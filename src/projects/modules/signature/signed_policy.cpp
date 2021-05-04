@@ -145,6 +145,11 @@ bool SignedPolicy::ProcessPolicyJson(const ov::String &policy_json)
 	if(!jv_stream_expire.isNull() && jv_stream_expire.isUInt64())
 	{
 		_stream_expire_epoch_msec = jv_stream_expire.asUInt64();
+		if(_stream_expire_epoch_msec < ov::Clock::NowMSec())
+		{
+			SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("Stream has expired.(now:%llu policy_expire:%llu) ", ov::Clock::NowMSec(), _url_expire_epoch_msec));
+			return false;
+		}
 	}
 	
 	if(!jv_allow_ip.isNull() && jv_allow_ip.isString())

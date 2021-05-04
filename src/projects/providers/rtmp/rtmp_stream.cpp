@@ -131,10 +131,28 @@ namespace pvd
 		return PushStream::Stop();
 	}
 
+	bool RtmpStream::CheckStreamExpired()
+	{
+		if(_stream_expired_msec != 0 && _stream_expired_msec < ov::Clock::NowMSec())
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 	bool RtmpStream::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
 	{
 		if(GetState() == Stream::State::ERROR || GetState() == Stream::State::STOPPED || GetState() == Stream::State::STOPPING)
 		{
+			return false;
+		}
+
+		// Check stream expired by signed policy
+		if(CheckStreamExpired() == true)
+		{
+			logti("Stream has expired by signed policy (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
+			Stop();
 			return false;
 		}
 
@@ -298,6 +316,7 @@ namespace pvd
 		}
 		else if(result == CheckSignatureResult::Pass)
 		{
+			_stream_expired_msec = _signed_policy->GetStreamExpireEpochMSec();
 			return true;
 		}
 		else if(result == CheckSignatureResult::Error)

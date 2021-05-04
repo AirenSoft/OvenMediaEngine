@@ -113,6 +113,7 @@ namespace pvd
 		bool SetTrackInfo(const std::shared_ptr<RtmpMediaInfo> &media_info);
 
 		bool CheckSignedPolicy();
+		bool CheckStreamExpired();
 
 		// RTMP related
 		RtmpHandshakeState _handshake_state = RtmpHandshakeState::Uninitialized;
@@ -154,6 +155,9 @@ namespace pvd
 
 		// Received data buffer
 		std::shared_ptr<ov::Data> 	_remained_data = nullptr;
+
+		// Singed Policy
+		uint64_t _stream_expired_msec = 0;
 
 		// For statistics 
 		time_t _stream_check_time = 0;
