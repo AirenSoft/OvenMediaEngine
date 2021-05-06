@@ -353,6 +353,10 @@ void IcePort::CheckTimedoutItem()
 			{
 				it = _binding_request_table.erase(it);
 			}
+			else
+			{
+				++it;
+			}
 		}
 	}
 
@@ -820,9 +824,6 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 
 	logtd("Send Stun Binding Request : %s", address.ToString().CStr());
 
-	// TODO: apply SASLprep(password)
-	SendStunMessage(remote, address, gate_info, message, info->peer_sdp->GetIcePwd());
-
 	// Store binding request transction
 	{
 		std::lock_guard<std::shared_mutex> brt_lock(_binding_request_table_lock);
@@ -832,6 +833,9 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 
 		logtd("Send Binding Request to(%s) id(%s)", address.ToString().CStr(), transaction_id_key.CStr());
 	}
+
+	// TODO: apply SASLprep(password)
+	SendStunMessage(remote, address, gate_info, message, info->peer_sdp->GetIcePwd());
 
 	return true;
 }
