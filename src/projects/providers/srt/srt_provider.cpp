@@ -73,9 +73,14 @@ namespace pvd
 
 	bool SrtProvider::Stop()
 	{
+		if(_physical_port != nullptr)
+		{
+			_physical_port->RemoveObserver(this);
+			PhysicalPortManager::GetInstance()->DeletePort(_physical_port);
+			_physical_port = nullptr;
+		}
 
-
-		return true;
+		return Provider::Stop();
 	}
 
 	std::shared_ptr<pvd::Application> SrtProvider::OnCreateProviderApplication(const info::Application &application_info)
@@ -101,20 +106,58 @@ namespace pvd
 		auto streamid = remote->GetStreamId();
 
 		// streamid format is below
-		// srt://host[:port]/app/stream?query=value
-		auto url = ov::Url::Parse(streamid);
-		if(url == nullptr)
+		// urlencode(srt://host[:port]/app/stream?query=value)
+		auto decoded_url = ov::Url::Decode(streamid);
+		auto parsed_url = ov::Url::Parse(decoded_url);
+		if(parsed_url == nullptr)
 		{
-			logte("SRT's streamid must be a URL of the form srt://{host}[:port]/{app}/{stream}?{query}={value} : %s", streamid.CStr());
+			logte("SRT's streamid must be a encoded URL of the form srt://{host}[:port]/{app}/{stream}?{query}={value} : %s", streamid.CStr());
 			remote->Close();
 			return;
 		}
 
 		auto channel_id = remote->GetNativeHandle();
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Host(), url->App());
-		auto stream_name = url->Stream();
-		
-		auto stream = MpegTsStream::Create(StreamSourceType::Srt, channel_id, vhost_app_name, stream_name, remote, GetSharedPtrAs<pvd::PushProvider>());
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
+		auto stream_name = parsed_url->Stream();
+
+		// Check if application is exist
+		if(GetApplicationByName(vhost_app_name) == nullptr)
+		{
+			logte("Could not find %s application : %s", vhost_app_name.CStr());
+			remote->Close();
+			return;
+		}
+
+		//TODO(Getroot): For security enhancement, 
+		// it should be checked whether the actual ip:port is the same as the ip:port of streamid (after dns resolve if it is domain).
+
+		// SingedPolicy
+		uint64_t life_time = 0;
+		std::shared_ptr<const SignedPolicy> signed_policy;
+		auto remote_address = remote->GetRemoteAddress();
+		auto signed_policy_result = HandleSignedPolicy(parsed_url, remote_address, signed_policy);
+		if(signed_policy_result == CheckSignatureResult::Off)
+		{
+			// Success
+		}
+		else if(signed_policy_result == CheckSignatureResult::Pass)
+		{
+			life_time = signed_policy->GetStreamExpireEpochMSec();
+		}
+		else if(signed_policy_result == CheckSignatureResult::Error)
+		{
+			// will not reach here
+			remote->Close();
+			return;
+		}
+		else if(signed_policy_result == CheckSignatureResult::Fail)
+		{
+			logtw("%s", signed_policy->GetErrMessage().CStr());
+			remote->Close();
+			return;
+		}
+
+		auto stream = MpegTsStream::Create(StreamSourceType::Srt, channel_id, vhost_app_name, stream_name, remote, life_time, GetSharedPtrAs<pvd::PushProvider>());
 
 		PushProvider::OnChannelCreated(remote->GetNativeHandle(), stream);
 	}
@@ -136,12 +179,13 @@ namespace pvd
 										PhysicalPortDisconnectReason reason,
 										const std::shared_ptr<const ov::Error> &error)
 	{
-		logtd("SrtProvider::OnDisonnected : %s [%s]", remote->ToString().CStr(), remote->GetStreamId().CStr());
+		logti("SrtProvider::OnDisonnected : %s [%s]", remote->ToString().CStr(), remote->GetStreamId().CStr());
 
 		auto channel = GetChannel(remote->GetNativeHandle());
 		if (channel == nullptr)
 		{
-			logte("Failed to find channel to delete stream (remote : %s)", remote->ToString().CStr());
+			// It probably rejected on OnConnected
+			logtd("Failed to find channel to delete stream (remote : %s)", remote->ToString().CStr());
 			return;
 		}
 
