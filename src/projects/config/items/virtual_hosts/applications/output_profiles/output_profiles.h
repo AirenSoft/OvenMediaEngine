@@ -21,14 +21,17 @@ namespace cfg
 				struct OutputProfiles : public Item
 				{
 				protected:
+					bool _hwaccel = false;
 					std::vector<OutputProfile> _output_profiles;
 
 				public:
-					CFG_DECLARE_REF_GETTER_OF(GetOutputProfileList, _output_profiles)
+					CFG_DECLARE_REF_GETTER_OF(IsHardwareAcceleration, _hwaccel);
+					CFG_DECLARE_REF_GETTER_OF(GetOutputProfileList, _output_profiles);
 
 				protected:
 					void MakeList() override
 					{
+						Register<Optional>("HardwareAcceleration", &_hwaccel);
 						Register<Optional>("OutputProfile", &_output_profiles);
 					}
 				};

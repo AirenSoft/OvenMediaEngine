@@ -17,7 +17,7 @@
 #include <orchestrator/orchestrator.h>
 #include <providers/providers.h>
 #include <publishers/publishers.h>
-#include <transcode/transcoder.h>
+#include <transcoder/transcoder.h>
 #include <web_console/web_console.h>
 #include <modules/address/address_utilities.h>
 
