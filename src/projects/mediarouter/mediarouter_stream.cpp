@@ -200,7 +200,7 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 			[[maybe_unused]] auto skipped = read_stream.Skip(nal_length);
 			OV_ASSERT2(skipped == nal_length);
 
-			H264NalUnitHeader header; 
+			H264NalUnitHeader header;
 			if (H264Parser::ParseNalUnitHeader(nalu->GetDataAs<uint8_t>(), H264_NAL_UNIT_HEADER_SIZE, header) == true)
 			{
 				if (header.GetNalUnitType() == H264NalUnitType::IdrSlice)
@@ -254,8 +254,8 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 	auto bitstream_length = media_packet->GetData()->GetLength();
 	bool has_sps = false, has_pps = false, has_idr = false;
 	size_t annexb_start_code_size = 0;
-	
-	while(offset < bitstream_length)
+
+	while (offset < bitstream_length)
 	{
 		size_t start_code_size;
 		int pos = 0;
@@ -267,7 +267,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 			break;
 		}
 
-		if(annexb_start_code_size == 0)
+		if (annexb_start_code_size == 0)
 		{
 			annexb_start_code_size = start_code_size;
 		}
@@ -356,11 +356,12 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 		media_track->SetH264SpsPpsAnnexBFormat(sps_pps_annexb_data, sps_pps_frag_header);
 	}
 
-	if (has_idr == true && (has_sps == false || has_pps == false))
+	if (has_idr == true && (has_sps == false || has_pps == false) && media_track->GetH264SpsPpsAnnexBFormat() != nullptr)
 	{
 		// Insert SPS/PPS nal units so that player can start to play faster
 		auto processed_data = std::make_shared<ov::Data>();
-		processed_data->Append(media_track->GetH264SpsPpsAnnexBFormat());
+		auto decode_parmeters = media_track->GetH264SpsPpsAnnexBFormat();
+		processed_data->Append(decode_parmeters);
 		processed_data->Append(media_packet->GetData());
 
 		// Update fragment haeader
@@ -378,6 +379,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 		}
 
 		media_packet->SetFragHeader(&updated_frag_header);
+		media_packet->SetData(processed_data);
 	}
 	else
 	{
@@ -725,7 +727,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 		_stat_first_time_diff[track_id] = uptime - rescaled_last_pts;
 	}
 
-	if (_stop_watch.IsElapsed(5000) && _stop_watch.Update())
+	if (_stop_watch.IsElapsed(10000) && _stop_watch.Update())
 	{
 		// Uptime
 		int64_t uptime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - _stat_start_time).count();
