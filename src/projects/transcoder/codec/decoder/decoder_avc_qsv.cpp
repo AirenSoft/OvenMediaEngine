@@ -8,9 +8,6 @@
 //==============================================================================
 #include "decoder_avc_qsv.h"
 
-#include <libavutil/hwcontext.h>
-#include <libavutil/hwcontext_qsv.h>
-
 #include "../../transcoder_gpu.h"
 #include "../../transcoder_private.h"
 #include "../codec_utilities.h"
@@ -40,7 +37,6 @@ bool DecoderAVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 
 	_context->time_base = TimebaseToAVRational(GetTimebase());
-	// _context->get_format = GetFormat;
 
 	::av_opt_set(_context->priv_data, "gpu_copy", "on", 0);
 
@@ -77,49 +73,6 @@ bool DecoderAVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 	return true;
 }
 
-enum AVPixelFormat DecoderAVCxQSV::GetFormat(AVCodecContext *s, const enum AVPixelFormat *pix_fmts)
-{
-	const enum AVPixelFormat *p;
-	int ret;
-	AVHWFramesContext *frames_ctx;
-	AVQSVFramesContext *frames_hwctx;
-
-	for (p = pix_fmts; *p != -1; p++)
-	{
-		const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(*p);
-		if (!(desc->flags & AV_PIX_FMT_FLAG_HWACCEL))
-			break;
-
-		if (*p == AV_PIX_FMT_QSV)
-		// if (*p == AV_PIX_FMT_NV12)
-		{
-			av_buffer_unref(&s->hw_frames_ctx);
-			s->hw_frames_ctx = av_hwframe_ctx_alloc(TranscodeGPU::GetInstance()->GetDeviceContext());
-			if (!s->hw_frames_ctx)
-				return AV_PIX_FMT_NONE;
-
-			frames_ctx = (AVHWFramesContext *)s->hw_frames_ctx->data;
-			frames_hwctx = (AVQSVFramesContext *)frames_ctx->hwctx;
-
-			frames_ctx->width = s->coded_width;
-			frames_ctx->height = s->coded_height;
-			frames_ctx->format = AV_PIX_FMT_QSV;
-			frames_ctx->sw_format = s->sw_pix_fmt;
-			frames_ctx->initial_pool_size = 3;
-			frames_hwctx->frame_type = MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET;
-
-			ret = av_hwframe_ctx_init(s->hw_frames_ctx);
-			if (ret < 0)
-			{
-				av_log(NULL, AV_LOG_ERROR, "Error initializing a QSV frame pool\n");
-				return AV_PIX_FMT_NONE;
-			}
-			break;
-		}
-	}
-
-	return *p;
-}
 
 void DecoderAVCxQSV::ThreadDecode()
 {

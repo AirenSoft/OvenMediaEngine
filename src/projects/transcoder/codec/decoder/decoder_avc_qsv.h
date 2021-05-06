@@ -25,8 +25,6 @@ public:
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
-	static enum AVPixelFormat GetFormat(AVCodecContext *s, const enum AVPixelFormat *pix_fmts);
-
 	void ThreadDecode() override;
 
 	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
