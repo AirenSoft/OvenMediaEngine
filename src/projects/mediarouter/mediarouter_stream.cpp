@@ -217,12 +217,12 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 				}
 				else if (header.GetNalUnitType() == H264NalUnitType::Sps)
 				{
-					logtd("[SPS] %s ", ov::Base64::Encode(nalu).CStr());
+					// logtd("[SPS] %s ", ov::Base64::Encode(nalu).CStr());
 					has_sps = true;
 				}
 				else if (header.GetNalUnitType() == H264NalUnitType::Pps)
 				{
-					logtd("[PPS] %s ", ov::Base64::Encode(nalu).CStr());
+					// logtd("[PPS] %s ", ov::Base64::Encode(nalu).CStr());
 					has_pps = true;
 				}
 			}
@@ -337,7 +337,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 			auto nalu = std::make_shared<ov::Data>(bitstream + offset, offset_length);
 			has_sps = true;
 
-			logtd("[-SPS] %s ", ov::Base64::Encode(nalu).CStr());
+			// logtd("[-SPS] %s ", ov::Base64::Encode(nalu).CStr());
 
 			// Parse track info if needed
 			if (media_track->IsValid() == false)
@@ -365,7 +365,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 			auto nalu = std::make_shared<ov::Data>(bitstream + offset, offset_length);
 			has_pps = true;
 
-			logtd("[-PPS] %s ", ov::Base64::Encode(nalu).CStr());
+			// logtd("[-PPS] %s ", ov::Base64::Encode(nalu).CStr());
 
 			// Parse track info if needed
 			if (media_track->IsValid() == false)

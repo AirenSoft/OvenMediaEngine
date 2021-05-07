@@ -44,6 +44,8 @@ public:
 					}
 				}
 
+				// TODO(soulk) : Depending on the pixel format, the size of the data being copied must vary by plane.
+#if 0
 				if (frame->format == AV_PIX_FMT_NV12 || frame->format == AV_PIX_FMT_YUV420P)
 				{
 					video_frame->SetBuffer(frame->data[0], video_frame->GetStride(0) * video_frame->GetHeight(), 0);	  // Y-Plane 4
@@ -60,7 +62,21 @@ public:
 				{
 					logtw("Unknown pixel format : %d", frame->format);
 				}
+#else
+				if (frame->format == AV_PIX_FMT_YUV444P)
+				{
+					video_frame->SetBuffer(frame->data[0], video_frame->GetStride(0) * video_frame->GetHeight(), 0);  // Y-Plane 4
+					video_frame->SetBuffer(frame->data[1], video_frame->GetStride(1) * video_frame->GetHeight(), 1);  // Cb Plane 4
+					video_frame->SetBuffer(frame->data[2], video_frame->GetStride(2) * video_frame->GetHeight(), 2);  // Cr Plane 4
+				}
+				else
+				{
+					video_frame->SetBuffer(frame->data[0], video_frame->GetStride(0) * video_frame->GetHeight(), 0);	  // Y-Plane 4
+					video_frame->SetBuffer(frame->data[1], video_frame->GetStride(1) * video_frame->GetHeight() / 2, 1);  // Cb Plane 2
+					video_frame->SetBuffer(frame->data[2], video_frame->GetStride(2) * video_frame->GetHeight() / 2, 2);  // Cr Plane 2					
+				}
 
+#endif
 				return video_frame;
 			}
 			case cmn::MediaType::Audio: {
