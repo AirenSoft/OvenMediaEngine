@@ -847,7 +847,8 @@ namespace ov
 
 			while (_dispatch_queue.empty() == false)
 			{
-				auto &front = _dispatch_queue.front();
+				auto front = _dispatch_queue.front();
+				_dispatch_queue.pop_front();
 
 				bool is_close_command = front.IsCloseCommand();
 
@@ -872,21 +873,15 @@ namespace ov
 
 				if (result == DispatchResult::Dispatched)
 				{
-					if (_dispatch_queue.size() > 0)
-					{
-						// Dispatches the next item
-						_dispatch_queue.pop_front();
-					}
-					else
-					{
-						// All items are dispatched in DispatchEventInternal()
-					}
-
+					// Dispatches the next item
 					continue;
 				}
 				else if (result == DispatchResult::PartialDispatched)
 				{
 					// The data is not fully processed and will not be removed from queue
+
+					// Re-enqueue the command partially processed
+					_dispatch_queue.push_front(front);
 
 					// Close-related commands will be processed when we receive the event from epoll later
 				}
