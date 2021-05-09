@@ -373,6 +373,8 @@ namespace ov
 			{
 				GarbageCollection();
 			}
+
+			MergeSocketList();
 		}
 
 		// Clean up all sockets
@@ -507,7 +509,6 @@ namespace ov
 				else if (event_count > 0)
 				{
 					// polled successfully
-					MergeSocketList();
 
 					// Make a list of epoll_event from SRT_EPOLL_EVENTs
 					for (int index = 0; index < event_count; index++)

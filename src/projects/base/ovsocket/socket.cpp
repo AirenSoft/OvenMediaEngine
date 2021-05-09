@@ -742,13 +742,13 @@ namespace ov
 		return _stream_id;
 	}
 
-	Socket::DispatchResult Socket::DispatchInternal(DispatchCommand &command)
+	Socket::DispatchResult Socket::DispatchEventInternal(DispatchCommand &command)
 	{
 		SOCKET_PROFILER_INIT();
 		SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
 			if (total_elapsed > 100)
 			{
-				logtw("[SockProfiler] DispatchInternal() - %s, Total: %dms", ToString().CStr(), total_elapsed);
+				logtw("[SockProfiler] DispatchEventInternal() - %s, Total: %dms", ToString().CStr(), total_elapsed);
 			}
 		});
 
@@ -868,7 +868,7 @@ namespace ov
 					break;
 				}
 
-				result = DispatchInternal(front);
+				result = DispatchEventInternal(front);
 
 				if (result == DispatchResult::Dispatched)
 				{
@@ -879,7 +879,7 @@ namespace ov
 					}
 					else
 					{
-						// All items are dispatched int DispatchInternal();
+						// All items are dispatched in DispatchEventInternal()
 					}
 
 					continue;
@@ -898,7 +898,6 @@ namespace ov
 					{
 						// Ignore errors that occurred during close
 						result = DispatchResult::Dispatched;
-						break;
 					}
 				}
 
@@ -908,11 +907,12 @@ namespace ov
 
 		// Since the resource is usually cleaned inside the OnClosed() callback,
 		// callback is performed outside the lock_guard to prevent acquiring the lock.
-		if (_post_callback != nullptr)
+		auto post_callback = std::move(_post_callback);
+		if (post_callback != nullptr)
 		{
 			if (_connection_event_fired)
 			{
-				_post_callback->OnClosed();
+				post_callback->OnClosed();
 			}
 		}
 

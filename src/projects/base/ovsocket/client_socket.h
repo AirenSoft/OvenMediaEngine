@@ -43,6 +43,6 @@ namespace ov
 
 		bool CloseInternal() override;
 
-		std::shared_ptr<ServerSocket> _server_socket;
+		std::weak_ptr<ServerSocket> _server_socket;
 	};
 }  // namespace ov

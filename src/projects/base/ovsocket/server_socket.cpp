@@ -29,6 +29,13 @@
 
 namespace ov
 {
+	ServerSocket::ServerSocket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker, const std::shared_ptr<SocketPool> &pool)
+		: Socket(token, worker),
+
+		  _pool(pool)
+	{
+	}
+
 	ServerSocket::~ServerSocket()
 	{
 	}
