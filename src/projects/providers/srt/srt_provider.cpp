@@ -111,7 +111,7 @@ namespace pvd
 		auto parsed_url = ov::Url::Parse(decoded_url);
 		if(parsed_url == nullptr)
 		{
-			logte("SRT's streamid must be a encoded URL of the form srt://{host}[:port]/{app}/{stream}?{query}={value} : %s", streamid.CStr());
+			logte("SRT's streamid streamid must be in the following format, percent encoded. srt://{host}[:port]/{app}/{stream}?{query}={value} : %s", streamid.CStr());
 			remote->Close();
 			return;
 		}
