@@ -124,8 +124,8 @@ namespace ov
 			SetSocketOptions() &&
 			// Client socket generates (EPOLLOUT | EPOLLIN) events as soon as it is added to epoll
 			((_socket.GetType() == SocketType::Srt) || UpdateFirstEpollEvent()) &&
-			MakeNonBlockingInternal(GetSharedPtrAs<SocketAsyncInterface>(), false) &&
-			AppendCommand({DispatchCommand::Type::Connected});
+			AppendCommand({DispatchCommand::Type::Connected}) &&
+			MakeNonBlockingInternal(GetSharedPtrAs<SocketAsyncInterface>(), false);
 	}
 
 	void ClientSocket::OnConnected()
