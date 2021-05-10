@@ -346,18 +346,20 @@ namespace ov
 		}
 
 		auto old_callback = _callback;
+
 		_callback = callback;
+		_blocking_mode = BlockingMode::NonBlocking;
 
 		if (
 			SetBlockingInternal(BlockingMode::NonBlocking) &&
 			AddToWorker(update_first_event_flag))
 		{
-			_blocking_mode = BlockingMode::NonBlocking;
 			return true;
 		}
 
 		// Rollback
 		_callback = old_callback;
+		_blocking_mode = BlockingMode::Blocking;
 
 		return false;
 	}
