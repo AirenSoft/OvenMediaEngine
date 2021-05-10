@@ -742,13 +742,13 @@ namespace ov
 		return _stream_id;
 	}
 
-	Socket::DispatchResult Socket::DispatchInternal(DispatchCommand &command)
+	Socket::DispatchResult Socket::DispatchEventInternal(DispatchCommand &command)
 	{
 		SOCKET_PROFILER_INIT();
 		SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
 			if (total_elapsed > 100)
 			{
-				logtw("[SockProfiler] DispatchInternal() - %s, Total: %dms", ToString().CStr(), total_elapsed);
+				logtw("[SockProfiler] DispatchEventInternal() - %s, Total: %dms", ToString().CStr(), total_elapsed);
 			}
 		});
 
@@ -847,7 +847,8 @@ namespace ov
 
 			while (_dispatch_queue.empty() == false)
 			{
-				auto &front = _dispatch_queue.front();
+				auto front = _dispatch_queue.front();
+				_dispatch_queue.pop_front();
 
 				bool is_close_command = front.IsCloseCommand();
 
@@ -868,25 +869,19 @@ namespace ov
 					break;
 				}
 
-				result = DispatchInternal(front);
+				result = DispatchEventInternal(front);
 
 				if (result == DispatchResult::Dispatched)
 				{
-					if (_dispatch_queue.size() > 0)
-					{
-						// Dispatches the next item
-						_dispatch_queue.pop_front();
-					}
-					else
-					{
-						// All items are dispatched int DispatchInternal();
-					}
-
+					// Dispatches the next item
 					continue;
 				}
 				else if (result == DispatchResult::PartialDispatched)
 				{
 					// The data is not fully processed and will not be removed from queue
+
+					// Re-enqueue the command partially processed
+					_dispatch_queue.push_front(front);
 
 					// Close-related commands will be processed when we receive the event from epoll later
 				}
@@ -898,7 +893,6 @@ namespace ov
 					{
 						// Ignore errors that occurred during close
 						result = DispatchResult::Dispatched;
-						break;
 					}
 				}
 
@@ -908,11 +902,12 @@ namespace ov
 
 		// Since the resource is usually cleaned inside the OnClosed() callback,
 		// callback is performed outside the lock_guard to prevent acquiring the lock.
-		if (_post_callback != nullptr)
+		auto post_callback = std::move(_post_callback);
+		if (post_callback != nullptr)
 		{
 			if (_connection_event_fired)
 			{
-				_post_callback->OnClosed();
+				post_callback->OnClosed();
 			}
 		}
 

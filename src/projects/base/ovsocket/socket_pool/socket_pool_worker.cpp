@@ -373,6 +373,8 @@ namespace ov
 			{
 				GarbageCollection();
 			}
+
+			MergeSocketList();
 		}
 
 		// Clean up all sockets

@@ -342,7 +342,7 @@ namespace ov
 
 		bool AppendCommand(DispatchCommand command);
 
-		DispatchResult DispatchInternal(DispatchCommand &command);
+		DispatchResult DispatchEventInternal(DispatchCommand &command);
 
 		ssize_t SendInternal(const std::shared_ptr<const Data> &data);
 		ssize_t SendToInternal(const SocketAddress &address, const std::shared_ptr<const Data> &data);

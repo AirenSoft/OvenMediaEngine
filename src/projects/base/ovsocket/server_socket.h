@@ -25,13 +25,7 @@ namespace ov
 		friend class ClientSocket;
 
 	public:
-		ServerSocket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker, const std::shared_ptr<SocketPool> &pool)
-			: Socket(token, worker),
-
-			  _pool(pool)
-		{
-		}
-
+		ServerSocket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker, const std::shared_ptr<SocketPool> &pool);
 		~ServerSocket() override;
 
 		// Bind to a specific port
