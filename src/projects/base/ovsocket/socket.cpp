@@ -1690,13 +1690,21 @@ namespace ov
 			{
 				auto error = Error::CreateErrorFromErrno();
 
-				if (error->GetCode() == EAGAIN)
+				switch (error->GetCode())
 				{
-					// Peer doesn't send ACK/FIN yet - ignores this
-					return DispatchResult::Dispatched;
+					case EAGAIN:
+						// Peer doesn't send ACK/FIN yet - ignores this
+						return DispatchResult::Dispatched;
+
+					case ECONNRESET:
+						// Suppress "Connection reset by peer" message
+						break;
+
+					default:
+						logae("An error occurred while half-closing: %s", error->ToString().CStr());
+						break;
 				}
 
-				logae("An error occurred while half-closing: %s", error->ToString().CStr());
 				return DispatchResult::Error;
 			}
 			else if (result == 0)
