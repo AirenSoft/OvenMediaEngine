@@ -51,7 +51,6 @@ namespace http
 			// Response headers (Headers received from HTTP server)
 			ov::String GetResponseHeader(const ov::String &key);
 			const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetResponseHeaders() const;
-			std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetResponseHeaders();
 
 			void SetBody();
 

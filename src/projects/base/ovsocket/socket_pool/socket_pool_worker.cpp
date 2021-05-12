@@ -208,6 +208,9 @@ namespace ov
 				// Sockets that have failed to send data for a long time are forced to shut down
 				logaw("Failed to send data for %dms - This socket is going to be garbage collection (%s)", OV_SOCKET_EXPIRE_TIMEOUT, socket->ToString().CStr());
 
+				socket->CloseInternal();
+				socket->DispatchEvents();
+
 				DeleteFromEpoll(socket);
 
 				candidate = _gc_candidates.erase(candidate);
@@ -261,12 +264,17 @@ namespace ov
 						  StringFromEpollEvent(event).CStr(), events, events,
 						  ov::Error::CreateErrorFromErrno()->ToString().CStr());
 
+					// Normal socket generates (EPOLLOUT | EPOLLHUP) events as soon as it is added to epoll
+					// Client socket generates (EPOLLOUT | EPOLLIN) events as soon as it is added to epoll
 					if (OV_CHECK_FLAG(events, EPOLLOUT))
 					{
-						if (socket->UpdateFirstEpollEvent())
+						if (socket->NeedToWaitFirstEpollEvent())
 						{
+							socket->SetFirstEpollEventReceived();
+
 							// EPOLLOUT events might occur immediately after added to epoll
 							logad("EPOLLOUT is ignored - this event might occurs immediately after added to epoll");
+
 							continue;
 						}
 					}
@@ -335,8 +343,9 @@ namespace ov
 
 					if (need_to_close)
 					{
-						socket->CloseIfNeeded();
-						socket->SetState(new_state);
+						socket->CloseWithState(new_state);
+
+						EnqueueToDispatchLater(socket);
 					}
 				}
 			}
@@ -363,7 +372,7 @@ namespace ov
 							break;
 
 						case Socket::DispatchResult::Error:
-							socket->Close();
+							socket->CloseWithState(SocketState::Error);
 							break;
 					}
 				}
@@ -382,12 +391,12 @@ namespace ov
 		{
 			auto socket = socket_item.second;
 
-			// Close immediately
-			if (socket->IsClosable())
-			{
-				socket->CloseInternal();
-				socket->SetState(SocketState::Closed);
-			}
+			// Close immediately (Do not half-close)
+			socket->CloseInternal();
+			socket->SetState(SocketState::Closed);
+
+			// Do connection callback, etc...
+			socket->DispatchEvents();
 		}
 	}
 
@@ -454,6 +463,9 @@ namespace ov
 
 	int SocketPoolWorker::EpollWait(int timeout_in_msec)
 	{
+		// Reset errno
+		errno = 0;
+
 		if (GetNativeHandle() == InvalidSocket)
 		{
 			logae("Epoll is not initialized");

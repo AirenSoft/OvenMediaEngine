@@ -138,8 +138,8 @@ namespace ov
 	Socket::~Socket()
 	{
 		// Verify that the socket is closed normally
-		CHECK_STATE(== SocketState::Closed, );
 		OV_ASSERT(_socket.IsValid() == false, "Socket is not closed. Current state: %s", StringFromSocketState(GetState()));
+		CHECK_STATE2(== SocketState::Closed, >= SocketState::Disconnected, );
 	}
 
 	bool Socket::Create(SocketType type)
@@ -274,14 +274,30 @@ namespace ov
 		return true;
 	}
 
-	bool Socket::AddToWorker(bool update_first_event_flag)
+	bool Socket::AddToWorker(bool need_to_wait_first_epoll_event)
 	{
-		if (update_first_event_flag)
+		if (GetType() == ov::SocketType::Srt)
 		{
-			_is_first_event = true;
+			// SRT doesn't generates any epoll events after ::srt_epoll_add_usock()
+			need_to_wait_first_epoll_event = false;
 		}
 
-		return _worker->AddToEpoll(GetSharedPtr());
+		if (need_to_wait_first_epoll_event)
+		{
+			ResetFirstEpollEventReceived();
+		}
+
+		if (_worker->AddToEpoll(GetSharedPtr()))
+		{
+			if (need_to_wait_first_epoll_event)
+			{
+				return WaitForFirstEpollEvent();
+			}
+
+			return true;
+		}
+
+		return false;
 	}
 
 	bool Socket::DeleteFromWorker()
@@ -335,7 +351,7 @@ namespace ov
 		return MakeNonBlockingInternal(callback, true);
 	}
 
-	bool Socket::MakeNonBlockingInternal(std::shared_ptr<SocketAsyncInterface> callback, bool update_first_event_flag)
+	bool Socket::MakeNonBlockingInternal(std::shared_ptr<SocketAsyncInterface> callback, bool need_to_wait_first_epoll_event)
 	{
 		if (_blocking_mode == BlockingMode::NonBlocking)
 		{
@@ -352,7 +368,7 @@ namespace ov
 
 		if (
 			SetBlockingInternal(BlockingMode::NonBlocking) &&
-			AddToWorker(update_first_event_flag))
+			AddToWorker(need_to_wait_first_epoll_event))
 		{
 			return true;
 		}
@@ -717,11 +733,6 @@ namespace ov
 	SocketState Socket::GetState() const
 	{
 		return _state;
-	}
-
-	bool Socket::IsClosable() const
-	{
-		return OV_CHECK_FLAG(static_cast<std::underlying_type<SocketState>::type>(_state), SOCKET_STATE_CLOSABLE);
 	}
 
 	void Socket::SetState(SocketState state)
@@ -1424,8 +1435,8 @@ namespace ov
 				error = Error::CreateError("Socket", "Remote is disconnected");
 				*received_length = 0UL;
 
-				SetState(SocketState::Disconnected);
 				Close();
+				SetState(SocketState::Disconnected);
 
 				return error;
 			}
@@ -1571,17 +1582,17 @@ namespace ov
 	{
 		if (_blocking_mode == BlockingMode::Blocking)
 		{
-			return IsClosable() && Close();
+			return Close();
 		}
 
-		return (IsClosing() == false) && IsClosable() && Close();
+		return (IsClosing() == false) && Close();
 	}
 
-	bool Socket::Close()
+	bool Socket::CloseWithState(SocketState new_state)
 	{
 		CHECK_STATE(>= SocketState::Closed, false);
 
-		if ((GetState() == SocketState::Closed) || (GetState() == SocketState::Error))
+		if (GetState() == SocketState::Closed)
 		{
 			// Suppress error message
 			return false;
@@ -1604,7 +1615,7 @@ namespace ov
 				// Close regardless of result
 				if (CloseInternal())
 				{
-					SetState(SocketState::Closed);
+					SetState(new_state);
 				}
 				else
 				{
@@ -1647,6 +1658,11 @@ namespace ov
 		}
 
 		return DispatchEvents() != DispatchResult::Error;
+	}
+
+	bool Socket::Close()
+	{
+		return CloseWithState(SocketState::Closed);
 	}
 
 	Socket::DispatchResult Socket::HalfClose()
@@ -1692,12 +1708,20 @@ namespace ov
 
 				switch (error->GetCode())
 				{
+					case EBADF:
+						// Suppress "Bad file descriptor" message
+						break;
+
 					case EAGAIN:
 						// Peer doesn't send ACK/FIN yet - ignores this
 						return DispatchResult::Dispatched;
 
 					case ECONNRESET:
 						// Suppress "Connection reset by peer" message
+						break;
+
+					case ENOTCONN:
+						// Suppress "Transport endpoint is not connected" message
 						break;
 
 					default:
@@ -1768,7 +1792,10 @@ namespace ov
 		}
 
 		logad("Socket is already closed");
-		OV_ASSERT2(_state == SocketState::Closed);
+		OV_ASSERT(((_state == SocketState::Closed) ||
+				   (_state == SocketState::Disconnected) ||
+				   (_state == SocketState::Error)),
+				  "Invalid state: %s", StringFromSocketState(_state));
 
 		return false;
 	}

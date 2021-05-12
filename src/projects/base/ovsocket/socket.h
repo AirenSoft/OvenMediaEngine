@@ -140,7 +140,6 @@ namespace ov
 		bool SetSockOpt(SRT_SOCKOPT option, const void *value, int value_length);
 
 		SocketState GetState() const;
-		bool IsClosable() const;
 
 		void SetState(SocketState state);
 
@@ -190,6 +189,7 @@ namespace ov
 		bool Flush();
 
 		bool CloseIfNeeded();
+		bool CloseWithState(SocketState new_state);
 		bool Close();
 
 		bool HasCommand() const
@@ -336,7 +336,7 @@ namespace ov
 		virtual bool Create(SocketType type);
 
 		// Internal version of MakeNonBlocking() - It doesn't check state
-		bool MakeNonBlockingInternal(std::shared_ptr<SocketAsyncInterface> callback, bool update_first_event_flag);
+		bool MakeNonBlockingInternal(std::shared_ptr<SocketAsyncInterface> callback, bool need_to_wait_first_epoll_event);
 
 		bool SetBlockingInternal(BlockingMode mode);
 
@@ -360,25 +360,48 @@ namespace ov
 		DispatchResult HalfClose();
 		DispatchResult WaitForHalfClose();
 
+		// CloseInternal() doesn't call the _callback directly
+		// So, we need to call DispatchEvents() after calling this api to do connection callback
 		virtual bool CloseInternal();
 
 	protected:
-		bool AddToWorker(bool update_first_event_flag);
+		// ClientSocket doesn't need to wait the first epoll event
+		bool AddToWorker(bool need_to_wait_first_epoll_event);
 		bool DeleteFromWorker();
 
-		// Returns true if it should be ignored as the first event, false if it should not be ignored.
-		bool UpdateFirstEpollEvent()
+		// When using epoll ET mode, the first event occurs immediately after EPOLL_CTL_ADD. (except SRT epoll)
+		// This API is used for waiting the event.
+		bool NeedToWaitFirstEpollEvent() const
 		{
 			if (_socket.GetType() == SocketType::Srt)
 			{
-				// All events should not be ignored
 				return false;
 			}
 
-			bool is_first_event = _is_first_event;
-			_is_first_event = false;
+			return _need_to_wait_first_epoll_event;
+		}
 
-			return is_first_event;
+		// true == Event is raised
+		// false == Timed out
+		bool WaitForFirstEpollEvent()
+		{
+			return _first_epoll_event_received.Wait();
+		}
+
+		bool SetFirstEpollEventReceived()
+		{
+			_need_to_wait_first_epoll_event = false;
+			_first_epoll_event_received.SetEvent();
+
+			return true;
+		}
+
+		bool ResetFirstEpollEventReceived()
+		{
+			_need_to_wait_first_epoll_event = true;
+			_first_epoll_event_received.Reset();
+
+			return true;
 		}
 
 		DispatchResult DispatchEventsInternal();
@@ -392,7 +415,8 @@ namespace ov
 
 		BlockingMode _blocking_mode = BlockingMode::Blocking;
 
-		bool _is_first_event = true;
+		std::atomic<bool> _need_to_wait_first_epoll_event{true};
+		ov::Event _first_epoll_event_received{true};
 
 		bool _end_of_stream = false;
 
