@@ -245,7 +245,7 @@ namespace http
 							continue;
 						}
 
-						// Read data next time in Nonblocing mode
+						// Read data next time in Nonblocking mode
 						return;
 					}
 
@@ -254,15 +254,21 @@ namespace http
 
 				if (error != nullptr)
 				{
-					if (socket->GetState() == ov::SocketState::Closed)
+					switch (socket->GetState())
 					{
-						// Ignore the error
-						error = nullptr;
-						break;
+						case ov::SocketState::Closed:
+							[[fallthrough]];
+						case ov::SocketState::Disconnected:
+							// Ignore the error
+							error = nullptr;
+							break;
+
+						default:
+							// Free the allocated data
+							_response_body = nullptr;
+							break;
 					}
 
-					// Free the allocated data
-					_response_body = nullptr;
 					break;
 				}
 			}
@@ -285,7 +291,7 @@ namespace http
 				switch (_parser.GetParseStatus())
 				{
 					case StatusCode::OK:
-						// 파싱 완료함 - 나머지는 일반 데이터로 취급
+						// Parsing is completed
 						_response_body->Append(sub_data);
 						remained -= sub_data->GetLength();
 						break;
@@ -296,17 +302,18 @@ namespace http
 						switch (_parser.GetParseStatus())
 						{
 							case StatusCode::OK:
-								// 파싱이 이제 막 완료된 상태. 즉, 파싱이 완료된 후 최초 1번만 여기로 진입함
+								// Parsing just completed
+								// After parsing is completed, this code is executed only once
 								PostProcess();
 								break;
 
 							case StatusCode::PartialContent:
-								// 데이터 더 필요 - 이 상태에서는 반드시 모든 데이터를 소진했어야 함
+								// We need more data to parse response
+								// In this state, all data must be processed
 								OV_ASSERT2((processed_length >= 0LL) && (static_cast<size_t>(processed_length) == data->GetLength()));
 								break;
 
 							default:
-								// 파싱 도중 오류 발생
 								OV_ASSERT2(processed_length == -1L);
 								return ov::Error::CreateError("HTTP", "Could not parse response");
 						}
@@ -317,7 +324,7 @@ namespace http
 					}
 
 					default:
-						// 이전에 parse 할 때 오류가 발생했다면 response한 뒤 close() 했으므로, 정상적인 상황이라면 여기에 진입하면 안됨
+						// If an error occurred when parsing before, this code should not executed under normal circumstances because it was closed after responed.
 						OV_ASSERT2(false);
 						return ov::Error::CreateError("HTTP", "Invalid parse status: %d", _parser.GetParseStatus());
 				}

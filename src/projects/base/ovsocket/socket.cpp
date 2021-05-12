@@ -1708,12 +1708,20 @@ namespace ov
 
 				switch (error->GetCode())
 				{
+					case EBADF:
+						// Suppress "Bad file descriptor" message
+						break;
+
 					case EAGAIN:
 						// Peer doesn't send ACK/FIN yet - ignores this
 						return DispatchResult::Dispatched;
 
 					case ECONNRESET:
 						// Suppress "Connection reset by peer" message
+						break;
+
+					case ENOTCONN:
+						// Suppress "Transport endpoint is not connected" message
 						break;
 
 					default:
@@ -1784,7 +1792,10 @@ namespace ov
 		}
 
 		logad("Socket is already closed");
-		OV_ASSERT2(_state == SocketState::Closed);
+		OV_ASSERT(((_state == SocketState::Closed) ||
+				   (_state == SocketState::Disconnected) ||
+				   (_state == SocketState::Error)),
+				  "Invalid state: %s", StringFromSocketState(_state));
 
 		return false;
 	}
