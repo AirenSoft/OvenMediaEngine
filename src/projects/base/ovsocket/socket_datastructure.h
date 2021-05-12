@@ -97,7 +97,7 @@ namespace ov
 		// Connection established
 		Connected = 5 | SOCKET_STATE_CLOSABLE,
 		// The connection with Peer has been lost (However, we can read data from the kernel socket buffer if available)
-		Disconnected = 6,
+		Disconnected = 6 | SOCKET_STATE_CLOSABLE,
 		// An error occurred
 		Error = 7,
 	};
