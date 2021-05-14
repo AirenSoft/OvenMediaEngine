@@ -195,7 +195,7 @@ namespace cfg
 			{
 				if (::gethostname(hostname.GetBuffer(), hostname.GetCapacity()) == 0)
 				{
-					return std::move(hostname);
+					return hostname;
 				}
 			}
 		}
@@ -276,7 +276,7 @@ namespace cfg
 			return ov::PathManager::Combine(base_path, str);
 		}
 
-		return std::move(str);
+		return str;
 	}
 
 	ov::String Preprocess(const ov::String &base_path, const ov::String &value, bool resolve_path)
@@ -290,7 +290,7 @@ namespace cfg
 			result = PreprocessForPath(base_path, result);
 		}
 
-		return std::move(result);
+		return result;
 	}
 
 	std::any DataSource::GetValueFromXml(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, Json::Value *original_value) const

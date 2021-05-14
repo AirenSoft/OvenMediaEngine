@@ -270,7 +270,7 @@ namespace ocst
 
 		logtd("Resolved application name: %s (from domain: %s, app: %s)", resolved.CStr(), domain_name.CStr(), app_name.CStr());
 
-		return std::move(resolved);
+		return resolved;
 	}
 
 	bool Orchestrator::GetUrlListForLocation(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name, std::vector<ov::String> *url_list)

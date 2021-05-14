@@ -121,7 +121,7 @@ namespace ov
 						T value = std::move(_queue.front());
 						_queue.pop();
 
-						return std::move(value);
+						return value;
 					}
 					else
 					{

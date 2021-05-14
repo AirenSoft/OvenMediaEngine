@@ -57,7 +57,7 @@ public:
 
 		_position += length;
 
-		return std::move(str);
+		return str;
 	}
 
 	// Note: ReadBytes() API obtains the bits without considering _bit_offset

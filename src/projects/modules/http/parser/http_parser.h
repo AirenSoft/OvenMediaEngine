@@ -76,7 +76,7 @@ namespace http
 
 			if (item == _headers.cend())
 			{
-				return std::move(default_value);
+				return default_value;
 			}
 
 			return item->second;

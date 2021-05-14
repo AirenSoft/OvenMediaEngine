@@ -197,7 +197,7 @@ namespace ov
 
 		Finish(data->GetWritableData(), data->GetCapacity());
 
-		return std::move(data);
+		return data;
 	}
 
 	bool MessageDigest::ComputeHmac(CryptoAlgorithm algorithm, const void *key, size_t key_length, const void *input, size_t input_length, void *output, size_t output_length)

@@ -104,7 +104,7 @@ RtcPeerBrowser RtcPeerInfo::ParseBrowserInfo(const ov::String &user_agent)
 		// Other
 	}
 
-	return std::move(browser);
+	return browser;
 }
 
 bool RtcPeerInfo::IsCompatibleWith(const std::shared_ptr<RtcPeerInfo> &peer)

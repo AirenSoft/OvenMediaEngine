@@ -1076,7 +1076,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 	UpdateStatistics(media_track, pop_media_packet);
 
-	return std::move(pop_media_packet);
+	return pop_media_packet;
 }
 
 void MediaRouteStream::DumpPacket(

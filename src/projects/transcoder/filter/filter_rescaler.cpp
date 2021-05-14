@@ -295,7 +295,7 @@ std::shared_ptr<MediaFrame> MediaFilterRescaler::RecvBuffer(TranscodeResult *res
 		auto obj = _output_buffer.Dequeue();
 		if (obj.has_value())
 		{
-			return std::move(obj.value());
+			return obj.value();
 		}
 	}
 

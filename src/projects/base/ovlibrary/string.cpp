@@ -630,7 +630,7 @@ namespace ov
 
 	std::vector<String> String::Split(const char *separator, size_t max_count) const
 	{
-		return std::move(String::Split(CStr(), separator, max_count));
+		return String::Split(CStr(), separator, max_count);
 	}
 
 	std::vector<String> String::Split(const char *string, const char *separator, size_t max_count) const
@@ -646,7 +646,7 @@ namespace ov
 				list.emplace_back(string);
 			}
 
-			return std::move(list);
+			return list;
 		}
 
 		seperator_length = (int)::strlen(separator);
@@ -658,7 +658,7 @@ namespace ov
 				list.emplace_back(string);
 			}
 
-			return std::move(list);
+			return list;
 		}
 
 		size_t token_count = 0;
@@ -681,7 +681,7 @@ namespace ov
 			token_count++;
 		}
 
-		return std::move(list);
+		return list;
 	}
 
 	String String::Join(const std::vector<String> &list, const char *seperator)

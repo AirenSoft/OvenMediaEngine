@@ -39,13 +39,13 @@ static AVRational RationalFromTimebase(const cmn::Timebase &timebase)
 static ov::String StringFromTs(int64_t timestamp)
 {
 	ov::String str = (timestamp == AV_NOPTS_VALUE) ? "NOPTS" : ov::String::FormatString("%" PRId64, timestamp);
-	return std::move(str);
+	return str;
 }
 
 static ov::String StringFromTime(int64_t timestamp, const AVRational *time_base)
 {
 	ov::String str = (timestamp == AV_NOPTS_VALUE) ? "NOPTS" : ov::String::FormatString("%.6g", ::av_q2d(*time_base) * timestamp);
-	return std::move(str);
+	return str;
 }
 
 static ov::String StringFromError(int code)
@@ -759,7 +759,7 @@ std::shared_ptr<const ov::Data> Writer::Finalize()
 	{
 		auto data = data_stream->GetDataPointer();
 
-		return std::move(data);
+		return data;
 	}
 
 	return nullptr;

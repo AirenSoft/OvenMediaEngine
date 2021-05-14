@@ -10,13 +10,13 @@ std::shared_ptr<RtpDepacketizingManager> RtpDepacketizingManager::Create(Support
 	switch(type)
 	{
 		case RtpDepacketizingManager::SupportedDepacketizerType::H264:
-			return std::move(std::make_shared<RtpDepacketizerH264>());
+			return std::make_shared<RtpDepacketizerH264>();
 		case RtpDepacketizingManager::SupportedDepacketizerType::VP8:
-			return std::move(std::make_shared<RtpDepacketizerVP8>());
+			return std::make_shared<RtpDepacketizerVP8>();
 		case RtpDepacketizingManager::SupportedDepacketizerType::MPEG4_GENERIC_AUDIO:
-			return std::move(std::make_shared<RtpDepacketizerMpeg4GenericAudio>());
+			return std::make_shared<RtpDepacketizerMpeg4GenericAudio>();
 		case RtpDepacketizingManager::SupportedDepacketizerType::OPUS:
-			return std::move(std::make_shared<RtpDepacketizerGenericAudio>());
+			return std::make_shared<RtpDepacketizerGenericAudio>();
 		default:
 			// Not supported
 			break;

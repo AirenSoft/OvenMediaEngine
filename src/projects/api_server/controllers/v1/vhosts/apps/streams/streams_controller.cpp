@@ -74,7 +74,7 @@ namespace api
 				}
 			}
 
-			return std::move(response_value);
+			return response_value;
 		}
 
 		ApiResponse StreamsController::OnGetStreamList(const std::shared_ptr<http::svr::HttpConnection> &client,
@@ -95,7 +95,7 @@ namespace api
 				}
 			}
 
-			return std::move(response);
+			return response;
 		}
 
 		ApiResponse StreamsController::OnGetStream(const std::shared_ptr<http::svr::HttpConnection> &client,
@@ -103,7 +103,7 @@ namespace api
 												   const std::shared_ptr<mon::ApplicationMetrics> &app,
 												   const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
-			return std::move(conv::JsonFromStream(stream, std::move(output_streams)));
+			return conv::JsonFromStream(stream, std::move(output_streams));
 		}
 
 		ApiResponse StreamsController::OnDeleteStream(const std::shared_ptr<http::svr::HttpConnection> &client,

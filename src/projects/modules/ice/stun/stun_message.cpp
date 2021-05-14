@@ -203,7 +203,7 @@ std::shared_ptr<StunAttribute> StunMessage::ParseFingerprintAttribute(ov::ByteSt
 		return nullptr;
 	}
 
-	return std::move(attribute);
+	return attribute;
 }
 
 bool StunMessage::WriteHeader(ov::ByteStream &stream)

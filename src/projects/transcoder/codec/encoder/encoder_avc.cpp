@@ -243,7 +243,7 @@ std::shared_ptr<MediaPacket> EncoderAVC::RecvBuffer(TranscodeResult *result)
 		auto obj = _output_buffer.Dequeue();
 		if (obj.has_value())
 		{
-			return std::move(obj.value());
+			return obj.value();
 		}
 	}
 
@@ -256,5 +256,5 @@ std::shared_ptr<MediaPacket> EncoderAVC::RecvBuffer(TranscodeResult *result)
 // {
 // 	auto packet = s
 
-// 	return std::move(packet);
+// 	return packet;
 // }

@@ -286,7 +286,7 @@ namespace http
 
 			_connection_list[remote.get()] = http_connection;
 
-			return std::move(http_connection);
+			return http_connection;
 		}
 
 		void HttpServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)

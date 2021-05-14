@@ -59,7 +59,7 @@ namespace cfg
 				app["providers"] = GetMpegTsStreamListFromMetrics(app["providers"], reserved_stream_list);
 			}
 
-			return std::move(app);
+			return app;
 		}
 
 		Json::Value GetApplicationListFromMetrics(const std::map<uint32_t, std::shared_ptr<mon::ApplicationMetrics>> &app_metrics_list, bool include_dynamic_app)
@@ -79,7 +79,7 @@ namespace cfg
 				apps.append(GetApplicationFromMetrics(app_metrics));
 			}
 
-			return std::move(apps);
+			return apps;
 		}
 
 		Json::Value GetVirtualHostFromMetrics(const std::shared_ptr<mon::HostMetrics> &vhost_metrics, bool include_dynamic_app)
@@ -89,7 +89,7 @@ namespace cfg
 			// Reset application list (Currently, vhost contains the settings that were loaded at the beginning of the OME run)
 			vhost["applications"] = GetApplicationListFromMetrics(vhost_metrics->GetApplicationMetricsList(), include_dynamic_app);
 
-			return std::move(vhost);
+			return vhost;
 		}
 
 		Json::Value GetVirtualHostListFromMetrics(Json::Value server_config, const std::map<uint32_t, std::shared_ptr<mon::HostMetrics>> &vhost_metrics_list, bool include_dynamic_app)
@@ -120,7 +120,7 @@ namespace cfg
 				// Nothing to do
 			}
 
-			return std::move(server_config);
+			return server_config;
 		}
 
 		Json::Value GetServerJsonFromConfig(const std::shared_ptr<cfg::Server> &server_config, bool include_dynamic_app)

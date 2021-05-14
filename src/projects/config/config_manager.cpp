@@ -114,7 +114,7 @@ namespace cfg
 
 		auto config = conv::GetServerJsonFromConfig(_server, false);
 
-		return std::move(config);
+		return config;
 	}
 
 	bool ConfigManager::SaveCurrentConfig()

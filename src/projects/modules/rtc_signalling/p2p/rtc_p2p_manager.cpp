@@ -243,7 +243,7 @@ std::map<peer_id_t, std::shared_ptr<RtcPeerInfo>> RtcP2PManager::GetClientPeerLi
 		list = host->_client_list;
 	}
 
-	return std::move(list);
+	return list;
 }
 
 int RtcP2PManager::GetPeerCount() const
