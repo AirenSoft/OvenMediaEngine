@@ -32,7 +32,7 @@ namespace api
 			SetTimestamp(value, "lastRecvTime", metrics->GetLastRecvTime());
 			SetTimestamp(value, "lastSentTime", metrics->GetLastSentTime());
 
-			return std::move(value);
+			return value;
 		}
 
 		Json::Value JsonFromStreamMetrics(const std::shared_ptr<const mon::StreamMetrics> &metrics)
@@ -41,13 +41,13 @@ namespace api
 
 			if (value.isNull())
 			{
-				return std::move(value);
+				return value;
 			}
 
 			SetTimeInterval(value, "requestTimeToOrigin", metrics->GetOriginRequestTimeMSec());
 			SetTimeInterval(value, "responseTimeFromOrigin", metrics->GetOriginResponseTimeMSec());
 
-			return std::move(value);
+			return value;
 		}
 	}  // namespace conv
 }  // namespace api

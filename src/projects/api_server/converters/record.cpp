@@ -146,7 +146,7 @@ namespace api
 				record->SetMetadata(json_metadata.asString().c_str());
 			}
 
-			return std::move(record);
+			return record;
 		}
 
 		Json::Value JsonFromRecord(const std::shared_ptr<info::Record> &record)
@@ -201,7 +201,7 @@ namespace api
 				SetTimestamp(response, "finishTime", record->GetRecordStopTime());
 			}
 
-			return std::move(response);
+			return response;
 		}
 
 	}  // namespace conv

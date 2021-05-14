@@ -101,7 +101,7 @@ namespace api
 			SetSignedToken(response, "signedToken", vhost->GetSignedToken(), Optional::True);
 			SetOriginMaps(response, "originMaps", vhost->GetOrigins(), Optional::True);
 
-			return std::move(response);
+			return response;
 		}
 
 	}  // namespace conv

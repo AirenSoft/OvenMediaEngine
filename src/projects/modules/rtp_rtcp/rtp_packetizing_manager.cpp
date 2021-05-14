@@ -10,13 +10,13 @@ std::shared_ptr<RtpPacketizingManager> RtpPacketizingManager::Create(cmn::MediaC
 	switch(type)
 	{
 		case cmn::MediaCodecId::Vp8:
-			return std::move(std::make_shared<RtpPacketizerVp8>());
+			return std::make_shared<RtpPacketizerVp8>();
 
 		case cmn::MediaCodecId::H264:
-			return std::move(std::make_shared<RtpPacketizerH264>());
+			return std::make_shared<RtpPacketizerH264>();
 
 		case cmn::MediaCodecId::H265:
-			return std::move(std::make_shared<RtpPacketizerH265>());
+			return std::make_shared<RtpPacketizerH265>();
 
 		default:
 			// Not supported

@@ -82,7 +82,7 @@ namespace cfg
 		{
 			DataSource new_data_source(_type, _base_path, file_name, root_name);
 
-			return std::move(new_data_source);
+			return new_data_source;
 		}
 
 		ov::String GetBasePath() const

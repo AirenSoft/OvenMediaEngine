@@ -170,7 +170,7 @@ const std::shared_ptr<ov::Data> OvtDepacketizer::PopMessage()
 	auto message = _messages.front();
 	_messages.pop();
 
-	return std::move(message);
+	return message;
 }
 
 const std::shared_ptr<MediaPacket> OvtDepacketizer::PopMediaPacket()
@@ -183,5 +183,5 @@ const std::shared_ptr<MediaPacket> OvtDepacketizer::PopMediaPacket()
 	auto media_packet = _media_packets.front();
 	_media_packets.pop();
 
-	return std::move(media_packet);
+	return media_packet;
 }

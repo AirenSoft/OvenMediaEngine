@@ -18,7 +18,7 @@ namespace api
 	{
 		Json::Value JsonFromOutputProfile(const cfg::vhost::app::oprf::OutputProfile &output_profile)
 		{
-			return std::move(output_profile.ToJson());
+			return output_profile.ToJson();
 		}
 
 		Json::Value JsonFromApplication(const std::shared_ptr<const mon::ApplicationMetrics> &application)
@@ -30,7 +30,7 @@ namespace api
 				app["dynamic"] = application->IsDynamicApp();
 			}
 
-			return std::move(app);
+			return app;
 		}
 
 		std::shared_ptr<http::HttpError> ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *application)

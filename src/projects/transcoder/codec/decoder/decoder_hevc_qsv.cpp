@@ -230,7 +230,7 @@ std::shared_ptr<MediaFrame> DecoderHEVCxQSV::RecvBuffer(TranscodeResult *result)
 		auto obj = _output_buffer.Dequeue();
 		if (obj.has_value())
 		{
-			return std::move(obj.value());
+			return obj.value();
 		}
 	}
 

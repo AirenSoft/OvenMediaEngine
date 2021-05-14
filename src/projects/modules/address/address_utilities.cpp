@@ -80,6 +80,6 @@ namespace ov
 			::freeifaddrs(interfaces);
 		}
 
-		return std::move(list);
+		return list;
 	}
 }

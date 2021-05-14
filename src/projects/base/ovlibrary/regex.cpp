@@ -67,7 +67,7 @@ namespace ov
 			result.push_back(std::string_view(start, length));
 		}
 
-		return std::move(result);
+		return result;
 	}
 
 	MatchResult::MatchResult(const std::shared_ptr<ov::Error> &error)
@@ -356,6 +356,6 @@ namespace ov
 			// No named substrings
 		}
 
-		return std::move(result);
+		return result;
 	}
 }  // namespace ov

@@ -213,7 +213,7 @@ struct RtmpChunkHeader
 
 		result.Append('>');
 
-		return std::move(result);
+		return result;
 	}
 };
 #pragma pack(pop)

@@ -12,7 +12,7 @@ namespace api
 {
 	std::map<uint32_t, std::shared_ptr<mon::HostMetrics>> GetVirtualHostList()
 	{
-		return std::move(mon::Monitoring::GetInstance()->GetHostMetricsList());
+		return mon::Monitoring::GetInstance()->GetHostMetricsList();
 	}
 
 	std::shared_ptr<mon::HostMetrics> GetVirtualHost(const std::string_view &vhost_name)
@@ -32,7 +32,7 @@ namespace api
 
 	std::map<uint32_t, std::shared_ptr<mon::ApplicationMetrics>> GetApplicationList(const std::shared_ptr<mon::HostMetrics> &vhost)
 	{
-		return std::move(vhost->GetApplicationMetricsList());
+		return vhost->GetApplicationMetricsList();
 	}
 
 	std::shared_ptr<mon::ApplicationMetrics> GetApplication(const std::shared_ptr<mon::HostMetrics> &vhost, const std::string_view &app_name)
@@ -54,7 +54,7 @@ namespace api
 
 	std::map<uint32_t, std::shared_ptr<mon::StreamMetrics>> GetStreamList(const std::shared_ptr<mon::ApplicationMetrics> &application)
 	{
-		return std::move(application->GetStreamMetricsMap());
+		return application->GetStreamMetricsMap();
 	}
 
 	std::shared_ptr<mon::StreamMetrics> GetStream(const std::shared_ptr<mon::ApplicationMetrics> &application, const std::string_view &stream_name, std::vector<std::shared_ptr<mon::StreamMetrics>> *output_streams)

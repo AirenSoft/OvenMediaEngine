@@ -170,7 +170,7 @@ namespace cmn
 
 		ov::String ToString() const
 		{
-			return std::move(GetStringExpr());
+			return GetStringExpr();
 		}
 
 	private:

@@ -156,7 +156,7 @@ namespace ov
 				break;
 		}
 
-		return std::move(object);
+		return object;
 	}
 
 	bool Url::PushBackQueryKey(const ov::String &key)

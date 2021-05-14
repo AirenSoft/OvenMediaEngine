@@ -264,7 +264,7 @@ namespace api
 				response.append(item.GetName().CStr());
 			}
 
-			return std::move(response);
+			return response;
 		}
 
 		ApiResponse OutputProfilesController::OnGetOutputProfile(const std::shared_ptr<http::svr::HttpConnection> &client,
@@ -277,7 +277,7 @@ namespace api
 			{
 				if (profile_name == profile.GetName().CStr())
 				{
-					return std::move(profile.ToJson());
+					return profile.ToJson();
 				}
 			}
 
@@ -338,7 +338,7 @@ namespace api
 
 				cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
 
-				return std::move(value);
+				return value;
 			}
 
 			return error;

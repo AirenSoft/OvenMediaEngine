@@ -119,6 +119,6 @@ namespace ov
 				break;
 		}
 
-		return std::move(stat);
+		return stat;
 	}
 }  // namespace ov

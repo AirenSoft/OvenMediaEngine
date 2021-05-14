@@ -620,7 +620,7 @@ private:
 
 			_data_buffer[plane] = data;
 
-			return std::move(data);
+			return data;
 		}
 
 		return item->second;

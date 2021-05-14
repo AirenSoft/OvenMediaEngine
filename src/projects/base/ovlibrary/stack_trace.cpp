@@ -25,7 +25,7 @@ namespace ov
 
 	String StackTrace::GetStackTrace(int line_count)
 	{
-		return std::move(GetStackTraceInternal(2, line_count));
+		return GetStackTraceInternal(2, line_count);
 	}
 
 	bool StackTrace::ParseLinuxStyleLine(char *line, ParseResult *parse_result)
@@ -341,7 +341,7 @@ namespace ov
 
 		::free(symbol_list);
 
-		return std::move(log);
+		return log;
 	}
 
 	void StackTrace::WriteStackTrace(std::ofstream &stream)

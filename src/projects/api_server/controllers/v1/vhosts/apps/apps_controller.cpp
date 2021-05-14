@@ -174,14 +174,14 @@ namespace api
 				response.append(app->GetName().GetAppName().CStr());
 			}
 
-			return std::move(response);
+			return response;
 		}
 
 		ApiResponse AppsController::OnGetApp(const std::shared_ptr<http::svr::HttpConnection> &client,
 											 const std::shared_ptr<mon::HostMetrics> &vhost,
 											 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			return std::move(conv::JsonFromApplication(app));
+			return conv::JsonFromApplication(app);
 		}
 
 		void OverwriteJson(const Json::Value &from, Json::Value *to)
@@ -291,7 +291,7 @@ namespace api
 				{
 					auto app = GetApplication(vhost, app_config.GetName().CStr());
 
-					return std::move(conv::JsonFromApplication(app));
+					return conv::JsonFromApplication(app);
 				}
 			}
 

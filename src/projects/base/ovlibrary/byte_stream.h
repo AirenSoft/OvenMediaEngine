@@ -100,7 +100,7 @@ namespace ov
 
 			if (Peek<T>(&value) == sizeof(T))
 			{
-				return std::move(value);
+				return value;
 			}
 
 			return T();

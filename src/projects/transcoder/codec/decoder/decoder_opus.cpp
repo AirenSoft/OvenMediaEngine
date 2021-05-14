@@ -258,7 +258,7 @@ std::shared_ptr<MediaFrame> DecoderOPUS::RecvBuffer(TranscodeResult *result)
 		auto obj = _output_buffer.Dequeue();
 		if (obj.has_value())
 		{
-			return std::move(obj.value());
+			return obj.value();
 		}
 	}
 

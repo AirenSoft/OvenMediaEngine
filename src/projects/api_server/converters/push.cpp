@@ -133,7 +133,7 @@ namespace api
 				}
 			}
 
-			return std::move(push);
+			return push;
 		}
 
 		Json::Value JsonFromPush(const std::shared_ptr<info::Push> &push)
@@ -157,7 +157,7 @@ namespace api
 			SetTimestamp(response, "finishTime", push->GetPushStopTime());
 			SetTimestamp(response, "createdTime", push->GetCreatedTime());
 
-			return std::move(response);
+			return response;
 		}	
 
 	}  // namespace conv
