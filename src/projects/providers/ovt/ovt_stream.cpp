@@ -7,6 +7,9 @@
 #include "ovt_stream.h"
 #include "ovt_provider.h"
 
+#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
+#include <modules/bitstream/aac/aac_specific_config.h>
+
 #define OV_LOG_TAG "OvtStream"
 
 namespace pvd
@@ -151,6 +154,11 @@ namespace pvd
 		}
 
 		ReleasePacketizer();
+
+		if(_client_socket != nullptr)
+		{
+			_client_socket->Close();
+		}
 	
 		return pvd::PullStream::Stop();
 	}
@@ -349,6 +357,36 @@ namespace pvd
 				ov::String extra_data_base64 = json_track["extra_data"].asString().c_str();
 				auto extra_data = ov::Base64::Decode(extra_data_base64);
 				new_track->SetCodecExtradata(extra_data);
+
+				if(new_track->GetCodecId() == cmn::MediaCodecId::H264)
+				{
+					AVCDecoderConfigurationRecord config;
+					if (!AVCDecoderConfigurationRecord::Parse(extra_data->GetDataAs<uint8_t>(), extra_data->GetLength(), config))
+					{
+						logte("Could not parse AVCDecoderConfigurationRecord");
+						return false;
+					}
+
+					if (config.NumOfSPS() <= 0 || config.NumOfPPS() <= 0)
+					{
+						logte("There is no SPS/PPS in the AVCDecoderConfigurationRecord");
+						return false;
+					}
+					
+					auto [sps_pps_data, frag_header] = config.GetSpsPpsAsAnnexB(4);
+					new_track->SetH264SpsPpsAnnexBFormat(sps_pps_data, frag_header);
+				}
+				else if(new_track->GetCodecId() == cmn::MediaCodecId::Aac)
+				{
+					AACSpecificConfig config;
+					if (!AACSpecificConfig::Parse(extra_data->GetDataAs<uint8_t>(), extra_data->GetLength(), config))
+					{
+						logte("Could not parse AacSpecifiConfig");
+						return false;
+					}
+
+					new_track->SetAacConfig(std::make_shared<AACSpecificConfig>(config));
+				}
 			}
 
 			// video or audio
@@ -377,10 +415,8 @@ namespace pvd
 				}
 
 				new_track->SetSampleRate(json_audio_track["samplerate"].asUInt());
-				new_track->GetSample().SetFormat(
-						static_cast<cmn::AudioSample::Format>(json_audio_track["sampleFormat"].asInt()));
-				new_track->GetChannel().SetLayout(
-						static_cast<cmn::AudioChannel::Layout>(json_audio_track["layout"].asUInt()));
+				new_track->GetSample().SetFormat(static_cast<cmn::AudioSample::Format>(json_audio_track["sampleFormat"].asInt()));
+				new_track->GetChannel().SetLayout(static_cast<cmn::AudioChannel::Layout>(json_audio_track["layout"].asUInt()));
 			}
 
 			AddTrack(new_track);
