@@ -35,9 +35,15 @@ namespace http
 			void SetBlockingMode(ov::BlockingMode mode);
 			ov::BlockingMode GetBlockingMode() const;
 
-			// timeout_in_msec == 0 means Infinite
-			void SetConnectionTimeout(int timeout_in_msec);
+			// timeout_msec == 0 means Infinite
+			void SetConnectionTimeout(int timeout_msec);
 			int GetConnectionTimeout() const;
+
+			// timeout_msec == 0 means Infinite
+			void SetRecvTimeout(int timeout_msec);
+			int GetRecvTimeout() const;
+
+			void SetTimeout(int timeout_msec);
 
 			void SetMethod(http::Method method);
 			http::Method GetMethod() const;
@@ -57,18 +63,18 @@ namespace http
 			void Request(const ov::String &url, ResponseHandler response_handler);
 
 		protected:
-			std::shared_ptr<const ov::Error> PrepareForRequest(const ov::String &url);
+			std::shared_ptr<const ov::Error> PrepareForRequest(const ov::String &url, ov::SocketAddress *address);
 			void SendRequest();
 			// Use this API when blocking mode
 			void RecvResponse();
-			std::shared_ptr<ov::Error> ProcessData(const std::shared_ptr<const ov::Data> &data);
+			std::shared_ptr<const ov::Error> ProcessData(const std::shared_ptr<const ov::Data> &data);
 
 			void PostProcess();
 
 			//--------------------------------------------------------------------
 			// Implementation of SocketAsyncInterface
 			//--------------------------------------------------------------------
-			void OnConnected() override;
+			void OnConnected(const std::shared_ptr<const ov::SocketError> &error) override;
 			void OnReadable() override;
 			void OnClosed() override;
 
@@ -79,7 +85,9 @@ namespace http
 
 			ov::BlockingMode _blocking_mode = ov::BlockingMode::Blocking;
 			// Default: 10 seconds
-			int _timeout_in_msec = 10 * 1000;
+			int _connection_timeout_msec = 10 * 1000;
+			// Default: 60 seconds
+			int _recv_timeout_msec = 60 * 1000;
 			http::Method _method = http::Method::Get;
 
 			HttpResponseParser _parser;

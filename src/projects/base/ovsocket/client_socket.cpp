@@ -127,8 +127,12 @@ namespace ov
 			MakeNonBlockingInternal(GetSharedPtrAs<SocketAsyncInterface>(), false);
 	}
 
-	void ClientSocket::OnConnected()
+	void ClientSocket::OnConnected(const std::shared_ptr<const SocketError> &error)
 	{
+		// Because ClientSocket is created by accepting from ServerSocket rather than actually connecting,
+		// there should be no connection error.
+		OV_ASSERT2(error == nullptr);
+
 		auto server_socket = _server_socket.lock();
 
 		if (server_socket == nullptr)

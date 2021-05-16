@@ -93,10 +93,10 @@ namespace ov
 	class ConnectHelper : public SocketAsyncInterface
 	{
 	public:
-		void OnConnected() override
+		void OnConnected(const std::shared_ptr<const SocketError> &error) override
 		{
-			logtd("Connected");
-			_connected_event.SetEvent();
+			_epoll_event.SetEvent();
+			_error = error;
 		}
 
 		void OnReadable() override
@@ -109,11 +109,17 @@ namespace ov
 
 		bool WaitForConnect(int timeout)
 		{
-			return _connected_event.Wait(timeout);
+			return _epoll_event.Wait(timeout);
+		}
+
+		std::shared_ptr<const SocketError> GetError() const
+		{
+			return _error;
 		}
 
 	protected:
-		Event _connected_event{true};
+		Event _epoll_event{true};
+		std::shared_ptr<const SocketError> _error;
 	};
 
 	Socket::Socket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker)
@@ -524,12 +530,39 @@ namespace ov
 		return SocketWrapper();
 	}
 
-	std::shared_ptr<Error> Socket::Connect(const SocketAddress &endpoint, int timeout_msec)
+	std::shared_ptr<const SocketError> Socket::DoConnectionCallback(const std::shared_ptr<const ov::SocketError> &error)
+	{
+		if (_blocking_mode == BlockingMode::Blocking)
+		{
+			if (error == nullptr)
+			{
+				SetState(SocketState::Connected);
+			}
+			else
+			{
+				CloseWithState(SocketState::Error);
+			}
+
+			return error;
+		}
+
+		OnConnectedEvent(error);
+
+		return nullptr;
+	}
+
+	std::shared_ptr<const SocketError> Socket::Connect(const SocketAddress &endpoint, int timeout_msec)
 	{
 		OV_ASSERT2(_socket.IsValid());
-		CHECK_STATE(== SocketState::Created, Error::CreateError(EINVAL, "Invalid state: %d", static_cast<int>(_state)));
 
-		std::shared_ptr<Error> error;
+		CHECK_STATE(== SocketState::Created, DoConnectionCallback(SocketError::CreateError(EINVAL, "Invalid state: %d", static_cast<int>(_state))));
+
+		if (endpoint.IsValid() == false)
+		{
+			return DoConnectionCallback(SocketError::CreateError("Invalid address: %s", endpoint.ToString().CStr()));
+		}
+
+		std::shared_ptr<const SocketError> socket_error;
 		std::shared_ptr<ConnectHelper> connect_helper;
 
 		// To set connection timeout
@@ -547,7 +580,7 @@ namespace ov
 							(SetBlockingInternal(BlockingMode::NonBlocking) == false) ||
 							(AddToWorker(true) == false))
 						{
-							return Error::CreateError("Socket cannot be changed to nonblocking mode: %s", ToString().CStr());
+							return DoConnectionCallback(SocketError::CreateError("Socket cannot be changed to nonblocking mode: %s", ToString().CStr()));
 						}
 
 						connect_helper = std::make_shared<ConnectHelper>();
@@ -573,56 +606,54 @@ namespace ov
 								(DeleteFromWorker() == false) ||
 								(SetBlockingInternal(BlockingMode::Blocking) == false))
 							{
-								return Error::CreateError("Socket cannot be changed to blocking mode: %s", ToString().CStr());
+								return DoConnectionCallback(SocketError::CreateError("Socket cannot be changed to blocking mode: %s", ToString().CStr()));
 							}
 						}
 					}
 
-					SetState(SocketState::Connected);
-					return nullptr;
+					return DoConnectionCallback(nullptr);
 				}
-
-				error = Error::CreateErrorFromErrno();
 
 				if (result < 0)
 				{
+					auto error = Error::CreateErrorFromErrno();
+
 					// Check timeout
 					if (error->GetCode() == EINPROGRESS)
 					{
 						if (_blocking_mode == BlockingMode::NonBlocking)
 						{
 							// Don't wait for the connection if this socket is non-blocking mode
+							_worker->EnqueueToCheckConnectionTimeOut(GetSharedPtr(), timeout_msec);
 							return nullptr;
 						}
 
 						// Blocking mode
 						if (connect_helper->WaitForConnect(timeout_msec))
 						{
-							// Restore blocking state
-							if (
-								(DeleteFromWorker() == false) ||
-								(SetBlockingInternal(BlockingMode::Blocking) == false))
-							{
-								error = Error::CreateError("Socket cannot be changed to blocking mode: %s", ToString().CStr());
-							}
-							else
-							{
-								SetState(SocketState::Connected);
-								error = nullptr;
-							}
+							socket_error = connect_helper->GetError();
 						}
 						else
 						{
 							// Timed out
-							int socket_error;
-							GetSockOpt(SO_ERROR, &socket_error);
+							int so_error;
+							GetSockOpt(SO_ERROR, &so_error);
 
-							error = Error::CreateError(socket_error, "Connection timed out (%d ms elapsed, SO_ERROR: %d)", timeout_msec, socket_error);
-
-							// Timed out/Error occurred
-							CloseInternal();
-							SetState(SocketState::Error);
+							socket_error = SocketError::CreateError(so_error, "Connection timed out (%d ms elapsed, SO_ERROR: %d)", timeout_msec, so_error);
+							logad("%s", socket_error->ToString().CStr());
 						}
+
+						// Restore blocking state
+						if (
+							(DeleteFromWorker() == false) ||
+							(SetBlockingInternal(BlockingMode::Blocking) == false))
+						{
+							socket_error = (socket_error == nullptr) ? SocketError::CreateError("Socket cannot be changed to blocking mode: %s", ToString().CStr()) : socket_error;
+						}
+					}
+					else
+					{
+						socket_error = SocketError::CreateError(error);
 					}
 				}
 
@@ -634,21 +665,20 @@ namespace ov
 				{
 					if (::srt_connect(GetNativeHandle(), endpoint.Address(), endpoint.AddressLength()) != SRT_ERROR)
 					{
-						SetState(SocketState::Connected);
-						return nullptr;
+						return DoConnectionCallback(nullptr);
 					}
 				}
 
-				error = Error::CreateErrorFromSrt();
+				socket_error = SocketError::CreateError(Error::CreateErrorFromSrt());
 
 				break;
 
 			default:
-				error = Error::CreateError("Socket", "Not implemented");
+				socket_error = SocketError::CreateError("Not implemented");
 				break;
 		}
 
-		return error;
+		return DoConnectionCallback(socket_error);
 	}
 
 	bool Socket::SetRecvTimeout(const timeval &tv)
@@ -730,6 +760,11 @@ namespace ov
 		return true;
 	}
 
+	bool Socket::IsClosable() const
+	{
+		return OV_CHECK_FLAG(static_cast<std::underlying_type<SocketState>::type>(_state), SOCKET_STATE_CLOSABLE);
+	}
+
 	SocketState Socket::GetState() const
 	{
 		return _state;
@@ -755,6 +790,34 @@ namespace ov
 		return _stream_id;
 	}
 
+	bool Socket::OnConnectedEvent(const std::shared_ptr<const SocketError> &error)
+	{
+		if (error == nullptr)
+		{
+			SetState(SocketState::Connected);
+
+			if (_callback != nullptr)
+			{
+				_connection_event_fired = true;
+				_callback->OnConnected(error);
+			}
+		}
+		else
+		{
+			auto callback = std::move(_callback);
+
+			CloseWithState(SocketState::Error);
+
+			if (callback != nullptr)
+			{
+				_connection_event_fired = true;
+				callback->OnConnected(error);
+			}
+		}
+
+		return true;
+	}
+
 	Socket::DispatchResult Socket::DispatchEventInternal(DispatchCommand &command)
 	{
 		SOCKET_PROFILER_INIT();
@@ -773,12 +836,12 @@ namespace ov
 		switch (command.type)
 		{
 			case DispatchCommand::Type::Connected:
-				if (_callback != nullptr)
+				if (OnConnectedEvent(nullptr))
 				{
-					_connection_event_fired = true;
-					_callback->OnConnected();
+					return DispatchResult::Dispatched;
 				}
-				return DispatchResult::Dispatched;
+
+				return DispatchResult::Error;
 
 			case DispatchCommand::Type::Send:
 				sent_bytes = SendInternal(data);
@@ -794,28 +857,25 @@ namespace ov
 			case DispatchCommand::Type::WaitForHalfClose:
 				return WaitForHalfClose();
 
-			case DispatchCommand::Type::Close:
+			case DispatchCommand::Type::Close: {
 				logad("Trying to close the socket...");
 
 				// Remove the socket from epoll
-				if (_worker->ReleaseSocket(this->GetSharedPtr()))
-				{
-					// CloseInternal() will be called in ReleaseSocket()
-					return DispatchResult::Dispatched;
-				}
+				auto result = _worker->DeleteFromEpoll(this->GetSharedPtr());
 
-				logae("Could not release socket from worker");
-				if (CloseInternal())
+				CloseInternal();
+
+				if (result == false)
 				{
-					SetState(SocketState::Closed);
-				}
-				else
-				{
+					OV_ASSERT2(false);
+					logae("Could not delete from epoll");
 					SetState(SocketState::Error);
+					return DispatchResult::Error;
 				}
 
-				OV_ASSERT2(false);
-				return DispatchResult::Error;
+				SetState(command.new_state);
+				return DispatchResult::Dispatched;
+			}
 		}
 
 		if (sent_bytes == static_cast<ssize_t>(command.data->GetLength()))
@@ -906,6 +966,7 @@ namespace ov
 					{
 						// Ignore errors that occurred during close
 						result = DispatchResult::Dispatched;
+						continue;
 					}
 				}
 
@@ -1158,22 +1219,7 @@ namespace ov
 		return total_sent;
 	}
 
-	void Socket::OnDataWritable()
-	{
-		logad("Socket is ready to write");
-
-		if (GetState() == SocketState::Connecting)
-		{
-			SetState(SocketState::Connected);
-
-			if (_callback != nullptr)
-			{
-				_callback->OnConnected();
-			}
-		}
-	}
-
-	void Socket::OnDataReceived()
+	void Socket::OnDataAvailableEvent()
 	{
 		logad("Socket is ready to read");
 
@@ -1346,7 +1392,7 @@ namespace ov
 		return SendTo(address, (data == nullptr) ? nullptr : std::make_shared<Data>(data, length));
 	}
 
-	std::shared_ptr<Error> Socket::Recv(std::shared_ptr<Data> &data, bool non_block)
+	std::shared_ptr<const SocketError> Socket::Recv(std::shared_ptr<Data> &data, bool non_block)
 	{
 		OV_ASSERT2(data != nullptr);
 		OV_ASSERT(data->GetCapacity() > 0, "Must specify a data size in advance using Reserve().");
@@ -1367,11 +1413,11 @@ namespace ov
 		return nullptr;
 	}
 
-	std::shared_ptr<Error> Socket::Recv(void *data, size_t length, size_t *received_length, bool non_block)
+	std::shared_ptr<const SocketError> Socket::Recv(void *data, size_t length, size_t *received_length, bool non_block)
 	{
 		if (GetState() == SocketState::Closed)
 		{
-			return Error::CreateError("Socket", "Socket is closed");
+			return SocketError::CreateError("Socket is closed");
 		}
 
 		OV_ASSERT2(data != nullptr);
@@ -1380,7 +1426,7 @@ namespace ov
 		logap("Trying to read from the socket...");
 
 		ssize_t read_bytes = -1;
-		std::shared_ptr<Error> error;
+		std::shared_ptr<SocketError> socket_error;
 
 		switch (GetType())
 		{
@@ -1391,13 +1437,25 @@ namespace ov
 
 				if (read_bytes <= 0L)
 				{
-					error = Error::CreateErrorFromErrno();
+					auto error = Error::CreateErrorFromErrno();
 
 					if (error->GetCode() == EAGAIN)
 					{
-						// Timed out
-						read_bytes = 0L;
-						error = nullptr;
+						if (_blocking_mode == BlockingMode::NonBlocking)
+						{
+							// Timed out
+							read_bytes = 0L;
+							// Actually, it is not an error
+							socket_error = nullptr;
+						}
+						else
+						{
+							socket_error = SocketError::CreateError(error->GetCode(), "Receive timed out: %s", error->GetMessage().CStr());
+						}
+					}
+					else
+					{
+						socket_error = SocketError::CreateError(error);
 					}
 				}
 
@@ -1409,13 +1467,18 @@ namespace ov
 
 				if (read_bytes <= 0L)
 				{
-					error = Error::CreateErrorFromSrt();
+					auto error = Error::CreateErrorFromSrt();
 
 					if (error->GetCode() == SRT_EASYNCRCV)
 					{
 						// Timed out
 						read_bytes = 0L;
-						error = nullptr;
+						// Actually, it is not an error
+						socket_error = nullptr;
+					}
+					else
+					{
+						socket_error = SocketError::CreateError(error->GetCode(), "Receive timed out (SRT): %s", error->GetMessage().CStr());
 					}
 				}
 
@@ -1426,25 +1489,24 @@ namespace ov
 				break;
 		}
 
-		if (error != nullptr)
+		if (socket_error != nullptr)
 		{
 			if (
 				((_socket.GetType() != SocketType::Srt) && (read_bytes == 0L)) ||
-				((_socket.GetType() == SocketType::Srt) && (error->GetCode() == SRT_ECONNLOST)))
+				((_socket.GetType() == SocketType::Srt) && (socket_error->GetCode() == SRT_ECONNLOST)))
 			{
-				error = Error::CreateError("Socket", "Remote is disconnected");
+				socket_error = SocketError::CreateError("Remote is disconnected");
 				*received_length = 0UL;
 
-				Close();
-				SetState(SocketState::Disconnected);
+				CloseWithState(SocketState::Disconnected);
 
-				return error;
+				return socket_error;
 			}
 			else if (read_bytes < 0L)
 			{
 				if (_socket.GetType() != SocketType::Srt)
 				{
-					switch (error->GetCode())
+					switch (socket_error->GetCode())
 					{
 						// Errors that can occur under normal circumstances do not output
 						case EBADF:
@@ -1459,25 +1521,30 @@ namespace ov
 							// Transport endpoint is not connected
 							break;
 
+						case EAGAIN:
+							// Timed out
+							OV_ASSERT2(_blocking_mode == BlockingMode::Blocking);
+							break;
+
 						default:
 							logae("An error occurred while read data: %s\nStack trace: %s",
-								  error->ToString().CStr(),
+								  socket_error->ToString().CStr(),
 								  StackTrace::GetStackTrace().CStr());
 					}
 
-					SetState(SocketState::Error);
+					CloseWithState(SocketState::Error);
 				}
 				else
 				{
-					switch (error->GetCode())
+					switch (socket_error->GetCode())
 					{
 						default:
 							logae("An error occurred while read data: %s\nStack trace: %s",
-								  error->ToString().CStr(),
+								  socket_error->ToString().CStr(),
 								  StackTrace::GetStackTrace().CStr());
 					}
 
-					SetState(SocketState::Error);
+					CloseWithState(SocketState::Error);
 				}
 			}
 		}
@@ -1487,16 +1554,16 @@ namespace ov
 			*received_length = static_cast<size_t>(read_bytes);
 		}
 
-		return error;
+		return socket_error;
 	}
 
-	std::shared_ptr<Error> Socket::RecvFrom(std::shared_ptr<Data> &data, SocketAddress *address, bool non_block)
+	std::shared_ptr<const SocketError> Socket::RecvFrom(std::shared_ptr<Data> &data, SocketAddress *address, bool non_block)
 	{
 		OV_ASSERT2(_socket.IsValid());
 		OV_ASSERT2(data != nullptr);
 		OV_ASSERT2(data->GetCapacity() > 0);
 
-		std::shared_ptr<Error> error;
+		std::shared_ptr<SocketError> socket_error;
 
 		switch (GetType())
 		{
@@ -1514,14 +1581,18 @@ namespace ov
 
 				if (read_bytes < 0L)
 				{
-					error = Error::CreateErrorFromErrno();
+					auto error = Error::CreateErrorFromErrno();
 
 					data->SetLength(0L);
 
 					if (error->GetCode() == EAGAIN)
 					{
 						// Timed out
-						error = nullptr;
+						socket_error = nullptr;
+					}
+					else
+					{
+						socket_error = SocketError::CreateError(error);
 					}
 				}
 				else
@@ -1541,25 +1612,25 @@ namespace ov
 			case SocketType::Srt:
 				// Does not support RecvFrom() for SRT
 				OV_ASSERT2(false);
-				error = Error::CreateError("Socket", "RecvFrom() is not supported operation while using SRT");
+				socket_error = SocketError::CreateError("RecvFrom() is not supported operation while using SRT");
 				break;
 
 			case SocketType::Unknown:
 				OV_ASSERT2(false);
-				error = Error::CreateError("Socket", "Unknown socket type");
+				socket_error = SocketError::CreateError("Unknown socket type");
 				break;
 		}
 
-		if (error != nullptr)
+		if (socket_error != nullptr)
 		{
 			logae("An error occurred while read data: %s\nStack trace: %s",
-				  error->ToString().CStr(),
+				  socket_error->ToString().CStr(),
 				  StackTrace::GetStackTrace().CStr());
 
-			SetState(SocketState::Error);
+			CloseWithState(SocketState::Error);
 		}
 
-		return error;
+		return socket_error;
 	}
 
 	bool Socket::Flush()
@@ -1603,13 +1674,16 @@ namespace ov
 			case BlockingMode::Blocking: {
 				bool result = true;
 
-				if (HalfClose() == DispatchResult::Error)
+				if (GetState() != SocketState::Error)
 				{
-					result = false;
-				}
-				if (WaitForHalfClose() == DispatchResult::Error)
-				{
-					result = false;
+					if (HalfClose() == DispatchResult::Error)
+					{
+						result = false;
+					}
+					if (WaitForHalfClose() == DispatchResult::Error)
+					{
+						result = false;
+					}
 				}
 
 				// Close regardless of result
@@ -1642,13 +1716,13 @@ namespace ov
 					logad("Enqueuing close command");
 					_has_close_command = true;
 
-					if (GetState() != SocketState::Disconnected)
+					if ((GetState() != SocketState::Disconnected) && (GetState() != SocketState::Error))
 					{
 						_dispatch_queue.emplace_back(DispatchCommand::Type::HalfClose);
 						_dispatch_queue.emplace_back(DispatchCommand::Type::WaitForHalfClose);
 					}
 
-					_dispatch_queue.emplace_back(DispatchCommand::Type::Close);
+					_dispatch_queue.emplace_back(DispatchCommand::Type::Close, new_state);
 				}
 				else
 				{
@@ -1657,7 +1731,7 @@ namespace ov
 			}
 		}
 
-		return DispatchEvents() != DispatchResult::Error;
+		return (DispatchEvents() != DispatchResult::Error);
 	}
 
 	bool Socket::Close()

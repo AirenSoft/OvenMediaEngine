@@ -15,10 +15,6 @@ namespace ov
 {
 	class SocketPool;
 
-	class SocketEventInterface
-	{
-	};
-
 	class SocketPoolWorker : public EnableSharedFromThis<SocketPoolWorker>
 	{
 	protected:
@@ -52,6 +48,8 @@ namespace ov
 
 		bool ReleaseSocket(const std::shared_ptr<Socket> &socket);
 
+		String ToString() const;
+
 	protected:
 		SocketType GetType() const;
 
@@ -77,26 +75,33 @@ namespace ov
 		bool PrepareEpoll();
 
 		void MergeSocketList();
+
 		void GarbageCollection();
+
+		void CallbackTimedOutConnections();
 
 		void ThreadProc();
 
 		bool AddToEpoll(const std::shared_ptr<Socket> &socket);
-		int EpollWait(int timeout_in_msec = Infinite);
+		int EpollWait(int timeout_msec = Infinite);
 		bool DeleteFromEpoll(const std::shared_ptr<Socket> &socket);
 
 		void ConvertSrtEventToEpollEvent(const SRT_EPOLL_EVENT &srt_event, epoll_event *event);
 
 		void EnqueueToDispatchLater(const std::shared_ptr<Socket> &socket);
+		void EnqueueToCheckConnectionTimeOut(const std::shared_ptr<Socket> &socket, int timeout_msec);
 
+	protected:
 		std::shared_ptr<SocketPool> _pool;
 
 		// The number of sockets is determined in advance and managed separately for processing
 		// Because excessive concentration may not be properly distributed to the worker,
 		// the number of sockets can be specified in advance so that they can be distributed properly.
 		std::atomic<int> _socket_count{0};
+
 		// key: native handle of SocketWrapper
 		std::map<int, std::shared_ptr<Socket>> _socket_map;
+
 		// A list of sockets created/deleted from AttachToWorker()/RemoveFromEpoll()
 		//
 		// If RemoveFromEpoll() is called in thread #1 immediately after EpollWait() is called in thread #2,
@@ -109,6 +114,11 @@ namespace ov
 		// Socket failed to send data for too long must be forced to shut down in the future
 		ov::StopWatch _gc_interval;
 		std::map<int, std::shared_ptr<Socket>> _gc_candidates;
+
+		// A queue for handling errors such as connection timeout in nonblocking mode.
+		inline static ov::DelayQueue _connection_callback_queue;
+		std::mutex _connection_timed_out_queue_mutex;
+		std::deque<std::shared_ptr<Socket>> _connection_timed_out_queue;
 
 		// Common variables
 		std::thread _epoll_thread;

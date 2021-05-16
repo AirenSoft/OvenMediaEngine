@@ -37,7 +37,7 @@ namespace ov
 		//--------------------------------------------------------------------
 		// Implementation of SocketAsyncInterface
 		//--------------------------------------------------------------------
-		void OnConnected() override;
+		void OnConnected(const std::shared_ptr<const SocketError> &error) override;
 		void OnReadable() override;
 		void OnClosed() override;
 

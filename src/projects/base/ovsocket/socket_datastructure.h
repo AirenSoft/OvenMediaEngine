@@ -16,6 +16,7 @@
 #include <functional>
 
 #include "epoll_wrapper.h"
+#include "socket_error.h"
 
 #define OV_SOCKET_ADD_FLAG_IF(list, x, flag) \
 	if (OV_CHECK_FLAG(x, flag))              \
@@ -97,7 +98,7 @@ namespace ov
 		// Connection established
 		Connected = 5 | SOCKET_STATE_CLOSABLE,
 		// The connection with Peer has been lost (However, we can read data from the kernel socket buffer if available)
-		Disconnected = 6 | SOCKET_STATE_CLOSABLE,
+		Disconnected = 6,
 		// An error occurred
 		Error = 7,
 	};
@@ -169,6 +170,14 @@ namespace ov
 	}
 
 	class SocketAddress;
+
+	// For SocketPoolWorker callback
+	class SocketPoolEventInterface
+	{
+	public:
+		virtual bool OnConnectedEvent(const std::shared_ptr<const SocketError> &error) = 0;
+		virtual void OnDataAvailableEvent() = 0;
+	};
 
 	// For TCP sockets
 	class ServerSocket;

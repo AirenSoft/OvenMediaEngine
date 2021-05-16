@@ -46,12 +46,22 @@ namespace http
 
 		void HttpClient::SetConnectionTimeout(int timeout_in_msec)
 		{
-			_timeout_in_msec = timeout_in_msec;
+			_connection_timeout_msec = timeout_in_msec;
 		}
 
 		int HttpClient::GetConnectionTimeout() const
 		{
-			return _timeout_in_msec;
+			return _connection_timeout_msec;
+		}
+
+		void HttpClient::SetRecvTimeout(int timeout_msec)
+		{
+			_recv_timeout_msec = timeout_msec;
+		}
+
+		int HttpClient::GetRecvTimeout() const
+		{
+			return _recv_timeout_msec;
 		}
 
 		void HttpClient::SetMethod(http::Method method)
@@ -118,7 +128,7 @@ namespace http
 			return _parser.GetHeaders();
 		}
 
-		std::shared_ptr<const ov::Error> HttpClient::PrepareForRequest(const ov::String &url)
+		std::shared_ptr<const ov::Error> HttpClient::PrepareForRequest(const ov::String &url, ov::SocketAddress *address)
 		{
 			if (_requested)
 			{
@@ -155,7 +165,21 @@ namespace http
 			}
 			else
 			{
-				return ov::Error::CreateError("HTTP", "Unknown scheme: %s, URL: %s", scheme.CStr(), url.CStr());
+				return ov::Error::CreateError("HTTP", "Unknown scheme: %s, URL: %s", parsed_url->Scheme().CStr(), url.CStr());
+			}
+
+			auto port = parsed_url->Port();
+			if (port == 0)
+			{
+				port = is_https ? 443 : 80;
+				parsed_url->SetPort(port);
+			}
+
+			auto socket_address = ov::SocketAddress(parsed_url->Host(), port);
+
+			if (socket_address.IsValid() == false)
+			{
+				return ov::Error::CreateError("HTTP", "Invalid address: %s:%d, URL: %s", parsed_url->Host().CStr(), port, url.CStr());
 			}
 
 			_socket = _socket_pool->AllocSocket();
@@ -170,11 +194,9 @@ namespace http
 				return ov::Error::CreateError("HTTP", "Could not set blocking mode");
 			}
 
-			auto port = parsed_url->Port();
-			if (port == 0)
+			if (address != nullptr)
 			{
-				port = is_https ? 443 : 80;
-				parsed_url->SetPort(port);
+				*address = socket_address;
 			}
 
 			_url = url;
@@ -227,7 +249,7 @@ namespace http
 		{
 			auto socket = _socket;
 			auto data = std::make_shared<ov::Data>();
-			std::shared_ptr<ov::Error> error;
+			std::shared_ptr<const ov::Error> error;
 
 			data->Reserve(HTTP_CLIENT_READ_BUFFER_SIZE);
 
@@ -271,17 +293,25 @@ namespace http
 
 					break;
 				}
+
+				if (_response_body->GetLength() >= _parser.GetContentLength())
+				{
+					// All data received
+					break;
+				}
 			}
 
-			if (_response_handler != nullptr)
+			auto response_handler = _response_handler;
+
+			if (response_handler != nullptr)
 			{
-				_response_handler(_parser.GetStatusCode(), _response_body, error);
+				response_handler(_parser.GetStatusCode(), _response_body, error);
 			}
 
 			CleanupVariables();
 		}
 
-		std::shared_ptr<ov::Error> HttpClient::ProcessData(const std::shared_ptr<const ov::Data> &data)
+		std::shared_ptr<const ov::Error> HttpClient::ProcessData(const std::shared_ptr<const ov::Data> &data)
 		{
 			auto remained = data->GetLength();
 			auto sub_data = data;
@@ -344,7 +374,9 @@ namespace http
 		{
 			std::lock_guard lock_guard(_request_mutex);
 
-			auto error = PrepareForRequest(url);
+			ov::SocketAddress address;
+
+			auto error = PrepareForRequest(url, &address);
 
 			if (error == nullptr)
 			{
@@ -353,15 +385,20 @@ namespace http
 
 				_response_handler = response_handler;
 
-				auto address = ov::SocketAddress(_parsed_url->Host(), _parsed_url->Port());
-
 				logtd("Request an URL: %s (address: %s)...", url.CStr(), address.ToString().CStr());
 
-				error = _socket->Connect(address, _timeout_in_msec);
+				// Convert milliseconds to timeval
+				struct timeval tv = {
+					_recv_timeout_msec / 1000,
+					_recv_timeout_msec % 1000};
+
+				_socket->SetRecvTimeout(tv);
+
+				error = _socket->Connect(address, _connection_timeout_msec);
 
 				if (error != nullptr)
 				{
-					error = ov::Error::CreateError("HTTP", "Could not connect to %s: %s", url.CStr(), error->ToString().CStr());
+					error = ov::Error::CreateError("HTTP", error->GetCode(), "Could not connect to %s: %s", url.CStr(), error->GetMessage().CStr());
 				}
 			}
 
@@ -394,10 +431,24 @@ namespace http
 			}
 		}
 
-		void HttpClient::OnConnected()
+		void HttpClient::OnConnected(const std::shared_ptr<const ov::SocketError> &error)
 		{
-			// Response will be processed in OnReadable()
-			SendRequest();
+			if (error == nullptr)
+			{
+				// Response will be processed in OnReadable()
+				SendRequest();
+			}
+			else
+			{
+				// An error occurred
+				auto response_handler = _response_handler;
+
+				if (response_handler != nullptr)
+				{
+					auto detailed_error = ov::Error::CreateError("HTTP", error->GetCode(), "Could not connect to %s (in callback): %s", _url.CStr(), error->GetMessage().CStr());
+					response_handler(StatusCode::Unknown, nullptr, detailed_error);
+				}
+			}
 		}
 
 		void HttpClient::OnReadable()
