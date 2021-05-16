@@ -7,11 +7,13 @@
 //
 //==============================================================================
 #include "./delay_queue.h"
-#include "./log.h"
-#include "./ovlibrary_private.h"
 
 #include <unistd.h>
+
 #include <thread>
+
+#include "./log.h"
+#include "./ovlibrary_private.h"
 
 namespace ov
 {
@@ -27,24 +29,24 @@ namespace ov
 		Stop();
 	}
 
-	void DelayQueue::Push(const DelayQueueFunction &func, void *parameter, int after)
+	void DelayQueue::Push(const DelayQueueFunction &func, void *parameter, int after_msec)
 	{
 		std::lock_guard<std::mutex> lock(_mutex);
 
 		int64_t index = _index;
 		_index++;
 
-		logtd("Pushing new item: %p (after %d ms)", parameter, after);
+		logtd("Pushing new item: %p (after %d ms)", parameter, after_msec);
 
-		_queue.emplace(index, func, parameter, after);
+		_queue.emplace(index, func, parameter, after_msec);
 
 		logtd("Notifying...");
 		_event.SetEvent();
 	}
 
-	void DelayQueue::Push(const DelayQueueFunction &func, int after)
+	void DelayQueue::Push(const DelayQueueFunction &func, int after_msec)
 	{
-		Push(func, nullptr, after);
+		Push(func, nullptr, after_msec);
 	}
 
 	ssize_t DelayQueue::GetCount() const
@@ -54,17 +56,25 @@ namespace ov
 		return _queue.size();
 	}
 
+	void DelayQueue::Clear()
+	{
+		std::lock_guard<std::mutex> lock(_mutex);
+
+		// empty _queue
+		std::priority_queue<DelayQueueItem>().swap(_queue);
+	}
+
 	bool DelayQueue::Start()
 	{
 		if (_stop == false)
 		{
-			// 이미 실행 중
+			// Already running
 			return false;
 		}
 
 		_stop = false;
 		_thread = std::thread(std::bind(&DelayQueue::DispatchThreadProc, this));
-		pthread_setname_np(_thread.native_handle(), "DelayQueue");
+		::pthread_setname_np(_thread.native_handle(), "DelayQueue");
 
 		return true;
 	}
@@ -73,14 +83,14 @@ namespace ov
 	{
 		if (_stop)
 		{
-			// 이미 중지됨
+			// Already stopped
 			return false;
 		}
 
 		_stop = true;
 		_event.SetEvent();
 
-		if(_thread.joinable())
+		if (_thread.joinable())
 		{
 			_thread.join();
 		}
@@ -94,7 +104,6 @@ namespace ov
 		{
 			if (_queue.empty())
 			{
-				// queue에 아무 것도 없음. 새로운 항목이 Push될 때까지 대기
 				logtd("Queue is empty. Waiting for new item...");
 
 				_event.Wait();
@@ -103,30 +112,29 @@ namespace ov
 			}
 			else
 			{
-				// queue에 들어 있는 첫 번째 항목 처리
+				// Handle the first enqueued item
 				auto first_item = _queue.top();
 
 				if (_event.Wait(first_item.time_point) == false)
 				{
-					// first_item.time_point 만큼 대기 할 때까지, 다른 항목이 Push() 되지 않았음
+					// No other items pushed until waiting for first_item.time_point
 					DelayQueueAction action = first_item.function(first_item.parameter);
 
 					std::lock_guard<std::mutex> lock(_mutex);
-
-					// 처리된 항목은 queue에서 제외
 					_queue.pop();
 
 					if (action == DelayQueueAction::Repeat)
 					{
 						first_item.RecalculateTimePoint();
-
 						_queue.push(first_item);
 					}
 				}
 				else
 				{
-					// first_item.time_point 만큼 대기하던 도중, 다른 항목이 Push() 됨
-					// 새로 Push()된 항목이 더 작은 time_point를 가리키고 있을 수 있으므로, 다시 계산해야 함
+					// Another item was pushed while waiting for first_item.time_point
+
+					// Newly pushed items may be pointing to a time_point smaller than first_item.time_point,
+					// which needs to be recalculated
 					logtd("Another item is pushed while waiting the condition");
 				}
 			}

@@ -73,6 +73,8 @@ namespace ov
 			return false;
 		}
 
+		_connection_callback_queue.Clear();
+
 		_stop_epoll_thread = true;
 
 		if (_epoll_thread.joinable())
@@ -85,6 +87,8 @@ namespace ov
 		_sockets_to_insert.Clear();
 		_sockets_to_dispatch.clear();
 		_sockets_to_delete.Clear();
+
+		_connection_timed_out_queue.clear();
 
 		_gc_candidates.clear();
 
@@ -228,20 +232,41 @@ namespace ov
 		}
 	}
 
+	void SocketPoolWorker::CallbackTimedOutConnections()
+	{
+		_connection_timed_out_queue_mutex.lock();
+		auto timed_out_queue = std::move(_connection_timed_out_queue);
+		_connection_timed_out_queue_mutex.unlock();
+
+		auto socket_error = SocketError::CreateError("Connection timed out (by worker)");
+
+		for (auto socket : timed_out_queue)
+		{
+			if (socket->GetState() == SocketState::Connecting)
+			{
+				socket->OnConnectedEvent(socket_error);
+			}
+		}
+	}
+
 	void SocketPoolWorker::ThreadProc()
 	{
+		_connection_callback_queue.Start();
+
 		_gc_interval.Start();
 
 		while (_stop_epoll_thread == false)
 		{
-			int count = EpollWait(200);
+			int count = EpollWait(100);
 
 			if (count < 0)
 			{
-				logae("An error occurred");
+				logae("An error occurred - EpollWait()");
 			}
 			else
 			{
+				CallbackTimedOutConnections();
+
 				for (int index = 0; index < count; index++)
 				{
 					auto &event = _epoll_events[index];
@@ -256,7 +281,11 @@ namespace ov
 					}
 
 					auto socket = socket_data->GetSharedPtr();
+					auto event_callback = socket_data->GetSharedPtrAs<SocketPoolEventInterface>();
 					auto events = event.events;
+
+					OV_ASSERT2(socket != nullptr);
+					OV_ASSERT2(event_callback != nullptr);
 
 					logad("Epoll event #%d (total: %d): %s, events: %s (%d, 0x%x), %s",
 						  index, count,
@@ -264,11 +293,19 @@ namespace ov
 						  StringFromEpollEvent(event).CStr(), events, events,
 						  ov::Error::CreateErrorFromErrno()->ToString().CStr());
 
+					if (socket->IsClosable() == false)
+					{
+						// The socket was closed or an error occurred just before this epoll events occurred.
+						// So the socket can't receive the epoll events.
+						logad("Epoll events are ignored - this event might occurs immediately after close/error");
+						continue;
+					}
+
 					// Normal socket generates (EPOLLOUT | EPOLLHUP) events as soon as it is added to epoll
 					// Client socket generates (EPOLLOUT | EPOLLIN) events as soon as it is added to epoll
-					if (OV_CHECK_FLAG(events, EPOLLOUT))
+					if (socket->NeedToWaitFirstEpollEvent())
 					{
-						if (socket->NeedToWaitFirstEpollEvent())
+						if (OV_CHECK_FLAG(events, EPOLLOUT))
 						{
 							socket->SetFirstEpollEventReceived();
 
@@ -277,13 +314,8 @@ namespace ov
 
 							continue;
 						}
-					}
 
-					if (socket->GetBlockingMode() == BlockingMode::Blocking)
-					{
-						// Blocking mode handles only connection events
-						socket->OnDataWritable();
-						continue;
+						OV_ASSERT(false, "EPOLLOUT event expected, but %s received", StringFromEpollEvent(event).CStr());
 					}
 
 					bool need_to_close = false;
@@ -291,59 +323,110 @@ namespace ov
 
 					if (OV_CHECK_FLAG(events, EPOLLOUT))
 					{
-						// Socket is ready for writing data
-						socket->OnDataWritable();
-
-						switch (socket->DispatchEvents())
+						if (socket->GetState() == SocketState::Connecting)
 						{
-							case Socket::DispatchResult::Dispatched:
-								break;
+							int so_error = 0;
 
-							case Socket::DispatchResult::PartialDispatched:
-								_gc_candidates[socket->GetNativeHandle()] = socket;
-								break;
-
-							case Socket::DispatchResult::Error:
-								new_state = SocketState::Error;
+							if (socket->GetSockOpt(SO_ERROR, &so_error))
+							{
+								if (so_error == 0)
+								{
+									// Connected successfully
+									event_callback->OnConnectedEvent(nullptr);
+								}
+								else
+								{
+									need_to_close = true;
+									event_callback->OnConnectedEvent(SocketError::CreateError(so_error, "Socket error occurred: %s", ::strerror(so_error)));
+								}
+							}
+							else
+							{
 								need_to_close = true;
-								break;
+								event_callback->OnConnectedEvent(SocketError::CreateError("Unknown error occurred: %s", StringFromEpollEvent(event).CStr()));
+							}
 						}
 					}
 
-					if (OV_CHECK_FLAG(events, EPOLLIN))
+					if (socket->GetBlockingMode() == BlockingMode::Blocking)
 					{
-						// Data is received from peer
-						socket->OnDataReceived();
+						// Blocking mode handles only connection events
+						continue;
 					}
 
-					if (OV_CHECK_FLAG(events, EPOLLERR))
+					if (need_to_close == false)
 					{
-						// An error occurred
-						int error;
-
-						if (socket->GetSockOpt(SO_ERROR, &error))
+						if (OV_CHECK_FLAG(events, EPOLLOUT))
 						{
-							logad("EPOLLERR detected: %s\n", ::strerror(error));
+							if (OV_CHECK_FLAG(events, EPOLLHUP) == false)
+							{
+								switch (socket->DispatchEvents())
+								{
+									case Socket::DispatchResult::Dispatched:
+										break;
+
+									case Socket::DispatchResult::PartialDispatched:
+										_gc_candidates[socket->GetNativeHandle()] = socket;
+										break;
+
+									case Socket::DispatchResult::Error:
+										new_state = SocketState::Error;
+										need_to_close = true;
+										break;
+								}
+							}
+							else
+							{
+								// EPOLLOUT can be ignored because it is not disconnected
+								logtd("EPOLLOUT is received, but ignored by EPOLLHUP event");
+							}
 						}
 
-						new_state = SocketState::Error;
-						need_to_close = true;
+						if (OV_CHECK_FLAG(events, EPOLLIN))
+						{
+							// Data is received from peer
+							event_callback->OnDataAvailableEvent();
+						}
+
+						if (OV_CHECK_FLAG(events, EPOLLERR))
+						{
+							// An error occurred
+							int socket_error;
+
+							if (socket->GetSockOpt(SO_ERROR, &socket_error))
+							{
+								logad("EPOLLERR detected: %s\n", ::strerror(socket_error));
+							}
+
+							new_state = SocketState::Error;
+							need_to_close = true;
+						}
+
+						if (OV_CHECK_FLAG(events, EPOLLHUP) || OV_CHECK_FLAG(events, EPOLLRDHUP))
+						{
+							if (socket->GetState() != SocketState::Error)
+							{
+								// Disconnected
+								socket->SetEndOfStream();
+
+								new_state = SocketState::Disconnected;
+								need_to_close = true;
+							}
+						}
 					}
-
-					if (OV_CHECK_FLAG(events, EPOLLHUP) || OV_CHECK_FLAG(events, EPOLLRDHUP))
+					else
 					{
-						// Disconnected
-						socket->SetEndOfStream();
-
-						new_state = SocketState::Disconnected;
-						need_to_close = true;
-
-						_gc_candidates.erase(socket->GetNativeHandle());
+						// An error occurred while connecting to remote
 					}
 
 					if (need_to_close)
 					{
-						socket->CloseWithState(new_state);
+						_gc_candidates.erase(socket->GetNativeHandle());
+
+						if (socket->IsClosable())
+						{
+							socket->CloseWithState(new_state);
+						}
 
 						EnqueueToDispatchLater(socket);
 					}
@@ -386,17 +469,22 @@ namespace ov
 			MergeSocketList();
 		}
 
+		_connection_callback_queue.Stop();
+
 		// Clean up all sockets
 		for (auto &socket_item : _socket_map)
 		{
 			auto socket = socket_item.second;
 
 			// Close immediately (Do not half-close)
-			socket->CloseInternal();
-			socket->SetState(SocketState::Closed);
+			if (socket->IsClosable())
+			{
+				socket->CloseInternal();
+				socket->SetState(SocketState::Closed);
 
-			// Do connection callback, etc...
-			socket->DispatchEvents();
+				// Do connection callback, etc...
+				socket->DispatchEvents();
+			}
 		}
 	}
 
@@ -461,7 +549,7 @@ namespace ov
 		return (error == nullptr);
 	}
 
-	int SocketPoolWorker::EpollWait(int timeout_in_msec)
+	int SocketPoolWorker::EpollWait(int timeout_msec)
 	{
 		// Reset errno
 		errno = 0;
@@ -481,7 +569,7 @@ namespace ov
 		{
 			case SocketType::Udp:
 			case SocketType::Tcp:
-				event_count = ::epoll_wait(_epoll, _epoll_events.data(), EpollMaxEvents, timeout_in_msec);
+				event_count = ::epoll_wait(_epoll, _epoll_events.data(), EpollMaxEvents, timeout_msec);
 
 				if (event_count == 0)
 				{
@@ -510,7 +598,7 @@ namespace ov
 				break;
 
 			case SocketType::Srt:
-				event_count = ::srt_epoll_uwait(_srt_epoll, _srt_epoll_events.data(), EpollMaxEvents, timeout_in_msec);
+				event_count = ::srt_epoll_uwait(_srt_epoll, _srt_epoll_events.data(), EpollMaxEvents, timeout_msec);
 				if (event_count == 0)
 				{
 					// timed out
@@ -613,6 +701,18 @@ namespace ov
 		_sockets_to_dispatch.push_back(socket);
 	}
 
+	void SocketPoolWorker::EnqueueToCheckConnectionTimeOut(const std::shared_ptr<Socket> &socket, int timeout_msec)
+	{
+		_connection_callback_queue.Push(
+			[=](void *parameter) -> ov::DelayQueueAction {
+				auto lock_guard = std::lock_guard(_connection_timed_out_queue_mutex);
+				_connection_timed_out_queue.push_back(socket);
+				return ov::DelayQueueAction::Stop;
+			},
+			nullptr,
+			timeout_msec);
+	}
+
 	bool SocketPoolWorker::DeleteFromEpoll(const std::shared_ptr<Socket> &socket)
 	{
 		if (GetNativeHandle() == InvalidSocket)
@@ -656,6 +756,7 @@ namespace ov
 
 		if (error == nullptr)
 		{
+			logad("Socket #%d is unregistered", native_handle);
 			_sockets_to_delete.Enqueue(socket);
 		}
 		else
@@ -680,14 +781,25 @@ namespace ov
 
 	bool SocketPoolWorker::ReleaseSocket(const std::shared_ptr<Socket> &socket)
 	{
-		if (DeleteFromEpoll(socket))
+		if (socket == nullptr)
 		{
-			socket->CloseInternal();
-			logad("Socket is removed: #%d", socket->GetNativeHandle());
-
-			return true;
+			return false;
 		}
 
-		return false;
+		return socket->Close();
 	}
+
+	String SocketPoolWorker::ToString() const
+	{
+		String description;
+
+		description.AppendFormat(
+			"<SocketPoolWorker: %p, socket_map: %zu, insert queue: %zu, delete queue: %zu, connection queue: %zu>",
+			this, _socket_map.size(),
+			_sockets_to_insert.Size(), _sockets_to_delete.Size(),
+			_connection_timed_out_queue.size());
+
+		return description;
+	}
+
 }  // namespace ov

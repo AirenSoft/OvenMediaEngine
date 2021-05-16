@@ -8,8 +8,8 @@
 //==============================================================================
 #pragma once
 
-#include "./socket_datastructure.h"
 #include "../ovlibrary/string.h"
+#include "./socket_datastructure.h"
 
 namespace ov
 {
@@ -42,12 +42,14 @@ namespace ov
 
 		~SocketAddress();
 
-		SocketAddress &operator =(const SocketAddress &address) noexcept;
+		bool IsValid() const;
 
-		bool operator ==(const SocketAddress &socket) const;
-		bool operator !=(const SocketAddress &socket) const;
-		bool operator <(const SocketAddress &socket) const;
-		bool operator >(const SocketAddress &socket) const;
+		SocketAddress &operator=(const SocketAddress &address) noexcept;
+
+		bool operator==(const SocketAddress &socket) const;
+		bool operator!=(const SocketAddress &socket) const;
+		bool operator<(const SocketAddress &socket) const;
+		bool operator>(const SocketAddress &socket) const;
 
 		void SetFamily(SocketFamily family)
 		{
@@ -73,19 +75,19 @@ namespace ov
 		const in_addr *AddrInForIPv4() const noexcept;
 		const in6_addr *AddrInForIPv6() const noexcept;
 
-		inline operator in_addr *() noexcept // NOLINT
+		inline operator in_addr *() noexcept  // NOLINT
 		{
 			return &(_address_ipv4->sin_addr);
 		}
 
-		inline operator in6_addr *() noexcept // NOLINT
+		inline operator in6_addr *() noexcept  // NOLINT
 		{
 			return &(_address_ipv6->sin6_addr);
 		}
 
 		void *ToAddrIn()
 		{
-			switch(_address_storage.ss_family)
+			switch (_address_storage.ss_family)
 			{
 				case AF_INET:
 					return &(_address_ipv4->sin_addr);
@@ -105,12 +107,13 @@ namespace ov
 		ov::String ToString() const noexcept;
 
 	protected:
-		sockaddr_storage _address_storage {};
+		sockaddr_storage _address_storage{};
 		// _address_storage내 데이터를 가리키는 포인터 (실제로 메모리가 할당되어 있거나 하지는 않음)
 		sockaddr_in *_address_ipv4 = nullptr;
 		sockaddr_in6 *_address_ipv6 = nullptr;
 
 		ov::String _hostname;
 		ov::String _ip_address;
+		uint16_t _port = 0;
 	};
-}
+}  // namespace ov

@@ -117,6 +117,8 @@ namespace ov
 
 		bool Uninitialize();
 
+		String ToString() const;
+
 	protected:
 		// This method will increase the number of sockets for that worker by 1
 		std::shared_ptr<SocketPoolWorker> GetIdleWorker()
@@ -145,10 +147,7 @@ namespace ov
 
 		bool _initialized = false;
 
-		std::mutex _worker_list_mutex;
+		mutable std::mutex _worker_list_mutex;
 		std::vector<std::shared_ptr<SocketPoolWorker>> _worker_list;
-
-		std::mutex _socket_list_mutex;
-		std::map<int, std::shared_ptr<Socket>> _socket_list;
 	};
 }  // namespace ov

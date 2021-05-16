@@ -76,7 +76,7 @@ namespace ov
 		//--------------------------------------------------------------------
 		// Implementation of SocketAsyncInterface
 		//--------------------------------------------------------------------
-		void OnConnected() override
+		void OnConnected(const std::shared_ptr<const ov::SocketError> &error) override
 		{
 			// server socket should not be called this event
 			OV_ASSERT2(false);

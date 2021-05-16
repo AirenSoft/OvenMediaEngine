@@ -10,10 +10,9 @@
 
 #define OV_LOG_TAG "Socket"
 
-// UDP 까지 고려해서 적당히 크게 잡음
 #define MAX_BUFFER_SIZE 4096
 
-// state가 condition이 아니면 return_value를 반환함
+// If state is not <condition>, returns <return_value>
 #define CHECK_STATE(condition, return_value)                                 \
 	do                                                                       \
 	{                                                                        \
@@ -27,15 +26,15 @@
 		}                                                                    \
 	} while (false)
 
-#define CHECK_STATE2(condition1, condition2, return_value)                    \
-	do                                                                       \
-	{                                                                        \
-		if ((!(_state condition1)) && (!(_state condition2)))                  \
-		{                                                                    \
+#define CHECK_STATE2(condition1, condition2, return_value)                                                     \
+	do                                                                                                         \
+	{                                                                                                          \
+		if ((!(_state condition1)) && (!(_state condition2)))                                                  \
+		{                                                                                                      \
 			logaw("%s(): Invalid state: %s (expected: _state " #condition1 " && _state " #condition2 ") - %s", \
-				  __FUNCTION__,                                              \
-				  StringFromSocketState(_state),                             \
-				  ToString().CStr());                                        \
-			return return_value;                                             \
-		}                                                                    \
+				  __FUNCTION__,                                                                                \
+				  StringFromSocketState(_state),                                                               \
+				  ToString().CStr());                                                                          \
+			return return_value;                                                                               \
+		}                                                                                                      \
 	} while (false)

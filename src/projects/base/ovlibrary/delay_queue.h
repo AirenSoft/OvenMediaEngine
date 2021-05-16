@@ -8,15 +8,15 @@
 //==============================================================================
 #pragma once
 
-#include "event.h"
-
+#include <algorithm>
 #include <cstdio>
 #include <functional>
-#include <thread>
-#include <queue>
 #include <mutex>
-#include <algorithm>
+#include <queue>
+#include <thread>
 #include <utility>
+
+#include "event.h"
 
 namespace ov
 {
@@ -35,17 +35,16 @@ namespace ov
 		DelayQueue();
 		virtual ~DelayQueue();
 
-		// after의 단위는 ms
-		void Push(const DelayQueueFunction &func, void *parameter, int after);
+		void Push(const DelayQueueFunction &func, void *parameter, int after_msec);
 		void Push(const DelayQueueFunction &func, int after);
 		ssize_t GetCount() const;
+
+		void Clear();
 
 		bool Start();
 		bool Stop();
 
 	protected:
-		void DispatchThreadProc();
-
 		struct DelayQueueItem
 		{
 		public:
@@ -54,45 +53,47 @@ namespace ov
 			DelayQueueFunction function;
 			void *parameter;
 
-			int after;
+			int after_msec;
 
 			std::chrono::time_point<std::chrono::system_clock> time_point;
 
-			// after의 단위는 ms
-			DelayQueueItem(int64_t index, DelayQueueFunction function, void *parameter, int after)
+			DelayQueueItem(int64_t index, DelayQueueFunction function, void *parameter, int after_msec)
 				: index(index),
 
 				  function(std::move(function)),
 				  parameter(parameter),
 
-				  after(after)
+				  after_msec(after_msec)
 			{
 				RecalculateTimePoint();
 			}
 
 			void RecalculateTimePoint()
 			{
-				time_point = std::chrono::system_clock::now() + std::chrono::milliseconds(after);
+				time_point = std::chrono::system_clock::now() + std::chrono::milliseconds(after_msec);
 			}
 
-			bool operator <(const DelayQueueItem &item) const
+			bool operator<(const DelayQueueItem &item) const
 			{
-				// interval이 비교 1순위, index가 비교 2순위
+				// item.interval has a high priority, followed by item.index
 				return (time_point == item.time_point) ? (index > item.index) : (time_point > item.time_point);
 			}
 		};
+
+	protected:
+		void DispatchThreadProc();
 
 		int64_t _index;
 
 		std::thread _thread;
 		volatile bool _stop;
 
-		// 실행해야 할 항목들이 저장된 queue
-		std::priority_queue<DelayQueueItem> _queue;
-		// GetCount()로 개수를 얻어올 때 lock을 걸어야 하므로 mutable로 선언함
+		// A queue where the items to be executed are stored
 		mutable std::mutex _mutex;
+		std::priority_queue<DelayQueueItem> _queue;
 
-		// 기다리고 있는 도중 Push()하면, 우선순위를 다시 가늠해야 하는데 이 때 사용되는 변수
+		// If Push() is called while DelayQueue is waiting, the priority must be recalculated.
+		// _event is used to notice this.
 		Event _event;
 	};
-}
+}  // namespace ov
