@@ -10,7 +10,6 @@
 
 #include <modules/bitstream/aac/aac_converter.h>
 #include <modules/bitstream/h264/h264_converter.h>
-#include <sys/time.h>
 
 #include <algorithm>
 #include <sstream>
@@ -35,78 +34,6 @@ Packetizer::Packetizer(const ov::String &app_name, const ov::String &stream_name
 {
 	_video_segments.resize(_segment_save_count);
 	_audio_segments.resize(_segment_save_count);
-}
-
-int64_t Packetizer::GetCurrentMilliseconds()
-{
-	struct timespec now;
-
-	::clock_gettime(CLOCK_REALTIME, &now);
-
-	return now.tv_sec * 1000LL + now.tv_nsec / 1000000LL;
-}
-
-int64_t Packetizer::GetCurrentTick()
-{
-	struct timespec now;
-
-	::clock_gettime(CLOCK_MONOTONIC, &now);
-
-	return now.tv_sec * 1000LL + now.tv_nsec / 1000000LL;
-}
-
-int64_t Packetizer::GetTimestampInMs()
-{
-	auto current = std::chrono::system_clock::now().time_since_epoch();
-
-	return std::chrono::duration_cast<std::chrono::milliseconds>(current).count();
-}
-
-ov::String Packetizer::MakeUtcSecond(time_t value)
-{
-	std::tm *now_tm = ::gmtime(&value);
-	char buffer[42];
-
-	::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%TZ", now_tm);
-
-	return buffer;
-}
-
-ov::String Packetizer::MakeUtcMillisecond(int64_t value)
-{
-	if (value == -1)
-	{
-		value = GetTimestampInMs();
-	}
-
-	ov::String result;
-
-	// YYYY-MM-DDTHH:II:SS.sssZ
-	// 012345678901234567890123
-	result.SetCapacity(24);
-
-	time_t time_value = static_cast<time_t>(value) / 1000;
-	std::tm *now_tm = ::gmtime(&time_value);
-	char *buffer = result.GetBuffer();
-
-	// YYYY-MM-DDTHH:II:SS.sssZ
-	// ~~~~~~~~~~~~~~~~~~~
-	auto length = ::strftime(buffer, result.GetCapacity(), "%Y-%m-%dT%T", now_tm);
-
-	if (result.SetLength(length))
-	{
-		// Change to "+00:00", because dash.js does not recognize timezone format such as "Z"
-		//
-		// in dash.js/src/dash/parser/matchers/DateTimeMatcher.js:
-		// const datetimeRegex = /^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2})(?::([0-9]*)(\.[0-9]*)?)?(?:([+-])([0-9]{2})(?::?)([0-9]{2}))?/;
-
-		// YYYY-MM-DDTHH:II:SS.sss+00:00
-		//                    ~~~~~~~~~~
-		result.AppendFormat(".%03u+00:00", static_cast<uint32_t>(value % 1000LL));
-		return result;
-	}
-
-	return "";
 }
 
 uint64_t Packetizer::ConvertTimeScale(uint64_t time, const cmn::Timebase &from_timebase, const cmn::Timebase &to_timebase)
@@ -249,11 +176,11 @@ bool Packetizer::GetPlayList(ov::String &play_list)
 {
 	if (IsReadyForStreaming() == false)
 	{
+		logtd("Manifest was requested before the stream began");
 		return false;
 	}
 
 	std::unique_lock<std::mutex> lock(_play_list_mutex);
-
 	play_list = _play_list;
 
 	return true;

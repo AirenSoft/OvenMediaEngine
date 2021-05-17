@@ -55,8 +55,6 @@ public:
 	std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const override;
 	bool SetSegmentData(const uint32_t sequence_number, ov::String file_name, int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms, const std::shared_ptr<const ov::Data> &data);
 
-	bool GetPlayList(ov::String &play_list) override;
-
 protected:
 	using DataCallback = std::function<void(const uint32_t sequence_number, const uint64_t duration_in_msec, const std::shared_ptr<const SampleData> &data, bool new_segment_written)>;
 

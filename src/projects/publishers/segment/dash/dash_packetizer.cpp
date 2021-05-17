@@ -280,7 +280,7 @@ bool DashPacketizer::WriteVideoSegment()
 
 	if (_video_start_time == -1L)
 	{
-		_video_start_time = GetCurrentMilliseconds() - (duration * _video_timebase_expr_ms);
+		_video_start_time = ov::Time::GetTimestampInMs() - (duration * _video_timebase_expr_ms);
 	}
 
 	if (SetSegmentData(_video_m4s_writer, pts))
@@ -313,7 +313,7 @@ bool DashPacketizer::WriteAudioSegment()
 
 	if (_audio_start_time == -1L)
 	{
-		_audio_start_time = GetCurrentMilliseconds() - (duration * _audio_timebase_expr_ms);
+		_audio_start_time = ov::Time::GetTimestampInMs() - (duration * _audio_timebase_expr_ms);
 	}
 
 	if (SetSegmentData(_audio_m4s_writer, pts))
@@ -529,7 +529,7 @@ bool DashPacketizer::UpdatePlayList()
 		return false;
 	}
 
-	ov::String publish_time = MakeUtcSecond(::time(nullptr));
+	ov::String publish_time = ov::Time::MakeUtcSecond();
 
 	logtd("Trying to update playlist for DASH with availabilityStartTime: %s, publishTime: %s", _start_time.CStr(), publish_time.CStr());
 
@@ -664,12 +664,6 @@ bool DashPacketizer::UpdatePlayList()
 			// </Period>
 			R"(	</Period>)" << std::endl;
 	}
-
-#if 0
-	xml
-		// <UTCTiming />
-		<< R"(	<UTCTiming schemeIdUri="urn:mpeg:dash:utc:direct:2014" value="%s" />)" << std::endl;
-#endif
 
 	xml
 		// </MPD>
@@ -890,22 +884,7 @@ void DashPacketizer::SetReadyForStreaming() noexcept
 		_start_time_ms = std::min(_video_start_time, _audio_start_time);
 	}
 
-	_start_time = MakeUtcMillisecond(_start_time_ms);
+	_start_time = ov::Time::MakeUtcMillisecond(_start_time_ms);
 
 	Packetizer::SetReadyForStreaming();
-}
-
-bool DashPacketizer::GetPlayList(ov::String &play_list)
-{
-	if (IsReadyForStreaming() == false)
-	{
-		logad("Manifest was requested before the stream began");
-		return false;
-	}
-
-	ov::String current_time = MakeUtcMillisecond();
-
-	play_list = ov::String::FormatString(_play_list.CStr(), current_time.CStr());
-
-	return true;
 }

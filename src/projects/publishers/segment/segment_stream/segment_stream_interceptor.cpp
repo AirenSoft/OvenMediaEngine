@@ -12,7 +12,6 @@
 
 SegmentStreamInterceptor::SegmentStreamInterceptor()
 {
-	_is_crossdomain_block = false;
 }
 
 SegmentStreamInterceptor::~SegmentStreamInterceptor()

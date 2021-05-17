@@ -7,16 +7,17 @@
 //
 //==============================================================================
 #include "dash_interceptor.h"
+
 #include "dash_define.h"
 #include "dash_private.h"
 
 bool DashInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpConnection> &client)
 {
-	if(SegmentStreamInterceptor::IsInterceptorForRequest(client) == false)
+	if (SegmentStreamInterceptor::IsInterceptorForRequest(client) == false)
 	{
 		return false;
 	}
-	
+
 	const auto request = client->GetRequest();
 
 	// Temporary code to accept HTTP 1.0
@@ -32,8 +33,7 @@ bool DashInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::
 	if (
 		(request_target.IndexOf(DASH_MPD_VIDEO_FULL_SUFFIX) >= 0) ||
 		(request_target.IndexOf(DASH_MPD_AUDIO_FULL_SUFFIX) >= 0) ||
-		(request_target.IndexOf(DASH_PLAYLIST_FULL_FILE_NAME) >= 0) ||
-		((_is_crossdomain_block == false) && request_target.IndexOf(DASH_CORS_FILE_NAME) >= 0))
+		(request_target.IndexOf(DASH_PLAYLIST_FULL_FILE_NAME) >= 0))
 	{
 		return true;
 	}

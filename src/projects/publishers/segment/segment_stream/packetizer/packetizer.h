@@ -58,12 +58,6 @@ public:
 	bool GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentItem>> &segment_datas);
 	bool GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentItem>> &segment_datas);
 
-	static int64_t GetTimestampInMs();
-	static ov::String MakeUtcSecond(time_t value);
-	static ov::String MakeUtcMillisecond(int64_t value = -1LL);
-	static int64_t GetCurrentMilliseconds();
-	static int64_t GetCurrentTick();
-
 protected:
 	virtual void SetReadyForStreaming() noexcept;
 

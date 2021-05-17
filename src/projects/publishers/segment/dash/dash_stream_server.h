@@ -26,21 +26,23 @@ public:
 		return "DASH Publisher";
 	}
 
-	std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor() override
-	{
-		return std::make_shared<DashInterceptor>();
-	}
-
 protected:
+	std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor() override;
+
+	bool PrepareInterceptors(
+		const std::shared_ptr<http::svr::HttpServer> &http_server,
+		const std::shared_ptr<http::svr::HttpsServer> &https_server,
+		int thread_count, const SegmentProcessHandler &process_handler) override;
+
 	http::svr::ConnectionPolicy ProcessStreamRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
-										const SegmentStreamRequestInfo &request_info,
-										const ov::String &file_ext) override;
+													 const SegmentStreamRequestInfo &request_info,
+													 const ov::String &file_ext) override;
 
 	http::svr::ConnectionPolicy ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
-										  const SegmentStreamRequestInfo &request_info,
-										  PlayListType play_list_type) override;
+													   const SegmentStreamRequestInfo &request_info,
+													   PlayListType play_list_type) override;
 
 	http::svr::ConnectionPolicy ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
-										 const SegmentStreamRequestInfo &request_info,
-										 SegmentType segment_type) override;
+													  const SegmentStreamRequestInfo &request_info,
+													  SegmentType segment_type) override;
 };
