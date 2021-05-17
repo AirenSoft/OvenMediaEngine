@@ -68,8 +68,8 @@ namespace http
 				return _request_uri;
 			}
 
-			// Path of the URI (excluding domain and poirt)
-			// Example: /<app>/<stream>/...
+			// Path of the URI (including query strings & excluding domain and port)
+			// Example: /<app>/<stream>/...?a=b&c=d
 			const ov::String &GetRequestTarget() const noexcept
 			{
 				return _parser.GetRequestTarget();

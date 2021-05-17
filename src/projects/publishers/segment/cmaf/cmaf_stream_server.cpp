@@ -15,6 +15,11 @@
 #include "cmaf_packetizer.h"
 #include "cmaf_private.h"
 
+std::shared_ptr<SegmentStreamInterceptor> CmafStreamServer::CreateInterceptor()
+{
+	return std::make_shared<CmafInterceptor>();
+}
+
 http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
 																	const SegmentStreamRequestInfo &request_info,
 																	SegmentType segment_type)

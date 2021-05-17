@@ -45,12 +45,15 @@ public:
 
 	virtual PublisherType GetPublisherType() const noexcept = 0;
 	virtual const char *GetPublisherName() const noexcept = 0;
-	virtual std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor()
-	{
-		return std::make_shared<SegmentStreamInterceptor>();
-	}
 
 protected:
+	virtual std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor();
+
+	virtual bool PrepareInterceptors(
+		const std::shared_ptr<http::svr::HttpServer> &http_server,
+		const std::shared_ptr<http::svr::HttpsServer> &https_server,
+		int thread_count, const SegmentProcessHandler &process_handler);
+
 	bool ParseRequestUrl(const ov::String &request_url,
 						 ov::String &app_name, ov::String &stream_name,
 						 ov::String &file_name, ov::String &file_ext);
@@ -63,16 +66,16 @@ protected:
 
 	// Interfaces
 	virtual http::svr::ConnectionPolicy ProcessStreamRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
-												const SegmentStreamRequestInfo &request_info,
-												const ov::String &file_ext) = 0;
+															 const SegmentStreamRequestInfo &request_info,
+															 const ov::String &file_ext) = 0;
 
 	virtual http::svr::ConnectionPolicy ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
-												  const SegmentStreamRequestInfo &request_info,
-												  PlayListType play_list_type) = 0;
+															   const SegmentStreamRequestInfo &request_info,
+															   PlayListType play_list_type) = 0;
 
 	virtual http::svr::ConnectionPolicy ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
-												 const SegmentStreamRequestInfo &request_info,
-												 SegmentType segment_type) = 0;
+															  const SegmentStreamRequestInfo &request_info,
+															  SegmentType segment_type) = 0;
 
 	bool UrlExistCheck(const std::vector<ov::String> &url_list, const ov::String &check_url);
 

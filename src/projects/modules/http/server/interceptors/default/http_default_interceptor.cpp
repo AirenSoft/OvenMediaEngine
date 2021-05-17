@@ -28,7 +28,7 @@ namespace http
 			}
 
 			ov::String whole_pattern;
-			whole_pattern.Format("%s%s", _pattern_prefix.CStr(), pattern.CStr());
+			whole_pattern.Format("^%s%s$", _pattern_prefix.CStr(), pattern.CStr());
 
 			auto regex = ov::Regex(whole_pattern);
 			auto error = regex.Compile();

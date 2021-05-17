@@ -12,12 +12,86 @@
 #include <publishers/segment/segment_stream/packetizer/packetizer_define.h>
 
 #include "../segment_publisher.h"
+#include "../segment_stream/time_interceptor.h"
 #include "dash_define.h"
 #include "dash_private.h"
 
+std::shared_ptr<SegmentStreamInterceptor> DashStreamServer::CreateInterceptor()
+{
+	return std::make_shared<DashInterceptor>();
+}
+
+bool DashStreamServer::PrepareInterceptors(
+	const std::shared_ptr<http::svr::HttpServer> &http_server,
+	const std::shared_ptr<http::svr::HttpsServer> &https_server,
+	int thread_count, const SegmentProcessHandler &process_handler)
+{
+	auto time_interceptor = std::make_shared<TimeInterceptor>();
+
+	time_interceptor->Register(http::Method::All, R"(\/time)", [=](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
+		auto url = ov::Url::Parse(client->GetRequest()->GetUri());
+
+		if (url == nullptr)
+		{
+			OV_ASSERT2(false);
+			client->GetResponse()->SetStatusCode(http::StatusCode::InternalServerError);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		// (iso == false) && (ms == false) - unix timestamp
+		// (iso == false) && (ms == true)  - unix timestamp + ms
+		// (iso == true)  && (ms == false) - ISO8601 datetime
+		// (iso == true)  && (ms == true)  - ISO8601 datetime + ms
+		auto iso = url->HasQueryKey("iso");
+		auto ms = url->HasQueryKey("ms");
+
+		ov::String response_body;
+
+		if (iso)
+		{
+			response_body = ms ? ov::Time::MakeUtcMillisecond() : ov::Time::MakeUtcSecond();
+		}
+		else
+		{
+			if (ms)
+			{
+				// 1621232660.123
+				auto time_msec = ov::Time::GetTimestampInMs();
+				response_body.Format("%d.%03d", (time_msec / 1000), (time_msec % 1000));
+			}
+			else
+			{
+				// 1621232660
+				response_body = ov::Converter::ToString(ov::Time::GetTimestamp());
+			}
+		}
+
+		auto response = client->GetResponse();
+
+		response->SetHeader("Content-Type", "text/plain;charset=ISO-8859-1");
+		response->SetHeader("Access-Control-Allow-Headers", "*");
+		response->SetHeader("Access-Control-Allow-Methods", "*");
+		response->SetHeader("Access-Control-Allow-Origin", "*");
+		response->SetHeader("Access-Control-Expose-Headers", "Server,Content-Length,Date");
+
+		response->AppendString(response_body);
+
+		return http::svr::NextHandler::DoNotCall;
+	});
+
+	bool result = true;
+
+	result = result && ((http_server == nullptr) || http_server->AddInterceptor(time_interceptor));
+	result = result && ((https_server == nullptr) || https_server->AddInterceptor(time_interceptor));
+
+	result = result && SegmentStreamServer::PrepareInterceptors(http_server, https_server, thread_count, process_handler);
+
+	return result;
+}
+
 http::svr::ConnectionPolicy DashStreamServer::ProcessStreamRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
-													  const SegmentStreamRequestInfo &request_info,
-													  const ov::String &file_ext)
+																   const SegmentStreamRequestInfo &request_info,
+																   const ov::String &file_ext)
 {
 	auto response = client->GetResponse();
 
@@ -37,8 +111,8 @@ http::svr::ConnectionPolicy DashStreamServer::ProcessStreamRequest(const std::sh
 }
 
 http::svr::ConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
-														const SegmentStreamRequestInfo &request_info,
-														PlayListType play_list_type)
+																	 const SegmentStreamRequestInfo &request_info,
+																	 PlayListType play_list_type)
 {
 	auto response = client->GetResponse();
 
@@ -74,7 +148,7 @@ http::svr::ConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::
 	auto sent_bytes = response->Response();
 
 	auto metric = GetStreamMetric(client);
-	if(metric != nullptr)
+	if (metric != nullptr)
 	{
 		metric->IncreaseBytesOut(GetPublisherType(), sent_bytes);
 	}
@@ -83,8 +157,8 @@ http::svr::ConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::
 }
 
 http::svr::ConnectionPolicy DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
-													   const SegmentStreamRequestInfo &request_info,
-													   SegmentType segment_type)
+																	const SegmentStreamRequestInfo &request_info,
+																	SegmentType segment_type)
 {
 	auto response = client->GetResponse();
 
@@ -110,11 +184,10 @@ http::svr::ConnectionPolicy DashStreamServer::ProcessSegmentRequest(const std::s
 	auto sent_bytes = response->Response();
 
 	auto metric = GetStreamMetric(client);
-	if(metric != nullptr)
+	if (metric != nullptr)
 	{
 		metric->IncreaseBytesOut(GetPublisherType(), sent_bytes);
 	}
-
 
 	return http::svr::ConnectionPolicy::Closed;
 }

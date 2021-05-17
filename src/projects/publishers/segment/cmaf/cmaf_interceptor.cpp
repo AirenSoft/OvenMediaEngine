@@ -7,12 +7,13 @@
 //
 //==============================================================================
 #include "cmaf_interceptor.h"
+
 #include "../dash/dash_define.h"
 #include "cmaf_private.h"
 
 bool CmafInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpConnection> &client)
 {
-	if(SegmentStreamInterceptor::IsInterceptorForRequest(client) == false)
+	if (SegmentStreamInterceptor::IsInterceptorForRequest(client) == false)
 	{
 		return false;
 	}
@@ -32,8 +33,7 @@ bool CmafInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::
 	if (
 		(request_target.IndexOf(CMAF_MPD_VIDEO_FULL_SUFFIX) >= 0) ||
 		(request_target.IndexOf(CMAF_MPD_AUDIO_FULL_SUFFIX) >= 0) ||
-		(request_target.IndexOf(CMAF_PLAYLIST_FULL_FILE_NAME) >= 0) ||
-		((_is_crossdomain_block == false) && request_target.IndexOf(DASH_CORS_FILE_NAME) >= 0))
+		(request_target.IndexOf(CMAF_PLAYLIST_FULL_FILE_NAME) >= 0))
 	{
 		return true;
 	}

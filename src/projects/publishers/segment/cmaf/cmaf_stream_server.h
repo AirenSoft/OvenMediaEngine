@@ -25,12 +25,9 @@ public:
 		return "LLDASH Publisher";
 	}
 
-	std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor() override
-	{
-		return std::make_shared<CmafInterceptor>();
-	}
-
 protected:
+	std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor() override;
+
 	struct CmafHttpChunkedData
 	{
 	public:

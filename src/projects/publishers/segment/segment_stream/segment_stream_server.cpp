@@ -27,6 +27,11 @@ SegmentStreamServer::SegmentStreamServer()
 		"</cross-domain-policy>";
 }
 
+std::shared_ptr<SegmentStreamInterceptor> SegmentStreamServer::CreateInterceptor()
+{
+	return std::make_shared<SegmentStreamInterceptor>();
+}
+
 bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 								const ov::SocketAddress *tls_address,
 								int thread_count,
@@ -44,22 +49,14 @@ bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 	auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
 
 	auto manager = http::svr::HttpServerManager::GetInstance();
+
 	std::shared_ptr<http::svr::HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("SegPub", *address, worker_count) : nullptr;
 	result = result && ((address != nullptr) ? (http_server != nullptr) : true);
+
 	std::shared_ptr<http::svr::HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer("SegPub", *tls_address, vhost_list, worker_count) : nullptr;
 	result = result && ((tls_address != nullptr) ? (https_server != nullptr) : true);
 
-	auto segment_stream_interceptor = result ? CreateInterceptor() : nullptr;
-
-	if (result)
-	{
-		segment_stream_interceptor->SetCrossdomainBlock();
-	}
-
-	result = result && ((http_server == nullptr) || http_server->AddInterceptor(segment_stream_interceptor));
-	result = result && ((https_server == nullptr) || https_server->AddInterceptor(segment_stream_interceptor));
-
-	result = result && segment_stream_interceptor->Start(thread_count, process_handler);
+	result = result && PrepareInterceptors(http_server, https_server, thread_count, process_handler);
 
 	if (result)
 	{
@@ -78,7 +75,7 @@ bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 
 bool SegmentStreamServer::Stop()
 {
-	// Remove Interceptor
+	// Remove Interceptors
 
 	// Stop server
 	if (_http_server != nullptr)
@@ -136,6 +133,29 @@ bool SegmentStreamServer::RemoveObserver(const std::shared_ptr<SegmentStreamObse
 bool SegmentStreamServer::Disconnect(const ov::String &app_name, const ov::String &stream_name)
 {
 	return true;
+}
+
+bool SegmentStreamServer::PrepareInterceptors(
+	const std::shared_ptr<http::svr::HttpServer> &http_server,
+	const std::shared_ptr<http::svr::HttpsServer> &https_server,
+	int thread_count, const SegmentProcessHandler &process_handler)
+{
+	auto segment_stream_interceptor = CreateInterceptor();
+
+	if (segment_stream_interceptor == nullptr)
+	{
+		OV_ASSERT2(false);
+		return false;
+	}
+
+	bool result = true;
+
+	result = result && ((http_server == nullptr) || http_server->AddInterceptor(segment_stream_interceptor));
+	result = result && ((https_server == nullptr) || https_server->AddInterceptor(segment_stream_interceptor));
+
+	result = result && segment_stream_interceptor->Start(thread_count, process_handler);
+
+	return result;
 }
 
 //====================================================================================================
