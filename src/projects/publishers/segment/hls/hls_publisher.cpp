@@ -9,7 +9,7 @@
 #include "hls_publisher.h"
 
 #include <config/config_manager.h>
-#include <modules/signature/signed_token.h>
+#include <modules/auth/signature/signed_token.h>
 #include <orchestrator/orchestrator.h>
 
 #include "hls_application.h"

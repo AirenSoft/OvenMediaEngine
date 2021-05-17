@@ -8,7 +8,7 @@
 //==============================================================================
 #include "segment_publisher.h"
 
-#include <modules/signature/signed_token.h>
+#include <modules/auth/signature/signed_token.h>
 #include <monitoring/monitoring.h>
 #include <orchestrator/orchestrator.h>
 #include <publishers/segment/segment_stream/segment_stream.h>
