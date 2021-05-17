@@ -169,8 +169,8 @@
 				-->
 			</Host>
 
-			<!-- Refer https://airensoft.gitbook.io/ovenmediaengine/signedpolicy
-
+			<!-- 	
+			Refer https://airensoft.gitbook.io/ovenmediaengine/signedpolicy
 			<SignedPolicy>
 				<PolicyQueryKeyName>policy</PolicyQueryKeyName>
 				<SignatureQueryKeyName>signature</SignatureQueryKeyName>
@@ -181,6 +181,18 @@
 					<Publishers>webrtc,hls,dash,lldash</Publishers>
 				</Enables>
 			</SignedPolicy>
+			-->
+
+			<!--
+			<AdmissionWebhooks>
+				<TargetUrl></TargetUrl>
+				<SeretKey></SecretKey>
+				<Timeout>3000</Timeout>
+				<Enables>
+					<Providers>rtmp,webrtc,srt</Providers>
+					<Publishers>webrtc,hls,dash,lldash</Publishers>
+				</Enables>
+			</AdmissionWebhooks>
 			-->
 
 			<!--
