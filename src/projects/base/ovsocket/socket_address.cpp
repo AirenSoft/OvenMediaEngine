@@ -130,6 +130,7 @@ namespace ov
 
 		_hostname = address._hostname;
 		_ip_address = address._ip_address;
+		_port = address._port;
 	}
 
 	SocketAddress::SocketAddress(SocketAddress &&address) noexcept
@@ -142,6 +143,7 @@ namespace ov
 
 		std::swap(_hostname, address._hostname);
 		std::swap(_ip_address, address._ip_address);
+		std::swap(_port, address._port);
 	}
 
 	SocketAddress::~SocketAddress()
@@ -159,6 +161,7 @@ namespace ov
 
 		_hostname = address._hostname;
 		_ip_address = address._ip_address;
+		_port = address._port;
 
 		return *this;
 	}
@@ -353,6 +356,22 @@ namespace ov
 			{
 				_ip_address = ip_address;
 			}
+
+			switch (_address_storage.ss_family)
+			{
+				case AF_INET:
+					_port = NetworkToHost16(_address_ipv4->sin_port);
+					break;
+
+				case AF_INET6:
+					_port = NetworkToHost16(_address_ipv6->sin6_port);
+					break;
+
+				default:
+					OV_ASSERT2(false);
+					_port = 0;
+					break;
+			}
 		}
 	}
 
@@ -461,36 +480,41 @@ namespace ov
 
 	ov::String SocketAddress::ToString() const noexcept
 	{
+		ov::String description;
+
 		auto hostname = GetHostname();
 
 		if (IsValid())
 		{
-			if (hostname.IsEmpty() == false)
-			{
-				auto ip = GetIpAddress();
+			auto ip = GetIpAddress();
 
-				if (hostname != ip)
+			description = (_address_storage.ss_family == AF_INET) ? "" : (_address_storage.ss_family == AF_INET6 ? "[v6] " : "[?] ");
+			description.Append(hostname);
+
+			if (hostname.IsEmpty())
+			{
+				description.Append(ip);
+			}
+			else
+			{
+				if ((hostname != "*") && (hostname != ip))
 				{
-					return ov::String::FormatString(
-						"%s%s(%s):%d",
-						(_address_storage.ss_family == AF_INET) ? "" : (_address_storage.ss_family == AF_INET6 ? "[v6] " : "[?] "),
-						hostname.CStr(), ip.CStr(), Port());
+					description.AppendFormat("(%s)", ip.CStr());
 				}
 			}
 
-			return ov::String::FormatString(
-				"%s%s:%d",
-				(_address_storage.ss_family == AF_INET) ? "" : (_address_storage.ss_family == AF_INET6 ? "[v6] " : "[?] "),
-				GetIpAddress().CStr(), Port());
-		}
-
-		if (Port() == 0)
-		{
-			return ov::String::FormatString("%s", hostname.CStr());
+			description.AppendFormat(":%d", Port());
 		}
 		else
 		{
-			return ov::String::FormatString("%s:%d", hostname.CStr(), Port());
+			description.Append(hostname);
+
+			if (Port() > 0)
+			{
+				description.AppendFormat(":%d", Port());
+			}
 		}
+
+		return description;
 	}
 }  // namespace ov
