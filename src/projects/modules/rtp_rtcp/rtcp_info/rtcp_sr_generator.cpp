@@ -56,7 +56,7 @@ std::shared_ptr<RtcpPacket> RtcpSRGenerator::PopRtcpSRPacket()
         return nullptr;
     }
 
-    return _rtcp_packet;
+    return std::move(_rtcp_packet);
 }
 
 uint32_t RtcpSRGenerator::GetElapsedTimeMSFromCreated()
