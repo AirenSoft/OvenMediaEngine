@@ -87,11 +87,11 @@ bool ThumbnailPublisher::Start()
 		}
 
 		tls_address = ov::SocketAddress(server_config.GetIp(), tls_port.GetPort());
-		auto certificate = info::Certificate::CreateCertificate("api_server", host_name_list, managers.GetHost().GetTls());
+		auto certificate = info::Certificate::CreateCertificate("thumbnail_publisher", host_name_list, managers.GetHost().GetTls());
 
 		if (certificate != nullptr)
 		{
-			_https_server = manager->CreateHttpsServer("ThumbnailPublisher", tls_address, certificate);
+			_https_server = manager->CreateHttpsServer("ThumbnailPublisher", tls_address, certificate, worker_count);
 
 			if (_https_server != nullptr)
 			{
@@ -165,8 +165,25 @@ std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterce
 
 		auto host_name = request->GetHeader("HOST").Split(":")[0];
 		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
+		auto app_config = std::static_pointer_cast<info::Application>(GetApplicationByName(vhost_app_name))->GetConfig();
+		auto thumbnail_config = app_config.GetPublishers().GetThumbnailPublisher();
 
 		auto response = client->GetResponse();
+
+		// Check CORS
+		auto application = std::static_pointer_cast<ThumbnailApplication>(GetApplicationByName(vhost_app_name));
+		if (application == nullptr)
+		{
+			response->AppendString("There is no application");
+			response->SetStatusCode(http::StatusCode::NotFound);
+			response->Response();
+
+			return http::svr::NextHandler::DoNotCall;
+		}
+		else
+		{
+			SetAllowOrigin(request->GetUri(), application->GetCorsUrls(), response);
+		}
 
 		// Check Stream
 		auto stream = std::static_pointer_cast<ThumbnailStream>(GetStream(vhost_app_name, stream_name));
@@ -179,20 +196,7 @@ std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterce
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		/*
-		// Check Filename
-		if (file_name.IndexOf("thumb") != 0)
-		{
-			// This part is not excute due to the regular expression.
-			response->AppendString("Thre is no file");
-			response->SetStatusCode(http::HttpStatusCode::NotFound);
-			response->Response();
-
-			return http::svr::NextHandler::DoNotCall;
-		}
-		*/
-
-		// check Extentions
+		// Check Extentions
 		auto media_codec_id = cmn::MediaCodecId::None;
 		if (file_ext.IndexOf("jpg") == 0)
 		{
@@ -202,17 +206,6 @@ std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterce
 		{
 			media_codec_id = cmn::MediaCodecId::Png;
 		}
-		/*
-		else
-		{
-			// This part is not excute due to the regular expression.
-			response->AppendString("Thre is no file(invalid extention)");
-			response->SetStatusCode(http::HttpStatusCode::NotFound);
-			response->Response();
-
-			return http::svr::NextHandler::DoNotCall;
-		}
-		*/
 
 		// There is no endcoded thumbnail image
 		auto endcoded_video_frame = stream->GetVideoFrameByCodecId(media_codec_id);
@@ -238,7 +231,6 @@ std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterce
 
 //====================================================================================================
 // ParseRequestUrl
-// - URL 분리
 //  ex) ..../app_name/stream_name/file_name.file_ext?param=param_value
 //====================================================================================================
 bool ThumbnailPublisher::ParseRequestUrl(const ov::String &request_url,
@@ -250,8 +242,7 @@ bool ThumbnailPublisher::ParseRequestUrl(const ov::String &request_url,
 {
 	ov::String request_path;
 
-	// 확장자 확인
-	// 파라메터 분리  directory/file.ext?param=test
+	// directory/file.ext?param=test
 	auto tokens = request_url.Split("?");
 	if (tokens.size() == 0)
 	{
@@ -261,7 +252,7 @@ bool ThumbnailPublisher::ParseRequestUrl(const ov::String &request_url,
 	request_path = tokens[0];
 	request_param = tokens.size() == 2 ? tokens[1] : "";
 
-	// ...../app_name/stream_name/file_name.ext_name 분리
+	// ...../app_name/stream_name/file_name.ext_name
 	tokens.clear();
 	tokens = request_path.Split("/");
 
@@ -274,7 +265,7 @@ bool ThumbnailPublisher::ParseRequestUrl(const ov::String &request_url,
 	stream_name = tokens[tokens.size() - 2];
 	file_name = tokens[tokens.size() - 1];
 
-	// file_name.ext_name 분리
+	// file_name.ext_name
 	tokens.clear();
 	tokens = file_name.Split(".");
 
@@ -298,9 +289,39 @@ bool ThumbnailPublisher::ParseRequestUrl(const ov::String &request_url,
 	return true;
 }
 
+// @Refer to segment_stream_server.cpp
+bool ThumbnailPublisher::SetAllowOrigin(const ov::String &origin_url, std::vector<ov::String> &cors_urls, const std::shared_ptr<http::svr::HttpResponse> &response)
+{
+	if (cors_urls.empty())
+	{
+		// Not need to check CORS
+		response->SetHeader("Access-Control-Allow-Origin", "*");
+		return true;
+	}
+
+	auto item = std::find_if(cors_urls.begin(), cors_urls.end(),
+							 [&origin_url](auto &url) -> bool {
+								 if (url.HasPrefix("http://*."))
+									 return origin_url.HasSuffix(url.Substring(strlen("http://*")));
+								 else if (url.HasPrefix("https://*."))
+									 return origin_url.HasSuffix(url.Substring(strlen("https://*")));
+
+								 return (origin_url == url);
+							 });
+
+	if (item == cors_urls.end())
+	{
+		return false;
+	}
+
+	response->SetHeader("Access-Control-Allow-Origin", origin_url);
+
+	return true;
+}
+
 std::shared_ptr<pub::Application> ThumbnailPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
-	if(IsModuleAvailable() == false)
+	if (IsModuleAvailable() == false)
 	{
 		return nullptr;
 	}

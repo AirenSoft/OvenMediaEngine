@@ -44,6 +44,8 @@ private:
 						 ov::String &file_name,
 						 ov::String &file_ext);
 
+	bool SetAllowOrigin(const ov::String &origin_url, std::vector<ov::String>& cors_urls, const std::shared_ptr<http::svr::HttpResponse> &response);
+
 private:
 	std::shared_ptr<http::svr::RequestInterceptor> CreateInterceptor();
 	std::shared_ptr<http::svr::HttpServer> _http_server;
