@@ -31,8 +31,8 @@ bool ReceiverReport::Parse(const RtcpPacket &packet)
 	size_t offset = 4; // sender ssrc size
 	for(int i=0; i<packet.GetReportCount(); i++)
 	{
-		auto report_block = std::make_shared<ReportBlock>();
-		if(report_block->Parse(payload + offset, RTCP_REPORT_BLOCK_SIZE) == false)
+		auto report_block = ReportBlock::Parse(payload + offset, RTCP_REPORT_BLOCK_SIZE);
+		if(report_block == nullptr)
 		{
 			return false;
 		}
@@ -48,7 +48,17 @@ bool ReceiverReport::Parse(const RtcpPacket &packet)
 // RtcpInfo must provide raw data
 std::shared_ptr<ov::Data> ReceiverReport::GetData() const
 {
-	return nullptr;
+	auto data = std::make_shared<ov::Data>();
+	ov::ByteStream stream(data);
+
+	stream.WriteBE32(GetSenderSsrc());
+
+	for(const auto &report : _report_blocks)
+	{
+		stream.Append(report->GetData());
+	}
+
+	return data;
 }
 
 void ReceiverReport::DebugPrint()

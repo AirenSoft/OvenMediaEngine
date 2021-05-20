@@ -1,6 +1,6 @@
 #pragma once
 
-#include <modules/http_server/http_server_manager.h>
+#include <modules/http/server/http_server_manager.h>
 #include <orchestrator/orchestrator.h>
 
 #include "base/common_types.h"
@@ -44,8 +44,10 @@ private:
 						 ov::String &file_name,
 						 ov::String &file_ext);
 
+	bool SetAllowOrigin(const ov::String &origin_url, std::vector<ov::String>& cors_urls, const std::shared_ptr<http::svr::HttpResponse> &response);
+
 private:
-	std::shared_ptr<HttpRequestInterceptor> CreateInterceptor();
-	std::shared_ptr<HttpServer> _http_server;
-	std::shared_ptr<HttpsServer> _https_server;
+	std::shared_ptr<http::svr::RequestInterceptor> CreateInterceptor();
+	std::shared_ptr<http::svr::HttpServer> _http_server;
+	std::shared_ptr<http::svr::HttpsServer> _https_server;
 };

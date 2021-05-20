@@ -41,6 +41,10 @@ public:
 	void 			SetIcePwd(const ov::String& pwd);
 	virtual ov::String		GetIcePwd() const;
 
+	// a=control:trackID=1
+	void			SetControl(const ov::String &control);
+	ov::String				GetControl() const;
+
 private:
 	// ice
 	ov::String		_ice_option;
@@ -49,4 +53,8 @@ private:
 	// dtls
 	ov::String		_fingerprint_algorithm;
 	ov::String		_fingerprint_value;
+
+	// For RTSP
+	// a=control:
+	ov::String		_control;
 };

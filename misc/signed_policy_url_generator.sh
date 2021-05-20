@@ -43,4 +43,10 @@ SIGNATURE=${SIGNATURE//+/-}
 SIGNATURE=${SIGNATURE//\//_}
 
 # 4. Create a whole URL
-echo "${POLICY_URL}&${SIGNATURE_QUERY_KEY_NAME}=${SIGNATURE}"
+RESULT="${POLICY_URL}&${SIGNATURE_QUERY_KEY_NAME}=${SIGNATURE}"
+echo "[URL] "${RESULT}
+
+# 5. For SRT, percent encode
+URLENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${RESULT}'))")
+echo "[Percent encoded URL] "${URLENCODED} 
+

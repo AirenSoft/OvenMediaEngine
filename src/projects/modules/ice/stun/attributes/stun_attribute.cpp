@@ -107,7 +107,7 @@ std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 		stream.Skip<uint8_t>(padded_length - length);
 	}
 
-	return std::move(attribute);
+	return attribute;
 }
 
 std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(StunAttributeType type, int length)
@@ -187,7 +187,7 @@ std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(StunAttributeType 
 			break;
 	}
 
-	return std::move(attribute);
+	return attribute;
 }
 
 StunAttributeType StunAttribute::GetType() const noexcept

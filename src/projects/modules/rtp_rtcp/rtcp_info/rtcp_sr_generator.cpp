@@ -19,19 +19,19 @@ void RtcpSRGenerator::AddRTPPacketAndGenerateRtcpSR(const RtpPacket &rtp_packet)
     if((GetElapsedTimeMSFromCreated() < 10000 && GetElapsedTimeMSFromRtcpSRGenerated() > 500) ||
         GetElapsedTimeMSFromRtcpSRGenerated() > 4999)
     {
-		SenderReport report;
+		auto report = std::make_shared<SenderReport>();
 		
 		uint32_t msw = 0;
     	uint32_t lsw = 0;
 
     	ov::Clock::GetNtpTime(msw, lsw);
 
-		report.SetSenderSsrc(_ssrc);
-		report.SetMsw(msw);
-		report.SetLsw(lsw);
-		report.SetTimestamp(rtp_packet.Timestamp());
-		report.SetPacketCount(_packet_count);
-		report.SetOctetCount(_octec_count);
+		report->SetSenderSsrc(_ssrc);
+		report->SetMsw(msw);
+		report->SetLsw(lsw);
+		report->SetTimestamp(rtp_packet.Timestamp());
+		report->SetPacketCount(_packet_count);
+		report->SetOctetCount(_octec_count);
 
 		_rtcp_packet = std::make_shared<RtcpPacket>();
 		_rtcp_packet->Build(report);

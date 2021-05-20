@@ -24,12 +24,26 @@ public:
 
 	virtual void DebugPrint() = 0;
 
+	void SetRtpPayloadType(uint8_t payload_type)
+	{
+		_rtp_payload_type = payload_type;
+	}
+
+	uint8_t GetRtpPayloadType() const
+	{
+		return _rtp_payload_type;
+	}
+
 protected:
 	void SetCount(uint8_t count) {_count_or_fmt = count;}
 	void SetFmt(uint8_t fmt) {_count_or_fmt = fmt;}
 
 private:
 	uint8_t		_count_or_fmt = 0;
+
+	// Extra Infomation
+	// it is not used for RTCP packet, but in order to find RTP stream faster
+	uint8_t		_rtp_payload_type = 0;
 };
 
 #define RTCP_DEFAULT_MAX_PACKET_SIZE	1472
@@ -39,10 +53,11 @@ class RtcpPacket
 public:
 	// Build RTCP Packet
 	bool Build(const std::shared_ptr<RtcpInfo> &info);
-	bool Build(const RtcpInfo &info);
 	// block_size : returns used bytes
 	bool Parse(const uint8_t* buffer, const size_t buffer_size, size_t &block_size);
 	
+	std::shared_ptr<RtcpInfo> GetRtcpInfo() const {return _info;}
+
 	RtcpPacketType GetType() const {return _type;}
 	uint8_t GetReportCount() const {return _count_or_format;}
 	uint8_t GetFMT() const {return _count_or_format;}
@@ -68,5 +83,6 @@ private:
 	uint8_t*			_payload = nullptr;
 	size_t				_payload_size = 0;
 
+	std::shared_ptr<RtcpInfo> _info = nullptr;
 	std::shared_ptr<ov::Data> _data = nullptr;
 };

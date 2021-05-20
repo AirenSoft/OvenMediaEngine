@@ -35,12 +35,16 @@ static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &s
 
 DashPacketizer::DashPacketizer(const ov::String &app_name, const ov::String &stream_name,
 							   uint32_t segment_count, uint32_t segment_duration,
+							   const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
 							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 							   const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
 	: Packetizer(app_name, stream_name,
 				 segment_count, segment_count * 5, segment_duration,
 				 video_track, audio_track,
 				 chunked_transfer),
+
+	  _utc_timing_scheme(utc_timing_scheme),
+	  _utc_timing_value(utc_timing_value),
 
 	  _video_m4s_writer(Writer::Type::M4s, Writer::MediaType::Video),
 	  _audio_m4s_writer(Writer::Type::M4s, Writer::MediaType::Audio)
@@ -280,7 +284,7 @@ bool DashPacketizer::WriteVideoSegment()
 
 	if (_video_start_time == -1L)
 	{
-		_video_start_time = GetCurrentMilliseconds() - (duration * _video_timebase_expr_ms);
+		_video_start_time = ov::Time::GetTimestampInMs() - (duration * _video_timebase_expr_ms);
 	}
 
 	if (SetSegmentData(_video_m4s_writer, pts))
@@ -313,7 +317,7 @@ bool DashPacketizer::WriteAudioSegment()
 
 	if (_audio_start_time == -1L)
 	{
-		_audio_start_time = GetCurrentMilliseconds() - (duration * _audio_timebase_expr_ms);
+		_audio_start_time = ov::Time::GetTimestampInMs() - (duration * _audio_timebase_expr_ms);
 	}
 
 	if (SetSegmentData(_audio_m4s_writer, pts))
@@ -435,7 +439,7 @@ bool DashPacketizer::AppendAudioFrame(const std::shared_ptr<const MediaPacket> &
 
 	if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::AAC_ADTS)
 	{
-		data = AacConverter::ConvertAdtsToLatm(data, &length_list);
+		data = AacConverter::ConvertAdtsToRaw(data, &length_list);
 	}
 	else
 	{
@@ -529,7 +533,7 @@ bool DashPacketizer::UpdatePlayList()
 		return false;
 	}
 
-	ov::String publish_time = MakeUtcSecond(::time(nullptr));
+	ov::String publish_time = ov::Time::MakeUtcSecond();
 
 	logtd("Trying to update playlist for DASH with availabilityStartTime: %s, publishTime: %s", _start_time.CStr(), publish_time.CStr());
 
@@ -665,11 +669,12 @@ bool DashPacketizer::UpdatePlayList()
 			R"(	</Period>)" << std::endl;
 	}
 
-#if 0
-	xml
-		// <UTCTiming />
-		<< R"(	<UTCTiming schemeIdUri="urn:mpeg:dash:utc:direct:2014" value="%s" />)" << std::endl;
-#endif
+	if ((_utc_timing_scheme.IsEmpty() == false) && (_utc_timing_value.IsEmpty() == false))
+	{
+		xml
+			// <UTCTiming />
+			<< R"(	<UTCTiming schemeIdUri=")" << _utc_timing_scheme.CStr() << R"(" value=")" << _utc_timing_value.CStr() << R"(" />)" << std::endl;
+	}
 
 	xml
 		// </MPD>
@@ -890,22 +895,7 @@ void DashPacketizer::SetReadyForStreaming() noexcept
 		_start_time_ms = std::min(_video_start_time, _audio_start_time);
 	}
 
-	_start_time = MakeUtcMillisecond(_start_time_ms);
+	_start_time = ov::Time::MakeUtcMillisecond(_start_time_ms);
 
 	Packetizer::SetReadyForStreaming();
-}
-
-bool DashPacketizer::GetPlayList(ov::String &play_list)
-{
-	if (IsReadyForStreaming() == false)
-	{
-		logad("Manifest was requested before the stream began");
-		return false;
-	}
-
-	ov::String current_time = MakeUtcMillisecond();
-
-	play_list = ov::String::FormatString(_play_list.CStr(), current_time.CStr());
-
-	return true;
 }

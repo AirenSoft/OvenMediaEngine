@@ -339,7 +339,6 @@ bool RtcStream::Start()
 	}
 
 	logtd("Stream is created : %s/%u", GetName().CStr(), GetId());
-	_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
 	_offer_sdp->Update();
 
 	logtd("%s", _offer_sdp->ToString().CStr());
@@ -376,11 +375,6 @@ bool RtcStream::OnRtpPacketized(std::shared_ptr<RtpPacket> packet)
 {
 	auto stream_packet = std::make_any<std::shared_ptr<RtpPacket>>(packet);
 	BroadcastPacket(stream_packet);
-
-	if (_stream_metrics != nullptr)
-	{
-		_stream_metrics->IncreaseBytesOut(PublisherType::Webrtc, packet->GetData()->GetLength() * GetSessionCount());
-	}
 
 	if (_rtx_enabled == true)
 	{

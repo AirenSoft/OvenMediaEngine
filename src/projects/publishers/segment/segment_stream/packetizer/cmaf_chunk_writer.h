@@ -23,6 +23,7 @@ public:
 		return _sequence_number;
 	}
 
+	// Unit: timebase
 	int64_t GetStartTimestamp() const
 	{
 		return _start_timestamp;
@@ -33,6 +34,7 @@ public:
 		return _sample_count;
 	}
 
+	// Unit: timebase
 	uint64_t GetSegmentDuration() const;
 
 	bool IsWriteStarted() const

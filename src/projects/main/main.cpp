@@ -17,7 +17,7 @@
 #include <orchestrator/orchestrator.h>
 #include <providers/providers.h>
 #include <publishers/publishers.h>
-#include <transcode/transcoder.h>
+#include <transcoder/transcoder.h>
 #include <web_console/web_console.h>
 #include <modules/address/address_utilities.h>
 
@@ -142,6 +142,7 @@ int main(int argc, char *argv[])
 	// Initialize Providers
 	INIT_MODULE(webrtc_provider, "WebRTC Provider", pvd::WebRTCProvider::Create(*server_config, media_router));
 	INIT_MODULE(mpegts_provider, "MPEG-TS Provider", pvd::MpegTsProvider::Create(*server_config, media_router));
+	INIT_MODULE(srt_provider, "SRT Provider", pvd::SrtProvider::Create(*server_config, media_router));
 	INIT_MODULE(rtmp_provider, "RTMP Provider", pvd::RtmpProvider::Create(*server_config, media_router));
 	INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
 	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));

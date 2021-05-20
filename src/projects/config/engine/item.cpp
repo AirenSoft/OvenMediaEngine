@@ -506,7 +506,7 @@ namespace cfg
 
 	Json::Value Item::ToJson(bool include_default_values) const
 	{
-		return std::move(ToJsonInternal(include_default_values));
+		return ToJsonInternal(include_default_values);
 	}
 
 	Json::Value Item::ToJsonInternal(bool include_default_values) const
@@ -523,7 +523,7 @@ namespace cfg
 			}
 		}
 
-		return std::move(object);
+		return object;
 	}
 
 	bool Item::SetValue(const std::shared_ptr<const Child> &child, ValueType type, std::any &child_target, const ov::String &path, const ItemName &child_name, const ov::String &name, const std::any &value)

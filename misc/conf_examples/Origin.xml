@@ -16,17 +16,40 @@
 
 	<!-- Settings for the ports to bind -->
 	<Bind>
+		<!-- Enable this configuration if you want to use API Server -->
+		<!--
+		<Managers>
+			<API>
+				<Port>${env:OME_API_PORT:48081}</Port>
+				<WorkerCount>1</WorkerCount>
+			</API>
+		</Managers>
+		-->
 		<Providers>
 			<RTMP>
 				<Port>${env:OME_RTMP_PROV_PORT:1935}</Port>
 			</RTMP>
+			<SRT>
+				<Port>${env:OME_SRT_PROV_PORT:9999}</Port>
+			</SRT>
 			<MPEGTS>
 				<!--
-					Listen on port 4000,4001,4004,4005
+					Listen on port 4000-4005
 					This is just a demonstration to show that you can configure the port in several ways
 				-->
 				<Port>${env:OME_MPEGTS_PROV_PORT:4000-4003,4004,4005/udp}</Port>
 			</MPEGTS>
+			<WebRTC>
+				<Signalling>
+					<Port>${env:OME_SIGNALLING_PORT:3333}</Port>
+					<!-- If you want to use TLS, specify the TLS port -->
+					<!-- <TLSPort>3334</TLSPort> -->
+				</Signalling>
+				<IceCandidates>
+					<TcpRelay>${env:OME_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
+					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006-10010/udp}</IceCandidate>
+				</IceCandidates>
+			</WebRTC>
 		</Providers>
 
 		<Publishers>
@@ -51,11 +74,6 @@
 					<!-- <TLSPort>3334</TLSPort> -->
 				</Signalling>
 				<IceCandidates>
-					<!-- 
-						If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
-						This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
-						For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/v/0.11.1/streaming/webrtc-publishing#webrtc-over-tcp
-					-->
 					<TcpRelay>${env:OME_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
 					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006-10010/udp}</IceCandidate>
 				</IceCandidates>
@@ -92,6 +110,19 @@
 				-->
 			</Host>
 
+			<!-- Refer https://airensoft.gitbook.io/ovenmediaengine/signedpolicy
+			<SignedPolicy>
+				<PolicyQueryKeyName>policy</PolicyQueryKeyName>
+				<SignatureQueryKeyName>signature</SignatureQueryKeyName>
+				<SecretKey>aKq#1kj</SecretKey>
+
+				<Enables>
+					<Providers>rtmp,webrtc,srt</Providers>
+					<Publishers>webrtc,hls,dash,lldash</Publishers>
+				</Enables>
+			</SignedPolicy>
+			-->
+
 			<!-- Settings for applications -->
 			<Applications>
 				<Application>
@@ -120,7 +151,9 @@
 					</OutputProfiles>
 					<Providers>
 						<OVT />
+						<WebRTC />
 						<RTMP />
+						<SRT />
 						<RTSPPull />
 						<MPEGTS>
 							<StreamMap>
@@ -158,12 +191,14 @@
 							<CrossDomains>
 								<Url>*</Url>
 							</CrossDomains>
+							<UTCTiming />
 						</DASH>
 						<LLDASH>
 							<SegmentDuration>5</SegmentDuration>
 							<CrossDomains>
 								<Url>*</Url>
 							</CrossDomains>
+							<UTCTiming />
 						</LLDASH>
 					</Publishers>
 				</Application>

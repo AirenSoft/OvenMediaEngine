@@ -54,7 +54,13 @@ namespace ov
 	{
 		_callback = nullptr;
 
-		return Socket::CloseInternal();
+		if (Socket::CloseInternal())
+		{
+			SetState(SocketState::Closed);
+			return true;
+		}
+
+		return false;
 	}
 
 	void DatagramSocket::OnReadable()

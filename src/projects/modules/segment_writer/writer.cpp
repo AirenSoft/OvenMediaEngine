@@ -39,13 +39,13 @@ static AVRational RationalFromTimebase(const cmn::Timebase &timebase)
 static ov::String StringFromTs(int64_t timestamp)
 {
 	ov::String str = (timestamp == AV_NOPTS_VALUE) ? "NOPTS" : ov::String::FormatString("%" PRId64, timestamp);
-	return std::move(str);
+	return str;
 }
 
 static ov::String StringFromTime(int64_t timestamp, const AVRational *time_base)
 {
 	ov::String str = (timestamp == AV_NOPTS_VALUE) ? "NOPTS" : ov::String::FormatString("%.6g", ::av_q2d(*time_base) * timestamp);
-	return std::move(str);
+	return str;
 }
 
 static ov::String StringFromError(int code)
@@ -208,12 +208,12 @@ bool Writer::FillCodecParameters(const std::shared_ptr<const Track> &track, AVCo
 			}
 
 			auto &extra_data = media_track->GetCodecExtradata();
-			if (extra_data.size() > 0)
+			if (extra_data != nullptr)
 			{
-				codec_parameters->extradata_size = extra_data.size();
+				codec_parameters->extradata_size = extra_data->GetLength();
 				codec_parameters->extradata = static_cast<uint8_t *>(::av_malloc(codec_parameters->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE));
 				::memset(codec_parameters->extradata, 0, codec_parameters->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
-				::memcpy(codec_parameters->extradata, extra_data.data(), codec_parameters->extradata_size);
+				::memcpy(codec_parameters->extradata, extra_data->GetData(), codec_parameters->extradata_size);
 			}
 
 			// _output_format->video_codec = codec_parameters->codec_id;
@@ -233,12 +233,12 @@ bool Writer::FillCodecParameters(const std::shared_ptr<const Track> &track, AVCo
 			codec_parameters->codec_tag = 0;
 
 			auto &extra_data = media_track->GetCodecExtradata();
-			if (extra_data.size() > 0)
+			if (extra_data != nullptr)
 			{
-				codec_parameters->extradata_size = extra_data.size();
+				codec_parameters->extradata_size = extra_data->GetLength();
 				codec_parameters->extradata = static_cast<uint8_t *>(::av_malloc(codec_parameters->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE));
 				::memset(codec_parameters->extradata, 0, codec_parameters->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
-				::memcpy(codec_parameters->extradata, extra_data.data(), codec_parameters->extradata_size);
+				::memcpy(codec_parameters->extradata, extra_data->GetData(), codec_parameters->extradata_size);
 			}
 
 			// _output_format->audio_codec = codec_parameters->codec_id;
@@ -664,10 +664,7 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 
 		case cmn::BitstreamFormat::H264_ANNEXB:
 			data = packet->GetData();
-			if (_type == Type::M4s)
-			{
-				data = H264Converter::ConvertAnnexbToAvcc(data);
-			}
+			data = H264Converter::ConvertAnnexbToAvcc(data);
 			length_list.push_back(data->GetLength());
 			break;
 
@@ -676,7 +673,7 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 			length_list.push_back(data->GetLength());
 			break;
 
-		case cmn::BitstreamFormat::AAC_LATM:
+		case cmn::BitstreamFormat::AAC_RAW:
 			data = packet->GetData();
 			length_list.push_back(data->GetLength());
 			break;
@@ -689,10 +686,11 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 			}
 			else
 			{
-				data = AacConverter::ConvertAdtsToLatm(packet->GetData(), &length_list);
+				data = AacConverter::ConvertAdtsToRaw(packet->GetData(), &length_list);
 			}
 			break;
-
+		case cmn::BitstreamFormat::AAC_LATM:
+			[[fallthrough]];
 		case cmn::BitstreamFormat::Unknown:
 			[[fallthrough]];
 		case cmn::BitstreamFormat::VP8:
@@ -701,8 +699,15 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 			[[fallthrough]];
 		case cmn::BitstreamFormat::JPEG:
 			[[fallthrough]];
+		case cmn::BitstreamFormat::H264_RTP_RFC_6184:
+			[[fallthrough]];
+		case cmn::BitstreamFormat::VP8_RTP_RFC_7741:
+			[[fallthrough]];
+		case cmn::BitstreamFormat::AAC_MPEG4_GENERIC:
+			[[fallthrough]];
+		case cmn::BitstreamFormat::OPUS_RTP_RFC_7587:
+			[[fallthrough]];
 		case cmn::BitstreamFormat::PNG:
-			// Not supported
 			break;
 	}
 
@@ -754,7 +759,7 @@ std::shared_ptr<const ov::Data> Writer::Finalize()
 	{
 		auto data = data_stream->GetDataPointer();
 
-		return std::move(data);
+		return data;
 	}
 
 	return nullptr;

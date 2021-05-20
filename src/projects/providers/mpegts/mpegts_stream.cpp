@@ -27,9 +27,9 @@
 
 namespace pvd
 {
-	std::shared_ptr<MpegTsStream> MpegTsStream::Create(StreamSourceType source_type, uint32_t client_id, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<ov::Socket> &client_socket, const std::shared_ptr<PushProvider> &provider)
+	std::shared_ptr<MpegTsStream> MpegTsStream::Create(StreamSourceType source_type, uint32_t client_id, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<ov::Socket> &client_socket, uint64_t lifetime_epoch_msec, const std::shared_ptr<PushProvider> &provider)
 	{
-		auto stream = std::make_shared<MpegTsStream>(source_type, client_id, vhost_app_name, stream_name, client_socket, provider);
+		auto stream = std::make_shared<MpegTsStream>(source_type, client_id, vhost_app_name, stream_name, client_socket, lifetime_epoch_msec, provider);
 		if(stream != nullptr)
 		{
 			stream->Start();
@@ -37,13 +37,14 @@ namespace pvd
 		return stream;
 	}
 
-	MpegTsStream::MpegTsStream(StreamSourceType source_type, uint32_t client_id, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, std::shared_ptr<ov::Socket> client_socket, const std::shared_ptr<PushProvider> &provider)
+	MpegTsStream::MpegTsStream(StreamSourceType source_type, uint32_t client_id, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, std::shared_ptr<ov::Socket> client_socket, uint64_t lifetime_epoch_msec, const std::shared_ptr<PushProvider> &provider)
 		: PushStream(source_type, client_id, provider),
 
 		_vhost_app_name(vhost_app_name)
 	{
 		SetName(stream_name);
 		_remote = client_socket;
+		_lifetime_epoch_msec = lifetime_epoch_msec;
 	}
 
 	MpegTsStream::~MpegTsStream()
@@ -82,6 +83,16 @@ namespace pvd
 	{
 		if(GetState() == Stream::State::ERROR || GetState() == Stream::State::STOPPED || GetState() == Stream::State::STOPPING)
 		{
+			return false;
+		}
+
+		if(_lifetime_epoch_msec != 0 &&
+			_remote->GetType() == ov::SocketType::Srt && 
+			_lifetime_epoch_msec < ov::Clock::NowMSec())
+		{
+			// Expired
+			logti("Stream has expired by signed policy (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
+			Stop();
 			return false;
 		}
 

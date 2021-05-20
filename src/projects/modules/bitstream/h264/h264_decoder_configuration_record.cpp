@@ -1,5 +1,4 @@
 #include "h264_decoder_configuration_record.h"
-
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovlibrary/bit_reader.h>
 #include <base/ovlibrary/bit_writer.h>
@@ -211,11 +210,57 @@ aligned(8) class AVCDecoderConfigurationRecord {
 	}
 } */
 
-void AVCDecoderConfigurationRecord::Serialize(std::vector<uint8_t>& serialze)
+std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> AVCDecoderConfigurationRecord::GetSpsPpsAsAnnexB(uint8_t start_code_size)
+{
+	auto data = std::make_shared<ov::Data>();
+	FragmentationHeader frag_header;
+	size_t offset = 0;
+
+	uint8_t START_CODE[4];
+	
+	START_CODE[0] = 0x00;
+	START_CODE[1] = 0x00;
+	if(start_code_size == 3)
+	{
+		START_CODE[2] = 0x01;
+	}
+	else // 4
+	{
+		START_CODE[2] = 0x00;
+		START_CODE[3] = 0x01;
+	}
+
+	for(int i=0; i<NumOfSPS(); i++)
+	{
+		data->Append(START_CODE, start_code_size);
+		offset += start_code_size;
+
+		auto sps = GetSPS(i);
+		frag_header.fragmentation_offset.push_back(offset);
+		frag_header.fragmentation_length.push_back(sps->GetLength());
+
+		offset += sps->GetLength();
+
+		data->Append(sps);
+	}
+
+	for(int i=0; i<NumOfPPS(); i++)
+	{
+		data->Append(START_CODE, start_code_size);
+		offset += start_code_size;
+
+		auto pps = GetPPS(i);
+		frag_header.fragmentation_offset.push_back(offset);
+		frag_header.fragmentation_length.push_back(pps->GetLength());
+		data->Append(pps);
+	}
+
+	return {data, frag_header};
+}
+
+std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::Serialize()
 {
 	ov::BitWriter bits(512);
-
-	Version();
 
 	bits.Write(8, Version());	
 	bits.Write(8, ProfileIndication());	
@@ -245,10 +290,14 @@ void AVCDecoderConfigurationRecord::Serialize(std::vector<uint8_t>& serialze)
 		}
 	}
 
-	int32_t capacity = (int32_t)ceil((double)bits.GetBitCount() / 8);
-	serialze.resize( capacity );
+	return std::make_shared<ov::Data>(bits.GetData(), bits.GetDataSize());
+}
 
-	std::copy(bits.GetData(), bits.GetData() + capacity, serialze.begin());
+void AVCDecoderConfigurationRecord::Serialize(std::vector<uint8_t>& serialze)
+{
+	auto data = Serialize();
+	serialze.resize(data->GetLength());
+	std::copy(data->GetDataAs<uint8_t>(), data->GetDataAs<uint8_t>() + data->GetLength(), serialze.begin());
 }
 
 void AVCDecoderConfigurationRecord::SetVersion(uint8_t version)

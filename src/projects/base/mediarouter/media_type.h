@@ -27,12 +27,17 @@ namespace cmn
 	{
 		Unknown = -1,
 		H264_AVCC = 0,
-		H264_ANNEXB,
-		H265_ANNEXB,
-		VP8,
+		H264_ANNEXB,		// OME's default internal bitstream format for H264
+		H264_RTP_RFC_6184,
+		H265_ANNEXB,		// OME's default internal bitstream format for H265
+		VP8,/*raw*/			// OME's default internal bitstream format for VP8
+		VP8_RTP_RFC_7741,
+		AAC_RAW,
+		AAC_MPEG4_GENERIC,
+		AAC_ADTS,			// OME's default internal bitstream format for AAC
 		AAC_LATM,
-		AAC_ADTS,
-		OPUS,
+		OPUS,/*raw*/		// OME's default internal bitstream format for OPUS
+		OPUS_RTP_RFC_7587,
 		JPEG,
 		PNG
 	};
@@ -44,9 +49,9 @@ namespace cmn
 		// and the "media router" delivers this type of packet to the publisher as it is without parsing.
 		OVT = 0,	
 
-		RAW, // AAC LATM, AAC ADTS, JPEG
+		RAW, // AAC RAW, AAC ADTS, JPEG
 		// H.264
-		SEQUENCE_HEADER, // For H.264 AVCC, AAC LATM
+		SEQUENCE_HEADER, // For H.264 AVCC, AAC RAW
 		NALU, // For H.264 AVCC, ANNEXB	
 	};
 
@@ -165,7 +170,7 @@ namespace cmn
 
 		ov::String ToString() const
 		{
-			return std::move(GetStringExpr());
+			return GetStringExpr();
 		}
 
 	private:

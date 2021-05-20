@@ -60,6 +60,14 @@ bool CmafApplication::Start()
 	_segment_count = 1;
 	_segment_duration = publisher_info->GetSegmentDuration();
 
+	auto &utc_timing = publisher_info->GetUtcTiming();
+
+	if (utc_timing.IsParsed())
+	{
+		_utc_timing_scheme = utc_timing.GetScheme();
+		_utc_timing_value = utc_timing.GetValue();
+	}
+
 	return Application::Start();
 }
 
@@ -82,6 +90,7 @@ std::shared_ptr<pub::Stream> CmafApplication::CreateStream(const std::shared_ptr
 	return SegmentStream::Create<CmafStreamPacketizer>(
 		GetSharedPtrAs<pub::Application>(), *info.get(),
 		_segment_count, _segment_duration,
+		_utc_timing_scheme, _utc_timing_value,
 		thread_count,
 		_chunked_transfer);
 }

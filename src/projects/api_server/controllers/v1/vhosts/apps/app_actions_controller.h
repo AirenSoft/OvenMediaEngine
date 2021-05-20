@@ -21,46 +21,46 @@ namespace api
 
 		protected:
 			// GET /v1/vhosts/<vhost_name>/apps/<app_name>:records
-			ApiResponse OnGetRecords(const std::shared_ptr<HttpClient> &client,
+			ApiResponse OnGetRecords(const std::shared_ptr<http::svr::HttpConnection> &client,
 									 const std::shared_ptr<mon::HostMetrics> &vhost,
 									 const std::shared_ptr<mon::ApplicationMetrics> &app);
 
-			ApiResponse OnPostRecords(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+			ApiResponse OnPostRecords(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 									 const std::shared_ptr<mon::HostMetrics> &vhost,
 									 const std::shared_ptr<mon::ApplicationMetrics> &app);
 
 			// POST /v1/vhosts/<vhost_name>/apps/<app_name>:startRecord
-			ApiResponse OnPostStartRecord(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+			ApiResponse OnPostStartRecord(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 										  const std::shared_ptr<mon::HostMetrics> &vhost,
 										  const std::shared_ptr<mon::ApplicationMetrics> &app);
 			
 			// POST /v1/vhosts/<vhost_name>/apps/<app_name>:stopRecord
-			ApiResponse OnPostStopRecord(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+			ApiResponse OnPostStopRecord(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 										 const std::shared_ptr<mon::HostMetrics> &vhost,
 										 const std::shared_ptr<mon::ApplicationMetrics> &app);
 
 			// GET /v1/vhosts/<vhost_name>/apps/<app_name>:pushes
-			ApiResponse OnGetPushes(const std::shared_ptr<HttpClient> &client,
+			ApiResponse OnGetPushes(const std::shared_ptr<http::svr::HttpConnection> &client,
 									const std::shared_ptr<mon::HostMetrics> &vhost,
 									const std::shared_ptr<mon::ApplicationMetrics> &app);
 
-			ApiResponse OnPostPushes(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+			ApiResponse OnPostPushes(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 									const std::shared_ptr<mon::HostMetrics> &vhost,
 									const std::shared_ptr<mon::ApplicationMetrics> &app);
 						
 
 			// POST /v1/vhosts/<vhost_name>/apps/<app_name>:startPush
-			ApiResponse OnPostStartPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+			ApiResponse OnPostStartPush(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 										const std::shared_ptr<mon::HostMetrics> &vhost,
 										const std::shared_ptr<mon::ApplicationMetrics> &app);
 			
 			// POST /v1/vhosts/<vhost_name>/apps/<app_name>:stopPush
-			ApiResponse OnPostStopPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+			ApiResponse OnPostStopPush(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 									   const std::shared_ptr<mon::HostMetrics> &vhost,
 									   const std::shared_ptr<mon::ApplicationMetrics> &app);
 
 			// GET /v1/vhosts/<vhost_name>/apps/<app_name>:<action>
-			ApiResponse OnGetDummyAction(const std::shared_ptr<HttpClient> &client,
+			ApiResponse OnGetDummyAction(const std::shared_ptr<http::svr::HttpConnection> &client,
 										 const std::shared_ptr<mon::HostMetrics> &vhost,
 										 const std::shared_ptr<mon::ApplicationMetrics> &app);
 		};

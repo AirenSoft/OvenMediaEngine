@@ -82,16 +82,16 @@ public:
 		return _channel;
 	}
 
-	void SetExtradata(std::vector<uint8_t> &extradata)
+	void SetExtradata(const std::shared_ptr<ov::Data> &extradata)
 	{
-		_extradata.assign(extradata.begin(), extradata.end());
+		_extradata = extradata;
 	}
 
-	const std::vector<uint8_t> &GetExtradata() const
+	const std::shared_ptr<ov::Data> &GetExtradata() const
 	{
 		return _extradata;
 	}
-	std::vector<uint8_t> &GetExtradata()
+	std::shared_ptr<ov::Data> &GetExtradata()
 	{
 		return _extradata;
 	}
@@ -108,7 +108,7 @@ private:
 	cmn::AudioSample _sample;
 	cmn::AudioChannel _channel;
 
-	std::vector<uint8_t> _extradata;
+	std::shared_ptr<ov::Data> _extradata;
 };
 
 class FileWriter
@@ -131,11 +131,15 @@ public:
 
 	bool AddTrack(cmn::MediaType media_type, int32_t track_id, std::shared_ptr<FileTrackInfo> trackinfo);
 
-	bool PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacketFlag flag, std::shared_ptr<ov::Data> &data);
+	bool PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacketFlag flag, cmn::BitstreamFormat format, std::shared_ptr<ov::Data> &data);
 
 	bool IsWritable();
 
 	static void FFmpegLog(void *ptr, int level, const char *fmt, va_list vl);
+
+	static ov::String GetFormatByExtension(ov::String extension, ov::String default_format = "ts");
+
+	static bool IsSupportCodec(ov::String format, cmn::MediaCodecId codec_id);
 
 private:
 	ov::String _path;
@@ -145,6 +149,8 @@ private:
 
 	// <MediaTrack.id, std::hsared_ptr<FileTrackInfo>>
 	std::map<int32_t, std::shared_ptr<FileTrackInfo>> _trackinfo_map;
+
+	int64_t 	_start_timestamp;
 
 	// Map of track
 	// <MediaTrack.id, AVStream.index>

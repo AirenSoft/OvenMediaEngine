@@ -11,8 +11,8 @@
 #include <base/info/host.h>
 #include <base/mediarouter/media_route_interface.h>
 #include <base/publisher/publisher.h>
-#include <modules/http_server/http_server_manager.h>
-#include <modules/http_server/interceptors/http_request_interceptors.h>
+#include <modules/http/server/http_server_manager.h>
+#include <modules/http/server/interceptors/http_request_interceptors.h>
 #include <modules/ice/ice.h>
 
 #include <memory>
@@ -27,7 +27,7 @@ public:
 	RtcSignallingServer(const cfg::Server &server_config);
 	~RtcSignallingServer() override = default;
 
-	bool Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address, int worker_count, std::shared_ptr<WebSocketInterceptor> interceptor);
+	bool Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address, int worker_count, std::shared_ptr<http::svr::ws::Interceptor> interceptor);
 	bool Stop();
 
 	bool AddObserver(const std::shared_ptr<RtcSignallingObserver> &observer);
@@ -99,20 +99,20 @@ protected:
 
 	using SdpCallback = std::function<void(std::shared_ptr<SessionDescription> sdp, std::shared_ptr<ov::Error> error)>;
 
-	bool SetWebSocketHandler(std::shared_ptr<WebSocketInterceptor> interceptor = nullptr);
+	bool SetWebSocketHandler(std::shared_ptr<http::svr::ws::Interceptor> interceptor = nullptr);
 
-	std::shared_ptr<ov::Error> DispatchCommand(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const WebSocketFrame> &message);
-	std::shared_ptr<ov::Error> DispatchRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client, std::shared_ptr<RtcSignallingInfo> &info);
-	std::shared_ptr<ov::Error> DispatchAnswer(const std::shared_ptr<WebSocketClient> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
-	std::shared_ptr<ov::Error> DispatchCandidate(const std::shared_ptr<WebSocketClient> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
-	std::shared_ptr<ov::Error> DispatchOfferP2P(const std::shared_ptr<WebSocketClient> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
-	std::shared_ptr<ov::Error> DispatchCandidateP2P(const std::shared_ptr<WebSocketClient> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
-	std::shared_ptr<ov::Error> DispatchStop(const std::shared_ptr<WebSocketClient> &ws_client, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<ov::Error> DispatchCommand(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const http::svr::ws::Frame> &message);
+	std::shared_ptr<ov::Error> DispatchRequestOffer(const std::shared_ptr<http::svr::ws::Client> &ws_client, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<ov::Error> DispatchAnswer(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<ov::Error> DispatchCandidate(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<ov::Error> DispatchOfferP2P(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<ov::Error> DispatchCandidateP2P(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<ov::Error> DispatchStop(const std::shared_ptr<http::svr::ws::Client> &ws_client, std::shared_ptr<RtcSignallingInfo> &info);
 
 	const cfg::Server _server_config;
 
-	std::shared_ptr<HttpServer> _http_server;
-	std::shared_ptr<HttpsServer> _https_server;
+	std::shared_ptr<http::svr::HttpServer> _http_server;
+	std::shared_ptr<http::svr::HttpsServer> _https_server;
 
 	std::vector<std::shared_ptr<RtcSignallingObserver>> _observers;
 

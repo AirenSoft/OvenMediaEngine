@@ -21,25 +21,25 @@ namespace api
 
 		protected:
 			// POST /v1/vhosts/<vhost_name>/apps
-			ApiResponse OnPostApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+			ApiResponse OnPostApp(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 								  const std::shared_ptr<mon::HostMetrics> &vhost);
 
 			// GET /v1/vhosts/<vhost_name>/apps
-			ApiResponse OnGetAppList(const std::shared_ptr<HttpClient> &client,
+			ApiResponse OnGetAppList(const std::shared_ptr<http::svr::HttpConnection> &client,
 									 const std::shared_ptr<mon::HostMetrics> &vhost);
 
 			// GET /v1/vhosts/<vhost_name>/apps/<app_name>
-			ApiResponse OnGetApp(const std::shared_ptr<HttpClient> &client,
+			ApiResponse OnGetApp(const std::shared_ptr<http::svr::HttpConnection> &client,
 								 const std::shared_ptr<mon::HostMetrics> &vhost,
 								 const std::shared_ptr<mon::ApplicationMetrics> &app);
 
 			// PUT /v1/vhosts/<vhost_name>/apps/<app_name>
-			ApiResponse OnPutApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+			ApiResponse OnPutApp(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 								 const std::shared_ptr<mon::HostMetrics> &vhost,
 								 const std::shared_ptr<mon::ApplicationMetrics> &app);
 
 			// DELETE /v1/vhosts/<vhost_name>/apps/<app_name>
-			ApiResponse OnDeleteApp(const std::shared_ptr<HttpClient> &client,
+			ApiResponse OnDeleteApp(const std::shared_ptr<http::svr::HttpConnection> &client,
 									const std::shared_ptr<mon::HostMetrics> &vhost,
 									const std::shared_ptr<mon::ApplicationMetrics> &app);
 		};

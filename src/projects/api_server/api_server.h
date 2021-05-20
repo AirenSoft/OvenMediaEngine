@@ -12,7 +12,7 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/ovsocket.h>
 #include <config/config.h>
-#include <modules/http_server/http_server_manager.h>
+#include <modules/http/server/http_server_manager.h>
 
 #include "controllers/root_controller.h"
 
@@ -25,10 +25,10 @@ namespace api
 		bool Stop();
 
 	protected:
-		std::shared_ptr<HttpRequestInterceptor> CreateInterceptor();
+		std::shared_ptr<http::svr::RequestInterceptor> CreateInterceptor();
 
-		std::shared_ptr<HttpServer> _http_server;
-		std::shared_ptr<HttpsServer> _https_server;
+		std::shared_ptr<http::svr::HttpServer> _http_server;
+		std::shared_ptr<http::svr::HttpsServer> _https_server;
 
 		std::shared_ptr<RootController> _root_controller;
 

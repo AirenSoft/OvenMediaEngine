@@ -210,16 +210,16 @@ bool RtmpWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 			codecpar->sample_aspect_ratio = AVRational{1, 1};
 
 			// set extradata for avc_decoder_configuration_record
-			if (track_info->GetExtradata().size() > 0)
+			if (track_info->GetExtradata() != nullptr)
 			{
-				codecpar->extradata_size = track_info->GetExtradata().size();
+				codecpar->extradata_size = track_info->GetExtradata()->GetLength();
 				codecpar->extradata = (uint8_t *)av_malloc(codecpar->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
 				memset(codecpar->extradata, 0, codecpar->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
-				memcpy(codecpar->extradata, &track_info->GetExtradata()[0], codecpar->extradata_size);
+				memcpy(codecpar->extradata, track_info->GetExtradata()->GetDataAs<uint8_t>(), codecpar->extradata_size);
 			}
 			else
 			{
-				logte("there is no avc configuration 0", track_info->GetExtradata().size());
+				logte("there is no avc configuration %d", track_info->GetExtradata()->GetLength());
 			}
 
 			stream->display_aspect_ratio = AVRational{1, 1};
@@ -245,12 +245,12 @@ bool RtmpWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 			codecpar->codec_tag = 0;
 
 			// set extradata for aac_specific_config
-			if (track_info->GetExtradata().size() > 0)
+			if (track_info->GetExtradata() != nullptr)
 			{
-				codecpar->extradata_size = track_info->GetExtradata().size();
+				codecpar->extradata_size = track_info->GetExtradata()->GetLength();
 				codecpar->extradata = (uint8_t *)av_malloc(codecpar->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
 				memset(codecpar->extradata, 0, codecpar->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
-				memcpy(codecpar->extradata, &track_info->GetExtradata()[0], codecpar->extradata_size);
+				memcpy(codecpar->extradata, track_info->GetExtradata()->GetDataAs<uint8_t>(), codecpar->extradata_size);
 			}
 
 			stream->time_base = AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()};
@@ -322,10 +322,10 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	//  - VP8 : Passthrough (unknown name)
 	// format(flv)
 	//	- H264 : AnnexB -> AVCC
-	//	- AAC : to LATM
+	//	- AAC : to RAW
 	// format(mp4)
 	//	- H264 : Passthrough
-	//	- AAC : to LATM
+	//	- AAC : to RAW
 
 	std::shared_ptr<ov::Data> nalu;
 

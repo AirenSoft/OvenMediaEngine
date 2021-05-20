@@ -55,7 +55,7 @@ bool RtmpPushPublisher::Stop()
 
 std::shared_ptr<pub::Application> RtmpPushPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
-	if(IsModuleAvailable() == false)
+	if (IsModuleAvailable() == false)
 	{
 		return nullptr;
 	}
@@ -99,7 +99,7 @@ void RtmpPushPublisher::StartSession(std::shared_ptr<RtmpPushSession> session)
 			[[fallthrough]];
 		// State of Record failed
 		case pub::Session::SessionState::Error:
-			[[fallthrough]];
+			break;
 	}
 
 	auto next_session_state = session->GetState();
@@ -125,7 +125,7 @@ void RtmpPushPublisher::StopSession(std::shared_ptr<RtmpPushSession> session)
 		case pub::Session::SessionState::Stopped:
 			[[fallthrough]];
 		case pub::Session::SessionState::Error:
-			[[fallthrough]];
+			break;
 	}
 
 	auto next_session_state = session->GetState();
@@ -213,7 +213,8 @@ std::shared_ptr<ov::Error> RtmpPushPublisher::PushStart(const info::VHostAppName
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);
 
-	if (push->GetId().IsEmpty() == true || push->GetStreamName().IsEmpty() == true)
+	// Validation check for required parameters
+	if (push->GetId().IsEmpty() == true || push->GetStreamName().IsEmpty() == true || push->GetUrl().IsEmpty() == true || push->GetProtocol().IsEmpty() == true)
 	{
 		ov::String error_message = "There is no required parameter [";
 
@@ -227,16 +228,42 @@ std::shared_ptr<ov::Error> RtmpPushPublisher::PushStart(const info::VHostAppName
 			error_message += " stream.name";
 		}
 
+		if (push->GetUrl().IsEmpty() == true)
+		{
+			error_message += " url";
+		}
+
+		if (push->GetProtocol().IsEmpty() == true)
+		{
+			error_message += " protocol";
+		}
+
 		error_message += "]";
 
 		return ov::Error::CreateError(PushPublisherErrorCode::FailureInvalidParameter, error_message);
 	}
 
+	// Validation check for dupulicate id
 	if (_userdata_sets.GetByKey(push->GetId()) != nullptr)
 	{
 		ov::String error_message = "Duplicate ID already exists";
 
 		return ov::Error::CreateError(PushPublisherErrorCode::FailureDupulicateKey, error_message);
+	}
+
+	// Validation check for protocol scheme
+	if (push->GetUrl().HasPrefix("rtmp://") == false)
+	{
+		ov::String error_message = "Unsupported protocol";
+
+		return ov::Error::CreateError(PushPublisherErrorCode::FailureInvalidParameter, error_message);
+	}
+
+	// Remove suffix '/" of rtmp url
+	while (push->GetUrl().HasSuffix("/"))
+	{
+		ov::String tmp_url = push->GetUrl().Substring(0, push->GetUrl().IndexOfRev('/'));
+		push->SetUrl(tmp_url);
 	}
 
 	push->SetEnable(true);

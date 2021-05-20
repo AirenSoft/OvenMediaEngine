@@ -4,16 +4,18 @@
 #include <base/ovlibrary/byte_io.h>
 #include <sys/time.h>
 
-bool RtcpPacket::Build(const RtcpInfo &info)
+bool RtcpPacket::Build(const std::shared_ptr<RtcpInfo> &info)
 {
-	auto info_data = info.GetData();
+	auto info_data = info->GetData();
 	if(info_data == nullptr)
 	{
 		return false;
 	}
 
-	SetReportCount(info.GetCountOrFmt());
-	SetType(info.GetPacketType());
+	_info = info;
+
+	SetReportCount(info->GetCountOrFmt());
+	SetType(info->GetPacketType());
 
 	_payload_size = info_data->GetLength();
 	_data = std::make_shared<ov::Data>(RTCP_DEFAULT_MAX_PACKET_SIZE);
@@ -26,8 +28,8 @@ bool RtcpPacket::Build(const RtcpInfo &info)
 	uint8_t version = 2 << 6;
 	uint8_t padding = false ? 1 << 5 : 0; // We don't use padding bit
 	
-	buffer[0] = version | padding | info.GetCountOrFmt();
-	buffer[1] = static_cast<uint8_t>(info.GetPacketType());
+	buffer[0] = version | padding | info->GetCountOrFmt();
+	buffer[1] = static_cast<uint8_t>(info->GetPacketType());
 
 	// Payload length must be divided zero
 	if(_payload_size % 4 != 0)
@@ -44,11 +46,6 @@ bool RtcpPacket::Build(const RtcpInfo &info)
 	memcpy(_payload, info_data->GetDataAs<uint8_t>(), info_data->GetLength());
 
 	return true;
-}
-
-bool RtcpPacket::Build(const std::shared_ptr<RtcpInfo> &info)
-{
-	return Build(*info);
 }
 
 bool RtcpPacket::Parse(const uint8_t* buffer, const size_t buffer_size, size_t &block_size)

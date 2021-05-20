@@ -8,8 +8,6 @@
 //==============================================================================
 #pragma once
 
-#define DASH_CORS_FILE_NAME					"crossdomain.xml"
-
 #define DASH_INIT_FILE_PREFIX				"init"
 #define DASH_PLAYLIST_FILE_NAME				"manifest"
 #define DASH_MPD_VIDEO_SUFFIX				/* <prefix>									*/	"_video"

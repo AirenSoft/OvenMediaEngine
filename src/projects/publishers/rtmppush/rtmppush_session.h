@@ -31,5 +31,7 @@ public:
 private:
 	std::shared_ptr<info::Push> _push;
 	
+	std::shared_mutex _mutex;
+	
 	std::shared_ptr<RtmpWriter> _writer;
 };

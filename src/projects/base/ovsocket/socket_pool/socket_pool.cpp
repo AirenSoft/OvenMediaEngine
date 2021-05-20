@@ -31,10 +31,12 @@ namespace ov
 		// Verify that the epoll is closed normally
 		std::lock_guard lock_guard(_worker_list_mutex);
 
+#if DEBUG
 		for (auto &worker : _worker_list)
 		{
 			OV_ASSERT(worker->_epoll == InvalidSocket, "Epoll is not uninitialized");
 		}
+#endif	// DEBUG
 	}
 
 	SocketType SocketPool::GetType() const
@@ -119,5 +121,25 @@ namespace ov
 		std::lock_guard lock_guard(_worker_list_mutex);
 
 		return UninitializeInternal();
+	}
+
+	String SocketPool::ToString() const
+	{
+		String description;
+
+		std::lock_guard lock_guard(_worker_list_mutex);
+
+		description.AppendFormat(
+			"<SocketPool: %p, workers: %d",
+			this, _worker_list.size());
+
+		for (auto &worker : _worker_list)
+		{
+			description.AppendFormat("\n    %s", worker->ToString().CStr());
+		}
+
+		description.Append((_worker_list.size() > 0) ? "\n>" : ">");
+
+		return description;
 	}
 }  // namespace ov

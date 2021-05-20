@@ -94,7 +94,7 @@ bool DtlsTransport::StartDTLS()
 			}
 		};
 
-	if(_tls.Initialize(DTLS_server_method(), _local_certificate, nullptr, "DEFAULT:!NULL:!aNULL:!SHA256:!SHA384:!aECDH:!AESGCM+AES256:!aPSK", callback) == false)
+	if(_tls.InitializeServerTls(DTLS_server_method(), _local_certificate, nullptr, "DEFAULT:!NULL:!aNULL:!SHA256:!SHA384:!aECDH:!AESGCM+AES256:!aPSK", callback) == false)
 	{
 		_state = SSL_ERROR;
 		return false;
@@ -154,7 +154,7 @@ bool DtlsTransport::MakeSrtpKey()
 
 	_tls.ExportKeyingMaterial(crypto_suite, label, server_key, client_key);
 
-	auto node = GetUpperNode();
+	auto node = GetPrevNode();
 	if(node->GetNodeType() == NodeType::Srtp)
 	{
 		auto srtp_transport = std::static_pointer_cast<SrtpTransport>(node);
@@ -172,9 +172,9 @@ bool DtlsTransport::VerifyPeerCertificate()
 	return true;
 }
 
-bool DtlsTransport::SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data)
+bool DtlsTransport::OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
-	if(GetState() != ov::Node::NodeState::Started)
+	if(GetNodeState() != ov::Node::NodeState::Started)
 	{
 		logtd("Node has not started, so the received data has been canceled.");
 		return false;
@@ -190,13 +190,7 @@ bool DtlsTransport::SendData(NodeType from_node, const std::shared_ptr<ov::Data>
 			// Since SRTP is already encrypted, it is sent directly to ICE.
 			if(from_node == NodeType::Srtp)
 			{
-				auto node = GetLowerNode(NodeType::Ice);
-				if(node == nullptr)
-				{
-					return false;
-				}
-				//logtd("DtlsTransport Send next node : %d", data->GetLength());
-				return node->SendData(GetNodeType(), data);
+				return SendDataToNextNode(data);
 			}
 			else
 			{
@@ -225,9 +219,9 @@ bool DtlsTransport::SendData(NodeType from_node, const std::shared_ptr<ov::Data>
 }
 
 // IcePort -> Publisher ->[queue] Application {thread}-> Session -> DtlsTransport -> SRTP || SCTP
-bool DtlsTransport::OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
+bool DtlsTransport::OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
-	if(GetState() != ov::Node::NodeState::Started)
+	if(GetNodeState() != ov::Node::NodeState::Started)
 	{
 		logtd("Node has not started, so the received data has been canceled.");
 		return false;
@@ -279,16 +273,7 @@ bool DtlsTransport::OnDataReceived(NodeType from_node, const std::shared_ptr<con
 			// SRTP cannot be input, only SRTCP can be input.
 			else
 			{
-				auto node = GetUpperNode();
-                if(node == nullptr)
-                {
-                    return false;
-                }
-
-				// To SRTP Transport
-                node->OnDataReceived(GetNodeType(), data);
-
-				return true;
+				return SendDataToPrevNode(data);
 			}
 			break;
 		}
@@ -325,20 +310,9 @@ ssize_t DtlsTransport::Write(ov::Tls *tls, const void *data, size_t length)
 {
 	auto packet = std::make_shared<ov::Data>(data, length);
 
-	auto node = GetLowerNode(NodeType::Ice);
-
-	if(node == nullptr)
-	{
-		logte("Cannot find lower node (Expected: IcePort)");
-
-		OV_ASSERT2(false);
-
-		return -1;
-	}
-
 	logtd("SSL write packet : %zu", packet->GetLength());
 
-	if(node->SendData(GetNodeType(), packet))
+	if(SendDataToNextNode(packet))
 	{
 		return length;
 	}

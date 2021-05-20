@@ -17,9 +17,10 @@ namespace ov
 	{
 	public:
 		void Notify();
-
 		void Wait();
 
+		// return false : timed out, return true : signalled
+		bool WaitFor(uint32_t timeout_delta_msec);
 		bool TryWait();
 
 	private:

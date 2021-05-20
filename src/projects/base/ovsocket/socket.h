@@ -39,12 +39,18 @@ namespace ov
 	class SocketAsyncInterface
 	{
 	public:
-		virtual void OnConnected() = 0;
+		// Called when
+		//   1) A new client connected to ServerSocket
+		//   2) Socket is connected to a server
+		//   3) An error occurred while connecting to a server
+		virtual void OnConnected(const std::shared_ptr<const SocketError> &error) = 0;
+		// Data is readable (by epoll)
 		virtual void OnReadable() = 0;
+		// Socket is closed
 		virtual void OnClosed() = 0;
 	};
 
-	class Socket : public EnableSharedFromThis<Socket>
+	class Socket : public EnableSharedFromThis<Socket>, public SocketPoolEventInterface
 	{
 	protected:
 		friend class SocketPoolWorker;
@@ -83,7 +89,10 @@ namespace ov
 			return _worker;
 		}
 
-		bool AttachToWorker();
+		BlockingMode GetBlockingMode() const
+		{
+			return _blocking_mode;
+		}
 
 		bool MakeBlocking();
 		bool MakeNonBlocking(std::shared_ptr<SocketAsyncInterface> callback);
@@ -91,7 +100,12 @@ namespace ov
 		bool Bind(const SocketAddress &address);
 		bool Listen(int backlog = SOMAXCONN);
 		SocketWrapper Accept(SocketAddress *client);
-		std::shared_ptr<Error> Connect(const SocketAddress &endpoint, int timeout_msec = Infinite);
+
+		// NOTE: If Socket is used in nonblocking mode, this method always returns nullptr,
+		//       and if an error occurs, OnConnected() callback passed as an argument in MakeNonBlocking() is called.
+		// NOTE: The callback to connection timeout is handled by SocketPoolWorker,
+		//       which can cause up to 100ms difference from timeout_msec due to the time taken by EpollWait()
+		std::shared_ptr<const SocketError> Connect(const SocketAddress &endpoint, int timeout_msec = (10 * 1000));
 
 		bool SetRecvTimeout(const timeval &tv);
 
@@ -131,6 +145,8 @@ namespace ov
 
 		bool SetSockOpt(SRT_SOCKOPT option, const void *value, int value_length);
 
+		bool IsClosable() const;
+
 		SocketState GetState() const;
 
 		void SetState(SocketState state);
@@ -151,6 +167,9 @@ namespace ov
 			return _callback;
 		}
 
+		// only available for SRT socket
+		ov::String GetStreamId() const;
+
 		bool Send(const std::shared_ptr<const Data> &data);
 		bool Send(const void *data, size_t length);
 
@@ -166,11 +185,11 @@ namespace ov
 		//                          (If not, epoll event will not occur later)
 		//
 		// If MakeNonBlocking() is called, non_block is ignored
-		std::shared_ptr<Error> Recv(std::shared_ptr<Data> &data, bool non_block = false);
-		std::shared_ptr<Error> Recv(void *data, size_t length, size_t *received_length, bool non_block = false);
+		std::shared_ptr<const SocketError> Recv(std::shared_ptr<Data> &data, bool non_block = false);
+		std::shared_ptr<const SocketError> Recv(void *data, size_t length, size_t *received_length, bool non_block = false);
 
 		// If MakeNonBlocking() is called, non_block is ignored
-		std::shared_ptr<Error> RecvFrom(std::shared_ptr<Data> &data, SocketAddress *address, bool non_block = false);
+		std::shared_ptr<const SocketError> RecvFrom(std::shared_ptr<Data> &data, SocketAddress *address, bool non_block = false);
 
 		// Dispatches as many command as possible
 		DispatchResult DispatchEvents();
@@ -178,6 +197,7 @@ namespace ov
 		bool Flush();
 
 		bool CloseIfNeeded();
+		bool CloseWithState(SocketState new_state);
 		bool Close();
 
 		bool HasCommand() const
@@ -221,6 +241,7 @@ namespace ov
 
 			enum class Type : uint8_t
 			{
+				// Fired when a client is connected to server (ServerSocket)
 				// Need to call connection callback
 				Connected = 0x00,
 
@@ -284,6 +305,13 @@ namespace ov
 			{
 			}
 
+			DispatchCommand(Type type, SocketState new_state)
+				: type(type),
+				  new_state(new_state),
+				  enqueued_time(std::chrono::system_clock::now())
+			{
+			}
+
 			bool IsCloseCommand() const
 			{
 				return OV_CHECK_FLAG(static_cast<uint8_t>(type), CLOSE_TYPE_MASK);
@@ -303,17 +331,29 @@ namespace ov
 
 			String ToString() const
 			{
-				return String::FormatString(
-					"<DispatchCommand: %p, %s, type: %s%s%s, data: %zu bytes>",
+				auto description = String::FormatString(
+					"<DispatchCommand: %p, %s, type: %s",
 					this,
 					ov::Converter::ToISO8601String(enqueued_time).CStr(),
-					StringFromType(type),
-					(type == DispatchCommand::Type::SendTo) ? ", address: " : "",
-					(type == DispatchCommand::Type::SendTo) ? address.ToString().CStr() : "",
-					(data != nullptr) ? data->GetLength() : 0);
+					StringFromType(type));
+
+				if (type == DispatchCommand::Type::SendTo)
+				{
+					description.AppendFormat(", address: %s", address.ToString().CStr());
+				}
+
+				if (data != nullptr)
+				{
+					description.AppendFormat(", data: %zu bytes", data->GetLength());
+				}
+
+				description.Append('>');
+
+				return description;
 			}
 
 			Type type = Type::Close;
+			SocketState new_state = SocketState::Closed;
 			SocketAddress address;
 			std::shared_ptr<const Data> data;
 			std::chrono::time_point<std::chrono::system_clock> enqueued_time;
@@ -322,32 +362,79 @@ namespace ov
 	protected:
 		virtual bool Create(SocketType type);
 
-		bool SetBlockingInternal(bool blocking);
+		// Internal version of MakeNonBlocking() - It doesn't check state
+		bool MakeNonBlockingInternal(std::shared_ptr<SocketAsyncInterface> callback, bool need_to_wait_first_epoll_event);
+
+		bool SetBlockingInternal(BlockingMode mode);
 
 		bool AppendCommand(DispatchCommand command);
 
-		DispatchResult DispatchInternal(DispatchCommand &command);
+		//--------------------------------------------------------------------
+		// Implementation of SocketPoolEventInterface
+		//--------------------------------------------------------------------
+		bool OnConnectedEvent(const std::shared_ptr<const SocketError> &error) override;
+		void OnDataAvailableEvent() override;
+
+		DispatchResult DispatchEventInternal(DispatchCommand &command);
 
 		ssize_t SendInternal(const std::shared_ptr<const Data> &data);
 		ssize_t SendToInternal(const SocketAddress &address, const std::shared_ptr<const Data> &data);
 
-		// From SocketPollWorker (Called when EPOLLIN event raised)
-		virtual void OnReadableFromSocket()
-		{
-			if (_callback != nullptr)
-			{
-				_callback->OnReadable();
-			}
-		}
-
-		std::shared_ptr<Error> RecvInternal(void *data, size_t length, size_t *received_length);
+		std::shared_ptr<SocketError> RecvInternal(void *data, size_t length, size_t *received_length);
 
 		virtual String ToString(const char *class_name) const;
 
 		DispatchResult HalfClose();
 		DispatchResult WaitForHalfClose();
 
+		// CloseInternal() doesn't call the _callback directly
+		// So, we need to call DispatchEvents() after calling this api to do connection callback
 		virtual bool CloseInternal();
+
+	protected:
+		std::shared_ptr<const SocketError> DoConnectionCallback(const std::shared_ptr<const ov::SocketError> &error);
+
+		// ClientSocket doesn't need to wait the first epoll event
+		bool AddToWorker(bool need_to_wait_first_epoll_event);
+		bool DeleteFromWorker();
+
+		// When using epoll ET mode, the first event occurs immediately after EPOLL_CTL_ADD. (except SRT epoll)
+		// This API is used for waiting the event, and MUST be called in SocketPoolWorker::ThreadProc() thread
+		bool NeedToWaitFirstEpollEvent() const
+		{
+			if (_socket.GetType() == SocketType::Srt)
+			{
+				return false;
+			}
+
+			return _need_to_wait_first_epoll_event;
+		}
+
+		// true == Event is raised
+		// false == Timed out
+		bool WaitForFirstEpollEvent()
+		{
+			return _first_epoll_event_received.Wait();
+		}
+
+		// This API MUST be called in SocketPoolWorker::ThreadProc() thread
+		bool SetFirstEpollEventReceived()
+		{
+			_need_to_wait_first_epoll_event = false;
+			_first_epoll_event_received.SetEvent();
+
+			return true;
+		}
+
+		bool ResetFirstEpollEventReceived()
+		{
+			_need_to_wait_first_epoll_event = true;
+			_first_epoll_event_received.Reset();
+
+			return true;
+		}
+
+		DispatchResult DispatchEventsInternal();
 
 	protected:
 		std::shared_ptr<SocketPoolWorker> _worker;
@@ -356,7 +443,10 @@ namespace ov
 
 		SocketState _state = SocketState::Closed;
 
-		bool _is_nonblock = true;
+		BlockingMode _blocking_mode = BlockingMode::Blocking;
+
+		std::atomic<bool> _need_to_wait_first_epoll_event{true};
+		ov::Event _first_epoll_event_received{true};
 
 		bool _end_of_stream = false;
 
@@ -374,5 +464,7 @@ namespace ov
 		std::shared_ptr<SocketAsyncInterface> _post_callback;
 
 		volatile bool _force_stop = false;
+
+		ov::String _stream_id;	// only available for SRT socket
 	};
 }  // namespace ov

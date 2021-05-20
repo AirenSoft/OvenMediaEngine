@@ -12,7 +12,7 @@ namespace api
 {
 	std::map<uint32_t, std::shared_ptr<mon::HostMetrics>> GetVirtualHostList()
 	{
-		return std::move(mon::Monitoring::GetInstance()->GetHostMetricsList());
+		return mon::Monitoring::GetInstance()->GetHostMetricsList();
 	}
 
 	std::shared_ptr<mon::HostMetrics> GetVirtualHost(const std::string_view &vhost_name)
@@ -32,7 +32,7 @@ namespace api
 
 	std::map<uint32_t, std::shared_ptr<mon::ApplicationMetrics>> GetApplicationList(const std::shared_ptr<mon::HostMetrics> &vhost)
 	{
-		return std::move(vhost->GetApplicationMetricsList());
+		return vhost->GetApplicationMetricsList();
 	}
 
 	std::shared_ptr<mon::ApplicationMetrics> GetApplication(const std::shared_ptr<mon::HostMetrics> &vhost, const std::string_view &app_name)
@@ -54,7 +54,7 @@ namespace api
 
 	std::map<uint32_t, std::shared_ptr<mon::StreamMetrics>> GetStreamList(const std::shared_ptr<mon::ApplicationMetrics> &application)
 	{
-		return std::move(application->GetStreamMetricsMap());
+		return application->GetStreamMetricsMap();
 	}
 
 	std::shared_ptr<mon::StreamMetrics> GetStream(const std::shared_ptr<mon::ApplicationMetrics> &application, const std::string_view &stream_name, std::vector<std::shared_ptr<mon::StreamMetrics>> *output_streams)
@@ -105,20 +105,20 @@ namespace api
 		return nullptr;
 	}
 
-	void MultipleStatus::AddStatusCode(HttpStatusCode status_code)
+	void MultipleStatus::AddStatusCode(http::StatusCode status_code)
 	{
 		if (_count == 0)
 		{
 			_last_status_code = status_code;
-			_has_ok = (status_code == HttpStatusCode::OK);
+			_has_ok = (status_code == http::StatusCode::OK);
 		}
 		else
 		{
-			_has_ok = _has_ok || (status_code == HttpStatusCode::OK);
+			_has_ok = _has_ok || (status_code == http::StatusCode::OK);
 
 			if (_last_status_code != status_code)
 			{
-				_last_status_code = HttpStatusCode::MultiStatus;
+				_last_status_code = http::StatusCode::MultiStatus;
 			}
 			else
 			{
@@ -131,12 +131,12 @@ namespace api
 
 	void MultipleStatus::AddStatusCode(const std::shared_ptr<const ov::Error> &error)
 	{
-		HttpStatusCode error_status_code = static_cast<HttpStatusCode>(error->GetCode());
+		http::StatusCode error_status_code = static_cast<http::StatusCode>(error->GetCode());
 
-		AddStatusCode(IsValidHttpStatusCode(error_status_code) ? error_status_code : HttpStatusCode::InternalServerError);
+		AddStatusCode(IsValidStatusCode(error_status_code) ? error_status_code : http::StatusCode::InternalServerError);
 	}
 
-	HttpStatusCode MultipleStatus::GetStatusCode() const
+	http::StatusCode MultipleStatus::GetStatusCode() const
 	{
 		return _last_status_code;
 	}

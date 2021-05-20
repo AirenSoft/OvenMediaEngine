@@ -25,13 +25,7 @@ namespace ov
 		friend class ClientSocket;
 
 	public:
-		ServerSocket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker, const std::shared_ptr<SocketPool> &pool)
-			: Socket(token, worker),
-
-			  _pool(pool)
-		{
-		}
-
+		ServerSocket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker, const std::shared_ptr<SocketPool> &pool);
 		~ServerSocket() override;
 
 		// Bind to a specific port
@@ -82,7 +76,7 @@ namespace ov
 		//--------------------------------------------------------------------
 		// Implementation of SocketAsyncInterface
 		//--------------------------------------------------------------------
-		void OnConnected() override
+		void OnConnected(const std::shared_ptr<const ov::SocketError> &error) override
 		{
 			// server socket should not be called this event
 			OV_ASSERT2(false);
@@ -97,7 +91,7 @@ namespace ov
 		std::shared_ptr<SocketPool> _pool;
 
 		std::mutex _client_list_mutex;
-		std::map<const void *, std::shared_ptr<ClientSocket>> _client_list;
+		std::unordered_map<const void *, std::shared_ptr<ClientSocket>> _client_list;
 
 		ClientConnectionCallback _connection_callback = nullptr;
 		ClientDataCallback _data_callback = nullptr;

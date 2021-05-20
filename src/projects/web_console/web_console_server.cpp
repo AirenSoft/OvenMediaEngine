@@ -59,11 +59,11 @@ bool WebConsoleServer::Start(const ov::SocketAddress &address)
 		return false;
 	}
 
-/* TODO(Dimiden): HttpsServer has changed to add certificate. 
+/* TODO(Dimiden): http::svr::HttpsServer has changed to add certificate. 
 	auto certificate = _host_info.GetCertificate();
 	if (certificate != nullptr)
 	{
-		auto https_server = std::make_shared<HttpsServer>();
+		auto https_server = std::make_shared<http::svr::HttpsServer>();
 
 		https_server->SetLocalCertificate(certificate);
 		https_server->SetChainCertificate(_host_info.GetChainCertificate());
@@ -72,10 +72,10 @@ bool WebConsoleServer::Start(const ov::SocketAddress &address)
 	}
 	else
 	{
-		_http_server = std::make_shared<HttpServer>();
+		_http_server = std::make_shared<http::svr::Server>();
 	}
 */
-	//_http_server = std::make_shared<HttpServer>();
+	//_http_server = std::make_shared<http::svr::Server>();
 //
 	//return InitializeServer() && _http_server->Start(address);
 
@@ -101,26 +101,26 @@ bool WebConsoleServer::Stop()
 
 bool WebConsoleServer::InitializeServer()
 {
-	auto http_interceptor = std::make_shared<HttpDefaultInterceptor>();
+	auto http_interceptor = std::make_shared<http::svr::DefaultInterceptor>();
 	ov::String document_root = ov::PathManager::GetCanonicalPath(_web_console.GetDocumentPath());
 
-	http_interceptor->Register(HttpMethod::Post, "/api/login", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+	http_interceptor->Register(http::Method::Post, "/api/login", [this](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
 		// auto request_body = request->GetRequestBody();
 		// auto json = ov::Json::Parse(request_body);
 
-		return HttpNextHandler::DoNotCall;
+		return http::svr::NextHandler::DoNotCall;
 	});
 
-	http_interceptor->Register(HttpMethod::Post, "/api/logout", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+	http_interceptor->Register(http::Method::Post, "/api/logout", [this](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
 		// auto request_body = request->GetRequestBody();
 		// auto json = ov::Json::Parse(request_body);
 
 		// logti("BODY: %s", json.ToString().CStr());
 
-		return HttpNextHandler::DoNotCall;
+		return http::svr::NextHandler::DoNotCall;
 	});
 
-	http_interceptor->Register(HttpMethod::Get, ".*", [document_root, this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+	http_interceptor->Register(http::Method::Get, ".*", [document_root, this](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
 		auto request = client->GetRequest();
 		auto response = client->GetResponse();
 
@@ -129,30 +129,30 @@ bool WebConsoleServer::InitializeServer()
 
 		if (real_path.IsEmpty())
 		{
-			response->SetStatusCode(HttpStatusCode::NotFound);
+			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
 
-			return HttpNextHandler::DoNotCall;
+			return http::svr::NextHandler::DoNotCall;
 		}
 
 		if (real_path.HasPrefix(document_root) == false)
 		{
 			// If the file exists but is not in the DocumentRoot, it is not provided because of the risk of attack
 			logtw("The client requested a resource, but the resource not in DocumentRoot: %s", real_path.CStr());
-			response->SetStatusCode(HttpStatusCode::NotFound);
+			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
 
-			return HttpNextHandler::DoNotCall;
+			return http::svr::NextHandler::DoNotCall;
 		}
 
 		FILE *file = ::fopen(real_path, "rb");
 
 		if (file == nullptr)
 		{
-			response->SetStatusCode(HttpStatusCode::NotFound);
+			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
 
-			return HttpNextHandler::DoNotCall;
+			return http::svr::NextHandler::DoNotCall;
 		}
 
 		auto data = std::make_shared<ov::Data>();
@@ -171,7 +171,7 @@ bool WebConsoleServer::InitializeServer()
 			stream.Append(buffer, read_bytes);
 		}
 
-		if (response->GetStatusCode() == HttpStatusCode::OK)
+		if (response->GetStatusCode() == http::StatusCode::OK)
 		{
 			response->SetHeader("Content-Length", ov::String::FormatString("%zu", data->GetLength()));
 			response->SetHeader("Content-Type", "text/html");
@@ -182,7 +182,7 @@ bool WebConsoleServer::InitializeServer()
 
 		response->Response();
 
-		return HttpNextHandler::DoNotCall;
+		return http::svr::NextHandler::DoNotCall;
 	});
 
 	return _http_server->AddInterceptor(http_interceptor);

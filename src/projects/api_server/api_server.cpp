@@ -17,7 +17,7 @@ namespace api
 {
 	bool Server::Start(const std::shared_ptr<cfg::Server> &server_config)
 	{
-		auto manager = HttpServerManager::GetInstance();
+		auto manager = http::svr::HttpServerManager::GetInstance();
 
 		// Port configurations
 		const auto &api_bind_config = server_config->GetBind().GetManagers().GetApi();
@@ -64,7 +64,7 @@ namespace api
 			}
 			else
 			{
-				logte("Could not initialize HttpServer");
+				logte("Could not initialize http::svr::Server");
 				http_server_result = false;
 			}
 		}
@@ -94,7 +94,7 @@ namespace api
 				}
 				else
 				{
-					logte("Could not initialize HttpsServer");
+					logte("Could not initialize http::svr::HttpsServer");
 					https_server_result = false;
 				}
 			}
@@ -132,9 +132,9 @@ namespace api
 		return false;
 	}
 
-	std::shared_ptr<HttpRequestInterceptor> Server::CreateInterceptor()
+	std::shared_ptr<http::svr::RequestInterceptor> Server::CreateInterceptor()
 	{
-		auto http_interceptor = std::make_shared<HttpDefaultInterceptor>();
+		auto http_interceptor = std::make_shared<http::svr::DefaultInterceptor>();
 
 		// Request Handlers will be added to http_interceptor
 		_root_controller = std::make_shared<RootController>(_access_token);
@@ -146,10 +146,10 @@ namespace api
 
 	bool Server::Stop()
 	{
-		auto manager = HttpServerManager::GetInstance();
+		auto manager = http::svr::HttpServerManager::GetInstance();
 
-		std::shared_ptr<HttpServer> http_server = std::move(_http_server);
-		std::shared_ptr<HttpsServer> https_server = std::move(_https_server);
+		std::shared_ptr<http::svr::HttpServer> http_server = std::move(_http_server);
+		std::shared_ptr<http::svr::HttpsServer> https_server = std::move(_https_server);
 
 		bool http_result = (http_server != nullptr) ? manager->ReleaseServer(http_server) : true;
 		bool https_result = (https_server != nullptr) ? manager->ReleaseServer(https_server) : true;

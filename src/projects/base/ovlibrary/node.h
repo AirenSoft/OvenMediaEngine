@@ -24,8 +24,8 @@ namespace ov
 
 		NodeType GetNodeType();
 
-		virtual void RegisterUpperNode(const std::shared_ptr<Node> &node);
-		virtual void RegisterLowerNode(const std::shared_ptr<Node> &node);
+		virtual void RegisterPrevNode(const std::shared_ptr<Node> &node);
+		virtual void RegisterNextNode(const std::shared_ptr<Node> &node);
 
 		virtual bool Start();
 		virtual bool Stop();
@@ -38,25 +38,29 @@ namespace ov
 			Error
 		};
 
-		NodeState GetState();
+		NodeState GetNodeState();
 
-		// It receives data from the upper side. Send it to the lower node.
-		virtual bool SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data) = 0;
-		// Receive data from lower. Send to the upper node.
-		virtual bool OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data) = 0;
+		virtual bool OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data) = 0;
+		virtual bool OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data) = 0;
 
 	protected:
-		std::shared_ptr<Node> GetUpperNode();
-		std::shared_ptr<Node> GetLowerNode();
+		bool SendDataToPrevNode(NodeType node_type, const std::shared_ptr<const ov::Data> &data);
+		bool SendDataToNextNode(NodeType node_type, const std::shared_ptr<ov::Data> &data);
 
-		std::shared_ptr<Node> GetUpperNode(NodeType node_type);
-		std::shared_ptr<Node> GetLowerNode(NodeType node_type);
+		bool SendDataToPrevNode(const std::shared_ptr<const ov::Data> &data);
+		bool SendDataToNextNode(const std::shared_ptr<ov::Data> &data);
 
-		std::map<NodeType, std::shared_ptr<Node>> _upper_nodes;
-		std::map<NodeType, std::shared_ptr<Node>> _lower_nodes;
+		std::shared_ptr<Node> GetPrevNode();
+		std::shared_ptr<Node> GetNextNode();
+
+		std::shared_ptr<Node> GetPrevNode(NodeType node_type);
+		std::shared_ptr<Node> GetNextNode(NodeType node_type);
+
+		std::map<NodeType, std::shared_ptr<Node>> _prev_nodes;
+		std::map<NodeType, std::shared_ptr<Node>> _next_nodes;
 
 	private:
 		NodeType _node_type = NodeType::Unknown;
-		NodeState _state = NodeState::Ready;
+		NodeState _node_state = NodeState::Ready;
 	};
-}  // namespace pub
+}  // namespace ov

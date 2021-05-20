@@ -66,7 +66,7 @@ namespace ov
 		return bio_method;
 	}
 
-	bool Tls::Initialize(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list, TlsCallback callback)
+	bool Tls::InitializeServerTls(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list, TlsCallback callback)
 	{
 		bool result = true;
 
@@ -85,7 +85,28 @@ namespace ov
 		}
 
 		return result;
-	};
+	}
+
+	bool Tls::InitializeClientTls(const SSL_METHOD *method, TlsCallback callback)
+	{
+		bool result = true;
+
+		_callback = std::move(callback);
+
+		// // Create SSL_CTX
+		// result = result && PrepareSslContext(method, certificate, chain_certificate, cipher_list);
+		// // Create BIO
+		// result = result && PrepareBio();
+		// // Create SSL
+		// result = result && PrepareSsl(nullptr);
+
+		if (result == false)
+		{
+			_callback = TlsCallback();
+		}
+
+		return result;
+	}
 
 	bool Tls::Uninitialize()
 	{
@@ -155,6 +176,12 @@ namespace ov
 			// https://curl.haxx.se/docs/ssl-ciphers.html
 			// https://wiki.mozilla.org/Security/Server_Side_TLS
 			::SSL_CTX_set_cipher_list(ctx, cipher_list.CStr());
+
+			// Disable TLS1.3 because it is not yet supported properly by the HTTP server implementation (HTTP2 support, Session tickets, ...)
+			// This also allows for using less secure cipher suites for lower CPU requirements when using HLS/DASH/LL-DASH streaming
+			::SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
+			// Disable old TLS versions which are neither secure nor needed any more
+			::SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
 
 			_ssl_ctx = std::move(ctx);
 
@@ -419,7 +446,7 @@ namespace ov
 				default:
 					// Another error occurred
 					OV_ASSERT2(read_bytes == 0);
-					return std::move(data);
+					return data;
 			}
 
 			if (data->Append(buf, read_bytes) == false)
@@ -429,7 +456,7 @@ namespace ov
 
 			if (error == SSL_ERROR_WANT_READ)
 			{
-				return std::move(data);
+				return data;
 			}
 		}
 	}

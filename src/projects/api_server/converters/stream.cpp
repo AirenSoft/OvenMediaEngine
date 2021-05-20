@@ -141,7 +141,7 @@ namespace api
 			SetInputStream(response, "input", stream, Optional::False);
 			SetOutputStreams(response, "outputs", output_streams, Optional::False);
 
-			return std::move(response);
+			return response;
 		}
 	}  // namespace conv
 }  // namespace api

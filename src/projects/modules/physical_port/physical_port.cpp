@@ -74,19 +74,19 @@ bool PhysicalPort::CreateServerSocket(
 
 			if (socket != nullptr)
 			{
-				if (socket->Prepare(address,
-									std::bind(&PhysicalPort::OnClientConnectionStateChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
-									std::bind(&PhysicalPort::OnClientData, this, std::placeholders::_1, std::placeholders::_2),
-									send_buffer_size, recv_buffer_size, 4096))
+				if (socket->Prepare(
+						address,
+						std::bind(&PhysicalPort::OnClientConnectionStateChanged, this,
+								  std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+						std::bind(&PhysicalPort::OnClientData, this,
+								  std::placeholders::_1, std::placeholders::_2),
+						send_buffer_size, recv_buffer_size, 4096))
 				{
-					if (socket->AttachToWorker())
-					{
-						_type = type;
-						_server_socket = socket;
-						_address = address;
+					_type = type;
+					_server_socket = socket;
+					_address = address;
 
-						return true;
-					}
+					return true;
 				}
 
 				_socket_pool->ReleaseSocket(socket);
@@ -121,16 +121,14 @@ bool PhysicalPort::CreateDatagramSocket(
 			{
 				if (socket->Prepare(
 						address,
-						std::bind(&PhysicalPort::OnDatagram, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)))
+						std::bind(&PhysicalPort::OnDatagram, this,
+								  std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)))
 				{
-					if (socket->AttachToWorker())
-					{
-						_type = type;
-						_datagram_socket = socket;
-						_address = address;
+					_type = type;
+					_datagram_socket = socket;
+					_address = address;
 
-						return true;
-					}
+					return true;
 				}
 
 				_socket_pool->ReleaseSocket(socket);

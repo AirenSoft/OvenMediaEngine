@@ -12,7 +12,6 @@
 
 SegmentStreamInterceptor::SegmentStreamInterceptor()
 {
-	_is_crossdomain_block = false;
 }
 
 SegmentStreamInterceptor::~SegmentStreamInterceptor()
@@ -31,16 +30,14 @@ bool SegmentStreamInterceptor::Start(int thread_count, const SegmentProcessHandl
 // http 1.0  : request -> response
 // http 1.1  : request -> response -> request -> response ...
 //====================================================================================================
-HttpInterceptorResult SegmentStreamInterceptor::OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
+http::svr::InterceptorResult SegmentStreamInterceptor::OnHttpData(const std::shared_ptr<http::svr::HttpConnection> &client, const std::shared_ptr<const ov::Data> &data)
 {
 	auto request = client->GetRequest();
 	auto response = client->GetResponse();
 
-	OV_ASSERT2(request->GetContentLength() >= 0);
-
 	if (request->GetContentLength() == 0)
 	{
-		response->SetStatusCode(HttpStatusCode::OK);
+		response->SetStatusCode(http::StatusCode::OK);
 		_worker_manager.AddWork(client, request->GetRequestTarget(), request->GetHeader("Origin"));
 	}
 	else
@@ -49,29 +46,29 @@ HttpInterceptorResult SegmentStreamInterceptor::OnHttpData(const std::shared_ptr
 
 		// data size over(error)
 		if (request_body == nullptr ||
-			request_body->GetLength() + data->GetLength() > static_cast<size_t>(request->GetContentLength()))
+			request_body->GetLength() + data->GetLength() > request->GetContentLength())
 		{
-			return HttpInterceptorResult::Disconnect;
+			return http::svr::InterceptorResult::Disconnect;
 		}
 
 		request_body->Append(data.get());
 
 		// http data completed
-		if (request_body->GetLength() == static_cast<size_t>(request->GetContentLength()))
+		if (request_body->GetLength() == request->GetContentLength())
 		{
-			response->SetStatusCode(HttpStatusCode::OK);
+			response->SetStatusCode(http::StatusCode::OK);
 			_worker_manager.AddWork(client, request->GetRequestTarget(), request->GetHeader("Origin"));
 		}
 	}
 
-	return HttpInterceptorResult::Keep;
+	return http::svr::InterceptorResult::Keep;
 }
 
-bool SegmentStreamInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
+bool SegmentStreamInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpConnection> &client)
 {
 	auto request = client->GetRequest();
 	
-	if(request->GetConnectionType() != HttpRequestConnectionType::HTTP)
+	if(request->GetConnectionType() != http::svr::RequestConnectionType::HTTP)
 	{
 		return false;
 	}

@@ -37,7 +37,7 @@ namespace ov
 			result = func;
 		}
 
-		return std::move(result);
+		return result;
 	}
 
 	// Dump utilities

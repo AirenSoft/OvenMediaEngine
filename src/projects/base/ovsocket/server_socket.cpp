@@ -29,6 +29,13 @@
 
 namespace ov
 {
+	ServerSocket::ServerSocket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker, const std::shared_ptr<SocketPool> &pool)
+		: Socket(token, worker),
+
+		  _pool(pool)
+	{
+	}
+
 	ServerSocket::~ServerSocket()
 	{
 	}
@@ -89,27 +96,25 @@ namespace ov
 
 			if (client != nullptr)
 			{
-				logad("New client is connected: %s", client->ToString().CStr());
+				auto key = client.get();
+
+				// An event occurs the moment client socket is added to the epoll,
+				// so we must add the client into _client_list before calling Prepare()
+				{
+					std::lock_guard lock_guard(_client_list_mutex);
+					_client_list[key] = client;
+				}
 
 				if (client->Prepare())
 				{
-					// An event occurs the moment client socket is added to the epoll,
-					// so we must add the client into _client_list before calling AttachToWorker()
-					{
-						std::lock_guard lock_guard(_client_list_mutex);
-						_client_list[client.get()] = client;
-					}
-
-					if (client->AttachToWorker() == false)
-					{
-						// The client will be removed from _client_list in the future
-						logad("An error occurred while attach client to worker: %s", client->ToString().CStr());
-						client->Close();
-					}
+					logad("Client(%s) is connected", client->ToString().CStr());
 				}
 				else
 				{
-					logae("Could not prepare socket options: %s", client->ToString().CStr());
+					std::lock_guard lock_guard(_client_list_mutex);
+					_client_list.erase(key);
+
+					logae("Client(%s) is connected, but could not prepare socket options", client->ToString().CStr());
 				}
 			}
 		}
@@ -126,7 +131,7 @@ namespace ov
 			return false;
 		}
 
-		logai("Client(%s) is disconnected", client->ToString().CStr());
+		logad("Client(%s) is disconnected", client->ToString().CStr());
 
 		_client_list.erase(item);
 
@@ -151,7 +156,13 @@ namespace ov
 
 		_callback = nullptr;
 
-		return Socket::CloseInternal();
+		if (Socket::CloseInternal())
+		{
+			SetState(SocketState::Closed);
+			return true;
+		}
+
+		return false;
 	}
 
 	String ServerSocket::ToString() const

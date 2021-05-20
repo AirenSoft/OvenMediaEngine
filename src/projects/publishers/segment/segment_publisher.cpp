@@ -8,7 +8,7 @@
 //==============================================================================
 #include "segment_publisher.h"
 
-#include <modules/signature/signed_token.h>
+#include <modules/auth/signature/signed_token.h>
 #include <monitoring/monitoring.h>
 #include <orchestrator/orchestrator.h>
 #include <publishers/segment/segment_stream/segment_stream.h>
@@ -77,7 +77,7 @@ bool SegmentPublisher::Stop()
 	return Publisher::Stop();
 }
 
-bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &client,
+bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
 										 const SegmentStreamRequestInfo &request_info,
 										 ov::String &play_list)
 {
@@ -88,7 +88,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 	if (parsed_url == nullptr)
 	{
 		logte("Could not parse the url: %s", uri.CStr());
-		client->GetResponse()->SetStatusCode(HttpStatusCode::BadRequest);
+		client->GetResponse()->SetStatusCode(http::StatusCode::BadRequest);
 		// Returns true when the observer search can be ended.
 		return true;
 	}
@@ -99,7 +99,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 	std::shared_ptr<PlaylistRequestInfo> playlist_request_info;
 	if (HandleSignedX(vhost_app_name, stream_name, client, parsed_url, playlist_request_info) == false)
 	{
-		client->GetResponse()->SetStatusCode(HttpStatusCode::Forbidden);
+		client->GetResponse()->SetStatusCode(http::StatusCode::Forbidden);
 		return true;
 	}
 
@@ -109,7 +109,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 		stream = std::dynamic_pointer_cast<SegmentStream>(PullStream(parsed_url, vhost_app_name, request_info.host_name, stream_name));
 		if (stream == nullptr)
 		{
-			client->GetResponse()->SetStatusCode(HttpStatusCode::NotFound);
+			client->GetResponse()->SetStatusCode(http::StatusCode::NotFound);
 			return true;
 		}
 		else
@@ -141,16 +141,16 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 	if (stream->GetPlayList(play_list) == false)
 	{
 		logtw("Could not get a playlist for %s [%p, %s/%s, %s]", GetPublisherName(), stream.get(), vhost_app_name.CStr(), stream_name.CStr(), request_info.file_name.CStr());
-		client->GetResponse()->SetStatusCode(HttpStatusCode::Accepted);
+		client->GetResponse()->SetStatusCode(http::StatusCode::Accepted);
 		// Returns true when the observer search can be ended.
 		return true;
 	}
 
-	client->GetResponse()->SetStatusCode(HttpStatusCode::OK);
+	client->GetResponse()->SetStatusCode(http::StatusCode::OK);
 	return true;
 }
 
-bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
+bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
 										const SegmentStreamRequestInfo &request_info,
 										std::shared_ptr<const SegmentItem> &segment)
 {
@@ -189,12 +189,18 @@ bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<HttpClient> &clien
 
 	client->GetRequest()->SetExtra(std::static_pointer_cast<pub::Stream>(stream));
 
-	auto segment_request_info = SegmentRequestInfo(GetPublisherType(),
-												   *std::static_pointer_cast<info::Stream>(stream),
-												   client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),
-												   segment->sequence_number,
-												   segment->duration_in_ms / 1000);
-	UpdateSegmentRequestInfo(segment_request_info);
+	// The first sequence number 0 means init_video and init_audio in MPEG-DASH.
+	// These are excluded because they confuse statistical calculations.
+	if(GetPublisherType() != PublisherType::LlDash &&  segment->sequence_number != 0)
+	{
+		auto segment_request_info = SegmentRequestInfo(GetPublisherType(),
+													*std::static_pointer_cast<info::Stream>(stream),
+													client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),				
+													segment->sequence_number,
+													segment->type,		
+													segment->duration_in_ms / 1000);
+		UpdateSegmentRequestInfo(segment_request_info);
+	}
 
 	return true;
 }
@@ -398,6 +404,8 @@ bool SegmentPublisher::IsAuthorizedSession(const PlaylistRequestInfo &info)
 
 void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 {
+	logtd("Update segment request info - Segment number : %u Duration : %u Type : %s", info.GetSequenceNumber(), info.GetDuration(), info.GetDataType()==SegmentDataType::Video?"Video":"Audio");
+
 	bool new_session = true;
 	std::unique_lock<std::recursive_mutex> table_lock(_segment_request_table_lock);
 
@@ -409,6 +417,12 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 		for (auto itr = it.first; itr != it.second;)
 		{
 			auto item = itr->second;
+
+			// If the segment is divided into audio and video, statistics must be calculated using only one.
+			if(item->GetDataType() != info.GetDataType())
+			{
+				return;
+			}
 
 			if (item->IsNextRequest(info))
 			{
@@ -485,7 +499,7 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 }
 
 bool SegmentPublisher::HandleSignedX(const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
-									 const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url,
+									 const std::shared_ptr<http::svr::HttpConnection> &client, const std::shared_ptr<const ov::Url> &request_url,
 									 std::shared_ptr<PlaylistRequestInfo> &request_info)
 {
 	auto request = client->GetRequest();

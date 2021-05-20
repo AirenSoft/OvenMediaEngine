@@ -70,7 +70,7 @@ namespace ov
 			this->post_handler = post_handler;
 		}
 
-		ov::StopWatch sw;
+		StopWatch sw;
 		int64_t lock_elapsed;
 		PostHandler post_handler;
 	};
@@ -89,29 +89,63 @@ namespace ov
 #	define SOCKET_PROFILER_POST_HANDLER(handler) SOCKET_PROFILER_NOOP()
 #endif	// USE_SOCKET_PROFILER
 
+	// Used to wait for connection
+	class ConnectHelper : public SocketAsyncInterface
+	{
+	public:
+		void OnConnected(const std::shared_ptr<const SocketError> &error) override
+		{
+			_epoll_event.SetEvent();
+			_error = error;
+		}
+
+		void OnReadable() override
+		{
+		}
+
+		void OnClosed() override
+		{
+		}
+
+		bool WaitForConnect(int timeout)
+		{
+			return _epoll_event.Wait(timeout);
+		}
+
+		std::shared_ptr<const SocketError> GetError() const
+		{
+			return _error;
+		}
+
+	protected:
+		Event _epoll_event{true};
+		std::shared_ptr<const SocketError> _error;
+	};
+
 	Socket::Socket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker)
 		: _worker(worker)
 	{
+		OV_ASSERT(worker != nullptr, "Worker must be not nullptr");
 	}
 
 	// Creates a socket using remote information.
-	// Remote information is present, considered already connected
 	Socket::Socket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker,
 				   SocketWrapper socket, const SocketAddress &remote_address)
 		: Socket(token, worker)
 	{
 		_socket = socket;
-		_state = SocketState::Connected;
 
-		// 로컬 정보는 없으며, 상대 정보만 있음. 즉, send만 가능
+		// Remote information is present, considered already connected
+		SetState(SocketState::Connected);
+
 		_remote_address = std::make_shared<SocketAddress>(remote_address);
 	}
 
 	Socket::~Socket()
 	{
 		// Verify that the socket is closed normally
-		CHECK_STATE(== SocketState::Closed, );
 		OV_ASSERT(_socket.IsValid() == false, "Socket is not closed. Current state: %s", StringFromSocketState(GetState()));
+		CHECK_STATE2(== SocketState::Closed, >= SocketState::Disconnected, );
 	}
 
 	bool Socket::Create(SocketType type)
@@ -161,74 +195,65 @@ namespace ov
 			return true;
 		} while (false);
 
-		CloseInternal();
+		if (CloseInternal())
+		{
+			SetState(SocketState::Closed);
+		}
 
 		return false;
 	}
 
-	bool Socket::SetBlockingInternal(bool blocking)
+	bool Socket::SetBlockingInternal(BlockingMode mode)
 	{
-		int result;
-
 		if (_socket.IsValid() == false)
 		{
-			logae("Could not make %sblocking socket (Invalid socket)", blocking ? "" : "non ");
+			logae("Could not make %s socket (Invalid socket)", StringFromBlockingMode(mode));
 			OV_ASSERT2(_socket.IsValid());
 			return false;
 		}
+
+		auto socket = GetSharedPtr();
 
 		switch (GetType())
 		{
 			case SocketType::Tcp:
 			case SocketType::Udp: {
-				result = ::fcntl(GetNativeHandle(), F_GETFL, 0);
+				int result = ::fcntl(GetNativeHandle(), F_GETFL, 0);
 
 				if (result == -1)
 				{
-					logae("Could not obtain flags from socket %d (%d)", GetNativeHandle(), result);
+					logae("Could not obtain flags: %s", Error::CreateErrorFromErrno()->ToString().CStr());
 					return false;
 				}
 
-				int flags = result;
-
-				if (blocking)
-				{
-					flags &= ~O_NONBLOCK;
-				}
-				else
-				{
-					flags |= O_NONBLOCK;
-				}
+				int flags = (mode == BlockingMode::Blocking) ? (result & ~O_NONBLOCK) : (result | O_NONBLOCK);
 
 				result = ::fcntl(GetNativeHandle(), F_SETFL, flags);
 
 				if (result == -1)
 				{
-					logae("Could not set flags to socket %d: %s", GetNativeHandle(), ov::Error::CreateErrorFromErrno()->ToString().CStr());
+					logae("Could not set flags: %s", Error::CreateErrorFromErrno()->ToString().CStr());
 					return false;
 				}
 
-				_is_nonblock = !blocking;
-
-				return true;
+				break;
 			}
 
 			case SocketType::Srt:
-				if (SetSockOpt(SRTO_RCVSYN, blocking) && SetSockOpt(SRTO_SNDSYN, blocking))
+				if (SetSockOpt(SRTO_RCVSYN, mode != BlockingMode::Blocking) == false || SetSockOpt(SRTO_SNDSYN, mode != BlockingMode::Blocking) == false)
 				{
-					_is_nonblock = !blocking;
-					return true;
+					logae("Could not set flags to SRT socket %d: %s", GetNativeHandle(), Error::CreateErrorFromSrt()->ToString().CStr());
+					return false;
 				}
 
-				logae("Could not set flags to SRT socket %d: %s", GetNativeHandle(), ov::Error::CreateErrorFromSrt()->ToString().CStr());
-				return false;
+				break;
 
 			default:
 				OV_ASSERT(false, "Invalid socket type: %d", GetType());
-				break;
+				return false;
 		}
 
-		return false;
+		return true;
 	}
 
 	bool Socket::AppendCommand(DispatchCommand command)
@@ -255,25 +280,109 @@ namespace ov
 		return true;
 	}
 
-	bool Socket::AttachToWorker()
+	bool Socket::AddToWorker(bool need_to_wait_first_epoll_event)
 	{
-		return _worker->AttachToWorker(GetSharedPtr());
+		if (GetType() == ov::SocketType::Srt)
+		{
+			// SRT doesn't generates any epoll events after ::srt_epoll_add_usock()
+			need_to_wait_first_epoll_event = false;
+		}
+
+		if (need_to_wait_first_epoll_event)
+		{
+			ResetFirstEpollEventReceived();
+		}
+
+		if (_worker->AddToEpoll(GetSharedPtr()))
+		{
+			if (need_to_wait_first_epoll_event)
+			{
+				return WaitForFirstEpollEvent();
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	bool Socket::DeleteFromWorker()
+	{
+		return _worker->DeleteFromEpoll(GetSharedPtr());
 	}
 
 	bool Socket::MakeBlocking()
 	{
-		return SetBlockingInternal(true);
+		if (GetState() != SocketState::Created)
+		{
+			logae("Blocking mode can only be changed at the beginning of socket creation");
+			OV_ASSERT2(false);
+			return false;
+		}
+
+		if (_blocking_mode == BlockingMode::Blocking)
+		{
+			// Socket is already blocking mode
+			OV_ASSERT2(_callback == nullptr);
+
+			return true;
+		}
+
+		auto old_callback = _callback;
+		_callback = nullptr;
+
+		if (
+			SetBlockingInternal(BlockingMode::Blocking) &&
+			DeleteFromWorker())
+		{
+			_blocking_mode = BlockingMode::Blocking;
+			return true;
+		}
+
+		// Rollback
+		_callback = old_callback;
+
+		return false;
 	}
 
 	bool Socket::MakeNonBlocking(std::shared_ptr<SocketAsyncInterface> callback)
 	{
-		if (SetBlockingInternal(false))
+		if (GetState() != SocketState::Created)
 		{
-			_callback = std::move(callback);
+			logae("Blocking mode can only be changed at the beginning of socket creation");
+			OV_ASSERT2(false);
+			return false;
+		}
+
+		return MakeNonBlockingInternal(callback, true);
+	}
+
+	bool Socket::MakeNonBlockingInternal(std::shared_ptr<SocketAsyncInterface> callback, bool need_to_wait_first_epoll_event)
+	{
+		if (_blocking_mode == BlockingMode::NonBlocking)
+		{
+			// Socket is already non-blocking mode
+			_callback = callback;
+
 			return true;
 		}
 
-		_callback = nullptr;
+		auto old_callback = _callback;
+
+		_callback = callback;
+		_blocking_mode = BlockingMode::NonBlocking;
+
+		if (
+			SetBlockingInternal(BlockingMode::NonBlocking) &&
+			AddToWorker(need_to_wait_first_epoll_event))
+		{
+			return true;
+		}
+
+		// Rollback
+		_callback = old_callback;
+		_blocking_mode = BlockingMode::Blocking;
+
 		return false;
 	}
 
@@ -421,101 +530,133 @@ namespace ov
 		return SocketWrapper();
 	}
 
-	std::shared_ptr<ov::Error> Socket::Connect(const SocketAddress &endpoint, int timeout_msec)
+	std::shared_ptr<const SocketError> Socket::DoConnectionCallback(const std::shared_ptr<const ov::SocketError> &error)
+	{
+		if (_blocking_mode == BlockingMode::Blocking)
+		{
+			if (error == nullptr)
+			{
+				SetState(SocketState::Connected);
+			}
+			else
+			{
+				CloseWithState(SocketState::Error);
+			}
+
+			return error;
+		}
+
+		OnConnectedEvent(error);
+
+		return nullptr;
+	}
+
+	std::shared_ptr<const SocketError> Socket::Connect(const SocketAddress &endpoint, int timeout_msec)
 	{
 		OV_ASSERT2(_socket.IsValid());
-		CHECK_STATE(== SocketState::Created, ov::Error::CreateError(EINVAL, "Invalid state: %d", static_cast<int>(_state)));
 
-		std::shared_ptr<ov::Error> error;
+		CHECK_STATE(== SocketState::Created, DoConnectionCallback(SocketError::CreateError(EINVAL, "Invalid state: %d", static_cast<int>(_state))));
+
+		if (endpoint.IsValid() == false)
+		{
+			return DoConnectionCallback(SocketError::CreateError("Invalid address: %s", endpoint.ToString().CStr()));
+		}
+
+		std::shared_ptr<const SocketError> socket_error;
+		std::shared_ptr<ConnectHelper> connect_helper;
 
 		// To set connection timeout
-		bool origin_nonblock_flag = _is_nonblock;
+		bool use_timeout = (timeout_msec > 0 && timeout_msec < Infinite);
 
 		switch (GetType())
 		{
 			case SocketType::Tcp:
 			case SocketType::Udp: {
-				if (timeout_msec > 0 && timeout_msec < Infinite)
+				if (_blocking_mode == BlockingMode::Blocking)
 				{
-					if (origin_nonblock_flag == false)
+					if (use_timeout)
 					{
-						MakeNonBlocking(nullptr);
+						if (
+							(SetBlockingInternal(BlockingMode::NonBlocking) == false) ||
+							(AddToWorker(true) == false))
+						{
+							return DoConnectionCallback(SocketError::CreateError("Socket cannot be changed to nonblocking mode: %s", ToString().CStr()));
+						}
+
+						connect_helper = std::make_shared<ConnectHelper>();
+						_callback = connect_helper;
 					}
 				}
 
+				SetState(SocketState::Connecting);
+
+				logad("Trying to connect to %s...", endpoint.ToString().CStr());
 				int result = ::connect(GetNativeHandle(), endpoint.Address(), endpoint.AddressLength());
 
 				if (result == 0)
 				{
-					if (origin_nonblock_flag == false)
+					if (_blocking_mode == BlockingMode::Blocking)
 					{
-						MakeBlocking();
-					}
+						_callback = nullptr;
 
-					SetState(SocketState::Connected);
-					return nullptr;
-				}
-				else if (result < 0)
-				{
-					// Check timeout
-					if (errno == EINPROGRESS)
-					{
-						do
+						if (use_timeout)
 						{
-							// For timeout and fastest to notice connection success
-							struct epoll_event triggered_events;
-							int ep_fd = epoll_create1(0);
-							struct epoll_event ep_event;
-							ep_event.events = EPOLLOUT | EPOLLIN | EPOLLERR;
-							ep_event.data.fd = GetSocket().GetNativeHandle();
-
-							if (epoll_ctl(ep_fd, EPOLL_CTL_ADD, GetSocket().GetNativeHandle(), &ep_event) == -1)
+							// Restore blocking state
+							if (
+								(DeleteFromWorker() == false) ||
+								(SetBlockingInternal(BlockingMode::Blocking) == false))
 							{
-								close(ep_fd);
-								break;
+								return DoConnectionCallback(SocketError::CreateError("Socket cannot be changed to blocking mode: %s", ToString().CStr()));
 							}
+						}
+					}
 
-							auto num_events = epoll_wait(ep_fd, &triggered_events, 1, timeout_msec);
+					return DoConnectionCallback(nullptr);
+				}
 
-							// timeout or error
-							if (num_events <= 0)
-							{
-								close(ep_fd);
-								break;
-							}
+				if (result < 0)
+				{
+					auto error = Error::CreateErrorFromErrno();
 
-							// Socket selected for write
-							int error_value;
-
-							if (GetSockOpt(SO_ERROR, &error_value) == false)
-							{
-								close(ep_fd);
-								break;
-							}
-
-							// Not connected
-							if (error_value != 0)
-							{
-								close(ep_fd);
-								break;
-							}
-
-							// Recover origin state
-							if (origin_nonblock_flag == false)
-							{
-								MakeBlocking();
-							}
-
-							SetState(SocketState::Connected);
-							close(ep_fd);
-
+					// Check timeout
+					if (error->GetCode() == EINPROGRESS)
+					{
+						if (_blocking_mode == BlockingMode::NonBlocking)
+						{
+							// Don't wait for the connection if this socket is non-blocking mode
+							_worker->EnqueueToCheckConnectionTimeOut(GetSharedPtr(), timeout_msec);
 							return nullptr;
+						}
 
-						} while (true);
+						// Blocking mode
+						if (connect_helper->WaitForConnect(timeout_msec))
+						{
+							socket_error = connect_helper->GetError();
+						}
+						else
+						{
+							// Timed out
+							int so_error;
+							GetSockOpt(SO_ERROR, &so_error);
+
+							socket_error = SocketError::CreateError(so_error, "Connection timed out (%d ms elapsed, SO_ERROR: %d)", timeout_msec, so_error);
+							logad("%s", socket_error->ToString().CStr());
+						}
+
+						// Restore blocking state
+						if (
+							(DeleteFromWorker() == false) ||
+							(SetBlockingInternal(BlockingMode::Blocking) == false))
+						{
+							socket_error = (socket_error == nullptr) ? SocketError::CreateError("Socket cannot be changed to blocking mode: %s", ToString().CStr()) : socket_error;
+						}
+					}
+					else
+					{
+						socket_error = SocketError::CreateError(error);
 					}
 				}
 
-				error = ov::Error::CreateErrorFromErrno();
 				break;
 			}
 
@@ -524,21 +665,20 @@ namespace ov
 				{
 					if (::srt_connect(GetNativeHandle(), endpoint.Address(), endpoint.AddressLength()) != SRT_ERROR)
 					{
-						SetState(SocketState::Connected);
-						return nullptr;
+						return DoConnectionCallback(nullptr);
 					}
 				}
 
-				error = ov::Error::CreateErrorFromSrt();
+				socket_error = SocketError::CreateError(Error::CreateErrorFromSrt());
 
 				break;
 
 			default:
-				error = ov::Error::CreateError("Socket", "Not implemented");
+				socket_error = SocketError::CreateError("Not implemented");
 				break;
 		}
 
-		return error;
+		return DoConnectionCallback(socket_error);
 	}
 
 	bool Socket::SetRecvTimeout(const timeval &tv)
@@ -559,12 +699,12 @@ namespace ov
 		}
 	}
 
-	std::shared_ptr<ov::SocketAddress> Socket::GetLocalAddress() const
+	std::shared_ptr<SocketAddress> Socket::GetLocalAddress() const
 	{
 		return _local_address;
 	}
 
-	std::shared_ptr<ov::SocketAddress> Socket::GetRemoteAddress() const
+	std::shared_ptr<SocketAddress> Socket::GetRemoteAddress() const
 	{
 		return _remote_address;
 	}
@@ -612,12 +752,17 @@ namespace ov
 
 		if (result == SRT_ERROR)
 		{
-			auto error = ov::Error::CreateErrorFromSrt();
+			auto error = Error::CreateErrorFromSrt();
 			logaw("Could not set option: %d (result: %s)", option, error->ToString().CStr());
 			return false;
 		}
 
 		return true;
+	}
+
+	bool Socket::IsClosable() const
+	{
+		return OV_CHECK_FLAG(static_cast<std::underlying_type<SocketState>::type>(_state), SOCKET_STATE_CLOSABLE);
 	}
 
 	SocketState Socket::GetState() const
@@ -627,6 +772,10 @@ namespace ov
 
 	void Socket::SetState(SocketState state)
 	{
+		logad("Socket state is changed: %s => %s",
+			  StringFromSocketState(_state),
+			  StringFromSocketState(state));
+
 		_state = state;
 	}
 
@@ -635,17 +784,51 @@ namespace ov
 		return _socket.GetType();
 	}
 
-	Socket::DispatchResult Socket::DispatchInternal(DispatchCommand &command)
+	// Only avaliable if socket is SRT
+	String Socket::GetStreamId() const
+	{
+		return _stream_id;
+	}
+
+	bool Socket::OnConnectedEvent(const std::shared_ptr<const SocketError> &error)
+	{
+		if (error == nullptr)
+		{
+			SetState(SocketState::Connected);
+
+			if (_callback != nullptr)
+			{
+				_connection_event_fired = true;
+				_callback->OnConnected(error);
+			}
+		}
+		else
+		{
+			auto callback = std::move(_callback);
+
+			CloseWithState(SocketState::Error);
+
+			if (callback != nullptr)
+			{
+				_connection_event_fired = true;
+				callback->OnConnected(error);
+			}
+		}
+
+		return true;
+	}
+
+	Socket::DispatchResult Socket::DispatchEventInternal(DispatchCommand &command)
 	{
 		SOCKET_PROFILER_INIT();
 		SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
 			if (total_elapsed > 100)
 			{
-				logtw("[SockProfiler] DispatchInternal() - %s, Total: %dms", ToString().CStr(), total_elapsed);
+				logtw("[SockProfiler] DispatchEventInternal() - %s, Total: %dms", ToString().CStr(), total_elapsed);
 			}
 		});
 
-		ssize_t sent_bytes;
+		ssize_t sent_bytes = 0;
 		auto &data = command.data;
 
 		logap("Dispatching event: %s", command.ToString().CStr());
@@ -653,12 +836,12 @@ namespace ov
 		switch (command.type)
 		{
 			case DispatchCommand::Type::Connected:
-				if (_callback != nullptr)
+				if (OnConnectedEvent(nullptr))
 				{
-					_connection_event_fired = true;
-					_callback->OnConnected();
+					return DispatchResult::Dispatched;
 				}
-				return DispatchResult::Dispatched;
+
+				return DispatchResult::Error;
 
 			case DispatchCommand::Type::Send:
 				sent_bytes = SendInternal(data);
@@ -674,21 +857,25 @@ namespace ov
 			case DispatchCommand::Type::WaitForHalfClose:
 				return WaitForHalfClose();
 
-			case DispatchCommand::Type::Close:
+			case DispatchCommand::Type::Close: {
 				logad("Trying to close the socket...");
 
 				// Remove the socket from epoll
-				if (_worker->ReleaseSocket(this->GetSharedPtr()))
-				{
-					// CloseInternal() will be called in ReleaseSocket()
-					return DispatchResult::Dispatched;
-				}
+				auto result = _worker->DeleteFromEpoll(this->GetSharedPtr());
 
-				logae("Could not release socket from worker");
 				CloseInternal();
 
-				OV_ASSERT2(false);
-				return DispatchResult::Error;
+				if (result == false)
+				{
+					OV_ASSERT2(false);
+					logae("Could not delete from epoll");
+					SetState(SocketState::Error);
+					return DispatchResult::Error;
+				}
+
+				SetState(command.new_state);
+				return DispatchResult::Dispatched;
+			}
 		}
 
 		if (sent_bytes == static_cast<ssize_t>(command.data->GetLength()))
@@ -705,7 +892,7 @@ namespace ov
 		return DispatchResult::PartialDispatched;
 	}
 
-	Socket::DispatchResult Socket::DispatchEvents()
+	Socket::DispatchResult Socket::DispatchEventsInternal()
 	{
 		SOCKET_PROFILER_INIT();
 
@@ -719,7 +906,8 @@ namespace ov
 			SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
 				if ((lock_elapsed > 100) || (count > 10) || (_dispatch_queue.size() > 10))
 				{
-					logtw("[SockProfiler] DispatchEvents() - %s, Before Queue: %zu, After Queue: %zu, Lock: %dms, Total: %dms", ToString().CStr(), count, _dispatch_queue.size(), lock_elapsed, total_elapsed);
+					logtw("[SockProfiler] DispatchEventsInternal() - %s, Before Queue: %zu, After Queue: %zu, Lock: %dms, Total: %dms",
+						  ToString().CStr(), count, _dispatch_queue.size(), lock_elapsed, total_elapsed);
 				}
 			});
 
@@ -732,7 +920,8 @@ namespace ov
 
 			while (_dispatch_queue.empty() == false)
 			{
-				auto &front = _dispatch_queue.front();
+				auto front = _dispatch_queue.front();
+				_dispatch_queue.pop_front();
 
 				bool is_close_command = front.IsCloseCommand();
 
@@ -753,25 +942,19 @@ namespace ov
 					break;
 				}
 
-				result = DispatchInternal(front);
+				result = DispatchEventInternal(front);
 
 				if (result == DispatchResult::Dispatched)
 				{
-					if (_dispatch_queue.size() > 0)
-					{
-						// Dispatches the next item
-						_dispatch_queue.pop_front();
-					}
-					else
-					{
-						// All items are dispatched int DispatchInternal();
-					}
-
+					// Dispatches the next item
 					continue;
 				}
 				else if (result == DispatchResult::PartialDispatched)
 				{
 					// The data is not fully processed and will not be removed from queue
+
+					// Re-enqueue the command partially processed
+					_dispatch_queue.push_front(front);
 
 					// Close-related commands will be processed when we receive the event from epoll later
 				}
@@ -783,7 +966,7 @@ namespace ov
 					{
 						// Ignore errors that occurred during close
 						result = DispatchResult::Dispatched;
-						break;
+						continue;
 					}
 				}
 
@@ -793,15 +976,37 @@ namespace ov
 
 		// Since the resource is usually cleaned inside the OnClosed() callback,
 		// callback is performed outside the lock_guard to prevent acquiring the lock.
-		if (_post_callback != nullptr)
+		auto post_callback = std::move(_post_callback);
+		if (post_callback != nullptr)
 		{
 			if (_connection_event_fired)
 			{
-				_post_callback->OnClosed();
+				post_callback->OnClosed();
 			}
 		}
 
 		return result;
+	}
+
+	Socket::DispatchResult Socket::DispatchEvents()
+	{
+		switch (_blocking_mode)
+		{
+			case BlockingMode::Blocking:
+#if DEBUG
+			{
+				std::lock_guard lock_guard(_dispatch_queue_lock);
+				[[maybe_unused]] auto count = _dispatch_queue.size();
+				OV_ASSERT2(count == 0);
+			}
+#endif	// DEBUG
+				return Socket::DispatchResult::Dispatched;
+
+			case BlockingMode::NonBlocking:
+				return DispatchEventsInternal();
+		}
+
+		return Socket::DispatchResult::Error;
 	}
 
 	ssize_t Socket::SendInternal(const std::shared_ptr<const Data> &data)
@@ -1014,6 +1219,16 @@ namespace ov
 		return total_sent;
 	}
 
+	void Socket::OnDataAvailableEvent()
+	{
+		logad("Socket is ready to read");
+
+		if (_callback != nullptr)
+		{
+			_callback->OnReadable();
+		}
+	}
+
 	bool Socket::Send(const std::shared_ptr<const Data> &data)
 	{
 		switch (GetState())
@@ -1036,50 +1251,57 @@ namespace ov
 			return false;
 		}
 
-		if (GetType() != SocketType::Udp)
+		switch (_blocking_mode)
 		{
-			CHECK_STATE(== SocketState::Connected, false);
+			case BlockingMode::Blocking:
+				return (SendInternal(data) == static_cast<ssize_t>(data->GetLength()));
 
-			if (AppendCommand({data->Clone()}) == false)
-			{
-				return false;
-			}
-
-			return (DispatchEvents() != DispatchResult::Error);
-		}
-		else
-		{
-			CHECK_STATE2(== SocketState::Created, == SocketState::Bound, false);
-
-			// We don't have to be accurate here, because we'll acquire lock of _dispatch_queue_lock in DispatchEvent()
-			if (_dispatch_queue.empty() == false)
-			{
-				// Send remaining data
-				if (DispatchEvents() == DispatchResult::Error)
+			case BlockingMode::NonBlocking:
+				if (GetType() != SocketType::Udp)
 				{
+					CHECK_STATE(== SocketState::Connected, false);
+
+					if (AppendCommand({data->Clone()}))
+					{
+						return (DispatchEvents() != DispatchResult::Error);
+					}
+
 					return false;
 				}
-			}
+				else
+				{
+					CHECK_STATE2(== SocketState::Created, == SocketState::Bound, false);
 
-			// Send the data directly
-			auto sent = SendInternal(data);
+					// We don't have to be accurate here, because we'll acquire lock of _dispatch_queue_lock in DispatchEvents()
+					if (_dispatch_queue.empty() == false)
+					{
+						// Send remaining data
+						if (DispatchEvents() == DispatchResult::Error)
+						{
+							return false;
+						}
+					}
 
-			if (sent == static_cast<ssize_t>(data->GetLength()))
-			{
-				// The data has been sent
-				return true;
-			}
-			else if (sent == 0L)
-			{
-				// Need to send later
-				return AppendCommand({data->Clone()});
-			}
-			else
-			{
-				// An error occurred
-				return false;
-			}
+					// Send the data directly
+					auto sent = SendInternal(data);
+
+					if (sent == static_cast<ssize_t>(data->GetLength()))
+					{
+						// The data has been sent
+						return true;
+					}
+					else if (sent == 0L)
+					{
+						// Need to send later
+						return AppendCommand({data->Clone()});
+					}
+
+					// An error occurred
+					return false;
+				}
 		}
+
+		return false;
 	}
 
 	bool Socket::Send(const void *data, size_t length)
@@ -1109,50 +1331,60 @@ namespace ov
 			return false;
 		}
 
-		if (GetType() != SocketType::Udp)
+		switch (_blocking_mode)
 		{
-			CHECK_STATE(== SocketState::Connected, false);
+			case BlockingMode::Blocking:
+				return (SendToInternal(address, data) == static_cast<ssize_t>(data->GetLength()));
 
-			if (AppendCommand({address, data->Clone()}) == false)
-			{
-				return false;
-			}
-
-			return (DispatchEvents() != DispatchResult::Error);
-		}
-		else
-		{
-			CHECK_STATE2(== SocketState::Created, == SocketState::Bound, false);
-
-			// We don't have to be accurate here, because we'll acquire lock of _dispatch_queue_lock in DispatchEvent()
-			if (_dispatch_queue.empty() == false)
-			{
-				// Send remaining data
-				if (DispatchEvents() == DispatchResult::Error)
+			case BlockingMode::NonBlocking:
+				if (GetType() != SocketType::Udp)
 				{
+					CHECK_STATE(== SocketState::Connected, false);
+
+					if (AppendCommand({address, data->Clone()}))
+					{
+						return (DispatchEvents() != DispatchResult::Error);
+					}
+
 					return false;
 				}
-			}
+				else
+				{
+					CHECK_STATE2(== SocketState::Created, == SocketState::Bound, false);
 
-			// Send the data directly
-			auto sent = SendToInternal(address, data);
+					// We don't have to be accurate here, because we'll acquire lock of _dispatch_queue_lock in DispatchEvents()
+					if (_dispatch_queue.empty() == false)
+					{
+						// Send remaining data
+						if (DispatchEvents() == DispatchResult::Error)
+						{
+							return false;
+						}
+					}
 
-			if (sent == static_cast<ssize_t>(data->GetLength()))
-			{
-				// The data has been sent
-				return true;
-			}
-			else if (sent == 0L)
-			{
-				// Need to send later
-				return AppendCommand({address, data->Clone()});
-			}
-			else
-			{
-				// An error occurred
-				return false;
-			}
+					// Send the data directly
+					auto sent = SendToInternal(address, data);
+
+					if (sent == static_cast<ssize_t>(data->GetLength()))
+					{
+						// The data has been sent
+						return true;
+					}
+					else if (sent == 0L)
+					{
+						// Need to send later
+						return AppendCommand({address, data->Clone()});
+					}
+					else
+					{
+						// An error occurred
+					}
+
+					return false;
+				}
 		}
+
+		return false;
 	}
 
 	bool Socket::SendTo(const SocketAddress &address, const void *data, size_t length)
@@ -1160,7 +1392,7 @@ namespace ov
 		return SendTo(address, (data == nullptr) ? nullptr : std::make_shared<Data>(data, length));
 	}
 
-	std::shared_ptr<ov::Error> Socket::Recv(std::shared_ptr<Data> &data, bool non_block)
+	std::shared_ptr<const SocketError> Socket::Recv(std::shared_ptr<Data> &data, bool non_block)
 	{
 		OV_ASSERT2(data != nullptr);
 		OV_ASSERT(data->GetCapacity() > 0, "Must specify a data size in advance using Reserve().");
@@ -1181,11 +1413,11 @@ namespace ov
 		return nullptr;
 	}
 
-	std::shared_ptr<ov::Error> Socket::Recv(void *data, size_t length, size_t *received_length, bool non_block)
+	std::shared_ptr<const SocketError> Socket::Recv(void *data, size_t length, size_t *received_length, bool non_block)
 	{
 		if (GetState() == SocketState::Closed)
 		{
-			return Error::CreateError("Socket", "Socket is closed");
+			return SocketError::CreateError("Socket is closed");
 		}
 
 		OV_ASSERT2(data != nullptr);
@@ -1194,23 +1426,36 @@ namespace ov
 		logap("Trying to read from the socket...");
 
 		ssize_t read_bytes = -1;
-		std::shared_ptr<Error> error;
+		std::shared_ptr<SocketError> socket_error;
 
 		switch (GetType())
 		{
 			case SocketType::Udp:
 			case SocketType::Tcp:
-				read_bytes = ::recv(GetNativeHandle(), data, length, (_is_nonblock || non_block) ? MSG_DONTWAIT : 0);
+				read_bytes = ::recv(GetNativeHandle(), data, length,
+									((_blocking_mode == BlockingMode::NonBlocking) || non_block) ? MSG_DONTWAIT : 0);
 
 				if (read_bytes <= 0L)
 				{
-					error = Error::CreateErrorFromErrno();
+					auto error = Error::CreateErrorFromErrno();
 
 					if (error->GetCode() == EAGAIN)
 					{
-						// Timed out
-						read_bytes = 0L;
-						error = nullptr;
+						if (_blocking_mode == BlockingMode::NonBlocking)
+						{
+							// Timed out
+							read_bytes = 0L;
+							// Actually, it is not an error
+							socket_error = nullptr;
+						}
+						else
+						{
+							socket_error = SocketError::CreateError(error->GetCode(), "Receive timed out: %s", error->GetMessage().CStr());
+						}
+					}
+					else
+					{
+						socket_error = SocketError::CreateError(error);
 					}
 				}
 
@@ -1222,13 +1467,18 @@ namespace ov
 
 				if (read_bytes <= 0L)
 				{
-					error = Error::CreateErrorFromSrt();
+					auto error = Error::CreateErrorFromSrt();
 
 					if (error->GetCode() == SRT_EASYNCRCV)
 					{
 						// Timed out
 						read_bytes = 0L;
-						error = nullptr;
+						// Actually, it is not an error
+						socket_error = nullptr;
+					}
+					else
+					{
+						socket_error = SocketError::CreateError(error->GetCode(), "Receive timed out (SRT): %s", error->GetMessage().CStr());
 					}
 				}
 
@@ -1239,41 +1489,63 @@ namespace ov
 				break;
 		}
 
-		if (error != nullptr)
+		if (socket_error != nullptr)
 		{
-			if (read_bytes == 0L)
+			if (
+				((_socket.GetType() != SocketType::Srt) && (read_bytes == 0L)) ||
+				((_socket.GetType() == SocketType::Srt) && (socket_error->GetCode() == SRT_ECONNLOST)))
 			{
-				logad("Remote is disconnected: %s", error->ToString().CStr());
+				socket_error = SocketError::CreateError("Remote is disconnected");
 				*received_length = 0UL;
 
-				SetState(SocketState::Disconnected);
-				Close();
+				CloseWithState(SocketState::Disconnected);
 
-				return error;
+				return socket_error;
 			}
 			else if (read_bytes < 0L)
 			{
-				switch (error->GetCode())
+				if (_socket.GetType() != SocketType::Srt)
 				{
-					// Errors that can occur under normal circumstances do not output
-					case EBADF:
-						// Socket is closed somewhere in OME
-						break;
+					switch (socket_error->GetCode())
+					{
+						// Errors that can occur under normal circumstances do not output
+						case EBADF:
+							// Socket is closed somewhere in OME
+							break;
 
-					case ECONNRESET:
-						// Peer is disconnected
-						break;
+						case ECONNRESET:
+							// Peer is disconnected
+							break;
 
-					case ENOTCONN:
-						// Transport endpoint is not connected
-						break;
+						case ENOTCONN:
+							// Transport endpoint is not connected
+							break;
 
-					default:
-						logae("An error occurred while read data: %s\nStack trace: %s",
-							  error->ToString().CStr(),
-							  ov::StackTrace::GetStackTrace().CStr());
+						case EAGAIN:
+							// Timed out
+							OV_ASSERT2(_blocking_mode == BlockingMode::Blocking);
+							break;
+
+						default:
+							logae("An error occurred while read data: %s\nStack trace: %s",
+								  socket_error->ToString().CStr(),
+								  StackTrace::GetStackTrace().CStr());
+					}
+
+					CloseWithState(SocketState::Error);
 				}
-				SetState(SocketState::Error);
+				else
+				{
+					switch (socket_error->GetCode())
+					{
+						default:
+							logae("An error occurred while read data: %s\nStack trace: %s",
+								  socket_error->ToString().CStr(),
+								  StackTrace::GetStackTrace().CStr());
+					}
+
+					CloseWithState(SocketState::Error);
+				}
 			}
 		}
 		else
@@ -1282,16 +1554,16 @@ namespace ov
 			*received_length = static_cast<size_t>(read_bytes);
 		}
 
-		return error;
+		return socket_error;
 	}
 
-	std::shared_ptr<ov::Error> Socket::RecvFrom(std::shared_ptr<Data> &data, SocketAddress *address, bool non_block)
+	std::shared_ptr<const SocketError> Socket::RecvFrom(std::shared_ptr<Data> &data, SocketAddress *address, bool non_block)
 	{
 		OV_ASSERT2(_socket.IsValid());
 		OV_ASSERT2(data != nullptr);
 		OV_ASSERT2(data->GetCapacity() > 0);
 
-		std::shared_ptr<Error> error;
+		std::shared_ptr<SocketError> socket_error;
 
 		switch (GetType())
 		{
@@ -1303,18 +1575,24 @@ namespace ov
 				logad("Trying to read from the socket...");
 				data->SetLength(data->GetCapacity());
 
-				ssize_t read_bytes = ::recvfrom(GetNativeHandle(), data->GetWritableData(), data->GetLength(), (_is_nonblock || non_block) ? MSG_DONTWAIT : 0, (sockaddr *)&remote, &remote_length);
+				ssize_t read_bytes = ::recvfrom(GetNativeHandle(), data->GetWritableData(), data->GetLength(),
+												((_blocking_mode == BlockingMode::NonBlocking) || non_block) ? MSG_DONTWAIT : 0,
+												reinterpret_cast<sockaddr *>(&remote), &remote_length);
 
 				if (read_bytes < 0L)
 				{
-					error = Error::CreateErrorFromErrno();
+					auto error = Error::CreateErrorFromErrno();
 
 					data->SetLength(0L);
 
 					if (error->GetCode() == EAGAIN)
 					{
 						// Timed out
-						error = nullptr;
+						socket_error = nullptr;
+					}
+					else
+					{
+						socket_error = SocketError::CreateError(error);
 					}
 				}
 				else
@@ -1334,25 +1612,25 @@ namespace ov
 			case SocketType::Srt:
 				// Does not support RecvFrom() for SRT
 				OV_ASSERT2(false);
-				error = ov::Error::CreateError("Socket", "RecvFrom() is not supported operation while using SRT");
+				socket_error = SocketError::CreateError("RecvFrom() is not supported operation while using SRT");
 				break;
 
 			case SocketType::Unknown:
 				OV_ASSERT2(false);
-				error = ov::Error::CreateError("Socket", "Unknown socket type");
+				socket_error = SocketError::CreateError("Unknown socket type");
 				break;
 		}
 
-		if (error != nullptr)
+		if (socket_error != nullptr)
 		{
 			logae("An error occurred while read data: %s\nStack trace: %s",
-				  error->ToString().CStr(),
-				  ov::StackTrace::GetStackTrace().CStr());
+				  socket_error->ToString().CStr(),
+				  StackTrace::GetStackTrace().CStr());
 
-			SetState(SocketState::Error);
+			CloseWithState(SocketState::Error);
 		}
 
-		return error;
+		return socket_error;
 	}
 
 	bool Socket::Flush()
@@ -1373,57 +1651,92 @@ namespace ov
 
 	bool Socket::CloseIfNeeded()
 	{
-		if (IsClosing() == false)
+		if (_blocking_mode == BlockingMode::Blocking)
 		{
 			return Close();
 		}
 
-		// Socket is already closed
-		return false;
+		return (IsClosing() == false) && Close();
 	}
 
-	bool Socket::Close()
+	bool Socket::CloseWithState(SocketState new_state)
 	{
 		CHECK_STATE(>= SocketState::Closed, false);
 
-		if (GetState() == SocketState::Error)
+		if (GetState() == SocketState::Closed)
 		{
 			// Suppress error message
 			return false;
 		}
 
+		switch (_blocking_mode)
 		{
-			SOCKET_PROFILER_INIT();
-			std::lock_guard lock_guard(_dispatch_queue_lock);
-			SOCKET_PROFILER_AFTER_LOCK();
+			case BlockingMode::Blocking: {
+				bool result = true;
 
-			SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
-				if ((lock_elapsed > 100) || (_dispatch_queue.size() > 10))
+				if (GetState() != SocketState::Error)
 				{
-					logtw("[SockProfiler] Close() - %s, Queue: %zu, Lock: %dms, Total: %dms", ToString().CStr(), _dispatch_queue.size(), lock_elapsed, total_elapsed);
-				}
-			});
-
-			if (_has_close_command == false)
-			{
-				logad("Enqueuing close command");
-				_has_close_command = true;
-
-				if (GetState() != SocketState::Disconnected)
-				{
-					_dispatch_queue.emplace_back(DispatchCommand::Type::HalfClose);
-					_dispatch_queue.emplace_back(DispatchCommand::Type::WaitForHalfClose);
+					if (HalfClose() == DispatchResult::Error)
+					{
+						result = false;
+					}
+					if (WaitForHalfClose() == DispatchResult::Error)
+					{
+						result = false;
+					}
 				}
 
-				_dispatch_queue.emplace_back(DispatchCommand::Type::Close);
+				// Close regardless of result
+				if (CloseInternal())
+				{
+					SetState(new_state);
+				}
+				else
+				{
+					result = false;
+				}
+
+				return result;
 			}
-			else
-			{
-				logad("This socket already has close command (Do not need to call Close*() in this case)");
+
+			case BlockingMode::NonBlocking: {
+				SOCKET_PROFILER_INIT();
+				std::lock_guard lock_guard(_dispatch_queue_lock);
+				SOCKET_PROFILER_AFTER_LOCK();
+
+				SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
+					if ((lock_elapsed > 100) || (_dispatch_queue.size() > 10))
+					{
+						logtw("[SockProfiler] Close() - %s, Queue: %zu, Lock: %dms, Total: %dms", ToString().CStr(), _dispatch_queue.size(), lock_elapsed, total_elapsed);
+					}
+				});
+
+				if (_has_close_command == false)
+				{
+					logad("Enqueuing close command");
+					_has_close_command = true;
+
+					if ((GetState() != SocketState::Disconnected) && (GetState() != SocketState::Error))
+					{
+						_dispatch_queue.emplace_back(DispatchCommand::Type::HalfClose);
+						_dispatch_queue.emplace_back(DispatchCommand::Type::WaitForHalfClose);
+					}
+
+					_dispatch_queue.emplace_back(DispatchCommand::Type::Close, new_state);
+				}
+				else
+				{
+					logad("This socket already has close command (Do not need to call Close*() in this case)");
+				}
 			}
 		}
 
-		return DispatchEvents() != DispatchResult::Error;
+		return (DispatchEvents() != DispatchResult::Error);
+	}
+
+	bool Socket::Close()
+	{
+		return CloseWithState(SocketState::Closed);
 	}
 
 	Socket::DispatchResult Socket::HalfClose()
@@ -1447,9 +1760,15 @@ namespace ov
 			return DispatchResult::Dispatched;
 		}
 
-		if (GetState() == ov::SocketState::Created)
+		switch (GetState())
 		{
-			return Socket::DispatchResult::Dispatched;
+			case SocketState::Created:
+				[[fallthrough]];
+			case SocketState::Disconnected:
+				return Socket::DispatchResult::Dispatched;
+
+			default:
+				break;
 		}
 
 		while (true)
@@ -1459,15 +1778,31 @@ namespace ov
 
 			if (result < 0L)
 			{
-				auto error = ov::Error::CreateErrorFromErrno();
+				auto error = Error::CreateErrorFromErrno();
 
-				if (error->GetCode() == EAGAIN)
+				switch (error->GetCode())
 				{
-					// Peer doesn't send ACK/FIN yet - ignores this
-					return DispatchResult::Dispatched;
+					case EBADF:
+						// Suppress "Bad file descriptor" message
+						break;
+
+					case EAGAIN:
+						// Peer doesn't send ACK/FIN yet - ignores this
+						return DispatchResult::Dispatched;
+
+					case ECONNRESET:
+						// Suppress "Connection reset by peer" message
+						break;
+
+					case ENOTCONN:
+						// Suppress "Transport endpoint is not connected" message
+						break;
+
+					default:
+						logae("An error occurred while half-closing: %s", error->ToString().CStr());
+						break;
 				}
 
-				logae("An error occurred while half-closing: %s", error->ToString().CStr());
 				return DispatchResult::Error;
 			}
 			else if (result == 0)
@@ -1526,13 +1861,15 @@ namespace ov
 			}
 
 			logad("Socket is closed successfully");
-			SetState(SocketState::Closed);
 
 			return true;
 		}
 
 		logad("Socket is already closed");
-		OV_ASSERT2(_state == SocketState::Closed);
+		OV_ASSERT(((_state == SocketState::Closed) ||
+				   (_state == SocketState::Disconnected) ||
+				   (_state == SocketState::Error)),
+				  "Invalid state: %s", StringFromSocketState(_state));
 
 		return false;
 	}
@@ -1540,11 +1877,13 @@ namespace ov
 	String Socket::ToString(const char *class_name) const
 	{
 		return String::FormatString(
-			"<%s: %p, #%d, state: %s, %s, %s>",
+			"<%s: %p, #%d, %s, %s, %s%s%s>",
 			class_name, this,
 			GetNativeHandle(), StringFromSocketState(_state),
 			StringFromSocketType(GetType()),
-			(_remote_address != nullptr) ? _remote_address->ToString().CStr() : "N/A");
+			StringFromBlockingMode(_blocking_mode),
+			(_remote_address != nullptr) ? ", " : "",
+			(_remote_address != nullptr) ? _remote_address->ToString().CStr() : "");
 	}
 
 	String Socket::ToString() const

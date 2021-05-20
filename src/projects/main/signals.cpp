@@ -235,7 +235,7 @@ struct sigaction GetSigAction(OV_SIG_ACTION action)
 
 	sa.sa_sigaction = action;
 
-	return std::move(sa);
+	return sa;
 }
 
 // Configure abort signal

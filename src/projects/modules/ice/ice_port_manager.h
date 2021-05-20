@@ -28,8 +28,6 @@ public:
 	bool CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::cmm::IceCandidates &ice_candidates_config);
 	bool CreateTurnServer(std::shared_ptr<IcePortObserver> observer, uint16_t listening_port, const ov::SocketType socket_type, int tcp_relay_worker_count);
 
-	const std::vector<RtcIceCandidate> &GetIceCandidateList(const std::shared_ptr<IcePortObserver> &observer) const;
-
 	// TODO(Getroot): In the future, each IceCandidate and TurnServer can be released flexibly.
 	// In the future, each IceCandidate and TurnServer can be released flexibly. 
 	// Currently, WebRTC publisher and provider use IcePortManager until the server is shut down, 
@@ -41,7 +39,7 @@ protected:
 	IcePortManager() = default;
 
 	bool IsRegisteredObserver(const std::shared_ptr<IcePortObserver> &observer);
-	bool GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &ice_candidates, std::vector<RtcIceCandidate> *parsed_ice_candidate_list);
+	bool GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &ice_candidates_config, std::vector<std::vector<RtcIceCandidate>> *ice_candidate_list);
 	bool ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, int *start_port, int *end_port);
 
 private:

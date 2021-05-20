@@ -3,22 +3,53 @@
 
 #include <base/ovlibrary/byte_io.h>
 
-bool ReportBlock::Parse(const uint8_t *data, size_t data_size)
+ReportBlock::ReportBlock(uint32_t src_ssrc, uint8_t fraction_lost, uint32_t cumulative_lost,
+					uint32_t extended_highest_sequence_num, uint32_t jitter, uint32_t lsr, uint32_t dlsr)
 {
+	SetSrcSsrc(src_ssrc);
+	SetFractionLost(fraction_lost);
+	SetCumulativeLost(cumulative_lost);
+	SetExtendedHighestSequenceNum(extended_highest_sequence_num);
+	SetJitter(jitter);
+	SetLSR(lsr);
+	SetDLSR(dlsr);	
+}
+
+std::shared_ptr<ReportBlock> ReportBlock::Parse(const uint8_t *data, size_t data_size)
+{
+	auto block = std::make_shared<ReportBlock>();
 	if(data_size < RTCP_REPORT_BLOCK_SIZE)
 	{
-		return false;
+		return nullptr;
 	}
 	
-	_src_ssrc = ByteReader<uint32_t>::ReadBigEndian(&data[0]);
-	_fraction_lost = ByteReader<uint8_t>::ReadBigEndian(&data[4]);
-	_cumulative_lost = ByteReader<uint32_t, 3>::ReadBigEndian(&data[5]);
-	_extented_highest_sequence_num = ByteReader<uint32_t>::ReadBigEndian(&data[8]);
-	_jitter = ByteReader<uint32_t>::ReadBigEndian(&data[12]);
-	_last_sr = ByteReader<uint32_t>::ReadBigEndian(&data[16]);
-	_delay_since_last_sr = ByteReader<uint32_t>::ReadBigEndian(&data[20]);
+	block->_src_ssrc = ByteReader<uint32_t>::ReadBigEndian(&data[0]);
+	block->_fraction_lost = ByteReader<uint8_t>::ReadBigEndian(&data[4]);
+	block->_cumulative_lost = ByteReader<uint32_t, 3>::ReadBigEndian(&data[5]);
+	block->_extended_highest_sequence_num = ByteReader<uint32_t>::ReadBigEndian(&data[8]);
+	block->_jitter = ByteReader<uint32_t>::ReadBigEndian(&data[12]);
+	block->_last_sr = ByteReader<uint32_t>::ReadBigEndian(&data[16]);
+	block->_delay_since_last_sr = ByteReader<uint32_t>::ReadBigEndian(&data[20]);
 
-	return true;
+	return block;
+}
+
+std::shared_ptr<ov::Data> ReportBlock::GetData()
+{
+	auto data = std::make_shared<ov::Data>(RTCP_REPORT_BLOCK_SIZE);
+	data->SetLength(RTCP_REPORT_BLOCK_SIZE);
+
+	ov::ByteStream write_stream(data);
+
+	write_stream.WriteBE32(_src_ssrc);
+	write_stream.WriteBE(_fraction_lost);
+	write_stream.WriteBE24(_cumulative_lost);
+	write_stream.WriteBE32(_extended_highest_sequence_num);
+	write_stream.WriteBE32(_jitter);
+	write_stream.WriteBE32(_last_sr);
+	write_stream.WriteBE32(_delay_since_last_sr);
+
+	return data;
 }
 
 /*
@@ -43,6 +74,6 @@ double RtcpPacket::DelayCalculation(uint32_t lsr, uint32_t dlsr)
 
 void ReportBlock::Print()
 {
-	logtd("Receiver Report >> source ssrc(%u) fraction lost(%u) cumulative lost(%u) highest sequence(%u) jitter(%u) last sr(%u) delay(%u)",
-			GetSrcSsrc(), GetFractionLost(), GetCumulativeLost(), GetExtentedHighestSequenceNum(), GetJitter(), GetLastSr(), GetDelaySinceLastSr());
+	logti("Receiver Report >> source ssrc(%u) fraction lost(%u) cumulative lost(%u) highest sequence(%u) jitter(%u) last sr(%u) delay(%u)",
+			GetSrcSsrc(), GetFractionLost(), GetCumulativeLost(), GetExtendedHighestSequenceNum(), GetJitter(), GetLastSr(), GetDelaySinceLastSr());
 }

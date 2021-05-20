@@ -21,23 +21,23 @@ namespace api
 
 		protected:
 			// POST /v1/vhosts/<vhost_name>/apps/<app_name>
-			ApiResponse OnPostStream(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+			ApiResponse OnPostStream(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 									 const std::shared_ptr<mon::HostMetrics> &vhost,
 									 const std::shared_ptr<mon::ApplicationMetrics> &app);
 
 			// GET /v1/vhosts/<vhost_name>/apps/<app_name>/streams
-			ApiResponse OnGetStreamList(const std::shared_ptr<HttpClient> &client,
+			ApiResponse OnGetStreamList(const std::shared_ptr<http::svr::HttpConnection> &client,
 										const std::shared_ptr<mon::HostMetrics> &vhost,
 										const std::shared_ptr<mon::ApplicationMetrics> &app);
 
 			// GET /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>
-			ApiResponse OnGetStream(const std::shared_ptr<HttpClient> &client,
+			ApiResponse OnGetStream(const std::shared_ptr<http::svr::HttpConnection> &client,
 									const std::shared_ptr<mon::HostMetrics> &vhost,
 									const std::shared_ptr<mon::ApplicationMetrics> &app,
 									const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
 
 			// DELETE /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>
-			ApiResponse OnDeleteStream(const std::shared_ptr<HttpClient> &client,
+			ApiResponse OnDeleteStream(const std::shared_ptr<http::svr::HttpConnection> &client,
 									   const std::shared_ptr<mon::HostMetrics> &vhost,
 									   const std::shared_ptr<mon::ApplicationMetrics> &app,
 									   const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);

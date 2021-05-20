@@ -57,7 +57,7 @@ namespace ov
 		/// @return read-only pointer
 		inline const void *GetData() const
 		{
-			return (_reference_data != nullptr) ? _reference_data : _allocated_data->data() + _offset;
+			return static_cast<const uint8_t *>((_reference_data != nullptr) ? _reference_data : _allocated_data->data()) + _offset;
 		}
 
 		template<typename T>

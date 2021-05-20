@@ -17,9 +17,9 @@ namespace pvd
 	class MpegTsStream : public pvd::PushStream
 	{
 	public:
-		static std::shared_ptr<MpegTsStream> Create(StreamSourceType source_type, uint32_t channel_id, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<ov::Socket> &client_socket, const std::shared_ptr<PushProvider> &provider);
+		static std::shared_ptr<MpegTsStream> Create(StreamSourceType source_type, uint32_t channel_id, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<ov::Socket> &client_socket, uint64_t lifetime_epoch_msec, const std::shared_ptr<PushProvider> &provider);
 		
-		explicit MpegTsStream(StreamSourceType source_type, uint32_t channel_id, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, std::shared_ptr<ov::Socket> client_socket, const std::shared_ptr<PushProvider> &provider);
+		explicit MpegTsStream(StreamSourceType source_type, uint32_t channel_id, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, std::shared_ptr<ov::Socket> client_socket, uint64_t lifetime_epoch_msec, const std::shared_ptr<PushProvider> &provider);
 		~MpegTsStream() final;
 
 		bool Stop() override;
@@ -46,5 +46,7 @@ namespace pvd
 		mpegts::MpegTsDepacketizer	_depacketizer;
 
 		info::VHostAppName _vhost_app_name;
+
+		uint64_t _lifetime_epoch_msec;
 	};
 }

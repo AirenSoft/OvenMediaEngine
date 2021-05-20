@@ -7,15 +7,16 @@
 //
 //==============================================================================
 #include "socket_address.h"
-#include "socket_private.h"
 
 #include <netdb.h>
+
 #include <algorithm>
 
 #include "../ovlibrary/assert.h"
 #include "../ovlibrary/byte_ordering.h"
-#include "../ovlibrary/ovlibrary.h"
 #include "../ovlibrary/converter.h"
+#include "../ovlibrary/ovlibrary.h"
+#include "socket_private.h"
 
 namespace ov
 {
@@ -34,31 +35,32 @@ namespace ov
 		OV_ASSERT2((void *)_address_ipv6 == (void *)(&_address_storage));
 	}
 
+	// <host>[:<port>]
 	SocketAddress::SocketAddress(const ov::String &host_port)
 		: SocketAddress()
 	{
 		OV_ASSERT2((void *)_address_ipv4 == (void *)(&_address_storage));
 		OV_ASSERT2((void *)_address_ipv6 == (void *)(&_address_storage));
 
-		// <host>[:<port>]
 		auto tokens = host_port.Split(":");
 		bool result = false;
 
-		if(tokens.empty() == false)
+		if (tokens.empty() == false)
 		{
 			// host
 			result = SetHostname(tokens[0]);
 
-			if(tokens.size() >= 2)
+			if (tokens.size() >= 2)
 			{
 				// port
 				result = SetPort(Converter::ToUInt16(tokens[1]));
 			}
 		}
 
-		if(result == false)
+		if (result == false)
 		{
 			logte("An error occurred: %s", host_port.CStr());
+			_hostname = host_port;
 		}
 
 		UpdateIPAddress();
@@ -77,8 +79,8 @@ namespace ov
 		OV_ASSERT2((void *)_address_ipv4 == (void *)(&_address_storage));
 		OV_ASSERT2((void *)_address_ipv6 == (void *)(&_address_storage));
 
-		bool result = SetHostname(hostname);
-		result = result && SetPort(port);
+		SetHostname(hostname);
+		SetPort(port);
 
 		UpdateIPAddress();
 	}
@@ -128,6 +130,7 @@ namespace ov
 
 		_hostname = address._hostname;
 		_ip_address = address._ip_address;
+		_port = address._port;
 	}
 
 	SocketAddress::SocketAddress(SocketAddress &&address) noexcept
@@ -140,59 +143,66 @@ namespace ov
 
 		std::swap(_hostname, address._hostname);
 		std::swap(_ip_address, address._ip_address);
+		std::swap(_port, address._port);
 	}
 
 	SocketAddress::~SocketAddress()
 	{
 	}
 
-	SocketAddress &SocketAddress::operator =(const SocketAddress &address) noexcept
+	bool SocketAddress::IsValid() const
+	{
+		return (_address_storage.ss_family != AF_UNSPEC);
+	}
+
+	SocketAddress &SocketAddress::operator=(const SocketAddress &address) noexcept
 	{
 		_address_storage = address._address_storage;
 
 		_hostname = address._hostname;
 		_ip_address = address._ip_address;
+		_port = address._port;
 
 		return *this;
 	}
 
-	bool SocketAddress::operator ==(const SocketAddress &socket) const
+	bool SocketAddress::operator==(const SocketAddress &socket) const
 	{
 		return ::memcmp(&_address_storage, &(socket._address_storage), sizeof(_address_storage)) == 0;
 	}
 
-	bool SocketAddress::operator !=(const SocketAddress &socket) const
+	bool SocketAddress::operator!=(const SocketAddress &socket) const
 	{
-		return !(operator ==(socket));
+		return !(operator==(socket));
 	}
 
-	bool SocketAddress::operator <(const SocketAddress &socket) const
+	bool SocketAddress::operator<(const SocketAddress &socket) const
 	{
 		// logtd("%s", Dump(_address_storage, "_address_storage", 0, 16).CStr());
 		// logtd("%s", Dump(socket._address_storage, "socket._address_storage", 0, 16).CStr());
 
-		if((_address_storage.ss_family == AF_INET) && (socket._address_storage.ss_family == AF_INET6))
+		if ((_address_storage.ss_family == AF_INET) && (socket._address_storage.ss_family == AF_INET6))
 		{
 			// IPv4 < IPv6
 			return true;
 		}
 
-		if((_address_storage.ss_family == AF_INET6) && (socket._address_storage.ss_family == AF_INET))
+		if ((_address_storage.ss_family == AF_INET6) && (socket._address_storage.ss_family == AF_INET))
 		{
 			// IPv4 < IPv6
 			return false;
 		}
 
-		if(_address_storage.ss_family == socket._address_storage.ss_family)
+		if (_address_storage.ss_family == socket._address_storage.ss_family)
 		{
 			int compare_result = 0;
 
-			switch(_address_storage.ss_family)
+			switch (_address_storage.ss_family)
 			{
 				case AF_INET:
 					compare_result = ::memcmp(&(_address_ipv4->sin_addr), &(socket._address_ipv4->sin_addr), sizeof(_address_ipv4->sin_addr));
 
-					if(compare_result == 0)
+					if (compare_result == 0)
 					{
 						return NetworkToHost16(_address_ipv4->sin_port) < NetworkToHost16(socket._address_ipv4->sin_port);
 					}
@@ -202,7 +212,7 @@ namespace ov
 				case AF_INET6:
 					compare_result = ::memcmp(&(_address_ipv6->sin6_addr), &(socket._address_ipv6->sin6_addr), sizeof(_address_ipv6->sin6_addr));
 
-					if(compare_result == 0)
+					if (compare_result == 0)
 					{
 						return NetworkToHost16(_address_ipv6->sin6_port) < NetworkToHost16(socket._address_ipv6->sin6_port);
 					}
@@ -218,15 +228,17 @@ namespace ov
 		return false;
 	}
 
-	bool SocketAddress::operator >(const SocketAddress &socket) const
+	bool SocketAddress::operator>(const SocketAddress &socket) const
 	{
-		return (operator !=(socket)) && (operator <(socket) == false);
+		return (operator!=(socket)) && (operator<(socket) == false);
 	}
 
 	bool SocketAddress::SetHostname(const char *hostname)
 	{
+		_hostname = hostname;
+
 		// 문자열로 부터 IP를 계산함
-		if((hostname == nullptr) || (hostname[0] == '\0') || ((hostname[0] == '*') && (hostname[1] == '\0')))
+		if ((hostname == nullptr) || (hostname[0] == '\0') || ((hostname[0] == '*') && (hostname[1] == '\0')))
 		{
 			// host가 지정되어 있지 않으면 INADDR_ANY 로 설정
 			_address_storage.ss_family = AF_INET;
@@ -240,7 +252,7 @@ namespace ov
 		}
 
 		// IPv4로 변환 시도
-		if(::inet_pton(AF_INET, hostname, &(_address_ipv4->sin_addr)) != 0)
+		if (::inet_pton(AF_INET, hostname, &(_address_ipv4->sin_addr)) != 0)
 		{
 			// 변환 성공
 			_address_storage.ss_family = AF_INET;
@@ -250,7 +262,7 @@ namespace ov
 			// IPv4로 변환 실패
 
 			// IPv6으로 시도
-			if(::inet_pton(AF_INET6, hostname, &(_address_ipv6->sin6_addr)) != 0)
+			if (::inet_pton(AF_INET6, hostname, &(_address_ipv6->sin6_addr)) != 0)
 			{
 				// 변환 성공
 				_address_storage.ss_family = AF_INET6;
@@ -260,7 +272,7 @@ namespace ov
 				// IPv6으로 변환 실패
 
 				// DNS resolve 시도
-				addrinfo hints {};
+				addrinfo hints{};
 
 				::memset(&hints, 0, sizeof(hints));
 				hints.ai_family = PF_UNSPEC;
@@ -269,7 +281,7 @@ namespace ov
 
 				addrinfo *result = nullptr;
 
-				if(::getaddrinfo(hostname, nullptr, nullptr, &result) != 0)
+				if (::getaddrinfo(hostname, nullptr, nullptr, &result) != 0)
 				{
 					logtw("An error occurred while resolve DNS for host [%s]", hostname);
 					return false;
@@ -277,9 +289,9 @@ namespace ov
 
 				bool stop = false;
 
-				for(addrinfo *item = result; item != nullptr; item = item->ai_next)
+				for (addrinfo *item = result; item != nullptr; item = item->ai_next)
 				{
-					switch(item->ai_family)
+					switch (item->ai_family)
 					{
 						case AF_INET:
 							// IPv4 항목 찾음
@@ -294,7 +306,7 @@ namespace ov
 						case AF_INET6:
 							// IPv6 항목 찾음
 
-							if(_address_storage.ss_family == AF_INET6)
+							if (_address_storage.ss_family == AF_INET6)
 							{
 								// 이미 IPv6 항목을 최소 1개 찾은 상태
 								// 아무런 조치도 취하지 않음
@@ -311,15 +323,15 @@ namespace ov
 							break;
 					}
 
-					if(stop)
+					if (stop)
 					{
 						break;
 					}
 				}
 
-				OV_SAFE_FUNC(result, nullptr, ::freeaddrinfo,);
+				OV_SAFE_FUNC(result, nullptr, ::freeaddrinfo, );
 
-				return _address_storage.ss_family != AF_UNSPEC;
+				return IsValid();
 			}
 		}
 
@@ -332,7 +344,7 @@ namespace ov
 
 	void SocketAddress::UpdateIPAddress()
 	{
-		if(_address_storage.ss_family != AF_UNSPEC)
+		if (IsValid())
 		{
 			String ip_address;
 
@@ -340,9 +352,25 @@ namespace ov
 
 			const void *address = (_address_storage.ss_family == AF_INET) ? (void *)(&(_address_ipv4->sin_addr)) : (void *)(&(_address_ipv6->sin6_addr));
 
-			if(inet_ntop(_address_storage.ss_family, address, ip_address.GetBuffer(), static_cast<socklen_t>(ip_address.GetLength())) != nullptr)
+			if (inet_ntop(_address_storage.ss_family, address, ip_address.GetBuffer(), static_cast<socklen_t>(ip_address.GetLength())) != nullptr)
 			{
 				_ip_address = ip_address;
+			}
+
+			switch (_address_storage.ss_family)
+			{
+				case AF_INET:
+					_port = NetworkToHost16(_address_ipv4->sin_port);
+					break;
+
+				case AF_INET6:
+					_port = NetworkToHost16(_address_ipv6->sin6_port);
+					break;
+
+				default:
+					OV_ASSERT2(false);
+					_port = 0;
+					break;
 			}
 		}
 	}
@@ -359,7 +387,9 @@ namespace ov
 
 	bool SocketAddress::SetPort(uint16_t port)
 	{
-		switch(_address_storage.ss_family)
+		_port = port;
+
+		switch (_address_storage.ss_family)
 		{
 			case AF_INET:
 				_address_ipv4->sin_port = HostToNetwork16(port);
@@ -376,22 +406,12 @@ namespace ov
 
 	uint16_t SocketAddress::Port() const noexcept
 	{
-		switch(_address_storage.ss_family)
-		{
-			case AF_INET:
-				return NetworkToHost16(_address_ipv4->sin_port);
-				
-			case AF_INET6:
-				return NetworkToHost16(_address_ipv6->sin6_port);
-
-			default:
-				return 0;
-		}
+		return _port;
 	}
 
 	const sockaddr *SocketAddress::Address() const noexcept
 	{
-		if(_address_storage.ss_family != AF_UNSPEC)
+		if (IsValid())
 		{
 			return (const sockaddr *)(&_address_storage);
 		}
@@ -401,7 +421,7 @@ namespace ov
 
 	const sockaddr_in *SocketAddress::AddressForIPv4() const noexcept
 	{
-		if(_address_storage.ss_family != AF_INET)
+		if (_address_storage.ss_family != AF_INET)
 		{
 			// IPv4 => IPv6로 변환할 수 없음
 			return nullptr;
@@ -412,7 +432,7 @@ namespace ov
 
 	const sockaddr_in6 *SocketAddress::AddressForIPv6() const noexcept
 	{
-		if(_address_storage.ss_family != AF_INET6)
+		if (_address_storage.ss_family != AF_INET6)
 		{
 			// IPv6 => IPv4로 변환할 수 없음
 			return nullptr;
@@ -423,7 +443,7 @@ namespace ov
 
 	const in_addr *SocketAddress::AddrInForIPv4() const noexcept
 	{
-		if(_address_storage.ss_family != AF_INET)
+		if (_address_storage.ss_family != AF_INET)
 		{
 			// IPv4 => IPv6로 변환할 수 없음
 			return nullptr;
@@ -434,7 +454,7 @@ namespace ov
 
 	const in6_addr *SocketAddress::AddrInForIPv6() const noexcept
 	{
-		if(_address_storage.ss_family != AF_INET6)
+		if (_address_storage.ss_family != AF_INET6)
 		{
 			// IPv6 => IPv4로 변환할 수 없음
 			return nullptr;
@@ -445,7 +465,7 @@ namespace ov
 
 	socklen_t SocketAddress::AddressLength() const noexcept
 	{
-		switch(_address_storage.ss_family)
+		switch (_address_storage.ss_family)
 		{
 			case AF_INET:
 				return INET_ADDRSTRLEN;
@@ -460,6 +480,41 @@ namespace ov
 
 	ov::String SocketAddress::ToString() const noexcept
 	{
-		return ov::String::FormatString("%s%s:%d", (_address_storage.ss_family == AF_INET) ? "" : (_address_storage.ss_family == AF_INET6 ? "[v6]" : "[?]"), GetIpAddress().CStr(), Port());
+		ov::String description;
+
+		auto hostname = GetHostname();
+
+		if (IsValid())
+		{
+			auto ip = GetIpAddress();
+
+			description = (_address_storage.ss_family == AF_INET) ? "" : (_address_storage.ss_family == AF_INET6 ? "[v6] " : "[?] ");
+			description.Append(hostname);
+
+			if (hostname.IsEmpty())
+			{
+				description.Append(ip);
+			}
+			else
+			{
+				if ((hostname != "*") && (hostname != ip))
+				{
+					description.AppendFormat("(%s)", ip.CStr());
+				}
+			}
+
+			description.AppendFormat(":%d", Port());
+		}
+		else
+		{
+			description.Append(hostname);
+
+			if (Port() > 0)
+			{
+				description.AppendFormat(":%d", Port());
+			}
+		}
+
+		return description;
 	}
-}
+}  // namespace ov

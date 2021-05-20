@@ -11,19 +11,24 @@
 #include <monitoring/monitoring.h>
 
 #include "../dash/dash_define.h"
+#include "../segment_publisher.h"
 #include "cmaf_packetizer.h"
 #include "cmaf_private.h"
 
-HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client,
-													   const SegmentStreamRequestInfo &request_info,
-													   SegmentType segment_type)
+std::shared_ptr<SegmentStreamInterceptor> CmafStreamServer::CreateInterceptor()
+{
+	return std::make_shared<CmafInterceptor>();
+}
+
+http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
+																	const SegmentStreamRequestInfo &request_info,
+																	SegmentType segment_type)
 {
 	auto response = client->GetResponse();
 
 	auto type = CmafPacketizer::GetFileType(request_info.file_name);
 
 	bool is_video = ((type == DashFileType::VideoSegment) || (type == DashFileType::VideoInit));
-	std::shared_ptr<SegmentItem> segment = nullptr;
 
 	// Check if the requested file is being created
 	{
@@ -38,14 +43,23 @@ HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 			std::shared_ptr<pub::Stream> stream_info;
 			for (auto observer : _observers)
 			{
-				auto segment_publisher = std::dynamic_pointer_cast<pub::Publisher>(observer);
-
+				auto segment_publisher = std::dynamic_pointer_cast<SegmentPublisher>(observer);
 				if (segment_publisher != nullptr)
 				{
 					stream_info = segment_publisher->GetStreamAs<pub::Stream>(request_info.vhost_app_name, request_info.stream_name);
-
 					if (stream_info != nullptr)
 					{
+						// For statistics
+						auto segment_request_info = SegmentRequestInfo(
+							GetPublisherType(),
+							*std::static_pointer_cast<info::Stream>(stream_info),
+							client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),
+							static_cast<int>(chunk_item->second->sequence_number),
+							is_video ? SegmentDataType::Video : SegmentDataType::Audio,
+							static_cast<int64_t>(chunk_item->second->duration_in_msec / 1000));
+
+						segment_publisher->UpdateSegmentRequestInfo(segment_request_info);
+
 						break;
 					}
 				}
@@ -54,10 +68,10 @@ HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 			if (stream_info == nullptr)
 			{
 				// The stream has been deleted, but if it remains in the Worker queue, this code will run.
-				response->SetStatusCode(HttpStatusCode::NotFound);
+				response->SetStatusCode(http::StatusCode::NotFound);
 				_http_chunk_list.clear();
-				
-				return HttpConnection::Closed;
+
+				return http::svr::ConnectionPolicy::Closed;
 			}
 
 			client->GetRequest()->SetExtra(stream_info);
@@ -76,11 +90,15 @@ HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 			response->AppendData(chunk_item->second->chunked_data);
 			auto sent_bytes = response->Response();
 
-			IncreaseBytesOut(client, sent_bytes);
+			auto metric = GetStreamMetric(client);
+			if (metric != nullptr)
+			{
+				metric->IncreaseBytesOut(GetPublisherType(), sent_bytes);
+			}
 
 			chunk_item->second->client_list.push_back(client);
 
-			return HttpConnection::KeepAlive;
+			return http::svr::ConnectionPolicy::KeepAlive;
 		}
 	}
 
@@ -89,6 +107,8 @@ HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 
 void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov::String &stream_name,
 										   const ov::String &file_name,
+										   const uint32_t sequence_number,
+										   const uint64_t duration_in_msec,
 										   bool is_video,
 										   std::shared_ptr<ov::Data> &chunk_data)
 {
@@ -101,7 +121,7 @@ void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov:
 	{
 		// New chunk data is arrived
 		logtd("Create a new chunk for [%s/%s, %s], size: %zu bytes", app_name.CStr(), stream_name.CStr(), file_name.CStr(), chunk_data->GetLength());
-		_http_chunk_list.emplace(key, std::make_shared<CmafHttpChunkedData>(chunk_data));
+		_http_chunk_list.emplace(key, std::make_shared<CmafHttpChunkedData>(sequence_number, duration_in_msec, chunk_data));
 		return;
 	}
 
@@ -114,11 +134,14 @@ void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov:
 		auto &client = *client_item;
 
 		auto response = client->GetResponse();
+		auto metric = GetStreamMetric(client);
 
 		if (response->SendChunkedData(chunk_data))
 		{
-			IncreaseBytesOut(client, chunk_data->GetLength());
-
+			if (metric != nullptr)
+			{
+				metric->IncreaseBytesOut(GetPublisherType(), chunk_data->GetLength());
+			}
 			++client_item;
 		}
 		else

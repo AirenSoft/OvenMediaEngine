@@ -69,11 +69,11 @@ namespace api
 			// <Optional>
 			if(json_body.isMember("stream"))
 			{
-				auto json_stream = json_body["stream"];
-				if(json_stream.empty() == false || json_stream.isObject() == true)
-				{
-					info::Stream stream(StreamSourceType::Ovt);
+				info::Stream stream(StreamSourceType::Ovt);
 
+				auto json_stream = json_body["stream"];
+				if(json_stream.empty() == false && json_stream.isObject() == true)
+				{
 					// <Required>
 					if(json_stream.isMember("name"))
 					{
@@ -102,8 +102,8 @@ namespace api
 							}
 						}	
 					}
-					push->SetStream(stream);
 				}
+				push->SetStream(stream);
 			}
 
 			if(json_body.isMember("protocol"))
@@ -133,7 +133,7 @@ namespace api
 				}
 			}
 
-			return std::move(push);
+			return push;
 		}
 
 		Json::Value JsonFromPush(const std::shared_ptr<info::Push> &push)
@@ -157,7 +157,7 @@ namespace api
 			SetTimestamp(response, "finishTime", push->GetPushStopTime());
 			SetTimestamp(response, "createdTime", push->GetCreatedTime());
 
-			return std::move(response);
+			return response;
 		}	
 
 	}  // namespace conv

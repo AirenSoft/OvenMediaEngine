@@ -9,12 +9,12 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
-#include <modules/http_server/http_server.h>
+#include <modules/http/server/http_server.h>
 
 namespace api
 {
 	namespace conv
 	{
-		Json::Value JsonFromError(const std::shared_ptr<HttpError> &error);
+		Json::Value JsonFromError(const std::shared_ptr<http::HttpError> &error);
 	}
 }

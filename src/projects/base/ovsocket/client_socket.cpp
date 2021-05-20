@@ -35,7 +35,7 @@ namespace ov
 
 		  _server_socket(server_socket)
 	{
-		OV_ASSERT2(_server_socket != nullptr);
+		OV_ASSERT2(server_socket != nullptr);
 
 		_local_address = (server_socket != nullptr) ? server_socket->GetLocalAddress() : nullptr;
 	}
@@ -46,7 +46,9 @@ namespace ov
 
 	bool ClientSocket::Create(SocketType type)
 	{
-		if (_server_socket != nullptr)
+		auto server_socket = _server_socket.lock();
+
+		if (server_socket != nullptr)
 		{
 			// Do not need to create a socket - socket is already created
 			return true;
@@ -55,6 +57,26 @@ namespace ov
 		OV_ASSERT2(false);
 
 		return false;
+	}
+
+	bool ClientSocket::GetSrtStreamId()
+	{
+		if (GetType() == ov::SocketType::Srt)
+		{
+			char stream_id_buff[512];
+			int stream_id_len = sizeof(stream_id_buff);
+			if (srt_getsockflag(GetNativeHandle(), SRT_SOCKOPT::SRTO_STREAMID, &stream_id_buff[0], &stream_id_len) != SRT_ERROR)
+			{
+				_stream_id = ov::String(stream_id_buff, stream_id_len);
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	bool ClientSocket::SetSocketOptions()
@@ -93,26 +115,54 @@ namespace ov
 
 	bool ClientSocket::Prepare()
 	{
+		// In the case of SRT, app/stream is classified by streamid.
+		// Since the streamid is processed by the application, error is not checked here.
+		GetSrtStreamId();
+
 		return
 			// Set socket options
 			SetSocketOptions() &&
-			MakeNonBlocking(GetSharedPtrAs<SocketAsyncInterface>()) &&
-			AppendCommand({DispatchCommand::Type::Connected});
+			AppendCommand({DispatchCommand::Type::Connected}) &&
+			SetFirstEpollEventReceived() &&
+			MakeNonBlockingInternal(GetSharedPtrAs<SocketAsyncInterface>(), false);
 	}
 
-	void ClientSocket::OnConnected()
+	void ClientSocket::OnConnected(const std::shared_ptr<const SocketError> &error)
 	{
-		auto callback = _server_socket->GetConnectionCallback();
+		// Because ClientSocket is created by accepting from ServerSocket rather than actually connecting,
+		// there should be no connection error.
+		OV_ASSERT2(error == nullptr);
 
-		if (callback != nullptr)
+		auto server_socket = _server_socket.lock();
+
+		if (server_socket == nullptr)
 		{
-			callback(GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Connected, nullptr);
+			OV_ASSERT2("_server_socket must not be nullptr");
+			return;
+		}
+
+		if (server_socket != nullptr)
+		{
+			auto callback = server_socket->GetConnectionCallback();
+
+			if (callback != nullptr)
+			{
+				callback(GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Connected, nullptr);
+			}
 		}
 	}
 
 	void ClientSocket::OnReadable()
 	{
-		auto &data_callback = _server_socket->GetDataCallback();
+		auto server_socket = _server_socket.lock();
+
+		if (server_socket == nullptr)
+		{
+			OV_ASSERT2("_server_socket must not be nullptr");
+			return;
+		}
+
+		auto &data_callback = server_socket->GetDataCallback();
 
 		auto data = std::make_shared<Data>(TcpBufferSize);
 
@@ -147,7 +197,15 @@ namespace ov
 
 	void ClientSocket::OnClosed()
 	{
-		auto callback = _server_socket->GetConnectionCallback();
+		auto server_socket = _server_socket.lock();
+
+		if (server_socket == nullptr)
+		{
+			OV_ASSERT2("_server_socket must not be nullptr");
+			return;
+		}
+
+		auto callback = server_socket->GetConnectionCallback();
 
 		if (callback != nullptr)
 		{
@@ -156,14 +214,25 @@ namespace ov
 			callback(GetSharedPtrAs<ClientSocket>(), state, nullptr);
 		}
 
-		_server_socket->OnClientDisconnected(GetSharedPtrAs<ClientSocket>());
+		server_socket->OnClientDisconnected(GetSharedPtrAs<ClientSocket>());
 	}
 
 	bool ClientSocket::CloseInternal()
 	{
-		Socket::CloseInternal();
+		auto server_socket = _server_socket.lock();
 
-		return _server_socket->OnClientDisconnected(GetSharedPtrAs<ClientSocket>());
+		if (server_socket == nullptr)
+		{
+			OV_ASSERT2("_server_socket must not be nullptr");
+			return false;
+		}
+
+		if (Socket::CloseInternal())
+		{
+			SetState(SocketState::Closed);
+		}
+
+		return server_socket->OnClientDisconnected(GetSharedPtrAs<ClientSocket>());
 	}
 
 	String ClientSocket::ToString() const

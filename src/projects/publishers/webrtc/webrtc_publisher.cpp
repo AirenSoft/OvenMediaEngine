@@ -305,7 +305,7 @@ bool WebRtcPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Ap
  */
 
 // Called when receives request offer sdp from client
-std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client,
+std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 																		  const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 																		  std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay)
 {
@@ -383,7 +383,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		return nullptr;
 	}
 
-	if(stream->WaitUntilStart(3000) == false)
+	if(stream->WaitUntilStart(10000) == false)
 	{
 		logtw("(%s/%s) stream has not started.", vhost_app_name.CStr(), stream_name.CStr());
 		return nullptr;
@@ -395,8 +395,14 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		tcp_relay = true;
 	}
 
-	auto &candidates = IcePortManager::GetInstance()->GetIceCandidateList(IcePortObserver::GetSharedPtr());
-	ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
+	if (_ice_candidate_list.empty() == false)
+	{
+		auto candidate_index_to_send = _current_ice_candidate_index++ % _ice_candidate_list.size();
+		const auto &candidates = _ice_candidate_list[candidate_index_to_send];
+
+		ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
+	}
+
 	auto session_description = std::make_shared<SessionDescription>(*stream->GetSessionDescription());
 	session_description->SetOrigin("OvenMediaEngine", ov::Unique::GenerateUint32(), 2, "IN", 4, "127.0.0.1");
 	session_description->SetIceUfrag(_ice_port->GenerateUfrag());
@@ -406,7 +412,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 }
 
 // Called when receives an answer sdp from client
-bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClient> &ws_client,
+bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 											 const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 											 const std::shared_ptr<const SessionDescription> &offer_sdp,
 											 const std::shared_ptr<const SessionDescription> &peer_sdp)
@@ -431,7 +437,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 		return false;
 	}
 
-	uint64_t session_expired_time = 0;
+	uint64_t session_life_time = 0;
 	std::shared_ptr<const SignedPolicy> signed_policy;
 	std::shared_ptr<const SignedToken> signed_token;
 	auto signed_policy_result = Publisher::HandleSignedPolicy(parsed_url, remote_address, signed_policy);
@@ -446,7 +452,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 	}
 	else if(signed_policy_result == CheckSignatureResult::Pass)
 	{
-		session_expired_time = signed_policy->GetStreamExpireEpochSec();
+		session_life_time = signed_policy->GetStreamExpireEpochMSec();
 	}
 	else if(signed_policy_result == CheckSignatureResult::Off)
 	{
@@ -463,7 +469,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 		}
 		else if(signed_token_result == CheckSignatureResult::Pass)
 		{
-			session_expired_time = signed_token->GetStreamExpiredTime();
+			session_life_time = signed_token->GetStreamExpiredTime();
 		}
 	}
 
@@ -473,11 +479,6 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 	auto session = RtcSession::Create(Publisher::GetSharedPtrAs<WebRtcPublisher>(), application, stream, offer_sdp, peer_sdp, _ice_port, ws_client);
 	if (session != nullptr)
 	{
-		if(session_expired_time != 0)
-		{
-			session->SetSessionExpiredTime(session_expired_time);
-		}
-
 		stream->AddSession(session);
 		auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
 		if (stream_metrics != nullptr)
@@ -486,7 +487,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 		}
 
 		auto ice_timeout = application->GetConfig().GetPublishers().GetWebrtcPublisher().GetTimeout();
-		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), session->GetId(), offer_sdp, peer_sdp, ice_timeout, session);
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), session->GetId(), offer_sdp, peer_sdp, ice_timeout, session_life_time, session);
 
 		// Session is created
 
@@ -540,7 +541,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 	return true;
 }
 
-bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_client,
+bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 									const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 									const std::shared_ptr<const SessionDescription> &offer_sdp,
 									const std::shared_ptr<const SessionDescription> &peer_sdp)
@@ -568,7 +569,7 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_c
 	return true;
 }
 
-bool WebRtcPublisher::OnIceCandidate(const std::shared_ptr<WebSocketClient> &ws_client,
+bool WebRtcPublisher::OnIceCandidate(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 									 const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 									 const std::shared_ptr<RtcIceCandidate> &candidate,
 									 const ov::String &username_fragment)

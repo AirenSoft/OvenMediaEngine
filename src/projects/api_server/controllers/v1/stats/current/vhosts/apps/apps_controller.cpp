@@ -23,7 +23,7 @@ namespace api
 				CreateSubController<StreamsController>(R"(\/(?<app_name>[^\/:]*)\/streams)");
 			};
 
-			ApiResponse AppsController::OnGetApp(const std::shared_ptr<HttpClient> &client,
+			ApiResponse AppsController::OnGetApp(const std::shared_ptr<http::svr::HttpConnection> &client,
 												 const std::shared_ptr<mon::HostMetrics> &vhost,
 												 const std::shared_ptr<mon::ApplicationMetrics> &app)
 			{

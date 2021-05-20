@@ -42,8 +42,12 @@ namespace api
 		// 			"name" : "<OutputStreamName>",
 		// 			"tracks" : [ 101, 102 ]
 		// 		}
+		// 		"interval": <Split recording time(ms)>,
+		// 		"schedule": "* *" # pattern of crontab style. only use minutes and hours
 		// 	}
-
+		// 	* The interval and schedule parameters are not available at the same time.
+		//
+		//
 		// Example of Record Stop
 		// ----------------------
 		// 	{
@@ -125,13 +129,24 @@ namespace api
 			}
 
 			// <Optional>
+			auto json_schedule = json_body["schedule"];
+			if (json_schedule.empty() == false && json_schedule.isString() == true)
+			{
+				record->SetSchedule(json_schedule.asString().c_str());
+			}
+			else
+			{
+				record->SetSchedule("");
+			}
+
+			// <Optional>
 			auto json_metadata = json_body["metadata"];
 			if (json_metadata.empty() == false && json_metadata.isString() == true)
 			{
 				record->SetMetadata(json_metadata.asString().c_str());
 			}
 
-			return std::move(record);
+			return record;
 		}
 
 		Json::Value JsonFromRecord(const std::shared_ptr<info::Record> &record)
@@ -159,6 +174,11 @@ namespace api
 				SetInt(response, "interval", record->GetInterval());
 			}
 
+			if (record->GetSchedule().IsEmpty() == false)
+			{
+				SetString(response, "schedule", record->GetSchedule(), Optional::True);
+			}
+
 			SetInt64(response, "recordBytes", record->GetRecordBytes());
 
 			SetInt64(response, "recordTime", record->GetRecordTime());
@@ -181,7 +201,7 @@ namespace api
 				SetTimestamp(response, "finishTime", record->GetRecordStopTime());
 			}
 
-			return std::move(response);
+			return response;
 		}
 
 	}  // namespace conv

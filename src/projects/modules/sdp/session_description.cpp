@@ -103,10 +103,8 @@ bool SessionDescription::FromString(const ov::String &sdp)
 		char type = line[0];
 		std::string content = line.substr(2);
 
-		// media라면 다음 m을 만날때까지 또는 stream이 끝날때까지 모아서 media description에 넘긴다.
 		if(type == 'm')
 		{
-			// 새로운 m을 만나면 기존 m level을 파싱
 			if(media_level == true)
 			{
 				auto media_desc = std::make_shared<MediaDescription>();
@@ -117,17 +115,14 @@ bool SessionDescription::FromString(const ov::String &sdp)
 				AddMedia(media_desc);
 			}
 
-			// 초기화
 			media_desc_sdp.Clear();
 			media_desc_sdp.AppendFormat("%s\n", line.c_str());
 			media_level = true;
 		}
-			// media level이면 계속 모은다.
 		else if(media_level == true)
 		{
 			media_desc_sdp.AppendFormat("%s\n", line.c_str());
 
-			// 만약 sdp의 끝이면 생성
 			if(sdpstream.rdbuf()->in_avail() == 0)
 			{
 				auto media_desc = std::make_shared<MediaDescription>();
@@ -138,7 +133,6 @@ bool SessionDescription::FromString(const ov::String &sdp)
 				AddMedia(media_desc);
 			}
 		}
-			// media level이 아니면 파싱하여 저장
 		else
 		{
 			if(ParsingSessionLine(type, content) == false)
@@ -234,7 +228,6 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 					std::stringstream bundles(matches[1]);
 					while(std::getline(bundles, bundle, ' '))
 					{
-						// 당장은 사용하는 곳이 없다. bundle only 이므로...
 						_bundles.emplace_back(bundle.c_str());
 					}
 				}
@@ -253,18 +246,33 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 					SetMsidSemantic(std::string(matches[1]).c_str(), std::string(matches[2]).c_str());
 				}
 			}
+			else if(content.compare(0, OV_COUNTOF("sdpl") - 1, "sdpl") == 0)
+			{
+				if(std::regex_search(content, matches, std::regex("^sdplang:(\\S*)")))
+				{
+					_sdp_lang = std::string(matches[1]).c_str();
+				}
+			}
+			else if(content.compare(0, OV_COUNTOF("ran") - 1, "ran") == 0)
+			{
+				if(std::regex_search(content, matches, std::regex("^range:(\\S*)")))
+				{
+					_range = std::string(matches[1]).c_str();
+				}
+			}
 			else if(ParsingCommonAttrLine(type, content))
 			{
 				// Nothing to do
 			}
 			else
 			{
-				logw("SDP", "Unknown Attributes : %c=%s", type, content.c_str());
+				// Other attributes are ignored because they are not required.
+				logd("SDP", "Unknown Attributes : %c=%s", type, content.c_str());
 			}
 
 			break;
 		default:
-			logw("SDP", "Unknown Attributes : %c=%s", type, content.c_str());
+			logd("SDP", "Unknown Attributes : %c=%s", type, content.c_str());
 	}
 
 	if(parsing_error)
@@ -372,6 +380,26 @@ ov::String SessionDescription::GetMsidSemantic() const
 ov::String SessionDescription::GetMsidToken() const
 {
 	return _msid_token;
+}
+
+void SessionDescription::SetSdpLang(const ov::String &lang)
+{
+	_sdp_lang = lang;
+}
+
+ov::String SessionDescription::GetSdpLang()
+{
+	return _sdp_lang;
+}
+
+void SessionDescription::SetRange(const ov::String &range)
+{
+	_range = range;
+}
+
+ov::String SessionDescription::GetRange()
+{
+	return _range;
 }
 
 // m=video 9 UDP/TLS/RTP/SAVPF 97

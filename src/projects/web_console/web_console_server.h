@@ -13,9 +13,9 @@
 #include <base/info/application.h>
 #include <base/mediarouter/media_route_interface.h>
 #include <modules/ice/ice.h>
-#include <modules/http_server/http_server.h>
-#include <modules/http_server/https_server.h>
-#include <modules/http_server/interceptors/http_request_interceptors.h>
+#include <modules/http/server/http_server.h>
+#include <modules/http/server/https_server.h>
+#include <modules/http/server/interceptors/http_request_interceptors.h>
 #include "../base/publisher/publisher.h"
 
 class WebConsoleServer : public ov::EnableSharedFromThis<WebConsoleServer>
@@ -37,5 +37,5 @@ protected:
 	const info::Host &_host_info;
 	cfg::vhost::app::wc::WebConsole _web_console;
 
-	std::shared_ptr<HttpServer> _http_server;
+	std::shared_ptr<http::svr::HttpServer> _http_server;
 };

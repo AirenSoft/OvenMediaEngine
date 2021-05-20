@@ -14,14 +14,14 @@
 //====================================================================================================
 // IsInterceptorForRequest
 //====================================================================================================
-bool MonitoringInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
+bool MonitoringInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpConnection> &client)
 {
 	const auto request = client->GetRequest();
 	
 	// logtd("Request Target : %s", request->GetRequestTarget().CStr());
 
 	// Get Method 1.1 check
-	if(request->GetMethod() != HttpMethod::Get || request->GetHttpVersionAsNumber() <= 1.0)
+	if(request->GetMethod() != http::Method::Get || request->GetHttpVersionAsNumber() <= 1.0)
 	{
 		return false;
 	}

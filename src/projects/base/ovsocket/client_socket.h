@@ -32,16 +32,17 @@ namespace ov
 		bool Create(SocketType type) override;
 
 		bool SetSocketOptions();
+		bool GetSrtStreamId();	// Only available if socket is SRT
 
 		//--------------------------------------------------------------------
 		// Implementation of SocketAsyncInterface
 		//--------------------------------------------------------------------
-		void OnConnected() override;
+		void OnConnected(const std::shared_ptr<const SocketError> &error) override;
 		void OnReadable() override;
 		void OnClosed() override;
 
 		bool CloseInternal() override;
 
-		std::shared_ptr<ServerSocket> _server_socket;
+		std::weak_ptr<ServerSocket> _server_socket;
 	};
 }  // namespace ov

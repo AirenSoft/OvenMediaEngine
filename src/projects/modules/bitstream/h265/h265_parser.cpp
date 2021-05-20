@@ -5,6 +5,41 @@
 #include "h265_parser.h"
 #include "h265_types.h"
 
+// returns offset (start point), code_size : 3(001) or 4(0001)
+// returns -1 if there is no start code in the buffer
+int H265Parser::FindAnnexBStartCode(const uint8_t *bitstream, size_t length, size_t &start_code_size)
+{
+	size_t offset = 0;
+	start_code_size = 0;
+	
+	while(offset < length)
+	{
+		size_t remaining = length - offset;
+		const uint8_t* data = bitstream + offset;
+
+		if((remaining >= 3 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x01) || 
+            (remaining >= 4 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00 && data[3] == 0x01))
+        {
+            if(data[2] == 0x01)
+            {
+                start_code_size = 3;
+            }
+            else
+            {
+                start_code_size = 4;
+            }
+
+			return offset;
+		}
+		else
+		{
+			offset += 1;
+		}
+	}
+
+	return -1;
+}
+
 bool H265Parser::CheckKeyframe(const uint8_t *bitstream, size_t length)
 {
 	size_t offset = 0;

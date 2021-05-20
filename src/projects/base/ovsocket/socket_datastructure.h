@@ -16,6 +16,7 @@
 #include <functional>
 
 #include "epoll_wrapper.h"
+#include "socket_error.h"
 
 #define OV_SOCKET_ADD_FLAG_IF(list, x, flag) \
 	if (OV_CHECK_FLAG(x, flag))              \
@@ -58,6 +59,12 @@ namespace ov
 		Error
 	};
 
+	enum class BlockingMode : char
+	{
+		Blocking,
+		NonBlocking
+	};
+
 	enum class SocketFamily : sa_family_t
 	{
 		Unknown = AF_UNSPEC,
@@ -74,23 +81,41 @@ namespace ov
 		Srt
 	};
 
-	enum class SocketState : char
+	constexpr const int SOCKET_STATE_CLOSABLE = 0x01000000;
+
+	enum class SocketState : int
 	{
 		// Socket was closed
-		Closed,
+		Closed = 0,
 		// Socket is created
-		Created,
+		Created = 1 | SOCKET_STATE_CLOSABLE,
 		// Bound on some port
-		Bound,
+		Bound = 2 | SOCKET_STATE_CLOSABLE,
 		// Listening
-		Listening,
+		Listening = 3 | SOCKET_STATE_CLOSABLE,
+		// Connecting
+		Connecting = 4 | SOCKET_STATE_CLOSABLE,
 		// Connection established
-		Connected,
+		Connected = 5 | SOCKET_STATE_CLOSABLE,
 		// The connection with Peer has been lost (However, we can read data from the kernel socket buffer if available)
-		Disconnected,
+		Disconnected = 6,
 		// An error occurred
-		Error,
+		Error = 7,
 	};
+
+	static const char *StringFromBlockingMode(BlockingMode mode)
+	{
+		switch (mode)
+		{
+			case BlockingMode::Blocking:
+				return "Blocking";
+
+			case BlockingMode::NonBlocking:
+				return "Nonblocking";
+		}
+
+		return "Unknown";
+	}
 
 	static const char *StringFromSocketState(SocketState state)
 	{
@@ -107,6 +132,9 @@ namespace ov
 
 			case SocketState::Listening:
 				return "Listening";
+
+			case SocketState::Connecting:
+				return "Connecting";
 
 			case SocketState::Connected:
 				return "Connected";
@@ -142,6 +170,14 @@ namespace ov
 	}
 
 	class SocketAddress;
+
+	// For SocketPoolWorker callback
+	class SocketPoolEventInterface
+	{
+	public:
+		virtual bool OnConnectedEvent(const std::shared_ptr<const SocketError> &error) = 0;
+		virtual void OnDataAvailableEvent() = 0;
+	};
 
 	// For TCP sockets
 	class ServerSocket;

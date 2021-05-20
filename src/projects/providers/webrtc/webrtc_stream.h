@@ -16,12 +16,12 @@
 #include "modules/rtp_rtcp/rtp_rtcp.h"
 #include "modules/rtp_rtcp/rtp_packetizer_interface.h"
 #include "modules/dtls_srtp/dtls_transport.h"
-#include "modules/dtls_srtp/dtls_ice_transport.h"
 #include "modules/rtp_rtcp/rtp_depacketizing_manager.h"
+#include "modules/rtp_rtcp/lip_sync_clock.h"
 
 namespace pvd
 {
-	class WebRTCStream : public pvd::PushStream, public RtpRtcpInterface
+	class WebRTCStream : public pvd::PushStream, public RtpRtcpInterface, public ov::Node
 	{
 	public:
 		static std::shared_ptr<WebRTCStream> Create(StreamSourceType source_type, ov::String stream_name, uint32_t stream_id, 
@@ -58,13 +58,17 @@ namespace pvd
 		void OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) override;
 		void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) override;
 
+		// ov::Node Interface
+		bool OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
+		bool OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
+
 	private:
-		bool AddDepacketizer(uint8_t payload_type, cmn::MediaCodecId codec_id);
+		bool AddDepacketizer(uint8_t payload_type, RtpDepacketizingManager::SupportedDepacketizerType codec_id);
 		std::shared_ptr<RtpDepacketizingManager> GetDepacketizer(uint8_t payload_type);
 
-		bool SendFIR();
+		uint64_t AdjustTimestamp(uint8_t payload_type, uint32_t timestamp);
+		uint64_t GetTimestampDelta(uint8_t payload_type, uint32_t timestamp);
 
-		uint8_t _fir_seq = 0;
 		ov::StopWatch _fir_timer;
 
 		std::shared_ptr<const SessionDescription> _offer_sdp;
@@ -75,7 +79,8 @@ namespace pvd
 		std::shared_ptr<RtpRtcp>            _rtp_rtcp;
 		std::shared_ptr<SrtpTransport>      _srtp_transport;
 		std::shared_ptr<DtlsTransport>      _dtls_transport;
-		std::shared_ptr<DtlsIceTransport>   _dtls_ice_transport;
+
+		uint32_t							_local_ssrc = 0;
 
 		uint8_t 							_red_block_pt = 0;
 		uint8_t                             _video_payload_type = 0;
@@ -87,9 +92,15 @@ namespace pvd
 		uint16_t							_rtx_sequence_number = 1;
 		uint64_t							_session_expired_time = 0;
 
+		// Payload type : Timestamp
+		std::map<uint8_t, uint32_t>			_last_timestamp_map;
+		std::map<uint8_t, uint32_t>			_timestamp_map;
+
 		std::shared_mutex					_start_stop_lock;
 
 		// Payload type, Depacketizer
 		std::map<uint8_t, std::shared_ptr<RtpDepacketizingManager>> _depacketizers;
+
+		std::shared_ptr<LipSyncClock> _lip_sync_clock;
 	};
 }

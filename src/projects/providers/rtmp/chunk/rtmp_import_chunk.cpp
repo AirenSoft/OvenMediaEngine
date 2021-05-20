@@ -403,7 +403,7 @@ std::shared_ptr<const RtmpMessage> RtmpImportChunk::FinalizeMessage(const std::s
 
 	auto message = std::make_shared<RtmpMessage>(chunk_header, std::move(payload_data));
 
-	return std::move(message);
+	return message;
 }
 
 std::shared_ptr<const RtmpMessage> RtmpImportChunk::GetMessage()

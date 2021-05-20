@@ -24,14 +24,6 @@ MediaDescription::~MediaDescription()
 
 bool MediaDescription::UpdateData(ov::String &sdp)
 {
-	if(_media_type == MediaType::Unknown || _direction == Direction::Unknown)
-	{
-		loge("SDP", "Required value is not defined - MediaType: %s, Direction: %s, SetupType: %s",
-		     _media_type_str.CStr(), _direction_str.CStr(), _setup_str.CStr());
-
-		return false;
-	}
-
 	// Make m line
 	sdp = ov::String::FormatString("m=%s %d %s", _media_type_str.CStr(), _port, _protocol.CStr());
 
@@ -262,7 +254,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 				{
 					UseDtls(true);
 				}
-				else if(protocol.UpperCaseString() == "RTP/AVPF")
+				else if(protocol.UpperCaseString() == "RTP/AVPF" || protocol.UpperCaseString() == "RTP/AVP")
 				{
 					UseDtls(false);
 				}
@@ -273,8 +265,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 					break;
 				}
 
-				// Payload를 모두 생성하여 넣는다.
-				// 나중에 Payload에 관련된 정보(rtpmap, fmtp, rtcp-fb)가 나오면 파싱하여 해당 Payload에 값을 설정한다.
 				std::string payload_number;
 				std::stringstream payload_numbers(matches[4]);
 				while(std::getline(payload_numbers, payload_number, ' '))
@@ -286,7 +276,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			}
 			else
 			{
-				// 필수값 이므로 m이 에러가 나면 실패
 				parsing_error = true;
 			}
 			break;
@@ -304,7 +293,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			}
 			else
 			{
-				// 필수값 이므로 m이 에러가 나면 실패
 				parsing_error = true;
 			}
 
@@ -325,7 +313,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 						break;
 					}
 
-					//TODO(getroot): matches[4]가 없는 경우에도 메모리는 할당 되는지 확인
 					AddRtpmap(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str(),
 					          static_cast<uint32_t>(std::stoul(matches[3])), std::string(matches[4]).c_str());
 				}
@@ -341,7 +328,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			else if(content.compare(0, OV_COUNTOF("rtcp-f") - 1, "rtcp-f") == 0)
 			{
 				// a=rtcp-fb:96 nack pli
-				// pli는 subtype으로 구분해야 하지만 여기서는 type-subtype 형태로 구분한다.
 				if(std::regex_search(content,
 				                     matches,
 				                     std::regex("rtcp-fb:(\\*|\\d*) (.*)")))
@@ -456,20 +442,32 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 					}
 				}
 			}
+			else if(content.compare(0, OV_COUNTOF("fmtp") - 1, "fmtp") == 0)
+			{
+				if(std::regex_search(content, matches, std::regex("fmtp:(\\*|\\d*) (.*)")))
+				{
+					SetFmtp(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str());
+				}
+			}
+			else if(content.compare(0, OV_COUNTOF("rtcp:") - 1, "rtcp:") == 0)
+			{
+				if(std::regex_search(content, matches, std::regex("rtcp:(\\d*) IN (.*)")))
+				{
+					// a=rtcp:9 IN IP4 0.0.0.0
+				}
+			}
 			else if(ParsingCommonAttrLine(type, content))
 			{
-				// 아무것도 안하기
 			}
 			else
 			{
-				//TODO: Implementing of unknown attributes
-            	//a=fmtp:112 minptime=10;useinbandfec=1
-				logw("SDP", "Unknown Attributes : %c=%s", type, content.c_str());
+				// Other attributes are ignored because they are not required.
+				logd("SDP", "Unknown Attributes : %c=%s", type, content.c_str());
 			}
 
 			break;
 		default:
-			logw("SDP", "Unknown Attributes : %c=%s", type, content.c_str());
+			logd("SDP", "Unknown Attributes : %c=%s", type, content.c_str());
 			break;
 	}
 
@@ -743,7 +741,6 @@ bool MediaDescription::AddRtpmap(uint8_t payload_type, const ov::String &codec,
                                  uint32_t rate, const ov::String &parameters)
 {
 	auto payload = GetPayload(payload_type);
-
 	if(payload == nullptr)
 	{
 		payload = std::make_shared<PayloadAttr>();
@@ -768,6 +765,19 @@ bool MediaDescription::EnableRtcpFb(uint8_t id, const ov::String &type, bool on)
 	}
 
 	return payload->EnableRtcpFb(type, on);
+}
+
+void MediaDescription::SetFmtp(uint8_t id, const ov::String &fmtp)
+{
+	std::shared_ptr<PayloadAttr> payload = GetPayload(id);
+	if(payload == nullptr)
+	{
+		payload = std::make_shared<PayloadAttr>();
+		payload->SetId(id);
+		AddPayload(payload);
+	}
+
+	return payload->SetFmtp(fmtp);
 }
 
 void MediaDescription::EnableRtcpFb(uint8_t id, const PayloadAttr::RtcpFbType &type, bool on)

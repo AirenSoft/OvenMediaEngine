@@ -39,13 +39,16 @@ static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &s
 
 CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &stream_name,
 							   uint32_t segment_count, uint32_t segment_duration,
+							   const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
 							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 							   const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
 	: Packetizer(app_name, stream_name,
 				 1, 1 * 5, segment_duration,
 				 video_track, audio_track,
+				 chunked_transfer),
 
-				 chunked_transfer)
+	  _utc_timing_scheme(utc_timing_scheme),
+	  _utc_timing_value(utc_timing_value)
 {
 	_mpd_min_buffer_time = 6;
 
@@ -344,7 +347,7 @@ bool CmafPacketizer::WriteAudioInit(const std::shared_ptr<const ov::Data> &frame
 	return WriteAudioInitInternal(frame_data, CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME);
 }
 
-bool CmafPacketizer::AppendVideoFrameInternal(const std::shared_ptr<const PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback)
+bool CmafPacketizer::AppendVideoFrameInternal(const std::shared_ptr<const PacketizerFrameData> &frame, DataCallback data_callback)
 {
 	if (WriteVideoInitIfNeeded(frame) == false)
 	{
@@ -393,22 +396,25 @@ bool CmafPacketizer::AppendVideoFrameInternal(const std::shared_ptr<const Packet
 	auto sample_data = std::make_shared<SampleData>(frame->duration, flag, frame->pts, frame->dts, data);
 
 	bool new_segment_written = false;
+	const auto sequence_number = _video_chunk_writer->GetSequenceNumber();
+	const auto duration = _video_chunk_writer->GetSegmentDuration();
+	const auto duration_in_msec = duration * _video_scale;
 
 	// Check whether the incoming frame is a key frame
 	if (frame->type == PacketizerFrameType::VideoKeyFrame)
 	{
 		if (_video_start_time == -1LL)
 		{
-			_video_start_time = GetCurrentMilliseconds() - current_segment_duration;
+			_video_start_time = ov::Time::GetTimestampInMs() - duration_in_msec;
 		}
 
 		// Check the timestamp to determine if a new segment is to be created
-		if ((current_segment_duration >= (_ideal_duration_for_video + _duration_delta_for_video)))
+		if ((duration >= (_ideal_duration_for_video + _duration_delta_for_video)))
 		{
 			// Need to create a new segment
 
 			// Flush frames
-			if (WriteVideoSegment() == false)
+			if (WriteVideoSegment(sequence_number, duration, duration_in_msec) == false)
 			{
 				logte("An error occurred while write the DASH video segment");
 				return false;
@@ -429,23 +435,27 @@ bool CmafPacketizer::AppendVideoFrameInternal(const std::shared_ptr<const Packet
 	{
 		if (data_callback != nullptr)
 		{
-			data_callback(sample_data, new_segment_written);
+			data_callback(sequence_number, duration_in_msec, sample_data, new_segment_written);
 		}
 	}
 
 	return true;
 }
 
-bool CmafPacketizer::AppendAudioFrameInternal(const std::shared_ptr<const PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback)
+bool CmafPacketizer::AppendAudioFrameInternal(const std::shared_ptr<const PacketizerFrameData> &frame, DataCallback data_callback)
 {
 	if (WriteAudioInitIfNeeded(frame) == false)
 	{
 		return false;
 	}
 
+	const auto sequence_number = _audio_chunk_writer->GetSequenceNumber();
+	const auto duration = _audio_chunk_writer->GetSegmentDuration();
+	const auto duration_in_msec = duration * _audio_scale;
+
 	if (_audio_start_time == -1LL)
 	{
-		_audio_start_time = GetCurrentMilliseconds() - current_segment_duration;
+		_audio_start_time = ov::Time::GetTimestampInMs() - duration_in_msec;
 	}
 
 	// Skip ADTS header
@@ -456,12 +466,12 @@ bool CmafPacketizer::AppendAudioFrameInternal(const std::shared_ptr<const Packet
 	// Since audio frame is always a key frame, don't need to check the frame type
 
 	// Check the timestamp to determine if a new segment is to be created
-	if ((current_segment_duration >= (_ideal_duration_for_audio + _duration_delta_for_audio)))
+	if ((duration >= (_ideal_duration_for_audio + _duration_delta_for_audio)))
 	{
 		// Need to create a new segment
 
 		// Flush frames
-		if (WriteAudioSegment() == false)
+		if (WriteAudioSegment(sequence_number, duration, duration_in_msec) == false)
 		{
 			logte("An error occurred while write the %s audio segment", GetPacketizerName());
 			return false;
@@ -476,7 +486,7 @@ bool CmafPacketizer::AppendAudioFrameInternal(const std::shared_ptr<const Packet
 	{
 		if (data_callback != nullptr)
 		{
-			data_callback(std::make_shared<SampleData>(frame->duration, frame->pts, frame->dts, data), new_segment_written);
+			data_callback(sequence_number, duration_in_msec, std::make_shared<SampleData>(frame->duration, frame->pts, frame->dts, data), new_segment_written);
 		}
 	}
 
@@ -484,13 +494,16 @@ bool CmafPacketizer::AppendAudioFrameInternal(const std::shared_ptr<const Packet
 }
 bool CmafPacketizer::AppendVideoFrame(const std::shared_ptr<const PacketizerFrameData> &frame)
 {
-	return AppendVideoFrameInternal(frame, _video_chunk_writer->GetSegmentDuration(), [this](const std::shared_ptr<const SampleData> data, bool new_segment_written) {
+	return AppendVideoFrameInternal(frame, [this](const uint32_t sequence_number, const uint64_t duration_in_msec, const std::shared_ptr<const SampleData> data, bool new_segment_written) {
 		auto chunk_data = _video_chunk_writer->AppendSample(data);
 
 		if (chunk_data != nullptr && _chunked_transfer != nullptr)
 		{
 			// Response chunk data to HTTP client
-			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(cmn::MediaType::Video), true, chunk_data);
+			_chunked_transfer->OnCmafChunkDataPush(
+				_app_name, _stream_name, GetFileName(cmn::MediaType::Video),
+				sequence_number, duration_in_msec,
+				true, chunk_data);
 		}
 
 		_last_video_pts = data->pts;
@@ -528,13 +541,16 @@ bool CmafPacketizer::WriteAudioInitInternal(const std::shared_ptr<const ov::Data
 
 bool CmafPacketizer::AppendAudioFrame(const std::shared_ptr<const PacketizerFrameData> &frame)
 {
-	return AppendAudioFrameInternal(frame, _audio_chunk_writer->GetSegmentDuration(), [this](const std::shared_ptr<const SampleData> data, bool new_segment_written) {
+	return AppendAudioFrameInternal(frame, [this](const uint32_t sequence_number, const uint64_t duration_in_msec, const std::shared_ptr<const SampleData> data, bool new_segment_written) {
 		auto chunk_data = _audio_chunk_writer->AppendSample(data);
 
 		if (chunk_data != nullptr && _chunked_transfer != nullptr)
 		{
 			// Response chunk data to HTTP client
-			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(cmn::MediaType::Audio), false, chunk_data);
+			_chunked_transfer->OnCmafChunkDataPush(
+				_app_name, _stream_name, GetFileName(cmn::MediaType::Audio),
+				sequence_number, duration_in_msec,
+				false, chunk_data);
 		}
 
 		_last_audio_pts = data->pts;
@@ -546,7 +562,7 @@ bool CmafPacketizer::AppendAudioFrame(const std::shared_ptr<const PacketizerFram
 	});
 }
 
-bool CmafPacketizer::WriteVideoSegment()
+bool CmafPacketizer::WriteVideoSegment(const uint32_t sequence_number, const uint64_t duration, const uint64_t duration_in_msec)
 {
 	if (_video_chunk_writer->GetSampleCount() == 0)
 	{
@@ -556,7 +572,6 @@ bool CmafPacketizer::WriteVideoSegment()
 
 	auto file_name = GetFileName(cmn::MediaType::Video);
 	auto start_timestamp = _video_chunk_writer->GetStartTimestamp();
-	auto segment_duration = _video_chunk_writer->GetSegmentDuration();
 
 	// Create a fragment
 	auto segment_data = _video_chunk_writer->GetChunkedSegment();
@@ -564,12 +579,12 @@ bool CmafPacketizer::WriteVideoSegment()
 
 	// Enqueue the segment
 	// TODO: need to change start_timestamp/segment_duration to start_timestamp_in_ms/segment_duration_in_ms
-	if (SetSegmentData(file_name, start_timestamp, start_timestamp, segment_duration, segment_duration, segment_data) == false)
+	if (SetSegmentData(sequence_number, file_name, start_timestamp, start_timestamp * _video_scale, duration, duration_in_msec, segment_data) == false)
 	{
 		return false;
 	}
 
-	_duration_delta_for_video += (_ideal_duration_for_video - segment_duration);
+	_duration_delta_for_video += (_ideal_duration_for_video - duration);
 
 	if (_chunked_transfer != nullptr)
 	{
@@ -579,7 +594,7 @@ bool CmafPacketizer::WriteVideoSegment()
 	return true;
 }
 
-bool CmafPacketizer::WriteAudioSegment()
+bool CmafPacketizer::WriteAudioSegment(const uint32_t sequence_number, const uint64_t duration, const uint64_t duration_in_msec)
 {
 	if (_audio_chunk_writer->GetSampleCount() == 0)
 	{
@@ -589,19 +604,18 @@ bool CmafPacketizer::WriteAudioSegment()
 
 	auto file_name = GetFileName(cmn::MediaType::Audio);
 	auto start_timestamp = _audio_chunk_writer->GetStartTimestamp();
-	auto segment_duration = _audio_chunk_writer->GetSegmentDuration();
 
 	// Create a fragment
 	auto segment_data = _audio_chunk_writer->GetChunkedSegment();
 	_audio_chunk_writer->Clear();
 
 	// Enqueue the segment
-	if (SetSegmentData(file_name, start_timestamp, start_timestamp, segment_duration, segment_duration, segment_data) == false)
+	if (SetSegmentData(sequence_number, file_name, start_timestamp, start_timestamp * _audio_scale, duration, duration_in_msec, segment_data) == false)
 	{
 		return false;
 	}
 
-	_duration_delta_for_audio += (_ideal_duration_for_audio - segment_duration);
+	_duration_delta_for_audio += (_ideal_duration_for_audio - duration);
 
 	if (_chunked_transfer != nullptr)
 	{
@@ -688,7 +702,7 @@ std::shared_ptr<const SegmentItem> CmafPacketizer::GetSegmentData(const ov::Stri
 	return nullptr;
 }
 
-bool CmafPacketizer::SetSegmentData(ov::String file_name, int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms, const std::shared_ptr<const ov::Data> &data)
+bool CmafPacketizer::SetSegmentData(const uint32_t sequence_number, ov::String file_name, int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms, const std::shared_ptr<const ov::Data> &data)
 {
 	auto file_type = GetFileType(file_name);
 
@@ -697,7 +711,7 @@ bool CmafPacketizer::SetSegmentData(ov::String file_name, int64_t timestamp, int
 		case DashFileType::VideoSegment: {
 			// video segment mutex
 			std::unique_lock<std::mutex> lock(_video_segment_mutex);
-			auto segment = std::make_shared<SegmentItem>(SegmentDataType::Video, _sequence_number++, file_name, timestamp, timestamp_in_ms, duration, duration_in_ms, data);
+			auto segment = std::make_shared<SegmentItem>(SegmentDataType::Video, sequence_number, file_name, timestamp, timestamp_in_ms, duration, duration_in_ms, data);
 
 			_video_segments[_current_video_index++] = segment;
 
@@ -719,7 +733,7 @@ bool CmafPacketizer::SetSegmentData(ov::String file_name, int64_t timestamp, int
 		case DashFileType::AudioSegment: {
 			// audio segment mutex
 			std::unique_lock<std::mutex> lock(_audio_segment_mutex);
-			auto segment = std::make_shared<SegmentItem>(SegmentDataType::Audio, _sequence_number++, file_name, timestamp, timestamp_in_ms, duration, duration_in_ms, data);
+			auto segment = std::make_shared<SegmentItem>(SegmentDataType::Audio, sequence_number, file_name, timestamp, timestamp_in_ms, duration, duration_in_ms, data);
 
 			_audio_segments[_current_audio_index++] = segment;
 
@@ -766,7 +780,7 @@ void CmafPacketizer::SetReadyForStreaming() noexcept
 		_start_time_ms = std::min(_video_start_time, _audio_start_time);
 	}
 
-	_start_time = MakeUtcMillisecond(_start_time_ms);
+	_start_time = ov::Time::MakeUtcMillisecond(_start_time_ms);
 
 	Packetizer::SetReadyForStreaming();
 }
@@ -821,7 +835,7 @@ void CmafPacketizer::DoJitterCorrection()
 	ov::String stat;
 
 	// Calculate total elapsed time since streaming started
-	int64_t current_time = GetTimestampInMs();
+	int64_t current_time = ov::Time::GetTimestampInMs();
 	int64_t elapsed_time = current_time - _start_time_ms;
 
 	int64_t video_delta = (_last_video_pts >= 0LL) ? (static_cast<int64_t>((_last_video_pts - _first_video_pts) * _video_scale)) : INT64_MAX;
@@ -843,7 +857,7 @@ void CmafPacketizer::DoJitterCorrection()
 	if (new_jitter_correction != _jitter_correction)
 	{
 		// Update start time
-		ov::String new_start_time = MakeUtcMillisecond(_start_time_ms + new_jitter_correction);
+		ov::String new_start_time = ov::Time::MakeUtcMillisecond(_start_time_ms + new_jitter_correction);
 		ov::String jitter_stat = MakeJitterStatString(elapsed_time, current_time, jitter, adjusted_jitter, new_jitter_correction, video_delta, audio_delta, stream_delta);
 
 		if (new_jitter_correction > _jitter_correction)
@@ -882,7 +896,7 @@ bool CmafPacketizer::UpdatePlayList()
 
 	DoJitterCorrection();
 
-	ov::String publish_time = MakeUtcSecond(::time(nullptr));
+	ov::String publish_time = ov::Time::MakeUtcSecond();
 
 	logtd("Trying to update playlist for LL-DASH with availabilityStartTime: %s, publishTime: %s", _start_time.CStr(), publish_time.CStr());
 
@@ -1017,11 +1031,12 @@ bool CmafPacketizer::UpdatePlayList()
 			R"(	</Period>)" << std::endl;
 	}
 
-#if 0
-	xml
-		// <UTCTiming />
-		<< R"(	<UTCTiming schemeIdUri="urn:mpeg:dash:utc:direct:2014" value="%s" />)" << std::endl;
-#endif
+	if ((_utc_timing_scheme.IsEmpty() == false) && (_utc_timing_value.IsEmpty() == false))
+	{
+		xml
+			// <UTCTiming />
+			<< R"(	<UTCTiming schemeIdUri=")" << _utc_timing_scheme.CStr() << R"(" value=")" << _utc_timing_value.CStr() << R"(" />)" << std::endl;
+	}
 
 	xml
 		// </MPD>
@@ -1030,21 +1045,6 @@ bool CmafPacketizer::UpdatePlayList()
 	ov::String play_list = xml.str().c_str();
 
 	SetPlayList(play_list);
-
-	return true;
-}
-
-bool CmafPacketizer::GetPlayList(ov::String &play_list)
-{
-	if (IsReadyForStreaming() == false)
-	{
-		logad("Manifest was requested before the stream began");
-		return false;
-	}
-
-	ov::String current_time = MakeUtcMillisecond();
-
-	play_list = ov::String::FormatString(_play_list.CStr(), current_time.CStr());
 
 	return true;
 }

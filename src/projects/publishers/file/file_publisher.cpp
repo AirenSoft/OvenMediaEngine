@@ -73,7 +73,7 @@ void FilePublisher::WorkerThread()
 
 std::shared_ptr<pub::Application> FilePublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
-	if(IsModuleAvailable() == false)
+	if (IsModuleAvailable() == false)
 	{
 		return nullptr;
 	}
@@ -160,7 +160,6 @@ void FilePublisher::SplitSession(std::shared_ptr<FileSession> session)
 		default:
 			break;
 	}
-
 }
 
 void FilePublisher::SessionController()
@@ -203,10 +202,34 @@ void FilePublisher::SessionController()
 				StopSession(session);
 			}
 
-			if ((uint64_t)session->GetRecord()->GetInterval() > 0 &&
-				session->GetRecord()->GetRecordTime() > (uint64_t)session->GetRecord()->GetInterval())
+			// When setting interval parameters, perform segmentation recording.
+			if ((uint64_t)session->GetRecord()->GetInterval() > 0)
 			{
-				SplitSession(session);
+				if (session->GetRecord()->GetRecordTime() > (uint64_t)session->GetRecord()->GetInterval())
+				{
+					SplitSession(session);
+				}
+			}
+			// When setting schedule parameter, perform segmentation recording.
+			else if (session->GetRecord()->GetSchedule().IsEmpty() != true)
+			{
+				if (session->GetRecord()->IsNextScheduleTimeEmpty() == true)
+				{
+					if (session->GetRecord()->UpdateNextScheduleTime() == false)
+					{
+						userdata->SetEnable(false);
+						logte("Failed to update next schedule time. reqeuset to stop recording.");
+					}
+				}
+				else if (session->GetRecord()->GetNextScheduleTime() <= std::chrono::system_clock::now())
+				{
+					SplitSession(session);
+					if (session->GetRecord()->UpdateNextScheduleTime() == false)
+					{
+						userdata->SetEnable(false);
+						logte("Failed to update next schedule time. reqeuset to stop recording.");
+					}
+				}
 			}
 		}
 		else
@@ -214,6 +237,7 @@ void FilePublisher::SessionController()
 			userdata->SetState(info::Record::RecordState::Ready);
 		}
 
+		// Garbage collector of removed userdata sets
 		if (userdata->GetRemove() == true)
 		{
 			logtd("Remove userdata of file publiser. id(%s)", userdata->GetId().CStr());
@@ -231,6 +255,7 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);
 
+	// Checking for the required parameters
 	if (record->GetId().IsEmpty() == true || record->GetStreamName().IsEmpty() == true)
 	{
 		ov::String error_message = "There is no required parameter [";
@@ -250,6 +275,37 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &
 		return ov::Error::CreateError(FilePublisherStatusCode::FailureInvalidParameter, error_message);
 	}
 
+	// Validation check of duplicate parameters
+	if (record->GetSchedule().IsEmpty() == false && record->GetInterval() > 0)
+	{
+		ov::String error_message = "[Interval] and [Schedule] cannot be used at the same time";
+
+		return ov::Error::CreateError(FilePublisherStatusCode::FailureInvalidParameter, error_message);
+	}
+
+	// Validation check of schedule Parameter
+	if (record->GetSchedule().IsEmpty() == false)
+	{
+		ov::String pattern = R"(^(\*|([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])|\*\/([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])) (\*|([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])|\*\/([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])) (\*|([0-9]|1[0-9]|2[0-3])|\*\/([0-9]|1[0-9]|2[0-3]))$)";
+		auto regex = ov::Regex(pattern);
+		auto error = regex.Compile();
+
+		if (error != nullptr)
+		{
+			ov::String error_message = "Invalid regular expression pattern";
+			return ov::Error::CreateError(FilePublisherStatusCode::FailureInvalidParameter, error_message);
+		}
+
+		// Just validation for schedule pattren
+		auto match_result = regex.Matches(record->GetSchedule().CStr());
+		if (match_result.GetError() != nullptr)
+		{
+			ov::String error_message = "Invalid [schedule] parameter";
+			return ov::Error::CreateError(FilePublisherStatusCode::FailureInvalidParameter, error_message);
+		}
+	}
+
+	// Checking for the dupilicate id
 	if (_userdata_sets.GetByKey(record->GetId()) != nullptr)
 	{
 		ov::String error_message = "Duplicate ID already exists";

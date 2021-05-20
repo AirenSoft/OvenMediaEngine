@@ -73,7 +73,7 @@ public:
 private:
 	// FEEDBACK
 	uint32_t _src_ssrc = 0;
-	uint32_t _media_ssrc = 0;	// MAYBE NOT USED
+	uint32_t _media_ssrc = 0;
 
 	// FCI
 	// media ssrc, sequence number

@@ -37,7 +37,7 @@ bool AACSpecificConfig::Parse(const uint8_t *data, size_t data_length, AACSpecif
 // 	return dest;
 // }
 
-void AACSpecificConfig::Serialize(std::vector<uint8_t>& serialze)
+std::shared_ptr<ov::Data> AACSpecificConfig::Serialize()
 {
 	ov::BitWriter bits(2);
 
@@ -45,11 +45,17 @@ void AACSpecificConfig::Serialize(std::vector<uint8_t>& serialze)
 	bits.Write(4, _sampling_frequency_index);
 	bits.Write(4, _channel);
 
-	serialze.resize(bits.GetDataSize());
-	std::copy(bits.GetData(), bits.GetData()+bits.GetDataSize(), serialze.begin());
+	return std::make_shared<ov::Data>(bits.GetData(), bits.GetDataSize());
 }
 
-AacObjectType AACSpecificConfig::ObjectType()
+void AACSpecificConfig::Serialize(std::vector<uint8_t>& serialze)
+{
+	auto data = Serialize();
+	serialze.resize(data->GetLength());
+	std::copy(data->GetDataAs<uint8_t>(), data->GetDataAs<uint8_t>()+data->GetLength(), serialze.begin());
+}
+
+AacObjectType AACSpecificConfig::ObjectType() const
 {
 	return _object_type;
 }
@@ -60,8 +66,44 @@ void AACSpecificConfig::SetOjbectType(AacObjectType object_type)
 	_object_type = object_type;
 }
 
+uint32_t AACSpecificConfig::SamplerateNum() const
+{
+	switch(SamplingFrequency())
+	{
+		case RATES_96000HZ:
+			return 96000;
+		case RATES_88200HZ:
+			return 88200;
+		case RATES_64000HZ:
+			return 64000;
+		case RATES_48000HZ:
+			return 48000;
+		case RATES_44100HZ:
+			return 44100;
+		case RATES_32000HZ:
+			return 32000;
+		case RATES_24000HZ:
+			return 24000;
+		case RATES_22050HZ:
+			return 22050;
+		case RATES_16000HZ:
+			return 16000;
+		case RATES_12000HZ:
+			return 12000;
+		case RATES_11025HZ:
+			return 11025;
+		case RATES_8000HZ:
+			return 8000;
+		case RATES_7350HZ:
+			return 7350;
+		case EXPLICIT_RATE:
+			return 0;
+	}
 
-AacSamplingFrequencies AACSpecificConfig::SamplingFrequency()
+	return 0;
+}
+
+AacSamplingFrequencies AACSpecificConfig::SamplingFrequency() const
 {
 	return _sampling_frequency_index;
 }
@@ -73,7 +115,7 @@ void AACSpecificConfig::SetSamplingFrequency(AacSamplingFrequencies sampling_fre
 }
 
 
-uint8_t	AACSpecificConfig::Channel()
+uint8_t	AACSpecificConfig::Channel() const
 {
 	return _channel;
 }
@@ -85,7 +127,7 @@ void AACSpecificConfig::SetChannel(uint8_t channel)
 }
 
 
-AacProfile AACSpecificConfig::GetAacProfile()
+AacProfile AACSpecificConfig::GetAacProfile() const
 {
 	switch(_object_type)
 	{
@@ -103,7 +145,7 @@ AacProfile AACSpecificConfig::GetAacProfile()
 }
 
 
-ov::String AACSpecificConfig::GetInfoString()
+ov::String AACSpecificConfig::GetInfoString() const
 {
 	ov::String out_str = ov::String::FormatString("\n[AACSpecificConfig]\n");
 

@@ -31,6 +31,10 @@
 				<Port>1935</Port>
 				<!-- <WorkerCount>1</WorkerCount> -->
 			</RTMP>
+			<SRT>
+				<Port>9999</Port>
+				<!-- <WorkerCount>1</WorkerCount> -->
+			</SRT>
 			<MPEGTS>
 				<!--
 					Listen on port 4000~4005
@@ -165,18 +169,30 @@
 				-->
 			</Host>
 
-			<!-- Refer https://airensoft.gitbook.io/ovenmediaengine/signedpolicy
-
+			<!-- 	
+			Refer https://airensoft.gitbook.io/ovenmediaengine/signedpolicy
 			<SignedPolicy>
 				<PolicyQueryKeyName>policy</PolicyQueryKeyName>
 				<SignatureQueryKeyName>signature</SignatureQueryKeyName>
 				<SecretKey>aKq#1kj</SecretKey>
 
 				<Enables>
-					<Providers>rtmp</Providers>
+					<Providers>rtmp,webrtc,srt</Providers>
 					<Publishers>webrtc,hls,dash,lldash</Publishers>
 				</Enables>
 			</SignedPolicy>
+			-->
+
+			<!--
+			<AdmissionWebhooks>
+				<TargetUrl></TargetUrl>
+				<SeretKey></SecretKey>
+				<Timeout>3000</Timeout>
+				<Enables>
+					<Providers>rtmp,webrtc,srt</Providers>
+					<Publishers>webrtc,hls,dash,lldash</Publishers>
+				</Enables>
+			</AdmissionWebhooks>
 			-->
 
 			<!--
@@ -212,6 +228,11 @@
 					<!-- Application type (live/vod) -->
 					<Type>live</Type>
 					<OutputProfiles>
+						<!-- Enable this configuration if you want to hardware acceleration using GPU -->
+						<!-- 
+						<HardwareAcceleration>false</HardwareAcceleration>
+						-->
+
 						<OutputProfile>
 							<Name>bypass_stream</Name>
 							<OutputStreamName>${OriginStreamName}</OutputStreamName>
@@ -242,7 +263,9 @@
 					</OutputProfiles>
 					<Providers>
 						<OVT />
+						<WebRTC />
 						<RTMP />
+						<SRT />
 						<MPEGTS>
 							<StreamMap>
 								<!--
@@ -285,12 +308,25 @@
 							<CrossDomains>
 								<Url>*</Url>
 							</CrossDomains>
+							<!--
+								Enable DASH player to obtain UTCTiming from OME using /time?iso&ms API
+							-->
+							<UTCTiming>
+								<Scheme>urn:mpeg:dash:utc:http-xsdate:2014</Scheme>
+								<Value>/time?iso&amp;ms</Value>
+							</UTCTiming>
 						</DASH>
 						<LLDASH>
 							<SegmentDuration>5</SegmentDuration>
 							<CrossDomains>
 								<Url>*</Url>
 							</CrossDomains>
+							<!--
+								Use default options for UTCTiming
+									- scheme: urn:mpeg:dash:utc:http-xsdate:2014
+									- value: /time?iso&ms
+							-->
+							<UTCTiming />
 						</LLDASH>
 					</Publishers>
 				</Application>

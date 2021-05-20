@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include <modules/http_server/http_datastructure.h>
+#include <modules/http/http_datastructure.h>
 #include <monitoring/monitoring.h>
 
 namespace api
@@ -25,9 +25,9 @@ namespace api
 	class MultipleStatus
 	{
 	public:
-		void AddStatusCode(HttpStatusCode status_code);
+		void AddStatusCode(http::StatusCode status_code);
 		void AddStatusCode(const std::shared_ptr<const ov::Error> &error);
-		HttpStatusCode GetStatusCode() const;
+		http::StatusCode GetStatusCode() const;
 
 		bool HasOK() const
 		{
@@ -36,7 +36,7 @@ namespace api
 
 	protected:
 		int _count = 0;
-		HttpStatusCode _last_status_code = HttpStatusCode::OK;
+		http::StatusCode _last_status_code = http::StatusCode::OK;
 
 		bool _has_ok = true;
 	};

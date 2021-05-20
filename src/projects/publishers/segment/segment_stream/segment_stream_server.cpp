@@ -8,7 +8,7 @@
 //==============================================================================
 #include "segment_stream_server.h"
 
-#include <modules/http_server/http_server_manager.h>
+#include <modules/http/server/http_server_manager.h>
 #include <monitoring/monitoring.h>
 
 #include <regex>
@@ -27,6 +27,11 @@ SegmentStreamServer::SegmentStreamServer()
 		"</cross-domain-policy>";
 }
 
+std::shared_ptr<SegmentStreamInterceptor> SegmentStreamServer::CreateInterceptor()
+{
+	return std::make_shared<SegmentStreamInterceptor>();
+}
+
 bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 								const ov::SocketAddress *tls_address,
 								int thread_count,
@@ -43,23 +48,15 @@ bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 	bool result = true;
 	auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
 
-	auto manager = HttpServerManager::GetInstance();
-	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("SegPub", *address, worker_count) : nullptr;
+	auto manager = http::svr::HttpServerManager::GetInstance();
+
+	std::shared_ptr<http::svr::HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("SegPub", *address, worker_count) : nullptr;
 	result = result && ((address != nullptr) ? (http_server != nullptr) : true);
-	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer("SegPub", *tls_address, vhost_list, worker_count) : nullptr;
+
+	std::shared_ptr<http::svr::HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer("SegPub", *tls_address, vhost_list, worker_count) : nullptr;
 	result = result && ((tls_address != nullptr) ? (https_server != nullptr) : true);
 
-	auto segment_stream_interceptor = result ? CreateInterceptor() : nullptr;
-
-	if (result)
-	{
-		segment_stream_interceptor->SetCrossdomainBlock();
-	}
-
-	result = result && ((http_server == nullptr) || http_server->AddInterceptor(segment_stream_interceptor));
-	result = result && ((https_server == nullptr) || https_server->AddInterceptor(segment_stream_interceptor));
-
-	result = result && segment_stream_interceptor->Start(thread_count, process_handler);
+	result = result && PrepareInterceptors(http_server, https_server, thread_count, process_handler);
 
 	if (result)
 	{
@@ -78,7 +75,7 @@ bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 
 bool SegmentStreamServer::Stop()
 {
-	// Remove Interceptor
+	// Remove Interceptors
 
 	// Stop server
 	if (_http_server != nullptr)
@@ -136,6 +133,29 @@ bool SegmentStreamServer::RemoveObserver(const std::shared_ptr<SegmentStreamObse
 bool SegmentStreamServer::Disconnect(const ov::String &app_name, const ov::String &stream_name)
 {
 	return true;
+}
+
+bool SegmentStreamServer::PrepareInterceptors(
+	const std::shared_ptr<http::svr::HttpServer> &http_server,
+	const std::shared_ptr<http::svr::HttpsServer> &https_server,
+	int thread_count, const SegmentProcessHandler &process_handler)
+{
+	auto segment_stream_interceptor = CreateInterceptor();
+
+	if (segment_stream_interceptor == nullptr)
+	{
+		OV_ASSERT2(false);
+		return false;
+	}
+
+	bool result = true;
+
+	result = result && ((http_server == nullptr) || http_server->AddInterceptor(segment_stream_interceptor));
+	result = result && ((https_server == nullptr) || https_server->AddInterceptor(segment_stream_interceptor));
+
+	result = result && segment_stream_interceptor->Start(thread_count, process_handler);
+
+	return result;
 }
 
 //====================================================================================================
@@ -201,13 +221,13 @@ bool SegmentStreamServer::ParseRequestUrl(const ov::String &request_url,
 	return true;
 }
 
-bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &client,
+bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
 										 const ov::String &request_target,
 										 const ov::String &origin_url)
 {
 	auto response = client->GetResponse();
 	auto request = client->GetRequest();
-	HttpConnection connetion = HttpConnection::Closed;
+	http::svr::ConnectionPolicy connetion = http::svr::ConnectionPolicy::Closed;
 
 	do
 	{
@@ -232,7 +252,7 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &clie
 		if (ParseRequestUrl(request_target, app_name, stream_name, file_name, file_ext) == false)
 		{
 			logtd("Failed to parse URL: %s", request_target.CStr());
-			response->SetStatusCode(HttpStatusCode::NotFound);
+			response->SetStatusCode(http::StatusCode::NotFound);
 			break;
 		}
 
@@ -253,10 +273,10 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &clie
 
 	switch (connetion)
 	{
-		case HttpConnection::Closed:
+		case http::svr::ConnectionPolicy::Closed:
 			return response->Close();
 
-		case HttpConnection::KeepAlive:
+		case http::svr::ConnectionPolicy::KeepAlive:
 			return true;
 
 		default:
@@ -266,7 +286,7 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &clie
 	}
 }
 
-bool SegmentStreamServer::SetAllowOrigin(const ov::String &origin_url, const std::shared_ptr<HttpResponse> &response)
+bool SegmentStreamServer::SetAllowOrigin(const ov::String &origin_url, const std::shared_ptr<http::svr::HttpResponse> &response)
 {
 	if (_cors_urls.empty())
 	{
@@ -391,24 +411,21 @@ bool SegmentStreamServer::UrlExistCheck(const std::vector<ov::String> &url_list,
 	return (item != url_list.end());
 }
 
-bool SegmentStreamServer::IncreaseBytesOut(const std::shared_ptr<HttpClient> &client, size_t sent_bytes)
+std::shared_ptr<mon::StreamMetrics> SegmentStreamServer::GetStreamMetric(const std::shared_ptr<http::svr::HttpConnection> &client)
 {
 	auto request = client->GetRequest();
 
 	auto stream_info = request->GetExtraAs<pub::Stream>();
-
-	if (stream_info != nullptr)
+	if (stream_info == nullptr)
 	{
-		auto stream_metric = StreamMetrics(*stream_info);
-		if (stream_metric != nullptr)
-		{
-			stream_metric->IncreaseBytesOut(GetPublisherType(), sent_bytes);
-		}
-	}
-	else
-	{
-		OV_ASSERT(stream_info != nullptr, "stream_info must not be nullptr: %p", request.get());
+		return nullptr;
 	}
 
-	return true;
+	auto stream_metric = StreamMetrics(*stream_info);
+	if (stream_metric == nullptr)
+	{
+		return nullptr;
+	}
+
+	return stream_metric;
 }

@@ -82,13 +82,13 @@ namespace pvd
 						// The stream type is pull stream, if packets do NOT arrive for more than 5 seconds, it is a seriously warning situation
 						if(elapsed_time_from_last_recv > 5)
 						{
-							logtw("%s/%s(%u) There are no imcoming packets. %d seconds have elapsed since the last packet was receivced.", 
+							logtw("%s/%s(%u) There are no incoming packets. %d seconds have elapsed since the last packet was received.", 
 									stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
 						}
 
 						if(elapsed_time_from_last_sent > MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC)
 						{
-							logtw("%s/%s(%u) stream will be deleted becasue it hasn't been used for %u seconds", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC);
+							logtw("%s/%s(%u) stream will be deleted because it hasn't been used for %u seconds", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC);
 							DeleteStream(stream);
 						}
 					}

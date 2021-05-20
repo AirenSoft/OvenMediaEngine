@@ -23,6 +23,7 @@ public:
 	virtual std::shared_ptr<StreamPacketizer> Create(
 		const ov::String &app_name, const ov::String &stream_name,
 		uint32_t segment_count, uint32_t segment_duration,
+		const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
 		const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track,
 		const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer) = 0;
 };
@@ -34,12 +35,14 @@ public:
 	std::shared_ptr<StreamPacketizer> Create(
 		const ov::String &app_name, const ov::String &stream_name,
 		uint32_t segment_count, uint32_t segment_duration,
+		const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
 		const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track,
 		const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer) override
 	{
 		return std::make_shared<Tpacketizer>(
 			app_name, stream_name,
 			segment_count, segment_duration,
+			utc_timing_scheme, utc_timing_value,
 			video_track, audio_track,
 			chunked_transfer);
 	}
@@ -52,6 +55,7 @@ public:
 		const std::shared_ptr<pub::Application> application,
 		const info::Stream &info,
 		int segment_count, int segment_duration,
+		const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
 		const std::shared_ptr<PacketizerFactoryInterface> &packetizer_factory,
 		const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer);
 
@@ -62,9 +66,25 @@ public:
 												 uint32_t thread_count,
 												 const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
 	{
+		return Create<Tpacketizer>(application, info,
+					  segment_count, segment_duration,
+					  "", "",
+					  thread_count,
+					  chunked_transfer);
+	}
+
+	template <typename Tpacketizer>
+	static std::shared_ptr<SegmentStream> Create(const std::shared_ptr<pub::Application> &application,
+												 const info::Stream &info,
+												 int segment_count, int segment_duration,
+												 const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
+												 uint32_t thread_count,
+												 const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
+	{
 		return std::make_shared<SegmentStream>(
 			application, info,
 			segment_count, segment_duration,
+			utc_timing_scheme, utc_timing_value,
 			std::make_shared<PacketizerFactory<Tpacketizer>>(),
 			chunked_transfer);
 	}
@@ -84,6 +104,9 @@ protected:
 
 	int _segment_count = 0;
 	int _segment_duration = 0;
+
+	ov::String _utc_timing_scheme;
+	ov::String _utc_timing_value;
 
 	std::shared_ptr<PacketizerFactoryInterface> _packetizer_factory;
 

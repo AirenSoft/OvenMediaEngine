@@ -46,6 +46,12 @@ bool CommonAttr::SerializeCommonAttr(ov::String &sdp)
 		);
 	}
 
+	// control
+	if(!_control.IsEmpty())
+	{
+		sdp.AppendFormat("a=control:%s\r\n", _control.CStr());
+	}
+
 	return true;
 }
 
@@ -85,18 +91,11 @@ bool CommonAttr::ParsingCommonAttrLine(char type, std::string content)
 			_ice_pwd = std::string(matches[1]).c_str();
 		}
 	}
-	else if(content.compare(0, OV_COUNTOF("fmtp") - 1, "fmtp") == 0)
+	else if(content.compare(0, OV_COUNTOF("con") - 1, "con") == 0)
 	{
-		if(std::regex_search(content, matches, std::regex("fmtp:(\\d*) (.*)profile-level-id=(.*)")))
+		if(std::regex_search(content, matches, std::regex("^control:(\\S*)")))
 		{
-			// a=fmtp:97 level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42e01f
-		}
-	}
-	else if(content.compare(0, OV_COUNTOF("rtcp:") - 1, "rtcp:") == 0)
-	{
-		if(std::regex_search(content, matches, std::regex("rtcp:(\\d*) IN (.*)")))
-		{
-			// a=rtcp:9 IN IP4 0.0.0.0
+			_control = std::string(matches[1]).c_str();
 		}
 	}
 	else
@@ -156,4 +155,14 @@ void CommonAttr::SetIcePwd(const ov::String &pwd)
 ov::String CommonAttr::GetIcePwd() const
 {
 	return _ice_pwd;
+}
+
+void CommonAttr::SetControl(const ov::String &control)
+{
+	_control = control;
+}
+
+ov::String CommonAttr::GetControl() const
+{
+	return _control;
 }

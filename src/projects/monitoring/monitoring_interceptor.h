@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include <modules/http_server/http_server.h>
+#include <modules/http/server/http_server.h>
 
-class MonitoringInterceptor : public HttpDefaultInterceptor
+class MonitoringInterceptor : public http::svr::DefaultInterceptor
 {
 public:
     MonitoringInterceptor()
@@ -25,5 +25,5 @@ protected:
 	//--------------------------------------------------------------------
 	// Implementation of HttpRequestInterceptorInterface
 	//--------------------------------------------------------------------
-	bool IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client) override;
+	bool IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpConnection> &client) override;
 };

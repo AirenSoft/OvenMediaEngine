@@ -10,12 +10,12 @@
 
 namespace api
 {
-	ApiResponse::ApiResponse(HttpStatusCode status_code)
+	ApiResponse::ApiResponse(http::StatusCode status_code)
 	{
 		SetResponse(status_code);
 	}
 
-	ApiResponse::ApiResponse(HttpStatusCode status_code, const Json::Value &json)
+	ApiResponse::ApiResponse(http::StatusCode status_code, const Json::Value &json)
 	{
 		SetResponse(status_code, nullptr, json);
 	}
@@ -35,14 +35,14 @@ namespace api
 
 	ApiResponse::ApiResponse(const Json::Value &json)
 	{
-		SetResponse(HttpStatusCode::OK, nullptr, json);
+		SetResponse(http::StatusCode::OK, nullptr, json);
 	}
 
-	ApiResponse::ApiResponse(const std::shared_ptr<HttpError> &error)
+	ApiResponse::ApiResponse(const std::shared_ptr<http::HttpError> &error)
 	{
 		if (error == nullptr)
 		{
-			SetResponse(HttpStatusCode::OK);
+			SetResponse(http::StatusCode::OK);
 			return;
 		}
 
@@ -61,27 +61,27 @@ namespace api
 		_json = std::move(response._json);
 	}
 
-	void ApiResponse::SetResponse(HttpStatusCode status_code)
+	void ApiResponse::SetResponse(http::StatusCode status_code)
 	{
 		SetResponse(status_code, nullptr);
 	}
 
-	void ApiResponse::SetResponse(HttpStatusCode status_code, const char *message)
+	void ApiResponse::SetResponse(http::StatusCode status_code, const char *message)
 	{
 		_status_code = status_code;
 
 		_json["statusCode"] = static_cast<int>(status_code);
-		_json["message"] = (message == nullptr) ? StringFromHttpStatusCode(status_code) : message;
+		_json["message"] = (message == nullptr) ? StringFromStatusCode(status_code) : message;
 	}
 
-	void ApiResponse::SetResponse(HttpStatusCode status_code, const char *message, const Json::Value &json)
+	void ApiResponse::SetResponse(http::StatusCode status_code, const char *message, const Json::Value &json)
 	{
 		SetResponse(status_code, message);
 
 		_json["response"] = json;
 	}
 
-	bool ApiResponse::SendToClient(const std::shared_ptr<HttpClient> &client)
+	bool ApiResponse::SendToClient(const std::shared_ptr<http::svr::HttpConnection> &client)
 	{
 		const auto &response = client->GetResponse();
 

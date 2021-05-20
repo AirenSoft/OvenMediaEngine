@@ -28,6 +28,7 @@ class DashPacketizer : public Packetizer
 public:
 	DashPacketizer(const ov::String &app_name, const ov::String &stream_name,
 				   uint32_t segment_count, uint32_t segment_duration,
+				   const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
 				   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 				   const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer);
 
@@ -60,8 +61,6 @@ public:
 
 	std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const override;
 	bool SetSegmentData(Writer &writer, int64_t timestamp);
-
-	bool GetPlayList(ov::String &play_list) override;
 
 protected:
 	using DataCallback = std::function<void(const std::shared_ptr<const SampleData> &data, bool new_segment_written)>;
@@ -96,6 +95,10 @@ protected:
 						 uint32_t max_segment_count);
 
 	void SetReadyForStreaming() noexcept override;
+
+protected:
+	ov::String _utc_timing_scheme;
+	ov::String _utc_timing_value;
 
 	bool _video_enable = false;
 	bool _audio_enable = false;

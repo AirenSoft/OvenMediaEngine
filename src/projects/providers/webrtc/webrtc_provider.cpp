@@ -181,7 +181,7 @@ namespace pvd
 	// Signalling
 	//------------------------
 
-	std::shared_ptr<const SessionDescription> WebRTCProvider::OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client,
+	std::shared_ptr<const SessionDescription> WebRTCProvider::OnRequestOffer(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 													const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 													std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay)
 	{
@@ -196,8 +196,22 @@ namespace pvd
 			return nullptr;
 		}
 
-		// TODO(Getroot): Implement SingedPolicy
-			
+		std::shared_ptr<const SignedPolicy> signed_policy;
+		auto signed_policy_result = HandleSignedPolicy(parsed_url, remote_address, signed_policy);
+		if(signed_policy_result == CheckSignatureResult::Off || signed_policy_result == CheckSignatureResult::Pass)
+		{
+			// Success
+		}
+		else if(signed_policy_result == CheckSignatureResult::Error)
+		{
+			return nullptr;
+		}
+		else if(signed_policy_result == CheckSignatureResult::Fail)
+		{
+			logtw("%s", signed_policy->GetErrMessage().CStr());
+			return nullptr;
+		}
+
 		// Check if same stream name is exist
 		auto application = std::dynamic_pointer_cast<WebRTCApplication>(GetApplicationByName(vhost_app_name));
 		if(application == nullptr)
@@ -221,8 +235,14 @@ namespace pvd
 			tcp_relay = true;
 		}
 
-		auto &candidates = IcePortManager::GetInstance()->GetIceCandidateList(IcePortObserver::GetSharedPtr());
-		ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
+		if (_ice_candidate_list.empty() == false)
+		{
+			auto candidate_index_to_send = _current_ice_candidate_index++ % _ice_candidate_list.size();
+			const auto &candidates = _ice_candidate_list[candidate_index_to_send];
+
+			ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
+		}
+
 		auto session_description = std::make_shared<SessionDescription>(*application->GetOfferSDP());
 		session_description->SetOrigin("OvenMediaEngine", ov::Unique::GenerateUint32(), 2, "IN", 4, "127.0.0.1");
 		session_description->SetIceUfrag(_ice_port->GenerateUfrag());
@@ -231,14 +251,42 @@ namespace pvd
 		return session_description;
 	}
 
-	bool WebRTCProvider::OnAddRemoteDescription(const std::shared_ptr<WebSocketClient> &ws_client,
+	bool WebRTCProvider::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 								const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 								const std::shared_ptr<const SessionDescription> &offer_sdp,
 								const std::shared_ptr<const SessionDescription> &peer_sdp)
 	{
 		logtd("WebRTCProvider::OnAddRemoteDescription");
+		auto request = ws_client->GetClient()->GetRequest();
+		auto remote_address = request->GetRemote()->GetRemoteAddress();
+		auto uri = request->GetUri();
+		auto parsed_url = ov::Url::Parse(uri);
+		if (parsed_url == nullptr)
+		{
+			logte("Could not parse the url: %s", uri.CStr());
+			return false;
+		}
 
-		// TODO(Getroot): Implement SingedPolicy
+		uint64_t life_time = 0;
+		std::shared_ptr<const SignedPolicy> signed_policy;
+		auto signed_policy_result = HandleSignedPolicy(parsed_url, remote_address, signed_policy);
+		if(signed_policy_result == CheckSignatureResult::Off)
+		{
+			// Success
+		}
+		else if(signed_policy_result == CheckSignatureResult::Pass)
+		{
+			life_time = signed_policy->GetStreamExpireEpochMSec();
+		}
+		else if(signed_policy_result == CheckSignatureResult::Error)
+		{
+			return false;
+		}
+		else if(signed_policy_result == CheckSignatureResult::Fail)
+		{
+			logtw("%s", signed_policy->GetErrMessage().CStr());
+			return false;
+		}
 
 		// Check if same stream name is exist
 		auto application = std::dynamic_pointer_cast<WebRTCApplication>(GetApplicationByName(vhost_app_name));
@@ -267,7 +315,7 @@ namespace pvd
 		}
 		
 		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
-		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), offer_sdp, peer_sdp, ice_timeout, stream);
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), offer_sdp, peer_sdp, ice_timeout, life_time, stream);
 
 		if(OnChannelCreated(channel_id, stream) == false)
 		{
@@ -283,7 +331,7 @@ namespace pvd
 		return true;
 	}
 
-	bool WebRTCProvider::OnIceCandidate(const std::shared_ptr<WebSocketClient> &ws_client,
+	bool WebRTCProvider::OnIceCandidate(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 						const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 						const std::shared_ptr<RtcIceCandidate> &candidate,
 						const ov::String &username_fragment)
@@ -291,7 +339,7 @@ namespace pvd
 		return true;
 	}
 
-	bool WebRTCProvider::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_client,
+	bool WebRTCProvider::OnStopCommand(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 					const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 					const std::shared_ptr<const SessionDescription> &offer_sdp,
 					const std::shared_ptr<const SessionDescription> &peer_sdp)

@@ -117,8 +117,6 @@ bool OvtStream::GenerateDecription()
 		Json::Value json_video_track;
 		Json::Value json_audio_track;
 
-		track->GetCodecExtradata();
-
 		json_track["id"] = track->GetId();
 		json_track["codecId"] = static_cast<int8_t>(track->GetCodecId());
 		json_track["mediaType"] = static_cast<int8_t>(track->GetMediaType());
@@ -140,9 +138,9 @@ bool OvtStream::GenerateDecription()
 		json_track["audioTrack"] = json_audio_track;
 
 		auto &extra_data = track->GetCodecExtradata();
-		if(!extra_data.empty())
+		if(extra_data != nullptr)
 		{
-			auto extra_data_base64 = ov::Base64::Encode(ov::Data(extra_data.data(), extra_data.size()));
+			auto extra_data_base64 = ov::Base64::Encode(extra_data);
 			json_track["extra_data"] = extra_data_base64.CStr();
 		}
 		

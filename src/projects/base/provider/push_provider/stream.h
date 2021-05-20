@@ -10,8 +10,8 @@
 #pragma once
 
 #include <base/ovlibrary/stop_watch.h>
-#include <modules/signature/signature_common_type.h>
-#include <modules/signature/signed_policy.h>
+#include <modules/auth/signature/signature_common_type.h>
+#include <modules/auth/signature/signed_policy.h>
 
 #include "base/provider/stream.h"
 

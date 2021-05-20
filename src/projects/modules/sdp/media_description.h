@@ -101,6 +101,10 @@ public:
 	bool EnableRtcpFb(uint8_t id, const ov::String &type, bool on);
 	void EnableRtcpFb(uint8_t id, const PayloadAttr::RtcpFbType &type, bool on);
 
+	// a=fmtp:96 packetization-mode=1;profile-level-id=42e01f;level-asymmetry-allowed=1
+	// a=fmtp:96 profile-level-id=1;moe=AAC-hbr;sizelength=13
+	void SetFmtp(uint8_t id, const ov::String &fmtp);
+
 	// a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
 	void SetCname(const ov::String &cname);
 	void SetSsrc(uint32_t ssrc);

@@ -26,13 +26,13 @@ namespace api
 			RegisterDelete(R"(\/(?<stream_name>[^\/]*))", &StreamsController::OnDeleteStream);
 		};
 
-		ApiResponse StreamsController::OnPostStream(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse StreamsController::OnPostStream(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 													const std::shared_ptr<mon::HostMetrics> &vhost,
 													const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
 			if (request_body.isArray() == false)
 			{
-				return HttpError::CreateError(HttpStatusCode::BadRequest, "Request body must be an array");
+				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Request body must be an array");
 			}
 
 			std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
@@ -74,10 +74,10 @@ namespace api
 				}
 			}
 
-			return std::move(response_value);
+			return response_value;
 		}
 
-		ApiResponse StreamsController::OnGetStreamList(const std::shared_ptr<HttpClient> &client,
+		ApiResponse StreamsController::OnGetStreamList(const std::shared_ptr<http::svr::HttpConnection> &client,
 													   const std::shared_ptr<mon::HostMetrics> &vhost,
 													   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -95,23 +95,23 @@ namespace api
 				}
 			}
 
-			return std::move(response);
+			return response;
 		}
 
-		ApiResponse StreamsController::OnGetStream(const std::shared_ptr<HttpClient> &client,
+		ApiResponse StreamsController::OnGetStream(const std::shared_ptr<http::svr::HttpConnection> &client,
 												   const std::shared_ptr<mon::HostMetrics> &vhost,
 												   const std::shared_ptr<mon::ApplicationMetrics> &app,
 												   const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
-			return std::move(conv::JsonFromStream(stream, std::move(output_streams)));
+			return conv::JsonFromStream(stream, std::move(output_streams));
 		}
 
-		ApiResponse StreamsController::OnDeleteStream(const std::shared_ptr<HttpClient> &client,
+		ApiResponse StreamsController::OnDeleteStream(const std::shared_ptr<http::svr::HttpConnection> &client,
 													  const std::shared_ptr<mon::HostMetrics> &vhost,
 													  const std::shared_ptr<mon::ApplicationMetrics> &app,
 													  const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
-			return HttpStatusCode::NotImplemented;
+			return http::StatusCode::NotImplemented;
 		}
 	}  // namespace v1
 }  // namespace api

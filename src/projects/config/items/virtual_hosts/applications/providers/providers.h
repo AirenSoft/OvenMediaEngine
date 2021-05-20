@@ -14,6 +14,7 @@
 #include "rtsp_provider.h"
 #include "rtsp_pull_provider.h"
 #include "webrtc_provider.h"
+#include "srt_provider.h"
 
 namespace cfg
 {
@@ -32,6 +33,7 @@ namespace cfg
 							&_rtsp_pull_provider,
 							&_rtsp_provider,
 							&_ovt_provider,
+							&_srt_provider,
 							&_mpegts_provider,
 							&_webrtc_provider};
 					}
@@ -40,6 +42,7 @@ namespace cfg
 					CFG_DECLARE_REF_GETTER_OF(GetRtspPullProvider, _rtsp_pull_provider)
 					CFG_DECLARE_REF_GETTER_OF(GetRtspProvider, _rtsp_provider)
 					CFG_DECLARE_REF_GETTER_OF(GetOvtProvider, _ovt_provider)
+					CFG_DECLARE_REF_GETTER_OF(GetSrtProvider, _srt_provider)
 					CFG_DECLARE_REF_GETTER_OF(GetMpegtsProvider, _mpegts_provider)
 					CFG_DECLARE_REF_GETTER_OF(GetWebrtcProvider, _webrtc_provider)
 
@@ -50,6 +53,7 @@ namespace cfg
 						Register<Optional>({"RTSPPull", "rtspPull"}, &_rtsp_pull_provider);
 						Register<Optional>({"RTSP", "rtsp"}, &_rtsp_provider);
 						Register<Optional>({"OVT", "ovt"}, &_ovt_provider);
+						Register<Optional>({"SRT", "srt"}, &_srt_provider);
 						Register<Optional>({"MPEGTS", "mpegts"}, &_mpegts_provider);
 						Register<Optional>({"WebRTC", "webrtc"}, &_webrtc_provider);
 					};
@@ -58,6 +62,7 @@ namespace cfg
 					RtspPullProvider _rtsp_pull_provider;
 					RtspProvider _rtsp_provider;
 					OvtProvider _ovt_provider;
+					SrtProvider _srt_provider;
 					MpegtsProvider _mpegts_provider;
 					WebrtcProvider _webrtc_provider;
 				};

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <base/common_types.h>
 
 // ISO 14496-15, 5.2.4.1
 //	aligned(8) class AVCDecoderConfigurationRecord {
@@ -60,7 +61,9 @@ public:
 	uint8_t ChromaFormat();
 	uint8_t BitDepthLumaMinus8();
 
+	std::shared_ptr<ov::Data> Serialize();
 	void Serialize(std::vector<uint8_t>& serialze);
+	std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> GetSpsPpsAsAnnexB(uint8_t start_code_size);
 
 	ov::String GetInfoString();
 	

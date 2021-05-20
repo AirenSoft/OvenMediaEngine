@@ -134,19 +134,20 @@ class AACSpecificConfig
 public:
 	static bool Parse(const uint8_t *data, size_t data_length, AACSpecificConfig &config);
 
-	AacObjectType				ObjectType();
-	AacSamplingFrequencies		SamplingFrequency();
-	uint8_t						Channel();
+	AacObjectType				ObjectType() const;
+	AacSamplingFrequencies		SamplingFrequency() const;
+	uint32_t					SamplerateNum() const;
+	uint8_t						Channel() const;
+	
+	AacProfile 					GetAacProfile() const;
+	ov::String 					GetInfoString() const;
 
 	void 						SetOjbectType(AacObjectType object_type);
 	void 						SetSamplingFrequency(AacSamplingFrequencies sampling_frequency_index);
 	void 						SetChannel(uint8_t channel);
 
-	AacProfile 					GetAacProfile();
-
-	ov::String 					GetInfoString();
-
 	// std::vector<uint8_t> 		Serialize() const;
+	std::shared_ptr<ov::Data>	Serialize();
 	void 						Serialize(std::vector<uint8_t>& serialze);
 
 private:

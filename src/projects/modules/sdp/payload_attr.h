@@ -24,9 +24,21 @@ public:
 		VP9,
 		H264,
 		H265,
+		MPEG4_GENERIC,
 		OPUS,
 		RED,
 		RTX
+	};
+
+	enum class Mpeg4GenericMode
+	{
+		Generic,
+		CELP_cbr,
+		CELP_vbr,
+		AAC_lbr,
+		AAC_hbr,
+		MPS_lbr,
+		MPS_hbr
 	};
 
 	enum class RtcpFbType
@@ -58,6 +70,41 @@ public:
 	void SetFmtp(const ov::String &fmtp);
 	ov::String GetFmtp() const;
 
+	// H264 Specific
+	std::shared_ptr<ov::Data> GetH264ExtraDataAsAnnexB() const
+	{
+		if(GetH264SPS() == nullptr || GetH264PPS() == nullptr)
+		{
+			return nullptr;
+		}
+
+		auto data = std::make_shared<ov::Data>();
+		ov::ByteStream stream(data);
+
+		stream.WriteBE((uint8_t)0);
+		stream.WriteBE((uint8_t)0);
+		stream.WriteBE((uint8_t)0);
+		stream.WriteBE((uint8_t)1);
+		stream.Write(GetH264SPS());
+		stream.WriteBE((uint8_t)0);
+		stream.WriteBE((uint8_t)0);
+		stream.WriteBE((uint8_t)0);
+		stream.WriteBE((uint8_t)1);
+		stream.Write(GetH264PPS());
+
+		return data;
+	}
+
+	std::shared_ptr<ov::Data> GetH264SPS() const {return _h264_sps_bytes;}
+	std::shared_ptr<ov::Data> GetH264PPS() const {return _h264_pps_bytes;}
+
+	// MPEG4-GENERIC AUDIO Specific
+	Mpeg4GenericMode GetMpeg4GenericMode() const {return _mpeg4_generic_mode;}
+	uint32_t GetMpeg4GenericSizeLength() const {return _mpeg4_generic_size_length;}
+	uint32_t GetMpeg4GenericIndexLength() const {return _mpeg4_generic_index_length;}
+	uint32_t GetMpeg4GenericIndexDeltaLength() const {return _mpeg4_generic_index_delta_length;}
+	std::shared_ptr<ov::Data> GetMpeg4GenericConfig() const {return _mpeg4_generic_config;}
+
 private:
 	uint8_t _id;
 	SupportCodec _codec;
@@ -65,7 +112,16 @@ private:
 	uint32_t _rate;
 	ov::String _codec_param;
 
+	Mpeg4GenericMode _mpeg4_generic_mode = Mpeg4GenericMode::Generic;
+	uint32_t _mpeg4_generic_size_length = 0;
+	uint32_t _mpeg4_generic_index_length = 0;
+	uint32_t _mpeg4_generic_index_delta_length = 0;
+	std::shared_ptr<ov::Data> _mpeg4_generic_config = nullptr;
+
 	bool _rtcpfb_support_flag[(int)(RtcpFbType::NumberOfRtcpFbType)];
 
 	ov::String _fmtp;
+
+	std::shared_ptr<ov::Data>	_h264_sps_bytes;
+	std::shared_ptr<ov::Data>	_h264_pps_bytes;
 };

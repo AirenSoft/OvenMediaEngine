@@ -131,10 +131,28 @@ namespace pvd
 		return PushStream::Stop();
 	}
 
+	bool RtmpStream::CheckStreamExpired()
+	{
+		if(_stream_expired_msec != 0 && _stream_expired_msec < ov::Clock::NowMSec())
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 	bool RtmpStream::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
 	{
 		if(GetState() == Stream::State::ERROR || GetState() == Stream::State::STOPPED || GetState() == Stream::State::STOPPING)
 		{
+			return false;
+		}
+
+		// Check stream expired by signed policy
+		if(CheckStreamExpired() == true)
+		{
+			logti("Stream has expired by signed policy (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
+			Stop();
 			return false;
 		}
 
@@ -298,6 +316,7 @@ namespace pvd
 		}
 		else if(result == CheckSignatureResult::Pass)
 		{
+			_stream_expired_msec = _signed_policy->GetStreamExpireEpochMSec();
 			return true;
 		}
 		else if(result == CheckSignatureResult::Error)
@@ -1273,7 +1292,7 @@ namespace pvd
 											  data,
 											  pts,
 											  dts,
-											  cmn::BitstreamFormat::AAC_LATM,
+											  cmn::BitstreamFormat::AAC_RAW,
 											  packet_type);
 
 			SendFrame(frame);											
@@ -1330,6 +1349,7 @@ namespace pvd
 			new_track->SetId(RTMP_VIDEO_TRACK_ID);
 			new_track->SetMediaType(cmn::MediaType::Video);
 			new_track->SetCodecId(cmn::MediaCodecId::H264);
+			new_track->SetOriginBitstream(cmn::BitstreamFormat::H264_AVCC);
 			new_track->SetTimeBase(1, 1000);
 			new_track->SetVideoTimestampScale(1.0);
 
@@ -1351,6 +1371,7 @@ namespace pvd
 			new_track->SetId(RTMP_AUDIO_TRACK_ID);
 			new_track->SetMediaType(cmn::MediaType::Audio);
 			new_track->SetCodecId(cmn::MediaCodecId::Aac);
+			new_track->SetOriginBitstream(cmn::BitstreamFormat::AAC_RAW);
 			new_track->SetTimeBase(1, 1000);
 			new_track->SetAudioTimestampScale(1.0);
 

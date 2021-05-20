@@ -10,6 +10,7 @@ LOCAL_STATIC_LIBRARIES := \
 	thumbnail_publisher \
 	ovt_provider \
 	rtmp_provider \
+	srt_provider \
 	mpegts_provider \
 	rtspc_provider \
 	webrtc_provider \
@@ -20,13 +21,14 @@ LOCAL_STATIC_LIBRARIES := \
 	api_server \
 	bitstream \
 	containers \
-	http_server \
+	http \
 	dtls_srtp \
 	rtp_rtcp \
 	sdp \
 	segment_writer \
 	web_console \
 	mediarouter \
+	rtsp_module \
 	ovt_packetizer \
 	orchestrator \
 	publisher \

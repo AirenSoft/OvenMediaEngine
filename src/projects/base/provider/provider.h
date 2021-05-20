@@ -12,8 +12,8 @@
 #include <base/mediarouter/media_route_interface.h>
 #include <orchestrator/data_structures/data_structure.h>
 
-#include <modules/signature/signature_common_type.h>
-#include <modules/signature/signed_policy.h>
+#include <modules/auth/signature/signature_common_type.h>
+#include <modules/auth/signature/signed_policy.h>
 
 #include <shared_mutex>
 
