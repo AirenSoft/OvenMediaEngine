@@ -98,6 +98,8 @@ CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &str
 	{
 		_audio_chunk_writer = std::make_shared<CmafChunkWriter>(M4sMediaType::Audio, 2, _ideal_duration_for_audio);
 	}
+
+	_utc_timing_value = _utc_timing_value.Replace("&", "&amp;");
 }
 
 DashFileType CmafPacketizer::GetFileType(const ov::String &file_name)
