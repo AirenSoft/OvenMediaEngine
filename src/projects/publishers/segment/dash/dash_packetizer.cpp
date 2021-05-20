@@ -55,6 +55,8 @@ DashPacketizer::DashPacketizer(const ov::String &app_name, const ov::String &str
 	SetAudioTrack(audio_track);
 
 	_stat_stop_watch.Start();
+
+	_utc_timing_value = _utc_timing_value.Replace("&", "&amp;");
 }
 
 DashPacketizer::~DashPacketizer()
