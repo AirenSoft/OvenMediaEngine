@@ -17,6 +17,7 @@ class CmafStreamPacketizer : public StreamPacketizer
 public:
 	CmafStreamPacketizer(const ov::String &app_name, const ov::String &stream_name,
 						 int segment_count, int segment_duration,
+						 ov::String utc_timing_scheme, ov::String utc_timing_value,
 						 std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 						 const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer);
 

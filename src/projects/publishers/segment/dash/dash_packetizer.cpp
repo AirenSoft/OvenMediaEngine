@@ -35,12 +35,16 @@ static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &s
 
 DashPacketizer::DashPacketizer(const ov::String &app_name, const ov::String &stream_name,
 							   uint32_t segment_count, uint32_t segment_duration,
+							   const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
 							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 							   const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
 	: Packetizer(app_name, stream_name,
 				 segment_count, segment_count * 5, segment_duration,
 				 video_track, audio_track,
 				 chunked_transfer),
+
+	  _utc_timing_scheme(utc_timing_scheme),
+	  _utc_timing_value(utc_timing_value),
 
 	  _video_m4s_writer(Writer::Type::M4s, Writer::MediaType::Video),
 	  _audio_m4s_writer(Writer::Type::M4s, Writer::MediaType::Audio)
@@ -663,6 +667,13 @@ bool DashPacketizer::UpdatePlayList()
 		xml <<
 			// </Period>
 			R"(	</Period>)" << std::endl;
+	}
+
+	if ((_utc_timing_scheme.IsEmpty() == false) && (_utc_timing_value.IsEmpty() == false))
+	{
+		xml
+			// <UTCTiming />
+			<< R"(	<UTCTiming schemeIdUri=")" << _utc_timing_scheme.CStr() << R"(" value=")" << _utc_timing_value.CStr() << R"(" />)" << std::endl;
 	}
 
 	xml
