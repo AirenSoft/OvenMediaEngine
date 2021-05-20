@@ -40,5 +40,8 @@ private:
 	int _segment_count;
 	int _segment_duration;
 
+	ov::String _utc_timing_scheme;
+	ov::String _utc_timing_value;
+
 	std::shared_ptr<ChunkedTransferInterface> _chunked_transfer = nullptr;
 };

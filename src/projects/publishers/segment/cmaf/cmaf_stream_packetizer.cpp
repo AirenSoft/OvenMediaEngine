@@ -16,15 +16,18 @@
 //====================================================================================================
 CmafStreamPacketizer::CmafStreamPacketizer(const ov::String &app_name, const ov::String &stream_name,
 										   int segment_count, int segment_duration,
+										   ov::String utc_timing_scheme, ov::String utc_timing_value,
 										   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 										   const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
 	: StreamPacketizer(app_name, stream_name,
 					   segment_count, segment_duration,
+					   utc_timing_scheme, utc_timing_value,
 					   video_track, audio_track,
 					   chunked_transfer)
 {
 	_packetizer = std::make_shared<CmafPacketizer>(app_name, stream_name,
 												   segment_count, segment_duration,
+												   utc_timing_scheme, utc_timing_value,
 												   video_track, audio_track,
 												   chunked_transfer);
 }

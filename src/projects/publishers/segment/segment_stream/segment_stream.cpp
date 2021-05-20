@@ -18,6 +18,7 @@ SegmentStream::SegmentStream(
 	const std::shared_ptr<pub::Application> application,
 	const info::Stream &info,
 	int segment_count, int segment_duration,
+	const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
 	const std::shared_ptr<PacketizerFactoryInterface> &packetizer_factory,
 	const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
 	: Stream(application, info),
@@ -25,10 +26,14 @@ SegmentStream::SegmentStream(
 	  _segment_count(segment_count),
 	  _segment_duration(segment_duration),
 
+	  _utc_timing_scheme(utc_timing_scheme),
+	  _utc_timing_value(utc_timing_value),
+
 	  _packetizer_factory(packetizer_factory),
 
 	  _chunked_transfer(chunked_transfer)
 {
+	_utc_timing_value.Replace("&", "&amp;");
 }
 
 bool SegmentStream::Start()
@@ -87,6 +92,7 @@ bool SegmentStream::Start()
 	_stream_packetizer = _packetizer_factory->Create(
 		GetApplicationName(), GetName().CStr(),
 		_segment_count, _segment_duration,
+		_utc_timing_scheme, _utc_timing_value,
 		_video_track, _audio_track,
 		_chunked_transfer);
 

@@ -308,12 +308,25 @@
 							<CrossDomains>
 								<Url>*</Url>
 							</CrossDomains>
+							<!--
+								Enable DASH player to obtain UTCTiming from OME using /time?iso&ms API
+							-->
+							<UTCTiming>
+								<Scheme>urn:mpeg:dash:utc:http-xsdate:2014</Scheme>
+								<Value>/time?iso&amp;ms</Value>
+							</UTCTiming>
 						</DASH>
 						<LLDASH>
 							<SegmentDuration>5</SegmentDuration>
 							<CrossDomains>
 								<Url>*</Url>
 							</CrossDomains>
+							<!--
+								Use default options for UTCTiming
+									- scheme: urn:mpeg:dash:utc:http-xsdate:2014
+									- value: /time?iso&ms
+							-->
+							<UTCTiming />
 						</LLDASH>
 					</Publishers>
 				</Application>

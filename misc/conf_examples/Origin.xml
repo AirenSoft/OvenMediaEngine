@@ -191,12 +191,14 @@
 							<CrossDomains>
 								<Url>*</Url>
 							</CrossDomains>
+							<UTCTiming />
 						</DASH>
 						<LLDASH>
 							<SegmentDuration>5</SegmentDuration>
 							<CrossDomains>
 								<Url>*</Url>
 							</CrossDomains>
+							<UTCTiming />
 						</LLDASH>
 					</Publishers>
 				</Application>
