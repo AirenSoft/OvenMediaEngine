@@ -61,7 +61,8 @@ namespace ov
 
 		if (
 			(
-				MakeNonBlocking(GetSharedPtrAs<SocketAsyncInterface>()) &&
+				SetFirstEpollEventReceived() &&
+				MakeNonBlocking(GetSharedPtrAs<SocketAsyncInterface>(), false) &&
 				SetSocketOptions(send_buffer_size, recv_buffer_size) &&
 				Bind(address) &&
 				Listen(backlog)))

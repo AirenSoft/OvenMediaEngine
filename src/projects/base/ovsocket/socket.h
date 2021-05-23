@@ -95,6 +95,7 @@ namespace ov
 		}
 
 		bool MakeBlocking();
+		bool MakeNonBlocking(std::shared_ptr<SocketAsyncInterface> callback, bool need_to_wait_first_epoll_event);
 		bool MakeNonBlocking(std::shared_ptr<SocketAsyncInterface> callback);
 
 		bool Bind(const SocketAddress &address);
