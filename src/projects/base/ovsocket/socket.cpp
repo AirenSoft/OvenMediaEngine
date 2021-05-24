@@ -345,7 +345,7 @@ namespace ov
 		return false;
 	}
 
-	bool Socket::MakeNonBlocking(std::shared_ptr<SocketAsyncInterface> callback, bool need_to_wait_first_epoll_event)
+	bool Socket::MakeNonBlocking(std::shared_ptr<SocketAsyncInterface> callback)
 	{
 		if (GetState() != SocketState::Created)
 		{
@@ -354,12 +354,7 @@ namespace ov
 			return false;
 		}
 
-		return MakeNonBlockingInternal(callback, need_to_wait_first_epoll_event);
-	}
-
-	bool Socket::MakeNonBlocking(std::shared_ptr<SocketAsyncInterface> callback)
-	{
-		return MakeNonBlocking(callback, true);
+		return MakeNonBlockingInternal(callback, true);
 	}
 
 	bool Socket::MakeNonBlockingInternal(std::shared_ptr<SocketAsyncInterface> callback, bool need_to_wait_first_epoll_event)
