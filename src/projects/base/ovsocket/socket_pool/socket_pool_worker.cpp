@@ -110,7 +110,7 @@ namespace ov
 
 	bool SocketPoolWorker::PrepareEpoll()
 	{
-		logad("Creating epoll for %s (%s)...", StringFromSocketType(GetType()), _pool->GetName().CStr());
+		logad("Creating epoll for %s...", StringFromSocketType(GetType()));
 
 		std::shared_ptr<ov::Error> error;
 
