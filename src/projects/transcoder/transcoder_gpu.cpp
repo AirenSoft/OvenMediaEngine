@@ -6,7 +6,6 @@
 //  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include <libavutil/hwcontext.h>
 #include "transcoder_gpu.h"
 #include "transcoder_private.h"
 
