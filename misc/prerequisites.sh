@@ -326,7 +326,7 @@ install_base_centos()
         # centos-release-scl should be installed before installing devtoolset-7
         sudo yum install -y centos-release-scl
         sudo yum install -y glibc-static devtoolset-7
-        
+
         # Centos 7 uses the 2.8.x version of cmake by default. It must be changed to version 3.x or higher.
         sudo yum remove -y cmake
         sudo yum install -y cmake3
@@ -336,7 +336,7 @@ install_base_centos()
         sudo yum install -y cmake    
     fi
 
-    sudo yum install -y bc gcc-c++ autoconf libtool glibc-static tcl bzip2 zlib-devel 
+    sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel 
 
     # Dependency library for hardware accelerator
     sudo yum install -y libdrm-devel libX11-devel libXi-devel
