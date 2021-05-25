@@ -16,13 +16,16 @@ NASM_VERSION=2.15.02
 FFMPEG_VERSION=4.3.2
 JEMALLOC_VERSION=5.2.1
 PCRE2_VERSION=10.35
-
 # Support to Intel QuickSync hardware accelerator
 LIBVA_VERSION=2.11.0
 GMMLIB_VERSION=20.4.1
 INTEL_MEDIA_DRIVER_VERSION=20.4.5
 INTEL_MEDIA_SDK_VERSION=20.5.1
+# Support to NVIDIA hardware accelerator
+NVCC_HEADERS=11.0.10.1
 
+ENABLE_QSV_HWACCELS=true
+ENABLE_NVCC_HWACCELS=false
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     NCPU=$(sysctl -n hw.ncpu)
@@ -178,6 +181,28 @@ install_ffmpeg()
     #  --enable-debug \
     #  --disable-optimizations --disable-mmx --disable-stripping \
 
+    ADDI_LIBS=""
+    ADDI_ENCODER=""
+    ADDI_DECODER=""
+    ADDI_CFLAGS=""
+    ADDI_LDFLAGS=""
+    ADDI_HWACCEL=""
+
+    if [ "$ENABLE_QSV_HWACCELS" = true ] ; then
+        ADDI_LIBS+=" --enable-libmfx"
+        ADDI_ENCODER+=",h264_qsv,hevc_qsv"
+        ADDI_DECODER+=",vp8_qsv,h264_qsv,hevc_qsv"
+    fi
+
+    if [ "$ENABLE_NVCC_HWACCELS" = true ] ; then
+        ADDI_LIBS+=" --enable-cuda-nvcc --enable-libnpp"
+        ADDI_ENCODER+=",h264_nvenc,hevc_nvenc"
+        ADDI_DECODER+=""
+        ADDI_CFLAGS+="-I/usr/local/cuda/include"
+        ADDI_LDFLAGS="-L/usr/local/cuda/lib64"
+        ADDI_HWACCEL="h264_nvdec,hevc_nvdec"
+    fi
+
     (DIR=${TEMP_PATH}/ffmpeg && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
@@ -186,8 +211,8 @@ install_ffmpeg()
     --prefix="${PREFIX}" \
     --enable-gpl \
     --enable-nonfree \
-    --extra-cflags="-I${PREFIX}/include"  \
-    --extra-ldflags="-L${PREFIX}/lib -Wl,-rpath,${PREFIX}/lib" \
+    --extra-cflags="-I${PREFIX}/include ${ADDI_CFLAGS}"  \
+    --extra-ldflags="-L${PREFIX}/lib ${ADDI_LDFLAGS} -Wl,-rpath,${PREFIX}/lib" \
     --extra-libs=-ldl \
     --enable-shared \
     --disable-static \
@@ -195,11 +220,12 @@ install_ffmpeg()
     --disable-doc \
     --disable-programs  \
     --disable-avdevice --disable-dct --disable-dwt --disable-lsp --disable-lzo --disable-rdft --disable-faan --disable-pixelutils \
-    --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-libx265 --enable-libmfx \
+    --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-libx265 ${ADDI_LIBS} \
     --disable-everything \
     --disable-fast-unaligned \
-    --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264,h264_qsv,libx265,hevc_qsv,mjpeg,png \
-    --enable-decoder=aac,aac_latm,aac_fixed,h264,h264_qsv,hevc,hevc_qsv,opus,vp8,vp8_qsv \
+    --enable-hwaccel=${ADDI_HWACCEL}  \
+    --enable-encoder=libvpx_vp8,libopus,libfdk_aac,libx264,libx265,mjpeg,png${ADDI_ENCODER} \
+    --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8${ADDI_DECODER} \
     --enable-parser=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
     --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp --enable-demuxer=rtsp --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
     --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb,format && \
@@ -305,6 +331,38 @@ install_intel_media_sdk() {
     make -j$(nproc) && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "intel_media_sdk"   
+}
+
+install_nvidia_driver() {
+    add-apt-repository ppa:graphics-drivers/ppa
+    apt update
+    apt install nvidia-driver-460 nvidia-cuda-toolkit
+}
+
+install_nvcc_headers() {
+    (DIR=${TEMP_PATH}/gmmlib && \
+    mkdir -p ${DIR} && \
+    cd ${DIR} && \
+    curl -sLf https://github.com/FFmpeg/nv-codec-headers/releases/download/n${NVCC_HEADERS}/nv-codec-headers-${NVCC_HEADERS}.tar.gz | tar -xz --strip-components=1 && \
+    sudo make install && \
+    rm -rf ${DIR}) || fail_exit "nvcc_headers"        
+}
+
+# Reboot is required after library installation
+install_nvcc() {
+    if [ "$ENABLE_NVCC_HWACCELS" = true ] ; then
+        install_nvidia_driver
+        install_nvcc_headers
+    fi
+}
+
+install_qsv() {
+    if [ "$ENABLE_QSV_HWACCELS" = true ] ; then
+        install_libva
+        install_gmmlib
+        install_intel_media_driver
+        install_intel_media_sdk
+    fi
 }
 
 install_base_ubuntu()
@@ -420,7 +478,7 @@ done
 
 if [ "${OSNAME}" == "Ubuntu" ]; then
     check_version
-    install_base_ubuntu
+    # install_base_ubuntu
 elif  [ "${OSNAME}" == "CentOS" ]; then
     check_version
     install_base_centos
@@ -444,10 +502,8 @@ install_libx264
 install_libx265
 install_libvpx
 install_fdk_aac
-install_libva
-install_gmmlib
-install_intel_media_driver
-install_intel_media_sdk
+install_qsv
+install_nvcc
 install_ffmpeg
 install_jemalloc
 install_libpcre2
