@@ -9,6 +9,7 @@
 #include "socket_utilities.h"
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <sys/ioctl.h>
 
 #include "socket.h"
 
