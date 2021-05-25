@@ -16,10 +16,12 @@ NASM_VERSION=2.15.02
 FFMPEG_VERSION=4.3.2
 JEMALLOC_VERSION=5.2.1
 PCRE2_VERSION=10.35
+
+# Support to Intel QuickSync hardware accelerator
 LIBVA_VERSION=2.11.0
-GMMLIB_VERSION=21.1.1
-INTEL_MEDIA_DRIVER_VERSION=21.1.3
-INTEL_MEDIA_SDK_VERSION=21.1.3
+GMMLIB_VERSION=20.4.1
+INTEL_MEDIA_DRIVER_VERSION=20.4.5
+INTEL_MEDIA_SDK_VERSION=20.5.1
 
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -180,7 +182,7 @@ install_ffmpeg()
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sLf https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n${FFMPEG_VERSION}.tar.gz | tar -xz --strip-components=1 && \
-    PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH} ./configure \
+    PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PREFIX}/lib64/pkgconfig:${PKG_CONFIG_PATH} ./configure \
     --prefix="${PREFIX}" \
     --enable-gpl \
     --enable-nonfree \
@@ -320,14 +322,24 @@ install_base_fedora()
 
 install_base_centos()
 {
-    # centos-release-scl should be installed before installing devtoolset-7
-    sudo yum install -y centos-release-scl
-    sudo yum install -y bc gcc-c++ cmake autoconf libtool glibc-static tcl bzip2 zlib-devel devtoolset-7 
+    if [[ "${OSVERSION}" == "7" ]]; then
+        # centos-release-scl should be installed before installing devtoolset-7
+        sudo yum install -y centos-release-scl
+        sudo yum install -y glibc-static devtoolset-7
+        
+        # Centos 7 uses the 2.8.x version of cmake by default. It must be changed to version 3.x or higher.
+        sudo yum remove -y cmake
+        sudo yum install -y cmake3
+        sudo ln -s /usr/bin/cmake3 /usr/bin/cmake
+        source scl_source enable devtoolset-7
+    else
+        sudo yum install -y cmake    
+    fi
 
-    # Dependency library for hardware accelerators
-    sudo yum install libdrm-devel libX11-devel
+    sudo yum install -y bc gcc-c++ autoconf libtool glibc-static tcl bzip2 zlib-devel 
 
-    source scl_source enable devtoolset-7
+    # Dependency library for hardware accelerator
+    sudo yum install -y libdrm-devel libX11-devel libXi-devel
 }
 
 install_base_macos()
@@ -369,7 +381,7 @@ check_version()
         proceed_yn
     fi
 
-    if [[ "${OSNAME}" == "CentOS" && "${OSVERSION}" != "7" ]]; then
+    if [[ "${OSNAME}" == "CentOS" && "${OSVERSION}" != "7" && "${OSVERSION}" != "8" ]]; then
         proceed_yn
     fi
 
@@ -380,7 +392,7 @@ check_version()
 
 proceed_yn()
 {
-    read -p "This program [$0] is tested on [Ubuntu 18/20.04, CentOS 7, Fedora 28]
+    read -p "This program [$0] is tested on [Ubuntu 18/20.04, CentOS 7/8 q, Fedora 28]
 Do you want to continue [y/N] ? " ANS
     if [[ "${ANS}" != "y" && "$ANS" != "yes" ]]; then
         cd ${CURRENT}
