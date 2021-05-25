@@ -310,7 +310,7 @@ install_base_ubuntu()
     sudo apt install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc
     
     # Dependency library for hardware accelerators
-    sudo apt install -y libdrm-dev
+    sudo apt install -y libdrm-dev xorg xorg-dev openbox libx11-dev libgl1-mesa-glx libgl1-mesa-dev
 }
 
 install_base_fedora()
@@ -325,7 +325,7 @@ install_base_centos()
     sudo yum install -y bc gcc-c++ cmake autoconf libtool glibc-static tcl bzip2 zlib-devel devtoolset-7 
 
     # Dependency library for hardware accelerators
-    sudo yum install libdrm-devel
+    sudo yum install libdrm-devel libX11-dev
 
     source scl_source enable devtoolset-7
 }
