@@ -325,7 +325,7 @@ install_base_centos()
     sudo yum install -y bc gcc-c++ cmake autoconf libtool glibc-static tcl bzip2 zlib-devel devtoolset-7 
 
     # Dependency library for hardware accelerators
-    sudo yum install libdrm-devel libX11-dev
+    sudo yum install libdrm-devel libX11-devel
 
     source scl_source enable devtoolset-7
 }
