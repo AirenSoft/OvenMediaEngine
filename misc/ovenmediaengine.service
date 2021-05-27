@@ -4,13 +4,13 @@ After=network.target
 
 [Service]
 Type=forking
-PIDFile=/var/run/ovenmediaengine.pid
+PIDFile=/run/ovenmediaengine.pid
 WorkingDirectory=/usr/share/ovenmediaengine
 ExecStart=/usr/bin/OvenMediaEngine -d
 Restart=on-abort
 RestartPreventExitStatus=1
 StandardOutput=null
-StandardError=syslog+console
+StandardError=journal+console
 
 [Install]
 WantedBy=multi-user.target
