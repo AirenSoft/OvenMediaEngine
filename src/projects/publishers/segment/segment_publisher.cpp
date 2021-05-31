@@ -514,8 +514,15 @@ bool SegmentPublisher::HandleSignedX(const info::VHostAppName &vhost_app_name, c
 	std::shared_ptr<const SignedPolicy> signed_policy;
 	std::shared_ptr<const SignedToken> signed_token;
 
+	auto requested_url = ov::Url::Parse(request_url->ToUrlString(true));
+	// PORT can be omitted if port is rtmp default port, but SignedPolicy requires this information.
+	if(requested_url->Port() == 0)
+	{
+		requested_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+	}
+
 	// SingedPolicy is first
-	auto signed_policy_result = Publisher::HandleSignedPolicy(request_url, remote_address, signed_policy);
+	auto signed_policy_result = Publisher::HandleSignedPolicy(requested_url, remote_address, signed_policy);
 	if (signed_policy_result == CheckSignatureResult::Off)
 	{
 		return true;

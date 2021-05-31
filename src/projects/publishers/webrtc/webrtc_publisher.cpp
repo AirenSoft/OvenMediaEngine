@@ -321,6 +321,12 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		return nullptr;
 	}
 
+	// PORT can be omitted if port is rtmp default port, but SignedPolicy requires this information.
+	if(parsed_url->Port() == 0)
+	{
+		parsed_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+	}
+
 	std::shared_ptr<const SignedPolicy> signed_policy;
 	std::shared_ptr<const SignedToken> signed_token;
 	auto signed_policy_result = Publisher::HandleSignedPolicy(parsed_url, remote_address, signed_policy);
@@ -435,6 +441,12 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	{
 		logte("Could not parse the url: %s", uri.CStr());
 		return false;
+	}
+
+	// PORT can be omitted if port is rtmp default port, but SignedPolicy requires this information.
+	if(parsed_url->Port() == 0)
+	{
+		parsed_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 	}
 
 	uint64_t session_life_time = 0;

@@ -196,6 +196,12 @@ namespace pvd
 			return nullptr;
 		}
 
+		// PORT can be omitted if port is rtmp default port, but SignedPolicy requires this information.
+		if(parsed_url->Port() == 0)
+		{
+			parsed_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+		}
+
 		std::shared_ptr<const SignedPolicy> signed_policy;
 		auto signed_policy_result = HandleSignedPolicy(parsed_url, remote_address, signed_policy);
 		if(signed_policy_result == CheckSignatureResult::Off || signed_policy_result == CheckSignatureResult::Pass)
@@ -265,6 +271,12 @@ namespace pvd
 		{
 			logte("Could not parse the url: %s", uri.CStr());
 			return false;
+		}
+
+		// PORT can be omitted if port is rtmp default port, but SignedPolicy requires this information.
+		if(parsed_url->Port() == 0)
+		{
+			parsed_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 		}
 
 		uint64_t life_time = 0;
