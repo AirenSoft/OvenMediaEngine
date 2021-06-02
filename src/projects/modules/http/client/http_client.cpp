@@ -118,14 +118,9 @@ namespace http
 			return _request_header;
 		}
 
-		ov::String HttpClient::GetResponseHeader(const ov::String &key)
+		void HttpClient::SetRequestBody(const std::shared_ptr<const ov::Data> &body)
 		{
-			return _parser.GetHeader(key);
-		}
-
-		const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &HttpClient::GetResponseHeaders() const
-		{
-			return _parser.GetHeaders();
+			_request_body = body->Clone();
 		}
 
 		std::shared_ptr<const ov::Error> HttpClient::PrepareForRequest(const ov::String &url, ov::SocketAddress *address)
@@ -230,7 +225,13 @@ namespace http
 			// Make HTTP 1.1 request header
 			logtd("Request resource: %s", path.CStr());
 
-			request_header.AppendFormat("GET %s HTTP/1.1\r\n", path.CStr());
+			// Pick a first method in _method
+			request_header.AppendFormat("%s %s HTTP/1.1\r\n", http::StringFromMethod(_method, false).CStr(), path.CStr());
+
+			if (_request_body != nullptr)
+			{
+				_request_header["Content-Length"] = ov::Converter::ToString(_request_body->GetLength());
+			}
 
 			logtd("Request headers: %zu:", _request_header.size());
 
@@ -243,6 +244,82 @@ namespace http
 			request_header.Append("\r\n");
 
 			_socket->Send(request_header.ToData(false));
+
+			if (_request_body != nullptr)
+			{
+				_socket->Send(_request_body);
+			}
+		}
+
+		void HttpClient::Request(const ov::String &url, ResponseHandler response_handler)
+		{
+			std::lock_guard lock_guard(_request_mutex);
+
+			ov::SocketAddress address;
+
+			auto error = PrepareForRequest(url, &address);
+
+			if (error == nullptr)
+			{
+				OV_ASSERT2(_url.IsEmpty() == false);
+				OV_ASSERT2(_parsed_url != nullptr);
+
+				_response_handler = response_handler;
+
+				logtd("Request an URL: %s (address: %s)...", url.CStr(), address.ToString().CStr());
+
+				// Convert milliseconds to timeval
+				struct timeval tv = {
+					_recv_timeout_msec / 1000,
+					_recv_timeout_msec % 1000};
+
+				_socket->SetRecvTimeout(tv);
+
+				error = _socket->Connect(address, _connection_timeout_msec);
+
+				if (error != nullptr)
+				{
+					error = ov::Error::CreateError("HTTP", error->GetCode(), "Could not connect to %s: %s", url.CStr(), error->GetMessage().CStr());
+				}
+			}
+
+			if (error == nullptr)
+			{
+				_requested = true;
+
+				if (_blocking_mode == ov::BlockingMode::Blocking)
+				{
+					SendRequest();
+					RecvResponse();
+				}
+			}
+			else
+			{
+				CleanupVariables();
+
+				if (response_handler != nullptr)
+				{
+					auto http_error = std::dynamic_pointer_cast<const HttpError>(error);
+					if (http_error != nullptr)
+					{
+						response_handler(http_error->GetStatusCode(), _response_body, error);
+					}
+					else
+					{
+						response_handler(StatusCode::Unknown, _response_body, error);
+					}
+				}
+			}
+		}
+
+		ov::String HttpClient::GetResponseHeader(const ov::String &key)
+		{
+			return _parser.GetHeader(key);
+		}
+
+		const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &HttpClient::GetResponseHeaders() const
+		{
+			return _parser.GetHeaders();
 		}
 
 		void HttpClient::RecvResponse()
@@ -368,67 +445,6 @@ namespace http
 			logtd("Allocating %zu bytes for receiving response data", _parser.GetContentLength());
 
 			_response_body = std::make_shared<ov::Data>(_parser.GetContentLength());
-		}
-
-		void HttpClient::Request(const ov::String &url, ResponseHandler response_handler)
-		{
-			std::lock_guard lock_guard(_request_mutex);
-
-			ov::SocketAddress address;
-
-			auto error = PrepareForRequest(url, &address);
-
-			if (error == nullptr)
-			{
-				OV_ASSERT2(_url.IsEmpty() == false);
-				OV_ASSERT2(_parsed_url != nullptr);
-
-				_response_handler = response_handler;
-
-				logtd("Request an URL: %s (address: %s)...", url.CStr(), address.ToString().CStr());
-
-				// Convert milliseconds to timeval
-				struct timeval tv = {
-					_recv_timeout_msec / 1000,
-					_recv_timeout_msec % 1000};
-
-				_socket->SetRecvTimeout(tv);
-
-				error = _socket->Connect(address, _connection_timeout_msec);
-
-				if (error != nullptr)
-				{
-					error = ov::Error::CreateError("HTTP", error->GetCode(), "Could not connect to %s: %s", url.CStr(), error->GetMessage().CStr());
-				}
-			}
-
-			if (error == nullptr)
-			{
-				_requested = true;
-
-				if (_blocking_mode == ov::BlockingMode::Blocking)
-				{
-					SendRequest();
-					RecvResponse();
-				}
-			}
-			else
-			{
-				CleanupVariables();
-
-				if (response_handler != nullptr)
-				{
-					auto http_error = std::dynamic_pointer_cast<const HttpError>(error);
-					if (http_error != nullptr)
-					{
-						response_handler(http_error->GetStatusCode(), _response_body, error);
-					}
-					else
-					{
-						response_handler(StatusCode::Unknown, _response_body, error);
-					}
-				}
-			}
 		}
 
 		void HttpClient::OnConnected(const std::shared_ptr<const ov::SocketError> &error)

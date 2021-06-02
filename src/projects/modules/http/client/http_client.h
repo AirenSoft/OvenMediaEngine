@@ -54,13 +54,18 @@ namespace http
 			const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetRequestHeaders() const;
 			std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetRequestHeaders();
 
+			// HttpClient can send a request body even when the method is GET, but the server may not actually accept it
+			void SetRequestBody(const std::shared_ptr<const ov::Data> &body);
+			void SetRequestBody(const ov::String &body)
+			{
+				SetRequestBody(body.ToData(false));
+			}
+
+			void Request(const ov::String &url, ResponseHandler response_handler);
+
 			// Response headers (Headers received from HTTP server)
 			ov::String GetResponseHeader(const ov::String &key);
 			const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetResponseHeaders() const;
-
-			void SetBody();
-
-			void Request(const ov::String &url, ResponseHandler response_handler);
 
 		protected:
 			std::shared_ptr<const ov::Error> PrepareForRequest(const ov::String &url, ov::SocketAddress *address);
@@ -102,6 +107,7 @@ namespace http
 			std::shared_ptr<ov::Socket> _socket;
 
 			std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> _request_header;
+			std::shared_ptr<ov::Data> _request_body;
 
 			// response header
 			bool _is_header_found = false;

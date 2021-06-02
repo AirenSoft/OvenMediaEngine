@@ -60,7 +60,18 @@ namespace http
 
 	inline Method operator|(Method lhs, Method rhs)
 	{
-		return static_cast<Method>(static_cast<uint16_t>(lhs) | static_cast<uint16_t>(rhs));
+		return static_cast<Method>(
+			static_cast<std::underlying_type_t<Method>>(lhs) |
+			static_cast<std::underlying_type_t<Method>>(rhs));
+	}
+
+	inline Method &operator|=(Method &lhs, Method rhs)
+	{
+		lhs = static_cast<Method>(
+			static_cast<std::underlying_type_t<Method>>(lhs) |
+			static_cast<std::underlying_type_t<Method>>(rhs));
+
+		return lhs;
 	}
 
 	// RFC7231 - 6. Response Status Codes
@@ -112,7 +123,7 @@ namespace http
 	enum class StatusCode : uint16_t
 	{
 		Unknown = 0,
-		
+
 		Continue = 100,
 		SwitchingProtocols = 101,
 		OK = 200,
@@ -158,57 +169,66 @@ namespace http
 		HTTPVersionNotSupported = 505
 	};
 
-#define HTTP_STATUS_RETURN(condition, value) \
-	case condition:                          \
+#define HTTP_CASE_RETURN(condition, value) \
+	case condition:                        \
 		return value
+
+#define HTTP_IF_EXPR(condition, expr) \
+	do                                \
+	{                                 \
+		if (condition)                \
+		{                             \
+			expr;                     \
+		}                             \
+	} while (false)
 
 	inline constexpr bool IsValidStatusCode(StatusCode status_code)
 	{
 		switch (status_code)
 		{
-			HTTP_STATUS_RETURN(StatusCode::Unknown, false);
-			HTTP_STATUS_RETURN(StatusCode::Continue, true);
-			HTTP_STATUS_RETURN(StatusCode::SwitchingProtocols, true);
-			HTTP_STATUS_RETURN(StatusCode::OK, true);
-			HTTP_STATUS_RETURN(StatusCode::Created, true);
-			HTTP_STATUS_RETURN(StatusCode::Accepted, true);
-			HTTP_STATUS_RETURN(StatusCode::NonAuthoritativeInformation, true);
-			HTTP_STATUS_RETURN(StatusCode::NoContent, true);
-			HTTP_STATUS_RETURN(StatusCode::ResetContent, true);
-			HTTP_STATUS_RETURN(StatusCode::PartialContent, true);
-			HTTP_STATUS_RETURN(StatusCode::MultiStatus, true);
-			HTTP_STATUS_RETURN(StatusCode::MultipleChoices, true);
-			HTTP_STATUS_RETURN(StatusCode::MovedPermanently, true);
-			HTTP_STATUS_RETURN(StatusCode::Found, true);
-			HTTP_STATUS_RETURN(StatusCode::SeeOther, true);
-			HTTP_STATUS_RETURN(StatusCode::NotModified, true);
-			HTTP_STATUS_RETURN(StatusCode::UseProxy, true);
-			HTTP_STATUS_RETURN(StatusCode::TemporaryRedirect, true);
-			HTTP_STATUS_RETURN(StatusCode::BadRequest, true);
-			HTTP_STATUS_RETURN(StatusCode::Unauthorized, true);
-			HTTP_STATUS_RETURN(StatusCode::PaymentRequired, true);
-			HTTP_STATUS_RETURN(StatusCode::Forbidden, true);
-			HTTP_STATUS_RETURN(StatusCode::NotFound, true);
-			HTTP_STATUS_RETURN(StatusCode::MethodNotAllowed, true);
-			HTTP_STATUS_RETURN(StatusCode::NotAcceptable, true);
-			HTTP_STATUS_RETURN(StatusCode::ProxyAuthenticationRequired, true);
-			HTTP_STATUS_RETURN(StatusCode::RequestTimeout, true);
-			HTTP_STATUS_RETURN(StatusCode::Conflict, true);
-			HTTP_STATUS_RETURN(StatusCode::Gone, true);
-			HTTP_STATUS_RETURN(StatusCode::LengthRequired, true);
-			HTTP_STATUS_RETURN(StatusCode::PreconditionFailed, true);
-			HTTP_STATUS_RETURN(StatusCode::PayloadTooLarge, true);
-			HTTP_STATUS_RETURN(StatusCode::URITooLong, true);
-			HTTP_STATUS_RETURN(StatusCode::UnsupportedMediaType, true);
-			HTTP_STATUS_RETURN(StatusCode::RangeNotSatisfiable, true);
-			HTTP_STATUS_RETURN(StatusCode::ExpectationFailed, true);
-			HTTP_STATUS_RETURN(StatusCode::UpgradeRequired, true);
-			HTTP_STATUS_RETURN(StatusCode::InternalServerError, true);
-			HTTP_STATUS_RETURN(StatusCode::NotImplemented, true);
-			HTTP_STATUS_RETURN(StatusCode::BadGateway, true);
-			HTTP_STATUS_RETURN(StatusCode::ServiceUnavailable, true);
-			HTTP_STATUS_RETURN(StatusCode::GatewayTimeout, true);
-			HTTP_STATUS_RETURN(StatusCode::HTTPVersionNotSupported, true);
+			HTTP_CASE_RETURN(StatusCode::Unknown, false);
+			HTTP_CASE_RETURN(StatusCode::Continue, true);
+			HTTP_CASE_RETURN(StatusCode::SwitchingProtocols, true);
+			HTTP_CASE_RETURN(StatusCode::OK, true);
+			HTTP_CASE_RETURN(StatusCode::Created, true);
+			HTTP_CASE_RETURN(StatusCode::Accepted, true);
+			HTTP_CASE_RETURN(StatusCode::NonAuthoritativeInformation, true);
+			HTTP_CASE_RETURN(StatusCode::NoContent, true);
+			HTTP_CASE_RETURN(StatusCode::ResetContent, true);
+			HTTP_CASE_RETURN(StatusCode::PartialContent, true);
+			HTTP_CASE_RETURN(StatusCode::MultiStatus, true);
+			HTTP_CASE_RETURN(StatusCode::MultipleChoices, true);
+			HTTP_CASE_RETURN(StatusCode::MovedPermanently, true);
+			HTTP_CASE_RETURN(StatusCode::Found, true);
+			HTTP_CASE_RETURN(StatusCode::SeeOther, true);
+			HTTP_CASE_RETURN(StatusCode::NotModified, true);
+			HTTP_CASE_RETURN(StatusCode::UseProxy, true);
+			HTTP_CASE_RETURN(StatusCode::TemporaryRedirect, true);
+			HTTP_CASE_RETURN(StatusCode::BadRequest, true);
+			HTTP_CASE_RETURN(StatusCode::Unauthorized, true);
+			HTTP_CASE_RETURN(StatusCode::PaymentRequired, true);
+			HTTP_CASE_RETURN(StatusCode::Forbidden, true);
+			HTTP_CASE_RETURN(StatusCode::NotFound, true);
+			HTTP_CASE_RETURN(StatusCode::MethodNotAllowed, true);
+			HTTP_CASE_RETURN(StatusCode::NotAcceptable, true);
+			HTTP_CASE_RETURN(StatusCode::ProxyAuthenticationRequired, true);
+			HTTP_CASE_RETURN(StatusCode::RequestTimeout, true);
+			HTTP_CASE_RETURN(StatusCode::Conflict, true);
+			HTTP_CASE_RETURN(StatusCode::Gone, true);
+			HTTP_CASE_RETURN(StatusCode::LengthRequired, true);
+			HTTP_CASE_RETURN(StatusCode::PreconditionFailed, true);
+			HTTP_CASE_RETURN(StatusCode::PayloadTooLarge, true);
+			HTTP_CASE_RETURN(StatusCode::URITooLong, true);
+			HTTP_CASE_RETURN(StatusCode::UnsupportedMediaType, true);
+			HTTP_CASE_RETURN(StatusCode::RangeNotSatisfiable, true);
+			HTTP_CASE_RETURN(StatusCode::ExpectationFailed, true);
+			HTTP_CASE_RETURN(StatusCode::UpgradeRequired, true);
+			HTTP_CASE_RETURN(StatusCode::InternalServerError, true);
+			HTTP_CASE_RETURN(StatusCode::NotImplemented, true);
+			HTTP_CASE_RETURN(StatusCode::BadGateway, true);
+			HTTP_CASE_RETURN(StatusCode::ServiceUnavailable, true);
+			HTTP_CASE_RETURN(StatusCode::GatewayTimeout, true);
+			HTTP_CASE_RETURN(StatusCode::HTTPVersionNotSupported, true);
 		}
 
 		return false;
@@ -218,52 +238,133 @@ namespace http
 	{
 		switch (status_code)
 		{
-			HTTP_STATUS_RETURN(StatusCode::Unknown, "Unknown");
-			HTTP_STATUS_RETURN(StatusCode::Continue, "Continue");
-			HTTP_STATUS_RETURN(StatusCode::SwitchingProtocols, "Switching Protocols");
-			HTTP_STATUS_RETURN(StatusCode::OK, "OK");
-			HTTP_STATUS_RETURN(StatusCode::Created, "Created");
-			HTTP_STATUS_RETURN(StatusCode::Accepted, "Accepted");
-			HTTP_STATUS_RETURN(StatusCode::NonAuthoritativeInformation, "Non-Authoritative Information");
-			HTTP_STATUS_RETURN(StatusCode::NoContent, "No Content");
-			HTTP_STATUS_RETURN(StatusCode::ResetContent, "Reset Content");
-			HTTP_STATUS_RETURN(StatusCode::PartialContent, "Partial Content");
-			HTTP_STATUS_RETURN(StatusCode::MultiStatus, "Multi Status");
-			HTTP_STATUS_RETURN(StatusCode::MultipleChoices, "Multiple Choices");
-			HTTP_STATUS_RETURN(StatusCode::MovedPermanently, "Moved Permanently");
-			HTTP_STATUS_RETURN(StatusCode::Found, "Found");
-			HTTP_STATUS_RETURN(StatusCode::SeeOther, "See Other");
-			HTTP_STATUS_RETURN(StatusCode::NotModified, "Not Modified");
-			HTTP_STATUS_RETURN(StatusCode::UseProxy, "Use Proxy");
-			HTTP_STATUS_RETURN(StatusCode::TemporaryRedirect, "Temporary Redirect");
-			HTTP_STATUS_RETURN(StatusCode::BadRequest, "Bad Request");
-			HTTP_STATUS_RETURN(StatusCode::Unauthorized, "Unauthorized");
-			HTTP_STATUS_RETURN(StatusCode::PaymentRequired, "Payment Required");
-			HTTP_STATUS_RETURN(StatusCode::Forbidden, "Forbidden");
-			HTTP_STATUS_RETURN(StatusCode::NotFound, "Not Found");
-			HTTP_STATUS_RETURN(StatusCode::MethodNotAllowed, "Method Not Allowed");
-			HTTP_STATUS_RETURN(StatusCode::NotAcceptable, "Not Acceptable");
-			HTTP_STATUS_RETURN(StatusCode::ProxyAuthenticationRequired, "Proxy Authentication Required");
-			HTTP_STATUS_RETURN(StatusCode::RequestTimeout, "Request Timeout");
-			HTTP_STATUS_RETURN(StatusCode::Conflict, "Conflict");
-			HTTP_STATUS_RETURN(StatusCode::Gone, "Gone");
-			HTTP_STATUS_RETURN(StatusCode::LengthRequired, "Length Required");
-			HTTP_STATUS_RETURN(StatusCode::PreconditionFailed, "Precondition Failed");
-			HTTP_STATUS_RETURN(StatusCode::PayloadTooLarge, "Payload Too Large");
-			HTTP_STATUS_RETURN(StatusCode::URITooLong, "URI Too Long");
-			HTTP_STATUS_RETURN(StatusCode::UnsupportedMediaType, "Unsupported Media Type");
-			HTTP_STATUS_RETURN(StatusCode::RangeNotSatisfiable, "Range Not Satisfiable");
-			HTTP_STATUS_RETURN(StatusCode::ExpectationFailed, "Expectation Failed");
-			HTTP_STATUS_RETURN(StatusCode::UpgradeRequired, "Upgrade Required");
-			HTTP_STATUS_RETURN(StatusCode::InternalServerError, "Internal Server Error");
-			HTTP_STATUS_RETURN(StatusCode::NotImplemented, "Not Implemented");
-			HTTP_STATUS_RETURN(StatusCode::BadGateway, "Bad Gateway");
-			HTTP_STATUS_RETURN(StatusCode::ServiceUnavailable, "Service Unavailable");
-			HTTP_STATUS_RETURN(StatusCode::GatewayTimeout, "Gateway Timeout");
-			HTTP_STATUS_RETURN(StatusCode::HTTPVersionNotSupported, "HTTP Version Not Supported");
+			HTTP_CASE_RETURN(StatusCode::Unknown, "Unknown");
+			HTTP_CASE_RETURN(StatusCode::Continue, "Continue");
+			HTTP_CASE_RETURN(StatusCode::SwitchingProtocols, "Switching Protocols");
+			HTTP_CASE_RETURN(StatusCode::OK, "OK");
+			HTTP_CASE_RETURN(StatusCode::Created, "Created");
+			HTTP_CASE_RETURN(StatusCode::Accepted, "Accepted");
+			HTTP_CASE_RETURN(StatusCode::NonAuthoritativeInformation, "Non-Authoritative Information");
+			HTTP_CASE_RETURN(StatusCode::NoContent, "No Content");
+			HTTP_CASE_RETURN(StatusCode::ResetContent, "Reset Content");
+			HTTP_CASE_RETURN(StatusCode::PartialContent, "Partial Content");
+			HTTP_CASE_RETURN(StatusCode::MultiStatus, "Multi Status");
+			HTTP_CASE_RETURN(StatusCode::MultipleChoices, "Multiple Choices");
+			HTTP_CASE_RETURN(StatusCode::MovedPermanently, "Moved Permanently");
+			HTTP_CASE_RETURN(StatusCode::Found, "Found");
+			HTTP_CASE_RETURN(StatusCode::SeeOther, "See Other");
+			HTTP_CASE_RETURN(StatusCode::NotModified, "Not Modified");
+			HTTP_CASE_RETURN(StatusCode::UseProxy, "Use Proxy");
+			HTTP_CASE_RETURN(StatusCode::TemporaryRedirect, "Temporary Redirect");
+			HTTP_CASE_RETURN(StatusCode::BadRequest, "Bad Request");
+			HTTP_CASE_RETURN(StatusCode::Unauthorized, "Unauthorized");
+			HTTP_CASE_RETURN(StatusCode::PaymentRequired, "Payment Required");
+			HTTP_CASE_RETURN(StatusCode::Forbidden, "Forbidden");
+			HTTP_CASE_RETURN(StatusCode::NotFound, "Not Found");
+			HTTP_CASE_RETURN(StatusCode::MethodNotAllowed, "Method Not Allowed");
+			HTTP_CASE_RETURN(StatusCode::NotAcceptable, "Not Acceptable");
+			HTTP_CASE_RETURN(StatusCode::ProxyAuthenticationRequired, "Proxy Authentication Required");
+			HTTP_CASE_RETURN(StatusCode::RequestTimeout, "Request Timeout");
+			HTTP_CASE_RETURN(StatusCode::Conflict, "Conflict");
+			HTTP_CASE_RETURN(StatusCode::Gone, "Gone");
+			HTTP_CASE_RETURN(StatusCode::LengthRequired, "Length Required");
+			HTTP_CASE_RETURN(StatusCode::PreconditionFailed, "Precondition Failed");
+			HTTP_CASE_RETURN(StatusCode::PayloadTooLarge, "Payload Too Large");
+			HTTP_CASE_RETURN(StatusCode::URITooLong, "URI Too Long");
+			HTTP_CASE_RETURN(StatusCode::UnsupportedMediaType, "Unsupported Media Type");
+			HTTP_CASE_RETURN(StatusCode::RangeNotSatisfiable, "Range Not Satisfiable");
+			HTTP_CASE_RETURN(StatusCode::ExpectationFailed, "Expectation Failed");
+			HTTP_CASE_RETURN(StatusCode::UpgradeRequired, "Upgrade Required");
+			HTTP_CASE_RETURN(StatusCode::InternalServerError, "Internal Server Error");
+			HTTP_CASE_RETURN(StatusCode::NotImplemented, "Not Implemented");
+			HTTP_CASE_RETURN(StatusCode::BadGateway, "Bad Gateway");
+			HTTP_CASE_RETURN(StatusCode::ServiceUnavailable, "Service Unavailable");
+			HTTP_CASE_RETURN(StatusCode::GatewayTimeout, "Gateway Timeout");
+			HTTP_CASE_RETURN(StatusCode::HTTPVersionNotSupported, "HTTP Version Not Supported");
 		}
 
 		return "Unknown";
+	}
+
+	// Since http::Method can contains multiple methods, the include_all_method flag is used to determine whether to return the value for the entire methods
+	inline ov::String StringFromMethod(Method method, bool include_all_methods = true)
+	{
+		auto method_value = static_cast<std::underlying_type_t<Method>>(method);
+
+		if (include_all_methods)
+		{
+			std::vector<ov::String> method_list;
+
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Get)), method_list.push_back("GET"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Head)), method_list.push_back("HEAD"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Post)), method_list.push_back("POST"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Put)), method_list.push_back("PUT"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Delete)), method_list.push_back("DELETE"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Connect)), method_list.push_back("CONNECT"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Options)), method_list.push_back("OPTIONS"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Trace)), method_list.push_back("TRACE"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Patch)), method_list.push_back("PATCH"));
+
+			return ov::String::Join(method_list, " | ");
+		}
+		else
+		{
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Get)), return "GET");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Head)), return "HEAD");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Post)), return "POST");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Put)), return "PUT");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Delete)), return "DELETE");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Connect)), return "CONNECT");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Options)), return "OPTIONS");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Trace)), return "TRACE");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Patch)), return "PATCH");
+		}
+
+		return "";
+	}
+
+	// Since http::Method can contains multiple methods, the include_all_method flag is used to determine whether to return the value for the entire methods
+	inline Method MethodFromString(ov::String method, bool include_all_methods = true)
+	{
+		Method method_enum = Method::Unknown;
+
+		if (include_all_methods)
+		{
+			HTTP_IF_EXPR(method.IndexOf("GET") >= 0, method_enum |= Method::Get);
+			HTTP_IF_EXPR(method.IndexOf("HEAD") >= 0, method_enum |= Method::Head);
+			HTTP_IF_EXPR(method.IndexOf("POST") >= 0, method_enum |= Method::Post);
+			HTTP_IF_EXPR(method.IndexOf("PUT") >= 0, method_enum |= Method::Put);
+			HTTP_IF_EXPR(method.IndexOf("DELETE") >= 0, method_enum |= Method::Delete);
+			HTTP_IF_EXPR(method.IndexOf("CONNECT") >= 0, method_enum |= Method::Connect);
+			HTTP_IF_EXPR(method.IndexOf("OPTIONS") >= 0, method_enum |= Method::Options);
+			HTTP_IF_EXPR(method.IndexOf("TRACE") >= 0, method_enum |= Method::Trace);
+			HTTP_IF_EXPR(method.IndexOf("PATCH") >= 0, method_enum |= Method::Patch);
+		}
+		else
+		{
+			auto methods = method.Split(" ");
+
+			if (methods.size() >= 1)
+			{
+				auto first_method = methods.front();
+
+				HTTP_IF_EXPR(first_method == "GET", return Method::Get);
+				HTTP_IF_EXPR(first_method == "HEAD", return Method::Head);
+				HTTP_IF_EXPR(first_method == "POST", return Method::Post);
+				HTTP_IF_EXPR(first_method == "PUT", return Method::Put);
+				HTTP_IF_EXPR(first_method == "DELETE", return Method::Delete);
+				HTTP_IF_EXPR(first_method == "CONNECT", return Method::Connect);
+				HTTP_IF_EXPR(first_method == "OPTIONS", return Method::Options);
+				HTTP_IF_EXPR(first_method == "TRACE", return Method::Trace);
+				HTTP_IF_EXPR(first_method == "PATCH", return Method::Patch);
+			}
+			else
+			{
+				// There is no method in the string
+			}
+		}
+
+		return method_enum;
 	}
 
 	namespace svr
