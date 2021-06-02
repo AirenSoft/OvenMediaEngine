@@ -24,7 +24,7 @@ INTEL_MEDIA_SDK_VERSION=20.5.1
 # Support to NVIDIA hardware accelerator
 NVCC_HEADERS=11.0.10.1
 
-ENABLE_QSV_HWACCELS=true
+ENABLE_QSV_HWACCELS=false
 ENABLE_NVCC_HWACCELS=false
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -197,7 +197,7 @@ install_ffmpeg()
     if [ "$ENABLE_NVCC_HWACCELS" = true ] ; then
         ADDI_LIBS+=" --enable-cuda-nvcc --enable-libnpp"
         ADDI_ENCODER+=",h264_nvenc,hevc_nvenc"
-        ADDI_DECODER+=""
+        ADDI_DECODER+=",h264_nvdec,hevc_nvdec"
         ADDI_CFLAGS+="-I/usr/local/cuda/include"
         ADDI_LDFLAGS="-L/usr/local/cuda/lib64"
         ADDI_HWACCEL="h264_nvdec,hevc_nvdec"
@@ -340,7 +340,7 @@ install_nvidia_driver() {
 }
 
 install_nvcc_headers() {
-    (DIR=${TEMP_PATH}/gmmlib && \
+    (DIR=${TEMP_PATH}/nvcc-hdr && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sLf https://github.com/FFmpeg/nv-codec-headers/releases/download/n${NVCC_HEADERS}/nv-codec-headers-${NVCC_HEADERS}.tar.gz | tar -xz --strip-components=1 && \

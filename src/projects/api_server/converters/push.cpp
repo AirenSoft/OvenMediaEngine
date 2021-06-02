@@ -147,7 +147,7 @@ namespace api
 			SetString(response, "state", push->GetStateString(), Optional::False);
 			SetString(response, "protocol", push->GetProtocol(), Optional::False);
 			SetString(response, "url", push->GetUrl(), Optional::False);
-			SetString(response, "stream_key", push->GetStreamKey(), Optional::False);
+			SetString(response, "streamKey", push->GetStreamKey(), Optional::False);
 			SetInt64(response, "sentBytes", push->GetPushBytes());
 			SetInt64(response, "sentTime", push->GetPushTime());
 			SetInt64(response, "totalsentBytes", push->GetPushTotalBytes());
