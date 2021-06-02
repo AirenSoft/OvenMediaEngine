@@ -19,8 +19,6 @@ namespace http
 	class HttpParser
 	{
 	public:
-		static Method MethodFromString(const ov::String &method);
-
 		/// Process data sent by peers
 		///
 		/// @param data Received data

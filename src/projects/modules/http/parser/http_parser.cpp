@@ -12,27 +12,6 @@
 
 namespace http
 {
-#define HTTP_COMPARE_METHOD(text, value_if_matches) \
-	if (method == text)                             \
-	{                                               \
-		return value_if_matches;                    \
-	}
-
-	Method HttpParser::MethodFromString(const ov::String &method)
-	{
-		HTTP_COMPARE_METHOD("GET", Method::Get);
-		HTTP_COMPARE_METHOD("HEAD", Method::Head);
-		HTTP_COMPARE_METHOD("POST", Method::Post);
-		HTTP_COMPARE_METHOD("PUT", Method::Put);
-		HTTP_COMPARE_METHOD("DELETE", Method::Delete);
-		HTTP_COMPARE_METHOD("CONNECT", Method::Connect);
-		HTTP_COMPARE_METHOD("OPTIONS", Method::Options);
-		HTTP_COMPARE_METHOD("TRACE", Method::Trace);
-		HTTP_COMPARE_METHOD("PATCH", Method::Patch);
-
-		return Method::Unknown;
-	}
-
 	ssize_t HttpParser::ProcessData(const std::shared_ptr<const ov::Data> &data)
 	{
 		if (_is_header_found)
