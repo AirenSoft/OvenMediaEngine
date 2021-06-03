@@ -46,62 +46,49 @@ bool ThumbnailPublisher::Start()
 		return true;
 	}
 
-	auto http_interceptor = CreateInterceptor();
+	bool is_parsed = false;
 
-	bool http_server_result = true;
-	ov::SocketAddress address;
-	bool is_parsed;
 	auto worker_count = thumbnail_bind_config.GetWorkerCount(&is_parsed);
 	worker_count = is_parsed ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
 
+	// Initialze HTTP Server
+	bool http_server_result = true;
 	auto &port = thumbnail_bind_config.GetPort(&is_parsed);
 	if (is_parsed)
 	{
-		address = ov::SocketAddress(server_config.GetIp(), port.GetPort());
+		ov::SocketAddress address = ov::SocketAddress(server_config.GetIp(), port.GetPort());
 
-		_http_server = manager->CreateHttpServer("ThumbnailPublisher", address, worker_count);
+		_http_server = manager->CreateHttpServer("thumb_http", address, worker_count);
 
 		if (_http_server != nullptr)
 		{
-			_http_server->AddInterceptor(http_interceptor);
+			_http_server->AddInterceptor(CreateInterceptor());
 		}
 		else
 		{
-			logte("Could not initialize http server");
+			logte("Could not initialize thumbnail http server");
 			http_server_result = false;
 		}
 	}
 
+	// Initialze HTTPS Server
 	bool https_server_result = true;
 	auto &tls_port = thumbnail_bind_config.GetTlsPort(&is_parsed);
-	ov::SocketAddress tls_address;
-
 	if (is_parsed)
 	{
-		const auto &managers = server_config.GetManagers();
+		ov::SocketAddress tls_address = ov::SocketAddress(server_config.GetIp(), tls_port.GetPort());
 
-		auto host_name_list = std::vector<ov::String>();
-		for (auto &name : managers.GetHost().GetNameList())
+		auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
+
+		_https_server = manager->CreateHttpsServer("thumb_https", tls_address, vhost_list, worker_count);
+		if (_https_server != nullptr)
 		{
-			host_name_list.push_back(name);
+			_https_server->AddInterceptor(CreateInterceptor());
 		}
-
-		tls_address = ov::SocketAddress(server_config.GetIp(), tls_port.GetPort());
-		auto certificate = info::Certificate::CreateCertificate("thumbnail_publisher", host_name_list, managers.GetHost().GetTls());
-
-		if (certificate != nullptr)
+		else
 		{
-			_https_server = manager->CreateHttpsServer("ThumbnailPublisher", tls_address, certificate, worker_count);
-
-			if (_https_server != nullptr)
-			{
-				_https_server->AddInterceptor(http_interceptor);
-			}
-			else
-			{
-				logte("Could not initialize thumbnail https server");
-				https_server_result = false;
-			}
+			logte("Could not initialize thumbnail https server");
+			https_server_result = false;
 		}
 	}
 
@@ -117,7 +104,7 @@ bool ThumbnailPublisher::Start()
 
 	if (http_server_result || https_server_result)
 	{
-		logti("Thumbnail publisher is listening on %s", address.ToString().CStr());
+		logti("Thumbnail publisher is listening on %s", server_config.GetIp().CStr());
 	}
 
 	return Publisher::Start();

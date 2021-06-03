@@ -139,7 +139,7 @@ bool ThumbnailApplication::UrlExistCheck(const std::vector<ov::String> &url_list
 	return (item != url_list.end());
 }
 
-std::vector<ov::String>& ThumbnailApplication::GetCorsUrls()
+std::vector<ov::String> &ThumbnailApplication::GetCorsUrls()
 {
 	return _cors_urls;
 }
