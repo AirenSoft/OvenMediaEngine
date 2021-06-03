@@ -48,7 +48,7 @@ bool EncoderVP8::Configure(std::shared_ptr<TranscodeContext> context)
 	_context->framerate = ::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE);
 	_context->gop_size = _output_context->GetFrameRate() * 1;  // create keyframes every second
 	_context->max_b_frames = 0;
-	_context->pix_fmt = AV_PIX_FMT_YUV420P;
+	_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
 	_context->thread_count = 2;
@@ -70,13 +70,14 @@ bool EncoderVP8::Configure(std::shared_ptr<TranscodeContext> context)
 		_kill_flag = false;
 
 		_thread_work = std::thread(&EncoderVP8::ThreadEncode, this);
-		pthread_setname_np(_thread_work.native_handle(),  ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
+		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
 	{
+		logte("Failed to start encoder thread.");
 		_kill_flag = true;
 
-		logte("Failed to start transcode stream thread.");
+		return false;
 	}
 
 	return true;
@@ -137,15 +138,11 @@ void EncoderVP8::ThreadEncode()
 		::memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
 
 		int ret = ::avcodec_send_frame(_context, _frame);
-		// int ret = 0;
 		::av_frame_unref(_frame);
 
 		if (ret < 0)
 		{
 			logte("Error sending a frame for encoding : %d", ret);
-
-			// Failure to send frame to encoder. Wait and put it back in. But it doesn't happen as often as possible.
-			// _input_buffer.Enqueue(std::move(frame));
 		}
 
 		///////////////////////////////////////////////////

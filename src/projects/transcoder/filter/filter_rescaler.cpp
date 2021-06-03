@@ -12,6 +12,7 @@
 #include <base/ovlibrary/ovlibrary.h>
 
 #include "../transcoder_private.h"
+#include "../codec/codec_utilities.h"
 
 MediaFilterRescaler::MediaFilterRescaler()
 {
@@ -200,9 +201,6 @@ void MediaFilterRescaler::ThreadFilter()
 
 		auto frame = std::move(obj.value());
 
-		// logte("Filter Queue : %d / %d", _input_buffer.Size(), _output_buffer.Size());
-		// logtp("Dequeued data for rescaling: %lld (%.0f)\n%s", frame->GetPts(), frame->GetPts() * _output_context->GetTimeBase().GetExpr() * 1000.0f, ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
-
 		_frame->format = frame->GetFormat();
 		_frame->width = frame->GetWidth();
 		_frame->height = frame->GetHeight();
@@ -227,10 +225,15 @@ void MediaFilterRescaler::ThreadFilter()
 			break;
 		}
 
-		// Copy data of frame to _frame
-		::memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
-		::memcpy(_frame->data[1], frame->GetBuffer(1), frame->GetBufferSize(1));
-		::memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
+		// Copy data of MediaFrame to AVFrame
+		for (int plane = 0; plane < 3; plane++)
+		{
+			size_t buffer_size = frame->GetBufferSize(plane);
+			if (buffer_size > 0)
+			{
+				::memcpy(_frame->data[plane], frame->GetBuffer(plane), frame->GetBufferSize(plane));
+			}
+		}
 
 		ret = ::av_buffersrc_add_frame_flags(_buffersrc_ctx, _frame, AV_BUFFERSRC_FLAG_KEEP_REF);
 		::av_frame_unref(_frame);
@@ -261,21 +264,11 @@ void MediaFilterRescaler::ThreadFilter()
 			}
 			else
 			{
-				auto output_frame = std::make_shared<MediaFrame>();
-
-				output_frame->SetFormat(_frame->format);
-				output_frame->SetWidth(_frame->width);
-				output_frame->SetHeight(_frame->height);
-				output_frame->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1LL : _frame->pts);
-				output_frame->SetDuration(_frame->pkt_duration);
-
-				output_frame->SetStride(_frame->linesize[0], 0);
-				output_frame->SetStride(_frame->linesize[1], 1);
-				output_frame->SetStride(_frame->linesize[2], 2);
-
-				output_frame->SetBuffer(_frame->data[0], output_frame->GetStride(0) * output_frame->GetHeight(), 0);	  // Y-Plane
-				output_frame->SetBuffer(_frame->data[1], output_frame->GetStride(1) * output_frame->GetHeight() / 2, 1);  // Cb Plane
-				output_frame->SetBuffer(_frame->data[2], output_frame->GetStride(2) * output_frame->GetHeight() / 2, 2);  // Cr Plane
+				auto output_frame = TranscoderUtilities::ConvertToMediaFrame(cmn::MediaType::Video, _frame);
+				if (output_frame == nullptr)
+				{
+					continue;
+				}
 
 				//logtp("Rescaled data: %lld (%.0f)\n%s", output_frame->GetPts(), output_frame->GetPts() * _output_context->GetTimeBase().GetExpr() * 1000.0f, ov::Dump(_frame->data[0], _frame->linesize[0], 32).CStr());
 

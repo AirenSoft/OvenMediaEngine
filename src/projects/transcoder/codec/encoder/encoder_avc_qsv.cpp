@@ -54,16 +54,7 @@ bool EncoderAVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 	_context->rc_max_rate = _context->bit_rate;
 	_context->rc_buffer_size = static_cast<int>(_context->bit_rate / 2);
 	_context->sample_aspect_ratio = (AVRational){1, 1};
-
-	// From avcodec.h:
-	// For some codecs, the time base is closer to the field rate than the frame rate.
-	// Most notably, H.264 and MPEG-2 specify time_base as half of frame duration
-	// if no telecine is used ...
-	// Set to time_base ticks per frame. Default 1, e.g., H.264/MPEG-2 set it to 2.
 	_context->ticks_per_frame = 2;
-	// From avcodec.h:
-	// For fixed-fps content, timebase should be 1/framerate and timestamp increments should be identically 1.
-	// This often, but not always is the inverse of the frame rate or field rate for video. 1/time_base is not the average frame rate if the frame rate is not constant.
 
 	AVRational codec_timebase = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
 	_context->time_base = codec_timebase;
@@ -85,13 +76,14 @@ bool EncoderAVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 		_kill_flag = false;
 
 		_thread_work = std::thread(&EncoderAVCxQSV::ThreadEncode, this);
-		pthread_setname_np(_thread_work.native_handle(),  ov::String::FormatString("Enc%sQsv", avcodec_get_name(GetCodecID())).CStr());
+		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Enc%sQsv", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
 	{
+		logte("Failed to start encoder thread.");
 		_kill_flag = true;
 
-		logte("Failed to start transcode stream thread.");
+		return false;
 	}
 
 	return true;
@@ -140,14 +132,12 @@ void EncoderAVCxQSV::ThreadEncode()
 		if (::av_frame_get_buffer(_frame, 32) < 0)
 		{
 			logte("Could not allocate the video frame data");
-			// *result = TranscodeResult::DataError;
 			break;
 		}
 
 		if (::av_frame_make_writable(_frame) < 0)
 		{
 			logte("Could not make sure the frame data is writable");
-			// *result = TranscodeResult::DataError;
 			break;
 		}
 
@@ -162,9 +152,6 @@ void EncoderAVCxQSV::ThreadEncode()
 		if (ret < 0)
 		{
 			logte("Error sending a frame for encoding : %d", ret);
-
-			// Failure to send frame to encoder. Wait and put it back in. But it doesn't happen as often as possible.
-			_input_buffer.Enqueue(std::move(frame));
 		}
 
 		///////////////////////////////////////////////////
@@ -178,9 +165,6 @@ void EncoderAVCxQSV::ThreadEncode()
 			if (ret == AVERROR(EAGAIN))
 			{
 				// More packets are needed for encoding.
-
-				// logte("Error receiving a packet for decoding : EAGAIN");
-
 				break;
 			}
 			else if (ret == AVERROR_EOF)

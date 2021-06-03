@@ -46,10 +46,8 @@ bool EncoderHEVC::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 
 	_context->framerate = ::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE);
-
 	_context->bit_rate = _output_context->GetBitrate();
-	_context->rc_min_rate = _context->bit_rate;
-	_context->rc_max_rate = _context->bit_rate;
+	_context->rc_min_rate = _context->rc_max_rate = _context->bit_rate;
 	_context->rc_buffer_size = static_cast<int>(_context->bit_rate / 2);
 	_context->sample_aspect_ratio = (AVRational){1, 1};
 
@@ -63,8 +61,7 @@ bool EncoderHEVC::Configure(std::shared_ptr<TranscodeContext> context)
 	// For fixed-fps content, timebase should be 1/framerate and timestamp increments should be identically 1.
 	// This often, but not always is the inverse of the frame rate or field rate for video. 1/time_base is not the average frame rate if the frame rate is not constant.
 
-	AVRational codec_timebase = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
-	_context->time_base = codec_timebase;
+	_context->time_base = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
 
 	// _context->gop_size = _context->framerate.num / _context->framerate.den;
 	_context->max_b_frames = 0;
@@ -73,7 +70,6 @@ bool EncoderHEVC::Configure(std::shared_ptr<TranscodeContext> context)
 	_context->height = _output_context->GetVideoHeight();
 	_context->thread_count = 0;
 
-	// 인코딩 품질 및 브라우저 호환성
 	// For browser compatibility
 	// _context->profile = FF_PROFILE_H264_MAIN;
 	_context->profile = FF_PROFILE_HEVC_MAIN;
@@ -99,13 +95,14 @@ bool EncoderHEVC::Configure(std::shared_ptr<TranscodeContext> context)
 		_kill_flag = false;
 
 		_thread_work = std::thread(&EncoderHEVC::ThreadEncode, this);
-		pthread_setname_np(_thread_work.native_handle(),  ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
+		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
 	{
+		logte("Failed to start encoder thread.");
 		_kill_flag = true;
 
-		logte("Failed to start transcode stream thread.");
+		return false;
 	}
 
 	return true;

@@ -67,13 +67,14 @@ bool EncoderAAC::Configure(std::shared_ptr<TranscodeContext> output_context)
 		_kill_flag = false;
 
 		_thread_work = std::thread(&EncoderAAC::ThreadEncode, this);
-		pthread_setname_np(_thread_work.native_handle(),  ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
+		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
 	{
+		logte("Failed to start encoder thread.");
 		_kill_flag = true;
 
-		logte("Failed to start transcode stream thread.");
+		return false;
 	}
 
 	return true;
@@ -142,9 +143,6 @@ void EncoderAAC::ThreadEncode()
 		if (ret < 0)
 		{
 			logte("Error sending a frame for encoding : %d", ret);
-
-			// Failure to send frame to encoder. Wait and put it back in. But it doesn't happen as often as possible.
-			_input_buffer.Enqueue(std::move(buffer));
 		}
 
 		while (true)

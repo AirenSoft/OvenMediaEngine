@@ -9,17 +9,18 @@
 
 #pragma once
 
+#include <base/common_types.h>
+
 #include <cstdint>
 #include <map>
 
-#include <base/common_types.h>
 #include "media_type.h"
 
 enum class MediaPacketFlag : uint8_t
 {
-	Unknown, // Unknown
-	NoFlag, // Raw Data (may PFrame, BFrame...)
-	Key // Key Frame
+	Unknown,  // Unknown
+	NoFlag,	  // Raw Data (may PFrame, BFrame...)
+	Key		  // Key Frame
 };
 
 class MediaPacket
@@ -112,7 +113,7 @@ public:
 		return _data;
 	}
 
-	size_t GetDataLength()  noexcept
+	size_t GetDataLength() noexcept
 	{
 		return _data->GetLength();
 	}
@@ -165,7 +166,7 @@ public:
 	{
 		_flag = flag;
 	}
-	
+
 	cmn::BitstreamFormat GetBitstreamFormat() const noexcept
 	{
 		return _bitstream_format;
@@ -296,7 +297,7 @@ public:
 	{
 		auto plane_data = GetPlainData(plane);
 
-		if(plane_data != nullptr)
+		if (plane_data != nullptr)
 		{
 			return plane_data->GetDataAs<uint8_t>();
 		}
@@ -328,7 +329,7 @@ public:
 		return 0;
 	}
 
-	// 메모리만 미리 할당함
+	// Preallocate memory only
 	void Reserve(uint32_t capacity, int32_t plane = 0)
 	{
 		auto plane_data = AllocPlainData(plane);
@@ -339,8 +340,8 @@ public:
 		}
 	}
 
-	// 메모리 할당 및 데이터 오브젝트 할당
-	// Append Buffer의 성능문제로 Resize를 선작업한다음 GetBuffer로 포인터를 얻어와 데이터를 설정함.
+	// Allocate Memory and Data Objects
+	// Pre-work Resize due to Append Buffer's performance problem, then get a pointer with GetBuffer and set the data.
 	void Resize(uint32_t capacity, int32_t plane = 0)
 	{
 		auto plane_data = AllocPlainData(plane);
@@ -525,7 +526,6 @@ public:
 				_channel_layout = channel_layout;
 				_channels = 0;
 				break;
-
 		}
 	}
 
@@ -564,8 +564,11 @@ public:
 
 			for (int i = 0; i < 3; ++i)
 			{
-				frame->SetStride(GetStride(i), i);
-				frame->SetPlainData(GetPlainData(i)->Clone(), i);
+				if (GetStride(i) > 0)
+				{
+					frame->SetStride(GetStride(i), i);
+					frame->SetPlainData(GetPlainData(i)->Clone(), i);
+				}
 			}
 		}
 		else if (_media_type == cmn::MediaType::Audio)
@@ -645,5 +648,5 @@ private:
 	cmn::AudioChannel::Layout _channel_layout = cmn::AudioChannel::Layout::LayoutMono;
 	int32_t _sample_rate = 0;
 
-	int32_t _flags = 0;  // Key, non-Key
+	int32_t _flags = 0;	 // Key, non-Key
 };

@@ -47,7 +47,7 @@ bool EncoderPNG::Configure(std::shared_ptr<TranscodeContext> context)
 	AVRational codec_timebase = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
 	_context->codec_type = AVMEDIA_TYPE_VIDEO;
 	_context->time_base = codec_timebase;
-	_context->pix_fmt = AV_PIX_FMT_RGBA;
+	_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
 	_context->framerate = ::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE);
@@ -68,9 +68,10 @@ bool EncoderPNG::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 	catch (const std::system_error &e)
 	{
+		logte("Failed to start encoder thread.");
 		_kill_flag = true;
 
-		logte("Failed to start transcode stream thread.");
+		return false;
 	}
 
 	return true;

@@ -34,6 +34,7 @@ public:
 				video_frame->SetHeight(frame->height);
 				video_frame->SetFormat(frame->format);
 				video_frame->SetPts((frame->pts == AV_NOPTS_VALUE) ? -1LL : frame->pts);
+				video_frame->SetDuration(frame->pkt_duration);
 
 				int nb_plane = 0;
 				for (int i = 0; i < AV_NUM_DATA_POINTERS; i++, nb_plane++)
@@ -44,39 +45,40 @@ public:
 					}
 				}
 
-				// TODO(soulk) : Depending on the pixel format, the size of the data being copied must vary by plane.
-#if 0
-				if (frame->format == AV_PIX_FMT_NV12 || frame->format == AV_PIX_FMT_YUV420P)
-				{
-					video_frame->SetBuffer(frame->data[0], video_frame->GetStride(0) * video_frame->GetHeight(), 0);	  // Y-Plane 4
-					video_frame->SetBuffer(frame->data[1], video_frame->GetStride(1) * video_frame->GetHeight() / 2, 1);  // Cb Plane 2
-					video_frame->SetBuffer(frame->data[2], video_frame->GetStride(2) * video_frame->GetHeight() / 2, 2);  // Cr Plane 2
-				}
-				else if (frame->format == AV_PIX_FMT_YUV444P)
-				{
-					video_frame->SetBuffer(frame->data[0], video_frame->GetStride(0) * video_frame->GetHeight(), 0);  // Y-Plane 4
-					video_frame->SetBuffer(frame->data[1], video_frame->GetStride(1) * video_frame->GetHeight(), 1);  // Cb Plane 4
-					video_frame->SetBuffer(frame->data[2], video_frame->GetStride(2) * video_frame->GetHeight(), 2);  // Cr Plane 4
-				}
-				else
-				{
-					logtw("Unknown pixel format : %d", frame->format);
-				}
-#else
 				if (frame->format == AV_PIX_FMT_YUV444P)
 				{
 					video_frame->SetBuffer(frame->data[0], video_frame->GetStride(0) * video_frame->GetHeight(), 0);  // Y-Plane 4
 					video_frame->SetBuffer(frame->data[1], video_frame->GetStride(1) * video_frame->GetHeight(), 1);  // Cb Plane 4
 					video_frame->SetBuffer(frame->data[2], video_frame->GetStride(2) * video_frame->GetHeight(), 2);  // Cr Plane 4
 				}
+				else if (frame->format == AV_PIX_FMT_NV12 || frame->format == AV_PIX_FMT_NV21)
+				{
+					video_frame->SetBuffer(frame->data[0], video_frame->GetStride(0) * video_frame->GetHeight(), 0);	  // Y-Plane 4
+					video_frame->SetBuffer(frame->data[1], video_frame->GetStride(1) * video_frame->GetHeight() / 2, 1);  // uv Plane 2
+				}
+				else if (frame->format == AV_PIX_FMT_YUV420P)
+				{
+					video_frame->SetBuffer(frame->data[0], video_frame->GetStride(0) * video_frame->GetHeight(), 0);	  // Y-Plane 4
+					video_frame->SetBuffer(frame->data[1], video_frame->GetStride(1) * video_frame->GetHeight() / 2, 1);  // Cb Plane 2
+					video_frame->SetBuffer(frame->data[2], video_frame->GetStride(2) * video_frame->GetHeight() / 2, 2);  // Cr Plane 2
+				}
+				else if (frame->format == AV_PIX_FMT_CUDA)
+				{
+					for (int i = 0; i < AV_NUM_DATA_POINTERS; i++, nb_plane++)
+					{
+						if (frame->linesize[i] > 0)
+						{
+							video_frame->SetBuffer(frame->data[i], video_frame->GetStride(i) * video_frame->GetHeight(), i);  // Y-Plane 4
+						}
+					}
+				}
 				else
 				{
 					video_frame->SetBuffer(frame->data[0], video_frame->GetStride(0) * video_frame->GetHeight(), 0);	  // Y-Plane 4
 					video_frame->SetBuffer(frame->data[1], video_frame->GetStride(1) * video_frame->GetHeight() / 2, 1);  // Cb Plane 2
-					video_frame->SetBuffer(frame->data[2], video_frame->GetStride(2) * video_frame->GetHeight() / 2, 2);  // Cr Plane 2					
+					video_frame->SetBuffer(frame->data[2], video_frame->GetStride(2) * video_frame->GetHeight() / 2, 2);  // Cr Plane 2
 				}
 
-#endif
 				return video_frame;
 			}
 			case cmn::MediaType::Audio: {
@@ -88,8 +90,6 @@ public:
 				audio_frame->SetChannels(frame->channels);
 				audio_frame->SetSampleRate(frame->sample_rate);
 				audio_frame->SetFormat(frame->format);
-
-				// logte("frame.pts(%lld), oframe.pts(%lld),nb.samples(%d)", _frame->pts, output_frame->GetPts(), _frame->nb_samples);
 
 				auto data_length = static_cast<uint32_t>(audio_frame->GetBytesPerSample() * audio_frame->GetNbSamples());
 

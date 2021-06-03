@@ -6,27 +6,29 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "decoder_vp8.h"
+#include "decoder_avc_nv.h"
 
+#include "../../transcoder_gpu.h"
 #include "../../transcoder_private.h"
 #include "../codec_utilities.h"
 #include "base/info/application.h"
 
-bool DecoderVP8::Configure(std::shared_ptr<TranscodeContext> context)
+// static enum AVPixelFormat hw_pix_fmt;
+
+bool DecoderAVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	if (TranscodeDecoder::Configure(context) == false)
 	{
 		return false;
 	}
 
-	AVCodec *_codec = ::avcodec_find_decoder(GetCodecID());
+	AVCodec *_codec = ::avcodec_find_decoder_by_name("h264");
 	if (_codec == nullptr)
 	{
 		logte("Codec not found: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
 		return false;
 	}
 
-	// create codec context
 	_context = ::avcodec_alloc_context3(_codec);
 	if (_context == nullptr)
 	{
@@ -35,6 +37,8 @@ bool DecoderVP8::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 
 	_context->time_base = TimebaseToAVRational(GetTimebase());
+	_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContextNV());
+	::av_opt_set(_context->priv_data, "gpu_copy", "on", 0);
 
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
@@ -49,7 +53,6 @@ bool DecoderVP8::Configure(std::shared_ptr<TranscodeContext> context)
 		logte("Parser not found");
 		return false;
 	}
-
 	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
 
 	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
@@ -58,7 +61,7 @@ bool DecoderVP8::Configure(std::shared_ptr<TranscodeContext> context)
 		_kill_flag = false;
 
 		_thread_work = std::thread(&TranscodeDecoder::ThreadDecode, this);
-		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Dec%s", avcodec_get_name(GetCodecID())).CStr());
+		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Dec%sNV", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
 	{
@@ -70,7 +73,7 @@ bool DecoderVP8::Configure(std::shared_ptr<TranscodeContext> context)
 	return true;
 }
 
-void DecoderVP8::ThreadDecode()
+void DecoderAVCxNV::ThreadDecode()
 {
 	while (!_kill_flag)
 	{
@@ -82,7 +85,6 @@ void DecoderVP8::ThreadDecode()
 		}
 
 		auto buffer = std::move(obj.value());
-
 		auto packet_data = buffer->GetData();
 
 		int64_t remained = packet_data->GetLength();
@@ -95,8 +97,7 @@ void DecoderVP8::ThreadDecode()
 		{
 			::av_init_packet(_pkt);
 
-			int parsed_size = ::av_parser_parse2(_parser, _context, &_pkt->data, &_pkt->size,
-												 data + offset, static_cast<int>(remained), pts, dts, 0);
+			int parsed_size = ::av_parser_parse2(_parser, _context, &_pkt->data, &_pkt->size, data + offset, static_cast<int>(remained), pts, dts, 0);
 
 			if (parsed_size < 0)
 			{
@@ -142,7 +143,7 @@ void DecoderVP8::ThreadDecode()
 				else if (ret < 0)
 				{
 					char err_msg[1024];
-					av_strerror(ret, err_msg, sizeof(err_msg));
+					::av_strerror(ret, err_msg, sizeof(err_msg));
 					logte("An error occurred while sending a packet for decoding: Unhandled error (%d:%s) ", ret, err_msg);
 				}
 			}
@@ -189,7 +190,10 @@ void DecoderVP8::ThreadDecode()
 					{
 						auto codec_info = ShowCodecParameters(_context, _codec_par);
 						logti("[%s/%s(%u)] input stream information: %s",
-							  _stream_info.GetApplicationInfo().GetName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
+							  _stream_info.GetApplicationInfo().GetName().CStr(),
+							  _stream_info.GetName().CStr(),
+							  _stream_info.GetId(),
+							  codec_info.CStr());
 
 						_change_format = true;
 
@@ -202,16 +206,36 @@ void DecoderVP8::ThreadDecode()
 					}
 				}
 
+				AVFrame *sw_frame = ::av_frame_alloc();
+				AVFrame *tmp_frame = NULL;
+
+				if (_frame->format == AV_PIX_FMT_CUDA)
+				{
+					// retrieve data from GPU to CPU
+					if ((ret = ::av_hwframe_transfer_data(sw_frame, _frame, 0)) < 0)
+					{
+						logte("Error transferring the data to system memory\n");
+						continue;
+					}
+					tmp_frame = sw_frame;
+				}
+				else
+				{
+					tmp_frame = _frame;
+				}
+				tmp_frame->pts = _frame->pts;
+
 				// TODO(soulk) : Reduce memory copy overhead. Memory copy can be removed in the Decoder -> Filter step.
-				auto decoded_frame = TranscoderUtilities::ConvertToMediaFrame(cmn::MediaType::Video, _frame);
+				auto decoded_frame = TranscoderUtilities::ConvertToMediaFrame(cmn::MediaType::Video, tmp_frame);
 				if (decoded_frame == nullptr)
 				{
 					continue;
 				}
-
 				decoded_frame->SetDuration(TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context));
+				decoded_frame->SetFormat(tmp_frame->format);
 
 				::av_frame_unref(_frame);
+				::av_frame_free(&sw_frame);
 
 				TranscodeResult result = need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady;
 
@@ -223,7 +247,7 @@ void DecoderVP8::ThreadDecode()
 	}
 }
 
-std::shared_ptr<MediaFrame> DecoderVP8::RecvBuffer(TranscodeResult *result)
+std::shared_ptr<MediaFrame> DecoderAVCxNV::RecvBuffer(TranscodeResult *result)
 {
 	if (!_output_buffer.IsEmpty())
 	{
@@ -237,5 +261,6 @@ std::shared_ptr<MediaFrame> DecoderVP8::RecvBuffer(TranscodeResult *result)
 	}
 
 	*result = TranscodeResult::NoData;
+
 	return nullptr;
 }
