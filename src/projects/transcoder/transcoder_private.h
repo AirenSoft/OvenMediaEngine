@@ -1,3 +1,4 @@
 #pragma once
 
-#define OV_LOG_TAG                      "Transcoder"
+#define OV_LOG_TAG          "Transcoder"
+#define SUPPORT_HWACCELS    false

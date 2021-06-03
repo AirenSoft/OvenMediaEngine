@@ -7,6 +7,7 @@
 //
 //==============================================================================
 #include "transcoder_gpu.h"
+
 #include "transcoder_private.h"
 
 TranscodeGPU::TranscodeGPU()
@@ -18,7 +19,7 @@ bool TranscodeGPU::Initialze()
 {
 	Uninitialize();
 
-	logtd("Trying to initialize a GPU accelerator engine");
+	logtd("Trying to initialize a hardware accelerator");
 
 	int ret = ::av_hwdevice_ctx_create(&_intel_quick_device_context, AV_HWDEVICE_TYPE_QSV, "/dev/dri/render128", NULL, 0);
 	if (ret < 0)
@@ -28,11 +29,24 @@ bool TranscodeGPU::Initialze()
 	}
 	else
 	{
-		logti("Supported Intel QuickSync");
+		logti("Supported Intel QuickSync hardware accelerator");
 		auto constraints = av_hwdevice_get_hwframe_constraints(_intel_quick_device_context, nullptr);
-		// logti("minimum : %dx%d -> maximum : %dx%d", constraints->min_width, constraints->min_height, constraints->max_width, constraints->max_height);
-		logtd("valid hardware pixel format : %d", *constraints->valid_hw_formats);
-		logtd("valid software pixel format : %d", *constraints->valid_sw_formats);
+		logtd("hw pixel format : %d, sw pixel format : %d", *constraints->valid_hw_formats, *constraints->valid_sw_formats);
+
+
+	}
+
+	ret = ::av_hwdevice_ctx_create(&_nvidia_cuda_device_context, AV_HWDEVICE_TYPE_CUDA, "/dev/dri/render128", NULL, 0);
+	if (ret < 0)
+	{
+		// logtw("Does not support NVIDIA CUDA");
+		_nvidia_cuda_device_context = nullptr;
+	}
+	else
+	{
+		logti("Supported NVIDIA CUDA hardware accelerator");
+		auto constraints = av_hwdevice_get_hwframe_constraints(_nvidia_cuda_device_context, nullptr);
+		logtd("hw pixel format : %d, sw pixel format : %d", *constraints->valid_hw_formats, *constraints->valid_sw_formats);
 	}
 
 	return true;
@@ -47,6 +61,12 @@ bool TranscodeGPU::Uninitialize()
 		_intel_quick_device_context = nullptr;
 	}
 
+	if (_nvidia_cuda_device_context != nullptr)
+	{
+		av_buffer_unref(&_nvidia_cuda_device_context);
+		_nvidia_cuda_device_context = nullptr;
+	}
+
 	return true;
 }
 
@@ -55,7 +75,17 @@ AVBufferRef* TranscodeGPU::GetDeviceContext()
 	return _intel_quick_device_context;
 }
 
+AVBufferRef* TranscodeGPU::GetDeviceContextNV()
+{
+	return _nvidia_cuda_device_context;
+}
+
 bool TranscodeGPU::IsSupportedQSV()
 {
 	return (_intel_quick_device_context != nullptr) ? true : false;
+}
+
+bool TranscodeGPU::IsSupportedNV()
+{
+	return (_nvidia_cuda_device_context != nullptr) ? true : false;
 }

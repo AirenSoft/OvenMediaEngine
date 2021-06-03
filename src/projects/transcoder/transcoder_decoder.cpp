@@ -10,8 +10,10 @@
 
 #include "codec/decoder/decoder_aac.h"
 #include "codec/decoder/decoder_avc.h"
+#include "codec/decoder/decoder_avc_nv.h"
 #include "codec/decoder/decoder_avc_qsv.h"
 #include "codec/decoder/decoder_hevc.h"
+#include "codec/decoder/decoder_hevc_nv.h"
 #include "codec/decoder/decoder_hevc_qsv.h"
 #include "codec/decoder/decoder_opus.h"
 #include "codec/decoder/decoder_vp8.h"
@@ -19,7 +21,6 @@
 #include "transcoder_private.h"
 
 #define MAX_QUEUE_SIZE 120
-#define HWACCEL_ENABLE
 
 TranscodeDecoder::TranscodeDecoder(info::Stream stream_info)
 	: _stream_info(stream_info)
@@ -71,10 +72,19 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::St
 	switch (context->GetCodecId())
 	{
 		case cmn::MediaCodecId::H264:
-#ifdef HWACCEL_ENABLE
+#if SUPPORT_HWACCELS
 			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
 			{
 				decoder = std::make_shared<DecoderAVCxQSV>(info);
+				if (decoder != nullptr && decoder->Configure(context) == true)
+				{
+					return decoder;
+				}
+			}
+
+			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
+			{
+				decoder = std::make_shared<DecoderAVCxNV>(info);
 				if (decoder != nullptr && decoder->Configure(context) == true)
 				{
 					return decoder;
@@ -87,11 +97,21 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::St
 				return decoder;
 			}
 			break;
+
 		case cmn::MediaCodecId::H265:
-#ifdef HWACCEL_ENABLE
+#if SUPPORT_HWACCELS
 			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
 			{
 				decoder = std::make_shared<DecoderHEVCxQSV>(info);
+				if (decoder != nullptr && decoder->Configure(context) == true)
+				{
+					return decoder;
+				}
+			}
+
+			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
+			{
+				decoder = std::make_shared<DecoderHEVCxNV>(info);
 				if (decoder != nullptr && decoder->Configure(context) == true)
 				{
 					return decoder;
@@ -160,6 +180,7 @@ void TranscodeDecoder::Stop()
 	if (_thread_work.joinable())
 	{
 		_thread_work.join();
+
 		logtd(ov::String::FormatString("decoder %s thread has ended.", avcodec_get_name(GetCodecID())).CStr());
 	}
 }

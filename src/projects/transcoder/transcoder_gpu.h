@@ -21,7 +21,11 @@ public:
 	bool Uninitialize();
 
 	AVBufferRef *GetDeviceContext();
+	AVBufferRef *GetDeviceContextNV();
 	bool IsSupportedQSV();
+	bool IsSupportedNV();
+
 protected:
 	AVBufferRef *_intel_quick_device_context;
+	AVBufferRef *_nvidia_cuda_device_context;
 };

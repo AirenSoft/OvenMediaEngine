@@ -69,9 +69,10 @@ bool EncoderJPEG::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 	catch (const std::system_error &e)
 	{
+		logte("Failed to start encoder thread.");
 		_kill_flag = true;
 
-		logte("Failed to start transcode stream thread.");
+		return false;
 	}
 
 	return true;

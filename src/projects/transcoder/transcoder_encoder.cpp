@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  OvenMediaEngine
+//  Transcoder
 //
 //  Created by Hyunjun Jang
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
@@ -12,8 +12,10 @@
 
 #include "codec/encoder/encoder_aac.h"
 #include "codec/encoder/encoder_avc.h"
+#include "codec/encoder/encoder_avc_nv.h"
 #include "codec/encoder/encoder_avc_qsv.h"
 #include "codec/encoder/encoder_hevc.h"
+#include "codec/encoder/encoder_hevc_nv.h"
 #include "codec/encoder/encoder_hevc_qsv.h"
 #include "codec/encoder/encoder_jpeg.h"
 #include "codec/encoder/encoder_opus.h"
@@ -23,26 +25,24 @@
 #include "transcoder_private.h"
 
 #define MAX_QUEUE_SIZE 120
-#define HWACCEL_ENABLE
 
 TranscodeEncoder::TranscodeEncoder()
 {
 	_packet = ::av_packet_alloc();
 	_frame = ::av_frame_alloc();
-
 	_codec_par = ::avcodec_parameters_alloc();
 }
 
 TranscodeEncoder::~TranscodeEncoder()
 {
 	if (_context != nullptr)
+	{
 		::avcodec_flush_buffers(_context);
+	}
 
 	OV_SAFE_FUNC(_context, nullptr, ::avcodec_free_context, &);
-
 	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
 	OV_SAFE_FUNC(_packet, nullptr, ::av_packet_free, &);
-
 	OV_SAFE_FUNC(_codec_par, nullptr, ::avcodec_parameters_free, &);
 
 	_input_buffer.Clear();
@@ -59,10 +59,19 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(std::shared_pt
 	switch (context->GetCodecId())
 	{
 		case cmn::MediaCodecId::H264:
-#ifdef HWACCEL_ENABLE
+#if SUPPORT_HWACCELS
 			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
 			{
 				encoder = std::make_shared<EncoderAVCxQSV>();
+				if (encoder != nullptr && encoder->Configure(context) == true)
+				{
+					return encoder;
+				}
+			}
+
+			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
+			{
+				encoder = std::make_shared<EncoderAVCxNV>();
 				if (encoder != nullptr && encoder->Configure(context) == true)
 				{
 					return encoder;
@@ -77,10 +86,19 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(std::shared_pt
 
 			break;
 		case cmn::MediaCodecId::H265:
-#ifdef HWACCEL_ENABLE
+#if SUPPORT_HWACCELS
 			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
 			{
 				encoder = std::make_shared<EncoderHEVCxQSV>();
+				if (encoder != nullptr && encoder->Configure(context) == true)
+				{
+					return encoder;
+				}
+			}
+
+			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
+			{
+				encoder = std::make_shared<EncoderHEVCxNV>();
 				if (encoder != nullptr && encoder->Configure(context) == true)
 				{
 					return encoder;
@@ -175,7 +193,9 @@ void TranscodeEncoder::SendOutputBuffer(std::shared_ptr<MediaPacket> packet)
 
 	// Invoke callback function when encoding/decoding is completed.
 	if (OnCompleteHandler)
+	{
 		OnCompleteHandler(_track_id);
+	}
 }
 
 std::shared_ptr<TranscodeContext> &TranscodeEncoder::GetContext()

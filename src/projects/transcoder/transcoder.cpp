@@ -36,7 +36,9 @@ Transcoder::Transcoder(std::shared_ptr<MediaRouteInterface> router)
 
 bool Transcoder::Start()
 {
+#if SUPPORT_HWACCELS	
 	TranscodeGPU::GetInstance()->Initialze();
+#endif
 
 	logtd("Transcoder has been started.");
 

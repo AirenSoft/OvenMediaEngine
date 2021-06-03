@@ -62,9 +62,9 @@ bool DecoderAAC::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 	catch (const std::system_error &e)
 	{
+		logte("Failed to start decoder thread");
 		_kill_flag = true;
-
-		logte("Failed to start transcode stream thread.");
+		return false;
 	}
 
 	return true;
@@ -236,7 +236,7 @@ void DecoderAAC::ThreadDecode()
 			// If the decoded audio frame does not have a PTS, Increase frame duration time in PTS of previous frame
 			output_frame->SetPts(static_cast<int64_t>((_frame->pts == AV_NOPTS_VALUE) ? _last_pkt_pts + output_frame->GetDuration() : _frame->pts));
 			_last_pkt_pts = output_frame->GetPts();
-			
+
 			::av_frame_unref(_frame);
 
 			// Return 1, if notification is required

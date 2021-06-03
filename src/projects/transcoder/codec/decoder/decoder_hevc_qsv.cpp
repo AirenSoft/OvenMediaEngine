@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  Transcode
+//  Transcoder
 //
 //  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
@@ -19,7 +19,7 @@ bool DecoderHEVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	AVCodec *_codec = ::avcodec_find_decoder_by_name("h264_qsv");
+	AVCodec *_codec = ::avcodec_find_decoder_by_name("h265_qsv");
 	if (_codec == nullptr)
 	{
 		logte("Codec not found: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
@@ -62,9 +62,9 @@ bool DecoderHEVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 	catch (const std::system_error &e)
 	{
+		logte("Failed to start decoder thread");
 		_kill_flag = true;
-
-		logte("Failed to start transcode stream thread.");
+		return false;
 	}
 
 	return true;

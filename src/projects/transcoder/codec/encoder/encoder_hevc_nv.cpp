@@ -1,18 +1,18 @@
 //==============================================================================
 //
-//  Transcode
+//  Transcoder
 //
 //  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "encoder_avc.h"
+#include "encoder_hevc_nv.h"
 
 #include <unistd.h>
 
 #include "../../transcoder_private.h"
 
-EncoderAVC::~EncoderAVC()
+EncoderHEVCxNV::~EncoderHEVCxNV()
 {
 	Stop();
 }
@@ -21,7 +21,7 @@ EncoderAVC::~EncoderAVC()
 //
 // - B-frame must be disabled. because, WEBRTC does not support B-Frame.
 //
-bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
+bool EncoderHEVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	if (TranscodeEncoder::Configure(context) == false)
 	{
@@ -30,8 +30,7 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 
 	auto codec_id = GetCodecID();
 
-	AVCodec *codec = ::avcodec_find_encoder(codec_id);
-
+	AVCodec *codec = ::avcodec_find_encoder_by_name("h265_nvenc");
 	if (codec == nullptr)
 	{
 		logte("Could not find encoder: %d (%s)", codec_id, ::avcodec_get_name(codec_id));
@@ -39,7 +38,6 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 
 	_context = ::avcodec_alloc_context3(codec);
-
 	if (_context == nullptr)
 	{
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
@@ -48,44 +46,20 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 
 	_context->framerate = ::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE);
 	_context->bit_rate = _output_context->GetBitrate();
-	_context->rc_min_rate = _context->bit_rate;
-	_context->rc_max_rate = _context->bit_rate;
+	_context->rc_min_rate = _context->rc_max_rate = _context->bit_rate;
 	_context->rc_buffer_size = static_cast<int>(_context->bit_rate / 2);
 	_context->sample_aspect_ratio = (AVRational){1, 1};
-
-	// From avcodec.h:
-	// For some codecs, the time base is closer to the field rate than the frame rate.
-	// Most notably, H.264 and MPEG-2 specify time_base as half of frame duration
-	// if no telecine is used ...
-	// Set to time_base ticks per frame. Default 1, e.g., H.264/MPEG-2 set it to 2.
 	_context->ticks_per_frame = 2;
-	// From avcodec.h:
-	// For fixed-fps content, timebase should be 1/framerate and timestamp increments should be identically 1.
-	// This often, but not always is the inverse of the frame rate or field rate for video. 1/time_base is not the average frame rate if the frame rate is not constant.
-
 	_context->time_base = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
 	_context->gop_size = _context->framerate.num / _context->framerate.den;
 	_context->max_b_frames = 0;
 	_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
-	_context->thread_count = 2;
-
-	// For browser compatibility
-	// _context->profile = FF_PROFILE_H264_MAIN;
-	_context->profile = FF_PROFILE_H264_BASELINE;
-	::av_opt_set(_context->priv_data, "preset", "ultrafast", 0);
-	::av_opt_set(_context->priv_data, "tune", "zerolatency", 0);
-
-	// Remove the sliced-thread option from encoding delay. Browser compatibility in MAC environment
-	::av_opt_set(_context->priv_data, "x264opts", "bframes=0:sliced-threads=0:b-adapt=1:no-scenecut:keyint=30:min-keyint=30", 0);
-
-	// CBR option /bitrate in kbps / *problem is not playing in MAC Chrome. So I only specify the maxrate value.
-	// x264opts.AppendFormat(":nal-hrd=cbr:force-cfr=1:bitrate=%d:vbv-maxrate=%d:vbv-bufsize=%d:", _context->bit_rate/1000,  _context->bit_rate/1000,  _context->bit_rate/1000);
 
 	if (::avcodec_open2(_context, codec, nullptr) < 0)
 	{
-		logte("Could not open codec: %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		logte("Could not open codec: %s (%d)", codec->name, codec->id);
 		return false;
 	}
 
@@ -94,8 +68,8 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&EncoderAVC::ThreadEncode, this);
-		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
+		_thread_work = std::thread(&EncoderHEVCxNV::ThreadEncode, this);
+		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Enc%sNV", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
 	{
@@ -108,7 +82,7 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 	return true;
 }
 
-void EncoderAVC::Stop()
+void EncoderHEVCxNV::Stop()
 {
 	_kill_flag = true;
 
@@ -122,7 +96,7 @@ void EncoderAVC::Stop()
 	}
 }
 
-void EncoderAVC::ThreadEncode()
+void EncoderHEVCxNV::ThreadEncode()
 {
 	while (!_kill_flag)
 	{
@@ -151,12 +125,14 @@ void EncoderAVC::ThreadEncode()
 		if (::av_frame_get_buffer(_frame, 32) < 0)
 		{
 			logte("Could not allocate the video frame data");
+			// *result = TranscodeResult::DataError;
 			break;
 		}
 
 		if (::av_frame_make_writable(_frame) < 0)
 		{
 			logte("Could not make sure the frame data is writable");
+			// *result = TranscodeResult::DataError;
 			break;
 		}
 
@@ -165,11 +141,15 @@ void EncoderAVC::ThreadEncode()
 		::memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
 
 		int ret = ::avcodec_send_frame(_context, _frame);
+
 		::av_frame_unref(_frame);
 
 		if (ret < 0)
 		{
 			logte("Error sending a frame for encoding : %d", ret);
+
+			// Failure to send frame to encoder. Wait and put it back in. But it doesn't happen as often as possible.
+			_input_buffer.Enqueue(std::move(frame));
 		}
 
 		///////////////////////////////////////////////////
@@ -218,7 +198,7 @@ void EncoderAVC::ThreadEncode()
 	}
 }
 
-std::shared_ptr<MediaPacket> EncoderAVC::RecvBuffer(TranscodeResult *result)
+std::shared_ptr<MediaPacket> EncoderHEVCxNV::RecvBuffer(TranscodeResult *result)
 {
 	if (!_output_buffer.IsEmpty())
 	{
@@ -235,10 +215,3 @@ std::shared_ptr<MediaPacket> EncoderAVC::RecvBuffer(TranscodeResult *result)
 
 	return nullptr;
 }
-
-// std::shared_ptr<MediaPacket> EncoderAVC::MakePacket() const
-// {
-// 	auto packet = s
-
-// 	return packet;
-// }
