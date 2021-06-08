@@ -327,27 +327,25 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		parsed_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 	}
 
-	std::shared_ptr<const SignedPolicy> signed_policy;
-	std::shared_ptr<const SignedToken> signed_token;
-	auto signed_policy_result = Publisher::HandleSignedPolicy(parsed_url, remote_address, signed_policy);
-	if(signed_policy_result == CheckSignatureResult::Error)
+	auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(parsed_url, remote_address);
+	if(signed_policy_result == AccessController::VerificationResult::Error)
 	{
 		return nullptr;
 	}
-	else if(signed_policy_result == CheckSignatureResult::Fail)
+	else if(signed_policy_result == AccessController::VerificationResult::Fail)
 	{
 		logtw("%s", signed_policy->GetErrMessage().CStr());
 		return nullptr;
 	}
-	else if(signed_policy_result == CheckSignatureResult::Off)
+	else if(signed_policy_result == AccessController::VerificationResult::Off)
 	{
 		// SingedToken
-		auto signed_token_result = Publisher::HandleSignedToken(parsed_url, remote_address, signed_token);
-		if(signed_token_result == CheckSignatureResult::Error)
+		auto [signed_token_result, signed_token] = Publisher::VerifyBySignedToken(parsed_url, remote_address);
+		if(signed_token_result == AccessController::VerificationResult::Error)
 		{
 			return nullptr;
 		}
-		else if(signed_token_result == CheckSignatureResult::Fail)
+		else if(signed_token_result == AccessController::VerificationResult::Fail)
 		{
 			logtw("%s", signed_token->GetErrMessage().CStr());
 			return nullptr;
@@ -450,36 +448,35 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	}
 
 	uint64_t session_life_time = 0;
-	std::shared_ptr<const SignedPolicy> signed_policy;
 	std::shared_ptr<const SignedToken> signed_token;
-	auto signed_policy_result = Publisher::HandleSignedPolicy(parsed_url, remote_address, signed_policy);
-	if(signed_policy_result == CheckSignatureResult::Error)
+	auto [signed_policy_result, signed_policy] =  Publisher::VerifyBySignedPolicy(parsed_url, remote_address);
+	if(signed_policy_result == AccessController::VerificationResult::Error)
 	{
 		return false;
 	}
-	else if(signed_policy_result == CheckSignatureResult::Fail)
+	else if(signed_policy_result == AccessController::VerificationResult::Fail)
 	{
 		logtw("%s", signed_policy->GetErrMessage().CStr());
 		return false;
 	}
-	else if(signed_policy_result == CheckSignatureResult::Pass)
+	else if(signed_policy_result == AccessController::VerificationResult::Pass)
 	{
 		session_life_time = signed_policy->GetStreamExpireEpochMSec();
 	}
-	else if(signed_policy_result == CheckSignatureResult::Off)
+	else if(signed_policy_result == AccessController::VerificationResult::Off)
 	{
 		// SingedToken
-		auto signed_token_result = Publisher::HandleSignedToken(parsed_url, remote_address, signed_token);
-		if(signed_token_result == CheckSignatureResult::Error)
+		auto [signed_token_result, signed_token] = Publisher::VerifyBySignedToken(parsed_url, remote_address);
+		if(signed_token_result == AccessController::VerificationResult::Error)
 		{
 			return false;
 		}
-		else if(signed_token_result == CheckSignatureResult::Fail)
+		else if(signed_token_result == AccessController::VerificationResult::Fail)
 		{
 			logtw("%s", signed_token->GetErrMessage().CStr());
 			return false;
 		}
-		else if(signed_token_result == CheckSignatureResult::Pass)
+		else if(signed_token_result == AccessController::VerificationResult::Pass)
 		{
 			session_life_time = signed_token->GetStreamExpiredTime();
 		}

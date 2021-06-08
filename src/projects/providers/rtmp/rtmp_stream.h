@@ -11,6 +11,7 @@
 
 #include "base/common_types.h"
 #include "base/provider/push_provider/stream.h"
+#include "modules/access_control/access_controller.h"
 
 #include "chunk/amf_document.h"
 #include "chunk/rtmp_chunk_parser.h"
@@ -112,7 +113,9 @@ namespace pvd
 		bool PublishStream();
 		bool SetTrackInfo(const std::shared_ptr<RtmpMediaInfo> &media_info);
 
-		bool CheckSignedPolicy();
+		bool SetFullUrl(ov::String url);
+
+		bool CheckAccessControl();
 		bool CheckStreamExpired();
 
 		// RTMP related
@@ -137,6 +140,7 @@ namespace pvd
 		// parsed from packet
 		std::shared_ptr<ov::Url> _url = nullptr;
 		std::shared_ptr<const SignedPolicy> _signed_policy = nullptr;
+		std::shared_ptr<const AdmissionWebhooks> _admission_webhooks = nullptr;
 
 		ov::String _full_url; // with stream_name
 		ov::String _tc_url;
@@ -146,6 +150,7 @@ namespace pvd
 		ov::String _stream_name;
 		ov::String _device_string;
 
+		std::shared_ptr<ov::Url> _publish_url = nullptr; // AccessControl can redirect url set in RTMP to another url.
 
 		// Cache (GetApplicationInfo()->GetId())
 		info::application_id_t _app_id = 0;

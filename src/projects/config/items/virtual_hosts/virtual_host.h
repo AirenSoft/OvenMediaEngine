@@ -11,8 +11,9 @@
 #include "../common/host/host.h"
 #include "applications/applications.h"
 #include "origins/origins.h"
-#include "signature/signed_policy.h"
-#include "signature/signed_token.h"
+#include "access_control/signed_policy.h"
+#include "access_control/signed_token.h"
+#include "access_control/admission_webhooks.h"
 
 namespace cfg
 {
@@ -26,6 +27,7 @@ namespace cfg
 			cmn::Host _host;
 			sig::SignedPolicy _signed_policy;
 			sig::SignedToken _signed_token;
+			sig::AdmissionWebhooks _admission_webhooks;
 			orgn::Origins _origins;
 			app::Applications _applications;
 
@@ -36,6 +38,7 @@ namespace cfg
 
 			CFG_DECLARE_REF_GETTER_OF(GetSignedPolicy, _signed_policy)
 			CFG_DECLARE_REF_GETTER_OF(GetSignedToken, _signed_token)
+			CFG_DECLARE_REF_GETTER_OF(GetAdmissionWebhooks, _admission_webhooks)
 
 			CFG_DECLARE_REF_GETTER_OF(GetOrigins, _origins)
 			CFG_DECLARE_REF_GETTER_OF(GetOriginList, _origins.GetOriginList())
@@ -50,6 +53,7 @@ namespace cfg
 
 				Register<Optional>("SignedPolicy", &_signed_policy);
 				Register<Optional>("SignedToken", &_signed_token);
+				Register<Optional>("AdmissionWebhooks", &_admission_webhooks);
 
 				Register<Optional>("Origins", &_origins);
 				Register<Optional>("Applications", &_applications);

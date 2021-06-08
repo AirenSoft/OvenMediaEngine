@@ -133,24 +133,23 @@ namespace pvd
 
 		// SingedPolicy
 		uint64_t life_time = 0;
-		std::shared_ptr<const SignedPolicy> signed_policy;
 		auto remote_address = remote->GetRemoteAddress();
-		auto signed_policy_result = HandleSignedPolicy(parsed_url, remote_address, signed_policy);
-		if(signed_policy_result == CheckSignatureResult::Off)
+		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(parsed_url, remote_address);
+		if(signed_policy_result == AccessController::VerificationResult::Off)
 		{
 			// Success
 		}
-		else if(signed_policy_result == CheckSignatureResult::Pass)
+		else if(signed_policy_result == AccessController::VerificationResult::Pass)
 		{
 			life_time = signed_policy->GetStreamExpireEpochMSec();
 		}
-		else if(signed_policy_result == CheckSignatureResult::Error)
+		else if(signed_policy_result == AccessController::VerificationResult::Error)
 		{
 			// will not reach here
 			remote->Close();
 			return;
 		}
-		else if(signed_policy_result == CheckSignatureResult::Fail)
+		else if(signed_policy_result == AccessController::VerificationResult::Fail)
 		{
 			logtw("%s", signed_policy->GetErrMessage().CStr());
 			remote->Close();

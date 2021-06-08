@@ -10,9 +10,6 @@
 #pragma once
 
 #include <base/ovlibrary/stop_watch.h>
-#include <modules/auth/signature/signature_common_type.h>
-#include <modules/auth/signature/signed_policy.h>
-
 #include "base/provider/stream.h"
 
 namespace pvd
@@ -59,7 +56,11 @@ namespace pvd
 		// provider->AssignStream (app)
 		// app-> NotifyStreamReady(this)
 		bool PublishChannel(const info::VHostAppName &vhost_app_name);
-		CheckSignatureResult HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy);
+
+		std::shared_ptr<PushProvider> GetProvider()
+		{
+			return _provider;
+		}
 
 	private:
 		uint32_t 		_channel_id = 0;

@@ -5,8 +5,7 @@
 namespace pub
 {
 	Publisher::Publisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
-		: _server_config(server_config),
-		  _router(router)
+		: _server_config(server_config), _router(router)
 	{
 	}
 
@@ -17,7 +16,11 @@ namespace pub
 	bool Publisher::Start()
 	{
 		logti("%s has been started.", GetPublisherName());
+
 		SetModuleAvailable(true);
+
+		_access_controller = std::make_shared<AccessController>(GetPublisherType(), GetServerConfig());
+
 		return true;
 	}
 
@@ -257,119 +260,24 @@ namespace pub
 		return nullptr;
 	}
 
-	CheckSignatureResult Publisher::HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy)
+	std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPolicy>> Publisher::VerifyBySignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address)
 	{
-		auto orchestrator = ocst::Orchestrator::GetInstance();
-		auto &server_config = GetServerConfig();
-		auto vhost_name = orchestrator->GetVhostNameFromDomain(request_url->Host());
-
-		if (vhost_name.IsEmpty())
+		if(_access_controller == nullptr)
 		{
-			logte("Could not resolve the domain: %s", request_url->Host().CStr());
-			return CheckSignatureResult::Error;
+			return {AccessController::VerificationResult::Error, nullptr};
 		}
 
-		// TODO(Dimiden) : Modify below codes
-		// GetVirtualHostByName is deprecated so blow codes are insane, later it will be modified.
-		auto vhost_list = server_config.GetVirtualHostList();
-		for (const auto &vhost_item : vhost_list)
-		{
-			if (vhost_item.GetName() != vhost_name)
-			{
-				continue;
-			}
-
-			// Handle SignedPolicy if needed
-			auto &signed_policy_config = vhost_item.GetSignedPolicy();
-			if (!signed_policy_config.IsParsed())
-			{
-				// The vhost doesn't use the SignedPolicy  feature.
-				return CheckSignatureResult::Off;
-			}
-
-			if(signed_policy_config.IsEnabledPublisher(GetPublisherType()) == false)
-			{
-				// This publisher turned off the SignedPolicy function
-				return CheckSignatureResult::Off;
-			}
-
-			auto policy_query_key_name = signed_policy_config.GetPolicyQueryKeyName();
-			auto signature_query_key_name = signed_policy_config.GetSignatureQueryKeyName();
-			auto secret_key = signed_policy_config.GetSecretKey();
-
-			signed_policy = SignedPolicy::Load(client_address->GetIpAddress(), request_url->ToUrlString(), policy_query_key_name, signature_query_key_name, secret_key);
-			if(signed_policy == nullptr)
-			{
-				// Probably this doesn't happen
-				logte("Could not load SingedToken");
-				return CheckSignatureResult::Error;
-			}
-
-			if(signed_policy->GetErrCode() != SignedPolicy::ErrCode::PASSED)
-			{
-				return CheckSignatureResult::Fail;
-			}
-
-			return CheckSignatureResult::Pass;
-		}
-
-		// Probably this doesn't happen
-		logte("Could not find VirtualHost (%s)", vhost_name);
-		return CheckSignatureResult::Error;
+		return _access_controller->VerifyBySignedPolicy(request_url, client_address);
 	}
 
-	CheckSignatureResult Publisher::HandleSignedToken(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedToken> &signed_token)
+	std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedToken>>  Publisher::VerifyBySignedToken(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address)
 	{
-		auto orchestrator = ocst::Orchestrator::GetInstance();
-		auto &server_config = GetServerConfig();
-		auto vhost_name = orchestrator->GetVhostNameFromDomain(request_url->Host());
-
-		if (vhost_name.IsEmpty())
+		if(_access_controller == nullptr)
 		{
-			logte("Could not resolve the domain: %s", request_url->Host().CStr());
-			return CheckSignatureResult::Error;
+			return {AccessController::VerificationResult::Error, nullptr};
 		}
 
-		// TODO(Dimiden) : Modify below codes
-		// GetVirtualHostByName is deprecated so blow codes are insane, later it will be modified.
-		auto vhost_list = server_config.GetVirtualHostList();
-		for (const auto &vhost_item : vhost_list)
-		{
-			if (vhost_item.GetName() != vhost_name)
-			{
-				continue;
-			}
-
-			// Handle SignedToken if needed
-			auto &signed_token_config = vhost_item.GetSignedToken();
-			if (!signed_token_config.IsParsed() || signed_token_config.GetCryptoKey().IsEmpty())
-			{
-				// The vhost doesn't use the signed url feature.
-				return CheckSignatureResult::Off;
-			}
-
-			auto crypto_key = signed_token_config.GetCryptoKey();
-			auto query_string_key = signed_token_config.GetQueryStringKey();
-
-			signed_token = SignedToken::Load(client_address->ToString(), request_url->ToUrlString(), query_string_key, crypto_key);
-			if (signed_token == nullptr)
-			{
-				// Probably this doesn't happen
-				logte("Could not load SingedToken");
-				return CheckSignatureResult::Error;
-			}
-
-			if(signed_token->GetErrCode() != SignedToken::ErrCode::PASSED)
-			{
-				return CheckSignatureResult::Fail;
-			}
-
-			return CheckSignatureResult::Pass;
-		}
-
-		// Probably this doesn't happen
-		logte("Could not find VirtualHost (%s)", vhost_name);
-		return CheckSignatureResult::Error;
+		return _access_controller->VerifyBySignedToken(request_url, client_address);
 	}
 
 }  // namespace pub
