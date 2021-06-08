@@ -679,7 +679,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		return false;
 	}
 
-	logtc("[From %s To %s] Received STUN binding request: %s:%s", address.ToString().CStr(), remote->GetLocalAddress()->ToString().CStr(), local_ufrag.CStr(), remote_ufrag.CStr());
+	logtd("[From %s To %s] Received STUN binding request: %s:%s", address.ToString().CStr(), remote->GetLocalAddress()->ToString().CStr(), local_ufrag.CStr(), remote_ufrag.CStr());
 
 	
 	std::shared_ptr<IcePortInfo> ice_port_info;
@@ -825,7 +825,7 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 	unknown_attribute->SetData(&(unknown_data3[0]), 4);
 	message.AddAttribute(std::move(attribute));
 
-	logtc("Send Stun Binding Request : %s", address.ToString().CStr());
+	logtd("Send Stun Binding Request : %s", address.ToString().CStr());
 
 	// Store binding request transction
 	{
@@ -864,7 +864,7 @@ bool IcePort::ProcessStunBindingResponse(const std::shared_ptr<ov::Socket> &remo
 		// Erase ended transction item
 		_binding_request_table.erase(item);
 
-		logtc("Receive stun binding response from %s, table size(%d)", address.ToString().CStr(), _binding_request_table.size());
+		logtd("Receive stun binding response from %s, table size(%d)", address.ToString().CStr(), _binding_request_table.size());
 	}
 
 	if (message.CheckIntegrity(ice_port_info->offer_sdp->GetIcePwd()) == false)
@@ -938,7 +938,7 @@ bool IcePort::SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const o
 		source_data = message.Serialize(integity_key);
 	}
 	
-	logtc("Send message:\n%s", message.ToString().CStr());
+	logtd("Send message:\n%s", message.ToString().CStr());
 
 	if(gate_info.input_method == IcePort::GateInfo::GateType::DIRECT)
 	{
