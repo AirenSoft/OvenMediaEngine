@@ -763,7 +763,8 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const std::sha
 
 			if (candidate.IsEmpty())
 			{
-				logtw("[Host -> OME] The host peer sents an empty candidate");
+				// Even if the player does not send candidates, this does not affect the OME, so it changes the log level.
+				logtd("[Host -> OME] The host peer sents an empty candidate");
 				continue;
 			}
 
