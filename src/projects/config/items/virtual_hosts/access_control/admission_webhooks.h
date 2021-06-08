@@ -42,13 +42,13 @@ namespace cfg
 				{
 					Register("ControlServerUrl", &_control_server_url);
 					Register("SecretKey", &_secret_key);
-					Register<Optional>("Timeout", &_timeout_msec);
+					Register("Timeout", &_timeout_msec);
 					Register("Enables", &_enables);
 				}
 
 				ov::String _control_server_url;
 				ov::String _secret_key;
-				uint32_t _timeout_msec = 3000;
+				int _timeout_msec = 3000;
 
 				Enables _enables;
 			};
