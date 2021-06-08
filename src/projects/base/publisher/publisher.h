@@ -20,9 +20,8 @@
 
 #include <orchestrator/data_structures/data_structure.h>
 
-#include <modules/auth/signature/signature_common_type.h>
-#include <modules/auth/signature/signed_policy.h>
-#include <modules/auth/signature/signed_token.h>
+#include <modules/access_control/access_controller.h>
+#include <modules/access_control/signed_token/signed_token.h>
 
 #include <chrono>
 
@@ -139,14 +138,17 @@ namespace pub
 		virtual bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) = 0;
 
 		// SignedPolicy is an official feature
-		CheckSignatureResult HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy);
+		std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPolicy>> VerifyBySignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address);
 		// SingedToken is used only special purposes
-		CheckSignatureResult HandleSignedToken(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedToken> &signed_token);
+		std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedToken>> VerifyBySignedToken(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address);
 
 		std::map<info::application_id_t, std::shared_ptr<Application>> 	_applications;
 		std::shared_mutex 		_application_map_mutex;
 
 		const cfg::Server _server_config;
 		std::shared_ptr<MediaRouteInterface> _router;
+
+	private:
+		std::shared_ptr<AccessController> _access_controller = nullptr;
 	};
 }  // namespace pub

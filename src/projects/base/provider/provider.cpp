@@ -38,6 +38,8 @@ namespace pvd
 
 		SetModuleAvailable(true);
 
+		_access_controller = std::make_shared<AccessController>(GetProviderType(), GetServerConfig());
+
 		return true;
 	}
 
@@ -232,64 +234,23 @@ namespace pvd
 		return nullptr;
 	}
 
-	CheckSignatureResult Provider::HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy)
+	std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPolicy>> Provider::VerifyBySignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address)
 	{
-		auto orchestrator = ocst::Orchestrator::GetInstance();
-		auto &server_config = GetServerConfig();
-		auto vhost_name = orchestrator->GetVhostNameFromDomain(request_url->Host());
-
-		if (vhost_name.IsEmpty())
+		if(_access_controller == nullptr)
 		{
-			logte("Could not resolve the domain: %s", request_url->Host().CStr());
-			return CheckSignatureResult::Error;
+			return {AccessController::VerificationResult::Error, nullptr};
 		}
 
-		// TODO(Dimiden) : Modify below codes
-		// GetVirtualHostByName is deprecated so blow codes are insane, later it will be modified.
-		auto vhost_list = server_config.GetVirtualHostList();
-		for (const auto &vhost_item : vhost_list)
+		return _access_controller->VerifyBySignedPolicy(request_url, client_address);
+	}
+
+	std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> Provider::VerifyByAdmissionWebhooks(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address)
+	{
+		if(_access_controller == nullptr)
 		{
-			if (vhost_item.GetName() != vhost_name)
-			{
-				continue;
-			}
-
-			// Handle SignedPolicy if needed
-			auto &signed_policy_config = vhost_item.GetSignedPolicy();
-			if (!signed_policy_config.IsParsed())
-			{
-				// The vhost doesn't use the SignedPolicy  feature.
-				return CheckSignatureResult::Off;
-			}
-
-			if(signed_policy_config.IsEnabledProvider(GetProviderType()) == false)
-			{
-				// This publisher turned off the SignedPolicy function
-				return CheckSignatureResult::Off;
-			}
-
-			auto policy_query_key_name = signed_policy_config.GetPolicyQueryKeyName();
-			auto signature_query_key_name = signed_policy_config.GetSignatureQueryKeyName();
-			auto secret_key = signed_policy_config.GetSecretKey();
-
-			signed_policy = SignedPolicy::Load(client_address->GetIpAddress(), request_url->ToUrlString(), policy_query_key_name, signature_query_key_name, secret_key);
-			if(signed_policy == nullptr)
-			{
-				// Probably this doesn't happen
-				logte("Could not load SingedPolicy");
-				return CheckSignatureResult::Error;
-			}
-
-			if(signed_policy->GetErrCode() != SignedPolicy::ErrCode::PASSED)
-			{
-				return CheckSignatureResult::Fail;
-			}
-
-			return CheckSignatureResult::Pass;
+			return {AccessController::VerificationResult::Error, nullptr};
 		}
 
-		// Probably this doesn't happen
-		logte("Could not find VirtualHost (%s)", vhost_name);
-		return CheckSignatureResult::Error;
+		return _access_controller->VerifyByWebhooks(request_url, client_address);
 	}
 }

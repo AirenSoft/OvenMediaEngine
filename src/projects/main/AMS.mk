@@ -33,7 +33,7 @@ LOCAL_STATIC_LIBRARIES := \
 	orchestrator \
 	publisher \
 	application \
-	signature \
+	access_controller \
 	physical_port \
 	socket \
 	ovcrypto \

@@ -12,8 +12,7 @@
 #include <base/mediarouter/media_route_interface.h>
 #include <orchestrator/data_structures/data_structure.h>
 
-#include <modules/auth/signature/signature_common_type.h>
-#include <modules/auth/signature/signed_policy.h>
+#include <modules/access_control/access_controller.h>
 
 #include <shared_mutex>
 
@@ -37,7 +36,9 @@ namespace pvd
 		std::shared_ptr<Application> GetApplicationById(info::application_id_t app_id);
 		std::shared_ptr<Stream> GetStreamById(info::application_id_t app_id, uint32_t stream_id);
 
-		CheckSignatureResult HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy);
+		std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPolicy>> VerifyBySignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address);
+
+		std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> VerifyByAdmissionWebhooks(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address);
 
 	protected:
 		Provider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
@@ -61,6 +62,7 @@ namespace pvd
 		std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
 		std::shared_mutex  _application_map_mutex;
 		std::shared_ptr<MediaRouteInterface> _router;
+		std::shared_ptr<AccessController> _access_controller = nullptr;
 	};
 
 }  // namespace pvd
