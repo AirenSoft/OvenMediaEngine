@@ -793,27 +793,21 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 	user_name_attribute->SetText(ov::String::FormatString("%s:%s", info->peer_sdp->GetIceUfrag().CStr(), info->offer_sdp->GetIceUfrag().CStr()));
 	message.AddAttribute(std::move(attribute));
 
-	// Unknown attribute (for testing hash)
-	StunUnknownAttribute *unknown_attribute = nullptr;
-	// https://tools.ietf.org/html/draft-thatcher-ice-network-cost-00
-	// https://www.ietf.org/mail-archive/web/ice/current/msg00247.html
-	// attribute = std::make_shared<StunUnknownAttribute>(0xC057, 4);
-	// auto *unknown_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
-	// uint8_t unknown_data[] = { 0x00, 0x02, 0x00, 0x00 };
-	// unknown_attribute->SetData(&(unknown_data[0]), 4);
-	// message.AddAttribute(std::move(attribute));
-
-	// ICE-CONTROLLED (for testing hash)
-	//attribute = std::make_shared<StunUnknownAttribute>(0x8029, 8);
-
-	// ICE-CONTROLLING (for testing hash)
+	// ICE-CONTROLLING 
 	attribute = std::make_shared<StunUnknownAttribute>(0x802A, 8);
-	unknown_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
-	uint8_t unknown_data2[] = {0x1C, 0xF5, 0x1E, 0xB1, 0xB0, 0xCB, 0xE3, 0x49};
-	unknown_attribute->SetData(&(unknown_data2[0]), 8);
+	auto *tie_break_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
+
+	/*
+	https://datatracker.ietf.org/doc/html/rfc5245#section-7.2.1.1
+	If the agent's tie-breaker is less than the contents of the
+    ICE-CONTROLLING attribute, the agent switches to the controlled role.
+	*/
+	uint8_t tie_break_value[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
+	tie_break_attribute->SetData(&(tie_break_value[0]), 8);
 	message.AddAttribute(std::move(attribute));
 
 	// USE-CANDIDATE (for testing hash)
+	StunUnknownAttribute *unknown_attribute = nullptr;
 	attribute = std::make_shared<StunUnknownAttribute>(0x0025, 0);
 	unknown_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
 	message.AddAttribute(std::move(attribute));
