@@ -163,8 +163,8 @@ install_fdk_aac()
 
 install_nasm()
 {
-	# NASM is binary, so don't install it in the prefix. If this conflicts with the NASM installed on your system, you must install it yourself to avoid crashing.
-	(DIR=${TEMP_PATH}/nasm && \
+    # NASM is binary, so don't install it in the prefix. If this conflicts with the NASM installed on your system, you must install it yourself to avoid crashing.
+    (DIR=${TEMP_PATH}/nasm && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sLf http://www.nasm.us/pub/nasm/releasebuilds/${NASM_VERSION}/nasm-${NASM_VERSION}.tar.gz | tar -xz --strip-components=1 && \
@@ -336,7 +336,7 @@ install_intel_media_sdk() {
 install_nvidia_driver() {
     add-apt-repository ppa:graphics-drivers/ppa
     apt update
-    apt install nvidia-driver-460 nvidia-cuda-toolkit
+    apt install -y nvidia-driver-460 nvidia-cuda-toolkit
 }
 
 install_nvcc_headers() {
@@ -370,12 +370,18 @@ install_base_ubuntu()
     sudo apt install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc
     
     # Dependency library for hardware accelerators
-    sudo apt install -y libdrm-dev xorg xorg-dev openbox libx11-dev libgl1-mesa-glx libgl1-mesa-dev
+    if [ "$ENABLE_QSV_HWACCELS" = true ] || [ "$ENABLE_NVCC_HWACCELS" = true ]; then
+        sudo apt install -y libdrm-dev xorg xorg-dev openbox libx11-dev libgl1-mesa-glx libgl1-mesa-dev
+    fi
 }
 
 install_base_fedora()
 {
     sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc
+
+    if [ "$ENABLE_QSV_HWACCELS" = true ] || ["$ENABLE_NVCC_HWACCELS" = true ]; then
+        echo "TODO"
+    fi 
 }
 
 install_base_centos()
@@ -397,7 +403,9 @@ install_base_centos()
     sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel 
 
     # Dependency library for hardware accelerator
-    sudo yum install -y libdrm-devel libX11-devel libXi-devel
+    if [ "$ENABLE_QSV_HWACCELS" = true ] || [ "$ENABLE_NVCC_HWACCELS" = true ]; then
+        sudo yum install -y libdrm-devel libX11-devel libXi-devel
+    fi
 }
 
 install_base_macos()
@@ -412,6 +420,10 @@ install_base_macos()
 
     # the nasm that comes with macOS does not work with libvpx thus put the path where the homebrew stuff is installed in front of PATH
     export PATH=/usr/local/bin:$PATH
+
+     if [ "$ENABLE_QSV_HWACCELS" = true ] || [ "$ENABLE_NVCC_HWACCELS" = true ]; then
+        echo "TODO"
+     fi     
 }
 
 install_ovenmediaengine()
@@ -478,7 +490,7 @@ done
 
 if [ "${OSNAME}" == "Ubuntu" ]; then
     check_version
-    # install_base_ubuntu
+    install_base_ubuntu
 elif  [ "${OSNAME}" == "CentOS" ]; then
     check_version
     install_base_centos
