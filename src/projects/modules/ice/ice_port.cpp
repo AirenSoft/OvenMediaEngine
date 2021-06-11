@@ -608,7 +608,14 @@ void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, co
 	{
 		// Print
 		auto error_code = message.GetAttribute<StunErrorCodeAttribute>(StunAttributeType::ErrorCode);
-		logtw("Received stun error response (Error code : %d Reason : %s)", error_code->GetErrorCodeNumber(), error_code->GetErrorReason().CStr());
+		if(error_code == nullptr)
+		{
+			logtw("Received stun error response, but there is no ErrorCode attribute");
+		}
+		else
+		{
+			logtw("Received stun error response (Error code : %d Reason : %s)", error_code->GetErrorCodeNumber(), error_code->GetErrorReason().CStr());
+		}
 	}
 
 	switch(message.GetMethod())
