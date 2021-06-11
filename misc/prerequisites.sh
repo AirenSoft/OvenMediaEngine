@@ -8,7 +8,7 @@ OPENSSL_VERSION=1.1.1i
 SRTP_VERSION=2.2.0
 SRT_VERSION=1.4.2
 OPUS_VERSION=1.1.3
-X264_VERSION=20190513-2245-stable
+X264_VERSION=20191217-2245-stable
 X265_VERSION=3.4
 VPX_VERSION=1.7.0
 FDKAAC_VERSION=0.1.5
@@ -16,15 +16,15 @@ NASM_VERSION=2.15.02
 FFMPEG_VERSION=4.3.2
 JEMALLOC_VERSION=5.2.1
 PCRE2_VERSION=10.35
-# Support to Intel QuickSync hardware accelerator
 LIBVA_VERSION=2.11.0
 GMMLIB_VERSION=20.4.1
 INTEL_MEDIA_DRIVER_VERSION=20.4.5
 INTEL_MEDIA_SDK_VERSION=20.5.1
-# Support to NVIDIA hardware accelerator
 NVCC_HEADERS=11.0.10.1
 
+# Support to Intel QuickSync
 ENABLE_QSV_HWACCELS=false
+# Support to NVIDIA NVCC
 ENABLE_NVCC_HWACCELS=false
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -110,7 +110,7 @@ install_libx264()
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sLf https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-${X264_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
-	./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli && \
+    ./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli --disable-asm  && \
     make -j$(nproc) && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "x264"
@@ -163,12 +163,12 @@ install_fdk_aac()
 
 install_nasm()
 {
-	# NASM is binary, so don't install it in the prefix. If this conflicts with the NASM installed on your system, you must install it yourself to avoid crashing.
-	(DIR=${TEMP_PATH}/nasm && \
+    # NASM is binary, so don't install it in the prefix. If this conflicts with the NASM installed on your system, you must install it yourself to avoid crashing.
+    (DIR=${TEMP_PATH}/nasm && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sLf http://www.nasm.us/pub/nasm/releasebuilds/${NASM_VERSION}/nasm-${NASM_VERSION}.tar.gz | tar -xz --strip-components=1 && \
-    ./configure && \
+    ./configure --prefix="${PREFIX}" && \
     make -j$(nproc) && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "nasm"
@@ -255,7 +255,7 @@ install_libpcre2()
     curl -sLf https://ftp.pcre.org/pub/pcre/pcre2-${PCRE2_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     ./configure --prefix="${PREFIX}" \
     --disable-static \
-	--enable-jit=auto && \
+        --enable-jit=auto && \
     make -j$(nproc) && \
     sudo make install && \
     rm -rf ${DIR} && \
@@ -270,7 +270,7 @@ install_libva() {
     ./autogen.sh --prefix="${PREFIX}" && \
     make -j$(nproc) && \
     sudo make install && \
-    rm -rf ${DIR}) || fail_exit "libva"    
+    rm -rf ${DIR}) || fail_exit "libva"
 }
 
 install_gmmlib() {
@@ -283,7 +283,7 @@ install_gmmlib() {
     cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" .. && \
     make -j$(nproc) && \
     sudo make install && \
-    rm -rf ${DIR}) || fail_exit "gmmlib"    
+    rm -rf ${DIR}) || fail_exit "gmmlib"
 }
 
 # Note: gmmlib must be pre-installed
@@ -314,7 +314,7 @@ install_intel_media_driver() {
     sudo make -j$(nproc) install && \
     rm -rf ${DIR} && \
     rm -rf ${DIR_IMD} && \
-    rm -rf ${DIR_GMMLIB}) || fail_exit "intel_media_driver" 
+    rm -rf ${DIR_GMMLIB}) || fail_exit "intel_media_driver"
 
     echo "export LIBVA_DRIVERS_PATH=${PREFIX}/lib"
     echo "export LIBVA_DRIVER_NAME=iHD"
@@ -330,13 +330,13 @@ install_intel_media_sdk() {
     PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH} cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" .. && \
     make -j$(nproc) && \
     sudo make install && \
-    rm -rf ${DIR}) || fail_exit "intel_media_sdk"   
+    rm -rf ${DIR}) || fail_exit "intel_media_sdk"
 }
 
 install_nvidia_driver() {
     add-apt-repository ppa:graphics-drivers/ppa
     apt update
-    apt install nvidia-driver-460 nvidia-cuda-toolkit
+    apt install -y nvidia-driver-460 nvidia-cuda-toolkit
 }
 
 install_nvcc_headers() {
@@ -345,7 +345,7 @@ install_nvcc_headers() {
     cd ${DIR} && \
     curl -sLf https://github.com/FFmpeg/nv-codec-headers/releases/download/n${NVCC_HEADERS}/nv-codec-headers-${NVCC_HEADERS}.tar.gz | tar -xz --strip-components=1 && \
     sudo make install && \
-    rm -rf ${DIR}) || fail_exit "nvcc_headers"        
+    rm -rf ${DIR}) || fail_exit "nvcc_headers"
 }
 
 # Reboot is required after library installation
@@ -367,37 +367,48 @@ install_qsv() {
 
 install_base_ubuntu()
 {
-    sudo apt install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc
-    
+    sudo apt install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc yasm
+
     # Dependency library for hardware accelerators
-    sudo apt install -y libdrm-dev xorg xorg-dev openbox libx11-dev libgl1-mesa-glx libgl1-mesa-dev
+    if [ "$ENABLE_QSV_HWACCELS" = true ] || [ "$ENABLE_NVCC_HWACCELS" = true ]; then
+        sudo apt install -y libdrm-dev xorg xorg-dev openbox libx11-dev libgl1-mesa-glx libgl1-mesa-dev
+    fi
 }
 
 install_base_fedora()
 {
     sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc
+
+    if [ "$ENABLE_QSV_HWACCELS" = true ] || ["$ENABLE_NVCC_HWACCELS" = true ]; then
+        echo "TODO"
+    fi
 }
 
 install_base_centos()
 {
-    if [[ "${OSVERSION}" == "7" ]]; then
+    if [ "${OSVERSION}" == "7" ]; then
+        sudo yum install -y epel-release
+        sudo yum install -y yasm
+
         # centos-release-scl should be installed before installing devtoolset-7
         sudo yum install -y centos-release-scl
         sudo yum install -y glibc-static devtoolset-7
+
+        source scl_source enable devtoolset-7
+    fi
+
+    sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake
+
+    # Dependency library for hardware accelerator
+    if [ "$ENABLE_QSV_HWACCELS" = true ] || [ "$ENABLE_NVCC_HWACCELS" = true ]; then
 
         # Centos 7 uses the 2.8.x version of cmake by default. It must be changed to version 3.x or higher.
         sudo yum remove -y cmake
         sudo yum install -y cmake3
         sudo ln -s /usr/bin/cmake3 /usr/bin/cmake
-        source scl_source enable devtoolset-7
-    else
-        sudo yum install -y cmake    
+
+        sudo yum install -y libdrm-devel libX11-devel libXi-devel
     fi
-
-    sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel 
-
-    # Dependency library for hardware accelerator
-    sudo yum install -y libdrm-devel libX11-devel libXi-devel
 }
 
 install_base_macos()
@@ -412,6 +423,10 @@ install_base_macos()
 
     # the nasm that comes with macOS does not work with libvpx thus put the path where the homebrew stuff is installed in front of PATH
     export PATH=/usr/local/bin:$PATH
+
+     if [ "$ENABLE_QSV_HWACCELS" = true ] || [ "$ENABLE_NVCC_HWACCELS" = true ]; then
+        echo "TODO"
+     fi
 }
 
 install_ovenmediaengine()
@@ -478,10 +493,10 @@ done
 
 if [ "${OSNAME}" == "Ubuntu" ]; then
     check_version
-    # install_base_ubuntu
+    install_base_ubuntu
 elif  [ "${OSNAME}" == "CentOS" ]; then
-    check_version
-    install_base_centos
+     check_version
+     install_base_centos
 elif  [ "${OSNAME}" == "Fedora" ]; then
     check_version
     install_base_fedora
