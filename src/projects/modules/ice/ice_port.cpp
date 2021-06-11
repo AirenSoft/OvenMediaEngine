@@ -604,6 +604,20 @@ void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, co
 
 	logtd("Received message:\n%s", message.ToString().CStr());
 
+	if(message.GetClass() == StunClass::ErrorResponse)
+	{
+		// Print
+		auto error_code = message.GetAttribute<StunErrorCodeAttribute>(StunAttributeType::ErrorCode);
+		if(error_code == nullptr)
+		{
+			logtw("Received stun error response, but there is no ErrorCode attribute");
+		}
+		else
+		{
+			logtw("Received stun error response (Error code : %d Reason : %s)", error_code->GetErrorCodeNumber(), error_code->GetErrorReason().CStr());
+		}
+	}
+
 	switch(message.GetMethod())
 	{
 		// STUN
@@ -619,7 +633,7 @@ void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, co
 					ProcessStunBindingResponse(remote, address, gate_info, message);
 					break;
 				case StunClass::ErrorResponse:
-					// Nothing to do
+					//TODO(Getroot): Delete the transaction immediately. 
 					break;
 			}
 			break;
@@ -793,6 +807,8 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 	user_name_attribute->SetText(ov::String::FormatString("%s:%s", info->peer_sdp->GetIceUfrag().CStr(), info->offer_sdp->GetIceUfrag().CStr()));
 	message.AddAttribute(std::move(attribute));
 
+	// ICE-CONTROLLED
+	//attribute = std::make_shared<StunUnknownAttribute>(0x8029, 8);
 	// ICE-CONTROLLING 
 	attribute = std::make_shared<StunUnknownAttribute>(0x802A, 8);
 	auto *tie_break_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
@@ -802,7 +818,9 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 	If the agent's tie-breaker is less than the contents of the
     ICE-CONTROLLING attribute, the agent switches to the controlled role.
 	*/
+	//uint8_t tie_break_value[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 	uint8_t tie_break_value[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
+	
 	tie_break_attribute->SetData(&(tie_break_value[0]), 8);
 	message.AddAttribute(std::move(attribute));
 
