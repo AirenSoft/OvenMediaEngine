@@ -99,7 +99,8 @@ private:
 	uint8_t		_chroma_format = 0;		// (2 bits)
 	uint8_t		_reserved4 = 0;			// (5 bits) = 11111b
 	uint8_t		_bit_depth_luma_minus8 = 0;	// (3 bits)
-	
+	uint8_t		_bit_depth_chroma_minus8 = 0; // (3 bits)
+
 	// for(int i=0; i<_num_of_sps_ext; i++)
 		// sps_ext_length(16 bits) + sps_ext
 	uint8_t		_num_of_sps_ext = 0;		// (8 bits)

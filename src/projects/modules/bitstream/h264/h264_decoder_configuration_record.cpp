@@ -65,6 +65,8 @@ bool AVCDecoderConfigurationRecord::Parse(const uint8_t *data, size_t data_lengt
 		record._chroma_format = parser.ReadBits<uint8_t>(2);
 		record._reserved4 = parser.ReadBits<uint8_t>(5);
 		record._bit_depth_luma_minus8 = parser.ReadBits<uint8_t>(3);
+		uint8_t bit_depth_chroma_minus8_padding_bits = parser.ReadBits<uint8_t>(5);
+		record._bit_depth_chroma_minus8 = parser.ReadBits<uint8_t>(3);
 
 		record._num_of_sps_ext = parser.ReadBytes<uint8_t>();
 		for(int i=0; i<record._num_of_sps_ext; i++)
