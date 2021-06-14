@@ -60,7 +60,8 @@ public:
 	std::shared_ptr<ov::Data>	GetSPSExt(int index);
 	uint8_t ChromaFormat();
 	uint8_t BitDepthLumaMinus8();
-
+	uint8_t BitDepthChromaMinus8();
+	
 	std::shared_ptr<ov::Data> Serialize();
 	void Serialize(std::vector<uint8_t>& serialze);
 	std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> GetSpsPpsAsAnnexB(uint8_t start_code_size);
