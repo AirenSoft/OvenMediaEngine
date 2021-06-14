@@ -40,16 +40,41 @@ install_nvcc_headers() {
     rm -rf ${DIR}) || fail_exit "nvcc_headers"
 }
 
-
 install_base_ubuntu()
 {
-    # Install Nvidia Driver and Nvidia Toolkit
-    add-apt-repository ppa:graphics-drivers/ppa
-    apt update
-    apt install -y nvidia-driver-460 nvidia-cuda-toolkit
+    if [[ "${OSVERSION}" == "18" || "${OSVERSION}" == "20" ]]; then
 
-    echo "Reboot is required to use the new video driver."
+        # Uninstalling a previously installed NVIDIA Driver
+        sudo apt-get remove --purge nvidia-*
+        sudo apt-get -y autoremove
+        sudo apt-get -y update
+
+        # Remove the nouveau driver. If the nouveau driver is in use, the nvidia driver cannot be installed.
+        USE_NOUVEAU=`sudo lshw -class video | grep nouveau`
+        if [ ! -z "$USE_NOUVEAU" ]; then
+
+                # Disable nouveau Driver
+                echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
+                echo "blacklist lbm-nouveau" >> /etc/modprobe.d/blacklist.conf
+                echo "options nouveau modeset=0" >> /etc/modprobe.d/blacklist.conf
+                echo "alias nouveau off" >> /etc/modprobe.d/blacklist.conf
+                echo "alias lbm-nouveau off" >> /etc/modprobe.d/blacklist.conf
+                sudo update-initramfs -u
+                echo "Using a driver display nouveau.Remove the driver and reboot.Reboot and installation script to rerun the nvidia display the driver to complete the installation."
+
+                sleep 5s
+                reboot
+        fi
+
+        # Install Nvidia Driver and Nvidia Toolkit
+        sudo add-apt-repository ppa:graphics-drivers/ppa
+        sudo apt -y update
+        sudo apt-get install -y $(ubuntu-drivers devices | grep recommended | awk '{print $3}')
+        sudo apt-get install -y nvidia-cuda-toolkit curl make
+        
+    fi
 }
+
 
 install_base_centos()
 {
@@ -60,38 +85,57 @@ install_base_centos()
         yum -y groupinstall "Development Tools"
         yum -y install kernel-devel
         yum -y install epel-release
-        yum -y install dkms
+        yum -y install dkms curl
         echo "Reboot is required to run with a new version of the kernel."
 
-        # Disable nouveau Driver
-        sed "s/GRUB_CMDLINE_LINUX=\"\(.*\)\"/GRUB_CMDLINE_LINUX=\"\1 rd.driver.blacklist=nouveau nouveau.modeset=0\"/" /etc/default/grub
-        grub2-mkconfig -o /boot/grub2/grub.cfg
-        echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
-        mv /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r)-nouveau.img
-        dracut /boot/initramfs-$(uname -r).img $(uname -r)
-        echo "Reboot is required to release the nouveau driver."
-        
-        # Install Nvidia Driver 
+        # Remove the nouveau driver. If the nouveau driver is in use, the nvidia driver cannot be installed.
+        USE_NOUVEAU=`sudo lshw -class video | grep nouveau`
+        if [ ! -z "$USE_NOUVEAU" ]; then
+
+                # Disable nouveau Driver
+                sed "s/GRUB_CMDLINE_LINUX=\"\(.*\)\"/GRUB_CMDLINE_LINUX=\"\1 rd.driver.blacklist=nouveau nouveau.modeset=0\"/" /etc/default/grub
+                grub2-mkconfig -o /boot/grub2/grub.cfg
+                echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
+                mv /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r)-nouveau.img
+                dracut /boot/initramfs-$(uname -r).img $(uname -r)
+
+                echo "Using a driver display nouveau.Remove the driver and reboot. "
+                echo "After reboot and installation script to rerun the nvidia display the driver to complete the installation."
+
+                sleep 5s
+                reboot
+        fi
+
+        # Install Nvidia Driver
         # https://www.nvidia.com/en-us/drivers/unix/
         systemctl isolate multi-user.target
-        wget https://us.download.nvidia.com/XFree86/Linux-x86_64/460.84/NVIDIA-Linux-x86_64-460.84.run
+        wget -N https://us.download.nvidia.com/XFree86/Linux-x86_64/460.84/NVIDIA-Linux-x86_64-460.84.run
         sh ./NVIDIA-Linux-x86_64-460.84.run --ui=none --no-questions
 
         # Install Nvidia Toolkit
         # https://developer.nvidia.com/cuda-downloads
-        wget https://developer.download.nvidia.com/compute/cuda/11.3.1/local_installers/cuda_11.3.1_465.19.01_linux.run
+        wget -N https://developer.download.nvidia.com/compute/cuda/11.3.1/local_installers/cuda_11.3.1_465.19.01_linux.run
         sh cuda_11.3.1_465.19.01_linux.run --silent
 
         # Configure Envionment Variables
+        echo "Please add the PATH below to the environment variable."
+        echo ""
+        echo "export PATH=${PATH}:/usr/local/cuda/bin/"
+        echo ""
         export PATH=${PATH}:/usr/local/cuda/bin/
 
     elif [[ "${OSVERSION}" == "8" ]]; then
-        
+
         echo "TODO"
 
     else
         fail_exit
     fi
+}
+
+install_base_amazonlinux()
+{
+    echo "TODO"
 }
 
 fail_exit()
@@ -114,7 +158,7 @@ check_version()
 
 proceed_yn()
 {
-    read -p "This program [$0] is tested on [Ubuntu 18/20.04, CentOS 7/8 q, Fedora 28] Do you want to continue [y/N] ? " ANS
+    read -p "This program [$0] is tested on [Ubuntu 18/20.04, CentOS 7/8] Do you want to continue [y/N] ? " ANS
     if [[ "${ANS}" != "y" && "$ANS" != "yes" ]]; then
         cd ${CURRENT}
         exit 1
@@ -135,9 +179,14 @@ elif  [ "${OSNAME}" == "CentOS" ]; then
     install_base_centos
 elif  [ "${OSNAME}" == "AmazonLinux" ]; then
     check_version
-    # TODO : For Cloud Instance
+    install_base_amazonlinux
 else
     echo "This program [$0] does not support your operating system [${OSNAME}]"
     echo "Please refer to manual installation page"
 fi
 
+install_nvcc_headers
+
+echo "-----------------------------------------------------"
+echo " Reboot is required to use the nvidia video driver"
+echo "-----------------------------------------------------"
