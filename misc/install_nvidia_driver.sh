@@ -99,7 +99,7 @@ install_base_centos()
                 mv /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r)-nouveau.img
                 dracut /boot/initramfs-$(uname -r).img $(uname -r)
 
-                echo "Using a driver display nouveau.Remove the driver and reboot. "
+                echo "Using a driver display nouveau. so, remove the driver and reboot. "
                 echo "After reboot and installation script to rerun the nvidia display the driver to complete the installation."
 
                 sleep 5s
@@ -126,7 +126,46 @@ install_base_centos()
 
     elif [[ "${OSVERSION}" == "8" ]]; then
 
-        echo "TODO"
+        dnf update -y
+        dnf groupinstall -y "Development Tools" 
+        dnf install -y elfutils-libelf-devel "kernel-devel-uname-r == $(uname -r)"
+
+        # Remove the nouveau driver. If the nouveau driver is in use, the nvidia driver cannot be installed.
+        USE_NOUVEAU=`sudo lshw -class video | grep nouveau`
+        if [ ! -z "$USE_NOUVEAU" ]; then
+
+                # Disable nouveau Driver
+                echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
+                mv /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r)-nouveau.img
+                dracut /boot/initramfs-$(uname -r).img $(uname -r)
+
+                systemctl set-default multi-user.target
+                systemctl get-default
+
+                echo "Using a driver display nouveau. so, remove the driver and reboot. "
+                echo "After reboot and installation script to rerun the nvidia display the driver to complete the installation."
+
+                sleep 5s
+                reboot
+        fi
+
+        wget -N https://us.download.nvidia.com/XFree86/Linux-x86_64/460.84/NVIDIA-Linux-x86_64-460.84.run
+        sh ./NVIDIA-Linux-x86_64-460.84.run --ui=none --no-questions
+
+        # Install Nvidia Toolkit
+        # https://developer.nvidia.com/cuda-downloads
+        wget -N https://developer.download.nvidia.com/compute/cuda/11.3.1/local_installers/cuda_11.3.1_465.19.01_linux.run
+        sh cuda_11.3.1_465.19.01_linux.run --silent
+
+        systemctl set-default graphical.target
+        systemctl get-default
+
+        # Configure Envionment Variables
+        echo "Please add the PATH below to the environment variable."
+        echo ""
+        echo "export PATH=${PATH}:/usr/local/cuda/bin/"
+        echo ""
+        export PATH=${PATH}:/usr/local/cuda/bin/
 
     else
         fail_exit
