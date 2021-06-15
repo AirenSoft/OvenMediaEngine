@@ -59,6 +59,9 @@ bool EncoderVP8::Configure(std::shared_ptr<TranscodeContext> context)
 
 	if (::avcodec_open2(_context, codec, &opts) < 0)
 	{
+        // close codec context to prevent definitely memory leak issue
+        ::avcodec_close(_context);
+
 		logte("Could not open codec");
 		return false;
 	}
@@ -74,6 +77,9 @@ bool EncoderVP8::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 	catch (const std::system_error &e)
 	{
+        // close codec context to prevent definitely memory leak issue
+        ::avcodec_close(_context);
+
 		logte("Failed to start encoder thread.");
 		_kill_flag = true;
 
@@ -121,6 +127,9 @@ void EncoderVP8::ThreadEncode()
 
 		if (::av_frame_get_buffer(_frame, 32) < 0)
 		{
+            // free frame pointer to prevent possible memory leak issue
+            ::av_frame_unref(_frame);
+
 			logte("Could not allocate the video frame data");
 			// *result = TranscodeResult::DataError;
 			break;
@@ -128,6 +137,9 @@ void EncoderVP8::ThreadEncode()
 
 		if (::av_frame_make_writable(_frame) < 0)
 		{
+            // free frame pointer to prevent possible memory leak issue
+            ::av_frame_unref(_frame);
+
 			logte("Could not make sure the frame data is writable");
 			// *result = TranscodeResult::DataError;
 			break;
@@ -155,19 +167,27 @@ void EncoderVP8::ThreadEncode()
 
 			if (ret == AVERROR(EAGAIN))
 			{
-				// More packets are needed for encoding.
+                // Check frame is availble
+                int ret = ::avcodec_receive_packet(_context, _packet);
 
+				// More packets are needed for encoding.
 				// logte("Error receiving a packet for decoding : EAGAIN");
 
 				break;
 			}
 			else if (ret == AVERROR_EOF)
 			{
+                // Check frame is availble
+                int ret = ::avcodec_receive_packet(_context, _packet);
+
 				logte("Error receiving a packet for decoding : AVERROR_EOF");
 				break;
 			}
 			else if (ret < 0)
 			{
+                // Check frame is availble
+                int ret = ::avcodec_receive_packet(_context, _packet);
+
 				logte("Error receiving a packet for decoding : %d", ret);
 				break;
 			}

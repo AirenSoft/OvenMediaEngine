@@ -38,6 +38,9 @@ bool DecoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
+        // close codec context to prevent definetly memory leak issue
+        ::avcodec_close(_context);
+
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
 		return false;
 	}
@@ -46,6 +49,9 @@ bool DecoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 	_parser = ::av_parser_init(_codec->id);
 	if (_parser == nullptr)
 	{
+        // close codec context to prevent definitely memory leak issue
+        ::avcodec_close(_context);
+
 		logte("Parser not found");
 		return false;
 	}
@@ -62,6 +68,9 @@ bool DecoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 	catch (const std::system_error &e)
 	{
+        // close codec context to prevent definitely memory leak issue
+        ::avcodec_close(_context);
+
 		logte("Failed to start decoder thread");
 		_kill_flag = true;
 		return false;
@@ -164,15 +173,23 @@ void DecoderAVC::ThreadDecode()
 
 			if (ret == AVERROR(EAGAIN))
 			{
+                // free frame pointer to prevent possible memory leak issue
+                ::av_frame_unref(_frame);
 				break;
 			}
 			else if (ret == AVERROR_EOF)
 			{
+                // free frame pointer to prevent possible memory leak issue
+                ::av_frame_unref(_frame);
+
 				logtw("Error receiving a packet for decoding : AVERROR_EOF");
 				break;
 			}
 			else if (ret < 0)
 			{
+                // free frame pointer to prevent possible memory leak issue
+                ::av_frame_unref(_frame);
+
 				logte("Error receiving a packet for decoding : %d", ret);
 				break;
 			}
