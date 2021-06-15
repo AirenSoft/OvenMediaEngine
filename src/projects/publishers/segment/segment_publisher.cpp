@@ -518,6 +518,12 @@ bool SegmentPublisher::HandleSignedX(const info::VHostAppName &vhost_app_name, c
 		requested_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 	}
 
+	auto session_id = remote_address->GetIpAddress();
+	request_info = std::make_shared<PlaylistRequestInfo>(GetPublisherType(),
+															vhost_app_name, stream_name,
+															remote_address->GetIpAddress(),
+															session_id);
+
 	// SingedPolicy is first
 	auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(requested_url, remote_address);
 	if (signed_policy_result == AccessController::VerificationResult::Pass)
