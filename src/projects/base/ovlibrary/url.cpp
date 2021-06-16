@@ -111,28 +111,34 @@ namespace ov
 
 		object->_source = url;
 
-		// <scheme>://<host>[:<port>][/<path/to/resource>][?<query string>]
+		// <scheme>://[id:password@]<host>[:<port>][/<path/to/resource>][?<query string>]
 		// Group 1: <scheme>
-		// Group 2: <host>
-		// Group 3: :<port>
-		// Group 4: <port>
-		// Group 5: /<path>
-		// Group 6: <path>
-		// Group 7: ?<query string>
-		// Group 8: <query string>
-		if (std::regex_search(url_string, matches, std::regex(R"((.*)://([^:/]+)(:([0-9]+))?(/([^\?]+)?)?(\?([^\?]+)?(.+)?)?)")) == false)
+		// Group 2: <id:password@>
+		// Group 3: <id>
+		// Group 4: <password> 
+		// Group 5: <host>
+		// Group 6: :<port>
+		// Group 7: <port>
+		// Group 8: /<path>
+		// Group 9: <path>
+		// Group 10: ?<query string>
+		// Group 11: <query string>
+		if (std::regex_search(url_string, matches, std::regex(R"((.*)://((.+):(.+)@)?([^:/]+)(:([0-9]+))?(/([^\?]+)?)?(\?([^\?]+)?(.+)?)?)")) == false)
 		{
 			return nullptr;
 		}
+		// ((.*)://((.+):(.+)@)?([^:/]+)(:([0-9]+))?(/([^\?]+)?)?(\?([^\?]+)?(.+)?)?)
 
 		object->_scheme = std::string(matches[1]).c_str();
-		object->_host = std::string(matches[2]).c_str();
-		object->_port = ov::Converter::ToUInt32(std::string(matches[4]).c_str());
-		object->_path = std::string(matches[5]).c_str();
-		object->_has_query_string = matches[7].matched;
+		object->_id = std::string(matches[3]).c_str();
+		object->_password = std::string(matches[4]).c_str();
+		object->_host = std::string(matches[5]).c_str();
+		object->_port = ov::Converter::ToUInt32(std::string(matches[7]).c_str());
+		object->_path = std::string(matches[8]).c_str();
+		object->_has_query_string = matches[10].matched;
 		if(object->_has_query_string)
 		{
-			object->_query_string = std::string(matches[8]).c_str();
+			object->_query_string = std::string(matches[11]).c_str();
 		}
 
 		// split <path> to /<app>/<stream>/<file> (4 tokens)
@@ -297,8 +303,9 @@ namespace ov
 		ov::String description;
 
 		description.AppendFormat(
-			"%s://%s%s%s%s%s (app: %s, stream: %s, file: %s)",
+			"%s://%s%s%s%s%s%s (app: %s, stream: %s, file: %s)",
 			_scheme.CStr(),
+			_id.IsEmpty() ? "" : ov::String::FormatString("%s:%s@", _id.CStr(), _password.CStr()).CStr(),
 			_host.CStr(), (_port > 0) ? ov::String::FormatString(":%d", _port).CStr() : "",
 			_path.CStr(), _query_string.IsEmpty() ? "" : "?", _query_string.CStr(),
 			_app.CStr(), _stream.CStr(), _file.CStr());
