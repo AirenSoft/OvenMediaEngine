@@ -11,6 +11,8 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <openssl/bio.h>
 
+#include "openssl_error.h"
+
 namespace ov
 {
 	class OpensslManager : public Singleton<OpensslManager>

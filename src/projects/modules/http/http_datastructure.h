@@ -61,15 +61,15 @@ namespace http
 	inline Method operator|(Method lhs, Method rhs)
 	{
 		return static_cast<Method>(
-			static_cast<std::underlying_type_t<Method>>(lhs) |
-			static_cast<std::underlying_type_t<Method>>(rhs));
+			ov::ToUnderlyingType(lhs) |
+			ov::ToUnderlyingType(rhs));
 	}
 
 	inline Method &operator|=(Method &lhs, Method rhs)
 	{
 		lhs = static_cast<Method>(
-			static_cast<std::underlying_type_t<Method>>(lhs) |
-			static_cast<std::underlying_type_t<Method>>(rhs));
+			ov::ToUnderlyingType(lhs) |
+			ov::ToUnderlyingType(rhs));
 
 		return lhs;
 	}
@@ -289,35 +289,35 @@ namespace http
 	// Since http::Method can contains multiple methods, the include_all_method flag is used to determine whether to return the value for the entire methods
 	inline ov::String StringFromMethod(Method method, bool include_all_methods = true)
 	{
-		auto method_value = static_cast<std::underlying_type_t<Method>>(method);
+		auto method_value = ov::ToUnderlyingType(method);
 
 		if (include_all_methods)
 		{
 			std::vector<ov::String> method_list;
 
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Get)), method_list.push_back("GET"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Head)), method_list.push_back("HEAD"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Post)), method_list.push_back("POST"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Put)), method_list.push_back("PUT"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Delete)), method_list.push_back("DELETE"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Connect)), method_list.push_back("CONNECT"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Options)), method_list.push_back("OPTIONS"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Trace)), method_list.push_back("TRACE"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Patch)), method_list.push_back("PATCH"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Get)), method_list.push_back("GET"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Head)), method_list.push_back("HEAD"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Post)), method_list.push_back("POST"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Put)), method_list.push_back("PUT"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Delete)), method_list.push_back("DELETE"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Connect)), method_list.push_back("CONNECT"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Options)), method_list.push_back("OPTIONS"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Trace)), method_list.push_back("TRACE"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Patch)), method_list.push_back("PATCH"));
 
 			return ov::String::Join(method_list, " | ");
 		}
 		else
 		{
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Get)), return "GET");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Head)), return "HEAD");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Post)), return "POST");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Put)), return "PUT");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Delete)), return "DELETE");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Connect)), return "CONNECT");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Options)), return "OPTIONS");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Trace)), return "TRACE");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, static_cast<std::underlying_type_t<Method>>(Method::Patch)), return "PATCH");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Get)), return "GET");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Head)), return "HEAD");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Post)), return "POST");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Put)), return "PUT");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Delete)), return "DELETE");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Connect)), return "CONNECT");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Options)), return "OPTIONS");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Trace)), return "TRACE");
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Patch)), return "PATCH");
 		}
 
 		return "";

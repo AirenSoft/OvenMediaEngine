@@ -32,8 +32,6 @@ namespace ov
 		static std::shared_ptr<Error> CreateError(ov::String domain, const char *format, ...);
 		static std::shared_ptr<Error> CreateError(int code, const char *format, ...);
 		static std::shared_ptr<Error> CreateErrorFromErrno();
-		static std::shared_ptr<Error> CreateErrorFromSrt();
-		static std::shared_ptr<Error> CreateErrorFromOpenSsl();
 
 		virtual ~Error() = default;
 

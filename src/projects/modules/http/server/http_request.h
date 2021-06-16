@@ -28,8 +28,8 @@ namespace http
 			std::shared_ptr<ov::ClientSocket> GetRemote();
 			std::shared_ptr<const ov::ClientSocket> GetRemote() const;
 
-			void SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data);
-			std::shared_ptr<ov::TlsData> GetTlsData();
+			void SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data);
+			std::shared_ptr<ov::TlsServerData> GetTlsData();
 
 			void SetConnectionType(RequestConnectionType type);
 			RequestConnectionType GetConnectionType() const;
@@ -161,7 +161,7 @@ namespace http
 
 			std::shared_ptr<ov::ClientSocket> _client_socket;
 			RequestConnectionType _connection_type = RequestConnectionType::Unknown;
-			std::shared_ptr<ov::TlsData> _tls_data;
+			std::shared_ptr<ov::TlsServerData> _tls_data;
 
 			// request 처리를 담당하는 객체
 			std::shared_ptr<RequestInterceptor> _interceptor;

@@ -33,8 +33,8 @@ namespace http
 			std::shared_ptr<ov::ClientSocket> GetRemote();
 			std::shared_ptr<const ov::ClientSocket> GetRemote() const;
 
-			void SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data);
-			std::shared_ptr<ov::TlsData> GetTlsData();
+			void SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data);
+			std::shared_ptr<ov::TlsServerData> GetTlsData();
 
 			StatusCode GetStatusCode() const
 			{
@@ -106,7 +106,7 @@ namespace http
 			uint32_t SendResponse();
 
 			std::shared_ptr<ov::ClientSocket> _client_socket;
-			std::shared_ptr<ov::TlsData> _tls_data;
+			std::shared_ptr<ov::TlsServerData> _tls_data;
 
 			ov::String _http_version = "1.1";
 

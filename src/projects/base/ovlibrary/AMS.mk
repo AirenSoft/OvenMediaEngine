@@ -6,7 +6,6 @@ LOCAL_TARGET := ovlibrary
 LOCAL_HEADER_FILES := $(LOCAL_HEADER_FILES)
 LOCAL_SOURCE_FILES := $(LOCAL_SOURCE_FILES)
 
-$(call add_pkg_config,openssl)
-$(call add_pkg_config,srt)
+$(call add_pkg_config,libpcre2-8)
 
 include $(BUILD_STATIC_LIBRARY)

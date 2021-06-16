@@ -11,6 +11,9 @@
 #include "../http_private.h"
 
 #define HTTP_CLIENT_READ_BUFFER_SIZE (64 * 1024)
+#define HTTP_CLIENT_MAX_CHUNK_HEADER_LENGTH (32)
+#define HTTP_CLIENT_NEW_LINE "\r\n"
+#define HTTP_CLIENT_NEW_LINE_LENGTH (OV_COUNTOF(HTTP_CLIENT_NEW_LINE) - 1)
 
 namespace http
 {
@@ -123,6 +126,80 @@ namespace http
 			_request_body = body->Clone();
 		}
 
+		void HttpClient::OnConnected(const std::shared_ptr<const ov::SocketError> &error)
+		{
+			if (error == nullptr)
+			{
+				OnReadable();
+				return;
+			}
+
+			auto detail_error = ov::Error::CreateError("HTTP", error->GetCode(), "Could not connect to %s (in callback): %s", _url.CStr(), error->GetMessage().CStr());
+
+			HandleError(detail_error);
+		}
+
+		void HttpClient::OnReadable()
+		{
+			auto error = TryTlsConnect();
+
+			if (error != nullptr)
+			{
+				if (error->GetCode() == SSL_ERROR_WANT_READ)
+				{
+					// Need more data
+				}
+				else
+				{
+					logtd("Could not connect TLS: %s", error->ToString().CStr());
+					HandleError(error);
+				}
+
+				return;
+			}
+
+			SendRequestIfNeeded();
+			RecvResponse();
+		}
+
+		void HttpClient::OnClosed()
+		{
+			// Ignore
+		}
+
+		ssize_t HttpClient::OnTlsReadData(void *data, int64_t length)
+		{
+			auto socket = _socket;
+
+			if (socket != nullptr)
+			{
+				size_t received_length;
+				auto error = socket->Recv(data, length, &received_length);
+
+				if (error == nullptr)
+				{
+					return received_length;
+				}
+			}
+
+			return -1;
+		}
+
+		ssize_t HttpClient::OnTlsWriteData(const void *data, int64_t length)
+		{
+			auto socket = _socket;
+
+			if (socket != nullptr)
+			{
+				if (socket->Send(data, length))
+				{
+					return length;
+				}
+			}
+
+			return -1;
+		}
+
 		std::shared_ptr<const ov::Error> HttpClient::PrepareForRequest(const ov::String &url, ov::SocketAddress *address)
 		{
 			if (_requested)
@@ -189,6 +266,18 @@ namespace http
 				return ov::Error::CreateError("HTTP", "Could not set blocking mode");
 			}
 
+			if (is_https)
+			{
+				_tls_data = std::make_shared<ov::TlsClientData>(ov::TlsClientData::Method::Tls);
+
+				if (_tls_data == nullptr)
+				{
+					return ov::Error::CreateError("HTTP", "Could not create TLS data");
+				}
+
+				_tls_data->SetIoCallback(GetSharedPtrAs<ov::TlsClientDataIoCallback>());
+			}
+
 			if (address != nullptr)
 			{
 				*address = socket_address;
@@ -203,8 +292,15 @@ namespace http
 			return nullptr;
 		}
 
-		void HttpClient::SendRequest()
+		void HttpClient::SendRequestIfNeeded()
 		{
+			if (_requested)
+			{
+				return;
+			}
+
+			_requested = true;
+
 			auto path = _parsed_url->Path();
 
 			if (path.IsEmpty())
@@ -212,12 +308,10 @@ namespace http
 				path = "/";
 			}
 
+			auto query_string = _parsed_url->Query();
+			if (query_string.IsEmpty() == false)
 			{
-				auto query_string = _parsed_url->Query();
-				if (query_string.IsEmpty() == false)
-				{
-					path.AppendFormat("?%s", query_string.CStr());
-				}
+				path.AppendFormat("?%s", query_string.CStr());
 			}
 
 			ov::String request_header;
@@ -226,7 +320,7 @@ namespace http
 			logtd("Request resource: %s", path.CStr());
 
 			// Pick a first method in _method
-			request_header.AppendFormat("%s %s HTTP/1.1\r\n", http::StringFromMethod(_method, false).CStr(), path.CStr());
+			request_header.AppendFormat("%s %s HTTP/1.1" HTTP_CLIENT_NEW_LINE, http::StringFromMethod(_method, false).CStr(), path.CStr());
 
 			if (_request_body != nullptr)
 			{
@@ -237,18 +331,27 @@ namespace http
 
 			for (auto header : _request_header)
 			{
-				request_header.AppendFormat("%s: %s\r\n", header.first.CStr(), header.second.CStr());
+				request_header.AppendFormat("%s: %s" HTTP_CLIENT_NEW_LINE, header.first.CStr(), header.second.CStr());
 				logtd("  >> %s: %s", header.first.CStr(), header.second.CStr());
 			}
 
-			request_header.Append("\r\n");
+			request_header.Append(HTTP_CLIENT_NEW_LINE);
 
-			_socket->Send(request_header.ToData(false));
+			SendData(request_header.ToData(false));
+			SendData(_request_body);
+		}
 
-			if (_request_body != nullptr)
+		std::shared_ptr<const ov::OpensslError> HttpClient::TryTlsConnect()
+		{
+			auto tls_data = _tls_data;
+
+			if ((tls_data == nullptr) || (tls_data->GetState() == ov::TlsClientData::State::Connected))
 			{
-				_socket->Send(_request_body);
+				// Nothing to do - the request isn't HTTPs request or already connected
+				return nullptr;
 			}
+
+			return tls_data->Connect();
 		}
 
 		void HttpClient::Request(const ov::String &url, ResponseHandler response_handler)
@@ -257,6 +360,8 @@ namespace http
 
 			ov::SocketAddress address;
 
+			_response_handler = response_handler;
+
 			auto error = PrepareForRequest(url, &address);
 
 			if (error == nullptr)
@@ -264,52 +369,31 @@ namespace http
 				OV_ASSERT2(_url.IsEmpty() == false);
 				OV_ASSERT2(_parsed_url != nullptr);
 
-				_response_handler = response_handler;
-
 				logtd("Request an URL: %s (address: %s)...", url.CStr(), address.ToString().CStr());
 
 				// Convert milliseconds to timeval
-				struct timeval tv = {
-					_recv_timeout_msec / 1000,
-					_recv_timeout_msec % 1000};
-
-				_socket->SetRecvTimeout(tv);
+				_socket->SetRecvTimeout(
+					{.tv_sec = _recv_timeout_msec / 1000,
+					 .tv_usec = _recv_timeout_msec % 1000});
 
 				error = _socket->Connect(address, _connection_timeout_msec);
 
-				if (error != nullptr)
+				if (error == nullptr)
 				{
-					error = ov::Error::CreateError("HTTP", error->GetCode(), "Could not connect to %s: %s", url.CStr(), error->GetMessage().CStr());
-				}
-			}
-
-			if (error == nullptr)
-			{
-				_requested = true;
-
-				if (_blocking_mode == ov::BlockingMode::Blocking)
-				{
-					SendRequest();
-					RecvResponse();
-				}
-			}
-			else
-			{
-				CleanupVariables();
-
-				if (response_handler != nullptr)
-				{
-					auto http_error = std::dynamic_pointer_cast<const HttpError>(error);
-					if (http_error != nullptr)
+					if (_socket->GetBlockingMode() == ov::BlockingMode::NonBlocking)
 					{
-						response_handler(http_error->GetStatusCode(), _response_body, error);
+						// Data will be downloaded in OnReadable()
+						return;
 					}
-					else
-					{
-						response_handler(StatusCode::Unknown, _response_body, error);
-					}
+
+					OnConnected(nullptr);
+					return;
 				}
+
+				error = ov::Error::CreateError("HTTP", error->GetCode(), "Could not connect to %s: %s", url.CStr(), error->GetMessage().CStr());
 			}
+
+			HandleError(error);
 		}
 
 		ov::String HttpClient::GetResponseHeader(const ov::String &key)
@@ -325,30 +409,56 @@ namespace http
 		void HttpClient::RecvResponse()
 		{
 			auto socket = _socket;
-			auto data = std::make_shared<ov::Data>();
+			auto tls_data = _tls_data;
+			std::shared_ptr<ov::Data> data;
+			std::shared_ptr<const ov::Data> process_data;
 			std::shared_ptr<const ov::Error> error;
+			bool need_to_callback = false;
 
-			data->Reserve(HTTP_CLIENT_READ_BUFFER_SIZE);
+			if (tls_data == nullptr)
+			{
+				data = std::make_shared<ov::Data>(HTTP_CLIENT_READ_BUFFER_SIZE);
+			}
 
 			while (true)
 			{
-				error = socket->Recv(data);
+				if (tls_data != nullptr)
+				{
+					process_data = tls_data->Decrypt();
+
+					if (process_data == nullptr)
+					{
+						error = ov::Error::CreateError("HTTP", "Could not decrypt data");
+					}
+					else if (process_data->GetLength() == 0)
+					{
+						// Need more data
+						return;
+					}
+				}
+				else
+				{
+					error = socket->Recv(data);
+
+					if (error == nullptr)
+					{
+						if ((data->GetLength() == 0) && (_blocking_mode == ov::BlockingMode::NonBlocking))
+						{
+							// Read data next time in Nonblocking mode
+							return;
+						}
+
+						process_data = data;
+					}
+					else
+					{
+						// An error occurred
+					}
+				}
 
 				if (error == nullptr)
 				{
-					if (data->GetLength() == 0)
-					{
-						// EAGAIN
-						if (_blocking_mode == ov::BlockingMode::Blocking)
-						{
-							continue;
-						}
-
-						// Read data next time in Nonblocking mode
-						return;
-					}
-
-					error = ProcessData(data);
+					error = ProcessData(process_data);
 				}
 
 				if (error != nullptr)
@@ -359,6 +469,7 @@ namespace http
 							[[fallthrough]];
 						case ov::SocketState::Disconnected:
 							// Ignore the error
+							need_to_callback = true;
 							error = nullptr;
 							break;
 
@@ -371,7 +482,11 @@ namespace http
 					break;
 				}
 
-				if (_response_body->GetLength() >= _parser.GetContentLength())
+				if (
+					((_response_body != nullptr) &&
+					 ((_parser.HasContentLength() && (_response_body->GetLength() >= _parser.GetContentLength())) ||
+					  (_chunk_parse_status == ChunkParseStatus::Completed))) ||
+					need_to_callback)
 				{
 					// All data received
 					break;
@@ -388,6 +503,145 @@ namespace http
 			CleanupVariables();
 		}
 
+		std::shared_ptr<const ov::Error> HttpClient::ProcessChunk(const std::shared_ptr<const ov::Data> &data, size_t *processed_bytes)
+		{
+			auto remained = data->GetLength();
+			auto sub_data = data->GetDataAs<char>();
+
+			*processed_bytes = 0L;
+
+			while (remained > 0L)
+			{
+				switch (_chunk_parse_status)
+				{
+					case ChunkParseStatus::None:
+						OV_ASSERT2(false);
+						return ov::Error::CreateError("HTTP", "Internal server error: Invalid ChunkParseStatus");
+
+					case ChunkParseStatus::Header: {
+						// ov::String is binary-safe
+						ov::String temp_header(sub_data, remained);
+
+						auto position = temp_header.IndexOf(HTTP_CLIENT_NEW_LINE);
+						if (position >= 0)
+						{
+							// Found a separator
+							_chunk_parse_status = ChunkParseStatus::Body;
+
+							_chunk_header.Append(sub_data, position);
+							sub_data += position + HTTP_CLIENT_NEW_LINE_LENGTH;
+							remained -= position + HTTP_CLIENT_NEW_LINE_LENGTH;
+							*processed_bytes += position + HTTP_CLIENT_NEW_LINE_LENGTH;
+
+							_chunk_length = ::strtoll(_chunk_header, nullptr, 16);
+							_chunk_header.Clear();
+
+							if (_chunk_length == 0)
+							{
+								_chunk_parse_status = ChunkParseStatus::CarriageReturnEnd;
+							}
+						}
+						else
+						{
+							_chunk_header.Append(sub_data, remained);
+							remained = 0;
+							*processed_bytes += remained;
+						}
+
+						if (_chunk_header.GetLength() > HTTP_CLIENT_MAX_CHUNK_HEADER_LENGTH)
+						{
+							return ov::Error::CreateError("HTTP", "Chunk header is too long");
+						}
+
+						break;
+					}
+
+					case ChunkParseStatus::Body: {
+						auto bytes_to_copy = std::min(_chunk_length, remained);
+
+						_response_body->Append(sub_data, bytes_to_copy);
+
+						sub_data += bytes_to_copy;
+						remained -= bytes_to_copy;
+						_chunk_length -= bytes_to_copy;
+						*processed_bytes += bytes_to_copy;
+
+						if (_chunk_length == 0)
+						{
+							_chunk_parse_status = ChunkParseStatus::CarriageReturn;
+						}
+
+						break;
+					}
+
+					case ChunkParseStatus::CarriageReturn:
+						if ((*sub_data) == '\r')
+						{
+							sub_data++;
+							remained--;
+							*processed_bytes += 1;
+							_chunk_parse_status = ChunkParseStatus::LineFeed;
+						}
+						else
+						{
+							return ov::Error::CreateError("HTTP", "Invalid chunk header (line feed not found)");
+						}
+
+						break;
+
+					case ChunkParseStatus::LineFeed:
+						if ((*sub_data) == '\n')
+						{
+							sub_data++;
+							remained--;
+							*processed_bytes += 1;
+							_chunk_parse_status = ChunkParseStatus::Header;
+						}
+						else
+						{
+							return ov::Error::CreateError("HTTP", "Invalid chunk header (new line not found)");
+						}
+
+						break;
+
+					case ChunkParseStatus::CarriageReturnEnd:
+						if ((*sub_data) == '\r')
+						{
+							sub_data++;
+							remained--;
+							*processed_bytes += 1;
+							_chunk_parse_status = ChunkParseStatus::LineFeedEnd;
+						}
+						else
+						{
+							return ov::Error::CreateError("HTTP", "Invalid chunk header (line feed not found)");
+						}
+
+						break;
+
+					case ChunkParseStatus::LineFeedEnd:
+						if ((*sub_data) == '\n')
+						{
+							sub_data++;
+							remained--;
+							*processed_bytes += 1;
+							_chunk_parse_status = ChunkParseStatus::Completed;
+						}
+						else
+						{
+							return ov::Error::CreateError("HTTP", "Invalid chunk header (new line not found)");
+						}
+
+						break;
+
+					case ChunkParseStatus::Completed:
+						return nullptr;
+				}
+			}
+
+			return nullptr;
+		}
+
 		std::shared_ptr<const ov::Error> HttpClient::ProcessData(const std::shared_ptr<const ov::Data> &data)
 		{
 			auto remained = data->GetLength();
@@ -397,11 +651,30 @@ namespace http
 			{
 				switch (_parser.GetParseStatus())
 				{
-					case StatusCode::OK:
+					case StatusCode::OK: {
 						// Parsing is completed
-						_response_body->Append(sub_data);
-						remained -= sub_data->GetLength();
+						size_t processed_bytes;
+
+						if (_is_chunked_transfer)
+						{
+							auto error = ProcessChunk(sub_data, &processed_bytes);
+
+							if (error != nullptr)
+							{
+								return error;
+							}
+						}
+						else
+						{
+							_response_body->Append(sub_data);
+							processed_bytes = sub_data->GetLength();
+						}
+
+						OV_ASSERT2(remained >= processed_bytes);
+						remained -= processed_bytes;
+
 						break;
+					}
 
 					case StatusCode::PartialContent: {
 						auto processed_length = _parser.ProcessData(sub_data);
@@ -440,41 +713,36 @@ namespace http
 			return nullptr;
 		}
 
+		bool HttpClient::SendData(const std::shared_ptr<const ov::Data> &data)
+		{
+			if (data == nullptr)
+			{
+				// Nothing to do
+				return true;
+			}
+
+			if (_tls_data != nullptr)
+			{
+				return _tls_data->Encrypt(data);
+			}
+
+			return _socket->Send(data);
+		}
+
 		void HttpClient::PostProcess()
 		{
 			logtd("Allocating %zu bytes for receiving response data", _parser.GetContentLength());
 
 			_response_body = std::make_shared<ov::Data>(_parser.GetContentLength());
-		}
 
-		void HttpClient::OnConnected(const std::shared_ptr<const ov::SocketError> &error)
-		{
-			if (error == nullptr)
+			_is_chunked_transfer = (_parser.GetHeader("TRANSFER-ENCODING") == "chunked");
+
+			if (_is_chunked_transfer)
 			{
-				// Response will be processed in OnReadable()
-				SendRequest();
+				_chunk_parse_status = ChunkParseStatus::Header;
+				_chunk_header.SetCapacity(16);
+				_chunk_length = 0L;
 			}
-			else
-			{
-				// An error occurred
-				auto response_handler = _response_handler;
-
-				if (response_handler != nullptr)
-				{
-					auto detailed_error = ov::Error::CreateError("HTTP", error->GetCode(), "Could not connect to %s (in callback): %s", _url.CStr(), error->GetMessage().CStr());
-					response_handler(StatusCode::Unknown, nullptr, detailed_error);
-				}
-			}
-		}
-
-		void HttpClient::OnReadable()
-		{
-			RecvResponse();
-		}
-
-		void HttpClient::OnClosed()
-		{
-			// Ignore
 		}
 
 		void HttpClient::CleanupVariables()
@@ -484,8 +752,36 @@ namespace http
 			_parsed_url = nullptr;
 			_response_handler = nullptr;
 
+			OV_SAFE_RESET(
+				_tls_data, nullptr, {
+					_tls_data->SetIoCallback(nullptr);
+					_tls_data = nullptr;
+				},
+				_tls_data);
 			OV_SAFE_RESET(_socket, nullptr, _socket->Close(), _socket);
 		}
 
+		void HttpClient::HandleError(std::shared_ptr<const ov::Error> error)
+		{
+			auto response_handler = _response_handler;
+
+			// An error occurred - reset all variables
+			CleanupVariables();
+
+			if (response_handler != nullptr)
+			{
+				auto http_error = std::dynamic_pointer_cast<const HttpError>(error);
+
+				if (http_error != nullptr)
+				{
+					// An error occurred in some modules related to HTTP
+					response_handler(http_error->GetStatusCode(), _response_body, error);
+				}
+				else
+				{
+					response_handler(StatusCode::Unknown, _response_body, error);
+				}
+			}
+		}
 	}  // namespace clnt
 }  // namespace http

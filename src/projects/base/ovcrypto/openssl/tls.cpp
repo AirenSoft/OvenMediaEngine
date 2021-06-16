@@ -93,12 +93,12 @@ namespace ov
 
 		_callback = std::move(callback);
 
-		// // Create SSL_CTX
-		// result = result && PrepareSslContext(method, certificate, chain_certificate, cipher_list);
-		// // Create BIO
-		// result = result && PrepareBio();
-		// // Create SSL
-		// result = result && PrepareSsl(nullptr);
+		// Create SSL_CTX
+		result = result && PrepareSslContext(method);
+		// Create BIO
+		result = result && PrepareBio();
+		// Create SSL
+		result = result && PrepareSsl(nullptr);
 
 		if (result == false)
 		{
@@ -110,10 +110,8 @@ namespace ov
 
 	bool Tls::Uninitialize()
 	{
-		if (_ssl != nullptr)
-		{
-			::SSL_shutdown(_ssl);
-		}
+		OV_SAFE_RESET(_ssl, nullptr, ::SSL_shutdown(_ssl), _ssl);
+		OV_SAFE_RESET(_peer_certificate, nullptr, ::X509_free(_peer_certificate), _peer_certificate);
 
 		_bio = nullptr;
 		_ssl = nullptr;
@@ -146,20 +144,20 @@ namespace ov
 
 			if (::SSL_CTX_use_certificate(ctx, certificate->GetX509()) != 1)
 			{
-				logte("Cannot use certficate: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
+				logte("Cannot use certficate: %s", ov::OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
 				break;
 			}
 
 			if ((chain_certificate != nullptr) && (::SSL_CTX_add1_chain_cert(ctx, chain_certificate->GetX509()) != 1))
 			{
-				logte("Cannot use chain certificate: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
+				logte("Cannot use chain certificate: %s", ov::OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
 
 				break;
 			}
 
 			if (::SSL_CTX_use_PrivateKey(ctx, certificate->GetPkey()) != 1)
 			{
-				logte("Cannot use private key: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
+				logte("Cannot use private key: %s", ov::OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
 				break;
 			}
 
@@ -182,6 +180,48 @@ namespace ov
 			::SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
 			// Disable old TLS versions which are neither secure nor needed any more
 			::SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
+
+			_ssl_ctx = std::move(ctx);
+
+			bool result = DO_CALLBACK_IF_AVAILBLE(bool, false, this, create_callback, static_cast<SSL_CTX *>(_ssl_ctx));
+
+			if (result == false)
+			{
+				logte("An error occurred inside create callback");
+
+				_ssl_ctx = nullptr;
+
+				break;
+			}
+		} while (false);
+
+		return (_ssl_ctx != nullptr);
+	}
+
+	bool Tls::PrepareSslContext(const SSL_METHOD *method)
+	{
+		do
+		{
+			OV_ASSERT2(_ssl_ctx == nullptr);
+
+			// Create a new SSL session
+			decltype(_ssl_ctx) ctx(::SSL_CTX_new(method));
+
+			if (ctx == nullptr)
+			{
+				logte("Cannot create SSL context");
+				break;
+			}
+
+			// Register peer certificate verification callback
+			if (_callback.verify_callback != nullptr)
+			{
+				::SSL_CTX_set_cert_verify_callback(ctx, TlsVerify, this);
+			}
+			else
+			{
+				// Use default
+			}
 
 			_ssl_ctx = std::move(ctx);
 
@@ -276,7 +316,7 @@ namespace ov
 
 		auto written_bytes = DO_CALLBACK_IF_AVAILBLE(ssize_t, -1, BIO_get_data(b), write_callback, in, static_cast<size_t>(inl));
 
-		logtd("Written: %zd/%d", written_bytes, inl);
+		// logtd("Written: %zd/%d", written_bytes, inl);
 
 		if (written_bytes > 0)
 		{
@@ -354,7 +394,7 @@ namespace ov
 	{
 		if (_ssl == nullptr)
 		{
-			logte("Ssl is null");
+			logte("SSL is nullptr");
 			return -1;
 		}
 
@@ -390,11 +430,37 @@ namespace ov
 
 			default:
 				// Another error
-				logte("An error occurred while accept SSL connection: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
+				logte("An error occurred while accept SSL connection: %s", ov::OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
 				break;
 		}
 
 		return error;
+	}
+
+	std::shared_ptr<const OpensslError> Tls::Connect()
+	{
+		if (_ssl == nullptr)
+		{
+			logte("SSL is nullptr");
+			return OpensslError::CreateError("SSL is nullptr");
+		}
+
+		// @return Returns
+		//         0: The TLS/SSL handshake was not successful but was shut down controlled and by the specifications of the TLS/SSL protocol. Call SSL_get_error() with the return value ret to find out the reason.
+		//         1: The TLS/SSL handshake was successfully completed, a TLS/SSL connection has been established.
+		//         <0: The TLS/SSL handshake was not successful, because a fatal error occurred either at the protocol level or a connection failure occurred.
+		//             The shutdown was not clean. It can also occur if action is needed to continue the operation for nonblocking BIOs. Call SSL_get_error() with the return value ret to find out the reason.
+		auto result = ::SSL_connect(_ssl);
+
+		if (result == 1)
+		{
+			// Connected
+			_peer_certificate = ::SSL_get_peer_certificate(_ssl);
+
+			return nullptr;
+		}
+
+		return OpensslError::CreateErrorFromOpenssl(_ssl, result);
 	}
 
 	int Tls::Read(void *buffer, size_t length, size_t *read_bytes)
@@ -427,38 +493,33 @@ namespace ov
 
 		unsigned char buf[1024];
 
-		while (true)
+		size_t read_bytes = 0;
+
+		int error = Read(buf, OV_COUNTOF(buf), &read_bytes);
+
+		switch (error)
 		{
-			size_t read_bytes = 0;
+			case SSL_ERROR_NONE:
+				// Read successfully
+				if (data->Append(buf, read_bytes) == false)
+				{
+					OV_ASSERT2(false);
+					return nullptr;
+				}
 
-			int error = Read(buf, OV_COUNTOF(buf), &read_bytes);
+				break;
 
-			switch (error)
-			{
-				case SSL_ERROR_NONE:
-					// Read successfully
-					break;
+			case SSL_ERROR_WANT_READ:
+				// Not enough data
+				break;
 
-					// Not enough data
-				case SSL_ERROR_WANT_READ:
-					break;
-
-				default:
-					// Another error occurred
-					OV_ASSERT2(read_bytes == 0);
-					return data;
-			}
-
-			if (data->Append(buf, read_bytes) == false)
-			{
-				return nullptr;
-			}
-
-			if (error == SSL_ERROR_WANT_READ)
-			{
-				return data;
-			}
+			default:
+				// Another error occurred
+				OV_ASSERT2(read_bytes == 0);
+				break;
 		}
+
+		return data;
 	}
 
 	int Tls::Write(const void *data, size_t length, size_t *written_bytes)
@@ -649,4 +710,40 @@ namespace ov
 
 		return true;
 	}
+
+	long Tls::GetVersion() const
+	{
+		// Holds _peer_certificate to prevent referencing nullptr
+		auto peer_certificate = _peer_certificate;
+		return (peer_certificate != nullptr) ? X509_get_version(peer_certificate) : 0;
+	}
+
+	ov::String Tls::StringFromX509Name(const X509_NAME *name)
+	{
+		BIO *bio = ::BIO_new(::BIO_s_mem());
+		::X509_NAME_print(bio, name, 0);
+		int keylen = BIO_pending(bio);
+
+		ov::String key;
+		key.SetLength(keylen);
+		::BIO_read(bio, key.GetBuffer(), keylen);
+		::BIO_free_all(bio);
+
+		return key;
+	}
+
+	ov::String Tls::GetSubjectName() const
+	{
+		// Holds _peer_certificate to prevent referencing nullptr
+		auto peer_certificate = _peer_certificate;
+		return (peer_certificate != nullptr) ? StringFromX509Name(::X509_get_subject_name(peer_certificate)) : "";
+	}
+
+	ov::String Tls::GetIssuerName() const
+	{
+		// Holds _peer_certificate to prevent referencing nullptr
+		auto peer_certificate = _peer_certificate;
+		return (peer_certificate != nullptr) ? StringFromX509Name(::X509_get_issuer_name(peer_certificate)) : "";
+	}
+
 };	// namespace ov

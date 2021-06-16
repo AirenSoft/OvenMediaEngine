@@ -112,7 +112,7 @@ namespace ov
 	{
 		logad("Creating epoll for %s...", StringFromSocketType(GetType()));
 
-		std::shared_ptr<ov::Error> error;
+		std::shared_ptr<Error> error;
 
 		switch (GetType())
 		{
@@ -142,13 +142,13 @@ namespace ov
 				}
 				else
 				{
-					error = Error::CreateErrorFromSrt();
+					error = SrtError::CreateErrorFromSrt();
 				}
 
 				break;
 
 			default:
-				error = ov::Error::CreateError("Socket", "Not implemented");
+				error = Error::CreateError("Socket", "Not implemented");
 				break;
 		}
 
@@ -271,7 +271,7 @@ namespace ov
 				{
 					auto &event = _epoll_events[index];
 
-					auto socket_data = reinterpret_cast<ov::Socket *>(event.data.ptr);
+					auto socket_data = reinterpret_cast<Socket *>(event.data.ptr);
 
 					if (socket_data == nullptr)
 					{
@@ -291,7 +291,7 @@ namespace ov
 						  index, count,
 						  socket->ToString().CStr(),
 						  StringFromEpollEvent(event).CStr(), events, events,
-						  ov::Error::CreateErrorFromErrno()->ToString().CStr());
+						  Error::CreateErrorFromErrno()->ToString().CStr());
 
 					if (socket->IsClosable() == false)
 					{
@@ -493,7 +493,7 @@ namespace ov
 		OV_ASSERT2(GetNativeHandle() != InvalidSocket);
 
 		auto native_handle = socket->GetNativeHandle();
-		std::shared_ptr<ov::Error> error;
+		std::shared_ptr<Error> error;
 
 		switch (GetType())
 		{
@@ -526,14 +526,14 @@ namespace ov
 
 				if (::srt_epoll_add_usock(_srt_epoll, native_handle, &events) == SRT_ERROR)
 				{
-					error = Error::CreateErrorFromSrt();
+					error = SrtError::CreateErrorFromSrt();
 				}
 
 				break;
 			}
 
 			default:
-				error = ov::Error::CreateError("Socket", "Not implemented");
+				error = Error::CreateError("Socket", "Not implemented");
 				break;
 		}
 
@@ -562,7 +562,7 @@ namespace ov
 			return -1;
 		}
 
-		std::shared_ptr<ov::Error> error;
+		std::shared_ptr<Error> error;
 		int event_count = 0;
 
 		switch (GetType())
@@ -581,7 +581,7 @@ namespace ov
 				}
 				else
 				{
-					error = ov::Error::CreateErrorFromErrno();
+					error = Error::CreateErrorFromErrno();
 
 					if (error->GetCode() == EINTR)
 					{
@@ -619,14 +619,14 @@ namespace ov
 				}
 				else
 				{
-					error = ov::Error::CreateErrorFromSrt();
+					error = SrtError::CreateErrorFromSrt();
 					OV_ASSERT(false, "Unknown error: %s", error->ToString().CStr());
 				}
 
 				break;
 
 			case SocketType::Unknown:
-				error = ov::Error::CreateError("Socket", "Unknown socket type: %s", StringFromSocketType(GetType()));
+				error = Error::CreateError("Socket", "Unknown socket type: %s", StringFromSocketType(GetType()));
 				break;
 		}
 
@@ -704,10 +704,10 @@ namespace ov
 	void SocketPoolWorker::EnqueueToCheckConnectionTimeOut(const std::shared_ptr<Socket> &socket, int timeout_msec)
 	{
 		_connection_callback_queue.Push(
-			[=](void *parameter) -> ov::DelayQueueAction {
+			[=](void *parameter) -> DelayQueueAction {
 				auto lock_guard = std::lock_guard(_connection_timed_out_queue_mutex);
 				_connection_timed_out_queue.push_back(socket);
-				return ov::DelayQueueAction::Stop;
+				return DelayQueueAction::Stop;
 			},
 			nullptr,
 			timeout_msec);
@@ -723,7 +723,7 @@ namespace ov
 			return false;
 		}
 
-		std::shared_ptr<ov::Error> error;
+		std::shared_ptr<Error> error;
 		auto native_handle = socket->GetNativeHandle();
 
 		logad("Trying to unregister a socket #%d from epoll...", native_handle);
@@ -734,7 +734,7 @@ namespace ov
 			case SocketType::Tcp: {
 				if (::epoll_ctl(_epoll, EPOLL_CTL_DEL, native_handle, nullptr) == -1)
 				{
-					error = ov::Error::CreateErrorFromErrno();
+					error = Error::CreateErrorFromErrno();
 				}
 
 				break;
@@ -743,14 +743,14 @@ namespace ov
 			case SocketType::Srt: {
 				if (::srt_epoll_remove_usock(_srt_epoll, native_handle) == SRT_ERROR)
 				{
-					error = ov::Error::CreateErrorFromSrt();
+					error = SrtError::CreateErrorFromSrt();
 				}
 
 				break;
 			}
 
 			default:
-				error = ov::Error::CreateError("Socket", "Not implemented");
+				error = Error::CreateError("Socket", "Not implemented");
 				break;
 		}
 
@@ -772,7 +772,7 @@ namespace ov
 				logae("Could not delete the socket %d from epoll: %s\n%s",
 					  native_handle,
 					  error->ToString().CStr(),
-					  ov::StackTrace::GetStackTrace().CStr());
+					  StackTrace::GetStackTrace().CStr());
 			}
 		}
 

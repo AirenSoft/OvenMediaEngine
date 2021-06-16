@@ -9,10 +9,11 @@
 #pragma once
 
 #include "./tls.h"
+#include "openssl_error.h"
 
 namespace ov
 {
-	class TlsData
+	class TlsServerData
 	{
 	public:
 		using WriteCallback = std::function<ssize_t(const void *data, int64_t length)>;
@@ -20,36 +21,31 @@ namespace ov
 		enum class Method
 		{
 			// TLS_server_method()
-			TlsServerMethod,
+			Tls,
 			// DTLS_server_method()
-			DtlsServerMethod,
-
-			// TLS_client_method()
-			TlsClientMethod
+			Dtls,
 		};
 
 		enum class State
 		{
 			Invalid,
 
-			// For TLS/DTLS server
 			WaitingForAccept,
 			Accepted,
-
-			// For TLS/DTLS client
-			Connected,
 		};
 
-		// For TLS/DTLS server
-		TlsData(Method method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const String &cipher_list);
-		// For TLS/DTLS client
-		TlsData(Method method);
-		
-		~TlsData();
+		TlsServerData(Method method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const String &cipher_list);
+
+		~TlsServerData();
 
 		State GetState() const
 		{
 			return _state;
+		}
+
+		const WriteCallback &GetWriteCallback() const
+		{
+			return _write_callback;
 		}
 
 		// This callback is called when TLS negotiation is in progress
@@ -70,10 +66,12 @@ namespace ov
 		//--------------------------------------------------------------------
 		// Called by TLS module
 		//--------------------------------------------------------------------
-		// Tls::Read() -> SSL_read() -> Tls::TlsRead() -> BIO_get_data()::read_callback -> TlsData::OnTlsRead()
+		// Tls::Read() -> SSL_read() -> Tls::TlsRead() -> BIO_get_data()::read_callback -> TlsServerData::OnTlsRead()
 		ssize_t OnTlsRead(Tls *tls, void *buffer, size_t length);
-		// Tls::Write() -> SSL_write() -> Tls::TlsWrite() -> BIO_get_data()::write_callback -> TlsData::OnTlsWrite()
+		// Tls::Write() -> SSL_write() -> Tls::TlsWrite() -> BIO_get_data()::write_callback -> TlsServerData::OnTlsWrite()
 		ssize_t OnTlsWrite(Tls *tls, const void *data, size_t length);
+
+		long OnTlsCtrl(ov::Tls *tls, int cmd, long num, void *arg);
 
 		State _state = State::Invalid;
 		Method _method;
@@ -81,6 +79,7 @@ namespace ov
 		Tls _tls;
 		std::mutex _data_mutex;
 		WriteCallback _write_callback;
+
 		std::shared_ptr<Data> _cipher_data;
 		std::shared_ptr<Data> _plain_data;
 	};

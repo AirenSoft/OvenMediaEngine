@@ -9,6 +9,7 @@
 #include "./third_parties.h"
 
 #include <base/ovcrypto/ovcrypto.h>
+#include <base/ovsocket/ovsocket.h>
 #include <srt/srt.h>
 #if !DEBUG
 #	include <jemalloc/jemalloc.h>
@@ -247,7 +248,7 @@ std::shared_ptr<ov::Error> InitializeSrt()
 	// -1 = failed
 	if (::srt_startup() == -1)
 	{
-		return ov::Error::CreateErrorFromSrt();
+		return ov::SrtError::CreateErrorFromSrt();
 	}
 
 	::srt_setloglevel(srt_logging::LogLevel::debug);
@@ -262,7 +263,7 @@ std::shared_ptr<ov::Error> TerminateSrt()
 	// 0 (A possibility to return other values is reserved for future use)
 	if (::srt_cleanup() != 0)
 	{
-		return ov::Error::CreateErrorFromSrt();
+		return ov::SrtError::CreateErrorFromSrt();
 	}
 
 	return nullptr;
@@ -288,7 +289,7 @@ std::shared_ptr<ov::Error> InitializeOpenSsl()
 		return nullptr;
 	}
 
-	return ov::Error::CreateErrorFromOpenSsl();
+	return ov::OpensslError::CreateErrorFromOpenssl();
 }
 
 std::shared_ptr<ov::Error> TerminateOpenSsl()
@@ -298,7 +299,7 @@ std::shared_ptr<ov::Error> TerminateOpenSsl()
 		return nullptr;
 	}
 
-	return ov::Error::CreateErrorFromOpenSsl();
+	return ov::OpensslError::CreateErrorFromOpenssl();
 }
 
 const char *GetJsonCppVersion()

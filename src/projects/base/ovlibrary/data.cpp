@@ -132,11 +132,11 @@ namespace ov
 	{
 		if (offset >= 0)
 		{
-			OV_ASSERT2(GetLength() >= static_cast<size_t>(offset));
+			OV_ASSERT(GetLength() >= static_cast<size_t>(offset), "Invalid offset: %jd (length: %zu)", offset, GetLength());
 		}
 		else
 		{
-			OV_ASSERT2(GetLength() > static_cast<size_t>(-1LL * offset));
+			OV_ASSERT(GetLength() > static_cast<size_t>(-1LL * offset), "Invalid offset: %jd (length: %zu)", -1LL * offset, GetLength());
 		}
 
 		return Subdata(offset, (offset >= 0) ? (GetLength() - offset) : (static_cast<size_t>(-1 * offset)));

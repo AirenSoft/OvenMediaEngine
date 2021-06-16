@@ -85,6 +85,11 @@ namespace http
 			return _headers.find(key.UpperCaseString()) != _headers.cend();
 		}
 
+		bool HasContentLength() const
+		{
+			return _has_content_length;
+		}
+
 		size_t GetContentLength() const
 		{
 			return _content_length;
@@ -107,5 +112,6 @@ namespace http
 
 		// Frequently used headers
 		size_t _content_length = 0L;
+		bool _has_content_length = false;
 	};
 }  // namespace http
