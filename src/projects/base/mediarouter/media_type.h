@@ -303,7 +303,7 @@ namespace cmn
 
 		int32_t GetRateNum() const
 		{
-			return static_cast<std::underlying_type<AudioSample::Rate>::type>(_rate);
+			return ov::ToUnderlyingType(_rate);
 		}
 
 		const char *GetName() const

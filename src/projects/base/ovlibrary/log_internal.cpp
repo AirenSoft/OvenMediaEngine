@@ -7,9 +7,10 @@
 //
 //==============================================================================
 #include "log_internal.h"
-#include "platform.h"
 
 #include <thread>
+
+#include "platform.h"
 
 #define OV_LOG_COLOR_RESET "\x1B[0m"
 
@@ -57,6 +58,11 @@ namespace ov
 	{
 	}
 
+	LogInternal::~LogInternal()
+	{
+		_released = true;
+	}
+
 	void LogInternal::SetLogLevel(OVLogLevel level)
 	{
 		_level = level;
@@ -64,15 +70,24 @@ namespace ov
 
 	void LogInternal::ResetEnable()
 	{
+		if (_released)
+		{
+			return;
+		}
+
 		std::lock_guard<std::mutex> lock(_mutex);
 
 		_enable_map.clear();
-
 		_enable_list.clear();
 	}
 
 	bool LogInternal::IsEnabled(const char *tag, OVLogLevel level)
 	{
+		if (_released)
+		{
+			return false;
+		}
+
 		std::lock_guard<std::mutex> lock(_mutex);
 
 		auto item = _enable_map.find(tag);
@@ -123,6 +138,11 @@ namespace ov
 
 	bool LogInternal::SetEnable(const char *tag_regex, OVLogLevel level, bool is_enabled)
 	{
+		if (_released)
+		{
+			return false;
+		}
+
 		std::lock_guard<std::mutex> lock(_mutex);
 
 		_enable_map.clear();
@@ -160,6 +180,11 @@ namespace ov
 
 	void LogInternal::Log(bool show_format, OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, va_list &arg_list)
 	{
+		if (_released)
+		{
+			return;
+		}
+
 		if (level < _level)
 		{
 			// Disabled log level
@@ -330,6 +355,11 @@ namespace ov
 
 	void LogInternal::SetLogPath(const char *log_path)
 	{
+		if (_released)
+		{
+			return;
+		}
+
 		_log_file.SetLogPath(log_path);
 	}
 }  // namespace ov

@@ -242,7 +242,7 @@ namespace ov
 			case SocketType::Srt:
 				if (SetSockOpt(SRTO_RCVSYN, mode != BlockingMode::Blocking) == false || SetSockOpt(SRTO_SNDSYN, mode != BlockingMode::Blocking) == false)
 				{
-					logae("Could not set flags to SRT socket %d: %s", GetNativeHandle(), Error::CreateErrorFromSrt()->ToString().CStr());
+					logae("Could not set flags to SRT socket %d: %s", GetNativeHandle(), SrtError::CreateErrorFromSrt()->ToString().CStr());
 					return false;
 				}
 
@@ -669,7 +669,7 @@ namespace ov
 					}
 				}
 
-				socket_error = SocketError::CreateError(Error::CreateErrorFromSrt());
+				socket_error = SocketError::CreateError(SrtError::CreateErrorFromSrt());
 
 				break;
 
@@ -752,7 +752,7 @@ namespace ov
 
 		if (result == SRT_ERROR)
 		{
-			auto error = Error::CreateErrorFromSrt();
+			auto error = SrtError::CreateErrorFromSrt();
 			logaw("Could not set option: %d (result: %s)", option, error->ToString().CStr());
 			return false;
 		}
@@ -762,7 +762,7 @@ namespace ov
 
 	bool Socket::IsClosable() const
 	{
-		return OV_CHECK_FLAG(static_cast<std::underlying_type<SocketState>::type>(_state), SOCKET_STATE_CLOSABLE);
+		return OV_CHECK_FLAG(ov::ToUnderlyingType(_state), SOCKET_STATE_CLOSABLE);
 	}
 
 	SocketState Socket::GetState() const
@@ -1099,7 +1099,7 @@ namespace ov
 
 					if (sent == SRT_ERROR)
 					{
-						auto error = Error::CreateErrorFromSrt();
+						auto error = SrtError::CreateErrorFromSrt();
 
 						if (error->GetCode() == SRT_EASYNCSND)
 						{
@@ -1109,7 +1109,7 @@ namespace ov
 						}
 
 						STATS_COUNTER_INCREASE_ERROR();
-						logaw("Could not send data: %zd (%s)", sent, Error::CreateErrorFromSrt()->ToString().CStr());
+						logaw("Could not send data: %zd (%s)", sent, SrtError::CreateErrorFromSrt()->ToString().CStr());
 						return sent;
 					}
 
@@ -1467,7 +1467,7 @@ namespace ov
 
 				if (read_bytes <= 0L)
 				{
-					auto error = Error::CreateErrorFromSrt();
+					auto error = SrtError::CreateErrorFromSrt();
 
 					if (error->GetCode() == SRT_EASYNCRCV)
 					{

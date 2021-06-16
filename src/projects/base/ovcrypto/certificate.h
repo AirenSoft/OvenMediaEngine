@@ -1,13 +1,15 @@
 #pragma once
 
-#include "base/common_types.h"
 #include <base/ovlibrary/ovlibrary.h>
 #include <openssl/ec.h>
 #include <openssl/ssl.h>
 
-#define    CERT_NAME        "OME"
+#include "base/common_types.h"
+#include "openssl/openssl_error.h"
 
-static const int DefaultCertificateLifetimeInSeconds = 60 * 60 * 24 * 30 * 12;  // 1 years
+#define CERT_NAME "OME"
+
+static const int DefaultCertificateLifetimeInSeconds = 60 * 60 * 24 * 30 * 12;	// 1 years
 static const int CertificateWindowInSeconds = -60 * 60 * 24;
 
 enum class KeyType : int32_t
@@ -26,16 +28,17 @@ public:
 	explicit Certificate(X509 *x509);
 	~Certificate();
 
-	std::shared_ptr<ov::Error> Generate();
-	std::shared_ptr<ov::Error> GenerateFromPem(const char *cert_filename, const char *private_key_filename);
+	std::shared_ptr<ov::OpensslError> Generate();
+	std::shared_ptr<ov::OpensslError> GenerateFromPem(const char *cert_filename, const char *private_key_filename);
 	// If aux flag is enabled, it will process a trusted X509 certificate using an X509 structure
-	std::shared_ptr<ov::Error> GenerateFromPem(const char *filename, bool aux);
+	std::shared_ptr<ov::OpensslError> GenerateFromPem(const char *filename, bool aux);
 	X509 *GetX509() const;
-	EVP_PKEY *GetPkey() const ;
+	EVP_PKEY *GetPkey() const;
 	ov::String GetFingerprint(const ov::String &algorithm);
 
 	// Print Cert for Test
 	void Print();
+
 private:
 	// Make ECDSA Key
 	EVP_PKEY *MakeKey();

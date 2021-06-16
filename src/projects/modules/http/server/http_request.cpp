@@ -33,13 +33,13 @@ namespace http
 			return _client_socket;
 		}
 
-		void HttpRequest::SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data)
+		void HttpRequest::SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data)
 		{
 			_tls_data = tls_data;
 			UpdateUri();
 		}
 
-		std::shared_ptr<ov::TlsData> HttpRequest::GetTlsData()
+		std::shared_ptr<ov::TlsServerData> HttpRequest::GetTlsData()
 		{
 			return _tls_data;
 		}

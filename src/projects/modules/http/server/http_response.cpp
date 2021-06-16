@@ -26,7 +26,7 @@ namespace http
 			OV_ASSERT2(_client_socket != nullptr);
 		}
 
-		void HttpResponse::SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data)
+		void HttpResponse::SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data)
 		{
 			_tls_data = tls_data;
 		}
@@ -41,7 +41,7 @@ namespace http
 			return _client_socket;
 		}
 
-		std::shared_ptr<ov::TlsData> HttpResponse::GetTlsData()
+		std::shared_ptr<ov::TlsServerData> HttpResponse::GetTlsData()
 		{
 			return _tls_data;
 		}

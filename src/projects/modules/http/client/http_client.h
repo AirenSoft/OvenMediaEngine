@@ -22,7 +22,8 @@ namespace http
 	namespace clnt
 	{
 		class HttpClient : public ov::EnableSharedFromThis<HttpClient>,
-						   public ov::SocketAsyncInterface
+						   public ov::SocketAsyncInterface,
+						   public ov::TlsClientDataIoCallback
 		{
 		public:
 			// Use default TCP socket pool
@@ -68,14 +69,27 @@ namespace http
 			const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetResponseHeaders() const;
 
 		protected:
-			std::shared_ptr<const ov::Error> PrepareForRequest(const ov::String &url, ov::SocketAddress *address);
-			void SendRequest();
-			// Use this API when blocking mode
-			void RecvResponse();
-			std::shared_ptr<const ov::Error> ProcessData(const std::shared_ptr<const ov::Data> &data);
+			enum class ChunkParseStatus
+			{
+				None,
 
-			void PostProcess();
+				// Waiting for chunk header
+				Header,
+				// Waiting for chunk body
+				Body,
+				// Waiting for \r
+				CarriageReturn,
+				// Waiting for \n
+				LineFeed,
+				// Waiting for \r (to determine end of response)
+				CarriageReturnEnd,
+				// Waiting for \n (to determine end of response)
+				LineFeedEnd,
 
+				Completed
+			};
+
+		protected:
 			//--------------------------------------------------------------------
 			// Implementation of SocketAsyncInterface
 			//--------------------------------------------------------------------
@@ -83,7 +97,28 @@ namespace http
 			void OnReadable() override;
 			void OnClosed() override;
 
+		protected:
+			//--------------------------------------------------------------------
+			// Implementation of ov::TlsClientDataIoCallback
+			//--------------------------------------------------------------------
+			ssize_t OnTlsReadData(void *data, int64_t length) override;
+			ssize_t OnTlsWriteData(const void *data, int64_t length) override;
+
+		protected:
+			std::shared_ptr<const ov::Error> PrepareForRequest(const ov::String &url, ov::SocketAddress *address);
+			std::shared_ptr<const ov::OpensslError> TryTlsConnect();
+			void SendRequestIfNeeded();
+			// Use this API when blocking mode
+			void RecvResponse();
+			std::shared_ptr<const ov::Error> ProcessChunk(const std::shared_ptr<const ov::Data> &data, size_t *processed_bytes);
+			std::shared_ptr<const ov::Error> ProcessData(const std::shared_ptr<const ov::Data> &data);
+
+			bool SendData(const std::shared_ptr<const ov::Data> &data);
+
+			void PostProcess();
 			void CleanupVariables();
+
+			void HandleError(std::shared_ptr<const ov::Error> error);
 
 		protected:
 			std::shared_ptr<ov::SocketPool> _socket_pool;
@@ -94,6 +129,15 @@ namespace http
 			// Default: 60 seconds
 			int _recv_timeout_msec = 60 * 1000;
 			http::Method _method = http::Method::Get;
+
+			// Related to chunked transfer
+			bool _is_chunked_transfer = false;
+			ChunkParseStatus _chunk_parse_status = ChunkParseStatus::None;
+			// Length of the chunk (include \r\n)
+			size_t _chunk_length = 0L;
+			ov::String _chunk_header;
+
+			std::shared_ptr<ov::TlsClientData> _tls_data;
 
 			HttpResponseParser _parser;
 

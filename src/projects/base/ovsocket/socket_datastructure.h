@@ -17,6 +17,7 @@
 
 #include "epoll_wrapper.h"
 #include "socket_error.h"
+#include "srt_error.h"
 
 #define OV_SOCKET_ADD_FLAG_IF(list, x, flag) \
 	if (OV_CHECK_FLAG(x, flag))              \

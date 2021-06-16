@@ -128,23 +128,8 @@ namespace http
 			logtd("\t>> %s: %s", pair.first.CStr(), pair.second.CStr());
 		});
 
-		switch (GetMethod())
-		{
-			case Method::Get:
-				// GET has no HTTP body
-				_content_length = 0L;
-				break;
-
-			case Method::Post:
-				// TODO(dimiden): Need to parse HTTP body if needed
-				_content_length = ov::Converter::ToInt64(GetHeader("CONTENT-LENGTH", "0"));
-				break;
-
-			default:
-				// Another method
-				_content_length = ov::Converter::ToInt64(GetHeader("CONTENT-LENGTH", "0"));
-				break;
-		}
+		_has_content_length = IsHeaderExists("CONTENT-LENGTH");
+		_content_length = ov::Converter::ToInt64(GetHeader("CONTENT-LENGTH", "0"));
 
 		return status_code;
 	}

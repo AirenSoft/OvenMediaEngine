@@ -26,15 +26,15 @@ namespace ocst
 	inline ModuleType operator|(ModuleType type1, ModuleType type2)
 	{
 		return static_cast<ModuleType>(
-			static_cast<std::underlying_type<ModuleType>::type>(type1) |
-			static_cast<std::underlying_type<ModuleType>::type>(type2));
+			ov::ToUnderlyingType(type1) |
+			ov::ToUnderlyingType(type2));
 	}
 
 	inline ModuleType operator&(ModuleType type1, ModuleType type2)
 	{
 		return static_cast<ModuleType>(
-			static_cast<std::underlying_type<ModuleType>::type>(type1) &
-			static_cast<std::underlying_type<ModuleType>::type>(type2));
+			ov::ToUnderlyingType(type1) &
+			ov::ToUnderlyingType(type2));
 	}
 
 	ov::String GetModuleTypeName(ModuleType type);

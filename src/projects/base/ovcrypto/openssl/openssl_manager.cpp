@@ -22,8 +22,6 @@
 #include <mutex>
 #include <thread>
 
-#include "openssl/ssl.h"
-
 #define OV_LOG_TAG "OpensslManager"
 
 namespace ov
@@ -120,7 +118,7 @@ namespace ov
 		}
 		else
 		{
-			logte("Could not allocate BIO method: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
+			logte("Could not allocate BIO method: %s", OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
 		}
 
 		return bio_method;

@@ -8,23 +8,23 @@
 //==============================================================================
 #pragma once
 
-#include "../crc_32.h"
-#include "../base_64.h"
-#include "../message_digest.h"
-#include "../certificate.h"
+#include <base/ovlibrary/ovlibrary.h>
+#include <openssl/crypto.h>
+#include <openssl/dtls1.h>
+#include <openssl/err.h>
+#include <openssl/rand.h>
+#include <openssl/ssl.h>
+#include <openssl/tls1.h>
+#include <openssl/x509v3.h>
 
 #include <cstdint>
 #include <functional>
 
-#include <openssl/crypto.h>
-#include <openssl/err.h>
-#include <openssl/rand.h>
-#include <openssl/tls1.h>
-#include <openssl/x509v3.h>
-#include <openssl/dtls1.h>
-#include <openssl/ssl.h>
-
-#include <base/ovlibrary/ovlibrary.h>
+#include "../base_64.h"
+#include "../certificate.h"
+#include "../crc_32.h"
+#include "../message_digest.h"
+#include "openssl_error.h"
 
 namespace ov
 {
@@ -70,12 +70,12 @@ namespace ov
 			std::swap(ptr._ptr, _ptr);
 		}
 
-		operator Ttype *() noexcept  // NOLINT
+		operator Ttype *() noexcept	 // NOLINT
 		{
 			return _ptr.get();
 		}
 
-		operator const Ttype *() const noexcept  // NOLINT
+		operator const Ttype *() const noexcept	 // NOLINT
 		{
 			return _ptr.get();
 		}
@@ -120,7 +120,7 @@ namespace ov
 		virtual ~Tls();
 
 		// method: DTLS_server_method(), TLS_server_method()
-		bool InitializeServerTls(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list, TlsCallback callback);
+		bool InitializeServerTls(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const String &cipher_list, TlsCallback callback);
 		// method: TLS_client_method()
 		bool InitializeClientTls(const SSL_METHOD *method, TlsCallback callback);
 		bool Uninitialize();
@@ -128,14 +128,16 @@ namespace ov
 		// @return Returns SSL_ERROR_NONE on success
 		int Accept();
 
+		std::shared_ptr<const OpensslError> Connect();
+
 		// @return Returns SSL_ERROR_NONE on success
 		int Read(void *buffer, size_t length, size_t *read_bytes);
 
-		std::shared_ptr<ov::Data> Read();
+		std::shared_ptr<Data> Read();
 
 		// @return Returns SSL_ERROR_NONE on success
 		int Write(const void *data, size_t length, size_t *written_bytes);
-		int Write(const std::shared_ptr<const ov::Data> &data, size_t *written_bytes);
+		int Write(const std::shared_ptr<const Data> &data, size_t *written_bytes);
 
 		bool FlushInput();
 
@@ -155,10 +157,18 @@ namespace ov
 
 		bool GetKeySaltLen(unsigned long crypto_suite, size_t *key_len, size_t *salt_len) const;
 
+		// Obtains a string in the BIO which allocated using BIO_new(BIO_s_mem())
+		static ov::String StringFromX509Name(const X509_NAME *name);
+
+		long GetVersion() const;
+		ov::String GetSubjectName() const;
+		ov::String GetIssuerName() const;
+
 	protected:
 		static BIO_METHOD *PrepareBioMethod();
 
 		bool PrepareSslContext(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list);
+		bool PrepareSslContext(const SSL_METHOD *method);
 		bool PrepareBio();
 		bool PrepareSsl(void *app_data);
 
@@ -194,6 +204,7 @@ namespace ov
 		static int TlsDestroy(BIO *b);
 
 	protected:
+		X509 *_peer_certificate = nullptr;
 		TlsUniquePtr<SSL, void, ::SSL_free> _ssl = nullptr;
 		TlsUniquePtr<SSL_CTX, void, ::SSL_CTX_free> _ssl_ctx = nullptr;
 		TlsUniquePtr<BIO, int, ::BIO_free> _bio = nullptr;

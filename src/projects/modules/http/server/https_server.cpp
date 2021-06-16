@@ -49,8 +49,8 @@ namespace http
 					return;
 				}
 
-				auto tls_data = std::make_shared<ov::TlsData>(
-					ov::TlsData::Method::TlsServerMethod,
+				auto tls_data = std::make_shared<ov::TlsServerData>(
+					ov::TlsServerData::Method::Tls,
 					_certificate->GetCertificate(), _certificate->GetChainCertificate(),
 					HTTP_FAST_NOT_VERY_SECURE);
 
@@ -102,7 +102,7 @@ namespace http
 			}
 			else
 			{
-				OV_ASSERT(false, "TlsData must not be null");
+				OV_ASSERT(false, "TlsServerData must not be null");
 			}
 
 			client->GetResponse()->Close();

@@ -36,5 +36,6 @@
 #include "./stop_watch.h"
 #include "./string.h"
 #include "./time.h"
+#include "./type.h"
 #include "./unique.h"
 #include "./url.h"
