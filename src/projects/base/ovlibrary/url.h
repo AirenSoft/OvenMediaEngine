@@ -68,6 +68,16 @@ namespace ov
 			return _file;
 		}
 
+		const ov::String &Id() const
+		{
+			return _id;
+		}
+
+		const ov::String &Password() const
+		{
+			return _password;
+		}
+
 		bool HasQueryString() const
 		{
 			return _has_query_string;
@@ -138,6 +148,8 @@ namespace ov
 		// Full URL
 		ov::String _source;
 		ov::String _scheme;
+		ov::String _id;
+		ov::String _password;
 		ov::String _host;
 		uint32_t _port = 0;
 		ov::String _path;
