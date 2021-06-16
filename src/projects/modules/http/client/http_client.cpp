@@ -752,6 +752,12 @@ namespace http
 			_parsed_url = nullptr;
 			_response_handler = nullptr;
 
+			OV_SAFE_RESET(
+				_tls_data, nullptr, {
+					_tls_data->SetIoCallback(nullptr);
+					_tls_data = nullptr;
+				},
+				_tls_data);
 			OV_SAFE_RESET(_socket, nullptr, _socket->Close(), _socket);
 		}
 

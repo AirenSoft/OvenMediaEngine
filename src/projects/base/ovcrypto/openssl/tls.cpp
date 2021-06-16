@@ -110,10 +110,8 @@ namespace ov
 
 	bool Tls::Uninitialize()
 	{
-		if (_ssl != nullptr)
-		{
-			::SSL_shutdown(_ssl);
-		}
+		OV_SAFE_RESET(_ssl, nullptr, ::SSL_shutdown(_ssl), _ssl);
+		OV_SAFE_RESET(_peer_certificate, nullptr, ::X509_free(_peer_certificate), _peer_certificate);
 
 		_bio = nullptr;
 		_ssl = nullptr;
