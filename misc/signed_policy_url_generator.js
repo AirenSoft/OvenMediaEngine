@@ -30,7 +30,9 @@ let policy = POLICY
 let policyBase64 = base64url(Buffer.from(policy,'utf8'))
 // console.log('policyBase64:\t',policyBase64)
 
-let policyUrl = baseUrl + '?' + POLICY_QUERY_KEY_NAME + '=' + policyBase64
+let qsSeperator = baseUrl.includes("?") ? "&" : "?";
+let policyUrl =
+  baseUrl + qsSeperator + POLICY_QUERY_KEY_NAME + "=" + policyBase64;
 // console.log('policyUrl:\t', policyUrl)
 
 let signature = base64url(crypto.createHmac('sha1', HMAC_KEY).update(policyUrl).digest())
