@@ -854,24 +854,27 @@ namespace pvd
 				break;
 			}
 
-			bool bSuccess = true;
+			bool result = true;
 
 			switch (message->header->completed.type_id)
 			{
 				case RTMP_MSGID_AUDIO_MESSAGE:
-					bSuccess = ReceiveAudioMessage(message);
+					result = ReceiveAudioMessage(message);
 					break;
 				case RTMP_MSGID_VIDEO_MESSAGE:
-					bSuccess = ReceiveVideoMessage(message);
+					result = ReceiveVideoMessage(message);
 					break;
 				case RTMP_MSGID_SET_CHUNK_SIZE:
-					bSuccess = ReceiveSetChunkSize(message);
+					result = ReceiveSetChunkSize(message);
 					break;
 				case RTMP_MSGID_AMF0_DATA_MESSAGE:
 					ReceiveAmfDataMessage(message);
 					break;
 				case RTMP_MSGID_AMF0_COMMAND_MESSAGE:
 					ReceiveAmfCommandMessage(message);
+					break;
+				case RTMP_MSGID_USER_CONTROL_MESSAGE:
+					result = ReceiveUserControlMessage(message);
 					break;
 				case RTMP_MSGID_WINDOWACKNOWLEDGEMENT_SIZE:
 					ReceiveWindowAcknowledgementSize(message);
@@ -881,7 +884,7 @@ namespace pvd
 					break;
 			}
 
-			if (!bSuccess)
+			if (!result)
 			{
 				return false;
 			}
@@ -902,6 +905,72 @@ namespace pvd
 
 		_import_chunk->SetChunkSize(chunk_size);
 		logtd("Set Receive ChunkSize(%u)", chunk_size);
+
+		return true;
+	}
+
+	bool RtmpStream::ReceiveUserControlMessage(const std::shared_ptr<const RtmpMessage> &message)
+	{
+		auto data = message->payload;
+
+		// RTMP Spec. v1.0 - 6.2. User Control Messages
+		//
+		// User Control messages SHOULD use message stream ID 0 (known as the
+		// control stream) and, when sent over RTMP Chunk Stream, be sent on
+		// chunk stream ID 2. 
+		auto message_stream_id = message->header->completed.stream_id;
+		auto chunk_stream_id = message->header->basic_header.stream_id;
+		if(
+			(message_stream_id != 0) ||
+			(chunk_stream_id != 2)
+		)
+		{
+			logte("Invalid id (message stream id: %u, chunk stream id: %u)", message_stream_id, chunk_stream_id);
+			return false;
+		}
+
+		if(data->GetLength() < 2)
+		{
+			logte("Invalid user control message size (data length must greater than 2 bytes, but %zu)", data->GetLength());
+			return false;
+		}
+
+		ov::ByteStream byte_stream(data);
+
+		auto type = byte_stream.ReadBE16();
+
+		switch (type)
+		{
+			case RTMP_UCMID_PINGREQUEST: {
+				if(data->GetLength() != 6)
+				{
+					logte("Invalid ping message size: %zu", data->GetLength());
+					return false;
+				}
+
+				// +---------------+--------------------------------------------------+
+				// | PingResponse  | The client sends this event to the server in     |
+				// | (=7)          | response to the ping request. The event data is  |
+				// |               | a 4-byte timestamp, which was received with the  |
+				// |               | PingRequest request.                             |
+				// +---------------+--------------------------------------------------+
+				// ping response == event type (16 bits) + timestamp (32 bits)
+				auto body = std::make_shared<std::vector<uint8_t>>(2 + 4);
+				auto write_buffer = body->data();
+				auto message_header = std::make_shared<RtmpMuxMessageHeader>(
+					chunk_stream_id,
+					0,
+					RTMP_MSGID_USER_CONTROL_MESSAGE,
+					message_stream_id,
+					6);
+
+				*(reinterpret_cast<uint16_t *>(write_buffer)) = ov::HostToBE16(RTMP_UCMID_PINGRESPONSE);
+				write_buffer += sizeof(uint16_t);
+				*(reinterpret_cast<uint32_t *>(write_buffer)) = ov::HostToBE32(byte_stream.ReadBE32());
+
+				return SendMessagePacket(message_header, body);
+			}
+		}
 
 		return true;
 	}
@@ -965,11 +1034,9 @@ namespace pvd
 		}
 		else if (message_name == RTMP_CMD_NAME_RELEASESTREAM)
 		{
-			;
 		}
 		else if (message_name == RTMP_PING)
 		{
-			;
 		}
 		else if (message_name == RTMP_CMD_NAME_DELETESTREAM)
 		{
@@ -1609,7 +1676,7 @@ namespace pvd
 		auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id,
 																	0,
 																	RTMP_MSGID_AMF0_COMMAND_MESSAGE,
-																	_rtmp_stream_id,
+																	0,
 																	0);
 		AmfDocument document;
 		AmfObject *object = nullptr;

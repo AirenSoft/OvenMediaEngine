@@ -99,6 +99,7 @@ namespace pvd
 		bool ReceiveChunkMessage();
 
 		bool ReceiveSetChunkSize(const std::shared_ptr<const RtmpMessage> &message);
+		bool ReceiveUserControlMessage(const std::shared_ptr<const RtmpMessage> &message);
 		void ReceiveWindowAcknowledgementSize(const std::shared_ptr<const RtmpMessage> &message);
 		void ReceiveAmfCommandMessage(const std::shared_ptr<const RtmpMessage> &message);
 		void ReceiveAmfDataMessage(const std::shared_ptr<const RtmpMessage> &message);
