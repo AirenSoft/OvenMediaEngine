@@ -222,7 +222,6 @@ bool RtmpWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 				logte("there is no avc configuration %d", track_info->GetExtradata()->GetLength());
 			}
 
-			stream->display_aspect_ratio = AVRational{1, 1};
 			stream->time_base = AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()};
 
 			_track_map[track_id] = stream->index;
