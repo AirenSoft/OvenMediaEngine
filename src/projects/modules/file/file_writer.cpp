@@ -210,7 +210,6 @@ bool FileWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 				memcpy(codecpar->extradata, track_info->GetExtradata()->GetDataAs<uint8_t>(), codecpar->extradata_size);
 			}
 
-			stream->display_aspect_ratio = AVRational{1, 1};
 			stream->time_base = AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()};
 
 			_track_map[track_id] = stream->index;
