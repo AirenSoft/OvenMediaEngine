@@ -723,8 +723,6 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 			continue;
 		}
 
-		
-
 		if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
 		{
 			NotifyStreamPrepared(stream);
