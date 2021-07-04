@@ -171,10 +171,10 @@ void EncoderOPUS::ThreadEncode()
 			// Store frame informations
 			_format = frame->GetFormat<cmn::AudioSample::Format>();
 
-			if (_current_pts == -1)
-			{
+			// if (_current_pts == -1)
+			// {
 				_current_pts = frame->GetPts();
-			}
+			// }
 
 			// Append frame data into the buffer
 			if (frame->GetChannels() == 1)

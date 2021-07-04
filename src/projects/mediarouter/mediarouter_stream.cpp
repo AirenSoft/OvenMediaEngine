@@ -43,7 +43,7 @@
 
 #include "mediarouter_private.h"
 
-#define PTS_CORRECT_THRESHOLD_US 5000
+#define PTS_CORRECT_THRESHOLD_MS 3000
 
 using namespace cmn;
 
@@ -78,8 +78,6 @@ MediaRouteStream::~MediaRouteStream()
 
 	_pts_last.clear();
 	_dts_last.clear();
-	_pts_correct.clear();
-	_pts_avg_inc.clear();
 }
 
 std::shared_ptr<info::Stream> MediaRouteStream::GetStream()
@@ -236,7 +234,7 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 			converted_data->Append(nalu);
 			nalu_offset += nalu->GetLength();
 		}
-		
+
 		if (has_idr == true && (has_sps == false || has_pps == false) && media_track->GetH264SpsPpsAnnexBFormat() != nullptr)
 		{
 			// Insert SPS/PPS nal units so that player can start to play faster
@@ -785,24 +783,11 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			auto track_id = iter.first;
 			auto track = iter.second;
 
-			ov::String pts_str = "";
-
 			int64_t rescaled_last_pts = _stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen();
 
 			int64_t first_delay = _stat_first_time_diff[track_id];
 
 			int64_t last_delay = uptime - rescaled_last_pts;
-
-			if (_pts_correct[track_id] != 0)
-			{
-				int64_t corrected_pts = _pts_correct[track_id] * 1000 / track->GetTimeBase().GetDen();
-
-				pts_str.AppendFormat("pts: %lldms, crt: %lld, delay: %5lldms", rescaled_last_pts, corrected_pts, first_delay - last_delay);
-			}
-			else
-			{
-				pts_str.AppendFormat("pts: %lldms, delay: %5lldms", rescaled_last_pts, first_delay - last_delay);
-			}
 
 			// calc min/max pts
 			if (min_pts == -1LL)
@@ -813,19 +798,19 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			min_pts = std::min(min_pts, rescaled_last_pts);
 			max_pts = std::max(max_pts, rescaled_last_pts);
 
-			stat_track_str.AppendFormat("\n\t[%3d] type: %5s(%2d/%4s), %s, pkt_cnt: %6lld, pkt_siz: %sB",
+			stat_track_str.AppendFormat("\n\t[%3d] type: %5s(%2d/%4s), pts: %lldms, delay: %5lldms, pkt_cnt: %6lld, pkt_siz: %sB",
 										track_id,
 										track->GetMediaType() == MediaType::Video ? "video" : "audio",
 										track->GetCodecId(),
 										::StringFromMediaCodecId(track->GetCodecId()).CStr(),
-										pts_str.CStr(),
+										rescaled_last_pts, (first_delay - last_delay) * -1,
 										_stat_recv_pkt_count[track_id],
 										ov::Converter::ToSiString(_stat_recv_pkt_size[track_id], 1).CStr());
 		}
 
 		ov::String stat_stream_str = "";
 
-		stat_stream_str.AppendFormat("\n - MediaRouter Stream | type: %s, name: %s/%s, uptime: %lldms, queue: %d, A-V(%lld)",
+		stat_stream_str.AppendFormat("\n - MediaRouter Stream | type: %s, name: %s/%s, uptime: %lldms, queue: %d, sync: %lldms",
 									 _inout_type == MediaRouterStreamType::INBOUND ? "Inbound" : "Outbound",
 									 _stream->GetApplicationInfo().GetName().CStr(),
 									 _stream->GetName().CStr(),
@@ -1037,43 +1022,26 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
-	// PTS Correction for Abnormal increase
-
-	int64_t ts_inc = pop_media_packet->GetPts() - _pts_last[track_id];
-
-	int den = media_track->GetTimeBase().GetDen();
-	if (den == 0)
-		den = 1;
-
-	int64_t ts_inc_ms = ts_inc * 1000 / den;
-
-	if (std::abs(ts_inc_ms) > PTS_CORRECT_THRESHOLD_US)
+	// Check for unusual PTS change
+	if (GetInoutType() == MediaRouterStreamType::INBOUND)
 	{
-		if (!(media_track->GetCodecId() == cmn::MediaCodecId::Png || media_track->GetCodecId() == cmn::MediaCodecId::Jpeg))
-		{
-			// TODO(soulk): I think all tracks should calibrate the PTS with the same value.
-			_pts_correct[track_id] = pop_media_packet->GetPts() - _pts_last[track_id] - _pts_avg_inc[track_id];
+		int64_t ts_inc = pop_media_packet->GetPts() - _pts_last[track_id];
+		int64_t ts_inc_ms = ts_inc * media_track->GetTimeBase().GetExpr();
 
-			logtw("Detected abnormal increased pts. track_id : %d, prv_pts : %lld, cur_pts : %lld, crt_pts : %lld, avg_inc : %lld, inc : %lld",
-				  track_id, _pts_last[track_id], pop_media_packet->GetPts(), _pts_correct[track_id], _pts_avg_inc[track_id], std::abs(ts_inc_ms));
+		if (std::abs(ts_inc_ms) > PTS_CORRECT_THRESHOLD_MS)
+		{
+			if (!(media_track->GetCodecId() == cmn::MediaCodecId::Png || media_track->GetCodecId() == cmn::MediaCodecId::Jpeg))
+			{
+				logtw("Detected abnormal increased timestamp. [%3d] lpts: %lld, cpts: %lld, tb(%d/%d), diff_ms: %lld",
+					  track_id, _pts_last[track_id], pop_media_packet->GetPts(), media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen(), ts_inc_ms);
+			}
 		}
 	}
-	else
-	{
-		// Originally it should be an average value, Use the difference of the last packet.
-		// Use DTS because the PTS value does not increase uniformly.
-		_pts_avg_inc[track_id] = pop_media_packet->GetDts() - _dts_last[track_id];
-	}
-
 	_pts_last[track_id] = pop_media_packet->GetPts();
 	_dts_last[track_id] = pop_media_packet->GetDts();
 
-	pop_media_packet->SetPts(pop_media_packet->GetPts() - _pts_correct[track_id]);
-	pop_media_packet->SetDts(pop_media_packet->GetDts() - _pts_correct[track_id]);
-
 	////////////////////////////////////////////////////////////////////////////////////
 	// Statistics
-
 	UpdateStatistics(media_track, pop_media_packet);
 
 	return pop_media_packet;
