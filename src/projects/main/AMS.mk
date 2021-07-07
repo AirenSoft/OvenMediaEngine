@@ -50,7 +50,7 @@ LOCAL_STATIC_LIBRARIES := \
 LOCAL_PREBUILT_LIBRARIES := \
 	libpugixml.a
 
-LOCAL_LDFLAGS := -lpthread
+LOCAL_LDFLAGS := -lpthread -luuid
 
 ifeq ($(shell echo $${OSTYPE}),linux-musl) 
 # For alpine linux

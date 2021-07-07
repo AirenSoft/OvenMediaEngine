@@ -258,12 +258,12 @@ install_libpcre2()
 
 install_base_ubuntu()
 {
-    sudo apt install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc yasm
+    sudo apt install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc yasm uuid-dev
 }
 
 install_base_fedora()
 {
-    sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc
+    sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc libuuid-devel
 }
 
 install_base_centos()
@@ -279,7 +279,7 @@ install_base_centos()
         source scl_source enable devtoolset-7
     fi
 
-    sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake
+    sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
 }
 
 install_base_macos()

@@ -65,6 +65,9 @@ int main(int argc, char *argv[])
 	auto server_config = cfg::ConfigManager::GetInstance()->GetServer();
 	auto orchestrator = ocst::Orchestrator::GetInstance();
 	auto monitor = mon::Monitoring::GetInstance();
+	monitor->SetServerName(server_config->GetName());
+
+	logti("Server ID : %s", monitor->GetServerID().CStr());
 
 	// Get public IP
 	bool stun_server_parsed;
