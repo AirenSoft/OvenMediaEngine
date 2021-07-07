@@ -14,6 +14,8 @@
 #define ApplicationMetrics(info)	mon::Monitoring::GetInstance()->GetApplicationMetrics(info);
 #define StreamMetrics(info)			mon::Monitoring::GetInstance()->GetStreamMetrics(info);
 
+#define SERVER_ID_STORAGE_FILE		"Server.id"
+
 namespace mon
 {
 	class Monitoring
@@ -29,6 +31,9 @@ namespace mon
 
 		void ShowInfo();
 
+		void SetServerName(ov::String name);
+		ov::String GetServerID();
+
 		bool OnHostCreated(const info::Host &host_info);
 		bool OnHostDeleted(const info::Host &host_info);
 		bool OnApplicationCreated(const info::Application &app_info);
@@ -43,6 +48,12 @@ namespace mon
         std::shared_ptr<StreamMetrics>  GetStreamMetrics(const info::Stream &stream_info);
 
 	private:
+		std::tuple<bool, ov::String> LoadServerIDFromStorage() const;
+		bool StoreServerID(ov::String server_id);
+		std::tuple<bool, ov::String> GenerateServerID() const;
+
+		ov::String _server_name;
+		ov::String _server_id;
 		std::shared_mutex _map_guard;
 		std::map<uint32_t, std::shared_ptr<HostMetrics>> _hosts;
 	};
