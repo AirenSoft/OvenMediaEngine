@@ -1147,7 +1147,10 @@ TranscodeResult TranscoderStream::FilterFrame(int32_t track_id, std::shared_ptr<
 		  (int64_t)(decoded_frame->GetPts() * filter->GetInputTimebase().GetExpr() * 1000),
 		  decoded_frame->GetBufferSize());
 
-	filter->SendBuffer(std::move(decoded_frame));
+	if(filter->SendBuffer(std::move(decoded_frame)) == false)
+	{
+		return TranscodeResult::DataError;
+	}
 
 	while (true)
 	{

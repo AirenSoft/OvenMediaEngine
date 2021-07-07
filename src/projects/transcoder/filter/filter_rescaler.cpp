@@ -125,8 +125,8 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	std::vector<ov::String> filters = {
 		// "fps" filter options
 		ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()),
+		// ov::String::FormatString("framerate=fps=%.2f:interp_start=1:interp_end=1", output_context->GetFrameRate()),
 		// "scale" filter options
-		// ov::String::FormatString("scale=%dx%d:flags=bicubic", output_context->GetVideoWidth(), output_context->GetVideoHeight()),
 		ov::String::FormatString("scale=%dx%d:flags=bilinear", output_context->GetVideoWidth(), output_context->GetVideoHeight()),
 		// "settb" filter options
 		ov::String::FormatString("settb=%s", output_context->GetTimeBase().GetStringExpr().CStr()),
