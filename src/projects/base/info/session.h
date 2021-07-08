@@ -20,12 +20,13 @@ namespace info
 		~Session() override = default;
 
 		session_id_t GetId() const;
+		ov::String GetUUID() const;
 		const std::chrono::system_clock::time_point &GetCreatedTime() const;
 		uint64_t GetSentBytes();
 
 		const Stream &GetStream() const
 		{
-			return *_stream;
+			return *_stream_info;
 		}
 
 	protected:
@@ -35,6 +36,6 @@ namespace info
 	private:
 		session_id_t 							_id;
 		std::chrono::system_clock::time_point 	_created_time;
-		std::shared_ptr<info::Stream>			_stream;
+		std::shared_ptr<info::Stream>			_stream_info;
 	};
 }  // namespace info

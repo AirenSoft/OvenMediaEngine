@@ -31,9 +31,20 @@ namespace info
 		_host_info = std::make_shared<info::Host>(host_info);
 	}
 
+	ov::String Application::GetUUID() const
+	{
+		if(_host_info == nullptr)
+		{
+			return "";
+		}
+		
+		return ov::String::FormatString("%s/%s", _host_info->GetUUID().CStr(), GetName().CStr());
+	}
+
+
 	const Application &Application::GetInvalidApplication()
 	{
-		static Application application(Host(cfg::vhost::VirtualHost()), InvalidApplicationId, VHostAppName::InvalidVHostAppName(), false);
+		static Application application(Host("InvalidHostName", "InvalidHostID", cfg::vhost::VirtualHost()), InvalidApplicationId, VHostAppName::InvalidVHostAppName(), false);
 
 		return application;
 	}

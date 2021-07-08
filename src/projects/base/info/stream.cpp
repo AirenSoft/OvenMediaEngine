@@ -82,6 +82,16 @@ namespace info
 		return _id;
 	}
 
+	ov::String Stream::GetUUID() const
+	{
+		if(_app_info == nullptr)
+		{
+			return "";
+		}
+
+		return ov::String::FormatString("%s/%s", _app_info->GetUUID().CStr(), GetName().CStr());
+	}
+
 	ov::String Stream::GetName() const 
 	{
 		return _name;

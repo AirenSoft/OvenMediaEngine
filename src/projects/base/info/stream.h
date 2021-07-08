@@ -26,7 +26,7 @@ namespace info
 
 		void SetId(info::stream_id_t id);
 		info::stream_id_t GetId() const;
-
+		ov::String GetUUID() const;
 		ov::String GetName() const;
 		void SetName(ov::String name);
 
