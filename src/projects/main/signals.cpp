@@ -186,10 +186,11 @@ static void ReloadHandler(int signum, siginfo_t *si, void *unused)
 
 	std::vector<info::Host> host_info_list;
 	// Create info::Host
-	auto hosts = config_manager->GetServer()->GetVirtualHostList();
+	auto server_config = config_manager->GetServer();
+	auto hosts = server_config->GetVirtualHostList();
 	for (const auto &host : hosts)
 	{
-		host_info_list.emplace_back(host);
+		host_info_list.emplace_back(info::Host(server_config->GetName(), server_config->GetID(), host));
 	}
 
 	if (ocst::Orchestrator::GetInstance()->ApplyOriginMap(host_info_list) == false)

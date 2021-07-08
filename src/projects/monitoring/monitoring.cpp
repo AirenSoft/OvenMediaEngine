@@ -4,8 +4,7 @@
 
 #include "monitoring.h"
 #include "monitoring_private.h"
-#include "base/ovlibrary/uuid.h"
-#include <fstream>
+
 
 namespace mon
 {
@@ -18,86 +17,6 @@ namespace mon
 		}
 	}
 
-	void Monitoring::SetServerName(ov::String name)
-	{
-		_server_name = name;
-	}
-
-	ov::String Monitoring::GetServerID()
-	{
-		if(_server_id.IsEmpty() == false)
-		{
-			return _server_id;
-		}
-
-		{
-			auto [result, server_id] = LoadServerIDFromStorage();
-			if(result == true)
-			{
-				_server_id = server_id;
-				return server_id;
-			}
-		}
-
-		{
-			auto [result, server_id] = GenerateServerID();
-			if(result == true)
-			{
-				StoreServerID(server_id);
-				return server_id;
-			}
-		}
-
-		return "";
-	}
-
-	std::tuple<bool, ov::String> Monitoring::LoadServerIDFromStorage() const
-	{
-		// If node id is empty, try to load ID from file
-		auto exe_path = ov::PathManager::GetAppPath();
-		auto node_id_storage = ov::PathManager::Combine(exe_path, SERVER_ID_STORAGE_FILE);
-
-		std::ifstream fs(node_id_storage);
-		if(!fs.is_open())
-		{
-			return {false, ""};
-		}
-
-		std::string line;
-		std::getline(fs, line);
-		fs.close();
-
-		line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
-
-		return {true, line.c_str()};
-	}
-
-	bool Monitoring::StoreServerID(ov::String server_id)
-	{
-		_server_id = server_id;
-
-		// Store server_id to storage
-		auto exe_path = ov::PathManager::GetAppPath();
-		auto node_id_storage = ov::PathManager::Combine(exe_path, SERVER_ID_STORAGE_FILE);
-
-		std::ofstream fs(node_id_storage);
-		if(!fs.is_open())
-		{
-			return false;
-		}
-
-		fs.write(server_id.CStr(), server_id.GetLength());
-		fs.close();
-		return true;
-	}
-
-	std::tuple<bool, ov::String> Monitoring::GenerateServerID() const
-	{
-		auto uuid = ov::UUID::Generate();
-		auto server_id = ov::String::FormatString("%s_%s", _server_name.CStr(), uuid.CStr());
-		return {true, server_id};
-	}
-
 	void Monitoring::Release()
 	{
 		for(const auto &host : _hosts)
@@ -105,7 +24,14 @@ namespace mon
 			host.second->Release();
 		}
 	}
-	
+
+	void Monitoring::OnServerStarted(ov::String server_name, ov::String server_id)
+	{
+		_server_name = server_name;
+		_server_id = server_id;
+		logti("%s(%s) ServerMetric has been started for monitoring", _server_name.CStr(), _server_id.CStr());
+	}
+
 	bool Monitoring::OnHostCreated(const info::Host &host_info)
 	{
 		std::unique_lock<std::shared_mutex> lock(_map_guard);
@@ -116,13 +42,13 @@ namespace mon
 		auto host_metrics = std::make_shared<HostMetrics>(host_info);
 		if (host_metrics == nullptr)
 		{
-			logte("Cannot create HostMetrics (%s)", host_info.GetName().CStr());
+			logte("Cannot create HostMetrics (%s/%s)", host_info.GetName().CStr(), host_info.GetUUID().CStr());
 			return false;
 		}
 		
 		_hosts[host_info.GetId()] = host_metrics;
 
-		logti("Create HostMetrics(%s) for monitoring", host_info.GetName().CStr());
+		logti("Create HostMetrics(%s/%s) for monitoring", host_info.GetName().CStr(), host_info.GetUUID().CStr());
 		return true;
 	}
 	bool Monitoring::OnHostDeleted(const info::Host &host_info)
@@ -139,7 +65,7 @@ namespace mon
 		_hosts.erase(it);
 		host->Release();
 
-		logti("Delete HostMetrics(%s) for monitoring", host_info.GetName().CStr());
+		logti("Delete HostMetrics(%s/%s) for monitoring", host_info.GetName().CStr(), host_info.GetUUID().CStr());
 		return true;
 	}
 	bool Monitoring::OnApplicationCreated(const info::Application &app_info)

@@ -54,6 +54,8 @@ namespace info
 			return _application_id;
 		}
 
+		ov::String GetUUID() const;
+		
 		const VHostAppName &GetName() const
 		{
 			return _name;

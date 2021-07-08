@@ -12,9 +12,11 @@
 
 namespace info
 {
-	Host::Host(const cfg::vhost::VirtualHost &host_info)
+	Host::Host(const ov::String &server_name, const ov::String &server_id, const cfg::vhost::VirtualHost &host_info)
 		: cfg::vhost::VirtualHost(host_info)
 	{
+		_server_name = server_name;
+		_server_id = server_id;
 		_host_id = ov::Random::GenerateUInt32();
 
 		std::vector<ov::String> name_list;
@@ -29,4 +31,10 @@ namespace info
 
 		_certificate = Certificate::CreateCertificate(host_info.GetName(), name_list, tls);
 	}
+
+	ov::String Host::GetUUID() const
+	{
+		return ov::String::FormatString("%s/%s", _server_id.CStr(), GetName().CStr());
+	}
+
 }  // namespace info

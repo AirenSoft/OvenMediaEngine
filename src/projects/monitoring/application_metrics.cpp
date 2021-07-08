@@ -47,13 +47,13 @@ namespace mon
         auto stream_metrics = std::make_shared<StreamMetrics>(GetSharedPtr(), stream);
         if(stream_metrics == nullptr)
         {
-            logte("Cannot create StreamMetrics (%s/%s)", GetName().CStr(), stream.GetName().CStr());
+            logte("Cannot create StreamMetrics (%s/%s - %s)", GetName().CStr(), stream.GetName().CStr(), stream.GetUUID().CStr());
             return false;
         }
 
         _streams[stream.GetId()] = stream_metrics;
 
-        logti("Create StreamMetrics(%s) for monitoring", stream.GetName().CStr());
+        logti("Create StreamMetrics(%s/%s) for monitoring", stream.GetName().CStr(), stream.GetUUID().CStr());
         return true;
     }
 
@@ -65,7 +65,7 @@ namespace mon
             return false;
         }
 
-        logti("Delete StreamMetrics(%s) for monitoring", stream.GetName().CStr());
+        logti("Delete StreamMetrics(%s/%s) for monitoring", stream.GetName().CStr(), stream.GetUUID().CStr());
 
 
 		// If there are sessions in the stream, the number of visitors to the app is recalculated.
