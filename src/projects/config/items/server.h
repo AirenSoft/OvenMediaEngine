@@ -13,6 +13,7 @@
 #include "p2p/p2p.h"
 #include "virtual_hosts/virtual_hosts.h"
 #include "base/ovlibrary/uuid.h"
+
 #include <fstream>
 
 #define SERVER_ID_STORAGE_FILE		"Server.id"
@@ -68,30 +69,12 @@ namespace cfg
 
 		ov::String GetID()
 		{
-			if(_id.IsEmpty() == false)
-			{
-				return _id;
-			}
-
-			{
-				auto [result, server_id] = LoadServerIDFromStorage();
-				if(result == true)
-				{
-					_id = server_id;
-					return server_id;
-				}
-			}
-
-			{
-				auto [result, server_id] = GenerateServerID();
-				if(result == true)
-				{
-					StoreServerID(server_id);
-					return server_id;
-				}
-			}
-
-			return "";
+			return _id;
+		}
+		// Set ID from external config file
+		void SetID(ov::String id)
+		{
+			_id = id;
 		}
 
 		// Deprecated - It has a bug
@@ -143,54 +126,6 @@ namespace cfg
 			Register<Optional>({"P2P", "p2p"}, &_p2p);
 
 			Register<Optional>("VirtualHosts", &_virtual_hosts);
-		}
-	
-	private:
-		std::tuple<bool, ov::String> LoadServerIDFromStorage() const
-		{
-			// If node id is empty, try to load ID from file
-			auto exe_path = ov::PathManager::GetAppPath();
-			auto node_id_storage = ov::PathManager::Combine(exe_path, SERVER_ID_STORAGE_FILE);
-
-			std::ifstream fs(node_id_storage);
-			if(!fs.is_open())
-			{
-				return {false, ""};
-			}
-
-			std::string line;
-			std::getline(fs, line);
-			fs.close();
-
-			line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
-
-			return {true, line.c_str()};
-		}
-
-		bool StoreServerID(ov::String server_id)
-		{
-			_id = server_id;
-
-			// Store server_id to storage
-			auto exe_path = ov::PathManager::GetAppPath();
-			auto node_id_storage = ov::PathManager::Combine(exe_path, SERVER_ID_STORAGE_FILE);
-
-			std::ofstream fs(node_id_storage);
-			if(!fs.is_open())
-			{
-				return false;
-			}
-
-			fs.write(server_id.CStr(), server_id.GetLength());
-			fs.close();
-			return true;
-		}
-
-		std::tuple<bool, ov::String> GenerateServerID() const
-		{
-			auto uuid = ov::UUID::Generate();
-			auto server_id = ov::String::FormatString("%s_%s", _name.CStr(), uuid.CStr());
-			return {true, server_id};
 		}
 	};
 }  // namespace cfg

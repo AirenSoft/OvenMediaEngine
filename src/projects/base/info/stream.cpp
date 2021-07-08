@@ -89,7 +89,7 @@ namespace info
 			return "";
 		}
 
-		return ov::String::FormatString("%s/%s", _app_info->GetUUID().CStr(), GetName().CStr());
+		return ov::String::FormatString("%s/%s_%u", _app_info->GetUUID().CStr(), GetName().CStr(), GetId());
 	}
 
 	ov::String Stream::GetName() const 
@@ -114,12 +114,24 @@ namespace info
 	void Stream::SetOriginStream(const std::shared_ptr<Stream> &stream)
 	{
 		_origin_stream = stream;
+		_origin_stream_uuid = stream->GetUUID();
 	}
 
 	const std::shared_ptr<Stream> Stream::GetOriginStream() const
 	{
 		return _origin_stream;
 	}
+
+	void Stream::SetOriginStreamUUID(const ov::String &uuid)
+	{
+		_origin_stream_uuid = uuid;
+	}
+
+	ov::String Stream::GetOriginStreamUUID() const
+	{
+		return _origin_stream_uuid;
+	}
+
 
 	const std::chrono::system_clock::time_point& Stream::GetCreatedTime() const
 	{
@@ -171,14 +183,19 @@ namespace info
 
 	ov::String Stream::GetInfoString()
 	{
-		ov::String out_str = ov::String::FormatString("\n[Stream Info]\nid(%u), output(%s), SourceType(%s), Created Time (%s)\n", 														
+		ov::String out_str = ov::String::FormatString("\n[Stream Info]\nid(%u), output(%s), SourceType(%s), Created Time (%s) UUID(%s)\n", 														
 														GetId(), GetName().CStr(),::StringFromStreamSourceType(_source_type).CStr(),
-														ov::Converter::ToString(_created_time).CStr());
+														ov::Converter::ToString(_created_time).CStr(), GetUUID().CStr());
 		if(GetOriginStream() != nullptr)
 		{
 			out_str.AppendFormat("\t>> Origin Stream Info\n\tid(%u), output(%s), SourceType(%s), Created Time (%s)\n",
 				GetOriginStream()->GetId(), GetOriginStream()->GetName().CStr(), ::StringFromStreamSourceType(GetOriginStream()->GetSourceType()).CStr(),
 														ov::Converter::ToString(GetOriginStream()->GetCreatedTime()).CStr());
+		}
+
+		if(GetOriginStreamUUID().IsEmpty() == false)
+		{
+			out_str.AppendFormat("\t>> Origin Stream UUID : %s\n", GetOriginStreamUUID().CStr());
 		}
 
 		for (auto it = _tracks.begin(); it != _tracks.end(); ++it)

@@ -323,6 +323,12 @@ namespace pvd
 			return false;
 		}
 
+		// Lastest version origin server sends UUID of origin stream
+		if(json_stream["originStreamUUID"].isString())
+		{
+			SetOriginStreamUUID(json_stream["originStreamUUID"].asString().c_str());
+		}
+
 		//SetName(json_stream["streamName"].asString().c_str());
 		std::shared_ptr<MediaTrack> new_track;
 

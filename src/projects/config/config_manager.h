@@ -40,11 +40,19 @@ namespace cfg
 			return _server;
 		}
 
+		ov::String GetConfigPath()
+		{
+			return _config_path;
+		}
+
 	protected:
 		ConfigManager();
 
 		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void LoadLoggerConfig(const ov::String &config_path);
+
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void LoadServerID(const ov::String &config_path);
 
 		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void CheckValidVersion(const ov::String &name, int version);
@@ -53,6 +61,7 @@ namespace cfg
 		bool _ignore_last_config = false;
 
 		std::shared_ptr<Server> _server;
+		ov::String _server_id;
 		std::map<ov::String, ov::String> _macros;
 
 		timespec _last_modified;
@@ -62,5 +71,10 @@ namespace cfg
 		std::map<ov::String, int> _supported_xml;
 
 		std::mutex _config_mutex;
+	
+	private:
+		std::tuple<bool, ov::String> LoadServerIDFromStorage(const ov::String &config_path) const;
+		bool StoreServerID(const ov::String &config_path, ov::String server_id);
+		std::tuple<bool, ov::String> GenerateServerID() const;
 	};
 }  // namespace cfg

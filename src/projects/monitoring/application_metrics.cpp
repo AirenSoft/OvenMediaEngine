@@ -10,7 +10,7 @@ namespace mon
 {
     ov::String ApplicationMetrics::GetInfoString(bool show_children)
     {
-        ov::String out_str = ov::String::FormatString("\n[Application Info]\nid(%u), name(%s)\nCreated Time (%s)\n", 														
+        ov::String out_str = ov::String::FormatString("\n[Application Info]\nid(%u), name(%s)\nCreated Time (%s)\n",
 														GetId(), GetName().CStr(),
 														ov::Converter::ToString(_created_time).CStr());
         
