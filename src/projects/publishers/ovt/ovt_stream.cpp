@@ -74,6 +74,7 @@ bool OvtStream::GenerateDecription()
 	{
 		"appName" : "app",
 		"streamName" : "stream_720p",
+		"streamUUID" : "OvenMediaEngine_90b8b53e-3140-4e59-813d-9ace51c0e186/default/#default#app/stream",
 		"tracks":
 		[
 			{
@@ -108,6 +109,9 @@ bool OvtStream::GenerateDecription()
 
 	json_stream["appName"] = GetApplicationName();
 	json_stream["streamName"] = GetName().CStr();
+
+	// Since the OVT publisher is also an output stream, it transmits the UUID of the input stream.
+	json_stream["originStreamUUID"] = GetOriginStream()->GetUUID().CStr();
 
 	for(auto &track_item : _tracks)
 	{

@@ -101,6 +101,9 @@ namespace cfg
 
 		_config_path = config_path;
 		_ignore_last_config = ignore_last_config;
+
+		LoadServerID(config_path);
+		GetServer()->SetID(_server_id);
 	}
 
 	void ConfigManager::ReloadConfigs()
@@ -135,6 +138,69 @@ namespace cfg
 		logti("Current config is written to %s", last_config_path.CStr());
 
 		return true;
+	}
+
+	void ConfigManager::LoadServerID(const ov::String &config_path)
+	{
+		{
+			auto [result, server_id] = LoadServerIDFromStorage(config_path);
+			if(result == true)
+			{
+				_server_id = server_id;
+				return;
+			}
+		}
+
+		{
+			auto [result, server_id] = GenerateServerID();
+			if(result == true)
+			{
+				_server_id = server_id;
+				StoreServerID(config_path, server_id);
+				return;
+			}
+		}
+	}
+
+	std::tuple<bool, ov::String> ConfigManager::LoadServerIDFromStorage(const ov::String &config_path) const
+	{
+		// If node id is empty, try to load ID from file
+		auto node_id_storage = ov::PathManager::Combine(config_path, SERVER_ID_STORAGE_FILE);
+
+		std::ifstream fs(node_id_storage);
+		if(!fs.is_open())
+		{
+			return {false, ""};
+		}
+
+		std::string line;
+		std::getline(fs, line);
+		fs.close();
+
+		line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
+
+		return {true, line.c_str()};
+	}
+
+	bool ConfigManager::StoreServerID(const ov::String &config_path, ov::String server_id)
+	{
+		// Store server_id to storage
+		auto node_id_storage = ov::PathManager::Combine(config_path, SERVER_ID_STORAGE_FILE);
+
+		std::ofstream fs(node_id_storage);
+		if(!fs.is_open())
+		{
+			return false;
+		}
+
+		fs.write(server_id.CStr(), server_id.GetLength());
+		fs.close();
+		return true;
+	}
+
+	std::tuple<bool, ov::String> ConfigManager::GenerateServerID() const
+	{
+		return {true, ov::UUID::Generate()};
 	}
 
 	void ConfigManager::LoadLoggerConfig(const ov::String &config_path)

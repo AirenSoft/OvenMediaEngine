@@ -36,6 +36,9 @@ namespace info
 		void SetOriginStream(const std::shared_ptr<Stream> &stream);
 		const std::shared_ptr<Stream> GetOriginStream() const;
 
+		void SetOriginStreamUUID(const ov::String &uuid);
+		ov::String GetOriginStreamUUID() const;
+
 		const std::chrono::system_clock::time_point &GetCreatedTime() const;
 		uint32_t GetUptimeSec();
 		StreamSourceType GetSourceType() const;
@@ -77,5 +80,8 @@ namespace info
 		// If the Source Type of this stream is LiveTranscoder,
 		// the original stream coming from the Provider can be recognized with _origin_stream.
 		std::shared_ptr<Stream> 	_origin_stream = nullptr;
+
+		// If the source if this stream is a remote stream of the origin server, store the uuid of origin stream
+		ov::String _origin_stream_uuid;
 	};
 }  // namespace info
