@@ -33,6 +33,7 @@ public:
 	std::shared_ptr<info::Record> &GetRecord();
 
 private:
+	void UpdateTemplateOutputPath();
 	ov::String GetRootPath();
 	ov::String GetOutputTempFilePath(std::shared_ptr<info::Record> &record);
 	ov::String GetOutputFilePath();
@@ -48,4 +49,7 @@ private:
 	std::vector<int32_t> selected_tracks;
 
 	std::shared_mutex _lock;
+
+	ov::String _template_output_file_path;
+	ov::String _template_output_info_path;
 };
