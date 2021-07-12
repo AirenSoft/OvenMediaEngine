@@ -64,8 +64,8 @@ bool EncoderOPUS::Configure(std::shared_ptr<TranscodeContext> context)
 	// Duration per frame
 	// _expert_frame_duration = OPUS_FRAMESIZE_2_5_MS;
 	// _expert_frame_duration = OPUS_FRAMESIZE_5_MS;
-	// _expert_frame_duration = OPUS_FRAMESIZE_10_MS;
-	_expert_frame_duration = OPUS_FRAMESIZE_20_MS;
+	 _expert_frame_duration = OPUS_FRAMESIZE_10_MS;
+	// _expert_frame_duration = OPUS_FRAMESIZE_20_MS;
 	// _expert_frame_duration = OPUS_FRAMESIZE_40_MS;
 	// _expert_frame_duration = OPUS_FRAMESIZE_60_MS;
 	::opus_encoder_ctl(_encoder, OPUS_SET_EXPERT_FRAME_DURATION(_expert_frame_duration));
@@ -171,10 +171,12 @@ void EncoderOPUS::ThreadEncode()
 			// Store frame informations
 			_format = frame->GetFormat<cmn::AudioSample::Format>();
 
-			// if (_current_pts == -1)
-			// {
+			// Update current pts if the first PTS or PTS goes over frame_size.
+			if (_current_pts == -1 || abs(_current_pts - frame->GetPts()) > frame_size)
+			{
 				_current_pts = frame->GetPts();
-			// }
+				// logtd("%lld / %lld", frame_size, abs(_current_pts - frame->GetPts()));
+			}
 
 			// Append frame data into the buffer
 			if (frame->GetChannels() == 1)
@@ -272,7 +274,7 @@ void EncoderOPUS::ThreadEncode()
 		_buffer->SetLength(_buffer->GetLength() - bytes_to_encode);
 
 		int64_t duration = frame_size;
-
+		
 		auto packet_buffer = std::make_shared<MediaPacket>(cmn::MediaType::Audio, 0, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
 		packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::OPUS);
 		packet_buffer->SetPacketType(cmn::PacketType::RAW);
