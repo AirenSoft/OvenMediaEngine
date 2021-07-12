@@ -25,7 +25,7 @@ ENV     OME_VERSION=master \
         PCRE2_VERSION=10.35 
 
 ## Install build utils
-RUN     apt-get -y install build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc apt-utils
+RUN     apt-get -y install build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev apt-utils
 
 ##################################################################################################################################
 ## Install Nvidia GPU(NVENC, NVDEC) build envrionment
