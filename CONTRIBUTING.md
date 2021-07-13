@@ -5,13 +5,13 @@ We need your help to keep and develop our open-source projects, and we want to t
 Thank you!
 
 ## How to contribute
-- Finding Bugs
-- Revieweing Code
-- Sharing Ideas
-- Testing
-- Improving Documentation
-- Spreading & Use Cases
-- Recurring Donations
+- [Finding Bugs](#finding-bugs)
+- [Reviewing Code](#reviewing-code)
+- [Sharing Ideas](#sharing-ideas)
+- [Testing](#testing)
+- [Improving Documentation](#improving-documentation)
+- [Spreading & Use Cases](#spreading--use-cases)
+- [Recurring Donations](#recurring-donations)
 
 And all other contributions that make our project better!
 
@@ -23,7 +23,7 @@ Also, if your question helped someone who uses our open-source community, we thi
 ### Finding Bugs
 If you find any bugs while using OvenMediaEngine and OvenPlayer, please feel free to let us know through GitHub Issues. Also, we may ask you for help in reproducing it and testing the fixed code. We will do our best to reproduce and fix the bug.
 
-### Revieweing Code
+### Reviewing Code
 We review our code countless times before release, but we can make mistakes. So let us know if you find it. Also, if you know any code or structure that OvenMediaEngine and OvenPlayer can work on more efficiently, please let us know.
 
 ### Sharing Ideas
