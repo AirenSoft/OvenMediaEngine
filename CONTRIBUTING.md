@@ -1,30 +1,59 @@
-# Contributing
+# Contribute
+First of all, thank you for your interest in OvenMediaEngine and OvenPlayer!
+We need your help to keep and develop our open-source projects, and we want to tell you that you can contribute in many ways.
 
-OvenMediaEngine project is open to everyone. We are very grateful for your considering contribution to the OvenMediaEngine.
+Thank you!
 
-## What you can contribute
+## How to contribute
+- [Finding Bugs](#finding-bugs)
+- [Reviewing Code](#reviewing-code)
+- [Sharing Ideas](#sharing-ideas)
+- [Testing](#testing)
+- [Improving Documentation](#improving-documentation)
+- [Spreading & Use Cases](#spreading--use-cases)
+- [Recurring Donations](#recurring-donations)
 
-- Bug reports
-- Feature requests
-- Improving documentation
-- Writing code
+And all other contributions that make our project better!
 
-And any kind of contributions that can make our project better!
+## Communication
+The first communication channel we use is GitHub Issues. If you have any problem or question using OvenMediaEngine and OvenPlayer, please describe it on AirenSoft GitHub Issues. Our open-source community is lively, so developers who see your inquiry will respond as soon as possible.
+Also, if your question helped someone who uses our open-source community, we think it's a great contribution.
 
-## First step
+---
+### Finding Bugs
+If you find any bugs while using OvenMediaEngine and OvenPlayer, please feel free to let us know through GitHub Issues. Also, we may ask you for help in reproducing it and testing the fixed code. We will do our best to reproduce and fix the bug.
 
-All contributions start with the Issue. Please join the Issue if it is an unresolved Issue or create an Issue if it does not already exist. We will contact you to find the best solution without getting lost. We hope all conversations are done through the Issue for history purposes.
+### Reviewing Code
+We review our code countless times before release, but we can make mistakes. So let us know if you find it. Also, if you know any code or structure that OvenMediaEngine and OvenPlayer can work on more efficiently, please let us know.
 
-### Bug reports
+### Sharing Ideas
+If you have any ideas about technology trends that can advance OvenMediaEngine and OvenPlayer and features that will work synergistically, please request us. We are ready to review and embrace it for development.
 
-Please make sure you have tested with the latest stable version. It is helpful to give as much detail as possible to the reproduction path when registering an issue.
+### Testing
+After the OvenMediaEngine and OvenPlayer updates, we may request you to test as we have responsibility for ensuring stability in more environments. Therefore, we would be very grateful if you could help us run the test.
+- [For OvenMediaEngine](https://github.com/AirenSoft/OvenMediaEngine/issues)
+- [For OvenPlayer](https://github.com/AirenSoft/OvenPlayer/issues)
 
-### Feature requests
+---
+### Improving Documentation
+We are not a perfectly English-speaking team. Therefore, there may be typos, grammatical awkwardness, or incomprehensible sentences in our documents. Please let us know if you find them.
+Or, if you would like to translate our documents into a language other than English, we welcome your work!
+- [OvenMediaEngine GitBook](https://airensoft.gitbook.io/ovenmediaengine/)
+- [OvenPlayer GitBook](https://airensoft.gitbook.io/ovenplayer/)
 
-Suggest new features that you and others would find useful. When you register it as an Issue, please provide a description of the function, why it is needed, and how it should work. We will organize these features and provide milestones and implement them in the near future.
+---
+### Spreading & Use Cases
+If you like our open-source project, if you have made something with our open-source, or if our open-source has helped you, please let people know about OvenMediaEngine and OvenPlayer.
+And we are love to hear about your experience and story using OvenMediaEngine and OvenPlayer, like why you chose this, how to use this, and more. You know, the voices of real contributors are of great help to our project.
+- <contact@airensoft.com>
 
-### Improving documentation and Writing code
+---
+### Recurring Donations
+If you want to help us continue developing OvenMediaEngine and OvenPlayer, or if our open-source has helped your business, please support us through the Open Collective.
+Your financial contribution to OvenMediaEngine and OvenPlayer will be used to reward the developer's efforts, cover the cost of servers and hardware that are continuously used, and attend related exhibitions. And these are transparent, publicly visible, and is used to develop our open-source projects.
+- [Open Collective](https://opencollective.com/ovenmediaengine)
 
-We are still discussing the commit guidelines, style guides, testing methods, and Pull request processes. It is similar to the way many other projects use it. However, if you want to contribute immediately, please create it as an Issue or mail to dimiden@airensoft.com. Please don't worry! We're here to help you.
+---
+We always hope that OvenMediaEngine will make your project a success!
 
-> We will update this section little by little.
+Thank you!
