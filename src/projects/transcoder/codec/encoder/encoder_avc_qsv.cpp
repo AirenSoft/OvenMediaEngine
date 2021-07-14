@@ -66,6 +66,9 @@ bool EncoderAVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 
 	if (::avcodec_open2(_context, codec, nullptr) < 0)
 	{
+        // close codec context to prevent definitely memory leak issue
+        ::avcodec_close(_context);
+
 		logte("Could not open codec: %s (%d)", codec->name, codec->id);
 		return false;
 	}
@@ -80,6 +83,9 @@ bool EncoderAVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 	catch (const std::system_error &e)
 	{
+        // close codec context to prevent definitely memory leak issue
+        ::avcodec_close(_context);
+
 		logte("Failed to start encoder thread.");
 		_kill_flag = true;
 
@@ -131,12 +137,18 @@ void EncoderAVCxQSV::ThreadEncode()
 
 		if (::av_frame_get_buffer(_frame, 32) < 0)
 		{
+            // free frame pointer to prevent possible memory leak issue
+            ::av_frame_unref(_frame);
+
 			logte("Could not allocate the video frame data");
 			break;
 		}
 
 		if (::av_frame_make_writable(_frame) < 0)
 		{
+            // free frame pointer to prevent possible memory leak issue
+            ::av_frame_unref(_frame);
+
 			logte("Could not make sure the frame data is writable");
 			break;
 		}
@@ -164,16 +176,25 @@ void EncoderAVCxQSV::ThreadEncode()
 
 			if (ret == AVERROR(EAGAIN))
 			{
+                // free _packet pointer to prevent possible memory leak issue
+                ::av_packet_unref(_packet);
+
 				// More packets are needed for encoding.
 				break;
 			}
 			else if (ret == AVERROR_EOF)
 			{
+                // free _packet pointer to prevent possible memory leak issue
+                ::av_packet_unref(_packet);
+
 				logte("Error receiving a packet for decoding : AVERROR_EOF");
 				break;
 			}
 			else if (ret < 0)
 			{
+                // free _packet pointer to prevent possible memory leak issue
+                ::av_packet_unref(_packet);
+
 				logte("Error receiving a packet for decoding : %d", ret);
 				break;
 			}
