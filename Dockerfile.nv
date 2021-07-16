@@ -267,7 +267,7 @@ RUN \
         DIR=/tmp/ome && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sLf http://dev.airensoft.com/~pub/test/master.tar.gz | tar -xz --strip-components=1 && \
+        curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1 && \
         cd src && \
         make 
 
