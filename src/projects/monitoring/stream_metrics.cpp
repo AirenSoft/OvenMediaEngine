@@ -67,11 +67,6 @@ namespace mon
 				origin_stream_metric->IncreaseBytesIn(value);
 			}
 		}
-		else
-		{
-			// Forward value to AppMetrics to sum
-			GetApplicationMetrics()->IncreaseBytesIn(value);
-		}
 	}
 
 	void StreamMetrics::IncreaseBytesOut(PublisherType type, uint64_t value) 
@@ -87,11 +82,6 @@ namespace mon
 			{
 				origin_stream_metric->IncreaseBytesOut(type, value);
 			}
-		}
-		else
-		{
-			// Forward value to AppMetrics to sum
-			GetApplicationMetrics()->IncreaseBytesOut(type, value);
 		}
 	}
 
@@ -111,9 +101,6 @@ namespace mon
 		}
 		else
 		{
-			// Sending a connection event to application only if it hasn't origin stream to prevent double sum. 
-			GetApplicationMetrics()->OnSessionConnected(type);
-
 			logti("A new session has started playing %s/%s on the %s publisher. %s(%u)/Stream total(%u)/App total(%u)", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
 					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
@@ -136,9 +123,6 @@ namespace mon
 		}
 		else
 		{
-			// Sending a connection event to application only if it hasn't origin stream to prevent double sum. 
-			GetApplicationMetrics()->OnSessionDisconnected(type);
-
 			logti("A session has been stopped playing %s/%s on the %s publisher. Concurrent Viewers[%s(%u)/Stream total(%u)/App total(%u)]", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
 					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());

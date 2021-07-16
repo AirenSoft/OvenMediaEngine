@@ -131,32 +131,4 @@ namespace mon
 		std::shared_lock<std::shared_mutex> lock(_reserved_streams_guard);
 		return _reserved_streams;
 	}
-
-    void ApplicationMetrics::IncreaseBytesIn(uint64_t value)
-    {
-        // Forward value to HostMetrics to sum
-		GetHostMetrics()->IncreaseBytesIn(value);
-		CommonMetrics::IncreaseBytesIn(value);
-    }
-
-    void ApplicationMetrics::IncreaseBytesOut(PublisherType type, uint64_t value)
-    {
-        // Forward value to HostMetrics to sum
-		GetHostMetrics()->IncreaseBytesOut(type, value);
-		CommonMetrics::IncreaseBytesOut(type, value);
-    }
-
-    void ApplicationMetrics::OnSessionConnected(PublisherType type)
-    {
-         // Forward value to HostMetrics to sum
-		GetHostMetrics()->OnSessionConnected(type);
-		CommonMetrics::OnSessionConnected(type);
-    }
-
-    void ApplicationMetrics::OnSessionDisconnected(PublisherType type)
-    {
-        // Forward value to HostMetrics to sum
-		GetHostMetrics()->OnSessionDisconnected(type);
-		CommonMetrics::OnSessionDisconnected(type);
-    }
 }

@@ -58,12 +58,6 @@ namespace mon
 		// For example: std::map<uint32_t, std::shared_ptr<const ReservedStreamMetrics>>
 		std::map<uint32_t, std::shared_ptr<ReservedStreamMetrics>> GetReservedStreamMetricsMap() const;
 
-		// Overriding from CommonMetrics 
-		void IncreaseBytesIn(uint64_t value) override;
-		void IncreaseBytesOut(PublisherType type, uint64_t value) override;
-		void OnSessionConnected(PublisherType type) override;
-		void OnSessionDisconnected(PublisherType type) override;
-
 	private:
 		std::shared_ptr<HostMetrics> _host_metrics;
 		std::shared_mutex _streams_guard;

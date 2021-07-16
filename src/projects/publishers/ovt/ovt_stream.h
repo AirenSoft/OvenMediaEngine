@@ -37,6 +37,4 @@ private:
 	Json::Value							_description;
 	std::shared_mutex					_packetizer_lock;
 	std::shared_ptr<OvtPacketizer>		_packetizer;
-	
-	std::shared_ptr<mon::StreamMetrics>		_stream_metrics;
 };

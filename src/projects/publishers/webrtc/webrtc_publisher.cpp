@@ -208,11 +208,8 @@ bool WebRtcPublisher::DisconnectSessionInternal(const std::shared_ptr<RtcSession
 	auto stream = std::dynamic_pointer_cast<RtcStream>(session->GetStream());
 
 	stream->RemoveSession(session->GetId());
-	auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
-	if (stream_metrics != nullptr)
-	{
-		stream_metrics->OnSessionDisconnected(PublisherType::Webrtc);
-	}
+
+	MonitorInstance->OnSessionDisconnected(*stream, PublisherType::Webrtc);
 
 	session->Stop();
 
@@ -489,11 +486,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	if (session != nullptr)
 	{
 		stream->AddSession(session);
-		auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
-		if (stream_metrics != nullptr)
-		{
-			stream_metrics->OnSessionConnected(PublisherType::Webrtc);
-		}
+		MonitorInstance->OnSessionConnected(*stream, PublisherType::Webrtc);
 
 		auto ice_timeout = application->GetConfig().GetPublishers().GetWebrtcPublisher().GetTimeout();
 		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), session->GetId(), offer_sdp, peer_sdp, ice_timeout, session_life_time, session);

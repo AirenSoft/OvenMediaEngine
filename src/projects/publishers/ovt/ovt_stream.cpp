@@ -42,7 +42,6 @@ bool OvtStream::Start()
 
 	logtd("OvtStream(%d) has been started", GetId());
 	_packetizer = std::make_shared<OvtPacketizer>(OvtPacketizerInterface::GetSharedPtr());
-	_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
 
 	return Stream::Start();
 }
@@ -195,10 +194,8 @@ bool OvtStream::OnOvtPacketized(std::shared_ptr<OvtPacket> &packet)
 	auto stream_packet = std::make_any<std::shared_ptr<OvtPacket>>(packet);
 	BroadcastPacket(stream_packet);
 	
-	if(_stream_metrics != nullptr)
-	{
-		_stream_metrics->IncreaseBytesOut(PublisherType::Ovt, packet->GetData()->GetLength() * GetSessionCount());
-	}
+	
+	MonitorInstance->IncreaseBytesOut(*pub::Stream::GetSharedPtrAs<info::Stream>(), PublisherType::Ovt, packet->GetData()->GetLength() * GetSessionCount());
 
 	return true;
 }

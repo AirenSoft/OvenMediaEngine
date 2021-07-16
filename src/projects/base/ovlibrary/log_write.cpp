@@ -25,7 +25,7 @@ namespace ov
     {
         if(log_file_name.empty())
         {
-            _log_file_name = OV_LOG_FILE;
+            _log_file_name = OV_DEFAULT_LOG_FILE;
         }
         else
         {

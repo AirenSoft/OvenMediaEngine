@@ -411,12 +411,16 @@ bool SegmentStreamServer::UrlExistCheck(const std::vector<ov::String> &url_list,
 	return (item != url_list.end());
 }
 
-std::shared_ptr<mon::StreamMetrics> SegmentStreamServer::GetStreamMetric(const std::shared_ptr<http::svr::HttpConnection> &client)
+std::shared_ptr<pub::Stream> SegmentStreamServer::GetStream(const std::shared_ptr<http::svr::HttpConnection> &client)
 {
 	auto request = client->GetRequest();
+	return request->GetExtraAs<pub::Stream>();
+}
 
-	auto stream_info = request->GetExtraAs<pub::Stream>();
-	if (stream_info == nullptr)
+std::shared_ptr<mon::StreamMetrics> SegmentStreamServer::GetStreamMetric(const std::shared_ptr<http::svr::HttpConnection> &client)
+{
+	auto stream_info = GetStream(client);
+	if(stream_info == nullptr)
 	{
 		return nullptr;
 	}

@@ -4,10 +4,9 @@
 
 #pragma once
 
-#include "base/info/host.h"
 #include "base/info/info.h"
-#include "host_metrics.h"
-#include <shared_mutex>
+#include "server_metrics.h"
+#include "event_logger.h"
 
 #define MonitorInstance				mon::Monitoring::GetInstance()
 #define HostMetrics(info)			mon::Monitoring::GetInstance()->GetHostMetrics(info);
@@ -16,7 +15,7 @@
 
 namespace mon
 {
-	class Monitoring
+	class Monitoring : public ServerMetrics
 	{
 	public:
         static Monitoring *GetInstance()
@@ -25,28 +24,27 @@ namespace mon
             return &monitor;
 	    }
 
-		void Release();
+		void SetLogPath(const ov::String &log_path);
 
-		void ShowInfo();
-
-		void OnServerStarted(ov::String server_name, ov::String server_id);
+		// Events
+		void OnServerStarted(ov::String user_key, ov::String server_name, ov::String server_id);
 		bool OnHostCreated(const info::Host &host_info);
 		bool OnHostDeleted(const info::Host &host_info);
 		bool OnApplicationCreated(const info::Application &app_info);
 		bool OnApplicationDeleted(const info::Application &app_info);
 		bool OnStreamCreated(const info::Stream &stream_info);
 		bool OnStreamDeleted(const info::Stream &stream_info);
+		bool OnStreamUpdated(const info::Stream &stream_info);
 
-		std::map<uint32_t, std::shared_ptr<HostMetrics>> GetHostMetricsList();
-		
-        std::shared_ptr<HostMetrics> GetHostMetrics(const info::Host &host_info);
-        std::shared_ptr<ApplicationMetrics> GetApplicationMetrics(const info::Application &app_info);
-        std::shared_ptr<StreamMetrics>  GetStreamMetrics(const info::Stream &stream_info);
+		void IncreaseBytesIn(const info::Stream &stream_info, uint64_t value);
+		void IncreaseBytesOut(const info::Stream &stream_info, PublisherType type, uint64_t value);
+		void OnSessionConnected(const info::Stream &stream_info, PublisherType type);
+		void OnSessionDisconnected(const info::Stream &stream_info, PublisherType type);
+		void OnSessionsDisconnected(const info::Stream &stream_info, PublisherType type, uint64_t number_of_sessions);
 
 	private:
-		ov::String _server_name;
-		ov::String _server_id;
-		std::shared_mutex _map_guard;
-		std::map<uint32_t, std::shared_ptr<HostMetrics>> _hosts;
+		ov::String _user_key;
+		EventLogger	_logger;
+
 	};
 }  // namespace mon

@@ -42,8 +42,6 @@ RtcSession::RtcSession(const info::Session &session_info,
 	_peer_sdp = peer_sdp;
 	_ice_port = ice_port;
 	_ws_client = ws_client;
-
-	_stream_metrics = StreamMetrics(*stream);
 }
 
 RtcSession::~RtcSession()
@@ -288,11 +286,8 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 
 	// RTP Session must be copied and sent because data is altered due to SRTP.
 	auto copy_packet = std::make_shared<RtpPacket>(*session_packet);
-
-	if(_stream_metrics != nullptr)
-	{
-		_stream_metrics->IncreaseBytesOut(PublisherType::Webrtc, copy_packet->GetData()->GetLength());
-	}
+	
+	MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::Webrtc, copy_packet->GetData()->GetLength());
 
 	// rtp_rtcp -> srtp -> dtls -> Edge Node(RtcSession)
 	return _rtp_rtcp->SendRtpPacket(copy_packet);

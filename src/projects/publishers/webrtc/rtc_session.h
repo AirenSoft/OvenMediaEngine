@@ -96,6 +96,4 @@ private:
 	uint64_t							_session_expired_time = 0;
 
 	std::shared_mutex					_start_stop_lock;
-
-	std::shared_ptr<mon::StreamMetrics>		_stream_metrics;
 };
