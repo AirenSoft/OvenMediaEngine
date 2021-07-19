@@ -10,11 +10,10 @@
 
 #include <config/config.h>
 #include <orchestrator/orchestrator.h>
-
+#include <modules/json_serdes/converters.h>
 #include <functional>
 
 #include "../../../../api_private.h"
-#include "../../../../converters/converters.h"
 #include "app_actions_controller.h"
 #include "output_profiles/output_profiles_controller.h"
 #include "streams/streams_controller.h"

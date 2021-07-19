@@ -10,10 +10,10 @@
 
 #include <modules/http/server/http_server.h>
 #include <monitoring/monitoring.h>
+#include <modules/json_serdes/converters.h>
 
 #include <memory>
 
-#include "../converters/converters.h"
 #include "../helpers/helpers.h"
 
 namespace api
