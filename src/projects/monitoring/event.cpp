@@ -2,8 +2,8 @@
 
 namespace mon
 {
-	Event::Event(EventType type, const ov::String &user_key, const ov::String &server_id)
-		: _type(type), _user_key(user_key), _server_id(server_id)
+	Event::Event(EventType type, const std::shared_ptr<ServerMetrics> &server_metric)
+		: _type(type), _server_metrics(server_metric)
 	{
 		switch(_type)
 		{
@@ -138,11 +138,13 @@ namespace mon
 		Json::Value json_root;
 
 		json_root["timestampMillis"] = ov::Clock::NowMSec();
-		json_root["userKey"] = _user_key.CStr();
+		json_root["userKey"] = "Not Implemented";
 		
 		Json::Value json_server;
-		json_server["serverID"] = _server_id.CStr();
-		json_server["startedTime"] = ov::Converter::ToISO8601String(std::chrono::system_clock::now()).CStr();
+		json_server["serverID"] = _server_metrics->GetConfig()->GetID().CStr();
+		json_server["startedTime"] = ov::Converter::ToISO8601String(std::chrono::system_clock::now()).CStr();	
+		json_server["bind"] = _server_metrics->GetConfig()->GetBind().ToJson();
+
 		json_root["server"] = json_server;
 
 		Json::Value json_event;
@@ -154,7 +156,7 @@ namespace mon
 		
 		Json::Value json_producer;
 		Json::Value json_host;
-		json_producer["serverID"] = _server_id.CStr();
+		json_producer["serverID"] = _server_metrics->GetConfig()->GetID().CStr();
 		switch(_set_metric_type)
 		{
 			case SetMetricType::HostMetric:
@@ -202,7 +204,7 @@ namespace mon
 
 	bool Event::FillProducerObject(Json::Value &jsonProducer, const std::shared_ptr<HostMetrics> &host_metric) const
 	{
-		jsonProducer["serverID"] = _server_id.CStr();
+		jsonProducer["serverID"] = _server_metrics->GetConfig()->GetID().CStr();
 		jsonProducer["hostID"] = host_metric->GetUUID().CStr();
 		return true;
 	}
@@ -228,12 +230,7 @@ namespace mon
 		json_host["createdTime"] = ov::Converter::ToISO8601String(host_metric->CommonMetrics::GetCreatedTime()).CStr();
 		//TODO(Getroot): Change this to real data
 		json_host["distribution"] = "Not Implemented";
-
-		// hostNames
-		for(const auto &name : host_metric->GetHost().GetNameList())
-		{
-			json_host["hostNames"].append(name.CStr());
-		}
+		json_host["hostNames"] = host_metric->GetHost().ToJson();
 
 		return true;
 	}
@@ -246,7 +243,10 @@ namespace mon
 		Json::Value json_app;
 		json_app["appID"] = app_metric->GetUUID().CStr();
 		json_app["name"] = app_metric->GetName().CStr();
-		json_host["createdTime"] = ov::Converter::ToISO8601String(app_metric->CommonMetrics::GetCreatedTime()).CStr();
+		json_app["createdTime"] = ov::Converter::ToISO8601String(app_metric->CommonMetrics::GetCreatedTime()).CStr();
+		json_app["outputProfiles"] = app_metric->GetConfig().GetOutputProfiles().ToJson();
+		json_app["providers"] = app_metric->GetConfig().GetProviders().ToJson();
+		json_app["publishers"] = app_metric->GetConfig().GetPublishers().ToJson();
 
 		json_host["app"] = json_app;
 

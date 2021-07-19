@@ -1,7 +1,14 @@
 #include "server_metrics.h"
+#include "monitoring_private.h"
 
 namespace mon
 {
+	ServerMetrics::ServerMetrics(const std::shared_ptr<cfg::Server> &server_config)
+			: _server_config(server_config)
+	{
+		_server_started_time = std::chrono::system_clock::now();
+	}
+
 	void ServerMetrics::ShowInfo()
 	{
 		for(const auto &t : _hosts)
@@ -24,6 +31,51 @@ namespace mon
 		return _server_started_time;
 	}
 
+	std::shared_ptr<cfg::Server> ServerMetrics::GetConfig()
+	{
+		return _server_config;
+	}
+
+	bool ServerMetrics::OnHostCreated(const info::Host &host_info)
+	{
+		std::unique_lock<std::shared_mutex> lock(_map_guard);
+		if(_hosts.find(host_info.GetId()) != _hosts.end())
+		{
+			return true;
+		}
+		auto host_metrics = std::make_shared<HostMetrics>(host_info);
+		if (host_metrics == nullptr)
+		{
+			logte("Cannot create HostMetrics (%s/%s)", host_info.GetName().CStr(), host_info.GetUUID().CStr());
+			return false;
+		}
+		
+		_hosts[host_info.GetId()] = host_metrics;
+
+		logti("Create HostMetrics(%s/%s) for monitoring", host_info.GetName().CStr(), host_info.GetUUID().CStr());
+
+		return true;
+	}
+	
+	bool ServerMetrics::OnHostDeleted(const info::Host &host_info)
+	{
+		std::unique_lock<std::shared_mutex> lock(_map_guard);
+		auto it = _hosts.find(host_info.GetId());
+
+		if (it == _hosts.end())
+		{
+			return false;
+		}
+
+		auto host = it->second;
+		_hosts.erase(it);
+		host->Release();
+
+		logti("Delete HostMetrics(%s/%s) for monitoring", host_info.GetName().CStr(), host_info.GetUUID().CStr());
+
+		return true;
+	}
+
 	std::map<uint32_t, std::shared_ptr<HostMetrics>> ServerMetrics::GetHostMetricsList()
 	{
 		std::shared_lock<std::shared_mutex> lock(_map_guard);
@@ -39,34 +91,5 @@ namespace mon
 		}
 
 		return _hosts[host_info.GetId()];
-	}
-
-	std::shared_ptr<ApplicationMetrics> ServerMetrics::GetApplicationMetrics(const info::Application &app_info)
-	{
-		auto host_metric = GetHostMetrics(app_info.GetHostInfo());
-		if (host_metric == nullptr)
-		{
-			return nullptr;
-		}
-
-		auto app_metric = host_metric->GetApplicationMetrics(app_info);
-		if (app_metric == nullptr)
-		{
-			return nullptr;
-		}
-
-		return app_metric;
-	}
-
-	std::shared_ptr<StreamMetrics> ServerMetrics::GetStreamMetrics(const info::Stream &stream)
-	{
-		auto app_metric = GetApplicationMetrics(stream.GetApplicationInfo());
-		if (app_metric == nullptr)
-		{
-			return nullptr;
-		}
-
-		auto stream_metric = app_metric->GetStreamMetrics(stream);
-		return stream_metric;
 	}
 }

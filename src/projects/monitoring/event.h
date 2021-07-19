@@ -1,5 +1,5 @@
 #include "base/ovlibrary/ovlibrary.h"
-#include "host_metrics.h"
+#include "server_metrics.h"
 #include <variant>
 
 namespace mon
@@ -27,11 +27,12 @@ namespace mon
 	class Event
 	{
 	public:
-		Event(EventType type, const ov::String &user_key, const ov::String &server_id);
+		Event(EventType type, const std::shared_ptr<ServerMetrics> &server_metric);
 
 		EventType GetType() const;
 		ov::String GetTypeString() const;
 
+		
 		void SetMetric(const std::vector<std::shared_ptr<HostMetrics>> &host_metric_list);
 		void SetMetric(const std::shared_ptr<HostMetrics> &host_metric);
 		void SetMetric(const std::shared_ptr<ApplicationMetrics> &app_metric);
@@ -73,8 +74,7 @@ namespace mon
 			StreamMetric
 		};
 		
-		ov::String _user_key;
-		ov::String _server_id;
+		std::shared_ptr<ServerMetrics> _server_metrics;
 
 		SetMetricType _set_metric_type = SetMetricType::None;
 		std::vector<std::shared_ptr<HostMetrics>> _host_metric_list;
