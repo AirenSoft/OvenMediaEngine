@@ -12,40 +12,37 @@
 
 #include "common.h"
 
-namespace api
+namespace serdes
 {
-	namespace conv
+	Json::Value JsonFromOutputProfile(const cfg::vhost::app::oprf::OutputProfile &output_profile)
 	{
-		Json::Value JsonFromOutputProfile(const cfg::vhost::app::oprf::OutputProfile &output_profile)
+		return output_profile.ToJson();
+	}
+
+	Json::Value JsonFromApplication(const std::shared_ptr<const mon::ApplicationMetrics> &application)
+	{
+		Json::Value app = cfg::serdes::GetApplicationFromMetrics(application);
+
+		if (app.isObject())
 		{
-			return output_profile.ToJson();
+			app["dynamic"] = application->IsDynamicApp();
 		}
 
-		Json::Value JsonFromApplication(const std::shared_ptr<const mon::ApplicationMetrics> &application)
+		return app;
+	}
+
+	std::shared_ptr<http::HttpError> ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *application)
+	{
+		cfg::DataSource data_source("", "", "Application", json_value);
+
+		try
 		{
-			Json::Value app = cfg::conv::GetApplicationFromMetrics(application);
-
-			if (app.isObject())
-			{
-				app["dynamic"] = application->IsDynamicApp();
-			}
-
-			return app;
+			application->FromDataSource("application", "Application", data_source);
+			return nullptr;
 		}
-
-		std::shared_ptr<http::HttpError> ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *application)
+		catch (const std::shared_ptr<cfg::ConfigError> &error)
 		{
-			cfg::DataSource data_source("", "", "Application", json_value);
-
-			try
-			{
-				application->FromDataSource("application", "Application", data_source);
-				return nullptr;
-			}
-			catch (const std::shared_ptr<cfg::ConfigError> &error)
-			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, "%s", error->GetMessage().CStr());
-			}
+			return http::HttpError::CreateError(http::StatusCode::BadRequest, "%s", error->GetMessage().CStr());
 		}
-	}  // namespace conv
-}  // namespace api
+	}
+}  // namespace serdes

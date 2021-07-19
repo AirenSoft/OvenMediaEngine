@@ -1,7 +1,8 @@
+#pragma once
+
 #include "base/ovlibrary/ovlibrary.h"
 #include "server_metrics.h"
 #include <variant>
-
 namespace mon
 {
 	enum class EventType

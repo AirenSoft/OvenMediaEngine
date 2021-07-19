@@ -10,11 +10,8 @@
 
 #include <monitoring/monitoring.h>
 
-namespace api
+namespace serdes
 {
-	namespace conv
-	{
-		Json::Value JsonFromMetrics(const std::shared_ptr<const mon::CommonMetrics> &metrics);
-		Json::Value JsonFromStreamMetrics(const std::shared_ptr<const mon::StreamMetrics> &metrics);
-	}  // namespace conv
-};	   // namespace api
+	Json::Value JsonFromMetrics(const std::shared_ptr<const mon::CommonMetrics> &metrics);
+	Json::Value JsonFromStreamMetrics(const std::shared_ptr<const mon::StreamMetrics> &metrics);
+}  // namespace serdes

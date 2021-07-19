@@ -22,54 +22,51 @@
                                                                \
 		return;                                                \
 	}                                                          \
-	[[maybe_unused]] Json::Value &object = parent_object[key]; \
+	[[maybe_unused]] Json::Value &object = (key == nullptr) ? parent_object : parent_object[key]; \
 	if (object.isNull())                                       \
 	{                                                          \
 		object = default_value;                                \
 	}
 
-namespace api
+namespace serdes
 {
-	namespace conv
+	enum class Optional
 	{
-		enum class Optional
-		{
-			True,
-			False
-		};
+		True,
+		False
+	};
 
-		inline void SetString(Json::Value &parent_object, const char *key, const ov::String &value, Optional optional)
-		{
-			CONVERTER_RETURN_IF(value.IsEmpty(), Json::stringValue);
+	inline void SetString(Json::Value &parent_object, const char *key, const ov::String &value, Optional optional)
+	{
+		CONVERTER_RETURN_IF(value.IsEmpty(), Json::stringValue);
 
-			object = value.CStr();
-		}
+		object = value.CStr();
+	}
 
-		inline void SetInt(Json::Value &parent_object, const char *key, int32_t value)
-		{
-			parent_object[key] = value;
-		}
+	inline void SetInt(Json::Value &parent_object, const char *key, int32_t value)
+	{
+		parent_object[key] = value;
+	}
 
-		inline void SetInt64(Json::Value &parent_object, const char *key, int64_t value)
-		{
-			parent_object[key] = value;
-		}
+	inline void SetInt64(Json::Value &parent_object, const char *key, int64_t value)
+	{
+		parent_object[key] = value;
+	}
 
-		inline void SetFloat(Json::Value &parent_object, const char *key, float value)
-		{
-			parent_object[key] = value;
-		}
+	inline void SetFloat(Json::Value &parent_object, const char *key, float value)
+	{
+		parent_object[key] = value;
+	}
 
-		inline void SetTimeInterval(Json::Value &parent_object, const char *key, int64_t value)
-		{
-			parent_object[key] = value;
-		}
+	inline void SetTimeInterval(Json::Value &parent_object, const char *key, int64_t value)
+	{
+		parent_object[key] = value;
+	}
 
-		void SetTimestamp(Json::Value &parent_object, const char *key, const std::chrono::system_clock::time_point &time_point);
+	void SetTimestamp(Json::Value &parent_object, const char *key, const std::chrono::system_clock::time_point &time_point);
 
-		inline void SetBool(Json::Value &parent_object, const char *key, bool value)
-		{
-			parent_object[key] = value;
-		}
-	}  // namespace conv
-}  // namespace api
+	inline void SetBool(Json::Value &parent_object, const char *key, bool value)
+	{
+		parent_object[key] = value;
+	}
+}  // namespace serdes

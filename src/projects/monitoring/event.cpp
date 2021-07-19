@@ -1,4 +1,5 @@
 #include "event.h"
+#include <modules/json_serdes/converters.h>
 
 namespace mon
 {
@@ -276,6 +277,9 @@ namespace mon
 		}
 
 		json_stream["provider"] = json_provider;
+
+		//json_stream["tracks"] = stream_metric->GetTracks();
+
 		json_host["app"]["stream"] = json_stream;
 
 		return true;

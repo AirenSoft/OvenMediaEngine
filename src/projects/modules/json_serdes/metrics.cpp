@@ -8,46 +8,42 @@
 //==============================================================================
 #include "application.h"
 #include "common.h"
-
-namespace api
+namespace serdes
 {
-	namespace conv
+	Json::Value JsonFromMetrics(const std::shared_ptr<const mon::CommonMetrics> &metrics)
 	{
-		Json::Value JsonFromMetrics(const std::shared_ptr<const mon::CommonMetrics> &metrics)
+		if (metrics == nullptr)
 		{
-			if (metrics == nullptr)
-			{
-				return Json::nullValue;
-			}
+			return Json::nullValue;
+		}
 
-			Json::Value value;
+		Json::Value value;
 
-			SetTimestamp(value, "createdTime", metrics->GetCreatedTime());
-			SetTimestamp(value, "lastUpdatedTime", metrics->GetLastUpdatedTime());
-			SetInt64(value, "totalBytesIn", metrics->GetTotalBytesIn());
-			SetInt64(value, "totalBytesOut", metrics->GetTotalBytesOut());
-			SetInt(value, "totalConnections", metrics->GetTotalConnections());
-			SetInt(value, "maxTotalConnections", metrics->GetMaxTotalConnections());
-			SetTimestamp(value, "maxTotalConnectionTime", metrics->GetMaxTotalConnectionsTime());
-			SetTimestamp(value, "lastRecvTime", metrics->GetLastRecvTime());
-			SetTimestamp(value, "lastSentTime", metrics->GetLastSentTime());
+		SetTimestamp(value, "createdTime", metrics->GetCreatedTime());
+		SetTimestamp(value, "lastUpdatedTime", metrics->GetLastUpdatedTime());
+		SetInt64(value, "totalBytesIn", metrics->GetTotalBytesIn());
+		SetInt64(value, "totalBytesOut", metrics->GetTotalBytesOut());
+		SetInt(value, "totalConnections", metrics->GetTotalConnections());
+		SetInt(value, "maxTotalConnections", metrics->GetMaxTotalConnections());
+		SetTimestamp(value, "maxTotalConnectionTime", metrics->GetMaxTotalConnectionsTime());
+		SetTimestamp(value, "lastRecvTime", metrics->GetLastRecvTime());
+		SetTimestamp(value, "lastSentTime", metrics->GetLastSentTime());
 
+		return value;
+	}
+
+	Json::Value JsonFromStreamMetrics(const std::shared_ptr<const mon::StreamMetrics> &metrics)
+	{
+		Json::Value value = JsonFromMetrics(metrics);
+
+		if (value.isNull())
+		{
 			return value;
 		}
 
-		Json::Value JsonFromStreamMetrics(const std::shared_ptr<const mon::StreamMetrics> &metrics)
-		{
-			Json::Value value = JsonFromMetrics(metrics);
+		SetTimeInterval(value, "requestTimeToOrigin", metrics->GetOriginRequestTimeMSec());
+		SetTimeInterval(value, "responseTimeFromOrigin", metrics->GetOriginResponseTimeMSec());
 
-			if (value.isNull())
-			{
-				return value;
-			}
-
-			SetTimeInterval(value, "requestTimeToOrigin", metrics->GetOriginRequestTimeMSec());
-			SetTimeInterval(value, "responseTimeFromOrigin", metrics->GetOriginResponseTimeMSec());
-
-			return value;
-		}
-	}  // namespace conv
-}  // namespace api
+		return value;
+	}
+}  // namespace serdes

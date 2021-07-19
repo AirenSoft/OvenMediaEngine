@@ -8,21 +8,18 @@
 //==============================================================================
 #include "others.h"
 
-namespace api
+namespace serdes
 {
-	namespace conv
+	Json::Value JsonFromError(const std::shared_ptr<http::HttpError> &error)
 	{
-		Json::Value JsonFromError(const std::shared_ptr<http::HttpError> &error)
+		Json::Value value(Json::ValueType::nullValue);
+
+		if (error != nullptr)
 		{
-			Json::Value value(Json::ValueType::nullValue);
-
-			if (error != nullptr)
-			{
-				value["statusCode"] = error->GetCode();
-				value["message"] = error->GetMessage().CStr();
-			}
-
-			return value;
+			value["statusCode"] = error->GetCode();
+			value["message"] = error->GetMessage().CStr();
 		}
-	}  // namespace conv
-}  // namespace api
+
+		return value;
+	}
+}  // namespace serdes

@@ -115,7 +115,7 @@ namespace cfg
 	{
 		auto lock_guard = std::lock_guard(_config_mutex);
 
-		auto config = conv::GetServerJsonFromConfig(_server, false);
+		auto config = cfg::serdes::GetServerJsonFromConfig(_server, false);
 
 		return config;
 	}

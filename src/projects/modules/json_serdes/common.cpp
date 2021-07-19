@@ -8,13 +8,10 @@
 //==============================================================================
 #include "./common.h"
 
-namespace api
+namespace serdes
 {
-	namespace conv
+	void SetTimestamp(Json::Value &parent_object, const char *key, const std::chrono::system_clock::time_point &time_point)
 	{
-		void SetTimestamp(Json::Value &parent_object, const char *key, const std::chrono::system_clock::time_point &time_point)
-		{
-			parent_object[key] = ov::Converter::ToISO8601String(time_point).CStr();
-		}
-	}  // namespace conv
-}  // namespace api
+		parent_object[key] = ov::Converter::ToISO8601String(time_point).CStr();
+	}
+}  // namespace serdes
