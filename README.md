@@ -143,4 +143,4 @@ The voices of real contributors are of great help to our project. We always hope
 
 ## License
 
-OvenMediaEngine is licensed under the [GPLv2](LICENSE) or later.
+OvenMediaEngine is licensed under the [GPLv3](LICENSE) or later.
