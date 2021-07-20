@@ -1004,6 +1004,8 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		break;
 
 		case MediaRouterStreamType::OUTBOUND: {
+			// DumpPacket(pop_media_packet, true);
+
 			if (!ProcessOutboundStream(media_track, pop_media_packet))
 			{
 				return nullptr;
