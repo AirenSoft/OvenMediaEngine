@@ -203,7 +203,7 @@ namespace mon
 			(*settings)["precisionType"] = "significant";
 		*/
 
-		logtd("%s", json_root.toStyledString().c_str());
+		//logti("%s", json_root.toStyledString().c_str());
 
 		builder["indentation"] = "";
 		return Json::writeString(builder, json_root).c_str();
@@ -235,8 +235,7 @@ namespace mon
 		json_host["hostID"] = host_metric->GetUUID().CStr();
 		json_host["name"] = host_metric->GetName().CStr();
 		json_host["createdTime"] = ov::Converter::ToISO8601String(host_metric->CommonMetrics::GetCreatedTime()).CStr();
-		//TODO(Getroot): Change this to real data
-		json_host["distribution"] = "Not Implemented";
+		json_host["distribution"] = host_metric->GetDistribution().IsEmpty()?"ovenmediaengine.com":host_metric->GetDistribution().CStr();
 		json_host["hostNames"] = host_metric->GetHost().ToJson();
 
 		return true;
