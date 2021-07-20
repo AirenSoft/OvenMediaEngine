@@ -143,6 +143,13 @@ std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterce
 		ov::String file_name;
 		ov::String file_ext;
 
+		auto host_name = request->GetHeader("HOST").Split(":")[0];
+		if (host_name.IsEmpty() == true)
+		{
+			logtw("Invalid hostname");
+			return http::svr::NextHandler::Call;
+		}
+
 		// Parse Url
 		if (ParseRequestUrl(request->GetRequestTarget(), request_param, app_name, stream_name, file_name, file_ext) == false)
 		{
@@ -150,18 +157,36 @@ std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterce
 			return http::svr::NextHandler::Call;
 		}
 
-		auto host_name = request->GetHeader("HOST").Split(":")[0];
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
-		auto app_config = std::static_pointer_cast<info::Application>(GetApplicationByName(vhost_app_name))->GetConfig();
-		auto thumbnail_config = app_config.GetPublishers().GetThumbnailPublisher();
+		if (app_name.IsEmpty() == true || stream_name.IsEmpty() == true || file_name.IsEmpty() == true || file_ext.IsEmpty() == true)
+		{
+			logtw("Invalid urn. app:%s, stream:%s, filename:%s, ext:%s",
+				  app_name.CStr(), stream_name.CStr(), file_name.CStr(), file_ext.CStr());
+			return http::svr::NextHandler::Call;
+		}
 
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
+		if (vhost_app_name.IsValid() == false)
+		{
+			logtw("Invalid application info");
+			return http::svr::NextHandler::Call;
+		}
+
+		auto app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(vhost_app_name));
+		if (app_info == nullptr)
+		{
+			logtw("Could not found application info");
+			return http::svr::NextHandler::Call;
+		}
+
+		auto app_config = app_info->GetConfig();
+		auto thumbnail_config = app_config.GetPublishers().GetThumbnailPublisher();
 		auto response = client->GetResponse();
 
 		// Check CORS
 		auto application = std::static_pointer_cast<ThumbnailApplication>(GetApplicationByName(vhost_app_name));
 		if (application == nullptr)
 		{
-			response->AppendString("There is no application");
+			response->AppendString("Could not found application of thumbnail publiser");
 			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
 
@@ -176,7 +201,7 @@ std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterce
 		auto stream = std::static_pointer_cast<ThumbnailStream>(GetStream(vhost_app_name, stream_name));
 		if (stream == nullptr)
 		{
-			response->AppendString("There is no stream");
+			response->AppendString("There are no thumbnails available stream");
 			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
 
@@ -198,7 +223,7 @@ std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterce
 		auto endcoded_video_frame = stream->GetVideoFrameByCodecId(media_codec_id);
 		if (endcoded_video_frame == nullptr)
 		{
-			response->AppendString("There is no encoded thumbnail image");
+			response->AppendString("There is no thumbnail image");
 			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
 
