@@ -20,7 +20,7 @@
 		<!--
 		<Managers>
 			<API>
-				<Port>${env:OME_API_PORT:48081}</Port>
+				<Port>${env:OME_API_PORT:8081}</Port>
 				<WorkerCount>1</WorkerCount>
 			</API>
 		</Managers>

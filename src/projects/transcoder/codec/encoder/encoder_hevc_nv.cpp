@@ -30,7 +30,7 @@ bool EncoderHEVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 
 	auto codec_id = GetCodecID();
 
-	AVCodec *codec = ::avcodec_find_encoder_by_name("h265_nvenc");
+	AVCodec *codec = ::avcodec_find_encoder_by_name("hevc_nvenc");
 	if (codec == nullptr)
 	{
 		logte("Could not find encoder: %d (%s)", codec_id, ::avcodec_get_name(codec_id));
@@ -187,7 +187,7 @@ void EncoderHEVCxNV::ThreadEncode()
 					_packet->dts,
 					-1L,
 					(_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
-				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::H264_ANNEXB);
+				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::H265_ANNEXB);
 				packet_buffer->SetPacketType(cmn::PacketType::NALU);
 
 				::av_packet_unref(_packet);
