@@ -197,7 +197,7 @@ int32_t TranscoderStream::CreateOutputStreamDynamic()
 	}
 
 	output_stream->SetName(_input_stream->GetName());
-	output_stream->SetMediaSource(_input_stream->GetMediaSource());
+	output_stream->SetMediaSource(_input_stream->GetUUID());
 	output_stream->SetOriginStream(_input_stream);
 
 	for (auto &it : _input_stream->GetTracks())
@@ -276,7 +276,7 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 
 	// It helps modules to reconize origin stream from provider
 	stream->SetOriginStream(_input_stream);
-	stream->SetMediaSource(_input_stream->GetMediaSource());
+	stream->SetMediaSource(_input_stream->GetUUID());
 
 	// Create a new stream name.
 	auto name = cfg_output_profile.GetOutputStreamName();

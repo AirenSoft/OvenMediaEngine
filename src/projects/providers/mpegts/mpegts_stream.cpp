@@ -44,6 +44,7 @@ namespace pvd
 	{
 		SetName(stream_name);
 		_remote = client_socket;
+		SetMediaSource(_remote->ToString());
 		_lifetime_epoch_msec = lifetime_epoch_msec;
 	}
 
