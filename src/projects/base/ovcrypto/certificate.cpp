@@ -1,5 +1,7 @@
 #include "certificate.h"
 
+#include <openssl/core_names.h>
+
 #include <utility>
 
 Certificate::Certificate(X509 *x509)
@@ -152,29 +154,55 @@ std::shared_ptr<ov::OpensslError> Certificate::Generate()
 // Make ECDSA Key
 EVP_PKEY *Certificate::MakeKey()
 {
-	EVP_PKEY *key;
-
-	key = EVP_PKEY_new();
+	EVP_PKEY *key = ::EVP_PKEY_new();
 	if (key == nullptr)
 	{
 		return nullptr;
 	}
 
-	EC_KEY *ec_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-	if (ec_key == nullptr)
+	bool succeeded = false;
+	
+	OSSL_PARAM params[2];
+	char str[] = SN_X9_62_prime256v1;
+
+	params[0] = ::OSSL_PARAM_construct_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME, str, 0);
+	params[1] = ::OSSL_PARAM_construct_end();
+
+	EVP_PKEY_CTX *pkey_context;
+
+	do
 	{
-		EVP_PKEY_free(key);
-		return nullptr;
+		pkey_context = ::EVP_PKEY_CTX_new_from_name(nullptr, "ec", nullptr);
+
+		if (pkey_context == nullptr)
+		{
+			break;
+		}
+
+		if (::EVP_PKEY_keygen_init(pkey_context) <= 0)
+		{
+			break;
+		}
+
+		if (::EVP_PKEY_CTX_set_params(pkey_context, params) <= 0)
+		{
+			break;
+		}
+
+		if (::EVP_PKEY_keygen(pkey_context, &key) <= 0)
+		{
+			break;
+		}
+
+		succeeded = true;
+	} while (false);
+
+	if (succeeded == false)
+	{
+		loge("CERT", "Could not make a key: %s", ov::OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
 	}
 
-	EC_KEY_set_asn1_flag(ec_key, OPENSSL_EC_NAMED_CURVE);
-
-	if (!EC_KEY_generate_key(ec_key) || !EVP_PKEY_assign_EC_KEY(key, ec_key))
-	{
-		EC_KEY_free(ec_key);
-		EVP_PKEY_free(key);
-		return nullptr;
-	}
+	::EVP_PKEY_CTX_free(pkey_context);
 
 	return key;
 }
@@ -223,7 +251,7 @@ X509 *Certificate::MakeCertificate(EVP_PKEY *pkey)
 	ASN1_INTEGER *asn1_serial_number;
 
 	// Random 값을 뽑아서 X509 Serial Number에 사용한다.
-	BN_pseudo_rand(serial_number, 64, 0, 0);
+	BN_rand(serial_number, 64, 0, 0);
 
 	// 인증서 내부의 Serial Number를 반환 (내부값으로 해제되면 안됨)
 	asn1_serial_number = X509_get_serialNumber(x509);
