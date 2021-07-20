@@ -133,7 +133,7 @@ namespace serdes
 
 	Json::Value JsonFromTracks(const std::map<int32_t, std::shared_ptr<MediaTrack>> &tracks)
 	{
-		Json::Value response(Json::ValueType::objectValue);
+		Json::Value response(Json::ValueType::arrayValue);
 		SetTracks(response, nullptr, tracks, Optional::False);
 		return response;
 	}

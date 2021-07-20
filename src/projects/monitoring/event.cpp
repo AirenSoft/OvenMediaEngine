@@ -1,5 +1,8 @@
-#include "event.h"
 #include <modules/json_serdes/converters.h>
+
+#include "event.h"
+#include "monitoring_private.h"
+
 
 namespace mon
 {
@@ -199,6 +202,9 @@ namespace mon
 			(*settings)["precision"] = 17;
 			(*settings)["precisionType"] = "significant";
 		*/
+
+		logtd("%s", json_root.toStyledString().c_str());
+
 		builder["indentation"] = "";
 		return Json::writeString(builder, json_root).c_str();
 	}
@@ -272,13 +278,12 @@ namespace mon
 		}
 		else
 		{
-			//TODO(Getroot): Implement this
-			json_provider["source"] = "Not implemented";
+			json_provider["source"] = stream_metric->GetMediaSource().CStr();
 		}
 
 		json_stream["provider"] = json_provider;
 
-		//json_stream["tracks"] = stream_metric->GetTracks();
+		json_stream["tracks"] = serdes::JsonFromTracks(stream_metric->GetTracks());
 
 		json_host["app"]["stream"] = json_stream;
 
