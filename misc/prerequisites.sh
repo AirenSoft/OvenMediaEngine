@@ -4,7 +4,7 @@ PREFIX=/opt/ovenmediaengine
 TEMP_PATH=/tmp
 
 OME_VERSION=dev
-OPENSSL_VERSION=1.1.1i
+OPENSSL_VERSION=3.0.0-beta1
 SRTP_VERSION=2.2.0
 SRT_VERSION=1.4.2
 OPUS_VERSION=1.1.3
@@ -44,13 +44,10 @@ CURRENT=$(pwd)
 
 install_openssl()
 {
-    DOWNLOAD_NAME=${OPENSSL_VERSION//\./_}
-    DOWNLOAD_URL="https://codeload.github.com/openssl/openssl/tar.gz/OpenSSL_${DOWNLOAD_NAME}"
-
     (DIR=${TEMP_PATH}/openssl && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf "${DOWNLOAD_URL}" | tar -xz --strip-components=1 && \
+    curl -sLf https://github.com/openssl/openssl/archive/openssl-${OPENSSL_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     ./config --prefix="${PREFIX}" --openssldir="${PREFIX}" -Wl,-rpath,"${PREFIX}/lib" shared no-idea no-mdc2 no-rc5 no-ec2m no-ecdh no-ecdsa no-async && \
     make -j$(nproc) && \
     sudo make install_sw && \
@@ -264,6 +261,7 @@ install_base_ubuntu()
 install_base_fedora()
 {
     sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc libuuid-devel
+    sudo yum install -y perl-FindBin
 }
 
 install_base_centos()
@@ -280,6 +278,7 @@ install_base_centos()
     fi
 
     sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
+    sudo yum install -y perl-IPC-Cmd
 }
 
 install_base_macos()
