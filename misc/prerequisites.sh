@@ -261,6 +261,7 @@ install_base_ubuntu()
 install_base_fedora()
 {
     sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc libuuid-devel
+    sudo yum install -y perl-FindBin
 }
 
 install_base_centos()
@@ -277,6 +278,7 @@ install_base_centos()
     fi
 
     sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
+    sudo yum install -y perl-IPC-Cmd
 }
 
 install_base_macos()
