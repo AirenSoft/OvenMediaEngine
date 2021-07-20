@@ -89,7 +89,7 @@ namespace info
 			return "";
 		}
 
-		return ov::String::FormatString("%s/%s_%u", _app_info->GetUUID().CStr(), GetName().CStr(), GetId());
+		return ov::String::FormatString("%s/%s/%s", _app_info->GetUUID().CStr(), GetName().CStr(), GetOriginStream() != nullptr ? "i" : "o");
 	}
 
 	ov::String Stream::GetName() const 
