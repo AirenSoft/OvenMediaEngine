@@ -10,7 +10,7 @@
 
 namespace mon
 {
-	class ServerMetrics
+	class ServerMetrics : public CommonMetrics
 	{
 	public:
 		ServerMetrics(const std::shared_ptr<cfg::Server> &server_config);

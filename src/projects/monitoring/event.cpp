@@ -159,34 +159,24 @@ namespace mon
 		}
 		
 		Json::Value json_producer;
-		Json::Value json_host;
-		json_producer["serverID"] = _server_metrics->GetConfig()->GetID().CStr();
-		switch(_set_metric_type)
+		FillProducerObject(json_producer);
+		json_event["producer"] = json_producer;
+
+		if(_category == EventCategory::StreamEventType)
 		{
-			case SetMetricType::HostMetric:
-				FillProducerObject(json_producer, _host_metric);
-				FillHostObject(json_host, _host_metric);
-				break;
-			case SetMetricType::AppMetric:
-				FillProducerObject(json_producer, _app_metric);
-				FillHostObject(json_host, _app_metric);
-				break;
-			case SetMetricType::StreamMetric:
-				FillProducerObject(json_producer, _stream_metric);
-				FillHostObject(json_host, _stream_metric);
-				break;
-			case SetMetricType::HostMetricList:
-				// this means server so only needed serverID
-			case SetMetricType::None:
-			default:
-				break;
+			Json::Value json_host;
+			FillHostObject(json_host);		
+			if(json_host.isNull() == false)
+			{
+				json_event["host"] = json_host;
+			}
+		}
+		else if(_category == EventCategory::StatisticsEventType)
+		{
+			
 		}
 
-		json_event["producer"] = json_producer;
-		if(json_host.isNull() == false)
-		{
-			json_event["host"] = json_host;
-		}
+
 		json_root["event"] = json_event;
 
 		Json::StreamWriterBuilder builder;
@@ -209,6 +199,30 @@ namespace mon
 		return Json::writeString(builder, json_root).c_str();
 	}
 
+	bool Event::FillProducerObject(Json::Value &json_producer) const
+	{
+		json_producer["serverID"] = _server_metrics->GetConfig()->GetID().CStr();
+
+		switch(_set_metric_type)
+		{
+			case SetMetricType::HostMetric:
+				FillProducerObject(json_producer, _host_metric);
+				break;
+			case SetMetricType::AppMetric:
+				FillProducerObject(json_producer, _app_metric);
+				break;
+			case SetMetricType::StreamMetric:
+				FillProducerObject(json_producer, _stream_metric);
+				break;
+			case SetMetricType::HostMetricList:
+			case SetMetricType::None:
+			default:
+				break;
+		}
+
+		return true;
+	}
+
 	bool Event::FillProducerObject(Json::Value &jsonProducer, const std::shared_ptr<HostMetrics> &host_metric) const
 	{
 		jsonProducer["serverID"] = _server_metrics->GetConfig()->GetID().CStr();
@@ -227,6 +241,28 @@ namespace mon
 	{
 		FillProducerObject(jsonProducer, stream_metric->GetApplicationMetrics());
 		jsonProducer["streamID"] = stream_metric->GetUUID().CStr();
+		return true;
+	}
+
+	bool Event::FillHostObject(Json::Value &json_host) const
+	{
+		switch(_set_metric_type)
+		{
+			case SetMetricType::HostMetric:
+				FillProducerObject(json_host, _host_metric);
+				break;
+			case SetMetricType::AppMetric:
+				FillProducerObject(json_host, _app_metric);
+				break;
+			case SetMetricType::StreamMetric:
+				FillProducerObject(json_host, _stream_metric);
+				break;
+			case SetMetricType::HostMetricList:
+			case SetMetricType::None:
+			default:
+				break;
+		}
+
 		return true;
 	}
 

@@ -46,9 +46,15 @@ namespace mon
 		ov::String SerializeToJson() const;
 
 	private:
+
+		// Use _set_metric_type
+		bool FillProducerObject(Json::Value &json_producer) const;
 		bool FillProducerObject(Json::Value &json_producer, const std::shared_ptr<HostMetrics> &host_metric) const;
 		bool FillProducerObject(Json::Value &json_producer, const std::shared_ptr<ApplicationMetrics> &app_metric) const;
 		bool FillProducerObject(Json::Value &json_producer, const std::shared_ptr<StreamMetrics> &stream_metric) const;
+
+		// Use _set_metric_type
+		bool FillHostObject(Json::Value &json_host) const;
 		bool FillHostObject(Json::Value &json_host, const std::shared_ptr<HostMetrics> &host_metric) const;
 		bool FillHostObject(Json::Value &json_host, const std::shared_ptr<ApplicationMetrics> &app_metric) const;
 		bool FillHostObject(Json::Value &json_host, const std::shared_ptr<StreamMetrics> &stream_metric) const;

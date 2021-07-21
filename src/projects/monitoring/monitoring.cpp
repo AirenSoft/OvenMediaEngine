@@ -177,6 +177,7 @@ namespace mon
 
 		return true;
 	}
+
 	bool Monitoring::OnStreamDeleted(const info::Stream &stream)
 	{
 		auto app_metrics = GetApplicationMetrics(stream.GetApplicationInfo());
@@ -191,9 +192,22 @@ namespace mon
 			return false;
 		}
 
-		if(app_metrics->OnStreamDeleted(stream) == false)
+		//TODO(Getroot): If a session connects or disconnects at the moment the block below is executed, a race condition may occur, so it must be protected with a mutex.
 		{
-			return false;
+			// If there are sessions in the stream, the number of visitors to the app is recalculated.
+			// Calculate connections to application only if it hasn't origin stream to prevent double subtract. 
+			if(stream_metrics->GetOriginStream() == nullptr) // It is an input stream
+			{
+				for(uint8_t type = static_cast<uint8_t>(PublisherType::Unknown); type < static_cast<uint8_t>(PublisherType::NumberOfPublishers); type++)
+				{
+					OnSessionsDisconnected(*stream_metrics, static_cast<PublisherType>(type), stream_metrics->GetConnections(static_cast<PublisherType>(type)));
+				}
+			}
+
+			if(app_metrics->OnStreamDeleted(stream) == false)
+			{
+				return false;
+			}
 		}
 
 		auto event = Event(EventType::StreamDeleted, _server_metric);
@@ -228,6 +242,7 @@ namespace mon
 			return;
 		}
 
+		_server_metric->IncreaseBytesIn(value);
 		host_metric->IncreaseBytesIn(value);
 		app_metric->IncreaseBytesIn(value);
 		stream_metric->IncreaseBytesIn(value);
@@ -251,6 +266,7 @@ namespace mon
 			return;
 		}
 
+		_server_metric->IncreaseBytesOut(type, value);
 		host_metric->IncreaseBytesOut(type, value);
 		app_metric->IncreaseBytesOut(type, value);
 		stream_metric->IncreaseBytesOut(type, value);
@@ -274,6 +290,7 @@ namespace mon
 			return;
 		}
 
+		_server_metric->OnSessionConnected(type);
 		host_metric->OnSessionConnected(type);
 		app_metric->OnSessionConnected(type);
 		stream_metric->OnSessionConnected(type);
@@ -297,6 +314,7 @@ namespace mon
 			return;
 		}
 
+		_server_metric->OnSessionDisconnected(type);
 		host_metric->OnSessionDisconnected(type);
 		app_metric->OnSessionDisconnected(type);
 		stream_metric->OnSessionDisconnected(type);
@@ -320,6 +338,7 @@ namespace mon
 			return;
 		}
 
+		_server_metric->OnSessionsDisconnected(type, number_of_sessions);
 		host_metric->OnSessionsDisconnected(type, number_of_sessions);
 		app_metric->OnSessionsDisconnected(type, number_of_sessions);
 		stream_metric->OnSessionsDisconnected(type, number_of_sessions);
