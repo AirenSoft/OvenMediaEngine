@@ -100,7 +100,8 @@ install_libx264()
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sLf https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-${X264_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
-    ./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli --disable-asm  && \
+    PATH=$PATH:${PREFIX}/bin && \
+    ./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli && \
     make -j$(nproc) && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "x264"
