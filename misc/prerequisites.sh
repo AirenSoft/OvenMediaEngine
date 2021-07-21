@@ -253,12 +253,12 @@ install_libpcre2()
 
 install_base_ubuntu()
 {
-    sudo apt install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc yasm uuid-dev
+    sudo apt install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev
 }
 
 install_base_fedora()
 {
-    sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc libuuid-devel yasm
+    sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc libuuid-devel 
     sudo yum install -y perl-IPC-Cmd
 }
 
@@ -266,7 +266,6 @@ install_base_centos()
 {
     if [ "${OSVERSION}" == "7" ]; then
         sudo yum install -y epel-release
-        sudo yum install -y yasm
 
         # centos-release-scl should be installed before installing devtoolset-7
         sudo yum install -y centos-release-scl
