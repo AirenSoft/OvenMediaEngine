@@ -5,9 +5,9 @@
 
 In short, OvenMediaEngine (OME) is <b>Open-Source Streaming Server</b> with <b>Sub-Second Latency</b>.
 
-OME receives a video/audio source from encoders and cameras such as [OvenStreamEncoder](https://www.airensoft.com/olk), OBS, XSplit, etc., to <b>WebRTC</b>, <b>RTMP</b>, <b>SRT</b>, <b>MPEG-2 TS</b> <sup><i>Beta</sup></i>, or <b>RTSP</b> <sup><i>Beta</sup></i>.  Then, OME transmits it using <b>WebRTC</b>, <b>Low Latency MPEG-DASH</b> (LLDASH), <b>MPEG-DASH</b>, and <b>HLS</b>.
+OME receives a video/audio source from encoders and cameras such as [OvenStreamEncoder](https://www.airensoft.com/olk), OBS, XSplit, and more to <b>WebRTC</b>, <b>RTMP</b>, <b>SRT</b>, <b>MPEG-2 TS</b> <sup><i>Beta</sup></i>, or <b>RTSP</b> <sup><i>Beta</sup></i>.  Then, OME transmits it using <b>WebRTC</b>, <b>Low Latency MPEG-DASH</b> (LLDASH), <b>MPEG-DASH</b>, and <b>HLS</b>.
 
-Like the picture below.
+Like the picture below:
 <img src="dist/01_OvenMediaEngine_210512.png" style="max-width: 100%; height: auto;">
 
 We also provide [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), Open-Source HTML5 Player that is very synergistic with OME.
@@ -15,10 +15,10 @@ We also provide [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), Open-Sour
 
 ## What is the goal of this project?
 
-AirenSoft's goal is to make it easier for you to build a stable broadcasting/streaming service with Sub-Second Latency.
+AirenSoft aims to make it easier for you to build a stable broadcasting/streaming service with Sub-Second Latency.
 Therefore, we will continue developing and providing the most optimized tools for smooth Sub-Second Latency Streaming.
 
-Please click on each link below for details.
+Would you please click on each link below for details:
 * ["Live Streaming Encoder for Mobile" <b>OvenLiveKit SDK](https://www.airensoft.com/olk)</b>
 * ["Sub-Second Latency Streaming Server" <b>OvenMediaEngine](https://www.ovenmediaengine.com/ome)</b>
 * ["HTML5 Player" <b>OvenPlayer](https://www.ovenmediaengine.com/ovenplayer)</b>
@@ -59,9 +59,9 @@ Please click on each link below for details.
 We have tested OME on the platforms listed below. However, we think it can work with other Linux packages as well:
 
 * [Docker](https://hub.docker.com/r/airensoft/ovenmediaengine)
-* Ubuntu 18
-* CentOS 7
-* Fedora 28
+* Ubuntu 18+
+* CentOS 7+
+* Fedora 28+
 
 
 ## Getting Started
@@ -117,11 +117,19 @@ Please read the [Getting Started](https://airensoft.gitbook.io/ovenmediaengine/g
 
 ## How to contribute
 
-Please see our [Guidelines ](CONTRIBUTING.md)and [Rules](CODE_OF_CONDUCT.md).
+Thank you so much for being so interested in OvenMediaEngine.
 
-And we are love to hear about your <b>Experience</b> and <b>Story</b> using OvenMediaEngine. If you are interested, please email us at [contact@airensoft.com](mailto:contact@airensoft.com) to share <u>Why you chose OvenMediaEngine</u>, <u>How to use it</u>, and more.
+We need your help to keep and develop our open-source project, and we want to tell you that you can contribute in many ways. Please see our [Guidelines](CONTRIBUTING.md), [Rules](CODE_OF_CONDUCT.md), and [Contribute](https://www.ovenmediaengine.com/contribute).
 
-The voices of real contributors are of great help to our project. We always hope that OvenMediaEngine will make your project a success.
+- [Finding Bugs](https://github.com/AirenSoft/OvenMediaEngine/blob/master/CONTRIBUTING.md#finding-bugs)
+- [Reviewing Code](https://github.com/AirenSoft/OvenMediaEngine/blob/master/CONTRIBUTING.md#reviewing-code)
+- [Sharing Ideas](https://github.com/AirenSoft/OvenMediaEngine/blob/master/CONTRIBUTING.md#sharing-ideas)
+- [Testing](https://github.com/AirenSoft/OvenMediaEngine/blob/master/CONTRIBUTING.md#testing)
+- [Improving Documentation](https://github.com/AirenSoft/OvenMediaEngine/blob/master/CONTRIBUTING.md#improving-documentation)
+- [Spreading & Use Cases](https://github.com/AirenSoft/OvenMediaEngine/blob/master/CONTRIBUTING.md#spreading--use-cases)
+- [Recurring Donations](https://github.com/AirenSoft/OvenMediaEngine/blob/master/CONTRIBUTING.md#recurring-donations)
+
+We always hope that OvenMediaEngine will give you good inspiration.
 
 
 ## For more information
