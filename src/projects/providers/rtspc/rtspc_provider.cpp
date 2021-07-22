@@ -40,6 +40,12 @@ namespace pvd
 	RtspcProvider::~RtspcProvider()
 	{
 		Stop();
+
+		if (_signalling_socket_pool != nullptr)
+		{
+			_signalling_socket_pool->Uninitialize();
+		}
+
 		logtd("Terminated Rtspc Provider modules.");
 	}
 
