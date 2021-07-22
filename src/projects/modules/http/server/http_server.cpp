@@ -458,7 +458,7 @@ namespace http
 				if (
 					// 3.   An |Upgrade| header field containing the value "websocket",
 					//      treated as an ASCII case-insensitive value.
-					(request->GetHeader("UPGRADE") == "websocket") &&
+					(request->GetHeader("UPGRADE").UpperCaseString().IndexOf("WEBSOCKET") >= 0L) &&
 
 					// 4.   A |Connection| header field that includes the token "Upgrade",
 					//      treated as an ASCII case-insensitive value.
