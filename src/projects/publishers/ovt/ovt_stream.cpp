@@ -110,7 +110,7 @@ bool OvtStream::GenerateDecription()
 	json_stream["streamName"] = GetName().CStr();
 
 	// Since the OVT publisher is also an output stream, it transmits the UUID of the input stream.
-	json_stream["originStreamUUID"] = GetOriginStream()->GetUUID().CStr();
+	json_stream["originStreamUUID"] = GetLinkedInputStream()->GetUUID().CStr();
 
 	for(auto &track_item : _tracks)
 	{

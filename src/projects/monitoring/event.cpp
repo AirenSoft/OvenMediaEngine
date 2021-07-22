@@ -7,7 +7,7 @@
 namespace mon
 {
 	Event::Event(EventType type, const std::shared_ptr<ServerMetrics> &server_metric)
-		: _type(type), _server_metrics(server_metric)
+		: _type(type), _server_metric(server_metric)
 	{
 		switch(_type)
 		{
@@ -19,7 +19,8 @@ namespace mon
 			case EventType::AppDeleted:
 			case EventType::StreamCreated:
 			case EventType::StreamDeleted: 
-			case EventType::StreamUpdated:
+			case EventType::StreamOriginLinkUpdated:
+			case EventType::StreamOutputsUpdated:
 				_category = EventCategory::StreamEventType;
 				break;
 			// SessionEventType
@@ -72,8 +73,10 @@ namespace mon
 				return "StreamCreated";
 			case EventType::StreamDeleted: 
 				return "StreamDeleted";
-			case EventType::StreamUpdated:
-				return "StreamUpdated";
+			case EventType::StreamOriginLinkUpdated:
+				return "StreamOriginLinkUpdated";
+			case EventType::StreamOutputsUpdated:
+				return "StreamOutputsUpdated";
 			// SessionEventType
 			case EventType::SessionConnected:
 				return "SessionConnected";
@@ -103,27 +106,21 @@ namespace mon
 		return "";
 	}
 
-	void Event::SetMetric(const std::vector<std::shared_ptr<HostMetrics>> &host_metric_list)
+	void Event::SetExtraMetric(const std::shared_ptr<HostMetrics> &host_metric)
 	{
-		_set_metric_type = SetMetricType::HostMetricList;
-		_host_metric_list = host_metric_list;
-	}
-
-	void Event::SetMetric(const std::shared_ptr<HostMetrics> &host_metric)
-	{
-		_set_metric_type = SetMetricType::HostMetric;
+		_extra_metric_type = ExtraMetricType::HostMetric;
 		_host_metric = host_metric;
 	}
 
-	void Event::SetMetric(const std::shared_ptr<ApplicationMetrics> &app_metric)
+	void Event::SetExtraMetric(const std::shared_ptr<ApplicationMetrics> &app_metric)
 	{
-		_set_metric_type = SetMetricType::AppMetric;
+		_extra_metric_type = ExtraMetricType::AppMetric;
 		_app_metric = app_metric;
 	}
 
-	void Event::SetMetric(const std::shared_ptr<StreamMetrics> &stream_metric)
+	void Event::SetExtraMetric(const std::shared_ptr<StreamMetrics> &stream_metric)
 	{
-		_set_metric_type = SetMetricType::StreamMetric;
+		_extra_metric_type = ExtraMetricType::StreamMetric;
 		_stream_metric = stream_metric;
 	}
 
@@ -141,43 +138,38 @@ namespace mon
 	{
 		Json::Value json_root;
 
+		// Fill common values
 		json_root["timestampMillis"] = ov::Clock::NowMSec();
 		json_root["userKey"] = "Not Implemented";
+		json_root["serverID"] = _server_metric->GetConfig()->GetID().CStr();
 		
-		Json::Value json_server;
-		json_server["serverID"] = _server_metrics->GetConfig()->GetID().CStr();
-		json_server["startedTime"] = ov::Converter::ToISO8601String(std::chrono::system_clock::now()).CStr();	
-		json_server["bind"] = _server_metrics->GetConfig()->GetBind().ToJson();
-
-		json_root["server"] = json_server;
-
-		Json::Value json_event;
+		// Fill root["event"]
+		Json::Value &json_event = json_root["event"];
 		json_event["type"] = GetTypeString().CStr();
 		if(_message.IsEmpty() == false)
 		{
 			json_event["message"] = _message.CStr();
 		}
 		
-		Json::Value json_producer;
-		FillProducerObject(json_producer);
-		json_event["producer"] = json_producer;
+		Json::Value &json_producer = json_event["producer"];
+		FillProducer(json_producer);
+
+		// Fill root["data"]
+		Json::Value &json_data = json_root["data"];
 
 		if(_category == EventCategory::StreamEventType)
 		{
-			Json::Value json_host;
-			FillHostObject(json_host);		
-			if(json_host.isNull() == false)
-			{
-				json_event["host"] = json_host;
-			}
+			//TODO(Getroot): Implement this
+			json_data["dataType"] = "Not Implemented";
+
+			Json::Value &json_server_info = json_data["serverInfo"];
+			FillServerInfo(json_server_info);
 		}
 		else if(_category == EventCategory::StatisticsEventType)
 		{
-			
+			Json::Value &json_server_stat = json_data["serverStat"];
+			FillServerStatistics(json_server_stat);
 		}
-
-
-		json_root["event"] = json_event;
 
 		Json::StreamWriterBuilder builder;
 		/* 
@@ -193,29 +185,28 @@ namespace mon
 			(*settings)["precisionType"] = "significant";
 		*/
 
-		//logti("%s", json_root.toStyledString().c_str());
+		logti("%s", json_root.toStyledString().c_str());
 
 		builder["indentation"] = "";
 		return Json::writeString(builder, json_root).c_str();
 	}
 
-	bool Event::FillProducerObject(Json::Value &json_producer) const
+	bool Event::FillProducer(Json::Value &json_producer) const
 	{
-		json_producer["serverID"] = _server_metrics->GetConfig()->GetID().CStr();
+		json_producer["serverID"] = _server_metric->GetConfig()->GetID().CStr();
 
-		switch(_set_metric_type)
+		switch(_extra_metric_type)
 		{
-			case SetMetricType::HostMetric:
-				FillProducerObject(json_producer, _host_metric);
+			case ExtraMetricType::HostMetric:
+				FillProducer(json_producer, _host_metric);
 				break;
-			case SetMetricType::AppMetric:
-				FillProducerObject(json_producer, _app_metric);
+			case ExtraMetricType::AppMetric:
+				FillProducer(json_producer, _app_metric);
 				break;
-			case SetMetricType::StreamMetric:
-				FillProducerObject(json_producer, _stream_metric);
+			case ExtraMetricType::StreamMetric:
+				FillProducer(json_producer, _stream_metric);
 				break;
-			case SetMetricType::HostMetricList:
-			case SetMetricType::None:
+			case ExtraMetricType::None:
 			default:
 				break;
 		}
@@ -223,42 +214,46 @@ namespace mon
 		return true;
 	}
 
-	bool Event::FillProducerObject(Json::Value &jsonProducer, const std::shared_ptr<HostMetrics> &host_metric) const
+	bool Event::FillProducer(Json::Value &jsonProducer, const std::shared_ptr<HostMetrics> &host_metric) const
 	{
-		jsonProducer["serverID"] = _server_metrics->GetConfig()->GetID().CStr();
+		jsonProducer["serverID"] = _server_metric->GetConfig()->GetID().CStr();
 		jsonProducer["hostID"] = host_metric->GetUUID().CStr();
 		return true;
 	}
 
-	bool Event::FillProducerObject(Json::Value &jsonProducer, const std::shared_ptr<ApplicationMetrics> &app_metric) const
+	bool Event::FillProducer(Json::Value &jsonProducer, const std::shared_ptr<ApplicationMetrics> &app_metric) const
 	{
-		FillProducerObject(jsonProducer, app_metric->GetHostMetrics());
+		FillProducer(jsonProducer, app_metric->GetHostMetrics());
 		jsonProducer["appID"] = app_metric->GetUUID().CStr();
 		return true;
 	}
 
-	bool Event::FillProducerObject(Json::Value &jsonProducer, const std::shared_ptr<StreamMetrics> &stream_metric) const
+	bool Event::FillProducer(Json::Value &jsonProducer, const std::shared_ptr<StreamMetrics> &stream_metric) const
 	{
-		FillProducerObject(jsonProducer, stream_metric->GetApplicationMetrics());
+		FillProducer(jsonProducer, stream_metric->GetApplicationMetrics());
 		jsonProducer["streamID"] = stream_metric->GetUUID().CStr();
 		return true;
 	}
 
-	bool Event::FillHostObject(Json::Value &json_host) const
+	bool Event::FillServerInfo(Json::Value &json_server) const
 	{
-		switch(_set_metric_type)
+		json_server["serverID"] = _server_metric->GetConfig()->GetID().CStr();
+		json_server["startedTime"] = ov::Converter::ToISO8601String(std::chrono::system_clock::now()).CStr();	
+		json_server["bind"] = _server_metric->GetConfig()->GetBind().ToJson();
+
+		Json::Value &json_host = json_server["host"];
+		switch(_extra_metric_type)
 		{
-			case SetMetricType::HostMetric:
-				FillProducerObject(json_host, _host_metric);
+			case ExtraMetricType::HostMetric:
+				FillHostInfo(json_host, _host_metric);
 				break;
-			case SetMetricType::AppMetric:
-				FillProducerObject(json_host, _app_metric);
+			case ExtraMetricType::AppMetric:
+				FillHostAppInfo(json_host, _app_metric);
 				break;
-			case SetMetricType::StreamMetric:
-				FillProducerObject(json_host, _stream_metric);
+			case ExtraMetricType::StreamMetric:
+				FillHostAppStreamInfo(json_host, _stream_metric);
 				break;
-			case SetMetricType::HostMetricList:
-			case SetMetricType::None:
+			case ExtraMetricType::None:
 			default:
 				break;
 		}
@@ -266,7 +261,7 @@ namespace mon
 		return true;
 	}
 
-	bool Event::FillHostObject(Json::Value &json_host, const std::shared_ptr<HostMetrics> &host_metric) const
+	bool Event::FillHostInfo(Json::Value &json_host, const std::shared_ptr<HostMetrics> &host_metric) const
 	{
 		json_host["hostID"] = host_metric->GetUUID().CStr();
 		json_host["name"] = host_metric->GetName().CStr();
@@ -277,10 +272,10 @@ namespace mon
 		return true;
 	}
 
-	bool Event::FillHostObject(Json::Value &json_host, const std::shared_ptr<ApplicationMetrics> &app_metric) const
+	bool Event::FillHostAppInfo(Json::Value &json_host, const std::shared_ptr<ApplicationMetrics> &app_metric) const
 	{
 		auto host_metric = app_metric->GetHostMetrics();
-		FillHostObject(json_host, host_metric);
+		FillHostInfo(json_host, host_metric);
 
 		Json::Value json_app;
 		json_app["appID"] = app_metric->GetUUID().CStr();
@@ -295,32 +290,115 @@ namespace mon
 		return true;
 	}
 
-	bool Event::FillHostObject(Json::Value &json_host, const std::shared_ptr<StreamMetrics> &stream_metric) const
+	bool Event::FillHostAppStreamInfo(Json::Value &json_host, const std::shared_ptr<StreamMetrics> &stream_metric) const
 	{
 		auto app_metric = stream_metric->GetApplicationMetrics();
-		FillHostObject(json_host, app_metric);
+		FillHostAppInfo(json_host, app_metric);
 
-		Json::Value json_stream;
+		Json::Value &json_stream = json_host["app"]["stream"];
+
 		json_stream["streamID"] = stream_metric->GetUUID().CStr();
 		json_stream["name"] = stream_metric->GetName().CStr();
 		json_stream["createdTime"] = ov::Converter::ToISO8601String(stream_metric->CommonMetrics::GetCreatedTime()).CStr();
 		
-		Json::Value json_provider;
-		json_provider["type"] = StringFromStreamSourceType(stream_metric->GetSourceType()).CStr();		
-		if(stream_metric->GetOriginStream() != nullptr)  
+		Json::Value &json_source = json_stream["source"];
+
+		// OVT, RTSPPull, RTMP, WEBRTC, SRT, MPEG-TS
+		json_source["type"] = StringFromStreamSourceType(stream_metric->GetSourceType()).CStr();
+		json_source["address"] = stream_metric->GetMediaSource().CStr();
+
+		// If stream_metric is from OVT provider, originUUID is UUID of origin server's stream
+		if(stream_metric->GetOriginStreamUUID().IsEmpty())
 		{
-			json_provider["source"] = stream_metric->GetOriginStreamUUID().CStr();
+			// This stream itself is the origin stream
+			json_source["streamID"] = stream_metric->GetUUID().CStr();
 		}
 		else
 		{
-			json_provider["source"] = stream_metric->GetMediaSource().CStr();
+			json_source["streamID"] = stream_metric->GetOriginStreamUUID().CStr();
 		}
-
-		json_stream["provider"] = json_provider;
 
 		json_stream["tracks"] = serdes::JsonFromTracks(stream_metric->GetTracks());
 
-		json_host["app"]["stream"] = json_stream;
+		if(stream_metric->GetLinkedOutputStreams().empty() == false)
+		{
+			Json::Value &json_outputs = json_stream["outputs"];
+
+			for(const auto &output_stream : stream_metric->GetLinkedOutputStreams())
+			{
+				auto output_stream_metric = app_metric->GetStreamMetrics(*output_stream);
+				if(output_stream_metric == nullptr)
+				{
+					continue;
+				}
+
+				Json::Value json_output_stream;
+
+				json_output_stream["streamID"] = output_stream_metric->GetUUID().CStr();
+				json_output_stream["name"] = output_stream_metric->GetName().CStr();
+				json_output_stream["createdTime"] = ov::Converter::ToISO8601String(output_stream_metric->CommonMetrics::GetCreatedTime()).CStr();
+				json_output_stream["tracks"] = serdes::JsonFromTracks(output_stream_metric->GetTracks());
+
+				json_outputs.append(json_output_stream);
+			}
+		}
+
+		return true;
+	}
+
+	bool Event::FillServerStatistics(Json::Value &json_server_stat) const
+	{
+		json_server_stat["serverID"] = _server_metric->GetConfig()->GetID().CStr();
+		json_server_stat["serverName"] = _server_metric->GetConfig()->GetName().CStr();
+		json_server_stat["stat"] = serdes::JsonFromMetrics(_server_metric);
+
+		for(const auto& [host_key, host_metric] : _server_metric->GetHostMetricsList())
+		{
+			Json::Value json_host;
+
+			json_host["hostID"] = host_metric->GetUUID().CStr();
+			json_host["hostName"] = host_metric->GetName().CStr();
+			json_host["stat"] = serdes::JsonFromMetrics(host_metric);
+
+			for(const auto& [app_key, app_metric] : host_metric->GetApplicationMetricsList())
+			{
+				Json::Value json_app;
+
+				json_app["appID"] = app_metric->GetUUID().CStr();
+				json_app["appName"] = app_metric->GetName().CStr();
+				json_app["stat"] = serdes::JsonFromMetrics(app_metric);
+
+				for(const auto& [stream_key, stream_metric] : app_metric->GetStreamMetricsMap())
+				{
+					if(stream_metric->IsInputStream())
+					{
+						Json::Value json_stream;
+						json_stream["streamID"] = stream_metric->GetUUID().CStr();
+						json_stream["streamName"] = stream_metric->GetName().CStr();
+						json_stream["stat"] = serdes::JsonFromMetrics(stream_metric);
+
+						Json::Value json_output_streams = json_stream["outputs"];
+						for(const auto& output_stream : stream_metric->GetLinkedOutputStreams())
+						{
+							auto output_stream_metric = app_metric->GetStreamMetrics(*output_stream);
+							
+							Json::Value json_output_stream;
+							json_output_stream["streamID"] = output_stream_metric->GetUUID().CStr();
+							json_output_stream["streamName"] = output_stream_metric->GetName().CStr();
+							json_output_stream["stat"] = serdes::JsonFromMetrics(output_stream_metric);
+
+							json_output_streams.append(json_output_stream);
+						}
+						
+						json_app["streams"].append(json_stream);
+					}
+				}
+
+				json_host["apps"].append(json_app);
+			}
+
+			json_server_stat["hosts"].append(json_host);
+		}
 
 		return true;
 	}

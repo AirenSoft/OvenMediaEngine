@@ -58,7 +58,7 @@ namespace mon
 		CommonMetrics::IncreaseBytesIn(value);
 
 		// If this stream is child then send event to parent
-		auto origin_stream_info = GetOriginStream();
+		auto origin_stream_info = GetLinkedInputStream();
 		if(origin_stream_info != nullptr)
 		{
 			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
@@ -74,7 +74,7 @@ namespace mon
 		CommonMetrics::IncreaseBytesOut(type, value);
 
 		// If this stream is child then send event to parent
-		auto origin_stream_info = GetOriginStream();
+		auto origin_stream_info = GetLinkedInputStream();
 		if(origin_stream_info != nullptr)
 		{
 			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
@@ -90,7 +90,7 @@ namespace mon
 		CommonMetrics::OnSessionConnected(type);
 
 		// If this stream is child then send event to parent
-		auto origin_stream_info = GetOriginStream();
+		auto origin_stream_info = GetLinkedInputStream();
 		if(origin_stream_info != nullptr)
 		{
 			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
@@ -112,7 +112,7 @@ namespace mon
 		CommonMetrics::OnSessionDisconnected(type);
 
 		// If this stream is child then send event to parent
-		auto origin_stream_info = GetOriginStream();
+		auto origin_stream_info = GetLinkedInputStream();
 		if(origin_stream_info != nullptr)
 		{
 			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);

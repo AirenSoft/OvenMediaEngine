@@ -256,6 +256,8 @@ namespace pub
 		}
 		_sessions.clear();
 
+		UnlinkAll();
+
 		logti("[%s(%u)] %s stream has been stopped", GetName().CStr(), GetId(), GetApplicationTypeName());
 
 		return true;

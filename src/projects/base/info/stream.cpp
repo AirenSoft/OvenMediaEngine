@@ -72,6 +72,12 @@ namespace info
 		return false;
 	}
 
+	void Stream::UnlinkAll()
+	{
+		_output_streams.clear();
+		_origin_stream.reset();
+	}
+
 	void Stream::SetId(info::stream_id_t id)
 	{
 		_id = id;
@@ -89,7 +95,7 @@ namespace info
 			return "";
 		}
 
-		return ov::String::FormatString("%s/%s/%s", _app_info->GetUUID().CStr(), GetName().CStr(), GetOriginStream() != nullptr ? "i" : "o");
+		return ov::String::FormatString("%s/%s/%s", _app_info->GetUUID().CStr(), GetName().CStr(), GetLinkedInputStream() != nullptr ? "o" : "i");
 	}
 
 	ov::String Stream::GetName() const 
@@ -111,17 +117,37 @@ namespace info
 		_source_url = url;
 	}
 
-	void Stream::SetOriginStream(const std::shared_ptr<Stream> &stream)
+	bool Stream::IsInputStream() const
 	{
-		_origin_stream = stream;
-		_origin_stream_uuid = stream->GetUUID();
+		return IsOutputStream() == false;
 	}
 
-	const std::shared_ptr<Stream> Stream::GetOriginStream() const
+	bool Stream::IsOutputStream() const
+	{
+		return GetSourceType() == StreamSourceType::Transcoder || GetLinkedInputStream() != nullptr;
+	}
+
+	void Stream::LinkOutputStream(const std::shared_ptr<Stream> &stream)
+	{
+		_output_streams.push_back(stream);
+	}
+	
+	std::vector<std::shared_ptr<Stream>> Stream::GetLinkedOutputStreams() const
+	{
+		return _output_streams;
+	}
+
+	void Stream::LinkInputStream(const std::shared_ptr<Stream> &stream)
+	{
+		_origin_stream = stream;
+	}
+
+	const std::shared_ptr<Stream> Stream::GetLinkedInputStream() const
 	{
 		return _origin_stream;
 	}
 
+	// Only used in OVT provider
 	void Stream::SetOriginStreamUUID(const ov::String &uuid)
 	{
 		_origin_stream_uuid = uuid;
@@ -131,7 +157,6 @@ namespace info
 	{
 		return _origin_stream_uuid;
 	}
-
 
 	const std::chrono::system_clock::time_point& Stream::GetCreatedTime() const
 	{
@@ -186,11 +211,11 @@ namespace info
 		ov::String out_str = ov::String::FormatString("\n[Stream Info]\nid(%u), output(%s), SourceType(%s), Created Time (%s) UUID(%s)\n", 														
 														GetId(), GetName().CStr(),::StringFromStreamSourceType(_source_type).CStr(),
 														ov::Converter::ToString(_created_time).CStr(), GetUUID().CStr());
-		if(GetOriginStream() != nullptr)
+		if(GetLinkedInputStream() != nullptr)
 		{
 			out_str.AppendFormat("\t>> Origin Stream Info\n\tid(%u), output(%s), SourceType(%s), Created Time (%s)\n",
-				GetOriginStream()->GetId(), GetOriginStream()->GetName().CStr(), ::StringFromStreamSourceType(GetOriginStream()->GetSourceType()).CStr(),
-														ov::Converter::ToString(GetOriginStream()->GetCreatedTime()).CStr());
+				GetLinkedInputStream()->GetId(), GetLinkedInputStream()->GetName().CStr(), ::StringFromStreamSourceType(GetLinkedInputStream()->GetSourceType()).CStr(),
+														ov::Converter::ToString(GetLinkedInputStream()->GetCreatedTime()).CStr());
 		}
 
 		if(GetOriginStreamUUID().IsEmpty() == false)

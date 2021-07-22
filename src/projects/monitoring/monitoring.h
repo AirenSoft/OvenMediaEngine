@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "base/ovlibrary/delay_queue.h"
 #include "base/info/info.h"
 #include "server_metrics.h"
 #include "event_logger.h"
@@ -51,6 +52,7 @@ namespace mon
 		void OnSessionsDisconnected(const info::Stream &stream_info, PublisherType type, uint64_t number_of_sessions);
 
 	private:
+		ov::DelayQueue _timer;
 		std::shared_ptr<ServerMetrics> _server_metric = nullptr;
 		EventLogger	_logger;
 

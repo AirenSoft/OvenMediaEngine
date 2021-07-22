@@ -70,6 +70,17 @@ namespace mon
 
 		auto event = Event(EventType::ServerStarted, _server_metric);
 		_logger.Write(event);
+
+		_timer.Push(
+			[this](void *parameter) -> ov::DelayQueueAction 
+			{
+				auto event = Event(EventType::ServerStat, _server_metric);
+				_logger.Write(event);
+				return ov::DelayQueueAction::Repeat;
+			},
+			5000);
+
+		_timer.Start();
 	}
 
 	bool Monitoring::OnHostCreated(const info::Host &host_info)
@@ -81,7 +92,7 @@ namespace mon
 
 		auto host_metrics = _server_metric->GetHostMetrics(host_info);
 		auto event = Event(EventType::HostCreated, _server_metric);
-		event.SetMetric(host_metrics);
+		event.SetExtraMetric(host_metrics);
 		_logger.Write(event);
 
 		return true;
@@ -97,7 +108,7 @@ namespace mon
 		auto host_metrics = _server_metric->GetHostMetrics(host_info);
 
 		auto event = Event(EventType::HostDeleted, _server_metric);
-		event.SetMetric(host_metrics);
+		event.SetExtraMetric(host_metrics);
 		_logger.Write(event);
 
 		return true;
@@ -123,7 +134,7 @@ namespace mon
 		}
 
 		auto event = Event(EventType::AppCreated, _server_metric);
-		event.SetMetric(app_metrics);
+		event.SetExtraMetric(app_metrics);
 		_logger.Write(event);
 
 		return true;
@@ -147,7 +158,7 @@ namespace mon
 		}
 
 		auto event = Event(EventType::AppDeleted, _server_metric);
-		event.SetMetric(app_metrics);
+		event.SetExtraMetric(app_metrics);
 		_logger.Write(event);
 
 		return true;
@@ -165,14 +176,27 @@ namespace mon
 			return false;
 		}
 
-		auto stream_metrics = app_metrics->GetStreamMetrics(stream);
+		// Writes events only based on the input stream.
+		std::shared_ptr<StreamMetrics> stream_metrics = nullptr;
+		EventType event_type = EventType::StreamCreated;
+		if(stream.IsInputStream())
+		{
+			stream_metrics = app_metrics->GetStreamMetrics(stream);
+			event_type = EventType::StreamOutputsUpdated;
+		}
+		else
+		{
+			stream_metrics = app_metrics->GetStreamMetrics(*stream.GetLinkedInputStream());
+			event_type = EventType::StreamOutputsUpdated;
+		}
+
 		if(stream_metrics == nullptr)
 		{
 			return false;
 		}
 
-		auto event = Event(EventType::StreamCreated, _server_metric);
-		event.SetMetric(stream_metrics);
+		auto event = Event(event_type, _server_metric);
+		event.SetExtraMetric(stream_metrics);
 		_logger.Write(event);
 
 		return true;
@@ -196,7 +220,7 @@ namespace mon
 		{
 			// If there are sessions in the stream, the number of visitors to the app is recalculated.
 			// Calculate connections to application only if it hasn't origin stream to prevent double subtract. 
-			if(stream_metrics->GetOriginStream() == nullptr) // It is an input stream
+			if(stream_metrics->GetLinkedInputStream() == nullptr) // It is an input stream
 			{
 				for(uint8_t type = static_cast<uint8_t>(PublisherType::Unknown); type < static_cast<uint8_t>(PublisherType::NumberOfPublishers); type++)
 				{
@@ -210,9 +234,12 @@ namespace mon
 			}
 		}
 
-		auto event = Event(EventType::StreamDeleted, _server_metric);
-		event.SetMetric(stream_metrics);
-		_logger.Write(event);
+		if(stream_metrics->IsInputStream())
+		{
+			auto event = Event(EventType::StreamDeleted, _server_metric);
+			event.SetExtraMetric(stream_metrics);
+			_logger.Write(event);
+		}
 
 		return true;
 	}

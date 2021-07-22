@@ -23,11 +23,19 @@ namespace serdes
 		SetTimestamp(value, "lastUpdatedTime", metrics->GetLastUpdatedTime());
 		SetInt64(value, "totalBytesIn", metrics->GetTotalBytesIn());
 		SetInt64(value, "totalBytesOut", metrics->GetTotalBytesOut());
+		SetTimestamp(value, "lastRecvTime", metrics->GetLastRecvTime());
+		SetTimestamp(value, "lastSentTime", metrics->GetLastSentTime());
 		SetInt(value, "totalConnections", metrics->GetTotalConnections());
 		SetInt(value, "maxTotalConnections", metrics->GetMaxTotalConnections());
 		SetTimestamp(value, "maxTotalConnectionTime", metrics->GetMaxTotalConnectionsTime());
-		SetTimestamp(value, "lastRecvTime", metrics->GetLastRecvTime());
-		SetTimestamp(value, "lastSentTime", metrics->GetLastSentTime());
+
+		Json::Value &session = value["sessions"];
+		for (int i = 1; i < static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
+		{
+			SetInt(session, 
+					ov::String::FormatString("%s", StringFromPublisherType(static_cast<PublisherType>(i)).LowerCaseString().CStr()).CStr(), 
+					metrics->GetConnections(static_cast<PublisherType>(i)));
+		}
 
 		return value;
 	}

@@ -33,9 +33,18 @@ namespace info
 		ov::String GetMediaSource() const;
 		void SetMediaSource(ov::String url);
 
-		void SetOriginStream(const std::shared_ptr<Stream> &stream);
-		const std::shared_ptr<Stream> GetOriginStream() const;
+		bool IsInputStream() const;
+		bool IsOutputStream() const;
 
+		void UnlinkAll();
+
+		void LinkOutputStream(const std::shared_ptr<Stream> &stream);
+		std::vector<std::shared_ptr<Stream>> GetLinkedOutputStreams() const;
+
+		void LinkInputStream(const std::shared_ptr<Stream> &stream);
+		const std::shared_ptr<Stream> GetLinkedInputStream() const;
+
+		// Only used in OVT provider
 		void SetOriginStreamUUID(const ov::String &uuid);
 		ov::String GetOriginStreamUUID() const;
 
@@ -67,7 +76,7 @@ namespace info
 		ov::String _name;
 		ov::String _source_url;
 		
-		// MediaTrack ID 값을 Key로 활용함
+		// Key : MediaTrack ID
 		std::map<int32_t, std::shared_ptr<MediaTrack>> _tracks;
 
 	private:
@@ -76,6 +85,9 @@ namespace info
 		StreamSourceType _source_type;
 
 		std::shared_ptr<Application>	_app_info = nullptr;
+
+		// If this stream is from Provider(input stream) it has multiple output streams
+		std::vector<std::shared_ptr<Stream>> _output_streams;
 
 		// If the Source Type of this stream is LiveTranscoder,
 		// the original stream coming from the Provider can be recognized with _origin_stream.

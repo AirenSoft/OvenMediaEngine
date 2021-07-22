@@ -11,7 +11,7 @@ namespace mon
 		ServerStarted,
 		HostCreated, HostDeleted,
 		AppCreated, AppDeleted,
-		StreamCreated, StreamDeleted, StreamUpdated,
+		StreamCreated, StreamDeleted, StreamOriginLinkUpdated, StreamOutputsUpdated,
 		// SessionEventType
 		SessionConnected, SessionDisconnected,
 		// ActoinEventType
@@ -33,11 +33,9 @@ namespace mon
 		EventType GetType() const;
 		ov::String GetTypeString() const;
 
-		
-		void SetMetric(const std::vector<std::shared_ptr<HostMetrics>> &host_metric_list);
-		void SetMetric(const std::shared_ptr<HostMetrics> &host_metric);
-		void SetMetric(const std::shared_ptr<ApplicationMetrics> &app_metric);
-		void SetMetric(const std::shared_ptr<StreamMetrics> &stream_metric);
+		void SetExtraMetric(const std::shared_ptr<HostMetrics> &host_metric);
+		void SetExtraMetric(const std::shared_ptr<ApplicationMetrics> &app_metric);
+		void SetExtraMetric(const std::shared_ptr<StreamMetrics> &stream_metric);
 
 		void SetMessage(const ov::String &message);
 
@@ -47,17 +45,19 @@ namespace mon
 
 	private:
 
-		// Use _set_metric_type
-		bool FillProducerObject(Json::Value &json_producer) const;
-		bool FillProducerObject(Json::Value &json_producer, const std::shared_ptr<HostMetrics> &host_metric) const;
-		bool FillProducerObject(Json::Value &json_producer, const std::shared_ptr<ApplicationMetrics> &app_metric) const;
-		bool FillProducerObject(Json::Value &json_producer, const std::shared_ptr<StreamMetrics> &stream_metric) const;
+		// Use _extra_metric_type
+		bool FillProducer(Json::Value &json_producer) const;
+		bool FillProducer(Json::Value &json_producer, const std::shared_ptr<HostMetrics> &host_metric) const;
+		bool FillProducer(Json::Value &json_producer, const std::shared_ptr<ApplicationMetrics> &app_metric) const;
+		bool FillProducer(Json::Value &json_producer, const std::shared_ptr<StreamMetrics> &stream_metric) const;
 
-		// Use _set_metric_type
-		bool FillHostObject(Json::Value &json_host) const;
-		bool FillHostObject(Json::Value &json_host, const std::shared_ptr<HostMetrics> &host_metric) const;
-		bool FillHostObject(Json::Value &json_host, const std::shared_ptr<ApplicationMetrics> &app_metric) const;
-		bool FillHostObject(Json::Value &json_host, const std::shared_ptr<StreamMetrics> &stream_metric) const;
+		// Use _extra_metric_type
+		bool FillServerInfo(Json::Value &json_server) const;
+		bool FillHostInfo(Json::Value &json_host, const std::shared_ptr<HostMetrics> &host_metric) const;
+		bool FillHostAppInfo(Json::Value &json_host, const std::shared_ptr<ApplicationMetrics> &app_metric) const;
+		bool FillHostAppStreamInfo(Json::Value &json_host, const std::shared_ptr<StreamMetrics> &stream_metric) const;
+
+		bool FillServerStatistics(Json::Value &json_stat) const;
 
 		enum class EventCategory
 		{
@@ -72,19 +72,19 @@ namespace mon
 		EventCategory _category;
 		ov::String _message;
 
-		enum class SetMetricType
+		enum class ExtraMetricType
 		{
 			None,
-			HostMetricList,
 			HostMetric,
 			AppMetric,
 			StreamMetric
 		};
 		
-		std::shared_ptr<ServerMetrics> _server_metrics;
+		// Essential metic
+		std::shared_ptr<ServerMetrics> _server_metric; 
 
-		SetMetricType _set_metric_type = SetMetricType::None;
-		std::vector<std::shared_ptr<HostMetrics>> _host_metric_list;
+		// Optional metric
+		ExtraMetricType _extra_metric_type = ExtraMetricType::None;
 		std::shared_ptr<HostMetrics> _host_metric = nullptr;
 		std::shared_ptr<ApplicationMetrics> _app_metric = nullptr;
 		std::shared_ptr<StreamMetrics> _stream_metric = nullptr;

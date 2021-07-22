@@ -89,7 +89,7 @@ namespace api
 			{
 				auto &stream = item.second;
 
-				if (stream->GetOriginStream() == nullptr)
+				if (stream->GetLinkedInputStream() == nullptr)
 				{
 					response.append(stream->GetName().CStr());
 				}
