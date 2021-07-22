@@ -175,12 +175,13 @@ install_ffmpeg()
     ADDI_DECODER=""
     ADDI_CFLAGS=""
     ADDI_LDFLAGS=""
-    ADDI_HWACCEL=""
+    ADDI_HWACCEL="--disable-nvdec --disable-nvdec --disable-vaapi --disable-vdpau --disable-cuda-llvm --disable-cuvid --disable-ffnvcodec"
 
     if [ "$INTEL_QSV_HWACCELS" = true ] ; then
         ADDI_LIBS+=" --enable-libmfx"
         ADDI_ENCODER+=",h264_qsv,hevc_qsv"
         ADDI_DECODER+=",vp8_qsv,h264_qsv,hevc_qsv"
+        ADDI_HWACCEL=""
     fi
 
     if [ "$NVIDIA_VIDEO_CODEC_HWACCELS" = true ] ; then
@@ -189,8 +190,10 @@ install_ffmpeg()
         ADDI_DECODER+=",h264_nvdec,hevc_nvdec"
         ADDI_CFLAGS+="-I/usr/local/cuda/include"
         ADDI_LDFLAGS="-L/usr/local/cuda/lib64"
-        ADDI_HWACCEL="h264_nvdec,hevc_nvdec"
+        ADDI_HWACCEL="--enable-hwaccel=h264_nvdec,hevc_nvdec"
     fi
+
+
 
     (DIR=${TEMP_PATH}/ffmpeg && \
     mkdir -p ${DIR} && \
@@ -212,7 +215,7 @@ install_ffmpeg()
     --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-libx265 ${ADDI_LIBS} \
     --disable-everything \
     --disable-fast-unaligned \
-    --enable-hwaccel=${ADDI_HWACCEL}  \
+    ${ADDI_HWACCEL} \
     --enable-encoder=libvpx_vp8,libopus,libfdk_aac,libx264,libx265,mjpeg,png${ADDI_ENCODER} \
     --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8${ADDI_DECODER} \
     --enable-parser=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
