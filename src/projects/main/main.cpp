@@ -219,7 +219,9 @@ int main(int argc, char *argv[])
 	monitor->Release();
 	api_server->Stop();
 
+	RELEASE_MODULE(webrtc_provider, "WebRTC Provider");
 	RELEASE_MODULE(mpegts_provider, "MPEG-TS Provider");
+	RELEASE_MODULE(srt_provider, "SRT Provider");	
 	RELEASE_MODULE(rtmp_provider, "RTMP Provider");
 	RELEASE_MODULE(ovt_provider, "OVT Provider");
 	RELEASE_MODULE(rtspc_provider, "RTSPC Provider");
