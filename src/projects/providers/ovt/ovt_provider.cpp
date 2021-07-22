@@ -43,6 +43,12 @@ namespace pvd
 	OvtProvider::~OvtProvider()
 	{
 		Stop();
+
+		if (_client_socket_pool != nullptr)
+		{
+			_client_socket_pool->Uninitialize();
+		}
+
 		logtd("Terminated OvtProvider modules.");
 	}
 

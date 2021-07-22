@@ -327,6 +327,11 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 
 static bool Uninitialize()
 {
+	logti("Uninitializing TCP socket pool...");
+	ov::SocketPool::GetTcpPool()->Uninitialize();
+	logti("Uninitializing UDP socket pool...");
+	ov::SocketPool::GetUdpPool()->Uninitialize();
+
 	logti("OvenMediaEngine will be terminated");
 
 	return true;
