@@ -171,6 +171,11 @@ namespace pvd
 			_rtp_rtcp->Stop();
 		}
 
+		if (_signalling_socket != nullptr)
+		{
+			_signalling_socket->Close();
+		}
+
 		ov::Node::Stop();
 
 		_state = State::STOPPED;
