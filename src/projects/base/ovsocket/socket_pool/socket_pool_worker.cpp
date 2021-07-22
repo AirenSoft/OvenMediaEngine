@@ -210,7 +210,7 @@ namespace ov
 			if (socket->HasExpiredCommand())
 			{
 				// Sockets that have failed to send data for a long time are forced to shut down
-				logaw("Failed to send data for %dms - This socket is going to be garbage collection (%s)", OV_SOCKET_EXPIRE_TIMEOUT, socket->ToString().CStr());
+				logaw("Failed to send data for %dms - This socket is going to be garbage collected (%s)", OV_SOCKET_EXPIRE_TIMEOUT, socket->ToString().CStr());
 
 				socket->CloseInternal();
 				socket->DispatchEvents();
@@ -356,20 +356,24 @@ namespace ov
 
 					if (need_to_close == false)
 					{
+						auto name = ov::String(ov::Platform::GetThreadName());
+
 						if (OV_CHECK_FLAG(events, EPOLLOUT))
 						{
 							if (OV_CHECK_FLAG(events, EPOLLHUP) == false)
 							{
-								switch (socket->DispatchEvents())
+								// Socket is ready to write data
+								switch (event_callback->OnDataWritableEvent())
 								{
-									case Socket::DispatchResult::Dispatched:
+									case PostProcessMethod::Nothing:
 										break;
 
-									case Socket::DispatchResult::PartialDispatched:
+									case PostProcessMethod::GarbageCollection:
+										logaw("Need to do garbage collection for %s", socket->ToString().CStr());
 										_gc_candidates[socket->GetNativeHandle()] = socket;
 										break;
 
-									case Socket::DispatchResult::Error:
+									case PostProcessMethod::Error:
 										new_state = SocketState::Error;
 										need_to_close = true;
 										break;
@@ -451,6 +455,7 @@ namespace ov
 							break;
 
 						case Socket::DispatchResult::PartialDispatched:
+							logaw("Need to do garbage collection for %s (dispatch_later)", socket->ToString().CStr());
 							_gc_candidates[socket->GetNativeHandle()] = socket;
 							break;
 

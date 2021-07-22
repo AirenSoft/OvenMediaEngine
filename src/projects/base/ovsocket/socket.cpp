@@ -953,15 +953,13 @@ namespace ov
 				{
 					// The data is not fully processed and will not be removed from queue
 
-					// Re-enqueue the command partially processed
-					_dispatch_queue.push_front(front);
+					_dispatch_queue.emplace_front(front);
 
 					// Close-related commands will be processed when we receive the event from epoll later
 				}
 				else
 				{
 					// An error occurred
-
 					if (is_close_command)
 					{
 						// Ignore errors that occurred during close
@@ -1000,13 +998,13 @@ namespace ov
 				OV_ASSERT2(count == 0);
 			}
 #endif	// DEBUG
-				return Socket::DispatchResult::Dispatched;
+				return DispatchResult::Dispatched;
 
 			case BlockingMode::NonBlocking:
 				return DispatchEventsInternal();
 		}
 
-		return Socket::DispatchResult::Error;
+		return DispatchResult::Error;
 	}
 
 	ssize_t Socket::SendInternal(const std::shared_ptr<const Data> &data)
@@ -1219,6 +1217,23 @@ namespace ov
 		return total_sent;
 	}
 
+	PostProcessMethod Socket::OnDataWritableEvent()
+	{
+		switch (DispatchEvents())
+		{
+			case DispatchResult::Dispatched:
+				return PostProcessMethod::Nothing;
+
+			case DispatchResult::PartialDispatched:
+				return PostProcessMethod::GarbageCollection;
+
+			case DispatchResult::Error:
+				return PostProcessMethod::Error;
+		}
+
+		return PostProcessMethod::Error;
+	}
+
 	void Socket::OnDataAvailableEvent()
 	{
 		logad("Socket is ready to read");
@@ -1263,7 +1278,21 @@ namespace ov
 
 					if (AppendCommand({data->Clone()}))
 					{
-						return (DispatchEvents() != DispatchResult::Error);
+						// Need to send later
+						switch (DispatchEvents())
+						{
+							case DispatchResult::Dispatched:
+								break;
+
+							case DispatchResult::PartialDispatched:
+								_worker->EnqueueToDispatchLater(GetSharedPtr());
+								break;
+
+							case DispatchResult::Error:
+								return false;
+						}
+
+						return true;
 					}
 
 					return false;
@@ -1341,9 +1370,23 @@ namespace ov
 				{
 					CHECK_STATE(== SocketState::Connected, false);
 
-					if (AppendCommand({address, data->Clone()}))
+					if (AppendCommand({data->Clone()}))
 					{
-						return (DispatchEvents() != DispatchResult::Error);
+						// Need to send later
+						switch (DispatchEvents())
+						{
+							case DispatchResult::Dispatched:
+								break;
+
+							case DispatchResult::PartialDispatched:
+								_worker->EnqueueToDispatchLater(GetSharedPtr());
+								break;
+
+							case DispatchResult::Error:
+								return false;
+						}
+
+						return true;
 					}
 
 					return false;
@@ -1765,7 +1808,7 @@ namespace ov
 			case SocketState::Created:
 				[[fallthrough]];
 			case SocketState::Disconnected:
-				return Socket::DispatchResult::Dispatched;
+				return DispatchResult::Dispatched;
 
 			default:
 				break;
