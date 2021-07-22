@@ -312,6 +312,26 @@ namespace ov
 			{
 			}
 
+			// Copy ctor
+			DispatchCommand(const DispatchCommand &another_command)
+				: type(another_command.type),
+				  new_state(another_command.new_state),
+				  address(another_command.address),
+				  data(another_command.data),
+				  enqueued_time(another_command.enqueued_time)
+			{
+			}
+
+			// Move ctor
+			DispatchCommand(DispatchCommand &&another_command)
+			{
+				std::swap(type, another_command.type);
+				std::swap(new_state, another_command.new_state);
+				std::swap(address, another_command.address);
+				std::swap(data, another_command.data);
+				std::swap(enqueued_time, another_command.enqueued_time);
+			}
+
 			bool IsCloseCommand() const
 			{
 				return OV_CHECK_FLAG(static_cast<uint8_t>(type), CLOSE_TYPE_MASK);
@@ -373,6 +393,7 @@ namespace ov
 		// Implementation of SocketPoolEventInterface
 		//--------------------------------------------------------------------
 		bool OnConnectedEvent(const std::shared_ptr<const SocketError> &error) override;
+		PostProcessMethod OnDataWritableEvent() override;
 		void OnDataAvailableEvent() override;
 
 		DispatchResult DispatchEventInternal(DispatchCommand &command);

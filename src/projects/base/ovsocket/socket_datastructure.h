@@ -173,10 +173,23 @@ namespace ov
 	class SocketAddress;
 
 	// For SocketPoolWorker callback
+	enum class PostProcessMethod
+	{
+		// Nothing to do
+		Nothing,
+
+		// Do garbage collection
+		GarbageCollection,
+
+		// An error occurred - close the socket immediately
+		Error
+	};
+
 	class SocketPoolEventInterface
 	{
 	public:
 		virtual bool OnConnectedEvent(const std::shared_ptr<const SocketError> &error) = 0;
+		virtual PostProcessMethod OnDataWritableEvent() = 0;
 		virtual void OnDataAvailableEvent() = 0;
 	};
 

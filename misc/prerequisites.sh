@@ -41,6 +41,7 @@ fi
 
 MAKEFLAGS="${MAKEFLAGS} -j${NCPU}"
 CURRENT=$(pwd)
+PATH=$PATH:${PREFIX}/bin
 
 install_openssl()
 {
@@ -51,8 +52,7 @@ install_openssl()
     ./config --prefix="${PREFIX}" --openssldir="${PREFIX}" -Wl,-rpath,"${PREFIX}/lib" shared no-idea no-mdc2 no-rc5 no-ec2m no-ecdh no-ecdsa no-async && \
     make -j$(nproc) && \
     sudo make install_sw && \
-    rm -rf ${DIR} && \
-    sudo rm -rf ${PREFIX}/bin) || fail_exit "openssl"
+    rm -rf ${DIR} ) || fail_exit "openssl"
 }
 
 install_libsrtp()
@@ -76,8 +76,7 @@ install_libsrt()
     PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH} ./configure --prefix="${PREFIX}" --enable-shared --disable-static && \
     make -j$(nproc) && \
     sudo make install && \
-    rm -rf ${DIR} && \
-    sudo rm -rf ${PREFIX}/bin) || fail_exit "srt"
+    rm -rf ${DIR} ) || fail_exit "srt"
 }
 
 install_libopus()
@@ -100,7 +99,7 @@ install_libx264()
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sLf https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-${X264_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
-    ./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli --disable-asm  && \
+    ./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli && \
     make -j$(nproc) && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "x264"
@@ -248,19 +247,18 @@ install_libpcre2()
         --enable-jit=auto && \
     make -j$(nproc) && \
     sudo make install && \
-    rm -rf ${DIR} && \
-    sudo rm -rf ${PREFIX}/bin) || fail_exit "libpcre2"
+    rm -rf ${DIR} ) || fail_exit "libpcre2"
 }
 
 
 install_base_ubuntu()
 {
-    sudo apt install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc yasm uuid-dev
+    sudo apt install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev
 }
 
 install_base_fedora()
 {
-    sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc libuuid-devel yasm
+    sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc libuuid-devel 
     sudo yum install -y perl-IPC-Cmd
 }
 
@@ -268,7 +266,6 @@ install_base_centos()
 {
     if [ "${OSVERSION}" == "7" ]; then
         sudo yum install -y epel-release
-        sudo yum install -y yasm
 
         # centos-release-scl should be installed before installing devtoolset-7
         sudo yum install -y centos-release-scl

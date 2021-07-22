@@ -156,8 +156,11 @@ namespace pvd
 	{
 		IcePortManager::GetInstance()->Release(IcePortObserver::GetSharedPtr());
 
-		_signalling_server->RemoveObserver(RtcSignallingObserver::GetSharedPtr());
-		_signalling_server->Stop();
+		if(_signalling_server != nullptr)
+		{
+			_signalling_server->RemoveObserver(RtcSignallingObserver::GetSharedPtr());
+			_signalling_server->Stop();
+		}
 
 		return Provider::Stop();
 	}
