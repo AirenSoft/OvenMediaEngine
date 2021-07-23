@@ -320,18 +320,12 @@ namespace mon
 
 		json_stream["tracks"] = serdes::JsonFromTracks(stream_metric->GetTracks());
 
-		if(stream_metric->GetLinkedOutputStreams().empty() == false)
+		if(stream_metric->GetLinkedOutputStreamMetrics().empty() == false)
 		{
 			Json::Value &json_outputs = json_stream["outputs"];
 
-			for(const auto &output_stream : stream_metric->GetLinkedOutputStreams())
+			for(const auto &output_stream_metric : stream_metric->GetLinkedOutputStreamMetrics())
 			{
-				auto output_stream_metric = app_metric->GetStreamMetrics(*output_stream);
-				if(output_stream_metric == nullptr)
-				{
-					continue;
-				}
-
 				Json::Value json_output_stream;
 
 				json_output_stream["streamID"] = output_stream_metric->GetUUID().CStr();
@@ -378,10 +372,8 @@ namespace mon
 						json_stream["stat"] = serdes::JsonFromMetrics(stream_metric);
 
 						Json::Value json_output_streams = json_stream["outputs"];
-						for(const auto& output_stream : stream_metric->GetLinkedOutputStreams())
+						for(const auto& output_stream_metric : stream_metric->GetLinkedOutputStreamMetrics())
 						{
-							auto output_stream_metric = app_metric->GetStreamMetrics(*output_stream);
-							
 							Json::Value json_output_stream;
 							json_output_stream["streamID"] = output_stream_metric->GetUUID().CStr();
 							json_output_stream["streamName"] = output_stream_metric->GetName().CStr();

@@ -60,6 +60,7 @@ namespace info
 
 	Stream::~Stream()
 	{
+		logd("DEBUG", "Stream (%s / %s) Destroyed", GetName().CStr(), GetUUID().CStr());
 	}
 
 	bool Stream::operator==(const Stream &stream_info) const
@@ -70,12 +71,6 @@ namespace info
 		}
 
 		return false;
-	}
-
-	void Stream::UnlinkAll()
-	{
-		_output_streams.clear();
-		_origin_stream.reset();
 	}
 
 	void Stream::SetId(info::stream_id_t id)
@@ -95,7 +90,7 @@ namespace info
 			return "";
 		}
 
-		return ov::String::FormatString("%s/%s/%s", _app_info->GetUUID().CStr(), GetName().CStr(), GetLinkedInputStream() != nullptr ? "o" : "i");
+		return ov::String::FormatString("%s/%s/%s", _app_info->GetUUID().CStr(), GetName().CStr(), IsInputStream() ? "i" : "o");
 	}
 
 	ov::String Stream::GetName() const 
@@ -125,16 +120,6 @@ namespace info
 	bool Stream::IsOutputStream() const
 	{
 		return GetSourceType() == StreamSourceType::Transcoder || GetLinkedInputStream() != nullptr;
-	}
-
-	void Stream::LinkOutputStream(const std::shared_ptr<Stream> &stream)
-	{
-		_output_streams.push_back(stream);
-	}
-	
-	std::vector<std::shared_ptr<Stream>> Stream::GetLinkedOutputStreams() const
-	{
-		return _output_streams;
 	}
 
 	void Stream::LinkInputStream(const std::shared_ptr<Stream> &stream)

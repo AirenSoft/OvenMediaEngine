@@ -260,6 +260,8 @@ bool MediaRouteApplication::OnStreamCreated(
 		{
 			return false;
 		}
+
+		
 	}
 	else if (connector == MediaRouteApplicationConnector::ConnectorType::Transcoder || connector == MediaRouteApplicationConnector::ConnectorType::Relay)
 	{

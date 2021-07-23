@@ -181,18 +181,28 @@ namespace mon
 		EventType event_type = EventType::StreamCreated;
 		if(stream.IsInputStream())
 		{
+			event_type = EventType::StreamCreated;
 			stream_metrics = app_metrics->GetStreamMetrics(stream);
-			event_type = EventType::StreamOutputsUpdated;
+			if(stream_metrics == nullptr)
+			{
+				return false;
+			}
 		}
+		// Output stream created
 		else
 		{
-			stream_metrics = app_metrics->GetStreamMetrics(*stream.GetLinkedInputStream());
 			event_type = EventType::StreamOutputsUpdated;
-		}
 
-		if(stream_metrics == nullptr)
-		{
-			return false;
+			// Get Input Stream
+			stream_metrics = app_metrics->GetStreamMetrics(*stream.GetLinkedInputStream());
+			if(stream_metrics == nullptr)
+			{
+				return false;
+			}
+
+			// Linke output stream to input stream
+			auto output_stream_metric = app_metrics->GetStreamMetrics(stream);
+			stream_metrics->LinkOutputStreamMetrics(output_stream_metric);
 		}
 
 		auto event = Event(event_type, _server_metric);
@@ -220,7 +230,7 @@ namespace mon
 		{
 			// If there are sessions in the stream, the number of visitors to the app is recalculated.
 			// Calculate connections to application only if it hasn't origin stream to prevent double subtract. 
-			if(stream_metrics->GetLinkedInputStream() == nullptr) // It is an input stream
+			if(stream_metrics->IsInputStream())
 			{
 				for(uint8_t type = static_cast<uint8_t>(PublisherType::Unknown); type < static_cast<uint8_t>(PublisherType::NumberOfPublishers); type++)
 				{
@@ -246,11 +256,9 @@ namespace mon
 
 	bool Monitoring::OnStreamUpdated(const info::Stream &stream_info)
 	{
-		// TODO(Getroot): Implement this.
-		// In particular, it must be updated when the OVT provider connects to an alternative origin.
 		return true;
-	}	
-
+	}
+	
 	void Monitoring::IncreaseBytesIn(const info::Stream &stream_info, uint64_t value)
 	{
 		auto host_metric = _server_metric->GetHostMetrics(stream_info.GetApplicationInfo().GetHostInfo());

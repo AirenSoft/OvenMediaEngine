@@ -326,7 +326,7 @@ namespace pvd
 			logte("Could not create %s stream in %s application", stream_name.CStr(), vhost_app_name.CStr());
 			return false;
 		}
-		stream->SetMediaSource(request->GetRemote()->ToString());
+		stream->SetMediaSource(request->GetRemote()->GetRemoteAddressAsUrl());
 		
 		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
 		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), offer_sdp, peer_sdp, ice_timeout, life_time, stream);

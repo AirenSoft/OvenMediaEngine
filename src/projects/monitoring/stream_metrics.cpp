@@ -31,6 +31,16 @@ namespace mon
 		logti("%s", GetInfoString().CStr());
 	}
 
+	void StreamMetrics::LinkOutputStreamMetrics(const std::shared_ptr<StreamMetrics> &stream)
+	{
+		_output_stream_metrics.push_back(stream);
+	}
+	
+	std::vector<std::shared_ptr<StreamMetrics>> StreamMetrics::GetLinkedOutputStreamMetrics() const
+	{
+		return _output_stream_metrics;
+	}
+
 	// Getter
 	int64_t StreamMetrics::GetOriginRequestTimeMSec() const
 	{

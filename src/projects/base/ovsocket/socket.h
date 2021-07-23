@@ -111,6 +111,7 @@ namespace ov
 
 		std::shared_ptr<SocketAddress> GetLocalAddress() const;
 		std::shared_ptr<SocketAddress> GetRemoteAddress() const;
+		ov::String GetRemoteAddressAsUrl() const;
 
 		// for system socket
 		template <class T>

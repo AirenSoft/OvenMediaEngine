@@ -95,7 +95,7 @@ namespace pvd
 		_vhost_app_name(info::VHostAppName::InvalidVHostAppName())
 	{
 		_remote = client_socket;
-		SetMediaSource(_remote->ToString());
+		SetMediaSource(_remote->GetRemoteAddressAsUrl());
 		
 		_import_chunk = std::make_shared<RtmpImportChunk>(RTMP_DEFAULT_CHUNK_SIZE);
 		_export_chunk = std::make_shared<RtmpExportChunk>(false, RTMP_DEFAULT_CHUNK_SIZE);
