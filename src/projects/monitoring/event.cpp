@@ -345,6 +345,7 @@ namespace mon
 		json_server_stat["serverID"] = _server_metric->GetConfig()->GetID().CStr();
 		json_server_stat["serverName"] = _server_metric->GetConfig()->GetName().CStr();
 		json_server_stat["stat"] = serdes::JsonFromMetrics(_server_metric);
+		Json::Value &json_hosts = json_server_stat["hosts"];
 
 		for(const auto& [host_key, host_metric] : _server_metric->GetHostMetricsList())
 		{
@@ -352,7 +353,10 @@ namespace mon
 
 			json_host["hostID"] = host_metric->GetUUID().CStr();
 			json_host["hostName"] = host_metric->GetName().CStr();
+			json_host["distribution"] = host_metric->GetDistribution().IsEmpty()?"ovenmediaengine.com":host_metric->GetDistribution().CStr();
 			json_host["stat"] = serdes::JsonFromMetrics(host_metric);
+
+			Json::Value &json_apps = json_host["apps"];
 
 			for(const auto& [app_key, app_metric] : host_metric->GetApplicationMetricsList())
 			{
@@ -362,6 +366,7 @@ namespace mon
 				json_app["appName"] = app_metric->GetName().CStr();
 				json_app["stat"] = serdes::JsonFromMetrics(app_metric);
 
+				Json::Value &json_streams = json_app["streams"];
 				for(const auto& [stream_key, stream_metric] : app_metric->GetStreamMetricsMap())
 				{
 					if(stream_metric->IsInputStream())
@@ -371,10 +376,11 @@ namespace mon
 						json_stream["streamName"] = stream_metric->GetName().CStr();
 						json_stream["stat"] = serdes::JsonFromMetrics(stream_metric);
 
-						Json::Value json_output_streams = json_stream["outputs"];
+						Json::Value &json_output_streams = json_stream["outputs"];
 						for(const auto& output_stream_metric : stream_metric->GetLinkedOutputStreamMetrics())
 						{
 							Json::Value json_output_stream;
+
 							json_output_stream["streamID"] = output_stream_metric->GetUUID().CStr();
 							json_output_stream["streamName"] = output_stream_metric->GetName().CStr();
 							json_output_stream["stat"] = serdes::JsonFromMetrics(output_stream_metric);
@@ -382,14 +388,14 @@ namespace mon
 							json_output_streams.append(json_output_stream);
 						}
 						
-						json_app["streams"].append(json_stream);
+						json_streams.append(json_stream);
 					}
 				}
 
-				json_host["apps"].append(json_app);
+				json_apps.append(json_app);
 			}
 
-			json_server_stat["hosts"].append(json_host);
+			json_hosts.append(json_host);
 		}
 
 		return true;
