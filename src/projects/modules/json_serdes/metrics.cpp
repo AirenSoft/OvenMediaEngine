@@ -29,13 +29,12 @@ namespace serdes
 		SetInt(value, "maxTotalConnections", metrics->GetMaxTotalConnections());
 		SetTimestamp(value, "maxTotalConnectionTime", metrics->GetMaxTotalConnectionsTime());
 
-		Json::Value &session = value["sessions"];
-		for (int i = 1; i < static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
-		{
-			SetInt(session, 
-					ov::String::FormatString("%s", StringFromPublisherType(static_cast<PublisherType>(i)).LowerCaseString().CStr()).CStr(), 
-					metrics->GetConnections(static_cast<PublisherType>(i)));
-		}
+		Json::Value &connections = value["connections"];
+		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Webrtc).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Webrtc));
+		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::LlDash).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::LlDash));
+		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Hls).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Hls));
+		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Dash).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Dash));
+		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Ovt).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Ovt));
 
 		return value;
 	}
