@@ -369,7 +369,7 @@ namespace ov
 										break;
 
 									case PostProcessMethod::GarbageCollection:
-										logaw("Need to do garbage collection for %s", socket->ToString().CStr());
+										logad("Need to do garbage collection for %s", socket->ToString().CStr());
 										_gc_candidates[socket->GetNativeHandle()] = socket;
 										break;
 
@@ -455,7 +455,7 @@ namespace ov
 							break;
 
 						case Socket::DispatchResult::PartialDispatched:
-							logaw("Need to do garbage collection for %s (dispatch_later)", socket->ToString().CStr());
+							logad("Need to do garbage collection for %s (dispatch_later)", socket->ToString().CStr());
 							_gc_candidates[socket->GetNativeHandle()] = socket;
 							break;
 
