@@ -73,7 +73,7 @@ namespace api
 				{
 					if (
 						// Stream is an input stream
-						(stream->GetOriginStream() == nullptr) &&
+						(stream->GetLinkedInputStream() == nullptr) &&
 						(stream_name == stream->GetName().CStr()))
 					{
 						input_stream = item.second;
@@ -90,7 +90,7 @@ namespace api
 				}
 				else
 				{
-					auto &origin_stream = stream->GetOriginStream();
+					auto &origin_stream = stream->GetLinkedInputStream();
 
 					if ((origin_stream != nullptr) && (origin_stream->GetId() == input_stream->GetId()))
 					{

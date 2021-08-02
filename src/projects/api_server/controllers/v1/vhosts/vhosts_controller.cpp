@@ -41,7 +41,7 @@ namespace api
 		ApiResponse VHostsController::OnGetVhost(const std::shared_ptr<http::svr::HttpConnection> &client,
 												 const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
-			return conv::JsonFromVHost(vhost);
+			return ::serdes::JsonFromVHost(vhost);
 		}
 	}  // namespace v1
 }  // namespace api

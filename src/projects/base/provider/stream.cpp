@@ -87,11 +87,7 @@ namespace pvd
 		}
 
 		// Statistics
-		auto stream_metrics = StreamMetrics(*GetSharedPtrAs<info::Stream>());
-		if(stream_metrics != nullptr)
-		{
-			stream_metrics->IncreaseBytesIn(packet->GetData()->GetLength());
-		}
+		MonitorInstance->IncreaseBytesIn(*GetSharedPtrAs<info::Stream>(), packet->GetData()->GetLength());
 
 		return _application->SendFrame(GetSharedPtr(), packet);
 	}

@@ -9,12 +9,9 @@
 #pragma once
 
 #include <monitoring/monitoring.h>
-
-namespace api
+#include "base/info/record.h"
+namespace serdes
 {
-	namespace conv
-	{
-		Json::Value JsonFromMetrics(const std::shared_ptr<const mon::CommonMetrics> &metrics);
-		Json::Value JsonFromStreamMetrics(const std::shared_ptr<const mon::StreamMetrics> &metrics);
-	}  // namespace conv
-};	   // namespace api
+	std::shared_ptr<info::Record>  RecordFromJson(const Json::Value &json_body);
+	Json::Value JsonFromRecord(const std::shared_ptr<info::Record> &record);
+}  // namespace serdes

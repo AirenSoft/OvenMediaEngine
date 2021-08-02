@@ -31,6 +31,16 @@ namespace mon
 		logti("%s", GetInfoString().CStr());
 	}
 
+	void StreamMetrics::LinkOutputStreamMetrics(const std::shared_ptr<StreamMetrics> &stream)
+	{
+		_output_stream_metrics.push_back(stream);
+	}
+	
+	std::vector<std::shared_ptr<StreamMetrics>> StreamMetrics::GetLinkedOutputStreamMetrics() const
+	{
+		return _output_stream_metrics;
+	}
+
 	// Getter
 	int64_t StreamMetrics::GetOriginRequestTimeMSec() const
 	{
@@ -58,7 +68,7 @@ namespace mon
 		CommonMetrics::IncreaseBytesIn(value);
 
 		// If this stream is child then send event to parent
-		auto origin_stream_info = GetOriginStream();
+		auto origin_stream_info = GetLinkedInputStream();
 		if(origin_stream_info != nullptr)
 		{
 			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
@@ -67,11 +77,6 @@ namespace mon
 				origin_stream_metric->IncreaseBytesIn(value);
 			}
 		}
-		else
-		{
-			// Forward value to AppMetrics to sum
-			GetApplicationMetrics()->IncreaseBytesIn(value);
-		}
 	}
 
 	void StreamMetrics::IncreaseBytesOut(PublisherType type, uint64_t value) 
@@ -79,7 +84,7 @@ namespace mon
 		CommonMetrics::IncreaseBytesOut(type, value);
 
 		// If this stream is child then send event to parent
-		auto origin_stream_info = GetOriginStream();
+		auto origin_stream_info = GetLinkedInputStream();
 		if(origin_stream_info != nullptr)
 		{
 			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
@@ -88,11 +93,6 @@ namespace mon
 				origin_stream_metric->IncreaseBytesOut(type, value);
 			}
 		}
-		else
-		{
-			// Forward value to AppMetrics to sum
-			GetApplicationMetrics()->IncreaseBytesOut(type, value);
-		}
 	}
 
 	void StreamMetrics::OnSessionConnected(PublisherType type)
@@ -100,7 +100,7 @@ namespace mon
 		CommonMetrics::OnSessionConnected(type);
 
 		// If this stream is child then send event to parent
-		auto origin_stream_info = GetOriginStream();
+		auto origin_stream_info = GetLinkedInputStream();
 		if(origin_stream_info != nullptr)
 		{
 			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
@@ -111,9 +111,6 @@ namespace mon
 		}
 		else
 		{
-			// Sending a connection event to application only if it hasn't origin stream to prevent double sum. 
-			GetApplicationMetrics()->OnSessionConnected(type);
-
 			logti("A new session has started playing %s/%s on the %s publisher. %s(%u)/Stream total(%u)/App total(%u)", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
 					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
@@ -125,7 +122,7 @@ namespace mon
 		CommonMetrics::OnSessionDisconnected(type);
 
 		// If this stream is child then send event to parent
-		auto origin_stream_info = GetOriginStream();
+		auto origin_stream_info = GetLinkedInputStream();
 		if(origin_stream_info != nullptr)
 		{
 			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
@@ -136,9 +133,6 @@ namespace mon
 		}
 		else
 		{
-			// Sending a connection event to application only if it hasn't origin stream to prevent double sum. 
-			GetApplicationMetrics()->OnSessionDisconnected(type);
-
 			logti("A session has been stopped playing %s/%s on the %s publisher. Concurrent Viewers[%s(%u)/Stream total(%u)/App total(%u)]", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
 					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());

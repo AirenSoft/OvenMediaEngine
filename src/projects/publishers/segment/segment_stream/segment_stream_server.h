@@ -79,6 +79,7 @@ protected:
 
 	bool UrlExistCheck(const std::vector<ov::String> &url_list, const ov::String &check_url);
 
+	std::shared_ptr<pub::Stream> GetStream(const std::shared_ptr<http::svr::HttpConnection> &client);
 	std::shared_ptr<mon::StreamMetrics> GetStreamMetric(const std::shared_ptr<http::svr::HttpConnection> &client);
 
 protected:

@@ -57,7 +57,7 @@ namespace api
 						std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
 						stream = GetStream(app, stream_name, &output_streams);
 
-						response_value.append(conv::JsonFromStream(stream, std::move(output_streams)));
+						response_value.append(::serdes::JsonFromStream(stream, std::move(output_streams)));
 					}
 					else
 					{
@@ -89,7 +89,7 @@ namespace api
 			{
 				auto &stream = item.second;
 
-				if (stream->GetOriginStream() == nullptr)
+				if (stream->GetLinkedInputStream() == nullptr)
 				{
 					response.append(stream->GetName().CStr());
 				}
@@ -103,7 +103,7 @@ namespace api
 												   const std::shared_ptr<mon::ApplicationMetrics> &app,
 												   const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
-			return conv::JsonFromStream(stream, std::move(output_streams));
+			return ::serdes::JsonFromStream(stream, std::move(output_streams));
 		}
 
 		ApiResponse StreamsController::OnDeleteStream(const std::shared_ptr<http::svr::HttpConnection> &client,

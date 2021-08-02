@@ -121,7 +121,7 @@ namespace api
 			app_json.removeMember("dynamic");
 
 			cfg::vhost::app::Application app_config;
-			auto error = conv::ApplicationFromJson(app_json, &app_config);
+			auto error = ::serdes::ApplicationFromJson(app_json, &app_config);
 
 			if (error == nullptr)
 			{
@@ -179,7 +179,7 @@ namespace api
 
 				if (name.isString() == false)
 				{
-					response.append(conv::JsonFromError(http::HttpError::CreateError(http::StatusCode::BadRequest, "Invalid name")));
+					response.append(::serdes::JsonFromError(http::HttpError::CreateError(http::StatusCode::BadRequest, "Invalid name")));
 					status_code.AddStatusCode(http::StatusCode::BadRequest);
 				}
 				else
@@ -193,14 +193,14 @@ namespace api
 					}
 					else
 					{
-						response.append(conv::JsonFromError(http::HttpError::CreateError(http::StatusCode::Conflict, "The output profile \"%s\" already exists", name.asCString())));
+						response.append(::serdes::JsonFromError(http::HttpError::CreateError(http::StatusCode::Conflict, "The output profile \"%s\" already exists", name.asCString())));
 						status_code.AddStatusCode(http::StatusCode::Conflict);
 					}
 				}
 			}
 
 			auto error = ChangeApp(vhost, app, app_json);
-			Json::Value error_json = conv::JsonFromError(error);
+			Json::Value error_json = ::serdes::JsonFromError(error);
 
 			std::shared_ptr<mon::ApplicationMetrics> new_app;
 			Json::Value new_app_json;
@@ -226,7 +226,7 @@ namespace api
 
 						if (FindOutputProfile(new_app_json, name, &new_profile) < 0)
 						{
-							response_profile = conv::JsonFromError(http::HttpError::CreateError(http::StatusCode::InternalServerError, "Output profile is created, but not found"));
+							response_profile = ::serdes::JsonFromError(http::HttpError::CreateError(http::StatusCode::InternalServerError, "Output profile is created, but not found"));
 							status_code.AddStatusCode(http::StatusCode::InternalServerError);
 						}
 						else

@@ -19,6 +19,7 @@ LOCAL_STATIC_LIBRARIES := \
 	address_utilities \
 	ice \
 	api_server \
+	json_serdes \
 	bitstream \
 	containers \
 	http \

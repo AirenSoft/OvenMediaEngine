@@ -90,10 +90,10 @@ http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::s
 			response->AppendData(chunk_item->second->chunked_data);
 			auto sent_bytes = response->Response();
 
-			auto metric = GetStreamMetric(client);
-			if (metric != nullptr)
+			auto stream = GetStream(client);
+			if (stream != nullptr)
 			{
-				metric->IncreaseBytesOut(GetPublisherType(), sent_bytes);
+				MonitorInstance->IncreaseBytesOut(*stream, GetPublisherType(), sent_bytes);
 			}
 
 			chunk_item->second->client_list.push_back(client);
@@ -134,13 +134,13 @@ void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov:
 		auto &client = *client_item;
 
 		auto response = client->GetResponse();
-		auto metric = GetStreamMetric(client);
+		auto stream_info = GetStream(client);
 
 		if (response->SendChunkedData(chunk_data))
 		{
-			if (metric != nullptr)
+			if (stream_info != nullptr)
 			{
-				metric->IncreaseBytesOut(GetPublisherType(), chunk_data->GetLength());
+				MonitorInstance->IncreaseBytesOut(*stream_info, GetPublisherType(), chunk_data->GetLength());
 			}
 			++client_item;
 		}

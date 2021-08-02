@@ -14,7 +14,7 @@
 
 namespace cfg
 {
-	namespace conv
+	namespace serdes
 	{
 		Json::Value GetMpegTsStreamListFromMetrics(Json::Value providers, const std::map<uint32_t, std::shared_ptr<ReservedStreamMetrics>> &reserved_stream_list)
 		{
@@ -126,8 +126,8 @@ namespace cfg
 		Json::Value GetServerJsonFromConfig(const std::shared_ptr<cfg::Server> &server_config, bool include_dynamic_app)
 		{
 			// Convert server config to JSON to obtain <Bind> and etc
-			return conv::GetVirtualHostListFromMetrics(server_config->ToJson(), mon::Monitoring::GetInstance()->GetHostMetricsList(), include_dynamic_app);
+			return cfg::serdes::GetVirtualHostListFromMetrics(server_config->ToJson(), mon::Monitoring::GetInstance()->GetHostMetricsList(), include_dynamic_app);
 		}
 
-	}  // namespace conv
+	}  // namespace serdes
 }  // namespace cfg

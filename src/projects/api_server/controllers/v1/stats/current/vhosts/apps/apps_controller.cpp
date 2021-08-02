@@ -27,7 +27,7 @@ namespace api
 												 const std::shared_ptr<mon::HostMetrics> &vhost,
 												 const std::shared_ptr<mon::ApplicationMetrics> &app)
 			{
-				return conv::JsonFromMetrics(app);
+				return ::serdes::JsonFromMetrics(app);
 			}
 		}  // namespace stats
 	}	   // namespace v1

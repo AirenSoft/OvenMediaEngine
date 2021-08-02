@@ -3,6 +3,7 @@
 //
 
 #include "monitoring_private.h"
+#include "monitoring.h"
 #include "application_metrics.h"
 #include "host_metrics.h"
 
@@ -67,19 +68,6 @@ namespace mon
 
         logti("Delete StreamMetrics(%s/%s) for monitoring", stream.GetName().CStr(), stream.GetUUID().CStr());
 
-
-		// If there are sessions in the stream, the number of visitors to the app is recalculated.
-		// Calculate connections to application only if it hasn't origin stream to prevent double subtract. 
-		if(stream_metric->GetOriginStream() == nullptr)
-		{
-			for(uint8_t type = static_cast<uint8_t>(PublisherType::Unknown); type < static_cast<uint8_t>(PublisherType::NumberOfPublishers); type++)
-			{
-				// Forward value to HostMetrics to sum
-				GetHostMetrics()->OnSessionsDisconnected(static_cast<PublisherType>(type), stream_metric->GetConnections(static_cast<PublisherType>(type)));
-				OnSessionsDisconnected(static_cast<PublisherType>(type), stream_metric->GetConnections(static_cast<PublisherType>(type)));
-			}
-		}
-
         // logging StreamMetric
         stream_metric->ShowInfo();
 
@@ -131,32 +119,4 @@ namespace mon
 		std::shared_lock<std::shared_mutex> lock(_reserved_streams_guard);
 		return _reserved_streams;
 	}
-
-    void ApplicationMetrics::IncreaseBytesIn(uint64_t value)
-    {
-        // Forward value to HostMetrics to sum
-		GetHostMetrics()->IncreaseBytesIn(value);
-		CommonMetrics::IncreaseBytesIn(value);
-    }
-
-    void ApplicationMetrics::IncreaseBytesOut(PublisherType type, uint64_t value)
-    {
-        // Forward value to HostMetrics to sum
-		GetHostMetrics()->IncreaseBytesOut(type, value);
-		CommonMetrics::IncreaseBytesOut(type, value);
-    }
-
-    void ApplicationMetrics::OnSessionConnected(PublisherType type)
-    {
-         // Forward value to HostMetrics to sum
-		GetHostMetrics()->OnSessionConnected(type);
-		CommonMetrics::OnSessionConnected(type);
-    }
-
-    void ApplicationMetrics::OnSessionDisconnected(PublisherType type)
-    {
-        // Forward value to HostMetrics to sum
-		GetHostMetrics()->OnSessionDisconnected(type);
-		CommonMetrics::OnSessionDisconnected(type);
-    }
 }

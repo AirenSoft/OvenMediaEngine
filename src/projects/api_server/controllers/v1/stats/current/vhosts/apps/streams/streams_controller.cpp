@@ -25,7 +25,7 @@ namespace api
 													   const std::shared_ptr<mon::StreamMetrics> &stream,
 													   const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 			{
-				return conv::JsonFromMetrics(stream);
+				return ::serdes::JsonFromMetrics(stream);
 			}
 		}  // namespace stats
 	}	   // namespace v1

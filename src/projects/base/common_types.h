@@ -59,7 +59,7 @@ enum class ProviderType : int8_t
 // Note : If you update PublisherType, you have to update /base/ovlibrary/converter.h:ToString(PublisherType type)
 enum class PublisherType : int8_t
 {
-	Unknown,
+	Unknown = 0,
 	Webrtc,
 	Rtmp,
 	RtmpPush,

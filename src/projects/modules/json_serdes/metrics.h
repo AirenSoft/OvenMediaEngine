@@ -9,13 +9,9 @@
 #pragma once
 
 #include <monitoring/monitoring.h>
-#include "base/info/push.h"
 
-namespace api
+namespace serdes
 {
-	namespace conv
-	{
-		std::shared_ptr<info::Push>  PushFromJson(const Json::Value &json_body);
-		Json::Value JsonFromPush(const std::shared_ptr<info::Push> &record);
-	}  // namespace conv
-};	   // namespace api
+	Json::Value JsonFromMetrics(const std::shared_ptr<const mon::CommonMetrics> &metrics);
+	Json::Value JsonFromStreamMetrics(const std::shared_ptr<const mon::StreamMetrics> &metrics);
+}  // namespace serdes

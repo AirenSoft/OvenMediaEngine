@@ -8,122 +8,24 @@
 
 namespace mon
 {
-	void Monitoring::ShowInfo()
-	{
-		for(const auto &t : _hosts)
-		{
-			auto &host = t.second;
-			host->ShowInfo();
-		}
-	}
-
 	void Monitoring::Release()
 	{
-		for(const auto &host : _hosts)
-		{
-			host.second->Release();
-		}
+		_server_metric->Release();
 	}
 
-	void Monitoring::OnServerStarted(ov::String server_name, ov::String server_id)
+	std::shared_ptr<ServerMetrics> Monitoring::GetServerMetrics()
 	{
-		_server_name = server_name;
-		_server_id = server_id;
-		logti("%s(%s) ServerMetric has been started for monitoring", _server_name.CStr(), _server_id.CStr());
-	}
-
-	bool Monitoring::OnHostCreated(const info::Host &host_info)
-	{
-		std::unique_lock<std::shared_mutex> lock(_map_guard);
-		if(_hosts.find(host_info.GetId()) != _hosts.end())
-		{
-			return true;
-		}
-		auto host_metrics = std::make_shared<HostMetrics>(host_info);
-		if (host_metrics == nullptr)
-		{
-			logte("Cannot create HostMetrics (%s/%s)", host_info.GetName().CStr(), host_info.GetUUID().CStr());
-			return false;
-		}
-		
-		_hosts[host_info.GetId()] = host_metrics;
-
-		logti("Create HostMetrics(%s/%s) for monitoring", host_info.GetName().CStr(), host_info.GetUUID().CStr());
-		return true;
-	}
-	bool Monitoring::OnHostDeleted(const info::Host &host_info)
-	{
-		std::unique_lock<std::shared_mutex> lock(_map_guard);
-		auto it = _hosts.find(host_info.GetId());
-
-		if (it == _hosts.end())
-		{
-			return false;
-		}
-
-		auto host = it->second;
-		_hosts.erase(it);
-		host->Release();
-
-		logti("Delete HostMetrics(%s/%s) for monitoring", host_info.GetName().CStr(), host_info.GetUUID().CStr());
-		return true;
-	}
-	bool Monitoring::OnApplicationCreated(const info::Application &app_info)
-	{
-		auto host_metrics = GetHostMetrics(app_info.GetHostInfo());
-		if (host_metrics == nullptr)
-		{
-			return false;
-		}
-
-		return host_metrics->OnApplicationCreated(app_info);
-	}
-	bool Monitoring::OnApplicationDeleted(const info::Application &app_info)
-	{
-		auto host_metrics = GetHostMetrics(app_info.GetHostInfo());
-		if (host_metrics == nullptr)
-		{
-			return false;
-		}
-
-		return host_metrics->OnApplicationDeleted(app_info);
-	}
-	bool Monitoring::OnStreamCreated(const info::Stream &stream)
-	{
-		auto app_metrics = GetApplicationMetrics(stream.GetApplicationInfo());
-		if (app_metrics == nullptr)
-		{
-			return false;
-		}
-
-		return app_metrics->OnStreamCreated(stream);
-	}
-	bool Monitoring::OnStreamDeleted(const info::Stream &stream)
-	{
-		auto app_metrics = GetApplicationMetrics(stream.GetApplicationInfo());
-		if (app_metrics == nullptr)
-		{
-			return false;
-		}
-
-		return app_metrics->OnStreamDeleted(stream);
+		return _server_metric;
 	}
 
 	std::map<uint32_t, std::shared_ptr<HostMetrics>> Monitoring::GetHostMetricsList()
 	{
-		std::shared_lock<std::shared_mutex> lock(_map_guard);
-		return _hosts;
+		return _server_metric->GetHostMetricsList();
 	}
 
 	std::shared_ptr<HostMetrics> Monitoring::GetHostMetrics(const info::Host &host_info)
 	{
-		std::shared_lock<std::shared_mutex> lock(_map_guard);
-		if (_hosts.find(host_info.GetId()) == _hosts.end())
-		{
-			return nullptr;
-		}
-
-		return _hosts[host_info.GetId()];
+		return _server_metric->GetHostMetrics(host_info);
 	}
 
 	std::shared_ptr<ApplicationMetrics> Monitoring::GetApplicationMetrics(const info::Application &app_info)
@@ -154,4 +56,348 @@ namespace mon
 		auto stream_metric = app_metric->GetStreamMetrics(stream);
 		return stream_metric;
 	}
+
+	void Monitoring::SetLogPath(const ov::String &log_path)
+	{
+		_logger.SetLogPath(log_path);
+	}	
+
+	void Monitoring::OnServerStarted(const std::shared_ptr<cfg::Server> &server_config)
+	{
+		_server_metric = std::make_shared<ServerMetrics>(server_config);
+		_is_analytics_on = _server_metric->GetConfig()->GetAnalytics().IsParsed();
+
+		logti("%s(%s) ServerMetric has been started for monitoring - %s", server_config->GetName().CStr(), server_config->GetID().CStr(), ov::Converter::ToISO8601String(_server_metric->GetServerStartedTime()));
+
+		if(IsAnalyticsOn())
+		{
+			auto event = Event(EventType::ServerStarted, _server_metric);
+			_logger.Write(event);
+
+			_timer.Push(
+				[this](void *parameter) -> ov::DelayQueueAction 
+				{
+					auto event = Event(EventType::ServerStat, _server_metric);
+					_logger.Write(event);
+					return ov::DelayQueueAction::Repeat;
+				},
+				5000);
+
+			_timer.Start();
+		}
+	}
+
+	bool Monitoring::OnHostCreated(const info::Host &host_info)
+	{
+		if(_server_metric->OnHostCreated(host_info) == false)
+		{
+			return false;
+		}
+
+		if(IsAnalyticsOn())
+		{
+			auto host_metrics = _server_metric->GetHostMetrics(host_info);
+			auto event = Event(EventType::HostCreated, _server_metric);
+			event.SetExtraMetric(host_metrics);
+			_logger.Write(event);
+		}
+
+		return true;
+	}
+
+	bool Monitoring::OnHostDeleted(const info::Host &host_info)
+	{
+		if(_server_metric->OnHostDeleted(host_info) == false)
+		{
+			return false;
+		}
+
+		if(IsAnalyticsOn())
+		{
+			auto host_metrics = _server_metric->GetHostMetrics(host_info);
+			auto event = Event(EventType::HostDeleted, _server_metric);
+			event.SetExtraMetric(host_metrics);
+			_logger.Write(event);
+		}
+
+		return true;
+	}
+
+	bool Monitoring::OnApplicationCreated(const info::Application &app_info)
+	{
+		auto host_metrics = _server_metric->GetHostMetrics(app_info.GetHostInfo());
+		if (host_metrics == nullptr)
+		{
+			return false;
+		}
+
+		if(host_metrics->OnApplicationCreated(app_info) == false)
+		{
+			return false;
+		}
+
+		auto app_metrics = host_metrics->GetApplicationMetrics(app_info);
+		if(app_metrics == nullptr)
+		{
+			return false;
+		}
+
+		if(IsAnalyticsOn())
+		{
+			auto event = Event(EventType::AppCreated, _server_metric);
+			event.SetExtraMetric(app_metrics);
+			_logger.Write(event);
+		}
+
+		return true;
+	}
+	bool Monitoring::OnApplicationDeleted(const info::Application &app_info)
+	{
+		auto host_metrics = _server_metric->GetHostMetrics(app_info.GetHostInfo());
+		if (host_metrics == nullptr)
+		{
+			return false;
+		}
+		auto app_metrics = host_metrics->GetApplicationMetrics(app_info);
+		if(app_metrics == nullptr)
+		{
+			return false;
+		}
+
+		if(host_metrics->OnApplicationDeleted(app_info) == false)
+		{
+			return false;
+		}
+
+		if(IsAnalyticsOn())
+		{
+			auto event = Event(EventType::AppDeleted, _server_metric);
+			event.SetExtraMetric(app_metrics);
+			_logger.Write(event);
+		}
+
+		return true;
+	}
+	bool Monitoring::OnStreamCreated(const info::Stream &stream)
+	{
+		auto app_metrics = GetApplicationMetrics(stream.GetApplicationInfo());
+		if (app_metrics == nullptr)
+		{
+			return false;
+		}
+
+		if(app_metrics->OnStreamCreated(stream) == false)
+		{
+			return false;
+		}
+
+		// Writes events only based on the input stream.
+		std::shared_ptr<StreamMetrics> stream_metrics = nullptr;
+		EventType event_type = EventType::StreamCreated;
+		if(stream.IsInputStream())
+		{
+			event_type = EventType::StreamCreated;
+			stream_metrics = app_metrics->GetStreamMetrics(stream);
+			if(stream_metrics == nullptr)
+			{
+				return false;
+			}
+		}
+		// Output stream created
+		else
+		{
+			event_type = EventType::StreamOutputsUpdated;
+
+			// Get Input Stream
+			stream_metrics = app_metrics->GetStreamMetrics(*stream.GetLinkedInputStream());
+			if(stream_metrics == nullptr)
+			{
+				return false;
+			}
+
+			// Linke output stream to input stream
+			auto output_stream_metric = app_metrics->GetStreamMetrics(stream);
+			stream_metrics->LinkOutputStreamMetrics(output_stream_metric);
+		}
+
+		if(IsAnalyticsOn())
+		{
+			auto event = Event(event_type, _server_metric);
+			event.SetExtraMetric(stream_metrics);
+			_logger.Write(event);
+		}
+
+		return true;
+	}
+
+	bool Monitoring::OnStreamDeleted(const info::Stream &stream)
+	{
+		auto app_metrics = GetApplicationMetrics(stream.GetApplicationInfo());
+		if (app_metrics == nullptr)
+		{
+			return false;
+		}
+
+		auto stream_metrics = app_metrics->GetStreamMetrics(stream);
+		if(stream_metrics == nullptr)
+		{
+			return false;
+		}
+
+		//TODO(Getroot): If a session connects or disconnects at the moment the block below is executed, a race condition may occur, so it must be protected with a mutex.
+		{
+			// If there are sessions in the stream, the number of visitors to the app is recalculated.
+			// Calculate connections to application only if it hasn't origin stream to prevent double subtract. 
+			if(stream_metrics->IsInputStream())
+			{
+				for(uint8_t type = static_cast<uint8_t>(PublisherType::Unknown); type < static_cast<uint8_t>(PublisherType::NumberOfPublishers); type++)
+				{
+					OnSessionsDisconnected(*stream_metrics, static_cast<PublisherType>(type), stream_metrics->GetConnections(static_cast<PublisherType>(type)));
+				}
+			}
+
+			if(app_metrics->OnStreamDeleted(stream) == false)
+			{
+				return false;
+			}
+		}
+		
+		if(IsAnalyticsOn())
+		{
+			if(stream_metrics->IsInputStream())
+			{
+				auto event = Event(EventType::StreamDeleted, _server_metric);
+				event.SetExtraMetric(stream_metrics);
+				_logger.Write(event);
+			}
+		}
+
+		return true;
+	}
+
+	bool Monitoring::OnStreamUpdated(const info::Stream &stream_info)
+	{
+		return true;
+	}
+	
+	void Monitoring::IncreaseBytesIn(const info::Stream &stream_info, uint64_t value)
+	{
+		auto host_metric = _server_metric->GetHostMetrics(stream_info.GetApplicationInfo().GetHostInfo());
+		if(host_metric == nullptr)
+		{
+			return;
+		}
+		auto app_metric = host_metric->GetApplicationMetrics(stream_info.GetApplicationInfo());
+		if(app_metric == nullptr)
+		{
+			return;
+		}
+		auto stream_metric = app_metric->GetStreamMetrics(stream_info);
+		if(stream_metric == nullptr)
+		{
+			return;
+		}
+
+		_server_metric->IncreaseBytesIn(value);
+		host_metric->IncreaseBytesIn(value);
+		app_metric->IncreaseBytesIn(value);
+		stream_metric->IncreaseBytesIn(value);
+	}
+
+	void Monitoring::IncreaseBytesOut(const info::Stream &stream_info, PublisherType type, uint64_t value)
+	{
+		auto host_metric = _server_metric->GetHostMetrics(stream_info.GetApplicationInfo().GetHostInfo());
+		if(host_metric == nullptr)
+		{
+			return;
+		}
+		auto app_metric = host_metric->GetApplicationMetrics(stream_info.GetApplicationInfo());
+		if(app_metric == nullptr)
+		{
+			return;
+		}
+		auto stream_metric = app_metric->GetStreamMetrics(stream_info);
+		if(stream_metric == nullptr)
+		{
+			return;
+		}
+
+		_server_metric->IncreaseBytesOut(type, value);
+		host_metric->IncreaseBytesOut(type, value);
+		app_metric->IncreaseBytesOut(type, value);
+		stream_metric->IncreaseBytesOut(type, value);
+	}
+
+	void Monitoring::OnSessionConnected(const info::Stream &stream_info, PublisherType type)
+	{
+		auto host_metric = _server_metric->GetHostMetrics(stream_info.GetApplicationInfo().GetHostInfo());
+		if(host_metric == nullptr)
+		{
+			return;
+		}
+		auto app_metric = host_metric->GetApplicationMetrics(stream_info.GetApplicationInfo());
+		if(app_metric == nullptr)
+		{
+			return;
+		}
+		auto stream_metric = app_metric->GetStreamMetrics(stream_info);
+		if(stream_metric == nullptr)
+		{
+			return;
+		}
+
+		_server_metric->OnSessionConnected(type);
+		host_metric->OnSessionConnected(type);
+		app_metric->OnSessionConnected(type);
+		stream_metric->OnSessionConnected(type);
+	}
+
+	void Monitoring::OnSessionDisconnected(const info::Stream &stream_info, PublisherType type)
+	{
+		auto host_metric = _server_metric->GetHostMetrics(stream_info.GetApplicationInfo().GetHostInfo());
+		if(host_metric == nullptr)
+		{
+			return;
+		}
+		auto app_metric = host_metric->GetApplicationMetrics(stream_info.GetApplicationInfo());
+		if(app_metric == nullptr)
+		{
+			return;
+		}
+		auto stream_metric = app_metric->GetStreamMetrics(stream_info);
+		if(stream_metric == nullptr)
+		{
+			return;
+		}
+
+		_server_metric->OnSessionDisconnected(type);
+		host_metric->OnSessionDisconnected(type);
+		app_metric->OnSessionDisconnected(type);
+		stream_metric->OnSessionDisconnected(type);
+	}
+
+	void Monitoring::OnSessionsDisconnected(const info::Stream &stream_info, PublisherType type, uint64_t number_of_sessions)
+	{
+		auto host_metric = _server_metric->GetHostMetrics(stream_info.GetApplicationInfo().GetHostInfo());
+		if(host_metric == nullptr)
+		{
+			return;
+		}
+		auto app_metric = host_metric->GetApplicationMetrics(stream_info.GetApplicationInfo());
+		if(app_metric == nullptr)
+		{
+			return;
+		}
+		auto stream_metric = app_metric->GetStreamMetrics(stream_info);
+		if(stream_metric == nullptr)
+		{
+			return;
+		}
+
+		_server_metric->OnSessionsDisconnected(type, number_of_sessions);
+		host_metric->OnSessionsDisconnected(type, number_of_sessions);
+		app_metric->OnSessionsDisconnected(type, number_of_sessions);
+		stream_metric->OnSessionsDisconnected(type, number_of_sessions);
+	}
+
 }  // namespace mon

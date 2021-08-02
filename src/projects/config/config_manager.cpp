@@ -115,7 +115,7 @@ namespace cfg
 	{
 		auto lock_guard = std::lock_guard(_config_mutex);
 
-		auto config = conv::GetServerJsonFromConfig(_server, false);
+		auto config = cfg::serdes::GetServerJsonFromConfig(_server, false);
 
 		return config;
 	}
@@ -248,6 +248,9 @@ namespace cfg
 
 		auto log_path = logger_loader->GetLogPath();
 		::ov_log_set_path(log_path.CStr());
+
+		// For event logger
+		MonitorInstance->SetLogPath(log_path.CStr());
 
 		// Init stat log
 		//TODO(Getroot): This is temporary code for testing. This will change to more elegant code in the future.

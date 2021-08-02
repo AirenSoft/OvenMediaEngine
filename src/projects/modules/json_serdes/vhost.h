@@ -8,12 +8,10 @@
 //==============================================================================
 #pragma once
 
+#include <base/ovlibrary/ovlibrary.h>
+#include <config/config.h>
 #include <monitoring/monitoring.h>
-
-namespace api
+namespace serdes
 {
-	namespace conv
-	{
-		Json::Value JsonFromStream(const std::shared_ptr<const mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
-	}  // namespace conv
-};	   // namespace api
+	Json::Value JsonFromVHost(const std::shared_ptr<const mon::HostMetrics> &vhost);
+}  // namespace serdes

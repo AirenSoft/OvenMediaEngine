@@ -70,7 +70,7 @@ namespace api
 
 			for (auto &item : records)
 			{
-				response.append(conv::JsonFromRecord(item));
+				response.append(::serdes::JsonFromRecord(item));
 			}
 
 			return {http::StatusCode::OK, std::move(response)};
@@ -89,7 +89,7 @@ namespace api
 											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
-			auto record = conv::RecordFromJson(request_body);
+			auto record = ::serdes::RecordFromJson(request_body);
 			if (record == nullptr)
 			{
 				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Could not parse json context: [%s/%s]",
@@ -111,7 +111,7 @@ namespace api
 				return http::HttpError::CreateError(http::StatusCode::BadRequest, error->GetMessage());
 			}
 
-			response.append(conv::JsonFromRecord(record));
+			response.append(::serdes::JsonFromRecord(record));
 
 			return {http::StatusCode::OK, std::move(response)};
 		}
@@ -129,7 +129,7 @@ namespace api
 											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
-			auto record = conv::RecordFromJson(request_body);
+			auto record = ::serdes::RecordFromJson(request_body);
 			if (record == nullptr)
 			{
 				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Could not parse json context: [%s/%s]",
@@ -151,7 +151,7 @@ namespace api
 				return http::HttpError::CreateError(http::StatusCode::NotFound, error->GetMessage());
 			}
 
-			response.append(conv::JsonFromRecord(record));
+			response.append(::serdes::JsonFromRecord(record));
 
 			return {http::StatusCode::OK, std::move(response)};
 		}
@@ -187,7 +187,7 @@ namespace api
 
 			for (auto &item : pushes)
 			{
-				response.append(conv::JsonFromPush(item));
+				response.append(::serdes::JsonFromPush(item));
 			}
 
 			return {http::StatusCode::OK, std::move(response)};
@@ -206,7 +206,7 @@ namespace api
 											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
-			auto push = conv::PushFromJson(request_body);
+			auto push = ::serdes::PushFromJson(request_body);
 			if (push == nullptr)
 			{
 				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Could not parse json context: [%s/%s]",
@@ -227,7 +227,7 @@ namespace api
 				return http::HttpError::CreateError(http::StatusCode::BadRequest, error->GetMessage());
 			}
 
-			response.append(conv::JsonFromPush(push));
+			response.append(::serdes::JsonFromPush(push));
 
 			return {http::StatusCode::OK, std::move(response)};
 		}
@@ -243,7 +243,7 @@ namespace api
 											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
-			auto push = conv::PushFromJson(request_body);
+			auto push = ::serdes::PushFromJson(request_body);
 			if (push == nullptr)
 			{
 				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Could not parse json context: [%s/%s]",

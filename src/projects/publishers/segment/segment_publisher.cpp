@@ -274,10 +274,8 @@ void SegmentPublisher::RequestTableUpdateThread()
 			if (request_info->IsExpiredRequest())
 			{
 				// remove and report
-				auto stream_metrics = StreamMetrics(request_info->GetStreamInfo());
-				if (stream_metrics != nullptr)
 				{
-					stream_metrics->OnSessionDisconnected(request_info->GetPublisherType());
+					MonitorInstance->OnSessionDisconnected(request_info->GetStreamInfo(), request_info->GetPublisherType());
 
 					auto playlist_request_info = GetSessionRequestInfoBySegmentRequestInfo(*request_info);
 					stat_log(STAT_LOG_HLS_EDGE_SESSION, "%s,%s,%s,%s,,,%s,%s,%s",
@@ -447,11 +445,9 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 	// It is a new viewer!
 	if (new_session)
 	{
-		// New Session!!!
-		auto stream_metrics = StreamMetrics(info.GetStreamInfo());
-		if (stream_metrics != nullptr)
 		{
-			stream_metrics->OnSessionConnected(info.GetPublisherType());
+			// New Session!!!
+			MonitorInstance->OnSessionConnected(info.GetStreamInfo(), info.GetPublisherType());
 
 			auto playlist_request_info = GetSessionRequestInfoBySegmentRequestInfo(info);
 			stat_log(STAT_LOG_HLS_EDGE_SESSION, "%s,%s,%s,%s,,,%s,%s,%s",

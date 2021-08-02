@@ -709,6 +709,11 @@ namespace ov
 		return _remote_address;
 	}
 
+	ov::String Socket::GetRemoteAddressAsUrl() const
+	{
+		return ov::String::FormatString("%s://%s", ov::StringFromSocketType(GetType()), GetRemoteAddress()->ToString());
+	}
+
 	bool Socket::SetSockOpt(int proto, int option, const void *value, socklen_t value_length)
 	{
 		CHECK_STATE(!= SocketState::Closed, false);

@@ -22,10 +22,12 @@ namespace mon
 		{
 			_request_time_to_origin_msec = 0;
 			_response_time_from_origin_msec = 0;
+			logd("DEBUG", "StreamMetric (%s / %s) Created", GetName().CStr(), GetUUID().CStr());
 		}
 
 		~StreamMetrics()
 		{
+			logd("DEBUG", "StreamMetric (%s / %s) Destroyed", GetName().CStr(), GetUUID().CStr());
 			_app_metrics.reset();
 		}
 
@@ -36,6 +38,9 @@ namespace mon
 
 		ov::String GetInfoString();
 		void ShowInfo() override;
+
+		void LinkOutputStreamMetrics(const std::shared_ptr<StreamMetrics> &stream);
+		std::vector<std::shared_ptr<StreamMetrics>> GetLinkedOutputStreamMetrics() const;
 
 		int64_t GetOriginRequestTimeMSec() const;
 		int64_t GetOriginResponseTimeMSec() const;
@@ -51,6 +56,9 @@ namespace mon
 		// Related to origin, From Provider
 		std::atomic<int64_t> _request_time_to_origin_msec = 0;
 		std::atomic<int64_t> _response_time_from_origin_msec = 0;
+
+		// If this stream is from Provider(input stream) it has multiple output streams
+		std::vector<std::shared_ptr<StreamMetrics>> _output_stream_metrics;
 
 		std::shared_ptr<ApplicationMetrics>	_app_metrics;
 	};

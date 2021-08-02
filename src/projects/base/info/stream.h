@@ -33,9 +33,13 @@ namespace info
 		ov::String GetMediaSource() const;
 		void SetMediaSource(ov::String url);
 
-		void SetOriginStream(const std::shared_ptr<Stream> &stream);
-		const std::shared_ptr<Stream> GetOriginStream() const;
+		bool IsInputStream() const;
+		bool IsOutputStream() const;
 
+		void LinkInputStream(const std::shared_ptr<Stream> &stream);
+		const std::shared_ptr<Stream> GetLinkedInputStream() const;
+
+		// Only used in OVT provider
 		void SetOriginStreamUUID(const ov::String &uuid);
 		ov::String GetOriginStreamUUID() const;
 
@@ -67,7 +71,7 @@ namespace info
 		ov::String _name;
 		ov::String _source_url;
 		
-		// MediaTrack ID 값을 Key로 활용함
+		// Key : MediaTrack ID
 		std::map<int32_t, std::shared_ptr<MediaTrack>> _tracks;
 
 	private:
