@@ -185,7 +185,7 @@ namespace mon
 			(*settings)["precisionType"] = "significant";
 		*/
 
-		logti("%s", json_root.toStyledString().c_str());
+		logtd("%s", json_root.toStyledString().c_str());
 
 		builder["indentation"] = "";
 		return Json::writeString(builder, json_root).c_str();
