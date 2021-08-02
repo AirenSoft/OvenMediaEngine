@@ -62,25 +62,29 @@ namespace mon
 		_logger.SetLogPath(log_path);
 	}	
 
-	void Monitoring::OnServerStarted(ov::String user_key, const std::shared_ptr<cfg::Server> &server_config)
+	void Monitoring::OnServerStarted(const std::shared_ptr<cfg::Server> &server_config)
 	{
 		_server_metric = std::make_shared<ServerMetrics>(server_config);
+		_is_analytics_on = _server_metric->GetConfig()->GetAnalytics().IsParsed();
 
 		logti("%s(%s) ServerMetric has been started for monitoring - %s", server_config->GetName().CStr(), server_config->GetID().CStr(), ov::Converter::ToISO8601String(_server_metric->GetServerStartedTime()));
 
-		auto event = Event(EventType::ServerStarted, _server_metric);
-		_logger.Write(event);
+		if(IsAnalyticsOn())
+		{
+			auto event = Event(EventType::ServerStarted, _server_metric);
+			_logger.Write(event);
 
-		_timer.Push(
-			[this](void *parameter) -> ov::DelayQueueAction 
-			{
-				auto event = Event(EventType::ServerStat, _server_metric);
-				_logger.Write(event);
-				return ov::DelayQueueAction::Repeat;
-			},
-			5000);
+			_timer.Push(
+				[this](void *parameter) -> ov::DelayQueueAction 
+				{
+					auto event = Event(EventType::ServerStat, _server_metric);
+					_logger.Write(event);
+					return ov::DelayQueueAction::Repeat;
+				},
+				5000);
 
-		_timer.Start();
+			_timer.Start();
+		}
 	}
 
 	bool Monitoring::OnHostCreated(const info::Host &host_info)
@@ -90,10 +94,13 @@ namespace mon
 			return false;
 		}
 
-		auto host_metrics = _server_metric->GetHostMetrics(host_info);
-		auto event = Event(EventType::HostCreated, _server_metric);
-		event.SetExtraMetric(host_metrics);
-		_logger.Write(event);
+		if(IsAnalyticsOn())
+		{
+			auto host_metrics = _server_metric->GetHostMetrics(host_info);
+			auto event = Event(EventType::HostCreated, _server_metric);
+			event.SetExtraMetric(host_metrics);
+			_logger.Write(event);
+		}
 
 		return true;
 	}
@@ -105,11 +112,13 @@ namespace mon
 			return false;
 		}
 
-		auto host_metrics = _server_metric->GetHostMetrics(host_info);
-
-		auto event = Event(EventType::HostDeleted, _server_metric);
-		event.SetExtraMetric(host_metrics);
-		_logger.Write(event);
+		if(IsAnalyticsOn())
+		{
+			auto host_metrics = _server_metric->GetHostMetrics(host_info);
+			auto event = Event(EventType::HostDeleted, _server_metric);
+			event.SetExtraMetric(host_metrics);
+			_logger.Write(event);
+		}
 
 		return true;
 	}
@@ -133,9 +142,12 @@ namespace mon
 			return false;
 		}
 
-		auto event = Event(EventType::AppCreated, _server_metric);
-		event.SetExtraMetric(app_metrics);
-		_logger.Write(event);
+		if(IsAnalyticsOn())
+		{
+			auto event = Event(EventType::AppCreated, _server_metric);
+			event.SetExtraMetric(app_metrics);
+			_logger.Write(event);
+		}
 
 		return true;
 	}
@@ -157,9 +169,12 @@ namespace mon
 			return false;
 		}
 
-		auto event = Event(EventType::AppDeleted, _server_metric);
-		event.SetExtraMetric(app_metrics);
-		_logger.Write(event);
+		if(IsAnalyticsOn())
+		{
+			auto event = Event(EventType::AppDeleted, _server_metric);
+			event.SetExtraMetric(app_metrics);
+			_logger.Write(event);
+		}
 
 		return true;
 	}
@@ -205,9 +220,12 @@ namespace mon
 			stream_metrics->LinkOutputStreamMetrics(output_stream_metric);
 		}
 
-		auto event = Event(event_type, _server_metric);
-		event.SetExtraMetric(stream_metrics);
-		_logger.Write(event);
+		if(IsAnalyticsOn())
+		{
+			auto event = Event(event_type, _server_metric);
+			event.SetExtraMetric(stream_metrics);
+			_logger.Write(event);
+		}
 
 		return true;
 	}
@@ -243,12 +261,15 @@ namespace mon
 				return false;
 			}
 		}
-
-		if(stream_metrics->IsInputStream())
+		
+		if(IsAnalyticsOn())
 		{
-			auto event = Event(EventType::StreamDeleted, _server_metric);
-			event.SetExtraMetric(stream_metrics);
-			_logger.Write(event);
+			if(stream_metrics->IsInputStream())
+			{
+				auto event = Event(EventType::StreamDeleted, _server_metric);
+				event.SetExtraMetric(stream_metrics);
+				_logger.Write(event);
+			}
 		}
 
 		return true;

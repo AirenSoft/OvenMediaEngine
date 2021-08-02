@@ -23,7 +23,7 @@ namespace cfg
 		{
 		protected:
 			ov::String _name;
-			ov::String _distribution;
+			ov::String _distribution = "ovenmediaengine.com";
 
 			cmn::Host _host;
 			sig::SignedPolicy _signed_policy;

@@ -29,6 +29,11 @@ namespace mon
 
 		void SetLogPath(const ov::String &log_path);
 
+		bool IsAnalyticsOn()
+		{
+			return _is_analytics_on;
+		}
+
 		std::shared_ptr<ServerMetrics> GetServerMetrics();
 		std::map<uint32_t, std::shared_ptr<HostMetrics>> GetHostMetricsList();
 		std::shared_ptr<HostMetrics> GetHostMetrics(const info::Host &host_info);
@@ -36,7 +41,7 @@ namespace mon
         std::shared_ptr<StreamMetrics>  GetStreamMetrics(const info::Stream &stream_info);
 
 		// Events
-		void OnServerStarted(ov::String user_key, const std::shared_ptr<cfg::Server> &server_config);
+		void OnServerStarted(const std::shared_ptr<cfg::Server> &server_config);
 		bool OnHostCreated(const info::Host &host_info);
 		bool OnHostDeleted(const info::Host &host_info);
 		bool OnApplicationCreated(const info::Application &app_info);
@@ -55,6 +60,7 @@ namespace mon
 		ov::DelayQueue _timer;
 		std::shared_ptr<ServerMetrics> _server_metric = nullptr;
 		EventLogger	_logger;
+		bool _is_analytics_on = false;
 
 	};
 }  // namespace mon

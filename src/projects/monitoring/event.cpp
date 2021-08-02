@@ -140,7 +140,7 @@ namespace mon
 
 		// Fill common values
 		json_root["timestampMillis"] = ov::Clock::NowMSec();
-		json_root["userKey"] = "Not Implemented";
+		json_root["userKey"] = _server_metric->GetConfig()->GetAnalytics().GetUserKey().CStr();
 		json_root["serverID"] = _server_metric->GetConfig()->GetID().CStr();
 		
 		// Fill root["event"]
@@ -353,7 +353,7 @@ namespace mon
 
 			json_host["hostID"] = host_metric->GetUUID().CStr();
 			json_host["hostName"] = host_metric->GetName().CStr();
-			json_host["distribution"] = host_metric->GetDistribution().IsEmpty()?"ovenmediaengine.com":host_metric->GetDistribution().CStr();
+			json_host["distribution"] = host_metric->GetDistribution().CStr();
 			json_host["stat"] = serdes::JsonFromMetrics(host_metric);
 
 			Json::Value &json_apps = json_host["apps"];

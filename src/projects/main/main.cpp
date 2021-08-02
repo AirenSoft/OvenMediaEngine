@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 	auto server_config = cfg::ConfigManager::GetInstance()->GetServer();
 	auto orchestrator = ocst::Orchestrator::GetInstance();
 	auto monitor = mon::Monitoring::GetInstance();
-	monitor->OnServerStarted("Not Implemented", server_config);
+	monitor->OnServerStarted(server_config);
 	logti("Server ID : %s", server_config->GetID().CStr());
 
 	// Get public IP
