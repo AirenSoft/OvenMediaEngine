@@ -74,7 +74,7 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 	// For browser compatibility
 	// _context->profile = FF_PROFILE_H264_MAIN;
 	_context->profile = FF_PROFILE_H264_BASELINE;
-	::av_opt_set(_context->priv_data, "preset", "ultrafast", 0);
+	::av_opt_set(_context->priv_data, "preset", "faster", 0);
 	::av_opt_set(_context->priv_data, "tune", "zerolatency", 0);
 
 	// Remove the sliced-thread option from encoding delay. Browser compatibility in MAC environment
