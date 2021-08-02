@@ -32,8 +32,13 @@ TranscodeDecoder::TranscodeDecoder(info::Stream stream_info)
 
 TranscodeDecoder::~TranscodeDecoder()
 {
-	if (_context != nullptr)
-		::avcodec_flush_buffers(_context);
+	if (_context != nullptr && _context->codec != nullptr)
+	{
+        if (_context->codec->capabilities & AV_CODEC_CAP_ENCODER_FLUSH) {
+			::avcodec_flush_buffers(_context);
+        }
+	}
+
 
 	::avcodec_free_context(&_context);
 	::avcodec_parameters_free(&_codec_par);
