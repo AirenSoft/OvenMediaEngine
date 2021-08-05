@@ -121,11 +121,11 @@ bool RtmpWriter::Start()
 
 	AVDictionary *options = nullptr;
 
-	// Examples
-	// av_dict_set(&out_options, "timeout", "1000000", 0);
-	// av_dict_set(&out_options, "tcp_nodelay", "1", 0);
-	// _format_context->flags = AVFMT_FLAG_NOBUFFER | AVFMT_FLAG_FLUSH_PACKETS;
-
+	// Compatibility with specific RTMP servers
+	av_dict_set(&options, "rtmp_flashver", "FMLE/3.0 (compatible; FMSc/1.0)", 0);
+	av_dict_set(&options, "rtmp_flashver", "rtmp_live", 0);
+	av_dict_set(&options, "rtmp_tcurl", _format_context->url, 0);
+	
 	if (!(_format_context->oformat->flags & AVFMT_NOFILE))
 	{
 		int error = avio_open2(&_format_context->pb, _format_context->url, AVIO_FLAG_WRITE, nullptr, &options);
