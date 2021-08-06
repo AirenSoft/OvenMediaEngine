@@ -58,12 +58,26 @@ FileWriter::FileWriter()
 {
 	// av_log_set_callback(FileWriter::FFmpegLog);
 	// av_log_set_level(AV_LOG_TRACE);
+
+	_start_timestamp = -1L;
+	_timestamp_recalc_mode = TIMESTAMP_STARTZERO_MODE;
 }
 
 FileWriter::~FileWriter()
 {
 	Stop();
 }
+
+void FileWriter::SetTimestampRecalcMode(int mode)
+{
+	_timestamp_recalc_mode = mode;
+}
+
+int FileWriter::GetTimestampRecalcMode()
+{
+	return _timestamp_recalc_mode;
+}
+
 
 bool FileWriter::SetPath(const ov::String path, const ov::String format)
 {
@@ -293,10 +307,18 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	// Find Ouput Track Info
 	auto track_info = _trackinfo_map[track_id];
 
-	if (_start_timestamp == -1LL)
+	if(GetTimestampRecalcMode() == TIMESTAMP_STARTZERO_MODE)
 	{
-		_start_timestamp = pts;
+		if (_start_timestamp == -1LL)
+		{
+			_start_timestamp = pts;
+		}
 	}
+	else if(GetTimestampRecalcMode() == TIMESTAMP_PASSTHROUGH_MODE)
+	{
+		_start_timestamp = 0LL;
+	}
+
 
 	// Make avpacket
 	AVPacket pkt = {0};
@@ -309,14 +331,18 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 
 	// TODO: Depending on the extension, the bitstream format should be changed.
 	// format(mpegts)
-	// 	- H264 : Passthrough(AnnexB)
-	//  - H265 : Passthrough(AnnexB)
-	//  - AAC : Passthrough(ADTS)
+	// 	- H264 : Passthrough (AnnexB)
+	//  - H265 : Passthrough (AnnexB)
+	//  - AAC : Passthrough (ADTS)
 	//  - OPUS : Passthrough (?)
 	//  - VP8 : Passthrough (unknown name)
 	// format(mp4)
 	//	- H264 : AVCC
 	//	- AAC : to RA
+	// format(webm)
+	//	- VP8 : Passthrough
+	//	- VP9 : Passthrough
+	//  - OPUS : Passthrough 
 	uint8_t ADTS_HEADER_LENGTH = 7;
 
 	std::shared_ptr<const ov::Data> cdata = nullptr;
@@ -347,6 +373,11 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 		}
 	}
 	else if (strcmp(_format_context->oformat->name, "mpegts") == 0)
+	{
+		pkt.size = data->GetLength();
+		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();
+	}
+	else if (strcmp(_format_context->oformat->name, "webm") == 0)
 	{
 		pkt.size = data->GetLength();
 		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();
@@ -427,6 +458,10 @@ ov::String FileWriter::GetFormatByExtension(ov::String extension, ov::String def
 	{
 		return "mpegts";
 	}
+	else if(extension == "webm")
+	{
+		return "webm";
+	}
 
 	return default_format;
 }
@@ -442,8 +477,6 @@ bool FileWriter::IsSupportCodec(ov::String format, cmn::MediaCodecId codec_id)
 		{
 			return true;
 		}
-
-		return false;
 	}
 	else if (format == "mpegts")
 	{
@@ -457,8 +490,15 @@ bool FileWriter::IsSupportCodec(ov::String format, cmn::MediaCodecId codec_id)
 		{
 			return true;
 		}
-
-		return false;
+	}
+	else if (format == "webm")
+	{
+		if (codec_id == cmn::MediaCodecId::Vp8 ||
+			codec_id == cmn::MediaCodecId::Vp9 ||
+			codec_id == cmn::MediaCodecId::Opus)
+		{
+			return true;
+		}
 	}
 
 	return false;
