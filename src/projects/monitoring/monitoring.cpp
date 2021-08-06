@@ -11,6 +11,7 @@ namespace mon
 	void Monitoring::Release()
 	{
 		_server_metric->Release();
+		_forwarder.Stop();
 	}
 
 	std::shared_ptr<ServerMetrics> Monitoring::GetServerMetrics()
@@ -60,6 +61,7 @@ namespace mon
 	void Monitoring::SetLogPath(const ov::String &log_path)
 	{
 		_logger.SetLogPath(log_path);
+		_forwarder.SetLogPath(log_path);
 	}	
 
 	void Monitoring::OnServerStarted(const std::shared_ptr<cfg::Server> &server_config)
@@ -84,6 +86,8 @@ namespace mon
 				5000);
 
 			_timer.Start();
+
+			_forwarder.Start(server_config);
 		}
 	}
 

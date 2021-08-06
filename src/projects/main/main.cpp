@@ -307,7 +307,7 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 		return ov::Daemon::State::CHILD_FAIL;
 	}
 
-	ov::LogWrite::Initialize(parse_option->start_service);
+	ov::LogWrite::SetAsService(parse_option->start_service);
 
 	try
 	{

@@ -19,7 +19,7 @@ namespace ov
 {
     bool LogWrite::_start_service = false;
 
-    LogWrite::LogWrite(std::string log_file_name) :
+    LogWrite::LogWrite(std::string log_file_name, bool include_date_in_filename) :
         _last_day(0),
         _log_path(OV_LOG_DIR)
     {
@@ -33,6 +33,7 @@ namespace ov
         }
 
         _log_file = _log_path + std::string("/") + log_file_name;
+		_include_date_in_filename = include_date_in_filename;
     }
 
     void LogWrite::SetLogPath(const char* log_path)
@@ -41,7 +42,7 @@ namespace ov
         _log_file = log_path + std::string("/") + _log_file_name;
     }
 
-    void LogWrite::Initialize()
+    void LogWrite::OpenNewFile(std::time_t time)
     {
         if (_start_service)
         {
@@ -59,37 +60,58 @@ namespace ov
         std::lock_guard<std::mutex> lock_guard(_log_stream_mutex);
         _log_stream.close();
         _log_stream.clear();
-        _log_stream.open(_log_file, std::ofstream::out | std::ofstream::app);
+
+		if(_include_date_in_filename == true)
+		{
+			std::tm local_time {};
+        	::localtime_r(&time, &local_time);
+			std::ostringstream logfile;
+            logfile << _log_file << "." << std::put_time(&local_time, "%Y%m%d");
+			_log_stream.open(logfile.str().c_str(), std::ofstream::out | std::ofstream::app);
+		}
+		else
+		{
+        	_log_stream.open(_log_file, std::ofstream::out | std::ofstream::app);
+		}
     }
 
-    void LogWrite::Initialize(bool start_service)
+    void LogWrite::SetAsService(bool start_service)
     {
         _start_service = start_service;
     }
 
-    void LogWrite::Write(const char *log)
+    void LogWrite::Write(const char *log, std::time_t time)
     {
-        std::time_t time = std::time(nullptr);
+    	if(time == 0)
+		{
+			time = std::time(nullptr);
+		}
         std::tm local_time {};
         ::localtime_r(&time, &local_time);
 
-        // At the end of the day, change file name to back it up 
-        // ovenmediaengine.log.YYmmDD
-        if (_last_day != local_time.tm_mday)
+		if (!_log_stream.is_open() || _log_stream.fail())
         {
-            if (_last_day)
+            OpenNewFile(time);
+        }
+        
+		// Need to open new file?
+		if (_last_day != local_time.tm_mday)
+        {
+			// Not first
+            if (_last_day != 0)
             {
-                std::ostringstream logfile;
-                logfile << _log_file << "." << std::put_time(&local_time, "%Y%m%d");
-                ::rename(_log_file.c_str(), logfile.str().c_str());
+				if(_include_date_in_filename == false)
+				{
+					// Backup file to (filename.log.yymmdd)
+					std::ostringstream logfile;
+					logfile << _log_file << "." << std::put_time(&local_time, "%Y%m%d");
+					::rename(_log_file.c_str(), logfile.str().c_str());
+				}
+
+				// Open new file (filename.log.yymmdd)
+				OpenNewFile(time);
             }
             _last_day = local_time.tm_mday;
-        }
-
-        struct stat file_stat {};
-        if (!_log_stream.is_open() || _log_stream.fail() || ::stat(_log_file.c_str(), &file_stat) != 0)
-        {
-            Initialize();
         }
 
         std::lock_guard<std::mutex> lock_guard(_log_stream_mutex);

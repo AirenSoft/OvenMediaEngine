@@ -9,6 +9,8 @@ namespace mon
 	Event::Event(EventType type, const std::shared_ptr<ServerMetrics> &server_metric)
 		: _type(type), _server_metric(server_metric)
 	{
+		_creation_time_msec = ov::Clock::NowMSec();
+
 		switch(_type)
 		{
 			// StreamEventType
@@ -47,6 +49,11 @@ namespace mon
 				break;
 		}
 
+	}
+
+	uint64_t Event::GetCreationTimeMSec() const
+	{
+		return _creation_time_msec;
 	}
 
 	EventType Event::GetType() const
@@ -139,7 +146,7 @@ namespace mon
 		Json::Value json_root;
 
 		// Fill common values
-		json_root["timestampMillis"] = ov::Clock::NowMSec();
+		json_root["timestampMillis"] = _creation_time_msec;
 		json_root["userKey"] = _server_metric->GetConfig()->GetAnalytics().GetUserKey().CStr();
 		json_root["serverID"] = _server_metric->GetConfig()->GetID().CStr();
 		
