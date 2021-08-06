@@ -170,6 +170,7 @@ bool FileSession::StartRecord()
 
 	// The mode to specify the initial value of the timestamp stored in the file to zero, 
 	// or keep it at the same value as the source.
+	
 	// _writer->SetTimestampRecalcMode(FileWriter::TIMESTAMP_PASSTHROUGH_MODE);
 	// _writer->SetTimestampRecalcMode(FileWriter::TIMESTAMP_STARTZERO_MODE);
 
