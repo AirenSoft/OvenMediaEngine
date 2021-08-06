@@ -13,6 +13,7 @@
 TranscodeGPU::TranscodeGPU()
 {
 	_intel_quick_device_context = nullptr;
+	_nvidia_cuda_device_context = nullptr;
 }
 
 bool TranscodeGPU::Initialze()
@@ -32,8 +33,6 @@ bool TranscodeGPU::Initialze()
 		logti("Supported Intel QuickSync hardware accelerator");
 		auto constraints = av_hwdevice_get_hwframe_constraints(_intel_quick_device_context, nullptr);
 		logtd("hw pixel format : %d, sw pixel format : %d", *constraints->valid_hw_formats, *constraints->valid_sw_formats);
-
-
 	}
 
 	ret = ::av_hwdevice_ctx_create(&_nvidia_cuda_device_context, AV_HWDEVICE_TYPE_CUDA, "/dev/dri/render128", NULL, 0);
@@ -48,6 +47,16 @@ bool TranscodeGPU::Initialze()
 		auto constraints = av_hwdevice_get_hwframe_constraints(_nvidia_cuda_device_context, nullptr);
 		logtd("hw pixel format : %d, sw pixel format : %d", *constraints->valid_hw_formats, *constraints->valid_sw_formats);
 	}
+
+	if (_intel_quick_device_context == nullptr && _nvidia_cuda_device_context == nullptr)
+	{
+		logtd("There is no supported hardware accelerator");
+	}
+
+	// enum AVHWDeviceType type = AV_HWDEVICE_TYPE_NONE;
+	// logtd("Supported hardware device types");
+	// while ((type = av_hwdevice_iterate_types(type)) != AV_HWDEVICE_TYPE_NONE)
+	// 	logtd("%s", av_hwdevice_get_type_name(type));
 
 	return true;
 }

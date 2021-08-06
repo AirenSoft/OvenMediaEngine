@@ -798,12 +798,14 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			min_pts = std::min(min_pts, rescaled_last_pts);
 			max_pts = std::max(max_pts, rescaled_last_pts);
 
-			stat_track_str.AppendFormat("\n\t[%3d] type: %5s(%2d/%4s), pts: %lldms, delay: %5lldms, pkt_cnt: %6lld, pkt_siz: %sB",
+			stat_track_str.AppendFormat("\n\t[%3d] type: %5s(%2d/%4s), pts: %lldms, tb: %d/%d,  delay: %5lldms, pkt_cnt: %6lld, pkt_siz: %sB",
 										track_id,
 										track->GetMediaType() == MediaType::Video ? "video" : "audio",
 										track->GetCodecId(),
 										::StringFromMediaCodecId(track->GetCodecId()).CStr(),
-										rescaled_last_pts, (first_delay - last_delay) * -1,
+										rescaled_last_pts, 
+										track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(),
+										(first_delay - last_delay) * -1,
 										_stat_recv_pkt_count[track_id],
 										ov::Converter::ToSiString(_stat_recv_pkt_size[track_id], 1).CStr());
 		}

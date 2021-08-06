@@ -114,10 +114,19 @@ private:
 class FileWriter
 {
 public:
+	enum {
+		TIMESTAMP_STARTZERO_MODE 	= 0,
+		TIMESTAMP_PASSTHROUGH_MODE 	= 1
+	};
+
+public:
 	static std::shared_ptr<FileWriter> Create();
 
 	FileWriter();
 	~FileWriter();
+
+	void SetTimestampRecalcMode(int mode);
+	int GetTimestampRecalcMode();
 
 	// format is muxer(or container)
 	// 	- mpegts
@@ -147,10 +156,12 @@ private:
 
 	AVFormatContext *_format_context;
 
+
 	// <MediaTrack.id, std::hsared_ptr<FileTrackInfo>>
 	std::map<int32_t, std::shared_ptr<FileTrackInfo>> _trackinfo_map;
 
 	int64_t 	_start_timestamp;
+	bool 		_timestamp_recalc_mode; 
 
 	// Map of track
 	// <MediaTrack.id, AVStream.index>

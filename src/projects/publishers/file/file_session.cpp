@@ -168,6 +168,11 @@ bool FileSession::StartRecord()
 		return false;
 	}
 
+	// The mode to specify the initial value of the timestamp stored in the file to zero, 
+	// or keep it at the same value as the source.
+	//  _writer->SetTimestampRecalcMode(FileWriter::TIMESTAMP_PASSTHROUGH_MODE);
+	//  _writer->SetTimestampRecalcMode(FileWriter::TIMESTAMP_STARTZERO_MODE);
+
 	logtd("The temporary file was created successfully. file: %s", _writer->GetPath().CStr());
 
 	for (auto &track_item : GetStream()->GetTracks())
@@ -386,17 +391,6 @@ ov::String FileSession::GetOutputTempFilePath(std::shared_ptr<info::Record> &rec
 
 ov::String FileSession::GetOutputFilePath()
 {
-	// auto app_config = std::static_pointer_cast<info::Application>(GetApplication())->GetConfig();
-	// auto file_config = app_config.GetPublishers().GetFilePublisher();
-
-	// auto file_path = file_config.GetFilePath();
-
-	// // If FILE->FilePath config is not set, save it as the default path.
-	// if (file_path.GetLength() == 0 || file_path.IsEmpty() == true)
-	// {
-	// 	file_path.Format("%s${TransactionId}_${VirtualHost}_${Application}_${Stream}_${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.ts", ov::PathManager::GetAppPath("records").CStr());
-	// }
-
 	auto result = ConvertMacro(_template_output_file_path);
 
 	return result;
@@ -404,16 +398,6 @@ ov::String FileSession::GetOutputFilePath()
 
 ov::String FileSession::GetOutputFileInfoPath()
 {
-	// auto app_config = std::static_pointer_cast<info::Application>(GetApplication())->GetConfig();
-	// auto file_config = app_config.GetPublishers().GetFilePublisher();
-
-	// // If FILE->FileInfoPath config is not set, save it as the default path.
-	// auto fileinfo_path = file_config.GetInfoPath();
-	// if (fileinfo_path.GetLength() == 0 || fileinfo_path.IsEmpty() == true)
-	// {
-	// 	fileinfo_path.Format("%s${TransactionId}_${VirtualHost}_${Application}_${Stream}.xml", ov::PathManager::GetAppPath("records").CStr());
-	// }
-
 	auto result = ConvertMacro(_template_output_info_path);
 
 	return result;

@@ -78,24 +78,22 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 	// Filter graph:
 	//     [abuffer] -> [aresample] -> [asetnsamples] -> [aformat] -> [asettb] -> [abuffersink]
 
-	// Prepare the input filter
+	// Prepare the input parameter
+	std::vector<ov::String> src_params = {
+		ov::String::FormatString("time_base=%s", input_context->GetTimeBase().GetStringExpr().CStr()),
+		ov::String::FormatString("sample_rate=%d", input_context->GetAudioSampleRate()),
+		ov::String::FormatString("sample_fmt=%s", input_context->GetAudioSample().GetName()),
+		ov::String::FormatString("channel_layout=%s", input_context->GetAudioChannel().GetName())};
 
-	// "abuffer" filter
-	ov::String input_args = ov::String::FormatString(
-		// "time_base=%s:sample_rate=%d:sample_fmt=%s:channel_layout=0x%x",
-		"time_base=%s:sample_rate=%d:sample_fmt=%s:channel_layout=%s",
-		input_context->GetTimeBase().GetStringExpr().CStr(),
-		input_context->GetAudioSampleRate(),
-		input_context->GetAudioSample().GetName(),
-		input_context->GetAudioChannel().GetName());
-		// input_context->GetAudioChannel().GetLayout().GetName());
+	ov::String src_args = ov::String::Join(src_params, ":");
 
-	ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, abuffersrc, "in", input_args, nullptr, _filter_graph);
+	ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, abuffersrc, "in", src_args, nullptr, _filter_graph);
 	if (ret < 0)
 	{
 		logte("Could not create audio buffer source filter for resampling: %d", ret);
 		return false;
 	}
+
 
 	// Prepare output filters
 	std::vector<ov::String> filters = {
@@ -153,7 +151,7 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 		return false;
 	}
 
-	logtd("Resampler is enabled for track #%u using parameters. input: %s / outputs: %s", input_media_track->GetId(), input_args.CStr(), output_filters.CStr());
+	logtd("Resampler is enabled for track #%u using parameters. input: %s / outputs: %s", input_media_track->GetId(), src_args.CStr(), output_filters.CStr());
 
 	_input_context = input_context;
 	_output_context = output_context;
