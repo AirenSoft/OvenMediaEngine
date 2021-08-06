@@ -8,28 +8,27 @@
 //==============================================================================
 #pragma once
 
-#include "forwarding.h"
-
 namespace cfg
 {
 	namespace an
 	{
-		struct Analytics : public Item
+		struct Forwarding : public Item
 		{
 		protected:
-			ov::String _user_key;
-			Forwarding _forwarding;
-		
+			bool _enable = false;
+			// Default OvenConsole URL
+			ov::String _collector = "tcp://collector.ovenconsole.io:21514";
+
 		public:
-			CFG_DECLARE_REF_GETTER_OF(GetUserKey, _user_key)
-			CFG_DECLARE_REF_GETTER_OF(GetForwarding, _forwarding)
+			CFG_DECLARE_REF_GETTER_OF(IsEnabled, _enable)
+			CFG_DECLARE_REF_GETTER_OF(GetCollector, _collector)
 
 		protected:
 			void MakeList() override
 			{
-				Register<Optional>("UserKey", &_user_key);
-				Register<Optional>("Forwarding", &_forwarding);
+				Register<Optional>("Enable", &_enable);
+				Register<Optional>("Collector", &_collector);
 			}
 		};
-	}  // namespace p2p
+	}  // namespace an
 }  // namespace cfg

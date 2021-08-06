@@ -3,7 +3,7 @@
 namespace mon
 {
 	EventLogger::EventLogger()
-		: _log_writer(DEFAULT_EVENT_LOG_FILE_NAME)
+		: _log_writer(DEFAULT_EVENT_LOG_FILE_NAME, true)
 	{
 	}
 
@@ -14,6 +14,6 @@ namespace mon
 
 	void EventLogger::Write(const Event &event)
 	{
-		_log_writer.Write(event.SerializeToJson().CStr());
+		//_log_writer.Write(event.SerializeToJson().CStr(), event.GetCreationTimeMSec()/1000);
 	}
 }

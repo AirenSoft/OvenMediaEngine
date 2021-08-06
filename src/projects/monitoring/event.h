@@ -30,6 +30,7 @@ namespace mon
 	public:
 		Event(EventType type, const std::shared_ptr<ServerMetrics> &server_metric);
 
+		uint64_t GetCreationTimeMSec() const;
 		EventType GetType() const;
 		ov::String GetTypeString() const;
 
@@ -80,6 +81,8 @@ namespace mon
 			StreamMetric
 		};
 		
+		uint64_t _creation_time_msec = 0;
+
 		// Essential metic
 		std::shared_ptr<ServerMetrics> _server_metric; 
 

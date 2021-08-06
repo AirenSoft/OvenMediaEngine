@@ -13,6 +13,7 @@
 #define CFG_LOG_FILE_NAME "Logger.xml"
 #define CFG_MAIN_FILE_NAME "Server.xml"
 #define CFG_LAST_CONFIG_FILE_NAME "LastConfig.json"
+#define SERVER_ID_STORAGE_FILE		"Server.id"
 
 namespace cfg
 {

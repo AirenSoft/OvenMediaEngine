@@ -17,8 +17,6 @@
 
 #include <fstream>
 
-#define SERVER_ID_STORAGE_FILE		"Server.id"
-
 namespace cfg
 {
 	enum class ServerType
