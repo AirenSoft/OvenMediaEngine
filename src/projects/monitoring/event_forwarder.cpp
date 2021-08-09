@@ -18,8 +18,12 @@ namespace mon
 		_log_dir_path = log_dir_path;
 	}
 		
-	void EventForwarder::EventLogFileFinder::SetStartOffset(std::time_t start_file_time, uint64_t start_file_offset)
+	void EventForwarder::EventLogFileFinder::ResetStartOffset(std::time_t start_file_time, uint64_t start_file_offset)
 	{
+		_curr_open_inode_number = 0;
+		_curr_open_log_time = 0;
+		_curr_open_log_file_path = "";
+
 		_start_file_time = start_file_time;
 		_start_file_offset = start_file_offset;
 	}
@@ -27,6 +31,29 @@ namespace mon
 	std::time_t EventForwarder::EventLogFileFinder::GetOpenLogTime()
 	{
 		return _curr_open_log_time;
+	}
+
+	// Check inode number
+	bool EventForwarder::EventLogFileFinder::IsCurrAvailable()
+	{
+		if(_curr_open_inode_number == 0 || _curr_open_log_file_path.IsEmpty())
+		{
+			return false;
+		}
+
+		// Store inode number of the open file
+		struct stat st;
+		if(stat(_curr_open_log_file_path.CStr(), &st) != 0)
+		{
+			return false;
+		}
+		
+		if(_curr_open_inode_number != st.st_ino)
+		{
+			return false;
+		}
+
+		return true;
 	}
 
 	bool EventForwarder::EventLogFileFinder::IsNextAvailable()
@@ -107,6 +134,15 @@ namespace mon
 		ifs.open(open_file_path.CStr());
 		ifs.seekg(open_file_offset);
 		_curr_open_log_time = open_file_time;
+		_curr_open_log_file_path = open_file_path;
+		logti("Open log file for forwarding: %s", open_file_path.CStr());
+
+		// Store inode number of the open file
+		struct stat st;
+		if(stat(open_file_path.CStr(), &st) == 0)
+		{
+			_curr_open_inode_number = st.st_ino;
+		}
 
 		return true;
 	}
@@ -309,7 +345,7 @@ namespace mon
 		if(result == true)
 		{
 			// Resume shipping 
-			event_stream.SetStartOffset(last_file_time, last_file_offset);
+			event_stream.ResetStartOffset(last_file_time, last_file_offset);
 		}
 		else
 		{
@@ -333,12 +369,27 @@ namespace mon
 					continue;
 				}
 			}
-			else
+			// Current file is moved or something failed
+			else if(event_stream.IsCurrAvailable() == false)
 			{
+				event_stream.ResetStartOffset(event_stream.GetOpenLogTime(), pos);
+				if(event_stream.OpenNextEventLog(ifs) == true)
+				{
+					pos = ifs.tellg();
+				}
+				else
+				{
+					// There is no current event log ? maybe it was removed, wait for new log file
+					sleep(1);
+					continue;
+				}
+			}
+			else
+			{		
 				// Wait for new message in current log file
 				sleep(1);
 
-				// Clear error bits
+				// Clear error bits to read a growing log file
 				ifs.clear();
 			}
 

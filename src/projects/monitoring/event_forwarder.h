@@ -3,7 +3,7 @@
 #include "base/ovlibrary/ovlibrary.h"
 #include "config/config.h"
 
-#define SHIPPER_INFO_DB_FILE "shipper.db"
+#define SHIPPER_INFO_DB_FILE "forwarder.db"
 #define OVEN_CONSOLE_AUTH_URL "https://ovenconsole.com/auth"
 
 namespace mon
@@ -33,13 +33,15 @@ namespace mon
 		public:
 			EventLogFileFinder(const ov::String &log_dir_path);
 			
-			void SetStartOffset(std::time_t start_file_time, uint64_t start_file_offset);
-			
+			// Reset and set start offset
+			void ResetStartOffset(std::time_t start_file_time, uint64_t start_file_offset);
+
+
 			std::time_t GetOpenLogTime();
 
+			bool IsCurrAvailable();
 			bool IsNextAvailable();
 			bool OpenNextEventLog(std::ifstream &ifs);
-			
 		private:
 			std::tuple<bool, ov::String> GetLogFilePathByTime(std::time_t start_file_time);
 			std::tuple<bool, std::time_t, ov::String> FindNextLogFilePath(std::time_t prev_file_time);
@@ -47,6 +49,8 @@ namespace mon
 			ov::String _log_dir_path;
 			
 			std::time_t _curr_open_log_time = 0;
+			ov::String _curr_open_log_file_path;
+			ino_t _curr_open_inode_number = 0;
 			std::time_t _start_file_time = 0;
 			uint64_t _start_file_offset = 0;
 		};
