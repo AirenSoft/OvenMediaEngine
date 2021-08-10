@@ -223,7 +223,7 @@ protected:
 	bool Start(const cfg::cmn::SingularPort &port_config, const cfg::cmn::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server, int worker_count);
 	virtual bool Start() = 0;
 
-	bool HandleSignedX(const info::VHostAppName &vhost_app_name, const ov::String &stream_name, 
+	bool HandleAccessControl(info::VHostAppName &vhost_app_name, ov::String &stream_name, 
 						const std::shared_ptr<http::svr::HttpConnection> &client, const std::shared_ptr<const ov::Url> &request_url,
 						std::shared_ptr<PlaylistRequestInfo> &request_info);
 

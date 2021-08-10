@@ -188,6 +188,10 @@ namespace pvd
 													const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 													std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay)
 	{
+		info::VHostAppName final_vhost_app_name = vhost_app_name;
+		ov::String final_host_name = host_name;
+		ov::String final_stream_name = stream_name;
+
 		logtd("WebRTCProvider::OnAddRemoteDescription");
 		auto request = ws_client->GetClient()->GetRequest();
 		auto remote_address = request->GetRemote()->GetRemoteAddress();
@@ -205,10 +209,15 @@ namespace pvd
 			parsed_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 		}
 
+		uint64_t session_life_time = 0;
 		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(parsed_url, remote_address);
-		if(signed_policy_result == AccessController::VerificationResult::Off || signed_policy_result == AccessController::VerificationResult::Pass)
+		if(signed_policy_result == AccessController::VerificationResult::Off)
 		{
 			// Success
+		}
+		else if(signed_policy_result == AccessController::VerificationResult::Pass)
+		{
+			session_life_time = signed_policy->GetStreamExpireEpochMSec();
 		}
 		else if(signed_policy_result == AccessController::VerificationResult::Error)
 		{
@@ -220,20 +229,64 @@ namespace pvd
 			return nullptr;
 		}
 
+		// Admission Webhooks
+		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(parsed_url, remote_address);
+		if(webhooks_result == AccessController::VerificationResult::Off)
+		{
+			// Success
+		}
+		else if(webhooks_result == AccessController::VerificationResult::Pass)
+		{
+			// Lifetime
+			if(admission_webhooks->GetLifetime() != 0)
+			{
+				// Choice smaller value
+				auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + admission_webhooks->GetLifetime();
+				if(stream_expired_msec_from_webhooks < session_life_time)
+				{
+					session_life_time = stream_expired_msec_from_webhooks;
+				}
+			}
+
+			// Redirect URL
+			if(admission_webhooks->GetNewURL() != nullptr)
+			{
+				parsed_url = admission_webhooks->GetNewURL();
+				if(parsed_url->Port() == 0)
+				{
+					parsed_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+				}
+
+				final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
+				final_host_name = parsed_url->Host();
+				final_stream_name = parsed_url->Stream();
+			}
+		}
+		else if(webhooks_result == AccessController::VerificationResult::Error)
+		{
+			logtw("AdmissionWebhooks error : %s", parsed_url->ToUrlString().CStr());
+			return nullptr;
+		}
+		else if(webhooks_result == AccessController::VerificationResult::Fail)
+		{
+			logtw("AdmissionWebhooks error : %s", admission_webhooks->GetErrReason().CStr());
+			return nullptr;
+		}
+
 		// Check if same stream name is exist
-		auto application = std::dynamic_pointer_cast<WebRTCApplication>(GetApplicationByName(vhost_app_name));
+		auto application = std::dynamic_pointer_cast<WebRTCApplication>(GetApplicationByName(final_vhost_app_name));
 		if(application == nullptr)
 		{
-			logte("Could not find %s application", vhost_app_name.CStr());
+			logte("Could not find %s application", final_vhost_app_name.CStr());
 			return nullptr;
 		}
 		
 		std::lock_guard<std::mutex> lock(_stream_lock);
 
 		// TODO(Getroot): Implement BlockDuplicateStreamName option
-		if(application->GetStreamByName(stream_name) != nullptr)
+		if(application->GetStreamByName(final_stream_name) != nullptr)
 		{
-			logte("%s stream is already exist in %s application", stream_name.CStr(), vhost_app_name.CStr());
+			logte("%s stream is already exist in %s application", final_stream_name.CStr(), final_vhost_app_name.CStr());
 			return nullptr;
 		}
 
@@ -256,6 +309,11 @@ namespace pvd
 		session_description->SetIceUfrag(_ice_port->GenerateUfrag());
 		session_description->Update();
 
+		// Passed AccessControl
+		ws_client->AddData("authorized", true);
+		ws_client->AddData("new_url", parsed_url->ToUrlString(true));
+		ws_client->AddData("stream_expired", session_life_time);
+
 		return session_description;
 	}
 
@@ -264,10 +322,37 @@ namespace pvd
 								const std::shared_ptr<const SessionDescription> &offer_sdp,
 								const std::shared_ptr<const SessionDescription> &peer_sdp)
 	{
-		logtd("WebRTCProvider::OnAddRemoteDescription");
-		auto request = ws_client->GetClient()->GetRequest();
-		auto remote_address = request->GetRemote()->GetRemoteAddress();
-		auto uri = request->GetUri();
+		auto [autorized_exist, authorized] = ws_client->GetData("authorized");
+		ov::String uri;
+		uint64_t session_life_time = 0;
+		if(autorized_exist == true && std::holds_alternative<bool>(authorized) == true && std::get<bool>(authorized) == true)
+		{
+			auto [new_url_exist, new_url] = ws_client->GetData("new_url");
+			if(new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
+			{
+				uri = std::get<ov::String>(new_url);
+			}
+			else
+			{
+				return false;
+			}
+
+			auto [stream_expired_exist, stream_expired] = ws_client->GetData("stream_expired");
+			if(stream_expired_exist == true && std::holds_alternative<uint64_t>(stream_expired) == true)
+			{
+				session_life_time = std::get<uint64_t>(stream_expired);
+			}
+			else
+			{
+				return false;
+			}
+		}
+		else
+		{
+			// This client was unauthoized when request offer situation
+			return false;
+		}
+
 		auto parsed_url = ov::Url::Parse(uri);
 		if (parsed_url == nullptr)
 		{
@@ -275,72 +360,53 @@ namespace pvd
 			return false;
 		}
 
-		// PORT can be omitted if port is rtmp default port, but SignedPolicy requires this information.
-		if(parsed_url->Port() == 0)
-		{
-			parsed_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
-		}
+		auto final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
+		auto final_stream_name = parsed_url->Stream();
 
-		uint64_t life_time = 0;
-		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(parsed_url, remote_address);
-		if(signed_policy_result == AccessController::VerificationResult::Off)
-		{
-			// Success
-		}
-		else if(signed_policy_result == AccessController::VerificationResult::Pass)
-		{
-			life_time = signed_policy->GetStreamExpireEpochMSec();
-		}
-		else if(signed_policy_result == AccessController::VerificationResult::Error)
-		{
-			return false;
-		}
-		else if(signed_policy_result == AccessController::VerificationResult::Fail)
-		{
-			logtw("%s", signed_policy->GetErrMessage().CStr());
-			return false;
-		}
-
+		logtd("WebRTCProvider::OnAddRemoteDescription");
+		auto request = ws_client->GetClient()->GetRequest();
+		auto remote_address = request->GetRemote()->GetRemoteAddress();
+		
 		// Check if same stream name is exist
-		auto application = std::dynamic_pointer_cast<WebRTCApplication>(GetApplicationByName(vhost_app_name));
+		auto application = std::dynamic_pointer_cast<WebRTCApplication>(GetApplicationByName(final_vhost_app_name));
 		if(application == nullptr)
 		{
-			logte("Could not find %s application", vhost_app_name.CStr());
+			logte("Could not find %s application", final_vhost_app_name.CStr());
 			return false;
 		}
 		
 		std::lock_guard<std::mutex> lock(_stream_lock);
 
 		// TODO(Getroot): Implement BlockDuplicateStreamName option
-		if(application->GetStreamByName(stream_name) != nullptr)
+		if(application->GetStreamByName(final_stream_name) != nullptr)
 		{
-			logte("%s stream is already exist in %s application", stream_name.CStr(), vhost_app_name.CStr());
+			logte("%s stream is already exist in %s application", final_stream_name.CStr(), final_vhost_app_name.CStr());
 			return false;
 		}
 
 		// Create Stream
 		auto channel_id = offer_sdp->GetSessionId();
-		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, stream_name, channel_id, PushProvider::GetSharedPtrAs<PushProvider>(), offer_sdp, peer_sdp, _certificate, _ice_port);
+		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, final_stream_name, channel_id, PushProvider::GetSharedPtrAs<PushProvider>(), offer_sdp, peer_sdp, _certificate, _ice_port);
 		if(stream == nullptr)
 		{
-			logte("Could not create %s stream in %s application", stream_name.CStr(), vhost_app_name.CStr());
+			logte("Could not create %s stream in %s application", final_stream_name.CStr(), final_vhost_app_name.CStr());
 			return false;
 		}
 		stream->SetMediaSource(request->GetRemote()->GetRemoteAddressAsUrl());
 		
-		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
-		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), offer_sdp, peer_sdp, ice_timeout, life_time, stream);
+		// The stream of the webrtc provider has already completed signaling at this point.
+		if(PublishChannel(channel_id, final_vhost_app_name, stream) == false)
+		{
+			return false;
+		}
 
 		if(OnChannelCreated(channel_id, stream) == false)
 		{
 			return false;
 		}
 
-		// The stream of the webrtc provider has already completed signaling at this point.
-		if(PublishChannel(channel_id, vhost_app_name, stream) == false)
-		{
-			return false;
-		}
+		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), offer_sdp, peer_sdp, ice_timeout, session_life_time, stream);
 
 		return true;
 	}
@@ -359,7 +425,7 @@ namespace pvd
 					const std::shared_ptr<const SessionDescription> &peer_sdp)
 	{
 		logti("Stop commnad received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
-
+		
 		// Find Stream
 		auto stream = std::static_pointer_cast<WebRTCStream>(GetStreamByName(vhost_app_name, stream_name));
 		if (!stream)

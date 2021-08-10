@@ -15,6 +15,7 @@
 #include <modules/http/server/http_server.h>
 
 #include "./web_socket_datastructure.h"
+#include <variant>
 
 namespace http
 {
@@ -40,10 +41,17 @@ namespace http
 
 				ov::String ToString() const;
 
+				void AddData(ov::String key, std::variant<bool, uint64_t, ov::String> value);
+				std::tuple<bool, std::variant<bool, uint64_t, ov::String>> GetData(ov::String key);
+
 				void Close();
 
 			protected:
 				std::shared_ptr<HttpConnection> _client;
+
+			private:
+				// key : data<int or string>
+				std::map<ov::String, std::variant<bool, uint64_t, ov::String>> _data_map;
 			};
 		}  // namespace ws
 	}	   // namespace svr

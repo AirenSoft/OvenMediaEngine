@@ -62,6 +62,11 @@ uint64_t AdmissionWebhooks::GetLifetime() const
 	return _lifetime;
 }
 
+uint64_t AdmissionWebhooks::GetElpasedTime() const
+{
+	return _elapsed_ms;
+}
+
 void AdmissionWebhooks::SetError(ErrCode code, ov::String reason)
 {
 	_err_code = code;
@@ -225,8 +230,13 @@ void AdmissionWebhooks::Run()
 	client->SetRequestHeader("Accept", "application/json");
 	client->SetRequestBody(body);
 
+	ov::StopWatch watch;
+	watch.Start();
+
 	client->Request(_control_server_url->ToUrlString(true), [=](http::StatusCode status_code, const std::shared_ptr<ov::Data> &data, const std::shared_ptr<const ov::Error> &error) 
 	{
+		_elapsed_ms = watch.Elapsed();
+
 		// A response was received from the server.
 		if(error == nullptr) 
 		{	

@@ -116,6 +116,22 @@ namespace http
 			{
 				return ov::String::FormatString("<WebSocketClient: %p, %s>", this, _client->GetRequest()->GetRemote()->ToString().CStr());
 			}
+
+			void Client::AddData(ov::String key, std::variant<bool, uint64_t, ov::String> value)
+			{
+				_data_map.emplace(key, value);
+			}
+
+			std::tuple<bool, std::variant<bool, uint64_t, ov::String>> Client::GetData(ov::String key)
+			{
+				if(_data_map.find(key) == _data_map.end())
+				{
+					return {false, false};
+				}
+
+				return {true, _data_map[key]};
+			}
+
 		}  // namespace ws
 	}	   // namespace svr
 }  // namespace http
