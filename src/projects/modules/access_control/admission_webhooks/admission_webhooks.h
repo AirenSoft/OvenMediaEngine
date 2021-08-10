@@ -34,6 +34,7 @@ public:
 	ov::String GetErrReason() const;
 	std::shared_ptr<ov::Url> GetNewURL() const;
 	uint64_t GetLifetime() const;
+	uint64_t GetElpasedTime() const;
 	
 private:
 	void Run();
@@ -41,6 +42,8 @@ private:
 	void SetError(ErrCode code, ov::String reason);
 
 	void ParseResponse(const std::shared_ptr<ov::Data> &data);
+
+	uint64_t _elapsed_ms = 0;
 
 	// Request
 	std::shared_ptr<ov::Url> _control_server_url = nullptr;

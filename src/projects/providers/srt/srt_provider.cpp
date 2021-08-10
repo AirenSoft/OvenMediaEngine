@@ -156,6 +156,45 @@ namespace pvd
 			return;
 		}
 
+		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(parsed_url, remote_address);
+		if(webhooks_result == AccessController::VerificationResult::Off)
+		{
+			// Success
+		}
+		else if(webhooks_result == AccessController::VerificationResult::Pass)
+		{
+			// Lifetime
+			if(admission_webhooks->GetLifetime() != 0)
+			{
+				// Choice smaller value
+				auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + admission_webhooks->GetLifetime();
+				if(stream_expired_msec_from_webhooks < life_time)
+				{
+					life_time = stream_expired_msec_from_webhooks;
+				}
+			}
+
+			// Redirect URL
+			if(admission_webhooks->GetNewURL() != nullptr)
+			{
+				auto new_url = admission_webhooks->GetNewURL();
+				vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(new_url->Host(), new_url->App());
+				stream_name = new_url->Stream();
+			}
+		}
+		else if(webhooks_result == AccessController::VerificationResult::Error)
+		{
+			logtw("AdmissionWebhooks error : %s", parsed_url->ToUrlString().CStr());
+			remote->Close();
+			return;
+		}
+		else if(webhooks_result == AccessController::VerificationResult::Fail)
+		{
+			logtw("AdmissionWebhooks error : %s", admission_webhooks->GetErrReason().CStr());
+			remote->Close();
+			return;
+		}
+
 		auto stream = MpegTsStream::Create(StreamSourceType::Srt, channel_id, vhost_app_name, stream_name, remote, life_time, GetSharedPtrAs<pvd::PushProvider>());
 
 		PushProvider::OnChannelCreated(remote->GetNativeHandle(), stream);
