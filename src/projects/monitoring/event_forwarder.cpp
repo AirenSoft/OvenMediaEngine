@@ -3,9 +3,8 @@
 #include "monitoring_private.h"
 
 #include <base/ovlibrary/path_manager.h>
+#include <base/ovlibrary/file.h>
 #include <modules/http/client/http_client.h>
-#include <filesystem>
-
 
 namespace mon
 {
@@ -171,52 +170,67 @@ namespace mon
 		std::time_t next_file_time = 0;
 		ov::String next_file_path;
 
-		for(const auto& entry : std::filesystem::directory_iterator(_log_dir_path.CStr()))
+		auto [result, file_list] = ov::File::GetFileList(_log_dir_path.CStr());
+
+		if(result == false)
 		{
-			if(entry.is_regular_file())
+			return {false, 0, ""};
+		}
+
+		for(const auto& entry : file_list)
+		{
+			struct stat stat_buf;
+			if(stat(entry.CStr(), &stat_buf) == -1)
 			{
-				ov::String entry_file_path = entry.path().c_str();
-				auto entry_file_path_items = entry_file_path.Split("/");
-				auto entry_file_name = entry_file_path_items.back();
+				continue;
+			}
 
-				// events.log.yyyymmdd
-				auto file_name_items = entry_file_name.Split(".");
-				if(file_name_items.size() != 3)
+			if(S_ISDIR(stat_buf.st_mode))
+			{
+				continue;
+			}
+
+			ov::String entry_file_path = entry.CStr();
+			auto entry_file_path_items = entry_file_path.Split("/");
+			auto entry_file_name = entry_file_path_items.back();
+
+			// events.log.yyyymmdd
+			auto file_name_items = entry_file_name.Split(".");
+			if(file_name_items.size() != 3)
+			{
+				continue;
+			}
+
+			if(file_name_items[0] != "events" || file_name_items[1] != "log")
+			{
+				continue;
+			}
+
+			// yyyymmdd
+			auto date = file_name_items[2];
+			if(date.GetLength() != 8)
+			{
+				continue;
+			}
+
+			auto year = ov::Converter::ToUInt32(date.Left(4).CStr());
+			auto mon = ov::Converter::ToUInt32(date.Substring(4, 2).CStr());
+			auto day = ov::Converter::ToUInt32(date.Right(2).CStr());
+			
+			std::time_t entry_time = ov::Converter::ToTime(year, mon, day, 0, 0, false);
+
+			// Find the oldest among files newer than prev_file_time
+			if(entry_time > prev_file_time)
+			{
+				if(next_file_time == 0)
 				{
-					continue;
+					next_file_time = entry_time;
+					next_file_path = entry_file_path;
 				}
-
-				if(file_name_items[0] != "events" || file_name_items[1] != "log")
+				else if(entry_time < next_file_time)
 				{
-					continue;
-				}
-
-				// yyyymmdd
-				auto date = file_name_items[2];
-				if(date.GetLength() != 8)
-				{
-					continue;
-				}
-
-				auto year = ov::Converter::ToUInt32(date.Left(4).CStr());
-				auto mon = ov::Converter::ToUInt32(date.Substring(4, 2).CStr());
-				auto day = ov::Converter::ToUInt32(date.Right(2).CStr());
-				
-				std::time_t entry_time = ov::Converter::ToTime(year, mon, day, 0, 0, false);
-
-				// Find the oldest among files newer than prev_file_time
-				if(entry_time > prev_file_time)
-				{
-					if(next_file_time == 0)
-					{
-						next_file_time = entry_time;
-						next_file_path = entry_file_path;
-					}
-					else if(entry_time < next_file_time)
-					{
-						next_file_time = entry_time;
-						next_file_path = entry_file_path;
-					}
+					next_file_time = entry_time;
+					next_file_path = entry_file_path;
 				}
 			}
 		}
