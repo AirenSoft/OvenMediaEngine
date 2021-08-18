@@ -195,7 +195,7 @@ namespace pvd
 			return;
 		}
 
-		auto stream = MpegTsStream::Create(StreamSourceType::Srt, channel_id, vhost_app_name, stream_name, remote, life_time, GetSharedPtrAs<pvd::PushProvider>());
+		auto stream = MpegTsStream::Create(StreamSourceType::Srt, channel_id, vhost_app_name, stream_name, remote, *remote->GetRemoteAddress(), life_time, GetSharedPtrAs<pvd::PushProvider>());
 
 		PushProvider::OnChannelCreated(remote->GetNativeHandle(), stream);
 	}

@@ -292,8 +292,18 @@ namespace pvd
 	}
 
 	// This function is not called by PhysicalPort when the protocol is udp (MPEGTS/UDP)
-	// It will be called by OnDataReceived when first packet is arrived from client
 	void MpegTsProvider::OnConnected(const std::shared_ptr<ov::Socket> &remote)
+	{
+		if(remote->GetRemoteAddress() == nullptr)
+		{
+			logte("A client connecting via MPEG-TS/TCP must have the remote address information");
+			return;
+		}
+
+		OnConnected(remote, *remote->GetRemoteAddress());
+	}
+
+	bool MpegTsProvider::OnConnected(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &remote_address)
 	{
 		auto local_port = remote->GetLocalAddress()->Port();
 		auto channel_id = remote->GetNativeHandle();
@@ -301,10 +311,10 @@ namespace pvd
 		auto stream_port_item = GetStreamPortItem(local_port);
 		if (stream_port_item == nullptr || stream_port_item->IsAttached() == false)
 		{
-			return;
+			return false;
 		}
 
-		auto stream = MpegTsStream::Create(StreamSourceType::Mpegts, channel_id, stream_port_item->GetVhostAppName(), stream_port_item->GetOutputStreamName(), remote, 0, GetSharedPtrAs<pvd::PushProvider>());
+		auto stream = MpegTsStream::Create(StreamSourceType::Mpegts, channel_id, stream_port_item->GetVhostAppName(), stream_port_item->GetOutputStreamName(), remote, remote_address, 0, GetSharedPtrAs<pvd::PushProvider>());
 		if (PushProvider::OnChannelCreated(remote->GetNativeHandle(), stream) == true)
 		{
 			logti("A MPEG-TS client has connected");  // %s", remote->ToString().CStr());
@@ -313,6 +323,8 @@ namespace pvd
 			// Because the stream is over UDP
 			SetChannelTimeout(stream, 3);
 		}
+
+		return true;
 	}
 
 	void MpegTsProvider::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
@@ -329,9 +341,13 @@ namespace pvd
 			return;
 		}
 
+		// UDP
 		if (stream_port_item->IsClientConnected() == false)
 		{
-			OnConnected(remote);
+			if(OnConnected(remote, address) == false)
+			{
+				return;
+			}
 		}
 
 		PushProvider::OnDataReceived(channel_id, data);
