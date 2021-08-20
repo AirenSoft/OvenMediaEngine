@@ -375,7 +375,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		{
 			// Choice smaller value
 			auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + admission_webhooks->GetLifetime();
-			if(stream_expired_msec_from_webhooks < session_life_time)
+			if(session_life_time == 0 || stream_expired_msec_from_webhooks < session_life_time)
 			{
 				session_life_time = stream_expired_msec_from_webhooks;
 			}
