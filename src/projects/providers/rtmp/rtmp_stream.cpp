@@ -345,7 +345,7 @@ namespace pvd
 			{
 				// Choice smaller value
 				auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + _admission_webhooks->GetLifetime();
-				if(stream_expired_msec_from_webhooks < _stream_expired_msec)
+				if(_stream_expired_msec == 0 || stream_expired_msec_from_webhooks < _stream_expired_msec)
 				{
 					_stream_expired_msec = stream_expired_msec_from_webhooks;
 				}
