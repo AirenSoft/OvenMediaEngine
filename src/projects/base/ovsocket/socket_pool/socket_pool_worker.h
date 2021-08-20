@@ -129,7 +129,7 @@ namespace ov
 		// Occasionally, events on sockets need to be dispatched, even without events from epolls.
 		// The queue used in this case
 		std::mutex _sockets_to_dispatch_mutex;
-		std::deque<std::shared_ptr<Socket>> _sockets_to_dispatch;
+		std::unordered_map<std::shared_ptr<Socket>, std::shared_ptr<Socket>> _sockets_to_dispatch;
 
 		// Related to epoll
 		socket_t _epoll = InvalidSocket;
