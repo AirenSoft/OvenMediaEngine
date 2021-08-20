@@ -440,15 +440,17 @@ namespace ov
 			if (_sockets_to_dispatch.empty() == false)
 			{
 				// Move _extra_epoll_events to events to avoid blocking
-				std::deque<std::shared_ptr<Socket>> socket_list;
+				std::unordered_map<std::shared_ptr<Socket>, std::shared_ptr<Socket>> socket_list;
 
 				{
 					std::lock_guard lock_guard(_sockets_to_dispatch_mutex);
 					std::swap(socket_list, _sockets_to_dispatch);
 				}
 
-				for (auto &socket : socket_list)
+				for (auto socket_item : socket_list)
 				{
+					auto socket = socket_item.second;
+
 					switch (socket->DispatchEvents())
 					{
 						case Socket::DispatchResult::Dispatched:
@@ -703,7 +705,7 @@ namespace ov
 	{
 		std::lock_guard lock_guard(_sockets_to_dispatch_mutex);
 
-		_sockets_to_dispatch.push_back(socket);
+		_sockets_to_dispatch[socket] = socket;
 	}
 
 	void SocketPoolWorker::EnqueueToCheckConnectionTimeOut(const std::shared_ptr<Socket> &socket, int timeout_msec)
