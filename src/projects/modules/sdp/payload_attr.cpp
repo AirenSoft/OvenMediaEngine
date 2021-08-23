@@ -188,8 +188,8 @@ void PayloadAttr::SetFmtp(const ov::String &fmtp)
 				logd("SDP", "fmtp parsing error : %s", fmtp.CStr());
 			}
 
-			auto key = key_value[0];
-			auto value = key_value[1];
+			auto key = key_value[0].Trim();
+			auto value = key_value[1].Trim();
 
 			if(key.UpperCaseString() == "SIZELENGTH")
 			{
