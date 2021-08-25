@@ -221,7 +221,7 @@ int AmfUtil::EncodeString(void *data, char *string)
     // 데이터 기록
     int length = strlen(string);
     pt_out += WriteInt16(pt_out, static_cast<uint16_t>(length));
-    strncpy((char *) pt_out, string, length);
+    memcpy(pt_out, string, length);
 
     return (1 + 2 + length);
 }

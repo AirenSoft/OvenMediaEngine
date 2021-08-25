@@ -130,8 +130,8 @@ std::shared_ptr<ov::Data> RtpDepacketizerMpeg4GenericAudio::Convert(const std::s
 		// Indicates the size in octets
 		uint16_t au_size = parser.ReadBits<uint16_t>(_size_length);
 		header_section_offset += _size_length;
-		uint8_t au_index = 0;
-		uint8_t au_index_delta = 0;
+		[[maybe_unused]] uint8_t au_index = 0;
+		[[maybe_unused]] uint8_t au_index_delta = 0;
 		
 		// First header
 		if(au_number == 0)
