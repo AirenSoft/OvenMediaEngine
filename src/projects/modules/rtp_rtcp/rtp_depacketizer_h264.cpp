@@ -142,7 +142,7 @@ std::shared_ptr<ov::Data> RtpDepacketizerH264::ParseStapAAndConvertToAnnexB(cons
 		// Append NALU
 		bitstream->Append(&payload_buffer[offset], nalu_size);
 
-		uint8_t nal_type = payload_buffer[offset] & NAL_TYPE_MASK;
+		[[maybe_unused]] uint8_t nal_type = payload_buffer[offset] & NAL_TYPE_MASK;
 
 		logd("DEBUG", "STAP-A Nal Type : %d", nal_type);
 
@@ -160,7 +160,7 @@ std::shared_ptr<ov::Data> RtpDepacketizerH264::ConvertSingleNaluToAnnexB(const s
 	bitstream->Append(start_prefix, ANNEXB_START_PREFIX_LENGTH);
 	bitstream->Append(payload);
 
-	uint8_t nal_type = payload->GetDataAs<uint8_t>()[0] & NAL_TYPE_MASK;
+	[[maybe_unused]] uint8_t nal_type = payload->GetDataAs<uint8_t>()[0] & NAL_TYPE_MASK;
 	logd("DEBUG", "Single Nal Type : %d", nal_type);
 
 	return bitstream;
