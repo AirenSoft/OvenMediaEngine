@@ -1711,6 +1711,8 @@ namespace ov
 	{
 		CHECK_STATE(>= SocketState::Closed, false);
 
+		logad("Closing %s...", GetRemoteAddress() != nullptr?GetRemoteAddress()->ToString().CStr():GetStreamId().CStr());
+
 		if (GetState() == SocketState::Closed)
 		{
 			// Suppress error message
@@ -1763,6 +1765,8 @@ namespace ov
 				{
 					logad("Enqueuing close command");
 					_has_close_command = true;
+
+					_dispatch_queue.clear();
 
 					if ((GetState() != SocketState::Disconnected) && (GetState() != SocketState::Error))
 					{
