@@ -50,6 +50,10 @@ bool SrtpAdapter::SetKey(srtp_ssrc_type_t type, uint64_t crypto_suite, std::shar
 			srtp_crypto_policy_set_aes_cm_128_hmac_sha1_32(&policy.rtp);
 			srtp_crypto_policy_set_aes_cm_128_hmac_sha1_32(&policy.rtcp);
 			break;
+		case SRTP_AEAD_AES_128_GCM:
+			srtp_crypto_policy_set_aes_gcm_128_16_auth(&policy.rtp);
+			srtp_crypto_policy_set_aes_gcm_128_16_auth(&policy.rtcp);
+			break;
 		default:
 			logte("Failed to create srtp adapter. Unsupported crypto suite %d", crypto_suite);
 			return false;

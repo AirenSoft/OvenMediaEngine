@@ -59,7 +59,7 @@ bool DtlsTransport::StartDTLS()
 				tls->SetVerify(SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT);
 
 				// SSL_CTX_set_tlsext_use_srtp() returns 1 on error, 0 on success
-				if(SSL_CTX_set_tlsext_use_srtp(context, "SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32"))
+				if(SSL_CTX_set_tlsext_use_srtp(context, "SRTP_AEAD_AES_128_GCM:SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32"))
 				{
 					logte("SSL_CTX_set_tlsext_use_srtp failed");
 					return false;
