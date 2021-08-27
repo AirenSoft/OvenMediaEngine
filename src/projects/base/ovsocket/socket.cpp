@@ -1766,8 +1766,6 @@ namespace ov
 					logad("Enqueuing close command");
 					_has_close_command = true;
 
-					_dispatch_queue.clear();
-
 					if ((GetState() != SocketState::Disconnected) && (GetState() != SocketState::Error))
 					{
 						_dispatch_queue.emplace_back(DispatchCommand::Type::HalfClose);
