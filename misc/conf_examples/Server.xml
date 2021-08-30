@@ -27,27 +27,35 @@
 		-->
 
 		<Providers>
+			<!-- Pull providers -->
+			<RTSPC>
+				<WorkerCount>1</WorkerCount>
+			</RTSPC>
+			<OVT>
+				<WorkerCount>1</WorkerCount>
+			</OVT>
+			<!-- Push providers -->
 			<RTMP>
 				<Port>1935</Port>
-				<!-- <WorkerCount>1</WorkerCount> -->
+				<WorkerCount>1</WorkerCount>
 			</RTMP>
 			<SRT>
 				<Port>9999</Port>
-				<!-- <WorkerCount>1</WorkerCount> -->
+				<WorkerCount>1</WorkerCount>
 			</SRT>
 			<MPEGTS>
 				<!--
-					Listen on port 4000~4005
+					Listen on port 4000~4005 (<Port>4000-4004,4005/udp</Port>)
 					This is just a demonstration to show that you can configure the port in several ways
 				-->
-				<Port>4000-4004,4005/udp</Port>
+				<Port>4000/udp</Port>
 			</MPEGTS>
 			<WebRTC>
 				<Signalling>
 					<Port>3333</Port>
 					<!-- If you want to use TLS, specify the TLS port -->
 					<!-- <TLSPort>3334</TLSPort> -->
-					<!-- <WorkerCount>4</WorkerCount> -->
+					<WorkerCount>1</WorkerCount>
 				</Signalling>
 
 				<IceCandidates>
@@ -57,13 +65,8 @@
 						For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/v/0.11.1/streaming/webrtc-publishing#webrtc-over-tcp
 					-->
 					<TcpRelay>*:3478</TcpRelay>
-					<IceCandidate>*:10000-10005/udp</IceCandidate>
-
-					<!--
-						Sets the number of worker threads to use in TcpRelay
-						
-						<TcpRelayWorkerCount>4</TcpRelayWorkerCount>
-					-->
+					<IceCandidate>*:10000/udp</IceCandidate>
+					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
 				</IceCandidates>
 			</WebRTC>
 		</Providers>
@@ -71,26 +74,26 @@
 		<Publishers>
 			<OVT>
 				<Port>9000</Port>
-				<!-- <WorkerCount>1</WorkerCount> -->
+				<WorkerCount>1</WorkerCount>
 			</OVT>
 			<HLS>
 				<Port>80</Port>
 				<!-- If you want to use TLS, specify the TLS port -->
 				<!-- <TLSPort>443</TLSPort> -->
-				<!-- <WorkerCount>4</WorkerCount> -->
+				<WorkerCount>1</WorkerCount>
 			</HLS>
 			<DASH>
 				<Port>80</Port>
 				<!-- If you want to use TLS, specify the TLS port -->
 				<!-- <TLSPort>443</TLSPort> -->
-				<!-- <WorkerCount>4</WorkerCount> -->
+				<WorkerCount>1</WorkerCount>
 			</DASH>
 			<WebRTC>
 				<Signalling>
 					<Port>3333</Port>
 					<!-- If you want to use TLS, specify the TLS port -->
 					<!-- <TLSPort>3334</TLSPort> -->
-					<!-- <WorkerCount>4</WorkerCount> -->
+					<WorkerCount>1</WorkerCount>
 				</Signalling>
 
 				<IceCandidates>
@@ -100,13 +103,8 @@
 						For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/v/0.11.1/streaming/webrtc-publishing#webrtc-over-tcp
 					-->
 					<TcpRelay>*:3478</TcpRelay>
-					<IceCandidate>*:10000-10005/udp</IceCandidate>
-
-					<!--
-						Sets the number of worker threads to use in TcpRelay
-						
-						<TcpRelayWorkerCount>4</TcpRelayWorkerCount>
-					-->
+					<IceCandidate>*:10000/udp</IceCandidate>
+					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
 				</IceCandidates>
 			</WebRTC>
 		</Publishers>
@@ -273,14 +271,18 @@
 								<!--
 									Set the stream name of the client connected to the port to "stream_${Port}"
 									For example, if a client connets to port 4000, OME creates a "stream_4000" stream
+									<Stream>
+										<Name>stream_${Port}</Name>
+										<Port>4000,4001-4004</Port>
+									</Stream>
+									<Stream>
+										<Name>stream_4005</Name>
+										<Port>4005</Port>
+									</Stream>
 								-->
 								<Stream>
 									<Name>stream_${Port}</Name>
-									<Port>4000,4001-4004</Port>
-								</Stream>
-								<Stream>
-									<Name>stream_4005</Name>
-									<Port>4005</Port>
+									<Port>4000</Port>
 								</Stream>
 							</StreamMap>
 						</MPEGTS>
@@ -290,12 +292,13 @@
 						</WebRTC>
 					</Providers>
 					<Publishers>
-						<SessionLoadBalancingThreadCount>8</SessionLoadBalancingThreadCount>
+						<StreamLoadBalancingThreadCount>1</StreamLoadBalancingThreadCount>
+						<SessionLoadBalancingThreadCount>1</SessionLoadBalancingThreadCount>
 						<OVT />
 						<WebRTC>
 							<Timeout>30000</Timeout>
-							<Rtx>true</Rtx>
-							<Ulpfec>true</Ulpfec>
+							<Rtx>false</Rtx>
+							<Ulpfec>false</Ulpfec>
 						</WebRTC>
 						<HLS>
 							<SegmentDuration>5</SegmentDuration>

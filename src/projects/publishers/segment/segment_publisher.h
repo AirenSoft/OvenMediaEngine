@@ -14,7 +14,7 @@
 #include <config/config.h>
 #include <publishers/segment/segment_stream/segment_stream_server.h>
 
-#define DEFAULT_SEGMENT_WORKER_THREAD_COUNT 4
+#define DEFAULT_SEGMENT_WORKER_THREAD_COUNT 1
 
 // It is used to determine if the token has expired but is an authorized session.
 class PlaylistRequestInfo
@@ -203,9 +203,12 @@ public:
 			return nullptr;
 		}
 
-		if (instance->StartSessionTableManager() == false)
+		if(instance->IsModuleAvailable())
 		{
-			return nullptr;
+			if (instance->StartSessionTableManager() == false)
+			{
+				return nullptr;
+			}
 		}
 
 		return publisher;

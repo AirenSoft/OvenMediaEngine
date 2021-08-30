@@ -14,7 +14,7 @@
 #include "physical_port_observer.h"
 
 #define PHYSICAL_PORT_USE_DEFAULT_COUNT -1
-#define PHYSICAL_PORT_DEFAULT_WORKER_COUNT 2
+#define PHYSICAL_PORT_DEFAULT_WORKER_COUNT 1
 
 class PhysicalPortManager : public ov::Singleton<PhysicalPortManager>
 {

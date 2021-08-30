@@ -52,16 +52,13 @@ namespace pvd
 		    return "RTSPCProvider";
 	    }
 
-		std::shared_ptr<ov::SocketPool> GetSignallingSocketPool()
-		{
-			return _signalling_socket_pool;
-		}
-
+		std::shared_ptr<ov::SocketPool> GetSignallingSocketPool();
 	protected:
 		std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &app_info) override;
 		bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
 
-		std::shared_ptr<ov::SocketPool> _signalling_socket_pool;
+		std::shared_ptr<ov::SocketPool> _signalling_socket_pool = nullptr;
+		int _worker_count = 1;
 		// Now, rtspc supports only interleaved channel (tcp based)
 		std::shared_ptr<ov::SocketPool> _data_socket_pool;
 	};

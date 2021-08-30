@@ -26,32 +26,39 @@
 		</Managers>
 		-->
 		<Providers>
-			<!-- Currently, OME doesn't support using the specified port for OVT Provider -->
+			<!-- Pull providers -->
+			<RTSPC>
+				<WorkerCount>1</WorkerCount>
+			</RTSPC>
 			<OVT>
-				<Port>9001</Port>
+				<WorkerCount>1</WorkerCount>
 			</OVT>
 		</Providers>
 
 		<Publishers>
 			<HLS>
 				<Port>${env:OME_HLS_STREAM_PORT:8090}</Port>
+				<WorkerCount>1</WorkerCount>
 				<!-- If you want to use TLS, specify the TLS port -->
 				<!-- <TLSPort>8443</TLSPort> -->
 			</HLS>
 			<DASH>
 				<Port>${env:OME_DASH_STREAM_PORT:8090}</Port>
+				<WorkerCount>1</WorkerCount>
 				<!-- If you want to use TLS, specify the TLS port -->
 				<!-- <TLSPort>8443</TLSPort> -->
 			</DASH>
 			<WebRTC>
 				<Signalling>
 					<Port>${env:OME_SIGNALLING_PORT:3334}</Port>
+					<WorkerCount>1</WorkerCount>
 					<!-- If you want to use TLS, specify the TLS port -->
 					<!-- <TLSPort>5556</TLSPort> -->
 				</Signalling>
 				<IceCandidates>
 					<TcpRelay>${env:OME_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
-					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10000-10005/udp}</IceCandidate>
+					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
+					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10000/udp}</IceCandidate>
 				</IceCandidates>
 			</WebRTC>
 		</Publishers>

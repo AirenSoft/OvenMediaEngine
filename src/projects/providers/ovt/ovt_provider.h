@@ -51,15 +51,13 @@ namespace pvd
 			return "OVTProvider";
 		}
 
-		std::shared_ptr<ov::SocketPool> GetClientSocketPool()
-		{
-			return _client_socket_pool;
-		}
+		std::shared_ptr<ov::SocketPool> GetClientSocketPool();
 
 	protected:
 		std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &app_info) override;
 		bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
 
-		std::shared_ptr<ov::SocketPool> _client_socket_pool;
+		std::shared_ptr<ov::SocketPool> _client_socket_pool = nullptr;
+		int _worker_count = 1;
 	};
 }  // namespace pvd

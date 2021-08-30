@@ -32,12 +32,8 @@ namespace pvd
 		auto &ovt_provider_config = server_config.GetBind().GetProviders().GetOvt();
 
 		bool is_parsed;
-		auto worker_count = ovt_provider_config.GetWorkerCount(&is_parsed);
-		worker_count = is_parsed ? worker_count : PHYSICAL_PORT_DEFAULT_WORKER_COUNT;
-
-		_client_socket_pool = ov::SocketPool::Create("OvtProvider", ov::SocketType::Tcp);
-
-		_client_socket_pool->Initialize(worker_count);
+		_worker_count = ovt_provider_config.GetWorkerCount(&is_parsed);
+		_worker_count = is_parsed ? _worker_count : PHYSICAL_PORT_DEFAULT_WORKER_COUNT;
 	}
 
 	OvtProvider::~OvtProvider()
@@ -51,6 +47,18 @@ namespace pvd
 
 		logtd("Terminated OvtProvider modules.");
 	}
+
+	std::shared_ptr<ov::SocketPool> OvtProvider::GetClientSocketPool()
+	{
+		if(_client_socket_pool == nullptr)
+		{
+			_client_socket_pool = ov::SocketPool::Create("OvtProvider", ov::SocketType::Tcp);
+			_client_socket_pool->Initialize(_worker_count);
+		}
+
+		return _client_socket_pool;
+	}
+
 
 	std::shared_ptr<pvd::Application> OvtProvider::OnCreateProviderApplication(const info::Application &app_info)
 	{

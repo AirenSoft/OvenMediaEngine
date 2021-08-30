@@ -58,6 +58,9 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 		logte("Could not allocate variables for filter graph: %p, %p, %p", _filter_graph, _inputs, _outputs);
 		return false;
 	}
+	
+	// Limit the number of filter threads to 1. I think 1 thread is usually enough for audio filtering processing.
+	_filter_graph->nb_threads = 1;
 
 	AVRational input_timebase = TimebaseToAVRational(input_context->GetTimeBase());
 	AVRational output_timebase = TimebaseToAVRational(output_context->GetTimeBase());
@@ -162,7 +165,7 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 		_kill_flag = false;
 
 		_thread_work = std::thread(&MediaFilterResampler::ThreadFilter, this);
-		pthread_setname_np(_thread_work.native_handle(), "Filter");
+		pthread_setname_np(_thread_work.native_handle(), "Resampler");
 	}
 	catch (const std::system_error &e)
 	{
