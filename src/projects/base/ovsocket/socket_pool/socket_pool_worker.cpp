@@ -234,6 +234,11 @@ namespace ov
 
 	void SocketPoolWorker::CallbackTimedOutConnections()
 	{
+		if(_connection_timed_out_queue.size() <= 0)
+		{
+			return;
+		}
+		
 		_connection_timed_out_queue_mutex.lock();
 		auto timed_out_queue = std::move(_connection_timed_out_queue);
 		_connection_timed_out_queue_mutex.unlock();
@@ -257,7 +262,7 @@ namespace ov
 
 		while (_stop_epoll_thread == false)
 		{
-			int count = EpollWait(100);
+			int count = EpollWait(3000);
 
 			if (count < 0)
 			{

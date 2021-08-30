@@ -71,8 +71,8 @@ namespace cfg
 						Register<Optional>({"Thumbnail", "thumbnail"}, &_thumbnail_publisher);
 					}
 
-					int _stream_load_balancing_thread_count = 2;
-					int _session_load_balancing_thread_count = 8;
+					int _stream_load_balancing_thread_count = 1;
+					int _session_load_balancing_thread_count = 2;
 
 					// RtmpPublisher _rtmp_publisher;
 					RtmpPushPublisher _rtmppush_publisher;

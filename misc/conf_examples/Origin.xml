@@ -26,28 +26,40 @@
 		</Managers>
 		-->
 		<Providers>
+			<!-- Pull providers -->
+			<RTSPC>
+				<WorkerCount>1</WorkerCount>
+			</RTSPC>
+			<OVT>
+				<WorkerCount>1</WorkerCount>
+			</OVT>
+			<!-- Push providers -->
 			<RTMP>
 				<Port>${env:OME_RTMP_PROV_PORT:1935}</Port>
+				<WorkerCount>1</WorkerCount>
 			</RTMP>
 			<SRT>
 				<Port>${env:OME_SRT_PROV_PORT:9999}</Port>
+				<WorkerCount>1</WorkerCount>
 			</SRT>
 			<MPEGTS>
 				<!--
 					Listen on port 4000-4005
 					This is just a demonstration to show that you can configure the port in several ways
 				-->
-				<Port>${env:OME_MPEGTS_PROV_PORT:4000-4003,4004,4005/udp}</Port>
+				<Port>${env:OME_MPEGTS_PROV_PORT:4000/udp}</Port>
 			</MPEGTS>
 			<WebRTC>
 				<Signalling>
 					<Port>${env:OME_SIGNALLING_PORT:3333}</Port>
+					<WorkerCount>1</WorkerCount>
 					<!-- If you want to use TLS, specify the TLS port -->
 					<!-- <TLSPort>3334</TLSPort> -->
 				</Signalling>
 				<IceCandidates>
 					<TcpRelay>${env:OME_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
-					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006-10010/udp}</IceCandidate>
+					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
+					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006/udp}</IceCandidate>
 				</IceCandidates>
 			</WebRTC>
 		</Providers>
@@ -56,26 +68,31 @@
 			<!-- The OVT is protocol for ORIGIN-EDGE -->
 			<OVT>
 				<Port>${env:OME_ORIGIN_PORT:9000}</Port>
+				<WorkerCount>1</WorkerCount>
 			</OVT>
 			<HLS>
 				<Port>${env:OME_HLS_STREAM_PORT:8080}</Port>
+				<WorkerCount>1</WorkerCount>
 				<!-- If you want to use TLS, specify the TLS port -->
 				<!-- <TLSPort>443</TLSPort> -->
 			</HLS>
 			<DASH>
 				<Port>${env:OME_DASH_STREAM_PORT:8080}</Port>
+				<WorkerCount>1</WorkerCount>
 				<!-- If you want to use TLS, specify the TLS port -->
 				<!-- <TLSPort>443</TLSPort> -->
 			</DASH>
 			<WebRTC>
 				<Signalling>
 					<Port>${env:OME_SIGNALLING_PORT:3333}</Port>
+					<WorkerCount>1</WorkerCount>
 					<!-- If you want to use TLS, specify the TLS port -->
 					<!-- <TLSPort>3334</TLSPort> -->
 				</Signalling>
 				<IceCandidates>
 					<TcpRelay>${env:OME_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
-					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006-10010/udp}</IceCandidate>
+					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
+					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006/udp}</IceCandidate>
 				</IceCandidates>
 			</WebRTC>
 		</Publishers>
@@ -162,23 +179,30 @@
 								<!--
 									Set the stream name of the client connected to the port to "stream_${Port}"
 									For example, if a client connets to port 4000, OME creates a "stream_4000" stream
+									<Stream>
+										<Name>stream_${Port}</Name>
+										<Port>4000,4001-4004</Port>
+									</Stream>
+									<Stream>
+										<Name>stream_4005</Name>
+										<Port>4005</Port>
+									</Stream>
 								-->
 								<Stream>
 									<Name>stream_${Port}</Name>
-									<Port>4000,4001-4004</Port>
-								</Stream>
-								<Stream>
-									<Name>stream_4005</Name>
-									<Port>4005</Port>
+									<Port>4000</Port>
 								</Stream>
 							</StreamMap>
 						</MPEGTS>
 					</Providers>
 					<Publishers>
-						<SessionLoadBalancingThreadCount>8</SessionLoadBalancingThreadCount>
+						<StreamLoadBalancingThreadCount>1</StreamLoadBalancingThreadCount>
+						<SessionLoadBalancingThreadCount>1</SessionLoadBalancingThreadCount>
 						<OVT />
 						<WebRTC>
 							<Timeout>30000</Timeout>
+							<Rtx>false</Rtx>
+							<Ulpfec>false</Ulpfec>
 						</WebRTC>
 						<HLS>
 							<SegmentDuration>5</SegmentDuration>

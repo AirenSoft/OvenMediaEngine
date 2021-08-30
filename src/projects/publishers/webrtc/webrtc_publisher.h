@@ -89,6 +89,6 @@ private:
 	std::shared_ptr<RtcSignallingServer> _signalling_server;
 	ov::MessageThread<std::shared_ptr<ov::CommonMessage>>	_message_thread;
 
-	// for special purpose log
-	ov::DelayQueue _timer;
+	// for special purpose log - Deprecated
+	// ov::DelayQueue _timer;
 };

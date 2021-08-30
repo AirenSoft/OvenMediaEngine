@@ -30,11 +30,8 @@ namespace pvd
 		auto &rtspc_provider_config = server_config.GetBind().GetProviders().GetRtspc();
 
 		bool is_parsed;
-		auto worker_count = rtspc_provider_config.GetWorkerCount(&is_parsed);
-		worker_count = is_parsed ? worker_count : PHYSICAL_PORT_DEFAULT_WORKER_COUNT;
-
-		_signalling_socket_pool = ov::SocketPool::Create("RtspcProvider", ov::SocketType::Tcp);
-		_signalling_socket_pool->Initialize(worker_count);
+		auto _worker_count = rtspc_provider_config.GetWorkerCount(&is_parsed);
+		_worker_count = is_parsed ? _worker_count : PHYSICAL_PORT_DEFAULT_WORKER_COUNT;
 	}
 
 	RtspcProvider::~RtspcProvider()
@@ -47,6 +44,17 @@ namespace pvd
 		}
 
 		logtd("Terminated Rtspc Provider modules.");
+	}
+
+	std::shared_ptr<ov::SocketPool> RtspcProvider::GetSignallingSocketPool()
+	{
+		if(_signalling_socket_pool == nullptr)
+		{
+			_signalling_socket_pool = ov::SocketPool::Create("RtspcProvider", ov::SocketType::Tcp);
+			_signalling_socket_pool->Initialize(_worker_count);
+		}
+
+		return _signalling_socket_pool;
 	}
 
 	std::shared_ptr<pvd::Application> RtspcProvider::OnCreateProviderApplication(const info::Application &app_info)
