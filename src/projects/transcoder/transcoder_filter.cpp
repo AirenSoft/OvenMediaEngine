@@ -100,8 +100,9 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 	if (_input_media_track->GetMediaType() == MediaType::Video)
 	{
 		// logtd("in : %dx%d -> out : %dx%d", buffer->GetWidth(), buffer->GetHeight(), _input_context->GetVideoWidth(), _input_context->GetVideoHeight());
-		if (buffer->GetWidth() != _input_context->GetVideoWidth() || buffer->GetHeight() != _input_context->GetVideoHeight())
+		if (buffer->GetWidth() != (int32_t)_input_context->GetVideoWidth() || buffer->GetHeight() != (int32_t)_input_context->GetVideoHeight())
 		{
+
 			_input_media_track->SetWidth(buffer->GetWidth());
 			_input_media_track->SetHeight(buffer->GetHeight());
 			_input_context->SetVideoWidth(buffer->GetWidth());
