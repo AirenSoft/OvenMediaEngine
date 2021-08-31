@@ -25,13 +25,13 @@ ENV     OME_VERSION=master \
         PCRE2_VERSION=10.35 
 
 ## Install build utils
-RUN     apt-get -y install build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev apt-utils
+RUN     apt-get update && apt-get -y install build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev apt-utils
 
 ##################################################################################################################################
 ## Install Nvidia GPU(NVENC, NVDEC) build envrionment
 
 RUN  \
-        apt-get install -y --no-install-recommends \
+        apt-get update && apt-get install -y --no-install-recommends \
         gnupg2 curl ca-certificates && \
         curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub | apt-key add - && \
         echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
