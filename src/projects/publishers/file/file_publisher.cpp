@@ -67,7 +67,7 @@ void FilePublisher::WorkerThread()
 			SessionController();
 		}
 
-		usleep(100000);
+		usleep(100 * 1000);
 	}
 }
 
@@ -353,6 +353,27 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStop(const info::VHostAppName &v
 
 	userdata->SetEnable(false);
 	userdata->SetRemove(true);
+
+	// Copy current recording information to the requested parameters.
+	// 
+	record->SetState(info::Record::RecordState::Stopping);	
+	record->SetMetadata(userdata->GetMetadata());
+	record->SetStream(userdata->GetStream());
+	record->SetSessionId(userdata->GetSessionId());
+	record->SetInterval(userdata->GetInterval());
+	record->SetSchedule(userdata->GetSchedule());
+	record->SetSegmentationRule(userdata->GetSegmentationRule());
+	record->SetFilePath(userdata->GetFilePath());
+	record->SetInfoPath(userdata->GetInfoPath());
+	record->SetTmpPath(userdata->GetTmpPath());
+	record->SetRecordBytes(userdata->GetRecordBytes());
+	record->SetRecordTotalBytes(userdata->GetRecordTotalBytes());
+	record->SetRecordTime(userdata->GetRecordTime());
+	record->SetRecordTotalTime(userdata->GetRecordTotalTime());	
+	record->SetSqeuence(userdata->GetSequence());	
+	record->SetCreatedTime(userdata->GetCreatedTime());	
+	record->SetRecordStartTime(userdata->GetRecordStartTime());	
+	record->SetRecordStopTime(userdata->GetRecordStopTime());	
 
 	return ov::Error::CreateError(FilePublisherStatusCode::Success, "Success");
 }

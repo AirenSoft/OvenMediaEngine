@@ -23,19 +23,23 @@ namespace api
 		{
 			RegisterGet(R"()", &AppActionsController::OnGetDummyAction);
 
+			//----------------------------------------
 			// Record related actions
-			// @GET action will be deprecated
-			RegisterGet(R"((records))", &AppActionsController::OnGetRecords);
+			//----------------------------------------
 			RegisterPost(R"((records))", &AppActionsController::OnPostRecords);
 			RegisterPost(R"((startRecord))", &AppActionsController::OnPostStartRecord);
 			RegisterPost(R"((stopRecord))", &AppActionsController::OnPostStopRecord);
-
-			// Push related actions
 			// @GET action will be deprecated
-			RegisterGet(R"((pushes))", &AppActionsController::OnGetPushes);
+			RegisterGet(R"((records))", &AppActionsController::OnGetRecords);
+
+			//----------------------------------------
+			// Push related actions
+			//----------------------------------------
 			RegisterPost(R"((pushes))", &AppActionsController::OnPostPushes);
 			RegisterPost(R"((startPush))", &AppActionsController::OnPostStartPush);
 			RegisterPost(R"((stopPush))", &AppActionsController::OnPostStopPush);
+			// @GET action will be deprecated
+			RegisterGet(R"((pushes))", &AppActionsController::OnGetPushes);
 		};
 
 		ApiResponse AppActionsController::OnGetRecords(const std::shared_ptr<http::svr::HttpConnection> &client,
@@ -47,7 +51,8 @@ namespace api
 			return OnPostRecords(client, empty_body, vhost, app);
 		}
 
-		ApiResponse AppActionsController::OnPostRecords(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostRecords(const std::shared_ptr<http::svr::HttpConnection> &client,
+														const Json::Value &request_body,
 														const std::shared_ptr<mon::HostMetrics> &vhost,
 														const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -56,8 +61,10 @@ namespace api
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
-				return http::HttpError::CreateError(http::StatusCode::NotFound, "Could not find publisher: [%s/%s]",
-											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+				return http::HttpError::CreateError(http::StatusCode::NotFound,
+													"Could not find publisher: [%s/%s]",
+													vhost->GetName().CStr(),
+													app->GetName().GetAppName().CStr());
 			}
 
 			std::vector<std::shared_ptr<info::Record>> records;
@@ -65,7 +72,8 @@ namespace api
 			auto error = publisher->GetRecords(app->GetName(), records);
 			if (error->GetCode() != FilePublisher::FilePublisherStatusCode::Success || records.size() == 0)
 			{
-				return http::HttpError::CreateError(http::StatusCode::NotFound, "There is no record information");
+				return http::HttpError::CreateError(http::StatusCode::NotFound,
+													"There is no record information");
 			}
 
 			for (auto &item : records)
@@ -76,7 +84,8 @@ namespace api
 			return {http::StatusCode::OK, std::move(response)};
 		}
 
-		ApiResponse AppActionsController::OnPostStartRecord(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostStartRecord(const std::shared_ptr<http::svr::HttpConnection> &client,
+															const Json::Value &request_body,
 															const std::shared_ptr<mon::HostMetrics> &vhost,
 															const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -85,15 +94,17 @@ namespace api
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
-				return http::HttpError::CreateError(http::StatusCode::NotFound, "Could not find publisher: [%s/%s]",
-											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+				return http::HttpError::CreateError(http::StatusCode::NotFound,
+													"Could not find publisher: [%s/%s]",
+													vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
 			auto record = ::serdes::RecordFromJson(request_body);
 			if (record == nullptr)
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Could not parse json context: [%s/%s]",
-											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+				return http::HttpError::CreateError(http::StatusCode::BadRequest,
+													"Could not parse json context: [%s/%s]",
+													vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 			else
 			{
@@ -104,11 +115,13 @@ namespace api
 			auto error = publisher->RecordStart(app->GetName(), record);
 			if (error->GetCode() == FilePublisher::FilePublisherStatusCode::FailureInvalidParameter)
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, error->GetMessage());
+				return http::HttpError::CreateError(http::StatusCode::BadRequest,
+													error->GetMessage());
 			}
 			else if (error->GetCode() == FilePublisher::FilePublisherStatusCode::FailureDupulicateKey)
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, error->GetMessage());
+				return http::HttpError::CreateError(http::StatusCode::BadRequest,
+													error->GetMessage());
 			}
 
 			response.append(::serdes::JsonFromRecord(record));
@@ -116,7 +129,8 @@ namespace api
 			return {http::StatusCode::OK, std::move(response)};
 		}
 
-		ApiResponse AppActionsController::OnPostStopRecord(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostStopRecord(const std::shared_ptr<http::svr::HttpConnection> &client,
+														   const Json::Value &request_body,
 														   const std::shared_ptr<mon::HostMetrics> &vhost,
 														   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -125,15 +139,19 @@ namespace api
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
-				return http::HttpError::CreateError(http::StatusCode::NotFound, "Could not find publisher: [%s/%s]",
-											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+				return http::HttpError::CreateError(http::StatusCode::NotFound,
+													"Could not find publisher: [%s/%s]",
+													vhost->GetName().CStr(),
+													app->GetName().GetAppName().CStr());
 			}
 
 			auto record = ::serdes::RecordFromJson(request_body);
 			if (record == nullptr)
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Could not parse json context: [%s/%s]",
-											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+				return http::HttpError::CreateError(http::StatusCode::BadRequest,
+													"Could not parse json context: [%s/%s]",
+													vhost->GetName().CStr(),
+													app->GetName().GetAppName().CStr());
 			}
 			else
 			{
@@ -165,7 +183,8 @@ namespace api
 			return OnPostPushes(client, empty_body, vhost, app);
 		}
 
-		ApiResponse AppActionsController::OnPostPushes(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostPushes(const std::shared_ptr<http::svr::HttpConnection> &client,
+													   const Json::Value &request_body,
 													   const std::shared_ptr<mon::HostMetrics> &vhost,
 													   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -175,8 +194,10 @@ namespace api
 			auto publisher = std::dynamic_pointer_cast<RtmpPushPublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::RtmpPush));
 			if (publisher == nullptr)
 			{
-				return http::HttpError::CreateError(http::StatusCode::NotFound, "Could not find publisher: [%s/%s]",
-											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+				return http::HttpError::CreateError(http::StatusCode::NotFound,
+													"Could not find publisher: [%s/%s]",
+													vhost->GetName().CStr(),
+													app->GetName().GetAppName().CStr());
 			}
 
 			auto error = publisher->GetPushes(app->GetName(), pushes);
@@ -193,7 +214,8 @@ namespace api
 			return {http::StatusCode::OK, std::move(response)};
 		}
 
-		ApiResponse AppActionsController::OnPostStartPush(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostStartPush(const std::shared_ptr<http::svr::HttpConnection> &client,
+														  const Json::Value &request_body,
 														  const std::shared_ptr<mon::HostMetrics> &vhost,
 														  const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -202,29 +224,35 @@ namespace api
 			auto publisher = std::dynamic_pointer_cast<RtmpPushPublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::RtmpPush));
 			if (publisher == nullptr)
 			{
-				return http::HttpError::CreateError(http::StatusCode::NotFound, "Could not find publisher: [%s/%s]",
-											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+				return http::HttpError::CreateError(http::StatusCode::NotFound,
+													"Could not find publisher: [%s/%s]",
+													vhost->GetName().CStr(),
+													app->GetName().GetAppName().CStr());
 			}
 
 			auto push = ::serdes::PushFromJson(request_body);
 			if (push == nullptr)
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Could not parse json context: [%s/%s]",
-											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+				return http::HttpError::CreateError(http::StatusCode::BadRequest,
+													"Could not parse json context: [%s/%s]",
+													vhost->GetName().CStr(),
+													app->GetName().GetAppName().CStr());
 			}
+
 			push->SetVhost(vhost->GetName().CStr());
 			push->SetApplication(app->GetName().GetAppName());
 
-			// logtd("%s", push->GetInfoString().CStr());
-
 			auto error = publisher->PushStart(app->GetName(), push);
-			if (error->GetCode() == RtmpPushPublisher::PushPublisherErrorCode::FailureInvalidParameter)
+			switch (error->GetCode())
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, error->GetMessage());
-			}
-			else if (error->GetCode() == RtmpPushPublisher::PushPublisherErrorCode::FailureDupulicateKey)
-			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, error->GetMessage());
+				case RtmpPushPublisher::PushPublisherErrorCode::FailureInvalidParameter: {
+					return http::HttpError::CreateError(http::StatusCode::BadRequest, error->GetMessage());
+				}
+				break;
+				case RtmpPushPublisher::PushPublisherErrorCode::FailureDupulicateKey: {
+					return http::HttpError::CreateError(http::StatusCode::BadRequest, error->GetMessage());
+				}
+				break;
 			}
 
 			response.append(::serdes::JsonFromPush(push));
@@ -232,34 +260,43 @@ namespace api
 			return {http::StatusCode::OK, std::move(response)};
 		}
 
-		ApiResponse AppActionsController::OnPostStopPush(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostStopPush(const std::shared_ptr<http::svr::HttpConnection> &client,
+														 const Json::Value &request_body,
 														 const std::shared_ptr<mon::HostMetrics> &vhost,
 														 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
 			auto publisher = std::dynamic_pointer_cast<RtmpPushPublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::RtmpPush));
 			if (publisher == nullptr)
 			{
-				return http::HttpError::CreateError(http::StatusCode::NotFound, "Could not find publisher: [%s/%s]",
-											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+				return http::HttpError::CreateError(http::StatusCode::NotFound,
+													"Could not find publisher: [%s/%s]",
+													vhost->GetName().CStr(),
+													app->GetName().GetAppName().CStr());
 			}
 
 			auto push = ::serdes::PushFromJson(request_body);
 			if (push == nullptr)
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Could not parse json context: [%s/%s]",
-											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+				return http::HttpError::CreateError(http::StatusCode::BadRequest,
+													"Could not parse json context: [%s/%s]",
+													vhost->GetName().CStr(),
+													app->GetName().GetAppName().CStr());
 			}
+
 			push->SetVhost(vhost->GetName().CStr());
 			push->SetApplication(app->GetName().GetAppName());
 
 			auto error = publisher->PushStop(app->GetName(), push);
-			if (error->GetCode() == RtmpPushPublisher::PushPublisherErrorCode::FailureInvalidParameter)
+			switch (error->GetCode())
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, error->GetMessage());
-			}
-			else if (error->GetCode() == RtmpPushPublisher::PushPublisherErrorCode::FailureNotExist)
-			{
-				return http::HttpError::CreateError(http::StatusCode::NotFound, error->GetMessage());
+				case RtmpPushPublisher::PushPublisherErrorCode::FailureInvalidParameter: {
+					return http::HttpError::CreateError(http::StatusCode::BadRequest, error->GetMessage());
+				}
+				break;
+				case RtmpPushPublisher::PushPublisherErrorCode::FailureNotExist: {
+					return http::HttpError::CreateError(http::StatusCode::NotFound, error->GetMessage());
+				}
+				break;
 			}
 
 			return http::HttpError::CreateError(http::StatusCode::OK, error->GetMessage());
@@ -269,8 +306,7 @@ namespace api
 														   const std::shared_ptr<mon::HostMetrics> &vhost,
 														   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			logte("Called OnGetDummyAction. invoke [%s/%s]",
-				  vhost->GetName().CStr(), app->GetName().GetAppName());
+			logte("Called OnGetDummyAction. invoke [%s/%s]", vhost->GetName().CStr(), app->GetName().GetAppName());
 
 			return app->GetConfig().ToJson();
 		}

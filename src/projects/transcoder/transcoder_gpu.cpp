@@ -61,11 +61,6 @@ bool TranscodeGPU::Initialze()
 		logti("There is no supported hardware accelerator");
 	}
 
-	// enum AVHWDeviceType type = AV_HWDEVICE_TYPE_NONE;
-	// logtd("Supported hardware device types");
-	// while ((type = av_hwdevice_iterate_types(type)) != AV_HWDEVICE_TYPE_NONE)
-	// 	logtd("%s", av_hwdevice_get_type_name(type));
-
 	return true;
 }
 

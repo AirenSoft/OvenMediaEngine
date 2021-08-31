@@ -21,24 +21,30 @@ namespace info
 		void SetTransactionId(ov::String transaction_id);
 		ov::String GetTransactionId();
 
+		// set by user
 		void SetId(ov::String id);
 		ov::String GetId() const;
 
+		// set by user
 		void SetMetadata(ov::String metadata);
 		ov::String GetMetadata() const;
 
+		// set by user
 		void SetStream(const info::Stream &stream);
 		const info::Stream &GetStream() const
 		{
 			return *_stream;
 		}
 
+		// set by user
 		void SetEnable(bool eanble);
 		bool GetEnable();
 
+		// set by user
 		void SetVhost(ov::String vhost_name);
 		ov::String GetVhost();
 
+		// set by user
 		void SetApplication(ov::String app_name);
 		ov::String GetApplication();
 
@@ -50,9 +56,11 @@ namespace info
 		void SetSessionId(session_id_t id);
 		session_id_t GetSessionId();
 
+		// set by user
 		void SetInterval(int32_t interval);
 		int32_t GetInterval();
 
+		// set by user
 		void SetSchedule(ov::String schedule);
 		ov::String GetSchedule();
 		const std::chrono::system_clock::time_point &GetNextScheduleTime() const;
@@ -60,9 +68,15 @@ namespace info
 		bool IsNextScheduleTimeEmpty();
 		bool UpdateNextScheduleTime();
 
+		// set by user
+		void SetSegmentationRule(ov::String rule);
+		ov::String GetSegmentationRule();
+
+		// set by user
 		void SetFilePath(ov::String file_path);
 		ov::String GetFilePath();
 
+		// set by user
 		void SetInfoPath(ov::String info_path);
 		ov::String GetInfoPath();
 
@@ -77,10 +91,14 @@ namespace info
 		void IncreaseRecordBytes(uint64_t bytes);
 		uint64_t GetRecordBytes();
 		uint64_t GetRecordTotalBytes();
+		void SetRecordBytes(uint64_t bytes);
+		void SetRecordTotalBytes(uint64_t bytes);
 
 		void UpdateRecordTime();
 		uint64_t GetRecordTime();
 		uint64_t GetRecordTotalTime();
+		void SetRecordTime(uint64_t time);
+		void SetRecordTotalTime(uint64_t time);
 
 		void IncreaseSequence();
 
@@ -88,10 +106,14 @@ namespace info
 		void UpdateRecordStopTime();
 
 		uint64_t GetSequence();
+		void SetSqeuence(uint64_t sequence);
 
 		const std::chrono::system_clock::time_point &GetCreatedTime() const;
 		const std::chrono::system_clock::time_point GetRecordStartTime() const;
 		const std::chrono::system_clock::time_point GetRecordStopTime() const;
+		void SetCreatedTime(std::chrono::system_clock::time_point tp);
+		void SetRecordStartTime(std::chrono::system_clock::time_point tp);
+		void SetRecordStopTime(std::chrono::system_clock::time_point tp);
 
 		enum class RecordState : int8_t
 		{
@@ -105,6 +127,8 @@ namespace info
 		RecordState GetState();
 		void SetState(RecordState state);
 		ov::String GetStateString();
+
+		void Clone(std::shared_ptr<info::Record> &record);
 
 		const ov::String GetInfoString();
 
@@ -176,6 +200,11 @@ namespace info
 		// Recorded (Accumulated) Time
 		uint64_t _record_time;
 		uint64_t _record_total_time;
+
+		// Timestamp Rules for Split Recording
+		//  continuity - The start of the split-recorded file PTS leads to the last PTS of the previously recorded file.
+		//  discontiuity - The start PTS of the split-recorded file begins with zero.
+		ov::String _segmentation_rule;
 
 		// Sequence number of the recorded file
 		uint32_t _sequence;
