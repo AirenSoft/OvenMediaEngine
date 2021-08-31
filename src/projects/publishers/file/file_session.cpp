@@ -168,10 +168,16 @@ bool FileSession::StartRecord()
 		return false;
 	}
 
-	// The mode to specify the initial value of the timestamp stored in the file to zero, 
-	// or keep it at the same value as the source.
-	//  _writer->SetTimestampRecalcMode(FileWriter::TIMESTAMP_PASSTHROUGH_MODE);
-	//  _writer->SetTimestampRecalcMode(FileWriter::TIMESTAMP_STARTZERO_MODE);
+	// The mode to specify the initial value of the timestamp stored in the file to zero,
+	// or keep it at the same value as the source timestamp
+	if (GetRecord()->GetSegmentationRule() == "continuity")
+	{
+		_writer->SetTimestampRecalcMode(FileWriter::TIMESTAMP_PASSTHROUGH_MODE);
+	}
+	else if (GetRecord()->GetSegmentationRule() == "discontinuity")
+	{
+		_writer->SetTimestampRecalcMode(FileWriter::TIMESTAMP_STARTZERO_MODE);
+	}
 
 	logtd("The temporary file was created successfully. file: %s", _writer->GetPath().CStr());
 

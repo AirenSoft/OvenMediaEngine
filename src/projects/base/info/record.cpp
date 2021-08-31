@@ -32,6 +32,7 @@ namespace info
 		_sequence = 0;
 		_interval = 0;
 		_schedule = "";
+		_segmentation_rule = "";
 
 		_state = RecordState::Ready;
 	}
@@ -145,6 +146,16 @@ namespace info
 		return _schedule;
 	}
 
+	void Record::SetSegmentationRule(ov::String rule)
+	{
+		_segmentation_rule = rule;
+	}
+
+	ov::String Record::GetSegmentationRule()
+	{
+		return _segmentation_rule;
+	}
+
 	const std::chrono::system_clock::time_point &Record::GetNextScheduleTime() const
 	{
 		return _schedule_next;
@@ -206,6 +217,38 @@ namespace info
 	{
 		_info_path_by_user = by_user;
 	}
+	void Record::SetRecordBytes(uint64_t bytes)
+	{
+		_record_bytes = bytes;
+	}
+	void Record::SetRecordTotalBytes(uint64_t bytes)
+	{
+		_record_total_bytes = bytes;
+	}
+	void Record::SetRecordTime(uint64_t time)
+	{
+		_record_time = time;
+	}
+	void Record::SetRecordTotalTime(uint64_t time)
+	{
+		_record_total_bytes = time;
+	}
+	void Record::SetSqeuence(uint64_t sequence)
+	{
+		_sequence = sequence;
+	}
+	void Record::SetCreatedTime(std::chrono::system_clock::time_point tp)
+	{
+		_created_time = tp;
+	}
+	void Record::SetRecordStartTime(std::chrono::system_clock::time_point tp)
+	{
+		_record_start_time = tp;
+	}
+	void Record::SetRecordStopTime(std::chrono::system_clock::time_point tp)
+	{
+		_record_stop_time = tp;
+	}
 	bool Record::IsInfoPathSetByUser()
 	{
 		return _info_path_by_user;
@@ -251,6 +294,7 @@ namespace info
 	{
 		return _record_bytes;
 	}
+
 	uint64_t Record::GetRecordTime()
 	{
 		return _record_time;
@@ -300,6 +344,10 @@ namespace info
 		}
 
 		return "Unknown";
+	}
+
+	void Record::Clone(std::shared_ptr<info::Record> &record)
+	{
 	}
 
 	const ov::String Record::GetInfoString()
