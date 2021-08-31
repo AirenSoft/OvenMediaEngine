@@ -13,7 +13,7 @@ ARG     MAKEFLAGS="-j16"
 
 ENV     OME_VERSION=master \
         OPENSSL_VERSION=3.0.0-beta1 \
-        SRTP_VERSION=2.2.0 \
+        SRTP_VERSION=2.4.0 \
         SRT_VERSION=1.4.2 \
         OPUS_VERSION=1.1.3 \
         X264_VERSION=20190513-2245-stable \
