@@ -114,6 +114,10 @@ func (sc *signalingClient) getOffer() (*signalMessage, error) {
 		return nil, fmt.Errorf("could not unmarshal offer message : %s (reason : %s)", sc.url, err)
 	}
 
+	if offer.Sdp.Type == 0 {
+		return nil, fmt.Errorf("invalid offer message received : %s (%s)", sc.url, string(offerMsg))
+	}
+
 	return &offer, nil
 }
 
