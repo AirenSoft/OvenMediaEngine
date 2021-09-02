@@ -144,12 +144,26 @@ namespace serdes
 			record->SetMetadata(json_metadata.asString().c_str());
 		}
 
+		// <Optional>
+		record->SetSegmentationRule("discontinuity");
+		auto json_segmentation_rule = json_body["segmentationRule"];
+		if (json_segmentation_rule.empty() == false && json_segmentation_rule.isString() == true)
+		{
+			if (json_segmentation_rule.asString().compare("discontinuity") == 0 ||
+				json_segmentation_rule.asString().compare("continuity") == 0)
+			{
+				record->SetSegmentationRule(json_segmentation_rule.asString().c_str());
+			}
+		}
+
 		return record;
 	}
 
 	Json::Value JsonFromRecord(const std::shared_ptr<info::Record> &record)
 	{
 		Json::Value response(Json::ValueType::objectValue);
+
+		SetString(response, "state", record->GetStateString(), Optional::False);
 
 		SetString(response, "id", record->GetId(), Optional::False);
 
@@ -160,8 +174,6 @@ namespace serdes
 		SetString(response, "app", record->GetApplication(), Optional::False);
 
 		SetRecordStream(response, "stream", record->GetStream(), Optional::False);
-
-		SetString(response, "state", record->GetStateString(), Optional::False);
 
 		SetString(response, "filePath", record->GetFilePath(), Optional::False);
 
@@ -177,28 +189,50 @@ namespace serdes
 			SetString(response, "schedule", record->GetSchedule(), Optional::True);
 		}
 
-		SetInt64(response, "recordBytes", record->GetRecordBytes());
-
-		SetInt64(response, "recordTime", record->GetRecordTime());
-
-		SetInt64(response, "totalRecordBytes", record->GetRecordTotalBytes());
-
-		SetInt64(response, "totalRecordTime", record->GetRecordTotalTime());
-
-		SetInt(response, "sequence", record->GetSequence());
-
-		SetTimestamp(response, "createdTime", record->GetCreatedTime());
-
-		if (record->GetRecordStartTime() != std::chrono::system_clock::from_time_t(0))
+		if (record->GetSegmentationRule().IsEmpty() == false)
 		{
-			SetTimestamp(response, "startTime", record->GetRecordStartTime());
-		}
-		if (record->GetRecordStopTime() != std::chrono::system_clock::from_time_t(0))
-
-		{
-			SetTimestamp(response, "finishTime", record->GetRecordStopTime());
+			SetString(response, "segmentationRule", record->GetSegmentationRule(), Optional::True);
 		}
 
+		if (record->GetCreatedTime() != std::chrono::system_clock::from_time_t(0))
+		{
+			SetTimestamp(response, "createdTime", record->GetCreatedTime());
+		}
+
+		if (record->GetState() == info::Record::RecordState::Recording ||
+			record->GetState() == info::Record::RecordState::Stopping ||
+			record->GetState() == info::Record::RecordState::Stopped ||
+			record->GetState() == info::Record::RecordState::Error)
+		{
+			if (record->GetRecordBytes() > 0)
+				SetInt64(response, "recordBytes", record->GetRecordBytes());
+
+			if (record->GetRecordTime() > 0)
+				SetInt64(response, "recordTime", record->GetRecordTime());
+
+			if (record->GetRecordTotalBytes() > 0)
+				SetInt64(response, "totalRecordBytes", record->GetRecordTotalBytes());
+
+			if (record->GetRecordTotalTime() > 0)
+				SetInt64(response, "totalRecordTime", record->GetRecordTotalTime());
+
+			if (record->GetSequence() > 0)
+				SetInt(response, "sequence", record->GetSequence());
+
+			if (record->GetRecordStartTime() != std::chrono::system_clock::from_time_t(0))
+			{
+				SetTimestamp(response, "startTime", record->GetRecordStartTime());
+			}
+		}
+
+		if (record->GetState() == info::Record::RecordState::Stopped ||
+			record->GetState() == info::Record::RecordState::Error)
+		{
+			if (record->GetRecordStopTime() != std::chrono::system_clock::from_time_t(0))
+			{
+				SetTimestamp(response, "finishTime", record->GetRecordStopTime());
+			}
+		}
 		return response;
 	}
 
