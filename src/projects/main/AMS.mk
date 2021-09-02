@@ -42,7 +42,6 @@ LOCAL_STATIC_LIBRARIES := \
 	ovlibrary \
 	monitoring \
 	jsoncpp \
-	sqlite \
 	file \
 	rtmp \
 
