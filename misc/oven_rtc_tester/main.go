@@ -164,6 +164,8 @@ func (c *omeClient) run(url string) error {
 		return err
 	}
 
+	// Everything below is the pion-WebRTC API! Thanks for using it ❤️.
+
 	// webrtc config
 	config := webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
