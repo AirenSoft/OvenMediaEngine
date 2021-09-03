@@ -5,17 +5,23 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"os/signal"
+	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/pion/webrtc/v3"
 )
 
+const jitterThreshold = 1000   // ms
+const delayReportPeriod = 5000 // ms
+
 func main() {
 	url := flag.String("url", "", "[Required] OvenMediaEngine's webrtc streaming URL")
 	numberOfClient := flag.Int("n", 1, "[Optional] Number of client")
-	
+
 	flag.Usage = func() {
 		fmt.Printf("Usage: %s [-n number_of_clients] OvenMediaEngine_URL\n", os.Args[0])
 		flag.PrintDefaults()
@@ -30,8 +36,8 @@ func main() {
 	}
 
 	var clients = make([]*omeClient, 0, *numberOfClient)
-	for i := 0; i<*numberOfClient; i++ {
-		client := new(omeClient)
+	for i := 0; i < *numberOfClient; i++ {
+		client := omeClient{}
 
 		client.name = fmt.Sprintf("client_%d", i)
 		err := client.run(*url)
@@ -42,20 +48,22 @@ func main() {
 		fmt.Printf("%s has started\n", client.name)
 		defer client.stop()
 
-		clients = append(clients, client)
+		clients = append(clients, &client)
 	}
 
 	closed := make(chan os.Signal, 1)
 	signal.Notify(closed, os.Interrupt)
 	<-closed
 
+	fmt.Println("***************************")
+	fmt.Println("Reports")
+	fmt.Println("***************************")
 	for _, client := range clients {
 		if client == nil {
-			fmt.Println("Null!")
 			continue
 		}
 
-		fmt.Printf("%s client finished - total_packet(%d) loss (%d)\n", client.name, client.totalRtpPackets, client.packetLoss)
+		client.report()
 	}
 }
 
@@ -64,14 +72,39 @@ type signalingClient struct {
 	socket *websocket.Conn
 }
 
+type sessionStat struct {
+	startTime time.Time
+
+	maxFPS float32
+	minFPS float32
+
+	maxBPS int64
+	minBPS int64
+
+	totalBytes       int64
+	totalVideoFrames int64
+	totalRtpPackets  int64
+	packetLoss       int64
+
+	videoRtpTimestampElapsedMSec int64
+	audioRtpTimestampElapsedMSec int64
+}
+
 type omeClient struct {
 	name string
 
 	sc             *signalingClient
 	peerConnection *webrtc.PeerConnection
 
-	totalRtpPackets		int64
-	packetLoss 			int64
+	videoAvailable bool
+	videoMimeType  string
+	audioAvailable bool
+	audioMimeType  string
+
+	stat sessionStat
+
+	once  sync.Once
+	mutex sync.Mutex
 }
 
 func (sc *signalingClient) connect(url string) error {
@@ -150,6 +183,34 @@ func (jsonMsg *signalMessage) unmarshal(msg []byte) error {
 	return json.Unmarshal(msg, jsonMsg)
 }
 
+func (c *omeClient) report() {
+
+	c.mutex.Lock()
+	// Copy and Unlock
+	stat := c.stat
+	c.mutex.Unlock()
+
+	videoDelay := float64(0)
+	audioDelay := float64(0)
+
+	if stat.videoRtpTimestampElapsedMSec != 0 {
+		videoDelay = math.Abs(float64(time.Since(stat.startTime).Milliseconds() - stat.videoRtpTimestampElapsedMSec))
+	}
+
+	if stat.audioRtpTimestampElapsedMSec != 0 {
+		audioDelay = math.Abs(float64(time.Since(stat.startTime).Milliseconds() - stat.audioRtpTimestampElapsedMSec))
+	}
+
+	avgBps := int64(float32(stat.totalBytes) / float32(time.Since(stat.startTime).Seconds()) * 8)
+	avgFps := float32(stat.totalVideoFrames) / float32(time.Since(stat.startTime).Seconds())
+
+	fmt.Printf("%c[32m[%s]%c[0m\n\trunning_time(%d ms) total_packets(%d) packet_loss(%d)\n\tlast_video_delay (%.1f ms) last_audio_delay (%.1f ms)\n\ttotal_bytes(%s) avg_bps(%s) min_bps(%s) max_bps(%s)\n\ttotal_video_frames(%d) avg_fps(%.2f) min_fps(%.2f) max_fps(%.2f)\n\n",
+		27,
+		c.name, 27, time.Since(stat.startTime).Milliseconds(), stat.totalRtpPackets, stat.packetLoss, videoDelay, audioDelay,
+		ByteCountDecimal(stat.totalBytes), ByteCountDecimal(avgBps), ByteCountDecimal(stat.minBPS), ByteCountDecimal(stat.maxBPS),
+		stat.totalVideoFrames, avgFps, stat.minFPS, stat.maxFPS)
+}
+
 func (c *omeClient) run(url string) error {
 
 	// Initialize
@@ -213,10 +274,71 @@ func (c *omeClient) run(url string) error {
 		return err
 	}
 
+	// RTP start
 	c.peerConnection.OnTrack(func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
+
 		fmt.Printf("%s track has started, of type %d: %s \n", c.name, track.PayloadType(), track.Codec().RTPCodecCapability.MimeType)
+		c.stat.startTime = time.Now()
+
+		switch track.Kind() {
+		case webrtc.RTPCodecTypeVideo:
+			c.videoAvailable = true
+			c.videoMimeType = track.Codec().MimeType
+		case webrtc.RTPCodecTypeAudio:
+			c.audioAvailable = true
+			c.audioMimeType = track.Codec().MimeType
+		}
+
+		go func() {
+
+			lastTime := time.Now()
+			lastFrames := int64(0)
+			lastBytes := int64(0)
+
+			ticker := time.NewTicker(time.Second * 1)
+			// fps/bps calculator, One ticker is sufficient.
+			c.once.Do(func() {
+				for range ticker.C {
+
+					c.mutex.Lock()
+					stat := c.stat
+					c.mutex.Unlock()
+
+					currVideoFrames := stat.totalVideoFrames
+					currTotalBytes := stat.totalBytes
+
+					fps := float32(float32(currVideoFrames-lastFrames) / float32(time.Since(lastTime).Seconds()))
+					bps := int64((float32(currTotalBytes-lastBytes) / float32(time.Since(lastTime).Seconds())) * 8)
+
+					c.mutex.Lock()
+					if c.stat.maxFPS == 0 || c.stat.maxFPS < fps {
+						c.stat.maxFPS = fps
+					}
+
+					if c.stat.minFPS == 0 || c.stat.minFPS > fps {
+						c.stat.minFPS = fps
+					}
+
+					if c.stat.maxBPS == 0 || c.stat.maxBPS < bps {
+						c.stat.maxBPS = bps
+					}
+
+					if c.stat.minBPS == 0 || c.stat.minBPS > bps {
+						c.stat.minBPS = bps
+					}
+					c.mutex.Unlock()
+
+					lastTime = time.Now()
+					lastFrames = currVideoFrames
+					lastBytes = currTotalBytes
+				}
+			})
+		}()
 
 		prev_seq := uint16(0)
+		startTimestamp := uint32(0)
+		last_report_time := time.Now().AddDate(0, 0, -1)
+
 		for {
 			// Read RTP packets being sent to Pion
 			rtp, _, readErr := track.ReadRTP()
@@ -227,12 +349,52 @@ func (c *omeClient) run(url string) error {
 				panic(readErr)
 			}
 
-			c.totalRtpPackets ++
+			if startTimestamp == 0 {
+				startTimestamp = rtp.Timestamp
+			}
 
+			// total packet count
+			c.mutex.Lock()
+
+			c.stat.totalRtpPackets++
+			c.stat.totalBytes += int64(rtp.PayloadOffset) + int64(len(rtp.Payload))
+
+			// packet loss metric
 			if prev_seq != 0 && rtp.SequenceNumber != prev_seq+1 {
-				c.packetLoss ++
+				c.stat.packetLoss++
 			}
 			prev_seq = rtp.SequenceNumber
+
+			need_delay_warn := false
+
+			switch track.Kind() {
+			case webrtc.RTPCodecTypeVideo:
+				if rtp.Marker {
+					c.stat.totalVideoFrames++
+					c.stat.videoRtpTimestampElapsedMSec = int64((float64(rtp.Timestamp-startTimestamp) / float64(track.Codec().ClockRate) * 1000))
+
+					rtpDelay := math.Abs(float64(time.Since(c.stat.startTime).Milliseconds() - c.stat.videoRtpTimestampElapsedMSec))
+					if rtpDelay > jitterThreshold {
+						need_delay_warn = true
+					}
+				}
+			case webrtc.RTPCodecTypeAudio:
+				c.stat.audioRtpTimestampElapsedMSec = int64((float64(rtp.Timestamp-startTimestamp) / float64(track.Codec().ClockRate) * 1000))
+
+				rtpDelay := math.Abs(float64(time.Since(c.stat.startTime).Milliseconds() - c.stat.audioRtpTimestampElapsedMSec))
+				if rtpDelay > jitterThreshold {
+					need_delay_warn = true
+				}
+			}
+
+			c.mutex.Unlock()
+
+			if need_delay_warn && time.Since(last_report_time).Milliseconds() > delayReportPeriod {
+				fmt.Printf("%c[31m[warning]%c[0m delay is too high!\n", 27, 27)
+				c.report()
+
+				last_report_time = time.Now()
+			}
 		}
 	})
 
@@ -287,4 +449,18 @@ func (c *omeClient) stop() error {
 	fmt.Printf("%s has stopped\n", c.name)
 
 	return nil
+}
+
+// utilities
+func ByteCountDecimal(b int64) string {
+	const unit = 1000
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "kMGTPE"[exp])
 }
