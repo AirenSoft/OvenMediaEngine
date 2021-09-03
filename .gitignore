@@ -26,3 +26,4 @@ src/projects/main/git_info.h
 *.pc
 *.texi
 *.dump
+misc/oven_rtc_tester/OvenRtcTester
