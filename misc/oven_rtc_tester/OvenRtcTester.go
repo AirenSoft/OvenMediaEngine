@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"sync"
 	"time"
+	"net/url"
 
 	"github.com/gorilla/websocket"
 	"github.com/pion/webrtc/v3"
@@ -19,20 +20,21 @@ const delayWarningThreshold = 1000  // ms
 const delayReportPeriod = 5000 		// ms
 
 func main() {
-	url := flag.String("url", "", "[Required] OvenMediaEngine's webrtc streaming URL")
+	requestURL := flag.String("url", "undefined", "[Required] OvenMediaEngine's webrtc streaming URL")
 	numberOfClient := flag.Int("n", 1, "[Optional] Number of client")
-	connectionInterval := flag.Int("int", 100, "[Optional] Client connection interval(milliseconds)")
+	connectionInterval := flag.Int("int", 100, "[Optional] Client connection interval(milliseconds), ")
 
 	flag.Usage = func() {
-		fmt.Printf("Usage: %s [-n number_of_clients] OvenMediaEngine_URL\n", os.Args[0])
+		
 		flag.PrintDefaults()
 	}
 
 	flag.Parse()
-
+	_, err := url.ParseRequestURI(*requestURL)
 	// URL is mandatory
-	if len(*url) == 0 {
-		flag.CommandLine.Usage()
+	if err != nil {
+		fmt.Printf("-url parameter is required and must be vaild. (input : %s)\n", *requestURL)
+		flag.PrintDefaults()
 		return
 	}
 
@@ -44,11 +46,10 @@ func main() {
 			case <- quit:
 				return
 			case <- time.After(time.Millisecond * time.Duration((*connectionInterval))):
-				fmt.Printf("%d", i)
 				client := omeClient{}
 
 				client.name = fmt.Sprintf("client_%d", i)
-				err := client.run(*url)
+				err := client.run(*requestURL)
 				if err != nil {
 					fmt.Printf("%s failed to run (reason - %s)\n", client.name, err)
 					return
@@ -58,7 +59,6 @@ func main() {
 				fmt.Printf("%s has started\n", client.name)
 			}
 		}
-		fmt.Println("quit goroutine")
 	}()
 
 	closed := make(chan os.Signal, 1)
