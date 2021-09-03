@@ -15,12 +15,13 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
-const jitterThreshold = 1000   // ms
-const delayReportPeriod = 5000 // ms
+const delayWarningThreshold = 1000  // ms
+const delayReportPeriod = 5000 		// ms
 
 func main() {
 	url := flag.String("url", "", "[Required] OvenMediaEngine's webrtc streaming URL")
 	numberOfClient := flag.Int("n", 1, "[Optional] Number of client")
+	connectionInterval := flag.Int("int", 100, "[Optional] Client connection interval(milliseconds)")
 
 	flag.Usage = func() {
 		fmt.Printf("Usage: %s [-n number_of_clients] OvenMediaEngine_URL\n", os.Args[0])
@@ -35,25 +36,46 @@ func main() {
 		return
 	}
 
-	var clients = make([]*omeClient, 0, *numberOfClient)
-	for i := 0; i < *numberOfClient; i++ {
-		client := omeClient{}
+	clientChan := make(chan *omeClient)
+	quit := make(chan bool)
+	go func() {
+		for i := 0; i < *numberOfClient; i++ {
+			select {
+			case <- quit:
+				return
+			case <- time.After(time.Millisecond * time.Duration((*connectionInterval))):
+				fmt.Printf("%d", i)
+				client := omeClient{}
 
-		client.name = fmt.Sprintf("client_%d", i)
-		err := client.run(*url)
-		if err != nil {
-			fmt.Printf("%s failed to run (reason - %s)\n", client.name, err)
-			return
+				client.name = fmt.Sprintf("client_%d", i)
+				err := client.run(*url)
+				if err != nil {
+					fmt.Printf("%s failed to run (reason - %s)\n", client.name, err)
+					return
+				}
+
+				clientChan <- &client
+				fmt.Printf("%s has started\n", client.name)
+			}
 		}
-		fmt.Printf("%s has started\n", client.name)
-		defer client.stop()
-
-		clients = append(clients, &client)
-	}
+		fmt.Println("quit goroutine")
+	}()
 
 	closed := make(chan os.Signal, 1)
 	signal.Notify(closed, os.Interrupt)
-	<-closed
+	
+	var clients = make([]*omeClient, 0, *numberOfClient)
+	
+	F :
+	for {
+		select {	
+		case client := <- clientChan:
+			clients = append(clients, client)
+		case <-closed:
+			close(quit)
+			break F
+		}
+	}
 
 	fmt.Println("***************************")
 	fmt.Println("Reports")
@@ -62,7 +84,7 @@ func main() {
 		if client == nil {
 			continue
 		}
-
+		client.stop()
 		client.report()
 	}
 }
@@ -374,7 +396,7 @@ func (c *omeClient) run(url string) error {
 					c.stat.videoRtpTimestampElapsedMSec = int64((float64(rtp.Timestamp-startTimestamp) / float64(track.Codec().ClockRate) * 1000))
 
 					rtpDelay := math.Abs(float64(time.Since(c.stat.startTime).Milliseconds() - c.stat.videoRtpTimestampElapsedMSec))
-					if rtpDelay > jitterThreshold {
+					if rtpDelay > delayWarningThreshold {
 						need_delay_warn = true
 					}
 				}
@@ -382,7 +404,7 @@ func (c *omeClient) run(url string) error {
 				c.stat.audioRtpTimestampElapsedMSec = int64((float64(rtp.Timestamp-startTimestamp) / float64(track.Codec().ClockRate) * 1000))
 
 				rtpDelay := math.Abs(float64(time.Since(c.stat.startTime).Milliseconds() - c.stat.audioRtpTimestampElapsedMSec))
-				if rtpDelay > jitterThreshold {
+				if rtpDelay > delayWarningThreshold {
 					need_delay_warn = true
 				}
 			}
@@ -418,16 +440,11 @@ func (c *omeClient) run(url string) error {
 	if err != nil {
 		return err
 	}
-
-	gatherComplete := webrtc.GatheringCompletePromise(c.peerConnection)
-
 	err = c.peerConnection.SetLocalDescription(answerSdp)
 	if err != nil {
 		return err
 	}
-
-	<-gatherComplete
-
+	
 	err = c.sc.sendAnswer(signalMessage{"answer", offer.Id, 0, answerSdp, nil, nil})
 	if err != nil {
 		return err
