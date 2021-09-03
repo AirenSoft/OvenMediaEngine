@@ -428,7 +428,8 @@ void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	}
 
 	auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
-	auto timestamp = media_packet->GetPts();
+	// video timescale is always 90000hz in WebRTC
+	auto timestamp = (media_packet->GetPts() * media_track->GetTimeBase().GetExpr() * 90000);
 	auto data = media_packet->GetData();
 	auto fragmentation = media_packet->GetFragHeader();
 
