@@ -45,8 +45,8 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
-
 	_context->framerate = ::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE);
+
 	_context->bit_rate = _output_context->GetBitrate();
 	_context->rc_min_rate = _context->bit_rate;
 	_context->rc_max_rate = _context->bit_rate;
@@ -59,11 +59,12 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 	// if no telecine is used ...
 	// Set to time_base ticks per frame. Default 1, e.g., H.264/MPEG-2 set it to 2.
 	_context->ticks_per_frame = 2;
+
 	// From avcodec.h:
 	// For fixed-fps content, timebase should be 1/framerate and timestamp increments should be identically 1.
 	// This often, but not always is the inverse of the frame rate or field rate for video. 1/time_base is not the average frame rate if the frame rate is not constant.
-
 	_context->time_base = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
+	
 	_context->gop_size = _context->framerate.num / _context->framerate.den;
 	_context->max_b_frames = 0;
 	_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
@@ -72,7 +73,6 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 	_context->thread_count = 2;
 
 	// For browser compatibility
-	// _context->profile = FF_PROFILE_H264_MAIN;
 	_context->profile = FF_PROFILE_H264_BASELINE;
 	::av_opt_set(_context->priv_data, "preset", "faster", 0);
 	::av_opt_set(_context->priv_data, "tune", "zerolatency", 0);
@@ -80,8 +80,6 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 	// Remove the sliced-thread option from encoding delay. Browser compatibility in MAC environment
 	::av_opt_set(_context->priv_data, "x264opts", "bframes=0:sliced-threads=0:b-adapt=1:no-scenecut:keyint=30:min-keyint=30", 0);
 
-	// CBR option /bitrate in kbps / *problem is not playing in MAC Chrome. So I only specify the maxrate value.
-	// x264opts.AppendFormat(":nal-hrd=cbr:force-cfr=1:bitrate=%d:vbv-maxrate=%d:vbv-bufsize=%d:", _context->bit_rate/1000,  _context->bit_rate/1000,  _context->bit_rate/1000);
 
 	if (::avcodec_open2(_context, codec, nullptr) < 0)
 	{
@@ -235,10 +233,3 @@ std::shared_ptr<MediaPacket> EncoderAVC::RecvBuffer(TranscodeResult *result)
 
 	return nullptr;
 }
-
-// std::shared_ptr<MediaPacket> EncoderAVC::MakePacket() const
-// {
-// 	auto packet = s
-
-// 	return packet;
-// }

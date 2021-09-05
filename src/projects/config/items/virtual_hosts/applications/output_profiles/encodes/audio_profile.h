@@ -68,6 +68,10 @@ namespace cfg
 
 								return (_bitrate > 0) ? nullptr : CreateConfigError("Bitrate must be greater than 0");
 							});
+#if 1
+						Register<Optional>("Samplerate", &_samplerate);						
+						Register<Optional>("Channel", &_channel);
+#else							
 						Register<Optional>("Samplerate", &_samplerate, [=]() -> std::shared_ptr<ConfigError> {
 							// <Samplerate> is an option when _bypass is true
 							return (_bypass) ? nullptr : CreateConfigError("Samplerate must be specified when bypass is false");
@@ -76,6 +80,7 @@ namespace cfg
 							// <Channel> is an option when _bypass is true
 							return (_bypass) ? nullptr : CreateConfigError("Channel must be specified when bypass is false");
 						});
+#endif						
 					}
 				};
 			}  // namespace oprf

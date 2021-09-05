@@ -85,18 +85,20 @@ void DecoderHEVC::ThreadDecode()
 
 		auto packet_data = buffer->GetData();
 
-		int64_t remained = packet_data->GetLength();
+		int64_t remained_size = packet_data->GetLength();
 		off_t offset = 0LL;
 		int64_t pts = (buffer->GetPts() == -1LL) ? AV_NOPTS_VALUE : buffer->GetPts();
 		int64_t dts = (buffer->GetDts() == -1LL) ? AV_NOPTS_VALUE : buffer->GetDts();
+		[[maybe_unused]] int64_t duration = (buffer->GetDuration() == -1LL) ? AV_NOPTS_VALUE : buffer->GetDuration();
+
 		auto data = packet_data->GetDataAs<uint8_t>();
 
-		while (remained > 0)
+		while (remained_size > 0)
 		{
 			::av_init_packet(_pkt);
 
 			int parsed_size = ::av_parser_parse2(_parser, _context, &_pkt->data, &_pkt->size,
-												 data + offset, static_cast<int>(remained), pts, dts, 0);
+												 data + offset, static_cast<int>(remained_size), pts, dts, 0);
 
 			if (parsed_size < 0)
 			{
@@ -108,8 +110,14 @@ void DecoderHEVC::ThreadDecode()
 			{
 				_pkt->pts = _parser->pts;
 				_pkt->dts = _parser->dts;
-
 				_pkt->flags = (_parser->key_frame == 1) ? AV_PKT_FLAG_KEY : 0;
+				_pkt->duration = _pkt->pts - _parser->last_pts;
+				if(_pkt->duration <= 0LL)
+				{
+					// It may not be the exact packet duration. 
+					// However, in general, this method is applied under the assumption that the duration of all packets is similar.
+					_pkt->duration = duration;
+				}
 
 				int ret = ::avcodec_send_packet(_context, _pkt);
 
@@ -148,15 +156,17 @@ void DecoderHEVC::ThreadDecode()
 			}
 
 			OV_ASSERT(
-				remained >= parsed_size,
+				remained_size >= parsed_size,
 				"Current data size MUST greater than parsed_size, but data size: %ld, parsed_size: %ld",
-				remained, parsed_size);
+				remained_size, parsed_size);
 
 			offset += parsed_size;
-			remained -= parsed_size;
+			remained_size -= parsed_size;
 		}
 
-		/////////////////////////////////////////////////////////////////////////////////////////////////////////
+		///////////////////////////////
+		// Receive from decoder
+		///////////////////////////////
 		while (true)
 		{
 			// Check the decoded frame is available
@@ -188,8 +198,11 @@ void DecoderHEVC::ThreadDecode()
 					if (ret == 0)
 					{
 						auto codec_info = ShowCodecParameters(_context, _codec_par);
-						logti("[%s/%s(%u)] input stream information: %s",
-							  _stream_info.GetApplicationInfo().GetName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
+						logti("[%s/%s(%u)] input track information: %s",
+							  _stream_info.GetApplicationInfo().GetName().CStr(),
+							  _stream_info.GetName().CStr(),
+							  _stream_info.GetId(),
+							  codec_info.CStr());
 
 						_change_format = true;
 
@@ -204,19 +217,21 @@ void DecoderHEVC::ThreadDecode()
 
 				// TODO(soulk) : Reduce memory copy overhead. Memory copy can be removed in the Decoder -> Filter step.
 				auto decoded_frame = TranscoderUtilities::ConvertToMediaFrame(cmn::MediaType::Video, _frame);
+				::av_frame_unref(_frame);
 				if (decoded_frame == nullptr)
 				{
 					continue;
 				}
-				decoded_frame->SetDuration(TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context));
 
-				::av_frame_unref(_frame);
-
-				TranscodeResult result = need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady;
+				// If there is no duration, the duration is calculated by framerate and timebase.
+				if (decoded_frame->GetDuration() <= 0LL)
+				{
+					decoded_frame->SetDuration(TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context));
+				}
 
 				_output_buffer.Enqueue(std::move(decoded_frame));
 
-				OnCompleteHandler(result, _track_id);
+				OnCompleteHandler(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, _track_id);
 			}
 		}
 	}
