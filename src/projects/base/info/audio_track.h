@@ -26,9 +26,10 @@ public:
 	cmn::AudioSample &GetSample();
 	const cmn::AudioSample &GetSample() const;
 	
+	void SetChannel(cmn::AudioChannel channel);
 	cmn::AudioChannel &GetChannel();
 	const cmn::AudioChannel &GetChannel() const;
-
+	
 	// Codec-specific data prepared in advance for performance
 	std::shared_ptr<AACSpecificConfig> GetAacConfig() const;
 	void SetAacConfig(const std::shared_ptr<AACSpecificConfig> &config);

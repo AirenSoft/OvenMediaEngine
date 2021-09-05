@@ -129,18 +129,18 @@ private:
 
 	void CreateFilter(MediaFrame *buffer);
 
-	int32_t CreateEncoders(MediaTrackId track_id);
+	int32_t CreateEncoders(MediaFrame *buffer);
 	bool CreateEncoder(int32_t encoder_track_id, std::shared_ptr<TranscodeContext> output_context);
 
 	// Called when formatting of decoded frames is analyzed or changed.
 	void ChangeOutputFormat(MediaFrame *buffer);
 	void UpdateInputTrack(MediaFrame *buffer);
 	void UpdateOutputTrack(MediaFrame *buffer);
-	void UpdateDecoderContext(MediaTrackId track_id);
+	void UpdateDecoderContext(MediaFrame *buffer);
 
 	// There are 3 steps to process packet
 	// Step 1: Decode (Decode a frame from given packets)
-	void DecodePacket(int32_t track_id, std::shared_ptr<MediaPacket> packet);
+	void DecodePacket(std::shared_ptr<MediaPacket> packet);
 	void OnDecodedPacket(TranscodeResult result, int32_t decoder_id);
 
 	// Step 2: Filter (resample/rescale the decoded frame)

@@ -93,6 +93,7 @@ void DecoderHEVCxNV::ThreadDecode()
 		off_t offset = 0LL;
 		int64_t pts = (buffer->GetPts() == -1LL) ? AV_NOPTS_VALUE : buffer->GetPts();
 		int64_t dts = (buffer->GetDts() == -1LL) ? AV_NOPTS_VALUE : buffer->GetDts();
+		[[maybe_unused]] int64_t duration = (buffer->GetDuration() == -1LL) ? AV_NOPTS_VALUE : buffer->GetDuration();
 		auto data = packet_data->GetDataAs<uint8_t>();
 
 		while (remained > 0)
@@ -112,8 +113,14 @@ void DecoderHEVCxNV::ThreadDecode()
 			{
 				_pkt->pts = _parser->pts;
 				_pkt->dts = _parser->dts;
-
 				_pkt->flags = (_parser->key_frame == 1) ? AV_PKT_FLAG_KEY : 0;
+				_pkt->duration = _pkt->pts - _parser->last_pts;
+				if(_pkt->duration <= 0LL)
+				{
+					// It may not be the exact packet duration. 
+					// However, in general, this method is applied under the assumption that the duration of all packets is similar.
+					_pkt->duration = duration;
+				}
 
 				int ret = ::avcodec_send_packet(_context, _pkt);
 
@@ -231,17 +238,21 @@ void DecoderHEVCxNV::ThreadDecode()
 				{
 					continue;
 				}
-				decoded_frame->SetDuration(TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context));
+
+				// If there is no duration, the duration is calculated by framerate and timebase.
+				if (decoded_frame->GetDuration() <= 0LL)
+				{
+					decoded_frame->SetDuration(TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context));
+				}
+
 				decoded_frame->SetFormat(tmp_frame->format);
 
 				::av_frame_unref(_frame);
 				::av_frame_free(&sw_frame);
 
-				TranscodeResult result = need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady;
-
 				_output_buffer.Enqueue(std::move(decoded_frame));
 
-				OnCompleteHandler(result, _track_id);
+				OnCompleteHandler(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, _track_id);
 			}
 		}
 	}

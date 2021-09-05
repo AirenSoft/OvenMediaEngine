@@ -213,8 +213,9 @@ void MediaFilterResampler::ThreadFilter()
 
 		_frame->format = frame->GetFormat();
 		_frame->nb_samples = frame->GetNbSamples();
-		_frame->channel_layout = static_cast<uint64_t>(frame->GetChannelLayout());
-		_frame->channels = frame->GetChannels();
+		_frame->channel_layout = static_cast<uint64_t>(frame->GetChannels().GetLayout());
+		// _frame->channel_layout = static_cast<uint64_t>(frame->GetChannelLayout());
+		_frame->channels = frame->GetChannels().GetCounts();
 		_frame->sample_rate = frame->GetSampleRate();
 		_frame->pts = frame->GetPts();
 		_frame->pkt_duration = frame->GetDuration();
@@ -298,9 +299,9 @@ void MediaFilterResampler::ThreadFilter()
 				output_frame->SetFormat(_frame->format);
 				output_frame->SetBytesPerSample(::av_get_bytes_per_sample((AVSampleFormat)_frame->format));
 				output_frame->SetNbSamples(_frame->nb_samples);
-				output_frame->SetChannels(_frame->channels);
+				output_frame->SetChannelCount(_frame->channels);
+				// output_frame->SetChannelLayout((cmn::AudioChannel::Layout)_frame->channel_layout);
 				output_frame->SetSampleRate(_frame->sample_rate);
-				output_frame->SetChannelLayout((cmn::AudioChannel::Layout)_frame->channel_layout);
 				output_frame->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1L : _frame->pts);
 				output_frame->SetDuration(_frame->pkt_duration);
 

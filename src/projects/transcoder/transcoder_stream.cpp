@@ -149,9 +149,7 @@ bool TranscoderStream::Stop()
 
 bool TranscoderStream::Push(std::shared_ptr<MediaPacket> packet)
 {
-	int32_t track_id = packet->GetTrackId();
-
-	DecodePacket(track_id, std::move(packet));
+	DecodePacket(std::move(packet));
 
 	return true;
 }
@@ -366,7 +364,7 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 		output_track->SetBypass(true);
 		output_track->SetCodecId(input_track->GetCodecId());
 		output_track->SetBitrate(input_track->GetBitrate());
-		output_track->GetChannel().SetLayout(input_track->GetChannel().GetLayout());
+		output_track->SetChannel(input_track->GetChannel());
 		output_track->GetSample().SetFormat(input_track->GetSample().GetFormat());
 		output_track->SetTimeBase(input_track->GetTimeBase());
 		output_track->SetSampleRate(input_track->GetTimeBase().GetDen());
@@ -383,6 +381,7 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 		output_track->SetCodecId(GetCodecId(profile.GetCodec()));
 		output_track->SetBitrate(profile.GetBitrate());
 		output_track->GetChannel().SetLayout(profile.GetChannel() == 1 ? cmn::AudioChannel::Layout::LayoutMono : cmn::AudioChannel::Layout::LayoutStereo);
+
 		// The sample format will change by the decoder event.
 		output_track->GetSample().SetFormat(input_track->GetSample().GetFormat());
 		output_track->SetSampleRate(profile.GetSamplerate());
@@ -395,7 +394,14 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 				logtw("OPUS codec only supports 48000Hz samplerate. change the samplerate to 48000Hz");
 			}
 		}
-		output_track->SetTimeBase(1, output_track->GetSampleRate());
+		if (output_track->GetSampleRate() == 0)
+		{
+			output_track->SetTimeBase(GetDefaultTimebaseByCodecId(output_track->GetCodecId()));
+		}
+		else
+		{
+			output_track->SetTimeBase(1, output_track->GetSampleRate());
+		}
 	}
 
 	if (IsAudioCodec(output_track->GetCodecId()) == false)
@@ -779,8 +785,9 @@ bool TranscoderStream::CreateDecoder(int32_t input_track_id, int32_t decoder_tra
 	return true;
 }
 
-int32_t TranscoderStream::CreateEncoders(MediaTrackId track_id)
+int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 {
+	MediaTrackId track_id = buffer->GetTrackId();
 	int32_t created_encoder_count = 0;
 
 	// Get hardware acceleration is enabled
@@ -882,8 +889,10 @@ bool TranscoderStream::CreateEncoder(int32_t encoder_track_id, std::shared_ptr<T
 	return true;
 }
 
-void TranscoderStream::UpdateDecoderContext(MediaTrackId track_id)
+void TranscoderStream::UpdateDecoderContext(MediaFrame *buffer)
 {
+	MediaTrackId track_id = buffer->GetTrackId();
+
 	if (_decoders.find(track_id) == _decoders.end())
 	{
 		return;
@@ -894,7 +903,10 @@ void TranscoderStream::UpdateDecoderContext(MediaTrackId track_id)
 		return;
 	}
 
+	// TranscodeContext of Decoder
 	auto &decoder_context = _decoders[track_id]->GetContext();
+
+	// Input Track
 	auto &track = _input_stream->GetTrack(track_id);
 
 	switch (track->GetMediaType())
@@ -938,12 +950,14 @@ void TranscoderStream::UpdateInputTrack(MediaFrame *buffer)
 		input_track->SetWidth(buffer->GetWidth());
 		input_track->SetHeight(buffer->GetHeight());
 		input_track->SetFormat(buffer->GetFormat());
+		// logtd("frame.duration(%lld)", buffer->GetDuration());
 	}
 	else if (input_track->GetMediaType() == cmn::MediaType::Audio)
 	{
 		input_track->SetSampleRate(buffer->GetSampleRate());
 		input_track->GetSample().SetFormat(buffer->GetFormat<cmn::AudioSample::Format>());
-		input_track->GetChannel().SetLayout(buffer->GetChannelLayout());
+		input_track->SetChannel(buffer->GetChannels());
+		// logtd("frame.duration(%lld)", buffer->GetDuration());
 	}
 }
 
@@ -954,7 +968,9 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 	{
 		(void)(k);
 
-		if (buffer->GetTrackId() != (int32_t)v->_input_track->GetId())
+		auto input_track = v->_input_track;
+
+		if (buffer->GetTrackId() != (int32_t)input_track->GetId())
 		{
 			continue;
 		}
@@ -964,6 +980,7 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 			// OutputStream->MediaTrack
 			auto &output_track = o.second;
 
+			// Case of ByPass
 			if (output_track->IsBypass() == true)
 			{
 				output_track->SetWidth(buffer->GetWidth());
@@ -971,7 +988,7 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 				output_track->SetFormat(buffer->GetFormat());
 				output_track->SetSampleRate(buffer->GetSampleRate());
 				output_track->GetSample().SetFormat(buffer->GetFormat<cmn::AudioSample::Format>());
-				output_track->GetChannel().SetLayout(buffer->GetChannelLayout());
+				output_track->SetChannel(buffer->GetChannels());
 			}
 			else
 			{
@@ -989,17 +1006,33 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 				{
 					output_track->SetFormat(buffer->GetFormat());
 				}
-			}
 
-			// Exception : If there is no framerate information, fix it at any value.
-			if (output_track->GetFrameRate() == 0)
-			{
-				output_track->SetFrameRate(1.0f);
+				if (output_track->GetSampleRate() == 0 &&
+					output_track->GetMediaType() == cmn::MediaType::Audio)
+				{
+					output_track->SetSampleRate(buffer->GetSampleRate());
+					output_track->SetTimeBase(1, buffer->GetSampleRate());
+				}
+
+				if (output_track->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutUnknown &&
+					output_track->GetMediaType() == cmn::MediaType::Audio)
+				{
+					output_track->SetChannel(buffer->GetChannels());
+				}
+
+				if (output_track->GetFrameRate() == 0 && output_track->GetMediaType() == cmn::MediaType::Video)
+				{
+					auto &input_track = _input_stream->GetTrack(buffer->GetTrackId());
+					float estimated_framerate = 1 / ((double)buffer->GetDuration() * input_track->GetTimeBase().GetExpr());
+					logti("Framerate of the output stream is not set. set the estimated framerate of source stream. %.2ffps", estimated_framerate);
+					output_track->SetFrameRate(estimated_framerate);
+				}
 			}
 		}
 	}
 }
 
+// Function called when codec information is extracted or changed from the decoder
 void TranscoderStream::ChangeOutputFormat(MediaFrame *buffer)
 {
 	if (buffer == nullptr)
@@ -1012,20 +1045,22 @@ void TranscoderStream::ChangeOutputFormat(MediaFrame *buffer)
 	UpdateInputTrack(buffer);
 
 	// Update Decoder Context
-	UpdateDecoderContext(buffer->GetTrackId());
+	UpdateDecoderContext(buffer);
 
 	// Udpate Track of Output Stream
 	UpdateOutputTrack(buffer);
 
 	// Create Encoder
-	CreateEncoders(buffer->GetTrackId());
+	CreateEncoders(buffer);
 
 	// Craete Filter
 	CreateFilter(buffer);
 }
 
-void TranscoderStream::DecodePacket(int32_t track_id, std::shared_ptr<MediaPacket> packet)
+void TranscoderStream::DecodePacket(std::shared_ptr<MediaPacket> packet)
 {
+	MediaTrackId track_id = packet->GetTrackId();
+
 	// 1. bypass track processing
 	auto stage_item_to_output = _stage_input_to_output.find(track_id);
 	if (stage_item_to_output != _stage_input_to_output.end())
@@ -1104,9 +1139,9 @@ void TranscoderStream::OnDecodedPacket(TranscodeResult result, int32_t decoder_i
 
 	switch (result)
 	{
+		// It indicates output format is changed
 		case TranscodeResult::FormatChanged:
-			// It indicates output format is changed
-
+			// logte("Called TranscodeResult::FormatChanged");
 			// Re-create filter and encoder using the format
 			decoded_frame->SetTrackId(decoder_id);
 			ChangeOutputFormat(decoded_frame.get());
@@ -1147,7 +1182,7 @@ TranscodeResult TranscoderStream::FilterFrame(int32_t track_id, std::shared_ptr<
 		  (int64_t)(decoded_frame->GetPts() * filter->GetInputTimebase().GetExpr() * 1000),
 		  decoded_frame->GetBufferSize());
 
-	if(filter->SendBuffer(std::move(decoded_frame)) == false)
+	if (filter->SendBuffer(std::move(decoded_frame)) == false)
 	{
 		return TranscodeResult::DataError;
 	}
@@ -1303,11 +1338,12 @@ void TranscoderStream::SendFrame(std::shared_ptr<info::Stream> &stream, std::sha
 
 void TranscoderStream::CreateFilter(MediaFrame *buffer)
 {
+	// Input Track Id
 	MediaTrackId track_id = buffer->GetTrackId();
 
 	// due to structural problems I've already made the transcode's context... so, update changed data.
 	auto &input_track = _input_stream->GetTrack(track_id);
-	auto &input_transcode_context = _decoders[track_id]->GetContext();
+	auto input_transcode_context = _decoders[track_id]->GetContext();
 
 	// 3. Get Output Track List. Creates a filter by looking up the encoding context information of the output track.
 	auto filter_item = _stage_decoder_to_filter.find(track_id);

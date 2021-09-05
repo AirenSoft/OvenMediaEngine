@@ -179,12 +179,12 @@ void EncoderOPUS::ThreadEncode()
 			}
 
 			// Append frame data into the buffer
-			if (frame->GetChannels() == 1)
+			if (frame->GetChannelCount() == 1)
 			{
 				// Just copy data into buffer
 				_buffer->Append(frame->GetBuffer(0), frame->GetBufferSize(0));
 			}
-			else if (frame->GetChannels() >= 2)
+			else if (frame->GetChannelCount() >= 2)
 			{
 				// Currently, OME's OPUS encoder supports up to 2 channels
 				switch (_format)
