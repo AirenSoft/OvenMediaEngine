@@ -482,51 +482,23 @@ public:
 		_nb_samples = nb_samples;
 	}
 
-	int32_t GetChannels() const
+	cmn::AudioChannel &GetChannels() 
 	{
 		return _channels;
 	}
 
-	void SetChannels(int32_t channels)
+	void SetChannels(cmn::AudioChannel channels)
 	{
-		switch (channels)
-		{
-			case 1:
-				_channels = channels;
-				_channel_layout = cmn::AudioChannel::Layout::LayoutMono;
-				break;
-
-			case 2:
-				_channels = channels;
-				_channel_layout = cmn::AudioChannel::Layout::LayoutStereo;
-				break;
-		}
+		_channels = channels;
 	}
 
-	cmn::AudioChannel::Layout GetChannelLayout() const
+	void SetChannelCount(uint32_t count)
 	{
-		return _channel_layout;
+		_channels.SetCount(count);
 	}
 
-	void SetChannelLayout(cmn::AudioChannel::Layout channel_layout)
-	{
-		switch (channel_layout)
-		{
-			case cmn::AudioChannel::Layout::LayoutMono:
-				_channel_layout = channel_layout;
-				_channels = 1;
-				break;
-
-			case cmn::AudioChannel::Layout::LayoutStereo:
-				_channel_layout = channel_layout;
-				_channels = 2;
-				break;
-			case cmn::AudioChannel::Layout::LayoutUnknown:
-			default:
-				_channel_layout = channel_layout;
-				_channels = 0;
-				break;
-		}
+	uint32_t GetChannelCount() const {
+		return _channels.GetCounts();
 	}
 
 	int32_t GetSampleRate() const
@@ -578,11 +550,10 @@ public:
 			frame->SetNbSamples(_nb_samples);
 			frame->SetChannels(_channels);
 			frame->SetSampleRate(_sample_rate);
-			frame->SetChannelLayout(_channel_layout);
 			frame->SetPts(_pts);
 			frame->SetDuration(_duration);
 
-			for (int i = 0; i < _channels; ++i)
+			for (uint32_t i = 0; i < _channels.GetCounts(); ++i)
 			{
 				frame->SetPlainData(GetPlainData(i)->Clone(), i);
 			}
@@ -644,8 +615,7 @@ private:
 
 	int32_t _bytes_per_sample = 0;
 	int32_t _nb_samples = 0;
-	int32_t _channels = 0;
-	cmn::AudioChannel::Layout _channel_layout = cmn::AudioChannel::Layout::LayoutMono;
+	cmn::AudioChannel _channels;
 	int32_t _sample_rate = 0;
 
 	int32_t _flags = 0;	 // Key, non-Key

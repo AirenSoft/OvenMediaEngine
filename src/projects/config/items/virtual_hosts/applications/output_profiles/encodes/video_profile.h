@@ -50,15 +50,6 @@ namespace cfg
 							// <Codec> is an option when _bypass is true
 							return (_bypass) ? nullptr : CreateConfigError("Codec must be specified when bypass is false");
 						});
-						Register<Optional>("Scale", &_scale);
-						Register<Optional>("Width", &_width, [=]() -> std::shared_ptr<ConfigError> {
-							// <Width> is an option when _bypass is true
-							return (_bypass) ? nullptr : CreateConfigError("Width must be specified when bypass is false");
-						});
-						Register<Optional>("Height", &_height, [=]() -> std::shared_ptr<ConfigError> {
-							// <Height> is an option when _bypass is true
-							return (_bypass) ? nullptr : CreateConfigError("Height must be specified when bypass is false");
-						});
 						Register<Optional>(
 							"Bitrate", &_bitrate_string,
 							[=]() -> std::shared_ptr<ConfigError> {
@@ -81,10 +72,27 @@ namespace cfg
 
 								return (_bitrate > 0) ? nullptr : CreateConfigError("Bitrate must be greater than 0");
 							});
+						Register<Optional>("Scale", &_scale);
+
+#if 1
+						// Change to optional value. If the value is not set, the same value as the source is used.
+						Register<Optional>("Width", &_width);
+						Register<Optional>("Height", &_height);
+						Register<Optional>("Framerate", &_framerate);
+#else
+						Register<Optional>("Width", &_width, [=]() -> std::shared_ptr<ConfigError> {
+							// <Width> is an option when _bypass is true
+							return (_bypass) ? nullptr : CreateConfigError("Width must be specified when bypass is false");
+						});
+						Register<Optional>("Height", &_height, [=]() -> std::shared_ptr<ConfigError> {
+							// <Height> is an option when _bypass is true
+							return (_bypass) ? nullptr : CreateConfigError("Height must be specified when bypass is false");
+						});
 						Register<Optional>("Framerate", &_framerate, [=]() -> std::shared_ptr<ConfigError> {
 							// <Framerate> is an option when _bypass is true
 							return (_bypass) ? nullptr : CreateConfigError("Framerate must be specified when bypass is false");
 						});
+#endif
 					}
 				};
 			}  // namespace oprf

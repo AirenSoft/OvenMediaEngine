@@ -60,7 +60,7 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 		logte("Could not allocate variables for filter graph: %p, %p, %p", _filter_graph, _inputs, _outputs);
 		return false;
 	}
-	
+
 	// Limit the number of filter threads to 2. I think 2 thread is usually enough for video filtering processing.
 	_filter_graph->nb_threads = 2;
 
@@ -125,14 +125,15 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	_inputs->pad_idx = 0;
 	_inputs->next = nullptr;
 
-	std::vector<ov::String> filters = {
-		// "fps" filter options
-		ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()),
-		// "scale" filter options
-		ov::String::FormatString("scale=%dx%d:flags=bilinear", output_context->GetVideoWidth(), output_context->GetVideoHeight()),
-		// "settb" filter options
-		ov::String::FormatString("settb=%s", output_context->GetTimeBase().GetStringExpr().CStr()),
-	};
+	std::vector<ov::String> filters;
+
+	if (output_context->GetFrameRate() > 0.0f)
+	{
+		filters.push_back(
+			ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()));
+	}
+	filters.push_back(ov::String::FormatString("scale=%dx%d:flags=bilinear", output_context->GetVideoWidth(), output_context->GetVideoHeight()));
+	filters.push_back(ov::String::FormatString("settb=%s", output_context->GetTimeBase().GetStringExpr().CStr()));
 
 	ov::String output_filters = ov::String::Join(filters, ",");
 	if ((ret = ::avfilter_graph_parse_ptr(_filter_graph, output_filters, &_inputs, &_outputs, nullptr)) < 0)

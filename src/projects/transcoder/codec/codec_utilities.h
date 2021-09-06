@@ -87,9 +87,10 @@ public:
 				audio_frame->SetMediaType(media_type);
 				audio_frame->SetBytesPerSample(::av_get_bytes_per_sample(static_cast<AVSampleFormat>(frame->format)));
 				audio_frame->SetNbSamples(frame->nb_samples);
-				audio_frame->SetChannels(frame->channels);
+				audio_frame->SetChannelCount(frame->channels);
 				audio_frame->SetSampleRate(frame->sample_rate);
 				audio_frame->SetFormat(frame->format);
+				audio_frame->SetDuration(frame->pkt_duration);
 
 				auto data_length = static_cast<uint32_t>(audio_frame->GetBytesPerSample() * audio_frame->GetNbSamples());
 
@@ -127,6 +128,8 @@ public:
 			case cmn::MediaType::Video: {
 				// Calculate duration using framerate in timebase
 				int den = context->GetTimeBase().GetDen();
+				
+				// TODO(soulk) : If there is no framerate value, the frame rate value cannot be calculated normally.
 				int64_t duration = (den == 0) ? 0LL : (float)den / context->GetFrameRate();
 				return duration;
 			}

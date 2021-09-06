@@ -359,9 +359,20 @@ namespace cmn
 			switch (_layout)
 			{
 				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutUnknown, _count = 0, _name = "unknown");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutStereo, _count = 2, _name = "stereo");
 				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutMono, _count = 1, _name = "mono");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutStereo, _count = 2, _name = "stereo");
 			}
+		}
+
+		void SetCount(uint32_t count) {
+			_count = count;
+			switch (_count)
+			{
+				OV_MEDIA_TYPE_SET_VALUE(0, _layout=Layout::LayoutUnknown, _name = "unknown");
+				OV_MEDIA_TYPE_SET_VALUE(1, _layout=Layout::LayoutMono, _name = "mono");
+				OV_MEDIA_TYPE_SET_VALUE(2, _layout=Layout::LayoutStereo, _name = "stereo");
+				
+			}			
 		}
 
 		// channel layout
