@@ -251,6 +251,10 @@ func reportSummury(clients *[]*omeClient) {
 
 	fmt.Printf("Number of clients : %d\n", clientCount)
 
+	if clientCount == 0 {
+		return
+	}
+
 	connectionStateCount := struct {
 						ICEConnectionStateNew int
 						ICEConnectionStateChecking int

@@ -121,12 +121,16 @@ namespace ov
 					DelayQueueAction action = first_item.function(first_item.parameter);
 
 					std::lock_guard<std::mutex> lock(_mutex);
-					_queue.pop();
-
-					if (action == DelayQueueAction::Repeat)
+					// If we enter this step immediately after Clear(), there will be a problem
+					if (_queue.empty() == false)
 					{
-						first_item.RecalculateTimePoint();
-						_queue.push(first_item);
+						_queue.pop();
+
+						if (action == DelayQueueAction::Repeat)
+						{
+							first_item.RecalculateTimePoint();
+							_queue.push(first_item);
+						}
 					}
 				}
 				else

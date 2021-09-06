@@ -83,10 +83,18 @@ namespace ov
 		}
 
 		_socket_count = 0;
-		_socket_map.clear();
-		_sockets_to_insert.Clear();
-		_sockets_to_dispatch.clear();
-		_sockets_to_delete.Clear();
+		{
+			std::lock_guard lock_guard(_socket_map_mutex);
+			_socket_map.clear();
+
+			decltype(_sockets_to_insert)().swap(_sockets_to_insert);
+			decltype(_sockets_to_delete)().swap(_sockets_to_delete);
+		}
+
+		{
+			std::lock_guard lock_guard(_sockets_to_dispatch_mutex);
+			_sockets_to_dispatch.clear();
+		}
 
 		_connection_timed_out_queue.clear();
 
@@ -174,28 +182,25 @@ namespace ov
 
 	void SocketPoolWorker::MergeSocketList()
 	{
-		while (_sockets_to_insert.IsEmpty() == false)
+		std::lock_guard lock_guard(_socket_map_mutex);
+
+		decltype(_sockets_to_insert) insert_queue;
+		decltype(_sockets_to_insert) delete_queue;
+
+		std::swap(insert_queue, _sockets_to_insert);
+		std::swap(delete_queue, _sockets_to_delete);
+		while (insert_queue.empty() == false)
 		{
-			auto socket_value = _sockets_to_insert.Dequeue();
-
-			if (socket_value.has_value())
-			{
-				auto socket = socket_value.value();
-
-				_socket_map[socket->GetNativeHandle()] = socket;
-			}
+			auto socket = insert_queue.front();
+			insert_queue.pop();
+			_socket_map[socket->GetNativeHandle()] = socket;
 		}
 
-		while (_sockets_to_delete.IsEmpty() == false)
+		while (delete_queue.empty() == false)
 		{
-			auto socket_value = _sockets_to_delete.Dequeue();
-
-			if (socket_value.has_value())
-			{
-				auto socket = socket_value.value();
-
-				_socket_map.erase(socket->GetNativeHandle());
-			}
+			auto socket = delete_queue.front();
+			delete_queue.pop();
+			_socket_map.erase(socket->GetNativeHandle());
 		}
 	}
 
@@ -212,10 +217,8 @@ namespace ov
 				// Sockets that have failed to send data for a long time are forced to shut down
 				logaw("Failed to send data for %dms - This socket is going to be garbage collected (%s)", OV_SOCKET_EXPIRE_TIMEOUT, socket->ToString().CStr());
 
-				socket->CloseInternal();
-				socket->DispatchEvents();
-
 				DeleteFromEpoll(socket);
+				socket->CloseImmediatelyWithState(SocketState::Disconnected);
 
 				candidate = _gc_candidates.erase(candidate);
 			}
@@ -234,11 +237,11 @@ namespace ov
 
 	void SocketPoolWorker::CallbackTimedOutConnections()
 	{
-		if(_connection_timed_out_queue.size() <= 0)
+		if (_connection_timed_out_queue.size() <= 0)
 		{
 			return;
 		}
-		
+
 		_connection_timed_out_queue_mutex.lock();
 		auto timed_out_queue = std::move(_connection_timed_out_queue);
 		_connection_timed_out_queue_mutex.unlock();
@@ -361,7 +364,7 @@ namespace ov
 
 					if (need_to_close == false)
 					{
-						auto name = ov::String(ov::Platform::GetThreadName());
+						auto name = String(Platform::GetThreadName());
 
 						if (OV_CHECK_FLAG(events, EPOLLOUT))
 						{
@@ -402,7 +405,7 @@ namespace ov
 							// An error occurred
 							int socket_error;
 
-							if (socket->GetSockOpt(SO_ERROR, &socket_error))
+							if (socket->IsClosable() && socket->GetSockOpt(SO_ERROR, &socket_error))
 							{
 								logad("EPOLLERR detected: %s\n", ::strerror(socket_error));
 							}
@@ -411,7 +414,7 @@ namespace ov
 							need_to_close = true;
 						}
 
-						if (OV_CHECK_FLAG(events, EPOLLHUP) || OV_CHECK_FLAG(events, EPOLLRDHUP))
+						if (OV_CHECK_FLAG(events, EPOLLHUP))
 						{
 							if (socket->GetState() != SocketState::Error)
 							{
@@ -432,12 +435,8 @@ namespace ov
 					{
 						_gc_candidates.erase(socket->GetNativeHandle());
 
-						if (socket->IsClosable())
-						{
-							socket->CloseWithState(new_state);
-						}
-
-						EnqueueToDispatchLater(socket);
+						DeleteFromEpoll(socket);
+						socket->CloseImmediatelyWithState(new_state);
 					}
 				}
 			}
@@ -462,12 +461,27 @@ namespace ov
 							break;
 
 						case Socket::DispatchResult::PartialDispatched:
-							logad("Need to do garbage collection for %s (dispatch_later)", socket->ToString().CStr());
-							_gc_candidates[socket->GetNativeHandle()] = socket;
+							if (socket->IsClosable())
+							{
+								logad("Need to do garbage collection for %s (dispatch_later)", socket->ToString().CStr());
+								_gc_candidates[socket->GetNativeHandle()] = socket;
+							}
+							else
+							{
+								// Socket is already closed
+							}
 							break;
 
 						case Socket::DispatchResult::Error:
-							socket->CloseWithState(SocketState::Error);
+							if (socket->IsClosable())
+							{
+								logad("Socket %s will be closed by dispatcher", socket->ToString().CStr());
+								socket->CloseImmediatelyWithState(SocketState::Error);
+							}
+							else
+							{
+								// Socket is already closed
+							}
 							break;
 					}
 				}
@@ -491,8 +505,7 @@ namespace ov
 			// Close immediately (Do not half-close)
 			if (socket->IsClosable())
 			{
-				socket->CloseInternal();
-				socket->SetState(SocketState::Closed);
+				socket->CloseImmediatelyWithState(SocketState::Closed);
 
 				// Do connection callback, etc...
 				socket->DispatchEvents();
@@ -551,7 +564,8 @@ namespace ov
 
 		if (error == nullptr)
 		{
-			_sockets_to_insert.Enqueue(socket);
+			std::lock_guard lock_guard(_socket_map_mutex);
+			_sockets_to_insert.push(socket);
 		}
 		else
 		{
@@ -717,7 +731,7 @@ namespace ov
 	{
 		_connection_callback_queue.Push(
 			[=](void *parameter) -> DelayQueueAction {
-				auto lock_guard = std::lock_guard(_connection_timed_out_queue_mutex);
+				std::lock_guard lock_guard(_connection_timed_out_queue_mutex);
 				_connection_timed_out_queue.push_back(socket);
 				return DelayQueueAction::Stop;
 			},
@@ -769,7 +783,6 @@ namespace ov
 		if (error == nullptr)
 		{
 			logad("Socket #%d is unregistered", native_handle);
-			_sockets_to_delete.Enqueue(socket);
 		}
 		else
 		{
@@ -786,6 +799,11 @@ namespace ov
 					  error->ToString().CStr(),
 					  StackTrace::GetStackTrace().CStr());
 			}
+		}
+
+		{
+			std::lock_guard lock_guard(_socket_map_mutex);
+			_socket_map.erase(socket->GetNativeHandle());
 		}
 
 		return (error == nullptr);
@@ -808,7 +826,7 @@ namespace ov
 		description.AppendFormat(
 			"<SocketPoolWorker: %p, socket_map: %zu, insert queue: %zu, delete queue: %zu, connection queue: %zu>",
 			this, _socket_map.size(),
-			_sockets_to_insert.Size(), _sockets_to_delete.Size(),
+			_sockets_to_insert.size(), _sockets_to_delete.size(),
 			_connection_timed_out_queue.size());
 
 		return description;
