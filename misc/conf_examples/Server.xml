@@ -293,7 +293,7 @@
 					</Providers>
 					<Publishers>
 						<AppWorkerCount>1</AppWorkerCount>
-						<StreamWorkerCount>1</StreamWorkerCount>
+						<StreamWorkerCount>8</StreamWorkerCount>
 						<OVT />
 						<WebRTC>
 							<Timeout>30000</Timeout>
