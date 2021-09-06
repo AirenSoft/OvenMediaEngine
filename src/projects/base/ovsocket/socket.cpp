@@ -195,9 +195,12 @@ namespace ov
 			return true;
 		} while (false);
 
-		if (CloseInternal())
 		{
-			SetState(SocketState::Closed);
+			std::lock_guard lock_guard(_dispatch_queue_lock);
+			if (CloseInternal())
+			{
+				SetState(SocketState::Closed);
+			}
 		}
 
 		return false;
@@ -282,7 +285,7 @@ namespace ov
 
 	bool Socket::AddToWorker(bool need_to_wait_first_epoll_event)
 	{
-		if (GetType() == ov::SocketType::Srt)
+		if (GetType() == SocketType::Srt)
 		{
 			// SRT doesn't generates any epoll events after ::srt_epoll_add_usock()
 			need_to_wait_first_epoll_event = false;
@@ -530,7 +533,7 @@ namespace ov
 		return SocketWrapper();
 	}
 
-	std::shared_ptr<const SocketError> Socket::DoConnectionCallback(const std::shared_ptr<const ov::SocketError> &error)
+	std::shared_ptr<const SocketError> Socket::DoConnectionCallback(const std::shared_ptr<const SocketError> &error)
 	{
 		if (_blocking_mode == BlockingMode::Blocking)
 		{
@@ -709,9 +712,9 @@ namespace ov
 		return _remote_address;
 	}
 
-	ov::String Socket::GetRemoteAddressAsUrl() const
+	String Socket::GetRemoteAddressAsUrl() const
 	{
-		return ov::String::FormatString("%s://%s", ov::StringFromSocketType(GetType()), GetRemoteAddress()!=nullptr?GetRemoteAddress()->ToString().CStr():"unknown");
+		return String::FormatString("%s://%s", StringFromSocketType(GetType()), GetRemoteAddress() != nullptr ? GetRemoteAddress()->ToString().CStr() : "unknown");
 	}
 
 	bool Socket::SetSockOpt(int proto, int option, const void *value, socklen_t value_length)
@@ -767,7 +770,7 @@ namespace ov
 
 	bool Socket::IsClosable() const
 	{
-		return OV_CHECK_FLAG(ov::ToUnderlyingType(_state), SOCKET_STATE_CLOSABLE);
+		return OV_CHECK_FLAG(ToUnderlyingType(_state), SOCKET_STATE_CLOSABLE);
 	}
 
 	SocketState Socket::GetState() const
@@ -888,11 +891,23 @@ namespace ov
 			return DispatchResult::Dispatched;
 		}
 
-		// Since some data has been sent, the time needs to be updated.
-		command.UpdateTime();
-		data = data->Subdata(sent_bytes);
+		if (sent_bytes == -1)
+		{
+			return DispatchResult::Error;
+		}
 
-		logad("Some data has not been sent: %ld bytes left", data->GetLength());
+		if (sent_bytes > 0)
+		{
+			// Since some data has been sent, the time needs to be updated.
+			command.UpdateTime();
+			data = data->Subdata(sent_bytes);
+
+			logad("Part of the data has been sent: %ld bytes, left: %ld bytes (%s)", sent_bytes, data->GetLength(), command.ToString().CStr());
+		}
+		else
+		{
+			// logad("Could not send data: %ld bytes (%s)", data->GetLength(), command.ToString().CStr());
+		}
 
 		return DispatchResult::PartialDispatched;
 	}
@@ -904,8 +919,9 @@ namespace ov
 		DispatchResult result = DispatchResult::Dispatched;
 
 		{
-			std::lock_guard lock_guard(_dispatch_queue_lock);
 			SOCKET_PROFILER_AFTER_LOCK();
+
+			std::lock_guard lock_guard(_dispatch_queue_lock);
 
 			[[maybe_unused]] auto count = _dispatch_queue.size();
 			SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
@@ -1005,8 +1021,11 @@ namespace ov
 #endif	// DEBUG
 				return DispatchResult::Dispatched;
 
-			case BlockingMode::NonBlocking:
+			case BlockingMode::NonBlocking: {
+				// Due to the connection callback point, the DispatchEventsInternal() specifically performs mutex.lock inside.
+				// std::lock_guard lock_guard(_dispatch_queue_lock);
 				return DispatchEventsInternal();
+			}
 		}
 
 		return DispatchResult::Error;
@@ -1554,6 +1573,8 @@ namespace ov
 			{
 				if (_socket.GetType() != SocketType::Srt)
 				{
+					SocketState new_state = SocketState::Error;
+
 					switch (socket_error->GetCode())
 					{
 						// Errors that can occur under normal circumstances do not output
@@ -1563,6 +1584,7 @@ namespace ov
 
 						case ECONNRESET:
 							// Peer is disconnected
+							new_state = SocketState::Disconnected;
 							break;
 
 						case ENOTCONN:
@@ -1580,7 +1602,7 @@ namespace ov
 								  StackTrace::GetStackTrace().CStr());
 					}
 
-					CloseWithState(SocketState::Error);
+					CloseWithState(new_state);
 				}
 				else
 				{
@@ -1711,7 +1733,7 @@ namespace ov
 	{
 		CHECK_STATE(>= SocketState::Closed, false);
 
-		logad("Closing %s...", GetRemoteAddress() != nullptr?GetRemoteAddress()->ToString().CStr():GetStreamId().CStr());
+		logad("Closing %s...", GetRemoteAddress() != nullptr ? GetRemoteAddress()->ToString().CStr() : GetStreamId().CStr());
 
 		if (GetState() == SocketState::Closed)
 		{
@@ -1737,13 +1759,17 @@ namespace ov
 				}
 
 				// Close regardless of result
-				if (CloseInternal())
 				{
-					SetState(new_state);
-				}
-				else
-				{
-					result = false;
+					std::lock_guard lock_guard(_dispatch_queue_lock);
+
+					if (CloseInternal())
+					{
+						SetState(new_state);
+					}
+					else
+					{
+						result = false;
+					}
 				}
 
 				return result;
@@ -1776,17 +1802,41 @@ namespace ov
 				}
 				else
 				{
-					logad("This socket already has close command (Do not need to call Close*() in this case)");
+					logad("This socket already has close command (Do not need to call Close*() in this case)\n%s", StackTrace::GetStackTrace().CStr());
 				}
+
+				_worker->EnqueueToDispatchLater(GetSharedPtr());
 			}
 		}
 
-		return (DispatchEvents() != DispatchResult::Error);
+		return false;
 	}
 
 	bool Socket::Close()
 	{
 		return CloseWithState(SocketState::Closed);
+	}
+
+	bool Socket::CloseImmediately()
+	{
+		std::lock_guard lock_guard(_dispatch_queue_lock);
+
+		// We must call DispatchEvents() so that the _post_callback can be called.
+		return CloseInternal() && (DispatchEvents() != DispatchResult::Error);
+	}
+
+	bool Socket::CloseImmediatelyWithState(SocketState new_state)
+	{
+		std::lock_guard lock_guard(_dispatch_queue_lock);
+
+		// We must call DispatchEvents() so that the _post_callback can be called.
+		if (CloseInternal() && (DispatchEvents() != DispatchResult::Error))
+		{
+			SetState(new_state);
+			return true;
+		}
+
+		return false;
 	}
 
 	Socket::DispatchResult Socket::HalfClose()
@@ -1909,6 +1959,8 @@ namespace ov
 #endif	// DEBUG
 				}
 			}
+
+			_dispatch_queue.clear();
 
 			logad("Socket is closed successfully");
 

@@ -33,7 +33,7 @@ namespace ov
 
 		int GetNativeHandle() const;
 
-		template <typename Tsocket = ov::Socket, typename... Targuments>
+		template <typename Tsocket = Socket, typename... Targuments>
 		std::shared_ptr<Tsocket> AllocSocket(Targuments... args)
 		{
 			auto socket = std::make_shared<Tsocket>(Socket::PrivateToken{nullptr}, this->GetSharedPtr(), args...);
@@ -99,24 +99,24 @@ namespace ov
 		// the number of sockets can be specified in advance so that they can be distributed properly.
 		std::atomic<int> _socket_count{0};
 
-		// key: native handle of SocketWrapper
-		std::map<int, std::shared_ptr<Socket>> _socket_map;
-
-		// A list of sockets created/deleted from AttachToWorker()/RemoveFromEpoll()
+		// A list of sockets created/deleted from AddToWorker()/DeleteFromEpoll()
 		//
-		// If RemoveFromEpoll() is called in thread #1 immediately after EpollWait() is called in thread #2,
+		// If DeleteFromEpoll() is called in thread #1 immediately after EpollWait() is called in thread #2,
 		// Since there is no longer a reference to std::shared_ptr<Socket>, the socket will be released,
 		// and after EpollWait() code will refer to the released socket.
-		// To avoid this issue, make sure that _socket_map is modified only in ThreadProc().
-		ov::Queue<std::shared_ptr<Socket>> _sockets_to_insert;
-		ov::Queue<std::shared_ptr<Socket>> _sockets_to_delete;
+		// To avoid this issue, _socket_map must ensure that it is modified only in the last part of ThreadProc().
+		std::mutex _socket_map_mutex;
+		// key: native handle of SocketWrapper
+		std::map<int, std::shared_ptr<Socket>> _socket_map;
+		std::queue<std::shared_ptr<Socket>> _sockets_to_insert;
+		std::queue<std::shared_ptr<Socket>> _sockets_to_delete;
 
 		// Socket failed to send data for too long must be forced to shut down in the future
-		ov::StopWatch _gc_interval;
+		StopWatch _gc_interval;
 		std::map<int, std::shared_ptr<Socket>> _gc_candidates;
 
 		// A queue for handling errors such as connection timeout in nonblocking mode.
-		inline static ov::DelayQueue _connection_callback_queue;
+		inline static DelayQueue _connection_callback_queue;
 		std::mutex _connection_timed_out_queue_mutex;
 		std::deque<std::shared_ptr<Socket>> _connection_timed_out_queue;
 
