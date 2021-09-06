@@ -50,8 +50,8 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetOutputProfiles, _output_profiles)
 				CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
 				CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
-				CFG_DECLARE_REF_GETTER_OF(GetStreamLoadBalancingThreadCount, _publishers.GetStreamLoadBalancingThreadCount())
-				CFG_DECLARE_REF_GETTER_OF(GetSessionLoadBalancingThreadCount, _publishers.GetSessionLoadBalancingThreadCount())
+				CFG_DECLARE_REF_GETTER_OF(GetAppWorkerCount, _publishers.GetAppWorkerCount())
+				CFG_DECLARE_REF_GETTER_OF(GetStreamWorkerCount, _publishers.GetStreamWorkerCount())
 
 			protected:
 				void MakeList() override

@@ -168,7 +168,7 @@ namespace pub
 
 	bool Application::Start()
 	{
-		_application_worker_count = GetConfig().GetStreamLoadBalancingThreadCount();
+		_application_worker_count = GetConfig().GetAppWorkerCount();
 		if(_application_worker_count < MIN_APPLICATION_WORKER_COUNT)
 		{
 			_application_worker_count = MIN_APPLICATION_WORKER_COUNT;
@@ -237,7 +237,7 @@ namespace pub
 	// Called by MediaRouteApplicationObserver
 	bool Application::OnStreamCreated(const std::shared_ptr<info::Stream> &info)
 	{
-		auto stream_worker_count = GetConfig().GetSessionLoadBalancingThreadCount();
+		auto stream_worker_count = GetConfig().GetStreamWorkerCount();
 
 		auto stream = CreateStream(info, stream_worker_count);
 		if (!stream)

@@ -42,8 +42,8 @@ namespace cfg
 							&_thumbnail_publisher};
 					}
 
-					CFG_DECLARE_REF_GETTER_OF(GetStreamLoadBalancingThreadCount, _stream_load_balancing_thread_count)
-					CFG_DECLARE_REF_GETTER_OF(GetSessionLoadBalancingThreadCount, _session_load_balancing_thread_count)
+					CFG_DECLARE_REF_GETTER_OF(GetAppWorkerCount, _stream_load_balancing_thread_count)
+					CFG_DECLARE_REF_GETTER_OF(GetStreamWorkerCount, _session_load_balancing_thread_count)
 					// CFG_DECLARE_REF_GETTER_OF(GetRtmpPublisher, _rtmp_publisher)
 					CFG_DECLARE_REF_GETTER_OF(GetHlsPublisher, _hls_publisher)
 					CFG_DECLARE_REF_GETTER_OF(GetDashPublisher, _dash_publisher)
@@ -57,8 +57,8 @@ namespace cfg
 				protected:
 					void MakeList() override
 					{
-						Register<Optional>("StreamLoadBalancingThreadCount", &_stream_load_balancing_thread_count);
-						Register<Optional>("SessionLoadBalancingThreadCount", &_session_load_balancing_thread_count);
+						Register<Optional>("AppWorkerCount", &_stream_load_balancing_thread_count);
+						Register<Optional>("StreamWorkerCount", &_session_load_balancing_thread_count);
 
 						// Register<Optional>("RTMP", &_rtmp_publisher);
 						Register<Optional>({"HLS", "hls"}, &_hls_publisher);
