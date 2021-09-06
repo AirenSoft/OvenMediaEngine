@@ -17,12 +17,15 @@ import (
 )
 
 const delayWarningThreshold = 1000  // ms
+const lossWarningThreshold = 5		// percentage
 const delayReportPeriod = 5000 		// ms
 
 func main() {
 	requestURL := flag.String("url", "undefined", "[Required] OvenMediaEngine's webrtc streaming URL")
 	numberOfClient := flag.Int("n", 1, "[Optional] Number of client")
-	connectionInterval := flag.Int("int", 100, "[Optional] Client connection interval(milliseconds), ")
+	connectionInterval := flag.Int("cint", 100, "[Optional] PeerConnection connection interval (milliseconds)")
+	summaryInterval := flag.Int("sint", 5000, "[Optional] Summary information output cycle (milliseconds)")
+	lifetime := flag.Int("life", 0, "[Optional] Number of times to execute the test (seconds)")
 
 	flag.Usage = func() {
 		
@@ -45,7 +48,7 @@ func main() {
 			select {
 			case <- quit:
 				return
-			case <- time.After(time.Millisecond * time.Duration((*connectionInterval))):
+			case <- time.After(time.Millisecond * time.Duration(*connectionInterval)):
 				client := omeClient{}
 
 				client.name = fmt.Sprintf("client_%d", i)
@@ -65,13 +68,34 @@ func main() {
 	signal.Notify(closed, os.Interrupt)
 	
 	var clients = make([]*omeClient, 0, *numberOfClient)
+	summaryTimeout := time.After(time.Millisecond * time.Duration(*summaryInterval));
+
+	lifetimeDuration := time.Duration(0)
+	if *lifetime == 0 {
+		lifetimeDuration = math.MaxInt64
+	}else {
+		lifetimeDuration = time.Second * time.Duration(*lifetime)
+	}
+	lifeTimeout := time.After(lifetimeDuration)
 	
 	F :
 	for {
 		select {	
 		case client := <- clientChan:
 			clients = append(clients, client)
+
+		case <- summaryTimeout:
+			reportSummury(&clients)
+			// Reset timer
+			summaryTimeout = time.After(time.Millisecond * time.Duration(*summaryInterval));
+
+		case <- lifeTimeout:
+			fmt.Printf("Test ended (lifetime : %d seconds)\n", *lifetime);
+			close(quit)
+			break F
+
 		case <-closed:
+			fmt.Printf("Test stopped by user\n");
 			close(quit)
 			break F
 		}
@@ -80,6 +104,10 @@ func main() {
 	fmt.Println("***************************")
 	fmt.Println("Reports")
 	fmt.Println("***************************")
+
+	reportSummury(&clients)
+
+	fmt.Println("<Details>")
 	for _, client := range clients {
 		if client == nil {
 			continue
@@ -97,10 +125,14 @@ type signalingClient struct {
 type sessionStat struct {
 	startTime time.Time
 
-	maxFPS float32
-	minFPS float32
+	connectionState webrtc.ICEConnectionState
+
+	maxFPS float64
+	avgFPS float64
+	minFPS float64
 
 	maxBPS int64
+	avgBPS int64
 	minBPS int64
 
 	totalBytes       int64
@@ -109,7 +141,9 @@ type sessionStat struct {
 	packetLoss       int64
 
 	videoRtpTimestampElapsedMSec int64
+	videoDelay float64
 	audioRtpTimestampElapsedMSec int64
+	audioDelay float64
 }
 
 type omeClient struct {
@@ -205,6 +239,109 @@ func (jsonMsg *signalMessage) unmarshal(msg []byte) error {
 	return json.Unmarshal(msg, jsonMsg)
 }
 
+func reportSummury(clients *[]*omeClient) {
+	fmt.Println("<Summary>")
+
+	clientCount := int64(len(*clients))
+	var firstSessionStartTime time.Time 
+	if clientCount > 0 {
+		firstSessionStartTime = ((*clients)[0]).stat.startTime
+		fmt.Printf("Running time : %s\n", time.Since(firstSessionStartTime).Round(time.Second))
+	}
+
+	fmt.Printf("Number of clients : %d\n", clientCount)
+
+	connectionStateCount := struct {
+						ICEConnectionStateNew int
+						ICEConnectionStateChecking int
+						ICEConnectionStateConnected int
+						ICEConnectionStateCompleted int
+						ICEConnectionStateDisconnected int
+						ICEConnectionStateFailed int
+						ICEConnectionStateClosed int
+					} {0,0,0,0,0,0,0}
+	
+	
+
+	totalStat := sessionStat{}
+
+	var minVideoDelay, maxVideoDelay, minAudioDelay, maxAudioDelay float64
+	var minAvgFPS, maxAvgFPS float64
+	var minAvgBPS, maxAvgBPS int64
+
+	for _, client := range *clients {
+		client.mutex.Lock()
+		stat := client.stat
+		client.mutex.Unlock()
+
+		switch stat.connectionState {
+		case webrtc.ICEConnectionStateNew:
+			connectionStateCount.ICEConnectionStateNew ++
+		case webrtc.ICEConnectionStateChecking:
+			connectionStateCount.ICEConnectionStateChecking ++
+		case webrtc.ICEConnectionStateConnected:
+			connectionStateCount.ICEConnectionStateConnected ++
+		case webrtc.ICEConnectionStateCompleted:
+			connectionStateCount.ICEConnectionStateCompleted ++
+		case webrtc.ICEConnectionStateDisconnected:
+			connectionStateCount.ICEConnectionStateDisconnected ++
+		case webrtc.ICEConnectionStateFailed:
+			connectionStateCount.ICEConnectionStateFailed ++
+		case webrtc.ICEConnectionStateClosed:
+			connectionStateCount.ICEConnectionStateClosed ++
+		}
+
+		if totalStat.startTime.IsZero() {
+			totalStat = stat
+
+			maxAvgFPS = totalStat.avgFPS
+			minAvgFPS = totalStat.avgFPS
+			maxAvgBPS = totalStat.avgBPS
+			minAvgBPS = totalStat.avgBPS
+
+			minVideoDelay = totalStat.videoDelay
+			maxVideoDelay = totalStat.videoDelay
+			minAudioDelay = totalStat.audioDelay
+			maxAudioDelay = totalStat.audioDelay
+
+			continue
+		}
+		
+		minAvgFPS = math.Min(minAvgFPS, stat.avgFPS)
+		maxAvgFPS = math.Max(maxAvgFPS, stat.avgFPS)
+		
+		minAvgBPS = int64(math.Min(float64(minAvgBPS), float64(stat.avgBPS)))
+		maxAvgBPS = int64(math.Max(float64(maxAvgBPS), float64(stat.avgBPS)))
+
+		minVideoDelay = math.Min(minVideoDelay, stat.videoDelay)
+		maxVideoDelay = math.Max(maxVideoDelay, stat.videoDelay)
+
+		minAudioDelay = math.Min(minAudioDelay, stat.audioDelay)
+		maxAudioDelay = math.Max(maxAudioDelay, stat.audioDelay)
+
+		// This will output the average value.
+		totalStat.avgBPS += stat.avgBPS
+		totalStat.avgFPS += stat.avgFPS
+		totalStat.totalBytes += stat.totalBytes
+		totalStat.totalVideoFrames += stat.totalVideoFrames
+		totalStat.totalRtpPackets += stat.totalRtpPackets
+		totalStat.packetLoss += stat.packetLoss
+		totalStat.videoDelay += stat.videoDelay
+		totalStat.audioDelay += stat.audioDelay
+	}
+
+	fmt.Printf("ICE Connection State : New(%d), Checking(%d) Connected(%d) Completed(%d) Disconnected(%d) Failed(%d) Closed(%d)\n", 
+	connectionStateCount.ICEConnectionStateNew, connectionStateCount.ICEConnectionStateChecking, connectionStateCount.ICEConnectionStateConnected, connectionStateCount.ICEConnectionStateCompleted, connectionStateCount.ICEConnectionStateDisconnected, connectionStateCount.ICEConnectionStateFailed, connectionStateCount.ICEConnectionStateClosed)
+
+	fmt.Printf("Avg Video Delay(%.2f ms) Max Video Delay(%.2f ms) Min Video Delay(%.2f ms)\nAvg Audio Delay(%.2f ms) Max Audio Delay(%.2f ms) Min Audio Delay(%.2f ms)\n", totalStat.videoDelay/float64(clientCount), maxVideoDelay, minVideoDelay, totalStat.audioDelay/float64(clientCount), maxAudioDelay, minAudioDelay)
+	
+	fmt.Printf("Avg FPS(%.2f) Max FPS(%.2f) Min FPS(%.2f)\nAvg BPS(%sbps) Max BPS(%sbps) Min BPS(%sbps)\n", totalStat.avgFPS/float64(clientCount), maxAvgFPS, minAvgFPS, CountDecimal(totalStat.avgBPS/clientCount), CountDecimal(maxAvgBPS), CountDecimal(minAvgBPS))
+	
+	fmt.Printf("Total Bytes(%sBytes) Avg Bytes(%sBytes)\nTotal Packets(%d) Avg Packets(%d)\nTotal Packet Losses(%d) Avg Packet Losses(%d)\n", CountDecimal(totalStat.totalBytes), CountDecimal(totalStat.totalBytes/clientCount), totalStat.totalRtpPackets, totalStat.totalRtpPackets/clientCount, totalStat.packetLoss, totalStat.packetLoss/clientCount)
+
+	fmt.Printf("\n")
+}
+
 func (c *omeClient) report() {
 
 	c.mutex.Lock()
@@ -223,14 +360,8 @@ func (c *omeClient) report() {
 		audioDelay = math.Abs(float64(time.Since(stat.startTime).Milliseconds() - stat.audioRtpTimestampElapsedMSec))
 	}
 
-	avgBps := int64(float32(stat.totalBytes) / float32(time.Since(stat.startTime).Seconds()) * 8)
-	avgFps := float32(stat.totalVideoFrames) / float32(time.Since(stat.startTime).Seconds())
-
-	fmt.Printf("%c[32m[%s]%c[0m\n\trunning_time(%d ms) total_packets(%d) packet_loss(%d)\n\tlast_video_delay (%.1f ms) last_audio_delay (%.1f ms)\n\ttotal_bytes(%s) avg_bps(%s) min_bps(%s) max_bps(%s)\n\ttotal_video_frames(%d) avg_fps(%.2f) min_fps(%.2f) max_fps(%.2f)\n\n",
-		27,
-		c.name, 27, time.Since(stat.startTime).Milliseconds(), stat.totalRtpPackets, stat.packetLoss, videoDelay, audioDelay,
-		ByteCountDecimal(stat.totalBytes), ByteCountDecimal(avgBps), ByteCountDecimal(stat.minBPS), ByteCountDecimal(stat.maxBPS),
-		stat.totalVideoFrames, avgFps, stat.minFPS, stat.maxFPS)
+	fmt.Printf("%c[32m[%s]%c[0m\n\trunning_time(%d ms) connection_state(%s) total_packets(%d) packet_loss(%d)\n\tlast_video_delay (%.1f ms) last_audio_delay (%.1f ms)\n\ttotal_bytes(%sbytes) avg_bps(%sbps) min_bps(%sbps) max_bps(%sbps)\n\ttotal_video_frames(%d) avg_fps(%.2f) min_fps(%.2f) max_fps(%.2f)\n\n",
+		27, c.name, 27, time.Since(stat.startTime).Round(time.Second), stat.connectionState.String(), stat.totalRtpPackets, stat.packetLoss, videoDelay, audioDelay, CountDecimal(stat.totalBytes), CountDecimal(stat.avgBPS), CountDecimal(stat.minBPS), CountDecimal(stat.maxBPS), stat.totalVideoFrames, stat.avgFPS, stat.minFPS, stat.maxFPS)
 }
 
 func (c *omeClient) run(url string) error {
@@ -329,8 +460,8 @@ func (c *omeClient) run(url string) error {
 					currVideoFrames := stat.totalVideoFrames
 					currTotalBytes := stat.totalBytes
 
-					fps := float32(float32(currVideoFrames-lastFrames) / float32(time.Since(lastTime).Seconds()))
-					bps := int64((float32(currTotalBytes-lastBytes) / float32(time.Since(lastTime).Seconds())) * 8)
+					fps := float64(float64(currVideoFrames-lastFrames) / float64(time.Since(lastTime).Seconds()))
+					bps := int64((float64(currTotalBytes-lastBytes) / float64(time.Since(lastTime).Seconds())) * 8)
 
 					c.mutex.Lock()
 					if c.stat.maxFPS == 0 || c.stat.maxFPS < fps {
@@ -348,6 +479,10 @@ func (c *omeClient) run(url string) error {
 					if c.stat.minBPS == 0 || c.stat.minBPS > bps {
 						c.stat.minBPS = bps
 					}
+
+					c.stat.avgBPS = int64(float32(stat.totalBytes) / float32(time.Since(stat.startTime).Seconds()) * 8)
+					c.stat.avgFPS = float64(stat.totalVideoFrames) / float64(time.Since(stat.startTime).Seconds())
+
 					c.mutex.Unlock()
 
 					lastTime = time.Now()
@@ -395,24 +530,32 @@ func (c *omeClient) run(url string) error {
 					c.stat.totalVideoFrames++
 					c.stat.videoRtpTimestampElapsedMSec = int64((float64(rtp.Timestamp-startTimestamp) / float64(track.Codec().ClockRate) * 1000))
 
-					rtpDelay := math.Abs(float64(time.Since(c.stat.startTime).Milliseconds() - c.stat.videoRtpTimestampElapsedMSec))
-					if rtpDelay > delayWarningThreshold {
+					c.stat.videoDelay = math.Abs(float64(time.Since(c.stat.startTime).Milliseconds() - c.stat.videoRtpTimestampElapsedMSec))
+					if c.stat.videoDelay > delayWarningThreshold {
 						need_delay_warn = true
 					}
 				}
 			case webrtc.RTPCodecTypeAudio:
 				c.stat.audioRtpTimestampElapsedMSec = int64((float64(rtp.Timestamp-startTimestamp) / float64(track.Codec().ClockRate) * 1000))
 
-				rtpDelay := math.Abs(float64(time.Since(c.stat.startTime).Milliseconds() - c.stat.audioRtpTimestampElapsedMSec))
-				if rtpDelay > delayWarningThreshold {
+				c.stat.audioDelay = math.Abs(float64(time.Since(c.stat.startTime).Milliseconds() - c.stat.audioRtpTimestampElapsedMSec))
+				if c.stat.audioDelay > delayWarningThreshold {
 					need_delay_warn = true
 				}
 			}
 
-			c.mutex.Unlock()
+			// packet loss rate
+			packetLossRate := (float32(c.stat.packetLoss)/float32(c.stat.totalRtpPackets)) * 100
+			// 5%
+			if(packetLossRate > lossWarningThreshold) {
+				need_delay_warn = true
+			}
 
+			c.mutex.Unlock()
+			
+			// report() must be called after mutex.Unlock
 			if need_delay_warn && time.Since(last_report_time).Milliseconds() > delayReportPeriod {
-				fmt.Printf("%c[31m[warning]%c[0m delay is too high!\n", 27, 27)
+				fmt.Printf("%c[31m[warning]%c[0m delay or packet loss is too high!\n", 27, 27)
 				c.report()
 
 				last_report_time = time.Now()
@@ -422,6 +565,7 @@ func (c *omeClient) run(url string) error {
 
 	c.peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
 		fmt.Printf("%s connection state has changed %s \n", c.name, connectionState.String())
+		c.stat.connectionState = connectionState
 	})
 
 	// Set remote SessionDescription
@@ -469,15 +613,15 @@ func (c *omeClient) stop() error {
 }
 
 // utilities
-func ByteCountDecimal(b int64) string {
+func CountDecimal(b int64) string {
 	const unit = 1000
 	if b < unit {
-		return fmt.Sprintf("%d B", b)
+		return fmt.Sprintf("%d", b)
 	}
 	div, exp := int64(unit), 0
 	for n := b / unit; n >= unit; n /= unit {
 		div *= unit
 		exp++
 	}
-	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "kMGTPE"[exp])
+	return fmt.Sprintf("%.1f %c", float64(b)/float64(div), "kMGTPE"[exp])
 }
