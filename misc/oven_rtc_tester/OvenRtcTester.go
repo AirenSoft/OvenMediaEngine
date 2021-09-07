@@ -341,11 +341,13 @@ func reportSummury(clients *[]*omeClient) {
 	fmt.Printf("ICE Connection State : New(%d), Checking(%d) Connected(%d) Completed(%d) Disconnected(%d) Failed(%d) Closed(%d)\n", 
 	connectionStateCount.ICEConnectionStateNew, connectionStateCount.ICEConnectionStateChecking, connectionStateCount.ICEConnectionStateConnected, connectionStateCount.ICEConnectionStateCompleted, connectionStateCount.ICEConnectionStateDisconnected, connectionStateCount.ICEConnectionStateFailed, connectionStateCount.ICEConnectionStateClosed)
 
-	fmt.Printf("Avg Video Delay(%.2f ms) Max Video Delay(%.2f ms) Min Video Delay(%.2f ms)\nAvg Audio Delay(%.2f ms) Max Audio Delay(%.2f ms) Min Audio Delay(%.2f ms)\n", totalStat.videoDelay/float64(clientCount), maxVideoDelay, minVideoDelay, totalStat.audioDelay/float64(clientCount), maxAudioDelay, minAudioDelay)
+	connected := int64(connectionStateCount.ICEConnectionStateConnected)
+
+	fmt.Printf("Avg Video Delay(%.2f ms) Max Video Delay(%.2f ms) Min Video Delay(%.2f ms)\nAvg Audio Delay(%.2f ms) Max Audio Delay(%.2f ms) Min Audio Delay(%.2f ms)\n", totalStat.videoDelay/float64(connected), maxVideoDelay, minVideoDelay, totalStat.audioDelay/float64(connected), maxAudioDelay, minAudioDelay)
 	
-	fmt.Printf("Avg FPS(%.2f) Max FPS(%.2f) Min FPS(%.2f)\nAvg BPS(%sbps) Max BPS(%sbps) Min BPS(%sbps)\n", totalStat.avgFPS/float64(clientCount), maxAvgFPS, minAvgFPS, CountDecimal(totalStat.avgBPS/clientCount), CountDecimal(maxAvgBPS), CountDecimal(minAvgBPS))
+	fmt.Printf("Avg FPS(%.2f) Max FPS(%.2f) Min FPS(%.2f)\nAvg BPS(%sbps) Max BPS(%sbps) Min BPS(%sbps)\n", totalStat.avgFPS/float64(connected), maxAvgFPS, minAvgFPS, CountDecimal(totalStat.avgBPS/connected), CountDecimal(maxAvgBPS), CountDecimal(minAvgBPS))
 	
-	fmt.Printf("Total Bytes(%sBytes) Avg Bytes(%sBytes)\nTotal Packets(%d) Avg Packets(%d)\nTotal Packet Losses(%d) Avg Packet Losses(%d)\n", CountDecimal(totalStat.totalBytes), CountDecimal(totalStat.totalBytes/clientCount), totalStat.totalRtpPackets, totalStat.totalRtpPackets/clientCount, totalStat.packetLoss, totalStat.packetLoss/clientCount)
+	fmt.Printf("Total Bytes(%sBytes) Avg Bytes(%sBytes)\nTotal Packets(%d) Avg Packets(%d)\nTotal Packet Losses(%d) Avg Packet Losses(%d)\n", CountDecimal(totalStat.totalBytes), CountDecimal(totalStat.totalBytes/connected), totalStat.totalRtpPackets, totalStat.totalRtpPackets/connected, totalStat.packetLoss, totalStat.packetLoss/connected)
 
 	fmt.Printf("\n")
 }
