@@ -62,6 +62,8 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 		_ice_servers = Json::arrayValue;
 
 		// for internal turn/tcp relay configuration
+		_tcp_force = webrtc_config.GetIceCandidates().IsTcpForce();
+
 		bool tcp_relay_parsed = false;
 		auto tcp_relay_address = webrtc_config.GetIceCandidates().GetTcpRelay(&tcp_relay_parsed);
 		if (tcp_relay_parsed)
@@ -602,6 +604,12 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 				}
 				value["candidates"] = candidates;
 				value["code"] = static_cast<int>(http::StatusCode::OK);
+
+				if(_tcp_force == true)
+				{
+					tcp_relay = true;
+				}
+				
 				if (tcp_relay == true && _ice_servers.isNull() == false)
 				{
 					value["ice_servers"] = _ice_servers;

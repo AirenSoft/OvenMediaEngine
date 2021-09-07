@@ -62,9 +62,12 @@
 					<!-- 
 						If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
 						This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
-						For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/v/0.11.1/streaming/webrtc-publishing#webrtc-over-tcp
+						For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/streaming/webrtc-publishing#webrtc-over-tcp
 					-->
 					<TcpRelay>*:3478</TcpRelay>
+					<!-- TcpForce is an option to force the use of TCP rather than UDP in WebRTC streaming. (You can omit ?transport=tcp accordingly.) If <TcpRelay> is not set, playback may fail. -->
+					<TcpForce>false</TcpForce>
+
 					<IceCandidate>*:10000/udp</IceCandidate>
 					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
 				</IceCandidates>
@@ -95,14 +98,15 @@
 					<!-- <TLSPort>3334</TLSPort> -->
 					<WorkerCount>1</WorkerCount>
 				</Signalling>
-
-				<IceCandidates>
 					<!-- 
 						If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
 						This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
-						For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/v/0.11.1/streaming/webrtc-publishing#webrtc-over-tcp
+						For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/streaming/webrtc-publishing#webrtc-over-tcp
 					-->
 					<TcpRelay>*:3478</TcpRelay>
+					<!-- TcpForce is an option to force the use of TCP rather than UDP in WebRTC streaming. (You can omit ?transport=tcp accordingly.) If <TcpRelay> is not set, playback may fail. -->
+					<TcpForce>false</TcpForce>
+
 					<IceCandidate>*:10000/udp</IceCandidate>
 					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
 				</IceCandidates>
@@ -292,8 +296,8 @@
 						</WebRTC>
 					</Providers>
 					<Publishers>
-						<AppWorkerCount>1</AppWorkerCount>
-						<StreamWorkerCount>8</StreamWorkerCount>
+						<StreamLoadBalancingThreadCount>1</StreamLoadBalancingThreadCount>
+						<SessionLoadBalancingThreadCount>1</SessionLoadBalancingThreadCount>
 						<OVT />
 						<WebRTC>
 							<Timeout>30000</Timeout>

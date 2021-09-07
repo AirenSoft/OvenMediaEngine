@@ -58,6 +58,7 @@
 				</Signalling>
 				<IceCandidates>
 					<TcpRelay>${env:OME_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
+					<TcpForce>false</TcpForce>
 					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
 					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006/udp}</IceCandidate>
 				</IceCandidates>
