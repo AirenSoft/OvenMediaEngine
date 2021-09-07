@@ -29,7 +29,7 @@ namespace ov
 		int64_t GetBps() const;
 
 	protected:
-		DelayQueue _timer;
+		DelayQueue _timer{"BpsCalc"};
 		StopWatch _stop_watch;
 
 		std::shared_mutex _mutex;

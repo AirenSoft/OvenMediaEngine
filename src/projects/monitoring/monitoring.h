@@ -58,7 +58,7 @@ namespace mon
 		void OnSessionsDisconnected(const info::Stream &stream_info, PublisherType type, uint64_t number_of_sessions);
 
 	private:
-		ov::DelayQueue _timer;
+		ov::DelayQueue _timer{"MonLogTimer"};
 		std::shared_ptr<ServerMetrics> _server_metric = nullptr;
 		EventLogger	_logger;
 		EventForwarder _forwarder;

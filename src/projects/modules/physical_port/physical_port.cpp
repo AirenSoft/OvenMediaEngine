@@ -64,7 +64,7 @@ bool PhysicalPort::CreateServerSocket(
 	int send_buffer_size,
 	int recv_buffer_size)
 {
-	_socket_pool = ov::SocketPool::Create(name, type);
+	_socket_pool = ov::SocketPool::Create(ov::String::FormatString("%s-T%d", name, address.Port()), type);
 
 	if (_socket_pool != nullptr)
 	{
@@ -109,7 +109,7 @@ bool PhysicalPort::CreateDatagramSocket(
 	const ov::SocketAddress &address,
 	int worker_count)
 {
-	_socket_pool = ov::SocketPool::Create(name, type);
+	_socket_pool = ov::SocketPool::Create(ov::String::FormatString("%s-U%d", name, address.Port()), type);
 
 	if (_socket_pool != nullptr)
 	{
