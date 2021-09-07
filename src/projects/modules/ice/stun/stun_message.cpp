@@ -8,12 +8,12 @@
 //==============================================================================
 #include "stun_message.h"
 
-#include "modules/ice/ice_private.h"
+#include <base/ovcrypto/ovcrypto.h>
+#include <base/ovlibrary/ovlibrary.h>
+
 #include "modules/ice/ice.h"
 #include "modules/ice/stun/attributes/stun_fingerprint_attribute.h"
-
-#include <base/ovlibrary/ovlibrary.h>
-#include <base/ovcrypto/ovcrypto.h>
+#include "stun_private.h"
 
 static const uint32_t StunTypeMask = 0x0110;
 static const size_t StunAttributeHeaderSize = 4;
@@ -60,7 +60,7 @@ bool StunMessage::ParseHeader(ov::ByteStream &stream)
 
 	size_t remained = stream.Remained();
 
-	if((static_cast<int>(remained) >= DefaultHeaderLength()) == false)
+	if ((static_cast<int>(remained) >= DefaultHeaderLength()) == false)
 	{
 		_last_error_code = LastErrorCode::NOT_ENOUGH_DATA;
 		return false;
@@ -107,7 +107,7 @@ bool StunMessage::ParseHeader(ov::ByteStream &stream)
 	uint16_t type = stream.ReadBE16();
 
 	// Validate MSB
-	if((type & 0xC000) != 0)
+	if ((type & 0xC000) != 0)
 	{
 		// This is not a stun packet
 		_last_error_code = LastErrorCode::INVALID_DATA;
@@ -123,7 +123,7 @@ bool StunMessage::ParseHeader(ov::ByteStream &stream)
 	// Magic Cookie
 	_magic_cookie = stream.ReadBE32();
 
-	if(_magic_cookie != OV_STUN_MAGIC_COOKIE)
+	if (_magic_cookie != OV_STUN_MAGIC_COOKIE)
 	{
 		// According to RFC5389, magic cookie values are always fixed
 
@@ -135,14 +135,14 @@ bool StunMessage::ParseHeader(ov::ByteStream &stream)
 	}
 
 	// Transaction ID
-	if(stream.Read<>(_transaction_id, OV_COUNTOF(_transaction_id)) != OV_COUNTOF(_transaction_id))
+	if (stream.Read<>(_transaction_id, OV_COUNTOF(_transaction_id)) != OV_COUNTOF(_transaction_id))
 	{
 		logtw("Could not read transaction ID");
 		_last_error_code = LastErrorCode::INVALID_DATA;
 		return false;
 	}
 
-	if(stream.Remained() < _message_length)
+	if (stream.Remained() < _message_length)
 	{
 		logtw("Message is too short: %d (expected: %d)", stream.Remained(), _message_length);
 		_last_error_code = LastErrorCode::NOT_ENOUGH_DATA;
@@ -159,15 +159,15 @@ bool StunMessage::ParseAttributes(ov::ByteStream &stream)
 	// OV_ASSERT2(_fingerprint_attribute != nullptr);
 
 	// Since fingerprint attribute is calculated before other attributes, it is excluded.
-	size_t minimum_length = StunAttribute::DefaultHeaderSize() + 
-	((_fingerprint_attribute != nullptr) ? _fingerprint_attribute->GetLength(true, false) : 0);
+	size_t minimum_length = StunAttribute::DefaultHeaderSize() +
+							((_fingerprint_attribute != nullptr) ? _fingerprint_attribute->GetLength(true, false) : 0);
 
 	// Parsing starts when the minimum data is found
-	while(stream.Remained() >= minimum_length)
+	while (stream.Remained() >= minimum_length)
 	{
 		std::shared_ptr<StunAttribute> attribute = StunAttribute::CreateAttribute(stream);
 
-		if(attribute == nullptr)
+		if (attribute == nullptr)
 		{
 			logtw("Could not parse attribute");
 			return false;
@@ -184,20 +184,20 @@ std::shared_ptr<StunAttribute> StunMessage::ParseFingerprintAttribute(ov::ByteSt
 	// Fingerprint attribute header + CRC (4B)
 	int fingerprint_attribute_size = StunAttribute::DefaultHeaderSize() + sizeof(uint32_t);
 
-	if(stream.IsRemained(DefaultHeaderLength() + fingerprint_attribute_size) == false)
+	if (stream.IsRemained(DefaultHeaderLength() + fingerprint_attribute_size) == false)
 	{
 		return nullptr;
 	}
 
 	// There must be a fingerprint attribute at the fingerprint_attribute_size point from the end
-	if(stream.SetOffset(stream.GetOffset() + stream.Remained() - fingerprint_attribute_size) == false)
+	if (stream.SetOffset(stream.GetOffset() + stream.Remained() - fingerprint_attribute_size) == false)
 	{
 		return nullptr;
 	}
 
 	std::shared_ptr<StunAttribute> attribute = StunAttribute::CreateAttribute(stream);
 
-	if((attribute != nullptr) && (attribute->GetType() != StunAttributeType::Fingerprint))
+	if ((attribute != nullptr) && (attribute->GetType() != StunAttributeType::Fingerprint))
 	{
 		logtw("Last attribute IS NOT FINGER-PRINT attribute(type: %d)", attribute->GetType());
 		return nullptr;
@@ -221,7 +221,7 @@ bool StunMessage::WriteHeader(ov::ByteStream &stream)
 	// Transaction ID
 	result = result && stream.Write<>(_transaction_id, OV_COUNTOF(_transaction_id));
 
-	if(result)
+	if (result)
 	{
 		logtd("STUN header is written");
 	}
@@ -237,12 +237,11 @@ bool StunMessage::WriteMessageLength(ov::ByteStream &stream)
 {
 	_message_length = 0;
 
-	for(const auto &attribute : _attributes)
+	for (const auto &attribute : _attributes)
 	{
-		if(
+		if (
 			(attribute->GetType() == StunAttributeType::MessageIntegrity) ||
-			(attribute->GetType() == StunAttributeType::Fingerprint)
-			)
+			(attribute->GetType() == StunAttributeType::Fingerprint))
 		{
 			continue;
 		}
@@ -258,28 +257,27 @@ bool StunMessage::WriteMessageLength(ov::ByteStream &stream)
 
 bool StunMessage::WriteAttributes(ov::ByteStream &stream)
 {
-	uint8_t padding[4] = { 0 };
+	uint8_t padding[4] = {0};
 
 	logtd("Trying to write attributes...");
 
-	for(const auto &attribute : _attributes)
+	for (const auto &attribute : _attributes)
 	{
-		if(
+		if (
 			(attribute->GetType() == StunAttributeType::MessageIntegrity) ||
-			(attribute->GetType() == StunAttributeType::Fingerprint)
-			)
+			(attribute->GetType() == StunAttributeType::Fingerprint))
 		{
 			continue;
 		}
 
-		if(attribute->Serialize(stream) == false)
+		if (attribute->Serialize(stream) == false)
 		{
 			return false;
 		}
 
 		ssize_t padding_count = 4 - ((attribute->GetLength(true, false)) % 4);
 
-		if(padding_count < 4)
+		if (padding_count < 4)
 		{
 			// zero-padding
 			stream.Write<uint8_t>(padding, static_cast<size_t>(padding_count));
@@ -319,13 +317,13 @@ bool StunMessage::WriteMessageIntegrityAttribute(ov::ByteStream &stream, const o
 	logtd("Computing hmac: key: %s (current message length: %d)\n%s", integrity_key.CStr(), _message_length, stream.GetData()->Dump().CStr());
 
 	result = result && ov::MessageDigest::ComputeHmac(ov::CryptoAlgorithm::Sha1,
-	                                                  integrity_key.CStr(), integrity_key.GetLength(),
-	                                                  stream.GetData()->GetData(), stream.GetData()->GetLength(),
-	                                                  hash, OV_STUN_HASH_LENGTH);
+													  integrity_key.CStr(), integrity_key.GetLength(),
+													  stream.GetData()->GetData(), stream.GetData()->GetLength(),
+													  hash, OV_STUN_HASH_LENGTH);
 	result = result && attribute->SetHash(hash);
 	result = result && attribute->Serialize(stream);
 
-	if(result)
+	if (result)
 	{
 		_integrity_attribute = std::move(attribute);
 	}
@@ -356,7 +354,7 @@ bool StunMessage::WriteFingerprintAttribute(ov::ByteStream &stream)
 	result = result && attribute->SetValue(crc ^ OV_STUN_FINGERPRINT_XOR_VALUE);
 	result = result && attribute->Serialize(stream);
 
-	if(result)
+	if (result)
 	{
 		_fingerprint_attribute = std::move(attribute);
 	}
@@ -370,7 +368,7 @@ bool StunMessage::CalculateFingerprint(ov::ByteStream &stream, ssize_t length, u
 	const auto buffer = stream.Read<>();
 
 	// Since the current position is stored in the buffer pointer above, the rest of the data is skipped so that it is not read.
-	if(stream.Skip(static_cast<size_t>(length)) == false)
+	if (stream.Skip(static_cast<size_t>(length)) == false)
 	{
 		return false;
 	}
@@ -380,7 +378,7 @@ bool StunMessage::CalculateFingerprint(ov::ByteStream &stream, ssize_t length, u
 	// xoring
 	calculated ^= OV_STUN_FINGERPRINT_XOR_VALUE;
 
-	if(fingerprint != nullptr)
+	if (fingerprint != nullptr)
 	{
 		*fingerprint = calculated;
 	}
@@ -396,7 +394,7 @@ bool StunMessage::ValidateFingerprint(ov::ByteStream &stream)
 	ov::ByteStream fingerprint_stream(stream);
 	_fingerprint_attribute = ParseFingerprintAttribute(fingerprint_stream);
 
-	if(_fingerprint_attribute != nullptr)
+	if (_fingerprint_attribute != nullptr)
 	{
 		// 성공적으로 fingerprint attribute를 얻어왔다면, CRC를 계산함
 
@@ -408,18 +406,18 @@ bool StunMessage::ValidateFingerprint(ov::ByteStream &stream)
 
 #if STUN_LOG_DATA
 		logtd("Trying to calculate crc for data:\n%s", stream.Dump(crc_length).CStr());
-#else // STUN_LOG_DATA
+#else	// STUN_LOG_DATA
 		logtd("Trying to calculate crc...");
-#endif // STUN_LOG_DATA
+#endif	// STUN_LOG_DATA
 
-		if(CalculateFingerprint(stream, crc_length, &crc))
+		if (CalculateFingerprint(stream, crc_length, &crc))
 		{
 			// stream 데이터에 대해 CRC 계산이 완료되었다면, fingerprint attribute의 CRC와 대조해봄
 			uint32_t fingerprint = static_cast<const StunFingerprintAttribute *>(_fingerprint_attribute.get())->GetValue();
 
 			OV_ASSERT(crc == fingerprint, "Fingerprint DOES NOT MATCHED: Calculated CRC: %08X, Fingerprint attribute CRC: %08X", crc, fingerprint);
 
-			if(crc == fingerprint)
+			if (crc == fingerprint)
 			{
 				logtd("Calculated CRC: %08X, Fingerprint attribute CRC: %08X", crc, fingerprint);
 			}
@@ -428,7 +426,7 @@ bool StunMessage::ValidateFingerprint(ov::ByteStream &stream)
 				logtw("Fingerprint DOES NOT MATCHED: Calculated CRC: %08X, Fingerprint attribute CRC: %08X", crc, fingerprint);
 			}
 
-			if(crc != fingerprint)
+			if (crc != fingerprint)
 			{
 				_last_error_code = LastErrorCode::INVALID_DATA;
 			}
@@ -436,7 +434,7 @@ bool StunMessage::ValidateFingerprint(ov::ByteStream &stream)
 			{
 				_last_error_code = LastErrorCode::SUCCESS;
 			}
-			
+
 			return (crc == fingerprint);
 		}
 	}
@@ -469,7 +467,7 @@ bool StunMessage::GetUfrags(ov::String *first_ufrag, ov::String *second_ufrag) c
 {
 	const auto *user_name_attribute = GetAttribute<StunUserNameAttribute>(StunAttributeType::UserName);
 
-	if(user_name_attribute == nullptr)
+	if (user_name_attribute == nullptr)
 	{
 		logtw("User name attribute not found");
 		return false;
@@ -479,19 +477,19 @@ bool StunMessage::GetUfrags(ov::String *first_ufrag, ov::String *second_ufrag) c
 
 	std::vector<ov::String> tokens = user_name.Split(":");
 
-	if(tokens.size() != 2)
+	if (tokens.size() != 2)
 	{
 		// token은 반드시 2개여야 함
 		logtw("Invalid user name: %s", user_name.CStr());
 		return false;
 	}
 
-	if(first_ufrag != nullptr)
+	if (first_ufrag != nullptr)
 	{
 		*first_ufrag = tokens[0];
 	}
 
-	if(second_ufrag != nullptr)
+	if (second_ufrag != nullptr)
 	{
 		*second_ufrag = tokens[1];
 	}
@@ -514,17 +512,17 @@ ov::String StunMessage::ToString() const
 	dump.AppendFormat("Transaction ID: %s\n", ov::ToHexString(&(_transaction_id[0]), OV_COUNTOF(_transaction_id)).CStr());
 	dump.AppendFormat("Attributes: %d items", _attributes.size());
 
-	for(const auto &attribute : _attributes)
+	for (const auto &attribute : _attributes)
 	{
 		dump.AppendFormat("\n    %s", attribute->ToString().CStr());
 	};
 
-	if(_integrity_attribute != nullptr)
+	if (_integrity_attribute != nullptr)
 	{
 		dump.AppendFormat("\n    %s", _integrity_attribute->ToString().CStr());
 	}
 
-	if(_fingerprint_attribute != nullptr)
+	if (_fingerprint_attribute != nullptr)
 	{
 		dump.AppendFormat("\n    %s", _fingerprint_attribute->ToString().CStr());
 	}
@@ -562,7 +560,7 @@ StunClass StunMessage::GetClass() const
 
 const char *StunMessage::GetClassString() const
 {
-	switch(GetClass())
+	switch (GetClass())
 	{
 		case StunClass::Request:
 			return "Request";
@@ -597,13 +595,12 @@ StunMethod StunMessage::GetMethod() const
 		// 07~05 번 째 bit 모음
 		((_type & 0b0000000011100000) >> 1) |
 		// 03~00 번 째 bit 모음
-		((_type & 0b0000000000001111) >> 0)
-	);
+		((_type & 0b0000000000001111) >> 0));
 }
 
 const char *StunMessage::GetMethodString() const
 {
-	switch(GetMethod())
+	switch (GetMethod())
 	{
 		case StunMethod::Binding:
 			return "Binding";
@@ -664,13 +661,13 @@ void StunMessage::SetTransactionId(const uint8_t transaction_id[OV_STUN_TRANSACT
 
 bool StunMessage::AddAttribute(std::shared_ptr<StunAttribute> attribute)
 {
-	if(_fingerprint_attribute != nullptr)
+	if (_fingerprint_attribute != nullptr)
 	{
 		OV_ASSERT(false, "Could not add attribute to serialized message");
 		return false;
 	}
 
-	if(attribute->GetType() == StunAttributeType::Fingerprint)
+	if (attribute->GetType() == StunAttributeType::Fingerprint)
 	{
 		OV_ASSERT(false, "Fingerprint attribute will generate automatically");
 		return false;

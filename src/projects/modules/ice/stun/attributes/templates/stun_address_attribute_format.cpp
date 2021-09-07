@@ -8,7 +8,7 @@
 //==============================================================================
 #include <arpa/inet.h>
 #include "stun_address_attribute_format.h"
-#include "modules/ice/ice_private.h"
+#include "../../stun_private.h"
 
 StunAddressAttributeFormat::StunAddressAttributeFormat(StunAttributeType type, int length)
 	: StunAttribute(type, length)
