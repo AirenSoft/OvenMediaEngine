@@ -932,64 +932,62 @@ namespace ov
 				}
 			});
 
-			if (_dispatch_queue.empty())
+			if (_dispatch_queue.empty() == false)
 			{
-				return DispatchResult::Dispatched;
-			}
+				logap("Dispatching events (count: %zu)...", _dispatch_queue.size());
 
-			logap("Dispatching events (count: %zu)...", _dispatch_queue.size());
-
-			while (_dispatch_queue.empty() == false)
-			{
-				auto front = _dispatch_queue.front();
-				_dispatch_queue.pop_front();
-
-				bool is_close_command = front.IsCloseCommand();
-
-				if ((GetState() == SocketState::Closed) && (is_close_command == false))
+				while (_dispatch_queue.empty() == false)
 				{
-					// If the socket is closed during dispatching, the rest of the data will not be sent.
-					logad("Some commands have not been dispatched: %zu commands", _dispatch_queue.size());
-#if DEBUG
-					for (auto &queue : _dispatch_queue)
+					auto front = _dispatch_queue.front();
+					_dispatch_queue.pop_front();
+
+					bool is_close_command = front.IsCloseCommand();
+
+					if ((GetState() == SocketState::Closed) && (is_close_command == false))
 					{
-						logad("  - Command: %s", queue.ToString().CStr());
-					}
+						// If the socket is closed during dispatching, the rest of the data will not be sent.
+						logad("Some commands have not been dispatched: %zu commands", _dispatch_queue.size());
+#if DEBUG
+						for (auto &queue : _dispatch_queue)
+						{
+							logad("  - Command: %s", queue.ToString().CStr());
+						}
 #endif	// DEBUG
 
-					_dispatch_queue.clear();
+						_dispatch_queue.clear();
 
-					result = DispatchResult::Dispatched;
-					break;
-				}
-
-				result = DispatchEventInternal(front);
-
-				if (result == DispatchResult::Dispatched)
-				{
-					// Dispatches the next item
-					continue;
-				}
-				else if (result == DispatchResult::PartialDispatched)
-				{
-					// The data is not fully processed and will not be removed from queue
-
-					_dispatch_queue.emplace_front(front);
-
-					// Close-related commands will be processed when we receive the event from epoll later
-				}
-				else
-				{
-					// An error occurred
-					if (is_close_command)
-					{
-						// Ignore errors that occurred during close
 						result = DispatchResult::Dispatched;
+						break;
+					}
+
+					result = DispatchEventInternal(front);
+
+					if (result == DispatchResult::Dispatched)
+					{
+						// Dispatches the next item
 						continue;
 					}
-				}
+					else if (result == DispatchResult::PartialDispatched)
+					{
+						// The data is not fully processed and will not be removed from queue
 
-				break;
+						_dispatch_queue.emplace_front(front);
+
+						// Close-related commands will be processed when we receive the event from epoll later
+					}
+					else
+					{
+						// An error occurred
+						if (is_close_command)
+						{
+							// Ignore errors that occurred during close
+							result = DispatchResult::Dispatched;
+							continue;
+						}
+					}
+
+					break;
+				}
 			}
 		}
 
