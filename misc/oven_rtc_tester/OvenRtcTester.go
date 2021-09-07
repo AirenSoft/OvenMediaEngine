@@ -295,6 +295,10 @@ func reportSummury(clients *[]*omeClient) {
 			connectionStateCount.ICEConnectionStateClosed ++
 		}
 
+		if stat.connectionState != webrtc.ICEConnectionStateConnected {
+			continue
+		}
+
 		if totalStat.startTime.IsZero() {
 			totalStat = stat
 
