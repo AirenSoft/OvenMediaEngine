@@ -25,7 +25,7 @@ func main() {
 	numberOfClient := flag.Int("n", 1, "[Optional] Number of client")
 	connectionInterval := flag.Int("cint", 100, "[Optional] PeerConnection connection interval (milliseconds)")
 	summaryInterval := flag.Int("sint", 5000, "[Optional] Summary information output cycle (milliseconds)")
-	lifetime := flag.Int("life", 0, "[Optional] Number of times to execute the test (seconds)")
+	lifetime := flag.Int("life", 0, "[Optional] Number of times to execute the test (seconds) (default \"indefinitely\")")
 
 	flag.Usage = func() {
 		
@@ -112,8 +112,8 @@ func main() {
 		if client == nil {
 			continue
 		}
-		client.stop()
 		client.report()
+		client.stop()
 	}
 }
 
@@ -364,7 +364,7 @@ func (c *omeClient) report() {
 		audioDelay = math.Abs(float64(time.Since(stat.startTime).Milliseconds() - stat.audioRtpTimestampElapsedMSec))
 	}
 
-	fmt.Printf("%c[32m[%s]%c[0m\n\trunning_time(%d ms) connection_state(%s) total_packets(%d) packet_loss(%d)\n\tlast_video_delay (%.1f ms) last_audio_delay (%.1f ms)\n\ttotal_bytes(%sbytes) avg_bps(%sbps) min_bps(%sbps) max_bps(%sbps)\n\ttotal_video_frames(%d) avg_fps(%.2f) min_fps(%.2f) max_fps(%.2f)\n\n",
+	fmt.Printf("%c[32m[%s]%c[0m\n\trunning_time(%s) connection_state(%s) total_packets(%d) packet_loss(%d)\n\tlast_video_delay (%.1f ms) last_audio_delay (%.1f ms)\n\ttotal_bytes(%sbytes) avg_bps(%sbps) min_bps(%sbps) max_bps(%sbps)\n\ttotal_video_frames(%d) avg_fps(%.2f) min_fps(%.2f) max_fps(%.2f)\n\n",
 		27, c.name, 27, time.Since(stat.startTime).Round(time.Second), stat.connectionState.String(), stat.totalRtpPackets, stat.packetLoss, videoDelay, audioDelay, CountDecimal(stat.totalBytes), CountDecimal(stat.avgBPS), CountDecimal(stat.minBPS), CountDecimal(stat.maxBPS), stat.totalVideoFrames, stat.avgFPS, stat.minFPS, stat.maxFPS)
 }
 
