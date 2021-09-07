@@ -17,8 +17,10 @@
 
 namespace ov
 {
-	DelayQueue::DelayQueue()
-		: _index(0L),
+	DelayQueue::DelayQueue(const char *queue_name)
+		: _queue_name(queue_name),
+
+		  _index(0L),
 
 		  _stop(true)
 	{
@@ -74,7 +76,19 @@ namespace ov
 
 		_stop = false;
 		_thread = std::thread(std::bind(&DelayQueue::DispatchThreadProc, this));
-		::pthread_setname_np(_thread.native_handle(), "DelayQueue");
+
+		String name;
+
+		if (_queue_name.IsEmpty())
+		{
+			name = "DQ";
+		}
+		else
+		{
+			name.Format("DQ%s", _queue_name.CStr());
+		}
+
+		::pthread_setname_np(_thread.native_handle(), name);
 
 		return true;
 	}

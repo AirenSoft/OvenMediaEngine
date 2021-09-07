@@ -116,7 +116,7 @@ namespace ov
 		std::map<int, std::shared_ptr<Socket>> _gc_candidates;
 
 		// A queue for handling errors such as connection timeout in nonblocking mode.
-		inline static DelayQueue _connection_callback_queue;
+		inline static DelayQueue _connection_callback_queue{"ConnectionCB"};
 		std::mutex _connection_timed_out_queue_mutex;
 		std::deque<std::shared_ptr<Socket>> _connection_timed_out_queue;
 

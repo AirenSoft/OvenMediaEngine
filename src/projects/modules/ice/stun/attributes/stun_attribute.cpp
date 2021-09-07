@@ -8,7 +8,7 @@
 //==============================================================================
 #include "stun_attribute.h"
 
-#include "modules/ice/ice_private.h"
+#include "../stun_private.h"
 
 // Attributes
 #include "stun_attributes.h"

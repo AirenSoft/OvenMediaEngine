@@ -76,7 +76,7 @@ namespace http
 				ErrorHandler _error_handler;
 				CloseHandler _close_handler;
 
-				ov::DelayQueue _ping_timer;
+				ov::DelayQueue _ping_timer{"WSPing"};
 			};
 		}  // namespace ws
 	}	   // namespace svr

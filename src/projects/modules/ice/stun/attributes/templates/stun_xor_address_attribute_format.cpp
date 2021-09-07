@@ -7,7 +7,7 @@
 //
 //==============================================================================
 #include "stun_xor_address_attribute_format.h"
-#include "modules/ice/ice_private.h"
+#include "../../stun_private.h"
 
 StunXorAddressAttributeFormat::StunXorAddressAttributeFormat(StunAttributeType type, int length)
 	: StunAddressAttributeFormat(type, length)

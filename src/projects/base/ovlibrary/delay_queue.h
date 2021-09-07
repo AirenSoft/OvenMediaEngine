@@ -16,7 +16,8 @@
 #include <thread>
 #include <utility>
 
-#include "event.h"
+#include "./event.h"
+#include "./string.h"
 
 namespace ov
 {
@@ -32,7 +33,7 @@ namespace ov
 	class DelayQueue
 	{
 	public:
-		DelayQueue();
+		DelayQueue(const char *queue_name);
 		virtual ~DelayQueue();
 
 		void Push(const DelayQueueFunction &func, void *parameter, int after_msec);
@@ -82,6 +83,8 @@ namespace ov
 
 	protected:
 		void DispatchThreadProc();
+
+		ov::String _queue_name;
 
 		int64_t _index;
 

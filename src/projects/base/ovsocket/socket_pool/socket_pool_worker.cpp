@@ -422,8 +422,13 @@ namespace ov
 								socket->SetEndOfStream();
 
 								new_state = SocketState::Disconnected;
-								need_to_close = true;
 							}
+							else
+							{
+								new_state = SocketState::Error;
+							}
+
+							need_to_close = true;
 						}
 					}
 					else
@@ -436,6 +441,7 @@ namespace ov
 						_gc_candidates.erase(socket->GetNativeHandle());
 
 						DeleteFromEpoll(socket);
+						logad("CloseImmediatelyWithState(%s) for %s", StringFromSocketState(new_state), socket->ToString().CStr());
 						socket->CloseImmediatelyWithState(new_state);
 					}
 				}

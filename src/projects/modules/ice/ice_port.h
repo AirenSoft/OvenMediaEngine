@@ -256,5 +256,5 @@ private:
 	std::shared_mutex _demultiplexers_lock;
 	std::map<int, std::shared_ptr<IceTcpDemultiplexer>>	_demultiplexers;
 
-	ov::DelayQueue _timer;
+	ov::DelayQueue _timer{"ICETmout"};
 };
