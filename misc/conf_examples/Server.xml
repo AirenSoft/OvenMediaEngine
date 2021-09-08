@@ -98,6 +98,7 @@
 					<!-- <TLSPort>3334</TLSPort> -->
 					<WorkerCount>1</WorkerCount>
 				</Signalling>
+				<IceCandidates>
 					<!-- 
 						If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
 						This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 

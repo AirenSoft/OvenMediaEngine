@@ -41,6 +41,7 @@ func main() {
 		return
 	}
 
+
 	clientChan := make(chan *omeClient)
 	quit := make(chan bool)
 	go func() {
@@ -96,7 +97,6 @@ func main() {
 
 		case <-closed:
 			fmt.Printf("Test stopped by user\n");
-			close(quit)
 			break F
 		}
 	}
@@ -160,7 +160,6 @@ type omeClient struct {
 	stat sessionStat
 
 	once  sync.Once
-	mutex sync.Mutex
 }
 
 func (sc *signalingClient) connect(url string) error {
@@ -274,9 +273,7 @@ func reportSummury(clients *[]*omeClient) {
 	var minAvgBPS, maxAvgBPS int64
 
 	for _, client := range *clients {
-		client.mutex.Lock()
 		stat := client.stat
-		client.mutex.Unlock()
 
 		switch stat.connectionState {
 		case webrtc.ICEConnectionStateNew:
@@ -341,21 +338,26 @@ func reportSummury(clients *[]*omeClient) {
 	fmt.Printf("ICE Connection State : New(%d), Checking(%d) Connected(%d) Completed(%d) Disconnected(%d) Failed(%d) Closed(%d)\n", 
 	connectionStateCount.ICEConnectionStateNew, connectionStateCount.ICEConnectionStateChecking, connectionStateCount.ICEConnectionStateConnected, connectionStateCount.ICEConnectionStateCompleted, connectionStateCount.ICEConnectionStateDisconnected, connectionStateCount.ICEConnectionStateFailed, connectionStateCount.ICEConnectionStateClosed)
 
-	fmt.Printf("Avg Video Delay(%.2f ms) Max Video Delay(%.2f ms) Min Video Delay(%.2f ms)\nAvg Audio Delay(%.2f ms) Max Audio Delay(%.2f ms) Min Audio Delay(%.2f ms)\n", totalStat.videoDelay/float64(clientCount), maxVideoDelay, minVideoDelay, totalStat.audioDelay/float64(clientCount), maxAudioDelay, minAudioDelay)
+	connected := int64(connectionStateCount.ICEConnectionStateConnected)
+	if connected == 0 {
+		return
+	}
+
+	fmt.Printf("Avg Video Delay(%.2f ms) Max Video Delay(%.2f ms) Min Video Delay(%.2f ms)\nAvg Audio Delay(%.2f ms) Max Audio Delay(%.2f ms) Min Audio Delay(%.2f ms)\n", totalStat.videoDelay/float64(connected), maxVideoDelay, minVideoDelay, totalStat.audioDelay/float64(connected), maxAudioDelay, minAudioDelay)
 	
-	fmt.Printf("Avg FPS(%.2f) Max FPS(%.2f) Min FPS(%.2f)\nAvg BPS(%sbps) Max BPS(%sbps) Min BPS(%sbps)\n", totalStat.avgFPS/float64(clientCount), maxAvgFPS, minAvgFPS, CountDecimal(totalStat.avgBPS/clientCount), CountDecimal(maxAvgBPS), CountDecimal(minAvgBPS))
+	fmt.Printf("Avg FPS(%.2f) Max FPS(%.2f) Min FPS(%.2f)\nAvg BPS(%sbps) Max BPS(%sbps) Min BPS(%sbps)\n", totalStat.avgFPS/float64(connected), maxAvgFPS, minAvgFPS, CountDecimal(totalStat.avgBPS/connected), CountDecimal(maxAvgBPS), CountDecimal(minAvgBPS))
 	
-	fmt.Printf("Total Bytes(%sBytes) Avg Bytes(%sBytes)\nTotal Packets(%d) Avg Packets(%d)\nTotal Packet Losses(%d) Avg Packet Losses(%d)\n", CountDecimal(totalStat.totalBytes), CountDecimal(totalStat.totalBytes/clientCount), totalStat.totalRtpPackets, totalStat.totalRtpPackets/clientCount, totalStat.packetLoss, totalStat.packetLoss/clientCount)
+	fmt.Printf("Total Bytes(%sBytes) Avg Bytes(%sBytes)\nTotal Packets(%d) Avg Packets(%d)\nTotal Packet Losses(%d) Avg Packet Losses(%d)\n", CountDecimal(totalStat.totalBytes), CountDecimal(totalStat.totalBytes/connected), totalStat.totalRtpPackets, totalStat.totalRtpPackets/connected, totalStat.packetLoss, totalStat.packetLoss/connected)
 
 	fmt.Printf("\n")
 }
 
 func (c *omeClient) report() {
 
-	c.mutex.Lock()
+	//c.mutex.Lock()
 	// Copy and Unlock
 	stat := c.stat
-	c.mutex.Unlock()
+	//c.mutex.Unlock()
 
 	videoDelay := float64(0)
 	audioDelay := float64(0)
@@ -390,7 +392,7 @@ func (c *omeClient) run(url string) error {
 		return err
 	}
 
-	// Everything below is the pion-WebRTC API! Thanks for using it ❤️.
+	// Everything below is the pion-WebRTC API! Thanks for making it ❤️.
 
 	// webrtc config
 	config := webrtc.Configuration{
@@ -429,7 +431,9 @@ func (c *omeClient) run(url string) error {
 		panic(err)
 	}
 
-	webrtcAPI := webrtc.NewAPI(webrtc.WithMediaEngine(engine))
+	setting := webrtc.SettingEngine{}
+	setting.SetICETimeouts(30 * time.Second, 30 * time.Second, 1 * time.Second)
+	webrtcAPI := webrtc.NewAPI(webrtc.WithMediaEngine(engine), webrtc.WithSettingEngine(setting))
 	c.peerConnection, err = webrtcAPI.NewPeerConnection(config)
 	if err != nil {
 		return err
@@ -461,9 +465,7 @@ func (c *omeClient) run(url string) error {
 			c.once.Do(func() {
 				for range ticker.C {
 
-					c.mutex.Lock()
 					stat := c.stat
-					c.mutex.Unlock()
 
 					currVideoFrames := stat.totalVideoFrames
 					currTotalBytes := stat.totalBytes
@@ -471,7 +473,7 @@ func (c *omeClient) run(url string) error {
 					fps := float64(float64(currVideoFrames-lastFrames) / float64(time.Since(lastTime).Seconds()))
 					bps := int64((float64(currTotalBytes-lastBytes) / float64(time.Since(lastTime).Seconds())) * 8)
 
-					c.mutex.Lock()
+					//c.mutex.Lock()
 					if c.stat.maxFPS == 0 || c.stat.maxFPS < fps {
 						c.stat.maxFPS = fps
 					}
@@ -491,7 +493,6 @@ func (c *omeClient) run(url string) error {
 					c.stat.avgBPS = int64(float32(stat.totalBytes) / float32(time.Since(stat.startTime).Seconds()) * 8)
 					c.stat.avgFPS = float64(stat.totalVideoFrames) / float64(time.Since(stat.startTime).Seconds())
 
-					c.mutex.Unlock()
 
 					lastTime = time.Now()
 					lastFrames = currVideoFrames
@@ -519,7 +520,6 @@ func (c *omeClient) run(url string) error {
 			}
 
 			// total packet count
-			c.mutex.Lock()
 
 			c.stat.totalRtpPackets++
 			c.stat.totalBytes += int64(rtp.PayloadOffset) + int64(len(rtp.Payload))
@@ -559,7 +559,6 @@ func (c *omeClient) run(url string) error {
 				need_delay_warn = true
 			}
 
-			c.mutex.Unlock()
 			
 			// report() must be called after mutex.Unlock
 			if need_delay_warn && time.Since(last_report_time).Milliseconds() > delayReportPeriod {
@@ -574,6 +573,13 @@ func (c *omeClient) run(url string) error {
 	c.peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
 		fmt.Printf("%s connection state has changed %s \n", c.name, connectionState.String())
 		c.stat.connectionState = connectionState
+	})
+
+	c.peerConnection.OnICECandidate(func(candidate *webrtc.ICECandidate) {
+		if candidate == nil {
+			return
+		}
+		fmt.Printf("%s candidate found\n", candidate.String())
 	})
 
 	// Set remote SessionDescription
@@ -592,12 +598,13 @@ func (c *omeClient) run(url string) error {
 	if err != nil {
 		return err
 	}
-	err = c.peerConnection.SetLocalDescription(answerSdp)
+
+	err = c.sc.sendAnswer(signalMessage{"answer", offer.Id, 0, answerSdp, nil, nil})
 	if err != nil {
 		return err
 	}
 	
-	err = c.sc.sendAnswer(signalMessage{"answer", offer.Id, 0, answerSdp, nil, nil})
+	err = c.peerConnection.SetLocalDescription(answerSdp)
 	if err != nil {
 		return err
 	}
