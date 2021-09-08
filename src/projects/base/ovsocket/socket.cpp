@@ -1076,7 +1076,7 @@ namespace ov
 								break;
 
 							default:
-								logaw("Could not send data: %zd (%s)", sent, error->ToString().CStr());
+								logaw("Could not send data: %zd (%s), %s", sent, error->ToString().CStr(), ToString().CStr());
 								break;
 						}
 
@@ -1787,7 +1787,8 @@ namespace ov
 
 				if (_has_close_command == false)
 				{
-					logad("Enqueuing close command");
+					logad("Enqueuing close command (new_state: %s)", StringFromSocketState(new_state));
+
 					_has_close_command = true;
 
 					if ((GetState() != SocketState::Disconnected) && (GetState() != SocketState::Error))
