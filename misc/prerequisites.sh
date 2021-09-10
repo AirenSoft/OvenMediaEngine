@@ -31,7 +31,7 @@ else
     if [ -f /etc/redhat-release ]; then
         OSNAME=$(cat /etc/redhat-release |awk '{print $1}')
         OSVERSION=$(cat /etc/redhat-release |sed s/.*release\ // |sed s/\ .*// | cut -d"." -f1)
-    # Ubuntu
+    # Ubuntu, Amazon
     elif [ -f /etc/os-release ]; then
         OSNAME=$(cat /etc/os-release | grep "^NAME" | tr -d "\"" | cut -d"=" -f2)
         OSVERSION=$(cat /etc/os-release | grep ^VERSION= | tr -d "\"" | cut -d"=" -f2 | cut -d"." -f1 | awk '{print  $1}')
@@ -327,11 +327,15 @@ check_version()
     if [[ "${OSNAME}" == "Fedora" && "${OSVERSION}" != "28" ]]; then
         proceed_yn
     fi
+
+	if [[ "${OSNAME}" == "Amazon Linux" && "${OSVERSION}" != "2" ]]; then
+        proceed_yn
+    fi
 }
 
 proceed_yn()
 {
-    read -p "This program [$0] is tested on [Ubuntu 18/20.04, CentOS 7/8 q, Fedora 28]
+    read -p "This program [$0] is tested on [Ubuntu 18/20.04, CentOS 7/8 q, Fedora 28, Amazon Linux 2]
 Do you want to continue [y/N] ? " ANS
     if [[ "${ANS}" != "y" && "$ANS" != "yes" ]]; then
         cd ${CURRENT}
@@ -369,6 +373,9 @@ if [ "${OSNAME}" == "Ubuntu" ]; then
     check_version
     install_base_ubuntu
 elif  [ "${OSNAME}" == "CentOS" ]; then
+     check_version
+     install_base_centos
+elif  [ "${OSNAME}" == "Amazon Linux" ]; then
      check_version
      install_base_centos
 elif  [ "${OSNAME}" == "Fedora" ]; then
