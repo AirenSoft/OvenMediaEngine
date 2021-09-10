@@ -185,7 +185,7 @@ endef
 # Add compiler/linker options into LOCAL_* variables
 # $(call add_pkg_config,<LIBRARY_NAME>)
 define add_pkg_config
-	$(eval
+	$(eval 
 		LOCAL_CFLAGS += $(shell $(__PKG_CONFIG_PATH) pkg-config --cflags $(1))
 		LOCAL_CXXFLAGS += $(shell $(__PKG_CONFIG_PATH) pkg-config --cflags $(1))
 		LOCAL_LDFLAGS += $(shell $(__PKG_CONFIG_PATH) pkg-config --libs $(1))
