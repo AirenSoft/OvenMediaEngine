@@ -120,6 +120,7 @@ protected:
 	std::shared_mutex _client_list_mutex;
 
 	Json::Value _ice_servers;
+	Json::Value _new_ice_servers;
 	bool _tcp_force = false;
 
 	RtcP2PManager _p2p_manager;

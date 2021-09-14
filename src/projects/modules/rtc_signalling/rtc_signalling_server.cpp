@@ -60,6 +60,7 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	if (result)
 	{
 		_ice_servers = Json::arrayValue;
+		_new_ice_servers = Json::arrayValue;
 
 		// for internal turn/tcp relay configuration
 		_tcp_force = webrtc_config.GetIceCandidates().IsTcpForce();
@@ -69,6 +70,7 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 		if (tcp_relay_parsed)
 		{
 			Json::Value ice_server = Json::objectValue;
+			Json::Value new_ice_server = Json::objectValue;
 			Json::Value urls = Json::arrayValue;
 
 			// <TcpRelay>IP:Port</TcpRelay>
@@ -100,12 +102,19 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 			}
 
 			ice_server["urls"] = urls;
+			new_ice_server["urls"] = urls;
 
 			// Embedded turn server has fixed user_name and credential. Security is provided by signed policy after this. This is because the embedded turn server does not relay other servers and only transmits the local stream to tcp when transmitting to webrtc.
+
+			// "user_name" is out of specification. This is a bug and "username" is correct. "user_name" will be deprecated in the future.
 			ice_server["user_name"] = DEFAULT_RELAY_USERNAME;
+			new_ice_server["username"] = DEFAULT_RELAY_USERNAME;
+
 			ice_server["credential"] = DEFAULT_RELAY_KEY;
+			new_ice_server["credential"] = DEFAULT_RELAY_KEY;
 
 			_ice_servers.append(ice_server);
+			_new_ice_servers.append(new_ice_server);
 		}
 
 		// for external ice server configuration
@@ -115,6 +124,7 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 			for (auto ice_server_config : ice_servers_config.GetIceServerList())
 			{
 				Json::Value ice_server = Json::objectValue;
+				Json::Value new_ice_server = Json::objectValue;
 
 				// URLS
 				auto &url_list = ice_server_config.GetUrls().GetUrlList();
@@ -131,20 +141,25 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 					urls.append(url.CStr());
 				}
 				ice_server["urls"] = urls;
+				new_ice_server["urls"] = urls;
 
 				// UserName
 				if (ice_server_config.GetUserName().IsEmpty() == false)
 				{
+					// "user_name" is out of specification. This is a bug and "username" is correct. "user_name" will be deprecated in the future.
 					ice_server["user_name"] = ice_server_config.GetUserName().CStr();
+					new_ice_server["username"] = ice_server_config.GetUserName().CStr();
 				}
 
 				// Credential
 				if (ice_server_config.GetCredential().IsEmpty() == false)
 				{
 					ice_server["credential"] = ice_server_config.GetCredential().CStr();
+					new_ice_server["credential"] = ice_server_config.GetCredential().CStr();
 				}
 
 				_ice_servers.append(ice_server);
+				_new_ice_servers.append(new_ice_server);
 			}
 		}
 		
@@ -610,11 +625,20 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 					tcp_relay = true;
 				}
 				
-				if (tcp_relay == true && _ice_servers.isNull() == false)
+				if (tcp_relay == true)
 				{
-					value["ice_servers"] = _ice_servers;
-				}
+					if(_ice_servers.isNull() == false)
+					{
+						// "ice_servers" is out of specification. This is a bug and "iceServers" is correct. "ice_servers" will be deprecated in the future.
+						value["ice_servers"] = _ice_servers;
+					}
 
+					if(_new_ice_servers.isNull() == false)
+					{
+						value["iceServers"] = _new_ice_servers;
+					}
+				}
+				
 				info->offer_sdp = sdp;
 
 				ws_client->Send(response_json.ToString());
