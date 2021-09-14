@@ -214,9 +214,10 @@ func (sc *signalingClient) sendAnswer(answer signalMessage) error {
 	return sc.socket.WriteMessage(websocket.TextMessage, byteAnswer)
 }
 
+// Old version of OME gives username as user_name
 type ICEServer struct {
 	URLs       []string `json:"urls"`
-	Username   string   `json:"user_name,omitempty"`
+	User_name   string   `json:"user_name,omitempty"`
 	Credential string   `json:"credential,omitempty"`
 }
 
@@ -226,7 +227,10 @@ type signalMessage struct {
 	PeerId     int64                     `json:"peer_id,omitempty"`
 	Sdp        webrtc.SessionDescription `json:"sdp,omitempty"`
 	Candidates []webrtc.ICECandidateInit `json:"candidates"`
-	ICEServers []ICEServer               `json:"ice_servers,omitempty"`
+	// Format given by the old version of OME, it will be deprecated
+	ICE_Servers []ICEServer              `json:"ice_servers,omitempty"`
+	// Format given by the latest version of OME
+	ICEServers []webrtc.ICEServer		 `json:"iceServers,omitempty"`
 }
 
 func (msg signalMessage) marshal() []byte {
@@ -397,18 +401,25 @@ func (c *omeClient) run(url string) error {
 	// webrtc config
 	config := webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
-			{
-				URLs: []string{"stun:stun.l.google.com:19302"},
-			},
+			// When playing OME's stream, there is no need to obtain a candidate with stun server
+			// {
+			// 	URLs: []string{"stun:stun.l.google.com:19302"},
+			// },
 		},
 	}
 
-	for _, iceServer := range offer.ICEServers {
-		// The ICEServer information provided by OME has a different format. (user_name => username)
-		config.ICEServers = append(config.ICEServers, webrtc.ICEServer{URLs: iceServer.URLs, Username: iceServer.Username, Credential: iceServer.Credential})
+	// The latest version of OME delivers information in two formats: iceServers and ice_servers. ice_servers will be deprecated. 
+	// Use iceServers first, then use ice_servers if iceServers is not exist for backward compatibility.	
+	if len(offer.ICEServers) > 0 {
+		config.ICEServers = append(config.ICEServers, offer.ICEServers...)
+	} else {
+		for _, iceServer := range offer.ICE_Servers {
+			// The ICEServer information provided by old OME has a different format. (user_name => username)
+			config.ICEServers = append(config.ICEServers, webrtc.ICEServer{URLs: iceServer.URLs, Username: iceServer.User_name, Credential: iceServer.Credential})
+		}
 	}
 
-	if len(offer.ICEServers) > 0 {
+	if len(offer.ICE_Servers) > 0 || len(offer.ICEServers) > 0 {
 		config.ICETransportPolicy = webrtc.ICETransportPolicyRelay
 	}
 
@@ -599,7 +610,7 @@ func (c *omeClient) run(url string) error {
 		return err
 	}
 
-	err = c.sc.sendAnswer(signalMessage{"answer", offer.Id, 0, answerSdp, nil, nil})
+	err = c.sc.sendAnswer(signalMessage{"answer", offer.Id, 0, answerSdp, nil, nil, nil})
 	if err != nil {
 		return err
 	}
