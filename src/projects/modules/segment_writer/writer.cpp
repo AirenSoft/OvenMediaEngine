@@ -475,7 +475,6 @@ int Writer::DecideBufferSize() const
 				[[fallthrough]];
 			case cmn::MediaType::Audio: {
 				auto bitrate = track->track->GetBitrate();
-				bitrate = 0;
 
 				if (bitrate > 0)
 				{
