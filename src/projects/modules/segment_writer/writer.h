@@ -20,6 +20,13 @@ extern "C"
 #include <base/mediarouter/media_type.h>
 #include <base/ovlibrary/ovlibrary.h>
 
+// Default buffer size to use if bps cannot be obtained from the track list.
+#define WRITER_DEFAULT_BUFFER_SIZE (1024 * 1024)
+// The amount to increase when there's not enough buffer.
+#define WRITER_BUFFER_SIZE_INCREMENT (1024 * 1024)
+// When calculating the buffer size from the track list initially, leaving some room.
+#define WRITER_BUFFER_ROOM_MULTIPLIER (1.2)
+
 class Writer
 {
 public:
@@ -109,6 +116,9 @@ protected:
 		bool first_packet_received = false;
 	};
 
+	// Needed mutex lock for _track_list before calling this method
+	int DecideBufferSize() const;
+
 	int OnWrite(const uint8_t *buf, int buf_size);
 	static int OnWrite(void *opaque, uint8_t *buf, int buf_size)
 	{
@@ -142,4 +152,6 @@ protected:
 	// Value: Track.stream_index
 	std::map<int, std::shared_ptr<Track>> _track_map;
 	std::vector<std::shared_ptr<Track>> _track_list;
+
+	std::atomic<int> _buffer_size{-1};
 };
