@@ -1724,7 +1724,7 @@ namespace ov
 			return Close();
 		}
 
-		return (IsClosing() == false) && Close();
+		return IsClosing() || Close();
 	}
 
 	bool Socket::CloseWithState(SocketState new_state)
@@ -1805,6 +1805,8 @@ namespace ov
 				}
 
 				_worker->EnqueueToDispatchLater(GetSharedPtr());
+
+				return true;
 			}
 		}
 
