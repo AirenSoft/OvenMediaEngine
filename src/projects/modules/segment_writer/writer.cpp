@@ -23,6 +23,7 @@ extern "C"
 
 #define OV_LOG_TAG "Writer"
 
+#define logap(format, ...) logtp("[%p] " format, this, ##__VA_ARGS__)
 #define logad(format, ...) logtd("[%p] " format, this, ##__VA_ARGS__)
 #define logas(format, ...) logts("[%p] " format, this, ##__VA_ARGS__)
 
@@ -252,11 +253,40 @@ bool Writer::FillCodecParameters(const std::shared_ptr<const Track> &track, AVCo
 
 int Writer::OnWrite(const uint8_t *buf, int buf_size)
 {
-	logad("Writing %d bytes", buf_size);
+	logap("Writing %d bytes", buf_size);
+
+	if (buf_size < 0)
+	{
+		// ffmpeg passed invalid buffer size
+		logae("Invalid buffer size: %d", buf_size);
+		OV_ASSERT2(false);
+		return -1;
+	}
 
 	auto data_stream = _data_stream;
 	if (data_stream != nullptr)
 	{
+		auto data = data_stream->GetData();
+		auto remained = data->GetCapacity() - data->GetLength();
+		if (remained < static_cast<size_t>(buf_size))
+		{
+			// In order to prevent CPU usage from increasing due to frequent memory allocation,
+			// if the remaining buffer size is insufficient, it is allocated in advance.
+			auto increase_amount = std::max(buf_size, WRITER_BUFFER_SIZE_INCREMENT);
+#if DEBUG
+			int current_buffer_size = _buffer_size;
+
+			logad("Increasing buffer size by %d (before: %d, after: %d), data size: %zu (remained: %zu), requested: %d",
+				  increase_amount, current_buffer_size, current_buffer_size + increase_amount,
+				  data->GetLength(), remained, buf_size);
+#endif	// DEBUG
+
+			_buffer_size += increase_amount;
+
+			auto data = data_stream->GetData();
+			data->Reserve(_buffer_size);
+		}
+
 		if (data_stream->Write(buf, buf_size))
 		{
 			return buf_size;
@@ -430,15 +460,72 @@ bool Writer::PrepareIfNeeded()
 	return Prepare();
 }
 
+int Writer::DecideBufferSize() const
+{
+	int estimated_buffer_size = 0;
+
+	for (auto track : _track_list)
+	{
+		auto media_track = track->track;
+		bool failed = false;
+
+		switch (media_track->GetMediaType())
+		{
+			case cmn::MediaType::Video:
+				[[fallthrough]];
+			case cmn::MediaType::Audio: {
+				auto bitrate = track->track->GetBitrate();
+
+				if (bitrate > 0)
+				{
+					estimated_buffer_size += bitrate;
+				}
+				else
+				{
+					estimated_buffer_size = 0;
+					failed = true;
+				}
+			}
+			break;
+
+			default:
+				break;
+		}
+
+		if (failed)
+		{
+			break;
+		}
+	}
+
+	if (estimated_buffer_size > 0)
+	{
+		int buffer_size = static_cast<int>(estimated_buffer_size * WRITER_BUFFER_ROOM_MULTIPLIER);
+		// Since the bitrate can vary little by little, a certain amount of room should be given
+		logad("Calculated buffer size from track list: %d, this buffer size will be used: %d",
+			  estimated_buffer_size, buffer_size);
+
+		return buffer_size;
+	}
+
+	// Since the buffer size cannot be inferred from the track list, the default size is used
+	logad("Default buffer size is used: %d", WRITER_DEFAULT_BUFFER_SIZE);
+	return WRITER_DEFAULT_BUFFER_SIZE;
+}
+
 bool Writer::ResetData(int track_id)
 {
-	_data_stream = std::make_shared<ov::ByteStream>(std::make_shared<ov::Data>());
-
 	{
 		auto lock_guard = std::lock_guard(_track_mutex);
 
+		if (_buffer_size == -1)
+		{
+			_buffer_size = DecideBufferSize();
+		}
+
 		if (track_id == -1)
 		{
+			// Reset all tracks
 			for (auto track : _track_list)
 			{
 				track->Reset();
@@ -446,6 +533,7 @@ bool Writer::ResetData(int track_id)
 		}
 		else
 		{
+			// Reset the designated track
 			auto item = _track_map.find(track_id);
 
 			if (item == _track_map.end())
@@ -456,6 +544,8 @@ bool Writer::ResetData(int track_id)
 			item->second->Reset();
 		}
 	}
+
+	_data_stream = std::make_shared<ov::ByteStream>(std::make_shared<ov::Data>(_buffer_size));
 
 	return true;
 }

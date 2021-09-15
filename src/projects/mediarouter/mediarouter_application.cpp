@@ -30,7 +30,8 @@ std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info:
 MediaRouteApplication::MediaRouteApplication(const info::Application &application_info)
 	: _application_info(application_info)
 {
-	_max_worker_thread_count = _application_info.GetConfig().GetPublishers().GetAppWorkerCount();
+	_max_worker_thread_count = (_application_info.GetConfig().GetPublishers().GetAppWorkerCount() / 2);
+
 	if (_max_worker_thread_count < MIN_APPLICATION_WORKER_COUNT)
 	{
 		_max_worker_thread_count = MIN_APPLICATION_WORKER_COUNT;

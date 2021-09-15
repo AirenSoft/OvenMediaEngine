@@ -39,7 +39,7 @@ HlsPacketizer::HlsPacketizer(const ov::String &app_name, const ov::String &strea
 							 const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track,
 							 const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
 	: Packetizer(app_name, stream_name,
-				 segment_count, segment_count * 5, segment_duration,
+				 segment_count, segment_count * 2, segment_duration,
 				 video_track, audio_track,
 				 chunked_transfer),
 
