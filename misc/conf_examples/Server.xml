@@ -191,7 +191,7 @@
 			<!--
 			<AdmissionWebhooks>
 				<TargetUrl></TargetUrl>
-				<SeretKey></SecretKey>
+				<SecretKey></SecretKey>
 				<Timeout>3000</Timeout>
 				<Enables>
 					<Providers>rtmp,webrtc,srt</Providers>
