@@ -11,6 +11,7 @@ Restart=on-abort
 RestartPreventExitStatus=1
 StandardOutput=null
 StandardError=syslog+console
+LimitNOFILE=65535
 
 [Install]
 WantedBy=multi-user.target
