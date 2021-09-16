@@ -1087,6 +1087,10 @@ namespace pvd
 		{
 			OnAmfMetaData(message->header, document, 2);
 		}
+		else if (message_name == RTMP_CMD_NAME_ONFI)
+		{
+			// Not support yet
+		}
 		else
 		{
 			logtw("Unknown Amf0DataMessage - Message(%s)", message_name.CStr());
