@@ -120,6 +120,7 @@ const int g_rtmp_sample_rate_table[] = {96000, 88200, 64000, 48000, 44100, 32000
 #define RTMP_CMD_NAME_CLOSE                    ("close")
 #define RTMP_CMD_NAME_SETCHALLENGE              ("setChallenge")
 #define RTMP_CMD_DATA_SETDATAFRAME                ("@setDataFrame")
+#define RTMP_CMD_NAME_ONFI							("onFI")
 #define RTMP_CMD_NAME_ONCLIENTLOGIN                ("onClientLogin")
 #define RTMP_CMD_DATA_ONMETADATA                ("onMetaData")
 #define RTMP_ACK_NAME_RESULT                    ("_result")
