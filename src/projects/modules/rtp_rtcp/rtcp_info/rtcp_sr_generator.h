@@ -7,7 +7,7 @@
 class RtcpSRGenerator
 {
 public:
-    RtcpSRGenerator(uint32_t ssrc);
+    RtcpSRGenerator(uint32_t ssrc, uint32_t codec_rate);
 
 	void AddRTPPacketAndGenerateRtcpSR(const RtpPacket &rtp_packet);
 	bool IsAvailableRtcpSRPacket() const;
@@ -25,6 +25,7 @@ private:
 
 	std::chrono::system_clock::time_point _created_time;
     std::chrono::system_clock::time_point _last_generated_time;
+	uint32_t	_codec_rate = 1;
 
 	std::shared_ptr<RtcpPacket>	_rtcp_packet = nullptr;
 };

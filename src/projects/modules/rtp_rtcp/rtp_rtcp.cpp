@@ -20,7 +20,7 @@ RtpRtcp::~RtpRtcp()
     _rtcp_sr_generators.clear();
 }
 
-bool RtpRtcp::AddRtcpSRGenerator(uint8_t payload_type, uint32_t ssrc)
+bool RtpRtcp::AddRtcpSRGenerator(uint8_t payload_type, uint32_t ssrc, uint32_t codec_rate)
 {
 	std::shared_lock<std::shared_mutex> lock(_state_lock);
 	if(GetNodeState() != ov::Node::NodeState::Ready)
@@ -29,7 +29,7 @@ bool RtpRtcp::AddRtcpSRGenerator(uint8_t payload_type, uint32_t ssrc)
 		return false;
 	}
 
-	_rtcp_sr_generators[payload_type] = std::make_shared<RtcpSRGenerator>(ssrc);
+	_rtcp_sr_generators[payload_type] = std::make_shared<RtcpSRGenerator>(ssrc, codec_rate);
 	return true;
 }
 

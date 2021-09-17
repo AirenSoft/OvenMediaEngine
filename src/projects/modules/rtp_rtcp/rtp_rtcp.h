@@ -25,7 +25,7 @@ public:
 	RtpRtcp(const std::shared_ptr<RtpRtcpInterface> &observer);
 	~RtpRtcp() override;
 
-	bool AddRtcpSRGenerator(uint8_t payload_type, uint32_t ssrc);
+	bool AddRtcpSRGenerator(uint8_t payload_type, uint32_t ssrc, uint32_t codec_rate);
 	bool AddRtpReceiver(uint8_t payload_type, const std::shared_ptr<MediaTrack> &track);
 	bool Stop() override;
 
