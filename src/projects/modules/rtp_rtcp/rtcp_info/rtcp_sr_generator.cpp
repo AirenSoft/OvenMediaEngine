@@ -32,11 +32,13 @@ void RtcpSRGenerator::AddRTPPacketAndGenerateRtcpSR(const RtpPacket &rtp_packet)
 
 		double ipart, fraction;
 		fraction = modf(clock, &ipart);
+		fraction *= 1000; // to milliseconds
 
 		msw = (uint32_t)(ipart);
-		lsw = (uint32_t)((double)(fraction)*(double)(((uint64_t)1)<<32)*1.0e-6);
+		lsw = (uint32_t)((double)(fraction*1000)*(double)(((uint64_t)1)<<32)*1.0e-6);
 
-		//logc("DEBUG", "[SR] Rate(%d) Timestamp(%u) Clock(%lf) ipart(%lf) fraction(%lf) msw(%u) lsw(%u)",  _codec_rate, rtp_packet.Timestamp(), clock, ipart, fraction, msw, lsw);
+		// auto reverse = (uint32_t)(((double)lsw/std::numeric_limits<uint32_t>::max())*1000);
+		// logc("DEBUG", "[SR] Rate(%d) Timestamp(%u) Clock(%lf) ipart(%lf) fraction(%lf) msw(%u) lsw(%u) reverse(%u)",  _codec_rate, rtp_packet.Timestamp(), clock, ipart, fraction, msw, lsw, reverse);
 		
 		report->SetSenderSsrc(_ssrc);
 		report->SetMsw(msw);
