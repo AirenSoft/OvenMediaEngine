@@ -99,7 +99,7 @@ bool RtcSession::Start()
 		{
 			_audio_payload_type = first_payload->GetId();
 			_audio_ssrc = offer_media_desc->GetSsrc();
-			_rtp_rtcp->AddRtcpSRGenerator(_audio_payload_type, _audio_ssrc);
+			_rtp_rtcp->AddRtcpSRGenerator(_audio_payload_type, _audio_ssrc, first_payload->GetCodecRate());
 		}
 		else
 		{
@@ -128,7 +128,7 @@ bool RtcSession::Start()
 			}
 
 			_video_ssrc = offer_media_desc->GetSsrc();
-			_rtp_rtcp->AddRtcpSRGenerator(_video_payload_type, _video_ssrc);
+			_rtp_rtcp->AddRtcpSRGenerator(_video_payload_type, _video_ssrc, first_payload->GetCodecRate());
 		}
 	}
 

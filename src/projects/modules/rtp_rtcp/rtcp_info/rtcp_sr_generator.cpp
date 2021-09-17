@@ -1,9 +1,10 @@
 #include "rtcp_sr_generator.h"
 #include "sender_report.h"
 
-RtcpSRGenerator::RtcpSRGenerator(uint32_t ssrc)
+RtcpSRGenerator::RtcpSRGenerator(uint32_t ssrc, uint32_t codec_rate)
 {
     _ssrc = ssrc;
+	_codec_rate = codec_rate;
     _created_time = std::chrono::system_clock::now();
     _last_generated_time = std::chrono::system_clock::now();
 }
@@ -21,14 +22,26 @@ void RtcpSRGenerator::AddRTPPacketAndGenerateRtcpSR(const RtpPacket &rtp_packet)
     {
 		auto report = std::make_shared<SenderReport>();
 		
+		
 		uint32_t msw = 0;
     	uint32_t lsw = 0;
 
-    	ov::Clock::GetNtpTime(msw, lsw);
+    	//ov::Clock::GetNtpTime(msw, lsw);
 
+		double clock = (double)rtp_packet.Timestamp() / (double)_codec_rate;
+
+		double ipart, fraction;
+		fraction = modf(clock, &ipart);
+
+		msw = (uint32_t)(ipart);
+		lsw = (uint32_t)((double)(fraction)*(double)(((uint64_t)1)<<32)*1.0e-6);
+
+		//logc("DEBUG", "[SR] Rate(%d) Timestamp(%u) Clock(%lf) ipart(%lf) fraction(%lf) msw(%u) lsw(%u)",  _codec_rate, rtp_packet.Timestamp(), clock, ipart, fraction, msw, lsw);
+		
 		report->SetSenderSsrc(_ssrc);
 		report->SetMsw(msw);
 		report->SetLsw(lsw);
+		
 		report->SetTimestamp(rtp_packet.Timestamp());
 		report->SetPacketCount(_packet_count);
 		report->SetOctetCount(_octec_count);
