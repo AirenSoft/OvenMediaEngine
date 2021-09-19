@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "decode/decode.h"
+#include "decodes/decodes.h"
 #include "origin.h"
 #include "output_profiles/output_profiles.h"
 #include "providers/providers.h"
@@ -35,7 +35,7 @@ namespace cfg
 				ov::String _type;
 				ApplicationType _type_value;
 
-				dec::Decode _decode;
+				dec::Decodes _decodes;
 				oprf::OutputProfiles _output_profiles;
 				pvd::Providers _providers;
 				pub::Publishers _publishers;
@@ -45,7 +45,7 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetType, _type_value)
 				CFG_DECLARE_REF_GETTER_OF(GetTypeString, _type)
 
-				CFG_DECLARE_REF_GETTER_OF(GetDecode, _decode)
+				CFG_DECLARE_REF_GETTER_OF(GetDecodes, _decodes)
 				CFG_DECLARE_REF_GETTER_OF(GetOutputProfileList, _output_profiles.GetOutputProfileList())
 				CFG_DECLARE_REF_GETTER_OF(GetOutputProfiles, _output_profiles)
 				CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
@@ -72,7 +72,7 @@ namespace cfg
 						return CreateConfigError("Unknown type: %s", _type.CStr());
 					});
 
-					Register<Optional>("Decode", &_decode);
+					Register<Optional>("Decodes", &_decodes);
 					Register<Optional>("OutputProfiles", &_output_profiles);
 					Register<Optional>("Providers", &_providers);
 					Register<Optional>("Publishers", &_publishers);

@@ -18,13 +18,16 @@ namespace cfg
 			{
 				struct DecodeVideo : public Item
 				{
+				public:
+					CFG_DECLARE_REF_GETTER_OF(IsHardwareAcceleration, _hw_acceleration);
+
 				protected:
 					void MakeList() override
 					{
-						Register("HWAcceleration", &_hw_acceleration);
+						Register("HardwareAcceleration", &_hw_acceleration);
 					}
 
-					ov::String _hw_acceleration;
+					bool _hw_acceleration;
 				};
 			}  // namespace dec
 		}	   // namespace app

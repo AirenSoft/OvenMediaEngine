@@ -110,7 +110,7 @@ void DecoderHEVCxQSV::ThreadDecode()
 				_pkt->pts = _parser->pts;
 				_pkt->dts = _parser->dts;
 				_pkt->flags = (_parser->key_frame == 1) ? AV_PKT_FLAG_KEY : 0;
-				_pkt->duration = _pkt->pts - _parser->last_pts;
+				_pkt->duration = _pkt->dts - _parser->last_dts;
 				if(_pkt->duration <= 0LL)
 				{
 					// It may not be the exact packet duration. 

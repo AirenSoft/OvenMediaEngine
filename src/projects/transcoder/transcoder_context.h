@@ -40,6 +40,7 @@ public:
 		_media_type = cmn::MediaType::Video;
 		_time_base.Set(1, 90000);
 		_video_gop = 30;
+		_h264_has_bframes = 0;
 	}
 
 	// Audio
@@ -151,4 +152,14 @@ private:
 
 	// Hardware accelerator
 	bool _hwaccel;
+
+
+public:
+	//--------------------------------------------------------------------
+	// Informal Options
+	//--------------------------------------------------------------------
+	void SetH264hasBframes(int32_t bframes_count);
+	int32_t GetH264hasBframes();
+private:	
+	int32_t _h264_has_bframes;
 };

@@ -165,3 +165,13 @@ bool TranscodeContext::GetHardwareAccel()
 {
 	return _hwaccel;
 }
+
+void TranscodeContext::SetH264hasBframes(int32_t bframes_count)
+{
+	_h264_has_bframes = bframes_count;
+}
+
+int32_t TranscodeContext::GetH264hasBframes()
+{
+	return _h264_has_bframes;
+}
