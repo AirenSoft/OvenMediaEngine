@@ -695,13 +695,6 @@ int32_t TranscoderStream::CreateDecoders()
 {
 	int32_t created_decoder_count = 0;
 
-	// Get hardware acceleration is enabled
-	auto use_hwaccel = _application_info.GetConfig().GetOutputProfiles().IsHardwareAcceleration();
-	if (use_hwaccel == true)
-	{
-		logtd("Enable hardware accelerator for decoder");
-	}
-
 	for (auto iter : _stage_input_to_decoder)
 	{
 		auto input_track_id = iter.first;
@@ -719,7 +712,7 @@ int32_t TranscoderStream::CreateDecoders()
 
 		switch (track->GetMediaType())
 		{
-			case cmn::MediaType::Video:
+			case cmn::MediaType::Video: {
 				transcode_context = std::make_shared<TranscodeContext>(
 					false,
 					track->GetCodecId(),
@@ -728,16 +721,17 @@ int32_t TranscoderStream::CreateDecoders()
 					track->GetHeight(),
 					track->GetFrameRate(),
 					track->GetFormat());
+			}
+			break;
 
-				break;
-
-			case cmn::MediaType::Audio:
+			case cmn::MediaType::Audio: {
 				transcode_context = std::make_shared<TranscodeContext>(
 					false,
 					track->GetCodecId(),
 					track->GetBitrate(),
 					track->GetSampleRate());
-				break;
+			}
+			break;
 
 			default:
 				logtw("Not supported media type: %d", track->GetMediaType());
@@ -745,7 +739,14 @@ int32_t TranscoderStream::CreateDecoders()
 		}
 
 		transcode_context->SetTimeBase(track->GetTimeBase());
+
+		// Get hardware acceleration is enabled
+		auto use_hwaccel = _application_info.GetConfig().GetOutputProfiles().IsHardwareAcceleration();
 		transcode_context->SetHardwareAccel(use_hwaccel);
+
+		// Set the number of b frames for compatibility with specific encoders.
+		auto h264_has_bframes = _application_info.GetConfig().GetDecodes().GetH264hasBFrames();
+		transcode_context->SetH264hasBframes(h264_has_bframes);
 
 		CreateDecoder(input_track_id, decoder_track_id, transcode_context);
 

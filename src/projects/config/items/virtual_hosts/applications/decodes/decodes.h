@@ -18,15 +18,23 @@ namespace cfg
 		{
 			namespace dec
 			{
-				struct Decode : public Item
+				struct Decodes : public Item
 				{
+				public:
+					CFG_DECLARE_REF_GETTER_OF(GetVideo, _video);
+					
+					// Informal Option 
+					CFG_DECLARE_REF_GETTER_OF(GetH264hasBFrames, _h264_has_bframes);
+
 				protected:
 					void MakeList() override
 					{
-						Register("Video", &_video);
+						Register<Optional>("Video", &_video);
+						Register<Optional>("H264hasBframes", &_h264_has_bframes);
 					}
 
-					DecodeVideo _video;
+					int32_t _h264_has_bframes = 0;
+					dec::DecodeVideo _video;
 				};
 			}  // namespace dec
 		}	   // namespace app
