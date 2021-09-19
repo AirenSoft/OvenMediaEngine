@@ -36,6 +36,13 @@ bool DecoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 
 	_context->time_base = TimebaseToAVRational(GetTimebase());
 
+	// Set the number of b frames for compatibility with specific encoders.
+	auto bframes = GetContext()->GetH264hasBframes();
+	if (bframes > 0)
+	{
+		_context->has_b_frames = bframes;
+	}
+
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
@@ -113,16 +120,15 @@ void DecoderAVC::ThreadDecode()
 				_pkt->pts = _parser->pts;
 				_pkt->dts = _parser->dts;
 				_pkt->flags = (_parser->key_frame == 1) ? AV_PKT_FLAG_KEY : 0;
-				_pkt->duration = _pkt->pts - _parser->last_pts;
-				if(_pkt->duration <= 0LL)
+				_pkt->duration = _pkt->dts - _parser->last_dts;
+				if (_pkt->duration <= 0LL)
 				{
-					// It may not be the exact packet duration. 
+					// It may not be the exact packet duration.
 					// However, in general, this method is applied under the assumption that the duration of all packets is similar.
 					_pkt->duration = duration;
 				}
 
 				int ret = ::avcodec_send_packet(_context, _pkt);
-
 				if (ret == AVERROR(EAGAIN))
 				{
 					// Need more data
