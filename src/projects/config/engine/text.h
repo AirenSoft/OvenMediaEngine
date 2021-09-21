@@ -10,21 +10,27 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 
-#include <memory>
-
-#define CreateConfigError(format, ...) \
-	cfg::ConfigError::CreateError(format " (%s:%d)", ##__VA_ARGS__, __FILE__, __LINE__)
-
-// Just a hint of what exception is thrown
-#define MAY_THROWS(...)
+#include "config_error.h"
 
 namespace cfg
 {
-	class ConfigError : public ov::Error
-	{
-	public:
-		ConfigError(ov::String message);
+	class Item;
 
-		static std::shared_ptr<ConfigError> CreateError(const char *format, ...);
+	class Text
+	{
+	protected:
+		friend class Item;
+
+	public:
+		virtual ov::String ToString() const = 0;
+
+	protected:
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		virtual void FromString(const ov::String &str) = 0;
+
+		bool IsParsed(const void *target) const
+		{
+			throw CreateConfigError("Use Item::IsParsed() instead");
+		}
 	};
 }  // namespace cfg

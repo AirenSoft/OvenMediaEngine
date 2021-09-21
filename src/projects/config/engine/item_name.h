@@ -23,6 +23,34 @@ namespace cfg
 		Json
 	};
 
+	// omit_rule: Indicates whether to omit the name when the child item is array
+	//
+	// For example:
+	// 1) OmitRule::Omit
+	// 2) OmitRule::DontOmit (default)
+	enum class OmitRule
+	{
+		// Omit the name
+		// {
+		//     "iceCandidates": [
+		//         "1.1.1.1/udp",
+		//         "1.2.2.2/udp"
+		//     ]
+		// }
+		Omit,
+
+		// Don't omit the name
+		// {
+		//     "iceCandidates": [
+		//         { "iceCandidate": "1.1.1.1/udp" },
+		//         { "iceCandidate": "1.2.2.2/udp" }
+		//     ]
+		// }
+		DontOmit,
+
+		Default = DontOmit
+	};
+
 	struct ItemName
 	{
 		friend class Item;
@@ -32,28 +60,8 @@ namespace cfg
 	public:
 		ItemName(const char *xml_name);
 		ItemName(const char *xml_name, const char *json_name);
-		// omit_name: Indicates whether to omit the name when the child item is array
-		//
-		// For example:
-		// 1) omit_name == true (default)
-		// {
-		//     "encodes": [
-		//         { "bypass": true },
-		//         { "bypass": true }
-		//     ]
-		// }
-		// 2) omit_name == false
-		// {
-		//     "encodes": {
-		//         "audios": [
-		//             { "bypass": true }
-		//         ],
-		//         "videos": [
-		//             { "bypass": true }
-		//         ]
-		//     }
-		// }
-		ItemName(const char *xml_name, const char *json_name, bool omit_name);
+		ItemName(const char *xml_name, OmitRule omit_rule);
+		ItemName(const char *xml_name, const char *json_name, OmitRule omit_rule);
 
 		ov::String ToString() const;
 
@@ -80,7 +88,7 @@ namespace cfg
 
 		ov::String xml_name;
 		ov::String json_name;
-		bool omit_name = true;
+		OmitRule omit_rule = OmitRule::Default;
 
 	protected:
 		ItemName() = default;

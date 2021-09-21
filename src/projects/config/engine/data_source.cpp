@@ -63,7 +63,8 @@ namespace cfg
 
 		if (result == false)
 		{
-			throw CreateConfigError("Could not read the file: %s (reason: %s)", file_name.CStr(), result.description());
+			throw CreateConfigError("Could not read the file: %s (reason: %s, offset: %td)",
+									file_name.CStr(), result.description(), result.offset);
 		}
 
 		_document = document;

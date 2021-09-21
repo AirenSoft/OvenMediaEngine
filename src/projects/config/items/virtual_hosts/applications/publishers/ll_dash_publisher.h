@@ -43,7 +43,7 @@ namespace cfg
 
 						Register<Optional>("UTCTiming", &_utc_timing);
 
-						Register<Optional>("CrossDomains", &_cross_domains);
+						Register<Optional>({"CrossDomains", OmitRule::Omit}, &_cross_domains);
 					}
 
 					// LL-DASH uses time-based segment

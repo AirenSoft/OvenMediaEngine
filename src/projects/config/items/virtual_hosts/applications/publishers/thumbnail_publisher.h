@@ -33,7 +33,7 @@ namespace cfg
 					{
 						Publisher::MakeList();
 
-						Register<Optional>("CrossDomains", &_cross_domains);
+						Register<Optional>({"CrossDomains", OmitRule::Omit}, &_cross_domains);
 					}
 
 					cmn::CrossDomains _cross_domains;

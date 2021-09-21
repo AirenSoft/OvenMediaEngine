@@ -37,7 +37,7 @@ namespace cfg
 
 						Register<Optional>("SegmentCount", &_segment_count);
 						Register<Optional>("SegmentDuration", &_segment_duration);
-						Register<Optional>("CrossDomains", &_cross_domains);
+						Register<Optional>({"CrossDomains", OmitRule::Omit}, &_cross_domains);
 					}
 
 					int _segment_count = 3;
