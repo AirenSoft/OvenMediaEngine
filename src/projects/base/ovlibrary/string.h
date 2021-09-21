@@ -48,7 +48,7 @@ namespace ov
 		String &operator=(const String &buffer) noexcept;
 		String &operator=(const char *buffer) noexcept;
 		const String &operator+=(const char *buffer) noexcept;
-		String operator+(const String &other) noexcept;
+		String operator+(const String &other) const noexcept;
 
 		// Adds a character or string before current string
 		bool Prepend(char c);

@@ -114,7 +114,7 @@ namespace ov
 		return *this;
 	}
 
-	String String::operator+(const String &other) noexcept
+	String String::operator+(const String &other) const noexcept
 	{
 		String instance(*this);
 
