@@ -12,8 +12,8 @@
 
 #define CFG_LOG_FILE_NAME "Logger.xml"
 #define CFG_MAIN_FILE_NAME "Server.xml"
-#define CFG_LAST_CONFIG_FILE_NAME "LastConfig.json"
-#define SERVER_ID_STORAGE_FILE		"Server.id"
+#define CFG_LAST_CONFIG_FILE_NAME "LastConfig.xml"
+#define SERVER_ID_STORAGE_FILE "Server.id"
 
 namespace cfg
 {
@@ -23,13 +23,16 @@ namespace cfg
 		friend class ov::Singleton<ConfigManager>;
 		~ConfigManager() override;
 
+		void SetOmeVersion(const ov::String &version, const ov::String &git_extra);
+
 		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void LoadConfigs(ov::String config_path, bool ignore_last_config);
 
 		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void ReloadConfigs();
 
-		Json::Value GetCurrentConfigAsJson();
+		Json::Value GetCurrentConfigAsJson() const;
+		pugi::xml_document GetCurrentConfigAsXml() const;
 
 		// ConfigManager contains only the configurations when OME first runs,
 		// so if you want to save the last changes modified with RESTful API, you need to call this API.
@@ -58,6 +61,9 @@ namespace cfg
 		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void CheckValidVersion(const ov::String &name, int version);
 
+		ov::String _version;
+		ov::String _git_extra;
+
 		ov::String _config_path;
 		bool _ignore_last_config = false;
 
@@ -71,8 +77,8 @@ namespace cfg
 		// value: version number
 		std::map<ov::String, int> _supported_xml;
 
-		std::mutex _config_mutex;
-	
+		mutable std::mutex _config_mutex;
+
 	private:
 		std::tuple<bool, ov::String> LoadServerIDFromStorage(const ov::String &config_path) const;
 		bool StoreServerID(const ov::String &config_path, ov::String server_id);
