@@ -236,6 +236,7 @@ namespace cfg
 		ov::String ToString(int indent_count) const;
 
 		Json::Value ToJson(bool include_default_values = false) const;
+		void ToXml(pugi::xml_node node, bool include_default_values = false) const;
 		pugi::xml_document ToXml(bool include_default_values = false) const;
 
 	protected:

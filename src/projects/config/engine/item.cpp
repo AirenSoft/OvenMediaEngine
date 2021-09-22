@@ -631,7 +631,7 @@ namespace cfg
 				break;
 
 			case ValueType::String:
-				SetXmlChildValue(node, child_name, original_value.asCString());
+				SetXmlChildValue(node, child_name, StringFromJsonValue(original_value));
 				break;
 
 			case ValueType::Integer:
@@ -651,11 +651,11 @@ namespace cfg
 				break;
 
 			case ValueType::Attribute:
-				node.append_attribute(child_name).set_value(original_value.asCString());
+				node.append_attribute(child_name).set_value(StringFromJsonValue(original_value));
 				break;
 
 			case ValueType::Text:
-				SetXmlChildValue(node, child_name, original_value.asCString());
+				SetXmlChildValue(node, child_name, StringFromJsonValue(original_value));
 				break;
 
 			case ValueType::Item: {
@@ -719,11 +719,19 @@ namespace cfg
 		return object;
 	}
 
+	void Item::ToXml(pugi::xml_node node, bool include_default_values) const
+	{
+		if (node.set_name(_item_name.xml_name.CStr()))
+		{
+			ToXmlInternal(node, include_default_values);
+		}
+	}
+
 	pugi::xml_document Item::ToXml(bool include_default_values) const
 	{
 		pugi::xml_document doc;
 
-		pugi::xml_node root_node = doc.append_child(_item_name.xml_name.CStr());
+		auto root_node = doc.append_child(_item_name.xml_name.CStr());
 
 		ToXmlInternal(root_node, include_default_values);
 
