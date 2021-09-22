@@ -56,7 +56,7 @@ namespace api
 		{
 			address = ov::SocketAddress(server_config->GetIp(), port.GetPort());
 
-			_http_server = manager->CreateHttpServer("APIServer", address, worker_count);
+			_http_server = manager->CreateHttpServer("APISvr", address, worker_count);
 
 			if (_http_server != nullptr)
 			{
