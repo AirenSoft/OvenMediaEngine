@@ -37,7 +37,7 @@ namespace cfg
 					{
 						Provider::MakeList();
 
-						Register<Optional>({"StreamMap", "streams"}, &_stream_map);
+						Register<Optional>({"StreamMap", "streams", OmitRule::Omit}, &_stream_map);
 					}
 				};
 			}  // namespace pvd

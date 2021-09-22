@@ -8,14 +8,14 @@
 //==============================================================================
 #pragma once
 
+#include <fstream>
+
+#include "analytics/analytics.h"
+#include "base/ovlibrary/uuid.h"
 #include "bind/bind.h"
 #include "managers/managers.h"
-#include "analytics/analytics.h"
 #include "p2p/p2p.h"
 #include "virtual_hosts/virtual_hosts.h"
-#include "base/ovlibrary/uuid.h"
-
-#include <fstream>
 
 namespace cfg
 {
@@ -129,7 +129,7 @@ namespace cfg
 
 			Register<Optional>({"P2P", "p2p"}, &_p2p);
 
-			Register<Optional>("VirtualHosts", &_virtual_hosts);
+			Register<Optional>({"VirtualHosts", OmitRule::Omit}, &_virtual_hosts);
 		}
 	};
 }  // namespace cfg

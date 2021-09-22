@@ -63,7 +63,8 @@ namespace cfg
 
 		if (result == false)
 		{
-			throw CreateConfigError("Could not read the file: %s (reason: %s)", file_name.CStr(), result.description());
+			throw CreateConfigError("Could not read the file: %s (reason: %s, offset: %td)",
+									file_name.CStr(), result.description(), result.offset);
 		}
 
 		_document = document;
@@ -355,14 +356,19 @@ namespace cfg
 					std::vector<DataSource> data_sources;
 					*original_value = Json::arrayValue;
 
-					for (auto &node_child : _node.children())
+					auto children = _node.children(name);
+
+					for (auto &node_child : children)
 					{
 						data_sources.emplace_back(_base_path, _file_name, _document, node_child);
 
 						original_value->append(node_child.child_value());
 					}
 
-					return data_sources;
+					if (data_sources.size() > 0)
+					{
+						return data_sources;
+					}
 				}
 
 				return {};

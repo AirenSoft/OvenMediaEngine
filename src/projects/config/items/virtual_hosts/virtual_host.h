@@ -9,11 +9,11 @@
 #pragma once
 
 #include "../common/host/host.h"
-#include "applications/applications.h"
-#include "origins/origins.h"
+#include "access_control/admission_webhooks.h"
 #include "access_control/signed_policy.h"
 #include "access_control/signed_token.h"
-#include "access_control/admission_webhooks.h"
+#include "applications/applications.h"
+#include "origins/origins.h"
 
 namespace cfg
 {
@@ -59,7 +59,7 @@ namespace cfg
 				Register<Optional>("AdmissionWebhooks", &_admission_webhooks);
 
 				Register<Optional>("Origins", &_origins);
-				Register<Optional>("Applications", &_applications);
+				Register<Optional>({"Applications", OmitRule::Omit}, &_applications);
 			}
 		};
 	}  // namespace vhost

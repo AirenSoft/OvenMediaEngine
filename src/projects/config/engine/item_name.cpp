@@ -23,14 +23,20 @@ namespace cfg
 	}
 
 	ItemName::ItemName(const char *xml_name, const char *json_name)
-		: ItemName(xml_name, json_name, true)
+		: ItemName(xml_name, json_name, OmitRule::Default)
 	{
 	}
 
-	ItemName::ItemName(const char *xml_name, const char *json_name, bool omit_name)
+	ItemName::ItemName(const char *xml_name, OmitRule omit_rule)
+		: ItemName(xml_name)
+	{
+		this->omit_rule = omit_rule;
+	}
+
+	ItemName::ItemName(const char *xml_name, const char *json_name, OmitRule omit_rule)
 		: xml_name(xml_name),
 		  json_name(json_name),
-		  omit_name(omit_name)
+		  omit_rule(omit_rule)
 	{
 	}
 

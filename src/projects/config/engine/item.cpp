@@ -64,7 +64,7 @@ namespace cfg
 		return false;
 	}
 
-	ov::String ChildToString(int indent_count, const std::shared_ptr<Child> &child, size_t index, size_t child_count)
+	ov::String Item::ChildToString(int indent_count, const std::shared_ptr<Child> &child, size_t index, size_t child_count)
 	{
 		ov::String indent = MakeIndentString(indent_count + 1);
 
@@ -226,6 +226,18 @@ namespace cfg
 		return description;
 	}
 
+	template <class T>
+	bool ValidateOmitRule(OmitRule omit_rule, const std::vector<T> &children)
+	{
+		if ((omit_rule == OmitRule::DontOmit) || (children.size() == 1))
+		{
+			// The item may be omitted
+			return true;
+		}
+
+		return false;
+	}
+
 	Item::Item(const Item &item)
 	{
 		_need_to_update_list = true;
@@ -329,6 +341,9 @@ namespace cfg
 
 	void Item::FromDataSource(ov::String path, const ItemName &name, const DataSource &data_source)
 	{
+		logtd("[%s] Validating data source for: %s", path.CStr(), name.ToString().CStr());
+		ValidateOmitRules(path);
+
 		RebuildListIfNeeded();
 		data_source.CheckUnknownItems(data_source.GetFileName(), path, _children_for_xml, _children_for_json);
 
@@ -350,6 +365,102 @@ namespace cfg
 		}
 
 		throw CreateConfigError("Could not find target: %p", target);
+	}
+
+	void Item::ValidateOmitRule(const ov::String &path, const ov::String &name) const
+	{
+		if (_item_name.omit_rule == OmitRule::Omit)
+		{
+			if (_children.size() > 1)
+			{
+				OV_ASSERT(false, "\"%s\" item cannot be omitted because it has multiple children", path.CStr());
+
+				throw CreateConfigError("[%s] This item cannot be omitted because it has multiple children", path.CStr());
+			}
+		}
+		else
+		{
+			// Don't need to check omit rule for this item
+		}
+
+		for (const auto &child : _children)
+		{
+			switch (child->GetType())
+			{
+				case ValueType::Unknown:
+				case ValueType::String:
+				case ValueType::Integer:
+				case ValueType::Long:
+				case ValueType::Boolean:
+				case ValueType::Double:
+				case ValueType::Attribute:
+				case ValueType::Text:
+					break;
+
+				case ValueType::Item: {
+					try
+					{
+						auto child_item = TryCast<Item *>(child->GetTarget());
+						child_item->ValidateOmitRule(path, child->GetName().ToString());
+					}
+					catch (const CastException &cast_exception)
+					{
+						throw CreateConfigError("[%s.%s] Could not cast %s to %s", path, child->GetName().ToString(), cast_exception.from.CStr(), cast_exception.to.CStr());
+					}
+
+					break;
+				}
+
+				case ValueType::List: {
+					auto child_name = child->GetName().ToString();
+
+					std::shared_ptr<ListInterface> list_interface;
+
+					try
+					{
+						list_interface = TryCast<std::shared_ptr<ListInterface>>(child->GetTarget());
+					}
+					catch (const CastException &cast_exception)
+					{
+						throw CreateConfigError("[%s.%s] Could not cast %s to %s", path.CStr(), child_name.CStr(), cast_exception.from.CStr(), cast_exception.to.CStr());
+					}
+
+					auto list_value_type = list_interface->GetValueType();
+
+					switch (list_value_type)
+					{
+						case ValueType::Unknown:
+						case ValueType::String:
+						case ValueType::Integer:
+						case ValueType::Long:
+						case ValueType::Boolean:
+						case ValueType::Double:
+						case ValueType::Attribute:
+						case ValueType::Text:
+							break;
+
+						case ValueType::Item: {
+							list_interface->ValidateOmitRule(path);
+							break;
+						}
+
+						case ValueType::List:
+							// Config module doesn't support nested list
+							OV_ASSERT2(false);
+							break;
+					}
+
+					break;
+				}
+			}
+		}
+	}
+
+	void Item::ValidateOmitRules(const ov::String &path) const
+	{
+		RebuildListIfNeeded();
+
+		ValidateOmitRule(path, _item_name.GetName(cfg::DataType::Json));
 	}
 
 	ov::String Item::ToString(int indent_count) const
@@ -414,7 +525,7 @@ namespace cfg
 		}
 	}
 
-	void Item::AddJsonChild(Json::Value &object, ValueType value_type, const ov::String &child_name, const std::any &child_target, const Json::Value &original_value, bool include_default_values)
+	void Item::AddJsonChild(Json::Value &object, ValueType value_type, OmitRule omit_rule, const ov::String &child_name, const std::any &child_target, const Json::Value &original_value, bool include_default_values)
 	{
 		switch (value_type)
 		{
@@ -463,8 +574,7 @@ namespace cfg
 				}
 				catch (const CastException &cast_exception)
 				{
-					logte("Could not cast %s to %s", cast_exception.from.CStr(), cast_exception.to.CStr());
-					return;
+					throw CreateConfigError("Could not cast %s to %s", cast_exception.from.CStr(), cast_exception.to.CStr());
 				}
 				break;
 			}
@@ -478,8 +588,7 @@ namespace cfg
 				}
 				catch (const CastException &cast_exception)
 				{
-					logte("Could not cast %s to %s", cast_exception.from.CStr(), cast_exception.to.CStr());
-					return;
+					throw CreateConfigError("Could not cast %s to %s", cast_exception.from.CStr(), cast_exception.to.CStr());
 				}
 
 				auto &list_children = list_item->GetChildren();
@@ -487,7 +596,7 @@ namespace cfg
 
 				auto &list_item_name = list_item->GetItemName();
 
-				Json::Value &target_object = (list_item_name.omit_name) ? object : object[list_item_name.json_name];
+				Json::Value &target_object = (omit_rule == OmitRule::DontOmit) ? object[list_item_name.json_name] : object;
 
 				if (target_object.isArray() == false)
 				{
@@ -496,9 +605,93 @@ namespace cfg
 
 				for (auto &list_child : list_children)
 				{
-					AddJsonChild(target_object, list_value_type, list_child->GetItemName().json_name, list_child->GetTarget(), list_child->GetOriginalValue(), include_default_values);
+					AddJsonChild(target_object, list_value_type, list_item_name.omit_rule, list_child->GetItemName().json_name, list_child->GetTarget(), list_child->GetOriginalValue(), include_default_values);
 				}
 
+				break;
+			}
+		}
+	}
+
+	void SetXmlChildValue(pugi::xml_node &node, const ov::String &child_name, const char *value)
+	{
+		auto child_node = node.append_child(child_name.CStr());
+		child_node.set_name(child_name.CStr());
+
+		auto child_text = child_node.append_child(pugi::node_pcdata);
+		child_text.set_value(value);
+	}
+
+	void Item::AddXmlChild(pugi::xml_node &node, ValueType value_type, const ov::String &child_name, const std::any &child_target, const Json::Value &original_value, bool include_default_values)
+	{
+		switch (value_type)
+		{
+			case ValueType::Unknown:
+				node.append_child(pugi::node_null).set_name(child_name.CStr());
+				break;
+
+			case ValueType::String:
+				SetXmlChildValue(node, child_name, StringFromJsonValue(original_value));
+				break;
+
+			case ValueType::Integer:
+				SetXmlChildValue(node, child_name, ov::Converter::ToString(ov::Converter::ToInt32(original_value)));
+				break;
+
+			case ValueType::Long:
+				SetXmlChildValue(node, child_name, ov::Converter::ToString(ov::Converter::ToInt64(original_value)));
+				break;
+
+			case ValueType::Boolean:
+				SetXmlChildValue(node, child_name, ov::Converter::ToBool(original_value) ? "true" : "false");
+				break;
+
+			case ValueType::Double:
+				SetXmlChildValue(node, child_name, ov::Converter::ToString(ov::Converter::ToDouble(original_value)));
+				break;
+
+			case ValueType::Attribute:
+				node.append_attribute(child_name).set_value(StringFromJsonValue(original_value));
+				break;
+
+			case ValueType::Text:
+				SetXmlChildValue(node, child_name, StringFromJsonValue(original_value));
+				break;
+
+			case ValueType::Item: {
+				try
+				{
+					auto child_node = node.append_child(child_name.CStr());
+					TryCast<Item *>(child_target)->ToXmlInternal(child_node, include_default_values);
+				}
+				catch (const CastException &cast_exception)
+				{
+					throw CreateConfigError("Could not cast %s to %s", cast_exception.from.CStr(), cast_exception.to.CStr());
+				}
+				break;
+			}
+
+			case ValueType::List: {
+				std::shared_ptr<ListInterface> list_item;
+
+				try
+				{
+					list_item = TryCast<std::shared_ptr<ListInterface>>(child_target);
+				}
+				catch (const CastException &cast_exception)
+				{
+					throw CreateConfigError("Could not cast %s to %s", cast_exception.from.CStr(), cast_exception.to.CStr());
+				}
+
+				auto &list_children = list_item->GetChildren();
+				auto list_value_type = list_item->GetValueType();
+
+				auto &list_item_name = list_item->GetItemName();
+
+				for (auto &list_child : list_children)
+				{
+					AddXmlChild(node, list_value_type, list_item_name.xml_name, list_child->GetTarget(), list_child->GetOriginalValue(), include_default_values);
+				}
 				break;
 			}
 		}
@@ -519,11 +712,43 @@ namespace cfg
 		{
 			if (include_default_values || child->IsParsed())
 			{
-				AddJsonChild(object, child->GetType(), child->GetName().json_name, child->GetTarget(), child->GetOriginalValue(), include_default_values);
+				AddJsonChild(object, child->GetType(), _item_name.omit_rule, child->GetName().json_name, child->GetTarget(), child->GetOriginalValue(), include_default_values);
 			}
 		}
 
 		return object;
+	}
+
+	void Item::ToXml(pugi::xml_node node, bool include_default_values) const
+	{
+		if (node.set_name(_item_name.xml_name.CStr()))
+		{
+			ToXmlInternal(node, include_default_values);
+		}
+	}
+
+	pugi::xml_document Item::ToXml(bool include_default_values) const
+	{
+		pugi::xml_document doc;
+
+		auto root_node = doc.append_child(_item_name.xml_name.CStr());
+
+		ToXmlInternal(root_node, include_default_values);
+
+		return doc;
+	}
+
+	void Item::ToXmlInternal(pugi::xml_node &parent_node, bool include_default_values) const
+	{
+		RebuildListIfNeeded();
+
+		for (auto &child : _children)
+		{
+			if (include_default_values || child->IsParsed())
+			{
+				AddXmlChild(parent_node, child->GetType(), child->GetName().xml_name, child->GetTarget(), child->GetOriginalValue(), include_default_values);
+			}
+		}
 	}
 
 	bool Item::SetValue(const std::shared_ptr<const Child> &child, ValueType type, std::any &child_target, const ov::String &path, const ItemName &child_name, const ov::String &name, const std::any &value)
@@ -560,69 +785,80 @@ namespace cfg
 			switch (type)
 			{
 				case ValueType::Unknown:
-					logtd("[%s] Unknown", path.CStr());
+					logtd("[%s] Unknown type: %s",
+						  path.CStr(),
+						  child_name.ToString().CStr());
 					break;
 
 				case ValueType::String:
-					logtd("[%s] Trying to cast %s",
+					logtd("[%s] Trying to cast %s for %s",
 						  path.CStr(),
-						  ov::Demangle(value.type().name()).CStr());
+						  ov::Demangle(value.type().name()).CStr(),
+						  child_name.ToString().CStr());
 					*(std::any_cast<ov::String *>(child_target)) = TryCast<ov::String, ov::String, const char *>(value);
 					break;
 
 				case ValueType::Integer:
-					logtd("[%s] Trying to cast %s",
+					logtd("[%s] Trying to cast %s for %s",
 						  path.CStr(),
-						  ov::Demangle(value.type().name()).CStr());
+						  ov::Demangle(value.type().name()).CStr(),
+						  child_name.ToString().CStr());
 					*(std::any_cast<int *>(child_target)) = TryCast<int, int, long, int64_t>(value);
 					break;
 
 				case ValueType::Long:
-					logtd("[%s] Trying to cast %s",
+					logtd("[%s] Trying to cast %s for %s",
 						  path.CStr(),
-						  ov::Demangle(value.type().name()).CStr());
+						  ov::Demangle(value.type().name()).CStr(),
+						  child_name.ToString().CStr());
 					*(std::any_cast<int64_t *>(child_target)) = TryCast<int, int64_t, long, int>(value);
 					break;
 
 				case ValueType::Boolean:
-					logtd("[%s] Trying to cast %s",
+					logtd("[%s] Trying to cast %s for %s",
 						  path.CStr(),
-						  ov::Demangle(value.type().name()).CStr());
+						  ov::Demangle(value.type().name()).CStr(),
+						  child_name.ToString().CStr());
 					*(std::any_cast<bool *>(child_target)) = TryCast<bool, bool, int>(value);
 					break;
 
 				case ValueType::Double:
-					logtd("[%s] Trying to cast %s",
+					logtd("[%s] Trying to cast %s for %s",
 						  path.CStr(),
-						  ov::Demangle(value.type().name()).CStr());
+						  ov::Demangle(value.type().name()).CStr(),
+						  child_name.ToString().CStr());
 					*(std::any_cast<double *>(child_target)) = TryCast<double, double, float>(value);
 					break;
 
 				case ValueType::Attribute:
-					logtd("[%s] Trying to cast %s (attribute)",
+					logtd("[%s] Trying to cast %s for %s (attribute)",
 						  path.CStr(),
-						  ov::Demangle(value.type().name()).CStr());
+						  ov::Demangle(value.type().name()).CStr(),
+						  child_name.ToString().CStr());
 					std::any_cast<Attribute *>(child_target)->_value = TryCast<ov::String, ov::String, const char *>(value);
 					break;
 
 				case ValueType::Text:
-					logtd("[%s] Trying to cast %s (text)",
+					logtd("[%s] Trying to cast %s for %s(text)",
 						  path.CStr(),
-						  ov::Demangle(value.type().name()).CStr());
+						  ov::Demangle(value.type().name()).CStr(),
+						  child_name.ToString().CStr());
 					std::any_cast<Text *>(child_target)->FromString(TryCast<ov::String, ov::String, const char *>(value));
 					break;
 
 				case ValueType::Item:
-					logtd("[%s] Trying to cast %s",
+					logtd("[%s] Trying to cast %s for %s",
 						  path.CStr(),
-						  ov::Demangle(value.type().name()).CStr());
+						  ov::Demangle(value.type().name()).CStr(),
+						  child_name.ToString().CStr());
 					std::any_cast<Item *>(child_target)->FromDataSource(child_path, child_name, TryCast<const cfg::DataSource &>(value));
 					break;
 
 				case ValueType::List: {
-					logtd("[%s] Trying to cast %s",
+					logtd("[%s] Trying to cast %s for %s",
 						  path.CStr(),
-						  ov::Demangle(value.type().name()).CStr());
+						  ov::Demangle(value.type().name()).CStr(),
+						  child_name.ToString().CStr());
 
 					auto &list_target = std::any_cast<std::shared_ptr<ListInterface> &>(child_target);
 
@@ -676,7 +912,7 @@ namespace cfg
 						auto list_child = std::make_shared<ListChild>(new_name, new_item, original_value);
 						list_target->AddListChild(list_child);
 
-						SetValue(child, list_target->GetValueType(), new_item, child_path, child_name, name, list_value);
+						SetValue(child, list_target->GetValueType(), new_item, path, child_name, name, list_value);
 
 						index++;
 					}

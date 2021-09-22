@@ -29,7 +29,7 @@ namespace cfg
 		protected:
 			void MakeList() override
 			{
-				Register("Names", &_names);
+				Register({"Names", OmitRule::Omit}, &_names);
 				Register<Optional>({"TLS", "tls"}, &_tls);
 			}
 		};

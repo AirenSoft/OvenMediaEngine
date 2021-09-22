@@ -9,6 +9,7 @@
 #include "config_manager.h"
 
 #include <monitoring/monitoring.h>
+#include <sys/utsname.h>
 
 #include <iostream>
 
@@ -42,6 +43,12 @@ namespace cfg
 	{
 	}
 
+	void ConfigManager::SetOmeVersion(const ov::String &version, const ov::String &git_extra)
+	{
+		_version = version;
+		_git_extra = git_extra;
+	}
+
 	void ConfigManager::LoadConfigs(ov::String config_path, bool ignore_last_config)
 	{
 		if (config_path.IsEmpty())
@@ -66,9 +73,9 @@ namespace cfg
 
 				try
 				{
-					DataSource data_source(DataType::Json, config_path, last_config_path, ROOT_NAME);
+					DataSource data_source(DataType::Xml, config_path, last_config_path, ROOT_NAME);
 					_server = std::make_shared<cfg::Server>();
-					_server->FromDataSource("server", ROOT_NAME, data_source);
+					_server->FromDataSource("Server", ROOT_NAME, data_source);
 
 					read_from_main_file = false;
 				}
@@ -111,7 +118,7 @@ namespace cfg
 		LoadConfigs(_config_path, _ignore_last_config);
 	}
 
-	Json::Value ConfigManager::GetCurrentConfigAsJson()
+	Json::Value ConfigManager::GetCurrentConfigAsJson() const
 	{
 		auto lock_guard = std::lock_guard(_config_mutex);
 
@@ -120,14 +127,54 @@ namespace cfg
 		return config;
 	}
 
+	pugi::xml_document ConfigManager::GetCurrentConfigAsXml() const
+	{
+		auto lock_guard = std::lock_guard(_config_mutex);
+
+		auto config = cfg::serdes::GetServerXmlFromConfig(_server, false);
+
+		return config;
+	}
+
 	bool ConfigManager::SaveCurrentConfig()
 	{
-		Json::Value config = GetCurrentConfigAsJson();
+		auto config = GetCurrentConfigAsXml();
+
+		auto comment_node = config.prepend_child(pugi::node_comment);
+		ov::String comment;
+
+		utsname uts{};
+		::uname(&uts);
+
+#if DEBUG
+		static constexpr const char *BUILD_MODE = " [debug]";
+#else	// DEBUG
+		static constexpr const char *BUILD_MODE = "";
+#endif	// DEBUG
+
+		comment.Format(
+			"\n"
+			"\tThis is an auto-generated configuration file through API call.\n"
+			"\tOvenMediaEngine may not work if it is modified incorrectly.\n"
+			"\tYou can use '-i' option to prevent loading this file when the OME launches.\n\n"
+			"\tVersion: v%s%s%s\n"
+			"\tCreated: %s\n"
+			"\tHost: %s (%s %s - %s, %s)\n",
+			_version.CStr(), _git_extra.CStr(), BUILD_MODE,
+			ov::Time::MakeUtcMillisecond().CStr(), uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
+
+		comment_node.set_value(comment);
+
+		auto declaration = config.prepend_child(pugi::node_declaration);
+		declaration.append_attribute("version") = "1.0";
+		declaration.append_attribute("encoding") = "utf-8";
 
 		ov::String last_config_path = ov::PathManager::Combine(_config_path, CFG_LAST_CONFIG_FILE_NAME);
-		auto config_json = config.toStyledString();
 
-		auto file = ov::DumpToFile(last_config_path, config_json.c_str(), config_json.length());
+		XmlWriter writer;
+		config.print(writer);
+
+		auto file = ov::DumpToFile(last_config_path, writer.result.CStr(), writer.result.GetLength());
 
 		if (file == nullptr)
 		{
@@ -144,7 +191,7 @@ namespace cfg
 	{
 		{
 			auto [result, server_id] = LoadServerIDFromStorage(config_path);
-			if(result == true)
+			if (result == true)
 			{
 				_server_id = server_id;
 				return;
@@ -153,7 +200,7 @@ namespace cfg
 
 		{
 			auto [result, server_id] = GenerateServerID();
-			if(result == true)
+			if (result == true)
 			{
 				_server_id = server_id;
 				StoreServerID(config_path, server_id);
@@ -168,7 +215,7 @@ namespace cfg
 		auto node_id_storage = ov::PathManager::Combine(config_path, SERVER_ID_STORAGE_FILE);
 
 		std::ifstream fs(node_id_storage);
-		if(!fs.is_open())
+		if (!fs.is_open())
 		{
 			return {false, ""};
 		}
@@ -188,7 +235,7 @@ namespace cfg
 		auto node_id_storage = ov::PathManager::Combine(config_path, SERVER_ID_STORAGE_FILE);
 
 		std::ofstream fs(node_id_storage);
-		if(!fs.is_open())
+		if (!fs.is_open())
 		{
 			return false;
 		}
