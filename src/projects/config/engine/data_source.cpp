@@ -149,7 +149,28 @@ namespace cfg
 		}
 	}
 
-	std::any DataSource::GetRootValue(ValueType value_type, bool resolve_path, Json::Value *original_value) const
+	bool DataSource::IsArray(const ItemName &name) const
+	{
+		switch (_type)
+		{
+			case DataType::Xml:
+				// if (_node)
+				// {
+				// 	auto iterator = _node.children(name.GetName(DataType::Json));
+				// 	auto count = std::distance(iterator.begin(), iterator.end());
+				// 	return count > 1;
+				// }
+				return true;
+
+			case DataType::Json:
+				return _json.isArray();
+		}
+
+		OV_ASSERT2(false);
+		return false;
+	}
+
+	std::any DataSource::GetRootValue(ValueType value_type, bool resolve_path, OmitRule omit_rule, Json::Value *original_value) const
 	{
 		switch (_type)
 		{
@@ -157,14 +178,14 @@ namespace cfg
 				return GetValueFromXml(value_type, "", false, resolve_path, original_value);
 
 			case DataType::Json:
-				return GetValueFromJson(value_type, "", false, resolve_path, original_value);
+				return GetValueFromJson(value_type, "", false, resolve_path, omit_rule, original_value);
 		}
 
 		OV_ASSERT2(false);
 		return {};
 	}
 
-	std::any DataSource::GetValue(ValueType value_type, const ItemName &name, bool resolve_path, Json::Value *original_value) const
+	std::any DataSource::GetValue(ValueType value_type, const ItemName &name, bool resolve_path, OmitRule omit_rule, Json::Value *original_value) const
 	{
 		switch (_type)
 		{
@@ -172,7 +193,7 @@ namespace cfg
 				return GetValueFromXml(value_type, name.GetName(_type), true, resolve_path, original_value);
 
 			case DataType::Json:
-				return GetValueFromJson(value_type, name.GetName(_type), true, resolve_path, original_value);
+				return GetValueFromJson(value_type, name.GetName(_type), true, resolve_path, omit_rule, original_value);
 		}
 
 		OV_ASSERT2(false);
@@ -354,7 +375,11 @@ namespace cfg
 				if (_node.empty() == false)
 				{
 					std::vector<DataSource> data_sources;
-					*original_value = Json::arrayValue;
+
+					if (original_value != nullptr)
+					{
+						*original_value = Json::arrayValue;
+					}
 
 					auto children = _node.children(name);
 
@@ -362,7 +387,10 @@ namespace cfg
 					{
 						data_sources.emplace_back(_base_path, _file_name, _document, node_child);
 
-						original_value->append(node_child.child_value());
+						if (original_value != nullptr)
+						{
+							original_value->append(node_child.child_value());
+						}
 					}
 
 					if (data_sources.size() > 0)
@@ -406,32 +434,65 @@ namespace cfg
 		return Json::nullValue;
 	}
 
-	std::any GetJsonList(const ov::String &base_path, const ov::String &file_name, const Json::Value &json, const ov::String &name, Json::Value *original_value)
+	std::any GetJsonList(const ov::String &base_path, const ov::String &file_name, const Json::Value &json, const ov::String &name, OmitRule omit_rule, Json::Value *original_value)
 	{
 		if (json.isNull())
 		{
 			return {};
 		}
 
+		Json::Value child_value = Json::nullValue;
+
 		if (json.isArray() == false)
 		{
-			return GetJsonList(base_path, file_name, GetJsonValue(json, name), name, original_value);
+			if (omit_rule == OmitRule::Omit)
+			{
+				return GetJsonList(base_path, file_name, GetJsonValue(json, name), name, omit_rule, original_value);
+			}
+			else
+			{
+				child_value = GetJsonValue(json, name);
+
+				if (child_value.isNull())
+				{
+					return {};
+				}
+			}
+		}
+
+		if (original_value != nullptr)
+		{
+			*original_value = Json::arrayValue;
 		}
 
 		std::vector<DataSource> data_sources;
-		*original_value = Json::arrayValue;
 
-		for (auto &json_child : json)
+		if (child_value.isNull())
 		{
-			data_sources.emplace_back(base_path, file_name, name, json_child);
+			for (auto &json_child : json)
+			{
+				data_sources.emplace_back(base_path, file_name, name, json_child);
 
-			original_value->append(json_child);
+				if (original_value != nullptr)
+				{
+					original_value->append(json_child);
+				}
+			}
+		}
+		else
+		{
+			data_sources.emplace_back(base_path, file_name, name, child_value);
+
+			if (original_value != nullptr)
+			{
+				original_value->append(child_value);
+			}
 		}
 
 		return data_sources;
 	}
 
-	std::any DataSource::GetValueFromJson(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, Json::Value *original_value) const
+	std::any DataSource::GetValueFromJson(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, OmitRule omit_rule, Json::Value *original_value) const
 	{
 		switch (value_type)
 		{
@@ -490,7 +551,7 @@ namespace cfg
 			case ValueType::List: {
 				if (_json.isNull() == false)
 				{
-					return GetJsonList(_base_path, _file_name, _json, name, original_value);
+					return GetJsonList(_base_path, _file_name, _json, name, omit_rule, original_value);
 				}
 
 				return {};

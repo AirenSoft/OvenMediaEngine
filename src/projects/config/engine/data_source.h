@@ -74,8 +74,11 @@ namespace cfg
 		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void CheckUnknownItems(const ov::String &file_path, const ov::String &path, const std::map<ov::String, std::shared_ptr<Child>> &children_for_xml, const std::map<ov::String, std::shared_ptr<Child>> &children_for_json) const;
 
-		std::any GetRootValue(ValueType value_type, bool resolve_path, Json::Value *original_value) const;
-		std::any GetValue(ValueType value_type, const ItemName &name, bool resolve_path, Json::Value *original_value) const;
+		// Check weather the root value is array or not
+		bool IsArray(const ItemName &name) const;
+
+		std::any GetRootValue(ValueType value_type, bool resolve_path, OmitRule omit_rule, Json::Value *original_value) const;
+		std::any GetValue(ValueType value_type, const ItemName &name, bool resolve_path, OmitRule omit_rule, Json::Value *original_value) const;
 
 		// Create a data source from this context
 		DataSource NewDataSource(const ov::String &file_name, const ItemName &root_name) const
@@ -104,7 +107,7 @@ namespace cfg
 		void LoadFromJson(const ov::String &file_name, const ov::String &root_name);
 
 		std::any GetValueFromXml(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, Json::Value *original_value) const;
-		std::any GetValueFromJson(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, Json::Value *original_value) const;
+		std::any GetValueFromJson(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, OmitRule omit_rule, Json::Value *original_value) const;
 
 		DataType _type;
 

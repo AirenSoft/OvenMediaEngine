@@ -9,8 +9,9 @@
 #include "apps_controller.h"
 
 #include <config/config.h>
-#include <orchestrator/orchestrator.h>
 #include <modules/json_serdes/converters.h>
+#include <orchestrator/orchestrator.h>
+
 #include <functional>
 
 #include "../../../../api_private.h"
@@ -59,22 +60,25 @@ namespace api
 
 			if (config.isMember("outputProfiles") == false)
 			{
-				Json::Value output_profile;
+				Json::Value &output_profile = config["outputProfile"];
+
 				output_profile["name"] = "bypass";
 				output_profile["outputStreamName"] = "${OriginStreamName}";
 
 				Json::Value codec;
 				codec["bypass"] = true;
 
-				output_profile["encodes"]["videos"].append(codec);
-				output_profile["encodes"]["audios"].append(codec);
+				auto &encodes = output_profile["encodes"];
+
+				encodes["videos"].append(codec);
+				encodes["audios"].append(codec);
 
 				codec = Json::objectValue;
 				codec["codec"] = "opus";
 				codec["bitrate"] = 128000;
 				codec["samplerate"] = 48000;
 				codec["channel"] = 2;
-				output_profile["encodes"]["audios"].append(codec);
+				encodes["audios"].append(codec);
 
 				config["outputProfiles"].append(output_profile);
 			}
@@ -260,7 +264,7 @@ namespace api
 				if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
 				{
 					return http::HttpError::CreateError(http::StatusCode::Forbidden, "Could not delete the application: [%s/%s]",
-												  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+														vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 				}
 
 				auto result = orchestrator->CreateApplication(*vhost, app_config);
@@ -304,7 +308,7 @@ namespace api
 			if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
 			{
 				return http::HttpError::CreateError(http::StatusCode::Forbidden, "Could not delete the application: [%s/%s]",
-											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+													vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
 			cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
