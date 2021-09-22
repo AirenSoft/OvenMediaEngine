@@ -30,7 +30,7 @@ namespace cfg
 	bool GetIncludeFileList(const DataSource &data_source, ov::String *pattern, std::vector<ov::String> *include_file_list)
 	{
 		Json::Value dummy_value;
-		auto include_file = data_source.GetValue(ValueType::Attribute, "include", false, &dummy_value);
+		auto include_file = data_source.GetValue(ValueType::Attribute, "include", false, OmitRule::DontOmit, &dummy_value);
 
 		if (include_file.has_value())
 		{
@@ -871,19 +871,64 @@ namespace cfg
 						if (data_source.IsSourceOf(child_name))
 						{
 							// Check the child has an include attribute
-							std::vector<ov::String> include_files;
+							std::vector<DataSource> data_sources_for_array;
 
-							if (GetIncludeFileList(data_source, nullptr, &include_files))
 							{
-								for (auto &include_file : include_files)
+								std::vector<ov::String> include_files;
+
+								if (GetIncludeFileList(data_source, nullptr, &include_files))
 								{
-									new_data_sources.push_back(std::move(data_source.NewDataSource(include_file, child_name)));
+									for (auto &include_file : include_files)
+									{
+										data_sources_for_array.push_back(data_source.NewDataSource(include_file, child_name));
+									}
+								}
+								else
+								{
+									// "include" attribute is not present
+									data_sources_for_array.push_back(data_source);
+								}
+							}
+
+							if (data_source.GetType() == DataType::Json)
+							{
+								for (auto &data_source_for_array : data_sources_for_array)
+								{
+									if (data_source_for_array.IsArray(child_name))
+									{
+										// data_source_for_array contains multiple data (eg: [item1, item2, ...])
+										auto list = data_source_for_array.GetRootValue(ValueType::List, child->ResolvePath(), child->_name.omit_rule, nullptr);
+
+										if (list.has_value())
+										{
+											auto data_source_list = TryCast<const std::vector<cfg::DataSource> &>(list);
+
+											for (auto &source_from_file : data_source_list)
+											{
+												new_data_sources.push_back(source_from_file);
+											}
+										}
+										else
+										{
+											// empty list
+										}
+									}
+									else
+									{
+										if (child_name.omit_rule == OmitRule::DontOmit)
+										{
+											throw CreateConfigError("%s is not an object", child_path.CStr());
+										}
+										else
+										{
+											new_data_sources.push_back(data_source_for_array);
+										}
+									}
 								}
 							}
 							else
 							{
-								// "include" attribute is not present
-								new_data_sources.push_back(data_source);
+								new_data_sources.push_back(std::move(data_source));
 							}
 						}
 						else
@@ -899,12 +944,18 @@ namespace cfg
 
 					list_target->SetItemName(child_name);
 
+					ItemName new_name = child_name;
+
 					for (auto &new_data_source : new_data_sources)
 					{
 						Json::Value original_value;
-						auto list_value = new_data_source.GetRootValue(list_target->GetValueType(), child->ResolvePath(), &original_value);
+						auto list_value = new_data_source.GetRootValue(list_target->GetValueType(), child->ResolvePath(), child->_name.omit_rule, &original_value);
 
-						ItemName new_name = child_name;
+						if (list_value.has_value() == false)
+						{
+							continue;
+						}
+
 						new_name.index = index;
 
 						auto new_item = list_target->GetAt(index);
@@ -987,7 +1038,8 @@ namespace cfg
 		{
 			Json::Value original_value;
 			auto &child_name = child->GetName();
-			auto value = data_source.GetValue(child->GetType(), child_name, child->ResolvePath(), &original_value);
+
+			auto value = data_source.GetValue(child->GetType(), child_name, child->ResolvePath(), _item_name.omit_rule, &original_value);
 			auto name = data_source.ResolveName(child_name);
 			auto &child_target = child->GetTarget();
 

@@ -42,6 +42,7 @@ namespace serdes
 		}
 		catch (const std::shared_ptr<cfg::ConfigError> &error)
 		{
+			logw("Serdes", "Could not convert message: %s", error->GetDetailedMessage().CStr());
 			return http::HttpError::CreateError(http::StatusCode::BadRequest, "%s", error->GetMessage().CStr());
 		}
 	}

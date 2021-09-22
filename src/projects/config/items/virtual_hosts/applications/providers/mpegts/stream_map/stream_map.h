@@ -27,7 +27,7 @@ namespace cfg
 					protected:
 						void MakeList() override
 						{
-							Register("Stream", &_stream_list);
+							Register({"Stream", OmitRule::Omit}, &_stream_list);
 						}
 
 						std::vector<Stream> _stream_list;
