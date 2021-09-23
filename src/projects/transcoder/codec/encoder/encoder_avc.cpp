@@ -64,13 +64,13 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 	// For fixed-fps content, timebase should be 1/framerate and timestamp increments should be identically 1.
 	// This often, but not always is the inverse of the frame rate or field rate for video. 1/time_base is not the average frame rate if the frame rate is not constant.
 	_context->time_base = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
-	
+
 	_context->gop_size = _context->framerate.num / _context->framerate.den;
 	_context->max_b_frames = 0;
 	_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
-	_context->thread_count = 2;
+	_context->thread_count = FFMAX(4, av_cpu_count() / 3);
 
 	// For browser compatibility
 	_context->profile = FF_PROFILE_H264_BASELINE;
@@ -79,7 +79,6 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 
 	// Remove the sliced-thread option from encoding delay. Browser compatibility in MAC environment
 	::av_opt_set(_context->priv_data, "x264opts", "bframes=0:sliced-threads=0:b-adapt=1:no-scenecut:keyint=30:min-keyint=30", 0);
-
 
 	if (::avcodec_open2(_context, codec, nullptr) < 0)
 	{
