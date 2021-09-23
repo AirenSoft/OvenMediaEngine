@@ -928,7 +928,10 @@ namespace cfg
 							}
 							else
 							{
-								new_data_sources.push_back(std::move(data_source));
+								for (auto &data_source_for_array : data_sources_for_array)
+								{
+									new_data_sources.push_back(data_source_for_array);
+								}
 							}
 						}
 						else
@@ -1009,7 +1012,7 @@ namespace cfg
 			if (include_files.empty())
 			{
 				// "include" attribute is present, but there is no file to include
-				logtd(
+				throw CreateConfigError(
 					"There is no file to include for path: %s, base path: %s, include pattern: %s",
 					path.CStr(),
 					base_path.CStr(), pattern.CStr());
