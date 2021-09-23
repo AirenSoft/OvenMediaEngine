@@ -745,6 +745,7 @@ int32_t TranscoderStream::CreateDecoders()
 		transcode_context->SetHardwareAccel(use_hwaccel);
 
 		// Set the number of b frames for compatibility with specific encoders.
+		// Default is 16. refer to .../config/.../applications/decodes.h
 		auto h264_has_bframes = _application_info.GetConfig().GetDecodes().GetH264hasBFrames();
 		transcode_context->SetH264hasBframes(h264_has_bframes);
 
