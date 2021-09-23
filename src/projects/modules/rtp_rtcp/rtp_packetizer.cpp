@@ -60,7 +60,8 @@ void RtpPacketizer::SetUlpfec(uint8_t red_payload_type, uint8_t ulpfec_payload_t
 }
 
 bool RtpPacketizer::Packetize(FrameType frame_type,
-                                   uint32_t timestamp,
+                                   uint32_t rtp_timestamp,
+								   uint64_t ntp_timestamp,
                                    const uint8_t *payload_data,
                                    size_t payload_size,
                                    const FragmentationHeader *fragmentation,
@@ -70,17 +71,18 @@ bool RtpPacketizer::Packetize(FrameType frame_type,
 
 	if(_audio_configured)
 	{
-		return PacketizeAudio(frame_type, timestamp, payload_data, payload_size);
+		return PacketizeAudio(frame_type, rtp_timestamp, ntp_timestamp, payload_data, payload_size);
 	}
 	else
 	{
-		return PacketizeVideo(rtp_header->codec, frame_type, timestamp, payload_data, payload_size, fragmentation, rtp_header);
+		return PacketizeVideo(rtp_header->codec, frame_type, rtp_timestamp, ntp_timestamp, payload_data, payload_size, fragmentation, rtp_header);
 	}
 }
 
 bool RtpPacketizer::PacketizeVideo(cmn::MediaCodecId video_type,
                                    FrameType frame_type,
                                    uint32_t rtp_timestamp,
+								   uint64_t ntp_timestamp,
                                    const uint8_t *payload_data,
                                    size_t payload_size,
                                    const FragmentationHeader *fragmentation,
@@ -136,6 +138,7 @@ bool RtpPacketizer::PacketizeVideo(cmn::MediaCodecId video_type,
 		}
 
 		_rtp_packet_count ++;
+		packet->SetNTPTimestamp(ntp_timestamp);
 		_stream->OnRtpPacketized(packet);
 
 		// RED First
@@ -186,6 +189,7 @@ bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 
 bool RtpPacketizer::PacketizeAudio(FrameType frame_type,
                                    uint32_t rtp_timestamp,
+								   uint64_t ntp_timestamp,
                                    const uint8_t *payload_data,
                                    size_t payload_size)
 {
@@ -204,6 +208,7 @@ bool RtpPacketizer::PacketizeAudio(FrameType frame_type,
 	packet->SetMarker(MarkerBit(frame_type, _payload_type));
 	packet->SetPayloadType(_payload_type);
 	packet->SetTimestamp(rtp_timestamp);
+	packet->SetNTPTimestamp(ntp_timestamp);
 
 	uint8_t *payload = packet->AllocatePayload(payload_size);
 

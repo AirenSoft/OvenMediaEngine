@@ -369,5 +369,20 @@ namespace ov
 
 			return ToDouble(ToString(value));
 		}
+
+
+		#define EPOCH  2208988800ULL
+		#define NTP_SCALE_FRAC  4294967296ULL
+
+		static uint64_t ToNTPTimestamp(double seconds)
+		{
+			uint64_t ntp_timestamp = 0;
+			double ipart, fraction;
+			fraction = modf(seconds, &ipart);
+			
+			ntp_timestamp = (((uint64_t)ipart + EPOCH) << 32) + (fraction * NTP_SCALE_FRAC);
+
+			return ntp_timestamp;
+		}
 	};
 }  // namespace ov

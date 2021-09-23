@@ -1009,23 +1009,25 @@ namespace cfg
 			if (include_files.empty())
 			{
 				// "include" attribute is present, but there is no file to include
-				throw CreateConfigError(
+				logtd(
 					"There is no file to include for path: %s, base path: %s, include pattern: %s",
 					path.CStr(),
 					base_path.CStr(), pattern.CStr());
 			}
-
-			if (include_files.size() > 1)
+			else
 			{
-				throw CreateConfigError(
-					"Too many files found for an Item: %s, base path: %s, include pattern: %s (%zu files found)",
-					path.CStr(),
-					base_path.CStr(), pattern.CStr(), include_files.size());
-			}
+				if (include_files.size() > 1)
+				{
+					throw CreateConfigError(
+						"Too many files found for an Item: %s, base path: %s, include pattern: %s (%zu files found)",
+						path.CStr(),
+						base_path.CStr(), pattern.CStr(), include_files.size());
+				}
 
-			auto &include_file = include_files[0];
-			auto new_data_source = data_source.NewDataSource(include_file, _item_name);
-			FromDataSourceInternal(path, new_data_source);
+				auto &include_file = include_files[0];
+				auto new_data_source = data_source.NewDataSource(include_file, _item_name);
+				FromDataSourceInternal(path, new_data_source);
+			}
 
 			return;
 		}
