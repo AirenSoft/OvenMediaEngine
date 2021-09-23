@@ -90,6 +90,10 @@ public:
 	// Dump print
 	ov::String	Dump();
 
+	// Extensions for OME specific
+	void		SetNTPTimestamp(uint64_t nts) {_ntp_timestamp = nts;}
+	uint64_t	NTPTimestamp() const {return _ntp_timestamp;}
+
 protected:
 	size_t		_payload_offset = 0;	// Payload Start Point (Header size)
 	bool		_has_padding = false;
@@ -114,5 +118,8 @@ protected:
 
 	// created time
 	std::chrono::system_clock::time_point _created_time;
+
+	// Extensions for OME specific
+	uint64_t	_ntp_timestamp = 0;
 };
 

@@ -22,22 +22,12 @@ void RtcpSRGenerator::AddRTPPacketAndGenerateRtcpSR(const RtpPacket &rtp_packet)
     {
 		auto report = std::make_shared<SenderReport>();
 		
-		
 		uint32_t msw = 0;
     	uint32_t lsw = 0;
 
-    	//ov::Clock::GetNtpTime(msw, lsw);
+		msw = rtp_packet.NTPTimestamp() >> 32;
+		lsw = rtp_packet.NTPTimestamp() & 0xFFFFFFFF;
 
-		double clock = (double)rtp_packet.Timestamp() / (double)_codec_rate;
-
-		double ipart, fraction;
-		fraction = modf(clock, &ipart);
-		fraction *= 1000; // to milliseconds
-
-		msw = (uint32_t)(ipart);
-		lsw = (uint32_t)((double)(fraction*1000)*(double)(((uint64_t)1)<<32)*1.0e-6);
-
-		// auto reverse = (uint32_t)(((double)lsw/std::numeric_limits<uint32_t>::max())*1000);
 		// logc("DEBUG", "[SR] Rate(%d) Timestamp(%u) Clock(%lf) ipart(%lf) fraction(%lf) msw(%u) lsw(%u) reverse(%u)",  _codec_rate, rtp_packet.Timestamp(), clock, ipart, fraction, msw, lsw, reverse);
 		
 		report->SetSenderSsrc(_ssrc);

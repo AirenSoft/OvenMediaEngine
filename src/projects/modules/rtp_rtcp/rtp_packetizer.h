@@ -4,6 +4,8 @@
 #include "rtp_packetizing_manager.h"
 #include "rtp_rtcp_defines.h"
 #include "ulpfec_generator.h"
+
+#include "base/mediarouter/media_buffer.h"
 #include <memory>
 
 class RtpPacketizer
@@ -21,7 +23,8 @@ public:
 
 	// RTP Packet
 	bool Packetize(FrameType frame_type,
-	               uint32_t timestamp,
+	               uint32_t rtp_timestamp,
+				   uint64_t ntp_timestamp,
 	               const uint8_t *payload_data,
 	               size_t payload_size,
 	               const FragmentationHeader *fragmentation,
@@ -38,6 +41,7 @@ private:
 	bool PacketizeVideo(cmn::MediaCodecId video_type,
 	                    FrameType frame_type,
 	                    uint32_t rtp_timestamp,
+						uint64_t ntp_timestamp,
 	                    const uint8_t *payload_data,
 	                    size_t payload_size,
 	                    const FragmentationHeader *fragmentation,
@@ -48,6 +52,7 @@ private:
 	// Audio Pakcet Sender Interface
 	bool PacketizeAudio(FrameType frame_type,
 	                    uint32_t rtp_timestamp,
+						uint64_t ntp_timestamp,
 	                    const uint8_t *payload_data,
 	                    size_t payload_size);
 
