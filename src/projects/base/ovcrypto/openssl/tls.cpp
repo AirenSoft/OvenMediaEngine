@@ -484,28 +484,41 @@ namespace ov
 
 		size_t read_bytes = 0;
 
-		int error = Read(buf, OV_COUNTOF(buf), &read_bytes);
-
-		switch (error)
+		while (true)
 		{
-			case SSL_ERROR_NONE:
-				// Read successfully
-				if (data->Append(buf, read_bytes) == false)
-				{
-					OV_ASSERT2(false);
-					return nullptr;
-				}
+			int error = Read(buf, OV_COUNTOF(buf), &read_bytes);
+			bool stop = false;
 
-				break;
+			switch (error)
+			{
+				case SSL_ERROR_NONE:
+					// Read successfully
+					if (data->Append(buf, read_bytes) == false)
+					{
+						OV_ASSERT2(false);
+						data = nullptr;
+						stop = true;
+					}
 
-			case SSL_ERROR_WANT_READ:
-				// Not enough data
-				break;
+					break;
 
-			default:
-				// Another error occurred
-				OV_ASSERT2(read_bytes == 0);
+				case SSL_ERROR_WANT_READ:
+					// Need more data
+					stop = true;
+					break;
+
+				default:
+					// Another error occurred
+					OV_ASSERT2(read_bytes == 0);
+					data = nullptr;
+					stop = true;
+					break;
+			}
+
+			if (stop)
+			{
 				break;
+			}
 		}
 
 		return data;

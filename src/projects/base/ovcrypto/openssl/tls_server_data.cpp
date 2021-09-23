@@ -163,8 +163,7 @@ namespace ov
 	{
 		if (_cipher_data == nullptr)
 		{
-			OV_ASSERT2(false);
-			return -1;
+			return 0;
 		}
 
 		auto bytes_to_copy = std::min(length, _cipher_data->GetLength());
@@ -172,9 +171,9 @@ namespace ov
 		logtd("Trying to read %zu bytes from TLS data buffer...", bytes_to_copy);
 
 		::memcpy(buffer, _cipher_data->GetData(), bytes_to_copy);
-		_cipher_data = _cipher_data->Subdata(bytes_to_copy);
+		_cipher_data = (_cipher_data->GetLength() == bytes_to_copy) ? nullptr : _cipher_data->Subdata(bytes_to_copy);
 
-		logtd("%zu bytes is remained in TLS data buffer", _cipher_data->GetLength());
+		logtd("%zu bytes is remained in TLS data buffer", (_cipher_data != nullptr) ? _cipher_data->GetLength() : 0);
 
 		return bytes_to_copy;
 	}
