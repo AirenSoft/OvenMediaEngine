@@ -33,7 +33,7 @@ namespace cfg
 						Register<Optional>("H264hasBframes", &_h264_has_bframes);
 					}
 
-					int32_t _h264_has_bframes = 0;
+					int32_t _h264_has_bframes = 16;
 					dec::DecodeVideo _video;
 				};
 			}  // namespace dec
