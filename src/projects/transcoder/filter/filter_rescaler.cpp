@@ -62,7 +62,7 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	}
 
 	// Limit the number of filter threads to 2. I think 2 thread is usually enough for video filtering processing.
-	_filter_graph->nb_threads = 2;
+	_filter_graph->nb_threads = 4;
 
 	AVRational input_timebase = TimebaseToAVRational(input_context->GetTimeBase());
 	AVRational output_timebase = TimebaseToAVRational(output_context->GetTimeBase());
