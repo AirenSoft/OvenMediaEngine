@@ -12,7 +12,7 @@
 
 #include <algorithm>
 
-#include "../../../http_private.h"
+#include "./web_socket_private.h"
 #include "web_socket_datastructure.h"
 
 namespace http

@@ -13,9 +13,9 @@
 
 #include <utility>
 
-#include "../../../http_private.h"
 #include "./web_socket_datastructure.h"
 #include "./web_socket_frame.h"
+#include "./web_socket_private.h"
 
 namespace http
 {
@@ -94,10 +94,9 @@ namespace http
 
 				response->SetHeader("Sec-WebSocket-Accept", base64);
 
-				// client에 헤더 전송
+				// Send headers to client
 				response->Response();
 
-				// 지속적으로 통신해야 하므로, 연결은 끊지 않음
 				logtd("Add to websocket client list: %s", request->ToString().CStr());
 				auto websocket_response = std::make_shared<Client>(client);
 
@@ -134,8 +133,6 @@ namespace http
 
 					if (item == _websocket_client_list.end())
 					{
-						// TODO(dimiden): Temporarily comment out assertions due to side-effect on socket side modification
-						// OV_ASSERT2(false);
 						return InterceptorResult::Disconnect;
 					}
 
@@ -150,86 +147,71 @@ namespace http
 
 				logtd("Data is received\n%s", data->Dump().CStr());
 
+				auto input_data = data;
+
 				if (info->frame == nullptr)
 				{
 					info->frame = std::make_shared<Frame>();
 				}
 
 				auto frame = info->frame;
-				auto processed_bytes = frame->Process(data);
 
-				switch (frame->GetStatus())
+				while (input_data->GetLength() > 0)
 				{
-					case FrameParseStatus::Prepare:
-						// Not enough data to parse header
-						break;
+					ssize_t read_bytes;
 
-					case FrameParseStatus::Parsing:
-						break;
-
-					case FrameParseStatus::Completed: {
+					if (frame->Process(input_data, &read_bytes))
+					{
+						// Frame is completed
 						const std::shared_ptr<const ov::Data> payload = frame->GetPayload();
 
 						switch (static_cast<FrameOpcode>(frame->GetHeader().opcode))
 						{
 							case FrameOpcode::ConnectionClose:
-								// 접속 종료 요청됨
+								// The client requested close the connection
 								logtd("Client requested close connection: reason:\n%s", payload->Dump("Reason").CStr());
 								return InterceptorResult::Disconnect;
 
 							case FrameOpcode::Ping:
 								logtd("A ping frame is received:\n%s", payload->Dump().CStr());
 
-								info->frame = nullptr;
-
 								// Send a pong frame to the client
 								info->response->Send(payload, FrameOpcode::Pong);
-
-								return InterceptorResult::Keep;
+								break;
 
 							case FrameOpcode::Pong:
 								// Ignore pong frame
 								logtd("A pong frame is received:\n%s", payload->Dump().CStr());
-
-								info->frame = nullptr;
-
-								return InterceptorResult::Keep;
+								break;
 
 							default:
 								logtd("%s:\n%s", frame->ToString().CStr(), payload->Dump("Frame", 0L, 1024L, nullptr).CStr());
 
-								// 패킷 조립이 완료되었음
-								// 상위 레벨로 올림
+								// Callback the payload
 								if (_message_handler != nullptr)
 								{
-									if (payload->GetLength() > 0L)
+									if (_message_handler(info->response, frame) == InterceptorResult::Disconnect)
 									{
-										// 데이터가 있을 경우에만 올림
-										if (_message_handler(info->response, frame) == InterceptorResult::Disconnect)
-										{
-											return InterceptorResult::Disconnect;
-										}
+										return InterceptorResult::Disconnect;
 									}
-
-									info->frame = nullptr;
 								}
 
-								// 나머지 데이터로 다시 파싱 시작
-								OV_ASSERT2(processed_bytes >= 0L);
-
-								if (processed_bytes > 0L)
-								{
-									return OnHttpData(client, data->Subdata(processed_bytes));
-								}
+								break;
 						}
 
-						break;
+						frame->Reset();
+					}
+					else
+					{
+						if (read_bytes < 0)
+						{
+							// Error
+							logtw("Invalid data received from %s", request->ToString().CStr());
+							return InterceptorResult::Disconnect;
+						}
 					}
 
-					case FrameParseStatus::Error:
-						// 잘못된 데이터가 수신되었음 WebSocket 연결을 해제함
-						logtw("Invalid data received from %s", request->ToString().CStr());
-						return InterceptorResult::Disconnect;
+					input_data = input_data->Subdata(read_bytes);
 				}
 
 				return InterceptorResult::Keep;
