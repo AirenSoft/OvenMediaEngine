@@ -71,7 +71,7 @@ namespace http
 			// +---------------------------------------------------------------+
 			struct FrameHeader
 			{
-				// 첫 번째 바이트
+				// === First byte ===
 				// Opcode:  4 bits
 				//
 				//    Defines the interpretation of the "Payload data".  If an unknown
@@ -94,7 +94,7 @@ namespace http
 				//    fragment MAY also be the final fragment.
 				bool fin : 1;
 
-				// 두 번째 바이트
+				// === Second byte ===
 				// Payload length:  7 bits, 7+16 bits, or 7+64 bits
 				//
 				//    The length of the "Payload data", in bytes: if 0-125, that is the

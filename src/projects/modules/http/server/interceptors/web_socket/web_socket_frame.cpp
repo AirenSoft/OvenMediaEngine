@@ -10,7 +10,29 @@
 
 #include <algorithm>
 
-#include "../../../http_private.h"
+#include "./web_socket_private.h"
+
+#define WEB_SOCKET_PROCESS(step, func)                            \
+	do                                                            \
+	{                                                             \
+		if (_last_status == step)                                 \
+		{                                                         \
+			consumed_bytes = func(input_data);                    \
+                                                                  \
+			if (consumed_bytes < 0)                               \
+			{                                                     \
+				_last_status = FrameParseStatus::Error;           \
+				*read_bytes = consumed_bytes;                     \
+				return false;                                     \
+			}                                                     \
+                                                                  \
+			if (consumed_bytes > 0)                               \
+			{                                                     \
+				input_data = input_data->Subdata(consumed_bytes); \
+				total_consumed_bytes += consumed_bytes;           \
+			}                                                     \
+		}                                                         \
+	} while (false)
 
 namespace http
 {
@@ -19,104 +41,110 @@ namespace http
 		namespace ws
 		{
 			Frame::Frame()
-				: _remained_length(0L),
-				  _total_length(0L),
-
-				  _last_status(FrameParseStatus::Prepare)
 			{
+				_previous_data = std::make_shared<ov::Data>(sizeof(_header) + sizeof(uint64_t) + sizeof(_frame_masking_key));
 			}
 
-			Frame::~Frame()
+			bool Frame::ParseData(const std::shared_ptr<const ov::Data> &input_data, void *output_data, size_t size_to_parse, ssize_t *read_bytes)
 			{
+				if (_previous_data->IsEmpty())
+				{
+					auto input_length = input_data->GetLength();
+					if (input_length >= size_to_parse)
+					{
+						// input_data can fill the output_data
+						::memcpy(output_data, input_data->GetData(), size_to_parse);
+						*read_bytes = size_to_parse;
+						return true;
+					}
+
+					// Need more data
+
+					if (_previous_data->Append(input_data))
+					{
+						*read_bytes = input_length;
+					}
+					else
+					{
+						// Could not append data
+						*read_bytes = -1;
+					}
+
+					// output_data isn't filled
+					return false;
+				}
+
+				// Append input_data to _previous_data to fill output_data.
+
+				// It should always be smaller than size_to_parse because there is insufficient data left in the existing step
+				OV_ASSERT2(_previous_data->GetLength() < size_to_parse);
+
+				auto remained_size = size_to_parse - _previous_data->GetLength();
+				auto size_to_read = std::min(remained_size, input_data->GetLength());
+
+				if (_previous_data->Append(input_data->GetData(), size_to_read) == false)
+				{
+					*read_bytes = -1;
+					return false;
+				}
+
+				*read_bytes = size_to_read;
+
+				if (_previous_data->GetLength() == size_to_parse)
+				{
+					// output_data can be filled
+					::memcpy(output_data, _previous_data->GetData(), size_to_parse);
+					_previous_data->SetLength(0);
+					return true;
+				}
+				else
+				{
+					// Need more data
+					OV_ASSERT2(size_to_read == input_data->GetLength());
+				}
+
+				// output_data isn't filled
+				return false;
 			}
 
-			ssize_t Frame::Process(const std::shared_ptr<const ov::Data> &data)
+			bool Frame::Process(const std::shared_ptr<const ov::Data> &data, ssize_t *read_bytes)
 			{
 				switch (_last_status)
 				{
-					case FrameParseStatus::Prepare:
-					case FrameParseStatus::Parsing:
-						break;
-
 					case FrameParseStatus::Completed:
+						[[fallthrough]];
 					case FrameParseStatus::Error:
-						// 이미 파싱이 완료되었거나 오류가 발생한 상태에서, 데이터가 또 들어오면 오류로 간주
-						OV_ASSERT2(false);
+						// If parsing has already been completed or an error has occurred, if data comes in again, it is considered an error
 						_last_status = FrameParseStatus::Error;
-						return -1L;
+						*read_bytes = -1;
+						OV_ASSERT2(false);
+						return false;
+
+					default:
+						break;
 				}
 
-				ov::ByteStream stream(data.get());
+				auto input_data = data;
+				size_t total_consumed_bytes = 0;
 
-				ssize_t header_length = 0L;
-
-				if (_last_status == FrameParseStatus::Prepare)
+				while (input_data->GetLength() > 0)
 				{
-					header_length = ProcessHeader(stream);
+					ssize_t consumed_bytes = 0;
 
-					if (_last_status != FrameParseStatus::Parsing)
+					WEB_SOCKET_PROCESS(FrameParseStatus::ParseHeader, ProcessHeader);
+					WEB_SOCKET_PROCESS(FrameParseStatus::ParseLength, ProcessLength);
+					WEB_SOCKET_PROCESS(FrameParseStatus::ParseMask, ProcessMask);
+					WEB_SOCKET_PROCESS(FrameParseStatus::ParsePayload, ProcessPayload);
+
+					if (_last_status == FrameParseStatus::Completed)
 					{
-						return header_length;
+						break;
 					}
 				}
 
-				// 남은 데이터와 websocket frame 크기 중, 작은 크기를 구해 데이터를 누적함
-				size_t length = std::min(static_cast<uint64_t>(stream.Remained()), _remained_length);
-
-				if (length > 0L)
-				{
-					// 잔여 데이터가 있다면 payload에 추가
-					if (_payload->Append(stream.GetRemainData()->GetData(), length) == false)
-					{
-						return -1L;
-					}
-				}
-
-				_remained_length -= length;
-
-				if (_payload->GetLength() == _total_length)
-				{
-					OV_ASSERT2(_remained_length == 0L);
-
-					// masking 처리
-					if (_header.mask)
-					{
-						size_t payload_length = _payload->GetLength();
-
-						// 빠른 처리를 위해 8의 배수로 처리함 (mask가 있을 경우, 데이터 할당 시 이미 8의 배수로 할당해놓음)
-
-						// masking은 반드시 4byte여야 함
-						OV_ASSERT2(sizeof(_frame_masking_key) == 4);
-
-						uint64_t mask = static_cast<uint64_t>(_frame_masking_key) << (sizeof(_frame_masking_key) * 8) | static_cast<uint64_t>(_frame_masking_key);
-
-						// 8의 배수로 만듦
-						size_t count = ((payload_length + 7L) / 8L);
-						_payload->SetLength(static_cast<size_t>(count * 8L));
-
-						auto current = _payload->GetWritableDataAs<uint64_t>();
-
-						for (size_t index = 0; index < count; index++)
-						{
-							*current ^= mask;
-							current++;
-						}
-
-						_payload->SetLength(payload_length);
-					}
-
-					logtd("The frame is finished: %s", ToString().CStr());
-
-					_last_status = FrameParseStatus::Completed;
-					return header_length + length;
-				}
-
-				logtd("Data received: %ld / %ld (remained: %ld)", _payload->GetLength(), _total_length, _remained_length);
-
-				OV_ASSERT(_payload->GetLength() <= _total_length, "Invalid payload length: payload length (%ld) must less equal than total length (%ld)", _payload->GetLength(), _total_length);
-
-				return header_length + length;
-			}
+				*read_bytes = total_consumed_bytes;
+				return (_last_status == FrameParseStatus::Completed);
+			}  // namespace ws
 
 			FrameParseStatus Frame::GetStatus() const noexcept
 			{
@@ -128,37 +156,35 @@ namespace http
 				return _header;
 			}
 
-			ssize_t Frame::ProcessHeader(ov::ByteStream &stream)
+			ssize_t Frame::ProcessHeader(const std::shared_ptr<const ov::Data> &data)
 			{
-				ssize_t before_offset = stream.GetOffset();
-				ssize_t read_count = stream.Read(reinterpret_cast<char *>(&_header) + _header_read_bytes, sizeof(_header) - _header_read_bytes);
+				ssize_t consumed_bytes;
 
-				if (read_count >= 0)
+				if (ParseData(data, &_header, sizeof(_header), &consumed_bytes))
 				{
-					_header_read_bytes += read_count;
+					// Handle extensions flag
+					// TODO(dimiden) - Extensions are now considered unused (need to be implemented later)
+					bool extensions = false;
+
+					if ((extensions == false) && (_header.reserved != 0x00))
+					{
+						consumed_bytes = -1;
+						OV_ASSERT(false, "Invalid reserved value: %d (expected: %d)", _header.reserved, 0x00);
+					}
+					else
+					{
+						_last_status = FrameParseStatus::ParseLength;
+					}
 				}
 
-				if (_header_read_bytes != sizeof(_header))
-				{
-					// Not enough data to process
-					return read_count;
-				}
+				return consumed_bytes;
+			}
 
-				// extensions 사용 여부
-				// TODO: 일단은 사용하지 않는 것으로 간주
-				bool extensions = false;
+			ssize_t Frame::ProcessLength(const std::shared_ptr<const ov::Data> &data)
+			{
+				ssize_t consumed_bytes;
 
-				if ((extensions == false) && (_header.reserved != 0x00))
-				{
-					OV_ASSERT(false, "Invalid reserved value: %d (expected: %d)", _header.reserved, 0x00);
-					_last_status = FrameParseStatus::Error;
-					return -1L;
-				}
-
-				_total_length = 0L;
-				_remained_length = 0L;
-
-				// 길이 계산
+				// Calculate payload length
 				//
 				// RFC6455 - 5.2.  Base Framing Protocol
 				//
@@ -180,64 +206,151 @@ namespace http
 				switch (_header.payload_length)
 				{
 					case 126: {
-						// 126이면, 다음 이어서 오는 16bit가 payload length
+						// If payload_length is 126, the next 16 bits are payload length
 						uint16_t extra_length;
 
-						if (stream.Read(&extra_length) == 1)
+						if (ParseData(data, &extra_length, sizeof(extra_length), &consumed_bytes))
 						{
-							_total_length = ov::NetworkToHost16(extra_length);
-							_remained_length = _total_length;
+							_payload_length = ov::NetworkToHost16(extra_length);
+							_remained_payload_length = _payload_length;
 						}
 						else
 						{
-							OV_ASSERT(false, "Could not read payload length");
-							_last_status = FrameParseStatus::Error;
-							return -1L;
+							// Need more data or an error occurred
+							return consumed_bytes;
 						}
 
 						break;
 					}
 
 					case 127: {
-						// 127이면, 다음 이어서 오는 64bit가 payload length
+						// If payload_length is 127, the next 64 bits are payload length
 						uint64_t extra_length;
 
-						if (stream.Read(&extra_length) == 1)
+						if (ParseData(data, &extra_length, sizeof(extra_length), &consumed_bytes))
 						{
-							_total_length = ov::NetworkToHost64(extra_length);
-							_remained_length = _total_length;
+							_payload_length = ov::NetworkToHost64(extra_length);
+							_remained_payload_length = _payload_length;
 						}
 						else
 						{
-							OV_ASSERT(false, "Could not read payload length");
-							_last_status = FrameParseStatus::Error;
-							return -1L;
+							// Need more data or an error occurred
+							return consumed_bytes;
 						}
 
 						break;
 					}
 
 					default:
-						_total_length = _header.payload_length;
-						_remained_length = _total_length;
+						_payload_length = _header.payload_length;
+						_remained_payload_length = _payload_length;
+
+						consumed_bytes = 0;
+						break;
 				}
 
-				// masking을 해야한다면, 나중에 속도 최적화를 위해 8의 배수로 masking을 처리하는데, 이 때 버퍼 재할당이 일어나지 않도록 8의 배수로 미리 맞춰놓음
-				ssize_t total_length = _header.mask ? (_total_length / 8L) * 8L : _total_length;
+				// To optimize the speed, masking is processed with a multiple of 8, which is set to a multiple of 8 in advance to prevent buffer reallocation
+				ssize_t total_length = _header.mask ? (((_payload_length + 7L) / 8L) * 8L) : _payload_length;
 				_payload = std::make_shared<ov::Data>(total_length);
+
+				_last_status = FrameParseStatus::ParseMask;
+
+				return consumed_bytes;
+			}
+
+			ssize_t Frame::ProcessMask(const std::shared_ptr<const ov::Data> &data)
+			{
+				ssize_t consumed_bytes;
 
 				if (_header.mask)
 				{
-					if (stream.Read(&_frame_masking_key) != 1)
+					if (ParseData(data, &_frame_masking_key, sizeof(_frame_masking_key), &consumed_bytes))
 					{
-						OV_ASSERT(false, "Could not read masking key");
-						_last_status = FrameParseStatus::Error;
-						return -1L;
+						_last_status = FrameParseStatus::ParsePayload;
+					}
+					else
+					{
+						// Need more data or an error occurred
+					}
+				}
+				else
+				{
+					consumed_bytes = 0;
+					_last_status = FrameParseStatus::ParsePayload;
+				}
+
+				return consumed_bytes;
+			}
+
+			ssize_t Frame::ProcessPayload(const std::shared_ptr<const ov::Data> &data)
+			{
+				// All of data in _previous_data were used in the previous step
+				OV_ASSERT2(_previous_data->GetLength() == 0);
+
+				size_t bytes_to_read = std::min(data->GetLength(), _remained_payload_length);
+
+				if (bytes_to_read > 0)
+				{
+					if (_payload->Append(data->GetData(), bytes_to_read) == false)
+					{
+						return -1;
 					}
 				}
 
-				_last_status = FrameParseStatus::Parsing;
-				return stream.GetOffset() - before_offset;
+				_remained_payload_length -= bytes_to_read;
+
+				if (_remained_payload_length == 0)
+				{
+					// Frame is completed
+					OV_ASSERT2(_payload->GetLength() == _payload_length);
+
+					if (_header.mask)
+					{
+						size_t payload_length = _payload->GetLength();
+
+						// For quick calculation, we'll adjust it to a multiple of 8
+						// (When _header.mask is on, it has already been allocated as a multiple of 8 when allocating data)
+
+						static_assert(sizeof(_frame_masking_key) == 4, "sizeof(_frame_masking_key) must be 4 bytes");
+
+						uint64_t mask = static_cast<uint64_t>(_frame_masking_key) << (sizeof(_frame_masking_key) * 8) | static_cast<uint64_t>(_frame_masking_key);
+
+						size_t block_count = ((payload_length + 7L) / 8L);
+
+						auto current = _payload->GetWritableDataAs<uint64_t>();
+
+						for (size_t index = 0; index < block_count; index++)
+						{
+							*current ^= mask;
+							current++;
+						}
+					}
+
+					logtd("The frame is finished: %s", ToString().CStr());
+
+					_last_status = FrameParseStatus::Completed;
+				}
+				else
+				{
+					// Need more data
+				}
+
+				return bytes_to_read;
+			}
+
+			void Frame::Reset()
+			{
+				::memset(&_header, 0, sizeof(_header));
+				_header_read_bytes = 0;
+
+				_remained_payload_length = 0UL;
+				_payload_length = 0UL;
+				_frame_masking_key = 0U;
+
+				_last_status = FrameParseStatus::ParseHeader;
+
+				_previous_data->SetLength(0);
+				_payload = nullptr;
 			}
 
 			ov::String Frame::ToString() const
@@ -248,7 +361,7 @@ namespace http
 					(_header.fin ? "True" : "False"),
 					_header.opcode,
 					(_header.mask ? "True" : "False"),
-					_total_length);
+					_payload_length);
 			}
 		}  // namespace ws
 	}	   // namespace svr

@@ -26,6 +26,13 @@
 // If no packet is sent during this time, the connection is disconnected
 #define CLIENT_SOCKET_SEND_TIMEOUT (60 * 1000)
 
+#if DEBUG
+// #	define CLIENT_SOCKET_SIMULATE_PACKET_FRAGMENT
+#	define CLIENT_SOCKET_FRAGMENT_AMOUNT(remained) remained
+// #	define CLIENT_SOCKET_FRAGMENT_AMOUNT(remained) 1
+// #	define CLIENT_SOCKET_FRAGMENT_AMOUNT(remained) ov::Random::GenerateInt32(1, remained)
+#endif
+
 namespace ov
 {
 	ClientSocket::ClientSocket(
@@ -176,7 +183,21 @@ namespace ov
 				{
 					if (data_callback != nullptr)
 					{
+#ifdef CLIENT_SOCKET_SIMULATE_PACKET_FRAGMENT
+						off_t offset = 0;
+						size_t remained = data->GetLength();
+						while (remained > 0)
+						{
+							auto length = CLIENT_SOCKET_FRAGMENT_AMOUNT(remained);
+
+							data_callback(GetSharedPtrAs<ClientSocket>(), data->Subdata(offset, length)->Clone());
+
+							offset += length;
+							remained -= length;
+						}
+#else	// CLIENT_SOCKET_SIMULATE_PACKET_FRAGMENT
 						data_callback(GetSharedPtrAs<ClientSocket>(), data->Clone());
+#endif	// CLIENT_SOCKET_SIMULATE_PACKET_FRAGMENT
 					}
 
 					continue;
