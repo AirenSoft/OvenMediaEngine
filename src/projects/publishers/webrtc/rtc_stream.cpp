@@ -102,6 +102,7 @@ bool RtcStream::Start()
 
 	_rtx_enabled = GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().IsRtxEnabled();
 	_ulpfec_enabled = GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().IsUlpfecEnalbed();
+	_jitter_buffer_enabled = GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().IsJitterBufferEnabled();
 
 	_offer_sdp = std::make_shared<SessionDescription>();
 	_offer_sdp->SetOrigin("OvenMediaEngine", ov::Random::GenerateUInt32(), 2, "IN", 4, "127.0.0.1");
@@ -295,7 +296,6 @@ bool RtcStream::Start()
 				audio_media_desc->Update();
 
 				AddPacketizer(track->GetCodecId(), track->GetId(), payload->GetId(), audio_media_desc->GetSsrc());
-
 				break;
 			}
 
@@ -304,6 +304,8 @@ bool RtcStream::Start()
 				logtw("Not supported media type: %d", (int)(track->GetMediaType()));
 				break;
 		}
+
+		_jitter_buffer_delay.CreateJitterBuffer(track->GetId(), track->GetTimeBase().GetDen());
 	}
 
 	if (video_media_desc && _ulpfec_enabled == true)
@@ -391,11 +393,52 @@ bool RtcStream::OnRtpPacketized(std::shared_ptr<RtpPacket> packet)
 
 void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	if(_jitter_buffer_enabled)
+	{
+		PushToJitterBuffer(media_packet);
+	}
+	else
+	{
+		PacketizeVideoFrame(media_packet);
+	}
+}
+
+void RtcStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
+{
+	if(_jitter_buffer_enabled)
+	{
+		PushToJitterBuffer(media_packet);
+	}
+	else
+	{
+		PacketizeAudioFrame(media_packet);
+	}
+}
+
+void RtcStream::PushToJitterBuffer(const std::shared_ptr<MediaPacket> &media_packet)
+{
 	if(GetState() != State::STARTED)
 	{
 		return;
 	}
 
+	_jitter_buffer_delay.PushMediaPacket(media_packet);
+
+	while(auto media_packet = _jitter_buffer_delay.PopNextMediaPacket())
+	{
+		if(media_packet->GetMediaType() == cmn::MediaType::Video)
+		{
+			PacketizeVideoFrame(media_packet);
+		}
+		else if(media_packet->GetMediaType() == cmn::MediaType::Audio)
+		{
+			PacketizeAudioFrame(media_packet);
+		}
+	}
+}
+
+void RtcStream::PacketizeVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
+{
 	auto media_track = GetTrack(media_packet->GetTrackId());
 
 	// Create RTP Video Header
@@ -443,13 +486,8 @@ void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 						  &rtp_video_header);
 }
 
-void RtcStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
+void RtcStream::PacketizeAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if(GetState() != State::STARTED)
-	{
-		return;
-	}
-
 	auto media_track = GetTrack(media_packet->GetTrackId());
 
 	// RTP Packetizing

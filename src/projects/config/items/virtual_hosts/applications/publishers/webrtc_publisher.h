@@ -28,6 +28,7 @@ namespace cfg
 					CFG_DECLARE_REF_GETTER_OF(GetTimeout, _timeout)
 					CFG_DECLARE_REF_GETTER_OF(IsRtxEnabled, _rtx)
 					CFG_DECLARE_REF_GETTER_OF(IsUlpfecEnalbed, _ulpfec)
+					CFG_DECLARE_REF_GETTER_OF(IsJitterBufferEnabled, _jitter_buffer)
 
 				protected:
 					void MakeList() override
@@ -35,6 +36,7 @@ namespace cfg
 						Publisher::MakeList();
 
 						Register<Optional>("Timeout", &_timeout);
+						Register<Optional>("JitterBuffer", &_jitter_buffer);
 						Register<Optional>("Rtx", &_rtx);
 						Register<Optional>("Ulpfec", &_ulpfec);
 					}
@@ -42,6 +44,7 @@ namespace cfg
 					int _timeout = 30000;
 					bool _rtx = true;
 					bool _ulpfec = true;
+					bool _jitter_buffer = false;
 				};
 			}  // namespace pub
 		}	   // namespace app
