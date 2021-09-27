@@ -380,7 +380,7 @@ namespace ov
 			double ipart, fraction;
 			fraction = modf(seconds, &ipart);
 			
-			ntp_timestamp = (((uint64_t)ipart + EPOCH) << 32) + (fraction * NTP_SCALE_FRAC);
+			ntp_timestamp = (((uint64_t)ipart) << 32) + (fraction * NTP_SCALE_FRAC);
 
 			return ntp_timestamp;
 		}
