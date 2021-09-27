@@ -30,6 +30,7 @@ LOCAL_STATIC_LIBRARIES := \
 	web_console \
 	mediarouter \
 	rtsp_module \
+	jitter_buffer \
 	ovt_packetizer \
 	orchestrator \
 	publisher \

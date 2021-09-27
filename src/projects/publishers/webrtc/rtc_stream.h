@@ -8,6 +8,7 @@
 #include <modules/sdp/session_description.h>
 #include <modules/rtp_rtcp/rtp_rtcp_defines.h>
 #include <modules/rtp_rtcp/rtp_history.h>
+#include <modules/jitter_buffer/jitter_buffer.h>
 #include "rtc_session.h"
 
 
@@ -48,6 +49,10 @@ private:
 
 	bool StorePacketForRTX(std::shared_ptr<RtpPacket> &packet);
 
+	void PushToJitterBuffer(const std::shared_ptr<MediaPacket> &media_packet);
+	void PacketizeVideoFrame(const std::shared_ptr<MediaPacket> &media_packet);
+	void PacketizeAudioFrame(const std::shared_ptr<MediaPacket> &media_packet);
+
 	// VP8 Picture ID
 	uint16_t _vp8_picture_id;
 	std::shared_ptr<SessionDescription> _offer_sdp;
@@ -62,5 +67,8 @@ private:
 
 	bool _rtx_enabled = true;
 	bool _ulpfec_enabled = true;
+	bool _jitter_buffer_enabled = false;
 	uint32_t _worker_count = 0;
+
+	JitterBufferDelay	_jitter_buffer_delay;
 };
