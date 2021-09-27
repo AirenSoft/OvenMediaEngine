@@ -19,6 +19,7 @@ private:
 
     uint32_t	_ssrc = 0;
 	uint32_t	_last_timestamp = 0;
+	uint64_t	_last_ntptime = 0;
     uint32_t    _rtcp_generated_count = 0;
     uint32_t    _packet_count = 0;
     uint32_t    _octec_count = 0;

@@ -13,6 +13,7 @@ RtpRtcp::RtpRtcp(const std::shared_ptr<RtpRtcpInterface> &observer)
 {
 	_observer = observer;
 	_receiver_report_timer.Start();
+	_rtcp_send_stop_watch.Start();
 }
 
 RtpRtcp::~RtpRtcp()
@@ -20,7 +21,7 @@ RtpRtcp::~RtpRtcp()
     _rtcp_sr_generators.clear();
 }
 
-bool RtpRtcp::AddRtcpSRGenerator(uint8_t payload_type, uint32_t ssrc, uint32_t codec_rate)
+bool RtpRtcp::AddRtpSender(uint8_t payload_type, uint32_t ssrc, uint32_t codec_rate, ov::String cname)
 {
 	std::shared_lock<std::shared_mutex> lock(_state_lock);
 	if(GetNodeState() != ov::Node::NodeState::Ready)
@@ -30,6 +31,16 @@ bool RtpRtcp::AddRtcpSRGenerator(uint8_t payload_type, uint32_t ssrc, uint32_t c
 	}
 
 	_rtcp_sr_generators[payload_type] = std::make_shared<RtcpSRGenerator>(ssrc, codec_rate);
+
+	if(_sdes == nullptr)
+	{
+		_sdes = std::make_shared<Sdes>();
+	}
+
+	_sdes->AddChunk(std::make_shared<SdesChunk>(ssrc, SdesChunk::Type::CNAME, cname));
+
+	logtd("AddRtpSender : %d / %u / %u / %s", payload_type, ssrc, codec_rate, cname.CStr());
+
 	return true;
 }
 
@@ -81,29 +92,55 @@ bool RtpRtcp::SendRtpPacket(const std::shared_ptr<RtpPacket> &rtp_packet)
 		return false;
 	}
 
+	// Send RTP
+	_last_sent_rtp_packet = rtp_packet;
+	auto ret = SendDataToNextNode(NodeType::Rtp, rtp_packet->GetData());
+	if(ret == false)
+	{
+		return false;
+	}
+
+	// Make RTCP SR + SR + SDES + SDES
 	auto it = _rtcp_sr_generators.find(rtp_packet->PayloadType());
     if(it != _rtcp_sr_generators.end())
     {
 		auto rtcp_sr_generator = it->second;
-		
 		rtcp_sr_generator->AddRTPPacketAndGenerateRtcpSR(*rtp_packet);
-		if(rtcp_sr_generator->IsAvailableRtcpSRPacket())
+	}
+
+	if(_rtcp_sent_count == 0 || _rtcp_send_stop_watch.Elapsed() > SDES_CYCLE_MS)
+	{		
+		_rtcp_send_stop_watch.Update();
+		_rtcp_sent_count ++;
+
+		auto compound_rtcp_data = std::make_shared<ov::Data>(1024);
+		for(const auto &item : _rtcp_sr_generators)
 		{
+			auto rtcp_sr_generator = item.second;
 			auto rtcp_sr_packet = rtcp_sr_generator->PopRtcpSRPacket();
-			_last_sent_rtcp_packet = rtcp_sr_packet;
-			if(SendDataToNextNode(NodeType::Rtcp, rtcp_sr_packet->GetData()) == false)
-			{
-				logd("RTCP","Send RTCP failed : pt(%d) ssrc(%u)", rtp_packet->PayloadType(), rtp_packet->Ssrc());
-			}
-			else
-			{
-				logd("RTCP", "Send RTCP succeed : pt(%d) ssrc(%u) length(%d)", rtp_packet->PayloadType(), rtp_packet->Ssrc(), rtcp_sr_packet->GetData()->GetLength());
-			}
+			compound_rtcp_data->Append(rtcp_sr_packet->GetData());
+		}
+
+		if(_rtcp_sdes == nullptr)
+		{
+			_rtcp_send_stop_watch.Update();
+			_rtcp_sdes = std::make_shared<RtcpPacket>();
+			_rtcp_sdes->Build(_sdes);
+		}
+
+		compound_rtcp_data->Append(_rtcp_sdes->GetData());
+		
+		if(SendDataToNextNode(NodeType::Rtcp, compound_rtcp_data) == false)
+		{
+			logd("RTCP","Send RTCP failed : pt(%d) ssrc(%u)", rtp_packet->PayloadType(), rtp_packet->Ssrc());
+		}
+		else
+		{
+			logd("RTCP", "Send RTCP succeed : pt(%d) ssrc(%u) length(%d)", rtp_packet->PayloadType(), rtp_packet->Ssrc(), compound_rtcp_data->GetLength());
 		}
 	}
 
-	_last_sent_rtp_packet = rtp_packet;
-	return SendDataToNextNode(NodeType::Rtp, rtp_packet->GetData());
+	return true;
 }
 
 bool RtpRtcp::SendFir(uint32_t media_ssrc)
