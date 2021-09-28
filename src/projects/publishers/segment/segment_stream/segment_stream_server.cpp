@@ -330,8 +330,12 @@ void SegmentStreamServer::SetCrossDomains(const info::VHostAppName &vhost_app_na
 			cors_urls.push_back("*");
 			cors_policy = CorsPolicy::All;
 
-			// Ignore other items
-			logtw("Invalid CORS settings found for %s: '*' cannot be used like other items. Other items are ignored.", vhost_app_name.CStr());
+			if (url_list.size() > 1)
+			{
+				// Ignore other items if "*" is specified
+				logtw("Invalid CORS settings found for %s: '*' cannot be used like other items. Other items are ignored.", vhost_app_name.CStr());
+			}
+
 			break;
 		}
 		else if (url == "null")
