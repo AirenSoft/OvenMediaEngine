@@ -19,12 +19,15 @@
 #include "codec/encoder/encoder_hevc_qsv.h"
 #include "codec/encoder/encoder_jpeg.h"
 #include "codec/encoder/encoder_opus.h"
+#include "codec/encoder/encoder_ffopus.h"
 #include "codec/encoder/encoder_png.h"
 #include "codec/encoder/encoder_vp8.h"
 #include "transcoder_gpu.h"
 #include "transcoder_private.h"
 
+#define USE_LEGACY_LIBOPUS true
 #define MAX_QUEUE_SIZE 120
+
 
 TranscodeEncoder::TranscodeEncoder()
 {
@@ -147,12 +150,19 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(std::shared_pt
 
 			break;
 		case cmn::MediaCodecId::Opus:
+#if USE_LEGACY_LIBOPUS
 			encoder = std::make_shared<EncoderOPUS>();
 			if (encoder != nullptr && encoder->Configure(context) == true)
 			{
 				return encoder;
 			}
-
+#else
+			encoder = std::make_shared<EncoderFFOPUS>();
+			if (encoder != nullptr && encoder->Configure(context) == true)
+			{
+				return encoder;
+			}
+#endif
 			break;
 		default:
 			OV_ASSERT(false, "Not supported codec: %d", context->GetCodecId());

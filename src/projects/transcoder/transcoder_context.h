@@ -114,6 +114,9 @@ public:
 	void SetHardwareAccel(bool hwaccel);
 	bool GetHardwareAccel();
 
+	void SetAudioSamplesPerFrame(int nbsamples);
+	int GetAudioSamplesPerFrame();
+
 private:
 	// Context type
 	//    true = this context will be used for encoding
@@ -154,6 +157,7 @@ private:
 	// Channel
 	cmn::AudioChannel _audio_channel;
 
+	int _audio_samples_per_frame;
 	// Hardware accelerator
 	bool _hwaccel;
 
