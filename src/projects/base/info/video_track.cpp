@@ -27,6 +27,17 @@ double VideoTrack::GetFrameRate() const
 	return _framerate;
 }
 
+
+void VideoTrack::SetEstimateFrameRate(double framerate)
+{
+	_estimate_framerate = framerate;
+}
+
+double VideoTrack::GetEsimateFrameRate() const
+{
+	return _estimate_framerate;
+}
+
 void VideoTrack::SetWidth(int32_t width)
 {
 	_width = width;

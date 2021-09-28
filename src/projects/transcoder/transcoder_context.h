@@ -91,8 +91,11 @@ public:
 	void SetGOP(int32_t val);
 	int32_t GetGOP();
 
-	void SetFrameRate(float val);
-	float GetFrameRate();
+	void SetFrameRate(double val);
+	double GetFrameRate();
+
+	void SetEstimateFrameRate(double val);
+	double GetEstimateFrameRate();
 
 	void SetAudioSample(cmn::AudioSample sample);
 	cmn::AudioSample GetAudioSample() const;
@@ -133,7 +136,8 @@ private:
 	uint32_t _video_height;
 
 	// Frame Rate
-	float _video_frame_rate;
+	double _video_frame_rate;
+	double _video_estimate_frame_rate;
 
 	// Colorspace
 	// - This variable is temporarily used in the Pixel Format defined by FFMPEG.
@@ -153,13 +157,13 @@ private:
 	// Hardware accelerator
 	bool _hwaccel;
 
-
 public:
 	//--------------------------------------------------------------------
 	// Informal Options
 	//--------------------------------------------------------------------
 	void SetH264hasBframes(int32_t bframes_count);
 	int32_t GetH264hasBframes();
-private:	
+
+private:
 	int32_t _h264_has_bframes;
 };

@@ -45,8 +45,8 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
-	_context->framerate = ::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE);
 
+	_context->framerate = ::av_d2q((_output_context->GetFrameRate() > 0) ? _output_context->GetFrameRate() : _output_context->GetEstimateFrameRate(), AV_TIME_BASE);
 	_context->bit_rate = _output_context->GetBitrate();
 	_context->rc_min_rate = _context->bit_rate;
 	_context->rc_max_rate = _context->bit_rate;
@@ -63,7 +63,7 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 	// From avcodec.h:
 	// For fixed-fps content, timebase should be 1/framerate and timestamp increments should be identically 1.
 	// This often, but not always is the inverse of the frame rate or field rate for video. 1/time_base is not the average frame rate if the frame rate is not constant.
-	_context->time_base = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
+	_context->time_base = ::av_inv_q(::av_mul_q(_context->framerate, (AVRational){_context->ticks_per_frame, 1}));
 
 	_context->gop_size = _context->framerate.num / _context->framerate.den;
 	_context->max_b_frames = 0;
@@ -204,6 +204,7 @@ void EncoderAVC::ThreadEncode()
 					_packet->dts,
 					-1L,
 					(_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
+				// logte("packet->duration : %lld / %lld", _packet->pts, _packet->dts);
 				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::H264_ANNEXB);
 				packet_buffer->SetPacketType(cmn::PacketType::NALU);
 

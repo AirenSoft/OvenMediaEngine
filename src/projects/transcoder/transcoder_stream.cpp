@@ -835,6 +835,10 @@ int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 
 				encoder_context->SetHardwareAccel(use_hwaccel);
 
+				// If there is no framerate value, a constant bit rate is not produced by the encoder.
+				// So, Estimated framerate is used to set the encoder.
+				encoder_context->SetEstimateFrameRate(track->GetEsimateFrameRate());
+
 				if (CreateEncoder(encoder_track_id, encoder_context) == false)
 				{
 					logte("Could not create encoder");
@@ -1022,12 +1026,12 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 					output_track->SetChannel(buffer->GetChannels());
 				}
 
-				if (output_track->GetFrameRate() == 0 && output_track->GetMediaType() == cmn::MediaType::Video)
+				if (output_track->GetMediaType() == cmn::MediaType::Video)
 				{
 					auto &input_track = _input_stream->GetTrack(buffer->GetTrackId());
 					float estimated_framerate = 1 / ((double)buffer->GetDuration() * input_track->GetTimeBase().GetExpr());
 					logti("Framerate of the output stream is not set. set the estimated framerate of source stream. %.2ffps", estimated_framerate);
-					output_track->SetFrameRate(estimated_framerate);
+					output_track->SetEstimateFrameRate(estimated_framerate);
 				}
 			}
 		}
@@ -1057,6 +1061,7 @@ void TranscoderStream::ChangeOutputFormat(MediaFrame *buffer)
 
 	// Craete Filter
 	CreateFilter(buffer);
+
 }
 
 void TranscoderStream::DecodePacket(std::shared_ptr<MediaPacket> packet)
@@ -1345,7 +1350,7 @@ void TranscoderStream::CreateFilter(MediaFrame *buffer)
 
 	// due to structural problems I've already made the transcode's context... so, update changed data.
 	auto &input_track = _input_stream->GetTrack(track_id);
-	auto input_transcode_context = _decoders[track_id]->GetContext();
+	auto input_context = _decoders[track_id]->GetContext();
 
 	// 3. Get Output Track List. Creates a filter by looking up the encoding context information of the output track.
 	auto filter_item = _stage_decoder_to_filter.find(track_id);
@@ -1368,14 +1373,14 @@ void TranscoderStream::CreateFilter(MediaFrame *buffer)
 			continue;
 		}
 
-		auto output_transcode_context = _encoders[encoder_id]->GetContext();
+		auto output_context = _encoders[encoder_id]->GetContext();
 
-		auto transcode_filter = std::make_shared<TranscodeFilter>();
+		auto filter = std::make_shared<TranscodeFilter>();
 
-		bool ret = transcode_filter->Configure(input_track, input_transcode_context, output_transcode_context);
+		bool ret = filter->Configure(input_track, input_context, output_context);
 		if (ret == true)
 		{
-			_filters[filter_id] = transcode_filter;
+			_filters[filter_id] = filter;
 		}
 		else
 		{

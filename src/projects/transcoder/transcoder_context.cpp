@@ -86,14 +86,24 @@ uint32_t TranscodeContext::GetVideoHeight()
 	return _video_height;
 }
 
-void TranscodeContext::SetFrameRate(float val)
+void TranscodeContext::SetFrameRate(double val)
 {
 	_video_frame_rate = val;
 }
 
-float TranscodeContext::GetFrameRate()
+double TranscodeContext::GetFrameRate()
 {
 	return _video_frame_rate;
+}
+
+void TranscodeContext::SetEstimateFrameRate(double val)
+{
+	_video_estimate_frame_rate = val;
+}
+
+double TranscodeContext::GetEstimateFrameRate()
+{
+	return _video_estimate_frame_rate;
 }
 
 const cmn::Timebase &TranscodeContext::GetTimeBase() const
