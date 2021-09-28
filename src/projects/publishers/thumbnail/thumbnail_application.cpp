@@ -122,11 +122,6 @@ void ThumbnailApplication::SetCrossDomain(const std::vector<ov::String> &url_lis
 				_cors_urls.push_back(https_prefix + url);
 		}
 	}
-
-	ov::String cors_urls;
-	for (auto &url : _cors_urls)
-		cors_urls += url + "\n";
-	logtd("CORS \n%s", cors_urls.CStr());
 }
 
 bool ThumbnailApplication::UrlExistCheck(const std::vector<ov::String> &url_list, const ov::String &check_url)
