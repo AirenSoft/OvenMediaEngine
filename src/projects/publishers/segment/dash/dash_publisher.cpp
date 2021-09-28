@@ -7,11 +7,12 @@
 //
 //==============================================================================
 #include "dash_publisher.h"
+
+#include <config/config_manager.h>
+
 #include "dash_application.h"
 #include "dash_private.h"
 #include "dash_stream_server.h"
-
-#include <config/config_manager.h>
 
 std::shared_ptr<DashPublisher> DashPublisher::Create(const cfg::Server &server_config,
 													 const std::shared_ptr<MediaRouteInterface> &router)
@@ -46,12 +47,44 @@ bool DashPublisher::Start()
 
 std::shared_ptr<pub::Application> DashPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
-	if(IsModuleAvailable() == false)
+	if (IsModuleAvailable() == false)
 	{
 		return nullptr;
 	}
 
-	return DashApplication::Create(pub::Publisher::GetSharedPtrAs<pub::Publisher>(), application_info);
+	auto name = application_info.GetName();
+	auto &dash_publisher_config = application_info.GetConfig().GetPublishers().GetDashPublisher();
+
+	if (dash_publisher_config.IsParsed() == false)
+	{
+		logte("Could not find %s configuration for application %s", GetPublisherName(), name.CStr());
+		return nullptr;
+	}
+
+	auto application = DashApplication::Create(pub::Publisher::GetSharedPtrAs<DashPublisher>(), application_info);
+
+	if (application != nullptr)
+	{
+		auto stream_server = _stream_server;
+
+		if (stream_server != nullptr)
+		{
+			bool is_parsed;
+			auto cross_domains = dash_publisher_config.GetCrossDomainList(&is_parsed);
+
+			if (is_parsed)
+			{
+				stream_server->SetCrossDomains(name, cross_domains);
+			}
+			else
+			{
+				OV_ASSERT2(cross_domains.empty());
+				cross_domains.push_back("*");
+			}
+		}
+	}
+
+	return application;
 }
 
 bool DashPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)

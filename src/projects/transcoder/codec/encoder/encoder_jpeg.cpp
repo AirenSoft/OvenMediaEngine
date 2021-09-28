@@ -44,14 +44,15 @@ bool EncoderJPEG::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	AVRational codec_timebase = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
-	_context->time_base = codec_timebase;
-	_context->pix_fmt =  (AVPixelFormat)GetPixelFormat();
+	_context->codec_type = AVMEDIA_TYPE_VIDEO;
+	_context->framerate = ::av_d2q((_output_context->GetFrameRate() > 0) ? _output_context->GetFrameRate() : _output_context->GetEstimateFrameRate(), AV_TIME_BASE);
+	_context->time_base = ::av_inv_q(::av_mul_q(_context->framerate, (AVRational){_context->ticks_per_frame, 1}));
+	_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
 	_context->flags = AV_CODEC_FLAG_QSCALE;
 	_context->global_quality = _context->qmin * FF_QP2LAMBDA;
-	_context->framerate = ::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE);
+
 
 	if (::avcodec_open2(_context, codec, nullptr) < 0)
 	{

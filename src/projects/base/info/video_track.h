@@ -19,6 +19,9 @@ public:
 	void SetFrameRate(double framerate);
 	double GetFrameRate() const;
 
+	void SetEstimateFrameRate(double framerate);
+	double GetEsimateFrameRate() const;
+
 	void SetWidth(int32_t width);
 	int32_t GetWidth() const;
 
@@ -38,6 +41,7 @@ public:
 
 protected:
 	double _framerate;
+	double _estimate_framerate;
 	double _video_timescale;
 	int32_t _width;
 	int32_t _height;

@@ -45,8 +45,8 @@ bool EncoderVP8::Configure(std::shared_ptr<TranscodeContext> context)
 	_context->rc_min_rate = _context->bit_rate;
 	_context->sample_aspect_ratio = (AVRational){1, 1};
 	_context->time_base = TimebaseToAVRational(_output_context->GetTimeBase());
-	_context->framerate = ::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE);
-	_context->gop_size = _output_context->GetFrameRate() * 1;  // create keyframes every second
+	_context->framerate = ::av_d2q((_output_context->GetFrameRate() > 0) ? _output_context->GetFrameRate() : _output_context->GetEstimateFrameRate(), AV_TIME_BASE);
+	_context->gop_size = _context->framerate.num / _context->framerate.den;
 	_context->max_b_frames = 0;
 	_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
 	_context->width = _output_context->GetVideoWidth();

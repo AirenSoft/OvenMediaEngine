@@ -49,12 +49,44 @@ bool HlsPublisher::Start()
 
 std::shared_ptr<pub::Application> HlsPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
-	if(IsModuleAvailable() == false)
+	if (IsModuleAvailable() == false)
 	{
 		return nullptr;
 	}
 
-	return HlsApplication::Create(pub::Publisher::GetSharedPtrAs<HlsPublisher>(), application_info);
+	auto name = application_info.GetName();
+	auto &hls_publisher_config = application_info.GetConfig().GetPublishers().GetHlsPublisher();
+
+	if (hls_publisher_config.IsParsed() == false)
+	{
+		logte("Could not find %s configuration for application %s", GetPublisherName(), name.CStr());
+		return nullptr;
+	}
+
+	auto application = HlsApplication::Create(pub::Publisher::GetSharedPtrAs<HlsPublisher>(), application_info);
+
+	if (application != nullptr)
+	{
+		auto stream_server = _stream_server;
+
+		if (stream_server != nullptr)
+		{
+			bool is_parsed;
+			auto cross_domains = hls_publisher_config.GetCrossDomainList(&is_parsed);
+
+			if (is_parsed)
+			{
+				stream_server->SetCrossDomains(name, cross_domains);
+			}
+			else
+			{
+				OV_ASSERT2(cross_domains.empty());
+				cross_domains.push_back("*");
+			}
+		}
+	}
+
+	return application;
 }
 
 bool HlsPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)

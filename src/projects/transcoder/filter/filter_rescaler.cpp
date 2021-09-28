@@ -87,7 +87,7 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	std::vector<ov::String> src_params = {
 		ov::String::FormatString("video_size=%dx%d", input_media_track->GetWidth(), input_media_track->GetHeight()),
 		ov::String::FormatString("pix_fmt=%d", input_media_track->GetFormat()),
-		ov::String::FormatString("time_base=%d/%d", input_media_track->GetTimeBase().GetNum(), input_media_track->GetTimeBase().GetDen()),
+		ov::String::FormatString("time_base=%s", input_media_track->GetTimeBase().GetStringExpr().CStr()),
 		ov::String::FormatString("pixel_aspect=%d/%d", 1, 1)};
 
 	ov::String src_args = ov::String::Join(src_params, ":");
@@ -129,11 +129,11 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 
 	if (output_context->GetFrameRate() > 0.0f)
 	{
-		filters.push_back(
-			ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()));
+		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()));
 	}
 	filters.push_back(ov::String::FormatString("scale=%dx%d:flags=bilinear", output_context->GetVideoWidth(), output_context->GetVideoHeight()));
 	filters.push_back(ov::String::FormatString("settb=%s", output_context->GetTimeBase().GetStringExpr().CStr()));
+
 
 	ov::String output_filters = ov::String::Join(filters, ",");
 	if ((ret = ::avfilter_graph_parse_ptr(_filter_graph, output_filters, &_inputs, &_outputs, nullptr)) < 0)

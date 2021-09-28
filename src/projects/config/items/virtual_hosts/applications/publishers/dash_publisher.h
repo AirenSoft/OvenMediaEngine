@@ -8,6 +8,7 @@
 //==============================================================================
 #pragma once
 
+#include "../../../common/cross_domain_support.h"
 #include "publisher.h"
 
 namespace cfg
@@ -18,8 +19,18 @@ namespace cfg
 		{
 			namespace pub
 			{
-				struct DashPublisher : public Publisher
+				struct DashPublisher : public Publisher, public cmn::CrossDomainSupport
 				{
+				protected:
+					int _segment_count = 3;
+					int _segment_duration = 5;
+
+					cmn::UtcTiming _utc_timing;
+
+					int _send_buffer_size = 1024 * 1024 * 20;  // 20M
+					int _recv_buffer_size = 0;
+
+				public:
 					PublisherType GetType() const override
 					{
 						return PublisherType::Dash;
@@ -29,10 +40,6 @@ namespace cfg
 					CFG_DECLARE_REF_GETTER_OF(GetSegmentDuration, _segment_duration)
 
 					CFG_DECLARE_REF_GETTER_OF(GetUtcTiming, _utc_timing)
-
-					CFG_DECLARE_REF_GETTER_OF(GetCrossDomainList, _cross_domains.GetUrls())
-					CFG_DECLARE_REF_GETTER_OF(GetCrossDomains, _cross_domains)
-
 				protected:
 					void MakeList() override
 					{
@@ -45,15 +52,6 @@ namespace cfg
 
 						Register<Optional>({"CrossDomains", OmitRule::Omit}, &_cross_domains);
 					}
-
-					int _segment_count = 3;
-					int _segment_duration = 5;
-
-					cmn::UtcTiming _utc_timing;
-
-					cmn::CrossDomains _cross_domains;
-					int _send_buffer_size = 1024 * 1024 * 20;  // 20M
-					int _recv_buffer_size = 0;
 				};
 			}  // namespace pub
 		}	   // namespace app
