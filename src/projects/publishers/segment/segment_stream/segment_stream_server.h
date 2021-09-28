@@ -41,7 +41,17 @@ public:
 
 	bool Disconnect(const ov::String &app_name, const ov::String &stream_name);
 
-	void SetCrossDomain(const std::vector<ov::String> &url_list);
+	// url_list can contains such values:
+	//   - *: Adds "Access-Control-Allow-Origin: *" for the request
+	//        If "*" and <domain> are passed at the same time, the <domain> value is ignored.
+	//   - null: Adds "Access-Control-Allow-Origin: null" for the request
+	//        If "null" and <domain> are passed at the same time, the "null" value is ignored.
+	//   - <domain>: Adds "Access-Control-Allow-Origin: <domain>" for the request
+	//
+	// Empty url_list means 'Do not set any CORS header'
+	//
+	// NOTE - SetCrossDomains() isn't thread-safe.
+	void SetCrossDomains(const info::VHostAppName &vhost_app_name, const std::vector<ov::String> &url_list);
 
 	virtual PublisherType GetPublisherType() const noexcept = 0;
 	virtual const char *GetPublisherName() const noexcept = 0;
@@ -54,15 +64,12 @@ protected:
 		const std::shared_ptr<http::svr::HttpsServer> &https_server,
 		int thread_count, const SegmentProcessHandler &process_handler);
 
-	bool ParseRequestUrl(const ov::String &request_url,
-						 ov::String &app_name, ov::String &stream_name,
-						 ov::String &file_name, ov::String &file_ext);
-
 	bool ProcessRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
 						const ov::String &request_target,
 						const ov::String &origin_url);
 
-	bool SetAllowOrigin(const ov::String &origin_url, const std::shared_ptr<http::svr::HttpResponse> &response);
+	bool SetRtmpCorsHeaders(const std::shared_ptr<http::svr::HttpResponse> &response);
+	bool SetHttpCorsHeaders(const info::VHostAppName &vhost_app_name, const ov::String &origin_url, const std::shared_ptr<const ov::Url> &url, const std::shared_ptr<http::svr::HttpResponse> &response);
 
 	// Interfaces
 	virtual http::svr::ConnectionPolicy ProcessStreamRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
@@ -83,9 +90,37 @@ protected:
 	std::shared_ptr<mon::StreamMetrics> GetStreamMetric(const std::shared_ptr<http::svr::HttpConnection> &client);
 
 protected:
+	// https://fetch.spec.whatwg.org/#http-access-control-allow-origin
+	// `Access-Control-Allow-Origin`
+	// Indicates whether the response can be shared, via returning the literal value of the `Origin` request header
+	// (which can be `null`) or `*` in a response.
+	//
+	// For example:
+	// Access-Control-Allow-Origin: *
+	// Access-Control-Allow-Origin: null
+	// Access-Control-Allow-Origin: <origin>
+	enum class CorsPolicy
+	{
+		// Do not add any CORS header
+		Empty,
+		// *
+		All,
+		// null
+		Null,
+		// Specific domain in _cors_http_map
+		Origin
+	};
+
 	std::shared_ptr<http::svr::HttpServer> _http_server;
 	std::shared_ptr<http::svr::HttpServer> _https_server;
 	std::vector<std::shared_ptr<SegmentStreamObserver>> _observers;
-	std::vector<ov::String> _cors_urls;
-	ov::String _cross_domain_xml;
+
+	std::unordered_map<info::VHostAppName, CorsPolicy> _cors_policy_map;
+	// CORS for HTTP
+	std::unordered_map<info::VHostAppName, std::vector<ov::String>> _cors_http_map;
+	// CORS for RTMP
+	//
+	// NOTE - The RTMP CORS setting follows the first declared <CrossDomains> setting,
+	//        because crossdomain.xml must be located / and cannot be declared per app.
+	ov::String _cors_rtmp;
 };

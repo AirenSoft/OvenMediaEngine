@@ -41,10 +41,6 @@ bool SegmentPublisher::Start(const cfg::cmn::SingularPort &port_config, const cf
 	// Register as observer
 	stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
-	// Apply CORS settings
-	// TODO(Dimiden): Move this code to the HttpInterceptor
-	//stream_server->SetCrossDomain(cross_domains);
-
 	if (stream_server->Start(has_port ? &address : nullptr, has_tls_port ? &tls_address : nullptr,
 							 DEFAULT_SEGMENT_WORKER_THREAD_COUNT, worker_count) == false)
 	{

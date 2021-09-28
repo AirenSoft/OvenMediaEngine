@@ -69,7 +69,9 @@ namespace mon
 		_server_metric = std::make_shared<ServerMetrics>(server_config);
 		_is_analytics_on = _server_metric->GetConfig()->GetAnalytics().IsParsed();
 
-		logti("%s(%s) ServerMetric has been started for monitoring - %s", server_config->GetName().CStr(), server_config->GetID().CStr(), ov::Converter::ToISO8601String(_server_metric->GetServerStartedTime()));
+		logti("%s(%s) ServerMetric has been started for monitoring - %s",
+			server_config->GetName().CStr(), server_config->GetID().CStr(),
+			ov::Converter::ToISO8601String(_server_metric->GetServerStartedTime()).CStr());
 
 		if(IsAnalyticsOn())
 		{

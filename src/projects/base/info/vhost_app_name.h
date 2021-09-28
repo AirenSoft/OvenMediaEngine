@@ -33,6 +33,14 @@ namespace info
 		const ov::String &ToString() const;
 		const char *CStr() const;
 
+		std::size_t Hash() const
+		{
+			return std::hash<bool>()(_is_valid) ^
+				   std::hash<ov::String>()(_vhost_app_name) ^
+				   std::hash<ov::String>()(_vhost_name) ^
+				   std::hash<ov::String>()(_app_name);
+		}
+
 	protected:
 		VHostAppName();
 
@@ -43,3 +51,15 @@ namespace info
 		ov::String _app_name;
 	};
 }  // namespace info
+
+namespace std
+{
+	template <>
+	struct hash<info::VHostAppName>
+	{
+		std::size_t operator()(info::VHostAppName const &vhost_app_name) const
+		{
+			return vhost_app_name.Hash();
+		}
+	};
+}  // namespace std
