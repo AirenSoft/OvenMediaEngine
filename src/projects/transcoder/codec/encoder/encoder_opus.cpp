@@ -80,6 +80,9 @@ bool EncoderOPUS::Configure(std::shared_ptr<TranscodeContext> context)
 	// OPUS supports int16 or float
 	const int estimated_frame_size = std::max(sizeof(opus_int16), sizeof(float));
 
+	context->SetAudioSamplesPerFrame(480);
+
+
 	// Setting the maximum size of PCM data to be encoded 
 	_buffer = std::make_shared<ov::Data>(max_opus_frame_count * estimated_channel_count * estimated_frame_size);
 	_format = cmn::AudioSample::Format::None;

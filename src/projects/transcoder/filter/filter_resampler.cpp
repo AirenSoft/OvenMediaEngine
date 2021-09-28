@@ -110,7 +110,7 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 		// "aformat" filter options
 		ov::String::FormatString("aformat=sample_fmts=%s:channel_layouts=%s", output_context->GetAudioSample().GetName(), output_context->GetAudioChannel().GetName()),
 		// "asetnsamples" filter options
-		ov::String::FormatString("asetnsamples=n=1024")
+		ov::String::FormatString("asetnsamples=n=%d", output_context->GetAudioSamplesPerFrame())
 	};
 
 	ov::String output_filters = ov::String::Join(filters, ",");

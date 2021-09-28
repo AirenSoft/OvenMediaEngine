@@ -185,3 +185,13 @@ int32_t TranscodeContext::GetH264hasBframes()
 {
 	return _h264_has_bframes;
 }
+
+void TranscodeContext::SetAudioSamplesPerFrame(int samples)
+{
+	_audio_samples_per_frame = samples;
+}
+
+int TranscodeContext::GetAudioSamplesPerFrame()
+{
+	return _audio_samples_per_frame;
+}

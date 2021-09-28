@@ -6,16 +6,16 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "encoder_aac.h"
+#include "encoder_ffopus.h"
 
 #include "../../transcoder_private.h"
 
-EncoderAAC::~EncoderAAC()
+EncoderFFOPUS::~EncoderFFOPUS()
 {
 	Stop();
 }
 
-bool EncoderAAC::Configure(std::shared_ptr<TranscodeContext> output_context)
+bool EncoderFFOPUS::Configure(std::shared_ptr<TranscodeContext> output_context)
 {
 	if (TranscodeEncoder::Configure(output_context) == false)
 	{
@@ -41,14 +41,13 @@ bool EncoderAAC::Configure(std::shared_ptr<TranscodeContext> output_context)
 
 	_context->bit_rate = output_context->GetBitrate();
 	_context->sample_fmt = AV_SAMPLE_FMT_S16;
-
-	// Supported sample rate: 48000, 24000, 16000, 12000, 8000, 0
 	_context->sample_rate = output_context->GetAudioSampleRate();
 	_context->channel_layout = static_cast<uint64_t>(output_context->GetAudioChannel().GetLayout());
 	_context->channels = output_context->GetAudioChannel().GetCounts();
-	// _context->time_base = TimebaseToAVRational(output_context->GetTimeBase());
 	_context->codec = codec;
 	_context->codec_id = codec_id;
+
+	::av_opt_set(_context->priv_data, "frame_duration", "10", 0);
 
 	// open codec
 	if (::avcodec_open2(_context, codec, nullptr) < 0)
@@ -58,13 +57,13 @@ bool EncoderAAC::Configure(std::shared_ptr<TranscodeContext> output_context)
 	}
 
 	output_context->SetAudioSamplesPerFrame(_context->frame_size);
-
+	
 	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
 	try
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&EncoderAAC::ThreadEncode, this);
+		_thread_work = std::thread(&EncoderFFOPUS::ThreadEncode, this);
 		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
@@ -78,7 +77,7 @@ bool EncoderAAC::Configure(std::shared_ptr<TranscodeContext> output_context)
 	return true;
 }
 
-void EncoderAAC::Stop()
+void EncoderFFOPUS::Stop()
 {
 	_kill_flag = true;
 
@@ -92,7 +91,7 @@ void EncoderAAC::Stop()
 	}
 }
 
-void EncoderAAC::ThreadEncode()
+void EncoderFFOPUS::ThreadEncode()
 {
 	while (!_kill_flag)
 	{
@@ -114,12 +113,11 @@ void EncoderAAC::ThreadEncode()
 		_frame->nb_samples = _context->frame_size;
 		_frame->pts = frame->GetPts();
 		_frame->pkt_duration = frame->GetDuration();
-
 		_frame->channel_layout = _context->channel_layout;
 		_frame->channels = _context->channels;
 		_frame->sample_rate = _context->sample_rate;
 
-		if (::av_frame_get_buffer(_frame, 0) < 0)
+		if (::av_frame_get_buffer(_frame, true) < 0)
 		{
 			logte("Could not allocate the audio frame data");
 			break;
@@ -129,19 +127,17 @@ void EncoderAAC::ThreadEncode()
 		{
 			logte("Could not make sure the frame data is writable");
 			// *result = TranscodeResult::DataError;
-			break;
+			break; 
 		}
 
 		::memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
-
 		int ret = ::avcodec_send_frame(_context, _frame);
-
-		::av_frame_unref(_frame);
-
 		if (ret < 0)
 		{
 			logte("Error sending a frame for encoding : %d", ret);
 		}
+
+		::av_frame_unref(_frame);
 
 		while (true)
 		{
@@ -172,7 +168,7 @@ void EncoderAAC::ThreadEncode()
 			{
 				// Packet is ready
 				auto packet_buffer = std::make_shared<MediaPacket>(cmn::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts, _packet->dts, _packet->duration, MediaPacketFlag::Key);
-				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::AAC_ADTS);
+				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::OPUS);
 				packet_buffer->SetPacketType(cmn::PacketType::RAW);
 
 				// logte("ENCODED:: %lld, %lld, %d, %d", packet_buffer->GetPts(), _packet->pts, _packet->size, _packet->duration);
@@ -189,7 +185,7 @@ void EncoderAAC::ThreadEncode()
 	}
 }
 
-std::shared_ptr<MediaPacket> EncoderAAC::RecvBuffer(TranscodeResult *result)
+std::shared_ptr<MediaPacket> EncoderFFOPUS::RecvBuffer(TranscodeResult *result)
 {
 	if (!_output_buffer.IsEmpty())
 	{
