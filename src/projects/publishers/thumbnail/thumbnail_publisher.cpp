@@ -194,7 +194,7 @@ std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterce
 		}
 		else
 		{
-			SetAllowOrigin(request->GetUri(), application->GetCorsUrls(), response);
+			SetAllowOrigin(request->GetHeader("ORIGIN"), application->GetCorsUrls(), response);
 		}
 
 		// Check Stream

@@ -21,9 +21,6 @@ namespace cfg
 			{
 				struct ThumbnailPublisher : public Publisher, public cmn::CrossDomainSupport
 				{
-				protected:
-					cmn::CrossDomains _cross_domains;
-
 				public:
 					PublisherType GetType() const override
 					{
