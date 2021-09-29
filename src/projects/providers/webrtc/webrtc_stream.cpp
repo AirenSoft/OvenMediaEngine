@@ -58,6 +58,11 @@ namespace pvd
 	{
 		std::lock_guard<std::shared_mutex> lock(_start_stop_lock);
 
+		logtd("[WebRTC Provider] OfferSDP");
+		logtd("%s\n", _offer_sdp->ToString().CStr());
+		logtd("[WebRTC Provider] AnswerSDP");
+		logtd("%s", _peer_sdp->ToString().CStr());
+
 		auto offer_media_desc_list = _offer_sdp->GetMediaList();
 		auto peer_media_desc_list = _peer_sdp->GetMediaList();
 
@@ -423,8 +428,8 @@ namespace pvd
 		}
 
 		//auto timestamp = _lip_sync_clock->GetNextTimestamp(clock_type, first_rtp_packet->Timestamp());
-
-		auto timestamp = AdjustTimestamp(first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp());
+		//auto timestamp = AdjustTimestamp(first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp());
+		auto timestamp = first_rtp_packet->Timestamp();
 
 		logtd("Payload Type(%d) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
 				first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
