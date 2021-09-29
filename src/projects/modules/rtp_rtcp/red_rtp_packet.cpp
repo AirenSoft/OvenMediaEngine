@@ -28,6 +28,9 @@ void RedRtpPacket::PackageAsRed(uint8_t red_payload_type, const RtpPacket &src)
 	SetSequenceNumber(src.SequenceNumber());
 	SetTimestamp(src.Timestamp());
 	SetNTPTimestamp(src.NTPTimestamp());
+	SetKeyframe(src.IsKeyframe());
+	SetFirstPacketOfFrame(src.IsFirstPacketOfFrame());
+	SetVideoPacket(src.IsVideoPacket());
 
 	_payload_offset = src.HeadersSize();
 	_payload_size = src.PayloadSize();

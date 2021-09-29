@@ -138,6 +138,17 @@ bool RtpPacketizer::PacketizeVideo(cmn::MediaCodecId video_type,
 		}
 
 		_rtp_packet_count ++;
+
+		packet->SetVideoPacket(true);
+		
+		if(i == 0)
+		{
+			packet->SetFirstPacketOfFrame(true);
+		}
+		if(frame_type == FrameType::VideoFrameKey)
+		{
+			packet->SetKeyframe(true);
+		}
 		packet->SetNTPTimestamp(ntp_timestamp);
 		_stream->OnRtpPacketized(packet);
 

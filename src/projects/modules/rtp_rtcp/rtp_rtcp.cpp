@@ -92,15 +92,7 @@ bool RtpRtcp::SendRtpPacket(const std::shared_ptr<RtpPacket> &rtp_packet)
 		return false;
 	}
 
-	// Send RTP
-	_last_sent_rtp_packet = rtp_packet;
-	auto ret = SendDataToNextNode(NodeType::Rtp, rtp_packet->GetData());
-	if(ret == false)
-	{
-		return false;
-	}
-
-	// Make RTCP SR + SR + SDES + SDES
+	// RTCP(SR + SR + SDES + SDES)
 	auto it = _rtcp_sr_generators.find(rtp_packet->PayloadType());
     if(it != _rtcp_sr_generators.end())
     {
@@ -118,6 +110,10 @@ bool RtpRtcp::SendRtpPacket(const std::shared_ptr<RtpPacket> &rtp_packet)
 		{
 			auto rtcp_sr_generator = item.second;
 			auto rtcp_sr_packet = rtcp_sr_generator->PopRtcpSRPacket();
+			if(rtcp_sr_packet == nullptr)
+			{
+				continue;
+			}
 			compound_rtcp_data->Append(rtcp_sr_packet->GetData());
 		}
 
@@ -140,7 +136,9 @@ bool RtpRtcp::SendRtpPacket(const std::shared_ptr<RtpPacket> &rtp_packet)
 		}
 	}
 
-	return true;
+	// Send RTP
+	_last_sent_rtp_packet = rtp_packet;
+	return SendDataToNextNode(NodeType::Rtp, rtp_packet->GetData());
 }
 
 bool RtpRtcp::SendFir(uint32_t media_ssrc)

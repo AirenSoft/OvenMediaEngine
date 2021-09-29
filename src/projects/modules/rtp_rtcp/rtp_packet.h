@@ -94,6 +94,15 @@ public:
 	void		SetNTPTimestamp(uint64_t nts) {_ntp_timestamp = nts;}
 	uint64_t	NTPTimestamp() const {return _ntp_timestamp;}
 
+	void		SetVideoPacket(bool flag) {_is_video_packet = flag;}
+	bool		IsVideoPacket() const {return _is_video_packet;}
+
+	void		SetKeyframe(bool flag) {_is_keyframe = flag;}
+	bool		IsKeyframe() const {return _is_keyframe;}
+
+	void		SetFirstPacketOfFrame(bool flag) {_is_first_packet_of_frame = flag;}
+	bool		IsFirstPacketOfFrame() const {return _is_first_packet_of_frame;}
+
 protected:
 	size_t		_payload_offset = 0;	// Payload Start Point (Header size)
 	bool		_has_padding = false;
@@ -121,5 +130,8 @@ protected:
 
 	// Extensions for OME specific
 	uint64_t	_ntp_timestamp = 0;
+	bool		_is_video_packet = false;
+	bool		_is_keyframe = false;
+	bool		_is_first_packet_of_frame = false;
 };
 
