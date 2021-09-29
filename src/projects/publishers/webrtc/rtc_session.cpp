@@ -60,6 +60,11 @@ bool RtcSession::Start()
 		return false;
 	}
 
+	logtd("[WebRTC Publisher] OfferSDP");
+	logtd("%s\n", _offer_sdp->ToString().CStr());
+	logtd("[WebRTC Publisher] AnswerSDP");
+	logtd("%s", _peer_sdp->ToString().CStr());
+
 	auto offer_media_desc_list = _offer_sdp->GetMediaList();
 	auto peer_media_desc_list = _peer_sdp->GetMediaList();
 
