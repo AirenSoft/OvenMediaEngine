@@ -46,6 +46,9 @@ RtpPacket::RtpPacket(RtpPacket &src)
 	_sequence_number = src._sequence_number;
 	_timestamp = src._timestamp;
 	_ntp_timestamp = src._ntp_timestamp;
+	_is_keyframe = src._is_keyframe;
+	_is_first_packet_of_frame = src._is_first_packet_of_frame;
+	_is_video_packet = src._is_video_packet;
 
 	_data = src._data->Clone();
 	_data->SetLength(src._data->GetLength());
