@@ -7,7 +7,7 @@ OME_VERSION=dev
 OPENSSL_VERSION=3.0.0-beta1
 SRTP_VERSION=2.4.0
 SRT_VERSION=1.4.2
-OPUS_VERSION=1.1.3
+OPUS_VERSION=1.3.1
 X264_VERSION=20191217-2245-stable
 X265_VERSION=3.4
 VPX_VERSION=1.7.0
@@ -388,18 +388,18 @@ else
     echo "Please refer to manual installation page"
 fi
 
-install_nasm
-install_openssl
-install_libsrtp
-install_libsrt
+# install_nasm
+# install_openssl
+# install_libsrtp
+# install_libsrt
 install_libopus
-install_libx264
-install_libx265
-install_libvpx
-install_fdk_aac
-install_ffmpeg
-install_jemalloc
-install_libpcre2
+# install_libx264
+# install_libx265
+# install_libvpx
+# install_fdk_aac
+# install_ffmpeg
+# install_jemalloc
+# install_libpcre2
 
 if [ "${WITH_OME}" == "true" ]; then
     install_ovenmediaengine
