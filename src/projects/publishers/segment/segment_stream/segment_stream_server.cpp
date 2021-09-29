@@ -191,7 +191,6 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<http::svr::HttpCo
 			response->SetStatusCode(http::StatusCode::BadRequest);
 			break;
 		}
-
 		else
 		{
 			if (origin_url.IsEmpty())
@@ -232,6 +231,8 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<http::svr::HttpCo
 
 bool SegmentStreamServer::SetRtmpCorsHeaders(const std::shared_ptr<http::svr::HttpResponse> &response)
 {
+	std::lock_guard lock_guard(_cors_mutex);
+
 	if (_cors_rtmp.IsEmpty() == false)
 	{
 		response->SetHeader("Content-Type", "text/x-cross-domain-policy");
@@ -243,48 +244,56 @@ bool SegmentStreamServer::SetRtmpCorsHeaders(const std::shared_ptr<http::svr::Ht
 
 bool SegmentStreamServer::SetHttpCorsHeaders(const info::VHostAppName &vhost_app_name, const ov::String &origin, const std::shared_ptr<const ov::Url> &url, const std::shared_ptr<http::svr::HttpResponse> &response)
 {
-	auto cors_policy_iterator = _cors_policy_map.find(vhost_app_name);
-	auto cors_domains_iterator = _cors_http_map.find(vhost_app_name);
+	ov::String cors_header = "";
 
-	if (
-		(cors_policy_iterator == _cors_policy_map.end()) ||
-		(cors_domains_iterator == _cors_http_map.end()))
 	{
-		OV_ASSERT2(false);
-		return false;
-	}
+		std::lock_guard lock_guard(_cors_mutex);
 
-	const auto &cors_policy = cors_policy_iterator->second;
-	auto cors_header = "";
+		auto cors_policy_iterator = _cors_policy_map.find(vhost_app_name);
+		auto cors_domains_iterator = _cors_http_map.find(vhost_app_name);
 
-	switch (cors_policy)
-	{
-		case CorsPolicy::Empty:
-			// Nothing to do
-			return true;
+		if (
+			(cors_policy_iterator == _cors_policy_map.end()) ||
+			(cors_domains_iterator == _cors_http_map.end()))
+		{
+			// This happens in the following situations:
+			//
+			// 1) Request to an application that doesn't exist
+			// 2) Request while the application is being created
+			return false;
+		}
 
-		case CorsPolicy::All:
-			cors_header = "*";
-			break;
+		const auto &cors_policy = cors_policy_iterator->second;
 
-		case CorsPolicy::Null:
-			cors_header = "null";
-			break;
+		switch (cors_policy)
+		{
+			case CorsPolicy::Empty:
+				// Nothing to do
+				return true;
 
-		case CorsPolicy::Origin: {
-			const auto &cors_domains = cors_domains_iterator->second;
-			auto item = std::find_if(cors_domains.begin(), cors_domains.end(),
-									 [&origin](auto &cors_domain) -> bool {
-										 return (origin == cors_domain);
-									 });
+			case CorsPolicy::All:
+				cors_header = "*";
+				break;
 
-			if (item == cors_domains.end())
-			{
-				// Could not find the domain
-				return false;
+			case CorsPolicy::Null:
+				cors_header = "null";
+				break;
+
+			case CorsPolicy::Origin: {
+				const auto &cors_domains = cors_domains_iterator->second;
+				auto item = std::find_if(cors_domains.begin(), cors_domains.end(),
+										 [&origin](auto &cors_domain) -> bool {
+											 return (origin == cors_domain);
+										 });
+
+				if (item == cors_domains.end())
+				{
+					// Could not find the domain
+					return false;
+				}
+
+				cors_header = origin;
 			}
-
-			cors_header = origin;
 		}
 	}
 
@@ -300,111 +309,115 @@ bool SegmentStreamServer::SetHttpCorsHeaders(const info::VHostAppName &vhost_app
 
 void SegmentStreamServer::SetCrossDomains(const info::VHostAppName &vhost_app_name, const std::vector<ov::String> &url_list)
 {
-	auto &cors_urls = _cors_http_map[vhost_app_name];
-	auto &cors_policy = _cors_policy_map[vhost_app_name];
-	ov::String cors_rtmp;
-
-	auto cors_domains_for_rtmp = std::vector<ov::String>();
-
-	cors_urls.clear();
-	cors_rtmp = "";
-
-	if (url_list.size() == 0)
 	{
-		cors_policy = CorsPolicy::Empty;
-		return;
-	}
+		std::lock_guard lock_guard(_cors_mutex);
 
-	cors_policy = CorsPolicy::Origin;
+		auto &cors_urls = _cors_http_map[vhost_app_name];
+		auto &cors_policy = _cors_policy_map[vhost_app_name];
+		ov::String cors_rtmp;
 
-	constexpr char HTTP_PREFIX[] = "http://";
-	constexpr auto HTTP_PREFIX_LENGTH = OV_COUNTOF(HTTP_PREFIX) - 1;
-	constexpr char HTTPS_PREFIX[] = "https://";
-	constexpr auto HTTPS_PREFIX_LENGTH = OV_COUNTOF(HTTPS_PREFIX) - 1;
+		auto cors_domains_for_rtmp = std::vector<ov::String>();
 
-	for (auto url : url_list)
-	{
-		if (url == "*")
+		cors_urls.clear();
+		cors_rtmp = "";
+
+		if (url_list.size() == 0)
 		{
-			cors_urls.clear();
-			cors_urls.push_back("*");
-			cors_policy = CorsPolicy::All;
+			cors_policy = CorsPolicy::Empty;
+			return;
+		}
 
-			if (url_list.size() > 1)
+		cors_policy = CorsPolicy::Origin;
+
+		constexpr char HTTP_PREFIX[] = "http://";
+		constexpr auto HTTP_PREFIX_LENGTH = OV_COUNTOF(HTTP_PREFIX) - 1;
+		constexpr char HTTPS_PREFIX[] = "https://";
+		constexpr auto HTTPS_PREFIX_LENGTH = OV_COUNTOF(HTTPS_PREFIX) - 1;
+
+		for (auto url : url_list)
+		{
+			if (url == "*")
 			{
-				// Ignore other items if "*" is specified
-				logtw("Invalid CORS settings found for %s: '*' cannot be used like other items. Other items are ignored.", vhost_app_name.CStr());
+				cors_urls.clear();
+				cors_urls.push_back("*");
+				cors_policy = CorsPolicy::All;
+
+				if (url_list.size() > 1)
+				{
+					// Ignore other items if "*" is specified
+					logtw("Invalid CORS settings found for %s: '*' cannot be used like other items. Other items are ignored.", vhost_app_name.CStr());
+				}
+
+				break;
+			}
+			else if (url == "null")
+			{
+				if (url_list.size() > 1)
+				{
+					logtw("Invalid CORS settings found for %s: '*' cannot be used like other items. 'null' item is ignored.", vhost_app_name.CStr());
+				}
+				else
+				{
+					cors_policy = CorsPolicy::Null;
+				}
+
+				continue;
 			}
 
-			break;
-		}
-		else if (url == "null")
-		{
-			if (url_list.size() > 1)
+			cors_urls.push_back(url);
+
+			if (url.HasPrefix(HTTP_PREFIX))
 			{
-				logtw("Invalid CORS settings found for %s: '*' cannot be used like other items. 'null' item is ignored.", vhost_app_name.CStr());
+				url = url.Substring(HTTP_PREFIX_LENGTH);
 			}
-			else
+			else if (url.HasPrefix(HTTPS_PREFIX))
 			{
-				cors_policy = CorsPolicy::Null;
+				url = url.Substring(HTTPS_PREFIX_LENGTH);
 			}
 
-			continue;
+			cors_domains_for_rtmp.push_back(url);
 		}
 
-		cors_urls.push_back(url);
+		// Create crossdomain.xml for RTMP - OME does not support RTMP playback, so it is not used.
+		std::ostringstream cross_domain_xml;
 
-		if (url.HasPrefix(HTTP_PREFIX))
-		{
-			url = url.Substring(HTTP_PREFIX_LENGTH);
-		}
-		else if (url.HasPrefix(HTTPS_PREFIX))
-		{
-			url = url.Substring(HTTPS_PREFIX_LENGTH);
-		}
-
-		cors_domains_for_rtmp.push_back(url);
-	}
-
-	// Create crossdomain.xml for RTMP - OME does not support RTMP playback, so it is not used.
-	std::ostringstream cross_domain_xml;
-
-	cross_domain_xml
-		<< R"(<?xml version="1.0"?>)" << std::endl
-		<< R"(<!DOCTYPE cross-domain-policy SYSTEM "http://www.adobe.com/xml/dtds/cross-domain-policy.dtd">)" << std::endl
-		<< R"(<cross-domain-policy>)" << std::endl;
-
-	if (cors_policy == CorsPolicy::All)
-	{
 		cross_domain_xml
-			<< R"(	<site-control permitted-cross-domain-policies="all" />)" << std::endl
-			<< R"(	<allow-access-from domain="*" secure="false" />)" << std::endl
-			<< R"(	<allow-http-request-headers-from domain="*" headers="*" secure="false"/>)" << std::endl;
-	}
-	else
-	{
-		for (auto &cors_domain : cors_urls)
+			<< R"(<?xml version="1.0"?>)" << std::endl
+			<< R"(<!DOCTYPE cross-domain-policy SYSTEM "http://www.adobe.com/xml/dtds/cross-domain-policy.dtd">)" << std::endl
+			<< R"(<cross-domain-policy>)" << std::endl;
+
+		if (cors_policy == CorsPolicy::All)
 		{
 			cross_domain_xml
-				<< R"(	<allow-access-from domain=")" << cors_domain.CStr() << R"(" />)" << std::endl;
+				<< R"(	<site-control permitted-cross-domain-policies="all" />)" << std::endl
+				<< R"(	<allow-access-from domain="*" secure="false" />)" << std::endl
+				<< R"(	<allow-http-request-headers-from domain="*" headers="*" secure="false"/>)" << std::endl;
 		}
-	}
-
-	cross_domain_xml
-		<< R"(</cross-domain-policy>)";
-
-	cors_rtmp = cross_domain_xml.str().c_str();
-
-	if (_cors_rtmp.IsEmpty())
-	{
-		_cors_rtmp = cors_rtmp;
-	}
-	else
-	{
-		if (cors_rtmp != _cors_rtmp)
+		else
 		{
-			logtw("Different CORS settings found for RTMP: crossdomain.xml must be located / and cannot be declared per app");
-			logtw("This CORS settings will be used\n%s", _cors_rtmp.CStr());
+			for (auto &cors_domain : cors_urls)
+			{
+				cross_domain_xml
+					<< R"(	<allow-access-from domain=")" << cors_domain.CStr() << R"(" />)" << std::endl;
+			}
+		}
+
+		cross_domain_xml
+			<< R"(</cross-domain-policy>)";
+
+		cors_rtmp = cross_domain_xml.str().c_str();
+
+		if (_cors_rtmp.IsEmpty())
+		{
+			_cors_rtmp = cors_rtmp;
+		}
+		else
+		{
+			if (cors_rtmp != _cors_rtmp)
+			{
+				logtw("Different CORS settings found for RTMP: crossdomain.xml must be located / and cannot be declared per app");
+				logtw("This CORS settings will be used\n%s", _cors_rtmp.CStr());
+			}
 		}
 	}
 }

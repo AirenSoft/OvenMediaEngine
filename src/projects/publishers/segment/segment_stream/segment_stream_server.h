@@ -115,6 +115,8 @@ protected:
 	std::shared_ptr<http::svr::HttpServer> _https_server;
 	std::vector<std::shared_ptr<SegmentStreamObserver>> _observers;
 
+	std::mutex _cors_mutex;
+	
 	std::unordered_map<info::VHostAppName, CorsPolicy> _cors_policy_map;
 	// CORS for HTTP
 	std::unordered_map<info::VHostAppName, std::vector<ov::String>> _cors_http_map;
