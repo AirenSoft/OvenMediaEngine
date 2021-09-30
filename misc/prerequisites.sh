@@ -185,21 +185,21 @@ install_ffmpeg()
     fi
 
     if [ "$NVIDIA_VIDEO_CODEC_HWACCELS" = true ] ; then
-        ADDI_LIBS+=" --enable-cuda-nvcc --enable-libnpp"
+        ADDI_LIBS+=" --enable-cuda-nvcc --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec"
         ADDI_ENCODER+=",h264_nvenc,hevc_nvenc"
         ADDI_DECODER+=",h264_nvdec,hevc_nvdec"
         ADDI_CFLAGS+="-I/usr/local/cuda/include"
         ADDI_LDFLAGS="-L/usr/local/cuda/lib64"
-        ADDI_HWACCEL="--enable-hwaccel=h264_nvdec,hevc_nvdec"
+        ADDI_HWACCEL="--enable-hwaccel=h264_nvdec,hevc_nvdec,nvenc,nvdec"
     fi
-
-
 
     (DIR=${TEMP_PATH}/ffmpeg && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sLf https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n${FFMPEG_VERSION}.tar.gz | tar -xz --strip-components=1 && \
-    PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PREFIX}/lib64/pkgconfig:${PKG_CONFIG_PATH} ./configure \
+    sed -i 's/compute_30/compute_60/g' ./configure && \
+    sed -i 's/sm_30/sm_60/g' ./configure && \
+    PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PREFIX}/lib64/pkgconfig:${PREFIX}/usr/local/lib//pkgconfig:${PKG_CONFIG_PATH} ./configure \
     --prefix="${PREFIX}" \
     --enable-gpl \
     --enable-nonfree \

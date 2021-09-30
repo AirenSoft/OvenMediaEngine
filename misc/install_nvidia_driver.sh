@@ -35,6 +35,7 @@ install_nvcc_headers() {
     (DIR=${TEMP_PATH}/nvcc-hdr && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
+    export DESTDIR=${PREFIX} && \
     curl -sLf https://github.com/FFmpeg/nv-codec-headers/releases/download/n${NVCC_HEADERS}/nv-codec-headers-${NVCC_HEADERS}.tar.gz | tar -xz --strip-components=1 && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "nvcc_headers"
