@@ -30,9 +30,7 @@ bool EncoderFFOPUS::Configure(std::shared_ptr<TranscodeContext> output_context)
 		return false;
 	}
 
-	// create codec context
 	_context = ::avcodec_alloc_context3(codec);
-
 	if (_context == nullptr)
 	{
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
@@ -46,10 +44,13 @@ bool EncoderFFOPUS::Configure(std::shared_ptr<TranscodeContext> output_context)
 	_context->channels = output_context->GetAudioChannel().GetCounts();
 	_context->codec = codec;
 	_context->codec_id = codec_id;
+	_context->cutoff = 12000;  // SuperWideBand
+	_context->compression_level = 10;
+	::av_opt_set(_context->priv_data, "application", "lowdelay", 0);
+	::av_opt_set(_context->priv_data, "frame_duration", "20.0", 0);
+	::av_opt_set(_context->priv_data, "packet_loss", "10", 0);
+	::av_opt_set(_context->priv_data, "vbr", "off", 0);
 
-	::av_opt_set(_context->priv_data, "frame_duration", "10", 0);
-
-	// open codec
 	if (::avcodec_open2(_context, codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(codec_id), codec_id);
@@ -57,7 +58,8 @@ bool EncoderFFOPUS::Configure(std::shared_ptr<TranscodeContext> output_context)
 	}
 
 	output_context->SetAudioSamplesPerFrame(_context->frame_size);
-	
+
+
 	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
 	try
 	{
@@ -107,8 +109,6 @@ void EncoderFFOPUS::ThreadEncode()
 
 		const MediaFrame *frame = buffer.get();
 
-		// logte("DECODE:: %lld %lld", frame->GetPts(), frame->GetPts() * 1000);
-
 		_frame->format = _context->sample_fmt;
 		_frame->nb_samples = _context->frame_size;
 		_frame->pts = frame->GetPts();
@@ -126,8 +126,7 @@ void EncoderFFOPUS::ThreadEncode()
 		if (::av_frame_make_writable(_frame) < 0)
 		{
 			logte("Could not make sure the frame data is writable");
-			// *result = TranscodeResult::DataError;
-			break; 
+			break;
 		}
 
 		::memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
@@ -151,27 +150,18 @@ void EncoderFFOPUS::ThreadEncode()
 			else if (ret == AVERROR_EOF)
 			{
 				logte("Error receiving a packet for decoding : AVERROR_EOF");
-
-				// *result = TranscodeResult::DataError;
-				// return nullptr;
 				break;
 			}
 			else if (ret < 0)
 			{
 				logte("Error receiving a packet for encoding : %d", ret);
-
-				// *result = TranscodeResult::DataError;
-				// return nullptr;
 				break;
 			}
 			else
 			{
-				// Packet is ready
 				auto packet_buffer = std::make_shared<MediaPacket>(cmn::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts, _packet->dts, _packet->duration, MediaPacketFlag::Key);
 				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::OPUS);
 				packet_buffer->SetPacketType(cmn::PacketType::RAW);
-
-				// logte("ENCODED:: %lld, %lld, %d, %d", packet_buffer->GetPts(), _packet->pts, _packet->size, _packet->duration);
 
 				::av_packet_unref(_packet);
 

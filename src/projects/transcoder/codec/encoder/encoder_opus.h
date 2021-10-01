@@ -42,6 +42,7 @@ protected:
 	int _expert_frame_duration;
 	cmn::AudioSample::Format _format;
 	int64_t _current_pts;
+	uint32_t _frame_size = 0;
 
 	OpusEncoder *_encoder;
 };
