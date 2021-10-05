@@ -304,6 +304,7 @@
 							<Timeout>30000</Timeout>
 							<Rtx>false</Rtx>
 							<Ulpfec>false</Ulpfec>
+							<JitterBuffer>false</JitterBuffer>
 						</WebRTC>
 						<HLS>
 							<SegmentDuration>5</SegmentDuration>
