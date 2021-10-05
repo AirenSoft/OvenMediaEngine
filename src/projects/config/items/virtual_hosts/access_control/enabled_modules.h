@@ -25,7 +25,8 @@ namespace cfg
 
 					for (const auto &item : _value_list)
 					{
-						if (item == value)
+						auto config_value = item.Trim();
+						if (config_value == value)
 						{
 							return true;
 						}

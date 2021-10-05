@@ -243,7 +243,7 @@ namespace ov
 			}
 
 			case SocketType::Srt:
-				if (SetSockOpt(SRTO_RCVSYN, mode != BlockingMode::Blocking) == false || SetSockOpt(SRTO_SNDSYN, mode != BlockingMode::Blocking) == false)
+				if (SetSockOpt(SRTO_RCVSYN, mode == BlockingMode::Blocking) == false || SetSockOpt(SRTO_SNDSYN, mode == BlockingMode::Blocking) == false)
 				{
 					logae("Could not set flags to SRT socket %d: %s", GetNativeHandle(), SrtError::CreateErrorFromSrt()->ToString().CStr());
 					return false;
