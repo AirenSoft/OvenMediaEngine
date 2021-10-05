@@ -5,6 +5,7 @@ JitterBuffer::JitterBuffer(uint32_t track_id, uint64_t timebase)
 {
 	_timebase = timebase;
 	_track_id = track_id;
+	_input_stop_watch.Start();
 }
 
 int64_t JitterBuffer::GetTimebase()
@@ -29,6 +30,7 @@ int64_t JitterBuffer::GetNextPtsUsec()
 
 bool JitterBuffer::PushMediaPacket(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	_input_stop_watch.Update();
 	_media_packet_queue.Enqueue(media_packet);
 	return true;
 }
@@ -44,9 +46,39 @@ std::shared_ptr<MediaPacket> JitterBuffer::PopNextMediaPacket()
 	return nullptr;
 }
 
+size_t JitterBuffer::GetBufferingSizeCount()
+{
+	return _media_packet_queue.Size();
+}
+
 bool JitterBuffer::IsEmpty()
 {
 	return _media_packet_queue.IsEmpty();
+}
+
+bool JitterBuffer::IsActive()
+{
+	return _input_stop_watch.IsElapsed(MAX_JITTER_BUFFER_SIZE_US / 1000) == false;
+}
+
+int64_t JitterBuffer::GetBufferingSizeUsec()
+{
+	if(_media_packet_queue.Size() <= 1)
+	{
+		return 0;
+	}
+
+	auto front = _media_packet_queue.Front(0);
+	auto back = _media_packet_queue.Back(0);
+	auto front_pts = ((double)front.value()->GetPts() / (double)_timebase) * JITTER_BUFFER_TIMEBASE;
+	auto back_pts = ((double)back.value()->GetPts() / (double)_timebase) * JITTER_BUFFER_TIMEBASE;
+
+	return (uint64_t)(back_pts - front_pts);
+}
+
+bool JitterBuffer::IsFull()
+{
+	return GetBufferingSizeUsec() >= MAX_JITTER_BUFFER_SIZE_US;
 }
 
 bool JitterBufferDelay::CreateJitterBuffer(uint32_t track_id, int64_t timebase)
@@ -68,9 +100,19 @@ bool JitterBufferDelay::PushMediaPacket(const std::shared_ptr<MediaPacket> &medi
 
 std::shared_ptr<MediaPacket> JitterBufferDelay::PopNextMediaPacket()
 {
-	if(DoesEveryBufferHavePackets() == false)
+	if(DoesEveryActiveBufferHavePackets() == false)
 	{
-		return nullptr;
+		// If there are a empty buffer and a full buffer, pop from the full buffer
+		// Unlike the initial negotiations, either video or audio is not coming in at all.
+		auto buffer = GetFullBuffer();
+		if(buffer == nullptr)
+		{
+			return nullptr;
+		}
+
+		logc("DEBUG", "Full buffer (%d)", buffer->GetBufferingSizeCount());
+
+		return buffer->PopNextMediaPacket();
 	}
 
 	// Pop lowest PTS first
@@ -79,6 +121,14 @@ std::shared_ptr<MediaPacket> JitterBufferDelay::PopNextMediaPacket()
 	{
 		auto buffer = item.second;
 
+		logd("DEBUG", "Buffer(%lld) - Active(%d) Full(%d) Empty(%d) Jitter(%d us) Count(%d)", buffer->GetTimebase(), buffer->IsActive(), buffer->IsFull(), buffer->IsEmpty(), buffer->GetBufferingSizeUsec(), buffer->GetBufferingSizeCount());
+
+		// If there is no input for a certain period of time, it is considered as an inactive buffer.
+		if(buffer->IsActive() == false)
+		{
+			continue;
+		}
+
 		//logc("DEBUG", "Timebase : %u Next PTS : %u", buffer->GetTimebase(), buffer->GetNextPtsUsec());
 		if(next_jitter_buffer == nullptr || buffer->GetNextPtsUsec() < next_jitter_buffer->GetNextPtsUsec())
 		{
@@ -86,10 +136,16 @@ std::shared_ptr<MediaPacket> JitterBufferDelay::PopNextMediaPacket()
 		}
 	}
 
+	// There are no active buffers
+	if(next_jitter_buffer == nullptr)
+	{
+		return nullptr;
+	}
+
 	return next_jitter_buffer->PopNextMediaPacket();
 }
 
-bool JitterBufferDelay::DoesEveryBufferHavePackets()
+bool JitterBufferDelay::DoesEveryActiveBufferHavePackets()
 {
 	if(_media_packet_queue_map.empty())
 	{
@@ -99,11 +155,32 @@ bool JitterBufferDelay::DoesEveryBufferHavePackets()
 	for(const auto &item : _media_packet_queue_map)
 	{
 		auto buffer = item.second;
-		if(buffer->IsEmpty())
+		if(buffer->IsActive() == true && buffer->IsEmpty())
 		{
+			logd("DEBUG", "Empty Buffer(%lld) - Active(%d) Full(%d) Empty(%d) Jitter(%d us) Count(%d)", buffer->GetTimebase(), buffer->IsActive(), buffer->IsFull(), buffer->IsEmpty(), buffer->GetBufferingSizeUsec(), buffer->GetBufferingSizeCount());
+
 			return false;
 		}
 	}
 
 	return true;
+}
+
+std::shared_ptr<JitterBuffer> JitterBufferDelay::GetFullBuffer()
+{
+	if(_media_packet_queue_map.empty())
+	{
+		return nullptr;
+	}
+
+	for(const auto &item : _media_packet_queue_map)
+	{
+		auto buffer = item.second;
+		if(buffer->IsFull())
+		{
+			return buffer;
+		}
+	}
+
+	return nullptr;
 }
