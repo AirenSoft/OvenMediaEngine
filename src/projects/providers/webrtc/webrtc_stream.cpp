@@ -428,8 +428,8 @@ namespace pvd
 		}
 
 		//auto timestamp = _lip_sync_clock->GetNextTimestamp(clock_type, first_rtp_packet->Timestamp());
-		//auto timestamp = AdjustTimestamp(first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp());
-		auto timestamp = first_rtp_packet->Timestamp();
+		auto timestamp = AdjustTimestamp(first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp());
+		//auto timestamp = first_rtp_packet->Timestamp();
 
 		logtd("Payload Type(%d) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
 				first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
