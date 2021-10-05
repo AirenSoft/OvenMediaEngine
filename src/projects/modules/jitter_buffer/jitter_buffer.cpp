@@ -110,7 +110,7 @@ std::shared_ptr<MediaPacket> JitterBufferDelay::PopNextMediaPacket()
 			return nullptr;
 		}
 
-		logc("DEBUG", "Full buffer (%d)", buffer->GetBufferingSizeCount());
+		logd("DEBUG", "Full buffer (%d)", buffer->GetBufferingSizeCount());
 
 		return buffer->PopNextMediaPacket();
 	}
