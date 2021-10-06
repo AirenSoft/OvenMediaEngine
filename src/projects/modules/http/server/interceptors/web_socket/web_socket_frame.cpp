@@ -287,7 +287,7 @@ namespace http
 				// All of data in _previous_data were used in the previous step
 				OV_ASSERT2(_previous_data->GetLength() == 0);
 
-				size_t bytes_to_read = std::min(data->GetLength(), _remained_payload_length);
+				size_t bytes_to_read = std::min(data->GetLength(), static_cast<size_t>(_remained_payload_length));
 
 				if (bytes_to_read > 0)
 				{
