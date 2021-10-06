@@ -127,7 +127,6 @@ bool RtcStream::Start()
 
 	for (auto &track_item : _tracks)
 	{
-		ov::String codec = "";
 		auto &track = track_item.second;
 
 		switch (track->GetMediaType())
@@ -138,13 +137,13 @@ bool RtcStream::Start()
 				switch (track->GetCodecId())
 				{
 					case MediaCodecId::Vp8:
-						codec = "VP8";
+						payload->SetRtpmap(payload_type_num++, "VP8", 90000);
 						break;
 					case MediaCodecId::H265:
-						codec = "H265";
+						payload->SetRtpmap(payload_type_num++, "H265", 90000);
 						break;
 					case MediaCodecId::H264:
-						codec = "H264";
+						payload->SetRtpmap(payload_type_num++, "H264", 90000);
 
 						{
 							const auto &codec_extradata = track_item.second->GetCodecExtradata();
@@ -218,8 +217,6 @@ bool RtcStream::Start()
 					first_video_desc = false;
 				}
 
-				payload->SetRtpmap(payload_type_num++, codec, 90000);
-
 				if (_rtx_enabled == true)
 				{
 					payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
@@ -248,7 +245,8 @@ bool RtcStream::Start()
 				switch (track->GetCodecId())
 				{
 					case MediaCodecId::Opus:
-						codec = "OPUS";
+						payload->SetRtpmap(payload_type_num++, "OPUS", static_cast<uint32_t>(track->GetSample().GetRateNum()),
+								   std::to_string(track->GetChannel().GetCounts()).c_str());
 
 						// Enable inband-fec
 						// a=fmtp:111 maxplaybackrate=16000; useinbandfec=1; maxaveragebitrate=20000
@@ -288,9 +286,6 @@ bool RtcStream::Start()
 					_offer_sdp->AddMedia(audio_media_desc);
 					first_audio_desc = false;
 				}
-
-				payload->SetRtpmap(payload_type_num++, codec, static_cast<uint32_t>(track->GetSample().GetRateNum()),
-								   std::to_string(track->GetChannel().GetCounts()).c_str());
 
 				audio_media_desc->AddPayload(payload);
 				audio_media_desc->Update();
