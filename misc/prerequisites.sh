@@ -176,21 +176,24 @@ install_ffmpeg()
     ADDI_CFLAGS=""
     ADDI_LDFLAGS=""
     ADDI_HWACCEL="--disable-nvdec --disable-nvdec --disable-vaapi --disable-vdpau --disable-cuda-llvm --disable-cuvid --disable-ffnvcodec"
+    ADDI_FILTERS=""
 
     if [ "$INTEL_QSV_HWACCELS" = true ] ; then
         ADDI_LIBS+=" --enable-libmfx"
         ADDI_ENCODER+=",h264_qsv,hevc_qsv"
         ADDI_DECODER+=",vp8_qsv,h264_qsv,hevc_qsv"
         ADDI_HWACCEL=""
+        ADDI_FILTERS=""
     fi
 
     if [ "$NVIDIA_VIDEO_CODEC_HWACCELS" = true ] ; then
-        ADDI_LIBS+=" --enable-cuda-nvcc --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec"
+        ADDI_LIBS+=" --enable-cuda-nvcc --enable-cuda-llvm --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec"
         ADDI_ENCODER+=",h264_nvenc,hevc_nvenc"
         ADDI_DECODER+=",h264_nvdec,hevc_nvdec"
         ADDI_CFLAGS+="-I/usr/local/cuda/include"
         ADDI_LDFLAGS="-L/usr/local/cuda/lib64"
         ADDI_HWACCEL="--enable-hwaccel=h264_nvdec,hevc_nvdec,nvenc,nvdec"
+        ADDI_FILTERS=",scale_cuda,hwdownload,hwupload,hwupload_cuda"
     fi
 
     (DIR=${TEMP_PATH}/ffmpeg && \
@@ -220,7 +223,7 @@ install_ffmpeg()
     --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8${ADDI_DECODER} \
     --enable-parser=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
     --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp --enable-demuxer=rtsp --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
-    --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb,format && \
+    --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb,format${ADDI_FILTERS} && \
     make -j$(nproc) && \
     sudo make install && \
     sudo rm -rf ${PREFIX}/share && \
