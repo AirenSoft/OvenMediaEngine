@@ -106,11 +106,11 @@ public:
 	std::shared_ptr<ov::Data> GetMpeg4GenericConfig() const {return _mpeg4_generic_config;}
 
 private:
-	uint8_t _id;
-	SupportCodec _codec;
-	ov::String _codec_str;
-	uint32_t _rate;
-	ov::String _codec_param;
+	uint8_t _id = 0;
+	SupportCodec _codec = SupportCodec::Unknown;
+	ov::String _codec_str = "";
+	uint32_t _rate = 0;
+	ov::String _codec_param = "";
 
 	Mpeg4GenericMode _mpeg4_generic_mode = Mpeg4GenericMode::Generic;
 	uint32_t _mpeg4_generic_size_length = 0;
@@ -120,8 +120,8 @@ private:
 
 	bool _rtcpfb_support_flag[(int)(RtcpFbType::NumberOfRtcpFbType)];
 
-	ov::String _fmtp;
+	ov::String _fmtp = "";
 
-	std::shared_ptr<ov::Data>	_h264_sps_bytes;
-	std::shared_ptr<ov::Data>	_h264_pps_bytes;
+	std::shared_ptr<ov::Data>	_h264_sps_bytes = nullptr;
+	std::shared_ptr<ov::Data>	_h264_pps_bytes = nullptr;
 };
