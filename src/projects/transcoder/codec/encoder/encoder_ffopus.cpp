@@ -15,6 +15,24 @@ EncoderFFOPUS::~EncoderFFOPUS()
 	Stop();
 }
 
+bool EncoderFFOPUS::SetCodecParams()
+{
+	_codec_context->bit_rate = _encoder_context->GetBitrate();
+	_codec_context->sample_fmt = AV_SAMPLE_FMT_S16;
+	_codec_context->sample_rate = _encoder_context->GetAudioSampleRate();
+	_codec_context->channel_layout = static_cast<uint64_t>(_encoder_context->GetAudioChannel().GetLayout());
+	_codec_context->channels = _encoder_context->GetAudioChannel().GetCounts();
+	_codec_context->cutoff = 12000;	 // SuperWideBand
+	_codec_context->compression_level = 10;
+	
+	::av_opt_set(_codec_context->priv_data, "application", "lowdelay", 0);
+	::av_opt_set(_codec_context->priv_data, "frame_duration", "20.0", 0);
+	::av_opt_set(_codec_context->priv_data, "packet_loss", "10", 0);
+	::av_opt_set(_codec_context->priv_data, "vbr", "off", 0);
+
+	return true;
+}
+
 bool EncoderFFOPUS::Configure(std::shared_ptr<TranscodeContext> output_context)
 {
 	if (TranscodeEncoder::Configure(output_context) == false)
@@ -30,35 +48,26 @@ bool EncoderFFOPUS::Configure(std::shared_ptr<TranscodeContext> output_context)
 		return false;
 	}
 
-	_context = ::avcodec_alloc_context3(codec);
-	if (_context == nullptr)
+	_codec_context = ::avcodec_alloc_context3(codec);
+	if (_codec_context == nullptr)
 	{
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
 
-	_context->bit_rate = output_context->GetBitrate();
-	_context->sample_fmt = AV_SAMPLE_FMT_S16;
-	_context->sample_rate = output_context->GetAudioSampleRate();
-	_context->channel_layout = static_cast<uint64_t>(output_context->GetAudioChannel().GetLayout());
-	_context->channels = output_context->GetAudioChannel().GetCounts();
-	_context->codec = codec;
-	_context->codec_id = codec_id;
-	_context->cutoff = 12000;  // SuperWideBand
-	_context->compression_level = 10;
-	::av_opt_set(_context->priv_data, "application", "lowdelay", 0);
-	::av_opt_set(_context->priv_data, "frame_duration", "20.0", 0);
-	::av_opt_set(_context->priv_data, "packet_loss", "10", 0);
-	::av_opt_set(_context->priv_data, "vbr", "off", 0);
+	if (SetCodecParams() == false)
+	{
+		logte("Could not set codec parameters for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		return false;
+	}
 
-	if (::avcodec_open2(_context, codec, nullptr) < 0)
+	if (::avcodec_open2(_codec_context, codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
 
-	output_context->SetAudioSamplesPerFrame(_context->frame_size);
-
+	_encoder_context->SetAudioSamplesPerFrame(_codec_context->frame_size);
 
 	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
 	try
@@ -109,13 +118,13 @@ void EncoderFFOPUS::ThreadEncode()
 
 		const MediaFrame *frame = buffer.get();
 
-		_frame->format = _context->sample_fmt;
-		_frame->nb_samples = _context->frame_size;
+		_frame->format = _codec_context->sample_fmt;
+		_frame->nb_samples = _codec_context->frame_size;
 		_frame->pts = frame->GetPts();
 		_frame->pkt_duration = frame->GetDuration();
-		_frame->channel_layout = _context->channel_layout;
-		_frame->channels = _context->channels;
-		_frame->sample_rate = _context->sample_rate;
+		_frame->channel_layout = _codec_context->channel_layout;
+		_frame->channels = _codec_context->channels;
+		_frame->sample_rate = _codec_context->sample_rate;
 
 		if (::av_frame_get_buffer(_frame, true) < 0)
 		{
@@ -130,7 +139,7 @@ void EncoderFFOPUS::ThreadEncode()
 		}
 
 		::memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
-		int ret = ::avcodec_send_frame(_context, _frame);
+		int ret = ::avcodec_send_frame(_codec_context, _frame);
 		if (ret < 0)
 		{
 			logte("Error sending a frame for encoding : %d", ret);
@@ -140,7 +149,7 @@ void EncoderFFOPUS::ThreadEncode()
 
 		while (true)
 		{
-			int ret = ::avcodec_receive_packet(_context, _packet);
+			int ret = ::avcodec_receive_packet(_codec_context, _packet);
 
 			if (ret == AVERROR(EAGAIN))
 			{

@@ -15,9 +15,20 @@ EncoderAAC::~EncoderAAC()
 	Stop();
 }
 
-bool EncoderAAC::Configure(std::shared_ptr<TranscodeContext> output_context)
+bool EncoderAAC::SetCodecParams()
 {
-	if (TranscodeEncoder::Configure(output_context) == false)
+	_codec_context->bit_rate = _encoder_context->GetBitrate();
+	_codec_context->sample_fmt = AV_SAMPLE_FMT_S16;
+	_codec_context->sample_rate = _encoder_context->GetAudioSampleRate();
+	_codec_context->channel_layout = static_cast<uint64_t>(_encoder_context->GetAudioChannel().GetLayout());
+	_codec_context->channels = _encoder_context->GetAudioChannel().GetCounts();
+
+	return true;
+}
+
+bool EncoderAAC::Configure(std::shared_ptr<TranscodeContext> context)
+{
+	if (TranscodeEncoder::Configure(context) == false)
 	{
 		return false;
 	}
@@ -31,33 +42,27 @@ bool EncoderAAC::Configure(std::shared_ptr<TranscodeContext> output_context)
 	}
 
 	// create codec context
-	_context = ::avcodec_alloc_context3(codec);
-
-	if (_context == nullptr)
+	_codec_context = ::avcodec_alloc_context3(codec);
+	if (_codec_context == nullptr)
 	{
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
 
-	_context->bit_rate = output_context->GetBitrate();
-	_context->sample_fmt = AV_SAMPLE_FMT_S16;
-
-	// Supported sample rate: 48000, 24000, 16000, 12000, 8000, 0
-	_context->sample_rate = output_context->GetAudioSampleRate();
-	_context->channel_layout = static_cast<uint64_t>(output_context->GetAudioChannel().GetLayout());
-	_context->channels = output_context->GetAudioChannel().GetCounts();
-	// _context->time_base = TimebaseToAVRational(output_context->GetTimeBase());
-	_context->codec = codec;
-	_context->codec_id = codec_id;
+	if (SetCodecParams() == false)
+	{
+		logte("Could not set codec parameters for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		return false;
+	}
 
 	// open codec
-	if (::avcodec_open2(_context, codec, nullptr) < 0)
+	if (::avcodec_open2(_codec_context, codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
 
-	output_context->SetAudioSamplesPerFrame(_context->frame_size);
+	_encoder_context->SetAudioSamplesPerFrame(_codec_context->frame_size);
 
 	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
 	try
@@ -108,16 +113,13 @@ void EncoderAAC::ThreadEncode()
 
 		const MediaFrame *frame = buffer.get();
 
-		// logte("DECODE:: %lld %lld", frame->GetPts(), frame->GetPts() * 1000);
-
-		_frame->format = _context->sample_fmt;
-		_frame->nb_samples = _context->frame_size;
+		_frame->format = _codec_context->sample_fmt;
+		_frame->nb_samples = _codec_context->frame_size;
 		_frame->pts = frame->GetPts();
 		_frame->pkt_duration = frame->GetDuration();
-
-		_frame->channel_layout = _context->channel_layout;
-		_frame->channels = _context->channels;
-		_frame->sample_rate = _context->sample_rate;
+		_frame->channel_layout = _codec_context->channel_layout;
+		_frame->channels = _codec_context->channels;
+		_frame->sample_rate = _codec_context->sample_rate;
 
 		if (::av_frame_get_buffer(_frame, 0) < 0)
 		{
@@ -134,7 +136,7 @@ void EncoderAAC::ThreadEncode()
 
 		::memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
 
-		int ret = ::avcodec_send_frame(_context, _frame);
+		int ret = ::avcodec_send_frame(_codec_context, _frame);
 
 		::av_frame_unref(_frame);
 
@@ -145,41 +147,30 @@ void EncoderAAC::ThreadEncode()
 
 		while (true)
 		{
-			int ret = ::avcodec_receive_packet(_context, _packet);
+			int ret = ::avcodec_receive_packet(_codec_context, _packet);
 
 			if (ret == AVERROR(EAGAIN))
 			{
-				// Wait for more packet
 				break;
 			}
 			else if (ret == AVERROR_EOF)
 			{
 				logte("Error receiving a packet for decoding : AVERROR_EOF");
-
-				// *result = TranscodeResult::DataError;
-				// return nullptr;
 				break;
 			}
 			else if (ret < 0)
 			{
 				logte("Error receiving a packet for encoding : %d", ret);
-
-				// *result = TranscodeResult::DataError;
-				// return nullptr;
 				break;
 			}
 			else
 			{
-				// Packet is ready
 				auto packet_buffer = std::make_shared<MediaPacket>(cmn::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts, _packet->dts, _packet->duration, MediaPacketFlag::Key);
 				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::AAC_ADTS);
 				packet_buffer->SetPacketType(cmn::PacketType::RAW);
 
-				// logte("ENCODED:: %lld, %lld, %d, %d", packet_buffer->GetPts(), _packet->pts, _packet->size, _packet->duration);
-
 				::av_packet_unref(_packet);
 
-				// TODO(soulk) : If the pts value are under zero, the dash packettizer does not work.
 				if (packet_buffer->GetPts() < 0)
 					continue;
 

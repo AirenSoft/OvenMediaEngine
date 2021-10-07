@@ -19,6 +19,18 @@ EncoderPNG::~EncoderPNG()
 	Stop();
 }
 
+bool EncoderPNG::SetCodecParams()
+{
+	_codec_context->codec_type = AVMEDIA_TYPE_VIDEO;
+	_codec_context->framerate = ::av_d2q((_encoder_context->GetFrameRate() > 0) ? _encoder_context->GetFrameRate() : _encoder_context->GetEstimateFrameRate(), AV_TIME_BASE);
+	_codec_context->time_base = ::av_inv_q(::av_mul_q(_codec_context->framerate, (AVRational){_codec_context->ticks_per_frame, 1}));
+	_codec_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
+	_codec_context->width = _encoder_context->GetVideoWidth();
+	_codec_context->height = _encoder_context->GetVideoHeight();
+
+	return true;
+}
+
 bool EncoderPNG::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	if (TranscodeEncoder::Configure(context) == false)
@@ -36,23 +48,20 @@ bool EncoderPNG::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	_context = ::avcodec_alloc_context3(codec);
-
-	if (_context == nullptr)
+	_codec_context = ::avcodec_alloc_context3(codec);
+	if (_codec_context == nullptr)
 	{
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
 
-	_context->codec_type = AVMEDIA_TYPE_VIDEO;
-	_context->framerate = ::av_d2q((_output_context->GetFrameRate() > 0) ? _output_context->GetFrameRate() : _output_context->GetEstimateFrameRate(), AV_TIME_BASE);
-	_context->time_base = ::av_inv_q(::av_mul_q(_context->framerate, (AVRational){_context->ticks_per_frame, 1}));
-	_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
-	_context->width = _output_context->GetVideoWidth();
-	_context->height = _output_context->GetVideoHeight();
+	if (SetCodecParams() == false)
+	{
+		logte("Could not set codec parameters for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		return false;
+	}
 
-
-	if (::avcodec_open2(_context, codec, nullptr) < 0)
+	if (::avcodec_open2(_codec_context, codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
@@ -64,7 +73,7 @@ bool EncoderPNG::Configure(std::shared_ptr<TranscodeContext> context)
 		_kill_flag = false;
 
 		_thread_work = std::thread(&EncoderPNG::ThreadEncode, this);
-		pthread_setname_np(_thread_work.native_handle(),  ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
+		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
 	{
@@ -133,7 +142,7 @@ void EncoderPNG::ThreadEncode()
 		::memcpy(_frame->data[1], frame->GetBuffer(1), frame->GetBufferSize(1));
 		::memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
 
-		int ret = ::avcodec_send_frame(_context, _frame);
+		int ret = ::avcodec_send_frame(_codec_context, _frame);
 
 		::av_frame_unref(_frame);
 
@@ -151,7 +160,7 @@ void EncoderPNG::ThreadEncode()
 		while (true)
 		{
 			// Check frame is availble
-			int ret = ::avcodec_receive_packet(_context, _packet);
+			int ret = ::avcodec_receive_packet(_codec_context, _packet);
 
 			if (ret == AVERROR(EAGAIN))
 			{

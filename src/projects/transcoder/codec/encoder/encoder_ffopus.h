@@ -32,4 +32,7 @@ public:
 	void ThreadEncode() override;
 
 	void Stop() override;	
+
+private:
+	bool SetCodecParams() override;	
 };

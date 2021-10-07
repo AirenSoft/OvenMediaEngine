@@ -17,6 +17,72 @@ EncoderHEVC::~EncoderHEVC()
 	Stop();
 }
 
+bool EncoderHEVC::SetCodecParams()
+{
+	_codec_context->framerate = ::av_d2q((_encoder_context->GetFrameRate() > 0) ? _encoder_context->GetFrameRate() : _encoder_context->GetEstimateFrameRate(), AV_TIME_BASE);
+	_codec_context->bit_rate = _encoder_context->GetBitrate();
+	_codec_context->rc_min_rate = _codec_context->rc_max_rate = _codec_context->bit_rate;
+	_codec_context->rc_buffer_size = static_cast<int>(_codec_context->bit_rate / 2);
+	_codec_context->sample_aspect_ratio = (AVRational){1, 1};
+
+	// From avcodec.h:
+	// For some codecs, the time base is closer to the field rate than the frame rate.
+	// Most notably, H.264 and MPEG-2 specify time_base as half of frame duration
+	// if no telecine is used ...
+	// Set to time_base ticks per frame. Default 1, e.g., H.264/MPEG-2 set it to 2.
+	_codec_context->ticks_per_frame = 2;
+	// From avcodec.h:
+	// For fixed-fps content, timebase should be 1/framerate and timestamp increments should be identically 1.
+	// This often, but not always is the inverse of the frame rate or field rate for video. 1/time_base is not the average frame rate if the frame rate is not constant.
+
+	_codec_context->time_base = ::av_inv_q(::av_mul_q(_codec_context->framerate, (AVRational){_codec_context->ticks_per_frame, 1}));
+
+	// _codec_context->gop_size = _codec_context->framerate.num / _codec_context->framerate.den;
+	_codec_context->max_b_frames = 0;
+	_codec_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
+	_codec_context->width = _encoder_context->GetVideoWidth();
+	_codec_context->height = _encoder_context->GetVideoHeight();
+	_codec_context->thread_count = FFMAX(4, av_cpu_count() / 3);
+
+	// For browser compatibility
+	_codec_context->profile = FF_PROFILE_HEVC_MAIN;
+
+	// Preset
+	if (_encoder_context->GetPreset() == "slower")
+	{
+		::av_opt_set(_codec_context->priv_data, "preset", "slower", 0);
+	}
+	else if (_encoder_context->GetPreset() == "slow")
+	{
+		::av_opt_set(_codec_context->priv_data, "preset", "slow", 0);
+	}
+	else if (_encoder_context->GetPreset() == "medium")
+	{
+		::av_opt_set(_codec_context->priv_data, "preset", "medium", 0);
+	}
+	else if (_encoder_context->GetPreset() == "fast")
+	{
+		::av_opt_set(_codec_context->priv_data, "preset", "fast", 0);
+	}
+	else if (_encoder_context->GetPreset() == "faster")
+	{
+		::av_opt_set(_codec_context->priv_data, "preset", "faster", 0);
+	}
+	else
+	{
+		// Default
+		::av_opt_set(_codec_context->priv_data, "preset", "faster", 0);
+	}
+
+	// Encoding Delay
+	::av_opt_set(_codec_context->priv_data, "tune", "zerolatency", 0);
+
+	// Keyframe Intervasl
+	::av_opt_set(_codec_context->priv_data, "x265-params", ov::String::FormatString("pass=1:bframes=0:no-scenecut=1:keyint=%.0f:min-keyint=%.0f:level-idc=4:no-open-gop=1", _encoder_context->GetFrameRate(), _encoder_context->GetFrameRate()).CStr(), 0);
+
+	return true;
+}
+
 // Notes.
 //
 // - B-frame must be disabled. because, WEBRTC does not support B-Frame.
@@ -37,53 +103,20 @@ bool EncoderHEVC::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	_context = ::avcodec_alloc_context3(codec);
-
-	if (_context == nullptr)
+	_codec_context = ::avcodec_alloc_context3(codec);
+	if (_codec_context == nullptr)
 	{
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
 
-	_context->framerate = ::av_d2q((_output_context->GetFrameRate() > 0) ? _output_context->GetFrameRate() : _output_context->GetEstimateFrameRate(), AV_TIME_BASE);
-	_context->bit_rate = _output_context->GetBitrate();
-	_context->rc_min_rate = _context->rc_max_rate = _context->bit_rate;
-	_context->rc_buffer_size = static_cast<int>(_context->bit_rate / 2);
-	_context->sample_aspect_ratio = (AVRational){1, 1};
+	if (SetCodecParams() == false)
+	{
+		logte("Could not set codec parameters for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		return false;
+	}
 
-	// From avcodec.h:
-	// For some codecs, the time base is closer to the field rate than the frame rate.
-	// Most notably, H.264 and MPEG-2 specify time_base as half of frame duration
-	// if no telecine is used ...
-	// Set to time_base ticks per frame. Default 1, e.g., H.264/MPEG-2 set it to 2.
-	_context->ticks_per_frame = 2;
-	// From avcodec.h:
-	// For fixed-fps content, timebase should be 1/framerate and timestamp increments should be identically 1.
-	// This often, but not always is the inverse of the frame rate or field rate for video. 1/time_base is not the average frame rate if the frame rate is not constant.
-
-	_context->time_base = ::av_inv_q(::av_mul_q(_context->framerate, (AVRational){_context->ticks_per_frame, 1}));
-
-	// _context->gop_size = _context->framerate.num / _context->framerate.den;
-	_context->max_b_frames = 0;
-	_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
-	_context->width = _output_context->GetVideoWidth();
-	_context->height = _output_context->GetVideoHeight();
-	_context->thread_count = 0;
-
-	// For browser compatibility
-	// _context->profile = FF_PROFILE_H264_MAIN;
-	_context->profile = FF_PROFILE_HEVC_MAIN;
-
-	// 인코딩 성능
-	::av_opt_set(_context->priv_data, "preset", "veryfast", 0);
-
-	// Encoding Delay
-	::av_opt_set(_context->priv_data, "tune", "zerolatency", 0);
-
-	// Keyframe Intervasl
-	::av_opt_set(_context->priv_data, "x265-params", ov::String::FormatString("pass=1:bframes=0:no-scenecut=1:keyint=%.0f:min-keyint=%.0f:level-idc=4:no-open-gop=1", _output_context->GetFrameRate(), _output_context->GetFrameRate()).CStr(), 0);
-
-	if (::avcodec_open2(_context, codec, nullptr) < 0)
+	if (::avcodec_open2(_codec_context, codec, nullptr) < 0)
 	{
 		logte("Could not open codec. %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
@@ -168,7 +201,7 @@ void EncoderHEVC::ThreadEncode()
 		::memcpy(_frame->data[1], frame->GetBuffer(1), frame->GetBufferSize(1));
 		::memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
 
-		int ret = ::avcodec_send_frame(_context, _frame);
+		int ret = ::avcodec_send_frame(_codec_context, _frame);
 		::av_frame_unref(_frame);
 
 		if (ret < 0)
@@ -185,7 +218,7 @@ void EncoderHEVC::ThreadEncode()
 		while (true)
 		{
 			// Check frame is availble
-			int ret = ::avcodec_receive_packet(_context, _packet);
+			int ret = ::avcodec_receive_packet(_codec_context, _packet);
 
 			if (ret == AVERROR(EAGAIN))
 			{
