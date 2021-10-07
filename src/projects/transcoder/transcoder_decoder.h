@@ -55,8 +55,6 @@ protected:
 	AVPacket *_pkt;
 	AVFrame *_frame;
 
-	int _decoded_frame_num = 0;
-
 	info::Stream _stream_info;
 
 	bool _kill_flag = false;

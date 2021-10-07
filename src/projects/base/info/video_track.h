@@ -39,6 +39,10 @@ public:
 	const FragmentationHeader& GetH264SpsPpsAnnexBFragmentHeader() const;
 	void SetH264SpsPpsAnnexBFormat(const std::shared_ptr<ov::Data>& data, const FragmentationHeader &header);
 
+	// Set by Configuration
+	void SetPreset(ov::String preset);
+	ov::String GetPreset() const;
+
 protected:
 	double _framerate;
 	double _estimate_framerate;
@@ -46,7 +50,7 @@ protected:
 	int32_t _width;
 	int32_t _height;
 	int32_t _format;
-
+	ov::String _preset;
 	std::shared_ptr<ov::Data> _h264_sps_pps_annexb_data = nullptr;
 	FragmentationHeader _h264_sps_pps_annexb_fragment_header;
 };

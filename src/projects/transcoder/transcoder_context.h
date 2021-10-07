@@ -17,19 +17,19 @@
 class TranscodeContext
 {
 public:
-	TranscodeContext(bool is_encoding_context);
+	TranscodeContext(bool encoder);
 	~TranscodeContext();
 
 	// Video
 	TranscodeContext(
-		bool is_encoding_context,
+		bool encoder,
 		cmn::MediaCodecId codec_id,
 		int32_t bitrate,
 		uint32_t width,
 		uint32_t height,
 		float frame_rate,
 		int colorspace)
-		: _is_encoding_context(is_encoding_context),
+		: _encoder(encoder),
 		  _codec_id(codec_id),
 		  _bitrate(bitrate),
 		  _video_width(width),
@@ -41,15 +41,16 @@ public:
 		_time_base.Set(1, 90000);
 		_video_gop = 30;
 		_h264_has_bframes = 0;
+		_preset = "";
 	}
 
 	// Audio
 	TranscodeContext(
-		bool is_encoding_context,
+		bool encoder,
 		cmn::MediaCodecId codec_id,
 		int32_t bitrate,
 		int32_t sample)
-		: _is_encoding_context(is_encoding_context),
+		: _encoder(encoder),
 		  _codec_id(codec_id),
 		  _bitrate(bitrate)
 	{
@@ -61,10 +62,7 @@ public:
 	}
 
 	// To determine whether this transcode context contains encoding/decoding information
-	bool IsEncodingContext() const
-	{
-		return _is_encoding_context;
-	}
+	bool IsEncodingContext() const;
 
 	//--------------------------------------------------------------------
 	// Video transcoding options
@@ -86,7 +84,7 @@ public:
 	uint32_t GetVideoHeight();
 
 	void SetColorspace(int colorspace);
-	int GetColorspace();
+	int GetColorspace() const;
 
 	void SetGOP(int32_t val);
 	int32_t GetGOP();
@@ -112,26 +110,30 @@ public:
 	cmn::MediaType GetMediaType() const;
 
 	void SetHardwareAccel(bool hwaccel);
-	bool GetHardwareAccel();
+	bool GetHardwareAccel() const;
 
 	void SetAudioSamplesPerFrame(int nbsamples);
-	int GetAudioSamplesPerFrame();
+	int GetAudioSamplesPerFrame() const;
+
+	void SetPreset(ov::String preset);
+	ov::String GetPreset() const;
 
 private:
 	// Context type
 	//    true = this context will be used for encoding
 	//    false = this context will be used for decoding
-	bool _is_encoding_context = false;
+	bool _encoder = false;
 
-	//--------------------------------------------------------------------
-	// Video transcoding options
-	//--------------------------------------------------------------------
+	// Codec ID
 	cmn::MediaCodecId _codec_id;
+
+	// Media Type
+	cmn::MediaType _media_type;
 
 	// Bitrate
 	int32_t _bitrate;
 
-	// Video timebase
+	// Video Timebase
 	cmn::Timebase _time_base;
 
 	// Resolution
@@ -149,24 +151,26 @@ private:
 	// GOP : Group Of Picture
 	int32_t _video_gop;
 
-	cmn::MediaType _media_type;
-
-	// Sample type
+	// Audio Sample Format
 	cmn::AudioSample _audio_sample;
 
-	// Channel
+	// Audio Channel
 	cmn::AudioChannel _audio_channel;
 
+	// Sample Count per frame
 	int _audio_samples_per_frame;
+
 	// Hardware accelerator
 	bool _hwaccel;
+
+	ov::String _preset;
 
 public:
 	//--------------------------------------------------------------------
 	// Informal Options
 	//--------------------------------------------------------------------
 	void SetH264hasBframes(int32_t bframes_count);
-	int32_t GetH264hasBframes();
+	int32_t GetH264hasBframes() const;
 
 private:
 	int32_t _h264_has_bframes;

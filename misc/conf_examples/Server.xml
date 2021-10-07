@@ -234,10 +234,7 @@
 					<Type>live</Type>
 					<OutputProfiles>
 						<!-- Enable this configuration if you want to hardware acceleration using GPU -->
-						<!-- 
 						<HardwareAcceleration>false</HardwareAcceleration>
-						-->
-
 						<OutputProfile>
 							<Name>bypass_stream</Name>
 							<OutputStreamName>${OriginStreamName}</OutputStreamName>
@@ -261,7 +258,8 @@
 									<Framerate>30</Framerate>
 									<Width>1280</Width>
 									<Height>720</Height>
-								</Video>								
+									<Preset>faster</Preset>
+								</Video>
 								-->
 							</Encodes>
 						</OutputProfile>

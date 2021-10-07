@@ -19,6 +19,28 @@ EncoderAVCxQSV::~EncoderAVCxQSV()
 	Stop();
 }
 
+bool EncoderAVCxQSV::SetCodecParams()
+{
+	_codec_context->bit_rate = _encoder_context->GetBitrate();
+	_codec_context->rc_min_rate = _codec_context->bit_rate;
+	_codec_context->rc_max_rate = _codec_context->bit_rate;
+	_codec_context->rc_buffer_size = static_cast<int>(_codec_context->bit_rate / 2);
+	_codec_context->sample_aspect_ratio = (AVRational){1, 1};
+	_codec_context->ticks_per_frame = 2;
+
+	_codec_context->framerate = ::av_d2q((_encoder_context->GetFrameRate() > 0) ? _encoder_context->GetFrameRate() : _encoder_context->GetEstimateFrameRate(), AV_TIME_BASE);
+	_codec_context->time_base = ::av_inv_q(::av_mul_q(_codec_context->framerate, (AVRational){_codec_context->ticks_per_frame, 1}));
+	_codec_context->gop_size = _codec_context->framerate.num / _codec_context->framerate.den;
+	_codec_context->max_b_frames = 0;
+	_codec_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
+	_codec_context->width = _encoder_context->GetVideoWidth();
+	_codec_context->height = _encoder_context->GetVideoHeight();
+
+	::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+
+	return true;
+}
+
 // Notes.
 //
 // - B-frame must be disabled. because, WEBRTC does not support B-Frame.
@@ -33,36 +55,26 @@ bool EncoderAVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 	auto codec_id = GetCodecID();
 
 	AVCodec *codec = ::avcodec_find_encoder_by_name("h264_qsv");
-	// AVCodec *codec = ::avcodec_find_encoder(codec_id);
 	if (codec == nullptr)
 	{
 		logte("Could not find encoder: %d (%s)", codec_id, ::avcodec_get_name(codec_id));
 		return false;
 	}
 
-	_context = ::avcodec_alloc_context3(codec);
-	if (_context == nullptr)
+	_codec_context = ::avcodec_alloc_context3(codec);
+	if (_codec_context == nullptr)
 	{
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
 
-	_context->bit_rate = _output_context->GetBitrate();
-	_context->rc_min_rate = _context->bit_rate;
-	_context->rc_max_rate = _context->bit_rate;
-	_context->rc_buffer_size = static_cast<int>(_context->bit_rate / 2);
-	_context->sample_aspect_ratio = (AVRational){1, 1};
-	_context->ticks_per_frame = 2;
+	if (SetCodecParams() == false)
+	{
+		logte("Could not set codec parameters for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		return false;
+	}
 
-	_context->framerate = ::av_d2q((_output_context->GetFrameRate() > 0) ? _output_context->GetFrameRate() : _output_context->GetEstimateFrameRate(), AV_TIME_BASE);
-	_context->time_base = ::av_inv_q(::av_mul_q(_context->framerate, (AVRational){_context->ticks_per_frame, 1}));
-	_context->gop_size = _context->framerate.num / _context->framerate.den;
-	_context->max_b_frames = 0;
-	_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
-	_context->width = _output_context->GetVideoWidth();
-	_context->height = _output_context->GetVideoHeight();
-
-	if (::avcodec_open2(_context, codec, nullptr) < 0)
+	if (::avcodec_open2(_codec_context, codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", codec->name, codec->id);
 		return false;
@@ -143,7 +155,7 @@ void EncoderAVCxQSV::ThreadEncode()
 		::memcpy(_frame->data[1], frame->GetBuffer(1), frame->GetBufferSize(1));
 		::memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
 
-		int ret = ::avcodec_send_frame(_context, _frame);
+		int ret = ::avcodec_send_frame(_codec_context, _frame);
 
 		::av_frame_unref(_frame);
 
@@ -158,7 +170,7 @@ void EncoderAVCxQSV::ThreadEncode()
 		while (true)
 		{
 			// Check frame is availble
-			int ret = ::avcodec_receive_packet(_context, _packet);
+			int ret = ::avcodec_receive_packet(_codec_context, _packet);
 
 			if (ret == AVERROR(EAGAIN))
 			{

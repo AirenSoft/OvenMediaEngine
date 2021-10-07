@@ -58,6 +58,7 @@ public:
 	virtual bool Configure(std::shared_ptr<TranscodeContext> context) = 0;
 
 	virtual void SendBuffer(std::shared_ptr<const InputType> buf) = 0;
+
 	virtual std::shared_ptr<OutputType> RecvBuffer(TranscodeResult *result) = 0;
 
 	static AVRational TimebaseToAVRational(const cmn::Timebase &timebase)

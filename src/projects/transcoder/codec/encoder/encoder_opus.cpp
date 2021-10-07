@@ -35,6 +35,12 @@ EncoderOPUS::~EncoderOPUS()
 	}
 }
 
+bool EncoderOPUS::SetCodecParams()
+{
+	return true;
+}
+
+
 bool EncoderOPUS::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	if (TranscodeEncoder::Configure(context) == false)
@@ -48,7 +54,7 @@ bool EncoderOPUS::Configure(std::shared_ptr<TranscodeContext> context)
 	int application = OPUS_APPLICATION_RESTRICTED_LOWDELAY;
 	int error;
 
-	_encoder = ::opus_encoder_create(context->GetAudioSampleRate(), context->GetAudioChannel().GetCounts(), application, &error);
+	_encoder = ::opus_encoder_create(_encoder_context->GetAudioSampleRate(), _encoder_context->GetAudioChannel().GetCounts(), application, &error);
 	if ((_encoder == nullptr) || (error != OPUS_OK))
 	{
 		logte("Could not create OPUS encoder: %d", error);
@@ -71,9 +77,9 @@ bool EncoderOPUS::Configure(std::shared_ptr<TranscodeContext> context)
 	::opus_encoder_ctl(_encoder, OPUS_SET_EXPERT_FRAME_DURATION(_expert_frame_duration));
 
 	// Bitrate
-	::opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(context->GetBitrate()));
+	::opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(_encoder_context->GetBitrate()));
 
-	const uint32_t default_frame_size = context->GetAudioSampleRate() / 100;  // default 10ms
+	const uint32_t default_frame_size = _encoder_context->GetAudioSampleRate() / 100;  // default 10ms
 	switch (_expert_frame_duration)
 	{
 		case OPUS_FRAMESIZE_2_5_MS:
@@ -98,14 +104,14 @@ bool EncoderOPUS::Configure(std::shared_ptr<TranscodeContext> context)
 	OV_ASSERT2(_frame_size > 0);
 
 	// (48000Hz / 100ms) * 6 = 2880 samples( == 60ms)
-	const int max_opus_frame_count = (context->GetAudioSampleRate() / 100) * 6;
+	const int max_opus_frame_count = (_encoder_context->GetAudioSampleRate() / 100) * 6;
 	// OPUS supports up to 256, but only 16 are used here.
 	const int estimated_channel_count = 16;
 	// OPUS supports int16 or float
 	const int estimated_frame_size = std::max(sizeof(opus_int16), sizeof(float));
 
-	context->SetAudioSamplesPerFrame(_frame_size);
-	context->SetAudioSampleFormat(cmn::AudioSample::Format::FltP);
+	_encoder_context->SetAudioSamplesPerFrame(_frame_size);
+	_encoder_context->SetAudioSampleFormat(cmn::AudioSample::Format::FltP);
 
 	// Setting the maximum size of PCM data to be encoded 
 	_buffer = std::make_shared<ov::Data>(max_opus_frame_count * estimated_channel_count * estimated_frame_size);
@@ -151,7 +157,7 @@ void EncoderOPUS::ThreadEncode()
 	// Number of samples per channel in the input signal. This must be an Opus frame size for the encoder's sampling rate.
 	// For example, at 48 kHz the permitted values are 120, 240, 480, 960, 1920, and 2880. Passing in a duration of less than 10 ms (480 samples at 48 kHz)
 
-	const unsigned int bytes_to_encode = _frame_size * _output_context->GetAudioChannel().GetCounts() * _output_context->GetAudioSample().GetSampleSize();
+	const unsigned int bytes_to_encode = _frame_size * _encoder_context->GetAudioChannel().GetCounts() * _encoder_context->GetAudioSample().GetSampleSize();
 
 	while (!_kill_flag)
 	{

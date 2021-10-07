@@ -15,8 +15,8 @@
 
 #include "transcoder_private.h"
 
-TranscodeContext::TranscodeContext(bool is_encoding_context)
-	: _is_encoding_context(is_encoding_context)
+TranscodeContext::TranscodeContext(bool encoder)
+	: _encoder(encoder)
 {
 	SetTimeBase(1, 1000000);
 	_hwaccel = false;
@@ -24,6 +24,11 @@ TranscodeContext::TranscodeContext(bool is_encoding_context)
 
 TranscodeContext::~TranscodeContext()
 {
+}
+
+bool TranscodeContext::IsEncodingContext() const
+{
+	return _encoder;
 }
 
 void TranscodeContext::SetCodecId(cmn::MediaCodecId val)
@@ -161,7 +166,7 @@ void TranscodeContext::SetColorspace(int colorspace)
 	_colorspace = colorspace;
 }
 
-int TranscodeContext::GetColorspace()
+int TranscodeContext::GetColorspace() const
 {
 	return _colorspace;
 }
@@ -171,7 +176,7 @@ void TranscodeContext::SetHardwareAccel(bool hwaccel)
 	_hwaccel = hwaccel;
 }
 
-bool TranscodeContext::GetHardwareAccel()
+bool TranscodeContext::GetHardwareAccel() const
 {
 	return _hwaccel;
 }
@@ -181,7 +186,7 @@ void TranscodeContext::SetH264hasBframes(int32_t bframes_count)
 	_h264_has_bframes = bframes_count;
 }
 
-int32_t TranscodeContext::GetH264hasBframes()
+int32_t TranscodeContext::GetH264hasBframes() const
 {
 	return _h264_has_bframes;
 }
@@ -191,7 +196,17 @@ void TranscodeContext::SetAudioSamplesPerFrame(int samples)
 	_audio_samples_per_frame = samples;
 }
 
-int TranscodeContext::GetAudioSamplesPerFrame()
+int TranscodeContext::GetAudioSamplesPerFrame() const
 {
 	return _audio_samples_per_frame;
+}
+
+void TranscodeContext::SetPreset(ov::String preset)
+{
+	_preset = preset;
+}
+
+ov::String TranscodeContext::GetPreset() const
+{
+	return _preset;
 }
