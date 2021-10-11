@@ -993,40 +993,57 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 			}
 			else
 			{
-				if (output_track->GetWidth() == 0)
+				if (output_track->GetMediaType() == cmn::MediaType::Video)
 				{
-					output_track->SetWidth(buffer->GetWidth());
+					if (output_track->GetWidth() == 0 && output_track->GetHeight() == 0)
+					{
+						// Keep the original video resolution
+						output_track->SetWidth(buffer->GetWidth());
+						output_track->SetHeight(buffer->GetHeight());
+					}
+					else if (output_track->GetWidth() == 0 && output_track->GetHeight() != 0)
+					{
+						// Width is automatically calculated as the original video ratio
+						float aspect_raio = (float)buffer->GetWidth() / (float)buffer->GetHeight();
+						int32_t width = (int32_t)((float)output_track->GetHeight() * aspect_raio);
+						width = (width % 2 == 0) ? width : width + 1;
+						output_track->SetWidth(width);
+					}
+					else if (output_track->GetWidth() != 0 && output_track->GetHeight() == 0)
+					{
+						// Heigh is automatically calculated as the original video ratio
+						float aspect_raio = (float)buffer->GetWidth() / (float)buffer->GetHeight();
+						int32_t height = (int32_t)((float)output_track->GetWidth() / aspect_raio);
+						height = (height % 2 == 0) ? height : height + 1;
+						output_track->SetHeight(height);
+					}
+
+					if (output_track->GetFrameRate() == 0.0f)
+					{
+						auto &input_track = _input_stream->GetTrack(buffer->GetTrackId());
+						float estimated_framerate = 1 / ((double)buffer->GetDuration() * input_track->GetTimeBase().GetExpr());
+						logti("Framerate of the output stream is not set. set the estimated framerate of source stream. %.2ffps", estimated_framerate);
+						output_track->SetEstimateFrameRate(estimated_framerate);
+					}
 				}
 
-				if (output_track->GetHeight() == 0)
+				if (output_track->GetMediaType() == cmn::MediaType::Audio)
 				{
-					output_track->SetHeight(buffer->GetHeight());
+					if (output_track->GetSampleRate() == 0)
+					{
+						output_track->SetSampleRate(buffer->GetSampleRate());
+						output_track->SetTimeBase(1, buffer->GetSampleRate());
+					}
+
+					if (output_track->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutUnknown)
+					{
+						output_track->SetChannel(buffer->GetChannels());
+					}
 				}
 
 				if (output_track->GetFormat() == 0)
 				{
 					output_track->SetFormat(buffer->GetFormat());
-				}
-
-				if (output_track->GetSampleRate() == 0 &&
-					output_track->GetMediaType() == cmn::MediaType::Audio)
-				{
-					output_track->SetSampleRate(buffer->GetSampleRate());
-					output_track->SetTimeBase(1, buffer->GetSampleRate());
-				}
-
-				if (output_track->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutUnknown &&
-					output_track->GetMediaType() == cmn::MediaType::Audio)
-				{
-					output_track->SetChannel(buffer->GetChannels());
-				}
-
-				if (output_track->GetMediaType() == cmn::MediaType::Video)
-				{
-					auto &input_track = _input_stream->GetTrack(buffer->GetTrackId());
-					float estimated_framerate = 1 / ((double)buffer->GetDuration() * input_track->GetTimeBase().GetExpr());
-					logti("Framerate of the output stream is not set. set the estimated framerate of source stream. %.2ffps", estimated_framerate);
-					output_track->SetEstimateFrameRate(estimated_framerate);
 				}
 			}
 		}
