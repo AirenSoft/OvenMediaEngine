@@ -9,7 +9,7 @@
 #pragma once
 
 #include <base/common_types.h>
-#include <base/mediarouter/media_route_application_interface.h>
+#include <base/mediarouter/mediarouter_application_interface.h>
 #include <base/publisher/publisher.h>
 #include <config/config.h>
 #include <publishers/segment/segment_stream/segment_stream_server.h>

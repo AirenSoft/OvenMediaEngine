@@ -8,7 +8,7 @@
 //==============================================================================
 #include "orchestrator.h"
 
-#include <base/mediarouter/media_route_interface.h>
+#include <base/mediarouter/mediarouter_interface.h>
 #include <base/provider/stream.h>
 #include <mediarouter/mediarouter.h>
 #include <monitoring/monitoring.h>

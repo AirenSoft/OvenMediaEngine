@@ -9,7 +9,7 @@
 #pragma once
 
 #include <base/info/host.h>
-#include <base/mediarouter/media_route_interface.h>
+#include <base/mediarouter/mediarouter_interface.h>
 #include <base/provider/provider.h>
 #include <base/publisher/publisher.h>
 

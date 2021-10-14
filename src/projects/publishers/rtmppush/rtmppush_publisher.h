@@ -3,7 +3,7 @@
 #include "base/common_types.h"
 #include "base/ovlibrary/url.h"
 #include "base/publisher/publisher.h"
-#include "base/mediarouter/media_route_application_interface.h"
+#include "base/mediarouter/mediarouter_application_interface.h"
 
 #include "base/info/push.h"
 #include "rtmppush_application.h"

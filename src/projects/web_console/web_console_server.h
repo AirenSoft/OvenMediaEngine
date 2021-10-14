@@ -11,7 +11,7 @@
 #include <memory>
 
 #include <base/info/application.h>
-#include <base/mediarouter/media_route_interface.h>
+#include <base/mediarouter/mediarouter_interface.h>
 #include <modules/ice/ice.h>
 #include <modules/http/server/http_server.h>
 #include <modules/http/server/https_server.h>

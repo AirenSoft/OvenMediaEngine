@@ -15,10 +15,10 @@
 #include <memory>
 #include <vector>
 
-#include "base/mediarouter/media_route_application_connector.h"
-#include "base/mediarouter/media_route_application_interface.h"
-#include "base/mediarouter/media_route_application_observer.h"
-#include "base/mediarouter/media_route_interface.h"
+#include "base/mediarouter/mediarouter_application_connector.h"
+#include "base/mediarouter/mediarouter_application_interface.h"
+#include "base/mediarouter/mediarouter_application_observer.h"
+#include "base/mediarouter/mediarouter_interface.h"
 #include "mediarouter_stream.h"
 
 class ApplicationInfo;
