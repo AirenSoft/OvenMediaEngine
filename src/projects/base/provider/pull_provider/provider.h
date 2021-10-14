@@ -10,7 +10,7 @@
 
 #include <base/common_types.h>
 #include <base/provider/provider.h>
-#include <base/mediarouter/media_route_interface.h>
+#include <base/mediarouter/mediarouter_interface.h>
 #include <orchestrator/data_structures/data_structure.h>
 
 #include <shared_mutex>

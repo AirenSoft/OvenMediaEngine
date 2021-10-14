@@ -2,7 +2,7 @@
 
 #include "base/common_types.h"
 #include "base/publisher/publisher.h"
-#include "base/mediarouter/media_route_application_interface.h"
+#include "base/mediarouter/mediarouter_application_interface.h"
 #include "base/ovlibrary/message_thread.h"
 #include "base/ovlibrary/delay_queue.h"
 #include "rtc_application.h"

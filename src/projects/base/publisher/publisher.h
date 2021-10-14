@@ -10,7 +10,7 @@
 
 #include <base/common_types.h>
 #include <base/info/host.h>
-#include <base/mediarouter/media_route_application_observer.h>
+#include <base/mediarouter/mediarouter_application_observer.h>
 #include <base/ovcrypto/ovcrypto.h>
 #include <base/publisher/application.h>
 #include <base/publisher/stream.h>

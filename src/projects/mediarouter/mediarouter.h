@@ -23,9 +23,9 @@
 
 #include "base/info/stream.h"
 #include "base/mediarouter/media_buffer.h"
-#include "base/mediarouter/media_route_application_connector.h"
-#include "base/mediarouter/media_route_application_observer.h"
-#include "base/mediarouter/media_route_interface.h"
+#include "base/mediarouter/mediarouter_application_connector.h"
+#include "base/mediarouter/mediarouter_application_observer.h"
+#include "base/mediarouter/mediarouter_interface.h"
 #include "mediarouter_application.h"
 #include "mediarouter_stream.h"
 
