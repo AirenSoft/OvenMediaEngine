@@ -5,7 +5,7 @@
 #include "base/common_types.h"
 #include "base/info/stream.h"
 #include "base/info/session.h"
-#include "base/mediarouter/media_route_application_observer.h"
+#include "base/mediarouter/mediarouter_application_observer.h"
 #include "base/ovlibrary/semaphore.h"
 #include "base/ovlibrary/string.h"
 #include "config/config.h"

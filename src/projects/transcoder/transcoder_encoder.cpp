@@ -38,14 +38,14 @@ TranscodeEncoder::TranscodeEncoder()
 
 TranscodeEncoder::~TranscodeEncoder()
 {
-	if (_context != nullptr && _context->codec != nullptr)
+	if (_codec_context != nullptr && _codec_context->codec != nullptr)
 	{
-        if (_context->codec->capabilities & AV_CODEC_CAP_ENCODER_FLUSH) {
-			::avcodec_flush_buffers(_context);
+        if (_codec_context->codec->capabilities & AV_CODEC_CAP_ENCODER_FLUSH) {
+			::avcodec_flush_buffers(_codec_context);
         }
 	}
 
-	OV_SAFE_FUNC(_context, nullptr, ::avcodec_free_context, &);
+	OV_SAFE_FUNC(_codec_context, nullptr, ::avcodec_free_context, &);
 	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
 	OV_SAFE_FUNC(_packet, nullptr, ::av_packet_free, &);
 	OV_SAFE_FUNC(_codec_par, nullptr, ::avcodec_parameters_free, &);
@@ -174,7 +174,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(std::shared_pt
 
 cmn::Timebase TranscodeEncoder::GetTimebase() const
 {
-	return _output_context->GetTimeBase();
+	return _encoder_context->GetTimeBase();
 }
 
 void TranscodeEncoder::SetTrackId(int32_t track_id)
@@ -184,14 +184,14 @@ void TranscodeEncoder::SetTrackId(int32_t track_id)
 
 bool TranscodeEncoder::Configure(std::shared_ptr<TranscodeContext> context)
 {
-	_output_context = context;
+	_encoder_context = context;
 
 	_input_buffer.SetAlias(ov::String::FormatString("Input queue of Encoder. codec(%s/%d)", ::avcodec_get_name(GetCodecID()), GetCodecID()));
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
 	_output_buffer.SetAlias(ov::String::FormatString("Output queue of Encoder. codec(%s/%d)", ::avcodec_get_name(GetCodecID()), GetCodecID()));
 	_output_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
-	return (_output_context != nullptr);
+	return (_encoder_context != nullptr);
 }
 
 void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)
@@ -212,7 +212,7 @@ void TranscodeEncoder::SendOutputBuffer(std::shared_ptr<MediaPacket> packet)
 
 std::shared_ptr<TranscodeContext> &TranscodeEncoder::GetContext()
 {
-	return _output_context;
+	return _encoder_context;
 }
 
 void TranscodeEncoder::ThreadEncode()

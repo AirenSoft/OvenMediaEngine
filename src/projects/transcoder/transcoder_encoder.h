@@ -43,12 +43,15 @@ public:
 		OnCompleteHandler = move(func);
 	}
 
+private:
+	virtual bool SetCodecParams() = 0;
+
 protected:
-	std::shared_ptr<TranscodeContext> _output_context = nullptr;
+	std::shared_ptr<TranscodeContext> _encoder_context = nullptr;
 
 	int32_t _track_id;
 
-	AVCodecContext *_context = nullptr;
+	AVCodecContext *_codec_context = nullptr;
 	AVCodecParserContext *_parser = nullptr;
 	AVCodecParameters *_codec_par = nullptr;
 
@@ -56,8 +59,6 @@ protected:
 
 	AVPacket *_packet = nullptr;
 	AVFrame *_frame = nullptr;
-
-	int _decoded_frame_num = 0;
 
 	bool _kill_flag = false;
 	std::thread _thread_work;

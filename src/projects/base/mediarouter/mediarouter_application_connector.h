@@ -10,8 +10,8 @@
 #include "base/info/stream.h"
 #include "base/ovlibrary/enable_shared_from_this.h"
 #include "media_buffer.h"
-#include "media_route_application_interface.h"
-#include "media_route_interface.h"
+#include "mediarouter_application_interface.h"
+#include "mediarouter_interface.h"
 
 class MediaRouteApplicationConnector : public ov::EnableSharedFromThis<MediaRouteApplicationConnector>
 {

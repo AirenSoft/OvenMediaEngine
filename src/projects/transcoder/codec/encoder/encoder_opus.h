@@ -37,6 +37,9 @@ public:
 
 	void Stop() override;
 
+private:
+	bool SetCodecParams() override;
+	
 protected:
 	std::shared_ptr<ov::Data> _buffer;
 	int _expert_frame_duration;

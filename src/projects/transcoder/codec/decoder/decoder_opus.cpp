@@ -227,8 +227,6 @@ void DecoderOPUS::ThreadDecode()
 				}
 			}
 
-			_decoded_frame_num++;
-
 			// TODO(soulk) : Reduce memory copy overhead. Memory copy can be removed in the Decoder -> Filter step.
 			auto output_frame = TranscoderUtilities::ConvertToMediaFrame(cmn::MediaType::Audio, _frame);
 			if (output_frame == nullptr)

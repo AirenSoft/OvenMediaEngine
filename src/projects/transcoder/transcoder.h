@@ -20,7 +20,7 @@
 
 #include "base/info/stream.h"
 #include "base/mediarouter/media_buffer.h"
-#include "base/mediarouter/media_route_interface.h"
+#include "base/mediarouter/mediarouter_interface.h"
 #include "transcoder_application.h"
 
 class Transcoder : public ocst::TranscoderModuleInterface

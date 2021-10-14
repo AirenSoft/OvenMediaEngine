@@ -9,11 +9,12 @@
 #include "video_track.h"
 
 VideoTrack::VideoTrack()
-	:_framerate(0),
-	_video_timescale(0),
-	_width(0),
-	_height(0),
-	_format(0)
+	: _framerate(0),
+	  _video_timescale(0),
+	  _width(0),
+	  _height(0),
+	  _format(0),
+	  _preset("")
 {
 }
 
@@ -26,7 +27,6 @@ double VideoTrack::GetFrameRate() const
 {
 	return _framerate;
 }
-
 
 void VideoTrack::SetEstimateFrameRate(double framerate)
 {
@@ -88,10 +88,18 @@ const FragmentationHeader& VideoTrack::GetH264SpsPpsAnnexBFragmentHeader() const
 	return _h264_sps_pps_annexb_fragment_header;
 }
 
-void VideoTrack::SetH264SpsPpsAnnexBFormat(const std::shared_ptr<ov::Data>& data, const FragmentationHeader &header)
+void VideoTrack::SetH264SpsPpsAnnexBFormat(const std::shared_ptr<ov::Data>& data, const FragmentationHeader& header)
 {
 	_h264_sps_pps_annexb_data = data;
 	_h264_sps_pps_annexb_fragment_header = header;
 }
 
+void VideoTrack::SetPreset(ov::String preset)
+{
+	_preset = preset;
+}
 
+ov::String VideoTrack::GetPreset() const
+{
+	return _preset;
+}

@@ -9,7 +9,7 @@
 #pragma once
 
 #include <base/info/host.h>
-#include <base/mediarouter/media_route_application_observer.h>
+#include <base/mediarouter/mediarouter_application_observer.h>
 
 #include <regex>
 
