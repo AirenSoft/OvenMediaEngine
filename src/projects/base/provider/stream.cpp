@@ -53,6 +53,7 @@ namespace pvd
 	bool Stream::Stop() 
 	{
 		logti("%s/%s(%u) has been stopped playing stream", GetApplicationName(), GetName().CStr(), GetId());
+		ResetSourceStreamTimestamp();
 		return true;
 	}
 
@@ -96,5 +97,124 @@ namespace pvd
 	{
 		_state = state;
 		return true;
+	}
+
+	void Stream::ResetSourceStreamTimestamp()
+	{
+		// _timestamp_map is the timetamp for this stream, _last_timestamp_map is the timestamp for source timestamp
+		// reset last timestamp map
+		double max_timestamp_ms = 0;
+		for(const auto &item : _last_timestamp_map)
+		{
+			auto track_id = item.first;
+			auto timestamp = item.second;
+			auto track = GetTrack(track_id);
+
+			auto timestamp_ms = (timestamp * 1000) / track->GetTimeBase().GetTimescale();
+			
+			logti("%d old timestamp : %f ms", track_id, timestamp_ms);
+
+			max_timestamp_ms = std::max<double>(timestamp_ms, max_timestamp_ms);
+		}
+
+		for(const auto &item : _last_timestamp_map)
+		{
+			auto track_id = item.first;
+			auto old_timestamp = item.second;
+			auto track = GetTrack(track_id);
+
+			// Since the stream is switched, initialize last_timestamp and base_timestamp to receive a new stream. However, some players do not allow the timestamp to decrease, so it is initialized based on the largest timestamp value among tracks. 
+			// If the timestamp is incremented by 60 seconds, it seems that the player flushes the old stream and starts anew. (This is an experimental estimate. If 60 seconds are added to the timestamp, no video stuttering in the browser is observed.)
+			auto adjust_timestamp = (max_timestamp_ms * track->GetTimeBase().GetTimescale() / 1000) + 
+									(60 * track->GetTimeBase().GetTimescale());
+
+			
+			// base_timestamp is the last timestamp value of the previous stream. Increase it based on this.
+			// last_timestamp is a value that is updated every time a packet is received.
+			_base_timestamp_map[track_id] = adjust_timestamp;
+			_last_timestamp_map[track_id] = adjust_timestamp;
+
+			logti("Reset %d last timestamp : %lld => %lld", track_id, old_timestamp, _last_timestamp_map[track_id]);
+		}
+
+		_source_timestamp_map.clear();
+		_jump_source_timestamp = false;
+	}
+
+	// This keeps the pts value of the input track (only the start value<base_timestamp> is different), meaning that this value can be used for A/V sync.
+	uint64_t Stream::AdjustTimestampByBase(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp)
+	{
+		uint64_t base_timestamp = 0;
+		if(_base_timestamp_map.find(track_id) != _base_timestamp_map.end())
+		{
+			base_timestamp = _base_timestamp_map[track_id];
+		}
+
+		_last_timestamp_map[track_id] = base_timestamp + timestamp;
+
+		return _last_timestamp_map[track_id];
+	}
+
+	// This is a method of generating a PTS with an increment value (delta) when it cannot be used as a PTS because the start value of the timestamp is random like the RTP timestamp.
+	uint64_t Stream::AdjustTimestampByDelta(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp)
+	{
+		uint32_t curr_timestamp; 
+
+		if(_last_timestamp_map.find(track_id) == _last_timestamp_map.end())
+		{
+			curr_timestamp = 0;
+		}
+		else
+		{
+			curr_timestamp = _last_timestamp_map[track_id];
+		}
+
+		auto delta = GetTimestampDelta(track_id, timestamp, max_timestamp);
+		curr_timestamp += delta;
+
+		_last_timestamp_map[track_id] = curr_timestamp;
+
+		return curr_timestamp;
+	}
+
+	uint64_t Stream::GetTimestampDelta(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp)
+	{
+		auto track = GetTrack(track_id);
+
+		// First timestamp
+		if(_source_timestamp_map.find(track_id) == _source_timestamp_map.end())
+		{
+			logti("New track timestamp(%u) : curr(%lld)", track_id, timestamp);
+			_source_timestamp_map[track_id] = timestamp;
+
+			// Start with zero
+			return 0;
+		}
+
+		uint64_t delta = 0;
+
+		// Wrap around or change source
+		if(timestamp < _source_timestamp_map[track_id])
+		{
+			// If the last timestamp exceeds 99.99%, it is judged to be wrapped around.
+			if(_source_timestamp_map[track_id] > ((double)max_timestamp * 99.99) / 100)
+			{
+				logti("Wrapped around(%u) : last(%lld) curr(%lld)", track_id, _source_timestamp_map[track_id], timestamp);
+				delta = (max_timestamp - _source_timestamp_map[track_id]) + timestamp;
+			}
+			// Otherwise, the source might be changed. (restarted)
+			else
+			{
+				logti("Source changed(%u) : last(%lld) curr(%lld)", track_id, _source_timestamp_map[track_id], timestamp);
+				delta = 0;
+			}
+		}
+		else
+		{
+			delta = timestamp - _source_timestamp_map[track_id];
+		}
+
+		_source_timestamp_map[track_id] = timestamp;
+		return delta;
 	}
 }

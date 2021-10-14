@@ -29,7 +29,7 @@ private:
 	bool AppendMessagePacket(const std::shared_ptr<OvtPacket> &packet);
 	bool AppendMediaPacket(const std::shared_ptr<OvtPacket> &packet);
 
-	ov::Data									_packet_buffer;
+	std::shared_ptr<ov::Data>					_packet_buffer;
 
 	ov::Data									_message_buffer;
 	ov::Data									_media_packet_buffer;

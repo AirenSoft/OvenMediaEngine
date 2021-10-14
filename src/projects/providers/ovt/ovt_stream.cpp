@@ -35,46 +35,29 @@ namespace pvd
 	}
 
 	OvtStream::OvtStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
-			: pvd::PullStream(application, stream_info)
+			: pvd::PullStream(application, stream_info, url_list)
 	{
 		_last_request_id = 0;
 		_state = State::IDLE;
-
-		for(auto &url : url_list)
-		{
-			auto parsed_url = ov::Url::Parse(url);
-			if(parsed_url)
-			{
-				_url_list.push_back(parsed_url);
-			}
-		}
-
-		if(!_url_list.empty())
-		{
-			_curr_url = _url_list[0];
-			SetMediaSource(_curr_url->ToUrlString(true));
-		}
-
 		logtd("OvtStream Created : %d", GetId());
 	}
 
 	OvtStream::~OvtStream()
 	{
+		Release();
 		Stop();
-
-		if(_client_socket != nullptr)
-		{
-			_client_socket->Close();
-			_client_socket = nullptr;
-		}
-
-		ReleasePacketizer();
-
 		logtd("OvtStream Terminated : %d", GetId());
 	}
 
-	void OvtStream::ReleasePacketizer()
+	void OvtStream::Release()
 	{
+		if(_client_socket != nullptr)
+		{
+			_client_socket->Close();
+		}
+
+		_curr_url = nullptr;
+
 		std::lock_guard<std::shared_mutex> mlock(_packetizer_lock);
 		if(_packetizer != nullptr)
 		{
@@ -83,59 +66,59 @@ namespace pvd
 		}
 	}
 
-	bool OvtStream::Start()
+	bool OvtStream::StartStream(const std::shared_ptr<const ov::Url> &url)
 	{
-		_packetizer = std::make_shared<OvtPacketizer>(OvtPacketizerInterface::GetSharedPtr());
+		_curr_url = url;
+
+		if(_packetizer == nullptr)
+		{
+			_packetizer = std::make_shared<OvtPacketizer>(OvtPacketizerInterface::GetSharedPtr());
+		}
+
+		ov::StopWatch stop_watch;
 
 		// For statistics
-		auto begin = std::chrono::steady_clock::now();
+		stop_watch.Start();
 		if (!ConnectOrigin())
 		{
-			ReleasePacketizer();
+			SetState(Stream::State::ERROR);
+			Release();
 			return false;
 		}
+		_origin_request_time_msec = stop_watch.Elapsed();
 
-		auto end = std::chrono::steady_clock::now();
-		std::chrono::duration<double, std::milli> elapsed = end - begin;
-		_origin_request_time_msec = static_cast<int64_t>(elapsed.count());
-
-		begin = std::chrono::steady_clock::now();
+		stop_watch.Update();
 		if (!RequestDescribe())
 		{
-			ReleasePacketizer();
+			SetState(Stream::State::ERROR);
+			Release();
 			return false;
 		}
 
-		end = std::chrono::steady_clock::now();
-		elapsed = end - begin;
-		_origin_response_time_msec = static_cast<int64_t>(elapsed.count());
-
-		return pvd::PullStream::Start();
-	}
-
-	std::shared_ptr<pvd::OvtProvider> OvtStream::GetOvtProvider()
-	{
-		return std::static_pointer_cast<OvtProvider>(_application->GetParentProvider());
-	}
-
-	bool OvtStream::Play()
-	{
 		if (!RequestPlay())
 		{
+			SetState(Stream::State::ERROR);
 			return false;
 		}
+		_origin_response_time_msec = stop_watch.Elapsed();
 
 		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pvd::Stream::GetSharedPtr()));
 		if(_stream_metrics != nullptr)
 		{
-			_stream_metrics->SetOriginRequestTimeMSec(_origin_request_time_msec);
-			_stream_metrics->SetOriginResponseTimeMSec(_origin_response_time_msec);
+			_stream_metrics->SetOriginConnectionTimeMSec(_origin_request_time_msec);
+			_stream_metrics->SetOriginSubscribeTimeMSec(_origin_response_time_msec);
 		}
 
-		return pvd::PullStream::Play();
+		return true;
 	}
 
-	bool OvtStream::Stop()
+	bool OvtStream::RestartStream(const std::shared_ptr<const ov::Url> &url)
+	{
+		logti("[%s/%s(%u)] stream tries to reconnect to %s", GetApplicationTypeName(), GetName().CStr(), GetId(), url->ToUrlString().CStr());
+		return StartStream(url);
+	}
+
+	bool OvtStream::StopStream()
 	{
 		// Already stopping
 		if(_state != State::PLAYING)
@@ -153,19 +136,19 @@ namespace pvd
 			SetState(State::STOPPED);
 		}
 
-		ReleasePacketizer();
+		Release();
 
-		if(_client_socket != nullptr)
-		{
-			_client_socket->Close();
-		}
-	
-		return pvd::PullStream::Stop();
+		return true;
+	}
+
+	std::shared_ptr<pvd::OvtProvider> OvtStream::GetOvtProvider()
+	{
+		return std::static_pointer_cast<OvtProvider>(_application->GetParentProvider());
 	}
 
 	bool OvtStream::ConnectOrigin()
 	{
-		if(_state != State::IDLE && _state != State::ERROR)
+		if(_state == State::PLAYING || _state == State::TERMINATED)
 		{
 			return false;
 		}
@@ -218,7 +201,7 @@ namespace pvd
 			return false;
 		}
 
-		_state = State::CONNECTED;
+		SetState(State::CONNECTED);
 
 		return true;
 	}
@@ -626,7 +609,6 @@ namespace pvd
 		auto result = ReceivePacket(true);
 		if(result == false)
 		{
-			Stop();
 			logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), static_cast<uint8_t>(result));
 			_state = State::ERROR;
 			return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
@@ -637,7 +619,16 @@ namespace pvd
 			if(_depacketizer.IsAvaliableMediaPacket())
 			{
 				auto media_packet = _depacketizer.PopMediaPacket();
+
 				media_packet->SetPacketType(cmn::PacketType::OVT);
+
+				auto pts = AdjustTimestampByBase(media_packet->GetTrackId(), media_packet->GetPts(), std::numeric_limits<int64_t>::max());
+				auto dts = pts;
+				
+				media_packet->SetPts(pts);
+				media_packet->SetDts(dts);
+
+				// logtd("%s(%d) - pts(%llu)", StringFromMediaType(media_packet->GetMediaType()).CStr(), media_packet->GetTrackId(), pts);
 				SendFrame(media_packet);
 
 				if(_depacketizer.IsAvaliableMediaPacket() || _depacketizer.IsAvailableMessage())
@@ -675,7 +666,6 @@ namespace pvd
 				}
 				else
 				{
-					Stop();
 					logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
 						GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 					_state = State::ERROR;

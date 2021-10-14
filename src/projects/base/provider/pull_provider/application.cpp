@@ -67,9 +67,15 @@ namespace pvd
 			
 				if(stream->GetState() == Stream::State::STOPPED || stream->GetState() == Stream::State::ERROR)
 				{
+					// Retry
+					ResumeStream(stream);
+				}
+				else if(stream->GetState() == Stream::State::TERMINATED)
+				{
+					// Tried several times, but if unsuccessful, delete it completely.
 					DeleteStream(stream);
 				}
-				else if(stream->GetState() != Stream::State::STOPPING)
+				else
 				{
 					// Check if there are streams have no any viewers
 					auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
@@ -202,6 +208,34 @@ namespace pvd
 		motor->AddStream(stream);
 		
 		return stream;
+	}
+
+	bool PullApplication::ResumeStream(const std::shared_ptr<Stream> &stream)
+	{
+		auto pull_stream = std::dynamic_pointer_cast<PullStream>(stream);
+		if(pull_stream == nullptr)
+		{
+			return false;
+		}
+
+		if(pull_stream->Resume() == false)
+		{
+			return false;
+		}
+
+		auto motor = GetStreamMotorInternal(pull_stream);
+		if(motor == nullptr)
+		{
+			// Something wrong
+			return false;
+		}
+
+		if(motor->UpdateStream(pull_stream) == false)
+		{
+			return false;
+		}
+
+		return true;
 	}
 
 	bool PullApplication::DeleteStream(const std::shared_ptr<Stream> &stream)

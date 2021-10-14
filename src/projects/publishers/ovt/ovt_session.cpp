@@ -82,6 +82,8 @@ bool OvtSession::SendOutgoingData(const std::any &packet)
 	auto copy_packet = std::make_shared<OvtPacket>(*session_packet);
 	copy_packet->SetSessionId(GetId());
 
+	
+
 	_connector->Send(copy_packet->GetData());
 
 	return true;

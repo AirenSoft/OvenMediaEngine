@@ -120,7 +120,25 @@ namespace pvd
 		_streams[stream->GetId()] = stream;
 		lock.unlock();
 
-		stream->Play();
+		if(!AddStreamToEpoll(stream))
+		{
+			DelStream(stream);
+			return false;
+		}
+
+		logti("%s/%s(%u) stream has added to %u StreamMotor", stream->GetApplicationName(), stream->GetName().CStr(), stream->GetId(), GetId());
+
+		return true;
+	}
+
+	bool StreamMotor::UpdateStream(const std::shared_ptr<PullStream> &stream)
+	{
+		std::unique_lock<std::shared_mutex> lock(_streams_map_guard);
+		if(_streams.find(stream->GetId()) == _streams.end())
+		{
+			_streams[stream->GetId()] = stream;
+		}
+		lock.unlock();
 
 		if(!AddStreamToEpoll(stream))
 		{

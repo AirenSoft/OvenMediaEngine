@@ -91,9 +91,9 @@ namespace pvd
 			std::shared_ptr<RtspMessage> _response = nullptr;
 		};
 
-		bool Start() override;
-		bool Play() override;
-		bool Stop() override;
+		bool StartStream(const std::shared_ptr<const ov::Url> &url) override; // Start
+		bool RestartStream(const std::shared_ptr<const ov::Url> &url) override; // Failover
+		bool StopStream() override; // Stop
 
 		bool ConnectTo();
 		bool RequestDescribe();
@@ -117,9 +117,6 @@ namespace pvd
 
 		bool AddDepacketizer(uint8_t payload_type, RtpDepacketizingManager::SupportedDepacketizerType codec_id);
 		std::shared_ptr<RtpDepacketizingManager> GetDepacketizer(uint8_t payload_type);
-
-		uint64_t AdjustTimestamp(uint8_t payload_type, uint32_t timestamp);
-		uint64_t GetTimestampDelta(uint8_t payload_type, uint32_t timestamp);
 
 		ov::String GenerateControlUrl(ov::String control);
 
