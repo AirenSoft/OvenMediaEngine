@@ -146,7 +146,7 @@ namespace pvd
 
 	bool RtmpStream::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
 	{
-		if(GetState() == Stream::State::ERROR || GetState() == Stream::State::STOPPED || GetState() == Stream::State::STOPPING)
+		if(GetState() == Stream::State::ERROR || GetState() == Stream::State::STOPPED)
 		{
 			return false;
 		}

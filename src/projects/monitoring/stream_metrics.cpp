@@ -17,8 +17,8 @@ namespace mon
 		if(GetSourceType() == StreamSourceType::Ovt || GetSourceType() == StreamSourceType::RtspPull)
 		{
 			out_str.AppendFormat("\n\tElapsed time to connect to origin server : %llu ms\n"
-									"\tElapsed time in response from origin server : %llu ms\n",
-									GetOriginRequestTimeMSec(), GetOriginResponseTimeMSec());
+									"\tElapsed time to subscribe to origin server : %llu ms\n",
+									GetOriginConnectionTimeMSec(), GetOriginSubscribeTimeMSec());
 		}
 		out_str.Append("\n");
 		out_str.Append(CommonMetrics::GetInfoString());
@@ -42,24 +42,24 @@ namespace mon
 	}
 
 	// Getter
-	int64_t StreamMetrics::GetOriginRequestTimeMSec() const
+	int64_t StreamMetrics::GetOriginConnectionTimeMSec() const
 	{
-		return _request_time_to_origin_msec.load();
+		return _connection_time_to_origin_msec.load();
 	}
-	int64_t StreamMetrics::GetOriginResponseTimeMSec() const
+	int64_t StreamMetrics::GetOriginSubscribeTimeMSec() const
 	{
-		return _response_time_from_origin_msec.load();
+		return _subscribe_time_from_origin_msec.load();
 	}
 
 	// Setter
-	void StreamMetrics::SetOriginRequestTimeMSec(int64_t value)
+	void StreamMetrics::SetOriginConnectionTimeMSec(int64_t value)
 	{
-		_request_time_to_origin_msec = value;
+		_connection_time_to_origin_msec = value;
 		UpdateDate();
 	}
-	void StreamMetrics::SetOriginResponseTimeMSec(int64_t value)
+	void StreamMetrics::SetOriginSubscribeTimeMSec(int64_t value)
 	{
-		_response_time_from_origin_msec = value;
+		_subscribe_time_from_origin_msec = value;
 		UpdateDate();
 	}
 

@@ -20,8 +20,8 @@ namespace mon
 		: info::Stream(stream), 
             _app_metrics(app_metrics)
 		{
-			_request_time_to_origin_msec = 0;
-			_response_time_from_origin_msec = 0;
+			_connection_time_to_origin_msec = 0;
+			_subscribe_time_from_origin_msec = 0;
 			logd("DEBUG", "StreamMetric (%s / %s) Created", GetName().CStr(), GetUUID().CStr());
 		}
 
@@ -42,10 +42,10 @@ namespace mon
 		void LinkOutputStreamMetrics(const std::shared_ptr<StreamMetrics> &stream);
 		std::vector<std::shared_ptr<StreamMetrics>> GetLinkedOutputStreamMetrics() const;
 
-		int64_t GetOriginRequestTimeMSec() const;
-		int64_t GetOriginResponseTimeMSec() const;
-		void SetOriginRequestTimeMSec(int64_t value);
-		void SetOriginResponseTimeMSec(int64_t value);
+		int64_t GetOriginConnectionTimeMSec() const;
+		int64_t GetOriginSubscribeTimeMSec() const;
+		void SetOriginConnectionTimeMSec(int64_t value);
+		void SetOriginSubscribeTimeMSec(int64_t value);
 
 		// Overriding from CommonMetrics 
 		void IncreaseBytesIn(uint64_t value) override;
@@ -54,8 +54,8 @@ namespace mon
 		void OnSessionDisconnected(PublisherType type) override;
 	private:
 		// Related to origin, From Provider
-		std::atomic<int64_t> _request_time_to_origin_msec = 0;
-		std::atomic<int64_t> _response_time_from_origin_msec = 0;
+		std::atomic<int64_t> _connection_time_to_origin_msec = 0;
+		std::atomic<int64_t> _subscribe_time_from_origin_msec = 0;
 
 		// If this stream is from Provider(input stream) it has multiple output streams
 		std::vector<std::shared_ptr<StreamMetrics>> _output_stream_metrics;

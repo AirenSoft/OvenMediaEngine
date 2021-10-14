@@ -16,7 +16,8 @@
 namespace pvd
 {
 	class Application;
-
+	
+	#define MAX_PULL_STREAM_RETRY_COUNT		2		// 2 * url_count
 	class PullStream : public Stream
 	{
 	public:
@@ -28,10 +29,11 @@ namespace pvd
 			PROCESS_MEDIA_TRY_AGAIN
 		};
 
-		virtual bool Start() override;
-		virtual bool Stop() override;
-		virtual bool Play();
-
+		// PullStream API
+		bool Start();
+		bool Stop();
+		bool Resume(); // Resume with another URL
+	
 		// It is used to detect event by StreamMotor and then StreamMotor calls ProcessMediaPacket
 		// Internally it is used for epoll
 		virtual int GetFileDescriptorForDetectingEvent() = 0;
@@ -42,6 +44,17 @@ namespace pvd
 		virtual ProcessMediaResult ProcessMediaPacket() = 0;
 
 	protected:
-		PullStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info);
+		PullStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list);
+
+		virtual bool StartStream(const std::shared_ptr<const ov::Url> &url) = 0; // Start
+		virtual bool RestartStream(const std::shared_ptr<const ov::Url> &url) = 0; // Failover
+		virtual bool StopStream() = 0; // Stop
+
+	private:
+		uint32_t	_restart_count = 0;
+		std::vector<std::shared_ptr<const ov::Url>> _url_list;
+		int _curr_url_index = 0;
+
+		const std::shared_ptr<const ov::Url> GetNextURL();
 	};
 }

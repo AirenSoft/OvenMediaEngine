@@ -48,8 +48,8 @@ namespace serdes
 			return value;
 		}
 
-		SetTimeInterval(value, "requestTimeToOrigin", metrics->GetOriginRequestTimeMSec());
-		SetTimeInterval(value, "responseTimeFromOrigin", metrics->GetOriginResponseTimeMSec());
+		SetTimeInterval(value, "requestTimeToOrigin", metrics->GetOriginConnectionTimeMSec());
+		SetTimeInterval(value, "responseTimeFromOrigin", metrics->GetOriginSubscribeTimeMSec());
 
 		return value;
 	}

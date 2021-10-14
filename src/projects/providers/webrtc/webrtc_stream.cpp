@@ -320,42 +320,6 @@ namespace pvd
 		return SendDataToPrevNode(data);
 	}
 
-	uint64_t WebRTCStream::AdjustTimestamp(uint8_t payload_type, uint32_t timestamp)
-	{
-		uint32_t curr_timestamp; 
-
-		if(_timestamp_map.find(payload_type) == _timestamp_map.end())
-		{
-			curr_timestamp = 0;
-		}
-		else
-		{
-			curr_timestamp = _timestamp_map[payload_type];
-		}
-
-		curr_timestamp += GetTimestampDelta(payload_type, timestamp);
-
-		_timestamp_map[payload_type] = curr_timestamp;
-
-		return curr_timestamp;
-	}
-
-	uint64_t WebRTCStream::GetTimestampDelta(uint8_t payload_type, uint32_t timestamp)
-	{
-		// First timestamp
-		if(_last_timestamp_map.find(payload_type) == _last_timestamp_map.end())
-		{
-			_last_timestamp_map[payload_type] = timestamp;
-			// Start with zero
-			return 0;
-		}
-
-		auto delta = timestamp - _last_timestamp_map[payload_type];
-		_last_timestamp_map[payload_type] = timestamp;
-
-		return delta;
-	}
-
 	// From RtpRtcp node
 	void WebRTCStream::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
 	{
@@ -428,7 +392,9 @@ namespace pvd
 		}
 
 		//auto timestamp = _lip_sync_clock->GetNextTimestamp(clock_type, first_rtp_packet->Timestamp());
-		auto timestamp = AdjustTimestamp(first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp());
+		auto timestamp = AdjustTimestampByDelta(track->GetId(),
+											first_rtp_packet->Timestamp(), 
+											std::numeric_limits<uint32_t>::max());
 		//auto timestamp = first_rtp_packet->Timestamp();
 
 		logtd("Payload Type(%d) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 

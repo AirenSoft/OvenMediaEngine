@@ -29,7 +29,7 @@ namespace pvd
 		stream_info.SetName(stream_name);
 
 		auto stream = std::make_shared<RtspcStream>(application, stream_info, url_list);
-		if (!stream->Start())
+		if (!stream->PullStream::Start())
 		{
 			// Explicit deletion
 			stream.reset();
@@ -40,29 +40,14 @@ namespace pvd
 	}
 
 	RtspcStream::RtspcStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
-	: pvd::PullStream(application, stream_info), Node(NodeType::Edge)
+	: pvd::PullStream(application, stream_info, url_list), Node(NodeType::Edge)
 	{
 		_state = State::IDLE;
-
-		for(auto &url : url_list)
-		{
-			auto parsed_url = ov::Url::Parse(url);
-			if(parsed_url)
-			{
-				_url_list.push_back(parsed_url);
-			}
-		}
-
-		if(!_url_list.empty())
-		{
-			_curr_url = _url_list[0];
-			SetMediaSource(_curr_url->ToUrlString(true));
-		}
 	}
 
 	RtspcStream::~RtspcStream()
 	{
-		Stop();
+		PullStream::Stop();
 		Release();
 	}
 
@@ -101,12 +86,9 @@ namespace pvd
 	{
 	}
 
-	bool RtspcStream::Start()
+	bool RtspcStream::StartStream(const std::shared_ptr<const ov::Url> &url)
 	{
-		if(_state != State::IDLE)
-		{
-			return false;
-		}
+		_curr_url = url;
 
 		ov::StopWatch stop_watch;
 
@@ -129,30 +111,30 @@ namespace pvd
 			return false;
 		}
 
-		_origin_response_time_msec = stop_watch.Elapsed();
-
-		return pvd::PullStream::Start();
-	}
-
-	bool RtspcStream::Play()
-	{
-		if (!RequestPlay())
+		if(RequestPlay() == false)
 		{
 			return false;
 		}
+
+		_origin_response_time_msec = stop_watch.Elapsed();
 
 		// Stream was created completly 
 		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(PullStream::GetSharedPtr()));
 		if(_stream_metrics != nullptr)
 		{
-			_stream_metrics->SetOriginRequestTimeMSec(_origin_request_time_msec);
-			_stream_metrics->SetOriginResponseTimeMSec(_origin_response_time_msec);
+			_stream_metrics->SetOriginConnectionTimeMSec(_origin_request_time_msec);
+			_stream_metrics->SetOriginSubscribeTimeMSec(_origin_response_time_msec);
 		}
 
-		return pvd::PullStream::Play();
+		return true;
 	}
 
-	bool RtspcStream::Stop()
+	bool RtspcStream::RestartStream(const std::shared_ptr<const ov::Url> &url)
+	{
+		return StartStream(url);
+	}
+
+	bool RtspcStream::StopStream()
 	{
 		// Already stopping
 		if(_state != State::PLAYING)
@@ -179,8 +161,8 @@ namespace pvd
 		ov::Node::Stop();
 
 		_state = State::STOPPED;
-	
-		return pvd::PullStream::Stop();
+
+		return true;
 	}
 
 	bool RtspcStream::ConnectTo()
@@ -670,8 +652,6 @@ namespace pvd
 			return false;
 		}
 
-		_state = State::STOPPING;
-
 		return true;
 	}
 
@@ -855,7 +835,6 @@ namespace pvd
 		auto result = ReceivePacket(true);
 		if(result == false)
 		{
-			Stop();
 			logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), static_cast<uint8_t>(result));
 			_state = State::ERROR;
 			return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
@@ -887,7 +866,6 @@ namespace pvd
 				else
 				{
 					// Error
-					Stop();
 					logte("%s/%s(%u) - Unknown rtsp message received", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 					_state = State::ERROR;
 					return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
@@ -981,7 +959,7 @@ namespace pvd
 				return;
 		}
 
-		auto timestamp = AdjustTimestamp(first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp());
+		auto timestamp = AdjustTimestampByDelta(first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
 
 		logtd("Payload Type(%d) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
 				first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
@@ -1003,42 +981,6 @@ namespace pvd
 	void RtspcStream::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	{
 		// Nothing to do now
-	}
-
-	uint64_t RtspcStream::AdjustTimestamp(uint8_t payload_type, uint32_t timestamp)
-	{
-		uint32_t curr_timestamp; 
-
-		if(_timestamp_map.find(payload_type) == _timestamp_map.end())
-		{
-			curr_timestamp = 0;
-		}
-		else
-		{
-			curr_timestamp = _timestamp_map[payload_type];
-		}
-
-		curr_timestamp += GetTimestampDelta(payload_type, timestamp);
-
-		_timestamp_map[payload_type] = curr_timestamp;
-
-		return curr_timestamp;
-	}
-
-	uint64_t RtspcStream::GetTimestampDelta(uint8_t payload_type, uint32_t timestamp)
-	{
-		// First timestamp
-		if(_last_timestamp_map.find(payload_type) == _last_timestamp_map.end())
-		{
-			_last_timestamp_map[payload_type] = timestamp;
-			// Start with zero
-			return 0;
-		}
-
-		auto delta = timestamp - _last_timestamp_map[payload_type];
-		_last_timestamp_map[payload_type] = timestamp;
-
-		return delta;
 	}
 
 	ov::String RtspcStream::GenerateControlUrl(ov::String control)

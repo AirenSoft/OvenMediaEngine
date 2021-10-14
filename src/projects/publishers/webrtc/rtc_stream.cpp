@@ -472,6 +472,8 @@ void RtcStream::PacketizeVideoFrame(const std::shared_ptr<MediaPacket> &media_pa
 	auto data = media_packet->GetData();
 	auto fragmentation = media_packet->GetFragHeader();
 
+	
+
 	packetizer->Packetize(frame_type,
 						  timestamp,
 						  ntp_timestamp,

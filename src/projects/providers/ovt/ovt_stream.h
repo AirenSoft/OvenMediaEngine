@@ -50,9 +50,10 @@ namespace pvd
 
 		std::shared_ptr<pvd::OvtProvider> GetOvtProvider();
 
-		bool Start() override;
-		bool Play() override;
-		bool Stop() override;
+		bool StartStream(const std::shared_ptr<const ov::Url> &url) override; // Start
+		bool RestartStream(const std::shared_ptr<const ov::Url> &url) override; // Failover
+		bool StopStream() override; // Stop
+
 		bool ConnectOrigin();
 		bool RequestDescribe();
 		bool ReceiveDescribe(uint32_t request_id);
@@ -64,12 +65,10 @@ namespace pvd
 		bool ReceivePacket(bool non_block = false);
 		std::shared_ptr<ov::Data> ReceiveMessage();
 
-		void ReleasePacketizer();
+		void Release();
 
-		std::vector<std::shared_ptr<const ov::Url>> _url_list;
-		std::shared_ptr<const ov::Url>				_curr_url;
-
-		std::shared_ptr<ov::Socket> _client_socket;
+		std::shared_ptr<ov::Socket> _client_socket = nullptr;
+		std::shared_ptr<const ov::Url> _curr_url = nullptr;
 
 		uint32_t _last_request_id;
 

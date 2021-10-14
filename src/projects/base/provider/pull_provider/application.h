@@ -46,6 +46,9 @@ namespace pvd
 	
 		// Remove unused streams
 		void WhiteElephantStreamCollector();
+
+		// Try restarting the stream for failover
+		bool ResumeStream(const std::shared_ptr<Stream> &stream);
 		
 		bool _stop_collector_thread_flag;
 		std::thread _collector_thread;
