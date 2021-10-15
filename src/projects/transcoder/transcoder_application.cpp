@@ -96,11 +96,44 @@ bool TranscodeApplication::OnStreamDeleted(const std::shared_ptr<info::Stream> &
 	return true;
 }
 
-bool TranscodeApplication::OnStreamPrepared(const std::shared_ptr<info::Stream> &stream)
+bool TranscodeApplication::OnStreamPrepared(const std::shared_ptr<info::Stream> &stream_info)
 {
 	std::unique_lock<std::mutex> lock(_mutex);
 
-	// logtw("Called OnStreamParsed. *Please delete this log after checking.*");
+	// logte("Called OnStreamParsed. *Please delete this log after checking.*");
+
+	auto stream_bucket = _streams.find(stream_info->GetId());
+	if (stream_bucket == _streams.end())
+	{
+		return false;
+	}
+
+	auto stream = stream_bucket->second;
+	if (stream->Prepare() == false)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool TranscodeApplication::OnStreamUpdated(const std::shared_ptr<info::Stream> &stream_info)
+{
+	std::unique_lock<std::mutex> lock(_mutex);
+
+	// logte("Called OnStreamUpdated. *Please delete this log after checking.*");
+
+	auto stream_bucket = _streams.find(stream_info->GetId());
+	if (stream_bucket == _streams.end())
+	{
+		return false;
+	}
+
+	auto stream = stream_bucket->second;
+	if (stream->Update(stream_info) == false)
+	{
+		return false;
+	}
 
 	return true;
 }

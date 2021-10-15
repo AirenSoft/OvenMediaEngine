@@ -53,6 +53,8 @@ public:
 	bool IsStreamPrepared();
 	bool AreAllTracksParsed();
 
+	void Flush();
+	
 private:
 	void DropNonDecodingPackets();
 

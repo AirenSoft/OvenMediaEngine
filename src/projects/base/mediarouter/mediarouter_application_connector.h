@@ -55,6 +55,16 @@ public:
 		return GetMediaRouteApplication()->OnStreamDeleted(this->GetSharedPtr(), stream);
 	}
 
+	inline bool UpdateStream(const std::shared_ptr<info::Stream> &stream)
+	{
+		if (GetMediaRouteApplication() == nullptr)
+		{
+			return false;
+		}
+
+		return GetMediaRouteApplication()->OnStreamUpdated(this->GetSharedPtr(), stream);
+	}
+
 	// MediaRouteApplication -> Stream-> Frame
 	inline bool SendFrame(const std::shared_ptr<info::Stream> &stream, const std::shared_ptr<MediaPacket> &packet)
 	{

@@ -148,7 +148,9 @@ bool OvtDepacketizer::AppendMediaPacket(const std::shared_ptr<OvtPacket> &packet
 			return false;
 		}
 
-		auto media_packet = std::make_shared<MediaPacket>(media_type, track_id,
+		auto media_packet = std::make_shared<MediaPacket>(
+														0,
+														media_type, track_id,
 														_media_packet_buffer.Subdata(MEDIA_PACKET_HEADER_SIZE),
 														pts, dts, bitstream_format, packet_type);
 		

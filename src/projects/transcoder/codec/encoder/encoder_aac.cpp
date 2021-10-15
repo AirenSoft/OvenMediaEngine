@@ -165,7 +165,7 @@ void EncoderAAC::ThreadEncode()
 			}
 			else
 			{
-				auto packet_buffer = std::make_shared<MediaPacket>(cmn::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts, _packet->dts, _packet->duration, MediaPacketFlag::Key);
+				auto packet_buffer = std::make_shared<MediaPacket>(0, cmn::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts, _packet->dts, _packet->duration, MediaPacketFlag::Key);
 				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::AAC_ADTS);
 				packet_buffer->SetPacketType(cmn::PacketType::RAW);
 

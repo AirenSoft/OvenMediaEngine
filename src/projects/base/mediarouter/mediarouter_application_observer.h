@@ -1,15 +1,14 @@
 #pragma once
 
-
+#include <base/info/stream.h>
+#include <base/ovlibrary/enable_shared_from_this.h>
 #include <stdint.h>
+
 #include <memory>
 #include <vector>
 
-#include <base/ovlibrary/enable_shared_from_this.h>
-#include <base/info/stream.h>
-
-#include "mediarouter_interface.h"
 #include "mediarouter_application_interface.h"
+#include "mediarouter_interface.h"
 
 class MediaRouteApplicationObserver : public ov::EnableSharedFromThis<MediaRouteApplicationObserver>
 {
@@ -29,15 +28,14 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	virtual bool OnStreamCreated(const std::shared_ptr<info::Stream> &info) = 0;
 	virtual bool OnStreamDeleted(const std::shared_ptr<info::Stream> &info) = 0;
+	virtual bool OnStreamUpdated(const std::shared_ptr<info::Stream> &info) = 0;
 	virtual bool OnStreamPrepared(const std::shared_ptr<info::Stream> &info) = 0;
 
 	// Delivery encoded video/audio frame
-	virtual bool OnSendFrame(const std::shared_ptr<info::Stream> &info,
-								const std::shared_ptr<MediaPacket> &packet) = 0;
+	virtual bool OnSendFrame(const std::shared_ptr<info::Stream> &info, const std::shared_ptr<MediaPacket> &packet) = 0;
 
 	virtual ObserverType GetObserverType()
 	{
 		return ObserverType::Publisher;
 	}
 };
-

@@ -24,7 +24,7 @@ bool EncoderFFOPUS::SetCodecParams()
 	_codec_context->channels = _encoder_context->GetAudioChannel().GetCounts();
 	_codec_context->cutoff = 12000;	 // SuperWideBand
 	_codec_context->compression_level = 10;
-	
+
 	::av_opt_set(_codec_context->priv_data, "application", "lowdelay", 0);
 	::av_opt_set(_codec_context->priv_data, "frame_duration", "20.0", 0);
 	::av_opt_set(_codec_context->priv_data, "packet_loss", "10", 0);
@@ -168,7 +168,7 @@ void EncoderFFOPUS::ThreadEncode()
 			}
 			else
 			{
-				auto packet_buffer = std::make_shared<MediaPacket>(cmn::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts, _packet->dts, _packet->duration, MediaPacketFlag::Key);
+				auto packet_buffer = std::make_shared<MediaPacket>(0, cmn::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts, _packet->dts, _packet->duration, MediaPacketFlag::Key);
 				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::OPUS);
 				packet_buffer->SetPacketType(cmn::PacketType::RAW);
 
