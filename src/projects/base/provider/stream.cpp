@@ -111,8 +111,7 @@ namespace pvd
 			auto track = GetTrack(track_id);
 
 			auto timestamp_ms = (timestamp * 1000) / track->GetTimeBase().GetTimescale();
-			
-			logti("%d old timestamp : %f ms", track_id, timestamp_ms);
+			logtd("%d old timestamp : %f ms", track_id, timestamp_ms);
 
 			max_timestamp_ms = std::max<double>(timestamp_ms, max_timestamp_ms);
 		}
@@ -123,22 +122,19 @@ namespace pvd
 			auto old_timestamp = item.second;
 			auto track = GetTrack(track_id);
 
-			// Since the stream is switched, initialize last_timestamp and base_timestamp to receive a new stream. However, some players do not allow the timestamp to decrease, so it is initialized based on the largest timestamp value among tracks. 
-			// If the timestamp is incremented by 60 seconds, it seems that the player flushes the old stream and starts anew. (This is an experimental estimate. If 60 seconds are added to the timestamp, no video stuttering in the browser is observed.)
-			auto adjust_timestamp = (max_timestamp_ms * track->GetTimeBase().GetTimescale() / 1000) + 
-									(60 * track->GetTimeBase().GetTimescale());
+			// Since the stream is switched, initialize last_timestamp and base_timestamp to receive a new stream. However, some players do not allow the timestamp to decrease, so it is initialized based on the largest timestamp value among previous tracks. 
+			// If the timestamp is incremented by 60 seconds (big jump), it seems that the player flushes the old stream and starts anew. (This is an experimental estimate. If 60 seconds are added to the timestamp, no video stuttering in the webrtc browser is observed.)
+			auto adjust_timestamp = (max_timestamp_ms * track->GetTimeBase().GetTimescale() / 1000) + (60 * track->GetTimeBase().GetTimescale());
 
-			
 			// base_timestamp is the last timestamp value of the previous stream. Increase it based on this.
 			// last_timestamp is a value that is updated every time a packet is received.
 			_base_timestamp_map[track_id] = adjust_timestamp;
 			_last_timestamp_map[track_id] = adjust_timestamp;
 
-			logti("Reset %d last timestamp : %lld => %lld", track_id, old_timestamp, _last_timestamp_map[track_id]);
+			logtd("Reset %d last timestamp : %lld => %lld", track_id, old_timestamp, _last_timestamp_map[track_id]);
 		}
 
 		_source_timestamp_map.clear();
-		_jump_source_timestamp = false;
 	}
 
 	// This keeps the pts value of the input track (only the start value<base_timestamp> is different), meaning that this value can be used for A/V sync.
@@ -151,7 +147,6 @@ namespace pvd
 		}
 
 		_last_timestamp_map[track_id] = base_timestamp + timestamp;
-
 		return _last_timestamp_map[track_id];
 	}
 

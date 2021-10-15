@@ -80,9 +80,6 @@ namespace pvd
 		// Track ID : Timestamp
 		std::map<uint32_t, uint64_t>			_source_timestamp_map;
 		std::map<uint32_t, uint64_t>			_last_timestamp_map;
-
 		std::map<uint32_t, uint64_t>			_base_timestamp_map;
-
-		bool _jump_source_timestamp = false;
 	};
 }
