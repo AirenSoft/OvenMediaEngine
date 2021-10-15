@@ -630,7 +630,13 @@ namespace ocst
 
 	bool Orchestrator::OnStreamPrepared(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logte("%s stream is parsed", info->GetName().CStr());
+		logtd("%s stream is parsed", info->GetName().CStr());
+		return true;
+	}
+
+	bool Orchestrator::OnStreamUpdated(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
+	{
+		logtd("%s stream is updated", info->GetName().CStr());
 		return true;
 	}
 

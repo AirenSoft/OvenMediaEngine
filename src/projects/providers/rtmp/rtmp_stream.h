@@ -178,5 +178,8 @@ namespace pvd
 		uint32_t _audio_frame_count = 0;
 
 		bool _negative_cts_detected = false;
+
+
+		bool _is_stream_updated = false;
 	};
 }

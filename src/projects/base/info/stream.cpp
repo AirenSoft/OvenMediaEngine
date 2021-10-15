@@ -7,7 +7,9 @@
 //
 //==============================================================================
 #include "stream.h"
+
 #include <random>
+
 #include "application.h"
 
 #define OV_LOG_TAG "Stream"
@@ -65,7 +67,7 @@ namespace info
 
 	bool Stream::operator==(const Stream &stream_info) const
 	{
-		if(_id == stream_info._id && *_app_info == *stream_info._app_info)
+		if (_id == stream_info._id && *_app_info == *stream_info._app_info)
 		{
 			return true;
 		}
@@ -83,9 +85,19 @@ namespace info
 		return _id;
 	}
 
+	void Stream::SetMsid(uint32_t msid)
+	{
+		_msid = msid;
+	}
+	
+	int32_t Stream::GetMsid()
+	{
+		return _msid;
+	}
+
 	ov::String Stream::GetUUID() const
 	{
-		if(_app_info == nullptr)
+		if (_app_info == nullptr)
 		{
 			return "";
 		}
@@ -93,7 +105,7 @@ namespace info
 		return ov::String::FormatString("%s/%s/%s", _app_info->GetUUID().CStr(), GetName().CStr(), IsInputStream() ? "i" : "o");
 	}
 
-	ov::String Stream::GetName() const 
+	ov::String Stream::GetName() const
 	{
 		return _name;
 	}
@@ -143,7 +155,7 @@ namespace info
 		return _origin_stream_uuid;
 	}
 
-	const std::chrono::system_clock::time_point& Stream::GetCreatedTime() const
+	const std::chrono::system_clock::time_point &Stream::GetCreatedTime() const
 	{
 		return _created_time;
 	}
@@ -180,9 +192,9 @@ namespace info
 		return _tracks;
 	}
 
-	const char* Stream::GetApplicationName()
+	const char *Stream::GetApplicationName()
 	{
-		if(_app_info == nullptr)
+		if (_app_info == nullptr)
 		{
 			return "Unknown";
 		}
@@ -190,20 +202,19 @@ namespace info
 		return _app_info->GetName().CStr();
 	}
 
-
 	ov::String Stream::GetInfoString()
 	{
-		ov::String out_str = ov::String::FormatString("\n[Stream Info]\nid(%u), output(%s), SourceType(%s), Created Time (%s) UUID(%s)\n", 														
-														GetId(), GetName().CStr(),::StringFromStreamSourceType(_source_type).CStr(),
-														ov::Converter::ToString(_created_time).CStr(), GetUUID().CStr());
-		if(GetLinkedInputStream() != nullptr)
+		ov::String out_str = ov::String::FormatString("\n[Stream Info]\nid(%u), msid(%u), output(%s), SourceType(%s), Created Time (%s) UUID(%s)\n",
+													  GetId(), GetMsid(), GetName().CStr(), ::StringFromStreamSourceType(_source_type).CStr(),
+													  ov::Converter::ToString(_created_time).CStr(), GetUUID().CStr());
+		if (GetLinkedInputStream() != nullptr)
 		{
 			out_str.AppendFormat("\t>> Origin Stream Info\n\tid(%u), output(%s), SourceType(%s), Created Time (%s)\n",
-				GetLinkedInputStream()->GetId(), GetLinkedInputStream()->GetName().CStr(), ::StringFromStreamSourceType(GetLinkedInputStream()->GetSourceType()).CStr(),
-														ov::Converter::ToString(GetLinkedInputStream()->GetCreatedTime()).CStr());
+								 GetLinkedInputStream()->GetId(), GetLinkedInputStream()->GetName().CStr(), ::StringFromStreamSourceType(GetLinkedInputStream()->GetSourceType()).CStr(),
+								 ov::Converter::ToString(GetLinkedInputStream()->GetCreatedTime()).CStr());
 		}
 
-		if(GetOriginStreamUUID().IsEmpty() == false)
+		if (GetOriginStreamUUID().IsEmpty() == false)
 		{
 			out_str.AppendFormat("\t>> Origin Stream UUID : %s\n", GetOriginStreamUUID().CStr());
 		}

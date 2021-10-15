@@ -230,6 +230,7 @@ void EncoderAVC::ThreadEncode()
 			{
 				// Encoded packet is ready
 				auto packet_buffer = std::make_shared<MediaPacket>(
+					0,
 					cmn::MediaType::Video,
 					0,
 					_packet->data,

@@ -50,7 +50,9 @@ public:
 
 	bool Start();
 	bool Stop();
-
+	bool Prepare();
+	bool Update(const std::shared_ptr<info::Stream> &stream);
+	
 	bool Push(std::shared_ptr<MediaPacket> packet);
 
 private:
@@ -150,6 +152,7 @@ private:
 	// Send frame with output stream's information
 	void SendFrame(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> packet);
 
+	void RemoveAllComponents();
 public:
 	cmn::MediaCodecId GetCodecIdByName(ov::String name);
 
@@ -162,9 +165,8 @@ public:
 
 	const cmn::Timebase GetDefaultTimebaseByCodecId(cmn::MediaCodecId codec_id);
 
-	// Create output streams
+	// Notify event to mediarouter
 	void NotifyCreateStreams();
-
-	// Delete output streams
 	void NotifyDeleteStreams();
+	void NotifyUpdateStreams();
 };
