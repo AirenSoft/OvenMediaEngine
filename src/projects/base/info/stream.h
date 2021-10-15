@@ -26,6 +26,10 @@ namespace info
 
 		void SetId(info::stream_id_t id);
 		info::stream_id_t GetId() const;
+
+		void SetMsid(uint32_t );
+		int32_t GetMsid();
+
 		ov::String GetUUID() const;
 		ov::String GetName() const;
 		void SetName(ov::String name);
@@ -68,6 +72,7 @@ namespace info
 
 	protected:
 		info::stream_id_t _id = 0;
+		uint32_t _msid = 0;
 		ov::String _name;
 		ov::String _source_url;
 		

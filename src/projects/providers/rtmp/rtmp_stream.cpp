@@ -8,18 +8,18 @@
 //==============================================================================
 
 #include "rtmp_stream.h"
-#include "base/info/application.h"
-#include "base/provider/push_provider/provider.h"
-#include "base/provider/push_provider/application.h"
-#include "rtmp_provider_private.h"
 
-#include <orchestrator/orchestrator.h>
-#include <base/mediarouter/media_type.h>
 #include <base/info/media_extradata.h>
-
-#include <modules/containers/flv/flv_parser.h>
-#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
+#include <base/mediarouter/media_type.h>
 #include <modules/bitstream/aac/aac_specific_config.h>
+#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
+#include <modules/containers/flv/flv_parser.h>
+#include <orchestrator/orchestrator.h>
+
+#include "base/info/application.h"
+#include "base/provider/push_provider/application.h"
+#include "base/provider/push_provider/provider.h"
+#include "rtmp_provider_private.h"
 
 /*
 Process of publishing 
@@ -75,14 +75,14 @@ Process of publishing
 // 133   -33   100 <== ERROR (PTS < DTS)
 // 166   100   266
 // 200     0   200
-#define ADJUST_PTS				(150)
+#define ADJUST_PTS (150)
 
 namespace pvd
 {
 	std::shared_ptr<RtmpStream> RtmpStream::Create(StreamSourceType source_type, uint32_t client_id, const std::shared_ptr<ov::Socket> &client_socket, const std::shared_ptr<PushProvider> &provider)
 	{
 		auto stream = std::make_shared<RtmpStream>(source_type, client_id, client_socket, provider);
-		if(stream != nullptr)
+		if (stream != nullptr)
 		{
 			stream->Start();
 		}
@@ -92,11 +92,11 @@ namespace pvd
 	RtmpStream::RtmpStream(StreamSourceType source_type, uint32_t client_id, std::shared_ptr<ov::Socket> client_socket, const std::shared_ptr<PushProvider> &provider)
 		: PushStream(source_type, client_id, provider),
 
-		_vhost_app_name(info::VHostAppName::InvalidVHostAppName())
+		  _vhost_app_name(info::VHostAppName::InvalidVHostAppName())
 	{
 		_remote = client_socket;
 		SetMediaSource(_remote->GetRemoteAddressAsUrl());
-		
+
 		_import_chunk = std::make_shared<RtmpImportChunk>(RTMP_DEFAULT_CHUNK_SIZE);
 		_export_chunk = std::make_shared<RtmpExportChunk>(false, RTMP_DEFAULT_CHUNK_SIZE);
 		_media_info = std::make_shared<RtmpMediaInfo>();
@@ -111,7 +111,7 @@ namespace pvd
 
 	bool RtmpStream::Start()
 	{
-		_state = Stream::State::PLAYING;
+		SetState(Stream::State::PLAYING);
 		_negative_cts_detected = false;
 
 		return PushStream::Start();
@@ -119,12 +119,10 @@ namespace pvd
 
 	bool RtmpStream::Stop()
 	{
-		if(GetState() == Stream::State::STOPPED)
+		if (GetState() == Stream::State::STOPPED)
 		{
 			return true;
 		}
-
-		_state = Stream::State::STOPPED;
 
 		if(_remote->GetState() == ov::SocketState::Connected)
 		{
@@ -136,7 +134,7 @@ namespace pvd
 
 	bool RtmpStream::CheckStreamExpired()
 	{
-		if(_stream_expired_msec != 0 && _stream_expired_msec < ov::Clock::NowMSec())
+		if (_stream_expired_msec != 0 && _stream_expired_msec < ov::Clock::NowMSec())
 		{
 			return true;
 		}
@@ -152,7 +150,7 @@ namespace pvd
 		}
 
 		// Check stream expired by signed policy
-		if(CheckStreamExpired() == true)
+		if (CheckStreamExpired() == true)
 		{
 			logti("Stream has expired by signed policy (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 			Stop();
@@ -171,14 +169,14 @@ namespace pvd
 		if (_remained_data->GetLength() > RTMP_MAX_PACKET_SIZE)
 		{
 			logte("The packet is ignored because the size is too large: [%d]), packet size: %zu, threshold: %d",
-				GetChannelId(), _remained_data->GetLength(), RTMP_MAX_PACKET_SIZE);
+				  GetChannelId(), _remained_data->GetLength(), RTMP_MAX_PACKET_SIZE);
 
 			return false;
 		}
 
 		logtp("Trying to parse data\n%s", _remained_data->Dump(_remained_data->GetLength()).CStr());
 
-		while(true)
+		while (true)
 		{
 			int32_t process_size = 0;
 
@@ -194,14 +192,14 @@ namespace pvd
 			if (process_size < 0)
 			{
 				logtd("Could not parse RTMP packet: [%s/%s] (%u/%u), size: %zu bytes, returns: %d",
-					_vhost_app_name.CStr(), _stream_name.CStr(),
-					_app_id, GetId(),
-					_remained_data->GetLength(),
-					process_size);
-				
+					  _vhost_app_name.CStr(), _stream_name.CStr(),
+					  _app_id, GetId(),
+					  _remained_data->GetLength(),
+					  process_size);
+
 				return process_size;
 			}
-			else if(process_size == 0)
+			else if (process_size == 0)
 			{
 				// Need more data
 				// logtd("Not enough data");
@@ -210,14 +208,14 @@ namespace pvd
 
 			_remained_data = _remained_data->Subdata(process_size);
 		}
-		
+
 		return true;
 	}
 
 	void RtmpStream::OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
 		double object_encoding = 0.0;
-		
+
 		if (document.GetProperty(2) != nullptr && document.GetProperty(2)->GetType() == AmfDataType::Object)
 		{
 			AmfObject *object = document.GetProperty(2)->GetObject();
@@ -311,22 +309,22 @@ namespace pvd
 	bool RtmpStream::CheckAccessControl()
 	{
 		// Check SignedPolicy
-		
+
 		auto [result, _signed_policy] = GetProvider()->VerifyBySignedPolicy(_url, _remote->GetRemoteAddress());
-		if(result == AccessController::VerificationResult::Off)
+		if (result == AccessController::VerificationResult::Off)
 		{
 		}
-		else if(result == AccessController::VerificationResult::Pass)
+		else if (result == AccessController::VerificationResult::Pass)
 		{
 			_stream_expired_msec = _signed_policy->GetStreamExpireEpochMSec();
 		}
-		else if(result == AccessController::VerificationResult::Error)
+		else if (result == AccessController::VerificationResult::Error)
 		{
 			logtw("SingedPolicy error : %s", _url->ToUrlString().CStr());
 			Stop();
 			return false;
 		}
-		else if(result == AccessController::VerificationResult::Fail)
+		else if (result == AccessController::VerificationResult::Fail)
 		{
 			logtw("%s", _signed_policy->GetErrMessage().CStr());
 			Stop();
@@ -334,38 +332,38 @@ namespace pvd
 		}
 
 		auto [webhooks_result, _admission_webhooks] = GetProvider()->VerifyByAdmissionWebhooks(_url, _remote->GetRemoteAddress());
-		if(webhooks_result == AccessController::VerificationResult::Off)
+		if (webhooks_result == AccessController::VerificationResult::Off)
 		{
 			return true;
 		}
-		else if(webhooks_result == AccessController::VerificationResult::Pass)
+		else if (webhooks_result == AccessController::VerificationResult::Pass)
 		{
 			// Lifetime
-			if(_admission_webhooks->GetLifetime() != 0)
+			if (_admission_webhooks->GetLifetime() != 0)
 			{
 				// Choice smaller value
 				auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + _admission_webhooks->GetLifetime();
-				if(_stream_expired_msec == 0 || stream_expired_msec_from_webhooks < _stream_expired_msec)
+				if (_stream_expired_msec == 0 || stream_expired_msec_from_webhooks < _stream_expired_msec)
 				{
 					_stream_expired_msec = stream_expired_msec_from_webhooks;
 				}
 			}
 
 			// Redirect URL
-			if(_admission_webhooks->GetNewURL() != nullptr)
+			if (_admission_webhooks->GetNewURL() != nullptr)
 			{
 				_publish_url = _admission_webhooks->GetNewURL();
 			}
 
 			return true;
 		}
-		else if(webhooks_result == AccessController::VerificationResult::Error)
+		else if (webhooks_result == AccessController::VerificationResult::Error)
 		{
 			logtw("AdmissionWebhooks error : %s", _url->ToUrlString().CStr());
 			Stop();
 			return false;
 		}
-		else if(webhooks_result == AccessController::VerificationResult::Fail)
+		else if (webhooks_result == AccessController::VerificationResult::Fail)
 		{
 			logtw("AdmissionWebhooks error : %s", _admission_webhooks->GetErrReason().CStr());
 			Stop();
@@ -386,7 +384,7 @@ namespace pvd
 				logte("SendAmfOnFCPublish Fail");
 				return;
 			}
-			
+
 			_full_url.Format("%s/%s", _tc_url.CStr(), document.GetProperty(3)->GetString());
 			SetFullUrl(_full_url);
 			CheckAccessControl();
@@ -429,11 +427,11 @@ namespace pvd
 
 		// 시작 상태 값 전송
 		if (!SendAmfOnStatus((uint32_t)_chunk_stream_id,
-							_rtmp_stream_id,
-							(char *)"status",
-							(char *)"NetStream.Publish.Start",
-							(char *)"Publishing",
-							_client_id))
+							 _rtmp_stream_id,
+							 (char *)"status",
+							 (char *)"NetStream.Publish.Start",
+							 (char *)"Publishing",
+							 _client_id))
 		{
 			logte("SendAmfOnStatus Fail");
 			return;
@@ -444,7 +442,7 @@ namespace pvd
 	{
 		_url = ov::Url::Parse(url);
 		// PORT can be omitted (1935), but SignedPolicy requires this information.
-		if(_url->Port() == 0)
+		if (_url->Port() == 0)
 		{
 			_url->SetPort(_remote->GetLocalAddress()->Port());
 		}
@@ -479,7 +477,7 @@ namespace pvd
 		document.Dump(dump_string);
 		logti(dump_string.c_str());
 		*/
-	
+
 		// object encoding 얻기
 		if (document.GetProperty(object_index)->GetType() == AmfDataType::Object)
 		{
@@ -493,7 +491,7 @@ namespace pvd
 		// DeviceType
 		if ((index = object->FindName("videodevice")) >= 0 && object->GetType(index) == AmfDataType::String)
 		{
-			_device_string = object->GetString(index);  //DeviceType - XSplit
+			_device_string = object->GetString(index);	//DeviceType - XSplit
 		}
 		else if ((index = object->FindName("encoder")) >= 0 && object->GetType(index) == AmfDataType::String)
 		{
@@ -581,15 +579,15 @@ namespace pvd
 		{
 			if (object->GetType(index) == AmfDataType::String && strcmp("mp4a", object->GetString(index)) == 0)
 			{
-				audio_codec_type = RtmpCodecType::AAC;  //AAC
+				audio_codec_type = RtmpCodecType::AAC;	//AAC
 			}
 			else if (object->GetType(index) == AmfDataType::String && strcmp("mp3", object->GetString(index)) == 0)
 			{
-				audio_codec_type = RtmpCodecType::MP3;  //MP3
+				audio_codec_type = RtmpCodecType::MP3;	//MP3
 			}
 			else if (object->GetType(index) == AmfDataType::String && strcmp(".mp3", object->GetString(index)) == 0)
 			{
-				audio_codec_type = RtmpCodecType::MP3;  //MP3
+				audio_codec_type = RtmpCodecType::MP3;	//MP3
 			}
 			else if (object->GetType(index) == AmfDataType::String && strcmp("speex", object->GetString(index)) == 0)
 			{
@@ -597,7 +595,7 @@ namespace pvd
 			}
 			else if (object->GetType(index) == AmfDataType::Number && object->GetNumber(index) == 10.0)
 			{
-				audio_codec_type = RtmpCodecType::AAC;  //AAC
+				audio_codec_type = RtmpCodecType::AAC;	//AAC
 			}
 			else if (object->GetType(index) == AmfDataType::Number && object->GetNumber(index) == 11.0)
 			{
@@ -648,19 +646,18 @@ namespace pvd
 			audio_samplesize = object->GetNumber(index);
 		}  // Audio Sample Size
 
-		if(video_codec_type == RtmpCodecType::H264 && audio_codec_type == RtmpCodecType::AAC)
+		if (video_codec_type == RtmpCodecType::H264 && audio_codec_type == RtmpCodecType::AAC)
 		{
-			
 		}
 		else
 		{
 			logtw("AmfMeta has incompatible codec information. - stream(%s/%s) id(%u/%u) video(%s) audio(%s)",
-				_vhost_app_name.CStr(),
-				_stream_name.CStr(),
-				_app_id,
-				GetId(),
-				GetCodecString(video_codec_type).CStr(),
-				GetCodecString(audio_codec_type).CStr());
+				  _vhost_app_name.CStr(),
+				  _stream_name.CStr(),
+				  _app_id,
+				  GetId(),
+				  GetCodecString(video_codec_type).CStr(),
+				  GetCodecString(audio_codec_type).CStr());
 		}
 
 		_media_info->video_codec_type = video_codec_type;
@@ -688,7 +685,6 @@ namespace pvd
 		// it will call PhysicalPort::OnDisconnected
 		_remote->Close();
 	}
-
 
 	off_t RtmpStream::ReceiveHandshakePacket(const std::shared_ptr<const ov::Data> &data)
 	{
@@ -919,19 +915,18 @@ namespace pvd
 		//
 		// User Control messages SHOULD use message stream ID 0 (known as the
 		// control stream) and, when sent over RTMP Chunk Stream, be sent on
-		// chunk stream ID 2. 
+		// chunk stream ID 2.
 		auto message_stream_id = message->header->completed.stream_id;
 		auto chunk_stream_id = message->header->basic_header.stream_id;
-		if(
+		if (
 			(message_stream_id != 0) ||
-			(chunk_stream_id != 2)
-		)
+			(chunk_stream_id != 2))
 		{
 			logte("Invalid id (message stream id: %u, chunk stream id: %u)", message_stream_id, chunk_stream_id);
 			return false;
 		}
 
-		if(data->GetLength() < 2)
+		if (data->GetLength() < 2)
 		{
 			logte("Invalid user control message size (data length must greater than 2 bytes, but %zu)", data->GetLength());
 			return false;
@@ -944,7 +939,7 @@ namespace pvd
 		switch (type)
 		{
 			case RTMP_UCMID_PINGREQUEST: {
-				if(data->GetLength() != 6)
+				if (data->GetLength() != 6)
 				{
 					logte("Invalid ping message size: %zu", data->GetLength());
 					return false;
@@ -1083,7 +1078,7 @@ namespace pvd
 			data_name == RTMP_CMD_DATA_ONMETADATA &&
 			document.GetProperty(2) != nullptr &&
 			(document.GetProperty(2)->GetType() == AmfDataType::Object ||
-			document.GetProperty(2)->GetType() == AmfDataType::Array))
+			 document.GetProperty(2)->GetType() == AmfDataType::Array))
 		{
 			OnAmfMetaData(message->header, document, 2);
 		}
@@ -1100,20 +1095,20 @@ namespace pvd
 
 	bool RtmpStream::CheckReadyToPublish()
 	{
-		if(_media_info->video_stream_coming == true && _media_info->audio_stream_coming == true)
+		if (_media_info->video_stream_coming == true && _media_info->audio_stream_coming == true)
 		{
 			return true;
 		}
-		// If this algorithm causes latency, it may be better to use meta data from AmfMeta. 
+		// If this algorithm causes latency, it may be better to use meta data from AmfMeta.
 		// But AmfMeta is not always correct so we need more consideration
-		
+
 		// It makes this stream video only
-		else if(_media_info->video_stream_coming == true && _stream_message_cache_video_count > MAX_STREAM_MESSAGE_COUNT/2)
+		else if (_media_info->video_stream_coming == true && _stream_message_cache_video_count > MAX_STREAM_MESSAGE_COUNT / 2)
 		{
 			return true;
 		}
 		// It makes this stream audio only
-		else if(_media_info->audio_stream_coming == true && _stream_message_cache_audio_count > MAX_STREAM_MESSAGE_COUNT/2)
+		else if (_media_info->audio_stream_coming == true && _stream_message_cache_audio_count > MAX_STREAM_MESSAGE_COUNT / 2)
 		{
 			return true;
 		}
@@ -1148,8 +1143,8 @@ namespace pvd
 			(message->header->payload_size > RTMP_MAX_PACKET_SIZE))
 		{
 			logte("Size Fail - stream(%s/%s) size(%d)",
-				_vhost_app_name.CStr(), _stream_name.CStr(),
-				message->header->payload_size);
+				  _vhost_app_name.CStr(), _stream_name.CStr(),
+				  message->header->payload_size);
 			return false;
 		}
 
@@ -1159,9 +1154,9 @@ namespace pvd
 		{
 			_media_info->video_stream_coming = true;
 
-			if(CheckReadyToPublish() == true)
+			if (CheckReadyToPublish() == true)
 			{
-				if(PublishStream() == false)
+				if (PublishStream() == false)
 				{
 					logte("Input create fail -  stream(%s/%s)", _vhost_app_name.CStr(), _stream_name.CStr());
 					return false;
@@ -1171,26 +1166,26 @@ namespace pvd
 			{
 				// Store stream data until stream is published
 				_stream_message_cache.push_back(message);
-				_stream_message_cache_video_count ++;
+				_stream_message_cache_video_count++;
 				if (_stream_message_cache.size() > MAX_STREAM_MESSAGE_COUNT)
 				{
 					logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
-						_vhost_app_name.CStr(),
-						_stream_name.CStr(),
-						_stream_message_cache.size(),
-						MAX_STREAM_MESSAGE_COUNT);
+						  _vhost_app_name.CStr(),
+						  _stream_name.CStr(),
+						  _stream_message_cache.size(),
+						  MAX_STREAM_MESSAGE_COUNT);
 				}
 
 				return true;
 			}
 		}
 
-		// video stream callback 
+		// video stream callback
 		if (_media_info->video_stream_coming)
 		{
 			// Parsing FLV
 			FlvVideoData flv_video;
-			if(FlvVideoData::Parse(message->payload->GetDataAs<uint8_t>(), message->payload->GetLength(), flv_video) == false)
+			if (FlvVideoData::Parse(message->payload->GetDataAs<uint8_t>(), message->payload->GetLength(), flv_video) == false)
 			{
 				logte("Could not parse flv video (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
@@ -1208,13 +1203,13 @@ namespace pvd
 			int64_t dts = message->header->completed.timestamp;
 			int64_t pts = dts + flv_video.CompositionTime();
 
-			if(_negative_cts_detected)
+			if (_negative_cts_detected)
 			{
 				pts += ADJUST_PTS;
 			}
 
 			auto video_track = GetTrack(RTMP_VIDEO_TRACK_ID);
-			if(video_track == nullptr)
+			if (video_track == nullptr)
 			{
 				logte("Cannot get video track (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
@@ -1223,8 +1218,8 @@ namespace pvd
 			dts *= video_track->GetVideoTimestampScale();
 			pts *= video_track->GetVideoTimestampScale();
 
-			cmn::PacketType	packet_type = cmn::PacketType::Unknown;
-			if(flv_video.PacketType() == FlvAvcPacketType::AVC_SEQUENCE_HEADER)
+			cmn::PacketType packet_type = cmn::PacketType::Unknown;
+			if (flv_video.PacketType() == FlvAvcPacketType::AVC_SEQUENCE_HEADER)
 			{
 				packet_type = cmn::PacketType::SEQUENCE_HEADER;
 
@@ -1232,24 +1227,25 @@ namespace pvd
 				AVCDecoderConfigurationRecord record;
 				AVCDecoderConfigurationRecord::Parse(flv_video.Payload(), flv_video.PayloadLength(), record);
 			}
-			else if(flv_video.PacketType() == FlvAvcPacketType::AVC_NALU)
+			else if (flv_video.PacketType() == FlvAvcPacketType::AVC_NALU)
 			{
 				packet_type = cmn::PacketType::NALU;
 			}
-			else if(flv_video.PacketType() == FlvAvcPacketType::AVC_END_SEQUENCE)
+			else if (flv_video.PacketType() == FlvAvcPacketType::AVC_END_SEQUENCE)
 			{
 				// what can I do?
 				return true;
 			}
 
 			auto data = std::make_shared<ov::Data>(flv_video.Payload(), flv_video.PayloadLength());
-			auto video_frame = std::make_shared<MediaPacket>(cmn::MediaType::Video,
-											  RTMP_VIDEO_TRACK_ID,
-											  data,
-											  pts,
-											  dts, 
-											  cmn::BitstreamFormat::H264_AVCC, // RTMP's packet type is AVCC 
-											 packet_type);
+			auto video_frame = std::make_shared<MediaPacket>(GetMsid(),
+															 cmn::MediaType::Video,
+															 RTMP_VIDEO_TRACK_ID,
+															 data,
+															 pts,
+															 dts,
+															 cmn::BitstreamFormat::H264_AVCC,  // RTMP's packet type is AVCC
+															 packet_type);
 
 			SendFrame(video_frame);
 
@@ -1269,16 +1265,16 @@ namespace pvd
 			if (check_gap >= 60)
 			{
 				logtd("Rtmp Provider Info - stream(%s/%s) key(%ums) timestamp(v:%ums/a:%ums/g:%dms) fps(v:%u/a:%u) gap(v:%ums/a:%ums)",
-					_vhost_app_name.CStr(),
-					_stream_name.CStr(),
-					_key_frame_interval,
-					_last_video_timestamp,
-					_last_audio_timestamp,
-					_last_video_timestamp - _last_audio_timestamp,
-					_video_frame_count / check_gap,
-					_audio_frame_count / check_gap,
-					_last_video_timestamp - _previous_last_video_timestamp,
-					_last_audio_timestamp - _previous_last_audio_timestamp);
+					  _vhost_app_name.CStr(),
+					  _stream_name.CStr(),
+					  _key_frame_interval,
+					  _last_video_timestamp,
+					  _last_audio_timestamp,
+					  _last_video_timestamp - _last_audio_timestamp,
+					  _video_frame_count / check_gap,
+					  _audio_frame_count / check_gap,
+					  _last_video_timestamp - _previous_last_video_timestamp,
+					  _last_audio_timestamp - _previous_last_audio_timestamp);
 
 				_stream_check_time = time(nullptr);
 				_video_frame_count = 0;
@@ -1313,9 +1309,9 @@ namespace pvd
 			(message->header->payload_size > RTMP_MAX_PACKET_SIZE))
 		{
 			logte("Size Fail - stream(%s/%s) size(%d)",
-				_vhost_app_name.CStr(),
-				_stream_name.CStr(),
-				message->header->payload_size);
+				  _vhost_app_name.CStr(),
+				  _stream_name.CStr(),
+				  message->header->payload_size);
 
 			return false;
 		}
@@ -1324,9 +1320,9 @@ namespace pvd
 		{
 			_media_info->audio_stream_coming = true;
 
-			if(CheckReadyToPublish() == true)
+			if (CheckReadyToPublish() == true)
 			{
-				if(PublishStream() == false)
+				if (PublishStream() == false)
 				{
 					logte("Input create fail -  stream(%s/%s)", _vhost_app_name.CStr(), _stream_name.CStr());
 					return false;
@@ -1336,26 +1332,26 @@ namespace pvd
 			{
 				// Store stream data until stream is published
 				_stream_message_cache.push_back(message);
-				_stream_message_cache_video_count ++;
+				_stream_message_cache_video_count++;
 				if (_stream_message_cache.size() > MAX_STREAM_MESSAGE_COUNT)
 				{
 					logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
-						_vhost_app_name.CStr(),
-						_stream_name.CStr(),
-						_stream_message_cache.size(),
-						MAX_STREAM_MESSAGE_COUNT);
+						  _vhost_app_name.CStr(),
+						  _stream_name.CStr(),
+						  _stream_message_cache.size(),
+						  MAX_STREAM_MESSAGE_COUNT);
 				}
 
 				return true;
 			}
 		}
 
-		// audio stream callback 
+		// audio stream callback
 		if (_media_info->audio_stream_coming)
 		{
 			// Parsing FLV
 			FlvAudioData flv_audio;
-			if(FlvAudioData::Parse(message->payload->GetDataAs<uint8_t>(), message->payload->GetLength(), flv_audio) == false)
+			if (FlvAudioData::Parse(message->payload->GetDataAs<uint8_t>(), message->payload->GetLength(), flv_audio) == false)
 			{
 				logte("Could not parse flv audio (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
@@ -1364,14 +1360,14 @@ namespace pvd
 			int64_t dts = message->header->completed.timestamp;
 			int64_t pts = dts;
 
-			if(_negative_cts_detected)
+			if (_negative_cts_detected)
 			{
 				pts += ADJUST_PTS;
 			}
 
 			// Get audio track info
 			auto audio_track = GetTrack(RTMP_AUDIO_TRACK_ID);
-			if(audio_track == nullptr)
+			if (audio_track == nullptr)
 			{
 				logte("Cannot get video track (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
@@ -1379,30 +1375,31 @@ namespace pvd
 
 			pts *= audio_track->GetAudioTimestampScale();
 			dts *= audio_track->GetAudioTimestampScale();
-
-			cmn::PacketType	packet_type = cmn::PacketType::Unknown;
-			if(flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
+	 
+			cmn::PacketType packet_type = cmn::PacketType::Unknown;
+			if (flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
 			{
 				packet_type = cmn::PacketType::SEQUENCE_HEADER;
 				// AACSpecificConfig Unit Test
 				AACSpecificConfig config;
 				AACSpecificConfig::Parse(flv_audio.Payload(), flv_audio.PayloadLength(), config);
 			}
-			else if(flv_audio.PacketType() == FlvAACPacketType::RAW)
+			else if (flv_audio.PacketType() == FlvAACPacketType::RAW)
 			{
 				packet_type = cmn::PacketType::RAW;
 			}
 
 			auto data = std::make_shared<ov::Data>(flv_audio.Payload(), flv_audio.PayloadLength());
-			auto frame = std::make_shared<MediaPacket>(cmn::MediaType::Audio,
-											  RTMP_AUDIO_TRACK_ID,
-											  data,
-											  pts,
-											  dts,
-											  cmn::BitstreamFormat::AAC_RAW,
-											  packet_type);
+			auto frame = std::make_shared<MediaPacket>(GetMsid(),
+													   cmn::MediaType::Audio,
+													   RTMP_AUDIO_TRACK_ID,
+													   data,
+													   pts,
+													   dts,
+													   cmn::BitstreamFormat::AAC_RAW,
+													   packet_type);
 
-			SendFrame(frame);											
+			SendFrame(frame);
 
 			_last_audio_timestamp = message->header->completed.timestamp;
 			_audio_frame_count++;
@@ -1413,7 +1410,7 @@ namespace pvd
 
 	bool RtmpStream::PublishStream()
 	{
-		if(_publish_url == nullptr)
+		if (_publish_url == nullptr)
 		{
 			return false;
 		}
@@ -1422,24 +1419,24 @@ namespace pvd
 
 		// Set Track Info
 		SetTrackInfo(_media_info);
-	
+
 		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(_publish_url->Host(), _publish_url->App());
 
 		// Publish
-		if(PublishChannel(vhost_app_name) == false)
+		if (PublishChannel(vhost_app_name) == false)
 		{
 			Stop();
 			return false;
 		}
 
-		// Send stored messages
-		for(auto message : _stream_message_cache)
+		//   stored messages
+		for (auto message : _stream_message_cache)
 		{
-			if(message->header->completed.type_id == RTMP_MSGID_VIDEO_MESSAGE && _media_info->video_stream_coming)
+			if (message->header->completed.type_id == RTMP_MSGID_VIDEO_MESSAGE && _media_info->video_stream_coming)
 			{
 				ReceiveVideoMessage(message);
 			}
-			else if(message->header->completed.type_id == RTMP_MSGID_AUDIO_MESSAGE && _media_info->audio_stream_coming)
+			else if (message->header->completed.type_id == RTMP_MSGID_AUDIO_MESSAGE && _media_info->audio_stream_coming)
 			{
 				ReceiveAudioMessage(message);
 			}
@@ -1448,7 +1445,7 @@ namespace pvd
 
 		return true;
 	}
-	
+
 	bool RtmpStream::SetTrackInfo(const std::shared_ptr<RtmpMediaInfo> &media_info)
 	{
 		if (media_info->video_stream_coming)
@@ -1469,7 +1466,7 @@ namespace pvd
 
 			// Kbps -> bps, it is just metadata
 			new_track->SetBitrate(media_info->video_bitrate * 1000);
-			
+
 			AddTrack(new_track);
 		}
 
@@ -1535,15 +1532,19 @@ namespace pvd
 		return SendData(export_data->data(), export_data->size());
 	}
 
-		//====================================================================================================
+	//====================================================================================================
 	// Send handshake packet
 	// s0 + s1 + s2
 	//====================================================================================================
 	bool RtmpStream::SendHandshake(const std::shared_ptr<const ov::Data> &data)
 	{
 		uint8_t s0 = 0;
-		uint8_t s1[RTMP_HANDSHAKE_PACKET_SIZE] = {0,};
-		uint8_t s2[RTMP_HANDSHAKE_PACKET_SIZE] = {0,};
+		uint8_t s1[RTMP_HANDSHAKE_PACKET_SIZE] = {
+			0,
+		};
+		uint8_t s2[RTMP_HANDSHAKE_PACKET_SIZE] = {
+			0,
+		};
 
 		s0 = RTMP_HANDSHAKE_VERSION;
 		RtmpHandshake::MakeS1(s1);
@@ -1580,10 +1581,10 @@ namespace pvd
 	bool RtmpStream::SendUserControlMessage(uint16_t message, std::shared_ptr<std::vector<uint8_t>> &data)
 	{
 		auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
-																	0,
-																	RTMP_MSGID_USER_CONTROL_MESSAGE,
-																	0,
-																	data->size() + 2);
+																	 0,
+																	 RTMP_MSGID_USER_CONTROL_MESSAGE,
+																	 0,
+																	 data->size() + 2);
 
 		data->insert(data->begin(), 0);
 		data->insert(data->begin(), 0);
@@ -1596,10 +1597,10 @@ namespace pvd
 	{
 		auto body = std::make_shared<std::vector<uint8_t>>(sizeof(int));
 		auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
-																	0,
-																	RTMP_MSGID_WINDOWACKNOWLEDGEMENT_SIZE,
-																	_rtmp_stream_id,
-																	body->size());
+																	 0,
+																	 RTMP_MSGID_WINDOWACKNOWLEDGEMENT_SIZE,
+																	 _rtmp_stream_id,
+																	 body->size());
 
 		RtmpMuxUtil::WriteInt32(body->data(), size);
 
@@ -1610,10 +1611,10 @@ namespace pvd
 	{
 		auto body = std::make_shared<std::vector<uint8_t>>(sizeof(int));
 		auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
-																	0,
-																	RTMP_MSGID_ACKNOWLEDGEMENT,
-																	0,
-																	body->size());
+																	 0,
+																	 RTMP_MSGID_ACKNOWLEDGEMENT,
+																	 0,
+																	 body->size());
 
 		RtmpMuxUtil::WriteInt32(body->data(), acknowledgement_traffic);
 
@@ -1624,10 +1625,10 @@ namespace pvd
 	{
 		auto body = std::make_shared<std::vector<uint8_t>>(5);
 		auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
-																	0,
-																	RTMP_MSGID_SET_PEERBANDWIDTH,
-																	_rtmp_stream_id,
-																	body->size());
+																	 0,
+																	 RTMP_MSGID_SET_PEERBANDWIDTH,
+																	 _rtmp_stream_id,
+																	 body->size());
 
 		RtmpMuxUtil::WriteInt32(body->data(), bandwidth);
 		RtmpMuxUtil::WriteInt8(body->data() + 4, 2);
@@ -1680,10 +1681,10 @@ namespace pvd
 	bool RtmpStream::SendAmfConnectResult(uint32_t chunk_stream_id, double transaction_id, double object_encoding)
 	{
 		auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id,
-																	0,
-																	RTMP_MSGID_AMF0_COMMAND_MESSAGE,
-																	0,
-																	0);
+																	 0,
+																	 RTMP_MSGID_AMF0_COMMAND_MESSAGE,
+																	 0,
+																	 0);
 		AmfDocument document;
 		AmfObject *object = nullptr;
 		AmfArray *array = nullptr;
@@ -1720,10 +1721,10 @@ namespace pvd
 	bool RtmpStream::SendAmfOnFCPublish(uint32_t chunk_stream_id, uint32_t stream_id, double client_id)
 	{
 		auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id,
-																	0,
-																	RTMP_MSGID_AMF0_COMMAND_MESSAGE,
-																	_rtmp_stream_id,
-																	0);
+																	 0,
+																	 RTMP_MSGID_AMF0_COMMAND_MESSAGE,
+																	 _rtmp_stream_id,
+																	 0);
 		AmfDocument document;
 		AmfObject *object = nullptr;
 
@@ -1745,10 +1746,10 @@ namespace pvd
 	bool RtmpStream::SendAmfCreateStreamResult(uint32_t chunk_stream_id, double transaction_id)
 	{
 		auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id,
-																	0,
-																	RTMP_MSGID_AMF0_COMMAND_MESSAGE,
-																	0,
-																	0);
+																	 0,
+																	 RTMP_MSGID_AMF0_COMMAND_MESSAGE,
+																	 0,
+																	 0);
 		AmfDocument document;
 
 		// 스트림ID 정하기
@@ -1763,17 +1764,17 @@ namespace pvd
 	}
 
 	bool RtmpStream::SendAmfOnStatus(uint32_t chunk_stream_id,
-									  uint32_t stream_id,
-									  char *level,
-									  char *code,
-									  char *description,
-									  double client_id)
+									 uint32_t stream_id,
+									 char *level,
+									 char *code,
+									 char *description,
+									 double client_id)
 	{
 		auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id,
-																	0,
-																	RTMP_MSGID_AMF0_COMMAND_MESSAGE,
-																	stream_id,
-																	0);
+																	 0,
+																	 RTMP_MSGID_AMF0_COMMAND_MESSAGE,
+																	 stream_id,
+																	 0);
 		AmfDocument document;
 		AmfObject *object = nullptr;
 
@@ -1845,4 +1846,4 @@ namespace pvd
 
 		return codec_string;
 	}
-}
+}  // namespace pvd

@@ -197,15 +197,15 @@ void EncoderVP8::ThreadEncode()
 			else
 			{
 				// Encoded packet is ready
-				auto packet_buffer = std::make_shared<MediaPacket>(
-					cmn::MediaType::Video,
-					0,
-					_packet->data,
-					_packet->size,
-					_packet->pts,
-					_packet->dts,
-					-1L,
-					(_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
+				auto packet_buffer = std::make_shared<MediaPacket>(0,
+																   cmn::MediaType::Video,
+																   0,
+																   _packet->data,
+																   _packet->size,
+																   _packet->pts,
+																   _packet->dts,
+																   -1L,
+																   (_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
 
 				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::VP8);
 				packet_buffer->SetPacketType(cmn::PacketType::RAW);

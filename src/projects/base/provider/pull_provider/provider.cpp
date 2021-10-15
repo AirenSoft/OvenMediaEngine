@@ -124,6 +124,7 @@ namespace pvd
 		auto app = std::dynamic_pointer_cast<PullApplication>(GetApplicationById(app_info.GetId()));
 		if (app == nullptr)
 		{
+			UnlockPullStreamIfNeeded(app_info, stream_name, PullingItem::PullingItemState::PULLED);
 			logte("There is no such app (%s)", app_info.GetName().CStr());
 			return nullptr;
 		}

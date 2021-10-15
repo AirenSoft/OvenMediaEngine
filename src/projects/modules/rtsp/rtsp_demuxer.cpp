@@ -24,7 +24,7 @@ bool RtspDemuxer::AppendPacket(const uint8_t *data, size_t data_length)
 			if(result > 0)
 			{
 				_datas.push(rtsp_data);
-				_buffer->Erase(0, result);
+				_buffer = _buffer->Subdata(result);
 				continue;
 			}
 			// Not enough buffer
@@ -46,7 +46,7 @@ bool RtspDemuxer::AppendPacket(const uint8_t *data, size_t data_length)
 			if(result > 0)
 			{
 				_messages.push(rtsp_message);
-				_buffer->Erase(0, result);
+				_buffer = _buffer->Subdata(result);
 				continue;
 			}
 			// Not enough buffer

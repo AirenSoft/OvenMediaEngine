@@ -85,17 +85,19 @@ namespace pvd
 						auto elapsed_time_from_last_sent = std::chrono::duration_cast<std::chrono::seconds>(current - stream_metrics->GetLastSentTime()).count();
 						auto elapsed_time_from_last_recv = std::chrono::duration_cast<std::chrono::seconds>(current - stream_metrics->GetLastRecvTime()).count();
 						
-						// The stream type is pull stream, if packets do NOT arrive for more than 5 seconds, it is a seriously warning situation
-						if(elapsed_time_from_last_recv > 5)
-						{
-							logtw("%s/%s(%u) There are no incoming packets. %d seconds have elapsed since the last packet was received.", 
-									stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
-						}
-
 						if(elapsed_time_from_last_sent > MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC)
 						{
 							logtw("%s/%s(%u) stream will be deleted because it hasn't been used for %u seconds", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC);
 							DeleteStream(stream);
+						}
+						// The stream type is pull stream, if packets do NOT arrive for more than 3 seconds, it is a seriously warning situation
+						else if(elapsed_time_from_last_recv > 3)
+						{
+							logtw("%s/%s(%u) There are no incoming packets. %d seconds have elapsed since the last packet was received.", 
+									stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
+
+							// When the stream is stopped, it tries to reconnect using the next url.
+							stream->Stop();
 						}
 					}
 				}

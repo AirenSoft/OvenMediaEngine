@@ -107,6 +107,18 @@ bool MediaRouteStream::IsStreamPrepared()
 	return _is_stream_prepared;
 }
 
+void MediaRouteStream::Flush()
+{
+	// Clear queued apckets
+	_packets_queue.Clear();
+	// Clear stahsed Packets
+	_media_packet_stash.clear();
+
+	_are_all_tracks_parsed = false;
+
+	_is_stream_prepared = false;
+}
+
 #include <base/ovcrypto/base_64.h>
 bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
 {
@@ -808,8 +820,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 										track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(),
 										_stat_recv_pkt_count[track_id],
 										ov::Converter::ToSiString(_stat_recv_pkt_size[track_id], 1).CStr(),
-										_stat_recv_pkt_size[track_id] / (uptime/1000) * 8 / 1000
-										);
+										_stat_recv_pkt_size[track_id] / (uptime / 1000) * 8 / 1000);
 		}
 
 		ov::String stat_stream_str = "";

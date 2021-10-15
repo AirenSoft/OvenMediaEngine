@@ -70,6 +70,7 @@ bool SegmentPublisher::Stop()
 
 	_stream_server->RemoveObserver(SegmentStreamObserver::GetSharedPtr());
 	_stream_server->Stop();
+	
 	return Publisher::Stop();
 }
 

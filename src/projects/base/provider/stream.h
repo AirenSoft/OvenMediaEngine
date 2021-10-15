@@ -27,9 +27,9 @@ namespace pvd
 			CONNECTED,
 			DESCRIBED,
 			PLAYING,
-			STOPPED,	// will be retried
+			STOPPED,	// will be retried, Set super class
 			ERROR,		// will be retried
-			TERMINATED	// will be deleted
+			TERMINATED	// will be deleted, Set super class
 		};
 
 		State GetState(){return _state;};
@@ -71,18 +71,14 @@ namespace pvd
 		uint64_t AdjustTimestampByBase(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp);
 		uint64_t AdjustTimestampByDelta(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp);
 		uint64_t GetTimestampDelta(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp);
-
-		State 	_state = State::IDLE;
-
 		std::shared_ptr<pvd::Application> _application = nullptr;
 
 	private:
 		// Track ID : Timestamp
 		std::map<uint32_t, uint64_t>			_source_timestamp_map;
 		std::map<uint32_t, uint64_t>			_last_timestamp_map;
-
 		std::map<uint32_t, uint64_t>			_base_timestamp_map;
 
-		bool _jump_source_timestamp = false;
+		State 	_state = State::IDLE;
 	};
 }

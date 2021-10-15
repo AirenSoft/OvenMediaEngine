@@ -107,6 +107,18 @@ bool TranscoderStream::Stop()
 {
 	logtd("Wait for terminated trancode stream thread.");
 
+	RemoveAllComponents();
+
+	// Notify to delete the stream created on the MediaRouter
+	NotifyDeleteStreams();
+
+	logti("[%s/%s(%u)] Transcoder stream has been stopped.", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId());
+
+	return true;
+}
+
+void TranscoderStream::RemoveAllComponents()
+{
 	// Stop all encoders
 	for (auto &iter : _encoders)
 	{
@@ -129,11 +141,28 @@ bool TranscoderStream::Stop()
 		object->Stop();
 		object.reset();
 	}
+}
 
-	// Notify to delete the stream created on the MediaRouter
-	NotifyDeleteStreams();
+bool TranscoderStream::Prepare()
+{
+	return true;
+}
 
-	logti("[%s/%s(%u)] Transcoder stream has been stopped.", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId());
+bool TranscoderStream::Update(const std::shared_ptr<info::Stream> &stream)
+{
+	RemoveAllComponents();
+
+	// Update info::Stream().msid of all output streams
+	for (auto &iter : _output_streams)
+	{
+		auto stream_output = iter.second;
+
+		stream_output->SetMsid(stream->GetMsid());
+	}
+
+	CreateDecoders();
+
+	NotifyUpdateStreams();
 
 	return true;
 }
@@ -1345,8 +1374,23 @@ void TranscoderStream::NotifyDeleteStreams()
 	_output_streams.clear();
 }
 
+void TranscoderStream::NotifyUpdateStreams()
+{
+	for (auto &iter : _output_streams)
+	{
+		auto stream_output = iter.second;
+		logti("[%s/%s(%u)] -> [%s/%s(%u)] Transcoder output stream has been updated.",
+			  _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId(),
+			  _application_info.GetName().CStr(), stream_output->GetName().CStr(), stream_output->GetId());
+
+		_parent->UpdateStream(stream_output);
+	}
+}
+
 void TranscoderStream::SendFrame(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> packet)
 {
+	packet->SetMsid(stream->GetMsid());
+
 	bool ret = _parent->SendFrame(stream, std::move(packet));
 	if (ret == false)
 	{

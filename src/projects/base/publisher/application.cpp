@@ -1,13 +1,15 @@
-#include "publisher.h"
 #include "application.h"
-#include "publisher_private.h"
+
 #include <algorithm>
+
+#include "publisher.h"
+#include "publisher_private.h"
 
 namespace pub
 {
 	ApplicationWorker::ApplicationWorker(uint32_t worker_id, ov::String worker_name)
 		: _stream_data_queue(nullptr, 500),
-		_incoming_packet_queue(nullptr, 500)
+		  _incoming_packet_queue(nullptr, 500)
 	{
 		_worker_id = worker_id;
 		_worker_name = worker_name;
@@ -35,7 +37,7 @@ namespace pub
 
 	bool ApplicationWorker::Stop()
 	{
-		if(_stop_thread_flag == true)
+		if (_stop_thread_flag == true)
 		{
 			return true;
 		}
@@ -83,7 +85,7 @@ namespace pub
 		}
 
 		auto data = _stream_data_queue.Dequeue(0);
-		if(data.has_value())
+		if (data.has_value())
 		{
 			return data.value();
 		}
@@ -99,11 +101,11 @@ namespace pub
 		}
 
 		auto data = _incoming_packet_queue.Dequeue(0);
-		if(data.has_value())
+		if (data.has_value())
 		{
 			return data.value();
 		}
-		
+
 		return nullptr;
 	}
 
@@ -117,11 +119,11 @@ namespace pub
 			auto stream_data = PopStreamData();
 			if ((stream_data != nullptr) && (stream_data->_stream != nullptr) && (stream_data->_media_packet != nullptr))
 			{
-				if(stream_data->_media_packet->GetMediaType() == cmn::MediaType::Video)
+				if (stream_data->_media_packet->GetMediaType() == cmn::MediaType::Video)
 				{
 					stream_data->_stream->SendVideoFrame(stream_data->_media_packet);
 				}
-				else if(stream_data->_media_packet->GetMediaType() == cmn::MediaType::Audio)
+				else if (stream_data->_media_packet->GetMediaType() == cmn::MediaType::Audio)
 				{
 					stream_data->_stream->SendAudioFrame(stream_data->_media_packet);
 				}
@@ -151,16 +153,16 @@ namespace pub
 		Stop();
 	}
 
-	const char* Application::GetApplicationTypeName()
+	const char *Application::GetApplicationTypeName()
 	{
-		if(_publisher == nullptr)
+		if (_publisher == nullptr)
 		{
 			return "";
 		}
 
-		if(_app_type_name.IsEmpty())
+		if (_app_type_name.IsEmpty())
 		{
-			_app_type_name.Format("%s %s",  _publisher->GetPublisherName(), "Application");
+			_app_type_name.Format("%s %s", _publisher->GetPublisherName(), "Application");
 		}
 
 		return _app_type_name.CStr();
@@ -169,18 +171,18 @@ namespace pub
 	bool Application::Start()
 	{
 		_application_worker_count = GetConfig().GetAppWorkerCount();
-		if(_application_worker_count < MIN_APPLICATION_WORKER_COUNT)
+		if (_application_worker_count < MIN_APPLICATION_WORKER_COUNT)
 		{
 			_application_worker_count = MIN_APPLICATION_WORKER_COUNT;
 		}
-		if(_application_worker_count > MAX_APPLICATION_WORKER_COUNT)
+		if (_application_worker_count > MAX_APPLICATION_WORKER_COUNT)
 		{
 			_application_worker_count = MIN_APPLICATION_WORKER_COUNT;
 		}
-		
+
 		std::lock_guard<std::shared_mutex> worker_lock(_application_worker_lock);
 
-		for(uint32_t i = 0; i < _application_worker_count; i++)
+		for (uint32_t i = 0; i < _application_worker_count; i++)
 		{
 			auto app_worker = std::make_shared<ApplicationWorker>(i, StringFromPublisherType(_publisher->GetPublisherType()).CStr());
 			if (app_worker->Start() == false)
@@ -202,7 +204,7 @@ namespace pub
 	bool Application::Stop()
 	{
 		std::unique_lock<std::shared_mutex> worker_lock(_application_worker_lock);
-		for(const auto &worker : _application_workers)
+		for (const auto &worker : _application_workers)
 		{
 			worker->Stop();
 		}
@@ -222,7 +224,7 @@ namespace pub
 	{
 		std::unique_lock<std::shared_mutex> lock(_stream_map_mutex);
 
-		for(const auto &x : _streams)
+		for (const auto &x : _streams)
 		{
 			auto stream = x.second;
 			stream->Stop();
@@ -255,7 +257,7 @@ namespace pub
 		std::unique_lock<std::shared_mutex> lock(_stream_map_mutex);
 
 		auto stream_it = _streams.find(info->GetId());
-		if(stream_it == _streams.end())
+		if (stream_it == _streams.end())
 		{
 			// Sometimes stream rejects stream creation if the input codec is not supported. So this is a normal situation.
 			logtd("OnStreamDeleted failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
@@ -280,12 +282,12 @@ namespace pub
 		return true;
 	}
 
-	bool Application::OnStreamPrepared(const std::shared_ptr<info::Stream> &info) 
+	bool Application::OnStreamPrepared(const std::shared_ptr<info::Stream> &info)
 	{
 		std::shared_lock<std::shared_mutex> lock(_stream_map_mutex);
 
 		auto stream_it = _streams.find(info->GetId());
-		if(stream_it == _streams.end())
+		if (stream_it == _streams.end())
 		{
 			// Sometimes stream rejects stream creation if the input codec is not supported. So this is a normal situation.
 			logtd("OnStreamPrepared failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
@@ -302,9 +304,28 @@ namespace pub
 		return true;
 	}
 
+	bool Application::OnStreamUpdated(const std::shared_ptr<info::Stream> &info)
+	{
+		std::shared_lock<std::shared_mutex> lock(_stream_map_mutex);
+
+		auto stream_it = _streams.find(info->GetId());
+		if (stream_it == _streams.end())
+		{
+			// Sometimes stream rejects stream creation if the input codec is not supported. So this is a normal situation.
+			logtd("OnStreamPrepared failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
+			return true;
+		}
+
+		auto stream = stream_it->second;
+
+		lock.unlock();
+
+		return true;
+	}
+
 	std::shared_ptr<ApplicationWorker> Application::GetWorkerByStreamID(info::stream_id_t stream_id)
 	{
-		if(_application_worker_count == 0)
+		if (_application_worker_count == 0)
 		{
 			return nullptr;
 		}
@@ -314,24 +335,23 @@ namespace pub
 	}
 
 	bool Application::OnSendFrame(const std::shared_ptr<info::Stream> &stream,
-									   const std::shared_ptr<MediaPacket> &media_packet)
+								  const std::shared_ptr<MediaPacket> &media_packet)
 	{
 		auto application_worker = GetWorkerByStreamID(stream->GetId());
-		if(application_worker == nullptr)
+		if (application_worker == nullptr)
 		{
 			return false;
 		}
 
 		return application_worker->PushMediaPacket(GetStream(stream->GetId()), media_packet);
 	}
-	
 
 	bool Application::PushIncomingPacket(const std::shared_ptr<info::Session> &session_info,
 										 const std::shared_ptr<const ov::Data> &data)
 	{
 		auto stream_id = session_info->GetStream().GetId();
 		auto application_worker = GetWorkerByStreamID(stream_id);
-		if(application_worker == nullptr)
+		if (application_worker == nullptr)
 		{
 			return false;
 		}
