@@ -5,13 +5,13 @@
 
 bool IceTcpDemultiplexer::AppendData(const void *data, size_t length)
 {	
-	_buffer.Append(data, length);
+	_buffer->Append(data, length);
 	return ParseData();
 }
 
 bool IceTcpDemultiplexer::AppendData(const std::shared_ptr<const ov::Data> &data)
 {
-	_buffer.Append(data);
+	_buffer->Append(data);
 	return ParseData();
 }
 
@@ -35,7 +35,7 @@ std::shared_ptr<IceTcpDemultiplexer::Packet> IceTcpDemultiplexer::PopPacket()
 
 bool IceTcpDemultiplexer::ParseData()
 {
-	while(_buffer.GetLength() > MINIMUM_PACKET_HEADER_SIZE)
+	while(_buffer->GetLength() > MINIMUM_PACKET_HEADER_SIZE)
 	{
 		// Only STUN and TURN Channel should be input packet types to IceTcpDemultiplexer. 
 		// If another packet is input, it means a problem has occurred.
@@ -79,7 +79,7 @@ bool IceTcpDemultiplexer::ParseData()
 
 IceTcpDemultiplexer::ExtractResult IceTcpDemultiplexer::ExtractStunMessage()
 {
-	ov::ByteStream stream(&_buffer);
+	ov::ByteStream stream(_buffer);
 	StunMessage message;
 
 	if(message.ParseHeader(stream) == false)
@@ -97,11 +97,12 @@ IceTcpDemultiplexer::ExtractResult IceTcpDemultiplexer::ExtractStunMessage()
 	}
 
 	uint32_t packet_size = StunMessage::DefaultHeaderLength() + message.GetMessageLength();
-	auto data = _buffer.Subdata(0, packet_size);
+	auto data = _buffer->Subdata(0, packet_size);
 	auto packet = std::make_shared<IceTcpDemultiplexer::Packet>(IcePacketIdentifier::PacketType::STUN, data);
 
 	_packets.push(packet);
-	_buffer.Erase(0, packet_size);
+
+	_buffer = _buffer->Subdata(packet_size);
 
 	return ExtractResult::SUCCESS;
 }
@@ -110,7 +111,7 @@ IceTcpDemultiplexer::ExtractResult IceTcpDemultiplexer::ExtractChannelMessage()
 {
 	ChannelDataMessage message;
 
-	if(message.LoadHeader(_buffer) == false)
+	if(message.LoadHeader(*_buffer) == false)
 	{
 		if(message.GetLastErrorCode() == ChannelDataMessage::LastErrorCode::NOT_ENOUGH_DATA)
 		{
@@ -123,11 +124,11 @@ IceTcpDemultiplexer::ExtractResult IceTcpDemultiplexer::ExtractChannelMessage()
 	}
 
 	uint32_t packet_size = message.GetPacketLength();
-	auto data = _buffer.Subdata(0, packet_size);
+	auto data = _buffer->Subdata(0, packet_size);
 	auto packet = std::make_shared<IceTcpDemultiplexer::Packet>(IcePacketIdentifier::PacketType::TURN_CHANNEL_DATA, data);
 
 	_packets.push(packet);
-	_buffer.Erase(0, packet_size);
+	_buffer = _buffer->Subdata(packet_size);
 
 	return ExtractResult::SUCCESS;
 }

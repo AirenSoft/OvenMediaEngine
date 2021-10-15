@@ -16,6 +16,12 @@
 class IceTcpDemultiplexer
 {
 public:
+
+	IceTcpDemultiplexer()
+	{
+		_buffer = std::make_shared<ov::Data>(65535);
+	}
+
 	// In the case of a turn channel data message, it parses the header and stores the application data.
 	class Packet
 	{
@@ -63,6 +69,6 @@ private:
 	ExtractResult ExtractStunMessage();
 	ExtractResult ExtractChannelMessage();
 
-	ov::Data _buffer;
+	std::shared_ptr<ov::Data> _buffer;
 	std::queue<std::shared_ptr<IceTcpDemultiplexer::Packet>> _packets;
 };
