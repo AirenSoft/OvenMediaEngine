@@ -178,7 +178,7 @@ namespace pub
 			return false;
 		}
 
-		logti("%s application has started [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
+		logti("%s application has started [%s(%u)] stream (MSID : %d)", GetApplicationTypeName(), GetName().CStr(), GetId(), GetMsid());
 		_state = State::STARTED;
 		return true;
 	}
@@ -257,6 +257,14 @@ namespace pub
 		_sessions.clear();
 
 		logti("[%s(%u)] %s stream has been stopped", GetName().CStr(), GetId(), GetApplicationTypeName());
+
+		return true;
+	}
+
+	bool Stream::OnStreamUpdated(const std::shared_ptr<info::Stream> &info)
+	{
+		logti("[%s(%u)] %s stream has been updated (MSID : %d)", 
+							info->GetName().CStr(), info->GetId(), GetApplicationTypeName(), info->GetMsid());
 
 		return true;
 	}
