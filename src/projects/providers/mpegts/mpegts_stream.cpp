@@ -183,7 +183,7 @@ namespace pvd
 					}
 
 					auto data = std::make_shared<ov::Data>(es->Payload(), es->PayloadLength());
-					auto media_packet = std::make_shared<MediaPacket>(0,
+					auto media_packet = std::make_shared<MediaPacket>(GetMsid(),
 																	  cmn::MediaType::Video,
 																	  es->PID(),
 																	  data,
@@ -199,7 +199,7 @@ namespace pvd
 					auto payload_length = es->PayloadLength();
 
 					auto data = std::make_shared<ov::Data>(payload, payload_length);
-					auto media_packet = std::make_shared<MediaPacket>(0,
+					auto media_packet = std::make_shared<MediaPacket>(GetMsid(),
 																	  cmn::MediaType::Audio,
 																	  es->PID(),
 																	  data,

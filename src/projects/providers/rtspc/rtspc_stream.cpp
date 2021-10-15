@@ -668,14 +668,14 @@ namespace pvd
 
 			if (track->GetCodecId() == cmn::MediaCodecId::H264 && _h264_extradata_nalu != nullptr)
 			{
-				auto media_packet = std::make_shared<MediaPacket>(track->GetMediaType(), 
-					track->GetId(), 
-					_h264_extradata_nalu,
-					timestamp, 
-					timestamp, 
-					cmn::BitstreamFormat::H264_ANNEXB, 
-					cmn::PacketType::NALU);
-
+				auto media_packet = std::make_shared<MediaPacket>(GetMsid(),	
+																	track->GetMediaType(), 
+																	track->GetId(), 
+																	_h264_extradata_nalu,
+																	timestamp, 
+																	timestamp, 
+																	cmn::BitstreamFormat::H264_ANNEXB, 
+																	cmn::PacketType::NALU);
 				SendFrame(media_packet);
 			}
 		}
@@ -969,7 +969,7 @@ namespace pvd
 		logti("Payload Type(%d) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
 				first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
 
-		auto frame = std::make_shared<MediaPacket>(0,
+		auto frame = std::make_shared<MediaPacket>(GetMsid(),
 												   track->GetMediaType(),
 												   track->GetId(),
 												   bitstream,

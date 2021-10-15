@@ -398,7 +398,7 @@ namespace pvd
 		logtd("Payload Type(%d) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)",
 			  first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
 
-		auto frame = std::make_shared<MediaPacket>(0,
+		auto frame = std::make_shared<MediaPacket>(GetMsid(),
 												   track->GetMediaType(),
 												   track->GetId(),
 												   bitstream,
