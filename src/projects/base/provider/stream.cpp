@@ -192,7 +192,7 @@ namespace pvd
 		// First timestamp
 		if(_source_timestamp_map.find(track_id) == _source_timestamp_map.end())
 		{
-			logti("New track timestamp(%u) : curr(%lld)", track_id, timestamp);
+			logtd("New track timestamp(%u) : curr(%lld)", track_id, timestamp);
 			_source_timestamp_map[track_id] = timestamp;
 
 			// Start with zero
@@ -207,13 +207,13 @@ namespace pvd
 			// If the last timestamp exceeds 99.99%, it is judged to be wrapped around.
 			if(_source_timestamp_map[track_id] > ((double)max_timestamp * 99.99) / 100)
 			{
-				logti("Wrapped around(%u) : last(%lld) curr(%lld)", track_id, _source_timestamp_map[track_id], timestamp);
+				logtd("Wrapped around(%u) : last(%lld) curr(%lld)", track_id, _source_timestamp_map[track_id], timestamp);
 				delta = (max_timestamp - _source_timestamp_map[track_id]) + timestamp;
 			}
 			// Otherwise, the source might be changed. (restarted)
 			else
 			{
-				logti("Source changed(%u) : last(%lld) curr(%lld)", track_id, _source_timestamp_map[track_id], timestamp);
+				logtd("Source changed(%u) : last(%lld) curr(%lld)", track_id, _source_timestamp_map[track_id], timestamp);
 				delta = 0;
 			}
 		}

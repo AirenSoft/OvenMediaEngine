@@ -149,11 +149,6 @@ public:
 	void SetDuration(int64_t duration)
 	{
 		_duration = duration;
-		
-		if(duration < 0)
-		{
-			logc("DEBUG", "Duration %lld", duration);
-		}
 	}
 
 	int32_t GetTrackId() const noexcept
