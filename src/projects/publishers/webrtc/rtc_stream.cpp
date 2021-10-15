@@ -358,6 +358,16 @@ bool RtcStream::Stop()
 	return Stream::Stop();
 }
 
+
+bool RtcStream::OnStreamUpdated(const std::shared_ptr<info::Stream> &info)
+{
+	SetMsid(info->GetMsid());
+
+	//TODO(Getroot): check if the track has changed and re-create the SDP.
+
+	return Stream::OnStreamUpdated(info);
+}
+
 std::shared_ptr<SessionDescription> RtcStream::GetSessionDescription()
 {
 	if(GetState() != State::STARTED)

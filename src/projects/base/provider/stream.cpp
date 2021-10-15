@@ -124,7 +124,7 @@ namespace pvd
 			auto track = GetTrack(track_id);
 
 			auto timestamp_ms = (timestamp * 1000) / track->GetTimeBase().GetTimescale();
-			logti("%d old timestamp : %f ms", track_id, timestamp_ms);
+			logtd("%d old timestamp : %f ms", track_id, timestamp_ms);
 
 			max_timestamp_ms = std::max<double>(timestamp_ms, max_timestamp_ms);
 		}
@@ -144,7 +144,7 @@ namespace pvd
 			_base_timestamp_map[track_id] = adjust_timestamp;
 			_last_timestamp_map[track_id] = adjust_timestamp;
 
-			logti("Reset %d last timestamp : %lld => %lld", track_id, old_timestamp, _last_timestamp_map[track_id]);
+			logtd("Reset %d last timestamp : %lld => %lld", track_id, old_timestamp, _last_timestamp_map[track_id]);
 		}
 
 		_source_timestamp_map.clear();

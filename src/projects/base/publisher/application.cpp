@@ -312,7 +312,7 @@ namespace pub
 		if (stream_it == _streams.end())
 		{
 			// Sometimes stream rejects stream creation if the input codec is not supported. So this is a normal situation.
-			logtd("OnStreamPrepared failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
+			logtd("OnStreamUpdated failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
 			return true;
 		}
 
@@ -320,7 +320,7 @@ namespace pub
 
 		lock.unlock();
 
-		return true;
+		return stream->OnStreamUpdated(info);
 	}
 
 	std::shared_ptr<ApplicationWorker> Application::GetWorkerByStreamID(info::stream_id_t stream_id)
