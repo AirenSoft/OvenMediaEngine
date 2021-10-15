@@ -153,6 +153,8 @@ private:
 	void SendFrame(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> packet);
 
 	void RemoveAllComponents();
+
+	void UpdateMsidOfOutputStreams(uint32_t msid);
 public:
 	cmn::MediaCodecId GetCodecIdByName(ov::String name);
 

@@ -152,19 +152,24 @@ bool TranscoderStream::Update(const std::shared_ptr<info::Stream> &stream)
 {
 	RemoveAllComponents();
 
-	// Update info::Stream().msid of all output streams
-	for (auto &iter : _output_streams)
-	{
-		auto stream_output = iter.second;
-
-		stream_output->SetMsid(stream->GetMsid());
-	}
+	UpdateMsidOfOutputStreams(stream->GetMsid());
 
 	CreateDecoders();
 
 	NotifyUpdateStreams();
 
 	return true;
+}
+
+void TranscoderStream::UpdateMsidOfOutputStreams(uint32_t msid)
+{
+	// Update info::Stream().msid of all output streams
+	for (auto &iter : _output_streams)
+	{
+		auto stream_output = iter.second;
+
+		stream_output->SetMsid(msid);
+	}
 }
 
 bool TranscoderStream::Push(std::shared_ptr<MediaPacket> packet)
@@ -358,9 +363,9 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 	output_track->SetBypass(false);
 	output_track->SetCodecId(GetCodecIdByName(profile.GetCodec()));
 	output_track->SetBitrate(0);
-	output_track->SetWidth((profile.GetWidth() == 0) ? input_track->GetWidth() : profile.GetWidth());
-	output_track->SetHeight((profile.GetHeight() == 0) ? input_track->GetHeight() : profile.GetHeight());
-	output_track->SetFrameRate((profile.GetFramerate() == 0) ? input_track->GetFrameRate() : profile.GetFramerate());
+	output_track->SetWidth(profile.GetWidth());
+	output_track->SetHeight(profile.GetHeight());
+	output_track->SetFrameRate(profile.GetFramerate());
 	output_track->SetTimeBase(GetDefaultTimebaseByCodecId(output_track->GetCodecId()));
 
 	if (IsVideoCodec(output_track->GetCodecId()) == false)
