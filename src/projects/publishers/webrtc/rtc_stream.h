@@ -43,6 +43,7 @@ public:
 private:
 	bool Start() override;
 	bool Stop() override;
+	bool OnStreamUpdated(const std::shared_ptr<info::Stream> &info) override;
 
 	void MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader *rtp_video_header);
 	uint16_t AllocateVP8PictureID();

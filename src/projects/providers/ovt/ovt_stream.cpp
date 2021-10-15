@@ -121,7 +121,12 @@ namespace pvd
 	bool OvtStream::RestartStream(const std::shared_ptr<const ov::Url> &url)
 	{
 		logti("[%s/%s(%u)] stream tries to reconnect to %s", GetApplicationTypeName(), GetName().CStr(), GetId(), url->ToUrlString().CStr());
-		return StartStream(url);
+		if(StartStream(url) == false)
+		{
+			return false;
+		}
+
+		return true;
 	}
 
 	bool OvtStream::StopStream()

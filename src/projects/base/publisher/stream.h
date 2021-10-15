@@ -71,6 +71,7 @@ namespace pub
 
 		virtual bool Start();
 		virtual bool Stop();
+		virtual bool OnStreamUpdated(const std::shared_ptr<info::Stream> &info);
 
 		bool WaitUntilStart(uint32_t timeout_ms);
 

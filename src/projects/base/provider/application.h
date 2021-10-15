@@ -62,6 +62,7 @@ namespace pvd
 		virtual ~Application() override;
 	
 		virtual bool NotifyStreamCreated(const std::shared_ptr<Stream> &stream);
+		virtual bool NotifyStreamUpdated(const std::shared_ptr<info::Stream> &stream);
 		virtual bool NotifyStreamDeleted(const std::shared_ptr<Stream> &stream);
 
 		std::shared_mutex _streams_guard;

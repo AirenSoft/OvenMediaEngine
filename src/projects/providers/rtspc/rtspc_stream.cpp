@@ -182,7 +182,7 @@ namespace pvd
 			return false;
 		}
 
-		logti("Requested url[%d] : %s", strlen(_curr_url->Source().CStr()), _curr_url->Source().CStr() );
+		logtd("Requested url[%d] : %s", strlen(_curr_url->Source().CStr()), _curr_url->Source().CStr() );
 
 		auto scheme = _curr_url->Scheme();
 		if (scheme.UpperCaseString() != "RTSP")
@@ -701,7 +701,7 @@ namespace pvd
 		auto it = _response_subscriptions.find(cseq);
 		if (it == _response_subscriptions.end())
 		{
-			logte("There is no request message to receive a response. (CSeq : %u)", cseq);
+			logtd("There is no request message to receive a response. (CSeq : %u)", cseq);
 			return nullptr;
 		}
 
@@ -966,7 +966,7 @@ namespace pvd
 
 		auto timestamp = AdjustTimestampByDelta(first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
 
-		logti("Payload Type(%d) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
+		logtd("Payload Type(%d) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
 				first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
 
 		auto frame = std::make_shared<MediaPacket>(GetMsid(),

@@ -124,7 +124,7 @@ namespace pvd
 			auto track = GetTrack(track_id);
 
 			auto timestamp_ms = (timestamp * 1000) / track->GetTimeBase().GetTimescale();
-			logti("%d old timestamp : %f ms", track_id, timestamp_ms);
+			logtd("%d old timestamp : %f ms", track_id, timestamp_ms);
 
 			max_timestamp_ms = std::max<double>(timestamp_ms, max_timestamp_ms);
 		}
@@ -144,7 +144,7 @@ namespace pvd
 			_base_timestamp_map[track_id] = adjust_timestamp;
 			_last_timestamp_map[track_id] = adjust_timestamp;
 
-			logti("Reset %d last timestamp : %lld => %lld", track_id, old_timestamp, _last_timestamp_map[track_id]);
+			logtd("Reset %d last timestamp : %lld => %lld", track_id, old_timestamp, _last_timestamp_map[track_id]);
 		}
 
 		_source_timestamp_map.clear();
@@ -192,7 +192,7 @@ namespace pvd
 		// First timestamp
 		if(_source_timestamp_map.find(track_id) == _source_timestamp_map.end())
 		{
-			logti("New track timestamp(%u) : curr(%lld)", track_id, timestamp);
+			logtd("New track timestamp(%u) : curr(%lld)", track_id, timestamp);
 			_source_timestamp_map[track_id] = timestamp;
 
 			// Start with zero
@@ -207,13 +207,13 @@ namespace pvd
 			// If the last timestamp exceeds 99.99%, it is judged to be wrapped around.
 			if(_source_timestamp_map[track_id] > ((double)max_timestamp * 99.99) / 100)
 			{
-				logti("Wrapped around(%u) : last(%lld) curr(%lld)", track_id, _source_timestamp_map[track_id], timestamp);
+				logtd("Wrapped around(%u) : last(%lld) curr(%lld)", track_id, _source_timestamp_map[track_id], timestamp);
 				delta = (max_timestamp - _source_timestamp_map[track_id]) + timestamp;
 			}
 			// Otherwise, the source might be changed. (restarted)
 			else
 			{
-				logti("Source changed(%u) : last(%lld) curr(%lld)", track_id, _source_timestamp_map[track_id], timestamp);
+				logtd("Source changed(%u) : last(%lld) curr(%lld)", track_id, _source_timestamp_map[track_id], timestamp);
 				delta = 0;
 			}
 		}

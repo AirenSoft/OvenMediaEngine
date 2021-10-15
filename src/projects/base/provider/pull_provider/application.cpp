@@ -93,7 +93,7 @@ namespace pvd
 						// The stream type is pull stream, if packets do NOT arrive for more than 3 seconds, it is a seriously warning situation
 						else if(elapsed_time_from_last_recv > 3)
 						{
-							logtw("%s/%s(%u) There are no incoming packets. %d seconds have elapsed since the last packet was received.", 
+							logtw("Stop stream %s/%s(%u) : there are no incoming packets. %d seconds have elapsed since the last packet was received.", 
 									stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
 
 							// When the stream is stopped, it tries to reconnect using the next url.
@@ -231,6 +231,9 @@ namespace pvd
 			// Something wrong
 			return false;
 		}
+
+		pull_stream->SetMsid(pull_stream->GetMsid() + 1);
+		NotifyStreamUpdated(pull_stream);
 
 		if(motor->UpdateStream(pull_stream) == false)
 		{
