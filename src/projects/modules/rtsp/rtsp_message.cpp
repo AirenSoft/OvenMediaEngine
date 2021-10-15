@@ -119,7 +119,7 @@ bool RtspMessage::ParseHeader(const char *string, size_t string_len)
 			if(line.HasPrefix("RTSP/") == true)
 			{
 				auto tokens = line.Split(" ");
-				if(tokens.size() != 3)
+				if(tokens.size() < 3)
 				{
 					logte("Could not parse status-line : %s", line.CStr());
 					return false;
@@ -127,8 +127,7 @@ bool RtspMessage::ParseHeader(const char *string, size_t string_len)
 				_type = RtspMessageType::RESPONSE;
 				_rtsp_version = tokens[0];
 				_status_code = std::atoi(tokens[1].CStr());
-				_reason_phrase = tokens[2];
-
+				_reason_phrase = line.Substring(tokens[0].GetLength() + tokens[1].GetLength() + 2);
 				logtd("Parsed status line : version(%s) status code(%d) reason phrase(%s)", _rtsp_version.CStr(), _status_code, _reason_phrase.CStr());
 			}
 			// Request
