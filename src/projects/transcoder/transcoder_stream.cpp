@@ -152,19 +152,24 @@ bool TranscoderStream::Update(const std::shared_ptr<info::Stream> &stream)
 {
 	RemoveAllComponents();
 
-	// Update info::Stream().msid of all output streams
-	for (auto &iter : _output_streams)
-	{
-		auto stream_output = iter.second;
-
-		stream_output->SetMsid(stream->GetMsid());
-	}
+	UpdateMsidOfOutputStreams(stream->GetMsid());
 
 	CreateDecoders();
 
 	NotifyUpdateStreams();
 
 	return true;
+}
+
+void TranscoderStream::UpdateMsidOfOutputStreams(uint32_t msid) 
+{
+	// Update info::Stream().msid of all output streams
+	for (auto &iter : _output_streams)
+	{
+		auto stream_output = iter.second;
+
+		stream_output->SetMsid(msid);
+	}
 }
 
 bool TranscoderStream::Push(std::shared_ptr<MediaPacket> packet)
