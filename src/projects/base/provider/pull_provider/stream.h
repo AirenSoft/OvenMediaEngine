@@ -55,6 +55,9 @@ namespace pvd
 		std::vector<std::shared_ptr<const ov::Url>> _url_list;
 		int _curr_url_index = 0;
 
+		// It can be called by multiple thread
+		std::mutex _start_stop_stream_lock;
+
 		const std::shared_ptr<const ov::Url> GetNextURL();
 	};
 }

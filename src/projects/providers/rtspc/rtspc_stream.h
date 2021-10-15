@@ -104,7 +104,7 @@ namespace pvd
 
 		int32_t GetNextCSeq();
 
-		bool SendSequenceHeaderIfNeeded();
+		bool SendSequenceHeaderIfNeeded(int64_t timestamp);
 
 		bool SendRequestMessage(const std::shared_ptr<RtspMessage> &message);
 		std::shared_ptr<RtspMessage> ReceiveResponse(uint32_t cseq, uint64_t timeout_ms);
@@ -159,6 +159,8 @@ namespace pvd
 		// Payload type : Timestamp
 		std::map<uint8_t, uint32_t>			_last_timestamp_map;
 		std::map<uint8_t, uint32_t>			_timestamp_map;
+
+		bool _sent_sequence_header = false;
 
 		// Statistics
 		int64_t _origin_request_time_msec = 0;

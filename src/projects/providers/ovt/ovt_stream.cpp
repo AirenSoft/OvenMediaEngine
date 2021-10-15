@@ -38,7 +38,7 @@ namespace pvd
 			: pvd::PullStream(application, stream_info, url_list)
 	{
 		_last_request_id = 0;
-		_state = State::IDLE;
+		SetState(State::IDLE);
 		logtd("OvtStream Created : %d", GetId());
 	}
 
@@ -68,6 +68,12 @@ namespace pvd
 
 	bool OvtStream::StartStream(const std::shared_ptr<const ov::Url> &url)
 	{
+		// Only start from IDLE, ERROR, STOPPED
+		if(!(GetState() == State::IDLE || GetState() == State::ERROR || GetState() == State::STOPPED))
+		{
+			return true;
+		}
+		
 		_curr_url = url;
 
 		if(_packetizer == nullptr)
@@ -120,20 +126,15 @@ namespace pvd
 
 	bool OvtStream::StopStream()
 	{
-		// Already stopping
-		if(_state != State::PLAYING)
+		if(GetState() == State::STOPPED)
 		{
 			return true;
 		}
-		
+	
 		if(!RequestStop())
 		{
 			// Force terminate 
 			SetState(State::ERROR);
-		}
-		else
-		{
-			SetState(State::STOPPED);
 		}
 
 		Release();
@@ -148,7 +149,7 @@ namespace pvd
 
 	bool OvtStream::ConnectOrigin()
 	{
-		if(_state == State::PLAYING || _state == State::TERMINATED)
+		if(GetState() == State::PLAYING || GetState() == State::TERMINATED)
 		{
 			return false;
 		}
@@ -162,7 +163,7 @@ namespace pvd
 		auto scheme = _curr_url->Scheme();
 		if (scheme.UpperCaseString() != "OVT")
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("The scheme is not OVT : %s", scheme.CStr());
 			return false;
 		}
@@ -179,7 +180,7 @@ namespace pvd
 
 		if (_client_socket == nullptr)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("To create client socket is failed.");
 			
 			_client_socket = nullptr;
@@ -196,7 +197,7 @@ namespace pvd
 		auto error = _client_socket->Connect(socket_address, 1500);
 		if (error != nullptr)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("Cannot connect to origin server (%s) : %s:%d", error->GetMessage().CStr(), _curr_url->Host().CStr(), _curr_url->Port());
 			return false;
 		}
@@ -208,7 +209,7 @@ namespace pvd
 
 	bool OvtStream::RequestDescribe()
 	{
-		if(_state != State::CONNECTED)
+		if(GetState() != State::CONNECTED)
 		{
 			return false;
 		}
@@ -236,7 +237,7 @@ namespace pvd
 		auto data = ReceiveMessage();
 		if (data == nullptr || data->GetLength() <= 0)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			return false;
 		}
 
@@ -246,7 +247,7 @@ namespace pvd
 
 		if (object.IsNull())
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("An invalid response : Json format");
 			return false;
 		}
@@ -259,21 +260,21 @@ namespace pvd
 
 		if (!json_id.isUInt() || json_application.isNull() || !json_code.isUInt() || json_message.isNull())
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("An invalid response : There are no required keys");
 			return false;
 		}
 
 		if (request_id != json_id.asUInt())
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("An invalid response : Response ID is wrong. (%d / %d)", request_id, json_id.asUInt());
 			return false;
 		}
 
 		if (json_code.asUInt() != 200)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("Describe : Server Failure : %d (%s)", json_code.asUInt(), json_message.asString().c_str());
 			return false;
 		}
@@ -281,14 +282,14 @@ namespace pvd
 		ov::String application = json_application.asString().c_str();
 		if (application.UpperCaseString() != "DESCRIBE")
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("An invalid response : wrong application : %s", application.CStr());
 			return false;
 		}
 
 		if (json_contents.isNull())
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("An invalid response : There is no contents");
 			return false;
 		}
@@ -301,7 +302,7 @@ namespace pvd
 		if (json_stream["appName"].isNull() || json_stream["streamName"].isNull() || json_stream["tracks"].isNull() ||
 			!json_tracks.isArray())
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("Invalid json payload : stream");
 			return false;
 		}
@@ -327,7 +328,7 @@ namespace pvd
 				!json_track["bitrate"].isUInt() ||
 				!json_track["startFrameTime"].isUInt64() || !json_track["lastFrameTime"].isUInt64())
 			{
-				_state = State::ERROR;
+				SetState(State::ERROR);
 				logte("Invalid json track [%d]", i);
 				return false;
 			}
@@ -384,7 +385,7 @@ namespace pvd
 				auto json_video_track = json_track["videoTrack"];
 				if (json_video_track.isNull())
 				{
-					_state = State::ERROR;
+					SetState(State::ERROR);
 					logte("Invalid json videoTrack");
 					return false;
 				}
@@ -398,7 +399,7 @@ namespace pvd
 				auto json_audio_track = json_track["audioTrack"];
 				if (json_audio_track.isNull())
 				{
-					_state = State::ERROR;
+					SetState(State::ERROR);
 					logte("Invalid json audioTrack");
 					return false;
 				}
@@ -411,13 +412,13 @@ namespace pvd
 			AddTrack(new_track);
 		}
 
-		_state = State::DESCRIBED;
+		SetState(State::DESCRIBED);
 		return true;
 	}
 
 	bool OvtStream::RequestPlay()
 	{
-		if(_state != State::DESCRIBED)
+		if(GetState() != State::DESCRIBED)
 		{
 			logte("%s/%s(%u) - Could not request to play. Before receiving describe.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			return false;
@@ -447,7 +448,7 @@ namespace pvd
 		if(message == nullptr)
 		{
 			logte("%s/%s(%u) - Could not receive message", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			return false;
 		}
 		
@@ -457,7 +458,7 @@ namespace pvd
 
 		if (object.IsNull())
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("An invalid response : Json format");
 			return false;
 		}
@@ -469,7 +470,7 @@ namespace pvd
 
 		if (!json_id.isUInt() || json_app.isNull() || !json_code.isUInt() || json_message.isNull())
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("An invalid response : There are no required keys");
 			return false;
 		}
@@ -478,32 +479,32 @@ namespace pvd
 
 		if(applicaiton.UpperCaseString() != "PLAY")
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("An invalid response : application is wrong (%s).", applicaiton.CStr());
 			return false;
 		}
 
 		if (request_id != json_id.asUInt())
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("An invalid response : Response ID is wrong.");
 			return false;
 		}
 
 		if (json_code.asUInt() != 200)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("Play : Server Failure : %s (%d)", json_code.asUInt(), json_message.asString().c_str());
 			return false;
 		}
 
-		_state = State::PLAYING;
+		SetState(State::PLAYING);
 		return true;
 	}
 
 	bool OvtStream::RequestStop()
 	{
-		if(_state != State::PLAYING)
+		if(GetState() != State::PLAYING)
 		{
 			return false;
 		}
@@ -529,7 +530,7 @@ namespace pvd
 	{
 		if(_client_socket->Send(packet->GetData()) == false)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("Could not send message");
 			return false;
 		}
@@ -545,7 +546,7 @@ namespace pvd
 			if(result == false)
 			{
 				logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), static_cast<uint8_t>(result));
-				_state = State::ERROR;
+				SetState(State::ERROR);
 				return nullptr;
 			}
 
@@ -571,7 +572,7 @@ namespace pvd
 			{
 				logte("[%s/%s] An error occurred while receiving packet: %s", GetApplicationName(), GetName().CStr(), error->ToString().CStr());
 				_client_socket->Close();
-				_state = State::ERROR;
+				SetState(State::ERROR);
 				return false;
 			}
 			else
@@ -610,7 +611,7 @@ namespace pvd
 		if(result == false)
 		{
 			logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), static_cast<uint8_t>(result));
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 		}
 
@@ -648,7 +649,7 @@ namespace pvd
 				if (object.IsNull())
 				{
 					Stop();
-					_state = State::ERROR;
+					SetState(State::ERROR);
 					logte("An invalid response : Json format");
 					return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 				}
@@ -660,7 +661,6 @@ namespace pvd
 
 				if(applicaiton.UpperCaseString() == "STOP")
 				{
-					_state = State::STOPPED;
 					logte("An invalid response : application is wrong (%s).", applicaiton.CStr());
 					return PullStream::ProcessMediaResult::PROCESS_MEDIA_FINISH;
 				}
@@ -668,7 +668,7 @@ namespace pvd
 				{
 					logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
 						GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-					_state = State::ERROR;
+					SetState(State::ERROR);
 					return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 				}
 			}

@@ -42,7 +42,7 @@ namespace pvd
 	RtspcStream::RtspcStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
 	: pvd::PullStream(application, stream_info, url_list), Node(NodeType::Edge)
 	{
-		_state = State::IDLE;
+		SetState(State::IDLE);
 	}
 
 	RtspcStream::~RtspcStream()
@@ -84,11 +84,27 @@ namespace pvd
 
 	void RtspcStream::Release()
 	{
+		if(_rtp_rtcp != nullptr)
+		{
+			_rtp_rtcp->Stop();
+		}
+
+		if (_signalling_socket != nullptr)
+		{
+			_signalling_socket->Close();
+		}
 	}
 
 	bool RtspcStream::StartStream(const std::shared_ptr<const ov::Url> &url)
 	{
+		// Only start from IDLE, ERROR, STOPPED
+		if(!(GetState() == State::IDLE || GetState() == State::ERROR || GetState() == State::STOPPED))
+		{
+			return true;
+		}
+
 		_curr_url = url;
+		_sent_sequence_header = false;
 
 		ov::StopWatch stop_watch;
 
@@ -103,16 +119,19 @@ namespace pvd
 
 		if(RequestDescribe() == false)
 		{
+			Release();
 			return false;
 		}
 
 		if(RequestSetup() == false)
 		{
+			Release();
 			return false;
 		}
 
 		if(RequestPlay() == false)
 		{
+			Release();
 			return false;
 		}
 
@@ -131,53 +150,43 @@ namespace pvd
 
 	bool RtspcStream::RestartStream(const std::shared_ptr<const ov::Url> &url)
 	{
+		logti("[%s/%s(%u)] stream tries to reconnect to %s", GetApplicationTypeName(), GetName().CStr(), GetId(), url->ToUrlString().CStr());
 		return StartStream(url);
 	}
 
 	bool RtspcStream::StopStream()
 	{
-		// Already stopping
-		if(_state != State::PLAYING)
+		if(GetState() == State::STOPPED)
 		{
 			return true;
 		}
-		
+
 		if(!RequestStop())
 		{
 			// Force terminate 
-			_state = State::ERROR;
+			SetState(State::ERROR);
 		}
 
-		if(_rtp_rtcp != nullptr)
-		{
-			_rtp_rtcp->Stop();
-		}
-
-		if (_signalling_socket != nullptr)
-		{
-			_signalling_socket->Close();
-		}
+		Release();
 
 		ov::Node::Stop();
-
-		_state = State::STOPPED;
 
 		return true;
 	}
 
 	bool RtspcStream::ConnectTo()
 	{
-		if(_state != State::IDLE && _state != State::ERROR)
+		if(GetState() == State::PLAYING || GetState() == State::TERMINATED)
 		{
 			return false;
 		}
 
-		logtd("Requested url[%d] : %s", strlen(_curr_url->Source().CStr()), _curr_url->Source().CStr() );
+		logti("Requested url[%d] : %s", strlen(_curr_url->Source().CStr()), _curr_url->Source().CStr() );
 
 		auto scheme = _curr_url->Scheme();
 		if(scheme.UpperCaseString() != "RTSP")
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("The scheme is not rtsp : %s", scheme.CStr());
 			return false;
 		}
@@ -194,7 +203,7 @@ namespace pvd
 		_signalling_socket = signalling_socket_pool->AllocSocket();
 		if (_signalling_socket == nullptr)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("To create client socket is failed.");
 			
 			_signalling_socket = nullptr;
@@ -209,19 +218,19 @@ namespace pvd
 		auto error = _signalling_socket->Connect(socket_address, 3000);
 		if (error != nullptr)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("Cannot connect to server (%s) : %s:%d", error->GetMessage().CStr(), _curr_url->Host().CStr(), _curr_url->Port());
 			return false;
 		}
 
-		_state = State::CONNECTED;
+		SetState(State::CONNECTED);
 
 		return true;
 	}
 
 	bool RtspcStream::RequestDescribe()
 	{
-		if(_state != State::CONNECTED)
+		if(GetState() != State::CONNECTED)
 		{
 			return false;
 		}
@@ -232,7 +241,7 @@ namespace pvd
 		
 		if(SendRequestMessage(describe) == false)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("Could not request DESCIBE to RTSP server (%s)", _curr_url->ToUrlString().CStr());
 			return false;
 		}
@@ -241,13 +250,13 @@ namespace pvd
 		
 		if(reply == nullptr)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("No response(CSeq : %u) was received from the rtsp server(%s)", describe->GetCSeq(), _curr_url->ToUrlString().CStr());
 			return false;
 		}
 		else if(reply->GetStatusCode() != 200)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
 			return false;
 		}
@@ -278,7 +287,7 @@ namespace pvd
 
 		if(reply->GetBody() == nullptr)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("There is no SDP in the describe response. Url(%s) CSeq(%d)", _curr_url->ToUrlString().CStr(), describe->GetCSeq());
 			return false;
 		}
@@ -287,7 +296,7 @@ namespace pvd
 		SessionDescription	sdp;
 		if(sdp.FromString(reply->GetBody()->ToString()) == false)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("Parsing of SDP received from rtsp url (%s)failed. ", _curr_url->ToUrlString().CStr());
 			return false;
 		}
@@ -311,7 +320,7 @@ namespace pvd
 				_video_control = media_desc->GetControl();
 				if(_video_control.IsEmpty())
 				{
-					_state = State::ERROR;
+					SetState(State::ERROR);
 					logte("Could not get control attribute in (%s) ", _curr_url->ToUrlString().CStr());
 					return false;
 				}
@@ -319,7 +328,7 @@ namespace pvd
 				_video_control_url = GenerateControlUrl(_video_control);
 				if(_video_control_url.IsEmpty())
 				{
-					_state = State::ERROR;
+					SetState(State::ERROR);
 					logte("Could not make control url with (%s) ", _video_control.CStr());
 					return false;
 				}
@@ -372,7 +381,7 @@ namespace pvd
 				_audio_control = media_desc->GetControl();
 				if(_audio_control.IsEmpty())
 				{
-					_state = State::ERROR;
+					SetState(State::ERROR);
 					logte("Could not get control attribute in (%s) ", _curr_url->ToUrlString().CStr());
 					return false;
 				}
@@ -380,7 +389,7 @@ namespace pvd
 				_audio_control_url = GenerateControlUrl(_audio_control);
 				if(_audio_control_url.IsEmpty())
 				{
-					_state = State::ERROR;
+					SetState(State::ERROR);
 					logte("Could not make control url with (%s) ", _video_control.CStr());
 					return false;
 				}
@@ -486,14 +495,14 @@ namespace pvd
 		RegisterNextNode(nullptr);
 		ov::Node::Start();
 
-		_state = State::DESCRIBED;
+		SetState(State::DESCRIBED);
 
 		return true;
 	}
 
 	bool RtspcStream::RequestSetup()
 	{
-		if(_state != State::DESCRIBED)
+		if(GetState() != State::DESCRIBED)
 		{
 			return false;
 		}
@@ -532,7 +541,7 @@ namespace pvd
 			
 			if(SendRequestMessage(setup) == false)
 			{
-				_state = State::ERROR;
+				SetState(State::ERROR);
 				logte("Could not request DESCIBE to RTSP server (%s)", _curr_url->ToUrlString().CStr());
 				return false;
 			}
@@ -542,13 +551,13 @@ namespace pvd
 			auto reply = ReceiveResponse(setup->GetCSeq(), 3000);
 			if(reply == nullptr)
 			{
-				_state = State::ERROR;
+				SetState(State::ERROR);
 				logte("No response(CSeq : %u) was received from the rtsp server(%s)", setup->GetCSeq(), _curr_url->ToUrlString().CStr());
 				return false;
 			}
 			else if(reply->GetStatusCode() != 200)
 			{
-				_state = State::ERROR;
+				SetState(State::ERROR);
 				logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
 				return false;
 			}
@@ -575,13 +584,10 @@ namespace pvd
 
 	bool RtspcStream::RequestPlay()
 	{
-		if(_state != State::DESCRIBED)
+		if(GetState() != State::DESCRIBED)
 		{
 			return false;
 		}
-
-		// Send SPS/PPS if stream is H264
-		SendSequenceHeaderIfNeeded();
 
 		auto play = std::make_shared<RtspMessage>(RtspMethod::PLAY, GetNextCSeq(), _curr_url->ToUrlString(true));
 
@@ -590,7 +596,7 @@ namespace pvd
 		
 		if(SendRequestMessage(play) == false)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("Could not request DESCIBE to RTSP server (%s)", _curr_url->ToUrlString().CStr());
 			return false;
 		}
@@ -601,27 +607,27 @@ namespace pvd
 		
 		if(reply == nullptr)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("No response(CSeq : %u) was received from the rtsp server(%s)", play->GetCSeq(), _curr_url->ToUrlString().CStr());
 			return false;
 		}
 		else if(reply->GetStatusCode() != 200)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
 			return false;
 		}
 
 		logtd("Response PLAY : %s", reply->DumpHeader().CStr());
 
-		_state = State::PLAYING;
+		SetState(State::PLAYING);
 
 		return true;
 	}
 
 	bool RtspcStream::RequestStop()
 	{
-		if (_state != State::PLAYING)
+		if (GetState() != State::PLAYING)
 		{
 			return false;
 		}
@@ -633,7 +639,7 @@ namespace pvd
 		
 		if(SendRequestMessage(teardown) == false)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("Could not request Stop to RTSP server (%s)", _curr_url->ToUrlString().CStr());
 			return false;
 		}
@@ -641,13 +647,13 @@ namespace pvd
 		auto reply = ReceiveResponse(teardown->GetCSeq(), 3000);
 		if(reply == nullptr)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("No response(CSeq : %u) was received from the rtsp server(%s)", teardown->GetCSeq(), _curr_url->ToUrlString().CStr());
 			return false;
 		}
 		else if(reply->GetStatusCode() != 200)
 		{
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
 			return false;
 		}
@@ -655,7 +661,7 @@ namespace pvd
 		return true;
 	}
 
-	bool RtspcStream::SendSequenceHeaderIfNeeded()
+	bool RtspcStream::SendSequenceHeaderIfNeeded(int64_t timestamp)
 	{
 		for(const auto &track_it : GetTracks())
 		{
@@ -666,8 +672,8 @@ namespace pvd
 				auto media_packet = std::make_shared<MediaPacket>(track->GetMediaType(), 
 					track->GetId(), 
 					_h264_extradata_nalu,
-					0, 
-					0, 
+					timestamp, 
+					timestamp, 
 					cmn::BitstreamFormat::H264_ANNEXB, 
 					cmn::PacketType::NALU);
 
@@ -795,7 +801,7 @@ namespace pvd
 			if (error != nullptr)
 			{
 				logte("[%s/%s] An error occurred while receiving packet: %s", GetApplicationName(), GetName().CStr(), error->ToString().CStr());
-				_state = State::ERROR;
+				SetState(State::ERROR);
 				return false;
 			}
 			else
@@ -836,7 +842,7 @@ namespace pvd
 		if(result == false)
 		{
 			logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), static_cast<uint8_t>(result));
-			_state = State::ERROR;
+			SetState(State::ERROR);
 			return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 		}
 
@@ -867,7 +873,7 @@ namespace pvd
 				{
 					// Error
 					logte("%s/%s(%u) - Unknown rtsp message received", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-					_state = State::ERROR;
+					SetState(State::ERROR);
 					return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 				}
 			}
@@ -961,7 +967,7 @@ namespace pvd
 
 		auto timestamp = AdjustTimestampByDelta(first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
 
-		logtd("Payload Type(%d) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
+		logti("Payload Type(%d) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
 				first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
 
 		auto frame = std::make_shared<MediaPacket>(track->GetMediaType(),
@@ -973,6 +979,13 @@ namespace pvd
 											  packet_type);
 
 		logtd("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%u)",  track->GetId(),  track->GetCodecId(), bitstream_format, packet_type, bitstream->GetLength(), first_rtp_packet->Timestamp());
+
+		// Send SPS/PPS if stream is H264
+		if(_sent_sequence_header == false)
+		{
+			_sent_sequence_header = true;
+			SendSequenceHeaderIfNeeded(timestamp);
+		}
 		
 		SendFrame(frame);
 	}

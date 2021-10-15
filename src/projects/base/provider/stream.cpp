@@ -52,8 +52,15 @@ namespace pvd
 	
 	bool Stream::Stop() 
 	{
+		if(GetState() == Stream::State::STOPPED)
+		{
+			return true;
+		}
+
 		logti("%s/%s(%u) has been stopped playing stream", GetApplicationName(), GetName().CStr(), GetId());
 		ResetSourceStreamTimestamp();
+
+		_state = State::STOPPED;
 		return true;
 	}
 
@@ -95,6 +102,12 @@ namespace pvd
 
 	bool Stream::SetState(State state)
 	{
+		// STOPPED state is only set by calling Stream::Stop() 
+		if(state == State::STOPPED)
+		{
+			return false;
+		}
+		
 		_state = state;
 		return true;
 	}
@@ -111,7 +124,7 @@ namespace pvd
 			auto track = GetTrack(track_id);
 
 			auto timestamp_ms = (timestamp * 1000) / track->GetTimeBase().GetTimescale();
-			logtd("%d old timestamp : %f ms", track_id, timestamp_ms);
+			logti("%d old timestamp : %f ms", track_id, timestamp_ms);
 
 			max_timestamp_ms = std::max<double>(timestamp_ms, max_timestamp_ms);
 		}
@@ -131,7 +144,7 @@ namespace pvd
 			_base_timestamp_map[track_id] = adjust_timestamp;
 			_last_timestamp_map[track_id] = adjust_timestamp;
 
-			logtd("Reset %d last timestamp : %lld => %lld", track_id, old_timestamp, _last_timestamp_map[track_id]);
+			logti("Reset %d last timestamp : %lld => %lld", track_id, old_timestamp, _last_timestamp_map[track_id]);
 		}
 
 		_source_timestamp_map.clear();

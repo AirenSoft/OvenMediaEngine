@@ -54,7 +54,7 @@ namespace pvd
 
 	bool MpegTsStream::Start()
 	{
-		_state = Stream::State::PLAYING;
+		SetState(Stream::State::PLAYING);
 		return PushStream::Start();
 	}
 
@@ -64,8 +64,6 @@ namespace pvd
 		{
 			return true;
 		}
-
-		_state = Stream::State::STOPPED;
 
 		if(_remote->GetState() == ov::SocketState::Connected)
 		{

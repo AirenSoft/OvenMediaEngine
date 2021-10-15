@@ -111,7 +111,7 @@ namespace pvd
 
 	bool RtmpStream::Start()
 	{
-		_state = Stream::State::PLAYING;
+		SetState(Stream::State::PLAYING);
 		_negative_cts_detected = false;
 
 		return PushStream::Start();
@@ -123,8 +123,6 @@ namespace pvd
 		{
 			return true;
 		}
-
-		_state = Stream::State::STOPPED;
 
 		if(_remote->GetState() == ov::SocketState::Connected)
 		{
