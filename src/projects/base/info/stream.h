@@ -28,7 +28,7 @@ namespace info
 		info::stream_id_t GetId() const;
 
 		void SetMsid(uint32_t );
-		int32_t GetMsid();
+		uint32_t GetMsid();
 
 		ov::String GetUUID() const;
 		ov::String GetName() const;
