@@ -34,7 +34,7 @@ bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 
 			case 'i':
 				parse_option->ignore_last_config = true;
-				return true;
+				break;
 
 			case 'c':
 				parse_option->config_path = optarg;
