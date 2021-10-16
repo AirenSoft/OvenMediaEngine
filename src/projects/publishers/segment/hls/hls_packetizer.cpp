@@ -146,17 +146,15 @@ HlsPacketizer::~HlsPacketizer()
 bool HlsPacketizer::ResetPacketizer(int new_msid)
 {
 	_last_msid = new_msid;
+	_need_to_flush = true;
 
 	return true;
 }
 
 bool HlsPacketizer::AppendVideoPacket(const std::shared_ptr<const MediaPacket> &media_packet)
 {
-	if (media_packet->GetMsid() != _last_msid)
-	{
-	}
-
 	auto video_track = _video_track;
+
 	if (video_track == nullptr)
 	{
 		// Video frame is sent since video track is not available
@@ -169,6 +167,17 @@ bool HlsPacketizer::AppendVideoPacket(const std::shared_ptr<const MediaPacket> &
 	{
 		// Video is disabled (invalid timebase or not supported codec, etc...)
 		return false;
+	}
+
+	if (media_packet->GetMsid() != _last_msid)
+	{
+		// Ignore the packet
+		return true;
+	}
+
+	if (_need_to_flush)
+	{
+
 	}
 
 	if (_video_key_frame_received == false)
@@ -232,6 +241,12 @@ bool HlsPacketizer::AppendAudioPacket(const std::shared_ptr<const MediaPacket> &
 		return false;
 	}
 
+	if (media_packet->GetMsid() != _last_msid)
+	{
+		// Ignore the packet
+		return true;
+	}
+
 	if (_audio_key_frame_received == false)
 	{
 		// Currently, the audio packet is always a Keyframe, but it will treat it the same as the video later for other codecs
@@ -284,7 +299,7 @@ bool HlsPacketizer::AppendAudioPacket(const std::shared_ptr<const MediaPacket> &
 
 ov::String HlsPacketizer::GenerateFileName() const
 {
-	return ov::String::FormatString("%u.ts", _last_msid, _sequence_number);
+	return ov::String::FormatString("%d_%u.ts", _last_msid, _sequence_number);
 }
 
 bool HlsPacketizer::WriteSegment(int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms)
