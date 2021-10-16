@@ -14,7 +14,7 @@
 #include <memory>
 
 #include "segment_stream_request_info.h"
-#include "stream_packetizer.h"
+#include "packetizer/packetizer.h"
 
 //====================================================================================================
 // SegmentStreamObserver

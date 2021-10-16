@@ -27,18 +27,13 @@ public:
 		return "HLS";
 	}
 
-	bool AppendVideoFrame(const std::shared_ptr<const MediaPacket> &media_packet) override;
-	bool AppendAudioFrame(const std::shared_ptr<const MediaPacket> &media_packet) override;
+	//--------------------------------------------------------------------
+	// Overriding of Packetizer
+	//--------------------------------------------------------------------
+	bool ResetPacketizer(int new_msid) override;
 
-	bool AppendVideoFrame(const std::shared_ptr<const PacketizerFrameData> &frame) override
-	{
-		return false;
-	}
-
-	bool AppendAudioFrame(const std::shared_ptr<const PacketizerFrameData> &frame) override
-	{
-		return false;
-	}
+	bool AppendVideoPacket(const std::shared_ptr<const MediaPacket> &media_packet) override;
+	bool AppendAudioPacket(const std::shared_ptr<const MediaPacket> &media_packet) override;
 
 	std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const override;
 	bool SetSegmentData(ov::String file_name, int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms, const std::shared_ptr<const ov::Data> &data);
@@ -47,9 +42,13 @@ protected:
 	void SetVideoTrack(const std::shared_ptr<MediaTrack> &video_track);
 	void SetAudioTrack(const std::shared_ptr<MediaTrack> &audio_track);
 
+	ov::String GenerateFileName() const;
+
 	bool WriteSegment(int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms);
 
 	bool UpdatePlayList();
+
+	uint32_t _last_msid = UINT32_MAX;
 
 	bool _audio_enable;
 	bool _video_enable;

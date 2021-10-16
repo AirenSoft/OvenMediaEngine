@@ -349,6 +349,11 @@ bool CmafPacketizer::WriteAudioInit(const std::shared_ptr<const ov::Data> &frame
 	return WriteAudioInitInternal(frame_data, CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME);
 }
 
+bool CmafPacketizer::ResetPacketizer(int new_msid)
+{
+	return true;
+}
+
 bool CmafPacketizer::AppendVideoFrameInternal(const std::shared_ptr<const PacketizerFrameData> &frame, DataCallback data_callback)
 {
 	if (WriteVideoInitIfNeeded(frame) == false)
@@ -494,6 +499,26 @@ bool CmafPacketizer::AppendAudioFrameInternal(const std::shared_ptr<const Packet
 
 	return true;
 }
+
+bool CmafPacketizer::AppendVideoPacket(const std::shared_ptr<const MediaPacket> &media_packet)
+{
+	if (_video_track == nullptr)
+	{
+		OV_ASSERT2("Since it is audio-only, video data cannot be appended");
+		return false;
+	}
+
+	auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
+	auto buffer = media_packet->GetData();
+	auto duration = media_packet->GetDuration();
+
+	PacketizerFrameType packetizer_frame_type = (frame_type == FrameType::VideoFrameKey) ? PacketizerFrameType::VideoKeyFrame : PacketizerFrameType::VideoPFrame;
+
+	auto frame_data = std::make_shared<PacketizerFrameData>(packetizer_frame_type, media_packet->GetPts(), media_packet->GetDts(), duration, _video_track->GetTimeBase(), buffer);
+
+	return AppendVideoFrame(frame_data);
+}
+
 bool CmafPacketizer::AppendVideoFrame(const std::shared_ptr<const PacketizerFrameData> &frame)
 {
 	return AppendVideoFrameInternal(frame, [this](const uint32_t sequence_number, const uint64_t duration_in_msec, const std::shared_ptr<const SampleData> data, bool new_segment_written) {
@@ -539,6 +564,23 @@ bool CmafPacketizer::WriteAudioInitInternal(const std::shared_ptr<const ov::Data
 	logtd("%s init file (%s) is written for audio [%s/%s]", GetPacketizerName(), init_file_name.CStr(), _app_name.CStr(), _stream_name.CStr());
 
 	return true;
+}
+
+bool CmafPacketizer::AppendAudioPacket(const std::shared_ptr<const MediaPacket> &media_packet)
+{
+	if (_audio_track == nullptr)
+	{
+		OV_ASSERT2("Since it is video-only, audio data cannot be appended");
+		return false;
+	}
+
+	//auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
+	auto buffer = media_packet->GetData();
+	auto duration = media_packet->GetDuration();
+
+	auto frame_data = std::make_shared<PacketizerFrameData>(PacketizerFrameType::AudioFrame, media_packet->GetPts(), media_packet->GetDts(), duration, _audio_track->GetTimeBase(), buffer);
+
+	return AppendAudioFrame(frame_data);
 }
 
 bool CmafPacketizer::AppendAudioFrame(const std::shared_ptr<const PacketizerFrameData> &frame)

@@ -6,7 +6,6 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
 #pragma once
 
 #include <base/common_types.h>
@@ -15,38 +14,9 @@
 #include <map>
 
 #include "packetizer/chunked_transfer_interface.h"
-#include "stream_packetizer.h"
+#include "packetizer/packetizer.h"
 
-class PacketizerFactoryInterface
-{
-public:
-	virtual std::shared_ptr<StreamPacketizer> Create(
-		const ov::String &app_name, const ov::String &stream_name,
-		uint32_t segment_count, uint32_t segment_duration,
-		const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
-		const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track,
-		const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer) = 0;
-};
-
-template <typename Tpacketizer, typename std::enable_if_t<std::is_base_of_v<StreamPacketizer, Tpacketizer>, int> = 0>
-class PacketizerFactory : public PacketizerFactoryInterface
-{
-public:
-	std::shared_ptr<StreamPacketizer> Create(
-		const ov::String &app_name, const ov::String &stream_name,
-		uint32_t segment_count, uint32_t segment_duration,
-		const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
-		const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track,
-		const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer) override
-	{
-		return std::make_shared<Tpacketizer>(
-			app_name, stream_name,
-			segment_count, segment_duration,
-			utc_timing_scheme, utc_timing_value,
-			video_track, audio_track,
-			chunked_transfer);
-	}
-};
+using PacketizerFactory = std::function<std::shared_ptr<Packetizer>(ov::String app_name, ov::String stream_name, std::shared_ptr<MediaTrack> _video_track, std::shared_ptr<MediaTrack> _audio_track)>;
 
 class SegmentStream : public pub::Stream
 {
@@ -54,68 +24,39 @@ public:
 	SegmentStream(
 		const std::shared_ptr<pub::Application> application,
 		const info::Stream &info,
-		int segment_count, int segment_duration,
-		const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
-		const std::shared_ptr<PacketizerFactoryInterface> &packetizer_factory,
-		const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer);
+		PacketizerFactory packetizer_factory);
 
-	template <typename Tpacketizer>
 	static std::shared_ptr<SegmentStream> Create(const std::shared_ptr<pub::Application> &application,
 												 const info::Stream &info,
-												 int segment_count, int segment_duration,
-												 uint32_t thread_count,
-												 const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
+												 PacketizerFactory packetizer_factory)
 	{
-		return Create<Tpacketizer>(application, info,
-					  segment_count, segment_duration,
-					  "", "",
-					  thread_count,
-					  chunked_transfer);
+		return std::make_shared<SegmentStream>(application, info, packetizer_factory);
 	}
-
-	template <typename Tpacketizer>
-	static std::shared_ptr<SegmentStream> Create(const std::shared_ptr<pub::Application> &application,
-												 const info::Stream &info,
-												 int segment_count, int segment_duration,
-												 const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
-												 uint32_t thread_count,
-												 const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
-	{
-		return std::make_shared<SegmentStream>(
-			application, info,
-			segment_count, segment_duration,
-			utc_timing_scheme, utc_timing_value,
-			std::make_shared<PacketizerFactory<Tpacketizer>>(),
-			chunked_transfer);
-	}
-
-	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
-	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
-
-	bool Start() override;
-	bool Stop() override;
 
 	bool GetPlayList(ov::String &play_list);
 
 	std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const;
 
+	//--------------------------------------------------------------------
+	// Overriding of pub::Stream
+	//--------------------------------------------------------------------
+	bool Start() override;
+	bool Stop() override;
+
+	bool OnStreamUpdated(const std::shared_ptr<info::Stream> &info) override;
+
+	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
+	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
+
 protected:
 	virtual bool CheckCodec(cmn::MediaType type, cmn::MediaCodecId codec_id);
 
-	int _segment_count = 0;
-	int _segment_duration = 0;
+	std::shared_ptr<Packetizer> _packetizer = nullptr;
 
-	ov::String _utc_timing_scheme;
-	ov::String _utc_timing_value;
-
-	std::shared_ptr<PacketizerFactoryInterface> _packetizer_factory;
-
-	std::shared_ptr<ChunkedTransferInterface> _chunked_transfer;
-
-	std::shared_ptr<StreamPacketizer> _stream_packetizer = nullptr;
-
-	std::map<uint32_t, std::shared_ptr<MediaTrack>> _media_tracks;
+	PacketizerFactory _packetizer_factory = nullptr;
 
 	std::shared_ptr<MediaTrack> _video_track;
 	std::shared_ptr<MediaTrack> _audio_track;
+
+	int _last_msid = 0;
 };

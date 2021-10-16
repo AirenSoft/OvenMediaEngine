@@ -166,7 +166,7 @@ public:
 		_msid = msid;
 	}
 
-	uint32_t GetMsid()
+	uint32_t GetMsid() const
 	{
 		return _msid;
 	}

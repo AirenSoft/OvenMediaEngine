@@ -2,7 +2,7 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Jaejong Bong
+//  Created by Hyunjun Jang
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
@@ -16,19 +16,24 @@ class HlsPublisher;
 class HlsApplication : public pub::Application
 {
 public:
-	static std::shared_ptr<HlsApplication> Create(const std::shared_ptr<HlsPublisher> &publisher, const info::Application &application_info);
+	static std::shared_ptr<HlsApplication> Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info);
 
-	HlsApplication(const std::shared_ptr<HlsPublisher> &publisher, const info::Application &application_info);
+	HlsApplication(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info);
 	~HlsApplication() override;
+
+	//--------------------------------------------------------------------
+	// Overriding of pub::Application
+	//--------------------------------------------------------------------
+	bool Start() override;
 
 private:
 	//--------------------------------------------------------------------
-	// Implementation of pub::Application
+	// Overriding of pub::Application
 	//--------------------------------------------------------------------
-	bool Start() override;
 	std::shared_ptr<pub::Stream> CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t thread_count) override;
 	bool DeleteStream(const std::shared_ptr<info::Stream> &info) override;
 
+protected:
 	int _segment_count;
 	int _segment_duration;
 };
