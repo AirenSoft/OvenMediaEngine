@@ -339,6 +339,11 @@ bool DashPacketizer::WriteAudioSegment()
 	return false;
 }
 
+bool DashPacketizer::ResetPacketizer()
+{
+	OV_ASSERT2(false);
+}
+
 bool DashPacketizer::AppendVideoFrame(const std::shared_ptr<const MediaPacket> &media_packet)
 {
 	// logap("#%d [%s] Received a packet: %15ld, %15ld",

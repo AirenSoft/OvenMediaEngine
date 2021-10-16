@@ -11,29 +11,17 @@
 #include <base/publisher/publisher.h>
 #include <config/items/items.h>
 
+#include "packetizer/packetizer.h"
 #include "segment_stream_private.h"
-#include "stream_packetizer.h"
 
 SegmentStream::SegmentStream(
 	const std::shared_ptr<pub::Application> application,
 	const info::Stream &info,
-	int segment_count, int segment_duration,
-	const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
-	const std::shared_ptr<PacketizerFactoryInterface> &packetizer_factory,
-	const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
+	PacketizerFactory packetizer_factory)
 	: Stream(application, info),
 
-	  _segment_count(segment_count),
-	  _segment_duration(segment_duration),
-
-	  _utc_timing_scheme(utc_timing_scheme),
-	  _utc_timing_value(utc_timing_value),
-
-	  _packetizer_factory(packetizer_factory),
-
-	  _chunked_transfer(chunked_transfer)
+	  _packetizer_factory(packetizer_factory)
 {
-	_utc_timing_value.Replace("&", "&amp;");
 }
 
 bool SegmentStream::Start()
@@ -89,12 +77,7 @@ bool SegmentStream::Start()
 		_audio_track = audio_track;
 	}
 
-	_stream_packetizer = _packetizer_factory->Create(
-		GetApplicationName(), GetName().CStr(),
-		_segment_count, _segment_duration,
-		_utc_timing_scheme, _utc_timing_value,
-		_video_track, _audio_track,
-		_chunked_transfer);
+	_packetizer = _packetizer_factory(GetApplicationName(), GetName().CStr(), _video_track, _audio_track);
 
 	return Stream::Start();
 }
@@ -104,27 +87,44 @@ bool SegmentStream::Stop()
 	return Stream::Stop();
 }
 
+bool SegmentStream::OnStreamUpdated(const std::shared_ptr<info::Stream> &info)
+{
+	if (Stream::OnStreamUpdated(info) == false)
+	{
+		return false;
+	}
+
+	_last_msid = info->GetMsid();
+
+	if (_packetizer != nullptr)
+	{
+		_packetizer->ResetPacketizer();
+	}
+
+	return true;
+}
+
 void SegmentStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (_stream_packetizer != nullptr && _media_tracks.find(media_packet->GetTrackId()) != _media_tracks.end())
+	if (_packetizer != nullptr && _media_tracks.find(media_packet->GetTrackId()) != _media_tracks.end())
 	{
-		_stream_packetizer->AppendVideoData(media_packet);
+		_packetizer->AppendVideoFrame(media_packet);
 	}
 }
 
 void SegmentStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (_stream_packetizer != nullptr && _media_tracks.find(media_packet->GetTrackId()) != _media_tracks.end())
+	if (_packetizer != nullptr && _media_tracks.find(media_packet->GetTrackId()) != _media_tracks.end())
 	{
-		_stream_packetizer->AppendAudioData(media_packet);
+		_packetizer->AppendAudioFrame(media_packet);
 	}
 }
 
 bool SegmentStream::GetPlayList(ov::String &play_list)
 {
-	if (_stream_packetizer != nullptr)
+	if (_packetizer != nullptr)
 	{
-		return _stream_packetizer->GetPlayList(play_list);
+		return _packetizer->GetPlayList(play_list);
 	}
 
 	return false;
@@ -132,12 +132,12 @@ bool SegmentStream::GetPlayList(ov::String &play_list)
 
 std::shared_ptr<const SegmentItem> SegmentStream::GetSegmentData(const ov::String &file_name) const
 {
-	if (_stream_packetizer == nullptr)
+	if (_packetizer == nullptr)
 	{
 		return nullptr;
 	}
 
-	return _stream_packetizer->GetSegmentData(file_name);
+	return _packetizer->GetSegmentData(file_name);
 }
 
 bool SegmentStream::CheckCodec(cmn::MediaType type, cmn::MediaCodecId codec_id)

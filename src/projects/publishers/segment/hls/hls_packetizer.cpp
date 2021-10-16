@@ -143,6 +143,11 @@ HlsPacketizer::~HlsPacketizer()
 	_ts_writer.Finalize();
 }
 
+bool HlsPacketizer::ResetPacketizer()
+{
+	OV_ASSERT2(false);
+}
+
 bool HlsPacketizer::AppendVideoFrame(const std::shared_ptr<const MediaPacket> &media_packet)
 {
 	auto video_track = _video_track;

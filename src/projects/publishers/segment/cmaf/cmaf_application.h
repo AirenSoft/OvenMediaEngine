@@ -2,7 +2,7 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Jaejong Bong
+//  Created by Hyunjun Jang
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
@@ -13,9 +13,6 @@
 
 #include "../segment_stream/segment_stream.h"
 
-//====================================================================================================
-// CmafApplication
-//====================================================================================================
 class CmafApplication : public pub::Application
 {
 public:
@@ -28,11 +25,15 @@ public:
 
 	virtual ~CmafApplication() final;
 
-private:
+	//--------------------------------------------------------------------
+	// Overriding of pub::Application
+	//--------------------------------------------------------------------
 	bool Start() override;
-	bool Stop() override;
 
-	// Application Implementation
+private:
+	//--------------------------------------------------------------------
+	// Overriding of pub::Application
+	//--------------------------------------------------------------------
 	std::shared_ptr<pub::Stream> CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t thread_count) override;
 	bool DeleteStream(const std::shared_ptr<info::Stream> &info) override;
 

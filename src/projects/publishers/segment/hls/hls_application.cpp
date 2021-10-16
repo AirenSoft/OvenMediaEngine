@@ -2,18 +2,20 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Jaejong Bong
+//  Created by Hyunjun Jang
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #include "hls_application.h"
 
 #include "../segment_stream/segment_stream.h"
+#include "hls_packetizer.h"
 #include "hls_private.h"
 #include "hls_publisher.h"
-#include "hls_stream_packetizer.h"
 
-std::shared_ptr<HlsApplication> HlsApplication::Create(const std::shared_ptr<HlsPublisher> &publisher, const info::Application &application_info)
+std::shared_ptr<HlsApplication> HlsApplication::Create(
+	const std::shared_ptr<pub::Publisher> &publisher,
+	const info::Application &application_info)
 {
 	auto application = std::make_shared<HlsApplication>(publisher, application_info);
 
@@ -25,8 +27,10 @@ std::shared_ptr<HlsApplication> HlsApplication::Create(const std::shared_ptr<Hls
 	return application;
 }
 
-HlsApplication::HlsApplication(const std::shared_ptr<HlsPublisher> &publisher, const info::Application &application_info)
-	: Application(publisher->pub::Publisher::GetSharedPtrAs<pub::Publisher>(), application_info)
+HlsApplication::HlsApplication(
+	const std::shared_ptr<pub::Publisher> &publisher,
+	const info::Application &application_info)
+	: Application(publisher, application_info)
 {
 }
 
@@ -47,15 +51,24 @@ bool HlsApplication::Start()
 
 std::shared_ptr<pub::Stream> HlsApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t thread_count)
 {
-	return SegmentStream::Create<HlsStreamPacketizer>(
+	logtd("HLS Stream is created: %s/%u", info->GetName().CStr(), info->GetId());
+
+	return SegmentStream::Create(
 		GetSharedPtrAs<pub::Application>(), *info.get(),
-		_segment_count, _segment_duration,
-		thread_count,
-		nullptr);
+		[=](ov::String app_name, ov::String stream_name,
+			std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track) -> std::shared_ptr<Packetizer> {
+			return std::make_shared<HlsPacketizer>(
+				app_name, stream_name,
+				_segment_count, _segment_duration,
+				video_track, audio_track,
+				nullptr);
+		});
 }
 
 bool HlsApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 {
+	logtd("HLS Stream is deleted: %s/%u", info->GetName().CStr(), info->GetId());
+
 	// Nothing to do
 	return true;
 }

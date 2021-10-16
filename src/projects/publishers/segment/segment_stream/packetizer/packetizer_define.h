@@ -94,9 +94,9 @@ struct PacketizerFrameData
 	PacketizerFrameData(PacketizerFrameType type,
 						int64_t pts,
 						int64_t dts,
-						uint64_t duration,
+						int64_t duration,
 						const cmn::Timebase &timebase,
-						std::shared_ptr<ov::Data> &data)
+						std::shared_ptr<const ov::Data> &data)
 		: type(type),
 		  pts(pts),
 		  dts(dts),
@@ -109,7 +109,7 @@ struct PacketizerFrameData
 	PacketizerFrameData(PacketizerFrameType type,
 						int64_t pts,
 						int64_t dts,
-						uint64_t duration,
+						int64_t duration,
 						const cmn::Timebase &timebase)
 		: type(type),
 		  pts(pts),
@@ -123,9 +123,9 @@ struct PacketizerFrameData
 	PacketizerFrameType type = PacketizerFrameType::Unknown;
 	int64_t pts = 0LL;
 	int64_t dts = 0LL;
-	uint64_t duration = 0ULL;
+	int64_t duration = 0LL;
 	cmn::Timebase timebase;
-	std::shared_ptr<ov::Data> data;
+	std::shared_ptr<const ov::Data> data;
 };
 
 #pragma pack(pop)

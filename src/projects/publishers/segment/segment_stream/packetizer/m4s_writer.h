@@ -34,23 +34,23 @@ public:
 			   uint32_t flag,
 			   int64_t pts,
 			   int64_t dts,
-			   std::shared_ptr<ov::Data> &data)
+			   std::shared_ptr<const ov::Data> &data)
 		: duration(duration),
 		  flag(flag),
 		  pts(pts),
 		  dts(dts),
-		  data(data)
+		  data(data->Clone())
 	{
 	}
 
 	SampleData(uint64_t duration,
 			   int64_t pts,
 			   int64_t dts,
-			   std::shared_ptr<ov::Data> &data)
+			   std::shared_ptr<const ov::Data> &data)
 		: duration(duration),
 		  pts(pts),
 		  dts(dts),
-		  data(data)
+		  data(data->Clone())
 	{
 	}
 

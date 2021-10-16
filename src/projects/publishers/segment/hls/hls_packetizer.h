@@ -27,18 +27,13 @@ public:
 		return "HLS";
 	}
 
+	//--------------------------------------------------------------------
+	// Overriding of Packetizer
+	//--------------------------------------------------------------------
+	bool ResetPacketizer() override;
+
 	bool AppendVideoFrame(const std::shared_ptr<const MediaPacket> &media_packet) override;
 	bool AppendAudioFrame(const std::shared_ptr<const MediaPacket> &media_packet) override;
-
-	bool AppendVideoFrame(const std::shared_ptr<const PacketizerFrameData> &frame) override
-	{
-		return false;
-	}
-
-	bool AppendAudioFrame(const std::shared_ptr<const PacketizerFrameData> &frame) override
-	{
-		return false;
-	}
 
 	std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const override;
 	bool SetSegmentData(ov::String file_name, int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms, const std::shared_ptr<const ov::Data> &data);
