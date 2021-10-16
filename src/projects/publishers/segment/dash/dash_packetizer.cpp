@@ -341,7 +341,7 @@ bool DashPacketizer::WriteAudioSegment()
 
 bool DashPacketizer::ResetPacketizer(int new_msid)
 {
-	OV_ASSERT2(false);
+	return true;
 }
 
 bool DashPacketizer::AppendVideoPacket(const std::shared_ptr<const MediaPacket> &media_packet)

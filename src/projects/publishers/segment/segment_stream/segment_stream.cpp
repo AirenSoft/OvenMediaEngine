@@ -126,6 +126,7 @@ bool SegmentStream::Start()
 	_audio_track = audio_track;
 
 	_packetizer = _packetizer_factory(GetApplicationName(), GetName().CStr(), _video_track, _audio_track);
+	_packetizer->ResetPacketizer(GetMsid());
 
 	return Stream::Start();
 }

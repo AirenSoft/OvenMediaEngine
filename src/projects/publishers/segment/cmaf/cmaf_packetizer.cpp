@@ -351,7 +351,7 @@ bool CmafPacketizer::WriteAudioInit(const std::shared_ptr<const ov::Data> &frame
 
 bool CmafPacketizer::ResetPacketizer(int new_msid)
 {
-	OV_ASSERT2(false);
+	return true;
 }
 
 bool CmafPacketizer::AppendVideoFrameInternal(const std::shared_ptr<const PacketizerFrameData> &frame, DataCallback data_callback)

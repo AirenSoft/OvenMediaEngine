@@ -42,9 +42,13 @@ protected:
 	void SetVideoTrack(const std::shared_ptr<MediaTrack> &video_track);
 	void SetAudioTrack(const std::shared_ptr<MediaTrack> &audio_track);
 
+	ov::String GenerateFileName() const;
+
 	bool WriteSegment(int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms);
 
 	bool UpdatePlayList();
+
+	uint32_t _last_msid = UINT32_MAX;
 
 	bool _audio_enable;
 	bool _video_enable;

@@ -145,11 +145,17 @@ HlsPacketizer::~HlsPacketizer()
 
 bool HlsPacketizer::ResetPacketizer(int new_msid)
 {
-	OV_ASSERT2(false);
+	_last_msid = new_msid;
+
+	return true;
 }
 
 bool HlsPacketizer::AppendVideoPacket(const std::shared_ptr<const MediaPacket> &media_packet)
 {
+	if (media_packet->GetMsid() != _last_msid)
+	{
+	}
+
 	auto video_track = _video_track;
 	if (video_track == nullptr)
 	{
@@ -276,6 +282,11 @@ bool HlsPacketizer::AppendAudioPacket(const std::shared_ptr<const MediaPacket> &
 	return result;
 }
 
+ov::String HlsPacketizer::GenerateFileName() const
+{
+	return ov::String::FormatString("%u.ts", _last_msid, _sequence_number);
+}
+
 bool HlsPacketizer::WriteSegment(int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms)
 {
 	auto data = _ts_writer.Finalize();
@@ -288,7 +299,7 @@ bool HlsPacketizer::WriteSegment(int64_t timestamp, int64_t timestamp_in_ms, int
 		return false;
 	}
 
-	SetSegmentData(ov::String::FormatString("%u.ts", _sequence_number),
+	SetSegmentData(GenerateFileName(),
 				   timestamp,
 				   timestamp_in_ms,
 				   duration,
