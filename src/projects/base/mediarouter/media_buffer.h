@@ -235,7 +235,7 @@ public:
 	}
 
 protected:
-	uint32_t _msid = -1;
+	uint32_t _msid = 0;
 	cmn::MediaType _media_type = cmn::MediaType::Unknown;
 	int32_t _track_id = -1;
 

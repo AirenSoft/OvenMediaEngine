@@ -90,7 +90,7 @@ namespace info
 		_msid = msid;
 	}
 	
-	int32_t Stream::GetMsid()
+	uint32_t Stream::GetMsid()
 	{
 		return _msid;
 	}

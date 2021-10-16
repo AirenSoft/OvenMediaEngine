@@ -49,6 +49,7 @@ protected:
 	bool UpdatePlayList();
 
 	uint32_t _last_msid = UINT32_MAX;
+	bool _need_to_flush = false;
 
 	bool _audio_enable;
 	bool _video_enable;
