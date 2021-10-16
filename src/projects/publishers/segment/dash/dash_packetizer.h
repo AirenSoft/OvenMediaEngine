@@ -44,10 +44,10 @@ public:
 	//--------------------------------------------------------------------
 	// Overriding of Packetizer
 	//--------------------------------------------------------------------
-	bool ResetPacketizer() override;
+	bool ResetPacketizer(int new_msid) override;
 
-	bool AppendVideoFrame(const std::shared_ptr<const MediaPacket> &media_packet) override;
-	bool AppendAudioFrame(const std::shared_ptr<const MediaPacket> &media_packet) override;
+	bool AppendVideoPacket(const std::shared_ptr<const MediaPacket> &media_packet) override;
+	bool AppendAudioPacket(const std::shared_ptr<const MediaPacket> &media_packet) override;
 
 	std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const override;
 	bool SetSegmentData(Writer &writer, int64_t timestamp);

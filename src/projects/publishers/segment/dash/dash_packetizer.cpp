@@ -339,12 +339,12 @@ bool DashPacketizer::WriteAudioSegment()
 	return false;
 }
 
-bool DashPacketizer::ResetPacketizer()
+bool DashPacketizer::ResetPacketizer(int new_msid)
 {
 	OV_ASSERT2(false);
 }
 
-bool DashPacketizer::AppendVideoFrame(const std::shared_ptr<const MediaPacket> &media_packet)
+bool DashPacketizer::AppendVideoPacket(const std::shared_ptr<const MediaPacket> &media_packet)
 {
 	// logap("#%d [%s] Received a packet: %15ld, %15ld",
 	// 	  media_packet->GetTrackId(), (media_packet->GetMediaType() == cmn::MediaType::Video) ? "V" : "A",
@@ -410,7 +410,7 @@ bool DashPacketizer::AppendVideoFrame(const std::shared_ptr<const MediaPacket> &
 	return result;
 }
 
-bool DashPacketizer::AppendAudioFrame(const std::shared_ptr<const MediaPacket> &media_packet)
+bool DashPacketizer::AppendAudioPacket(const std::shared_ptr<const MediaPacket> &media_packet)
 {
 	// logap("#%d [%s] Received a packet: %15ld, %15ld",
 	// 	  media_packet->GetTrackId(), (media_packet->GetMediaType() == cmn::MediaType::Video) ? "V" : "A",

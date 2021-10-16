@@ -28,10 +28,10 @@ public:
 
 	virtual const char *GetPacketizerName() const = 0;
 
-	virtual bool ResetPacketizer() = 0;
+	virtual bool ResetPacketizer(int new_msid) = 0;
 
-	virtual bool AppendVideoFrame(const std::shared_ptr<const MediaPacket> &media_packet) = 0;
-	virtual bool AppendAudioFrame(const std::shared_ptr<const MediaPacket> &media_packet) = 0;
+	virtual bool AppendVideoPacket(const std::shared_ptr<const MediaPacket> &media_packet) = 0;
+	virtual bool AppendAudioPacket(const std::shared_ptr<const MediaPacket> &media_packet) = 0;
 
 	virtual std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const = 0;
 	// virtual bool SetSegmentData(ov::String file_name, uint64_t duration_in_ms, int64_t timestamp_in_ms, const std::shared_ptr<const ov::Data> &data) = 0;

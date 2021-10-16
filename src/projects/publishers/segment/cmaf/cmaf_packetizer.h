@@ -42,10 +42,10 @@ public:
 	//--------------------------------------------------------------------
 	// Override Packetizer
 	//--------------------------------------------------------------------
-	bool ResetPacketizer() override;
+	bool ResetPacketizer(int new_msid) override;
 
-	bool AppendVideoFrame(const std::shared_ptr<const MediaPacket> &media_packet) override;
-	bool AppendAudioFrame(const std::shared_ptr<const MediaPacket> &media_packet) override;
+	bool AppendVideoPacket(const std::shared_ptr<const MediaPacket> &media_packet) override;
+	bool AppendAudioPacket(const std::shared_ptr<const MediaPacket> &media_packet) override;
 
 	std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const override;
 	bool SetSegmentData(const uint32_t sequence_number, ov::String file_name, int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms, const std::shared_ptr<const ov::Data> &data);

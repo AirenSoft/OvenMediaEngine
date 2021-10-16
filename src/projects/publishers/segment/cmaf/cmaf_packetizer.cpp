@@ -349,7 +349,7 @@ bool CmafPacketizer::WriteAudioInit(const std::shared_ptr<const ov::Data> &frame
 	return WriteAudioInitInternal(frame_data, CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME);
 }
 
-bool CmafPacketizer::ResetPacketizer()
+bool CmafPacketizer::ResetPacketizer(int new_msid)
 {
 	OV_ASSERT2(false);
 }
@@ -500,7 +500,7 @@ bool CmafPacketizer::AppendAudioFrameInternal(const std::shared_ptr<const Packet
 	return true;
 }
 
-bool CmafPacketizer::AppendVideoFrame(const std::shared_ptr<const MediaPacket> &media_packet)
+bool CmafPacketizer::AppendVideoPacket(const std::shared_ptr<const MediaPacket> &media_packet)
 {
 	if (_video_track == nullptr)
 	{
@@ -566,7 +566,7 @@ bool CmafPacketizer::WriteAudioInitInternal(const std::shared_ptr<const ov::Data
 	return true;
 }
 
-bool CmafPacketizer::AppendAudioFrame(const std::shared_ptr<const MediaPacket> &media_packet)
+bool CmafPacketizer::AppendAudioPacket(const std::shared_ptr<const MediaPacket> &media_packet)
 {
 	if (_audio_track == nullptr)
 	{

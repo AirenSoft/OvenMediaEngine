@@ -22,6 +22,63 @@ SegmentStream::SegmentStream(
 
 	  _packetizer_factory(packetizer_factory)
 {
+	OV_ASSERT2(_packetizer_factory != nullptr);
+}
+
+bool SegmentStream::CheckCodec(cmn::MediaType type, cmn::MediaCodecId codec_id)
+{
+	switch (type)
+	{
+		case cmn::MediaType::Video:
+			switch (codec_id)
+			{
+				case cmn::MediaCodecId::H264:
+				case cmn::MediaCodecId::H265:
+					return true;
+
+				default:
+					// Not supported codec
+					return false;
+			}
+			break;
+
+		case cmn::MediaType::Audio:
+			switch (codec_id)
+			{
+				case cmn::MediaCodecId::Aac:
+					return true;
+
+				default:
+					// Not supported codec
+					break;
+			}
+			break;
+
+		default:
+			break;
+	}
+
+	return false;
+}
+
+bool SegmentStream::GetPlayList(ov::String &play_list)
+{
+	if (_packetizer != nullptr)
+	{
+		return _packetizer->GetPlayList(play_list);
+	}
+
+	return false;
+}
+
+std::shared_ptr<const SegmentItem> SegmentStream::GetSegmentData(const ov::String &file_name) const
+{
+	if (_packetizer == nullptr)
+	{
+		return nullptr;
+	}
+
+	return _packetizer->GetSegmentData(file_name);
 }
 
 bool SegmentStream::Start()
@@ -65,17 +122,8 @@ bool SegmentStream::Start()
 		return false;
 	}
 
-	if (video_enabled)
-	{
-		_media_tracks[video_track->GetId()] = video_track;
-		_video_track = video_track;
-	}
-
-	if (audio_enabled)
-	{
-		_media_tracks[audio_track->GetId()] = audio_track;
-		_audio_track = audio_track;
-	}
+	_video_track = video_track;
+	_audio_track = audio_track;
 
 	_packetizer = _packetizer_factory(GetApplicationName(), GetName().CStr(), _video_track, _audio_track);
 
@@ -98,7 +146,7 @@ bool SegmentStream::OnStreamUpdated(const std::shared_ptr<info::Stream> &info)
 
 	if (_packetizer != nullptr)
 	{
-		_packetizer->ResetPacketizer();
+		_packetizer->ResetPacketizer(_last_msid);
 	}
 
 	return true;
@@ -106,72 +154,52 @@ bool SegmentStream::OnStreamUpdated(const std::shared_ptr<info::Stream> &info)
 
 void SegmentStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (_packetizer != nullptr && _media_tracks.find(media_packet->GetTrackId()) != _media_tracks.end())
+	if (_video_track != nullptr)
 	{
-		_packetizer->AppendVideoFrame(media_packet);
+		if (_video_track->GetId() == static_cast<uint32_t>(media_packet->GetTrackId()))
+		{
+			if (_packetizer != nullptr)
+			{
+				_packetizer->AppendVideoPacket(media_packet);
+			}
+		}
+		else
+		{
+			logte("A video packet different from the _video_track was received. (Expected: %u, but: %d)",
+				  _video_track->GetId(),
+				  media_packet->GetTrackId());
+
+			OV_ASSERT2(false);
+		}
+	}
+	else
+	{
+		// _video_track became nullptr due to unsupported codec, etc.
 	}
 }
 
 void SegmentStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (_packetizer != nullptr && _media_tracks.find(media_packet->GetTrackId()) != _media_tracks.end())
+	if (_audio_track != nullptr)
 	{
-		_packetizer->AppendAudioFrame(media_packet);
-	}
-}
-
-bool SegmentStream::GetPlayList(ov::String &play_list)
-{
-	if (_packetizer != nullptr)
-	{
-		return _packetizer->GetPlayList(play_list);
-	}
-
-	return false;
-}
-
-std::shared_ptr<const SegmentItem> SegmentStream::GetSegmentData(const ov::String &file_name) const
-{
-	if (_packetizer == nullptr)
-	{
-		return nullptr;
-	}
-
-	return _packetizer->GetSegmentData(file_name);
-}
-
-bool SegmentStream::CheckCodec(cmn::MediaType type, cmn::MediaCodecId codec_id)
-{
-	switch (type)
-	{
-		case cmn::MediaType::Video:
-			switch (codec_id)
+		if (_audio_track->GetId() == static_cast<uint32_t>(media_packet->GetTrackId()))
+		{
+			if (_packetizer != nullptr)
 			{
-				case cmn::MediaCodecId::H264:
-				case cmn::MediaCodecId::H265:
-					return true;
-
-				default:
-					// Not supported codec
-					return false;
+				_packetizer->AppendAudioPacket(media_packet);
 			}
-			break;
+		}
+		else
+		{
+			logte("An audio packet different from the _audio_track was received. (Expected: %u, but: %d)",
+				  _audio_track->GetId(),
+				  media_packet->GetTrackId());
 
-		case cmn::MediaType::Audio:
-			switch (codec_id)
-			{
-				case cmn::MediaCodecId::Aac:
-					return true;
-
-				default:
-					// Not supported codec
-					break;
-			}
-			break;
-
-		default:
-			break;
+			OV_ASSERT2(false);
+		}
 	}
-
-	return false;
+	else
+	{
+		// _audio_track became nullptr due to unsupported codec, etc.
+	}
 }

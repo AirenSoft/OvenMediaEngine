@@ -33,28 +33,30 @@ public:
 		return std::make_shared<SegmentStream>(application, info, packetizer_factory);
 	}
 
-	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
-	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
-
-	bool Start() override;
-	bool Stop() override;
-	bool OnStreamUpdated(const std::shared_ptr<info::Stream> &info) override;
-
 	bool GetPlayList(ov::String &play_list);
 
 	std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const;
+
+	//--------------------------------------------------------------------
+	// Overriding of pub::Stream
+	//--------------------------------------------------------------------
+	bool Start() override;
+	bool Stop() override;
+
+	bool OnStreamUpdated(const std::shared_ptr<info::Stream> &info) override;
+
+	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
+	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 
 protected:
 	virtual bool CheckCodec(cmn::MediaType type, cmn::MediaCodecId codec_id);
 
 	std::shared_ptr<Packetizer> _packetizer = nullptr;
 
-	PacketizerFactory _packetizer_factory;
-
-	std::map<uint32_t, std::shared_ptr<MediaTrack>> _media_tracks;
+	PacketizerFactory _packetizer_factory = nullptr;
 
 	std::shared_ptr<MediaTrack> _video_track;
 	std::shared_ptr<MediaTrack> _audio_track;
 
-	std::atomic<int> _last_msid{0};
+	int _last_msid = 0;
 };

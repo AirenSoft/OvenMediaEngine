@@ -143,12 +143,12 @@ HlsPacketizer::~HlsPacketizer()
 	_ts_writer.Finalize();
 }
 
-bool HlsPacketizer::ResetPacketizer()
+bool HlsPacketizer::ResetPacketizer(int new_msid)
 {
 	OV_ASSERT2(false);
 }
 
-bool HlsPacketizer::AppendVideoFrame(const std::shared_ptr<const MediaPacket> &media_packet)
+bool HlsPacketizer::AppendVideoPacket(const std::shared_ptr<const MediaPacket> &media_packet)
 {
 	auto video_track = _video_track;
 	if (video_track == nullptr)
@@ -209,7 +209,7 @@ bool HlsPacketizer::AppendVideoFrame(const std::shared_ptr<const MediaPacket> &m
 	return result;
 }
 
-bool HlsPacketizer::AppendAudioFrame(const std::shared_ptr<const MediaPacket> &media_packet)
+bool HlsPacketizer::AppendAudioPacket(const std::shared_ptr<const MediaPacket> &media_packet)
 {
 	auto audio_track = _audio_track;
 	if (audio_track == nullptr)
