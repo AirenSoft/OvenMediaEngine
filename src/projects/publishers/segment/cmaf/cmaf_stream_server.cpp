@@ -120,7 +120,10 @@ void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov:
 	if (chunk_item == _http_chunk_list.end())
 	{
 		// New chunk data is arrived
-		logtd("Create a new chunk for [%s/%s, %s], size: %zu bytes", app_name.CStr(), stream_name.CStr(), file_name.CStr(), chunk_data->GetLength());
+		logtd("[%s/%s] [%s] Create a new chunk for %s, size: %zu bytes",
+			  app_name.CStr(), stream_name.CStr(), StringFromPublisherType(GetPublisherType()).CStr(),
+			  file_name.CStr(), chunk_data->GetLength());
+
 		_http_chunk_list.emplace(key, std::make_shared<CmafHttpChunkedData>(sequence_number, duration_in_msec, chunk_data));
 		return;
 	}
@@ -146,7 +149,9 @@ void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov:
 		}
 		else
 		{
-			logtw("Failed to send the chunked data for [%s/%s, %s] to %s (%zu bytes)", app_name.CStr(), stream_name.CStr(), file_name.CStr(), response->GetRemote()->ToString().CStr(), chunk_data->GetLength());
+			logtw("[%s/%s] [%s] Failed to send the chunked data for %s to %s (%zu bytes)",
+				  app_name.CStr(), stream_name.CStr(), StringFromPublisherType(GetPublisherType()).CStr(),
+				  file_name.CStr(), response->GetRemote()->ToString().CStr(), chunk_data->GetLength());
 
 			client_item = chunk_item->second->client_list.erase(client_item);
 			response->Close();
@@ -169,7 +174,9 @@ void CmafStreamServer::OnCmafChunkedComplete(const ov::String &app_name, const o
 
 		if (chunk_item == _http_chunk_list.end())
 		{
-			logtw("Could not find a CMAF chunk [%s/%s, %s]", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+			logtw("[%s/%s] [%s] Could not find: %s",
+				  app_name.CStr(), stream_name.CStr(), StringFromPublisherType(GetPublisherType()).CStr(),
+				  file_name.CStr());
 			OV_ASSERT2(false);
 			return;
 		}
@@ -179,7 +186,9 @@ void CmafStreamServer::OnCmafChunkedComplete(const ov::String &app_name, const o
 		_http_chunk_list.erase(chunk_item);
 	}
 
-	logtd("The chunk is completed [%s/%s, %s]", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+	logtd("[%s/%s] [%s] The chunk is completed: %s",
+		  app_name.CStr(), stream_name.CStr(), StringFromPublisherType(GetPublisherType()).CStr(),
+		  file_name.CStr());
 
 	for (auto client : chunked_data->client_list)
 	{
@@ -187,8 +196,9 @@ void CmafStreamServer::OnCmafChunkedComplete(const ov::String &app_name, const o
 
 		if (response->SendChunkedData(nullptr) == false)
 		{
-			logtw("[%s] Could not response the CMAF chunk: [%s/%s, %s]",
-				  response->GetRemote()->ToString().CStr(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
+			logtw("[%s/%s] [%s] Could not response the CMAF chunk %s to %s",
+				  app_name.CStr(), stream_name.CStr(), StringFromPublisherType(GetPublisherType()).CStr(),
+				  file_name.CStr(), response->GetRemote()->ToString().CStr());
 		}
 
 		response->Close();

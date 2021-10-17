@@ -125,7 +125,9 @@ http::svr::ConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::
 
 	if ((item == _observers.end()))
 	{
-		logtd("Could not find a %s playlist for [%s/%s], %s", GetPublisherName(), request_info.vhost_app_name.CStr(), request_info.stream_name.CStr(), request_info.file_name.CStr());
+		logtd("[%s/%s] [%s] Could not find: %s",
+			  request_info.vhost_app_name.CStr(), request_info.stream_name.CStr(), StringFromPublisherType(GetPublisherType()).CStr(),
+			  request_info.file_name.CStr());
 		response->SetStatusCode(http::StatusCode::NotFound);
 		response->Response();
 
@@ -171,7 +173,9 @@ http::svr::ConnectionPolicy DashStreamServer::ProcessSegmentRequest(const std::s
 
 	if (item == _observers.end())
 	{
-		logtd("Could not find a %s segment for [%s/%s], %s", GetPublisherName(), request_info.vhost_app_name.CStr(), request_info.stream_name.CStr(), request_info.file_name.CStr());
+		logtd("[%s/%s] [%s] Could not find: %s",
+			  request_info.vhost_app_name.CStr(), request_info.stream_name.CStr(), StringFromPublisherType(GetPublisherType()).CStr(),
+			  request_info.file_name.CStr());
 		response->SetStatusCode(http::StatusCode::NotFound);
 		response->Response();
 

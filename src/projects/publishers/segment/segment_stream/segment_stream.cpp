@@ -83,6 +83,11 @@ std::shared_ptr<const SegmentItem> SegmentStream::GetSegmentData(const ov::Strin
 
 bool SegmentStream::Start()
 {
+	if (GetState() != State::CREATED)
+	{
+		return false;
+	}
+
 	std::shared_ptr<MediaTrack> video_track = nullptr;
 	std::shared_ptr<MediaTrack> audio_track = nullptr;
 

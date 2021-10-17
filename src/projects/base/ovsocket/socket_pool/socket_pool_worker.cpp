@@ -800,7 +800,7 @@ namespace ov
 			}
 			else
 			{
-				logae("Could not delete the socket %d from epoll: %s\n%s",
+				logae("Could not delete the socket #%d from epoll: %s\n%s",
 					  native_handle,
 					  error->ToString().CStr(),
 					  StackTrace::GetStackTrace().CStr());

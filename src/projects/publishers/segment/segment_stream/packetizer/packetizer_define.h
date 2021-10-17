@@ -78,6 +78,8 @@ public:
 	int64_t duration = 0L;
 	int64_t duration_in_ms = 0L;
 	std::shared_ptr<const ov::Data> data;
+
+	bool discontinuity = false;
 };
 
 enum class PacketizerFrameType
