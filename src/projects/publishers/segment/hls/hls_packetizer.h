@@ -30,31 +30,36 @@ public:
 	//--------------------------------------------------------------------
 	// Overriding of Packetizer
 	//--------------------------------------------------------------------
-	bool ResetPacketizer(int new_msid) override;
+	bool ResetPacketizer(uint32_t new_msid) override;
 
 	bool AppendVideoPacket(const std::shared_ptr<const MediaPacket> &media_packet) override;
 	bool AppendAudioPacket(const std::shared_ptr<const MediaPacket> &media_packet) override;
 
 	std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const override;
-	bool SetSegmentData(ov::String file_name, int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms, const std::shared_ptr<const ov::Data> &data);
+	bool SetSegmentData(int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms, const std::shared_ptr<const ov::Data> &data);
 
 protected:
 	void SetVideoTrack(const std::shared_ptr<MediaTrack> &video_track);
 	void SetAudioTrack(const std::shared_ptr<MediaTrack> &audio_track);
 
-	ov::String GenerateFileName() const;
+	// Returns last_msid
+	uint32_t FlushIfNeeded();
 
 	bool WriteSegment(int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms);
 
 	bool UpdatePlayList();
 
 	uint32_t _last_msid = UINT32_MAX;
+
+	std::mutex _flush_mutex;
 	bool _need_to_flush = false;
 
-	bool _audio_enable;
-	bool _video_enable;
+	bool _video_enable = false;
+	bool _audio_enable = false;
 
-	uint32_t _sequence_number = 1U;
+	uint32_t _sequence_number = 0U;
+	uint32_t _discontinuity_sequence_number = 0U;
+	uint32_t _last_discontinuity_count = 0U;
 
 	// To convert from timebase to seconds, multiply by these value
 	double _video_timebase_expr = 0.0;

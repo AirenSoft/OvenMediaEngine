@@ -349,7 +349,7 @@ bool CmafPacketizer::WriteAudioInit(const std::shared_ptr<const ov::Data> &frame
 	return WriteAudioInitInternal(frame_data, CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME);
 }
 
-bool CmafPacketizer::ResetPacketizer(int new_msid)
+bool CmafPacketizer::ResetPacketizer(uint32_t new_msid)
 {
 	return true;
 }
@@ -709,26 +709,11 @@ std::shared_ptr<const SegmentItem> CmafPacketizer::GetSegmentData(const ov::Stri
 
 	switch (file_type)
 	{
-		case DashFileType::VideoSegment: {
-			std::unique_lock<std::mutex> lock(_video_segment_mutex);
-
-			auto item = std::find_if(_video_segments.begin(), _video_segments.end(),
-									 [&](std::shared_ptr<SegmentItem> const &value) -> bool {
-										 return value != nullptr ? value->file_name == file_name : false;
-									 });
-
-			return (item != _video_segments.end()) ? (*item) : nullptr;
-		}
+		case DashFileType::VideoSegment:
+			return _video_segment_queue.GetSegmentData(file_name);
 
 		case DashFileType::AudioSegment: {
-			std::unique_lock<std::mutex> lock(_audio_segment_mutex);
-
-			auto item = std::find_if(_audio_segments.begin(), _audio_segments.end(),
-									 [&](std::shared_ptr<SegmentItem> const &value) -> bool {
-										 return value != nullptr ? value->file_name == file_name : false;
-									 });
-
-			return (item != _audio_segments.end()) ? (*item) : nullptr;
+			return _audio_segment_queue.GetSegmentData(file_name);
 		}
 
 		case DashFileType::VideoInit:
@@ -753,45 +738,17 @@ bool CmafPacketizer::SetSegmentData(const uint32_t sequence_number, ov::String f
 	switch (file_type)
 	{
 		case DashFileType::VideoSegment: {
-			// video segment mutex
-			std::unique_lock<std::mutex> lock(_video_segment_mutex);
 			auto segment = std::make_shared<SegmentItem>(SegmentDataType::Video, sequence_number, file_name, timestamp, timestamp_in_ms, duration, duration_in_ms, data);
-
-			_video_segments[_current_video_index++] = segment;
-
-			if (_segment_save_count <= _current_video_index)
-			{
-				_current_video_index = 0;
-			}
-
+			_video_segment_queue.Append(segment);
 			DumpSegmentToFile(segment);
-
-			_video_segment_count++;
-
-			logtd("%s segment is added for video stream [%s/%s], file: %s, duration: %llu, size: %zu (scale: %llu/%.0f = %0.3f)",
-				  GetPacketizerName(), _app_name.CStr(), _stream_name.CStr(), file_name.CStr(), duration_in_ms, data->GetLength(), duration_in_ms, _video_track->GetTimeBase().GetTimescale(), (double)duration_in_ms / _video_track->GetTimeBase().GetTimescale());
 
 			break;
 		}
 
 		case DashFileType::AudioSegment: {
-			// audio segment mutex
-			std::unique_lock<std::mutex> lock(_audio_segment_mutex);
 			auto segment = std::make_shared<SegmentItem>(SegmentDataType::Audio, sequence_number, file_name, timestamp, timestamp_in_ms, duration, duration_in_ms, data);
-
-			_audio_segments[_current_audio_index++] = segment;
-
-			if (_segment_save_count <= _current_audio_index)
-			{
-				_current_audio_index = 0;
-			}
-
+			_audio_segment_queue.Append(segment);
 			DumpSegmentToFile(segment);
-
-			_audio_segment_count++;
-
-			logtd("%s segment is added for audio stream [%s/%s], file: %s, duration: %llu, size: %zu (scale: %llu/%.0f = %0.3f)",
-				  GetPacketizerName(), _app_name.CStr(), _stream_name.CStr(), file_name.CStr(), duration_in_ms, data->GetLength(), duration_in_ms, _audio_track->GetTimeBase().GetTimescale(), (double)duration_in_ms / _audio_track->GetTimeBase().GetTimescale());
 
 			break;
 		}
@@ -800,8 +757,8 @@ bool CmafPacketizer::SetSegmentData(const uint32_t sequence_number, ov::String f
 			break;
 	}
 
-	if ((IsReadyForStreaming() == false) && (((_video_track == nullptr) || (_video_segment_count >= _segment_count)) &&
-											 ((_audio_track == nullptr) || (_audio_segment_count >= _segment_count))))
+	if ((IsReadyForStreaming() == false) && (((_video_track == nullptr) || (_video_segment_queue.GetCount() >= _segment_count)) &&
+											 ((_audio_track == nullptr) || (_audio_segment_queue.GetCount() >= _segment_count))))
 	{
 		SetReadyForStreaming();
 

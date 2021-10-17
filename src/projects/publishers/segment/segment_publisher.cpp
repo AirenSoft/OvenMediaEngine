@@ -70,7 +70,7 @@ bool SegmentPublisher::Stop()
 
 	_stream_server->RemoveObserver(SegmentStreamObserver::GetSharedPtr());
 	_stream_server->Stop();
-	
+
 	return Publisher::Stop();
 }
 
@@ -127,7 +127,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<http::svr::HttpCo
 
 		if (stream->WaitUntilStart(3000) == false)
 		{
-			logtw("(%s/%s) stream has not started.", vhost_app_name.CStr(), stream_name.CStr());
+			logtw("[%s/%s] stream has not started.", vhost_app_name.CStr(), stream_name.CStr());
 			// Returns true when the observer search can be ended.
 			return true;
 		}
@@ -137,7 +137,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<http::svr::HttpCo
 
 	if (stream->GetPlayList(play_list) == false)
 	{
-		logtw("Could not get a playlist for %s [%p, %s/%s, %s]", GetPublisherName(), stream.get(), vhost_app_name.CStr(), stream_name.CStr(), request_info.file_name.CStr());
+		logtw("[%s/%s] %s: Could not get a playlist for %s (%p)", vhost_app_name.CStr(), stream_name.CStr(), GetPublisherName(), request_info.file_name.CStr(), stream.get());
 		client->GetResponse()->SetStatusCode(http::StatusCode::Accepted);
 		// Returns true when the observer search can be ended.
 		return true;
@@ -163,23 +163,23 @@ bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<http::svr::HttpCon
 
 		if (segment == nullptr)
 		{
-			logtw("Could not find a segment for %s [%s/%s, %s]", GetPublisherName(), vhost_app_name.CStr(), stream_name.CStr(), file_name.CStr());
+			logtw("[%s/%s] %s: Could not find a segment for %s", vhost_app_name.CStr(), stream_name.CStr(), GetPublisherName(), file_name.CStr());
 			return false;
 		}
 		else if (segment->data == nullptr)
 		{
-			logtw("Could not obtain segment data from %s for [%p, %s/%s, %s]", GetPublisherName(), segment.get(), vhost_app_name.CStr(), stream_name.CStr(), file_name.CStr());
+			logtw("[%s/%s] %s: Could not obtain segment data for %s (%p)", vhost_app_name.CStr(), stream_name.CStr(), GetPublisherName(), file_name.CStr(), segment.get());
 			return false;
 		}
 	}
 	else
 	{
-		logtw("Could not find a stream for %s [%s/%s, %s]", GetPublisherName(), vhost_app_name.CStr(), stream_name.CStr(), file_name.CStr());
+		logtw("[%s/%s] %s: Could not find a stream for %s", vhost_app_name.CStr(), stream_name.CStr(), GetPublisherName(), file_name.CStr());
 		return false;
 	}
 
 	// To manage sessions
-	logti("Segment requested (%s/%s/%s) from %s : Segment number : %u Duration : %u",
+	logti("[%s/%s] Segment requested %s from %s : Segment number : %u Duration : %u",
 		  vhost_app_name.CStr(), stream_name.CStr(), file_name.CStr(),
 		  client->GetRequest()->GetRemote()->GetRemoteAddress()->ToString().CStr(),
 		  segment->sequence_number, segment->duration_in_ms / 1000);
@@ -188,14 +188,14 @@ bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<http::svr::HttpCon
 
 	// The first sequence number 0 means init_video and init_audio in MPEG-DASH.
 	// These are excluded because they confuse statistical calculations.
-	if(GetPublisherType() != PublisherType::LlDash &&  segment->sequence_number != 0)
+	if (GetPublisherType() != PublisherType::LlDash && segment->sequence_number != 0)
 	{
 		auto segment_request_info = SegmentRequestInfo(GetPublisherType(),
-													*std::static_pointer_cast<info::Stream>(stream),
-													client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),				
-													segment->sequence_number,
-													segment->type,		
-													segment->duration_in_ms / 1000);
+													   *std::static_pointer_cast<info::Stream>(stream),
+													   client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),
+													   segment->sequence_number,
+													   segment->type,
+													   segment->duration_in_ms / 1000);
 		UpdateSegmentRequestInfo(segment_request_info);
 	}
 
@@ -399,7 +399,7 @@ bool SegmentPublisher::IsAuthorizedSession(const PlaylistRequestInfo &info)
 
 void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 {
-	logtd("Update segment request info - Segment number : %u Duration : %u Type : %s", info.GetSequenceNumber(), info.GetDuration(), info.GetDataType()==SegmentDataType::Video?"Video":"Audio");
+	logtd("Update segment request info - Segment number : %u Duration : %u Type : %s", info.GetSequenceNumber(), info.GetDuration(), info.GetDataType() == SegmentDataType::Video ? "Video" : "Audio");
 
 	bool new_session = true;
 	std::unique_lock<std::recursive_mutex> table_lock(_segment_request_table_lock);
@@ -414,7 +414,7 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 			auto item = itr->second;
 
 			// If the segment is divided into audio and video, statistics must be calculated using only one.
-			if(item->GetDataType() != info.GetDataType())
+			if (item->GetDataType() != info.GetDataType())
 			{
 				return;
 			}
@@ -492,8 +492,8 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 }
 
 bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, ov::String &stream_name,
-									 const std::shared_ptr<http::svr::HttpConnection> &client, const std::shared_ptr<const ov::Url> &request_url,
-									 std::shared_ptr<PlaylistRequestInfo> &request_info)
+										   const std::shared_ptr<http::svr::HttpConnection> &client, const std::shared_ptr<const ov::Url> &request_url,
+										   std::shared_ptr<PlaylistRequestInfo> &request_info)
 {
 	auto request = client->GetRequest();
 	auto remote_address = request->GetRemote()->GetRemoteAddress();
@@ -506,16 +506,16 @@ bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, o
 
 	auto requested_url = ov::Url::Parse(request_url->ToUrlString(true));
 	// PORT can be omitted if port is rtmp default port, but SignedPolicy requires this information.
-	if(requested_url->Port() == 0)
+	if (requested_url->Port() == 0)
 	{
 		requested_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 	}
 
 	auto session_id = remote_address->GetIpAddress();
 	request_info = std::make_shared<PlaylistRequestInfo>(GetPublisherType(),
-															vhost_app_name, stream_name,
-															remote_address->GetIpAddress(),
-															session_id);
+														 vhost_app_name, stream_name,
+														 remote_address->GetIpAddress(),
+														 session_id);
 
 	// SingedPolicy is first
 	auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(requested_url, remote_address);
@@ -592,18 +592,18 @@ bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, o
 
 	// Admission Webhooks
 	auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(requested_url, remote_address);
-	if(webhooks_result == AccessController::VerificationResult::Off)
+	if (webhooks_result == AccessController::VerificationResult::Off)
 	{
 		// Success
 	}
-	else if(webhooks_result == AccessController::VerificationResult::Pass)
+	else if (webhooks_result == AccessController::VerificationResult::Pass)
 	{
 		// In HTTP based streaming, lifetime could not work
 		// Lifetime cannot work in HTTP-based streaming. In HTTP-based streaming, the playlist is continuously requested, so the ControlServer can control the session by disallowing it at the appropriate time.
 		// admission_webhooks->GetLifetime();
 
 		// Redirect URL
-		if(admission_webhooks->GetNewURL() != nullptr)
+		if (admission_webhooks->GetNewURL() != nullptr)
 		{
 			// Change host/app/stream by response
 			auto new_url = admission_webhooks->GetNewURL();
@@ -612,12 +612,12 @@ bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, o
 			stream_name = new_url->Stream();
 		}
 	}
-	else if(webhooks_result == AccessController::VerificationResult::Error)
+	else if (webhooks_result == AccessController::VerificationResult::Error)
 	{
 		logtw("AdmissionWebhooks error : %s", requested_url->ToUrlString().CStr());
 		return false;
 	}
-	else if(webhooks_result == AccessController::VerificationResult::Fail)
+	else if (webhooks_result == AccessController::VerificationResult::Fail)
 	{
 		logtw("AdmissionWebhooks error : %s", admission_webhooks->GetErrReason().CStr());
 		return false;

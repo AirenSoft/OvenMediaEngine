@@ -58,7 +58,7 @@ void HlsPacketizer::SetVideoTrack(const std::shared_ptr<MediaTrack> &video_track
 {
 	if (video_track == nullptr)
 	{
-		logad("This stream has no video track");
+		logaw("This stream has no video track");
 		return;
 	}
 
@@ -100,7 +100,7 @@ void HlsPacketizer::SetAudioTrack(const std::shared_ptr<MediaTrack> &audio_track
 {
 	if (audio_track == nullptr)
 	{
-		logad("This stream has no audio track");
+		logaw("This stream has no audio track");
 		return;
 	}
 
@@ -143,12 +143,68 @@ HlsPacketizer::~HlsPacketizer()
 	_ts_writer.Finalize();
 }
 
-bool HlsPacketizer::ResetPacketizer(int new_msid)
+bool HlsPacketizer::ResetPacketizer(uint32_t new_msid)
 {
+	std::lock_guard lock_guard(_flush_mutex);
 	_last_msid = new_msid;
 	_need_to_flush = true;
 
+	logai("Packetizer will be reset: %u", new_msid);
+
 	return true;
+}
+
+uint32_t HlsPacketizer::FlushIfNeeded()
+{
+	// Even if the _last_msid value changes from the outside while the packet is being processed,
+	// it is stored to temporary variable to minimize the side effect.
+	bool need_to_flush = false;
+	uint32_t last_msid = _last_msid;
+
+	if (_need_to_flush)
+	{
+		std::lock_guard lock_guard(_flush_mutex);
+
+		// DCL
+		if (_need_to_flush)
+		{
+			need_to_flush = true;
+			_need_to_flush = false;
+
+			last_msid = _last_msid;
+		}
+	}
+
+	if (need_to_flush)
+	{
+		if (_ts_writer.GetData() != nullptr)
+		{
+			auto target_track = (_video_track != nullptr) ? _video_track : _audio_track;
+
+			if (target_track != nullptr)
+			{
+				auto track_id = target_track->GetId();
+				auto timebase_expr_ms = (_video_track != nullptr) ? _video_timebase_expr_ms : _audio_timebase_expr_ms;
+
+				// Flush TS writer
+				auto first_pts = _ts_writer.GetFirstPts(track_id);
+				auto duration = _ts_writer.GetDuration(track_id);
+
+				WriteSegment(
+					first_pts, first_pts * timebase_expr_ms,
+					duration, duration * timebase_expr_ms);
+
+				_video_segment_queue.MarkAsDiscontinuity();
+			}
+
+			_first_video_pts = -1LL;
+			_first_audio_pts = -1LL;
+			_last_video_pts = -1LL;
+			_last_audio_pts = -1LL;
+		}
+	}
+
+	return last_msid;
 }
 
 bool HlsPacketizer::AppendVideoPacket(const std::shared_ptr<const MediaPacket> &media_packet)
@@ -169,15 +225,13 @@ bool HlsPacketizer::AppendVideoPacket(const std::shared_ptr<const MediaPacket> &
 		return false;
 	}
 
-	if (media_packet->GetMsid() != _last_msid)
+	auto current_msid = FlushIfNeeded();
+
+	if (media_packet->GetMsid() != current_msid)
 	{
 		// Ignore the packet
+		logtd("The packet is ignored by msid: (current msid: %u, packet msid: %u)", current_msid, media_packet->GetMsid());
 		return true;
-	}
-
-	if (_need_to_flush)
-	{
-
 	}
 
 	if (_video_key_frame_received == false)
@@ -209,7 +263,9 @@ bool HlsPacketizer::AppendVideoPacket(const std::shared_ptr<const MediaPacket> &
 
 		if (duration >= _ideal_duration_for_video)
 		{
-			result = WriteSegment(first_pts, first_pts * _video_timebase_expr_ms, duration, duration * _video_timebase_expr_ms);
+			result = WriteSegment(
+				first_pts, first_pts * _video_timebase_expr_ms,
+				duration, duration * _video_timebase_expr_ms);
 		}
 	}
 
@@ -241,9 +297,12 @@ bool HlsPacketizer::AppendAudioPacket(const std::shared_ptr<const MediaPacket> &
 		return false;
 	}
 
-	if (media_packet->GetMsid() != _last_msid)
+	auto current_msid = FlushIfNeeded();
+
+	if (media_packet->GetMsid() != current_msid)
 	{
 		// Ignore the packet
+		logtd("The packet is ignored by msid: (current msid: %u, packet msid: %u)", current_msid, media_packet->GetMsid());
 		return true;
 	}
 
@@ -281,7 +340,9 @@ bool HlsPacketizer::AppendAudioPacket(const std::shared_ptr<const MediaPacket> &
 			// Writing a segment is done only on the video side
 			if (_video_enable == false)
 			{
-				result = WriteSegment(first_pts, first_pts * _audio_timebase_expr_ms, duration, duration * _audio_timebase_expr_ms);
+				result = WriteSegment(
+					first_pts, first_pts * _audio_timebase_expr_ms,
+					duration, duration * _audio_timebase_expr_ms);
 			}
 		}
 	}
@@ -297,11 +358,6 @@ bool HlsPacketizer::AppendAudioPacket(const std::shared_ptr<const MediaPacket> &
 	return result;
 }
 
-ov::String HlsPacketizer::GenerateFileName() const
-{
-	return ov::String::FormatString("%d_%u.ts", _last_msid, _sequence_number);
-}
-
 bool HlsPacketizer::WriteSegment(int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms)
 {
 	auto data = _ts_writer.Finalize();
@@ -314,14 +370,10 @@ bool HlsPacketizer::WriteSegment(int64_t timestamp, int64_t timestamp_in_ms, int
 		return false;
 	}
 
-	SetSegmentData(GenerateFileName(),
-				   timestamp,
-				   timestamp_in_ms,
-				   duration,
-				   duration_in_ms,
-				   data);
-
-	UpdatePlayList();
+	SetSegmentData(
+		timestamp, timestamp_in_ms,
+		duration, duration_in_ms,
+		data);
 
 	if (_ts_writer.Prepare() == false)
 	{
@@ -339,33 +391,61 @@ bool HlsPacketizer::UpdatePlayList()
 {
 	std::ostringstream play_list_stream;
 	std::ostringstream m3u8_play_list;
-	double max_duration_in_ms = 0;
+	double max_duration_in_ms = 0.0;
 
-	std::vector<std::shared_ptr<SegmentItem>> segment_datas;
-	Packetizer::GetVideoPlaySegments(segment_datas);
+	bool is_first = true;
+	auto first_sequence_number = 0U;
+	auto current_discontinuity_count = 0U;
 
-	for (const auto &segment_data : segment_datas)
-	{
-		m3u8_play_list << "#EXTINF:" << std::fixed << std::setprecision(0)
-					   << (segment_data->duration_in_ms / 1000) << "\r\n"
-					   << segment_data->file_name.CStr() << "\r\n";
-
-		if (segment_data->duration_in_ms > max_duration_in_ms)
+	_video_segment_queue.Iterate([&](std::shared_ptr<const SegmentItem> segment_item) -> bool {
+		if (is_first)
 		{
-			max_duration_in_ms = segment_data->duration_in_ms;
+			is_first = false;
+			first_sequence_number = segment_item->sequence_number;
 		}
+
+		m3u8_play_list << "#EXTINF:" << std::fixed << std::setprecision(0)
+					   << (segment_item->duration_in_ms / 1000) << "\r\n"
+					   << segment_item->file_name.CStr() << "\r\n";
+
+		if (segment_item->duration_in_ms > max_duration_in_ms)
+		{
+			max_duration_in_ms = segment_item->duration_in_ms;
+		}
+
+		if (segment_item->discontinuity)
+		{
+			current_discontinuity_count++;
+			m3u8_play_list << "#EXT-X-DISCONTINUITY\r\n";
+		}
+
+		return true;
+	});
+
+	if (_last_discontinuity_count > current_discontinuity_count)
+	{
+		_discontinuity_sequence_number += (_last_discontinuity_count - current_discontinuity_count);
 	}
 
-	play_list_stream << "#EXTM3U\r\n"
-					 << "#EXT-X-VERSION:3\r\n"
-					 << "#EXT-X-MEDIA-SEQUENCE:" << (_sequence_number - 1) << "\r\n"
-					 << "#EXT-X-ALLOW-CACHE:NO\r\n"
-					 << "#EXT-X-TARGETDURATION:" << std::fixed << std::setprecision(0) << (max_duration_in_ms / 1000) << "\r\n"
-					 << m3u8_play_list.str();
+	_last_discontinuity_count = current_discontinuity_count;
+
+	play_list_stream
+		<< "#EXTM3U\r\n"
+		<< "#EXT-X-VERSION:3\r\n"
+		<< "#EXT-X-MEDIA-SEQUENCE:" << first_sequence_number << "\r\n";
+
+	if (_discontinuity_sequence_number > 0)
+	{
+		play_list_stream
+			<< "#EXT-X-DISCONTINUITY-SEQUENCE:" << _discontinuity_sequence_number << "\r\n";
+	}
+
+	play_list_stream
+		<< "#EXT-X-ALLOW-CACHE:NO\r\n"
+		<< "#EXT-X-TARGETDURATION:" << std::fixed << std::setprecision(0) << (max_duration_in_ms / 1000) << "\r\n"
+		<< m3u8_play_list.str();
 
 	ov::String play_list = play_list_stream.str().c_str();
-
-	// logad("%p %d %s", this, IsReadyForStreaming(), play_list.CStr());
 
 	SetPlayList(play_list);
 
@@ -391,47 +471,25 @@ std::shared_ptr<const SegmentItem> HlsPacketizer::GetSegmentData(const ov::Strin
 		return nullptr;
 	}
 
-	// video segment mutex
-	std::unique_lock<std::mutex> lock(_video_segment_mutex);
-
-	auto item = std::find_if(_video_segments.begin(),
-							 _video_segments.end(), [&](std::shared_ptr<SegmentItem> const &value) -> bool {
-								 return value != nullptr ? value->file_name == file_name : false;
-							 });
-
-	if (item == _video_segments.end())
-	{
-		return nullptr;
-	}
-
-	return (*item);
+	return _video_segment_queue.GetSegmentData(file_name);
 }
 
-bool HlsPacketizer::SetSegmentData(ov::String file_name, int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms, const std::shared_ptr<const ov::Data> &data)
+bool HlsPacketizer::SetSegmentData(int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms, const std::shared_ptr<const ov::Data> &data)
 {
-	auto segment_data = std::make_shared<SegmentItem>(
-		SegmentDataType::Both,
-		_sequence_number++,
+	auto file_name = ov::String::FormatString("%u.ts", _sequence_number);
+
+	auto segment_item = _video_segment_queue.Append(
+		SegmentDataType::Both, _sequence_number++,
 		file_name,
-		timestamp,
-		timestamp_in_ms,
-		duration,
-		duration_in_ms,
+		timestamp, timestamp_in_ms,
+		duration, duration_in_ms,
 		data);
 
-	// video segment mutex
-	std::unique_lock<std::mutex> lock(_video_segment_mutex);
+	DumpSegmentToFile(segment_item);
 
-	_video_segments[_current_video_index++] = segment_data;
-
-	if (_segment_save_count <= _current_video_index)
-	{
-		_current_video_index = 0;
-	}
-
-	logad("TS segment is added, file: %s, pts: %" PRId64 "ms, duration: %" PRIu64 "ms, data size: %zubytes", file_name.CStr(), timestamp_in_ms, duration_in_ms, data->GetLength());
-
-	if ((IsReadyForStreaming() == false) && (_sequence_number > _segment_count))
+	if (
+		(IsReadyForStreaming() == false) &&
+		(_video_segment_queue.GetCount() >= _segment_count))
 	{
 		SetReadyForStreaming();
 
@@ -439,7 +497,5 @@ bool HlsPacketizer::SetSegmentData(ov::String file_name, int64_t timestamp, int6
 			  _segment_duration, _segment_count);
 	}
 
-	DumpSegmentToFile(segment_data);
-
-	return true;
+	return UpdatePlayList();
 }

@@ -42,7 +42,7 @@ public:
 	//--------------------------------------------------------------------
 	// Override Packetizer
 	//--------------------------------------------------------------------
-	bool ResetPacketizer(int new_msid) override;
+	bool ResetPacketizer(uint32_t new_msid) override;
 
 	bool AppendVideoPacket(const std::shared_ptr<const MediaPacket> &media_packet) override;
 	bool AppendAudioPacket(const std::shared_ptr<const MediaPacket> &media_packet) override;
@@ -101,9 +101,6 @@ private:
 	//   delta < 0 means <Ideal duration> < <Average of total segment duration>
 	double _duration_delta_for_video = 0.0;
 	double _duration_delta_for_audio = 0.0;
-
-	uint32_t _video_segment_count = 0U;
-	uint32_t _audio_segment_count = 0U;
 
 	// Unit: milliseconds
 	int64_t _video_start_time = -1LL;
