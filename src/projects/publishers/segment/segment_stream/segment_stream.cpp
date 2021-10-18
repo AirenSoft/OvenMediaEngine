@@ -171,11 +171,7 @@ void SegmentStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_pac
 		}
 		else
 		{
-			logte("A video packet different from the _video_track was received. (Expected: %u, but: %d)",
-				  _video_track->GetId(),
-				  media_packet->GetTrackId());
-
-			OV_ASSERT2(false);
+			// Unsupported Codec
 		}
 	}
 	else
@@ -197,11 +193,7 @@ void SegmentStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_pac
 		}
 		else
 		{
-			logte("An audio packet different from the _audio_track was received. (Expected: %u, but: %d)",
-				  _audio_track->GetId(),
-				  media_packet->GetTrackId());
-
-			OV_ASSERT2(false);
+			// Unsuppported Codec
 		}
 	}
 	else
