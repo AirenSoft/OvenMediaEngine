@@ -293,205 +293,13 @@ namespace pvd
 		}
 
 		// Parse SDP to add track information
-		SessionDescription sdp;
-		if (sdp.FromString(reply->GetBody()->ToString()) == false)
+		if (_sdp.FromString(reply->GetBody()->ToString()) == false)
 		{
 			SetState(State::ERROR);
 			logte("Parsing of SDP received from rtsp url (%s)failed. ", _curr_url->ToUrlString().CStr());
 			return false;
 		}
 
-		logtd("SDP : %s\n", sdp.ToString().CStr());
-
-		_rtp_rtcp = std::make_shared<RtpRtcp>(RtpRtcpInterface::GetSharedPtr());
-
-		auto media_desc_list = sdp.GetMediaList();
-		for (const auto &media_desc : media_desc_list)
-		{
-			auto first_payload = media_desc->GetFirstPayload();
-			if (first_payload == nullptr)
-			{
-				logte("Failed to get the first Payload type of peer sdp");
-				return false;
-			}
-
-			if (media_desc->GetMediaType() == MediaDescription::MediaType::Video)
-			{
-				_video_control = media_desc->GetControl();
-				if (_video_control.IsEmpty())
-				{
-					SetState(State::ERROR);
-					logte("Could not get control attribute in (%s) ", _curr_url->ToUrlString().CStr());
-					return false;
-				}
-
-				_video_control_url = GenerateControlUrl(_video_control);
-				if (_video_control_url.IsEmpty())
-				{
-					SetState(State::ERROR);
-					logte("Could not make control url with (%s) ", _video_control.CStr());
-					return false;
-				}
-
-				_video_payload_type = first_payload->GetId();
-
-				auto codec = first_payload->GetCodec();
-				auto timebase = first_payload->GetCodecRate();
-				RtpDepacketizingManager::SupportedDepacketizerType depacketizer_type;
-
-				auto video_track = std::make_shared<MediaTrack>();
-
-				video_track->SetId(first_payload->GetId());
-				video_track->SetMediaType(cmn::MediaType::Video);
-
-				if (codec == PayloadAttr::SupportCodec::H264)
-				{
-					video_track->SetCodecId(cmn::MediaCodecId::H264);
-					video_track->SetOriginBitstream(cmn::BitstreamFormat::H264_RTP_RFC_6184);
-					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::H264;
-					_h264_extradata_nalu = first_payload->GetH264ExtraDataAsAnnexB();
-				}
-				else if (codec == PayloadAttr::SupportCodec::VP8)
-				{
-					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::VP8;
-					video_track->SetCodecId(cmn::MediaCodecId::Vp8);
-					video_track->SetOriginBitstream(cmn::BitstreamFormat::VP8_RTP_RFC_7741);
-				}
-				else
-				{
-					logte("%s - Unsupported video codec  : %s", GetName().CStr(), first_payload->GetCodecParams().CStr());
-					return false;
-				}
-
-				video_track->SetTimeBase(1, timebase);
-				video_track->SetVideoTimestampScale(1.0);
-
-				if (AddDepacketizer(_video_payload_type, depacketizer_type) == false)
-				{
-					return false;
-				}
-
-				AddTrack(video_track);
-
-				_rtp_rtcp->AddRtpReceiver(_video_payload_type, video_track);
-			}
-			else if (media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
-			{
-				_audio_control = media_desc->GetControl();
-				if (_audio_control.IsEmpty())
-				{
-					SetState(State::ERROR);
-					logte("Could not get control attribute in (%s) ", _curr_url->ToUrlString().CStr());
-					return false;
-				}
-
-				_audio_control_url = GenerateControlUrl(_audio_control);
-				if (_audio_control_url.IsEmpty())
-				{
-					SetState(State::ERROR);
-					logte("Could not make control url with (%s) ", _video_control.CStr());
-					return false;
-				}
-
-				_audio_payload_type = first_payload->GetId();
-				auto codec = first_payload->GetCodec();
-				auto samplerate = first_payload->GetCodecRate();
-				auto channels = std::atoi(first_payload->GetCodecParams());
-				RtpDepacketizingManager::SupportedDepacketizerType depacketizer_type;
-
-				auto audio_track = std::make_shared<MediaTrack>();
-				if (codec == PayloadAttr::SupportCodec::MPEG4_GENERIC)
-				{
-					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::MPEG4_GENERIC_AUDIO;
-					audio_track->SetCodecId(cmn::MediaCodecId::Aac);
-					audio_track->SetOriginBitstream(cmn::BitstreamFormat::AAC_MPEG4_GENERIC);
-				}
-				else if (codec == PayloadAttr::SupportCodec::OPUS)
-				{
-					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::OPUS;
-					audio_track->SetCodecId(cmn::MediaCodecId::Opus);
-					audio_track->SetOriginBitstream(cmn::BitstreamFormat::OPUS_RTP_RFC_7587);
-				}
-				else
-				{
-					logte("%s - Unsupported audio codec : %s", GetName().CStr(), first_payload->GetCodecParams().CStr());
-					return false;
-				}
-
-				audio_track->SetId(first_payload->GetId());
-				audio_track->SetMediaType(cmn::MediaType::Audio);
-				audio_track->SetTimeBase(1, samplerate);
-				audio_track->SetAudioTimestampScale(1.0);
-
-				if (channels == 1)
-				{
-					audio_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutMono);
-				}
-				else
-				{
-					audio_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutStereo);
-				}
-
-				// Add depacketizer and config if needed
-				if (depacketizer_type == RtpDepacketizingManager::SupportedDepacketizerType::MPEG4_GENERIC_AUDIO)
-				{
-					RtpDepacketizerMpeg4GenericAudio::Mode mpeg4_mode;
-					if (first_payload->GetMpeg4GenericMode() == PayloadAttr::Mpeg4GenericMode::AAC_lbr)
-					{
-						mpeg4_mode = RtpDepacketizerMpeg4GenericAudio::Mode::AAC_lbr;
-					}
-					else if (first_payload->GetMpeg4GenericMode() == PayloadAttr::Mpeg4GenericMode::AAC_hbr)
-					{
-						mpeg4_mode = RtpDepacketizerMpeg4GenericAudio::Mode::AAC_hbr;
-					}
-					else
-					{
-						logte("%s - It is not supported MPEG4-GENERIC audio mode : %s", GetName().CStr(), first_payload->GetFmtp().CStr());
-						return false;
-					}
-
-					auto mpeg4_size_length = first_payload->GetMpeg4GenericSizeLength();
-					auto mpeg4_index_length = first_payload->GetMpeg4GenericIndexLength();
-					auto mpeg4_index_delta_length = first_payload->GetMpeg4GenericIndexDeltaLength();
-					auto mpeg4_config = first_payload->GetMpeg4GenericConfig();
-
-					if (mpeg4_config == nullptr)
-					{
-						logte("%s - Could not parse MPEG4-GENERIC audio config : %s", GetName().CStr(), first_payload->GetFmtp().CStr());
-						return false;
-					}
-
-					if (AddDepacketizer(_audio_payload_type, depacketizer_type) == false)
-					{
-						return false;
-					}
-
-					auto depacketizer = std::dynamic_pointer_cast<RtpDepacketizerMpeg4GenericAudio>(GetDepacketizer(_audio_payload_type));
-					if (depacketizer->SetConfigParams(mpeg4_mode, mpeg4_size_length, mpeg4_index_length, mpeg4_index_delta_length, mpeg4_config) == false)
-					{
-						logte("%s - Could not parse MPEG4-GENERIC audio config : %s", GetName().CStr(), first_payload->GetFmtp().CStr());
-						return false;
-					}
-				}
-				else
-				{
-					if (AddDepacketizer(_audio_payload_type, depacketizer_type) == false)
-					{
-						return false;
-					}
-				}
-
-				AddTrack(audio_track);
-				_rtp_rtcp->AddRtpReceiver(_audio_payload_type, audio_track);
-			}
-		}
-
-		_rtp_rtcp->RegisterPrevNode(nullptr);
-		_rtp_rtcp->RegisterNextNode(ov::Node::GetSharedPtr());
-		_rtp_rtcp->Start();
-
-		RegisterPrevNode(_rtp_rtcp);
-		RegisterNextNode(nullptr);
 		ov::Node::Start();
 
 		SetState(State::DESCRIBED);
@@ -508,33 +316,34 @@ namespace pvd
 
 		int interleaved_channel = 0;
 
-		for (const auto &it : GetTracks())
+		_rtp_rtcp = std::make_shared<RtpRtcp>(RtpRtcpInterface::GetSharedPtr());
+
+		auto media_desc_list = _sdp.GetMediaList();
+		for (const auto &media_desc : media_desc_list)
 		{
-			auto track = it.second;
-
-			ov::String setup_url;
-
-			if (track->GetMediaType() == cmn::MediaType::Video)
+			auto control = media_desc->GetControl();
+			if(control.IsEmpty())
 			{
-				setup_url = _video_control_url;
-				_video_rtp_channel_id = interleaved_channel;
-				_video_rtcp_channel_id = interleaved_channel + 1;
-			}
-			else
-			{
-				setup_url = _audio_control_url;
-				_audio_rtp_channel_id = interleaved_channel;
-				_audio_rtcp_channel_id = interleaved_channel + 1;
+				SetState(State::ERROR);
+				logte("Could not get control attribute in (%s) ", _curr_url->ToUrlString().CStr());
+				return false;
 			}
 
-			auto setup = std::make_shared<RtspMessage>(RtspMethod::SETUP, GetNextCSeq(), setup_url);
+			auto control_url = GenerateControlUrl(control);
+			if(control_url.IsEmpty())
+			{
+				SetState(State::ERROR);
+				logte("Could not make control url with (%s) ", control.CStr());
+				return false;
+			}
+
+			auto setup = std::make_shared<RtspMessage>(RtspMethod::SETUP, GetNextCSeq(), control_url);
 
 			// Now RtspcStream only supports RTP/AVP/TCP;unicast/interleaved(rtp+rtcp)
 			// The chennel id can be used for demuxing, but since it is already demuxing in a different way, it is not saved.
 			setup->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Transport,
 																	ov::String::FormatString("RTP/AVP/TCP;unicast;interleaved=%d-%d", interleaved_channel, interleaved_channel + 1)));
 
-			interleaved_channel += 2;
 			setup->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
 			setup->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
 
@@ -561,6 +370,8 @@ namespace pvd
 				return false;
 			}
 
+			logtd("Response SETUP : %s", reply->DumpHeader().CStr());
+
 			// Session
 			auto session_field = reply->GetHeaderFieldAs<RtspHeaderSessionField>(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::Session));
 			if (session_field == nullptr)
@@ -575,8 +386,131 @@ namespace pvd
 				[[maybe_unused]] auto timeout_delta_seconds = session_field->GetTimeoutDeltaSeconds();
 			}
 
-			logtd("Response SETUP : %s", reply->DumpHeader().CStr());
+			// Transport
+			auto transport_field = reply->GetHeaderFieldAs<RtspHeaderTransportField>(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::Transport));
+			uint32_t ssrc;
+			if(transport_field == nullptr)
+			{	
+				SetState(State::ERROR);
+				logte("There is no Transport header in the response from the RTSP server(%s)", _curr_url->ToUrlString().CStr());
+				return false;
+			}
+			else
+			{
+				ssrc = transport_field->GetSsrc();
+			}
+
+			_channel_id_map[ssrc] = interleaved_channel;
+			interleaved_channel += 2;
+
+			// Make track
+			auto first_payload = media_desc->GetFirstPayload();
+			if (first_payload == nullptr)
+			{
+				logte("Failed to get the first Payload type of peer sdp");
+				return false;
+			}
+
+			auto track = std::make_shared<MediaTrack>();
+			RtpDepacketizingManager::SupportedDepacketizerType depacketizer_type;
+
+			track->SetId(ssrc);
+			track->SetTimeBase(1, first_payload->GetCodecRate());
+			track->SetVideoTimestampScale(1.0);
+
+			switch(first_payload->GetCodec())
+			{
+				case PayloadAttr::SupportCodec::H264:
+					track->SetMediaType(cmn::MediaType::Video);
+					track->SetCodecId(cmn::MediaCodecId::H264);
+					track->SetOriginBitstream(cmn::BitstreamFormat::H264_RTP_RFC_6184);
+					_h264_extradata_nalu = first_payload->GetH264ExtraDataAsAnnexB();
+					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::H264;
+					break;
+
+				case PayloadAttr::SupportCodec::VP8:
+					track->SetMediaType(cmn::MediaType::Video);
+					track->SetCodecId(cmn::MediaCodecId::Vp8);
+					track->SetOriginBitstream(cmn::BitstreamFormat::VP8_RTP_RFC_7741);
+					track->SetTimeBase(1, first_payload->GetCodecRate());
+					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::VP8;
+					break;
+
+				case PayloadAttr::SupportCodec::MPEG4_GENERIC:
+					track->SetMediaType(cmn::MediaType::Audio);
+					track->SetCodecId(cmn::MediaCodecId::Aac);
+					track->SetOriginBitstream(cmn::BitstreamFormat::AAC_MPEG4_GENERIC);
+					track->GetChannel().SetCount(std::atoi(first_payload->GetCodecParams()));
+					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::MPEG4_GENERIC_AUDIO;
+					break;
+
+				case PayloadAttr::SupportCodec::OPUS:
+					track->SetMediaType(cmn::MediaType::Audio);
+					track->SetCodecId(cmn::MediaCodecId::Opus);
+					track->SetOriginBitstream(cmn::BitstreamFormat::OPUS_RTP_RFC_7587);
+					track->GetChannel().SetCount(std::atoi(first_payload->GetCodecParams()));
+					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::OPUS;
+					break;
+
+				default:
+					logte("%s - Unsupported codec  : %s", GetName().CStr(), first_payload->GetCodecParams().CStr());
+					return false;
+			}
+
+			// Add Depacketizer
+			if(AddDepacketizer(ssrc, depacketizer_type) == false)
+			{
+				logte("%s - Could not add depacketizer for %u codec  : %s", GetName().CStr(), ssrc, first_payload->GetCodecParams().CStr());
+				return false;
+			}
+
+			// Set Parameters
+			if(depacketizer_type == RtpDepacketizingManager::SupportedDepacketizerType::MPEG4_GENERIC_AUDIO)
+			{
+				RtpDepacketizerMpeg4GenericAudio::Mode mpeg4_mode;
+				if (first_payload->GetMpeg4GenericMode() == PayloadAttr::Mpeg4GenericMode::AAC_lbr)
+				{
+					mpeg4_mode = RtpDepacketizerMpeg4GenericAudio::Mode::AAC_lbr;
+				}
+				else if (first_payload->GetMpeg4GenericMode() == PayloadAttr::Mpeg4GenericMode::AAC_hbr)
+				{
+					mpeg4_mode = RtpDepacketizerMpeg4GenericAudio::Mode::AAC_hbr;
+				}
+				else
+				{
+					logte("%s - It is not supported MPEG4-GENERIC audio mode : %s", GetName().CStr(), first_payload->GetFmtp().CStr());
+					return false;
+				}
+
+				auto mpeg4_size_length = first_payload->GetMpeg4GenericSizeLength();
+				auto mpeg4_index_length = first_payload->GetMpeg4GenericIndexLength();
+				auto mpeg4_index_delta_length = first_payload->GetMpeg4GenericIndexDeltaLength();
+				auto mpeg4_config = first_payload->GetMpeg4GenericConfig();
+
+				if (mpeg4_config == nullptr)
+				{
+					logte("%s - Could not parse MPEG4-GENERIC audio config : %s", GetName().CStr(), first_payload->GetFmtp().CStr());
+					return false;
+				}
+
+				auto depacketizer = std::dynamic_pointer_cast<RtpDepacketizerMpeg4GenericAudio>(GetDepacketizer(ssrc));
+				if (depacketizer->SetConfigParams(mpeg4_mode, mpeg4_size_length, mpeg4_index_length, mpeg4_index_delta_length, mpeg4_config) == false)
+				{
+					logte("%s - Could not parse MPEG4-GENERIC audio config : %s", GetName().CStr(), first_payload->GetFmtp().CStr());
+					return false;
+				}
+			}
+
+			AddTrack(track);
+			_rtp_rtcp->AddRtpReceiver(ssrc, track);
 		}
+
+		_rtp_rtcp->RegisterPrevNode(nullptr);
+		_rtp_rtcp->RegisterNextNode(ov::Node::GetSharedPtr());
+		_rtp_rtcp->Start();
+
+		RegisterPrevNode(_rtp_rtcp);
+		RegisterNextNode(nullptr);
 
 		return true;
 	}
@@ -617,7 +551,7 @@ namespace pvd
 			return false;
 		}
 
-		logtd("Response PLAY : %s", reply->DumpHeader().CStr());
+		logti("Response PLAY : %s", reply->DumpHeader().CStr());
 
 		SetState(State::PLAYING);
 
@@ -901,20 +835,20 @@ namespace pvd
 	void RtspcStream::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
 	{
 		auto first_rtp_packet = rtp_packets.front();
-		auto payload_type = first_rtp_packet->PayloadType();
+		auto ssrc = first_rtp_packet->Ssrc();
 		logtd("%s", first_rtp_packet->Dump().CStr());
 
-		auto track = GetTrack(payload_type);
+		auto track = GetTrack(ssrc);
 		if (track == nullptr)
 		{
-			logte("%s - Could not find track : payload_type(%d)", GetName().CStr(), payload_type);
+			logte("%s - Could not find track : ssrc(%u)", GetName().CStr(), ssrc);
 			return;
 		}
 
-		auto depacketizer = GetDepacketizer(payload_type);
+		auto depacketizer = GetDepacketizer(ssrc);
 		if (depacketizer == nullptr)
 		{
-			logte("%s - Could not find depacketizer : payload_type(%d)", GetName().CStr(), payload_type);
+			logte("%s - Could not find depacketizer : ssrc(%u)", GetName().CStr(), ssrc);
 			return;
 		}
 
@@ -928,7 +862,7 @@ namespace pvd
 		auto bitstream = depacketizer->ParseAndAssembleFrame(payload_list);
 		if (bitstream == nullptr)
 		{
-			logte("%s - Could not depacketize packet : payload_type(%d)", GetName().CStr(), payload_type);
+			logte("%s - Could not depacketize packet : ssrc(%u)", GetName().CStr(), ssrc);
 			return;
 		}
 
@@ -964,10 +898,10 @@ namespace pvd
 				return;
 		}
 
-		auto timestamp = AdjustTimestampByDelta(first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
+		auto timestamp = AdjustTimestampByDelta(first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
 
-		logtd("Payload Type(%d) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
-				first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
+		logtd("Payload Type(%d) Ssrc(%u) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
+				first_rtp_packet->PayloadType(), first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
 
 		auto frame = std::make_shared<MediaPacket>(GetMsid(),
 												   track->GetMediaType(),
@@ -1008,7 +942,7 @@ namespace pvd
 		// Check content_base
 		if (_content_base.IsEmpty() == false)
 		{
-			return ov::String::FormatString("%s/%s", _content_base.CStr(), control.CStr());
+			return ov::String::FormatString("%s%s", _content_base.CStr(), control.CStr());
 		}
 
 		ov::String control_url;
@@ -1039,20 +973,8 @@ namespace pvd
 			auto rtcp_packet = _rtp_rtcp->GetLastSentRtcpPacket();
 			auto rtcp_info = rtcp_packet->GetRtcpInfo();
 
-			auto rtp_payload_type = rtcp_info->GetRtpPayloadType();
-			if (rtp_payload_type == _video_payload_type)
-			{
-				channel_id = _video_rtcp_channel_id;
-			}
-			else if (rtp_payload_type == _audio_payload_type)
-			{
-				channel_id = _audio_rtcp_channel_id;
-			}
-			else
-			{
-				logte("The channel ID cannot be obtained from the generated RTCP packet. RTP PT(%d)", rtp_payload_type);
-				return false;
-			}
+			auto rtp_ssrc = rtcp_info->GetRtpSsrc();
+			channel_id = _channel_id_map[rtp_ssrc] + 1; // RTCP Channel ID is rtp channel id + 1
 
 			auto channel_data = std::make_shared<ov::Data>();
 			// $ + 1 bytes channel id + length + payload

@@ -132,7 +132,7 @@ namespace pvd
 					return false;
 				}
 
-				audio_track->SetId(first_payload->GetId());
+				audio_track->SetId(_audio_ssrc);
 				audio_track->SetMediaType(cmn::MediaType::Audio);
 				audio_track->SetTimeBase(1, samplerate);
 				audio_lip_sync_timebase = audio_track->GetTimeBase().GetExpr();
@@ -147,13 +147,13 @@ namespace pvd
 					audio_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutStereo);
 				}
 
-				if (AddDepacketizer(_audio_payload_type, depacketizer_type) == false)
+				if (AddDepacketizer(_audio_ssrc, depacketizer_type) == false)
 				{
 					return false;
 				}
 
 				AddTrack(audio_track);
-				_rtp_rtcp->AddRtpReceiver(_audio_payload_type, audio_track);
+				_rtp_rtcp->AddRtpReceiver(_audio_ssrc, audio_track);
 			}
 			else
 			{
@@ -189,7 +189,7 @@ namespace pvd
 
 				auto video_track = std::make_shared<MediaTrack>();
 
-				video_track->SetId(first_payload->GetId());
+				video_track->SetId(_video_ssrc);
 				video_track->SetMediaType(cmn::MediaType::Video);
 
 				if (codec == PayloadAttr::SupportCodec::H264)
@@ -214,13 +214,13 @@ namespace pvd
 				video_lip_sync_timebase = video_track->GetTimeBase().GetExpr();
 				video_track->SetVideoTimestampScale(1.0);
 
-				if (AddDepacketizer(_video_payload_type, depacketizer_type) == false)
+				if (AddDepacketizer(_video_ssrc, depacketizer_type) == false)
 				{
 					return false;
 				}
 
 				AddTrack(video_track);
-				_rtp_rtcp->AddRtpReceiver(_video_payload_type, video_track);
+				_rtp_rtcp->AddRtpReceiver(_video_ssrc, video_track);
 			}
 		}
 
@@ -322,20 +322,20 @@ namespace pvd
 	void WebRTCStream::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
 	{
 		auto first_rtp_packet = rtp_packets.front();
-		auto payload_type = first_rtp_packet->PayloadType();
+		auto ssrc = first_rtp_packet->Ssrc();
 		logtd("%s", first_rtp_packet->Dump().CStr());
 
-		auto track = GetTrack(payload_type);
+		auto track = GetTrack(ssrc);
 		if (track == nullptr)
 		{
-			logte("%s - Could not find track : payload_type(%d)", GetName().CStr(), payload_type);
+			logte("%s - Could not find track : ssrc(%u)", GetName().CStr(), ssrc);
 			return;
 		}
 
-		auto depacketizer = GetDepacketizer(payload_type);
+		auto depacketizer = GetDepacketizer(ssrc);
 		if (depacketizer == nullptr)
 		{
-			logte("%s - Could not find depacketizer : payload_type(%d)", GetName().CStr(), payload_type);
+			logte("%s - Could not find depacketizer : ssrc(%u", GetName().CStr(), ssrc);
 			return;
 		}
 
@@ -349,7 +349,7 @@ namespace pvd
 		auto bitstream = depacketizer->ParseAndAssembleFrame(payload_list);
 		if (bitstream == nullptr)
 		{
-			logte("%s - Could not depacketize packet : payload_type(%d)", GetName().CStr(), payload_type);
+			logte("%s - Could not depacketize packet : ssrc(%u)", GetName().CStr(), ssrc);
 			return;
 		}
 

@@ -21,6 +21,8 @@
 #include <modules/rtp_rtcp/rtp_depacketizing_manager.h>
 #include <modules/rtp_rtcp/rtp_rtcp.h>
 
+#include <modules/sdp/session_description.h>
+
 #define RTSP_USER_AGENT_NAME	"OvenMediaEngine"
 namespace pvd
 {
@@ -131,21 +133,13 @@ namespace pvd
 		// Values from RTSP
 		int32_t	_cseq = 0;
 
+		SessionDescription _sdp;
+
 		ov::String _content_base;
 		ov::String _rtsp_session_id;
-
-		uint8_t	_video_payload_type = 0;
-		uint8_t _video_rtp_channel_id = 0;
-		uint8_t _video_rtcp_channel_id = 0;
-		ov::String _video_control;
-		ov::String _video_control_url;
 		std::shared_ptr<ov::Data> _h264_extradata_nalu = nullptr;
-
-		uint8_t	_audio_payload_type = 0;
-		uint8_t _audio_rtp_channel_id = 0;
-		uint8_t _audio_rtcp_channel_id = 0;
-		ov::String _audio_control;
-		ov::String _audio_control_url;
+		// ssrc, rtp channel id (rtcp channel id = rtp_channel_id + 1)
+		std::map<uint32_t, uint8_t> _channel_id_map;
 
 		// CSeq : RequestMessage
 		std::mutex _response_subscriptions_lock;

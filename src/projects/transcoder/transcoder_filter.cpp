@@ -107,7 +107,7 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 			_input_media_track->SetHeight(buffer->GetHeight());
 			_input_context->SetVideoWidth(buffer->GetWidth());
 			_input_context->SetVideoHeight(buffer->GetHeight());
-			logti("Changed resolution %d track", _input_media_track->GetId());
+			logti("Changed resolution %u track", _input_media_track->GetId());
 			return true;
 		}
 	}

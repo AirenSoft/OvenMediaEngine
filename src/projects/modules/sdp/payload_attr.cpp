@@ -156,8 +156,8 @@ void PayloadAttr::SetFmtp(const ov::String &fmtp)
 				continue;
 			}
 
-			auto name = component.Substring(0, index);
-			auto value = component.Substring(index+1);
+			auto name = component.Substring(0, index).Trim();
+			auto value = component.Substring(index+1).Trim();
 
 			if(name.LowerCaseString() == "sprop-parameter-sets")
 			{
