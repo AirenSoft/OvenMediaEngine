@@ -22,10 +22,14 @@ std::shared_ptr<RtspHeaderField> RtspHeaderFieldParser::Parse(const ov::String &
 	}
 
 	std::shared_ptr<RtspHeaderField> field;
-	auto field_name = message.Substring(0, index);
+	auto field_name = message.Substring(0, index).Trim();
 	if(field_name.UpperCaseString() == RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::Session).UpperCaseString())
 	{
 		field = std::make_shared<RtspHeaderSessionField>();
+	}
+	else if(field_name.UpperCaseString() == RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::Transport).UpperCaseString())
+	{
+		field = std::make_shared<RtspHeaderTransportField>();
 	}
 	else
 	{

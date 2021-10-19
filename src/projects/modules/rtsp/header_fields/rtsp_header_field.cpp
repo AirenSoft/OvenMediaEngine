@@ -87,21 +87,15 @@ bool RtspHeaderField::Parse(const ov::String &message)
 		return false;
 	}
 
-	auto name = message.Substring(0, index);
-
-	// Remove space
-	for(size_t i=index+1; i<message.GetLength(); i++)
-	{
-		if(message.Get(i) != ' ')
-		{
-			index = i;
-			break;
-		}
-	}
-
-	auto value = message.Substring(index);
+	auto name = message.Substring(0, index).Trim();
+	auto value = message.Substring(index + 1).Trim();
 	
 	return SetContent(name, value);
+}
+
+bool RtspHeaderField::SetContent(RtspHeaderFieldType type, ov::String value)
+{
+	return SetContent(RtspHeaderField::FieldTypeToString(type), value);
 }
 
 bool RtspHeaderField::SetContent(ov::String name, ov::String value)
@@ -109,6 +103,12 @@ bool RtspHeaderField::SetContent(ov::String name, ov::String value)
 	_name = name;
 	_value = value;
 
+	return true;
+}
+
+bool RtspHeaderField::SetValue(ov::String value)
+{
+	_value = value;
 	return true;
 }
 

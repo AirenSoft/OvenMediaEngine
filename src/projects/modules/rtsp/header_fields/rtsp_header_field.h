@@ -51,8 +51,10 @@ public:
 	
 	virtual ov::String Serialize();
 
+	virtual bool SetContent(RtspHeaderFieldType type, ov::String value);
 	virtual bool SetContent(ov::String name, ov::String value);
 	virtual bool SetContent(ov::String name, int32_t value);
+	virtual bool SetValue(ov::String value);
 
 	virtual ParsedFieldType GetParsedFieldClass()
 	{

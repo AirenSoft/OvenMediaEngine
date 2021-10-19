@@ -132,7 +132,7 @@ namespace pvd
 		for(const auto &item : _last_timestamp_map)
 		{
 			auto track_id = item.first;
-			auto old_timestamp = item.second;
+			[[maybe_unused]] auto old_timestamp = item.second;
 			auto track = GetTrack(track_id);
 
 			// Since the stream is switched, initialize last_timestamp and base_timestamp to receive a new stream. However, some players do not allow the timestamp to decrease, so it is initialized based on the largest timestamp value among previous tracks. 
