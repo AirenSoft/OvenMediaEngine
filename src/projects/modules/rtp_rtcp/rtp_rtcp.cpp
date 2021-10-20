@@ -269,7 +269,7 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 	auto packet = std::make_shared<RtpPacket>(data);
 	logtd("%s", packet->Dump().CStr());
 
-	uint32_t track_id = packet->Ssrc();
+	uint32_t rtsp_channel = 0;
 	if(from_node == NodeType::Rtsp)
 	{
 		auto rtsp_data = std::dynamic_pointer_cast<const RtspData>(data);
@@ -280,13 +280,13 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 		}
 
 		// RTSP Node uses channelID as trackID
-		track_id = rtsp_data->GetChannelId();
+		rtsp_channel = rtsp_data->GetChannelId();
 	}
 
-	auto track_it = _tracks.find(track_id);
+	auto track_it = _tracks.find(rtsp_channel);
 	if(track_it == _tracks.end())
 	{
-		logte("Could not find track info for track ID %u", track_id);
+		logte("Could not find track info for track ID %u", rtsp_channel);
 		return false;
 	}
 	auto track = track_it->second;
@@ -339,7 +339,7 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 
 	if(jitter_buffer_type == 1)
 	{
-		auto buffer_it = _rtp_frame_jitter_buffers.find(track_id);
+		auto buffer_it = _rtp_frame_jitter_buffers.find(rtsp_channel);
 		if(buffer_it == _rtp_frame_jitter_buffers.end())
 		{
 			// can not happen
@@ -364,6 +364,7 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 				return false;
 			}
 			
+			packet->SetRtspChannel(rtsp_channel);
 			rtp_packets.push_back(packet);
 
 			while(true)
@@ -374,15 +375,16 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 					break;
 				}
 
+				packet->SetRtspChannel(rtsp_channel);
 				rtp_packets.push_back(packet);
 			}
 
-			_observer->OnRtpFrameReceived(track_id, rtp_packets);
+			_observer->OnRtpFrameReceived(rtp_packets);
 		}
 	}
 	else if(jitter_buffer_type == 2)
 	{
-		auto buffer_it = _rtp_minimal_jitter_buffers.find(track_id);
+		auto buffer_it = _rtp_minimal_jitter_buffers.find(rtsp_channel);
 		if(buffer_it == _rtp_minimal_jitter_buffers.end())
 		{
 			// can not happen
@@ -398,8 +400,9 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 		if(pop_packet != nullptr)
 		{
 			std::vector<std::shared_ptr<RtpPacket>> rtp_packets;
+			pop_packet->SetRtspChannel(rtsp_channel);
 			rtp_packets.push_back(pop_packet);
-			_observer->OnRtpFrameReceived(track_id, rtp_packets);
+			_observer->OnRtpFrameReceived(rtp_packets);
 		}
 	}
 	else
@@ -420,7 +423,7 @@ bool RtpRtcp::OnRtcpReceived(NodeType from_node, const std::shared_ptr<const ov:
 		return false;
 	}
 
-	uint32_t track_id = 0;
+	uint32_t rtsp_channel = 0;
 	if(from_node == NodeType::Rtsp)
 	{
 		auto rtsp_data = std::dynamic_pointer_cast<const RtspData>(data);
@@ -431,7 +434,7 @@ bool RtpRtcp::OnRtcpReceived(NodeType from_node, const std::shared_ptr<const ov:
 		}
 
 		// RTSP Node uses channelID as trackID
-		track_id = rtsp_data->GetChannelId();
+		rtsp_channel = rtsp_data->GetChannelId();
 	}
 
 	while(receiver.HasAvailableRtcpInfo())
@@ -451,7 +454,7 @@ bool RtpRtcp::OnRtcpReceived(NodeType from_node, const std::shared_ptr<const ov:
 		
 		if(_observer != nullptr)
 		{
-			_observer->OnRtcpReceived(track_id, info);
+			_observer->OnRtcpReceived(info);
 		}
 	}
 	
