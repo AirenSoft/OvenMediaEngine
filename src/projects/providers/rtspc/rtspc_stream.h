@@ -44,8 +44,8 @@ namespace pvd
 		PullStream::ProcessMediaResult ProcessMediaPacket() override;
 
 		// RtpRtcpInterface Implementation
-		void OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) override;
-		void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) override;
+		void OnRtpFrameReceived(uint32_t track_id, const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) override;
+		void OnRtcpReceived(uint32_t track_id, const std::shared_ptr<RtcpInfo> &rtcp_info) override;
 
 		// ov::Node Interface
 		bool OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
@@ -139,7 +139,7 @@ namespace pvd
 		ov::String _rtsp_session_id;
 		std::shared_ptr<ov::Data> _h264_extradata_nalu = nullptr;
 		// ssrc, rtp channel id (rtcp channel id = rtp_channel_id + 1)
-		std::map<uint32_t, uint8_t> _channel_id_map;
+		std::map<uint32_t, uint8_t> _ssrc_channel_id_map;
 
 		// CSeq : RequestMessage
 		std::mutex _response_subscriptions_lock;

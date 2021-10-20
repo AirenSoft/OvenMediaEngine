@@ -319,7 +319,7 @@ namespace pvd
 	}
 
 	// From RtpRtcp node
-	void WebRTCStream::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
+	void WebRTCStream::OnRtpFrameReceived(uint32_t track_id, const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
 	{
 		auto first_rtp_packet = rtp_packets.front();
 		auto ssrc = first_rtp_packet->Ssrc();
@@ -422,7 +422,7 @@ namespace pvd
 	}
 
 	// From RtpRtcp node
-	void WebRTCStream::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
+	void WebRTCStream::OnRtcpReceived(uint32_t track_id, const std::shared_ptr<RtcpInfo> &rtcp_info)
 	{
 		// Receive Sender Report
 		if (rtcp_info->GetPacketType() == RtcpPacketType::SR)

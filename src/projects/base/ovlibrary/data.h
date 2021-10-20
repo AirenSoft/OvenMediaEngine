@@ -47,6 +47,8 @@ namespace ov
 		// Move constructor
 		Data(Data &&data) noexcept;
 
+		virtual ~Data() = default;
+
 		/// Create a new data from this instance. The newly created data is managed by copy-on-write method
 		///
 		/// @return

@@ -50,23 +50,19 @@ int RtspData::ParseInternal(const std::shared_ptr<const ov::Data> &data)
 		return 0;
 	}
 
-	_data = std::make_shared<ov::Data>(&ptr[4], data_length);
+	Clear();
+	Append(&ptr[4], data_length);
 
 	return RTSP_INTERLEAVED_DATA_HEADER_LEN + data_length;;
 }
 
 RtspData::RtspData(uint8_t channel_id, const std::shared_ptr<ov::Data> &data)
+	: RtspData(data->GetData(), data->GetLength())
 {
 	_channel_id = channel_id;
-	_data = data;
 }
 
-uint8_t RtspData::GetChannelId()
+uint8_t RtspData::GetChannelId() const
 {
 	return _channel_id;
-}
-
-std::shared_ptr<ov::Data> RtspData::GetData()
-{
-	return _data;
 }
