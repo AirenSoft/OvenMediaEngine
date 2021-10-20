@@ -12,9 +12,11 @@
 
 // $ + ID + Length = 4
 #define RTSP_INTERLEAVED_DATA_HEADER_LEN	4	
-class RtspData
+class RtspData : public ov::Data
 {
 public:
+	using ov::Data::Data;
+
 	// If success, returns RtspData and parsed data length
 	// If not enough data, returns nullptr and 0
 	// If fail, returns nullptr and -1
@@ -25,12 +27,10 @@ public:
 	RtspData(){}
 	RtspData(uint8_t channel_id, const std::shared_ptr<ov::Data> &data);
 
-	uint8_t GetChannelId();
-	std::shared_ptr<ov::Data> GetData();
+	uint8_t GetChannelId() const;
 
 private:
 	int ParseInternal(const std::shared_ptr<const ov::Data> &data);
 
 	uint8_t _channel_id;
-	std::shared_ptr<ov::Data>	_data;
 };

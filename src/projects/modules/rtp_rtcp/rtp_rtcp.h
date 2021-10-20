@@ -17,8 +17,8 @@
 class RtpRtcpInterface : public ov::EnableSharedFromThis<RtpRtcpInterface>
 {
 public:
-	virtual void OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) = 0;
-	virtual void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) = 0;
+	virtual void OnRtpFrameReceived(uint32_t track_id, const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) = 0;
+	virtual void OnRtcpReceived(uint32_t track_id, const std::shared_ptr<RtcpInfo> &rtcp_info) = 0;
 };
 
 class RtpRtcp : public ov::Node
@@ -46,8 +46,8 @@ public:
 	bool OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 	
 private:
-	bool OnRtpReceived(const std::shared_ptr<const ov::Data> &data);
-	bool OnRtcpReceived(const std::shared_ptr<const ov::Data> &data);
+	bool OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data);
+	bool OnRtcpReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data);
 
 	std::shared_ptr<RtpFrameJitterBuffer> GetJitterBuffer(uint8_t payload_type);
 

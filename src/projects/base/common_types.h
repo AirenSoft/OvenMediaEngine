@@ -87,6 +87,7 @@ enum class NodeType : int16_t
 {
 	Unknown = 0,
 	Edge = 10,	// Start or End of Nodes
+	Rtsp = 11,
 	Rtp = 100,
 	Rtcp = 101,
 	Srtp = 200,

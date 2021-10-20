@@ -298,12 +298,12 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 	return _rtp_rtcp->SendRtpPacket(copy_packet);
 }
 
-void RtcSession::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
+void RtcSession::OnRtpFrameReceived(uint32_t track_id, const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
 {
 	// No player send RTP packet 
 }
 
-void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
+void RtcSession::OnRtcpReceived(uint32_t track_id, const std::shared_ptr<RtcpInfo> &rtcp_info)
 {
 	if(pub::Session::GetState() != SessionState::Started)
 	{

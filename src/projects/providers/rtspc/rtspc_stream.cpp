@@ -41,7 +41,7 @@ namespace pvd
 	}
 
 	RtspcStream::RtspcStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
-	: pvd::PullStream(application, stream_info, url_list), Node(NodeType::Edge)
+	: pvd::PullStream(application, stream_info, url_list), Node(NodeType::Rtsp)
 	{
 		SetState(State::IDLE);
 	}
@@ -262,7 +262,7 @@ namespace pvd
 			return false;
 		}
 
-		logtd("Response Describe : %s", reply->DumpHeader().CStr());
+		logti("Response Describe : %s", reply->DumpHeader().CStr());
 
 		// Content-Base
 		auto content_base_field = reply->GetHeaderField(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::ContentBase));
@@ -299,6 +299,8 @@ namespace pvd
 			logte("Parsing of SDP received from rtsp url (%s)failed. ", _curr_url->ToUrlString().CStr());
 			return false;
 		}
+
+		logti("SDP : %s\n", reply->GetBody()->ToString().CStr());
 
 		ov::Node::Start();
 
@@ -342,7 +344,7 @@ namespace pvd
 			// Now RtspcStream only supports RTP/AVP/TCP;unicast/interleaved(rtp+rtcp)
 			// The chennel id can be used for demuxing, but since it is already demuxing in a different way, it is not saved.
 			setup->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Transport,
-																	ov::String::FormatString("RTP/AVP/TCP;unicast;interleaved=%d-%d", interleaved_channel, interleaved_channel + 1)));
+																	ov::String::FormatString("RTP/AVP/TCP;unicast;interleaved=%d-%d;ssrc=%X", interleaved_channel, interleaved_channel + 1, ov::Random::GenerateUInt32())));
 
 			setup->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
 			setup->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
@@ -370,7 +372,7 @@ namespace pvd
 				return false;
 			}
 
-			logtd("Response SETUP : %s", reply->DumpHeader().CStr());
+			logti("Response SETUP : %s", reply->DumpHeader().CStr());
 
 			// Session
 			auto session_field = reply->GetHeaderFieldAs<RtspHeaderSessionField>(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::Session));
@@ -388,7 +390,6 @@ namespace pvd
 
 			// Transport
 			auto transport_field = reply->GetHeaderFieldAs<RtspHeaderTransportField>(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::Transport));
-			uint32_t ssrc;
 			if(transport_field == nullptr)
 			{	
 				SetState(State::ERROR);
@@ -397,13 +398,10 @@ namespace pvd
 			}
 			else
 			{
-				ssrc = transport_field->GetSsrc();
+				// Some rtsp server ignores this value, so it is unusable
+				// transport_field->GetSsrc();
 			}
 
-			_channel_id_map[ssrc] = interleaved_channel;
-			interleaved_channel += 2;
-
-			// Make track
 			auto first_payload = media_desc->GetFirstPayload();
 			if (first_payload == nullptr)
 			{
@@ -411,10 +409,11 @@ namespace pvd
 				return false;
 			}
 
+			// Make track
 			auto track = std::make_shared<MediaTrack>();
 			RtpDepacketizingManager::SupportedDepacketizerType depacketizer_type;
 
-			track->SetId(ssrc);
+			track->SetId(interleaved_channel);
 			track->SetTimeBase(1, first_payload->GetCodecRate());
 			track->SetVideoTimestampScale(1.0);
 
@@ -432,7 +431,6 @@ namespace pvd
 					track->SetMediaType(cmn::MediaType::Video);
 					track->SetCodecId(cmn::MediaCodecId::Vp8);
 					track->SetOriginBitstream(cmn::BitstreamFormat::VP8_RTP_RFC_7741);
-					track->SetTimeBase(1, first_payload->GetCodecRate());
 					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::VP8;
 					break;
 
@@ -458,9 +456,9 @@ namespace pvd
 			}
 
 			// Add Depacketizer
-			if(AddDepacketizer(ssrc, depacketizer_type) == false)
+			if(AddDepacketizer(interleaved_channel, depacketizer_type) == false)
 			{
-				logte("%s - Could not add depacketizer for %u codec  : %s", GetName().CStr(), ssrc, first_payload->GetCodecParams().CStr());
+				logte("%s - Could not add depacketizer for channel %u codec  : %s", GetName().CStr(), interleaved_channel, first_payload->GetCodecParams().CStr());
 				return false;
 			}
 
@@ -493,7 +491,7 @@ namespace pvd
 					return false;
 				}
 
-				auto depacketizer = std::dynamic_pointer_cast<RtpDepacketizerMpeg4GenericAudio>(GetDepacketizer(ssrc));
+				auto depacketizer = std::dynamic_pointer_cast<RtpDepacketizerMpeg4GenericAudio>(GetDepacketizer(interleaved_channel));
 				if (depacketizer->SetConfigParams(mpeg4_mode, mpeg4_size_length, mpeg4_index_length, mpeg4_index_delta_length, mpeg4_config) == false)
 				{
 					logte("%s - Could not parse MPEG4-GENERIC audio config : %s", GetName().CStr(), first_payload->GetFmtp().CStr());
@@ -502,7 +500,11 @@ namespace pvd
 			}
 
 			AddTrack(track);
-			_rtp_rtcp->AddRtpReceiver(ssrc, track);
+
+			// Some RTSP servers ignore the ssrc of SETUP, so they use an interleaved channel instead.
+			_rtp_rtcp->AddRtpReceiver(interleaved_channel, track);
+
+			interleaved_channel += 2;
 		}
 
 		_rtp_rtcp->RegisterPrevNode(nullptr);
@@ -817,10 +819,11 @@ namespace pvd
 
 				// RTP or RTCP
 				auto rtsp_data = _rtsp_demuxer.PopData();
+				rtsp_data->GetChannelId();
 
 				// RtpRtcpInterface(RtspcStream) <--> [RTP_RTCP Node] <--> [*Edge Node(RtspcStream)] ---Send--> {Socket}
 				//							        					     					    <--Recv--- {Socket}
-				SendDataToPrevNode(rtsp_data->GetData());
+				SendDataToPrevNode(rtsp_data);
 			}
 			else
 			{
@@ -832,23 +835,22 @@ namespace pvd
 	}
 
 	// From RtpRtcp node
-	void RtspcStream::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
+	void RtspcStream::OnRtpFrameReceived(uint32_t track_id, const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
 	{
 		auto first_rtp_packet = rtp_packets.front();
-		auto ssrc = first_rtp_packet->Ssrc();
 		logtd("%s", first_rtp_packet->Dump().CStr());
 
-		auto track = GetTrack(ssrc);
+		auto track = GetTrack(track_id);
 		if (track == nullptr)
 		{
-			logte("%s - Could not find track : ssrc(%u)", GetName().CStr(), ssrc);
+			logte("%s - Could not find track : channel_id(%u)", GetName().CStr(), track_id);
 			return;
 		}
 
-		auto depacketizer = GetDepacketizer(ssrc);
+		auto depacketizer = GetDepacketizer(track_id);
 		if (depacketizer == nullptr)
 		{
-			logte("%s - Could not find depacketizer : ssrc(%u)", GetName().CStr(), ssrc);
+			logte("%s - Could not find depacketizer : channel_id(%u)", GetName().CStr(), track_id);
 			return;
 		}
 
@@ -862,7 +864,7 @@ namespace pvd
 		auto bitstream = depacketizer->ParseAndAssembleFrame(payload_list);
 		if (bitstream == nullptr)
 		{
-			logte("%s - Could not depacketize packet : ssrc(%u)", GetName().CStr(), ssrc);
+			logte("%s - Could not depacketize packet : channel_id(%u)", GetName().CStr(), track_id);
 			return;
 		}
 
@@ -924,7 +926,7 @@ namespace pvd
 	}
 
 	// From RtpRtcp node
-	void RtspcStream::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
+	void RtspcStream::OnRtcpReceived(uint32_t track_id, const std::shared_ptr<RtcpInfo> &rtcp_info)
 	{
 		// Nothing to do now
 	}
@@ -974,7 +976,7 @@ namespace pvd
 			auto rtcp_info = rtcp_packet->GetRtcpInfo();
 
 			auto rtp_ssrc = rtcp_info->GetRtpSsrc();
-			channel_id = _channel_id_map[rtp_ssrc] + 1; // RTCP Channel ID is rtp channel id + 1
+			channel_id = _ssrc_channel_id_map[rtp_ssrc] + 1; // RTCP Channel ID is rtp channel id + 1
 
 			auto channel_data = std::make_shared<ov::Data>();
 			// $ + 1 bytes channel id + length + payload

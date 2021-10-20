@@ -6,6 +6,8 @@
 #include "rtcp_receiver.h"
 #include "rtcp_info/fir.h"
 
+#include "modules/rtsp/rtsp_data.h"
+
 #define OV_LOG_TAG "RtpRtcp"
 
 RtpRtcp::RtpRtcp(const std::shared_ptr<RtpRtcpInterface> &observer)
@@ -222,7 +224,6 @@ bool RtpRtcp::OnDataReceivedFromNextNode(NodeType from_node, const std::shared_p
 		return false;
 	}
 
-
 	/* Check if this is a RTP/RTCP packet
 		https://www.rfc-editor.org/rfc/rfc7983.html
 					+----------------+
@@ -246,12 +247,12 @@ bool RtpRtcp::OnDataReceivedFromNextNode(NodeType from_node, const std::shared_p
 		// RTCP
 		if(payload_type >= 192 && payload_type <= 223)
 		{
-			return OnRtcpReceived(data);
+			return OnRtcpReceived(from_node, data);
 		}
 		// RTP
 		else
 		{
-			return OnRtpReceived(data);
+			return OnRtpReceived(from_node, data);
 		}
 	}
 	else
@@ -263,15 +264,29 @@ bool RtpRtcp::OnDataReceivedFromNextNode(NodeType from_node, const std::shared_p
     return true;
 }
 
-bool RtpRtcp::OnRtpReceived(const std::shared_ptr<const ov::Data> &data)
+bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
 	auto packet = std::make_shared<RtpPacket>(data);
 	logtd("%s", packet->Dump().CStr());
 
-	auto track_it = _tracks.find(packet->Ssrc());
+	uint32_t track_id = packet->Ssrc();
+	if(from_node == NodeType::Rtsp)
+	{
+		auto rtsp_data = std::dynamic_pointer_cast<const RtspData>(data);
+		if(rtsp_data == nullptr)
+		{
+			logte("Could not convert to RtspData");
+			return false;
+		}
+
+		// RTSP Node uses channelID as trackID
+		track_id = rtsp_data->GetChannelId();
+	}
+
+	auto track_it = _tracks.find(track_id);
 	if(track_it == _tracks.end())
 	{
-		logte("Could not find track info for ssrc %u", packet->Ssrc());
+		logte("Could not find track info for track ID %u", track_id);
 		return false;
 	}
 	auto track = track_it->second;
@@ -324,7 +339,7 @@ bool RtpRtcp::OnRtpReceived(const std::shared_ptr<const ov::Data> &data)
 
 	if(jitter_buffer_type == 1)
 	{
-		auto buffer_it = _rtp_frame_jitter_buffers.find(packet->Ssrc());
+		auto buffer_it = _rtp_frame_jitter_buffers.find(track_id);
 		if(buffer_it == _rtp_frame_jitter_buffers.end())
 		{
 			// can not happen
@@ -362,12 +377,12 @@ bool RtpRtcp::OnRtpReceived(const std::shared_ptr<const ov::Data> &data)
 				rtp_packets.push_back(packet);
 			}
 
-			_observer->OnRtpFrameReceived(rtp_packets);
+			_observer->OnRtpFrameReceived(track_id, rtp_packets);
 		}
 	}
 	else if(jitter_buffer_type == 2)
 	{
-		auto buffer_it = _rtp_minimal_jitter_buffers.find(packet->Ssrc());
+		auto buffer_it = _rtp_minimal_jitter_buffers.find(track_id);
 		if(buffer_it == _rtp_minimal_jitter_buffers.end())
 		{
 			// can not happen
@@ -384,7 +399,7 @@ bool RtpRtcp::OnRtpReceived(const std::shared_ptr<const ov::Data> &data)
 		{
 			std::vector<std::shared_ptr<RtpPacket>> rtp_packets;
 			rtp_packets.push_back(pop_packet);
-			_observer->OnRtpFrameReceived(rtp_packets);
+			_observer->OnRtpFrameReceived(track_id, rtp_packets);
 		}
 	}
 	else
@@ -395,7 +410,7 @@ bool RtpRtcp::OnRtpReceived(const std::shared_ptr<const ov::Data> &data)
 	return true;
 }
 
-bool RtpRtcp::OnRtcpReceived(const std::shared_ptr<const ov::Data> &data)
+bool RtpRtcp::OnRtcpReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
 	logtd("Get RTCP Packet - length(%d)", data->GetLength());
 	// Parse RTCP Packet
@@ -403,6 +418,20 @@ bool RtpRtcp::OnRtcpReceived(const std::shared_ptr<const ov::Data> &data)
 	if(receiver.ParseCompoundPacket(data) == false)
 	{
 		return false;
+	}
+
+	uint32_t track_id = 0;
+	if(from_node == NodeType::Rtsp)
+	{
+		auto rtsp_data = std::dynamic_pointer_cast<const RtspData>(data);
+		if(rtsp_data == nullptr)
+		{
+			logte("Could not convert to RtspData");
+			return false;
+		}
+
+		// RTSP Node uses channelID as trackID
+		track_id = rtsp_data->GetChannelId();
 	}
 
 	while(receiver.HasAvailableRtcpInfo())
@@ -422,7 +451,7 @@ bool RtpRtcp::OnRtcpReceived(const std::shared_ptr<const ov::Data> &data)
 		
 		if(_observer != nullptr)
 		{
-			_observer->OnRtcpReceived(info);
+			_observer->OnRtcpReceived(track_id, info);
 		}
 	}
 	
