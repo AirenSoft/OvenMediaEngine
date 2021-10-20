@@ -835,22 +835,23 @@ namespace pvd
 	}
 
 	// From RtpRtcp node
-	void RtspcStream::OnRtpFrameReceived(uint32_t track_id, const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
+	void RtspcStream::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
 	{
 		auto first_rtp_packet = rtp_packets.front();
+		auto channel = first_rtp_packet->GetRtspChannel();
 		logtd("%s", first_rtp_packet->Dump().CStr());
 
-		auto track = GetTrack(track_id);
+		auto track = GetTrack(channel);
 		if (track == nullptr)
 		{
-			logte("%s - Could not find track : channel_id(%u)", GetName().CStr(), track_id);
+			logte("%s - Could not find track : channel_id(%u)", GetName().CStr(), channel);
 			return;
 		}
 
-		auto depacketizer = GetDepacketizer(track_id);
+		auto depacketizer = GetDepacketizer(channel);
 		if (depacketizer == nullptr)
 		{
-			logte("%s - Could not find depacketizer : channel_id(%u)", GetName().CStr(), track_id);
+			logte("%s - Could not find depacketizer : channel_id(%u)", GetName().CStr(), channel);
 			return;
 		}
 
@@ -864,7 +865,7 @@ namespace pvd
 		auto bitstream = depacketizer->ParseAndAssembleFrame(payload_list);
 		if (bitstream == nullptr)
 		{
-			logte("%s - Could not depacketize packet : channel_id(%u)", GetName().CStr(), track_id);
+			logte("%s - Could not depacketize packet : channel_id(%u)", GetName().CStr(), channel);
 			return;
 		}
 
@@ -926,7 +927,7 @@ namespace pvd
 	}
 
 	// From RtpRtcp node
-	void RtspcStream::OnRtcpReceived(uint32_t track_id, const std::shared_ptr<RtcpInfo> &rtcp_info)
+	void RtspcStream::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	{
 		// Nothing to do now
 	}

@@ -17,8 +17,8 @@
 class RtpRtcpInterface : public ov::EnableSharedFromThis<RtpRtcpInterface>
 {
 public:
-	virtual void OnRtpFrameReceived(uint32_t track_id, const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) = 0;
-	virtual void OnRtcpReceived(uint32_t track_id, const std::shared_ptr<RtcpInfo> &rtcp_info) = 0;
+	virtual void OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) = 0;
+	virtual void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) = 0;
 };
 
 class RtpRtcp : public ov::Node

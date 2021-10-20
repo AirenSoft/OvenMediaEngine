@@ -55,8 +55,8 @@ namespace pvd
 		bool OnDataReceived(const std::shared_ptr<const ov::Data> &data) override;
 
 		// RtpRtcpInterface Implement
-		void OnRtpFrameReceived(uint32_t track_id, const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) override;
-		void OnRtcpReceived(uint32_t track_id, const std::shared_ptr<RtcpInfo> &rtcp_info) override;
+		void OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) override;
+		void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) override;
 
 		// ov::Node Interface
 		bool OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
