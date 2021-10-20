@@ -129,8 +129,15 @@ void DecoderAAC::ThreadDecode()
 					_pkt->pts = _parser->pts;
 					_pkt->dts = _parser->dts;
 					_pkt->flags = (_parser->key_frame == 1) ? AV_PKT_FLAG_KEY : 0;
-					_pkt->duration = _pkt->pts - _parser->last_pts;
-
+					if (_pkt->pts != AV_NOPTS_VALUE && _parser->last_pts != AV_NOPTS_VALUE)
+					{
+						_pkt->duration = _pkt->pts - _parser->last_pts;
+					}
+					else
+					{
+						_pkt->duration = 0;
+					}
+					
 					int ret = ::avcodec_send_packet(_context, _pkt);
 
 					if (ret == AVERROR(EAGAIN))
