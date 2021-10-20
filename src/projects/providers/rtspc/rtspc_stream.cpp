@@ -901,10 +901,10 @@ namespace pvd
 				return;
 		}
 
-		auto timestamp = AdjustTimestampByDelta(first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
+		auto timestamp = AdjustTimestampByDelta(channel, first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
 
-		logtd("Payload Type(%d) Ssrc(%u) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
-				first_rtp_packet->PayloadType(), first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
+		logtd("Channel(%d) Payload Type(%d) Ssrc(%u) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
+				channel, first_rtp_packet->PayloadType(), first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
 
 		auto frame = std::make_shared<MediaPacket>(GetMsid(),
 												   track->GetMediaType(),

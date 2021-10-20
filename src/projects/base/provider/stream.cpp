@@ -122,6 +122,10 @@ namespace pvd
 			auto track_id = item.first;
 			auto timestamp = item.second;
 			auto track = GetTrack(track_id);
+			if(track == nullptr)
+			{
+				return;
+			}
 
 			auto timestamp_ms = (timestamp * 1000) / track->GetTimeBase().GetTimescale();
 			logtd("%d old timestamp : %f ms", track_id, timestamp_ms);
