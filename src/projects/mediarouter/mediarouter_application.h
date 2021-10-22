@@ -137,6 +137,7 @@ private:
 	std::shared_mutex _streams_lock;
 
 private:
+	uint32_t GetWorkerIDByStreamID(info::stream_id_t stream_id);
 	void InboundWorkerThread(uint32_t worker_id);
 	void OutboundWorkerThread(uint32_t worker_id);
 

@@ -503,7 +503,6 @@ bool MediaRouteApplication::DeleteInboundStream(
 	const std::shared_ptr<info::Stream> &stream_info)
 {
 	std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
-
 	_inbound_streams.erase(stream_info->GetId());
 
 	return true;
@@ -512,7 +511,6 @@ bool MediaRouteApplication::DeleteOutboundStream(
 	const std::shared_ptr<info::Stream> &stream_info)
 {
 	std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
-
 	_outbound_streams.erase(stream_info->GetId());
 
 	return true;
@@ -630,7 +628,7 @@ bool MediaRouteApplication::OnPacketReceived(
 
 			stream->Push(packet);
 
-			_inbound_stream_indicator[stream_info->GetId() % _max_worker_thread_count]->Enqueue(stream);
+			_inbound_stream_indicator[GetWorkerIDByStreamID(stream_info->GetId())]->Enqueue(stream);
 		}
 		break;
 
@@ -645,7 +643,7 @@ bool MediaRouteApplication::OnPacketReceived(
 
 			stream->Push(packet);
 
-			_outbound_stream_indicator[stream_info->GetId() % _max_worker_thread_count]->Enqueue(stream);
+			_outbound_stream_indicator[GetWorkerIDByStreamID(stream_info->GetId())]->Enqueue(stream);
 		}
 		break;
 		default: {
@@ -729,6 +727,11 @@ bool MediaRouteApplication::IsExistingInboundStream(ov::String stream_name)
 	}
 
 	return false;
+}
+
+uint32_t MediaRouteApplication::GetWorkerIDByStreamID(info::stream_id_t stream_id)
+{
+	return stream_id % _max_worker_thread_count;
 }
 
 void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
