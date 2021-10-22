@@ -502,8 +502,6 @@ bool MediaRouteApplication::OnStreamDeleted(
 bool MediaRouteApplication::DeleteInboundStream(
 	const std::shared_ptr<info::Stream> &stream_info)
 {
-	_inbound_stream_indicator[GetWorkerIDByStreamID(stream_info->GetId())]->Clear();
-
 	std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
 	_inbound_streams.erase(stream_info->GetId());
 
@@ -512,8 +510,6 @@ bool MediaRouteApplication::DeleteInboundStream(
 bool MediaRouteApplication::DeleteOutboundStream(
 	const std::shared_ptr<info::Stream> &stream_info)
 {
-	_outbound_stream_indicator[GetWorkerIDByStreamID(stream_info->GetId())]->Clear();
-
 	std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
 	_outbound_streams.erase(stream_info->GetId());
 
