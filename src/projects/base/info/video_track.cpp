@@ -14,7 +14,8 @@ VideoTrack::VideoTrack()
 	  _width(0),
 	  _height(0),
 	  _format(0),
-	  _preset("")
+	  _preset(""),
+	  _has_bframe(false)
 {
 }
 
@@ -102,4 +103,14 @@ void VideoTrack::SetPreset(ov::String preset)
 ov::String VideoTrack::GetPreset() const
 {
 	return _preset;
+}
+
+void VideoTrack::SetBframes(bool has_bframe)
+{
+	_has_bframe = has_bframe;
+}
+
+bool VideoTrack::HasBframes()
+{
+	return _has_bframe;
 }
