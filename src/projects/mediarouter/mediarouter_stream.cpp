@@ -54,6 +54,8 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 	logti("Trying to create media route stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
 	_inout_type = MediaRouterStreamType::UNKNOWN;
 
+	_max_warning_count_bframe = 0;
+
 	_stat_start_time = std::chrono::system_clock::now();
 	_stop_watch.Start();
 }
@@ -779,10 +781,26 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 		case cmn::BitstreamFormat::H264_ANNEXB:
 		case cmn::BitstreamFormat::H264_AVCC:
 		case cmn::BitstreamFormat::H265_ANNEXB:
-			if (media_packet->GetPts() != media_packet->GetDts())
+			if (_max_warning_count_bframe < 10)
 			{
-				media_track->SetBframes(true);
+				if (media_packet->GetPts() != media_packet->GetDts())
+				{
+					media_track->SetBframes(true);
+				}
+
+				// Display a warning message that b-frame exists
+				if (media_track->HasBframes() == true)
+				{
+					logtw("b-frame has been detected in the %d track of %s %s/%s stream",
+						  track_id,
+						  _inout_type == MediaRouterStreamType::INBOUND ? "inbound" : "outbound",
+						  _stream->GetApplicationInfo().GetName().CStr(),
+						  _stream->GetName().CStr());
+
+					_max_warning_count_bframe++;
+				}
 			}
+			break;
 		default:
 			break;
 	}
@@ -841,17 +859,6 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 										_stat_recv_pkt_count[track_id],
 										ov::Converter::ToSiString(_stat_recv_pkt_size[track_id], 1).CStr(),
 										_stat_recv_pkt_size[track_id] / (uptime / 1000) * 8 / 1000);
-
-			
-			// Display a warning message that b-frame exists
-			if (track->HasBframes() == true)
-			{
-				logtw("b-frame has been detected in the %d track of %s %s/%s stream",
-					  track_id,
-					  _inout_type == MediaRouterStreamType::INBOUND? "inbound": "outbound",
-					  _stream->GetApplicationInfo().GetName().CStr(),
-					  _stream->GetName().CStr());
-			}
 		}
 
 		ov::String stat_stream_str = "";
