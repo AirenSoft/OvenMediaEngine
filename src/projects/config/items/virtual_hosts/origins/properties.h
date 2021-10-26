@@ -8,29 +8,26 @@
 //==============================================================================
 #pragma once
 
-#include "origin.h"
-#include "properties.h"
-
 namespace cfg
 {
 	namespace vhost
 	{
 		namespace orgn
 		{
-			struct Origins : public Item
+			struct Properties : public Item
 			{
-				CFG_DECLARE_REF_GETTER_OF(GetOriginList, _origin_list)
-				CFG_DECLARE_REF_GETTER_OF(GetProperties, _properties)
+				CFG_DECLARE_REF_GETTER_OF(GetNoInputFailoverTimeout, _no_input_failover_timeout)
+				CFG_DECLARE_REF_GETTER_OF(GetUnusedStreamDeletionTimeout, _unused_stream_deletion_timeout)
 
 			protected:
 				void MakeList() override
 				{
-					Register<Optional>("Origin", &_origin_list);
-					Register<Optional>("Properties", &_properties);
+					Register("NoInputFailoverTimeout", &_no_input_failover_timeout);
+					Register("UnusedStreamDeletionTimeout", &_unused_stream_deletion_timeout);
 				}
 
-				std::vector<Origin> _origin_list;
-				Properties _properties;
+				int64_t _no_input_failover_timeout = 3000;
+				int64_t _unused_stream_deletion_timeout = 60000;
 			};
 		}  // namespace orgn
 	}	   // namespace vhost

@@ -52,6 +52,9 @@ namespace pvd
 	// It works only with pull provider
 	void PullApplication::WhiteElephantStreamCollector()
 	{
+		auto no_input_timeout = GetHostInfo().GetOrigins().GetProperties().GetNoInputFailoverTimeout();
+		auto unused_stream_timeout = GetHostInfo().GetOrigins().GetProperties().GetUnusedStreamDeletionTimeout();
+
 		while(!_stop_collector_thread_flag)
 		{
 			// TODO (Getroot): If there is no stream, use semaphore to wait until the stream is added.
@@ -82,18 +85,18 @@ namespace pvd
 					if(stream_metrics != nullptr)
 					{
 						auto current = std::chrono::high_resolution_clock::now();
-						auto elapsed_time_from_last_sent = std::chrono::duration_cast<std::chrono::seconds>(current - stream_metrics->GetLastSentTime()).count();
-						auto elapsed_time_from_last_recv = std::chrono::duration_cast<std::chrono::seconds>(current - stream_metrics->GetLastRecvTime()).count();
+						auto elapsed_time_from_last_sent = std::chrono::duration_cast<std::chrono::milliseconds>(current - stream_metrics->GetLastSentTime()).count();
+						auto elapsed_time_from_last_recv = std::chrono::duration_cast<std::chrono::milliseconds>(current - stream_metrics->GetLastRecvTime()).count();
 						
-						if(elapsed_time_from_last_sent > MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC)
+						if(elapsed_time_from_last_sent > unused_stream_timeout)
 						{
-							logtw("%s/%s(%u) stream will be deleted because it hasn't been used for %u seconds", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC);
+							logtw("%s/%s(%u) stream will be deleted because it hasn't been used for %u milliseconds", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_sent);
 							DeleteStream(stream);
 						}
 						// The stream type is pull stream, if packets do NOT arrive for more than 3 seconds, it is a seriously warning situation
-						else if(elapsed_time_from_last_recv > 3)
+						else if(elapsed_time_from_last_recv > no_input_timeout)
 						{
-							logtw("Stop stream %s/%s(%u) : there are no incoming packets. %d seconds have elapsed since the last packet was received.", 
+							logtw("Stop stream %s/%s(%u) : there are no incoming packets. %d milliseconds have elapsed since the last packet was received.", 
 									stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
 
 							// When the stream is stopped, it tries to reconnect using the next url.

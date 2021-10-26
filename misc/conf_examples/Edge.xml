@@ -116,6 +116,10 @@
 
 			<!-- Settings for ProxyPass (It can specify origin for each path) -->
 			<Origins>
+				<Properties>
+					<NoInputFailoverTimeout>3000</NoInputFailoverTimeout>
+					<UnusedStreamDeletionTimeout>60000</UnusedStreamDeletionTimeout>
+				</Properties>
 				<!--
 					<Origin>
 					<Location>/app/stream</Location>
