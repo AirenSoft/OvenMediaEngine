@@ -21,7 +21,7 @@ namespace cfg
 		protected:
 			void MakeList() override
 			{
-				Register("VirtualHost", &_virtual_host_list);
+				Register({"VirtualHost", OmitRule::Omit}, &_virtual_host_list);
 			}
 
 			std::vector<VirtualHost> _virtual_host_list;
