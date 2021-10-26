@@ -262,7 +262,7 @@ namespace pvd
 			return false;
 		}
 
-		logti("Response Describe : %s", reply->DumpHeader().CStr());
+		logtd("Response Describe : %s", reply->DumpHeader().CStr());
 
 		// Content-Base
 		auto content_base_field = reply->GetHeaderField(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::ContentBase));
@@ -372,7 +372,7 @@ namespace pvd
 				return false;
 			}
 
-			logti("Response SETUP : %s", reply->DumpHeader().CStr());
+			logtd("Response SETUP : %s", reply->DumpHeader().CStr());
 
 			// Session
 			auto session_field = reply->GetHeaderFieldAs<RtspHeaderSessionField>(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::Session));
@@ -553,7 +553,7 @@ namespace pvd
 			return false;
 		}
 
-		logti("Response PLAY : %s", reply->DumpHeader().CStr());
+		logtd("Response PLAY : %s", reply->DumpHeader().CStr());
 
 		SetState(State::PLAYING);
 

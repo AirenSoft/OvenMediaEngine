@@ -200,9 +200,11 @@
 			</AdmissionWebhooks>
 			-->
 
-			<!--
-			<Origins>
-			
+			<!-- <Origins>
+				<Properties>
+					<NoInputFailoverTimeout>3000</NoInputFailoverTimeout>
+					<UnusedStreamDeletionTimeout>60000</UnusedStreamDeletionTimeout>
+				</Properties>
 				<Origin>
 					<Location>/app/stream</Location>
 					<Pass>
@@ -224,8 +226,8 @@
 						<Urls><Url>origin.com:9000/app/</Url></Urls>
 					</Pass>
 				</Origin>
-			</Origins>
-			-->
+			</Origins> -->
+			
 			<!-- Settings for applications -->
 			<Applications>
 				<Application>
