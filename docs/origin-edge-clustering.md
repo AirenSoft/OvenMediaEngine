@@ -132,7 +132,7 @@ The automatically created application by `<Origin>` enables all providers but if
 
 NoInputFailoverTimeout is the time (in milliseconds) to switch to the next URL if there is no input for the set time.
 
-<mark style="color:purple;">**UnusedStreamDeletionTimeout **</mark>**(default 60000)**
+<mark style="color:blue;">**UnusedStreamDeletionTimeout **</mark>**(default 60000)**
 
 UnusedStreamDeletionTimeout is a function that deletes a stream created with OriginMap if there is no viewer for a set amount of time (milliseconds). This helps to save network traffic and system resources for Origin and Edge.
 
