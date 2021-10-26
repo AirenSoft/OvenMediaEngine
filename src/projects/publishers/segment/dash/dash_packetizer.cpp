@@ -33,12 +33,12 @@ static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &s
 #endif	// DEBUG
 }
 
-DashPacketizer::DashPacketizer(const ov::String &app_name, const ov::String &stream_name,
+DashPacketizer::DashPacketizer(const ov::String &service_name, const ov::String &app_name, const ov::String &stream_name,
 							   uint32_t segment_count, uint32_t segment_duration,
 							   const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
 							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 							   const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
-	: Packetizer(app_name, stream_name,
+	: Packetizer(service_name, app_name, stream_name,
 				 segment_count, segment_count * 2, segment_duration,
 				 video_track, audio_track,
 				 chunked_transfer),
@@ -205,7 +205,7 @@ bool DashPacketizer::PrepareVideoInitIfNeeded()
 		return true;
 	}
 
-	if ((_video_m4s_writer.Prepare() && _video_m4s_writer.Flush()) == false)
+	if ((_video_m4s_writer.Prepare(GetServiceName()) && _video_m4s_writer.Flush()) == false)
 	{
 		return false;
 	}
@@ -246,7 +246,7 @@ bool DashPacketizer::PrepareAudioInitIfNeeded()
 		return true;
 	}
 
-	if ((_audio_m4s_writer.Prepare() && _audio_m4s_writer.Flush()) == false)
+	if ((_audio_m4s_writer.Prepare(GetServiceName()) && _audio_m4s_writer.Flush()) == false)
 	{
 		return false;
 	}

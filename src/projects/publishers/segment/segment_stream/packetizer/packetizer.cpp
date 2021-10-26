@@ -16,12 +16,12 @@
 
 #include "../segment_stream_private.h"
 
-Packetizer::Packetizer(const ov::String &app_name, const ov::String &stream_name,
+Packetizer::Packetizer(const ov::String &service_name, const ov::String &app_name, const ov::String &stream_name,
 					   uint32_t segment_count, uint32_t segment_save_count, uint32_t segment_duration,
 					   const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track,
 					   const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
 
-	: _app_name(app_name), _stream_name(stream_name),
+	: _service_name(service_name), _app_name(app_name), _stream_name(stream_name),
 
 	  _segment_count(segment_count),
 	  _segment_save_count(segment_save_count),

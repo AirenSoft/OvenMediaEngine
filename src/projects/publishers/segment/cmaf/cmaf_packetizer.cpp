@@ -37,12 +37,12 @@ static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &s
 #endif	// DEBUG
 }
 
-CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &stream_name,
+CmafPacketizer::CmafPacketizer(const ov::String &service_name, const ov::String &app_name, const ov::String &stream_name,
 							   uint32_t segment_count, uint32_t segment_duration,
 							   const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
 							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 							   const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
-	: Packetizer(app_name, stream_name,
+	: Packetizer(service_name, app_name, stream_name,
 				 1, 1 * 5, segment_duration,
 				 video_track, audio_track,
 				 chunked_transfer),

@@ -15,7 +15,7 @@
 class CmafPacketizer : public Packetizer
 {
 public:
-	CmafPacketizer(const ov::String &app_name, const ov::String &stream_name,
+	CmafPacketizer(const ov::String &service_name, const ov::String &app_name, const ov::String &stream_name,
 				   uint32_t segment_count, uint32_t segment_duration,
 				   const ov::String &utc_timing_scheme, const ov::String &utc_timing_value,
 				   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
