@@ -58,8 +58,8 @@ public:
 	}
 
 	bool AddTrack(const std::shared_ptr<const MediaTrack> &media_track);
-	bool Prepare();
-	bool PrepareIfNeeded();
+	bool Prepare(ov::String service_name = "");
+	bool PrepareIfNeeded(ov::String service_name = "");
 
 	bool ResetData(int track_id = -1);
 	std::shared_ptr<const ov::Data> GetData() const;

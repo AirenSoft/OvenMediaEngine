@@ -34,11 +34,11 @@ static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &s
 #endif	// DEBUG
 }
 
-HlsPacketizer::HlsPacketizer(const ov::String &app_name, const ov::String &stream_name,
+HlsPacketizer::HlsPacketizer(const ov::String &service_name, const ov::String &app_name, const ov::String &stream_name,
 							 uint32_t segment_count, uint32_t segment_duration,
 							 const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track,
 							 const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
-	: Packetizer(app_name, stream_name,
+	: Packetizer(service_name, app_name, stream_name,
 				 segment_count, segment_count * 2, segment_duration,
 				 video_track, audio_track,
 				 chunked_transfer),
@@ -246,7 +246,7 @@ bool HlsPacketizer::AppendVideoPacket(const std::shared_ptr<const MediaPacket> &
 		_video_key_frame_received = true;
 	}
 
-	if (_ts_writer.PrepareIfNeeded() == false)
+	if (_ts_writer.PrepareIfNeeded(GetServiceName()) == false)
 	{
 		logte("Could not prepare ts writer");
 		return false;
@@ -320,7 +320,7 @@ bool HlsPacketizer::AppendAudioPacket(const std::shared_ptr<const MediaPacket> &
 		_audio_key_frame_received = true;
 	}
 
-	if (_ts_writer.PrepareIfNeeded() == false)
+	if (_ts_writer.PrepareIfNeeded(GetServiceName()) == false)
 	{
 		logte("Could not prepare ts writer");
 		return false;
@@ -375,7 +375,7 @@ bool HlsPacketizer::WriteSegment(int64_t timestamp, int64_t timestamp_in_ms, int
 		duration, duration_in_ms,
 		data);
 
-	if (_ts_writer.Prepare() == false)
+	if (_ts_writer.Prepare(GetServiceName()) == false)
 	{
 		logae("Could not prepare ts writer");
 		return false;

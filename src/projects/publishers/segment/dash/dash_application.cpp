@@ -61,13 +61,14 @@ bool DashApplication::Start()
 std::shared_ptr<pub::Stream> DashApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t thread_count)
 {
 	logtd("DASH Stream is created: %s/%u", info->GetName().CStr(), info->GetId());
+	auto server_config = cfg::ConfigManager::GetInstance()->GetServer();
 
 	return SegmentStream::Create(
 		GetSharedPtrAs<pub::Application>(), *info.get(),
 		[=](ov::String app_name, ov::String stream_name,
 			std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track) -> std::shared_ptr<Packetizer> {
 			return std::make_shared<DashPacketizer>(
-				app_name, stream_name,
+				server_config->GetName(), app_name, stream_name,
 				_segment_count, _segment_duration,
 				_utc_timing_scheme, _utc_timing_value,
 				video_track, audio_track,

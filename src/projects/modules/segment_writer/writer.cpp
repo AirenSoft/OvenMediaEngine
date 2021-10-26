@@ -346,7 +346,7 @@ bool Writer::AddTrack(const std::shared_ptr<const MediaTrack> &media_track)
 	return true;
 }
 
-bool Writer::Prepare()
+bool Writer::Prepare(ov::String service_name)
 {
 	if (_format_context != nullptr)
 	{
@@ -400,7 +400,7 @@ bool Writer::Prepare()
 
 	format_context->pb = avio_context.get();
 
-	::av_dict_set(&(format_context->metadata), "service_name", "OvenMediaEngine", 0);
+	::av_dict_set(&(format_context->metadata), "service_name", service_name.CStr(), 0);
 	::av_dict_set(&(format_context->metadata), "service_provider", "OvenMediaEngine", 0);
 
 	AVDictionary *options = nullptr;
@@ -450,14 +450,14 @@ bool Writer::Prepare()
 	return true;
 }
 
-bool Writer::PrepareIfNeeded()
+bool Writer::PrepareIfNeeded(ov::String service_name)
 {
 	if (_format_context != nullptr)
 	{
 		return true;
 	}
 
-	return Prepare();
+	return Prepare(service_name);
 }
 
 int Writer::DecideBufferSize() const
