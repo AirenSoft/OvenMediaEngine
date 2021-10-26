@@ -12,6 +12,7 @@
 
 #define CFG_LOG_FILE_NAME "Logger.xml"
 #define CFG_MAIN_FILE_NAME "Server.xml"
+#define CFG_LAST_CONFIG_FILE_NAME_LEGACY "LastConfig.json"
 #define CFG_LAST_CONFIG_FILE_NAME "LastConfig.xml"
 #define SERVER_ID_STORAGE_FILE "Server.id"
 
@@ -60,6 +61,8 @@ namespace cfg
 
 		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void CheckValidVersion(const ov::String &name, int version);
+
+		bool SaveCurrentConfig(pugi::xml_document &config, const ov::String &last_config_path);
 
 		ov::String _version;
 		ov::String _git_extra;

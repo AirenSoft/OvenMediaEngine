@@ -64,6 +64,8 @@ namespace cfg
 
 		// Try to read configurations from CFG_LAST_CONFIG_FILE_NAME
 		ov::String last_config_path = ov::PathManager::Combine(config_path, CFG_LAST_CONFIG_FILE_NAME);
+		ov::String legacy_last_config_path = ov::PathManager::Combine(config_path, CFG_LAST_CONFIG_FILE_NAME_LEGACY);
+
 		if (ignore_last_config == false)
 		{
 			if (ov::PathManager::IsFile(last_config_path))
@@ -71,23 +73,36 @@ namespace cfg
 				// Read from last config
 				logti("Trying to load configurations from last config... (%s)", last_config_path.CStr());
 
-				try
+				DataSource data_source(DataType::Xml, config_path, last_config_path, ROOT_NAME);
+				_server = std::make_shared<cfg::Server>();
+				_server->FromDataSource("Server", ROOT_NAME, data_source);
+
+				read_from_main_file = false;
+			}
+			else
+			{
+				if (ov::PathManager::IsFile(legacy_last_config_path))
 				{
-					DataSource data_source(DataType::Xml, config_path, last_config_path, ROOT_NAME);
+					// Read from last config
+					logti("Trying to load configurations from legacy last config... (%s)", legacy_last_config_path.CStr());
+
+					DataSource data_source(DataType::Json, config_path, legacy_last_config_path, ROOT_NAME);
 					_server = std::make_shared<cfg::Server>();
 					_server->FromDataSource("Server", ROOT_NAME, data_source);
 
 					read_from_main_file = false;
-				}
-				catch (const std::shared_ptr<ConfigError> &error)
-				{
-					logte("Could not load configurations from last config. (Is file corrupted?): %s", error->ToString().CStr());
+
+					logti("Saving migrated config to %s", last_config_path.CStr());
+
+					auto xml = _server->ToXml();
+
+					SaveCurrentConfig(xml, last_config_path);
 				}
 			}
 		}
 		else
 		{
-			if (ov::PathManager::IsFile(last_config_path))
+			if (ov::PathManager::IsFile(last_config_path) || ov::PathManager::IsFile(legacy_last_config_path))
 			{
 				logtw("Last config is ignored by option");
 			}
@@ -136,10 +151,8 @@ namespace cfg
 		return config;
 	}
 
-	bool ConfigManager::SaveCurrentConfig()
+	bool ConfigManager::SaveCurrentConfig(pugi::xml_document &config, const ov::String &last_config_path)
 	{
-		auto config = GetCurrentConfigAsXml();
-
 		auto comment_node = config.prepend_child(pugi::node_comment);
 		ov::String comment;
 
@@ -169,8 +182,6 @@ namespace cfg
 		declaration.append_attribute("version") = "1.0";
 		declaration.append_attribute("encoding") = "utf-8";
 
-		ov::String last_config_path = ov::PathManager::Combine(_config_path, CFG_LAST_CONFIG_FILE_NAME);
-
 		XmlWriter writer;
 		config.print(writer);
 
@@ -185,6 +196,14 @@ namespace cfg
 		logti("Current config is written to %s", last_config_path.CStr());
 
 		return true;
+	}
+
+	bool ConfigManager::SaveCurrentConfig()
+	{
+		auto config = GetCurrentConfigAsXml();
+		ov::String last_config_path = ov::PathManager::Combine(_config_path, CFG_LAST_CONFIG_FILE_NAME);
+
+		return SaveCurrentConfig(config, last_config_path);
 	}
 
 	void ConfigManager::LoadServerID(const ov::String &config_path)
