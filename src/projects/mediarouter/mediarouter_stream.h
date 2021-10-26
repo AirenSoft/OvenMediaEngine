@@ -113,5 +113,9 @@ private:
 	std::chrono::time_point<std::chrono::system_clock> _last_recv_time;
 	std::chrono::time_point<std::chrono::system_clock> _stat_start_time;
 
+
+	uint32_t _max_warning_count_bframe;
+
+
 	void DumpPacket(std::shared_ptr<MediaPacket> &media_packet, bool dump = false);
 };
