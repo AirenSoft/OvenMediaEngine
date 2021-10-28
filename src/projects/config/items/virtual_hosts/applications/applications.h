@@ -23,7 +23,7 @@ namespace cfg
 			protected:
 				void MakeList() override
 				{
-					Register<Optional>("Application", &_application_list);
+					Register<Optional>({"Application", OmitRule::Omit}, &_application_list);
 				}
 
 				std::vector<Application> _application_list;
