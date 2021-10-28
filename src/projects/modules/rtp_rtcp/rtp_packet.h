@@ -122,6 +122,9 @@ protected:
 	size_t		_payload_size = 0;		// Payload Size
 	size_t		_extension_size;
 
+	// ID, Extension Data
+	std::map<uint8_t, std::shared_ptr<ov::Data>> _extensions;
+
 	bool		_is_available = false;
 
 	// std::vector<uint8_t>	_buffer;
