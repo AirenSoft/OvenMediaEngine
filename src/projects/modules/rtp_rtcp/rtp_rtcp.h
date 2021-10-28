@@ -28,7 +28,7 @@ public:
 	~RtpRtcp() override;
 
 	bool AddRtpSender(uint8_t payload_type, uint32_t ssrc, uint32_t codec_rate, ov::String cname);
-	bool AddRtpReceiver(uint32_t ssrc, const std::shared_ptr<MediaTrack> &track);
+	bool AddRtpReceiver(uint32_t track_id, const std::shared_ptr<MediaTrack> &track);
 	bool Stop() override;
 
 	bool SendRtpPacket(const std::shared_ptr<RtpPacket> &packet);

@@ -46,7 +46,7 @@ bool RtpRtcp::AddRtpSender(uint8_t payload_type, uint32_t ssrc, uint32_t codec_r
 	return true;
 }
 
-bool RtpRtcp::AddRtpReceiver(uint32_t ssrc, const std::shared_ptr<MediaTrack> &track)
+bool RtpRtcp::AddRtpReceiver(uint32_t track_id, const std::shared_ptr<MediaTrack> &track)
 {
 	std::shared_lock<std::shared_mutex> lock(_state_lock);
 	if(GetNodeState() != ov::Node::NodeState::Ready)
@@ -55,17 +55,17 @@ bool RtpRtcp::AddRtpReceiver(uint32_t ssrc, const std::shared_ptr<MediaTrack> &t
 		return false;
 	}
 
-	_tracks[ssrc] = track;
+	_tracks[track_id] = track;
 
 	switch(track->GetOriginBitstream())
 	{
 		case cmn::BitstreamFormat::H264_RTP_RFC_6184:
 		case cmn::BitstreamFormat::VP8_RTP_RFC_7741:
 		case cmn::BitstreamFormat::AAC_MPEG4_GENERIC:
-			_rtp_frame_jitter_buffers[ssrc] = std::make_shared<RtpFrameJitterBuffer>();
+			_rtp_frame_jitter_buffers[track_id] = std::make_shared<RtpFrameJitterBuffer>();
 			break;
 		case cmn::BitstreamFormat::OPUS_RTP_RFC_7587:
-			_rtp_minimal_jitter_buffers[ssrc] = std::make_shared<RtpMinimalJitterBuffer>();
+			_rtp_minimal_jitter_buffers[track_id] = std::make_shared<RtpMinimalJitterBuffer>();
 			break;
 		default:
 			logte("RTP Receiver cannot support %d input stream format", static_cast<int8_t>(track->GetOriginBitstream()));
@@ -269,7 +269,7 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 	auto packet = std::make_shared<RtpPacket>(data);
 	logtd("%s", packet->Dump().CStr());
 
-	uint32_t rtsp_channel = 0;
+	uint32_t track_id = 0;
 	if(from_node == NodeType::Rtsp)
 	{
 		auto rtsp_data = std::dynamic_pointer_cast<const RtspData>(data);
@@ -280,13 +280,18 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 		}
 
 		// RTSP Node uses channelID as trackID
-		rtsp_channel = rtsp_data->GetChannelId();
+		track_id = rtsp_data->GetChannelId();
+		packet->SetRtspChannel(track_id);
+	}
+	else
+	{
+		track_id = packet->Ssrc();
 	}
 
-	auto track_it = _tracks.find(rtsp_channel);
+	auto track_it = _tracks.find(track_id);
 	if(track_it == _tracks.end())
 	{
-		logte("Could not find track info for track ID %u", rtsp_channel);
+		logte("Could not find track info for track ID %u", track_id);
 		return false;
 	}
 	auto track = track_it->second;
@@ -339,7 +344,7 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 
 	if(jitter_buffer_type == 1)
 	{
-		auto buffer_it = _rtp_frame_jitter_buffers.find(rtsp_channel);
+		auto buffer_it = _rtp_frame_jitter_buffers.find(track_id);
 		if(buffer_it == _rtp_frame_jitter_buffers.end())
 		{
 			// can not happen
@@ -363,8 +368,7 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 				logte("Could not get first rtp packet from jitter buffer - ssrc : %u", packet->Ssrc());
 				return false;
 			}
-			
-			packet->SetRtspChannel(rtsp_channel);
+
 			rtp_packets.push_back(packet);
 
 			while(true)
@@ -375,7 +379,6 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 					break;
 				}
 
-				packet->SetRtspChannel(rtsp_channel);
 				rtp_packets.push_back(packet);
 			}
 
@@ -384,7 +387,7 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 	}
 	else if(jitter_buffer_type == 2)
 	{
-		auto buffer_it = _rtp_minimal_jitter_buffers.find(rtsp_channel);
+		auto buffer_it = _rtp_minimal_jitter_buffers.find(track_id);
 		if(buffer_it == _rtp_minimal_jitter_buffers.end())
 		{
 			// can not happen
@@ -400,7 +403,6 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 		if(pop_packet != nullptr)
 		{
 			std::vector<std::shared_ptr<RtpPacket>> rtp_packets;
-			pop_packet->SetRtspChannel(rtsp_channel);
 			rtp_packets.push_back(pop_packet);
 			_observer->OnRtpFrameReceived(rtp_packets);
 		}
@@ -440,6 +442,7 @@ bool RtpRtcp::OnRtcpReceived(NodeType from_node, const std::shared_ptr<const ov:
 	while(receiver.HasAvailableRtcpInfo())
 	{
 		auto info = receiver.PopRtcpInfo();
+		info->SetRtspChannel(rtsp_channel);
 
 		if(info->GetPacketType() == RtcpPacketType::SR)
 		{

@@ -49,6 +49,7 @@ RtpPacket::RtpPacket(RtpPacket &src)
 	_is_keyframe = src._is_keyframe;
 	_is_first_packet_of_frame = src._is_first_packet_of_frame;
 	_is_video_packet = src._is_video_packet;
+	_rtsp_channel = src._rtsp_channel;
 
 	_data = src._data->Clone();
 	_data->SetLength(src._data->GetLength());
@@ -113,7 +114,6 @@ bool RtpPacket::Parse(const std::shared_ptr<const ov::Data> &data)
 
 	//TODO(Getroot): Parse CSRC
 	_payload_offset = FIXED_HEADER_SIZE + (_cc * 4);
-	
 	if(_has_padding)
 	{
 		_padding_size = buffer[buffer_size -1];
@@ -150,9 +150,8 @@ bool RtpPacket::Parse(const std::shared_ptr<const ov::Data> &data)
 			return false;
 		}
 
-		[[maybe_unused]]uint16_t extension_profile = ByteReader<uint16_t>::ReadBigEndian(&buffer[_payload_offset]);
+		uint16_t extension_profile = ByteReader<uint16_t>::ReadBigEndian(&buffer[_payload_offset]);
 		_extension_size = ByteReader<uint16_t>::ReadBigEndian(&buffer[_payload_offset + 2]) * 4;
-
 		if(extension_offset + _extension_size > buffer_size)
 		{
 			return false;
@@ -160,9 +159,46 @@ bool RtpPacket::Parse(const std::shared_ptr<const ov::Data> &data)
 
 		// https://tools.ietf.org/html/rfc8285
 		// A General Mechanism for RTP Header Extensions
-		// TODO(Getroot): Extract extensions
 		
+		// Extension buffer
+		// extension_profile, &buffer[extension_offset + 4], _extension_size
 		_payload_offset = extension_offset + _extension_size;
+		ov::Data extensions_buffer(&buffer[extension_offset], _extension_size);
+		ov::ByteStream stream(&extensions_buffer);
+
+		while(stream.Remained() > 0)
+		{
+			uint8_t id = 0;
+			uint8_t length = 0;
+			// 1 Bytes Header
+			if(extension_profile == 0xBEDE)
+			{
+				auto header = stream.Read8();
+				id = header & 0xF0;
+				if(id == 0) // padding
+				{
+					continue;
+				}
+				length = header & 0xF;
+			}
+			// 2 Bytes Header
+			else 
+			{
+				id = stream.Read8();
+				if(id == 0) // padding
+				{
+					continue;
+				}
+
+				length = stream.Read8();
+			}
+			
+			auto extension = std::make_shared<ov::Data>();
+			extension->SetLength(length);
+			stream.Read<uint8_t>(extension->GetWritableDataAs<uint8_t>(), length);
+
+			_extensions.emplace(id, extension);
+		}
 	}
 
 	if(_payload_offset + _padding_size > buffer_size)
