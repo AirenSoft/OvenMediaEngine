@@ -107,17 +107,17 @@ ov::String PayloadAttr::GetCodecParams() const
 
 bool PayloadAttr::EnableRtcpFb(const ov::String &type, const bool on)
 {
-	ov::String type_name = type.UpperCaseString();
-
-	if(type_name == "GOOG_REMB")
+	ov::String type_name = type.UpperCaseString().Trim();
+	
+	if(type_name == "GOOG-REMB")
 	{
 		_rtcpfb_support_flag[(int)(RtcpFbType::GoogRemb)] = on;
 	}
-	else if(type_name == "TRANSPORT_CC")
+	else if(type_name == "TRANSPORT-CC")
 	{
 		_rtcpfb_support_flag[(int)(RtcpFbType::TransportCc)] = on;
 	}
-	else if(type_name == "CCM_FIR")
+	else if(type_name == "CCM FIR")
 	{
 		_rtcpfb_support_flag[(int)(RtcpFbType::CcmFir)] = on;
 	}
@@ -125,7 +125,7 @@ bool PayloadAttr::EnableRtcpFb(const ov::String &type, const bool on)
 	{
 		_rtcpfb_support_flag[(int)(RtcpFbType::Nack)] = on;
 	}
-	else if(type_name == "NACK_PLI")
+	else if(type_name == "NACK PLI")
 	{
 		_rtcpfb_support_flag[(int)(RtcpFbType::NackPli)] = on;
 	}
