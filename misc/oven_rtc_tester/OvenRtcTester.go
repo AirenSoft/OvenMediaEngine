@@ -137,6 +137,7 @@ type sessionStat struct {
 
 	totalBytes       int64
 	totalVideoFrames int64
+	totalVideoKeyframes int64
 	totalRtpPackets  int64
 	packetLoss       int64
 
@@ -275,6 +276,7 @@ func reportSummury(clients *[]*omeClient) {
 	var minVideoDelay, maxVideoDelay, minAudioDelay, maxAudioDelay float64
 	var minAvgFPS, maxAvgFPS float64
 	var minAvgBPS, maxAvgBPS int64
+	var minGOP, maxGOP float64
 
 	for _, client := range *clients {
 		stat := client.stat
@@ -300,6 +302,8 @@ func reportSummury(clients *[]*omeClient) {
 			continue
 		}
 
+		gop := float64(stat.totalVideoFrames) / float64(stat.totalVideoKeyframes)
+
 		if totalStat.startTime.IsZero() {
 			totalStat = stat
 
@@ -312,6 +316,9 @@ func reportSummury(clients *[]*omeClient) {
 			maxVideoDelay = totalStat.videoDelay
 			minAudioDelay = totalStat.audioDelay
 			maxAudioDelay = totalStat.audioDelay
+
+			minGOP = gop
+			maxGOP = gop
 
 			continue
 		}
@@ -328,11 +335,15 @@ func reportSummury(clients *[]*omeClient) {
 		minAudioDelay = math.Min(minAudioDelay, stat.audioDelay)
 		maxAudioDelay = math.Max(maxAudioDelay, stat.audioDelay)
 
+		minGOP = math.Min(minGOP, gop)
+		maxGOP = math.Max(maxGOP, gop)
+
 		// This will output the average value.
 		totalStat.avgBPS += stat.avgBPS
 		totalStat.avgFPS += stat.avgFPS
 		totalStat.totalBytes += stat.totalBytes
 		totalStat.totalVideoFrames += stat.totalVideoFrames
+		totalStat.totalVideoKeyframes += stat.totalVideoKeyframes
 		totalStat.totalRtpPackets += stat.totalRtpPackets
 		totalStat.packetLoss += stat.packetLoss
 		totalStat.videoDelay += stat.videoDelay
@@ -348,6 +359,8 @@ func reportSummury(clients *[]*omeClient) {
 	}
 
 	fmt.Printf("Avg Video Delay(%.2f ms) Max Video Delay(%.2f ms) Min Video Delay(%.2f ms)\nAvg Audio Delay(%.2f ms) Max Audio Delay(%.2f ms) Min Audio Delay(%.2f ms)\n", totalStat.videoDelay/float64(connected), maxVideoDelay, minVideoDelay, totalStat.audioDelay/float64(connected), maxAudioDelay, minAudioDelay)
+
+	fmt.Printf("Avg GOP(%.2f) Max GOP(%.2f) Min GOP(%2.f)\n", float64(totalStat.totalVideoFrames) / float64(totalStat.totalVideoKeyframes), maxGOP, minGOP)
 	
 	fmt.Printf("Avg FPS(%.2f) Max FPS(%.2f) Min FPS(%.2f)\nAvg BPS(%sbps) Max BPS(%sbps) Min BPS(%sbps)\n", totalStat.avgFPS/float64(connected), maxAvgFPS, minAvgFPS, CountDecimal(totalStat.avgBPS/connected), CountDecimal(maxAvgBPS), CountDecimal(minAvgBPS))
 	
@@ -374,8 +387,8 @@ func (c *omeClient) report() {
 		audioDelay = math.Abs(float64(time.Since(stat.startTime).Milliseconds() - stat.audioRtpTimestampElapsedMSec))
 	}
 
-	fmt.Printf("%c[32m[%s]%c[0m\n\trunning_time(%s) connection_state(%s) total_packets(%d) packet_loss(%d)\n\tlast_video_delay (%.1f ms) last_audio_delay (%.1f ms)\n\ttotal_bytes(%sbytes) avg_bps(%sbps) min_bps(%sbps) max_bps(%sbps)\n\ttotal_video_frames(%d) avg_fps(%.2f) min_fps(%.2f) max_fps(%.2f)\n\n",
-		27, c.name, 27, time.Since(stat.startTime).Round(time.Second), stat.connectionState.String(), stat.totalRtpPackets, stat.packetLoss, videoDelay, audioDelay, CountDecimal(stat.totalBytes), CountDecimal(stat.avgBPS), CountDecimal(stat.minBPS), CountDecimal(stat.maxBPS), stat.totalVideoFrames, stat.avgFPS, stat.minFPS, stat.maxFPS)
+	fmt.Printf("%c[32m[%s]%c[0m\n\trunning_time(%s) connection_state(%s) total_packets(%d) packet_loss(%d)\n\tlast_video_delay (%.1f ms) last_audio_delay (%.1f ms)\n\ttotal_bytes(%sbytes) avg_bps(%sbps) min_bps(%sbps) max_bps(%sbps)\n\ttotal_video_frames(%d) total_video_keyframes(%d) avg_gop(%2.f) avg_fps(%.2f) min_fps(%.2f) max_fps(%.2f)\n\n",
+		27, c.name, 27, time.Since(stat.startTime).Round(time.Second), stat.connectionState.String(), stat.totalRtpPackets, stat.packetLoss, videoDelay, audioDelay, CountDecimal(stat.totalBytes), CountDecimal(stat.avgBPS), CountDecimal(stat.minBPS), CountDecimal(stat.maxBPS), stat.totalVideoFrames, stat.totalVideoKeyframes, float64(stat.totalVideoFrames) / float64(stat.totalVideoKeyframes), stat.avgFPS, stat.minFPS, stat.maxFPS)
 }
 
 func (c *omeClient) run(url string) error {
@@ -547,6 +560,15 @@ func (c *omeClient) run(url string) error {
 			case webrtc.RTPCodecTypeVideo:
 				if rtp.Marker {
 					c.stat.totalVideoFrames++
+
+					framemarking := rtp.GetExtension(1)
+					if len(framemarking) > 0 {
+						// Start && Keyframe
+						if uint8(framemarking[0]) & 0x20 != 0 {
+							c.stat.totalVideoKeyframes++
+						}
+					}
+
 					c.stat.videoRtpTimestampElapsedMSec = int64((float64(rtp.Timestamp-startTimestamp) / float64(track.Codec().ClockRate) * 1000))
 
 					c.stat.videoDelay = math.Abs(float64(time.Since(c.stat.startTime).Milliseconds() - c.stat.videoRtpTimestampElapsedMSec))
