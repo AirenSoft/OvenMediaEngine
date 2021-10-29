@@ -2,6 +2,7 @@
 
 #include <base/info/media_extradata.h>
 #include <modules/bitstream/h264/h264_converter.h>
+#include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_framemarking.h>
 
 #include "rtc_application.h"
 #include "rtc_private.h"
@@ -29,6 +30,7 @@ a=sendonly
 a=mid:jyJ5Pe
 a=setup:actpass
 a=rtcp-mux
+a=extmap:1 urn:ietf:params:rtp-hdrext:framemarking
 a=msid:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf 6jHsvxRPcpiEVZbA5QegGowmCtOlh8kTaXJ4
 a=rtpmap:100 H264/90000
 a=fmtp:100 packetization-mode=1;profile-level-id=42e01f;level-asymmetry-allowed=1
@@ -213,6 +215,8 @@ bool RtcStream::Start()
 					{
 						video_media_desc->SetRtxSsrc(ov::Random::GenerateUInt32());
 					}
+					video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_FRAMEMARKING_ID, RTP_HEADER_EXTENSION_FRAMEMARKING_ATTRIBUTE);
+
 					_offer_sdp->AddMedia(video_media_desc);
 					first_video_desc = false;
 				}

@@ -74,6 +74,12 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 		sdp.AppendFormat("a=msid:%s %s\r\n", _msid.CStr(), _msid_appdata.CStr());
 	}
 
+	// Extmap
+	for(const auto &[id, attribute] : _extmap)
+	{
+		sdp.AppendFormat("a=extmap:%d %s\r\n",id, attribute.CStr());
+	}
+
 	// Payloads
 	for(auto &payload : _payload_list)
 	{
@@ -327,6 +333,8 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			}
 			else if(content.compare(0, OV_COUNTOF("rtcp-f") - 1, "rtcp-f") == 0)
 			{
+				//TODO(Getroot): Implement full spec
+				//https://datatracker.ietf.org/doc/html/rfc5104#section-7.1
 				// a=rtcp-fb:96 nack pli
 				if(std::regex_search(content,
 				                     matches,
@@ -454,6 +462,22 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 				if(std::regex_search(content, matches, std::regex("rtcp:(\\d*) IN (.*)")))
 				{
 					// a=rtcp:9 IN IP4 0.0.0.0
+				}
+			}
+			else if(content.compare(0, OV_COUNTOF("ext") - 1, "ext") == 0)
+			{
+				// a=extmap:1 urn:ietf:params:rtp-hdrext:framemarking
+				if(std::regex_search(content,
+				                     matches,
+				                     std::regex("extmap:(\\*|\\d*) (.*)")))
+				{
+					if(matches.size() != 2 + 1)
+					{
+						parsing_error = true;
+						break;
+					}
+
+					AddExtmap(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str());
 				}
 			}
 			else if(ParsingCommonAttrLine(type, content))
@@ -734,6 +758,21 @@ uint32_t MediaDescription::GetRtxSsrc() const
 ov::String MediaDescription::GetCname() const
 {
 	return _cname;
+}
+
+void MediaDescription::AddExtmap(uint8_t id, ov::String attribute)
+{
+	_extmap[id] = attribute;
+}
+
+std::map<uint8_t, ov::String> MediaDescription::GetExtmap() const
+{
+	return _extmap;
+}
+
+ov::String MediaDescription::GetExtmapItem(uint8_t id) const
+{
+	return _extmap.at(id);
 }
 
 // a=rtpmap:96 VP8/50000
