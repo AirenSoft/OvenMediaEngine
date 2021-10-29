@@ -5,6 +5,8 @@
 #include "red_rtp_packet.h"
 #include "rtp_packetizing_manager.h"
 #include "rtp_packetizer.h"
+#include "rtp_header_extension/rtp_header_extensions.h"
+#include "rtp_header_extension/rtp_header_extension_framemarking.h"
 
 #define OV_LOG_TAG "RtpRtcp"
 
@@ -127,29 +129,44 @@ bool RtpPacketizer::PacketizeVideo(cmn::MediaCodecId video_type,
 		bool last = (i + 1) == num_packets;
 		auto packet = last ? std::move(last_rtp_header) : std::make_shared<RtpPacket>(*rtp_header_template);
 
-		if(!_packetizer->NextPacket(packet.get()))
-		{
-			return false;
-		}
-
 		if(!AssignSequenceNumber(packet.get()))
 		{
 			return false;
 		}
 
-		_rtp_packet_count ++;
-
 		packet->SetVideoPacket(true);
 		
+		RtpHeaderExtensions extensions;
+		auto framemarking_extension = std::make_shared<RtpHeaderExtensionFrameMarking>();
+
 		if(i == 0)
 		{
 			packet->SetFirstPacketOfFrame(true);
+			framemarking_extension->SetStartOfFrame();
 		}
+		else if(last == true)
+		{
+			framemarking_extension->SetEndOfFrame();
+		}
+
 		if(frame_type == FrameType::VideoFrameKey)
 		{
 			packet->SetKeyframe(true);
+			framemarking_extension->SetIndependentFrame();
 		}
+
 		packet->SetNTPTimestamp(ntp_timestamp);
+
+		extensions.AddExtention(framemarking_extension);
+		packet->SetExtensions(extensions);
+
+		// Set Payload
+		if(!_packetizer->NextPacket(packet.get()))
+		{
+			return false;
+		}
+
+		_rtp_packet_count ++;
 		_stream->OnRtpPacketized(packet);
 
 		// RED First
