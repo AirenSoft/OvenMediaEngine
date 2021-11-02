@@ -148,6 +148,7 @@ namespace mon
 		Json::Value json_root;
 
 		// Fill common values
+		json_root["eventVersion"] = EVENT_VERSION;
 		json_root["timestampMillis"] = _creation_time_msec;
 		json_root["userKey"] = _server_metric->GetConfig()->GetAnalytics().GetUserKey().CStr();
 		json_root["serverID"] = _server_metric->GetConfig()->GetID().CStr();
