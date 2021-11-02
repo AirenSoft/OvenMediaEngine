@@ -15,8 +15,7 @@ RtpPacket::RtpPacket()
 	_padding_size = 0;
 	_extension_size = 0;
 
-	_data = std::make_shared<ov::Data>();
-	_data->Reserve(RTP_DEFAULT_MAX_PACKET_SIZE);
+	_data = std::make_shared<ov::Data>(RTP_DEFAULT_MAX_PACKET_SIZE);
 	_data->SetLength(FIXED_HEADER_SIZE);
 	_buffer = _data->GetWritableDataAs<uint8_t>();
 

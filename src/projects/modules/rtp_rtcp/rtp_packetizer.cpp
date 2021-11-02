@@ -268,25 +268,20 @@ std::shared_ptr<RedRtpPacket> RtpPacketizer::PackageAsRed(std::shared_ptr<RtpPac
 
 std::shared_ptr<RtpPacket> RtpPacketizer::AllocatePacket(bool ulpfec)
 {
-	std::shared_ptr<RedRtpPacket> red_packet;
-	std::shared_ptr<RtpPacket> rtp_packet;
-
 	if(ulpfec)
 	{
-		red_packet = std::make_shared<RedRtpPacket>();
-
+		auto red_packet = std::make_shared<RedRtpPacket>();
 		red_packet->SetSsrc(_ssrc);
 		red_packet->SetCsrcs(_csrcs);
 		red_packet->SetPayloadType(_ulpfec_payload_type);
 		red_packet->SetUlpfec(true, _payload_type);
-
 		red_packet->PackageAsRed(_red_payload_type);
-
+		
 		return red_packet;
 	}
 	else
 	{
-		rtp_packet = std::make_shared<RtpPacket>();
+		auto rtp_packet = std::make_shared<RtpPacket>();
 		rtp_packet->SetSsrc(_ssrc);
 		rtp_packet->SetCsrcs(_csrcs);
 		rtp_packet->SetPayloadType(_payload_type);
