@@ -3,6 +3,8 @@
 #include "base/ovlibrary/ovlibrary.h"
 #include "server_metrics.h"
 #include <variant>
+
+#define EVENT_VERSION		1
 namespace mon
 {
 	enum class EventType
