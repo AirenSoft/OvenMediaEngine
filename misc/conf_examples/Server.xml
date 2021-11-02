@@ -66,7 +66,7 @@
 					-->
 					<TcpRelay>*:3478</TcpRelay>
 					<!-- TcpForce is an option to force the use of TCP rather than UDP in WebRTC streaming. (You can omit ?transport=tcp accordingly.) If <TcpRelay> is not set, playback may fail. -->
-					<TcpForce>false</TcpForce>
+					<TcpForce>true</TcpForce>
 
 					<IceCandidate>*:10000/udp</IceCandidate>
 					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
@@ -106,7 +106,7 @@
 					-->
 					<TcpRelay>*:3478</TcpRelay>
 					<!-- TcpForce is an option to force the use of TCP rather than UDP in WebRTC streaming. (You can omit ?transport=tcp accordingly.) If <TcpRelay> is not set, playback may fail. -->
-					<TcpForce>false</TcpForce>
+					<TcpForce>true</TcpForce>
 
 					<IceCandidate>*:10000/udp</IceCandidate>
 					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>

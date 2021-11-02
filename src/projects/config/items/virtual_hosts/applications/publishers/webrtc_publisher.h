@@ -42,8 +42,8 @@ namespace cfg
 					}
 
 					int _timeout = 30000;
-					bool _rtx = true;
-					bool _ulpfec = true;
+					bool _rtx = false;
+					bool _ulpfec = false;
 					bool _jitter_buffer = false;
 				};
 			}  // namespace pub
