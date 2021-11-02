@@ -18,8 +18,16 @@ namespace api
 		{
 			void CurrentController::PrepareHandlers()
 			{
+				RegisterGet(R"()", &CurrentController::OnGetServerMetrics);
+
 				CreateSubController<VHostsController>(R"(\/vhosts)");
-			};
+			}
+
+			ApiResponse CurrentController::OnGetServerMetrics(const std::shared_ptr<http::svr::HttpConnection> &client)
+			{
+				auto serverMetric = MonitorInstance->GetServerMetrics();
+				return ::serdes::JsonFromMetrics(serverMetric);
+			}
 		}  // namespace stats
 	}	   // namespace v1
 }  // namespace api
