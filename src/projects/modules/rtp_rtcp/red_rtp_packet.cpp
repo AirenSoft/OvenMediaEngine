@@ -4,13 +4,26 @@ RedRtpPacket::RedRtpPacket()
 {
 }
 
-RedRtpPacket::RedRtpPacket(uint8_t red_payload_type, const RtpPacket &src)
+RedRtpPacket::RedRtpPacket(uint8_t red_payload_type, RtpPacket &src)
+	: RtpPacket(src)
 {
-	PackageAsRed(red_payload_type, src);
+	_block_pt = PayloadType();
+	SetPayloadType(red_payload_type);
+
+	_payload_offset = _payload_offset + RED_HEADER_SIZE;
+	if(_data->GetLength() < _payload_offset)
+	{
+		_data->SetLength(_payload_offset);
+		_buffer = _data->GetWritableDataAs<uint8_t>();
+	}
+
+	_buffer[_payload_offset - RED_HEADER_SIZE] = _block_pt;
+
+	SetPayload(src.Payload(), src.PayloadSize());
 }
 
 RedRtpPacket::RedRtpPacket(RedRtpPacket &src)
-	:RtpPacket(src)
+	: RtpPacket(src)
 {
 	_block_pt = src._block_pt;
 }
@@ -18,30 +31,6 @@ RedRtpPacket::RedRtpPacket(RedRtpPacket &src)
 RedRtpPacket::~RedRtpPacket()
 {
 
-}
-
-void RedRtpPacket::PackageAsRed(uint8_t red_payload_type, const RtpPacket &src)
-{
-	SetPayloadType(src.PayloadType());
-	SetUlpfec(src.IsUlpfec(), src.OriginPayloadType());
-	SetSsrc(src.Ssrc());
-	SetSequenceNumber(src.SequenceNumber());
-	SetTimestamp(src.Timestamp());
-	SetNTPTimestamp(src.NTPTimestamp());
-	SetKeyframe(src.IsKeyframe());
-	SetFirstPacketOfFrame(src.IsFirstPacketOfFrame());
-	SetVideoPacket(src.IsVideoPacket());
-
-	_payload_offset = src.HeadersSize();
-	_payload_size = src.PayloadSize();
-	_padding_size = src.PaddingSize();
-	_extension_size = src.ExtensionSize();
-
-	PackageAsRed(red_payload_type);
-
-	SetMarker(src.Marker());
-
-	SetPayload(src.Payload(), src.PayloadSize());
 }
 
 //Implement RED as part of the RTP header to reduce memory copying and improve performance.
