@@ -1,4 +1,6 @@
 #include <modules/json_serdes/converters.h>
+#include <main/main.h>
+#include <main/git_info.h>
 
 #include "event.h"
 #include "monitoring_private.h"
@@ -244,7 +246,16 @@ namespace mon
 
 	bool Event::FillServerInfo(Json::Value &json_server) const
 	{
+		#if DEBUG
+			static constexpr const char *BUILD_MODE = " [debug]";
+		#else	// DEBUG
+			static constexpr const char *BUILD_MODE = "";
+		#endif	// DEBUG
+
+
 		json_server["serverID"] = _server_metric->GetConfig()->GetID().CStr();
+		json_server["serverName"] = _server_metric->GetConfig()->GetName().CStr();
+		json_server["serverVersion"] = ov::String::FormatString("v%s (GIT : %s) (%s)", OME_VERSION, OME_GIT_VERSION, BUILD_MODE).CStr();
 		json_server["startedTime"] = ov::Converter::ToISO8601String(std::chrono::system_clock::now()).CStr();	
 		json_server["bind"] = _server_metric->GetConfig()->GetBind().ToJson();
 
