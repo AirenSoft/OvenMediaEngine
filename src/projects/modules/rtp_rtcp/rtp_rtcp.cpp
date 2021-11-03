@@ -5,6 +5,7 @@
 #include "publishers/webrtc/rtc_stream.h"
 #include "rtcp_receiver.h"
 #include "rtcp_info/fir.h"
+#include "rtcp_info/pli.h"
 
 #include "modules/rtsp/rtsp_data.h"
 
@@ -143,7 +144,31 @@ bool RtpRtcp::SendRtpPacket(const std::shared_ptr<RtpPacket> &rtp_packet)
 	return SendDataToNextNode(NodeType::Rtp, rtp_packet->GetData());
 }
 
-bool RtpRtcp::SendFir(uint32_t media_ssrc)
+bool RtpRtcp::SendPLI(uint32_t media_ssrc)
+{
+	auto stat_it = _receive_statistics.find(media_ssrc);
+	if(stat_it == _receive_statistics.end())
+	{
+		// Never received such SSRC packet
+		return false;
+	}
+
+	auto stat = stat_it->second;
+	
+	auto pli = std::make_shared<PLI>();
+
+	pli->SetSrcSsrc(stat->GetReceiverSSRC());
+	pli->SetMediaSsrc(media_ssrc);
+
+	auto rtcp_packet = std::make_shared<RtcpPacket>();
+	rtcp_packet->Build(pli);
+
+	_last_sent_rtcp_packet = rtcp_packet;
+
+	return SendDataToNextNode(NodeType::Rtcp, rtcp_packet->GetData());
+}
+
+bool RtpRtcp::SendFIR(uint32_t media_ssrc)
 {
 	auto stat_it = _receive_statistics.find(media_ssrc);
 	if(stat_it == _receive_statistics.end())
@@ -157,6 +182,7 @@ bool RtpRtcp::SendFir(uint32_t media_ssrc)
 	auto fir = std::make_shared<FIR>();
 
 	fir->SetSrcSsrc(stat->GetReceiverSSRC());
+	fir->SetMediaSsrc(media_ssrc);
 	fir->AddFirMessage(media_ssrc, static_cast<uint8_t>(stat->GetNumberOfFirRequests()%256));
 	auto rtcp_packet = std::make_shared<RtcpPacket>();
 	rtcp_packet->Build(fir);

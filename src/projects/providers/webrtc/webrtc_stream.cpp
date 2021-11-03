@@ -415,7 +415,8 @@ namespace pvd
 		if (_fir_timer.IsElapsed(1000))
 		{
 			_fir_timer.Update();
-			_rtp_rtcp->SendFir(_video_ssrc);
+			_rtp_rtcp->SendPLI(_video_ssrc);
+			//_rtp_rtcp->SendFIR(_video_ssrc);
 		}
 
 		// Send Receiver Report
