@@ -32,7 +32,8 @@ public:
 	bool Stop() override;
 
 	bool SendRtpPacket(const std::shared_ptr<RtpPacket> &packet);
-	bool SendFir(uint32_t media_ssrc);
+	bool SendPLI(uint32_t media_ssrc);
+	bool SendFIR(uint32_t media_ssrc);
 
 	uint8_t GetReceivedPayloadType(uint32_t ssrc);
 
