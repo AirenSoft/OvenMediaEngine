@@ -56,6 +56,10 @@ To run OvenMediaEngine as Edge, you need to add Origins elements to the configur
 <VirtualHosts>
 	<VirtualHost>
 		<Origins>
+			<Properties>
+				<NoInputFailoverTimeout>3000</NoInputFailoverTimeout>
+				<UnusedStreamDeletionTimeout>60000</UnusedStreamDeletionTimeout>
+			</Properties>
 			<Origin>
 				<Location>/app/stream</Location>
 				<Pass>
