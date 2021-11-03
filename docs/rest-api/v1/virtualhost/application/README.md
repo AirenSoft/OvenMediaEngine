@@ -32,125 +32,7 @@ Request Example:
 
 ``
 
-\
-
-
-`[`
-
-\
-
-
-`   { `
-
-\
-
-
-`     "name": "app", `
-
-\
-
-
-`     "type": "live", `
-
-\
-
-
-`     "outputProfiles": [ `
-
-\
-
-
-`       { `
-
-\
-
-
-`         "name": "bypass_profile", `
-
-\
-
-
-`         "outputStreamName": "${OriginStreamName}", `
-
-\
-
-
-`         "encodes": { `
-
-\
-
-
-`           "videos": [ `
-
-\
-
-
-`             { `
-
-\
-
-
-`               "bypass": true `
-
-\
-
-
-`             } `
-
-\
-
-
-`           ], `
-
-\
-
-
-`           "audios": [ `
-
-\
-
-
-`             { `
-
-\
-
-
-`               "bypass": true `
-
-\
-
-
-`             } `
-
-\
-
-
-`           ] `
-
-\
-
-
-`         } `
-
-\
-
-
-`       } `
-
-\
-
-
-`     ] `
-
-\
-
-
-`   } `
-
-\
-
-
-`]`
+\[ { "name": "app", "type": "live", "outputProfiles": { "outputProfile": [ { "name": "bypass_profile", "outputStreamName": "${OriginStreamName}", "encodes": { "videos": [ { "bypass": true } ], "audios": [ { "bypass": true } ] } } ] } ]
 {% endswagger-description %}
 
 {% swagger-parameter in="path" name="vhost_name" type="string" %}
@@ -197,7 +79,8 @@ Returns a list of created application informations" %}
 		"response": {
 			"dynamic": false,
 			"name": "app",
-			"outputProfiles": [
+			"outputProfiles":{
+				"outputProfile": [
 				{
 					"encodes": {
 						"audios": [
@@ -215,7 +98,8 @@ Returns a list of created application informations" %}
 					"name": "bypass_profile",
 					"outputStreamName": "${OriginStreamName}"
 				}
-			],
+				],
+			},
 			"providers": {
 				"mpegts": {},
 				"rtmp": {}
@@ -400,7 +284,8 @@ Returns the specified application information" %}
 	"response": {
 		"dynamic": false,
 		"name": "app",
-		"outputProfiles": [
+		"outputProfiles":{
+			"outputProfile": [
 			{
 				"encodes": {
 					"audios": [
@@ -425,7 +310,8 @@ Returns the specified application information" %}
 				"name": "bypass.opus",
 				"outputStreamName": "${OriginStreamName}"
 			}
-		],
+			],
+		},
 		"providers": {
 			"mpegts": {},
 			"ovt": {},
@@ -572,7 +458,8 @@ Returns the modified application information" %}
 	"response": {
 		"dynamic": false,
 		"name": "app",
-		"outputProfiles": [
+		"outputProfiles": {
+			"outputProfile": [
 			{
 				"encodes": {
 					"audios": [
@@ -590,7 +477,8 @@ Returns the modified application information" %}
 				"name": "bypass_profile",
 				"outputStreamName": "${OriginStreamName}"
 			}
-		],
+			],
+		},
 		"providers": {
 			"mpegts": {},
 			"rtmp": {}

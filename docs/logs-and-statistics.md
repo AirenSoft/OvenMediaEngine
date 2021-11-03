@@ -159,17 +159,8 @@ OvenMediaEngine collects the following metrics for each host, application, and s
 * Maximum connections and time
 * Time is taken to connect to origin
 
-This is available through the Monitoring class, and we use this information to generate various log files. OvenMediaEngine outputs various statistics through log files. OvenMediaEngine now prints logs for WebRTC and HTTP based streamings, but its format is for a specific purpose and isn't standardized. This will be standardized in future 1.0 and will be published throughout this manual.
+You can get the current statistics using the REST API. See [Stat API ](rest-api/v1/statistics/current.md)for the statistics REST API.
 
-Currently, OvenMediaEngine outputs statistics like this:
-
-```markup
-# Statistics for WebRTC 
-"ovenmediaengine_webrtc_stat.log"
-# Statistics for http based streaming
-"hls_rtsp_session.log"
-"hls_rtsp_reqeuest.log"
-"hls_rtsp_viewers.log"
-```
-
-The statistics logs are mostly different because they are collected from Bigdata's collection system and output for various purposes. OvenMediaEngine is open-source, so you have the flexibility to respond in such situations. OME keeps all the metrics for Vhost, App, and Stream in the Monitoring Class, so anyone can use them.
+{% hint style="warning" %}
+Files such as webrtc\_stat.log and hls\_rtsp\_xxxx.log that were previously output are deprecated in the current version. We are developing a formal stats file, which will be open in the future.
+{% endhint %}
