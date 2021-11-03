@@ -499,7 +499,7 @@ namespace pvd
 		if (json_code.asUInt() != 200)
 		{
 			SetState(State::ERROR);
-			logte("Play : Server Failure : %s (%d)", json_code.asUInt(), json_message.asString().c_str());
+			logte("Play : Server Failure : %d (%s)", json_code.asUInt(), json_message.asString().c_str());
 			return false;
 		}
 
