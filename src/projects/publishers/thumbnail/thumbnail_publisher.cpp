@@ -130,51 +130,45 @@ bool ThumbnailPublisher::Stop()
 	return Publisher::Stop();
 }
 
-std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterceptor()
+std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 {
-	auto http_interceptor = std::make_shared<http::svr::DefaultInterceptor>();
+	auto http_interceptor = std::make_shared<ThumbnailInterceptor>();
 
 	http_interceptor->Register(http::Method::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
 		auto request = client->GetRequest();
 
-		ov::String request_param;
-		ov::String app_name;
-		ov::String stream_name;
-		ov::String file_name;
-		ov::String file_ext;
-
 		auto host_name = request->GetHeader("HOST").Split(":")[0];
 		if (host_name.IsEmpty() == true)
 		{
-			logtw("Invalid hostname");
+			logtw("Failed to parse hostname");
 			return http::svr::NextHandler::Call;
 		}
 
-		// Parse Url
-		if (ParseRequestUrl(request->GetRequestTarget(), request_param, app_name, stream_name, file_name, file_ext) == false)
+		auto uri = request->GetUri();
+		auto parsed_url = ov::Url::Parse(uri);
+		if(parsed_url == nullptr)
 		{
-			logte("Failed to parse URL: %s", request->GetRequestTarget().CStr());
+			logtw("Failed to parse url: %s", request->GetRequestTarget().CStr());
 			return http::svr::NextHandler::Call;
 		}
 
-		if (app_name.IsEmpty() == true || stream_name.IsEmpty() == true || file_name.IsEmpty() == true || file_ext.IsEmpty() == true)
+		if (parsed_url->App().IsEmpty() == true || parsed_url->Stream().IsEmpty() == true || parsed_url->File().IsEmpty() == true)
 		{
-			logtw("Invalid urn. app:%s, stream:%s, filename:%s, ext:%s",
-				  app_name.CStr(), stream_name.CStr(), file_name.CStr(), file_ext.CStr());
+			logtw("Invalid request url: %s",uri.CStr());
 			return http::svr::NextHandler::Call;
 		}
 
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, parsed_url->App());
 		if (vhost_app_name.IsValid() == false)
 		{
-			logtw("Invalid application info");
+			logtw("Could not found virtual host");
 			return http::svr::NextHandler::Call;
 		}
 
 		auto app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(vhost_app_name));
 		if (app_info == nullptr)
 		{
-			logtw("Could not found application info");
+			logtw("Could not found application");
 			return http::svr::NextHandler::Call;
 		}
 
@@ -198,7 +192,7 @@ std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterce
 		}
 
 		// Check Stream
-		auto stream = std::static_pointer_cast<ThumbnailStream>(GetStream(vhost_app_name, stream_name));
+		auto stream = std::static_pointer_cast<ThumbnailStream>(GetStream(vhost_app_name, parsed_url->Stream()));
 		if (stream == nullptr)
 		{
 			response->AppendString("There are no thumbnails available stream");
@@ -210,11 +204,11 @@ std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterce
 
 		// Check Extentions
 		auto media_codec_id = cmn::MediaCodecId::None;
-		if (file_ext.IndexOf("jpg") == 0)
+		if (parsed_url->File().LowerCaseString().IndexOf(".jpg") >= 0)
 		{
 			media_codec_id = cmn::MediaCodecId::Jpeg;
 		}
-		else if (file_ext.IndexOf("png") == 0)
+		else if (parsed_url->File().LowerCaseString().IndexOf(".png") >= 0)
 		{
 			media_codec_id = cmn::MediaCodecId::Png;
 		}
@@ -239,66 +233,6 @@ std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterce
 	});
 
 	return http_interceptor;
-}
-
-//====================================================================================================
-// ParseRequestUrl
-//  ex) ..../app_name/stream_name/file_name.file_ext?param=param_value
-//====================================================================================================
-bool ThumbnailPublisher::ParseRequestUrl(const ov::String &request_url,
-										 ov::String &request_param,
-										 ov::String &app_name,
-										 ov::String &stream_name,
-										 ov::String &file_name,
-										 ov::String &file_ext)
-{
-	ov::String request_path;
-
-	// directory/file.ext?param=test
-	auto tokens = request_url.Split("?");
-	if (tokens.size() == 0)
-	{
-		return false;
-	}
-
-	request_path = tokens[0];
-	request_param = tokens.size() == 2 ? tokens[1] : "";
-
-	// ...../app_name/stream_name/file_name.ext_name
-	tokens.clear();
-	tokens = request_path.Split("/");
-
-	if (tokens.size() < 3)
-	{
-		return false;
-	}
-
-	app_name = tokens[tokens.size() - 3];
-	stream_name = tokens[tokens.size() - 2];
-	file_name = tokens[tokens.size() - 1];
-
-	// file_name.ext_name
-	tokens.clear();
-	tokens = file_name.Split(".");
-
-	if (tokens.size() != 2)
-	{
-		return false;
-	}
-
-	file_ext = tokens[1];
-
-	// logtd(
-	// 	"request : %s\n"
-	// 	"request path : %s\n"
-	// 	"request param : %s\n"
-	// 	"app name : %s\n"
-	// 	"stream name : %s\n"
-	// 	"file name : %s\n"
-	// 	"file ext : %s\n",
-	// 	request_url.CStr(), request_path.CStr(), request_param.CStr(), app_name.CStr(), stream_name.CStr(), file_name.CStr(), file_ext.CStr());
-
-	return true;
 }
 
 // @Refer to segment_stream_server.cpp
