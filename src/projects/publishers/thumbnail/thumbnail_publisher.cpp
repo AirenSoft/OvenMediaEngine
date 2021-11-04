@@ -130,9 +130,9 @@ bool ThumbnailPublisher::Stop()
 	return Publisher::Stop();
 }
 
-std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterceptor()
+std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 {
-	auto http_interceptor = std::make_shared<http::svr::DefaultInterceptor>();
+	auto http_interceptor = std::make_shared<ThumbnailInterceptor>();
 
 	http_interceptor->Register(http::Method::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
 		auto request = client->GetRequest();

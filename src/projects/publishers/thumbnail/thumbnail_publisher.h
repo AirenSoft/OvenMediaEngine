@@ -9,6 +9,7 @@
 #include "base/ovlibrary/url.h"
 #include "base/publisher/publisher.h"
 #include "thumbnail_application.h"
+#include "thumbnail_interceptor.h"
 
 class ThumbnailPublisher : public pub::Publisher
 {
@@ -48,7 +49,7 @@ private:
 	bool SetAllowOrigin(const ov::String &origin_url, std::vector<ov::String>& cors_urls, const std::shared_ptr<http::svr::HttpResponse> &response);
 
 private:
-	std::shared_ptr<http::svr::RequestInterceptor> CreateInterceptor();
+	std::shared_ptr<ThumbnailInterceptor> CreateInterceptor();
 	std::shared_ptr<http::svr::HttpServer> _http_server;
 	std::shared_ptr<http::svr::HttpsServer> _https_server;
 };
