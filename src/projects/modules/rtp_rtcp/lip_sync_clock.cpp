@@ -23,9 +23,24 @@ std::shared_ptr<LipSyncClock::Clock> LipSyncClock::GetClock(uint32_t id)
 std::optional<uint64_t> LipSyncClock::CalcPTS(uint32_t id, uint32_t rtp_timestamp)
 {
 	auto clock = GetClock(id);
-	if(clock == nullptr || clock->_updated == false)
+	if(clock == nullptr)
 	{
 		return {};
+	}
+
+	if(clock->_updated == false)
+	{
+		return {};
+		// @Deprecated
+		// TODO(Getroot) : This method sometimes causes a smaller PTS to come out after the RTCP SR arrives. 
+		// Since this is not allowed in OME, we have to think more about how to handle it.
+		// Since most servers send RTP and RTCP SR, 
+		// it is the simplest and most powerful to wait for the RTCP SR and then calculate the PTS.
+
+		// Update using wall clock until rtcp sr is arrived
+		// uint32_t msw, lsw;
+		// ov::Clock::GetNtpTime(msw, lsw);
+		// UpdateSenderReportTime(id, msw, lsw, rtp_timestamp);
 	}
 
 	std::shared_lock<std::shared_mutex> lock(clock->_clock_lock);
