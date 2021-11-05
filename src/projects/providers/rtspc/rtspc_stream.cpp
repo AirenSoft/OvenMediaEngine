@@ -503,6 +503,7 @@ namespace pvd
 
 			// Some RTSP servers ignore the ssrc of SETUP, so they use an interleaved channel instead.
 			_rtp_rtcp->AddRtpReceiver(interleaved_channel, track);
+			_lip_sync_clock.RegisterClock(interleaved_channel, track->GetTimeBase().GetExpr());
 
 			interleaved_channel += 2;
 		}
@@ -591,29 +592,6 @@ namespace pvd
 			SetState(State::ERROR);
 			logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
 			return false;
-		}
-
-		return true;
-	}
-
-	bool RtspcStream::SendSequenceHeaderIfNeeded(int64_t timestamp)
-	{
-		for (const auto &track_it : GetTracks())
-		{
-			auto track = track_it.second;
-
-			if (track->GetCodecId() == cmn::MediaCodecId::H264 && _h264_extradata_nalu != nullptr)
-			{
-				auto media_packet = std::make_shared<MediaPacket>(GetMsid(),	
-																	track->GetMediaType(), 
-																	track->GetId(), 
-																	_h264_extradata_nalu,
-																	timestamp, 
-																	timestamp, 
-																	cmn::BitstreamFormat::H264_ANNEXB, 
-																	cmn::PacketType::NALU);
-				SendFrame(media_packet);
-			}
 		}
 
 		return true;
@@ -819,7 +797,6 @@ namespace pvd
 
 				// RTP or RTCP
 				auto rtsp_data = _rtsp_demuxer.PopData();
-				rtsp_data->GetChannelId();
 
 				// RtpRtcpInterface(RtspcStream) <--> [RTP_RTCP Node] <--> [*Edge Node(RtspcStream)] ---Send--> {Socket}
 				//							        					     					    <--Recv--- {Socket}
@@ -901,9 +878,20 @@ namespace pvd
 				return;
 		}
 
-		auto timestamp = AdjustTimestampByDelta(channel, first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
+		auto pts = _lip_sync_clock.CalcPTS(channel, first_rtp_packet->Timestamp());
+		if(pts.has_value() == false)
+		{
+			logtd("not yet received sr packet : %u", first_rtp_packet->Ssrc());
 
-		logtd("Channel(%d) Payload Type(%d) Ssrc(%u) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
+			// Prevents the stream from being deleted because there is no input data
+			MonitorInstance->IncreaseBytesIn(*Stream::GetSharedPtr(), bitstream->GetLength());
+			return;
+		}
+
+		auto timestamp = AdjustTimestampByBase(channel, pts.value(), std::numeric_limits<uint64_t>::max());
+		//auto timestamp = AdjustTimestampByDelta(channel, first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
+
+		logtd("Channel(%d) Payload Type(%d) Ssrc(%u) Timestamp(%u) PTS(%lld) Time scale(%f) Adjust Timestamp(%f)", 
 				channel, first_rtp_packet->PayloadType(), first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
 
 		auto frame = std::make_shared<MediaPacket>(GetMsid(),
@@ -916,11 +904,20 @@ namespace pvd
 												   packet_type);
 
 		logtd("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%u)", track->GetId(), track->GetCodecId(), bitstream_format, packet_type, bitstream->GetLength(), first_rtp_packet->Timestamp());
+
 		// Send SPS/PPS if stream is H264
-		if(_sent_sequence_header == false)
+		if (_sent_sequence_header == false && track->GetCodecId() == cmn::MediaCodecId::H264 && _h264_extradata_nalu != nullptr)
 		{
+			auto media_packet = std::make_shared<MediaPacket>(GetMsid(),	
+																track->GetMediaType(), 
+																track->GetId(), 
+																_h264_extradata_nalu,
+																timestamp, 
+																timestamp, 
+																cmn::BitstreamFormat::H264_ANNEXB, 
+																cmn::PacketType::NALU);
+			SendFrame(media_packet);
 			_sent_sequence_header = true;
-			SendSequenceHeaderIfNeeded(timestamp);
 		}
 		
 		SendFrame(frame);
@@ -929,7 +926,14 @@ namespace pvd
 	// From RtpRtcp node
 	void RtspcStream::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	{
-		// Nothing to do now
+		// RTCP Channel is RTP Channel + 1
+		auto channel = rtcp_info->GetRtspChannel() - 1;
+		// Receive Sender Report
+		if (rtcp_info->GetPacketType() == RtcpPacketType::SR)
+		{
+			auto sr = std::dynamic_pointer_cast<SenderReport>(rtcp_info);
+			_lip_sync_clock.UpdateSenderReportTime(channel, sr->GetMsw(), sr->GetLsw(), sr->GetTimestamp());
+		}
 	}
 
 	ov::String RtspcStream::GenerateControlUrl(ov::String control)

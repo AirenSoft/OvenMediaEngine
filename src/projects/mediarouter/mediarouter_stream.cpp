@@ -1102,10 +1102,12 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 				}
 			}
 		}
-	}
+
+		logtd("Track(%d) PTS(%lld)", track_id, pop_media_packet->GetPts());
 	
-	_pts_last[track_id] = pop_media_packet->GetPts();
-	_dts_last[track_id] = pop_media_packet->GetDts();
+		_pts_last[track_id] = pop_media_packet->GetPts();
+		_dts_last[track_id] = pop_media_packet->GetDts();
+	}
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Statistics

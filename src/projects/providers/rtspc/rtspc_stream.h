@@ -20,6 +20,7 @@
 
 #include <modules/rtp_rtcp/rtp_depacketizing_manager.h>
 #include <modules/rtp_rtcp/rtp_rtcp.h>
+#include <modules/rtp_rtcp/lip_sync_clock.h>
 
 #include <modules/sdp/session_description.h>
 
@@ -106,8 +107,6 @@ namespace pvd
 
 		int32_t GetNextCSeq();
 
-		bool SendSequenceHeaderIfNeeded(int64_t timestamp);
-
 		bool SendRequestMessage(const std::shared_ptr<RtspMessage> &message);
 		std::shared_ptr<RtspMessage> ReceiveResponse(uint32_t cseq, uint64_t timeout_ms);
 
@@ -153,6 +152,8 @@ namespace pvd
 		// Payload type : Timestamp
 		std::map<uint8_t, uint32_t>			_last_timestamp_map;
 		std::map<uint8_t, uint32_t>			_timestamp_map;
+
+		LipSyncClock 						_lip_sync_clock;
 
 		bool _sent_sequence_header = false;
 
