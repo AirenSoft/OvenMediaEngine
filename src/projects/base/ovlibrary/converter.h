@@ -374,7 +374,7 @@ namespace ov
 		#define EPOCH  2208988800ULL
 		#define NTP_SCALE_FRAC  4294967296ULL
 
-		static uint64_t ToNTPTimestamp(double seconds)
+		static uint64_t SecondsToNtpTs(double seconds)
 		{
 			uint64_t ntp_timestamp = 0;
 			double ipart, fraction;
@@ -383,6 +383,21 @@ namespace ov
 			ntp_timestamp = (((uint64_t)ipart) << 32) + (fraction * NTP_SCALE_FRAC);
 
 			return ntp_timestamp;
+		}
+
+		static double NtpTsToSeconds(uint64_t ntp_timestamp)
+		{
+			uint32_t msw = ntp_timestamp >> 32;
+			uint32_t lsw = ntp_timestamp & 0xFFFFFFFF;
+			return NtpTsToSeconds(msw, lsw);
+		}
+
+		static double NtpTsToSeconds(uint32_t msw, uint32_t lsw)
+		{
+			double seconds = (double)msw;
+			double frac = (double)lsw / (double)NTP_SCALE_FRAC;
+
+			return seconds + frac;
 		}
 	};
 }  // namespace ov

@@ -15,56 +15,20 @@ void RtcpSRGenerator::AddRTPPacketAndGenerateRtcpSR(const RtpPacket &rtp_packet)
     _octec_count += rtp_packet.PayloadSize();
 	_last_timestamp = rtp_packet.Timestamp();
 	_last_ntptime = rtp_packet.NTPTimestamp();
-	
-    // RTCP Interval
-    // Send RTCP SR twice a second for the first 10 seconds so the player can sync AV. 
-    // After 5 seconds, send RTCP SR once every 5 seconds. 
-    // if((GetElapsedTimeMSFromCreated() < 10000 && GetElapsedTimeMSFromRtcpSRGenerated() > 500) ||
-    //     GetElapsedTimeMSFromRtcpSRGenerated() > 4999)
-	// if(GetElapsedTimeMSFromRtcpSRGenerated() > 500)
-    // {
-	// 	auto report = std::make_shared<SenderReport>();
-		
-	// 	uint32_t msw = 0;
-    // 	uint32_t lsw = 0;
-
-	// 	msw = rtp_packet.NTPTimestamp() >> 32;
-	// 	lsw = rtp_packet.NTPTimestamp() & 0xFFFFFFFF;
-
-	// 	// logc("DEBUG", "[SR] Rate(%d) Timestamp(%u) Clock(%lf) ipart(%lf) fraction(%lf) msw(%u) lsw(%u) reverse(%u)",  _codec_rate, rtp_packet.Timestamp(), clock, ipart, fraction, msw, lsw, reverse);
-		
-	// 	report->SetSenderSsrc(_ssrc);
-	// 	report->SetMsw(msw);
-	// 	report->SetLsw(lsw);
-		
-	// 	report->SetTimestamp(rtp_packet.Timestamp());
-	// 	report->SetPacketCount(_packet_count);
-	// 	report->SetOctetCount(_octec_count);
-
-	// 	_rtcp_packet = std::make_shared<RtcpPacket>();
-	// 	_rtcp_packet->Build(report);
-
-    //     // Reset RTCP information
-    //     _packet_count = 0;
-    //     _octec_count = 0;
-    //     _last_generated_time = std::chrono::system_clock::now();
-    //     _rtcp_generated_count++;
-    // }
 }
 
 bool RtcpSRGenerator::IsAvailableRtcpSRPacket() const
 {
-	return true;
-    // return (_rtcp_packet != nullptr);
+	return _packet_count > 0 ? true : false;
 }
 
 std::shared_ptr<RtcpPacket> RtcpSRGenerator::PopRtcpSRPacket()
 {
-    // if(_rtcp_packet == nullptr)
-    // {
-    //     return nullptr;
-    // }
-
+	if(_packet_count <= 0)
+	{
+		return nullptr; 
+	}
+	
 	auto report = std::make_shared<SenderReport>();
 	
 	uint32_t msw = 0;

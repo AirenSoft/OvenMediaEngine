@@ -482,7 +482,7 @@ void RtcStream::PacketizeVideoFrame(const std::shared_ptr<MediaPacket> &media_pa
 	auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
 	// video timescale is always 90000hz in WebRTC
 	auto timestamp = ((double)media_packet->GetPts() * media_track->GetTimeBase().GetExpr() * 90000);
-	auto ntp_timestamp = ov::Converter::ToNTPTimestamp((double)media_packet->GetPts() * media_track->GetTimeBase().GetExpr());
+	auto ntp_timestamp = ov::Converter::SecondsToNtpTs((double)media_packet->GetPts() * media_track->GetTimeBase().GetExpr());
 	auto data = media_packet->GetData();
 	auto fragmentation = media_packet->GetFragHeader();
 
@@ -510,7 +510,7 @@ void RtcStream::PacketizeAudioFrame(const std::shared_ptr<MediaPacket> &media_pa
 
 	auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
 	auto timestamp = media_packet->GetPts();
-	auto ntp_timestamp = ov::Converter::ToNTPTimestamp((double)media_packet->GetPts() * media_track->GetTimeBase().GetExpr());
+	auto ntp_timestamp = ov::Converter::SecondsToNtpTs((double)media_packet->GetPts() * media_track->GetTimeBase().GetExpr());
 	auto data = media_packet->GetData();
 	auto fragmentation = media_packet->GetFragHeader();
 

@@ -1083,22 +1083,27 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	// Detect abnormal increases in PTS.
 	if (GetInoutType() == MediaRouterStreamType::INBOUND)
 	{
-		int64_t ts_inc = pop_media_packet->GetPts() - _pts_last[track_id];
-		int64_t ts_inc_ms = ts_inc * media_track->GetTimeBase().GetExpr();
-
-		if (std::abs(ts_inc_ms) > PTS_CORRECT_THRESHOLD_MS)
+		auto it = _pts_last.find(track_id);
+		if(it != _pts_last.end())
 		{
-			if (!(media_track->GetCodecId() == cmn::MediaCodecId::Png || media_track->GetCodecId() == cmn::MediaCodecId::Jpeg))
+			int64_t ts_inc = pop_media_packet->GetPts() - _pts_last[track_id];
+			int64_t ts_inc_ms = ts_inc * media_track->GetTimeBase().GetExpr();
+
+			if (std::abs(ts_inc_ms) > PTS_CORRECT_THRESHOLD_MS)
 			{
-				logtw("Detected abnormal increased timestamp. track:%d last.pts: %lld, cur.pts: %lld, tb(%d/%d), diff: %lldms",
-					  track_id, _pts_last[track_id],
-					  pop_media_packet->GetPts(),
-					  media_track->GetTimeBase().GetNum(),
-					  media_track->GetTimeBase().GetDen(),
-					  ts_inc_ms);
+				if (!(media_track->GetCodecId() == cmn::MediaCodecId::Png || media_track->GetCodecId() == cmn::MediaCodecId::Jpeg))
+				{
+					logtw("Detected abnormal increased timestamp. track:%u last.pts: %lld, cur.pts: %lld, tb(%d/%d), diff: %lldms",
+						track_id, _pts_last[track_id],
+						pop_media_packet->GetPts(),
+						media_track->GetTimeBase().GetNum(),
+						media_track->GetTimeBase().GetDen(),
+						ts_inc_ms);
+				}
 			}
 		}
 	}
+	
 	_pts_last[track_id] = pop_media_packet->GetPts();
 	_dts_last[track_id] = pop_media_packet->GetDts();
 

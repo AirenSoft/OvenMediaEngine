@@ -70,8 +70,6 @@ namespace pvd
 			return false;
 		}
 
-		_local_ssrc = ov::Random::GenerateUInt32();
-
 		// Create Nodes
 		_rtp_rtcp = std::make_shared<RtpRtcp>(RtpRtcpInterface::GetSharedPtr());
 		_srtp_transport = std::make_shared<SrtpTransport>();
@@ -80,8 +78,6 @@ namespace pvd
 		auto application = std::static_pointer_cast<WebRTCApplication>(GetApplication());
 		_dtls_transport->SetLocalCertificate(_certificate);
 		_dtls_transport->StartDTLS();
-
-		double audio_lip_sync_timebase = 0, video_lip_sync_timebase = 0;
 
 		// RFC3264
 		// For each "m=" line in the offer, there MUST be a corresponding "m=" line in the answer.
@@ -101,9 +97,8 @@ namespace pvd
 
 			if (peer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
 			{
-				_audio_payload_type = first_payload->GetId();
-				_audio_ssrc = peer_media_desc->GetSsrc();
-				ssrc_list.push_back(_audio_ssrc);
+				auto ssrc = peer_media_desc->GetSsrc();
+				ssrc_list.push_back(ssrc);
 
 				// Add Track
 				auto audio_track = std::make_shared<MediaTrack>();
@@ -132,10 +127,9 @@ namespace pvd
 					return false;
 				}
 
-				audio_track->SetId(_audio_ssrc);
+				audio_track->SetId(ssrc);
 				audio_track->SetMediaType(cmn::MediaType::Audio);
 				audio_track->SetTimeBase(1, samplerate);
-				audio_lip_sync_timebase = audio_track->GetTimeBase().GetExpr();
 				audio_track->SetAudioTimestampScale(1.0);
 
 				if (channels == 1)
@@ -147,40 +141,19 @@ namespace pvd
 					audio_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutStereo);
 				}
 
-				if (AddDepacketizer(_audio_ssrc, depacketizer_type) == false)
+				if (AddDepacketizer(ssrc, depacketizer_type) == false)
 				{
 					return false;
 				}
 
 				AddTrack(audio_track);
-				_rtp_rtcp->AddRtpReceiver(_audio_ssrc, audio_track);
+				_rtp_rtcp->AddRtpReceiver(ssrc, audio_track);
+				_lip_sync_clock.RegisterClock(ssrc, audio_track->GetTimeBase().GetExpr());
 			}
 			else
 			{
-				// RED is not support yet
-				if (0 && peer_media_desc->GetPayload(static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE)))
-				{
-					_video_payload_type = static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE);
-					_red_block_pt = first_payload->GetId();
-				}
-				else
-				{
-					_video_payload_type = first_payload->GetId();
-				}
-
-				// Retransmission, We always define the RTX payload as payload + 1
-				auto payload = peer_media_desc->GetPayload(_video_payload_type + 1);
-				if (payload != nullptr)
-				{
-					if (payload->GetCodec() == PayloadAttr::SupportCodec::RTX)
-					{
-						_rtx_enabled = true;
-						_video_rtx_ssrc = peer_media_desc->GetRtxSsrc();
-					}
-				}
-
-				_video_ssrc = peer_media_desc->GetSsrc();
-				ssrc_list.push_back(_video_ssrc);
+				auto ssrc = peer_media_desc->GetSsrc();
+				ssrc_list.push_back(ssrc);
 
 				// a=rtpmap:100 H264/90000
 				auto codec = first_payload->GetCodec();
@@ -189,7 +162,7 @@ namespace pvd
 
 				auto video_track = std::make_shared<MediaTrack>();
 
-				video_track->SetId(_video_ssrc);
+				video_track->SetId(ssrc);
 				video_track->SetMediaType(cmn::MediaType::Video);
 
 				if (codec == PayloadAttr::SupportCodec::H264)
@@ -211,21 +184,18 @@ namespace pvd
 				}
 
 				video_track->SetTimeBase(1, timebase);
-				video_lip_sync_timebase = video_track->GetTimeBase().GetExpr();
 				video_track->SetVideoTimestampScale(1.0);
 
-				if (AddDepacketizer(_video_ssrc, depacketizer_type) == false)
+				if (AddDepacketizer(ssrc, depacketizer_type) == false)
 				{
 					return false;
 				}
 
 				AddTrack(video_track);
-				_rtp_rtcp->AddRtpReceiver(_video_ssrc, video_track);
+				_rtp_rtcp->AddRtpReceiver(ssrc, video_track);
+				_lip_sync_clock.RegisterClock(ssrc, video_track->GetTimeBase().GetExpr());
 			}
 		}
-
-		// lip sync clock
-		_lip_sync_clock = std::make_shared<LipSyncClock>(audio_lip_sync_timebase, video_lip_sync_timebase);
 
 		// Connect nodes
 		_rtp_rtcp->RegisterPrevNode(nullptr);
@@ -379,23 +349,15 @@ namespace pvd
 				return;
 		}
 
-		[[maybe_unused]] ClockType clock_type = ClockType::NUMBER_OF_TYPE;
-		if (track->GetMediaType() == cmn::MediaType::Audio)
+		auto pts = _lip_sync_clock.CalcPTS(first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp());
+		if(pts.has_value() == false)
 		{
-			clock_type = ClockType::AUDIO;
-		}
-		else
-		{
-			clock_type = ClockType::VIDEO;
+			logtd("not yet received sr packet : %u", first_rtp_packet->Ssrc());
+			return;
 		}
 
-		//auto timestamp = _lip_sync_clock->GetNextTimestamp(clock_type, first_rtp_packet->Timestamp());
-		auto timestamp = AdjustTimestampByDelta(track->GetId(),
-											first_rtp_packet->Timestamp(), 
-											std::numeric_limits<uint32_t>::max());
-		//auto timestamp = first_rtp_packet->Timestamp();
-
-		logtd("Payload Type(%d) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)",
+		auto timestamp = pts.value();
+		logtd("Payload Type(%d) Timestamp(%u) PTS(%u) Time scale(%f) Adjust Timestamp(%f)",
 			  first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
 
 		auto frame = std::make_shared<MediaPacket>(GetMsid(),
@@ -412,10 +374,10 @@ namespace pvd
 		SendFrame(frame);
 
 		// Send FIR to reduce keyframe interval
-		if (_fir_timer.IsElapsed(1000))
+		if (_fir_timer.IsElapsed(1000) && track->GetMediaType() == cmn::MediaType::Video)
 		{
 			_fir_timer.Update();
-			_rtp_rtcp->SendPLI(_video_ssrc);
+			_rtp_rtcp->SendPLI(first_rtp_packet->Ssrc());
 			//_rtp_rtcp->SendFIR(_video_ssrc);
 		}
 
@@ -429,22 +391,7 @@ namespace pvd
 		if (rtcp_info->GetPacketType() == RtcpPacketType::SR)
 		{
 			auto sr = std::dynamic_pointer_cast<SenderReport>(rtcp_info);
-			ClockType clock_type = ClockType::NUMBER_OF_TYPE;
-			if (sr->GetSenderSsrc() == _video_ssrc)
-			{
-				clock_type = ClockType::VIDEO;
-			}
-			else if (sr->GetSenderSsrc() == _audio_ssrc)
-			{
-				clock_type = ClockType::AUDIO;
-			}
-			else
-			{
-				logtw("Could not find SSRC of sender report : %u", sr->GetSenderSsrc());
-				return;
-			}
-
-			_lip_sync_clock->ApplySenderReportTime(clock_type, sr->GetMsw(), sr->GetLsw(), sr->GetTimestamp());
+			_lip_sync_clock.UpdateSenderReportTime(sr->GetSenderSsrc(), sr->GetMsw(), sr->GetLsw(), sr->GetTimestamp());
 		}
 	}
 
