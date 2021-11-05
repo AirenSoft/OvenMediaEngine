@@ -15,7 +15,7 @@ FDKAAC_VERSION=0.1.5
 NASM_VERSION=2.15.02
 FFMPEG_VERSION=4.3.2
 JEMALLOC_VERSION=5.2.1
-PCRE2_VERSION=10.35
+PCRE2_VERSION=10.39
 
 INTEL_QSV_HWACCELS=false
 NVIDIA_VIDEO_CODEC_HWACCELS=false
@@ -247,7 +247,7 @@ install_libpcre2()
     (DIR=${TEMP_PATH}/libpcre2 && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://ftp.pcre.org/pub/pcre/pcre2-${PCRE2_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sLf https://github.com/PhilipHazel/pcre2/releases/download/pcre2-${PCRE2_VERSION}/pcre2-${PCRE2_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     ./configure --prefix="${PREFIX}" \
     --disable-static \
         --enable-jit=auto && \
