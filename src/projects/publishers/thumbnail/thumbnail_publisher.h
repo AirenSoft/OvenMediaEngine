@@ -9,6 +9,7 @@
 #include "base/ovlibrary/url.h"
 #include "base/publisher/publisher.h"
 #include "thumbnail_application.h"
+#include "thumbnail_interceptor.h"
 
 class ThumbnailPublisher : public pub::Publisher
 {
@@ -38,17 +39,10 @@ private:
 	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
 	bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) override;
 
-	bool ParseRequestUrl(const ov::String &request_url,
-						 ov::String &request_param,
-						 ov::String &app_name,
-						 ov::String &stream_name,
-						 ov::String &file_name,
-						 ov::String &file_ext);
-
 	bool SetAllowOrigin(const ov::String &origin_url, std::vector<ov::String>& cors_urls, const std::shared_ptr<http::svr::HttpResponse> &response);
 
 private:
-	std::shared_ptr<http::svr::RequestInterceptor> CreateInterceptor();
+	std::shared_ptr<ThumbnailInterceptor> CreateInterceptor();
 	std::shared_ptr<http::svr::HttpServer> _http_server;
 	std::shared_ptr<http::svr::HttpsServer> _https_server;
 };
