@@ -340,12 +340,12 @@ namespace http
 			if (reason == PhysicalPortDisconnectReason::Disconnect)
 			{
 				logti("The HTTP client(%s) has been disconnected from %s (%d)",
-					  remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
+					  remote->GetRemoteAddress()->ToString(false).CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
 			}
 			else
 			{
 				logti("The HTTP client(%s) is disconnected from %s (%d)",
-					  remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
+					  remote->GetRemoteAddress()->ToString(false).CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
 			}
 
 			auto interceptor = request->GetRequestInterceptor();

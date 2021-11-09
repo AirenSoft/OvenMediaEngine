@@ -181,7 +181,7 @@ bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<http::svr::HttpCon
 	// To manage sessions
 	logti("[%s/%s] Segment requested %s from %s : Segment number : %u Duration : %u",
 		  vhost_app_name.CStr(), stream_name.CStr(), file_name.CStr(),
-		  client->GetRequest()->GetRemote()->GetRemoteAddress()->ToString().CStr(),
+		  client->GetRequest()->GetRemote()->GetRemoteAddress()->ToString(false).CStr(),
 		  segment->sequence_number, segment->duration_in_ms / 1000);
 
 	client->GetRequest()->SetExtra(std::static_pointer_cast<pub::Stream>(stream));

@@ -9,8 +9,9 @@
 #include "socket_address.h"
 
 #include <netdb.h>
-
 #include <algorithm>
+
+#include <config/config_manager.h>
 
 #include "../ovlibrary/assert.h"
 #include "../ovlibrary/byte_ordering.h"
@@ -478,15 +479,26 @@ namespace ov
 		}
 	}
 
-	ov::String SocketAddress::ToString() const noexcept
+	ov::String SocketAddress::ToString(bool ignore_privacy_protect_config) const noexcept
 	{
+		auto server_config = cfg::ConfigManager::GetInstance()->GetServer();
+		bool protect_privacy = (ignore_privacy_protect_config == false) && (server_config->IsPrivaryProtectionOn() == true);
+
 		ov::String description;
 
 		auto hostname = GetHostname();
+		if(protect_privacy == true && hostname.IsEmpty() == false)
+		{
+			hostname = "xxxxxxxx";
+		}
 
 		if (IsValid())
 		{
 			auto ip = GetIpAddress();
+			if(protect_privacy == true && ip.IsEmpty() == false)
+			{
+				ip = "xxx.xxx.xxx.xxx";
+			}
 
 			description = (_address_storage.ss_family == AF_INET) ? "" : (_address_storage.ss_family == AF_INET6 ? "[v6] " : "[?] ");
 			description.Append(hostname);
@@ -503,7 +515,14 @@ namespace ov
 				}
 			}
 
-			description.AppendFormat(":%d", Port());
+			if(protect_privacy == true)
+			{
+				description.AppendFormat(":xxx");
+			}
+			else
+			{
+				description.AppendFormat(":%d", Port());
+			}
 		}
 		else
 		{
@@ -511,7 +530,14 @@ namespace ov
 
 			if (Port() > 0)
 			{
-				description.AppendFormat(":%d", Port());
+				if(protect_privacy == true)
+				{
+					description.AppendFormat(":xxx");
+				}
+				else
+				{
+					description.AppendFormat(":%d", Port());
+				}
 			}
 		}
 
