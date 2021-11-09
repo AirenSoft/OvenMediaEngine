@@ -363,7 +363,7 @@ namespace ov
 
 				if (type == DispatchCommand::Type::SendTo)
 				{
-					description.AppendFormat(", address: %s", address.ToString().CStr());
+					description.AppendFormat(", address: %s", address.ToString(false).CStr());
 				}
 
 				if (data != nullptr)

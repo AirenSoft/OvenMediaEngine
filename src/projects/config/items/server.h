@@ -34,6 +34,8 @@ namespace cfg
 		ov::String _name;
 		ov::String _id;
 
+		bool _privacy_protection_on = false;
+
 		ov::String _typeName;
 		ServerType _type;
 
@@ -59,6 +61,8 @@ namespace cfg
 
 		CFG_DECLARE_REF_GETTER_OF(GetIp, _ip)
 		CFG_DECLARE_REF_GETTER_OF(GetStunServer, _stun_server)
+
+		CFG_DECLARE_REF_GETTER_OF(IsPrivaryProtectionOn, _privacy_protection_on)
 
 		CFG_DECLARE_REF_GETTER_OF(GetBind, _bind)
 
@@ -122,6 +126,7 @@ namespace cfg
 
 			Register({"IP", "ip"}, &_ip);
 			Register<Optional>("StunServer", &_stun_server);
+			Register<Optional>("PrivacyProtection", &_privacy_protection_on);
 			Register("Bind", &_bind);
 
 			Register<Optional>("Managers", &_managers);

@@ -6,7 +6,7 @@
 	<Type>origin</Type>
 	<!-- Specify IP address to bind (* means all IPs) -->
 	<IP>*</IP>
-	
+	<PrivacyProtection>false</PrivacyProtection>
 	<!-- 
 	To get the public IP address(mapped address of stun) of the local server. 
 	This is useful when OME cannot obtain a public IP from an interface, such as AWS or docker environment. 

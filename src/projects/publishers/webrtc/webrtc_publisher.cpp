@@ -425,7 +425,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 						"INFO",
 						final_vhost_app_name.CStr(),
 						stream->GetMediaSource().CStr(),
-						remote_address->ToString().CStr());
+						remote_address->ToString(false).CStr());
 
 			logti("URL %s is requested", stream->GetMediaSource().CStr());
 		}

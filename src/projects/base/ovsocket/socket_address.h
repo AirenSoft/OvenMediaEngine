@@ -104,7 +104,7 @@ namespace ov
 
 		void UpdateIPAddress();
 
-		ov::String ToString() const noexcept;
+		ov::String ToString(bool ignore_privacy_protect_config = true) const noexcept;
 
 	protected:
 		sockaddr_storage _address_storage{};

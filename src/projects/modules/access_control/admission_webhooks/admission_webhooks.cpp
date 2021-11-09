@@ -166,7 +166,7 @@ void AdmissionWebhooks::ParseResponse(const std::shared_ptr<ov::Data> &data)
 	_allowed = jv_allowed.asBool();
 	if(_allowed == false)
 	{
-		_err_reason.Format("ControlServer(%s) denied admission to %s by %s.", _control_server_url->ToUrlString().CStr(), _requested_url->ToUrlString().CStr(), _client_address->ToString().CStr());
+		_err_reason.Format("ControlServer(%s) denied admission to %s by %s.", _control_server_url->ToUrlString().CStr(), _requested_url->ToUrlString().CStr(), _client_address->ToString(false).CStr());
 	}
 
 	// Optional data

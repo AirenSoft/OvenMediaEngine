@@ -30,6 +30,7 @@ The `Server` is the root element of the configuration file. The `version`attribu
 <Server version="8">
     <Name>OvenMediaEngine</Name>
     <IP>*</IP>
+    <PrivacyProtection>false</PrivacyProtection>
     <StunServer>stun.l.google.com:19302</StunServer>
     <Bind>...</Bind>
     <VirtualHosts>...</VirtualHosts>
@@ -43,6 +44,10 @@ The `Server` is the root element of the configuration file. The `version`attribu
 ```
 
 The `IP address` is OvenMediaEngine will bind to. If you set \*, all IP addresses of the system are used. If you enter a specific IP, the Host uses that IP only.
+
+### PrivacyProtection
+
+PrivacyProtection is an option to comply with GDPR, PIPEDA, CCPA, LGPD, etc. by deleting the client's personal information (IP, Port) from all records. When this option is turned on, the client's IP and Port are converted to `xxx.xxx.xxx.xxx:xxx` in all logs and REST APIs.
 
 ### StunServer
 

@@ -94,7 +94,7 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const Admission
 		}
 
 		logti("AdmissionWebhooks queried %s whether client %s could access %s. (Result : %s Elapsed : %u ms)",
-			control_server_url_address.CStr(), client_address->ToString().CStr(), request_url->ToUrlString().CStr(), admission_webhooks->GetErrCode()==AdmissionWebhooks::ErrCode::ALLOWED?"Allow":"Reject", admission_webhooks->GetElpasedTime());
+			control_server_url_address.CStr(), client_address->ToString(false).CStr(), request_url->ToUrlString().CStr(), admission_webhooks->GetErrCode()==AdmissionWebhooks::ErrCode::ALLOWED?"Allow":"Reject", admission_webhooks->GetElpasedTime());
 
 		if(admission_webhooks->GetErrCode() != AdmissionWebhooks::ErrCode::ALLOWED)
 		{

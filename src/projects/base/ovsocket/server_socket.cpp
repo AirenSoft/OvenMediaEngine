@@ -90,7 +90,7 @@ namespace ov
 				return;
 			}
 
-			logad("Trying to allocate a socket for client: %s", address.ToString().CStr());
+			logad("Trying to allocate a socket for client: %s", address.ToString(false).CStr());
 
 			auto client = _pool->AllocSocket<ClientSocket>(GetSharedPtrAs<ServerSocket>(), client_socket, address);
 

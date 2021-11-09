@@ -42,7 +42,7 @@ namespace pvd
 	{
 		SetName(stream_name);
 		_remote = client_socket;
-		SetMediaSource(ov::String::FormatString("%s://%s", ov::StringFromSocketType(client_socket->GetType()), remote_address.ToString().CStr()));
+		SetMediaSource(ov::String::FormatString("%s://%s", ov::StringFromSocketType(client_socket->GetType()), remote_address.ToString(false).CStr()));
 		_lifetime_epoch_msec = lifetime_epoch_msec;
 	}
 

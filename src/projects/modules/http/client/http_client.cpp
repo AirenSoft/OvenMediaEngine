@@ -369,7 +369,7 @@ namespace http
 				OV_ASSERT2(_url.IsEmpty() == false);
 				OV_ASSERT2(_parsed_url != nullptr);
 
-				logtd("Request an URL: %s (address: %s)...", url.CStr(), address.ToString().CStr());
+				logtd("Request an URL: %s (address: %s)...", url.CStr(), address.ToString(false).CStr());
 
 				// Convert milliseconds to timeval
 				_socket->SetRecvTimeout(
