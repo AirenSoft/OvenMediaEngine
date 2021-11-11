@@ -46,7 +46,7 @@ Please tell me which address you used to send and play. You can hide IP or Domai
 
 - Operating system and version
 
-Please tell us the version information as well as Ubuntu 20.04.
+Please tell me the OS and version (e.g. Ubuntu 20.04)
 
 **SETUP INFORMATION AND LOGS**
 
