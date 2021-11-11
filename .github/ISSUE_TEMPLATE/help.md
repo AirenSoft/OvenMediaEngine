@@ -7,7 +7,7 @@ assignees: ''
 
 ---
 
-Before calling for help, please carefully review the troubleshooting documentation in the manual.
+Before asking for help, please read the troubleshooting section in the manual carefully.
 https://airensoft.gitbook.io/ovenmediaengine/troubleshooting
 
 Please fill out the form below to create an issue. Failure to follow the form may result in late responses or close issues.
