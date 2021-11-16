@@ -43,6 +43,18 @@ public:
 		: RtpHeaderExtension(id, data)
 	{
 	}
+
+	void Reset()
+	{
+		_start_of_frame = false;
+		_end_of_frame = false;
+		_independent_frame = false;
+		_discardable_frame = false;
+		_base_layer_sync = false;
+		_temporal_id = 0;	
+
+		memset(_buffer, 0, sizeof(_buffer));
+	}
 	
 	void SetStartOfFrame()
 	{

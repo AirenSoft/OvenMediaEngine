@@ -3,6 +3,7 @@
 #include <base/info/media_extradata.h>
 #include <modules/bitstream/h264/h264_converter.h>
 #include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_framemarking.h>
+#include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_playout_delay.h>
 
 #include "rtc_application.h"
 #include "rtc_private.h"
@@ -216,6 +217,9 @@ bool RtcStream::Start()
 						video_media_desc->SetRtxSsrc(ov::Random::GenerateUInt32());
 					}
 					video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_FRAMEMARKING_ID, RTP_HEADER_EXTENSION_FRAMEMARKING_ATTRIBUTE);
+
+					// Experimental Code
+					// video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ID, RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ATTRIBUTE);
 
 					_offer_sdp->AddMedia(video_media_desc);
 					first_video_desc = false;
@@ -587,6 +591,9 @@ void RtcStream::AddPacketizer(cmn::MediaCodecId codec_id, uint32_t id, uint8_t p
 			{
 				packetizer->SetUlpfec(static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE), static_cast<uint8_t>(FixedRtcPayloadType::ULPFEC_PAYLOAD_TYPE));
 			}
+
+			// Experimental : PlayoutDelay extension
+			// packetizer->SetPlayoutDelay(1000, 3000);
 			break;
 		}
 		case MediaCodecId::Opus:

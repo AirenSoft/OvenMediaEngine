@@ -8,12 +8,17 @@
 #include "base/mediarouter/media_buffer.h"
 #include <memory>
 
+#include "rtp_header_extension/rtp_header_extensions.h"
+#include "rtp_header_extension/rtp_header_extension_framemarking.h"
+#include "rtp_header_extension/rtp_header_extension_playout_delay.h"
+
 class RtpPacketizer
 {
 public:
 	RtpPacketizer(std::shared_ptr<RtpPacketizerInterface> session);
 	~RtpPacketizer();
 
+	void SetPlayoutDelay(uint32_t min, uint32_t max);
 	void SetVideoCodec(cmn::MediaCodecId codec_type);
 	void SetAudioCodec(cmn::MediaCodecId codec_type);
 	void SetUlpfec(uint8_t _red_payload_type, uint8_t _ulpfec_payload_type);
@@ -80,6 +85,11 @@ private:
 
 	uint64_t		_frame_count = 0;
 	uint64_t		_rtp_packet_count = 0;
+
+	RtpHeaderExtensions _rtp_extensions;
+	std::shared_ptr<RtpHeaderExtensionFrameMarking>	_framemarking_extension;
+	std::shared_ptr<RtpHeaderExtensionPlayoutDelay> _playout_delay_extension;
+
 
 	// Session Descriptor
 	std::shared_ptr<RtpPacketizerInterface> _stream;

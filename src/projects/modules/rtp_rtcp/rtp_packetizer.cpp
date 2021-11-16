@@ -5,8 +5,6 @@
 #include "red_rtp_packet.h"
 #include "rtp_packetizing_manager.h"
 #include "rtp_packetizer.h"
-#include "rtp_header_extension/rtp_header_extensions.h"
-#include "rtp_header_extension/rtp_header_extension_framemarking.h"
 
 #define OV_LOG_TAG "RtpRtcp"
 
@@ -31,12 +29,23 @@ void RtpPacketizer::SetVideoCodec(cmn::MediaCodecId codec_type)
 	_audio_configured = false;
 	_video_codec_type = codec_type;
 	_packetizer = RtpPacketizingManager::Create(codec_type);
+
+	// RTP Extension
+	_framemarking_extension = std::make_shared<RtpHeaderExtensionFrameMarking>();
+	_rtp_extensions.AddExtention(_framemarking_extension);
 }
 
 void RtpPacketizer::SetAudioCodec(cmn::MediaCodecId codec_type)
 {
 	_audio_codec_type = codec_type;
 	_audio_configured = true;
+}
+
+void RtpPacketizer::SetPlayoutDelay(uint32_t min, uint32_t max)
+{
+	_playout_delay_extension = std::make_shared<RtpHeaderExtensionPlayoutDelay>();
+	_playout_delay_extension->SetDelayMilliseconds(min, max);
+	_rtp_extensions.AddExtention(_playout_delay_extension);
 }
 
 void RtpPacketizer::SetPayloadType(uint8_t payload_type)
@@ -135,30 +144,27 @@ bool RtpPacketizer::PacketizeVideo(cmn::MediaCodecId video_type,
 		}
 
 		packet->SetVideoPacket(true);
-		
-		RtpHeaderExtensions extensions;
-		auto framemarking_extension = std::make_shared<RtpHeaderExtensionFrameMarking>();
+
+		_framemarking_extension->Reset();
 
 		if(i == 0)
 		{
 			packet->SetFirstPacketOfFrame(true);
-			framemarking_extension->SetStartOfFrame();
+			_framemarking_extension->SetStartOfFrame();
 		}
 		else if(last == true)
 		{
-			framemarking_extension->SetEndOfFrame();
+			_framemarking_extension->SetEndOfFrame();
 		}
 
 		if(frame_type == FrameType::VideoFrameKey)
 		{
 			packet->SetKeyframe(true);
-			framemarking_extension->SetIndependentFrame();
+			_framemarking_extension->SetIndependentFrame();
 		}
 
 		packet->SetNTPTimestamp(ntp_timestamp);
-
-		extensions.AddExtention(framemarking_extension);
-		packet->SetExtensions(extensions);
+		packet->SetExtensions(_rtp_extensions);
 
 		// Set Payload
 		if(!_packetizer->NextPacket(packet.get()))
