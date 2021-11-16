@@ -181,7 +181,7 @@ namespace ov
 				result &= SetSockOpt<int>(SO_REUSEADDR, 1);
 
 				// Disable Nagle's algorithm
-				// result &= SetSockOpt<int>(IPPROTO_TCP, TCP_NODELAY, 1);
+				result &= SetSockOpt<int>(IPPROTO_TCP, TCP_NODELAY, 1);
 
 				// Set send buffer size if smaller than argument (0 == default)
 				int current_send_buffer_size = 0;
