@@ -65,31 +65,29 @@ namespace http
 					header.payload_length = 127;
 				}
 
-				auto response = _client->GetResponse();
+				auto response_data = std::make_shared<ov::Data>();
 
-				response->Send(&header);
+				response_data->Append(&header, sizeof(header));
 
 				if (header.payload_length == 126)
 				{
 					auto payload_length = ov::HostToNetwork16(static_cast<uint16_t>(length));
-
-					response->Send(&payload_length);
+					response_data->Append(&payload_length, sizeof(payload_length));
 				}
 				else if (header.payload_length == 127)
 				{
 					auto payload_length = ov::HostToNetwork64(static_cast<uint64_t>(length));
-
-					response->Send(&payload_length);
+					response_data->Append(&payload_length, sizeof(payload_length));
 				}
 
 				if (length > 0LL)
 				{
 					logtd("Trying to send data\n%s", data->Dump(32).CStr());
-
-					return response->Send(data) ? length : -1LL;
+					response_data->Append(data);
 				}
 
-				return length;
+				auto response = _client->GetResponse();
+				return response->Send(response_data) ? length : -1LL;
 			}
 
 			ssize_t Client::Send(const std::shared_ptr<const ov::Data> &data)
@@ -124,7 +122,7 @@ namespace http
 
 			std::tuple<bool, std::variant<bool, uint64_t, ov::String>> Client::GetData(ov::String key)
 			{
-				if(_data_map.find(key) == _data_map.end())
+				if (_data_map.find(key) == _data_map.end())
 				{
 					return {false, false};
 				}
