@@ -29,6 +29,11 @@ namespace ov
 		Converter() = delete;
 		~Converter() = delete;
 
+		static ov::String ToString(bool flag)
+		{
+			return flag == true ? "TRUE" : "FALSE";
+		}
+
 		static ov::String ToString(int number)
 		{
 			return ov::String::FormatString("%d", number);

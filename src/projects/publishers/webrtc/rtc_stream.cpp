@@ -107,6 +107,10 @@ bool RtcStream::Start()
 	_ulpfec_enabled = GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().IsUlpfecEnalbed();
 	_jitter_buffer_enabled = GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().IsJitterBufferEnabled();
 
+	auto playoutDelay = GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().GetPlayoutDelay(&_playout_delay_enabled);
+	_playout_delay_min = playoutDelay.GetMin();
+	_playout_delay_max = playoutDelay.GetMax();
+
 	_offer_sdp = std::make_shared<SessionDescription>();
 	_offer_sdp->SetOrigin("OvenMediaEngine", ov::Random::GenerateUInt32(), 2, "IN", 4, "127.0.0.1");
 	_offer_sdp->SetTiming(0, 0);
@@ -219,7 +223,10 @@ bool RtcStream::Start()
 					video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_FRAMEMARKING_ID, RTP_HEADER_EXTENSION_FRAMEMARKING_ATTRIBUTE);
 
 					// Experimental Code
-					// video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ID, RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ATTRIBUTE);
+					if(_playout_delay_enabled == true)
+					{
+						video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ID, RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ATTRIBUTE);
+					}
 
 					_offer_sdp->AddMedia(video_media_desc);
 					first_video_desc = false;
@@ -343,9 +350,15 @@ bool RtcStream::Start()
 		video_media_desc->Update();
 	}
 
-	logtd("Stream is created : %s/%u", GetName().CStr(), GetId());
+	logti("WebRTC Stream has been created : %s/%u\nRtx(%s) Ulpfec(%s) JitterBuffer(%s) PlayoutDelay(%s min:%d max: %d)", 
+									GetName().CStr(), GetId(),
+									ov::Converter::ToString(_rtx_enabled).CStr(),
+									ov::Converter::ToString(_ulpfec_enabled).CStr(),
+									ov::Converter::ToString(_jitter_buffer_enabled).CStr(),
+									ov::Converter::ToString(_playout_delay_enabled).CStr(),
+									_playout_delay_min, _playout_delay_max);
+	
 	_offer_sdp->Update();
-
 	logtd("%s", _offer_sdp->ToString().CStr());
 
 	return Stream::Start();
@@ -593,7 +606,10 @@ void RtcStream::AddPacketizer(cmn::MediaCodecId codec_id, uint32_t id, uint8_t p
 			}
 
 			// Experimental : PlayoutDelay extension
-			// packetizer->SetPlayoutDelay(1000, 3000);
+			if(_playout_delay_enabled == true)
+			{
+				packetizer->SetPlayoutDelay(_playout_delay_min, _playout_delay_max);
+			}
 			break;
 		}
 		case MediaCodecId::Opus:
