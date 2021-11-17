@@ -18,6 +18,24 @@ namespace cfg
 		{
 			namespace pub
 			{
+				struct PlayoutDelay : public Item
+				{
+				protected:
+					int _min = 0;
+					int _max = 0;
+
+				public:
+					CFG_DECLARE_REF_GETTER_OF(GetMin, _min)
+					CFG_DECLARE_REF_GETTER_OF(GetMax, _max)
+
+				protected:
+					void MakeList() override
+					{
+						Register("Min", &_min);
+						Register("Max", &_max);
+					}
+				};
+
 				struct WebrtcPublisher : public Publisher
 				{
 					PublisherType GetType() const override
@@ -30,6 +48,8 @@ namespace cfg
 					CFG_DECLARE_REF_GETTER_OF(IsUlpfecEnalbed, _ulpfec)
 					CFG_DECLARE_REF_GETTER_OF(IsJitterBufferEnabled, _jitter_buffer)
 
+					CFG_DECLARE_REF_GETTER_OF(GetPlayoutDelay, _playout_delay)
+
 				protected:
 					void MakeList() override
 					{
@@ -39,12 +59,14 @@ namespace cfg
 						Register<Optional>("JitterBuffer", &_jitter_buffer);
 						Register<Optional>("Rtx", &_rtx);
 						Register<Optional>("Ulpfec", &_ulpfec);
+						Register<Optional>("PlayoutDelay", &_playout_delay);
 					}
 
 					int _timeout = 30000;
 					bool _rtx = false;
 					bool _ulpfec = false;
 					bool _jitter_buffer = false;
+					PlayoutDelay _playout_delay;
 				};
 			}  // namespace pub
 		}	   // namespace app
