@@ -54,36 +54,48 @@ public:
 		_temporal_id = 0;	
 
 		memset(_buffer, 0, sizeof(_buffer));
+
+		UpdateData();
 	}
 	
 	void SetStartOfFrame()
 	{
 		_buffer[0] |= 0x80;
 		_start_of_frame = true;
+
+		UpdateData();
 	}
 
 	void SetEndOfFrame()
 	{
 		_buffer[0] |= 0x40;
 		_end_of_frame = true;
+
+		UpdateData();
 	}
 
 	void SetIndependentFrame()
 	{
 		_buffer[0] |= 0x20;
 		_independent_frame = true;
+
+		UpdateData();
 	}
 
 	void SetDiscardableFrame()
 	{
 		_buffer[0] |= 0x10;
 		_discardable_frame = true;
+
+		UpdateData();
 	}
 
 	void SetBaseLayerSync()
 	{
 		_buffer[0] |= 0x08;
 		_base_layer_sync = true;
+
+		UpdateData();
 	}
 
 	void SetTemporalId(uint8_t id)
@@ -95,6 +107,8 @@ public:
 
 		_buffer[0] |= id;
 		_temporal_id = id;
+
+		UpdateData();
 	}
 
 protected:
