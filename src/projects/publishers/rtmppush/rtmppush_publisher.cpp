@@ -86,19 +86,20 @@ void RtmpPushPublisher::StartSession(std::shared_ptr<RtmpPushSession> session)
 	{
 		// State of disconnected and ready to connect
 		case pub::Session::SessionState::Ready:
-			session->Start();
-			break;
+			[[fallthrough]];
+		// State of stopped
 		case pub::Session::SessionState::Stopped:
+			[[fallthrough]];
+		// State of failed (connection refused, disconnected)
+		case pub::Session::SessionState::Error:
 			session->Start();
 			break;
-		// State of Recording
+
+		// State of Started
 		case pub::Session::SessionState::Started:
 			[[fallthrough]];
 		// State of Stopping
 		case pub::Session::SessionState::Stopping:
-			[[fallthrough]];
-		// State of Record failed
-		case pub::Session::SessionState::Error:
 			break;
 	}
 

@@ -155,9 +155,10 @@ bool RtmpPushSession::SendOutgoingData(const std::any &packet)
 
 		if(ret == false)
 		{
-			logte("Failed to add packet");
+			logte("Failed to send packet");
 
 			SetState(SessionState::Error);
+			GetPush()->SetState(info::Push::PushState::Error);
 			
 			_writer->Stop();
 			_writer = nullptr;
