@@ -250,8 +250,8 @@ To run the Edge server, Origin creates application and stream if there isn't tho
 </Application>
 ```
 
-- `<Name>` is used to configure the Streaming URL.&#x20;
-- `<Type>` defines the operation of `<Application>`. Currently, there is only a `live` type.&#x20;
+* `<Name>` is used to configure the Streaming URL.&#x20;
+* `<Type>` defines the operation of `<Application>`. Currently, there is only a `live` type.&#x20;
 
 #### OutputProfiles
 
@@ -276,14 +276,14 @@ To run the Edge server, Origin creates application and stream if there isn't tho
                         <Samplerate>48000</Samplerate>
                         <Channel>2</Channel>
                     </Audio>
-                    <!--
+                    <!--                             
                     <Video>
                         <Codec>vp8</Codec>
                         <Bitrate>1024000</Bitrate>
                         <Framerate>30</Framerate>
                         <Width>1280</Width>
                         <Height>720</Height>
-                    </Video>
+                    </Video>                                
                     -->
                 </Encodes>
             </OutputProfile>
@@ -354,9 +354,9 @@ Finally, `Server.xml` is configured as follows:
     <!-- Specify IP address to bind (* means all IPs) -->
     <IP>*</IP>
 
-    <!--
-    To get the public IP address(mapped address of stun) of the local server.
-    This is useful when OME cannot obtain a public IP from an interface, such as AWS or docker environment.
+    <!-- 
+    To get the public IP address(mapped address of stun) of the local server. 
+    This is useful when OME cannot obtain a public IP from an interface, such as AWS or docker environment. 
     If this is successful, you can use ${PublicIP} in your settings.
     -->
     <StunServer>stun.l.google.com:19302</StunServer>
@@ -398,9 +398,9 @@ Finally, `Server.xml` is configured as follows:
                 </Signalling>
 
                 <IceCandidates>
-                    <!--
+                    <!-- 
                         If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
-                        This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP.
+                        This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
                         For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/v/0.11.1/streaming/webrtc-publishing#webrtc-over-tcp
                     -->
                     <TcpRelay>*:3478</TcpRelay>
@@ -447,9 +447,9 @@ Finally, `Server.xml` is configured as follows:
                 </Signalling>
 
                 <IceCandidates>
-                    <!--
+                    <!-- 
                         If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
-                        This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP.
+                        This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
                         For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/v/0.11.1/streaming/webrtc-publishing#webrtc-over-tcp
                     -->
                     <TcpRelay>*:3478</TcpRelay>
@@ -585,14 +585,14 @@ Finally, `Server.xml` is configured as follows:
                                     <Samplerate>48000</Samplerate>
                                     <Channel>2</Channel>
                                 </Audio>
-                                <!--
+                                <!--                             
                                 <Video>
                                     <Codec>vp8</Codec>
                                     <Bitrate>1024000</Bitrate>
                                     <Framerate>30</Framerate>
                                     <Width>1280</Width>
                                     <Height>720</Height>
-                                </Video>
+                                </Video>                                
                                 -->
                             </Encodes>
                         </OutputProfile>
@@ -671,7 +671,7 @@ Finally, `Server.xml` is configured as follows:
                         <Thumbnail>
                             <CrossDomains>
                                 <Url>*</Url>
-                            </CrossDomains>
+                            </CrossDomains>    
                         </Thumbnail>
                         -->
                     </Publishers>
