@@ -640,7 +640,7 @@ Finally, `Server.xml` is configured as follows:
                         </WebRTC>
                     </Providers>
                     <Publishers>
-                        <AppWorkerCount>8</AppWorkerCount>
+                        <SessionLoadBalancingThreadCount>8</SessionLoadBalancingThreadCount>
                         <OVT />
                         <WebRTC>
                             <Timeout>30000</Timeout>
