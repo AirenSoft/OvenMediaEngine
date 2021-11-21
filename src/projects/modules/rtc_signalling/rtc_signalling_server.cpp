@@ -91,7 +91,7 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 					urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", ip.CStr(), address_items[1].CStr()).CStr());
 				}
 			}
-			else if(address_items[0].UpperCaseString() == "${PublicIP}")
+			else if(address_items[0] == "${PublicIP}")
 			{
 				auto public_ip = ov::AddressUtilities::GetInstance()->GetMappedAddress();
 				urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", public_ip->GetIpAddress().CStr(), address_items[1].CStr()).CStr());
