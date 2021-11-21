@@ -10,10 +10,11 @@
 #include "rtc_signalling_server.h"
 
 #include <config/config_manager.h>
+#include <modules/address/address_utilities.h>
 #include <modules/ice/ice.h>
 #include <modules/ice/ice_port.h>
-#include <modules/address/address_utilities.h>
 #include <publishers/webrtc/webrtc_publisher.h>
+
 #include <utility>
 
 #include "rtc_ice_candidate.h"
@@ -35,8 +36,8 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 		return false;
 	}
 
-	if(interceptor == nullptr)
-	{	
+	if (interceptor == nullptr)
+	{
 		OV_ASSERT(false, "Interceptor must not be nullptr");
 		return false;
 	}
@@ -45,10 +46,10 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
 
 	auto manager = http::svr::HttpServerManager::GetInstance();
-	std::shared_ptr<http::svr::HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("RtcSignallingServer", *address, worker_count) : nullptr;
-	std::shared_ptr<http::svr::HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer("RtcSignallingServer", *tls_address, vhost_list, worker_count) : nullptr;
+	std::shared_ptr<http::svr::HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("RtcSig", *address, worker_count) : nullptr;
+	std::shared_ptr<http::svr::HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer("RtcSig", *tls_address, vhost_list, worker_count) : nullptr;
 
-	if(SetWebSocketHandler(interceptor) == false)
+	if (SetWebSocketHandler(interceptor) == false)
 	{
 		OV_ASSERT(false, "SetWebSocketHandler failed");
 		return false;
@@ -78,15 +79,14 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 			// <TcpRelay>${PublicIP}:Port</TcpRelay>
 			// Check tcp_relay_address is * or ${PublicIP}
 			auto address_items = tcp_relay_address.Split(":");
-			if(address_items.size() != 2)
+			if (address_items.size() != 2)
 			{
-				
 			}
 
-			if(address_items[0] == "*")
+			if (address_items[0] == "*")
 			{
 				auto ip_list = ov::AddressUtilities::GetInstance()->GetIpList();
-				for(const auto& ip : ip_list)
+				for (const auto &ip : ip_list)
 				{
 					urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", ip.CStr(), address_items[1].CStr()).CStr());
 				}
@@ -162,8 +162,8 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 				_new_ice_servers.append(new_ice_server);
 			}
 		}
-		
-		if(_ice_servers.size() == 0)
+
+		if (_ice_servers.empty())
 		{
 			_ice_servers = Json::nullValue;
 		}
@@ -343,7 +343,7 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 				// The client is disconnected before websocket negotiation
 			}
 		});
-	
+
 	return true;
 }
 
@@ -620,25 +620,25 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 				value["candidates"] = candidates;
 				value["code"] = static_cast<int>(http::StatusCode::OK);
 
-				if(_tcp_force == true)
+				if (_tcp_force == true)
 				{
 					tcp_relay = true;
 				}
-				
+
 				if (tcp_relay == true)
 				{
-					if(_ice_servers.isNull() == false)
+					if (_ice_servers.isNull() == false)
 					{
 						// "ice_servers" is out of specification. This is a bug and "iceServers" is correct. "ice_servers" will be deprecated in the future.
 						value["ice_servers"] = _ice_servers;
 					}
 
-					if(_new_ice_servers.isNull() == false)
+					if (_new_ice_servers.isNull() == false)
 					{
 						value["iceServers"] = _new_ice_servers;
 					}
 				}
-				
+
 				info->offer_sdp = sdp;
 
 				ws_client->Send(response_json.ToString());
@@ -723,9 +723,9 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared
 			for (auto &observer : _observers)
 			{
 				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->vhost_app_name.CStr(), info->stream_name.CStr());
-				
+
 				// TODO : Improved to return detailed error cause
-				if(observer->OnAddRemoteDescription(ws_client, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
+				if (observer->OnAddRemoteDescription(ws_client, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
 				{
 					return http::HttpError::CreateError(http::StatusCode::Forbidden, "Forbidden");
 				}
