@@ -30,16 +30,57 @@ namespace cfg
 		}
 	};
 
-	void DataSource::LoadFromFile(ov::String file_name, const ItemName &root_name)
+	DataSource::DataSource(const ov::String &current_path, const ov::String &file_name, const std::shared_ptr<pugi::xml_document> &document, const pugi::xml_node &node)
+		: _type(DataType::Xml),
+		  _document(document),
+		  _node(node),
+		  _current_path(current_path),
+		  _file_name(file_name)
 	{
-		if ((ov::PathManager::IsAbsolute(file_name) == false) && (_base_path.IsEmpty() == false))
+		logtd("Trying to create a DataSource from XML value... [cwd: %s, file: %s]", current_path.CStr(), file_name.CStr());
+	}
+
+	DataSource::DataSource(const ov::String &current_path, const ov::String &file_name, const ov::String json_name, const Json::Value &json)
+		: _type(DataType::Json),
+		  _json_name(json_name),
+		  _json(json),
+		  _current_path(current_path),
+		  _file_name(file_name)
+	{
+		logtd("Trying to create a DataSource from JSON value... [cwd: %s, file: %s]", current_path.CStr(), file_name.CStr());
+	}
+
+	DataSource::DataSource(DataType type, const ov::String &current_path, const ov::String &file_name, const ItemName &root_name)
+		: _type(type),
+		  _current_path(current_path)
+	{
+		ov::String file_name_to_load = file_name;
+
+		if (ov::PathManager::IsAbsolute(file_name_to_load) == false)
 		{
-			file_name = ov::PathManager::Combine(ov::PathManager::ExtractPath(_base_path), file_name);
+			if (_current_path.IsEmpty() == false)
+			{
+				file_name_to_load = ov::PathManager::Combine(ov::PathManager::ExtractPath(_current_path), file_name_to_load);
+			}
 		}
 
+		_current_path = ov::PathManager::ExtractPath(file_name_to_load);
+
+		logtd("Trying to create a DataSource for %s from %s file: %s [cwd: %s => %s, file: %s]",
+			  root_name.ToString().CStr(),
+			  (type == DataType::Xml) ? "XML" : "JSON",
+			  file_name_to_load.CStr(),
+			  current_path.CStr(), _current_path.CStr(),
+			  file_name.CStr());
+
+		LoadFromFile(file_name_to_load, root_name);
+	}
+
+	void DataSource::LoadFromFile(ov::String file_name, const ItemName &root_name)
+	{
 		_file_name = file_name;
 
-		logti("Trying to load data source from %s", file_name.CStr());
+		logtd("Trying to load data source from %s", file_name.CStr());
 
 		switch (_type)
 		{
@@ -290,18 +331,18 @@ namespace cfg
 	}
 
 	// Preprocess for ResolvePath annotation
-	ov::String PreprocessForPath(const ov::String &base_path, ov::String str)
+	ov::String PreprocessForPath(const ov::String &current_path, ov::String str)
 	{
 		if (ov::PathManager::IsAbsolute(str) == false)
 		{
 			// relative path
-			return ov::PathManager::Combine(base_path, str);
+			return ov::PathManager::Combine(current_path, str);
 		}
 
 		return str;
 	}
 
-	ov::String Preprocess(const ov::String &base_path, const ov::String &value, bool resolve_path)
+	ov::String Preprocess(const ov::String &current_path, const ov::String &value, bool resolve_path)
 	{
 		ov::String result = PreprocessForEnv(value);
 
@@ -309,7 +350,7 @@ namespace cfg
 
 		if (resolve_path)
 		{
-			result = PreprocessForPath(base_path, result);
+			result = PreprocessForPath(current_path, result);
 		}
 
 		return result;
@@ -326,49 +367,49 @@ namespace cfg
 			case ValueType::String: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = node.child_value();
-				return node.empty() ? std::any() : Preprocess(_base_path, node.child_value(), resolve_path);
+				return node.empty() ? std::any() : Preprocess(_current_path, node.child_value(), resolve_path);
 			}
 
 			case ValueType::Integer: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = node.child_value();
-				return node.empty() ? std::any() : ov::Converter::ToInt32(Preprocess(_base_path, node.child_value(), resolve_path));
+				return node.empty() ? std::any() : ov::Converter::ToInt32(Preprocess(_current_path, node.child_value(), resolve_path));
 			}
 
 			case ValueType::Long: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = node.child_value();
-				return node.empty() ? std::any() : ov::Converter::ToInt64(Preprocess(_base_path, node.child_value(), resolve_path));
+				return node.empty() ? std::any() : ov::Converter::ToInt64(Preprocess(_current_path, node.child_value(), resolve_path));
 			}
 
 			case ValueType::Boolean: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = node.child_value();
-				return node.empty() ? std::any() : ov::Converter::ToBool(Preprocess(_base_path, node.child_value(), resolve_path));
+				return node.empty() ? std::any() : ov::Converter::ToBool(Preprocess(_current_path, node.child_value(), resolve_path));
 			}
 
 			case ValueType::Double: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = node.child_value();
-				return node.empty() ? std::any() : ov::Converter::ToDouble(Preprocess(_base_path, node.child_value(), resolve_path));
+				return node.empty() ? std::any() : ov::Converter::ToDouble(Preprocess(_current_path, node.child_value(), resolve_path));
 			}
 
 			case ValueType::Attribute: {
 				auto attribute = _node.attribute(name);
 				*original_value = attribute.value();
-				return attribute.empty() ? std::any() : Preprocess(_base_path, attribute.value(), resolve_path);
+				return attribute.empty() ? std::any() : Preprocess(_current_path, attribute.value(), resolve_path);
 			}
 
 			case ValueType::Text: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = node.child_value();
-				return node.empty() ? std::any() : Preprocess(_base_path, node.child_value(), resolve_path);
+				return node.empty() ? std::any() : Preprocess(_current_path, node.child_value(), resolve_path);
 			}
 
 			case ValueType::Item: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = Json::objectValue;
-				return node.empty() ? std::any() : DataSource(_base_path, _file_name, _document, node);
+				return node.empty() ? std::any() : DataSource(_current_path, _file_name, _document, node);
 			}
 
 			case ValueType::List: {
@@ -385,7 +426,7 @@ namespace cfg
 
 					for (auto &node_child : children)
 					{
-						data_sources.emplace_back(_base_path, _file_name, _document, node_child);
+						data_sources.emplace_back(_current_path, _file_name, _document, node_child);
 
 						if (original_value != nullptr)
 						{
@@ -434,7 +475,7 @@ namespace cfg
 		return Json::nullValue;
 	}
 
-	std::any GetJsonList(const ov::String &base_path, const ov::String &file_name, const Json::Value &json, const ov::String &name, OmitRule omit_rule, Json::Value *original_value)
+	std::any GetJsonList(const ov::String &current_path, const ov::String &file_name, const Json::Value &json, const ov::String &name, OmitRule omit_rule, Json::Value *original_value)
 	{
 		if (json.isNull())
 		{
@@ -447,7 +488,7 @@ namespace cfg
 		{
 			if (omit_rule == OmitRule::Omit)
 			{
-				return GetJsonList(base_path, file_name, GetJsonValue(json, name), name, omit_rule, original_value);
+				return GetJsonList(current_path, file_name, GetJsonValue(json, name), name, omit_rule, original_value);
 			}
 			else
 			{
@@ -471,7 +512,7 @@ namespace cfg
 		{
 			for (auto &json_child : json)
 			{
-				data_sources.emplace_back(base_path, file_name, name, json_child);
+				data_sources.emplace_back(current_path, file_name, name, json_child);
 
 				if (original_value != nullptr)
 				{
@@ -481,7 +522,7 @@ namespace cfg
 		}
 		else
 		{
-			data_sources.emplace_back(base_path, file_name, name, child_value);
+			data_sources.emplace_back(current_path, file_name, name, child_value);
 
 			if (original_value != nullptr)
 			{
@@ -503,7 +544,7 @@ namespace cfg
 			case ValueType::String: {
 				auto &json = is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
-				return json.isNull() ? std::any() : ov::Converter::ToString(Preprocess(_base_path, ov::Converter::ToString(json), resolve_path));
+				return json.isNull() ? std::any() : ov::Converter::ToString(Preprocess(_current_path, ov::Converter::ToString(json), resolve_path));
 			}
 
 			case ValueType::Integer: {
@@ -533,25 +574,25 @@ namespace cfg
 			case ValueType::Attribute: {
 				auto attribute = GetJsonAttribute(_json, name);
 				*original_value = attribute;
-				return attribute.empty() ? std::any() : Preprocess(_base_path, ov::Converter::ToString(attribute), resolve_path);
+				return attribute.empty() ? std::any() : Preprocess(_current_path, ov::Converter::ToString(attribute), resolve_path);
 			}
 
 			case ValueType::Text: {
 				auto &json = is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
-				return json.isNull() ? std::any() : Preprocess(_base_path, ov::Converter::ToString(json), resolve_path);
+				return json.isNull() ? std::any() : Preprocess(_current_path, ov::Converter::ToString(json), resolve_path);
 			}
 
 			case ValueType::Item: {
 				auto &json = is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
-				return json.isNull() ? std::any() : DataSource(_base_path, _file_name, name, json);
+				return json.isNull() ? std::any() : DataSource(_current_path, _file_name, name, json);
 			}
 
 			case ValueType::List: {
 				if (_json.isNull() == false)
 				{
-					return GetJsonList(_base_path, _file_name, _json, name, omit_rule, original_value);
+					return GetJsonList(_current_path, _file_name, _json, name, omit_rule, original_value);
 				}
 
 				return {};
