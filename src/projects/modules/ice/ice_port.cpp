@@ -568,7 +568,7 @@ void IcePort::OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &rem
 
 	if (ice_port_info == nullptr)
 	{
-		logtd("Could not find client information. Dropping...");
+		logtw("Could not find client(%s) information. Dropping...", address.ToString(false).CStr());
 		return;
 	}
 	
@@ -766,7 +766,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 
 		if(ice_port_info->state == IcePortConnectionState::New)
 		{
-			logti("Add the client to the port list: %s", address.ToString(false).CStr());
+			logti("Add the client to the port list: %s / %s", address.ToString(false).CStr(), gate_info.ToString().CStr());
 		}
 		else
 		{
@@ -901,7 +901,7 @@ bool IcePort::ProcessStunBindingResponse(const std::shared_ptr<ov::Socket> &remo
 		auto item = _binding_request_table.find(transaction_id_key);
 		if(item == _binding_request_table.end())
 		{
-			logtw("Could not find binding request info : transaction id(%s)", transaction_id_key.CStr());
+			logtw("Could not find binding request info : address(%s) transaction id(%s)", address.ToString(false).CStr(), transaction_id_key.CStr());
 			return false;
 		}
 
