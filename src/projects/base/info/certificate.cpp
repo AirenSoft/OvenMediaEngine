@@ -14,15 +14,47 @@ namespace info
 {
 	std::shared_ptr<Certificate> Certificate::CreateCertificate(const ov::String &certificate_name, const std::vector<ov::String> &host_name_list, const cfg::cmn::Tls &tls)
 	{
+		if (tls.IsParsed() == false)
+		{
+			// TLS is disabled
+			return nullptr;
+		}
+
 		auto certificate = std::make_shared<Certificate>();
 
 		auto error = certificate->PrepareCertificate(certificate_name, host_name_list, tls);
 
-		if (error != nullptr)
+		ov::String cert_path = tls.GetCertPath();
+		ov::String key_path = tls.GetKeyPath();
+		ov::String chain_cert_path = tls.GetChainCertPath();
+
+		ov::String chain_description = chain_cert_path.IsEmpty() ? "N/A" : ov::String::FormatString("Chain cert file path: %s", chain_cert_path.CStr());
+
+		if (error == nullptr)
 		{
-			logte("Could not prepare certificate for application %s: %s",
-				  certificate_name.CStr(),
-				  error->ToString().CStr());
+			logti(
+				"A certificate has been created for VirtualHost [%s]:\n"
+				"\tCert file path: %s\n"
+				"\tChain cert file path: %s\n"
+				"\tPrivate key file path: %s",
+				certificate_name.CStr(),
+				cert_path.CStr(),
+				chain_cert_path.CStr(),
+				key_path.CStr());
+		}
+		else
+		{
+			logte(
+				"Failed to create a certificate for VirtualHost [%s]:\n"
+				"\tReason: %s\n"
+				"\tCert file path: %s\n"
+				"\tChain cert file path: %s\n"
+				"\tPrivate key file path: %s",
+				certificate_name.CStr(),
+				error->GetMessage().CStr(),
+				cert_path.CStr(),
+				chain_cert_path.CStr(),
+				key_path.CStr());
 
 			return nullptr;
 		}
@@ -32,12 +64,6 @@ namespace info
 
 	std::shared_ptr<ov::Error> Certificate::PrepareCertificate(const ov::String &certificate_name, const std::vector<ov::String> &host_name_list, const cfg::cmn::Tls &tls)
 	{
-		if (tls.IsParsed() == false)
-		{
-			// TLS is disabled
-			return nullptr;
-		}
-
 		_certificate_name = certificate_name;
 
 		_host_name_list = host_name_list;
@@ -58,24 +84,12 @@ namespace info
 
 		_certificate = std::make_shared<::Certificate>();
 
-		logti(
-			"Trying to create a certificate using\n"
-			"\tCert file path: %s\n"
-			"%s%s%s"
-			"\tPrivate key file path: %s",
-			cert_path.CStr(),
-			chain_cert_path.IsEmpty() ? "" : "\tChain cert file path: ",
-			chain_cert_path.IsEmpty() ? "" : chain_cert_path.CStr(),
-			chain_cert_path.IsEmpty() ? "" : "\n",
-			key_path.CStr());
-
 		auto error = _certificate->GenerateFromPem(cert_path, key_path);
 
 		if (error != nullptr)
 		{
-			logte("Could not create a certificate from files: %s", error->ToString().CStr());
 			_certificate = nullptr;
-			return error;
+			return ov::Error::CreateError(OV_LOG_TAG, "Could not create a certificate from file - %s", error->ToString().CStr());
 		}
 
 		if (chain_cert_path.IsEmpty())
@@ -90,9 +104,8 @@ namespace info
 
 		if (error != nullptr)
 		{
-			logte("Could not create a chain certificate from file: %s", error->ToString().CStr());
 			_chain_certificate = nullptr;
-			return error;
+			return ov::Error::CreateError(OV_LOG_TAG, "Could not create a chain certificate from file - %s", error->ToString().CStr());
 		}
 
 		return nullptr;

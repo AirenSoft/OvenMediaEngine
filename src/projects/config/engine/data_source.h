@@ -21,31 +21,10 @@ namespace cfg
 	class DataSource
 	{
 	public:
-		DataSource(const ov::String &base_path, const ov::String &file_name, const std::shared_ptr<pugi::xml_document> &document, const pugi::xml_node &node)
-			: _type(DataType::Xml),
-			  _document(document),
-			  _node(node),
-			  _base_path(base_path),
-			  _file_name(file_name)
-		{
-		}
-
-		DataSource(const ov::String &base_path, const ov::String &file_name, const ov::String json_name, const Json::Value &json)
-			: _type(DataType::Json),
-			  _json_name(json_name),
-			  _json(json),
-			  _base_path(base_path),
-			  _file_name(file_name)
-		{
-		}
-
+		DataSource(const ov::String &current_path, const ov::String &file_name, const std::shared_ptr<pugi::xml_document> &document, const pugi::xml_node &node);
+		DataSource(const ov::String &current_path, const ov::String &file_name, const ov::String json_name, const Json::Value &json);
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		DataSource(DataType type, const ov::String &base_path, const ov::String &file_name, const ItemName &root_name)
-			: _type(type),
-			  _base_path(base_path)
-		{
-			LoadFromFile(file_name, root_name);
-		}
+		DataSource(DataType type, const ov::String &current_path, const ov::String &file_name, const ItemName &root_name);
 
 		DataType GetType() const
 		{
@@ -83,14 +62,14 @@ namespace cfg
 		// Create a data source from this context
 		DataSource NewDataSource(const ov::String &file_name, const ItemName &root_name) const
 		{
-			DataSource new_data_source(_type, _base_path, file_name, root_name);
+			DataSource new_data_source(_type, _current_path, file_name, root_name);
 
 			return new_data_source;
 		}
 
-		ov::String GetBasePath() const
+		ov::String GetCurrentPath() const
 		{
-			return _base_path;
+			return _current_path;
 		}
 
 		ov::String GetFileName() const
@@ -117,7 +96,7 @@ namespace cfg
 		ov::String _json_name;
 		Json::Value _json;
 
-		ov::String _base_path;
+		ov::String _current_path;
 		ov::String _file_name;
 	};
 }  // namespace cfg
