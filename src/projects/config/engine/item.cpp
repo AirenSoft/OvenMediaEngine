@@ -34,7 +34,7 @@ namespace cfg
 
 		if (include_file.has_value())
 		{
-			auto base_path = data_source.GetBasePath();
+			auto current_path = data_source.GetCurrentPath();
 
 			// Load from the include file
 			ov::String include_file_path = TryCast<ov::String>(include_file);
@@ -42,11 +42,11 @@ namespace cfg
 			logtd("Include file found: %s", include_file_path.CStr());
 
 			std::vector<ov::String> file_list;
-			auto path_error = ov::PathManager::GetFileList(base_path, include_file_path, &file_list);
+			auto path_error = ov::PathManager::GetFileList(current_path, include_file_path, &file_list);
 
 			if (path_error != nullptr)
 			{
-				throw CreateConfigError("Could not obtain file list: base path: %s, include pattern: %s (%s)", base_path.CStr(), include_file_path.CStr(), path_error->ToString().CStr());
+				throw CreateConfigError("Could not obtain file list: current path: %s, include pattern: %s (%s)", current_path.CStr(), include_file_path.CStr(), path_error->ToString().CStr());
 			}
 
 			if (pattern != nullptr)
@@ -339,17 +339,17 @@ namespace cfg
 		}
 	}
 
-	void Item::FromDataSource(ov::String path, const ItemName &name, const DataSource &data_source)
+	void Item::FromDataSource(ov::String item_path, const ItemName &name, const DataSource &data_source)
 	{
-		logtd("[%s] Validating data source for: %s", path.CStr(), name.ToString().CStr());
-		ValidateOmitRules(path);
+		logtd("[%s] Validating data source for: %s", item_path.CStr(), name.ToString().CStr());
+		ValidateOmitRules(item_path);
 
 		RebuildListIfNeeded();
-		data_source.CheckUnknownItems(data_source.GetFileName(), path, _children_for_xml, _children_for_json);
+		data_source.CheckUnknownItems(data_source.GetFileName(), item_path, _children_for_xml, _children_for_json);
 
 		_item_name = name;
 
-		FromDataSourceInternal(path, data_source);
+		FromDataSourceInternal(item_path, data_source);
 	}
 
 	bool Item::IsParsed(const void *target) const
@@ -367,15 +367,15 @@ namespace cfg
 		throw CreateConfigError("Could not find target: %p", target);
 	}
 
-	void Item::ValidateOmitRule(const ov::String &path, const ov::String &name) const
+	void Item::ValidateOmitRule(const ov::String &item_path, const ov::String &name) const
 	{
 		if (_item_name.omit_rule == OmitRule::Omit)
 		{
 			if (_children.size() > 1)
 			{
-				OV_ASSERT(false, "\"%s\" item cannot be omitted because it has multiple children", path.CStr());
+				OV_ASSERT(false, "\"%s\" item cannot be omitted because it has multiple children", item_path.CStr());
 
-				throw CreateConfigError("[%s] This item cannot be omitted because it has multiple children", path.CStr());
+				throw CreateConfigError("[%s] This item cannot be omitted because it has multiple children", item_path.CStr());
 			}
 		}
 		else
@@ -401,11 +401,11 @@ namespace cfg
 					try
 					{
 						auto child_item = TryCast<Item *>(child->GetTarget());
-						child_item->ValidateOmitRule(path, child->GetName().ToString());
+						child_item->ValidateOmitRule(item_path, child->GetName().ToString());
 					}
 					catch (const CastException &cast_exception)
 					{
-						throw CreateConfigError("[%s.%s] Could not cast %s to %s", path, child->GetName().ToString(), cast_exception.from.CStr(), cast_exception.to.CStr());
+						throw CreateConfigError("[%s.%s] Could not cast %s to %s", item_path, child->GetName().ToString(), cast_exception.from.CStr(), cast_exception.to.CStr());
 					}
 
 					break;
@@ -422,7 +422,7 @@ namespace cfg
 					}
 					catch (const CastException &cast_exception)
 					{
-						throw CreateConfigError("[%s.%s] Could not cast %s to %s", path.CStr(), child_name.CStr(), cast_exception.from.CStr(), cast_exception.to.CStr());
+						throw CreateConfigError("[%s.%s] Could not cast %s to %s", item_path.CStr(), child_name.CStr(), cast_exception.from.CStr(), cast_exception.to.CStr());
 					}
 
 					auto list_value_type = list_interface->GetValueType();
@@ -440,7 +440,7 @@ namespace cfg
 							break;
 
 						case ValueType::Item: {
-							list_interface->ValidateOmitRule(path);
+							list_interface->ValidateOmitRule(item_path);
 							break;
 						}
 
@@ -456,11 +456,11 @@ namespace cfg
 		}
 	}
 
-	void Item::ValidateOmitRules(const ov::String &path) const
+	void Item::ValidateOmitRules(const ov::String &item_path) const
 	{
 		RebuildListIfNeeded();
 
-		ValidateOmitRule(path, _item_name.GetName(cfg::DataType::Json));
+		ValidateOmitRule(item_path, _item_name.GetName(cfg::DataType::Json));
 	}
 
 	ov::String Item::ToString(int indent_count) const
@@ -751,12 +751,12 @@ namespace cfg
 		}
 	}
 
-	bool Item::SetValue(const std::shared_ptr<const Child> &child, ValueType type, std::any &child_target, const ov::String &path, const ItemName &child_name, const ov::String &name, const std::any &value)
+	bool Item::SetValue(const std::shared_ptr<const Child> &child, ValueType type, std::any &child_target, const ov::String &item_path, const ItemName &child_name, const ov::String &name, const std::any &value)
 	{
 		ov::String child_path = ov::String::FormatString(
 			"%s%s%s",
-			path.CStr(),
-			path.IsEmpty() ? "" : ".",
+			item_path.CStr(),
+			item_path.IsEmpty() ? "" : ".",
 			name.CStr());
 
 		if (value.has_value() == false)
@@ -786,13 +786,13 @@ namespace cfg
 			{
 				case ValueType::Unknown:
 					logtd("[%s] Unknown type: %s",
-						  path.CStr(),
+						  item_path.CStr(),
 						  child_name.ToString().CStr());
 					break;
 
 				case ValueType::String:
 					logtd("[%s] Trying to cast %s for %s",
-						  path.CStr(),
+						  item_path.CStr(),
 						  ov::Demangle(value.type().name()).CStr(),
 						  child_name.ToString().CStr());
 					*(std::any_cast<ov::String *>(child_target)) = TryCast<ov::String, ov::String, const char *>(value);
@@ -800,7 +800,7 @@ namespace cfg
 
 				case ValueType::Integer:
 					logtd("[%s] Trying to cast %s for %s",
-						  path.CStr(),
+						  item_path.CStr(),
 						  ov::Demangle(value.type().name()).CStr(),
 						  child_name.ToString().CStr());
 					*(std::any_cast<int *>(child_target)) = TryCast<int, int, long, int64_t>(value);
@@ -808,7 +808,7 @@ namespace cfg
 
 				case ValueType::Long:
 					logtd("[%s] Trying to cast %s for %s",
-						  path.CStr(),
+						  item_path.CStr(),
 						  ov::Demangle(value.type().name()).CStr(),
 						  child_name.ToString().CStr());
 					*(std::any_cast<int64_t *>(child_target)) = TryCast<int, int64_t, long, int>(value);
@@ -816,7 +816,7 @@ namespace cfg
 
 				case ValueType::Boolean:
 					logtd("[%s] Trying to cast %s for %s",
-						  path.CStr(),
+						  item_path.CStr(),
 						  ov::Demangle(value.type().name()).CStr(),
 						  child_name.ToString().CStr());
 					*(std::any_cast<bool *>(child_target)) = TryCast<bool, bool, int>(value);
@@ -824,7 +824,7 @@ namespace cfg
 
 				case ValueType::Double:
 					logtd("[%s] Trying to cast %s for %s",
-						  path.CStr(),
+						  item_path.CStr(),
 						  ov::Demangle(value.type().name()).CStr(),
 						  child_name.ToString().CStr());
 					*(std::any_cast<double *>(child_target)) = TryCast<double, double, float>(value);
@@ -832,7 +832,7 @@ namespace cfg
 
 				case ValueType::Attribute:
 					logtd("[%s] Trying to cast %s for %s (attribute)",
-						  path.CStr(),
+						  item_path.CStr(),
 						  ov::Demangle(value.type().name()).CStr(),
 						  child_name.ToString().CStr());
 					std::any_cast<Attribute *>(child_target)->_value = TryCast<ov::String, ov::String, const char *>(value);
@@ -840,7 +840,7 @@ namespace cfg
 
 				case ValueType::Text:
 					logtd("[%s] Trying to cast %s for %s(text)",
-						  path.CStr(),
+						  item_path.CStr(),
 						  ov::Demangle(value.type().name()).CStr(),
 						  child_name.ToString().CStr());
 					std::any_cast<Text *>(child_target)->FromString(TryCast<ov::String, ov::String, const char *>(value));
@@ -848,7 +848,7 @@ namespace cfg
 
 				case ValueType::Item:
 					logtd("[%s] Trying to cast %s for %s",
-						  path.CStr(),
+						  item_path.CStr(),
 						  ov::Demangle(value.type().name()).CStr(),
 						  child_name.ToString().CStr());
 					std::any_cast<Item *>(child_target)->FromDataSource(child_path, child_name, TryCast<const cfg::DataSource &>(value));
@@ -856,7 +856,7 @@ namespace cfg
 
 				case ValueType::List: {
 					logtd("[%s] Trying to cast %s for %s",
-						  path.CStr(),
+						  item_path.CStr(),
 						  ov::Demangle(value.type().name()).CStr(),
 						  child_name.ToString().CStr());
 
@@ -966,7 +966,7 @@ namespace cfg
 						auto list_child = std::make_shared<ListChild>(new_name, new_item, original_value);
 						list_target->AddListChild(list_child);
 
-						SetValue(child, list_target->GetValueType(), new_item, path, child_name, name, list_value);
+						SetValue(child, list_target->GetValueType(), new_item, item_path, child_name, name, list_value);
 
 						index++;
 					}
@@ -979,7 +979,7 @@ namespace cfg
 		{
 			throw CreateConfigError(
 				"[%s] Could not convert value: type: %s, expected: %s, but: %s",
-				path.CStr(),
+				item_path.CStr(),
 				StringFromValueType(child->GetType()),
 				cast_exception.to.CStr(),
 				cast_exception.from.CStr());
@@ -994,7 +994,7 @@ namespace cfg
 		return true;
 	}
 
-	void Item::FromDataSourceInternal(ov::String path, const DataSource &data_source)
+	void Item::FromDataSourceInternal(ov::String item_path, const DataSource &data_source)
 	{
 		if (_need_to_update_list)
 		{
@@ -1007,29 +1007,29 @@ namespace cfg
 
 		if (GetIncludeFileList(data_source, &pattern, &include_files))
 		{
-			auto base_path = data_source.GetBasePath();
+			auto current_path = data_source.GetCurrentPath();
 
 			if (include_files.empty())
 			{
 				// "include" attribute is present, but there is no file to include
 				throw CreateConfigError(
-					"There is no file to include for path: %s, base path: %s, include pattern: %s",
-					path.CStr(),
-					base_path.CStr(), pattern.CStr());
+					"There is no file to include for path: %s, current path: %s, include pattern: %s",
+					item_path.CStr(),
+					current_path.CStr(), pattern.CStr());
 			}
 			else
 			{
 				if (include_files.size() > 1)
 				{
 					throw CreateConfigError(
-						"Too many files found for an Item: %s, base path: %s, include pattern: %s (%zu files found)",
-						path.CStr(),
-						base_path.CStr(), pattern.CStr(), include_files.size());
+						"Too many files found for an Item: %s, current path: %s, include pattern: %s (%zu files found)",
+						item_path.CStr(),
+						current_path.CStr(), pattern.CStr(), include_files.size());
 				}
 
 				auto &include_file = include_files[0];
 				auto new_data_source = data_source.NewDataSource(include_file, _item_name);
-				FromDataSourceInternal(path, new_data_source);
+				FromDataSourceInternal(item_path, new_data_source);
 			}
 
 			return;
@@ -1048,7 +1048,7 @@ namespace cfg
 			auto name = data_source.ResolveName(child_name);
 			auto &child_target = child->GetTarget();
 
-			child->_is_parsed = SetValue(child, child->GetType(), child_target, path, child_name, name, value);
+			child->_is_parsed = SetValue(child, child->GetType(), child_target, item_path, child_name, name, value);
 			child->SetOriginalValue(original_value);
 		}
 

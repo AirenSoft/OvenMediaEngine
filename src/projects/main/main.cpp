@@ -18,6 +18,7 @@
 #include <orchestrator/orchestrator.h>
 #include <providers/providers.h>
 #include <publishers/publishers.h>
+#include <sys/utsname.h>
 #include <transcoder/transcoder.h>
 #include <web_console/web_console.h>
 
@@ -31,6 +32,7 @@
 extern bool g_is_terminated;
 
 static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_option);
+static void CheckKernelVersion();
 static bool Uninitialize();
 
 int main(int argc, char *argv[])
@@ -45,7 +47,6 @@ int main(int argc, char *argv[])
 				return 0;
 
 			case ov::Daemon::State::CHILD_SUCCESS:
-				// continue;
 				break;
 
 			case ov::Daemon::State::PIPE_FAIL:
@@ -61,6 +62,7 @@ int main(int argc, char *argv[])
 	}
 
 	PrintBanner();
+	CheckKernelVersion();
 
 	auto server_config = cfg::ConfigManager::GetInstance()->GetServer();
 	auto orchestrator = ocst::Orchestrator::GetInstance();
@@ -327,6 +329,37 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 	}
 
 	return ov::Daemon::State::CHILD_FAIL;
+}
+
+static void CheckKernelVersion()
+{
+	utsname name{};
+
+	if (::uname(&name) != 0)
+	{
+		logte("Could not obtain utsname using uname(): %s", ov::Error::CreateErrorFromErrno()->ToString().CStr());
+		return;
+	}
+
+	ov::String release = name.release;
+	auto tokens = release.Split(".");
+
+	if (tokens.size() > 1)
+	{
+		auto major = ov::Converter::ToInt32(tokens[0]);
+		auto minor = ov::Converter::ToInt32(tokens[1]);
+
+		if ((major == 5) &&
+			((minor >= 3) && (minor <= 6)))
+		{
+			logtc("Current kernel version: %s", release.CStr());
+			logtc("Linux kernel version 5.3 through 5.6 have a critical bug. Please consider using a different version. (https://bugzilla.kernel.org/show_bug.cgi?id=205933)");
+		}
+	}
+	else
+	{
+		logte("Could not parse kernel version: %s", release.CStr());
+	}
 }
 
 static bool Uninitialize()
