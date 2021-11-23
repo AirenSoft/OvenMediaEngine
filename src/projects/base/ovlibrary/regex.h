@@ -110,6 +110,7 @@ namespace ov
 		};
 
 		// TODO(dimiden): Implement a feature to support multiple options
+		Regex();
 		Regex(const char *pattern, Option options);
 		Regex(const char *pattern);
 		Regex(const Regex &regex);
@@ -124,6 +125,8 @@ namespace ov
 
 		bool Test(const char *subject);
 		MatchResult Matches(const char *subject);
+
+		Regex &operator=(const Regex &regex);
 
 		void Release();
 
