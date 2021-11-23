@@ -326,7 +326,7 @@ bool RtmpImportChunk::CalculateForType3Header(const std::shared_ptr<RtmpChunkHea
 			return false;
 	}
 
-	int type_3_count = (chunk_header->payload_size - 1) / _chunk_size;
+	int type_3_count = (chunk_header->payload_size > 0) ? ((chunk_header->payload_size - 1) / _chunk_size) : 0;
 	int expected_type_3_size = chunk_header->basic_header_size + (chunk_header->is_extended ? sizeof(RtmpChunkHeader::extended_timestamp) : 0);
 	chunk_header->expected_payload_size = chunk_header->payload_size + (type_3_count * expected_type_3_size);
 
