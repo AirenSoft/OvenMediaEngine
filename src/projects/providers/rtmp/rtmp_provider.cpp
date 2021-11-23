@@ -28,9 +28,14 @@ namespace pvd
 	{
 		if (dump_packet)
 		{
-			auto file_name = remote->GetRemoteAddress()->ToString().Replace(":", "_");
+			auto remote_address = remote->GetRemoteAddress();
 
-			ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/rtmp"), file_name), data, true);
+			if (remote_address != nullptr)
+			{
+				auto file_name = remote_address->ToString().Replace(":", "_");
+
+				ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/rtmp"), file_name), data, 0L, true);
+			}
 		}
 	}
 #endif	// DEBUG
