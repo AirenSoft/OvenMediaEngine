@@ -28,9 +28,7 @@ namespace pvd
 	{
 		if (dump_packet)
 		{
-			auto file_name = ov::String::FormatString("%s_%s",
-													  ov::Time::MakeUtcSecond().CStr(),
-													  remote->GetRemoteAddress()->ToString().Replace(":", "_").CStr());
+			auto file_name = remote->GetRemoteAddress()->ToString().Replace(":", "_");
 
 			ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/rtmp"), file_name), data, true);
 		}
