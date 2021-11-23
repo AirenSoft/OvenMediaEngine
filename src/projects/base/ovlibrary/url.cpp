@@ -14,6 +14,35 @@
 
 namespace ov
 {
+	static bool g_url_parse_regex_initialized = false;
+	static ov::Regex g_url_parse_regex;
+	static std::mutex g_url_parse_regex_mutex;
+
+	Url::Url()
+	{
+		if (g_url_parse_regex_initialized == false)
+		{
+			std::lock_guard lock_guard(g_url_parse_regex_mutex);
+
+			// DCL
+			if (g_url_parse_regex_initialized == false)
+			{
+				g_url_parse_regex = ov::Regex(
+					// <scheme>://[id:password@]
+					R"((?<scheme>.*)://((?<id>.+):(?<password>.+)@)?)"
+					// <host>[:<port>]
+					R"((?<host>[^:/]+)(:(?<port>[0-9]+))?)"
+					// [/<path/to/resource>]
+					R"((?<path>/([^\?]+)?)?)"
+					// [?<query string>]
+					R"((\?(?<qs>[^\?]+)?(.+)?)?)");
+				g_url_parse_regex.Compile();
+
+				g_url_parse_regex_initialized = true;
+			}
+		}
+	}
+
 	ov::String Url::Encode(const ov::String &value)
 	{
 		static char hex_table[] = "0123456789abcdef";
@@ -56,7 +85,7 @@ namespace ov
 
 	ov::String Url::Decode(const ov::String &value)
 	{
-		if(value.IsEmpty())
+		if (value.IsEmpty())
 		{
 			return "";
 		}
@@ -106,40 +135,27 @@ namespace ov
 	std::shared_ptr<Url> Url::Parse(const ov::String &url)
 	{
 		auto object = std::make_shared<Url>();
-		std::smatch matches;
 		std::string url_string = url.CStr();
 
 		object->_source = url;
 
-		// <scheme>://[id:password@]<host>[:<port>][/<path/to/resource>][?<query string>]
-		// Group 1: <scheme>
-		// Group 2: <id:password@>
-		// Group 3: <id>
-		// Group 4: <password> 
-		// Group 5: <host>
-		// Group 6: :<port>
-		// Group 7: <port>
-		// Group 8: /<path>
-		// Group 9: <path>
-		// Group 10: ?<query string>
-		// Group 11: <query string>
-		if (std::regex_search(url_string, matches, std::regex(R"((.*)://((.+):(.+)@)?([^:/]+)(:([0-9]+))?(/([^\?]+)?)?(\?([^\?]+)?(.+)?)?)")) == false)
+		auto matches = g_url_parse_regex.Matches(url);
+
+		if (matches.GetError() != nullptr)
 		{
 			return nullptr;
 		}
-		// ((.*)://((.+):(.+)@)?([^:/]+)(:([0-9]+))?(/([^\?]+)?)?(\?([^\?]+)?(.+)?)?)
 
-		object->_scheme = std::string(matches[1]).c_str();
-		object->_id = std::string(matches[3]).c_str();
-		object->_password = std::string(matches[4]).c_str();
-		object->_host = std::string(matches[5]).c_str();
-		object->_port = ov::Converter::ToUInt32(std::string(matches[7]).c_str());
-		object->_path = std::string(matches[8]).c_str();
-		object->_has_query_string = matches[10].matched;
-		if(object->_has_query_string)
-		{
-			object->_query_string = std::string(matches[11]).c_str();
-		}
+		auto group_list = matches.GetNamedGroupList();
+
+		object->_scheme = std::string(group_list["scheme"]).c_str();
+		object->_id = std::string(group_list["id"]).c_str();
+		object->_password = std::string(group_list["password"]).c_str();
+		object->_host = std::string(group_list["host"]).c_str();
+		object->_port = ov::Converter::ToUInt32(std::string(group_list["port"]).c_str());
+		object->_path = std::string(group_list["path"]).c_str();
+		object->_query_string = std::string(group_list["qs"]).c_str();
+		object->_has_query_string = (object->_query_string.IsEmpty() == false);
 
 		// split <path> to /<app>/<stream>/<file> (4 tokens)
 		auto tokens = object->_path.Split("/");
@@ -167,7 +183,7 @@ namespace ov
 
 	bool Url::PushBackQueryKey(const ov::String &key)
 	{
-		if(_has_query_string == true)
+		if (_has_query_string == true)
 		{
 			_query_string.Append("&");
 		}
@@ -181,7 +197,7 @@ namespace ov
 
 	bool Url::PushBackQueryKey(const ov::String &key, const ov::String &value)
 	{
-		if(_has_query_string == true)
+		if (_has_query_string == true)
 		{
 			_query_string.Append("&");
 		}
@@ -213,16 +229,16 @@ namespace ov
 				ov::String key;
 				if (tokens.size() == 2)
 				{
-					key = tokens[0];	
+					key = tokens[0];
 				}
 				else
 				{
 					key = query;
 				}
 
-				if(key.UpperCaseString() != remove_key.UpperCaseString())
+				if (key.UpperCaseString() != remove_key.UpperCaseString())
 				{
-					if(first_query == true)
+					if (first_query == true)
 					{
 						first_query = false;
 					}
@@ -230,7 +246,7 @@ namespace ov
 					{
 						new_query_string.Append("&");
 					}
-					
+
 					new_query_string.Append(query);
 				}
 			}

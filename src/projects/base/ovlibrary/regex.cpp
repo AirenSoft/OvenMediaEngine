@@ -133,6 +133,11 @@ namespace ov
 		return item->second;
 	}
 
+	Regex::Regex()
+		: Regex("")
+	{
+	}
+
 	Regex::Regex(const char *pattern, Option options)
 		: _pattern(pattern),
 		  _options(options)
@@ -146,9 +151,7 @@ namespace ov
 
 	Regex::Regex(const Regex &regex)
 	{
-		_pattern = regex._pattern;
-		_options = regex._options;
-		_code = ::pcre2_code_copy_with_tables(static_cast<pcre2_code_8 *>(regex._code));
+		operator=(regex);
 	}
 
 	Regex::Regex(Regex &&regex)
@@ -299,6 +302,15 @@ namespace ov
 		}
 
 		return {error};
+	}
+
+	Regex &Regex::operator=(const Regex &regex)
+	{
+		_pattern = regex._pattern;
+		_options = regex._options;
+		_code = ::pcre2_code_copy_with_tables(static_cast<pcre2_code_8 *>(regex._code));
+
+		return *this;
 	}
 
 	void Regex::Release()
