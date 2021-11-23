@@ -20,8 +20,32 @@
 
 namespace pvd
 {
+#if DEBUG
+	static bool dump_packet = false;
+	static void DumpDataToFile(const std::shared_ptr<ov::Socket> &remote,
+							   const ov::SocketAddress &address,
+							   const std::shared_ptr<const ov::Data> &data)
+	{
+		if (dump_packet)
+		{
+			auto remote_address = remote->GetRemoteAddress();
+
+			if (remote_address != nullptr)
+			{
+				auto file_name = remote_address->ToString().Replace(":", "_");
+
+				ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/rtmp"), file_name), data, 0L, true);
+			}
+		}
+	}
+#endif	// DEBUG
+
 	std::shared_ptr<RtmpProvider> RtmpProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 	{
+#if DEBUG
+		dump_packet = ov::Converter::ToBool(std::getenv("OME_DUMP_RTMP"));
+#endif	// DEBUG
+
 		auto provider = std::make_shared<RtmpProvider>(server_config, router);
 		if (!provider->Start())
 		{
@@ -123,6 +147,10 @@ namespace pvd
 						const ov::SocketAddress &address,
 						const std::shared_ptr<const ov::Data> &data)
 	{
+#if DEBUG
+		DumpDataToFile(remote, address, data);
+#endif	// DEBUG
+
 		PushProvider::OnDataReceived(remote->GetNativeHandle(), data);
 	}
 
