@@ -482,7 +482,13 @@ namespace ov
 	ov::String SocketAddress::ToString(bool ignore_privacy_protect_config) const noexcept
 	{
 		auto server_config = cfg::ConfigManager::GetInstance()->GetServer();
-		bool protect_privacy = (ignore_privacy_protect_config == false) && (server_config->IsPrivaryProtectionOn() == true);
+
+		bool protect_privacy = false;
+
+		if (server_config != nullptr)
+		{
+			protect_privacy = (ignore_privacy_protect_config == false) && (server_config->IsPrivaryProtectionOn() == true);
+		}
 
 		ov::String description;
 

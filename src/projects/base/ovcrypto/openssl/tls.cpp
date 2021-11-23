@@ -491,15 +491,19 @@ namespace ov
 
 			switch (error)
 			{
+				case SSL_ERROR_ZERO_RETURN:
+					// Read successfully, and the connection was closed
+					[[fallthrough]];
+
 				case SSL_ERROR_NONE:
 					// Read successfully
 					if (data->Append(buf, read_bytes) == false)
 					{
 						OV_ASSERT2(false);
 						data = nullptr;
-						stop = true;
 					}
 
+					stop = true;
 					break;
 
 				case SSL_ERROR_WANT_READ:
@@ -509,7 +513,7 @@ namespace ov
 
 				default:
 					// Another error occurred
-					OV_ASSERT2(read_bytes == 0);
+					OV_ASSERT(read_bytes == 0, "read_bytes must be 0, but %zu (code: %d)", read_bytes, error);
 					data = nullptr;
 					stop = true;
 					break;
