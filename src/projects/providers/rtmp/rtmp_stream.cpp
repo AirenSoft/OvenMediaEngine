@@ -1138,11 +1138,20 @@ namespace pvd
 	//====================================================================================================
 	bool RtmpStream::ReceiveVideoMessage(const std::shared_ptr<const RtmpMessage> &message)
 	{
+		if(message->header->payload_size == 0)
+		{
+			// Nothing to do
+			logtw("0-byte video message received: stream(%s/%s)",
+				  _vhost_app_name.CStr(),
+				  _stream_name.CStr());
+			return true;
+		}
+
 		// size check
 		if ((message->header->payload_size < RTMP_VIDEO_DATA_MIN_SIZE) ||
 			(message->header->payload_size > RTMP_MAX_PACKET_SIZE))
 		{
-			logte("Size Fail - stream(%s/%s) size(%d)",
+			logte("Invalid payload size: stream(%s/%s) size(%d)",
 				  _vhost_app_name.CStr(), _stream_name.CStr(),
 				  message->header->payload_size);
 			return false;
@@ -1169,7 +1178,7 @@ namespace pvd
 				_stream_message_cache_video_count++;
 				if (_stream_message_cache.size() > MAX_STREAM_MESSAGE_COUNT)
 				{
-					logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
+					logtw("Rtmp input stream init message count over -  stream(%s/%s) size(%d:%d)",
 						  _vhost_app_name.CStr(),
 						  _stream_name.CStr(),
 						  _stream_message_cache.size(),
@@ -1304,11 +1313,20 @@ namespace pvd
 	//====================================================================================================
 	bool RtmpStream::ReceiveAudioMessage(const std::shared_ptr<const RtmpMessage> &message)
 	{
+		if(message->header->payload_size == 0)
+		{
+			// Nothing to do
+			logtw("0-byte audio message received: stream(%s/%s)",
+				  _vhost_app_name.CStr(),
+				  _stream_name.CStr());
+			return true;
+		}
+
 		// size check
 		if ((message->header->payload_size < RTMP_AAC_AUDIO_DATA_MIN_SIZE) ||
 			(message->header->payload_size > RTMP_MAX_PACKET_SIZE))
 		{
-			logte("Size Fail - stream(%s/%s) size(%d)",
+			logte("Invalid payload size: stream(%s/%s) size(%d)",
 				  _vhost_app_name.CStr(),
 				  _stream_name.CStr(),
 				  message->header->payload_size);
@@ -1332,10 +1350,10 @@ namespace pvd
 			{
 				// Store stream data until stream is published
 				_stream_message_cache.push_back(message);
-				_stream_message_cache_video_count++;
+				_stream_message_cache_audio_count++;
 				if (_stream_message_cache.size() > MAX_STREAM_MESSAGE_COUNT)
 				{
-					logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
+					logtw("Rtmp input stream init message count over -  stream(%s/%s) size(%d:%d)",
 						  _vhost_app_name.CStr(),
 						  _stream_name.CStr(),
 						  _stream_message_cache.size(),
