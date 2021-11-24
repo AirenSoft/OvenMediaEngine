@@ -192,6 +192,8 @@ namespace pvd
 			return false;
 		}
 
+		_client_socket->SetSockOpt<int>(IPPROTO_TCP, TCP_NODELAY, 1);
+		_client_socket->SetSockOpt<int>(IPPROTO_TCP, TCP_QUICKACK, 1);
 		_client_socket->MakeBlocking();
 
 		struct timeval tv = {1, 500000}; // 1.5 sec
