@@ -93,6 +93,10 @@ namespace ov
 		switch (GetType())
 		{
 			case SocketType::Tcp:
+				// Disable Nagle's algorithm
+				result &= SetSockOpt<int>(IPPROTO_TCP, TCP_NODELAY, 1);
+				// Quick ACK
+				result &= SetSockOpt<int>(IPPROTO_TCP, TCP_QUICKACK, 1);
 				// Enable TCP keep-alive
 				result &= SetSockOpt<int>(SOL_SOCKET, SO_KEEPALIVE, 1);
 				// Wait XX seconds before starting to determine that the connection is alive
