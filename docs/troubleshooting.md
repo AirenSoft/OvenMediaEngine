@@ -331,6 +331,16 @@ net.ipv4.tcp_slow_start_after_idle = 0
 * hard nofile 1048576
 ```
 
+#### 5-3. Congestion Control: Change to BBR
+
+The mobile environment used by many people uses a **wireless network**. It has a high network speed but, conversely, can cause high packet loss.
+
+Look, **CUBIC**, the Congestion Control set by default in your Linux, adjusts the TCP Window by packet loss, so it is not suitable to provide stable streaming in such an environment.
+
+![Source: iccrg-bbr-congestion-control-02.pdf (Page 18)](.gitbook/assets/BBR\_CUBIC.png)
+
+So our suggestion is to use Google's **BBR**. This setting is even more important if you mainly provide WebRTC services to mobile users who use a wireless network. Change the Congestion Control from CUBIC to BBR on your Linux.
+
 ## Player connection fails
 
 ### **1. Due to the** Mixed Contents
