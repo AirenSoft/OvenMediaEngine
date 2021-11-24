@@ -12,7 +12,7 @@
 
 namespace ov
 {
-	TlsServerData::TlsServerData(Method method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const String &cipher_list)
+	TlsServerData::TlsServerData(Method method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const String &cipher_list, bool is_nonblocking)
 	{
 		TlsCallback callback =
 			{
@@ -42,7 +42,7 @@ namespace ov
 
 		if (error == nullptr)
 		{
-			if (_tls.InitializeServerTls(tls_method, certificate, chain_certificate, cipher_list, callback))
+			if (_tls.InitializeServerTls(tls_method, certificate, chain_certificate, cipher_list, callback, is_nonblocking))
 			{
 				_method = method;
 				_state = State::WaitingForAccept;

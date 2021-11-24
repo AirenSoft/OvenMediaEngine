@@ -120,9 +120,9 @@ namespace ov
 		virtual ~Tls();
 
 		// method: DTLS_server_method(), TLS_server_method()
-		bool InitializeServerTls(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const String &cipher_list, TlsCallback callback);
+		bool InitializeServerTls(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const String &cipher_list, TlsCallback callback, bool is_nonblocking);
 		// method: TLS_client_method()
-		bool InitializeClientTls(const SSL_METHOD *method, TlsCallback callback);
+		bool InitializeClientTls(const SSL_METHOD *method, TlsCallback callback, bool is_nonblocking);
 		bool Uninitialize();
 
 		// @return Returns SSL_ERROR_NONE on success
@@ -204,6 +204,8 @@ namespace ov
 		static int TlsDestroy(BIO *b);
 
 	protected:
+		bool _is_nonblocking = false;
+
 		X509 *_peer_certificate = nullptr;
 		TlsUniquePtr<SSL, void, ::SSL_free> _ssl = nullptr;
 		TlsUniquePtr<SSL_CTX, void, ::SSL_CTX_free> _ssl_ctx = nullptr;
