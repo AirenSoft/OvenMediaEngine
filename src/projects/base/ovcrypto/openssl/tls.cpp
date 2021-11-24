@@ -66,7 +66,7 @@ namespace ov
 		return bio_method;
 	}
 
-	bool Tls::InitializeServerTls(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list, TlsCallback callback)
+	bool Tls::InitializeServerTls(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list, TlsCallback callback, bool is_nonblocking)
 	{
 		bool result = true;
 
@@ -84,10 +84,12 @@ namespace ov
 			_callback = TlsCallback();
 		}
 
+		_is_nonblocking = is_nonblocking;
+
 		return result;
 	}
 
-	bool Tls::InitializeClientTls(const SSL_METHOD *method, TlsCallback callback)
+	bool Tls::InitializeClientTls(const SSL_METHOD *method, TlsCallback callback, bool is_nonblocking)
 	{
 		bool result = true;
 
@@ -104,6 +106,8 @@ namespace ov
 		{
 			_callback = TlsCallback();
 		}
+
+		_is_nonblocking = is_nonblocking;
 
 		return result;
 	}
@@ -501,9 +505,13 @@ namespace ov
 					{
 						OV_ASSERT2(false);
 						data = nullptr;
+						stop = true;
 					}
 
-					stop = true;
+					if (_is_nonblocking == false)
+					{
+						stop = true;
+					}
 					break;
 
 				case SSL_ERROR_WANT_READ:

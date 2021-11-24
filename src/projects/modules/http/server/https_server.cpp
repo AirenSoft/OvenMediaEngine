@@ -52,7 +52,8 @@ namespace http
 				auto tls_data = std::make_shared<ov::TlsServerData>(
 					ov::TlsServerData::Method::Tls,
 					_certificate->GetCertificate(), _certificate->GetChainCertificate(),
-					HTTP_FAST_NOT_VERY_SECURE);
+					HTTP_FAST_NOT_VERY_SECURE,
+					true);
 
 				tls_data->SetWriteCallback([remote](const void *data, size_t length) -> ssize_t {
 					return remote->Send(data, length) ? length : -1L;

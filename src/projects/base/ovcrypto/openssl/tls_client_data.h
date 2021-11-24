@@ -38,7 +38,7 @@ namespace ov
 			Connected,
 		};
 
-		TlsClientData(Method method);
+		TlsClientData(Method method, bool is_nonblocking);
 
 		~TlsClientData();
 

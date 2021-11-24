@@ -268,7 +268,7 @@ namespace http
 
 			if (is_https)
 			{
-				_tls_data = std::make_shared<ov::TlsClientData>(ov::TlsClientData::Method::Tls);
+				_tls_data = std::make_shared<ov::TlsClientData>(ov::TlsClientData::Method::Tls, (_blocking_mode == ov::BlockingMode::NonBlocking));
 
 				if (_tls_data == nullptr)
 				{

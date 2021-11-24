@@ -34,7 +34,7 @@ namespace ov
 			Accepted,
 		};
 
-		TlsServerData(Method method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const String &cipher_list);
+		TlsServerData(Method method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const String &cipher_list, bool is_nonblocking);
 
 		~TlsServerData();
 

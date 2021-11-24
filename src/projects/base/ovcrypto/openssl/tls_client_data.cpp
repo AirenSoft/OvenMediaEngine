@@ -12,7 +12,7 @@
 
 namespace ov
 {
-	TlsClientData::TlsClientData(Method method)
+	TlsClientData::TlsClientData(Method method, bool is_nonblocking)
 	{
 		TlsCallback callback =
 			{
@@ -38,7 +38,7 @@ namespace ov
 
 		if (error == nullptr)
 		{
-			if (_tls.InitializeClientTls(tls_method, callback))
+			if (_tls.InitializeClientTls(tls_method, callback, is_nonblocking))
 			{
 				_method = method;
 				_state = State::WaitingForConnect;
