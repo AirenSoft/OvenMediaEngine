@@ -127,7 +127,7 @@ public:
 
 	bool AddTrack(cmn::MediaType media_type, int32_t track_id, std::shared_ptr<RtmpTrackInfo> trackinfo);
 
-	bool PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacketFlag flag, std::shared_ptr<ov::Data>& data);
+	bool PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacketFlag flag, cmn::BitstreamFormat format, std::shared_ptr<ov::Data>& data);
 
 	static void FFmpegLog(void* ptr, int level, const char* fmt, va_list vl);
 
