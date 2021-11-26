@@ -68,8 +68,11 @@ bool SegmentPublisher::Stop()
 		_worker_thread.join();
 	}
 
-	_stream_server->RemoveObserver(SegmentStreamObserver::GetSharedPtr());
-	_stream_server->Stop();
+	if (_stream_server != nullptr)
+	{
+		_stream_server->RemoveObserver(SegmentStreamObserver::GetSharedPtr());
+		_stream_server->Stop();
+	}
 
 	return Publisher::Stop();
 }
