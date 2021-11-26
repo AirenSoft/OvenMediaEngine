@@ -9,6 +9,7 @@
 #include "./regex.h"
 
 #include "./assert.h"
+#include "./memory_utilities.h"
 
 // This is to set up PCRE2 to treat strings as UTF8
 #define PCRE2_CODE_UNIT_WIDTH 8
@@ -16,55 +17,75 @@
 
 #define GET_CODE() static_cast<pcre2_code *>(_code)
 
-inline PCRE2_SPTR ToPcreStr(const char *c_string)
+static inline PCRE2_SPTR ToPcreStr(const char *c_string)
 {
 	return reinterpret_cast<PCRE2_SPTR>(c_string);
 }
 
-inline const char *FromPcreStr(PCRE2_SPTR pcre_string)
+static inline const char *FromPcreStr(PCRE2_SPTR pcre_string)
 {
 	return reinterpret_cast<const char *>(pcre_string);
 }
 
-inline PCRE2_SIZE ToPcreSize(size_t size)
+static inline PCRE2_SIZE ToPcreSize(const ov::String &string)
+{
+	return static_cast<PCRE2_SIZE>(string.GetLength());
+}
+
+static inline PCRE2_SIZE ToPcreSize(size_t size)
 {
 	return static_cast<PCRE2_SIZE>(size);
 }
 
-inline size_t FromPcreSize(PCRE2_SIZE pcre_size)
+static inline size_t FromPcreSize(PCRE2_SIZE pcre_size)
 {
 	return static_cast<size_t>(pcre_size);
 }
 
+static inline ov::String GetPcreErrorMessage(int error_code)
+{
+	PCRE2_UCHAR buffer[512];
+	::pcre2_get_error_message(error_code, buffer, OV_COUNTOF(buffer));
+
+	return FromPcreStr(buffer);
+}
+
 namespace ov
 {
+	MatchGroup::MatchGroup(const char *base_address, size_t start_offset, size_t end_offset)
+	{
+		if (start_offset <= end_offset)
+		{
+			_base_address = base_address;
+			_start_offset = start_offset;
+			_end_offset = end_offset;
+
+			_length = end_offset - start_offset;
+		}
+		else
+		{
+			// Note in pcre2demo:
+			//    We must guard against patterns such as /(?=.\K)/ that use \K in an assertion
+			//    to set the start of a match later than its end. In this demonstration program,
+			//    we just detect this case and give up.
+		}
+	}
+
 	MatchResult::MatchResult()
 		: MatchResult(Error::CreateError("Regex", "Not initialized"))
 	{
 	}
 
-	static std::vector<std::string_view> CreateMatchGroup(const char *base_address, const pcre2_match_data *match_data, int group_count, const size_t *output_vectors)
+	static std::vector<MatchGroup> CreateMatchGroupList(const char *base_address, const pcre2_match_data *match_data, int group_count, const size_t *output_vectors)
 	{
-		std::vector<std::string_view> result;
+		std::vector<MatchGroup> result;
 
 		for (int i = 0; i < group_count; i++)
 		{
 			auto start_offset = output_vectors[2 * i];
 			auto end_offset = output_vectors[2 * i + 1];
-			auto start = base_address + start_offset;
-			auto length = end_offset - start_offset;
 
-			if (start_offset > end_offset)
-			{
-				// Note in pcre2demo:
-				//    We must guard against patterns such as /(?=.\K)/ that use \K in an assertion
-				//    to set the start of a match later than its end. In this demonstration program,
-				//    we just detect this case and give up.
-				return {};
-			}
-
-			// printf("%d: Value: %.*s\n", i, length, start);
-			result.push_back(std::string_view(start, length));
+			result.emplace_back(base_address, start_offset, end_offset);
 		}
 
 		return result;
@@ -76,9 +97,9 @@ namespace ov
 	}
 
 	// MatchResult with results
-	MatchResult::MatchResult(std::shared_ptr<std::string> subject,
-							 std::vector<std::string_view> group_list,
-							 std::map<std::string, std::string_view> named_group)
+	MatchResult::MatchResult(std::shared_ptr<ov::String> subject,
+							 std::vector<MatchGroup> group_list,
+							 std::unordered_map<ov::String, MatchGroup> named_group)
 		: _subject(std::move(subject)),
 		  _group_list(std::move(group_list)),
 		  _named_group(std::move(named_group))
@@ -86,12 +107,12 @@ namespace ov
 	{
 	}
 
-	const std::shared_ptr<ov::Error> &MatchResult::GetError() const
+	std::shared_ptr<const ov::Error> MatchResult::GetError() const
 	{
 		return _error;
 	}
 
-	const std::string &MatchResult::GetSubject() const
+	const ov::String &MatchResult::GetSubject() const
 	{
 		return *_subject;
 	}
@@ -101,12 +122,17 @@ namespace ov
 		return _group_list.size();
 	}
 
-	std::string_view MatchResult::GetGroupAt(size_t index) const
+	MatchGroup MatchResult::GetGroupAt(size_t index) const
 	{
-		return {};
+		if (index >= _group_list.size())
+		{
+			return {};
+		}
+
+		return _group_list[index];
 	}
 
-	const std::vector<std::string_view> &MatchResult::GetGroupList() const
+	const std::vector<MatchGroup> &MatchResult::GetGroupList() const
 	{
 		return _group_list;
 	}
@@ -116,12 +142,12 @@ namespace ov
 		return _named_group.size();
 	}
 
-	const std::map<std::string, std::string_view> &MatchResult::GetNamedGroupList() const
+	const std::unordered_map<ov::String, MatchGroup> &MatchResult::GetNamedGroupList() const
 	{
 		return _named_group;
 	}
 
-	std::string_view MatchResult::GetNamedGroup(const char *name) const
+	MatchGroup MatchResult::GetNamedGroup(const char *name) const
 	{
 		auto item = _named_group.find(name);
 
@@ -166,7 +192,42 @@ namespace ov
 		Release();
 	}
 
-	const std::string &Regex::GetPattern() const
+	Regex Regex::CompiledRegex(const char *pattern, Option options)
+	{
+		Regex regex(pattern, options);
+		regex.Compile();
+
+		return regex;
+	}
+
+	Regex Regex::CompiledRegex(const char *pattern)
+	{
+		Regex regex(pattern);
+		regex.Compile();
+
+		return regex;
+	}
+
+	ov::String Regex::WildCardRegex(const ov::String &wildcard_string, bool exact_match)
+	{
+		// Escape special characters: '[', '\', '.', '/', '+', '{', '}', '$', '^', '|' to \<char>
+		auto regex = ov::Regex::CompiledRegex(R"(([[\\.\/+{}$^|]))")
+						 // Change <special char> to '.<special char>'
+						 .Replace(wildcard_string, R"(\\$1)", true)
+						 // Change '*'/'?' to .<char>
+						 .Replace(R"(*)", R"(.*)")
+						 .Replace(R"(?)", R"(.?)");
+
+		if (exact_match)
+		{
+			regex.Prepend("^");
+			regex.Append("$");
+		}
+
+		return regex;
+	}
+
+	const ov::String &Regex::GetPattern() const
 	{
 		return _pattern;
 	}
@@ -177,6 +238,11 @@ namespace ov
 		{
 			OV_ASSERT2("Compile() is called twice");
 			return Error::CreateError("Regex", "Regex is already compiled");
+		}
+
+		if (_pattern.IsEmpty())
+		{
+			return Error::CreateError("Regex", "Pattern is empty");
 		}
 
 		int error_code;
@@ -203,16 +269,13 @@ namespace ov
 
 		// https://www.pcre.org/current/doc/html/pcre2_compile.html
 		_code = ::pcre2_compile(
-			ToPcreStr(_pattern.c_str()), ToPcreSize(_pattern.size()),
+			ToPcreStr(_pattern.CStr()), ToPcreSize(_pattern),
 			options, &error_code, &error_offset,
 			nullptr);
 
 		if (_code == nullptr)
 		{
-			PCRE2_UCHAR buffer[256];
-			::pcre2_get_error_message(error_code, buffer, sizeof(buffer));
-
-			return Error::CreateError("Regex", "Compilation failed at offset %zu: %s", FromPcreSize(error_offset), buffer);
+			return Error::CreateError("Regex", "Compilation failed at offset %zu: %s", FromPcreSize(error_offset), GetPcreErrorMessage(error_code).CStr());
 		}
 
 		// https://www.pcre.org/current/doc/html/pcre2_jit_compile.html
@@ -231,12 +294,6 @@ namespace ov
 		// ::pcre2_jit_compile(GET_CODE(), PCRE2_JIT_COMPLETE);
 
 		return nullptr;
-	}
-
-	bool Regex::Test(const char *subject)
-	{
-		// Not implemented yet
-		return false;
 	}
 
 	MatchResult Regex::Matches(const char *subject)
@@ -263,17 +320,17 @@ namespace ov
 			{
 				// group_count == 1: There is no numbered captures (output_vector[0]/[1] contain the start/end offset of matched text)
 
-				auto allocated_subject = std::make_shared<std::string>(subject);
-				auto base_address = allocated_subject->c_str();
+				auto allocated_subject = std::make_shared<ov::String>(subject);
+				auto base_address = allocated_subject->CStr();
 
 				auto output_vectors = ::pcre2_get_ovector_pointer(match_data);
 
-				auto match_group = CreateMatchGroup(base_address, match_data, group_count, output_vectors);
-				auto named_group = CreateNamedGroup(base_address, output_vectors);
+				auto match_group_list = CreateMatchGroupList(base_address, match_data, group_count, output_vectors);
+				auto named_group_map = CreateNamedGroupMap(base_address, output_vectors);
 
 				::pcre2_match_data_free(match_data);
 
-				return {allocated_subject, match_group, named_group};
+				return {allocated_subject, match_group_list, named_group_map};
 			}
 			else if (group_count == 0)
 			{
@@ -304,6 +361,86 @@ namespace ov
 		return {error};
 	}
 
+	ov::String Regex::Replace(const ov::String &subject, const ov::String &replace_with, bool replace_all, std::shared_ptr<const ov::Error> *error) const
+	{
+		if (IsCompiled() == false)
+		{
+			if (error != nullptr)
+			{
+				*error = Error::CreateError("Regex", "Regex is not compiled");
+			}
+			return {};
+		}
+
+		auto code = GET_CODE();
+		auto match_data = ::pcre2_match_data_create_from_pattern(code, nullptr);
+
+		auto subject_str = ToPcreStr(subject);
+		auto subject_length = ToPcreSize(subject);
+		auto replace_str = ToPcreStr(replace_with);
+		auto replace_length = ToPcreSize(replace_with);
+
+		// https://www.pcre.org/current/doc/html/pcre2_substitute.html
+		auto options =
+			// If overflow, compute needed length
+			PCRE2_SUBSTITUTE_OVERFLOW_LENGTH |
+			// Replace all occurrences in the subject
+			(replace_all ? PCRE2_SUBSTITUTE_GLOBAL : 0) |
+			// Do extended replacement processing
+			PCRE2_SUBSTITUTE_EXTENDED;
+
+		PCRE2_SIZE buffer_length = subject_length;
+		PCRE2_SIZE string_length = 0;
+		PCRE2_UCHAR *buffer = static_cast<PCRE2_UCHAR *>(::malloc(sizeof(PCRE2_UCHAR) * buffer_length));
+
+		while (true)
+		{
+			auto output_length = buffer_length;
+			auto result = ::pcre2_substitute(
+				code,
+				subject_str, subject_length,
+				// startoffset
+				0,
+				options,
+				// match_data, mcontext
+				nullptr, nullptr,
+				replace_str, replace_length,
+				buffer, &output_length);
+
+			string_length = output_length;
+
+			if (result >= 0)
+			{
+				break;
+			}
+			else
+			{
+				if (result == PCRE2_ERROR_NOMEMORY)
+				{
+					buffer_length = output_length;
+					buffer = static_cast<PCRE2_UCHAR *>(::realloc(buffer, sizeof(PCRE2_UCHAR) * buffer_length));
+					continue;
+				}
+
+				// An error occurred
+				if (error != nullptr)
+				{
+					*error = Error::CreateError("Regex", "Regex is not compiled");
+				}
+
+				break;
+			}
+		}
+
+		::pcre2_match_data_free(match_data);
+
+		ov::String result(FromPcreStr(buffer), string_length);
+
+		OV_SAFE_FREE(buffer);
+
+		return result;
+	}
+
 	Regex &Regex::operator=(const Regex &regex)
 	{
 		_pattern = regex._pattern;
@@ -315,7 +452,7 @@ namespace ov
 
 	void Regex::Release()
 	{
-		_pattern.clear();
+		_pattern = {};
 
 		if (_code != nullptr)
 		{
@@ -324,9 +461,9 @@ namespace ov
 		}
 	}
 
-	std::map<std::string, std::string_view> Regex::CreateNamedGroup(const char *base_address, const size_t *output_vectors)
+	std::unordered_map<ov::String, MatchGroup> Regex::CreateNamedGroupMap(const char *base_address, const size_t *output_vectors)
 	{
-		std::map<std::string, std::string_view> result;
+		std::unordered_map<ov::String, MatchGroup> result;
 
 		// Named groups
 		uint32_t name_count;
@@ -356,10 +493,9 @@ namespace ov
 				// value
 				auto start_offset = output_vectors[2 * group_index];
 				auto end_offset = output_vectors[2 * group_index + 1];
-				auto start = base_address + start_offset;
-				auto length = end_offset - start_offset;
 
-				result.emplace(group_name, std::string_view(start, length));
+				result.emplace(group_name, MatchGroup(base_address, start_offset, end_offset));
+
 				name_table += name_entry_size;
 			}
 		}

@@ -12,5 +12,5 @@
 #include <modules/http/server/http_server.h>
 namespace serdes
 {
-	Json::Value JsonFromError(const std::shared_ptr<http::HttpError> &error);
+	Json::Value JsonFromError(const std::shared_ptr<const http::HttpError> &error);
 }

@@ -38,7 +38,7 @@ namespace api
 		SetResponse(http::StatusCode::OK, nullptr, json);
 	}
 
-	ApiResponse::ApiResponse(const std::shared_ptr<http::HttpError> &error)
+	ApiResponse::ApiResponse(const std::shared_ptr<const http::HttpError> &error)
 	{
 		if (error == nullptr)
 		{

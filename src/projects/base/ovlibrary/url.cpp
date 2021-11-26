@@ -148,13 +148,13 @@ namespace ov
 
 		auto group_list = matches.GetNamedGroupList();
 
-		object->_scheme = std::string(group_list["scheme"]).c_str();
-		object->_id = std::string(group_list["id"]).c_str();
-		object->_password = std::string(group_list["password"]).c_str();
-		object->_host = std::string(group_list["host"]).c_str();
-		object->_port = ov::Converter::ToUInt32(std::string(group_list["port"]).c_str());
-		object->_path = std::string(group_list["path"]).c_str();
-		object->_query_string = std::string(group_list["qs"]).c_str();
+		object->_scheme = group_list["scheme"].GetValue();
+		object->_id = group_list["id"].GetValue();
+		object->_password = group_list["password"].GetValue();
+		object->_host = group_list["host"].GetValue();
+		object->_port = ov::Converter::ToUInt32(group_list["port"].GetValue());
+		object->_path = group_list["path"].GetValue();
+		object->_query_string = group_list["qs"].GetValue();
 		object->_has_query_string = (object->_query_string.IsEmpty() == false);
 
 		// split <path> to /<app>/<stream>/<file> (4 tokens)

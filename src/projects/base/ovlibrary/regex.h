@@ -8,17 +8,15 @@
 //==============================================================================
 #pragma once
 
-#include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "./error.h"
 
 // These classes are a simple PCRE2 wrapper
 //
-// Note - I wanted to use ov::String, but ov::String did not have the same function as std::string_view, so I used std::string* classes.
-
 // Usage:
 //
 //    auto regex = ov::Regex("(?<token1>[^/]+)/.+");
@@ -46,7 +44,7 @@
 //            auto &key = item.first;
 //            auto &value = item.second;
 //
-//            printf("%s = %.*s\n", key.c_str(), static_cast<int>(value.length()), value.data());
+//            printf("%s = %.*s\n", key.CStr(), static_cast<int>(value.length()), value.data());
 //        }
 //    }
 //    else
@@ -56,6 +54,50 @@
 
 namespace ov
 {
+	class MatchGroup
+	{
+	public:
+		MatchGroup() = default;
+		MatchGroup(const char *base_address, size_t start_offset, size_t end_offset);
+
+		bool IsValid() const
+		{
+			return (_base_address != nullptr);
+		}
+
+		size_t GetStartOffset() const
+		{
+			return _start_offset;
+		}
+
+		size_t GetEndOffset() const
+		{
+			return _end_offset;
+		}
+
+		size_t GetLength() const
+		{
+			return _end_offset - _start_offset;
+		}
+
+		ov::String GetValue() const
+		{
+			if (_base_address != nullptr)
+			{
+				return ov::String(_base_address + _start_offset, _length);
+			}
+
+			return {};
+		}
+
+	protected:
+		const char *_base_address = nullptr;
+
+		size_t _start_offset = 0;
+		size_t _end_offset = 0;
+		size_t _length = 0;
+	};
+
 	// Match result must be a
 	class MatchResult
 	{
@@ -66,30 +108,35 @@ namespace ov
 		MatchResult(const std::shared_ptr<ov::Error> &error);
 
 		// MatchResult with results
-		MatchResult(std::shared_ptr<std::string> subject,
-					std::vector<std::string_view> group_list,
-					std::map<std::string, std::string_view> named_group);
+		MatchResult(std::shared_ptr<ov::String> subject,
+					std::vector<MatchGroup> group_list,
+					std::unordered_map<ov::String, MatchGroup> named_group);
 
-		const std::shared_ptr<ov::Error> &GetError() const;
+		std::shared_ptr<const ov::Error> GetError() const;
 
-		const std::string &GetSubject() const;
+		bool IsMatched() const
+		{
+			return ((_error == nullptr) && (GetGroupCount() > 0));
+		}
+
+		const ov::String &GetSubject() const;
 
 		size_t GetGroupCount() const;
-		std::string_view GetGroupAt(size_t index) const;
-		const std::vector<std::string_view> &GetGroupList() const;
+		MatchGroup GetGroupAt(size_t index) const;
+		const std::vector<MatchGroup> &GetGroupList() const;
 
 		size_t GetNamedGroupCount() const;
-		std::string_view GetNamedGroup(const char *name) const;
-		const std::map<std::string, std::string_view> &GetNamedGroupList() const;
+		MatchGroup GetNamedGroup(const char *name) const;
+		const std::unordered_map<ov::String, MatchGroup> &GetNamedGroupList() const;
 
 	protected:
 		std::shared_ptr<Error> _error;
 
-		// Stored as std::shared_ptr for std::string_view to work well even if MatchResult is copied
-		std::shared_ptr<std::string> _subject;
+		// Stored as std::shared_ptr for ov::String to work well even if MatchResult is copied
+		std::shared_ptr<ov::String> _subject;
 
-		std::vector<std::string_view> _group_list;
-		std::map<std::string, std::string_view> _named_group;
+		std::vector<MatchGroup> _group_list;
+		std::unordered_map<ov::String, MatchGroup> _named_group;
 	};
 
 	class Regex
@@ -109,31 +156,51 @@ namespace ov
 			Literal
 		};
 
-		// TODO(dimiden): Implement a feature to support multiple options
 		Regex();
+		// TODO(dimiden): Implement a feature to support multiple options
 		Regex(const char *pattern, Option options);
 		Regex(const char *pattern);
 		Regex(const Regex &regex);
 		Regex(Regex &&regex);
 		~Regex();
 
-		// TODO(dimiden): Copy/Move Ctor is needed for _code using pcre2_code_copy
+		static Regex CompiledRegex(const char *pattern, Option options);
+		static Regex CompiledRegex(const char *pattern);
 
-		const std::string &GetPattern() const;
+		// Transform the wildcard-type string to be used in regx
+		//
+		// 1) Escape special characters: '[', '\', '.', '/', '+', '{', '}', '$', '^', '|' to \<char>
+		// 2) Replace '*', '?' to '.*', '.?'
+		// 3) Prepend '^' and append '$' if exact_match == true
+		//
+		// For example: *.[a/irensoft.com => .*\.\[a\/irensoft\.com
+		static ov::String WildCardRegex(const ov::String &wildcard_string, bool exact_match = true);
+
+		const ov::String &GetPattern() const;
 
 		std::shared_ptr<Error> Compile();
+		bool IsCompiled() const
+		{
+			return (_code != nullptr);
+		}
 
-		bool Test(const char *subject);
 		MatchResult Matches(const char *subject);
+
+		// Replace all occurrences of the pattern in the subject string with replace_to
+		// For example:
+		//     ov::Regex regex("[el]+");
+		//     regex.Compile();
+		//     regex.Replace("Hello", "!"); // It returns "H!o"
+		ov::String Replace(const ov::String &subject, const ov::String &replace_with, bool replace_all = false, std::shared_ptr<const ov::Error> *error = nullptr) const;
 
 		Regex &operator=(const Regex &regex);
 
 		void Release();
 
 	protected:
-		std::map<std::string, std::string_view> CreateNamedGroup(const char *base_address, const size_t *output_vectors);
+		std::unordered_map<ov::String, MatchGroup> CreateNamedGroupMap(const char *base_address, const size_t *output_vectors);
 
-		std::string _pattern;
+		ov::String _pattern;
 		Option _options;
 
 		// To hide pcre2_code
