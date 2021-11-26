@@ -63,7 +63,7 @@ namespace api
 								const ov::String &output_profile_name,
 								Json::Value **value)
 		{
-			auto &output_profiles = app_json["outputProfiles"];
+			auto &output_profiles = app_json["outputProfiles"]["outputProfile"];
 			off_t offset = 0;
 
 			if (output_profiles.isArray())
@@ -168,7 +168,7 @@ namespace api
 			MultipleStatus status_code;
 
 			Json::Value app_json = app->GetConfig().ToJson();
-			auto &output_profiles = app_json["outputProfiles"];
+			auto &output_profiles = app_json["outputProfiles"]["outputProfile"];
 
 			Json::Value response(Json::ValueType::arrayValue);
 
@@ -356,7 +356,7 @@ namespace api
 			}
 
 			Json::Value app_json = app->GetConfig().ToJson();
-			auto &output_profiles = app_json["outputProfiles"];
+			auto &output_profiles = app_json["outputProfiles"]["outputProfile"];
 
 			if (output_profiles.removeIndex(index, nullptr) == false)
 			{
