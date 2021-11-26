@@ -91,6 +91,7 @@ namespace ov
 		}
 
 	protected:
+		// Because _base_address refers to MatchResult, MatchGroup is also unavailable when MatchResult is released.
 		const char *_base_address = nullptr;
 
 		size_t _start_offset = 0;
