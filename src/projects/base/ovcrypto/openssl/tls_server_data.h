@@ -18,14 +18,6 @@ namespace ov
 	public:
 		using WriteCallback = std::function<ssize_t(const void *data, int64_t length)>;
 
-		enum class Method
-		{
-			// TLS_server_method()
-			Tls,
-			// DTLS_server_method()
-			Dtls,
-		};
-
 		enum class State
 		{
 			Invalid,
@@ -34,7 +26,7 @@ namespace ov
 			Accepted,
 		};
 
-		TlsServerData(Method method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const String &cipher_list, bool is_nonblocking);
+		TlsServerData(const std::shared_ptr<TlsContext> &tls_context, bool is_blocking);
 
 		~TlsServerData();
 
@@ -66,18 +58,17 @@ namespace ov
 		//--------------------------------------------------------------------
 		// Called by TLS module
 		//--------------------------------------------------------------------
-		// Tls::Read() -> SSL_read() -> Tls::TlsRead() -> BIO_get_data()::read_callback -> TlsServerData::OnTlsRead()
+		// Tls.Read() -> SSL_read() -> Tls::TlsRead() -> TlsBioCallback.read_callback -> TlsServerData.OnTlsRead()
 		ssize_t OnTlsRead(Tls *tls, void *buffer, size_t length);
-		// Tls::Write() -> SSL_write() -> Tls::TlsWrite() -> BIO_get_data()::write_callback -> TlsServerData::OnTlsWrite()
+		// Tls.Write() -> SSL_write() -> Tls::TlsWrite() -> TlsBioCallback.write_callback -> TlsServerData.OnTlsWrite()
 		ssize_t OnTlsWrite(Tls *tls, const void *data, size_t length);
-
+		// OpenSSL -> Tls::() -> Tls::TlsCtrl() -> TlsBioCallback.ctrl_callback -> TlsServerData.OnTlsCtrl()
 		long OnTlsCtrl(ov::Tls *tls, int cmd, long num, void *arg);
 
+	protected:
 		State _state = State::Invalid;
-		Method _method;
 
 		Tls _tls;
-		std::mutex _data_mutex;
 		WriteCallback _write_callback;
 
 		std::shared_ptr<Data> _cipher_data;

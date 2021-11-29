@@ -92,37 +92,6 @@ namespace http
 			return (_physical_port != nullptr);
 		}
 
-		ssize_t HttpServer::TryParseHeader(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data)
-		{
-			auto request = client->GetRequest();
-			auto &parser = request->GetRequestParser();
-
-			OV_ASSERT2(parser.GetParseStatus() == StatusCode::PartialContent);
-
-			// 파싱이 필요한 상태 - ProcessData()를 호출하여 파싱 시도
-			ssize_t processed_length = parser.ProcessData(data);
-
-			switch (parser.GetParseStatus())
-			{
-				case StatusCode::OK:
-					// 파싱이 이제 막 완료된 상태. 즉, 파싱이 완료된 후 최초 1번만 여기로 진입함
-					request->PostProcess();
-					break;
-
-				case StatusCode::PartialContent:
-					// 데이터 더 필요 - 이 상태에서는 반드시 모든 데이터를 소진했어야 함
-					OV_ASSERT2((processed_length >= 0LL) && (static_cast<size_t>(processed_length) == data->GetLength()));
-					break;
-
-				default:
-					// 파싱 도중 오류 발생
-					OV_ASSERT2(processed_length == -1L);
-					break;
-			}
-
-			return processed_length;
-		}
-
 		std::shared_ptr<HttpConnection> HttpServer::FindClient(const std::shared_ptr<ov::Socket> &remote)
 		{
 			std::shared_lock<std::shared_mutex> guard(_client_list_mutex);
@@ -135,127 +104,6 @@ namespace http
 			}
 
 			return nullptr;
-		}
-
-		void HttpServer::ProcessData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data)
-		{
-			if (client != nullptr)
-			{
-				std::shared_ptr<HttpRequest> request = client->GetRequest();
-				std::shared_ptr<HttpResponse> response = client->GetResponse();
-
-				auto &parser = request->GetRequestParser();
-
-				bool need_to_disconnect = false;
-
-				switch (parser.GetParseStatus())
-				{
-					case StatusCode::OK: {
-						auto interceptor = request->GetRequestInterceptor();
-
-						if (interceptor != nullptr)
-						{
-							// If the request is parsed, bypass to the interceptor
-							need_to_disconnect = (interceptor->OnHttpData(client, data) == InterceptorResult::Disconnect);
-						}
-						else
-						{
-							OV_ASSERT2(false);
-							need_to_disconnect = true;
-						}
-
-						break;
-					}
-
-					case StatusCode::PartialContent: {
-						// Need to parse HTTP header
-						ssize_t processed_length = TryParseHeader(client, data);
-
-						if (processed_length >= 0)
-						{
-							if (parser.GetParseStatus() == StatusCode::OK)
-							{
-								// Probe scheme
-								if (IsWebSocketRequest(request) == true)
-								{
-									request->SetConnectionType(RequestConnectionType::WebSocket);
-								}
-								else
-								{
-									request->SetConnectionType(RequestConnectionType::HTTP);
-								}
-
-								// Parsing is completed
-								bool found_interceptor = false;
-								// Find interceptor for the request
-								{
-									std::shared_lock<std::shared_mutex> guard(_interceptor_list_mutex);
-
-									for (auto &interceptor : _interceptor_list)
-									{
-										if (interceptor->IsInterceptorForRequest(client))
-										{
-											found_interceptor = true;
-											request->SetRequestInterceptor(interceptor);
-											break;
-										}
-									}
-								}
-
-								auto interceptor = request->GetRequestInterceptor();
-
-								if (interceptor == nullptr)
-								{
-									response->SetStatusCode(StatusCode::InternalServerError);
-									need_to_disconnect = true;
-									OV_ASSERT2(false);
-								}
-
-								auto remote = request->GetRemote();
-
-								if (remote != nullptr)
-								{
-									logti("Client(%s) is requested uri: [%s]", remote->ToString().CStr(), request->GetUri().CStr());
-								}
-
-								if (found_interceptor == false)
-								{
-									logtw("No module could be found to handle this connection request : [%s]", request->GetUri().CStr());
-								}
-
-								need_to_disconnect = need_to_disconnect || (interceptor->OnHttpPrepare(client) == InterceptorResult::Disconnect);
-								need_to_disconnect = need_to_disconnect || (interceptor->OnHttpData(client, data->Subdata(processed_length)) == InterceptorResult::Disconnect);
-							}
-							else if (parser.GetParseStatus() == StatusCode::PartialContent)
-							{
-								// Need more data
-							}
-						}
-						else
-						{
-							// An error occurred with the request
-							request->GetRequestInterceptor()->OnHttpError(client, StatusCode::BadRequest);
-							need_to_disconnect = true;
-						}
-
-						break;
-					}
-
-					default:
-						// 이전에 parse 할 때 오류가 발생했다면 response한 뒤 close() 했으므로, 정상적인 상황이라면 여기에 진입하면 안됨
-						logte("Invalid parse status: %d", parser.GetParseStatus());
-						OV_ASSERT2(false);
-						need_to_disconnect = true;
-						break;
-				}
-
-				if (need_to_disconnect)
-				{
-					// 연결을 종료해야 함
-					response->Response();
-					response->Close();
-				}
-			}
 		}
 
 		std::shared_ptr<HttpConnection> HttpServer::ProcessConnect(const std::shared_ptr<ov::Socket> &remote)
@@ -306,7 +154,7 @@ namespace http
 
 			if (remote->IsClosing() == false)
 			{
-				ProcessData(client, data);
+				client->ProcessData(data);
 			}
 			else
 			{
@@ -339,13 +187,13 @@ namespace http
 
 			if (reason == PhysicalPortDisconnectReason::Disconnect)
 			{
-				logti("The HTTP client(%s) has been disconnected from %s (%d)",
-					  remote->GetRemoteAddress()->ToString(false).CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
+				logti("Client(%s) has been disconnected from %s (%d)",
+					  remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
 			}
 			else
 			{
-				logti("The HTTP client(%s) is disconnected from %s (%d)",
-					  remote->GetRemoteAddress()->ToString(false).CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
+				logti("Client(%s) is disconnected from %s (%d)",
+					  remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
 			}
 
 			auto interceptor = request->GetRequestInterceptor();
@@ -378,6 +226,22 @@ namespace http
 
 			_interceptor_list.push_back(interceptor);
 			return true;
+		}
+
+		std::shared_ptr<RequestInterceptor> HttpServer::FindInterceptor(const std::shared_ptr<HttpConnection> &client)
+		{
+			// Find interceptor for the request
+			std::shared_lock<std::shared_mutex> guard(_interceptor_list_mutex);
+
+			for (auto &interceptor : _interceptor_list)
+			{
+				if (interceptor->IsInterceptorForRequest(client))
+				{
+					return interceptor;
+				}
+			}
+
+			return nullptr;
 		}
 
 		bool HttpServer::RemoveInterceptor(const std::shared_ptr<RequestInterceptor> &interceptor)
@@ -439,64 +303,6 @@ namespace http
 			}
 
 			return true;
-		}
-
-		bool HttpServer::IsWebSocketRequest(const std::shared_ptr<const HttpRequest> &request)
-		{
-			// RFC6455 - 4.2.1.  Reading the Client's Opening Handshake
-			//
-			// 1.   An HTTP/1.1 or higher GET request, including a "Request-URI"
-			//      [RFC2616] that should be interpreted as a /resource name/
-			//      defined in Section 3 (or an absolute HTTP/HTTPS URI containing
-			//      the /resource name/).
-			//
-			// 2.   A |Host| header field containing the server's authority.
-			//
-
-			if ((request->GetMethod() == Method::Get) && (request->GetHttpVersionAsNumber() > 1.0))
-			{
-				if (
-					// 3.   An |Upgrade| header field containing the value "websocket",
-					//      treated as an ASCII case-insensitive value.
-					(request->GetHeader("UPGRADE").UpperCaseString().IndexOf("WEBSOCKET") >= 0L) &&
-
-					// 4.   A |Connection| header field that includes the token "Upgrade",
-					//      treated as an ASCII case-insensitive value.
-					(request->GetHeader("CONNECTION").UpperCaseString().IndexOf("UPGRADE") >= 0L) &&
-
-					// 5.   A |Sec-WebSocket-Key| header field with a base64-encoded (see
-					//      Section 4 of [RFC4648]) value that, when decoded, is 16 bytes in
-					//      length.
-					request->IsHeaderExists("SEC-WEBSOCKET-KEY") &&
-
-					// 6.   A |Sec-WebSocket-Version| header field, with a value of 13.
-					(request->GetHeader("SEC-WEBSOCKET-VERSION") == "13"))
-				{
-					// 7.   Optionally, an |Origin| header field.  This header field is sent
-					//      by all browser clients.  A connection attempt lacking this
-					//      header field SHOULD NOT be interpreted as coming from a browser
-					//      client.
-					//
-					// 8.   Optionally, a |Sec-WebSocket-Protocol| header field, with a list
-					//      of values indicating which protocols the client would like to
-					//      speak, ordered by preference.
-					//
-					// 9.   Optionally, a |Sec-WebSocket-Extensions| header field, with a
-					//      list of values indicating which extensions the client would like
-					//      to speak.  The interpretation of this header field is discussed
-					//      in Section 9.1.
-					//
-					// 10.  Optionally, other header fields, such as those used to send
-					//      cookies or request authentication to a server.  Unknown header
-					//      fields are ignored, as per [RFC2616].
-
-					logtd("%s is websocket request", request->ToString().CStr());
-
-					return true;
-				}
-			}
-
-			return false;
 		}
 	}  // namespace svr
 }  // namespace http

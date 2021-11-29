@@ -8,6 +8,8 @@
 //==============================================================================
 #include "./regex.h"
 
+#define OV_LOG_TAG "Regex"
+
 #include "./assert.h"
 #include "./memory_utilities.h"
 
@@ -195,7 +197,12 @@ namespace ov
 	Regex Regex::CompiledRegex(const char *pattern, Option options)
 	{
 		Regex regex(pattern, options);
-		regex.Compile();
+		auto error = regex.Compile();
+
+		if (error != nullptr)
+		{
+			logte("Could not compile regex: %s, options: %d, reason: %s", pattern, static_cast<int>(options), error->ToString().CStr());
+		}
 
 		return regex;
 	}
@@ -203,7 +210,12 @@ namespace ov
 	Regex Regex::CompiledRegex(const char *pattern)
 	{
 		Regex regex(pattern);
-		regex.Compile();
+		auto error = regex.Compile();
+
+		if (error != nullptr)
+		{
+			logte("Could not compile regex: %s, reason: %s", pattern, error->ToString().CStr());
+		}
 
 		return regex;
 	}
@@ -296,7 +308,7 @@ namespace ov
 		return nullptr;
 	}
 
-	MatchResult Regex::Matches(const char *subject)
+	MatchResult Regex::Matches(const char *subject) const
 	{
 		if (_code == nullptr)
 		{
@@ -461,7 +473,7 @@ namespace ov
 		}
 	}
 
-	std::unordered_map<ov::String, MatchGroup> Regex::CreateNamedGroupMap(const char *base_address, const size_t *output_vectors)
+	std::unordered_map<ov::String, MatchGroup> Regex::CreateNamedGroupMap(const char *base_address, const size_t *output_vectors) const
 	{
 		std::unordered_map<ov::String, MatchGroup> result;
 

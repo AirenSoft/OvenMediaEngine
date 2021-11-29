@@ -24,8 +24,22 @@ namespace http
 			{
 			}
 
-			// TODO(Dimiden): OME doesn't support SNI yet, so OME can handle only one certificate.
-			bool SetCertificate(const std::shared_ptr<info::Certificate> &certificate);
+			std::shared_ptr<const ov::Error> AppendCertificate(const std::shared_ptr<const info::Certificate> &certificate);
+			std::shared_ptr<const ov::Error> AppendCertificateList(const std::vector<std::shared_ptr<const info::Certificate>> &certificate_list);
+
+		protected:
+			struct HttpsCertificate
+			{
+				HttpsCertificate() = default;
+				HttpsCertificate(std::shared_ptr<const info::Certificate> certificate, std::shared_ptr<ov::TlsContext> tls_context)
+					: certificate(std::move(certificate)),
+					  tls_context(std::move(tls_context))
+				{
+				}
+
+				std::shared_ptr<const info::Certificate> certificate;
+				std::shared_ptr<ov::TlsContext> tls_context;
+			};
 
 		protected:
 			//--------------------------------------------------------------------
@@ -35,7 +49,11 @@ namespace http
 			void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
 
 		protected:
-			std::shared_ptr<info::Certificate> _certificate;
+			bool HandleSniCallback(ov::TlsContext *tls_context, SSL *ssl, const ov::String &server_name);
+
+		protected:
+			std::mutex _https_certificate_list_mutex;
+			std::vector<std::shared_ptr<HttpsCertificate>> _https_certificate_list;
 		};
 	}  // namespace svr
 }  // namespace http

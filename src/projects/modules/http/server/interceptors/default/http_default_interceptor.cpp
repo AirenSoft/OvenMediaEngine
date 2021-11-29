@@ -95,25 +95,23 @@ namespace http
 			size_t current_length = (request_body != nullptr) ? request_body->GetLength() : 0L;
 			size_t content_length = request->GetContentLength();
 
-			// content length가 0 초과면, request_body는 반드시 초기화 되어 있어야 함
+			// request_body must be prepared if content length is greater than 0
 			OV_ASSERT2((content_length == 0L) || ((content_length > 0L) && (request_body != nullptr)));
 
 			std::shared_ptr<const ov::Data> process_data;
 			if ((content_length > 0) && ((current_length + data->GetLength()) > content_length))
 			{
 				logtw("Client sent too many data: expected: %ld, sent: %ld", content_length, (current_length + data->GetLength()));
-				// 원래는, 클라이언트가 보낸 데이터는 content-length를 넘어설 수 없으나,
-				// 만약에라도 넘어섰다면 data를 content_length까지만 처리함
 
+				// The data sent by the client cannot exceed the content-length,
+				// but if it exceeds the content-length, the data is processed only up to the content_length.
 				if (content_length > current_length)
 				{
 					process_data = data->Subdata(0L, content_length - current_length);
 				}
 				else
 				{
-					// content_length만큼 다 처리 한 상태
-
-					// 정상적인 시나리오 에서는, 여기로 진입하면 안됨
+					// Data has been processed as much as content_length, so it should not enter here
 					OV_ASSERT2(false);
 					return InterceptorResult::Disconnect;
 				}
@@ -125,19 +123,15 @@ namespace http
 
 			if (process_data != nullptr)
 			{
-				// request body에 데이터를 추가한 뒤
 				request_body->Append(process_data.get());
 
-				// 다 받아졌는지 확인
 				if (request_body->GetLength() >= content_length)
 				{
-					// 데이터가 다 받아졌다면, Register()된 handler 호출
 					logtd("HTTP message is parsed successfully");
 
-					// 처리할 수 있는 handler 찾음
 					int handler_count = 0;
 
-					// 403 Method not allowed 처리 하기 위한 수단
+					// A variable to handle 403 Method not allowed
 					bool regex_found = false;
 
 					auto uri = ov::Url::Parse(request->GetUri());
@@ -159,7 +153,7 @@ namespace http
 						response->SetStatusCode(StatusCode::OK);
 
 						auto matches = request_info.pattern.Matches(uri_target);
-						auto &error = matches.GetError();
+						auto error = matches.GetError();
 
 						if (error == nullptr)
 						{
@@ -167,10 +161,8 @@ namespace http
 							logtd("Matches: url [%s], pattern: [%s]", uri_target.CStr(), request_info.pattern_string.CStr());
 #endif	// DEBUG
 
-							// 일단 패턴에 일치하는 handler 찾음
 							regex_found = true;
 
-							// method가 일치하는지 확인
 							if (HTTP_CHECK_METHOD(request_info.method, request->GetMethod()))
 							{
 								handler_count++;
@@ -181,10 +173,8 @@ namespace http
 								{
 									break;
 								}
-								else
-								{
-									// Call the next handler
-								}
+
+								// Call the next handler
 							}
 						}
 						else
@@ -199,31 +189,29 @@ namespace http
 					{
 						if (regex_found)
 						{
-							// 패턴에 일치하는 handler는 찾았으나, 실제로 handler가 실행이 안되었다면 Method not allowed임
+							// Handler matching the pattern was found, but no matching method was found
 							response->SetStatusCode(StatusCode::MethodNotAllowed);
 						}
 						else
 						{
-							// URL을 처리할 수 있는 handler를 아예 찾을 수 없음
+							// Handler not found
 							response->SetStatusCode(StatusCode::NotFound);
 						}
 					}
 					else
 					{
-						// 처리 완료
+						// Everything is OK
 					}
 				}
 				else
 				{
-					// 클라이언트가 아직 데이터를 덜 보냄
-
-					// 데이터를 더 기다려야 함
+					// Need more data
 					return InterceptorResult::Keep;
 				}
 			}
 			else
 			{
-				// content-length만큼 다 처리 한 상태
+				// All data are processed
 			}
 
 			return InterceptorResult::Disconnect;

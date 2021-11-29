@@ -170,6 +170,7 @@ namespace http
 							case FrameOpcode::ConnectionClose:
 								// The client requested close the connection
 								logtd("Client requested close connection: reason:\n%s", payload->Dump("Reason").CStr());
+								frame->Reset();
 								return InterceptorResult::Disconnect;
 
 							case FrameOpcode::Ping:
@@ -192,6 +193,7 @@ namespace http
 								{
 									if (_message_handler(info->response, frame) == InterceptorResult::Disconnect)
 									{
+										frame->Reset();
 										return InterceptorResult::Disconnect;
 									}
 								}

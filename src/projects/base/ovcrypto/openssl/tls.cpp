@@ -11,19 +11,53 @@
 #include <utility>
 
 #include "./openssl_manager.h"
+#include "./openssl_private.h"
 
-#define OV_LOG_TAG "OpenSSL"
 #define OV_TLS_BIO_METHOD_NAME "ov::Tls"
 
-#define MAX_TLS_WRITE_SIZE (16 * 1024)
-#define DO_CALLBACK_IF_AVAILBLE(return_type, default_value, object, callback_name, ...) \
-	Tls::DoCallback<return_type, default_value, decltype(&TlsCallback::callback_name), &TlsCallback::callback_name>(object, ##__VA_ARGS__)
+#define DO_CALLBACK_IF_AVAILBLE(return_type, default_value, tls_instance, callback_name, ...) \
+	DoCallback<return_type, default_value, decltype(&TlsBioCallback::callback_name), &TlsBioCallback::callback_name>(tls_instance, ##__VA_ARGS__)
 
 namespace ov
 {
 	Tls::~Tls()
 	{
 		Uninitialize();
+	}
+
+	bool Tls::Initialize(const std::shared_ptr<TlsContext> &tls_context, const TlsBioCallback &callback, bool is_nonblocking)
+	{
+		bool result = true;
+
+		// Create BIO
+		result = result && PrepareBio(callback);
+		// Create SSL
+		result = result && PrepareSsl(tls_context);
+
+		if (result == false)
+		{
+			_callback = {};
+		}
+
+		return result;
+	}
+
+	bool Tls::Uninitialize()
+	{
+		if (_ssl != nullptr)
+		{
+			::SSL_shutdown(_ssl);
+			::SSL_free(_ssl);
+			_ssl = nullptr;
+		}
+
+		OV_SAFE_FUNC(_bio, nullptr, ::BIO_free, );
+
+		OV_SAFE_RESET(_peer_certificate, nullptr, ::X509_free(_peer_certificate), _peer_certificate);
+
+		_callback = {};
+
+		return true;
 	}
 
 	BIO_METHOD *Tls::PrepareBioMethod()
@@ -50,7 +84,7 @@ namespace ov
 					result = result && ::BIO_meth_set_puts(bio_method, TlsPuts);
 					result = result && ::BIO_meth_set_destroy(bio_method, TlsDestroy);
 
-					if (result == false)
+					if (result == 0)
 					{
 						OpensslManager::GetInstance()->FreeBioMethod(OV_TLS_BIO_METHOD_NAME);
 						::BIO_meth_free(bio_method);
@@ -66,186 +100,10 @@ namespace ov
 		return bio_method;
 	}
 
-	bool Tls::InitializeServerTls(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list, TlsCallback callback, bool is_nonblocking)
+	bool Tls::PrepareBio(const TlsBioCallback &callback)
 	{
-		bool result = true;
+		_callback = callback;
 
-		_callback = std::move(callback);
-
-		// Create SSL_CTX
-		result = result && PrepareSslContext(method, certificate, chain_certificate, cipher_list);
-		// Create BIO
-		result = result && PrepareBio();
-		// Create SSL
-		result = result && PrepareSsl(nullptr);
-
-		if (result == false)
-		{
-			_callback = TlsCallback();
-		}
-
-		_is_nonblocking = is_nonblocking;
-
-		return result;
-	}
-
-	bool Tls::InitializeClientTls(const SSL_METHOD *method, TlsCallback callback, bool is_nonblocking)
-	{
-		bool result = true;
-
-		_callback = std::move(callback);
-
-		// Create SSL_CTX
-		result = result && PrepareSslContext(method);
-		// Create BIO
-		result = result && PrepareBio();
-		// Create SSL
-		result = result && PrepareSsl(nullptr);
-
-		if (result == false)
-		{
-			_callback = TlsCallback();
-		}
-
-		_is_nonblocking = is_nonblocking;
-
-		return result;
-	}
-
-	bool Tls::Uninitialize()
-	{
-		OV_SAFE_RESET(_ssl, nullptr, ::SSL_shutdown(_ssl), _ssl);
-		OV_SAFE_RESET(_peer_certificate, nullptr, ::X509_free(_peer_certificate), _peer_certificate);
-
-		_bio = nullptr;
-		_ssl = nullptr;
-		_ssl_ctx = nullptr;
-
-		return true;
-	}
-
-	bool Tls::PrepareSslContext(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list)
-	{
-		do
-		{
-			OV_ASSERT2(_ssl_ctx == nullptr);
-			OV_ASSERT2(certificate != nullptr);
-
-			if (certificate == nullptr)
-			{
-				logte("Invalid TLS certificate");
-				break;
-			}
-
-			// Create a new SSL session
-			decltype(_ssl_ctx) ctx(::SSL_CTX_new(method));
-
-			if (ctx == nullptr)
-			{
-				logte("Cannot create SSL context");
-				break;
-			}
-
-			if (::SSL_CTX_use_certificate(ctx, certificate->GetX509()) != 1)
-			{
-				logte("Cannot use certficate: %s", ov::OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
-				break;
-			}
-
-			if ((chain_certificate != nullptr) && (::SSL_CTX_add1_chain_cert(ctx, chain_certificate->GetX509()) != 1))
-			{
-				logte("Cannot use chain certificate: %s", ov::OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
-
-				break;
-			}
-
-			if (::SSL_CTX_use_PrivateKey(ctx, certificate->GetPkey()) != 1)
-			{
-				logte("Cannot use private key: %s", ov::OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
-				break;
-			}
-
-			// Register peer certificate verification callback
-			if (_callback.verify_callback != nullptr)
-			{
-				::SSL_CTX_set_cert_verify_callback(ctx, TlsVerify, this);
-			}
-			else
-			{
-				// Use default
-			}
-
-			// https://curl.haxx.se/docs/ssl-ciphers.html
-			// https://wiki.mozilla.org/Security/Server_Side_TLS
-			::SSL_CTX_set_cipher_list(ctx, cipher_list.CStr());
-
-			// Disable TLS1.3 because it is not yet supported properly by the HTTP server implementation (HTTP2 support, Session tickets, ...)
-			// This also allows for using less secure cipher suites for lower CPU requirements when using HLS/DASH/LL-DASH streaming
-			::SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
-			// Disable old TLS versions which are neither secure nor needed any more
-			::SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
-
-			_ssl_ctx = std::move(ctx);
-
-			bool result = DO_CALLBACK_IF_AVAILBLE(bool, false, this, create_callback, static_cast<SSL_CTX *>(_ssl_ctx));
-
-			if (result == false)
-			{
-				logte("An error occurred inside create callback");
-
-				_ssl_ctx = nullptr;
-
-				break;
-			}
-		} while (false);
-
-		return (_ssl_ctx != nullptr);
-	}
-
-	bool Tls::PrepareSslContext(const SSL_METHOD *method)
-	{
-		do
-		{
-			OV_ASSERT2(_ssl_ctx == nullptr);
-
-			// Create a new SSL session
-			decltype(_ssl_ctx) ctx(::SSL_CTX_new(method));
-
-			if (ctx == nullptr)
-			{
-				logte("Cannot create SSL context");
-				break;
-			}
-
-			// Register peer certificate verification callback
-			if (_callback.verify_callback != nullptr)
-			{
-				::SSL_CTX_set_cert_verify_callback(ctx, TlsVerify, this);
-			}
-			else
-			{
-				// Use default
-			}
-
-			_ssl_ctx = std::move(ctx);
-
-			bool result = DO_CALLBACK_IF_AVAILBLE(bool, false, this, create_callback, static_cast<SSL_CTX *>(_ssl_ctx));
-
-			if (result == false)
-			{
-				logte("An error occurred inside create callback");
-
-				_ssl_ctx = nullptr;
-
-				break;
-			}
-		} while (false);
-
-		return (_ssl_ctx != nullptr);
-	}
-
-	bool Tls::PrepareBio()
-	{
 		BIO_METHOD *bio_method = PrepareBioMethod();
 
 		_bio = ::BIO_new(bio_method);
@@ -261,101 +119,10 @@ namespace ov
 		return true;
 	}
 
-	int Tls::TlsVerify(X509_STORE_CTX *store, void *arg)
+	bool Tls::PrepareSsl(const std::shared_ptr<TlsContext> &tls_context)
 	{
-		bool result = DO_CALLBACK_IF_AVAILBLE(bool, false, arg, verify_callback, store);
-
-		return result ? 1 : 0;
-	}
-
-	int Tls::TlsCreate(BIO *b)
-	{
-		::BIO_set_shutdown(b, 0);
-		::BIO_set_init(b, 1);
-		::BIO_set_data(b, nullptr);
-		::BIO_set_flags(b, 0);
-
-		return 1;
-	}
-
-	long Tls::TlsCtrl(BIO *b, int cmd, long num, void *ptr)
-	{
-		return DO_CALLBACK_IF_AVAILBLE(long, 0, BIO_get_data(b), ctrl_callback, cmd, num, ptr);
-	}
-
-	int Tls::TlsRead(BIO *b, char *out, int outl)
-	{
-		BIO_clear_retry_flags(b);
-
-		OV_ASSERT2(out != nullptr);
-		OV_ASSERT2(outl >= 0);
-
-		auto read_bytes = DO_CALLBACK_IF_AVAILBLE(ssize_t, -1, BIO_get_data(b), read_callback, out, static_cast<size_t>(outl));
-
-		if (read_bytes > 0)
-		{
-			return static_cast<int>(read_bytes);
-		}
-		else if (read_bytes == 0)
-		{
-			// No data to read
-			BIO_set_retry_read(b);
-		}
-		else
-		{
-			// Error
-		}
-
-		return -1;
-	}
-
-	int Tls::TlsWrite(BIO *b, const char *in, int inl)
-	{
-		BIO_clear_retry_flags(b);
-
-		OV_ASSERT2(in != nullptr);
-		OV_ASSERT2(inl >= 0);
-
-		// logtp("Trying to write %d bytes...\n%s", inl, ov::Dump(in, inl).CStr());
-
-		auto written_bytes = DO_CALLBACK_IF_AVAILBLE(ssize_t, -1, BIO_get_data(b), write_callback, in, static_cast<size_t>(inl));
-
-		// logtd("Written: %zd/%d", written_bytes, inl);
-
-		if (written_bytes > 0)
-		{
-			return static_cast<int>(written_bytes);
-		}
-		else if (written_bytes == 0)
-		{
-			// No data to write
-			BIO_set_retry_write(b);
-		}
-		else
-		{
-			// Error
-		}
-
-		return written_bytes;
-	}
-
-	int Tls::TlsPuts(BIO *b, const char *str)
-	{
-		return TlsWrite(b, str, static_cast<int>(::strlen(str)));
-	}
-
-	int Tls::TlsDestroy(BIO *b)
-	{
-		return DO_CALLBACK_IF_AVAILBLE(bool, false, BIO_get_data(b), destroy_callback) ? 1 : 0;
-	}
-
-	bool Tls::PrepareSsl(void *app_data)
-	{
-		OV_ASSERT2(_ssl_ctx != nullptr);
-		OV_ASSERT2(_bio != nullptr);
-
 		// Create a SSL session
-		decltype(_ssl) ssl(::SSL_new(_ssl_ctx));
+		decltype(_ssl) ssl(::SSL_new(tls_context->GetSslContext()));
 
 		if (ssl == nullptr)
 		{
@@ -363,7 +130,6 @@ namespace ov
 		}
 
 		// Setup the session
-		SSL_set_app_data(ssl, app_data);
 		::SSL_set_bio(ssl, _bio, _bio);
 		::SSL_set_read_ahead(ssl, 1);
 		::SSL_set_mode(ssl, SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
@@ -395,9 +161,11 @@ namespace ov
 
 		switch (result)
 		{
-			case 1:
+			case 1: {
 				// The TLS/SSL handshake was successfully completed, a TLS/SSL connection has been established.
+				ov::String host_name = ::SSL_get_servername(_ssl, TLSEXT_NAMETYPE_host_name);
 				return SSL_ERROR_NONE;
+			}
 
 			case 0:
 				// The TLS/SSL handshake was not successful but was shut down controlled and by the specifications of the TLS/SSL protocol.
@@ -507,6 +275,7 @@ namespace ov
 					append_data = true;
 					if (_is_nonblocking == false)
 					{
+						// Do not need to read whole data in blocking mode
 						stop = true;
 					}
 					break;
@@ -618,24 +387,104 @@ namespace ov
 		return (::SSL_has_pending(_ssl) == 1);
 	}
 
-	void Tls::SetVerify(int mode)
+	int Tls::TlsCreate(BIO *b)
 	{
-		::SSL_CTX_set_verify(_ssl_ctx, mode, nullptr);
+		::BIO_set_shutdown(b, 0);
+		::BIO_set_init(b, 1);
+		::BIO_set_data(b, nullptr);
+		::BIO_set_flags(b, 0);
+
+		return 1;
+	}
+
+	long Tls::TlsCtrl(BIO *b, int cmd, long num, void *ptr)
+	{
+		return DO_CALLBACK_IF_AVAILBLE(long, 0, BIO_get_data(b), ctrl_callback, cmd, num, ptr);
+	}
+
+	int Tls::TlsRead(BIO *b, char *out, int outl)
+	{
+		BIO_clear_retry_flags(b);
+
+		OV_ASSERT2(out != nullptr);
+		OV_ASSERT2(outl >= 0);
+
+		auto read_bytes = DO_CALLBACK_IF_AVAILBLE(ssize_t, -1, BIO_get_data(b), read_callback, out, static_cast<size_t>(outl));
+
+		if (read_bytes > 0)
+		{
+			return static_cast<int>(read_bytes);
+		}
+		else if (read_bytes == 0)
+		{
+			// No data to read
+			BIO_set_retry_read(b);
+		}
+		else
+		{
+			// Error
+		}
+
+		return -1;
+	}
+
+	int Tls::TlsWrite(BIO *b, const char *in, int inl)
+	{
+		BIO_clear_retry_flags(b);
+
+		OV_ASSERT2(in != nullptr);
+		OV_ASSERT2(inl >= 0);
+
+		logtp("Trying to write %d bytes...\n%s", inl, ov::Dump(in, inl).CStr());
+
+		auto written_bytes = DO_CALLBACK_IF_AVAILBLE(ssize_t, -1, BIO_get_data(b), write_callback, in, static_cast<size_t>(inl));
+
+		logtd("Written: %zd/%d", written_bytes, inl);
+
+		if (written_bytes > 0)
+		{
+			return static_cast<int>(written_bytes);
+		}
+		else if (written_bytes == 0)
+		{
+			// No data to write
+			BIO_set_retry_write(b);
+		}
+		else
+		{
+			// Error
+		}
+
+		return written_bytes;
+	}
+
+	int Tls::TlsPuts(BIO *b, const char *str)
+	{
+		return TlsWrite(b, str, static_cast<int>(::strlen(str)));
+	}
+
+	int Tls::TlsDestroy(BIO *b)
+	{
+		return DO_CALLBACK_IF_AVAILBLE(bool, false, BIO_get_data(b), destroy_callback) ? 1 : 0;
 	}
 
 	std::shared_ptr<Certificate> Tls::GetPeerCertificate() const
 	{
 		OV_ASSERT2(_ssl != nullptr);
 
-		TlsUniquePtr<X509, void, ::X509_free> cert(::SSL_get_peer_certificate(_ssl));
+		X509 *peer_certificate = ::SSL_get_peer_certificate(_ssl);
 
-		if (cert == nullptr)
+		if (peer_certificate == nullptr)
 		{
 			logte("An error occurred while get peer certificate");
 			return nullptr;
 		}
 
-		return std::make_shared<Certificate>(cert);
+		auto certificate = std::make_shared<Certificate>(peer_certificate);
+
+		::X509_free(peer_certificate);
+
+		return certificate;
 	}
 
 	bool Tls::ExportKeyingMaterial(unsigned long crypto_suite, const ov::String &label, std::shared_ptr<ov::Data> &server_key, std::shared_ptr<ov::Data> &client_key)

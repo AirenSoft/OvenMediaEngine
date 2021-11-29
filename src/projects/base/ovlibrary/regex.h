@@ -185,7 +185,7 @@ namespace ov
 			return (_code != nullptr);
 		}
 
-		MatchResult Matches(const char *subject);
+		MatchResult Matches(const char *subject) const;
 
 		// Replace all occurrences of the pattern in the subject string with replace_to
 		// For example:
@@ -199,7 +199,7 @@ namespace ov
 		void Release();
 
 	protected:
-		std::unordered_map<ov::String, MatchGroup> CreateNamedGroupMap(const char *base_address, const size_t *output_vectors);
+		std::unordered_map<ov::String, MatchGroup> CreateNamedGroupMap(const char *base_address, const size_t *output_vectors) const;
 
 		ov::String _pattern;
 		Option _options;

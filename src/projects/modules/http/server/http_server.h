@@ -39,7 +39,7 @@ namespace http
 			friend class HttpServerManager;
 
 		public:
-			using ClientList = std::map<ov::Socket *, std::shared_ptr<HttpConnection>>;
+			using ClientList = std::unordered_map<ov::Socket *, std::shared_ptr<HttpConnection>>;
 			using ClientIterator = std::function<bool(const std::shared_ptr<HttpConnection> &client)>;
 
 			HttpServer(const char *server_name);
@@ -51,6 +51,7 @@ namespace http
 			bool IsRunning() const;
 
 			bool AddInterceptor(const std::shared_ptr<RequestInterceptor> &interceptor);
+			std::shared_ptr<RequestInterceptor> FindInterceptor(const std::shared_ptr<HttpConnection> &client);
 			bool RemoveInterceptor(const std::shared_ptr<RequestInterceptor> &interceptor);
 
 			// If the iterator returns true, FindClient() will return the client
@@ -60,13 +61,8 @@ namespace http
 			bool DisconnectIf(ClientIterator iterator);
 
 		protected:
-			// @return 파싱이 성공적으로 되었다면 true를, 데이터가 더 필요하거나 오류가 발생하였다면 false이 반환됨
-			ssize_t TryParseHeader(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data);
-
 			std::shared_ptr<HttpConnection> FindClient(const std::shared_ptr<ov::Socket> &remote);
-
 			std::shared_ptr<HttpConnection> ProcessConnect(const std::shared_ptr<ov::Socket> &remote);
-			void ProcessData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data);
 
 			//--------------------------------------------------------------------
 			// Implementation of PhysicalPortObserver
@@ -94,9 +90,6 @@ namespace http
 			std::shared_ptr<RequestInterceptor> _default_interceptor = std::make_shared<DefaultInterceptor>();
 
 			std::vector<std::shared_ptr<ocst::VirtualHost>> _virtual_host_list;
-
-		private:
-			bool IsWebSocketRequest(const std::shared_ptr<const HttpRequest> &request);
 		};
 	}  // namespace svr
 }  // namespace http

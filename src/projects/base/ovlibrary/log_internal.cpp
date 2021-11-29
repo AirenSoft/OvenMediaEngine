@@ -202,10 +202,6 @@ namespace ov
 			return;
 		}
 
-		// ::vprintf(format, arg_list);
-		// ::printf("\n");
-		// return;
-
 		constexpr const char *log_level[] = {
 			"D",
 			"I",
