@@ -1,5 +1,8 @@
 #include "rtmp_writer.h"
 
+#include <modules/bitstream/aac/aac_converter.h>
+#include <modules/bitstream/h264/h264_converter.h>
+
 #include "private.h"
 
 /* 
@@ -124,7 +127,7 @@ bool RtmpWriter::Start()
 	// Compatibility with specific RTMP servers
 	av_dict_set(&options, "rtmp_flashver", "FMLE/3.0 (compatible; FMSc/1.0)", 0);
 	av_dict_set(&options, "rtmp_tcurl", _format_context->url, 0);
-	
+
 	if (!(_format_context->oformat->flags & AVFMT_NOFILE))
 	{
 		int error = avio_open2(&_format_context->pb, _format_context->url, AVIO_FLAG_WRITE, nullptr, &options);
@@ -199,7 +202,10 @@ bool RtmpWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 
 			codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
 			codecpar->codec_id =
-				(track_info->GetCodecId() == cmn::MediaCodecId::H264) ? AV_CODEC_ID_H264 : (track_info->GetCodecId() == cmn::MediaCodecId::H265) ? AV_CODEC_ID_H265 : (track_info->GetCodecId() == cmn::MediaCodecId::Vp8) ? AV_CODEC_ID_VP8 : (track_info->GetCodecId() == cmn::MediaCodecId::Vp9) ? AV_CODEC_ID_VP9 : AV_CODEC_ID_NONE;
+				(track_info->GetCodecId() == cmn::MediaCodecId::H264) ? AV_CODEC_ID_H264 : (track_info->GetCodecId() == cmn::MediaCodecId::H265) ? AV_CODEC_ID_H265
+																					   : (track_info->GetCodecId() == cmn::MediaCodecId::Vp8)	 ? AV_CODEC_ID_VP8
+																					   : (track_info->GetCodecId() == cmn::MediaCodecId::Vp9)	 ? AV_CODEC_ID_VP9
+																																				 : AV_CODEC_ID_NONE;
 
 			codecpar->codec_tag = 0;
 			codecpar->bit_rate = track_info->GetBitrate();
@@ -233,11 +239,15 @@ bool RtmpWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 			AVCodecParameters *codecpar = stream->codecpar;
 
 			codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
-			codecpar->codec_id =
-				(track_info->GetCodecId() == cmn::MediaCodecId::Aac) ? AV_CODEC_ID_AAC : (track_info->GetCodecId() == cmn::MediaCodecId::Mp3) ? AV_CODEC_ID_MP3 : (track_info->GetCodecId() == cmn::MediaCodecId::Opus) ? AV_CODEC_ID_OPUS : AV_CODEC_ID_NONE;
+			codecpar->codec_id = 
+				(track_info->GetCodecId() == cmn::MediaCodecId::Aac) ? AV_CODEC_ID_AAC : 
+				(track_info->GetCodecId() == cmn::MediaCodecId::Mp3) ? AV_CODEC_ID_MP3 : 
+				(track_info->GetCodecId() == cmn::MediaCodecId::Opus) ? AV_CODEC_ID_OPUS : AV_CODEC_ID_NONE;
 			codecpar->bit_rate = track_info->GetBitrate();
 			codecpar->channels = static_cast<int>(track_info->GetChannel().GetCounts());
-			codecpar->channel_layout = (track_info->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutMono) ? AV_CH_LAYOUT_MONO : (track_info->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutStereo) ? AV_CH_LAYOUT_STEREO : 0;  // <- Unknown
+			codecpar->channel_layout = 
+				(track_info->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutMono) ? AV_CH_LAYOUT_MONO : 
+				(track_info->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutStereo) ? AV_CH_LAYOUT_STEREO : 0;	 // <- Unknown
 			codecpar->sample_rate = track_info->GetSample().GetRateNum();
 			codecpar->frame_size = 1024;  // TODO: Need to Frame Size
 			codecpar->codec_tag = 0;
@@ -272,7 +282,7 @@ bool RtmpWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 //	- H264 : AnnexB bitstream
 // 	- AAC : ASC(Audio Specific Config) bitstream
 
-bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacketFlag flag, std::shared_ptr<ov::Data> &data)
+bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacketFlag flag, cmn::BitstreamFormat format, std::shared_ptr<ov::Data> &data)
 {
 	std::unique_lock<std::mutex> mlock(_lock);
 
@@ -285,8 +295,6 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	auto iter = _track_map.find(track_id);
 	if (iter == _track_map.end())
 	{
-		// logtw("There is no track id %d", track_id);
-
 		// Without a track, it's not an error. Ignore.
 		return true;
 	}
@@ -311,58 +319,71 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	pkt.pts = av_rescale_q(pts, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
 	pkt.dts = av_rescale_q(dts, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
 
-	// TODO: Depending on the extension, the bitstream format should be changed.
-	// format(mpegts)
-	// 	- H264 : Passthrough(AnnexB)
-	//  - H265 : Passthrough(AnnexB)
-	//  - AAC : Passthrough(ADTS)
-	//  - OPUS : Passthrough (?)
-	//  - VP8 : Passthrough (unknown name)
-	// format(flv)
-	//	- H264 : AnnexB -> AVCC
-	//	- AAC : to RAW
-	// format(mp4)
-	//	- H264 : Passthrough
-	//	- AAC : to RAW
+	std::shared_ptr<const ov::Data> cdata = data;
+	std::vector<size_t> length_list;
 
-	std::shared_ptr<ov::Data> nalu;
-
-	if ((stream->codecpar->codec_id == AV_CODEC_ID_AAC) &&
-		(strcmp(_format_context->oformat->name, "flv") == 0 || strcmp(_format_context->oformat->name, "mp4")))
+	if (strcmp(_format_context->oformat->name, "flv") == 0)
 	{
-		pkt.size = data->GetLength() - 7;
-		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>() + 7;
+		switch (format)
+		{
+			case cmn::BitstreamFormat::H264_AVCC:
+				pkt.size = cdata->GetLength();
+				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				break;
+
+			case cmn::BitstreamFormat::H264_ANNEXB:
+				cdata = H264Converter::ConvertAnnexbToAvcc(cdata);
+				pkt.size = cdata->GetLength();
+				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				break;
+
+			case cmn::BitstreamFormat::AAC_RAW:
+				pkt.size = cdata->GetLength();
+				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				break;
+
+			case cmn::BitstreamFormat::AAC_ADTS:
+				cdata = AacConverter::ConvertAdtsToRaw(cdata, &length_list);
+				pkt.size = cdata->GetLength();
+				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				break;
+
+			default:
+				// Unsupported bitstream foramt
+				return false;
+		}
 	}
-	else if ((stream->codecpar->codec_id == AV_CODEC_ID_H264) && (strcmp(_format_context->oformat->name, "flv") == 0))
+	else if (strcmp(_format_context->oformat->name, "mp4") == 0)
 	{
-		// AnnexB to AVCC
-		//  - remove START_CODE[4]
-		//  - append NalU length
+		switch (format)
+		{
+			case cmn::BitstreamFormat::AAC_RAW:
+				pkt.size = cdata->GetLength();
+				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				break;
 
-		// TODO(soulk): it should be changed to a common module.
-		// TODO(soulk): multiple NALUs in a single packet should be considered.
+			case cmn::BitstreamFormat::AAC_ADTS:
+				cdata = AacConverter::ConvertAdtsToRaw(cdata, &length_list);
+				pkt.size = cdata->GetLength();
+				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				break;
 
-		if (data->GetLength() <= 4)
-			return false;
+			case cmn::BitstreamFormat::H264_ANNEXB:
+				[[fallthrough]];
+			case cmn::BitstreamFormat::H264_AVCC:
+				pkt.size = cdata->GetLength();
+				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				break;
 
-		nalu = data->Subdata(4, data->GetLength() - 4);
-		uint32_t nalu_length = nalu->GetLength();
-
-		unsigned char nalu_length_araay[4];
-		nalu_length_araay[0] = nalu_length >> 24;
-		nalu_length_araay[1] = nalu_length >> 16;
-		nalu_length_araay[2] = nalu_length >> 8;
-		nalu_length_araay[3] = nalu_length;
-
-		nalu->Insert(nalu_length_araay, 0, sizeof(nalu_length_araay));
-
-		pkt.data = (uint8_t *)nalu->GetDataAs<uint8_t>();
-		pkt.size = nalu->GetLength();
+			default:
+				// Unsupported bitstream foramt
+				return false;
+		}
 	}
-	else
+	else if (strcmp(_format_context->oformat->name, "mpegts") == 0)
 	{
-		pkt.size = data->GetLength();
-		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();
+		pkt.size = cdata->GetLength();
+		pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 	}
 
 	int error = av_interleaved_write_frame(_format_context, &pkt);

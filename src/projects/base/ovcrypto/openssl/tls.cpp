@@ -487,31 +487,34 @@ namespace ov
 		unsigned char buf[1024];
 
 		size_t read_bytes = 0;
+		volatile bool stop = false;
 
-		while (true)
+		while (stop == false)
 		{
 			int error = Read(buf, OV_COUNTOF(buf), &read_bytes);
-			bool stop = false;
+			bool append_data = false;
 
 			switch (error)
 			{
 				case SSL_ERROR_ZERO_RETURN:
 					// Read successfully, and the connection was closed
-					[[fallthrough]];
+					append_data = true;
+					stop = true;
+					break;
 
 				case SSL_ERROR_NONE:
 					// Read successfully
-					if (data->Append(buf, read_bytes) == false)
-					{
-						OV_ASSERT2(false);
-						data = nullptr;
-						stop = true;
-					}
-
+					append_data = true;
 					if (_is_nonblocking == false)
 					{
 						stop = true;
 					}
+					break;
+
+				case SSL_ERROR_SSL:
+					append_data = true;
+					stop = true;
+
 					break;
 
 				case SSL_ERROR_WANT_READ:
@@ -527,9 +530,14 @@ namespace ov
 					break;
 			}
 
-			if (stop)
+			if (append_data && (read_bytes > 0) && (data != nullptr))
 			{
-				break;
+				if (data->Append(buf, read_bytes) == false)
+				{
+					OV_ASSERT2(false);
+					data = nullptr;
+					stop = true;
+				}
 			}
 		}
 
