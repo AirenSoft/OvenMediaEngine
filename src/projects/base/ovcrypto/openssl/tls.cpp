@@ -163,7 +163,6 @@ namespace ov
 		{
 			case 1: {
 				// The TLS/SSL handshake was successfully completed, a TLS/SSL connection has been established.
-				ov::String host_name = ::SSL_get_servername(_ssl, TLSEXT_NAMETYPE_host_name);
 				return SSL_ERROR_NONE;
 			}
 
@@ -580,6 +579,11 @@ namespace ov
 		}
 
 		return true;
+	}
+
+	ov::String Tls::GetServerName() const
+	{
+		return ::SSL_get_servername(_ssl, TLSEXT_NAMETYPE_host_name);
 	}
 
 	long Tls::GetVersion() const

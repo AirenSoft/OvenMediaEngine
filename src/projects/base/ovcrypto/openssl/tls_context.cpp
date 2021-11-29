@@ -9,6 +9,7 @@
 #include "tls_context.h"
 
 #include "./openssl_private.h"
+#include "./tls.h"
 
 #define DO_CALLBACK_IF_AVAILBLE(return_type, default_value, tls_context, callback_name, ...) \
 	DoCallback<return_type, default_value, decltype(&TlsContextCallback::callback_name), &TlsContextCallback::callback_name>(tls_context, ##__VA_ARGS__)

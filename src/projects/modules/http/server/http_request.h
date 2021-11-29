@@ -137,6 +137,17 @@ namespace http
 				return nullptr;
 			}
 
+			// Received server name using SNI
+			ov::String GetServerName() const
+			{
+				if (_tls_data != nullptr)
+				{
+					return _tls_data->GetTls().GetServerName();
+				}
+
+				return "";
+			}
+
 			template <typename T>
 			void SetExtra(std::shared_ptr<T> extra)
 			{

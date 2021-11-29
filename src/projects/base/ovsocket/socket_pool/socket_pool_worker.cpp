@@ -265,7 +265,7 @@ namespace ov
 
 		while (_stop_epoll_thread == false)
 		{
-			int count = EpollWait(3000);
+			int count = EpollWait(100);
 
 			if (count < 0)
 			{

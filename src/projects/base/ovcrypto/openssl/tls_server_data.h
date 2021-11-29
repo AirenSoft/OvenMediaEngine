@@ -46,6 +46,22 @@ namespace ov
 			_write_callback = write_callback;
 		}
 
+		// If a server name is provided by SNI, it should be stored in ov::TlsServerData, which is the method used at this time.
+		void SetServerName(const char *server_name)
+		{
+			_server_name = server_name;
+		}
+
+		ov::String GetServerName() const
+		{
+			return _server_name;
+		}
+
+		const Tls &GetTls() const
+		{
+			return _tls;
+		}
+
 		// plain_data can be null even if successful (It indicates accepting a new client)
 		bool Decrypt(const std::shared_ptr<const Data> &cipher_data, std::shared_ptr<const Data> *plain_data);
 		// cipher_data can be null even if successful (It indicates accepting a new client)
@@ -67,6 +83,8 @@ namespace ov
 
 	protected:
 		State _state = State::Invalid;
+
+		ov::String _server_name;
 
 		Tls _tls;
 		WriteCallback _write_callback;
