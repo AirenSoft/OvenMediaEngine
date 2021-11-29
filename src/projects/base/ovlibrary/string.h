@@ -22,6 +22,7 @@
 namespace ov
 {
 	class Data;
+	class Regex;
 
 	class String
 	{
@@ -85,6 +86,7 @@ namespace ov
 
 		// Out-of-place utilties
 		String Replace(const char *old_token, const char *new_token) const;
+		String Replace(const ov::Regex &regex, const char *new_token, bool replace_all = false) const;
 		String Substring(off_t start) const;
 		String Substring(off_t start, size_t length) const;
 		String Trim() const;

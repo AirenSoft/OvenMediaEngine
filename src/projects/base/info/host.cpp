@@ -26,10 +26,10 @@ namespace info
 			name_list.push_back(name.CStr());
 		}
 
-		const cfg::cmn::Tls &tls = GetHost().GetTls();
+		const cfg::cmn::Tls &tls_config = GetHost().GetTls();
 		std::shared_ptr<ov::Error> error = nullptr;
 
-		_certificate = Certificate::CreateCertificate(host_info.GetName(), name_list, tls);
+		_certificate = Certificate::CreateCertificate(host_info.GetName(), name_list, tls_config);
 	}
 
 	ov::String Host::GetUUID() const

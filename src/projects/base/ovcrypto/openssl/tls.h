@@ -8,121 +8,18 @@
 //==============================================================================
 #pragma once
 
-#include <base/ovlibrary/ovlibrary.h>
-#include <openssl/crypto.h>
-#include <openssl/dtls1.h>
-#include <openssl/err.h>
-#include <openssl/rand.h>
-#include <openssl/ssl.h>
-#include <openssl/tls1.h>
-#include <openssl/x509v3.h>
-
-#include <cstdint>
-#include <functional>
-
-#include "../base_64.h"
-#include "../certificate.h"
-#include "../crc_32.h"
-#include "../message_digest.h"
-#include "openssl_error.h"
+#include "./tls_bio_callback.h"
+#include "./tls_context.h"
 
 namespace ov
 {
-	class Tls;
-
-	struct TlsCallback
-	{
-		// Setting up TLS extensions, etc
-		std::function<bool(Tls *tls, SSL_CTX *context)> create_callback = nullptr;
-
-		// Return value: read bytes
-		std::function<ssize_t(Tls *tls, void *buffer, size_t length)> read_callback = nullptr;
-
-		// Return value: written bytes
-		std::function<ssize_t(Tls *tls, const void *data, size_t length)> write_callback = nullptr;
-
-		std::function<bool(Tls *tls)> destroy_callback = nullptr;
-
-		std::function<long(Tls *tls, int cmd, long num, void *ptr)> ctrl_callback = nullptr;
-
-		// Return value: verfied: true, not verified: false
-		std::function<bool(Tls *tls, X509_STORE_CTX *store_context)> verify_callback = nullptr;
-	};
-
-	// TlsUniquePtr is like the unique_ptr, it was created to support custom deleter which has return values
-	template <typename Ttype, typename Treturn, Treturn (*delete_function)(Ttype *argument)>
-	class TlsUniquePtr
-	{
-	public:
-		TlsUniquePtr()
-			: _ptr(nullptr, nullptr)
-		{
-		}
-
-		TlsUniquePtr(Ttype *pointer)  // NOLINT
-			: _ptr(pointer, Deleter)
-		{
-		}
-
-		TlsUniquePtr(TlsUniquePtr &&ptr) noexcept
-			: _ptr(nullptr, nullptr)
-		{
-			std::swap(ptr._ptr, _ptr);
-		}
-
-		operator Ttype *() noexcept	 // NOLINT
-		{
-			return _ptr.get();
-		}
-
-		operator const Ttype *() const noexcept	 // NOLINT
-		{
-			return _ptr.get();
-		}
-
-		TlsUniquePtr &operator=(TlsUniquePtr &&instance) noexcept
-		{
-			std::swap(_ptr, instance._ptr);
-
-			return *this;
-		}
-
-		TlsUniquePtr &operator=(Ttype *pointer)
-		{
-			_ptr = std::unique_ptr<Ttype, decltype(&Deleter)>(pointer, Deleter);
-
-			return *this;
-		}
-
-		bool operator==(const Ttype *pointer) const
-		{
-			return _ptr.get() == pointer;
-		}
-
-		bool operator!=(const Ttype *pointer) const
-		{
-			return !(operator==(pointer));
-		}
-
-	private:
-		static void Deleter(Ttype *variable)
-		{
-			delete_function(variable);
-		}
-
-		std::unique_ptr<Ttype, decltype(&Deleter)> _ptr;
-	};
-
 	class Tls
 	{
 	public:
 		Tls() = default;
 		virtual ~Tls();
 
-		// method: DTLS_server_method(), TLS_server_method()
-		bool InitializeServerTls(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const String &cipher_list, TlsCallback callback, bool is_nonblocking);
-		// method: TLS_client_method()
-		bool InitializeClientTls(const SSL_METHOD *method, TlsCallback callback, bool is_nonblocking);
+		bool Initialize(const std::shared_ptr<TlsContext> &tls_context, const TlsBioCallback &callback, bool is_nonblocking);
 		bool Uninitialize();
 
 		// @return Returns SSL_ERROR_NONE on success
@@ -147,8 +44,6 @@ namespace ov
 		// @return SSL_has_pending() returns 1 if there is buffered record data in the SSL object and 0 otherwise.
 		bool HasPending() const;
 
-		void SetVerify(int flags);
-
 		std::shared_ptr<Certificate> GetPeerCertificate() const;
 		bool ExportKeyingMaterial(unsigned long crypto_suite, const ov::String &label, std::shared_ptr<ov::Data> &server_key, std::shared_ptr<ov::Data> &client_key);
 
@@ -166,24 +61,19 @@ namespace ov
 
 	protected:
 		static BIO_METHOD *PrepareBioMethod();
-
-		bool PrepareSslContext(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list);
-		bool PrepareSslContext(const SSL_METHOD *method);
-		bool PrepareBio();
-		bool PrepareSsl(void *app_data);
-
-		int GetError(int code);
+		bool PrepareBio(const TlsBioCallback &callback);
+		bool PrepareSsl(const std::shared_ptr<TlsContext> &tls_context);
 
 		template <typename Treturn, Treturn default_value, class Tmember, Tmember member, typename... Targuments>
-		static Treturn DoCallback(void *obj, Targuments... args)
+		static Treturn DoCallback(void *tls_instance, Targuments... args)
 		{
-			if (obj == nullptr)
+			if (tls_instance == nullptr)
 			{
 				OV_ASSERT2(false);
 				return default_value;
 			}
 
-			auto tls = static_cast<Tls *>(obj);
+			auto tls = static_cast<Tls *>(tls_instance);
 			auto &target = tls->_callback.*member;
 
 			if (target != nullptr)
@@ -194,8 +84,6 @@ namespace ov
 			return default_value;
 		}
 
-		static int TlsVerify(X509_STORE_CTX *store, void *arg);
-
 		static int TlsCreate(BIO *b);
 		static long TlsCtrl(BIO *b, int cmd, long num, void *ptr);
 		static int TlsRead(BIO *b, char *out, int outl);
@@ -203,14 +91,16 @@ namespace ov
 		static int TlsPuts(BIO *b, const char *str);
 		static int TlsDestroy(BIO *b);
 
+		int GetError(int code);
+
 	protected:
 		bool _is_nonblocking = false;
 
 		X509 *_peer_certificate = nullptr;
-		TlsUniquePtr<SSL, void, ::SSL_free> _ssl = nullptr;
-		TlsUniquePtr<SSL_CTX, void, ::SSL_CTX_free> _ssl_ctx = nullptr;
-		TlsUniquePtr<BIO, int, ::BIO_free> _bio = nullptr;
 
-		TlsCallback _callback;
+		BIO *_bio = nullptr;
+		SSL *_ssl = nullptr;
+
+		TlsBioCallback _callback;
 	};
 }  // namespace ov

@@ -8,9 +8,4 @@
 //==============================================================================
 #pragma once
 
-#include <base/ovlibrary/ovlibrary.h>
-#include <modules/http/server/http_server.h>
-namespace serdes
-{
-	Json::Value JsonFromError(const std::shared_ptr<const http::HttpError> &error);
-}
+#define OV_LOG_TAG "OpenSSL"

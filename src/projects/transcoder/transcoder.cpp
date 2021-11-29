@@ -47,6 +47,10 @@ bool Transcoder::Start()
 
 bool Transcoder::Stop()
 {
+#if SUPPORT_HWACCELS	
+	TranscodeGPU::GetInstance()->Uninitialize();
+#endif
+
 	logtd("Transcoder has been stopped.");
 	return true;
 }

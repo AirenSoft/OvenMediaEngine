@@ -15,6 +15,7 @@
 #include "./assert.h"
 #include "./data.h"
 #include "./memory_utilities.h"
+#include "./regex.h"
 
 namespace ov
 {
@@ -503,6 +504,11 @@ namespace ov
 		}
 
 		return target;
+	}
+
+	String String::Replace(const ov::Regex &regex, const char *new_token, bool replace_all) const
+	{
+		return regex.Replace(*this, new_token, replace_all, nullptr);
 	}
 
 	String String::Substring(off_t start) const

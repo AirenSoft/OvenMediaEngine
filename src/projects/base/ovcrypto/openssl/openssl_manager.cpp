@@ -22,7 +22,7 @@
 #include <mutex>
 #include <thread>
 
-#define OV_LOG_TAG "OpensslManager"
+#include "./openssl_private.h"
 
 namespace ov
 {

@@ -27,15 +27,15 @@ namespace api
 			RegisterDelete(R"(\/(?<output_profile_name>[^\/]*))", &OutputProfilesController::OnDeleteOutputProfile);
 		};
 
-		std::string_view GetOutputProfileName(const std::shared_ptr<http::svr::HttpConnection> &client)
+		ov::String GetOutputProfileName(const std::shared_ptr<http::svr::HttpConnection> &client)
 		{
 			auto &match_result = client->GetRequest()->GetMatchResult();
 
-			return match_result.GetNamedGroup("output_profile_name");
+			return match_result.GetNamedGroup("output_profile_name").GetValue();
 		}
 
 		off_t FindOutputProfile(const std::shared_ptr<mon::ApplicationMetrics> &app,
-								const std::string_view &output_profile_name,
+								const ov::String &output_profile_name,
 								Json::Value *value)
 		{
 			auto &app_config = app->GetConfig();
@@ -60,10 +60,10 @@ namespace api
 		}
 
 		off_t FindOutputProfile(Json::Value &app_json,
-								const std::string_view &output_profile_name,
+								const ov::String &output_profile_name,
 								Json::Value **value)
 		{
-			auto &output_profiles = app_json["outputProfiles"];
+			auto &output_profiles = app_json["outputProfiles"]["outputProfile"];
 			off_t offset = 0;
 
 			if (output_profiles.isArray())
@@ -97,20 +97,19 @@ namespace api
 			return -1;
 		}
 
-		std::shared_ptr<http::HttpError> CreateNotFoundError(const std::shared_ptr<mon::HostMetrics> &vhost,
-													   const std::shared_ptr<mon::ApplicationMetrics> &app,
-													   const std::string_view &output_profile_name)
+		std::shared_ptr<const http::HttpError> CreateNotFoundError(const std::shared_ptr<mon::HostMetrics> &vhost,
+																   const std::shared_ptr<mon::ApplicationMetrics> &app,
+																   const ov::String &output_profile_name)
 		{
 			return http::HttpError::CreateError(
 				http::StatusCode::NotFound,
-				"Could not find the output profile: [%s/%s/%.*s]",
-				vhost->GetName().CStr(), app->GetName().GetAppName().CStr(),
-				output_profile_name.length(), output_profile_name.data());
+				"Could not find the output profile: [%s/%s/%s]",
+				vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), output_profile_name.CStr());
 		}
 
-		std::shared_ptr<http::HttpError> ChangeApp(const std::shared_ptr<mon::HostMetrics> &vhost,
-											 const std::shared_ptr<mon::ApplicationMetrics> &app,
-											 Json::Value &app_json)
+		std::shared_ptr<const http::HttpError> ChangeApp(const std::shared_ptr<mon::HostMetrics> &vhost,
+														 const std::shared_ptr<mon::ApplicationMetrics> &app,
+														 Json::Value &app_json)
 		{
 			// TODO(dimiden): Caution - Race condition may occur
 			// If an application is deleted immediately after the GetApplication(),
@@ -128,7 +127,7 @@ namespace api
 				if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
 				{
 					return http::HttpError::CreateError(http::StatusCode::Forbidden, "Could not delete the application: [%s/%s]",
-												  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+														vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 				}
 
 				auto result = orchestrator->CreateApplication(*vhost, app_config);
@@ -169,7 +168,7 @@ namespace api
 			MultipleStatus status_code;
 
 			Json::Value app_json = app->GetConfig().ToJson();
-			auto &output_profiles = app_json["outputProfiles"];
+			auto &output_profiles = app_json["outputProfiles"]["outputProfile"];
 
 			Json::Value response(Json::ValueType::arrayValue);
 
@@ -221,7 +220,7 @@ namespace api
 				{
 					if (error == nullptr)
 					{
-						auto name = response_profile.asString();
+						auto name = response_profile.asCString();
 						Json::Value *new_profile;
 
 						if (FindOutputProfile(new_app_json, name, &new_profile) < 0)
@@ -357,7 +356,7 @@ namespace api
 			}
 
 			Json::Value app_json = app->GetConfig().ToJson();
-			auto &output_profiles = app_json["outputProfiles"];
+			auto &output_profiles = app_json["outputProfiles"]["outputProfile"];
 
 			if (output_profiles.removeIndex(index, nullptr) == false)
 			{

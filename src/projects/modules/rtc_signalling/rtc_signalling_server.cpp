@@ -456,7 +456,7 @@ bool RtcSignallingServer::Stop()
 	return http_result && https_result;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const http::svr::ws::Frame> &message)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCommand(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const http::svr::ws::Frame> &message)
 {
 	if (command == "request_offer")
 	{
@@ -492,7 +492,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const std::share
 	return http::HttpError::CreateError(http::StatusCode::BadRequest, "Unknown command: %s", command.CStr());
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::shared_ptr<http::svr::ws::Client> &ws_client, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::shared_ptr<http::svr::ws::Client> &ws_client, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	auto &client = ws_client->GetClient();
 	auto request = client->GetRequest();
@@ -501,7 +501,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 	auto stream_name = info->stream_name;
 
 	std::shared_ptr<const SessionDescription> sdp = nullptr;
-	std::shared_ptr<ov::Error> error = nullptr;
+	std::shared_ptr<const ov::Error> error = nullptr;
 
 	std::shared_ptr<RtcPeerInfo> host_peer = nullptr;
 
@@ -681,7 +681,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 	return error;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	auto &peer_info = info->peer_info;
 
@@ -768,7 +768,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared
 	return nullptr;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCandidate(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	const Json::Value &candidates_value = object.GetJsonValue("candidates");
 
@@ -835,7 +835,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const std::sha
 	return nullptr;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchOfferP2P(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchOfferP2P(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	auto &host = info->peer_info;
 
@@ -896,7 +896,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchOfferP2P(const std::shar
 	return nullptr;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidateP2P(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCandidateP2P(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	auto &host = info->peer_info;
 
@@ -941,7 +941,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidateP2P(const std::
 	return nullptr;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(const std::shared_ptr<http::svr::ws::Client> &ws_client, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchStop(const std::shared_ptr<http::svr::ws::Client> &ws_client, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	bool result = true;
 

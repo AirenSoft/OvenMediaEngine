@@ -31,7 +31,7 @@ namespace serdes
 		return app;
 	}
 
-	std::shared_ptr<http::HttpError> ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *application)
+	std::shared_ptr<const http::HttpError> ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *application)
 	{
 		cfg::DataSource data_source("", "", "Application", json_value);
 

@@ -78,7 +78,8 @@ private:
 	std::shared_ptr<info::Session> _session_info;
 	std::shared_ptr<IcePort> _ice_port;
 	std::shared_ptr<SrtpTransport> _srtp_transport;
-	std::shared_ptr<Certificate> _local_certificate;
+	std::shared_ptr<CertificatePair> _local_certificate_pair;
+	std::shared_ptr<ov::TlsContext> _tls_context;
 	std::shared_ptr<Certificate> _peer_certificate;
 	ov::String _peer_fingerprint_algorithm;
 	ov::String _peer_fingerprint_value;

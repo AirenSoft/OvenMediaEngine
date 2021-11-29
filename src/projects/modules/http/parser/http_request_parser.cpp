@@ -51,6 +51,7 @@ namespace http
 		auto tokens = _http_version.Split("/");
 		if ((tokens.size() != 2) || (tokens[0] != "HTTP"))
 		{
+			logtw("Invalid HTTP version: %s", _http_version.CStr());
 			return StatusCode::BadRequest;
 		}
 

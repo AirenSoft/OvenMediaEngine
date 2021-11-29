@@ -23,12 +23,6 @@ namespace ov
 	class TlsClientData
 	{
 	public:
-		enum class Method
-		{
-			// TLS_client_method()
-			Tls
-		};
-
 		enum class State
 		{
 			Invalid,
@@ -38,7 +32,7 @@ namespace ov
 			Connected,
 		};
 
-		TlsClientData(Method method, bool is_nonblocking);
+		TlsClientData(const std::shared_ptr<TlsContext> &tls_context, bool is_nonblocking);
 
 		~TlsClientData();
 
@@ -53,8 +47,9 @@ namespace ov
 
 		/// Read via _io_callback->OnTlsReadData() and decrypt it, and returns it
 		///
-		/// @returns Returns decrypted data if there is no error, otherwise returns nullptr
-		std::shared_ptr<const Data> Decrypt();
+		/// @param plain_data decrypted data if there is no error
+		/// @returns Returns true if read successfully, false if an error occurred
+		bool Decrypt(std::shared_ptr<const Data> *plain_data);
 		// Encrypt plain_data, and send via _io_callback->OnTlsWriteData()
 		bool Encrypt(const std::shared_ptr<const Data> &plain_data);
 
@@ -65,19 +60,18 @@ namespace ov
 		//--------------------------------------------------------------------
 		// Called by TLS module
 		//--------------------------------------------------------------------
-		// Tls::Read() -> SSL_read() -> Tls::TlsRead() -> BIO_get_data()::read_callback -> TlsClientData::OnTlsRead()
+		// Tls.Read() -> SSL_read() -> Tls::TlsRead() -> TlsBioCallback.read_callback -> TlsClientData.OnTlsRead()
 		ssize_t OnTlsRead(Tls *tls, void *buffer, size_t length);
-		// Tls::Write() -> SSL_write() -> Tls::TlsWrite() -> BIO_get_data()::write_callback -> TlsClientData::OnTlsWrite()
+		// Tls.Write() -> SSL_write() -> Tls::TlsWrite() -> TlsBioCallback.write_callback -> TlsClientData.OnTlsWrite()
 		ssize_t OnTlsWrite(Tls *tls, const void *data, size_t length);
-
+		// OpenSSL -> Tls::() -> Tls::TlsCtrl() -> TlsBioCallback.ctrl_callback -> TlsClientData.OnTlsCtrl()
 		long OnTlsCtrl(ov::Tls *tls, int cmd, long num, void *arg);
 
+	protected:
 		State _state = State::Invalid;
-		Method _method;
 
 		std::shared_ptr<TlsClientDataIoCallback> _io_callback;
 
 		Tls _tls;
-		std::mutex _data_mutex;
 	};
 }  // namespace ov

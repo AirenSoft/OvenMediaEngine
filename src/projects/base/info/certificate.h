@@ -18,28 +18,39 @@ namespace info
 	public:
 		///
 		/// @param certificate_name A name/identifier of certificate (Used for debugging purposes)
-		/// @param host_name_list A host name list
-		/// @param tls A information of certificate
+		/// @param host_name_list A host name list (wildcard can be used)
+		/// @param tls_config A information of certificate
 		///
-		static std::shared_ptr<Certificate> CreateCertificate(const ov::String &certificate_name, const std::vector<ov::String> &host_name_list, const cfg::cmn::Tls &tls);
+		static std::shared_ptr<Certificate> CreateCertificate(const ov::String &certificate_name, const std::vector<ov::String> &host_name_list, const cfg::cmn::Tls &tls_config);
 
-		std::shared_ptr<::Certificate> GetCertificate() const
+		std::shared_ptr<CertificatePair> GetCertificatePair() const
 		{
-			return _certificate;
+			return _certificate_pair;
 		}
 
-		std::shared_ptr<::Certificate> GetChainCertificate() const
-		{
-			return _chain_certificate;
-		}
+		bool IsCertificateForHost(const ov::String &host_name) const;
+
+		ov::String ToString() const;
 
 	protected:
-		std::shared_ptr<ov::Error> PrepareCertificate(const ov::String &certificate_name, const std::vector<ov::String> &host_name_list, const cfg::cmn::Tls &tls);
+		struct HostNameEntry
+		{
+			HostNameEntry(ov::String host_name, ov::Regex regex)
+				: host_name(std::move(host_name)),
+				  regex(std::move(regex))
+			{
+			}
+
+			ov::String host_name;
+			ov::Regex regex;
+		};
+
+	protected:
+		std::shared_ptr<ov::Error> PrepareCertificate(const ov::String &certificate_name, const std::vector<ov::String> &host_name_list, const cfg::cmn::Tls &tls_config);
 
 		ov::String _certificate_name;
-		std::vector<ov::String> _host_name_list;
+		std::vector<HostNameEntry> _host_name_entry_list;
 
-		std::shared_ptr<::Certificate> _certificate;
-		std::shared_ptr<::Certificate> _chain_certificate;
+		std::shared_ptr<CertificatePair> _certificate_pair;
 	};
 }  // namespace info

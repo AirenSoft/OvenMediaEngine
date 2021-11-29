@@ -807,7 +807,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 
 		// Send Stun Binding Response
 		// TODO: apply SASLprep(password)
-		SendStunMessage(remote, address, gate_info, response_message, ice_port_info->offer_sdp->GetIcePwd());
+		SendStunMessage(remote, address, gate_info, response_message, ice_port_info->offer_sdp->GetIcePwd().ToData(false));
 
 		// Immediately, the server also sends a bind request.
 		SendStunBindingRequest(remote, address, gate_info, ice_port_info);
@@ -884,7 +884,7 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 	}
 
 	// TODO: apply SASLprep(password)
-	SendStunMessage(remote, address, gate_info, message, info->peer_sdp->GetIcePwd());
+	SendStunMessage(remote, address, gate_info, message, info->peer_sdp->GetIcePwd().ToData(false));
 
 	return true;
 }
@@ -924,17 +924,17 @@ bool IcePort::ProcessStunBindingResponse(const std::shared_ptr<ov::Socket> &remo
 	return true;
 }
 
-bool IcePort::SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info,  StunMessage &message, const ov::String &integity_key)
+bool IcePort::SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info,  StunMessage &message, const std::shared_ptr<const ov::Data> &integrity_key)
 {
 	std::shared_ptr<const ov::Data> source_data, send_data;
 
-	if(integity_key.IsEmpty())
+	if(integrity_key == nullptr)
 	{
 		source_data = message.Serialize();
 	}
 	else
 	{
-		source_data = message.Serialize(integity_key);
+		source_data = message.Serialize(integrity_key);
 	}
 	
 	logtd("Send message:\n%s", message.ToString().CStr());
@@ -1054,7 +1054,7 @@ bool IcePort::ProcessTurnAllocateRequest(const std::shared_ptr<ov::Socket> &remo
 	response_message.AddAttribute(_xor_relayed_address_attribute);
 	response_message.AddAttribute(_software_attribute);
 	
-	SendStunMessage(remote, address, gate_info, response_message, _hmac_key->ToString());
+	SendStunMessage(remote, address, gate_info, response_message, _hmac_key);
 
 	return true;
 }
@@ -1103,7 +1103,7 @@ bool IcePort::ProcessTurnCreatePermissionRequest(const std::shared_ptr<ov::Socke
 
 	StunMessage response_message;
 	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::CreatePermission, message.GetTransactionId());
-	SendStunMessage(remote, address, gate_info, response_message, _hmac_key->ToString());
+	SendStunMessage(remote, address, gate_info, response_message, _hmac_key);
 
 	return true;
 }
@@ -1122,7 +1122,7 @@ bool IcePort::ProcessTurnChannelBindRequest(const std::shared_ptr<ov::Socket> &r
 	}
 
 	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::ChannelBind, message.GetTransactionId());
-	SendStunMessage(remote, address, gate_info, response_message, _hmac_key->ToString());
+	SendStunMessage(remote, address, gate_info, response_message, _hmac_key);
 
 	std::shared_ptr<IcePortInfo> ice_port_info;
 	{
@@ -1159,7 +1159,7 @@ bool IcePort::ProcessTurnRefreshRequest(const std::shared_ptr<ov::Socket> &remot
 
 	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::Refresh, message.GetTransactionId());
 	response_message.AddAttribute(lifetime_attribute);
-	SendStunMessage(remote, address, gate_info, response_message, _hmac_key->ToString());
+	SendStunMessage(remote, address, gate_info, response_message, _hmac_key);
 
 	logtd("Turn Refresh Request : %s", lifetime_attribute->ToString().CStr());	
 

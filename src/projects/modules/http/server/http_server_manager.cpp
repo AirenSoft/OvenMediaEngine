@@ -74,77 +74,52 @@ namespace http
 			}
 		}
 
-		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *server_name, const ov::SocketAddress &address, const std::shared_ptr<info::Certificate> &certificate, int worker_count)
+		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *server_name, const ov::SocketAddress &address, const std::vector<std::shared_ptr<ocst::VirtualHost>> &vhost_list, int worker_count)
 		{
-			std::shared_ptr<HttpsServer> https_server = nullptr;
+			auto https_server = GetHttpsServer(server_name, address, worker_count);
 
+			if (https_server != nullptr)
 			{
-				auto lock_guard = std::lock_guard(_http_servers_mutex);
-				auto item = _http_servers.find(address);
-
-				if (item != _http_servers.end())
+				for (auto &vhost : vhost_list)
 				{
-					auto http_server = item->second;
+					auto error = https_server->AppendCertificate(vhost->host_info.GetCertificate());
 
-					// Assume that http_server is not HttpsServer
-					https_server = std::dynamic_pointer_cast<HttpsServer>(http_server);
-
-					if (https_server == nullptr)
+					if (error != nullptr)
 					{
-						logte("Cannot reuse instance: Requested HttpsServer, but previous instance is Server (%s)", address.ToString().CStr());
-					}
-					else if (https_server->SetCertificate(certificate) == false)
-					{
-						logte("Could not set certificate: HttpsServer can use only one certificate at the same time");
+						logte("Could not set certificate: %s", error->ToString().CStr());
 						https_server = nullptr;
+						break;
 					}
 					else
 					{
 						// HTTPS server is ready
 					}
 				}
-				else
-				{
-					// Create a new HTTP server
-					https_server = std::make_shared<HttpsServer>(server_name);
-
-					if (https_server->SetCertificate(certificate))
-					{
-						if (https_server->Start(address, worker_count))
-						{
-							_http_servers[address] = https_server;
-						}
-						else
-						{
-							// Failed to start HTTP server
-							https_server = nullptr;
-						}
-					}
-					else
-					{
-						logte("Could not set certificate: HttpsServer can use only one certificate at the same time");
-						https_server = nullptr;
-					}
-				}
-
-				return https_server;
 			}
+
+			return https_server;
 		}
 
-		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *server_name, const ov::SocketAddress &address, const std::vector<std::shared_ptr<ocst::VirtualHost>> &virtual_host_list, int worker_count)
+		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *server_name, const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate, int worker_count)
 		{
-			// Check if TLS is enabled
-			auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
+			auto https_server = GetHttpsServer(server_name, address, worker_count);
 
-			if (vhost_list.empty())
+			if (https_server != nullptr)
 			{
-				return nullptr;
+				auto error = https_server->AppendCertificate(certificate);
+
+				if (error != nullptr)
+				{
+					logte("Could not set certificate: %s", error->ToString().CStr());
+					https_server = nullptr;
+				}
+				else
+				{
+					// HTTPS server is ready
+				}
 			}
 
-			// TODO(Dimiden): OME doesn't support SNI yet, so OME can handle only one certificate.
-			const auto &host_info = vhost_list[0]->host_info;
-
-			return CreateHttpsServer(server_name, address, host_info.GetCertificate(), worker_count);
+			return https_server;
 		}
 
 		bool HttpServerManager::ReleaseServer(const std::shared_ptr<HttpServer> &http_server)
@@ -157,5 +132,44 @@ namespace http
 
 			return false;
 		}
+
+		std::shared_ptr<HttpsServer> HttpServerManager::GetHttpsServer(const char *server_name, const ov::SocketAddress &address, int worker_count)
+		{
+			std::shared_ptr<HttpsServer> https_server = nullptr;
+
+			auto lock_guard = std::lock_guard(_http_servers_mutex);
+			auto item = _http_servers.find(address);
+
+			if (item != _http_servers.end())
+			{
+				auto http_server = item->second;
+
+				// Assume that http_server is not HttpsServer
+				https_server = std::dynamic_pointer_cast<HttpsServer>(http_server);
+
+				if (https_server == nullptr)
+				{
+					logte("Cannot reuse instance: Requested HttpsServer, but previous instance is Server (%s)", address.ToString().CStr());
+				}
+			}
+			else
+			{
+				// Create a new HTTP server
+				https_server = std::make_shared<HttpsServer>(server_name);
+
+				if (https_server->Start(address, worker_count))
+				{
+					_http_servers[address] = https_server;
+				}
+				else
+				{
+					// Failed to start HTTP server
+					https_server = nullptr;
+				}
+			}
+
+			return https_server;
+		}
+
 	}  // namespace svr
 }  // namespace http

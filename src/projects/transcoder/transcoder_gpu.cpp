@@ -25,6 +25,7 @@ bool TranscodeGPU::Initialze()
 	int ret = ::av_hwdevice_ctx_create(&_intel_quick_device_context, AV_HWDEVICE_TYPE_QSV, "/dev/dri/render128", NULL, 0);
 	if (ret < 0)
 	{
+		av_buffer_unref(&_intel_quick_device_context);
 		_intel_quick_device_context = nullptr;
 	}
 	else
@@ -42,6 +43,7 @@ bool TranscodeGPU::Initialze()
 	ret = ::av_hwdevice_ctx_create(&_nvidia_cuda_device_context, AV_HWDEVICE_TYPE_CUDA, "/dev/dri/render128", NULL, 0);
 	if (ret < 0)
 	{
+		av_buffer_unref(&_nvidia_cuda_device_context);
 		_nvidia_cuda_device_context = nullptr;
 	}
 	else

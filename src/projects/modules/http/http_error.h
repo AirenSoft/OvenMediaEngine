@@ -27,7 +27,7 @@ namespace http
 			return static_cast<StatusCode>(GetCode());
 		}
 
-		static std::shared_ptr<HttpError> CreateError(StatusCode status_code, const char *format, ...)
+		static std::shared_ptr<const HttpError> CreateError(StatusCode status_code, const char *format, ...)
 		{
 			ov::String message;
 			va_list list;
@@ -35,17 +35,17 @@ namespace http
 			message.VFormat(format, list);
 			va_end(list);
 
-			return std::make_shared<HttpError>(status_code, message);
+			return std::make_shared<const HttpError>(status_code, message);
 		}
 
-		static std::shared_ptr<HttpError> CreateError(const std::shared_ptr<ov::Error> &error)
+		static std::shared_ptr<const HttpError> CreateError(const std::shared_ptr<const ov::Error> &error)
 		{
 			if (error == nullptr)
 			{
 				return nullptr;
 			}
 
-			auto http_error = std::dynamic_pointer_cast<HttpError>(error);
+			auto http_error = std::dynamic_pointer_cast<const HttpError>(error);
 
 			if (http_error != nullptr)
 			{
