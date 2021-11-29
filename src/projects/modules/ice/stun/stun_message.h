@@ -99,7 +99,7 @@ public:
 	bool AddAttribute(std::shared_ptr<StunAttribute> attribute);
 
 	// Generate MESSAGE-INTEGRITY and FINGERPRINT attributes
-	std::shared_ptr<ov::Data> Serialize(const ov::String &integrity_key);
+	std::shared_ptr<ov::Data> Serialize(const std::shared_ptr<const ov::Data> &integrity_key);
 	// Generate only FINGERPRINT attribute
 	std::shared_ptr<ov::Data> Serialize();
 
@@ -111,7 +111,7 @@ protected:
 	bool WriteHeader(ov::ByteStream &stream);
 	bool WriteMessageLength(ov::ByteStream &stream);
 	bool WriteAttributes(ov::ByteStream &stream);
-	bool WriteMessageIntegrityAttribute(ov::ByteStream &stream, const ov::String &integrity_key);
+	bool WriteMessageIntegrityAttribute(ov::ByteStream &stream, const std::shared_ptr<const ov::Data> &integrity_key);
 	bool WriteFingerprintAttribute(ov::ByteStream &stream);
 
 	// spec: RFC 5389, section 7.3, 15.5

@@ -195,7 +195,7 @@ private:
 						GateInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
 
 
-	bool SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, StunMessage &message, const ov::String &integity_key = "");
+	bool SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, StunMessage &message, const std::shared_ptr<const ov::Data> &integrity_key = nullptr);
 	bool SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, const std::shared_ptr<IcePortInfo> &info);
 	bool SendDataIndication(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, std::shared_ptr<ov::Data> &data);
 

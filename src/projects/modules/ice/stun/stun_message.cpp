@@ -287,7 +287,7 @@ bool StunMessage::WriteAttributes(ov::ByteStream &stream)
 	return true;
 }
 
-bool StunMessage::WriteMessageIntegrityAttribute(ov::ByteStream &stream, const ov::String &integrity_key)
+bool StunMessage::WriteMessageIntegrityAttribute(ov::ByteStream &stream, const std::shared_ptr<const ov::Data> &integrity_key)
 {
 	logtd("Trying to write message integrity attribute...");
 
@@ -314,10 +314,10 @@ bool StunMessage::WriteMessageIntegrityAttribute(ov::ByteStream &stream, const o
 
 	bool result = true;
 
-	logtd("Computing hmac: key: %s (current message length: %d)\n%s", integrity_key.CStr(), _message_length, stream.GetData()->Dump().CStr());
+	logtd("Computing hmac: key: %s (current message length: %d)\n%s", integrity_key->ToHexString().CStr(), _message_length, stream.GetData()->Dump().CStr());
 
 	result = result && ov::MessageDigest::ComputeHmac(ov::CryptoAlgorithm::Sha1,
-													  integrity_key.CStr(), integrity_key.GetLength(),
+													  integrity_key->GetData(), integrity_key->GetLength(),
 													  stream.GetData()->GetData(), stream.GetData()->GetLength(),
 													  hash, OV_STUN_HASH_LENGTH);
 	result = result && attribute->SetHash(hash);
@@ -693,7 +693,7 @@ std::shared_ptr<ov::Data> StunMessage::Serialize()
 	return result ? data : nullptr;
 }
 
-std::shared_ptr<ov::Data> StunMessage::Serialize(const ov::String &integrity_key)
+std::shared_ptr<ov::Data> StunMessage::Serialize(const std::shared_ptr<const ov::Data> &integrity_key)
 {
 	std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>();
 	ov::ByteStream stream(data.get());
