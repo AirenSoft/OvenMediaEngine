@@ -10,6 +10,8 @@
 #include "media_description.h"
 #include "session_description.h"
 
+#include "sdp_regex_pattern.h"
+
 #include <regex>
 
 MediaDescription::MediaDescription()
@@ -238,7 +240,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 	{
 		case 'm':
 			// m=video 9 UDP/TLS/RTP/SAVPF 97
-
+			/*
 			if(std::regex_search(content, matches, std::regex("^(\\w*) (\\d*) ([\\w\\/]*)(?: (.*))?")))
 			{
 				if(matches.size() < 4 + 1)
@@ -284,9 +286,52 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			{
 				parsing_error = true;
 			}
+			*/
+			{
+				auto match = SDPRegexPattern::GetInstance()->MatchMedia(content.c_str());
+				if(match.GetGroupCount() != 4 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				if(!SetMediaType(match.GetGroupAt(1).GetValue()))
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetPort(ov::Converter::ToUInt32(match.GetGroupAt(2).GetValue().CStr()));
+
+				ov::String protocol = match.GetGroupAt(3).GetValue();
+				if(protocol.UpperCaseString() == "UDP/TLS/RTP/SAVPF")
+				{
+					UseDtls(true);
+				}
+				else if(protocol.UpperCaseString() == "RTP/AVPF" || protocol.UpperCaseString() == "RTP/AVP")
+				{
+					UseDtls(false);
+				}
+				else
+				{
+					loge("SDP", "Cannot support %s protocol", protocol.CStr());
+					parsing_error = true;
+					break;
+				}
+
+				auto payload_numbers = match.GetGroupAt(4).GetValue();
+				auto items = payload_numbers.Split(" ");
+				for(const auto &item : items)
+				{
+					auto payload = std::make_shared<PayloadAttr>();
+					payload->SetId(ov::Converter::ToUInt32(item.CStr()));
+					AddPayload(payload);
+				}
+			}
 			break;
 		case 'c':
 			// c=IN IP4 0.0.0.0
+			/*
 			if(std::regex_search(content, matches, std::regex("^IN IP(\\d) (\\S*)")))
 			{
 				if(matches.size() != 2 + 1)
@@ -301,7 +346,20 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			{
 				parsing_error = true;
 			}
+			*/
 
+			{
+				auto match = SDPRegexPattern::GetInstance()->MatchConnection(content.c_str());
+				if(match.GetGroupCount() != 2 + 1)
+				{
+					break;
+				}
+
+				SetConnection(
+					ov::Converter::ToUInt32(match.GetGroupAt(1).GetValue().CStr()),
+					match.GetGroupAt(2).GetValue()
+				);
+			}
 			break;
 
 		case 'a':
@@ -309,6 +367,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			if(content.compare(0, OV_COUNTOF("rtp") - 1,"rtp") == 0)
 			{
 				// a=rtpmap:96 VP8/50000/?
+				/*
 				if(std::regex_search(content,
 				                     matches,
 				                     std::regex("rtpmap:(\\d*) ([\\w\\-\\.]*)(?:\\s*\\/(\\d*)(?:\\s*\\/(\\S*))?)?")))
@@ -322,11 +381,32 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 					AddRtpmap(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str(),
 					          static_cast<uint32_t>(std::stoul(matches[3])), std::string(matches[4]).c_str());
 				}
+				*/
+				auto match = SDPRegexPattern::GetInstance()->MatchRtpmap(content.c_str());
+				if(match.GetGroupCount() < 3 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				AddRtpmap(
+					ov::Converter::ToUInt32(match.GetGroupAt(1).GetValue().CStr()),
+					match.GetGroupAt(2).GetValue(),
+					ov::Converter::ToUInt32(match.GetGroupAt(3).GetValue().CStr()),
+					match.GetGroupAt(4).GetValue()
+				);
 			}
 				// a=rtcp-mux
 			else if(content.compare(0, OV_COUNTOF("rtcp-m") - 1,"rtcp-m") == 0)
 			{
+				/*
 				if(std::regex_search(content, matches, std::regex("^(rtcp-mux)")))
+				{
+					UseRtcpMux(true);
+				}
+				*/
+				auto match = SDPRegexPattern::GetInstance()->MatchRtcpMux(content.c_str());
+				if(match.GetError() == nullptr)
 				{
 					UseRtcpMux(true);
 				}
@@ -336,6 +416,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 				//TODO(Getroot): Implement full spec
 				//https://datatracker.ietf.org/doc/html/rfc5104#section-7.1
 				// a=rtcp-fb:96 nack pli
+				/*
 				if(std::regex_search(content,
 				                     matches,
 				                     std::regex("rtcp-fb:(\\*|\\d*) (.*)")))
@@ -348,10 +429,25 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 
 					EnableRtcpFb(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str(), true);
 				}
+				*/
+				
+				auto match = SDPRegexPattern::GetInstance()->MatchRtcpFb(content.c_str());
+				if(match.GetGroupCount() != 2 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				EnableRtcpFb(
+					ov::Converter::ToUInt32(match.GetGroupAt(1).GetValue().CStr()),
+					match.GetGroupAt(2).GetValue(),
+					true
+				);
 			}
 			else if(content.compare(0, OV_COUNTOF("mid") - 1, "mid") == 0)
 			{
 				// a=mid:video,
+				/*
 				if(std::regex_search(content, matches, std::regex("^mid:([^\\s]*)")))
 				{
 					if(matches.size() != 1 + 1)
@@ -362,10 +458,20 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 
 					SetMid(std::string(matches[1]).c_str());
 				}
+				*/
+				auto match = SDPRegexPattern::GetInstance()->MatchMid(content.c_str());
+				if(match.GetGroupCount() != 1 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetMid(match.GetGroupAt(1).GetValue());
 			}
 			else if(content.compare(0, OV_COUNTOF("msid") - 1, "msid") == 0)
 			{
 				// a=msid:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf 6jHsvxRPcpiEVZbA5QegGowmCtOlh8kTaXJ4
+				/*
 				if(std::regex_search(content, matches, std::regex("^msid:(.*) (.*)")))
 				{
 					if(matches.size() != 2 + 1)
@@ -376,10 +482,23 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 
 					SetMsid(std::string(matches[1]).c_str(), std::string(matches[2]).c_str());
 				}
+				*/
+				auto match = SDPRegexPattern::GetInstance()->MatchMsid(content.c_str());
+				if(match.GetGroupCount() != 2 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetMsid(
+					match.GetGroupAt(1).GetValue(),
+					match.GetGroupAt(2).GetValue()
+				);
 			}
 			else if(content.compare(0, OV_COUNTOF("set") - 1, "set") == 0)
 			{
 				// a=setup:actpass
+				/*
 				if(std::regex_search(content, matches, std::regex("^setup:(\\w*)")))
 				{
 					if(matches.size() != 1 + 1)
@@ -390,10 +509,20 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 
 					SetSetup(std::string(matches[1]).c_str());
 				}
+				*/
+				auto match = SDPRegexPattern::GetInstance()->MatchSetup(content.c_str());
+				if(match.GetGroupCount() != 1 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetSetup(match.GetGroupAt(1).GetValue());
 			}
 			else if(content.compare(0, OV_COUNTOF("ss") - 1, "ss") == 0)
 			{
 				// a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
+				/*
 				if(std::regex_search(content, matches, std::regex("^ssrc:(\\d*) cname(?::(.*))?")))
 				{
 					if(matches.size() != 2 + 1)
@@ -415,10 +544,44 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 					SetSsrc(stoul(matches[1]));
 					SetRtxSsrc(stoul(matches[2]));
 				}
+				*/
+
+				auto match = SDPRegexPattern::GetInstance()->MatchSsrcCname(content.c_str());
+				if(match.GetError() == nullptr)
+				{
+					if(match.GetGroupCount() != 2 + 1)
+					{
+						parsing_error = true;
+						break;
+					}
+
+					SetSsrc(ov::Converter::ToUInt32(match.GetGroupAt(1).GetValue().CStr()));
+					SetCname(match.GetGroupAt(2).GetValue());
+				}
+				else
+				{
+					auto match = SDPRegexPattern::GetInstance()->MatchSsrcFid(content.c_str());
+					if(match.GetError() == nullptr)
+					{
+						if(match.GetGroupCount() != 2 + 1)
+						{
+							parsing_error = true;
+							break;
+						}
+						
+						SetSsrc(ov::Converter::ToUInt32(match.GetGroupAt(1).GetValue().CStr()));
+						SetRtxSsrc(ov::Converter::ToUInt32(match.GetGroupAt(2).GetValue().CStr()));
+					}
+					else
+					{
+						// unknown pattern
+					}
+				}
 			}
 			else if(content.compare(0, OV_COUNTOF("fra") - 1, "fra") == 0)
 			{
 				// a=framerate:29.97
+				/*
 				if(std::regex_search(content, matches, std::regex("^framerate:(\\d+(?:$|\\.\\d+))")))
 				{
 					if(matches.size() != 1 + 1)
@@ -429,12 +592,23 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 
 					SetFramerate(std::stof(matches[1]));
 				}
+				*/
+
+				auto match = SDPRegexPattern::GetInstance()->MatchFramerate(content.c_str());
+				if(match.GetGroupCount() != 1 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetFramerate(ov::Converter::ToFloat(match.GetGroupAt(1).GetValue().CStr()));
 			}
 				// a=sendonly
 			else if(content.compare(0, OV_COUNTOF("se") - 1, "se") == 0 ||
 			        content.compare(0, OV_COUNTOF("re") - 1, "re") == 0 ||
 			        content.compare(0, OV_COUNTOF("in") - 1, "in") == 0)
 			{
+				/*
 				if(std::regex_search(content, matches, std::regex("^(sendrecv|recvonly|sendonly|inactive)")))
 				{
 					if(matches.size() != 1 + 1)
@@ -449,24 +623,46 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 						break;
 					}
 				}
+				*/
+
+				auto match = SDPRegexPattern::GetInstance()->MatchDirection(content.c_str());
+				if(match.GetGroupCount() != 1 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetDirection(match.GetGroupAt(1).GetValue());
 			}
 			else if(content.compare(0, OV_COUNTOF("fmtp") - 1, "fmtp") == 0)
 			{
+				/*
 				if(std::regex_search(content, matches, std::regex("fmtp:(\\*|\\d*) (.*)")))
 				{
 					SetFmtp(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str());
 				}
+				*/
+
+				auto match = SDPRegexPattern::GetInstance()->MatchFmtp(content.c_str());
+				if(match.GetGroupCount() != 2 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetFmtp(
+					ov::Converter::ToUInt32(match.GetGroupAt(1).GetValue().CStr()),
+					match.GetGroupAt(2).GetValue()
+				);
 			}
 			else if(content.compare(0, OV_COUNTOF("rtcp:") - 1, "rtcp:") == 0)
 			{
-				if(std::regex_search(content, matches, std::regex("rtcp:(\\d*) IN (.*)")))
-				{
-					// a=rtcp:9 IN IP4 0.0.0.0
-				}
+				// No need
 			}
 			else if(content.compare(0, OV_COUNTOF("ext") - 1, "ext") == 0)
 			{
-				// a=extmap:1 urn:ietf:params:rtp-hdrext:framemarking
+				// a=extmap:1[/direction] urn:ietf:params:rtp-hdrext:framemarking
+				/*
 				if(std::regex_search(content,
 				                     matches,
 				                     std::regex("extmap:(\\*|\\d*) (.*)")))
@@ -479,6 +675,29 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 
 					AddExtmap(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str());
 				}
+				*/
+
+				auto match = SDPRegexPattern::GetInstance()->MatchExtmap(content.c_str());
+				if(match.GetGroupCount() < 2 + 1)
+				{
+					break;
+				}
+
+				auto value = match.GetGroupAt(1).GetValue();
+				uint8_t id = 0;
+				if(value.IndexOf("/") == -1)
+				{
+					id = ov::Converter::ToUInt32(value.CStr());
+				}
+				else 
+				{
+					id = ov::Converter::ToUInt32(value.Left(value.IndexOf("/")).CStr());
+				}
+
+				AddExtmap(
+					id,
+					match.GetGroupAt(2).GetValue()
+				);
 			}
 			else if(ParsingCommonAttrLine(type, content))
 			{
