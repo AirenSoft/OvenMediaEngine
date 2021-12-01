@@ -10,6 +10,8 @@
 #include <sstream>
 #include <regex>
 
+#include "sdp_regex_pattern.h"
+
 SessionDescription::SessionDescription()
 {
 }
@@ -155,6 +157,7 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 	switch(type)
 	{
 		case 'v':
+			/*
 			// v=0
 			if(std::regex_search(content, matches, std::regex("^(\\d*)$")))
 			{
@@ -165,9 +168,21 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 				}
 				SetVersion(static_cast<uint8_t>(std::stoi(matches[1])));
 			}
+			*/
+			{
+				auto match = SDPRegexPattern::GetInstance()->MatchVersion(content.c_str());
+				if(match.GetGroupCount() != 1 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetVersion(ov::Converter::ToInt32(match.GetGroupAt(1).GetValue().CStr()));
+			}
 			break;
 		case 'o':
 			// o=OvenMediaEngine 1882243660 2 IN IP4 127.0.0.1
+			/*
 			if(std::regex_search(content, matches, std::regex("^(\\S*) (\\d*) (\\d*) (\\S*) IP(\\d) (\\S*)")))
 			{
 				if(matches.size() != 6 + 1)
@@ -183,9 +198,29 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 				          static_cast<uint8_t>(std::stoul(matches[5])),
 				          std::string(matches[6]).c_str());
 			}
+			*/
+			{
+				auto match = SDPRegexPattern::GetInstance()->MatchOrigin(content.c_str());
+				if(match.GetGroupCount() != 6 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetOrigin(
+						match.GetGroupAt(1).GetValue(), // user name
+						ov::Converter::ToUInt32(match.GetGroupAt(2).GetValue().CStr()), // session id
+						ov::Converter::ToUInt32(match.GetGroupAt(3).GetValue().CStr()), // session version
+						match.GetGroupAt(4).GetValue(), // net_type
+						ov::Converter::ToInt32(match.GetGroupAt(5).GetValue().CStr()), // ip_version
+						match.GetGroupAt(6).GetValue() // address
+						);
+			}
+
 			break;
 		case 's':
 			// s=-
+			/*
 			if(std::regex_search(content, matches, std::regex("^(.*)")))
 			{
 				if(matches.size() != 1 + 1)
@@ -195,10 +230,21 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 				}
 
 				SetSessionName(std::string(matches[1]).c_str());
+			}*/
+			{
+				auto match = SDPRegexPattern::GetInstance()->MatchSessionName(content.c_str());
+				if(match.GetGroupCount() != 1 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+				
+				SetSessionName(match.GetGroupAt(1).GetValue());
 			}
 			break;
 		case 't':
 			// t=0 0
+			/*
 			if(std::regex_search(content, matches, std::regex("^(\\d*) (\\d*)")))
 			{
 				if(matches.size() != 2 + 1)
@@ -210,12 +256,27 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 				SetTiming(static_cast<uint32_t>(std::stoul(matches[1])),
 				          static_cast<uint32_t>(std::stoul(matches[2])));
 			}
+			*/
+			{
+				auto match = SDPRegexPattern::GetInstance()->MatchTiming(content.c_str());
+				if(match.GetGroupCount() != 2 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+				
+				SetTiming(
+					ov::Converter::ToUInt32(match.GetGroupAt(1).GetValue().CStr()),
+					ov::Converter::ToUInt32(match.GetGroupAt(2).GetValue().CStr())
+				);
+			}
 
 			break;
 		case 'a':
 			// a=group:BUNDLE video audio ...
 			if(content.compare(0, OV_COUNTOF("gr") - 1, "gr") == 0)
 			{
+				/*
 				if(std::regex_search(content, matches, std::regex("^group:BUNDLE (.*)")))
 				{
 					if(matches.size() != 1 + 1)
@@ -231,10 +292,26 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 						_bundles.emplace_back(bundle.c_str());
 					}
 				}
+				*/
+				
+				auto match = SDPRegexPattern::GetInstance()->MatchGourpBundle(content.c_str());
+				if(match.GetGroupCount() != 1 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+				
+				auto bundles = match.GetGroupAt(1).GetValue();
+				auto items = bundles.Split(" ");
+				for(const auto &item : items)
+				{
+					_bundles.emplace_back(item);
+				}
 			}
 			// a=msid-semantic:WMS *
 			else if(content.compare(0, OV_COUNTOF("ms") - 1, "ms") == 0)
 			{
+				/*
 				if(std::regex_search(content, matches, std::regex(R"(^msid-semantic:\s?(\w*) (\S*))")))
 				{
 					if(matches.size() != 2 + 1)
@@ -245,20 +322,55 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 
 					SetMsidSemantic(std::string(matches[1]).c_str(), std::string(matches[2]).c_str());
 				}
+				*/
+
+				auto match = SDPRegexPattern::GetInstance()->MatchMsidSemantic(content.c_str());
+				if(match.GetGroupCount() != 2 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetMsidSemantic(
+					match.GetGroupAt(1).GetValue(),
+					match.GetGroupAt(2).GetValue()
+				);
 			}
 			else if(content.compare(0, OV_COUNTOF("sdpl") - 1, "sdpl") == 0)
 			{
+				/*
 				if(std::regex_search(content, matches, std::regex("^sdplang:(\\S*)")))
 				{
 					_sdp_lang = std::string(matches[1]).c_str();
 				}
+				*/
+
+				auto match = SDPRegexPattern::GetInstance()->MatchSdpLang(content.c_str());
+				if(match.GetGroupCount() != 1 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				_sdp_lang = match.GetGroupAt(1).GetValue();
 			}
 			else if(content.compare(0, OV_COUNTOF("ran") - 1, "ran") == 0)
 			{
+				/*
 				if(std::regex_search(content, matches, std::regex("^range:(\\S*)")))
 				{
 					_range = std::string(matches[1]).c_str();
 				}
+				*/
+
+				auto match = SDPRegexPattern::GetInstance()->MatchRange(content.c_str());
+				if(match.GetGroupCount() != 1 + 1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				_range = match.GetGroupAt(1).GetValue();
 			}
 			else if(ParsingCommonAttrLine(type, content))
 			{

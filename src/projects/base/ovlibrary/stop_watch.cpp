@@ -24,13 +24,20 @@ namespace ov
 		return _is_valid;
 	}
 
-	int64_t StopWatch::Elapsed() const
+	int64_t StopWatch::Elapsed(bool nano) const
 	{
 		if (_is_valid)
 		{
 			auto current = std::chrono::high_resolution_clock::now();
 
-			return std::chrono::duration_cast<std::chrono::milliseconds>(current - _last).count();
+			if(nano == false)
+			{
+				return std::chrono::duration_cast<std::chrono::milliseconds>(current - _last).count();
+			}
+			else
+			{
+				return std::chrono::duration_cast<std::chrono::nanoseconds>(current - _last).count();
+			}
 		}
 
 		return -1LL;

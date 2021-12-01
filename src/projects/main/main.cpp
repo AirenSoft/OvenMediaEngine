@@ -21,6 +21,7 @@
 #include <sys/utsname.h>
 #include <transcoder/transcoder.h>
 #include <web_console/web_console.h>
+#include <modules/sdp/sdp_regex_pattern.h>
 
 #include "banner.h"
 #include "init_utilities.h"
@@ -83,6 +84,13 @@ int main(int argc, char *argv[])
 		{
 			logtw("Could not resolve public IP address from stun server (%s)", stun_server_address.CStr());
 		}
+	}
+
+	// Precompile SDP patterns for better performance.
+	if(SDPRegexPattern::GetInstance()->Compile() == false)
+	{
+		OV_ASSERT(false, "SDPRegexPattern compile failed");
+		return false;
 	}
 
 	// Create info::Host list
