@@ -274,7 +274,7 @@ namespace ov
 
 	bool TlsContext::UseSslContext(SSL *ssl)
 	{
-		::SSL_set_SSL_CTX(ssl, _ssl_ctx);
+		return (::SSL_set_SSL_CTX(ssl, _ssl_ctx) != nullptr);
 	}
 
 	void TlsContext::SetVerify(int mode)
