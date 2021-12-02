@@ -32,8 +32,8 @@ namespace http
 				return ov::OpensslError::CreateError("Certificate is nullptr");
 			}
 
-			ov::TlsContextCallback tls_context_callback = {
-				.sni_callback = std::bind(&HttpsServer::HandleSniCallback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)};
+			ov::TlsContextCallback tls_context_callback = { nullptr, nullptr,
+				std::bind(&HttpsServer::HandleSniCallback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)};
 
 			std::shared_ptr<const ov::Error> error;
 			auto tls_context = ov::TlsContext::CreateServerContext(

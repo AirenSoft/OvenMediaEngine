@@ -63,6 +63,7 @@ void RtmpPushStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_pa
 	auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
 
 	BroadcastPacket(stream_packet);
+	MonitorInstance->IncreaseBytesOut(*pub::Stream::GetSharedPtrAs<info::Stream>(), PublisherType::RtmpPush, media_packet->GetData()->GetLength() * GetSessionCount());
 }
 
 void RtmpPushStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
@@ -75,6 +76,7 @@ void RtmpPushStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_pa
 	auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
 
 	BroadcastPacket(stream_packet);
+	MonitorInstance->IncreaseBytesOut(*pub::Stream::GetSharedPtrAs<info::Stream>(), PublisherType::RtmpPush, media_packet->GetData()->GetLength() * GetSessionCount());
 }
 
 bool RtmpPushStream::DeleteSession(uint32_t session_id)

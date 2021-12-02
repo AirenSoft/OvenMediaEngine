@@ -255,6 +255,11 @@ namespace api
 				break;
 			}
 
+			auto url = ov::Url::Parse(client->GetRequest()->GetUri());
+			auto a_name = app->GetName();
+			auto s_name = push->GetStreamName();
+			ocst::Orchestrator::GetInstance()->RequestPullStream(url, a_name, s_name);
+
 			response.append(::serdes::JsonFromPush(push));
 
 			return {http::StatusCode::OK, std::move(response)};
