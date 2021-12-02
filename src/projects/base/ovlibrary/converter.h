@@ -177,7 +177,7 @@ namespace ov
 				{
 					return std::stoi(str, nullptr, base);
 				}
-				catch (std::invalid_argument &e)
+				catch (std::exception &e)
 				{
 				}
 			}
@@ -203,7 +203,7 @@ namespace ov
 				{
 					return static_cast<uint16_t>(std::stoi(str, nullptr, base));
 				}
-				catch (std::invalid_argument &e)
+				catch (std::exception &e)
 				{
 				}
 			}
@@ -219,7 +219,7 @@ namespace ov
 				{
 					return static_cast<uint32_t>(std::stoul(str, nullptr, base));
 				}
-				catch (std::invalid_argument &e)
+				catch (std::exception &e)
 				{
 				}
 			}
@@ -243,7 +243,7 @@ namespace ov
 
 				return 0;
 			}
-			catch (std::invalid_argument &e)
+			catch (std::exception &e)
 			{
 				return 0;
 			}
@@ -257,7 +257,7 @@ namespace ov
 				{
 					return std::stoll(str, nullptr, base);
 				}
-				catch (std::invalid_argument &e)
+				catch (std::exception &e)
 				{
 				}
 			}
@@ -283,7 +283,7 @@ namespace ov
 				{
 					return std::stoull(str, nullptr, base);
 				}
-				catch (std::invalid_argument &e)
+				catch (std::exception &e)
 				{
 				}
 			}
@@ -331,7 +331,7 @@ namespace ov
 				{
 					return std::stof(str, nullptr);
 				}
-				catch (std::invalid_argument &e)
+				catch (std::exception &e)
 				{
 				}
 			}
@@ -357,7 +357,7 @@ namespace ov
 				{
 					return std::stod(str, nullptr);
 				}
-				catch (std::invalid_argument &e)
+				catch (std::exception &e)
 				{
 				}
 			}
