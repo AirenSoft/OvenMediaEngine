@@ -75,7 +75,7 @@ namespace pvd
 
 		// Initialize RtcSignallingServer
 		auto interceptor = std::make_shared<WebRtcProviderSignallingInterceptor>();
-		_signalling_server = std::make_shared<RtcSignallingServer>(server_config);
+		_signalling_server = std::make_shared<RtcSignallingServer>(server_config, server_config.GetBind().GetProviders().GetWebrtc());
 		_signalling_server->AddObserver(RtcSignallingObserver::GetSharedPtr());
 		if (_signalling_server->Start(has_port ? &signalling_address : nullptr, has_tls_port ? &signalling_tls_address : nullptr, worker_count, interceptor) == false)
 		{
