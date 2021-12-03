@@ -20,15 +20,15 @@
 #include "rtc_ice_candidate.h"
 #include "rtc_signalling_server_private.h"
 
-RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config)
-	: _server_config(server_config),
+RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_config)
+  : _webrtc_config(webrtc_config),
 	  _p2p_manager(server_config)
 {
 }
 
 bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address, int worker_count, std::shared_ptr<http::svr::ws::Interceptor> interceptor)
 {
-	const auto &webrtc_config = _server_config.GetBind().GetPublishers().GetWebrtc();
+//	const auto &webrtc_config = _server_config.GetBind().GetPublishers().GetWebrtc();
 
 	if ((_http_server != nullptr) || (_https_server != nullptr))
 	{
@@ -64,10 +64,10 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 		_new_ice_servers = Json::arrayValue;
 
 		// for internal turn/tcp relay configuration
-		_tcp_force = webrtc_config.GetIceCandidates().IsTcpForce();
+		_tcp_force = _webrtc_config.GetIceCandidates().IsTcpForce();
 
 		bool tcp_relay_parsed = false;
-		auto tcp_relay_address = webrtc_config.GetIceCandidates().GetTcpRelay(&tcp_relay_parsed);
+		auto tcp_relay_address = _webrtc_config.GetIceCandidates().GetTcpRelay(&tcp_relay_parsed);
 		if (tcp_relay_parsed)
 		{
 			Json::Value ice_server = Json::objectValue;
@@ -118,7 +118,7 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 		}
 
 		// for external ice server configuration
-		auto &ice_servers_config = webrtc_config.GetIceServers();
+		auto &ice_servers_config = _webrtc_config.GetIceServers();
 		if (ice_servers_config.IsParsed())
 		{
 			for (auto ice_server_config : ice_servers_config.GetIceServerList())
