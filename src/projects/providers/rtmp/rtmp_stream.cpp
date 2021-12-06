@@ -646,7 +646,7 @@ namespace pvd
 			audio_samplesize = object->GetNumber(index);
 		}  // Audio Sample Size
 
-		if (video_codec_type == RtmpCodecType::H264 && audio_codec_type == RtmpCodecType::AAC)
+		if (video_codec_type != RtmpCodecType::H264 || audio_codec_type != RtmpCodecType::AAC)
 		{
 		}
 		else
