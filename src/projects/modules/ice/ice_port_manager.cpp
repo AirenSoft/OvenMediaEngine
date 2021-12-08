@@ -85,7 +85,7 @@ bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePortObserver> observer,
 		Release(observer);
 
 		logte("Could not create turn server");
-		OV_ASSERT2(false);
+		return false;
 	}
 	else
 	{
