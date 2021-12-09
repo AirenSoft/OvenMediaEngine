@@ -89,7 +89,10 @@ namespace ov
 		Tls _tls;
 		WriteCallback _write_callback;
 
+		std::mutex _cipher_data_mutex;
 		std::shared_ptr<Data> _cipher_data;
+
+		std::mutex _plain_data_mutex;
 		std::shared_ptr<Data> _plain_data;
 	};
 }  // namespace ov

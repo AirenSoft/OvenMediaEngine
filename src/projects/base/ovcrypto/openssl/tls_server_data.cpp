@@ -58,17 +58,20 @@ namespace ov
 
 		logtd("Trying to decrypt the data for TLS\n%s", cipher_data->Dump(32).CStr());
 
-		if ((_cipher_data == nullptr) || _cipher_data->IsEmpty())
 		{
-			_cipher_data = cipher_data->Clone();
-		}
-		else
-		{
-			// Append the data
-			if (_cipher_data->Append(cipher_data) == false)
+			std::lock_guard lock_guard(_cipher_data_mutex);
+			if ((_cipher_data == nullptr) || _cipher_data->IsEmpty())
 			{
-				logtd("Could not append data");
-				return false;
+				_cipher_data = cipher_data->Clone();
+			}
+			else
+			{
+				// Append the data
+				if (_cipher_data->Append(cipher_data) == false)
+				{
+					logtd("Could not append data");
+					return false;
+				}
 			}
 		}
 
@@ -166,6 +169,7 @@ namespace ov
 
 		if (_tls.Write(plain_data, &written_bytes) == SSL_ERROR_NONE)
 		{
+			std::lock_guard lock_guard(_plain_data_mutex);
 			*cipher_data = std::move(_plain_data);
 			return true;
 		}
@@ -175,6 +179,8 @@ namespace ov
 
 	ssize_t TlsServerData::OnTlsRead(Tls *tls, void *buffer, size_t length)
 	{
+		std::lock_guard lock_guard(_cipher_data_mutex);
+
 		if (_cipher_data == nullptr)
 		{
 			return 0;
@@ -206,6 +212,7 @@ namespace ov
 		}
 		else
 		{
+			std::lock_guard lock_guard(_plain_data_mutex);
 			if (_plain_data == nullptr)
 			{
 				_plain_data = std::make_shared<Data>(data, length);

@@ -25,6 +25,9 @@ namespace http
 		{
 			Interceptor::Interceptor()
 			{
+				ov::String str("OvenMediaEngine");
+				_ping_data = str.ToData(false);
+
 				_ping_timer.Push(std::bind(&Interceptor::DoPing, this, std::placeholders::_1), 30 * 1000);
 				_ping_timer.Start();
 			}
@@ -36,20 +39,20 @@ namespace http
 
 			ov::DelayQueueAction Interceptor::DoPing(void *parameter)
 			{
+				decltype(_websocket_client_list) client_list;
+
 				{
-					std::shared_lock<std::shared_mutex> lock_guard(_websocket_client_list_mutex);
+					std::shared_lock lock_guard(_websocket_client_list_mutex);
+					client_list = _websocket_client_list;
+				}
 
-					if (_websocket_client_list.size() > 0)
+				if (client_list.size() > 0)
+				{
+					logtd("Trying to ping to WebSocket clients...");
+
+					for (auto client : client_list)
 					{
-						logtd("Trying to ping to WebSocket clients...");
-
-						ov::String str("OvenMediaEngine");
-						auto payload = std::move(str.ToData(false));
-
-						for (auto client : _websocket_client_list)
-						{
-							client.second->response->Send(payload, FrameOpcode::Ping);
-						}
+						client.second->GetClient()->Send(_ping_data, FrameOpcode::Ping);
 					}
 				}
 
@@ -69,10 +72,10 @@ namespace http
 				return true;
 			}
 
-			InterceptorResult Interceptor::OnHttpPrepare(const std::shared_ptr<HttpConnection> &client)
+			InterceptorResult Interceptor::OnHttpPrepare(const std::shared_ptr<HttpConnection> &connection)
 			{
-				auto request = client->GetRequest();
-				auto response = client->GetResponse();
+				auto request = connection->GetRequest();
+				auto response = connection->GetResponse();
 
 				// RFC6455 - 4.2.2.  Sending the Server's Opening Handshake
 				response->SetStatusCode(StatusCode::SwitchingProtocols);
@@ -98,10 +101,10 @@ namespace http
 				response->Response();
 
 				logtd("Add to websocket client list: %s", request->ToString().CStr());
-				auto websocket_response = std::make_shared<Client>(client);
+				auto websocket_response = std::make_shared<Client>(connection);
 
 				{
-					std::lock_guard<std::shared_mutex> lock_guard(_websocket_client_list_mutex);
+					std::lock_guard lock_guard(_websocket_client_list_mutex);
 
 					_websocket_client_list.emplace(request, std::make_shared<Info>(websocket_response, nullptr));
 				}
@@ -114,9 +117,9 @@ namespace http
 				return InterceptorResult::Keep;
 			}
 
-			InterceptorResult Interceptor::OnHttpData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data)
+			InterceptorResult Interceptor::OnHttpData(const std::shared_ptr<HttpConnection> &connection, const std::shared_ptr<const ov::Data> &data)
 			{
-				auto request = client->GetRequest();
+				auto request = connection->GetRequest();
 
 				if (data->GetLength() == 0)
 				{
@@ -127,7 +130,7 @@ namespace http
 				std::shared_ptr<Info> info = nullptr;
 
 				{
-					std::shared_lock<std::shared_mutex> lock_guard(_websocket_client_list_mutex);
+					std::shared_lock lock_guard(_websocket_client_list_mutex);
 
 					auto item = _websocket_client_list.find(request);
 
@@ -148,13 +151,8 @@ namespace http
 				logtd("Data is received\n%s", data->Dump().CStr());
 
 				auto input_data = data;
-
-				if (info->frame == nullptr)
-				{
-					info->frame = std::make_shared<Frame>();
-				}
-
-				auto frame = info->frame;
+				auto client = info->GetClient();
+				auto frame = info->GetFrame();
 
 				while (input_data->GetLength() > 0)
 				{
@@ -177,7 +175,7 @@ namespace http
 								logtd("A ping frame is received:\n%s", payload->Dump().CStr());
 
 								// Send a pong frame to the client
-								info->response->Send(payload, FrameOpcode::Pong);
+								client->Send(payload, FrameOpcode::Pong);
 								break;
 
 							case FrameOpcode::Pong:
@@ -191,7 +189,7 @@ namespace http
 								// Callback the payload
 								if (_message_handler != nullptr)
 								{
-									if (_message_handler(info->response, frame) == InterceptorResult::Disconnect)
+									if (_message_handler(client, frame) == InterceptorResult::Disconnect)
 									{
 										frame->Reset();
 										return InterceptorResult::Disconnect;
@@ -219,15 +217,15 @@ namespace http
 				return InterceptorResult::Keep;
 			}
 
-			void Interceptor::OnHttpError(const std::shared_ptr<HttpConnection> &client, StatusCode status_code)
+			void Interceptor::OnHttpError(const std::shared_ptr<HttpConnection> &connection, StatusCode status_code)
 			{
-				auto request = client->GetRequest();
-				auto response = client->GetResponse();
+				auto request = connection->GetRequest();
+				auto response = connection->GetResponse();
 
 				std::shared_ptr<Info> socket_info;
 
 				{
-					std::lock_guard<std::shared_mutex> lock_guard(_websocket_client_list_mutex);
+					std::lock_guard lock_guard(_websocket_client_list_mutex);
 
 					auto item = _websocket_client_list.find(request);
 
@@ -242,7 +240,7 @@ namespace http
 
 				if ((_error_handler != nullptr) && (socket_info != nullptr))
 				{
-					_error_handler(socket_info->response, ov::Error::CreateError(static_cast<int>(status_code), "%s", StringFromStatusCode(status_code)));
+					_error_handler(socket_info->GetClient(), ov::Error::CreateError(static_cast<int>(status_code), "%s", StringFromStatusCode(status_code)));
 				}
 
 				response->SetStatusCode(status_code);
@@ -254,7 +252,7 @@ namespace http
 
 				std::shared_ptr<Info> socket_info;
 				{
-					std::lock_guard<std::shared_mutex> lock_guard(_websocket_client_list_mutex);
+					std::lock_guard lock_guard(_websocket_client_list_mutex);
 
 					auto item = _websocket_client_list.find(request);
 
@@ -274,7 +272,7 @@ namespace http
 
 				if ((_close_handler != nullptr) && (socket_info != nullptr))
 				{
-					_close_handler(socket_info->response, reason);
+					_close_handler(socket_info->GetClient(), reason);
 				}
 			}
 
