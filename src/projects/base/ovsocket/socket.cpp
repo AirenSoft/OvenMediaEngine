@@ -875,8 +875,6 @@ namespace ov
 
 				if (result == false)
 				{
-					OV_ASSERT2(false);
-					logae("Could not delete from epoll");
 					SetState(SocketState::Error);
 					return DispatchResult::Error;
 				}
