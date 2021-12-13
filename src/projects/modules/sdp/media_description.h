@@ -54,6 +54,7 @@ public:
 	void SetMediaType(MediaType type);
 	bool SetMediaType(const ov::String &type);
 	const MediaType GetMediaType() const;
+	const ov::String GetMediaTypeStr() const;
 	void SetPort(uint16_t port);
 	uint16_t GetPort() const;
 	void UseDtls(bool flag);

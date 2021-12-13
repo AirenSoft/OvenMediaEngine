@@ -749,6 +749,11 @@ const MediaDescription::MediaType MediaDescription::GetMediaType() const
 	return _media_type;
 }
 
+const ov::String MediaDescription::GetMediaTypeStr() const
+{
+	return _media_type_str;
+}
+
 void MediaDescription::SetPort(uint16_t port)
 {
 	_port = port;
