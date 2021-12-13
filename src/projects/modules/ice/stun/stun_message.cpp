@@ -129,7 +129,7 @@ bool StunMessage::ParseHeader(ov::ByteStream &stream)
 
 		// If this STUN message is of the form shown in RFC3489, the magic cookie value may not match
 		// If this happens, we need to implement the RFC3489 format
-		logtd("Invalid magic cookie found: %08X", _magic_cookie);
+		logtw("Invalid magic cookie found: %08X", _magic_cookie);
 		_last_error_code = LastErrorCode::INVALID_DATA;
 		return false;
 	}
@@ -144,7 +144,7 @@ bool StunMessage::ParseHeader(ov::ByteStream &stream)
 
 	if (stream.Remained() < _message_length)
 	{
-		logtw("Message is too short: %d (expected: %d)", stream.Remained(), _message_length);
+		logtd("Message is too short: %d (expected: %d)", stream.Remained(), _message_length);
 		_last_error_code = LastErrorCode::NOT_ENOUGH_DATA;
 		return false;
 	}

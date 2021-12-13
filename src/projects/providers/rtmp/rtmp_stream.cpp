@@ -458,6 +458,8 @@ namespace pvd
 	{
 		RtmpCodecType video_codec_type = RtmpCodecType::Unknown;
 		RtmpCodecType audio_codec_type = RtmpCodecType::Unknown;
+		bool video_avaliable = false;
+		bool audio_avaliable = false;
 		double frame_rate = 30.0;
 		double video_width = 0;
 		double video_height = 0;
@@ -523,6 +525,7 @@ namespace pvd
 		// Video Codec
 		if ((index = object->FindName("videocodecid")) >= 0)
 		{
+			video_avaliable = true;
 			if (object->GetType(index) == AmfDataType::String && strcmp("avc1", object->GetString(index)) == 0)
 			{
 				video_codec_type = RtmpCodecType::H264;
@@ -577,6 +580,7 @@ namespace pvd
 		// Audio Codec
 		if ((index = object->FindName("audiocodecid")) >= 0)
 		{
+			audio_avaliable = true;
 			if (object->GetType(index) == AmfDataType::String && strcmp("mp4a", object->GetString(index)) == 0)
 			{
 				audio_codec_type = RtmpCodecType::AAC;	//AAC
@@ -646,10 +650,8 @@ namespace pvd
 			audio_samplesize = object->GetNumber(index);
 		}  // Audio Sample Size
 
-		if (video_codec_type != RtmpCodecType::H264 || audio_codec_type != RtmpCodecType::AAC)
-		{
-		}
-		else
+		if ((video_avaliable == true && video_codec_type != RtmpCodecType::H264) || 
+			(audio_avaliable == true &&  audio_codec_type != RtmpCodecType::AAC))
 		{
 			logtw("AmfMeta has incompatible codec information. - stream(%s/%s) id(%u/%u) video(%s) audio(%s)",
 				  _vhost_app_name.CStr(),
