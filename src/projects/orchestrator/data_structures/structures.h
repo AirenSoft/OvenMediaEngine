@@ -118,7 +118,7 @@ namespace ocst
 
 	struct VirtualHost
 	{
-		VirtualHost(const info::Host &host_info);
+		VirtualHost(const info::Host &new_host_info);
 
 		void MarkAllAs(ItemState state);
 		bool MarkAllAs(ItemState expected_old_state, ItemState state);
