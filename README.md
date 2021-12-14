@@ -39,12 +39,15 @@ Would you please click on each link below for details:
   * In-band FEC (Forward Error Correction)
     * <i>Opus</i>
   * Embedded WebRTC Signalling Server (WebSocket based)
-* Low Latency Streaming with MPEG-DASH (Chunked CAMF)
-* Legacy Streaming with MPEG-DASH/HLS
+* Low Latency MPEG-DASH streaming (Beta)
+* Legacy HLS and MPEG-DASH streaming
 * Embedded Live Transcoder
   * VP8, H.264, Opus, AAC, Bypass
-* Origin-Edge structure
+* Clustering (Origin-Edge structure)
 * Monitoring
+* Access Control
+  * Adminssion Webhooks
+  * SingedPolicy
 * Beta
   * File Recording
   * RTMP Push Publishing (Re-streaming)
