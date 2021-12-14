@@ -142,8 +142,8 @@ namespace ocst
 	//--------------------------------------------------------------------
 	// ocst::VirtualHost
 	//--------------------------------------------------------------------
-	VirtualHost::VirtualHost(const info::Host &host_info)
-		: host_info(host_info), state(ItemState::New)
+	VirtualHost::VirtualHost(const info::Host &new_host_info)
+		: host_info(new_host_info), state(ItemState::New)
 
 	{
 	}
