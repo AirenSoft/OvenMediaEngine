@@ -46,6 +46,21 @@ namespace cfg
 			CFG_DECLARE_REF_GETTER_OF(GetOriginList, _origins.GetOriginList())
 			CFG_DECLARE_REF_GETTER_OF(GetApplicationList, _applications.GetApplicationList())
 
+			bool GetApplicationByName(ov::String name, cfg::vhost::app::Application &application) const
+			{
+				auto &app_list = GetApplicationList();
+				for (auto &item : app_list)
+				{
+					if (item.GetName() == name)
+					{
+						application = item;
+						return true;
+					}
+				}
+
+				return false;
+			}
+
 		protected:
 			void MakeList() override
 			{
