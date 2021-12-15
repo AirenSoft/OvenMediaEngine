@@ -381,7 +381,7 @@ namespace pvd
 		SendFrame(frame);
 
 		// Send FIR to reduce keyframe interval
-		if (_fir_timer.IsElapsed(1000) && track->GetMediaType() == cmn::MediaType::Video)
+		if (_fir_timer.IsElapsed(2000) && track->GetMediaType() == cmn::MediaType::Video)
 		{
 			_fir_timer.Update();
 			_rtp_rtcp->SendPLI(first_rtp_packet->Ssrc());
