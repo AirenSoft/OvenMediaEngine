@@ -95,12 +95,14 @@ namespace pvd
 		payload->SetRtpmap(payload_type_num++, "H264", 90000);
 		payload->SetFmtp(ov::String::FormatString("packetization-mode=1;profile-level-id=%x;level-asymmetry-allowed=1",	0x42e01f));
 		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::CcmFir, true);
+		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::NackPli, true);
 		video_media_desc->AddPayload(payload);
 
 		// VP8
 		payload = std::make_shared<PayloadAttr>();
 		payload->SetRtpmap(payload_type_num++, "VP8", 90000);
 		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::CcmFir, true);
+		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::NackPli, true);
 		video_media_desc->AddPayload(payload);
 
 		video_media_desc->Update();
