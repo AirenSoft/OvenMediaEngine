@@ -31,6 +31,10 @@ struct ParseOption
 	// -d
 	// Run as a service
 	bool start_service = false;
+
+	// -p <pid_path>
+	// If -d is set then the path of the PID can be set
+	ov::String pid_path = "";
 };
 
 bool TryParseOption(int argc, char *argv[], ParseOption *parse_option);

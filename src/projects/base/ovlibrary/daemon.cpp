@@ -18,7 +18,7 @@ namespace ov
 {
     int Daemon::_pipe_event[2];
 
-    Daemon::State Daemon::Initialize()
+    Daemon::State Daemon::Initialize(const char* pid_path)
     {
         char result[2] = {0,};
 
@@ -37,7 +37,7 @@ namespace ov
         {
             ::close(_pipe_event[PIPE_WRITE]);
 
-            int pid_file = ::open(OV_PID_FILE, O_RDWR|O_CREAT, 0644);
+            int pid_file = ::open(pid_path, O_RDWR|O_CREAT, 0644);
             if (pid_file < 0)
             {
                 return State::PARENT_FAIL;
