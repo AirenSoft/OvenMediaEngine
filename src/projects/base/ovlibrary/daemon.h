@@ -35,7 +35,7 @@ namespace ov
         Daemon() = default;
         virtual ~Daemon() = default;
 
-        static State Initialize();
+        static State Initialize(const char* pid_path = OV_PID_FILE);
         static void SetEvent(bool success = true);
 
     private:
