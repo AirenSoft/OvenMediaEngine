@@ -193,7 +193,7 @@ static void ReloadHandler(int signum, siginfo_t *si, void *unused)
 		host_info_list.emplace_back(info::Host(server_config->GetName(), server_config->GetID(), host));
 	}
 
-	if (ocst::Orchestrator::GetInstance()->ApplyOriginMap(host_info_list) == false)
+	if (ocst::Orchestrator::GetInstance()->UpdateVirtualHosts(host_info_list) == false)
 	{
 		logte("Could not reload OriginMap");
 	}

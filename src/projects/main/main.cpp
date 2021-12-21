@@ -67,8 +67,7 @@ int main(int argc, char *argv[])
 
 	auto server_config = cfg::ConfigManager::GetInstance()->GetServer();
 	auto orchestrator = ocst::Orchestrator::GetInstance();
-	auto monitor = mon::Monitoring::GetInstance();
-	monitor->OnServerStarted(server_config);
+
 	logti("Server ID : %s", server_config->GetID().CStr());
 
 	// Get public IP
@@ -93,34 +92,7 @@ int main(int argc, char *argv[])
 		return false;
 	}
 
-	// Create info::Host list
-	std::vector<info::Host> host_info_list;
-	{
-		// Used to check duplicate names
-		std::map<ov::String, bool> vhost_map;
-		auto &hosts = server_config->GetVirtualHostList();
-
-		for (const auto &host : hosts)
-		{
-			auto item = vhost_map.find(host.GetName());
-
-			if (item == vhost_map.end())
-			{
-				host_info_list.emplace_back(info::Host(server_config->GetName(), server_config->GetID(), host));
-				vhost_map[host.GetName()] = true;
-			}
-			else
-			{
-				logte("Duplicated VirtualHost found: %s", host.GetName().CStr());
-				return 1;
-			}
-		}
-	}
-
-	orchestrator->ApplyOriginMap(host_info_list);
-
 	auto api_server = api::Server::GetInstance();
-
 	api_server->Start(server_config);
 
 	INIT_EXTERNAL_MODULE("FFmpeg", InitializeFFmpeg);
@@ -162,56 +134,7 @@ int main(int argc, char *argv[])
 
 	logti("All modules are initialized successfully");
 
-	bool should_exit = false;
-
-	for (auto &host_info : host_info_list)
-	{
-		auto host_name = host_info.GetName();
-
-		logtd("Trying to create host [%s]", host_name.CStr());
-		monitor->OnHostCreated(host_info);
-
-		// Create applications that defined by the configuration
-		for (auto &app_cfg : host_info.GetApplicationList())
-		{
-			auto result = orchestrator->CreateApplication(host_info, app_cfg);
-
-			switch (result)
-			{
-				case ocst::Result::Failed:
-					logtc("Failed to create an application: %s", app_cfg.GetName().CStr());
-					should_exit = true;
-					break;
-
-				case ocst::Result::Succeeded:
-					break;
-
-				case ocst::Result::Exists:
-					logtc("Duplicate application [%s] found. Please check the settings.", app_cfg.GetName().CStr());
-					should_exit = true;
-					break;
-
-				case ocst::Result::NotExists:
-					// This should never happen
-					OV_ASSERT2(false);
-					logtc("Internal error occurred (THIS IS A BUG)");
-					should_exit = true;
-					break;
-			}
-
-			if (should_exit)
-			{
-				break;
-			}
-		}
-
-		if (should_exit)
-		{
-			break;
-		}
-	}
-
-	if (should_exit == false)
+	if(orchestrator->StartServer(server_config))
 	{
 		if (parse_option.start_service)
 		{
@@ -225,8 +148,6 @@ int main(int argc, char *argv[])
 	}
 
 	orchestrator->Release();
-	// Relase all modules
-	monitor->Release();
 	api_server->Stop();
 
 	RELEASE_MODULE(webrtc_provider, "WebRTC Provider");
