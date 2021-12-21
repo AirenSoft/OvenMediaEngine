@@ -287,7 +287,8 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 	// Daemonize OME with start_service argument
 	if (parse_option->start_service)
 	{
-		auto state = ov::Daemon::Initialize();
+		auto &p { parse_option->pid_path };
+		auto state { p.IsEmpty() ? ov::Daemon::Initialize() : ov::Daemon::Initialize(p.CStr()) };
 
 		switch (state)
 		{
