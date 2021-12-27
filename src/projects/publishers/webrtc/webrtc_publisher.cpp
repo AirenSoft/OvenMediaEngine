@@ -603,8 +603,27 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::Client>
 									const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
 	logti("Stop command received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
+
+	auto final_vhost_app_name = vhost_app_name;
+	auto final_stream_name = stream_name;
+	auto [new_url_exist, new_url] = ws_client->GetData("new_url");
+	if (new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
+	{
+		ov::String uri = std::get<ov::String>(new_url);
+
+		auto parsed_url = ov::Url::Parse(uri);
+		if (parsed_url == nullptr)
+		{
+			logte("Could not parse the url: %s", uri.CStr());
+			return false;
+		}
+
+		final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
+		final_stream_name = parsed_url->Stream();
+	}
+
 	// Find Stream
-	auto stream = std::static_pointer_cast<RtcStream>(GetStream(vhost_app_name, stream_name));
+	auto stream = std::static_pointer_cast<RtcStream>(GetStream(final_vhost_app_name, final_stream_name));
 	if (!stream)
 	{
 		logte("To stop session failed. Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
