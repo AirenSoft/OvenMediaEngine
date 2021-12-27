@@ -35,7 +35,7 @@ namespace http
 			ov::TlsContextCallback tls_context_callback = {
 				.create_callback = nullptr,
 				.verify_callback = nullptr,
-				std::bind(&HttpsServer::HandleSniCallback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)};
+				.sni_callback = std::bind(&HttpsServer::HandleSniCallback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)};
 
 			std::shared_ptr<const ov::Error> error;
 			auto tls_context = ov::TlsContext::CreateServerContext(
