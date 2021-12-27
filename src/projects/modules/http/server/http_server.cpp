@@ -173,8 +173,7 @@ namespace http
 
 				if (client_iterator == _connection_list.end())
 				{
-					logte("Could not find client %s from list", remote->ToString().CStr());
-					OV_ASSERT2(false);
+					// If an error occurs during TCP or HTTP connection processing, it may not exist in _connection_list.
 					return;
 				}
 
