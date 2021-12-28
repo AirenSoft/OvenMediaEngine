@@ -6,10 +6,13 @@ OvenMediaEngine has a built-in live transcoder. The live transcoder can decode t
 
 OvenMediaEngine currently supports the following codecs:
 
-| Video Decoding   | Audio Decoding | Video Encoding   | Audio Encoding | Image Encoding |
-| ---------------- | -------------- | ---------------- | -------------- | -------------- |
-| H.264 (Baseline) | AAC            | H.264 (Baseline) | AAC            | JPEG           |
-|                  |                | VP8              | Opus           | PNG            |
+| Type  | Decoder           | Encoder                    |
+| ----- | ----------------- | -------------------------- |
+| Video | VP8, H.264, H.265 | VP8, H.264, H265(GPU only) |
+| Audio | AAC, OPUS         | AAC, OPUS                  |
+| Image |                   | JPEG, PNG                  |
+
+
 
 ## OutputProfiles
 
