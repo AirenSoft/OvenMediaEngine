@@ -81,18 +81,16 @@ The meaning of each property is as follows:
 
 A table in which presets provided for each codec library are mapped to OvenMediaEngine's presets. Slow presets are of good quality and use a lot of resources, whereas Fast presets have lower quality and better performance. It can be set according to your own system environment and service purpose.
 
-| Presets     | x264/x265  | libvpx      | h264/265 NVC | h264/265 QSV |
-| ----------- | ---------- | ----------- | ------------ | ------------ |
-| **slower**  | slower     | best        | hq           | -            |
-| **slow**    | slow       | best        | llhq         | -            |
-| **medium**  | medium     | good        | bd           | -            |
-| **fast**    | fast       | realtime    | hp           | -            |
-| **faster ** | \*faster   | \*realtime  | \*llhp       | -            |
+| Presets     | openh264         | libvpx      | h264/265 NVC | h264/265 QSV |
+| ----------- | ---------------- | ----------- | ------------ | ------------ |
+| **slower**  | Quantizer(10-41) | best        | hq           | -            |
+| **slow**    | Quantizer(10-41) | best        | llhq         | -            |
+| **medium**  | Quantizer(10-51) | good        | bd           | -            |
+| **fast**    | Quantizer(25-51) | realtime    | hp           | -            |
+| **faster**  | Quantizer(25-51) | \*realtime  | \*llhp       | -            |
 
 _References_
 
-* https://trac.ffmpeg.org/wiki/Encode/H.264
-* https://x265.readthedocs.io/en/stable/presets.html
 * https://trac.ffmpeg.org/wiki/Encode/VP8
 * https://docs.nvidia.com/video-technologies/video-codec-sdk/nvenc-preset-migration-guide/
 
@@ -185,7 +183,7 @@ WebRTC doesn't support AAC, so if video bypasses transcoding, audio must be enco
 
 ### **Keep the original with transcoding**
 
-&#x20;If you want to transcode with the same quality as the original. See the sample below for possible parameters that OME supports to keep original. If you remove the **Width**, **Height**, **Framerate**, **Samplerate**, and **Channel **parameters. then, It is transcoded with the same options as the original.
+&#x20;If you want to transcode with the same quality as the original. See the sample below for possible parameters that OME supports to keep original. If you remove the **Width**, **Height**, **Framerate**, **Samplerate**, and **Channel** parameters. then, It is transcoded with the same options as the original.
 
 ```
 <Encodes>
@@ -205,7 +203,7 @@ WebRTC doesn't support AAC, so if video bypasses transcoding, audio must be enco
 
 ### Rescaling while keep the aspect ratio
 
-To change the video resolution when transcoding, use the values of width and height in the Video encode option. If you don't know the resolution of the original, it will be difficult to keep the aspect ratio after transcoding. Please use the following methods to solve these problems. For example, if you input only the **Width **value in the Video encoding option, the **Height** value is automatically generated according to the ratio of the original video.
+To change the video resolution when transcoding, use the values of width and height in the Video encode option. If you don't know the resolution of the original, it will be difficult to keep the aspect ratio after transcoding. Please use the following methods to solve these problems. For example, if you input only the **Width** value in the Video encoding option, the **Height** value is automatically generated according to the ratio of the original video.
 
 ```
 <Encodes>
