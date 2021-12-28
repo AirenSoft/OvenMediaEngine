@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  Transcode
+//  Transcoder
 //
 //  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
@@ -12,6 +12,8 @@
 
 #include "../../transcoder_private.h"
 
+#define USE_OPENH264			1
+
 EncoderAVC::~EncoderAVC()
 {
 	Stop();
@@ -19,6 +21,43 @@ EncoderAVC::~EncoderAVC()
 
 bool EncoderAVC::SetCodecParams()
 {
+#if USE_OPENH264
+	_codec_context->framerate = ::av_d2q((_encoder_context->GetFrameRate() > 0) ? _encoder_context->GetFrameRate() : _encoder_context->GetEstimateFrameRate(), AV_TIME_BASE);
+	_codec_context->bit_rate = _codec_context->rc_min_rate = _codec_context->rc_max_rate = _encoder_context->GetBitrate();
+	_codec_context->rc_buffer_size = static_cast<int>(_codec_context->bit_rate / 2);
+	_codec_context->sample_aspect_ratio = ::av_make_q(1, 1);
+	_codec_context->time_base = ::av_inv_q(::av_mul_q(_codec_context->framerate, (AVRational){_codec_context->ticks_per_frame, 1}));
+	_codec_context->gop_size = _codec_context->framerate.num / _codec_context->framerate.den;
+	_codec_context->max_b_frames = 0;
+	_codec_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
+	_codec_context->width = _encoder_context->GetVideoWidth();
+	_codec_context->height = _encoder_context->GetVideoHeight();
+	_codec_context->thread_count = FFMAX(4, av_cpu_count() / 3);
+	_codec_context->slices = _codec_context->thread_count;
+
+	::av_opt_set(_codec_context->priv_data, "rc_mode", "timestamp", 0);
+	::av_opt_set(_codec_context->priv_data, "allow_skip_frames", "true", 0);
+
+	::av_opt_set(_codec_context->priv_data, "profile", "constrained_baseline", 0);
+	::av_opt_set(_codec_context->priv_data, "coder", "cavlc", 0);
+
+
+	if (_encoder_context->GetPreset() == "slower" || _encoder_context->GetPreset() == "slow")
+	{
+		_codec_context->qmin = 10;
+		_codec_context->qmax = 41;
+	}
+	else if (_encoder_context->GetPreset() == "fast" || _encoder_context->GetPreset() == "faster")
+	{
+		_codec_context->qmin = 25;
+		_codec_context->qmax = 51;		
+	}
+	else // else if (_encoder_context->GetPreset() == "medium")
+	{
+		_codec_context->qmin = 10;
+		_codec_context->qmax = 51;
+	}
+#else
 	_codec_context->framerate = ::av_d2q((_encoder_context->GetFrameRate() > 0) ? _encoder_context->GetFrameRate() : _encoder_context->GetEstimateFrameRate(), AV_TIME_BASE);
 	_codec_context->bit_rate = _codec_context->rc_min_rate = _codec_context->rc_max_rate = _encoder_context->GetBitrate();
 	_codec_context->rc_buffer_size = static_cast<int>(_codec_context->bit_rate / 2);
@@ -77,6 +116,7 @@ bool EncoderAVC::SetCodecParams()
 
 	// Remove the sliced-thread option from encoding delay. Browser compatibility in MAC environment
 	::av_opt_set(_codec_context->priv_data, "x264opts", "bframes=0:sliced-threads=0:b-adapt=1:no-scenecut:keyint=30:min-keyint=30", 0);
+#endif
 
 	return true;
 }
@@ -94,7 +134,11 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 
 	auto codec_id = GetCodecID();
 
-	AVCodec *codec = ::avcodec_find_encoder(codec_id);
+#if USE_OPENH264	
+	AVCodec *codec = ::avcodec_find_encoder_by_name("libopenh264");
+#else
+	AVCodec *codec = ::avcodec_find_encoder_by_name("libx264");	
+#endif
 	if (codec == nullptr)
 	{
 		logte("Could not find encoder: %d (%s)", codec_id, ::avcodec_get_name(codec_id));
