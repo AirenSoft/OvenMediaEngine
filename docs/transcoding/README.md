@@ -6,11 +6,11 @@ OvenMediaEngine has a built-in live transcoder. The live transcoder can decode t
 
 OvenMediaEngine currently supports the following codecs:
 
-| Type  | Decoder           | Encoder                    |
-| ----- | ----------------- | -------------------------- |
-| Video | VP8, H.264, H.265 | VP8, H.264, H265(GPU only) |
-| Audio | AAC, OPUS         | AAC, OPUS                  |
-| Image |                   | JPEG, PNG                  |
+| Type  | Decoder           | Encoder                     |
+| ----- | ----------------- | --------------------------- |
+| Video | VP8, H.264, H.265 | VP8, H.264, H.265(GPU only) |
+| Audio | AAC, OPUS         | AAC, OPUS                   |
+| Image |                   | JPEG, PNG                   |
 
 
 
@@ -45,10 +45,10 @@ The `<OutputProfile>` setting allows incoming streams to be re-encoded via the `
 
 According to the above setting, if the incoming stream name is `stream`, the output stream becomes `stream_bypass`and the stream URL can be used as follows.
 
-* **`WebRTC`**    ws://192.168.0.1:3333/app/`stream_bypass`
-* **`HLS`**       [http://192.168.0.1:8080/app/\`stream\_bypass\`/playlist.m3u8](http://192.168.0.1:8080/app/%60stream\_bypass%60/playlist.m3u8)
-* **`MPEG-DASH`** [http://192.168.0.1:8080/app/\`stream\_bypass\`/manifest.mpd](http://192.168.0.1:8080/app/%60stream\_bypass%60/manifest.mpd)
-* **`Low-Latency MPEG-DASH`** [http://192.168.0.1:8080/app/\`stream\_bypass\`/manifest\_ll.mpd](http://192.168.0.1:8080/app/%60stream\_bypass%60/manifest\_ll.mpd)
+* **`WebRTC`**    ws://192.168.0.1:3333/app/<mark style="background-color:blue;">stream\_bypass</mark>
+* **`HLS`**       http://192.168.0.1:8080/app/<mark style="background-color:blue;">stream\_bypass</mark>/playlist.m3u8
+* **`MPEG-DASH`** http://192.168.0.1:8080/app/<mark style="background-color:blue;">stream\_bypass</mark>/manifest.mpd
+* **`Low-Latency MPEG-DASH`** http://192.168.0.1:8080/app/<mark style="background-color:blue;">stream\_bypass</mark>/manifest\_ll.mpd
 
 ### Encodes
 
