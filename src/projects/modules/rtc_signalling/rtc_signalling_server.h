@@ -109,6 +109,7 @@ protected:
 	std::shared_ptr<const ov::Error> DispatchCandidateP2P(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
 	std::shared_ptr<const ov::Error> DispatchStop(const std::shared_ptr<http::svr::ws::Client> &ws_client, std::shared_ptr<RtcSignallingInfo> &info);
 
+	const cfg::Server _server_config;
 	const cfg::bind::cmm::Webrtc _webrtc_config;
 
 	std::shared_ptr<http::svr::HttpServer> _http_server;

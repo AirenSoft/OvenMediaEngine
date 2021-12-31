@@ -25,7 +25,8 @@ std::shared_ptr<SegmentStreamInterceptor> SegmentStreamServer::CreateInterceptor
 	return std::make_shared<SegmentStreamInterceptor>();
 }
 
-bool SegmentStreamServer::Start(const ov::SocketAddress *address,
+bool SegmentStreamServer::Start(const cfg::Server &server_config,
+								const ov::SocketAddress *address,
 								const ov::SocketAddress *tls_address,
 								int thread_count,
 								int worker_count)
@@ -39,14 +40,25 @@ bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 	auto process_handler = std::bind(&SegmentStreamServer::ProcessRequest, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 
 	bool result = true;
-	auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
-
+	// auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
+	auto vhost_list = server_config.GetVirtualHostList();
 	auto manager = http::svr::HttpServerManager::GetInstance();
 
 	std::shared_ptr<http::svr::HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("SegPub", *address, worker_count) : nullptr;
 	result = result && ((address != nullptr) ? (http_server != nullptr) : true);
 
-	std::shared_ptr<http::svr::HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer("SegPub", *tls_address, vhost_list, worker_count) : nullptr;
+	std::shared_ptr<http::svr::HttpsServer> https_server = nullptr;
+	if(tls_address != nullptr)
+	{
+		for(const auto &vhost : vhost_list)
+		{
+			auto certificate = info::Certificate::CreateCertificate("SegPub", vhost.GetHost().GetNameList(), vhost.GetHost().GetTls());
+			manager->CreateHttpsServer("SegPub", *tls_address, certificate, worker_count);
+		}
+
+		https_server = manager->GetHttpsServer("SegPub", *tls_address, worker_count);
+	}
+
 	result = result && ((tls_address != nullptr) ? (https_server != nullptr) : true);
 
 	result = result && PrepareInterceptors(http_server, https_server, thread_count, process_handler);

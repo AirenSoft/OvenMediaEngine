@@ -30,6 +30,7 @@ public:
 	// thread_count: A thread count of SegmentWorkerManager
 	// worker_count: A thread count of socket pool
 	bool Start(
+		const cfg::Server &server_config,
 		const ov::SocketAddress *address,
 		const ov::SocketAddress *tls_address,
 		int thread_count,

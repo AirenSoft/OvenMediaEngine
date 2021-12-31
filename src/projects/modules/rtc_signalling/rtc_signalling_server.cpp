@@ -21,7 +21,8 @@
 #include "rtc_signalling_server_private.h"
 
 RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_config)
-  : _webrtc_config(webrtc_config),
+  : _server_config(server_config),
+  	_webrtc_config(webrtc_config),
 	  _p2p_manager(server_config)
 {
 }
@@ -43,11 +44,23 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	}
 
 	bool result = true;
-	auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
+	//auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
+	auto vhost_list = _server_config.GetVirtualHostList();
 
 	auto manager = http::svr::HttpServerManager::GetInstance();
 	std::shared_ptr<http::svr::HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("RtcSig", *address, worker_count) : nullptr;
-	std::shared_ptr<http::svr::HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer("RtcSig", *tls_address, vhost_list, worker_count) : nullptr;
+	
+	std::shared_ptr<http::svr::HttpsServer> https_server = nullptr;
+	if(tls_address != nullptr)
+	{
+		for(const auto &vhost : vhost_list)
+		{
+			auto certificate = info::Certificate::CreateCertificate("RtcSig", vhost.GetHost().GetNameList(), vhost.GetHost().GetTls());
+			manager->CreateHttpsServer("RtcSig", *tls_address, certificate, worker_count);
+		}
+
+		https_server = manager->GetHttpsServer("RtcSig", *tls_address, worker_count);
+	}
 
 	if (SetWebSocketHandler(interceptor) == false)
 	{

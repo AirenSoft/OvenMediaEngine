@@ -78,9 +78,16 @@ bool ThumbnailPublisher::Start()
 	{
 		ov::SocketAddress tls_address = ov::SocketAddress(server_config.GetIp(), tls_port.GetPort());
 
-		auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
+		//auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
+		auto vhost_list = _server_config.GetVirtualHostList();
 
-		_https_server = manager->CreateHttpsServer("thumb_https", tls_address, vhost_list, worker_count);
+		for(const auto &vhost : vhost_list)
+		{
+			auto certificate = info::Certificate::CreateCertificate("thumb_https", vhost.GetHost().GetNameList(), vhost.GetHost().GetTls());
+			manager->CreateHttpsServer("thumb_https", tls_address, certificate, worker_count);
+		}
+
+		_https_server = manager->GetHttpsServer("thumb_https", tls_address, worker_count);
 		if (_https_server != nullptr)
 		{
 			_https_server->AddInterceptor(CreateInterceptor());
