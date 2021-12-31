@@ -41,7 +41,7 @@ bool SegmentPublisher::Start(const cfg::cmn::SingularPort &port_config, const cf
 	// Register as observer
 	stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
-	if (stream_server->Start(has_port ? &address : nullptr, has_tls_port ? &tls_address : nullptr,
+	if (stream_server->Start(_server_config, has_port ? &address : nullptr, has_tls_port ? &tls_address : nullptr,
 							 DEFAULT_SEGMENT_WORKER_THREAD_COUNT, worker_count) == false)
 	{
 		logte("An error occurred while start %s Publisher", GetPublisherName());

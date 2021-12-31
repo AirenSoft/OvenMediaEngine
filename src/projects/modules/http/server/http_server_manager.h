@@ -26,8 +26,6 @@ namespace http
 			std::shared_ptr<HttpsServer> CreateHttpsServer(const char *server_name, const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate, int worker_count = HTTP_SERVER_USE_DEFAULT_COUNT);
 
 			bool ReleaseServer(const std::shared_ptr<HttpServer> &http_server);
-
-		protected:
 			std::shared_ptr<HttpsServer> GetHttpsServer(const char *server_name, const ov::SocketAddress &address, int worker_count = HTTP_SERVER_USE_DEFAULT_COUNT);
 
 		protected:
