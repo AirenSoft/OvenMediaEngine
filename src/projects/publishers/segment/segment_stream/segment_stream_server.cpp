@@ -48,9 +48,9 @@ bool SegmentStreamServer::Start(const cfg::Server &server_config,
 	result = result && ((address != nullptr) ? (http_server != nullptr) : true);
 
 	std::shared_ptr<http::svr::HttpsServer> https_server = nullptr;
-	if(tls_address != nullptr)
+	if (result && (tls_address != nullptr))
 	{
-		for(const auto &vhost : vhost_list)
+		for (const auto &vhost : vhost_list)
 		{
 			auto certificate = info::Certificate::CreateCertificate("SegPub", vhost.GetHost().GetNameList(), vhost.GetHost().GetTls());
 			manager->CreateHttpsServer("SegPub", *tls_address, certificate, worker_count);
@@ -262,11 +262,11 @@ bool SegmentStreamServer::SetHttpCorsHeaders(const info::VHostAppName &vhost_app
 		std::lock_guard lock_guard(_cors_mutex);
 
 		auto cors_policy_iterator = _cors_policy_map.find(vhost_app_name);
-		auto cors_domains_iterator = _cors_http_map.find(vhost_app_name);
+		auto cors_regex_list_iterator = _cors_regex_list_map.find(vhost_app_name);
 
 		if (
 			(cors_policy_iterator == _cors_policy_map.end()) ||
-			(cors_domains_iterator == _cors_http_map.end()))
+			(cors_regex_list_iterator == _cors_regex_list_map.end()))
 		{
 			// This happens in the following situations:
 			//
@@ -292,13 +292,14 @@ bool SegmentStreamServer::SetHttpCorsHeaders(const info::VHostAppName &vhost_app
 				break;
 
 			case CorsPolicy::Origin: {
-				const auto &cors_domains = cors_domains_iterator->second;
-				auto item = std::find_if(cors_domains.begin(), cors_domains.end(),
-										 [&origin](auto &cors_domain) -> bool {
-											 return (origin == cors_domain);
+				const auto &cors_regex_list = cors_regex_list_iterator->second;
+				auto item = std::find_if(cors_regex_list.begin(), cors_regex_list.end(),
+										 [&origin](auto &cors_regex) -> bool {
+											 ov::MatchResult match_result = cors_regex.Matches(origin);
+											 return match_result.IsMatched();
 										 });
 
-				if (item == cors_domains.end())
+				if (item == cors_regex_list.end())
 				{
 					// Could not find the domain
 					return false;
@@ -324,13 +325,13 @@ void SegmentStreamServer::SetCrossDomains(const info::VHostAppName &vhost_app_na
 	{
 		std::lock_guard lock_guard(_cors_mutex);
 
-		auto &cors_urls = _cors_http_map[vhost_app_name];
 		auto &cors_policy = _cors_policy_map[vhost_app_name];
+		auto &cors_regex_list = _cors_regex_list_map[vhost_app_name];
 		ov::String cors_rtmp;
 
 		auto cors_domains_for_rtmp = std::vector<ov::String>();
 
-		cors_urls.clear();
+		cors_regex_list.clear();
 		cors_rtmp = "";
 
 		if (url_list.size() == 0)
@@ -350,8 +351,8 @@ void SegmentStreamServer::SetCrossDomains(const info::VHostAppName &vhost_app_na
 		{
 			if (url == "*")
 			{
-				cors_urls.clear();
-				cors_urls.push_back("*");
+				cors_regex_list.clear();
+				cors_regex_list.push_back(ov::Regex::CompiledRegex(ov::Regex::WildCardRegex("*")));
 				cors_policy = CorsPolicy::All;
 
 				if (url_list.size() > 1)
@@ -376,7 +377,7 @@ void SegmentStreamServer::SetCrossDomains(const info::VHostAppName &vhost_app_na
 				continue;
 			}
 
-			cors_urls.push_back(url);
+			cors_regex_list.push_back(ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(url)));
 
 			if (url.HasPrefix(HTTP_PREFIX))
 			{
@@ -407,10 +408,10 @@ void SegmentStreamServer::SetCrossDomains(const info::VHostAppName &vhost_app_na
 		}
 		else
 		{
-			for (auto &cors_domain : cors_urls)
+			for (auto &cors_url : cors_domains_for_rtmp)
 			{
 				cross_domain_xml
-					<< R"(	<allow-access-from domain=")" << cors_domain.CStr() << R"(" />)" << std::endl;
+					<< R"(	<allow-access-from domain=")" << cors_url.CStr() << R"(" />)" << std::endl;
 			}
 		}
 
