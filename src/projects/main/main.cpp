@@ -14,6 +14,7 @@
 #include <config/config_manager.h>
 #include <mediarouter/mediarouter.h>
 #include <modules/address/address_utilities.h>
+#include <modules/sdp/sdp_regex_pattern.h>
 #include <monitoring/monitoring.h>
 #include <orchestrator/orchestrator.h>
 #include <providers/providers.h>
@@ -21,7 +22,6 @@
 #include <sys/utsname.h>
 #include <transcoder/transcoder.h>
 #include <web_console/web_console.h>
-#include <modules/sdp/sdp_regex_pattern.h>
 
 #include "banner.h"
 #include "init_utilities.h"
@@ -86,14 +86,16 @@ int main(int argc, char *argv[])
 	}
 
 	// Precompile SDP patterns for better performance.
-	if(SDPRegexPattern::GetInstance()->Compile() == false)
+	if (SDPRegexPattern::GetInstance()->Compile() == false)
 	{
 		OV_ASSERT(false, "SDPRegexPattern compile failed");
 		return false;
 	}
 
+	bool succeeded = true;
+
 	auto api_server = api::Server::GetInstance();
-	api_server->Start(server_config);
+	succeeded = succeeded && api_server->Start(server_config);
 
 	INIT_EXTERNAL_MODULE("FFmpeg", InitializeFFmpeg);
 	INIT_EXTERNAL_MODULE("SRT", InitializeSrt);
@@ -132,18 +134,21 @@ int main(int argc, char *argv[])
 	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
 	// PENDING : INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
 
-	logti("All modules are initialized successfully");
-
-	if(orchestrator->StartServer(server_config))
+	if (succeeded)
 	{
-		if (parse_option.start_service)
-		{
-			ov::Daemon::SetEvent();
-		}
+		logti("All modules are initialized successfully");
 
-		while (g_is_terminated == false)
+		if (orchestrator->StartServer(server_config))
 		{
-			sleep(1);
+			if (parse_option.start_service)
+			{
+				ov::Daemon::SetEvent();
+			}
+
+			while (g_is_terminated == false)
+			{
+				sleep(1);
+			}
 		}
 	}
 
@@ -208,8 +213,8 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 	// Daemonize OME with start_service argument
 	if (parse_option->start_service)
 	{
-		auto &p { parse_option->pid_path };
-		auto state { p.IsEmpty() ? ov::Daemon::Initialize() : ov::Daemon::Initialize(p.CStr()) };
+		auto &p{parse_option->pid_path};
+		auto state{p.IsEmpty() ? ov::Daemon::Initialize() : ov::Daemon::Initialize(p.CStr())};
 
 		switch (state)
 		{

@@ -10,7 +10,7 @@ namespace mon
 {
 	void Monitoring::Release()
 	{
-		_server_metric->Release();
+		OV_SAFE_RESET(_server_metric, nullptr, _server_metric->Release(), _server_metric);
 		_forwarder.Stop();
 	}
 
