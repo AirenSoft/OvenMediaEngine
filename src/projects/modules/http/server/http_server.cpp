@@ -38,14 +38,22 @@ namespace http
 				return false;
 			}
 
-			_physical_port = PhysicalPortManager::GetInstance()->CreatePort(_server_name.CStr(), ov::SocketType::Tcp, address, worker_count);
+			auto manager = PhysicalPortManager::GetInstance();
 
-			if (_physical_port != nullptr)
+			auto physical_port = manager->CreatePort(_server_name.CStr(), ov::SocketType::Tcp, address, worker_count);
+
+			if (physical_port != nullptr)
 			{
-				return _physical_port->AddObserver(this);
+				if (physical_port->AddObserver(this))
+				{
+					_physical_port = physical_port;
+					return true;
+				}
 			}
 
-			return _physical_port != nullptr;
+			manager->DeletePort(physical_port);
+
+			return false;
 		}
 
 		bool HttpServer::Stop()
