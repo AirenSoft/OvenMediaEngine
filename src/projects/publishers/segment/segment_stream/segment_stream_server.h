@@ -120,7 +120,8 @@ protected:
 	
 	std::unordered_map<info::VHostAppName, CorsPolicy> _cors_policy_map;
 	// CORS for HTTP
-	std::unordered_map<info::VHostAppName, std::vector<ov::String>> _cors_http_map;
+	// key: VHostAppName, value: regex
+	std::unordered_map<info::VHostAppName, std::vector<ov::Regex>> _cors_regex_list_map;
 	// CORS for RTMP
 	//
 	// NOTE - The RTMP CORS setting follows the first declared <CrossDomains> setting,
