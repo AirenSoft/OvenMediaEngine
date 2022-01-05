@@ -9,5 +9,6 @@
 #pragma once
 
 #include "client/http_client.h"
+#include "cors/cors_manager.h"
 #include "server/http_server.h"
 #include "server/http_server_manager.h"

@@ -193,10 +193,8 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 
 			return http::svr::NextHandler::DoNotCall;
 		}
-		else
-		{
-			SetAllowOrigin(request->GetHeader("ORIGIN"), application->GetCorsUrls(), response);
-		}
+
+		application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response);
 
 		// Check Stream
 		auto stream = std::static_pointer_cast<ThumbnailStream>(GetStream(vhost_app_name, parsed_url->Stream()));
