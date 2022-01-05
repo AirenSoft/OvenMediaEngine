@@ -32,8 +32,12 @@ bool EncoderAVC::SetCodecParams()
 	_codec_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
 	_codec_context->width = _encoder_context->GetVideoWidth();
 	_codec_context->height = _encoder_context->GetVideoHeight();
-	_codec_context->thread_count = FFMAX(4, av_cpu_count() / 3);
+
+	// Limit the number of threads suitable for h264 encoding to between 4 and 8.
+	// The peculiar thing is that openh264 does not increase the actual number of threads even if the number of threads is increased.
+	_codec_context->thread_count = FFMIN(FFMAX(4, av_cpu_count() / 3), 8);
 	_codec_context->slices = _codec_context->thread_count;
+
 
 	::av_opt_set(_codec_context->priv_data, "rc_mode", "timestamp", 0);
 	::av_opt_set(_codec_context->priv_data, "allow_skip_frames", "true", 0);
