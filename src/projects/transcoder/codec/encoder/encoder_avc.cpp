@@ -24,32 +24,35 @@ bool EncoderAVC::SetCodecParams()
 #if USE_OPENH264
 	_codec_context->framerate = ::av_d2q((_encoder_context->GetFrameRate() > 0) ? _encoder_context->GetFrameRate() : _encoder_context->GetEstimateFrameRate(), AV_TIME_BASE);
 	_codec_context->bit_rate = _codec_context->rc_min_rate = _codec_context->rc_max_rate = _encoder_context->GetBitrate();
-	_codec_context->rc_buffer_size = static_cast<int>(_codec_context->bit_rate / 2);
 	_codec_context->sample_aspect_ratio = ::av_make_q(1, 1);
+	_codec_context->ticks_per_frame = 2;
 	_codec_context->time_base = ::av_inv_q(::av_mul_q(_codec_context->framerate, (AVRational){_codec_context->ticks_per_frame, 1}));
 	_codec_context->gop_size = _codec_context->framerate.num / _codec_context->framerate.den;
-	_codec_context->max_b_frames = 0;
 	_codec_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
 	_codec_context->width = _encoder_context->GetVideoWidth();
 	_codec_context->height = _encoder_context->GetVideoHeight();
-	_codec_context->thread_count = FFMAX(4, av_cpu_count() / 3);
+
+	// Limit the number of threads suitable for h264 encoding to between 4 and 8.
+	// The peculiar thing is that openh264 does not increase the actual number of threads even if the number of threads is increased.
+	_codec_context->thread_count = FFMIN(FFMAX(4, av_cpu_count() / 3), 8);
 	_codec_context->slices = _codec_context->thread_count;
 
-	::av_opt_set(_codec_context->priv_data, "rc_mode", "timestamp", 0);
-	::av_opt_set(_codec_context->priv_data, "allow_skip_frames", "true", 0);
+	// bitrate can't be controlled for RC_QUALITY_MODE,RC_BITRATE_MODE and RC_TIMESTAMP_MODE without enabling skip frame
+	// If the auto skip frame option is enabled, intermittent frame drop occurs. It has nothing to do with CPU usage.
+	::av_opt_set(_codec_context->priv_data, "rc_mode", "bitrate", 0);
+	::av_opt_set(_codec_context->priv_data, "allow_skip_frames", "false", 0);
 
 	::av_opt_set(_codec_context->priv_data, "profile", "constrained_baseline", 0);
-	::av_opt_set(_codec_context->priv_data, "coder", "cavlc", 0);
-
+	::av_opt_set(_codec_context->priv_data, "coder", "default", 0);
 
 	if (_encoder_context->GetPreset() == "slower" || _encoder_context->GetPreset() == "slow")
 	{
-		_codec_context->qmin = 10;
-		_codec_context->qmax = 41;
+		_codec_context->qmin = 5;
+		_codec_context->qmax = 51;
 	}
 	else if (_encoder_context->GetPreset() == "fast" || _encoder_context->GetPreset() == "faster")
 	{
-		_codec_context->qmin = 25;
+		_codec_context->qmin = 30;
 		_codec_context->qmax = 51;		
 	}
 	else // else if (_encoder_context->GetPreset() == "medium")
@@ -79,7 +82,9 @@ bool EncoderAVC::SetCodecParams()
 	_codec_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
 	_codec_context->width = _encoder_context->GetVideoWidth();
 	_codec_context->height = _encoder_context->GetVideoHeight();
-	_codec_context->thread_count = FFMAX(4, av_cpu_count() / 3);
+
+	// Limit the number of threads suitable for h264 encoding to between 4 and 8.
+	_codec_context->thread_count = FFMIN(FFMAX(4, av_cpu_count() / 3), 8);
 
 	// Preset
 	if (_encoder_context->GetPreset() == "slower")
@@ -131,7 +136,6 @@ bool EncoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 	{
 		return false;
 	}
-
 	auto codec_id = GetCodecID();
 
 #if USE_OPENH264	

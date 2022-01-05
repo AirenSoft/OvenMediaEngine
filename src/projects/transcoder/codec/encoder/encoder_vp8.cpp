@@ -28,7 +28,9 @@ bool EncoderVP8::SetCodecParams()
 	_codec_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
 	_codec_context->width = _encoder_context->GetVideoWidth();
 	_codec_context->height = _encoder_context->GetVideoHeight();
-	_codec_context->thread_count = 2;
+
+	// Limit the number of threads suitable for h264 encoding to between 4 and 8.
+	_codec_context->thread_count = FFMIN(FFMAX(4, av_cpu_count() / 3), 8);
 
 	// Preset
 	if (_encoder_context->GetPreset() == "slower" || _encoder_context->GetPreset() == "slow")
