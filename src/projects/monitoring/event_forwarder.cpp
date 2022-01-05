@@ -476,6 +476,8 @@ namespace mon
 				if(error != nullptr)
 				{
 					logtd("Could not connect to collector server : %s", _collector_url->ToUrlString(true).CStr());
+					_socket = nullptr;
+
 					return false;
 				}
 
