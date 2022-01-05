@@ -14,23 +14,8 @@
 
 #include <queue>
 #include <string>
-struct SegmentWorkInfo
-{
-	SegmentWorkInfo(const std::shared_ptr<http::svr::HttpConnection> &client, const ov::String &request_target, const ov::String &origin_url)
-		: client(client),
-		  request_target(request_target),
-		  origin_url(origin_url)
-	{
-	}
 
-	std::shared_ptr<http::svr::HttpConnection> client = nullptr;
-	ov::String request_target;
-	ov::String origin_url;
-};
-
-using SegmentProcessHandler = std::function<bool(const std::shared_ptr<http::svr::HttpConnection> &client,
-												 const ov::String &request_target,
-												 const ov::String &origin_url)>;
+using SegmentProcessHandler = std::function<bool(const std::shared_ptr<http::svr::HttpConnection> &connection)>;
 //====================================================================================================
 // SegmentWorker
 //====================================================================================================
@@ -43,14 +28,14 @@ public:
 	bool Start(const SegmentProcessHandler &process_handler);
 	bool Stop();
 
-	bool AddWorkInfo(std::shared_ptr<SegmentWorkInfo> work_info);
-	std::shared_ptr<SegmentWorkInfo> PopWorkInfo();
+	bool PushConnection(const std::shared_ptr<http::svr::HttpConnection> &connection);
+	std::shared_ptr<http::svr::HttpConnection> PopConnection();
 
 private:
 	void WorkerThread();
 
 private:
-	std::queue<std::shared_ptr<SegmentWorkInfo>> _work_infos;
+	std::queue<std::shared_ptr<http::svr::HttpConnection>> _connection_list_to_process;
 	std::mutex _work_info_guard;
 	ov::Semaphore _queue_event;
 
@@ -72,9 +57,7 @@ public:
 public:
 	bool Start(int worker_count, const SegmentProcessHandler &process_handler);
 	bool Stop();
-	bool AddWork(const std::shared_ptr<http::svr::HttpConnection> &response,
-				 const ov::String &request_target,
-				 const ov::String &origin_url);
+	bool PushConnection(const std::shared_ptr<http::svr::HttpConnection> &connection);
 
 private:
 	int _worker_index = 0;
