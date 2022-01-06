@@ -341,6 +341,7 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 		output_track->SetFrameRate(profile.GetFramerate());
 		output_track->SetTimeBase(GetDefaultTimebaseByCodecId(output_track->GetCodecId()));
 		output_track->SetPreset(profile.GetPreset());
+		output_track->SetThreadCount(profile.GetThreadCount());
 	}
 
 	if (IsVideoCodec(output_track->GetCodecId()) == false)
@@ -474,6 +475,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 						logtw("Encoding codec set is not a video codec, track_id(%d)", input_track_id);
 						continue;
 					}
+
 					output_stream->AddTrack(output_track);
 
 					AppendTrackMap(GetIdentifiedForVideoProfile(profile), _input_stream, input_track, output_stream, output_track);
@@ -488,6 +490,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 						logtw("Encoding codec set is not a video codec, track_id(%d)", input_track_id);
 						continue;
 					}
+
 					output_stream->AddTrack(output_track);
 
 					AppendTrackMap(GetIdentifiedForImageProfile(profile), _input_stream, input_track, output_stream, output_track);
@@ -506,6 +509,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 					}
 
 					output_stream->AddTrack(output_track);
+
 					AppendTrackMap(GetIdentifiedForAudioProfile(profile), _input_stream, input_track, output_stream, output_track);
 				}
 			}
@@ -868,6 +872,7 @@ int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 				// If there is no framerate value, a constant bit rate is not produced by the encoder.
 				// So, Estimated framerate is used to set the encoder.
 				encoder_context->SetEstimateFrameRate(track->GetEsimateFrameRate());
+				encoder_context->SetThreadCount(track->GetThreadCount());
 
 				if (CreateEncoder(encoder_track_id, encoder_context) == false)
 				{

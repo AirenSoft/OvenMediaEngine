@@ -210,3 +210,13 @@ ov::String TranscodeContext::GetPreset() const
 {
 	return _preset;
 }
+
+void TranscodeContext::SetThreadCount(int thread_count)
+{
+	_thread_count = thread_count;
+}
+
+int TranscodeContext::GetThreadCount()
+{
+	return _thread_count;
+}

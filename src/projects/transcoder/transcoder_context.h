@@ -42,6 +42,7 @@ public:
 		_video_gop = 30;
 		_h264_has_bframes = 0;
 		_preset = "";
+		_thread_count = 0;
 	}
 
 	// Audio
@@ -118,6 +119,9 @@ public:
 	void SetPreset(ov::String preset);
 	ov::String GetPreset() const;
 
+	void SetThreadCount(int thread_count);
+	int GetThreadCount();
+
 private:
 	// Context type
 	//    true = this context will be used for encoding
@@ -164,6 +168,10 @@ private:
 	bool _hwaccel;
 
 	ov::String _preset;
+
+	// Number of threads in encoding
+	// 0: Auto
+	int _thread_count;
 
 public:
 	//--------------------------------------------------------------------

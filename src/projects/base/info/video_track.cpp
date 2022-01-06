@@ -15,7 +15,8 @@ VideoTrack::VideoTrack()
 	  _height(0),
 	  _format(0),
 	  _preset(""),
-	  _has_bframe(false)
+	  _has_bframe(false),
+	  _thread_count(0)
 {
 }
 
@@ -113,4 +114,14 @@ void VideoTrack::SetBframes(bool has_bframe)
 bool VideoTrack::HasBframes()
 {
 	return _has_bframe;
+}
+
+void VideoTrack::SetThreadCount(int thread_count)
+{
+	_thread_count = thread_count;
+}
+
+int VideoTrack::GetThreadCount() 
+{
+	return _thread_count;
 }

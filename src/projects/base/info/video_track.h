@@ -47,6 +47,10 @@ public:
 	void SetBframes(bool has_bframe);
 	bool HasBframes();
 	
+	// @Set By Configuration
+	void SetThreadCount(int thread_count);
+	int GetThreadCount();
+
 protected:
 	double _framerate;
 	double _estimate_framerate;
@@ -58,4 +62,6 @@ protected:
 	std::shared_ptr<ov::Data> _h264_sps_pps_annexb_data = nullptr;
 	FragmentationHeader _h264_sps_pps_annexb_fragment_header;
 	bool _has_bframe;
+
+	int _thread_count;
 };

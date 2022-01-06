@@ -29,6 +29,7 @@ namespace cfg
 					ov::String _bitrate_string;
 					double _framerate = 0.0;
 					ov::String _preset;
+					int _thread_count = 0;
 
 				public:
 					CFG_DECLARE_REF_GETTER_OF(IsBypass, _bypass)
@@ -41,6 +42,7 @@ namespace cfg
 					CFG_DECLARE_REF_GETTER_OF(GetBitrateString, _bitrate_string)
 					CFG_DECLARE_REF_GETTER_OF(GetFramerate, _framerate)
 					CFG_DECLARE_REF_GETTER_OF(GetPreset, _preset)
+					CFG_DECLARE_REF_GETTER_OF(GetThreadCount, _thread_count)
 
 				protected:
 					void MakeList() override
@@ -79,6 +81,7 @@ namespace cfg
 						Register<Optional>("Height", &_height);
 						Register<Optional>("Framerate", &_framerate);
 						Register<Optional>("Preset", &_preset);
+						Register<Optional>("ThreadCount", &_thread_count);
 
 					}
 				};
