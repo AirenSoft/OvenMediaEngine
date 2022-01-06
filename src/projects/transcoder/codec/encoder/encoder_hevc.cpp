@@ -44,7 +44,7 @@ bool EncoderHEVC::SetCodecParams()
 	_codec_context->height = _encoder_context->GetVideoHeight();
 
 	// Limit the number of threads suitable for h264 encoding to between 4 and 8.
-	_codec_context->thread_count = FFMIN(FFMAX(4, av_cpu_count() / 3), 8);
+	_codec_context->thread_count = (_encoder_context->GetThreadCount() > 0) ? _encoder_context->GetThreadCount() : FFMIN(FFMAX(4, av_cpu_count() / 3), 8);
 
 	// For browser compatibility
 	_codec_context->profile = FF_PROFILE_HEVC_MAIN;

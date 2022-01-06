@@ -65,6 +65,7 @@ You can set the video profile as below:
         <Bitrate>2000000</Bitrate>
         <Framerate>30.0</Framerate>
         <Preset>fast</Preset>
+        <ThreadCount>4</ThreadCount>
     </Video>
 </Encodes>
 ```
