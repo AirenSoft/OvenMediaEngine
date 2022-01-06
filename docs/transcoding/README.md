@@ -65,20 +65,22 @@ You can set the video profile as below:
         <Bitrate>2000000</Bitrate>
         <Framerate>30.0</Framerate>
         <Preset>fast</Preset>
+        <ThreadCount>4</ThreadCount>
     </Video>
 </Encodes>
 ```
 
 The meaning of each property is as follows:
 
-| Property  | Description                                 |
-| --------- | ------------------------------------------- |
-| Codec     | Specifies the `vp8` or `h264` codec to use  |
-| Width     | Width of resolution                         |
-| Height    | Height of resolution                        |
-| Bitrate   | Bit per second                              |
-| Framerate | Frames per second                           |
-| Preset    | Presets of encoding quality and performance |
+| Property                                  | Description                                 |
+| ----------------------------------------- | ------------------------------------------- |
+| Codec<mark style="color:red;">\*</mark>   | Specifies the `vp8` or `h264` codec to use  |
+| Bitrate<mark style="color:red;">\*</mark> | Bit per second                              |
+| Width                                     | Width of resolution                         |
+| Height                                    | Height of resolution                        |
+| Framerate                                 | Frames per second                           |
+| Preset                                    | Presets of encoding quality and performance |
+| ThreadCount                               | Number of threads in encoding               |
 
 **Table of presets**
 
@@ -114,12 +116,12 @@ You can set the audio profile as below:
 
 The meaning of each property is as follows:
 
-| Property   | Description                                |
-| ---------- | ------------------------------------------ |
-| Codec      | Specifies the `opus` or `aac` codec to use |
-| Bitrates   | Bits per second                            |
-| Samplerate | Samples per second                         |
-| Channel    | The number of audio channels               |
+| Property                                  | Description                                |
+| ----------------------------------------- | ------------------------------------------ |
+| Codec<mark style="color:red;">\*</mark>   | Specifies the `opus` or `aac` codec to use |
+| Bitrate<mark style="color:red;">\*</mark> | Bits per second                            |
+| Samplerate                                | Samples per second                         |
+| Channel                                   | The number of audio channels               |
 
 It is possible to have an audio only output profile by specifying the Audio profile and omitting a Video one.
 
