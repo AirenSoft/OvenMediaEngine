@@ -180,7 +180,7 @@ install_ffmpeg()
         ADDI_HWACCEL="--enable-hwaccel=h264_nvdec,hevc_nvdec,nvenc,nvdec"
         ADDI_FILTERS=",scale_cuda,hwdownload,hwupload,hwupload_cuda"
     fi
-x664
+
     (DIR=${TEMP_PATH}/ffmpeg && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
