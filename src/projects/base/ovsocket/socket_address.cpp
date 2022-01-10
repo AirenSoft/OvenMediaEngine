@@ -174,59 +174,12 @@ namespace ov
 
 	bool SocketAddress::operator!=(const SocketAddress &socket) const
 	{
-		return !(operator==(socket));
+		return (operator==(socket)) == false;
 	}
 
 	bool SocketAddress::operator<(const SocketAddress &socket) const
 	{
-		// logtd("%s", Dump(_address_storage, "_address_storage", 0, 16).CStr());
-		// logtd("%s", Dump(socket._address_storage, "socket._address_storage", 0, 16).CStr());
-
-		if ((_address_storage.ss_family == AF_INET) && (socket._address_storage.ss_family == AF_INET6))
-		{
-			// IPv4 < IPv6
-			return true;
-		}
-
-		if ((_address_storage.ss_family == AF_INET6) && (socket._address_storage.ss_family == AF_INET))
-		{
-			// IPv4 < IPv6
-			return false;
-		}
-
-		if (_address_storage.ss_family == socket._address_storage.ss_family)
-		{
-			int compare_result = 0;
-
-			switch (_address_storage.ss_family)
-			{
-				case AF_INET:
-					compare_result = ::memcmp(&(_address_ipv4->sin_addr), &(socket._address_ipv4->sin_addr), sizeof(_address_ipv4->sin_addr));
-
-					if (compare_result == 0)
-					{
-						return NetworkToHost16(_address_ipv4->sin_port) < NetworkToHost16(socket._address_ipv4->sin_port);
-					}
-
-					return (compare_result < 0);
-
-				case AF_INET6:
-					compare_result = ::memcmp(&(_address_ipv6->sin6_addr), &(socket._address_ipv6->sin6_addr), sizeof(_address_ipv6->sin6_addr));
-
-					if (compare_result == 0)
-					{
-						return NetworkToHost16(_address_ipv6->sin6_port) < NetworkToHost16(socket._address_ipv6->sin6_port);
-					}
-
-					return (compare_result < 0);
-
-				default:
-					// unknown family
-					break;
-			}
-		}
-
-		return false;
+		return ::memcmp(&_address_storage, &(socket._address_storage), sizeof(_address_storage)) < 0;
 	}
 
 	bool SocketAddress::operator>(const SocketAddress &socket) const
