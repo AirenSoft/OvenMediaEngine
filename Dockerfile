@@ -15,11 +15,11 @@ ENV     OME_VERSION=master \
         OPENSSL_VERSION=3.0.1 \
         SRTP_VERSION=2.4.2 \
         SRT_VERSION=1.4.4 \
-        OPUS_VERSION=1.1.3 \
+        OPUS_VERSION=1.3.1 \
         OPENH264_VERSION=2.1.1 \
-        VPX_VERSION=1.7.0 \
-        FDKAAC_VERSION=0.1.5 \
-        FFMPEG_VERSION=4.3.2 \
+        VPX_VERSION=1.11.0 \
+        FDKAAC_VERSION=2.0.2 \
+        FFMPEG_VERSION=4.4.1 \
         JEMALLOC_VERSION=5.2.1 \
         PCRE2_VERSION=10.39 
 
