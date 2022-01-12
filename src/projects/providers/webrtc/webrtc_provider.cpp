@@ -110,11 +110,38 @@ namespace pvd
 			}
 			else
 			{
-				bool is_parsed;
-				auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&is_parsed);
-				tcp_relay_worker_count = is_parsed ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+				bool tcp_relay_local_parsed { false };
+				auto tcp_relay_local { ice_candidates_config.GetTcpRelayLocal(&tcp_relay_local_parsed) };
+				if(tcp_relay_local_parsed)
+				{
+					auto l_tokens { tcp_relay_local.Split(":") };
+					if(l_tokens.size() == 2)
+					{
+						auto l_ip { (l_tokens[0].IsEmpty()) ? server_config.GetIp() : l_tokens[0] };
+						auto l_port { l_tokens[1] };
+						tcp_relay_local = ov::String::FormatString("%s:%s", l_ip.CStr(), l_port.CStr());
+						ov::SocketAddress l_tcp_address(tcp_relay_local);
+						tcp_relay_local_parsed = l_tcp_address.IsValid();
+						if(!tcp_relay_local_parsed)
+						{
+							logte("TcpRelayLocal invalid address: %s", tcp_relay_local.CStr());
+						}
+					}
+					else
+					{
+						tcp_relay_local_parsed = false;
+						logte("TcpRelayLocal format is incorrect: <Relay Local IP>:<Port>");
+					}
+				}
 
-				if(IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), std::atoi(items[1]), ov::SocketType::Tcp, tcp_relay_worker_count) == false)
+				auto tcp_relay_listen { (tcp_relay_local_parsed) ? tcp_relay_local : ov::String::FormatString("*:%s", items[1].CStr()) };
+				ov::SocketAddress tcp_relay_address(tcp_relay_listen);
+
+				bool tcp_relay_worker_count_parsed { false };
+				auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&tcp_relay_worker_count_parsed);
+				tcp_relay_worker_count = tcp_relay_worker_count_parsed ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+
+				if(IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), tcp_relay_address, ov::SocketType::Tcp, tcp_relay_worker_count) == false)
 				{
 					logte("Could not create Turn Server. Check your configuration");
 					result = false;
