@@ -40,7 +40,7 @@ namespace cfg
 		// (DO NOT USE GetServer()->ToJson() to save configurations)
 		bool SaveCurrentConfig();
 
-		std::shared_ptr<Server> GetServer() noexcept
+		std::shared_ptr<const Server> GetServer() const noexcept
 		{
 			return _server;
 		}

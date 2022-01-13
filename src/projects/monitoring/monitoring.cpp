@@ -64,7 +64,7 @@ namespace mon
 		_forwarder.SetLogPath(log_path);
 	}	
 
-	void Monitoring::OnServerStarted(const std::shared_ptr<cfg::Server> &server_config)
+	void Monitoring::OnServerStarted(const std::shared_ptr<const cfg::Server> &server_config)
 	{
 		_server_metric = std::make_shared<ServerMetrics>(server_config);
 		_is_analytics_on = _server_metric->GetConfig()->GetAnalytics().IsParsed();

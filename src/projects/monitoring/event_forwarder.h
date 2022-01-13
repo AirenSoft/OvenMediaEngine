@@ -12,7 +12,7 @@ namespace mon
 	{
 	public:
 		void SetLogPath(const ov::String &log_path);
-		bool Start(const std::shared_ptr<cfg::Server> &server_config);
+		bool Start(const std::shared_ptr<const cfg::Server> &server_config);
 		bool Stop();
 
 	private:
@@ -63,7 +63,7 @@ namespace mon
 		
 		ov::String _log_path;
 
-		std::shared_ptr<cfg::Server> _server_config = nullptr;
+		std::shared_ptr<const cfg::Server> _server_config = nullptr;
 
 		std::thread _shipper_thread;
 		bool _run_thread = false;

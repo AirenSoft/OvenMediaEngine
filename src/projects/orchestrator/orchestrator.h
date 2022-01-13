@@ -45,7 +45,7 @@ namespace ocst
 
 		// Create VirtualHost in the settings and instruct application creation to all registered modules.
 		// So, StartServer should be called after registering all modules with RegisterModule.
-		bool StartServer(const std::shared_ptr<cfg::Server> &server_config);
+		bool StartServer(const std::shared_ptr<const cfg::Server> &server_config);
 		Result Release();
 
 		Result CreateVirtualHost(const cfg::vhost::VirtualHost &vhost_cfg);
