@@ -230,6 +230,10 @@ protected:
 						const std::shared_ptr<http::svr::HttpConnection> &client, const std::shared_ptr<const ov::Url> &request_url,
 						std::shared_ptr<PlaylistRequestInfo> &request_info);
 
+	// Implementation of Publisher
+	bool OnCreateHost(const info::Host &host_info) override;
+	bool OnDeleteHost(const info::Host &host_info) override;
+
 	//--------------------------------------------------------------------
 	// Implementation of SegmentStreamObserver
 	//--------------------------------------------------------------------

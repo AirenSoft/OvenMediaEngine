@@ -53,6 +53,17 @@ bool RtmpPushPublisher::Stop()
 	return Publisher::Stop();
 }
 
+bool RtmpPushPublisher::OnCreateHost(const info::Host &host_info)
+{
+	return true;
+}
+
+bool RtmpPushPublisher::OnDeleteHost(const info::Host &host_info)
+{
+	return true;
+}
+
+
 std::shared_ptr<pub::Application> RtmpPushPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
 	if (IsModuleAvailable() == false)

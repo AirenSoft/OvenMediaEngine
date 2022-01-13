@@ -55,6 +55,16 @@ bool Transcoder::Stop()
 	return true;
 }
 
+bool Transcoder::OnCreateHost(const info::Host &host_info)
+{
+	return true;
+}
+
+bool Transcoder::OnDeleteHost(const info::Host &host_info)
+{
+	return true;
+}
+
 // Create Application
 bool Transcoder::OnCreateApplication(const info::Application &app_info)
 {

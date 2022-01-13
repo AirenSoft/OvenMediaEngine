@@ -82,6 +82,17 @@ bool OvtPublisher::Stop()
 	return Publisher::Stop();
 }
 
+bool OvtPublisher::OnCreateHost(const info::Host &host_info)
+{
+	return true;
+}
+
+bool OvtPublisher::OnDeleteHost(const info::Host &host_info)
+{
+	return true;
+}
+
+
 std::shared_ptr<pub::Application> OvtPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
 	if(IsModuleAvailable() == false)

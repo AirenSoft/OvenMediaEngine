@@ -35,6 +35,9 @@ public:
 		int worker_count);
 	bool Stop();
 
+	bool AppendCertificate(const std::shared_ptr<const info::Certificate> &certificate);
+	bool RemoveCertificate(const std::shared_ptr<const info::Certificate> &certificate);
+
 	bool AddObserver(const std::shared_ptr<SegmentStreamObserver> &observer);
 	bool RemoveObserver(const std::shared_ptr<SegmentStreamObserver> &observer);
 
@@ -73,7 +76,7 @@ protected:
 
 protected:
 	std::shared_ptr<http::svr::HttpServer> _http_server;
-	std::shared_ptr<http::svr::HttpServer> _https_server;
+	std::shared_ptr<http::svr::HttpsServer> _https_server;
 	std::vector<std::shared_ptr<SegmentStreamObserver>> _observers;
 
 	http::CorsManager _cors_manager;

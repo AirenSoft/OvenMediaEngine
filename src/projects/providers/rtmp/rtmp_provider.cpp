@@ -118,6 +118,17 @@ namespace pvd
 		return Provider::Stop();
 	}
 
+	bool RtmpProvider::OnCreateHost(const info::Host &host_info)
+	{
+		return true;
+	}
+	
+	bool RtmpProvider::OnDeleteHost(const info::Host &host_info)
+	{
+		return true;
+	}
+
+
 	std::shared_ptr<pvd::Application> RtmpProvider::OnCreateProviderApplication(const info::Application &application_info)
 	{
 		if(IsModuleAvailable() == false)

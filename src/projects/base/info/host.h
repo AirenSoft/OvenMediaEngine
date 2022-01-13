@@ -38,7 +38,7 @@ namespace info
 		ov::String _server_name;
 		ov::String _server_id;
 		host_id_t _host_id = 0;
-		std::shared_ptr<Certificate> _certificate;
+		std::shared_ptr<Certificate> _certificate = nullptr;
 	};
 
 }  // namespace info

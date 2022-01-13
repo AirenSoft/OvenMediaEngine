@@ -39,84 +39,6 @@ namespace pvd
 		logti("Terminated Mpegts Provider module.");
 	}
 
-	bool MpegTsProvider::PrepareStreamList(const cfg::Server &server_config, std::map<std::tuple<int, ov::SocketType>, StreamInfo> *stream_map)
-	{
-		// Build a port-stream map from the configuration
-		//
-		// <Server>
-		// 	<VirtualHosts>
-		// 		<Applications>
-		// 			<Application>
-		// 				<Providers>
-		// 				<MPEGTS>
-		// 					<StreamMap>
-		// 						<Stream>
-		//							<Name>mpegts_test_stream</Name>
-		// 							<OutputStreamName>stream_${Port}</OutputStreamName>
-		// 							<Port>40000-40001,40004,40005/udp</Port>
-		// 						</Stream>
-		// 					</StreamMap>
-		// 				</MPEGTS>
-		// ...
-		auto &mpegts_provider_config = server_config.GetBind().GetProviders().GetMpegts();
-		auto &port_config = mpegts_provider_config.GetPort();
-		auto &port_list_config = port_config.GetPortList();
-		auto &vhost_list_config = server_config.GetVirtualHostList();
-
-		for (auto &vhost_config : vhost_list_config)
-		{
-			auto app_list_config = vhost_config.GetApplicationList();
-
-			for (auto &app_config : app_list_config)
-			{
-				auto &mpegts_provider_config = app_config.GetProviders().GetMpegtsProvider();
-				auto &stream_map_config = mpegts_provider_config.GetStreamMap();
-				auto &stream_list_config = stream_map_config.GetStreamList();
-
-				for (auto &stream_config : stream_list_config)
-				{
-					auto stream_port_config = stream_config.GetPort();
-					auto port_list = stream_port_config.GetPortList();
-
-					for (auto port : port_list)
-					{
-						{
-							// Ensure that a port not speficied in <Bind> is used
-							auto found = std::find(port_list_config.begin(), port_list_config.end(), port);
-
-							if (found == port_list_config.end())
-							{
-								logte("Port not listed in <Bind> was used: %d", port);
-								return false;
-							}
-						}
-
-						auto key = std::make_tuple(port, port_config.GetSocketType());
-
-						{
-							// Check if it conflicts with other settings
-							auto found = stream_map->find(key);
-							if (found != stream_map->end())
-							{
-								auto value = found->second;
-
-								logte("%d port is already in use: %s/%s", port, value.vhost_app_name.CStr(), value.stream_name.CStr());
-								return false;
-							}
-						}
-
-						auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationName(vhost_config.GetName(), app_config.GetName());
-						auto stream_name = stream_config.GetName().Replace("${Port}", ov::Converter::ToString(port));
-
-						stream_map->emplace(std::move(key), StreamInfo(vhost_app_name, stream_name));
-					}
-				}
-			}
-		}
-
-		return true;
-	}
-
 	bool MpegTsProvider::BindMpegTSPorts()
 	{
 		auto &server_config = GetServerConfig();
@@ -170,8 +92,6 @@ namespace pvd
 	{
 		auto &server_config = GetServerConfig();
 
-		std::map<std::tuple<int, ov::SocketType>, StreamInfo> stream_map;
-
 		if (server_config.GetBind().GetProviders().GetMpegts().IsParsed() == false)
 		{
 			logti("%s is disabled by configuration", GetProviderName());
@@ -201,6 +121,16 @@ namespace pvd
 
 		StopTimer();
 
+		return true;
+	}
+
+	bool MpegTsProvider::OnCreateHost(const info::Host &host_info)
+	{
+		return true;
+	}
+	
+	bool MpegTsProvider::OnDeleteHost(const info::Host &host_info)
+	{
 		return true;
 	}
 

@@ -78,7 +78,7 @@ RUN \
 
 ## Build OpenH264
 RUN \
-        DIR=/tmp//openh264 && \
+        DIR=/tmp/openh264 && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLf https://github.com/cisco/openh264/archive/refs/tags/v${OPENH264_VERSION}.tar.gz | tar -xz --strip-components=1 && \
@@ -89,7 +89,7 @@ RUN \
 
 ## Download Cisco OpenH264 prebuilt library
 RUN \
-        DIR=/tmp//openh264 && \
+        DIR=/tmp/openh264 && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         PLATFORM=linux64 && \

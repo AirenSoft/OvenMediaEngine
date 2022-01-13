@@ -17,7 +17,7 @@ namespace info
 	{
 	public:
 		///
-		/// @param certificate_name A name/identifier of certificate (Used for debugging purposes)
+		/// @param certificate_name A name/identifier of certificate, OME uses virtual host name as this value.
 		/// @param host_name_list A host name list (wildcard can be used)
 		/// @param tls_config A information of certificate
 		///
@@ -27,6 +27,8 @@ namespace info
 		{
 			return _certificate_pair;
 		}
+
+		ov::String GetName() const;
 
 		bool IsCertificateForHost(const ov::String &host_name) const;
 
