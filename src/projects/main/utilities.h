@@ -20,10 +20,6 @@ struct ParseOption
 	// Show OME version
 	bool version = false;
 
-	// -i
-	// Ignore CFG_LAST_CONFIG_FILE_NAME
-	bool ignore_last_config = false;
-
 	// -c <config_path>
 	// Load configurations from the path
 	ov::String config_path = "";

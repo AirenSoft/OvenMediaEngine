@@ -9,7 +9,7 @@
 #pragma once
 
 #include "../common/host/host.h"
-#include "api.h"
+#include "api/api.h"
 
 namespace cfg
 {
@@ -19,7 +19,7 @@ namespace cfg
 		{
 		protected:
 			cmn::Host _host;
-			API _api;
+			api::API _api;
 
 		public:
 			CFG_DECLARE_REF_GETTER_OF(GetHost, _host)

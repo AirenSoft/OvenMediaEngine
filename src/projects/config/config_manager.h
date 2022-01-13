@@ -27,7 +27,7 @@ namespace cfg
 		void SetOmeVersion(const ov::String &version, const ov::String &git_extra);
 
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		void LoadConfigs(ov::String config_path, bool ignore_last_config);
+		void LoadConfigs(ov::String config_path);
 
 		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void ReloadConfigs();
@@ -54,7 +54,13 @@ namespace cfg
 		ConfigManager();
 
 		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void CheckLegacyConfigs(ov::String config_path);
+
+		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void LoadLoggerConfig(const ov::String &config_path);
+
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void LoadServerConfig(const ov::String &config_path);
 
 		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void LoadServerID(const ov::String &config_path);
@@ -68,7 +74,6 @@ namespace cfg
 		ov::String _git_extra;
 
 		ov::String _config_path;
-		bool _ignore_last_config = false;
 
 		std::shared_ptr<Server> _server;
 		ov::String _server_id;
@@ -77,8 +82,8 @@ namespace cfg
 		timespec _last_modified;
 
 		// key: XML file name
-		// value: version number
-		std::map<ov::String, int> _supported_xml;
+		// value: compatiable version numbers
+		std::map<ov::String, std::vector<int>> _supported_versions_map;
 
 		mutable std::mutex _config_mutex;
 
