@@ -98,7 +98,7 @@ install_libopenh264()
     cd ${DIR} && \
     curl -sLf https://github.com/cisco/openh264/archive/refs/tags/v${OPENH264_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     sed -i -e "s|PREFIX=/usr/local|PREFIX=${PREFIX}|" Makefile && \
-    make OS=linux ARCH=$(uname -s) && \
+    make OS=linux && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "openh264"
 
