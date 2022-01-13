@@ -156,6 +156,20 @@ namespace ocst
 		return result;
 	}
 
+	std::optional<info::Host> Orchestrator::GetHostInfo(ov::String vhost_name)
+	{
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+
+		auto vhost = OrchestratorInternal::GetVirtualHost(vhost_name);
+
+		if(vhost != nullptr)
+		{
+			return vhost->host_info;
+		}
+
+		return std::nullopt;
+	}
+
 	ocst::Result Orchestrator::CreateApplication(const info::Host &host_info, const cfg::vhost::app::Application &app_config)
 	{
 		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
