@@ -50,6 +50,8 @@ namespace ocst
 
 		Result CreateVirtualHost(const cfg::vhost::VirtualHost &vhost_cfg);
 		Result DeleteVirtualHost(const info::Host &vhost_info);
+
+		std::optional<info::Host> GetHostInfo(ov::String vhost_name);
 		
 		bool UpdateVirtualHosts(const std::vector<info::Host> &host_list);
 		std::vector<std::shared_ptr<ocst::VirtualHost>> GetVirtualHostList();

@@ -40,8 +40,6 @@ bool SegmentStreamServer::Start(const cfg::Server &server_config,
 	auto process_handler = std::bind(&SegmentStreamServer::ProcessRequest, this, std::placeholders::_1);
 
 	bool result = true;
-	// auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
-	auto vhost_list = server_config.GetVirtualHostList();
 	auto manager = http::svr::HttpServerManager::GetInstance();
 
 	std::shared_ptr<http::svr::HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("SegPub", *address, worker_count) : nullptr;

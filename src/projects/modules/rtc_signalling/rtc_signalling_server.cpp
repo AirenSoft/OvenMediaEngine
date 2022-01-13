@@ -44,8 +44,6 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	}
 
 	bool result = true;
-	auto vhost_list = _server_config.GetVirtualHostList();
-
 	auto manager = http::svr::HttpServerManager::GetInstance();
 	std::shared_ptr<http::svr::HttpServer> http_server = nullptr;
 	std::shared_ptr<http::svr::HttpsServer> https_server = nullptr;
