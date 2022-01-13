@@ -15,7 +15,7 @@
 
 namespace api
 {
-	bool Server::Start(const std::shared_ptr<cfg::Server> &server_config)
+	bool Server::Start(const std::shared_ptr<const cfg::Server> &server_config)
 	{
 		auto manager = http::svr::HttpServerManager::GetInstance();
 

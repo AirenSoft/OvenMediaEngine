@@ -17,7 +17,7 @@
 
 namespace ocst
 {
-	bool Orchestrator::StartServer(const std::shared_ptr<cfg::Server> &server_config)
+	bool Orchestrator::StartServer(const std::shared_ptr<const cfg::Server> &server_config)
 	{
 		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
 

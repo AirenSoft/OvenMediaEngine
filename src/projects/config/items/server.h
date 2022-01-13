@@ -74,7 +74,7 @@ namespace cfg
 
 		CFG_DECLARE_REF_GETTER_OF(GetVirtualHostList, _virtual_hosts.GetVirtualHostList())
 
-		ov::String GetID()
+		ov::String GetID() const
 		{
 			return _id;
 		}

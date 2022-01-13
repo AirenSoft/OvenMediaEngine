@@ -21,7 +21,7 @@ namespace api
 	class Server : public ov::Singleton<Server>
 	{
 	public:
-		bool Start(const std::shared_ptr<cfg::Server> &server_config);
+		bool Start(const std::shared_ptr<const cfg::Server> &server_config);
 		bool Stop();
 
 	protected:

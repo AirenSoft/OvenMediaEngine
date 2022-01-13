@@ -77,7 +77,7 @@ namespace ocst
 		const info::Application &GetApplicationInfo(const ov::String &vhost_name, info::application_id_t app_id) const;
 
 		// Server Info
-		std::shared_ptr<cfg::Server> 	_server_config;
+		std::shared_ptr<const cfg::Server> 	_server_config;
 
 		std::shared_ptr<MediaRouteInterface> _media_router;
 

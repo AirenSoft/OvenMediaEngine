@@ -125,7 +125,7 @@ namespace cfg
 		_ignore_last_config = ignore_last_config;
 
 		LoadServerID(config_path);
-		GetServer()->SetID(_server_id);
+		_server->SetID(_server_id);
 	}
 
 	void ConfigManager::ReloadConfigs()

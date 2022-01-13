@@ -42,7 +42,7 @@ namespace mon
         std::shared_ptr<StreamMetrics>  GetStreamMetrics(const info::Stream &stream_info);
 
 		// Events
-		void OnServerStarted(const std::shared_ptr<cfg::Server> &server_config);
+		void OnServerStarted(const std::shared_ptr<const cfg::Server> &server_config);
 		bool OnHostCreated(const info::Host &host_info);
 		bool OnHostDeleted(const info::Host &host_info);
 		bool OnApplicationCreated(const info::Application &app_info);
