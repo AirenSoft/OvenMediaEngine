@@ -91,6 +91,18 @@ namespace ov
 		return "./";
 	}
 
+	String PathManager::ExtractFileName(String path)
+	{
+		off_t position = path.IndexOfRev('/');
+
+		if (position >= 0)
+		{
+			return path.Substring(position + 1);
+		}
+
+		return path;
+	}
+
 	bool PathManager::MakeDirectory(const char *path, int mask)
 	{
 		if ((path == nullptr) || (path[0] == '\0'))

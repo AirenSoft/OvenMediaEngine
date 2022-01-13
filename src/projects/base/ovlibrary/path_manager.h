@@ -22,7 +22,12 @@ namespace ov
 		static String GetCurrentPath(String sub_path = "");
 
 		static String ExpandPath(String path);
+		// /var/log/test
+		// ~~~~~~~~        <== Extract this part
 		static String ExtractPath(String path);
+		// /var/log/test
+		//          ~~~~   <== Extract this part
+		static String ExtractFileName(String path);
 
 		// Creates a directory with the mask (Default mask is 755 (rwxr-xr-x))
 		static bool MakeDirectory(const char *path, int mask = S_IRWXU | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
