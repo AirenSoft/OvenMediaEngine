@@ -98,7 +98,7 @@ install_libopenh264()
     cd ${DIR} && \
     curl -sLf https://github.com/cisco/openh264/archive/refs/tags/v${OPENH264_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     sed -i -e "s|PREFIX=/usr/local|PREFIX=${PREFIX}|" Makefile && \
-    make OS=linux ARCH=$(uname -s) && \
+    make OS=linux && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "openh264"
 
@@ -107,22 +107,22 @@ install_libopenh264()
     # We send an audit to Cisco.
     # "OpenH264 Video Codec provided by Cisco Systems, Inc."
 
-    KERNEL=$(uname -s)
-    ARCH=$(uname -m)
+    # KERNEL=$(uname -s)
+    # ARCH=$(uname -m)
 
-    if  [ "${KERNEL}" == "Linux" ] && [ "${ARCH}" == "x86" ]; then
-        PLATFORM="linux32"
-    elif [ "${KERNEL}" == "Linux" ] && [ "${ARCH}" == "x86_64" ]; then
-        PLATFORM="linux64"
-    else
-        return
-    fi 
+    # if  [ "${KERNEL}" == "Linux" ] && [ "${ARCH}" == "x86" ]; then
+    #     PLATFORM="linux32"
+    # elif [ "${KERNEL}" == "Linux" ] && [ "${ARCH}" == "x86_64" ]; then
+    #     PLATFORM="linux64"
+    # else
+    #     return
+    # fi 
 
-    (cd ${PREFIX}/lib && \
-    FILENAME=libopenh264-${OPENH264_VERSION}-${PLATFORM}.6.so && \
-    sudo curl -O http://ciscobinary.openh264.org/${FILENAME}.bz2 && \
-    sudo bunzip2 -f ${FILENAME}.bz2 && \
-    sudo mv ${FILENAME} libopenh264.so.${OPENH264_VERSION} ) || fail_exit "prebuilt_openh264"
+    # (cd ${PREFIX}/lib && \
+    # FILENAME=libopenh264-${OPENH264_VERSION}-${PLATFORM}.6.so && \
+    # sudo curl -O http://ciscobinary.openh264.org/${FILENAME}.bz2 && \
+    # sudo bunzip2 -f ${FILENAME}.bz2 && \
+    # sudo mv ${FILENAME} libopenh264.so.${OPENH264_VERSION} ) || fail_exit "prebuilt_openh264"
 }
 
 install_libvpx()
