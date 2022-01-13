@@ -77,13 +77,25 @@ RUN \
 
 ## Build OpenH264
 RUN \
-        DIR=${TEMP_PATH}/openh264 && \
+        DIR=/tmp/openh264 && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLf https://github.com/cisco/openh264/archive/refs/tags/v${OPENH264_VERSION}.tar.gz | tar -xz --strip-components=1 && \
         sed -i -e "s|PREFIX=/usr/local|PREFIX=${PREFIX}|" Makefile && \
         make OS=linux ARCH=$(uname -s) && \
         make install && \
+        rm -rf ${DIR}
+
+## Download Cisco OpenH264 prebuilt library
+RUN \
+        DIR=/tmp/openh264 && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
+        PLATFORM=linux64 && \
+        FILENAME=libopenh264-${OPENH264_VERSION}-${PLATFORM}.6.so && \
+        curl -Os http://ciscobinary.openh264.org/${FILENAME}.bz2 && \
+        bunzip2 -f ${FILENAME}.bz2 && \
+        cp ${FILENAME} ${PREFIX}/lib/libopenh264.so.${OPENH264_VERSION} && \
         rm -rf ${DIR}
 
 ## Build VPX
