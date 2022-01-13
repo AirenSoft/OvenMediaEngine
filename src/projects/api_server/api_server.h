@@ -25,6 +25,11 @@ namespace api
 		bool Stop();
 
 	protected:
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void LoadAPIStorageConfigs(const cfg::mgr::api::Storage &storage_config);
+		bool PrepareAPIStoragePath(const cfg::mgr::api::Storage &storage_config);
+		bool PrepareHttpServers(const ov::String &server_ip, const cfg::mgr::Managers &managers, const cfg::bind::mgr::API &api_bind_config);
+
 		std::shared_ptr<http::svr::RequestInterceptor> CreateInterceptor();
 
 		std::shared_ptr<http::svr::HttpServer> _http_server;
