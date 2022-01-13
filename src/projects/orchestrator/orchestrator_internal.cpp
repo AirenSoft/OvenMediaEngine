@@ -442,6 +442,25 @@ namespace ocst
 		_virtual_host_map[vhost_info.GetName()] = vhost;
 		_virtual_host_list.push_back(vhost);
 
+
+		// Notification 
+		for (auto &module : _module_list)
+		{
+			auto &module_interface = module.module;
+
+			logtd("Notifying %p (%s) for the create event (%s)", module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr(), vhost_info.GetName().CStr());
+
+			if (module_interface->OnCreateHost(vhost_info))
+			{
+				logtd("The module %p (%s) returns true", module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr());
+			}
+			else
+			{
+				logte("The module %p (%s) returns error while creating the vhost [%s]",
+					  module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr(), vhost_info.GetName().CStr());
+			}
+		}
+
 		mon::Monitoring::GetInstance()->OnHostCreated(vhost_info);
 
 		return Result::Succeeded;
@@ -457,6 +476,25 @@ namespace ocst
 			{
 				_virtual_host_list.erase(i);
 				_virtual_host_map.erase(vhost_item->name);
+
+
+				// Notification
+				for (auto &module : _module_list)
+				{
+					auto &module_interface = module.module;
+
+					logtd("Notifying %p (%s) for the create event (%s)", module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr(), vhost_info.GetName().CStr());
+
+					if (module_interface->OnDeleteHost(vhost_info))
+					{
+						logtd("The module %p (%s) returns true", module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr());
+					}
+					else
+					{
+						logte("The module %p (%s) returns error while deleting the vhost [%s]",
+							module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr(), vhost_info.GetName().CStr());
+					}
+				}
 				
 				mon::Monitoring::GetInstance()->OnHostDeleted(vhost_info);
 				return Result::Succeeded;
@@ -660,7 +698,6 @@ namespace ocst
 		mon::Monitoring::GetInstance()->OnApplicationCreated(app_info);
 
 		// Notify modules of creation events
-		std::vector<std::shared_ptr<ModuleInterface>> created_list;
 		bool succeeded = true;
 
 		auto new_app = std::make_shared<Application>(this, app_info);
@@ -675,8 +712,6 @@ namespace ocst
 			if (module_interface->OnCreateApplication(app_info))
 			{
 				logtd("The module %p (%s) returns true", module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr());
-
-				created_list.push_back(module_interface);
 			}
 			else
 			{

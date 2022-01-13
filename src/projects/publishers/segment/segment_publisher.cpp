@@ -77,6 +77,25 @@ bool SegmentPublisher::Stop()
 	return Publisher::Stop();
 }
 
+bool SegmentPublisher::OnCreateHost(const info::Host &host_info)
+{
+	if(_stream_server != nullptr && host_info.GetCertificate() != nullptr)
+	{
+		return _stream_server->AppendCertificate(host_info.GetCertificate());
+	}
+
+	return true;
+}
+
+bool SegmentPublisher::OnDeleteHost(const info::Host &host_info)
+{
+	if(_stream_server != nullptr && host_info.GetCertificate() != nullptr)
+	{
+		return _stream_server->RemoveCertificate(host_info.GetCertificate());
+	}
+	return true;
+}
+
 bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
 										 const SegmentStreamRequestInfo &request_info,
 										 ov::String &play_list)

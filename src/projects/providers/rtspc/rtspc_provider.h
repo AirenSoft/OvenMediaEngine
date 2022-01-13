@@ -54,6 +54,8 @@ namespace pvd
 
 		std::shared_ptr<ov::SocketPool> GetSignallingSocketPool();
 	protected:
+		bool OnCreateHost(const info::Host &host_info) override;
+		bool OnDeleteHost(const info::Host &host_info) override;
 		std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &app_info) override;
 		bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
 

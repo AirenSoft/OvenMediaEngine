@@ -71,6 +71,16 @@ void FilePublisher::WorkerThread()
 	}
 }
 
+bool FilePublisher::OnCreateHost(const info::Host &host_info)
+{
+	return true;
+}
+
+bool FilePublisher::OnDeleteHost(const info::Host &host_info)
+{
+	return true;
+}
+
 std::shared_ptr<pub::Application> FilePublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
 	if (IsModuleAvailable() == false)

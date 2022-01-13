@@ -78,6 +78,8 @@ private:
 		return "WebRTC Publisher";
 	}
 
+	bool OnCreateHost(const info::Host &host_info) override;
+	bool OnDeleteHost(const info::Host &host_info) override;
 	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
 	bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) override;
 

@@ -56,6 +56,16 @@ bool MediaRouter::Stop()
 	return true;
 }
 
+bool MediaRouter::OnCreateHost(const info::Host &host_info)
+{
+	return true;
+}
+
+bool MediaRouter::OnDeleteHost(const info::Host &host_info) 
+{
+	return true;
+}
+
 // Application created by the orchestrator
 bool MediaRouter::OnCreateApplication(const info::Application &app_info)
 {

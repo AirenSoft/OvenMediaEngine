@@ -282,6 +282,25 @@ void WebRtcPublisher::OnMessage(const std::shared_ptr<ov::CommonMessage> &messag
 	}
 }
 
+bool WebRtcPublisher::OnCreateHost(const info::Host &host_info)
+{
+	if(_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+	{
+		return _signalling_server->AppendCertificate(host_info.GetCertificate());
+	}
+
+	return true;
+}
+
+bool WebRtcPublisher::OnDeleteHost(const info::Host &host_info)
+{
+	if(_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+	{
+		return _signalling_server->RemoveCertificate(host_info.GetCertificate());
+	}
+	return true;
+}
+
 std::shared_ptr<pub::Application> WebRtcPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
 	if(IsModuleAvailable() == false)

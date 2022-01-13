@@ -38,6 +38,8 @@ public:
 	//--------------------------------------------------------------------
 	// Implementation of ModuleInterface
 	//--------------------------------------------------------------------
+	bool OnCreateHost(const info::Host &host_info) override;
+	bool OnDeleteHost(const info::Host &host_info) override;
 	bool OnCreateApplication(const info::Application &app_info) override;
 	bool OnDeleteApplication(const info::Application &app_info) override;
 

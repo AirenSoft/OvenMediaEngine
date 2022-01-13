@@ -153,6 +153,11 @@ namespace info
 		return false;
 	}
 
+	ov::String Certificate::GetName() const
+	{
+		return _certificate_name;
+	}
+
 	ov::String Certificate::ToString() const
 	{
 		ov::String description;

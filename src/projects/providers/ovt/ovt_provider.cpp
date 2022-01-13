@@ -59,6 +59,15 @@ namespace pvd
 		return _client_socket_pool;
 	}
 
+	bool OvtProvider::OnCreateHost(const info::Host &host_info)
+	{
+		return true;
+	}
+	
+	bool OvtProvider::OnDeleteHost(const info::Host &host_info)
+	{
+		return true;
+	}
 
 	std::shared_ptr<pvd::Application> OvtProvider::OnCreateProviderApplication(const info::Application &app_info)
 	{

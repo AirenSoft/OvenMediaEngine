@@ -56,6 +56,8 @@ namespace pvd
 		//--------------------------------------------------------------------
 		// Implementation of Provider's pure virtual functions
 		//--------------------------------------------------------------------
+		bool OnCreateHost(const info::Host &host_info) override;
+		bool OnDeleteHost(const info::Host &host_info) override;
 		std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &application_info) override;
 		bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
 

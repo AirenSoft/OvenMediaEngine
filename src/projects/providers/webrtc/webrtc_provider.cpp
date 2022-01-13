@@ -165,6 +165,25 @@ namespace pvd
 		return Provider::Stop();
 	}
 
+	bool WebRTCProvider::OnCreateHost(const info::Host &host_info)
+	{
+		if(_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+		{
+			return _signalling_server->AppendCertificate(host_info.GetCertificate());
+		}
+
+		return true;
+	}
+
+	bool WebRTCProvider::OnDeleteHost(const info::Host &host_info)
+	{
+		if(_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+		{
+			return _signalling_server->RemoveCertificate(host_info.GetCertificate());
+		}
+		return true;
+	}
+
 	std::shared_ptr<pvd::Application> WebRTCProvider::OnCreateProviderApplication(const info::Application &application_info)
 	{	
 		if(IsModuleAvailable() == false)
