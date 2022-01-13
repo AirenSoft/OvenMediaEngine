@@ -54,26 +54,42 @@ namespace cfg
 		: _type(type),
 		  _current_path(current_path)
 	{
-		ov::String file_name_to_load = file_name;
+		_full_path = file_name;
 
-		if (ov::PathManager::IsAbsolute(file_name_to_load) == false)
+		if (ov::PathManager::IsAbsolute(_full_path))
+		{
+			_current_path.Clear();
+		}
+		else
 		{
 			if (_current_path.IsEmpty() == false)
 			{
-				file_name_to_load = ov::PathManager::Combine(ov::PathManager::ExtractPath(_current_path), file_name_to_load);
+				_full_path = ov::PathManager::Combine(_current_path, _full_path);
 			}
 		}
 
-		_current_path = ov::PathManager::ExtractPath(file_name_to_load);
+		if (_current_path.IsEmpty())
+		{
+			_current_path = ov::PathManager::ExtractPath(_full_path);
+		}
 
 		logtd("Trying to create a DataSource for %s from %s file: %s [cwd: %s => %s, file: %s]",
 			  root_name.ToString().CStr(),
 			  (type == DataType::Xml) ? "XML" : "JSON",
-			  file_name_to_load.CStr(),
+			  _full_path.CStr(),
 			  current_path.CStr(), _current_path.CStr(),
 			  file_name.CStr());
 
-		LoadFromFile(file_name_to_load, root_name);
+		LoadFromFile(_full_path, root_name);
+	}
+
+	DataSource::DataSource(DataType type, const ov::String &file_path, const ItemName &root_name)
+		: DataSource(
+			  type,
+			  ov::PathManager::ExtractPath(file_path),
+			  ov::PathManager::ExtractFileName(file_path),
+			  root_name)
+	{
 	}
 
 	void DataSource::LoadFromFile(ov::String file_name, const ItemName &root_name)
@@ -113,7 +129,7 @@ namespace cfg
 
 		if (_node.empty())
 		{
-			throw CreateConfigError("Could not find the root element: %s in %s", root_name.CStr(), file_name.CStr());
+			throw CreateConfigError("Could not find the root element: <%s> in %s", root_name.CStr(), file_name.CStr());
 		}
 	}
 

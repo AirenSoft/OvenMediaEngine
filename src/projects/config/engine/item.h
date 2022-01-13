@@ -165,12 +165,12 @@ namespace cfg
 
 		protected:
 			MAY_THROWS(std::shared_ptr<ConfigError>)
-			void ValidateOmitRuleInternal(const ov::String &path) const override
+			void ValidateOmitRuleInternal(const ov::String &item_path) const override
 			{
 				switch (GetValueType())
 				{
 					case ValueType::Item: {
-						ValidateOmitRuleForItem(path);
+						ValidateOmitRuleForItem(item_path);
 						break;
 					}
 
@@ -190,16 +190,16 @@ namespace cfg
 		private:
 			MAY_THROWS(std::shared_ptr<ConfigError>)
 			template <typename Titem_type = Ttype, std::enable_if_t<std::is_base_of_v<Item, Titem_type>, int> = 0>
-			void ValidateOmitRuleForItem(const ov::String &path) const
+			void ValidateOmitRuleForItem(const ov::String &item_path) const
 			{
 				Ttype item;
 
-				item.ValidateOmitRules(path);
+				item.ValidateOmitRules(item_path);
 			}
 
 			MAY_THROWS(std::shared_ptr<ConfigError>)
 			template <typename Titem_type = Ttype, std::enable_if_t<!std::is_base_of_v<Item, Titem_type>, int> = 0>
-			void ValidateOmitRuleForItem(const ov::String &path) const
+			void ValidateOmitRuleForItem(const ov::String &item_path) const
 			{
 			}
 		};
@@ -210,8 +210,13 @@ namespace cfg
 		Item(const Item &item);
 		Item(Item &&item);
 
+		virtual ~Item() = default;
+
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		void FromDataSource(ov::String path, const ItemName &name, const DataSource &data_source);
+		void FromDataSource(ov::String item_path, const ItemName &name, const DataSource &data_source);
+
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void FromDataSource(const ItemName &name, const DataSource &data_source);
 
 		Item &operator=(const Item &item);
 
@@ -225,8 +230,18 @@ namespace cfg
 			return _is_parsed;
 		}
 
+		bool IsReadOnly() const
+		{
+			return _is_read_only;
+		}
+
+		void SetReadOnly(bool is_read_only)
+		{
+			_is_read_only = is_read_only;
+		}
+
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		void ValidateOmitRules(const ov::String &path) const;
+		void ValidateOmitRules(const ov::String &item_path) const;
 
 		ov::String ToString() const
 		{
@@ -242,10 +257,10 @@ namespace cfg
 	protected:
 		// Returns true if the value exists, otherwise returns false
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		static bool SetValue(const std::shared_ptr<const Child> &child, ValueType type, std::any &child_target, const ov::String &path, const ItemName &child_name, const ov::String &name, const std::any &value);
+		static bool SetValue(const std::shared_ptr<const Child> &child, ValueType type, std::any &child_target, const ov::String &item_path, const ItemName &child_name, const ov::String &name, const std::any &value);
 
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		void FromDataSourceInternal(ov::String path, const DataSource &data_source);
+		void FromDataSourceInternal(ov::String item_path, const DataSource &data_source);
 
 		bool IsParsed(const void *target) const;
 
@@ -268,8 +283,11 @@ namespace cfg
 		//     <Item>World</Item>
 		//     <AnotherItem />
 		// </Items>
+
+		// @param item_path The path of this item (for debugging purpose)
+		// @param name Item name
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		void ValidateOmitRule(const ov::String &path, const ov::String &name) const;
+		void ValidateOmitRule(const ov::String &item_path, const ov::String &name) const;
 
 		void RebuildListIfNeeded() const;
 		void RebuildListIfNeeded();
@@ -317,7 +335,7 @@ namespace cfg
 					 CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
 					 CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value,
 					 optional_callback, validation_callback,
-					 value, static_cast<Item *>(value));
+					 value, item);
 
 			value->_item_name = name;
 		}
@@ -346,6 +364,7 @@ namespace cfg
 		bool _need_to_update_list = true;
 
 		bool _is_parsed = false;
+		bool _is_read_only = true;
 
 		ItemName _item_name;
 

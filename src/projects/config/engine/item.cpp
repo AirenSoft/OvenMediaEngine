@@ -34,7 +34,7 @@ namespace cfg
 
 		if (include_file.has_value())
 		{
-			auto current_path = data_source.GetCurrentPath();
+			auto current_path = data_source.GetCurrentPath() + "/";
 
 			// Load from the include file
 			ov::String include_file_path = TryCast<ov::String>(include_file);
@@ -89,7 +89,7 @@ namespace cfg
 			(value_type == ValueType::List) ? "std::vector<" : "", child->GetTypeName().CStr(), (value_type == ValueType::List) ? ">" : "", StringFromValueType(child->GetType()),
 			child->IsOptional() ? "Optional, " : "",
 			child->ResolvePath() ? "Path, " : "",
-			child->IsParsed() ? "DataSource" : "Default");
+			child->IsParsed() ? "Parsed" : "NotParsed");
 
 		if (child->IsParsed() &&
 			((child->GetType() != ValueType::Item) && (child->GetType() != ValueType::List)))
@@ -243,6 +243,7 @@ namespace cfg
 		_need_to_update_list = true;
 
 		_is_parsed = item._is_parsed;
+		_is_read_only = item._is_read_only;
 
 		_item_name = item._item_name;
 
@@ -253,9 +254,11 @@ namespace cfg
 
 	Item::Item(Item &&item)
 	{
-		std::swap(_need_to_update_list, item._need_to_update_list);
+		_need_to_update_list = true;
+		item._need_to_update_list = true;
 
 		std::swap(_is_parsed, item._is_parsed);
+		std::swap(_is_read_only, item._is_read_only);
 
 		std::swap(_item_name, item._item_name);
 
@@ -269,6 +272,7 @@ namespace cfg
 		_need_to_update_list = true;
 
 		_is_parsed = item._is_parsed;
+		_is_read_only = item._is_read_only;
 
 		_item_name = item._item_name;
 
@@ -291,7 +295,7 @@ namespace cfg
 	{
 		if (_need_to_update_list)
 		{
-			logtd("Rebuilding a list of children for: %s", _item_name.ToString().CStr());
+			logtd("[%s] Rebuilding a list of children", _item_name.ToString().CStr());
 
 			MakeList();
 
@@ -341,15 +345,20 @@ namespace cfg
 
 	void Item::FromDataSource(ov::String item_path, const ItemName &name, const DataSource &data_source)
 	{
-		logtd("[%s] Validating data source for: %s", item_path.CStr(), name.ToString().CStr());
+		_item_name = name;
+
+		logtd("[%s] Validating data source for %s", item_path.CStr(), name.ToString().CStr());
 		ValidateOmitRules(item_path);
 
 		RebuildListIfNeeded();
 		data_source.CheckUnknownItems(data_source.GetFileName(), item_path, _children_for_xml, _children_for_json);
 
-		_item_name = name;
-
 		FromDataSourceInternal(item_path, data_source);
+	}
+
+	void Item::FromDataSource(const ItemName &name, const DataSource &data_source)
+	{
+		FromDataSource(name.GetName(data_source.GetType()), name, data_source);
 	}
 
 	bool Item::IsParsed(const void *target) const
@@ -478,13 +487,14 @@ namespace cfg
 #if CFG_VERBOSE_STRING
 		extra.Format(
 			CFG_EXTRA_PREFIX
-			"%p: "
-			"%s, "
+			"%p: %s, "
 			"children = %zu, "
+			"%s, "
 			"%s",
 			this, ov::Demangle(typeid(*this).name()).CStr(),
 			child_count,
-			_is_parsed ? "DataSource" : "Default");
+			_is_parsed ? "Parsed" : "NotParsed",
+			_is_read_only ? "ReadOnly" : "Writable");
 #endif	// CFG_VERBOSE_STRING
 
 		description.AppendFormat(

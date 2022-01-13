@@ -23,8 +23,17 @@ namespace cfg
 	public:
 		DataSource(const ov::String &current_path, const ov::String &file_name, const std::shared_ptr<pugi::xml_document> &document, const pugi::xml_node &node);
 		DataSource(const ov::String &current_path, const ov::String &file_name, const ov::String json_name, const Json::Value &json);
+		// @param type XML/JSON
+		// @param current_path cwd
+		// @param file_name config file name
+		// @param root_name The name of root element
 		MAY_THROWS(std::shared_ptr<ConfigError>)
 		DataSource(DataType type, const ov::String &current_path, const ov::String &file_name, const ItemName &root_name);
+		// @param type XML/JSON
+		// @param file_path directory + file_name (current_path + file_name)
+		// @param root_name The name of root element
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		DataSource(DataType type, const ov::String &file_path, const ItemName &root_name);
 
 		DataType GetType() const
 		{
@@ -77,6 +86,11 @@ namespace cfg
 			return _file_name;
 		}
 
+		ov::String GetFullPath() const
+		{
+			return _full_path;
+		}
+
 		ov::String ToString() const;
 
 	protected:
@@ -96,6 +110,8 @@ namespace cfg
 		ov::String _json_name;
 		Json::Value _json;
 
+		// _full_path = _current_path + _file_name
+		ov::String _full_path;
 		ov::String _current_path;
 		ov::String _file_name;
 	};
