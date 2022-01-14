@@ -19,7 +19,6 @@ namespace api
 {
 	void Server::LoadAPIStorageConfigs(const cfg::mgr::api::Storage &storage_config)
 	{
-		return;
 		auto storage_path = storage_config.GetPath();
 
 		// Obtain a list of XML files in the storage path
