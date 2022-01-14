@@ -376,6 +376,7 @@ namespace cfg
 
 		ItemName _item_name;
 
+		std::vector<std::shared_ptr<Child>> _children;
 		std::unordered_map<ov::String, std::shared_ptr<Child>> _children_for_xml;
 		std::unordered_map<ov::String, std::shared_ptr<Child>> _children_for_json;
 	};

@@ -240,8 +240,6 @@ namespace cfg
 
 	Item::Item(const Item &item)
 	{
-		logac("Item is copied from %p", &item);
-
 		_last_target = nullptr;
 
 		_is_parsed = item._is_parsed;
@@ -249,14 +247,13 @@ namespace cfg
 
 		_item_name = item._item_name;
 
+		_children = item._children;
 		_children_for_xml = item._children_for_xml;
 		_children_for_json = item._children_for_json;
 	}
 
 	Item::Item(Item &&item)
 	{
-		logac("Item is moved from %p", &item);
-
 		_last_target = nullptr;
 		item._last_target = nullptr;
 
@@ -265,6 +262,7 @@ namespace cfg
 
 		std::swap(_item_name, item._item_name);
 
+		std::swap(_children, item._children);
 		std::swap(_children_for_xml, item._children_for_xml);
 		std::swap(_children_for_json, item._children_for_json);
 	}
@@ -278,6 +276,7 @@ namespace cfg
 
 		_item_name = item._item_name;
 
+		_children = item._children;
 		_children_for_xml = item._children_for_xml;
 		_children_for_json = item._children_for_json;
 
@@ -311,12 +310,14 @@ namespace cfg
 	{
 		std::shared_ptr<Child> prev_child;
 
+		for (auto child_iterator = _children.begin(); child_iterator != _children.end(); ++child_iterator)
 		{
-			auto prev_child_iterator = _children_for_xml.find(name.xml_name);
-			if (prev_child_iterator != _children_for_xml.end())
+			auto &child = *child_iterator;
+			if (child->GetItemName() == name)
 			{
-				logtc(">> FOUND!");
-				prev_child = prev_child_iterator->second;
+				prev_child = *child_iterator;
+				_children.erase(child_iterator);
+				break;
 			}
 		}
 
@@ -328,6 +329,7 @@ namespace cfg
 
 		_children_for_xml.insert_or_assign(name.xml_name, child);
 		_children_for_json.insert_or_assign(name.json_name, child);
+		_children.push_back(child);
 
 		if (prev_child != nullptr)
 		{
@@ -370,10 +372,8 @@ namespace cfg
 	{
 		RebuildListIfNeeded();
 
-		for (const auto &child_pair : _children_for_xml)
+		for (const auto &child : _children)
 		{
-			const auto &child = child_pair.second;
-
 			if (child->GetRawTarget() == target)
 			{
 				return child->IsParsed();
@@ -387,7 +387,7 @@ namespace cfg
 	{
 		if (_item_name.omit_rule == OmitRule::Omit)
 		{
-			if (_children_for_xml.size() > 1)
+			if (_children.size() > 1)
 			{
 				OV_ASSERT(false, "\"%s\" item cannot be omitted because it has multiple children", item_path.CStr());
 
@@ -399,10 +399,8 @@ namespace cfg
 			// Don't need to check omit rule for this item
 		}
 
-		for (const auto &child_pair : _children_for_xml)
+		for (const auto &child : _children)
 		{
-			const auto &child = child_pair.second;
-
 			switch (child->GetType())
 			{
 				case ValueType::Unknown:
@@ -488,7 +486,7 @@ namespace cfg
 		ov::String indent = MakeIndentString(indent_count);
 
 		auto item_name = _item_name.ToString();
-		size_t child_count = _children_for_xml.size();
+		size_t child_count = _children.size();
 
 		ov::String description;
 		ov::String extra;
@@ -516,10 +514,8 @@ namespace cfg
 
 		size_t index = 0;
 
-		for (const auto &child_pair : _children_for_xml)
+		for (const auto &child : _children)
 		{
-			const auto &child = child_pair.second;
-
 			description.AppendFormat("\n%s",
 									 ChildToString(indent_count, child, index, child_count).CStr());
 
@@ -729,10 +725,8 @@ namespace cfg
 
 		Json::Value object = Json::objectValue;
 
-		for (const auto &child_pair : _children_for_xml)
+		for (const auto &child : _children)
 		{
-			const auto &child = child_pair.second;
-
 			if (include_default_values || child->IsParsed())
 			{
 				AddJsonChild(object, child->GetType(), _item_name.omit_rule, child->GetItemName().json_name, child->GetTarget(), child->GetOriginalValue(), include_default_values);
@@ -765,10 +759,8 @@ namespace cfg
 	{
 		RebuildListIfNeeded();
 
-		for (const auto &child_pair : _children_for_xml)
+		for (const auto &child : _children)
 		{
-			const auto &child = child_pair.second;
-
 			if (include_default_values || child->IsParsed())
 			{
 				AddXmlChild(parent_node, child->GetType(), child->GetItemName().xml_name, child->GetTarget(), child->GetOriginalValue(), include_default_values);
@@ -1064,10 +1056,8 @@ namespace cfg
 			// "include" attribute is not present
 		}
 
-		for (auto &child_pair : _children_for_xml)
+		for (auto &child : _children)
 		{
-			auto &child = child_pair.second;
-
 			Json::Value original_value;
 			auto &child_name = child->GetItemName();
 
