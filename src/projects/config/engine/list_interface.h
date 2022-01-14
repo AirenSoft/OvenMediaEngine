@@ -31,7 +31,7 @@ namespace cfg
 		virtual void Allocate(size_t size) = 0;
 		virtual std::any GetAt(size_t index) = 0;
 
-		virtual ov::String ToString(int indent_count, const std::shared_ptr<Child> &child) const = 0;
+		virtual ov::String ToString(int indent_count, const std::shared_ptr<const Child> &child) const = 0;
 
 		size_t GetCount() const
 		{

@@ -41,14 +41,16 @@ namespace cfg
 	class Item
 	{
 	protected:
-		static ov::String ChildToString(int indent_count, const std::shared_ptr<Child> &child, size_t index, size_t child_count);
+		static ov::String ChildToString(int indent_count, const std::shared_ptr<const Child> &child, size_t index, size_t child_count);
 
+		// Convert <cfg::Item *> to std::any
 		template <typename Ttype, std::enable_if_t<!std::is_base_of_v<Item, Ttype>, int> = 0>
 		static std::any MakeAny(Ttype *item)
 		{
 			return item;
 		}
 
+		// Convert <Subclass of cfg::Item *> to std::any
 		template <typename Ttype, std::enable_if_t<std::is_base_of_v<Item, Ttype>, int> = 0>
 		static std::any MakeAny(Ttype *item)
 		{
@@ -118,7 +120,7 @@ namespace cfg
 				return cfg::ToString(indent_count, value);
 			}
 
-			ov::String ToString(int indent_count, const std::shared_ptr<Child> &list_info) const override
+			ov::String ToString(int indent_count, const std::shared_ptr<const Child> &list_info) const override
 			{
 				size_t index = 0;
 				size_t child_count = _target->size();
@@ -243,12 +245,12 @@ namespace cfg
 		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void ValidateOmitRules(const ov::String &item_path) const;
 
-		ov::String ToString() const
+		virtual ov::String ToString() const
 		{
 			return ToString(0);
 		}
 
-		ov::String ToString(int indent_count) const;
+		virtual ov::String ToString(int indent_count) const;
 
 		Json::Value ToJson(bool include_default_values = false) const;
 		void ToXml(pugi::xml_node node, bool include_default_values = false) const;
@@ -331,6 +333,8 @@ namespace cfg
 			typename Ttype, std::enable_if_t<std::is_base_of_v<Item, Ttype>, int> = 0>
 		void Register(const ItemName &name, Ttype *value, OptionalCallback optional_callback = nullptr, ValidationCallback validation_callback = nullptr)
 		{
+			auto item = static_cast<Item *>(value);
+
 			AddChild(name, ProbeType<Ttype>::type, ov::Demangle(typeid(Ttype).name()),
 					 CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
 					 CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value,
@@ -361,16 +365,18 @@ namespace cfg
 		Json::Value ToJsonInternal(bool include_default_values) const;
 		void ToXmlInternal(pugi::xml_node &parent_node, bool include_default_values) const;
 
-		bool _need_to_update_list = true;
+		// Used to determine if a child list needs to be refreshed
+		//
+		// _last_target == this: The list is not refreshed
+		// _last_target != this: The list is refreshed
+		const void *_last_target = nullptr;
 
 		bool _is_parsed = false;
 		bool _is_read_only = true;
 
 		ItemName _item_name;
 
-		std::map<ov::String, std::shared_ptr<Child>> _children_for_xml;
-		std::map<ov::String, std::shared_ptr<Child>> _children_for_json;
-
-		std::vector<std::shared_ptr<Child>> _children;
+		std::unordered_map<ov::String, std::shared_ptr<Child>> _children_for_xml;
+		std::unordered_map<ov::String, std::shared_ptr<Child>> _children_for_json;
 	};
 }  // namespace cfg

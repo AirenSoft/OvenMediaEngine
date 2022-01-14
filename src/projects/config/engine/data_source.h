@@ -60,7 +60,9 @@ namespace cfg
 		}
 
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		void CheckUnknownItems(const ov::String &file_path, const ov::String &path, const std::map<ov::String, std::shared_ptr<Child>> &children_for_xml, const std::map<ov::String, std::shared_ptr<Child>> &children_for_json) const;
+		void CheckUnknownItems(const ov::String &file_path, const ov::String &path,
+							   const std::unordered_map<ov::String, std::shared_ptr<Child>> &children_for_xml,
+							   const std::unordered_map<ov::String, std::shared_ptr<Child>> &children_for_json) const;
 
 		// Check weather the root value is array or not
 		bool IsArray(const ItemName &name) const;
