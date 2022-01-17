@@ -31,11 +31,7 @@ public:
 
 	// void SendBuffer(std::shared_ptr<const MediaFrame> frame) override;
 
-	std::shared_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
-
-	void ThreadEncode() override;
-
-	void Stop() override;
+	void CodecThread() override;
 
 private:
 	bool SetCodecParams() override;

@@ -10,14 +10,14 @@
 
 #include "../../transcoder_encoder.h"
 
-class EncoderHEVC : public TranscodeEncoder
+class EncoderAVCxOpenH264 : public TranscodeEncoder
 {
 public:
-	~EncoderHEVC();
+	~EncoderAVCxOpenH264();
 
 	AVCodecID GetCodecID() const noexcept override
 	{
-		return AV_CODEC_ID_H265;
+		return AV_CODEC_ID_H264;
 	}
 
 	int GetPixelFormat() const noexcept override
@@ -27,12 +27,8 @@ public:
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
-	std::shared_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
-
-	void ThreadEncode() override;
-
-	void Stop() override;
+	void CodecThread() override;
 
 private:
-	bool SetCodecParams() override;	
+	bool SetCodecParams() override;
 };

@@ -182,11 +182,11 @@ void TranscodeDecoder::Stop()
 	_input_buffer.Stop();
 	_output_buffer.Stop();
 
-	if (_thread_work.joinable())
+	if (_codec_thread.joinable())
 	{
-		_thread_work.join();
+		_codec_thread.join();
 
-		logtd(ov::String::FormatString("decoder %s thread has ended.", avcodec_get_name(GetCodecID())).CStr());
+		logtd(ov::String::FormatString("decoder %s thread has ended", avcodec_get_name(GetCodecID())).CStr());
 	}
 }
 

@@ -11,10 +11,9 @@
 #include <utility>
 
 #include "codec/encoder/encoder_aac.h"
-#include "codec/encoder/encoder_avc.h"
+#include "codec/encoder/encoder_avc_openh264.h"
 #include "codec/encoder/encoder_avc_nv.h"
 #include "codec/encoder/encoder_avc_qsv.h"
-#include "codec/encoder/encoder_hevc.h"
 #include "codec/encoder/encoder_hevc_nv.h"
 #include "codec/encoder/encoder_hevc_qsv.h"
 #include "codec/encoder/encoder_jpeg.h"
@@ -38,6 +37,8 @@ TranscodeEncoder::TranscodeEncoder()
 
 TranscodeEncoder::~TranscodeEncoder()
 {
+	Stop();
+
 	if (_codec_context != nullptr && _codec_context->codec != nullptr)
 	{
         if (_codec_context->codec->capabilities & AV_CODEC_CAP_ENCODER_FLUSH) {
@@ -83,7 +84,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(std::shared_pt
 				}
 			}
 #endif
-			encoder = std::make_shared<EncoderAVC>();
+			encoder = std::make_shared<EncoderAVCxOpenH264>();
 			if (encoder != nullptr && encoder->Configure(context) == true)
 			{
 				return encoder;
@@ -110,12 +111,6 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(std::shared_pt
 				}
 			}
 #endif
-			encoder = std::make_shared<EncoderHEVC>();
-			if (encoder != nullptr && encoder->Configure(context) == true)
-			{
-				return encoder;
-			}
-
 			break;
 		case cmn::MediaCodecId::Vp8:
 			encoder = std::make_shared<EncoderVP8>();
@@ -194,6 +189,11 @@ bool TranscodeEncoder::Configure(std::shared_ptr<TranscodeContext> context)
 	return (_encoder_context != nullptr);
 }
 
+std::shared_ptr<TranscodeContext> &TranscodeEncoder::GetContext()
+{
+	return _encoder_context;
+}
+
 void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 {
 	_input_buffer.Enqueue(std::move(frame));
@@ -210,17 +210,35 @@ void TranscodeEncoder::SendOutputBuffer(std::shared_ptr<MediaPacket> packet)
 	}
 }
 
-std::shared_ptr<TranscodeContext> &TranscodeEncoder::GetContext()
+std::shared_ptr<MediaPacket> TranscodeEncoder::RecvBuffer(TranscodeResult *result)
 {
-	return _encoder_context;
-}
+	if (!_output_buffer.IsEmpty())
+	{
+		*result = TranscodeResult::DataReady;
 
-void TranscodeEncoder::ThreadEncode()
-{
-	// nothing...
+		auto obj = _output_buffer.Dequeue();
+		if (obj.has_value())
+		{
+			return obj.value();
+		}
+	}
+
+	*result = TranscodeResult::NoData;
+
+	return nullptr;
 }
 
 void TranscodeEncoder::Stop()
 {
-	// nothing...
+	_kill_flag = true;
+
+	_input_buffer.Stop();
+	_output_buffer.Stop();
+
+	if (_codec_thread.joinable())
+	{
+		_codec_thread.join();
+		logtd(ov::String::FormatString("encoder %s thread has ended", avcodec_get_name(GetCodecID())).CStr());
+	}
 }
+
