@@ -496,6 +496,7 @@ namespace pvd
 
 				// Signalling server will call OnStopCommand, then stream will be removed in that function
 				_signalling_server->Disconnect(stream->GetApplicationInfo().GetName(), stream->GetName(), stream->GetPeerSDP());
+				OnChannelDeleted(stream);
 
 				break;
 			}
