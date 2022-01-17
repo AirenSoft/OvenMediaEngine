@@ -443,7 +443,7 @@ namespace pvd
 					const std::shared_ptr<const SessionDescription> &offer_sdp,
 					const std::shared_ptr<const SessionDescription> &peer_sdp)
 	{
-		logti("Stop commnad received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
+		logti("Stop command received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 		
 		// Find Stream
 		auto stream = std::static_pointer_cast<WebRTCStream>(GetStreamByName(vhost_app_name, stream_name));
@@ -496,6 +496,7 @@ namespace pvd
 
 				// Signalling server will call OnStopCommand, then stream will be removed in that function
 				_signalling_server->Disconnect(stream->GetApplicationInfo().GetName(), stream->GetName(), stream->GetPeerSDP());
+				OnChannelDeleted(stream);
 
 				break;
 			}
