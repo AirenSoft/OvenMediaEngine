@@ -31,9 +31,7 @@ public:
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
-	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
-
-	void ThreadDecode() override;
+	void CodecThread() override;
 
 protected:
 };

@@ -25,7 +25,5 @@ public:
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
-	void ThreadDecode() override;
-
-	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
+	void CodecThread() override;
 };
