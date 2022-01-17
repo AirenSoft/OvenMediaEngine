@@ -24,8 +24,6 @@ namespace cfg
 		friend class ov::Singleton<ConfigManager>;
 		~ConfigManager() override;
 
-		void SetOmeVersion(const ov::String &version, const ov::String &git_extra);
-
 		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void LoadConfigs(ov::String config_path);
 
@@ -69,9 +67,6 @@ namespace cfg
 		void CheckValidVersion(const ov::String &name, int version);
 
 		bool SaveCurrentConfig(pugi::xml_document &config, const ov::String &last_config_path);
-
-		ov::String _version;
-		ov::String _git_extra;
 
 		ov::String _config_path;
 

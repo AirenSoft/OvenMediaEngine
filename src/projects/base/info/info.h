@@ -9,3 +9,5 @@
 #pragma once
 
 #include "application.h"
+
+#include "ome_version.h"

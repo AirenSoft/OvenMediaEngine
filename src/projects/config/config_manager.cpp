@@ -8,6 +8,7 @@
 //==============================================================================
 #include "config_manager.h"
 
+#include <base/info/ome_version.h>
 #include <monitoring/monitoring.h>
 #include <sys/utsname.h>
 
@@ -41,12 +42,6 @@ namespace cfg
 
 	ConfigManager::~ConfigManager()
 	{
-	}
-
-	void ConfigManager::SetOmeVersion(const ov::String &version, const ov::String &git_extra)
-	{
-		_version = version;
-		_git_extra = git_extra;
 	}
 
 	void ConfigManager::CheckLegacyConfigs(ov::String config_path)
@@ -112,22 +107,17 @@ namespace cfg
 		utsname uts{};
 		::uname(&uts);
 
-#if DEBUG
-		static constexpr const char *BUILD_MODE = " [debug]";
-#else	// DEBUG
-		static constexpr const char *BUILD_MODE = "";
-#endif	// DEBUG
-
 		comment.Format(
 			"\n"
 			"\tThis is an auto-generated configuration file through API call.\n"
 			"\tOvenMediaEngine may not work if it is modified incorrectly.\n"
 			"\tYou can use '-i' option to prevent loading this file when the OME launches.\n\n"
-			"\tVersion: v%s%s%s\n"
+			"\tVersion: %s\n"
 			"\tCreated: %s\n"
 			"\tHost: %s (%s %s - %s, %s)\n",
-			_version.CStr(), _git_extra.CStr(), BUILD_MODE,
-			ov::Time::MakeUtcMillisecond().CStr(), uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
+			info::OmeVersion::GetInstance()->ToString().CStr(),
+			ov::Time::MakeUtcMillisecond().CStr(),
+			uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
 
 		comment_node.set_value(comment);
 

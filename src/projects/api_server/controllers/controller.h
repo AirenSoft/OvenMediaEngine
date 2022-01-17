@@ -118,42 +118,7 @@ namespace api
 		using ApiHandlerWithBodyVHostApp = ApiResponse (Tclass::*)(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app);
 		using ApiHandlerWithBodyVHostAppStream = ApiResponse (Tclass::*)(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app, const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
 
-#define API_CONTROLLER_REGISTER_HANDLERS(postfix)                                                  \
-	void Register##postfix(const ov::String &pattern, const ApiHandler &handler)                   \
-	{                                                                                              \
-		Register(http::Method::postfix, pattern, handler);                                         \
-	}                                                                                              \
-	void Register##postfix(const ov::String &pattern, const ApiHandlerWithVHost &handler)          \
-	{                                                                                              \
-		Register(http::Method::postfix, pattern, handler);                                         \
-	}                                                                                              \
-	void Register##postfix(const ov::String &pattern, const ApiHandlerWithVHostApp &handler)       \
-	{                                                                                              \
-		Register(http::Method::postfix, pattern, handler);                                         \
-	}                                                                                              \
-	void Register##postfix(const ov::String &pattern, const ApiHandlerWithVHostAppStream &handler) \
-	{                                                                                              \
-		Register(http::Method::postfix, pattern, handler);                                         \
-	}
-
-#define API_CONTROLLER_REGISTER_HANDLERS_WITH_BODY(postfix)                                            \
-	void Register##postfix(const ov::String &pattern, const ApiHandlerWithBody &handler)               \
-	{                                                                                                  \
-		Register(http::Method::postfix, pattern, handler);                                             \
-	}                                                                                                  \
-	void Register##postfix(const ov::String &pattern, const ApiHandlerWithBodyVHost &handler)          \
-	{                                                                                                  \
-		Register(http::Method::postfix, pattern, handler);                                             \
-	}                                                                                                  \
-	void Register##postfix(const ov::String &pattern, const ApiHandlerWithBodyVHostApp &handler)       \
-	{                                                                                                  \
-		Register(http::Method::postfix, pattern, handler);                                             \
-	}                                                                                                  \
-	void Register##postfix(const ov::String &pattern, const ApiHandlerWithBodyVHostAppStream &handler) \
-	{                                                                                                  \
-		Register(http::Method::postfix, pattern, handler);                                             \
-	}
-
+	protected:
 		void Register(http::Method method, const ov::String &pattern, const Handler &handler)
 		{
 			auto new_pattern = ov::String::FormatString("^%s%s$", _prefix.CStr(), pattern.CStr());
@@ -304,11 +269,48 @@ namespace api
 		}
 
 		// Register handlers
+#define API_CONTROLLER_REGISTER_HANDLERS(postfix)                                                  \
+	void Register##postfix(const ov::String &pattern, const ApiHandler &handler)                   \
+	{                                                                                              \
+		Register(http::Method::postfix, pattern, handler);                                         \
+	}                                                                                              \
+	void Register##postfix(const ov::String &pattern, const ApiHandlerWithVHost &handler)          \
+	{                                                                                              \
+		Register(http::Method::postfix, pattern, handler);                                         \
+	}                                                                                              \
+	void Register##postfix(const ov::String &pattern, const ApiHandlerWithVHostApp &handler)       \
+	{                                                                                              \
+		Register(http::Method::postfix, pattern, handler);                                         \
+	}                                                                                              \
+	void Register##postfix(const ov::String &pattern, const ApiHandlerWithVHostAppStream &handler) \
+	{                                                                                              \
+		Register(http::Method::postfix, pattern, handler);                                         \
+	}
+
+#define API_CONTROLLER_REGISTER_HANDLERS_WITH_BODY(postfix)                                            \
+	void Register##postfix(const ov::String &pattern, const ApiHandlerWithBody &handler)               \
+	{                                                                                                  \
+		Register(http::Method::postfix, pattern, handler);                                             \
+	}                                                                                                  \
+	void Register##postfix(const ov::String &pattern, const ApiHandlerWithBodyVHost &handler)          \
+	{                                                                                                  \
+		Register(http::Method::postfix, pattern, handler);                                             \
+	}                                                                                                  \
+	void Register##postfix(const ov::String &pattern, const ApiHandlerWithBodyVHostApp &handler)       \
+	{                                                                                                  \
+		Register(http::Method::postfix, pattern, handler);                                             \
+	}                                                                                                  \
+	void Register##postfix(const ov::String &pattern, const ApiHandlerWithBodyVHostAppStream &handler) \
+	{                                                                                                  \
+		Register(http::Method::postfix, pattern, handler);                                             \
+	}
+
 		API_CONTROLLER_REGISTER_HANDLERS_WITH_BODY(Post)
 		API_CONTROLLER_REGISTER_HANDLERS(Get)
 		API_CONTROLLER_REGISTER_HANDLERS_WITH_BODY(Put)
 		API_CONTROLLER_REGISTER_HANDLERS(Delete)
 
+	protected:
 		// For all Handler registrations, prefix before pattern
 		ov::String _prefix;
 		std::shared_ptr<http::svr::DefaultInterceptor> _interceptor;

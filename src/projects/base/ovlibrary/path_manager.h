@@ -44,5 +44,8 @@ namespace ov
 		static String ExtractExtension(String path);
 
 		static std::shared_ptr<ov::Error> GetFileList(const ov::String &base_file_name, const ov::String &pattern, std::vector<ov::String> *file_list, bool exclude_base_path = true);
+
+		static std::shared_ptr<ov::Error> Rename(const ov::String &file_name, const ov::String &to_file_name);
+		static std::shared_ptr<ov::Error> DeleteFile(const ov::String &file_name);
 	};
 }  // namespace ov

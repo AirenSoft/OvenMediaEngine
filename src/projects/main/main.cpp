@@ -9,6 +9,7 @@
 #include "main.h"
 
 #include <api_server/api_server.h>
+#include <base/info/ome_version.h>
 #include <base/ovlibrary/daemon.h>
 #include <base/ovlibrary/log_write.h>
 #include <config/config_manager.h>
@@ -212,6 +213,8 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 		return ov::Daemon::State::PARENT_FAIL;
 	}
 
+	info::OmeVersion::GetInstance()->SetVersion(OME_VERSION, OME_GIT_VERSION);
+
 	// Daemonize OME with start_service argument
 	if (parse_option->start_service)
 	{
@@ -249,8 +252,6 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 	ov::LogWrite::SetAsService(parse_option->start_service);
 
 	auto config_manager = cfg::ConfigManager::GetInstance();
-
-	config_manager->SetOmeVersion(OME_VERSION, OME_GIT_VERSION_EXTRA);
 
 	try
 	{

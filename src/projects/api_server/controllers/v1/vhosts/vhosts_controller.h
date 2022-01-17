@@ -25,6 +25,10 @@ namespace api
 			// GET /v1/vhosts/<vhost_name>
 			ApiResponse OnGetVhost(const std::shared_ptr<http::svr::HttpConnection> &client,
 								   const std::shared_ptr<mon::HostMetrics> &vhost);
+
+			// DELETE /v1/vhosts/<vhost_name>
+			ApiResponse OnDeleteVhost(const std::shared_ptr<http::svr::HttpConnection> &client,
+									  const std::shared_ptr<mon::HostMetrics> &vhost);
 		};
 	}  // namespace v1
 }  // namespace api

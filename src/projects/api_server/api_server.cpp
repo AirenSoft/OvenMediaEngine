@@ -8,7 +8,9 @@
 //==============================================================================
 #include "api_server.h"
 
+#include <base/info/ome_version.h>
 #include <orchestrator/orchestrator.h>
+#include <sys/utsname.h>
 
 #include "api_private.h"
 #include "controllers/root_controller.h"
@@ -17,13 +19,23 @@
 
 namespace api
 {
+	struct XmlWriter : pugi::xml_writer
+	{
+		ov::String result;
+
+		void write(const void *data, size_t size) override
+		{
+			result.Append(static_cast<const char *>(data), size);
+		}
+	};
+
 	void Server::LoadAPIStorageConfigs(const cfg::mgr::api::Storage &storage_config)
 	{
 		auto storage_path = storage_config.GetPath();
 
 		// Obtain a list of XML files in the storage path
 		std::vector<ov::String> file_list;
-		auto error = ov::PathManager::GetFileList(storage_path + "/", "*.xml", &file_list);
+		auto error = ov::PathManager::GetFileList(storage_path + "/", "VHost_*.xml", &file_list);
 
 		if (error != nullptr)
 		{
@@ -38,8 +50,6 @@ namespace api
 		}
 
 		// Load configurations from the API storage path
-		auto orchestrator = ocst::Orchestrator::GetInstance();
-
 		logti("Trying to load API storage configurations in %s...", storage_path.CStr());
 
 		if (file_list.empty() == false)
@@ -54,12 +64,8 @@ namespace api
 				vhost_config.FromDataSource("VirtualHost", data_source);
 				vhost_config.SetReadOnly(false);
 
-				logtc("%s", vhost_config.ToString().CStr());
-
-				if (orchestrator->CreateVirtualHost(vhost_config) == ocst::Result::Failed)
-				{
-					throw CreateConfigError("Failed to create virtual host from file: %s", data_source.GetFileName().CStr());
-				}
+				logti("Creating a new VirtualHost from %s...", file_name.CStr());
+				CreateVHost(vhost_config, true);
 			}
 		}
 		else
@@ -70,6 +76,9 @@ namespace api
 
 	bool Server::PrepareAPIStoragePath(const cfg::mgr::api::Storage &storage_config)
 	{
+		_storage_path = "";
+		_is_storage_path_initialized = false;
+
 		if (storage_config.IsEnabled())
 		{
 			// Check the write permission for <Storage>
@@ -98,12 +107,15 @@ namespace api
 
 				logti("Directory is created: %s", storage_path.CStr());
 			}
+
+			_storage_path = storage_path;
 		}
 		else
 		{
 			logtw("API Storage is disabled. You will lose the configurations modified using the API.");
 		}
 
+		_is_storage_path_initialized = true;
 		return true;
 	}
 
@@ -220,9 +232,10 @@ namespace api
 		if (_access_token.IsEmpty())
 		{
 #if DEBUG
-			logtw("An empty AccessToken setting was found. This is only allowed on Debug builds for ease of development, and the Release build does not allow empty AccessToken.");
+			logtw("An empty <AccessToken> setting was found. This is only allowed on Debug builds for ease of development, and the Release build does not allow empty <AccessToken>.");
 #else	// DEBUG
-			logte("Empty AccessToken is not allowed");
+			logte("Empty <AccessToken> is not allowed");
+			return false;
 #endif	// DEBUG
 		}
 
@@ -230,6 +243,11 @@ namespace api
 
 		if (storage_config.IsParsed())
 		{
+			if (PrepareAPIStoragePath(storage_config) == false)
+			{
+				return false;
+			}
+
 			try
 			{
 				LoadAPIStorageConfigs(storage_config);
@@ -237,11 +255,6 @@ namespace api
 			catch (std::shared_ptr<cfg::ConfigError> &error)
 			{
 				logte("An error occurred while load API config: %s", error->ToString().CStr());
-				return false;
-			}
-
-			if (PrepareAPIStoragePath(storage_config) == false)
-			{
 				return false;
 			}
 		}
@@ -275,7 +288,117 @@ namespace api
 		bool http_result = (http_server != nullptr) ? manager->ReleaseServer(http_server) : true;
 		bool https_result = (https_server != nullptr) ? manager->ReleaseServer(https_server) : true;
 
+		_is_storage_path_initialized = false;
+		_storage_path = "";
+
 		return http_result && https_result;
 	}
 
+	ov::String Server::MangleVHostName(const ov::String &vhost_name)
+	{
+		auto regex = ov::Regex::CompiledRegex("[^a-zA-Z0-9\\-_.\\[\\]\"']");
+
+		return regex.Replace(vhost_name, "_", true);
+	}
+
+	ov::String Server::GenerateFileNameForVHostName(const ov::String &vhost_name)
+	{
+		ov::String file_name;
+
+		file_name.Format("VHost_%s.xml", MangleVHostName(vhost_name).CStr());
+
+		return ov::PathManager::Combine(_storage_path, file_name);
+	}
+
+	void Server::CreateVHost(const cfg::vhost::VirtualHost &vhost_config, bool write_to_storage)
+	{
+		if (_is_storage_path_initialized == false)
+		{
+			throw CreateConfigError("Storage path is not initialized (API server is not started)");
+		}
+
+		auto orchestrator = ocst::Orchestrator::GetInstance();
+
+		OV_ASSERT2(vhost_config.IsReadOnly() == false);
+
+		if (orchestrator->CreateVirtualHost(vhost_config) == ocst::Result::Failed)
+		{
+			throw CreateConfigError("Failed to create virtual host: %s", vhost_config.GetName().CStr());
+		}
+
+		if (write_to_storage)
+		{
+			ov::String file_name = GenerateFileNameForVHostName(vhost_config.GetName());
+
+			logti("Writing [%s] config to %s...", vhost_config.GetName().CStr(), file_name.CStr());
+
+			auto config = vhost_config.ToXml();
+			auto comment_node = config.prepend_child(pugi::node_comment);
+			ov::String comment;
+
+			utsname uts{};
+			::uname(&uts);
+
+			comment.Format(
+				"\n"
+				"\tThis is an auto-generated by API.\n"
+				"\tOvenMediaEngine may not work if this file is modified incorrectly.\n"
+				"\t\n"
+				"\tHost: %s (%s %s - %s, %s)\n"
+				"\tOME Version: %s\n"
+				"\tCreated at: %s\n",
+				uts.nodename, uts.sysname, uts.machine, uts.release, uts.version,
+				info::OmeVersion::GetInstance()->ToString().CStr(),
+				ov::Time::MakeUtcMillisecond().CStr());
+
+			comment_node.set_value(comment);
+
+			auto declaration = config.prepend_child(pugi::node_declaration);
+			declaration.append_attribute("version") = "1.0";
+			declaration.append_attribute("encoding") = "utf-8";
+
+			XmlWriter writer;
+			config.print(writer);
+
+			auto file = ov::DumpToFile(file_name, writer.result.CStr(), writer.result.GetLength());
+
+			if (file == nullptr)
+			{
+				throw CreateConfigError("Could not write config to file: %s", file_name.CStr());
+			}
+
+			logti("[%s] is written to %s", vhost_config.GetName().CStr(), file_name.CStr());
+		}
+	}
+
+	void Server::DeleteVHost(const info::Host &vhost_info, bool delete_from_storage)
+	{
+		if (vhost_info.IsReadOnly())
+		{
+			throw CreateConfigError("Could not delete virtual host: %s is not created by API call", vhost_info.GetName().CStr());
+		}
+
+		logti("Deleting virtual host: %s", vhost_info.GetName().CStr());
+
+		auto result = ocst::Orchestrator::GetInstance()->DeleteVirtualHost(vhost_info);
+
+		if (result != ocst::Result::Succeeded)
+		{
+			throw CreateConfigError("Failed to delete virtual host: %s (%d)", vhost_info.GetName().CStr(), ov::ToUnderlyingType(result));
+		}
+
+		if (delete_from_storage)
+		{
+			auto file_name = GenerateFileNameForVHostName(vhost_info.GetName());
+			ov::String target_file_name = file_name;
+			target_file_name.AppendFormat("_%ld.bak", ov::Time::GetTimestampInMs());
+
+			auto error = ov::PathManager::Rename(file_name, target_file_name);
+
+			if (error != nullptr)
+			{
+				throw CreateConfigError("Failed to delete config file for vhost: %s, error: (%d)", vhost_info.GetName().CStr(), error->ToString().CStr());
+			}
+		}
+	}
 }  // namespace api

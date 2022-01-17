@@ -295,4 +295,23 @@ namespace ov
 		return nullptr;
 	}
 
+	std::shared_ptr<ov::Error> PathManager::Rename(const ov::String &file_name, const ov::String &to_file_name)
+	{
+		if (::rename(file_name.CStr(), to_file_name.CStr()) == 0)
+		{
+			return nullptr;
+		}
+
+		return ov::Error::CreateErrorFromErrno();
+	}
+
+	std::shared_ptr<ov::Error> PathManager::DeleteFile(const ov::String &file_name)
+	{
+		if (::unlink(file_name.CStr()) == 0)
+		{
+			return nullptr;
+		}
+
+		return ov::Error::CreateErrorFromErrno();
+	}
 }  // namespace ov
