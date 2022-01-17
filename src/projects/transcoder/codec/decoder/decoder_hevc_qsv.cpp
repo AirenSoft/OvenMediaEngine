@@ -210,7 +210,7 @@ void DecoderHEVCxQSV::ThreadDecode()
 				}
 
 				// TODO(soulk) : Reduce memory copy overhead. Memory copy can be removed in the Decoder -> Filter step.
-				auto decoded_frame = TranscoderUtilities::ConvertToMediaFrame(cmn::MediaType::Video, _frame);
+				auto decoded_frame = TranscoderUtilities::ConvertAvFrameToMediaFrame(cmn::MediaType::Video, _frame);
 				if (decoded_frame == nullptr)
 				{
 					continue;

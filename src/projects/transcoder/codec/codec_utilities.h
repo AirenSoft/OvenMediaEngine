@@ -22,7 +22,7 @@ extern "C"
 class TranscoderUtilities
 {
 public:
-	static inline std::shared_ptr<MediaFrame> ConvertToMediaFrame(cmn::MediaType media_type, AVFrame* frame)
+	static inline std::shared_ptr<MediaFrame> ConvertAvFrameToMediaFrame(cmn::MediaType media_type, AVFrame* frame)
 	{
 		switch (media_type)
 		{
@@ -171,7 +171,7 @@ public:
 		}
 	}
 
-	static bool CopyMediaFrameToAvFrame(cmn::MediaType media_type, std::shared_ptr<const MediaFrame> src, AVFrame* dst)
+	static bool ConvertMediaFrameToAvFrame(cmn::MediaType media_type, std::shared_ptr<const MediaFrame> src, AVFrame* dst)
 	{
 		switch (media_type)
 		{
@@ -234,7 +234,7 @@ public:
 		return true;
 	}
 
-	static std::shared_ptr<MediaPacket> GetMediaPacketFromAvPacket(AVPacket* src, cmn::MediaType media_type, cmn::BitstreamFormat format, cmn::PacketType packet_type)
+	static std::shared_ptr<MediaPacket> ConvertAvPacketToMediaPacket(AVPacket* src, cmn::MediaType media_type, cmn::BitstreamFormat format, cmn::PacketType packet_type)
 	{
 		auto packet_buffer = std::make_shared<MediaPacket>(
 			0,

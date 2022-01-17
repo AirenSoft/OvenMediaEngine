@@ -112,7 +112,7 @@ void EncoderAVCxQSV::CodecThread()
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-		if (TranscoderUtilities::CopyMediaFrameToAvFrame(cmn::MediaType::Video, media_frame, _frame) == false)
+		if (TranscoderUtilities::ConvertMediaFrameToAvFrame(cmn::MediaType::Video, media_frame, _frame) == false)
 		{
 			logte("Could not allocate the video frame data");
 			break;
@@ -144,7 +144,7 @@ void EncoderAVCxQSV::CodecThread()
 			}
 			else
 			{
-				auto media_packet = TranscoderUtilities::GetMediaPacketFromAvPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::H264_ANNEXB, cmn::PacketType::NALU);
+				auto media_packet = TranscoderUtilities::ConvertAvPacketToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::H264_ANNEXB, cmn::PacketType::NALU);
 				if (media_packet == nullptr)
 				{
 					logte("Could not allocate the media packet");
