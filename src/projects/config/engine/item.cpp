@@ -34,7 +34,7 @@ namespace cfg
 
 		if (include_file.has_value())
 		{
-			auto current_path = data_source.GetCurrentPath();
+			auto current_path = data_source.GetCurrentPath() + "/";
 
 			// Load from the include file
 			ov::String include_file_path = TryCast<ov::String>(include_file);
@@ -64,14 +64,14 @@ namespace cfg
 		return false;
 	}
 
-	ov::String Item::ChildToString(int indent_count, const std::shared_ptr<Child> &child, size_t index, size_t child_count)
+	ov::String Item::ChildToString(int indent_count, const std::shared_ptr<const Child> &child, size_t index, size_t child_count)
 	{
 		ov::String indent = MakeIndentString(indent_count + 1);
 
 		ov::String description;
 		ov::String extra;
 
-		ov::String child_name = child->GetName().ToString();
+		ov::String child_name = child->GetItemName().ToString();
 		const std::any &child_target = child->GetTarget();
 		auto value_type = child->GetType();
 
@@ -80,16 +80,16 @@ namespace cfg
 #if CFG_VERBOSE_STRING
 		extra.Format(
 			CFG_EXTRA_PREFIX
-			"%p: "
+			"%p (%p): "
 			"%s%s%s (%s), "
 			"%s"
 			"%s"
 			"%s",
-			child,
+			child->GetRawTarget(), child.get(),
 			(value_type == ValueType::List) ? "std::vector<" : "", child->GetTypeName().CStr(), (value_type == ValueType::List) ? ">" : "", StringFromValueType(child->GetType()),
 			child->IsOptional() ? "Optional, " : "",
 			child->ResolvePath() ? "Path, " : "",
-			child->IsParsed() ? "DataSource" : "Default");
+			child->IsParsed() ? "Parsed" : "NotParsed");
 
 		if (child->IsParsed() &&
 			((child->GetType() != ValueType::Item) && (child->GetType() != ValueType::List)))
@@ -240,9 +240,10 @@ namespace cfg
 
 	Item::Item(const Item &item)
 	{
-		_need_to_update_list = true;
+		_last_target = nullptr;
 
 		_is_parsed = item._is_parsed;
+		_is_read_only = item._is_read_only;
 
 		_item_name = item._item_name;
 
@@ -253,9 +254,11 @@ namespace cfg
 
 	Item::Item(Item &&item)
 	{
-		std::swap(_need_to_update_list, item._need_to_update_list);
+		_last_target = nullptr;
+		item._last_target = nullptr;
 
 		std::swap(_is_parsed, item._is_parsed);
+		std::swap(_is_read_only, item._is_read_only);
 
 		std::swap(_item_name, item._item_name);
 
@@ -266,9 +269,10 @@ namespace cfg
 
 	Item &Item::operator=(const Item &item)
 	{
-		_need_to_update_list = true;
+		_last_target = nullptr;
 
 		_is_parsed = item._is_parsed;
+		_is_read_only = item._is_read_only;
 
 		_item_name = item._item_name;
 
@@ -289,13 +293,13 @@ namespace cfg
 
 	void Item::RebuildListIfNeeded()
 	{
-		if (_need_to_update_list)
+		if (_last_target != this)
 		{
-			logtd("Rebuilding a list of children for: %s", _item_name.ToString().CStr());
+			logad("[%s] Rebuilding a list of children", _item_name.ToString().CStr());
+
+			_last_target = this;
 
 			MakeList();
-
-			_need_to_update_list = false;
 		}
 	}
 
@@ -304,59 +308,71 @@ namespace cfg
 						OptionalCallback optional_callback, ValidationCallback validation_callback,
 						const void *raw_target, std::any target)
 	{
-		auto old_child_iterator = _children_for_xml.find(name.xml_name);
+		std::shared_ptr<Child> prev_child;
 
-		if (old_child_iterator == _children_for_xml.end())
+		for (auto child_iterator = _children.begin(); child_iterator != _children.end(); ++child_iterator)
 		{
-			auto child = std::make_shared<Child>(
-				name, type, type_name,
-				is_optional, resolve_path,
-				optional_callback, validation_callback,
-				raw_target, std::move(target));
-
-			_children_for_xml[name.xml_name] = child;
-			_children_for_json[name.json_name] = child;
-			_children.push_back(child);
+			auto &child = *child_iterator;
+			if (child->GetItemName() == name)
+			{
+				prev_child = *child_iterator;
+				_children.erase(child_iterator);
+				break;
+			}
 		}
-		else
-		{
-			// Reuse previous value to keep some variables such as _is_parsed
-			auto &old_child = old_child_iterator->second;
 
-			OV_ASSERT2(old_child->GetName() == name);
-			OV_ASSERT2(old_child->GetType() == type);
-			OV_ASSERT2(old_child->GetTypeName() == type_name);
-			OV_ASSERT2(old_child->IsOptional() == is_optional);
-			OV_ASSERT2(old_child->ResolvePath() == resolve_path);
+		auto child = std::make_shared<Child>(
+			name, type, type_name,
+			is_optional, resolve_path,
+			optional_callback, validation_callback,
+			raw_target, target);
+
+		_children_for_xml.insert_or_assign(name.xml_name, child);
+		_children_for_json.insert_or_assign(name.json_name, child);
+		_children.push_back(child);
+
+		if (prev_child != nullptr)
+		{
+			// These are immutable attributes
+			OV_ASSERT2(prev_child->GetItemName() == name);
+			OV_ASSERT2(prev_child->GetType() == type);
+			OV_ASSERT2(prev_child->GetTypeName() == type_name);
+			OV_ASSERT2(prev_child->IsOptional() == is_optional);
+			OV_ASSERT2(prev_child->ResolvePath() == resolve_path);
+
+			child->CopyValuesFrom(prev_child);
 
 			if (type == ValueType::List)
 			{
-				// Copy the children
-				TryCast<std::shared_ptr<ListInterface>>(target)->CopyChildrenFrom(old_child->GetTarget());
+				// Copy values from prev_child
+				TryCast<std::shared_ptr<ListInterface>>(target)->CopyChildrenFrom(prev_child->GetTarget());
 			}
-
-			old_child->Update(optional_callback, validation_callback, raw_target, target);
 		}
 	}
 
 	void Item::FromDataSource(ov::String item_path, const ItemName &name, const DataSource &data_source)
 	{
-		logtd("[%s] Validating data source for: %s", item_path.CStr(), name.ToString().CStr());
+		_item_name = name;
+
+		logad("[%s] Validating data source for %s", item_path.CStr(), name.ToString().CStr());
 		ValidateOmitRules(item_path);
 
 		RebuildListIfNeeded();
 		data_source.CheckUnknownItems(data_source.GetFileName(), item_path, _children_for_xml, _children_for_json);
 
-		_item_name = name;
-
 		FromDataSourceInternal(item_path, data_source);
+	}
+
+	void Item::FromDataSource(const ItemName &name, const DataSource &data_source)
+	{
+		FromDataSource(name.GetName(data_source.GetType()), name, data_source);
 	}
 
 	bool Item::IsParsed(const void *target) const
 	{
 		RebuildListIfNeeded();
 
-		for (auto &child : _children)
+		for (const auto &child : _children)
 		{
 			if (child->GetRawTarget() == target)
 			{
@@ -401,18 +417,18 @@ namespace cfg
 					try
 					{
 						auto child_item = TryCast<Item *>(child->GetTarget());
-						child_item->ValidateOmitRule(item_path, child->GetName().ToString());
+						child_item->ValidateOmitRule(item_path, child->GetItemName().ToString());
 					}
 					catch (const CastException &cast_exception)
 					{
-						throw CreateConfigError("[%s.%s] Could not cast %s to %s", item_path, child->GetName().ToString(), cast_exception.from.CStr(), cast_exception.to.CStr());
+						throw CreateConfigError("[%s.%s] Could not cast %s to %s", item_path, child->GetItemName().ToString(), cast_exception.from.CStr(), cast_exception.to.CStr());
 					}
 
 					break;
 				}
 
 				case ValueType::List: {
-					auto child_name = child->GetName().ToString();
+					auto child_name = child->GetItemName().ToString();
 
 					std::shared_ptr<ListInterface> list_interface;
 
@@ -478,13 +494,14 @@ namespace cfg
 #if CFG_VERBOSE_STRING
 		extra.Format(
 			CFG_EXTRA_PREFIX
-			"%p: "
-			"%s, "
+			"%p: %s, "
 			"children = %zu, "
+			"%s, "
 			"%s",
 			this, ov::Demangle(typeid(*this).name()).CStr(),
 			child_count,
-			_is_parsed ? "DataSource" : "Default");
+			_is_parsed ? "Parsed" : "NotParsed",
+			_is_read_only ? "ReadOnly" : "Writable");
 #endif	// CFG_VERBOSE_STRING
 
 		description.AppendFormat(
@@ -497,7 +514,7 @@ namespace cfg
 
 		size_t index = 0;
 
-		for (auto &child : _children)
+		for (const auto &child : _children)
 		{
 			description.AppendFormat("\n%s",
 									 ChildToString(indent_count, child, index, child_count).CStr());
@@ -708,11 +725,11 @@ namespace cfg
 
 		Json::Value object = Json::objectValue;
 
-		for (auto &child : _children)
+		for (const auto &child : _children)
 		{
 			if (include_default_values || child->IsParsed())
 			{
-				AddJsonChild(object, child->GetType(), _item_name.omit_rule, child->GetName().json_name, child->GetTarget(), child->GetOriginalValue(), include_default_values);
+				AddJsonChild(object, child->GetType(), _item_name.omit_rule, child->GetItemName().json_name, child->GetTarget(), child->GetOriginalValue(), include_default_values);
 			}
 		}
 
@@ -742,11 +759,11 @@ namespace cfg
 	{
 		RebuildListIfNeeded();
 
-		for (auto &child : _children)
+		for (const auto &child : _children)
 		{
 			if (include_default_values || child->IsParsed())
 			{
-				AddXmlChild(parent_node, child->GetType(), child->GetName().xml_name, child->GetTarget(), child->GetOriginalValue(), include_default_values);
+				AddXmlChild(parent_node, child->GetType(), child->GetItemName().xml_name, child->GetTarget(), child->GetOriginalValue(), include_default_values);
 			}
 		}
 	}
@@ -897,7 +914,7 @@ namespace cfg
 									if (data_source_for_array.IsArray(child_name))
 									{
 										// data_source_for_array contains multiple data (eg: [item1, item2, ...])
-										auto list = data_source_for_array.GetRootValue(ValueType::List, child->ResolvePath(), child->_name.omit_rule, nullptr);
+										auto list = data_source_for_array.GetRootValue(ValueType::List, child->ResolvePath(), child->_item_name.omit_rule, nullptr);
 
 										if (list.has_value())
 										{
@@ -952,7 +969,7 @@ namespace cfg
 					for (auto &new_data_source : new_data_sources)
 					{
 						Json::Value original_value;
-						auto list_value = new_data_source.GetRootValue(list_target->GetValueType(), child->ResolvePath(), child->_name.omit_rule, &original_value);
+						auto list_value = new_data_source.GetRootValue(list_target->GetValueType(), child->ResolvePath(), child->_item_name.omit_rule, &original_value);
 
 						if (list_value.has_value() == false)
 						{
@@ -996,7 +1013,7 @@ namespace cfg
 
 	void Item::FromDataSourceInternal(ov::String item_path, const DataSource &data_source)
 	{
-		if (_need_to_update_list)
+		if (_last_target != this)
 		{
 			throw CreateConfigError(
 				"Rebuilding of children list is required before call FromDataSource()");
@@ -1042,7 +1059,7 @@ namespace cfg
 		for (auto &child : _children)
 		{
 			Json::Value original_value;
-			auto &child_name = child->GetName();
+			auto &child_name = child->GetItemName();
 
 			auto value = data_source.GetValue(child->GetType(), child_name, child->ResolvePath(), _item_name.omit_rule, &original_value);
 			auto name = data_source.ResolveName(child_name);

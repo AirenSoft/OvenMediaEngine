@@ -8,6 +8,7 @@
 //==============================================================================
 #include "config_manager.h"
 
+#include <base/info/ome_version.h>
 #include <monitoring/monitoring.h>
 #include <sys/utsname.h>
 
@@ -34,95 +35,42 @@ namespace cfg
 	{
 		// Modify if supported xml version is added or changed
 
-		// Version 7 -> 8
-		_supported_xml["Server"] = 8;
-		_supported_xml["Logger"] = 2;
+		// Current OME compatible with v8 & v9
+		_supported_versions_map["Server"] = {8, 9};
+		_supported_versions_map["Logger"] = {2};
 	}
 
 	ConfigManager::~ConfigManager()
 	{
 	}
 
-	void ConfigManager::SetOmeVersion(const ov::String &version, const ov::String &git_extra)
+	void ConfigManager::CheckLegacyConfigs(ov::String config_path)
 	{
-		_version = version;
-		_git_extra = git_extra;
+		// LastConfig was used <= 0.12.10, but later version changed to <API><Storage>.
+		// Inform the user that LastConfig is no longer used and throws an exception so that OME can be terminated.
+		bool is_last_config_found = ov::PathManager::IsFile(ov::PathManager::Combine(config_path, CFG_LAST_CONFIG_FILE_NAME));
+		bool is_legacy_last_config_found = ov::PathManager::IsFile(ov::PathManager::Combine(config_path, CFG_LAST_CONFIG_FILE_NAME_LEGACY));
+
+		if (is_last_config_found || is_legacy_last_config_found)
+		{
+			throw CreateConfigError("Legacy config file found. Please migrate '%s' manually or delete it and run OME again.", is_last_config_found ? CFG_LAST_CONFIG_FILE_NAME : CFG_LAST_CONFIG_FILE_NAME_LEGACY);
+		}
 	}
 
-	void ConfigManager::LoadConfigs(ov::String config_path, bool ignore_last_config)
+	void ConfigManager::LoadConfigs(ov::String config_path)
 	{
 		if (config_path.IsEmpty())
 		{
+			// Default: <OME_HOME>/conf
 			config_path = ov::PathManager::GetAppPath("conf");
 		}
 
-		// Load Logger
+		CheckLegacyConfigs(config_path);
+
 		LoadLoggerConfig(config_path);
-
-		bool read_from_main_file = true;
-		const char *ROOT_NAME = "Server";
-
-		// Try to read configurations from CFG_LAST_CONFIG_FILE_NAME
-		ov::String last_config_path = ov::PathManager::Combine(config_path, CFG_LAST_CONFIG_FILE_NAME);
-		ov::String legacy_last_config_path = ov::PathManager::Combine(config_path, CFG_LAST_CONFIG_FILE_NAME_LEGACY);
-
-		if (ignore_last_config == false)
-		{
-			if (ov::PathManager::IsFile(last_config_path))
-			{
-				// Read from last config
-				logti("Trying to load configurations from last config... (%s)", last_config_path.CStr());
-
-				DataSource data_source(DataType::Xml, config_path, last_config_path, ROOT_NAME);
-				_server = std::make_shared<cfg::Server>();
-				_server->FromDataSource("Server", ROOT_NAME, data_source);
-
-				read_from_main_file = false;
-			}
-			else
-			{
-				if (ov::PathManager::IsFile(legacy_last_config_path))
-				{
-					// Read from last config
-					logti("Trying to load configurations from legacy last config... (%s)", legacy_last_config_path.CStr());
-
-					DataSource data_source(DataType::Json, config_path, legacy_last_config_path, ROOT_NAME);
-					_server = std::make_shared<cfg::Server>();
-					_server->FromDataSource("Server", ROOT_NAME, data_source);
-
-					read_from_main_file = false;
-
-					logti("Saving migrated config to %s", last_config_path.CStr());
-
-					auto xml = _server->ToXml();
-
-					SaveCurrentConfig(xml, last_config_path);
-				}
-			}
-		}
-		else
-		{
-			if (ov::PathManager::IsFile(last_config_path) || ov::PathManager::IsFile(legacy_last_config_path))
-			{
-				logtw("Last config is ignored by option");
-			}
-		}
-
-		if (read_from_main_file)
-		{
-			ov::String server_config_path = ov::PathManager::Combine(config_path, CFG_MAIN_FILE_NAME);
-
-			logti("Trying to load configurations... (%s)", server_config_path.CStr());
-
-			DataSource data_source(DataType::Xml, config_path, server_config_path, ROOT_NAME);
-			_server = std::make_shared<cfg::Server>();
-			_server->FromDataSource("Server", ROOT_NAME, data_source);
-		}
-
-		CheckValidVersion("Server", ov::Converter::ToInt32(_server->GetVersion()));
+		LoadServerConfig(config_path);
 
 		_config_path = config_path;
-		_ignore_last_config = ignore_last_config;
 
 		LoadServerID(config_path);
 		_server->SetID(_server_id);
@@ -130,14 +78,14 @@ namespace cfg
 
 	void ConfigManager::ReloadConfigs()
 	{
-		LoadConfigs(_config_path, _ignore_last_config);
+		LoadConfigs(_config_path);
 	}
 
 	Json::Value ConfigManager::GetCurrentConfigAsJson() const
 	{
 		auto lock_guard = std::lock_guard(_config_mutex);
 
-		auto config = cfg::serdes::GetServerJsonFromConfig(_server, false);
+		auto config = serdes::GetServerJsonFromConfig(_server, false);
 
 		return config;
 	}
@@ -146,7 +94,7 @@ namespace cfg
 	{
 		auto lock_guard = std::lock_guard(_config_mutex);
 
-		auto config = cfg::serdes::GetServerXmlFromConfig(_server, false);
+		auto config = serdes::GetServerXmlFromConfig(_server, false);
 
 		return config;
 	}
@@ -159,22 +107,17 @@ namespace cfg
 		utsname uts{};
 		::uname(&uts);
 
-#if DEBUG
-		static constexpr const char *BUILD_MODE = " [debug]";
-#else	// DEBUG
-		static constexpr const char *BUILD_MODE = "";
-#endif	// DEBUG
-
 		comment.Format(
 			"\n"
 			"\tThis is an auto-generated configuration file through API call.\n"
 			"\tOvenMediaEngine may not work if it is modified incorrectly.\n"
 			"\tYou can use '-i' option to prevent loading this file when the OME launches.\n\n"
-			"\tVersion: v%s%s%s\n"
+			"\tVersion: %s\n"
 			"\tCreated: %s\n"
 			"\tHost: %s (%s %s - %s, %s)\n",
-			_version.CStr(), _git_extra.CStr(), BUILD_MODE,
-			ov::Time::MakeUtcMillisecond().CStr(), uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
+			info::OmeVersion::GetInstance()->ToString().CStr(),
+			ov::Time::MakeUtcMillisecond().CStr(),
+			uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
 
 		comment_node.set_value(comment);
 
@@ -344,16 +287,29 @@ namespace cfg
 		logger_loader->Reset();
 	}
 
+	void ConfigManager::LoadServerConfig(const ov::String &config_path)
+	{
+		const char *XML_ROOT_NAME = "Server";
+		ov::String server_config_path = ov::PathManager::Combine(config_path, CFG_MAIN_FILE_NAME);
+
+		logti("Trying to load configurations... (%s)", server_config_path.CStr());
+		DataSource data_source(DataType::Xml, config_path, CFG_MAIN_FILE_NAME, XML_ROOT_NAME);
+		_server = std::make_shared<Server>();
+		_server->FromDataSource(XML_ROOT_NAME, data_source);
+
+		CheckValidVersion(XML_ROOT_NAME, ov::Converter::ToInt32(_server->GetVersion()));
+	}
+
 	void ConfigManager::CheckValidVersion(const ov::String &name, int version)
 	{
-		auto supported_xml = _supported_xml.find(name);
+		auto versions_iterator = _supported_versions_map.find(name);
 
-		if (supported_xml == _supported_xml.end())
+		if (versions_iterator == _supported_versions_map.end())
 		{
 			throw CreateConfigError("Cannot find conf XML (%s.xml)", name.CStr());
 		}
 
-		auto supported_version = supported_xml->second;
+		auto supported_versions = versions_iterator->second;
 
 		if (version == 0)
 		{
@@ -362,19 +318,21 @@ namespace cfg
 				name.CStr());
 		}
 
-		if (version != supported_version)
+		auto version_iterator = std::find(supported_versions.begin(), supported_versions.end(), version);
+
+		if (version_iterator == supported_versions.end())
 		{
 			ov::String description;
 
 			description.Format(
 				"The version of %s.xml is outdated (Your XML version: %d, Latest version: %d).\n",
-				name.CStr(), version, supported_version);
+				name.CStr(), version, supported_versions);
 
 			description.AppendFormat(
 				"If you have upgraded OME, see misc/conf_examples/%s.xml\n",
 				name.CStr());
 
-			if ((version == 7) && (supported_version == 8))
+			if (version <= 7)
 			{
 				description.AppendFormat("Major Changes (v7 -> v8):\n");
 				description.AppendFormat(" - Added <Server>.<Bind>.<Managers>.<API> for setting API binding port\n");
@@ -384,6 +342,12 @@ namespace cfg
 				description.AppendFormat(" - Changed <CrossDomain> to <CrossDomains>\n");
 				description.AppendFormat(" - Deleted <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<Streams>\n");
 				description.AppendFormat(" - Deleted <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<Encodes>\n");
+			}
+
+			if (version <= 8)
+			{
+				description.AppendFormat("Major Changes (v8 -> v9):\n");
+				description.AppendFormat(" - Added <Server>.<Bind>.<Managers>.<API>.<Storage> to store configs created using API\n");
 			}
 
 			throw CreateConfigError("%s", description.CStr());

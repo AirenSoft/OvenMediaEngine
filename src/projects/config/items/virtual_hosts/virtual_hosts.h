@@ -16,15 +16,17 @@ namespace cfg
 	{
 		struct VirtualHosts : public Item
 		{
+		protected:
+			std::vector<VirtualHost> _virtual_host_list;
+
+		public:
 			CFG_DECLARE_REF_GETTER_OF(GetVirtualHostList, _virtual_host_list)
 
 		protected:
 			void MakeList() override
 			{
-				Register({"VirtualHost", OmitRule::Omit}, &_virtual_host_list);
+				Register("VirtualHost", &_virtual_host_list);
 			}
-
-			std::vector<VirtualHost> _virtual_host_list;
 		};
 	}  // namespace vhost
 }  // namespace cfg

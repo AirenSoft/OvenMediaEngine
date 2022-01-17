@@ -31,11 +31,11 @@ namespace cfg
 
 	public:
 		Child() = default;
-		Child(const ItemName &name, ValueType type, const ov::String &type_name,
+		Child(const ItemName &item_name, ValueType type, const ov::String &type_name,
 			  bool is_optional, bool resolve_path,
 			  OptionalCallback optional_callback, ValidationCallback validation_callback,
 			  const void *raw_target, std::any target)
-			: _name(name),
+			: _item_name(item_name),
 			  _type(type),
 			  _type_name(type_name),
 
@@ -50,14 +50,21 @@ namespace cfg
 		{
 		}
 
+		void CopyValuesFrom(const std::shared_ptr<const Child> &another_child)
+		{
+			_is_parsed = another_child->_is_parsed;
+
+			_original_value = another_child->_original_value;
+		}
+
 		bool IsParsed() const
 		{
 			return _is_parsed;
 		}
 
-		const ItemName &GetName() const
+		const ItemName &GetItemName() const
 		{
-			return _name;
+			return _item_name;
 		}
 
 		ValueType GetType() const
@@ -136,19 +143,9 @@ namespace cfg
 			_original_value = std::move(value);
 		}
 
-		void Update(
-			OptionalCallback optional_callback, ValidationCallback validation_callback,
-			const void *raw_target, std::any target)
-		{
-			_optional_callback = optional_callback;
-			_validation_callback = validation_callback;
-			_raw_target = raw_target;
-			_target = std::move(target);
-		}
-
 		bool _is_parsed = false;
 
-		ItemName _name;
+		ItemName _item_name;
 		ValueType _type = ValueType::Unknown;
 		ov::String _type_name;
 
