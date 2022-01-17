@@ -14,6 +14,9 @@ namespace cfg
 	{
 		class CrossDomainSupport
 		{
+		protected:
+			cmn::CrossDomains _cross_domains;
+
 		public:
 			const auto &GetCrossDomains(bool *is_parsed = nullptr) const
 			{
@@ -29,9 +32,6 @@ namespace cfg
 			{
 				return GetCrossDomains(is_parsed).GetUrls();
 			}
-
-		protected:
-			cmn::CrossDomains _cross_domains;
 		};
 	}  // namespace cmn
 }  // namespace cfg

@@ -23,7 +23,7 @@ namespace cfg
 		protected:
 			void MakeList() override
 			{
-				Register({"Url", OmitRule::Omit}, &_url_list);
+				Register("Url", &_url_list);
 			}
 		};
 	}  // namespace cmn

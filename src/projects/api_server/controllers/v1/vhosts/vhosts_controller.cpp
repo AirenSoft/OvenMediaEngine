@@ -11,6 +11,7 @@
 #include <config/config.h>
 
 #include "../../../api_private.h"
+#include "../../../api_server.h"
 #include "apps/apps_controller.h"
 
 namespace api
@@ -21,6 +22,8 @@ namespace api
 		{
 			RegisterGet(R"()", &VHostsController::OnGetVhostList);
 			RegisterGet(R"(\/(?<vhost_name>[^\/]*))", &VHostsController::OnGetVhost);
+
+			RegisterDelete(R"(\/(?<vhost_name>[^\/]*))", &VHostsController::OnDeleteVhost);
 
 			CreateSubController<AppsController>(R"(\/(?<vhost_name>[^\/]*)\/apps)");
 		}
@@ -42,6 +45,24 @@ namespace api
 												 const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
 			return ::serdes::JsonFromVHost(vhost);
+		}
+
+		ApiResponse VHostsController::OnDeleteVhost(const std::shared_ptr<http::svr::HttpConnection> &client,
+													const std::shared_ptr<mon::HostMetrics> &vhost)
+		{
+			auto api_server = Server::GetInstance();
+
+			try
+			{
+				api_server->DeleteVHost(*(vhost.get()));
+			}
+			catch (std::shared_ptr<cfg::ConfigError> &error)
+			{
+				logte("An error occurred while load API config: %s", error->ToString().CStr());
+				return http::HttpError::CreateError(error);
+			}
+
+			return http::StatusCode::OK;
 		}
 	}  // namespace v1
 }  // namespace api

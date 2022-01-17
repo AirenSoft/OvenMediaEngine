@@ -9,6 +9,7 @@
 #include "main.h"
 
 #include <api_server/api_server.h>
+#include <base/info/ome_version.h>
 #include <base/ovlibrary/daemon.h>
 #include <base/ovlibrary/log_write.h>
 #include <config/config_manager.h>
@@ -94,9 +95,6 @@ int main(int argc, char *argv[])
 
 	bool succeeded = true;
 
-	auto api_server = api::Server::GetInstance();
-	succeeded = succeeded && api_server->Start(server_config);
-
 	INIT_EXTERNAL_MODULE("FFmpeg", InitializeFFmpeg);
 	INIT_EXTERNAL_MODULE("SRT", InitializeSrt);
 	INIT_EXTERNAL_MODULE("OpenSSL", InitializeOpenSsl);
@@ -134,20 +132,25 @@ int main(int argc, char *argv[])
 	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
 	// PENDING : INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
 
+	auto api_server = api::Server::GetInstance();
+
 	if (succeeded)
 	{
 		logti("All modules are initialized successfully");
 
 		if (orchestrator->StartServer(server_config))
 		{
-			if (parse_option.start_service)
+			if (api_server->Start(server_config))
 			{
-				ov::Daemon::SetEvent();
-			}
+				if (parse_option.start_service)
+				{
+					ov::Daemon::SetEvent();
+				}
 
-			while (g_is_terminated == false)
-			{
-				sleep(1);
+				while (g_is_terminated == false)
+				{
+					sleep(1);
+				}
 			}
 		}
 	}
@@ -210,6 +213,8 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 		return ov::Daemon::State::PARENT_FAIL;
 	}
 
+	info::OmeVersion::GetInstance()->SetVersion(OME_VERSION, OME_GIT_VERSION);
+
 	// Daemonize OME with start_service argument
 	if (parse_option->start_service)
 	{
@@ -248,13 +253,9 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 
 	auto config_manager = cfg::ConfigManager::GetInstance();
 
-	config_manager->SetOmeVersion(OME_VERSION, OME_GIT_VERSION_EXTRA);
-
 	try
 	{
-		config_manager->LoadConfigs(
-			parse_option->config_path,
-			parse_option->ignore_last_config);
+		config_manager->LoadConfigs(parse_option->config_path);
 
 		return ov::Daemon::State::CHILD_SUCCESS;
 	}
