@@ -58,5 +58,5 @@ protected:
 	info::Stream _stream_info;
 
 	bool _kill_flag = false;
-	std::thread _thread_work;
+	std::thread _codec_thread;
 };

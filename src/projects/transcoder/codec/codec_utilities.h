@@ -128,7 +128,7 @@ public:
 			case cmn::MediaType::Video: {
 				// Calculate duration using framerate in timebase
 				int den = context->GetTimeBase().GetDen();
-				
+
 				// TODO(soulk) : If there is no framerate value, the frame rate value cannot be calculated normally.
 				int64_t duration = (den == 0) ? 0LL : (float)den / context->GetFrameRate();
 				return duration;
@@ -169,5 +169,92 @@ public:
 			default:
 				return false;
 		}
+	}
+
+	static bool CopyMediaFrameToAvFrame(cmn::MediaType media_type, std::shared_ptr<const MediaFrame> src, AVFrame* dst)
+	{
+		switch (media_type)
+		{
+			case cmn::MediaType::Video: {
+				dst->format = src->GetFormat();
+				dst->nb_samples = 1;
+				dst->pts = src->GetPts();
+				// The encoder will not pass this duration
+				dst->pkt_duration = src->GetDuration();
+
+				dst->width = src->GetWidth();
+				dst->height = src->GetHeight();
+				dst->linesize[0] = src->GetStride(0);
+				dst->linesize[1] = src->GetStride(1);
+				dst->linesize[2] = src->GetStride(2);
+
+				if (::av_frame_get_buffer(dst, 32) < 0)
+				{
+					return false;
+				}
+
+				if (::av_frame_make_writable(dst) < 0)
+				{
+					return false;
+				}
+
+				::memcpy(dst->data[0], src->GetBuffer(0), src->GetBufferSize(0));
+				::memcpy(dst->data[1], src->GetBuffer(1), src->GetBufferSize(1));
+				::memcpy(dst->data[2], src->GetBuffer(2), src->GetBufferSize(2));
+			}
+			break;
+			case cmn::MediaType::Audio: {
+				dst->format = src->GetFormat();
+				dst->nb_samples = src->GetNbSamples();
+				
+				dst->pts = src->GetPts();
+				dst->pkt_duration = src->GetDuration();
+				dst->channel_layout = (src->GetChannelCount() == 1) ? AV_CH_LAYOUT_MONO : AV_CH_LAYOUT_STEREO;
+				dst->channels = src->GetChannelCount();
+				dst->sample_rate = src->GetSampleRate();
+
+				if (::av_frame_get_buffer(dst, 0) < 0)
+				{
+					return false;
+				}
+
+				if (::av_frame_make_writable(dst) < 0)
+				{
+					return false;
+				}
+
+				::memcpy(dst->data[0], src->GetBuffer(0), src->GetBufferSize(0));
+			}
+			break;
+			default: {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	static std::shared_ptr<MediaPacket> GetMediaPacketFromAvPacket(AVPacket* src, cmn::MediaType media_type, cmn::BitstreamFormat format, cmn::PacketType packet_type)
+	{
+		auto packet_buffer = std::make_shared<MediaPacket>(
+			0,
+			media_type,
+			0,
+			src->data,
+			src->size,
+			src->pts,
+			src->dts,
+			src->duration,
+			(src->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
+
+		if (packet_buffer == nullptr)
+		{
+			return nullptr;
+		}
+
+		packet_buffer->SetBitstreamFormat(format);
+		packet_buffer->SetPacketType(packet_type);
+
+		return packet_buffer;
 	}
 };

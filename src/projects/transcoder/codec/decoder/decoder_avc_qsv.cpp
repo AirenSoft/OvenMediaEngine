@@ -60,8 +60,8 @@ bool DecoderAVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&TranscodeDecoder::ThreadDecode, this);
-		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Dec%sQsv", avcodec_get_name(GetCodecID())).CStr());
+		_codec_thread = std::thread(&TranscodeDecoder::ThreadDecode, this);
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%sQsv", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
 	{

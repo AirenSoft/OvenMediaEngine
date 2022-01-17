@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "../../transcoder_private.h"
+#include "../codec_utilities.h"
 
 #if 0
 size_t AudioEncoderOpusImpl::SufficientOutputBufferSize() const {
@@ -27,8 +28,6 @@ size_t AudioEncoderOpusImpl::SufficientOutputBufferSize() const {
 
 EncoderOPUS::~EncoderOPUS()
 {
-	Stop();
-
 	if (_encoder)
 	{
 		::opus_encoder_destroy(_encoder);
@@ -122,8 +121,8 @@ bool EncoderOPUS::Configure(std::shared_ptr<TranscodeContext> context)
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&EncoderOPUS::ThreadEncode, this);
-		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
+		_codec_thread = std::thread(&EncoderOPUS::CodecThread, this);
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
 	{
@@ -136,21 +135,7 @@ bool EncoderOPUS::Configure(std::shared_ptr<TranscodeContext> context)
 	return true;
 }
 
-void EncoderOPUS::Stop()
-{
-	_kill_flag = true;
-
-	_input_buffer.Stop();
-	_output_buffer.Stop();
-
-	if (_thread_work.joinable())
-	{
-		_thread_work.join();
-		logtd("OPUS encoder thread has ended.");
-	}
-}
-
-void EncoderOPUS::ThreadEncode()
+void EncoderOPUS::CodecThread()
 {
 	// Refrence : https://opus-codec.org/docs/opus_api-1.1.3/group__opus__encoder.html#gad2d6bf6a9ffb6674879d7605ed073e25
 	// Number of samples per channel in the input signal. This must be an Opus frame size for the encoder's sampling rate.
@@ -288,22 +273,4 @@ void EncoderOPUS::ThreadEncode()
 
 		SendOutputBuffer(std::move(packet_buffer));
 	}
-}
-
-std::shared_ptr<MediaPacket> EncoderOPUS::RecvBuffer(TranscodeResult *result)
-{
-	if (!_output_buffer.IsEmpty())
-	{
-		*result = TranscodeResult::DataReady;
-
-		auto obj = _output_buffer.Dequeue();
-		if (obj.has_value())
-		{
-			return obj.value();
-		}
-	}
-
-	*result = TranscodeResult::NoData;
-
-	return nullptr;
 }

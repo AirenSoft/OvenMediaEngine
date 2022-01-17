@@ -28,7 +28,7 @@ public:
 
 	std::shared_ptr<TranscodeContext> &GetContext();
 
-	virtual void ThreadEncode();
+	virtual void CodecThread() = 0;
 
 	virtual void Stop();
 
@@ -42,6 +42,8 @@ public:
 	{
 		OnCompleteHandler = move(func);
 	}
+
+	std::shared_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
 
 private:
 	virtual bool SetCodecParams() = 0;
@@ -61,5 +63,5 @@ protected:
 	AVFrame *_frame = nullptr;
 
 	bool _kill_flag = false;
-	std::thread _thread_work;
+	std::thread _codec_thread;
 };
