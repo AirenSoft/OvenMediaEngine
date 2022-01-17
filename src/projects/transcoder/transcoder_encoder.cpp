@@ -14,7 +14,6 @@
 #include "codec/encoder/encoder_avc_openh264.h"
 #include "codec/encoder/encoder_avc_nv.h"
 #include "codec/encoder/encoder_avc_qsv.h"
-#include "codec/encoder/encoder_hevc.h"
 #include "codec/encoder/encoder_hevc_nv.h"
 #include "codec/encoder/encoder_hevc_qsv.h"
 #include "codec/encoder/encoder_jpeg.h"
@@ -112,12 +111,6 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(std::shared_pt
 				}
 			}
 #endif
-			encoder = std::make_shared<EncoderHEVC>();
-			if (encoder != nullptr && encoder->Configure(context) == true)
-			{
-				return encoder;
-			}
-
 			break;
 		case cmn::MediaCodecId::Vp8:
 			encoder = std::make_shared<EncoderVP8>();
