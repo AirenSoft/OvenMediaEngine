@@ -26,7 +26,6 @@ bool DecoderHEVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	// create codec context
 	_context = ::avcodec_alloc_context3(_codec);
 	if (_context == nullptr)
 	{
@@ -57,7 +56,7 @@ bool DecoderHEVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 	{
 		_kill_flag = false;
 
-		_codec_thread = std::thread(&TranscodeDecoder::ThreadDecode, this);
+		_codec_thread = std::thread(&TranscodeDecoder::CodecThread, this);
 		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%sQsv", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
@@ -70,7 +69,7 @@ bool DecoderHEVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 	return true;
 }
 
-void DecoderHEVCxQSV::ThreadDecode()
+void DecoderHEVCxQSV::CodecThread()
 {
 	while (!_kill_flag)
 	{
@@ -209,7 +208,6 @@ void DecoderHEVCxQSV::ThreadDecode()
 					}
 				}
 
-				// TODO(soulk) : Reduce memory copy overhead. Memory copy can be removed in the Decoder -> Filter step.
 				auto decoded_frame = TranscoderUtilities::ConvertAvFrameToMediaFrame(cmn::MediaType::Video, _frame);
 				if (decoded_frame == nullptr)
 				{
@@ -222,28 +220,8 @@ void DecoderHEVCxQSV::ThreadDecode()
 					decoded_frame->SetDuration(TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context));
 				}
 
-				_output_buffer.Enqueue(std::move(decoded_frame));
-
-				OnCompleteHandler(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, _track_id);
+				SendOutputBuffer(need_to_change_notify, _track_id, std::move(decoded_frame));
 			}
 		}
 	}
-}
-
-std::shared_ptr<MediaFrame> DecoderHEVCxQSV::RecvBuffer(TranscodeResult *result)
-{
-	if (!_output_buffer.IsEmpty())
-	{
-		*result = TranscodeResult::DataReady;
-
-		auto obj = _output_buffer.Dequeue();
-		if (obj.has_value())
-		{
-			return obj.value();
-		}
-	}
-
-	*result = TranscodeResult::NoData;
-
-	return nullptr;
 }

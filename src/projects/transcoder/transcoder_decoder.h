@@ -24,12 +24,15 @@ public:
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
 	void SendBuffer(std::shared_ptr<const MediaPacket> packet) override;
+	void SendOutputBuffer(bool change_format, int32_t track_id, std::shared_ptr<MediaFrame> frame);
+
+	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
 
 	std::shared_ptr<TranscodeContext> &GetContext();
 
 	cmn::Timebase GetTimebase() const;
 
-	virtual void ThreadDecode() = 0;
+	virtual void CodecThread() = 0;
 
 	virtual void Stop();
 

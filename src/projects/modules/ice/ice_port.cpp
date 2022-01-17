@@ -100,7 +100,7 @@ bool IcePort::CreateIceCandidates(const std::vector<std::vector<RtcIceCandidate>
 	return succeeded;
 }
 
-bool IcePort::CreateTurnServer(uint16_t listening_port, ov::SocketType socket_type, int tcp_relay_worker_count)
+bool IcePort::CreateTurnServer(const ov::SocketAddress &address, ov::SocketType socket_type, int tcp_relay_worker_count)
 {
 	// {[Browser][WebRTC][TURN Client]} <----(TCP)-----> {[TURN Server][OvenMediaEngine]}
 
@@ -117,7 +117,7 @@ bool IcePort::CreateTurnServer(uint16_t listening_port, ov::SocketType socket_ty
 	// Player --[TURN/TCP]--> [TurnServer(OME) --[Fucntion Call not udp send]--> Peer(OME)]
 	// Player <--[TURN/TCP]-- [TurnServer(OME) <--[Fucntion Call not udp send]-- Peer(OME)]
 
-	ov::SocketAddress address(listening_port);
+	// ov::SocketAddress address(listening_port);
 	auto physical_port = CreatePhysicalPort(address, socket_type, tcp_relay_worker_count);
 	if (physical_port == nullptr)
 	{

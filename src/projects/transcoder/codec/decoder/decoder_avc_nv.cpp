@@ -60,7 +60,7 @@ bool DecoderAVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 	{
 		_kill_flag = false;
 
-		_codec_thread = std::thread(&TranscodeDecoder::ThreadDecode, this);
+		_codec_thread = std::thread(&TranscodeDecoder::CodecThread, this);
 		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%sNV", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
@@ -73,7 +73,7 @@ bool DecoderAVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 	return true;
 }
 
-void DecoderAVCxNV::ThreadDecode()
+void DecoderAVCxNV::CodecThread()
 {
 	while (!_kill_flag)
 	{
@@ -115,9 +115,9 @@ void DecoderAVCxNV::ThreadDecode()
 				_pkt->dts = _parser->dts;
 				_pkt->flags = (_parser->key_frame == 1) ? AV_PKT_FLAG_KEY : 0;
 				_pkt->duration = _pkt->dts - _parser->last_dts;
-				if(_pkt->duration <= 0LL)
+				if (_pkt->duration <= 0LL)
 				{
-					// It may not be the exact packet duration. 
+					// It may not be the exact packet duration.
 					// However, in general, this method is applied under the assumption that the duration of all packets is similar.
 					_pkt->duration = duration;
 				}
@@ -234,13 +234,12 @@ void DecoderAVCxNV::ThreadDecode()
 				}
 				tmp_frame->pts = _frame->pts;
 
-				// TODO(soulk) : Reduce memory copy overhead. Memory copy can be removed in the Decoder -> Filter step.
 				auto decoded_frame = TranscoderUtilities::ConvertAvFrameToMediaFrame(cmn::MediaType::Video, tmp_frame);
 				if (decoded_frame == nullptr)
 				{
 					continue;
 				}
-				
+
 				if (decoded_frame->GetDuration() <= 0)
 				{
 					decoded_frame->SetDuration(TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context));
@@ -251,28 +250,8 @@ void DecoderAVCxNV::ThreadDecode()
 				::av_frame_unref(_frame);
 				::av_frame_free(&sw_frame);
 
-				_output_buffer.Enqueue(std::move(decoded_frame));
-
-				OnCompleteHandler(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, _track_id);
+				SendOutputBuffer(need_to_change_notify, _track_id, std::move(decoded_frame));
 			}
 		}
 	}
-}
-
-std::shared_ptr<MediaFrame> DecoderAVCxNV::RecvBuffer(TranscodeResult *result)
-{
-	if (!_output_buffer.IsEmpty())
-	{
-		*result = TranscodeResult::DataReady;
-
-		auto obj = _output_buffer.Dequeue();
-		if (obj.has_value())
-		{
-			return obj.value();
-		}
-	}
-
-	*result = TranscodeResult::NoData;
-
-	return nullptr;
 }
