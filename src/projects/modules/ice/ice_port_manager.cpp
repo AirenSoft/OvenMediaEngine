@@ -73,14 +73,14 @@ bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePortObserver> observ
 	return true;
 }
 
-bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePortObserver> observer, uint16_t listening_port, const ov::SocketType socket_type, int tcp_relay_worker_count)
+bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePortObserver> observer, const ov::SocketAddress &listening, const ov::SocketType socket_type, int tcp_relay_worker_count)
 {
 	if(_ice_port == nullptr || IsRegisteredObserver(observer) == false)
 	{
 		return false;
 	}
 
-	if(_ice_port->CreateTurnServer(listening_port, socket_type, tcp_relay_worker_count) == false)
+	if(_ice_port->CreateTurnServer(listening, socket_type, tcp_relay_worker_count) == false)
 	{
 		Release(observer);
 
@@ -90,8 +90,8 @@ bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePortObserver> observer,
 	else
 	{
 		observer->SetTurnServerSocketType(socket_type);
-		observer->SetTurnServerPort(listening_port);
-		logti("RelayServer is created successfully: host:%d?transport=tcp", listening_port);
+		observer->SetTurnServerPort(listening.Port());
+		logti("RelayServer is created successfully: host:%d?transport=tcp", listening.Port());
 	}
 	
 	return true;
