@@ -120,7 +120,7 @@ void EncoderVP8::CodecThread()
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-		if (TranscoderUtilities::CopyMediaFrameToAvFrame(cmn::MediaType::Video, media_frame, _frame) == false)
+		if (TranscoderUtilities::ConvertMediaFrameToAvFrame(cmn::MediaType::Video, media_frame, _frame) == false)
 		{
 			logte("Could not allocate the video frame data");
 			break;
@@ -152,7 +152,7 @@ void EncoderVP8::CodecThread()
 			}
 			else
 			{
-				auto media_packet = TranscoderUtilities::GetMediaPacketFromAvPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::VP8, cmn::PacketType::RAW);
+				auto media_packet = TranscoderUtilities::ConvertAvPacketToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::VP8, cmn::PacketType::RAW);
 				if (media_packet == nullptr)
 				{
 					logte("Could not allocate the media packet");

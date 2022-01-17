@@ -267,7 +267,7 @@ void MediaFilterRescaler::ThreadFilter()
 			}
 			else
 			{
-				auto output_frame = TranscoderUtilities::ConvertToMediaFrame(cmn::MediaType::Video, _frame);
+				auto output_frame = TranscoderUtilities::ConvertAvFrameToMediaFrame(cmn::MediaType::Video, _frame);
 				if (output_frame == nullptr)
 				{
 					continue;

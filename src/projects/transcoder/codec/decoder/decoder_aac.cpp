@@ -234,7 +234,7 @@ void DecoderAAC::ThreadDecode()
 				}
 			}
 
-			auto output_frame = TranscoderUtilities::ConvertToMediaFrame(cmn::MediaType::Audio, _frame);
+			auto output_frame = TranscoderUtilities::ConvertAvFrameToMediaFrame(cmn::MediaType::Audio, _frame);
 			if (output_frame == nullptr)
 			{
 				continue;

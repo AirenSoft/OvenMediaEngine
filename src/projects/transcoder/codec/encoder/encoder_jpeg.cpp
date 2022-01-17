@@ -100,7 +100,7 @@ void EncoderJPEG::CodecThread()
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-		if (TranscoderUtilities::CopyMediaFrameToAvFrame(cmn::MediaType::Video, media_frame, _frame) == false)
+		if (TranscoderUtilities::ConvertMediaFrameToAvFrame(cmn::MediaType::Video, media_frame, _frame) == false)
 		{
 			logte("Could not allocate the video frame data");
 			break;
@@ -145,7 +145,7 @@ void EncoderJPEG::CodecThread()
 				writeFile.close();
 #endif
 
-				auto media_packet = TranscoderUtilities::GetMediaPacketFromAvPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::JPEG, cmn::PacketType::RAW);
+				auto media_packet = TranscoderUtilities::ConvertAvPacketToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::JPEG, cmn::PacketType::RAW);
 				if (media_packet == nullptr)
 				{
 					logte("Could not allocate the media packet");

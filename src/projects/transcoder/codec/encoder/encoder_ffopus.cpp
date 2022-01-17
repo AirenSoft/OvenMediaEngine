@@ -101,7 +101,7 @@ void EncoderFFOPUS::CodecThread()
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-		if (TranscoderUtilities::CopyMediaFrameToAvFrame(cmn::MediaType::Audio, media_frame, _frame) == false)
+		if (TranscoderUtilities::ConvertMediaFrameToAvFrame(cmn::MediaType::Audio, media_frame, _frame) == false)
 		{
 			logte("Could not allocate the audio frame data");
 			break;
@@ -133,7 +133,7 @@ void EncoderFFOPUS::CodecThread()
 			}
 			else
 			{
-				auto media_packet = TranscoderUtilities::GetMediaPacketFromAvPacket(_packet, cmn::MediaType::Audio, cmn::BitstreamFormat::OPUS, cmn::PacketType::RAW);
+				auto media_packet = TranscoderUtilities::ConvertAvPacketToMediaPacket(_packet, cmn::MediaType::Audio, cmn::BitstreamFormat::OPUS, cmn::PacketType::RAW);
 				if (media_packet == nullptr)
 				{
 					logte("Could not allocate the media packet");
