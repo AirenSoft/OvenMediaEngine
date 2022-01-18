@@ -113,7 +113,13 @@ namespace ov
 			::localtime_r(&time, &local_time);
 
 			std::ostringstream oss;
-			oss << std::put_time(&local_time, "%Y-%m-%dT%H:%M:%S") << "." << std::setfill('0') << std::setw(3) << milliseconds << std::put_time(&local_time, "%z");
+			oss << std::put_time(&local_time, "%Y-%m-%dT%H:%M:%S") << "." << std::setfill('0') << std::setw(3) << milliseconds;
+
+			auto gmtoff = (local_time.tm_gmtoff >= 0) ? local_time.tm_gmtoff : -local_time.tm_gmtoff;
+			char sign = (local_time.tm_gmtoff >= 0) ? '+' : '-';
+			int hour_part = gmtoff / 3600;
+			int min_part = (gmtoff % 3600) / 60;
+			oss << sign << std::setfill('0') << std::setw(2) << hour_part << ":" << std::setfill('0') << std::setw(2) << min_part;
 
 			return oss.str().c_str();
 		}
