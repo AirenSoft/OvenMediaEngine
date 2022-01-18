@@ -21,6 +21,15 @@ CMakeLists.txt
 # For information data
 src/projects/main/git_info.h
 
+# For Qt Creator
+*.user
+*.cflags
+*.config
+*.creator
+*.cxxflags
+*.files
+*.includes
+
 *.o
 *.d
 *.pc

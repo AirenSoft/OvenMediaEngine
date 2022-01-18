@@ -22,6 +22,7 @@ namespace cfg
 			{
 			protected:
 				Signalling _signalling;
+				ov::String _tcp_relay_bind;
 				IceCandidates _ice_candidates;
 				IceServers _ice_servers;
 
@@ -37,6 +38,7 @@ namespace cfg
 				}
 
 				CFG_DECLARE_REF_GETTER_OF(GetSignalling, _signalling)
+				CFG_DECLARE_REF_GETTER_OF(GetTcpRelayBind, _tcp_relay_bind);
 				CFG_DECLARE_REF_GETTER_OF(GetIceCandidates, _ice_candidates)
 				CFG_DECLARE_REF_GETTER_OF(GetIceServers, _ice_servers)
 
@@ -44,6 +46,7 @@ namespace cfg
 				void MakeList() override
 				{
 					Register<Optional>("Signalling", &_signalling);
+					Register<Optional>("TcpRelayBind", &_tcp_relay_bind);
 					Register<Optional>("IceCandidates", &_ice_candidates);
 					Register<Optional>("IceServers", &_ice_servers);
 				};

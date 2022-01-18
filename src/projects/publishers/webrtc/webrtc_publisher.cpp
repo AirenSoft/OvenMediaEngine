@@ -104,31 +104,31 @@ bool WebRtcPublisher::Start()
 		}
 		else
 		{
-			bool tcp_relay_local_parsed { false };
-			ov::String tcp_relay_local { ice_candidates_config.GetTcpRelayLocal(&tcp_relay_local_parsed) };
-			if(tcp_relay_local_parsed)
+			bool tcp_relay_bind_parsed { false };
+			ov::String tcp_relay_bind { webrtc_bind_config.GetTcpRelayBind(&tcp_relay_bind_parsed) };
+			if(tcp_relay_bind_parsed)
 			{
-				auto l_tokens { tcp_relay_local.Split(":") };
+				auto l_tokens { tcp_relay_bind.Split(":") };
 				if(l_tokens.size() == 2)
 				{
 					auto l_ip { (l_tokens[0].IsEmpty()) ? server_config.GetIp() : l_tokens[0] };
 					auto l_port { l_tokens[1] };
-					tcp_relay_local = ov::String::FormatString("%s:%s", l_ip.CStr(), l_port.CStr());
-					ov::SocketAddress l_tcp_address(tcp_relay_local);
-					tcp_relay_local_parsed = l_tcp_address.IsValid();
-					if(!tcp_relay_local_parsed)
+					tcp_relay_bind = ov::String::FormatString("%s:%s", l_ip.CStr(), l_port.CStr());
+					ov::SocketAddress l_tcp_address(tcp_relay_bind);
+					tcp_relay_bind_parsed = l_tcp_address.IsValid();
+					if(!tcp_relay_bind_parsed)
 					{
-						logte("TcpRelayLocal invalid address: %s", tcp_relay_local.CStr());
+						logte("TcpRelayBind invalid address: %s", tcp_relay_bind.CStr());
 					}
 				}
 				else
 				{
-					tcp_relay_local_parsed = false;
-					logte("TcpRelayLocal format is incorrect: <Relay Local IP>:<Port>");
+					tcp_relay_bind_parsed = false;
+					logte("TcpRelayBind format is incorrect: <Relay Local IP>:<Port>");
 				}
 			}
 
-			auto tcp_relay_listen { (tcp_relay_local_parsed) ? tcp_relay_local : ov::String::FormatString("*:%s", items[1].CStr()) };
+			auto tcp_relay_listen { (tcp_relay_bind_parsed) ? tcp_relay_bind : ov::String::FormatString("*:%s", items[1].CStr()) };
 			ov::SocketAddress tcp_relay_address(tcp_relay_listen);
 
 			bool tcp_relay_worker_count_parsed { false };
