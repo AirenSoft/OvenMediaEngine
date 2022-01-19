@@ -696,8 +696,7 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet, const
 
 	for (auto length : length_list)
 	{
-		AVPacket av_packet;
-		::av_init_packet(&av_packet);
+		AVPacket av_packet = {0};
 
 		av_packet.stream_index = stream_index;
 		av_packet.flags = (packet->GetFlag() == MediaPacketFlag::Key) ? AV_PKT_FLAG_KEY : 0;

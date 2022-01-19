@@ -321,13 +321,12 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 
 
 	// Make avpacket
-	AVPacket pkt = {0};
-	av_init_packet(&pkt);
+	AVPacket av_packet = {0};
 
-	pkt.stream_index = stream_index;
-	pkt.flags = (flag == MediaPacketFlag::Key) ? AV_PKT_FLAG_KEY : 0;
-	pkt.pts = av_rescale_q(pts - _start_timestamp, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
-	pkt.dts = av_rescale_q(dts - _start_timestamp, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
+	av_packet.stream_index = stream_index;
+	av_packet.flags = (flag == MediaPacketFlag::Key) ? AV_PKT_FLAG_KEY : 0;
+	av_packet.pts = av_rescale_q(pts - _start_timestamp, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
+	av_packet.dts = av_rescale_q(dts - _start_timestamp, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
 
 	// TODO: Depending on the extension, the bitstream format should be changed.
 	// format(mpegts)
@@ -352,18 +351,18 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 		{
 			case cmn::BitstreamFormat::H264_ANNEXB:
 				cdata = H264Converter::ConvertAnnexbToAvcc(data);
-				pkt.size = cdata->GetLength();
-				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				av_packet.size = cdata->GetLength();
+				av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 				break;
 			case cmn::BitstreamFormat::AAC_ADTS:
 				// Skip ADTS header
-				pkt.size = data->GetLength() - ADTS_HEADER_LENGTH;
-				pkt.data = (uint8_t *)data->GetDataAs<uint8_t>() + ADTS_HEADER_LENGTH;
+				av_packet.size = data->GetLength() - ADTS_HEADER_LENGTH;
+				av_packet.data = (uint8_t *)data->GetDataAs<uint8_t>() + ADTS_HEADER_LENGTH;
 				break;
 			case cmn::BitstreamFormat::AAC_RAW:
 			case cmn::BitstreamFormat::H264_AVCC:
-				pkt.size = data->GetLength();
-				pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();
+				av_packet.size = data->GetLength();
+				av_packet.data = (uint8_t *)data->GetDataAs<uint8_t>();
 				break;
 			case cmn::BitstreamFormat::AAC_LATM:
 			default: {
@@ -374,13 +373,13 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	}
 	else if (strcmp(_format_context->oformat->name, "mpegts") == 0)
 	{
-		pkt.size = data->GetLength();
-		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();
+		av_packet.size = data->GetLength();
+		av_packet.data = (uint8_t *)data->GetDataAs<uint8_t>();
 	}
 	else if (strcmp(_format_context->oformat->name, "webm") == 0)
 	{
-		pkt.size = data->GetLength();
-		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();
+		av_packet.size = data->GetLength();
+		av_packet.data = (uint8_t *)data->GetDataAs<uint8_t>();
 	}
 	else
 	{
@@ -388,7 +387,7 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 		return false;
 	}
 
-	int ret = av_interleaved_write_frame(_format_context, &pkt);
+	int ret = av_interleaved_write_frame(_format_context, &av_packet);
 	if (ret != 0)
 	{
 		logte("error = %d", ret);

@@ -95,7 +95,7 @@ void DecoderAVCxQSV::CodecThread()
 
 		while (remained > 0)
 		{
-			::av_init_packet(_pkt);
+			::av_packet_unref(_pkt);
 
 			int parsed_size = ::av_parser_parse2(_parser, _context, &_pkt->data, &_pkt->size,
 												 data + offset, static_cast<int>(remained), pts, dts, 0);
