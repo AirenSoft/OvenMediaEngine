@@ -319,7 +319,10 @@ bool IcePort::RemoveSession(uint32_t session_id)
 		ice_port_info = item->second;
 
 		_session_port_table.erase(item);
-		_address_port_table.erase(ice_port_info->address);
+		for(const auto &item : ice_port_info->address_map)
+		{
+			_address_port_table.erase(item.first);
+		}
 
 		// Close only TCP (TURN)
 		auto remote = ice_port_info->remote;
@@ -384,7 +387,10 @@ void IcePort::CheckTimedoutItem()
 		for (auto &deleted_ice_port : delete_list)
 		{
 			_session_port_table.erase(deleted_ice_port->session_id);
-			_address_port_table.erase(deleted_ice_port->address);
+			for(const auto &item : deleted_ice_port->address_map)
+			{
+				_address_port_table.erase(item.first);
+			}
 		}
 	}
 
@@ -557,11 +563,12 @@ void IcePort::OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &rem
 		if (item != _address_port_table.end())
 		{
 			ice_port_info = item->second;
-
 			// When the candidate pair is determined, the peer starts sending DTLS messages. This can be seen as a true connected.
 			if(ice_port_info->state != IcePortConnectionState::Connected)
 			{
 				SetIceState(ice_port_info, IcePortConnectionState::Connected);
+				// It communicates with the candidate address that sends application data first.
+				ice_port_info->address = address;
 			}
 		}
 	}
@@ -752,7 +759,10 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		{
 			std::lock_guard<std::mutex> lock_guard(_port_table_lock);
 
-			_address_port_table.erase(ice_port_info->address);
+			for(const auto &item : ice_port_info->address_map)
+			{
+				_address_port_table.erase(item.first);
+			}
 			_session_port_table.erase(ice_port_info->session_id);
 		}
 
@@ -760,7 +770,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 	}
 
 	if (ice_port_info->state == IcePortConnectionState::New || 
-			(ice_port_info->state == IcePortConnectionState::Checking && ice_port_info->address != address) )
+		(ice_port_info->state == IcePortConnectionState::Checking && ice_port_info->address != address) )
 	{
 		std::lock_guard<std::mutex> lock_guard(_port_table_lock);
 
@@ -775,6 +785,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 
 		ice_port_info->remote = remote;
 		ice_port_info->address = address;
+		ice_port_info->address_map[address] = true;
 
 		_address_port_table[address] = ice_port_info;
 		_session_port_table[ice_port_info->session_id] = ice_port_info;
