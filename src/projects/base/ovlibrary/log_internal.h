@@ -17,6 +17,7 @@
 #include <ctime>
 #include <mutex>
 #include <regex>
+#include <unordered_map>
 
 #include "./assert.h"
 #include "./log.h"
