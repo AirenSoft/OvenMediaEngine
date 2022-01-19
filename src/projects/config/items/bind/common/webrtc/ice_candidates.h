@@ -19,7 +19,6 @@ namespace cfg
 			protected:
 				std::vector<ov::String> _ice_candidate_list{"*:10000-10005/udp"};
 				ov::String _tcp_relay;
-				ov::String _tcp_relay_local;
 
 				int _tcp_relay_worker_count{};
 				int _ice_worker_count{};
@@ -30,7 +29,6 @@ namespace cfg
 
 				CFG_DECLARE_REF_GETTER_OF(GetIceCandidateList, _ice_candidate_list);
 				CFG_DECLARE_REF_GETTER_OF(GetTcpRelay, _tcp_relay);
-				CFG_DECLARE_REF_GETTER_OF(GetTcpRelayLocal, _tcp_relay_local);
 
 				CFG_DECLARE_REF_GETTER_OF(GetTcpRelayWorkerCount, _tcp_relay_worker_count);
 				CFG_DECLARE_REF_GETTER_OF(GetIceWorkerCount, _ice_worker_count);
@@ -40,7 +38,6 @@ namespace cfg
 				{
 					Register<Optional>("IceCandidate", &_ice_candidate_list);
 					Register<Optional>("TcpRelay", &_tcp_relay);
-					Register<Optional>("TcpRelayLocal", &_tcp_relay_local);
 					Register<Optional>("TcpForce", &_tcp_force);
 
 					Register<Optional>("TcpRelayWorkerCount", &_tcp_relay_worker_count);
@@ -48,5 +45,5 @@ namespace cfg
 				}
 			};
 		}  // namespace cmm
-	}	   // namespace bind
+	} // namespace bind
 }  // namespace cfg
