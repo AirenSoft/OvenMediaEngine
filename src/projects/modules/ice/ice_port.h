@@ -71,6 +71,7 @@ protected:
 
 		std::shared_ptr<ov::Socket> remote;
 		ov::SocketAddress address;
+		std::map<ov::SocketAddress, bool> address_map;
 
 		IcePortConnectionState state;
 
