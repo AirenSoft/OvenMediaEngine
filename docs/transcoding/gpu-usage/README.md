@@ -13,7 +13,7 @@ Please check what graphics card you have and refer to the NVIDIA or Intel driver
 
 ### Intel QuickSync Driver
 
-If you are using an Intel CPU that supports QuickSync, please refer to the following guide to install the driver. The OSes that support installation using the provided scripts are** CentOS 7/8** and** Ubuntu 18/20 **versions. If you want to install the driver on a different OS, please refer to the Manual Installation Guide document.
+If you are using an Intel CPU that supports QuickSync, please refer to the following guide to install the driver. The OSes that support installation using the provided scripts are **CentOS 7/8** and **Ubuntu 18/20** versions. If you want to install the driver on a different OS, please refer to the Manual Installation Guide document.
 
 When the Intel QuickSync driver installation is complete, the OS must be rebooted for normal operation.
 
@@ -91,13 +91,13 @@ The NVIDIA Driver must have been previously installed
 
 #### How to run docker
 
-To use GPU when running Docker, you need to add the -**-gpus all **option.
+To use GPU when running Docker, you need to add the -**-gpus all** option.
 
 ```
 docker run -d \
 -p 1935:1935 -p 4000-4005:4000-4005/udp -p 3333:3333 -p 3478:3478 -p 8080:8080 -p 9000:9000 -p 9999:9999/udp -p 10006-10010:10006-10010/udp \
 --gpus all
-airensoft/ovenmediaengine:dev 
+airensoft/ovenmediaengine:dev
 ```
 
 ###
@@ -131,63 +131,63 @@ OvenMediaEngine-master/misc/prerequisites.sh --enable-qsv
 #### When using Docker container
 
 ```bash
-docker build --file Dockerfile.nv -t airensoft/ovenmediaengine:dev .
+docker build --file Dockerfile -t airensoft/ovenmediaengine:dev --build-arg GPU=TRU
 ```
 
 ## Configuration
 
-To use hardware acceleration, set the **HardwareAcceleration **option to **true **under OutputProfiles. If this option is enabled, a hardware codec is automatically used when creating a stream, and if it is unavailable due to insufficient hardware resources, it is replaced with a software codec.
+To use hardware acceleration, set the **HardwareAcceleration** option to **true** under OutputProfiles. If this option is enabled, a hardware codec is automatically used when creating a stream, and if it is unavailable due to insufficient hardware resources, it is replaced with a software codec.
 
 ```markup
 <VirtualHosts>
-		<VirtualHost>
-				<Name>default</Name>
+   <VirtualHost>
+      <Name>default</Name>
 
-				<!-- Settings for multi domain and TLS -->
-				<Host>
-					...
-				</Host>
+      <!-- Settings for multi domain and TLS -->
+      <Host>
+         ...
+      </Host>
 
-				<!-- Settings for applications -->
-				<Applications>
-						<Application>
-								<Name>app</Name>
-								<Type>live</Type>
-								<OutputProfiles>
-								    <!-- Settings to use hardware codecs -->
-										<HardwareAcceleration>true</HardwareAcceleration>
-										<OutputProfile>
-												<Name>bypass_stream</Name>
-												<OutputStreamName>${OriginStreamName}_o</OutputStreamName>
-												<Encodes>
-														<Video>
-																<Codec>h264</Codec>
-																<Width>1920</Width>
-																<Height>1080</Height>
-																<Bitrate>5000000</Bitrate>
-																<Framerate>30</Framerate>
-														</Video>
-														
-														<Video>
-																<Codec>h265</Codec>
-																<Width>1280</Width>
-																<Height>720</Height>
-																<Bitrate>5000000</Bitrate>
-																<Framerate>30</Framerate>
-														</Video> 
-												</Encodes>
-										</OutputProfile>
+      <!-- Settings for applications -->
+      <Applications>
+         <Application>
+            <Name>app</Name>
+            <Type>live</Type>
+            <OutputProfiles>
+               <!-- Settings to use hardware codecs -->
+               <HardwareAcceleration>true</HardwareAcceleration>
+               <OutputProfile>
+                  <Name>bypass_stream</Name>
+                  <OutputStreamName>${OriginStreamName}_o</OutputStreamName>
+                  <Encodes>
+                     <Video>
+                        <Codec>h264</Codec>
+                        <Width>1920</Width>
+                        <Height>1080</Height>
+                        <Bitrate>5000000</Bitrate>
+                        <Framerate>30</Framerate>
+                     </Video>
+                     
+                     <Video>
+                        <Codec>h265</Codec>
+                        <Width>1280</Width>
+                        <Height>720</Height>
+                        <Bitrate>5000000</Bitrate>
+                        <Framerate>30</Framerate>
+                     </Video> 
+                  </Encodes>
+               </OutputProfile>
 
-								</OutputProfiles>
-								<Providers>
-									...
-								</Providers>
-								<Publishers>
-									...
-								</Publishers>
-						</Application>
-				</Applications>
-		</VirtualHost>
+            </OutputProfiles>
+            <Providers>
+               ...
+            </Providers>
+            <Publishers>
+               ...
+            </Publishers>
+         </Application>
+      </Applications>
+   </VirtualHost>
 </VirtualHosts>
 ```
 
