@@ -10,9 +10,10 @@ WORKDIR /tmp
 
 ARG     OME_VERSION=master
 ARG 	STRIP=TRUE
+ARG     GPU=FALSE
 
 ENV     PREFIX=/opt/ovenmediaengine
-ENV		TEMP_DIR=/tmp/ome
+ENV     TEMP_DIR=/tmp/ome
 
 ## Download OvenMediaEngine
 RUN \
@@ -22,7 +23,12 @@ RUN \
 
 ## Install dependencies
 RUN \
-        ${TEMP_DIR}/misc/prerequisites.sh
+        if [ "$GPU" = "TRUE" ] ; then \
+                ${TEMP_DIR}/misc/install_nvidia_docker_image.sh ; \
+                ${TEMP_DIR}/misc/prerequisites.sh  --enable-nvc ; \
+        else \
+                ${TEMP_DIR}/misc/prerequisites.sh ; \
+        fi
 
 ## Build OvenMediaEngine
 RUN \
@@ -30,7 +36,7 @@ RUN \
         make release -j$(nproc)
 
 RUN \
-		if [ "$STRIP" = "TRUE" ] ; then strip ${TEMP_DIR}/src/bin/RELEASE/OvenMediaEngine ; fi
+        if [ "$STRIP" = "TRUE" ] ; then strip ${TEMP_DIR}/src/bin/RELEASE/OvenMediaEngine ; fi
 
 ## Make running environment
 RUN \

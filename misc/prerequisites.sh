@@ -194,13 +194,14 @@ install_ffmpeg()
     fi
 
     if [ "$NVIDIA_VIDEO_CODEC_HWACCELS" = true ] ; then
-        ADDI_LIBS+=" --enable-cuda-nvcc --enable-cuda-llvm --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec"
+        ADDI_LIBS+="--enable-gpl --enable-nonfree --enable-cuda-nvcc --enable-cuda-llvm --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec"
         ADDI_ENCODER+=",h264_nvenc,hevc_nvenc"
         ADDI_DECODER+=",h264_nvdec,hevc_nvdec"
         ADDI_CFLAGS+="-I/usr/local/cuda/include"
         ADDI_LDFLAGS="-L/usr/local/cuda/lib64"
         ADDI_HWACCEL="--enable-hwaccel=h264_nvdec,hevc_nvdec,nvenc,nvdec"
         ADDI_FILTERS=",scale_cuda,hwdownload,hwupload,hwupload_cuda"
+        PATH=$PATH:/usr/local/nvidia/bin:/usr/local/cuda/bin
     fi
 
     (DIR=${TEMP_PATH}/ffmpeg && \
