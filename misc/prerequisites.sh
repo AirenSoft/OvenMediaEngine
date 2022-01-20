@@ -177,6 +177,11 @@ install_ffmpeg()
     #  --enable-debug \
     #  --disable-optimizations --disable-mmx --disable-stripping \
 
+    if [[ -n "${EXT_FFMPEG_DISABLE}" ]]; then
+        return
+    fi
+
+    ADDI_LICENSE=""
     ADDI_LIBS=""
     ADDI_ENCODER=""
     ADDI_DECODER=""
@@ -194,7 +199,8 @@ install_ffmpeg()
     fi
 
     if [ "$NVIDIA_VIDEO_CODEC_HWACCELS" = true ] ; then
-        ADDI_LIBS+="--enable-gpl --enable-nonfree --enable-cuda-nvcc --enable-cuda-llvm --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec"
+        ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
+        ADDI_LIBS+=" --enable-cuda-nvcc --enable-cuda-llvm --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec"
         ADDI_ENCODER+=",h264_nvenc,hevc_nvenc"
         ADDI_DECODER+=",h264_nvdec,hevc_nvdec"
         ADDI_CFLAGS+="-I/usr/local/cuda/include"
@@ -203,6 +209,21 @@ install_ffmpeg()
         ADDI_FILTERS=",scale_cuda,hwdownload,hwupload,hwupload_cuda"
         PATH=$PATH:/usr/local/nvidia/bin:/usr/local/cuda/bin
     fi
+
+    # Add options as environmental variable values.
+
+    if [[ -n "${EXT_FFMPEG_LICENSE}" ]]; then 
+        ADDI_LICENSE+=${EXT_FFMPEG_LICENSE}
+    fi
+
+    if [[ -n "${EXT_FFMPEG_LIBS}" ]] ; then 
+        ADDI_LIBS+=${EXT_FFMPEG_LIBS}
+    fi
+
+    if [[ -n "${EXT_FFMPEG_ENCODER}" ]] ; then 
+        ADDI_ENCODER+=${EXT_FFMPEG_ENCODER}
+    fi
+
 
     (DIR=${TEMP_PATH}/ffmpeg && \
     mkdir -p ${DIR} && \
@@ -215,6 +236,7 @@ install_ffmpeg()
     --extra-cflags="-I${PREFIX}/include ${ADDI_CFLAGS}"  \
     --extra-ldflags="-L${PREFIX}/lib ${ADDI_LDFLAGS} -Wl,-rpath,${PREFIX}/lib" \
     --extra-libs=-ldl \
+    ${ADDI_LICENSE} \
     --enable-shared \
     --disable-static \
     --disable-debug \
