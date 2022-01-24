@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
 	// PENDING : INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
 
-	auto api_server = api::Server::GetInstance();
+	auto api_server = std::make_shared<api::Server>();
 
 	if (succeeded)
 	{

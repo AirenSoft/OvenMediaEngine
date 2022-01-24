@@ -12,13 +12,14 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/ovsocket.h>
 #include <config/config.h>
+#include <modules/http/cors/cors_manager.h>
 #include <modules/http/server/http_server_manager.h>
 
 #include "controllers/root_controller.h"
 
 namespace api
 {
-	class Server : public ov::Singleton<Server>
+	class Server : public ov::EnableSharedFromThis<Server>
 	{
 	public:
 		bool Start(const std::shared_ptr<const cfg::Server> &server_config);
@@ -49,5 +50,7 @@ namespace api
 
 		bool _is_storage_path_initialized = false;
 		ov::String _storage_path;
+
+		http::CorsManager _cors_manager;
 	};
 }  // namespace api

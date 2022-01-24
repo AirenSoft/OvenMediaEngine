@@ -18,6 +18,8 @@
 
 namespace api
 {
+	class Server;
+	
 	class ApiResponse
 	{
 	public:
@@ -79,6 +81,11 @@ namespace api
 	class Controller
 	{
 	public:
+		void SetServer(const std::shared_ptr<Server> &server)
+		{
+			_server = server;
+		}
+
 		void SetPrefix(const ov::String &prefix)
 		{
 			_prefix = prefix;
@@ -94,6 +101,7 @@ namespace api
 		{
 			auto instance = std::make_shared<Tcontroller>();
 
+			instance->SetServer(_server);
 			instance->SetPrefix(_prefix + prefix_of_sub_controller);
 			instance->SetInterceptor(_interceptor);
 
@@ -314,5 +322,7 @@ namespace api
 		// For all Handler registrations, prefix before pattern
 		ov::String _prefix;
 		std::shared_ptr<http::svr::DefaultInterceptor> _interceptor;
+
+		std::shared_ptr<Server> _server;
 	};
 }  // namespace api

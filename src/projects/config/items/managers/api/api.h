@@ -8,6 +8,7 @@
 //==============================================================================
 #pragma once
 
+#include "../../common/cross_domain_support.h"
 #include "storage/storage.h"
 
 namespace cfg
@@ -16,7 +17,7 @@ namespace cfg
 	{
 		namespace api
 		{
-			struct API : public Item
+			struct API : public Item, public cmn::CrossDomainSupport
 			{
 			protected:
 				ov::String _access_token;
@@ -34,6 +35,8 @@ namespace cfg
 					Register("AccessToken", &_access_token);
 
 					Register<Optional>("Storage", &_storage);
+
+					Register<Optional>({"CrossDomains", OmitRule::Omit}, &_cross_domains);
 				}
 			};
 		}  // namespace api

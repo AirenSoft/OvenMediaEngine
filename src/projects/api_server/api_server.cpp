@@ -227,6 +227,19 @@ namespace api
 			return true;
 		}
 
+		// CORS
+		{
+			bool is_cors_parsed;
+			auto cross_domains = api_config.GetCrossDomainList(&is_cors_parsed);
+
+			if (is_cors_parsed)
+			{
+				// API server doesn't have VHost, so use dummy VHost
+				auto vhost_app_name = info::VHostAppName::InvalidVHostAppName();
+				_cors_manager.SetCrossDomains(vhost_app_name, cross_domains);
+			}
+		}
+
 		_access_token = api_config.GetAccessToken();
 
 		if (_access_token.IsEmpty())
@@ -270,8 +283,30 @@ namespace api
 	{
 		auto http_interceptor = std::make_shared<http::svr::DefaultInterceptor>();
 
+		// CORS header processor
+		http_interceptor->Register(http::Method::All, R"(.+)", [=](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
+			auto response = client->GetResponse();
+			auto request = client->GetRequest();
+
+			do
+			{
+				// Set default headers
+				response->SetHeader("Server", "OvenMediaEngine");
+				response->SetHeader("Content-Type", "text/html");
+
+				auto vhost_app_name = info::VHostAppName::InvalidVHostAppName();
+
+				_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
+
+				return http::svr::NextHandler::Call;
+			} while (false);
+
+			return http::svr::NextHandler::DoNotCall;
+		});
+
 		// Request Handlers will be added to http_interceptor
 		_root_controller = std::make_shared<RootController>(_access_token);
+		_root_controller->SetServer(GetSharedPtr());
 		_root_controller->SetInterceptor(http_interceptor);
 		_root_controller->PrepareHandlers();
 
@@ -290,6 +325,8 @@ namespace api
 
 		_is_storage_path_initialized = false;
 		_storage_path = "";
+
+		_root_controller = nullptr;
 
 		return http_result && https_result;
 	}

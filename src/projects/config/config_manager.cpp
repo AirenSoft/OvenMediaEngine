@@ -35,8 +35,8 @@ namespace cfg
 	{
 		// Modify if supported xml version is added or changed
 
-		// Current OME compatible with v8 & v9
-		_supported_versions_map["Server"] = {8, 9};
+		// Current OME compatible with v8 & v9 & v10
+		_supported_versions_map["Server"] = {8, 9, 10};
 		_supported_versions_map["Logger"] = {2};
 	}
 
@@ -325,8 +325,8 @@ namespace cfg
 			ov::String description;
 
 			description.Format(
-				"The version of %s.xml is outdated (Your XML version: %d, Latest version: %d).\n",
-				name.CStr(), version, supported_versions);
+				"The version of %s.xml is outdated (Your XML version: %d).\n",
+				name.CStr(), version);
 
 			description.AppendFormat(
 				"If you have upgraded OME, see misc/conf_examples/%s.xml\n",
@@ -348,6 +348,12 @@ namespace cfg
 			{
 				description.AppendFormat("Major Changes (v8 -> v9):\n");
 				description.AppendFormat(" - Added <Server>.<Bind>.<Managers>.<API>.<Storage> to store configs created using API\n");
+			}
+
+			if (version <= 9)
+			{
+				description.AppendFormat("Major Changes (v9 -> v10):\n");
+				description.AppendFormat(" - Added <Server>.<Bind>.<Managers>.<API>.<CrossDomains>\n");
 			}
 
 			throw CreateConfigError("%s", description.CStr());

@@ -50,11 +50,9 @@ namespace api
 		ApiResponse VHostsController::OnDeleteVhost(const std::shared_ptr<http::svr::HttpConnection> &client,
 													const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
-			auto api_server = Server::GetInstance();
-
 			try
 			{
-				api_server->DeleteVHost(*(vhost.get()));
+				_server->DeleteVHost(*(vhost.get()));
 			}
 			catch (std::shared_ptr<cfg::ConfigError> &error)
 			{
