@@ -10,6 +10,11 @@
 
 #include "../http_private.h"
 
+static constexpr char CORS_HTTP_PREFIX[] = "http://";
+static constexpr auto CORS_HTTP_PREFIX_LENGTH = OV_COUNTOF(CORS_HTTP_PREFIX) - 1;
+static constexpr char CORS_HTTPS_PREFIX[] = "https://";
+static constexpr auto CORS_HTTPS_PREFIX_LENGTH = OV_COUNTOF(CORS_HTTPS_PREFIX) - 1;
+
 namespace http
 {
 	void CorsManager::SetCrossDomains(const info::VHostAppName &vhost_app_name, const std::vector<ov::String> &url_list)
@@ -17,7 +22,7 @@ namespace http
 		std::lock_guard lock_guard(_cors_mutex);
 
 		auto &cors_policy = _cors_policy_map[vhost_app_name];
-		auto &cors_regex_list = _cors_regex_list_map[vhost_app_name];
+		auto &cors_regex_list = _cors_item_list_map[vhost_app_name];
 		ov::String cors_rtmp;
 
 		auto cors_domains_for_rtmp = std::vector<ov::String>();
@@ -33,17 +38,12 @@ namespace http
 
 		cors_policy = CorsPolicy::Origin;
 
-		constexpr char HTTP_PREFIX[] = "http://";
-		constexpr auto HTTP_PREFIX_LENGTH = OV_COUNTOF(HTTP_PREFIX) - 1;
-		constexpr char HTTPS_PREFIX[] = "https://";
-		constexpr auto HTTPS_PREFIX_LENGTH = OV_COUNTOF(HTTPS_PREFIX) - 1;
-
 		for (auto url : url_list)
 		{
 			if (url == "*")
 			{
 				cors_regex_list.clear();
-				cors_regex_list.push_back(ov::Regex::CompiledRegex(ov::Regex::WildCardRegex("*")));
+				cors_regex_list.emplace_back(false, ov::Regex::CompiledRegex(ov::Regex::WildCardRegex("*")));
 				cors_policy = CorsPolicy::All;
 
 				if (url_list.size() > 1)
@@ -68,16 +68,9 @@ namespace http
 				continue;
 			}
 
-			cors_regex_list.push_back(ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(url)));
+			bool has_protocol = url.HasPrefix(CORS_HTTP_PREFIX) || url.HasPrefix(CORS_HTTPS_PREFIX);
 
-			if (url.HasPrefix(HTTP_PREFIX))
-			{
-				url = url.Substring(HTTP_PREFIX_LENGTH);
-			}
-			else if (url.HasPrefix(HTTPS_PREFIX))
-			{
-				url = url.Substring(HTTPS_PREFIX_LENGTH);
-			}
+			cors_regex_list.emplace_back(has_protocol, ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(url)));
 
 			cors_domains_for_rtmp.push_back(url);
 		}
@@ -147,11 +140,11 @@ namespace http
 			std::lock_guard lock_guard(_cors_mutex);
 
 			auto cors_policy_iterator = _cors_policy_map.find(vhost_app_name);
-			auto cors_regex_list_iterator = _cors_regex_list_map.find(vhost_app_name);
+			auto cors_regex_list_iterator = _cors_item_list_map.find(vhost_app_name);
 
 			if (
 				(cors_policy_iterator == _cors_policy_map.end()) ||
-				(cors_regex_list_iterator == _cors_regex_list_map.end()))
+				(cors_regex_list_iterator == _cors_item_list_map.end()))
 			{
 				// This happens in the following situations:
 				//
@@ -177,14 +170,25 @@ namespace http
 					break;
 
 				case CorsPolicy::Origin: {
-					const auto &cors_regex_list = cors_regex_list_iterator->second;
-					auto item = std::find_if(cors_regex_list.begin(), cors_regex_list.end(),
-											 [&origin_header](auto &cors_regex) -> bool {
-												 ov::MatchResult match_result = cors_regex.Matches(origin_header);
-												 return match_result.IsMatched();
-											 });
+					const auto &cors_item_list = cors_regex_list_iterator->second;
+					auto origin_header_without_protocol = origin_header;
 
-					if (item == cors_regex_list.end())
+					if (origin_header.HasPrefix(CORS_HTTP_PREFIX))
+					{
+						origin_header_without_protocol = origin_header.Substring(CORS_HTTP_PREFIX_LENGTH);
+					}
+					else if (origin_header.HasPrefix(CORS_HTTPS_PREFIX))
+					{
+						origin_header_without_protocol = origin_header.Substring(CORS_HTTPS_PREFIX_LENGTH);
+					}
+
+					auto item = std::find_if(
+						cors_item_list.begin(), cors_item_list.end(),
+						[&origin_header, &origin_header_without_protocol](auto &cors_item) -> bool {
+							return cors_item.regex.Matches(cors_item.has_protocol ? origin_header : origin_header_without_protocol).IsMatched();
+						});
+
+					if (item == cors_item_list.end())
 					{
 						// Could not find the domain
 						return false;

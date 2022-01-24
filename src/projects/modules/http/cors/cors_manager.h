@@ -55,6 +55,18 @@ namespace http
 			Origin
 		};
 
+		struct CorsItem
+		{
+			CorsItem(bool has_protocol, const ov::Regex &regex)
+				: has_protocol(has_protocol),
+				  regex(regex)
+			{
+			}
+
+			bool has_protocol;
+			ov::Regex regex;
+		};
+
 	protected:
 		mutable std::mutex _cors_mutex;
 
@@ -62,7 +74,7 @@ namespace http
 
 		// CORS for HTTP
 		// key: VHostAppName, value: regex
-		std::unordered_map<info::VHostAppName, std::vector<ov::Regex>> _cors_regex_list_map;
+		std::unordered_map<info::VHostAppName, std::vector<CorsItem>> _cors_item_list_map;
 
 		// CORS for RTMP
 		//

@@ -71,15 +71,12 @@ std::shared_ptr<pub::Application> CmafPublisher::OnCreatePublisherApplication(co
 		if (stream_server != nullptr)
 		{
 			bool is_parsed;
-			auto cross_domains = lldash_publisher_config.GetCrossDomainList(&is_parsed);
+			const auto &cross_domains = lldash_publisher_config.GetCrossDomainList(&is_parsed);
 
-			if (is_parsed == false)
+			if (is_parsed)
 			{
-				OV_ASSERT2(cross_domains.empty());
-				cross_domains.push_back("*");
+				stream_server->SetCrossDomains(name, cross_domains);
 			}
-
-			stream_server->SetCrossDomains(name, cross_domains);
 		}
 	}
 
