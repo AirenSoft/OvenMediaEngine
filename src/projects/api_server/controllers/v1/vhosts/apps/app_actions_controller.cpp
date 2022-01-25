@@ -67,9 +67,19 @@ namespace api
 													app->GetName().GetAppName().CStr());
 			}
 
+			auto application =  std::static_pointer_cast<FileApplication>(publisher->GetApplicationByName(app->GetName()));
+			if(application == nullptr)
+			{
+				return http::HttpError::CreateError(http::StatusCode::NotFound,
+													"Could not find application: [%s/%s]",
+													vhost->GetName().CStr(),
+													app->GetName().GetAppName().CStr());
+			}
+
+
 			std::vector<std::shared_ptr<info::Record>> records;
 
-			auto error = publisher->GetRecords(app->GetName(), records);
+			auto error = application->GetRecords(records);
 			if (error->GetCode() != FilePublisher::FilePublisherStatusCode::Success || records.size() == 0)
 			{
 				return http::HttpError::CreateError(http::StatusCode::NotFound,
@@ -99,6 +109,16 @@ namespace api
 													vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
+			auto application =  std::static_pointer_cast<FileApplication>(publisher->GetApplicationByName(app->GetName()));
+			if(application == nullptr)
+			{
+				return http::HttpError::CreateError(http::StatusCode::NotFound,
+													"Could not find application: [%s/%s]",
+													vhost->GetName().CStr(),
+													app->GetName().GetAppName().CStr());
+			}
+
+
 			auto record = ::serdes::RecordFromJson(request_body);
 			if (record == nullptr)
 			{
@@ -112,7 +132,7 @@ namespace api
 				record->SetApplication(app->GetName().GetAppName());
 			}
 
-			auto error = publisher->RecordStart(app->GetName(), record);
+			auto error = application->RecordStart(record);
 			if (error->GetCode() == FilePublisher::FilePublisherStatusCode::FailureInvalidParameter)
 			{
 				return http::HttpError::CreateError(http::StatusCode::BadRequest,
@@ -145,6 +165,16 @@ namespace api
 													app->GetName().GetAppName().CStr());
 			}
 
+			auto application =  std::static_pointer_cast<FileApplication>(publisher->GetApplicationByName(app->GetName()));
+			if(application == nullptr)
+			{
+				return http::HttpError::CreateError(http::StatusCode::NotFound,
+													"Could not find application: [%s/%s]",
+													vhost->GetName().CStr(),
+													app->GetName().GetAppName().CStr());
+			}
+
+
 			auto record = ::serdes::RecordFromJson(request_body);
 			if (record == nullptr)
 			{
@@ -159,7 +189,9 @@ namespace api
 				record->SetApplication(app->GetName().GetAppName());
 			}
 
-			auto error = publisher->RecordStop(app->GetName(), record);
+			
+
+			auto error = application->RecordStop(record);
 			if (error->GetCode() == FilePublisher::FilePublisherStatusCode::FailureInvalidParameter)
 			{
 				return http::HttpError::CreateError(http::StatusCode::BadRequest, error->GetMessage());
@@ -200,8 +232,19 @@ namespace api
 													app->GetName().GetAppName().CStr());
 			}
 
-			auto error = publisher->GetPushes(app->GetName(), pushes);
-			if (error->GetCode() != RtmpPushPublisher::PushPublisherErrorCode::Success || pushes.size() == 0)
+			auto application =  std::static_pointer_cast<RtmpPushApplication>(publisher->GetApplicationByName(app->GetName()));
+			if(application == nullptr)
+			{
+				return http::HttpError::CreateError(http::StatusCode::NotFound,
+													"Could not find application: [%s/%s]",
+													vhost->GetName().CStr(),
+													app->GetName().GetAppName().CStr());
+			}
+
+
+
+			auto error = application->GetPushes(pushes);
+			if (error->GetCode() != RtmpPushPublisher::ErrorCode::Success || pushes.size() == 0)
 			{
 				return http::HttpError::CreateError(http::StatusCode::NoContent, "There is no pushes information");
 			}
@@ -230,6 +273,17 @@ namespace api
 													app->GetName().GetAppName().CStr());
 			}
 
+			auto application =  std::static_pointer_cast<RtmpPushApplication>(publisher->GetApplicationByName(app->GetName()));
+			if(application == nullptr)
+			{
+				return http::HttpError::CreateError(http::StatusCode::NotFound,
+													"Could not find application: [%s/%s]",
+													vhost->GetName().CStr(),
+													app->GetName().GetAppName().CStr());
+			}
+
+
+
 			auto push = ::serdes::PushFromJson(request_body);
 			if (push == nullptr)
 			{
@@ -242,14 +296,14 @@ namespace api
 			push->SetVhost(vhost->GetName().CStr());
 			push->SetApplication(app->GetName().GetAppName());
 
-			auto error = publisher->PushStart(app->GetName(), push);
+			auto error = application->PushStart(push);
 			switch (error->GetCode())
 			{
-				case RtmpPushPublisher::PushPublisherErrorCode::FailureInvalidParameter: {
+				case RtmpPushPublisher::ErrorCode::FailureInvalidParameter: {
 					return http::HttpError::CreateError(http::StatusCode::BadRequest, error->GetMessage());
 				}
 				break;
-				case RtmpPushPublisher::PushPublisherErrorCode::FailureDupulicateKey: {
+				case RtmpPushPublisher::ErrorCode::FailureDupulicateKey: {
 					return http::HttpError::CreateError(http::StatusCode::BadRequest, error->GetMessage());
 				}
 				break;
@@ -279,6 +333,16 @@ namespace api
 													app->GetName().GetAppName().CStr());
 			}
 
+			auto application =  std::static_pointer_cast<RtmpPushApplication>(publisher->GetApplicationByName(app->GetName()));
+			if(application == nullptr)
+			{
+				return http::HttpError::CreateError(http::StatusCode::NotFound,
+													"Could not find application: [%s/%s]",
+													vhost->GetName().CStr(),
+													app->GetName().GetAppName().CStr());
+			}
+
+
 			auto push = ::serdes::PushFromJson(request_body);
 			if (push == nullptr)
 			{
@@ -291,14 +355,14 @@ namespace api
 			push->SetVhost(vhost->GetName().CStr());
 			push->SetApplication(app->GetName().GetAppName());
 
-			auto error = publisher->PushStop(app->GetName(), push);
+			auto error = application->PushStop(push);
 			switch (error->GetCode())
 			{
-				case RtmpPushPublisher::PushPublisherErrorCode::FailureInvalidParameter: {
+				case RtmpPushPublisher::ErrorCode::FailureInvalidParameter: {
 					return http::HttpError::CreateError(http::StatusCode::BadRequest, error->GetMessage());
 				}
 				break;
-				case RtmpPushPublisher::PushPublisherErrorCode::FailureNotExist: {
+				case RtmpPushPublisher::ErrorCode::FailureNotExist: {
 					return http::HttpError::CreateError(http::StatusCode::NotFound, error->GetMessage());
 				}
 				break;

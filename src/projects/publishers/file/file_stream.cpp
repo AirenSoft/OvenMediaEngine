@@ -4,6 +4,7 @@
 
 #include "base/publisher/application.h"
 #include "base/publisher/stream.h"
+#include "file_application.h"
 #include "file_private.h"
 
 std::shared_ptr<FileStream> FileStream::Create(const std::shared_ptr<pub::Application> application,
@@ -27,7 +28,7 @@ FileStream::~FileStream()
 
 bool FileStream::Start()
 {
-	if(GetState() != Stream::State::CREATED)
+	if (GetState() != Stream::State::CREATED)
 	{
 		return false;
 	}
@@ -39,24 +40,28 @@ bool FileStream::Start()
 		return false;
 	}
 
+	std::static_pointer_cast<FileApplication>(GetApplication())->SessionController();
+
 	return Stream::Start();
 }
 
 bool FileStream::Stop()
 {
-	if(GetState() != Stream::State::STARTED)
+	if (GetState() != Stream::State::STARTED)
 	{
 		return false;
 	}
 
 	logtd("FileStream(%u) has been stopped", GetId());
 
+	std::static_pointer_cast<FileApplication>(GetApplication())->SessionController();
+
 	return Stream::Stop();
 }
 
 void FileStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if(GetState() != Stream::State::STARTED)
+	if (GetState() != Stream::State::STARTED)
 	{
 		return;
 	}
@@ -67,11 +72,11 @@ void FileStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet
 
 void FileStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if(GetState() != Stream::State::STARTED)
+	if (GetState() != Stream::State::STARTED)
 	{
 		return;
 	}
-	
+
 	auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
 	BroadcastPacket(stream_packet);
 }
@@ -84,8 +89,6 @@ std::shared_ptr<FileSession> FileStream::CreateSession()
 		logte("Internal Error : Cannot create session");
 		return nullptr;
 	}
-
-	logtd("created session");
 
 	AddSession(session);
 

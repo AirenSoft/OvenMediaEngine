@@ -5,6 +5,7 @@
 #include <base/info/session.h>
 
 #include "file_stream.h"
+#include "file_userdata.h"
 
 class FileApplication : public pub::Application
 {
@@ -20,4 +21,19 @@ private:
 	// Application Implementation
 	std::shared_ptr<pub::Stream> CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t worker_count) override;
 	bool DeleteStream(const std::shared_ptr<info::Stream> &info) override;
+
+public:
+	void SessionController();
+	void SessionStart(std::shared_ptr<FileSession> session);
+	void SessionStop(std::shared_ptr<FileSession> session);
+	
+	std::shared_mutex _userdata_sets_mutex;;
+	FileUserdataSets _userdata_sets;
+
+public:
+	
+	std::shared_ptr<ov::Error> RecordStart(const std::shared_ptr<info::Record> record);
+	std::shared_ptr<ov::Error> RecordStop(const std::shared_ptr<info::Record> record);
+	std::shared_ptr<ov::Error> GetRecords(std::vector<std::shared_ptr<info::Record>> &record_list);
+
 };

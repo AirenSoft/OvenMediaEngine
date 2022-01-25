@@ -28,5 +28,4 @@ private:
 	bool Stop() override;
 
 	std::shared_ptr<mon::StreamMetrics> _stream_metrics;
-	std::shared_ptr<RtmpWriter> _writer;
 };
