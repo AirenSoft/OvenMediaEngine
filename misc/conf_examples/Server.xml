@@ -212,6 +212,7 @@
 						<Scheme>ovt</Scheme>
 						<Urls><Url>origin.com:9000/app/stream_720p</Url></Urls>
 					</Pass>
+					<ForwardQueryParams>false</ForwardQueryParams>
 				</Origin>
 				<Origin>
 					<Location>/app/</Location>

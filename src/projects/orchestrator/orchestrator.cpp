@@ -660,7 +660,7 @@ namespace ocst
 				}
 			}
 
-			if (request_from->HasQueryString())
+			if (matched_origin->forward_query_params && request_from->HasQueryString())
 			{
 				// Combine query string with the URL
 				for (auto url : url_list_in_map)
