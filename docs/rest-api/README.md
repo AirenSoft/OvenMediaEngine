@@ -67,6 +67,34 @@ Set the `<Port>` to use by the API server. If you omit `<Port>`, you will use th
 </Server>
 ```
 
+### CrossDomains
+
+If you face a CORS problem by calling the OME API on your browser, you can set `<CrossDomains>` as follows:
+
+```markup
+<Server version="10">
+	...
+	<Managers>
+		<Host>
+			<Names>
+				<Name>*</Name>
+			</Names>
+
+		</Host>
+		<API>
+		...
+			<CrossDomains>
+				<Url>*.airensoft.com</Url>
+				<Url>sub-domain.airensoft.com</Url>
+				<Url>http://http-only.airensoft.com</Url>
+			</CrossDomains>
+		</API>
+	</Managers>
+</Server>
+```
+
+If protocol is omitted like `*.airensoft.com`, both HTTP and HTTPS are supported.
+
 ## API Request/Response Specification
 
 In this manual, the following format is used when describing the API.
@@ -105,7 +133,9 @@ Request Example:
 \
 
 
-`  authorization: Basic b21ldGVzdA==`
+  
+
+`authorization: Basic b21ldGVzdA==`
 {% endswagger-description %}
 
 {% swagger-parameter in="path" name="" type="string" %}
