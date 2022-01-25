@@ -24,6 +24,8 @@
 
 #include <modules/sdp/session_description.h>
 
+#include <modules/rtsp/header_fields/rtsp_header_fields.h>
+
 #define RTSP_USER_AGENT_NAME	"OvenMediaEngine"
 namespace pvd
 {
@@ -126,6 +128,7 @@ namespace pvd
 
 		std::vector<std::shared_ptr<const ov::Url>> _url_list;
 		std::shared_ptr<const ov::Url> _curr_url;
+		std::shared_ptr<RtspHeaderAuthorizationField> _authorization_field = nullptr;
 
 		std::shared_ptr<ov::Socket> _signalling_socket;
 		

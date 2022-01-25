@@ -75,6 +75,8 @@ public:
 	std::shared_ptr<ov::Data> GetMessage();
 
 	// Getter
+	ov::String GetMethodStr() const;
+	ov::String GetRequestUri() const;
 	RtspMessageType GetMessageType() const;
 	uint32_t GetCSeq() const;
 	uint32_t GetStatusCode() const;
@@ -83,7 +85,7 @@ public:
 	ov::String DumpHeader() const;
 
 private:
-	ov::String RtspMethodToString(RtspMethod method);
+	ov::String RtspMethodToString(RtspMethod method) const;
 	bool SerializeHeader();
 
 	// Parsing

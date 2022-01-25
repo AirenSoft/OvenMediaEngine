@@ -12,7 +12,6 @@
 #include <base/info/application.h>
 #include <base/ovlibrary/byte_io.h>
 #include <modules/rtp_rtcp/rtp_depacketizer_mpeg4_generic_audio.h>
-#include <modules/rtsp/header_fields/rtsp_header_fields.h>
 
 #include "rtspc_provider.h"
 
@@ -240,26 +239,79 @@ namespace pvd
 		describe->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Accept, "application/sdp"));
 		describe->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
 
-		if (SendRequestMessage(describe) == false)
+		std::shared_ptr<RtspMessage> reply = nullptr;
+		for(int i=0; i<2; i++)
 		{
-			SetState(State::ERROR);
-			logte("Could not request DESCIBE to RTSP server (%s)", _curr_url->ToUrlString().CStr());
-			return false;
-		}
+			if (SendRequestMessage(describe) == false)
+			{
+				SetState(State::ERROR);
+				logte("Could not request DESCIBE to RTSP server (%s)", _curr_url->ToUrlString().CStr());
+				return false;
+			}
 
-		auto reply = ReceiveResponse(describe->GetCSeq(), 3000);
+			reply = ReceiveResponse(describe->GetCSeq(), 3000);
+			if (reply == nullptr)
+			{
+				SetState(State::ERROR);
+				logte("No response(CSeq : %u) was received from the rtsp server(%s)", describe->GetCSeq(), _curr_url->ToUrlString().CStr());
+				return false;
+			}
+			// Unauthorized, try to authenticate
+			else if (reply->GetStatusCode() == 401)
+			{
+				// Authorization has been failed
+				if(i == 1)
+				{
+					SetState(State::ERROR);
+					logte("Rtsp server(%s) rejected the describe request : %d(%s) | ID/Password may be incorrect.", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
+					return false;
+				}
 
-		if (reply == nullptr)
-		{
-			SetState(State::ERROR);
-			logte("No response(CSeq : %u) was received from the rtsp server(%s)", describe->GetCSeq(), _curr_url->ToUrlString().CStr());
-			return false;
-		}
-		else if (reply->GetStatusCode() != 200)
-		{
-			SetState(State::ERROR);
-			logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
-			return false;
+				auto authenticate_field = reply->GetHeaderFieldAs<RtspHeaderWWWAuthenticateField>(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::WWWAuthenticate));
+				if (authenticate_field == nullptr)
+				{
+					SetState(State::ERROR);
+					logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
+					return false;
+				}
+
+				// Add authorization field
+				if(authenticate_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Basic)
+				{
+					_authorization_field = RtspHeaderAuthorizationField::CreateRtspBasicAuthorizationField(_curr_url->Id(), _curr_url->Password());
+					describe->AddHeaderField(_authorization_field);
+
+					// Try to send again
+					continue;
+				}
+				else if (authenticate_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+				{
+					_authorization_field = RtspHeaderAuthorizationField::CreateRtspDigestAuthorizationField(_curr_url->Id(), _curr_url->Password(), 
+																											describe->GetMethodStr(), describe->GetRequestUri(),
+																											authenticate_field->GetRealm(), authenticate_field->GetNonce());
+					describe->AddHeaderField(_authorization_field);
+
+					// Try to send again
+					continue;
+				}
+				else
+				{
+					SetState(State::ERROR);
+					logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
+					return false;
+				}
+			}
+			else if (reply->GetStatusCode() != 200)
+			{
+				SetState(State::ERROR);
+				logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
+				return false;
+			}
+			else 
+			{
+				// Success
+				break;
+			}
 		}
 
 		logtd("Response Describe : %s", reply->DumpHeader().CStr());
@@ -340,6 +392,16 @@ namespace pvd
 			}
 
 			auto setup = std::make_shared<RtspMessage>(RtspMethod::SETUP, GetNextCSeq(), control_url);
+			if(_authorization_field != nullptr)
+			{
+				// If authorization method is Digest, update the method and uri
+				if(_authorization_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+				{
+					_authorization_field->UpdateDigestAuth(setup->GetMethodStr(), setup->GetRequestUri());
+				}
+
+				setup->AddHeaderField(_authorization_field);
+			}
 
 			// Now RtspcStream only supports RTP/AVP/TCP;unicast/interleaved(rtp+rtcp)
 			// The chennel id can be used for demuxing, but since it is already demuxing in a different way, it is not saved.
@@ -352,7 +414,7 @@ namespace pvd
 			if (SendRequestMessage(setup) == false)
 			{
 				SetState(State::ERROR);
-				logte("Could not request DESCIBE to RTSP server (%s)", _curr_url->ToUrlString().CStr());
+				logte("Could not request setup to RTSP server (%s)", _curr_url->ToUrlString().CStr());
 				return false;
 			}
 
@@ -368,7 +430,7 @@ namespace pvd
 			else if (reply->GetStatusCode() != 200)
 			{
 				SetState(State::ERROR);
-				logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
+				logte("Rtsp server(%s) rejected the setup request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
 				return false;
 			}
 
@@ -526,7 +588,16 @@ namespace pvd
 		}
 
 		auto play = std::make_shared<RtspMessage>(RtspMethod::PLAY, GetNextCSeq(), _curr_url->ToUrlString(true));
+		if(_authorization_field != nullptr)
+		{
+			// If authorization method is Digest, update the method and uri
+			if(_authorization_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+			{
+				_authorization_field->UpdateDigestAuth(play->GetMethodStr(), play->GetRequestUri());
+			}
 
+			play->AddHeaderField(_authorization_field);
+		}
 		play->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
 		play->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
 
@@ -569,7 +640,16 @@ namespace pvd
 		}
 
 		auto teardown = std::make_shared<RtspMessage>(RtspMethod::TEARDOWN, GetNextCSeq(), _curr_url->ToUrlString(true));
+		if(_authorization_field != nullptr)
+		{
+			// If authorization method is Digest, update the method and uri
+			if(_authorization_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+			{
+				_authorization_field->UpdateDigestAuth(teardown->GetMethodStr(), teardown->GetRequestUri());
+			}
 
+			teardown->AddHeaderField(_authorization_field);
+		}
 		teardown->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
 		teardown->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
 
