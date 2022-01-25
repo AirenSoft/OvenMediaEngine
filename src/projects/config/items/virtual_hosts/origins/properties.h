@@ -22,8 +22,8 @@ namespace cfg
 			protected:
 				void MakeList() override
 				{
-					Register("NoInputFailoverTimeout", &_no_input_failover_timeout);
-					Register("UnusedStreamDeletionTimeout", &_unused_stream_deletion_timeout);
+					Register<Optional>("NoInputFailoverTimeout", &_no_input_failover_timeout);
+					Register<Optional>("UnusedStreamDeletionTimeout", &_unused_stream_deletion_timeout);
 				}
 
 				int64_t _no_input_failover_timeout = 3000;
