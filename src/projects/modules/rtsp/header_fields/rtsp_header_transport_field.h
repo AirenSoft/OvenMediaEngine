@@ -29,11 +29,6 @@ public:
 		_ssrc = ssrc;
 	}
 
-	ParsedFieldType GetParsedFieldClass() override
-	{
-		return ParsedFieldType::Session;
-	}
-
 	// https://datatracker.ietf.org/doc/html/rfc2326#section-12.39
 	// transport/profile/lower-transport;parameters
 
@@ -104,7 +99,7 @@ public:
 		return true;
 	}
 
-	ov::String Serialize() override
+	ov::String Serialize() const override
 	{
 		return ov::String::FormatString("RTP/AVP/TCP;unicast;interleaved=%d-%d;ssrc=%X", _interleaved_channel_start, _interleaved_channel_end, _ssrc);
 	}

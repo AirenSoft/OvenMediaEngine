@@ -3,7 +3,7 @@
 
 #define OV_LOG_TAG "RtspMessage"
 
-ov::String RtspMessage::RtspMethodToString(RtspMethod method)
+ov::String RtspMessage::RtspMethodToString(RtspMethod method) const
 {
 	switch(method)
 	{
@@ -219,10 +219,11 @@ RtspMessage::RtspMessage(uint32_t status_code, uint32_t cseq, ov::String reason_
 	AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::CSeq, _cseq));
 }
 
+// TODO(Getroot): I have to deal with this because there are multiple header fields with the same name. 
+// For example, currently only the first of WWW-Authenticate is processed.
 bool RtspMessage::AddHeaderField(const std::shared_ptr<RtspHeaderField> &field)
 {
 	_header_fields.emplace(field->GetName().UpperCaseString(), field);
-
 	_is_header_data_uptodate = false;
 
 	return true;
@@ -353,6 +354,16 @@ std::shared_ptr<ov::Data> RtspMessage::GetMessage()
 RtspMessageType RtspMessage::GetMessageType() const
 {
 	return _type;
+}
+
+ov::String RtspMessage::GetMethodStr() const
+{
+	return _method_string;
+}
+
+ov::String RtspMessage::GetRequestUri() const
+{
+	return _request_uri;
 }
 
 uint32_t RtspMessage::GetCSeq() const

@@ -27,13 +27,9 @@ enum class RtspHeaderFieldType : uint16_t
 	Session,
 	Transport,
 	Expires,
-	Range
-};
-
-enum class ParsedFieldType : uint16_t
-{
-	GeneralType = 0, // String or Integer
-	Session
+	Range,
+	WWWAuthenticate,
+	Authorization
 };
 
 // Basic field(name, value) class
@@ -49,17 +45,12 @@ public:
 
 	virtual bool Parse(const ov::String &message);
 	
-	virtual ov::String Serialize();
+	virtual ov::String Serialize() const;
 
 	virtual bool SetContent(RtspHeaderFieldType type, ov::String value);
 	virtual bool SetContent(ov::String name, ov::String value);
 	virtual bool SetContent(ov::String name, int32_t value);
 	virtual bool SetValue(ov::String value);
-
-	virtual ParsedFieldType GetParsedFieldClass()
-	{
-		return ParsedFieldType::GeneralType;
-	}
 	
 	ov::String GetName();
 	ov::String GetValue();

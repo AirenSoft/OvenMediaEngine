@@ -31,6 +31,10 @@ std::shared_ptr<RtspHeaderField> RtspHeaderFieldParser::Parse(const ov::String &
 	{
 		field = std::make_shared<RtspHeaderTransportField>();
 	}
+	else if(field_name.UpperCaseString() == RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::WWWAuthenticate).UpperCaseString())
+	{
+		field = std::make_shared<RtspHeaderWWWAuthenticateField>();
+	}
 	else
 	{
 		field = std::make_shared<RtspHeaderField>();
