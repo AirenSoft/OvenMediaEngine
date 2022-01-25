@@ -37,6 +37,8 @@ FileSession::~FileSession()
 
 bool FileSession::Start()
 {
+	std::lock_guard<std::shared_mutex> mlock(_lock);
+
 	if (StartRecord() == false)
 	{
 		logte("Failed to start recording. id(%d)", GetId());
@@ -51,6 +53,8 @@ bool FileSession::Start()
 
 bool FileSession::Stop()
 {
+	std::lock_guard<std::shared_mutex> mlock(_lock);
+
 	if (StopRecord() == false)
 	{
 		logte("Failed to stop recording. id(%d)", GetId());
@@ -62,6 +66,7 @@ bool FileSession::Stop()
 
 	return Session::Stop();
 }
+
 bool FileSession::Split()
 {
 	if (StopRecord() == false)
@@ -92,6 +97,7 @@ void FileSession::UpdateTemplateOutputPath()
 	{
 		_template_output_file_path = file_config.GetFilePath();
 	}
+
 	// If FilePath config is not set, save it as the default path.
 	if (_template_output_file_path.GetLength() == 0 || _template_output_file_path.IsEmpty() == true)
 	{
@@ -106,6 +112,7 @@ void FileSession::UpdateTemplateOutputPath()
 	{
 		_template_output_info_path = file_config.GetInfoPath();
 	}
+
 	// If FileInfoPath config is not set, save it as the default path.
 	if (_template_output_info_path.GetLength() == 0 || _template_output_info_path.IsEmpty() == true)
 	{
@@ -118,8 +125,6 @@ void FileSession::UpdateTemplateOutputPath()
 
 bool FileSession::StartRecord()
 {
-	std::lock_guard<std::shared_mutex> mlock(_lock);
-
 	GetRecord()->UpdateRecordStartTime();
 	GetRecord()->SetFilePath(GetOutputFilePath());
 	GetRecord()->SetInfoPath(GetOutputFileInfoPath());
@@ -233,8 +238,6 @@ bool FileSession::StartRecord()
 
 bool FileSession::StopRecord()
 {
-	std::lock_guard<std::shared_mutex> mlock(_lock);
-
 	if (_writer != nullptr)
 	{
 		_writer->Stop();
@@ -285,21 +288,21 @@ bool FileSession::StopRecord()
 
 		if (rename(tmp_output_path.CStr(), output_path.CStr()) != 0)
 		{
-			logte("Failed to move file.\n from: %s\n to:  %s", tmp_output_path.CStr(), output_path.CStr());
+			logte("Failed to move file. from: %s to: %s", tmp_output_path.CStr(), output_path.CStr());
 
 			SetState(SessionState::Error);
 			GetRecord()->SetState(info::Record::RecordState::Error);
 
 			return false;
 		}
-		logtd("Move the temporary file to real file.\n from: %s\n   to: %s", tmp_output_path.CStr(), output_path.CStr());
+		logtd("Move the temporary file to real file. from: %s  to: %s", tmp_output_path.CStr(), output_path.CStr());
 
 		// Append recorded information to the information file
 		if (FileExport::GetInstance()->ExportRecordToXml(info_path, GetRecord()) == false)
 		{
 			logte("Failed to export xml file. path: %s", info_path.CStr());
 		}
-		logtd("Append to the infomation file. file: %s", info_path.CStr());
+		logtd("Append to the infomation file. path: %s", info_path.CStr());
 
 		GetRecord()->SetState(info::Record::RecordState::Stopped);
 		GetRecord()->IncreaseSequence();
@@ -356,6 +359,39 @@ bool FileSession::SendOutgoingData(const std::any &packet)
 
 		GetRecord()->UpdateRecordTime();
 		GetRecord()->IncreaseRecordBytes(session_packet->GetData()->GetLength());
+	}
+
+	bool need_file_split = false;
+
+	// When setting interval parameter, perform segmentation recording.
+	if ((uint64_t)GetRecord()->GetInterval() > 0 && (GetRecord()->GetRecordTime() > (uint64_t)GetRecord()->GetInterval()))
+	{
+		need_file_split = true;
+	}
+	// When setting schedule parameter, perform segmentation recording.
+	else if (GetRecord()->GetSchedule().IsEmpty() != true)
+	{
+		if (GetRecord()->IsNextScheduleTimeEmpty() == true)
+		{
+			if (GetRecord()->UpdateNextScheduleTime() == false)
+			{
+				logte("Failed to update next schedule time. reqeuset to stop recording.");
+			}
+		}
+		else if (GetRecord()->GetNextScheduleTime() <= std::chrono::system_clock::now())
+		{
+			need_file_split = true;
+
+			if (GetRecord()->UpdateNextScheduleTime() == false)
+			{
+				logte("Failed to update next schedule time. reqeuset to stop recording.");
+			}
+		}
+	}
+
+	if(need_file_split)
+	{
+		Split();
 	}
 
 	return true;

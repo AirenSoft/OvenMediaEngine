@@ -639,7 +639,7 @@ namespace ocst
 					// Append remaining_part
 					url_part.Append(remaining_part);
 
-					if (index >= 0)
+					if(index >= 0)
 					{
 						url_part.Append('?');
 						url_part.Append(another_part);

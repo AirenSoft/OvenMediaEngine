@@ -37,6 +37,7 @@ namespace ocst
 	Origin::Origin(const cfg::vhost::orgn::Origin &origin_config)
 		: scheme(origin_config.GetPass().GetScheme()),
 		  location(origin_config.GetLocation()),
+		  forward_query_params(origin_config.GetPass().IsForwardQueryParamsEnabled()),
 		  state(ItemState::New)
 
 	{

@@ -51,6 +51,10 @@ namespace ocst
 
 		// Origin/Location
 		ov::String location;
+
+		// Forwrading query params
+		bool forward_query_params = true;
+
 		// Generated URL list from <Origin>.<Pass>.<URL>
 		std::vector<ov::String> url_list;
 

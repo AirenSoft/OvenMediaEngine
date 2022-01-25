@@ -148,6 +148,11 @@
 						<Urls>
 							<Url>${env:DEFAULT_ORIGIN_SERVER:}:${env:DEFAULT_ORIGIN_PORT:9000}/</Url>
 						</Urls>
+						<!-- 
+							Whether to pass the query string to the origin server in the URL the user requested to play (used by some RTSP servers) 
+							default : true
+						-->
+						<ForwardQueryParams>true</ForwardQueryParams>
 					</Pass>
 				</Origin>
 			</Origins>
