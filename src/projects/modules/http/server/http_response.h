@@ -59,8 +59,12 @@ namespace http
 				_reason = reason;
 			}
 
+			// Append a new item to the existing header
+			bool AddHeader(const ov::String &key, const ov::String &value);
+			// Overwrites the existing value to <value>
 			bool SetHeader(const ov::String &key, const ov::String &value);
-			const ov::String &GetHeader(const ov::String &key);
+			const std::vector<ov::String> &GetHeader(const ov::String &key) const;
+			bool RemoveHeader(const ov::String &key);
 
 			// Enqueue the data into the queue (This data will be sent when SendResponse() is called)
 			// Can be used for response with content-length
@@ -102,6 +106,7 @@ namespace http
 			}
 
 		protected:
+			bool IsHeaderSent() const;
 			uint32_t SendHeaderIfNeeded();
 			uint32_t SendResponse();
 
@@ -115,14 +120,14 @@ namespace http
 
 			bool _is_header_sent = false;
 
-			std::map<ov::String, ov::String> _response_header;
+			std::unordered_map<ov::String, std::vector<ov::String>> _response_header;
 
 			// FIXME(dimiden): It is supposed to be synchronized whenever a packet is sent, but performance needs to be improved
 			std::recursive_mutex _response_mutex;
 			size_t _response_data_size = 0;
 			std::vector<std::shared_ptr<const ov::Data>> _response_data_list;
 
-			ov::String _default_value = "";
+			std::vector<ov::String> _default_value {};
 
 			bool _chunked_transfer = false;
 		};
