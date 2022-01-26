@@ -46,7 +46,7 @@ namespace http
 			return _tls_data;
 		}
 
-		bool HttpResponse::IsHeaderSent() const
+		bool HttpResponse::CheckHeaderSent() const
 		{
 			if (_is_header_sent)
 			{
@@ -59,6 +59,11 @@ namespace http
 
 		bool HttpResponse::AddHeader(const ov::String &key, const ov::String &value)
 		{
+			if (CheckHeaderSent() == false)
+			{
+				return false;
+			}
+
 			_response_header[key].push_back(value);
 
 			return true;
@@ -66,7 +71,7 @@ namespace http
 
 		bool HttpResponse::SetHeader(const ov::String &key, const ov::String &value)
 		{
-			if (IsHeaderSent() == false)
+			if (CheckHeaderSent() == false)
 			{
 				return false;
 			}
@@ -90,7 +95,7 @@ namespace http
 
 		bool HttpResponse::RemoveHeader(const ov::String &key)
 		{
-			if (IsHeaderSent() == false)
+			if (CheckHeaderSent() == false)
 			{
 				return false;
 			}
@@ -146,7 +151,7 @@ namespace http
 
 		uint32_t HttpResponse::SendHeaderIfNeeded()
 		{
-			if (IsHeaderSent())
+			if (CheckHeaderSent() == false)
 			{
 				// The headers are already sent
 				return 0;
