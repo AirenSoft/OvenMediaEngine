@@ -106,7 +106,7 @@ namespace http
 			}
 
 		protected:
-			bool IsHeaderSent() const;
+			bool CheckHeaderSent() const;
 			uint32_t SendHeaderIfNeeded();
 			uint32_t SendResponse();
 
