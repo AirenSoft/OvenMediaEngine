@@ -21,8 +21,8 @@ namespace cfg
 				ov::String _path = "conf/api_data";
 
 			public:
-				CFG_DECLARE_REF_GETTER_OF(IsEnabled, _enabled)
-				CFG_DECLARE_REF_GETTER_OF(GetPath, _path)
+				CFG_DECLARE_CONST_REF_GETTER_OF(IsEnabled, _enabled)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetPath, _path)
 
 			protected:
 				void MakeList() override

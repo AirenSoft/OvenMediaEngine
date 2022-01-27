@@ -24,7 +24,7 @@ namespace cfg
 			{
 			}
 
-			CFG_DECLARE_REF_GETTER_OF(GetPortList, _port_value);
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetPortList, _port_value);
 
 		protected:
 			MAY_THROWS(std::shared_ptr<ConfigError>)

@@ -18,8 +18,8 @@ namespace cfg
 		{
 			struct Enables : public Item
 			{
-				CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
-				CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetProviders, _providers)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetPublishers, _publishers)
 
 			protected:
 				void MakeList() override

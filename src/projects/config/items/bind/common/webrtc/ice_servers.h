@@ -22,7 +22,7 @@ namespace cfg
 				std::vector<IceServer> _ice_server_list;
 
 			public:
-				CFG_DECLARE_REF_GETTER_OF(GetIceServerList, _ice_server_list);
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetIceServerList, _ice_server_list);
 
 			protected:
 				void MakeList() override

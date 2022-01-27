@@ -18,7 +18,7 @@ namespace cfg
 			std::vector<ov::String> _url_list;
 
 		public:
-			CFG_DECLARE_REF_GETTER_OF(GetUrlList, _url_list)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetUrlList, _url_list)
 
 		protected:
 			void MakeList() override

@@ -28,13 +28,13 @@ namespace cfg
 					int _channel = 0;
 
 				public:
-					CFG_DECLARE_REF_GETTER_OF(IsBypass, _bypass)
-					CFG_DECLARE_REF_GETTER_OF(IsActive, _active)
-					CFG_DECLARE_REF_GETTER_OF(GetCodec, _codec)
-					CFG_DECLARE_REF_GETTER_OF(GetBitrate, _bitrate)
-					CFG_DECLARE_REF_GETTER_OF(GetBitrateString, _bitrate_string)
-					CFG_DECLARE_REF_GETTER_OF(GetSamplerate, _samplerate)
-					CFG_DECLARE_REF_GETTER_OF(GetChannel, _channel)
+					CFG_DECLARE_CONST_REF_GETTER_OF(IsBypass, _bypass)
+					CFG_DECLARE_CONST_REF_GETTER_OF(IsActive, _active)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetCodec, _codec)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetBitrate, _bitrate)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetBitrateString, _bitrate_string)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetSamplerate, _samplerate)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetChannel, _channel)
 
 				protected:
 					void MakeList() override

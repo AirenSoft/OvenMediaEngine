@@ -19,8 +19,8 @@ namespace cfg
 			ov::String _value = "/time?iso&ms";
 
 		public:
-			CFG_DECLARE_REF_GETTER_OF(GetScheme, _scheme)
-			CFG_DECLARE_REF_GETTER_OF(GetValue, _value)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetScheme, _scheme)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetValue, _value)
 
 		protected:
 			void MakeList() override

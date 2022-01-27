@@ -52,27 +52,27 @@ namespace cfg
 		vhost::VirtualHosts _virtual_hosts;
 
 	public:
-		CFG_DECLARE_REF_GETTER_OF(GetVersion, _version)
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetVersion, _version)
 
-		CFG_DECLARE_REF_GETTER_OF(GetName, _name)
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
 
-		CFG_DECLARE_REF_GETTER_OF(GetTypeName, _typeName)
-		CFG_DECLARE_REF_GETTER_OF(GetType, _type)
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetTypeName, _typeName)
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetType, _type)
 
-		CFG_DECLARE_REF_GETTER_OF(GetIp, _ip)
-		CFG_DECLARE_REF_GETTER_OF(GetStunServer, _stun_server)
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetIp, _ip)
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetStunServer, _stun_server)
 
-		CFG_DECLARE_REF_GETTER_OF(IsPrivaryProtectionOn, _privacy_protection_on)
+		CFG_DECLARE_CONST_REF_GETTER_OF(IsPrivaryProtectionOn, _privacy_protection_on)
 
-		CFG_DECLARE_REF_GETTER_OF(GetBind, _bind)
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetBind, _bind)
 
-		CFG_DECLARE_REF_GETTER_OF(GetManagers, _managers)
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetManagers, _managers)
 
-		CFG_DECLARE_REF_GETTER_OF(GetAnalytics, _analytics)
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetAnalytics, _analytics)
 
-		CFG_DECLARE_REF_GETTER_OF(GetP2P, _p2p)
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetP2P, _p2p)
 
-		CFG_DECLARE_REF_GETTER_OF(GetVirtualHostList, _virtual_hosts.GetVirtualHostList())
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetVirtualHostList, _virtual_hosts.GetVirtualHostList())
 
 		ov::String GetID() const
 		{

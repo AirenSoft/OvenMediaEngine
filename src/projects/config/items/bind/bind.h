@@ -24,9 +24,9 @@ namespace cfg
 			pub::Publishers _publishers;
 
 		public:
-			CFG_DECLARE_REF_GETTER_OF(GetManagers, _managers)
-			CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
-			CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetManagers, _managers)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetProviders, _providers)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetPublishers, _publishers)
 
 		protected:
 			void MakeList() override

@@ -20,8 +20,8 @@ namespace cfg
 			ov::String _collector = "tcp://collector.ovenconsole.io:21514";
 
 		public:
-			CFG_DECLARE_REF_GETTER_OF(IsEnabled, _enable)
-			CFG_DECLARE_REF_GETTER_OF(GetCollector, _collector)
+			CFG_DECLARE_CONST_REF_GETTER_OF(IsEnabled, _enable)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetCollector, _collector)
 
 		protected:
 			void MakeList() override

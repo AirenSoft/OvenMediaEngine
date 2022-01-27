@@ -18,8 +18,8 @@ namespace cfg
 		{
 			struct Origin : public Item
 			{
-				CFG_DECLARE_REF_GETTER_OF(GetLocation, _location)
-				CFG_DECLARE_REF_GETTER_OF(GetPass, _pass)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetLocation, _location)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetPass, _pass)
 
 			protected:
 				void MakeList() override

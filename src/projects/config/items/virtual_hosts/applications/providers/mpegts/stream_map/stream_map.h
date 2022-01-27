@@ -22,7 +22,7 @@ namespace cfg
 				{
 					struct StreamMap : public Item
 					{
-						CFG_DECLARE_REF_GETTER_OF(GetStreamList, _stream_list)
+						CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamList, _stream_list)
 
 					protected:
 						void MakeList() override

@@ -25,9 +25,9 @@ namespace cfg
 						return PublisherType::File;
 					}
 					
-					CFG_DECLARE_REF_GETTER_OF(GetFilePath, _file_path)
-					CFG_DECLARE_REF_GETTER_OF(GetInfoPath, _info_path)
-					CFG_DECLARE_REF_GETTER_OF(GetRootPath, _root_path)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetFilePath, _file_path)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetInfoPath, _info_path)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetRootPath, _root_path)
 
 				protected:
 					void MakeList() override

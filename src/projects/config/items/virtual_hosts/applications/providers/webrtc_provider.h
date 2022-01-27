@@ -25,7 +25,7 @@ namespace cfg
 						return ProviderType::WebRTC;
 					}
 
-					CFG_DECLARE_REF_GETTER_OF(GetTimeout, _timeout)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetTimeout, _timeout)
 
 				protected:
 					void MakeList() override

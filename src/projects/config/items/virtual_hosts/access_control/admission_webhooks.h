@@ -19,11 +19,11 @@ namespace cfg
 		{
 			struct AdmissionWebhooks : public Item
 			{
-				CFG_DECLARE_REF_GETTER_OF(GetControlServerUrl, _control_server_url)
-				CFG_DECLARE_REF_GETTER_OF(GetSecretKey, _secret_key)
-				CFG_DECLARE_REF_GETTER_OF(GetTimeoutMsec, _timeout_msec)
-				CFG_DECLARE_REF_GETTER_OF(GetEnabledProviders, _enables.GetProviders().GetValue())
-				CFG_DECLARE_REF_GETTER_OF(GetEnabledPublishers, _enables.GetPublishers().GetValue())
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetControlServerUrl, _control_server_url)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetSecretKey, _secret_key)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetTimeoutMsec, _timeout_msec)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetEnabledProviders, _enables.GetProviders().GetValue())
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetEnabledPublishers, _enables.GetPublishers().GetValue())
 
 				bool IsEnabledProvider(ProviderType type) const
 				{

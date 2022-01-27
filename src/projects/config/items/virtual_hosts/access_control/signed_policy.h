@@ -19,11 +19,11 @@ namespace cfg
 		{
 			struct SignedPolicy : public Item
 			{
-				CFG_DECLARE_REF_GETTER_OF(GetPolicyQueryKeyName, _policy_query_key_name)
-				CFG_DECLARE_REF_GETTER_OF(GetSignatureQueryKeyName, _signature_query_key_name)
-				CFG_DECLARE_REF_GETTER_OF(GetSecretKey, _secret_key)
-				CFG_DECLARE_REF_GETTER_OF(GetEnabledProviders, _enables.GetProviders().GetValue())
-				CFG_DECLARE_REF_GETTER_OF(GetEnabledPublishers, _enables.GetPublishers().GetValue())
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetPolicyQueryKeyName, _policy_query_key_name)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetSignatureQueryKeyName, _signature_query_key_name)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetSecretKey, _secret_key)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetEnabledProviders, _enables.GetProviders().GetValue())
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetEnabledPublishers, _enables.GetPublishers().GetValue())
 
 				bool IsEnabledProvider(ProviderType type) const
 				{

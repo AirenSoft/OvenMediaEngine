@@ -37,10 +37,10 @@ namespace cfg
 				{
 				}
 
-				CFG_DECLARE_REF_GETTER_OF(GetSignalling, _signalling)
-				CFG_DECLARE_REF_GETTER_OF(GetTcpRelayBind, _tcp_relay_bind);
-				CFG_DECLARE_REF_GETTER_OF(GetIceCandidates, _ice_candidates)
-				CFG_DECLARE_REF_GETTER_OF(GetIceServers, _ice_servers)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetSignalling, _signalling)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetTcpRelayBind, _tcp_relay_bind);
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetIceCandidates, _ice_candidates)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetIceServers, _ice_servers)
 
 			protected:
 				void MakeList() override

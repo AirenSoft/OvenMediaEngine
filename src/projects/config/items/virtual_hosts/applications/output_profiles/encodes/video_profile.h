@@ -32,17 +32,17 @@ namespace cfg
 					int _thread_count = 0;
 
 				public:
-					CFG_DECLARE_REF_GETTER_OF(IsBypass, _bypass)
-					CFG_DECLARE_REF_GETTER_OF(IsActive, _active)
-					CFG_DECLARE_REF_GETTER_OF(GetCodec, _codec)
-					CFG_DECLARE_REF_GETTER_OF(GetScale, _scale)
-					CFG_DECLARE_REF_GETTER_OF(GetWidth, _width)
-					CFG_DECLARE_REF_GETTER_OF(GetHeight, _height)
-					CFG_DECLARE_REF_GETTER_OF(GetBitrate, _bitrate)
-					CFG_DECLARE_REF_GETTER_OF(GetBitrateString, _bitrate_string)
-					CFG_DECLARE_REF_GETTER_OF(GetFramerate, _framerate)
-					CFG_DECLARE_REF_GETTER_OF(GetPreset, _preset)
-					CFG_DECLARE_REF_GETTER_OF(GetThreadCount, _thread_count)
+					CFG_DECLARE_CONST_REF_GETTER_OF(IsBypass, _bypass)
+					CFG_DECLARE_CONST_REF_GETTER_OF(IsActive, _active)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetCodec, _codec)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetScale, _scale)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetWidth, _width)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetHeight, _height)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetBitrate, _bitrate)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetBitrateString, _bitrate_string)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetFramerate, _framerate)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetPreset, _preset)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetThreadCount, _thread_count)
 
 				protected:
 					void MakeList() override

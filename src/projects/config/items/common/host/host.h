@@ -22,9 +22,9 @@ namespace cfg
 			Tls _tls;
 
 		public:
-			CFG_DECLARE_REF_GETTER_OF(GetNameList, _names.GetNameList())
-			CFG_DECLARE_REF_GETTER_OF(GetNames, _names)
-			CFG_DECLARE_REF_GETTER_OF(GetTls, _tls)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetNameList, _names.GetNameList())
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetNames, _names)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetTls, _tls)
 
 		protected:
 			void MakeList() override
