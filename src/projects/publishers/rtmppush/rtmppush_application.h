@@ -23,7 +23,9 @@ private:
 	bool DeleteStream(const std::shared_ptr<info::Stream> &info) override;
 
 public:
-	void SessionController();
+	void SessionUpdateByUser();
+	void SessionUpdateByStream(std::shared_ptr<RtmpPushStream>, bool started);
+	void SessionUpdate(std::shared_ptr<RtmpPushStream> stream, std::shared_ptr<info::Push> userdata);
 	void SessionStart(std::shared_ptr<RtmpPushSession> session);
 	void SessionStop(std::shared_ptr<RtmpPushSession> session);
 

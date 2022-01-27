@@ -40,7 +40,7 @@ bool RtmpPushStream::Start()
 
 	logtd("RtmpPushStream(%ld) has been started", GetId());
 
-	std::static_pointer_cast<RtmpPushApplication>(GetApplication())->SessionController();
+	std::static_pointer_cast<RtmpPushApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<RtmpPushStream>(GetSharedPtr()), true);
 
 	return Stream::Start();
 }
@@ -48,13 +48,13 @@ bool RtmpPushStream::Start()
 bool RtmpPushStream::Stop()
 {
 	logtd("RtmpPushStream(%u) has been stopped", GetId());
-
+	
+	std::static_pointer_cast<RtmpPushApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<RtmpPushStream>(GetSharedPtr()), false);
+	
 	if (GetState() != Stream::State::STARTED)
 	{
 		return false;
 	}
-
-	std::static_pointer_cast<RtmpPushApplication>(GetApplication())->SessionController();
 
 	return Stream::Stop();
 }
