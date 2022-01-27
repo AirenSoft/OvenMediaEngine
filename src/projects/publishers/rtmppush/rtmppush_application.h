@@ -24,7 +24,7 @@ private:
 
 public:
 	void SessionUpdateByUser();
-	void SessionUpdateByStream(std::shared_ptr<RtmpPushStream>, bool started);
+	void SessionUpdateByStream(std::shared_ptr<RtmpPushStream> stream, bool stopped);
 	void SessionUpdate(std::shared_ptr<RtmpPushStream> stream, std::shared_ptr<info::Push> userdata);
 	void SessionStart(std::shared_ptr<RtmpPushSession> session);
 	void SessionStop(std::shared_ptr<RtmpPushSession> session);

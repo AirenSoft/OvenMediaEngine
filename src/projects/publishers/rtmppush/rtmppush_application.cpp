@@ -83,21 +83,29 @@ void RtmpPushApplication::SessionUpdate(std::shared_ptr<RtmpPushStream> stream, 
 	}
 }
 
-void RtmpPushApplication::SessionUpdateByStream(std::shared_ptr<RtmpPushStream> stream, bool started)
+void RtmpPushApplication::SessionUpdateByStream(std::shared_ptr<RtmpPushStream> stream, bool stopped)
 {
+	if (stream == nullptr)
+	{
+		return;
+	}
+
 	for (uint32_t i = 0; i < _userdata_sets.GetCount(); i++)
 	{
 		auto userdata = _userdata_sets.GetAt(i);
-		if (userdata == nullptr || userdata->GetStreamName() != stream->GetName())
+		if (userdata == nullptr)
 			continue;
 
-		if (stream != nullptr && started == true)
+		if (userdata->GetStreamName() != stream->GetName())
+			continue;
+
+		if (stopped == true)
 		{
-			SessionUpdate(stream, userdata);
+			userdata->SetState(info::Push::PushState::Ready);
 		}
 		else
 		{
-			userdata->SetState(info::Push::PushState::Ready);
+			SessionUpdate(stream, userdata);
 		}
 	}
 }
@@ -110,7 +118,7 @@ void RtmpPushApplication::SessionUpdateByUser()
 		if (userdata == nullptr)
 			continue;
 
-		// Find a session related to Userdata.
+		// Find a stream related to Userdata.
 		auto stream = std::static_pointer_cast<RtmpPushStream>(GetStream(userdata->GetStreamName()));
 		if (stream != nullptr && stream->GetState() == pub::Stream::State::STARTED)
 		{
@@ -124,7 +132,9 @@ void RtmpPushApplication::SessionUpdateByUser()
 		if (userdata->GetRemove() == true)
 		{
 			if (stream != nullptr && userdata->GetSessionId() != 0)
+			{
 				stream->DeleteSession(userdata->GetSessionId());
+			}
 
 			_userdata_sets.DeleteByKey(userdata->GetId());
 		}
