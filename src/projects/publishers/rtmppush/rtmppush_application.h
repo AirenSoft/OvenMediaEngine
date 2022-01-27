@@ -33,6 +33,6 @@ public:
 	std::shared_ptr<ov::Error> PushStop(const std::shared_ptr<info::Push> &record);
 	std::shared_ptr<ov::Error> GetPushes(std::vector<std::shared_ptr<info::Push>> &record_list);	
 
+private:
 	RtmpPushUserdataSets _userdata_sets;
-
 };
