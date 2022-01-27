@@ -38,13 +38,13 @@ namespace cfg
 							&_webrtc_provider};
 					}
 
-					CFG_DECLARE_REF_GETTER_OF(GetRtmpProvider, _rtmp_provider)
-					CFG_DECLARE_REF_GETTER_OF(GetRtspPullProvider, _rtsp_pull_provider)
-					CFG_DECLARE_REF_GETTER_OF(GetRtspProvider, _rtsp_provider)
-					CFG_DECLARE_REF_GETTER_OF(GetOvtProvider, _ovt_provider)
-					CFG_DECLARE_REF_GETTER_OF(GetSrtProvider, _srt_provider)
-					CFG_DECLARE_REF_GETTER_OF(GetMpegtsProvider, _mpegts_provider)
-					CFG_DECLARE_REF_GETTER_OF(GetWebrtcProvider, _webrtc_provider)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetRtmpProvider, _rtmp_provider)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetRtspPullProvider, _rtsp_pull_provider)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetRtspProvider, _rtsp_provider)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetOvtProvider, _ovt_provider)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetSrtProvider, _srt_provider)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetMpegtsProvider, _mpegts_provider)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetWebrtcProvider, _webrtc_provider)
 
 				protected:
 					void MakeList() override

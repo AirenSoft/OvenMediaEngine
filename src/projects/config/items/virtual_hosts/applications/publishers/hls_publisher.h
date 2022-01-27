@@ -34,8 +34,8 @@ namespace cfg
 						return PublisherType::Hls;
 					}
 
-					CFG_DECLARE_REF_GETTER_OF(GetSegmentCount, _segment_count)
-					CFG_DECLARE_REF_GETTER_OF(GetSegmentDuration, _segment_duration)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetSegmentCount, _segment_count)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetSegmentDuration, _segment_duration)
 
 				protected:
 					void MakeList() override

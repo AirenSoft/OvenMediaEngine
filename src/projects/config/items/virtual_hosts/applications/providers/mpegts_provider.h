@@ -30,7 +30,7 @@ namespace cfg
 						return ProviderType::Mpegts;
 					}
 
-					CFG_DECLARE_REF_GETTER_OF(GetStreamMap, _stream_map)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamMap, _stream_map)
 
 				protected:
 					void MakeList() override

@@ -18,7 +18,7 @@ namespace cfg
 		{
 			struct Applications : public Item
 			{
-				CFG_DECLARE_REF_GETTER_OF(GetApplicationList, _application_list)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetApplicationList, _application_list)
 
 			protected:
 				void MakeList() override

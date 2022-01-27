@@ -22,9 +22,9 @@ namespace cfg
 			api::API _api;
 
 		public:
-			CFG_DECLARE_REF_GETTER_OF(GetHost, _host)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetHost, _host)
 
-			CFG_DECLARE_REF_GETTER_OF(GetApi, _api)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetApi, _api)
 
 		protected:
 			void MakeList() override

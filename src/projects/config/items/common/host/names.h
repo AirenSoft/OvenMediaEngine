@@ -18,7 +18,7 @@ namespace cfg
 			std::vector<ov::String> _name_list;
 
 		public:
-			CFG_DECLARE_REF_GETTER_OF(GetNameList, _name_list);
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetNameList, _name_list);
 
 		protected:
 			void MakeList() override

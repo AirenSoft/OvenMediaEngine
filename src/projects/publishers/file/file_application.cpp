@@ -106,6 +106,93 @@ void FileApplication::SessionStop(std::shared_ptr<FileSession> session)
 	}
 }
 
+void FileApplication::SessionUpdate(std::shared_ptr<FileStream> stream, std::shared_ptr<info::Record> userdata)
+{
+	// If there is no session, create a new file(record) session.
+	auto session = std::static_pointer_cast<FileSession>(stream->GetSession(userdata->GetSessionId()));
+	if (session == nullptr)
+	{
+		session = stream->CreateSession();
+		if (session == nullptr)
+		{
+			logte("Could not create session");
+			return;
+		}
+		userdata->SetSessionId(session->GetId());
+
+		session->SetRecord(userdata);
+	}
+
+	if (userdata->GetEnable() == true && userdata->GetRemove() == false)
+	{
+		SessionStart(session);
+	}
+
+	if (userdata->GetEnable() == false || userdata->GetRemove() == true)
+	{
+		SessionStop(session);
+	}
+}
+
+void FileApplication::SessionUpdateByStream(std::shared_ptr<FileStream> stream, bool stopped)
+{
+	if (stream == nullptr)
+	{
+		return;
+	}
+
+	for (uint32_t i = 0; i < _userdata_sets.GetCount(); i++)
+	{
+		auto userdata = _userdata_sets.GetAt(i);
+		if (userdata == nullptr)
+			continue;
+
+		if (userdata->GetStreamName() != stream->GetName())
+			continue;
+
+		if (stopped == true)
+		{
+			userdata->SetState(info::Record::RecordState::Ready);
+		}
+		else
+		{
+			SessionUpdate(stream, userdata);
+		}
+	}
+}
+
+void FileApplication::SessionUpdateByUser()
+{
+	for (uint32_t i = 0; i < _userdata_sets.GetCount(); i++)
+	{
+		auto userdata = _userdata_sets.GetAt(i);
+		if (userdata == nullptr)
+			continue;
+
+		// Find a stream related to Userdata.
+		auto stream = std::static_pointer_cast<FileStream>(GetStream(userdata->GetStreamName()));
+		if (stream != nullptr && stream->GetState() == pub::Stream::State::STARTED)
+		{
+			SessionUpdate(stream, userdata);
+		}
+		else
+		{
+			userdata->SetState(info::Record::RecordState::Ready);
+		}
+
+		if (userdata->GetRemove() == true)
+		{
+			if (stream != nullptr && userdata->GetSessionId() != 0)
+			{
+				stream->DeleteSession(userdata->GetSessionId());
+			}
+
+			_userdata_sets.DeleteByKey(userdata->GetId());
+		}
+	}	
+}
+
+#if 0
 void FileApplication::SessionController()
 {
 	for (uint32_t i = 0; i < _userdata_sets.GetCount(); i++)
@@ -161,6 +248,7 @@ void FileApplication::SessionController()
 		}
 	}
 }
+#endif 
 
 std::shared_ptr<ov::Error> FileApplication::RecordStart(const std::shared_ptr<info::Record> record)
 {
@@ -230,7 +318,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStart(const std::shared_ptr<in
 
 	_userdata_sets.Set(record->GetId(), record);
 
-	SessionController();
+	SessionUpdateByUser();
 
 	return ov::Error::CreateError(FilePublisher::FilePublisherStatusCode::Success, "Success");
 }
@@ -283,7 +371,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStop(const std::shared_ptr<inf
 	record->SetRecordStartTime(userdata->GetRecordStartTime());
 	record->SetRecordStopTime(userdata->GetRecordStopTime());
 
-	SessionController();
+	SessionUpdateByUser();
 
 	return ov::Error::CreateError(FilePublisher::FilePublisherStatusCode::Success, "Success");
 }
@@ -293,7 +381,7 @@ std::shared_ptr<ov::Error> FileApplication::GetRecords(std::vector<std::shared_p
 	for (uint32_t i = 0; i < _userdata_sets.GetCount(); i++)
 	{
 		auto userdata = _userdata_sets.GetAt(i);
-		if(userdata == nullptr)
+		if (userdata == nullptr)
 			continue;
 
 		record_list.push_back(userdata);

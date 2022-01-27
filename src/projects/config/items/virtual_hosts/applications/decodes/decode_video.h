@@ -19,7 +19,7 @@ namespace cfg
 				struct DecodeVideo : public Item
 				{
 				public:
-					CFG_DECLARE_REF_GETTER_OF(IsHardwareAcceleration, _hw_acceleration);
+					CFG_DECLARE_CONST_REF_GETTER_OF(IsHardwareAcceleration, _hw_acceleration);
 
 				protected:
 					void MakeList() override

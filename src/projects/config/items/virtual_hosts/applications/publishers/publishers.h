@@ -42,17 +42,17 @@ namespace cfg
 							&_thumbnail_publisher};
 					}
 
-					CFG_DECLARE_REF_GETTER_OF(GetAppWorkerCount, _app_worker_count)
-					CFG_DECLARE_REF_GETTER_OF(GetStreamWorkerCount, _stream_worker_count)
-					// CFG_DECLARE_REF_GETTER_OF(GetRtmpPublisher, _rtmp_publisher)
-					CFG_DECLARE_REF_GETTER_OF(GetHlsPublisher, _hls_publisher)
-					CFG_DECLARE_REF_GETTER_OF(GetDashPublisher, _dash_publisher)
-					CFG_DECLARE_REF_GETTER_OF(GetLlDashPublisher, _ll_dash_publisher)
-					CFG_DECLARE_REF_GETTER_OF(GetWebrtcPublisher, _webrtc_publisher)
-					CFG_DECLARE_REF_GETTER_OF(GetOvtPublisher, _ovt_publisher)
-					CFG_DECLARE_REF_GETTER_OF(GetFilePublisher, _file_publisher)
-					CFG_DECLARE_REF_GETTER_OF(GetRtmpPushPublisher, _rtmppush_publisher)
-					CFG_DECLARE_REF_GETTER_OF(GetThumbnailPublisher, _thumbnail_publisher)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetAppWorkerCount, _app_worker_count)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamWorkerCount, _stream_worker_count)
+					// CFG_DECLARE_CONST_REF_GETTER_OF(GetRtmpPublisher, _rtmp_publisher)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetHlsPublisher, _hls_publisher)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetDashPublisher, _dash_publisher)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetLlDashPublisher, _ll_dash_publisher)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetWebrtcPublisher, _webrtc_publisher)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetOvtPublisher, _ovt_publisher)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetFilePublisher, _file_publisher)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetRtmpPushPublisher, _rtmppush_publisher)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetThumbnailPublisher, _thumbnail_publisher)
 
 				protected:
 					void MakeList() override

@@ -21,8 +21,8 @@ namespace cfg
 			Forwarding _forwarding;
 		
 		public:
-			CFG_DECLARE_REF_GETTER_OF(GetUserKey, _user_key)
-			CFG_DECLARE_REF_GETTER_OF(GetForwarding, _forwarding)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetUserKey, _user_key)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetForwarding, _forwarding)
 
 		protected:
 			void MakeList() override

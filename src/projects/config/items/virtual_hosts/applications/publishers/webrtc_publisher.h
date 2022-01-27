@@ -25,8 +25,8 @@ namespace cfg
 					int _max = 0;
 
 				public:
-					CFG_DECLARE_REF_GETTER_OF(GetMin, _min)
-					CFG_DECLARE_REF_GETTER_OF(GetMax, _max)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetMin, _min)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetMax, _max)
 
 				protected:
 					void MakeList() override
@@ -43,12 +43,12 @@ namespace cfg
 						return PublisherType::Webrtc;
 					}
 
-					CFG_DECLARE_REF_GETTER_OF(GetTimeout, _timeout)
-					CFG_DECLARE_REF_GETTER_OF(IsRtxEnabled, _rtx)
-					CFG_DECLARE_REF_GETTER_OF(IsUlpfecEnalbed, _ulpfec)
-					CFG_DECLARE_REF_GETTER_OF(IsJitterBufferEnabled, _jitter_buffer)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetTimeout, _timeout)
+					CFG_DECLARE_CONST_REF_GETTER_OF(IsRtxEnabled, _rtx)
+					CFG_DECLARE_CONST_REF_GETTER_OF(IsUlpfecEnalbed, _ulpfec)
+					CFG_DECLARE_CONST_REF_GETTER_OF(IsJitterBufferEnabled, _jitter_buffer)
 
-					CFG_DECLARE_REF_GETTER_OF(GetPlayoutDelay, _playout_delay)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetPlayoutDelay, _playout_delay)
 
 				protected:
 					void MakeList() override

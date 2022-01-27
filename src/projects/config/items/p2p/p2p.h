@@ -18,7 +18,7 @@ namespace cfg
 			int _max_client_peers_per_host_peer = 2;
 
 		public:
-			CFG_DECLARE_REF_GETTER_OF(GetMaxClientPeersPerHostPeer, _max_client_peers_per_host_peer)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetMaxClientPeersPerHostPeer, _max_client_peers_per_host_peer)
 
 		protected:
 			void MakeList() override

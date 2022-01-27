@@ -20,7 +20,7 @@ namespace cfg
 			std::vector<VirtualHost> _virtual_host_list;
 
 		public:
-			CFG_DECLARE_REF_GETTER_OF(GetVirtualHostList, _virtual_host_list)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetVirtualHostList, _virtual_host_list)
 
 		protected:
 			void MakeList() override

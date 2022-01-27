@@ -22,7 +22,7 @@ namespace cfg
 				API _api{"8081/tcp"};
 
 			public:
-				CFG_DECLARE_REF_GETTER_OF(GetApi, _api)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetApi, _api)
 
 			protected:
 				void MakeList() override

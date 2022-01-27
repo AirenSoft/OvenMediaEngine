@@ -21,10 +21,10 @@ namespace cfg
 				struct Decodes : public Item
 				{
 				public:
-					CFG_DECLARE_REF_GETTER_OF(GetVideo, _video);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetVideo, _video);
 					
 					// Informal Option 
-					CFG_DECLARE_REF_GETTER_OF(GetH264hasBFrames, _h264_has_bframes);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetH264hasBFrames, _h264_has_bframes);
 
 				protected:
 					void MakeList() override

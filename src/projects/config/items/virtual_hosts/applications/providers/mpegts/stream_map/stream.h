@@ -25,8 +25,8 @@ namespace cfg
 						cmn::RangedPort _port{"4000/udp"};
 
 					public:
-						CFG_DECLARE_REF_GETTER_OF(GetName, _name)
-						CFG_DECLARE_REF_GETTER_OF(GetPort, _port)
+						CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
+						CFG_DECLARE_CONST_REF_GETTER_OF(GetPort, _port)
 
 					protected:
 						void MakeList() override

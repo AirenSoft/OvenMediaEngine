@@ -40,7 +40,7 @@ bool FileStream::Start()
 		return false;
 	}
 
-	std::static_pointer_cast<FileApplication>(GetApplication())->SessionController();
+	std::static_pointer_cast<FileApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<FileStream>(GetSharedPtr()), false);
 
 	return Stream::Start();
 }
@@ -54,9 +54,22 @@ bool FileStream::Stop()
 
 	logtd("FileStream(%u) has been stopped", GetId());
 
-	std::static_pointer_cast<FileApplication>(GetApplication())->SessionController();
+	std::static_pointer_cast<FileApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<FileStream>(GetSharedPtr()), true);
 
 	return Stream::Stop();
+}
+
+void FileStream::SendFrame(const std::shared_ptr<MediaPacket> &media_packet)
+{
+	// Periodically check the session. Retry the session in which the error occurred.
+	if (_stop_watch.IsElapsed(5000) && _stop_watch.Update())
+	{
+		std::static_pointer_cast<FileApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<FileStream>(GetSharedPtr()), false);
+	}
+
+	auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
+
+	BroadcastPacket(stream_packet);
 }
 
 void FileStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
@@ -66,8 +79,7 @@ void FileStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet
 		return;
 	}
 
-	auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
-	BroadcastPacket(stream_packet);
+	SendFrame(media_packet);
 }
 
 void FileStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
@@ -76,9 +88,8 @@ void FileStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet
 	{
 		return;
 	}
-
-	auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
-	BroadcastPacket(stream_packet);
+	
+	SendFrame(media_packet);
 }
 
 std::shared_ptr<FileSession> FileStream::CreateSession()

@@ -25,7 +25,7 @@ namespace cfg
 						return ProviderType::RtspPull;
 					}
 
-					CFG_DECLARE_REF_GETTER_OF(IsBlockDuplicateStreamName, _is_block_duplicate_stream_name)
+					CFG_DECLARE_CONST_REF_GETTER_OF(IsBlockDuplicateStreamName, _is_block_duplicate_stream_name)
 
 				protected:
 					void MakeList() override

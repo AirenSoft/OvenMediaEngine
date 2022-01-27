@@ -27,12 +27,12 @@ namespace cfg
 					double _framerate = 0.0;
 
 				public:
-					CFG_DECLARE_REF_GETTER_OF(IsActive, _active)
-					CFG_DECLARE_REF_GETTER_OF(GetCodec, _codec)
-					CFG_DECLARE_REF_GETTER_OF(GetScale, _scale)
-					CFG_DECLARE_REF_GETTER_OF(GetWidth, _width)
-					CFG_DECLARE_REF_GETTER_OF(GetHeight, _height)
-					CFG_DECLARE_REF_GETTER_OF(GetFramerate, _framerate)
+					CFG_DECLARE_CONST_REF_GETTER_OF(IsActive, _active)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetCodec, _codec)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetScale, _scale)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetWidth, _width)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetHeight, _height)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetFramerate, _framerate)
 
 				protected:
 					void MakeList() override

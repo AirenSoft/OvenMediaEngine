@@ -25,13 +25,13 @@ namespace cfg
 				bool _tcp_force = false;
 
 			public:
-				CFG_DECLARE_REF_GETTER_OF(IsTcpForce, _tcp_force)
+				CFG_DECLARE_CONST_REF_GETTER_OF(IsTcpForce, _tcp_force)
 
-				CFG_DECLARE_REF_GETTER_OF(GetIceCandidateList, _ice_candidate_list);
-				CFG_DECLARE_REF_GETTER_OF(GetTcpRelay, _tcp_relay);
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetIceCandidateList, _ice_candidate_list);
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetTcpRelay, _tcp_relay);
 
-				CFG_DECLARE_REF_GETTER_OF(GetTcpRelayWorkerCount, _tcp_relay_worker_count);
-				CFG_DECLARE_REF_GETTER_OF(GetIceWorkerCount, _ice_worker_count);
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetTcpRelayWorkerCount, _tcp_relay_worker_count);
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetIceWorkerCount, _ice_worker_count);
 
 			protected:
 				void MakeList() override

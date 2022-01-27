@@ -25,9 +25,9 @@ namespace cfg
 				Storage _storage;
 
 			public:
-				CFG_DECLARE_REF_GETTER_OF(GetAccessToken, _access_token)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetAccessToken, _access_token)
 
-				CFG_DECLARE_REF_GETTER_OF(GetStorage, _storage)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetStorage, _storage)
 
 			protected:
 				void MakeList() override
