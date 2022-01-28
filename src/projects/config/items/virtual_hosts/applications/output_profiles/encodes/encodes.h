@@ -35,9 +35,9 @@ namespace cfg
 				protected:
 					void MakeList() override
 					{
-						Register<Optional>({"Audio", "audios", OmitRule::DontOmit}, &_audio_profiles);
-						Register<Optional>({"Video", "videos", OmitRule::DontOmit}, &_video_profiles);
-						Register<Optional>({"Image", "images", OmitRule::DontOmit}, &_image_profiles);
+						Register<Optional>({"Audio", "audios"}, &_audio_profiles);
+						Register<Optional>({"Video", "videos"}, &_video_profiles);
+						Register<Optional>({"Image", "images"}, &_image_profiles);
 					}
 				};
 			}  // namespace oprf

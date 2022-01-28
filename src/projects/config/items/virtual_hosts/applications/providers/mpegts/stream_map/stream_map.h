@@ -22,6 +22,10 @@ namespace cfg
 				{
 					struct StreamMap : public Item
 					{
+					protected:
+						std::vector<Stream> _stream_list;
+
+					public:
 						CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamList, _stream_list)
 
 					protected:
@@ -29,8 +33,6 @@ namespace cfg
 						{
 							Register("Stream", &_stream_list);
 						}
-
-						std::vector<Stream> _stream_list;
 					};
 				}  // namespace mpegts
 			}	   // namespace pvd

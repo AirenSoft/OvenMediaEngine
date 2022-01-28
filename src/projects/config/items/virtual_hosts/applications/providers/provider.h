@@ -18,6 +18,10 @@ namespace cfg
 			{
 				struct Provider : public Item
 				{
+				protected:
+					int _max_connection = 0;
+
+				public:
 					virtual ProviderType GetType() const = 0;
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetMaxConnection, _max_connection)
 
@@ -26,8 +30,6 @@ namespace cfg
 					{
 						Register<Optional>("MaxConnection", &_max_connection);
 					}
-
-					int _max_connection = 0;
 				};
 			}  // namespace pvd
 		}	   // namespace app
