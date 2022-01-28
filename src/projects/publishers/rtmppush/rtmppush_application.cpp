@@ -240,7 +240,7 @@ std::shared_ptr<ov::Error> RtmpPushApplication::PushStart(const std::shared_ptr<
 	}
 
 	// Validation check for protocol scheme
-	if (push->GetUrl().HasPrefix("rtmp://") == false)
+	if (push->GetUrl().HasPrefix("rtmp://") == false && push->GetUrl().HasPrefix("rtmps://") == false)
 	{
 		ov::String error_message = "Unsupported protocol";
 
