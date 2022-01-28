@@ -257,9 +257,21 @@ namespace cfg
 		pugi::xml_document ToXml(bool include_default_values = false) const;
 
 	protected:
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		static void SetValueForList(
+			const ov::String &child_path, const std::shared_ptr<const Child> &child,
+			ValueType type, std::shared_ptr<ListInterface> &list_target,
+			const ov::String &item_path,
+			const ItemName &child_name, const ov::String &name,
+			const std::vector<cfg::DataSource> &data_sources);
 		// Returns true if the value exists, otherwise returns false
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		static bool SetValue(const std::shared_ptr<const Child> &child, ValueType type, std::any &child_target, const ov::String &item_path, const ItemName &child_name, const ov::String &name, const std::any &value);
+		static bool SetValue(
+			const std::shared_ptr<const Child> &child,
+			ValueType type, std::any &child_target,
+			const ov::String &item_path,
+			const ItemName &child_name, const ov::String &name,
+			const std::any &value);
 
 		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void FromDataSourceInternal(ov::String item_path, const DataSource &data_source);

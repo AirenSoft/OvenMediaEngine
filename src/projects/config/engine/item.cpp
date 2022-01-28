@@ -27,6 +27,7 @@ namespace cfg
 		return "";
 	}
 
+	MAY_THROWS(std::shared_ptr<ConfigError>)
 	bool GetIncludeFileList(const DataSource &data_source, ov::String *pattern, std::vector<ov::String> *include_file_list)
 	{
 		Json::Value dummy_value;
@@ -768,7 +769,83 @@ namespace cfg
 		}
 	}
 
-	bool Item::SetValue(const std::shared_ptr<const Child> &child, ValueType type, std::any &child_target, const ov::String &item_path, const ItemName &child_name, const ov::String &name, const std::any &value)
+	void Item::SetValueForList(
+		const ov::String &child_path, const std::shared_ptr<const Child> &child,
+		ValueType type, std::shared_ptr<ListInterface> &list_target,
+		const ov::String &item_path,
+		const ItemName &child_name, const ov::String &name,
+		const std::vector<cfg::DataSource> &data_sources)
+	{
+		std::vector<DataSource> new_data_sources;
+
+		for (auto &data_source : data_sources)
+		{
+			if (data_source.IsSourceOf(child_name))
+			{
+				// Check the child has an include attribute
+				std::vector<DataSource> data_sources_for_array;
+
+				{
+					std::vector<ov::String> include_files;
+
+					if (GetIncludeFileList(data_source, nullptr, &include_files))
+					{
+						for (auto &include_file : include_files)
+						{
+							new_data_sources.push_back(data_source.NewDataSource(include_file, child_name));
+						}
+					}
+					else
+					{
+						// "include" attribute is not present
+						new_data_sources.push_back(data_source);
+					}
+				}
+			}
+			else
+			{
+				// The parent has multiple types of items
+			}
+		}
+
+		list_target->Clear();
+		list_target->Allocate(new_data_sources.size());
+
+		size_t index = 0;
+
+		list_target->SetItemName(child_name);
+
+		ItemName new_name = child_name;
+
+		for (auto &new_data_source : new_data_sources)
+		{
+			Json::Value original_value;
+			auto list_value = new_data_source.GetRootValue(list_target->GetValueType(), child->ResolvePath(), child->_item_name.omit_rule, &original_value);
+
+			if (list_value.has_value() == false)
+			{
+				continue;
+			}
+
+			new_name.index = index;
+
+			auto new_item = list_target->GetAt(index);
+
+			auto list_child = std::make_shared<ListChild>(new_name, new_item, original_value);
+			list_target->AddListChild(list_child);
+
+			SetValue(child, list_target->GetValueType(), new_item, item_path, child_name, name, list_value);
+
+			index++;
+		}
+	}
+
+	bool Item::SetValue(
+		const std::shared_ptr<const Child> &child,
+		ValueType type, std::any &child_target,
+		const ov::String &item_path,
+		const ItemName &child_name, const ov::String &name,
+		const std::any &value)
 	{
 		ov::String child_path = ov::String::FormatString(
 			"%s%s%s",
@@ -856,7 +933,7 @@ namespace cfg
 					break;
 
 				case ValueType::Text:
-					logtd("[%s] Trying to cast %s for %s(text)",
+					logtd("[%s] Trying to cast %s for %s (text)",
 						  item_path.CStr(),
 						  ov::Demangle(value.type().name()).CStr(),
 						  child_name.ToString().CStr());
@@ -871,125 +948,20 @@ namespace cfg
 					std::any_cast<Item *>(child_target)->FromDataSource(child_path, child_name, TryCast<const cfg::DataSource &>(value));
 					break;
 
-				case ValueType::List: {
+				case ValueType::List:
 					logtd("[%s] Trying to cast %s for %s",
 						  item_path.CStr(),
 						  ov::Demangle(value.type().name()).CStr(),
 						  child_name.ToString().CStr());
 
-					auto &list_target = std::any_cast<std::shared_ptr<ListInterface> &>(child_target);
+					SetValueForList(
+						child_path, child,
+						type, TryCast<std::shared_ptr<ListInterface> &>(child_target),
+						item_path,
+						child_name, name,
+						TryCast<const std::vector<cfg::DataSource> &>(value));
 
-					const std::vector<cfg::DataSource> &data_sources = TryCast<const std::vector<cfg::DataSource> &>(value);
-
-					std::vector<DataSource> new_data_sources;
-
-					for (auto &data_source : data_sources)
-					{
-						if (data_source.IsSourceOf(child_name))
-						{
-							// Check the child has an include attribute
-							std::vector<DataSource> data_sources_for_array;
-
-							{
-								std::vector<ov::String> include_files;
-
-								if (GetIncludeFileList(data_source, nullptr, &include_files))
-								{
-									for (auto &include_file : include_files)
-									{
-										data_sources_for_array.push_back(data_source.NewDataSource(include_file, child_name));
-									}
-								}
-								else
-								{
-									// "include" attribute is not present
-									data_sources_for_array.push_back(data_source);
-								}
-							}
-
-							if (data_source.GetType() == DataType::Json)
-							{
-								for (auto &data_source_for_array : data_sources_for_array)
-								{
-									if (data_source_for_array.IsArray(child_name))
-									{
-										// data_source_for_array contains multiple data (eg: [item1, item2, ...])
-										auto list = data_source_for_array.GetRootValue(ValueType::List, child->ResolvePath(), child->_item_name.omit_rule, nullptr);
-
-										if (list.has_value())
-										{
-											auto data_source_list = TryCast<const std::vector<cfg::DataSource> &>(list);
-
-											for (auto &source_from_file : data_source_list)
-											{
-												new_data_sources.push_back(source_from_file);
-											}
-										}
-										else
-										{
-											// empty list
-										}
-									}
-									else
-									{
-										if (child_name.omit_rule == OmitRule::DontOmit)
-										{
-											throw CreateConfigError("%s is not an object", child_path.CStr());
-										}
-										else
-										{
-											new_data_sources.push_back(data_source_for_array);
-										}
-									}
-								}
-							}
-							else
-							{
-								for (auto &data_source_for_array : data_sources_for_array)
-								{
-									new_data_sources.push_back(data_source_for_array);
-								}
-							}
-						}
-						else
-						{
-							// The parent has multiple types of items
-						}
-					}
-
-					list_target->Clear();
-					list_target->Allocate(new_data_sources.size());
-
-					size_t index = 0;
-
-					list_target->SetItemName(child_name);
-
-					ItemName new_name = child_name;
-
-					for (auto &new_data_source : new_data_sources)
-					{
-						Json::Value original_value;
-						auto list_value = new_data_source.GetRootValue(list_target->GetValueType(), child->ResolvePath(), child->_item_name.omit_rule, &original_value);
-
-						if (list_value.has_value() == false)
-						{
-							continue;
-						}
-
-						new_name.index = index;
-
-						auto new_item = list_target->GetAt(index);
-
-						auto list_child = std::make_shared<ListChild>(new_name, new_item, original_value);
-						list_target->AddListChild(list_child);
-
-						SetValue(child, list_target->GetValueType(), new_item, item_path, child_name, name, list_value);
-
-						index++;
-					}
-				}
-
-				break;
+					break;
 			}
 		}
 		catch (const CastException &cast_exception)
