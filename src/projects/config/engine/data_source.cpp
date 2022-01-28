@@ -34,7 +34,7 @@ namespace cfg
 		: _type(DataType::Xml),
 		  _document(document),
 		  _node(node),
-		  _current_path(current_path),
+		  _current_file_path(current_path),
 		  _file_name(file_name)
 	{
 		logtd("Trying to create a DataSource from XML value... [cwd: %s, file: %s]", current_path.CStr(), file_name.CStr());
@@ -44,7 +44,7 @@ namespace cfg
 		: _type(DataType::Json),
 		  _json_name(json_name),
 		  _json(json),
-		  _current_path(current_path),
+		  _current_file_path(current_path),
 		  _file_name(file_name)
 	{
 		logtd("Trying to create a DataSource from JSON value... [cwd: %s, file: %s]", current_path.CStr(), file_name.CStr());
@@ -52,35 +52,35 @@ namespace cfg
 
 	DataSource::DataSource(DataType type, const ov::String &current_path, const ov::String &file_name, const ItemName &root_name)
 		: _type(type),
-		  _current_path(current_path)
+		  _current_file_path(current_path)
 	{
-		_full_path = file_name;
+		_full_file_path = file_name;
 
-		if (ov::PathManager::IsAbsolute(_full_path))
+		if (ov::PathManager::IsAbsolute(_full_file_path))
 		{
-			_current_path.Clear();
+			_current_file_path.Clear();
 		}
 		else
 		{
-			if (_current_path.IsEmpty() == false)
+			if (_current_file_path.IsEmpty() == false)
 			{
-				_full_path = ov::PathManager::Combine(_current_path, _full_path);
+				_full_file_path = ov::PathManager::Combine(_current_file_path, _full_file_path);
 			}
 		}
 
-		if (_current_path.IsEmpty())
+		if (_current_file_path.IsEmpty())
 		{
-			_current_path = ov::PathManager::ExtractPath(_full_path);
+			_current_file_path = ov::PathManager::ExtractPath(_full_file_path);
 		}
 
 		logtd("Trying to create a DataSource for %s from %s file: %s [cwd: %s => %s, file: %s]",
 			  root_name.ToString().CStr(),
 			  (type == DataType::Xml) ? "XML" : "JSON",
-			  _full_path.CStr(),
-			  current_path.CStr(), _current_path.CStr(),
+			  _full_file_path.CStr(),
+			  current_path.CStr(), _current_file_path.CStr(),
 			  file_name.CStr());
 
-		LoadFromFile(_full_path, root_name);
+		LoadFromFile(_full_file_path, root_name);
 	}
 
 	DataSource::DataSource(DataType type, const ov::String &file_path, const ItemName &root_name)
@@ -385,49 +385,49 @@ namespace cfg
 			case ValueType::String: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = node.child_value();
-				return node.empty() ? std::any() : Preprocess(_current_path, node.child_value(), resolve_path);
+				return node.empty() ? std::any() : Preprocess(_current_file_path, node.child_value(), resolve_path);
 			}
 
 			case ValueType::Integer: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = node.child_value();
-				return node.empty() ? std::any() : ov::Converter::ToInt32(Preprocess(_current_path, node.child_value(), resolve_path));
+				return node.empty() ? std::any() : ov::Converter::ToInt32(Preprocess(_current_file_path, node.child_value(), resolve_path));
 			}
 
 			case ValueType::Long: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = node.child_value();
-				return node.empty() ? std::any() : ov::Converter::ToInt64(Preprocess(_current_path, node.child_value(), resolve_path));
+				return node.empty() ? std::any() : ov::Converter::ToInt64(Preprocess(_current_file_path, node.child_value(), resolve_path));
 			}
 
 			case ValueType::Boolean: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = node.child_value();
-				return node.empty() ? std::any() : ov::Converter::ToBool(Preprocess(_current_path, node.child_value(), resolve_path));
+				return node.empty() ? std::any() : ov::Converter::ToBool(Preprocess(_current_file_path, node.child_value(), resolve_path));
 			}
 
 			case ValueType::Double: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = node.child_value();
-				return node.empty() ? std::any() : ov::Converter::ToDouble(Preprocess(_current_path, node.child_value(), resolve_path));
+				return node.empty() ? std::any() : ov::Converter::ToDouble(Preprocess(_current_file_path, node.child_value(), resolve_path));
 			}
 
 			case ValueType::Attribute: {
 				auto attribute = _node.attribute(name);
 				*original_value = attribute.value();
-				return attribute.empty() ? std::any() : Preprocess(_current_path, attribute.value(), resolve_path);
+				return attribute.empty() ? std::any() : Preprocess(_current_file_path, attribute.value(), resolve_path);
 			}
 
 			case ValueType::Text: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = node.child_value();
-				return node.empty() ? std::any() : Preprocess(_current_path, node.child_value(), resolve_path);
+				return node.empty() ? std::any() : Preprocess(_current_file_path, node.child_value(), resolve_path);
 			}
 
 			case ValueType::Item: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = Json::objectValue;
-				return node.empty() ? std::any() : DataSource(_current_path, _file_name, _document, node);
+				return node.empty() ? std::any() : DataSource(_current_file_path, _file_name, _document, node);
 			}
 
 			case ValueType::List: {
@@ -444,7 +444,7 @@ namespace cfg
 
 					for (auto &node_child : children)
 					{
-						data_sources.emplace_back(_current_path, _file_name, _document, node_child);
+						data_sources.emplace_back(_current_file_path, _file_name, _document, node_child);
 
 						if (original_value != nullptr)
 						{
@@ -495,13 +495,6 @@ namespace cfg
 
 	std::any GetJsonList(const ov::String &current_path, const ov::String &file_name, const Json::Value &json, const ov::String &name, OmitRule omit_rule, Json::Value *original_value)
 	{
-		if (json.isNull())
-		{
-			return {};
-		}
-
-		std::vector<DataSource> data_sources;
-
 		// json:
 		//
 		// {
@@ -519,11 +512,23 @@ namespace cfg
 
 		if (json.isArray())
 		{
+			if (json.isNull())
+			{
+				return {};
+			}
+
 			value_list = json;
 
 			if (omit_rule == OmitRule::DontOmit)
 			{
-				throw CreateConfigError("%s is not an array", current_path.CStr());
+				if (current_path.IsEmpty())
+				{
+					throw CreateConfigError("%s is not an array", name.CStr());
+				}
+				else
+				{
+					throw CreateConfigError("%s is not an array (%s)", name.CStr(), current_path.CStr());
+				}
 			}
 		}
 		else
@@ -531,11 +536,25 @@ namespace cfg
 			// Extract the value of the child node
 			value_list = GetJsonValue(json, name);
 
+			if (value_list.isNull())
+			{
+				return {};
+			}
+
 			if (value_list.isArray() == false)
 			{
-				throw CreateConfigError("%s is not an array", current_path.CStr());
+				if (current_path.IsEmpty())
+				{
+					throw CreateConfigError("Child %s is not an array", name.CStr());
+				}
+				else
+				{
+					throw CreateConfigError("Child %s is not an array (%s)", name.CStr(), current_path.CStr());
+				}
 			}
 		}
+
+		std::vector<DataSource> data_sources;
 
 		for (const auto &json_value : value_list)
 		{
@@ -561,7 +580,7 @@ namespace cfg
 			case ValueType::String: {
 				auto &json = is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
-				return json.isNull() ? std::any() : ov::Converter::ToString(Preprocess(_current_path, ov::Converter::ToString(json), resolve_path));
+				return json.isNull() ? std::any() : ov::Converter::ToString(Preprocess(_current_file_path, ov::Converter::ToString(json), resolve_path));
 			}
 
 			case ValueType::Integer: {
@@ -591,23 +610,23 @@ namespace cfg
 			case ValueType::Attribute: {
 				auto attribute = GetJsonAttribute(_json, name);
 				*original_value = attribute;
-				return attribute.empty() ? std::any() : Preprocess(_current_path, ov::Converter::ToString(attribute), resolve_path);
+				return attribute.empty() ? std::any() : Preprocess(_current_file_path, ov::Converter::ToString(attribute), resolve_path);
 			}
 
 			case ValueType::Text: {
 				auto &json = is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
-				return json.isNull() ? std::any() : Preprocess(_current_path, ov::Converter::ToString(json), resolve_path);
+				return json.isNull() ? std::any() : Preprocess(_current_file_path, ov::Converter::ToString(json), resolve_path);
 			}
 
 			case ValueType::Item: {
 				auto &json = is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
-				return json.isNull() ? std::any() : DataSource(_current_path, _file_name, name, json);
+				return json.isNull() ? std::any() : DataSource(_current_file_path, _file_name, name, json);
 			}
 
 			case ValueType::List: {
-				return GetJsonList(_current_path, _file_name, _json, name, omit_rule, original_value);
+				return GetJsonList(_current_file_path, _file_name, _json, name, omit_rule, original_value);
 			}
 		}
 

@@ -75,14 +75,14 @@ namespace cfg
 		// Create a data source from this context
 		DataSource NewDataSource(const ov::String &file_name, const ItemName &root_name) const
 		{
-			DataSource new_data_source(_type, _current_path, file_name, root_name);
+			DataSource new_data_source(_type, _current_file_path, file_name, root_name);
 
 			return new_data_source;
 		}
 
 		ov::String GetCurrentPath() const
 		{
-			return _current_path;
+			return _current_file_path;
 		}
 
 		ov::String GetFileName() const
@@ -92,7 +92,7 @@ namespace cfg
 
 		ov::String GetFullPath() const
 		{
-			return _full_path;
+			return _full_file_path;
 		}
 
 		ov::String ToString() const;
@@ -116,9 +116,9 @@ namespace cfg
 		ov::String _json_name;
 		Json::Value _json;
 
-		// _full_path = _current_path + _file_name
-		ov::String _full_path;
-		ov::String _current_path;
+		// _full_file_path = _current_file_path + _file_name
+		ov::String _full_file_path;
+		ov::String _current_file_path;
 		ov::String _file_name;
 	};
 }  // namespace cfg
