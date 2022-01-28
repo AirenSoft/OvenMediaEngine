@@ -59,6 +59,11 @@ namespace http
 				_reason = reason;
 			}
 
+			bool IsHeaderSent() const
+			{
+				return _is_header_sent;
+			}
+
 			// Append a new item to the existing header
 			bool AddHeader(const ov::String &key, const ov::String &value);
 			// Overwrites the existing value to <value>
@@ -106,7 +111,6 @@ namespace http
 			}
 
 		protected:
-			bool CheckHeaderSent() const;
 			uint32_t SendHeaderIfNeeded();
 			uint32_t SendResponse();
 
@@ -127,7 +131,7 @@ namespace http
 			size_t _response_data_size = 0;
 			std::vector<std::shared_ptr<const ov::Data>> _response_data_list;
 
-			std::vector<ov::String> _default_value {};
+			std::vector<ov::String> _default_value{};
 
 			bool _chunked_transfer = false;
 		};

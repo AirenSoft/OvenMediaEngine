@@ -46,21 +46,11 @@ namespace http
 			return _tls_data;
 		}
 
-		bool HttpResponse::CheckHeaderSent() const
-		{
-			if (_is_header_sent)
-			{
-				logtw("Cannot modify header: Header is sent: %s", _client_socket->ToString().CStr());
-				return false;
-			}
-
-			return true;
-		}
-
 		bool HttpResponse::AddHeader(const ov::String &key, const ov::String &value)
 		{
-			if (CheckHeaderSent() == false)
+			if (IsHeaderSent())
 			{
+				logtw("Cannot add header: Header is sent: %s", _client_socket->ToString().CStr());
 				return false;
 			}
 
@@ -71,8 +61,9 @@ namespace http
 
 		bool HttpResponse::SetHeader(const ov::String &key, const ov::String &value)
 		{
-			if (CheckHeaderSent() == false)
+			if (IsHeaderSent())
 			{
+				logtw("Cannot set header: Header is sent: %s", _client_socket->ToString().CStr());
 				return false;
 			}
 
@@ -95,8 +86,9 @@ namespace http
 
 		bool HttpResponse::RemoveHeader(const ov::String &key)
 		{
-			if (CheckHeaderSent() == false)
+			if (IsHeaderSent())
 			{
+				logtw("Cannot remove header: Header is sent: %s", _client_socket->ToString().CStr());
 				return false;
 			}
 
@@ -151,7 +143,7 @@ namespace http
 
 		uint32_t HttpResponse::SendHeaderIfNeeded()
 		{
-			if (CheckHeaderSent() == false)
+			if (IsHeaderSent())
 			{
 				// The headers are already sent
 				return 0;
