@@ -500,52 +500,51 @@ namespace cfg
 			return {};
 		}
 
-		Json::Value child_value = Json::nullValue;
-
-		if (json.isArray() == false)
-		{
-			if (omit_rule == OmitRule::Omit)
-			{
-				return GetJsonList(current_path, file_name, GetJsonValue(json, name), name, omit_rule, original_value);
-			}
-			else
-			{
-				child_value = GetJsonValue(json, name);
-
-				if (child_value.isNull())
-				{
-					return {};
-				}
-			}
-		}
-
-		if (original_value != nullptr)
-		{
-			*original_value = Json::arrayValue;
-		}
-
 		std::vector<DataSource> data_sources;
 
-		if (child_value.isNull())
-		{
-			for (auto &json_child : json)
-			{
-				data_sources.emplace_back(current_path, file_name, name, json_child);
+		// json:
+		//
+		// {
+		//     "items": [ <item1>, <item2>, ... ]
+		// }
+		//
+		// or
+		//
+		// {
+		//     "items": {
+		//         "item": [ <item1>, <item2>, ... ]
+		//     }
+		// }
+		Json::Value value_list;
 
-				if (original_value != nullptr)
-				{
-					original_value->append(json_child);
-				}
+		if (json.isArray())
+		{
+			value_list = json;
+
+			if (omit_rule == OmitRule::DontOmit)
+			{
+				throw CreateConfigError("%s is not an array", current_path.CStr());
 			}
 		}
 		else
 		{
-			data_sources.emplace_back(current_path, file_name, name, child_value);
+			// Extract the value of the child node
+			value_list = GetJsonValue(json, name);
 
-			if (original_value != nullptr)
+			if (value_list.isArray() == false)
 			{
-				original_value->append(child_value);
+				throw CreateConfigError("%s is not an array", current_path.CStr());
 			}
+		}
+
+		for (const auto &json_value : value_list)
+		{
+			data_sources.emplace_back(current_path, file_name, name, json_value);
+		}
+
+		if (original_value != nullptr)
+		{
+			*original_value = std::move(value_list);
 		}
 
 		return data_sources;
@@ -608,12 +607,7 @@ namespace cfg
 			}
 
 			case ValueType::List: {
-				if (_json.isNull() == false)
-				{
-					return GetJsonList(_current_path, _file_name, _json, name, omit_rule, original_value);
-				}
-
-				return {};
+				return GetJsonList(_current_path, _file_name, _json, name, omit_rule, original_value);
 			}
 		}
 

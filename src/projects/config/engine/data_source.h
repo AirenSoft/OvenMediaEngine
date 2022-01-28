@@ -67,7 +67,9 @@ namespace cfg
 		// Check weather the root value is array or not
 		bool IsArray(const ItemName &name) const;
 
+		MAY_THROWS(std::shared_ptr<ConfigError>)
 		std::any GetRootValue(ValueType value_type, bool resolve_path, OmitRule omit_rule, Json::Value *original_value) const;
+		MAY_THROWS(std::shared_ptr<ConfigError>)
 		std::any GetValue(ValueType value_type, const ItemName &name, bool resolve_path, OmitRule omit_rule, Json::Value *original_value) const;
 
 		// Create a data source from this context
@@ -101,7 +103,9 @@ namespace cfg
 		void LoadFromXmlFile(const ov::String &file_name, const ov::String &root_name);
 		void LoadFromJson(const ov::String &file_name, const ov::String &root_name);
 
+		MAY_THROWS(std::shared_ptr<ConfigError>)
 		std::any GetValueFromXml(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, Json::Value *original_value) const;
+		MAY_THROWS(std::shared_ptr<ConfigError>)
 		std::any GetValueFromJson(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, OmitRule omit_rule, Json::Value *original_value) const;
 
 		DataType _type;

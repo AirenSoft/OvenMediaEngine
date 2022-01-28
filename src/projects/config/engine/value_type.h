@@ -144,6 +144,21 @@ namespace cfg
 	};
 
 	template <typename Toutput_type>
+	Toutput_type TryCast([[maybe_unused]] std::any &value)
+	{
+		try
+		{
+			return std::any_cast<Toutput_type>(value);
+		}
+		catch (const std::bad_any_cast &)
+		{
+			throw CastException(
+				ov::Demangle(value.type().name()).CStr(),
+				ov::Demangle(typeid(Toutput_type).name()).CStr());
+		}
+	}
+
+	template <typename Toutput_type>
 	Toutput_type TryCast([[maybe_unused]] const std::any &value)
 	{
 		try
