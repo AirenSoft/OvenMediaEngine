@@ -79,3 +79,13 @@
                                                                           \
 		return variable_name;                                             \
 	}
+
+#define SET_IF_NOT_PARSED(GETTER, SETTER, VARIABLE) \
+	{                                               \
+		bool is_parsed;                             \
+		variant.GETTER(&is_parsed);                 \
+		if (!is_parsed)                             \
+		{                                           \
+			variant.SETTER(VARIABLE);               \
+		}                                           \
+	}
