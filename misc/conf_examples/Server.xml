@@ -143,6 +143,12 @@
 		</Host>
 		<API>
 			<AccessToken>ome-access-token</AccessToken>
+
+			<CrossDomains>
+				<Url>*.airensoft.com</Url>
+				<Url>http://*.sub-domain.airensoft.com</Url>
+				<Url>http?://airensoft.*</Url>
+			</CrossDomains>
 		</API>
 	</Managers>
 	-->

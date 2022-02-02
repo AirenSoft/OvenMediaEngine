@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8"?>
 
 <Server version="8">
 	<Name>OvenMediaEngine</Name>
@@ -80,7 +80,7 @@
 			<Name>default</Name>
 			<!--Distribution is a value that can be used when grouping the same vhost distributed across multiple servers. This value is output to the events log, so you can use it to aggregate statistics. -->
 			<Distribution>ovenmediaengine.com</Distribution>
-			
+
 			<!-- Settings for multi ip/domain and TLS -->
 			<Host>
 				<Names>
@@ -100,7 +100,7 @@
 				</TLS>
 				-->
 			</Host>
-			
+
 			<!-- Refer https://airensoft.gitbook.io/ovenmediaengine/signedpolicy
 
 			<SignedPolicy>
@@ -156,6 +156,51 @@
 					</Pass>
 				</Origin>
 			</Origins>
+
+			<!--
+				Apply the following settings for /app/<stream_name> requests.
+
+				This demonstrates setting <OutputProfiles>/<Providers>/<Pubishers> for a specific application.
+
+				(https://github.com/AirenSoft/OvenMediaEngine/issues/621#issuecomment-1026892776)
+			-->
+			<!--
+			<Applications>
+				<Application>
+					<Name>app</Name>
+					<Type>live</Type>
+					<OutputProfiles>
+						<OutputProfile>
+							<Name>passthrough</Name>
+							<OutputStreamName>${OriginStreamName}</OutputStreamName>
+							<Encodes>
+								<Video>
+									<Bypass>true</Bypass>
+								</Video>
+								<Audio>
+									<Bypass>true</Bypass>
+								</Audio>
+							</Encodes>
+						</OutputProfile>
+					</OutputProfiles>
+					<Providers>
+						<OVT />
+					</Providers>
+					<Publishers>
+						<HLS>
+							<SegmentDuration>2</SegmentDuration>
+							<SegmentCount>3</SegmentCount>
+							<CrossDomains>
+								<Url>*.airensoft.com</Url>
+								<Url>http://*.sub-domain.airensoft.com</Url>
+								<Url>http?://airensoft.*</Url>
+							</CrossDomains>
+						</HLS>
+						<WebRTC />
+					</Publishers>
+				</Application>
+			</Applications>
+			-->
 		</VirtualHost>
 	</VirtualHosts>
 </Server>
