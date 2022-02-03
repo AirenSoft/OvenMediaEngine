@@ -7,7 +7,7 @@
 #include "rtmppush_userdata.h"
 #include "rtmppush_stream.h"
 
-class RtmpPushApplication : public pub::Application
+class RtmpPushApplication : public pub::PushApplication
 {
 public:
 	static std::shared_ptr<RtmpPushApplication> Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info);
@@ -29,9 +29,9 @@ public:
 	void SessionStart(std::shared_ptr<RtmpPushSession> session);
 	void SessionStop(std::shared_ptr<RtmpPushSession> session);
 
-	std::shared_ptr<ov::Error> PushStart(const std::shared_ptr<info::Push> &record);
-	std::shared_ptr<ov::Error> PushStop(const std::shared_ptr<info::Push> &record);
-	std::shared_ptr<ov::Error> GetPushes(std::vector<std::shared_ptr<info::Push>> &record_list);	
+	virtual std::shared_ptr<ov::Error> PushStart(const std::shared_ptr<info::Push> &record) override;
+	virtual std::shared_ptr<ov::Error> PushStop(const std::shared_ptr<info::Push> &record) override;
+	virtual std::shared_ptr<ov::Error> GetPushes(std::vector<std::shared_ptr<info::Push>> &record_list) override;
 
 private:
 	RtmpPushUserdataSets _userdata_sets;
