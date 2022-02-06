@@ -14,6 +14,7 @@ extern "C"
 #include <libavformat/avformat.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
+#include <libavutil/channel_layout.h>
 #include <libswscale/swscale.h>
 }
 #include "../transcoder_private.h"
