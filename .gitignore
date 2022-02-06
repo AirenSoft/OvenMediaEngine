@@ -36,7 +36,3 @@ src/projects/main/git_info.h
 *.texi
 *.dump
 misc/oven_rtc_tester/OvenRtcTester
-/.vs
-/Ome.sln
-/Ome.vcxproj
-/Ome.vcxproj.filters
