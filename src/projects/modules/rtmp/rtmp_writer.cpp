@@ -86,7 +86,7 @@ bool RtmpWriter::SetPath(const ov::String path, const ov::String format)
 		_format_context = nullptr;
 	}
 
-	AVOutputFormat *output_format = nullptr;
+	const AVOutputFormat *output_format = nullptr;
 
 	// If the format is nullptr, it is automatically set based on the extension.
 	if (format != nullptr)

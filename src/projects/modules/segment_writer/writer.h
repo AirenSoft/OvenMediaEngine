@@ -141,7 +141,7 @@ protected:
 
 	std::shared_ptr<AVFormatContext> _format_context;
 	std::shared_ptr<AVIOContext> _avio_context;
-	AVOutputFormat *_output_format = nullptr;
+	const AVOutputFormat *_output_format = nullptr;
 
 	AVDictionary *_options = nullptr;
 
