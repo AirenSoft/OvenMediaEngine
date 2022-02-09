@@ -158,4 +158,4 @@ We always hope that OvenMediaEngine will give you good inspiration.
 
 ## License
 
-OvenMediaEngine is licensed under the [GPLv3](LICENSE) or later.
+OvenMediaEngine is licensed under the [AGPL-3.0-only](LICENSE).
