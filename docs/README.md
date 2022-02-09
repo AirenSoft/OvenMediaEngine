@@ -35,7 +35,7 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
   * _Signed Policy_
 * **Beta**
   * _File Recording_
-  * _RTMP Push Publishing (Re-streaming)_
+  * _RTMP, MPEGTS Push Publishing (Re-streaming)_
   * _Thumbnail_
   * _REST API_
 * **Experiment**
