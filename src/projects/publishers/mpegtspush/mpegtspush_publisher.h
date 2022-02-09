@@ -7,16 +7,16 @@
 #include "base/mediarouter/mediarouter_application_interface.h"
 #include "base/ovlibrary/url.h"
 #include "base/publisher/publisher.h"
-#include "rtmppush_application.h"
-#include "rtmppush_userdata.h"
+#include "mpegtspush_application.h"
+#include "mpegtspush_userdata.h"
 
-class RtmpPushPublisher : public pub::Publisher
+class MpegtsPushPublisher : public pub::Publisher
 {
 public:
-	static std::shared_ptr<RtmpPushPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	static std::shared_ptr<MpegtsPushPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 
-	RtmpPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
-	~RtmpPushPublisher() override;
+	MpegtsPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	~MpegtsPushPublisher() override;
 	bool Stop() override;
 
 private:
@@ -27,11 +27,11 @@ private:
 	//--------------------------------------------------------------------
 	PublisherType GetPublisherType() const override
 	{
-		return PublisherType::RtmpPush;
+		return PublisherType::MpegtsPush;
 	}
 	const char *GetPublisherName() const override
 	{
-		return "RTMPPushPublisher";
+		return "MPEGTSPushPublisher";
 	}
 
 	bool OnCreateHost(const info::Host &host_info) override;

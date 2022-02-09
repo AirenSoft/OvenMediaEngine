@@ -1,52 +1,52 @@
-#include "rtmppush_application.h"
+#include "mpegtspush_application.h"
 
-#include "rtmppush_private.h"
-#include "rtmppush_publisher.h"
-#include "rtmppush_stream.h"
+#include "mpegtspush_private.h"
+#include "mpegtspush_publisher.h"
+#include "mpegtspush_stream.h"
 
-std::shared_ptr<RtmpPushApplication> RtmpPushApplication::Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
+std::shared_ptr<MpegtsPushApplication> MpegtsPushApplication::Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
 {
-	auto application = std::make_shared<RtmpPushApplication>(publisher, application_info);
+	auto application = std::make_shared<MpegtsPushApplication>(publisher, application_info);
 	application->Start();
 	return application;
 }
 
-RtmpPushApplication::RtmpPushApplication(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
+MpegtsPushApplication::MpegtsPushApplication(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
 	: PushApplication(publisher, application_info)
 {
 }
 
-RtmpPushApplication::~RtmpPushApplication()
+MpegtsPushApplication::~MpegtsPushApplication()
 {
 	Stop();
-	logtd("RtmpPushApplication(%d) has been terminated finally", GetId());
+	logtd("MpegtsPushApplication(%d) has been terminated finally", GetId());
 }
 
-bool RtmpPushApplication::Start()
+bool MpegtsPushApplication::Start()
 {
 	return Application::Start();
 }
 
-bool RtmpPushApplication::Stop()
+bool MpegtsPushApplication::Stop()
 {
 	return Application::Stop();
 }
 
-std::shared_ptr<pub::Stream> RtmpPushApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t worker_count)
+std::shared_ptr<pub::Stream> MpegtsPushApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t worker_count)
 {
 	logtd("CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 
-	return RtmpPushStream::Create(GetSharedPtrAs<pub::Application>(), *info);
+	return MpegtsPushStream::Create(GetSharedPtrAs<pub::Application>(), *info);
 }
 
-bool RtmpPushApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
+bool MpegtsPushApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 {
 	logtd("DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());
 
-	auto stream = std::static_pointer_cast<RtmpPushStream>(GetStream(info->GetId()));
+	auto stream = std::static_pointer_cast<MpegtsPushStream>(GetStream(info->GetId()));
 	if (stream == nullptr)
 	{
-		logte("RtmpPushApplication::Delete stream failed. Cannot find stream (%s)", info->GetName().CStr());
+		logte("MpegtsPushApplication::Delete stream failed. Cannot find stream (%s)", info->GetName().CStr());
 		return false;
 	}
 
@@ -55,10 +55,10 @@ bool RtmpPushApplication::DeleteStream(const std::shared_ptr<info::Stream> &info
 	return true;
 }
 
-void RtmpPushApplication::SessionUpdate(std::shared_ptr<RtmpPushStream> stream, std::shared_ptr<info::Push> userdata)
+void MpegtsPushApplication::SessionUpdate(std::shared_ptr<MpegtsPushStream> stream, std::shared_ptr<info::Push> userdata)
 {
 	// If there is no session, create a new file(record) session.
-	auto session = std::static_pointer_cast<RtmpPushSession>(stream->GetSession(userdata->GetSessionId()));
+	auto session = std::static_pointer_cast<MpegtsPushSession>(stream->GetSession(userdata->GetSessionId()));
 	if (session == nullptr)
 	{
 		session = stream->CreateSession();
@@ -83,7 +83,7 @@ void RtmpPushApplication::SessionUpdate(std::shared_ptr<RtmpPushStream> stream, 
 	}
 }
 
-void RtmpPushApplication::SessionUpdateByStream(std::shared_ptr<RtmpPushStream> stream, bool stopped)
+void MpegtsPushApplication::SessionUpdateByStream(std::shared_ptr<MpegtsPushStream> stream, bool stopped)
 {
 	if (stream == nullptr)
 	{
@@ -110,7 +110,7 @@ void RtmpPushApplication::SessionUpdateByStream(std::shared_ptr<RtmpPushStream> 
 	}
 }
 
-void RtmpPushApplication::SessionUpdateByUser()
+void MpegtsPushApplication::SessionUpdateByUser()
 {
 	for (uint32_t i = 0; i < _userdata_sets.GetCount(); i++)
 	{
@@ -119,7 +119,7 @@ void RtmpPushApplication::SessionUpdateByUser()
 			continue;
 
 		// Find a stream related to Userdata.
-		auto stream = std::static_pointer_cast<RtmpPushStream>(GetStream(userdata->GetStreamName()));
+		auto stream = std::static_pointer_cast<MpegtsPushStream>(GetStream(userdata->GetStreamName()));
 		if (stream != nullptr && stream->GetState() == pub::Stream::State::STARTED)
 		{
 			SessionUpdate(stream, userdata);
@@ -141,7 +141,7 @@ void RtmpPushApplication::SessionUpdateByUser()
 	}
 }
 
-void RtmpPushApplication::SessionStart(std::shared_ptr<RtmpPushSession> session)
+void MpegtsPushApplication::SessionStart(std::shared_ptr<MpegtsPushSession> session)
 {
 	// Check the status of the session.
 	auto session_state = session->GetState();
@@ -173,7 +173,7 @@ void RtmpPushApplication::SessionStart(std::shared_ptr<RtmpPushSession> session)
 	}
 }
 
-void RtmpPushApplication::SessionStop(std::shared_ptr<RtmpPushSession> session)
+void MpegtsPushApplication::SessionStop(std::shared_ptr<MpegtsPushSession> session)
 {
 	auto session_state = session->GetState();
 
@@ -199,10 +199,13 @@ void RtmpPushApplication::SessionStop(std::shared_ptr<RtmpPushSession> session)
 	}
 }
 
-std::shared_ptr<ov::Error> RtmpPushApplication::PushStart(const std::shared_ptr<info::Push> &push)
+std::shared_ptr<ov::Error> MpegtsPushApplication::PushStart(const std::shared_ptr<info::Push> &push)
 {
 	// Validation check for required parameters
-	if (push->GetId().IsEmpty() == true || push->GetStreamName().IsEmpty() == true || push->GetUrl().IsEmpty() == true || push->GetProtocol().IsEmpty() == true)
+	if (push->GetId().IsEmpty() == true ||
+		push->GetStreamName().IsEmpty() == true ||
+		push->GetUrl().IsEmpty() == true ||
+		push->GetProtocol().IsEmpty() == true)
 	{
 		ov::String error_message = "There is no required parameter [";
 
@@ -227,7 +230,6 @@ std::shared_ptr<ov::Error> RtmpPushApplication::PushStart(const std::shared_ptr<
 		}
 
 		error_message += "]";
-
 		return ov::Error::CreateError(ErrorCode::FailureInvalidParameter, error_message);
 	}
 
@@ -235,36 +237,45 @@ std::shared_ptr<ov::Error> RtmpPushApplication::PushStart(const std::shared_ptr<
 	if (_userdata_sets.GetByKey(push->GetId()) != nullptr)
 	{
 		ov::String error_message = "Duplicate ID already exists";
-
 		return ov::Error::CreateError(ErrorCode::FailureDupulicateKey, error_message);
 	}
 
 	// Validation check for protocol scheme
-	if (push->GetUrl().HasPrefix("rtmp://") == false && push->GetUrl().HasPrefix("rtmps://") == false)
+	if (push->GetUrl().HasPrefix("udp://") == false &&
+		push->GetUrl().HasPrefix("tcp://") == false)
 	{
 		ov::String error_message = "Unsupported protocol";
-
 		return ov::Error::CreateError(ErrorCode::FailureInvalidParameter, error_message);
 	}
 
-	// Remove suffix '/" of rtmp url
+	// Remove suffix '/" of mpegts url
 	while (push->GetUrl().HasSuffix("/"))
 	{
-		ov::String tmp_url = push->GetUrl().Substring(0, push->GetUrl().IndexOfRev('/'));
-		push->SetUrl(tmp_url);
+		auto index_of { push->GetUrl().IndexOfRev('/') };
+		if (index_of >= 0)
+		{
+			ov::String tmp_url = push->GetUrl().Substring(0, static_cast<size_t>(index_of));
+			push->SetUrl(tmp_url);
+		}
+	}
+
+	// Validation check only push not tcp listen
+	if (push->GetUrl().HasPrefix("tcp://") &&
+		push->GetUrl().HasSuffix("listen"))
+	{
+		ov::String error_message = "Unsupported tcp listen";
+		return ov::Error::CreateError(ErrorCode::FailureInvalidParameter, error_message);
 	}
 
 	push->SetEnable(true);
 	push->SetRemove(false);
-
 	_userdata_sets.Set(push);
 
 	SessionUpdateByUser();
-
 	return ov::Error::CreateError(ErrorCode::Success, "Success");
 }
 
-std::shared_ptr<ov::Error> RtmpPushApplication::PushStop(const std::shared_ptr<info::Push> &push)
+std::shared_ptr<ov::Error> MpegtsPushApplication::PushStop(const std::shared_ptr<info::Push> &push)
 {
 	if (push->GetId().IsEmpty() == true)
 	{
@@ -296,7 +307,7 @@ std::shared_ptr<ov::Error> RtmpPushApplication::PushStop(const std::shared_ptr<i
 	return ov::Error::CreateError(ErrorCode::Success, "Success");
 }
 
-std::shared_ptr<ov::Error> RtmpPushApplication::GetPushes(std::vector<std::shared_ptr<info::Push>> &push_list)
+std::shared_ptr<ov::Error> MpegtsPushApplication::GetPushes(std::vector<std::shared_ptr<info::Push>> &push_list)
 {
 	for (uint32_t i = 0; i < _userdata_sets.GetCount(); i++)
 	{

@@ -19,12 +19,12 @@ namespace cfg
 		{
 			namespace pub
 			{
-				struct RtmpPublisher : public Publisher, public cmn::CrossDomainSupport
+				struct MpegtsPushPublisher : public Publisher, public cmn::CrossDomainSupport
 				{
 				public:
 					PublisherType GetType() const override
 					{
-						return PublisherType::Rtmp;
+						return PublisherType::MpegtsPush;
 					}
 
 				protected:
@@ -32,7 +32,7 @@ namespace cfg
 					{
 						Publisher::MakeList();
 
-						Register<Optional>("CrossDomains", &_cross_domains);
+						Register<Optional>({"CrossDomains", OmitRule::Omit}, &_cross_domains);
 					}
 				};
 			}  // namespace pub
