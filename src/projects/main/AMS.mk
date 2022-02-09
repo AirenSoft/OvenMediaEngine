@@ -6,6 +6,7 @@ LOCAL_STATIC_LIBRARIES := \
 	segment_publishers \
 	ovt_publisher \
 	file_publisher \
+	mpegtspush_publisher \
 	rtmppush_publisher \
 	thumbnail_publisher \
 	ovt_provider \

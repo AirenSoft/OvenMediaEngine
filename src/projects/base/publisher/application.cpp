@@ -390,4 +390,9 @@ namespace pub
 
 		return nullptr;
 	}
+
+	PushApplication::PushApplication(const std::shared_ptr<Publisher> &publisher, const info::Application &application_info) :
+		Application(publisher, application_info)
+	{
+	}
 }  // namespace pub
