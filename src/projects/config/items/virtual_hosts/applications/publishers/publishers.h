@@ -13,7 +13,7 @@
 #include "hls_publisher.h"
 #include "ll_dash_publisher.h"
 #include "ovt_publisher.h"
-#include "rtmp_publisher.h"
+#include "mpegtspush_publisher.h"
 #include "rtmppush_publisher.h"
 #include "thumbnail_publisher.h"
 #include "webrtc_publisher.h"
@@ -30,8 +30,9 @@ namespace cfg
 				{
 					std::vector<const Publisher *> GetPublisherList() const
 					{
-						return {
-							// &_rtmp_publisher,
+						return
+						{
+							&_mpegtspush_publisher,
 							&_hls_publisher,
 							&_dash_publisher,
 							&_ll_dash_publisher,
@@ -39,12 +40,13 @@ namespace cfg
 							&_ovt_publisher,
 							&_file_publisher,
 							&_rtmppush_publisher,
-							&_thumbnail_publisher};
+							&_thumbnail_publisher
+						};
 					}
 
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetAppWorkerCount, _app_worker_count)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamWorkerCount, _stream_worker_count)
-					// CFG_DECLARE_CONST_REF_GETTER_OF(GetRtmpPublisher, _rtmp_publisher)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetMpegtsPushPublisher, _mpegtspush_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetHlsPublisher, _hls_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetDashPublisher, _dash_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetLlDashPublisher, _ll_dash_publisher)
@@ -60,7 +62,7 @@ namespace cfg
 						Register<Optional>("AppWorkerCount", &_app_worker_count);
 						Register<Optional>("StreamWorkerCount", &_stream_worker_count);
 
-						// Register<Optional>("RTMP", &_rtmp_publisher);
+						Register<Optional>("MPEGTSPush", &_mpegtspush_publisher);
 						Register<Optional>({"HLS", "hls"}, &_hls_publisher);
 						Register<Optional>({"DASH", "dash"}, &_dash_publisher);
 						Register<Optional>({"LLDASH", "llDash"}, &_ll_dash_publisher);
@@ -74,7 +76,7 @@ namespace cfg
 					int _app_worker_count = 1;
 					int _stream_worker_count = 8;
 
-					// RtmpPublisher _rtmp_publisher;
+					MpegtsPushPublisher _mpegtspush_publisher;
 					RtmpPushPublisher _rtmppush_publisher;
 					HlsPublisher _hls_publisher;
 					DashPublisher _dash_publisher;

@@ -127,6 +127,7 @@ bool RtmpWriter::Start()
 	// Compatibility with specific RTMP servers
 	av_dict_set(&options, "rtmp_flashver", "FMLE/3.0 (compatible; FMSc/1.0)", 0);
 	av_dict_set(&options, "rtmp_tcurl", _format_context->url, 0);
+	av_dict_set(&options, "fflags", "flush_packets", 0);
 
 	if (!(_format_context->oformat->flags & AVFMT_NOFILE))
 	{
