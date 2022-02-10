@@ -76,8 +76,8 @@ We always hope that OvenMediaEngine will give you good inspiration.
 * [OvenMediaEngine Website](https://ovenmediaengine.com)
 * [OvenMediaEngine Tutorial Source](https://github.com/AirenSoft/OvenMediaEngineDocs)
 * Test Player
-  * _Without TLS:_ [_http://demo.ovenplayer.com_](http://demo.ovenplayer.com)\_\_
-  * _With TLS:_ [_https://demo.ovenplayer.com_](https://demo.ovenplayer.com)\_\_
+  * _Without TLS:_ [_http://demo.ovenplayer.com_](http://demo.ovenplayer.com)
+  * _With TLS:_ [_https://demo.ovenplayer.com_](https://demo.ovenplayer.com)
 * [OvenPlayer Github](https://github.com/AirenSoft/OvenPlayer)
 * [AirenSoft Website](https://www.airensoft.com)
 
