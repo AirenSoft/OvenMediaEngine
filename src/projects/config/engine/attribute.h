@@ -12,12 +12,12 @@
 
 namespace cfg
 {
-	class Item;
+	class Variant;
 
 	class Attribute
 	{
 	protected:
-		friend class Item;
+		friend class Variant;
 
 	public:
 		const ov::String &GetValue() const
@@ -31,6 +31,11 @@ namespace cfg
 		}
 
 	protected:
+		void FromString(const ov::String &str)
+		{
+			_value = str;
+		}
+
 		ov::String _value;
 	};
 }  // namespace cfg

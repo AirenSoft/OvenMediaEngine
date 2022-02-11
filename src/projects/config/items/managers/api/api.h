@@ -36,7 +36,7 @@ namespace cfg
 
 					Register<Optional>("Storage", &_storage);
 
-					Register<Optional>({"CrossDomains", OmitRule::Omit}, &_cross_domains);
+					Register<Optional>("CrossDomains", &_cross_domains);
 				}
 			};
 		}  // namespace api

@@ -61,7 +61,8 @@ namespace api
 				cfg::DataSource data_source(cfg::DataType::Xml, storage_path, file_name, "VirtualHost");
 
 				cfg::vhost::VirtualHost vhost_config;
-				vhost_config.FromDataSource("VirtualHost", data_source);
+				vhost_config.SetItemName("VirtualHost");
+				vhost_config.FromDataSource(data_source);
 				vhost_config.SetReadOnly(false);
 
 				logti("Creating a new VirtualHost from %s...", file_name.CStr());

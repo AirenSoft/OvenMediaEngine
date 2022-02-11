@@ -295,9 +295,13 @@ namespace cfg
 		logti("Trying to load configurations... (%s)", server_config_path.CStr());
 		DataSource data_source(DataType::Xml, config_path, CFG_MAIN_FILE_NAME, XML_ROOT_NAME);
 		_server = std::make_shared<Server>();
-		_server->FromDataSource(XML_ROOT_NAME, data_source);
+		_server->SetItemName(XML_ROOT_NAME);
+		_server->FromDataSource(data_source);
 
 		CheckValidVersion(XML_ROOT_NAME, ov::Converter::ToInt32(_server->GetVersion()));
+
+		logtd("Validating omit rules...");
+		_server->ValidateOmitJsonNameRules();
 	}
 
 	void ConfigManager::CheckValidVersion(const ov::String &name, int version)
