@@ -134,7 +134,7 @@ namespace cfg
 
 			Register<Optional>({"P2P", "p2p"}, &_p2p);
 
-			Register<Optional>({"VirtualHosts", OmitRule::Omit}, &_virtual_hosts);
+			Register<Optional>("VirtualHosts", &_virtual_hosts);
 		}
 	};
 }  // namespace cfg

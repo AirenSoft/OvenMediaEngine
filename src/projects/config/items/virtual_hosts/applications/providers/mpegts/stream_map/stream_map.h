@@ -31,7 +31,7 @@ namespace cfg
 					protected:
 						void MakeList() override
 						{
-							Register("Stream", &_stream_list);
+							Register<OmitJsonName>("Stream", &_stream_list);
 						}
 					};
 				}  // namespace mpegts

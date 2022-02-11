@@ -23,7 +23,7 @@ namespace cfg
 		protected:
 			void MakeList() override
 			{
-				Register("Name", &_name_list);
+				Register<OmitJsonName>("Name", &_name_list);
 			}
 		};
 	}  // namespace cmn

@@ -283,7 +283,8 @@ namespace api
 			return CreateNotFoundError(vhost, app, profile_name);
 		}
 
-		ApiResponse OutputProfilesController::OnPutOutputProfile(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
+		ApiResponse OutputProfilesController::OnPutOutputProfile(const std::shared_ptr<http::svr::HttpConnection> &client,
+																 const Json::Value &request_body,
 																 const std::shared_ptr<mon::HostMetrics> &vhost,
 																 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{

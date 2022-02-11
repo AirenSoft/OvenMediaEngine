@@ -50,7 +50,7 @@ namespace cfg
 
 						Register<Optional>("UTCTiming", &_utc_timing);
 
-						Register<Optional>({"CrossDomains", OmitRule::Omit}, &_cross_domains);
+						Register<Optional>("CrossDomains", &_cross_domains);
 					}
 				};
 			}  // namespace pub

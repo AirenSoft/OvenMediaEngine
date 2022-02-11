@@ -61,7 +61,7 @@ enum class PublisherType : int8_t
 {
 	Unknown = 0,
 	Webrtc,
-	Rtmp,
+	MpegtsPush,
 	RtmpPush,
 	Hls,
 	Dash,
@@ -316,8 +316,8 @@ static ov::String StringFromPublisherType(const PublisherType &type)
 			return "Unknown";
 		case PublisherType::Webrtc:
 			return "WebRTC";
-		case PublisherType::Rtmp:
-			return "RTMP";
+		case PublisherType::MpegtsPush:
+			return "MPEGTSPush";
 		case PublisherType::RtmpPush:
 			return "RTMPPush";
 		case PublisherType::Hls:

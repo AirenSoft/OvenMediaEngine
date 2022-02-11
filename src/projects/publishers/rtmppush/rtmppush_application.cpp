@@ -12,7 +12,7 @@ std::shared_ptr<RtmpPushApplication> RtmpPushApplication::Create(const std::shar
 }
 
 RtmpPushApplication::RtmpPushApplication(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
-	: Application(publisher, application_info)
+	: PushApplication(publisher, application_info)
 {
 }
 
@@ -228,7 +228,7 @@ std::shared_ptr<ov::Error> RtmpPushApplication::PushStart(const std::shared_ptr<
 
 		error_message += "]";
 
-		return ov::Error::CreateError(RtmpPushPublisher::ErrorCode::FailureInvalidParameter, error_message);
+		return ov::Error::CreateError(ErrorCode::FailureInvalidParameter, error_message);
 	}
 
 	// Validation check for dupulicate id
@@ -236,7 +236,7 @@ std::shared_ptr<ov::Error> RtmpPushApplication::PushStart(const std::shared_ptr<
 	{
 		ov::String error_message = "Duplicate ID already exists";
 
-		return ov::Error::CreateError(RtmpPushPublisher::ErrorCode::FailureDupulicateKey, error_message);
+		return ov::Error::CreateError(ErrorCode::FailureDupulicateKey, error_message);
 	}
 
 	// Validation check for protocol scheme
@@ -244,7 +244,7 @@ std::shared_ptr<ov::Error> RtmpPushApplication::PushStart(const std::shared_ptr<
 	{
 		ov::String error_message = "Unsupported protocol";
 
-		return ov::Error::CreateError(RtmpPushPublisher::ErrorCode::FailureInvalidParameter, error_message);
+		return ov::Error::CreateError(ErrorCode::FailureInvalidParameter, error_message);
 	}
 
 	// Remove suffix '/" of rtmp url
@@ -261,7 +261,7 @@ std::shared_ptr<ov::Error> RtmpPushApplication::PushStart(const std::shared_ptr<
 
 	SessionUpdateByUser();
 
-	return ov::Error::CreateError(RtmpPushPublisher::ErrorCode::Success, "Success");
+	return ov::Error::CreateError(ErrorCode::Success, "Success");
 }
 
 std::shared_ptr<ov::Error> RtmpPushApplication::PushStop(const std::shared_ptr<info::Push> &push)
@@ -277,7 +277,7 @@ std::shared_ptr<ov::Error> RtmpPushApplication::PushStop(const std::shared_ptr<i
 
 		error_message += "]";
 
-		return ov::Error::CreateError(RtmpPushPublisher::ErrorCode::FailureInvalidParameter, error_message);
+		return ov::Error::CreateError(ErrorCode::FailureInvalidParameter, error_message);
 	}
 
 	auto userdata = _userdata_sets.GetByKey(push->GetId());
@@ -285,7 +285,7 @@ std::shared_ptr<ov::Error> RtmpPushApplication::PushStop(const std::shared_ptr<i
 	{
 		ov::String error_message = ov::String::FormatString("There is no push information related to the ID [%s]", push->GetId().CStr());
 
-		return ov::Error::CreateError(RtmpPushPublisher::ErrorCode::FailureNotExist, error_message);
+		return ov::Error::CreateError(ErrorCode::FailureNotExist, error_message);
 	}
 
 	userdata->SetEnable(false);
@@ -293,7 +293,7 @@ std::shared_ptr<ov::Error> RtmpPushApplication::PushStop(const std::shared_ptr<i
 
 	SessionUpdateByUser();
 
-	return ov::Error::CreateError(RtmpPushPublisher::ErrorCode::Success, "Success");
+	return ov::Error::CreateError(ErrorCode::Success, "Success");
 }
 
 std::shared_ptr<ov::Error> RtmpPushApplication::GetPushes(std::vector<std::shared_ptr<info::Push>> &push_list)
@@ -307,5 +307,5 @@ std::shared_ptr<ov::Error> RtmpPushApplication::GetPushes(std::vector<std::share
 		push_list.push_back(userdata);
 	}
 
-	return ov::Error::CreateError(RtmpPushPublisher::ErrorCode::Success, "Success");
+	return ov::Error::CreateError(ErrorCode::Success, "Success");
 }

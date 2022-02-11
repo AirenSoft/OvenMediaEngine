@@ -11,8 +11,8 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
 ## Features
 
 * **Ingest**
-  * _Push: WebRTC, RTMP, SRT, MPEG-2 TS_
-  * _Pull: RTSP_
+  * Push: WebRTC, RTMP, SRT, MPEG-2 TS
+  * Pull: RTSP
 * **Sub-Second Latency Streaming with WebRTC**
   * WebRTC over TCP (with embedded TURN server)
   * Embedded WebRTC Signalling Server (WebSocket based)
@@ -25,21 +25,21 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
     * _Opus_
 * **Low-Latency MPEG-DASH Streaming** (Beta)
 * **Legacy HLS/MPEG-DASH Streaming**
-* **Embedded Live Transcoder**&#x20;
-  * _Video: VP8, H.264, Pass-through_
-  * _Audio: Opus, AAC, Pass-through_
+* **Embedded Live Transcoder**
+  * Video: VP8, H.264, Pass-through
+  * Audio: Opus, AAC, Pass-through
 * **Clustering** (Origin-Edge Structure)
 * **Monitoring**
 * **Access Control**
-  * _Admission Webhooks_
-  * _Signed Policy_
+  * Admission Webhooks
+  * Signed Policy
 * **Beta**
-  * _File Recording_
-  * _RTMP Push Publishing (Re-streaming)_
-  * _Thumbnail_
-  * _REST API_
+  * File Recording
+  * RTMP, MPEGTS Push Publishing (Re-streaming)
+  * Thumbnail
+  * REST API
 * **Experiment**
-  * _P2P Traffic Distribution (Only WebRTC)_
+  * P2P Traffic Distribution (Only WebRTC)
 
 ## Supported Platforms
 
@@ -76,11 +76,11 @@ We always hope that OvenMediaEngine will give you good inspiration.
 * [OvenMediaEngine Website](https://ovenmediaengine.com)
 * [OvenMediaEngine Tutorial Source](https://github.com/AirenSoft/OvenMediaEngineDocs)
 * Test Player
-  * _Without TLS:_ [_http://demo.ovenplayer.com_](http://demo.ovenplayer.com)__
-  * _With TLS:_ [_https://demo.ovenplayer.com_](https://demo.ovenplayer.com)__
+  * _Without TLS:_ [_http://demo.ovenplayer.com_](http://demo.ovenplayer.com)
+  * _With TLS:_ [_https://demo.ovenplayer.com_](https://demo.ovenplayer.com)
 * [OvenPlayer Github](https://github.com/AirenSoft/OvenPlayer)
 * [AirenSoft Website](https://www.airensoft.com)
 
 ## License
 
-OvenMediaEngine is licensed under the [GPLv3](../LICENSE) or later.
+OvenMediaEngine is licensed under the [AGPL-3.0-only](../LICENSE).

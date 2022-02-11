@@ -35,7 +35,7 @@ namespace cfg
 					return false;
 				}
 
-				ov::String ToString() const
+				ov::String ToString() const override
 				{
 					return _value;
 				}

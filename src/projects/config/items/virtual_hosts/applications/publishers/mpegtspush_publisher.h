@@ -19,12 +19,12 @@ namespace cfg
 		{
 			namespace pub
 			{
-				struct RtmpPublisher : public Publisher, public cmn::CrossDomainSupport
+				struct MpegtsPushPublisher : public Publisher, public cmn::CrossDomainSupport
 				{
 				public:
 					PublisherType GetType() const override
 					{
-						return PublisherType::Rtmp;
+						return PublisherType::MpegtsPush;
 					}
 
 				protected:

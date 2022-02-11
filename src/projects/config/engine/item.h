@@ -8,23 +8,17 @@
 //==============================================================================
 #pragma once
 
-#include <base/ovlibrary/ovlibrary.h>
-
 #include <any>
 #include <functional>
 
 #include "./annotations.h"
 #include "./attribute.h"
+#include "./child.h"
 #include "./config_error.h"
 #include "./data_source.h"
 #include "./declare_utilities.h"
-
-// Value types
-#include "./child.h"
-#include "./list_child.h"
-#include "./list_interface.h"
-#include "./text.h"
-#include "./value_type.h"
+#include "./item_name.h"
+#include "./list.h"
 
 #define CFG_VERBOSE_STRING 1
 
@@ -43,168 +37,7 @@ namespace cfg
 	protected:
 		static ov::String ChildToString(int indent_count, const std::shared_ptr<const Child> &child, size_t index, size_t child_count);
 
-		// Convert <cfg::Item *> to std::any
-		template <typename Ttype, std::enable_if_t<!std::is_base_of_v<Item, Ttype>, int> = 0>
-		static std::any MakeAny(Ttype *item)
-		{
-			return item;
-		}
-
-		// Convert <Subclass of cfg::Item *> to std::any
-		template <typename Ttype, std::enable_if_t<std::is_base_of_v<Item, Ttype>, int> = 0>
-		static std::any MakeAny(Ttype *item)
-		{
-			return static_cast<Item *>(item);
-		}
-
-		template <typename Ttype>
-		class List : public ListInterface
-		{
-		public:
-			using ListType = std::vector<Ttype>;
-
-			List(ListType *target)
-				: ListInterface(ProbeType<Ttype>::type),
-				  _target(target)
-			{
-			}
-
-			void CopyChildrenFrom(const std::any &another_list) override
-			{
-				auto from = std::static_pointer_cast<List<Ttype>>(TryCast<std::shared_ptr<ListInterface>>(another_list));
-
-				_item_name = from->_item_name;
-
-				_list_children = from->_list_children;
-
-				// _target points to the Item's value;
-				auto iterator = _target->begin();
-
-				// Rebuild target list
-				for (auto &list_child : _list_children)
-				{
-					list_child->Update(MakeAny(&(*iterator)));
-					iterator++;
-				}
-			}
-
-			ov::String GetTypeName() const override
-			{
-				return ov::Demangle(typeid(Ttype).name());
-			}
-
-			void Allocate(size_t size) override
-			{
-				_target->resize(size);
-			}
-
-			std::any GetAt(size_t index) override
-			{
-				return MakeAny(&(_target->operator[](index)));
-			}
-
-			void Clear() override
-			{
-				ListInterface::Clear();
-				_target->clear();
-			}
-
-			template <typename Tvalue_type, std::enable_if_t<!std::is_base_of_v<Item, Tvalue_type>, int> = 0>
-			ov::String ConvertToString(int indent_count, const Tvalue_type *value) const
-			{
-				return cfg::ToString(value);
-			}
-
-			ov::String ConvertToString(int indent_count, const Item *value) const
-			{
-				return cfg::ToString(indent_count, value);
-			}
-
-			ov::String ToString(int indent_count, const std::shared_ptr<const Child> &list_info) const override
-			{
-				size_t index = 0;
-				size_t child_count = _target->size();
-
-				if (child_count == 0)
-				{
-					return "";
-				}
-
-				ov::String indent = MakeIndentString(indent_count);
-
-				ov::String description;
-
-				for (auto &item : *_target)
-				{
-					ov::String comma = (index < (child_count - 1)) ? ", " : "";
-
-					if (GetValueType() == ValueType::Item)
-					{
-						description.AppendFormat(
-							"%s"
-							"%s"
-							"\n",
-							ConvertToString(indent_count, &item).CStr(),
-							comma.CStr());
-					}
-					else
-					{
-						description.AppendFormat(
-							"%s"
-							"%zu: %s"
-							"%s"
-							"\n",
-							indent.CStr(),
-							index, ConvertToString(indent_count + 1, &item).CStr(),
-							comma.CStr());
-					}
-
-					index++;
-				}
-
-				return description;
-			}
-
-		protected:
-			MAY_THROWS(std::shared_ptr<ConfigError>)
-			void ValidateOmitRuleInternal(const ov::String &item_path) const override
-			{
-				switch (GetValueType())
-				{
-					case ValueType::Item: {
-						ValidateOmitRuleForItem(item_path);
-						break;
-					}
-
-					case ValueType::List: {
-						// Config module doesn't support nested list
-						throw CreateConfigError("Config module doesn't support nested list");
-					}
-
-					default:
-						// Do not need to validate omit rule for other types
-						break;
-				}
-			}
-
-			ListType *_target;
-
-		private:
-			MAY_THROWS(std::shared_ptr<ConfigError>)
-			template <typename Titem_type = Ttype, std::enable_if_t<std::is_base_of_v<Item, Titem_type>, int> = 0>
-			void ValidateOmitRuleForItem(const ov::String &item_path) const
-			{
-				Ttype item;
-
-				item.ValidateOmitRules(item_path);
-			}
-
-			MAY_THROWS(std::shared_ptr<ConfigError>)
-			template <typename Titem_type = Ttype, std::enable_if_t<!std::is_base_of_v<Item, Titem_type>, int> = 0>
-			void ValidateOmitRuleForItem(const ov::String &item_path) const
-			{
-			}
-		};
+		friend class SetValueHelper;
 
 	public:
 		Item() = default;
@@ -218,18 +51,23 @@ namespace cfg
 		void FromDataSource(ov::String item_path, const ItemName &name, const DataSource &data_source);
 
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		void FromDataSource(const ItemName &name, const DataSource &data_source);
+		void FromDataSource(const DataSource &data_source);
 
 		Item &operator=(const Item &item);
 
-		bool IsDefault() const
+		void SetItemName(const ItemName &item_name)
 		{
-			return _is_parsed == false;
+			_item_name = item_name;
 		}
 
 		bool IsParsed() const
 		{
 			return _is_parsed;
+		}
+
+		void SetParsed(bool is_parsed)
+		{
+			_is_parsed = is_parsed;
 		}
 
 		bool IsReadOnly() const
@@ -242,8 +80,47 @@ namespace cfg
 			_is_read_only = is_read_only;
 		}
 
+		template <typename Ttype = Child>
+		std::shared_ptr<Ttype> GetMember(const void *member_pointer)
+		{
+			RebuildListIfNeeded();
+
+			for (const auto &child : _children)
+			{
+				if (child->GetMemberRawPointer() == member_pointer)
+				{
+					return child->GetSharedPtrAs<Ttype>();
+				}
+			}
+
+			return nullptr;
+		}
+
+		template <typename Ttype>
+		std::shared_ptr<List<Ttype>> GetListMember(const std::vector<Ttype> *member_pointer)
+		{
+			return GetMember<List<Ttype>>(member_pointer);
+		}
+
+		void SetValue(const void *member_pointer, const Variant &value)
+		{
+			RebuildListIfNeeded();
+
+			for (const auto &child : _children)
+			{
+				if (child->GetMemberRawPointer() == member_pointer)
+				{
+					child->SetValue(value);
+					return;
+				}
+			}
+		}
+
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		void ValidateOmitRules(const ov::String &item_path) const;
+		void ValidateOmitJsonNameRules(const ov::String &item_path) const;
+
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void ValidateOmitJsonNameRules() const;
 
 		virtual ov::String ToString() const
 		{
@@ -252,31 +129,44 @@ namespace cfg
 
 		virtual ov::String ToString(int indent_count) const;
 
-		Json::Value ToJson(bool include_default_values = false) const;
-		void ToXml(pugi::xml_node node, bool include_default_values = false) const;
-		pugi::xml_document ToXml(bool include_default_values = false) const;
+		static void SetJsonChildValue(ValueType value_type, Json::Value &object, const ov::String &child_name, const Json::Value &original_value);
+
+		// Serialize Item to Json::Value
+		// (ResolvePath and ${env} are NOT processed - created from original data)
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void ToJson(Json::Value &value, bool include_default_values) const;
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		Json::Value ToJson(bool include_default_values) const;
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		Json::Value ToJson() const
+		{
+			return ToJson(false);
+		}
+
+		// Serialize Item to pugi::xml_node/pugi::xml_document
+		// (ResolvePath and ${env} are NOT processed - created from original data)
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void ToXml(pugi::xml_node &node, bool include_default_values) const;
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		pugi::xml_document ToXml(bool include_default_values) const;
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		pugi::xml_document ToXml() const
+		{
+			return ToXml(false);
+		}
 
 	protected:
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		static void SetValueForList(
-			const ov::String &child_path, const std::shared_ptr<const Child> &child,
-			ValueType type, std::shared_ptr<ListInterface> &list_target,
-			const ov::String &item_path,
-			const ItemName &child_name, const ov::String &name,
-			const std::vector<cfg::DataSource> &data_sources);
-		// Returns true if the value exists, otherwise returns false
-		MAY_THROWS(std::shared_ptr<ConfigError>)
-		static bool SetValue(
-			const std::shared_ptr<const Child> &child,
-			ValueType type, std::any &child_target,
-			const ov::String &item_path,
-			const ItemName &child_name, const ov::String &name,
-			const std::any &value);
-
-		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void FromDataSourceInternal(ov::String item_path, const DataSource &data_source);
 
+		MAY_THROWS(std::shared_ptr<ConfigError>)
 		bool IsParsed(const void *target) const;
+
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void ValidateOmitJsonNameRuleForItem(const ov::String &item_path, const std::shared_ptr<Child> &child) const;
+
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void ValidateOmitJsonNameRuleForList(const ov::String &item_path, const std::shared_ptr<Child> &child) const;
 
 		// When converting to JSON, check if the sub-items of this item can be omitted.
 		// If an error is thrown when call this function, there is a misdeveloped config.
@@ -301,7 +191,7 @@ namespace cfg
 		// @param item_path The path of this item (for debugging purpose)
 		// @param name Item name
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		void ValidateOmitRule(const ov::String &item_path, const ov::String &name) const;
+		void ValidateOmitJsonNameRule(const ov::String &item_path, const ov::String &name) const;
 
 		void RebuildListIfNeeded() const;
 		void RebuildListIfNeeded();
@@ -309,73 +199,71 @@ namespace cfg
 		virtual void MakeList() = 0;
 
 		void AddChild(const ItemName &name, ValueType type, const ov::String &type_name,
-					  bool is_optional, bool resolve_path,
+					  Optional is_optional, cfg::ResolvePath resolve_path, cfg::OmitJsonName omit_json_name,
 					  OptionalCallback optional_callback, ValidationCallback validation_callback,
-					  const void *raw_target, std::any target);
+					  void *member_raw_pointer, std::any member_pointer);
+
+		void AddChild(const std::shared_ptr<Child> &child);
 
 		// For primitive types
 		template <
-			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
+			typename Tannot1 = void, typename Tannot2 = void, typename Tannot3 = void,
 			typename Ttype, std::enable_if_t<!std::is_base_of_v<Item, Ttype> && !std::is_base_of_v<Text, Ttype>, int> = 0>
 		void Register(const ItemName &name, Ttype *value, OptionalCallback optional_callback = nullptr, ValidationCallback validation_callback = nullptr)
 		{
 			AddChild(name, ProbeType<Ttype>::type, ov::Demangle(typeid(Ttype).name()),
-					 CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-					 CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value,
+					 CheckAnnotations<Optional, Tannot1, Tannot2, Tannot3>::value ? Optional::Optional : Optional::NotOptional,
+					 CheckAnnotations<ResolvePath, Tannot1, Tannot2, Tannot3>::value ? ResolvePath::Resolve : ResolvePath::DontResolve,
+					 CheckAnnotations<OmitJsonName, Tannot1, Tannot2, Tannot3>::value ? OmitJsonName::Omit : OmitJsonName::DontOmit,
 					 optional_callback, validation_callback,
 					 value, value);
 		}
 
 		// For Text
 		template <
-			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
+			typename Tannot1 = void, typename Tannot2 = void, typename Tannot3 = void,
 			typename Ttype, std::enable_if_t<std::is_base_of_v<Text, Ttype>, int> = 0>
 		void Register(const ItemName &name, Ttype *value, OptionalCallback optional_callback = nullptr, ValidationCallback validation_callback = nullptr)
 		{
 			AddChild(name, ProbeType<Ttype>::type, ov::Demangle(typeid(Ttype).name()),
-					 CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-					 CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value,
+					 CheckAnnotations<Optional, Tannot1, Tannot2, Tannot3>::value ? Optional::Optional : Optional::NotOptional,
+					 CheckAnnotations<ResolvePath, Tannot1, Tannot2, Tannot3>::value ? ResolvePath::Resolve : ResolvePath::DontResolve,
+					 CheckAnnotations<OmitJsonName, Tannot1, Tannot2, Tannot3>::value ? OmitJsonName::Omit : OmitJsonName::DontOmit,
 					 optional_callback, validation_callback,
 					 value, static_cast<Text *>(value));
 		}
 
 		// For Item
 		template <
-			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
+			typename Tannot1 = void, typename Tannot2 = void, typename Tannot3 = void,
 			typename Ttype, std::enable_if_t<std::is_base_of_v<Item, Ttype>, int> = 0>
 		void Register(const ItemName &name, Ttype *value, OptionalCallback optional_callback = nullptr, ValidationCallback validation_callback = nullptr)
 		{
-			auto item = static_cast<Item *>(value);
-
 			AddChild(name, ProbeType<Ttype>::type, ov::Demangle(typeid(Ttype).name()),
-					 CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-					 CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value,
+					 CheckAnnotations<Optional, Tannot1, Tannot2, Tannot3>::value ? Optional::Optional : Optional::NotOptional,
+					 CheckAnnotations<ResolvePath, Tannot1, Tannot2, Tannot3>::value ? ResolvePath::Resolve : ResolvePath::DontResolve,
+					 CheckAnnotations<OmitJsonName, Tannot1, Tannot2, Tannot3>::value ? OmitJsonName::Omit : OmitJsonName::DontOmit,
 					 optional_callback, validation_callback,
-					 value, item);
+					 value, static_cast<Item *>(value));
 
-			value->_item_name = name;
+			value->SetItemName(name);
 		}
 
 		// For std::vector<Ttype>
 		template <
-			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
+			typename Tannot1 = void, typename Tannot2 = void, typename Tannot3 = void,
 			typename Ttype>
 		void Register(const ItemName &name, std::vector<Ttype> *value, OptionalCallback optional_callback = nullptr, ValidationCallback validation_callback = nullptr)
 		{
-			auto list = std::make_shared<List<Ttype>>(value);
-
-			AddChild(name, ValueType::List, ov::Demangle(typeid(Ttype).name()),
-					 CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-					 CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value,
-					 optional_callback, validation_callback,
-					 value, std::static_pointer_cast<ListInterface>(list));
+			AddChild(
+				std::make_shared<List<Ttype>>(
+					name, ov::Demangle(typeid(Ttype).name()),
+					CheckAnnotations<Optional, Tannot1, Tannot2, Tannot3>::value ? Optional::Optional : Optional::NotOptional,
+					CheckAnnotations<ResolvePath, Tannot1, Tannot2, Tannot3>::value ? ResolvePath::Resolve : ResolvePath::DontResolve,
+					CheckAnnotations<OmitJsonName, Tannot1, Tannot2, Tannot3>::value ? OmitJsonName::Omit : OmitJsonName::DontOmit,
+					optional_callback, validation_callback,
+					value));
 		}
-
-		static void AddJsonChild(Json::Value &object, ValueType value_type, OmitRule omit_name, const ov::String &child_name, const std::any &child_target, const Json::Value &original_value, bool include_default_values);
-		static void AddXmlChild(pugi::xml_node &node, ValueType value_type, const ov::String &child_name, const std::any &child_target, const Json::Value &original_value, bool include_default_values);
-
-		Json::Value ToJsonInternal(bool include_default_values) const;
-		void ToXmlInternal(pugi::xml_node &parent_node, bool include_default_values) const;
 
 		// Used to determine if a child list needs to be refreshed
 		//
