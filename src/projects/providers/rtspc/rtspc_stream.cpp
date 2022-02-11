@@ -626,6 +626,7 @@ namespace pvd
 		}
 
 		logtd("Response PLAY : %s", reply->DumpHeader().CStr());
+		_play_request_time.Start();
 
 		SetState(State::PLAYING);
 
@@ -958,18 +959,55 @@ namespace pvd
 				return;
 		}
 
-		auto pts = _lip_sync_clock.CalcPTS(channel, first_rtp_packet->Timestamp());
-		if(pts.has_value() == false)
+		if(_pts_calculation_method == PtsCalculationMethod::UNDER_DECISION)
 		{
-			logtd("not yet received sr packet : %u", first_rtp_packet->Ssrc());
+			if(GetTracks().size() == 1)
+			{
+				logti("Since this stream has a single track, it computes PTS alone without RTCP SR.");
+				_pts_calculation_method = PtsCalculationMethod::SINGLE_DELTA;
+			}
+			else if(_lip_sync_clock.IsEnabled() == true)
+			{
+				logti("Since this stream has received an RTCP SR, it counts the PTS with the SR.");
+				_pts_calculation_method = PtsCalculationMethod::WITH_RTCP_SR;
+			}
+			// If it exceeds 5 seconds, it is calculated independently without RTCP SR.
+			else if(_lip_sync_clock.IsEnabled() == false && _play_request_time.Elapsed() > 5000)
+			{
+				logtw("Since the RTCP SR was not received within 5 seconds, the PTS is calculated for each track without RTCP SR. (Lip-Sync may be out of sync)");
+				_pts_calculation_method = PtsCalculationMethod::SINGLE_DELTA;
+			}
+			else if(_lip_sync_clock.IsEnabled() == false && _play_request_time.Elapsed() <= 5000)
+			{
+				// Wait for RTCP SR for 5 seconds
+			}
+		}
 
+		uint64_t timestamp = 0;
+		if(_pts_calculation_method == PtsCalculationMethod::WITH_RTCP_SR)
+		{
+			auto pts = _lip_sync_clock.CalcPTS(channel, first_rtp_packet->Timestamp());
+			if(pts.has_value() == false)
+			{
+				logtd("not yet received sr packet : %u", first_rtp_packet->Ssrc());
+				// Prevents the stream from being deleted because there is no input data
+				MonitorInstance->IncreaseBytesIn(*Stream::GetSharedPtr(), bitstream->GetLength());
+				return;
+			}
+
+			timestamp = AdjustTimestampByBase(channel, pts.value(), std::numeric_limits<uint64_t>::max());
+		}
+		else if(_pts_calculation_method == PtsCalculationMethod::SINGLE_DELTA)
+		{
+			timestamp = AdjustTimestampByDelta(channel, first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
+		}
+		else
+		{
+			logtd("Haven't decided how to calculate pts yet.");
 			// Prevents the stream from being deleted because there is no input data
 			MonitorInstance->IncreaseBytesIn(*Stream::GetSharedPtr(), bitstream->GetLength());
 			return;
 		}
-
-		auto timestamp = AdjustTimestampByBase(channel, pts.value(), std::numeric_limits<uint64_t>::max());
-		//auto timestamp = AdjustTimestampByDelta(channel, first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
 
 		logtd("Channel(%d) Payload Type(%d) Ssrc(%u) Timestamp(%u) PTS(%lld) Time scale(%f) Adjust Timestamp(%f)", 
 				channel, first_rtp_packet->PayloadType(), first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
