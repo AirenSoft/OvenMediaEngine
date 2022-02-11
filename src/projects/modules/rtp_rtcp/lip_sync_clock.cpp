@@ -50,6 +50,8 @@ std::optional<uint64_t> LipSyncClock::CalcPTS(uint32_t id, uint32_t rtp_timestam
 
 bool LipSyncClock::UpdateSenderReportTime(uint32_t id, uint32_t ntp_msw, uint32_t ntp_lsw, uint32_t rtcp_timestamp)
 {
+	_enabled = true;
+
 	auto clock = GetClock(id);
 	if(clock == nullptr)
 	{
