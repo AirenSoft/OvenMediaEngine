@@ -74,7 +74,7 @@ namespace cfg
 				Register<Optional>("AdmissionWebhooks", &_admission_webhooks);
 
 				Register<Optional>("Origins", &_origins);
-				Register<Optional>({"Applications", OmitRule::Omit}, &_applications);
+				Register<Optional>("Applications", &_applications);
 			}
 		};
 	}  // namespace vhost

@@ -36,8 +36,8 @@ namespace cfg
 					void MakeList() override
 					{
 						AudioProfileTemplate::MakeList();
-						
-						Register<Optional>({"Variant", "variants", OmitRule::DontOmit}, &_variants, [=]() -> std::shared_ptr<ConfigError> {
+
+						Register<Optional>({"Variant", "variants"}, &_variants, [=]() -> std::shared_ptr<ConfigError> {
 							for (auto &variant : _variants)
 							{
 								if (variant.GetName().IsEmpty())

@@ -27,7 +27,7 @@ namespace cfg
 						Register("HardwareAcceleration", &_hw_acceleration);
 					}
 
-					bool _hw_acceleration;
+					bool _hw_acceleration = false;
 				};
 			}  // namespace dec
 		}	   // namespace app

@@ -36,7 +36,7 @@ namespace cfg
 					{
 						VideoProfileTemplate::MakeList();
 
-						Register<Optional>({"Variant", "variants", OmitRule::DontOmit}, &_variants, [=]() -> std::shared_ptr<ConfigError> {
+						Register<Optional>({"Variant", "variants"}, &_variants, [=]() -> std::shared_ptr<ConfigError> {
 							for (auto &variant : _variants)
 							{
 								if (variant.GetName().IsEmpty())

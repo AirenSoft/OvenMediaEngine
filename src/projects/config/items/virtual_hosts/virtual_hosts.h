@@ -25,7 +25,7 @@ namespace cfg
 		protected:
 			void MakeList() override
 			{
-				Register("VirtualHost", &_virtual_host_list);
+				Register<OmitJsonName>("VirtualHost", &_virtual_host_list);
 			}
 		};
 	}  // namespace vhost

@@ -8,7 +8,9 @@
 //==============================================================================
 #include "value_type.h"
 
+#include "attribute.h"
 #include "item.h"
+#include "list_interface.h"
 
 namespace cfg
 {
@@ -68,39 +70,56 @@ namespace cfg
 		return "";
 	}
 
-	ov::String ToString(const int *value)
+	ov::String ToDebugString(int indent_count, const ov::String *value)
+	{
+		return ov::String::FormatString("\"%s\"", value->CStr());
+	}
+
+	ov::String ToDebugString(int indent_count, const int *value)
 	{
 		return ov::Converter::ToString(*value);
 	}
 
-	ov::String ToString(const int64_t *value)
+	ov::String ToDebugString(int indent_count, const int64_t *value)
 	{
 		auto result = ov::Converter::ToString(*value);
 		result += "L";
 		return result;
 	}
 
-	ov::String ToString(const float *value)
-	{
-		auto result = ov::Converter::ToString(*value);
-		result += "f";
-		return result;
-	}
-
-	ov::String ToString(const double *value)
+	ov::String ToDebugString(int indent_count, const bool *value)
 	{
 		return ov::Converter::ToString(*value);
 	}
 
-	ov::String ToString(const ov::String *value)
+	ov::String ToDebugString(int indent_count, const double *value)
 	{
-		ov::String result;
-		result.Format("\"%s\"", value->CStr());
-		return result;
+		return ov::Converter::ToString(*value);
 	}
 
-	ov::String ToString(int indent_count, const Item *object)
+	ov::String ToDebugString(int indent_count, const Attribute *value)
 	{
-		return object->ToString(indent_count);
+		return ov::String::FormatString("\"%s\"", value->GetValue().CStr());
 	}
+
+	ov::String ToDebugString(int indent_count, const Text *value)
+	{
+		return ov::String::FormatString("\"%s\"", value->ToString().CStr());
+	}
+
+	ov::String ToDebugString(int indent_count, const Item *value)
+	{
+		return value->ToString(indent_count);
+	}
+
+	ov::String ToString(const Text *value)
+	{
+		return value->ToString();
+	}
+
+	ov::String ToString(int indent_count, const Item *value)
+	{
+		return value->ToString(indent_count);
+	}
+
 }  // namespace cfg

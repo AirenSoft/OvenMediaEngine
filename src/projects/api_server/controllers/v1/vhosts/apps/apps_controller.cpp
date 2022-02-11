@@ -60,7 +60,7 @@ namespace api
 
 			if (config.isMember("outputProfiles") == false)
 			{
-				Json::Value &output_profile = config["outputProfile"];
+				Json::Value output_profile(Json::objectValue);
 
 				output_profile["name"] = "bypass";
 				output_profile["outputStreamName"] = "${OriginStreamName}";
@@ -80,7 +80,10 @@ namespace api
 				codec["channel"] = 2;
 				encodes["audios"].append(codec);
 
-				config["outputProfiles"].append(output_profile);
+				Json::Value item;
+				item["outputProfile"] = output_profile;
+
+				config["outputProfiles"].append(item);
 			}
 
 			return true;
