@@ -52,9 +52,18 @@ namespace api
 		ApiResponse VHostsController::OnDeleteVhost(const std::shared_ptr<http::svr::HttpConnection> &client,
 													const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
-			_server->DeleteVHost(*(vhost.get()));
+			auto &vhost_info = *(vhost.get());
 
-			return http::StatusCode::OK;
+			logti("Deleting virtual host: %s", vhost_info.GetName().CStr());
+
+			auto result = ocst::Orchestrator::GetInstance()->DeleteVirtualHost(vhost_info);
+
+			if (result != ocst::Result::Succeeded)
+			{
+				throw CreateConfigError("Failed to delete virtual host: %s (%d)", vhost_info.GetName().CStr(), ov::ToUnderlyingType(result));
+			}
+
+			return {};
 		}
 	}  // namespace v1
 }  // namespace api
