@@ -182,12 +182,12 @@ install_ffmpeg()
     fi
 
     ADDI_LICENSE=""
-    ADDI_LIBS=""
+    ADDI_LIBS=" --disable-nvdec --disable-nvdec --disable-vaapi --disable-vdpau --disable-cuda-llvm --disable-cuvid --disable-ffnvcodec "
     ADDI_ENCODER=""
     ADDI_DECODER=""
     ADDI_CFLAGS=""
     ADDI_LDFLAGS=""
-    ADDI_HWACCEL="--disable-nvdec --disable-nvdec --disable-vaapi --disable-vdpau --disable-cuda-llvm --disable-cuvid --disable-ffnvcodec"
+    ADDI_HWACCEL=""
     ADDI_FILTERS=""
 
     if [ "$INTEL_QSV_HWACCELS" = true ] ; then
@@ -200,12 +200,12 @@ install_ffmpeg()
 
     if [ "$NVIDIA_VIDEO_CODEC_HWACCELS" = true ] ; then
         ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
-        ADDI_LIBS+=" --enable-cuda-nvcc --enable-cuda-llvm --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec"
+        ADDI_LIBS+=" --enable-cuda-nvcc --enable-cuda-llvm --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec --enable-cuvid"
         ADDI_ENCODER+=",h264_nvenc,hevc_nvenc"
-        ADDI_DECODER+=",h264_nvdec,hevc_nvdec"
+        ADDI_DECODER+=",h264_nvdec,hevc_nvdec,h264_cuvid,hevc_cuvid"
         ADDI_CFLAGS+="-I/usr/local/cuda/include"
         ADDI_LDFLAGS="-L/usr/local/cuda/lib64"
-        ADDI_HWACCEL="--enable-hwaccel=h264_nvdec,hevc_nvdec,nvenc,nvdec"
+        ADDI_HWACCEL="--enable-hwaccel=cuda,cuvid"
         ADDI_FILTERS=",scale_cuda,hwdownload,hwupload,hwupload_cuda"
         PATH=$PATH:/usr/local/nvidia/bin:/usr/local/cuda/bin
     fi
