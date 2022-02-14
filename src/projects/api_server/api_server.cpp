@@ -221,9 +221,12 @@ namespace api
 	{
 		auto orchestrator = ocst::Orchestrator::GetInstance();
 
+		OV_ASSERT2(vhost_config.IsReadOnly() == false);
+
 		if (orchestrator->CreateVirtualHost(vhost_config) == ocst::Result::Failed)
 		{
-			throw CreateConfigError("Failed to create virtual host: %s", vhost_config.GetName().CStr());
+			throw http::HttpError(http::StatusCode::InternalServerError,
+								  "Failed to create virtual host: %s", vhost_config.GetName().CStr());
 		}
 	}
 
@@ -231,7 +234,8 @@ namespace api
 	{
 		if (host_info.IsReadOnly())
 		{
-			throw CreateConfigError("Could not delete virtual host: %s is not created by API call", host_info.GetName().CStr());
+			throw http::HttpError(http::StatusCode::Forbidden,
+								  "Could not delete virtual host: %s is not created by API call", host_info.GetName().CStr());
 		}
 
 		logti("Deleting virtual host: %s", host_info.GetName().CStr());
@@ -240,7 +244,8 @@ namespace api
 
 		if (result != ocst::Result::Succeeded)
 		{
-			throw CreateConfigError("Failed to delete virtual host: %s (%d)", host_info.GetName().CStr(), ov::ToUnderlyingType(result));
+			throw http::HttpError(http::StatusCode::InternalServerError,
+								  "Failed to delete virtual host: %s (%d)", host_info.GetName().CStr(), ov::ToUnderlyingType(result));
 		}
 	}
 }  // namespace api
