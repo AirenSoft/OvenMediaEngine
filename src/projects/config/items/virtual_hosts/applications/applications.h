@@ -18,6 +18,11 @@ namespace cfg
 		{
 			struct Applications : public Item
 			{
+			protected:
+				std::vector<Application> _application_list;
+
+			public:
+				CFG_DECLARE_REF_GETTER_OF(GetApplicationList, _application_list)
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetApplicationList, _application_list)
 
 			protected:
@@ -25,8 +30,6 @@ namespace cfg
 				{
 					Register<Optional, OmitJsonName>("Application", &_application_list);
 				}
-
-				std::vector<Application> _application_list;
 			};
 		}  // namespace app
 	}	   // namespace vhost
