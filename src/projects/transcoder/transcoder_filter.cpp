@@ -2,6 +2,7 @@
 
 #include "filter/filter_resampler.h"
 #include "filter/filter_rescaler.h"
+#include "transcoder_gpu.h"
 #include "transcoder_private.h"
 
 using namespace cmn;
@@ -16,7 +17,6 @@ TranscodeFilter::TranscodeFilter()
 TranscodeFilter::TranscodeFilter(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context)
 	: _impl(nullptr)
 {
-	// Configure(input_media_track, std::move(input_context), std::move(output_context));
 	Configure(input_media_track, input_context, output_context);
 }
 
@@ -35,6 +35,7 @@ bool TranscodeFilter::Configure(std::shared_ptr<MediaTrack> input_media_track, s
 	_input_media_track = input_media_track;
 	_input_context = input_context;
 	_output_context = output_context;
+	_threshold_ts_increment = (int64_t)_input_media_track->GetTimeBase().GetTimescale() * PTS_INCREMENT_LIMIT;
 
 	return CreateFilter();
 }
@@ -59,9 +60,15 @@ bool TranscodeFilter::CreateFilter()
 			return false;
 	}
 
-	_threshold_ts_increment = (int64_t)_input_media_track->GetTimeBase().GetTimescale() * PTS_INCREMENT_LIMIT;
+	bool success = _impl->Configure(_input_media_track, _input_context, _output_context);
+	if (success == false)
+	{
+		logte("Could not craete filter");
 
-	return _impl->Configure(_input_media_track, _input_context, _output_context);
+		return false;
+	}
+
+	return _impl->Start();
 }
 
 bool TranscodeFilter::SendBuffer(std::shared_ptr<MediaFrame> buffer)
@@ -96,13 +103,11 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 		return true;
 	}
 
-
 	if (_input_media_track->GetMediaType() == MediaType::Video)
 	{
 		// logtd("in : %dx%d -> out : %dx%d", buffer->GetWidth(), buffer->GetHeight(), _input_context->GetVideoWidth(), _input_context->GetVideoHeight());
 		if (buffer->GetWidth() != (int32_t)_input_context->GetVideoWidth() || buffer->GetHeight() != (int32_t)_input_context->GetVideoHeight())
 		{
-
 			_input_media_track->SetWidth(buffer->GetWidth());
 			_input_media_track->SetHeight(buffer->GetHeight());
 			_input_context->SetVideoWidth(buffer->GetWidth());

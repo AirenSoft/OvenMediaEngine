@@ -42,7 +42,8 @@ public:
 
 	virtual int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer) = 0;
 	virtual std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) = 0;
-
+	virtual bool Start() = 0;
+	
 	static AVRational TimebaseToAVRational(const cmn::Timebase &timebase)
 	{
 		return (AVRational){

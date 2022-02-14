@@ -1208,10 +1208,9 @@ void TranscoderStream::OnDecodedPacket(TranscodeResult result, int32_t decoder_i
 		case TranscodeResult::DataReady:
 			decoded_frame->SetTrackId(decoder_id);
 
-			logtp("[#%3d] Decode Out. PTS: %lld, SIZE: %lld, DURATION: %lld",
+			logtp("[#%3d] Decode Out. PTS: %lld, DURATION: %lld",
 				  decoder_id,
 				  (int64_t)(decoded_frame->GetPts() * decoder->GetTimebase().GetExpr() * 1000),
-				  (int64_t)decoded_frame->GetBufferSize(),
 				  (int64_t)((double)decoded_frame->GetDuration() * decoder->GetTimebase().GetExpr() * 1000));
 
 			SpreadToFilters(std::move(decoded_frame));
@@ -1234,10 +1233,9 @@ TranscodeResult TranscoderStream::FilterFrame(int32_t track_id, std::shared_ptr<
 
 	auto filter = filter_item->second.get();
 
-	logtp("[#%3d] Filter In.  PTS: %lld, SIZE: %lld",
+	logtp("[#%3d] Filter In.  PTS: %lld",
 		  track_id,
-		  (int64_t)(decoded_frame->GetPts() * filter->GetInputTimebase().GetExpr() * 1000),
-		  decoded_frame->GetBufferSize());
+		  (int64_t)(decoded_frame->GetPts() * filter->GetInputTimebase().GetExpr() * 1000));
 
 	if (filter->SendBuffer(std::move(decoded_frame)) == false)
 	{
@@ -1259,10 +1257,9 @@ TranscodeResult TranscoderStream::FilterFrame(int32_t track_id, std::shared_ptr<
 			case TranscodeResult::DataReady: {
 				filtered_frame->SetTrackId(track_id);
 
-				logtp("[#%3d] Filter Out. PTS: %lld, SIZE: %lld",
+				logtp("[#%3d] Filter Out. PTS: %lld",
 					  track_id,
-					  (int64_t)(filtered_frame->GetPts() * filter->GetOutputTimebase().GetExpr() * 1000),
-					  filtered_frame->GetBufferSize());
+					  (int64_t)(filtered_frame->GetPts() * filter->GetOutputTimebase().GetExpr() * 1000));
 
 				EncodeFrame(std::move(filtered_frame));
 			}
@@ -1288,11 +1285,10 @@ TranscodeResult TranscoderStream::EncodeFrame(std::shared_ptr<const MediaFrame> 
 
 	auto encoder = encoder_item->second.get();
 
-	logtp("[#%3d] Encode In.  PTS: %lld, FLAGS: %d, SIZE: %d",
+	logtp("[#%3d] Encode In.  PTS: %lld, FLAGS: %d",
 		  encoder_id,
 		  (int64_t)(frame->GetPts() * encoder->GetTimebase().GetExpr() * 1000),
-		  frame->GetFlags(),
-		  frame->GetBufferSize());
+		  frame->GetFlags());
 
 	encoder->SendBuffer(std::move(frame));
 
