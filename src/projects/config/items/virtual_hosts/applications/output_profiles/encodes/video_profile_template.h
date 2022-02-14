@@ -67,13 +67,13 @@ namespace cfg
 						Register<Optional>("Active", &_active);
 						Register<Optional>("Codec", &_codec, [=]() -> std::shared_ptr<ConfigError> {
 							// <Codec> is an option when _bypass is true
-							return (_bypass) ? nullptr : CreateConfigError("Codec must be specified when bypass is false");
+							return (_bypass) ? nullptr : CreateConfigErrorPtr("Codec must be specified when bypass is false");
 						});
 						Register<Optional>(
 							"Bitrate", &_bitrate_string,
 							[=]() -> std::shared_ptr<ConfigError> {
 								// <Bitrate> is an option when _bypass is true
-								return (_bypass) ? nullptr : CreateConfigError("Bitrate must be specified when bypass is false");
+								return (_bypass) ? nullptr : CreateConfigErrorPtr("Bitrate must be specified when bypass is false");
 							},
 							[=]() -> std::shared_ptr<ConfigError> {
 								auto bitrate_string = _bitrate_string.UpperCaseString();
@@ -89,7 +89,7 @@ namespace cfg
 
 								_bitrate = static_cast<int>(ov::Converter::ToFloat(bitrate_string) * multiplier);
 
-								return (_bitrate > 0) ? nullptr : CreateConfigError("Bitrate must be greater than 0");
+								return (_bitrate > 0) ? nullptr : CreateConfigErrorPtr("Bitrate must be greater than 0");
 							});
 						Register<Optional>("Scale", &_scale);
 						Register<Optional>("Width", &_width);

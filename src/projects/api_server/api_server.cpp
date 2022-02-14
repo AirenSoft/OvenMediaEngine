@@ -46,7 +46,7 @@ namespace api
 			}
 
 			// Another error occurred
-			throw CreateConfigError("Failed to get a list of XML files in the storage path: %s (%s)", storage_path.CStr(), error->ToString().CStr());
+			throw CreateConfigError("Failed to get a list of XML files in the storage path: %s (%s)", storage_path.CStr(), error->What());
 		}
 
 		// Load configurations from the API storage path
@@ -253,30 +253,6 @@ namespace api
 #endif	// DEBUG
 		}
 
-		const auto &storage_config = server_config->GetManagers().GetApi().GetStorage();
-
-		if (storage_config.IsParsed())
-		{
-			if (PrepareAPIStoragePath(storage_config) == false)
-			{
-				return false;
-			}
-
-			try
-			{
-				LoadAPIStorageConfigs(storage_config);
-			}
-			catch (std::shared_ptr<cfg::ConfigError> &error)
-			{
-				logte("An error occurred while load API config: %s", error->ToString().CStr());
-				return false;
-			}
-		}
-		else
-		{
-			logtw("<Server><Managers><API><Storage> is not specified. You will lose the configurations modified using the API.");
-		}
-
 		return PrepareHttpServers(server_config->GetIp(), managers, api_bind_config);
 	}
 
@@ -435,7 +411,7 @@ namespace api
 
 			if (error != nullptr)
 			{
-				throw CreateConfigError("Failed to delete config file for vhost: %s, error: (%d)", vhost_info.GetName().CStr(), error->ToString().CStr());
+				throw CreateConfigError("Failed to delete config file for vhost: %s, error: (%d)", vhost_info.GetName().CStr(), error->What());
 			}
 		}
 	}

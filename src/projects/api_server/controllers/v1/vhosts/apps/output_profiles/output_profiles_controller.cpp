@@ -14,6 +14,14 @@
 
 #include "../../../../../api_private.h"
 
+#define CreateNotFoundError(vhost_metrics, app_metrics, output_profile_name) \
+	http::HttpError(                                                         \
+		http::StatusCode::NotFound,                                          \
+		"Could not find the output profile: [%s/%s/%s]",                     \
+		vhost_metrics->GetName().CStr(),                                     \
+		app_metrics->GetName().GetAppName().CStr(),                          \
+		output_profile_name.CStr())
+
 namespace api
 {
 	namespace v1
@@ -97,19 +105,10 @@ namespace api
 			return -1;
 		}
 
-		std::shared_ptr<const http::HttpError> CreateNotFoundError(const std::shared_ptr<mon::HostMetrics> &vhost,
-																   const std::shared_ptr<mon::ApplicationMetrics> &app,
-																   const ov::String &output_profile_name)
-		{
-			return http::HttpError::CreateError(
-				http::StatusCode::NotFound,
-				"Could not find the output profile: [%s/%s/%s]",
-				vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), output_profile_name.CStr());
-		}
-
-		std::shared_ptr<const http::HttpError> ChangeApp(const std::shared_ptr<mon::HostMetrics> &vhost,
-														 const std::shared_ptr<mon::ApplicationMetrics> &app,
-														 Json::Value &app_json)
+		MAY_THROWS(HttpError)
+		void ChangeApp(const std::shared_ptr<mon::HostMetrics> &vhost,
+					   const std::shared_ptr<mon::ApplicationMetrics> &app,
+					   Json::Value &app_json)
 		{
 			// TODO(dimiden): Caution - Race condition may occur
 			// If an application is deleted immediately after the GetApplication(),
@@ -120,40 +119,40 @@ namespace api
 			app_json.removeMember("dynamic");
 
 			cfg::vhost::app::Application app_config;
-			auto error = ::serdes::ApplicationFromJson(app_json, &app_config);
-
-			if (error == nullptr)
+			try
 			{
-				if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
-				{
-					return http::HttpError::CreateError(http::StatusCode::Forbidden, "Could not delete the application: [%s/%s]",
-														vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
-				}
-
-				auto result = orchestrator->CreateApplication(*vhost, app_config);
-
-				switch (result)
-				{
-					case ocst::Result::Failed:
-						error = http::HttpError::CreateError(http::StatusCode::BadRequest, "Failed to create the application");
-						break;
-
-					case ocst::Result::Succeeded:
-						break;
-
-					case ocst::Result::Exists:
-						error = http::HttpError::CreateError(http::StatusCode::Conflict, "The application already exists");
-						break;
-
-					case ocst::Result::NotExists:
-						// CreateApplication() never returns NotExists
-						error = http::HttpError::CreateError(http::StatusCode::InternalServerError, "Unknown error occurred");
-						OV_ASSERT2(false);
-						break;
-				}
+				::serdes::ApplicationFromJson(app_json, &app_config);
+			}
+			catch (const cfg::ConfigError &error)
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, error.What());
 			}
 
-			return http::HttpError::CreateError(error);
+			if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
+			{
+				throw http::HttpError(http::StatusCode::Forbidden,
+									  "Could not delete the application: [%s/%s]",
+									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+			}
+
+			auto result = orchestrator->CreateApplication(*vhost, app_config);
+
+			switch (result)
+			{
+				case ocst::Result::Failed:
+					throw http::HttpError(http::StatusCode::BadRequest, "Failed to create the application");
+
+				case ocst::Result::Succeeded:
+					break;
+
+				case ocst::Result::Exists:
+					throw http::HttpError(http::StatusCode::Conflict, "The application already exists");
+
+				case ocst::Result::NotExists:
+					// CreateApplication() never returns NotExists
+					OV_ASSERT2(false);
+					throw http::HttpError(http::StatusCode::InternalServerError, "Unknown error occurred");
+			}
 		}
 
 		ApiResponse OutputProfilesController::OnPostOutputProfile(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
@@ -162,10 +161,10 @@ namespace api
 		{
 			if (request_body.isArray() == false)
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Request body must be an array");
+				throw http::HttpError(http::StatusCode::BadRequest, "Request body must be an array");
 			}
 
-			MultipleStatus status_code;
+			MultipleStatus status_codes;
 
 			Json::Value app_json = app->GetConfig().ToJson();
 			auto &output_profiles = app_json["outputProfiles"]["outputProfile"];
@@ -176,80 +175,76 @@ namespace api
 			{
 				auto name = item["name"];
 
-				if (name.isString() == false)
+				try
 				{
-					response.append(::serdes::JsonFromError(http::HttpError::CreateError(http::StatusCode::BadRequest, "Invalid name")));
-					status_code.AddStatusCode(http::StatusCode::BadRequest);
-				}
-				else
-				{
-					if (FindOutputProfile(app_json, name.asCString(), nullptr) < 0)
+					if (name.isString())
 					{
-						output_profiles.append(item);
+						if (FindOutputProfile(app_json, name.asCString(), nullptr) < 0)
+						{
+							output_profiles.append(item);
 
-						response.append(name);
-						status_code.AddStatusCode(http::StatusCode::OK);
+							response.append(name);
+							status_codes.AddStatusCode(http::StatusCode::OK);
+						}
+						else
+						{
+							throw http::HttpError(http::StatusCode::Conflict, "The output profile \"%s\" already exists", name.asCString());
+						}
 					}
 					else
 					{
-						response.append(::serdes::JsonFromError(http::HttpError::CreateError(http::StatusCode::Conflict, "The output profile \"%s\" already exists", name.asCString())));
-						status_code.AddStatusCode(http::StatusCode::Conflict);
+						throw http::HttpError(http::StatusCode::BadRequest, "Invalid name");
 					}
+				}
+				catch (const http::HttpError &error)
+				{
+					status_codes.AddStatusCode(error.GetStatusCode());
+					response.append(::serdes::JsonFromError(error));
 				}
 			}
 
-			auto error = ChangeApp(vhost, app, app_json);
-			Json::Value error_json = ::serdes::JsonFromError(error);
+			ChangeApp(vhost, app, app_json);
 
 			std::shared_ptr<mon::ApplicationMetrics> new_app;
 			Json::Value new_app_json;
 
-			if (error == nullptr)
-			{
-				new_app = GetApplication(vhost, app->GetName().GetAppName().CStr());
-				new_app_json = new_app->GetConfig().ToJson();
-			}
+			new_app = GetApplication(vhost, app->GetName().GetAppName().CStr());
+			new_app_json = new_app->GetConfig().ToJson();
 
 			for (auto &response_profile : response)
 			{
-				if (response_profile.isString() == false)
+				try
 				{
-					// An error created above step
-				}
-				else
-				{
-					if (error == nullptr)
+					if (response_profile.isString() == false)
+					{
+						// An error created above step
+					}
+					else
 					{
 						auto name = response_profile.asCString();
 						Json::Value *new_profile;
 
-						if (FindOutputProfile(new_app_json, name, &new_profile) < 0)
-						{
-							response_profile = ::serdes::JsonFromError(http::HttpError::CreateError(http::StatusCode::InternalServerError, "Output profile is created, but not found"));
-							status_code.AddStatusCode(http::StatusCode::InternalServerError);
-						}
-						else
+						if (FindOutputProfile(new_app_json, name, &new_profile) >= 0)
 						{
 							response_profile = Json::objectValue;
 							response_profile["statusCode"] = static_cast<int>(http::StatusCode::OK);
 							response_profile["message"] = StringFromStatusCode(http::StatusCode::OK);
 							response_profile["response"] = *new_profile;
 						}
+						else
+						{
+							throw http::HttpError(http::StatusCode::InternalServerError, "Output profile is created, but not found");
+						}
 					}
-					else
-					{
-						response_profile = error_json;
-						status_code.AddStatusCode(error);
-					}
+				}
+				catch (const http::HttpError &error)
+				{
+					response_profile = ::serdes::JsonFromError(error);
+					status_codes.AddStatusCode(error.GetStatusCode());
 				}
 			}
 
-			if (status_code.HasOK())
-			{
-				cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
-			}
-
-			return {status_code, std::move(response)};
+			return {status_codes, std::move(response)};
 		}
 
 		ApiResponse OutputProfilesController::OnGetOutputProfileList(const std::shared_ptr<http::svr::HttpConnection> &client,
@@ -280,7 +275,7 @@ namespace api
 				}
 			}
 
-			return CreateNotFoundError(vhost, app, profile_name);
+			throw CreateNotFoundError(vhost, app, profile_name);
 		}
 
 		ApiResponse OutputProfilesController::OnPutOutputProfile(const std::shared_ptr<http::svr::HttpConnection> &client,
@@ -290,7 +285,7 @@ namespace api
 		{
 			if (request_body.isObject() == false)
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Request body must be an object");
+				throw http::HttpError(http::StatusCode::BadRequest, "Request body must be an object");
 			}
 
 			auto profile_name = GetOutputProfileName(client);
@@ -301,7 +296,7 @@ namespace api
 
 			if (index < 0)
 			{
-				return CreateNotFoundError(vhost, app, profile_name);
+				throw CreateNotFoundError(vhost, app, profile_name);
 			}
 
 			for (auto item = request_body.begin(); item != request_body.end(); ++item)
@@ -312,7 +307,7 @@ namespace api
 				// Prevent to change the name using this API
 				if (lower_name == "name")
 				{
-					return http::HttpError::CreateError(http::StatusCode::BadRequest, "The %s entry cannot be specified in the modification", name.CStr());
+					throw http::HttpError(http::StatusCode::BadRequest, "The %s entry cannot be specified in the modification", name.CStr());
 				}
 			}
 
@@ -323,25 +318,18 @@ namespace api
 			// Modify the json object
 			*output_profile_json = request_json;
 
-			auto error = ChangeApp(vhost, app, app_json);
+			ChangeApp(vhost, app, app_json);
 
-			if (error == nullptr)
+			auto new_app = GetApplication(vhost, app->GetName().GetAppName().CStr());
+
+			Json::Value value;
+
+			if (FindOutputProfile(new_app, profile_name, &value) < 0)
 			{
-				auto new_app = GetApplication(vhost, app->GetName().GetAppName().CStr());
-
-				Json::Value value;
-
-				if (FindOutputProfile(new_app, profile_name, &value) < 0)
-				{
-					return http::HttpError::CreateError(http::StatusCode::InternalServerError, "Output profile is modified, but not found");
-				}
-
-				cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
-
-				return value;
+				http::HttpError(http::StatusCode::InternalServerError, "Output profile is modified, but not found");
 			}
 
-			return error;
+			return value;
 		}
 
 		ApiResponse OutputProfilesController::OnDeleteOutputProfile(const std::shared_ptr<http::svr::HttpConnection> &client,
@@ -353,7 +341,7 @@ namespace api
 
 			if (index < 0)
 			{
-				return CreateNotFoundError(vhost, app, profile_name);
+				throw CreateNotFoundError(vhost, app, profile_name);
 			}
 
 			Json::Value app_json = app->GetConfig().ToJson();
@@ -361,17 +349,12 @@ namespace api
 
 			if (output_profiles.removeIndex(index, nullptr) == false)
 			{
-				return http::HttpError::CreateError(http::StatusCode::Forbidden, "Could not delete output profile");
+				throw http::HttpError(http::StatusCode::Forbidden, "Could not delete output profile");
 			}
 
-			auto error = ChangeApp(vhost, app, app_json);
+			ChangeApp(vhost, app, app_json);
 
-			if (error == nullptr)
-			{
-				cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
-			}
-
-			return error;
+			return {};
 		}
 	}  // namespace v1
 }  // namespace api

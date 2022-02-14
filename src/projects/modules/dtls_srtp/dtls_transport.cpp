@@ -58,7 +58,7 @@ void DtlsTransport::SetLocalCertificate(const std::shared_ptr<Certificate> &cert
 
 	if (error != nullptr)
 	{
-		logte("Could not append certificate: %s", error->ToString().CStr());
+		logte("Could not append certificate: %s", error->What());
 	}
 }
 

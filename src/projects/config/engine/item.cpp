@@ -12,7 +12,7 @@
 
 namespace cfg
 {
-	MAY_THROWS(std::shared_ptr<ConfigError>)
+	MAY_THROWS(ConfigError)
 	const Json::Value &GetJsonObject(const Json::Value &value, const char *key)
 	{
 		try
@@ -26,7 +26,7 @@ namespace cfg
 		}
 	}
 
-	MAY_THROWS(std::shared_ptr<ConfigError>)
+	MAY_THROWS(ConfigError)
 	Json::Value &GetJsonObject(Json::Value &value, const char *key)
 	{
 		try
@@ -136,18 +136,6 @@ namespace cfg
 		}
 
 		return description;
-	}
-
-	template <class T>
-	bool ValidateOmitJsonNameRulesss(bool omit_json, const std::vector<T> &children)
-	{
-		if ((omit_json == false) || (children.size() == 1))
-		{
-			// The item may be omitted
-			return true;
-		}
-
-		return false;
 	}
 
 	Item::Item(const Item &item)
@@ -615,9 +603,33 @@ namespace cfg
 	{
 		Json::Value value;
 
-		ToJson(GetJsonObject(value, _item_name.GetName(DataType::Json)), include_default_values);
+		ToJson(value, include_default_values);
 
 		return value;
+	}
+
+	Json::Value Item::ToJson() const
+	{
+		return ToJson(false);
+	}
+
+	void Item::ToJsonWithName(Json::Value &value, bool include_default_values) const
+	{
+		ToJson(GetJsonObject(value, _item_name.GetName(DataType::Json)), include_default_values);
+	}
+
+	Json::Value Item::ToJsonWithName(bool include_default_values) const
+	{
+		Json::Value value;
+
+		ToJsonWithName(value, include_default_values);
+
+		return value;
+	}
+
+	Json::Value Item::ToJsonWithName() const
+	{
+		return Item::ToJsonWithName(false);
 	}
 
 	void SetChildValueToXmlNode(pugi::xml_node &node, const ov::String &child_name, const char *value)

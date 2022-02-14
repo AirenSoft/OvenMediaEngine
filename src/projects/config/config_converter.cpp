@@ -53,6 +53,7 @@ namespace cfg
 		Json::Value GetApplicationFromMetrics(const std::shared_ptr<const mon::ApplicationMetrics> &app_metrics)
 		{
 			auto app = app_metrics->GetConfig().ToJson();
+
 			auto reserved_stream_list = app_metrics->GetReservedStreamMetricsMap();
 
 			if (reserved_stream_list.size() > 0)

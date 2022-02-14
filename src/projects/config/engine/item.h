@@ -47,10 +47,10 @@ namespace cfg
 
 		virtual ~Item() = default;
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void FromDataSource(ov::String item_path, const ItemName &name, const DataSource &data_source);
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void FromDataSource(const DataSource &data_source);
 
 		Item &operator=(const Item &item);
@@ -116,10 +116,10 @@ namespace cfg
 			}
 		}
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void ValidateOmitJsonNameRules(const ov::String &item_path) const;
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void ValidateOmitJsonNameRules() const;
 
 		virtual ov::String ToString() const
@@ -133,39 +133,43 @@ namespace cfg
 
 		// Serialize Item to Json::Value
 		// (ResolvePath and ${env} are NOT processed - created from original data)
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void ToJson(Json::Value &value, bool include_default_values) const;
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		Json::Value ToJson(bool include_default_values) const;
-		MAY_THROWS(std::shared_ptr<ConfigError>)
-		Json::Value ToJson() const
-		{
-			return ToJson(false);
-		}
+		MAY_THROWS(ConfigError)
+		Json::Value ToJson() const;
+
+		MAY_THROWS(ConfigError)
+		void ToJsonWithName(Json::Value &value, bool include_default_values) const;
+		MAY_THROWS(ConfigError)
+		Json::Value ToJsonWithName(bool include_default_values) const;
+		MAY_THROWS(ConfigError)
+		Json::Value ToJsonWithName() const;
 
 		// Serialize Item to pugi::xml_node/pugi::xml_document
 		// (ResolvePath and ${env} are NOT processed - created from original data)
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void ToXml(pugi::xml_node &node, bool include_default_values) const;
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		pugi::xml_document ToXml(bool include_default_values) const;
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		pugi::xml_document ToXml() const
 		{
 			return ToXml(false);
 		}
 
 	protected:
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void FromDataSourceInternal(ov::String item_path, const DataSource &data_source);
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		bool IsParsed(const void *target) const;
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void ValidateOmitJsonNameRuleForItem(const ov::String &item_path, const std::shared_ptr<Child> &child) const;
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void ValidateOmitJsonNameRuleForList(const ov::String &item_path, const std::shared_ptr<Child> &child) const;
 
 		// When converting to JSON, check if the sub-items of this item can be omitted.
@@ -190,7 +194,7 @@ namespace cfg
 
 		// @param item_path The path of this item (for debugging purpose)
 		// @param name Item name
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void ValidateOmitJsonNameRule(const ov::String &item_path, const ov::String &name) const;
 
 		void RebuildListIfNeeded() const;

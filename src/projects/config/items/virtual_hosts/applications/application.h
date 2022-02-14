@@ -69,7 +69,7 @@ namespace cfg
 							return nullptr;
 						}
 
-						return CreateConfigError("Unknown type: %s", _type.CStr());
+						return CreateConfigErrorPtr("Unknown type: %s", _type.CStr());
 					});
 
 					Register<Optional>("Decodes", &_decodes);

@@ -54,7 +54,7 @@ namespace ov
 			return object;
 		}
 
-		logtw("Could not parse: %s", error->ToString().CStr());
+		logtw("Could not parse: %s", error->What());
 
 		return JsonObject::NullObject();
 	}
@@ -70,7 +70,7 @@ namespace ov
 			return object;
 		}
 
-		logtw("Could not parse: %s", error->ToString().CStr());
+		logtw("Could not parse: %s", error->What());
 
 		return JsonObject::NullObject();
 	}

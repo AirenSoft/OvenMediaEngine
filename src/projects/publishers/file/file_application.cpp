@@ -4,6 +4,8 @@
 #include "file_publisher.h"
 #include "file_stream.h"
 
+#define FILE_PUBLISHER_ERROR_DOMAIN "FilePublisher"
+
 std::shared_ptr<FileApplication> FileApplication::Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
 {
 	auto application = std::make_shared<FileApplication>(publisher, application_info);
@@ -189,7 +191,7 @@ void FileApplication::SessionUpdateByUser()
 
 			_userdata_sets.DeleteByKey(userdata->GetId());
 		}
-	}	
+	}
 }
 
 #if 0
@@ -248,7 +250,7 @@ void FileApplication::SessionController()
 		}
 	}
 }
-#endif 
+#endif
 
 std::shared_ptr<ov::Error> FileApplication::RecordStart(const std::shared_ptr<info::Record> record)
 {
@@ -269,7 +271,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStart(const std::shared_ptr<in
 
 		error_message += "]";
 
-		return ov::Error::CreateError(FilePublisher::FilePublisherStatusCode::FailureInvalidParameter, error_message);
+		return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::FailureInvalidParameter, error_message);
 	}
 
 	// Validation check of duplicate parameters
@@ -277,7 +279,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStart(const std::shared_ptr<in
 	{
 		ov::String error_message = "[Interval] and [Schedule] cannot be used at the same time";
 
-		return ov::Error::CreateError(FilePublisher::FilePublisherStatusCode::FailureInvalidParameter, error_message);
+		return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::FailureInvalidParameter, error_message);
 	}
 
 	// Validation check of schedule Parameter
@@ -290,7 +292,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStart(const std::shared_ptr<in
 		if (error != nullptr)
 		{
 			ov::String error_message = "Invalid regular expression pattern";
-			return ov::Error::CreateError(FilePublisher::FilePublisherStatusCode::FailureInvalidParameter, error_message);
+			return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::FailureInvalidParameter, error_message);
 		}
 
 		// Just validation for schedule pattren
@@ -298,7 +300,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStart(const std::shared_ptr<in
 		if (match_result.GetError() != nullptr)
 		{
 			ov::String error_message = "Invalid [schedule] parameter";
-			return ov::Error::CreateError(FilePublisher::FilePublisherStatusCode::FailureInvalidParameter, error_message);
+			return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::FailureInvalidParameter, error_message);
 		}
 	}
 
@@ -307,7 +309,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStart(const std::shared_ptr<in
 	{
 		ov::String error_message = "Duplicate ID already exists";
 
-		return ov::Error::CreateError(FilePublisher::FilePublisherStatusCode::FailureDupulicateKey, error_message);
+		return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::FailureDupulicateKey, error_message);
 	}
 
 	record->SetTransactionId(ov::Random::GenerateString(16));
@@ -320,7 +322,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStart(const std::shared_ptr<in
 
 	SessionUpdateByUser();
 
-	return ov::Error::CreateError(FilePublisher::FilePublisherStatusCode::Success, "Success");
+	return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::Success, "Success");
 }
 
 std::shared_ptr<ov::Error> FileApplication::RecordStop(const std::shared_ptr<info::Record> record)
@@ -336,7 +338,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStop(const std::shared_ptr<inf
 
 		error_message += "]";
 
-		return ov::Error::CreateError(FilePublisher::FilePublisherStatusCode::FailureInvalidParameter, error_message);
+		return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::FailureInvalidParameter, error_message);
 	}
 
 	auto userdata = _userdata_sets.GetByKey(record->GetId());
@@ -344,7 +346,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStop(const std::shared_ptr<inf
 	{
 		ov::String error_message = ov::String::FormatString("There is no record information related to the ID [%s]", record->GetId().CStr());
 
-		return ov::Error::CreateError(FilePublisher::FilePublisherStatusCode::FailureNotExist, error_message);
+		return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::FailureNotExist, error_message);
 	}
 
 	userdata->SetEnable(false);
@@ -373,7 +375,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStop(const std::shared_ptr<inf
 
 	SessionUpdateByUser();
 
-	return ov::Error::CreateError(FilePublisher::FilePublisherStatusCode::Success, "Success");
+	return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::Success, "Success");
 }
 
 std::shared_ptr<ov::Error> FileApplication::GetRecords(std::vector<std::shared_ptr<info::Record>> &record_list)
@@ -387,5 +389,5 @@ std::shared_ptr<ov::Error> FileApplication::GetRecords(std::vector<std::shared_p
 		record_list.push_back(userdata);
 	}
 
-	return ov::Error::CreateError(FilePublisher::FilePublisherStatusCode::Success, "Success");
+	return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::Success, "Success");
 }

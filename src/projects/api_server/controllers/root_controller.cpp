@@ -54,59 +54,43 @@ namespace api
 
 			auto authorization = client->GetRequest()->GetHeader("Authorization");
 
-			ov::String message = nullptr;
-
-			do
+			if (authorization.IsEmpty())
 			{
-				if (authorization.IsEmpty())
-				{
-					message = "Authorization header is required to call API";
-					break;
-				}
+				throw http::HttpError(http::StatusCode::Forbidden, "Authorization header is required to call API");
+			}
 
-				auto tokens = authorization.Split(" ");
+			auto tokens = authorization.Split(" ");
 
-				if (tokens.size() != 2)
-				{
-					// Invalid tokens
-					message = "Invalid authorization header";
-					break;
-				}
+			if (tokens.size() != 2)
+			{
+				// Invalid tokens
+				throw http::HttpError(http::StatusCode::Forbidden, "Invalid authorization header");
+			}
 
-				if (tokens[0].UpperCaseString() != "BASIC")
-				{
-					message.AppendFormat("Not supported credential type: %s", tokens[0].CStr());
-					break;
-				}
+			if (tokens[0].UpperCaseString() != "BASIC")
+			{
+				throw http::HttpError(http::StatusCode::Forbidden, "Not supported credential type: %s", tokens[0].CStr());
+			}
 
-				auto data = ov::Base64::Decode(tokens[1]);
+			auto data = ov::Base64::Decode(tokens[1]);
 
-				if (data == nullptr)
-				{
-					message = "Invalid credential format";
-					break;
-				}
+			if (data == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::Forbidden, "Invalid credential format");
+			}
 
-				ov::String str = data->ToString();
+			ov::String str = data->ToString();
 
-				if (str != _access_token)
-				{
-					message = "Invalid credential";
-					break;
-				}
-
-				return http::svr::NextHandler::Call;
-			} while (false);
-
-			ApiResponse response(http::HttpError::CreateError(http::StatusCode::Forbidden, message));
-			response.SendToClient(client);
-
-			return http::svr::NextHandler::DoNotCall;
+			if (str != _access_token)
+			{
+				throw http::HttpError(http::StatusCode::Forbidden, "Invalid credential");
+			}
+			return http::svr::NextHandler::Call;
 		});
 	}
 
 	ApiResponse RootController::OnNotFound(const std::shared_ptr<http::svr::HttpConnection> &client)
 	{
-		return http::HttpError::CreateError(http::StatusCode::NotFound, "Controller not found");
+		throw http::HttpError(http::StatusCode::NotFound, "Controller not found");
 	}
 }  // namespace api

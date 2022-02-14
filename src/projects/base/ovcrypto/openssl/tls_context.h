@@ -55,13 +55,15 @@ namespace ov
 		void SetVerify(int mode);
 
 	protected:
-		std::shared_ptr<ov::Error> Prepare(
+		MAY_THROWS(OpensslError)
+		void Prepare(
 			const SSL_METHOD *method,
 			const std::shared_ptr<const CertificatePair> &certificate_pair,
 			const ov::String &cipher_list,
 			const TlsContextCallback *callback);
 
-		std::shared_ptr<ov::Error> Prepare(
+		MAY_THROWS(OpensslError)
+		void Prepare(
 			const SSL_METHOD *method,
 			const TlsContextCallback *callback);
 
@@ -88,7 +90,8 @@ namespace ov
 		static int OnServerNameCallback(SSL *s, int *ad, void *arg);
 		int OnServerName(SSL *ssl);
 
-		std::shared_ptr<ov::Error> SetCertificate(const std::shared_ptr<const CertificatePair> &certificate_pair);
+		MAY_THROWS(OpensslError)
+		void SetCertificate(const std::shared_ptr<const CertificatePair> &certificate_pair);
 
 		static int TlsVerify(X509_STORE_CTX *store, void *arg);
 

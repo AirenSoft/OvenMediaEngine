@@ -163,7 +163,7 @@ namespace ov
 		if (error != nullptr)
 		{
 			logae("Could not prepare epoll: %s (%s)",
-				  error->ToString().CStr(),
+				  error->What(),
 				  StringFromSocketType(GetType()));
 		}
 		else
@@ -299,7 +299,7 @@ namespace ov
 						  index, count,
 						  socket->ToString().CStr(),
 						  StringFromEpollEvent(event).CStr(), events, events,
-						  Error::CreateErrorFromErrno()->ToString().CStr());
+						  Error::CreateErrorFromErrno()->What());
 
 					if (socket->IsClosable() == false)
 					{
@@ -575,7 +575,7 @@ namespace ov
 		}
 		else
 		{
-			logae("Could not add to epoll for descriptor %d (error: %s)", native_handle, error->ToString().CStr());
+			logae("Could not add to epoll for descriptor %d (error: %s)", native_handle, error->What());
 		}
 
 		return (error == nullptr);
@@ -623,7 +623,7 @@ namespace ov
 					}
 					else
 					{
-						OV_ASSERT(false, "Unknown error: %s", error->ToString().CStr());
+						OV_ASSERT(false, "Unknown error: %s", error->What());
 					}
 				}
 
@@ -652,7 +652,7 @@ namespace ov
 				else
 				{
 					error = SrtError::CreateErrorFromSrt();
-					OV_ASSERT(false, "Unknown error: %s", error->ToString().CStr());
+					OV_ASSERT(false, "Unknown error: %s", error->What());
 				}
 
 				break;
@@ -668,7 +668,7 @@ namespace ov
 		}
 		else
 		{
-			logae("Could not wait for epoll: %s", error->ToString().CStr());
+			logae("Could not wait for epoll: %s", error->What());
 			_last_epoll_event_count = 0;
 		}
 
@@ -802,7 +802,7 @@ namespace ov
 			{
 				logae("Could not delete the socket #%d from epoll: %s\n%s",
 					  native_handle,
-					  error->ToString().CStr(),
+					  error->What(),
 					  StackTrace::GetStackTrace().CStr());
 			}
 		}

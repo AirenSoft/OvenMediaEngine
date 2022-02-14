@@ -45,7 +45,7 @@ namespace cfg
 		}
 
 		MAY_THROWS(CastException)
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void SetValue(ValueType value_type, const Variant &value, Json::Value *original_value = nullptr);
 
 		MAY_THROWS(CastException)

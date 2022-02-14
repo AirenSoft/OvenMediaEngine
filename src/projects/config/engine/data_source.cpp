@@ -724,7 +724,7 @@ namespace cfg
 
 			if (path_error != nullptr)
 			{
-				throw CreateConfigError("Could not obtain file list: current path: %s, include pattern: %s (%s)", current_path.CStr(), include_file_path.CStr(), path_error->ToString().CStr());
+				throw CreateConfigError("Could not obtain file list: current path: %s, include pattern: %s (%s)", current_path.CStr(), include_file_path.CStr(), path_error->What());
 			}
 
 			if (pattern != nullptr)

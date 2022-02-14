@@ -107,91 +107,86 @@ namespace api
 		return nullptr;
 	}
 
-	std::shared_ptr<const http::HttpError> GetRequestBody(
+	void GetRequestBody(
 		const std::shared_ptr<http::svr::HttpConnection> &client,
 		Json::Value *request_body)
 	{
 		ov::JsonObject json_object;
-		auto error = http::HttpError::CreateError(json_object.Parse(client->GetRequest()->GetRequestBody()));
+		auto error = json_object.Parse(client->GetRequest()->GetRequestBody());
 
 		if (error != nullptr)
 		{
-			return error;
+			throw http::HttpError(http::StatusCode::BadRequest, error->What());
 		}
 
 		if (request_body != nullptr)
 		{
 			*request_body = json_object.GetJsonValue();
 		}
-
-		return nullptr;
 	}
 
-	std::shared_ptr<const http::HttpError> GetVirtualHostMetrics(
+	void GetVirtualHostMetrics(
 		const ov::MatchResult &match_result,
 		std::shared_ptr<mon::HostMetrics> *vhost_metrics)
 	{
 		auto vhost_name_group = match_result.GetNamedGroup("vhost_name");
 
-		if (vhost_name_group.IsValid())
+		if (vhost_name_group.IsValid() == false)
 		{
-			auto vhost_name = vhost_name_group.GetValue();
-			auto vhost = GetVirtualHost(vhost_name);
-
-			if (vhost == nullptr)
-			{
-				return http::HttpError::CreateError(
-					http::StatusCode::NotFound,
-					"Could not find the virtual host: [%s]", vhost_name.CStr());
-			}
-
-			if (vhost_metrics != nullptr)
-			{
-				*vhost_metrics = vhost;
-			}
-
-			return nullptr;
+			throw http::HttpError(
+				http::StatusCode::InternalServerError,
+				"Could not find the virtual host regex group");
 		}
 
-		return http::HttpError::CreateError(
-			http::StatusCode::InternalServerError,
-			"Could not find the virtual host regex group");
+		auto vhost_name = vhost_name_group.GetValue();
+		auto vhost = GetVirtualHost(vhost_name);
+
+		if (vhost == nullptr)
+		{
+			throw http::HttpError(
+				http::StatusCode::NotFound,
+				"Could not find the virtual host: [%s]", vhost_name.CStr());
+		}
+
+		if (vhost_metrics != nullptr)
+		{
+			*vhost_metrics = vhost;
+		}
 	}
 
-	std::shared_ptr<const http::HttpError> GetApplicationMetrics(
+	void GetApplicationMetrics(
 		const ov::MatchResult &match_result,
 		const std::shared_ptr<mon::HostMetrics> &vhost_metrics,
 		std::shared_ptr<mon::ApplicationMetrics> *app_metrics)
 	{
 		auto app_name_group = match_result.GetNamedGroup("app_name");
 
-		if (app_name_group.IsValid())
+		if (app_name_group.IsValid() == false)
 		{
-			auto vhost_name = vhost_metrics->GetName();
-			auto app_name = app_name_group.GetValue();
-			auto app = GetApplication(vhost_metrics, app_name);
-
-			if (app == nullptr)
-			{
-				return http::HttpError::CreateError(
-					http::StatusCode::NotFound,
-					"Could not find the application: [%s/%s]", vhost_name.CStr(), app_name.CStr());
-			}
-
-			if (app_metrics != nullptr)
-			{
-				*app_metrics = app;
-			}
-
-			return nullptr;
+			throw http::HttpError(
+				http::StatusCode::InternalServerError,
+				"Could not find the application regex group");
 		}
 
-		return http::HttpError::CreateError(
-			http::StatusCode::InternalServerError,
-			"Could not find the application regex group");
+		auto vhost_name = vhost_metrics->GetName();
+		auto app_name = app_name_group.GetValue();
+		auto app = GetApplication(vhost_metrics, app_name);
+
+		if (app == nullptr)
+		{
+			throw http::HttpError(
+				http::StatusCode::NotFound,
+				"Could not find the application: [%s/%s]", vhost_name.CStr(), app_name.CStr());
+		}
+
+		if (app_metrics != nullptr)
+		{
+			*app_metrics = app;
+		}
 	}
 
-	std::shared_ptr<const http::HttpError> GetStreamMetrics(
+	MAY_THROWS(HttpError)
+	void GetStreamMetrics(
 		const ov::MatchResult &match_result,
 		const std::shared_ptr<mon::HostMetrics> &vhost_metrics,
 		const std::shared_ptr<mon::ApplicationMetrics> &app_metrics,
@@ -200,31 +195,29 @@ namespace api
 	{
 		auto stream_name_group = match_result.GetNamedGroup("stream_name");
 
-		if (stream_name_group.IsValid())
+		if (stream_name_group.IsValid() == false)
 		{
-			auto vhost_name = vhost_metrics->GetName();
-			auto app_name = app_metrics->GetName();
-			auto stream_name = stream_name_group.GetValue();
-			auto stream = GetStream(app_metrics, stream_name, output_streams);
-
-			if (stream == nullptr)
-			{
-				return http::HttpError::CreateError(
-					http::StatusCode::NotFound,
-					"Could not find the stream: [%s/%s/%s]", vhost_name.CStr(), app_name.CStr(), stream_name.CStr());
-			}
-
-			if (stream_metrics != nullptr)
-			{
-				*stream_metrics = stream;
-			}
-
-			return nullptr;
+			throw http::HttpError(
+				http::StatusCode::InternalServerError,
+				"Could not find the stream regex group");
 		}
 
-		return http::HttpError::CreateError(
-			http::StatusCode::InternalServerError,
-			"Could not find the stream regex group");
+		auto vhost_name = vhost_metrics->GetName();
+		auto app_name = app_metrics->GetName();
+		auto stream_name = stream_name_group.GetValue();
+		auto stream = GetStream(app_metrics, stream_name, output_streams);
+
+		if (stream == nullptr)
+		{
+			throw http::HttpError(
+				http::StatusCode::NotFound,
+				"Could not find the stream: [%s/%s/%s]", vhost_name.CStr(), app_name.CStr(), stream_name.CStr());
+		}
+
+		if (stream_metrics != nullptr)
+		{
+			*stream_metrics = stream;
+		}
 	}
 
 	void MultipleStatus::AddStatusCode(http::StatusCode status_code)

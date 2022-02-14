@@ -34,17 +34,19 @@ namespace ov
 
 		auto context = std::make_shared<TlsContext>();
 
-		auto prepare_error = context->Prepare(
-			ssl_method,
-			certificate_pair,
-			cipher_list,
-			callback);
-
-		if (prepare_error != nullptr)
+		try
+		{
+			context->Prepare(
+				ssl_method,
+				certificate_pair,
+				cipher_list,
+				callback);
+		}
+		catch (const OpensslError &e)
 		{
 			if (error != nullptr)
 			{
-				*error = prepare_error;
+				*error = std::make_shared<OpensslError>(e);
 			}
 
 			return nullptr;
@@ -58,15 +60,15 @@ namespace ov
 	{
 		auto context = std::make_shared<TlsContext>();
 
-		auto prepare_error = context->Prepare(
-			TLS_client_method(),
-			nullptr);
-
-		if (prepare_error != nullptr)
+		try
+		{
+			context->Prepare(TLS_client_method(), nullptr);
+		}
+		catch (const OpensslError &e)
 		{
 			if (error != nullptr)
 			{
-				*error = prepare_error;
+				*error = std::make_shared<OpensslError>(e);
 			}
 
 			return nullptr;
@@ -75,7 +77,7 @@ namespace ov
 		return context;
 	}
 
-	std::shared_ptr<ov::Error> TlsContext::Prepare(
+	void TlsContext::Prepare(
 		const SSL_METHOD *method,
 		const std::shared_ptr<const CertificatePair> &certificate_pair,
 		const ov::String &cipher_list,
@@ -89,7 +91,7 @@ namespace ov
 			{
 				OV_ASSERT2(certificate_pair != nullptr);
 
-				return OpensslError::CreateError("Invalid TLS certificate");
+				throw OpensslError("Invalid TLS certificate");
 			}
 
 			// Create a new SSL session
@@ -97,7 +99,7 @@ namespace ov
 
 			if (ctx == nullptr)
 			{
-				return OpensslError::CreateError("Cannot create SSL context");
+				throw OpensslError("Cannot create SSL context");
 			}
 
 			if (callback != nullptr)
@@ -134,19 +136,21 @@ namespace ov
 				_callback = {};
 
 				OV_SAFE_FUNC(_ssl_ctx, nullptr, ::SSL_CTX_free, );
-				return OpensslError::CreateError("An error occurred inside create callback");
+				throw OpensslError("An error occurred inside create callback");
 			}
 
 			if (certificate_pair != nullptr)
 			{
-				auto error = SetCertificate(certificate_pair);
-
-				if (error != nullptr)
+				try
+				{
+					SetCertificate(certificate_pair);
+				}
+				catch (const OpensslError &error)
 				{
 					_callback = {};
 
 					OV_SAFE_FUNC(_ssl_ctx, nullptr, ::SSL_CTX_free, );
-					return OpensslError::CreateError("An error occurred inside create callback");
+					throw OpensslError("An error occurred inside create callback: %s", error.What());
 				}
 			}
 
@@ -157,11 +161,9 @@ namespace ov
 				::SSL_CTX_set_tlsext_servername_arg(_ssl_ctx, this);
 			}
 		} while (false);
-
-		return nullptr;
 	}
 
-	std::shared_ptr<ov::Error> TlsContext::Prepare(
+	void TlsContext::Prepare(
 		const SSL_METHOD *method,
 		const TlsContextCallback *callback)
 	{
@@ -202,11 +204,9 @@ namespace ov
 				_callback = {};
 
 				OV_SAFE_FUNC(_ssl_ctx, nullptr, ::SSL_CTX_free, );
-				return OpensslError::CreateError("An error occurred inside create callback");
+				throw OpensslError("An error occurred inside create callback");
 			}
 		} while (false);
-
-		return nullptr;
 	}
 
 	int TlsContext::OnServerNameCallback(SSL *s, int *ad, void *arg)
@@ -237,13 +237,13 @@ namespace ov
 		return SSL_TLSEXT_ERR_OK;
 	}
 
-	std::shared_ptr<ov::Error> TlsContext::SetCertificate(const std::shared_ptr<const CertificatePair> &certificate_pair)
+	void TlsContext::SetCertificate(const std::shared_ptr<const CertificatePair> &certificate_pair)
 	{
 		OV_ASSERT2(certificate_pair != nullptr);
 
 		if (certificate_pair == nullptr)
 		{
-			return OpensslError::CreateError("certificate_pair is nullptr");
+			throw OpensslError("certificate_pair is nullptr");
 		}
 
 		auto certificate = certificate_pair->GetCertificate();
@@ -251,25 +251,23 @@ namespace ov
 
 		if (certificate == nullptr)
 		{
-			return OpensslError::CreateError("certificate is nullptr");
+			throw OpensslError("certificate is nullptr");
 		}
 
 		if (::SSL_CTX_use_certificate(_ssl_ctx, certificate->GetX509()) != 1)
 		{
-			return OpensslError::CreateError("Cannot use certficate: %s", ov::OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
+			throw OpensslError("Cannot use certficate: %s", OpensslError().What());
 		}
 
 		if ((chain_certificate != nullptr) && (::SSL_CTX_add1_chain_cert(_ssl_ctx, chain_certificate->GetX509()) != 1))
 		{
-			return OpensslError::CreateError("Cannot use chain certificate: %s", ov::OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
+			throw OpensslError("Cannot use chain certificate: %s", OpensslError().What());
 		}
 
 		if (::SSL_CTX_use_PrivateKey(_ssl_ctx, certificate->GetPkey()) != 1)
 		{
-			return OpensslError::CreateError("Cannot use private key: %s", ov::OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
+			throw OpensslError("Cannot use private key: %s", OpensslError().What());
 		}
-
-		return nullptr;
 	}
 
 	bool TlsContext::UseSslContext(SSL *ssl)

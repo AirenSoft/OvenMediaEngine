@@ -34,7 +34,7 @@ namespace cfg
 
 				if (error != nullptr)
 				{
-					throw error;
+					throw *(error.get());
 				}
 
 				// Callback returns no error. Use default value
@@ -91,7 +91,7 @@ namespace cfg
 		auto validation_error = CallValidationCallback();
 		if (validation_error != nullptr)
 		{
-			throw validation_error;
+			throw *(validation_error.get());
 		}
 
 		_original_value = std::move(original_value);
@@ -124,7 +124,7 @@ namespace cfg
 
 				if (error != nullptr)
 				{
-					throw error;
+					throw *(error.get());
 				}
 
 				// Callback returns no error. Use default value
@@ -181,7 +181,7 @@ namespace cfg
 		auto validation_error = CallValidationCallback();
 		if (validation_error != nullptr)
 		{
-			throw validation_error;
+			throw *(validation_error.get());
 		}
 
 		_original_value = std::move(original_value);

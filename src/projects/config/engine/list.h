@@ -22,24 +22,24 @@ namespace cfg
 	//--------------------------------------------------------------------
 	// CopyValueToXmlNode()
 	//--------------------------------------------------------------------
-	MAY_THROWS(std::shared_ptr<ConfigError>)
+	MAY_THROWS(ConfigError)
 	template <typename Tvalue_type, std::enable_if_t<!std::is_base_of_v<Item, Tvalue_type>, int> = 0>
 	void CopyValueToXmlNode(pugi::xml_node &node, const ov::String &item_name, const Tvalue_type *value, bool include_default_values)
 	{
 		node.text().set(ToString(value));
 	}
 
-	MAY_THROWS(std::shared_ptr<ConfigError>)
+	MAY_THROWS(ConfigError)
 	void CopyValueToXmlNode(pugi::xml_node &node, const ov::String &item_name, const Json::Value &value, bool include_default_values);
 
-	MAY_THROWS(std::shared_ptr<ConfigError>)
+	MAY_THROWS(ConfigError)
 	void CopyValueToXmlNode(pugi::xml_node &node, const ov::String &item_name, const Item *value, bool include_default_values);
 	//--------------------------------------------------------------------
 
 	//--------------------------------------------------------------------
 	// CopyValueToJson()
 	//--------------------------------------------------------------------
-	MAY_THROWS(std::shared_ptr<ConfigError>)
+	MAY_THROWS(ConfigError)
 	template <typename Tvalue_type, std::enable_if_t<!std::is_base_of_v<Item, Tvalue_type>, int> = 0>
 	void CopyValueToJson(Json::Value &json, const Tvalue_type *value, bool include_default_values)
 	{
@@ -47,7 +47,7 @@ namespace cfg
 		OV_ASSERT2(false);
 	}
 
-	MAY_THROWS(std::shared_ptr<ConfigError>)
+	MAY_THROWS(ConfigError)
 	void CopyValueToJson(Json::Value &json, const Item *value, bool include_default_values);
 	//--------------------------------------------------------------------
 
@@ -120,7 +120,7 @@ namespace cfg
 		}
 
 		// Copy children to xml_node
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void CopyToXmlNode(pugi::xml_node &node, bool include_default_values) const override
 		{
 			const auto &list_target = *_item_list;
@@ -173,7 +173,7 @@ namespace cfg
 		}
 
 		// Copy children to json array
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void CopyToJsonValue(Json::Value &value, bool include_default_values) const override
 		{
 			const auto &list_target = *_item_list;
@@ -296,7 +296,7 @@ namespace cfg
 			_original_value_list.push_back(std::move(original_value));
 		}
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		template <typename Titem_type = Tlist_item, std::enable_if_t<std::is_base_of_v<Item, Titem_type>, int> = 0>
 		void SetValue(const DataSource &data_source, ValueType list_item_type, bool resolve_path, bool omit_json)
 		{
@@ -308,7 +308,7 @@ namespace cfg
 		}
 
 		MAY_THROWS(CastException)
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void AppendChildValue(const DataSource &data_source, ValueType list_item_type, bool resolve_path, bool omit_json) override
 		{
 			SetValue(data_source, list_item_type, resolve_path, omit_json);
@@ -320,7 +320,7 @@ namespace cfg
 			OV_ASSERT2(false);
 		}
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		template <typename Titem_type = Tlist_item, std::enable_if_t<std::is_base_of_v<Item, Titem_type>, int> = 0>
 		void ValidateOmitJsonNameRule(const ov::String &item_path, const ItemName &item_name) const
 		{
@@ -330,7 +330,7 @@ namespace cfg
 			item.ValidateOmitJsonNameRules(item_path);
 		}
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void ValidateOmitJsonNameRuleForItem(const ov::String &item_path, const ItemName &item_name) const override
 		{
 			return ValidateOmitJsonNameRule(item_path, item_name);

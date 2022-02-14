@@ -151,7 +151,7 @@ namespace http
 				}
 				else
 				{
-					logtd("Could not connect TLS: %s", error->ToString().CStr());
+					logtd("Could not connect TLS: %s", error->What());
 					HandleError(error);
 				}
 

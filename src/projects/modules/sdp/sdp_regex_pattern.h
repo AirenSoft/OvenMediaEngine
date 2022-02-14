@@ -17,7 +17,7 @@
 	auto error = member.Compile();													\
 	if(error != nullptr)															\
 	{																				\
-		loge("SDPRegex", "SDP regex pattern compile error : %s", error->ToString().CStr());	\
+		loge("SDPRegex", "SDP regex pattern compile error : %s", error->What());	\
 		return false;																\
 	}																				\
 }			

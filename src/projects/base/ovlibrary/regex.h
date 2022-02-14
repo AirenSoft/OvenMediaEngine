@@ -49,7 +49,7 @@
 //    }
 //    else
 //    {
-//        printf("%s\n", error->ToString().CStr());
+//        printf("%s\n", error->What());
 //    }
 
 namespace ov
