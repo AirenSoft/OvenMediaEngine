@@ -19,5 +19,5 @@ namespace serdes
 	Json::Value JsonFromApplication(const std::shared_ptr<const mon::ApplicationMetrics> &application);
 
 	MAY_THROWS(ConfigError)
-	void ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *application);
+	void ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *app_config);
 }  // namespace serdes

@@ -11,6 +11,8 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <openssl/ssl.h>
 
+#define OPENSSL_ERROR_DOMAIN "OpenSSL"
+
 namespace ov
 {
 	class OpensslError : public Error
@@ -19,7 +21,13 @@ namespace ov
 		// Create an error instance from OpenSSL error code
 		OpensslError();
 		OpensslError(ov::String message);
-		OpensslError(const char *format, ...);
+
+		template <typename... Args>
+		OpensslError(const char *format, Args... args)
+			: Error(OPENSSL_ERROR_DOMAIN, ov::String::FormatString(format, args...))
+		{
+		}
+
 		OpensslError(SSL *ssl, int result);
 	};
 }  // namespace ov

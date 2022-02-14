@@ -10,8 +10,6 @@
 
 #include <openssl/err.h>
 
-#define OPENSSL_ERROR_DOMAIN "OpenSSL"
-
 namespace ov
 {
 	OpensslError::OpensslError()
@@ -28,18 +26,6 @@ namespace ov
 	OpensslError::OpensslError(ov::String message)
 		: Error(OPENSSL_ERROR_DOMAIN, std::move(message))
 	{
-	}
-
-	OpensslError::OpensslError(const char *format, ...)
-		: OpensslError()
-	{
-		String message;
-		va_list list;
-		va_start(list, format);
-		message.VFormat(format, list);
-		va_end(list);
-
-		SetMessage(std::move(message));
 	}
 
 	OpensslError::OpensslError(SSL *ssl, int result)

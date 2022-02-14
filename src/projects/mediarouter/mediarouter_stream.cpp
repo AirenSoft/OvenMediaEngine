@@ -1009,21 +1009,27 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	//	- 1) If the current packet does not have a Duration value then stashed.
 	//	- 1) If packets stashed, calculate duration compared to the current packet timestamp.
 	//	- 3) and then, the current packet stash.
+	std::shared_ptr<MediaPacket> pop_media_packet = nullptr;
 
-	auto it = _media_packet_stash.find(media_packet->GetTrackId());
-	if (it == _media_packet_stash.end())
-	{
+	if(GetInoutType() == MediaRouterStreamType::OUTBOUND) {
+		auto it = _media_packet_stash.find(media_packet->GetTrackId());
+		if (it == _media_packet_stash.end())
+		{
+			_media_packet_stash[media_packet->GetTrackId()] = std::move(media_packet);
+
+			return nullptr;
+		}
+
+		pop_media_packet = std::move(it->second);
+
+		int64_t duration = media_packet->GetDts() - pop_media_packet->GetDts();
+		pop_media_packet->SetDuration(duration);
+
 		_media_packet_stash[media_packet->GetTrackId()] = std::move(media_packet);
-
-		return nullptr;
 	}
-
-	auto pop_media_packet = std::move(it->second);
-
-	int64_t duration = media_packet->GetDts() - pop_media_packet->GetDts();
-	pop_media_packet->SetDuration(duration);
-
-	_media_packet_stash[media_packet->GetTrackId()] = std::move(media_packet);
+	else {
+		pop_media_packet = std::move(media_packet);
+	}
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Bitstream format converting to standard format. and, parsing track informaion
@@ -1039,6 +1045,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 		return nullptr;
 	}
+
 
 	switch (GetInoutType())
 	{
@@ -1084,7 +1091,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	if (GetInoutType() == MediaRouterStreamType::INBOUND)
 	{
 		auto it = _pts_last.find(track_id);
-		if(it != _pts_last.end())
+		if (it != _pts_last.end())
 		{
 			int64_t ts_inc = pop_media_packet->GetPts() - _pts_last[track_id];
 			int64_t ts_inc_ms = ts_inc * media_track->GetTimeBase().GetExpr();
@@ -1094,11 +1101,11 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 				if (!(media_track->GetCodecId() == cmn::MediaCodecId::Png || media_track->GetCodecId() == cmn::MediaCodecId::Jpeg))
 				{
 					logtw("Detected abnormal increased timestamp. track:%u last.pts: %lld, cur.pts: %lld, tb(%d/%d), diff: %lldms",
-						track_id, _pts_last[track_id],
-						pop_media_packet->GetPts(),
-						media_track->GetTimeBase().GetNum(),
-						media_track->GetTimeBase().GetDen(),
-						ts_inc_ms);
+						  track_id, _pts_last[track_id],
+						  pop_media_packet->GetPts(),
+						  media_track->GetTimeBase().GetNum(),
+						  media_track->GetTimeBase().GetDen(),
+						  ts_inc_ms);
 				}
 			}
 		}
