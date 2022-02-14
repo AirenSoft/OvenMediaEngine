@@ -12,6 +12,34 @@
 
 namespace cfg
 {
+	MAY_THROWS(std::shared_ptr<ConfigError>)
+	const Json::Value &GetJsonObject(const Json::Value &value, const char *key)
+	{
+		try
+		{
+			return value[key];
+		}
+		catch (const std::exception &e)
+		{
+			logtw("Could not obtain JSON value for key %s\nException: %s\n%s", key, e.what(), ov::Json::Stringify(value).CStr());
+			throw CreateConfigError("JSON value is not an object (Expected: object, but: %s)", ov::StringFromJsonValueType(value));
+		}
+	}
+
+	MAY_THROWS(std::shared_ptr<ConfigError>)
+	Json::Value &GetJsonObject(Json::Value &value, const char *key)
+	{
+		try
+		{
+			return value[key];
+		}
+		catch (const std::exception &e)
+		{
+			logtw("Could not obtain JSON value for key %s\nException: %s\n%s", key, e.what(), ov::Json::Stringify(value).CStr());
+			throw CreateConfigError("JSON value is not an object (Expected: object, but: %s)", ov::StringFromJsonValueType(value));
+		}
+	}
+
 	ov::String Item::ChildToString(int indent_count, const std::shared_ptr<const Child> &child, size_t index, size_t child_count)
 	{
 		ov::String indent = MakeIndentString(indent_count + 1);
@@ -451,7 +479,7 @@ namespace cfg
 	void Item::SetJsonChildValue(ValueType value_type, Json::Value &object, const ov::String &child_name, const Json::Value &original_value)
 	{
 		Json::Value value;
-		Json::Value &target_object = (value_type == ValueType::Attribute) ? object["$"] : object;
+		Json::Value &target_object = (value_type == ValueType::Attribute) ? GetJsonObject(object, "$") : object;
 
 		switch (value_type)
 		{
@@ -484,13 +512,22 @@ namespace cfg
 				return;
 		}
 
+		if (target_object.isNull())
+		{
+			target_object = Json::objectValue;
+		}
+
 		if (target_object.isArray())
 		{
 			target_object.append(value);
 		}
-		else
+		else if (target_object.isObject())
 		{
 			target_object[child_name] = value;
+		}
+		else
+		{
+			throw CreateConfigError("Invalid JSON object type: %s", child_name.CStr());
 		}
 	}
 
@@ -539,7 +576,7 @@ namespace cfg
 							HANDLE_CAST_EXCEPTION(value_type, );
 						}
 
-						auto &target_value = child->OmitJsonName() ? value : value[child_name.CStr()];
+						auto &target_value = child->OmitJsonName() ? value : GetJsonObject(value, child_name);
 
 						child_item->ToJson(target_value, include_default_values);
 
@@ -558,7 +595,7 @@ namespace cfg
 							HANDLE_CAST_EXCEPTION(value_type, );
 						}
 
-						auto &target_value = child->OmitJsonName() ? value : value[child_name];
+						auto &target_value = child->OmitJsonName() ? value : GetJsonObject(value, child_name);
 
 						if (target_value.isArray() == false)
 						{
@@ -578,7 +615,7 @@ namespace cfg
 	{
 		Json::Value value;
 
-		ToJson(value[_item_name.GetName(DataType::Json)], include_default_values);
+		ToJson(GetJsonObject(value, _item_name.GetName(DataType::Json)), include_default_values);
 
 		return value;
 	}

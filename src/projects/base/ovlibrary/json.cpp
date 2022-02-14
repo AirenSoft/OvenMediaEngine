@@ -74,4 +74,35 @@ namespace ov
 
 		return JsonObject::NullObject();
 	}
+
+	const char *StringFromJsonValueType(::Json::ValueType value_type)
+	{
+		switch (value_type)
+		{
+			case ::Json::ValueType::nullValue:
+				return "null";
+			case ::Json::ValueType::intValue:
+				return "int";
+			case ::Json::ValueType::uintValue:
+				return "uint";
+			case ::Json::ValueType::realValue:
+				return "real";
+			case ::Json::ValueType::stringValue:
+				return "string";
+			case ::Json::ValueType::booleanValue:
+				return "boolean";
+			case ::Json::ValueType::arrayValue:
+				return "array";
+			case ::Json::ValueType::objectValue:
+				return "object";
+		}
+
+		return "unknown";
+	}
+
+	const char *StringFromJsonValueType(const ::Json::Value &value)
+	{
+		return StringFromJsonValueType(value.type());
+	}
+
 }  // namespace ov

@@ -174,7 +174,7 @@ namespace cfg
 
 		// Copy children to json array
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		void CopyToJsonValue(Json::Value &object, bool include_default_values) const override
+		void CopyToJsonValue(Json::Value &value, bool include_default_values) const override
 		{
 			const auto &list_target = *_item_list;
 
@@ -183,10 +183,10 @@ namespace cfg
 				return;
 			}
 
-			if (object.isArray() == false)
+			if (value.isArray() == false)
 			{
 				OV_ASSERT2(false);
-				object = Json::arrayValue;
+				value = Json::arrayValue;
 			}
 
 			auto list_item_type = GetListItemType();
@@ -196,7 +196,7 @@ namespace cfg
 			{
 				for (const auto &list_item : list_target)
 				{
-					CopyValueToJson(object, &list_item, include_default_values);
+					CopyValueToJson(value.append({}), &list_item, include_default_values);
 				}
 			}
 			else
@@ -212,7 +212,7 @@ namespace cfg
 				// Copy original values (these data generated from XML/JSON data sources)
 				for (const auto &original_value : _original_value_list)
 				{
-					SetJsonChildValue(list_item_type, object, child_name, original_value);
+					SetJsonChildValue(list_item_type, value, child_name, original_value);
 
 					list_item++;
 				}
@@ -220,7 +220,7 @@ namespace cfg
 				// Copy rest items (dynamic data, these data have appended programmatically)
 				while (list_item != list_target.end())
 				{
-					SetJsonChildValue(list_item_type, object, child_name, *list_item);
+					SetJsonChildValue(list_item_type, value, child_name, *list_item);
 
 					list_item++;
 				}
