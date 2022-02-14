@@ -42,6 +42,7 @@ namespace ov
 	}
 
 	Error::Error(ov::String domain, const char *format, ...)
+		: Error(domain)
 	{
 		String message;
 		va_list list;
@@ -49,7 +50,7 @@ namespace ov
 		message.VFormat(format, list);
 		va_end(list);
 
-		Error(domain, 0, false, std::move(message));
+		SetMessage(std::move(message));
 	}
 
 	Error::Error(ov::String domain, int code, ov::String message)
@@ -58,6 +59,7 @@ namespace ov
 	}
 
 	Error::Error(ov::String domain, int code, const char *format, ...)
+		: Error(domain)
 	{
 		String message;
 		va_list list;
@@ -65,7 +67,7 @@ namespace ov
 		message.VFormat(format, list);
 		va_end(list);
 
-		Error(domain, code, true, std::move(message));
+		SetCodeAndMessage(code, std::move(message));
 	}
 
 	std::shared_ptr<Error> Error::CreateError(ov::String domain, int code, const char *format, ...)
