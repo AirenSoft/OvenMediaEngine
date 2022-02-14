@@ -38,7 +38,7 @@ bool DecoderHEVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 
 	::av_opt_set(_context->priv_data, "gpu_copy", "on", 0);
 
-	_context->hw_device_ctx = av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContextNV());
+	_context->hw_device_ctx = av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext());
 
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
@@ -231,19 +231,15 @@ void DecoderHEVCxNV::CodecThread()
 				}
 				tmp_frame->pts = _frame->pts;
 
-				auto decoded_frame = TranscoderUtilities::ConvertAvFrameToMediaFrame(cmn::MediaType::Video, tmp_frame);
+
+				// If there is no duration, the duration is calculated by framerate and timebase.
+				tmp_frame->pkt_duration = (tmp_frame->pkt_duration <= 0LL) ? TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : tmp_frame->pkt_duration;
+
+				auto decoded_frame = TranscoderUtilities::AvFrameToMediaFrame(cmn::MediaType::Video, tmp_frame);
 				if (decoded_frame == nullptr)
 				{
 					continue;
 				}
-
-				// If there is no duration, the duration is calculated by framerate and timebase.
-				if (decoded_frame->GetDuration() <= 0LL)
-				{
-					decoded_frame->SetDuration(TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context));
-				}
-
-				decoded_frame->SetFormat(tmp_frame->format);
 
 				::av_frame_unref(_frame);
 				::av_frame_free(&sw_frame);

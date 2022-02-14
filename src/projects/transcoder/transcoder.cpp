@@ -36,22 +36,25 @@ Transcoder::Transcoder(std::shared_ptr<MediaRouteInterface> router)
 
 bool Transcoder::Start()
 {
-#if SUPPORT_HWACCELS	
-	TranscodeGPU::GetInstance()->Initialze();
+#if SUPPORT_HWACCELS
+	if (TranscodeGPU::GetInstance()->Initialze() == false)
+	{
+		logti("There is no supported hardware accelerator");
+	}
 #endif
 
-	logtd("Transcoder has been started.");
+	logtd("Transcoder has been started");
 
 	return true;
 }
 
 bool Transcoder::Stop()
 {
-#if SUPPORT_HWACCELS	
+#if SUPPORT_HWACCELS
 	TranscodeGPU::GetInstance()->Uninitialize();
 #endif
 
-	logtd("Transcoder has been stopped.");
+	logtd("Transcoder has been stopped");
 	return true;
 }
 

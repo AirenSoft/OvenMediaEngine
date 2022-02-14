@@ -96,19 +96,18 @@ void EncoderAAC::CodecThread()
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-		if (TranscoderUtilities::ConvertMediaFrameToAvFrame(cmn::MediaType::Audio, media_frame, _frame) == false)
+		auto av_frame = TranscoderUtilities::MediaFrameToAVFrame(cmn::MediaType::Audio, media_frame);
+		if (!av_frame)
 		{
-			logte("Could not allocate the audio frame data");
+			logte("Could not allocate the frame data");
 			break;
 		}
 
-		int ret = ::avcodec_send_frame(_codec_context, _frame);
+		int ret = ::avcodec_send_frame(_codec_context, av_frame);
 		if (ret < 0)
 		{
 			logte("Error sending a frame for encoding : %d", ret);
 		}
-
-		::av_frame_unref(_frame);
 
 		///////////////////////////////////////////////////
 		// The encoded packet is taken from the codec.
@@ -127,7 +126,7 @@ void EncoderAAC::CodecThread()
 			}
 			else
 			{
-				auto media_packet = TranscoderUtilities::ConvertAvPacketToMediaPacket(_packet, cmn::MediaType::Audio, cmn::BitstreamFormat::AAC_ADTS, cmn::PacketType::RAW);
+				auto media_packet = TranscoderUtilities::AvPacketToMediaPacket(_packet, cmn::MediaType::Audio, cmn::BitstreamFormat::AAC_ADTS, cmn::PacketType::RAW);
 				if (media_packet == nullptr)
 				{
 					logte("Could not allocate the media packet");
@@ -137,7 +136,8 @@ void EncoderAAC::CodecThread()
 				::av_packet_unref(_packet);
 
 				// TODO : If the pts value are under zero, the dash packettizer does not work.
-				if (media_packet->GetPts() < 0) {
+				if (media_packet->GetPts() < 0)
+				{
 					continue;
 				}
 
