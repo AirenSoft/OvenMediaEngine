@@ -33,9 +33,6 @@ namespace api
 	protected:
 		bool PrepareHttpServers(const ov::String &server_ip, const cfg::mgr::Managers &managers, const cfg::bind::mgr::API &api_bind_config);
 
-		ov::String MangleVHostName(const ov::String &vhost_name);
-		ov::String GenerateFileNameForVHostName(const ov::String &vhost_name);
-
 		std::shared_ptr<http::svr::RequestInterceptor> CreateInterceptor();
 
 		std::shared_ptr<http::svr::HttpServer> _http_server;

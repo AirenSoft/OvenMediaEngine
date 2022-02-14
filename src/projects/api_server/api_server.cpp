@@ -217,22 +217,6 @@ namespace api
 		return http_result && https_result;
 	}
 
-	ov::String Server::MangleVHostName(const ov::String &vhost_name)
-	{
-		auto regex = ov::Regex::CompiledRegex("[^a-zA-Z0-9\\-_.\\[\\]\"']");
-
-		return regex.Replace(vhost_name, "_", true);
-	}
-
-	ov::String Server::GenerateFileNameForVHostName(const ov::String &vhost_name)
-	{
-		ov::String file_name;
-
-		file_name.Format("VHost_%s.xml", MangleVHostName(vhost_name).CStr());
-
-		return ov::PathManager::Combine(_storage_path, file_name);
-	}
-
 	void Server::CreateVHost(const cfg::vhost::VirtualHost &vhost_config, bool write_to_storage)
 	{
 		if (_is_storage_path_initialized == false)

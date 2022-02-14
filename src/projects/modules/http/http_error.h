@@ -19,21 +19,15 @@ namespace http
 	class HttpError : public ov::Error
 	{
 	public:
-		HttpError(StatusCode status_code, const ov::String &message)
+		HttpError(StatusCode status_code, const char *message)
 			: ov::Error(HTTP_ERROR_DOMAIN, static_cast<int>(status_code), message)
 		{
 		}
 
-		HttpError(StatusCode status_code, const char *format, ...)
-			: ov::Error(HTTP_ERROR_DOMAIN)
+		template <typename... Args>
+		HttpError(StatusCode status_code, const char *format, Args... args)
+			: ov::Error(HTTP_ERROR_DOMAIN, static_cast<int>(status_code), ov::String::FormatString(format, args...))
 		{
-			ov::String message;
-			va_list list;
-			va_start(list, format);
-			message.VFormat(format, list);
-			va_end(list);
-
-			SetCodeAndMessage(static_cast<int>(status_code), message);
 		}
 
 		StatusCode GetStatusCode() const
