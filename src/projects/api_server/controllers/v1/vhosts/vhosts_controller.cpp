@@ -44,7 +44,9 @@ namespace api
 		ApiResponse VHostsController::OnGetVhost(const std::shared_ptr<http::svr::HttpConnection> &client,
 												 const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
-			return ::serdes::JsonFromVHost(vhost);
+			auto vhost_json = vhost->ToJson();
+			vhost_json.removeMember("applications");
+			return vhost_json;
 		}
 
 		ApiResponse VHostsController::OnDeleteVhost(const std::shared_ptr<http::svr::HttpConnection> &client,

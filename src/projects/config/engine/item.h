@@ -53,6 +53,9 @@ namespace cfg
 		MAY_THROWS(ConfigError)
 		void FromDataSource(const DataSource &data_source);
 
+		MAY_THROWS(ConfigError)
+		void FromJson(const Json::Value &value);
+
 		Item &operator=(const Item &item);
 
 		void SetItemName(const ItemName &item_name)

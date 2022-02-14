@@ -267,6 +267,12 @@ namespace cfg
 		FromDataSource(name.GetName(data_source.GetType()), name, data_source);
 	}
 
+	void Item::FromJson(const Json::Value &value)
+	{
+		cfg::DataSource data_source("", "", _item_name.GetName(DataType::Json), value);
+		FromDataSource(data_source);
+	}
+
 	bool Item::IsParsed(const void *target) const
 	{
 		RebuildListIfNeeded();

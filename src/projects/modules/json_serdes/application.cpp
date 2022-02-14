@@ -31,11 +31,9 @@ namespace serdes
 		return app;
 	}
 
-	void ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *application)
+	void ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *app_config)
 	{
-		cfg::DataSource data_source("", "", "Application", json_value);
-
-		application->SetItemName("Application");
-		application->FromDataSource(data_source);
+		app_config->SetItemName("Application");
+		app_config->FromJson(json_value);
 	}
 }  // namespace serdes
