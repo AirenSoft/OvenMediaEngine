@@ -214,17 +214,14 @@ void DecoderHEVC::CodecThread()
 					}
 				}
 
-				auto decoded_frame = TranscoderUtilities::ConvertAvFrameToMediaFrame(cmn::MediaType::Video, _frame);
+				// If there is no duration, the duration is calculated by framerate and timebase.
+				_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : _frame->pkt_duration;
+
+				auto decoded_frame = TranscoderUtilities::AvFrameToMediaFrame(cmn::MediaType::Video, _frame);
 				::av_frame_unref(_frame);
 				if (decoded_frame == nullptr)
 				{
 					continue;
-				}
-
-				// If there is no duration, the duration is calculated by framerate and timebase.
-				if (decoded_frame->GetDuration() <= 0LL)
-				{
-					decoded_frame->SetDuration(TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context));
 				}
 
 				SendOutputBuffer(need_to_change_notify, _track_id, std::move(decoded_frame));

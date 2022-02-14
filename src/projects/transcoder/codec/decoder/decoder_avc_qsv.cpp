@@ -112,9 +112,9 @@ void DecoderAVCxQSV::CodecThread()
 				_pkt->dts = _parser->dts;
 				_pkt->flags = (_parser->key_frame == 1) ? AV_PKT_FLAG_KEY : 0;
 				_pkt->duration = _pkt->dts - _parser->last_dts;
-				if(_pkt->duration <= 0LL)
+				if (_pkt->duration <= 0LL)
 				{
-					// It may not be the exact packet duration. 
+					// It may not be the exact packet duration.
 					// However, in general, this method is applied under the assumption that the duration of all packets is similar.
 					_pkt->duration = duration;
 				}
@@ -210,19 +210,15 @@ void DecoderAVCxQSV::CodecThread()
 					}
 				}
 
-				auto decoded_frame = TranscoderUtilities::ConvertAvFrameToMediaFrame(cmn::MediaType::Video, _frame);
+				// If there is no duration, the duration is calculated by framerate and timebase.
+				_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : _frame->pkt_duration;
+
+				auto decoded_frame = TranscoderUtilities::AvFrameToMediaFrame(cmn::MediaType::Video, _frame);
+				::av_frame_unref(_frame);
 				if (decoded_frame == nullptr)
 				{
 					continue;
 				}
-
-				// If there is no duration, the duration is calculated by framerate and timebase.
-				if (decoded_frame->GetDuration() <= 0LL)
-				{
-					decoded_frame->SetDuration(TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context));
-				}
-
-				::av_frame_unref(_frame);
 
 				SendOutputBuffer(need_to_change_notify, _track_id, std::move(decoded_frame));
 			}
