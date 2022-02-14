@@ -216,4 +216,31 @@ namespace api
 
 		return http_result && https_result;
 	}
+
+	void Server::CreateVHost(const cfg::vhost::VirtualHost &vhost_config)
+	{
+		auto orchestrator = ocst::Orchestrator::GetInstance();
+
+		if (orchestrator->CreateVirtualHost(vhost_config) == ocst::Result::Failed)
+		{
+			throw CreateConfigError("Failed to create virtual host: %s", vhost_config.GetName().CStr());
+		}
+	}
+
+	void Server::DeleteVHost(const info::Host &host_info)
+	{
+		if (host_info.IsReadOnly())
+		{
+			throw CreateConfigError("Could not delete virtual host: %s is not created by API call", host_info.GetName().CStr());
+		}
+
+		logti("Deleting virtual host: %s", host_info.GetName().CStr());
+
+		auto result = ocst::Orchestrator::GetInstance()->DeleteVirtualHost(host_info);
+
+		if (result != ocst::Result::Succeeded)
+		{
+			throw CreateConfigError("Failed to delete virtual host: %s (%d)", host_info.GetName().CStr(), ov::ToUnderlyingType(result));
+		}
+	}
 }  // namespace api
