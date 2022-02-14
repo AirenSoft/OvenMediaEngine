@@ -45,27 +45,27 @@
 		}                                                      \
 	}
 
-#define INIT_EXTERNAL_MODULE(name, func)                                          \
-	if (succeeded)                                                                \
-	{                                                                             \
-		logtd("Trying to initialize " name "...");                                \
-		auto error = func();                                                      \
-                                                                                  \
-		if (error != nullptr)                                                     \
-		{                                                                         \
-			logte("Could not initialize " name ": %s", error->ToString().CStr()); \
-			succeeded = false;                                                    \
-		}                                                                         \
+#define INIT_EXTERNAL_MODULE(name, func)                               \
+	if (succeeded)                                                     \
+	{                                                                  \
+		logtd("Trying to initialize " name "...");                     \
+		auto error = func();                                           \
+                                                                       \
+		if (error != nullptr)                                          \
+		{                                                              \
+			logte("Could not initialize " name ": %s", error->What()); \
+			succeeded = false;                                         \
+		}                                                              \
 	}
 
-#define TERMINATE_EXTERNAL_MODULE(name, func)                                    \
-	{                                                                            \
-		logtd("Trying to terminate " name "...");                                \
-		auto error = func();                                                     \
-                                                                                 \
-		if (error != nullptr)                                                    \
-		{                                                                        \
-			logte("Could not terminate " name ": %s", error->ToString().CStr()); \
-			return 1;                                                            \
-		}                                                                        \
+#define TERMINATE_EXTERNAL_MODULE(name, func)                         \
+	{                                                                 \
+		logtd("Trying to terminate " name "...");                     \
+		auto error = func();                                          \
+                                                                      \
+		if (error != nullptr)                                         \
+		{                                                             \
+			logte("Could not terminate " name ": %s", error->What()); \
+			return 1;                                                 \
+		}                                                             \
 	}

@@ -38,7 +38,7 @@ public:
 
 				AVFrame* moved_frame = av_frame_alloc();
 				av_frame_move_ref(moved_frame, frame);
-				media_frame->SetPrivdata(moved_frame);
+				media_frame->SetPrivData(moved_frame);
 
 				return media_frame;
 			}
@@ -57,7 +57,7 @@ public:
 
 				AVFrame* moved_frame = av_frame_alloc();
 				av_frame_move_ref(moved_frame, frame);
-				media_frame->SetPrivdata(moved_frame);
+				media_frame->SetPrivData(moved_frame);
 
 				return media_frame;
 			}
@@ -122,9 +122,9 @@ public:
 
 	static AVFrame* MediaFrameToAVFrame(cmn::MediaType media_type, std::shared_ptr<const MediaFrame> src)
 	{
-		if (src->GetPrivdata() != nullptr)
+		if (src->GetPrivData() != nullptr)
 		{
-			return static_cast<AVFrame*>(src->GetPrivdata());
+			return static_cast<AVFrame*>(src->GetPrivData());
 		}
 
 		return nullptr;

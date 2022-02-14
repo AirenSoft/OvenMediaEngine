@@ -49,7 +49,7 @@ namespace http
 			}
 			else
 			{
-				logte("Invalid regex pattern: %s (Error: %s)", pattern.CStr(), error->ToString().CStr());
+				logte("Invalid regex pattern: %s (Error: %s)", pattern.CStr(), error->What());
 				return false;
 			}
 
@@ -182,7 +182,7 @@ namespace http
 						else
 						{
 #if DEBUG
-							logtd("Not matched: url [%s], pattern: [%s] (with error: %s)", uri_target.CStr(), request_info.pattern_string.CStr(), error->ToString().CStr());
+							logtd("Not matched: url [%s], pattern: [%s] (with error: %s)", uri_target.CStr(), request_info.pattern_string.CStr(), error->What());
 #endif	// DEBUG
 						}
 					}

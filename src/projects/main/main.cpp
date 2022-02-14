@@ -260,9 +260,9 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 
 		return ov::Daemon::State::CHILD_SUCCESS;
 	}
-	catch (std::shared_ptr<cfg::ConfigError> &error)
+	catch (const cfg::ConfigError &error)
 	{
-		logte("An error occurred while load config: %s", error->ToString().CStr());
+		logte("An error occurred while load config: %s", error.What());
 	}
 
 	return ov::Daemon::State::CHILD_FAIL;
@@ -274,7 +274,7 @@ static void CheckKernelVersion()
 
 	if (::uname(&name) != 0)
 	{
-		logte("Could not obtain utsname using uname(): %s", ov::Error::CreateErrorFromErrno()->ToString().CStr());
+		logte("Could not obtain utsname using uname(): %s", ov::Error::CreateErrorFromErrno()->What());
 		return;
 	}
 

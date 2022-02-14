@@ -50,15 +50,7 @@ namespace api
 		ApiResponse VHostsController::OnDeleteVhost(const std::shared_ptr<http::svr::HttpConnection> &client,
 													const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
-			try
-			{
-				_server->DeleteVHost(*(vhost.get()));
-			}
-			catch (std::shared_ptr<cfg::ConfigError> &error)
-			{
-				logte("An error occurred while load API config: %s", error->ToString().CStr());
-				return http::HttpError::CreateError(error);
-			}
+			_server->DeleteVHost(*(vhost.get()));
 
 			return http::StatusCode::OK;
 		}

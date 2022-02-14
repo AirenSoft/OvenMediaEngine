@@ -123,13 +123,18 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()));
 	}
 
-	if (output_context->GetHardwareAccel() == true && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
+	if (output_context->GetHardwareAccel() == true && 
+		TranscodeGPU::GetInstance()->IsSupportedNV() == true && 
+		input_media_track->GetFormat() == AV_PIX_FMT_NV12 && 
+		output_context->GetColorspace() == AV_PIX_FMT_NV12)
 	{
-		filters.push_back(ov::String::FormatString("hwupload_cuda,scale_cuda=%d:%d,hwdownload", output_context->GetVideoWidth(), output_context->GetVideoHeight()));
+		filters.push_back(ov::String::FormatString("hwupload_cuda,scale_cuda=%d:%d,hwdownload", 
+			output_context->GetVideoWidth(), output_context->GetVideoHeight()));
 	}
 	else
 	{
-		filters.push_back(ov::String::FormatString("scale=%dx%d:flags=bicubic", output_context->GetVideoWidth(), output_context->GetVideoHeight()));
+		filters.push_back(ov::String::FormatString("scale=%dx%d:flags=bilinear", 
+			output_context->GetVideoWidth(), output_context->GetVideoHeight()));
 	}
 
 	filters.push_back(ov::String::FormatString("settb=%s", output_context->GetTimeBase().GetStringExpr().CStr()));

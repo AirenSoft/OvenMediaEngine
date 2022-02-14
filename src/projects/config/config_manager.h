@@ -24,19 +24,11 @@ namespace cfg
 		friend class ov::Singleton<ConfigManager>;
 		~ConfigManager() override;
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void LoadConfigs(ov::String config_path);
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void ReloadConfigs();
-
-		Json::Value GetCurrentConfigAsJson() const;
-		pugi::xml_document GetCurrentConfigAsXml() const;
-
-		// ConfigManager contains only the configurations when OME first runs,
-		// so if you want to save the last changes modified with RESTful API, you need to call this API.
-		// (DO NOT USE GetServer()->ToJson() to save configurations)
-		bool SaveCurrentConfig();
 
 		std::shared_ptr<const Server> GetServer() const noexcept
 		{
@@ -51,22 +43,20 @@ namespace cfg
 	protected:
 		ConfigManager();
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void CheckLegacyConfigs(ov::String config_path);
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void LoadLoggerConfig(const ov::String &config_path);
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void LoadServerConfig(const ov::String &config_path);
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void LoadServerID(const ov::String &config_path);
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void CheckValidVersion(const ov::String &name, int version);
-
-		bool SaveCurrentConfig(pugi::xml_document &config, const ov::String &last_config_path);
 
 		ov::String _config_path;
 

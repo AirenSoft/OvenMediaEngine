@@ -20,25 +20,17 @@ namespace ov
 			.destroy_callback = nullptr,
 			.ctrl_callback = std::bind(&TlsServerData::OnTlsCtrl, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)};
 
-		std::shared_ptr<Error> error;
+		bool result = _tls.Initialize(tls_context, callback, is_nonblocking);
 
-		if (error == nullptr)
+		if (result)
 		{
-			bool result = _tls.Initialize(tls_context, callback, is_nonblocking);
-
-			if (result)
-			{
-				_state = State::WaitingForAccept;
-			}
-			else
-			{
-				error = OpensslError::CreateErrorFromOpenssl();
-			}
+			_state = State::WaitingForAccept;
 		}
-
-		if (error != nullptr)
+		else
 		{
-			logte("Could not initialize TLS: %s", error->ToString().CStr());
+			auto error = OpensslError();
+
+			logte("Could not initialize TLS: %s", error.What());
 			_state = State::Invalid;
 		}
 	}

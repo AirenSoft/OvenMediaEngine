@@ -195,11 +195,11 @@ class MediaFrame
 public:
 	MediaFrame() = default;
 	~MediaFrame() {
-		if(_privdata)
+		if(_priv_data)
 		{
-			av_frame_unref(_privdata);
-			av_frame_free(&_privdata);
-			_privdata = nullptr;
+			av_frame_unref(_priv_data);
+			av_frame_free(&_priv_data);
+			_priv_data = nullptr;
 		}
 	}
 
@@ -344,8 +344,8 @@ public:
 	{
 		auto frame = std::make_shared<MediaFrame>();
 
-		if(_privdata != nullptr){
-			frame->SetPrivdata(::av_frame_clone(_privdata));
+		if(_priv_data != nullptr){
+			frame->SetPrivData(::av_frame_clone(_priv_data));
 		}
 
 		if (_media_type == cmn::MediaType::Video)
@@ -374,16 +374,15 @@ public:
 		return frame;
 	}
 
-	void SetPrivdata(AVFrame* ptr) {
-		_privdata = ptr;
+	void SetPrivData(AVFrame* ptr) {
+		_priv_data = ptr;
 	}
-	AVFrame* GetPrivdata() const {
-		return _privdata;
+	AVFrame* GetPrivData() const {
+		return _priv_data;
 	}
 
 private:
-	// 임시 포인터 변수
-	AVFrame *_privdata = nullptr;
+	AVFrame *_priv_data = nullptr;
 
 	// Data plane, Data
 	cmn::MediaType _media_type = cmn::MediaType::Unknown;

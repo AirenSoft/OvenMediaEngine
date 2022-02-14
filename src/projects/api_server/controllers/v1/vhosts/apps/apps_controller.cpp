@@ -80,10 +80,7 @@ namespace api
 				codec["channel"] = 2;
 				encodes["audios"].append(codec);
 
-				Json::Value item;
-				item["outputProfile"] = output_profile;
-
-				config["outputProfiles"].append(item);
+				config["outputProfiles"]["outputProfile"].append(output_profile);
 			}
 
 			return true;
@@ -94,14 +91,14 @@ namespace api
 		{
 			if (request_body.isArray() == false)
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Request body must be an array");
+				throw http::HttpError(http::StatusCode::BadRequest, "Request body must be an array");
 			}
 
 			auto orchestrator = ocst::Orchestrator::GetInstance();
 			Json::Value response_value(Json::ValueType::arrayValue);
 			Json::Value requested_config = request_body;
 
-			MultipleStatus status_code;
+			MultipleStatus status_codes;
 
 			for (auto &item : requested_config)
 			{
@@ -109,43 +106,29 @@ namespace api
 
 				FillDefaultValues(item);
 
-				auto error = ::serdes::ApplicationFromJson(item, &app_config);
-
-				if (error == nullptr)
+				try
 				{
+					::serdes::ApplicationFromJson(item, &app_config);
+
 					auto result = orchestrator->CreateApplication(*vhost, app_config);
 
 					switch (result)
 					{
 						case ocst::Result::Failed:
-							error = http::HttpError::CreateError(http::StatusCode::BadRequest, "Failed to create the application");
-							status_code.AddStatusCode(http::StatusCode::BadRequest);
-							break;
+							throw http::HttpError(http::StatusCode::BadRequest, "Failed to create the application");
 
 						case ocst::Result::Succeeded:
-							status_code.AddStatusCode(http::StatusCode::OK);
 							break;
 
 						case ocst::Result::Exists:
-							error = http::HttpError::CreateError(http::StatusCode::Conflict, "The application already exists");
-							status_code.AddStatusCode(http::StatusCode::Conflict);
-							break;
+							throw http::HttpError(http::StatusCode::Conflict, "The application already exists");
 
 						case ocst::Result::NotExists:
 							// CreateApplication() never returns NotExists
-							error = http::HttpError::CreateError(http::StatusCode::InternalServerError, "Unknown error occurred");
-							status_code.AddStatusCode(http::StatusCode::InternalServerError);
 							OV_ASSERT2(false);
-							break;
+							throw http::HttpError(http::StatusCode::InternalServerError, "Unknown error occurred");
 					}
-				}
 
-				if (error != nullptr)
-				{
-					response_value.append(::serdes::JsonFromError(error));
-				}
-				else
-				{
 					auto app = GetApplication(vhost, app_config.GetName().CStr());
 					auto app_json = ::serdes::JsonFromApplication(app);
 
@@ -154,16 +137,24 @@ namespace api
 					response["message"] = StringFromStatusCode(http::StatusCode::OK);
 					response["response"] = app_json;
 
+					status_codes.AddStatusCode(http::StatusCode::OK);
 					response_value.append(std::move(response));
+				}
+				catch (const cfg::ConfigError &error)
+				{
+					auto http_error = http::HttpError(http::StatusCode::BadRequest, error.What());
+
+					status_codes.AddStatusCode(http_error.GetStatusCode());
+					response_value.append(::serdes::JsonFromError(http_error));
+				}
+				catch (const http::HttpError &error)
+				{
+					status_codes.AddStatusCode(error.GetStatusCode());
+					response_value.append(::serdes::JsonFromError(error));
 				}
 			}
 
-			if (status_code.HasOK())
-			{
-				cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
-			}
-
-			return {status_code, std::move(response_value)};
+			return {status_codes, std::move(response_value)};
 		}
 
 		ApiResponse AppsController::OnGetAppList(const std::shared_ptr<http::svr::HttpConnection> &client,
@@ -226,7 +217,7 @@ namespace api
 		{
 			if (request_body.isObject() == false)
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Request body must be an object");
+				throw http::HttpError(http::StatusCode::BadRequest, "Request body must be an object");
 			}
 
 			// TODO(dimiden): Caution - Race condition may occur
@@ -243,65 +234,54 @@ namespace api
 			// Prevent to change the name/outputProfiles using this API
 			if (request_body.isMember("name"))
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Cannot change [name] using this API");
+				throw http::HttpError(http::StatusCode::BadRequest, "Cannot change [name] using this API");
 			}
 
 			if (request_body.isMember("dynamic"))
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Cannot change [dynamic] using this API");
+				throw http::HttpError(http::StatusCode::BadRequest, "Cannot change [dynamic] using this API");
 			}
 
 			if (request_body.isMember("outputProfiles"))
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Cannot change [outputProfiles] using this API");
+				throw http::HttpError(http::StatusCode::BadRequest, "Cannot change [outputProfiles] using this API");
 			}
 
 			// Copy request_body into app_json
 			OverwriteJson(request_body, &app_json);
 
 			cfg::vhost::app::Application app_config;
-			auto error = ::serdes::ApplicationFromJson(app_json, &app_config);
+			::serdes::ApplicationFromJson(app_json, &app_config);
 
-			if (error == nullptr)
+			if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
 			{
-				if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
-				{
-					return http::HttpError::CreateError(http::StatusCode::Forbidden, "Could not delete the application: [%s/%s]",
-														vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
-				}
-
-				auto result = orchestrator->CreateApplication(*vhost, app_config);
-
-				switch (result)
-				{
-					case ocst::Result::Failed:
-						error = http::HttpError::CreateError(http::StatusCode::BadRequest, "Failed to create the application");
-						break;
-
-					case ocst::Result::Succeeded:
-						cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
-						break;
-
-					case ocst::Result::Exists:
-						error = http::HttpError::CreateError(http::StatusCode::Conflict, "The application already exists");
-						break;
-
-					case ocst::Result::NotExists:
-						// CreateApplication() never returns NotExists
-						error = http::HttpError::CreateError(http::StatusCode::InternalServerError, "Unknown error occurred");
-						OV_ASSERT2(false);
-						break;
-				}
-
-				if (error == nullptr)
-				{
-					auto app = GetApplication(vhost, app_config.GetName().CStr());
-
-					return ::serdes::JsonFromApplication(app);
-				}
+				throw http::HttpError(http::StatusCode::Forbidden,
+									  "Could not delete the application: [%s/%s]",
+									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
-			return error;
+			auto result = orchestrator->CreateApplication(*vhost, app_config);
+
+			switch (result)
+			{
+				case ocst::Result::Failed:
+					throw http::HttpError(http::StatusCode::BadRequest, "Failed to create the application");
+
+				case ocst::Result::Succeeded:
+					break;
+
+				case ocst::Result::Exists:
+					throw http::HttpError(http::StatusCode::Conflict, "The application already exists");
+
+				case ocst::Result::NotExists:
+					// CreateApplication() never returns NotExists
+					OV_ASSERT2(false);
+					throw http::HttpError(http::StatusCode::InternalServerError, "Unknown error occurred");
+			}
+
+			auto app_metrics = GetApplication(vhost, app_config.GetName().CStr());
+
+			return ::serdes::JsonFromApplication(app_metrics);
 		}
 
 		ApiResponse AppsController::OnDeleteApp(const std::shared_ptr<http::svr::HttpConnection> &client,
@@ -310,11 +290,10 @@ namespace api
 		{
 			if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
 			{
-				return http::HttpError::CreateError(http::StatusCode::Forbidden, "Could not delete the application: [%s/%s]",
-													vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+				throw http::HttpError(http::StatusCode::Forbidden,
+									  "Could not delete the application: [%s/%s]",
+									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
-
-			cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
 
 			return http::StatusCode::OK;
 		}

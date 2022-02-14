@@ -170,9 +170,9 @@ static void ReloadHandler(int signum, siginfo_t *si, void *unused)
 	{
 		config_manager->ReloadConfigs();
 	}
-	catch (std::shared_ptr<cfg::ConfigError> &error)
+	catch (const cfg::ConfigError &error)
 	{
-		logte("An error occurred while reload configuration: %s", error->ToString().CStr());
+		logte("An error occurred while reload configuration: %s", error.What());
 		return;
 	}
 

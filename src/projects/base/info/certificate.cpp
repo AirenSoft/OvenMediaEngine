@@ -89,7 +89,7 @@ namespace info
 
 		if (error != nullptr)
 		{
-			return ov::Error::CreateError(OV_LOG_TAG, "[%s] Could not create a certificate from file - %s", certificate_name.CStr(), error->ToString().CStr());
+			return ov::Error::CreateError(OV_LOG_TAG, "[%s] Could not create a certificate from file - %s", certificate_name.CStr(), error->What());
 		}
 
 		std::shared_ptr<::Certificate> chain_certificate;
@@ -102,7 +102,7 @@ namespace info
 
 			if (error != nullptr)
 			{
-				return ov::Error::CreateError(OV_LOG_TAG, "[%s] Could not create a chain certificate from file - %s", certificate_name.CStr(), error->ToString().CStr());
+				return ov::Error::CreateError(OV_LOG_TAG, "[%s] Could not create a chain certificate from file - %s", certificate_name.CStr(), error->What());
 			}
 		}
 		else
@@ -146,7 +146,7 @@ namespace info
 				logtd("Not matched with error: host_name: %s, pattern: %s, error: %s",
 					  host_name.CStr(),
 					  host_name_entry.regex.GetPattern().CStr(),
-					  error->ToString().CStr());
+					  error->What());
 			}
 		}
 

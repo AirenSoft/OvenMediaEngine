@@ -17,6 +17,8 @@
 #include "./web_socket_frame.h"
 #include "./web_socket_private.h"
 
+#define WEBSOCKET_ERROR_DOMAIN "WebSocket"
+
 namespace http
 {
 	namespace svr
@@ -240,7 +242,7 @@ namespace http
 
 				if ((_error_handler != nullptr) && (socket_info != nullptr))
 				{
-					_error_handler(socket_info->GetClient(), ov::Error::CreateError(static_cast<int>(status_code), "%s", StringFromStatusCode(status_code)));
+					_error_handler(socket_info->GetClient(), ov::Error::CreateError(WEBSOCKET_ERROR_DOMAIN, static_cast<int>(status_code), "%s", StringFromStatusCode(status_code)));
 				}
 
 				response->SetStatusCode(status_code);

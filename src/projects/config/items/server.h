@@ -121,7 +121,7 @@ namespace cfg
 					return nullptr;
 				}
 
-				return CreateConfigError("Unknown type: %s", _typeName.CStr());
+				return CreateConfigErrorPtr("Unknown type: %s", _typeName.CStr());
 			});
 
 			Register({"IP", "ip"}, &_ip);

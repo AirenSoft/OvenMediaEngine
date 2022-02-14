@@ -19,10 +19,16 @@
 namespace api
 {
 	class Server;
-	
+
 	class ApiResponse
 	{
 	public:
+		// {
+		//     "statusCode": 200,
+		//     "message": "OK"
+		// }
+		ApiResponse();
+
 		// {
 		//     "statusCode": <status_code>,
 		//     "message": <message_of_status_code>
@@ -40,7 +46,7 @@ namespace api
 		//     "statusCode": <status_code>,
 		//     "message": <message_of_status_code>
 		// }
-		ApiResponse(MultipleStatus status_code, const Json::Value &json);
+		ApiResponse(MultipleStatus status_codes, const Json::Value &json);
 
 		// {
 		//     "statusCode": 200,
@@ -53,7 +59,7 @@ namespace api
 		//     "statusCode": <error->GetCode()>,
 		//     "message": <error->GetMessage()>
 		// }
-		ApiResponse(const std::shared_ptr<const http::HttpError> &error);
+		ApiResponse(const std::exception *error);
 
 		// Copy ctor
 		ApiResponse(const ApiResponse &response);
@@ -135,7 +141,25 @@ namespace api
 			_interceptor->Register(method, new_pattern, [that, handler](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
 				if (that != nullptr)
 				{
-					handler(that, client);
+					try
+					{
+						handler(that, client);
+					}
+					catch (const http::HttpError &error)
+					{
+						logw("APIController", "HTTP error occurred: %s", error.What());
+						ApiResponse(&error).SendToClient(client);
+					}
+					catch (const cfg::ConfigError &error)
+					{
+						logw("APIController", "Config error occurred: %s", error.GetDetailedMessage().CStr());
+						ApiResponse(&error).SendToClient(client);
+					}
+					catch (const std::exception &error)
+					{
+						logw("APIController", "Unknown error occurred: %s", error.what());
+						ApiResponse(&error).SendToClient(client);
+					}
 				}
 				else
 				{
@@ -162,9 +186,9 @@ namespace api
 				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
 
 				std::shared_ptr<mon::HostMetrics> vhost_metrics;
-				auto error = GetVirtualHostMetrics(match_result, &vhost_metrics);
+				GetVirtualHostMetrics(match_result, &vhost_metrics);
 
-				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client, vhost_metrics) : error;
+				ApiResponse result = (clazz->*handler)(client, vhost_metrics);
 				result.SendToClient(client);
 			});
 		}
@@ -175,12 +199,12 @@ namespace api
 				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
 
 				std::shared_ptr<mon::HostMetrics> vhost_metrics;
-				auto error = GetVirtualHostMetrics(match_result, &vhost_metrics);
+				GetVirtualHostMetrics(match_result, &vhost_metrics);
 
 				std::shared_ptr<mon::ApplicationMetrics> app_metrics;
-				error = (error != nullptr) ? error : GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
+				GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
 
-				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client, vhost_metrics, app_metrics) : error;
+				ApiResponse result = (clazz->*handler)(client, vhost_metrics, app_metrics);
 				result.SendToClient(client);
 			});
 		}
@@ -191,16 +215,16 @@ namespace api
 				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
 
 				std::shared_ptr<mon::HostMetrics> vhost_metrics;
-				auto error = GetVirtualHostMetrics(match_result, &vhost_metrics);
+				GetVirtualHostMetrics(match_result, &vhost_metrics);
 
 				std::shared_ptr<mon::ApplicationMetrics> app_metrics;
-				error = (error != nullptr) ? error : GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
+				GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
 
 				std::shared_ptr<mon::StreamMetrics> stream_metrics;
 				std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
-				error = (error != nullptr) ? error : GetStreamMetrics(match_result, vhost_metrics, app_metrics, &stream_metrics, &output_streams);
+				GetStreamMetrics(match_result, vhost_metrics, app_metrics, &stream_metrics, &output_streams);
 
-				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client, vhost_metrics, app_metrics, stream_metrics, output_streams) : error;
+				ApiResponse result = (clazz->*handler)(client, vhost_metrics, app_metrics, stream_metrics, output_streams);
 				result.SendToClient(client);
 			});
 		}
@@ -211,9 +235,9 @@ namespace api
 				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
 
 				Json::Value request_body;
-				auto error = GetRequestBody(client, &request_body);
+				GetRequestBody(client, &request_body);
 
-				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client, request_body) : error;
+				ApiResponse result = (clazz->*handler)(client, request_body);
 				result.SendToClient(client);
 			});
 		}
@@ -224,12 +248,12 @@ namespace api
 				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
 
 				Json::Value request_body;
-				auto error = GetRequestBody(client, &request_body);
+				GetRequestBody(client, &request_body);
 
 				std::shared_ptr<mon::HostMetrics> vhost_metrics;
-				error = GetVirtualHostMetrics(match_result, &vhost_metrics);
+				GetVirtualHostMetrics(match_result, &vhost_metrics);
 
-				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client, request_body, vhost_metrics) : error;
+				ApiResponse result = (clazz->*handler)(client, request_body, vhost_metrics);
 				result.SendToClient(client);
 			});
 		}
@@ -240,15 +264,15 @@ namespace api
 				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
 
 				Json::Value request_body;
-				auto error = GetRequestBody(client, &request_body);
+				GetRequestBody(client, &request_body);
 
 				std::shared_ptr<mon::HostMetrics> vhost_metrics;
-				error = GetVirtualHostMetrics(match_result, &vhost_metrics);
+				GetVirtualHostMetrics(match_result, &vhost_metrics);
 
 				std::shared_ptr<mon::ApplicationMetrics> app_metrics;
-				error = (error != nullptr) ? error : GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
+				GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
 
-				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client, request_body, vhost_metrics, app_metrics) : error;
+				ApiResponse result = (clazz->*handler)(client, request_body, vhost_metrics, app_metrics);
 				result.SendToClient(client);
 			});
 		}
@@ -259,19 +283,19 @@ namespace api
 				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
 
 				Json::Value request_body;
-				auto error = GetRequestBody(client, &request_body);
+				GetRequestBody(client, &request_body);
 
 				std::shared_ptr<mon::HostMetrics> vhost_metrics;
-				error = GetVirtualHostMetrics(match_result, &vhost_metrics);
+				GetVirtualHostMetrics(match_result, &vhost_metrics);
 
 				std::shared_ptr<mon::ApplicationMetrics> app_metrics;
-				error = (error != nullptr) ? error : GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
+				GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
 
 				std::shared_ptr<mon::StreamMetrics> stream_metrics;
 				std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
-				error = (error != nullptr) ? error : GetStreamMetrics(match_result, vhost_metrics, app_metrics, &stream_metrics, &output_streams);
+				GetStreamMetrics(match_result, vhost_metrics, app_metrics, &stream_metrics, &output_streams);
 
-				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client, request_body, vhost_metrics, app_metrics, stream_metrics, output_streams) : error;
+				ApiResponse result = (clazz->*handler)(client, request_body, vhost_metrics, app_metrics, stream_metrics, output_streams);
 				result.SendToClient(client);
 			});
 		}

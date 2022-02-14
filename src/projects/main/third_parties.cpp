@@ -289,7 +289,7 @@ std::shared_ptr<ov::Error> InitializeOpenSsl()
 		return nullptr;
 	}
 
-	return ov::OpensslError::CreateErrorFromOpenssl();
+	return std::make_shared<ov::OpensslError>();
 }
 
 std::shared_ptr<ov::Error> TerminateOpenSsl()
@@ -299,7 +299,7 @@ std::shared_ptr<ov::Error> TerminateOpenSsl()
 		return nullptr;
 	}
 
-	return ov::OpensslError::CreateErrorFromOpenssl();
+	return std::make_shared<ov::OpensslError>();
 }
 
 const char *GetJsonCppVersion()

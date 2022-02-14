@@ -52,10 +52,10 @@ namespace cfg
 			return "";
 		}
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		virtual void FromString(const ov::String &str) = 0;
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		bool IsParsed(const void *target) const
 		{
 			throw CreateConfigError("Use Item::IsParsed() instead");

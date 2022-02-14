@@ -4,6 +4,8 @@
 #include "mpegtspush_publisher.h"
 #include "mpegtspush_stream.h"
 
+#define MPEG_TS_PUSH_PUBLISHER_ERROR_DOMAIN					"MPEGTSPushPublisher"
+
 std::shared_ptr<MpegtsPushApplication> MpegtsPushApplication::Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
 {
 	auto application = std::make_shared<MpegtsPushApplication>(publisher, application_info);
@@ -230,14 +232,14 @@ std::shared_ptr<ov::Error> MpegtsPushApplication::PushStart(const std::shared_pt
 		}
 
 		error_message += "]";
-		return ov::Error::CreateError(ErrorCode::FailureInvalidParameter, error_message);
+		return ov::Error::CreateError(MPEG_TS_PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::FailureInvalidParameter, error_message);
 	}
 
 	// Validation check for dupulicate id
 	if (_userdata_sets.GetByKey(push->GetId()) != nullptr)
 	{
 		ov::String error_message = "Duplicate ID already exists";
-		return ov::Error::CreateError(ErrorCode::FailureDupulicateKey, error_message);
+		return ov::Error::CreateError(MPEG_TS_PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::FailureDupulicateKey, error_message);
 	}
 
 	// Validation check for protocol scheme
@@ -245,7 +247,7 @@ std::shared_ptr<ov::Error> MpegtsPushApplication::PushStart(const std::shared_pt
 		push->GetUrl().HasPrefix("tcp://") == false)
 	{
 		ov::String error_message = "Unsupported protocol";
-		return ov::Error::CreateError(ErrorCode::FailureInvalidParameter, error_message);
+		return ov::Error::CreateError(MPEG_TS_PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::FailureInvalidParameter, error_message);
 	}
 
 	// Remove suffix '/" of mpegts url
@@ -264,7 +266,7 @@ std::shared_ptr<ov::Error> MpegtsPushApplication::PushStart(const std::shared_pt
 		push->GetUrl().HasSuffix("listen"))
 	{
 		ov::String error_message = "Unsupported tcp listen";
-		return ov::Error::CreateError(ErrorCode::FailureInvalidParameter, error_message);
+		return ov::Error::CreateError(MPEG_TS_PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::FailureInvalidParameter, error_message);
 	}
 
 	push->SetEnable(true);
@@ -272,7 +274,7 @@ std::shared_ptr<ov::Error> MpegtsPushApplication::PushStart(const std::shared_pt
 	_userdata_sets.Set(push);
 
 	SessionUpdateByUser();
-	return ov::Error::CreateError(ErrorCode::Success, "Success");
+	return ov::Error::CreateError(MPEG_TS_PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::Success, "Success");
 }
 
 std::shared_ptr<ov::Error> MpegtsPushApplication::PushStop(const std::shared_ptr<info::Push> &push)
@@ -288,7 +290,7 @@ std::shared_ptr<ov::Error> MpegtsPushApplication::PushStop(const std::shared_ptr
 
 		error_message += "]";
 
-		return ov::Error::CreateError(ErrorCode::FailureInvalidParameter, error_message);
+		return ov::Error::CreateError(MPEG_TS_PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::FailureInvalidParameter, error_message);
 	}
 
 	auto userdata = _userdata_sets.GetByKey(push->GetId());
@@ -296,7 +298,7 @@ std::shared_ptr<ov::Error> MpegtsPushApplication::PushStop(const std::shared_ptr
 	{
 		ov::String error_message = ov::String::FormatString("There is no push information related to the ID [%s]", push->GetId().CStr());
 
-		return ov::Error::CreateError(ErrorCode::FailureNotExist, error_message);
+		return ov::Error::CreateError(MPEG_TS_PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::FailureNotExist, error_message);
 	}
 
 	userdata->SetEnable(false);
@@ -304,7 +306,7 @@ std::shared_ptr<ov::Error> MpegtsPushApplication::PushStop(const std::shared_ptr
 
 	SessionUpdateByUser();
 
-	return ov::Error::CreateError(ErrorCode::Success, "Success");
+	return ov::Error::CreateError(MPEG_TS_PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::Success, "Success");
 }
 
 std::shared_ptr<ov::Error> MpegtsPushApplication::GetPushes(std::vector<std::shared_ptr<info::Push>> &push_list)
@@ -318,5 +320,5 @@ std::shared_ptr<ov::Error> MpegtsPushApplication::GetPushes(std::vector<std::sha
 		push_list.push_back(userdata);
 	}
 
-	return ov::Error::CreateError(ErrorCode::Success, "Success");
+	return ov::Error::CreateError(MPEG_TS_PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::Success, "Success");
 }

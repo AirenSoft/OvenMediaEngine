@@ -42,7 +42,7 @@ namespace cfg
 							{
 								if (variant.GetName().IsEmpty())
 								{
-									return CreateConfigError("Variant name must be specified");
+									return CreateConfigErrorPtr("Variant name must be specified");
 								}
 
 								SET_IF_NOT_PARSED(GetCodec, SetCodec, _codec);

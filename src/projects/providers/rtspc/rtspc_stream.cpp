@@ -794,7 +794,7 @@ namespace pvd
 		{
 			if (error != nullptr)
 			{
-				logte("[%s/%s] An error occurred while receiving packet: %s", GetApplicationName(), GetName().CStr(), error->ToString().CStr());
+				logte("[%s/%s] An error occurred while receiving packet: %s", GetApplicationName(), GetName().CStr(), error->What());
 				SetState(State::ERROR);
 				return false;
 			}

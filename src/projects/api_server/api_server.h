@@ -25,15 +25,12 @@ namespace api
 		bool Start(const std::shared_ptr<const cfg::Server> &server_config);
 		bool Stop();
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void CreateVHost(const cfg::vhost::VirtualHost &vhost_config, bool write_to_storage = true);
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void DeleteVHost(const info::Host &vhost_info, bool delete_from_storage = true);
 
 	protected:
-		MAY_THROWS(std::shared_ptr<ConfigError>)
-		void LoadAPIStorageConfigs(const cfg::mgr::api::Storage &storage_config);
-		bool PrepareAPIStoragePath(const cfg::mgr::api::Storage &storage_config);
 		bool PrepareHttpServers(const ov::String &server_ip, const cfg::mgr::Managers &managers, const cfg::bind::mgr::API &api_bind_config);
 
 		ov::String MangleVHostName(const ov::String &vhost_name);

@@ -29,7 +29,7 @@ namespace http
 		{
 			if (certificate == nullptr)
 			{
-				return ov::OpensslError::CreateError("Certificate is nullptr");
+				return std::make_shared<ov::OpensslError>("Certificate is nullptr");
 			}
 
 			ov::TlsContextCallback tls_context_callback = {

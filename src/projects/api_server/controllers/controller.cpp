@@ -10,6 +10,11 @@
 
 namespace api
 {
+	ApiResponse::ApiResponse()
+		: ApiResponse(http::StatusCode::OK)
+	{
+	}
+
 	ApiResponse::ApiResponse(http::StatusCode status_code)
 	{
 		SetResponse(status_code);
@@ -20,16 +25,16 @@ namespace api
 		SetResponse(status_code, nullptr, json);
 	}
 
-	ApiResponse::ApiResponse(MultipleStatus status_code, const Json::Value &json)
+	ApiResponse::ApiResponse(MultipleStatus status_codes, const Json::Value &json)
 	{
 		if (json.isArray())
 		{
-			_status_code = status_code.GetStatusCode();
+			_status_code = status_codes.GetStatusCode();
 			_json = json;
 		}
 		else
 		{
-			SetResponse(status_code.GetStatusCode(), nullptr, json);
+			SetResponse(status_codes.GetStatusCode(), nullptr, json);
 		}
 	}
 
@@ -38,7 +43,7 @@ namespace api
 		SetResponse(http::StatusCode::OK, nullptr, json);
 	}
 
-	ApiResponse::ApiResponse(const std::shared_ptr<const http::HttpError> &error)
+	ApiResponse::ApiResponse(const std::exception *error)
 	{
 		if (error == nullptr)
 		{
@@ -46,7 +51,14 @@ namespace api
 			return;
 		}
 
-		SetResponse(error->GetStatusCode(), error->ToString().CStr());
+		auto http_error = dynamic_cast<const http::HttpError *>(error);
+		if (http_error != nullptr)
+		{
+			SetResponse(http_error->GetStatusCode(), http_error->What());
+			return;
+		}
+
+		SetResponse(http::StatusCode::InternalServerError, error->what());
 	}
 
 	ApiResponse::ApiResponse(const ApiResponse &response)

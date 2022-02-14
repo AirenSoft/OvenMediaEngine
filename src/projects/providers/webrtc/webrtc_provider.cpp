@@ -558,7 +558,7 @@ namespace pvd
 		auto error = certificate->Generate();
 		if(error != nullptr)
 		{
-			logte("Cannot create certificate: %s", error->ToString().CStr());
+			logte("Cannot create certificate: %s", error->What());
 			return nullptr;
 		}
 

@@ -118,7 +118,7 @@ namespace ov
 		}
 		else
 		{
-			logte("Could not allocate BIO method: %s", OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
+			logte("Could not allocate BIO method: %s", OpensslError().What());
 		}
 
 		return bio_method;

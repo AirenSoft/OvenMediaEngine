@@ -35,10 +35,10 @@ namespace cfg
 
 		virtual void CopyFrom(const std::shared_ptr<const ListInterface> &another_list);
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		virtual void CopyToXmlNode(pugi::xml_node &node, bool include_default_values) const = 0;
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		// virtual void AddChildrenToJson(Json::Value &object, ValueType value_type, OmitRule omit_name, const ov::String &child_name, const std::any &child_target, const Json::Value &original_value, bool include_default_values) const = 0;
 		virtual void CopyToJsonValue(Json::Value &object, bool include_default_values) const = 0;
 
@@ -70,13 +70,13 @@ namespace cfg
 		MAY_THROWS(CastException)
 		virtual void AppendChildValue(const DataSource &data_source, ValueType list_item_type, bool resolve_path, bool omit_json) = 0;
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void ValidateOmitJsonNameRule(const ov::String &path, const ItemName &item_name) const;
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		virtual void ValidateOmitJsonNameRuleForItem(const ov::String &item_path, const ItemName &item_name) const = 0;
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void ValidateOmitJsonNameRuleInternal(const ov::String &item_path, const ItemName &item_name) const
 		{
 			switch (GetListItemType())

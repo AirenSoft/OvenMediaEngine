@@ -166,10 +166,10 @@ namespace cfg
 			return _original_value;
 		}
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void SetValue(const Variant &value);
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(ConfigError)
 		void SetValue(const ov::String &item_path, const DataSource &data_source);
 
 	protected:

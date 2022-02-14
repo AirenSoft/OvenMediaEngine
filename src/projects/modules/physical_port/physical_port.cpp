@@ -180,7 +180,7 @@ void PhysicalPort::OnClientConnectionStateChanged(const std::shared_ptr<ov::Clie
 		}
 
 		case ov::SocketConnectionState::Error: {
-			logtd("Client is disconnected with error: %s (%s)", client->ToString().CStr(), (error != nullptr) ? error->ToString().CStr() : "N/A");
+			logtd("Client is disconnected with error: %s (%s)", client->ToString().CStr(), (error != nullptr) ? error->What() : "N/A");
 
 			// Notify observers
 			auto func = bind(&PhysicalPortObserver::OnDisconnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client), PhysicalPortDisconnectReason::Error, error);

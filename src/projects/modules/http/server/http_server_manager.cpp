@@ -115,7 +115,7 @@ namespace http
 		bool HttpServerManager::AppendCertificate(const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate)
 		{
 			auto https_server = GetHttpsServer(address);
-			if(https_server == nullptr)
+			if (https_server == nullptr)
 			{
 				logte("Could not find https server(%s) to append certificate", address.ToString(false).CStr());
 				return false;
@@ -124,7 +124,7 @@ namespace http
 			auto error = https_server->AppendCertificate(certificate);
 			if (error != nullptr)
 			{
-				logte("Could not set certificate to https server(%s) : %s", address.ToString(false).CStr(), error->ToString().CStr());
+				logte("Could not set certificate to https server(%s) : %s", address.ToString(false).CStr(), error->What());
 				return false;
 			}
 
@@ -134,7 +134,7 @@ namespace http
 		bool HttpServerManager::RemoveCertificate(const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate)
 		{
 			auto https_server = GetHttpsServer(address);
-			if(https_server == nullptr)
+			if (https_server == nullptr)
 			{
 				logte("Could not find https server(%s) to append certificate", address.ToString(false).CStr());
 				return false;
@@ -143,7 +143,7 @@ namespace http
 			auto error = https_server->RemoveCertificate(certificate);
 			if (error != nullptr)
 			{
-				logte("Could not set certificate to https server(%s) : %s", address.ToString(false).CStr(), error->ToString().CStr());
+				logte("Could not set certificate to https server(%s) : %s", address.ToString(false).CStr(), error->What());
 				return false;
 			}
 
@@ -160,7 +160,7 @@ namespace http
 					auto error = https_server->AppendCertificate(vhost->host_info.GetCertificate());
 					if (error != nullptr)
 					{
-						logte("Could not set certificate: %s", error->ToString().CStr());
+						logte("Could not set certificate: %s", error->What());
 						https_server = nullptr;
 						break;
 					}
@@ -182,7 +182,7 @@ namespace http
 				auto error = https_server->AppendCertificate(certificate);
 				if (error != nullptr)
 				{
-					logte("Could not set certificate: %s", error->ToString().CStr());
+					logte("Could not set certificate: %s", error->What());
 					https_server = nullptr;
 				}
 				else

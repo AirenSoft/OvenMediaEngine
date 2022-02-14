@@ -12,6 +12,34 @@
 
 namespace cfg
 {
+	MAY_THROWS(ConfigError)
+	const Json::Value &GetJsonObject(const Json::Value &value, const char *key)
+	{
+		try
+		{
+			return value[key];
+		}
+		catch (const std::exception &e)
+		{
+			logtw("Could not obtain JSON value for key %s\nException: %s\n%s", key, e.what(), ov::Json::Stringify(value).CStr());
+			throw CreateConfigError("JSON value is not an object (Expected: object, but: %s)", ov::StringFromJsonValueType(value));
+		}
+	}
+
+	MAY_THROWS(ConfigError)
+	Json::Value &GetJsonObject(Json::Value &value, const char *key)
+	{
+		try
+		{
+			return value[key];
+		}
+		catch (const std::exception &e)
+		{
+			logtw("Could not obtain JSON value for key %s\nException: %s\n%s", key, e.what(), ov::Json::Stringify(value).CStr());
+			throw CreateConfigError("JSON value is not an object (Expected: object, but: %s)", ov::StringFromJsonValueType(value));
+		}
+	}
+
 	ov::String Item::ChildToString(int indent_count, const std::shared_ptr<const Child> &child, size_t index, size_t child_count)
 	{
 		ov::String indent = MakeIndentString(indent_count + 1);
@@ -108,18 +136,6 @@ namespace cfg
 		}
 
 		return description;
-	}
-
-	template <class T>
-	bool ValidateOmitJsonNameRulesss(bool omit_json, const std::vector<T> &children)
-	{
-		if ((omit_json == false) || (children.size() == 1))
-		{
-			// The item may be omitted
-			return true;
-		}
-
-		return false;
 	}
 
 	Item::Item(const Item &item)
@@ -451,7 +467,7 @@ namespace cfg
 	void Item::SetJsonChildValue(ValueType value_type, Json::Value &object, const ov::String &child_name, const Json::Value &original_value)
 	{
 		Json::Value value;
-		Json::Value &target_object = (value_type == ValueType::Attribute) ? object["$"] : object;
+		Json::Value &target_object = (value_type == ValueType::Attribute) ? GetJsonObject(object, "$") : object;
 
 		switch (value_type)
 		{
@@ -484,13 +500,22 @@ namespace cfg
 				return;
 		}
 
+		if (target_object.isNull())
+		{
+			target_object = Json::objectValue;
+		}
+
 		if (target_object.isArray())
 		{
 			target_object.append(value);
 		}
-		else
+		else if (target_object.isObject())
 		{
 			target_object[child_name] = value;
+		}
+		else
+		{
+			throw CreateConfigError("Invalid JSON object type: %s", child_name.CStr());
 		}
 	}
 
@@ -539,7 +564,7 @@ namespace cfg
 							HANDLE_CAST_EXCEPTION(value_type, );
 						}
 
-						auto &target_value = child->OmitJsonName() ? value : value[child_name.CStr()];
+						auto &target_value = child->OmitJsonName() ? value : GetJsonObject(value, child_name);
 
 						child_item->ToJson(target_value, include_default_values);
 
@@ -558,7 +583,7 @@ namespace cfg
 							HANDLE_CAST_EXCEPTION(value_type, );
 						}
 
-						auto &target_value = child->OmitJsonName() ? value : value[child_name];
+						auto &target_value = child->OmitJsonName() ? value : GetJsonObject(value, child_name);
 
 						if (target_value.isArray() == false)
 						{
@@ -578,9 +603,33 @@ namespace cfg
 	{
 		Json::Value value;
 
-		ToJson(value[_item_name.GetName(DataType::Json)], include_default_values);
+		ToJson(value, include_default_values);
 
 		return value;
+	}
+
+	Json::Value Item::ToJson() const
+	{
+		return ToJson(false);
+	}
+
+	void Item::ToJsonWithName(Json::Value &value, bool include_default_values) const
+	{
+		ToJson(GetJsonObject(value, _item_name.GetName(DataType::Json)), include_default_values);
+	}
+
+	Json::Value Item::ToJsonWithName(bool include_default_values) const
+	{
+		Json::Value value;
+
+		ToJsonWithName(value, include_default_values);
+
+		return value;
+	}
+
+	Json::Value Item::ToJsonWithName() const
+	{
+		return Item::ToJsonWithName(false);
 	}
 
 	void SetChildValueToXmlNode(pugi::xml_node &node, const ov::String &child_name, const char *value)

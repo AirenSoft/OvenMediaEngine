@@ -29,97 +29,6 @@ namespace api
 		}
 	};
 
-	void Server::LoadAPIStorageConfigs(const cfg::mgr::api::Storage &storage_config)
-	{
-		auto storage_path = storage_config.GetPath();
-
-		// Obtain a list of XML files in the storage path
-		std::vector<ov::String> file_list;
-		auto error = ov::PathManager::GetFileList(storage_path + "/", "VHost_*.xml", &file_list);
-
-		if (error != nullptr)
-		{
-			if (error->GetCode() == ENOENT)
-			{
-				// The path could not be found - Ignore this error
-				return;
-			}
-
-			// Another error occurred
-			throw CreateConfigError("Failed to get a list of XML files in the storage path: %s (%s)", storage_path.CStr(), error->ToString().CStr());
-		}
-
-		// Load configurations from the API storage path
-		logti("Trying to load API storage configurations in %s...", storage_path.CStr());
-
-		if (file_list.empty() == false)
-		{
-			for (auto file_iterator = file_list.begin(); file_iterator != file_list.end(); ++file_iterator)
-			{
-				auto file_name = *file_iterator;
-
-				cfg::DataSource data_source(cfg::DataType::Xml, storage_path, file_name, "VirtualHost");
-
-				cfg::vhost::VirtualHost vhost_config;
-				vhost_config.SetItemName("VirtualHost");
-				vhost_config.FromDataSource(data_source);
-				vhost_config.SetReadOnly(false);
-
-				logti("Creating a new VirtualHost from %s...", file_name.CStr());
-				CreateVHost(vhost_config, true);
-			}
-		}
-		else
-		{
-			logti("There is no XML file in %s", storage_path.CStr());
-		}
-	}
-
-	bool Server::PrepareAPIStoragePath(const cfg::mgr::api::Storage &storage_config)
-	{
-		_storage_path = "";
-		_is_storage_path_initialized = false;
-
-		if (storage_config.IsEnabled())
-		{
-			// Check the write permission for <Storage>
-			const auto &storage_path = storage_config.GetPath();
-
-			if (ov::PathManager::IsDirectory(storage_path))
-			{
-				int result = ::access(storage_path.CStr(), W_OK);
-
-				if (result != 0)
-				{
-					throw CreateConfigError("Write permission denied. Unable to write: %s", storage_path.CStr());
-				}
-
-				// writable
-			}
-			else
-			{
-				logti("Trying to create API storage directory: %s", storage_path.CStr());
-
-				if (ov::PathManager::MakeDirectory(storage_path) == false)
-				{
-					logte("Could not create directory: %s", storage_path.CStr());
-					return false;
-				}
-
-				logti("Directory is created: %s", storage_path.CStr());
-			}
-
-			_storage_path = storage_path;
-		}
-		else
-		{
-			logtw("API Storage is disabled. You will lose the configurations modified using the API.");
-		}
-
-		_is_storage_path_initialized = true;
-		return true;
-	}
-
 	bool Server::PrepareHttpServers(const ov::String &server_ip, const cfg::mgr::Managers &managers, const cfg::bind::mgr::API &api_bind_config)
 	{
 		auto http_server_manager = http::svr::HttpServerManager::GetInstance();
@@ -251,30 +160,6 @@ namespace api
 			logte("Empty <AccessToken> is not allowed");
 			return false;
 #endif	// DEBUG
-		}
-
-		const auto &storage_config = server_config->GetManagers().GetApi().GetStorage();
-
-		if (storage_config.IsParsed())
-		{
-			if (PrepareAPIStoragePath(storage_config) == false)
-			{
-				return false;
-			}
-
-			try
-			{
-				LoadAPIStorageConfigs(storage_config);
-			}
-			catch (std::shared_ptr<cfg::ConfigError> &error)
-			{
-				logte("An error occurred while load API config: %s", error->ToString().CStr());
-				return false;
-			}
-		}
-		else
-		{
-			logtw("<Server><Managers><API><Storage> is not specified. You will lose the configurations modified using the API.");
 		}
 
 		return PrepareHttpServers(server_config->GetIp(), managers, api_bind_config);
@@ -435,7 +320,7 @@ namespace api
 
 			if (error != nullptr)
 			{
-				throw CreateConfigError("Failed to delete config file for vhost: %s, error: (%d)", vhost_info.GetName().CStr(), error->ToString().CStr());
+				throw CreateConfigError("Failed to delete config file for vhost: %s, error: (%d)", vhost_info.GetName().CStr(), error->What());
 			}
 		}
 	}
