@@ -13,8 +13,6 @@
 #include "../codec_utilities.h"
 #include "base/info/application.h"
 
-// static enum AVPixelFormat hw_pix_fmt;
-
 bool DecoderAVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	if (TranscodeDecoder::Configure(context) == false)
@@ -22,7 +20,7 @@ bool DecoderAVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	AVCodec *_codec = ::avcodec_find_decoder_by_name("h264");
+	AVCodec *_codec = ::avcodec_find_decoder_by_name("h264_cuvid");
 	if (_codec == nullptr)
 	{
 		logte("Codec not found: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
@@ -37,7 +35,7 @@ bool DecoderAVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 
 	_context->time_base = TimebaseToAVRational(GetTimebase());
-	_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContextNV());
+	_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext());
 	::av_opt_set(_context->priv_data, "gpu_copy", "on", 0);
 
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
@@ -217,10 +215,9 @@ void DecoderAVCxNV::CodecThread()
 
 				AVFrame *sw_frame = ::av_frame_alloc();
 				AVFrame *tmp_frame = NULL;
-
 				if (_frame->format == AV_PIX_FMT_CUDA)
 				{
-					// retrieve data from GPU to CPU
+					// retrieve data from GPU to CPU ( CUDA -> NV12 )
 					if ((ret = ::av_hwframe_transfer_data(sw_frame, _frame, 0)) < 0)
 					{
 						logte("Error transferring the data to system memory\n");
@@ -234,18 +231,14 @@ void DecoderAVCxNV::CodecThread()
 				}
 				tmp_frame->pts = _frame->pts;
 
-				auto decoded_frame = TranscoderUtilities::ConvertAvFrameToMediaFrame(cmn::MediaType::Video, tmp_frame);
+				// If there is no duration, the duration is calculated by framerate and timebase.
+				tmp_frame->pkt_duration = (tmp_frame->pkt_duration <= 0LL) ? TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : tmp_frame->pkt_duration;
+
+				auto decoded_frame = TranscoderUtilities::AvFrameToMediaFrame(cmn::MediaType::Video, tmp_frame);
 				if (decoded_frame == nullptr)
 				{
 					continue;
 				}
-
-				if (decoded_frame->GetDuration() <= 0)
-				{
-					decoded_frame->SetDuration(TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context));
-				}
-
-				decoded_frame->SetFormat(tmp_frame->format);
 
 				::av_frame_unref(_frame);
 				::av_frame_free(&sw_frame);

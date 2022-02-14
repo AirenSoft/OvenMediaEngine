@@ -22,97 +22,46 @@ extern "C"
 class TranscoderUtilities
 {
 public:
-	static inline std::shared_ptr<MediaFrame> ConvertAvFrameToMediaFrame(cmn::MediaType media_type, AVFrame* frame)
+	static inline std::shared_ptr<MediaFrame> AvFrameToMediaFrame(cmn::MediaType media_type, AVFrame* frame)
 	{
 		switch (media_type)
 		{
 			case cmn::MediaType::Video: {
-				auto video_frame = std::make_shared<MediaFrame>();
+				auto media_frame = std::make_shared<MediaFrame>();
 
-				video_frame->SetMediaType(media_type);
-				video_frame->SetWidth(frame->width);
-				video_frame->SetHeight(frame->height);
-				video_frame->SetFormat(frame->format);
-				video_frame->SetPts((frame->pts == AV_NOPTS_VALUE) ? -1LL : frame->pts);
-				video_frame->SetDuration(frame->pkt_duration);
+				media_frame->SetMediaType(media_type);
+				media_frame->SetWidth(frame->width);
+				media_frame->SetHeight(frame->height);
+				media_frame->SetFormat(frame->format);
+				media_frame->SetPts((frame->pts == AV_NOPTS_VALUE) ? -1LL : frame->pts);
+				media_frame->SetDuration(frame->pkt_duration);
 
-				int nb_plane = 0;
-				for (int i = 0; i < AV_NUM_DATA_POINTERS; i++, nb_plane++)
-				{
-					if (frame->linesize[i] > 0)
-					{
-						video_frame->SetStride(frame->linesize[i], i);
-					}
-				}
+				AVFrame* moved_frame = av_frame_alloc();
+				av_frame_move_ref(moved_frame, frame);
+				media_frame->SetPrivdata(moved_frame);
 
-				if (frame->format == AV_PIX_FMT_YUV444P)
-				{
-					video_frame->SetBuffer(frame->data[0], video_frame->GetStride(0) * video_frame->GetHeight(), 0);  // Y-Plane 4
-					video_frame->SetBuffer(frame->data[1], video_frame->GetStride(1) * video_frame->GetHeight(), 1);  // Cb Plane 4
-					video_frame->SetBuffer(frame->data[2], video_frame->GetStride(2) * video_frame->GetHeight(), 2);  // Cr Plane 4
-				}
-				else if (frame->format == AV_PIX_FMT_NV12 || frame->format == AV_PIX_FMT_NV21)
-				{
-					video_frame->SetBuffer(frame->data[0], video_frame->GetStride(0) * video_frame->GetHeight(), 0);	  // Y-Plane 4
-					video_frame->SetBuffer(frame->data[1], video_frame->GetStride(1) * video_frame->GetHeight() / 2, 1);  // uv Plane 2
-				}
-				else if (frame->format == AV_PIX_FMT_YUV420P)
-				{
-					video_frame->SetBuffer(frame->data[0], video_frame->GetStride(0) * video_frame->GetHeight(), 0);	  // Y-Plane 4
-					video_frame->SetBuffer(frame->data[1], video_frame->GetStride(1) * video_frame->GetHeight() / 2, 1);  // Cb Plane 2
-					video_frame->SetBuffer(frame->data[2], video_frame->GetStride(2) * video_frame->GetHeight() / 2, 2);  // Cr Plane 2
-				}
-				else if (frame->format == AV_PIX_FMT_CUDA)
-				{
-					for (int i = 0; i < AV_NUM_DATA_POINTERS; i++, nb_plane++)
-					{
-						if (frame->linesize[i] > 0)
-						{
-							video_frame->SetBuffer(frame->data[i], video_frame->GetStride(i) * video_frame->GetHeight(), i);  // Y-Plane 4
-						}
-					}
-				}
-				else
-				{
-					video_frame->SetBuffer(frame->data[0], video_frame->GetStride(0) * video_frame->GetHeight(), 0);	  // Y-Plane 4
-					video_frame->SetBuffer(frame->data[1], video_frame->GetStride(1) * video_frame->GetHeight() / 2, 1);  // Cb Plane 2
-					video_frame->SetBuffer(frame->data[2], video_frame->GetStride(2) * video_frame->GetHeight() / 2, 2);  // Cr Plane 2
-				}
-
-				return video_frame;
+				return media_frame;
 			}
+			break;
 			case cmn::MediaType::Audio: {
-				auto audio_frame = std::make_shared<MediaFrame>();
+				auto media_frame = std::make_shared<MediaFrame>();
 
-				audio_frame->SetMediaType(media_type);
-				audio_frame->SetBytesPerSample(::av_get_bytes_per_sample(static_cast<AVSampleFormat>(frame->format)));
-				audio_frame->SetNbSamples(frame->nb_samples);
-				audio_frame->SetChannelCount(frame->channels);
-				audio_frame->SetSampleRate(frame->sample_rate);
-				audio_frame->SetFormat(frame->format);
-				audio_frame->SetDuration(frame->pkt_duration);
+				media_frame->SetMediaType(media_type);
+				media_frame->SetBytesPerSample(::av_get_bytes_per_sample(static_cast<AVSampleFormat>(frame->format)));
+				media_frame->SetNbSamples(frame->nb_samples);
+				media_frame->SetChannelCount(frame->channels);
+				media_frame->SetSampleRate(frame->sample_rate);
+				media_frame->SetFormat(frame->format);
+				media_frame->SetDuration(frame->pkt_duration);
+				media_frame->SetPts((frame->pts == AV_NOPTS_VALUE) ? -1LL : frame->pts);
 
-				auto data_length = static_cast<uint32_t>(audio_frame->GetBytesPerSample() * audio_frame->GetNbSamples());
+				AVFrame* moved_frame = av_frame_alloc();
+				av_frame_move_ref(moved_frame, frame);
+				media_frame->SetPrivdata(moved_frame);
 
-				// Copy frame data into out_buf
-				if (IsPlanar(audio_frame->GetFormat<AVSampleFormat>()))
-				{
-					// If the frame is planar, the data is stored separately in the "_frame->data" array.
-					for (int channel = 0; channel < frame->channels; channel++)
-					{
-						audio_frame->Resize(data_length, channel);
-						uint8_t* output = audio_frame->GetWritableBuffer(channel);
-						::memcpy(output, frame->data[channel], data_length);
-					}
-				}
-				else
-				{
-					// If the frame is non-planar, it means interleaved data. So, just copy from "_frame->data[0]" into the output_frame
-					audio_frame->AppendBuffer(frame->data[0], data_length * frame->channels, 0);
-				}
-
-				return audio_frame;
+				return media_frame;
 			}
+			break;
 			default:
 				return nullptr;
 				break;
@@ -171,70 +120,17 @@ public:
 		}
 	}
 
-	static bool ConvertMediaFrameToAvFrame(cmn::MediaType media_type, std::shared_ptr<const MediaFrame> src, AVFrame* dst)
+	static AVFrame* MediaFrameToAVFrame(cmn::MediaType media_type, std::shared_ptr<const MediaFrame> src)
 	{
-		switch (media_type)
+		if (src->GetPrivdata() != nullptr)
 		{
-			case cmn::MediaType::Video: {
-				dst->format = src->GetFormat();
-				dst->nb_samples = 1;
-				dst->pts = src->GetPts();
-				// The encoder will not pass this duration
-				dst->pkt_duration = src->GetDuration();
-
-				dst->width = src->GetWidth();
-				dst->height = src->GetHeight();
-				dst->linesize[0] = src->GetStride(0);
-				dst->linesize[1] = src->GetStride(1);
-				dst->linesize[2] = src->GetStride(2);
-
-				if (::av_frame_get_buffer(dst, 32) < 0)
-				{
-					return false;
-				}
-
-				if (::av_frame_make_writable(dst) < 0)
-				{
-					return false;
-				}
-
-				::memcpy(dst->data[0], src->GetBuffer(0), src->GetBufferSize(0));
-				::memcpy(dst->data[1], src->GetBuffer(1), src->GetBufferSize(1));
-				::memcpy(dst->data[2], src->GetBuffer(2), src->GetBufferSize(2));
-			}
-			break;
-			case cmn::MediaType::Audio: {
-				dst->format = src->GetFormat();
-				dst->nb_samples = src->GetNbSamples();
-				
-				dst->pts = src->GetPts();
-				dst->pkt_duration = src->GetDuration();
-				dst->channel_layout = (src->GetChannelCount() == 1) ? AV_CH_LAYOUT_MONO : AV_CH_LAYOUT_STEREO;
-				dst->channels = src->GetChannelCount();
-				dst->sample_rate = src->GetSampleRate();
-
-				if (::av_frame_get_buffer(dst, 0) < 0)
-				{
-					return false;
-				}
-
-				if (::av_frame_make_writable(dst) < 0)
-				{
-					return false;
-				}
-
-				::memcpy(dst->data[0], src->GetBuffer(0), src->GetBufferSize(0));
-			}
-			break;
-			default: {
-				return false;
-			}
+			return static_cast<AVFrame*>(src->GetPrivdata());
 		}
 
-		return true;
+		return nullptr;
 	}
 
-	static std::shared_ptr<MediaPacket> ConvertAvPacketToMediaPacket(AVPacket* src, cmn::MediaType media_type, cmn::BitstreamFormat format, cmn::PacketType packet_type)
+	static std::shared_ptr<MediaPacket> AvPacketToMediaPacket(AVPacket* src, cmn::MediaType media_type, cmn::BitstreamFormat format, cmn::PacketType packet_type)
 	{
 		auto packet_buffer = std::make_shared<MediaPacket>(
 			0,

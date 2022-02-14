@@ -10,6 +10,7 @@
 
 #include <unistd.h>
 
+#include "../../transcoder_gpu.h"
 #include "../../transcoder_private.h"
 #include "../codec_utilities.h"
 
@@ -36,30 +37,31 @@ bool EncoderAVCxNV::SetCodecParams()
 	// Preset
 	if (_encoder_context->GetPreset() == "slower")
 	{
-		::av_opt_set(_codec_context->priv_data, "preset", "hq", 0);
+		::av_opt_set(_codec_context->priv_data, "preset", "p7", 0);
 	}
 	else if (_encoder_context->GetPreset() == "slow")
 	{
-		::av_opt_set(_codec_context->priv_data, "preset", "llhq", 0);
+		::av_opt_set(_codec_context->priv_data, "preset", "p6", 0);
 	}
 	else if (_encoder_context->GetPreset() == "medium")
 	{
-		::av_opt_set(_codec_context->priv_data, "preset", "bd", 0);
+		::av_opt_set(_codec_context->priv_data, "preset", "p5", 0);
 	}
 	else if (_encoder_context->GetPreset() == "fast")
 	{
-		::av_opt_set(_codec_context->priv_data, "preset", "hp", 0);
+		::av_opt_set(_codec_context->priv_data, "preset", "p4", 0);
 	}
 	else if (_encoder_context->GetPreset() == "faster")
 	{
-		::av_opt_set(_codec_context->priv_data, "preset", "llhp", 0);
+		::av_opt_set(_codec_context->priv_data, "preset", "p3", 0);
 	}
 	else
 	{
 		// Default
-		::av_opt_set(_codec_context->priv_data, "preset", "llhp", 0);
+		::av_opt_set(_codec_context->priv_data, "preset", "p7", 0);
 	}
-
+	
+	::av_opt_set(_codec_context->priv_data, "tune", "ull", 0);
 	::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
 	::av_opt_set(_codec_context->priv_data, "rc", "cbr", 0);
 
@@ -90,6 +92,7 @@ bool EncoderAVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
+	_codec_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext());
 
 	if (SetCodecParams() == false)
 	{
@@ -135,14 +138,14 @@ void EncoderAVCxNV::CodecThread()
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-		if (TranscoderUtilities::ConvertMediaFrameToAvFrame(cmn::MediaType::Video, media_frame, _frame) == false)
+		auto av_frame = TranscoderUtilities::MediaFrameToAVFrame(cmn::MediaType::Video, media_frame);
+		if(!av_frame)
 		{
 			logte("Could not allocate the video frame data");
 			break;
 		}
-
-		int ret = ::avcodec_send_frame(_codec_context, _frame);
-		::av_frame_unref(_frame);
+		
+		int ret = ::avcodec_send_frame(_codec_context, av_frame);
 		if (ret < 0)
 		{
 			logte("Error sending a frame for encoding : %d", ret);
@@ -167,7 +170,7 @@ void EncoderAVCxNV::CodecThread()
 			}
 			else
 			{
-				auto media_packet = TranscoderUtilities::ConvertAvPacketToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::H264_ANNEXB, cmn::PacketType::NALU);
+				auto media_packet = TranscoderUtilities::AvPacketToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::H264_ANNEXB, cmn::PacketType::NALU);
 				if (media_packet == nullptr)
 				{
 					logte("Could not allocate the media packet");

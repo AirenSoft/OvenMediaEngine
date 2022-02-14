@@ -12,8 +12,9 @@
 
 TranscodeGPU::TranscodeGPU()
 {
-	_intel_quick_device_context = nullptr;
-	_nvidia_cuda_device_context = nullptr;
+	_supported_qsv = false;
+	_supported_cuda = false;
+	_device_context = nullptr;
 }
 
 bool TranscodeGPU::Initialze()
@@ -22,63 +23,51 @@ bool TranscodeGPU::Initialze()
 
 	logtd("Trying to initialize a hardware accelerator");
 
-	int ret = ::av_hwdevice_ctx_create(&_intel_quick_device_context, AV_HWDEVICE_TYPE_QSV, "/dev/dri/render128", NULL, 0);
+	int ret = ::av_hwdevice_ctx_create(&_device_context, AV_HWDEVICE_TYPE_QSV, "/dev/dri/render128", NULL, 0);
 	if (ret < 0)
 	{
-		av_buffer_unref(&_intel_quick_device_context);
-		_intel_quick_device_context = nullptr;
+		av_buffer_unref(&_device_context);
+		_device_context = nullptr;
+		_supported_qsv = false;
 	}
 	else
 	{
-		auto constraints = av_hwdevice_get_hwframe_constraints(_intel_quick_device_context, nullptr);
-		logti("Supported Intel QuickSync hardware accelerator. hw.pixfmt: %d, sw.pixfmt : %d, resolution: %dx%d -%dx%d",
+		_supported_qsv = true;
+		auto constraints = av_hwdevice_get_hwframe_constraints(_device_context, nullptr);
+		logti("Supported Intel QuickSync hardware accelerator. hw.pixfmt: %d, sw.pixfmt : %d",
 			  *constraints->valid_hw_formats,
-			  *constraints->valid_sw_formats,
-			  constraints->min_width,
-			  constraints->min_height,
-			  constraints->max_width,
-			  constraints->max_height);
+			  *constraints->valid_sw_formats);
+
+		return true;
 	}
 
-	ret = ::av_hwdevice_ctx_create(&_nvidia_cuda_device_context, AV_HWDEVICE_TYPE_CUDA, "/dev/dri/render128", NULL, 0);
+	ret = ::av_hwdevice_ctx_create(&_device_context, AV_HWDEVICE_TYPE_CUDA, "/dev/dri/render128", NULL, 0);
 	if (ret < 0)
 	{
-		av_buffer_unref(&_nvidia_cuda_device_context);
-		_nvidia_cuda_device_context = nullptr;
+		av_buffer_unref(&_device_context);
+		_device_context = nullptr;
 	}
 	else
 	{
-		auto constraints = av_hwdevice_get_hwframe_constraints(_nvidia_cuda_device_context, nullptr);
-		logti("Supported NVIDIA CUDA hardware accelerator. hw.pixfmt: %d, sw.pixfmt : %d, resolution: %dx%d -%dx%d",
+		_supported_cuda = true;
+		auto constraints = av_hwdevice_get_hwframe_constraints(_device_context, nullptr);
+		logti("Supported NVIDIA CUDA hardware accelerator. hw.pixfmt: %d, sw.pixfmt : %d",
 			  *constraints->valid_hw_formats,
-			  *constraints->valid_sw_formats,
-			  constraints->min_width,
-			  constraints->min_height,
-			  constraints->max_width,
-			  constraints->max_height);
+			  *constraints->valid_sw_formats);
+
+		return true;
 	}
 
-	if (_intel_quick_device_context == nullptr && _nvidia_cuda_device_context == nullptr)
-	{
-		logti("There is no supported hardware accelerator");
-	}
-
-	return true;
+	return false;
 }
 
 bool TranscodeGPU::Uninitialize()
 {
 	// Uninitialize device context of Intel Quicksync
-	if (_intel_quick_device_context != nullptr)
+	if (_device_context != nullptr)
 	{
-		av_buffer_unref(&_intel_quick_device_context);
-		_intel_quick_device_context = nullptr;
-	}
-
-	if (_nvidia_cuda_device_context != nullptr)
-	{
-		av_buffer_unref(&_nvidia_cuda_device_context);
-		_nvidia_cuda_device_context = nullptr;
+		av_buffer_unref(&_device_context);
+		_device_context = nullptr;
 	}
 
 	return true;
@@ -86,20 +75,16 @@ bool TranscodeGPU::Uninitialize()
 
 AVBufferRef* TranscodeGPU::GetDeviceContext()
 {
-	return _intel_quick_device_context;
+	return _device_context;
 }
 
-AVBufferRef* TranscodeGPU::GetDeviceContextNV()
-{
-	return _nvidia_cuda_device_context;
-}
 
 bool TranscodeGPU::IsSupportedQSV()
 {
-	return (_intel_quick_device_context != nullptr) ? true : false;
+	return _supported_qsv;
 }
 
 bool TranscodeGPU::IsSupportedNV()
 {
-	return (_nvidia_cuda_device_context != nullptr) ? true : false;
+	return _supported_cuda;
 }

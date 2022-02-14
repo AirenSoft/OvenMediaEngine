@@ -152,29 +152,33 @@ void EncoderOPUS::CodecThread()
 			if (obj.has_value() == false)
 				continue;
 
-			auto frame_buffer = std::move(obj.value());
+			auto media_frame = std::move(obj.value());
+			OV_ASSERT2(media_frame != nullptr);
 
-			const MediaFrame *frame = frame_buffer.get();
-
-			OV_ASSERT2(frame != nullptr);
+			// const MediaFrame *frame = media_frame.get();
+			auto av_frame = TranscoderUtilities::MediaFrameToAVFrame(cmn::MediaType::Audio, media_frame);
+			if (!av_frame)
+			{
+				logte("Could not allocate the frame data");
+				break;
+			}
 
 			// Store frame informations
-			_format = frame->GetFormat<cmn::AudioSample::Format>();
+			_format = media_frame->GetFormat<cmn::AudioSample::Format>();
 
 			// Update current pts if the first PTS or PTS goes over frame_size.
-			if (_current_pts == -1 || abs(_current_pts - frame->GetPts()) > _frame_size)
+			if (_current_pts == -1 || abs(_current_pts - media_frame->GetPts()) > _frame_size)
 			{
-				_current_pts = frame->GetPts();
-				// logtd("%lld / %lld", frame_size, abs(_current_pts - frame->GetPts()));
+				_current_pts = media_frame->GetPts();
 			}
 
 			// Append frame data into the buffer
-			if (frame->GetChannelCount() == 1)
+			if (media_frame->GetChannelCount() == 1)
 			{
 				// Just copy data into buffer
-				_buffer->Append(frame->GetBuffer(0), frame->GetBufferSize(0));
+				_buffer->Append(av_frame->data[0], av_frame->linesize[0]);
 			}
-			else if (frame->GetChannelCount() >= 2)
+			else if (media_frame->GetChannelCount() >= 2)
 			{
 				// Currently, OME's OPUS encoder supports up to 2 channels
 				switch (_format)
@@ -185,29 +189,29 @@ void EncoderOPUS::CodecThread()
 						off_t current_offset = _buffer->GetLength();
 
 						// Reserve extra spaces
-						size_t total_bytes = frame->GetBufferSize(0) + frame->GetBufferSize(1);
+						// size_t total_bytes = av_frame->linesize[0] + av_frame->linesize[1];
+						auto total_bytes = static_cast<uint32_t>(media_frame->GetBytesPerSample() * media_frame->GetNbSamples()) * media_frame->GetChannelCount();
 						_buffer->SetLength(current_offset + total_bytes);
 
 						if (_format == cmn::AudioSample::Format::S16P)
 						{
 							// S16P
-							ov::Interleave<int16_t>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, frame->GetBuffer(0), frame->GetBuffer(1), frame->GetNbSamples());
+							ov::Interleave<int16_t>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, av_frame->data[0], av_frame->data[1], media_frame->GetNbSamples());
 							_format = cmn::AudioSample::Format::S16;
 						}
 						else
 						{
 							// FltP
-							ov::Interleave<float>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, frame->GetBuffer(0), frame->GetBuffer(1), frame->GetNbSamples());
+							ov::Interleave<float>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, av_frame->data[0], av_frame->data[1], media_frame->GetNbSamples());
 							_format = cmn::AudioSample::Format::Flt;
 						}
-
 						break;
 					}
 
 					case cmn::AudioSample::Format::S16:
 					case cmn::AudioSample::Format::Flt:
 						// Do not need to interleave if sample type is non-planar
-						_buffer->Append(frame->GetBuffer(0), frame->GetBufferSize(0));
+						_buffer->Append(av_frame->data[0], av_frame->linesize[0]);
 						break;
 
 					default:
