@@ -92,6 +92,21 @@ namespace cfg
 			_item_list->emplace_back(std::move(value));
 		}
 
+		void RemoveIf(const std::function<bool(const Tlist_item &)> &callback)
+		{
+			for (auto item_iterator = _item_list->begin(); item_iterator != _item_list->end();)
+			{
+				if (callback(*item_iterator))
+				{
+					item_iterator = _item_list->erase(item_iterator);
+				}
+				else
+				{
+					++item_iterator;
+				}
+			}
+		}
+
 		void CopyFrom(const std::shared_ptr<const ListInterface> &another_list) override
 		{
 #if DEBUG
