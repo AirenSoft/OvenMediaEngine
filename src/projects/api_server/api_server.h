@@ -31,9 +31,6 @@ namespace api
 		void DeleteVHost(const info::Host &vhost_info, bool delete_from_storage = true);
 
 	protected:
-		MAY_THROWS(ConfigError)
-		void LoadAPIStorageConfigs(const cfg::mgr::api::Storage &storage_config);
-		bool PrepareAPIStoragePath(const cfg::mgr::api::Storage &storage_config);
 		bool PrepareHttpServers(const ov::String &server_ip, const cfg::mgr::Managers &managers, const cfg::bind::mgr::API &api_bind_config);
 
 		ov::String MangleVHostName(const ov::String &vhost_name);
