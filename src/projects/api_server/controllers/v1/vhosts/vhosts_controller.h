@@ -19,15 +19,18 @@ namespace api
 		public:
 			void PrepareHandlers() override;
 
+			// POST /v1/vhosts
+			ApiResponse OnPostVHost(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body);
+
 			// GET /v1/vhosts
-			ApiResponse OnGetVhostList(const std::shared_ptr<http::svr::HttpConnection> &client);
+			ApiResponse OnGetVHostList(const std::shared_ptr<http::svr::HttpConnection> &client);
 
 			// GET /v1/vhosts/<vhost_name>
-			ApiResponse OnGetVhost(const std::shared_ptr<http::svr::HttpConnection> &client,
+			ApiResponse OnGetVHost(const std::shared_ptr<http::svr::HttpConnection> &client,
 								   const std::shared_ptr<mon::HostMetrics> &vhost);
 
 			// DELETE /v1/vhosts/<vhost_name>
-			ApiResponse OnDeleteVhost(const std::shared_ptr<http::svr::HttpConnection> &client,
+			ApiResponse OnDeleteVHost(const std::shared_ptr<http::svr::HttpConnection> &client,
 									  const std::shared_ptr<mon::HostMetrics> &vhost);
 		};
 	}  // namespace v1

@@ -46,16 +46,20 @@ namespace api
 			// Setting up the default values
 			if (config.isMember("providers") == false)
 			{
-				config["providers"]["rtmp"] = Json::objectValue;
-				config["providers"]["mpegts"] = Json::objectValue;
+				auto &providers = config["providers"];
+
+				providers["rtmp"] = Json::objectValue;
+				providers["mpegts"] = Json::objectValue;
 			}
 
 			if (config.isMember("publishers") == false)
 			{
-				config["publishers"]["hls"] = Json::objectValue;
-				config["publishers"]["dash"] = Json::objectValue;
-				config["publishers"]["llDash"] = Json::objectValue;
-				config["publishers"]["webrtc"] = Json::objectValue;
+				auto &publishers = config["publishers"];
+
+				publishers["hls"] = Json::objectValue;
+				publishers["dash"] = Json::objectValue;
+				publishers["llDash"] = Json::objectValue;
+				publishers["webrtc"] = Json::objectValue;
 			}
 
 			if (config.isMember("outputProfiles") == false)
@@ -66,10 +70,10 @@ namespace api
 				output_profile["outputStreamName"] = "${OriginStreamName}";
 
 				Json::Value codec;
+
 				codec["bypass"] = true;
 
 				auto &encodes = output_profile["encodes"];
-
 				encodes["videos"].append(codec);
 				encodes["audios"].append(codec);
 
@@ -96,37 +100,45 @@ namespace api
 
 			auto orchestrator = ocst::Orchestrator::GetInstance();
 			Json::Value response_value(Json::ValueType::arrayValue);
-			Json::Value requested_config = request_body;
+			// Copy values to fill default values
+			Json::Value requested_app_list = request_body;
 
 			MultipleStatus status_codes;
 
-			for (auto &item : requested_config)
+			for (auto &requested_app : requested_app_list)
 			{
-				cfg::vhost::app::Application app_config;
+				FillDefaultValues(requested_app);
 
-				FillDefaultValues(item);
+				cfg::vhost::app::Application app_config;
+				::serdes::ApplicationFromJson(requested_app, &app_config);
 
 				try
 				{
-					::serdes::ApplicationFromJson(item, &app_config);
+					app_config.FromJson(requested_app);
 
 					auto result = orchestrator->CreateApplication(*vhost, app_config);
 
 					switch (result)
 					{
 						case ocst::Result::Failed:
-							throw http::HttpError(http::StatusCode::BadRequest, "Failed to create the application");
+							throw http::HttpError(http::StatusCode::BadRequest,
+												  "Failed to create the application: [%s/%s]",
+												  vhost->GetName().CStr(), app_config.GetName().CStr());
 
 						case ocst::Result::Succeeded:
 							break;
 
 						case ocst::Result::Exists:
-							throw http::HttpError(http::StatusCode::Conflict, "The application already exists");
+							throw http::HttpError(http::StatusCode::Conflict,
+												  "The application already exists: [%s/%s]",
+												  vhost->GetName().CStr(), app_config.GetName().CStr());
 
 						case ocst::Result::NotExists:
 							// CreateApplication() never returns NotExists
 							OV_ASSERT2(false);
-							throw http::HttpError(http::StatusCode::InternalServerError, "Unknown error occurred");
+							throw http::HttpError(http::StatusCode::InternalServerError,
+												  "Unknown error occurred: [%s/%s]",
+												  vhost->GetName().CStr(), app_config.GetName().CStr());
 					}
 
 					auto app = GetApplication(vhost, app_config.GetName().CStr());
@@ -264,18 +276,24 @@ namespace api
 			switch (result)
 			{
 				case ocst::Result::Failed:
-					throw http::HttpError(http::StatusCode::BadRequest, "Failed to create the application");
+					throw http::HttpError(http::StatusCode::BadRequest,
+										  "Failed to create the application: [%s/%s]",
+										  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 
 				case ocst::Result::Succeeded:
 					break;
 
 				case ocst::Result::Exists:
-					throw http::HttpError(http::StatusCode::Conflict, "The application already exists");
+					throw http::HttpError(http::StatusCode::Conflict,
+										  "The application already exists: [%s/%s]",
+										  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 
 				case ocst::Result::NotExists:
 					// CreateApplication() never returns NotExists
 					OV_ASSERT2(false);
-					throw http::HttpError(http::StatusCode::InternalServerError, "Unknown error occurred");
+					throw http::HttpError(http::StatusCode::InternalServerError,
+										  "Unknown error occurred: [%s/%s]",
+										  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
 			auto app_metrics = GetApplication(vhost, app_config.GetName().CStr());
@@ -287,11 +305,32 @@ namespace api
 												const std::shared_ptr<mon::HostMetrics> &vhost,
 												const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
+			switch (ocst::Orchestrator::GetInstance()->DeleteApplication(*app))
 			{
-				throw http::HttpError(http::StatusCode::Forbidden,
-									  "Could not delete the application: [%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+				case ocst::Result::Failed:
+					throw http::HttpError(http::StatusCode::BadRequest,
+										  "Failed to delete the application: [%s/%s]",
+										  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+
+				case ocst::Result::Succeeded:
+					break;
+
+				case ocst::Result::Exists:
+					// CreateVirtDeleteVirtualHostualHost() never returns Exists
+					OV_ASSERT2(false);
+					throw http::HttpError(http::StatusCode::InternalServerError,
+										  "Unknown error occurred: [%s/%s]",
+										  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+
+				case ocst::Result::NotExists:
+					// CreateVirtualHost() never returns NotExists
+					throw http::HttpError(http::StatusCode::NotFound,
+										  "The virtual host not exists: [%s/%s]",
+										  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+
+					throw http::HttpError(http::StatusCode::Forbidden,
+										  "Could not delete the application: [%s/%s]",
+										  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
 			return {};
