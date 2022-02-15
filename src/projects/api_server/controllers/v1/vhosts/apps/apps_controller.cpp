@@ -181,7 +181,7 @@ namespace api
 			return ::serdes::JsonFromApplication(app);
 		}
 
-		void OverwriteJson(const Json::Value &from, Json::Value *to)
+		void OverwriteJson(const Json::Value &from, Json::Value &to)
 		{
 			for (auto item = from.begin(); item != from.end(); ++item)
 			{
@@ -200,12 +200,11 @@ namespace api
 					case Json::ValueType::booleanValue:
 						[[fallthrough]];
 					case Json::ValueType::arrayValue:
-						to->operator[](item.name()) = *item;
+						to[item.name()] = *item;
 						break;
 
 					case Json::ValueType::objectValue: {
-						auto &target = to->operator[](item.name());
-						OverwriteJson(*item, &target);
+						OverwriteJson(*item, to[item.name()]);
 					}
 				}
 			}
@@ -248,7 +247,7 @@ namespace api
 			}
 
 			// Copy request_body into app_json
-			OverwriteJson(request_body, &app_json);
+			OverwriteJson(request_body, app_json);
 
 			cfg::vhost::app::Application app_config;
 			::serdes::ApplicationFromJson(app_json, &app_config);
@@ -295,7 +294,7 @@ namespace api
 									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
-			return http::StatusCode::OK;
+			return {};
 		}
 	}  // namespace v1
 }  // namespace api
