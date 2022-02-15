@@ -235,7 +235,7 @@ namespace api
 				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
 
 				Json::Value request_body;
-				GetRequestBodyssss(client, &request_body);
+				GetRequestBody(client, &request_body);
 
 				ApiResponse result = (clazz->*handler)(client, request_body);
 				result.SendToClient(client);
@@ -248,7 +248,7 @@ namespace api
 				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
 
 				Json::Value request_body;
-				GetRequestBodyssss(client, &request_body);
+				GetRequestBody(client, &request_body);
 
 				std::shared_ptr<mon::HostMetrics> vhost_metrics;
 				GetVirtualHostMetrics(match_result, &vhost_metrics);
@@ -264,7 +264,7 @@ namespace api
 				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
 
 				Json::Value request_body;
-				GetRequestBodyssss(client, &request_body);
+				GetRequestBody(client, &request_body);
 
 				std::shared_ptr<mon::HostMetrics> vhost_metrics;
 				GetVirtualHostMetrics(match_result, &vhost_metrics);
@@ -283,7 +283,7 @@ namespace api
 				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
 
 				Json::Value request_body;
-				GetRequestBodyssss(client, &request_body);
+				GetRequestBody(client, &request_body);
 
 				std::shared_ptr<mon::HostMetrics> vhost_metrics;
 				GetVirtualHostMetrics(match_result, &vhost_metrics);

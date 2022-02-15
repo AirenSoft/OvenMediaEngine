@@ -107,7 +107,7 @@ namespace api
 		return nullptr;
 	}
 
-	void GetRequestBodyssss(
+	void GetRequestBody(
 		const std::shared_ptr<http::svr::HttpConnection> &client,
 		Json::Value *request_body)
 	{
