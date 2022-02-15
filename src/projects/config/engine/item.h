@@ -58,6 +58,11 @@ namespace cfg
 
 		Item &operator=(const Item &item);
 
+		const ItemName &GetItemName() const
+		{
+			return _item_name;
+		}
+
 		void SetItemName(const ItemName &item_name)
 		{
 			_item_name = item_name;
