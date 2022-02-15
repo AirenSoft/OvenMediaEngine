@@ -71,34 +71,40 @@ namespace api
 								const ov::String &output_profile_name,
 								Json::Value **value)
 		{
-			auto &output_profiles = app_json["outputProfiles"]["outputProfile"];
-			off_t offset = 0;
-
-			if (output_profiles.isArray())
+			if (app_json.isMember("outputProfiles"))
 			{
-				for (auto &profile : output_profiles)
+				if (app_json.isMember("outputProfile"))
 				{
-					auto name = profile["name"];
+					auto &output_profiles = app_json["outputProfiles"]["outputProfile"];
+					off_t offset = 0;
 
-					if (name.isString())
+					if (output_profiles.isArray())
 					{
-						if (output_profile_name == name.asCString())
+						for (auto &profile : output_profiles)
 						{
-							if (value != nullptr)
+							auto name = profile["name"];
+
+							if (name.isString())
 							{
-								*value = &profile;
+								if (output_profile_name == name.asCString())
+								{
+									if (value != nullptr)
+									{
+										*value = &profile;
+									}
+
+									return offset;
+								}
+							}
+							else
+							{
+								// Invalid name
+								OV_ASSERT(false, "String is expected, but %d found", name.type());
 							}
 
-							return offset;
+							offset++;
 						}
 					}
-					else
-					{
-						// Invalid name
-						OV_ASSERT(false, "String is expected, but %d found", name.type());
-					}
-
-					offset++;
 				}
 			}
 
