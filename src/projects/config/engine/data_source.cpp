@@ -537,29 +537,26 @@ namespace cfg
 		return {};
 	}
 
-	Json::Value GetJsonValue(const Json::Value &value, const ov::String &name, bool *has_value)
+	Json::Value GetJsonValue(const Json::Value &value, const ov::String &name)
 	{
 		if (value.isObject())
 		{
 			if (value.isMember(name))
 			{
-				*has_value = true;
 				return value[name];
 			}
 		}
 
-		*has_value = false;
 		return Json::nullValue;
 	}
 
-	Json::Value GetJsonAttribute(const Json::Value &value, const ov::String &attribute_name, bool *has_value)
+	Json::Value GetJsonAttribute(const Json::Value &value, const ov::String &attribute_name)
 	{
 		if (value.isObject() && value.isMember("$"))
 		{
-			return GetJsonValue(value["$"], attribute_name, has_value);
+			return GetJsonValue(value["$"], attribute_name);
 		}
 
-		*has_value = false;
 		return Json::nullValue;
 	}
 
@@ -599,11 +596,9 @@ namespace cfg
 		else
 		{
 			// Extract the value of the child node
-			bool has_value;
+			value_list = GetJsonValue(json, name);
 
-			value_list = GetJsonValue(json, name, &has_value);
-
-			if (has_value)
+			if (value_list.isNull())
 			{
 				return {};
 			}
@@ -638,8 +633,6 @@ namespace cfg
 
 	Variant DataSource::GetValueFromJson(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, bool omit_json, Json::Value *original_value) const
 	{
-		bool has_value;
-
 		switch (value_type)
 		{
 			case ValueType::Unknown:
@@ -647,51 +640,51 @@ namespace cfg
 				return {};
 
 			case ValueType::String: {
-				auto &json = is_child ? GetJsonValue(_json, name, &has_value) : _json;
+				auto &json = is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
-				return has_value ? ov::Converter::ToString(Preprocess(_current_file_path, ov::Converter::ToString(json), resolve_path)) : Variant();
+				return json.isNull() ? Variant() : ov::Converter::ToString(Preprocess(_current_file_path, ov::Converter::ToString(json), resolve_path));
 			}
 
 			case ValueType::Integer: {
-				auto &json = is_child ? GetJsonValue(_json, name, &has_value) : _json;
+				auto &json = is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
-				return has_value ? ov::Converter::ToInt32(json) : Variant();
+				return json.isNull() ? Variant() : ov::Converter::ToInt32(json);
 			}
 
 			case ValueType::Long: {
-				auto &json = is_child ? GetJsonValue(_json, name, &has_value) : _json;
+				auto &json = is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
-				return has_value ? ov::Converter::ToInt64(json) : Variant();
+				return json.isNull() ? Variant() : ov::Converter::ToInt64(json);
 			}
 
 			case ValueType::Boolean: {
-				auto &json = is_child ? GetJsonValue(_json, name, &has_value) : _json;
+				auto &json = is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
-				return has_value ? ov::Converter::ToBool(json) : Variant();
+				return json.isNull() ? Variant() : ov::Converter::ToBool(json);
 			}
 
 			case ValueType::Double: {
-				auto &json = is_child ? GetJsonValue(_json, name, &has_value) : _json;
+				auto &json = is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
-				return has_value ? ov::Converter::ToDouble(json) : Variant();
+				return json.isNull() ? Variant() : ov::Converter::ToDouble(json);
 			}
 
 			case ValueType::Attribute: {
-				auto attribute = GetJsonAttribute(_json, name, &has_value);
+				auto attribute = GetJsonAttribute(_json, name);
 				*original_value = attribute;
-				return has_value ? Preprocess(_current_file_path, ov::Converter::ToString(attribute), resolve_path) : Variant();
+				return attribute.isNull() ? Variant() : Preprocess(_current_file_path, ov::Converter::ToString(attribute), resolve_path);
 			}
 
 			case ValueType::Text: {
-				auto &json = is_child ? GetJsonValue(_json, name, &has_value) : _json;
+				auto &json = is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
-				return has_value ? Preprocess(_current_file_path, ov::Converter::ToString(json), resolve_path) : Variant();
+				return json.isNull() ? Variant() : Preprocess(_current_file_path, ov::Converter::ToString(json), resolve_path);
 			}
 
 			case ValueType::Item: {
-				auto &json = is_child ? GetJsonValue(_json, name, &has_value) : _json;
+				auto &json = is_child ? GetJsonValue(_json, name) : _json;
 				SET_VALUE_IF_NOT_NULL(true, json, nullptr);
-				return has_value ? DataSource(_current_file_path, _file_name, name, json, _check_unknown_items) : Variant();
+				return json.isNull() ? Variant() : DataSource(_current_file_path, _file_name, name, json, _check_unknown_items);
 			}
 
 			case ValueType::List: {

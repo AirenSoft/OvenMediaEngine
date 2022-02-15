@@ -223,10 +223,27 @@ namespace api
 
 		OV_ASSERT2(vhost_config.IsReadOnly() == false);
 
-		if (orchestrator->CreateVirtualHost(vhost_config) == ocst::Result::Failed)
+		switch (orchestrator->CreateVirtualHost(vhost_config))
 		{
-			throw http::HttpError(http::StatusCode::InternalServerError,
-								  "Failed to create virtual host: %s", vhost_config.GetName().CStr());
+			case ocst::Result::Failed:
+				throw http::HttpError(http::StatusCode::BadRequest,
+									  "Failed to create the virtual host: [%s]",
+									  vhost_config.GetName().CStr());
+
+			case ocst::Result::Succeeded:
+				break;
+
+			case ocst::Result::Exists:
+				throw http::HttpError(http::StatusCode::Conflict,
+									  "The virtual host already exists: [%s]",
+									  vhost_config.GetName().CStr());
+
+			case ocst::Result::NotExists:
+				// CreateVirtualHost() never returns NotExists
+				OV_ASSERT2(false);
+				throw http::HttpError(http::StatusCode::InternalServerError,
+									  "Unknown error occurred: [%s]",
+									  vhost_config.GetName().CStr());
 		}
 	}
 
@@ -235,17 +252,34 @@ namespace api
 		if (host_info.IsReadOnly())
 		{
 			throw http::HttpError(http::StatusCode::Forbidden,
-								  "Could not delete virtual host: %s is not created by API call", host_info.GetName().CStr());
+								  "Could not delete virtual host: %s is not created by API call",
+								  host_info.GetName().CStr());
 		}
 
 		logti("Deleting virtual host: %s", host_info.GetName().CStr());
 
-		auto result = ocst::Orchestrator::GetInstance()->DeleteVirtualHost(host_info);
-
-		if (result != ocst::Result::Succeeded)
+		switch (ocst::Orchestrator::GetInstance()->DeleteVirtualHost(host_info))
 		{
-			throw http::HttpError(http::StatusCode::InternalServerError,
-								  "Failed to delete virtual host: %s (%d)", host_info.GetName().CStr(), ov::ToUnderlyingType(result));
+			case ocst::Result::Failed:
+				throw http::HttpError(http::StatusCode::BadRequest,
+									  "Failed to delete the virtual host: [%s]",
+									  host_info.GetName().CStr());
+
+			case ocst::Result::Succeeded:
+				break;
+
+			case ocst::Result::Exists:
+				// CreateVirtDeleteVirtualHostualHost() never returns Exists
+				OV_ASSERT2(false);
+				throw http::HttpError(http::StatusCode::InternalServerError,
+									  "Unknown error occurred: [%s]",
+									  host_info.GetName().CStr());
+
+			case ocst::Result::NotExists:
+				// CreateVirtualHost() never returns NotExists
+				throw http::HttpError(http::StatusCode::NotFound,
+									  "The virtual host not exists: [%s]",
+									  host_info.GetName().CStr());
 		}
 	}
 }  // namespace api

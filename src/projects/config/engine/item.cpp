@@ -261,14 +261,15 @@ namespace cfg
 
 	void Item::FromDataSource(const DataSource &data_source, bool allow_optional)
 	{
-		// FromDataSource(name.GetName(data_source.GetType()), name, data_source);
-		auto name = _item_name;
+		OV_ASSERT(_item_name.xml_name.IsEmpty() == false, "Item name is required");
 
-		FromDataSource(name.GetName(data_source.GetType()), name, data_source, allow_optional);
+		FromDataSource(_item_name.GetName(data_source.GetType()), _item_name, data_source, allow_optional);
 	}
 
 	void Item::FromJson(const Json::Value &value, bool allow_optional)
 	{
+		OV_ASSERT(_item_name.xml_name.IsEmpty() == false, "Item name is required");
+
 		cfg::DataSource data_source("", "", _item_name.GetName(DataType::Json), value);
 		FromDataSource(data_source, allow_optional);
 	}
@@ -571,6 +572,11 @@ namespace cfg
 						}
 
 						auto &target_value = child->OmitJsonName() ? value : GetJsonObject(value, child_name);
+
+						if (target_value.isNull())
+						{
+							target_value = Json::objectValue;
+						}
 
 						child_item->ToJson(target_value, include_default_values);
 
