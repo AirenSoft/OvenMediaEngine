@@ -248,7 +248,7 @@ namespace cfg
 		}
 	}
 
-	void Item::FromDataSource(ov::String item_path, const ItemName &name, const DataSource &data_source)
+	void Item::FromDataSource(ov::String item_path, const ItemName &name, const DataSource &data_source, bool allow_optional)
 	{
 		_item_name = name;
 
@@ -256,21 +256,21 @@ namespace cfg
 
 		data_source.CheckUnknownItems(item_path, _children_for_xml, _children_for_json);
 
-		FromDataSourceInternal(item_path, data_source);
+		FromDataSourceInternal(item_path, data_source, allow_optional);
 	}
 
-	void Item::FromDataSource(const DataSource &data_source)
+	void Item::FromDataSource(const DataSource &data_source, bool allow_optional)
 	{
 		// FromDataSource(name.GetName(data_source.GetType()), name, data_source);
 		auto name = _item_name;
 
-		FromDataSource(name.GetName(data_source.GetType()), name, data_source);
+		FromDataSource(name.GetName(data_source.GetType()), name, data_source, allow_optional);
 	}
 
-	void Item::FromJson(const Json::Value &value)
+	void Item::FromJson(const Json::Value &value, bool allow_optional)
 	{
 		cfg::DataSource data_source("", "", _item_name.GetName(DataType::Json), value);
-		FromDataSource(data_source);
+		FromDataSource(data_source, allow_optional);
 	}
 
 	bool Item::IsParsed(const void *target) const
@@ -741,7 +741,7 @@ namespace cfg
 		return doc;
 	}
 
-	void Item::FromDataSourceInternal(ov::String item_path, const DataSource &data_source)
+	void Item::FromDataSourceInternal(ov::String item_path, const DataSource &data_source, bool allow_optional)
 	{
 		if (_last_target != this)
 		{
@@ -776,7 +776,7 @@ namespace cfg
 
 				auto &include_file = include_files[0];
 				auto new_data_source = data_source.NewDataSource(include_file, _item_name);
-				FromDataSourceInternal(item_path, new_data_source);
+				FromDataSourceInternal(item_path, new_data_source, allow_optional);
 			}
 
 			return;
@@ -788,7 +788,7 @@ namespace cfg
 
 		for (auto &child : _children)
 		{
-			child->SetValue(item_path, data_source);
+			child->SetValue(item_path, data_source, allow_optional || child->IsOptional());
 		}
 
 		_is_parsed = true;

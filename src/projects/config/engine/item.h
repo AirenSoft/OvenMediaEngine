@@ -48,15 +48,20 @@ namespace cfg
 		virtual ~Item() = default;
 
 		MAY_THROWS(ConfigError)
-		void FromDataSource(ov::String item_path, const ItemName &name, const DataSource &data_source);
+		void FromDataSource(ov::String item_path, const ItemName &name, const DataSource &data_source, bool allow_optional = false);
 
 		MAY_THROWS(ConfigError)
-		void FromDataSource(const DataSource &data_source);
+		void FromDataSource(const DataSource &data_source, bool allow_optional = false);
 
 		MAY_THROWS(ConfigError)
-		void FromJson(const Json::Value &value);
+		void FromJson(const Json::Value &value, bool allow_optional = false);
 
 		Item &operator=(const Item &item);
+
+		const ItemName &GetItemName() const
+		{
+			return _item_name;
+		}
 
 		void SetItemName(const ItemName &item_name)
 		{
@@ -105,7 +110,7 @@ namespace cfg
 			return GetMember<List<Ttype>>(member_pointer);
 		}
 
-		void SetValue(const void *member_pointer, const Variant &value)
+		void SetValue(const void *member_pointer, const Variant &value, bool is_parent_optional)
 		{
 			RebuildListIfNeeded();
 
@@ -113,7 +118,7 @@ namespace cfg
 			{
 				if (child->GetMemberRawPointer() == member_pointer)
 				{
-					child->SetValue(value);
+					child->SetValue(value, is_parent_optional);
 					return;
 				}
 			}
@@ -164,7 +169,7 @@ namespace cfg
 
 	protected:
 		MAY_THROWS(ConfigError)
-		void FromDataSourceInternal(ov::String item_path, const DataSource &data_source);
+		void FromDataSourceInternal(ov::String item_path, const DataSource &data_source, bool is_parent_optional);
 
 		MAY_THROWS(ConfigError)
 		bool IsParsed(const void *target) const;

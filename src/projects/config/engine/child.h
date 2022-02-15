@@ -167,10 +167,10 @@ namespace cfg
 		}
 
 		MAY_THROWS(ConfigError)
-		void SetValue(const Variant &value);
+		void SetValue(const Variant &value, bool is_parent_optional);
 
 		MAY_THROWS(ConfigError)
-		void SetValue(const ov::String &item_path, const DataSource &data_source);
+		void SetValue(const ov::String &item_path, const DataSource &data_source, bool is_parent_optional);
 
 	protected:
 		void SetOriginalValue(Json::Value value)

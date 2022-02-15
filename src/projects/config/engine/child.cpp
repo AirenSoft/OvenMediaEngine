@@ -15,7 +15,7 @@
 
 namespace cfg
 {
-	void Child::SetValue(const Variant &value)
+	void Child::SetValue(const Variant &value, bool is_parent_optional)
 	{
 		auto &item_name = GetItemName();
 		auto name = item_name.GetName(DataType::Json);
@@ -26,7 +26,13 @@ namespace cfg
 		{
 			if (IsOptional() == false)
 			{
-				throw CreateConfigError("%s is not optional", child_path.CStr());
+				if (is_parent_optional == false)
+				{
+					throw CreateConfigError("%s is not optional", child_path.CStr());
+				}
+
+				// Parent is an optional - set a default value
+				is_parent_optional = true;
 			}
 			else
 			{
@@ -98,7 +104,7 @@ namespace cfg
 		_is_parsed = true;
 	}
 
-	void Child::SetValue(const ov::String &item_path, const DataSource &data_source)
+	void Child::SetValue(const ov::String &item_path, const DataSource &data_source, bool is_parent_optional)
 	{
 		auto &item_name = GetItemName();
 
@@ -116,7 +122,13 @@ namespace cfg
 		{
 			if (IsOptional() == false)
 			{
-				throw CreateConfigError("%s is not optional", child_path.CStr());
+				if (is_parent_optional == false)
+				{
+					throw CreateConfigError("%s is not optional", child_path.CStr());
+				}
+
+				// Parent is an optional - set a default value
+				is_parent_optional = true;
 			}
 			else
 			{
@@ -165,7 +177,7 @@ namespace cfg
 					break;
 
 				case ValueType::Item:
-					_member_pointer.TryCast<Item *>()->FromDataSource(child_path, item_name, value.TryCast<const cfg::DataSource &>());
+					_member_pointer.TryCast<Item *>()->FromDataSource(child_path, item_name, value.TryCast<const cfg::DataSource &>(), is_parent_optional);
 					break;
 
 				case ValueType::List:
