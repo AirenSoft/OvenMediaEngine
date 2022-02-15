@@ -23,7 +23,7 @@ namespace api
 	std::shared_ptr<mon::StreamMetrics> GetStream(const std::shared_ptr<mon::ApplicationMetrics> &application, const ov::String &stream_name, std::vector<std::shared_ptr<mon::StreamMetrics>> *output_streams);
 
 	MAY_THROWS(HttpError)
-	void GetRequestBody(
+	void GetRequestBodyssss(
 		const std::shared_ptr<http::svr::HttpConnection> &client,
 		Json::Value *request_body);
 
