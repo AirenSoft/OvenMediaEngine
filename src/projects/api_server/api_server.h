@@ -34,7 +34,7 @@ namespace api
 		bool PrepareHttpServers(const ov::String &server_ip, const cfg::mgr::Managers &managers, const cfg::bind::mgr::API &api_bind_config);
 
 		void SetupCors(const cfg::mgr::api::API &api_config);
-		void SetupAccessToken(const cfg::mgr::api::API &api_config);
+		bool SetupAccessToken(const cfg::mgr::api::API &api_config);
 
 		std::shared_ptr<http::svr::RequestInterceptor> CreateInterceptor();
 

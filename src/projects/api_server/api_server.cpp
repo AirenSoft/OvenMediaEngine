@@ -135,7 +135,7 @@ namespace api
 		}
 	}
 
-	void Server::SetupAccessToken(const cfg::mgr::api::API &api_config)
+	bool Server::SetupAccessToken(const cfg::mgr::api::API &api_config)
 	{
 		_access_token = api_config.GetAccessToken();
 
@@ -148,6 +148,8 @@ namespace api
 			return false;
 #endif	// DEBUG
 		}
+
+		return true;
 	}
 
 	bool Server::Start(const std::shared_ptr<const cfg::Server> &server_config)
@@ -166,7 +168,10 @@ namespace api
 		}
 
 		SetupCors(api_config);
-		SetupAccessToken(api_config);
+		if (SetupAccessToken(api_config) == false)
+		{
+			return false;
+		}
 
 		return PrepareHttpServers(server_config->GetIp(), managers_config, api_bind_config);
 	}
