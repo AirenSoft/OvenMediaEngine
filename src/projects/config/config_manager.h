@@ -24,10 +24,10 @@ namespace cfg
 		friend class ov::Singleton<ConfigManager>;
 		~ConfigManager() override;
 
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		void LoadConfigs(ov::String config_path);
 
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		void ReloadConfigs();
 
 		std::shared_ptr<const Server> GetServer() const noexcept
@@ -43,19 +43,19 @@ namespace cfg
 	protected:
 		ConfigManager();
 
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		void CheckLegacyConfigs(ov::String config_path);
 
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		void LoadLoggerConfig(const ov::String &config_path);
 
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		void LoadServerConfig(const ov::String &config_path);
 
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		void LoadServerID(const ov::String &config_path);
 
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		void CheckValidVersion(const ov::String &name, int version);
 
 		ov::String _config_path;

@@ -12,7 +12,7 @@
 
 namespace cfg
 {
-	MAY_THROWS(ConfigError)
+	MAY_THROWS(cfg::ConfigError)
 	const Json::Value &GetJsonObject(const Json::Value &value, const char *key)
 	{
 		try
@@ -26,7 +26,7 @@ namespace cfg
 		}
 	}
 
-	MAY_THROWS(ConfigError)
+	MAY_THROWS(cfg::ConfigError)
 	Json::Value &GetJsonObject(Json::Value &value, const char *key)
 	{
 		try

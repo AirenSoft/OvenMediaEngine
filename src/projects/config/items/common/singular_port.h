@@ -24,7 +24,7 @@ namespace cfg
 			}
 
 		protected:
-			MAY_THROWS(ConfigError)
+			MAY_THROWS(cfg::ConfigError)
 			void FromString(const ov::String &str) override
 			{
 				_port = str;
