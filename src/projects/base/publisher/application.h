@@ -145,8 +145,8 @@ namespace pub
 
 		explicit PushApplication(const std::shared_ptr<Publisher> &publisher, const info::Application &application_info);
 
-		virtual std::shared_ptr<ov::Error> PushStart(const std::shared_ptr<info::Push> &record) = 0;
-		virtual std::shared_ptr<ov::Error> PushStop(const std::shared_ptr<info::Push> &record) = 0;
-		virtual std::shared_ptr<ov::Error> GetPushes(std::vector<std::shared_ptr<info::Push>> &record_list) = 0;
+		virtual std::shared_ptr<ov::Error> PushStart(const std::shared_ptr<info::Push> &push) = 0;
+		virtual std::shared_ptr<ov::Error> PushStop(const std::shared_ptr<info::Push> &push) = 0;
+		virtual std::shared_ptr<ov::Error> GetPushes(const std::shared_ptr<info::Push> push, std::vector<std::shared_ptr<info::Push>> &results) = 0;
 	};
 }  // namespace pub

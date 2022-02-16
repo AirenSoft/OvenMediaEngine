@@ -33,7 +33,7 @@ public:
 	
 	std::shared_ptr<ov::Error> RecordStart(const std::shared_ptr<info::Record> record);
 	std::shared_ptr<ov::Error> RecordStop(const std::shared_ptr<info::Record> record);
-	std::shared_ptr<ov::Error> GetRecords(std::vector<std::shared_ptr<info::Record>> &record_list);
+	std::shared_ptr<ov::Error> GetRecords(const std::shared_ptr<info::Record> record, std::vector<std::shared_ptr<info::Record>> &results);
 
 private:
 	FileUserdataSets _userdata_sets;

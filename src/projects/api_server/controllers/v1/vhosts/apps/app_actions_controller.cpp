@@ -76,16 +76,29 @@ namespace api
 									  app->GetName().GetAppName().CStr());
 			}
 
-			std::vector<std::shared_ptr<info::Record>> records;
+			auto record = ::serdes::RecordFromJson(request_body);
+			if (record == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::BadRequest,
+									  "Could not parse json context: [%s/%s]",
+									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+			}
+			else
+			{
+				record->SetVhost(vhost->GetName().CStr());
+				record->SetApplication(app->GetName().GetAppName());
+			}
 
-			auto error = application->GetRecords(records);
-			if (error->GetCode() != FilePublisher::FilePublisherStatusCode::Success || records.size() == 0)
+			std::vector<std::shared_ptr<info::Record>> results;
+
+			auto error = application->GetRecords(record, results);
+			if (error->GetCode() != FilePublisher::FilePublisherStatusCode::Success || results.size() == 0)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "There is no record information");
 			}
 
-			for (auto &item : records)
+			for (auto &item : results)
 			{
 				response.append(::serdes::JsonFromRecord(item));
 			}
@@ -215,8 +228,17 @@ namespace api
 													   const std::shared_ptr<mon::HostMetrics> &vhost,
 													   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			std::vector<std::shared_ptr<info::Push>> pushes;
+			std::vector<std::shared_ptr<info::Push>> results;
 			Json::Value response;
+
+			auto push{::serdes::PushFromJson(request_body)};
+			if (push == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::BadRequest,
+									  "Could not parse json context: [%s/%s]",
+									  vhost->GetName().CStr(),
+									  app->GetName().GetAppName().CStr());
+			}
 
 			std::vector<PublisherType> publisher_types{PublisherType::RtmpPush, PublisherType::MpegtsPush};
 			for (auto publisher_type : publisher_types)
@@ -235,16 +257,16 @@ namespace api
 					std::static_pointer_cast<pub::PushApplication>(publisher->GetApplicationByName(app->GetName()))};
 				if (application != nullptr)
 				{
-					application->GetPushes(pushes);
+					application->GetPushes(push, results);
 				}
 			}
 
-			if (pushes.size() == 0)
+			if (results.size() == 0)
 			{
 				throw http::HttpError(http::StatusCode::NoContent, "There is no pushes information");
 			}
 
-			for (auto &item : pushes)
+			for (auto &item : results)
 			{
 				response.append(::serdes::JsonFromPush(item));
 			}
