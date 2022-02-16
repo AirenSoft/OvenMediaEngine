@@ -25,9 +25,9 @@ namespace api
 		bool Start(const std::shared_ptr<const cfg::Server> &server_config);
 		bool Stop();
 
-		MAY_THROWS(HttpError)
+		MAY_THROWS(http::HttpError)
 		void CreateVHost(const cfg::vhost::VirtualHost &vhost_config);
-		MAY_THROWS(HttpError)
+		MAY_THROWS(http::HttpError)
 		void DeleteVHost(const info::Host &host_info);
 
 	protected:

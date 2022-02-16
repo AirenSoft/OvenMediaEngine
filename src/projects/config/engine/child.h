@@ -137,14 +137,14 @@ namespace cfg
 			return _member_pointer;
 		}
 
-		MAY_THROWS(CastException)
+		MAY_THROWS(cfg::CastException)
 		template <typename Toutput_type, typename... Ttype>
 		Toutput_type *GetMemberPointerAs()
 		{
 			return _member_pointer.TryCast<Toutput_type *, Ttype...>();
 		}
 
-		MAY_THROWS(CastException)
+		MAY_THROWS(cfg::CastException)
 		template <typename Toutput_type, typename... Ttype>
 		const Toutput_type *GetMemberPointerAs() const
 		{
@@ -166,10 +166,10 @@ namespace cfg
 			return _original_value;
 		}
 
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		void SetValue(const Variant &value, bool is_parent_optional);
 
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		void SetValue(const ov::String &item_path, const DataSource &data_source, bool is_parent_optional);
 
 	protected:

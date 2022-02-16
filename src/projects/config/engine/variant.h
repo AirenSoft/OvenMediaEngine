@@ -44,11 +44,11 @@ namespace cfg
 			return ov::Demangle(type().name());
 		}
 
-		MAY_THROWS(CastException)
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::CastException)
+		MAY_THROWS(cfg::ConfigError)
 		void SetValue(ValueType value_type, const Variant &value, Json::Value *original_value = nullptr);
 
-		MAY_THROWS(CastException)
+		MAY_THROWS(cfg::CastException)
 		template <typename Toutput_type>
 		Toutput_type &TryCast()
 		{
@@ -64,7 +64,7 @@ namespace cfg
 			}
 		}
 
-		MAY_THROWS(CastException)
+		MAY_THROWS(cfg::CastException)
 		template <typename Toutput_type>
 		const Toutput_type TryCast() const
 		{
@@ -80,7 +80,7 @@ namespace cfg
 			}
 		}
 
-		MAY_THROWS(CastException)
+		MAY_THROWS(cfg::CastException)
 		template <typename Toutput_type, typename Ttype, typename... Tcandidates>
 		Toutput_type &TryCast()
 		{
@@ -95,7 +95,7 @@ namespace cfg
 			return TryCast<Toutput_type, Tcandidates...>();
 		}
 
-		MAY_THROWS(CastException)
+		MAY_THROWS(cfg::CastException)
 		template <typename Toutput_type, typename Ttype, typename... Tcandidates>
 		const Toutput_type TryCast() const
 		{

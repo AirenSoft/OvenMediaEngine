@@ -9,6 +9,7 @@
 #include "./helpers.h"
 
 #include <modules/http/http.h>
+#include <modules/json_serdes/converters.h>
 
 namespace api
 {
@@ -185,7 +186,7 @@ namespace api
 		}
 	}
 
-	MAY_THROWS(HttpError)
+	MAY_THROWS(http::HttpError)
 	void GetStreamMetrics(
 		const ov::MatchResult &match_result,
 		const std::shared_ptr<mon::HostMetrics> &vhost_metrics,
@@ -267,6 +268,35 @@ namespace api
 		}
 	}
 
+	void OverwriteJson(const Json::Value &from, Json::Value &to)
+	{
+		for (auto item = from.begin(); item != from.end(); ++item)
+		{
+			switch (item->type())
+			{
+				case Json::ValueType::nullValue:
+					[[fallthrough]];
+				case Json::ValueType::intValue:
+					[[fallthrough]];
+				case Json::ValueType::uintValue:
+					[[fallthrough]];
+				case Json::ValueType::realValue:
+					[[fallthrough]];
+				case Json::ValueType::stringValue:
+					[[fallthrough]];
+				case Json::ValueType::booleanValue:
+					[[fallthrough]];
+				case Json::ValueType::arrayValue:
+					to[item.name()] = *item;
+					break;
+
+				case Json::ValueType::objectValue: {
+					OverwriteJson(*item, to[item.name()]);
+				}
+			}
+		}
+	}
+
 	void ThrowIfVirtualIsReadOnly(const cfg::vhost::VirtualHost &vhost_config)
 	{
 		if (vhost_config.IsReadOnly())
@@ -296,5 +326,41 @@ namespace api
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not %s the %s: [%s] not exists", action, resource_name, resource_path);
 		}
+	}
+
+	void RecreateApplication(const std::shared_ptr<mon::HostMetrics> &vhost,
+							 const std::shared_ptr<mon::ApplicationMetrics> &app,
+							 Json::Value &app_json)
+	{
+		ThrowIfVirtualIsReadOnly(*(vhost.get()));
+
+		// TODO(dimiden): Caution - Race condition may occur
+		// If an application is deleted immediately after the GetApplication(),
+		// the app information can no longer be obtained from Orchestrator
+
+		// Delete GET-only fields
+		app_json.removeMember("dynamic");
+
+		cfg::vhost::app::Application app_config;
+		try
+		{
+			::serdes::ApplicationFromJson(app_json, &app_config);
+		}
+		catch (const cfg::ConfigError &error)
+		{
+			throw http::HttpError(http::StatusCode::BadRequest, error.What());
+		}
+
+		ThrowIfOrchestratorNotSucceeded(
+			ocst::Orchestrator::GetInstance()->DeleteApplication(*app),
+			"delete",
+			"application",
+			ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
+
+		ThrowIfOrchestratorNotSucceeded(
+			ocst::Orchestrator::GetInstance()->CreateApplication(*vhost, app_config),
+			"create",
+			"application",
+			ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
 	}
 }  // namespace api

@@ -126,35 +126,6 @@ namespace api
 			return ::serdes::JsonFromApplication(app);
 		}
 
-		void OverwriteJson(const Json::Value &from, Json::Value &to)
-		{
-			for (auto item = from.begin(); item != from.end(); ++item)
-			{
-				switch (item->type())
-				{
-					case Json::ValueType::nullValue:
-						[[fallthrough]];
-					case Json::ValueType::intValue:
-						[[fallthrough]];
-					case Json::ValueType::uintValue:
-						[[fallthrough]];
-					case Json::ValueType::realValue:
-						[[fallthrough]];
-					case Json::ValueType::stringValue:
-						[[fallthrough]];
-					case Json::ValueType::booleanValue:
-						[[fallthrough]];
-					case Json::ValueType::arrayValue:
-						to[item.name()] = *item;
-						break;
-
-					case Json::ValueType::objectValue: {
-						OverwriteJson(*item, to[item.name()]);
-					}
-				}
-			}
-		}
-
 		ApiResponse AppsController::OnPutApp(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 											 const std::shared_ptr<mon::HostMetrics> &vhost,
 											 const std::shared_ptr<mon::ApplicationMetrics> &app)

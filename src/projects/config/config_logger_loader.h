@@ -21,7 +21,7 @@ namespace cfg
 		explicit ConfigLoggerLoader(const ov::String config_path);
 		virtual ~ConfigLoggerLoader();
 
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		void Parse() override;
 
 		void Reset();

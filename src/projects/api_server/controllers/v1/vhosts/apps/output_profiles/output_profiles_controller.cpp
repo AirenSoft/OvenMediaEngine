@@ -111,33 +111,6 @@ namespace api
 			return -1;
 		}
 
-		MAY_THROWS(HttpError)
-		ocst::Result ChangeApp(const std::shared_ptr<mon::HostMetrics> &vhost,
-							   const std::shared_ptr<mon::ApplicationMetrics> &app,
-							   Json::Value &app_json)
-		{
-			ThrowIfVirtualIsReadOnly(*(vhost.get()));
-
-			// TODO(dimiden): Caution - Race condition may occur
-			// If an application is deleted immediately after the GetApplication(),
-			// the app information can no longer be obtained from Orchestrator
-
-			// Delete GET-only fields
-			app_json.removeMember("dynamic");
-
-			cfg::vhost::app::Application app_config;
-			try
-			{
-				::serdes::ApplicationFromJson(app_json, &app_config);
-			}
-			catch (const cfg::ConfigError &error)
-			{
-				throw http::HttpError(http::StatusCode::BadRequest, error.What());
-			}
-
-			return ocst::Orchestrator::GetInstance()->DeleteApplication(*app);
-		}
-
 		ApiResponse OutputProfilesController::OnPostOutputProfile(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 																  const std::shared_ptr<mon::HostMetrics> &vhost,
 																  const std::shared_ptr<mon::ApplicationMetrics> &app)
@@ -188,11 +161,7 @@ namespace api
 				}
 			}
 
-			ThrowIfOrchestratorNotSucceeded(
-				ChangeApp(vhost, app, app_json),
-				"create",
-				"output profile",
-				ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
+			RecreateApplication(vhost, app, app_json);
 
 			std::shared_ptr<mon::ApplicationMetrics> new_app;
 			Json::Value new_app_json;
@@ -309,11 +278,7 @@ namespace api
 			// Modify the json object
 			*output_profile_json = request_json;
 
-			ThrowIfOrchestratorNotSucceeded(
-				ChangeApp(vhost, app, app_json),
-				"modify",
-				"output profile",
-				ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
+			RecreateApplication(vhost, app, app_json);
 
 			auto new_app = GetApplication(vhost, app->GetName().GetAppName().CStr());
 
@@ -349,11 +314,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::Forbidden, "Could not delete output profile");
 			}
 
-			ThrowIfOrchestratorNotSucceeded(
-				ChangeApp(vhost, app, app_json),
-				"delete",
-				"output profile",
-				ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
+			RecreateApplication(vhost, app, app_json);
 
 			return {};
 		}

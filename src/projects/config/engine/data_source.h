@@ -25,12 +25,12 @@ namespace cfg
 		// @param current_path cwd
 		// @param file_name config file name
 		// @param root_name The name of root element
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		DataSource(DataType type, const ov::String &current_path, const ov::String &file_name, const ItemName &root_name, CheckUnknownItems check_unknown_items = CheckUnknownItems::Check);
 		// @param type XML/JSON
 		// @param file_path directory + file_name (current_path + file_name)
 		// @param root_name The name of root element
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		DataSource(DataType type, const ov::String &file_path, const ItemName &root_name, CheckUnknownItems check_unknown_items = CheckUnknownItems::Check);
 
 		DataType GetType() const
@@ -57,7 +57,7 @@ namespace cfg
 			return false;
 		}
 
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		void CheckUnknownItems(const ov::String &path,
 							   const std::unordered_map<ov::String, std::shared_ptr<Child>> &children_for_xml,
 							   const std::unordered_map<ov::String, std::shared_ptr<Child>> &children_for_json) const;
@@ -65,9 +65,9 @@ namespace cfg
 		// Check weather the root value is array or not
 		bool IsArray(const ItemName &name) const;
 
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		Variant GetRootValue(ValueType value_type, bool resolve_path, bool omit_json, Json::Value *original_value) const;
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		Variant GetValue(ValueType value_type, const ItemName &name, bool resolve_path, bool omit_json, Json::Value *original_value) const;
 
 		// Create a data source from this context
@@ -103,9 +103,9 @@ namespace cfg
 		void LoadFromXmlFile(const ov::String &file_name, const ov::String &root_name);
 		void LoadFromJson(const ov::String &file_name, const ov::String &root_name);
 
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		Variant GetValueFromXml(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, Json::Value *original_value) const;
-		MAY_THROWS(ConfigError)
+		MAY_THROWS(cfg::ConfigError)
 		Variant GetValueFromJson(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, bool omit_json, Json::Value *original_value) const;
 
 		DataType _type;
