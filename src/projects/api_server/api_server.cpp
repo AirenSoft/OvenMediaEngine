@@ -122,34 +122,21 @@ namespace api
 		return false;
 	}
 
-	bool Server::Start(const std::shared_ptr<const cfg::Server> &server_config)
+	void Server::SetupCors(const cfg::mgr::api::API &api_config)
 	{
-		// API Server configurations
-		const auto &managers = server_config->GetManagers();
-		const auto &api_config = managers.GetApi();
+		bool is_cors_parsed;
+		auto cross_domains = api_config.GetCrossDomainList(&is_cors_parsed);
 
-		// Port configurations
-		const auto &api_bind_config = server_config->GetBind().GetManagers().GetApi();
-
-		if (api_bind_config.IsParsed() == false)
+		if (is_cors_parsed)
 		{
-			logti("API Server is disabled");
-			return true;
+			// API server doesn't have VHost, so use dummy VHost
+			auto vhost_app_name = info::VHostAppName::InvalidVHostAppName();
+			_cors_manager.SetCrossDomains(vhost_app_name, cross_domains);
 		}
+	}
 
-		// CORS
-		{
-			bool is_cors_parsed;
-			auto cross_domains = api_config.GetCrossDomainList(&is_cors_parsed);
-
-			if (is_cors_parsed)
-			{
-				// API server doesn't have VHost, so use dummy VHost
-				auto vhost_app_name = info::VHostAppName::InvalidVHostAppName();
-				_cors_manager.SetCrossDomains(vhost_app_name, cross_domains);
-			}
-		}
-
+	bool Server::SetupAccessToken(const cfg::mgr::api::API &api_config)
+	{
 		_access_token = api_config.GetAccessToken();
 
 		if (_access_token.IsEmpty())
@@ -162,7 +149,31 @@ namespace api
 #endif	// DEBUG
 		}
 
-		return PrepareHttpServers(server_config->GetIp(), managers, api_bind_config);
+		return true;
+	}
+
+	bool Server::Start(const std::shared_ptr<const cfg::Server> &server_config)
+	{
+		// API Server configurations
+		const auto &managers_config = server_config->GetManagers();
+		const auto &api_config = managers_config.GetApi();
+
+		// Port configurations
+		const auto &api_bind_config = server_config->GetBind().GetManagers().GetApi();
+
+		if (api_bind_config.IsParsed() == false)
+		{
+			logti("API Server is disabled");
+			return true;
+		}
+
+		SetupCors(api_config);
+		if (SetupAccessToken(api_config) == false)
+		{
+			return false;
+		}
+
+		return PrepareHttpServers(server_config->GetIp(), managers_config, api_bind_config);
 	}
 
 	std::shared_ptr<http::svr::RequestInterceptor> Server::CreateInterceptor()
