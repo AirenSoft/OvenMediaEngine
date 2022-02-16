@@ -402,14 +402,16 @@ namespace api
 	{
 		if (app_json.isMember("outputProfiles"))
 		{
-			if (app_json.isMember("outputProfile"))
+			auto &output_profiles = app_json["outputProfiles"];
+
+			if (output_profiles.isMember("outputProfile"))
 			{
-				auto &output_profiles = app_json["outputProfiles"]["outputProfile"];
+				auto &output_profile_list = output_profiles["outputProfile"];
 				off_t offset = 0;
 
-				if (output_profiles.isArray())
+				if (output_profile_list.isArray())
 				{
-					for (auto &profile : output_profiles)
+					for (auto &profile : output_profile_list)
 					{
 						auto name = profile["name"];
 
