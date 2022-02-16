@@ -26,7 +26,7 @@ public:
 
 	std::shared_ptr<IcePort> CreatePort(std::shared_ptr<IcePortObserver> observer);
 	bool CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::cmm::IceCandidates &ice_candidates_config);
-	bool CreateTurnServer(std::shared_ptr<IcePortObserver> observer, uint16_t listening_port, const ov::SocketType socket_type, int tcp_relay_worker_count);
+	bool CreateTurnServer(std::shared_ptr<IcePortObserver> observer, const ov::SocketAddress &listening, const ov::SocketType socket_type, int tcp_relay_worker_count);
 
 	// TODO(Getroot): In the future, each IceCandidate and TurnServer can be released flexibly.
 	// In the future, each IceCandidate and TurnServer can be released flexibly. 

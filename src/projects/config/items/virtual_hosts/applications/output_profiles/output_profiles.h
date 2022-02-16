@@ -25,8 +25,8 @@ namespace cfg
 					std::vector<OutputProfile> _output_profiles;
 
 				public:
-					CFG_DECLARE_REF_GETTER_OF(IsHardwareAcceleration, _hwaccel);
-					CFG_DECLARE_REF_GETTER_OF(GetOutputProfileList, _output_profiles);
+					CFG_DECLARE_CONST_REF_GETTER_OF(IsHardwareAcceleration, _hwaccel);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetOutputProfileList, _output_profiles);
 
 				protected:
 					void MakeList() override

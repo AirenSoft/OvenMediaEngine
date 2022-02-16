@@ -70,6 +70,60 @@ Request Example:
 
 
 `}`
+
+
+
+`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:startPush                               `
+
+\
+
+
+`{`
+
+\
+
+
+`   "id": "{UserDefinedUniqueId}", `
+
+\
+
+
+`   "stream": { `
+
+\
+
+
+`     "name": "output_stream_name", `
+
+\
+
+
+`     "tracks": [ 101, 102 ] `
+
+\
+
+
+`  },`
+
+\
+
+
+`  "protocol": "mpegts",`
+
+\
+
+
+`  "url":"udp://{host}[:port]",`
+
+\
+
+
+`   "streamKey":"" `
+
+\
+
+
+`}`
 {% endswagger-description %}
 
 {% swagger-parameter in="path" name="vhost_name" type="string" required="true" %}

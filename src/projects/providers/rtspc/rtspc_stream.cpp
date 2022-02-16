@@ -12,7 +12,6 @@
 #include <base/info/application.h>
 #include <base/ovlibrary/byte_io.h>
 #include <modules/rtp_rtcp/rtp_depacketizer_mpeg4_generic_audio.h>
-#include <modules/rtsp/header_fields/rtsp_header_fields.h>
 
 #include "rtspc_provider.h"
 
@@ -240,26 +239,79 @@ namespace pvd
 		describe->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Accept, "application/sdp"));
 		describe->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
 
-		if (SendRequestMessage(describe) == false)
+		std::shared_ptr<RtspMessage> reply = nullptr;
+		for(int i=0; i<2; i++)
 		{
-			SetState(State::ERROR);
-			logte("Could not request DESCIBE to RTSP server (%s)", _curr_url->ToUrlString().CStr());
-			return false;
-		}
+			if (SendRequestMessage(describe) == false)
+			{
+				SetState(State::ERROR);
+				logte("Could not request DESCIBE to RTSP server (%s)", _curr_url->ToUrlString().CStr());
+				return false;
+			}
 
-		auto reply = ReceiveResponse(describe->GetCSeq(), 3000);
+			reply = ReceiveResponse(describe->GetCSeq(), 3000);
+			if (reply == nullptr)
+			{
+				SetState(State::ERROR);
+				logte("No response(CSeq : %u) was received from the rtsp server(%s)", describe->GetCSeq(), _curr_url->ToUrlString().CStr());
+				return false;
+			}
+			// Unauthorized, try to authenticate
+			else if (reply->GetStatusCode() == 401)
+			{
+				// Authorization has been failed
+				if(i == 1)
+				{
+					SetState(State::ERROR);
+					logte("Rtsp server(%s) rejected the describe request : %d(%s) | ID/Password may be incorrect.", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
+					return false;
+				}
 
-		if (reply == nullptr)
-		{
-			SetState(State::ERROR);
-			logte("No response(CSeq : %u) was received from the rtsp server(%s)", describe->GetCSeq(), _curr_url->ToUrlString().CStr());
-			return false;
-		}
-		else if (reply->GetStatusCode() != 200)
-		{
-			SetState(State::ERROR);
-			logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
-			return false;
+				auto authenticate_field = reply->GetHeaderFieldAs<RtspHeaderWWWAuthenticateField>(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::WWWAuthenticate));
+				if (authenticate_field == nullptr)
+				{
+					SetState(State::ERROR);
+					logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
+					return false;
+				}
+
+				// Add authorization field
+				if(authenticate_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Basic)
+				{
+					_authorization_field = RtspHeaderAuthorizationField::CreateRtspBasicAuthorizationField(_curr_url->Id(), _curr_url->Password());
+					describe->AddHeaderField(_authorization_field);
+
+					// Try to send again
+					continue;
+				}
+				else if (authenticate_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+				{
+					_authorization_field = RtspHeaderAuthorizationField::CreateRtspDigestAuthorizationField(_curr_url->Id(), _curr_url->Password(), 
+																											describe->GetMethodStr(), describe->GetRequestUri(),
+																											authenticate_field->GetRealm(), authenticate_field->GetNonce());
+					describe->AddHeaderField(_authorization_field);
+
+					// Try to send again
+					continue;
+				}
+				else
+				{
+					SetState(State::ERROR);
+					logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
+					return false;
+				}
+			}
+			else if (reply->GetStatusCode() != 200)
+			{
+				SetState(State::ERROR);
+				logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
+				return false;
+			}
+			else 
+			{
+				// Success
+				break;
+			}
 		}
 
 		logtd("Response Describe : %s", reply->DumpHeader().CStr());
@@ -340,6 +392,16 @@ namespace pvd
 			}
 
 			auto setup = std::make_shared<RtspMessage>(RtspMethod::SETUP, GetNextCSeq(), control_url);
+			if(_authorization_field != nullptr)
+			{
+				// If authorization method is Digest, update the method and uri
+				if(_authorization_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+				{
+					_authorization_field->UpdateDigestAuth(setup->GetMethodStr(), setup->GetRequestUri());
+				}
+
+				setup->AddHeaderField(_authorization_field);
+			}
 
 			// Now RtspcStream only supports RTP/AVP/TCP;unicast/interleaved(rtp+rtcp)
 			// The chennel id can be used for demuxing, but since it is already demuxing in a different way, it is not saved.
@@ -352,7 +414,7 @@ namespace pvd
 			if (SendRequestMessage(setup) == false)
 			{
 				SetState(State::ERROR);
-				logte("Could not request DESCIBE to RTSP server (%s)", _curr_url->ToUrlString().CStr());
+				logte("Could not request setup to RTSP server (%s)", _curr_url->ToUrlString().CStr());
 				return false;
 			}
 
@@ -368,7 +430,7 @@ namespace pvd
 			else if (reply->GetStatusCode() != 200)
 			{
 				SetState(State::ERROR);
-				logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
+				logte("Rtsp server(%s) rejected the setup request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
 				return false;
 			}
 
@@ -526,7 +588,16 @@ namespace pvd
 		}
 
 		auto play = std::make_shared<RtspMessage>(RtspMethod::PLAY, GetNextCSeq(), _curr_url->ToUrlString(true));
+		if(_authorization_field != nullptr)
+		{
+			// If authorization method is Digest, update the method and uri
+			if(_authorization_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+			{
+				_authorization_field->UpdateDigestAuth(play->GetMethodStr(), play->GetRequestUri());
+			}
 
+			play->AddHeaderField(_authorization_field);
+		}
 		play->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
 		play->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
 
@@ -555,6 +626,7 @@ namespace pvd
 		}
 
 		logtd("Response PLAY : %s", reply->DumpHeader().CStr());
+		_play_request_time.Start();
 
 		SetState(State::PLAYING);
 
@@ -569,7 +641,16 @@ namespace pvd
 		}
 
 		auto teardown = std::make_shared<RtspMessage>(RtspMethod::TEARDOWN, GetNextCSeq(), _curr_url->ToUrlString(true));
+		if(_authorization_field != nullptr)
+		{
+			// If authorization method is Digest, update the method and uri
+			if(_authorization_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+			{
+				_authorization_field->UpdateDigestAuth(teardown->GetMethodStr(), teardown->GetRequestUri());
+			}
 
+			teardown->AddHeaderField(_authorization_field);
+		}
 		teardown->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
 		teardown->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
 
@@ -713,7 +794,7 @@ namespace pvd
 		{
 			if (error != nullptr)
 			{
-				logte("[%s/%s] An error occurred while receiving packet: %s", GetApplicationName(), GetName().CStr(), error->ToString().CStr());
+				logte("[%s/%s] An error occurred while receiving packet: %s", GetApplicationName(), GetName().CStr(), error->What());
 				SetState(State::ERROR);
 				return false;
 			}
@@ -878,18 +959,55 @@ namespace pvd
 				return;
 		}
 
-		auto pts = _lip_sync_clock.CalcPTS(channel, first_rtp_packet->Timestamp());
-		if(pts.has_value() == false)
+		if(_pts_calculation_method == PtsCalculationMethod::UNDER_DECISION)
 		{
-			logtd("not yet received sr packet : %u", first_rtp_packet->Ssrc());
+			if(GetTracks().size() == 1)
+			{
+				logti("Since this stream has a single track, it computes PTS alone without RTCP SR.");
+				_pts_calculation_method = PtsCalculationMethod::SINGLE_DELTA;
+			}
+			else if(_lip_sync_clock.IsEnabled() == true)
+			{
+				logti("Since this stream has received an RTCP SR, it counts the PTS with the SR.");
+				_pts_calculation_method = PtsCalculationMethod::WITH_RTCP_SR;
+			}
+			// If it exceeds 5 seconds, it is calculated independently without RTCP SR.
+			else if(_lip_sync_clock.IsEnabled() == false && _play_request_time.Elapsed() > 5000)
+			{
+				logtw("Since the RTCP SR was not received within 5 seconds, the PTS is calculated for each track without RTCP SR. (Lip-Sync may be out of sync)");
+				_pts_calculation_method = PtsCalculationMethod::SINGLE_DELTA;
+			}
+			else if(_lip_sync_clock.IsEnabled() == false && _play_request_time.Elapsed() <= 5000)
+			{
+				// Wait for RTCP SR for 5 seconds
+			}
+		}
 
+		uint64_t timestamp = 0;
+		if(_pts_calculation_method == PtsCalculationMethod::WITH_RTCP_SR)
+		{
+			auto pts = _lip_sync_clock.CalcPTS(channel, first_rtp_packet->Timestamp());
+			if(pts.has_value() == false)
+			{
+				logtd("not yet received sr packet : %u", first_rtp_packet->Ssrc());
+				// Prevents the stream from being deleted because there is no input data
+				MonitorInstance->IncreaseBytesIn(*Stream::GetSharedPtr(), bitstream->GetLength());
+				return;
+			}
+
+			timestamp = AdjustTimestampByBase(channel, pts.value(), std::numeric_limits<uint64_t>::max());
+		}
+		else if(_pts_calculation_method == PtsCalculationMethod::SINGLE_DELTA)
+		{
+			timestamp = AdjustTimestampByDelta(channel, first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
+		}
+		else
+		{
+			logtd("Haven't decided how to calculate pts yet.");
 			// Prevents the stream from being deleted because there is no input data
 			MonitorInstance->IncreaseBytesIn(*Stream::GetSharedPtr(), bitstream->GetLength());
 			return;
 		}
-
-		auto timestamp = AdjustTimestampByBase(channel, pts.value(), std::numeric_limits<uint64_t>::max());
-		//auto timestamp = AdjustTimestampByDelta(channel, first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
 
 		logtd("Channel(%d) Payload Type(%d) Ssrc(%u) Timestamp(%u) PTS(%lld) Time scale(%f) Adjust Timestamp(%f)", 
 				channel, first_rtp_packet->PayloadType(), first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());

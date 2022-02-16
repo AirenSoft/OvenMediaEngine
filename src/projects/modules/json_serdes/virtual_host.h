@@ -8,10 +8,12 @@
 //==============================================================================
 #pragma once
 
-#include <base/ovlibrary/ovlibrary.h>
 #include <config/config.h>
-#include <monitoring/monitoring.h>
+
 namespace serdes
 {
-	Json::Value JsonFromVHost(const std::shared_ptr<const mon::HostMetrics> &vhost);
+	MAY_THROWS(cfg::ConfigError)
+	void VirtualHostFromJson(const Json::Value &json_value, cfg::vhost::VirtualHost *vhost_config);
+	MAY_THROWS(cfg::ConfigError)
+	Json::Value JsonFromVirtualHost(const cfg::vhost::VirtualHost &vhost_config);
 }  // namespace serdes

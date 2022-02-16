@@ -32,7 +32,7 @@ namespace api
 		{
 			if (request_body.isArray() == false)
 			{
-				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Request body must be an array");
+				throw http::HttpError(http::StatusCode::BadRequest, "Request body must be an array");
 			}
 
 			std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
@@ -41,36 +41,42 @@ namespace api
 			Json::Value response_value(Json::ValueType::arrayValue);
 			auto url = ov::Url::Parse(client->GetRequest()->GetUri());
 
+			MultipleStatus status_codes;
+
 			for (auto &item : request_body)
 			{
 				auto stream_name = item["name"].asCString();
 				auto stream = GetStream(app, stream_name, nullptr);
 
-				if (stream == nullptr)
+				try
 				{
-					auto result = orchestrator->RequestPullStream(
-						url, app->GetName(),
-						stream_name, item["url"].asCString());
-
-					if (result)
+					if (stream == nullptr)
 					{
-						std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
-						stream = GetStream(app, stream_name, &output_streams);
+						auto result = orchestrator->RequestPullStream(
+							url, app->GetName(),
+							stream_name, item["url"].asCString());
 
-						response_value.append(::serdes::JsonFromStream(stream, std::move(output_streams)));
+						if (result)
+						{
+							std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
+							stream = GetStream(app, stream_name, &output_streams);
+
+							response_value.append(::serdes::JsonFromStream(stream, std::move(output_streams)));
+						}
+						else
+						{
+							throw http::HttpError(http::StatusCode::InternalServerError, "Could not pull the stream");
+						}
 					}
 					else
 					{
-						Json::Value error_value;
-						error_value["message"] = "Could not pull the stream";
-						response_value.append(error_value);
+						throw http::HttpError(http::StatusCode::Conflict, "Stream already exists");
 					}
 				}
-				else
+				catch (const http::HttpError &error)
 				{
-					Json::Value error_value;
-					error_value["message"] = "Stream already exists";
-					response_value.append(error_value);
+					status_codes.AddStatusCode(error.GetStatusCode());
+					response_value.append(::serdes::JsonFromError(error));
 				}
 			}
 

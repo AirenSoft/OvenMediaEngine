@@ -30,14 +30,14 @@ namespace cfg
 						return ProviderType::Mpegts;
 					}
 
-					CFG_DECLARE_REF_GETTER_OF(GetStreamMap, _stream_map)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamMap, _stream_map)
 
 				protected:
 					void MakeList() override
 					{
 						Provider::MakeList();
 
-						Register<Optional>({"StreamMap", "streams", OmitRule::Omit}, &_stream_map);
+						Register<Optional>({"StreamMap", "streams"}, &_stream_map);
 					}
 				};
 			}  // namespace pvd

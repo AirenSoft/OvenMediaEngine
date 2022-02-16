@@ -21,10 +21,16 @@ namespace cfg
 	class Attribute;
 	class Text;
 	class Item;
+	class ListInterface;
 
-	// #region ========== ValueType ==========
+	//--------------------------------------------------------------------
+	// ValueType
+	//--------------------------------------------------------------------
 	enum class ValueType : uint32_t
 	{
+		//
+		// Primitive types
+		//
 		// Unknown type
 		Unknown,
 		// A text value
@@ -41,15 +47,28 @@ namespace cfg
 		Attribute,
 		// A text of itself
 		Text,
+
+		//
+		// Non-primitive types
+		//
 		// An item
 		Item,
 		// A list value
 		List
 	};
-	// #endregion
 
 	const char *StringFromValueType(ValueType type);
+	//--------------------------------------------------------------------
 
+	enum class CheckUnknownItems
+	{
+		Check,
+		DontCheck
+	};
+
+	//--------------------------------------------------------------------
+	// ProbeType
+	//--------------------------------------------------------------------
 	// Probe a type of Tprobe
 	template <typename Tprobe, typename Tdummy = void>
 	struct ProbeType
@@ -121,15 +140,61 @@ namespace cfg
 		static constexpr ValueType type = ValueType::List;
 		static constexpr ValueType sub_type = ProbeType<Titem>::type;
 	};
+	//--------------------------------------------------------------------
+
+	//--------------------------------------------------------------------
+	// MakeAny()
+	//--------------------------------------------------------------------
+	// Convert <Subclass of cfg::Text *> to std::any
+	template <typename Ttype, std::enable_if_t<std::is_base_of_v<Text, Ttype>, int> = 0>
+	static std::any MakeAny(Ttype *item)
+	{
+		return static_cast<Text *>(item);
+	}
+
+	// Convert <Subclass of cfg::Item *> to std::any
+	template <typename Ttype, std::enable_if_t<std::is_base_of_v<Item, Ttype>, int> = 0>
+	static std::any MakeAny(Ttype *item)
+	{
+		return static_cast<Item *>(item);
+	}
+
+	// Convert other types to std::any
+	template <typename Ttype,
+			  std::enable_if_t<!std::is_base_of_v<Text, Ttype>, int> = 0,
+			  std::enable_if_t<!std::is_base_of_v<Item, Ttype>, int> = 0>
+	static std::any MakeAny(Ttype *item)
+	{
+		return item;
+	}
+	//--------------------------------------------------------------------
 
 	ov::String MakeIndentString(int indent_count);
 
-	ov::String ToString(const int *value);
-	ov::String ToString(const int64_t *value);
-	ov::String ToString(const float *value);
-	ov::String ToString(const double *value);
-	ov::String ToString(const ov::String *value);
-	ov::String ToString(int indent_count, const Item *object);
+	//--------------------------------------------------------------------
+	// ToDebugString()
+	//--------------------------------------------------------------------
+	ov::String ToDebugString(int indent_count, const ov::String *value);
+	ov::String ToDebugString(int indent_count, const int *value);
+	ov::String ToDebugString(int indent_count, const int64_t *value);
+	ov::String ToDebugString(int indent_count, const bool *value);
+	ov::String ToDebugString(int indent_count, const double *value);
+	ov::String ToDebugString(int indent_count, const Attribute *value);
+	ov::String ToDebugString(int indent_count, const Text *value);
+	ov::String ToDebugString(int indent_count, const Item *value);
+	//--------------------------------------------------------------------
+
+	//--------------------------------------------------------------------
+	// ToString()
+	//--------------------------------------------------------------------
+	template <typename Tvalue_type, std::enable_if_t<!std::is_base_of_v<Item, Tvalue_type> && !std::is_base_of_v<Text, Tvalue_type>, int> = 0>
+	ov::String ToString(const Tvalue_type *value)
+	{
+		return ov::Converter::ToString(*value);
+	}
+	ov::String ToString(const Text *value);
+	ov::String ToString(int indent_count, const Item *value);
+	//--------------------------------------------------------------------
 
 	struct CastException
 	{
@@ -142,33 +207,4 @@ namespace cfg
 		ov::String from;
 		ov::String to;
 	};
-
-	template <typename Toutput_type>
-	Toutput_type TryCast([[maybe_unused]] const std::any &value)
-	{
-		try
-		{
-			return std::any_cast<Toutput_type>(value);
-		}
-		catch (const std::bad_any_cast &)
-		{
-			throw CastException(
-				ov::Demangle(value.type().name()).CStr(),
-				ov::Demangle(typeid(Toutput_type).name()).CStr());
-		}
-	}
-
-	template <typename Toutput_type, typename Ttype, typename... Tcandidates>
-	Toutput_type TryCast(const std::any &value)
-	{
-		try
-		{
-			return std::any_cast<Ttype>(value);
-		}
-		catch (const std::bad_any_cast &)
-		{
-		}
-
-		return TryCast<Toutput_type, Tcandidates...>(value);
-	}
 }  // namespace cfg

@@ -252,7 +252,7 @@ namespace mon
 		_log_path = log_path;
 	}
 
-	bool EventForwarder::Start(const std::shared_ptr<cfg::Server> &server_config)
+	bool EventForwarder::Start(const std::shared_ptr<const cfg::Server> &server_config)
 	{
 		if(server_config == nullptr)
 		{
@@ -476,6 +476,8 @@ namespace mon
 				if(error != nullptr)
 				{
 					logtd("Could not connect to collector server : %s", _collector_url->ToUrlString(true).CStr());
+					_socket = nullptr;
+
 					return false;
 				}
 

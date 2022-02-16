@@ -24,9 +24,9 @@ namespace cfg
 				ov::String _credential;
 
 			public:
-				CFG_DECLARE_REF_GETTER_OF(GetUrls, _urls)
-				CFG_DECLARE_REF_GETTER_OF(GetUserName, _user_name)
-				CFG_DECLARE_REF_GETTER_OF(GetCredential, _credential)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetUrls, _urls)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetUserName, _user_name)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetCredential, _credential)
 
 			protected:
 				void MakeList() override

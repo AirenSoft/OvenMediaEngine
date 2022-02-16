@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "../../transcoder_private.h"
+#include "../codec_utilities.h"
 
 #if 0
 size_t AudioEncoderOpusImpl::SufficientOutputBufferSize() const {
@@ -27,8 +28,6 @@ size_t AudioEncoderOpusImpl::SufficientOutputBufferSize() const {
 
 EncoderOPUS::~EncoderOPUS()
 {
-	Stop();
-
 	if (_encoder)
 	{
 		::opus_encoder_destroy(_encoder);
@@ -122,8 +121,8 @@ bool EncoderOPUS::Configure(std::shared_ptr<TranscodeContext> context)
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&EncoderOPUS::ThreadEncode, this);
-		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
+		_codec_thread = std::thread(&EncoderOPUS::CodecThread, this);
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
 	{
@@ -136,21 +135,7 @@ bool EncoderOPUS::Configure(std::shared_ptr<TranscodeContext> context)
 	return true;
 }
 
-void EncoderOPUS::Stop()
-{
-	_kill_flag = true;
-
-	_input_buffer.Stop();
-	_output_buffer.Stop();
-
-	if (_thread_work.joinable())
-	{
-		_thread_work.join();
-		logtd("OPUS encoder thread has ended.");
-	}
-}
-
-void EncoderOPUS::ThreadEncode()
+void EncoderOPUS::CodecThread()
 {
 	// Refrence : https://opus-codec.org/docs/opus_api-1.1.3/group__opus__encoder.html#gad2d6bf6a9ffb6674879d7605ed073e25
 	// Number of samples per channel in the input signal. This must be an Opus frame size for the encoder's sampling rate.
@@ -167,29 +152,33 @@ void EncoderOPUS::ThreadEncode()
 			if (obj.has_value() == false)
 				continue;
 
-			auto frame_buffer = std::move(obj.value());
+			auto media_frame = std::move(obj.value());
+			OV_ASSERT2(media_frame != nullptr);
 
-			const MediaFrame *frame = frame_buffer.get();
-
-			OV_ASSERT2(frame != nullptr);
+			// const MediaFrame *frame = media_frame.get();
+			auto av_frame = TranscoderUtilities::MediaFrameToAVFrame(cmn::MediaType::Audio, media_frame);
+			if (!av_frame)
+			{
+				logte("Could not allocate the frame data");
+				break;
+			}
 
 			// Store frame informations
-			_format = frame->GetFormat<cmn::AudioSample::Format>();
+			_format = media_frame->GetFormat<cmn::AudioSample::Format>();
 
 			// Update current pts if the first PTS or PTS goes over frame_size.
-			if (_current_pts == -1 || abs(_current_pts - frame->GetPts()) > _frame_size)
+			if (_current_pts == -1 || abs(_current_pts - media_frame->GetPts()) > _frame_size)
 			{
-				_current_pts = frame->GetPts();
-				// logtd("%lld / %lld", frame_size, abs(_current_pts - frame->GetPts()));
+				_current_pts = media_frame->GetPts();
 			}
 
 			// Append frame data into the buffer
-			if (frame->GetChannelCount() == 1)
+			if (media_frame->GetChannelCount() == 1)
 			{
 				// Just copy data into buffer
-				_buffer->Append(frame->GetBuffer(0), frame->GetBufferSize(0));
+				_buffer->Append(av_frame->data[0], av_frame->linesize[0]);
 			}
-			else if (frame->GetChannelCount() >= 2)
+			else if (media_frame->GetChannelCount() >= 2)
 			{
 				// Currently, OME's OPUS encoder supports up to 2 channels
 				switch (_format)
@@ -200,29 +189,29 @@ void EncoderOPUS::ThreadEncode()
 						off_t current_offset = _buffer->GetLength();
 
 						// Reserve extra spaces
-						size_t total_bytes = frame->GetBufferSize(0) + frame->GetBufferSize(1);
+						// size_t total_bytes = av_frame->linesize[0] + av_frame->linesize[1];
+						auto total_bytes = static_cast<uint32_t>(media_frame->GetBytesPerSample() * media_frame->GetNbSamples()) * media_frame->GetChannelCount();
 						_buffer->SetLength(current_offset + total_bytes);
 
 						if (_format == cmn::AudioSample::Format::S16P)
 						{
 							// S16P
-							ov::Interleave<int16_t>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, frame->GetBuffer(0), frame->GetBuffer(1), frame->GetNbSamples());
+							ov::Interleave<int16_t>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, av_frame->data[0], av_frame->data[1], media_frame->GetNbSamples());
 							_format = cmn::AudioSample::Format::S16;
 						}
 						else
 						{
 							// FltP
-							ov::Interleave<float>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, frame->GetBuffer(0), frame->GetBuffer(1), frame->GetNbSamples());
+							ov::Interleave<float>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, av_frame->data[0], av_frame->data[1], media_frame->GetNbSamples());
 							_format = cmn::AudioSample::Format::Flt;
 						}
-
 						break;
 					}
 
 					case cmn::AudioSample::Format::S16:
 					case cmn::AudioSample::Format::Flt:
 						// Do not need to interleave if sample type is non-planar
-						_buffer->Append(frame->GetBuffer(0), frame->GetBufferSize(0));
+						_buffer->Append(av_frame->data[0], av_frame->linesize[0]);
 						break;
 
 					default:
@@ -288,22 +277,4 @@ void EncoderOPUS::ThreadEncode()
 
 		SendOutputBuffer(std::move(packet_buffer));
 	}
-}
-
-std::shared_ptr<MediaPacket> EncoderOPUS::RecvBuffer(TranscodeResult *result)
-{
-	if (!_output_buffer.IsEmpty())
-	{
-		*result = TranscodeResult::DataReady;
-
-		auto obj = _output_buffer.Dequeue();
-		if (obj.has_value())
-		{
-			return obj.value();
-		}
-	}
-
-	*result = TranscodeResult::NoData;
-
-	return nullptr;
 }

@@ -201,7 +201,7 @@ namespace ov
 
 		if (error != nullptr)
 		{
-			logte("Could not compile regex: %s, options: %d, reason: %s", pattern, static_cast<int>(options), error->ToString().CStr());
+			logte("Could not compile regex: %s, options: %d, reason: %s", pattern, static_cast<int>(options), error->What());
 		}
 
 		return regex;
@@ -214,7 +214,7 @@ namespace ov
 
 		if (error != nullptr)
 		{
-			logte("Could not compile regex: %s, reason: %s", pattern, error->ToString().CStr());
+			logte("Could not compile regex: %s, reason: %s", pattern, error->What());
 		}
 
 		return regex;

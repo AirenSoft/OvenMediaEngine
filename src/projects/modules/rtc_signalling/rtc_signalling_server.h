@@ -30,6 +30,9 @@ public:
 	bool Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address, int worker_count, std::shared_ptr<http::svr::ws::Interceptor> interceptor);
 	bool Stop();
 
+	bool AppendCertificate(const std::shared_ptr<const info::Certificate> &certificate);
+	bool RemoveCertificate(const std::shared_ptr<const info::Certificate> &certificate);
+
 	bool AddObserver(const std::shared_ptr<RtcSignallingObserver> &observer);
 	bool RemoveObserver(const std::shared_ptr<RtcSignallingObserver> &observer);
 
@@ -109,9 +112,12 @@ protected:
 	std::shared_ptr<const ov::Error> DispatchCandidateP2P(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
 	std::shared_ptr<const ov::Error> DispatchStop(const std::shared_ptr<http::svr::ws::Client> &ws_client, std::shared_ptr<RtcSignallingInfo> &info);
 
+	const cfg::Server _server_config;
 	const cfg::bind::cmm::Webrtc _webrtc_config;
 
+	ov::SocketAddress _http_server_address;
 	std::shared_ptr<http::svr::HttpServer> _http_server;
+	ov::SocketAddress _https_server_address;
 	std::shared_ptr<http::svr::HttpsServer> _https_server;
 
 	std::vector<std::shared_ptr<RtcSignallingObserver>> _observers;

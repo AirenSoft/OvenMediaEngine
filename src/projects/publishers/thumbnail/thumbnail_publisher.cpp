@@ -78,9 +78,7 @@ bool ThumbnailPublisher::Start()
 	{
 		ov::SocketAddress tls_address = ov::SocketAddress(server_config.GetIp(), tls_port.GetPort());
 
-		auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
-
-		_https_server = manager->CreateHttpsServer("thumb_https", tls_address, vhost_list, worker_count);
+		_https_server = manager->CreateHttpsServer("thumb_https", tls_address, worker_count);
 		if (_https_server != nullptr)
 		{
 			_https_server->AddInterceptor(CreateInterceptor());
@@ -128,6 +126,49 @@ bool ThumbnailPublisher::Stop()
 	}
 
 	return Publisher::Stop();
+}
+
+
+bool ThumbnailPublisher::OnCreateHost(const info::Host &host_info)
+{
+	if(_https_server != nullptr && host_info.GetCertificate() != nullptr)
+	{
+		return _https_server->AppendCertificate(host_info.GetCertificate()) == nullptr;
+	}
+
+	return true;
+}
+
+bool ThumbnailPublisher::OnDeleteHost(const info::Host &host_info)
+{
+	if(_https_server != nullptr && host_info.GetCertificate() != nullptr)
+	{
+		return _https_server->RemoveCertificate(host_info.GetCertificate()) == nullptr;
+	}
+
+	return true;
+}
+
+std::shared_ptr<pub::Application> ThumbnailPublisher::OnCreatePublisherApplication(const info::Application &application_info)
+{
+	if (IsModuleAvailable() == false)
+	{
+		return nullptr;
+	}
+
+	return ThumbnailApplication::Create(ThumbnailPublisher::GetSharedPtrAs<pub::Publisher>(), application_info);
+}
+
+bool ThumbnailPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
+{
+	auto file_application = std::static_pointer_cast<ThumbnailApplication>(application);
+	if (file_application == nullptr)
+	{
+		logte("Could not found thumbnail application. app:%s", file_application->GetName().CStr());
+		return false;
+	}
+
+	return true;
 }
 
 std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
@@ -186,10 +227,8 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 
 			return http::svr::NextHandler::DoNotCall;
 		}
-		else
-		{
-			SetAllowOrigin(request->GetHeader("ORIGIN"), application->GetCorsUrls(), response);
-		}
+
+		application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response);
 
 		// Check Stream
 		auto stream = std::static_pointer_cast<ThumbnailStream>(GetStream(vhost_app_name, parsed_url->Stream()));
@@ -265,24 +304,3 @@ bool ThumbnailPublisher::SetAllowOrigin(const ov::String &origin_url, std::vecto
 	return true;
 }
 
-std::shared_ptr<pub::Application> ThumbnailPublisher::OnCreatePublisherApplication(const info::Application &application_info)
-{
-	if (IsModuleAvailable() == false)
-	{
-		return nullptr;
-	}
-
-	return ThumbnailApplication::Create(ThumbnailPublisher::GetSharedPtrAs<pub::Publisher>(), application_info);
-}
-
-bool ThumbnailPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
-{
-	auto file_application = std::static_pointer_cast<ThumbnailApplication>(application);
-	if (file_application == nullptr)
-	{
-		logte("Could not found thumbnail application. app:%s", file_application->GetName().CStr());
-		return false;
-	}
-
-	return true;
-}

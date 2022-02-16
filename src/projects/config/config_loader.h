@@ -23,7 +23,7 @@ namespace cfg
 		explicit ConfigLoader(const ov::String &config_path);
 		virtual ~ConfigLoader();
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(cfg::ConfigError)
 		virtual void Parse() = 0;
 		void Reset();
 
@@ -31,7 +31,7 @@ namespace cfg
 		void SetConfigPath(ov::String config_path);
 
 	protected:
-		MAY_THROWS(std::shared_ptr<ConfigError>)
+		MAY_THROWS(cfg::ConfigError)
 		void Load();
 
 		pugi::xml_document _document;

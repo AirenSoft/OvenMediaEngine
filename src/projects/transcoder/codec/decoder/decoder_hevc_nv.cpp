@@ -27,7 +27,6 @@ bool DecoderHEVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	// Create codec context
 	_context = ::avcodec_alloc_context3(_codec);
 	if (_context == nullptr)
 	{
@@ -39,7 +38,7 @@ bool DecoderHEVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 
 	::av_opt_set(_context->priv_data, "gpu_copy", "on", 0);
 
-	_context->hw_device_ctx = av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContextNV());
+	_context->hw_device_ctx = av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext());
 
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
@@ -62,8 +61,8 @@ bool DecoderHEVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&TranscodeDecoder::ThreadDecode, this);
-		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Dec%sNV", avcodec_get_name(GetCodecID())).CStr());
+		_codec_thread = std::thread(&TranscodeDecoder::CodecThread, this);
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%sNV", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
 	{
@@ -75,7 +74,7 @@ bool DecoderHEVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 	return true;
 }
 
-void DecoderHEVCxNV::ThreadDecode()
+void DecoderHEVCxNV::CodecThread()
 {
 	while (!_kill_flag)
 	{
@@ -98,7 +97,7 @@ void DecoderHEVCxNV::ThreadDecode()
 
 		while (remained > 0)
 		{
-			::av_init_packet(_pkt);
+			::av_packet_unref(_pkt);
 
 			int parsed_size = ::av_parser_parse2(_parser, _context, &_pkt->data, &_pkt->size,
 												 data + offset, static_cast<int>(remained), pts, dts, 0);
@@ -232,46 +231,21 @@ void DecoderHEVCxNV::ThreadDecode()
 				}
 				tmp_frame->pts = _frame->pts;
 
-				// TODO(soulk) : Reduce memory copy overhead. Memory copy can be removed in the Decoder -> Filter step.
-				auto decoded_frame = TranscoderUtilities::ConvertToMediaFrame(cmn::MediaType::Video, tmp_frame);
+
+				// If there is no duration, the duration is calculated by framerate and timebase.
+				tmp_frame->pkt_duration = (tmp_frame->pkt_duration <= 0LL) ? TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : tmp_frame->pkt_duration;
+
+				auto decoded_frame = TranscoderUtilities::AvFrameToMediaFrame(cmn::MediaType::Video, tmp_frame);
 				if (decoded_frame == nullptr)
 				{
 					continue;
 				}
 
-				// If there is no duration, the duration is calculated by framerate and timebase.
-				if (decoded_frame->GetDuration() <= 0LL)
-				{
-					decoded_frame->SetDuration(TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context));
-				}
-
-				decoded_frame->SetFormat(tmp_frame->format);
-
 				::av_frame_unref(_frame);
 				::av_frame_free(&sw_frame);
 
-				_output_buffer.Enqueue(std::move(decoded_frame));
-
-				OnCompleteHandler(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, _track_id);
+				SendOutputBuffer(need_to_change_notify, _track_id, std::move(decoded_frame));
 			}
 		}
 	}
-}
-
-std::shared_ptr<MediaFrame> DecoderHEVCxNV::RecvBuffer(TranscodeResult *result)
-{
-	if (!_output_buffer.IsEmpty())
-	{
-		*result = TranscodeResult::DataReady;
-
-		auto obj = _output_buffer.Dequeue();
-		if (obj.has_value())
-		{
-			return obj.value();
-		}
-	}
-
-	*result = TranscodeResult::NoData;
-
-	return nullptr;
 }

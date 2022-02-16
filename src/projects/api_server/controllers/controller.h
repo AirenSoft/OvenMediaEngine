@@ -18,9 +18,17 @@
 
 namespace api
 {
+	class Server;
+
 	class ApiResponse
 	{
 	public:
+		// {
+		//     "statusCode": 200,
+		//     "message": "OK"
+		// }
+		ApiResponse();
+
 		// {
 		//     "statusCode": <status_code>,
 		//     "message": <message_of_status_code>
@@ -38,7 +46,7 @@ namespace api
 		//     "statusCode": <status_code>,
 		//     "message": <message_of_status_code>
 		// }
-		ApiResponse(MultipleStatus status_code, const Json::Value &json);
+		ApiResponse(MultipleStatus status_codes, const Json::Value &json);
 
 		// {
 		//     "statusCode": 200,
@@ -51,7 +59,7 @@ namespace api
 		//     "statusCode": <error->GetCode()>,
 		//     "message": <error->GetMessage()>
 		// }
-		ApiResponse(const std::shared_ptr<const http::HttpError> &error);
+		ApiResponse(const std::exception *error);
 
 		// Copy ctor
 		ApiResponse(const ApiResponse &response);
@@ -75,10 +83,19 @@ namespace api
 		Json::Value _json = Json::Value::null;
 	};
 
+	class ControllerInterface
+	{
+	};
+
 	template <typename Tclass>
-	class Controller
+	class Controller : public ControllerInterface
 	{
 	public:
+		void SetServer(const std::shared_ptr<Server> &server)
+		{
+			_server = server;
+		}
+
 		void SetPrefix(const ov::String &prefix)
 		{
 			_prefix = prefix;
@@ -90,16 +107,17 @@ namespace api
 		}
 
 		template <typename Tcontroller>
-		std::shared_ptr<Controller<Tcontroller>> CreateSubController(const ov::String &prefix_of_sub_controller)
+		void CreateSubController(const ov::String &prefix_of_sub_controller)
 		{
 			auto instance = std::make_shared<Tcontroller>();
 
+			instance->SetServer(_server);
 			instance->SetPrefix(_prefix + prefix_of_sub_controller);
 			instance->SetInterceptor(_interceptor);
 
 			instance->PrepareHandlers();
 
-			return instance;
+			_sub_controllers.push_back(instance);
 		}
 
 		virtual void PrepareHandlers() = 0;
@@ -118,6 +136,175 @@ namespace api
 		using ApiHandlerWithBodyVHostApp = ApiResponse (Tclass::*)(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app);
 		using ApiHandlerWithBodyVHostAppStream = ApiResponse (Tclass::*)(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app, const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
 
+	protected:
+		void Register(http::Method method, const ov::String &pattern, const Handler &handler)
+		{
+			auto new_pattern = ov::String::FormatString("^%s%s$", _prefix.CStr(), pattern.CStr());
+			auto that = dynamic_cast<Tclass *>(this);
+
+			_interceptor->Register(method, new_pattern, [that, handler](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
+				if (that != nullptr)
+				{
+					try
+					{
+						handler(that, client);
+					}
+					catch (const http::HttpError &error)
+					{
+						logw("APIController", "HTTP error occurred: %s", error.What());
+						ApiResponse(&error).SendToClient(client);
+					}
+					catch (const cfg::ConfigError &error)
+					{
+						logw("APIController", "Config error occurred: %s", error.GetDetailedMessage().CStr());
+						ApiResponse(&error).SendToClient(client);
+					}
+					catch (const std::exception &error)
+					{
+						logw("APIController", "Unknown error occurred: %s", error.what());
+						ApiResponse(&error).SendToClient(client);
+					}
+				}
+				else
+				{
+					OV_ASSERT2(false);
+				}
+
+				return http::svr::NextHandler::DoNotCall;
+			});
+		}
+
+		void Register(http::Method method, const ov::String &pattern, const ApiHandler &handler)
+		{
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
+				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
+
+				ApiResponse result = (clazz->*handler)(client);
+				result.SendToClient(client);
+			});
+		}
+
+		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithVHost &handler)
+		{
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
+				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
+
+				std::shared_ptr<mon::HostMetrics> vhost_metrics;
+				GetVirtualHostMetrics(match_result, &vhost_metrics);
+
+				ApiResponse result = (clazz->*handler)(client, vhost_metrics);
+				result.SendToClient(client);
+			});
+		}
+
+		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithVHostApp &handler)
+		{
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
+				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
+
+				std::shared_ptr<mon::HostMetrics> vhost_metrics;
+				GetVirtualHostMetrics(match_result, &vhost_metrics);
+
+				std::shared_ptr<mon::ApplicationMetrics> app_metrics;
+				GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
+
+				ApiResponse result = (clazz->*handler)(client, vhost_metrics, app_metrics);
+				result.SendToClient(client);
+			});
+		}
+
+		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithVHostAppStream &handler)
+		{
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
+				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
+
+				std::shared_ptr<mon::HostMetrics> vhost_metrics;
+				GetVirtualHostMetrics(match_result, &vhost_metrics);
+
+				std::shared_ptr<mon::ApplicationMetrics> app_metrics;
+				GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
+
+				std::shared_ptr<mon::StreamMetrics> stream_metrics;
+				std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
+				GetStreamMetrics(match_result, vhost_metrics, app_metrics, &stream_metrics, &output_streams);
+
+				ApiResponse result = (clazz->*handler)(client, vhost_metrics, app_metrics, stream_metrics, output_streams);
+				result.SendToClient(client);
+			});
+		}
+
+		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithBody &handler)
+		{
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
+				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
+
+				Json::Value request_body;
+				GetRequestBody(client, &request_body);
+
+				ApiResponse result = (clazz->*handler)(client, request_body);
+				result.SendToClient(client);
+			});
+		}
+
+		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithBodyVHost &handler)
+		{
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
+				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
+
+				Json::Value request_body;
+				GetRequestBody(client, &request_body);
+
+				std::shared_ptr<mon::HostMetrics> vhost_metrics;
+				GetVirtualHostMetrics(match_result, &vhost_metrics);
+
+				ApiResponse result = (clazz->*handler)(client, request_body, vhost_metrics);
+				result.SendToClient(client);
+			});
+		}
+
+		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithBodyVHostApp &handler)
+		{
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
+				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
+
+				Json::Value request_body;
+				GetRequestBody(client, &request_body);
+
+				std::shared_ptr<mon::HostMetrics> vhost_metrics;
+				GetVirtualHostMetrics(match_result, &vhost_metrics);
+
+				std::shared_ptr<mon::ApplicationMetrics> app_metrics;
+				GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
+
+				ApiResponse result = (clazz->*handler)(client, request_body, vhost_metrics, app_metrics);
+				result.SendToClient(client);
+			});
+		}
+
+		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithBodyVHostAppStream &handler)
+		{
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
+				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
+
+				Json::Value request_body;
+				GetRequestBody(client, &request_body);
+
+				std::shared_ptr<mon::HostMetrics> vhost_metrics;
+				GetVirtualHostMetrics(match_result, &vhost_metrics);
+
+				std::shared_ptr<mon::ApplicationMetrics> app_metrics;
+				GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
+
+				std::shared_ptr<mon::StreamMetrics> stream_metrics;
+				std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
+				GetStreamMetrics(match_result, vhost_metrics, app_metrics, &stream_metrics, &output_streams);
+
+				ApiResponse result = (clazz->*handler)(client, request_body, vhost_metrics, app_metrics, stream_metrics, output_streams);
+				result.SendToClient(client);
+			});
+		}
+
+		// Register handlers
 #define API_CONTROLLER_REGISTER_HANDLERS(postfix)                                                  \
 	void Register##postfix(const ov::String &pattern, const ApiHandler &handler)                   \
 	{                                                                                              \
@@ -154,163 +341,19 @@ namespace api
 		Register(http::Method::postfix, pattern, handler);                                             \
 	}
 
-		void Register(http::Method method, const ov::String &pattern, const Handler &handler)
-		{
-			auto new_pattern = ov::String::FormatString("^%s%s$", _prefix.CStr(), pattern.CStr());
-			auto that = dynamic_cast<Tclass *>(this);
-
-			_interceptor->Register(method, new_pattern, [that, handler](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
-				if (that != nullptr)
-				{
-					handler(that, client);
-				}
-				else
-				{
-					OV_ASSERT2(false);
-				}
-
-				return http::svr::NextHandler::DoNotCall;
-			});
-		}
-
-		void Register(http::Method method, const ov::String &pattern, const ApiHandler &handler)
-		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
-
-				ApiResponse result = (clazz->*handler)(client);
-				result.SendToClient(client);
-			});
-		}
-
-		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithVHost &handler)
-		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
-
-				std::shared_ptr<mon::HostMetrics> vhost_metrics;
-				auto error = GetVirtualHostMetrics(match_result, &vhost_metrics);
-
-				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client, vhost_metrics) : error;
-				result.SendToClient(client);
-			});
-		}
-
-		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithVHostApp &handler)
-		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
-
-				std::shared_ptr<mon::HostMetrics> vhost_metrics;
-				auto error = GetVirtualHostMetrics(match_result, &vhost_metrics);
-
-				std::shared_ptr<mon::ApplicationMetrics> app_metrics;
-				error = (error != nullptr) ? error : GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
-
-				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client, vhost_metrics, app_metrics) : error;
-				result.SendToClient(client);
-			});
-		}
-
-		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithVHostAppStream &handler)
-		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
-
-				std::shared_ptr<mon::HostMetrics> vhost_metrics;
-				auto error = GetVirtualHostMetrics(match_result, &vhost_metrics);
-
-				std::shared_ptr<mon::ApplicationMetrics> app_metrics;
-				error = (error != nullptr) ? error : GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
-
-				std::shared_ptr<mon::StreamMetrics> stream_metrics;
-				std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
-				error = (error != nullptr) ? error : GetStreamMetrics(match_result, vhost_metrics, app_metrics, &stream_metrics, &output_streams);
-
-				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client, vhost_metrics, app_metrics, stream_metrics, output_streams) : error;
-				result.SendToClient(client);
-			});
-		}
-
-		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithBody &handler)
-		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
-
-				Json::Value request_body;
-				auto error = GetRequestBody(client, &request_body);
-
-				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client, request_body) : error;
-				result.SendToClient(client);
-			});
-		}
-
-		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithBodyVHost &handler)
-		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
-
-				Json::Value request_body;
-				auto error = GetRequestBody(client, &request_body);
-
-				std::shared_ptr<mon::HostMetrics> vhost_metrics;
-				error = GetVirtualHostMetrics(match_result, &vhost_metrics);
-
-				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client, request_body, vhost_metrics) : error;
-				result.SendToClient(client);
-			});
-		}
-
-		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithBodyVHostApp &handler)
-		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
-
-				Json::Value request_body;
-				auto error = GetRequestBody(client, &request_body);
-
-				std::shared_ptr<mon::HostMetrics> vhost_metrics;
-				error = GetVirtualHostMetrics(match_result, &vhost_metrics);
-
-				std::shared_ptr<mon::ApplicationMetrics> app_metrics;
-				error = (error != nullptr) ? error : GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
-
-				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client, request_body, vhost_metrics, app_metrics) : error;
-				result.SendToClient(client);
-			});
-		}
-
-		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithBodyVHostAppStream &handler)
-		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpConnection> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
-
-				Json::Value request_body;
-				auto error = GetRequestBody(client, &request_body);
-
-				std::shared_ptr<mon::HostMetrics> vhost_metrics;
-				error = GetVirtualHostMetrics(match_result, &vhost_metrics);
-
-				std::shared_ptr<mon::ApplicationMetrics> app_metrics;
-				error = (error != nullptr) ? error : GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
-
-				std::shared_ptr<mon::StreamMetrics> stream_metrics;
-				std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
-				error = (error != nullptr) ? error : GetStreamMetrics(match_result, vhost_metrics, app_metrics, &stream_metrics, &output_streams);
-
-				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client, request_body, vhost_metrics, app_metrics, stream_metrics, output_streams) : error;
-				result.SendToClient(client);
-			});
-		}
-
-		// Register handlers
 		API_CONTROLLER_REGISTER_HANDLERS_WITH_BODY(Post)
 		API_CONTROLLER_REGISTER_HANDLERS(Get)
 		API_CONTROLLER_REGISTER_HANDLERS_WITH_BODY(Put)
 		API_CONTROLLER_REGISTER_HANDLERS(Delete)
 
+	protected:
 		// For all Handler registrations, prefix before pattern
 		ov::String _prefix;
 		std::shared_ptr<http::svr::DefaultInterceptor> _interceptor;
+
+		// A variable to keep shared_ptr are alive
+		std::vector<std::shared_ptr<ControllerInterface>> _sub_controllers;
+
+		std::shared_ptr<Server> _server;
 	};
 }  // namespace api

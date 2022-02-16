@@ -26,9 +26,7 @@ bool DecoderAVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 		logte("Codec not found: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
 		return false;
 	}
-	// logtw("%s / %s", _codec->name, _codec->long_name);
 
-	// create codec context
 	_context = ::avcodec_alloc_context3(_codec);
 	if (_context == nullptr)
 	{
@@ -60,8 +58,8 @@ bool DecoderAVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&TranscodeDecoder::ThreadDecode, this);
-		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Dec%sQsv", avcodec_get_name(GetCodecID())).CStr());
+		_codec_thread = std::thread(&TranscodeDecoder::CodecThread, this);
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%sQsv", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
 	{
@@ -73,7 +71,7 @@ bool DecoderAVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 	return true;
 }
 
-void DecoderAVCxQSV::ThreadDecode()
+void DecoderAVCxQSV::CodecThread()
 {
 	while (!_kill_flag)
 	{
@@ -97,7 +95,7 @@ void DecoderAVCxQSV::ThreadDecode()
 
 		while (remained > 0)
 		{
-			::av_init_packet(_pkt);
+			::av_packet_unref(_pkt);
 
 			int parsed_size = ::av_parser_parse2(_parser, _context, &_pkt->data, &_pkt->size,
 												 data + offset, static_cast<int>(remained), pts, dts, 0);
@@ -114,9 +112,9 @@ void DecoderAVCxQSV::ThreadDecode()
 				_pkt->dts = _parser->dts;
 				_pkt->flags = (_parser->key_frame == 1) ? AV_PKT_FLAG_KEY : 0;
 				_pkt->duration = _pkt->dts - _parser->last_dts;
-				if(_pkt->duration <= 0LL)
+				if (_pkt->duration <= 0LL)
 				{
-					// It may not be the exact packet duration. 
+					// It may not be the exact packet duration.
 					// However, in general, this method is applied under the assumption that the duration of all packets is similar.
 					_pkt->duration = duration;
 				}
@@ -212,43 +210,18 @@ void DecoderAVCxQSV::ThreadDecode()
 					}
 				}
 
-				// TODO(soulk) : Reduce memory copy overhead. Memory copy can be removed in the Decoder -> Filter step.
-				auto decoded_frame = TranscoderUtilities::ConvertToMediaFrame(cmn::MediaType::Video, _frame);
+				// If there is no duration, the duration is calculated by framerate and timebase.
+				_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : _frame->pkt_duration;
+
+				auto decoded_frame = TranscoderUtilities::AvFrameToMediaFrame(cmn::MediaType::Video, _frame);
+				::av_frame_unref(_frame);
 				if (decoded_frame == nullptr)
 				{
 					continue;
 				}
 
-				// If there is no duration, the duration is calculated by framerate and timebase.
-				if (decoded_frame->GetDuration() <= 0LL)
-				{
-					decoded_frame->SetDuration(TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context));
-				}
-
-				::av_frame_unref(_frame);
-
-				_output_buffer.Enqueue(std::move(decoded_frame));
-
-				OnCompleteHandler(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, _track_id);
+				SendOutputBuffer(need_to_change_notify, _track_id, std::move(decoded_frame));
 			}
 		}
 	}
-}
-
-std::shared_ptr<MediaFrame> DecoderAVCxQSV::RecvBuffer(TranscodeResult *result)
-{
-	if (!_output_buffer.IsEmpty())
-	{
-		*result = TranscodeResult::DataReady;
-
-		auto obj = _output_buffer.Dequeue();
-		if (obj.has_value())
-		{
-			return obj.value();
-		}
-	}
-
-	*result = TranscodeResult::NoData;
-
-	return nullptr;
 }

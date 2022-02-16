@@ -341,6 +341,7 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 		output_track->SetFrameRate(profile.GetFramerate());
 		output_track->SetTimeBase(GetDefaultTimebaseByCodecId(output_track->GetCodecId()));
 		output_track->SetPreset(profile.GetPreset());
+		output_track->SetThreadCount(profile.GetThreadCount());
 	}
 
 	if (IsVideoCodec(output_track->GetCodecId()) == false)
@@ -474,6 +475,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 						logtw("Encoding codec set is not a video codec, track_id(%d)", input_track_id);
 						continue;
 					}
+
 					output_stream->AddTrack(output_track);
 
 					AppendTrackMap(GetIdentifiedForVideoProfile(profile), _input_stream, input_track, output_stream, output_track);
@@ -488,6 +490,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 						logtw("Encoding codec set is not a video codec, track_id(%d)", input_track_id);
 						continue;
 					}
+
 					output_stream->AddTrack(output_track);
 
 					AppendTrackMap(GetIdentifiedForImageProfile(profile), _input_stream, input_track, output_stream, output_track);
@@ -506,6 +509,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 					}
 
 					output_stream->AddTrack(output_track);
+
 					AppendTrackMap(GetIdentifiedForAudioProfile(profile), _input_stream, input_track, output_stream, output_track);
 				}
 			}
@@ -868,6 +872,7 @@ int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 				// If there is no framerate value, a constant bit rate is not produced by the encoder.
 				// So, Estimated framerate is used to set the encoder.
 				encoder_context->SetEstimateFrameRate(track->GetEsimateFrameRate());
+				encoder_context->SetThreadCount(track->GetThreadCount());
 
 				if (CreateEncoder(encoder_track_id, encoder_context) == false)
 				{
@@ -1203,10 +1208,9 @@ void TranscoderStream::OnDecodedPacket(TranscodeResult result, int32_t decoder_i
 		case TranscodeResult::DataReady:
 			decoded_frame->SetTrackId(decoder_id);
 
-			logtp("[#%3d] Decode Out. PTS: %lld, SIZE: %lld, DURATION: %lld",
+			logtp("[#%3d] Decode Out. PTS: %lld, DURATION: %lld",
 				  decoder_id,
 				  (int64_t)(decoded_frame->GetPts() * decoder->GetTimebase().GetExpr() * 1000),
-				  (int64_t)decoded_frame->GetBufferSize(),
 				  (int64_t)((double)decoded_frame->GetDuration() * decoder->GetTimebase().GetExpr() * 1000));
 
 			SpreadToFilters(std::move(decoded_frame));
@@ -1229,10 +1233,9 @@ TranscodeResult TranscoderStream::FilterFrame(int32_t track_id, std::shared_ptr<
 
 	auto filter = filter_item->second.get();
 
-	logtp("[#%3d] Filter In.  PTS: %lld, SIZE: %lld",
+	logtp("[#%3d] Filter In.  PTS: %lld",
 		  track_id,
-		  (int64_t)(decoded_frame->GetPts() * filter->GetInputTimebase().GetExpr() * 1000),
-		  decoded_frame->GetBufferSize());
+		  (int64_t)(decoded_frame->GetPts() * filter->GetInputTimebase().GetExpr() * 1000));
 
 	if (filter->SendBuffer(std::move(decoded_frame)) == false)
 	{
@@ -1254,10 +1257,9 @@ TranscodeResult TranscoderStream::FilterFrame(int32_t track_id, std::shared_ptr<
 			case TranscodeResult::DataReady: {
 				filtered_frame->SetTrackId(track_id);
 
-				logtp("[#%3d] Filter Out. PTS: %lld, SIZE: %lld",
+				logtp("[#%3d] Filter Out. PTS: %lld",
 					  track_id,
-					  (int64_t)(filtered_frame->GetPts() * filter->GetOutputTimebase().GetExpr() * 1000),
-					  filtered_frame->GetBufferSize());
+					  (int64_t)(filtered_frame->GetPts() * filter->GetOutputTimebase().GetExpr() * 1000));
 
 				EncodeFrame(std::move(filtered_frame));
 			}
@@ -1283,11 +1285,10 @@ TranscodeResult TranscoderStream::EncodeFrame(std::shared_ptr<const MediaFrame> 
 
 	auto encoder = encoder_item->second.get();
 
-	logtp("[#%3d] Encode In.  PTS: %lld, FLAGS: %d, SIZE: %d",
+	logtp("[#%3d] Encode In.  PTS: %lld, FLAGS: %d",
 		  encoder_id,
 		  (int64_t)(frame->GetPts() * encoder->GetTimebase().GetExpr() * 1000),
-		  frame->GetFlags(),
-		  frame->GetBufferSize());
+		  frame->GetFlags());
 
 	encoder->SendBuffer(std::move(frame));
 

@@ -31,19 +31,9 @@ namespace serdes
 		return app;
 	}
 
-	std::shared_ptr<const http::HttpError> ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *application)
+	void ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *app_config)
 	{
-		cfg::DataSource data_source("", "", "Application", json_value);
-
-		try
-		{
-			application->FromDataSource("application", "Application", data_source);
-			return nullptr;
-		}
-		catch (const std::shared_ptr<cfg::ConfigError> &error)
-		{
-			logw("Serdes", "Could not convert message: %s", error->GetDetailedMessage().CStr());
-			return http::HttpError::CreateError(http::StatusCode::BadRequest, "%s", error->GetMessage().CStr());
-		}
+		app_config->SetItemName("Application");
+		app_config->FromJson(json_value);
 	}
 }  // namespace serdes

@@ -10,15 +10,12 @@
 
 namespace serdes
 {
-	Json::Value JsonFromError(const std::shared_ptr<const http::HttpError> &error)
+	Json::Value JsonFromError(const ov::Error &error)
 	{
 		Json::Value value(Json::ValueType::nullValue);
 
-		if (error != nullptr)
-		{
-			value["statusCode"] = error->GetCode();
-			value["message"] = error->GetMessage().CStr();
-		}
+		value["statusCode"] = error.GetCode();
+		value["message"] = error.GetMessage().CStr();
 
 		return value;
 	}

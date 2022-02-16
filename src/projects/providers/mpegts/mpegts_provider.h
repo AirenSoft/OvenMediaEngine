@@ -154,13 +154,11 @@ namespace pvd
 
 		bool BindMpegTSPorts();
 
-		// stream_map->key: <port, type>
-		// stream_map->value: <vhost_app_name, stream_name>
-		bool PrepareStreamList(const cfg::Server &server_config, std::map<std::tuple<int, ov::SocketType>, StreamInfo> *stream_map);
-
 		//--------------------------------------------------------------------
-		// Implementation of Provider's pure virtual functions
+		// Implementation of Provider's virtual functions
 		//--------------------------------------------------------------------
+		bool OnCreateHost(const info::Host &host_info) override;
+		bool OnDeleteHost(const info::Host &host_info) override;
 		std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &application_info) override;
 		bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
 

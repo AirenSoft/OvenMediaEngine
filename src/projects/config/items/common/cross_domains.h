@@ -18,12 +18,12 @@ namespace cfg
 			std::vector<ov::String> _url_list;
 
 		public:
-			CFG_DECLARE_REF_GETTER_OF(GetUrls, _url_list)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetUrls, _url_list)
 
 		protected:
 			void MakeList() override
 			{
-				Register({"Url", OmitRule::Omit}, &_url_list);
+				Register<OmitJsonName>("Url", &_url_list);
 			}
 		};
 	}  // namespace cmn

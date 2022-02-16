@@ -110,11 +110,38 @@ namespace pvd
 			}
 			else
 			{
-				bool is_parsed;
-				auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&is_parsed);
-				tcp_relay_worker_count = is_parsed ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+				bool tcp_relay_bind_parsed { false };
+				auto tcp_relay_bind { webrtc_bind_config.GetTcpRelayBind(&tcp_relay_bind_parsed) };
+				if(tcp_relay_bind_parsed)
+				{
+					auto l_tokens { tcp_relay_bind.Split(":") };
+					if(l_tokens.size() == 2)
+					{
+						auto l_ip { (l_tokens[0].IsEmpty()) ? server_config.GetIp() : l_tokens[0] };
+						auto l_port { l_tokens[1] };
+						tcp_relay_bind = ov::String::FormatString("%s:%s", l_ip.CStr(), l_port.CStr());
+						ov::SocketAddress l_tcp_address(tcp_relay_bind);
+						tcp_relay_bind_parsed = l_tcp_address.IsValid();
+						if(!tcp_relay_bind_parsed)
+						{
+							logte("TcpRelayBind invalid address: %s", tcp_relay_bind.CStr());
+						}
+					}
+					else
+					{
+						tcp_relay_bind_parsed = false;
+						logte("TcpRelayBind format is incorrect: <Relay Local IP>:<Port>");
+					}
+				}
 
-				if(IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), std::atoi(items[1]), ov::SocketType::Tcp, tcp_relay_worker_count) == false)
+				auto tcp_relay_listen { (tcp_relay_bind_parsed) ? tcp_relay_bind : ov::String::FormatString("*:%s", items[1].CStr()) };
+				ov::SocketAddress tcp_relay_address(tcp_relay_listen);
+
+				bool tcp_relay_worker_count_parsed { false };
+				auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&tcp_relay_worker_count_parsed);
+				tcp_relay_worker_count = tcp_relay_worker_count_parsed ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+
+				if(IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), tcp_relay_address, ov::SocketType::Tcp, tcp_relay_worker_count) == false)
 				{
 					logte("Could not create Turn Server. Check your configuration");
 					result = false;
@@ -163,6 +190,25 @@ namespace pvd
 		}
 
 		return Provider::Stop();
+	}
+
+	bool WebRTCProvider::OnCreateHost(const info::Host &host_info)
+	{
+		if(_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+		{
+			return _signalling_server->AppendCertificate(host_info.GetCertificate());
+		}
+
+		return true;
+	}
+
+	bool WebRTCProvider::OnDeleteHost(const info::Host &host_info)
+	{
+		if(_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+		{
+			return _signalling_server->RemoveCertificate(host_info.GetCertificate());
+		}
+		return true;
 	}
 
 	std::shared_ptr<pvd::Application> WebRTCProvider::OnCreateProviderApplication(const info::Application &application_info)
@@ -424,7 +470,7 @@ namespace pvd
 					const std::shared_ptr<const SessionDescription> &offer_sdp,
 					const std::shared_ptr<const SessionDescription> &peer_sdp)
 	{
-		logti("Stop commnad received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
+		logti("Stop command received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 		
 		// Find Stream
 		auto stream = std::static_pointer_cast<WebRTCStream>(GetStreamByName(vhost_app_name, stream_name));
@@ -477,6 +523,7 @@ namespace pvd
 
 				// Signalling server will call OnStopCommand, then stream will be removed in that function
 				_signalling_server->Disconnect(stream->GetApplicationInfo().GetName(), stream->GetName(), stream->GetPeerSDP());
+				OnChannelDeleted(stream);
 
 				break;
 			}
@@ -511,7 +558,7 @@ namespace pvd
 		auto error = certificate->Generate();
 		if(error != nullptr)
 		{
-			logte("Cannot create certificate: %s", error->ToString().CStr());
+			logte("Cannot create certificate: %s", error->What());
 			return nullptr;
 		}
 

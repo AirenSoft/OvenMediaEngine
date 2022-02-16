@@ -22,15 +22,17 @@ namespace cfg
 				{
 					struct StreamMap : public Item
 					{
-						CFG_DECLARE_REF_GETTER_OF(GetStreamList, _stream_list)
+					protected:
+						std::vector<Stream> _stream_list;
+
+					public:
+						CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamList, _stream_list)
 
 					protected:
 						void MakeList() override
 						{
-							Register({"Stream", OmitRule::Omit}, &_stream_list);
+							Register<OmitJsonName>("Stream", &_stream_list);
 						}
-
-						std::vector<Stream> _stream_list;
 					};
 				}  // namespace mpegts
 			}	   // namespace pvd

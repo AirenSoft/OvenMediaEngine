@@ -12,6 +12,9 @@
 
 #include "./web_socket_private.h"
 
+// Currently, OME does not handle websocket frame larger than 1 MB
+#define MAX_WEBSOCKET_FRAME_SIZE (1024LL * 1024LL)
+
 #define WEB_SOCKET_PROCESS(step, func)                            \
 	do                                                            \
 	{                                                             \
@@ -67,6 +70,12 @@ namespace http
 					else
 					{
 						// Could not append data
+						*read_bytes = -1;
+					}
+
+					if (_previous_data->GetLength() >= MAX_WEBSOCKET_FRAME_SIZE)
+					{
+						// Too many data - stop read
 						*read_bytes = -1;
 					}
 
@@ -169,7 +178,7 @@ namespace http
 					if ((extensions == false) && (_header.reserved != 0x00))
 					{
 						consumed_bytes = -1;
-						OV_ASSERT(false, "Invalid reserved value: %d (expected: %d)", _header.reserved, 0x00);
+						logte("Invalid reserved value: %d (expected: %d)", _header.reserved, 0x00);
 					}
 					else
 					{

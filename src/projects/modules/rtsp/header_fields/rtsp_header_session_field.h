@@ -33,11 +33,6 @@ public:
 		_timeout_delta_seconds = timeout_delta_seconds;
 	}
 
-	ParsedFieldType GetParsedFieldClass() override
-	{
-		return ParsedFieldType::Session;
-	}
-
 	// https://tools.ietf.org/html/rfc2326#page-57
 	// Session  = "Session" ":" session-id [ ";" "timeout" "=" delta-seconds ]
 
@@ -69,7 +64,7 @@ public:
 		return true;
 	}
 
-	ov::String Serialize() override
+	ov::String Serialize() const override
 	{
 		return ov::String::FormatString("Session: %s;timeout=%u", _session_id.CStr(), _timeout_delta_seconds);
 	}

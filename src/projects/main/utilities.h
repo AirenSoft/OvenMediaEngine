@@ -20,10 +20,6 @@ struct ParseOption
 	// Show OME version
 	bool version = false;
 
-	// -i
-	// Ignore CFG_LAST_CONFIG_FILE_NAME
-	bool ignore_last_config = false;
-
 	// -c <config_path>
 	// Load configurations from the path
 	ov::String config_path = "";
@@ -31,6 +27,10 @@ struct ParseOption
 	// -d
 	// Run as a service
 	bool start_service = false;
+
+	// -p <pid_path>
+	// If -d is set then the path of the PID can be set
+	ov::String pid_path = "";
 };
 
 bool TryParseOption(int argc, char *argv[], ParseOption *parse_option);

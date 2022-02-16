@@ -53,6 +53,7 @@ namespace cfg
 		Json::Value GetApplicationFromMetrics(const std::shared_ptr<const mon::ApplicationMetrics> &app_metrics)
 		{
 			auto app = app_metrics->GetConfig().ToJson();
+
 			auto reserved_stream_list = app_metrics->GetReservedStreamMetricsMap();
 
 			if (reserved_stream_list.size() > 0)
@@ -124,7 +125,7 @@ namespace cfg
 			return server_config;
 		}
 
-		Json::Value GetServerJsonFromConfig(const std::shared_ptr<cfg::Server> &server_config, bool include_dynamic_app)
+		Json::Value GetServerJsonFromConfig(const std::shared_ptr<const cfg::Server> &server_config, bool include_dynamic_app)
 		{
 			// Convert server config to JSON to obtain <Bind> and etc
 			return cfg::serdes::GetVirtualHostListFromMetrics(server_config->ToJson(), mon::Monitoring::GetInstance()->GetHostMetricsList(), include_dynamic_app);
@@ -238,7 +239,7 @@ namespace cfg
 			}
 		}
 
-		pugi::xml_document GetServerXmlFromConfig(const std::shared_ptr<Server> &server_config, bool include_dynamic_app)
+		pugi::xml_document GetServerXmlFromConfig(const std::shared_ptr<const Server> &server_config, bool include_dynamic_app)
 		{
 			// Convert server config to XML to obtain <Bind> and etc
 			auto doc = server_config->ToXml();

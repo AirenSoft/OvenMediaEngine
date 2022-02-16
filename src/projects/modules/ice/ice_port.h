@@ -139,7 +139,7 @@ public:
 	IcePort();
 	~IcePort() override;
 
-	bool CreateTurnServer(uint16_t listening_port, ov::SocketType socket_type, int tcp_relay_worker_count);
+	bool CreateTurnServer(const ov::SocketAddress &address, ov::SocketType socket_type, int tcp_relay_worker_count);
 	bool CreateIceCandidates(const std::vector<std::vector<RtcIceCandidate>> &ice_candidate_list, int ice_worker_count);
 	bool Close();
 

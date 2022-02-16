@@ -34,10 +34,10 @@ namespace cfg
 				{
 				}
 
-				CFG_DECLARE_REF_GETTER_OF(GetPort, _port);
-				CFG_DECLARE_REF_GETTER_OF(GetTlsPort, _tls_port);
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetPort, _port);
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetTlsPort, _tls_port);
 
-				CFG_DECLARE_REF_GETTER_OF(GetWorkerCount, _worker_count);
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetWorkerCount, _worker_count);
 
 			protected:
 				void MakeList() override

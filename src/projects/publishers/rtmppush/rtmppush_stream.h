@@ -17,6 +17,7 @@ public:
 							const info::Stream &info);
 	~RtmpPushStream() final;
 
+	void SendFrame(const std::shared_ptr<MediaPacket> &media_packet);
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 
@@ -27,6 +28,6 @@ private:
 	bool Start() override;
 	bool Stop() override;
 
+	ov::StopWatch _stop_watch;
 	std::shared_ptr<mon::StreamMetrics> _stream_metrics;
-	std::shared_ptr<RtmpWriter> _writer;
 };

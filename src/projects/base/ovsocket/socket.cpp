@@ -225,7 +225,7 @@ namespace ov
 
 				if (result == -1)
 				{
-					logae("Could not obtain flags: %s", Error::CreateErrorFromErrno()->ToString().CStr());
+					logae("Could not obtain flags: %s", Error::CreateErrorFromErrno()->What());
 					return false;
 				}
 
@@ -235,7 +235,7 @@ namespace ov
 
 				if (result == -1)
 				{
-					logae("Could not set flags: %s", Error::CreateErrorFromErrno()->ToString().CStr());
+					logae("Could not set flags: %s", Error::CreateErrorFromErrno()->What());
 					return false;
 				}
 
@@ -245,7 +245,7 @@ namespace ov
 			case SocketType::Srt:
 				if (SetSockOpt(SRTO_RCVSYN, mode == BlockingMode::Blocking) == false || SetSockOpt(SRTO_SNDSYN, mode == BlockingMode::Blocking) == false)
 				{
-					logae("Could not set flags to SRT socket %d: %s", GetNativeHandle(), SrtError::CreateErrorFromSrt()->ToString().CStr());
+					logae("Could not set flags to SRT socket %d: %s", GetNativeHandle(), SrtError::CreateErrorFromSrt()->What());
 					return false;
 				}
 
@@ -467,7 +467,7 @@ namespace ov
 					return true;
 				}
 
-				logae("Could not listen: %s", Error::CreateErrorFromErrno()->ToString().CStr());
+				logae("Could not listen: %s", Error::CreateErrorFromErrno()->What());
 				break;
 			}
 
@@ -643,7 +643,7 @@ namespace ov
 							GetSockOpt(SO_ERROR, &so_error);
 
 							socket_error = SocketError::CreateError(so_error, "Connection timed out (%d ms elapsed, SO_ERROR: %d)", timeout_msec, so_error);
-							logad("%s", socket_error->ToString().CStr());
+							logad("%s", socket_error->What());
 						}
 
 						// Restore blocking state
@@ -761,7 +761,7 @@ namespace ov
 		if (result == SRT_ERROR)
 		{
 			auto error = SrtError::CreateErrorFromSrt();
-			logaw("Could not set option: %d (result: %s)", option, error->ToString().CStr());
+			logaw("Could not set option: %d (result: %s)", option, error->What());
 			return false;
 		}
 
@@ -1074,7 +1074,7 @@ namespace ov
 								break;
 
 							default:
-								logaw("Could not send data: %zd (%s), %s", sent, error->ToString().CStr(), ToString().CStr());
+								logaw("Could not send data: %zd (%s), %s", sent, error->What(), ToString().CStr());
 								break;
 						}
 
@@ -1127,7 +1127,7 @@ namespace ov
 						}
 
 						STATS_COUNTER_INCREASE_ERROR();
-						logaw("Could not send data: %zd (%s)", sent, SrtError::CreateErrorFromSrt()->ToString().CStr());
+						logaw("Could not send data: %zd (%s)", sent, SrtError::CreateErrorFromSrt()->What());
 						return sent;
 					}
 
@@ -1200,7 +1200,7 @@ namespace ov
 								break;
 
 							default:
-								logaw("Could not send data: %zd (%s)", sent, error->ToString().CStr());
+								logaw("Could not send data: %zd (%s)", sent, error->What());
 								break;
 						}
 
@@ -1594,7 +1594,7 @@ namespace ov
 
 						default:
 							logae("An error occurred while read data: %s\nStack trace: %s",
-								  socket_error->ToString().CStr(),
+								  socket_error->What(),
 								  StackTrace::GetStackTrace().CStr());
 					}
 
@@ -1606,7 +1606,7 @@ namespace ov
 					{
 						default:
 							logae("An error occurred while read data: %s\nStack trace: %s",
-								  socket_error->ToString().CStr(),
+								  socket_error->What(),
 								  StackTrace::GetStackTrace().CStr());
 					}
 
@@ -1690,7 +1690,7 @@ namespace ov
 		if (socket_error != nullptr)
 		{
 			logae("An error occurred while read data: %s\nStack trace: %s",
-				  socket_error->ToString().CStr(),
+				  socket_error->What(),
 				  StackTrace::GetStackTrace().CStr());
 
 			CloseWithState(SocketState::Error);
@@ -1898,7 +1898,7 @@ namespace ov
 						break;
 
 					default:
-						logae("An error occurred while half-closing: %s", error->ToString().CStr());
+						logae("An error occurred while half-closing: %s", error->What());
 						break;
 				}
 
@@ -1981,7 +1981,7 @@ namespace ov
 		bool ignore_privacy_protection = true;
 
 		// ClientSocket must follow privacy rule
-		if(caller == "ClientSocket")
+		if (caller == "ClientSocket")
 		{
 			ignore_privacy_protection = false;
 		}

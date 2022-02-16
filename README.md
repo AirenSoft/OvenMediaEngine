@@ -1,16 +1,17 @@
-# "Sub-Second Latency Streaming Server" OvenMediaEngine
+# "Large-Scale Streaming Server with Sub-Second Latency" OvenMediaEngine
 
 
 ## What is OvenMediaEngine?
 
-In short, OvenMediaEngine (OME) is <b>Open-Source Streaming Server</b> with <b>Sub-Second Latency</b>.
+In short, OvenMediaEngine (OME) is an <b>Open-Source Streaming Server</b> that enables <b>Large-Scale</b> and <b>Sub-Second Latency Live Streaming</b>.
 
-OME receives a video/audio source from encoders and cameras such as [OvenStreamEncoder](https://www.airensoft.com/olk), OBS, XSplit, and more to <b>WebRTC</b>, <b>RTMP</b>, <b>SRT</b>, <b>MPEG-2 TS</b> <sup><i>Beta</sup></i>, or <b>RTSP</b> <sup><i>Beta</sup></i>.  Then, OME transmits it using <b>WebRTC</b>, <b>Low Latency MPEG-DASH</b> (LLDASH), <b>MPEG-DASH</b>, and <b>HLS</b>.
+OvenMediaEngine receives a video/audio source from encoders and cameras such as [OvenLiveKit](https://www.ovenmediaengine.com/olk), OBS, XSplit, and more to <b>WebRTC</b>, <b>RTMP</b>, <b>SRT</b>, <b>MPEG-2 TS</b> <sup><i>Beta</sup></i>, or <b>RTSP</b> <sup><i>Beta</sup></i>.  Then, OME transmits it using <b>WebRTC</b>, <b>Low Latency MPEG-DASH</b> (LLDASH), <b>MPEG-DASH</b>, and <b>HLS</b>.
 
 Like the picture below:
-<img src="dist/01_OvenMediaEngine_210512.png" style="max-width: 100%; height: auto;">
+<img src="dist/OME_Overview_GitHub_220117.svg" style="max-width: 100%; height: auto;">
+OvenMediaEngine supports you can create platforms/services/systems that live stream to <b>large audiences of hundreds or more</b> with <b>sub-second latency</b> and be <b>scalable</b>, depending on the number of concurrent viewers.
 
-We also provide [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), Open-Source HTML5 Player that is very synergistic with OME.
+We also provide [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), an Open-Source and JavaScript-based WebRTC Player for OvenMediaEngine.
 
 
 ## What is the goal of this project?
@@ -19,18 +20,19 @@ AirenSoft aims to make it easier for you to build a stable broadcasting/streamin
 Therefore, we will continue developing and providing the most optimized tools for smooth Sub-Second Latency Streaming.
 
 Would you please click on each link below for details:
-* ["Live Streaming Encoder for Mobile" <b>OvenLiveKit SDK](https://www.airensoft.com/olk)</b>
-* ["Sub-Second Latency Streaming Server" <b>OvenMediaEngine](https://www.ovenmediaengine.com/ome)</b>
-* ["HTML5 Player" <b>OvenPlayer](https://www.ovenmediaengine.com/ovenplayer)</b>
+* ["Live Streaming Encoder for Mobile" <b>OvenLiveKit](https://www.ovenmediaengine.com/olk)</b>
+* ["Large-Scale Streaming Server with Sub-Second Latency" <b>OvenMediaEngine](https://www.ovenmediaengine.com/ome)</b>
+* ["JavaScript-based WebRTC Player" <b>OvenPlayer](https://www.ovenmediaengine.com/ovenplayer)</b>
 
 
 ## Features
 
-* Ingest
+* <b>Ingest</b>
   * Push: WebRTC, RTMP, SRT, MPEG-2 TS
   * Pull: RTSP
-* Sub-Second Streaming with WebRTC
-  * WebRTC over TCP (with Embedded TURN Server)
+* <b>Sub-Second Latency Streaming with WebRTC</b>
+  * WebRTC over TCP (With Embedded TURN Server)
+  * Embedded WebRTC Signalling Server (WebSocket based)
   * ICE (Interactive Connectivity Establishment)
   * DTLS (Datagram Transport Layer Security)
   * SRTP (Secure Real-time Transport Protocol)
@@ -38,25 +40,28 @@ Would you please click on each link below for details:
     * <i>VP8, H.264</i>
   * In-band FEC (Forward Error Correction)
     * <i>Opus</i>
-  * Embedded WebRTC Signalling Server (WebSocket based)
-* Low Latency Streaming with MPEG-DASH (Chunked CAMF)
-* Legacy Streaming with MPEG-DASH/HLS
-* Embedded Live Transcoder
-  * VP8, H.264, Opus, AAC, Bypass
-* Origin-Edge structure
-* Monitoring
-* Beta
+* <b>Low Latency MPEG-DASH Streaming</b> (Beta)
+* <b>Legacy HLS and MPEG-DASH Streaming</b>
+* <b>Embedded Live Transcoder</b>
+  * Video: VP8, H.264, Pass-through
+  * Audio: Opus, AAC, Pass-through
+* <b>Clustering</b> (Origin-Edge Structure)
+* <b>Monitoring</b>
+* <b>Access Control</b>
+  * Adminssion Webhooks
+  * Singed Policy
+* <b>Beta</b>
   * File Recording
   * RTMP Push Publishing (Re-streaming)
   * Thumbnail
   * REST API
-* Experiment
+* <b>Experiment</b>
   * P2P Traffic Distribution (Only WebRTC)
 
 
 ## Supported Platforms
 
-We have tested OME on the platforms listed below. However, we think it can work with other Linux packages as well:
+We have tested OvenMediaEngine on the platforms listed below. However, we think it can work with other Linux packages as well:
 
 * [Docker](https://hub.docker.com/r/airensoft/ovenmediaengine)
 * Ubuntu 18+
@@ -135,20 +140,22 @@ We always hope that OvenMediaEngine will give you good inspiration.
 ## For more information
 
 * [OvenMediaEngine Website](https://ovenmediaengine.com) 
-  * Basic Information, FAQ, and Benchmark about OvenMediaEngine
+  * Basic Information and Benchmark about OvenMediaEngine
 * [OvenMediaEngine Tutorial](https://airensoft.gitbook.io/ovenmediaengine/)
   * Getting Started, Install, and Configuration
 * [OvenMediaEngine Tutorial Source](https://github.com/AirenSoft/OvenMediaEngineDocs)
-  * Please make a pull request for the manual of this project. Thanks in advance for your contribution.
+  * Please contribute by making a pull request for the user guide of our open-soure project
+* [OvenMediaEngine Docker Hub](https://hub.docker.com/r/airensoft/ovenmediaengine)
+  * Install and use OvenMeidaEngine easily using Docker
 * Test Player
   * `Without TLS`: [http://demo.ovenplayer.com](http://demo.ovenplayer.com)
   * `With TLS`: [https://demo.ovenplayer.com](https://demo.ovenplayer.com)
 * [OvenPlayer Github](https://github.com/AirenSoft/OvenPlayer)
-  * Open-Source HTML5 Player
+  * JavaScript-based WebRTC Player for OvenMediaEngine
 * [AirenSoft Website](https://www.airensoft.com/)
-  * AirenSoft's Solutions/Services, and Blog (Tech Journal)
+  * AirenSoft's Solutions/Services, and AirenBlog (Tech Journal)
 
 
 ## License
 
-OvenMediaEngine is licensed under the [GPLv3](LICENSE) or later.
+OvenMediaEngine is licensed under the [AGPL-3.0-only](LICENSE).

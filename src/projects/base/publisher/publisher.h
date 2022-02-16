@@ -134,6 +134,7 @@ namespace pub
 
 		const cfg::Server &GetServerConfig() const;
 
+		
 		virtual std::shared_ptr<Application> OnCreatePublisherApplication(const info::Application &application_info) = 0;
 		virtual bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) = 0;
 

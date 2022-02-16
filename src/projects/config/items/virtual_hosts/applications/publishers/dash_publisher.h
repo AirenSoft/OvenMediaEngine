@@ -36,10 +36,10 @@ namespace cfg
 						return PublisherType::Dash;
 					}
 
-					CFG_DECLARE_REF_GETTER_OF(GetSegmentCount, _segment_count)
-					CFG_DECLARE_REF_GETTER_OF(GetSegmentDuration, _segment_duration)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetSegmentCount, _segment_count)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetSegmentDuration, _segment_duration)
 
-					CFG_DECLARE_REF_GETTER_OF(GetUtcTiming, _utc_timing)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetUtcTiming, _utc_timing)
 				protected:
 					void MakeList() override
 					{
@@ -50,7 +50,7 @@ namespace cfg
 
 						Register<Optional>("UTCTiming", &_utc_timing);
 
-						Register<Optional>({"CrossDomains", OmitRule::Omit}, &_cross_domains);
+						Register<Optional>("CrossDomains", &_cross_domains);
 					}
 				};
 			}  // namespace pub

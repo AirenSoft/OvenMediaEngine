@@ -29,13 +29,13 @@ namespace http
 		{
 			if (certificate == nullptr)
 			{
-				return ov::OpensslError::CreateError("Certificate is nullptr");
+				return std::make_shared<ov::OpensslError>("Certificate is nullptr");
 			}
 
 			ov::TlsContextCallback tls_context_callback = {
 				.create_callback = nullptr,
 				.verify_callback = nullptr,
-				std::bind(&HttpsServer::HandleSniCallback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)};
+				.sni_callback = std::bind(&HttpsServer::HandleSniCallback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)};
 
 			std::shared_ptr<const ov::Error> error;
 			auto tls_context = ov::TlsContext::CreateServerContext(
@@ -48,26 +48,38 @@ namespace http
 				return error;
 			}
 
-			std::lock_guard lock_guard(_https_certificate_list_mutex);
+			std::lock_guard lock_guard(_https_certificate_map_mutex);
 
-			logtd("Appending a certificate for host: %s", certificate->ToString().CStr());
+			logtd("Append the certificate for host: %s", certificate->ToString().CStr());
 
-			_https_certificate_list.emplace_back(std::make_shared<HttpsCertificate>(certificate, tls_context));
+			_https_certificate_map.emplace(certificate->GetName(), std::make_shared<HttpsCertificate>(certificate, tls_context));
 
 			return nullptr;
 		}
 
+		std::shared_ptr<const ov::Error> HttpsServer::RemoveCertificate(const std::shared_ptr<const info::Certificate> &certificate)
+		{
+			std::lock_guard lock_guard(_https_certificate_map_mutex);
+
+			logtd("Remove the certificate for host: %s", certificate->ToString().CStr());
+
+			_https_certificate_map.erase(certificate->GetName());
+
+			return nullptr;
+		}
+
+		// Deprecated
 		std::shared_ptr<const ov::Error> HttpsServer::AppendCertificateList(const std::vector<std::shared_ptr<const info::Certificate>> &certificate_list)
 		{
-			for (auto &certificate : certificate_list)
-			{
-				auto error = AppendCertificate(certificate);
+			// for (auto &certificate : certificate_list)
+			// {
+			// 	auto error = AppendCertificate(certificate);
 
-				if (error != nullptr)
-				{
-					return error;
-				}
-			}
+			// 	if (error != nullptr)
+			// 	{
+			// 		return error;
+			// 	}
+			// }
 
 			return nullptr;
 		}
@@ -77,14 +89,19 @@ namespace http
 			std::shared_ptr<HttpsCertificate> https_certificate;
 
 			{
-				std::lock_guard lock_guard(_https_certificate_list_mutex);
-				if (_https_certificate_list.empty())
+				std::lock_guard lock_guard(_https_certificate_map_mutex);
+				if (_https_certificate_map.empty())
 				{
 					logte("Could not handle connection event: there is no certificate");
 					return;
 				}
 
-				https_certificate = _https_certificate_list.front();
+				// Eventually this certificate will be ignored after SNI works.
+				// - SSL_accept() requires an SSL instance
+				// - SSL_CTX is required to create an SSL instance
+				// - SSL_CTX contains certificate information.
+				// - An empty SSL_CTX could be used, but we just used the first certificate
+				https_certificate = _https_certificate_map.begin()->second;
 			}
 
 			auto client = ProcessConnect(remote);
@@ -154,8 +171,8 @@ namespace http
 			std::shared_ptr<HttpsCertificate> https_certificate;
 
 			{
-				std::lock_guard lock_guard(_https_certificate_list_mutex);
-				for (auto &https_cert : _https_certificate_list)
+				std::lock_guard lock_guard(_https_certificate_map_mutex);
+				for (auto &[vhost_name, https_cert] : _https_certificate_map)
 				{
 					if (https_cert->certificate->IsCertificateForHost(server_name))
 					{

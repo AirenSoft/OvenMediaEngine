@@ -38,7 +38,15 @@ bool RtmpPushSession::Start()
 	GetPush()->UpdatePushStartTime();
 	GetPush()->SetState(info::Push::PushState::Pushing);
 
-	ov::String rtmp_url = ov::String::FormatString("%s/%s", GetPush()->GetUrl().CStr(), GetPush()->GetStreamKey().CStr());
+	ov::String rtmp_url;
+	if (GetPush()->GetStreamKey().IsEmpty())
+	{
+		rtmp_url = GetPush()->GetUrl();
+	}
+	else
+	{
+		rtmp_url = ov::String::FormatString("%s/%s", GetPush()->GetUrl().CStr(), GetPush()->GetStreamKey().CStr());
+	}
 
 	std::lock_guard<std::shared_mutex> lock(_mutex);
 

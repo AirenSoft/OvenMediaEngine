@@ -68,6 +68,10 @@ ov::String RtspHeaderField::FieldTypeToString(RtspHeaderFieldType type)
 			return "Expires";
 		case RtspHeaderFieldType::Range:
 			return "Range";
+		case RtspHeaderFieldType::WWWAuthenticate:
+			return "WWW-Authenticate";
+		case RtspHeaderFieldType::Authorization:
+			return "Authorization";
 		case RtspHeaderFieldType::Unknown:
 		default:
 			return "Unknown";	
@@ -117,7 +121,7 @@ bool RtspHeaderField::SetContent(ov::String name, int32_t value)
 	return SetContent(name, ov::String::FormatString("%d", value));
 }
 
-ov::String RtspHeaderField::Serialize()
+ov::String RtspHeaderField::Serialize() const
 {
 	return ov::String::FormatString("%s: %s", _name.CStr(), _value.CStr()); 
 }

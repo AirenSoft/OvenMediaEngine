@@ -41,17 +41,17 @@ namespace cfg
 				pub::Publishers _publishers;
 
 			public:
-				CFG_DECLARE_REF_GETTER_OF(GetName, _name)
-				CFG_DECLARE_REF_GETTER_OF(GetType, _type_value)
-				CFG_DECLARE_REF_GETTER_OF(GetTypeString, _type)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetType, _type_value)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetTypeString, _type)
 
-				CFG_DECLARE_REF_GETTER_OF(GetDecodes, _decodes)
-				CFG_DECLARE_REF_GETTER_OF(GetOutputProfileList, _output_profiles.GetOutputProfileList())
-				CFG_DECLARE_REF_GETTER_OF(GetOutputProfiles, _output_profiles)
-				CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
-				CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
-				CFG_DECLARE_REF_GETTER_OF(GetAppWorkerCount, _publishers.GetAppWorkerCount())
-				CFG_DECLARE_REF_GETTER_OF(GetStreamWorkerCount, _publishers.GetStreamWorkerCount())
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetDecodes, _decodes)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetOutputProfileList, _output_profiles.GetOutputProfileList())
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetOutputProfiles, _output_profiles)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetProviders, _providers)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetPublishers, _publishers)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetAppWorkerCount, _publishers.GetAppWorkerCount())
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamWorkerCount, _publishers.GetStreamWorkerCount())
 
 			protected:
 				void MakeList() override
@@ -69,7 +69,7 @@ namespace cfg
 							return nullptr;
 						}
 
-						return CreateConfigError("Unknown type: %s", _type.CStr());
+						return CreateConfigErrorPtr("Unknown type: %s", _type.CStr());
 					});
 
 					Register<Optional>("Decodes", &_decodes);

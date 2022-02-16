@@ -9,7 +9,7 @@ std::shared_ptr<ov::Data> RtpDepacketizerH264::ParseAndAssembleFrame(std::vector
 	}
 
 	auto bitstream = std::make_shared<ov::Data>();
-
+	bool start_payload = true;
 	for(const auto &payload : payload_list)
 	{
 		uint8_t nal_type = (payload->GetDataAs<uint8_t>()[0]) & NAL_TYPE_MASK;
@@ -18,7 +18,7 @@ std::shared_ptr<ov::Data> RtpDepacketizerH264::ParseAndAssembleFrame(std::vector
 		// Fragmented NAL units
 		if(nal_type == NaluType::kFuA)
 		{
-			result = ParseFuaAndConvertAnnexB(payload);
+			result = ParseFuaAndConvertAnnexB(payload, start_payload);
 			if(result == nullptr)
 			{
 				return nullptr;
@@ -46,12 +46,14 @@ std::shared_ptr<ov::Data> RtpDepacketizerH264::ParseAndAssembleFrame(std::vector
 
 			bitstream->Append(result);
 		}
+
+		start_payload = false;
 	}
 
 	return bitstream;
 }
 
-std::shared_ptr<ov::Data> RtpDepacketizerH264::ParseFuaAndConvertAnnexB(const std::shared_ptr<ov::Data> &payload)
+std::shared_ptr<ov::Data> RtpDepacketizerH264::ParseFuaAndConvertAnnexB(const std::shared_ptr<ov::Data> &payload, bool start)
 {
 	auto bitstream = std::make_shared<ov::Data>();
 
@@ -66,12 +68,10 @@ std::shared_ptr<ov::Data> RtpDepacketizerH264::ParseFuaAndConvertAnnexB(const st
 	auto original_nal_type = buffer[1] & NAL_TYPE_MASK;
 	bool first_fragment = (buffer[1] & FUA_SBIT) > 0;
 
-	if(first_fragment == true)
+	if(first_fragment == true || start == true)
 	{
 		uint8_t	start_prefix_and_nal_header[ANNEXB_START_PREFIX_LENGTH + NAL_HEADER_SIZE];
 		uint8_t original_nal_header = fnri | original_nal_type;
-
-		logd("DEBUG", "FUA Nal Type : %d", original_nal_type);
 
 		start_prefix_and_nal_header[0] = 0;
 		start_prefix_and_nal_header[1] = 0;

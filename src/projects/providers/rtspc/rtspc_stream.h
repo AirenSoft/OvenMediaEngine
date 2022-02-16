@@ -24,6 +24,8 @@
 
 #include <modules/sdp/session_description.h>
 
+#include <modules/rtsp/header_fields/rtsp_header_fields.h>
+
 #define RTSP_USER_AGENT_NAME	"OvenMediaEngine"
 namespace pvd
 {
@@ -126,6 +128,7 @@ namespace pvd
 
 		std::vector<std::shared_ptr<const ov::Url>> _url_list;
 		std::shared_ptr<const ov::Url> _curr_url;
+		std::shared_ptr<RtspHeaderAuthorizationField> _authorization_field = nullptr;
 
 		std::shared_ptr<ov::Socket> _signalling_socket;
 		
@@ -154,6 +157,16 @@ namespace pvd
 		std::map<uint8_t, uint32_t>			_timestamp_map;
 
 		LipSyncClock 						_lip_sync_clock;
+		ov::StopWatch						_play_request_time;
+
+		enum class PtsCalculationMethod : uint8_t
+		{
+			UNDER_DECISION,
+			SINGLE_DELTA,
+			WITH_RTCP_SR
+		};
+
+		PtsCalculationMethod				_pts_calculation_method = PtsCalculationMethod::UNDER_DECISION;
 
 		bool _sent_sequence_header = false;
 

@@ -107,12 +107,6 @@ typedef void (*OV_SIG_ACTION)(int signum, siginfo_t *si, void *unused);
 
 static void AbortHandler(int signum, siginfo_t *si, void *unused)
 {
-#if DEBUG
-	static constexpr const char *BUILD_MODE = " [debug]";
-#else	// DEBUG
-	static constexpr const char *BUILD_MODE = "";
-#endif	// DEBUG
-
 	char time_buffer[30]{};
 	char file_name[32]{};
 	time_t t = ::time(nullptr);
@@ -133,7 +127,7 @@ static void AbortHandler(int signum, siginfo_t *si, void *unused)
 		auto tid = ov::Platform::GetThreadId();
 
 		ostream << "***** Crash dump *****" << std::endl;
-		ostream << "OvenMediaEngine v" OME_VERSION OME_GIT_VERSION_EXTRA << BUILD_MODE << " received signal " << signum << " (" << GetSignalName(signum) << ")" << std::endl;
+		ostream << "OvenMediaEngine " << info::OmeVersion::GetInstance()->ToString().CStr() << " received signal " << signum << " (" << GetSignalName(signum) << ")" << std::endl;
 		ostream << "- Time: " << time_buffer << ", pid: " << pid << ", tid: " << tid << std::endl;
 		ostream << "- Stack trace" << std::endl;
 
@@ -176,9 +170,9 @@ static void ReloadHandler(int signum, siginfo_t *si, void *unused)
 	{
 		config_manager->ReloadConfigs();
 	}
-	catch (std::shared_ptr<cfg::ConfigError> &error)
+	catch (const cfg::ConfigError &error)
 	{
-		logte("An error occurred while reload configuration: %s", error->ToString().CStr());
+		logte("An error occurred while reload configuration: %s", error.What());
 		return;
 	}
 
@@ -193,7 +187,7 @@ static void ReloadHandler(int signum, siginfo_t *si, void *unused)
 		host_info_list.emplace_back(info::Host(server_config->GetName(), server_config->GetID(), host));
 	}
 
-	if (ocst::Orchestrator::GetInstance()->ApplyOriginMap(host_info_list) == false)
+	if (ocst::Orchestrator::GetInstance()->UpdateVirtualHosts(host_info_list) == false)
 	{
 		logte("Could not reload OriginMap");
 	}

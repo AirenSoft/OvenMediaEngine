@@ -25,7 +25,7 @@ std::shared_ptr<ov::OpensslError> Certificate::GenerateFromPem(const char *cert_
 
 	if ((_X509 != nullptr) || (_pkey != nullptr))
 	{
-		return ov::OpensslError::CreateError("Certificate is already created");
+		return std::make_shared<ov::OpensslError>("Certificate is already created");
 	}
 
 	// TODO(dimiden): If a cert file contains multiple certificates, it should be processed.
@@ -36,7 +36,7 @@ std::shared_ptr<ov::OpensslError> Certificate::GenerateFromPem(const char *cert_
 	if (BIO_read_filename(cert_bio, cert_filename) <= 0)
 	{
 		BIO_free(cert_bio);
-		return ov::OpensslError::CreateErrorFromOpenssl();
+		return std::make_shared<ov::OpensslError>();
 	}
 
 	_X509 = PEM_read_bio_X509(cert_bio, nullptr, nullptr, nullptr);
@@ -44,7 +44,7 @@ std::shared_ptr<ov::OpensslError> Certificate::GenerateFromPem(const char *cert_
 
 	if (_X509 == nullptr)
 	{
-		return ov::OpensslError::CreateErrorFromOpenssl();
+		return std::make_shared<ov::OpensslError>();
 	}
 
 	// Read private key file
@@ -53,7 +53,7 @@ std::shared_ptr<ov::OpensslError> Certificate::GenerateFromPem(const char *cert_
 
 	if (BIO_read_filename(pk_bio, private_key_filename) <= 0)
 	{
-		return ov::OpensslError::CreateErrorFromOpenssl();
+		return std::make_shared<ov::OpensslError>();
 	}
 
 	_pkey = PEM_read_bio_PrivateKey(pk_bio, nullptr, nullptr, nullptr);
@@ -62,7 +62,7 @@ std::shared_ptr<ov::OpensslError> Certificate::GenerateFromPem(const char *cert_
 
 	if (_pkey == nullptr)
 	{
-		return ov::OpensslError::CreateErrorFromOpenssl();
+		return std::make_shared<ov::OpensslError>();
 	}
 
 	return nullptr;
@@ -72,7 +72,7 @@ std::shared_ptr<ov::OpensslError> Certificate::GenerateFromPem(const char *filen
 {
 	if (_X509 != nullptr)
 	{
-		return ov::OpensslError::CreateError("Certificate is already created");
+		return std::make_shared<ov::OpensslError>("Certificate is already created");
 	}
 
 	BIO *cert_bio = nullptr;
@@ -80,7 +80,7 @@ std::shared_ptr<ov::OpensslError> Certificate::GenerateFromPem(const char *filen
 
 	if (BIO_read_filename(cert_bio, filename) <= 0)
 	{
-		return ov::OpensslError::CreateErrorFromOpenssl();
+		return std::make_shared<ov::OpensslError>();
 	}
 
 	if (aux)
@@ -96,7 +96,7 @@ std::shared_ptr<ov::OpensslError> Certificate::GenerateFromPem(const char *filen
 
 	if (_X509 == nullptr)
 	{
-		return ov::OpensslError::CreateErrorFromOpenssl();
+		return std::make_shared<ov::OpensslError>();
 	}
 
 	// TODO(dimiden): Extract these codes to another function like GenerateFromPrivateKey()
@@ -105,7 +105,7 @@ std::shared_ptr<ov::OpensslError> Certificate::GenerateFromPem(const char *filen
 	//if(_pkey == nullptr)
 	//{
 	//	BIO_free(cert_bio);
-	//	return ov::OpensslError::CreateErrorFromOpenssl();
+	//	return std::make_shared<ov::OpensslError>();
 	//}
 	//
 	//BIO_free(cert_bio);
@@ -114,13 +114,13 @@ std::shared_ptr<ov::OpensslError> Certificate::GenerateFromPem(const char *filen
 	//EC_KEY *ec_key = EVP_PKEY_get1_EC_KEY(_pkey);
 	//if(!ec_key)
 	//{
-	//	return ov::OpensslError::CreateErrorFromOpenssl();
+	//	return std::make_shared<ov::OpensslError>();
 	//}
 	//
 	//if(!EC_KEY_check_key(ec_key))
 	//{
 	//	EC_KEY_free(ec_key);
-	//	return ov::OpensslError::CreateErrorFromOpenssl();
+	//	return std::make_shared<ov::OpensslError>();
 	//}
 
 	return nullptr;
@@ -130,19 +130,19 @@ std::shared_ptr<ov::OpensslError> Certificate::Generate()
 {
 	if (_X509 != nullptr)
 	{
-		return ov::OpensslError::CreateError("Certificate is already created");
+		return std::make_shared<ov::OpensslError>("Certificate is already created");
 	}
 
 	EVP_PKEY *pkey = MakeKey();
 	if (pkey == nullptr)
 	{
-		return ov::OpensslError::CreateErrorFromOpenssl();
+		return std::make_shared<ov::OpensslError>();
 	}
 
 	X509 *x509 = MakeCertificate(pkey);
 	if (x509 == nullptr)
 	{
-		return ov::OpensslError::CreateErrorFromOpenssl();
+		return std::make_shared<ov::OpensslError>();
 	}
 
 	_pkey = pkey;
@@ -161,7 +161,7 @@ EVP_PKEY *Certificate::MakeKey()
 	}
 
 	bool succeeded = false;
-	
+
 	OSSL_PARAM params[2];
 	char str[] = SN_X9_62_prime256v1;
 
@@ -199,7 +199,7 @@ EVP_PKEY *Certificate::MakeKey()
 
 	if (succeeded == false)
 	{
-		loge("CERT", "Could not make a key: %s", ov::OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
+		loge("CERT", "Could not make a key: %s", ov::OpensslError().What());
 	}
 
 	::EVP_PKEY_CTX_free(pkey_context);

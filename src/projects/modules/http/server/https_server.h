@@ -25,6 +25,9 @@ namespace http
 			}
 
 			std::shared_ptr<const ov::Error> AppendCertificate(const std::shared_ptr<const info::Certificate> &certificate);
+			std::shared_ptr<const ov::Error> RemoveCertificate(const std::shared_ptr<const info::Certificate> &certificate);
+
+			// Deprecated
 			std::shared_ptr<const ov::Error> AppendCertificateList(const std::vector<std::shared_ptr<const info::Certificate>> &certificate_list);
 
 		protected:
@@ -52,8 +55,10 @@ namespace http
 			bool HandleSniCallback(ov::TlsContext *tls_context, SSL *ssl, const ov::String &server_name);
 
 		protected:
-			std::mutex _https_certificate_list_mutex;
-			std::vector<std::shared_ptr<HttpsCertificate>> _https_certificate_list;
+			std::mutex _https_certificate_map_mutex;
+
+			// Certificate Name : HttpsCertificate
+			std::map<ov::String, std::shared_ptr<HttpsCertificate>> _https_certificate_map;
 		};
 	}  // namespace svr
 }  // namespace http

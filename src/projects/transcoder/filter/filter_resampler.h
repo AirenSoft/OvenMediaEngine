@@ -9,11 +9,10 @@
 
 #pragma once
 
-#include "filter_base.h"
+#include "../transcoder_context.h"
 #include "base/mediarouter/media_buffer.h"
 #include "base/mediarouter/media_type.h"
-
-#include "../transcoder_context.h"
+#include "filter_base.h"
 
 class MediaFilterResampler : public MediaFilterImpl
 {
@@ -26,10 +25,8 @@ public:
 	int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer) override;
 	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
 
-	void ThreadFilter();
+	void FilterThread();
 
+	bool Start() override;
 	void Stop();
-
-protected:
-	bool IsPlanar(AVSampleFormat format);
 };

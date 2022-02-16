@@ -597,7 +597,10 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 				auto match = SDPRegexPattern::GetInstance()->MatchFramerate(content.c_str());
 				if(match.GetGroupCount() != 1 + 1)
 				{
-					parsing_error = true;
+					// Not critical error
+					// parsing_error = true;
+					logw("SDP", "Sdp parsing error : %c=%s", type, content.c_str());
+					
 					break;
 				}
 
@@ -747,6 +750,11 @@ void MediaDescription::SetMediaType(const MediaType type)
 const MediaDescription::MediaType MediaDescription::GetMediaType() const
 {
 	return _media_type;
+}
+
+const ov::String MediaDescription::GetMediaTypeStr() const
+{
+	return _media_type_str;
 }
 
 void MediaDescription::SetPort(uint16_t port)

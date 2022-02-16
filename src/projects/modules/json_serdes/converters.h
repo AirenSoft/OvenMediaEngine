@@ -14,4 +14,4 @@
 #include "./push.h"
 #include "./record.h"
 #include "./stream.h"
-#include "./vhost.h"
+#include "./virtual_host.h"

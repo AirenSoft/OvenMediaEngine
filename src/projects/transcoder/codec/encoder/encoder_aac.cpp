@@ -9,10 +9,10 @@
 #include "encoder_aac.h"
 
 #include "../../transcoder_private.h"
+#include "../codec_utilities.h"
 
 EncoderAAC::~EncoderAAC()
 {
-	Stop();
 }
 
 bool EncoderAAC::SetCodecParams()
@@ -69,8 +69,8 @@ bool EncoderAAC::Configure(std::shared_ptr<TranscodeContext> context)
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&EncoderAAC::ThreadEncode, this);
-		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
+		_codec_thread = std::thread(&EncoderAAC::CodecThread, this);
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
 	{
@@ -83,21 +83,7 @@ bool EncoderAAC::Configure(std::shared_ptr<TranscodeContext> context)
 	return true;
 }
 
-void EncoderAAC::Stop()
-{
-	_kill_flag = true;
-
-	_input_buffer.Stop();
-	_output_buffer.Stop();
-
-	if (_thread_work.joinable())
-	{
-		_thread_work.join();
-		logtd("AAC encoder thread has ended.");
-	}
-}
-
-void EncoderAAC::ThreadEncode()
+void EncoderAAC::CodecThread()
 {
 	while (!_kill_flag)
 	{
@@ -105,95 +91,58 @@ void EncoderAAC::ThreadEncode()
 		if (obj.has_value() == false)
 			continue;
 
-		auto buffer = std::move(obj.value());
+		auto media_frame = std::move(obj.value());
 
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-
-		const MediaFrame *frame = buffer.get();
-
-		_frame->format = _codec_context->sample_fmt;
-		_frame->nb_samples = _codec_context->frame_size;
-		_frame->pts = frame->GetPts();
-		_frame->pkt_duration = frame->GetDuration();
-		_frame->channel_layout = _codec_context->channel_layout;
-		_frame->channels = _codec_context->channels;
-		_frame->sample_rate = _codec_context->sample_rate;
-
-		if (::av_frame_get_buffer(_frame, 0) < 0)
+		auto av_frame = TranscoderUtilities::MediaFrameToAVFrame(cmn::MediaType::Audio, media_frame);
+		if (!av_frame)
 		{
-			logte("Could not allocate the audio frame data");
+			logte("Could not allocate the frame data");
 			break;
 		}
 
-		if (::av_frame_make_writable(_frame) < 0)
-		{
-			logte("Could not make sure the frame data is writable");
-			// *result = TranscodeResult::DataError;
-			break;
-		}
-
-		::memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
-
-		int ret = ::avcodec_send_frame(_codec_context, _frame);
-
-		::av_frame_unref(_frame);
-
+		int ret = ::avcodec_send_frame(_codec_context, av_frame);
 		if (ret < 0)
 		{
 			logte("Error sending a frame for encoding : %d", ret);
 		}
 
+		///////////////////////////////////////////////////
+		// The encoded packet is taken from the codec.
+		///////////////////////////////////////////////////
 		while (true)
 		{
 			int ret = ::avcodec_receive_packet(_codec_context, _packet);
-
 			if (ret == AVERROR(EAGAIN))
 			{
 				break;
 			}
-			else if (ret == AVERROR_EOF)
+			else if (ret == AVERROR_EOF && ret < 0)
 			{
-				logte("Error receiving a packet for decoding : AVERROR_EOF");
-				break;
-			}
-			else if (ret < 0)
-			{
-				logte("Error receiving a packet for encoding : %d", ret);
+				logte("Error receiving a packet for decoding : %d", ret);
 				break;
 			}
 			else
 			{
-				auto packet_buffer = std::make_shared<MediaPacket>(0, cmn::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts, _packet->dts, _packet->duration, MediaPacketFlag::Key);
-				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::AAC_ADTS);
-				packet_buffer->SetPacketType(cmn::PacketType::RAW);
+				auto media_packet = TranscoderUtilities::AvPacketToMediaPacket(_packet, cmn::MediaType::Audio, cmn::BitstreamFormat::AAC_ADTS, cmn::PacketType::RAW);
+				if (media_packet == nullptr)
+				{
+					logte("Could not allocate the media packet");
+					break;
+				}
 
 				::av_packet_unref(_packet);
 
-				if (packet_buffer->GetPts() < 0)
+				// TODO : If the pts value are under zero, the dash packettizer does not work.
+				if (media_packet->GetPts() < 0)
+				{
 					continue;
+				}
 
-				SendOutputBuffer(std::move(packet_buffer));
+				SendOutputBuffer(std::move(media_packet));
 			}
 		}
 	}
-}
-
-std::shared_ptr<MediaPacket> EncoderAAC::RecvBuffer(TranscodeResult *result)
-{
-	if (!_output_buffer.IsEmpty())
-	{
-		*result = TranscodeResult::DataReady;
-
-		auto obj = _output_buffer.Dequeue();
-		if (obj.has_value())
-		{
-			return obj.value();
-		}
-	}
-
-	*result = TranscodeResult::NoData;
-
-	return nullptr;
 }

@@ -50,7 +50,7 @@ namespace pvd
 			}
 		}
 
-		logti("%s has started to play [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
+		logti("%s has started to play [%s(%u)] stream : %s", GetApplicationTypeName(), GetName().CStr(), GetId(), GetMediaSource().CStr());
 		return Stream::Start();
 	}
 

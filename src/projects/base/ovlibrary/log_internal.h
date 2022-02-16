@@ -17,6 +17,7 @@
 #include <ctime>
 #include <mutex>
 #include <regex>
+#include <unordered_map>
 
 #include "./assert.h"
 #include "./log.h"
@@ -90,6 +91,6 @@ namespace ov
 		// This map used for cache (It reduces regex matching cost)
 		// key: tag
 		// value: is_enabled
-		std::map<ov::String, EnableItem> _enable_map;
+		std::unordered_map<ov::String, EnableItem> _enable_map;
 	};
 }  // namespace ov

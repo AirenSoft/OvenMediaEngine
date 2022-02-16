@@ -57,6 +57,16 @@ namespace pvd
 		return _signalling_socket_pool;
 	}
 
+	bool RtspcProvider::OnCreateHost(const info::Host &host_info)
+	{
+		return true;
+	}
+	
+	bool RtspcProvider::OnDeleteHost(const info::Host &host_info)
+	{
+		return true;
+	}
+
 	std::shared_ptr<pvd::Application> RtspcProvider::OnCreateProviderApplication(const info::Application &app_info)
 	{
 		if(IsModuleAvailable() == false)

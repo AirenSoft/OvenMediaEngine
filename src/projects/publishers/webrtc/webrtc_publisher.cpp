@@ -104,11 +104,38 @@ bool WebRtcPublisher::Start()
 		}
 		else
 		{
-			bool is_parsed;
-			auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&is_parsed);
-			tcp_relay_worker_count = is_parsed ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+			bool tcp_relay_bind_parsed { false };
+			ov::String tcp_relay_bind { webrtc_bind_config.GetTcpRelayBind(&tcp_relay_bind_parsed) };
+			if(tcp_relay_bind_parsed)
+			{
+				auto l_tokens { tcp_relay_bind.Split(":") };
+				if(l_tokens.size() == 2)
+				{
+					auto l_ip { (l_tokens[0].IsEmpty()) ? server_config.GetIp() : l_tokens[0] };
+					auto l_port { l_tokens[1] };
+					tcp_relay_bind = ov::String::FormatString("%s:%s", l_ip.CStr(), l_port.CStr());
+					ov::SocketAddress l_tcp_address(tcp_relay_bind);
+					tcp_relay_bind_parsed = l_tcp_address.IsValid();
+					if(!tcp_relay_bind_parsed)
+					{
+						logte("TcpRelayBind invalid address: %s", tcp_relay_bind.CStr());
+					}
+				}
+				else
+				{
+					tcp_relay_bind_parsed = false;
+					logte("TcpRelayBind format is incorrect: <Relay Local IP>:<Port>");
+				}
+			}
 
-			if(IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), std::atoi(items[1]), ov::SocketType::Tcp, tcp_relay_worker_count) == false)
+			auto tcp_relay_listen { (tcp_relay_bind_parsed) ? tcp_relay_bind : ov::String::FormatString("*:%s", items[1].CStr()) };
+			ov::SocketAddress tcp_relay_address(tcp_relay_listen);
+
+			bool tcp_relay_worker_count_parsed { false };
+			auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&tcp_relay_worker_count_parsed);
+			tcp_relay_worker_count = tcp_relay_worker_count_parsed ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+
+			if(IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), tcp_relay_address, ov::SocketType::Tcp, tcp_relay_worker_count) == false)
 			{
 				logte("Could not create Turn Server. Check your configuration");
 				result = false;
@@ -280,6 +307,25 @@ void WebRtcPublisher::OnMessage(const std::shared_ptr<ov::CommonMessage> &messag
 			return;
 		}
 	}
+}
+
+bool WebRtcPublisher::OnCreateHost(const info::Host &host_info)
+{
+	if(_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+	{
+		return _signalling_server->AppendCertificate(host_info.GetCertificate());
+	}
+
+	return true;
+}
+
+bool WebRtcPublisher::OnDeleteHost(const info::Host &host_info)
+{
+	if(_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+	{
+		return _signalling_server->RemoveCertificate(host_info.GetCertificate());
+	}
+	return true;
 }
 
 std::shared_ptr<pub::Application> WebRtcPublisher::OnCreatePublisherApplication(const info::Application &application_info)
@@ -603,8 +649,27 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::Client>
 									const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
 	logti("Stop command received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
+
+	auto final_vhost_app_name = vhost_app_name;
+	auto final_stream_name = stream_name;
+	auto [new_url_exist, new_url] = ws_client->GetData("new_url");
+	if (new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
+	{
+		ov::String uri = std::get<ov::String>(new_url);
+
+		auto parsed_url = ov::Url::Parse(uri);
+		if (parsed_url == nullptr)
+		{
+			logte("Could not parse the url: %s", uri.CStr());
+			return false;
+		}
+
+		final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
+		final_stream_name = parsed_url->Stream();
+	}
+
 	// Find Stream
-	auto stream = std::static_pointer_cast<RtcStream>(GetStream(vhost_app_name, stream_name));
+	auto stream = std::static_pointer_cast<RtcStream>(GetStream(final_vhost_app_name, final_stream_name));
 	if (!stream)
 	{
 		logte("To stop session failed. Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());

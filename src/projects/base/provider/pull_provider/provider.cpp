@@ -125,7 +125,7 @@ namespace pvd
 		if (app == nullptr)
 		{
 			UnlockPullStreamIfNeeded(app_info, stream_name, PullingItem::PullingItemState::PULLED);
-			logte("There is no such app (%s)", app_info.GetName().CStr());
+			logte("There is no such app (%s) in %s", app_info.GetName().CStr(), GetProviderName());
 			return nullptr;
 		}
 

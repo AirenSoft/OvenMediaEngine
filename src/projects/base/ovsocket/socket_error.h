@@ -61,7 +61,7 @@ namespace ov
 				return http_error;
 			}
 
-			return CreateError(error->GetCode(), "%s", error->ToString().CStr());
+			return CreateError(error->GetCode(), "%s", error->What());
 		}
 	};
 }  // namespace ov

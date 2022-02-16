@@ -70,6 +70,11 @@ std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(const char *name,
 
 bool PhysicalPortManager::DeletePort(std::shared_ptr<PhysicalPort> &port)
 {
+	if (port == nullptr)
+	{
+		return false;
+	}
+
 	auto lock_guard = std::lock_guard(_port_list_mutex);
 
 	auto key = std::make_pair(port->GetType(), port->GetAddress());

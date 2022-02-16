@@ -190,7 +190,7 @@ namespace ov
 
 			default:
 				// Another error
-				logte("An error occurred while accept SSL connection: %s", ov::OpensslError::CreateErrorFromOpenssl()->ToString().CStr());
+				logte("An error occurred while accept SSL connection: %s", OpensslError().What());
 				break;
 		}
 
@@ -202,7 +202,7 @@ namespace ov
 		if (_ssl == nullptr)
 		{
 			logte("SSL is nullptr");
-			return OpensslError::CreateError("SSL is nullptr");
+			return std::make_shared<OpensslError>("SSL is nullptr");
 		}
 
 		// @return Returns
@@ -220,7 +220,7 @@ namespace ov
 			return nullptr;
 		}
 
-		return OpensslError::CreateErrorFromOpenssl(_ssl, result);
+		return std::make_shared<OpensslError>(_ssl, result);
 	}
 
 	int Tls::Read(void *buffer, size_t length, size_t *read_bytes)

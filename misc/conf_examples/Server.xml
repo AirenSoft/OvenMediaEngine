@@ -143,6 +143,12 @@
 		</Host>
 		<API>
 			<AccessToken>ome-access-token</AccessToken>
+
+			<CrossDomains>
+				<Url>*.airensoft.com</Url>
+				<Url>http://*.sub-domain.airensoft.com</Url>
+				<Url>http?://airensoft.*</Url>
+			</CrossDomains>
 		</API>
 	</Managers>
 	-->
@@ -212,6 +218,7 @@
 						<Scheme>ovt</Scheme>
 						<Urls><Url>origin.com:9000/app/stream_720p</Url></Urls>
 					</Pass>
+					<ForwardQueryParams>false</ForwardQueryParams>
 				</Origin>
 				<Origin>
 					<Location>/app/</Location>

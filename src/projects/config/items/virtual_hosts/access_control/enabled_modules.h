@@ -16,8 +16,8 @@ namespace cfg
 		{
 			struct EnabledModules : public Text
 			{
-				CFG_DECLARE_REF_GETTER_OF(GetValue, _value)
-				CFG_DECLARE_REF_GETTER_OF(GetValueList, _value_list)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetValue, _value)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetValueList, _value_list)
 
 				bool IsExist(ov::String value) const
 				{
@@ -35,7 +35,7 @@ namespace cfg
 					return false;
 				}
 
-				ov::String ToString() const
+				ov::String ToString() const override
 				{
 					return _value;
 				}

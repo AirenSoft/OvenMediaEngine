@@ -23,33 +23,14 @@ namespace cfg
 	}
 
 	ItemName::ItemName(const char *xml_name, const char *json_name)
-		: ItemName(xml_name, json_name, OmitRule::Default)
-	{
-	}
-
-	ItemName::ItemName(const char *xml_name, OmitRule omit_rule)
-		: ItemName(xml_name)
-	{
-		this->omit_rule = omit_rule;
-	}
-
-	ItemName::ItemName(const char *xml_name, const char *json_name, OmitRule omit_rule)
 		: xml_name(xml_name),
-		  json_name(json_name),
-		  omit_rule(omit_rule)
+		  json_name(json_name)
 	{
 	}
 
 	ov::String ItemName::ToString() const
 	{
-		ov::String name;
-
-		if (index >= 0)
-		{
-			name.AppendFormat("#%d ", index);
-		}
-
-		name.AppendFormat("%s", xml_name.CStr());
+		ov::String name = xml_name.CStr();
 
 		if (_created_from_xml_name == false)
 		{

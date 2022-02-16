@@ -24,7 +24,7 @@ namespace cfg
 			}
 
 		protected:
-			MAY_THROWS(std::shared_ptr<ConfigError>)
+			MAY_THROWS(cfg::ConfigError)
 			void FromString(const ov::String &str) override
 			{
 				_port = str;

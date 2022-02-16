@@ -87,6 +87,13 @@ namespace pvd
 			auto peer_media_desc = peer_media_desc_list[i];
 			auto offer_media_desc = offer_media_desc_list[i];
 
+			if(peer_media_desc->GetDirection() != MediaDescription::Direction::SendOnly &&
+				peer_media_desc->GetDirection() != MediaDescription::Direction::SendRecv)
+			{
+				logtd("Media (%s) is inactive", peer_media_desc->GetMediaTypeStr().CStr());
+				continue;
+			}
+
 			// The first payload has the highest priority.
 			auto first_payload = peer_media_desc->GetFirstPayload();
 			if (first_payload == nullptr)
@@ -374,7 +381,7 @@ namespace pvd
 		SendFrame(frame);
 
 		// Send FIR to reduce keyframe interval
-		if (_fir_timer.IsElapsed(1000) && track->GetMediaType() == cmn::MediaType::Video)
+		if (_fir_timer.IsElapsed(2000) && track->GetMediaType() == cmn::MediaType::Video)
 		{
 			_fir_timer.Update();
 			_rtp_rtcp->SendPLI(first_rtp_packet->Ssrc());

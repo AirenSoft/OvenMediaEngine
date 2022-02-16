@@ -17,7 +17,235 @@
 
 namespace ocst
 {
-	bool Orchestrator::ApplyOriginMap(const std::vector<info::Host> &host_list)
+	bool Orchestrator::StartServer(const std::shared_ptr<const cfg::Server> &server_config)
+	{
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+
+		_server_config = server_config;
+
+		mon::Monitoring::GetInstance()->OnServerStarted(server_config);
+
+		auto &vhost_conf_list = _server_config->GetVirtualHostList();
+
+		for (const auto &vhost_conf : vhost_conf_list)
+		{
+			// Create VirtualHost in Orchestrator
+			if(CreateVirtualHost(vhost_conf) != Result::Succeeded)
+			{
+				logte("Could not create VirtualHost(%s)", vhost_conf.GetName().CStr());
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	ocst::Result Orchestrator::Release()
+	{
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+
+		// Mark all items as NeedToCheck
+		for (auto &vhost_item : _virtual_host_list)
+		{
+			mon::Monitoring::GetInstance()->OnHostDeleted(vhost_item->host_info);
+
+			auto app_map = vhost_item->app_map;
+			for (auto &app_item : app_map)
+			{
+				auto &app_info = app_item.second->app_info;
+
+				auto result = OrchestratorInternal::DeleteApplication(app_info);
+				if (result != Result::Succeeded)
+				{
+					logte("Could not delete application: %s", app_info.GetName().CStr());
+					continue;
+				}
+			}
+
+			app_map.clear();
+		}
+
+		_virtual_host_list.clear();
+		_virtual_host_map.clear();
+
+		mon::Monitoring::GetInstance()->Release();
+
+		return Result::Succeeded;
+	}
+
+	Result Orchestrator::CreateVirtualHost(const cfg::vhost::VirtualHost &vhost_cfg)
+	{
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+
+		info::Host vhost_info(_server_config->GetName(), _server_config->GetID(), vhost_cfg);
+
+		auto result = OrchestratorInternal::CreateVirtualHost(vhost_info);
+		switch (result)
+		{
+			case ocst::Result::Failed:
+				logtc("Failed to create a virtual host: %s", vhost_cfg.GetName().CStr());
+				return result;
+
+			case ocst::Result::Succeeded:
+				break;
+
+			case ocst::Result::Exists:
+				logtc("Duplicate virtual host [%s] found. Please check the settings.", vhost_cfg.GetName().CStr());
+				return result;
+
+			case ocst::Result::NotExists:
+				// This should never happen
+				OV_ASSERT2(false);
+				logtc("Internal error occurred (THIS IS A BUG)");
+				return result;
+		}
+
+		// Create Applications
+		for (const auto &app_cfg : vhost_info.GetApplicationList())
+		{
+			if(CreateApplication(vhost_info, app_cfg) != Result::Succeeded)
+			{
+				// Rollback
+				DeleteVirtualHost(vhost_info);
+				return Result::Failed;
+			}
+		}
+
+		return Result::Succeeded;
+	}
+
+	Result Orchestrator::DeleteVirtualHost(const info::Host &vhost_info)
+	{
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+
+		// Delete Applications
+		auto vhost = GetVirtualHost(vhost_info.GetName());
+		// Copy app list so that 
+		auto app_map = vhost->app_map;
+		for(const auto &item : app_map)
+		{
+			auto app = item.second;
+			if(DeleteApplication(app->app_info) != Result::Succeeded)
+			{
+				logtc("Failed to delete an application (%s) in virtual host (%s)", app->app_info.GetName().CStr(), vhost_info.GetName().CStr());
+				return Result::Failed;
+			}
+		}
+
+		auto result = OrchestratorInternal::DeleteVirtualHost(vhost_info);
+		switch (result)
+		{
+			case ocst::Result::Failed:
+				logtc("Failed to delete a virtual host: %s", vhost_info.GetName().CStr());
+				return result;
+
+			case ocst::Result::Succeeded:
+				break;
+
+			case ocst::Result::Exists:
+				// This should never happen
+				OV_ASSERT2(false);
+				logtc("Duplicate virtual host [%s] found. Please check the settings.", vhost_info.GetName().CStr());
+				return result;
+
+			case ocst::Result::NotExists:
+				logtc("Unable to delete vhost (does not exist): %s", vhost_info.GetName().CStr());
+				return result;
+		}
+
+		return result;
+	}
+
+	std::optional<info::Host> Orchestrator::GetHostInfo(ov::String vhost_name)
+	{
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+
+		auto vhost = OrchestratorInternal::GetVirtualHost(vhost_name);
+
+		if(vhost != nullptr)
+		{
+			return vhost->host_info;
+		}
+
+		return std::nullopt;
+	}
+
+	ocst::Result Orchestrator::CreateApplication(const info::Host &host_info, const cfg::vhost::app::Application &app_config)
+	{
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+
+		auto vhost_name = host_info.GetName();
+
+		info::Application app_info(host_info, GetNextAppId(), ResolveApplicationName(vhost_name, app_config.GetName()), app_config, false);
+
+		auto result = OrchestratorInternal::CreateApplication(vhost_name, app_info);
+		switch (result)
+		{
+			case ocst::Result::Failed:
+				logtc("Failed to create an application: %s/%s", vhost_name.CStr(), app_config.GetName().CStr());
+				break;
+
+			case ocst::Result::Succeeded:
+				break;
+
+			case ocst::Result::Exists:
+				logtc("Duplicate application [%s/%s] found. Please check the settings.", vhost_name.CStr(), app_config.GetName().CStr());
+				break;
+
+			case ocst::Result::NotExists:
+				// This should never happen
+				OV_ASSERT2(false);
+				logtc("Internal error occurred (THIS IS A BUG)");
+				break;
+		}
+
+		return result;
+	}
+
+	ocst::Result Orchestrator::DeleteApplication(const info::Application &app_info)
+	{
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+
+		auto result = OrchestratorInternal::DeleteApplication(app_info);
+		switch (result)
+		{
+			case ocst::Result::Failed:
+				logtc("Failed to delete an application: %s", app_info.GetName().CStr());
+				return result;
+
+			case ocst::Result::Succeeded:
+				break;
+
+			case ocst::Result::Exists:
+				// This should never happen
+				OV_ASSERT2(false);
+				logtc("Duplicate application [%s] found. Please check the settings.", app_info.GetName().CStr());
+				return result;
+
+			case ocst::Result::NotExists:
+				logtc("Unable to delete application (does not exist): %s", app_info.GetName().CStr());
+				return result;
+		}
+
+		return result;
+	}
+
+	const info::Application &Orchestrator::GetApplicationInfo(const ov::String &vhost_name, const ov::String &app_name) const
+	{
+		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
+
+		return OrchestratorInternal::GetApplicationInfo(vhost_name, app_name);
+	}
+
+	const info::Application &Orchestrator::GetApplicationInfo(const info::VHostAppName &vhost_app_name) const
+	{
+		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
+
+		return OrchestratorInternal::GetApplicationInfo(vhost_app_name);
+	}
+
+
+	bool Orchestrator::UpdateVirtualHosts(const std::vector<info::Host> &host_list)
 	{
 		bool result = true;
 		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
@@ -40,41 +268,14 @@ namespace ocst
 		{
 			auto previous_vhost_item = _virtual_host_map.find(host_info.GetName());
 
+			// New VHost
 			if (previous_vhost_item == _virtual_host_map.end())
 			{
-				logtd("  - %s: New", host_info.GetName().CStr());
-				auto vhost = std::make_shared<VirtualHost>(host_info);
-
-				vhost->name = host_info.GetName();
-
-				logtd("    - Processing for hosts: %d items", host_info.GetHost().GetNameList().size());
-
-				for (auto &domain_name : host_info.GetHost().GetNameList())
-				{
-					logtd("      - %s: New", domain_name.CStr());
-					vhost->host_list.emplace_back(domain_name);
-				}
-
-				logtd("    - Processing for origins: %d items", host_info.GetOriginList().size());
-
-				for (auto &origin_config : host_info.GetOriginList())
-				{
-					logtd("      - %s: New (%zu urls)",
-						  origin_config.GetLocation().CStr(),
-						  origin_config.GetPass().GetUrlList().size());
-
-					vhost->origin_list.emplace_back(origin_config);
-				}
-
-				_virtual_host_map[host_info.GetName()] = vhost;
-				_virtual_host_list.push_back(vhost);
-
+				CreateVirtualHost(host_info);
 				continue;
 			}
 
-			logtd("  - %s: Not changed", host_info.GetName().CStr());
-
-			// Check the previous VirtualHost item
+			// If the vhost is exist(matching by name) check if there is updated info (Host, Origin)
 			auto &vhost = previous_vhost_item->second;
 
 			logtd("    - Processing for hosts");
@@ -113,7 +314,7 @@ namespace ocst
 					_virtual_host_map.erase(vhost->name);
 
 					vhost->MarkAllAs(ItemState::Delete);
-					ApplyForVirtualHost(vhost);
+					UpdateVirtualHost(vhost);
 
 					break;
 
@@ -125,7 +326,7 @@ namespace ocst
 					_virtual_host_map.erase(vhost->name);
 
 					vhost->MarkAllAs(ItemState::Delete);
-					ApplyForVirtualHost(vhost);
+					UpdateVirtualHost(vhost);
 
 					break;
 
@@ -139,7 +340,7 @@ namespace ocst
 				case ItemState::Changed:
 					++vhost_item;
 
-					if (ApplyForVirtualHost(vhost))
+					if (UpdateVirtualHost(vhost))
 					{
 						vhost->MarkAllAs(ItemState::Applied);
 					}
@@ -278,69 +479,6 @@ namespace ocst
 		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 		return OrchestratorInternal::GetUrlListForLocation(vhost_app_name, host_name, stream_name, url_list, nullptr, nullptr);
-	}
-
-	ocst::Result Orchestrator::CreateApplication(const info::Host &host_info, const cfg::vhost::app::Application &app_config)
-	{
-		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
-
-		auto vhost_name = host_info.GetName();
-
-		info::Application app_info(host_info, GetNextAppId(), ResolveApplicationName(vhost_name, app_config.GetName()), app_config, false);
-
-		return OrchestratorInternal::CreateApplication(vhost_name, app_info);
-	}
-
-	ocst::Result Orchestrator::DeleteApplication(const info::Application &app_info)
-	{
-		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
-
-		return OrchestratorInternal::DeleteApplication(app_info);
-	}
-
-	ocst::Result Orchestrator::Release()
-	{
-		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
-
-		// Mark all items as NeedToCheck
-		for (auto &vhost_item : _virtual_host_list)
-		{
-			mon::Monitoring::GetInstance()->OnHostDeleted(vhost_item->host_info);
-
-			auto app_map = vhost_item->app_map;
-			for (auto &app_item : app_map)
-			{
-				auto &app_info = app_item.second->app_info;
-
-				auto result = OrchestratorInternal::DeleteApplication(app_info);
-				if (result != Result::Succeeded)
-				{
-					logte("Could not delete application: %s", app_info.GetName().CStr());
-					continue;
-				}
-			}
-
-			app_map.clear();
-		}
-
-		_virtual_host_list.clear();
-		_virtual_host_map.clear();
-
-		return Result::Succeeded;
-	}
-
-	const info::Application &Orchestrator::GetApplicationInfo(const ov::String &vhost_name, const ov::String &app_name) const
-	{
-		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
-
-		return OrchestratorInternal::GetApplicationInfo(vhost_name, app_name);
-	}
-
-	const info::Application &Orchestrator::GetApplicationInfo(const info::VHostAppName &vhost_app_name) const
-	{
-		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
-
-		return OrchestratorInternal::GetApplicationInfo(vhost_app_name);
 	}
 
 	bool Orchestrator::RequestPullStream(
@@ -522,7 +660,7 @@ namespace ocst
 				}
 			}
 
-			if (request_from->HasQueryString())
+			if (matched_origin->forward_query_params && request_from->HasQueryString())
 			{
 				// Combine query string with the URL
 				for (auto url : url_list_in_map)

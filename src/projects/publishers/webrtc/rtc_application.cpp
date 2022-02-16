@@ -1,23 +1,22 @@
-#include "rtc_private.h"
 #include "rtc_application.h"
 
 #include "modules/ice/ice_port_manager.h"
+#include "rtc_private.h"
 
-
-std::shared_ptr<RtcApplication> RtcApplication::Create(const std::shared_ptr<pub::Publisher> &publisher, 
+std::shared_ptr<RtcApplication> RtcApplication::Create(const std::shared_ptr<pub::Publisher> &publisher,
 													   const info::Application &application_info,
-                                                       const std::shared_ptr<IcePort> &ice_port,
-                                                       const std::shared_ptr<RtcSignallingServer> &rtc_signalling)
+													   const std::shared_ptr<IcePort> &ice_port,
+													   const std::shared_ptr<RtcSignallingServer> &rtc_signalling)
 {
 	auto application = std::make_shared<RtcApplication>(publisher, application_info, ice_port, rtc_signalling);
 	application->Start();
 	return application;
 }
 
-RtcApplication::RtcApplication(const std::shared_ptr<pub::Publisher> &publisher, 
+RtcApplication::RtcApplication(const std::shared_ptr<pub::Publisher> &publisher,
 							   const info::Application &application_info,
-                               const std::shared_ptr<IcePort> &ice_port,
-                               const std::shared_ptr<RtcSignallingServer> &rtc_signalling)
+							   const std::shared_ptr<IcePort> &ice_port,
+							   const std::shared_ptr<RtcSignallingServer> &rtc_signalling)
 	: Application(publisher, application_info)
 {
 	_ice_port = ice_port;
@@ -46,14 +45,14 @@ bool RtcApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 	logtd("DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());
 
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(info->GetId()));
-	if(stream == nullptr)
+	if (stream == nullptr)
 	{
 		logte("RtcApplication::Delete stream failed. Cannot find stream (%s)", info->GetName().CStr());
 		return false;
 	}
 
 	const auto sessions = stream->GetAllSessions();
-	for(auto it = sessions.begin(); it != sessions.end();)
+	for (auto it = sessions.begin(); it != sessions.end();)
 	{
 		auto session = std::static_pointer_cast<RtcSession>(it->second);
 		it++;
@@ -70,14 +69,14 @@ bool RtcApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 
 bool RtcApplication::Start()
 {
-	if(_certificate == nullptr)
+	if (_certificate == nullptr)
 	{
 		_certificate = std::make_shared<Certificate>();
 
 		auto error = _certificate->Generate();
-		if(error != nullptr)
+		if (error != nullptr)
 		{
-			logte("Cannot create certificate: %s", error->ToString().CStr());
+			logte("Cannot create certificate: %s", error->What());
 			return false;
 		}
 	}

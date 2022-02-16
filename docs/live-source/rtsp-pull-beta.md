@@ -14,11 +14,24 @@ RTSP Pull is provided through OriginMap configuration. OriginMap is the rule tha
 		<VirtualHost>
 			<Name>default</Name>
 
-			<Domain>
+			<Host>
 				<Names>
+					<!-- Host names
+						<Name>stream1.airensoft.com</Name>
+						<Name>stream2.airensoft.com</Name>
+						<Name>*.sub.airensoft.com</Name>
+						<Name>192.168.0.1</Name>
+					-->
 					<Name>*</Name>
 				</Names>
-			</Domain>
+				<!--
+				<TLS>
+					<CertPath>path/to/file.crt</CertPath>
+					<KeyPath>path/to/file.key</KeyPath>
+					<ChainCertPath>path/to/file.crt</ChainCertPath>
+				</TLS>
+				-->
+			</Host>
 			
 			<Origins>
 				<Origin>

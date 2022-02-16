@@ -12,6 +12,7 @@
 #include <base/ovlibrary/ovlibrary.h>
 
 #include "../codec/codec_utilities.h"
+#include "../transcoder_gpu.h"
 #include "../transcoder_private.h"
 
 MediaFilterRescaler::MediaFilterRescaler()
@@ -115,6 +116,31 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 		return false;
 	}
 
+	std::vector<ov::String> filters;
+
+	if (output_context->GetFrameRate() > 0.0f)
+	{
+		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()));
+	}
+
+	if (output_context->GetHardwareAccel() == true && 
+		TranscodeGPU::GetInstance()->IsSupportedNV() == true && 
+		input_media_track->GetFormat() == AV_PIX_FMT_NV12 && 
+		output_context->GetColorspace() == AV_PIX_FMT_NV12)
+	{
+		filters.push_back(ov::String::FormatString("hwupload_cuda,scale_cuda=%d:%d,hwdownload", 
+			output_context->GetVideoWidth(), output_context->GetVideoHeight()));
+	}
+	else
+	{
+		filters.push_back(ov::String::FormatString("scale=%dx%d:flags=bilinear", 
+			output_context->GetVideoWidth(), output_context->GetVideoHeight()));
+	}
+
+	filters.push_back(ov::String::FormatString("settb=%s", output_context->GetTimeBase().GetStringExpr().CStr()));
+
+	ov::String output_filters = ov::String::Join(filters, ",");
+
 	_outputs->name = ::av_strdup("in");
 	_outputs->filter_ctx = _buffersrc_ctx;
 	_outputs->pad_idx = 0;
@@ -125,17 +151,6 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	_inputs->pad_idx = 0;
 	_inputs->next = nullptr;
 
-	std::vector<ov::String> filters;
-
-	if (output_context->GetFrameRate() > 0.0f)
-	{
-		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()));
-	}
-	filters.push_back(ov::String::FormatString("scale=%dx%d:flags=bilinear", output_context->GetVideoWidth(), output_context->GetVideoHeight()));
-	filters.push_back(ov::String::FormatString("settb=%s", output_context->GetTimeBase().GetStringExpr().CStr()));
-
-
-	ov::String output_filters = ov::String::Join(filters, ",");
 	if ((ret = ::avfilter_graph_parse_ptr(_filter_graph, output_filters, &_inputs, &_outputs, nullptr)) < 0)
 	{
 		logte("Could not parse filter string for rescaling: %d (%s)", ret, output_filters.CStr());
@@ -153,21 +168,6 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	_input_context = input_context;
 	_output_context = output_context;
 
-	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
-	try
-	{
-		_kill_flag = false;
-
-		_thread_work = std::thread(&MediaFilterRescaler::ThreadFilter, this);
-		pthread_setname_np(_thread_work.native_handle(), "Rescaler");
-	}
-	catch (const std::system_error &e)
-	{
-		_kill_flag = true;
-
-		logte("Failed to start transcode rescale filter thread.");
-	}
-
 	return true;
 }
 
@@ -176,6 +176,27 @@ int32_t MediaFilterRescaler::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 	_input_buffer.Enqueue(std::move(buffer));
 
 	return 0;
+}
+
+bool MediaFilterRescaler::Start()
+{
+	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
+	try
+	{
+		_kill_flag = false;
+
+		_thread_work = std::thread(&MediaFilterRescaler::FilterThread, this);
+		pthread_setname_np(_thread_work.native_handle(), "Rescaler");
+	}
+	catch (const std::system_error &e)
+	{
+		_kill_flag = true;
+
+		logte("Failed to start transcode rescale filter thread.");
+		return false;
+	}
+
+	return true;
 }
 
 void MediaFilterRescaler::Stop()
@@ -192,7 +213,7 @@ void MediaFilterRescaler::Stop()
 	}
 }
 
-void MediaFilterRescaler::ThreadFilter()
+void MediaFilterRescaler::FilterThread()
 {
 	logtd("Start transcode rescaler filter thread.");
 
@@ -202,44 +223,16 @@ void MediaFilterRescaler::ThreadFilter()
 		if (obj.has_value() == false)
 			continue;
 
-		auto frame = std::move(obj.value());
+		auto media_frame = std::move(obj.value());
 
-		_frame->format = frame->GetFormat();
-		_frame->width = frame->GetWidth();
-		_frame->height = frame->GetHeight();
-		_frame->pts = frame->GetPts();
-		_frame->pkt_duration = frame->GetDuration();
-
-		_frame->linesize[0] = frame->GetStride(0);
-		_frame->linesize[1] = frame->GetStride(1);
-		_frame->linesize[2] = frame->GetStride(2);
-
-		int ret = ::av_frame_get_buffer(_frame, 32);
-		if (ret < 0)
+		auto av_frame = TranscoderUtilities::MediaFrameToAVFrame(cmn::MediaType::Video, media_frame);
+		if (!av_frame)
 		{
-			logte("Could not allocate the video frame data\n");
+			logte("Could not allocate the video frame data");
 			break;
 		}
 
-		ret = ::av_frame_make_writable(_frame);
-		if (ret < 0)
-		{
-			logte("Could not make writable frame. error(%d)", ret);
-			break;
-		}
-
-		// Copy data of MediaFrame to AVFrame
-		for (int plane = 0; plane < 3; plane++)
-		{
-			size_t buffer_size = frame->GetBufferSize(plane);
-			if (buffer_size > 0)
-			{
-				::memcpy(_frame->data[plane], frame->GetBuffer(plane), frame->GetBufferSize(plane));
-			}
-		}
-
-		ret = ::av_buffersrc_add_frame_flags(_buffersrc_ctx, _frame, AV_BUFFERSRC_FLAG_KEEP_REF);
-		::av_frame_unref(_frame);
+		int ret = ::av_buffersrc_add_frame_flags(_buffersrc_ctx, av_frame, AV_BUFFERSRC_FLAG_KEEP_REF);
 		if (ret < 0)
 		{
 			logte("An error occurred while feeding the audio filtergraph: format: %d, pts: %lld, linesize: %d, size: %d", _frame->format, _frame->pts, _frame->linesize[0], _input_buffer.Size());
@@ -267,15 +260,12 @@ void MediaFilterRescaler::ThreadFilter()
 			}
 			else
 			{
-				auto output_frame = TranscoderUtilities::ConvertToMediaFrame(cmn::MediaType::Video, _frame);
+				auto output_frame = TranscoderUtilities::AvFrameToMediaFrame(cmn::MediaType::Video, _frame);
+				::av_frame_unref(_frame);
 				if (output_frame == nullptr)
 				{
 					continue;
 				}
-
-				//logtp("Rescaled data: %lld (%.0f)\n%s", output_frame->GetPts(), output_frame->GetPts() * _output_context->GetTimeBase().GetExpr() * 1000.0f, ov::Dump(_frame->data[0], _frame->linesize[0], 32).CStr());
-
-				::av_frame_unref(_frame);
 
 				_output_buffer.Enqueue(std::move(output_frame));
 			}

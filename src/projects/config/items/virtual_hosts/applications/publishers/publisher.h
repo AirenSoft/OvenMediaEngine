@@ -19,7 +19,7 @@ namespace cfg
 				struct Publisher : public Item
 				{
 					virtual PublisherType GetType() const = 0;
-					CFG_DECLARE_REF_GETTER_OF(GetMaxConnection, _max_connection)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetMaxConnection, _max_connection)
 
 				protected:
 					void MakeList() override

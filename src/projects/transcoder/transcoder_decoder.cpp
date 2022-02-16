@@ -175,6 +175,34 @@ void TranscodeDecoder::SendBuffer(std::shared_ptr<const MediaPacket> packet)
 	_input_buffer.Enqueue(std::move(packet));
 }
 
+void TranscodeDecoder::SendOutputBuffer(bool change_format, int32_t track_id, std::shared_ptr<MediaFrame> frame)
+{
+	_output_buffer.Enqueue(std::move(frame));
+
+	// Invoke callback function when encoding/decoding is completed.
+	if (OnCompleteHandler)
+	{
+		OnCompleteHandler(change_format ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, track_id);
+	}
+}
+
+std::shared_ptr<MediaFrame> TranscodeDecoder::RecvBuffer(TranscodeResult *result)
+{
+	if (!_output_buffer.IsEmpty())
+	{
+		*result = TranscodeResult::DataReady;
+
+		auto obj = _output_buffer.Dequeue();
+		if (obj.has_value())
+		{
+			return obj.value();
+		}
+	}
+
+	*result = TranscodeResult::NoData;
+	return nullptr;
+}
+
 void TranscodeDecoder::Stop()
 {
 	_kill_flag = true;
@@ -182,11 +210,11 @@ void TranscodeDecoder::Stop()
 	_input_buffer.Stop();
 	_output_buffer.Stop();
 
-	if (_thread_work.joinable())
+	if (_codec_thread.joinable())
 	{
-		_thread_work.join();
+		_codec_thread.join();
 
-		logtd(ov::String::FormatString("decoder %s thread has ended.", avcodec_get_name(GetCodecID())).CStr());
+		logtd(ov::String::FormatString("decoder %s thread has ended", avcodec_get_name(GetCodecID())).CStr());
 	}
 }
 

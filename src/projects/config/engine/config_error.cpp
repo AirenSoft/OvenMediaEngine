@@ -10,15 +10,11 @@
 
 namespace cfg
 {
-	ConfigError::ConfigError(const char *file_name, int line_number, ov::String message)
-		: ov::Error("Config", message),
+	ConfigError::ConfigError(const char *file_name, int line_number, const char *format, ...)
+		: ov::Error("Config"),
 
 		  _file_name(file_name),
 		  _line_number(line_number)
-	{
-	}
-
-	std::shared_ptr<ConfigError> ConfigError::CreateError(const char *file_name, int line_number, const char *format, ...)
 	{
 		ov::String message;
 		va_list list;
@@ -26,12 +22,12 @@ namespace cfg
 		message.VFormat(format, list);
 		va_end(list);
 
-		return std::make_shared<ConfigError>(file_name, line_number, message);
+		SetMessage(std::move(message));
 	}
 
 	ov::String ConfigError::GetDetailedMessage() const
 	{
-		auto message = GetMessage();
+		ov::String message = what();
 
 		message.AppendFormat(" (%s:%d)", _file_name.CStr(), _line_number);
 

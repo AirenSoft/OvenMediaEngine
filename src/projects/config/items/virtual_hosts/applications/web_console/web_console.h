@@ -18,10 +18,10 @@ namespace cfg
 			{
 				struct WebConsole : public Item
 				{
-					CFG_DECLARE_REF_GETTER_OF(GetListenPort, _listen_port)
-					CFG_DECLARE_REF_GETTER_OF(GetLoginId, _login_id)
-					CFG_DECLARE_REF_GETTER_OF(GetLoginPw, _login_pw)
-					CFG_DECLARE_REF_GETTER_OF(GetDocumentPath, _document_path)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetListenPort, _listen_port)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetLoginId, _login_id)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetLoginPw, _login_pw)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetDocumentPath, _document_path)
 
 				protected:
 					void MakeList() override

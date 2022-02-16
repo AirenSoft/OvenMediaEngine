@@ -12,9 +12,11 @@
 
 #include <functional>
 
-#include "config_error.h"
-#include "item_name.h"
-#include "value_type.h"
+#include "./annotations.h"
+#include "./config_error.h"
+#include "./data_source.h"
+#include "./item_name.h"
+#include "./value_type.h"
 
 namespace cfg
 {
@@ -25,29 +27,44 @@ namespace cfg
 
 	using ValidationCallback = std::function<std::shared_ptr<ConfigError>()>;
 
-	class Child
+	class Child : public ov::EnableSharedFromThis<Child>
 	{
 		friend class Item;
 
 	public:
 		Child() = default;
-		Child(const ItemName &name, ValueType type, const ov::String &type_name,
-			  bool is_optional, bool resolve_path,
+		Child(const ItemName &item_name, ValueType type, const ov::String &type_name,
+			  Optional is_optional, ResolvePath resolve_path, OmitJsonName omit_json_name,
 			  OptionalCallback optional_callback, ValidationCallback validation_callback,
-			  const void *raw_target, std::any target)
-			: _name(name),
+			  void *member_raw_pointer, Variant member_pointer)
+			: _item_name(item_name),
 			  _type(type),
 			  _type_name(type_name),
 
 			  _is_optional(is_optional),
 			  _resolve_path(resolve_path),
+			  _omit_json_name(omit_json_name),
 
 			  _optional_callback(optional_callback),
 			  _validation_callback(validation_callback),
 
-			  _raw_target(raw_target),
-			  _target(std::move(target))
+			  _member_raw_pointer(member_raw_pointer),
+			  _member_pointer(member_pointer)
 		{
+		}
+
+		virtual ~Child() = default;
+
+		void CopyFrom(const std::shared_ptr<const Child> &another_child)
+		{
+			_is_parsed = another_child->_is_parsed;
+
+			_original_value = another_child->_original_value;
+		}
+
+		void SetParsed(bool is_parsed)
+		{
+			_is_parsed = is_parsed;
 		}
 
 		bool IsParsed() const
@@ -55,9 +72,14 @@ namespace cfg
 			return _is_parsed;
 		}
 
-		const ItemName &GetName() const
+		void SetItemName(const ItemName &item_name)
 		{
-			return _name;
+			_item_name = item_name;
+		}
+
+		const ItemName &GetItemName() const
+		{
+			return _item_name;
 		}
 
 		ValueType GetType() const
@@ -72,12 +94,17 @@ namespace cfg
 
 		bool IsOptional() const
 		{
-			return _is_optional;
+			return _is_optional == Optional::Optional;
 		}
 
 		bool ResolvePath() const
 		{
-			return _resolve_path;
+			return _resolve_path == ResolvePath::Resolve;
+		}
+
+		bool OmitJsonName() const
+		{
+			return _omit_json_name == OmitJsonName::Omit;
 		}
 
 		OptionalCallback GetOptionalCallback() const
@@ -92,37 +119,46 @@ namespace cfg
 
 		std::shared_ptr<ConfigError> CallOptionalCallback() const
 		{
-			if (_optional_callback != nullptr)
-			{
-				return _optional_callback();
-			}
-
-			return nullptr;
+			return (_optional_callback != nullptr) ? _optional_callback() : nullptr;
 		}
 
 		std::shared_ptr<ConfigError> CallValidationCallback() const
 		{
-			if (_validation_callback != nullptr)
-			{
-				return _validation_callback();
-			}
-
-			return nullptr;
+			return (_validation_callback != nullptr) ? _validation_callback() : nullptr;
 		}
 
-		const void *GetRawTarget() const
+		Variant &GetMemberPointer()
 		{
-			return _raw_target;
+			return _member_pointer;
 		}
 
-		std::any &GetTarget()
+		const Variant &GetMemberPointer() const
 		{
-			return _target;
+			return _member_pointer;
 		}
 
-		const std::any &GetTarget() const
+		MAY_THROWS(cfg::CastException)
+		template <typename Toutput_type, typename... Ttype>
+		Toutput_type *GetMemberPointerAs()
 		{
-			return _target;
+			return _member_pointer.TryCast<Toutput_type *, Ttype...>();
+		}
+
+		MAY_THROWS(cfg::CastException)
+		template <typename Toutput_type, typename... Ttype>
+		const Toutput_type *GetMemberPointerAs() const
+		{
+			return _member_pointer.TryCast<Toutput_type *, Ttype...>();
+		}
+
+		void *GetMemberRawPointer()
+		{
+			return _member_raw_pointer;
+		}
+
+		const void *GetMemberRawPointer() const
+		{
+			return _member_raw_pointer;
 		}
 
 		const Json::Value &GetOriginalValue() const
@@ -130,39 +166,35 @@ namespace cfg
 			return _original_value;
 		}
 
+		MAY_THROWS(cfg::ConfigError)
+		void SetValue(const Variant &value, bool is_parent_optional);
+
+		MAY_THROWS(cfg::ConfigError)
+		void SetValue(const ov::String &item_path, const DataSource &data_source, bool is_parent_optional);
+
 	protected:
 		void SetOriginalValue(Json::Value value)
 		{
 			_original_value = std::move(value);
 		}
 
-		void Update(
-			OptionalCallback optional_callback, ValidationCallback validation_callback,
-			const void *raw_target, std::any target)
-		{
-			_optional_callback = optional_callback;
-			_validation_callback = validation_callback;
-			_raw_target = raw_target;
-			_target = std::move(target);
-		}
-
 		bool _is_parsed = false;
 
-		ItemName _name;
+		ItemName _item_name;
 		ValueType _type = ValueType::Unknown;
 		ov::String _type_name;
 
-		bool _is_optional = false;
-		bool _resolve_path = false;
+		cfg::Optional _is_optional = Optional::NotOptional;
+		cfg::ResolvePath _resolve_path = ResolvePath::DontResolve;
+		cfg::OmitJsonName _omit_json_name = OmitJsonName::DontOmit;
 
 		OptionalCallback _optional_callback = nullptr;
 		ValidationCallback _validation_callback = nullptr;
 
-		// This value used to determine a member using a pointer
-		const void *_raw_target = nullptr;
-
-		// Contains a pointer of member variable
-		std::any _target;
+		// This value contains a pointer to point a member variable
+		void *_member_raw_pointer;
+		// This value contains the pointer + a type of the member variable
+		Variant _member_pointer;
 
 		Json::Value _original_value;
 	};

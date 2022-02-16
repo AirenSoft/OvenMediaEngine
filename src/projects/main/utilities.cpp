@@ -12,7 +12,7 @@
 
 bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 {
-	constexpr const char *opt_string = "hvic:d";
+	constexpr const char *opt_string = "hvc:dp:";
 
 	while (true)
 	{
@@ -32,10 +32,6 @@ bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 				parse_option->version = true;
 				return true;
 
-			case 'i':
-				parse_option->ignore_last_config = true;
-				break;
-
 			case 'c':
 				parse_option->config_path = optarg;
 				break;
@@ -43,6 +39,10 @@ bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 			case 'd':
 				// Don't use this option manually
 				parse_option->start_service = true;
+				break;
+
+			case 'p':
+				parse_option->pid_path = optarg;
 				break;
 
 			default:  // '?'

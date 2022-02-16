@@ -16,7 +16,7 @@ namespace http
 {
 	namespace svr
 	{
-		std::shared_ptr<HttpServer> HttpServerManager::CreateHttpServer(const char *server_name, const ov::SocketAddress &address, int worker_count)
+		std::shared_ptr<HttpServer> HttpServerManager::CreateHttpServer(const char *instance_name, const ov::SocketAddress &address, int worker_count)
 		{
 			std::shared_ptr<HttpServer> http_server = nullptr;
 
@@ -57,7 +57,7 @@ namespace http
 				else
 				{
 					// Create a new HTTP server
-					http_server = std::make_shared<HttpServer>(server_name);
+					http_server = std::make_shared<HttpServer>(instance_name);
 
 					if (http_server->Start(address, worker_count))
 					{
@@ -74,19 +74,93 @@ namespace http
 			}
 		}
 
-		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *server_name, const ov::SocketAddress &address, const std::vector<std::shared_ptr<ocst::VirtualHost>> &vhost_list, int worker_count)
+		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *instance_name, const ov::SocketAddress &address, int worker_count)
 		{
-			auto https_server = GetHttpsServer(server_name, address, worker_count);
+			std::shared_ptr<HttpsServer> https_server = nullptr;
 
+			auto lock_guard = std::lock_guard(_http_servers_mutex);
+			auto item = _http_servers.find(address);
+
+			if (item != _http_servers.end())
+			{
+				auto http_server = item->second;
+
+				// Assume that http_server is not HttpsServer
+				https_server = std::dynamic_pointer_cast<HttpsServer>(http_server);
+
+				if (https_server == nullptr)
+				{
+					logte("Cannot reuse instance: Requested HttpsServer, but previous instance is Server (%s)", address.ToString().CStr());
+				}
+			}
+			else
+			{
+				// Create a new HTTP server
+				https_server = std::make_shared<HttpsServer>(instance_name);
+
+				if (https_server->Start(address, worker_count))
+				{
+					_http_servers[address] = https_server;
+				}
+				else
+				{
+					// Failed to start HTTP server
+					https_server = nullptr;
+				}
+			}
+
+			return https_server;
+		}
+
+		bool HttpServerManager::AppendCertificate(const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate)
+		{
+			auto https_server = GetHttpsServer(address);
+			if (https_server == nullptr)
+			{
+				logte("Could not find https server(%s) to append certificate", address.ToString(false).CStr());
+				return false;
+			}
+
+			auto error = https_server->AppendCertificate(certificate);
+			if (error != nullptr)
+			{
+				logte("Could not set certificate to https server(%s) : %s", address.ToString(false).CStr(), error->What());
+				return false;
+			}
+
+			return true;
+		}
+
+		bool HttpServerManager::RemoveCertificate(const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate)
+		{
+			auto https_server = GetHttpsServer(address);
+			if (https_server == nullptr)
+			{
+				logte("Could not find https server(%s) to append certificate", address.ToString(false).CStr());
+				return false;
+			}
+
+			auto error = https_server->RemoveCertificate(certificate);
+			if (error != nullptr)
+			{
+				logte("Could not set certificate to https server(%s) : %s", address.ToString(false).CStr(), error->What());
+				return false;
+			}
+
+			return true;
+		}
+
+		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *instance_name, const ov::SocketAddress &address, const std::vector<std::shared_ptr<ocst::VirtualHost>> &vhost_list, int worker_count)
+		{
+			auto https_server = CreateHttpsServer(instance_name, address, worker_count);
 			if (https_server != nullptr)
 			{
 				for (auto &vhost : vhost_list)
 				{
 					auto error = https_server->AppendCertificate(vhost->host_info.GetCertificate());
-
 					if (error != nullptr)
 					{
-						logte("Could not set certificate: %s", error->ToString().CStr());
+						logte("Could not set certificate: %s", error->What());
 						https_server = nullptr;
 						break;
 					}
@@ -100,17 +174,15 @@ namespace http
 			return https_server;
 		}
 
-		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *server_name, const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate, int worker_count)
+		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *instance_name, const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate, int worker_count)
 		{
-			auto https_server = GetHttpsServer(server_name, address, worker_count);
-
+			auto https_server = CreateHttpsServer(instance_name, address, worker_count);
 			if (https_server != nullptr)
 			{
 				auto error = https_server->AppendCertificate(certificate);
-
 				if (error != nullptr)
 				{
-					logte("Could not set certificate: %s", error->ToString().CStr());
+					logte("Could not set certificate: %s", error->What());
 					https_server = nullptr;
 				}
 				else
@@ -133,7 +205,7 @@ namespace http
 			return false;
 		}
 
-		std::shared_ptr<HttpsServer> HttpServerManager::GetHttpsServer(const char *server_name, const ov::SocketAddress &address, int worker_count)
+		std::shared_ptr<HttpsServer> HttpServerManager::GetHttpsServer(const ov::SocketAddress &address)
 		{
 			std::shared_ptr<HttpsServer> https_server = nullptr;
 
@@ -146,30 +218,13 @@ namespace http
 
 				// Assume that http_server is not HttpsServer
 				https_server = std::dynamic_pointer_cast<HttpsServer>(http_server);
-
 				if (https_server == nullptr)
 				{
 					logte("Cannot reuse instance: Requested HttpsServer, but previous instance is Server (%s)", address.ToString().CStr());
 				}
 			}
-			else
-			{
-				// Create a new HTTP server
-				https_server = std::make_shared<HttpsServer>(server_name);
-
-				if (https_server->Start(address, worker_count))
-				{
-					_http_servers[address] = https_server;
-				}
-				else
-				{
-					// Failed to start HTTP server
-					https_server = nullptr;
-				}
-			}
 
 			return https_server;
 		}
-
 	}  // namespace svr
 }  // namespace http

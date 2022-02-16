@@ -5,6 +5,7 @@
 #include "base/common_types.h"
 #include "base/info/stream.h"
 #include "base/info/session.h"
+#include "base/info/push.h"
 #include "base/mediarouter/mediarouter_application_observer.h"
 #include "base/ovlibrary/semaphore.h"
 #include "base/ovlibrary/string.h"
@@ -128,5 +129,24 @@ namespace pub
 		std::vector<std::shared_ptr<ApplicationWorker>>	_application_workers;
 
 		std::shared_ptr<Publisher>		_publisher;
+	};
+
+	class PushApplication : public Application
+	{
+	public:
+		enum ErrorCode
+		{
+			Success,
+			FailureInvalidParameter,
+			FailureDupulicateKey,
+			FailureNotExist,
+			FailureUnknown
+		};
+
+		explicit PushApplication(const std::shared_ptr<Publisher> &publisher, const info::Application &application_info);
+
+		virtual std::shared_ptr<ov::Error> PushStart(const std::shared_ptr<info::Push> &push) = 0;
+		virtual std::shared_ptr<ov::Error> PushStop(const std::shared_ptr<info::Push> &push) = 0;
+		virtual std::shared_ptr<ov::Error> GetPushes(const std::shared_ptr<info::Push> push, std::vector<std::shared_ptr<info::Push>> &results) = 0;
 	};
 }  // namespace pub

@@ -83,6 +83,16 @@ namespace pvd
 		return Provider::Stop();
 	}
 
+	bool SrtProvider::OnCreateHost(const info::Host &host_info)
+	{
+		return true;
+	}
+	
+	bool SrtProvider::OnDeleteHost(const info::Host &host_info)
+	{
+		return true;
+	}
+
 	std::shared_ptr<pvd::Application> SrtProvider::OnCreateProviderApplication(const info::Application &application_info)
 	{
 		if(IsModuleAvailable() == false)

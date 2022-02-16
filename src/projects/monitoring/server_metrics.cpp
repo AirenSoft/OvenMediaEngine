@@ -3,7 +3,7 @@
 
 namespace mon
 {
-	ServerMetrics::ServerMetrics(const std::shared_ptr<cfg::Server> &server_config)
+	ServerMetrics::ServerMetrics(const std::shared_ptr<const cfg::Server> &server_config)
 			: _server_config(server_config)
 	{
 		_server_started_time = std::chrono::system_clock::now();
@@ -31,7 +31,7 @@ namespace mon
 		return _server_started_time;
 	}
 
-	std::shared_ptr<cfg::Server> ServerMetrics::GetConfig()
+	std::shared_ptr<const cfg::Server> ServerMetrics::GetConfig()
 	{
 		return _server_config;
 	}

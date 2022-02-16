@@ -24,10 +24,10 @@ namespace cfg
 			{
 			}
 
-			CFG_DECLARE_REF_GETTER_OF(GetPortList, _port_value);
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetPortList, _port_value);
 
 		protected:
-			MAY_THROWS(std::shared_ptr<ConfigError>)
+			MAY_THROWS(cfg::ConfigError)
 			void AddPorts(const ov::String &ports)
 			{
 				// ports == "40000-40001" or "40000"
@@ -76,7 +76,7 @@ namespace cfg
 				}
 			}
 
-			MAY_THROWS(std::shared_ptr<ConfigError>)
+			MAY_THROWS(cfg::ConfigError)
 			void FromString(const ov::String &str) override
 			{
 				_port = str;

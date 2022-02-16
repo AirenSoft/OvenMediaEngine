@@ -20,9 +20,9 @@ namespace cfg
 			ov::String _chain_cert_path;
 
 		public:
-			CFG_DECLARE_REF_GETTER_OF(GetCertPath, _cert_path)
-			CFG_DECLARE_REF_GETTER_OF(GetKeyPath, _key_path)
-			CFG_DECLARE_REF_GETTER_OF(GetChainCertPath, _chain_cert_path)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetCertPath, _cert_path)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetKeyPath, _key_path)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetChainCertPath, _chain_cert_path)
 
 		protected:
 			void MakeList() override

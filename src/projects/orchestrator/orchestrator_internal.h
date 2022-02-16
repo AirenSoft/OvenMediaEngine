@@ -24,7 +24,7 @@ namespace ocst
 	protected:
 		OrchestratorInternal() = default;
 
-		bool ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtual_host);
+		bool UpdateVirtualHost(const std::shared_ptr<VirtualHost> &virtual_host);
 
 		/// Compares a list of hosts and adds them to added_host_list if a new entry is found
 		///
@@ -62,6 +62,9 @@ namespace ocst
 
 		bool GetUrlListForLocation(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Origin **matched_origin, Host **matched_host);
 
+		Result CreateVirtualHost(const info::Host &vhost_info);
+		Result DeleteVirtualHost(const info::Host &vhost_info);
+
 		Result CreateApplication(const ov::String &vhost_name, const info::Application &app_info);
 		Result CreateApplication(const info::VHostAppName &vhost_app_name, info::Application *app_info);
 
@@ -72,6 +75,9 @@ namespace ocst
 		const info::Application &GetApplicationInfo(const info::VHostAppName &vhost_app_name) const;
 		const info::Application &GetApplicationInfo(const ov::String &vhost_name, const ov::String &app_name) const;
 		const info::Application &GetApplicationInfo(const ov::String &vhost_name, info::application_id_t app_id) const;
+
+		// Server Info
+		std::shared_ptr<const cfg::Server> 	_server_config;
 
 		std::shared_ptr<MediaRouteInterface> _media_router;
 

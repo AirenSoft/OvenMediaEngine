@@ -12,47 +12,27 @@
 
 #include "http_datastructure.h"
 
+#define HTTP_ERROR_DOMAIN "HTTP"
+
 namespace http
 {
 	class HttpError : public ov::Error
 	{
 	public:
-		HttpError(StatusCode status_code, const ov::String &message)
-			: ov::Error(static_cast<int>(status_code), message)
+		HttpError(StatusCode status_code, const char *message)
+			: ov::Error(HTTP_ERROR_DOMAIN, static_cast<int>(status_code), message)
+		{
+		}
+
+		template <typename... Args>
+		HttpError(StatusCode status_code, const char *format, Args... args)
+			: ov::Error(HTTP_ERROR_DOMAIN, static_cast<int>(status_code), ov::String::FormatString(format, args...))
 		{
 		}
 
 		StatusCode GetStatusCode() const
 		{
 			return static_cast<StatusCode>(GetCode());
-		}
-
-		static std::shared_ptr<const HttpError> CreateError(StatusCode status_code, const char *format, ...)
-		{
-			ov::String message;
-			va_list list;
-			va_start(list, format);
-			message.VFormat(format, list);
-			va_end(list);
-
-			return std::make_shared<const HttpError>(status_code, message);
-		}
-
-		static std::shared_ptr<const HttpError> CreateError(const std::shared_ptr<const ov::Error> &error)
-		{
-			if (error == nullptr)
-			{
-				return nullptr;
-			}
-
-			auto http_error = std::dynamic_pointer_cast<const HttpError>(error);
-
-			if (http_error != nullptr)
-			{
-				return http_error;
-			}
-
-			return HttpError::CreateError(StatusCode::InternalServerError, "%s", error->ToString().CStr());
 		}
 	};
 }  // namespace http

@@ -6,10 +6,13 @@ OvenMediaEngine has a built-in live transcoder. The live transcoder can decode t
 
 OvenMediaEngine currently supports the following codecs:
 
-| Video Decoding   | Audio Decoding | Video Encoding   | Audio Encoding | Image Encoding |
-| ---------------- | -------------- | ---------------- | -------------- | -------------- |
-| H.264 (Baseline) | AAC            | H.264 (Baseline) | AAC            | JPEG           |
-|                  |                | VP8              | Opus           | PNG            |
+| Type  | Decoder           | Encoder                     |
+| ----- | ----------------- | --------------------------- |
+| Video | VP8, H.264, H.265 | VP8, H.264, H.265(GPU only) |
+| Audio | AAC, OPUS         | AAC, OPUS                   |
+| Image |                   | JPEG, PNG                   |
+
+
 
 ## OutputProfiles
 
@@ -42,10 +45,10 @@ The `<OutputProfile>` setting allows incoming streams to be re-encoded via the `
 
 According to the above setting, if the incoming stream name is `stream`, the output stream becomes `stream_bypass`and the stream URL can be used as follows.
 
-* **`WebRTC`**    ws://192.168.0.1:3333/app/`stream_bypass`
-* **`HLS`**       [http://192.168.0.1:8080/app/\`stream\_bypass\`/playlist.m3u8](http://192.168.0.1:8080/app/%60stream\_bypass%60/playlist.m3u8)
-* **`MPEG-DASH`** [http://192.168.0.1:8080/app/\`stream\_bypass\`/manifest.mpd](http://192.168.0.1:8080/app/%60stream\_bypass%60/manifest.mpd)
-* **`Low-Latency MPEG-DASH`** [http://192.168.0.1:8080/app/\`stream\_bypass\`/manifest\_ll.mpd](http://192.168.0.1:8080/app/%60stream\_bypass%60/manifest\_ll.mpd)
+* **`WebRTC`**    ws://192.168.0.1:3333/app/<mark style="background-color:blue;">stream\_bypass</mark>
+* **`HLS`**       http://192.168.0.1:8080/app/<mark style="background-color:blue;">stream\_bypass</mark>/playlist.m3u8
+* **`MPEG-DASH`** http://192.168.0.1:8080/app/<mark style="background-color:blue;">stream\_bypass</mark>/manifest.mpd
+* **`Low-Latency MPEG-DASH`** http://192.168.0.1:8080/app/<mark style="background-color:blue;">stream\_bypass</mark>/manifest\_ll.mpd
 
 ### Encodes
 
@@ -62,37 +65,37 @@ You can set the video profile as below:
         <Bitrate>2000000</Bitrate>
         <Framerate>30.0</Framerate>
         <Preset>fast</Preset>
+        <ThreadCount>4</ThreadCount>
     </Video>
 </Encodes>
 ```
 
 The meaning of each property is as follows:
 
-| Property  | Description                                 |
-| --------- | ------------------------------------------- |
-| Codec     | Specifies the `vp8` or `h264` codec to use  |
-| Width     | Width of resolution                         |
-| Height    | Height of resolution                        |
-| Bitrate   | Bit per second                              |
-| Framerate | Frames per second                           |
-| Preset    | Presets of encoding quality and performance |
+| Property                                  | Description                                 |
+| ----------------------------------------- | ------------------------------------------- |
+| Codec<mark style="color:red;">\*</mark>   | Specifies the `vp8` or `h264` codec to use  |
+| Bitrate<mark style="color:red;">\*</mark> | Bit per second                              |
+| Width                                     | Width of resolution                         |
+| Height                                    | Height of resolution                        |
+| Framerate                                 | Frames per second                           |
+| Preset                                    | Presets of encoding quality and performance |
+| ThreadCount                               | Number of threads in encoding               |
 
 **Table of presets**
 
 A table in which presets provided for each codec library are mapped to OvenMediaEngine's presets. Slow presets are of good quality and use a lot of resources, whereas Fast presets have lower quality and better performance. It can be set according to your own system environment and service purpose.
 
-| Presets     | x264/x265  | libvpx      | h264/265 NVC | h264/265 QSV |
-| ----------- | ---------- | ----------- | ------------ | ------------ |
-| **slower**  | slower     | best        | hq           | -            |
-| **slow**    | slow       | best        | llhq         | -            |
-| **medium**  | medium     | good        | bd           | -            |
-| **fast**    | fast       | realtime    | hp           | -            |
-| **faster ** | \*faster   | \*realtime  | \*llhp       | -            |
+| Presets     | openh264         | libvpx      | h264/265 NVC | h264/265 QSV |
+| ----------- | ---------------- | ----------- | ------------ | ------------ |
+| **slower**  | Quantizer(10-41) | best        | hq           | -            |
+| **slow**    | Quantizer(10-41) | best        | llhq         | -            |
+| **medium**  | Quantizer(10-51) | good        | bd           | -            |
+| **fast**    | Quantizer(25-51) | realtime    | hp           | -            |
+| **faster**  | Quantizer(25-51) | \*realtime  | \*llhp       | -            |
 
 _References_
 
-* https://trac.ffmpeg.org/wiki/Encode/H.264
-* https://x265.readthedocs.io/en/stable/presets.html
 * https://trac.ffmpeg.org/wiki/Encode/VP8
 * https://docs.nvidia.com/video-technologies/video-codec-sdk/nvenc-preset-migration-guide/
 
@@ -113,12 +116,12 @@ You can set the audio profile as below:
 
 The meaning of each property is as follows:
 
-| Property   | Description                                |
-| ---------- | ------------------------------------------ |
-| Codec      | Specifies the `opus` or `aac` codec to use |
-| Bitrates   | Bits per second                            |
-| Samplerate | Samples per second                         |
-| Channel    | The number of audio channels               |
+| Property                                  | Description                                |
+| ----------------------------------------- | ------------------------------------------ |
+| Codec<mark style="color:red;">\*</mark>   | Specifies the `opus` or `aac` codec to use |
+| Bitrate<mark style="color:red;">\*</mark> | Bits per second                            |
+| Samplerate                                | Samples per second                         |
+| Channel                                   | The number of audio channels               |
 
 It is possible to have an audio only output profile by specifying the Audio profile and omitting a Video one.
 
@@ -185,7 +188,7 @@ WebRTC doesn't support AAC, so if video bypasses transcoding, audio must be enco
 
 ### **Keep the original with transcoding**
 
-&#x20;If you want to transcode with the same quality as the original. See the sample below for possible parameters that OME supports to keep original. If you remove the **Width**, **Height**, **Framerate**, **Samplerate**, and **Channel **parameters. then, It is transcoded with the same options as the original.
+&#x20;If you want to transcode with the same quality as the original. See the sample below for possible parameters that OME supports to keep original. If you remove the **Width**, **Height**, **Framerate**, **Samplerate**, and **Channel** parameters. then, It is transcoded with the same options as the original.
 
 ```
 <Encodes>
@@ -205,7 +208,7 @@ WebRTC doesn't support AAC, so if video bypasses transcoding, audio must be enco
 
 ### Rescaling while keep the aspect ratio
 
-To change the video resolution when transcoding, use the values of width and height in the Video encode option. If you don't know the resolution of the original, it will be difficult to keep the aspect ratio after transcoding. Please use the following methods to solve these problems. For example, if you input only the **Width **value in the Video encoding option, the **Height** value is automatically generated according to the ratio of the original video.
+To change the video resolution when transcoding, use the values of width and height in the Video encode option. If you don't know the resolution of the original, it will be difficult to keep the aspect ratio after transcoding. Please use the following methods to solve these problems. For example, if you input only the **Width** value in the Video encoding option, the **Height** value is automatically generated according to the ratio of the original video.
 
 ```
 <Encodes>

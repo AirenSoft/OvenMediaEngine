@@ -8,8 +8,8 @@
 //==============================================================================
 #pragma once
 
-#include "./string.h"
 #include "./json_object.h"
+#include "./string.h"
 
 namespace ov
 {
@@ -26,4 +26,7 @@ namespace ov
 		static JsonObject Parse(const ov::String &str);
 		static JsonObject Parse(const std::shared_ptr<const Data> &data);
 	};
-}
+
+	const char *StringFromJsonValueType(::Json::ValueType value_type);
+	const char *StringFromJsonValueType(const ::Json::Value &value);
+}  // namespace ov

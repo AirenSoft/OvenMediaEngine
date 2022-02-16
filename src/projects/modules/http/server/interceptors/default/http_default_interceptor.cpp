@@ -11,6 +11,9 @@
 #include "../../../http_private.h"
 #include "../../http_connection.h"
 
+// Currently, OME does not handle requests larger than 1 MB
+#define MAX_HTTP_REQUEST_SIZE (1024LL * 1024LL)
+
 namespace http
 {
 	namespace svr
@@ -46,7 +49,7 @@ namespace http
 			}
 			else
 			{
-				logte("Invalid regex pattern: %s (Error: %s)", pattern.CStr(), error->ToString().CStr());
+				logte("Invalid regex pattern: %s (Error: %s)", pattern.CStr(), error->What());
 				return false;
 			}
 
@@ -67,9 +70,8 @@ namespace http
 			// TODO: Support for file upload & need to create a feature to block requests that are too large because too much CONTENT-LENGTH can cause OOM
 			size_t content_length = request->GetContentLength();
 
-			if (content_length > (1024LL * 1024LL))
+			if (content_length > MAX_HTTP_REQUEST_SIZE)
 			{
-				// Currently, OME does not handle requests larger than 1 MB
 				return InterceptorResult::Disconnect;
 			}
 
@@ -180,7 +182,7 @@ namespace http
 						else
 						{
 #if DEBUG
-							logtd("Not matched: url [%s], pattern: [%s] (with error: %s)", uri_target.CStr(), request_info.pattern_string.CStr(), error->ToString().CStr());
+							logtd("Not matched: url [%s], pattern: [%s] (with error: %s)", uri_target.CStr(), request_info.pattern_string.CStr(), error->What());
 #endif	// DEBUG
 						}
 					}

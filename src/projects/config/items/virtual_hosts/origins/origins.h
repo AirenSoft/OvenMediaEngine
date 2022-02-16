@@ -19,8 +19,8 @@ namespace cfg
 		{
 			struct Origins : public Item
 			{
-				CFG_DECLARE_REF_GETTER_OF(GetOriginList, _origin_list)
-				CFG_DECLARE_REF_GETTER_OF(GetProperties, _properties)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetOriginList, _origin_list)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetProperties, _properties)
 
 			protected:
 				void MakeList() override

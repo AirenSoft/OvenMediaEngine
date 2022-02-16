@@ -11,16 +11,23 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <openssl/ssl.h>
 
+#define OPENSSL_ERROR_DOMAIN "OpenSSL"
+
 namespace ov
 {
 	class OpensslError : public Error
 	{
 	public:
-		OpensslError(int code, const String &message);
-		OpensslError(const String &message);
+		// Create an error instance from OpenSSL error code
+		OpensslError();
+		OpensslError(ov::String message);
 
-		static std::shared_ptr<OpensslError> CreateError(const char *format, ...);
-		static std::shared_ptr<OpensslError> CreateErrorFromOpenssl();
-		static std::shared_ptr<OpensslError> CreateErrorFromOpenssl(SSL *ssl, int result);
+		template <typename... Args>
+		OpensslError(const char *format, Args... args)
+			: Error(OPENSSL_ERROR_DOMAIN, ov::String::FormatString(format, args...))
+		{
+		}
+
+		OpensslError(SSL *ssl, int result);
 	};
 }  // namespace ov

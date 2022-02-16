@@ -10,7 +10,7 @@ namespace mon
 {
 	void Monitoring::Release()
 	{
-		_server_metric->Release();
+		OV_SAFE_RESET(_server_metric, nullptr, _server_metric->Release(), _server_metric);
 		_forwarder.Stop();
 	}
 
@@ -64,7 +64,7 @@ namespace mon
 		_forwarder.SetLogPath(log_path);
 	}	
 
-	void Monitoring::OnServerStarted(const std::shared_ptr<cfg::Server> &server_config)
+	void Monitoring::OnServerStarted(const std::shared_ptr<const cfg::Server> &server_config)
 	{
 		_server_metric = std::make_shared<ServerMetrics>(server_config);
 		_is_analytics_on = _server_metric->GetConfig()->GetAnalytics().IsParsed();

@@ -9,11 +9,13 @@
 #include "main.h"
 
 #include <api_server/api_server.h>
+#include <base/info/ome_version.h>
 #include <base/ovlibrary/daemon.h>
 #include <base/ovlibrary/log_write.h>
 #include <config/config_manager.h>
 #include <mediarouter/mediarouter.h>
 #include <modules/address/address_utilities.h>
+#include <modules/sdp/sdp_regex_pattern.h>
 #include <monitoring/monitoring.h>
 #include <orchestrator/orchestrator.h>
 #include <providers/providers.h>
@@ -21,7 +23,6 @@
 #include <sys/utsname.h>
 #include <transcoder/transcoder.h>
 #include <web_console/web_console.h>
-#include <modules/sdp/sdp_regex_pattern.h>
 
 #include "banner.h"
 #include "init_utilities.h"
@@ -67,8 +68,7 @@ int main(int argc, char *argv[])
 
 	auto server_config = cfg::ConfigManager::GetInstance()->GetServer();
 	auto orchestrator = ocst::Orchestrator::GetInstance();
-	auto monitor = mon::Monitoring::GetInstance();
-	monitor->OnServerStarted(server_config);
+
 	logti("Server ID : %s", server_config->GetID().CStr());
 
 	// Get public IP
@@ -87,41 +87,13 @@ int main(int argc, char *argv[])
 	}
 
 	// Precompile SDP patterns for better performance.
-	if(SDPRegexPattern::GetInstance()->Compile() == false)
+	if (SDPRegexPattern::GetInstance()->Compile() == false)
 	{
 		OV_ASSERT(false, "SDPRegexPattern compile failed");
 		return false;
 	}
 
-	// Create info::Host list
-	std::vector<info::Host> host_info_list;
-	{
-		// Used to check duplicate names
-		std::map<ov::String, bool> vhost_map;
-		auto &hosts = server_config->GetVirtualHostList();
-
-		for (const auto &host : hosts)
-		{
-			auto item = vhost_map.find(host.GetName());
-
-			if (item == vhost_map.end())
-			{
-				host_info_list.emplace_back(info::Host(server_config->GetName(), server_config->GetID(), host));
-				vhost_map[host.GetName()] = true;
-			}
-			else
-			{
-				logte("Duplicated VirtualHost found: %s", host.GetName().CStr());
-				return 1;
-			}
-		}
-	}
-
-	orchestrator->ApplyOriginMap(host_info_list);
-
-	auto api_server = api::Server::GetInstance();
-
-	api_server->Start(server_config);
+	bool succeeded = true;
 
 	INIT_EXTERNAL_MODULE("FFmpeg", InitializeFFmpeg);
 	INIT_EXTERNAL_MODULE("SRT", InitializeSrt);
@@ -145,6 +117,7 @@ int main(int argc, char *argv[])
 	INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(*server_config, media_router));
 	INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, media_router));
 	INIT_MODULE(file_publisher, "File Publisher", FilePublisher::Create(*server_config, media_router));
+	INIT_MODULE(mpegtspush_publisher, "MpegtsPush Publisher", MpegtsPushPublisher::Create(*server_config, media_router));
 	INIT_MODULE(rtmppush_publisher, "RtmpPush Publisher", RtmpPushPublisher::Create(*server_config, media_router));
 	INIT_MODULE(thumbnail_publisher, "Thumbnail Publisher", ThumbnailPublisher::Create(*server_config, media_router));
 
@@ -160,73 +133,30 @@ int main(int argc, char *argv[])
 	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
 	// PENDING : INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
 
-	logti("All modules are initialized successfully");
+	auto api_server = std::make_shared<api::Server>();
 
-	bool should_exit = false;
-
-	for (auto &host_info : host_info_list)
+	if (succeeded)
 	{
-		auto host_name = host_info.GetName();
+		logti("All modules are initialized successfully");
 
-		logtd("Trying to create host [%s]", host_name.CStr());
-		monitor->OnHostCreated(host_info);
-
-		// Create applications that defined by the configuration
-		for (auto &app_cfg : host_info.GetApplicationList())
+		if (orchestrator->StartServer(server_config))
 		{
-			auto result = orchestrator->CreateApplication(host_info, app_cfg);
-
-			switch (result)
+			if (api_server->Start(server_config))
 			{
-				case ocst::Result::Failed:
-					logtc("Failed to create an application: %s", app_cfg.GetName().CStr());
-					should_exit = true;
-					break;
+				if (parse_option.start_service)
+				{
+					ov::Daemon::SetEvent();
+				}
 
-				case ocst::Result::Succeeded:
-					break;
-
-				case ocst::Result::Exists:
-					logtc("Duplicate application [%s] found. Please check the settings.", app_cfg.GetName().CStr());
-					should_exit = true;
-					break;
-
-				case ocst::Result::NotExists:
-					// This should never happen
-					OV_ASSERT2(false);
-					logtc("Internal error occurred (THIS IS A BUG)");
-					should_exit = true;
-					break;
+				while (g_is_terminated == false)
+				{
+					sleep(1);
+				}
 			}
-
-			if (should_exit)
-			{
-				break;
-			}
-		}
-
-		if (should_exit)
-		{
-			break;
-		}
-	}
-
-	if (should_exit == false)
-	{
-		if (parse_option.start_service)
-		{
-			ov::Daemon::SetEvent();
-		}
-
-		while (g_is_terminated == false)
-		{
-			sleep(1);
 		}
 	}
 
 	orchestrator->Release();
-	// Relase all modules
-	monitor->Release();
 	api_server->Stop();
 
 	RELEASE_MODULE(webrtc_provider, "WebRTC Provider");
@@ -284,10 +214,13 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 		return ov::Daemon::State::PARENT_FAIL;
 	}
 
+	info::OmeVersion::GetInstance()->SetVersion(OME_VERSION, OME_GIT_VERSION);
+
 	// Daemonize OME with start_service argument
 	if (parse_option->start_service)
 	{
-		auto state = ov::Daemon::Initialize();
+		auto &p{parse_option->pid_path};
+		auto state{p.IsEmpty() ? ov::Daemon::Initialize() : ov::Daemon::Initialize(p.CStr())};
 
 		switch (state)
 		{
@@ -321,19 +254,15 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 
 	auto config_manager = cfg::ConfigManager::GetInstance();
 
-	config_manager->SetOmeVersion(OME_VERSION, OME_GIT_VERSION_EXTRA);
-
 	try
 	{
-		config_manager->LoadConfigs(
-			parse_option->config_path,
-			parse_option->ignore_last_config);
+		config_manager->LoadConfigs(parse_option->config_path);
 
 		return ov::Daemon::State::CHILD_SUCCESS;
 	}
-	catch (std::shared_ptr<cfg::ConfigError> &error)
+	catch (const cfg::ConfigError &error)
 	{
-		logte("An error occurred while load config: %s", error->ToString().CStr());
+		logte("An error occurred while load config: %s", error.What());
 	}
 
 	return ov::Daemon::State::CHILD_FAIL;
@@ -345,7 +274,7 @@ static void CheckKernelVersion()
 
 	if (::uname(&name) != 0)
 	{
-		logte("Could not obtain utsname using uname(): %s", ov::Error::CreateErrorFromErrno()->ToString().CStr());
+		logte("Could not obtain utsname using uname(): %s", ov::Error::CreateErrorFromErrno()->What());
 		return;
 	}
 

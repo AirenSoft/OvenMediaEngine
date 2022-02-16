@@ -28,16 +28,16 @@ namespace cfg
 					std::vector<ImageProfile> _image_profiles;
 
 				public:
-					CFG_DECLARE_REF_GETTER_OF(GetAudioProfileList, _audio_profiles);
-					CFG_DECLARE_REF_GETTER_OF(GetVideoProfileList, _video_profiles);
-					CFG_DECLARE_REF_GETTER_OF(GetImageProfileList, _image_profiles);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetAudioProfileList, _audio_profiles);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetVideoProfileList, _video_profiles);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetImageProfileList, _image_profiles);
 
 				protected:
 					void MakeList() override
 					{
-						Register<Optional>({"Audio", "audios", OmitRule::DontOmit}, &_audio_profiles);
-						Register<Optional>({"Video", "videos", OmitRule::DontOmit}, &_video_profiles);
-						Register<Optional>({"Image", "images", OmitRule::DontOmit}, &_image_profiles);
+						Register<Optional>({"Audio", "audios"}, &_audio_profiles);
+						Register<Optional>({"Video", "videos"}, &_video_profiles);
+						Register<Optional>({"Image", "images"}, &_image_profiles);
 					}
 				};
 			}  // namespace oprf

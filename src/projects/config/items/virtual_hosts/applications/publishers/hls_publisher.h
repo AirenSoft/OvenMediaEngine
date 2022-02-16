@@ -34,8 +34,8 @@ namespace cfg
 						return PublisherType::Hls;
 					}
 
-					CFG_DECLARE_REF_GETTER_OF(GetSegmentCount, _segment_count)
-					CFG_DECLARE_REF_GETTER_OF(GetSegmentDuration, _segment_duration)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetSegmentCount, _segment_count)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetSegmentDuration, _segment_duration)
 
 				protected:
 					void MakeList() override
@@ -45,7 +45,7 @@ namespace cfg
 						Register<Optional>("SegmentCount", &_segment_count);
 						Register<Optional>("SegmentDuration", &_segment_duration);
 
-						Register<Optional>({"CrossDomains", OmitRule::Omit}, &_cross_domains);
+						Register<Optional>("CrossDomains", &_cross_domains);
 					}
 				};
 			}  // namespace pub

@@ -29,380 +29,54 @@ namespace ov
 		Converter() = delete;
 		~Converter() = delete;
 
-		static ov::String ToString(bool flag)
-		{
-			return flag == true ? "TRUE" : "FALSE";
-		}
-
-		static ov::String ToString(int number)
-		{
-			return ov::String::FormatString("%d", number);
-		}
-
-		static ov::String ToString(const char *str)
-		{
-			return str;
-		}
-
-		static ov::String ToString(unsigned int number)
-		{
-			return ov::String::FormatString("%u", number);
-		}
-
-		static ov::String ToString(int64_t number)
-		{
-			return ov::String::FormatString("%" PRId64, number);
-		}
-
-		static ov::String ToString(uint64_t number)
-		{
-			return ov::String::FormatString("%" PRIu64, number);
-		}
-
+		static ov::String ToString(bool flag);
+		static ov::String ToString(int number);
+		static ov::String ToString(const char *str);
+		static ov::String ToString(unsigned int number);
+		static ov::String ToString(int64_t number);
+		static ov::String ToString(uint64_t number);
 		// Due to conflict between size_t and uint64_t in linux, make sure that the OS is only active when macOS
 #if defined(__APPLE__)
-		static ov::String ToString(size_t number)
-		{
-			return ov::String::FormatString("%zu", number);
-		}
+		static ov::String ToString(size_t number);
 #endif	// defined(__APPLE__)
+		static ov::String ToString(float number);
+		static ov::String ToString(double number);
+		static ov::String ToString(const ov::JsonObject &object);
+		static ov::String ToString(const ::Json::Value &value);
+		static ov::String ToString(const std::chrono::system_clock::time_point &tp);
 
-		static ov::String ToString(float number)
-		{
-			return ov::String::FormatString("%f", number);
-		}
+		static ov::String ToISO8601String(const std::chrono::system_clock::time_point &tp);
 
-		static ov::String ToString(double number)
-		{
-			return ov::String::FormatString("%f", number);
-		}
+		static ov::String ToSiString(int64_t number, int precision);
 
-		static ov::String ToString(const ov::JsonObject &object)
-		{
-			return object.ToString();
-		}
+		static ov::String BitToString(int64_t bits);
+		static ov::String BytesToString(int64_t bytes);
 
-		static ov::String ToString(const ::Json::Value &value)
-		{
-			if (value.isString())
-			{
-				return value.asCString();
-			}
+		static std::time_t ToTime(uint32_t year, uint32_t mon, uint32_t day, uint32_t hour, uint32_t min, bool isdst);
 
-			return ov::Json::Stringify(value);
-		}
+		static int32_t ToInt32(const char *str, int base = 10);
+		static int32_t ToInt32(const ::Json::Value &value, int base = 10);
 
-		static ov::String ToString(const std::chrono::system_clock::time_point &tp)
-		{
-			std::time_t t = std::chrono::system_clock::to_time_t(tp);
-			char buffer[32]{0};
-			::ctime_r(&t, buffer);
-			// Ensure null-terminated
-			buffer[OV_COUNTOF(buffer) - 1] = '\0';
+		static uint16_t ToUInt16(const char *str, int base = 10);
+		static uint32_t ToUInt32(const char *str, int base = 10);
 
-			ov::String time_string = buffer;
+		static uint32_t ToUInt32(const ::Json::Value &value, int base = 10);
 
-			return time_string.Trim();
-		}
+		static int64_t ToInt64(const char *str, int base = 10);
+		static int64_t ToInt64(const ::Json::Value &value, int base = 10);
+		static uint64_t ToUInt64(const char *str, int base = 10);
 
-		static ov::String ToISO8601String(const std::chrono::system_clock::time_point &tp)
-		{
-			auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count() % 1000;
-			auto time = std::chrono::system_clock::to_time_t(tp);
-			std::tm local_time{};
-			::localtime_r(&time, &local_time);
+		static bool ToBool(const char *str);
+		static bool ToBool(const ::Json::Value &value);
 
-			std::ostringstream oss;
-			oss << std::put_time(&local_time, "%Y-%m-%dT%H:%M:%S") << "." << std::setfill('0') << std::setw(3) << milliseconds << std::put_time(&local_time, "%z");
+		static float ToFloat(const char *str);
+		static float ToFloat(const ::Json::Value &value);
 
-			return oss.str().c_str();
-		}
+		static double ToDouble(const char *str);
+		static double ToDouble(const ::Json::Value &value);
 
-		static ov::String ToSiString(int64_t number, int precision)
-		{
-			ov::String suf[] = {"", "K", "M", "G", "T", "P", "E", "Z", "Y"};
-
-			if (number == 0)
-			{
-				return "0";
-			}
-
-			int64_t abs_number = std::abs(number);
-			int8_t place = std::floor(std::log10(abs_number) / std::log10(1000));
-			if (place > 8)
-			{
-				place = 8;
-			}
-
-			double num = number / std::pow(1000, place);
-
-			ov::String si_number;
-			si_number.Format("%.*f%s", precision, num, suf[place].CStr());
-
-			return si_number;
-		}
-
-		static ov::String BitToString(int64_t bits)
-		{
-			return ToSiString(bits, 2) + "b";
-		}
-
-		static ov::String BytesToString(int64_t bytes)
-		{
-			return ToSiString(bytes, 2) + "B";
-		}
-
-		static std::time_t ToTime(uint32_t year, uint32_t mon, uint32_t day, uint32_t hour, uint32_t min, bool isdst)
-		{
-			//TODO: Set timezone with new parmaeter
-			//setenv("TZ", "/usr/share/zoneinfo/America/Los_Angeles", 1); // POSIX-specific
-			
-			std::tm tm{};
-
-			tm.tm_year = year - 1900;
-			tm.tm_mon = mon - 1;
-			tm.tm_mday = day;
-			tm.tm_hour = hour;
-			tm.tm_min = min;
-			tm.tm_isdst = isdst?1:0;
-
-			return std::mktime(&tm);
-		}
-
-		static int32_t ToInt32(const char *str, int base = 10)
-		{
-			if (str != nullptr)
-			{
-				try
-				{
-					return std::stoi(str, nullptr, base);
-				}
-				catch (std::exception &e)
-				{
-				}
-			}
-
-			return 0;
-		}
-
-		static int32_t ToInt32(const ::Json::Value &value, int base = 10)
-		{
-			if (value.isIntegral())
-			{
-				return value.asInt();
-			}
-
-			return ToInt32(ToString(value), base);
-		}
-
-		static uint16_t ToUInt16(const char *str, int base = 10)
-		{
-			if (str != nullptr)
-			{
-				try
-				{
-					return static_cast<uint16_t>(std::stoi(str, nullptr, base));
-				}
-				catch (std::exception &e)
-				{
-				}
-			}
-
-			return 0;
-		}
-
-		static uint32_t ToUInt32(const char *str, int base = 10)
-		{
-			if (str != nullptr)
-			{
-				try
-				{
-					return static_cast<uint32_t>(std::stoul(str, nullptr, base));
-				}
-				catch (std::exception &e)
-				{
-				}
-			}
-
-			return 0;
-		}
-
-		static uint32_t ToUInt32(const ::Json::Value &value, int base = 10)
-		{
-			try
-			{
-				if (value.isNumeric())
-				{
-					return (uint32_t)value.asUInt();
-				}
-
-				if (value.isString())
-				{
-					return (uint32_t)std::stoul(value.asCString(), nullptr, base);
-				}
-
-				return 0;
-			}
-			catch (std::exception &e)
-			{
-				return 0;
-			}
-		}
-
-		static int64_t ToInt64(const char *str, int base = 10)
-		{
-			if (str != nullptr)
-			{
-				try
-				{
-					return std::stoll(str, nullptr, base);
-				}
-				catch (std::exception &e)
-				{
-				}
-			}
-
-			return 0L;
-		}
-
-		static int64_t ToInt64(const ::Json::Value &value, int base = 10)
-		{
-			if (value.isIntegral())
-			{
-				return value.asInt64();
-			}
-
-			return ToInt64(ToString(value), base);
-		}
-
-		static uint64_t ToUInt64(const char *str, int base = 10)
-		{
-			if (str != nullptr)
-			{
-				try
-				{
-					return std::stoull(str, nullptr, base);
-				}
-				catch (std::exception &e)
-				{
-				}
-			}
-
-			return 0UL;
-		}
-
-		static bool ToBool(const char *str)
-		{
-			if (str == nullptr)
-			{
-				return false;
-			}
-
-			ov::String value = str;
-			value.MakeLower();
-
-			if (value == "true")
-			{
-				return true;
-			}
-			else if (value == "false")
-			{
-				return false;
-			}
-
-			return (ToInt64(str) != 0);
-		}
-
-		static bool ToBool(const ::Json::Value &value)
-		{
-			if (value.isBool())
-			{
-				return value.asBool();
-			}
-
-			return ToBool(ToString(value));
-		}
-
-		static float ToFloat(const char *str)
-		{
-			if (str != nullptr)
-			{
-				try
-				{
-					return std::stof(str, nullptr);
-				}
-				catch (std::exception &e)
-				{
-				}
-			}
-
-			return 0.0f;
-		}
-
-		static float ToFloat(const ::Json::Value &value)
-		{
-			if (value.isDouble())
-			{
-				return value.asDouble();
-			}
-
-			return ToFloat(ToString(value));
-		}
-
-		static double ToDouble(const char *str)
-		{
-			if (str != nullptr)
-			{
-				try
-				{
-					return std::stod(str, nullptr);
-				}
-				catch (std::exception &e)
-				{
-				}
-			}
-
-			return 0.0;
-		}
-
-		static double ToDouble(const ::Json::Value &value)
-		{
-			if (value.isDouble())
-			{
-				return value.asDouble();
-			}
-
-			return ToDouble(ToString(value));
-		}
-
-
-		#define EPOCH  2208988800ULL
-		#define NTP_SCALE_FRAC  4294967296ULL
-
-		static uint64_t SecondsToNtpTs(double seconds)
-		{
-			uint64_t ntp_timestamp = 0;
-			double ipart, fraction;
-			fraction = modf(seconds, &ipart);
-			
-			ntp_timestamp = (((uint64_t)ipart) << 32) + (fraction * NTP_SCALE_FRAC);
-
-			return ntp_timestamp;
-		}
-
-		static double NtpTsToSeconds(uint64_t ntp_timestamp)
-		{
-			uint32_t msw = ntp_timestamp >> 32;
-			uint32_t lsw = ntp_timestamp & 0xFFFFFFFF;
-			return NtpTsToSeconds(msw, lsw);
-		}
-
-		static double NtpTsToSeconds(uint32_t msw, uint32_t lsw)
-		{
-			double seconds = (double)msw;
-			double frac = (double)lsw / (double)NTP_SCALE_FRAC;
-
-			return seconds + frac;
-		}
+		static uint64_t SecondsToNtpTs(double seconds);
+		static double NtpTsToSeconds(uint64_t ntp_timestamp);
+		static double NtpTsToSeconds(uint32_t msw, uint32_t lsw);
 	};
 }  // namespace ov

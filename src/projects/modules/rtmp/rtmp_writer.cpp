@@ -127,6 +127,7 @@ bool RtmpWriter::Start()
 	// Compatibility with specific RTMP servers
 	av_dict_set(&options, "rtmp_flashver", "FMLE/3.0 (compatible; FMSc/1.0)", 0);
 	av_dict_set(&options, "rtmp_tcurl", _format_context->url, 0);
+	av_dict_set(&options, "fflags", "flush_packets", 0);
 
 	if (!(_format_context->oformat->flags & AVFMT_NOFILE))
 	{
@@ -311,13 +312,12 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	auto track_info = _trackinfo_map[track_id];
 
 	// Make avpacket
-	AVPacket pkt = {0};
-	av_init_packet(&pkt);
+	AVPacket av_packet = {0};
 
-	pkt.stream_index = stream_index;
-	pkt.flags = (flag == MediaPacketFlag::Key) ? AV_PKT_FLAG_KEY : 0;
-	pkt.pts = av_rescale_q(pts, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
-	pkt.dts = av_rescale_q(dts, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
+	av_packet.stream_index = stream_index;
+	av_packet.flags = (flag == MediaPacketFlag::Key) ? AV_PKT_FLAG_KEY : 0;
+	av_packet.pts = av_rescale_q(pts, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
+	av_packet.dts = av_rescale_q(dts, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
 
 	std::shared_ptr<const ov::Data> cdata = data;
 	std::vector<size_t> length_list;
@@ -327,25 +327,25 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 		switch (format)
 		{
 			case cmn::BitstreamFormat::H264_AVCC:
-				pkt.size = cdata->GetLength();
-				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				av_packet.size = cdata->GetLength();
+				av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 				break;
 
 			case cmn::BitstreamFormat::H264_ANNEXB:
 				cdata = H264Converter::ConvertAnnexbToAvcc(cdata);
-				pkt.size = cdata->GetLength();
-				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				av_packet.size = cdata->GetLength();
+				av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 				break;
 
 			case cmn::BitstreamFormat::AAC_RAW:
-				pkt.size = cdata->GetLength();
-				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				av_packet.size = cdata->GetLength();
+				av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 				break;
 
 			case cmn::BitstreamFormat::AAC_ADTS:
 				cdata = AacConverter::ConvertAdtsToRaw(cdata, &length_list);
-				pkt.size = cdata->GetLength();
-				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				av_packet.size = cdata->GetLength();
+				av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 				break;
 
 			default:
@@ -358,21 +358,21 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 		switch (format)
 		{
 			case cmn::BitstreamFormat::AAC_RAW:
-				pkt.size = cdata->GetLength();
-				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				av_packet.size = cdata->GetLength();
+				av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 				break;
 
 			case cmn::BitstreamFormat::AAC_ADTS:
 				cdata = AacConverter::ConvertAdtsToRaw(cdata, &length_list);
-				pkt.size = cdata->GetLength();
-				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				av_packet.size = cdata->GetLength();
+				av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 				break;
 
 			case cmn::BitstreamFormat::H264_ANNEXB:
 				[[fallthrough]];
 			case cmn::BitstreamFormat::H264_AVCC:
-				pkt.size = cdata->GetLength();
-				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				av_packet.size = cdata->GetLength();
+				av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 				break;
 
 			default:
@@ -382,11 +382,11 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	}
 	else if (strcmp(_format_context->oformat->name, "mpegts") == 0)
 	{
-		pkt.size = cdata->GetLength();
-		pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+		av_packet.size = cdata->GetLength();
+		av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 	}
 
-	int error = av_interleaved_write_frame(_format_context, &pkt);
+	int error = av_interleaved_write_frame(_format_context, &av_packet);
 	if (error != 0)
 	{
 		char errbuf[256];

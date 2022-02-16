@@ -26,7 +26,6 @@ bool DecoderAAC::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	// create codec context
 	_context = ::avcodec_alloc_context3(_codec);
 	if (_context == nullptr)
 	{
@@ -57,8 +56,8 @@ bool DecoderAAC::Configure(std::shared_ptr<TranscodeContext> context)
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&TranscodeDecoder::ThreadDecode, this);
-		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("Dec%s", avcodec_get_name(GetCodecID())).CStr());
+		_codec_thread = std::thread(&TranscodeDecoder::CodecThread, this);
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%s", avcodec_get_name(GetCodecID())).CStr());
 	}
 	catch (const std::system_error &e)
 	{
@@ -70,7 +69,7 @@ bool DecoderAAC::Configure(std::shared_ptr<TranscodeContext> context)
 	return true;
 }
 
-void DecoderAAC::ThreadDecode()
+void DecoderAAC::CodecThread()
 {
 	bool no_data_to_encode = false;
 
@@ -137,7 +136,7 @@ void DecoderAAC::ThreadDecode()
 					{
 						_pkt->duration = 0;
 					}
-					
+
 					int ret = ::avcodec_send_packet(_context, _pkt);
 
 					if (ret == AVERROR(EAGAIN))
@@ -234,44 +233,22 @@ void DecoderAAC::ThreadDecode()
 				}
 			}
 
-			auto output_frame = TranscoderUtilities::ConvertToMediaFrame(cmn::MediaType::Audio, _frame);
+			// If there is no duration, the duration is calculated by timebase.
+			_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Audio, _input_context, _frame) : _frame->pkt_duration;
+
+			// If the decoded audio frame does not have a PTS, Increase frame duration time in PTS of previous frame
+			_frame->pts = (_frame->pts == AV_NOPTS_VALUE) ? (_last_pkt_pts + _frame->pkt_duration) : _frame->pts;
+
+			auto output_frame = TranscoderUtilities::AvFrameToMediaFrame(cmn::MediaType::Audio, _frame);
+			::av_frame_unref(_frame);
 			if (output_frame == nullptr)
 			{
 				continue;
 			}
 
-			// If there is no duration, the duration is calculated by framerate and timebase.
-			if (output_frame->GetDuration() <= 0LL)
-			{
-				output_frame->SetDuration(TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Audio, _input_context, _frame));
-			}
-
-			// If the decoded audio frame does not have a PTS, Increase frame duration time in PTS of previous frame
-			output_frame->SetPts(static_cast<int64_t>((_frame->pts == AV_NOPTS_VALUE) ? _last_pkt_pts + output_frame->GetDuration() : _frame->pts));
 			_last_pkt_pts = output_frame->GetPts();
 
-			::av_frame_unref(_frame);
-
-			_output_buffer.Enqueue(std::move(output_frame));
-
-			OnCompleteHandler(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, _track_id);
+			SendOutputBuffer(need_to_change_notify, _track_id, std::move(output_frame));
 		}
 	}
-}
-
-std::shared_ptr<MediaFrame> DecoderAAC::RecvBuffer(TranscodeResult *result)
-{
-	if (!_output_buffer.IsEmpty())
-	{
-		*result = TranscodeResult::DataReady;
-
-		auto obj = _output_buffer.Dequeue();
-		if (obj.has_value())
-		{
-			return obj.value();
-		}
-	}
-
-	*result = TranscodeResult::NoData;
-	return nullptr;
 }

@@ -8,6 +8,10 @@
 //==============================================================================
 #include "api_server.h"
 
+#include <base/info/ome_version.h>
+#include <orchestrator/orchestrator.h>
+#include <sys/utsname.h>
+
 #include "api_private.h"
 #include "controllers/root_controller.h"
 
@@ -15,33 +19,19 @@
 
 namespace api
 {
-	bool Server::Start(const std::shared_ptr<cfg::Server> &server_config)
+	struct XmlWriter : pugi::xml_writer
 	{
-		auto manager = http::svr::HttpServerManager::GetInstance();
+		ov::String result;
 
-		// Port configurations
-		const auto &api_bind_config = server_config->GetBind().GetManagers().GetApi();
-		// API Server configurations
-		const auto &managers = server_config->GetManagers();
-		const auto &api_config = managers.GetApi();
-
-		if (api_bind_config.IsParsed() == false)
+		void write(const void *data, size_t size) override
 		{
-			logti("API Server is disabled");
-			return true;
+			result.Append(static_cast<const char *>(data), size);
 		}
+	};
 
-		_access_token = api_config.GetAccessToken();
-
-		if (_access_token.IsEmpty())
-		{
-#if DEBUG
-			logtw("An empty AccessToken setting was found. This is only allowed on Debug builds for ease of development, and the Release build does not allow empty AccessToken.");
-#else	// DEBUG
-			logte("Empty  AccessToken is not allowed");
-#endif	// DEBUG
-		}
-
+	bool Server::PrepareHttpServers(const ov::String &server_ip, const cfg::mgr::Managers &managers, const cfg::bind::mgr::API &api_bind_config)
+	{
+		auto http_server_manager = http::svr::HttpServerManager::GetInstance();
 		auto http_interceptor = CreateInterceptor();
 
 		bool http_server_result = true;
@@ -54,9 +44,9 @@ namespace api
 		ov::SocketAddress address;
 		if (is_parsed)
 		{
-			address = ov::SocketAddress(server_config->GetIp(), port.GetPort());
+			address = ov::SocketAddress(server_ip, port.GetPort());
 
-			_http_server = manager->CreateHttpServer("APISvr", address, worker_count);
+			_http_server = http_server_manager->CreateHttpServer("APISvr", address, worker_count);
 
 			if (_http_server != nullptr)
 			{
@@ -81,12 +71,12 @@ namespace api
 				host_name_list.push_back(name);
 			}
 
-			tls_address = ov::SocketAddress(server_config->GetIp(), tls_port.GetPort());
+			tls_address = ov::SocketAddress(server_ip, tls_port.GetPort());
 			auto certificate = info::Certificate::CreateCertificate("api_server", host_name_list, managers.GetHost().GetTls());
 
 			if (certificate != nullptr)
 			{
-				_https_server = manager->CreateHttpsServer("APIServer", tls_address, certificate, worker_count);
+				_https_server = http_server_manager->CreateHttpsServer("APIServer", tls_address, certificate, worker_count);
 
 				if (_https_server != nullptr)
 				{
@@ -126,18 +116,94 @@ namespace api
 		}
 
 		// Rollback
-		manager->ReleaseServer(_http_server);
-		manager->ReleaseServer(_https_server);
+		http_server_manager->ReleaseServer(_http_server);
+		http_server_manager->ReleaseServer(_https_server);
 
 		return false;
+	}
+
+	void Server::SetupCors(const cfg::mgr::api::API &api_config)
+	{
+		bool is_cors_parsed;
+		auto cross_domains = api_config.GetCrossDomainList(&is_cors_parsed);
+
+		if (is_cors_parsed)
+		{
+			// API server doesn't have VHost, so use dummy VHost
+			auto vhost_app_name = info::VHostAppName::InvalidVHostAppName();
+			_cors_manager.SetCrossDomains(vhost_app_name, cross_domains);
+		}
+	}
+
+	bool Server::SetupAccessToken(const cfg::mgr::api::API &api_config)
+	{
+		_access_token = api_config.GetAccessToken();
+
+		if (_access_token.IsEmpty())
+		{
+#if DEBUG
+			logtw("An empty <AccessToken> setting was found. This is only allowed on Debug builds for ease of development, and the Release build does not allow empty <AccessToken>.");
+#else	// DEBUG
+			logte("Empty <AccessToken> is not allowed");
+			return false;
+#endif	// DEBUG
+		}
+
+		return true;
+	}
+
+	bool Server::Start(const std::shared_ptr<const cfg::Server> &server_config)
+	{
+		// API Server configurations
+		const auto &managers_config = server_config->GetManagers();
+		const auto &api_config = managers_config.GetApi();
+
+		// Port configurations
+		const auto &api_bind_config = server_config->GetBind().GetManagers().GetApi();
+
+		if (api_bind_config.IsParsed() == false)
+		{
+			logti("API Server is disabled");
+			return true;
+		}
+
+		SetupCors(api_config);
+		if (SetupAccessToken(api_config) == false)
+		{
+			return false;
+		}
+
+		return PrepareHttpServers(server_config->GetIp(), managers_config, api_bind_config);
 	}
 
 	std::shared_ptr<http::svr::RequestInterceptor> Server::CreateInterceptor()
 	{
 		auto http_interceptor = std::make_shared<http::svr::DefaultInterceptor>();
 
+		// CORS header processor
+		http_interceptor->Register(http::Method::All, R"(.+)", [=](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
+			auto response = client->GetResponse();
+			auto request = client->GetRequest();
+
+			do
+			{
+				// Set default headers
+				response->SetHeader("Server", "OvenMediaEngine");
+				response->SetHeader("Content-Type", "text/html");
+
+				auto vhost_app_name = info::VHostAppName::InvalidVHostAppName();
+
+				_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
+
+				return http::svr::NextHandler::Call;
+			} while (false);
+
+			return http::svr::NextHandler::DoNotCall;
+		});
+
 		// Request Handlers will be added to http_interceptor
 		_root_controller = std::make_shared<RootController>(_access_token);
+		_root_controller->SetServer(GetSharedPtr());
 		_root_controller->SetInterceptor(http_interceptor);
 		_root_controller->PrepareHandlers();
 
@@ -154,7 +220,70 @@ namespace api
 		bool http_result = (http_server != nullptr) ? manager->ReleaseServer(http_server) : true;
 		bool https_result = (https_server != nullptr) ? manager->ReleaseServer(https_server) : true;
 
+		_is_storage_path_initialized = false;
+		_storage_path = "";
+
+		_root_controller = nullptr;
+
 		return http_result && https_result;
 	}
 
+	void Server::CreateVHost(const cfg::vhost::VirtualHost &vhost_config)
+	{
+		OV_ASSERT2(vhost_config.IsReadOnly() == false);
+
+		switch (ocst::Orchestrator::GetInstance()->CreateVirtualHost(vhost_config))
+		{
+			case ocst::Result::Failed:
+				throw http::HttpError(http::StatusCode::BadRequest,
+									  "Failed to create the virtual host: [%s]",
+									  vhost_config.GetName().CStr());
+
+			case ocst::Result::Succeeded:
+				break;
+
+			case ocst::Result::Exists:
+				throw http::HttpError(http::StatusCode::Conflict,
+									  "The virtual host already exists: [%s]",
+									  vhost_config.GetName().CStr());
+
+			case ocst::Result::NotExists:
+				// CreateVirtualHost() never returns NotExists
+				OV_ASSERT2(false);
+				throw http::HttpError(http::StatusCode::InternalServerError,
+									  "Unknown error occurred: [%s]",
+									  vhost_config.GetName().CStr());
+		}
+	}
+
+	void Server::DeleteVHost(const info::Host &host_info)
+	{
+		OV_ASSERT2(host_info.IsReadOnly() == false);
+
+		logti("Deleting virtual host: %s", host_info.GetName().CStr());
+
+		switch (ocst::Orchestrator::GetInstance()->DeleteVirtualHost(host_info))
+		{
+			case ocst::Result::Failed:
+				throw http::HttpError(http::StatusCode::BadRequest,
+									  "Failed to delete the virtual host: [%s]",
+									  host_info.GetName().CStr());
+
+			case ocst::Result::Succeeded:
+				break;
+
+			case ocst::Result::Exists:
+				// CreateVirtDeleteVirtualHostualHost() never returns Exists
+				OV_ASSERT2(false);
+				throw http::HttpError(http::StatusCode::InternalServerError,
+									  "Unknown error occurred: [%s]",
+									  host_info.GetName().CStr());
+
+			case ocst::Result::NotExists:
+				// CreateVirtualHost() never returns NotExists
+				throw http::HttpError(http::StatusCode::NotFound,
+									  "The virtual host not exists: [%s]",
+									  host_info.GetName().CStr());
+		}
+	}
 }  // namespace api

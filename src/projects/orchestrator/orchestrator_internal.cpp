@@ -14,7 +14,7 @@
 
 namespace ocst
 {
-	bool OrchestratorInternal::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtual_host)
+	bool OrchestratorInternal::UpdateVirtualHost(const std::shared_ptr<VirtualHost> &virtual_host)
 	{
 		auto succeeded = true;
 
@@ -25,7 +25,8 @@ namespace ocst
 			logtd("VirtualHost is deleted");
 
 			// Delete all apps that were created by this VirtualHost
-			for (auto app_item : virtual_host->app_map)
+			auto app_map = virtual_host->app_map;
+			for (auto app_item : app_map)
 			{
 				auto &app_info = app_item.second->app_info;
 
@@ -417,6 +418,94 @@ namespace ocst
 		return info::VHostAppName(vhost_name, app_name);
 	}
 
+	Result OrchestratorInternal::CreateVirtualHost(const info::Host &vhost_info)
+	{
+		if(GetVirtualHost(vhost_info.GetName()) != nullptr)
+		{
+			// Duplicated VirtualHostName
+			return Result::Exists;
+		}
+
+		auto vhost = std::make_shared<VirtualHost>(vhost_info);
+		vhost->name = vhost_info.GetName();
+
+		for (auto &domain_name : vhost_info.GetHost().GetNameList())
+		{
+			vhost->host_list.emplace_back(domain_name);
+		}
+
+		for (auto &origin_config : vhost_info.GetOriginList())
+		{
+			vhost->origin_list.emplace_back(origin_config);
+		}
+
+		_virtual_host_map[vhost_info.GetName()] = vhost;
+		_virtual_host_list.push_back(vhost);
+
+
+		// Notification 
+		for (auto &module : _module_list)
+		{
+			auto &module_interface = module.module;
+
+			logtd("Notifying %p (%s) for the create event (%s)", module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr(), vhost_info.GetName().CStr());
+
+			if (module_interface->OnCreateHost(vhost_info))
+			{
+				logtd("The module %p (%s) returns true", module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr());
+			}
+			else
+			{
+				logte("The module %p (%s) returns error while creating the vhost [%s]",
+					  module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr(), vhost_info.GetName().CStr());
+			}
+		}
+
+		mon::Monitoring::GetInstance()->OnHostCreated(vhost_info);
+
+		return Result::Succeeded;
+	}
+
+	Result OrchestratorInternal::DeleteVirtualHost(const info::Host &vhost_info)
+	{
+		auto i = _virtual_host_list.begin();
+		while(i != _virtual_host_list.end())
+		{
+			auto vhost_item = *i;
+			if(vhost_item->name == vhost_info.GetName())
+			{
+				_virtual_host_list.erase(i);
+				_virtual_host_map.erase(vhost_item->name);
+
+
+				// Notification
+				for (auto &module : _module_list)
+				{
+					auto &module_interface = module.module;
+
+					logtd("Notifying %p (%s) for the create event (%s)", module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr(), vhost_info.GetName().CStr());
+
+					if (module_interface->OnDeleteHost(vhost_info))
+					{
+						logtd("The module %p (%s) returns true", module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr());
+					}
+					else
+					{
+						logte("The module %p (%s) returns error while deleting the vhost [%s]",
+							module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr(), vhost_info.GetName().CStr());
+					}
+				}
+				
+				mon::Monitoring::GetInstance()->OnHostDeleted(vhost_info);
+				return Result::Succeeded;
+			}
+
+			i++;
+		}
+
+		return Result::NotExists;
+	}
+
 	std::shared_ptr<ocst::VirtualHost> OrchestratorInternal::GetVirtualHost(const ov::String &vhost_name)
 	{
 		auto vhost_item = _virtual_host_map.find(vhost_name);
@@ -550,7 +639,7 @@ namespace ocst
 					// Append remaining_part
 					url_part.Append(remaining_part);
 
-					if (index >= 0)
+					if(index >= 0)
 					{
 						url_part.Append('?');
 						url_part.Append(another_part);
@@ -609,7 +698,6 @@ namespace ocst
 		mon::Monitoring::GetInstance()->OnApplicationCreated(app_info);
 
 		// Notify modules of creation events
-		std::vector<std::shared_ptr<ModuleInterface>> created_list;
 		bool succeeded = true;
 
 		auto new_app = std::make_shared<Application>(this, app_info);
@@ -624,8 +712,6 @@ namespace ocst
 			if (module_interface->OnCreateApplication(app_info))
 			{
 				logtd("The module %p (%s) returns true", module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr());
-
-				created_list.push_back(module_interface);
 			}
 			else
 			{

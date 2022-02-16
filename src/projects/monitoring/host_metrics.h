@@ -1,14 +1,19 @@
+//==============================================================================
 //
-// Created by getroot on 20. 1. 16.
+//  OvenMediaEngine
 //
-
+//  Created by getroot
+//  Copyright (c) 2020 AirenSoft. All rights reserved.
+//
+//==============================================================================
 #pragma once
+
+#include <shared_mutex>
 
 #include "application_metrics.h"
 #include "base/common_types.h"
 #include "base/info/host.h"
 #include "common_metrics.h"
-#include <shared_mutex>
 
 namespace mon
 {
@@ -27,15 +32,15 @@ namespace mon
 
 		void Release()
 		{
-			for(const auto &app : _applications)
+			for (const auto &app : _applications)
 			{
 				app.second->Release();
 			}
 			_applications.clear();
 		}
 
-		ov::String GetInfoString(bool show_children=true);
-		void ShowInfo(bool show_children=true);
+		ov::String GetInfoString(bool show_children = true);
+		void ShowInfo(bool show_children = true);
 
 		bool OnApplicationCreated(const info::Application &app_info);
 		bool OnApplicationDeleted(const info::Application &app_info);

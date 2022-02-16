@@ -4,19 +4,17 @@ PREFIX=/opt/ovenmediaengine
 TEMP_PATH=/tmp
 
 OME_VERSION=dev
-OPENSSL_VERSION=3.0.0-beta1
-SRTP_VERSION=2.4.0
-SRT_VERSION=1.4.2
+OPENSSL_VERSION=3.0.1
+SRTP_VERSION=2.4.2
+SRT_VERSION=1.4.4
 OPUS_VERSION=1.3.1
-X264_VERSION=20191217-2245-stable
-X265_VERSION=3.4
-VPX_VERSION=1.7.0
-FDKAAC_VERSION=0.1.5
+VPX_VERSION=1.11.0
+FDKAAC_VERSION=2.0.2
 NASM_VERSION=2.15.02
-FFMPEG_VERSION=4.3.2
+FFMPEG_VERSION=4.4.1
 JEMALLOC_VERSION=5.2.1
 PCRE2_VERSION=10.39
-
+OPENH264_VERSION=2.1.1
 INTEL_QSV_HWACCELS=false
 NVIDIA_VIDEO_CODEC_HWACCELS=false
 
@@ -49,7 +47,7 @@ install_openssl()
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sLf https://github.com/openssl/openssl/archive/openssl-${OPENSSL_VERSION}.tar.gz | tar -xz --strip-components=1 && \
-    ./config --prefix="${PREFIX}" --openssldir="${PREFIX}" -Wl,-rpath,"${PREFIX}/lib" shared no-idea no-mdc2 no-rc5 no-ec2m no-ecdh no-ecdsa no-async && \
+    ./config --prefix="${PREFIX}" --openssldir="${PREFIX}" --libdir=lib -Wl,-rpath,"${PREFIX}/lib" shared no-idea no-mdc2 no-rc5 no-ec2m no-ecdh no-ecdsa no-async && \
     make -j$(nproc) && \
     sudo make install_sw && \
     rm -rf ${DIR} ) || fail_exit "openssl"
@@ -61,7 +59,7 @@ install_libsrtp()
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sLf https://github.com/cisco/libsrtp/archive/v${SRTP_VERSION}.tar.gz | tar -xz --strip-components=1 && \
-    ./configure --prefix="${PREFIX}" --enable-shared --disable-static --enable-openssl --with-openssl-dir="${PREFIX}" && \
+    ./configure --prefix="${PREFIX}" --enable-openssl --with-openssl-dir="${PREFIX}" && \
     make -j$(nproc) shared_library&& \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "srtp"
@@ -93,29 +91,38 @@ install_libopus()
     rm -rf ${DIR}) || fail_exit "opus"
 }
 
-install_libx264()
+install_libopenh264()
 {
-    (DIR=${TEMP_PATH}/x264 && \
+    (DIR=${TEMP_PATH}/openh264 && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-${X264_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
-    ./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli && \
-    make -j$(nproc) && \
+    curl -sLf https://github.com/cisco/openh264/archive/refs/tags/v${OPENH264_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    sed -i -e "s|PREFIX=/usr/local|PREFIX=${PREFIX}|" Makefile && \
+    make OS=linux && \
     sudo make install && \
-    rm -rf ${DIR}) || fail_exit "x264"
-}
+    rm -rf ${DIR}) || fail_exit "openh264"
 
-install_libx265()
-{
-    (DIR=${TEMP_PATH}/x265 && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sLf https://github.com/videolan/x265/archive/${X265_VERSION}.tar.gz | tar -xz --strip-components=1 && \
-    cd ${DIR}/build/linux && \
-    cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="${PREFIX}" -DENABLE_SHARED:bool=on ../../source && \
-    make -j$(nproc) && \
-    sudo make install && \
-    rm -rf ${DIR}) || fail_exit "x265"
+    # To build ffmpeg, build and install the downloaded openh264 source. There is no other way.
+    # Download and replace the Prebuilt library for AVC/H.264 Patent
+    # We send an audit to Cisco.
+    # "OpenH264 Video Codec provided by Cisco Systems, Inc."
+
+    # KERNEL=$(uname -s)
+    # ARCH=$(uname -m)
+
+    # if  [ "${KERNEL}" == "Linux" ] && [ "${ARCH}" == "x86" ]; then
+    #     PLATFORM="linux32"
+    # elif [ "${KERNEL}" == "Linux" ] && [ "${ARCH}" == "x86_64" ]; then
+    #     PLATFORM="linux64"
+    # else
+    #     return
+    # fi 
+
+    # (cd ${PREFIX}/lib && \
+    # FILENAME=libopenh264-${OPENH264_VERSION}-${PLATFORM}.6.so && \
+    # sudo curl -O http://ciscobinary.openh264.org/${FILENAME}.bz2 && \
+    # sudo bunzip2 -f ${FILENAME}.bz2 && \
+    # sudo mv ${FILENAME} libopenh264.so.${OPENH264_VERSION} ) || fail_exit "prebuilt_openh264"
 }
 
 install_libvpx()
@@ -170,12 +177,17 @@ install_ffmpeg()
     #  --enable-debug \
     #  --disable-optimizations --disable-mmx --disable-stripping \
 
-    ADDI_LIBS=""
+    if [[ -n "${EXT_FFMPEG_DISABLE}" ]]; then
+        return
+    fi
+
+    ADDI_LICENSE=""
+    ADDI_LIBS=" --disable-nvdec --disable-nvdec --disable-vaapi --disable-vdpau --disable-cuda-llvm --disable-cuvid --disable-ffnvcodec "
     ADDI_ENCODER=""
     ADDI_DECODER=""
     ADDI_CFLAGS=""
     ADDI_LDFLAGS=""
-    ADDI_HWACCEL="--disable-nvdec --disable-nvdec --disable-vaapi --disable-vdpau --disable-cuda-llvm --disable-cuvid --disable-ffnvcodec"
+    ADDI_HWACCEL=""
     ADDI_FILTERS=""
 
     if [ "$INTEL_QSV_HWACCELS" = true ] ; then
@@ -187,14 +199,31 @@ install_ffmpeg()
     fi
 
     if [ "$NVIDIA_VIDEO_CODEC_HWACCELS" = true ] ; then
-        ADDI_LIBS+=" --enable-cuda-nvcc --enable-cuda-llvm --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec"
+        ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
+        ADDI_LIBS+=" --enable-cuda-nvcc --enable-cuda-llvm --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec --enable-cuvid"
         ADDI_ENCODER+=",h264_nvenc,hevc_nvenc"
-        ADDI_DECODER+=",h264_nvdec,hevc_nvdec"
+        ADDI_DECODER+=",h264_nvdec,hevc_nvdec,h264_cuvid,hevc_cuvid"
         ADDI_CFLAGS+="-I/usr/local/cuda/include"
         ADDI_LDFLAGS="-L/usr/local/cuda/lib64"
-        ADDI_HWACCEL="--enable-hwaccel=h264_nvdec,hevc_nvdec,nvenc,nvdec"
+        ADDI_HWACCEL="--enable-hwaccel=cuda,cuvid"
         ADDI_FILTERS=",scale_cuda,hwdownload,hwupload,hwupload_cuda"
+        PATH=$PATH:/usr/local/nvidia/bin:/usr/local/cuda/bin
     fi
+
+    # Add options as environmental variable values.
+
+    if [[ -n "${EXT_FFMPEG_LICENSE}" ]]; then 
+        ADDI_LICENSE+=${EXT_FFMPEG_LICENSE}
+    fi
+
+    if [[ -n "${EXT_FFMPEG_LIBS}" ]] ; then 
+        ADDI_LIBS+=${EXT_FFMPEG_LIBS}
+    fi
+
+    if [[ -n "${EXT_FFMPEG_ENCODER}" ]] ; then 
+        ADDI_ENCODER+=${EXT_FFMPEG_ENCODER}
+    fi
+
 
     (DIR=${TEMP_PATH}/ffmpeg && \
     mkdir -p ${DIR} && \
@@ -202,27 +231,26 @@ install_ffmpeg()
     curl -sLf https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n${FFMPEG_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     sed -i 's/compute_30/compute_60/g' ./configure && \
     sed -i 's/sm_30/sm_60/g' ./configure && \
-    PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PREFIX}/lib64/pkgconfig:${PREFIX}/usr/local/lib//pkgconfig:${PKG_CONFIG_PATH} ./configure \
+    PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PREFIX}/lib64/pkgconfig:${PREFIX}/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH} ./configure \
     --prefix="${PREFIX}" \
-    --enable-gpl \
-    --enable-nonfree \
     --extra-cflags="-I${PREFIX}/include ${ADDI_CFLAGS}"  \
     --extra-ldflags="-L${PREFIX}/lib ${ADDI_LDFLAGS} -Wl,-rpath,${PREFIX}/lib" \
     --extra-libs=-ldl \
+    ${ADDI_LICENSE} \
     --enable-shared \
     --disable-static \
     --disable-debug \
     --disable-doc \
     --disable-programs  \
     --disable-avdevice --disable-dct --disable-dwt --disable-lsp --disable-lzo --disable-rdft --disable-faan --disable-pixelutils \
-    --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-libx265 ${ADDI_LIBS} \
+    --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libopenh264 --enable-openssl ${ADDI_LIBS} \
     --disable-everything \
     --disable-fast-unaligned \
     ${ADDI_HWACCEL} \
-    --enable-encoder=libvpx_vp8,libopus,libfdk_aac,libx264,libx265,mjpeg,png${ADDI_ENCODER} \
+    --enable-encoder=libvpx_vp8,libopus,libfdk_aac,libopenh264,mjpeg,png${ADDI_ENCODER} \
     --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8${ADDI_DECODER} \
     --enable-parser=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
-    --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp --enable-demuxer=rtsp --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
+    --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp,tls,rtmps --enable-demuxer=rtsp --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
     --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb,format${ADDI_FILTERS} && \
     make -j$(nproc) && \
     sudo make install && \
@@ -396,8 +424,7 @@ install_openssl
 install_libsrtp
 install_libsrt
 install_libopus
-install_libx264
-install_libx265
+install_libopenh264
 install_libvpx
 install_fdk_aac
 install_ffmpeg

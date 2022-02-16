@@ -60,10 +60,10 @@ bool SegmentWorker::Stop()
 //====================================================================================================
 // add work info
 //====================================================================================================
-bool SegmentWorker::AddWorkInfo(std::shared_ptr<SegmentWorkInfo> work_info)
+bool SegmentWorker::PushConnection(const std::shared_ptr<http::svr::HttpConnection> &connection)
 {
 	std::unique_lock<std::mutex> lock(_work_info_guard);
-	_work_infos.push(work_info);
+	_connection_list_to_process.push(connection);
 
 	_queue_event.Notify();
 
@@ -73,15 +73,15 @@ bool SegmentWorker::AddWorkInfo(std::shared_ptr<SegmentWorkInfo> work_info)
 //====================================================================================================
 // pop work info
 //====================================================================================================
-std::shared_ptr<SegmentWorkInfo> SegmentWorker::PopWorkInfo()
+std::shared_ptr<http::svr::HttpConnection> SegmentWorker::PopConnection()
 {
 	std::unique_lock<std::mutex> lock(_work_info_guard);
 
-	if (_work_infos.empty())
+	if (_connection_list_to_process.empty())
 		return nullptr;
 
-	auto work_info = _work_infos.front();
-	_work_infos.pop();
+	auto work_info = _connection_list_to_process.front();
+	_connection_list_to_process.pop();
 
 	return work_info;
 }
@@ -96,9 +96,9 @@ void SegmentWorker::WorkerThread()
 		// quequ event wait
 		_queue_event.Wait();
 
-		auto work_info = PopWorkInfo();
+		auto connection = PopConnection();
 
-		if (work_info == nullptr)
+		if (connection == nullptr)
 		{
 			if (_stop_thread_flag == false)
 			{
@@ -109,9 +109,9 @@ void SegmentWorker::WorkerThread()
 			continue;
 		}
 
-		if (_process_handler(work_info->client, work_info->request_target, work_info->origin_url) == false)
+		if (_process_handler(connection) == false)
 		{
-			logte("Segment process handler fail - target(%s)", work_info->request_target.CStr());
+			logte("Segment process handler fail - target(%s)", connection->GetRequest()->ToString());
 		}
 
 		//        logtd("Segment process handler - target(%s)", work_info->request_target.CStr());
@@ -154,14 +154,10 @@ bool SegmentWorkerManager::Stop()
 // Worker Add
 //====================================================================================================
 #define MAX_WORKER_INDEX 100000000
-bool SegmentWorkerManager::AddWork(const std::shared_ptr<http::svr::HttpConnection> &response,
-								   const ov::String &request_target,
-								   const ov::String &origin_url)
+bool SegmentWorkerManager::PushConnection(const std::shared_ptr<http::svr::HttpConnection> &connection)
 {
-	auto work_info = std::make_shared<SegmentWorkInfo>(response, request_target, origin_url);
-
 	// insert thread
-	_workers[(_worker_index % _workers.size())]->AddWorkInfo(work_info);
+	_workers[(_worker_index % _workers.size())]->PushConnection(connection);
 
 	if (_worker_index < MAX_WORKER_INDEX)
 		_worker_index++;

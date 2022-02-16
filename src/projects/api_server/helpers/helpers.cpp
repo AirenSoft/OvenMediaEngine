@@ -9,6 +9,7 @@
 #include "./helpers.h"
 
 #include <modules/http/http.h>
+#include <modules/json_serdes/converters.h>
 
 namespace api
 {
@@ -107,91 +108,86 @@ namespace api
 		return nullptr;
 	}
 
-	std::shared_ptr<const http::HttpError> GetRequestBody(
+	void GetRequestBody(
 		const std::shared_ptr<http::svr::HttpConnection> &client,
 		Json::Value *request_body)
 	{
 		ov::JsonObject json_object;
-		auto error = http::HttpError::CreateError(json_object.Parse(client->GetRequest()->GetRequestBody()));
+		auto error = json_object.Parse(client->GetRequest()->GetRequestBody());
 
 		if (error != nullptr)
 		{
-			return error;
+			throw http::HttpError(http::StatusCode::BadRequest, error->What());
 		}
 
 		if (request_body != nullptr)
 		{
 			*request_body = json_object.GetJsonValue();
 		}
-
-		return nullptr;
 	}
 
-	std::shared_ptr<const http::HttpError> GetVirtualHostMetrics(
+	void GetVirtualHostMetrics(
 		const ov::MatchResult &match_result,
 		std::shared_ptr<mon::HostMetrics> *vhost_metrics)
 	{
 		auto vhost_name_group = match_result.GetNamedGroup("vhost_name");
 
-		if (vhost_name_group.IsValid())
+		if (vhost_name_group.IsValid() == false)
 		{
-			auto vhost_name = vhost_name_group.GetValue();
-			auto vhost = GetVirtualHost(vhost_name);
-
-			if (vhost == nullptr)
-			{
-				return http::HttpError::CreateError(
-					http::StatusCode::NotFound,
-					"Could not find the virtual host: [%s]", vhost_name.CStr());
-			}
-
-			if (vhost_metrics != nullptr)
-			{
-				*vhost_metrics = vhost;
-			}
-
-			return nullptr;
+			throw http::HttpError(
+				http::StatusCode::InternalServerError,
+				"Could not find the virtual host regex group");
 		}
 
-		return http::HttpError::CreateError(
-			http::StatusCode::InternalServerError,
-			"Could not find the virtual host regex group");
+		auto vhost_name = vhost_name_group.GetValue();
+		auto vhost = GetVirtualHost(vhost_name);
+
+		if (vhost == nullptr)
+		{
+			throw http::HttpError(
+				http::StatusCode::NotFound,
+				"Could not find the virtual host: [%s]", vhost_name.CStr());
+		}
+
+		if (vhost_metrics != nullptr)
+		{
+			*vhost_metrics = vhost;
+		}
 	}
 
-	std::shared_ptr<const http::HttpError> GetApplicationMetrics(
+	void GetApplicationMetrics(
 		const ov::MatchResult &match_result,
 		const std::shared_ptr<mon::HostMetrics> &vhost_metrics,
 		std::shared_ptr<mon::ApplicationMetrics> *app_metrics)
 	{
 		auto app_name_group = match_result.GetNamedGroup("app_name");
 
-		if (app_name_group.IsValid())
+		if (app_name_group.IsValid() == false)
 		{
-			auto vhost_name = vhost_metrics->GetName();
-			auto app_name = app_name_group.GetValue();
-			auto app = GetApplication(vhost_metrics, app_name);
-
-			if (app == nullptr)
-			{
-				return http::HttpError::CreateError(
-					http::StatusCode::NotFound,
-					"Could not find the application: [%s/%s]", vhost_name.CStr(), app_name.CStr());
-			}
-
-			if (app_metrics != nullptr)
-			{
-				*app_metrics = app;
-			}
-
-			return nullptr;
+			throw http::HttpError(
+				http::StatusCode::InternalServerError,
+				"Could not find the application regex group");
 		}
 
-		return http::HttpError::CreateError(
-			http::StatusCode::InternalServerError,
-			"Could not find the application regex group");
+		auto vhost_name = vhost_metrics->GetName();
+		auto app_name = app_name_group.GetValue();
+		auto app = GetApplication(vhost_metrics, app_name);
+
+		if (app == nullptr)
+		{
+			throw http::HttpError(
+				http::StatusCode::NotFound,
+				"Could not find the application: [%s/%s]", vhost_name.CStr(), app_name.CStr());
+		}
+
+		if (app_metrics != nullptr)
+		{
+			*app_metrics = app;
+		}
 	}
 
-	std::shared_ptr<const http::HttpError> GetStreamMetrics(
+	MAY_THROWS(http::HttpError)
+	void GetStreamMetrics(
 		const ov::MatchResult &match_result,
 		const std::shared_ptr<mon::HostMetrics> &vhost_metrics,
 		const std::shared_ptr<mon::ApplicationMetrics> &app_metrics,
@@ -200,66 +196,249 @@ namespace api
 	{
 		auto stream_name_group = match_result.GetNamedGroup("stream_name");
 
-		if (stream_name_group.IsValid())
+		if (stream_name_group.IsValid() == false)
 		{
-			auto vhost_name = vhost_metrics->GetName();
-			auto app_name = app_metrics->GetName();
-			auto stream_name = stream_name_group.GetValue();
-			auto stream = GetStream(app_metrics, stream_name, output_streams);
-
-			if (stream == nullptr)
-			{
-				return http::HttpError::CreateError(
-					http::StatusCode::NotFound,
-					"Could not find the stream: [%s/%s/%s]", vhost_name.CStr(), app_name.CStr(), stream_name.CStr());
-			}
-
-			if (stream_metrics != nullptr)
-			{
-				*stream_metrics = stream;
-			}
-
-			return nullptr;
+			throw http::HttpError(
+				http::StatusCode::InternalServerError,
+				"Could not find the stream regex group");
 		}
 
-		return http::HttpError::CreateError(
-			http::StatusCode::InternalServerError,
-			"Could not find the stream regex group");
-	}
+		auto vhost_name = vhost_metrics->GetName();
+		auto app_name = app_metrics->GetName();
+		auto stream_name = stream_name_group.GetValue();
+		auto stream = GetStream(app_metrics, stream_name, output_streams);
 
-	void MultipleStatus::AddStatusCode(http::StatusCode status_code)
-	{
-		if (_count == 0)
+		if (stream == nullptr)
 		{
-			_last_status_code = status_code;
-			_has_ok = (status_code == http::StatusCode::OK);
-		}
-		else
-		{
-			_has_ok = _has_ok || (status_code == http::StatusCode::OK);
-
-			if (_last_status_code != status_code)
-			{
-				_last_status_code = http::StatusCode::MultiStatus;
-			}
-			else
-			{
-				// Keep the status code
-			}
+			throw http::HttpError(
+				http::StatusCode::NotFound,
+				"Could not find the stream: [%s/%s/%s]", vhost_name.CStr(), app_name.CStr(), stream_name.CStr());
 		}
 
-		_count++;
+		if (stream_metrics != nullptr)
+		{
+			*stream_metrics = stream;
+		}
 	}
 
-	void MultipleStatus::AddStatusCode(const std::shared_ptr<const ov::Error> &error)
+	void FillDefaultAppConfigValues(Json::Value &app_config)
 	{
-		http::StatusCode error_status_code = static_cast<http::StatusCode>(error->GetCode());
+		// Setting up the default values
+		if (app_config.isMember("providers") == false)
+		{
+			auto &providers = app_config["providers"];
 
-		AddStatusCode(IsValidStatusCode(error_status_code) ? error_status_code : http::StatusCode::InternalServerError);
+			providers["rtmp"] = Json::objectValue;
+			providers["mpegts"] = Json::objectValue;
+		}
+
+		if (app_config.isMember("publishers") == false)
+		{
+			auto &publishers = app_config["publishers"];
+
+			publishers["hls"] = Json::objectValue;
+			publishers["dash"] = Json::objectValue;
+			publishers["llDash"] = Json::objectValue;
+			publishers["webrtc"] = Json::objectValue;
+		}
+
+		if (app_config.isMember("outputProfiles") == false)
+		{
+			Json::Value output_profile(Json::objectValue);
+
+			output_profile["name"] = "bypass";
+			output_profile["outputStreamName"] = "${OriginStreamName}";
+
+			Json::Value codec;
+
+			codec["bypass"] = true;
+
+			auto &encodes = output_profile["encodes"];
+			encodes["videos"].append(codec);
+			encodes["audios"].append(codec);
+
+			codec = Json::objectValue;
+			codec["codec"] = "opus";
+			codec["bitrate"] = 128000;
+			codec["samplerate"] = 48000;
+			codec["channel"] = 2;
+			encodes["audios"].append(codec);
+
+			app_config["outputProfiles"]["outputProfile"].append(output_profile);
+		}
 	}
 
-	http::StatusCode MultipleStatus::GetStatusCode() const
+	void OverwriteJson(const Json::Value &from, Json::Value &to)
 	{
-		return _last_status_code;
+		for (auto item = from.begin(); item != from.end(); ++item)
+		{
+			switch (item->type())
+			{
+				case Json::ValueType::nullValue:
+					[[fallthrough]];
+				case Json::ValueType::intValue:
+					[[fallthrough]];
+				case Json::ValueType::uintValue:
+					[[fallthrough]];
+				case Json::ValueType::realValue:
+					[[fallthrough]];
+				case Json::ValueType::stringValue:
+					[[fallthrough]];
+				case Json::ValueType::booleanValue:
+					[[fallthrough]];
+				case Json::ValueType::arrayValue:
+					to[item.name()] = *item;
+					break;
+
+				case Json::ValueType::objectValue: {
+					OverwriteJson(*item, to[item.name()]);
+				}
+			}
+		}
+	}
+
+	void ThrowIfVirtualIsReadOnly(const cfg::vhost::VirtualHost &vhost_config)
+	{
+		if (vhost_config.IsReadOnly())
+		{
+			throw http::HttpError(http::StatusCode::Forbidden,
+								  "The VirtualHost is read-only: [%s]",
+								  vhost_config.GetName().CStr());
+		}
+	}
+
+	void ThrowIfOrchestratorNotSucceeded(ocst::Result result, const char *action, const char *resource_name, const char *resource_path)
+	{
+		switch (result)
+		{
+			case ocst::Result::Failed:
+				throw http::HttpError(http::StatusCode::BadRequest,
+									  "Failed to %s the %s: [%s]", action, resource_name, resource_path);
+
+			case ocst::Result::Succeeded:
+				break;
+
+			case ocst::Result::Exists:
+				throw http::HttpError(http::StatusCode::Conflict,
+									  "Could not %s the %s: [%s] already exists", action, resource_name, resource_path);
+
+			case ocst::Result::NotExists:
+				throw http::HttpError(http::StatusCode::NotFound,
+									  "Could not %s the %s: [%s] not exists", action, resource_name, resource_path);
+		}
+	}
+
+	void RecreateApplication(const std::shared_ptr<mon::HostMetrics> &vhost,
+							 const std::shared_ptr<mon::ApplicationMetrics> &app,
+							 Json::Value &app_json)
+	{
+		ThrowIfVirtualIsReadOnly(*(vhost.get()));
+
+		// TODO(dimiden): Caution - Race condition may occur
+		// If an application is deleted immediately after the GetApplication(),
+		// the app information can no longer be obtained from Orchestrator
+
+		// Delete GET-only fields
+		app_json.removeMember("dynamic");
+
+		cfg::vhost::app::Application app_config;
+		try
+		{
+			::serdes::ApplicationFromJson(app_json, &app_config);
+		}
+		catch (const cfg::ConfigError &error)
+		{
+			throw http::HttpError(http::StatusCode::BadRequest, error.What());
+		}
+
+		ThrowIfOrchestratorNotSucceeded(
+			ocst::Orchestrator::GetInstance()->DeleteApplication(*app),
+			"delete",
+			"application",
+			ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
+
+		ThrowIfOrchestratorNotSucceeded(
+			ocst::Orchestrator::GetInstance()->CreateApplication(*vhost, app_config),
+			"create",
+			"application",
+			ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
+	}
+
+	ov::String GetOutputProfileName(const std::shared_ptr<http::svr::HttpConnection> &client)
+	{
+		auto &match_result = client->GetRequest()->GetMatchResult();
+
+		return match_result.GetNamedGroup("output_profile_name").GetValue();
+	}
+
+	off_t FindOutputProfile(const std::shared_ptr<mon::ApplicationMetrics> &app,
+							const ov::String &output_profile_name,
+							Json::Value *value)
+	{
+		auto &app_config = app->GetConfig();
+		off_t offset = 0;
+
+		for (auto &profile : app_config.GetOutputProfileList())
+		{
+			if (output_profile_name == profile.GetName().CStr())
+			{
+				if (value != nullptr)
+				{
+					*value = profile.ToJson();
+				}
+
+				return offset;
+			}
+
+			offset++;
+		}
+
+		return -1;
+	}
+
+	off_t FindOutputProfile(Json::Value &app_json,
+							const ov::String &output_profile_name,
+							Json::Value **value)
+	{
+		if (app_json.isMember("outputProfiles"))
+		{
+			auto &output_profiles = app_json["outputProfiles"];
+
+			if (output_profiles.isMember("outputProfile"))
+			{
+				auto &output_profile_list = output_profiles["outputProfile"];
+				off_t offset = 0;
+
+				if (output_profile_list.isArray())
+				{
+					for (auto &profile : output_profile_list)
+					{
+						auto name = profile["name"];
+
+						if (name.isString())
+						{
+							if (output_profile_name == name.asCString())
+							{
+								if (value != nullptr)
+								{
+									*value = &profile;
+								}
+
+								return offset;
+							}
+						}
+						else
+						{
+							// Invalid name
+							OV_ASSERT(false, "String is expected, but %d found", name.type());
+						}
+
+						offset++;
+					}
+				}
+			}
+		}
+
+		return -1;
 	}
 }  // namespace api

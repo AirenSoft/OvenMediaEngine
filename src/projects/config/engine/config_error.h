@@ -12,20 +12,18 @@
 
 #include <memory>
 
-#define CreateConfigError(format, ...) \
-	cfg::ConfigError::CreateError(__FILE__, __LINE__, format, ##__VA_ARGS__)
+#define CreateConfigErrorPtr(format, ...) \
+	std::make_shared<cfg::ConfigError>(__FILE__, __LINE__, format, ##__VA_ARGS__)
 
-// Just a hint of what exception is thrown
-#define MAY_THROWS(...)
+#define CreateConfigError(format, ...) \
+	cfg::ConfigError(__FILE__, __LINE__, format, ##__VA_ARGS__)
 
 namespace cfg
 {
 	class ConfigError : public ov::Error
 	{
 	public:
-		ConfigError(const char *file_name, int line_number, ov::String message);
-
-		static std::shared_ptr<ConfigError> CreateError(const char *file_name, int line_number, const char *format, ...);
+		ConfigError(const char *file_name, int line_number, const char *format, ...);
 
 		ov::String GetDetailedMessage() const;
 

@@ -27,15 +27,10 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const Admission
 		return {AccessController::VerificationResult::Error, nullptr};
 	}
 
-	// TODO(Dimiden) : Modify below codes
-	// GetVirtualHostByName is deprecated so blow codes are insane, later it will be modified.
-	auto vhost_list = _server_config.GetVirtualHostList();
-	for (const auto &vhost_item : vhost_list)
+	auto item = ocst::Orchestrator::GetInstance()->GetHostInfo(vhost_name);
+	if(item.has_value())
 	{
-		if (vhost_item.GetName() != vhost_name)
-		{
-			continue;
-		}
+		auto vhost_item = item.value();
 
 		auto &webhooks_config = vhost_item.GetAdmissionWebhooks();
 		if (!webhooks_config.IsParsed())
@@ -120,16 +115,10 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPol
 		return {AccessController::VerificationResult::Error, nullptr};
 	}
 
-	// TODO(Dimiden) : Modify below codes
-	// GetVirtualHostByName is deprecated so blow codes are insane, later it will be modified.
-	auto vhost_list = _server_config.GetVirtualHostList();
-	for (const auto &vhost_item : vhost_list)
+	auto item = ocst::Orchestrator::GetInstance()->GetHostInfo(vhost_name);
+	if(item.has_value())
 	{
-		if (vhost_item.GetName() != vhost_name)
-		{
-			continue;
-		}
-
+		auto vhost_item = item.value();
 		// Handle SignedPolicy if needed
 		auto &signed_policy_config = vhost_item.GetSignedPolicy();
 		if (!signed_policy_config.IsParsed())
@@ -181,7 +170,7 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPol
 	}
 
 	// Probably this doesn't happen
-	logte("Could not find VirtualHost (%s)", vhost_name);
+	logte("Could not find VirtualHost (%s)", vhost_name.CStr());
 	return {AccessController::VerificationResult::Error, nullptr};
 }
 
@@ -196,15 +185,10 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedTok
 		return {AccessController::VerificationResult::Error, nullptr};
 	}
 
-	// TODO(Dimiden) : Modify below codes
-	// GetVirtualHostByName is deprecated so blow codes are insane, later it will be modified.
-	auto vhost_list = _server_config.GetVirtualHostList();
-	for (const auto &vhost_item : vhost_list)
+	auto item = ocst::Orchestrator::GetInstance()->GetHostInfo(vhost_name);
+	if(item.has_value())
 	{
-		if (vhost_item.GetName() != vhost_name)
-		{
-			continue;
-		}
+		auto vhost_item = item.value();
 
 		// Handle SignedToken if needed
 		auto &signed_token_config = vhost_item.GetSignedToken();
@@ -234,6 +218,6 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedTok
 	}
 
 	// Probably this doesn't happen
-	logte("Could not find VirtualHost (%s)", vhost_name);
+	logte("Could not find VirtualHost (%s)", vhost_name.CStr());
 	return {AccessController::VerificationResult::Error, nullptr}; 
 }

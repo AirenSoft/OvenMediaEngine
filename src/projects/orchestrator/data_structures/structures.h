@@ -51,6 +51,10 @@ namespace ocst
 
 		// Origin/Location
 		ov::String location;
+
+		// Forwrading query params
+		bool forward_query_params = true;
+
 		// Generated URL list from <Origin>.<Pass>.<URL>
 		std::vector<ov::String> url_list;
 
@@ -118,7 +122,7 @@ namespace ocst
 
 	struct VirtualHost
 	{
-		VirtualHost(const info::Host &host_info);
+		VirtualHost(const info::Host &new_host_info);
 
 		void MarkAllAs(ItemState state);
 		bool MarkAllAs(ItemState expected_old_state, ItemState state);

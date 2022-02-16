@@ -33,13 +33,13 @@ namespace cfg
 				cmm::Webrtc _webrtc{"3333/tcp", "3334/tcp"};
 
 			public:
-				CFG_DECLARE_REF_GETTER_OF(GetOvt, _ovt);
-				CFG_DECLARE_REF_GETTER_OF(GetRtmp, _rtmp)
-				CFG_DECLARE_REF_GETTER_OF(GetRtsp, _rtsp)
-				CFG_DECLARE_REF_GETTER_OF(GetRtspc, _rtspc)
-				CFG_DECLARE_REF_GETTER_OF(GetSrt, _srt)
-				CFG_DECLARE_REF_GETTER_OF(GetMpegts, _mpegts);
-				CFG_DECLARE_REF_GETTER_OF(GetWebrtc, _webrtc)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetOvt, _ovt);
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetRtmp, _rtmp)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetRtsp, _rtsp)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetRtspc, _rtspc)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetSrt, _srt)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetMpegts, _mpegts);
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetWebrtc, _webrtc)
 
 			protected:
 				void MakeList() override

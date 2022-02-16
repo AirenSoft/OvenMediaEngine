@@ -46,20 +46,33 @@ namespace http
 			return _tls_data;
 		}
 
-		bool HttpResponse::SetHeader(const ov::String &key, const ov::String &value)
+		bool HttpResponse::AddHeader(const ov::String &key, const ov::String &value)
 		{
-			if (_is_header_sent)
+			if (IsHeaderSent())
 			{
-				logtw("Cannot modify header: Header is sent: %s", _client_socket->ToString().CStr());
+				logtw("Cannot add header: Header is sent: %s", _client_socket->ToString().CStr());
 				return false;
 			}
 
-			_response_header[key] = value;
+			_response_header[key].push_back(value);
 
 			return true;
 		}
 
-		const ov::String &HttpResponse::GetHeader(const ov::String &key)
+		bool HttpResponse::SetHeader(const ov::String &key, const ov::String &value)
+		{
+			if (IsHeaderSent())
+			{
+				logtw("Cannot set header: Header is sent: %s", _client_socket->ToString().CStr());
+				return false;
+			}
+
+			_response_header[key] = {value};
+
+			return true;
+		}
+
+		const std::vector<ov::String> &HttpResponse::GetHeader(const ov::String &key) const
 		{
 			auto item = _response_header.find(key);
 
@@ -69,6 +82,26 @@ namespace http
 			}
 
 			return item->second;
+		}
+
+		bool HttpResponse::RemoveHeader(const ov::String &key)
+		{
+			if (IsHeaderSent())
+			{
+				logtw("Cannot remove header: Header is sent: %s", _client_socket->ToString().CStr());
+				return false;
+			}
+
+			auto response_iterator = _response_header.find(key);
+
+			if (response_iterator == _response_header.end())
+			{
+				return false;
+			}
+
+			_response_header.erase(response_iterator);
+
+			return true;
 		}
 
 		bool HttpResponse::AppendData(const std::shared_ptr<const ov::Data> &data)
@@ -110,7 +143,7 @@ namespace http
 
 		uint32_t HttpResponse::SendHeaderIfNeeded()
 		{
-			if (_is_header_sent)
+			if (IsHeaderSent())
 			{
 				// The headers are already sent
 				return 0;
@@ -131,12 +164,21 @@ namespace http
 			stream.Append(ov::String::FormatString("HTTP/%s %d %s\r\n", _http_version.CStr(), _status_code, _reason.CStr()).ToData(false));
 
 			// RFC7230 - 3.2.  Header Fields
-			std::for_each(_response_header.begin(), _response_header.end(), [&stream](const auto &pair) -> void {
-				stream.Append(pair.first.ToData(false));
-				stream.Append(": ", 2);
-				stream.Append(pair.second.ToData(false));
-				stream.Append("\r\n", 2);
-			});
+			for (const auto &pair : _response_header)
+			{
+				auto key_data = pair.first.ToData(false);
+				const std::vector<ov::String> &value_list = pair.second;
+
+				for (const auto &value : value_list)
+				{
+					auto value_data = value.ToData(false);
+
+					stream.Append(key_data);
+					stream.Append(": ", 2);
+					stream.Append(value_data);
+					stream.Append("\r\n", 2);
+				}
+			}
 
 			stream.Append("\r\n", 2);
 

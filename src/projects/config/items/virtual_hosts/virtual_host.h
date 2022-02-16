@@ -33,18 +33,33 @@ namespace cfg
 			app::Applications _applications;
 
 		public:
-			CFG_DECLARE_REF_GETTER_OF(GetName, _name)
-			CFG_DECLARE_REF_GETTER_OF(GetDistribution, _distribution)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetDistribution, _distribution)
 
-			CFG_DECLARE_REF_GETTER_OF(GetHost, _host)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetHost, _host)
 
-			CFG_DECLARE_REF_GETTER_OF(GetSignedPolicy, _signed_policy)
-			CFG_DECLARE_REF_GETTER_OF(GetSignedToken, _signed_token)
-			CFG_DECLARE_REF_GETTER_OF(GetAdmissionWebhooks, _admission_webhooks)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetSignedPolicy, _signed_policy)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetSignedToken, _signed_token)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetAdmissionWebhooks, _admission_webhooks)
 
-			CFG_DECLARE_REF_GETTER_OF(GetOrigins, _origins)
-			CFG_DECLARE_REF_GETTER_OF(GetOriginList, _origins.GetOriginList())
-			CFG_DECLARE_REF_GETTER_OF(GetApplicationList, _applications.GetApplicationList())
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetOrigins, _origins)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetOriginList, _origins.GetOriginList())
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetApplicationList, _applications.GetApplicationList())
+
+			bool GetApplicationByName(ov::String name, cfg::vhost::app::Application &application) const
+			{
+				auto &app_list = GetApplicationList();
+				for (auto &item : app_list)
+				{
+					if (item.GetName() == name)
+					{
+						application = item;
+						return true;
+					}
+				}
+
+				return false;
+			}
 
 		protected:
 			void MakeList() override
@@ -59,7 +74,7 @@ namespace cfg
 				Register<Optional>("AdmissionWebhooks", &_admission_webhooks);
 
 				Register<Optional>("Origins", &_origins);
-				Register<Optional>({"Applications", OmitRule::Omit}, &_applications);
+				Register<Optional>("Applications", &_applications);
 			}
 		};
 	}  // namespace vhost

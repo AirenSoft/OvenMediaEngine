@@ -16,14 +16,14 @@ namespace cfg
 		{
 			struct Properties : public Item
 			{
-				CFG_DECLARE_REF_GETTER_OF(GetNoInputFailoverTimeout, _no_input_failover_timeout)
-				CFG_DECLARE_REF_GETTER_OF(GetUnusedStreamDeletionTimeout, _unused_stream_deletion_timeout)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetNoInputFailoverTimeout, _no_input_failover_timeout)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetUnusedStreamDeletionTimeout, _unused_stream_deletion_timeout)
 
 			protected:
 				void MakeList() override
 				{
-					Register("NoInputFailoverTimeout", &_no_input_failover_timeout);
-					Register("UnusedStreamDeletionTimeout", &_unused_stream_deletion_timeout);
+					Register<Optional>("NoInputFailoverTimeout", &_no_input_failover_timeout);
+					Register<Optional>("UnusedStreamDeletionTimeout", &_unused_stream_deletion_timeout);
 				}
 
 				int64_t _no_input_failover_timeout = 3000;

@@ -28,10 +28,6 @@ namespace ocst
 						 protected OrchestratorInternal
 	{
 	public:
-		bool ApplyOriginMap(const std::vector<info::Host> &host_list);
-
-		std::vector<std::shared_ptr<ocst::VirtualHost>> GetVirtualHostList();
-
 		/// Register the module
 		///
 		/// @param module Module to register
@@ -46,6 +42,37 @@ namespace ocst
 		///
 		/// @return If the module is not already registered, false is returned. Otherwise, true is returned.
 		bool UnregisterModule(const std::shared_ptr<ModuleInterface> &module);
+
+		// Create VirtualHost in the settings and instruct application creation to all registered modules.
+		// So, StartServer should be called after registering all modules with RegisterModule.
+		bool StartServer(const std::shared_ptr<const cfg::Server> &server_config);
+		Result Release();
+
+		Result CreateVirtualHost(const cfg::vhost::VirtualHost &vhost_cfg);
+		Result DeleteVirtualHost(const info::Host &vhost_info);
+
+		std::optional<info::Host> GetHostInfo(ov::String vhost_name);
+		
+		bool UpdateVirtualHosts(const std::vector<info::Host> &host_list);
+		std::vector<std::shared_ptr<ocst::VirtualHost>> GetVirtualHostList();
+
+		/// Create an application and notify the modules
+		///
+		/// @param vhost_name A name of VirtualHost
+		/// @param app_config Application configuration to create
+		///
+		/// @return Creation result
+		///
+		/// @note Automatically DeleteApplication() when application creation fails
+		Result CreateApplication(const info::Host &vhost_info, const cfg::vhost::app::Application &app_config);
+		/// Delete the application and notify the modules
+		///
+		/// @param app_info Application information to delete
+		///
+		/// @return
+		///
+		/// @note If an error occurs during deletion, do not recreate the application
+		Result DeleteApplication(const info::Application &app_info);
 
 		ov::String GetVhostNameFromDomain(const ov::String &domain_name) const;
 
@@ -69,26 +96,6 @@ namespace ocst
 		info::VHostAppName ResolveApplicationNameFromDomain(const ov::String &domain_name, const ov::String &app_name) const;
 
 		bool GetUrlListForLocation(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name, std::vector<ov::String> *url_list);
-
-		/// Create an application and notify the modules
-		///
-		/// @param vhost_name A name of VirtualHost
-		/// @param app_config Application configuration to create
-		///
-		/// @return Creation result
-		///
-		/// @note Automatically DeleteApplication() when application creation fails
-		Result CreateApplication(const info::Host &vhost_info, const cfg::vhost::app::Application &app_config);
-		/// Delete the application and notify the modules
-		///
-		/// @param app_info Application information to delete
-		///
-		/// @return
-		///
-		/// @note If an error occurs during deletion, do not recreate the application
-		Result DeleteApplication(const info::Application &app_info);
-
-		Result Release();
 
 		const info::Application &GetApplicationInfo(const ov::String &vhost_name, const ov::String &app_name) const;
 		const info::Application &GetApplicationInfo(const info::VHostAppName &vhost_app_name) const;
