@@ -61,4 +61,19 @@ namespace api
 	void RecreateApplication(const std::shared_ptr<mon::HostMetrics> &vhost,
 							 const std::shared_ptr<mon::ApplicationMetrics> &app,
 							 Json::Value &app_json);
+
+	ov::String GetOutputProfileName(const std::shared_ptr<http::svr::HttpConnection> &client)
+	{
+		auto &match_result = client->GetRequest()->GetMatchResult();
+
+		return match_result.GetNamedGroup("output_profile_name").GetValue();
+	}
+
+	off_t FindOutputProfile(const std::shared_ptr<mon::ApplicationMetrics> &app,
+							const ov::String &output_profile_name,
+							Json::Value *value);
+
+	off_t FindOutputProfile(Json::Value &app_json,
+							const ov::String &output_profile_name,
+							Json::Value **value);
 }  // namespace api
