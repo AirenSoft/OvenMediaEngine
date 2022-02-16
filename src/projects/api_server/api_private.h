@@ -9,3 +9,13 @@
 #pragma once
 
 #define OV_LOG_TAG "APIServer"
+
+#define ThrowIfVirtualIsReadOnly()                                                                   \
+	do                                                                                               \
+	{                                                                                                \
+		if (vhost->IsReadOnly())                                                                     \
+		{                                                                                            \
+			throw http::HttpError(http::StatusCode::Forbidden, "The VirtualHost is read-only: [%s]", \
+								  vhost->GetName().CStr());                                          \
+		}                                                                                            \
+	} while (false)
