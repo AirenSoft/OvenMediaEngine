@@ -83,8 +83,12 @@ namespace api
 		Json::Value _json = Json::Value::null;
 	};
 
+	class ControllerInterface
+	{
+	};
+
 	template <typename Tclass>
-	class Controller
+	class Controller : public ControllerInterface
 	{
 	public:
 		void SetServer(const std::shared_ptr<Server> &server)
@@ -103,7 +107,7 @@ namespace api
 		}
 
 		template <typename Tcontroller>
-		std::shared_ptr<Controller<Tcontroller>> CreateSubController(const ov::String &prefix_of_sub_controller)
+		void CreateSubController(const ov::String &prefix_of_sub_controller)
 		{
 			auto instance = std::make_shared<Tcontroller>();
 
@@ -113,7 +117,7 @@ namespace api
 
 			instance->PrepareHandlers();
 
-			return instance;
+			_sub_controllers.push_back(instance);
 		}
 
 		virtual void PrepareHandlers() = 0;
@@ -346,6 +350,9 @@ namespace api
 		// For all Handler registrations, prefix before pattern
 		ov::String _prefix;
 		std::shared_ptr<http::svr::DefaultInterceptor> _interceptor;
+
+		// A variable to keep shared_ptr are alive
+		std::vector<std::shared_ptr<ControllerInterface>> _sub_controllers;
 
 		std::shared_ptr<Server> _server;
 	};
