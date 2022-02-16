@@ -93,6 +93,8 @@ namespace api
 		ApiResponse AppsController::OnPostApp(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 											  const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
+			ThrowIfVirtualIsReadOnly();
+
 			if (request_body.isArray() == false)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest, "Request body must be an array");
@@ -226,6 +228,8 @@ namespace api
 											 const std::shared_ptr<mon::HostMetrics> &vhost,
 											 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			ThrowIfVirtualIsReadOnly();
+
 			if (request_body.isObject() == false)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest, "Request body must be an object");
@@ -305,6 +309,8 @@ namespace api
 												const std::shared_ptr<mon::HostMetrics> &vhost,
 												const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			ThrowIfVirtualIsReadOnly();
+			
 			switch (ocst::Orchestrator::GetInstance()->DeleteApplication(*app))
 			{
 				case ocst::Result::Failed:

@@ -116,6 +116,8 @@ namespace api
 					   const std::shared_ptr<mon::ApplicationMetrics> &app,
 					   Json::Value &app_json)
 		{
+			ThrowIfVirtualIsReadOnly();
+
 			// TODO(dimiden): Caution - Race condition may occur
 			// If an application is deleted immediately after the GetApplication(),
 			// the app information can no longer be obtained from Orchestrator
@@ -165,6 +167,8 @@ namespace api
 																  const std::shared_ptr<mon::HostMetrics> &vhost,
 																  const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			ThrowIfVirtualIsReadOnly();
+
 			if (request_body.isArray() == false)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest, "Request body must be an array");
@@ -289,6 +293,8 @@ namespace api
 																 const std::shared_ptr<mon::HostMetrics> &vhost,
 																 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			ThrowIfVirtualIsReadOnly();
+
 			if (request_body.isObject() == false)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest, "Request body must be an object");
@@ -342,6 +348,8 @@ namespace api
 																	const std::shared_ptr<mon::HostMetrics> &vhost,
 																	const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			ThrowIfVirtualIsReadOnly();
+
 			auto profile_name = GetOutputProfileName(client);
 			off_t index = FindOutputProfile(app, profile_name, nullptr);
 

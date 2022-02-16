@@ -230,11 +230,9 @@ namespace api
 
 	void Server::CreateVHost(const cfg::vhost::VirtualHost &vhost_config)
 	{
-		auto orchestrator = ocst::Orchestrator::GetInstance();
-
 		OV_ASSERT2(vhost_config.IsReadOnly() == false);
 
-		switch (orchestrator->CreateVirtualHost(vhost_config))
+		switch (ocst::Orchestrator::GetInstance()->CreateVirtualHost(vhost_config))
 		{
 			case ocst::Result::Failed:
 				throw http::HttpError(http::StatusCode::BadRequest,
@@ -260,12 +258,7 @@ namespace api
 
 	void Server::DeleteVHost(const info::Host &host_info)
 	{
-		if (host_info.IsReadOnly())
-		{
-			throw http::HttpError(http::StatusCode::Forbidden,
-								  "Could not delete virtual host: %s is not created by API call",
-								  host_info.GetName().CStr());
-		}
+		OV_ASSERT2(host_info.IsReadOnly() == false);
 
 		logti("Deleting virtual host: %s", host_info.GetName().CStr());
 
