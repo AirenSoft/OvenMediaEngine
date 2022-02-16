@@ -62,12 +62,7 @@ namespace api
 							 const std::shared_ptr<mon::ApplicationMetrics> &app,
 							 Json::Value &app_json);
 
-	ov::String GetOutputProfileName(const std::shared_ptr<http::svr::HttpConnection> &client)
-	{
-		auto &match_result = client->GetRequest()->GetMatchResult();
-
-		return match_result.GetNamedGroup("output_profile_name").GetValue();
-	}
+	ov::String GetOutputProfileName(const std::shared_ptr<http::svr::HttpConnection> &client);
 
 	off_t FindOutputProfile(const std::shared_ptr<mon::ApplicationMetrics> &app,
 							const ov::String &output_profile_name,
