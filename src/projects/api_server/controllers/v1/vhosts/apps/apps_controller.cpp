@@ -41,66 +41,16 @@ namespace api
 			CreateSubController<OutputProfilesController>(R"(\/(?<app_name>[^\/:]*)\/outputProfiles)");
 		};
 
-		bool FillDefaultValues(Json::Value &config)
-		{
-			// Setting up the default values
-			if (config.isMember("providers") == false)
-			{
-				auto &providers = config["providers"];
-
-				providers["rtmp"] = Json::objectValue;
-				providers["mpegts"] = Json::objectValue;
-			}
-
-			if (config.isMember("publishers") == false)
-			{
-				auto &publishers = config["publishers"];
-
-				publishers["hls"] = Json::objectValue;
-				publishers["dash"] = Json::objectValue;
-				publishers["llDash"] = Json::objectValue;
-				publishers["webrtc"] = Json::objectValue;
-			}
-
-			if (config.isMember("outputProfiles") == false)
-			{
-				Json::Value output_profile(Json::objectValue);
-
-				output_profile["name"] = "bypass";
-				output_profile["outputStreamName"] = "${OriginStreamName}";
-
-				Json::Value codec;
-
-				codec["bypass"] = true;
-
-				auto &encodes = output_profile["encodes"];
-				encodes["videos"].append(codec);
-				encodes["audios"].append(codec);
-
-				codec = Json::objectValue;
-				codec["codec"] = "opus";
-				codec["bitrate"] = 128000;
-				codec["samplerate"] = 48000;
-				codec["channel"] = 2;
-				encodes["audios"].append(codec);
-
-				config["outputProfiles"]["outputProfile"].append(output_profile);
-			}
-
-			return true;
-		}
-
 		ApiResponse AppsController::OnPostApp(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 											  const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
-			ThrowIfVirtualIsReadOnly();
+			ThrowIfVirtualIsReadOnly(*(vhost.get()));
 
 			if (request_body.isArray() == false)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest, "Request body must be an array");
 			}
 
-			auto orchestrator = ocst::Orchestrator::GetInstance();
 			Json::Value response_value(Json::ValueType::arrayValue);
 			// Copy values to fill default values
 			Json::Value requested_app_list = request_body;
@@ -109,7 +59,7 @@ namespace api
 
 			for (auto &requested_app : requested_app_list)
 			{
-				FillDefaultValues(requested_app);
+				FillDefaultAppConfigValues(requested_app);
 
 				cfg::vhost::app::Application app_config;
 				::serdes::ApplicationFromJson(requested_app, &app_config);
@@ -118,30 +68,11 @@ namespace api
 				{
 					app_config.FromJson(requested_app);
 
-					auto result = orchestrator->CreateApplication(*vhost, app_config);
-
-					switch (result)
-					{
-						case ocst::Result::Failed:
-							throw http::HttpError(http::StatusCode::BadRequest,
-												  "Failed to create the application: [%s/%s]",
-												  vhost->GetName().CStr(), app_config.GetName().CStr());
-
-						case ocst::Result::Succeeded:
-							break;
-
-						case ocst::Result::Exists:
-							throw http::HttpError(http::StatusCode::Conflict,
-												  "The application already exists: [%s/%s]",
-												  vhost->GetName().CStr(), app_config.GetName().CStr());
-
-						case ocst::Result::NotExists:
-							// CreateApplication() never returns NotExists
-							OV_ASSERT2(false);
-							throw http::HttpError(http::StatusCode::InternalServerError,
-												  "Unknown error occurred: [%s/%s]",
-												  vhost->GetName().CStr(), app_config.GetName().CStr());
-					}
+					ThrowIfOrchestratorNotSucceeded(
+						ocst::Orchestrator::GetInstance()->CreateApplication(*vhost, app_config),
+						"create",
+						"application",
+						ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app_config.GetName().CStr()));
 
 					auto app = GetApplication(vhost, app_config.GetName().CStr());
 					auto app_json = ::serdes::JsonFromApplication(app);
@@ -228,7 +159,7 @@ namespace api
 											 const std::shared_ptr<mon::HostMetrics> &vhost,
 											 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			ThrowIfVirtualIsReadOnly();
+			ThrowIfVirtualIsReadOnly(*(vhost.get()));
 
 			if (request_body.isObject() == false)
 			{
@@ -238,9 +169,6 @@ namespace api
 			// TODO(dimiden): Caution - Race condition may occur
 			// If an application is deleted immediately after the GetApplication(),
 			// the app information can no longer be obtained from Orchestrator
-
-			auto orchestrator = ocst::Orchestrator::GetInstance();
-
 			auto app_json = ::serdes::JsonFromApplication(app);
 
 			// Delete GET-only fields
@@ -268,37 +196,17 @@ namespace api
 			cfg::vhost::app::Application app_config;
 			::serdes::ApplicationFromJson(app_json, &app_config);
 
-			if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
-			{
-				throw http::HttpError(http::StatusCode::Forbidden,
-									  "Could not delete the application: [%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
-			}
+			ThrowIfOrchestratorNotSucceeded(
+				ocst::Orchestrator::GetInstance()->DeleteApplication(*app),
+				"delete",
+				"application",
+				ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
 
-			auto result = orchestrator->CreateApplication(*vhost, app_config);
-
-			switch (result)
-			{
-				case ocst::Result::Failed:
-					throw http::HttpError(http::StatusCode::BadRequest,
-										  "Failed to create the application: [%s/%s]",
-										  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
-
-				case ocst::Result::Succeeded:
-					break;
-
-				case ocst::Result::Exists:
-					throw http::HttpError(http::StatusCode::Conflict,
-										  "The application already exists: [%s/%s]",
-										  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
-
-				case ocst::Result::NotExists:
-					// CreateApplication() never returns NotExists
-					OV_ASSERT2(false);
-					throw http::HttpError(http::StatusCode::InternalServerError,
-										  "Unknown error occurred: [%s/%s]",
-										  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
-			}
+			ThrowIfOrchestratorNotSucceeded(
+				ocst::Orchestrator::GetInstance()->CreateApplication(*vhost, app_config),
+				"create",
+				"application",
+				ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
 
 			auto app_metrics = GetApplication(vhost, app_config.GetName().CStr());
 
@@ -309,35 +217,13 @@ namespace api
 												const std::shared_ptr<mon::HostMetrics> &vhost,
 												const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			ThrowIfVirtualIsReadOnly();
-			
-			switch (ocst::Orchestrator::GetInstance()->DeleteApplication(*app))
-			{
-				case ocst::Result::Failed:
-					throw http::HttpError(http::StatusCode::BadRequest,
-										  "Failed to delete the application: [%s/%s]",
-										  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+			ThrowIfVirtualIsReadOnly(*(vhost.get()));
 
-				case ocst::Result::Succeeded:
-					break;
-
-				case ocst::Result::Exists:
-					// CreateVirtDeleteVirtualHostualHost() never returns Exists
-					OV_ASSERT2(false);
-					throw http::HttpError(http::StatusCode::InternalServerError,
-										  "Unknown error occurred: [%s/%s]",
-										  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
-
-				case ocst::Result::NotExists:
-					// CreateVirtualHost() never returns NotExists
-					throw http::HttpError(http::StatusCode::NotFound,
-										  "The virtual host not exists: [%s/%s]",
-										  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
-
-					throw http::HttpError(http::StatusCode::Forbidden,
-										  "Could not delete the application: [%s/%s]",
-										  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
-			}
+			ThrowIfOrchestratorNotSucceeded(
+				ocst::Orchestrator::GetInstance()->DeleteApplication(*app),
+				"delete",
+				"application",
+				ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
 
 			return {};
 		}

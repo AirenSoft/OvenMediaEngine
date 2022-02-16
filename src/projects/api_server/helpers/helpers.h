@@ -8,8 +8,10 @@
 //==============================================================================
 #pragma once
 
-#include <modules/http/http_datastructure.h>
 #include <monitoring/monitoring.h>
+#include <orchestrator/orchestrator.h>
+
+#include "./multiple_status.h"
 
 namespace api
 {
@@ -46,22 +48,9 @@ namespace api
 		std::shared_ptr<mon::StreamMetrics> *stream_metrics,
 		std::vector<std::shared_ptr<mon::StreamMetrics>> *output_streams);
 
-	class MultipleStatus
-	{
-	public:
-		void AddStatusCode(http::StatusCode status_code);
-		void AddStatusCode(const std::shared_ptr<const ov::Error> &error);
-		http::StatusCode GetStatusCode() const;
+	void FillDefaultAppConfigValues(Json::Value &app_config);
 
-		bool HasOK() const
-		{
-			return _has_ok;
-		}
+	void ThrowIfVirtualIsReadOnly(const cfg::vhost::VirtualHost &vhost_config);
+	void ThrowIfOrchestratorNotSucceeded(ocst::Result result, const char *action, const char *resource_name, const char *resource_path);
 
-	protected:
-		int _count = 0;
-		http::StatusCode _last_status_code = http::StatusCode::OK;
-
-		bool _has_ok = true;
-	};
 }  // namespace api

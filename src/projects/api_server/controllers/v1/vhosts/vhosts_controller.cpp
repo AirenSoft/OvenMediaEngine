@@ -101,7 +101,7 @@ namespace api
 		ApiResponse VHostsController::OnDeleteVHost(const std::shared_ptr<http::svr::HttpConnection> &client,
 													const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
-			ThrowIfVirtualIsReadOnly();
+			ThrowIfVirtualIsReadOnly(*(vhost.get()));
 			
 			_server->DeleteVHost(*(vhost.get()));
 
