@@ -378,7 +378,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStop(const std::shared_ptr<inf
 	return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::Success, "Success");
 }
 
-std::shared_ptr<ov::Error> FileApplication::GetRecords(std::vector<std::shared_ptr<info::Record>> &record_list)
+std::shared_ptr<ov::Error> FileApplication::GetRecords(const std::shared_ptr<info::Record> record, std::vector<std::shared_ptr<info::Record>> &results)
 {
 	for (uint32_t i = 0; i < _userdata_sets.GetCount(); i++)
 	{
@@ -386,7 +386,10 @@ std::shared_ptr<ov::Error> FileApplication::GetRecords(std::vector<std::shared_p
 		if (userdata == nullptr)
 			continue;
 
-		record_list.push_back(userdata);
+		if (!record->GetId().IsEmpty() && record->GetId() != userdata->GetId())
+			continue;
+
+		results.push_back(userdata);
 	}
 
 	return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::Success, "Success");

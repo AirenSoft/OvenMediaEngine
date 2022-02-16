@@ -29,9 +29,9 @@ public:
 	void SessionStart(std::shared_ptr<RtmpPushSession> session);
 	void SessionStop(std::shared_ptr<RtmpPushSession> session);
 
-	virtual std::shared_ptr<ov::Error> PushStart(const std::shared_ptr<info::Push> &record) override;
-	virtual std::shared_ptr<ov::Error> PushStop(const std::shared_ptr<info::Push> &record) override;
-	virtual std::shared_ptr<ov::Error> GetPushes(std::vector<std::shared_ptr<info::Push>> &record_list) override;
+	virtual std::shared_ptr<ov::Error> PushStart(const std::shared_ptr<info::Push> &push) override;
+	virtual std::shared_ptr<ov::Error> PushStop(const std::shared_ptr<info::Push> &push) override;
+	virtual std::shared_ptr<ov::Error> GetPushes(const std::shared_ptr<info::Push> push, std::vector<std::shared_ptr<info::Push>> &results) override;
 
 private:
 	RtmpPushUserdataSets _userdata_sets;

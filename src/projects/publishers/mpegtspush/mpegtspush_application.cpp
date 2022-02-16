@@ -309,7 +309,7 @@ std::shared_ptr<ov::Error> MpegtsPushApplication::PushStop(const std::shared_ptr
 	return ov::Error::CreateError(MPEG_TS_PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::Success, "Success");
 }
 
-std::shared_ptr<ov::Error> MpegtsPushApplication::GetPushes(std::vector<std::shared_ptr<info::Push>> &push_list)
+std::shared_ptr<ov::Error> MpegtsPushApplication::GetPushes(const std::shared_ptr<info::Push> push, std::vector<std::shared_ptr<info::Push>> &results)
 {
 	for (uint32_t i = 0; i < _userdata_sets.GetCount(); i++)
 	{
@@ -317,7 +317,10 @@ std::shared_ptr<ov::Error> MpegtsPushApplication::GetPushes(std::vector<std::sha
 		if (userdata == nullptr)
 			continue;
 
-		push_list.push_back(userdata);
+		if (!push->GetId().IsEmpty() && push->GetId() != userdata->GetId())
+			continue;
+
+		results.push_back(userdata);
 	}
 
 	return ov::Error::CreateError(MPEG_TS_PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::Success, "Success");
