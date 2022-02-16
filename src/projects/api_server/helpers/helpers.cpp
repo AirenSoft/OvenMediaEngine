@@ -220,39 +220,81 @@ namespace api
 		}
 	}
 
-	void MultipleStatus::AddStatusCode(http::StatusCode status_code)
+	void FillDefaultAppConfigValues(Json::Value &app_config)
 	{
-		if (_count == 0)
+		// Setting up the default values
+		if (app_config.isMember("providers") == false)
 		{
-			_last_status_code = status_code;
-			_has_ok = (status_code == http::StatusCode::OK);
-		}
-		else
-		{
-			_has_ok = _has_ok || (status_code == http::StatusCode::OK);
+			auto &providers = app_config["providers"];
 
-			if (_last_status_code != status_code)
-			{
-				_last_status_code = http::StatusCode::MultiStatus;
-			}
-			else
-			{
-				// Keep the status code
-			}
+			providers["rtmp"] = Json::objectValue;
+			providers["mpegts"] = Json::objectValue;
 		}
 
-		_count++;
+		if (app_config.isMember("publishers") == false)
+		{
+			auto &publishers = app_config["publishers"];
+
+			publishers["hls"] = Json::objectValue;
+			publishers["dash"] = Json::objectValue;
+			publishers["llDash"] = Json::objectValue;
+			publishers["webrtc"] = Json::objectValue;
+		}
+
+		if (app_config.isMember("outputProfiles") == false)
+		{
+			Json::Value output_profile(Json::objectValue);
+
+			output_profile["name"] = "bypass";
+			output_profile["outputStreamName"] = "${OriginStreamName}";
+
+			Json::Value codec;
+
+			codec["bypass"] = true;
+
+			auto &encodes = output_profile["encodes"];
+			encodes["videos"].append(codec);
+			encodes["audios"].append(codec);
+
+			codec = Json::objectValue;
+			codec["codec"] = "opus";
+			codec["bitrate"] = 128000;
+			codec["samplerate"] = 48000;
+			codec["channel"] = 2;
+			encodes["audios"].append(codec);
+
+			app_config["outputProfiles"]["outputProfile"].append(output_profile);
+		}
 	}
 
-	void MultipleStatus::AddStatusCode(const std::shared_ptr<const ov::Error> &error)
+	void ThrowIfVirtualIsReadOnly(const cfg::vhost::VirtualHost &vhost_config)
 	{
-		http::StatusCode error_status_code = static_cast<http::StatusCode>(error->GetCode());
-
-		AddStatusCode(IsValidStatusCode(error_status_code) ? error_status_code : http::StatusCode::InternalServerError);
+		if (vhost_config.IsReadOnly())
+		{
+			throw http::HttpError(http::StatusCode::Forbidden,
+								  "The VirtualHost is read-only: [%s]",
+								  vhost_config.GetName().CStr());
+		}
 	}
 
-	http::StatusCode MultipleStatus::GetStatusCode() const
+	void ThrowIfOrchestratorNotSucceeded(ocst::Result result, const char *action, const char *resource_name, const char *resource_path)
 	{
-		return _last_status_code;
+		switch (result)
+		{
+			case ocst::Result::Failed:
+				throw http::HttpError(http::StatusCode::BadRequest,
+									  "Failed to %s the %s: [%s]", action, resource_name, resource_path);
+
+			case ocst::Result::Succeeded:
+				break;
+
+			case ocst::Result::Exists:
+				throw http::HttpError(http::StatusCode::Conflict,
+									  "Could not %s the %s: [%s] already exists", action, resource_name, resource_path);
+
+			case ocst::Result::NotExists:
+				throw http::HttpError(http::StatusCode::NotFound,
+									  "Could not %s the %s: [%s] not exists", action, resource_name, resource_path);
+		}
 	}
 }  // namespace api
