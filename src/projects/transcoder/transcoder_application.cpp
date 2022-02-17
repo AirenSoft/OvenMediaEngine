@@ -8,12 +8,11 @@
 //==============================================================================
 
 #include "transcoder_application.h"
+#include "transcoder_gpu.h"
+#include "transcoder_private.h"
 
 #include <unistd.h>
-
 #include <iostream>
-
-#include "transcoder_private.h"
 
 #define MIN_APPLICATION_WORKER_COUNT 1
 #define MAX_APPLICATION_WORKER_COUNT 72
@@ -39,6 +38,15 @@ TranscodeApplication::~TranscodeApplication()
 
 bool TranscodeApplication::Start()
 {
+#if SUPPORT_HWACCELS
+	if(_application_info.GetConfig().GetOutputProfiles().IsHardwareAcceleration() == true)
+	{
+		if (TranscodeGPU::GetInstance()->Initialze() == false)
+		{
+			logtw("There is no supported hardware accelerator");
+		}
+	}
+#endif	
 	return true;
 }
 

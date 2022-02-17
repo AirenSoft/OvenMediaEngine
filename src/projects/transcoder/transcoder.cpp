@@ -15,7 +15,6 @@
 
 #include "config/config_manager.h"
 #include "transcoder.h"
-#include "transcoder_gpu.h"
 #include "transcoder_private.h"
 
 std::shared_ptr<Transcoder> Transcoder::Create(std::shared_ptr<MediaRouteInterface> router)
@@ -36,13 +35,6 @@ Transcoder::Transcoder(std::shared_ptr<MediaRouteInterface> router)
 
 bool Transcoder::Start()
 {
-#if SUPPORT_HWACCELS
-	if (TranscodeGPU::GetInstance()->Initialze() == false)
-	{
-		logti("There is no supported hardware accelerator");
-	}
-#endif
-
 	logtd("Transcoder has been started");
 
 	return true;
@@ -50,10 +42,6 @@ bool Transcoder::Start()
 
 bool Transcoder::Stop()
 {
-#if SUPPORT_HWACCELS
-	TranscodeGPU::GetInstance()->Uninitialize();
-#endif
-
 	logtd("Transcoder has been stopped");
 	return true;
 }

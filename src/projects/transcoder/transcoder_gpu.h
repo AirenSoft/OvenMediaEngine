@@ -26,6 +26,7 @@ public:
 	bool IsSupportedNV();
 
 protected:
+	bool _initialzed = false;
 	bool _supported_qsv;
 	bool _supported_cuda;
 

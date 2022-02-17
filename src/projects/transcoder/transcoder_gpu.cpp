@@ -19,6 +19,9 @@ TranscodeGPU::TranscodeGPU()
 
 bool TranscodeGPU::Initialze()
 {
+	if(_initialzed)
+		return true;
+		
 	Uninitialize();
 
 	logtd("Trying to initialize a hardware accelerator");
@@ -33,10 +36,12 @@ bool TranscodeGPU::Initialze()
 	else
 	{
 		_supported_qsv = true;
+		_initialzed = true;
 		auto constraints = av_hwdevice_get_hwframe_constraints(_device_context, nullptr);
 		logti("Supported Intel QuickSync hardware accelerator. hw.pixfmt: %d, sw.pixfmt : %d",
 			  *constraints->valid_hw_formats,
 			  *constraints->valid_sw_formats);
+
 
 		return true;
 	}
@@ -49,6 +54,7 @@ bool TranscodeGPU::Initialze()
 	}
 	else
 	{
+		_initialzed = true;
 		_supported_cuda = true;
 		auto constraints = av_hwdevice_get_hwframe_constraints(_device_context, nullptr);
 		logti("Supported NVIDIA CUDA hardware accelerator. hw.pixfmt: %d, sw.pixfmt : %d",
