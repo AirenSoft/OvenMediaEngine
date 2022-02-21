@@ -141,7 +141,7 @@ The meanings of each item are as follows:
 
 After you enter the above RTMP URL into the encoder and start publishing, you will have an environment in which the player can view the live stream.
 
-### Example **of using **OvenLiveKit (OvenStreamEncoder)
+### Example **of using** OvenLiveKit (OvenStreamEncoder)
 
 [OvenLiveKit](https://www.airensoft.com/olk) is a transmission SDK. So, you can easily add broadcast transmission functions to your apps using this SDK. And OvenStreamEncoder is a sample app that shows you can make and use it with OvenLiveKit. You can use it by searching [OvenStreamEncoder](https://play.google.com/store/apps/details?id=com.airensoft.ovenstreamencoder.camera) in Google Play.
 
