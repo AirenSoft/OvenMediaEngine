@@ -44,7 +44,7 @@ Therefore, in order for the SRT encoder to transmit a stream to OvenMediaEngine,
 > streamid = percent\_encoding("srt://{host}\[:port]/{app name}/{stream name}\[?query=value]")
 
 {% hint style="warning" %}
-The **streamid **contains the URL format, so it must be [**percent encoded**](https://tools.ietf.org/html/rfc3986#section-2.1)****
+The **streamid** contains the URL format, so it must be [**percent encoded**](https://tools.ietf.org/html/rfc3986#section-2.1)****
 {% endhint %}
 
 ### OBS Studio

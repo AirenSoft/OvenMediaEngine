@@ -200,7 +200,7 @@ rm -rf ${DIR}
 
 ## **`systemctl start ovenmediaengine` failed**
 
-### **Check SELinux **
+### **Check SELinux**&#x20;
 
 If SELinux is running on your system, SELinux can deny the execution of OvenMediaEngine.&#x20;
 
@@ -251,11 +251,11 @@ $ sudo setenforce 0
 
 ## **Streaming is not smooth**
 
-### **1. **If you are using Transcoding as Bypass in OvenMediaEngine, and streaming does not work in all players
+### **1.** If you are using Transcoding as Bypass in OvenMediaEngine, and streaming does not work in all players
 
-WebRTC does not support the b-frame of H.264. However, suppose the encoder you are using is transmitting a stream with b-frames. In that case, you can solve this problem by **changing your encoder settings**,
+WebRTC does not support b-frame of H.264. But if your encoder sends b-frames the video will be stuttered in the player. In this case, you can solve the problem by disabling the b-frame function in your encoder. For OBS, you can set bframes=0 option as below.
 
-![How to set the option to exclude b-frames in OBS, which is the most used encoder](.gitbook/assets/bframes\_obs.png)
+![](<.gitbook/assets/image (39).png>)
 
 Or by **activating the encoding options** in OvenMediaEngine.
 
@@ -263,7 +263,7 @@ Or by **activating the encoding options** in OvenMediaEngine.
 Setting up Transcoding options in OvenMediaEngine: [https://airensoft.gitbook.io/ovenmediaengine/transcoding#encodes](https://airensoft.gitbook.io/ovenmediaengine/transcoding#encodes)
 {% endhint %}
 
-### **2. **When streaming does not work in some players
+### **2.** When streaming does not work in some players
 
 In this case, you are probably trying to stream with UDP in an environment where packet loss is high due to network performance, connection problems, etc., the interruption during stream playback may more and more worsen. This problem can be solved simply by playing with WebRTC/TCP.
 
@@ -275,7 +275,7 @@ Setting up WebRTC over TCP in OvenMediaEngine: [https://airensoft.gitbook.io/ove
 
 Also, if the device's network speed, which is running the player, isn't fast enough to accommodate the stream's BPS, the stuttering during streaming won't resolve and will eventually drop the connection. In this case, there is no other way than to speed up your network.
 
-### **3. **When streaming fails due to excessive CPU/Memory/Network usage of Origin in OvenMediaEngine
+### **3.** When streaming fails due to excessive CPU/Memory/Network usage of Origin in OvenMediaEngine
 
 If the Origin server uses excessive CPU/Memory/Network, all players may experience stuttering during streaming.
 
@@ -285,11 +285,11 @@ When you see Origin is CPU intensive on your Origin-Edge structure, the transcod
 Setting up GPU Acceleration in OvenMediaEngine: [https://airensoft.gitbook.io/ovenmediaengine/transcoding/gpu-usage](https://airensoft.gitbook.io/ovenmediaengine/transcoding/gpu-usage)
 {% endhint %}
 
-### **4. **When streaming fails due to excessive CPU/Memory/Network usage of Edge in OvenMediaEngine
+### **4.** When streaming fails due to excessive CPU/Memory/Network usage of Edge in OvenMediaEngine
 
 If the edge server excessively uses CPU/Memory/Network, the player connected to that Edge may experience stuttering during streaming. In this case, it can be solved by **expanding Edge**.
 
-### **5. If **you have enough CPU/Memory/Network, but streaming is not smooth
+### **5. If** you have enough CPU/Memory/Network, but streaming is not smooth
 
 #### 5-1. When a specific thread is using the CPU excessively
 
@@ -353,11 +353,11 @@ In this case, you can solve this by installing a certificate in OvenMediaEngine 
 Setting up TLS Encryption in OvenMediaEngine: [https://airensoft.gitbook.io/ovenmediaengine/streaming/tls-encryption](https://airensoft.gitbook.io/ovenmediaengine/streaming/tls-encryption)
 {% endhint %}
 
-### **2. **Due to a Cross-Origin Resource Sharing (CORS) Error
+### **2.** Due to a Cross-Origin Resource Sharing (CORS) Error
 
 As of October 2021, most browsers have enforced the [CORS policy](https://fetch.spec.whatwg.org), and CORS errors often occur when requesting access to other domains if it is not a TLS site. In this case, you can solve the problem by **installing a certificate** on the site that loads the player.
 
-### **3. **When the message "Too many open files" appears in the log, the player cannot connect
+### **3.** When the message "Too many open files" appears in the log, the player cannot connect
 
 At some point, when the message "**Too many open files**" is output in your OvenMediaEngine log, it may not be able to handle any more player connections. In this case, you can solve the problem by setting it as follows:
 

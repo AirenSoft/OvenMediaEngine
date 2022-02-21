@@ -63,7 +63,7 @@ We provide a demo page so you can easily test your WebRTC input. You can access 
 ![](<../.gitbook/assets/image (4).png>)
 
 {% hint style="warning" %}
-The getUserMedia API to access the local device only works in a [secure context](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia#privacy\_and\_security). So, the WebRTC Input demo page can only work on the https site** **[**https**://demo.ovenplayer.com/demo\_input.html](https://demo.ovenplayer.com/demo\_input.html). This means that due to [mixed content](https://developer.mozilla.org/en-US/docs/Web/Security/Mixed\_content) you have to install the certificate in OvenMediaEngine and use the signaling URL as wss to test this. If you can't install the certificate in OvenMediaEngine, you can temporarily test it by allowing the insecure content of the demo.ovenplayer.com URL in your browser.
+The getUserMedia API to access the local device only works in a [secure context](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia#privacy\_and\_security). So, the WebRTC Input demo page can only work on the https site **** [**https**://demo.ovenplayer.com/demo\_input.html](https://demo.ovenplayer.com/demo\_input.html). This means that due to [mixed content](https://developer.mozilla.org/en-US/docs/Web/Security/Mixed\_content) you have to install the certificate in OvenMediaEngine and use the signaling URL as wss to test this. If you can't install the certificate in OvenMediaEngine, you can temporarily test it by allowing the insecure content of the demo.ovenplayer.com URL in your browser.
 {% endhint %}
 
 ### Custom WebRTC Producer

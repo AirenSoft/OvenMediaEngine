@@ -6,7 +6,7 @@ OvenMediaEngine can record live streams. You can start and stop recording the ou
 
 ### File Publisher
 
-To enable recording, add the `<FILE>` publisher to the configuration file as shown below. `<FilePath>` and `<InfoPath>` are required and used as default values. \<FilePath> is the setting for the file path and file name. `<InfoPath>`is the setting for the path and name of the XML file that contains information about the recorded files. If there is no file path value among parameters when requesting recording through API, recording is performed with the set default value. This may be necessary if for security reasons you do not want to specify the file path when calling the API to avoid exposing the server's internal path. <`<RootPath> `is an optional parameter. It is used when requesting with a relative path is required when requesting an API. also, it is applied to `<FilePath> `and `<InfoPath>` as in the example below.
+To enable recording, add the `<FILE>` publisher to the configuration file as shown below. `<FilePath>` and `<InfoPath>` are required and used as default values. \<FilePath> is the setting for the file path and file name. `<InfoPath>`is the setting for the path and name of the XML file that contains information about the recorded files. If there is no file path value among parameters when requesting recording through API, recording is performed with the set default value. This may be necessary if for security reasons you do not want to specify the file path when calling the API to avoid exposing the server's internal path. <`<RootPath>` is an optional parameter. It is used when requesting with a relative path is required when requesting an API. also, it is applied to `<FilePath>` and `<InfoPath>` as in the example below.
 
 You must specify `.ts` or `.mp4` at the end of the FilePath string to select a container for the recording file. We recommend using .ts unless you have a special case. This is because vp8 and opus codecs are not recorded due to container limitations if you choose .mp4.
 
@@ -50,10 +50,10 @@ For how to use the API, please refer to the link below.
 
 ### Split Recording
 
-Split recording methods provide **interval **and **schedule**.  The interval method splits files based on the accumulated recording time. The Schedule method then splits files according to scheduling options based on system time. The scheduling option is the same as the pattern used in crontab. However, only three options are used: seconds/minutes/hour.
+Split recording methods provide **interval** and **schedule**.  The interval method splits files based on the accumulated recording time. The Schedule method then splits files according to scheduling options based on system time. The scheduling option is the same as the pattern used in crontab. However, only three options are used: seconds/minutes/hour.
 
 {% hint style="info" %}
-**interval **and **schedule **methods cannot be used simultaneously.&#x20;
+**interval** and **schedule** methods cannot be used simultaneously.&#x20;
 {% endhint %}
 
 ## Appendix A. Recorded File Information Specification

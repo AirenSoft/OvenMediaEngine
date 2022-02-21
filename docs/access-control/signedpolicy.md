@@ -55,7 +55,7 @@ When creating a signature, you cannot omit the default port such as http port 80
 {% endhint %}
 
 {% hint style="danger" %}
-When using SignedPolicy with SRT providers, only use the **streamid **portion of the URL, e.g. srt://myserver:9999?streamid=**srt://myserver:9999/app/stream?policy=abc123**
+When using SignedPolicy with SRT providers, only use the **streamid** portion of the URL, e.g. srt://myserver:9999?streamid=**srt://myserver:9999/app/stream?policy=abc123**
 {% endhint %}
 
 ## Configuration
