@@ -52,40 +52,61 @@ namespace api
 			}
 #endif	// DEBUG
 
-			auto authorization = client->GetRequest()->GetHeader("Authorization");
-
-			if (authorization.IsEmpty())
+			try
 			{
-				throw http::HttpError(http::StatusCode::Forbidden, "Authorization header is required to call API");
+				auto authorization = client->GetRequest()->GetHeader("Authorization");
+
+				if (authorization.IsEmpty())
+				{
+					throw http::HttpError(http::StatusCode::Forbidden, "Authorization header is required to call API");
+				}
+
+				auto tokens = authorization.Split(" ");
+
+				if (tokens.size() != 2)
+				{
+					// Invalid tokens
+					throw http::HttpError(http::StatusCode::Forbidden, "Invalid authorization header");
+				}
+
+				if (tokens[0].UpperCaseString() != "BASIC")
+				{
+					throw http::HttpError(http::StatusCode::Forbidden, "Not supported credential type: %s", tokens[0].CStr());
+				}
+
+				auto data = ov::Base64::Decode(tokens[1]);
+
+				if (data == nullptr)
+				{
+					throw http::HttpError(http::StatusCode::Forbidden, "Invalid credential format");
+				}
+
+				ov::String str = data->ToString();
+
+				if (str != _access_token)
+				{
+					throw http::HttpError(http::StatusCode::Forbidden, "Invalid credential");
+				}
+
+				return http::svr::NextHandler::Call;
+			}
+			catch (const http::HttpError &error)
+			{
+				logw("APIController", "HTTP error occurred: %s", error.What());
+				ApiResponse(&error).SendToClient(client);
+			}
+			catch (const cfg::ConfigError &error)
+			{
+				logw("APIController", "Config error occurred: %s", error.GetDetailedMessage().CStr());
+				ApiResponse(&error).SendToClient(client);
+			}
+			catch (const std::exception &error)
+			{
+				logw("APIController", "Unknown error occurred: %s", error.what());
+				ApiResponse(&error).SendToClient(client);
 			}
 
-			auto tokens = authorization.Split(" ");
-
-			if (tokens.size() != 2)
-			{
-				// Invalid tokens
-				throw http::HttpError(http::StatusCode::Forbidden, "Invalid authorization header");
-			}
-
-			if (tokens[0].UpperCaseString() != "BASIC")
-			{
-				throw http::HttpError(http::StatusCode::Forbidden, "Not supported credential type: %s", tokens[0].CStr());
-			}
-
-			auto data = ov::Base64::Decode(tokens[1]);
-
-			if (data == nullptr)
-			{
-				throw http::HttpError(http::StatusCode::Forbidden, "Invalid credential format");
-			}
-
-			ov::String str = data->ToString();
-
-			if (str != _access_token)
-			{
-				throw http::HttpError(http::StatusCode::Forbidden, "Invalid credential");
-			}
-			return http::svr::NextHandler::Call;
+			return http::svr::NextHandler::DoNotCall;
 		});
 	}
 
