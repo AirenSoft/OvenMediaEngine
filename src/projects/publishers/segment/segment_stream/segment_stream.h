@@ -24,13 +24,15 @@ public:
 	SegmentStream(
 		const std::shared_ptr<pub::Application> application,
 		const info::Stream &info,
-		PacketizerFactory packetizer_factory);
+		PacketizerFactory packetizer_factory,
+		int segment_duration);
 
 	static std::shared_ptr<SegmentStream> Create(const std::shared_ptr<pub::Application> &application,
 												 const info::Stream &info,
-												 PacketizerFactory packetizer_factory)
+												 PacketizerFactory packetizer_factory,
+												 int segment_duration)
 	{
-		return std::make_shared<SegmentStream>(application, info, packetizer_factory);
+		return std::make_shared<SegmentStream>(application, info, packetizer_factory, segment_duration);
 	}
 
 	bool GetPlayList(ov::String &play_list);
@@ -47,6 +49,7 @@ public:
 
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
+	int GetSegmentDuration() { return _segment_duration; }
 
 protected:
 	virtual bool CheckCodec(cmn::MediaType type, cmn::MediaCodecId codec_id);
@@ -59,4 +62,6 @@ protected:
 	std::shared_ptr<MediaTrack> _audio_track;
 
 	int _last_msid = 0;
+	int _segment_duration;
+
 };

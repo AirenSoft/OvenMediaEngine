@@ -14,13 +14,12 @@
 #include "packetizer/packetizer.h"
 #include "segment_stream_private.h"
 
-SegmentStream::SegmentStream(
-	const std::shared_ptr<pub::Application> application,
-	const info::Stream &info,
-	PacketizerFactory packetizer_factory)
-	: Stream(application, info),
+SegmentStream::SegmentStream(const std::shared_ptr<pub::Application> application, const info::Stream &info,
+							 PacketizerFactory packetizer_factory, int segment_duration)
+	: Stream(application, info)
+	, _packetizer_factory(packetizer_factory)
+	, _segment_duration(segment_duration)
 
-	  _packetizer_factory(packetizer_factory)
 {
 	OV_ASSERT2(_packetizer_factory != nullptr);
 }

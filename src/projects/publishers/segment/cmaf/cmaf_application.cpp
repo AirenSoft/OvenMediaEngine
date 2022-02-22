@@ -74,7 +74,7 @@ std::shared_ptr<pub::Stream> CmafApplication::CreateStream(const std::shared_ptr
 				_utc_timing_scheme, _utc_timing_value,
 				video_track, audio_track,
 				_chunked_transfer);
-		});
+		}, _segment_duration);
 }
 
 bool CmafApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)

@@ -16,6 +16,98 @@ AccessController::AccessController(PublisherType publisher_type, const cfg::Serv
 
 }
 
+
+std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> AccessController::SendCloseWebhooks(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address)
+{
+	auto orchestrator = ocst::Orchestrator::GetInstance();
+	auto vhost_name = orchestrator->GetVhostNameFromDomain(request_url->Host());
+
+	if (vhost_name.IsEmpty())
+	{
+		logte("Could not resolve the domain: %s", request_url->Host().CStr());
+		return {AccessController::VerificationResult::Error, nullptr};
+	}
+
+	auto item = ocst::Orchestrator::GetInstance()->GetHostInfo(vhost_name);
+	if(item.has_value())
+	{
+		auto vhost_item = item.value();
+
+		auto &webhooks_config = vhost_item.GetAdmissionWebhooks();
+		if (!webhooks_config.IsParsed())
+		{
+			// The vhost doesn't use the AdmissionWebhooks feature.
+			return {AccessController::VerificationResult::Off, nullptr};
+		}
+
+		if(_provider_type != ProviderType::Unknown)
+		{
+			if(webhooks_config.IsEnabledProvider(_provider_type) == false)
+			{
+				// This provider turned off the AdmissionWebhooks function
+				return {AccessController::VerificationResult::Off, nullptr};
+			}
+		}
+		else if(_publisher_type != PublisherType::Unknown)
+		{
+			if(webhooks_config.IsEnabledPublisher(_publisher_type) == false)
+			{
+				// This publisher turned off the AdmissionWebhooks function
+				return {AccessController::VerificationResult::Off, nullptr};
+			}
+		}
+		else
+		{
+			logte("Could not resolve provider/publisher type: %s", request_url->Host().CStr());
+			return {AccessController::VerificationResult::Error, nullptr};
+		}
+
+		auto control_server_url_address = webhooks_config.GetControlServerUrl();
+		auto control_server_url = ov::Url::Parse(control_server_url_address);
+		auto secret_key = webhooks_config.GetSecretKey();
+		auto timeout_msec = 500; //webhooks_config.GetTimeoutMsec();
+
+		std::shared_ptr<AdmissionWebhooks> admission_webhooks;
+		if(_provider_type != ProviderType::Unknown)
+		{
+			admission_webhooks = AdmissionWebhooks::Query(
+				_provider_type, control_server_url, timeout_msec, secret_key, client_address, request_url, AdmissionWebhooks::Status::Code::CLOSING);
+		}
+		else if(_publisher_type != PublisherType::Unknown)
+		{
+			admission_webhooks = AdmissionWebhooks::Query(
+				_publisher_type, control_server_url, timeout_msec, secret_key, client_address, request_url, AdmissionWebhooks::Status::Code::CLOSING);
+		}
+		else
+		{
+			logte("Provider type or publisher type must be set");
+			return {AccessController::VerificationResult::Error, nullptr};
+		}
+
+		if(admission_webhooks == nullptr)
+		{
+			// Probably this doesn't happen
+			logte("Could not load admission webhooks");
+			return {AccessController::VerificationResult::Error, nullptr};
+		}
+
+		logti("AdmissionWebhooks queried %s whether client %s could access %s. (Result : %s Elapsed : %u ms)",
+			control_server_url_address.CStr(), client_address->ToString(false).CStr(), request_url->ToUrlString().CStr(),
+			admission_webhooks->GetErrCode()==AdmissionWebhooks::ErrCode::ALLOWED?"Allow":"Reject", admission_webhooks->GetElpasedTime());
+
+		if(admission_webhooks->GetErrCode() != AdmissionWebhooks::ErrCode::ALLOWED)
+		{
+			return {AccessController::VerificationResult::Fail, admission_webhooks};
+		}
+
+		return {AccessController::VerificationResult::Pass, admission_webhooks};
+	}
+
+	// Probably this doesn't happen
+	logte("Could not find VirtualHost (%s)", vhost_name);
+	return {AccessController::VerificationResult::Error, nullptr};
+}
+
 std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> AccessController::VerifyByWebhooks(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address)
 {
 	auto orchestrator = ocst::Orchestrator::GetInstance();

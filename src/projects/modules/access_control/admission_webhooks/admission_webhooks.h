@@ -19,16 +19,40 @@ public:
 		INTERNAL_ERROR,
 	};
 
+	class Status
+	{
+	public:
+		enum class Code : uint8_t
+		{
+			OPENING,
+			CLOSING
+		};
+
+		static inline ov::String Description(Code code)
+		{
+			return _description[static_cast<std::size_t>(code)];
+		}
+
+	private:
+		static inline const std::vector<ov::String> _description {
+			"opening",
+			"closing"
+		};
+	};
+
+
 	static std::shared_ptr<AdmissionWebhooks> Query(ProviderType provider,
 													const std::shared_ptr<ov::Url> &control_server_url, uint32_t timeout_msec,
 													const ov::String secret_key,
 													const std::shared_ptr<ov::SocketAddress> &client_address,
-													const std::shared_ptr<const ov::Url> &request_url);
+													const std::shared_ptr<const ov::Url> &request_url,
+													const Status::Code status = Status::Code::OPENING);
 	static std::shared_ptr<AdmissionWebhooks> Query(PublisherType publisher,
 													const std::shared_ptr<ov::Url> &control_server_url, uint32_t timeout_msec,
 													const ov::String secret_key,
 													const std::shared_ptr<ov::SocketAddress> &client_address,
-													const std::shared_ptr<const ov::Url> &request_url);
+													const std::shared_ptr<const ov::Url> &request_url,
+													const Status::Code status = Status::Code::OPENING);
 
 	ErrCode GetErrCode() const;
 	ov::String GetErrReason() const;
@@ -53,6 +77,7 @@ private:
 	PublisherType _publisher_type = PublisherType::Unknown;
 	std::shared_ptr<ov::SocketAddress> _client_address;
 	std::shared_ptr<const ov::Url> _requested_url;
+	Status::Code _status;
 
 	// Response
 	bool _allowed = false;
