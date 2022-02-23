@@ -177,7 +177,11 @@ namespace serdes
 
 		SetString(response, "filePath", record->GetFilePath(), Optional::False);
 
+		SetString(response, "outputFilePath", record->GetOutputFilePath(), Optional::False);
+
 		SetString(response, "infoPath", record->GetInfoPath(), Optional::False);
+
+		SetString(response, "outputInfoPath", record->GetOutputInfoPath(), Optional::False);
 
 		if (record->GetInterval() > 0)
 		{

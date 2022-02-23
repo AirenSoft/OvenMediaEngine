@@ -74,19 +74,28 @@ namespace info
 
 		// set by user
 		void SetFilePath(ov::String file_path);
+		void SetFilePathTemplate(ov::String file_path);
 		ov::String GetFilePath();
 
 		// set by user
 		void SetInfoPath(ov::String info_path);
+		void SetInfoPathTemplate(ov::String file_path);
 		ov::String GetInfoPath();
 
 		void SetFilePathSetByUser(bool by_user);
 		bool IsFilePathSetByUser();
+		
 		void SetInfoPathSetByUser(bool by_user);
 		bool IsInfoPathSetByUser();
 
 		void SetTmpPath(ov::String tmp_path);
 		ov::String GetTmpPath();
+
+		void SetOutputFilePath(ov::String output_file_path);
+		ov::String GetOutputFilePath();
+
+		void SetOutputInfoPath(ov::String output_info_path);
+		ov::String GetOutputInfoPath();
 
 		void IncreaseRecordBytes(uint64_t bytes);
 		uint64_t GetRecordBytes();
@@ -162,6 +171,9 @@ namespace info
 
 		ov::String _info_path;
 		bool _info_path_by_user;
+
+		ov::String _output_file_path;
+		ov::String _output_info_path;
 
 		ov::String _tmp_path;
 
