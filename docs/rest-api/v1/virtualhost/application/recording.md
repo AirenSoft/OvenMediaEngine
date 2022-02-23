@@ -19,67 +19,103 @@ Request Example:
 
 
 
-`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:startRecord                       `
+`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:startRecord`
+
+                       
 
 \
 
 
-`{`
+`{`
+
+
 
 \
 
 
-`   "id": "custom_id", `
+  
+
+`"id": "custom_id",`
+
+
 
 \
 
 
-`   "stream": { `
+  
+
+`"stream": {`
+
+
 
 \
 
 
-`     "name": "stream_o", `
+    
+
+`"name": "stream_o",`
+
+
 
 \
 
 
-`     "tracks": [ 100, 200 ] `
+    
+
+`"tracks": [ 100, 200 ]`
+
+
 
 \
 
 
-`  },`
+  
+
+`},`
 
 \
 
 
-`  "filePath" : "/path/to/save/recorded/file_${Sequence}.ts",`
+  
+
+`"filePath" : "/path/to/save/recorded/file_${Sequence}.ts",`
 
 \
 
 
-`  "infoPath" : "/path/to/save/information/file.xml",`
+  
+
+`"infoPath" : "/path/to/save/information/file.xml",`
 
 \
 
 
-`  "interval" : 60000,    # Split it every 60 seconds`
+  
+
+`"interval" : 60000,    # Split it every 60 seconds`
 
 \
 
 
-`   "schedule" : "0 0 */1" # Split it at second 0, minute 0, every hours.  `
+  
+
+`"schedule" : "0 0 */1" # Split it at second 0, minute 0, every hours.`
+
+ 
 
 \
 
 
-`  "segmentationRule" : "continuity"`
+  
+
+`"segmentationRule" : "continuity"`
 
 \
 
 
-`}`
+
+
+`}`
 {% endswagger-description %}
 
 {% swagger-parameter in="path" name="vhost_name" type="string" %}
@@ -245,17 +281,25 @@ Request Example:
 
 
 
-`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:stopRecord                         `
+`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:stopRecord`
+
+                         
 
 \
 
 
-`{`
+`{`
+
+
 
 \
 
 
-`   "id": "custom_id" `
+  
+
+`"id": "custom_id"`
+
+
 
 \
 
@@ -314,8 +358,11 @@ An unique identifier for recording job.
                 "name": "stream_o",
                 "tracks": []
             },
-            "filePath": "app_stream_o_0.ts",
-            "infoPath": "app_stream_o.xml",
+            "filePath" : "/path/to/save/recorded/file_${Sequence}.ts",
+            "infoPath" : "/path/to/save/information/file_${Sequence}.xml",
+            "outputFilePath": "/path/to/save/recorded/file_1.ts",
+            "outputInfoPath": "/path/to/save/information/file_1.xml",
+            "sequence" : 1,
             "segmentationRule": "discontinuity",
             "recordBytes": 1200503,
             "recordTime": 4272,
@@ -369,7 +416,9 @@ Request Example:
 
 
 
-`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:records       `
+`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:records`
+
+       
 
 \
 
@@ -379,12 +428,16 @@ Request Example:
 \
 
 
-`   "id" : "custom_id"`
+   
+
+`"id" : "custom_id"`
 
 \
 
 
-`}                    `
+`}`
+
+                    
 {% endswagger-description %}
 
 {% swagger-parameter in="path" name="vhost_name" type="string" %}
@@ -438,10 +491,19 @@ An unique identifier for recording job. If no value is specified, the entire rec
                 "name": "stream_o",
                 "tracks": []
             },
-            "filePath": "app_stream_o_0.ts",
-            "infoPath": "app_stream_o.xml",
-            "segmentationRule": "discontinuity",
+            "interval": 5000,            
+            "filePath" : "/path/to/save/recorded/file_${Sequence}.ts",
+            "infoPath" : "/path/to/save/information/file_${Sequence}.xml",
+            "outputFilePath": "/path/to/save/recorded/file_1.ts",
+            "outputInfoPath": "/path/to/save/information/file_1.xml",
+            "recordBytes": 737150,
+            "recordTime": 1112,
+            "totalRecordBytes": 18237881,
+            "totalRecordTime": 26148,            
+            "sequence": 1,            
+            "segmentationRule": "discontinuity",            
             "createdTime": "2021-08-31T21:05:01.171+0900",
+            "startTime": "2021-08-31T21:05:01.171+0900", 
         },
         {
             "state": "recording",
@@ -452,79 +514,21 @@ An unique identifier for recording job. If no value is specified, the entire rec
                 "name": "stream_o",
                 "tracks": []
             },
-            "filePath": "app_stream_o_0.ts",
-            "infoPath": "app_stream_o.xml",
-            "segmentationRule": "discontinuity",
-            "sequence": 0,
-            "recordBytes": 1907351,
-            "recordTime": 6968,
-            "totalRecordBytes": 1907351,
-            "totalRecordTime": 6968,
-            "createdTime": "2021-08-31T21:05:01.171+0900",            
-            "startTime": "2021-08-31T21:05:01.567+0900",            
-        },
-        {
-            "state": "stopping",
-            "id": "custom_id_3",
-            "vhost": "default",
-            "app": "app",
-            "stream": {
-                "name": "stream_o",
-                "tracks": []
-            },
-            "filePath": "app_stream_o_0.ts",
-            "infoPath": "app_stream_o.xml",
-            "segmentationRule": "discontinuity",
-            "sequence": 0,
-            "recordBytes": 1907351,
-            "recordTime": 6968,
-            "totalRecordBytes": 1907351,
-            "totalRecordTime": 6968,
+            "interval": 5000,            
+            "filePath" : "/path/to/save/recorded/file2_${Sequence}.ts",
+            "infoPath" : "/path/to/save/information/file2_${Sequence}.xml",
+            "outputFilePath": "/path/to/save/recorded/file2_12.ts",
+            "outputInfoPath": "/path/to/save/information/file2_12.xml",
+            "recordBytes": 737150,
+            "recordTime": 1112,
+            "totalRecordBytes": 18237881,
+            "totalRecordTime": 26148,            
+            "sequence": 12,            
+            "segmentationRule": "continuity",            
             "createdTime": "2021-08-31T21:05:01.171+0900",
-            "startTime": "2021-08-31T21:05:01.567+0900",
-        },
-        {
-            "state": "stopped",
-            "id": "custom_id_4",
-            "vhost": "default",        
-            "app": "app",
-            "stream": {
-                "name": "stream_o",
-                "tracks": []
-            },
-            "filePath": "app_stream_o_0.ts",
-            "infoPath": "app_stream_o.xml",
-            "segmentationRule": "discontinuity",
-            "sequence": 0,
-            "recordBytes": 1907351,
-            "recordTime": 6968,
-            "totalRecordBytes": 1907351,
-            "totalRecordTime": 6968,
-            "startTime": "2021-08-31T21:05:01.567+0900",            
-            "createdTime": "2021-08-31T21:05:01.171+0900",            
-            "finishTime": "2021-08-31T21:15:01.567+0900"
-        },
-        {
-            "state": "error",
-            "id": "custom_id_5",
-            "vhost": "default",        
-            "app": "app",
-            "stream": {
-                "name": "stream_o",
-                "tracks": []
-            },
-            "filePath": "app_stream_o_0.ts",
-            "infoPath": "app_stream_o.xml",
-            "segmentationRule": "discontinuity",
-            "sequence": 0,
-            "recordBytes": 1907351,
-            "recordTime": 6968,
-            "totalRecordBytes": 1907351,
-            "totalRecordTime": 6968,
-            "createdTime": "2021-08-31T21:05:01.171+0900",
-            "startTime": "2021-08-31T21:05:01.567+0900",
-            "finishTime": "2021-08-31T21:15:01.567+0900"
+            "startTime": "2021-08-31T21:05:01.171+0900", 
         }
+        ....
     ],
     "statusCode": 200
 }
