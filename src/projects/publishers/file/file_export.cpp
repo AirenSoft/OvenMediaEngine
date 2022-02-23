@@ -43,7 +43,7 @@ bool FileExport::ExportRecordToXml(const ov::String path, const std::shared_ptr<
 	item.append_child("app").append_child(pugi::node_pcdata).set_value(record->GetApplication().CStr());
 	item.append_child("stream").append_child(pugi::node_pcdata).set_value(record->GetStreamName().CStr());
 
-	item.append_child("filePath").append_child(pugi::node_cdata).set_value(record->GetFilePath().CStr());
+	item.append_child("filePath").append_child(pugi::node_cdata).set_value(record->GetOutputFilePath().CStr());
 
 	item.append_child("recordBytes").append_child(pugi::node_pcdata).set_value(std::to_string(record->GetRecordBytes()).c_str());
 	item.append_child("recordTime").append_child(pugi::node_pcdata).set_value(std::to_string(record->GetRecordTime()).c_str());

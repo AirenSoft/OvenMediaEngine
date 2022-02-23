@@ -197,10 +197,6 @@ namespace info
 		_file_path = file_path;
 	}
 
-	void Record::SetTmpPath(ov::String tmp_path)
-	{
-		_tmp_path = tmp_path;
-	}
 	void Record::SetInfoPath(ov::String info_path)
 	{
 		_info_path = info_path;
@@ -217,6 +213,32 @@ namespace info
 	{
 		_info_path_by_user = by_user;
 	}
+
+	void Record::SetTmpPath(ov::String tmp_path)
+	{
+		_tmp_path = tmp_path;
+	}
+
+	void Record::SetOutputFilePath(ov::String output_file_path)
+	{
+		_output_file_path = output_file_path;
+	}
+
+	ov::String Record::GetOutputFilePath()
+	{
+		return _output_file_path;
+	}
+
+	void Record::SetOutputInfoPath(ov::String output_info_path)
+	{
+		_output_info_path = output_info_path;
+	}
+
+	ov::String Record::GetOutputInfoPath()
+	{
+		return _output_info_path;
+	}
+
 	void Record::SetRecordBytes(uint64_t bytes)
 	{
 		_record_bytes = bytes;

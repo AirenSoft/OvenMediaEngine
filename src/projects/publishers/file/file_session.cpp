@@ -84,59 +84,24 @@ bool FileSession::Split()
 	return true;
 }
 
-void FileSession::UpdateTemplateOutputPath()
-{
-	auto app_config = std::static_pointer_cast<info::Application>(GetApplication())->GetConfig();
-	auto file_config = app_config.GetPublishers().GetFilePublisher();
-
-	if (GetRecord()->IsFilePathSetByUser() == true)
-	{
-		_template_output_file_path = GetRecord()->GetFilePath();
-	}
-	else
-	{
-		_template_output_file_path = file_config.GetFilePath();
-	}
-
-	// If FilePath config is not set, save it as the default path.
-	if (_template_output_file_path.GetLength() == 0 || _template_output_file_path.IsEmpty() == true)
-	{
-		_template_output_file_path.Format("%s${TransactionId}_${VirtualHost}_${Application}_${Stream}_${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.ts", ov::PathManager::GetAppPath("records").CStr());
-	}
-
-	if (GetRecord()->IsInfoPathSetByUser() == true)
-	{
-		_template_output_info_path = GetRecord()->GetInfoPath();
-	}
-	else
-	{
-		_template_output_info_path = file_config.GetInfoPath();
-	}
-
-	// If FileInfoPath config is not set, save it as the default path.
-	if (_template_output_info_path.GetLength() == 0 || _template_output_info_path.IsEmpty() == true)
-	{
-		_template_output_info_path.Format("%s${TransactionId}_${VirtualHost}_${Application}_${Stream}.xml", ov::PathManager::GetAppPath("records").CStr());
-	}
-
-	logtd("Recording file template path: %s", _template_output_file_path.CStr());
-	logtd("Recording info template path: %s", _template_output_info_path.CStr());
-}
-
 bool FileSession::StartRecord()
 {
 	GetRecord()->UpdateRecordStartTime();
-	GetRecord()->SetFilePath(GetOutputFilePath());
-	GetRecord()->SetInfoPath(GetOutputFileInfoPath());
+	GetRecord()->SetOutputFilePath(GetOutputFilePath());
+	GetRecord()->SetOutputInfoPath(GetOutputFileInfoPath());
 	GetRecord()->SetTmpPath(GetOutputTempFilePath(GetRecord()));
 	GetRecord()->SetState(info::Record::RecordState::Recording);
 
 	// Get extension and container format
-	ov::String output_extention = ov::PathManager::ExtractExtension(GetRecord()->GetFilePath());
+	ov::String output_extention = ov::PathManager::ExtractExtension(GetRecord()->GetOutputFilePath());
 	ov::String output_format = FileWriter::GetFormatByExtension(output_extention, "mpegts");
 
-	logtd("output extention : %s", output_extention.CStr());
-	logtd("output format : %s", output_format.CStr());
+	logtd("Recording file information. sequence: %d, extention: %s, format: %s, filePath: %s, infoPath: %s",
+		  GetRecord()->GetSequence(),
+		  output_extention.CStr(),
+		  output_format.CStr(),
+		  GetRecord()->GetOutputFilePath().CStr(),
+		  GetRecord()->GetOutputInfoPath().CStr());
 
 	// Create directory for temporary file
 	ov::String tmp_directory = ov::PathManager::ExtractPath(GetRecord()->GetTmpPath());
@@ -184,7 +149,7 @@ bool FileSession::StartRecord()
 		_writer->SetTimestampRecalcMode(FileWriter::TIMESTAMP_STARTZERO_MODE);
 	}
 
-	logtd("The temporary file was created successfully. file: %s", _writer->GetPath().CStr());
+	logtd("Create temporary file: %s", _writer->GetPath().CStr());
 
 	for (auto &track_item : GetStream()->GetTracks())
 	{
@@ -248,12 +213,12 @@ bool FileSession::StopRecord()
 
 		GetRecord()->UpdateRecordStopTime();
 
-		GetRecord()->SetFilePath(GetOutputFilePath());
+		GetRecord()->SetOutputFilePath(GetOutputFilePath());
 
-		GetRecord()->SetInfoPath(GetOutputFileInfoPath());
+		GetRecord()->SetOutputInfoPath(GetOutputFileInfoPath());
 
 		// Create directory for recorded file
-		ov::String output_path = ov::PathManager::Combine(GetRootPath(), GetRecord()->GetFilePath());
+		ov::String output_path = ov::PathManager::Combine(GetRootPath(), GetRecord()->GetOutputFilePath());
 		ov::String output_directory = ov::PathManager::ExtractPath(output_path);
 
 		if (MakeDirectoryRecursive(output_directory.CStr()) == false)
@@ -267,7 +232,7 @@ bool FileSession::StopRecord()
 		}
 
 		// Create directory for information file
-		ov::String info_path = ov::PathManager::Combine(GetRootPath(), GetRecord()->GetInfoPath());
+		ov::String info_path = ov::PathManager::Combine(GetRootPath(), GetRecord()->GetOutputInfoPath());
 		ov::String info_directory = ov::PathManager::ExtractPath(info_path);
 
 		if (MakeDirectoryRecursive(info_directory.CStr()) == false)
@@ -279,9 +244,6 @@ bool FileSession::StopRecord()
 
 			return false;
 		}
-
-		// logtd("file directory was created successfully. (%s)", output_directory.CStr());
-		// logtd("information directory was created successfully. (%s)", info_directory.CStr());
 
 		// Moves temporary files to a user-defined path.
 		ov::String tmp_output_path = _writer->GetPath();
@@ -295,14 +257,16 @@ bool FileSession::StopRecord()
 
 			return false;
 		}
-		logtd("Move the temporary file to real file. from: %s  to: %s", tmp_output_path.CStr(), output_path.CStr());
+		
+		logtd("Replace the temporary file name with the target file name. from: %s, to: %s", tmp_output_path.CStr(), output_path.CStr());
 
 		// Append recorded information to the information file
 		if (FileExport::GetInstance()->ExportRecordToXml(info_path, GetRecord()) == false)
 		{
 			logte("Failed to export xml file. path: %s", info_path.CStr());
 		}
-		logtd("Append to the infomation file. path: %s", info_path.CStr());
+
+		logtd("Appends the recording result to the information file. path: %s", info_path.CStr());
 
 		GetRecord()->SetState(info::Record::RecordState::Stopped);
 		GetRecord()->IncreaseSequence();
@@ -389,7 +353,7 @@ bool FileSession::SendOutgoingData(const std::any &packet)
 		}
 	}
 
-	if(need_file_split)
+	if (need_file_split)
 	{
 		Split();
 	}
@@ -406,8 +370,6 @@ void FileSession::OnPacketReceived(const std::shared_ptr<info::Session> &session
 void FileSession::SetRecord(std::shared_ptr<info::Record> &record)
 {
 	_record = record;
-
-	UpdateTemplateOutputPath();
 }
 
 std::shared_ptr<info::Record> &FileSession::GetRecord()
@@ -433,14 +395,53 @@ ov::String FileSession::GetOutputTempFilePath(std::shared_ptr<info::Record> &rec
 
 ov::String FileSession::GetOutputFilePath()
 {
-	auto result = ConvertMacro(_template_output_file_path);
+	auto app_config = std::static_pointer_cast<info::Application>(GetApplication())->GetConfig();
+	auto file_config = app_config.GetPublishers().GetFilePublisher();
+
+	ov::String template_path = "";
+	if (GetRecord()->IsFilePathSetByUser() == true)
+	{
+		template_path = GetRecord()->GetFilePath();
+	}
+	else
+	{
+		template_path = file_config.GetFilePath();
+	}
+
+	// If FilePath config is not set, save it as the default path.
+	if (template_path.GetLength() == 0 || template_path.IsEmpty() == true)
+	{
+		template_path.Format("%s${TransactionId}_${VirtualHost}_${Application}_${Stream}_${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.ts", ov::PathManager::GetAppPath("records").CStr());
+	}
+
+	auto result = ConvertMacro(template_path);
 
 	return result;
 }
 
 ov::String FileSession::GetOutputFileInfoPath()
 {
-	auto result = ConvertMacro(_template_output_info_path);
+	auto app_config = std::static_pointer_cast<info::Application>(GetApplication())->GetConfig();
+	auto file_config = app_config.GetPublishers().GetFilePublisher();
+
+	ov::String template_path = "";
+
+	if (GetRecord()->IsInfoPathSetByUser() == true)
+	{
+		template_path = GetRecord()->GetInfoPath();
+	}
+	else
+	{
+		template_path = file_config.GetInfoPath();
+	}
+
+	// If FileInfoPath config is not set, save it as the default path.
+	if (template_path.GetLength() == 0 || template_path.IsEmpty() == true)
+	{
+		template_path.Format("%s${TransactionId}_${VirtualHost}_${Application}_${Stream}.xml", ov::PathManager::GetAppPath("records").CStr());
+	}
+
+	auto result = ConvertMacro(template_path);
 
 	return result;
 }
