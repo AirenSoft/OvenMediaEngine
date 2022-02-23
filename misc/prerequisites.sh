@@ -250,7 +250,7 @@ install_ffmpeg()
     --enable-encoder=libvpx_vp8,libopus,libfdk_aac,libopenh264,mjpeg,png${ADDI_ENCODER} \
     --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8${ADDI_DECODER} \
     --enable-parser=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
-    --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp,tls,rtmps --enable-demuxer=rtsp --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
+    --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp,tls,rtmps --enable-demuxer=rtsp,flv,live_flv --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
     --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb,format${ADDI_FILTERS} && \
     make -j$(nproc) && \
     sudo make install && \
@@ -400,36 +400,36 @@ case $i in
 esac
 done
 
-if [ "${OSNAME}" == "Ubuntu" ]; then
-    check_version
-    install_base_ubuntu
-elif  [ "${OSNAME}" == "CentOS" ]; then
-     check_version
-     install_base_centos
-elif  [ "${OSNAME}" == "Amazon Linux" ]; then
-     check_version
-     install_base_centos
-elif  [ "${OSNAME}" == "Fedora" ]; then
-    check_version
-    install_base_fedora
-elif  [ "${OSNAME}" == "Mac OS X" ]; then
-    install_base_macos
-else
-    echo "This program [$0] does not support your operating system [${OSNAME}]"
-    echo "Please refer to manual installation page"
-fi
+# if [ "${OSNAME}" == "Ubuntu" ]; then
+#     check_version
+#     install_base_ubuntu
+# elif  [ "${OSNAME}" == "CentOS" ]; then
+#      check_version
+#      install_base_centos
+# elif  [ "${OSNAME}" == "Amazon Linux" ]; then
+#      check_version
+#      install_base_centos
+# elif  [ "${OSNAME}" == "Fedora" ]; then
+#     check_version
+#     install_base_fedora
+# elif  [ "${OSNAME}" == "Mac OS X" ]; then
+#     install_base_macos
+# else
+#     echo "This program [$0] does not support your operating system [${OSNAME}]"
+#     echo "Please refer to manual installation page"
+# fi
 
-install_nasm
-install_openssl
-install_libsrtp
-install_libsrt
-install_libopus
-install_libopenh264
-install_libvpx
-install_fdk_aac
+# install_nasm
+# install_openssl
+# install_libsrtp
+# install_libsrt
+# install_libopus
+# install_libopenh264
+# install_libvpx
+# install_fdk_aac
 install_ffmpeg
-install_jemalloc
-install_libpcre2
+# install_jemalloc
+# install_libpcre2
 
 if [ "${WITH_OME}" == "true" ]; then
     install_ovenmediaengine
