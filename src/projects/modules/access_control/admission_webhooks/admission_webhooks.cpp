@@ -6,7 +6,8 @@ std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(ProviderType provide
 															const std::shared_ptr<ov::Url> &control_server_url, uint32_t timeout_msec,
 															const ov::String secret_key,
 															const std::shared_ptr<ov::SocketAddress> &client_address,
-															const std::shared_ptr<const ov::Url> &request_url)
+															const std::shared_ptr<const ov::Url> &request_url,
+															const Status::Code status)
 {
 	auto hooks = std::make_shared<AdmissionWebhooks>();
 
@@ -16,6 +17,7 @@ std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(ProviderType provide
 	hooks->_secret_key = secret_key;
 	hooks->_client_address = client_address;
 	hooks->_requested_url = request_url;
+	hooks->_status = status;
 
 	hooks->Run();
 
@@ -26,7 +28,8 @@ std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(PublisherType publis
 															const std::shared_ptr<ov::Url> &control_server_url, uint32_t timeout_msec,
 															const ov::String secret_key,
 															const std::shared_ptr<ov::SocketAddress> &client_address,
-															const std::shared_ptr<const ov::Url> &request_url)
+															const std::shared_ptr<const ov::Url> &request_url,
+															const Status::Code status)
 {
 	auto hooks = std::make_shared<AdmissionWebhooks>();
 
@@ -36,6 +39,7 @@ std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(PublisherType publis
 	hooks->_secret_key = secret_key;
 	hooks->_client_address = client_address;
 	hooks->_requested_url = request_url;
+	hooks->_status = status;
 
 	hooks->Run();
 
@@ -87,11 +91,12 @@ ov::String AdmissionWebhooks::GetMessageBody()
 			"direction": "incoming | outgoing",
 			"protocol": "webrtc | rtmp | srt | hls | dash | lldash",
 			"url": "scheme://host[:port]/app/stream/file?query=value&query2=value2",
-			"time": ""2021-05-12T13:45:00.000Z" // ISO8601
+			"status": "opening | closing",
+			"time": "2021-05-12T13:45:00.000Z" // ISO8601
 		}
 	}
 	*/
-	// Make reqeust message
+	// Make request message
 	Json::Value jv_root;
 	Json::Value jv_client;
 	Json::Value jv_request;
@@ -124,6 +129,7 @@ ov::String AdmissionWebhooks::GetMessageBody()
 	jv_request["direction"] = direction.CStr();
 	jv_request["protocol"] = protocol.CStr();
 	jv_request["url"] = _requested_url->ToUrlString(true).CStr();
+	jv_request["status"] = Status::Description(_status).CStr();
 	jv_request["time"] = ov::Converter::ToISO8601String(std::chrono::system_clock::now()).CStr();
 	jv_root["request"] = jv_request;
 
@@ -132,6 +138,19 @@ ov::String AdmissionWebhooks::GetMessageBody()
 
 void AdmissionWebhooks::ParseResponse(const std::shared_ptr<ov::Data> &data)
 {
+	ov::JsonObject object = ov::Json::Parse(data->ToString());
+	if(object.IsNull())
+	{
+		SetError(ErrCode::INVALID_DATA_FORMAT, ov::String::FormatString("Json parsing error : a response in the wrong format was received."));
+		return;
+	}
+
+	if (_status == Status::Code::CLOSING)
+	{
+		SetError(ErrCode::ALLOWED, _err_reason);
+		return;
+	}
+
 	/*
 	Required : "allowed"
 	Optional : "new_url", "lifetime", "reason"
@@ -147,13 +166,6 @@ void AdmissionWebhooks::ParseResponse(const std::shared_ptr<ov::Data> &data)
 		"reason": "optional value"
 	}
 	*/
-	
-	ov::JsonObject object = ov::Json::Parse(data->ToString());
-	if(object.IsNull())
-	{
-		SetError(ErrCode::INVALID_DATA_FORMAT, ov::String::FormatString("Json parsing error : a response in the wrong format was received."));
-		return;
-	}
 
 	// Required data
 	Json::Value &jv_allowed = object.GetJsonValue()["allowed"];

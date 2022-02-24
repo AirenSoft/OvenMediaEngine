@@ -73,7 +73,7 @@ std::shared_ptr<pub::Stream> DashApplication::CreateStream(const std::shared_ptr
 				_utc_timing_scheme, _utc_timing_value,
 				video_track, audio_track,
 				nullptr);
-		});
+		}, _segment_duration);
 }
 
 bool DashApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)

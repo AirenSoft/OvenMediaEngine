@@ -471,6 +471,15 @@ namespace pvd
 					const std::shared_ptr<const SessionDescription> &peer_sdp)
 	{
 		logti("Stop command received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
+
+		// Send Close to Admission Webhooks
+		auto parsed_url { ov::Url::Parse(ws_client->GetClient()->GetRequest()->GetUri()) };
+		auto remote_address { ws_client->GetClient()->GetRequest()->GetRemote()->GetRemoteAddress() };
+		if (parsed_url && remote_address)
+		{
+			SendCloseAdmissionWebhooks(parsed_url, remote_address);
+		}
+		// the return check is not necessary
 		
 		// Find Stream
 		auto stream = std::static_pointer_cast<WebRTCStream>(GetStreamByName(vhost_app_name, stream_name));

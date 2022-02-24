@@ -64,7 +64,7 @@ std::shared_ptr<pub::Stream> HlsApplication::CreateStream(const std::shared_ptr<
 				_segment_count, _segment_duration,
 				video_track, audio_track,
 				nullptr);
-		});
+		}, _segment_duration);
 }
 
 bool HlsApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)

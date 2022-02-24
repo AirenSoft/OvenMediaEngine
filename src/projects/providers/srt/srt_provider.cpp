@@ -237,6 +237,18 @@ namespace pvd
 			return;
 		}
 
+		// Send Close to Admission Webhooks
+		if (remote)
+		{
+			auto parsed_url = ov::Url::Parse(ov::Url::Decode(remote->GetStreamId()));
+			auto remote_address = remote->GetRemoteAddress();
+			if (parsed_url && remote_address)
+			{
+				SendCloseAdmissionWebhooks(parsed_url, remote_address);
+			}
+		}
+		// the return check is not necessary
+
 		logti("The SRT client has disconnected: [%s/%s], remote: %s", channel->GetApplicationName(), channel->GetName().CStr(), remote->ToString().CStr());
 
 		PushProvider::OnChannelDeleted(remote->GetNativeHandle());

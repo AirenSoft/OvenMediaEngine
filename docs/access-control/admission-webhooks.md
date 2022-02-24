@@ -55,6 +55,7 @@ X-OME-Signature: f871jd991jj1929jsjd91pqa0amm1
   {
     "direction": "incoming | outgoing",
     "protocol": "webrtc | rtmp | srt | hls | dash | lldash",
+    "status": "opening | closing",
     "url": "scheme://host[:port]/app/stream/file?query=value&query2=value2",
     "time": ""2021-05-12T13:45:00.000Z"
   }
@@ -73,6 +74,7 @@ Here is a detailed explanation of each element of Json payload:
 | request |             | Information about the client's request                                                                      |
 |         | direction   | <p>incoming : A client requests to publish a stream</p><p>outgoing : A client requests to play a stream</p> |
 |         | protocol    | webrtc, srt, rtmp, hls, dash, lldash                                                                        |
+|         | status      | <p>opening : A client requests to open a stream</p><p>outgoing : A client closed the stream</p>             |
 |         | url         | url requested by the client                                                                                 |
 |         | time        | time requested by the client (ISO8601 format)                                                               |
 
@@ -93,7 +95,21 @@ As shown below, the trigger condition of request is different for each protocol.
 | DASH      | Every time a client requests a playlist                                                                                  |
 | LL-DASH   | Every time a client requests a playlist                                                                                  |
 
-## Response&#x20;
+## Response for closing status&#x20;
+
+The engine in the closing state does not need any parameter in response.
+To the query just answer with empty json object.
+
+```http
+HTTP/1.1 200 OK
+Content-Length: 5
+Content-Type: application/json
+Connection: Closed
+{
+}
+```
+
+## Response for opening status&#x20;
 
 ### Format
 
