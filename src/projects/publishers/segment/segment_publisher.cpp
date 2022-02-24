@@ -370,6 +370,37 @@ void SegmentPublisher::RequestTableUpdateThread()
 
 		playlist_table_lock.unlock();
 
+		{
+			std::unique_lock<std::recursive_mutex> webhooks_table_lock(_webhooks_request_table_lock);
+			for (auto item = _webhooks_request_table.begin(); item != _webhooks_request_table.end();)
+			{
+				auto request_info = item->second;
+				if (request_info->IsTooOld())
+				{
+					// remove and report
+					logti("Removed webhook request info of the unused session : %s/%s - %s - %s - %s - %d",
+						  request_info->GetAppName().CStr(), request_info->GetStreamName().CStr(),
+						  request_info->GetSessionId().CStr(), request_info->GetIpAddress().CStr(),
+						  request_info->GetUri().CStr(), request_info->GetSegmentDuration());
+
+					// send close to admin webhook
+					auto request_url = ov::Url::Parse(request_info->GetUri());
+					auto remote_address { std::make_shared<ov::SocketAddress>(request_info->GetIpAddressPort()) };
+					if (request_url && remote_address)
+					{
+						SendCloseAdmissionWebhooks(request_url, remote_address);
+					}
+					// it is not necessary to check the return
+
+					item = _webhooks_request_table.erase(item);
+				}
+				else
+				{
+					++item;
+				}
+			}
+		}
+
 		sleep(3);
 	}
 }
@@ -513,6 +544,40 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 	}
 }
 
+void SegmentPublisher::UpdateWebhooksRequestInfo(const WebhooksRequestInfo &info)
+{
+	std::unique_lock<std::recursive_mutex> table_lock(_webhooks_request_table_lock);
+
+	auto its { _webhooks_request_table.equal_range(info.GetIpAddress().CStr()) };
+	auto item
+	{
+		std::find_if(its.first, its.second,
+			[info](std::pair<std::string, std::shared_ptr<WebhooksRequestInfo>> const &webhook) -> bool {
+				return webhook.second->GetUri() == info.GetUri();
+			}
+		)
+	};
+
+	ov::String operation;
+	auto webhook { std::make_shared<WebhooksRequestInfo>(info) };
+	if (item == _webhooks_request_table.end())
+	{
+		_webhooks_request_table.emplace(info.GetIpAddress().CStr(), std::move(webhook));
+		operation = "Added";
+	}
+	else
+	{
+		item->second = std::move(webhook);
+		operation = "Updated";
+	}
+
+	logti("%s webhook request info : %s/%s - %s - %s - %d",
+		operation.CStr(), info.GetAppName().CStr(),
+		info.GetStreamName().CStr(), info.GetSessionId().CStr(),
+		info.GetIpAddress().CStr(), info.GetSegmentDuration());
+
+}
+
 bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, ov::String &stream_name,
 										   const std::shared_ptr<http::svr::HttpConnection> &client, const std::shared_ptr<const ov::Url> &request_url,
 										   std::shared_ptr<PlaylistRequestInfo> &request_info)
@@ -538,6 +603,10 @@ bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, o
 														 vhost_app_name, stream_name,
 														 remote_address->GetIpAddress(),
 														 session_id);
+
+	auto stream { GetStreamAs<SegmentStream>(vhost_app_name, stream_name) };
+	auto segment_duration { (stream == nullptr) ? request_info->GetSegmentDuration() : stream->GetSegmentDuration() };
+	request_info->SetSegmentDuration(segment_duration);
 
 	// SingedPolicy is first
 	auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(requested_url, remote_address);
@@ -624,15 +693,26 @@ bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, o
 		// Lifetime cannot work in HTTP-based streaming. In HTTP-based streaming, the playlist is continuously requested, so the ControlServer can control the session by disallowing it at the appropriate time.
 		// admission_webhooks->GetLifetime();
 
+		auto uri { request_url->ToUrlString(true) };
 		// Redirect URL
 		if (admission_webhooks->GetNewURL() != nullptr)
 		{
 			// Change host/app/stream by response
 			auto new_url = admission_webhooks->GetNewURL();
 
+			uri = new_url->ToUrlString(true);
 			vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(new_url->Host(), new_url->App());
 			stream_name = new_url->Stream();
 		}
+
+		WebhooksRequestInfo webhooks_info
+		{
+			GetPublisherType(), vhost_app_name, stream_name,
+			remote_address->GetIpAddress(), session_id,
+			remote_address->ToString(false).CStr(), uri, segment_duration
+		};
+
+		UpdateWebhooksRequestInfo(webhooks_info);
 	}
 	else if (webhooks_result == AccessController::VerificationResult::Error)
 	{

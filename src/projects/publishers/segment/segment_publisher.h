@@ -36,15 +36,15 @@ public:
 		_stream_name(info._stream_name),
 		_ip_address(info._ip_address),
 		_session_id(info._session_id),
-		_last_requested_time(info._last_requested_time)
+		_last_requested_time(info._last_requested_time),
+		_segment_duration(info._segment_duration)
 	{
 	}
 
 	bool IsTooOld()
 	{
 		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - _last_requested_time).count();
-		// TODO(Getroot): It should be related with segment duration.
-		if(elapsed > 30) 
+		if(elapsed > (_segment_duration * 6))
 		{
 			return true;
 		}
@@ -71,14 +71,48 @@ public:
 	const ov::String& GetSessionId() const { return _session_id; }
 	const info::VHostAppName& GetAppName() const { return _vhost_app_name; }
 	const ov::String& GetStreamName() const { return _stream_name; }
+	int GetSegmentDuration() const { return _segment_duration; }
+	void SetSegmentDuration(int segment_duration) { _segment_duration = segment_duration; }
 
-private:
+protected:
 	PublisherType		_publisher_type;
 	info::VHostAppName	_vhost_app_name;
 	ov::String			_stream_name;
 	ov::String			_ip_address;
 	ov::String			_session_id;
 	std::chrono::system_clock::time_point	_last_requested_time;
+	int _segment_duration { 5 };
+};
+
+class WebhooksRequestInfo : public PlaylistRequestInfo
+{
+public:
+	WebhooksRequestInfo(const PublisherType &type, const info::VHostAppName &vhost_app_name,
+						const ov::String &stream_name, const ov::String &ip,
+						const ov::String &session_id, const ov::String &ip_address_port,
+						const ov::String &uri, int segment_duration)
+		: PlaylistRequestInfo(type, vhost_app_name, stream_name, ip, session_id)
+		, _ip_address_port(ip_address_port)
+		, _uri(uri)
+	{
+		SetSegmentDuration(segment_duration);
+	}
+
+	WebhooksRequestInfo(const WebhooksRequestInfo &info)
+		: PlaylistRequestInfo(info._publisher_type, info._vhost_app_name, info._stream_name, info._ip_address, info._session_id)
+		, _ip_address_port(info._ip_address_port)
+		, _uri(info._uri)
+	{
+		SetSegmentDuration(info._segment_duration);
+	}
+
+	const ov::String& GetIpAddressPort() const { return _ip_address_port; }
+	const ov::String& GetUri() const { return _uri; }
+
+private:
+	ov::String _ip_address_port;
+	ov::String _uri;
+
 };
 
 class SegmentRequestInfo
@@ -216,7 +250,6 @@ public:
 
 	bool Stop() override;
 
-	void		UpdatePlaylistRequestInfo(const std::shared_ptr<PlaylistRequestInfo> &info);
 	void		UpdateSegmentRequestInfo(SegmentRequestInfo &info);
 
 protected:
@@ -248,20 +281,26 @@ protected:
 	std::shared_ptr<SegmentStreamServer> _stream_server = nullptr;
 
 private:
+	void		UpdatePlaylistRequestInfo(const std::shared_ptr<PlaylistRequestInfo> &info);
+	void		UpdateWebhooksRequestInfo(const WebhooksRequestInfo &info);
 	bool		StartSessionTableManager();
 	void 		RequestTableUpdateThread();
 	const std::shared_ptr<PlaylistRequestInfo>	GetSessionRequestInfoBySegmentRequestInfo(const SegmentRequestInfo &info);
+	void		GetUriRequestInfoBySegmentRequestInfo(SegmentRequestInfo &info);
 	bool		IsAuthorizedSession(const PlaylistRequestInfo &info);
 
-	
+
 
 	bool					_run_thread = false;
 	std::recursive_mutex 	_playlist_request_table_lock;
 	std::recursive_mutex 	_segment_request_table_lock;
+	std::recursive_mutex 	_webhooks_request_table_lock;
 	std::thread 			_worker_thread;
 
 	// key: session id, Probabliy, the session_id will be the least duplicated info in the _playlist_request_table.
 	std::map<std::string, std::shared_ptr<PlaylistRequestInfo>>			_playlist_request_table;
 	// key: ip address, Probabliy, the ip address will be the least duplicated info in the _segment_request_table.
 	std::multimap<std::string, std::shared_ptr<SegmentRequestInfo>>		_segment_request_table;
+	// key: session id, Probabliy, the session_id will be the least duplicated info in the _webhooks_request_table.
+	std::multimap<std::string, std::shared_ptr<WebhooksRequestInfo>>	_webhooks_request_table;
 };

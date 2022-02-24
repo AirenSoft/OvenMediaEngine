@@ -124,6 +124,17 @@ namespace pvd
 			return true;
 		}
 
+		// Send Close to Admission Webhooks
+		if (_url && _remote)
+		{
+			auto remote_address { _remote->GetRemoteAddress() };
+			if (remote_address)
+			{
+				GetProvider()->SendCloseAdmissionWebhooks(_url, remote_address);
+			}
+		}
+		// the return check is not necessary
+
 		if(_remote->GetState() == ov::SocketState::Connected)
 		{
 			_remote->Close();
@@ -227,13 +238,13 @@ namespace pvd
 				object_encoding = object->GetNumber(index);
 			}
 
-			// app 설정
+			// app name set
 			if ((index = object->FindName("app")) >= 0 && object->GetType(index) == AmfDataType::String)
 			{
 				_app_name = object->GetString(index);
 			}
 
-			// app 설정
+			// app url set
 			if ((index = object->FindName("tcUrl")) >= 0 && object->GetType(index) == AmfDataType::String)
 			{
 				_tc_url = object->GetString(index);

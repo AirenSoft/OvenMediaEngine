@@ -211,8 +211,11 @@ bool WebRtcPublisher::Stop()
 {
 	IcePortManager::GetInstance()->Release(IcePortObserver::GetSharedPtr());
 
-	_signalling_server->RemoveObserver(RtcSignallingObserver::GetSharedPtr());
-	_signalling_server->Stop();
+	if (_signalling_server)
+	{
+		_signalling_server->RemoveObserver(RtcSignallingObserver::GetSharedPtr());
+		_signalling_server->Stop();
+	}
 
 	_message_thread.Stop();
 
@@ -650,14 +653,17 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::Client>
 {
 	logti("Stop command received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 
+	ov::String uri { ws_client->GetClient()->GetRequest()->GetUri() };
+	auto parsed_url { ov::Url::Parse(uri) };
+
 	auto final_vhost_app_name = vhost_app_name;
 	auto final_stream_name = stream_name;
 	auto [new_url_exist, new_url] = ws_client->GetData("new_url");
 	if (new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
 	{
-		ov::String uri = std::get<ov::String>(new_url);
+		uri = std::get<ov::String>(new_url);
 
-		auto parsed_url = ov::Url::Parse(uri);
+		parsed_url = ov::Url::Parse(uri);
 		if (parsed_url == nullptr)
 		{
 			logte("Could not parse the url: %s", uri.CStr());
@@ -667,6 +673,14 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::Client>
 		final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
 		final_stream_name = parsed_url->Stream();
 	}
+
+	// Send Close to Admission Webhooks
+	auto remote_address { ws_client->GetClient()->GetRequest()->GetRemote()->GetRemoteAddress() };
+	if (parsed_url && remote_address)
+	{
+		SendCloseAdmissionWebhooks(parsed_url, remote_address);
+	}
+	// the return check is not necessary
 
 	// Find Stream
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(final_vhost_app_name, final_stream_name));
