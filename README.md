@@ -48,7 +48,7 @@ Would you please click on each link below for details:
 * <b>Clustering</b> (Origin-Edge Structure)
 * <b>Monitoring</b>
 * <b>Access Control</b>
-  * Adminssion Webhooks
+  * Admission Webhooks
   * Singed Policy
 * <b>Beta</b>
   * File Recording
@@ -159,3 +159,4 @@ We always hope that OvenMediaEngine will give you good inspiration.
 ## License
 
 OvenMediaEngine is licensed under the [AGPL-3.0-only](LICENSE).
+However, if you need another license, please feel free to email us at [contact@airensoft.com](mailto:contact@airensoft.com).
