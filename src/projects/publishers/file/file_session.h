@@ -38,7 +38,7 @@ private:
 	ov::String GetOutputFilePath();
 	ov::String GetOutputFileInfoPath();
 	ov::String ConvertMacro(ov::String src);
-	bool MakeDirectoryRecursive(std::string s, mode_t mode = S_IRWXU | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+	bool MakeDirectoryRecursive(std::string s);
 
 private:
 	std::shared_ptr<FileWriter> _writer;

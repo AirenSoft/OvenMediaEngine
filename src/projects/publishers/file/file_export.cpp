@@ -56,6 +56,11 @@ bool FileExport::ExportRecordToXml(const ov::String path, const std::shared_ptr<
 	item.append_child("finishTime").append_child(pugi::node_pcdata).set_value(ov::Converter::ToISO8601String(record->GetRecordStopTime()).CStr());
 
 	bool is_success = doc.save_file(path.CStr(), PUGIXML_TEXT("  "));
-
+	
+	if(chmod(path.CStr(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH) != 0)
+	{
+		logtw("Could not change permission. path(%s)", path.CStr());
+	}
+	
 	return is_success;
 }
