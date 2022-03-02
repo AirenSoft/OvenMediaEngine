@@ -140,7 +140,7 @@ bool FileWriter::Start()
 
 	if (!(_format_context->oformat->flags & AVFMT_NOFILE))
 	{
-		int error = avio_open2(&_format_context->pb, _format_context->url, AVIO_FLAG_WRITE, nullptr, &options);
+		int error = avio_open2(&_format_context->pb, _format_context->url, AVIO_FLAG_READ_WRITE, nullptr, &options);
 		if (error < 0)
 		{
 			logte("Error opening file. error(%d), %s", error, _format_context->url);
@@ -176,6 +176,7 @@ bool FileWriter::Stop()
 
 	if (_format_context != nullptr)
 	{
+		ov::String path = _format_context->url;
 		if (_format_context->pb != nullptr)
 		{
 			av_write_trailer(_format_context);
@@ -186,6 +187,11 @@ bool FileWriter::Stop()
 		avformat_free_context(_format_context);
 
 		_format_context = nullptr;
+
+		if(chmod(path.CStr(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH) != 0)
+		{
+			logtw("Could not change permission. path(%s)", path.CStr());
+		}
 	}
 
 	return true;

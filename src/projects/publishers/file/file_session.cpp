@@ -3,6 +3,7 @@
 #include <base/info/application.h>
 #include <base/info/host.h>
 #include <base/info/stream.h>
+#include <base/ovlibrary/ovlibrary.h>
 #include <base/publisher/application.h>
 #include <base/publisher/stream.h>
 #include <config/config.h>
@@ -96,11 +97,12 @@ bool FileSession::StartRecord()
 	ov::String output_extention = ov::PathManager::ExtractExtension(GetRecord()->GetOutputFilePath());
 	ov::String output_format = FileWriter::GetFormatByExtension(output_extention, "mpegts");
 
-	logtd("Recording file information. sequence: %d, extention: %s, format: %s, filePath: %s, infoPath: %s",
+	logtd("Recording file information. seq(%d), extention(%s), format(%s), filePath(%s), tmpPath(%s), infoPath(%s)",
 		  GetRecord()->GetSequence(),
 		  output_extention.CStr(),
 		  output_format.CStr(),
 		  GetRecord()->GetOutputFilePath().CStr(),
+		  GetRecord()->GetTmpPath().CStr(),
 		  GetRecord()->GetOutputInfoPath().CStr());
 
 	// Create directory for temporary file
@@ -149,7 +151,7 @@ bool FileSession::StartRecord()
 		_writer->SetTimestampRecalcMode(FileWriter::TIMESTAMP_STARTZERO_MODE);
 	}
 
-	logtd("Create temporary file: %s", _writer->GetPath().CStr());
+	logtd("Create temporary file(%s)", _writer->GetPath().CStr());
 
 	for (auto &track_item : GetStream()->GetTracks())
 	{
@@ -257,7 +259,7 @@ bool FileSession::StopRecord()
 
 			return false;
 		}
-		
+
 		logtd("Replace the temporary file name with the target file name. from: %s, to: %s", tmp_output_path.CStr(), output_path.CStr());
 
 		// Append recorded information to the information file
@@ -387,7 +389,7 @@ ov::String FileSession::GetRootPath()
 
 ov::String FileSession::GetOutputTempFilePath(std::shared_ptr<info::Record> &record)
 {
-	ov::String tmp_directory = ov::PathManager::ExtractPath(record->GetFilePath());
+	ov::String tmp_directory = ov::PathManager::ExtractPath(record->GetOutputFilePath());
 	ov::String tmp_filename = ov::String::FormatString("tmp_%s", ov::Random::GenerateString(32).CStr());
 
 	return ov::PathManager::Combine(tmp_directory, tmp_filename);
@@ -446,11 +448,10 @@ ov::String FileSession::GetOutputFileInfoPath()
 	return result;
 }
 
-bool FileSession::MakeDirectoryRecursive(std::string s, mode_t mode)
+bool FileSession::MakeDirectoryRecursive(std::string s)
 {
 	size_t pos = 0;
 	std::string dir;
-	int32_t mdret;
 
 	if (access(s.c_str(), R_OK | W_OK) == 0)
 	{
@@ -472,9 +473,10 @@ bool FileSession::MakeDirectoryRecursive(std::string s, mode_t mode)
 		if (dir.size() == 0)
 			continue;  // if leading / first time is 0 length
 
-		if ((mdret = ::mkdir(dir.c_str(), mode)) && errno != EEXIST)
+		// If you want to change the directory permission, 
+		// change the mask parameter of the MakeDirectory function.
+		if (ov::PathManager::MakeDirectory(dir.c_str()) == false)
 		{
-			logtd("* ret : %d", mdret);
 			return false;
 		}
 	}

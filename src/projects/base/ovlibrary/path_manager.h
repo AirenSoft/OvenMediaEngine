@@ -30,7 +30,7 @@ namespace ov
 		static String ExtractFileName(String path);
 
 		// Creates a directory with the mask (Default mask is 755 (rwxr-xr-x))
-		static bool MakeDirectory(const char *path, int mask = S_IRWXU | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+		static bool MakeDirectory(const char *path, int mask = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 
 		// Creates a directory named "<path1>/<path2."
 		static String Combine(String path1, String path2);
