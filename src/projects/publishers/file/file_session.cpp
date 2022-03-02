@@ -389,7 +389,7 @@ ov::String FileSession::GetRootPath()
 
 ov::String FileSession::GetOutputTempFilePath(std::shared_ptr<info::Record> &record)
 {
-	ov::String tmp_directory = ov::PathManager::ExtractPath(record->GetFilePath());
+	ov::String tmp_directory = ov::PathManager::ExtractPath(record->GetOutputFilePath());
 	ov::String tmp_filename = ov::String::FormatString("tmp_%s", ov::Random::GenerateString(32).CStr());
 
 	return ov::PathManager::Combine(tmp_directory, tmp_filename);
