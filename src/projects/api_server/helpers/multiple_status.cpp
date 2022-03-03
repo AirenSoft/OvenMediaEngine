@@ -6,8 +6,6 @@
 //  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#pragma once
-
 #include "./multiple_status.h"
 
 namespace api
