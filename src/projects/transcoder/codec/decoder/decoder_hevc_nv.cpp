@@ -20,7 +20,7 @@ bool DecoderHEVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	AVCodec *_codec = ::avcodec_find_decoder_by_name("hevc_nvdec");
+	AVCodec *_codec = ::avcodec_find_decoder_by_name("hevc_cuvid");
 	if (_codec == nullptr)
 	{
 		logte("Codec not found: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
