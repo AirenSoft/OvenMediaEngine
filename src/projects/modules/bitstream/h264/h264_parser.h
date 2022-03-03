@@ -106,7 +106,7 @@ public:
     static bool CheckAnnexBKeyframe(const uint8_t *bitstream, size_t length);
     static bool ParseNalUnitHeader(const uint8_t *nalu, size_t length, H264NalUnitHeader &header);
     static bool ParseSPS(const uint8_t *nalu, size_t length, H264SPS &sps);
-
+    static bool ParseVUI(NalUnitBitstreamParser &parser, H264SPS &sps);
 private:
     static bool ParseNalUnitHeader(NalUnitBitstreamParser &parser, H264NalUnitHeader &header);
 };
