@@ -65,15 +65,23 @@ bool MpegtsPushSession::Start()
 	{
 		auto &track = track_item.second;
 
-		auto track_info = MpegtsTrackInfo::Create();
-
-		// It does not transmit unless it is H264 and AAC codec.
-		if( !(track->GetCodecId() == cmn::MediaCodecId::H264 || track->GetCodecId() == cmn::MediaCodecId::Aac))
+		// If the user selected a track, ignore the unselected track.
+		auto selected_track = GetPush()->GetStream().GetTracks();		
+		if (selected_track.size() > 0 && selected_track.find(track->GetId()) == selected_track.end())
 		{
-			logtw("Could not supported codec. codec_id(%d)", track->GetCodecId());
 			continue;
 		}
 
+		// MPEGTS supports various codecs.
+
+		// (Deprecated) It does not transmit unless it is H264 and AAC codec.
+		// if( !(track->GetCodecId() == cmn::MediaCodecId::H264 || track->GetCodecId() == cmn::MediaCodecId::Aac))
+		// {
+		// 	logtw("Could not supported codec. codec_id(%d)", track->GetCodecId());
+		// 	continue;
+		// }
+		
+		auto track_info = MpegtsTrackInfo::Create();
 		track_info->SetCodecId( track->GetCodecId() );
 		track_info->SetBitrate( track->GetBitrate() );
 		track_info->SetTimeBase( track->GetTimeBase() );

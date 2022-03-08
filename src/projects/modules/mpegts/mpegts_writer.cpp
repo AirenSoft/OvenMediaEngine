@@ -170,10 +170,8 @@ bool MpegtsWriter::Stop()
 	{
 		if (_format_context->pb != nullptr)
 		{
-			av_write_trailer(_format_context);
+			avformat_close_input(&_format_context);
 		}
-
-		avformat_close_input(&_format_context);
 
 		avformat_free_context(_format_context);
 
