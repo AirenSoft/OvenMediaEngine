@@ -73,15 +73,21 @@ bool RtmpPushSession::Start()
 	{
 		auto &track = track_item.second;
 
-		auto track_info = RtmpTrackInfo::Create();
-
-		// It does not transmit unless it is H264 and AAC codec.
-		if( !(track->GetCodecId() == cmn::MediaCodecId::H264 || track->GetCodecId() == cmn::MediaCodecId::Aac))
+		// If the user selected a track, ignore the unselected track.
+		auto selected_track = GetPush()->GetStream().GetTracks();		
+		if (selected_track.size() > 0 && selected_track.find(track->GetId()) == selected_track.end())
 		{
-			logtw("Could not supported codec. codec_id(%d)", track->GetCodecId());
 			continue;
 		}
 
+		// Rtmp does not supported except for H264 and AAC codec.
+		if ( !(track->GetCodecId() == cmn::MediaCodecId::H264 || track->GetCodecId() == cmn::MediaCodecId::Aac))
+		{
+			logtw("Could not supported codec. track_id:%d, codec_id: %d", track->GetId(), track->GetCodecId());
+			continue;
+		}
+
+		auto track_info = RtmpTrackInfo::Create();
 		track_info->SetCodecId( track->GetCodecId() );
 		track_info->SetBitrate( track->GetBitrate() );
 		track_info->SetTimeBase( track->GetTimeBase() );
@@ -98,6 +104,7 @@ bool RtmpPushSession::Start()
 		}
 	}
 
+	// Notice: If there are more than one video track, RTMP Push is not created and returns an error. You must use 1 video track.
 	if(_writer->Start() == false)
 	{
 		_writer = nullptr;
