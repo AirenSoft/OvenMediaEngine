@@ -767,11 +767,6 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 {
 	auto track_id = media_track->GetId();
 
-	_stat_recv_pkt_lpts[track_id] = media_packet->GetPts();
-	_stat_recv_pkt_ldts[track_id] = media_packet->GetDts();
-	_stat_recv_pkt_size[track_id] += media_packet->GetData()->GetLength();
-	_stat_recv_pkt_count[track_id]++;
-
 	// Check b-frame of H264/H265 codec
 	//
 	// Basically, in order to check the presence of B-Frame, the SliceType of H264 should be checked,
@@ -783,7 +778,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 		case cmn::BitstreamFormat::H265_ANNEXB:
 			if (_max_warning_count_bframe < 10)
 			{
-				if (media_packet->GetPts() != media_packet->GetDts())
+				if (_stat_recv_pkt_ldts[track_id] > media_packet->GetDts())
 				{
 					media_track->SetBframes(true);
 				}
@@ -804,6 +799,12 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 		default:
 			break;
 	}
+
+	_stat_recv_pkt_lpts[track_id] = media_packet->GetPts();
+	_stat_recv_pkt_ldts[track_id] = media_packet->GetDts();
+	_stat_recv_pkt_size[track_id] += media_packet->GetData()->GetLength();
+	_stat_recv_pkt_count[track_id]++;
+
 
 	// 	Diffrence time of received first packet with uptime.
 	if (_stat_first_time_diff[track_id] == 0)
