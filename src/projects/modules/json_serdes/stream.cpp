@@ -75,6 +75,7 @@ namespace serdes
 
 			Json::Value track_value;
 
+			SetInt(track_value, "id", track->GetId());
 			SetString(track_value, "type", ::StringFromMediaType(track->GetMediaType()), Optional::False);
 
 			switch (track->GetMediaType())
