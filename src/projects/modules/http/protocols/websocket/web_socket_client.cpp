@@ -9,11 +9,11 @@
 #include "web_socket_client.h"
 
 #include <unistd.h>
-
 #include <algorithm>
 
 #include "./web_socket_private.h"
 #include "web_socket_datastructure.h"
+#include "../../server/http_transaction.h"
 
 namespace http
 {
@@ -21,8 +21,8 @@ namespace http
 	{
 		namespace ws
 		{
-			Client::Client(const std::shared_ptr<HttpConnection> &client)
-				: _client(client)
+			Client::Client(const std::shared_ptr<HttpTransaction> &transaction)
+				: _transaction(transaction)
 			{
 			}
 
@@ -86,7 +86,7 @@ namespace http
 					response_data->Append(data);
 				}
 
-				auto response = _client->GetResponse();
+				auto response = _transaction->GetResponse();
 				return response->Send(response_data) ? length : -1LL;
 			}
 
@@ -107,12 +107,12 @@ namespace http
 
 			void Client::Close()
 			{
-				_client->GetResponse()->Close();
+				_transaction->GetResponse()->Close();
 			}
 
 			ov::String Client::ToString() const
 			{
-				return ov::String::FormatString("<WebSocketClient: %p, %s>", this, _client->GetRequest()->GetRemote()->ToString().CStr());
+				return ov::String::FormatString("<WebSocketClient: %p, %s>", this, _transaction->GetRequest()->GetRemote()->ToString().CStr());
 			}
 
 			void Client::AddData(ov::String key, std::variant<bool, uint64_t, ov::String> value)

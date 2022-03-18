@@ -176,7 +176,7 @@ bool SegmentStreamServer::PrepareInterceptors(
 	return result;
 }
 
-bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<http::svr::HttpConnection> &client)
+bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<http::svr::HttpTransaction> &client)
 {
 	auto response = client->GetResponse();
 	auto request = client->GetRequest();
@@ -230,7 +230,8 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<http::svr::HttpCo
 	switch (connection_policy)
 	{
 		case http::svr::ConnectionPolicy::Closed:
-			return response->Close();
+		// TODO(h2) : ConnectionPolicy 없애기, Connection->IsKeepAlive로 판단한다. 그리고 에러일때도 Close한다.  
+			return true; //response->Close();
 
 		case http::svr::ConnectionPolicy::KeepAlive:
 			return true;
@@ -247,13 +248,12 @@ void SegmentStreamServer::SetCrossDomains(const info::VHostAppName &vhost_app_na
 	_cors_manager.SetCrossDomains(vhost_app_name, url_list);
 }
 
-std::shared_ptr<pub::Stream> SegmentStreamServer::GetStream(const std::shared_ptr<http::svr::HttpConnection> &client)
+std::shared_ptr<pub::Stream> SegmentStreamServer::GetStream(const std::shared_ptr<http::svr::HttpTransaction> &client)
 {
-	auto request = client->GetRequest();
-	return request->GetExtraAs<pub::Stream>();
+	return client->GetExtraAs<pub::Stream>();
 }
 
-std::shared_ptr<mon::StreamMetrics> SegmentStreamServer::GetStreamMetric(const std::shared_ptr<http::svr::HttpConnection> &client)
+std::shared_ptr<mon::StreamMetrics> SegmentStreamServer::GetStreamMetric(const std::shared_ptr<http::svr::HttpTransaction> &client)
 {
 	auto stream_info = GetStream(client);
 	if (stream_info == nullptr)

@@ -11,7 +11,7 @@
 #include "../segment_publisher.h"
 #include "hls_private.h"
 
-http::svr::ConnectionPolicy HlsStreamServer::ProcessStreamRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
+http::svr::ConnectionPolicy HlsStreamServer::ProcessStreamRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 																  const SegmentStreamRequestInfo &request_info,
 																  const ov::String &file_ext)
 {
@@ -31,7 +31,7 @@ http::svr::ConnectionPolicy HlsStreamServer::ProcessStreamRequest(const std::sha
 	return http::svr::ConnectionPolicy::Closed;
 }
 
-http::svr::ConnectionPolicy HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
+http::svr::ConnectionPolicy HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 																	const SegmentStreamRequestInfo &request_info,
 																	PlayListType play_list_type)
 {
@@ -39,6 +39,8 @@ http::svr::ConnectionPolicy HlsStreamServer::ProcessPlayListRequest(const std::s
 
 	ov::String play_list;
 
+	//TODO(h2) : Observer는 SegmentPublisher::OnPlayListRequest 이다. 
+	// 여기서 SetExtra(stream)을 해서 stream을 넘겨준다. 
 	auto item = std::find_if(_observers.begin(), _observers.end(),
 							 [client, request_info, &play_list](std::shared_ptr<SegmentStreamObserver> &observer) -> bool {
 								 return observer->OnPlayListRequest(client, request_info, play_list);
@@ -82,7 +84,7 @@ http::svr::ConnectionPolicy HlsStreamServer::ProcessPlayListRequest(const std::s
 	return http::svr::ConnectionPolicy::Closed;
 }
 
-http::svr::ConnectionPolicy HlsStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
+http::svr::ConnectionPolicy HlsStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 																   const SegmentStreamRequestInfo &request_info,
 																   SegmentType segment_type)
 {

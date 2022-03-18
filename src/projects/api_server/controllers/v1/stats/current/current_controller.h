@@ -21,7 +21,7 @@ namespace api
 			public:
 				void PrepareHandlers() override;
 
-				ApiResponse OnGetServerMetrics(const std::shared_ptr<http::svr::HttpConnection> &client);
+				ApiResponse OnGetServerMetrics(const std::shared_ptr<http::svr::HttpTransaction> &client);
 			};
 		}  // namespace stats
 	}	   // namespace v1

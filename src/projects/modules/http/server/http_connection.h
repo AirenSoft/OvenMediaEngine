@@ -2,16 +2,18 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Hyunjun Jang
-//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//  Created by Getroot
+//  Copyright (c) 2021 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
 
-#include <mutex>
+#include <base/ovlibrary/ovlibrary.h>
+#include <base/ovsocket/client_socket.h>
 
-#include "http_request.h"
-#include "http_response.h"
+#include "http_transaction.h"
+#include "websocket_session.h"
+#include "http2_stream.h"
 
 namespace http
 {
@@ -20,36 +22,69 @@ namespace http
 		class HttpServer;
 		class HttpsServer;
 
-		// HttpConnection: Contains HttpRequest & HttpResponse
-		// HttpRequest: Contains request informations (Request HTTP Header & Body)
-		// HttpResponse: Contains socket & response informations (Response HTTP Header & Body)
-
 		class HttpConnection : public ov::EnableSharedFromThis<HttpConnection>
 		{
 		public:
-			friend class HttpServer;
-			friend class HttpsServer;
+			HttpConnection(const std::shared_ptr<HttpServer> &server, const std::shared_ptr<ov::ClientSocket> &client_socket);
+			
+			void OnDataReceived(const std::shared_ptr<const ov::Data> &data);
+			void Close(PhysicalPortDisconnectReason reason);
 
-			HttpConnection(const std::shared_ptr<HttpServer> &server, std::shared_ptr<HttpRequest> &http_request, std::shared_ptr<HttpResponse> &http_response);
-			virtual ~HttpConnection() = default;
+			bool OnTimerTask();
 
-			std::shared_ptr<HttpRequest> GetRequest();
-			std::shared_ptr<HttpResponse> GetResponse();
+			void SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data);
 
-			std::shared_ptr<const HttpRequest> GetRequest() const;
-			std::shared_ptr<const HttpResponse> GetResponse() const;
+			std::shared_ptr<ov::TlsServerData> GetTlsData() const;
+			std::shared_ptr<ov::ClientSocket> GetSocket() const;
+			ConnectionType GetConnectionType() const;
+			std::shared_ptr<HttpTransaction> GetHttpTransaction() const;
+			// Get Websocket Session
+			std::shared_ptr<WebSocketSession> GetWebSocketSession() const;
 
-		protected:
-			bool IsWebSocketRequest();
+			// Get ID
+			uint32_t GetId() const;
 
-			// @return returns true if HTTP header parsed successfully, otherwise returns false
-			ssize_t TryParseHeader(const std::shared_ptr<const ov::Data> &data);
-			void ProcessData(const std::shared_ptr<const ov::Data> &data);
+			// Get interceptor, return cached interceptor
+			std::shared_ptr<RequestInterceptor> GetInterceptor() const;
+			// Find interceptor
+			std::shared_ptr<RequestInterceptor> FindInterceptor(const std::shared_ptr<HttpTransaction> &transaction);
 
+			// To string
+			ov::String ToString() const;
+
+		private:
+			// For HTTP 1.0 and HTTP 1.1
+			ssize_t OnHttp1RequestReceived(const std::shared_ptr<const ov::Data> &data);
+			ssize_t OnHttp2RequestReceived(const std::shared_ptr<const ov::Data> &data);
+			ssize_t OnWebSocketDataReceived(const std::shared_ptr<const ov::Data> &data);
+
+			bool AddStream(const std::shared_ptr<HttpTransaction> &transaction);
+			std::shared_ptr<HttpTransaction> FindHttpStream(uint32_t stream_id);
+			bool DeleteHttpStream(uint32_t stream_id);
+
+			bool UpgradeToWebSocket(const std::shared_ptr<HttpTransaction> &transaction);
+
+			// Default : HTTP 1.1
+			ConnectionType _connection_type = ConnectionType::Http11;
 			std::shared_ptr<HttpServer> _server = nullptr;
+			std::shared_ptr<ov::ClientSocket> _client_socket = nullptr;
+			std::shared_ptr<ov::TlsServerData> _tls_data;
 
-			std::shared_ptr<HttpRequest> _request = nullptr;
-			std::shared_ptr<HttpResponse> _response = nullptr;
+			// For HTTP/1.1
+			std::shared_ptr<HttpTransaction> _http_transaction = nullptr;
+
+			// For HTTP/2.0
+			// Stream Identifier, HttpTransaction
+			std::map<uint32_t, std::shared_ptr<HttpStream>> _http_stream_map;
+
+			// For Websocket
+			std::shared_ptr<WebSocketSession> _websocket_session = nullptr;
+			// Websocket Frame
+			std::shared_ptr<ws::Frame> _websocket_frame = nullptr;
+
+			std::shared_ptr<RequestInterceptor> _interceptor = nullptr;
+
+			bool _keep_alive = true;
 		};
-	}  // namespace svr
-}  // namespace http
+	} // namespace svr
+} // namespace http

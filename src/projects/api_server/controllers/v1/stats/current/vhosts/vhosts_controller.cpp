@@ -23,7 +23,7 @@ namespace api
 				CreateSubController<AppsController>(R"(\/(?<vhost_name>[^\/]*)\/apps)");
 			};
 
-			ApiResponse VHostsController::OnGetVhost(const std::shared_ptr<http::svr::HttpConnection> &client,
+			ApiResponse VHostsController::OnGetVhost(const std::shared_ptr<http::svr::HttpTransaction> &client,
 													 const std::shared_ptr<mon::HostMetrics> &vhost)
 			{
 				return ::serdes::JsonFromMetrics(vhost);

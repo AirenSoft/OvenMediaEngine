@@ -117,22 +117,19 @@ namespace http
 				return remote->Send(data, length) ? length : -1L;
 			});
 
-			client->GetRequest()->SetTlsData(tls_data);
-			client->GetResponse()->SetTlsData(tls_data);
+			client->SetTlsData(tls_data);
 		}
 
 		void HttpsServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 		{
-			auto client = FindClient(remote);
-
-			if (client == nullptr)
+			auto connection = FindClient(remote);
+			if (connection == nullptr)
 			{
 				// This can be called in situations where the client closes the connection from the server at the same time as the data is sent
 				return;
 			}
 
-			auto request = client->GetRequest();
-			auto tls_data = request->GetTlsData();
+			auto tls_data = connection->GetTlsData();
 
 			if (tls_data != nullptr)
 			{
@@ -143,9 +140,8 @@ namespace http
 					if ((plain_data != nullptr) && (plain_data->GetLength() > 0))
 					{
 						// plain_data is HTTP data
-
 						// Use the decrypted data
-						client->ProcessData(plain_data);
+						HttpServer::OnDataReceived(remote, address, plain_data);
 					}
 					else
 					{
@@ -162,8 +158,6 @@ namespace http
 			{
 				OV_ASSERT(false, "TlsServerData must not be null");
 			}
-
-			client->GetResponse()->Close();
 		}
 
 		bool HttpsServer::HandleSniCallback(ov::TlsContext *tls_context, SSL *ssl, const ov::String &server_name)

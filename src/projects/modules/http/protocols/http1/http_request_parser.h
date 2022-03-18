@@ -12,7 +12,7 @@
 
 namespace http
 {
-	class HttpRequestParser : public HttpParser
+	class HttpRequestHeaderParser : public HttpParser
 	{
 	public:
 		const ov::String &GetRequestTarget() const noexcept

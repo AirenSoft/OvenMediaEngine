@@ -28,7 +28,7 @@ bool DashStreamServer::PrepareInterceptors(
 {
 	auto time_interceptor = std::make_shared<TimeInterceptor>();
 
-	time_interceptor->Register(http::Method::All, R"(\/time)", [=](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
+	time_interceptor->Register(http::Method::All, R"(\/time)", [=](const std::shared_ptr<http::svr::HttpTransaction> &client) -> http::svr::NextHandler {
 		auto url = ov::Url::Parse(client->GetRequest()->GetUri());
 
 		if (url == nullptr)
@@ -89,7 +89,7 @@ bool DashStreamServer::PrepareInterceptors(
 	return result;
 }
 
-http::svr::ConnectionPolicy DashStreamServer::ProcessStreamRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
+http::svr::ConnectionPolicy DashStreamServer::ProcessStreamRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 																   const SegmentStreamRequestInfo &request_info,
 																   const ov::String &file_ext)
 {
@@ -110,7 +110,7 @@ http::svr::ConnectionPolicy DashStreamServer::ProcessStreamRequest(const std::sh
 	return http::svr::ConnectionPolicy::Closed;
 }
 
-http::svr::ConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
+http::svr::ConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 																	 const SegmentStreamRequestInfo &request_info,
 																	 PlayListType play_list_type)
 {
@@ -158,7 +158,7 @@ http::svr::ConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::
 	return http::svr::ConnectionPolicy::Closed;
 }
 
-http::svr::ConnectionPolicy DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
+http::svr::ConnectionPolicy DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 																	const SegmentStreamRequestInfo &request_info,
 																	SegmentType segment_type)
 {

@@ -53,6 +53,9 @@ namespace http
 
 			manager->DeletePort(physical_port);
 
+			//TODO(h2) : Connection Timeout 처리 - 모든 Connection에 대해 timeout 처리를 해야 한다.
+			// HTTP/2.0 HTTP/1.1은 client가 session을 계속 유지할 수 있기 때문이다. 
+
 			return false;
 		}
 
@@ -85,7 +88,7 @@ namespace http
 
 			for (auto &client : client_list)
 			{
-				client.second->GetResponse()->Close();
+				client.second->Close(PhysicalPortDisconnectReason::Disconnect);
 			}
 
 			_interceptor_list.clear();
@@ -119,27 +122,15 @@ namespace http
 			logti("Client(%s) is connected on %s", remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 
 			auto client_socket = std::dynamic_pointer_cast<ov::ClientSocket>(remote);
-
 			if (client_socket == nullptr)
 			{
 				OV_ASSERT2(false);
 				return nullptr;
 			}
 
-			auto request = std::make_shared<HttpRequest>(client_socket, _default_interceptor);
-			auto response = std::make_shared<HttpResponse>(client_socket);
-
-			if (response != nullptr)
-			{
-				// Set default headers
-				response->SetHeader("Server", "OvenMediaEngine");
-				response->SetHeader("Content-Type", "text/html");
-			}
-
 			std::lock_guard<std::shared_mutex> guard(_client_list_mutex);
 
-			auto http_connection = std::make_shared<HttpConnection>(GetSharedPtr(), request, response);
-
+			auto http_connection = std::make_shared<HttpConnection>(GetSharedPtr(), client_socket);
 			_connection_list[remote.get()] = http_connection;
 
 			return http_connection;
@@ -162,7 +153,7 @@ namespace http
 
 			if (remote->IsClosing() == false)
 			{
-				client->ProcessData(data);
+				client->OnDataReceived(data);
 			}
 			else
 			{
@@ -172,7 +163,7 @@ namespace http
 
 		void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
 		{
-			std::shared_ptr<HttpConnection> client;
+			std::shared_ptr<HttpConnection> connection;
 
 			{
 				std::lock_guard<std::shared_mutex> guard(_client_list_mutex);
@@ -185,33 +176,30 @@ namespace http
 					return;
 				}
 
-				client = client_iterator->second;
+				connection = client_iterator->second;
 				_connection_list.erase(client_iterator);
 			}
 
-			auto request = client->GetRequest();
-			auto response = client->GetResponse();
-
 			if (reason == PhysicalPortDisconnectReason::Disconnect)
 			{
-				logti("Client(%s) has been disconnected from %s (%d)",
-					  remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
+				logti("Client(%s) has been disconnected from %s",
+					  remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 			}
 			else
 			{
-				logti("Client(%s) is disconnected from %s (%d)",
-					  remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
+				logti("Client(%s) has disconnected from %s",
+					  remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 			}
 
-			auto interceptor = request->GetRequestInterceptor();
-
+			auto interceptor = connection->GetInterceptor();
 			if (interceptor != nullptr)
 			{
-				interceptor->OnHttpClosed(client, reason);
+				interceptor->OnClosed(connection, reason);
 			}
 			else
 			{
-				logtw("Interceptor does not exists for HTTP client %p", client.get());
+				// It probably be disconnected before the interceptor is set.
+				logtd("Interceptor does not exists for HTTP client %p", connection.get());
 			}
 		}
 
@@ -235,18 +223,20 @@ namespace http
 			return true;
 		}
 
-		std::shared_ptr<RequestInterceptor> HttpServer::FindInterceptor(const std::shared_ptr<HttpConnection> &client)
+		std::shared_ptr<RequestInterceptor> HttpServer::FindInterceptor(const std::shared_ptr<HttpTransaction> &transaction)
 		{
 			// Find interceptor for the request
 			std::shared_lock<std::shared_mutex> guard(_interceptor_list_mutex);
 
 			for (auto &interceptor : _interceptor_list)
 			{
-				if (interceptor->IsInterceptorForRequest(client))
+				if (interceptor->IsInterceptorForRequest(transaction))
 				{
 					return interceptor;
 				}
 			}
+
+			// TODO(h2) : Check if default interceptor should be used 
 
 			return nullptr;
 		}
@@ -306,7 +296,7 @@ namespace http
 
 			for (auto client_iterator : temp_list)
 			{
-				client_iterator->GetResponse()->Close();
+				client_iterator->Close(PhysicalPortDisconnectReason::Disconnect);
 			}
 
 			return true;

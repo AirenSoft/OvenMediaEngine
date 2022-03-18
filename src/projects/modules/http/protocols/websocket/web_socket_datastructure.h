@@ -13,7 +13,7 @@
 
 #include <functional>
 
-#include "../../../http_datastructure.h"
+#include "../../http_datastructure.h"
 
 namespace http
 {
@@ -122,8 +122,8 @@ namespace http
 			};
 #pragma pack(pop)
 
-			typedef std::function<InterceptorResult(const std::shared_ptr<Client> &ws_client)> ConnectionHandler;
-			typedef std::function<InterceptorResult(const std::shared_ptr<Client> &ws_client, const std::shared_ptr<const Frame> &message)> MessageHandler;
+			typedef std::function<bool(const std::shared_ptr<Client> &ws_client)> ConnectionHandler;
+			typedef std::function<bool(const std::shared_ptr<Client> &ws_client, const std::shared_ptr<const ov::Data> &message)> MessageHandler;
 			typedef std::function<void(const std::shared_ptr<Client> &ws_client, const std::shared_ptr<const ov::Error> &error)> ErrorHandler;
 			typedef std::function<void(const std::shared_ptr<Client> &ws_client, PhysicalPortDisconnectReason reason)> CloseHandler;
 		}  // namespace ws

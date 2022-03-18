@@ -11,7 +11,7 @@
 #include "dash_define.h"
 #include "dash_private.h"
 
-bool DashInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpConnection> &client)
+bool DashInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpTransaction> &client)
 {
 	if (SegmentStreamInterceptor::IsInterceptorForRequest(client) == false)
 	{

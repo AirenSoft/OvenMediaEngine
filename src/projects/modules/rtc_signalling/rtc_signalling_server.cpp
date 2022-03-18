@@ -215,7 +215,7 @@ bool RtcSignallingServer::RemoveCertificate(const std::shared_ptr<const info::Ce
 bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Interceptor> interceptor)
 {
 	interceptor->SetConnectionHandler(
-		[this](const std::shared_ptr<http::svr::ws::Client> &ws_client) -> http::svr::InterceptorResult {
+		[this](const std::shared_ptr<http::svr::ws::Client> &ws_client) -> bool {
 			auto &client = ws_client->GetClient();
 			auto request = client->GetRequest();
 			auto response = client->GetResponse();
@@ -224,7 +224,7 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 			if (remote == nullptr)
 			{
 				OV_ASSERT(false, "Cannot find the client information: %s", ws_client->ToString().CStr());
-				return http::svr::InterceptorResult::Disconnect;
+				return false;
 			}
 
 			ov::String description = remote->ToString();
@@ -236,7 +236,7 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 			if (uri == nullptr)
 			{
 				logtw("Invalid request from %s. Disconnecting...", description.CStr());
-				return http::svr::InterceptorResult::Disconnect;
+				return false;
 			}
 
 			// Find the "Host" header
@@ -267,19 +267,20 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 				}
 			}
 
-			request->SetExtra(info);
+			client->SetExtra(info);
 
-			return http::svr::InterceptorResult::Keep;
+			return true;
 		});
 
 	interceptor->SetMessageHandler(
-		[this](const std::shared_ptr<http::svr::ws::Client> &ws_client, const std::shared_ptr<const http::svr::ws::Frame> &message) -> http::svr::InterceptorResult {
+		[this](const std::shared_ptr<http::svr::ws::Client> &ws_client, const std::shared_ptr<const ov::Data> &message) -> bool {
 			auto &client = ws_client->GetClient();
+			auto connection = client->GetConnection();
 			auto request = client->GetRequest();
 
-			logtp("The client sent a message:\n%s", message->GetPayload()->Dump().CStr());
+			logtp("The client sent a message:\n%s", message->Dump().CStr());
 
-			auto info = request->GetExtraAs<RtcSignallingInfo>();
+			auto info = client->GetExtraAs<RtcSignallingInfo>();
 
 			if (info == nullptr)
 			{
@@ -289,15 +290,15 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 				// 2. After the connection is lost, the callback is called late
 				logtw("Could not find client information: %s", ws_client->ToString().CStr());
 
-				return http::svr::InterceptorResult::Disconnect;
+				return false;
 			}
 
-			ov::JsonObject object = ov::Json::Parse(message->GetPayload());
+			ov::JsonObject object = ov::Json::Parse(message);
 
 			if (object.IsNull())
 			{
 				logtw("Invalid request message from %s", ws_client->ToString().CStr());
-				return http::svr::InterceptorResult::Disconnect;
+				return false;
 			}
 
 			auto &payload = object.GetJsonValue();
@@ -305,7 +306,7 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 			if ((payload.isObject() == false) || (payload.isMember("command") == false))
 			{
 				logtw("Invalid request message from %s", ws_client->ToString().CStr());
-				return http::svr::InterceptorResult::Disconnect;
+				return false;
 			}
 
 			auto &command_value = payload["command"];
@@ -335,10 +336,10 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 
 				ws_client->Send(response_json.ToString());
 
-				return http::svr::InterceptorResult::Disconnect;
+				return false;
 			}
 
-			return http::svr::InterceptorResult::Keep;
+			return true;
 		});
 
 	interceptor->SetErrorHandler(
@@ -349,9 +350,10 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 	interceptor->SetCloseHandler(
 		[this](const std::shared_ptr<http::svr::ws::Client> &ws_client, PhysicalPortDisconnectReason reason) -> void {
 			auto &client = ws_client->GetClient();
+			auto connection = client->GetConnection();
 			auto request = client->GetRequest();
 
-			auto info = request->GetExtraAs<RtcSignallingInfo>();
+			auto info = client->GetExtraAs<RtcSignallingInfo>();
 
 			if (info != nullptr)
 			{
@@ -419,9 +421,16 @@ bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, c
 	if ((disconnected == false) && (_http_server != nullptr))
 	{
 		disconnected = _http_server->DisconnectIf(
-			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<http::svr::HttpConnection> &client) -> bool {
-				auto request = client->GetRequest();
-				auto info = request->GetExtraAs<RtcSignallingInfo>();
+			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<http::svr::HttpConnection> &connection) -> bool {
+				
+				//TODO(h2) : Change to use connection->GetWebsocketHandler() 
+				// if(connection->GetConnectionType() != http::ConnectionType::WebSocket)
+				// {
+				// 	return false;
+				// }
+
+				auto transaction = connection->GetHttpTransaction();
+				auto info = transaction->GetExtraAs<RtcSignallingInfo>();
 
 				if (info == nullptr)
 				{
@@ -441,9 +450,16 @@ bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, c
 	if ((disconnected == false) && (_https_server != nullptr))
 	{
 		disconnected = _https_server->DisconnectIf(
-			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<http::svr::HttpConnection> &client) -> bool {
-				auto request = client->GetRequest();
-				auto info = request->GetExtraAs<RtcSignallingInfo>();
+			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<http::svr::HttpConnection> &connection) -> bool {
+				
+				//TODO(h2) : Change to use connection->GetWebsocketHandler() 
+				// if(connection->GetConnectionType() != http::ConnectionType::WebSocket)
+				// {
+				// 	return false;
+				// }
+				
+				auto transaction = connection->GetHttpTransaction();
+				auto info = transaction->GetExtraAs<RtcSignallingInfo>();
 
 				if (info == nullptr)
 				{
@@ -487,7 +503,7 @@ bool RtcSignallingServer::Stop()
 	return http_result && https_result;
 }
 
-std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCommand(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const http::svr::ws::Frame> &message)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCommand(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const ov::Data> &message)
 {
 	if (command == "request_offer")
 	{

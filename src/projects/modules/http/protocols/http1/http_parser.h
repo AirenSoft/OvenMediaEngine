@@ -12,7 +12,7 @@
 
 #include <map>
 
-#include "../http_datastructure.h"
+#include "../../http_datastructure.h"
 
 namespace http
 {
@@ -24,14 +24,14 @@ namespace http
 		/// @param data Received data
 		///
 		/// @return Size of data used for HTTP parsing. Returns -1L if an error occurs during parsing
-		ssize_t ProcessData(const std::shared_ptr<const ov::Data> &data);
+		ssize_t AppendData(const std::shared_ptr<const ov::Data> &data);
 
 		/// Parsing status (Updated by ProcessData())
 		///
 		/// @return HttpStatusCode::PartialContent - Need more data
 		///         HttpStatusCode::OK - All data parsed successfully
 		///         Other - An error occurred
-		StatusCode GetParseStatus() const
+		StatusCode GetStatus() const
 		{
 			return _parse_status;
 		}

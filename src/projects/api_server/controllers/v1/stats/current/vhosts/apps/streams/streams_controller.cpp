@@ -19,7 +19,7 @@ namespace api
 				RegisterGet(R"(\/(?<stream_name>[^\/]*))", &StreamsController::OnGetStream);
 			};
 
-			ApiResponse StreamsController::OnGetStream(const std::shared_ptr<http::svr::HttpConnection> &client,
+			ApiResponse StreamsController::OnGetStream(const std::shared_ptr<http::svr::HttpTransaction> &client,
 													   const std::shared_ptr<mon::HostMetrics> &vhost,
 													   const std::shared_ptr<mon::ApplicationMetrics> &app,
 													   const std::shared_ptr<mon::StreamMetrics> &stream,

@@ -175,7 +175,7 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 {
 	auto http_interceptor = std::make_shared<ThumbnailInterceptor>();
 
-	http_interceptor->Register(http::Method::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
+	http_interceptor->Register(http::Method::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<http::svr::HttpTransaction> &client) -> http::svr::NextHandler {
 		auto request = client->GetRequest();
 
 		auto host_name = request->GetHeader("HOST").Split(":")[0];
