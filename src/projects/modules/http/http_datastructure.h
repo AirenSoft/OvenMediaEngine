@@ -395,14 +395,6 @@ namespace http
 
 	namespace svr
 	{
-		enum class ConnectionPolicy : char
-		{
-			// Send "Connection: Closed" header
-			Closed,
-			// Send "Connection: Keep-Alive" header
-			KeepAlive
-		};
-
 		enum class InterceptorResult : char
 		{
 			Completed,

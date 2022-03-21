@@ -89,7 +89,7 @@ bool DashStreamServer::PrepareInterceptors(
 	return result;
 }
 
-http::svr::ConnectionPolicy DashStreamServer::ProcessStreamRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+bool DashStreamServer::ProcessStreamRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 																   const SegmentStreamRequestInfo &request_info,
 																   const ov::String &file_ext)
 {
@@ -107,10 +107,10 @@ http::svr::ConnectionPolicy DashStreamServer::ProcessStreamRequest(const std::sh
 	response->SetStatusCode(http::StatusCode::NotFound);
 	response->Response();
 
-	return http::svr::ConnectionPolicy::Closed;
+	return true;
 }
 
-http::svr::ConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+bool DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 																	 const SegmentStreamRequestInfo &request_info,
 																	 PlayListType play_list_type)
 {
@@ -131,13 +131,13 @@ http::svr::ConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::
 		response->SetStatusCode(http::StatusCode::NotFound);
 		response->Response();
 
-		return http::svr::ConnectionPolicy::Closed;
+		return false;
 	}
 
 	if (response->GetStatusCode() != http::StatusCode::OK || play_list.IsEmpty())
 	{
 		response->Response();
-		return http::svr::ConnectionPolicy::Closed;
+		return false;
 	}
 
 	// Set HTTP header
@@ -155,10 +155,10 @@ http::svr::ConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::
 		MonitorInstance->IncreaseBytesOut(*stream_info, GetPublisherType(), sent_bytes);
 	}
 
-	return http::svr::ConnectionPolicy::Closed;
+	return true;
 }
 
-http::svr::ConnectionPolicy DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+bool DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 																	const SegmentStreamRequestInfo &request_info,
 																	SegmentType segment_type)
 {
@@ -179,7 +179,7 @@ http::svr::ConnectionPolicy DashStreamServer::ProcessSegmentRequest(const std::s
 		response->SetStatusCode(http::StatusCode::NotFound);
 		response->Response();
 
-		return http::svr::ConnectionPolicy::Closed;
+		return false;
 	}
 
 	// Set HTTP header
@@ -193,5 +193,5 @@ http::svr::ConnectionPolicy DashStreamServer::ProcessSegmentRequest(const std::s
 		MonitorInstance->IncreaseBytesOut(*stream_info, GetPublisherType(), sent_bytes);
 	}
 
-	return http::svr::ConnectionPolicy::Closed;
+	return true;
 }

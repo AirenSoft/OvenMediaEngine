@@ -20,7 +20,7 @@ std::shared_ptr<SegmentStreamInterceptor> CmafStreamServer::CreateInterceptor()
 	return std::make_shared<CmafInterceptor>();
 }
 
-http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+bool CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 																	const SegmentStreamRequestInfo &request_info,
 																	SegmentType segment_type)
 {
@@ -71,7 +71,7 @@ http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::s
 				response->SetStatusCode(http::StatusCode::NotFound);
 				_http_chunk_list.clear();
 
-				return http::svr::ConnectionPolicy::Closed;
+				return false;
 			}
 
 			client->SetExtra(stream_info);
@@ -98,7 +98,7 @@ http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::s
 
 			chunk_item->second->client_list.push_back(client);
 
-			return http::svr::ConnectionPolicy::KeepAlive;
+			return true;
 		}
 	}
 

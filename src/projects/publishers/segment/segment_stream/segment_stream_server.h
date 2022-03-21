@@ -59,15 +59,15 @@ protected:
 	bool ProcessRequest(const std::shared_ptr<http::svr::HttpTransaction> &client);
 
 	// Interfaces
-	virtual http::svr::ConnectionPolicy ProcessStreamRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+	virtual bool ProcessStreamRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 															 const SegmentStreamRequestInfo &request_info,
 															 const ov::String &file_ext) = 0;
 
-	virtual http::svr::ConnectionPolicy ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+	virtual bool ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 															   const SegmentStreamRequestInfo &request_info,
 															   PlayListType play_list_type) = 0;
 
-	virtual http::svr::ConnectionPolicy ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+	virtual bool ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 															  const SegmentStreamRequestInfo &request_info,
 															  SegmentType segment_type) = 0;
 

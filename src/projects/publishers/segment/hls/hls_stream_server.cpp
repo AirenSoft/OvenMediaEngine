@@ -11,7 +11,7 @@
 #include "../segment_publisher.h"
 #include "hls_private.h"
 
-http::svr::ConnectionPolicy HlsStreamServer::ProcessStreamRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+bool HlsStreamServer::ProcessStreamRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 																  const SegmentStreamRequestInfo &request_info,
 																  const ov::String &file_ext)
 {
@@ -28,10 +28,10 @@ http::svr::ConnectionPolicy HlsStreamServer::ProcessStreamRequest(const std::sha
 
 	response->SetStatusCode(http::StatusCode::NotFound);
 	response->Response();
-	return http::svr::ConnectionPolicy::Closed;
+	return false;
 }
 
-http::svr::ConnectionPolicy HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+bool HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 																	const SegmentStreamRequestInfo &request_info,
 																	PlayListType play_list_type)
 {
@@ -54,7 +54,7 @@ http::svr::ConnectionPolicy HlsStreamServer::ProcessPlayListRequest(const std::s
 		response->SetStatusCode(http::StatusCode::NotFound);
 		response->Response();
 
-		return http::svr::ConnectionPolicy::Closed;
+		return false;
 	}
 
 	if (response->GetStatusCode() != http::StatusCode::OK || play_list.IsEmpty())
@@ -63,7 +63,7 @@ http::svr::ConnectionPolicy HlsStreamServer::ProcessPlayListRequest(const std::s
 			  request_info.vhost_app_name.CStr(), request_info.stream_name.CStr(), StringFromPublisherType(GetPublisherType()).CStr(),
 			  request_info.file_name.CStr(), response->GetStatusCode());
 		response->Response();
-		return http::svr::ConnectionPolicy::Closed;
+		return false;
 	}
 
 	// Set HTTP header
@@ -81,10 +81,10 @@ http::svr::ConnectionPolicy HlsStreamServer::ProcessPlayListRequest(const std::s
 		MonitorInstance->IncreaseBytesOut(*stream_info, GetPublisherType(), sent_bytes);
 	}
 
-	return http::svr::ConnectionPolicy::Closed;
+	return true;
 }
 
-http::svr::ConnectionPolicy HlsStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+bool HlsStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 																   const SegmentStreamRequestInfo &request_info,
 																   SegmentType segment_type)
 {
@@ -105,7 +105,7 @@ http::svr::ConnectionPolicy HlsStreamServer::ProcessSegmentRequest(const std::sh
 		response->SetStatusCode(http::StatusCode::NotFound);
 		response->Response();
 
-		return http::svr::ConnectionPolicy::Closed;
+		return false;
 	}
 
 	// Set HTTP header
@@ -119,5 +119,5 @@ http::svr::ConnectionPolicy HlsStreamServer::ProcessSegmentRequest(const std::sh
 		MonitorInstance->IncreaseBytesOut(*stream_info, GetPublisherType(), sent_bytes);
 	}
 
-	return http::svr::ConnectionPolicy::Closed;
+	return true;
 }

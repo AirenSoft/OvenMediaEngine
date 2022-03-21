@@ -53,7 +53,7 @@ protected:
 	//--------------------------------------------------------------------
 	// Overriding functions of DashStreamServer
 	//--------------------------------------------------------------------
-	http::svr::ConnectionPolicy ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+	bool ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 													  const SegmentStreamRequestInfo &request_info, SegmentType segment_type) override;
 
 	//--------------------------------------------------------------------
