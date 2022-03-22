@@ -287,7 +287,5 @@ All response results are provided in the HTTP status code and response body, and
 
 ## API Limitations
 
-&#x20;`VirtualHost` settings created by `Server.xml` cannot be modified through API. This rule also applies to `Application`/`OutputStream`, etc. within that VirtualHost.
-
-We thought about a design that would eliminate this limitation, but we ended up making this decision because of the problem that the complexity of the Config module would be too high unless we gave up the `include` function. So, if you call a POST/PUT/DELETE API for `VirtualHost`/`Application`/`OutputProfile` declared in `Server.xml`, it will not work with a `403 Forbidden`  error.
+&#x20;`VirtualHost` settings created by `Server.xml` cannot be modified through API. This rule also applies to `Application`/`OutputStream`, etc. within that VirtualHost. So, if you call a POST/PUT/DELETE API for `VirtualHost`/`Application`/`OutputProfile` declared in `Server.xml`, it will not work with a `403 Forbidden`  error.
 
