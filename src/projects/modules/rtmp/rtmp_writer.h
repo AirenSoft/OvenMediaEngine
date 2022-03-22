@@ -129,8 +129,6 @@ public:
 
 	bool PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacketFlag flag, cmn::BitstreamFormat format, std::shared_ptr<ov::Data>& data);
 
-	static void FFmpegLog(void* ptr, int level, const char* fmt, va_list vl);
-
 private:
 	ov::String _path;
 	ov::String _format;
