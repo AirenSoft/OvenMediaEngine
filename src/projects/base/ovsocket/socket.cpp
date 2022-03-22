@@ -1092,6 +1092,8 @@ namespace ov
 					data_to_send += sent;
 
 					ttt += sent;
+
+					UpdateLastSentTime();
 				}
 
 				break;
@@ -1140,6 +1142,8 @@ namespace ov
 					data_to_send += sent;
 
 					msgctrl.boundary = 0;
+
+					UpdateLastSentTime();
 				}
 
 				break;
@@ -1153,7 +1157,6 @@ namespace ov
 		}
 
 		logap("%zu bytes sent", total_sent);
-
 		return total_sent;
 	}
 
@@ -1205,7 +1208,6 @@ namespace ov
 						}
 
 						STATS_COUNTER_INCREASE_ERROR();
-
 						return sent;
 					}
 
@@ -1216,6 +1218,7 @@ namespace ov
 					remained -= sent;
 					total_sent += sent;
 					data_to_send += sent;
+					UpdateLastSentTime();
 				}
 				break;
 
@@ -1618,6 +1621,7 @@ namespace ov
 		{
 			logap("%zd bytes read", read_bytes);
 			*received_length = static_cast<size_t>(read_bytes);
+			UpdateLastRecvTime();
 		}
 
 		return socket_error;
@@ -1671,6 +1675,8 @@ namespace ov
 					{
 						*address = SocketAddress(remote);
 					}
+
+					UpdateLastRecvTime();
 				}
 				break;
 			}
@@ -1697,6 +1703,26 @@ namespace ov
 		}
 
 		return socket_error;
+	}
+
+	std::chrono::system_clock::time_point Socket::GetLastRecvTime() const
+	{
+		return _last_recv_time;
+	}
+
+	std::chrono::system_clock::time_point Socket::GetLastSentTime() const
+	{
+		return _last_sent_time;
+	}
+
+	void Socket::UpdateLastRecvTime()
+	{
+		_last_recv_time = std::chrono::system_clock::now();
+	}
+	
+	void Socket::UpdateLastSentTime()
+	{
+		_last_sent_time = std::chrono::system_clock::now();
 	}
 
 	bool Socket::Flush()
