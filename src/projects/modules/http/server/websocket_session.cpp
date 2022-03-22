@@ -55,6 +55,8 @@ namespace http
 
 				SetStatus(HttpTransaction::Status::Exchanging);
 
+				_ping_timer.Start();
+
 				return true;
 			}
 
@@ -64,6 +66,14 @@ namespace http
 				{
 					return false;
 				}
+
+				if (_ping_timer.IsElapsed(WEBSOCKET_PING_INTERVAL_MS) == false)
+				{
+					// If the timer is not expired, do not send ping
+					return true;
+				}
+
+				_ping_timer.Update();
 
 				return _websocket_client->Send(_ping_data, ws::FrameOpcode::Ping) > 0;
 			}

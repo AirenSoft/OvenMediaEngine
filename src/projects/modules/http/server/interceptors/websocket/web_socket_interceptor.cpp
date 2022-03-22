@@ -119,7 +119,7 @@ namespace http
 				auto websocket_session = connection->GetWebSocketSession();
 				if (websocket_session == nullptr)
 				{
-					logtw("%s is not websocket connection", connection->ToString().CStr());
+					logtd("%s is already closed", connection->ToString().CStr());
 					return;
 				}
 

@@ -15,6 +15,10 @@
 #include "websocket_session.h"
 #include "http2_stream.h"
 
+//TODO(Getroot) : Move to Server.xml
+#define HTTP_CONNECTION_TIMEOUT_MS		5000
+#define WEBSOCKET_CONNECTION_TIMEOUT_MS	WEBSOCKET_PING_INTERVAL_MS * 3
+
 namespace http
 {
 	namespace svr
@@ -30,7 +34,7 @@ namespace http
 			void OnDataReceived(const std::shared_ptr<const ov::Data> &data);
 			void Close(PhysicalPortDisconnectReason reason);
 
-			bool OnTimerTask();
+			bool OnRepeatTask();
 
 			void SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data);
 
@@ -64,6 +68,8 @@ namespace http
 
 			bool UpgradeToWebSocket(const std::shared_ptr<HttpTransaction> &transaction);
 
+			void CheckTimeout();
+			
 			// Default : HTTP 1.1
 			ConnectionType _connection_type = ConnectionType::Http11;
 			std::shared_ptr<HttpServer> _server = nullptr;
@@ -84,7 +90,7 @@ namespace http
 
 			std::shared_ptr<RequestInterceptor> _interceptor = nullptr;
 
-			bool _keep_alive = true;
+			std::recursive_mutex _close_mutex;
 		};
 	} // namespace svr
 } // namespace http

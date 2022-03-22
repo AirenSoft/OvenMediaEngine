@@ -77,8 +77,6 @@ namespace http
 			}
 
 			ov::String _server_name;
-
-			// Server와 연결된 physical port
 			mutable std::mutex _physical_port_mutex;
 			std::shared_ptr<PhysicalPort> _physical_port = nullptr;
 
@@ -90,6 +88,10 @@ namespace http
 			std::shared_ptr<RequestInterceptor> _default_interceptor = std::make_shared<DefaultInterceptor>();
 
 			std::vector<std::shared_ptr<ocst::VirtualHost>> _virtual_host_list;
+
+		private:
+			ov::DelayQueueAction Repeater(void *parameter);
+			ov::DelayQueue _repeater{"HTTPTimer"};
 		};
 	}  // namespace svr
 }  // namespace http

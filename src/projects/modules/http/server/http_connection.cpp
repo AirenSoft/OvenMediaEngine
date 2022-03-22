@@ -32,16 +32,53 @@ namespace http
 				_client_socket->ToString().CStr(),
 				_tls_data ? "Enabled" : "Disabled");
 		}
-
-		bool HttpConnection::OnTimerTask()
+		
+		// Called every 5 seconds
+		bool HttpConnection::OnRepeatTask()
 		{
-			// TODO(h2) : Implement this 2022-03-17
+			if (_connection_type == ConnectionType::WebSocket)
+			{
+				if (_websocket_session != nullptr)
+				{
+					_websocket_session->Ping();
+				}
+			}
 
-			// Check timeout 
-
-			// Send Ping if connection type is websocket or HTTP/2
+			CheckTimeout();
 
 			return true;
+		}
+
+		void HttpConnection::CheckTimeout()
+		{
+			// Check timeout 
+			auto current = std::chrono::high_resolution_clock::now();
+			auto elapsed_time_from_last_sent = std::chrono::duration_cast<std::chrono::milliseconds>(current - _client_socket->GetLastSentTime()).count();
+			auto elapsed_time_from_last_recv = std::chrono::duration_cast<std::chrono::milliseconds>(current - _client_socket->GetLastRecvTime()).count();
+
+			switch (_connection_type)
+			{
+				case ConnectionType::Http10:
+				case ConnectionType::Http11:
+				case ConnectionType::Http20:
+					if (std::min(elapsed_time_from_last_recv, elapsed_time_from_last_sent) > HTTP_CONNECTION_TIMEOUT_MS)
+					{
+						// Close connection
+						logti("Client(%s - %s) has timed out", StringFromConnectionType(_connection_type).CStr(), _client_socket->ToString().CStr());
+						Close(PhysicalPortDisconnectReason::Disconnect);
+					}
+					break;
+				case ConnectionType::WebSocket:
+					// In websocket, if Pong does not arrive for a certain period of time, timeout should be processed. (It takes a very long time to check disconnected by ping transmission because it can be mistaken for sending a ping to a dead client.)
+					if (elapsed_time_from_last_recv > WEBSOCKET_CONNECTION_TIMEOUT_MS)
+					{
+						// Close connection
+						logti("Client(%s - %s) has timed out", StringFromConnectionType(_connection_type).CStr(),_client_socket->ToString().CStr());
+						Close(PhysicalPortDisconnectReason::Disconnect);
+					}
+				default:
+					return;
+			}
 		}
 
 		// Called from HttpsServer
@@ -119,18 +156,33 @@ namespace http
 
 		void HttpConnection::Close(PhysicalPortDisconnectReason reason)
 		{
+			// mutex
+			std::lock_guard<std::recursive_mutex> lock(_close_mutex);
+
 			if (_interceptor != nullptr)
 			{
 				_interceptor->OnClosed(GetSharedPtr(), reason);
 			}
 
-			_http_transaction.reset();
-			_websocket_frame.reset();
-			_websocket_session->Release();
-			_websocket_session.reset();
+			if (_http_transaction != nullptr)
+			{
+				_http_transaction.reset();
+			}
+
+			if (_websocket_frame != nullptr)
+			{
+				_websocket_frame.reset();
+			}
+
+			if (_websocket_session != nullptr)
+			{
+				_websocket_session->Release();
+				_websocket_session.reset();
+			}
+			
 			_http_stream_map.clear();
 
-			if (reason == PhysicalPortDisconnectReason::Disconnect || reason == PhysicalPortDisconnectReason::Error)
+			if (reason != PhysicalPortDisconnectReason::Disconnected)
 			{
 				_client_socket->Close();
 			}
@@ -138,6 +190,8 @@ namespace http
 
 		void HttpConnection::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
 		{
+			std::lock_guard<std::recursive_mutex> lock(_close_mutex);
+
 			auto process_data = data->Clone();
 			while (process_data->GetLength() > 0)
 			{
@@ -190,40 +244,42 @@ namespace http
 				return -1;
 			}
 
-			if (_http_transaction->GetStatus() == HttpTransaction::Status::Completed)
+			switch(_http_transaction->GetStatus())
 			{
-				if (_keep_alive == false)
-				{
-					Close(PhysicalPortDisconnectReason::Disconnect);
-					return -1;
-				}
-
-				_http_transaction.reset();
-			}
-			else if (_http_transaction->GetStatus() == HttpTransaction::Status::Moved)
-			{
-				// Control has been transferred to another thread, so nothing to do here.
-				_http_transaction.reset();
-			}
-			// Upgrade
-			else if (_http_transaction->GetStatus() == HttpTransaction::Status::Upgrade)
-			{
-				if (_http_transaction->IsWebSocketUpgradeRequest())
-				{
-					UpgradeToWebSocket(_http_transaction);
+				case HttpTransaction::Status::Completed:
+					if (_http_transaction->IsKeepAlive() == false)
+					{
+						Close(PhysicalPortDisconnectReason::Disconnect);
+						return 0;
+					}
 					_http_transaction.reset();
-				}
-				else
-				{
-					// TODO(h2) : Implement this
-					OV_ASSERT2(false);
-				}
-			}
-			else if (_http_transaction->GetStatus() == HttpTransaction::Status::Error)
-			{
-				// Error
-				Close(PhysicalPortDisconnectReason::Error);
-				return -1;
+					break;
+
+				case HttpTransaction::Status::Upgrade:
+					if (_http_transaction->IsWebSocketUpgradeRequest())
+					{
+						UpgradeToWebSocket(_http_transaction);
+					}
+					else
+					{
+						// TODO(h2) : Implement this
+						OV_ASSERT2(false);
+					}
+					_http_transaction.reset();
+					break;
+
+				case HttpTransaction::Status::Moved:
+					_http_transaction.reset();
+					break;
+					
+				case HttpTransaction::Status::Error:
+					Close(PhysicalPortDisconnectReason::Error);
+					return -1;
+
+				case HttpTransaction::Status::Init:
+				case HttpTransaction::Status::Exchanging:
+				default:
+					break;
 			}
 
 			return processed_data_length;
@@ -231,6 +287,8 @@ namespace http
 
 		ssize_t HttpConnection::OnWebSocketDataReceived(const std::shared_ptr<const ov::Data> &data)
 		{
+			
+
 			if (_websocket_frame == nullptr)
 			{
 				_websocket_frame = std::make_shared<ws::Frame>();

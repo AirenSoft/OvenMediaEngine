@@ -47,14 +47,15 @@ namespace http
 				if (physical_port->AddObserver(this))
 				{
 					_physical_port = physical_port;
+
+					_repeater.Push(std::bind(&HttpServer::Repeater, this, std::placeholders::_1), 5 * 1000);
+					_repeater.Start();
+
 					return true;
 				}
 			}
 
 			manager->DeletePort(physical_port);
-
-			//TODO(h2) : Connection Timeout 처리 - 모든 Connection에 대해 timeout 처리를 해야 한다.
-			// HTTP/2.0 HTTP/1.1은 client가 session을 계속 유지할 수 있기 때문이다. 
 
 			return false;
 		}
@@ -93,7 +94,23 @@ namespace http
 
 			_interceptor_list.clear();
 
+			_repeater.Stop();
+
 			return true;
+		}
+
+		ov::DelayQueueAction HttpServer::Repeater(void *parameter)
+		{
+			std::shared_lock<std::shared_mutex> guard(_client_list_mutex);
+			auto client_list = _connection_list;
+			guard.unlock();
+
+			for (const auto &item : client_list)
+			{
+				item.second->OnRepeatTask();
+			}
+
+			return ov::DelayQueueAction::Repeat;
 		}
 
 		bool HttpServer::IsRunning() const
@@ -182,7 +199,7 @@ namespace http
 
 			if (reason == PhysicalPortDisconnectReason::Disconnect)
 			{
-				logti("Client(%s) has been disconnected from %s",
+				logti("Client(%s) has been disconnected by %s",
 					  remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 			}
 			else

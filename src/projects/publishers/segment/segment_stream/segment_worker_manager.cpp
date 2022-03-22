@@ -113,10 +113,8 @@ void SegmentWorker::WorkerThread()
 
 		if (_process_handler(transaction) == false)
 		{
-			logte("Segment process handler fail - target(%s)", transaction->GetRequest()->ToString());
+			logtd("Segment process handler fail - target(%s)", transaction->GetRequest()->ToString().CStr());
 		}
-
-		//        logtd("Segment process handler - target(%s)", work_info->request_target.CStr());
 	}
 }
 
