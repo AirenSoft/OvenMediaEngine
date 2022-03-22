@@ -31,6 +31,12 @@ For example,
 .
 {% endswagger-parameter %}
 
+{% swagger-parameter in="body" name="(json body)" type="array" required="true" %}
+A list of 
+
+`VirtualHost`
+{% endswagger-parameter %}
+
 {% swagger-response status="200: OK" description="Returns the specified virtual host information" %}
 Return type: `Response<VirtualHost>`
 
