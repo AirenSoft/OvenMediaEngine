@@ -478,7 +478,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 
 					output_stream->AddTrack(output_track);
 
-					AppendTrackMap(GetIdentifiedForVideoProfile(profile), _input_stream, input_track, output_stream, output_track);
+					AppendTrackMap(GetIdentifiedForVideoProfile( input_track_id, profile), _input_stream, input_track, output_stream, output_track);
 				}
 
 				// Image Profile
@@ -493,7 +493,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 
 					output_stream->AddTrack(output_track);
 
-					AppendTrackMap(GetIdentifiedForImageProfile(profile), _input_stream, input_track, output_stream, output_track);
+					AppendTrackMap(GetIdentifiedForImageProfile(input_track_id, profile), _input_stream, input_track, output_stream, output_track);
 				}
 			}
 			else if (input_track->GetMediaType() == cmn::MediaType::Audio)
@@ -510,7 +510,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 
 					output_stream->AddTrack(output_track);
 
-					AppendTrackMap(GetIdentifiedForAudioProfile(profile), _input_stream, input_track, output_stream, output_track);
+					AppendTrackMap(GetIdentifiedForAudioProfile(input_track_id, profile), _input_stream, input_track, output_stream, output_track);
 				}
 			}
 			else
@@ -627,9 +627,9 @@ int32_t TranscoderStream::CreateStageMapping()
 		}
 
 		// for debug log
-		temp_debug_msg.AppendFormat(" - Encode Profile(%s:%s) / Flow InputTrack[%d] => Decoder[%d] => Filter[%d] => Encoder[%d] => OutputTraks%s\n",
-									encode_profile_name.CStr(),
+		temp_debug_msg.AppendFormat(" - Encode Profile(%s/%s) : InputTrack[%d] -> Decoder[%d] -> Filter[%d] -> Encoder[%d] -> OutputTrack[%s]\n",
 									(encode_media_type == cmn::MediaType::Video) ? "Video" : "Audio",
+									encode_profile_name.CStr(),
 									flow_context->_input_track->GetId(),
 									flow_context->_input_track->GetId(),
 									flow_context->_map_id,
@@ -643,14 +643,15 @@ int32_t TranscoderStream::CreateStageMapping()
 	return created_stage_map;
 }
 
-ov::String TranscoderStream::GetIdentifiedForVideoProfile(const cfg::vhost::app::oprf::VideoProfile &profile)
+ov::String TranscoderStream::GetIdentifiedForVideoProfile(const uint32_t track_id, const cfg::vhost::app::oprf::VideoProfile &profile)
 {
 	if (profile.IsBypass() == true)
 	{
-		return ov::String::FormatString("_bypass_");
+		return ov::String::FormatString("T%d_PBYPASS", track_id);
 	}
 
-	return ov::String::FormatString("%s-%d-%.02f-%d-%d",
+	return ov::String::FormatString("T%d_P%s-%d-%.02f-%d-%d",
+									track_id,
 									profile.GetCodec().CStr(),
 									profile.GetBitrate(),
 									profile.GetFramerate(),
@@ -658,23 +659,25 @@ ov::String TranscoderStream::GetIdentifiedForVideoProfile(const cfg::vhost::app:
 									profile.GetHeight());
 }
 
-ov::String TranscoderStream::GetIdentifiedForImageProfile(const cfg::vhost::app::oprf::ImageProfile &profile)
+ov::String TranscoderStream::GetIdentifiedForImageProfile(const uint32_t track_id, const cfg::vhost::app::oprf::ImageProfile &profile)
 {
-	return ov::String::FormatString("%s-%.02f-%d-%d",
+	return ov::String::FormatString("T%d_P%s-%.02f-%d-%d",
+									track_id,
 									profile.GetCodec().CStr(),
 									profile.GetFramerate(),
 									profile.GetWidth(),
 									profile.GetHeight());
 }
 
-ov::String TranscoderStream::GetIdentifiedForAudioProfile(const cfg::vhost::app::oprf::AudioProfile &profile)
+ov::String TranscoderStream::GetIdentifiedForAudioProfile(const uint32_t track_id, const cfg::vhost::app::oprf::AudioProfile &profile)
 {
 	if (profile.IsBypass() == true)
 	{
-		return ov::String::FormatString("_bypass_");
+		return ov::String::FormatString("T%d_PBYPASS");
 	}
 
-	return ov::String::FormatString("%s-%d-%d-%d",
+	return ov::String::FormatString("T%d_P%s-%d-%d-%d",
+									track_id,
 									profile.GetCodec().CStr(),
 									profile.GetBitrate(),
 									profile.GetSamplerate(),
