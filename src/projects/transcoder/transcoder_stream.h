@@ -161,9 +161,9 @@ public:
 	bool IsVideoCodec(cmn::MediaCodecId codec_id);
 	bool IsAudioCodec(cmn::MediaCodecId codec_id);
 
-	ov::String GetIdentifiedForVideoProfile(const cfg::vhost::app::oprf::VideoProfile &profile);
-	ov::String GetIdentifiedForAudioProfile(const cfg::vhost::app::oprf::AudioProfile &profile);
-	ov::String GetIdentifiedForImageProfile(const cfg::vhost::app::oprf::ImageProfile &profile);
+	ov::String GetIdentifiedForVideoProfile(const uint32_t track_id, const cfg::vhost::app::oprf::VideoProfile &profile);
+	ov::String GetIdentifiedForAudioProfile(const uint32_t track_id, const cfg::vhost::app::oprf::AudioProfile &profile);
+	ov::String GetIdentifiedForImageProfile(const uint32_t track_id, const cfg::vhost::app::oprf::ImageProfile &profile);
 
 	const cmn::Timebase GetDefaultTimebaseByCodecId(cmn::MediaCodecId codec_id);
 
