@@ -56,23 +56,23 @@ protected:
 		const std::shared_ptr<http::svr::HttpsServer> &https_server,
 		int thread_count, const SegmentProcessHandler &process_handler);
 
-	bool ProcessRequest(const std::shared_ptr<http::svr::HttpConnection> &client);
+	bool ProcessRequest(const std::shared_ptr<http::svr::HttpTransaction> &client);
 
 	// Interfaces
-	virtual http::svr::ConnectionPolicy ProcessStreamRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
+	virtual bool ProcessStreamRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 															 const SegmentStreamRequestInfo &request_info,
 															 const ov::String &file_ext) = 0;
 
-	virtual http::svr::ConnectionPolicy ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
+	virtual bool ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 															   const SegmentStreamRequestInfo &request_info,
 															   PlayListType play_list_type) = 0;
 
-	virtual http::svr::ConnectionPolicy ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
+	virtual bool ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 															  const SegmentStreamRequestInfo &request_info,
 															  SegmentType segment_type) = 0;
 
-	std::shared_ptr<pub::Stream> GetStream(const std::shared_ptr<http::svr::HttpConnection> &client);
-	std::shared_ptr<mon::StreamMetrics> GetStreamMetric(const std::shared_ptr<http::svr::HttpConnection> &client);
+	std::shared_ptr<pub::Stream> GetStream(const std::shared_ptr<http::svr::HttpTransaction> &client);
+	std::shared_ptr<mon::StreamMetrics> GetStreamMetric(const std::shared_ptr<http::svr::HttpTransaction> &client);
 
 protected:
 	std::shared_ptr<http::svr::HttpServer> _http_server;

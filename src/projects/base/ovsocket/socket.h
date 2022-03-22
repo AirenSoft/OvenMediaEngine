@@ -192,6 +192,9 @@ namespace ov
 		// If MakeNonBlocking() is called, non_block is ignored
 		std::shared_ptr<const SocketError> RecvFrom(std::shared_ptr<Data> &data, SocketAddress *address, bool non_block = false);
 
+		std::chrono::system_clock::time_point GetLastRecvTime() const;
+		std::chrono::system_clock::time_point GetLastSentTime() const;
+
 		// Dispatches as many command as possible
 		DispatchResult DispatchEvents();
 
@@ -491,5 +494,12 @@ namespace ov
 		volatile bool _force_stop = false;
 
 		String _stream_id;	// only available for SRT socket
+
+	private:
+		void UpdateLastRecvTime();
+		void UpdateLastSentTime();
+
+		std::chrono::system_clock::time_point	_last_recv_time = std::chrono::system_clock::now();
+		std::chrono::system_clock::time_point	_last_sent_time = std::chrono::system_clock::now();
 	};
 }  // namespace ov

@@ -109,7 +109,7 @@ namespace api
 	}
 
 	void GetRequestBody(
-		const std::shared_ptr<http::svr::HttpConnection> &client,
+		const std::shared_ptr<http::svr::HttpTransaction> &client,
 		Json::Value *request_body)
 	{
 		ov::JsonObject json_object;
@@ -364,7 +364,7 @@ namespace api
 			ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
 	}
 
-	ov::String GetOutputProfileName(const std::shared_ptr<http::svr::HttpConnection> &client)
+	ov::String GetOutputProfileName(const std::shared_ptr<http::svr::HttpTransaction> &client)
 	{
 		auto &match_result = client->GetRequest()->GetMatchResult();
 

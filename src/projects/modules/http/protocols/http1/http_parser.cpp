@@ -8,11 +8,11 @@
 //==============================================================================
 #include "http_parser.h"
 
-#include "../http_private.h"
+#include "../../http_private.h"
 
 namespace http
 {
-	ssize_t HttpParser::ProcessData(const std::shared_ptr<const ov::Data> &data)
+	ssize_t HttpParser::AppendData(const std::shared_ptr<const ov::Data> &data)
 	{
 		if (_is_header_found)
 		{

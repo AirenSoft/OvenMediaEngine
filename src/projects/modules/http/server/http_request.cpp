@@ -16,11 +16,20 @@ namespace http
 {
 	namespace svr
 	{
-		HttpRequest::HttpRequest(const std::shared_ptr<ov::ClientSocket> &client_socket, const std::shared_ptr<RequestInterceptor> &interceptor)
-			: _client_socket(client_socket),
-			  _interceptor(interceptor)
+		HttpRequest::HttpRequest(const std::shared_ptr<ov::ClientSocket> &client_socket)
+			: _client_socket(client_socket)
 		{
 			OV_ASSERT2(client_socket != nullptr);
+		}
+
+		void HttpRequest::SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data)
+		{
+			_tls_data = tls_data;
+		}
+
+		std::shared_ptr<ov::TlsServerData> HttpRequest::GetTlsData()
+		{
+			return _tls_data;
 		}
 
 		std::shared_ptr<ov::ClientSocket> HttpRequest::GetRemote()
@@ -33,24 +42,13 @@ namespace http
 			return _client_socket;
 		}
 
-		void HttpRequest::SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data)
-		{
-			_tls_data = tls_data;
-			UpdateUri();
-		}
-
-		std::shared_ptr<ov::TlsServerData> HttpRequest::GetTlsData()
-		{
-			return _tls_data;
-		}
-
-		void HttpRequest::SetConnectionType(RequestConnectionType type)
+		void HttpRequest::SetConnectionType(ConnectionType type)
 		{
 			_connection_type = type;
 			UpdateUri();
 		}
 
-		RequestConnectionType HttpRequest::GetConnectionType() const
+		ConnectionType HttpRequest::GetConnectionType() const
 		{
 			return _connection_type;
 		}
@@ -62,17 +60,17 @@ namespace http
 
 		ov::String HttpRequest::GetHeader(const ov::String &key) const noexcept
 		{
-			return _parser.GetHeader(key);
+			return _http_header_parser.GetHeader(key);
 		}
 
 		ov::String HttpRequest::GetHeader(const ov::String &key, ov::String default_value) const noexcept
 		{
-			return _parser.GetHeader(key, std::move(default_value));
+			return _http_header_parser.GetHeader(key, std::move(default_value));
 		}
 
 		const bool HttpRequest::IsHeaderExists(const ov::String &key) const noexcept
 		{
-			return _parser.IsHeaderExists(key);
+			return _http_header_parser.IsHeaderExists(key);
 		}
 
 		void HttpRequest::UpdateUri()
@@ -84,21 +82,23 @@ namespace http
 			}
 
 			ov::String scheme;
-			if (GetConnectionType() == RequestConnectionType::HTTP)
+			if (GetConnectionType() == ConnectionType::Http10 || 
+				GetConnectionType() == ConnectionType::Http11 || 
+				GetConnectionType() == ConnectionType::Http20)
 			{
 				scheme = "http";
 			}
-			else if (GetConnectionType() == RequestConnectionType::WebSocket)
+			else if (GetConnectionType() == ConnectionType::WebSocket)
 			{
 				scheme = "ws";
 			}
 
-			_request_uri = ov::String::FormatString("%s%s://%s%s", scheme.CStr(), (_tls_data != nullptr) ? "s" : "", host.CStr(), _parser.GetRequestTarget().CStr());
+			_request_uri = ov::String::FormatString("%s%s://%s%s", scheme.CStr(), (_tls_data != nullptr) ? "s" : "", host.CStr(), _http_header_parser.GetRequestTarget().CStr());
 		}
 
 		ov::String HttpRequest::ToString() const
 		{
-			return ov::String::FormatString("<HttpRequest: %p, Method: %d, uri: %s>", this, static_cast<int>(_parser.GetMethod()), GetUri().CStr());
+			return ov::String::FormatString("<HttpRequest: %p, Method: %d, uri: %s>", this, static_cast<int>(_http_header_parser.GetMethod()), GetUri().CStr());
 		}
 	}  // namespace svr
 }  // namespace http

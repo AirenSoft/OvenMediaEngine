@@ -93,7 +93,7 @@ namespace api
 		_json["response"] = json;
 	}
 
-	bool ApiResponse::SendToClient(const std::shared_ptr<http::svr::HttpConnection> &client)
+	bool ApiResponse::SendToClient(const std::shared_ptr<http::svr::HttpTransaction> &client)
 	{
 		const auto &response = client->GetResponse();
 

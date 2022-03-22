@@ -15,7 +15,7 @@
 
 #include "../http_datastructure.h"
 #include "../http_error.h"
-#include "../parser/http_response_parser.h"
+#include "../protocols/http1/http_response_parser.h"
 
 namespace http
 {

@@ -17,6 +17,32 @@
 
 namespace http
 {
+	enum class ConnectionType : uint8_t
+	{
+		Unknown = 0,
+		Http10,
+		Http11, // Default over Non-TLS. It can be upgraded to Http2(h2c) or WebSocket
+		Http20, // Default over TLS (If the client supports h2). It can be upgraded to WebSocket
+		WebSocket
+	};
+
+	inline ov::String StringFromConnectionType(ConnectionType type)
+	{
+		switch (type)
+		{
+			case ConnectionType::Http10:
+				return "HTTP/1.0";
+			case ConnectionType::Http11:
+				return "HTTP/1.1";
+			case ConnectionType::Http20:
+				return "HTTP/2";
+			case ConnectionType::WebSocket:
+				return "WebSocket";
+			default:
+				return "Unknown";
+		}
+	}
+
 	// RFC7231 - 4. Request Methods
 	// +---------+-------------------------------------------------+-------+
 	// | Method  | Description                                     | Sec.  |
@@ -369,18 +395,11 @@ namespace http
 
 	namespace svr
 	{
-		enum class ConnectionPolicy : char
-		{
-			// Send "Connection: Closed" header
-			Closed,
-			// Send "Connection: Keep-Alive" header
-			KeepAlive
-		};
-
 		enum class InterceptorResult : char
 		{
-			Keep,
-			Disconnect,
+			Completed,
+			Error,
+			Moved		// Control is transferred to another thread so DO NOT close the connection
 		};
 
 		enum class NextHandler : char
@@ -392,10 +411,10 @@ namespace http
 		};
 
 		class HttpServer;
-		class HttpConnection;
+		class HttpTransaction;
 
-		using RequestHandler = std::function<NextHandler(const std::shared_ptr<HttpConnection> &client)>;
-		using RequestErrorHandler = std::function<void(const std::shared_ptr<HttpConnection> &client)>;
+		using RequestHandler = std::function<NextHandler(const std::shared_ptr<HttpTransaction> &transaction)>;
+		using RequestErrorHandler = std::function<void(const std::shared_ptr<HttpTransaction> &transaction)>;
 
 		using ResponseWriteHandler = std::function<bool(const std::shared_ptr<ov::Data> &data)>;
 	}  // namespace svr

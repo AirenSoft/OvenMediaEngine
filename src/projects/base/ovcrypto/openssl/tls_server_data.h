@@ -26,6 +26,13 @@ namespace ov
 			Accepted,
 		};
 
+		enum class AlpnProtocol : uint8_t
+		{
+			Http10,
+			Http11,
+			Http20
+		};
+
 		TlsServerData(const std::shared_ptr<TlsContext> &tls_context, bool is_blocking);
 
 		~TlsServerData();
@@ -62,6 +69,14 @@ namespace ov
 			return _tls;
 		}
 
+		//TODO(h2) : Set ALPN protocol
+
+		// Get ALPN protocol
+		AlpnProtocol GetSelectedAlpnProtocol() const
+		{
+			return _selected_alpn_protocol;
+		}
+
 		// plain_data can be null even if successful (It indicates accepting a new client)
 		bool Decrypt(const std::shared_ptr<const Data> &cipher_data, std::shared_ptr<const Data> *plain_data);
 		// cipher_data can be null even if successful (It indicates accepting a new client)
@@ -94,5 +109,7 @@ namespace ov
 
 		std::mutex _plain_data_mutex;
 		std::shared_ptr<Data> _plain_data;
+
+		AlpnProtocol _selected_alpn_protocol = AlpnProtocol::Http11;
 	};
 }  // namespace ov

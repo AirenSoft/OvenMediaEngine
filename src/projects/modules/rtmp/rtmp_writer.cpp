@@ -123,9 +123,13 @@ bool RtmpWriter::Start()
 	AVDictionary *options = nullptr;
 
 	// Compatibility with specific RTMP servers
-	av_dict_set(&options, "rtmp_flashver", "FMLE/3.0 (compatible; FMSc/1.0)", 0);
-	av_dict_set(&options, "rtmp_tcurl", _format_context->url, 0);
+
+	// tc_url : rtmp://[host]:[port]/[app_name]
+	ov::String tc_url = ov::String(_format_context->url);
+	tc_url = tc_url.Substring(0, tc_url.IndexOfRev('/'));
+	av_dict_set(&options, "rtmp_tcurl", tc_url.CStr(), 0);
 	av_dict_set(&options, "fflags", "flush_packets", 0);
+	av_dict_set(&options, "rtmp_flashver", "FMLE/3.0 (compatible; FMSc/1.0)", 0);
 
 	if (!(_format_context->oformat->flags & AVFMT_NOFILE))
 	{
@@ -135,7 +139,7 @@ bool RtmpWriter::Start()
 			char errbuf[256];
 			av_strerror(error, errbuf, sizeof(errbuf));
 
-			logte("Error opening file. error(%d:%s), filename(%s)", error, errbuf, _format_context->url);
+			logte("Error opening file. error(%d:%s), url(%s)", error, errbuf, _format_context->url);
 
 			return false;
 		}

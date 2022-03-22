@@ -8,11 +8,11 @@
 //==============================================================================
 #include "http_request_parser.h"
 
-#include "../http_private.h"
+#include "../../http_private.h"
 
 namespace http
 {
-	StatusCode HttpRequestParser::ParseFirstLine(const ov::String &line)
+	StatusCode HttpRequestHeaderParser::ParseFirstLine(const ov::String &line)
 	{
 		// RFC7230 - 3.1.1. Request Line
 		// request-line   = method SP request-target SP HTTP-version CRLF

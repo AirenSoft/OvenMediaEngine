@@ -97,7 +97,7 @@ namespace ov
 							break;
 
 						default:
-							logte("An error occurred while accept TLS connection: error code: %d", result);
+							logtd("An error occurred while accept TLS connection: error code: %d", result);
 							return false;
 					}
 
@@ -111,7 +111,7 @@ namespace ov
 
 					if (read_data == nullptr)
 					{
-						logte("An error occurred while read TLS data");
+						logtd("An error occurred while read TLS data");
 						return false;
 					}
 

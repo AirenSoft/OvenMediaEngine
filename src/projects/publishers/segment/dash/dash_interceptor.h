@@ -16,5 +16,5 @@ public:
 	//--------------------------------------------------------------------
 	// Implementation of HttpRequestInterceptorInterface
 	//--------------------------------------------------------------------
-	bool IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpConnection> &client) override;
+	bool IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpTransaction> &client) override;
 };

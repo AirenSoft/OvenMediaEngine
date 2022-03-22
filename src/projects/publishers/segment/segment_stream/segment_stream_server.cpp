@@ -113,12 +113,10 @@ bool SegmentStreamServer::RemoveCertificate(const std::shared_ptr<const info::Ce
 
 bool SegmentStreamServer::AddObserver(const std::shared_ptr<SegmentStreamObserver> &observer)
 {
-	// 기존에 등록된 observer가 있는지 확인
 	for (const auto &item : _observers)
 	{
 		if (item == observer)
 		{
-			// 기존에 등록되어 있음
 			logtw("%p is already observer of SegmentStreamServer", observer.get());
 			return false;
 		}
@@ -176,70 +174,52 @@ bool SegmentStreamServer::PrepareInterceptors(
 	return result;
 }
 
-bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<http::svr::HttpConnection> &client)
+bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<http::svr::HttpTransaction> &client)
 {
 	auto response = client->GetResponse();
 	auto request = client->GetRequest();
-	http::svr::ConnectionPolicy connection_policy = http::svr::ConnectionPolicy::Closed;
 
-	do
+	// Set default headers
+	response->SetHeader("Server", "OvenMediaEngine");
+	response->SetHeader("Content-Type", "text/html");
+
+	// Parse URL (URL must be "app/stream/file.ext" format)
+	auto request_uri = request->GetUri();
+	auto url = ov::Url::Parse(request_uri);
+	if (url == nullptr)
 	{
-		// Set default headers
-		response->SetHeader("Server", "OvenMediaEngine");
-		response->SetHeader("Content-Type", "text/html");
-
-		// Parse URL (URL must be "app/stream/file.ext" format)
-		auto request_uri = request->GetUri();
-		auto url = ov::Url::Parse(request_uri);
-		if (url == nullptr)
-		{
-			logtw("Failed to parse URL: %s", request_uri.CStr());
-			response->SetStatusCode(http::StatusCode::BadRequest);
-			break;
-		}
-
-		if (url->Path() == "crossdomain.xml")
-		{
-			_cors_manager.SetupRtmpCorsXml(response);
-			break;
-		}
-
-		auto host_header = request->GetHeader("HOST");
-		auto host_name = host_header.Split(":")[0];
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, url->App());
-
-		if (vhost_app_name.IsValid() == false)
-		{
-			logtw("Invalid app name for host: %s, app: %s", host_name.CStr(), url->App().CStr());
-			response->SetStatusCode(http::StatusCode::BadRequest);
-			break;
-		}
-
-		_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
-
-		SegmentStreamRequestInfo request_info(
-			vhost_app_name,
-			host_name, url->Stream(), url->File());
-
-		auto tokens = url->File().Split(".");
-		auto file_ext = (tokens.size() >= 2) ? tokens[1] : "";
-
-		connection_policy = ProcessStreamRequest(client, request_info, file_ext);
-	} while (false);
-
-	switch (connection_policy)
-	{
-		case http::svr::ConnectionPolicy::Closed:
-			return response->Close();
-
-		case http::svr::ConnectionPolicy::KeepAlive:
-			return true;
-
-		default:
-			response->Close();
-			OV_ASSERT2(false);
-			return false;
+		logtw("Failed to parse URL: %s", request_uri.CStr());
+		response->SetStatusCode(http::StatusCode::BadRequest);
+		return false;
 	}
+
+	if (url->Path() == "crossdomain.xml")
+	{
+		_cors_manager.SetupRtmpCorsXml(response);
+		return false;
+	}
+
+	auto host_header = request->GetHeader("HOST");
+	auto host_name = host_header.Split(":")[0];
+	auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, url->App());
+
+	if (vhost_app_name.IsValid() == false)
+	{
+		logtw("Invalid app name for host: %s, app: %s", host_name.CStr(), url->App().CStr());
+		response->SetStatusCode(http::StatusCode::BadRequest);
+		return false;
+	}
+
+	_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
+
+	SegmentStreamRequestInfo request_info(
+		vhost_app_name,
+		host_name, url->Stream(), url->File());
+
+	auto tokens = url->File().Split(".");
+	auto file_ext = (tokens.size() >= 2) ? tokens[1] : "";
+
+	return ProcessStreamRequest(client, request_info, file_ext);
 }
 
 void SegmentStreamServer::SetCrossDomains(const info::VHostAppName &vhost_app_name, const std::vector<ov::String> &url_list)
@@ -247,13 +227,12 @@ void SegmentStreamServer::SetCrossDomains(const info::VHostAppName &vhost_app_na
 	_cors_manager.SetCrossDomains(vhost_app_name, url_list);
 }
 
-std::shared_ptr<pub::Stream> SegmentStreamServer::GetStream(const std::shared_ptr<http::svr::HttpConnection> &client)
+std::shared_ptr<pub::Stream> SegmentStreamServer::GetStream(const std::shared_ptr<http::svr::HttpTransaction> &client)
 {
-	auto request = client->GetRequest();
-	return request->GetExtraAs<pub::Stream>();
+	return client->GetExtraAs<pub::Stream>();
 }
 
-std::shared_ptr<mon::StreamMetrics> SegmentStreamServer::GetStreamMetric(const std::shared_ptr<http::svr::HttpConnection> &client)
+std::shared_ptr<mon::StreamMetrics> SegmentStreamServer::GetStreamMetric(const std::shared_ptr<http::svr::HttpTransaction> &client)
 {
 	auto stream_info = GetStream(client);
 	if (stream_info == nullptr)

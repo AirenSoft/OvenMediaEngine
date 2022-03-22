@@ -29,7 +29,7 @@ namespace api
 			CreateSubController<AppsController>(R"(\/(?<vhost_name>[^\/]*)\/apps)");
 		}
 
-		ApiResponse VHostsController::OnPostVHost(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body)
+		ApiResponse VHostsController::OnPostVHost(const std::shared_ptr<http::svr::HttpTransaction> &client, const Json::Value &request_body)
 		{
 			if (request_body.isArray() == false)
 			{
@@ -79,7 +79,7 @@ namespace api
 			return {status_codes, std::move(response_value)};
 		}
 
-		ApiResponse VHostsController::OnGetVHostList(const std::shared_ptr<http::svr::HttpConnection> &client)
+		ApiResponse VHostsController::OnGetVHostList(const std::shared_ptr<http::svr::HttpTransaction> &client)
 		{
 			auto vhost_list = GetVirtualHostList();
 			Json::Value response(Json::ValueType::arrayValue);
@@ -92,13 +92,13 @@ namespace api
 			return response;
 		}
 
-		ApiResponse VHostsController::OnGetVHost(const std::shared_ptr<http::svr::HttpConnection> &client,
+		ApiResponse VHostsController::OnGetVHost(const std::shared_ptr<http::svr::HttpTransaction> &client,
 												 const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
 			return ::serdes::JsonFromVirtualHost(*vhost);
 		}
 
-		ApiResponse VHostsController::OnDeleteVHost(const std::shared_ptr<http::svr::HttpConnection> &client,
+		ApiResponse VHostsController::OnDeleteVHost(const std::shared_ptr<http::svr::HttpTransaction> &client,
 													const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
 			ThrowIfVirtualIsReadOnly(*(vhost.get()));

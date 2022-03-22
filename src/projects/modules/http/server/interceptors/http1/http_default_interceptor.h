@@ -51,16 +51,12 @@ namespace http
 			//--------------------------------------------------------------------
 			// Implementation of RequestInterceptor
 			//--------------------------------------------------------------------
-			RequestConnectionType GetConnectionType() override
-			{
-				return RequestConnectionType::HTTP;
-			}
-
-			bool IsInterceptorForRequest(const std::shared_ptr<const HttpConnection> &client) override;
-			InterceptorResult OnHttpPrepare(const std::shared_ptr<HttpConnection> &client) override;
-			InterceptorResult OnHttpData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data) override;
-			void OnHttpError(const std::shared_ptr<HttpConnection> &client, StatusCode status_code) override;
-			void OnHttpClosed(const std::shared_ptr<HttpConnection> &client, PhysicalPortDisconnectReason reason) override;
+			virtual bool IsInterceptorForRequest(const std::shared_ptr<const HttpTransaction> &client) override;
+			virtual bool OnRequestPrepared(const std::shared_ptr<HttpTransaction> &transaction) override;
+			virtual ssize_t OnDataReceived(const std::shared_ptr<HttpTransaction> &transaction, const std::shared_ptr<const ov::Data> &data) override;
+			virtual InterceptorResult OnRequestCompleted(const std::shared_ptr<HttpTransaction> &transaction) override;
+			virtual void OnError(const std::shared_ptr<HttpTransaction> &transaction, StatusCode status_code) override;
+			virtual void OnClosed(const std::shared_ptr<HttpConnection> &stream, PhysicalPortDisconnectReason reason) override;
 
 		protected:
 			struct RequestInfo

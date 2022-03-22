@@ -104,7 +104,7 @@ protected:
 
 	bool SetWebSocketHandler(std::shared_ptr<http::svr::ws::Interceptor> interceptor = nullptr);
 
-	std::shared_ptr<const ov::Error> DispatchCommand(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const http::svr::ws::Frame> &message);
+	std::shared_ptr<const ov::Error> DispatchCommand(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const ov::Data> &message);
 	std::shared_ptr<const ov::Error> DispatchRequestOffer(const std::shared_ptr<http::svr::ws::Client> &ws_client, std::shared_ptr<RtcSignallingInfo> &info);
 	std::shared_ptr<const ov::Error> DispatchAnswer(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
 	std::shared_ptr<const ov::Error> DispatchCandidate(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);

@@ -34,15 +34,15 @@ protected:
 	//--------------------------------------------------------------------
 	// Implementation of SegmentStreamServer
 	//--------------------------------------------------------------------
-	http::svr::ConnectionPolicy ProcessStreamRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
+	bool ProcessStreamRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 										const SegmentStreamRequestInfo &request_info,
 										const ov::String &file_ext) override;
 
-	http::svr::ConnectionPolicy ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
+	bool ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 										  const SegmentStreamRequestInfo &request_info,
 										  PlayListType play_list_type) override;
 
-	http::svr::ConnectionPolicy ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
+	bool ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 										 const SegmentStreamRequestInfo &request_info,
 										 SegmentType segment_type) override;
 };

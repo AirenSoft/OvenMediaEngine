@@ -26,7 +26,7 @@ namespace api
 
 	MAY_THROWS(http::HttpError)
 	void GetRequestBody(
-		const std::shared_ptr<http::svr::HttpConnection> &client,
+		const std::shared_ptr<http::svr::HttpTransaction> &client,
 		Json::Value *request_body);
 
 	MAY_THROWS(http::HttpError)
@@ -62,7 +62,7 @@ namespace api
 							 const std::shared_ptr<mon::ApplicationMetrics> &app,
 							 Json::Value &app_json);
 
-	ov::String GetOutputProfileName(const std::shared_ptr<http::svr::HttpConnection> &client);
+	ov::String GetOutputProfileName(const std::shared_ptr<http::svr::HttpTransaction> &client);
 
 	off_t FindOutputProfile(const std::shared_ptr<mon::ApplicationMetrics> &app,
 							const ov::String &output_profile_name,

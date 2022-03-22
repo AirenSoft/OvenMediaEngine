@@ -20,7 +20,7 @@ std::shared_ptr<SegmentStreamInterceptor> CmafStreamServer::CreateInterceptor()
 	return std::make_shared<CmafInterceptor>();
 }
 
-http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
+bool CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
 																	const SegmentStreamRequestInfo &request_info,
 																	SegmentType segment_type)
 {
@@ -71,10 +71,10 @@ http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::s
 				response->SetStatusCode(http::StatusCode::NotFound);
 				_http_chunk_list.clear();
 
-				return http::svr::ConnectionPolicy::Closed;
+				return false;
 			}
 
-			client->GetRequest()->SetExtra(stream_info);
+			client->SetExtra(stream_info);
 
 			// The file is being created
 			logtd("Requested file is being created");
@@ -93,12 +93,12 @@ http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::s
 			auto stream = GetStream(client);
 			if (stream != nullptr)
 			{
-				MonitorInstance->IncreaseBytesOut(*stream, GetPublisherType(), sent_bytes);
+				MonitorInstance->IncreaseBytesOut(*stream_info, GetPublisherType(), sent_bytes);
 			}
 
 			chunk_item->second->client_list.push_back(client);
 
-			return http::svr::ConnectionPolicy::KeepAlive;
+			return true;
 		}
 	}
 

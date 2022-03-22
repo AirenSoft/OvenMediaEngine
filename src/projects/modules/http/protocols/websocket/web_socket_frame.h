@@ -40,7 +40,7 @@ namespace http
 				bool Process(const std::shared_ptr<const ov::Data> &data, ssize_t *read_bytes);
 				FrameParseStatus GetStatus() const noexcept;
 
-				const FrameHeader &GetHeader();
+				const FrameHeader &GetHeader() const noexcept;
 
 				void Reset();
 

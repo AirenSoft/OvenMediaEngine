@@ -10,12 +10,12 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovlibrary/semaphore.h>
-#include <modules/http/server/http_connection.h>
+#include <modules/http/server/http_transaction.h>
 
 #include <queue>
 #include <string>
 
-using SegmentProcessHandler = std::function<bool(const std::shared_ptr<http::svr::HttpConnection> &connection)>;
+using SegmentProcessHandler = std::function<bool(const std::shared_ptr<http::svr::HttpTransaction> &transaction)>;
 //====================================================================================================
 // SegmentWorker
 //====================================================================================================
@@ -28,14 +28,14 @@ public:
 	bool Start(const SegmentProcessHandler &process_handler);
 	bool Stop();
 
-	bool PushConnection(const std::shared_ptr<http::svr::HttpConnection> &connection);
-	std::shared_ptr<http::svr::HttpConnection> PopConnection();
+	bool PushConnection(const std::shared_ptr<http::svr::HttpTransaction> &transaction);
+	std::shared_ptr<http::svr::HttpTransaction> PopTransaction();
 
 private:
 	void WorkerThread();
 
 private:
-	std::queue<std::shared_ptr<http::svr::HttpConnection>> _connection_list_to_process;
+	std::queue<std::shared_ptr<http::svr::HttpTransaction>> _transaction_list_to_process;
 	std::mutex _work_info_guard;
 	ov::Semaphore _queue_event;
 
@@ -57,7 +57,7 @@ public:
 public:
 	bool Start(int worker_count, const SegmentProcessHandler &process_handler);
 	bool Stop();
-	bool PushConnection(const std::shared_ptr<http::svr::HttpConnection> &connection);
+	bool PushConnection(const std::shared_ptr<http::svr::HttpTransaction> &transaction);
 
 private:
 	int _worker_index = 0;

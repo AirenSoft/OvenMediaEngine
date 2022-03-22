@@ -160,7 +160,7 @@ namespace http
 				return _last_status;
 			}
 
-			const FrameHeader &Frame::GetHeader()
+			const FrameHeader &Frame::GetHeader() const noexcept
 			{
 				return _header;
 			}

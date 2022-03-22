@@ -14,7 +14,7 @@
 
 #include "../http_error.h"
 #include "http_connection.h"
-#include "interceptors/default/http_default_interceptor.h"
+#include "interceptors/http1/http_default_interceptor.h"
 
 #define HTTP_SERVER_USE_DEFAULT_COUNT PHYSICAL_PORT_USE_DEFAULT_COUNT
 
@@ -40,7 +40,7 @@ namespace http
 
 		public:
 			using ClientList = std::unordered_map<ov::Socket *, std::shared_ptr<HttpConnection>>;
-			using ClientIterator = std::function<bool(const std::shared_ptr<HttpConnection> &client)>;
+			using ClientIterator = std::function<bool(const std::shared_ptr<HttpConnection> &stream)>;
 
 			HttpServer(const char *server_name);
 			~HttpServer() override;
@@ -51,7 +51,7 @@ namespace http
 			bool IsRunning() const;
 
 			bool AddInterceptor(const std::shared_ptr<RequestInterceptor> &interceptor);
-			std::shared_ptr<RequestInterceptor> FindInterceptor(const std::shared_ptr<HttpConnection> &client);
+			std::shared_ptr<RequestInterceptor> FindInterceptor(const std::shared_ptr<HttpTransaction> &transaction);
 			bool RemoveInterceptor(const std::shared_ptr<RequestInterceptor> &interceptor);
 
 			// If the iterator returns true, FindClient() will return the client
@@ -77,8 +77,6 @@ namespace http
 			}
 
 			ov::String _server_name;
-
-			// Server와 연결된 physical port
 			mutable std::mutex _physical_port_mutex;
 			std::shared_ptr<PhysicalPort> _physical_port = nullptr;
 
@@ -90,6 +88,10 @@ namespace http
 			std::shared_ptr<RequestInterceptor> _default_interceptor = std::make_shared<DefaultInterceptor>();
 
 			std::vector<std::shared_ptr<ocst::VirtualHost>> _virtual_host_list;
+
+		private:
+			ov::DelayQueueAction Repeater(void *parameter);
+			ov::DelayQueue _repeater{"HTTPTimer"};
 		};
 	}  // namespace svr
 }  // namespace http

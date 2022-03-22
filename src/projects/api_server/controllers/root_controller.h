@@ -21,7 +21,7 @@ namespace api
 
 	protected:
 		void PrepareAccessTokenHandler();
-		ApiResponse OnNotFound(const std::shared_ptr<http::svr::HttpConnection> &client);
+		ApiResponse OnNotFound(const std::shared_ptr<http::svr::HttpTransaction> &client);
 
 		ov::String _access_token;
 	};

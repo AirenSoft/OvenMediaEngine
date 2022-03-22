@@ -12,7 +12,6 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/ovsocket.h>
-#include <modules/http/server/http_server.h>
 
 #include "./web_socket_datastructure.h"
 #include <variant>
@@ -26,7 +25,7 @@ namespace http
 			class Client
 			{
 			public:
-				Client(const std::shared_ptr<HttpConnection> &client);
+				Client(const std::shared_ptr<HttpTransaction> &transaction);
 				virtual ~Client();
 
 				ssize_t Send(const std::shared_ptr<const ov::Data> &data, FrameOpcode opcode);
@@ -34,9 +33,9 @@ namespace http
 				ssize_t Send(const ov::String &string);
 				ssize_t Send(const Json::Value &value);
 
-				const std::shared_ptr<HttpConnection> &GetClient()
+				const std::shared_ptr<HttpTransaction> &GetClient()
 				{
-					return _client;
+					return _transaction;
 				}
 
 				ov::String ToString() const;
@@ -47,7 +46,7 @@ namespace http
 				void Close();
 
 			protected:
-				std::shared_ptr<HttpConnection> _client;
+				std::shared_ptr<HttpTransaction> _transaction;
 
 			private:
 				// key : data<int or string>

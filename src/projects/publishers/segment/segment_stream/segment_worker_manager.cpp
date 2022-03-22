@@ -1,6 +1,8 @@
 #include "segment_worker_manager.h"
 #include "segment_stream_private.h"
 
+#include <modules/http/server/http_connection.h>
+
 //====================================================================================================
 // SegmentWorker constructorc
 //====================================================================================================
@@ -60,10 +62,10 @@ bool SegmentWorker::Stop()
 //====================================================================================================
 // add work info
 //====================================================================================================
-bool SegmentWorker::PushConnection(const std::shared_ptr<http::svr::HttpConnection> &connection)
+bool SegmentWorker::PushConnection(const std::shared_ptr<http::svr::HttpTransaction> &transaction)
 {
 	std::unique_lock<std::mutex> lock(_work_info_guard);
-	_connection_list_to_process.push(connection);
+	_transaction_list_to_process.push(transaction);
 
 	_queue_event.Notify();
 
@@ -73,15 +75,15 @@ bool SegmentWorker::PushConnection(const std::shared_ptr<http::svr::HttpConnecti
 //====================================================================================================
 // pop work info
 //====================================================================================================
-std::shared_ptr<http::svr::HttpConnection> SegmentWorker::PopConnection()
+std::shared_ptr<http::svr::HttpTransaction> SegmentWorker::PopTransaction()
 {
 	std::unique_lock<std::mutex> lock(_work_info_guard);
 
-	if (_connection_list_to_process.empty())
+	if (_transaction_list_to_process.empty())
 		return nullptr;
 
-	auto work_info = _connection_list_to_process.front();
-	_connection_list_to_process.pop();
+	auto work_info = _transaction_list_to_process.front();
+	_transaction_list_to_process.pop();
 
 	return work_info;
 }
@@ -96,9 +98,9 @@ void SegmentWorker::WorkerThread()
 		// quequ event wait
 		_queue_event.Wait();
 
-		auto connection = PopConnection();
+		auto transaction = PopTransaction();
 
-		if (connection == nullptr)
+		if (transaction == nullptr)
 		{
 			if (_stop_thread_flag == false)
 			{
@@ -109,12 +111,10 @@ void SegmentWorker::WorkerThread()
 			continue;
 		}
 
-		if (_process_handler(connection) == false)
+		if (_process_handler(transaction) == false)
 		{
-			logte("Segment process handler fail - target(%s)", connection->GetRequest()->ToString());
+			logtd("Segment process handler fail - target(%s)", transaction->GetRequest()->ToString().CStr());
 		}
-
-		//        logtd("Segment process handler - target(%s)", work_info->request_target.CStr());
 	}
 }
 
@@ -154,15 +154,37 @@ bool SegmentWorkerManager::Stop()
 // Worker Add
 //====================================================================================================
 #define MAX_WORKER_INDEX 100000000
-bool SegmentWorkerManager::PushConnection(const std::shared_ptr<http::svr::HttpConnection> &connection)
+bool SegmentWorkerManager::PushConnection(const std::shared_ptr<http::svr::HttpTransaction> &transaction)
 {
-	// insert thread
-	_workers[(_worker_index % _workers.size())]->PushConnection(connection);
-
-	if (_worker_index < MAX_WORKER_INDEX)
-		_worker_index++;
+	int place = 0;
+	if (transaction->GetConnection()->GetConnectionType() == http::ConnectionType::Http10 || 
+		transaction->GetConnection()->GetConnectionType() == http::ConnectionType::Http11)
+	{
+		// HTTP/1.1 pipelining must be placed in the same thread as requests must be responded to in the order in which they were requested.
+		place = transaction->GetConnection()->GetId() % _workers.size();
+	}
+	else if (transaction->GetConnection()->GetConnectionType() == http::ConnectionType::Http20)
+	{
+		// HTTP/2.0 can give a response to a transaction(stream) in any order.
+		if (_worker_index < MAX_WORKER_INDEX)
+		{
+			_worker_index++;
+		}
+		else
+		{
+			_worker_index = 0;
+		}
+		
+		place = transaction->GetConnection()->GetId() % _workers.size();
+	}
 	else
-		_worker_index = 0;
+	{
+		logte("Invalid connection type of transaction (%s) - target(%s)", transaction->GetRequest()->ToString(), 
+		StringFromConnectionType(transaction->GetConnection()->GetConnectionType()));
+		return false;
+	}
+	
+	_workers[place]->PushConnection(transaction);
 
 	return true;
 }
