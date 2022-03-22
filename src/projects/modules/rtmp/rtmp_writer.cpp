@@ -57,8 +57,6 @@ std::shared_ptr<RtmpWriter> RtmpWriter::Create()
 RtmpWriter::RtmpWriter()
 	: _format_context(nullptr)
 {
-	// av_log_set_callback(RtmpWriter::FFmpegLog);
-	// av_log_set_level(AV_LOG_DEBUG);
 }
 
 RtmpWriter::~RtmpWriter()
@@ -395,42 +393,4 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	}
 
 	return true;
-}
-
-// FFMPEG DEBUG
-void RtmpWriter::FFmpegLog(void *ptr, int level, const char *fmt, va_list vl)
-{
-	va_list vl2;
-	char line[1024];
-	static int print_prefix = 1;
-
-	va_copy(vl2, vl);
-	av_log_default_callback(ptr, level, fmt, vl);
-	av_log_format_line(ptr, level, fmt, vl2, line, sizeof(line), &print_prefix);
-	va_end(vl2);
-
-	// if(level >= AV_LOG_DEBUG) return;
-
-	switch (level)
-	{
-		case AV_LOG_QUIET:
-		case AV_LOG_DEBUG:
-		case AV_LOG_VERBOSE:
-			logd(OV_LOG_TAG, line, vl);
-			break;
-		case AV_LOG_INFO:
-			logi(OV_LOG_TAG, line, vl);
-			break;
-		case AV_LOG_WARNING:
-			logw(OV_LOG_TAG, line, vl);
-			break;
-		case AV_LOG_ERROR:
-		case AV_LOG_FATAL:
-		case AV_LOG_PANIC:
-			loge(OV_LOG_TAG, line, vl);
-			break;
-		case AV_LOG_TRACE:
-			//		log_level = ANDROID_LOG_VERBOSE;
-			break;
-	}
 }
