@@ -586,6 +586,16 @@ namespace ov
 		return ::SSL_get_servername(_ssl, TLSEXT_NAMETYPE_host_name);
 	}
 
+	ov::String Tls::GetSelectedAlpnName() const
+	{
+		const unsigned char *data = NULL;
+		unsigned int len = 0;
+
+		SSL_get0_alpn_selected(_ssl, &data, &len);
+
+		return ov::String(reinterpret_cast<const char *>(data), len);
+	}
+
 	long Tls::GetVersion() const
 	{
 		// Holds _peer_certificate to prevent referencing nullptr

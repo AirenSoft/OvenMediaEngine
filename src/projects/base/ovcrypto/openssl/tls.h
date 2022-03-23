@@ -53,6 +53,7 @@ namespace ov
 		bool GetKeySaltLen(unsigned long crypto_suite, size_t *key_len, size_t *salt_len) const;
 
 		ov::String GetServerName() const;
+		ov::String GetSelectedAlpnName() const;
 
 		// Obtains a string in the BIO which allocated using BIO_new(BIO_s_mem())
 		static ov::String StringFromX509Name(const X509_NAME *name);

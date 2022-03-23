@@ -85,11 +85,18 @@ namespace http
 		void HttpConnection::SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data)
 		{
 			_tls_data = tls_data;
+		}
+
+		void HttpConnection::OnTlsAccepted()
+		{
+			logti("TLS connection accepted : Server Name(%s) Alpn Protocol(%s) Client (%s)", 
+					_tls_data->GetServerName().CStr(), _tls_data->GetSelectedAlpnProtocolStr().CStr(), _client_socket->ToString().CStr());
+
 			if (_tls_data->GetSelectedAlpnProtocol() == ov::TlsServerData::AlpnProtocol::Http20)
 			{
 				_connection_type = ConnectionType::Http20;
 			}
-			else
+			else 
 			{
 				_connection_type = ConnectionType::Http11;
 			}
@@ -287,8 +294,6 @@ namespace http
 
 		ssize_t HttpConnection::OnWebSocketDataReceived(const std::shared_ptr<const ov::Data> &data)
 		{
-			
-
 			if (_websocket_frame == nullptr)
 			{
 				_websocket_frame = std::make_shared<ws::Frame>();

@@ -135,8 +135,17 @@ namespace http
 			{
 				std::shared_ptr<const ov::Data> plain_data;
 
+				auto prev_tls_state = tls_data->GetState();
+
 				if (tls_data->Decrypt(data, &plain_data))
 				{
+					if (prev_tls_state == ov::TlsServerData::State::WaitingForAccept && 
+						tls_data->GetState() == ov::TlsServerData::State::Accepted)
+					{
+						// The client has accepted the connection
+						connection->OnTlsAccepted();
+					}
+
 					if ((plain_data != nullptr) && (plain_data->GetLength() > 0))
 					{
 						// plain_data is HTTP data

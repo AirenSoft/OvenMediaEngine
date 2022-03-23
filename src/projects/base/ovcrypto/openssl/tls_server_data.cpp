@@ -169,6 +169,39 @@ namespace ov
 		return false;
 	}
 
+	TlsServerData::AlpnProtocol TlsServerData::GetSelectedAlpnProtocol() const
+	{
+		auto alpn_protocol = _tls.GetSelectedAlpnName();
+
+		// https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
+
+		if (alpn_protocol.IsEmpty())
+		{
+			return AlpnProtocol::None;
+		}
+		else if (alpn_protocol == "h2")
+		{
+			return AlpnProtocol::Http20;
+		}
+		else if (alpn_protocol == "http/1.1")
+		{
+			return AlpnProtocol::Http11;
+		}
+		else if (alpn_protocol == "http/1.0")
+		{
+			return AlpnProtocol::Http10;
+		}
+
+		logtw("Unknown ALPN protocol: %s", alpn_protocol.CStr());
+
+		return AlpnProtocol::Unsupported;
+	}
+
+	ov::String TlsServerData::GetSelectedAlpnProtocolStr() const
+	{
+		return _tls.GetSelectedAlpnName();
+	}
+
 	ssize_t TlsServerData::OnTlsRead(Tls *tls, void *buffer, size_t length)
 	{
 		std::lock_guard lock_guard(_cipher_data_mutex);

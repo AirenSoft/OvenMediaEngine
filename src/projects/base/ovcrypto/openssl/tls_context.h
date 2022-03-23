@@ -90,6 +90,9 @@ namespace ov
 		static int OnServerNameCallback(SSL *s, int *ad, void *arg);
 		int OnServerName(SSL *ssl);
 
+		static int OnALPNSelectCallback(SSL *ssl, const unsigned char **out, unsigned char *outlen, const unsigned char *in, unsigned int inlen, void *arg);
+		static bool SelectALPNProtocol(ov::String key, const unsigned char **out, unsigned char *outlen, const unsigned char *in, unsigned int inlen);
+
 		MAY_THROWS(ov::OpensslError)
 		void SetCertificate(const std::shared_ptr<const CertificatePair> &certificate_pair);
 

@@ -160,6 +160,10 @@ namespace ov
 				::SSL_CTX_set_tlsext_servername_callback(_ssl_ctx, OnServerNameCallback);
 				::SSL_CTX_set_tlsext_servername_arg(_ssl_ctx, this);
 			}
+
+			// Use ALPN
+			SSL_CTX_set_alpn_select_cb(_ssl_ctx, OnALPNSelectCallback, this);
+
 		} while (false);
 	}
 
@@ -207,6 +211,44 @@ namespace ov
 				throw OpensslError("An error occurred inside create callback");
 			}
 		} while (false);
+	}
+
+	int TlsContext::OnALPNSelectCallback(SSL *ssl, const unsigned char **out, unsigned char *outlen, const unsigned char *in, unsigned int inlen, void *arg)
+	{
+		// h2 first, 
+		if (SelectALPNProtocol("h2", out, outlen, in, inlen) == true)
+		{
+			return SSL_TLSEXT_ERR_OK;
+		}
+
+		if (SelectALPNProtocol("http/1.1", out, outlen, in, inlen) == true)
+		{
+			return SSL_TLSEXT_ERR_OK;
+		}
+
+		return SSL_TLSEXT_ERR_NOACK;
+	}
+
+	bool TlsContext::SelectALPNProtocol(ov::String key, const unsigned char **out, unsigned char *outlen, const unsigned char *in, unsigned int inlen)
+	{
+		unsigned int i=0;
+		while (i < inlen)
+		{
+			auto length = in[i];
+			ov::String protocol(reinterpret_cast<const char *>(&in[i+1]), length);
+
+			if (protocol == key)
+			{
+				logtd("Selected ALPN protocol: %s", protocol.CStr());
+				*out = &in[i+1];
+				*outlen = length;
+				return true;
+			}
+
+			i += length + 1;
+		}
+
+		return false;
 	}
 
 	int TlsContext::OnServerNameCallback(SSL *s, int *ad, void *arg)

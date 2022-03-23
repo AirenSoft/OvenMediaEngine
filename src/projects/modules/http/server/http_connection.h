@@ -37,6 +37,7 @@ namespace http
 			bool OnRepeatTask();
 
 			void SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data);
+			void OnTlsAccepted();
 
 			std::shared_ptr<ov::TlsServerData> GetTlsData() const;
 			std::shared_ptr<ov::ClientSocket> GetSocket() const;
