@@ -16,7 +16,7 @@
 #include "transactions/http2_stream.h"
 
 //TODO(Getroot) : Move to Server.xml
-#define HTTP_CONNECTION_TIMEOUT_MS		5000
+#define HTTP_CONNECTION_TIMEOUT_MS		10 * 1000
 #define WEBSOCKET_CONNECTION_TIMEOUT_MS	WEBSOCKET_PING_INTERVAL_MS * 3
 
 namespace http
