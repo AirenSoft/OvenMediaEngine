@@ -28,7 +28,7 @@ namespace http
 			OV_ASSERT(_physical_port == nullptr, "%s: Physical port: %s", _server_name.CStr(), _physical_port->ToString().CStr());
 		}
 
-		bool HttpServer::Start(const ov::SocketAddress &address, int worker_count)
+		bool HttpServer::Start(const ov::SocketAddress &address, int worker_count, bool enable_http2)
 		{
 			auto lock_guard = std::lock_guard(_physical_port_mutex);
 
@@ -37,6 +37,8 @@ namespace http
 				logtw("Server is running");
 				return false;
 			}
+			
+			_http2_enabled = enable_http2;
 
 			auto manager = PhysicalPortManager::GetInstance();
 
@@ -118,6 +120,11 @@ namespace http
 			auto lock_guard = std::lock_guard(_physical_port_mutex);
 
 			return (_physical_port != nullptr);
+		}
+
+		bool HttpServer::IsHttp2Enabled() const
+		{
+			return _http2_enabled;
 		}
 
 		std::shared_ptr<HttpConnection> HttpServer::FindClient(const std::shared_ptr<ov::Socket> &remote)

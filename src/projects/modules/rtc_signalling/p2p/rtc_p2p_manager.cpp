@@ -12,9 +12,9 @@
 
 RtcP2PManager::RtcP2PManager(const cfg::Server &server_config)
 {
-	auto &p2p_info = server_config.GetP2P();
+	auto &p2p_info = server_config.GetModules().GetP2P();
 
-	_is_enabled = p2p_info.IsParsed();
+	_is_enabled = p2p_info.IsEnabled() == false;
 
 	if (_is_enabled)
 	{

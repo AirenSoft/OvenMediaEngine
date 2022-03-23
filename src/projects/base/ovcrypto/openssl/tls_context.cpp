@@ -27,6 +27,7 @@ namespace ov
 		TlsMethod method,
 		const std::shared_ptr<const CertificatePair> &certificate_pair,
 		const ov::String &cipher_list,
+		bool enable_h2_alpn, 
 		const ov::TlsContextCallback *callback,
 		std::shared_ptr<const ov::Error> *error)
 	{
@@ -40,6 +41,7 @@ namespace ov
 				ssl_method,
 				certificate_pair,
 				cipher_list,
+				enable_h2_alpn,
 				callback);
 		}
 		catch (const OpensslError &e)
@@ -81,8 +83,11 @@ namespace ov
 		const SSL_METHOD *method,
 		const std::shared_ptr<const CertificatePair> &certificate_pair,
 		const ov::String &cipher_list,
+		bool enable_h2_alpn, 
 		const TlsContextCallback *callback)
 	{
+		_h2_alpn_enabled = enable_h2_alpn;
+
 		do
 		{
 			OV_ASSERT2(_ssl_ctx == nullptr);
@@ -215,10 +220,16 @@ namespace ov
 
 	int TlsContext::OnALPNSelectCallback(SSL *ssl, const unsigned char **out, unsigned char *outlen, const unsigned char *in, unsigned int inlen, void *arg)
 	{
+		// arg to TlsContext instance
+		auto parent = static_cast<TlsContext *>(arg);
+
 		// h2 first, 
-		if (SelectALPNProtocol("h2", out, outlen, in, inlen) == true)
+		if (parent->_h2_alpn_enabled)
 		{
-			return SSL_TLSEXT_ERR_OK;
+			if (SelectALPNProtocol("h2", out, outlen, in, inlen) == true)
+			{
+				return SSL_TLSEXT_ERR_OK;
+			}
 		}
 
 		if (SelectALPNProtocol("http/1.1", out, outlen, in, inlen) == true)

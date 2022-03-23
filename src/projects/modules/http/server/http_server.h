@@ -45,7 +45,7 @@ namespace http
 			HttpServer(const char *server_name);
 			~HttpServer() override;
 
-			virtual bool Start(const ov::SocketAddress &address, int worker_count);
+			virtual bool Start(const ov::SocketAddress &address, int worker_count, bool enable_http2);
 			virtual bool Stop();
 
 			bool IsRunning() const;
@@ -76,6 +76,8 @@ namespace http
 				return _physical_port;
 			}
 
+			bool IsHttp2Enabled() const;
+
 			ov::String _server_name;
 			mutable std::mutex _physical_port_mutex;
 			std::shared_ptr<PhysicalPort> _physical_port = nullptr;
@@ -92,6 +94,7 @@ namespace http
 		private:
 			ov::DelayQueueAction Repeater(void *parameter);
 			ov::DelayQueue _repeater{"HTTPTimer"};
+			bool _http2_enabled = true;
 		};
 	}  // namespace svr
 }  // namespace http

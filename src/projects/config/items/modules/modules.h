@@ -2,29 +2,35 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Jaejong Bong
+//  Created by Hyunjun Jang
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
 
+#include "http2.h"
+#include "p2p.h"
+
 namespace cfg
 {
-	namespace p2p
+	namespace modules
 	{
-		struct P2P : public Item
+		struct modules : public Item
 		{
 		protected:
-			int _max_client_peers_per_host_peer = 2;
+			HTTP2 _http2;
+			P2P _p2p;
 
 		public:
-			CFG_DECLARE_CONST_REF_GETTER_OF(GetMaxClientPeersPerHostPeer, _max_client_peers_per_host_peer)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetHttp2, _http2)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetP2P, _p2p)
 
 		protected:
 			void MakeList() override
 			{
-				Register<Optional>("MaxClientPeersPerHostPeer", &_max_client_peers_per_host_peer);
+				Register<Optional>("HTTP2", &_http2);
+				Register<Optional>({"P2P", "p2p"}, &_p2p);
 			}
 		};
-	}  // namespace p2p
+	}  // namespace bind
 }  // namespace cfg

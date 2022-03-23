@@ -20,6 +20,9 @@ namespace http
 		{
 			std::shared_ptr<HttpServer> http_server = nullptr;
 
+			auto module_config = cfg::ConfigManager::GetInstance()->GetServer()->GetModules();
+			auto http2_enabled = module_config.GetHttp2().IsEnabled();
+
 			{
 				auto lock_guard = std::lock_guard(_http_servers_mutex);
 				auto item = _http_servers.find(address);
@@ -59,7 +62,7 @@ namespace http
 					// Create a new HTTP server
 					http_server = std::make_shared<HttpServer>(instance_name);
 
-					if (http_server->Start(address, worker_count))
+					if (http_server->Start(address, worker_count, http2_enabled))
 					{
 						_http_servers[address] = http_server;
 					}
@@ -77,6 +80,8 @@ namespace http
 		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *instance_name, const ov::SocketAddress &address, int worker_count)
 		{
 			std::shared_ptr<HttpsServer> https_server = nullptr;
+			auto module_config = cfg::ConfigManager::GetInstance()->GetServer()->GetModules();
+			auto http2_enabled = module_config.GetHttp2().IsEnabled();
 
 			auto lock_guard = std::lock_guard(_http_servers_mutex);
 			auto item = _http_servers.find(address);
@@ -98,7 +103,7 @@ namespace http
 				// Create a new HTTP server
 				https_server = std::make_shared<HttpsServer>(instance_name);
 
-				if (https_server->Start(address, worker_count))
+				if (https_server->Start(address, worker_count, http2_enabled))
 				{
 					_http_servers[address] = https_server;
 				}

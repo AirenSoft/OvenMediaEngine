@@ -40,7 +40,7 @@ namespace http
 			std::shared_ptr<const ov::Error> error;
 			auto tls_context = ov::TlsContext::CreateServerContext(
 				ov::TlsMethod::Tls, certificate->GetCertificatePair(),
-				HTTP_FAST_NOT_VERY_SECURE, &tls_context_callback,
+				HTTP_FAST_NOT_VERY_SECURE, IsHttp2Enabled(), &tls_context_callback,
 				&error);
 
 			if (tls_context == nullptr)

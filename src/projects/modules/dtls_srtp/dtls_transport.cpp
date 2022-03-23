@@ -53,6 +53,7 @@ void DtlsTransport::SetLocalCertificate(const std::shared_ptr<Certificate> &cert
 		ov::TlsMethod::DTls,
 		_local_certificate_pair,
 		"DEFAULT:!NULL:!aNULL:!SHA256:!SHA384:!aECDH:!AESGCM+AES256:!aPSK",
+		false,
 		&tls_context_callback,
 		&error);
 

@@ -15,6 +15,21 @@
 	-->
 	<StunServer>stun.l.google.com:19302</StunServer>
 
+	<Modules>
+		<!-- HTTP2 is under development -->
+		<HTTP2>
+			<!-- disabled by default -->
+			<Enable>false</Enable>
+		</HTTP2>
+
+		<!-- P2P works only in WebRTC and is experiment feature -->
+		<P2P>
+			<!-- disabled by default -->
+			<Enable>false</Enable>
+			<MaxClientPeersPerHostPeer>2</MaxClientPeersPerHostPeer>
+		</P2P>
+	</Modules>
+
 	<!-- Settings for the ports to bind -->
 	<Bind>
 		<!-- Enable this configuration if you want to use API Server -->
@@ -115,13 +130,6 @@
 			</WebRTC>
 		</Publishers>
 	</Bind>
-
-	<!-- P2P works only in WebRTC -->
-	<!--
-	<P2P>
-		<MaxClientPeersPerHostPeer>2</MaxClientPeersPerHostPeer>
-	</P2P>
-	-->
 
 	<!--
 		Enable this configuration if you want to use API Server
