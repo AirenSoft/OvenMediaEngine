@@ -9,8 +9,8 @@
 #pragma once
 
 #include "http_transaction.h"
-#include "../protocols/websocket/web_socket_client.h"
-#include "../protocols/websocket/web_socket_frame.h"
+#include "../../protocols/websocket/web_socket_client.h"
+#include "../../protocols/websocket/web_socket_frame.h"
 
 #define WEBSOCKET_PING_INTERVAL_MS		20 * 1000
 

@@ -7,7 +7,7 @@
 //
 //==============================================================================
 #include "websocket_session.h"
-#include "http_connection.h"
+#include "../http_connection.h"
 
 #define OV_LOG_TAG		"WebSocket"
 

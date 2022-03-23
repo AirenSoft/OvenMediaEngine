@@ -8,8 +8,8 @@
 //==============================================================================
 #include "http_transaction.h"
 
-#include "../http_private.h"
-#include "http_connection.h"
+#include "../../http_private.h"
+#include "../http_connection.h"
 
 namespace http
 {
@@ -255,6 +255,10 @@ namespace http
 							return -1;
 					}
 				}
+				else
+				{
+					SetStatus(Status::Exchanging);
+				}
 
 				return comsumed_bytes;
 			}
@@ -326,6 +330,10 @@ namespace http
 								SetStatus(Status::Error);
 								return -1;
 						}
+					}
+					else
+					{
+						SetStatus(Status::Exchanging);
 					}
 
 					return comsumed_bytes;

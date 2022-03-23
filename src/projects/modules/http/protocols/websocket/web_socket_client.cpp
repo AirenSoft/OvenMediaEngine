@@ -13,7 +13,7 @@
 
 #include "./web_socket_private.h"
 #include "web_socket_datastructure.h"
-#include "../../server/http_transaction.h"
+#include "../../server/transactions/http_transaction.h"
 
 namespace http
 {
