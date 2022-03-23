@@ -9,7 +9,7 @@
 #pragma once
 
 #include "http_transaction.h"
-#include "http2_frame.h"
+#include "../../protocols/http2/http2_frame.h"
 
 namespace http
 {

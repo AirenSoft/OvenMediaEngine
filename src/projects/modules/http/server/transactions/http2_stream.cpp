@@ -7,9 +7,7 @@
 //
 //==============================================================================
 #include "http2_stream.h"
-
-#include "../http_private.h"
-#include "http_connection.h"
+#include "../http_connection.h"
 
 namespace http
 {

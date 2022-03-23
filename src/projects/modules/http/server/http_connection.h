@@ -11,9 +11,9 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/client_socket.h>
 
-#include "http_transaction.h"
-#include "websocket_session.h"
-#include "http2_stream.h"
+#include "transactions/http_transaction.h"
+#include "transactions/websocket_session.h"
+#include "transactions/http2_stream.h"
 
 //TODO(Getroot) : Move to Server.xml
 #define HTTP_CONNECTION_TIMEOUT_MS		5000

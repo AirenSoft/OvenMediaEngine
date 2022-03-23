@@ -9,7 +9,7 @@
 #include "http_default_interceptor.h"
 
 #include "../../../http_private.h"
-#include "../../http_transaction.h"
+#include "../../transactions/http_transaction.h"
 
 // Currently, OME does not handle requests larger than 1 MB
 #define MAX_HTTP_REQUEST_SIZE (1024LL * 1024LL)

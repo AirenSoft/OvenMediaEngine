@@ -10,7 +10,7 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovlibrary/semaphore.h>
-#include <modules/http/server/http_transaction.h>
+#include <modules/http/server/transactions/http_transaction.h>
 
 #include <queue>
 #include <string>

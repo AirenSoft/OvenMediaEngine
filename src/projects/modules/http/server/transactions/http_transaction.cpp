@@ -8,8 +8,8 @@
 //==============================================================================
 #include "http_transaction.h"
 
-#include "../http_private.h"
-#include "http_connection.h"
+#include "../../http_private.h"
+#include "../http_connection.h"
 
 namespace http
 {
