@@ -255,6 +255,10 @@ namespace http
 							return -1;
 					}
 				}
+				else
+				{
+					SetStatus(Status::Exchanging);
+				}
 
 				return comsumed_bytes;
 			}
@@ -326,6 +330,10 @@ namespace http
 								SetStatus(Status::Error);
 								return -1;
 						}
+					}
+					else
+					{
+						SetStatus(Status::Exchanging);
 					}
 
 					return comsumed_bytes;
