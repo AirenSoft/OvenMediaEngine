@@ -253,11 +253,10 @@ namespace http
 						default:
 							SetStatus(Status::Error);
 							return -1;
-							break;
 					}
-
-						return comsumed_bytes;
 				}
+
+				return comsumed_bytes;
 			}
 			// The header has not yet been parsed
 			else if (_request->GetHeaderParingStatus() == StatusCode::PartialContent)
@@ -326,11 +325,10 @@ namespace http
 							default:
 								SetStatus(Status::Error);
 								return -1;
-								break;
 						}
-
-						return comsumed_bytes;
 					}
+
+					return comsumed_bytes;
 				}
 			}
 
