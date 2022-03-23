@@ -149,7 +149,8 @@ void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov:
 		}
 		else
 		{
-			logtw("[%s/%s] [%s] Failed to send the chunked data for %s to %s (%zu bytes)",
+			// Maybe disconnected
+			logtd("[%s/%s] [%s] Failed to send the chunked data for %s to %s (%zu bytes)",
 				  app_name.CStr(), stream_name.CStr(), StringFromPublisherType(GetPublisherType()).CStr(),
 				  file_name.CStr(), response->GetRemote()->ToString().CStr(), chunk_data->GetLength());
 
@@ -200,7 +201,5 @@ void CmafStreamServer::OnCmafChunkedComplete(const ov::String &app_name, const o
 				  app_name.CStr(), stream_name.CStr(), StringFromPublisherType(GetPublisherType()).CStr(),
 				  file_name.CStr(), response->GetRemote()->ToString().CStr());
 		}
-
-		response->Close();
 	}
 }

@@ -204,6 +204,7 @@ namespace http
 			}
 			else
 			{
+				connection->Close(reason);
 				logti("Client(%s) has disconnected from %s",
 					  remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 			}
