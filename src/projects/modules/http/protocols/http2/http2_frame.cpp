@@ -6,8 +6,6 @@
 //  Copyright (c) 2022 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#pragma once
-
 #include "http2_frame.h"
 
 namespace http
@@ -22,11 +20,11 @@ namespace http
 			if (_state == Http2Frame::State::Init)
 			{
 				// Need Haeder Data
-				auto need_header_bytes = HTTP2_FRAME_HEADER_SIZE - _packet_data->GetLength();
+				auto need_header_bytes = HTTP2_FRAME_HEADER_SIZE - _packet_data.GetLength();
 				if (input_data->GetLength() >= need_header_bytes)
 				{
 					consumed_bytes += need_header_bytes;
-					_packet_data->Append(input_data->GetData(), need_header_bytes);
+					_packet_data.Append(input_data->GetData(), need_header_bytes);
 					input_data = input_data->Subdata(need_header_bytes);
 					
 					// Parse Header
@@ -39,7 +37,7 @@ namespace http
 				else
 				{
 					consumed_bytes += input_data->GetLength();
-					_packet_data->Append(input_data);
+					_packet_data.Append(input_data);
 					// Need more data
 				}
 			}
@@ -47,23 +45,23 @@ namespace http
 			if (_state == Http2Frame::State::HeaderParsed)
 			{
 				// Need Length Data
-				auto need_payload_bytes = GetLength() - (_packet_data->GetLength() - HTTP2_FRAME_HEADER_SIZE);
+				auto need_payload_bytes = GetLength() - (_packet_data.GetLength() - HTTP2_FRAME_HEADER_SIZE);
 				if (input_data->GetLength() >= need_payload_bytes)
 				{
 					consumed_bytes += need_payload_bytes;
-					_packet_data->Append(input_data->GetData(), need_payload_bytes);
+					_packet_data.Append(input_data->GetData(), need_payload_bytes);
 				}
 				else
 				{
 					consumed_bytes += input_data->GetLength();
-					_packet_data->Append(input_data);
+					_packet_data.Append(input_data);
 					
 					// Need more data to complete Frame
 				}
 
-				if (_packet_data->GetLength() - HTTP2_FRAME_HEADER_SIZE == GetLength())
+				if (_packet_data.GetLength() - HTTP2_FRAME_HEADER_SIZE == GetLength())
 				{
-					_payload = _packet_data->Subdata(HTTP2_FRAME_HEADER_SIZE);
+					_payload = _packet_data.Subdata(HTTP2_FRAME_HEADER_SIZE);
 					_state = Http2Frame::State::Completed;	
 				}
 			}
@@ -73,12 +71,15 @@ namespace http
 
 		bool Http2Frame::ParseHeader()
 		{
-			if (_packet_data->GetLength() < HTTP2_FRAME_HEADER_SIZE)
+			if (_packet_data.GetLength() < HTTP2_FRAME_HEADER_SIZE)
 			{
 				return false;
 			}
 
-			auto header_data = _packet_data->GetWritableDataAs<uint8_t>();
+			auto header_data = _packet_data.GetWritableDataAs<uint8_t>();
+
+			// Parse HTTP/2 Frame Length (24bit)
+			
 
 			// Parse Length
 			_length = (header_data[0] << 16) | (header_data[1] << 8) | header_data[2];

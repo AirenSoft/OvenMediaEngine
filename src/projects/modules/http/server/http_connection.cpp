@@ -337,17 +337,37 @@ namespace http
 
 		ssize_t HttpConnection::OnHttp2RequestReceived(const std::shared_ptr<const ov::Data> &data)
 		{
-			// HTTP 2.0에서는 _last_frame 으로 받아서 frame이 완성되면 Stream을 찾아서 넘겨야 한다. 헤더가 파싱되었으면 그 이후로 처리하면된다. 여기서는 frame을 길이로만 완성하고 어떤 frame인지 처리는 Stream 내에서 한다.)
+			ssize_t comsumed_bytes = 0;
 
-			// HTTP1은 stream이 1개로 고정되어 있다. (현재 HttpTransaction이라는 이름임 : 수정할 것)
-			
-			// HTTP2 에서는 frame을 먼저 파싱한다. 
+			if (_http2_preface.IsConfirmed() == false)
+			{
+				comsumed_bytes = _http2_preface.AppendData(data);
+				if (comsumed_bytes == -1)
+				{
+					logte("HTTP/2 preface is not confirmed from %s", _client_socket->ToString().CStr());
+					return -1;
+				}
 
-			// frame 정보로 stream을 찾는다.
+				return comsumed_bytes;
+			}
 
-			// stream에 frame을 넘긴다. 
+			if (_http2_frame == nullptr)
+			{
+				_http2_frame = std::make_shared<Http2Frame>();
+			}
 
-			// frame을 다 받았다면 stream을 종료시킨다.
+			comsumed_bytes = _http2_frame->AppendData(data);
+			if (comsumed_bytes < 0)
+			{
+				Close(PhysicalPortDisconnectReason::Error);
+				return -1;
+			}
+
+			if (_http2_frame->GetState() == Http2Frame::State::Completed)
+			{
+				logti("HTTP/2 Frame Received : %s", _http2_frame->ToString().CStr());
+				_http2_frame.reset();
+			}
 
 			return 0;
 		}

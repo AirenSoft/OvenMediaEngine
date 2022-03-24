@@ -88,7 +88,7 @@ namespace http
 			Flags _flags = Flags::None;
 			uint32_t _stream_id = 0;
 			std::shared_ptr<const ov::Data> _payload = nullptr;
-			std::shared_ptr<ov::Data> _packet_data = std::shared_ptr<ov::Data>();
+			ov::Data _packet_data;
 		};
 	}  // namespace svr
 }  // namespace http

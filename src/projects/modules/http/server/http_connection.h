@@ -15,6 +15,8 @@
 #include "transactions/websocket_session.h"
 #include "transactions/http2_stream.h"
 
+#include "../protocols/http2/http2_preface.h"
+
 //TODO(Getroot) : Move to Server.xml
 #define HTTP_CONNECTION_TIMEOUT_MS		10 * 1000
 #define WEBSOCKET_CONNECTION_TIMEOUT_MS	WEBSOCKET_PING_INTERVAL_MS * 3
@@ -77,14 +79,25 @@ namespace http
 			std::shared_ptr<ov::ClientSocket> _client_socket = nullptr;
 			std::shared_ptr<ov::TlsServerData> _tls_data;
 
+			///////////////////////
 			// For HTTP/1.1
+			///////////////////////
 			std::shared_ptr<HttpTransaction> _http_transaction = nullptr;
 
+			///////////////////////
 			// For HTTP/2.0
+			///////////////////////
+
+			// HTTP/2 Preface
+			Http2Preface _http2_preface;
+			// HTTP/2 Frame
+			std::shared_ptr<Http2Frame> _http2_frame = nullptr;
 			// Stream Identifier, HttpTransaction
 			std::map<uint32_t, std::shared_ptr<HttpStream>> _http_stream_map;
 
+			///////////////////////
 			// For Websocket
+			///////////////////////
 			std::shared_ptr<WebSocketSession> _websocket_session = nullptr;
 			// Websocket Frame
 			std::shared_ptr<ws::Frame> _websocket_frame = nullptr;
