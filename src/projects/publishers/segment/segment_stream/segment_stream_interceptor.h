@@ -24,9 +24,7 @@ public:
 
 	bool Start(int thread_count, const SegmentProcessHandler &process_handler);
 
-	ssize_t OnDataReceived(const std::shared_ptr<http::svr::HttpExchange> &exchange, const std::shared_ptr<const ov::Data> &data) override;
 	http::svr::InterceptorResult OnRequestCompleted(const std::shared_ptr<http::svr::HttpExchange> &exchange) override;
-
 	bool IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpExchange> &client) override;
 
 protected:

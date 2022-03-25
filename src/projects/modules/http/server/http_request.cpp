@@ -58,21 +58,6 @@ namespace http
 			UpdateUri();
 		}
 
-		ov::String HttpRequest::GetHeader(const ov::String &key) const noexcept
-		{
-			return _http_header_parser.GetHeader(key);
-		}
-
-		ov::String HttpRequest::GetHeader(const ov::String &key, ov::String default_value) const noexcept
-		{
-			return _http_header_parser.GetHeader(key, std::move(default_value));
-		}
-
-		const bool HttpRequest::IsHeaderExists(const ov::String &key) const noexcept
-		{
-			return _http_header_parser.IsHeaderExists(key);
-		}
-
 		void HttpRequest::UpdateUri()
 		{
 			auto host = GetHeader("Host");
@@ -93,12 +78,12 @@ namespace http
 				scheme = "ws";
 			}
 
-			_request_uri = ov::String::FormatString("%s%s://%s%s", scheme.CStr(), (_tls_data != nullptr) ? "s" : "", host.CStr(), _http_header_parser.GetRequestTarget().CStr());
+			_request_uri = ov::String::FormatString("%s%s://%s%s", scheme.CStr(), (_tls_data != nullptr) ? "s" : "", host.CStr(), GetRequestTarget().CStr());
 		}
 
 		ov::String HttpRequest::ToString() const
 		{
-			return ov::String::FormatString("<HttpRequest: %p, Method: %d, uri: %s>", this, static_cast<int>(_http_header_parser.GetMethod()), GetUri().CStr());
+			return ov::String::FormatString("<HttpRequest: %p, Method: %d, uri: %s>", this, static_cast<int>(GetMethod()), GetUri().CStr());
 		}
 	}  // namespace svr
 }  // namespace http

@@ -23,26 +23,49 @@ namespace http
 
 			}
 
+			std::shared_ptr<HttpRequest> HttpTransaction::CreateRequestInstance()
+			{
+				_http1_request = std::make_shared<Http1Request>(GetConnection()->GetSocket());
+				_http1_request->SetConnectionType(ConnectionType::Http11);
+				_http1_request->SetTlsData(GetConnection()->GetTlsData());
+				return _http1_request;
+			}
+			
+			// std::shared_ptr<HttpResponse> HttpTransaction::CreateResponseInstance()
+			// {
+				
+			// }
+
 			ssize_t HttpTransaction::OnRequestPacketReceived(const std::shared_ptr<const ov::Data> &data)
 			{
 				// Header parsing is complete and data is being received.
-				if (GetRequest()->GetHeaderParingStatus() == StatusCode::OK)
+				if (_http1_request->GetHeaderParingStatus() == StatusCode::OK)
 				{
 					auto interceptor = GetConnection()->FindInterceptor(GetSharedPtr());
+					auto need_bytes = _http1_request->GetContentLength() - _received_data_size;
+
+					std::shared_ptr<const ov::Data> input_data;
+					if (data->GetLength() <= need_bytes)
+					{
+						input_data = data;
+					}
+					else
+					{
+						input_data = data->Subdata(0, need_bytes);
+					}
 
 					// Here, payload data is passed to the interceptor rather than stored in the request. The interceptor may or may not store the payload in the request according to each role.
-					auto comsumed_bytes = interceptor->OnDataReceived(GetSharedPtr(), data);
-					if (comsumed_bytes <= 0)
+					if (interceptor->OnDataReceived(GetSharedPtr(), input_data) == false)
 					{
 						SetStatus(Status::Error);
 						return -1;
 					}
 
-					_received_data_size += comsumed_bytes;
+					_received_data_size += input_data->GetLength();
 
 					// TODO(getroot) : In the case of chunked transfer, there is no Content-length header, and it is necessary to parse the chunk to determine the end when the length is 0. Currently, chunked-transfer type request is not used, so it is not supported.
 
-					if (_received_data_size >= GetRequest()->GetContentLength())
+					if (_received_data_size >= _http1_request->GetContentLength())
 					{
 						auto result = interceptor->OnRequestCompleted(GetSharedPtr());
 						switch (result)
@@ -64,25 +87,25 @@ namespace http
 						SetStatus(Status::Exchanging);
 					}
 
-					return comsumed_bytes;
+					return input_data->GetLength();
 				}
 				// The header has not yet been parsed
-				else if (GetRequest()->GetHeaderParingStatus() == StatusCode::PartialContent)
+				else if (_http1_request->GetHeaderParingStatus() == StatusCode::PartialContent)
 				{
 					// Put more data to parse header
-					auto comsumed_bytes = GetRequest()->AppendHeaderData(data);
+					auto comsumed_bytes = _http1_request->AppendHeaderData(data);
 					_received_header_size += comsumed_bytes;
 
 					// Check if header parsing is complete
-					if (GetRequest()->GetHeaderParingStatus() == StatusCode::PartialContent)
+					if (_http1_request->GetHeaderParingStatus() == StatusCode::PartialContent)
 					{
 						// Need more data to parse header
 						return comsumed_bytes;
 					}
-					else if (GetRequest()->GetHeaderParingStatus() == StatusCode::OK)
+					else if (_http1_request->GetHeaderParingStatus() == StatusCode::OK)
 					{
 						// Header parsing is done
-						logti("Client(%s) is requested uri: [%s]", GetConnection()->GetSocket()->ToString().CStr(), GetRequest()->GetUri().CStr());
+						logti("Client(%s) is requested uri: [%s]", GetConnection()->GetSocket()->ToString().CStr(), _http1_request->GetUri().CStr());
 
 						if (IsUpgradeRequest() == true)
 						{
@@ -118,7 +141,7 @@ namespace http
 
 						// Check if the request is completed
 						// If Content-length is 0, it means that the request is completed.
-						if (GetRequest()->GetContentLength() == 0)
+						if (_http1_request->GetContentLength() == 0)
 						{
 							auto result = interceptor->OnRequestCompleted(GetSharedPtr());
 							switch (result)
@@ -145,7 +168,7 @@ namespace http
 				}
 
 				// Error
-				logte("Invalid parse status: %d", GetRequest()->GetHeaderParingStatus());
+				logte("Invalid parse status: %d", _http1_request->GetHeaderParingStatus());
 				return -1;
 			}
 		}  // namespace h1

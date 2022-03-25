@@ -64,62 +64,17 @@ namespace http
 
 		bool DefaultInterceptor::OnRequestPrepared(const std::shared_ptr<HttpExchange> &exchange)
 		{
-			// Pre-allocate memory to process request body
-			auto request = exchange->GetRequest();
-
-			// TODO: Support for file upload & need to create a feature to block requests that are too large because too much CONTENT-LENGTH can cause OOM
-			size_t content_length = request->GetContentLength();
-
-			if (content_length > MAX_HTTP_REQUEST_SIZE)
-			{
-				return false;
-			}
-
-			if (content_length > 0L)
-			{
-				const std::shared_ptr<ov::Data> &request_body = GetRequestBody(request);
-
-				if (request_body->Reserve(request->GetContentLength()) == false)
-				{
-					return false;
-				}
-			}
-
 			return true;
 		}
 
-		ssize_t DefaultInterceptor::OnDataReceived(const std::shared_ptr<HttpExchange> &exchange, const std::shared_ptr<const ov::Data> &data)
+		bool DefaultInterceptor::OnDataReceived(const std::shared_ptr<HttpExchange> &exchange, const std::shared_ptr<const ov::Data> &data)
 		{
 			auto request = exchange->GetRequest();
-			auto response = exchange->GetResponse();
-
 			const std::shared_ptr<ov::Data> &request_body = GetRequestBody(request);
-			size_t current_length = (request_body != nullptr) ? request_body->GetLength() : 0L;
-			size_t content_length = request->GetContentLength();
-			ssize_t consumed_length = 0;
 
-			// request_body must be prepared if content length is greater than 0
-			OV_ASSERT2((content_length == 0L) || ((content_length > 0L) && (request_body != nullptr)));
-
-			std::shared_ptr<const ov::Data> process_data;
-			if (current_length + data->GetLength() > content_length)
-			{
-				// HTTP/1.1 pipelining can contain more data than the content length. That's the next request.
-				// logtw("Client sent too many data: expected: %ld, sent: %ld", content_length, (current_length + data->GetLength()));
-
-				// The data sent by the client cannot exceed the content-length,
-				// but if it exceeds the content-length, the data is processed only up to the content_length.
-				process_data = data->Subdata(0L, content_length - current_length);
-				consumed_length = content_length - current_length;
-			}
-			else
-			{
-				process_data = data;
-				consumed_length = data->GetLength();
-			}
-
-			request_body->Append(process_data.get());
-			return consumed_length;
+			request_body->Append(data);
+			
+			return true;
 		}
 
 		InterceptorResult DefaultInterceptor::OnRequestCompleted(const std::shared_ptr<HttpExchange> &exchange)

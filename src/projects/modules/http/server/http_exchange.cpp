@@ -35,11 +35,7 @@ namespace http
 
 		std::shared_ptr<HttpRequest> HttpExchange::CreateRequestInstance()
 		{
-			auto request = std::make_shared<HttpRequest>(_connection->GetSocket());
-			request->SetConnectionType(ConnectionType::Http11);
-			request->SetTlsData(_connection->GetTlsData());
-
-			return request;
+			return nullptr;
 		}
 		
 		std::shared_ptr<HttpResponse> HttpExchange::CreateResponseInstance()

@@ -34,49 +34,6 @@ namespace http
 			void SetConnectionType(ConnectionType type);
 			ConnectionType GetConnectionType() const;
 
-			ssize_t AppendHeaderData(const std::shared_ptr<const ov::Data> &data)
-			{
-				if (GetHeaderParingStatus() == StatusCode::OK)
-				{
-					// Already parsed
-					return 0;
-				}
-				else if (GetHeaderParingStatus() == StatusCode::PartialContent)
-				{
-					auto consumed_bytes = _http_header_parser.AppendData(data);
-					if (GetHeaderParingStatus() == StatusCode::OK)
-					{
-						PostProcess();
-					}
-					return consumed_bytes;
-				}
-				else
-				{
-					// Error
-					return -1;
-				}
-			}
-
-			StatusCode GetHeaderParingStatus() const
-			{
-				return _http_header_parser.GetStatus();
-			}
-
-			Method GetMethod() const noexcept
-			{
-				return _http_header_parser.GetMethod();
-			}
-
-			ov::String GetHttpVersion() const noexcept
-			{
-				return _http_header_parser.GetHttpVersion();
-			}
-
-			double GetHttpVersionAsNumber() const noexcept
-			{
-				return _http_header_parser.GetHttpVersionAsNumber();
-			}
-
 			// Full URI (including domain and port)
 			// Example: http://<domain>:<port>/<app>/<stream>/...
 			const ov::String &GetUri() const noexcept
@@ -84,34 +41,10 @@ namespace http
 				return _request_uri;
 			}
 
-			// Path of the URI (including query strings & excluding domain and port)
-			// Example: /<app>/<stream>/...?a=b&c=d
-			const ov::String &GetRequestTarget() const noexcept
-			{
-				return _http_header_parser.GetRequestTarget();
-			}
-
-			/// HTTP body 데이터 길이 반환
-			///
-			/// @return body 데이터 길이. 파싱이 제대로 되지 않았거나, request header에 명시가 안되어 있으면 0이 반환됨.
-			size_t GetContentLength() const noexcept
-			{
-				return _http_header_parser.GetContentLength();
-			}
-
 			std::shared_ptr<const ov::Data> GetRequestBody() const
 			{
 				return _request_body;
 			}
-
-			const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetRequestHeader() const noexcept
-			{
-				return _http_header_parser.GetHeaders();
-			}
-
-			ov::String GetHeader(const ov::String &key) const noexcept;
-			ov::String GetHeader(const ov::String &key, ov::String default_value) const noexcept;
-			const bool IsHeaderExists(const ov::String &key) const noexcept;
 
 			void SetMatchResult(ov::MatchResult match_result)
 			{
@@ -136,8 +69,29 @@ namespace http
 
 			ov::String ToString() const;
 
+			virtual ssize_t AppendHeaderData(const std::shared_ptr<const ov::Data> &data) = 0;
+			virtual StatusCode GetHeaderParingStatus() const = 0;
+			virtual Method GetMethod() const noexcept = 0;
+			virtual ov::String GetHttpVersion() const noexcept = 0;
+			virtual double GetHttpVersionAsNumber() const noexcept = 0;
+			// Path of the URI (including query strings & excluding domain and port)
+			// Example: /<app>/<stream>/...?a=b&c=d
+			virtual const ov::String &GetRequestTarget() const noexcept = 0;
+			virtual ov::String GetHeader(const ov::String &key) const noexcept = 0;
+			virtual const bool IsHeaderExists(const ov::String &key) const noexcept = 0;
+
+			ov::String GetHeader(const ov::String &key, ov::String default_value) const noexcept
+			{
+				if (IsHeaderExists(key))
+				{
+					return GetHeader(key);
+				}
+
+				return default_value;
+			}
+
+
 		protected:
-			// HttpRequestInterceptorInterface를 통해, 다른 interceptor에서 사용됨
 			const std::shared_ptr<ov::Data> &GetRequestBodyInternal()
 			{
 				if (_request_body == nullptr)
@@ -158,13 +112,7 @@ namespace http
 			ov::MatchResult _match_result;
 			ov::String _request_uri;
 
-			// For HTTP/1.1
-			prot::h1::HttpRequestHeaderParser _http_header_parser;
-
-			// TODO(h2) : Implement this
-			// For HTTP/2.0
-			// Http2RequestParser _parser;
-
+		private:
 			// HTTP body
 			std::shared_ptr<ov::Data> _request_body;
 		};

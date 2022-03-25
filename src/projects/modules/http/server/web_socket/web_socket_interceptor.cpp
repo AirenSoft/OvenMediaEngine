@@ -75,7 +75,7 @@ namespace http
 				return true;
 			}
 
-			ssize_t Interceptor::OnDataReceived(const std::shared_ptr<HttpExchange> &exchange, const std::shared_ptr<const ov::Data> &data)
+			bool Interceptor::OnDataReceived(const std::shared_ptr<HttpExchange> &exchange, const std::shared_ptr<const ov::Data> &data)
 			{
 				auto websocket_session = std::dynamic_pointer_cast<WebSocketSession>(exchange);
 				if (websocket_session == nullptr)

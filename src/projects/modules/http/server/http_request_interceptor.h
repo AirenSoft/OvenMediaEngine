@@ -44,7 +44,7 @@ namespace http
 			///
 			/// @return return <= 0 -> error, return > 0 -> consumed bytes
 
-			virtual ssize_t OnDataReceived(const std::shared_ptr<HttpExchange> &exchange, const std::shared_ptr<const ov::Data> &data) = 0;
+			virtual bool OnDataReceived(const std::shared_ptr<HttpExchange> &exchange, const std::shared_ptr<const ov::Data> &data) = 0;
 
 			/// A callback called if the request is completed.
 			///

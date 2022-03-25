@@ -44,7 +44,7 @@ namespace http
 
 				// If these handler return false, the connection will be disconnected
 				bool OnRequestPrepared(const std::shared_ptr<HttpExchange> &exchange) override;
-				ssize_t OnDataReceived(const std::shared_ptr<HttpExchange> &exchange, const std::shared_ptr<const ov::Data> &data) override;
+				bool OnDataReceived(const std::shared_ptr<HttpExchange> &exchange, const std::shared_ptr<const ov::Data> &data) override;
 				InterceptorResult OnRequestCompleted(const std::shared_ptr<HttpExchange> &exchange) override;
 				void OnError(const std::shared_ptr<HttpExchange> &exchange, StatusCode status_code) override;
 				void OnClosed(const std::shared_ptr<HttpConnection> &stream, PhysicalPortDisconnectReason reason) override;

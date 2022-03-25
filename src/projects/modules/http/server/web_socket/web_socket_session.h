@@ -27,6 +27,7 @@ namespace http
 				friend class HttpConnection;
 
 				// Only can be created by upgrade
+				WebSocketSession(const std::shared_ptr<HttpConnection> &connection) = delete;
 				WebSocketSession(const std::shared_ptr<HttpExchange> &exchange);
 				virtual ~WebSocketSession() = default;
 
