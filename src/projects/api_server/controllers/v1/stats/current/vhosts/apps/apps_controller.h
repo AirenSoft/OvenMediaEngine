@@ -22,7 +22,7 @@ namespace api
 				void PrepareHandlers() override;
 
 			protected:
-				ApiResponse OnGetApp(const std::shared_ptr<http::svr::HttpTransaction> &client,
+				ApiResponse OnGetApp(const std::shared_ptr<http::svr::HttpExchange> &client,
 									 const std::shared_ptr<mon::HostMetrics> &vhost,
 									 const std::shared_ptr<mon::ApplicationMetrics> &app);
 			};

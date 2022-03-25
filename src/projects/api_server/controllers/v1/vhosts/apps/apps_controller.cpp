@@ -41,7 +41,7 @@ namespace api
 			CreateSubController<OutputProfilesController>(R"(\/(?<app_name>[^\/:]*)\/outputProfiles)");
 		};
 
-		ApiResponse AppsController::OnPostApp(const std::shared_ptr<http::svr::HttpTransaction> &client, const Json::Value &request_body,
+		ApiResponse AppsController::OnPostApp(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
 											  const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
 			ThrowIfVirtualIsReadOnly(*(vhost.get()));
@@ -102,7 +102,7 @@ namespace api
 			return {status_codes, std::move(response_value)};
 		}
 
-		ApiResponse AppsController::OnGetAppList(const std::shared_ptr<http::svr::HttpTransaction> &client,
+		ApiResponse AppsController::OnGetAppList(const std::shared_ptr<http::svr::HttpExchange> &client,
 												 const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
 			Json::Value response(Json::ValueType::arrayValue);
@@ -119,14 +119,14 @@ namespace api
 			return response;
 		}
 
-		ApiResponse AppsController::OnGetApp(const std::shared_ptr<http::svr::HttpTransaction> &client,
+		ApiResponse AppsController::OnGetApp(const std::shared_ptr<http::svr::HttpExchange> &client,
 											 const std::shared_ptr<mon::HostMetrics> &vhost,
 											 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
 			return ::serdes::JsonFromApplication(app);
 		}
 
-		ApiResponse AppsController::OnPutApp(const std::shared_ptr<http::svr::HttpTransaction> &client, const Json::Value &request_body,
+		ApiResponse AppsController::OnPutApp(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
 											 const std::shared_ptr<mon::HostMetrics> &vhost,
 											 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -184,7 +184,7 @@ namespace api
 			return ::serdes::JsonFromApplication(app_metrics);
 		}
 
-		ApiResponse AppsController::OnDeleteApp(const std::shared_ptr<http::svr::HttpTransaction> &client,
+		ApiResponse AppsController::OnDeleteApp(const std::shared_ptr<http::svr::HttpExchange> &client,
 												const std::shared_ptr<mon::HostMetrics> &vhost,
 												const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{

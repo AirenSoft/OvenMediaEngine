@@ -47,13 +47,13 @@ protected:
 		uint32_t sequence_number = 0U;
 		uint64_t duration_in_msec = 0U;
 		std::shared_ptr<ov::Data> chunked_data;
-		std::vector<std::shared_ptr<http::svr::HttpTransaction>> client_list;
+		std::vector<std::shared_ptr<http::svr::HttpExchange>> client_list;
 	};
 
 	//--------------------------------------------------------------------
 	// Overriding functions of DashStreamServer
 	//--------------------------------------------------------------------
-	bool ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+	bool ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpExchange> &client,
 													  const SegmentStreamRequestInfo &request_info, SegmentType segment_type) override;
 
 	//--------------------------------------------------------------------

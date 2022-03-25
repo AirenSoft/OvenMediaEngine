@@ -429,8 +429,8 @@ bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, c
 				// 	return false;
 				// }
 
-				auto transaction = connection->GetHttpTransaction();
-				auto info = transaction->GetExtraAs<RtcSignallingInfo>();
+				auto exchange = connection->GetHttpExchange();
+				auto info = exchange->GetExtraAs<RtcSignallingInfo>();
 
 				if (info == nullptr)
 				{
@@ -458,8 +458,8 @@ bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, c
 				// 	return false;
 				// }
 				
-				auto transaction = connection->GetHttpTransaction();
-				auto info = transaction->GetExtraAs<RtcSignallingInfo>();
+				auto exchange = connection->GetHttpExchange();
+				auto info = exchange->GetExtraAs<RtcSignallingInfo>();
 
 				if (info == nullptr)
 				{

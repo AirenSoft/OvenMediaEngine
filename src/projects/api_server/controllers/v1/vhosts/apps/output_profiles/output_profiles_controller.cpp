@@ -35,7 +35,7 @@ namespace api
 			RegisterDelete(R"(\/(?<output_profile_name>[^\/]*))", &OutputProfilesController::OnDeleteOutputProfile);
 		};
 
-		ApiResponse OutputProfilesController::OnPostOutputProfile(const std::shared_ptr<http::svr::HttpTransaction> &client, const Json::Value &request_body,
+		ApiResponse OutputProfilesController::OnPostOutputProfile(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
 																  const std::shared_ptr<mon::HostMetrics> &vhost,
 																  const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -129,7 +129,7 @@ namespace api
 			return {status_codes, std::move(response)};
 		}
 
-		ApiResponse OutputProfilesController::OnGetOutputProfileList(const std::shared_ptr<http::svr::HttpTransaction> &client,
+		ApiResponse OutputProfilesController::OnGetOutputProfileList(const std::shared_ptr<http::svr::HttpExchange> &client,
 																	 const std::shared_ptr<mon::HostMetrics> &vhost,
 																	 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -143,7 +143,7 @@ namespace api
 			return response;
 		}
 
-		ApiResponse OutputProfilesController::OnGetOutputProfile(const std::shared_ptr<http::svr::HttpTransaction> &client,
+		ApiResponse OutputProfilesController::OnGetOutputProfile(const std::shared_ptr<http::svr::HttpExchange> &client,
 																 const std::shared_ptr<mon::HostMetrics> &vhost,
 																 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -160,7 +160,7 @@ namespace api
 			throw CreateNotFoundError(vhost, app, profile_name);
 		}
 
-		ApiResponse OutputProfilesController::OnPutOutputProfile(const std::shared_ptr<http::svr::HttpTransaction> &client,
+		ApiResponse OutputProfilesController::OnPutOutputProfile(const std::shared_ptr<http::svr::HttpExchange> &client,
 																 const Json::Value &request_body,
 																 const std::shared_ptr<mon::HostMetrics> &vhost,
 																 const std::shared_ptr<mon::ApplicationMetrics> &app)
@@ -216,7 +216,7 @@ namespace api
 			return value;
 		}
 
-		ApiResponse OutputProfilesController::OnDeleteOutputProfile(const std::shared_ptr<http::svr::HttpTransaction> &client,
+		ApiResponse OutputProfilesController::OnDeleteOutputProfile(const std::shared_ptr<http::svr::HttpExchange> &client,
 																	const std::shared_ptr<mon::HostMetrics> &vhost,
 																	const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{

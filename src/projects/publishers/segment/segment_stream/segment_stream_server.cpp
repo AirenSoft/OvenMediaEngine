@@ -174,7 +174,7 @@ bool SegmentStreamServer::PrepareInterceptors(
 	return result;
 }
 
-bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<http::svr::HttpTransaction> &client)
+bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<http::svr::HttpExchange> &client)
 {
 	auto response = client->GetResponse();
 	auto request = client->GetRequest();
@@ -227,12 +227,12 @@ void SegmentStreamServer::SetCrossDomains(const info::VHostAppName &vhost_app_na
 	_cors_manager.SetCrossDomains(vhost_app_name, url_list);
 }
 
-std::shared_ptr<pub::Stream> SegmentStreamServer::GetStream(const std::shared_ptr<http::svr::HttpTransaction> &client)
+std::shared_ptr<pub::Stream> SegmentStreamServer::GetStream(const std::shared_ptr<http::svr::HttpExchange> &client)
 {
 	return client->GetExtraAs<pub::Stream>();
 }
 
-std::shared_ptr<mon::StreamMetrics> SegmentStreamServer::GetStreamMetric(const std::shared_ptr<http::svr::HttpTransaction> &client)
+std::shared_ptr<mon::StreamMetrics> SegmentStreamServer::GetStreamMetric(const std::shared_ptr<http::svr::HttpExchange> &client)
 {
 	auto stream_info = GetStream(client);
 	if (stream_info == nullptr)

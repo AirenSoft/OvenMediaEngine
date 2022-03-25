@@ -12,7 +12,7 @@
 #include <base/mediarouter/mediarouter_interface.h>
 #include <base/publisher/publisher.h>
 #include <modules/http/server/http_server_manager.h>
-#include <modules/http/server/interceptors/http_request_interceptors.h>
+#include <modules/http/server/http_request_interceptors.h>
 #include <modules/ice/ice.h>
 
 #include <memory>

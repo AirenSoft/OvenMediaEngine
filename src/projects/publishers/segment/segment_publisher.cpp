@@ -96,7 +96,7 @@ bool SegmentPublisher::OnDeleteHost(const info::Host &host_info)
 	return true;
 }
 
-bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<http::svr::HttpExchange> &client,
 										 const SegmentStreamRequestInfo &request_info,
 										 ov::String &play_list)
 {
@@ -170,7 +170,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<http::svr::HttpTr
 	return true;
 }
 
-bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<http::svr::HttpExchange> &client,
 										const SegmentStreamRequestInfo &request_info,
 										std::shared_ptr<const SegmentItem> &segment)
 {
@@ -580,7 +580,7 @@ void SegmentPublisher::UpdateWebhooksRequestInfo(const WebhooksRequestInfo &info
 }
 
 bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, ov::String &stream_name,
-										   const std::shared_ptr<http::svr::HttpTransaction> &client, const std::shared_ptr<const ov::Url> &request_url,
+										   const std::shared_ptr<http::svr::HttpExchange> &client, const std::shared_ptr<const ov::Url> &request_url,
 										   std::shared_ptr<PlaylistRequestInfo> &request_info)
 {
 	auto request = client->GetRequest();

@@ -20,7 +20,7 @@ std::shared_ptr<SegmentStreamInterceptor> CmafStreamServer::CreateInterceptor()
 	return std::make_shared<CmafInterceptor>();
 }
 
-bool CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+bool CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpExchange> &client,
 																	const SegmentStreamRequestInfo &request_info,
 																	SegmentType segment_type)
 {

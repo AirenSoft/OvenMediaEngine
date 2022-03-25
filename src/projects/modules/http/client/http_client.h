@@ -15,10 +15,11 @@
 
 #include "../http_datastructure.h"
 #include "../http_error.h"
-#include "../protocols/http1/http_response_parser.h"
+#include "../protocol/http1/http_response_parser.h"
 
 namespace http
 {
+
 	namespace clnt
 	{
 		class HttpClient : public ov::EnableSharedFromThis<HttpClient>,
@@ -139,7 +140,7 @@ namespace http
 
 			std::shared_ptr<ov::TlsClientData> _tls_data;
 
-			HttpResponseParser _parser;
+			prot::h1::HttpResponseParser _parser;
 
 			std::mutex _request_mutex;
 			std::atomic<bool> _requested = false;

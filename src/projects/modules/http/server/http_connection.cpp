@@ -102,13 +102,13 @@ namespace http
 			}
 		}
 
-		// Get Last Transaction
-		std::shared_ptr<HttpTransaction> HttpConnection::GetHttpTransaction() const
+		// Get Last Exchange
+		std::shared_ptr<HttpExchange> HttpConnection::GetHttpExchange() const
 		{
 			return _http_transaction;
 		}
 
-		std::shared_ptr<WebSocketSession> HttpConnection::GetWebSocketSession() const
+		std::shared_ptr<ws::WebSocketSession> HttpConnection::GetWebSocketSession() const
 		{
 			return _websocket_session;
 		}
@@ -135,7 +135,7 @@ namespace http
 		}
 
 		// Find Interceptor
-		std::shared_ptr<RequestInterceptor> HttpConnection::FindInterceptor(const std::shared_ptr<HttpTransaction> &transaction)
+		std::shared_ptr<RequestInterceptor> HttpConnection::FindInterceptor(const std::shared_ptr<HttpExchange> &exchange)
 		{
 			if (_interceptor != nullptr)
 			{
@@ -144,18 +144,18 @@ namespace http
 			else 
 			{
 				// Cache interceptor
-				_interceptor = _server->FindInterceptor(transaction);
+				_interceptor = _server->FindInterceptor(exchange);
 			}
 
 			// Find interceptor from server
 			return _interceptor;
 		}
 
-		bool HttpConnection::UpgradeToWebSocket(const std::shared_ptr<HttpTransaction> &transaction)
+		bool HttpConnection::UpgradeToWebSocket(const std::shared_ptr<HttpExchange> &exchange)
 		{
 			_connection_type = ConnectionType::WebSocket;
 					
-			_websocket_session = std::make_shared<WebSocketSession>(_http_transaction);
+			_websocket_session = std::make_shared<ws::WebSocketSession>(_http_transaction);
 			_websocket_session->Upgrade();
 
 			return true;
@@ -240,7 +240,7 @@ namespace http
 
 			if (_http_transaction == nullptr)
 			{
-				_http_transaction = std::make_shared<HttpTransaction>(GetSharedPtr());
+				_http_transaction = std::make_shared<h1::HttpTransaction>(GetSharedPtr());
 			}
 
 			auto processed_data_length = _http_transaction->OnRequestPacketReceived(data);
@@ -253,7 +253,7 @@ namespace http
 
 			switch(_http_transaction->GetStatus())
 			{
-				case HttpTransaction::Status::Completed:
+				case HttpExchange::Status::Completed:
 					if (_http_transaction->IsKeepAlive() == false)
 					{
 						Close(PhysicalPortDisconnectReason::Disconnect);
@@ -262,7 +262,7 @@ namespace http
 					_http_transaction.reset();
 					break;
 
-				case HttpTransaction::Status::Upgrade:
+				case HttpExchange::Status::Upgrade:
 					if (_http_transaction->IsWebSocketUpgradeRequest())
 					{
 						UpgradeToWebSocket(_http_transaction);
@@ -275,16 +275,16 @@ namespace http
 					_http_transaction.reset();
 					break;
 
-				case HttpTransaction::Status::Moved:
+				case HttpExchange::Status::Moved:
 					_http_transaction.reset();
 					break;
 					
-				case HttpTransaction::Status::Error:
+				case HttpExchange::Status::Error:
 					Close(PhysicalPortDisconnectReason::Error);
 					return -1;
 
-				case HttpTransaction::Status::Init:
-				case HttpTransaction::Status::Exchanging:
+				case HttpExchange::Status::Init:
+				case HttpExchange::Status::Exchanging:
 				default:
 					break;
 			}
@@ -296,7 +296,7 @@ namespace http
 		{
 			if (_websocket_frame == nullptr)
 			{
-				_websocket_frame = std::make_shared<ws::Frame>();
+				_websocket_frame = std::make_shared<prot::ws::Frame>();
 			}
 		
 			ssize_t read_bytes = 0;
@@ -308,16 +308,16 @@ namespace http
 					return -1;
 				}
 
-				if (_websocket_session->GetStatus() == HttpTransaction::Status::Exchanging)
+				if (_websocket_session->GetStatus() == HttpExchange::Status::Exchanging)
 				{
 					// Normal
 				}
-				else if (_websocket_session->GetStatus() == HttpTransaction::Status::Completed)
+				else if (_websocket_session->GetStatus() == HttpExchange::Status::Completed)
 				{
 					Close(PhysicalPortDisconnectReason::Disconnect);
 					return -1;
 				}
-				else if (_websocket_session->GetStatus() == HttpTransaction::Status::Error)
+				else if (_websocket_session->GetStatus() == HttpExchange::Status::Error)
 				{
 					Close(PhysicalPortDisconnectReason::Error);
 					return -1;
@@ -339,7 +339,13 @@ namespace http
 		{
 			ssize_t comsumed_bytes = 0;
 
-			if (_http2_preface.IsConfirmed() == false)
+			if (_http2_preface.IsConfirmed() == true)
+			{
+				// Create connection control stream
+				auto stream = std::make_shared<h2::HttpStream>(GetSharedPtr(), 0);
+				_http_stream_map.emplace(0, stream);
+			}
+			else
 			{
 				comsumed_bytes = _http2_preface.AppendData(data);
 				if (comsumed_bytes == -1)
@@ -365,7 +371,22 @@ namespace http
 
 			if (_http2_frame->GetState() == Http2Frame::State::Completed)
 			{
-				logti("HTTP/2 Frame Received : %s", _http2_frame->ToString().CStr());
+				logtd("HTTP/2 Frame Received : %s", _http2_frame->ToString().CStr());
+				
+				std::shared_ptr<h2::HttpStream> stream;
+				auto stream_it = _http_stream_map.find(_http2_frame->GetStreamId());
+				if (stream_it != _http_stream_map.end())
+				{
+					stream = stream_it->second;
+				}
+				else
+				{
+					stream = std::make_shared<h2::HttpStream>(GetSharedPtr(), _http2_frame->GetStreamId());
+					_http_stream_map.emplace(_http2_frame->GetStreamId(), stream);
+				}
+
+				stream->OnFrameReceived(_http2_frame);
+
 				_http2_frame.reset();
 			}
 

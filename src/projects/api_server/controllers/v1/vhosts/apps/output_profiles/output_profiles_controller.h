@@ -21,27 +21,27 @@ namespace api
 
 		protected:
 			// POST /v1/vhosts/<vhost_name>/apps/<app_name>/outputProfiles
-			ApiResponse OnPostOutputProfile(const std::shared_ptr<http::svr::HttpTransaction> &client, const Json::Value &request_body,
+			ApiResponse OnPostOutputProfile(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
 											const std::shared_ptr<mon::HostMetrics> &vhost,
 											const std::shared_ptr<mon::ApplicationMetrics> &app);
 
 			// GET /v1/vhosts/<vhost_name>/apps/<app_name>/outputProfiles
-			ApiResponse OnGetOutputProfileList(const std::shared_ptr<http::svr::HttpTransaction> &client,
+			ApiResponse OnGetOutputProfileList(const std::shared_ptr<http::svr::HttpExchange> &client,
 											   const std::shared_ptr<mon::HostMetrics> &vhost,
 											   const std::shared_ptr<mon::ApplicationMetrics> &app);
 
 			// GET /v1/vhosts/<vhost_name>/apps/<app_name>/outputProfiles/<output_profile_name>
-			ApiResponse OnGetOutputProfile(const std::shared_ptr<http::svr::HttpTransaction> &client,
+			ApiResponse OnGetOutputProfile(const std::shared_ptr<http::svr::HttpExchange> &client,
 										   const std::shared_ptr<mon::HostMetrics> &vhost,
 										   const std::shared_ptr<mon::ApplicationMetrics> &app);
 
 			// PUT /v1/vhosts/<vhost_name>/apps/<app_name>/outputProfiles/<output_profile_name>
-			ApiResponse OnPutOutputProfile(const std::shared_ptr<http::svr::HttpTransaction> &client, const Json::Value &request_body,
+			ApiResponse OnPutOutputProfile(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
 										   const std::shared_ptr<mon::HostMetrics> &vhost,
 										   const std::shared_ptr<mon::ApplicationMetrics> &app);
 
 			// DELETE /v1/vhosts/<vhost_name>/apps/<app_name>/outputProfiles/<output_profile_name>
-			ApiResponse OnDeleteOutputProfile(const std::shared_ptr<http::svr::HttpTransaction> &client,
+			ApiResponse OnDeleteOutputProfile(const std::shared_ptr<http::svr::HttpExchange> &client,
 											  const std::shared_ptr<mon::HostMetrics> &vhost,
 											  const std::shared_ptr<mon::ApplicationMetrics> &app);
 		};

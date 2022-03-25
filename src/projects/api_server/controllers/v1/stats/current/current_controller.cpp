@@ -23,7 +23,7 @@ namespace api
 				CreateSubController<VHostsController>(R"(\/vhosts)");
 			}
 
-			ApiResponse CurrentController::OnGetServerMetrics(const std::shared_ptr<http::svr::HttpTransaction> &client)
+			ApiResponse CurrentController::OnGetServerMetrics(const std::shared_ptr<http::svr::HttpExchange> &client)
 			{
 				auto serverMetric = MonitorInstance->GetServerMetrics();
 				return ::serdes::JsonFromMetrics(serverMetric);

@@ -62,10 +62,10 @@ bool SegmentWorker::Stop()
 //====================================================================================================
 // add work info
 //====================================================================================================
-bool SegmentWorker::PushConnection(const std::shared_ptr<http::svr::HttpTransaction> &transaction)
+bool SegmentWorker::PushConnection(const std::shared_ptr<http::svr::HttpExchange> &exchange)
 {
 	std::unique_lock<std::mutex> lock(_work_info_guard);
-	_transaction_list_to_process.push(transaction);
+	_http_exchange_list_to_process.push(exchange);
 
 	_queue_event.Notify();
 
@@ -75,15 +75,15 @@ bool SegmentWorker::PushConnection(const std::shared_ptr<http::svr::HttpTransact
 //====================================================================================================
 // pop work info
 //====================================================================================================
-std::shared_ptr<http::svr::HttpTransaction> SegmentWorker::PopTransaction()
+std::shared_ptr<http::svr::HttpExchange> SegmentWorker::PopExchange()
 {
 	std::unique_lock<std::mutex> lock(_work_info_guard);
 
-	if (_transaction_list_to_process.empty())
+	if (_http_exchange_list_to_process.empty())
 		return nullptr;
 
-	auto work_info = _transaction_list_to_process.front();
-	_transaction_list_to_process.pop();
+	auto work_info = _http_exchange_list_to_process.front();
+	_http_exchange_list_to_process.pop();
 
 	return work_info;
 }
@@ -98,9 +98,9 @@ void SegmentWorker::WorkerThread()
 		// quequ event wait
 		_queue_event.Wait();
 
-		auto transaction = PopTransaction();
+		auto exchange = PopExchange();
 
-		if (transaction == nullptr)
+		if (exchange == nullptr)
 		{
 			if (_stop_thread_flag == false)
 			{
@@ -111,9 +111,9 @@ void SegmentWorker::WorkerThread()
 			continue;
 		}
 
-		if (_process_handler(transaction) == false)
+		if (_process_handler(exchange) == false)
 		{
-			logtd("Segment process handler fail - target(%s)", transaction->GetRequest()->ToString().CStr());
+			logtd("Segment process handler fail - target(%s)", exchange->GetRequest()->ToString().CStr());
 		}
 	}
 }
@@ -154,18 +154,18 @@ bool SegmentWorkerManager::Stop()
 // Worker Add
 //====================================================================================================
 #define MAX_WORKER_INDEX 100000000
-bool SegmentWorkerManager::PushConnection(const std::shared_ptr<http::svr::HttpTransaction> &transaction)
+bool SegmentWorkerManager::PushConnection(const std::shared_ptr<http::svr::HttpExchange> &exchange)
 {
 	int place = 0;
-	if (transaction->GetConnection()->GetConnectionType() == http::ConnectionType::Http10 || 
-		transaction->GetConnection()->GetConnectionType() == http::ConnectionType::Http11)
+	if (exchange->GetConnection()->GetConnectionType() == http::ConnectionType::Http10 || 
+		exchange->GetConnection()->GetConnectionType() == http::ConnectionType::Http11)
 	{
 		// HTTP/1.1 pipelining must be placed in the same thread as requests must be responded to in the order in which they were requested.
-		place = transaction->GetConnection()->GetId() % _workers.size();
+		place = exchange->GetConnection()->GetId() % _workers.size();
 	}
-	else if (transaction->GetConnection()->GetConnectionType() == http::ConnectionType::Http20)
+	else if (exchange->GetConnection()->GetConnectionType() == http::ConnectionType::Http20)
 	{
-		// HTTP/2.0 can give a response to a transaction(stream) in any order.
+		// HTTP/2.0 can give a response to a exchange(stream) in any order.
 		if (_worker_index < MAX_WORKER_INDEX)
 		{
 			_worker_index++;
@@ -175,16 +175,16 @@ bool SegmentWorkerManager::PushConnection(const std::shared_ptr<http::svr::HttpT
 			_worker_index = 0;
 		}
 		
-		place = transaction->GetConnection()->GetId() % _workers.size();
+		place = exchange->GetConnection()->GetId() % _workers.size();
 	}
 	else
 	{
-		logte("Invalid connection type of transaction (%s) - target(%s)", transaction->GetRequest()->ToString(), 
-		StringFromConnectionType(transaction->GetConnection()->GetConnectionType()));
+		logte("Invalid connection type of exchange (%s) - target(%s)", exchange->GetRequest()->ToString(), 
+		StringFromConnectionType(exchange->GetConnection()->GetConnectionType()));
 		return false;
 	}
 	
-	_workers[place]->PushConnection(transaction);
+	_workers[place]->PushConnection(exchange);
 
 	return true;
 }

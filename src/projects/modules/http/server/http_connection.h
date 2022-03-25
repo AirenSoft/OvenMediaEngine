@@ -11,11 +11,11 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/client_socket.h>
 
-#include "transactions/http_transaction.h"
-#include "transactions/websocket_session.h"
-#include "transactions/http2_stream.h"
+#include "http1/http_transaction.h"
+#include "http2/http2_stream.h"
+#include "web_socket/web_socket_session.h"
 
-#include "../protocols/http2/http2_preface.h"
+#include "../protocol/http2/http2_preface.h"
 
 //TODO(Getroot) : Move to Server.xml
 #define HTTP_CONNECTION_TIMEOUT_MS		10 * 1000
@@ -44,9 +44,9 @@ namespace http
 			std::shared_ptr<ov::TlsServerData> GetTlsData() const;
 			std::shared_ptr<ov::ClientSocket> GetSocket() const;
 			ConnectionType GetConnectionType() const;
-			std::shared_ptr<HttpTransaction> GetHttpTransaction() const;
+			std::shared_ptr<HttpExchange> GetHttpExchange() const;
 			// Get Websocket Session
-			std::shared_ptr<WebSocketSession> GetWebSocketSession() const;
+			std::shared_ptr<ws::WebSocketSession> GetWebSocketSession() const;
 
 			// Get ID
 			uint32_t GetId() const;
@@ -54,7 +54,7 @@ namespace http
 			// Get interceptor, return cached interceptor
 			std::shared_ptr<RequestInterceptor> GetInterceptor() const;
 			// Find interceptor
-			std::shared_ptr<RequestInterceptor> FindInterceptor(const std::shared_ptr<HttpTransaction> &transaction);
+			std::shared_ptr<RequestInterceptor> FindInterceptor(const std::shared_ptr<HttpExchange> &exchange);
 
 			// To string
 			ov::String ToString() const;
@@ -65,11 +65,11 @@ namespace http
 			ssize_t OnHttp2RequestReceived(const std::shared_ptr<const ov::Data> &data);
 			ssize_t OnWebSocketDataReceived(const std::shared_ptr<const ov::Data> &data);
 
-			bool AddStream(const std::shared_ptr<HttpTransaction> &transaction);
-			std::shared_ptr<HttpTransaction> FindHttpStream(uint32_t stream_id);
+			bool AddStream(const std::shared_ptr<HttpExchange> &exchange);
+			std::shared_ptr<HttpExchange> FindHttpStream(uint32_t stream_id);
 			bool DeleteHttpStream(uint32_t stream_id);
 
-			bool UpgradeToWebSocket(const std::shared_ptr<HttpTransaction> &transaction);
+			bool UpgradeToWebSocket(const std::shared_ptr<HttpExchange> &exchange);
 
 			void CheckTimeout();
 			
@@ -82,7 +82,7 @@ namespace http
 			///////////////////////
 			// For HTTP/1.1
 			///////////////////////
-			std::shared_ptr<HttpTransaction> _http_transaction = nullptr;
+			std::shared_ptr<h1::HttpTransaction> _http_transaction = nullptr;
 
 			///////////////////////
 			// For HTTP/2.0
@@ -92,15 +92,15 @@ namespace http
 			Http2Preface _http2_preface;
 			// HTTP/2 Frame
 			std::shared_ptr<Http2Frame> _http2_frame = nullptr;
-			// Stream Identifier, HttpTransaction
-			std::map<uint32_t, std::shared_ptr<HttpStream>> _http_stream_map;
+			// Stream Identifier, HttpExchange
+			std::map<uint32_t, std::shared_ptr<h2::HttpStream>> _http_stream_map;
 
 			///////////////////////
 			// For Websocket
 			///////////////////////
-			std::shared_ptr<WebSocketSession> _websocket_session = nullptr;
+			std::shared_ptr<ws::WebSocketSession> _websocket_session = nullptr;
 			// Websocket Frame
-			std::shared_ptr<ws::Frame> _websocket_frame = nullptr;
+			std::shared_ptr<prot::ws::Frame> _websocket_frame = nullptr;
 
 			std::shared_ptr<RequestInterceptor> _interceptor = nullptr;
 

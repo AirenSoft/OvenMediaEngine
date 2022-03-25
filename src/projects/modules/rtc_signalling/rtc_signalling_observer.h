@@ -10,7 +10,7 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <modules/http/server/http_server.h>
-#include <modules/http/protocols/websocket/web_socket_client.h>
+#include <modules/http/server/web_socket/web_socket_client.h>
 #include <modules/ice/ice.h>
 #include <modules/sdp/session_description.h>
 

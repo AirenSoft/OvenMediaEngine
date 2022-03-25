@@ -248,14 +248,14 @@ namespace http
 			return true;
 		}
 
-		std::shared_ptr<RequestInterceptor> HttpServer::FindInterceptor(const std::shared_ptr<HttpTransaction> &transaction)
+		std::shared_ptr<RequestInterceptor> HttpServer::FindInterceptor(const std::shared_ptr<HttpExchange> &exchange)
 		{
 			// Find interceptor for the request
 			std::shared_lock<std::shared_mutex> guard(_interceptor_list_mutex);
 
 			for (auto &interceptor : _interceptor_list)
 			{
-				if (interceptor->IsInterceptorForRequest(transaction))
+				if (interceptor->IsInterceptorForRequest(exchange))
 				{
 					return interceptor;
 				}

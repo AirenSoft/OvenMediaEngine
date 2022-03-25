@@ -8,14 +8,14 @@
 //==============================================================================
 #pragma once
 
-#include "../protocols/http1/http_request_parser.h"
-#include "interceptors/http_request_interceptor.h"
+#include "../protocol/http1/http_request_parser.h"
+#include "http_request_interceptor.h"
 
 namespace http
 {
 	namespace svr
 	{
-		class HttpTransaction;
+		class HttpExchange;
 
 		class HttpRequest : public ov::EnableSharedFromThis<HttpRequest>
 		{
@@ -33,18 +33,6 @@ namespace http
 
 			void SetConnectionType(ConnectionType type);
 			ConnectionType GetConnectionType() const;
-
-			HttpParser &GetHeaderParser()
-			{
-				// TODO(h2) : Return the correct parser according to the ConnectionType (for HTTP/1 or HTTP/2).
-				return _http_header_parser;
-			}
-
-			const HttpParser &GetHeaderParser() const
-			{
-				// TODO(h2) : Return the correct parser according to the ConnectionType (for HTTP/1 or HTTP/2).
-				return _http_header_parser;
-			}
 
 			ssize_t AppendHeaderData(const std::shared_ptr<const ov::Data> &data)
 			{
@@ -71,7 +59,7 @@ namespace http
 
 			StatusCode GetHeaderParingStatus() const
 			{
-				return GetHeaderParser().GetStatus();
+				return _http_header_parser.GetStatus();
 			}
 
 			Method GetMethod() const noexcept
@@ -171,7 +159,7 @@ namespace http
 			ov::String _request_uri;
 
 			// For HTTP/1.1
-			HttpRequestHeaderParser _http_header_parser;
+			prot::h1::HttpRequestHeaderParser _http_header_parser;
 
 			// TODO(h2) : Implement this
 			// For HTTP/2.0

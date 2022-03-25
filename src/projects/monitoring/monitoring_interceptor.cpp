@@ -14,7 +14,7 @@
 //====================================================================================================
 // IsInterceptorForRequest
 //====================================================================================================
-bool MonitoringInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpTransaction> &client)
+bool MonitoringInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpExchange> &client)
 {
 	const auto request = client->GetRequest();
 	

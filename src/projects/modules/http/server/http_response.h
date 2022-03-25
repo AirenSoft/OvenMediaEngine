@@ -16,12 +16,12 @@ namespace http
 {
 	namespace svr
 	{
-		class HttpTransaction;
+		class HttpExchange;
 
 		class HttpResponse : public ov::EnableSharedFromThis<HttpResponse>
 		{
 		public:
-			friend class HttpTransaction;
+			friend class HttpExchange;
 
 			class IoCallback
 			{

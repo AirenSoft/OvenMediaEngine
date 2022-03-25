@@ -10,7 +10,7 @@
 
 #include <modules/http/server/http_server.h>
 #include <modules/http/server/https_server.h>
-#include <modules/http/server/interceptors/http_request_interceptors.h>
+#include <modules/http/server/http_request_interceptors.h>
 
 // Peer ID of OME
 #define P2P_OME_PEER_ID                             0

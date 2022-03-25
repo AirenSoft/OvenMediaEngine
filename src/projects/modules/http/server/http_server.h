@@ -14,7 +14,7 @@
 
 #include "../http_error.h"
 #include "http_connection.h"
-#include "interceptors/http1/http_default_interceptor.h"
+#include "http_default_interceptor.h"
 
 #define HTTP_SERVER_USE_DEFAULT_COUNT PHYSICAL_PORT_USE_DEFAULT_COUNT
 
@@ -51,7 +51,7 @@ namespace http
 			bool IsRunning() const;
 
 			bool AddInterceptor(const std::shared_ptr<RequestInterceptor> &interceptor);
-			std::shared_ptr<RequestInterceptor> FindInterceptor(const std::shared_ptr<HttpTransaction> &transaction);
+			std::shared_ptr<RequestInterceptor> FindInterceptor(const std::shared_ptr<HttpExchange> &exchange);
 			bool RemoveInterceptor(const std::shared_ptr<RequestInterceptor> &interceptor);
 
 			// If the iterator returns true, FindClient() will return the client
@@ -87,8 +87,6 @@ namespace http
 
 			std::shared_mutex _interceptor_list_mutex;
 			std::vector<std::shared_ptr<RequestInterceptor>> _interceptor_list;
-			std::shared_ptr<RequestInterceptor> _default_interceptor = std::make_shared<DefaultInterceptor>();
-
 			std::vector<std::shared_ptr<ocst::VirtualHost>> _virtual_host_list;
 
 		private:
