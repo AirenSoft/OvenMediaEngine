@@ -15,11 +15,11 @@ std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<WebRtcPubli
                                                const std::shared_ptr<const SessionDescription> &offer_sdp,
                                                const std::shared_ptr<const SessionDescription> &peer_sdp,
                                                const std::shared_ptr<IcePort> &ice_port,
-											   const std::shared_ptr<http::svr::ws::Client> &ws_client)
+											   const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session)
 {
 	// Session Id of the offer sdp is unique value
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), offer_sdp->GetSessionId());
-	auto session = std::make_shared<RtcSession>(session_info, publisher, application, stream, offer_sdp, peer_sdp, ice_port, ws_client);
+	auto session = std::make_shared<RtcSession>(session_info, publisher, application, stream, offer_sdp, peer_sdp, ice_port, ws_session);
 	if(!session->Start())
 	{
 		return nullptr;
@@ -34,14 +34,14 @@ RtcSession::RtcSession(const info::Session &session_info,
 					   const std::shared_ptr<const SessionDescription> &offer_sdp,
 					   const std::shared_ptr<const SessionDescription> &peer_sdp,
 					   const std::shared_ptr<IcePort> &ice_port,
-					   const std::shared_ptr<http::svr::ws::Client> &ws_client)
+					   const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session)
 	: Session(session_info, application, stream), Node(NodeType::Edge)
 {
 	_publisher = publisher;
 	_offer_sdp = offer_sdp;
 	_peer_sdp = peer_sdp;
 	_ice_port = ice_port;
-	_ws_client = ws_client;
+	_ws_session = ws_session;
 }
 
 RtcSession::~RtcSession()
@@ -186,7 +186,7 @@ bool RtcSession::Stop()
 	}
 
 	// TODO(Getroot): Doesn't need this?
-	//_ws_client->Close();
+	//_ws_session->Close();
 
 	ov::Node::Stop();
 
@@ -208,9 +208,9 @@ const std::shared_ptr<const SessionDescription>& RtcSession::GetPeerSDP() const
 	return _peer_sdp;
 }
 
-const std::shared_ptr<http::svr::ws::Client>& RtcSession::GetWSClient()
+const std::shared_ptr<http::svr::ws::WebSocketSession>& RtcSession::GetWSClient()
 {
-	return _ws_client;
+	return _ws_session;
 }
 
 void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_info,

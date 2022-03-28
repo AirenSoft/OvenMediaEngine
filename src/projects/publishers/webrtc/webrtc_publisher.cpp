@@ -351,7 +351,7 @@ bool WebRtcPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Ap
  */
 
 // Called when receives request offer sdp from client
-std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<http::svr::ws::Client> &ws_client,
+std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
 																		  const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 																		  std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay)
 {
@@ -360,7 +360,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 	ov::String final_stream_name = stream_name;
 
 	[[maybe_unused]] RequestStreamResult result = RequestStreamResult::init;
-	auto request = ws_client->GetClient()->GetRequest();
+	auto request = ws_session->GetRequest();
 	auto remote_address = request->GetRemote()->GetRemoteAddress();
 	auto uri = request->GetUri();
 	auto parsed_url = ov::Url::Parse(uri);
@@ -516,25 +516,25 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 	session_description->Update();
 
 	// Passed AccessControl
-	ws_client->AddData("authorized", true);
-	ws_client->AddData("new_url", parsed_url->ToUrlString(true));
-	ws_client->AddData("stream_expired", session_life_time);
+	ws_session->AddUserData("authorized", true);
+	ws_session->AddUserData("new_url", parsed_url->ToUrlString(true));
+	ws_session->AddUserData("stream_expired", session_life_time);
 
 	return session_description;
 }
 
 // Called when receives an answer sdp from client
-bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws::Client> &ws_client,
+bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
 											 const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 											 const std::shared_ptr<const SessionDescription> &offer_sdp,
 											 const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
-	auto [autorized_exist, authorized] = ws_client->GetData("authorized");
+	auto [autorized_exist, authorized] = ws_session->GetUserData("authorized");
 	ov::String uri;
 	uint64_t session_life_time = 0;
 	if(autorized_exist == true && std::holds_alternative<bool>(authorized) == true && std::get<bool>(authorized) == true)
 	{
-		auto [new_url_exist, new_url] = ws_client->GetData("new_url");
+		auto [new_url_exist, new_url] = ws_session->GetUserData("new_url");
 		if(new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
 		{
 			uri = std::get<ov::String>(new_url);
@@ -544,7 +544,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 			return false;
 		}
 
-		auto [stream_expired_exist, stream_expired] = ws_client->GetData("stream_expired");
+		auto [stream_expired_exist, stream_expired] = ws_session->GetUserData("stream_expired");
 		if(stream_expired_exist == true && std::holds_alternative<uint64_t>(stream_expired) == true)
 		{
 			session_life_time = std::get<uint64_t>(stream_expired);
@@ -571,7 +571,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	auto final_stream_name = parsed_url->Stream();
 
 	// SignedPolicy and SignedToken
-	auto request = ws_client->GetClient()->GetRequest();
+	auto request = ws_session->GetRequest();
 	auto remote_address = request->GetRemote()->GetRemoteAddress();
 	
 	ov::String remote_sdp_text = peer_sdp->ToString();
@@ -585,7 +585,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 		return false;
 	}
 
-	auto session = RtcSession::Create(Publisher::GetSharedPtrAs<WebRtcPublisher>(), application, stream, offer_sdp, peer_sdp, _ice_port, ws_client);
+	auto session = RtcSession::Create(Publisher::GetSharedPtrAs<WebRtcPublisher>(), application, stream, offer_sdp, peer_sdp, _ice_port, ws_session);
 	if (session != nullptr)
 	{
 		stream->AddSession(session);
@@ -646,19 +646,19 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	return true;
 }
 
-bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::Client> &ws_client,
+bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
 									const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 									const std::shared_ptr<const SessionDescription> &offer_sdp,
 									const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
 	logti("Stop command received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 
-	ov::String uri { ws_client->GetClient()->GetRequest()->GetUri() };
+	ov::String uri { ws_session->GetRequest()->GetUri() };
 	auto parsed_url { ov::Url::Parse(uri) };
 
 	auto final_vhost_app_name = vhost_app_name;
 	auto final_stream_name = stream_name;
-	auto [new_url_exist, new_url] = ws_client->GetData("new_url");
+	auto [new_url_exist, new_url] = ws_session->GetUserData("new_url");
 	if (new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
 	{
 		uri = std::get<ov::String>(new_url);
@@ -675,7 +675,7 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::Client>
 	}
 
 	// Send Close to Admission Webhooks
-	auto remote_address { ws_client->GetClient()->GetRequest()->GetRemote()->GetRemoteAddress() };
+	auto remote_address { ws_session->GetRequest()->GetRemote()->GetRemoteAddress() };
 	if (parsed_url && remote_address)
 	{
 		SendCloseAdmissionWebhooks(parsed_url, remote_address);
@@ -704,7 +704,7 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::Client>
 	return true;
 }
 
-bool WebRtcPublisher::OnIceCandidate(const std::shared_ptr<http::svr::ws::Client> &ws_client,
+bool WebRtcPublisher::OnIceCandidate(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
 									 const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 									 const std::shared_ptr<RtcIceCandidate> &candidate,
 									 const ov::String &username_fragment)

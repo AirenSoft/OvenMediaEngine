@@ -27,12 +27,11 @@ namespace http
 				}
 			}
 
-			std::shared_ptr<HttpRequest> HttpStream::CreateRequestInstance()
+			std::shared_ptr<HttpRequest> HttpStream::GetRequest() const
 			{
 				return nullptr;
 			}
-
-			std::shared_ptr<HttpResponse> HttpStream::CreateResponseInstance()
+			std::shared_ptr<HttpResponse> HttpStream::GetResponse() const
 			{
 				return nullptr;
 			}

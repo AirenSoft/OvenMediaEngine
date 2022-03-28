@@ -38,8 +38,6 @@ namespace http
 			HttpExchange(const std::shared_ptr<HttpExchange> &exchange); // Copy
 			virtual ~HttpExchange() = default;
 
-			void Initialize();
-
 			// Get connection
 			std::shared_ptr<HttpConnection> GetConnection() const;
 			
@@ -49,11 +47,10 @@ namespace http
 			// Get Connection Policy
 			bool IsKeepAlive() const;
 
-			virtual std::shared_ptr<HttpRequest> GetRequest();
-			virtual std::shared_ptr<HttpResponse> GetResponse();
+			ov::String ToString() const;
 
-			virtual std::shared_ptr<const HttpRequest> GetRequest() const;
-			virtual std::shared_ptr<const HttpResponse> GetResponse() const;
+			virtual std::shared_ptr<HttpRequest> GetRequest() const = 0;
+			virtual std::shared_ptr<HttpResponse> GetResponse() const = 0;
 
 			template <typename T>
 			void SetExtra(std::shared_ptr<T> extra)
@@ -91,12 +88,7 @@ namespace http
 			void SetStatus(Status status);
 
 		private:
-			virtual std::shared_ptr<HttpRequest> CreateRequestInstance();
-			virtual std::shared_ptr<HttpResponse> CreateResponseInstance();
-
 			std::shared_ptr<HttpConnection> _connection = nullptr;
-			std::shared_ptr<HttpRequest> _request = nullptr;
-			std::shared_ptr<HttpResponse> _response = nullptr;
 
 			Status _status = Status::None;
 

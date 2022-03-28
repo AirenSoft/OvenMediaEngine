@@ -55,16 +55,9 @@ namespace http
 					return false;
 				}
 
-				auto client = websocket_session->GetClient();
-				if (client == nullptr)
-				{
-					logtw("%s has not websocket client", exchange->GetConnection()->ToString().CStr());
-					return false;
-				}
-
 				if (_connection_handler != nullptr)
 				{
-					return _connection_handler(client);
+					return _connection_handler(websocket_session);
 				}
 				else
 				{
@@ -84,12 +77,10 @@ namespace http
 					return false;
 				}
 
-				auto client = websocket_session->GetClient();
-				
 				// Callback the payload
 				if (_message_handler != nullptr)
 				{
-					if (_message_handler(client, data) == false)
+					if (_message_handler(websocket_session, data) == false)
 					{
 						return -1;
 					}
@@ -106,11 +97,10 @@ namespace http
 			void Interceptor::OnError(const std::shared_ptr<HttpExchange> &exchange, StatusCode status_code)
 			{
 				auto websocket_session = std::dynamic_pointer_cast<WebSocketSession>(exchange);
-				auto client = websocket_session->GetClient();
 
 				if ((_error_handler != nullptr))
 				{
-					_error_handler(client, ov::Error::CreateError(WEBSOCKET_ERROR_DOMAIN, static_cast<int>(status_code), "%s", StringFromStatusCode(status_code)));
+					_error_handler(websocket_session, ov::Error::CreateError(WEBSOCKET_ERROR_DOMAIN, static_cast<int>(status_code), "%s", StringFromStatusCode(status_code)));
 				}
 			}
 
@@ -123,11 +113,9 @@ namespace http
 					return;
 				}
 
-				auto client = websocket_session->GetClient();
-
 				if (_close_handler != nullptr)
 				{
-					_close_handler(client, reason);
+					_close_handler(websocket_session, reason);
 				}
 			}
 

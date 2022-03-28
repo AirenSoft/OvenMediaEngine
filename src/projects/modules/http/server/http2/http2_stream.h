@@ -27,17 +27,17 @@ namespace http
 				HttpStream(const std::shared_ptr<HttpConnection> &connection, uint32_t stream_id);
 				virtual ~HttpStream() = default;
 
+				// Implement HttpExchange
+				std::shared_ptr<HttpRequest> GetRequest() const override;
+				std::shared_ptr<HttpResponse> GetResponse() const override;
+
 				// Get Stream ID
 				uint32_t GetStreamId() const;
-
 				bool OnFrameReceived(const std::shared_ptr<const Http2Frame> &frame);
 
 			private:
 				// Send Settings frame and Window_Update frame
 				bool SendInitialControlMessage();
-
-				std::shared_ptr<HttpRequest> CreateRequestInstance() override;
-				std::shared_ptr<HttpResponse> CreateResponseInstance() override;
 
 				uint32_t _stream_id = 0;
 			};

@@ -28,12 +28,11 @@ RtcP2PManager::RtcP2PManager(const cfg::Server &server_config)
 	}
 }
 
-std::shared_ptr<RtcPeerInfo> RtcP2PManager::CreatePeerInfo(peer_id_t id, const std::shared_ptr<http::svr::ws::Client> &ws_client)
+std::shared_ptr<RtcPeerInfo> RtcP2PManager::CreatePeerInfo(peer_id_t id, const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session)
 {
-	auto request = ws_client->GetClient()->GetRequest();
-
+	auto request = ws_session->GetRequest();
 	auto user_agent = request->GetHeader("USER-AGENT");
-	auto peer_info = RtcPeerInfo::FromUserAgent(id, user_agent, ws_client);
+	auto peer_info = RtcPeerInfo::FromUserAgent(id, user_agent, ws_session);
 
 	if (IsEnabled())
 	{

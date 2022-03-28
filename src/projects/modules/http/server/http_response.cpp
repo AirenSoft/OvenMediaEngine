@@ -26,6 +26,21 @@ namespace http
 			OV_ASSERT2(_client_socket != nullptr);
 		}
 
+		HttpResponse::HttpResponse(const std::shared_ptr<HttpResponse> &http_response)
+		{
+			OV_ASSERT2(http_response != nullptr);
+
+			_client_socket = http_response->_client_socket;
+			_tls_data = http_response->_tls_data;
+			_status_code = http_response->_status_code;
+			_reason = http_response->_reason;
+			_is_header_sent = http_response->_is_header_sent;
+			_response_header = http_response->_response_header;
+			_response_data_list = http_response->_response_data_list;
+			_response_data_size = http_response->_response_data_size;
+			_default_value = http_response->_default_value;
+		}
+
 		void HttpResponse::SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data)
 		{
 			_tls_data = tls_data;

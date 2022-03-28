@@ -21,6 +21,7 @@ namespace http
 		{
 		public:
 			HttpResponse(const std::shared_ptr<ov::ClientSocket> &client_socket);
+			HttpResponse(const std::shared_ptr<HttpResponse> &http_response);
 			~HttpResponse() override = default;
 
 			std::shared_ptr<ov::ClientSocket> GetRemote();
@@ -51,16 +52,6 @@ namespace http
 			bool AppendString(const ov::String &string);
 			bool AppendFile(const ov::String &filename);
 
-			// Send the data immediately
-			// Can be used for response without content-length
-			template <typename T>
-			bool Send(const T *data)
-			{
-				return Send(data, sizeof(T));
-			}
-			virtual bool Send(const void *data, size_t length);
-			virtual bool Send(const std::shared_ptr<const ov::Data> &data);
-
 			uint32_t Response();
 
 			bool Close();
@@ -74,6 +65,16 @@ namespace http
 			// Get Response Header
 			const std::unordered_map<ov::String, std::vector<ov::String>> &GetResponseHeaderList() const;
 			void ResetResponseData();
+
+			// Can be used for response without content-length
+			template <typename T>
+			bool Send(const T *data)
+			{
+				return Send(data, sizeof(T));
+			}
+			virtual bool Send(const void *data, size_t length);
+			virtual bool Send(const std::shared_ptr<const ov::Data> &data);
+			
 		private:
 			virtual uint32_t SendHeader();
 			virtual uint32_t SendResponse();

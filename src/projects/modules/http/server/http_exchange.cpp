@@ -24,29 +24,15 @@ namespace http
 
 		HttpExchange::HttpExchange(const std::shared_ptr<HttpExchange> &exchange)
 		{
-			_request = exchange->_request;
-			_response = exchange->_response;
 			_status = exchange->_status;
 			_connection = exchange->_connection;
 			_extra = exchange->_extra;
 			_keep_alive = exchange->_keep_alive;
 		}
 
-		void HttpExchange::Initialize()
+		ov::String HttpExchange::ToString() const
 		{
-			_status = Status::Init;
-			_request = CreateRequestInstance();
-			_response = CreateResponseInstance();
-		}
-
-		std::shared_ptr<HttpRequest> HttpExchange::CreateRequestInstance()
-		{
-			return nullptr;
-		}
-		
-		std::shared_ptr<HttpResponse> HttpExchange::CreateResponseInstance()
-		{
-			return nullptr;
+			return GetConnection()->ToString();
 		}
 
 		// Get Status
@@ -67,26 +53,6 @@ namespace http
 			return _connection;
 		}
 
-		std::shared_ptr<HttpRequest> HttpExchange::GetRequest()
-		{
-			return _request;
-		}
-
-		std::shared_ptr<HttpResponse> HttpExchange::GetResponse()
-		{
-			return _response;
-		}
-
-		std::shared_ptr<const HttpRequest> HttpExchange::GetRequest() const
-		{
-			return _request;
-		}
-
-		std::shared_ptr<const HttpResponse> HttpExchange::GetResponse() const
-		{
-			return _response;
-		}
-
 		bool HttpExchange::IsHttp2UpgradeRequest()
 		{
 			//TODO(h2) : Implement this
@@ -105,24 +71,24 @@ namespace http
 			// 2.   A |Host| header field containing the server's authority.
 			//
 
-			if ((_request->GetMethod() == Method::Get) && (_request->GetHttpVersionAsNumber() > 1.0))
+			if ((GetRequest()->GetMethod() == Method::Get) && (GetRequest()->GetHttpVersionAsNumber() > 1.0))
 			{
 				if (
 					// 3.   An |Upgrade| header field containing the value "websocket",
 					//      treated as an ASCII case-insensitive value.
-					(_request->GetHeader("UPGRADE").UpperCaseString().IndexOf("WEBSOCKET") >= 0L) &&
+					(GetRequest()->GetHeader("UPGRADE").UpperCaseString().IndexOf("WEBSOCKET") >= 0L) &&
 
 					// 4.   A |Connection| header field that includes the token "Upgrade",
 					//      treated as an ASCII case-insensitive value.
-					(_request->GetHeader("CONNECTION").UpperCaseString().IndexOf("UPGRADE") >= 0L) &&
+					(GetRequest()->GetHeader("CONNECTION").UpperCaseString().IndexOf("UPGRADE") >= 0L) &&
 
 					// 5.   A |Sec-WebSocket-Key| header field with a base64-encoded (see
 					//      Section 4 of [RFC4648]) value that, when decoded, is 16 bytes in
 					//      length.
-					_request->IsHeaderExists("SEC-WEBSOCKET-KEY") &&
+					GetRequest()->IsHeaderExists("SEC-WEBSOCKET-KEY") &&
 
 					// 6.   A |Sec-WebSocket-Version| header field, with a value of 13.
-					(_request->GetHeader("SEC-WEBSOCKET-VERSION") == "13"))
+					(GetRequest()->GetHeader("SEC-WEBSOCKET-VERSION") == "13"))
 				{
 					// 7.   Optionally, an |Origin| header field.  This header field is sent
 					//      by all browser clients.  A connection attempt lacking this
@@ -142,7 +108,7 @@ namespace http
 					//      cookies or request authentication to a server.  Unknown header
 					//      fields are ignored, as per [RFC2616].
 
-					logtd("%s is websocket request", _request->ToString().CStr());
+					logtd("%s is websocket request", GetRequest()->ToString().CStr());
 
 					return true;
 				}
@@ -161,10 +127,10 @@ namespace http
 			if (IsWebSocketUpgradeRequest())
 			{
 				// RFC6455 - 4.2.2.  Sending the Server's Opening Handshake
-				_response->SetStatusCode(StatusCode::SwitchingProtocols);
+				GetResponse()->SetStatusCode(StatusCode::SwitchingProtocols);
 
-				_response->SetHeader("Upgrade", "websocket");
-				_response->SetHeader("Connection", "Upgrade");
+				GetResponse()->SetHeader("Upgrade", "websocket");
+				GetResponse()->SetHeader("Connection", "Upgrade");
 
 				// 4.  A |Sec-WebSocket-Accept| header field.  The value of this
 				//    header field is constructed by concatenating /key/, defined
@@ -173,15 +139,15 @@ namespace http
 				//    concatenated value to obtain a 20-byte value and base64-
 				//    encoding (see Section 4 of [RFC4648]) this 20-byte hash.
 				const ov::String unique_id = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-				ov::String key = _request->GetHeader("SEC-WEBSOCKET-KEY");
+				ov::String key = GetRequest()->GetHeader("SEC-WEBSOCKET-KEY");
 
 				std::shared_ptr<ov::Data> hash = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Sha1, (key + unique_id).ToData(false));
 				ov::String base64 = ov::Base64::Encode(hash);
 
-				_response->SetHeader("Sec-WebSocket-Accept", base64);
+				GetResponse()->SetHeader("Sec-WebSocket-Accept", base64);
 
 				// Send headers to client
-				if (_response->Response() <= 0)
+				if (GetResponse()->Response() <= 0)
 				{
 					return false;
 				}
@@ -204,25 +170,25 @@ namespace http
 
 		void HttpExchange::SetConnectionPolicyByRequest()
 		{
-			if (_request->GetHttpVersionAsNumber() == 1.0)
+			if (GetRequest()->GetHttpVersionAsNumber() == 1.0)
 			{
 				_keep_alive = false;
 			}
-			else if (_request->GetHttpVersionAsNumber() == 1.1 || _request->GetHttpVersionAsNumber() == 2.0)
+			else if (GetRequest()->GetHttpVersionAsNumber() == 1.1 || GetRequest()->GetHttpVersionAsNumber() == 2.0)
 			{
 				_keep_alive = true;
 			}
 
-			if (_request->GetHeader("Connection") == "Keep-Alive")
+			if (GetRequest()->GetHeader("Connection") == "Keep-Alive")
 			{
 				_keep_alive = true;
-				_response->AddHeader("Connection", "Keep-Alive");
-				_response->AddHeader("Keep-Alive", "timeout=5, max=100");
+				GetResponse()->AddHeader("Connection", "Keep-Alive");
+				GetResponse()->AddHeader("Keep-Alive", "timeout=5, max=100");
 			}
-			else if (_request->GetHeader("Connection") == "Close")
+			else if (GetRequest()->GetHeader("Connection") == "Close")
 			{
 				_keep_alive = false;
-				_response->AddHeader("Connection", "Close");
+				GetResponse()->AddHeader("Connection", "Close");
 			}
 		}
 	}  // namespace svr

@@ -57,7 +57,7 @@ namespace http
 			std::shared_ptr<RequestInterceptor> FindInterceptor(const std::shared_ptr<HttpExchange> &exchange);
 
 			// To string
-			ov::String ToString() const;
+			virtual ov::String ToString() const;
 
 		private:
 			// For HTTP 1.0 and HTTP 1.1

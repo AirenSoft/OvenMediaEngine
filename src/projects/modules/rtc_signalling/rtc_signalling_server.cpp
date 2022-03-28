@@ -215,15 +215,14 @@ bool RtcSignallingServer::RemoveCertificate(const std::shared_ptr<const info::Ce
 bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Interceptor> interceptor)
 {
 	interceptor->SetConnectionHandler(
-		[this](const std::shared_ptr<http::svr::ws::Client> &ws_client) -> bool {
-			auto &client = ws_client->GetClient();
-			auto request = client->GetRequest();
-			auto response = client->GetResponse();
+		[this](const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session) -> bool {
+			auto request = ws_session->GetRequest();
+			auto response = ws_session->GetResponse();
 			auto remote = request->GetRemote();
 
 			if (remote == nullptr)
 			{
-				OV_ASSERT(false, "Cannot find the client information: %s", ws_client->ToString().CStr());
+				OV_ASSERT(false, "Cannot find the client information: %s", ws_session->ToString().CStr());
 				return false;
 			}
 
@@ -267,20 +266,19 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 				}
 			}
 
-			client->SetExtra(info);
+			ws_session->SetExtra(info);
 
 			return true;
 		});
 
 	interceptor->SetMessageHandler(
-		[this](const std::shared_ptr<http::svr::ws::Client> &ws_client, const std::shared_ptr<const ov::Data> &message) -> bool {
-			auto &client = ws_client->GetClient();
-			auto connection = client->GetConnection();
-			auto request = client->GetRequest();
+		[this](const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const std::shared_ptr<const ov::Data> &message) -> bool {
+			auto connection = ws_session->GetConnection();
+			auto request = ws_session->GetRequest();
 
 			logtp("The client sent a message:\n%s", message->Dump().CStr());
 
-			auto info = client->GetExtraAs<RtcSignallingInfo>();
+			auto info = ws_session->GetExtraAs<RtcSignallingInfo>();
 
 			if (info == nullptr)
 			{
@@ -288,7 +286,7 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 				//
 				// 1. An error occurred during the connection (request was wrong)
 				// 2. After the connection is lost, the callback is called late
-				logtw("Could not find client information: %s", ws_client->ToString().CStr());
+				logtw("Could not find client information: %s", ws_session->ToString().CStr());
 
 				return false;
 			}
@@ -297,7 +295,7 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 
 			if (object.IsNull())
 			{
-				logtw("Invalid request message from %s", ws_client->ToString().CStr());
+				logtw("Invalid request message from %s", ws_session->ToString().CStr());
 				return false;
 			}
 
@@ -305,7 +303,7 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 
 			if ((payload.isObject() == false) || (payload.isMember("command") == false))
 			{
-				logtw("Invalid request message from %s", ws_client->ToString().CStr());
+				logtw("Invalid request message from %s", ws_session->ToString().CStr());
 				return false;
 			}
 
@@ -315,7 +313,7 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 
 			logtd("Trying to dispatch command: %s...", command.CStr());
 
-			auto error = DispatchCommand(ws_client, command, object, info, message);
+			auto error = DispatchCommand(ws_session, command, object, info, message);
 
 			if (error != nullptr)
 			{
@@ -334,7 +332,7 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 				value["code"] = error->GetCode();
 				value["error"] = error->GetMessage().CStr();
 
-				ws_client->Send(response_json.ToString());
+				ws_session->GetWebSocketResponse()->Send(response_json.ToString());
 
 				return false;
 			}
@@ -343,17 +341,16 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 		});
 
 	interceptor->SetErrorHandler(
-		[this](const std::shared_ptr<http::svr::ws::Client> &ws_client, const std::shared_ptr<const ov::Error> &error) -> void {
+		[this](const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const std::shared_ptr<const ov::Error> &error) -> void {
 			logtw("An error occurred: %s", error->What());
 		});
 
 	interceptor->SetCloseHandler(
-		[this](const std::shared_ptr<http::svr::ws::Client> &ws_client, PhysicalPortDisconnectReason reason) -> void {
-			auto &client = ws_client->GetClient();
-			auto connection = client->GetConnection();
-			auto request = client->GetRequest();
+		[this](const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, PhysicalPortDisconnectReason reason) -> void {
+			auto connection = ws_session->GetConnection();
+			auto request = ws_session->GetRequest();
 
-			auto info = client->GetExtraAs<RtcSignallingInfo>();
+			auto info = ws_session->GetExtraAs<RtcSignallingInfo>();
 
 			if (info != nullptr)
 			{
@@ -362,11 +359,11 @@ bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Int
 					// The client is disconnected without send "close" command
 
 					// Forces the session to be cleaned up by sending a stop command
-					DispatchStop(ws_client, info);
+					DispatchStop(ws_session, info);
 				}
 
 				logti("Client is disconnected: %s (%s / %s, ufrag: local: %s, remote: %s)",
-					  ws_client->ToString().CStr(),
+					  ws_session->ToString().CStr(),
 					  info->vhost_app_name.CStr(), info->stream_name.CStr(),
 					  (info->offer_sdp != nullptr) ? info->offer_sdp->GetIceUfrag().CStr() : "(N/A)",
 					  (info->peer_sdp != nullptr) ? info->peer_sdp->GetIceUfrag().CStr() : "(N/A)");
@@ -503,11 +500,11 @@ bool RtcSignallingServer::Stop()
 	return http_result && https_result;
 }
 
-std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCommand(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const ov::Data> &message)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCommand(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const ov::Data> &message)
 {
 	if (command == "request_offer")
 	{
-		return DispatchRequestOffer(ws_client, info);
+		return DispatchRequestOffer(ws_session, info);
 	}
 
 	if (info->id != object.GetInt64Value("id"))
@@ -516,34 +513,32 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCommand(const std:
 	}
 	else if (command == "answer")
 	{
-		return DispatchAnswer(ws_client, object, info);
+		return DispatchAnswer(ws_session, object, info);
 	}
 	else if (command == "candidate")
 	{
-		return DispatchCandidate(ws_client, object, info);
+		return DispatchCandidate(ws_session, object, info);
 	}
 	else if (command == "offer_p2p")
 	{
-		return DispatchOfferP2P(ws_client, object, info);
+		return DispatchOfferP2P(ws_session, object, info);
 	}
 	else if (command == "candidate_p2p")
 	{
-		return DispatchCandidateP2P(ws_client, object, info);
+		return DispatchCandidateP2P(ws_session, object, info);
 	}
 	else if (command == "stop")
 	{
-		return DispatchStop(ws_client, info);
+		return DispatchStop(ws_session, info);
 	}
 
 	// Unknown command
 	return std::make_shared<http::HttpError>(http::StatusCode::BadRequest, "Unknown command: %s", command.CStr());
 }
 
-std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::shared_ptr<http::svr::ws::Client> &ws_client, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, std::shared_ptr<RtcSignallingInfo> &info)
 {
-	auto &client = ws_client->GetClient();
-	auto request = client->GetRequest();
-
+	auto request = ws_session->GetRequest();
 	auto vhost_app_name = info->vhost_app_name;
 	auto stream_name = info->stream_name;
 
@@ -552,7 +547,7 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchRequestOffer(const
 
 	std::shared_ptr<RtcPeerInfo> host_peer = nullptr;
 
-	std::shared_ptr<RtcPeerInfo> peer_info = _p2p_manager.CreatePeerInfo(info->id, ws_client);
+	std::shared_ptr<RtcPeerInfo> peer_info = _p2p_manager.CreatePeerInfo(info->id, ws_session);
 
 	if (peer_info == nullptr)
 	{
@@ -563,7 +558,7 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchRequestOffer(const
 
 	if (_p2p_manager.IsEnabled())
 	{
-		logtd("Trying to find p2p host for client %s...", ws_client->ToString().CStr());
+		logtd("Trying to find p2p host for client %s...", ws_session->ToString().CStr());
 
 		if (info->peer_was_client == false)
 		{
@@ -591,14 +586,14 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchRequestOffer(const
 	{
 		if (_p2p_manager.IsEnabled())
 		{
-			logtd("peer %s became a host peer because there is no p2p host for client %s.", peer_info->ToString().CStr(), ws_client->ToString().CStr());
+			logtd("peer %s became a host peer because there is no p2p host for client %s.", peer_info->ToString().CStr(), ws_session->ToString().CStr());
 		}
 
 		bool tcp_relay = false;
 		// None of the hosts can accept this client, so the peer will be connectioned to OME
-		std::find_if(_observers.begin(), _observers.end(), [ws_client, info, &sdp, vhost_app_name, stream_name, &tcp_relay](auto &observer) -> bool {
+		std::find_if(_observers.begin(), _observers.end(), [ws_session, info, &sdp, vhost_app_name, stream_name, &tcp_relay](auto &observer) -> bool {
 			// Ask observer to fill local_candidates
-			sdp = observer->OnRequestOffer(ws_client, vhost_app_name, info->host_name, stream_name, &(info->local_candidates), tcp_relay);
+			sdp = observer->OnRequestOffer(ws_session, vhost_app_name, info->host_name, stream_name, &(info->local_candidates), tcp_relay);
 			return sdp != nullptr;
 		});
 
@@ -688,7 +683,7 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchRequestOffer(const
 
 				info->offer_sdp = sdp;
 
-				ws_client->Send(response_json.ToString());
+				ws_session->GetWebSocketResponse()->Send(response_json.ToString());
 			}
 			else
 			{
@@ -718,7 +713,7 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchRequestOffer(const
 		value["id"] = host_peer->GetId();
 		value["peer_id"] = peer_info->GetId();
 
-		host_peer->GetResponse()->Send(value);
+		host_peer->GetSession()->GetWebSocketResponse()->Send(value);
 
 		// Wait for 'offer_p2p' command from the host
 
@@ -728,7 +723,7 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchRequestOffer(const
 	return error;
 }
 
-std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	auto &peer_info = info->peer_info;
 
@@ -772,7 +767,7 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchAnswer(const std::
 				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->vhost_app_name.CStr(), info->stream_name.CStr());
 
 				// TODO : Improved to return detailed error cause
-				if (observer->OnAddRemoteDescription(ws_client, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
+				if (observer->OnAddRemoteDescription(ws_session, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
 				{
 					return std::make_shared<http::HttpError>(http::StatusCode::Forbidden, "Forbidden");
 				}
@@ -809,13 +804,13 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchAnswer(const std::
 		value["peer_id"] = peer_info->GetId();
 		value["sdp"] = sdp_value;
 
-		host_peer->GetResponse()->Send(value);
+		host_peer->GetSession()->GetWebSocketResponse()->Send(value);
 	}
 
 	return nullptr;
 }
 
-std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCandidate(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCandidate(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	const Json::Value &candidates_value = object.GetJsonValue("candidates");
 
@@ -860,7 +855,7 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCandidate(const st
 
 			for (auto &observer : _observers)
 			{
-				observer->OnIceCandidate(ws_client, info->vhost_app_name, info->host_name, info->stream_name, ice_candidate, username_fragment);
+				observer->OnIceCandidate(ws_session, info->vhost_app_name, info->host_name, info->stream_name, ice_candidate, username_fragment);
 			}
 		}
 	}
@@ -876,13 +871,13 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCandidate(const st
 		value["peer_id"] = info->id;
 		value["candidates"] = candidates_value;
 
-		peer_info->GetResponse()->Send(value);
+		peer_info->GetSession()->GetWebSocketResponse()->Send(value);
 	}
 
 	return nullptr;
 }
 
-std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchOfferP2P(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchOfferP2P(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	auto &host = info->peer_info;
 
@@ -938,12 +933,12 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchOfferP2P(const std
 		value["candidates"] = candidates;
 	}
 
-	client_peer->GetResponse()->Send(value);
+	client_peer->GetSession()->GetWebSocketResponse()->Send(value);
 
 	return nullptr;
 }
 
-std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCandidateP2P(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCandidateP2P(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	auto &host = info->peer_info;
 
@@ -983,12 +978,12 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCandidateP2P(const
 
 	logtd("[Host -> Client] JSON: %s", ov::Converter::ToString(candidates).CStr());
 
-	client_peer->GetResponse()->Send(candidates);
+	client_peer->GetSession()->GetWebSocketResponse()->Send(candidates);
 
 	return nullptr;
 }
 
-std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchStop(const std::shared_ptr<http::svr::ws::Client> &ws_client, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchStop(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	bool result = true;
 
@@ -998,7 +993,7 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchStop(const std::sh
 		{
 			logtd("Trying to callback OnStopCommand to %p for client %d (%s / %s)...", observer.get(), info->id, info->vhost_app_name.CStr(), info->stream_name.CStr());
 
-			if (observer->OnStopCommand(ws_client, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
+			if (observer->OnStopCommand(ws_session, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
 			{
 				result = false;
 			}
@@ -1041,7 +1036,7 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchStop(const std::sh
 					value["id"] = client_info->GetId();
 					value["peer_id"] = peer_info->GetId();
 
-					client_info->GetResponse()->Send(value);
+					client_info->GetSession()->GetWebSocketResponse()->Send(value);
 
 					// remove client from peer
 					_p2p_manager.RemovePeer(client_info);
@@ -1063,7 +1058,7 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchStop(const std::sh
 					value["id"] = host_info->GetId();
 					value["peer_id"] = peer_info->GetId();
 
-					host_info->GetResponse()->Send(value);
+					host_info->GetSession()->GetWebSocketResponse()->Send(value);
 				}
 				else
 				{

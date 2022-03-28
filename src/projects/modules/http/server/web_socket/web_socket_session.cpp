@@ -27,25 +27,31 @@ namespace http
 				ov::String str("OvenMediaEngine");
 				_ping_data = str.ToData(false);
 
-				GetRequest()->SetConnectionType(ConnectionType::WebSocket);
+				_request = exchange->GetRequest();
+				_request->SetConnectionType(ConnectionType::WebSocket);
+
+				_ws_response = std::make_shared<WebSocketResponse>(exchange->GetResponse());
 			}
 
-			void WebSocketSession::Release()
+			void WebSocketSession::AddUserData(ov::String key, std::variant<bool, uint64_t, ov::String> value)
 			{
-				// To solve cyclic reference
-				_websocket_client.reset();
+				_data_map.emplace(key, value);
 			}
 
-			std::shared_ptr<ws::Client> WebSocketSession::GetClient() const
+			std::tuple<bool, std::variant<bool, uint64_t, ov::String>> WebSocketSession::GetUserData(ov::String key)
 			{
-				return _websocket_client;
+				if (_data_map.find(key) == _data_map.end())
+				{
+					return {false, false};
+				}
+
+				return {true, _data_map[key]};
 			}
+
 
 			// Go Upgrade
 			bool WebSocketSession::Upgrade()
 			{
-				_websocket_client = std::make_shared<ws::Client>(GetSharedPtr());
-
 				// Find Interceptor
 				auto interceptor = GetConnection()->FindInterceptor(GetSharedPtr());
 				if (interceptor == nullptr)
@@ -65,13 +71,23 @@ namespace http
 				return true;
 			}
 
+			std::shared_ptr<WebSocketResponse> WebSocketSession::GetWebSocketResponse() const
+			{
+				return _ws_response;
+			}
+
+			// Implement HttpExchange
+			std::shared_ptr<HttpRequest> WebSocketSession::GetRequest() const
+			{
+				return _request;
+			}
+			std::shared_ptr<HttpResponse> WebSocketSession::GetResponse() const
+			{
+				return _ws_response;
+			}
+
 			bool WebSocketSession::Ping()
 			{
-				if (_websocket_client == nullptr)
-				{
-					return false;
-				}
-
 				if (_ping_timer.IsElapsed(WEBSOCKET_PING_INTERVAL_MS) == false)
 				{
 					// If the timer is not expired, do not send ping
@@ -80,7 +96,7 @@ namespace http
 
 				_ping_timer.Update();
 
-				return _websocket_client->Send(_ping_data, FrameOpcode::Ping) > 0;
+				return _ws_response->Send(_ping_data, FrameOpcode::Ping) > 0;
 			}
 
 			bool WebSocketSession::OnFrameReceived(const std::shared_ptr<const prot::ws::Frame> &frame)
@@ -105,7 +121,7 @@ namespace http
 					case FrameOpcode::Ping:
 						logtd("A ping frame is received:\n%s", payload->Dump().CStr());
 						// Send a pong frame to the client
-						_websocket_client->Send(payload, FrameOpcode::Pong);
+						_ws_response->Send(payload, FrameOpcode::Pong);
 						break;
 
 					case FrameOpcode::Pong:

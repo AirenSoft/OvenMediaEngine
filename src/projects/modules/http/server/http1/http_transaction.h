@@ -28,12 +28,13 @@ namespace http
 
 				ssize_t OnRequestPacketReceived(const std::shared_ptr<const ov::Data> &data);
 
-			private:
-				std::shared_ptr<HttpRequest> CreateRequestInstance() override;
-				std::shared_ptr<HttpResponse> CreateResponseInstance() override;
+				// Implement HttpExchange
+				std::shared_ptr<HttpRequest> GetRequest() const override;
+				std::shared_ptr<HttpResponse> GetResponse() const override;
 
-				std::shared_ptr<Http1Request> _http1_request;
-				std::shared_ptr<Http1Response> _http1_response;
+			private:
+				std::shared_ptr<Http1Request> _request;
+				std::shared_ptr<Http1Response> _response;
 
 				size_t _received_header_size = 0;
 				size_t _received_data_size = 0;

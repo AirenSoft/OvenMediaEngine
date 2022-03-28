@@ -6,14 +6,13 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "web_socket_client.h"
+#include "web_socket_response.h"
 
 #include <unistd.h>
 #include <algorithm>
 
 #include "./web_socket_private.h"
 #include "../../protocol/web_socket/web_socket_frame.h"
-#include "../http_exchange.h"
 
 namespace http
 {
@@ -21,16 +20,16 @@ namespace http
 	{
 		namespace ws
 		{
-			Client::Client(const std::shared_ptr<HttpExchange> &exchange)
-				: _http_exchange(exchange)
+			WebSocketResponse::WebSocketResponse(const std::shared_ptr<HttpResponse> &http_respose)
+				: HttpResponse(http_respose)
 			{
 			}
 
-			Client::~Client()
+			WebSocketResponse::~WebSocketResponse()
 			{
 			}
 
-			ssize_t Client::Send(const std::shared_ptr<const ov::Data> &data, prot::ws::FrameOpcode opcode)
+			ssize_t WebSocketResponse::Send(const std::shared_ptr<const ov::Data> &data, prot::ws::FrameOpcode opcode)
 			{
 				// RFC6455 - 5.2.  Base Framing Protocol
 				//
@@ -86,50 +85,18 @@ namespace http
 					response_data->Append(data);
 				}
 
-				auto response = _http_exchange->GetResponse();
-				return response->Send(response_data) ? length : -1LL;
+				return HttpResponse::Send(response_data) ? length : -1LL;
 			}
 
-			ssize_t Client::Send(const std::shared_ptr<const ov::Data> &data)
-			{
-				return Send(data, prot::ws::FrameOpcode::Binary);
-			}
-
-			ssize_t Client::Send(const ov::String &string)
+			ssize_t WebSocketResponse::Send(const ov::String &string)
 			{
 				return Send(string.ToData(false), prot::ws::FrameOpcode::Text);
 			}
 
-			ssize_t Client::Send(const Json::Value &value)
+			ssize_t WebSocketResponse::Send(const Json::Value &value)
 			{
 				return Send(ov::Json::Stringify(value));
 			}
-
-			void Client::Close()
-			{
-				_http_exchange->GetResponse()->Close();
-			}
-
-			ov::String Client::ToString() const
-			{
-				return ov::String::FormatString("<WebSocketClient: %p, %s>", this, _http_exchange->GetRequest()->GetRemote()->ToString().CStr());
-			}
-
-			void Client::AddData(ov::String key, std::variant<bool, uint64_t, ov::String> value)
-			{
-				_data_map.emplace(key, value);
-			}
-
-			std::tuple<bool, std::variant<bool, uint64_t, ov::String>> Client::GetData(ov::String key)
-			{
-				if (_data_map.find(key) == _data_map.end())
-				{
-					return {false, false};
-				}
-
-				return {true, _data_map[key]};
-			}
-
 		}  // namespace ws
 	}	   // namespace svr
 }  // namespace http

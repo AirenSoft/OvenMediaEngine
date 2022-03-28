@@ -9,10 +9,7 @@
 #pragma once
 
 #include <modules/http/server/http_server.h>
-
 #include <shared_mutex>
-
-#include "web_socket_client.h"
 #include "../../protocol/web_socket/web_socket_frame.h"
 
 namespace http

@@ -9,7 +9,7 @@
 
 #include "rtc_peer_info.h"
 
-std::shared_ptr<RtcPeerInfo> RtcPeerInfo::FromUserAgent(peer_id_t id, const ov::String &user_agent, const std::shared_ptr<http::svr::ws::Client> &ws_client)
+std::shared_ptr<RtcPeerInfo> RtcPeerInfo::FromUserAgent(peer_id_t id, const ov::String &user_agent, const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session)
 {
 	RtcPeerBrowser browser = ParseBrowserInfo(user_agent);
 
@@ -17,7 +17,7 @@ std::shared_ptr<RtcPeerInfo> RtcPeerInfo::FromUserAgent(peer_id_t id, const ov::
 
 	peer_info->_id = id;
 	peer_info->_browser = browser;
-	peer_info->_ws_client = ws_client;
+	peer_info->_ws_session = ws_session;
 
 	peer_info->_can_accept =
 		(
