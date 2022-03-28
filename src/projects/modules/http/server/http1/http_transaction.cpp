@@ -31,10 +31,14 @@ namespace http
 				return _http1_request;
 			}
 			
-			// std::shared_ptr<HttpResponse> HttpTransaction::CreateResponseInstance()
-			// {
-				
-			// }
+			std::shared_ptr<HttpResponse> HttpTransaction::CreateResponseInstance()
+			{
+				_http1_response = std::make_shared<Http1Response>(GetConnection()->GetSocket());
+				_http1_response->SetTlsData(GetConnection()->GetTlsData());
+				_http1_response->SetHeader("Server", "OvenMediaEngine");
+				_http1_response->SetHeader("Content-Type", "text/html");
+				return _http1_response;
+			}
 
 			ssize_t HttpTransaction::OnRequestPacketReceived(const std::shared_ptr<const ov::Data> &data)
 			{

@@ -25,6 +25,7 @@ namespace http
 		public:
 			enum class Status : uint8_t
 			{
+				None,
 				Init,
 				Exchanging, // Exchanging request and response
 				Moved, // Control transferred to another thread, header parsed
@@ -36,6 +37,8 @@ namespace http
 			HttpExchange(const std::shared_ptr<HttpConnection> &connection);
 			HttpExchange(const std::shared_ptr<HttpExchange> &exchange); // Copy
 			virtual ~HttpExchange() = default;
+
+			void Initialize();
 
 			// Get connection
 			std::shared_ptr<HttpConnection> GetConnection() const;
@@ -95,7 +98,7 @@ namespace http
 			std::shared_ptr<HttpRequest> _request = nullptr;
 			std::shared_ptr<HttpResponse> _response = nullptr;
 
-			Status _status = Status::Init;
+			Status _status = Status::None;
 
 			bool _keep_alive = true; // HTTP/1.1 default
 

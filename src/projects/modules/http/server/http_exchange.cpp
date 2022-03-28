@@ -19,8 +19,7 @@ namespace http
 		HttpExchange::HttpExchange(const std::shared_ptr<HttpConnection> &connection)
 			: _connection(connection)
 		{
-			_request = CreateRequestInstance();
-			_response = CreateResponseInstance();
+			
 		}
 
 		HttpExchange::HttpExchange(const std::shared_ptr<HttpExchange> &exchange)
@@ -33,6 +32,13 @@ namespace http
 			_keep_alive = exchange->_keep_alive;
 		}
 
+		void HttpExchange::Initialize()
+		{
+			_status = Status::Init;
+			_request = CreateRequestInstance();
+			_response = CreateResponseInstance();
+		}
+
 		std::shared_ptr<HttpRequest> HttpExchange::CreateRequestInstance()
 		{
 			return nullptr;
@@ -40,12 +46,7 @@ namespace http
 		
 		std::shared_ptr<HttpResponse> HttpExchange::CreateResponseInstance()
 		{
-			auto response = std::make_shared<HttpResponse>(_connection->GetSocket());
-			response->SetTlsData(_connection->GetTlsData());
-			response->SetHeader("Server", "OvenMediaEngine");
-			response->SetHeader("Content-Type", "text/html");
-
-			return response;
+			return nullptr;
 		}
 
 		// Get Status

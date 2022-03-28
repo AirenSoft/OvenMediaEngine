@@ -115,8 +115,7 @@ namespace http
 
 					default:
 						logtd("%s:\n%s", frame->ToString().CStr(), payload->Dump("Frame", 0L, 1024L, nullptr).CStr());
-						auto consumed_bytes = interceptor->OnDataReceived(GetSharedPtr(), payload);
-						if (consumed_bytes < 0 || static_cast<size_t>(consumed_bytes) != payload->GetLength())
+						if (interceptor->OnDataReceived(GetSharedPtr(), payload) == false)
 						{
 							SetStatus(Status::Error);
 							return false;

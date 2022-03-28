@@ -241,6 +241,7 @@ namespace http
 			if (_http_transaction == nullptr)
 			{
 				_http_transaction = std::make_shared<h1::HttpTransaction>(GetSharedPtr());
+				_http_transaction->Initialize();
 			}
 
 			auto processed_data_length = _http_transaction->OnRequestPacketReceived(data);
@@ -294,6 +295,11 @@ namespace http
 
 		ssize_t HttpConnection::OnWebSocketDataReceived(const std::shared_ptr<const ov::Data> &data)
 		{
+			if (_websocket_session == nullptr)
+			{
+				return -1;
+			}
+
 			if (_websocket_frame == nullptr)
 			{
 				_websocket_frame = std::make_shared<prot::ws::Frame>();
@@ -382,6 +388,8 @@ namespace http
 				else
 				{
 					stream = std::make_shared<h2::HttpStream>(GetSharedPtr(), _http2_frame->GetStreamId());
+					stream->Initialize();
+					
 					_http_stream_map.emplace(_http2_frame->GetStreamId(), stream);
 				}
 

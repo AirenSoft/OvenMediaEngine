@@ -11,7 +11,7 @@
 #include "../http_exchange.h"
 #include "../../protocol/http2/http2_frame.h"
 #include "http1_request.h"
-
+#include "http1_response.h"
 
 namespace http
 {
@@ -30,9 +30,10 @@ namespace http
 
 			private:
 				std::shared_ptr<HttpRequest> CreateRequestInstance() override;
-				// std::shared_ptr<HttpResponse> CreateResponseInstance() override;
+				std::shared_ptr<HttpResponse> CreateResponseInstance() override;
 
 				std::shared_ptr<Http1Request> _http1_request;
+				std::shared_ptr<Http1Response> _http1_response;
 
 				size_t _received_header_size = 0;
 				size_t _received_data_size = 0;

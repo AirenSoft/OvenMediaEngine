@@ -17,85 +17,28 @@ namespace http
 	{
 		namespace h1
 		{
-			//TODO(h2) : 2022-03-25 | Next : Check if default interceptor works well
-
 			class Http1Request : public HttpRequest
 			{
 			public:
 				// Constructor
-				Http1Request(const std::shared_ptr<ov::ClientSocket> &client_socket)
-					: HttpRequest(client_socket)
-				{
-				}
+				Http1Request(const std::shared_ptr<ov::ClientSocket> &client_socket);
 
-				size_t GetContentLength() const noexcept
-				{
-					return _http_header_parser.GetContentLength();
-				}
+				size_t GetContentLength() const noexcept;
 
 				/////////////////////////////////////
 				// Implementation of HttpRequest
 				/////////////////////////////////////
 
-				ssize_t AppendHeaderData(const std::shared_ptr<const ov::Data> &data) override
-				{
-					if (GetHeaderParingStatus() == StatusCode::OK)
-					{
-						// Already parsed
-						return 0;
-					}
-					else if (GetHeaderParingStatus() == StatusCode::PartialContent)
-					{
-						auto consumed_bytes = _http_header_parser.AppendData(data);
-						if (GetHeaderParingStatus() == StatusCode::OK)
-						{
-							PostProcess();
-						}
-						return consumed_bytes;
-					}
-					else
-					{
-						// Error
-						return -1;
-					}
-				}
-
-				StatusCode GetHeaderParingStatus() const override
-				{
-					return _http_header_parser.GetStatus();
-				}
-
-				Method GetMethod() const noexcept
-				{
-					return _http_header_parser.GetMethod();
-				}
-
-				ov::String GetHttpVersion() const noexcept override
-				{
-					return _http_header_parser.GetHttpVersion();
-				}
-
-				double GetHttpVersionAsNumber() const noexcept override
-				{
-					return _http_header_parser.GetHttpVersionAsNumber();
-				}
-
+				ssize_t AppendHeaderData(const std::shared_ptr<const ov::Data> &data) override;
+				StatusCode GetHeaderParingStatus() const override;
+				Method GetMethod() const noexcept;
+				ov::String GetHttpVersion() const noexcept override;
+				double GetHttpVersionAsNumber() const noexcept override;
 				// Path of the URI (including query strings & excluding domain and port)
 				// Example: /<app>/<stream>/...?a=b&c=d
-				const ov::String &GetRequestTarget() const noexcept override
-				{
-					return _http_header_parser.GetRequestTarget();
-				}
-
-				ov::String GetHeader(const ov::String &key) const noexcept override
-				{
-					return _http_header_parser.GetHeader(key);
-				}
-
-				const bool IsHeaderExists(const ov::String &key) const noexcept override
-				{
-					return _http_header_parser.IsHeaderExists(key);
-				}
+				const ov::String &GetRequestTarget() const noexcept override;
+				ov::String GetHeader(const ov::String &key) const noexcept override;
+				const bool IsHeaderExists(const ov::String &key) const noexcept override;
 
 			private:
 				prot::h1::HttpRequestHeaderParser _http_header_parser;
