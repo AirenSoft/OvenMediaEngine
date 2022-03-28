@@ -11,7 +11,7 @@
 
 #include "segment_stream_private.h"
 
-bool TimeInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpTransaction> &client)
+bool TimeInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpExchange> &client)
 {
 	auto path = client->GetRequest()->GetRequestTarget();
 

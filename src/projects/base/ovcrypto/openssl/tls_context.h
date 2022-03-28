@@ -32,6 +32,7 @@ namespace ov
 			TlsMethod method,
 			const std::shared_ptr<const CertificatePair> &certificate_pair,
 			const ov::String &cipher_list,
+			bool enable_h2_alpn, 
 			const ov::TlsContextCallback *callback,
 			// output param
 			std::shared_ptr<const ov::Error> *error);
@@ -60,6 +61,7 @@ namespace ov
 			const SSL_METHOD *method,
 			const std::shared_ptr<const CertificatePair> &certificate_pair,
 			const ov::String &cipher_list,
+			bool enable_h2_alpn, 
 			const TlsContextCallback *callback);
 
 		MAY_THROWS(ov::OpensslError)
@@ -90,6 +92,9 @@ namespace ov
 		static int OnServerNameCallback(SSL *s, int *ad, void *arg);
 		int OnServerName(SSL *ssl);
 
+		static int OnALPNSelectCallback(SSL *ssl, const unsigned char **out, unsigned char *outlen, const unsigned char *in, unsigned int inlen, void *arg);
+		static bool SelectALPNProtocol(ov::String key, const unsigned char **out, unsigned char *outlen, const unsigned char *in, unsigned int inlen);
+
 		MAY_THROWS(ov::OpensslError)
 		void SetCertificate(const std::shared_ptr<const CertificatePair> &certificate_pair);
 
@@ -97,7 +102,7 @@ namespace ov
 
 	protected:
 		SSL_CTX *_ssl_ctx = nullptr;
-
+		bool _h2_alpn_enabled = true;
 		TlsContextCallback _callback;
 	};
 }  // namespace ov

@@ -26,6 +26,21 @@ namespace http
 			OV_ASSERT2(_client_socket != nullptr);
 		}
 
+		HttpResponse::HttpResponse(const std::shared_ptr<HttpResponse> &http_response)
+		{
+			OV_ASSERT2(http_response != nullptr);
+
+			_client_socket = http_response->_client_socket;
+			_tls_data = http_response->_tls_data;
+			_status_code = http_response->_status_code;
+			_reason = http_response->_reason;
+			_is_header_sent = http_response->_is_header_sent;
+			_response_header = http_response->_response_header;
+			_response_data_list = http_response->_response_data_list;
+			_response_data_size = http_response->_response_data_size;
+			_default_value = http_response->_default_value;
+		}
+
 		void HttpResponse::SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data)
 		{
 			_tls_data = tls_data;
@@ -44,6 +59,30 @@ namespace http
 		std::shared_ptr<ov::TlsServerData> HttpResponse::GetTlsData()
 		{
 			return _tls_data;
+		}
+
+		StatusCode HttpResponse::GetStatusCode() const
+		{
+			return _status_code;
+		}
+
+		// Get Reason
+		ov::String HttpResponse::GetReason()
+		{
+			return _reason;
+		}
+
+		// reason = default
+		void HttpResponse::SetStatusCode(StatusCode status_code)
+		{
+			SetStatusCode(status_code, StringFromStatusCode(status_code));
+		}
+
+		// custom reason
+		void HttpResponse::SetStatusCode(StatusCode status_code, const ov::String &reason)
+		{
+			_status_code = status_code;
+			_reason = reason;
 		}
 
 		bool HttpResponse::AddHeader(const ov::String &key, const ov::String &value)
@@ -128,69 +167,66 @@ namespace http
 
 		bool HttpResponse::AppendFile(const ov::String &filename)
 		{
-			// TODO: ov::Data에 파일에서 읽는 기능이 추가되면 그 때 구현
 			OV_ASSERT(false, "Not implemented");
-
 			return false;
+		}
+
+		bool HttpResponse::IsHeaderSent() const
+		{
+			return _is_header_sent;
+		}
+
+		// Get Response Data Size
+		size_t HttpResponse::GetResponseDataSize() const
+		{
+			return _response_data_size;
+		}
+
+		// Get Response Data List
+		const std::vector<std::shared_ptr<const ov::Data>> &HttpResponse::GetResponseDataList() const
+		{
+			return _response_data_list;
+		}
+
+		// Get Response Header
+		const std::unordered_map<ov::String, std::vector<ov::String>> &HttpResponse::GetResponseHeaderList() const
+		{
+			return _response_header;
+		}
+
+		void HttpResponse::ResetResponseData()
+		{
+			_response_data_list.clear();
+			_response_data_size = 0ULL;
 		}
 
 		uint32_t HttpResponse::Response()
 		{
 			std::lock_guard<decltype(_response_mutex)> lock(_response_mutex);
+			
+			uint32_t sent_size = 0;
 
-			return SendHeaderIfNeeded() + SendResponse();
-		}
-
-		uint32_t HttpResponse::SendHeaderIfNeeded()
-		{
-			if (IsHeaderSent())
+			if (IsHeaderSent() == false)
 			{
-				// The headers are already sent
-				return 0;
-			}
-
-			std::shared_ptr<ov::Data> response = std::make_shared<ov::Data>();
-			ov::ByteStream stream(response.get());
-
-			if (_chunked_transfer == false)
-			{
-				// Calculate the content length
-				SetHeader("Content-Length", ov::Converter::ToString(_response_data_size));
-			}
-
-			// RFC7230 - 3.1.2.  Status Line
-			// status-line = HTTP-version SP status-code SP reason-phrase CRLF
-			// TODO(dimiden): Replace this HTTP version with the version that received from the request
-			stream.Append(ov::String::FormatString("HTTP/%s %d %s\r\n", _http_version.CStr(), _status_code, _reason.CStr()).ToData(false));
-
-			// RFC7230 - 3.2.  Header Fields
-			for (const auto &pair : _response_header)
-			{
-				auto key_data = pair.first.ToData(false);
-				const std::vector<ov::String> &value_list = pair.second;
-
-				for (const auto &value : value_list)
+				sent_size += SendHeader();
+				if (sent_size > 0)
 				{
-					auto value_data = value.ToData(false);
-
-					stream.Append(key_data);
-					stream.Append(": ", 2);
-					stream.Append(value_data);
-					stream.Append("\r\n", 2);
+					_is_header_sent = true;
 				}
 			}
 
-			stream.Append("\r\n", 2);
+			sent_size += SendResponse();
 
-			if (Send(response))
-			{
-				logtd("Header is sent:\n%s", response->Dump(response->GetLength()).CStr());
+			return sent_size;
+		}	
 
-				_is_header_sent = true;
+		uint32_t HttpResponse::SendHeader()
+		{
+			return 0;
+		}
 
-				return response->GetLength();
-			}
-
+		uint32_t HttpResponse::SendResponse()
+		{
 			return 0;
 		}
 
@@ -228,67 +264,6 @@ namespace http
 			}
 
 			return _client_socket->Send(send_data);
-		}
-
-		bool HttpResponse::SendChunkedData(const void *data, size_t length)
-		{
-			return SendChunkedData(std::make_shared<ov::Data>(data, length));
-		}
-
-		bool HttpResponse::SendChunkedData(const std::shared_ptr<const ov::Data> &data)
-		{
-			if ((data == nullptr) || data->IsEmpty())
-			{
-				// Send a empty chunk
-				return Send("0\r\n\r\n", 5);
-			}
-
-			bool result =
-				// Send the chunk header
-				Send(ov::String::FormatString("%x\r\n", data->GetLength()).ToData(false)) &&
-				// Send the chunk payload
-				Send(data) &&
-				// Send a last data of chunk
-				Send("\r\n", 2);
-
-			return result;
-		}
-
-		uint32_t HttpResponse::SendResponse()
-		{
-			bool sent = true;
-
-			std::lock_guard<decltype(_response_mutex)> lock(_response_mutex);
-
-			logtd("Trying to send datas...");
-
-			uint32_t sent_bytes = 0;
-			for (const auto &data : _response_data_list)
-			{
-				if (_chunked_transfer)
-				{
-					sent &= SendChunkedData(data);
-					if (sent == true)
-					{
-						sent_bytes += data->GetLength();
-					}
-				}
-				else
-				{
-					sent &= Send(data);
-					if (sent == true)
-					{
-						sent_bytes += data->GetLength();
-					}
-				}
-			}
-
-			_response_data_list.clear();
-			_response_data_size = 0ULL;
-
-			logtd("All datas are sent...");
-
-			return sent_bytes;
 		}
 
 		bool HttpResponse::Close()

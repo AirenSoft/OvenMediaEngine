@@ -21,16 +21,17 @@ namespace ov
 		enum class State
 		{
 			Invalid,
-
 			WaitingForAccept,
 			Accepted,
 		};
 
 		enum class AlpnProtocol : uint8_t
 		{
+			None,
 			Http10,
 			Http11,
-			Http20
+			Http20,
+			Unsupported,
 		};
 
 		TlsServerData(const std::shared_ptr<TlsContext> &tls_context, bool is_blocking);
@@ -53,15 +54,9 @@ namespace ov
 			_write_callback = write_callback;
 		}
 
-		// If a server name is provided by SNI, it should be stored in ov::TlsServerData, which is the method used at this time.
-		void SetServerName(const char *server_name)
-		{
-			_server_name = server_name;
-		}
-
 		ov::String GetServerName() const
 		{
-			return _server_name;
+			return _tls.GetServerName();
 		}
 
 		const Tls &GetTls() const
@@ -69,14 +64,10 @@ namespace ov
 			return _tls;
 		}
 
-		//TODO(h2) : Set ALPN protocol
-
 		// Get ALPN protocol
-		AlpnProtocol GetSelectedAlpnProtocol() const
-		{
-			return _selected_alpn_protocol;
-		}
-
+		AlpnProtocol GetSelectedAlpnProtocol() const;
+		ov::String GetSelectedAlpnProtocolStr() const;
+		
 		// plain_data can be null even if successful (It indicates accepting a new client)
 		bool Decrypt(const std::shared_ptr<const Data> &cipher_data, std::shared_ptr<const Data> *plain_data);
 		// cipher_data can be null even if successful (It indicates accepting a new client)

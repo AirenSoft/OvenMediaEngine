@@ -15,7 +15,7 @@
 #include <modules/ice/ice.h>
 #include <modules/http/server/http_server.h>
 #include <modules/http/server/https_server.h>
-#include <modules/http/server/interceptors/http_request_interceptors.h>
+#include <modules/http/server/http_request_interceptors.h>
 #include "../base/publisher/publisher.h"
 
 class WebConsoleServer : public ov::EnableSharedFromThis<WebConsoleServer>

@@ -13,7 +13,7 @@
 //====================================================================================================
 // IsInterceptorForRequest
 //====================================================================================================
-bool ThumbnailInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpTransaction> &client)
+bool ThumbnailInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpExchange> &client)
 {
 	const auto request = client->GetRequest();
 	

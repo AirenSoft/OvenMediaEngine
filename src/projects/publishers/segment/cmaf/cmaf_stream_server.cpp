@@ -10,6 +10,8 @@
 
 #include <monitoring/monitoring.h>
 
+#include <modules/http/server/http1/http1_response.h>
+
 #include "../dash/dash_define.h"
 #include "../segment_publisher.h"
 #include "cmaf_packetizer.h"
@@ -20,11 +22,17 @@ std::shared_ptr<SegmentStreamInterceptor> CmafStreamServer::CreateInterceptor()
 	return std::make_shared<CmafInterceptor>();
 }
 
-bool CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+bool CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpExchange> &client,
 																	const SegmentStreamRequestInfo &request_info,
 																	SegmentType segment_type)
 {
-	auto response = client->GetResponse();
+	// Cast to HTTP/1.1 Response
+	auto response = std::static_pointer_cast<http::svr::h1::Http1Response>(client->GetResponse());
+	if (response == nullptr)
+	{
+		logte("LLDASH only supports HTTP/1.1.");
+		return false;
+	}
 
 	auto type = CmafPacketizer::GetFileType(request_info.file_name);
 
@@ -83,7 +91,6 @@ bool CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::Ht
 			response->SetHeader("Content-Type", is_video ? "video/mp4" : "audio/mp4");
 
 			// Enable chunked transfer
-			response->SetKeepAlive();
 			response->SetChunkedTransfer();
 
 			// Append data to HTTP response
@@ -136,7 +143,12 @@ void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov:
 	{
 		auto &client = *client_item;
 
-		auto response = client->GetResponse();
+		auto response = std::static_pointer_cast<http::svr::h1::Http1Response>(client->GetResponse());
+		if (response == nullptr)
+		{
+			logte("LLDASH only supports HTTP/1.1.");
+			return;
+		}
 		auto stream_info = GetStream(client);
 
 		if (response->SendChunkedData(chunk_data))
@@ -193,7 +205,12 @@ void CmafStreamServer::OnCmafChunkedComplete(const ov::String &app_name, const o
 
 	for (auto client : chunked_data->client_list)
 	{
-		auto response = client->GetResponse();
+		auto response = std::static_pointer_cast<http::svr::h1::Http1Response>(client->GetResponse());
+		if (response == nullptr)
+		{
+			logte("LLDASH only supports HTTP/1.1.");
+			return;
+		}
 
 		if (response->SendChunkedData(nullptr) == false)
 		{

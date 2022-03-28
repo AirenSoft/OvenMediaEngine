@@ -12,7 +12,7 @@
 #include <base/mediarouter/mediarouter_interface.h>
 #include <base/publisher/publisher.h>
 #include <modules/http/server/http_server_manager.h>
-#include <modules/http/server/interceptors/http_request_interceptors.h>
+#include <modules/http/server/http_request_interceptors.h>
 #include <modules/ice/ice.h>
 
 #include <memory>
@@ -104,13 +104,13 @@ protected:
 
 	bool SetWebSocketHandler(std::shared_ptr<http::svr::ws::Interceptor> interceptor = nullptr);
 
-	std::shared_ptr<const ov::Error> DispatchCommand(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const ov::Data> &message);
-	std::shared_ptr<const ov::Error> DispatchRequestOffer(const std::shared_ptr<http::svr::ws::Client> &ws_client, std::shared_ptr<RtcSignallingInfo> &info);
-	std::shared_ptr<const ov::Error> DispatchAnswer(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
-	std::shared_ptr<const ov::Error> DispatchCandidate(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
-	std::shared_ptr<const ov::Error> DispatchOfferP2P(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
-	std::shared_ptr<const ov::Error> DispatchCandidateP2P(const std::shared_ptr<http::svr::ws::Client> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
-	std::shared_ptr<const ov::Error> DispatchStop(const std::shared_ptr<http::svr::ws::Client> &ws_client, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<const ov::Error> DispatchCommand(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const ov::Data> &message);
+	std::shared_ptr<const ov::Error> DispatchRequestOffer(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<const ov::Error> DispatchAnswer(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<const ov::Error> DispatchCandidate(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<const ov::Error> DispatchOfferP2P(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<const ov::Error> DispatchCandidateP2P(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<const ov::Error> DispatchStop(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, std::shared_ptr<RtcSignallingInfo> &info);
 
 	const cfg::Server _server_config;
 	const cfg::bind::cmm::Webrtc _webrtc_config;

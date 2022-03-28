@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "modules/http/server/interceptors/websocket/web_socket_interceptor.h"
+#include "modules/http/server/web_socket/web_socket_interceptor.h"
 
 class WebRtcProviderSignallingInterceptor : public http::svr::ws::Interceptor
 {
@@ -16,7 +16,7 @@ public:
     //--------------------------------------------------------------------
 	// Implementation of HttpRequestInterceptorInterface
 	//--------------------------------------------------------------------
-	bool IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpTransaction> &client) override
+	bool IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpExchange> &client) override
 	{
 		if(http::svr::ws::Interceptor::IsInterceptorForRequest(client) == false)
 		{

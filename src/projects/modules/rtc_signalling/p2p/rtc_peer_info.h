@@ -10,7 +10,7 @@
 
 #include <modules/http/server/http_server.h>
 #include <modules/http/server/https_server.h>
-#include <modules/http/server/interceptors/http_request_interceptors.h>
+#include <modules/http/server/http_request_interceptors.h>
 
 // Peer ID of OME
 #define P2P_OME_PEER_ID                             0
@@ -235,16 +235,16 @@ public:
 		return _host_peer;
 	}
 
-	std::shared_ptr<http::svr::ws::Client> GetResponse()
+	std::shared_ptr<http::svr::ws::WebSocketSession> GetSession()
 	{
-		return _ws_client;
+		return _ws_session;
 	}
 
 	bool IsCompatibleWith(const std::shared_ptr<RtcPeerInfo> &peer);
 
 	ov::String ToString() const;
 
-	static std::shared_ptr<RtcPeerInfo> FromUserAgent(peer_id_t id, const ov::String &user_agent, const std::shared_ptr<http::svr::ws::Client> &ws_client);
+	static std::shared_ptr<RtcPeerInfo> FromUserAgent(peer_id_t id, const ov::String &user_agent, const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session);
 
 protected:
 	RtcPeerInfo() = default;
@@ -264,7 +264,7 @@ protected:
 	// host peer info (client only)
 	std::shared_ptr<RtcPeerInfo> _host_peer;
 
-	std::shared_ptr<http::svr::ws::Client> _ws_client;
+	std::shared_ptr<http::svr::ws::WebSocketSession> _ws_session;
 
 	std::map<peer_id_t, std::shared_ptr<RtcPeerInfo>> _client_list;
 };

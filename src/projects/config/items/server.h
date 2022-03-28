@@ -13,8 +13,8 @@
 #include "analytics/analytics.h"
 #include "base/ovlibrary/uuid.h"
 #include "bind/bind.h"
+#include "modules/modules.h"
 #include "managers/managers.h"
-#include "p2p/p2p.h"
 #include "virtual_hosts/virtual_hosts.h"
 
 namespace cfg
@@ -42,12 +42,11 @@ namespace cfg
 		ov::String _ip;
 		ov::String _stun_server;
 		bind::Bind _bind;
+		modules::modules _modules;
 
 		mgr::Managers _managers;
 
 		an::Analytics _analytics;
-
-		p2p::P2P _p2p;
 
 		vhost::VirtualHosts _virtual_hosts;
 
@@ -66,11 +65,11 @@ namespace cfg
 
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetBind, _bind)
 
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetModules, _modules)
+
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetManagers, _managers)
 
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetAnalytics, _analytics)
-
-		CFG_DECLARE_CONST_REF_GETTER_OF(GetP2P, _p2p)
 
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetVirtualHostList, _virtual_hosts.GetVirtualHostList())
 
@@ -128,11 +127,10 @@ namespace cfg
 			Register<Optional>("StunServer", &_stun_server);
 			Register<Optional>("PrivacyProtection", &_privacy_protection_on);
 			Register("Bind", &_bind);
+			Register<Optional>("Modules", &_modules);
 
 			Register<Optional>("Managers", &_managers);
 			Register<Optional>("Analytics", &_analytics);
-
-			Register<Optional>({"P2P", "p2p"}, &_p2p);
 
 			Register<Optional>("VirtualHosts", &_virtual_hosts);
 		}

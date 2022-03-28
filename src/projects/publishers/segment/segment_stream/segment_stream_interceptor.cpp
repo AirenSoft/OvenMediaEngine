@@ -24,47 +24,17 @@ bool SegmentStreamInterceptor::Start(int thread_count, const SegmentProcessHandl
 	return _worker_manager.Start(thread_count, process_handler);
 }
 
-ssize_t SegmentStreamInterceptor::OnDataReceived(const std::shared_ptr<http::svr::HttpTransaction> &transaction, const std::shared_ptr<const ov::Data> &data)
+http::svr::InterceptorResult SegmentStreamInterceptor::OnRequestCompleted(const std::shared_ptr<http::svr::HttpExchange> &exchange)
 {
-	auto request = transaction->GetRequest();
-	auto response = transaction->GetResponse();
-	ssize_t consumed_bytes = 0;
-	
-	const std::shared_ptr<ov::Data> request_body = GetRequestBody(request);
-
-	//TODO(h2) : Data size can be over, 아래 코드가 정상 동작하는지 체크해야 한다. 
-	if (request_body == nullptr)
-	{
-		return -1;
-	}
-
-	if (request_body->GetLength() + data->GetLength() > request->GetContentLength())
-	{
-		consumed_bytes = request->GetContentLength() - request_body->GetLength();
-	}
-	else
-	{
-		consumed_bytes = data->GetLength();
-	}
-
-	auto process_data = data->Subdata(0L, consumed_bytes);
-
-	request_body->Append(process_data);
-
-	return consumed_bytes;
-}
-
-http::svr::InterceptorResult SegmentStreamInterceptor::OnRequestCompleted(const std::shared_ptr<http::svr::HttpTransaction> &transaction)
-{
-	auto response = transaction->GetResponse();
+	auto response = exchange->GetResponse();
 
 	response->SetStatusCode(http::StatusCode::OK);
-	_worker_manager.PushConnection(transaction);
+	_worker_manager.PushConnection(exchange);
 
 	return http::svr::InterceptorResult::Moved;
 }
 
-bool SegmentStreamInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpTransaction> &client)
+bool SegmentStreamInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpExchange> &client)
 {
 	auto request = client->GetRequest();
 	

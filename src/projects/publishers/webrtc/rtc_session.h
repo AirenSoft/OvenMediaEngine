@@ -1,6 +1,6 @@
 #pragma once
 
-#include <modules/http/protocols/websocket/web_socket_client.h>
+#include <modules/http/server/web_socket/web_socket_session.h>
 #include "base/info/media_track.h"
 #include "base/publisher/session.h"
 #include "modules/sdp/session_description.h"
@@ -34,7 +34,7 @@ public:
 	                                          const std::shared_ptr<const SessionDescription> &offer_sdp,
 	                                          const std::shared_ptr<const SessionDescription> &peer_sdp,
 	                                          const std::shared_ptr<IcePort> &ice_port,
-											  const std::shared_ptr<http::svr::ws::Client> &ws_client);
+											  const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session);
 
 	RtcSession(const info::Session &session_info,
 			const std::shared_ptr<WebRtcPublisher> &publisher,
@@ -43,7 +43,7 @@ public:
 	        const std::shared_ptr<const SessionDescription> &offer_sdp,
 	        const std::shared_ptr<const SessionDescription> &peer_sdp,
 	        const std::shared_ptr<IcePort> &ice_port,
-			const std::shared_ptr<http::svr::ws::Client> &ws_client);
+			const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session);
 	~RtcSession() override;
 
 	bool Start() override;
@@ -53,7 +53,7 @@ public:
 
 	const std::shared_ptr<const SessionDescription>& GetPeerSDP() const;
 	const std::shared_ptr<const SessionDescription>& GetOfferSDP() const;
-	const std::shared_ptr<http::svr::ws::Client>& GetWSClient();
+	const std::shared_ptr<http::svr::ws::WebSocketSession>& GetWSClient();
 
 	// pub::Session Interface
 	bool SendOutgoingData(const std::any &packet) override;
@@ -79,7 +79,7 @@ private:
 	std::shared_ptr<const SessionDescription> _offer_sdp;
 	std::shared_ptr<const SessionDescription> _peer_sdp;
 	std::shared_ptr<IcePort>            _ice_port;
-	std::shared_ptr<http::svr::ws::Client> 	_ws_client; // Signalling  
+	std::shared_ptr<http::svr::ws::WebSocketSession> 	_ws_session; // Signalling  
 
 	uint8_t 							_red_block_pt = 0;
 	uint8_t                             _video_payload_type = 0;

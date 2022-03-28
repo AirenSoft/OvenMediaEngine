@@ -11,7 +11,7 @@
 #include "../segment_publisher.h"
 #include "hls_private.h"
 
-bool HlsStreamServer::ProcessStreamRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+bool HlsStreamServer::ProcessStreamRequest(const std::shared_ptr<http::svr::HttpExchange> &client,
 																  const SegmentStreamRequestInfo &request_info,
 																  const ov::String &file_ext)
 {
@@ -31,7 +31,7 @@ bool HlsStreamServer::ProcessStreamRequest(const std::shared_ptr<http::svr::Http
 	return false;
 }
 
-bool HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+bool HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpExchange> &client,
 																	const SegmentStreamRequestInfo &request_info,
 																	PlayListType play_list_type)
 {
@@ -84,7 +84,7 @@ bool HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<http::svr::Ht
 	return true;
 }
 
-bool HlsStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpTransaction> &client,
+bool HlsStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpExchange> &client,
 																   const SegmentStreamRequestInfo &request_info,
 																   SegmentType segment_type)
 {

@@ -11,7 +11,7 @@
 #include "../dash/dash_define.h"
 #include "cmaf_private.h"
 
-bool CmafInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpTransaction> &client)
+bool CmafInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpExchange> &client)
 {
 	if (SegmentStreamInterceptor::IsInterceptorForRequest(client) == false)
 	{

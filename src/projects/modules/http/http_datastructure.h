@@ -411,10 +411,10 @@ namespace http
 		};
 
 		class HttpServer;
-		class HttpTransaction;
+		class HttpExchange;
 
-		using RequestHandler = std::function<NextHandler(const std::shared_ptr<HttpTransaction> &transaction)>;
-		using RequestErrorHandler = std::function<void(const std::shared_ptr<HttpTransaction> &transaction)>;
+		using RequestHandler = std::function<NextHandler(const std::shared_ptr<HttpExchange> &exchange)>;
+		using RequestErrorHandler = std::function<void(const std::shared_ptr<HttpExchange> &exchange)>;
 
 		using ResponseWriteHandler = std::function<bool(const std::shared_ptr<ov::Data> &data)>;
 	}  // namespace svr
