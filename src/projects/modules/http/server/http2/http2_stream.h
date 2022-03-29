@@ -40,8 +40,10 @@ namespace http
 				// Send Settings frame and Window_Update frame
 				bool SendInitialControlMessage();
 
-				// Settings Frame Received
+				// Settings frame received
 				bool OnSettingsFrameReceived(const std::shared_ptr<const Http2SettingsFrame> &frame);
+				// WindowUpdate frame received
+				bool OnWindowUpdateFrameReceived(const std::shared_ptr<const Http2WindowUpdateFrame> &frame);
 
 				uint32_t _stream_id = 0;
 

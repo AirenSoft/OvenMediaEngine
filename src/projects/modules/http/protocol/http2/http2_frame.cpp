@@ -117,18 +117,8 @@ namespace http
 
 				// R: A reserved 1-bit field.  The semantics of this bit are undefined,
 				// and the bit MUST remain unset (0x0) when sending and MUST be ignored when receiving.
-
-				// Check reserved bit of Stream Identifier is 0
-				// if ((header_data[5] & 0x80) != 0)
-				// {
-				// 	// Set reserved bit of Stream Identifier to 0
-				// 	header_data[5] &= 0x7F;
-				//
-				// 	// Or failed
-				// 	return false;
-				// }
-
-				// Parse Stream ID - ignore reserved bit
+				header_data[5] &= 0x7F;
+				// Parse Stream ID
 				_stream_id = (header_data[5] << 24) | (header_data[6] << 16) | (header_data[7] << 8) | header_data[8];
 
 				_state = Http2Frame::ParsingState::HeaderParsed;
