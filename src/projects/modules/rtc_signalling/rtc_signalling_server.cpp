@@ -420,27 +420,27 @@ bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, c
 		disconnected = _http_server->DisconnectIf(
 			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<http::svr::HttpConnection> &connection) -> bool {
 				
-				//TODO(h2) : Change to use connection->GetWebsocketHandler() 
-				// if(connection->GetConnectionType() != http::ConnectionType::WebSocket)
-				// {
-				// 	return false;
-				// }
+				if(connection->GetConnectionType() != http::ConnectionType::WebSocket)
+				{
+					return false;
+				}
 
-				auto exchange = connection->GetHttpExchange();
-				auto info = exchange->GetExtraAs<RtcSignallingInfo>();
+				auto websocket_session = connection->GetWebSocketSession();
+				if (websocket_session == nullptr)
+				{
+					return false;
+				}
 
+				auto info = websocket_session->GetExtraAs<RtcSignallingInfo>();
 				if (info == nullptr)
 				{
-					// Client disconnected while Connect() is being processed
+					return false;
 				}
-				else
-				{
-					return (info->vhost_app_name == vhost_app_name) &&
-						   (info->stream_name == stream_name) &&
-						   ((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
-				}
-
-				return false;
+				
+				return (info->vhost_app_name == vhost_app_name) &&
+						(info->stream_name == stream_name) &&
+						((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
+				
 			});
 	}
 
