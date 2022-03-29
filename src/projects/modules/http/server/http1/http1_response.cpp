@@ -99,7 +99,7 @@ namespace http
 				return 0;
 			}
 
-			uint32_t Http1Response::SendResponse()
+			uint32_t Http1Response::SendPayload()
 			{
 				bool sent = true;
 

@@ -31,7 +31,7 @@ namespace http
 
 			private:
 				uint32_t SendHeader() override;
-				uint32_t SendResponse() override;
+				uint32_t SendPayload() override;
 
 				bool _chunked_transfer = false;
 			};

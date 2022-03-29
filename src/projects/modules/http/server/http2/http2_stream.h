@@ -8,8 +8,9 @@
 //==============================================================================
 #pragma once
 
-#include "../../protocol/http2/http2_frame.h"
 #include "../http_exchange.h"
+#include "../../protocol/http2/frames/http2_frames.h"
+#include "http2_response.h"
 
 namespace http
 {
@@ -39,7 +40,12 @@ namespace http
 				// Send Settings frame and Window_Update frame
 				bool SendInitialControlMessage();
 
+				// Settings Frame Received
+				bool OnSettingsFrameReceived(const std::shared_ptr<const Http2SettingsFrame> &frame);
+
 				uint32_t _stream_id = 0;
+
+				std::shared_ptr<Http2Response> _response = nullptr;
 			};
 		}  // namespace h2
 	} // namespace svr
