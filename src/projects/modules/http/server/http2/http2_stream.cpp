@@ -81,7 +81,17 @@ namespace http
 					case Http2Frame::Type::GoAway:
 						break;
 					case Http2Frame::Type::WindowUpdate:
+					{
+						parsed_frame = std::make_shared<const Http2WindowUpdateFrame>(frame);
+						if (parsed_frame->GetParsingState() != Http2WindowUpdateFrame::ParsingState::Completed)
+						{
+							logte("Failed to parse window update frame");
+							return false;
+						}
+
+						result = OnWindowUpdateFrameReceived(std::static_pointer_cast<const Http2WindowUpdateFrame>(parsed_frame));
 						break;
+					}
 					case Http2Frame::Type::Continuation:
 						break;
 
@@ -91,7 +101,7 @@ namespace http
 						return false;
 				}
 
-				logtd("Frame Processing %s : %s", result?"Completed":"Error", parsed_frame->ToString().CStr());
+				logti("Frame Processing %s : %s", result?"Completed":"Error", parsed_frame->ToString().CStr());
 
 				return true;
 			}
@@ -109,6 +119,11 @@ namespace http
 				return true;
 			}
 
+			bool HttpStream::OnWindowUpdateFrameReceived(const std::shared_ptr<const Http2WindowUpdateFrame> &frame)
+			{
+				return true;
+			}
+
 			bool HttpStream::SendInitialControlMessage()
 			{
 				logtd("Send Initial Control Message");
@@ -122,6 +137,10 @@ namespace http
 				auto result = _response->Send(settings_frame);
 
 				// WindowUpdate Frame
+				auto window_update_frame = std::make_shared<Http2WindowUpdateFrame>();
+				window_update_frame->SetWindowSizeIncrement(6291456);
+
+				result = result ? _response->Send(window_update_frame) : false;
 				
 				return result;
 			}
