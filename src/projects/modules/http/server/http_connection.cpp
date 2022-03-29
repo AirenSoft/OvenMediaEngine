@@ -341,13 +341,17 @@ namespace http
 
 		ssize_t HttpConnection::OnHttp2RequestReceived(const std::shared_ptr<const ov::Data> &data)
 		{
+			logtd("Http2RequestReceived : %u", data->GetLength());
+
 			ssize_t comsumed_bytes = 0;
 
 			if (_http2_preface.IsConfirmed() == true)
 			{
-				// Create connection control stream
-				auto stream = std::make_shared<h2::HttpStream>(GetSharedPtr(), 0);
-				_http_stream_map.emplace(0, stream);
+				// Create connection control stream : stream id 0
+				if (_http_stream_map.find(0) == _http_stream_map.end())
+				{
+					_http_stream_map.emplace(0, std::make_shared<h2::HttpStream>(GetSharedPtr(), 0));
+				}
 			}
 			else
 			{
@@ -363,6 +367,7 @@ namespace http
 
 			if (_http2_frame == nullptr)
 			{
+				logtd("Create HTTP/2 frame");
 				_http2_frame = std::make_shared<Http2Frame>();
 			}
 
@@ -373,7 +378,7 @@ namespace http
 				return -1;
 			}
 
-			if (_http2_frame->GetState() == Http2Frame::State::Completed)
+			if (_http2_frame->GetParsingState() == Http2Frame::ParsingState::Completed)
 			{
 				logtd("HTTP/2 Frame Received : %s", _http2_frame->ToString().CStr());
 				
@@ -394,7 +399,7 @@ namespace http
 				_http2_frame.reset();
 			}
 
-			return 0;
+			return comsumed_bytes;
 		}
 	}  // namespace svr
 }  // namespace http

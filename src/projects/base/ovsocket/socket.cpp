@@ -1717,12 +1717,12 @@ namespace ov
 
 	void Socket::UpdateLastRecvTime()
 	{
-		_last_recv_time = std::chrono::system_clock::now();
+		_last_recv_time = std::chrono::high_resolution_clock::now();
 	}
 	
 	void Socket::UpdateLastSentTime()
 	{
-		_last_sent_time = std::chrono::system_clock::now();
+		_last_sent_time = std::chrono::high_resolution_clock::now();
 	}
 
 	bool Socket::Flush()

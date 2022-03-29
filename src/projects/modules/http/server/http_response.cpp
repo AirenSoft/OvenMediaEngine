@@ -215,7 +215,7 @@ namespace http
 				}
 			}
 
-			sent_size += SendResponse();
+			sent_size += SendPayload();
 
 			return sent_size;
 		}	
@@ -225,7 +225,7 @@ namespace http
 			return 0;
 		}
 
-		uint32_t HttpResponse::SendResponse()
+		uint32_t HttpResponse::SendPayload()
 		{
 			return 0;
 		}

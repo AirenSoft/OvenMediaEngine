@@ -77,7 +77,7 @@ namespace http
 			
 		private:
 			virtual uint32_t SendHeader();
-			virtual uint32_t SendResponse();
+			virtual uint32_t SendPayload();
 
 			std::shared_ptr<ov::ClientSocket> _client_socket;
 			std::shared_ptr<ov::TlsServerData> _tls_data;

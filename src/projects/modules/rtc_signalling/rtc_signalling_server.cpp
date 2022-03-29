@@ -420,27 +420,27 @@ bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, c
 		disconnected = _http_server->DisconnectIf(
 			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<http::svr::HttpConnection> &connection) -> bool {
 				
-				//TODO(h2) : Change to use connection->GetWebsocketHandler() 
-				// if(connection->GetConnectionType() != http::ConnectionType::WebSocket)
-				// {
-				// 	return false;
-				// }
+				if(connection->GetConnectionType() != http::ConnectionType::WebSocket)
+				{
+					return false;
+				}
 
-				auto exchange = connection->GetHttpExchange();
-				auto info = exchange->GetExtraAs<RtcSignallingInfo>();
+				auto websocket_session = connection->GetWebSocketSession();
+				if (websocket_session == nullptr)
+				{
+					return false;
+				}
 
+				auto info = websocket_session->GetExtraAs<RtcSignallingInfo>();
 				if (info == nullptr)
 				{
-					// Client disconnected while Connect() is being processed
+					return false;
 				}
-				else
-				{
-					return (info->vhost_app_name == vhost_app_name) &&
-						   (info->stream_name == stream_name) &&
-						   ((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
-				}
-
-				return false;
+				
+				return (info->vhost_app_name == vhost_app_name) &&
+						(info->stream_name == stream_name) &&
+						((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
+				
 			});
 	}
 
@@ -449,34 +449,35 @@ bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, c
 		disconnected = _https_server->DisconnectIf(
 			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<http::svr::HttpConnection> &connection) -> bool {
 				
-				//TODO(h2) : Change to use connection->GetWebsocketHandler() 
-				// if(connection->GetConnectionType() != http::ConnectionType::WebSocket)
-				// {
-				// 	return false;
-				// }
+				if(connection->GetConnectionType() != http::ConnectionType::WebSocket)
+				{
+					return false;
+				}
 				
-				auto exchange = connection->GetHttpExchange();
-				auto info = exchange->GetExtraAs<RtcSignallingInfo>();
+				auto websocket_session = connection->GetWebSocketSession();
+				if (websocket_session == nullptr)
+				{
+					return false;
+				}
 
+				auto info = websocket_session->GetExtraAs<RtcSignallingInfo>();
 				if (info == nullptr)
 				{
-					// Client disconnected while Connect() is being processed
+					return false;
 				}
-				else
-				{
-					return (info->vhost_app_name == vhost_app_name) &&
-						   (info->stream_name == stream_name) &&
-						   ((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
-				}
-
-				return false;
+				
+				return (info->vhost_app_name == vhost_app_name) &&
+						(info->stream_name == stream_name) &&
+						((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
 			});
 	}
 
 	if (disconnected == false)
 	{
-		// ICE 연결이 끊어져 Disconnect()이 호출 된 직후, _http_server->Disconnect()이 실행되기 전 타이밍에
-		// WebSocket 연결이 끊어져서 http::svr::HttpServer::OnDisconnected() 이 처리되고 나면 실패 할 수 있음
+		// May fail after http::svr::HttpServer::OnDisconnected() is handled 
+		// because the WebSocket connection is disconnected at the timing immediately 
+		// after Disconnect() is called due to ICE disconnection, 
+		// but before _http_server->Disconnect() is executed
 	}
 
 	return disconnected;

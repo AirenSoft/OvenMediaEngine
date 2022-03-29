@@ -29,13 +29,13 @@ namespace http
 			// +---------------------------------------------------------------+
 			//                       Figure 1: Frame Layout
 
-#define HTTP2_FRAME_HEADER_SIZE 3 + 1 + 1 + 4
+#define HTTP2_FRAME_HEADER_SIZE (3+1+1+4)
 
 			// For HTTP/2.0
 			class Http2Frame
 			{
 			public:
-				enum class State : uint8_t
+				enum class ParsingState : uint8_t
 				{
 					Init,
 					HeaderParsed,
@@ -58,38 +58,47 @@ namespace http
 					Unknown = 0xA,
 				};
 
-				enum class Flags : uint8_t
-				{
-					None = 0x0,
-					EndStream = 0x1,
-					EndHeaders = 0x4,
-					Padded = 0x8,
-					Priority = 0x20,
-				};
+				Http2Frame();
+				Http2Frame(const std::shared_ptr<const Http2Frame> &frame);
 
+				// For frame parsing
 				ssize_t AppendData(const std::shared_ptr<const ov::Data> &data);
 
-				ov::String ToString() const;
+				virtual ov::String ToString() const;
 
 				// Getters
-				State GetState() const noexcept;
+				ParsingState GetParsingState() const noexcept;
 				uint32_t GetLength() const;
 				Type GetType() const noexcept;
-				Flags GetFlags() const noexcept;
+				uint8_t GetFlags() const noexcept;
 				uint32_t GetStreamId() const noexcept;
-				const std::shared_ptr<const ov::Data> GetPayload() const noexcept;
+				virtual const std::shared_ptr<const ov::Data> GetPayload() const;
+
+				// To data
+				std::shared_ptr<ov::Data> ToData() const;
+
+			protected:
+				// Setters
+				void SetType(Type type) noexcept;
+				void SetFlags(uint8_t flags) noexcept;
+				void SetStreamId(uint32_t stream_id) noexcept;
+				void SetPayload(const std::shared_ptr<const ov::Data> &payload) noexcept;
+
+				// Set state
+				void SetParsingState(ParsingState state) noexcept;
 
 			private:
 				bool ParseHeader();
 
-				State _state = State::Init;
-
 				uint32_t _length = 0;
 				Type _type = Type::Unknown;
-				Flags _flags = Flags::None;
+				uint8_t _flags = 0;
 				uint32_t _stream_id = 0;
 				std::shared_ptr<const ov::Data> _payload = nullptr;
-				ov::Data _packet_data;
+
+				ParsingState _state = ParsingState::Init;
+				// Temporary buffer to parse header
+				ov::Data _packet_buffer;
 			};
 		}  // namespace h2
 	} // namespace prot
