@@ -35,31 +35,31 @@ bool EncoderHEVCxNV::SetCodecParams()
 	// Preset
 	if (_encoder_context->GetPreset() == "slower")
 	{
-		::av_opt_set(_codec_context->priv_data, "preset", "hq", 0);
+		::av_opt_set(_codec_context->priv_data, "preset", "p7", 0);
 	}
 	else if (_encoder_context->GetPreset() == "slow")
 	{
-		::av_opt_set(_codec_context->priv_data, "preset", "llhq", 0);
+		::av_opt_set(_codec_context->priv_data, "preset", "p6", 0);
 	}
 	else if (_encoder_context->GetPreset() == "medium")
 	{
-		::av_opt_set(_codec_context->priv_data, "preset", "bd", 0);
+		::av_opt_set(_codec_context->priv_data, "preset", "p5", 0);
 	}
 	else if (_encoder_context->GetPreset() == "fast")
 	{
-		::av_opt_set(_codec_context->priv_data, "preset", "hp", 0);
+		::av_opt_set(_codec_context->priv_data, "preset", "p4", 0);
 	}
 	else if (_encoder_context->GetPreset() == "faster")
 	{
-		::av_opt_set(_codec_context->priv_data, "preset", "llhp", 0);
+		::av_opt_set(_codec_context->priv_data, "preset", "p3", 0);
 	}
 	else
 	{
 		// Default
-		::av_opt_set(_codec_context->priv_data, "preset", "llhp", 0);
+		::av_opt_set(_codec_context->priv_data, "preset", "p7", 0);
 	}
-
-	::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+	
+	::av_opt_set(_codec_context->priv_data, "tune", "ull", 0);
 	::av_opt_set(_codec_context->priv_data, "rc", "cbr", 0);
 
 	return true;
