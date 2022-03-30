@@ -9,6 +9,10 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
+
+#define CHECK_HTTP2_FRAME_FLAG(flag) ((GetFlags() & static_cast<uint8_t>(flag)) ? true:false)
+#define TURN_ON_HTTP2_FRAME_FLAG(flag) SetFlag(static_cast<uint8_t>(flag))
+
 namespace http
 {
 	namespace prot
@@ -71,6 +75,7 @@ namespace http
 				uint32_t GetLength() const;
 				Type GetType() const noexcept;
 				uint8_t GetFlags() const noexcept;
+				bool IsFlagSet(uint8_t flag) const noexcept;
 				uint32_t GetStreamId() const noexcept;
 				virtual const std::shared_ptr<const ov::Data> GetPayload() const;
 
@@ -81,6 +86,8 @@ namespace http
 				// Setters
 				void SetType(Type type) noexcept;
 				void SetFlags(uint8_t flags) noexcept;
+				// Turn on flag
+				void SetFlag(uint8_t flag) noexcept;
 				void SetStreamId(uint32_t stream_id) noexcept;
 				void SetPayload(const std::shared_ptr<const ov::Data> &payload) noexcept;
 

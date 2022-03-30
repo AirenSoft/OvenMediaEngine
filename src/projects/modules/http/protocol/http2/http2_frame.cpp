@@ -190,6 +190,11 @@ namespace http
 				return _flags;
 			}
 
+			bool Http2Frame::IsFlagSet(uint8_t flag) const noexcept
+			{
+				return (_flags & flag) == flag;
+			}
+
 			uint32_t Http2Frame::GetStreamId() const noexcept
 			{
 				return _stream_id;
@@ -209,6 +214,11 @@ namespace http
 			void Http2Frame::SetFlags(uint8_t flags) noexcept
 			{
 				_flags = flags;
+			}
+
+			void Http2Frame::SetFlag(uint8_t flag) noexcept
+			{
+				_flags |= flag;
 			}
 
 			void Http2Frame::SetStreamId(uint32_t stream_id) noexcept
