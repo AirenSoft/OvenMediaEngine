@@ -39,7 +39,9 @@ namespace http
 			private:
 				// Send Settings frame and Window_Update frame
 				bool SendInitialControlMessage();
-
+				
+				// Headers frame received
+				bool OnHeadersFrameReceived(const std::shared_ptr<const Http2HeadersFrame> &frame);
 				// Settings frame received
 				bool OnSettingsFrameReceived(const std::shared_ptr<const Http2SettingsFrame> &frame);
 				// WindowUpdate frame received

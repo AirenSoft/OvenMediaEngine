@@ -57,7 +57,17 @@ namespace http
 					case Http2Frame::Type::Data:
 						break;
 					case Http2Frame::Type::Headers:
+					{
+						parsed_frame = std::make_shared<Http2HeadersFrame>(frame);
+						if (parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						{
+							logte("Failed to parse settings frame");
+							return false;
+						}
+
+						result = OnHeadersFrameReceived(std::static_pointer_cast<const Http2HeadersFrame>(parsed_frame));
 						break;
+					}
 					case Http2Frame::Type::Priority:
 						break;
 					case Http2Frame::Type::RstStream:
@@ -65,7 +75,7 @@ namespace http
 					case Http2Frame::Type::Settings:
 					{
 						parsed_frame = std::make_shared<const Http2SettingsFrame>(frame);
-						if (parsed_frame->GetParsingState() != Http2SettingsFrame::ParsingState::Completed)
+						if (parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
 							logte("Failed to parse settings frame");
 							return false;
@@ -83,7 +93,7 @@ namespace http
 					case Http2Frame::Type::WindowUpdate:
 					{
 						parsed_frame = std::make_shared<const Http2WindowUpdateFrame>(frame);
-						if (parsed_frame->GetParsingState() != Http2WindowUpdateFrame::ParsingState::Completed)
+						if (parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
 							logte("Failed to parse window update frame");
 							return false;
@@ -103,6 +113,11 @@ namespace http
 
 				logti("Frame Processing %s : %s", result?"Completed":"Error", parsed_frame->ToString().CStr());
 
+				return true;
+			}
+
+			bool HttpStream::OnHeadersFrameReceived(const std::shared_ptr<const Http2HeadersFrame> &frame)
+			{
 				return true;
 			}
 

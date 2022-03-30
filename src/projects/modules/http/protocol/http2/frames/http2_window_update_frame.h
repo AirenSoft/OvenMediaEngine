@@ -112,8 +112,6 @@ namespace http
 					SetParsingState(ParsingState::Completed);
 				}
 
-				std::shared_ptr<Http2Frame> _frame;
-				
 				uint32_t _window_size_increment = 983041; // Default value
 			};
 		}

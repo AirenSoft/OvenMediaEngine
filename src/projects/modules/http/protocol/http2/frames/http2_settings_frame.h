@@ -62,6 +62,11 @@ namespace http
 
 					str += "\n";
 					str += "[Settings Frame]\n";
+
+					// Print Flags
+					str += ov::String::FormatString("Flags: Ack(%s)\n", 
+						ov::Converter::ToString(CHECK_HTTP2_FRAME_FLAG(Flags::Ack)).CStr());
+
 					// Print parameters
 					for (const auto &param : _parameters)
 					{
@@ -73,12 +78,12 @@ namespace http
 
 				void SetAck()
 				{
-					SetFlags(GetFlags() | static_cast<uint8_t>(Flags::Ack));
+					TURN_ON_HTTP2_FRAME_FLAG(Flags::Ack);
 				}
 
 				bool IsAck() const
 				{
-					return GetFlags() & static_cast<uint8_t>(Flags::Ack);
+					return CHECK_HTTP2_FRAME_FLAG(Flags::Ack);
 				}
 
 				void SetParameter(Parameters parameter, uint32_t value)
@@ -182,7 +187,6 @@ namespace http
 					SetParsingState(ParsingState::Completed);
 				}
 
-				std::shared_ptr<Http2Frame> _frame;
 				// Parameters
 				std::map<uint16_t, uint32_t> _parameters;
 			};
