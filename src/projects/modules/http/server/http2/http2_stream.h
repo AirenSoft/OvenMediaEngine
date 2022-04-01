@@ -10,6 +10,7 @@
 
 #include "../http_exchange.h"
 #include "../../protocol/http2/frames/http2_frames.h"
+#include "http2_request.h"
 #include "http2_response.h"
 
 namespace http
@@ -49,6 +50,8 @@ namespace http
 
 				uint32_t _stream_id = 0;
 
+				std::shared_ptr<ov::Data> _header_block = nullptr;
+				std::shared_ptr<Http2Request> _request = nullptr;
 				std::shared_ptr<Http2Response> _response = nullptr;
 			};
 		}  // namespace h2

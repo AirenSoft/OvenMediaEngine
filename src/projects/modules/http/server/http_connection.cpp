@@ -134,6 +134,16 @@ namespace http
 			return _connection_type;
 		}
 
+		std::shared_ptr<hpack::Encoder> HttpConnection::GetHpackEncoder() const
+		{
+			return _hpack_encoder;
+		}
+
+		std::shared_ptr<hpack::Decoder> HttpConnection::GetHpackDecoder() const
+		{
+			return _hpack_decoder;
+		}
+
 		// Find Interceptor
 		std::shared_ptr<RequestInterceptor> HttpConnection::FindInterceptor(const std::shared_ptr<HttpExchange> &exchange)
 		{
@@ -345,21 +355,18 @@ namespace http
 
 			ssize_t comsumed_bytes = 0;
 
-			if (_http2_preface.IsConfirmed() == true)
-			{
-				// Create connection control stream : stream id 0
-				if (_http_stream_map.find(0) == _http_stream_map.end())
-				{
-					_http_stream_map.emplace(0, std::make_shared<h2::HttpStream>(GetSharedPtr(), 0));
-				}
-			}
-			else
+			if (_http2_preface.IsConfirmed() == false)
 			{
 				comsumed_bytes = _http2_preface.AppendData(data);
 				if (comsumed_bytes == -1)
 				{
 					logte("HTTP/2 preface is not confirmed from %s", _client_socket->ToString().CStr());
 					return -1;
+				}
+
+				if (_http2_preface.IsConfirmed() == true)
+				{
+					InitializeHttp2Connection();
 				}
 
 				return comsumed_bytes;
@@ -400,6 +407,17 @@ namespace http
 			}
 
 			return comsumed_bytes;
+		}
+
+		void HttpConnection::InitializeHttp2Connection()
+		{
+			logtd("Initialize HTTP/2 connection");
+
+			_hpack_encoder = std::make_shared<hpack::Encoder>();
+			_hpack_decoder = std::make_shared<hpack::Decoder>();
+
+			// Control Stream (stream id : 0) is always open
+			_http_stream_map.emplace(0, std::make_shared<h2::HttpStream>(GetSharedPtr(), 0));
 		}
 	}  // namespace svr
 }  // namespace http

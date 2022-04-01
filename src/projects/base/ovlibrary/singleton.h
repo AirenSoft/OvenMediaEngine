@@ -19,11 +19,17 @@ namespace ov
 		static T *GetInstance()
 		{
 			static T instance;
-
+			instance.InitSingletonInstance();
 			return &instance;
 		}
 
 	protected:
 		Singleton() = default;
+
+	private:
+		virtual void InitSingletonInstance()
+		{
+			// For derived class
+		}
 	};
 }

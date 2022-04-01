@@ -210,6 +210,11 @@ public:
 		return _capacity - BytesConsumed();
 	}
 
+	size_t BitsRemained() const
+	{
+		return (_capacity * 8) - BitsConsumed();
+	}
+
     size_t BytesConsumed() const
     {
         return _position - _buffer;
@@ -217,7 +222,7 @@ public:
 
     size_t BitsConsumed() const
     {
-        return (_position - _buffer) * 8 + _bit_offset;
+        return (BytesConsumed() * 8) + _bit_offset;
     }
 
 protected:

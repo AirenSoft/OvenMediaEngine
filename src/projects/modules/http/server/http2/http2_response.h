@@ -11,6 +11,7 @@
 
 #include "../http_response.h"
 #include "../../protocol/http2/http2_frame.h"
+#include "../../hpack/encoder.h"
 
 namespace http
 {
@@ -22,10 +23,10 @@ namespace http
 			{
 			public:
 				// Constructor
-				Http2Response(const std::shared_ptr<ov::ClientSocket> &client_socket)
+				Http2Response(const std::shared_ptr<ov::ClientSocket> &client_socket, const std::shared_ptr<hpack::Encoder> &hpack_encoder)
 					: HttpResponse(client_socket)
 				{
-					
+					_hpack_encoder = hpack_encoder;
 				}
 
 				bool Send(const std::shared_ptr<prot::h2::Http2Frame> &frame)
@@ -43,6 +44,8 @@ namespace http
 				{
 					return 0;
 				}
+
+				std::shared_ptr<hpack::Encoder> _hpack_encoder;
 			};
 		}
 	}

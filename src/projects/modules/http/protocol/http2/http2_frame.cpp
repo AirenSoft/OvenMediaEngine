@@ -190,7 +190,7 @@ namespace http
 				return _flags;
 			}
 
-			bool Http2Frame::IsFlagSet(uint8_t flag) const noexcept
+			bool Http2Frame::IsFlagOn(uint8_t flag) const noexcept
 			{
 				return (_flags & flag) == flag;
 			}

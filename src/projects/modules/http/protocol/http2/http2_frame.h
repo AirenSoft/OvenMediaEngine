@@ -11,6 +11,7 @@
 #include <base/ovlibrary/ovlibrary.h>
 
 #define CHECK_HTTP2_FRAME_FLAG(flag) ((GetFlags() & static_cast<uint8_t>(flag)) ? true:false)
+#define IS_HTTP2_FRAME_FLAG_ON(flag) IsFlagOn(static_cast<uint8_t>(flag))
 #define TURN_ON_HTTP2_FRAME_FLAG(flag) SetFlag(static_cast<uint8_t>(flag))
 
 namespace http
@@ -75,7 +76,7 @@ namespace http
 				uint32_t GetLength() const;
 				Type GetType() const noexcept;
 				uint8_t GetFlags() const noexcept;
-				bool IsFlagSet(uint8_t flag) const noexcept;
+				bool IsFlagOn(uint8_t flag) const noexcept;
 				uint32_t GetStreamId() const noexcept;
 				virtual const std::shared_ptr<const ov::Data> GetPayload() const;
 

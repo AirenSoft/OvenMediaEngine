@@ -10,6 +10,7 @@
 
 #include "./assert.h"
 #include "./bit_writer.h"
+#include "./bit_reader.h"
 #include "./bps_calculator.h"
 #include "./byte_ordering.h"
 #include "./byte_stream.h"
