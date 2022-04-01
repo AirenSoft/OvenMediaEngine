@@ -20,7 +20,11 @@ namespace http
 			HttpStream::HttpStream(const std::shared_ptr<HttpConnection> &connection, uint32_t stream_id)
 				: HttpExchange(connection), _stream_id(stream_id)
 			{
-				_response = std::make_shared<Http2Response>(GetConnection()->GetSocket());
+				_request = std::make_shared<Http2Request>(GetConnection()->GetSocket(), GetConnection()->GetHpackDecoder());
+				_request->SetConnectionType(ConnectionType::Http20);
+				_request->SetTlsData(GetConnection()->GetTlsData());
+
+				_response = std::make_shared<Http2Response>(GetConnection()->GetSocket(), GetConnection()->GetHpackEncoder());
 				_response->SetTlsData(GetConnection()->GetTlsData());
 				_response->SetHeader("Server", "OvenMediaEngine");
 				_response->SetHeader("Content-Type", "text/html");
@@ -118,6 +122,25 @@ namespace http
 
 			bool HttpStream::OnHeadersFrameReceived(const std::shared_ptr<const Http2HeadersFrame> &frame)
 			{
+				if (_header_block == nullptr)
+				{
+					_header_block = std::make_shared<ov::Data>();
+				}
+
+				_header_block->Append(frame->GetHeaderBlockFragment());
+
+				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndHeaders))
+				{
+					// Header Completed
+					_request->AppendHeaderData(_header_block);
+				}
+
+				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndStream))
+				{
+					// End of Stream, that means no more data will be sent
+
+				}
+
 				return true;
 			}
 

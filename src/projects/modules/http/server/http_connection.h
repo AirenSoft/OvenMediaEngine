@@ -16,6 +16,8 @@
 #include "web_socket/web_socket_session.h"
 
 #include "../protocol/http2/http2_preface.h"
+#include "../hpack/encoder.h"
+#include "../hpack/decoder.h"
 
 //TODO(Getroot) : Move to Server.xml
 #define HTTP_CONNECTION_TIMEOUT_MS		10 * 1000
@@ -56,6 +58,10 @@ namespace http
 			// Find interceptor
 			std::shared_ptr<RequestInterceptor> FindInterceptor(const std::shared_ptr<HttpExchange> &exchange);
 
+			// Get HPACK Codec
+			std::shared_ptr<hpack::Encoder> GetHpackEncoder() const;
+			std::shared_ptr<hpack::Decoder> GetHpackDecoder() const;
+
 			// To string
 			virtual ov::String ToString() const;
 
@@ -70,6 +76,8 @@ namespace http
 			bool DeleteHttpStream(uint32_t stream_id);
 
 			bool UpgradeToWebSocket(const std::shared_ptr<HttpExchange> &exchange);
+
+			void InitializeHttp2Connection();
 
 			void CheckTimeout();
 			
@@ -94,6 +102,9 @@ namespace http
 			std::shared_ptr<Http2Frame> _http2_frame = nullptr;
 			// Stream Identifier, HttpExchange
 			std::map<uint32_t, std::shared_ptr<h2::HttpStream>> _http_stream_map;
+			// HTTP/2 HPACK Codec
+			std::shared_ptr<hpack::Encoder> _hpack_encoder = nullptr;
+			std::shared_ptr<hpack::Decoder> _hpack_decoder = nullptr;
 
 			///////////////////////
 			// For Websocket
