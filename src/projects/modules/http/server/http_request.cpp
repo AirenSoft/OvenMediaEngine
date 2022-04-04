@@ -53,14 +53,14 @@ namespace http
 			return _connection_type;
 		}
 
-		void HttpRequest::PostProcess()
+		void HttpRequest::PostHeaderParsedProcess()
 		{
 			UpdateUri();
 		}
 
 		void HttpRequest::UpdateUri()
 		{
-			auto host = GetHeader("Host");
+			auto host = GetHost();
 			if (host.IsEmpty())
 			{
 				host = _client_socket->GetLocalAddress()->GetIpAddress();

@@ -64,6 +64,7 @@ namespace http
 				};
 
 				Http2Frame();
+				Http2Frame(uint32_t stream_id);
 				Http2Frame(const std::shared_ptr<const Http2Frame> &frame);
 
 				// For frame parsing

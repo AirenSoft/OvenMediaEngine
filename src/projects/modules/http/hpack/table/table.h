@@ -51,6 +51,8 @@ namespace http
 				_header_field_name_sequence_map[header_field.GetName()] = _append_sequence;
 				_header_field_sequence_map[header_field.GetKey()] = _append_sequence;
 
+				logi("DEBUG", "Indexed header field: %s", header_field.ToString().CStr());
+
 				_append_sequence++;
 
 				return false;
@@ -110,6 +112,7 @@ namespace http
 
 			bool FreeUpSpace(size_t new_entry_size)
 			{
+				// TODO(h2) : Implement
 				return true;
 			}
 

@@ -38,12 +38,23 @@ namespace http
 				}
 
 				// Make by itself
-				Http2HeadersFrame()
+				Http2HeadersFrame(uint32_t stream_id)
+					: Http2Frame(stream_id)
 				{
 					SetType(Http2Frame::Type::Headers);
 				}
 
 				// Setters
+				void SetEndHeaders()
+				{
+					TURN_ON_HTTP2_FRAME_FLAG(Flags::EndHeaders);
+				}
+
+				void SetEndStream()
+				{
+					TURN_ON_HTTP2_FRAME_FLAG(Flags::EndStream);
+				}
+
 				void SetPadLength(uint8_t pad_length)
 				{
 					_pad_length = pad_length;
@@ -143,7 +154,7 @@ namespace http
 						payload->SetLength(payload->GetLength() + _pad_length);
 					}
 
-					return nullptr;
+					return payload;
 				}
 
 			private:

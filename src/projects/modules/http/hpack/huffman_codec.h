@@ -17,14 +17,12 @@ namespace http
 	{
 		class HuffmanCodec : public ov::Singleton<HuffmanCodec>
 		{
-		public:			
+		public:
+			HuffmanCodec();
 			std::shared_ptr<ov::Data> Encode(const ov::String &str);
 			bool Decode(const std::shared_ptr<const ov::Data> &data, ov::String &str);
 			
 		private:
-			friend class ov::Singleton<HuffmanCodec>;
-			void InitSingletonInstance() override;
-
 			// Build Tree and Map
 			void Build(uint32_t code, uint8_t length, uint16_t symbol);
 			// Build Map for encoding from symbol to code

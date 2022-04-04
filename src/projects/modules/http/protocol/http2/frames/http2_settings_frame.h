@@ -46,6 +46,10 @@ namespace http
 
 				// Make by itself
 				Http2SettingsFrame()
+					// https://datatracker.ietf.org/doc/html/rfc7540#section-6.5
+					// SETTINGS frames always apply to a connection, never a single stream. 
+					// The stream identifier for a SETTINGS frame MUST be zero (0x00).
+					: Http2Frame(0)
 				{
 					SetType(Http2Frame::Type::Settings);
 					SetFlags(0);

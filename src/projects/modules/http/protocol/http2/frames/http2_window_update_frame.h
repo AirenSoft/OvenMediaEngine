@@ -29,7 +29,8 @@ namespace http
 				}
 
 				// Make by itself
-				Http2WindowUpdateFrame()
+				Http2WindowUpdateFrame(uint32_t stream_id)
+					: Http2Frame(stream_id)
 				{
 					SetType(Http2Frame::Type::WindowUpdate);
 					// Unused flags

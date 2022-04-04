@@ -24,10 +24,10 @@ namespace http
 				_request->SetConnectionType(ConnectionType::Http20);
 				_request->SetTlsData(GetConnection()->GetTlsData());
 
-				_response = std::make_shared<Http2Response>(GetConnection()->GetSocket(), GetConnection()->GetHpackEncoder());
+				_response = std::make_shared<Http2Response>(stream_id, GetConnection()->GetSocket(), GetConnection()->GetHpackEncoder());
 				_response->SetTlsData(GetConnection()->GetTlsData());
-				_response->SetHeader("Server", "OvenMediaEngine");
-				_response->SetHeader("Content-Type", "text/html");
+				_response->SetHeader("server", "OvenMediaEngine");
+				_response->SetHeader("content-type", "text/html");
 
 				// https://www.rfc-editor.org/rfc/rfc7540.html#section-5.1.1
 				// A stream identifier of zero (0x0) is used for connection control messages
@@ -39,7 +39,7 @@ namespace http
 
 			std::shared_ptr<HttpRequest> HttpStream::GetRequest() const
 			{
-				return nullptr;
+				return _request;
 			}
 			std::shared_ptr<HttpResponse> HttpStream::GetResponse() const
 			{
@@ -132,13 +132,60 @@ namespace http
 				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndHeaders))
 				{
 					// Header Completed
-					_request->AppendHeaderData(_header_block);
+					if (_request->AppendHeaderData(_header_block) <= 0)
+					{
+						return false;
+					}
+
+					if (IsUpgradeRequest() == true)
+					{
+						if (AcceptUpgrade() == false)
+						{
+							SetStatus(Status::Error);
+							return -1;
+						}
+
+						SetStatus(Status::Upgrade);
+						return true;
+					}
+
+					// HTTP/2 Connection is awalys keep-alive
+					SetKeepAlive(true);
+
+					// Notify to interceptor
+					if (OnRequestPrepared(GetSharedPtr()) == false)
+					{
+						return -1;
+					}
+
+					if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndStream))
+					{
+						SetStatus(Status::Completed);
+					}
 				}
 
 				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndStream))
 				{
 					// End of Stream, that means no more data will be sent
-
+					auto result = OnRequestCompleted(GetSharedPtr());
+					switch (result)
+					{
+						case InterceptorResult::Completed:
+							SetStatus(Status::Completed);
+							break;
+						case InterceptorResult::Moved:
+							SetStatus(Status::Moved);
+							break;
+						case InterceptorResult::Error:
+						default:
+							SetStatus(Status::Error);
+							return -1;
+					}
+				}
+				else
+				{
+					// Continue to receive more data
+					SetStatus(Status::Exchanging);
 				}
 
 				return true;
@@ -175,7 +222,7 @@ namespace http
 				auto result = _response->Send(settings_frame);
 
 				// WindowUpdate Frame
-				auto window_update_frame = std::make_shared<Http2WindowUpdateFrame>();
+				auto window_update_frame = std::make_shared<Http2WindowUpdateFrame>(0);
 				window_update_frame->SetWindowSizeIncrement(6291456);
 
 				result = result ? _response->Send(window_update_frame) : false;

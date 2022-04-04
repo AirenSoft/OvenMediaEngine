@@ -149,6 +149,8 @@ namespace http
 				return false;
 			}
 
+			header_fields.push_back(header_field);
+
 			logtc("DecodeLiteralHeaderFieldWithoutIndexing: %s", header_field.ToString().CStr());
 
 			return true;
@@ -161,6 +163,8 @@ namespace http
 			{
 				return false;
 			}
+
+			header_fields.push_back(header_field);
 
 			logtc("DecodeLiteralHeaderFieldNeverIndexed: %s", header_field.ToString().CStr());
 

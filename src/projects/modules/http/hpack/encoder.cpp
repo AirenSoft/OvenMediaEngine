@@ -16,10 +16,7 @@ namespace http
 	{
 		std::shared_ptr<ov::Data> Encoder::Encode(const HeaderField &header_fields, EncodingType type)
 		{
-			std::shared_ptr<ov::Data> encoded_data = std::make_shared<ov::Data>();
-			
-			// Allocate the expected size in advance for performance.
-			encoded_data->SetLength(header_fields.GetSize());
+			std::shared_ptr<ov::Data> encoded_data = std::make_shared<ov::Data>(header_fields.GetSize());
 
 			ov::ByteStream stream(encoded_data.get());
 

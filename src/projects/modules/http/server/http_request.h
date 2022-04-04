@@ -67,18 +67,21 @@ namespace http
 				return "";
 			}
 
+			double GetHttpVersionAsNumber() const noexcept
+			{
+				return ov::Converter::ToDouble(GetHttpVersion().CStr());
+			}
+
 			ov::String ToString() const;
 
 			virtual ssize_t AppendHeaderData(const std::shared_ptr<const ov::Data> &data) = 0;
 			virtual StatusCode GetHeaderParingStatus() const = 0;
 			virtual Method GetMethod() const noexcept = 0;
 			virtual ov::String GetHttpVersion() const noexcept = 0;
-			virtual double GetHttpVersionAsNumber() const noexcept = 0;
-			// Path of the URI (including query strings & excluding domain and port)
-			// Example: /<app>/<stream>/...?a=b&c=d
-			virtual const ov::String &GetRequestTarget() const noexcept = 0;
+			virtual ov::String GetHost() const noexcept = 0;
+			virtual ov::String GetRequestTarget() const noexcept = 0;
 			virtual ov::String GetHeader(const ov::String &key) const noexcept = 0;
-			virtual const bool IsHeaderExists(const ov::String &key) const noexcept = 0;
+			virtual bool IsHeaderExists(const ov::String &key) const noexcept = 0;
 
 			ov::String GetHeader(const ov::String &key, ov::String default_value) const noexcept
 			{
@@ -102,7 +105,7 @@ namespace http
 				return _request_body;
 			}
 
-			void PostProcess();
+			void PostHeaderParsedProcess();
 			void UpdateUri();
 
 			std::shared_ptr<ov::ClientSocket> _client_socket;

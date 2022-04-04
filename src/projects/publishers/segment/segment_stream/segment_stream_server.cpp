@@ -136,7 +136,6 @@ bool SegmentStreamServer::RemoveObserver(const std::shared_ptr<SegmentStreamObse
 
 	if (item == _observers.end())
 	{
-		// 기존에 등록되어 있지 않음
 		logtw("%p is not registered observer", observer.get());
 		return false;
 	}
@@ -199,7 +198,7 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<http::svr::HttpEx
 		return false;
 	}
 
-	auto host_header = request->GetHeader("HOST");
+	auto host_header = request->GetHost();
 	auto host_name = host_header.Split(":")[0];
 	auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, url->App());
 

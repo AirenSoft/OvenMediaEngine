@@ -13,7 +13,7 @@ namespace http
 {
 	namespace hpack
 	{
-		void StaticTable::InitSingletonInstance()
+		StaticTable::StaticTable()
 		{
 			// https://www.rfc-editor.org/rfc/rfc7541.html#appendix-A
 			// The index number starts from 1. There are up to 61 static tables.
