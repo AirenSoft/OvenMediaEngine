@@ -35,7 +35,7 @@ namespace http
 
 				// Get Stream ID
 				uint32_t GetStreamId() const;
-				bool OnFrameReceived(const std::shared_ptr<const Http2Frame> &frame);
+				bool OnFrameReceived(const std::shared_ptr<Http2Frame> &frame);
 
 			private:
 				// Send Settings frame and Window_Update frame

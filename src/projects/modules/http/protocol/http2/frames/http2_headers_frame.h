@@ -30,18 +30,16 @@ namespace http
 					Priority = 0x20,
 				};
 
-				// Make from parsed general frame header and payload
-				Http2HeadersFrame(const std::shared_ptr<const Http2Frame> &frame)
-					: Http2Frame(frame)
-				{
-					ParsingPayload();
-				}
-
 				// Make by itself
 				Http2HeadersFrame(uint32_t stream_id)
 					: Http2Frame(stream_id)
 				{
 					SetType(Http2Frame::Type::Headers);
+				}
+
+				Http2HeadersFrame(const std::shared_ptr<Http2Frame> &frame)
+					: Http2Frame(frame)
+				{
 				}
 
 				// Setters
@@ -158,14 +156,18 @@ namespace http
 				}
 
 			private:
-				void ParsingPayload()
+				bool ParsePayload() override
 				{
-					// The payload of a SETTINGS frame consists of zero or more parameters,
+					if (GetType() != Type::Headers)
+					{
+						return false;
+					}
+
 					auto payload = GetPayload();
 					if (payload == nullptr)
 					{
 						SetParsingState(ParsingState::Completed);
-						return;
+						return false;
 					}
 					
 					// Parse each parameter in the payload
@@ -208,6 +210,8 @@ namespace http
 					_header_block_fragment = payload->Subdata(payload_offset, header_block_size);
 
 					SetParsingState(ParsingState::Completed);
+
+					return true;
 				}
 				
 				uint8_t	_pad_length = 0;

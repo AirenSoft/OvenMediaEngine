@@ -21,13 +21,6 @@ namespace http
 			class Http2WindowUpdateFrame : public Http2Frame
 			{
 			public:
-				// Make from parsed general frame header and payload
-				Http2WindowUpdateFrame(const std::shared_ptr<const Http2Frame> &frame)
-					: Http2Frame(frame)
-				{
-					ParsingPayload();
-				}
-
 				// Make by itself
 				Http2WindowUpdateFrame(uint32_t stream_id)
 					: Http2Frame(stream_id)
@@ -35,6 +28,11 @@ namespace http
 					SetType(Http2Frame::Type::WindowUpdate);
 					// Unused flags
 					SetFlags(0);
+				}
+
+				Http2WindowUpdateFrame(const std::shared_ptr<Http2Frame> &frame)
+					: Http2Frame(frame)
+				{
 				}
 
 				// Get Window Size Increment
@@ -88,14 +86,19 @@ namespace http
 				}
 
 			private:
-				void ParsingPayload()
+				bool ParsePayload() override
 				{
+					if (GetType() != Http2Frame::Type::WindowUpdate)
+					{
+						return false;
+					}
+
 					// WindowUpdate frame must have a payload of at least 4 bytes
 					auto payload = GetPayload();
 					if (payload == nullptr)
 					{
 						SetParsingState(ParsingState::Error);
-						return;
+						return false;
 					}
 					
 					// Parse each parameter in the payload
@@ -105,12 +108,14 @@ namespace http
 					if (payload_size != 4)
 					{
 						SetParsingState(ParsingState::Error);
-						return;
+						return false;
 					}
 
 					_window_size_increment = ByteReader<uint32_t>::ReadBigEndian(payload_data);
 					
 					SetParsingState(ParsingState::Completed);
+
+					return true;
 				}
 
 				uint32_t _window_size_increment = 983041; // Default value

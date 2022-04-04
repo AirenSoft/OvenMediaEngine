@@ -21,13 +21,6 @@ namespace http
 			class Http2GoAwayFrame : public Http2Frame
 			{
 			public:
-				// Make from parsed general frame header and payload
-				Http2GoAwayFrame(const std::shared_ptr<const Http2Frame> &frame)
-					: Http2Frame(frame)
-				{
-					ParsingPayload();
-				}
-
 				// Make by itself
 				Http2GoAwayFrame()
 					// https://datatracker.ietf.org/doc/html/rfc7540#section-6.5
@@ -38,6 +31,11 @@ namespace http
 					SetType(Http2Frame::Type::GoAway);
 					// Settings Frame's stream id is 0
 					SetStreamId(0);
+				}
+
+				Http2GoAwayFrame(const std::shared_ptr<Http2Frame> &frame)
+					: Http2Frame(frame)
+				{
 				}
 
 				// Setters
@@ -103,14 +101,19 @@ namespace http
 				}
 
 			private:
-				void ParsingPayload()
+				bool ParsePayload() override
 				{
+					if (GetType() != Http2Frame::Type::GoAway)
+					{
+						return false;
+					}
+
 					// The payload of a SETTINGS frame consists of zero or more parameters,
 					auto payload = GetPayload();
 					if (payload == nullptr)
 					{
 						SetParsingState(ParsingState::Completed);
-						return;
+						return false;
 					}
 					
 					// Parse each parameter in the payload
@@ -134,6 +137,8 @@ namespace http
 					}
 
 					SetParsingState(ParsingState::Completed);
+
+					return true;
 				}
 
 				uint32_t _last_stream_id = 0;

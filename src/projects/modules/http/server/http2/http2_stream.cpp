@@ -52,18 +52,21 @@ namespace http
 				return _stream_id;
 			}
 
-			bool HttpStream::OnFrameReceived(const std::shared_ptr<const Http2Frame> &frame)
+			bool HttpStream::OnFrameReceived(const std::shared_ptr<Http2Frame> &frame)
 			{
 				std::shared_ptr<const Http2Frame> parsed_frame = frame;
 				bool result = false;
 				switch (frame->GetType())
 				{
 					case Http2Frame::Type::Data:
+					{
+						
 						break;
+					}
 					case Http2Frame::Type::Headers:
 					{
-						parsed_frame = std::make_shared<Http2HeadersFrame>(frame);
-						if (parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						parsed_frame = frame->GetFrameAs<Http2HeadersFrame>();
+						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
 							logte("Failed to parse settings frame");
 							return false;
@@ -78,8 +81,8 @@ namespace http
 						break;
 					case Http2Frame::Type::Settings:
 					{
-						parsed_frame = std::make_shared<const Http2SettingsFrame>(frame);
-						if (parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						parsed_frame = frame->GetFrameAs<Http2SettingsFrame>();
+						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
 							logte("Failed to parse settings frame");
 							return false;
@@ -94,8 +97,8 @@ namespace http
 						break;
 					case Http2Frame::Type::GoAway:
 					{
-						parsed_frame = std::make_shared<const Http2GoAwayFrame>(frame);
-						if (parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						parsed_frame = frame->GetFrameAs<Http2GoAwayFrame>();
+						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
 							logte("Failed to parse settings frame");
 							return false;
@@ -107,8 +110,8 @@ namespace http
 					}
 					case Http2Frame::Type::WindowUpdate:
 					{
-						parsed_frame = std::make_shared<const Http2WindowUpdateFrame>(frame);
-						if (parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						parsed_frame = frame->GetFrameAs<Http2WindowUpdateFrame>();
+						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
 							logte("Failed to parse window update frame");
 							return false;
