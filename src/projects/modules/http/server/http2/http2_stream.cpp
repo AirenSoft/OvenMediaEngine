@@ -204,7 +204,7 @@ namespace http
 
 			bool HttpStream::OnSettingsFrameReceived(const std::shared_ptr<const Http2SettingsFrame> &frame)
 			{
-				if (frame->IsAck())
+				if (frame->IsAck() == false)
 				{
 					// Settings Frame
 					auto settings_frame = std::make_shared<Http2SettingsFrame>();
