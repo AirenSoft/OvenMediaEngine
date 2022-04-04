@@ -13,7 +13,8 @@
 #include "../../protocol/http2/frames/http2_frames.h"
 #include "../../hpack/encoder.h"
 
-#define MAX_HTTP2_HEADER_SIZE (16 * 1024)
+#define MAX_HTTP2_HEADER_SIZE (1024 * 1024)
+#define MAX_HTTP2_DATA_SIZE (16384)
 
 namespace http
 {

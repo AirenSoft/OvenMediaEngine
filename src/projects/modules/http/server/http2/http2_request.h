@@ -42,6 +42,19 @@ namespace http
 
 			private:
 				std::shared_ptr<hpack::Decoder> _hpack_decoder;
+
+				// https://www.rfc-editor.org/rfc/rfc7230#section-3.2
+				// Each header field consists of a case-insensitive field name followed
+				// by a colon (":"), optional leading whitespace, the field value, and
+				// optional trailing whitespace.
+
+				// https://www.rfc-editor.org/rfc/rfc7540#section-8.1.2
+				// Just as in HTTP/1.x, header field names are strings of ASCII
+				// characters that are compared in a case-insensitive fashion.  However,
+				// header field names MUST be converted to lowercase prior to their
+				// encoding in HTTP/2.
+
+				// So _headers is a map of case insentitive header key and value
 				std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> _headers;
 				StatusCode _parse_status = StatusCode::PartialContent;
 			};

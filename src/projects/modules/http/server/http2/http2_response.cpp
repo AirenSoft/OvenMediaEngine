@@ -50,7 +50,9 @@ namespace http
 				std::shared_ptr<ov::Data> response = std::make_shared<ov::Data>();
 				size_t sent_size = 0;
 
-				SetHeader(":status", ov::Converter::ToString(static_cast<uint16_t>(GetStatusCode())));
+				// :status header field is must on top
+				auto header_block = _hpack_encoder->Encode({":status", ov::Converter::ToString(static_cast<uint16_t>(GetStatusCode()))}, hpack::Encoder::EncodingType::LiteralWithIndexing);
+				response->Append(header_block);
 
 				for (const auto &[name, values] : GetResponseHeaderList())
 				{
@@ -60,6 +62,8 @@ namespace http
 						// Field names MUST be converted to lowercase when constructing an HTTP/2 message.
 						auto header_block = _hpack_encoder->Encode({name.LowerCaseString(), value}, hpack::Encoder::EncodingType::LiteralWithIndexing);
 						response->Append(header_block);
+
+						logtw("Send Headers : [%s] %s", name.CStr(), value.CStr());
 
 						// Send fragmented header block if the header block size is larger than MAX_HTTP2_HEADER_SIZE
 						if (response->GetLength() > MAX_HTTP2_HEADER_SIZE)
@@ -108,8 +112,29 @@ namespace http
 
 				for (const auto &data : GetResponseDataList())
 				{
+					size_t offset = 0;
+					auto data_fragment = data;
+					while (offset + MAX_HTTP2_DATA_SIZE < data->GetLength())
+					{
+						data_fragment = data->Subdata(offset, MAX_HTTP2_DATA_SIZE);
+
+						auto payload_frame = std::make_shared<prot::h2::Http2DataFrame>(_stream_id);
+						payload_frame->SetData(data_fragment);
+
+						if (Send(payload_frame) == false)
+						{
+							logte("Failed to send payload");
+							ResetResponseData();
+							return -1;
+						}
+
+						offset += MAX_HTTP2_DATA_SIZE;
+					}
+
+					// Last fragment
 					auto payload_frame = std::make_shared<prot::h2::Http2DataFrame>(_stream_id);
-					payload_frame->SetData(data);
+					data_fragment = data->Subdata(offset);
+					payload_frame->SetData(data_fragment);
 
 					// End Stream
 					if (_keep_stream == false && (&data == &GetResponseDataList().back()))
@@ -119,6 +144,7 @@ namespace http
 
 					if (Send(payload_frame) == false)
 					{
+						logte("Failed to send payload");
 						ResetResponseData();
 						return -1;
 					}
