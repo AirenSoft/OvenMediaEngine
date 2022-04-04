@@ -41,6 +41,8 @@ namespace http
 				// Send Settings frame and Window_Update frame
 				bool SendInitialControlMessage();
 				
+				// Data frame received
+				bool OnDataFrameReceived(const std::shared_ptr<const Http2DataFrame> &frame);
 				// Headers frame received
 				bool OnHeadersFrameReceived(const std::shared_ptr<const Http2HeadersFrame> &frame);
 				// Settings frame received

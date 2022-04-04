@@ -7,6 +7,7 @@
 //
 //==============================================================================
 #include "http2_request.h"
+
 #include "../../http_private.h"
 
 namespace http
@@ -15,7 +16,7 @@ namespace http
 	{
 		namespace h2
 		{
-// Constructor
+			// Constructor
 			Http2Request::Http2Request(const std::shared_ptr<ov::ClientSocket> &client_socket, const std::shared_ptr<hpack::Decoder> &hpack_decoder)
 				: HttpRequest(client_socket)
 			{
@@ -33,7 +34,7 @@ namespace http
 					// Already parsed
 					return 0;
 				}
-				
+
 				if (_hpack_decoder == nullptr)
 				{
 					logte("Http2Request::AppendHeaderData() - Http2Request::_hpack_decoder is nullptr");
@@ -132,6 +133,6 @@ namespace http
 
 				return true;
 			}
-		} // namespace h1
-	} // namespace svr
-} // namespace http
+		}  // namespace h2
+	}	   // namespace svr
+}  // namespace http

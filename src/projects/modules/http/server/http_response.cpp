@@ -208,14 +208,26 @@ namespace http
 
 			if (IsHeaderSent() == false)
 			{
-				sent_size += SendHeader();
+				auto sent_header_size = SendHeader();
+				if (sent_header_size <= 0)
+				{
+					return -1;
+				}
+
+				sent_size += sent_header_size;
 				if (sent_size > 0)
 				{
 					_is_header_sent = true;
 				}
 			}
 
-			sent_size += SendPayload();
+			auto sent_data_size = SendPayload();
+			if (sent_data_size <= 0)
+			{
+				return -1;
+			}
+
+			sent_size += sent_data_size;
 
 			return sent_size;
 		}	

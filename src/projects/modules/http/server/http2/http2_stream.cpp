@@ -60,7 +60,14 @@ namespace http
 				{
 					case Http2Frame::Type::Data:
 					{
-						
+						parsed_frame = frame->GetFrameAs<Http2DataFrame>();
+						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						{
+							logte("Failed to parse settings frame");
+							return false;
+						}
+
+						result = OnDataFrameReceived(std::static_pointer_cast<const Http2DataFrame>(parsed_frame));
 						break;
 					}
 					case Http2Frame::Type::Headers:
@@ -200,6 +207,36 @@ namespace http
 				{
 					// Continue to receive more data
 					SetStatus(Status::Exchanging);
+				}
+
+				return true;
+			}
+
+			// Data frame received
+			bool HttpStream::OnDataFrameReceived(const std::shared_ptr<const Http2DataFrame> &frame)
+			{
+				if (OnDataReceived(GetSharedPtr(), frame->GetData()) == false)
+				{
+					return false;
+				}
+
+				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2DataFrame::Flags::EndStream))
+				{
+					// End of Stream, that means no more data will be sent
+					auto result = OnRequestCompleted(GetSharedPtr());
+					switch (result)
+					{
+						case InterceptorResult::Completed:
+							SetStatus(Status::Completed);
+							break;
+						case InterceptorResult::Moved:
+							SetStatus(Status::Moved);
+							break;
+						case InterceptorResult::Error:
+						default:
+							SetStatus(Status::Error);
+							return false;
+					}
 				}
 
 				return true;
