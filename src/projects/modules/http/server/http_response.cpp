@@ -92,8 +92,9 @@ namespace http
 				logtw("Cannot add header: Header is sent: %s", _client_socket->ToString().CStr());
 				return false;
 			}
-
-			_response_header[key].push_back(value);
+			
+			// TODO(h2) : Why ov::CaseInsensitiveComparator is not working?
+			_response_header[key.LowerCaseString()].push_back(value);
 
 			return true;
 		}
@@ -105,8 +106,8 @@ namespace http
 				logtw("Cannot set header: Header is sent: %s", _client_socket->ToString().CStr());
 				return false;
 			}
-
-			_response_header[key] = {value};
+			
+			_response_header[key.LowerCaseString()] = {value};
 
 			return true;
 		}
@@ -189,7 +190,7 @@ namespace http
 		}
 
 		// Get Response Header
-		const std::unordered_map<ov::String, std::vector<ov::String>> &HttpResponse::GetResponseHeaderList() const
+		const std::unordered_map<ov::String, std::vector<ov::String>, ov::CaseInsensitiveComparator> &HttpResponse::GetResponseHeaderList() const
 		{
 			return _response_header;
 		}

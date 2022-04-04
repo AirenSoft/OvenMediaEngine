@@ -63,7 +63,7 @@ namespace http
 			// Get Response Data List
 			const std::vector<std::shared_ptr<const ov::Data>> &GetResponseDataList() const;
 			// Get Response Header
-			const std::unordered_map<ov::String, std::vector<ov::String>> &GetResponseHeaderList() const;
+			const std::unordered_map<ov::String, std::vector<ov::String>, ov::CaseInsensitiveComparator> &GetResponseHeaderList() const;
 			void ResetResponseData();
 
 			// Can be used for response without content-length
@@ -89,7 +89,20 @@ namespace http
 			
 			// FIXME(dimiden): It is supposed to be synchronized whenever a packet is sent, but performance needs to be improved
 			std::recursive_mutex _response_mutex;
-			std::unordered_map<ov::String, std::vector<ov::String>> _response_header;
+
+			// https://www.rfc-editor.org/rfc/rfc7230#section-3.2
+			// Each header field consists of a case-insensitive field name followed
+			// by a colon (":"), optional leading whitespace, the field value, and
+			// optional trailing whitespace.
+
+			// https://www.rfc-editor.org/rfc/rfc7540#section-8.1.2
+			// Just as in HTTP/1.x, header field names are strings of ASCII
+			// characters that are compared in a case-insensitive fashion.  However,
+			// header field names MUST be converted to lowercase prior to their
+			// encoding in HTTP/2.
+
+			// So _response_header is a map of case insentitive header key and value
+			std::unordered_map<ov::String, std::vector<ov::String>, ov::CaseInsensitiveComparator> _response_header;
 			std::vector<std::shared_ptr<const ov::Data>> _response_data_list;
 			size_t _response_data_size = 0;
 
