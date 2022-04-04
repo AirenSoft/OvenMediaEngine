@@ -14,143 +14,7 @@ namespace http
 {
 	namespace hpack
 	{
-		std::shared_ptr<ov::Data> HuffmanCodec::Encode(const ov::String &str)
-		{
-			uint8_t out_data[str.GetLength() * 2];
-			size_t out_data_size = 0;
-
-			uint64_t bit_buffer = 0;
-			size_t bit_buffer_length = 0;
-			size_t length = str.GetLength();
-			for (size_t i = 0; i < length; i++)
-			{
-				uint8_t c = str[i];
-				auto [code, code_bit_length] = _map[c];
-				
-				// Append the code to the bit buffer
-				bit_buffer <<= code_bit_length;
-				bit_buffer |= code;
-				bit_buffer_length += code_bit_length;
-
-				// If the bit buffer is over 8 bits, flush it to the output buffer
-				while (bit_buffer_length >= 8)
-				{
-					uint8_t byte = static_cast<uint8_t>(bit_buffer >> (bit_buffer_length - 8));
-					bit_buffer_length -= 8;
-					out_data[out_data_size] = byte;
-					out_data_size ++;
-				}
-			}
-			
-			// https://www.rfc-editor.org/rfc/rfc7541.html#section-5.2
-			// As the Huffman-encoded data doesn't always end at an octet boundary,
-			// some padding is inserted after it, up to the next octet boundary.  To
-			// prevent this padding from being misinterpreted as part of the string
-			// literal, the most significant bits of the code corresponding to the
-			// EOS (end-of-string) symbol are used.
-
-			// Append EOS
-			if (bit_buffer_length > 0)
-			{
-				auto byte = bit_buffer << (8 - bit_buffer_length);
-				// Append EOS(0xFF) to the end of the bit buffer
-				// bit_buffer is always less than 8 bits
-				byte |= 0xFF >> bit_buffer_length;
-
-				out_data[out_data_size] = byte;
-				out_data_size ++;
-			}
-			
-			return std::make_shared<ov::Data>(&out_data[0], out_data_size);
-		}
-
-		bool HuffmanCodec::Decode(const std::shared_ptr<const ov::Data> &data, ov::String &str)
-		{
-			auto reader = std::make_shared<BitReader>(data->GetDataAs<uint8_t>(), data->GetLength());
-			auto node = _tree;
-
-			while (reader->BytesReamined() > 0)
-			{
-				auto b = reader->ReadBit();
-				if (b == 1)
-				{
-					node = node->GetRight();
-					if (node == nullptr)
-					{
-						return false;
-					}
-				}
-				else
-				{
-					node = node->GetLeft();
-					if (node == nullptr)
-					{
-						return false;
-					}
-				}
-
-				if (node->IsLeaf())
-				{
-					if (node->GetValue() == 256)
-					{
-						// EOS
-						return false;
-					}
-
-					str.Append(static_cast<uint8_t>(node->GetValue()));
-					node = _tree;
-
-					// https://www.rfc-editor.org/rfc/rfc7541.html#section-5.2
-					// As the Huffman-encoded data doesn't always end at an octet boundary,
-					// some padding is inserted after it, up to the next octet boundary.  To
-					// prevent this padding from being misinterpreted as part of the string
-					// literal, the most significant bits of the code corresponding to the
-					// EOS (end-of-string) symbol are used.
-
-					// So, the symbol (1111111) corresponding to EOS may be included in the 
-					// last 7 bits or less. In this case, no processing is done because it will 
-					// terminate without reaching the leaf naturally.
-				}
-			}
-
-			return true;
-		}
-
-		void HuffmanCodec::BuildTree(uint32_t code, uint8_t length, uint16_t symbol)
-		{
-			//TODO(Getroot): If needed, apply faster algorithm
-			auto node = _tree;
-
-			for (uint16_t i = 0; i < length; i++)
-			{
-				auto bit = (code >> (length - i - 1)) & 0x1;
-
-				if (bit == 0)
-				{
-					node = node->GetLeft(true);
-				}
-				else
-				{
-					node = node->GetRight(true);
-				}
-			}
-
-			node->SetValue(symbol);
-		}
-
-		void HuffmanCodec::BuildMap(uint32_t code, uint8_t length, uint16_t symbol)
-		{
-			_map[symbol] = std::make_pair(code, length);
-		}
-
-		// Build Tree and Map
-		void HuffmanCodec::Build(uint32_t code, uint8_t length, uint16_t symbol)
-		{
-			BuildMap(code, length, symbol);
-			BuildTree(code, length, symbol);
-		}
-
-		void HuffmanCodec::InitSingletonInstance()
+		HuffmanCodec::HuffmanCodec()
 		{
 			// https://www.rfc-editor.org/rfc/rfc7541.html#appendix-B
 			Build(0x1ff8, 13, 0);
@@ -409,7 +273,143 @@ namespace http
 			Build(0x7ffffef, 27, 253);
 			Build(0x7fffff0, 27, 254);
 			Build(0x3ffffee, 26, 255);
-			//EOS - Build(0x3fffffff, 30, 256);
+			Build(0x3fffffff, 30, 256); //EOS
+		}
+
+		std::shared_ptr<ov::Data> HuffmanCodec::Encode(const ov::String &str)
+		{
+			uint8_t out_data[str.GetLength() * 2];
+			size_t out_data_size = 0;
+
+			uint64_t bit_buffer = 0;
+			size_t bit_buffer_length = 0;
+			size_t length = str.GetLength();
+			for (size_t i = 0; i < length; i++)
+			{
+				uint8_t c = str[i];
+				auto [code, code_bit_length] = _map[c];
+				
+				// Append the code to the bit buffer
+				bit_buffer <<= code_bit_length;
+				bit_buffer |= code;
+				bit_buffer_length += code_bit_length;
+
+				// If the bit buffer is over 8 bits, flush it to the output buffer
+				while (bit_buffer_length >= 8)
+				{
+					uint8_t byte = static_cast<uint8_t>(bit_buffer >> (bit_buffer_length - 8));
+					bit_buffer_length -= 8;
+					out_data[out_data_size] = byte;
+					out_data_size ++;
+				}
+			}
+			
+			// https://www.rfc-editor.org/rfc/rfc7541.html#section-5.2
+			// As the Huffman-encoded data doesn't always end at an octet boundary,
+			// some padding is inserted after it, up to the next octet boundary.  To
+			// prevent this padding from being misinterpreted as part of the string
+			// literal, the most significant bits of the code corresponding to the
+			// EOS (end-of-string) symbol are used.
+
+			// Append EOS
+			if (bit_buffer_length > 0)
+			{
+				auto byte = bit_buffer << (8 - bit_buffer_length);
+				// Append EOS(0xFF) to the end of the bit buffer
+				// bit_buffer is always less than 8 bits
+				byte |= 0xFF >> bit_buffer_length;
+
+				out_data[out_data_size] = byte;
+				out_data_size ++;
+			}
+			
+			return std::make_shared<ov::Data>(&out_data[0], out_data_size);
+		}
+
+		bool HuffmanCodec::Decode(const std::shared_ptr<const ov::Data> &data, ov::String &str)
+		{
+			auto reader = std::make_shared<BitReader>(data->GetDataAs<uint8_t>(), data->GetLength());
+			auto node = _tree;
+
+			while (reader->BytesReamined() > 0)
+			{
+				auto b = reader->ReadBit();
+				if (b == 1)
+				{
+					node = node->GetRight();
+					if (node == nullptr)
+					{
+						return false;
+					}
+				}
+				else
+				{
+					node = node->GetLeft();
+					if (node == nullptr)
+					{
+						return false;
+					}
+				}
+
+				if (node->IsLeaf())
+				{
+					if (node->GetValue() == 256)
+					{
+						// EOS
+						return false;
+					}
+
+					str.Append(static_cast<uint8_t>(node->GetValue()));
+					node = _tree;
+
+					// https://www.rfc-editor.org/rfc/rfc7541.html#section-5.2
+					// As the Huffman-encoded data doesn't always end at an octet boundary,
+					// some padding is inserted after it, up to the next octet boundary.  To
+					// prevent this padding from being misinterpreted as part of the string
+					// literal, the most significant bits of the code corresponding to the
+					// EOS (end-of-string) symbol are used.
+
+					// So, the symbol (1111111) corresponding to EOS may be included in the 
+					// last 7 bits or less. In this case, no processing is done because it will 
+					// terminate without reaching the leaf naturally.
+				}
+			}
+
+			return true;
+		}
+
+		void HuffmanCodec::BuildTree(uint32_t code, uint8_t length, uint16_t symbol)
+		{
+			//TODO(Getroot): If needed, apply faster algorithm
+			auto node = _tree;
+
+			for (uint16_t i = 0; i < length; i++)
+			{
+				auto bit = (code >> (length - i - 1)) & 0x1;
+
+				if (bit == 0)
+				{
+					node = node->GetLeft(true);
+				}
+				else
+				{
+					node = node->GetRight(true);
+				}
+			}
+
+			node->SetValue(symbol);
+		}
+
+		void HuffmanCodec::BuildMap(uint32_t code, uint8_t length, uint16_t symbol)
+		{
+			_map[symbol] = std::make_pair(code, length);
+		}
+
+		// Build Tree and Map
+		void HuffmanCodec::Build(uint32_t code, uint8_t length, uint16_t symbol)
+		{
+			BuildMap(code, length, symbol);
+			BuildTree(code, length, symbol);
 		}
 	} // namespace hpack
 } // namespace http

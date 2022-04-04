@@ -45,7 +45,6 @@ namespace http
 				// Header parsing is complete and data is being received.
 				if (_request->GetHeaderParingStatus() == StatusCode::OK)
 				{
-					auto interceptor = GetConnection()->FindInterceptor(GetSharedPtr());
 					auto need_bytes = _request->GetContentLength() - _received_data_size;
 
 					std::shared_ptr<const ov::Data> input_data;
@@ -59,11 +58,7 @@ namespace http
 					}
 
 					// Here, payload data is passed to the interceptor rather than stored in the request. The interceptor may or may not store the payload in the request according to each role.
-					if (interceptor->OnDataReceived(GetSharedPtr(), input_data) == false)
-					{
-						SetStatus(Status::Error);
-						return -1;
-					}
+					OnDataReceived(GetSharedPtr(), input_data);
 
 					_received_data_size += input_data->GetLength();
 
@@ -71,7 +66,7 @@ namespace http
 
 					if (_received_data_size >= _request->GetContentLength())
 					{
-						auto result = interceptor->OnRequestCompleted(GetSharedPtr());
+						auto result = OnRequestCompleted(GetSharedPtr());
 						switch (result)
 						{
 							case InterceptorResult::Completed:
@@ -125,21 +120,10 @@ namespace http
 
 						SetConnectionPolicyByRequest();
 
-						// Find interceptor using received header
-						auto interceptor = GetConnection()->FindInterceptor(GetSharedPtr());
-						if (interceptor == nullptr)
-						{
-							SetStatus(Status::Error);
-							GetResponse()->SetStatusCode(StatusCode::NotFound);
-							GetResponse()->Response();
-							return -1;
-						}
-
 						// Notify to interceptor
-						auto need_to_disconnect = interceptor->OnRequestPrepared(GetSharedPtr());
+						auto need_to_disconnect = OnRequestPrepared(GetSharedPtr());
 						if (need_to_disconnect == false)
 						{
-							SetStatus(Status::Error);
 							return -1;
 						}
 
@@ -147,7 +131,7 @@ namespace http
 						// If Content-length is 0, it means that the request is completed.
 						if (_request->GetContentLength() == 0)
 						{
-							auto result = interceptor->OnRequestCompleted(GetSharedPtr());
+							auto result = OnRequestCompleted(GetSharedPtr());
 							switch (result)
 							{
 								case InterceptorResult::Completed:

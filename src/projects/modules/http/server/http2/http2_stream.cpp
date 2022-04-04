@@ -24,10 +24,10 @@ namespace http
 				_request->SetConnectionType(ConnectionType::Http20);
 				_request->SetTlsData(GetConnection()->GetTlsData());
 
-				_response = std::make_shared<Http2Response>(GetConnection()->GetSocket(), GetConnection()->GetHpackEncoder());
+				_response = std::make_shared<Http2Response>(stream_id, GetConnection()->GetSocket(), GetConnection()->GetHpackEncoder());
 				_response->SetTlsData(GetConnection()->GetTlsData());
-				_response->SetHeader("Server", "OvenMediaEngine");
-				_response->SetHeader("Content-Type", "text/html");
+				_response->SetHeader("server", "OvenMediaEngine");
+				_response->SetHeader("content-type", "text/html");
 
 				// https://www.rfc-editor.org/rfc/rfc7540.html#section-5.1.1
 				// A stream identifier of zero (0x0) is used for connection control messages
@@ -39,7 +39,7 @@ namespace http
 
 			std::shared_ptr<HttpRequest> HttpStream::GetRequest() const
 			{
-				return nullptr;
+				return _request;
 			}
 			std::shared_ptr<HttpResponse> HttpStream::GetResponse() const
 			{
@@ -52,18 +52,28 @@ namespace http
 				return _stream_id;
 			}
 
-			bool HttpStream::OnFrameReceived(const std::shared_ptr<const Http2Frame> &frame)
+			bool HttpStream::OnFrameReceived(const std::shared_ptr<Http2Frame> &frame)
 			{
 				std::shared_ptr<const Http2Frame> parsed_frame = frame;
 				bool result = false;
 				switch (frame->GetType())
 				{
 					case Http2Frame::Type::Data:
+					{
+						parsed_frame = frame->GetFrameAs<Http2DataFrame>();
+						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						{
+							logte("Failed to parse settings frame");
+							return false;
+						}
+
+						result = OnDataFrameReceived(std::static_pointer_cast<const Http2DataFrame>(parsed_frame));
 						break;
+					}
 					case Http2Frame::Type::Headers:
 					{
-						parsed_frame = std::make_shared<Http2HeadersFrame>(frame);
-						if (parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						parsed_frame = frame->GetFrameAs<Http2HeadersFrame>();
+						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
 							logte("Failed to parse settings frame");
 							return false;
@@ -78,8 +88,8 @@ namespace http
 						break;
 					case Http2Frame::Type::Settings:
 					{
-						parsed_frame = std::make_shared<const Http2SettingsFrame>(frame);
-						if (parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						parsed_frame = frame->GetFrameAs<Http2SettingsFrame>();
+						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
 							logte("Failed to parse settings frame");
 							return false;
@@ -93,11 +103,22 @@ namespace http
 					case Http2Frame::Type::Ping:
 						break;
 					case Http2Frame::Type::GoAway:
+					{
+						parsed_frame = frame->GetFrameAs<Http2GoAwayFrame>();
+						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						{
+							logte("Failed to parse settings frame");
+							return false;
+						}
+
+						result = OnGoAwayFrameReceived(std::static_pointer_cast<const Http2GoAwayFrame>(parsed_frame));
+					
 						break;
+					}
 					case Http2Frame::Type::WindowUpdate:
 					{
-						parsed_frame = std::make_shared<const Http2WindowUpdateFrame>(frame);
-						if (parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						parsed_frame = frame->GetFrameAs<Http2WindowUpdateFrame>();
+						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
 							logte("Failed to parse window update frame");
 							return false;
@@ -132,13 +153,90 @@ namespace http
 				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndHeaders))
 				{
 					// Header Completed
-					_request->AppendHeaderData(_header_block);
+					if (_request->AppendHeaderData(_header_block) <= 0)
+					{
+						return false;
+					}
+
+					if (IsUpgradeRequest() == true)
+					{
+						if (AcceptUpgrade() == false)
+						{
+							SetStatus(Status::Error);
+							return -1;
+						}
+
+						SetStatus(Status::Upgrade);
+						return true;
+					}
+
+					// HTTP/2 Connection is awalys keep-alive
+					SetKeepAlive(true);
+
+					// Notify to interceptor
+					if (OnRequestPrepared(GetSharedPtr()) == false)
+					{
+						return -1;
+					}
+
+					if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndStream))
+					{
+						SetStatus(Status::Completed);
+					}
 				}
 
 				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndStream))
 				{
 					// End of Stream, that means no more data will be sent
+					auto result = OnRequestCompleted(GetSharedPtr());
+					switch (result)
+					{
+						case InterceptorResult::Completed:
+							SetStatus(Status::Completed);
+							break;
+						case InterceptorResult::Moved:
+							SetStatus(Status::Moved);
+							break;
+						case InterceptorResult::Error:
+						default:
+							SetStatus(Status::Error);
+							return -1;
+					}
+				}
+				else
+				{
+					// Continue to receive more data
+					SetStatus(Status::Exchanging);
+				}
 
+				return true;
+			}
+
+			// Data frame received
+			bool HttpStream::OnDataFrameReceived(const std::shared_ptr<const Http2DataFrame> &frame)
+			{
+				if (OnDataReceived(GetSharedPtr(), frame->GetData()) == false)
+				{
+					return false;
+				}
+
+				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2DataFrame::Flags::EndStream))
+				{
+					// End of Stream, that means no more data will be sent
+					auto result = OnRequestCompleted(GetSharedPtr());
+					switch (result)
+					{
+						case InterceptorResult::Completed:
+							SetStatus(Status::Completed);
+							break;
+						case InterceptorResult::Moved:
+							SetStatus(Status::Moved);
+							break;
+						case InterceptorResult::Error:
+						default:
+							SetStatus(Status::Error);
+							return false;
+					}
 				}
 
 				return true;
@@ -146,7 +244,7 @@ namespace http
 
 			bool HttpStream::OnSettingsFrameReceived(const std::shared_ptr<const Http2SettingsFrame> &frame)
 			{
-				if (frame->IsAck())
+				if (frame->IsAck() == false)
 				{
 					// Settings Frame
 					auto settings_frame = std::make_shared<Http2SettingsFrame>();
@@ -158,6 +256,11 @@ namespace http
 			}
 
 			bool HttpStream::OnWindowUpdateFrameReceived(const std::shared_ptr<const Http2WindowUpdateFrame> &frame)
+			{
+				return true;
+			}
+
+			bool HttpStream::OnGoAwayFrameReceived(const std::shared_ptr<const Http2GoAwayFrame> &frame)
 			{
 				return true;
 			}
@@ -175,7 +278,7 @@ namespace http
 				auto result = _response->Send(settings_frame);
 
 				// WindowUpdate Frame
-				auto window_update_frame = std::make_shared<Http2WindowUpdateFrame>();
+				auto window_update_frame = std::make_shared<Http2WindowUpdateFrame>(0);
 				window_update_frame->SetWindowSizeIncrement(6291456);
 
 				result = result ? _response->Send(window_update_frame) : false;

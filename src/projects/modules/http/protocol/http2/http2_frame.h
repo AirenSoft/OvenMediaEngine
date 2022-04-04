@@ -37,7 +37,7 @@ namespace http
 #define HTTP2_FRAME_HEADER_SIZE (3+1+1+4)
 
 			// For HTTP/2.0
-			class Http2Frame
+			class Http2Frame : public ov::EnableSharedFromThis<Http2Frame>
 			{
 			public:
 				enum class ParsingState : uint8_t
@@ -64,10 +64,21 @@ namespace http
 				};
 
 				Http2Frame();
-				Http2Frame(const std::shared_ptr<const Http2Frame> &frame);
+				Http2Frame(uint32_t stream_id);
 
 				// For frame parsing
 				ssize_t AppendData(const std::shared_ptr<const ov::Data> &data);
+
+				template<typename T>
+				inline std::shared_ptr<T> GetFrameAs()
+				{
+					auto frame = std::make_shared<T>(GetSharedPtr());
+					if (std::dynamic_pointer_cast<Http2Frame>(frame)->ParsePayload() == false)
+					{
+						return nullptr;
+					}
+					return frame;
+				}
 
 				virtual ov::String ToString() const;
 
@@ -84,6 +95,9 @@ namespace http
 				std::shared_ptr<ov::Data> ToData() const;
 
 			protected:
+				// Copy construcor only can be called in derived class
+				Http2Frame(const std::shared_ptr<const Http2Frame> &frame);
+
 				// Setters
 				void SetType(Type type) noexcept;
 				void SetFlags(uint8_t flags) noexcept;
@@ -94,9 +108,10 @@ namespace http
 
 				// Set state
 				void SetParsingState(ParsingState state) noexcept;
-
+				
 			private:
 				bool ParseHeader();
+				virtual bool ParsePayload() {return false;};
 
 				uint32_t _length = 0;
 				Type _type = Type::Unknown;

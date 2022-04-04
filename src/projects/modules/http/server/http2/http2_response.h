@@ -10,8 +10,10 @@
 #pragma once
 
 #include "../http_response.h"
-#include "../../protocol/http2/http2_frame.h"
+#include "../../protocol/http2/frames/http2_frames.h"
 #include "../../hpack/encoder.h"
+
+#define MAX_HTTP2_HEADER_SIZE (16 * 1024)
 
 namespace http
 {
@@ -23,28 +25,20 @@ namespace http
 			{
 			public:
 				// Constructor
-				Http2Response(const std::shared_ptr<ov::ClientSocket> &client_socket, const std::shared_ptr<hpack::Encoder> &hpack_encoder)
-					: HttpResponse(client_socket)
-				{
-					_hpack_encoder = hpack_encoder;
-				}
+				Http2Response(uint32_t stream_id, const std::shared_ptr<ov::ClientSocket> &client_socket, const std::shared_ptr<hpack::Encoder> &hpack_encoder);
 
-				bool Send(const std::shared_ptr<prot::h2::Http2Frame> &frame)
-				{
-					return HttpResponse::Send(frame->ToData());
-				}
+				bool Send(const std::shared_ptr<prot::h2::Http2Frame> &frame);
+
+				// After Response(), EndStream flag is not sent.
+				void SetKeepStream(bool keep_stream);
+				bool Send(const std::shared_ptr<prot::h2::Http2DataFrame> &data_frame, bool end_stream);
 
 			private:
-				uint32_t SendHeader() override
-				{
-					return 0;
-				}
+				uint32_t SendHeader() override;
+				uint32_t SendPayload() override;
 
-				uint32_t SendPayload() override
-				{
-					return 0;
-				}
-
+				uint32_t _stream_id = 0;
+				bool _keep_stream = false;
 				std::shared_ptr<hpack::Encoder> _hpack_encoder;
 			};
 		}

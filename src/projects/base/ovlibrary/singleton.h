@@ -19,7 +19,6 @@ namespace ov
 		static T *GetInstance()
 		{
 			static T instance;
-			instance.InitSingletonInstance();
 			return &instance;
 		}
 
@@ -27,9 +26,5 @@ namespace ov
 		Singleton() = default;
 
 	private:
-		virtual void InitSingletonInstance()
-		{
-			// For derived class
-		}
 	};
 }

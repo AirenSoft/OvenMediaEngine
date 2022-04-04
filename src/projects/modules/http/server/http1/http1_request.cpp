@@ -42,7 +42,7 @@ namespace http
 					auto consumed_bytes = _http_header_parser.AppendData(data);
 					if (GetHeaderParingStatus() == StatusCode::OK)
 					{
-						PostProcess();
+						PostHeaderParsedProcess();
 					}
 					return consumed_bytes;
 				}
@@ -68,14 +68,12 @@ namespace http
 				return _http_header_parser.GetHttpVersion();
 			}
 
-			double Http1Request::GetHttpVersionAsNumber() const noexcept
+			ov::String Http1Request::GetHost() const noexcept
 			{
-				return _http_header_parser.GetHttpVersionAsNumber();
+				return GetHeader("Host");
 			}
 
-			// Path of the URI (including query strings & excluding domain and port)
-			// Example: /<app>/<stream>/...?a=b&c=d
-			const ov::String &Http1Request::GetRequestTarget() const noexcept
+			ov::String Http1Request::GetRequestTarget() const noexcept
 			{
 				return _http_header_parser.GetRequestTarget();
 			}
@@ -85,7 +83,7 @@ namespace http
 				return _http_header_parser.GetHeader(key);
 			}
 
-			const bool Http1Request::IsHeaderExists(const ov::String &key) const noexcept
+			bool Http1Request::IsHeaderExists(const ov::String &key) const noexcept
 			{
 				return _http_header_parser.IsHeaderExists(key);
 			}

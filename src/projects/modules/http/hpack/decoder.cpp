@@ -149,6 +149,8 @@ namespace http
 				return false;
 			}
 
+			header_fields.push_back(header_field);
+
 			logtc("DecodeLiteralHeaderFieldWithoutIndexing: %s", header_field.ToString().CStr());
 
 			return true;
@@ -161,6 +163,8 @@ namespace http
 			{
 				return false;
 			}
+
+			header_fields.push_back(header_field);
 
 			logtc("DecodeLiteralHeaderFieldNeverIndexed: %s", header_field.ToString().CStr());
 
@@ -194,12 +198,8 @@ namespace http
 		{
 			// Indexed Header Field Representation
 			uint64_t index = reader->ReadBits<uint8_t>(index_bits);
-			if (index == 0)
-			{
-				// Error
-				return false;
-			}
-			else if (index == (std::pow(2, index_bits) - 1))
+			
+			if (index == (std::pow(2, index_bits) - 1))
 			{
 				uint64_t extra = 0;
 				if (ReadULEB128(reader, extra) == false)

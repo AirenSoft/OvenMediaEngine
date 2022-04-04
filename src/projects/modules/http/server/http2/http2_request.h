@@ -24,7 +24,7 @@ namespace http
 				// Constructor
 				Http2Request(const std::shared_ptr<ov::ClientSocket> &client_socket, const std::shared_ptr<hpack::Decoder> &hpack_decoder);
 
-				size_t GetContentLength() const noexcept;
+				
 
 				/////////////////////////////////////
 				// Implementation of HttpRequest
@@ -32,14 +32,13 @@ namespace http
 
 				ssize_t AppendHeaderData(const std::shared_ptr<const ov::Data> &data) override;
 				StatusCode GetHeaderParingStatus() const override;
+				
 				Method GetMethod() const noexcept;
 				ov::String GetHttpVersion() const noexcept override;
-				double GetHttpVersionAsNumber() const noexcept override;
-				// Path of the URI (including query strings & excluding domain and port)
-				// Example: /<app>/<stream>/...?a=b&c=d
-				const ov::String &GetRequestTarget() const noexcept override;
+				ov::String GetHost() const noexcept override;
+				ov::String GetRequestTarget() const noexcept override;
 				ov::String GetHeader(const ov::String &key) const noexcept override;
-				const bool IsHeaderExists(const ov::String &key) const noexcept override;
+				bool IsHeaderExists(const ov::String &key) const noexcept override;
 
 			private:
 				std::shared_ptr<hpack::Decoder> _hpack_decoder;

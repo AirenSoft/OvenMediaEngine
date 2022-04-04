@@ -126,9 +126,17 @@ namespace ov
 			// https://wiki.mozilla.org/Security/Server_Side_TLS
 			::SSL_CTX_set_cipher_list(ctx, cipher_list.CStr());
 
-			// Disable TLS1.3 because it is not yet supported properly by the HTTP server implementation (HTTP2 support, Session tickets, ...)
-			// This also allows for using less secure cipher suites for lower CPU requirements when using HLS/DASH/LL-DASH streaming
-			::SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
+			if (enable_h2_alpn == true)
+			{
+				// Now, only enable TLS 1.3 for HTTP/2 
+				::SSL_CTX_set_max_proto_version(ctx, TLS1_3_VERSION);
+			}
+			else
+			{
+				// Disable TLS1.3 because it is not yet supported properly by the HTTP server implementation (HTTP2 support, Session tickets, ...)
+				// This also allows for using less secure cipher suites for lower CPU requirements when using HLS/DASH/LL-DASH streaming
+				::SSL_CTX_set_max_proto_version(ctx, TLS1_2_VERSION);
+			}
 			// Disable old TLS versions which are neither secure nor needed any more
 			::SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
 

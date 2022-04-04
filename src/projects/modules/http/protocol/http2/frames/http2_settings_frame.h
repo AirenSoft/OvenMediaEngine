@@ -37,20 +37,20 @@ namespace http
 					MaxHeaderListSize = 0x6,
 				};
 
-				// Make from parsed general frame header and payload
-				Http2SettingsFrame(const std::shared_ptr<const Http2Frame> &frame)
-					: Http2Frame(frame)
-				{
-					ParsingPayload();
-				}
-
 				// Make by itself
 				Http2SettingsFrame()
+					// https://datatracker.ietf.org/doc/html/rfc7540#section-6.5
+					// SETTINGS frames always apply to a connection, never a single stream. 
+					// The stream identifier for a SETTINGS frame MUST be zero (0x00).
+					: Http2Frame(0)
 				{
 					SetType(Http2Frame::Type::Settings);
 					SetFlags(0);
-					// Settings Frame's stream id is 0
-					SetStreamId(0);
+				}
+
+				Http2SettingsFrame(const std::shared_ptr<Http2Frame> &frame)
+					: Http2Frame(frame)
+				{
 				}
 
 				// To String
@@ -152,14 +152,19 @@ namespace http
 				}
 
 			private:
-				void ParsingPayload()
+				bool ParsePayload() override
 				{
+					if (GetType() != Http2Frame::Type::Settings)
+					{
+						return false;
+					}
+
 					// The payload of a SETTINGS frame consists of zero or more parameters,
 					auto payload = GetPayload();
 					if (payload == nullptr)
 					{
 						SetParsingState(ParsingState::Completed);
-						return;
+						return true;
 					}
 					
 					// Parse each parameter in the payload
@@ -170,7 +175,7 @@ namespace http
 					if (payload_size % 6 != 0)
 					{
 						SetParsingState(ParsingState::Error);
-						return;
+						return false;
 					}
 
 					while (payload_offset < payload_size)
@@ -185,6 +190,7 @@ namespace http
 					}
 
 					SetParsingState(ParsingState::Completed);
+					return true;
 				}
 
 				// Parameters

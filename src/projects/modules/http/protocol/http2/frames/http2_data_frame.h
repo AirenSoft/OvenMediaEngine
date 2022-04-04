@@ -18,36 +18,29 @@ namespace http
 	{
 		namespace h2
 		{
-			class Http2HeadersFrame : public Http2Frame
+			class Http2DataFrame : public Http2Frame
 			{
 			public:
 				enum class Flags : uint8_t
 				{
 					None = 0x00,
-					EndHeaders = 0x04,
 					EndStream = 0x01,
 					Padded = 0x08,
-					Priority = 0x20,
 				};
 
 				// Make by itself
-				Http2HeadersFrame(uint32_t stream_id)
+				Http2DataFrame(uint32_t stream_id)
 					: Http2Frame(stream_id)
 				{
-					SetType(Http2Frame::Type::Headers);
+					SetType(Http2Frame::Type::Data);
 				}
 
-				Http2HeadersFrame(const std::shared_ptr<Http2Frame> &frame)
+				Http2DataFrame(const std::shared_ptr<Http2Frame> &frame)
 					: Http2Frame(frame)
 				{
 				}
 
 				// Setters
-				void SetEndHeaders()
-				{
-					TURN_ON_HTTP2_FRAME_FLAG(Flags::EndHeaders);
-				}
-
 				void SetEndStream()
 				{
 					TURN_ON_HTTP2_FRAME_FLAG(Flags::EndStream);
@@ -59,24 +52,16 @@ namespace http
 					SetFlag(static_cast<uint8_t>(Flags::Padded));
 				}
 
-				void SetPriority(bool is_exclusive, uint32_t stream_dependency, uint8_t weight)
-				{
-					_is_exclusive = is_exclusive;
-					_stream_dependency = stream_dependency;
-					_weight = weight;
-					TURN_ON_HTTP2_FRAME_FLAG(Flags::Priority);
-				}
-
 				// Set Header Block Fragment
-				void SetHeaderBlockFragment(const std::shared_ptr<const ov::Data> &data)
+				void SetData(const std::shared_ptr<const ov::Data> &data)
 				{
-					_header_block_fragment = data;
+					_data = data;
 				}
 
 				// Get Header Block Fragment
-				const std::shared_ptr<const ov::Data> &GetHeaderBlockFragment() const
+				const std::shared_ptr<const ov::Data> &GetData() const
 				{
-					return _header_block_fragment;
+					return _data;
 				}
 
 				// To String
@@ -87,30 +72,20 @@ namespace http
 					str = Http2Frame::ToString();
 
 					str += "\n";
-					str += "[Headers Frame]\n";
+					str += "[DATA Frame]\n";
 					
 					// Header Block Fragment length
-					str += ov::String::FormatString("Header Block Fragment Length : %d\n", _header_block_fragment->GetLength());
+					str += ov::String::FormatString("Data Length : %d\n", _data->GetLength());
 
 					// Flags - End Header, End Stream, Padded, Priority
-					str += ov::String::FormatString("Flags : EndHeader(%s) EndStream(%s) Padded(%s) Priority(%s)\n",
-					ov::Converter::ToString(CHECK_HTTP2_FRAME_FLAG(Flags::EndHeaders)).CStr(), 
+					str += ov::String::FormatString("Flags : EndStream(%s) Padded(%s) \n",
 					ov::Converter::ToString(CHECK_HTTP2_FRAME_FLAG(Flags::EndStream)).CStr(),
-					ov::Converter::ToString(CHECK_HTTP2_FRAME_FLAG(Flags::Padded)).CStr(),
-					ov::Converter::ToString(CHECK_HTTP2_FRAME_FLAG(Flags::Priority)).CStr());
+					ov::Converter::ToString(CHECK_HTTP2_FRAME_FLAG(Flags::Padded)).CStr());
 
 					// Pad flag and info
 					if (CHECK_HTTP2_FRAME_FLAG(Flags::Padded))
 					{
 						str += ov::String::FormatString("Padded : %d\n", _pad_length);
-					}
-
-					// Priority flag
-					if (CHECK_HTTP2_FRAME_FLAG(Flags::Priority))
-					{
-						str += ov::String::FormatString("Exclusive : %s\n", _is_exclusive ? "true" : "false");
-						str += ov::String::FormatString("Stream Dependency : %d\n", _stream_dependency);
-						str += ov::String::FormatString("Weight : %d\n", _weight);
 					}
 
 					return str;
@@ -133,18 +108,8 @@ namespace http
 						stream.Write8(_pad_length);
 					}
 
-					// Set Priority if needed
-					if (CHECK_HTTP2_FRAME_FLAG(Flags::Priority))
-					{
-						uint32_t stream_dependency_with_flag = _stream_dependency;
-						stream_dependency_with_flag |= (_is_exclusive ? 0x80000000 : 0x00000000);
-
-						stream.WriteBE32(stream_dependency_with_flag);
-						stream.Write8(_weight);
-					}
-
 					// Append Header Block Fragment
-					payload->Append(GetHeaderBlockFragment());
+					payload->Append(GetData());
 
 					// Append Padding if needed
 					if (CHECK_HTTP2_FRAME_FLAG(Flags::Padded))
@@ -158,11 +123,12 @@ namespace http
 			private:
 				bool ParsePayload() override
 				{
-					if (GetType() != Type::Headers)
+					if (GetType() != Http2Frame::Type::Data)
 					{
 						return false;
 					}
 
+					// The payload of a SETTINGS frame consists of zero or more parameters,
 					auto payload = GetPayload();
 					if (payload == nullptr)
 					{
@@ -186,28 +152,8 @@ namespace http
 						header_block_size -= _pad_length;
 					}
 
-					// Get Priority if flag is set
-					if (CHECK_HTTP2_FRAME_FLAG(Flags::Priority))
-					{
-						// Get Exclusive Flag
-						_is_exclusive = payload_data[payload_offset] & 0x80;
-						
-						// Get Stream Dependency from payload_data (31 bits)
-						_stream_dependency = ByteReader<uint32_t>::ReadBigEndian(payload_data + payload_offset);
-						// Remove E flag
-						_stream_dependency &= 0x7FFFFFFF;
-
-						payload_offset += 4;
-						header_block_size -= 4;
-						
-						// Get Weight
-						_weight = payload_data[payload_offset];
-						payload_offset ++;
-						header_block_size --;
-					}
-
 					// Get Header Block Fragment
-					_header_block_fragment = payload->Subdata(payload_offset, header_block_size);
+					_data = payload->Subdata(payload_offset, header_block_size);
 
 					SetParsingState(ParsingState::Completed);
 
@@ -215,10 +161,7 @@ namespace http
 				}
 				
 				uint8_t	_pad_length = 0;
-				bool	_is_exclusive = false;
-				uint32_t _stream_dependency = 0;
-				uint8_t	_weight = 0;
-				std::shared_ptr<const ov::Data> _header_block_fragment = nullptr;
+				std::shared_ptr<const ov::Data> _data = nullptr;
 			};
 		}
 	}

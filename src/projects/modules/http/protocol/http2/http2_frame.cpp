@@ -17,7 +17,11 @@ namespace http
 		{
 			Http2Frame::Http2Frame()
 			{
-
+			}
+			
+			Http2Frame::Http2Frame(uint32_t stream_id)
+			{
+				SetStreamId(stream_id);
 			}
 
 			Http2Frame::Http2Frame(const std::shared_ptr<const Http2Frame> &frame)
@@ -30,6 +34,7 @@ namespace http
 				_payload = frame->_payload;
 			}
 
+			
 			ssize_t Http2Frame::AppendData(const std::shared_ptr<const ov::Data> &data)
 			{
 				ssize_t consumed_bytes = 0;

@@ -35,18 +35,22 @@ namespace http
 
 				// Get Stream ID
 				uint32_t GetStreamId() const;
-				bool OnFrameReceived(const std::shared_ptr<const Http2Frame> &frame);
+				bool OnFrameReceived(const std::shared_ptr<Http2Frame> &frame);
 
 			private:
 				// Send Settings frame and Window_Update frame
 				bool SendInitialControlMessage();
 				
+				// Data frame received
+				bool OnDataFrameReceived(const std::shared_ptr<const Http2DataFrame> &frame);
 				// Headers frame received
 				bool OnHeadersFrameReceived(const std::shared_ptr<const Http2HeadersFrame> &frame);
 				// Settings frame received
 				bool OnSettingsFrameReceived(const std::shared_ptr<const Http2SettingsFrame> &frame);
 				// WindowUpdate frame received
 				bool OnWindowUpdateFrameReceived(const std::shared_ptr<const Http2WindowUpdateFrame> &frame);
+				// Goaway frame received
+				bool OnGoAwayFrameReceived(const std::shared_ptr<const Http2GoAwayFrame> &frame);
 
 				uint32_t _stream_id = 0;
 

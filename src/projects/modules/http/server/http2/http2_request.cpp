@@ -7,6 +7,7 @@
 //
 //==============================================================================
 #include "http2_request.h"
+
 #include "../../http_private.h"
 
 namespace http
@@ -15,7 +16,7 @@ namespace http
 	{
 		namespace h2
 		{
-// Constructor
+			// Constructor
 			Http2Request::Http2Request(const std::shared_ptr<ov::ClientSocket> &client_socket, const std::shared_ptr<hpack::Decoder> &hpack_decoder)
 				: HttpRequest(client_socket)
 			{
@@ -33,7 +34,7 @@ namespace http
 					// Already parsed
 					return 0;
 				}
-				
+
 				if (_hpack_decoder == nullptr)
 				{
 					logte("Http2Request::AppendHeaderData() - Http2Request::_hpack_decoder is nullptr");
@@ -57,6 +58,8 @@ namespace http
 
 				_parse_status = StatusCode::OK;
 
+				PostHeaderParsedProcess();
+
 				return data->GetLength();
 			}
 
@@ -78,17 +81,25 @@ namespace http
 
 			ov::String Http2Request::GetHttpVersion() const noexcept
 			{
-				return "2.0";
+				return "2";
 			}
 
-			double Http2Request::GetHttpVersionAsNumber() const noexcept
+			ov::String Http2Request::GetHost() const noexcept
 			{
-				return 2.0;
+				static const ov::String empty = "";
+
+				auto it = _headers.find(":authority");
+				if (it == _headers.end())
+				{
+					return empty;
+				}
+
+				return it->second;
 			}
 
 			// Path of the URI (including query strings & excluding domain and port)
 			// Example: /<app>/<stream>/...?a=b&c=d
-			const ov::String &Http2Request::GetRequestTarget() const noexcept
+			ov::String Http2Request::GetRequestTarget() const noexcept
 			{
 				static const ov::String empty = "";
 
@@ -112,7 +123,7 @@ namespace http
 				return it->second;
 			}
 
-			const bool Http2Request::IsHeaderExists(const ov::String &key) const noexcept
+			bool Http2Request::IsHeaderExists(const ov::String &key) const noexcept
 			{
 				auto it = _headers.find(key);
 				if (it == _headers.end())
@@ -122,6 +133,6 @@ namespace http
 
 				return true;
 			}
-		} // namespace h1
-	} // namespace svr
-} // namespace http
+		}  // namespace h2
+	}	   // namespace svr
+}  // namespace http

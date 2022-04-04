@@ -28,7 +28,7 @@ bool DashInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::
 
 	// Check file pattern
 	// TODO(dimiden): Check this code later - IsInterceptorForRequest() should not filter method and filename. It is recommended to use Register()
-	auto &request_target = request->GetRequestTarget();
+	auto request_target = request->GetRequestTarget();
 
 	if (
 		(request_target.IndexOf(DASH_MPD_VIDEO_FULL_SUFFIX) >= 0) ||

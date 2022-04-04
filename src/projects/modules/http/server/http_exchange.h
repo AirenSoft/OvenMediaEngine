@@ -86,14 +86,16 @@ namespace http
 			bool AcceptUpgrade();
 			void SetConnectionPolicyByRequest();
 			void SetStatus(Status status);
+			void SetKeepAlive(bool keep_alive);
+
+			bool OnRequestPrepared(const std::shared_ptr<HttpExchange> &exchange);
+			bool OnDataReceived(const std::shared_ptr<HttpExchange> &exchange, const std::shared_ptr<const ov::Data> &data);
+			InterceptorResult OnRequestCompleted(const std::shared_ptr<HttpExchange> &exchange);
 
 		private:
 			std::shared_ptr<HttpConnection> _connection = nullptr;
-
 			Status _status = Status::None;
-
 			bool _keep_alive = true; // HTTP/1.1 default
-
 			std::any _extra;
 		};
 	}  // namespace svr
