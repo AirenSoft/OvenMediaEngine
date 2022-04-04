@@ -47,6 +47,8 @@ namespace http
 				bool OnSettingsFrameReceived(const std::shared_ptr<const Http2SettingsFrame> &frame);
 				// WindowUpdate frame received
 				bool OnWindowUpdateFrameReceived(const std::shared_ptr<const Http2WindowUpdateFrame> &frame);
+				// Goaway frame received
+				bool OnGoAwayFrameReceived(const std::shared_ptr<const Http2GoAwayFrame> &frame);
 
 				uint32_t _stream_id = 0;
 

@@ -93,7 +93,18 @@ namespace http
 					case Http2Frame::Type::Ping:
 						break;
 					case Http2Frame::Type::GoAway:
+					{
+						parsed_frame = std::make_shared<const Http2GoAwayFrame>(frame);
+						if (parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						{
+							logte("Failed to parse settings frame");
+							return false;
+						}
+
+						result = OnGoAwayFrameReceived(std::static_pointer_cast<const Http2GoAwayFrame>(parsed_frame));
+					
 						break;
+					}
 					case Http2Frame::Type::WindowUpdate:
 					{
 						parsed_frame = std::make_shared<const Http2WindowUpdateFrame>(frame);
@@ -205,6 +216,11 @@ namespace http
 			}
 
 			bool HttpStream::OnWindowUpdateFrameReceived(const std::shared_ptr<const Http2WindowUpdateFrame> &frame)
+			{
+				return true;
+			}
+
+			bool HttpStream::OnGoAwayFrameReceived(const std::shared_ptr<const Http2GoAwayFrame> &frame)
 			{
 				return true;
 			}
