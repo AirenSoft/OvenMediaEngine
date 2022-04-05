@@ -81,7 +81,7 @@ namespace http
 			private:
 				bool ParsePayload() override
 				{
-					if (GetType() != Type::Headers)
+					if (GetType() != Type::Priority)
 					{
 						return false;
 					}
@@ -89,7 +89,7 @@ namespace http
 					auto payload = GetPayload();
 					if (payload == nullptr)
 					{
-						SetParsingState(ParsingState::Completed);
+						SetParsingState(ParsingState::Error);
 						return false;
 					}
 

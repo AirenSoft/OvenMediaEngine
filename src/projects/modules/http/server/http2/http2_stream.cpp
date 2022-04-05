@@ -52,6 +52,90 @@ namespace http
 				return _stream_id;
 			}
 
+			bool HttpStream::OnEndHeaders()
+			{
+				// Header Completed
+				if (_request->AppendHeaderData(_header_block) <= 0)
+				{
+					return false;
+				}
+
+				if (IsUpgradeRequest() == true)
+				{
+					if (AcceptUpgrade() == false)
+					{
+						SetStatus(Status::Error);
+						return -1;
+					}
+
+					SetStatus(Status::Upgrade);
+					return true;
+				}
+
+				// HTTP/2 Connection is awalys keep-alive
+				SetKeepAlive(true);
+
+				// Notify to interceptor
+				if (OnRequestPrepared() == false)
+				{
+					return -1;
+				}
+
+				if (_headers_frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndStream))
+				{
+					return OnEndStream();
+				}
+				else
+				{
+					// Continue to receive more data
+					SetStatus(Status::Exchanging);
+				}
+
+				return true;
+			}
+
+			bool HttpStream::OnEndStream()
+			{
+				// End of Stream, that means no more data will be sent
+				auto result = OnRequestCompleted();
+				switch (result)
+				{
+					case InterceptorResult::Completed:
+						SetStatus(Status::Completed);
+						break;
+					case InterceptorResult::Moved:
+						SetStatus(Status::Moved);
+						break;
+					case InterceptorResult::Error:
+					default:
+						SetStatus(Status::Error);
+						return false;
+				}
+
+				return true;
+			}
+
+			bool HttpStream::SendInitialControlMessage()
+			{
+				logtd("Send Initial Control Message");
+				// Settings Frame
+				auto settings_frame = std::make_shared<Http2SettingsFrame>();
+				settings_frame->SetParameter(Http2SettingsFrame::Parameters::HeaderTableSize, 65536);
+				settings_frame->SetParameter(Http2SettingsFrame::Parameters::MaxConcurrentStreams, 1000);
+				settings_frame->SetParameter(Http2SettingsFrame::Parameters::InitialWindowSize, 6291456);
+				settings_frame->SetParameter(Http2SettingsFrame::Parameters::MaxHeaderListSize, 262144);
+
+				auto result = _response->Send(settings_frame);
+
+				// WindowUpdate Frame
+				auto window_update_frame = std::make_shared<Http2WindowUpdateFrame>(0);
+				window_update_frame->SetWindowSizeIncrement(6291456);
+
+				result = result ? _response->Send(window_update_frame) : false;
+				
+				return result;
+			}
+
 			bool HttpStream::OnFrameReceived(const std::shared_ptr<Http2Frame> &frame)
 			{
 				std::shared_ptr<const Http2Frame> parsed_frame = frame;
@@ -63,7 +147,7 @@ namespace http
 						parsed_frame = frame->GetFrameAs<Http2DataFrame>();
 						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
-							logte("Failed to parse settings frame");
+							logte("Failed to parse Data frame");
 							return false;
 						}
 
@@ -75,7 +159,7 @@ namespace http
 						parsed_frame = frame->GetFrameAs<Http2HeadersFrame>();
 						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
-							logte("Failed to parse settings frame");
+							logte("Failed to parse Headers frame");
 							return false;
 						}
 
@@ -87,7 +171,7 @@ namespace http
 						parsed_frame = frame->GetFrameAs<Http2PriorityFrame>();
 						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
-							logte("Failed to parse settings frame");
+							logte("Failed to parse Priority frame");
 							return false;
 						}
 
@@ -99,7 +183,7 @@ namespace http
 						parsed_frame = frame->GetFrameAs<Http2RstStreamFrame>();
 						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
-							logte("Failed to parse settings frame");
+							logte("Failed to parse RstStream frame");
 							return false;
 						}
 
@@ -111,7 +195,7 @@ namespace http
 						parsed_frame = frame->GetFrameAs<Http2SettingsFrame>();
 						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
-							logte("Failed to parse settings frame");
+							logte("Failed to parse Settings frame");
 							return false;
 						}
 
@@ -120,11 +204,21 @@ namespace http
 					}
 					case Http2Frame::Type::PushPromise:
 					{
-						// Not for server
+						// No need to parse server side
 						break;
 					}
 					case Http2Frame::Type::Ping:
+					{
+						parsed_frame = frame->GetFrameAs<Http2PingFrame>();
+						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						{
+							logte("Failed to parse Ping frame");
+							return false;
+						}
+
+						result = OnPingFrameReceived(std::static_pointer_cast<const Http2PingFrame>(parsed_frame));
 						break;
+					}
 					case Http2Frame::Type::GoAway:
 					{
 						parsed_frame = frame->GetFrameAs<Http2GoAwayFrame>();
@@ -151,8 +245,17 @@ namespace http
 						break;
 					}
 					case Http2Frame::Type::Continuation:
-						break;
+					{
+						parsed_frame = frame->GetFrameAs<Http2ContinuationFrame>();
+						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						{
+							logte("Failed to parse continuation frame");
+							return false;
+						}
 
+						result = OnContinuationFrameReceived(std::static_pointer_cast<const Http2ContinuationFrame>(parsed_frame));
+						break;
+					}
 					case Http2Frame::Type::Unknown:
 					default:
 						logte("Unknown frame type received");
@@ -172,65 +275,7 @@ namespace http
 				}
 
 				_header_block->Append(frame->GetHeaderBlockFragment());
-
-				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndHeaders))
-				{
-					// Header Completed
-					if (_request->AppendHeaderData(_header_block) <= 0)
-					{
-						return false;
-					}
-
-					if (IsUpgradeRequest() == true)
-					{
-						if (AcceptUpgrade() == false)
-						{
-							SetStatus(Status::Error);
-							return -1;
-						}
-
-						SetStatus(Status::Upgrade);
-						return true;
-					}
-
-					// HTTP/2 Connection is awalys keep-alive
-					SetKeepAlive(true);
-
-					// Notify to interceptor
-					if (OnRequestPrepared() == false)
-					{
-						return -1;
-					}
-
-					if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndStream))
-					{
-						SetStatus(Status::Completed);
-					}
-				}
-
-				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndStream))
-				{
-					// End of Stream, that means no more data will be sent
-					auto result = OnRequestCompleted();
-					switch (result)
-					{
-						case InterceptorResult::Completed:
-							SetStatus(Status::Completed);
-							break;
-						case InterceptorResult::Moved:
-							SetStatus(Status::Moved);
-							break;
-						case InterceptorResult::Error:
-						default:
-							SetStatus(Status::Error);
-							return -1;
-					}
-				}
-				else
-				{
-					// Continue to receive more data
-					SetStatus(Status::Exchanging);
-				}
+				_headers_frame = frame;
 
 				return true;
 			}
@@ -245,21 +290,7 @@ namespace http
 
 				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2DataFrame::Flags::EndStream))
 				{
-					// End of Stream, that means no more data will be sent
-					auto result = OnRequestCompleted();
-					switch (result)
-					{
-						case InterceptorResult::Completed:
-							SetStatus(Status::Completed);
-							break;
-						case InterceptorResult::Moved:
-							SetStatus(Status::Moved);
-							break;
-						case InterceptorResult::Error:
-						default:
-							SetStatus(Status::Error);
-							return false;
-					}
+					return OnEndStream();
 				}
 
 				return true;
@@ -288,6 +319,25 @@ namespace http
 				return true;
 			}
 
+			bool HttpStream::OnPushPromiseFrameReceived(const std::shared_ptr<const Http2PushPromiseFrame> &frame)
+			{
+				return true;
+			}
+
+			bool HttpStream::OnPingFrameReceived(const std::shared_ptr<const Http2PingFrame> &frame)
+			{
+				if (frame->IsAck() == false)
+				{
+					// PING Frame
+					auto ping_frame = std::make_shared<Http2PingFrame>(frame->GetStreamId());
+					ping_frame->SetAck();
+					ping_frame->SetOpaqueData(frame->GetOpaqueData());
+					return _response->Send(ping_frame);
+				}
+
+				return true;
+			}
+
 			bool HttpStream::OnWindowUpdateFrameReceived(const std::shared_ptr<const Http2WindowUpdateFrame> &frame)
 			{
 				return true;
@@ -298,25 +348,22 @@ namespace http
 				return true;
 			}
 
-			bool HttpStream::SendInitialControlMessage()
+			bool HttpStream::OnContinuationFrameReceived(const std::shared_ptr<const Http2ContinuationFrame> &frame)
 			{
-				logtd("Send Initial Control Message");
-				// Settings Frame
-				auto settings_frame = std::make_shared<Http2SettingsFrame>();
-				settings_frame->SetParameter(Http2SettingsFrame::Parameters::HeaderTableSize, 65536);
-				settings_frame->SetParameter(Http2SettingsFrame::Parameters::MaxConcurrentStreams, 1000);
-				settings_frame->SetParameter(Http2SettingsFrame::Parameters::InitialWindowSize, 6291456);
-				settings_frame->SetParameter(Http2SettingsFrame::Parameters::MaxHeaderListSize, 262144);
+				if (_header_block == nullptr)
+				{
+					// It must be created by headers frame
+					return false;
+				}
 
-				auto result = _response->Send(settings_frame);
+				_header_block->Append(frame->GetHeaderBlockFragment());
 
-				// WindowUpdate Frame
-				auto window_update_frame = std::make_shared<Http2WindowUpdateFrame>(0);
-				window_update_frame->SetWindowSizeIncrement(6291456);
+				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2ContinuationFrame::Flags::EndHeaders))
+				{
+					return OnEndHeaders();
+				}
 
-				result = result ? _response->Send(window_update_frame) : false;
-				
-				return result;
+				return true;
 			}
 		}  // namespace h2
 	}	   // namespace svr

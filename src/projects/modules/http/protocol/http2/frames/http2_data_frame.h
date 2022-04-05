@@ -49,7 +49,7 @@ namespace http
 				void SetPadLength(uint8_t pad_length)
 				{
 					_pad_length = pad_length;
-					SetFlag(static_cast<uint8_t>(Flags::Padded));
+					TURN_ON_HTTP2_FRAME_FLAG(Flags::Padded);
 				}
 
 				// Set Header Block Fragment

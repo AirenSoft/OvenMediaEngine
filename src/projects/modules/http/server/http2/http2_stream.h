@@ -40,6 +40,9 @@ namespace http
 			private:
 				// Send Settings frame and Window_Update frame
 				bool SendInitialControlMessage();
+
+				bool OnEndHeaders();
+				bool OnEndStream();
 				
 				// Data frame received
 				bool OnDataFrameReceived(const std::shared_ptr<const Http2DataFrame> &frame);
@@ -51,13 +54,19 @@ namespace http
 				bool OnRstStreamFrameReceived(const std::shared_ptr<const Http2RstStreamFrame> &frame);
 				// Settings frame received
 				bool OnSettingsFrameReceived(const std::shared_ptr<const Http2SettingsFrame> &frame);
+				// Push Promise frame received
+				bool OnPushPromiseFrameReceived(const std::shared_ptr<const Http2PushPromiseFrame> &frame);
+				// Ping frame received
+				bool OnPingFrameReceived(const std::shared_ptr<const Http2PingFrame> &frame);
+				// GoAway frame received
+				bool OnGoAwayFrameReceived(const std::shared_ptr<const Http2GoAwayFrame> &frame);
 				// WindowUpdate frame received
 				bool OnWindowUpdateFrameReceived(const std::shared_ptr<const Http2WindowUpdateFrame> &frame);
-				// Goaway frame received
-				bool OnGoAwayFrameReceived(const std::shared_ptr<const Http2GoAwayFrame> &frame);
-
+				// Continuation frame received
+				bool OnContinuationFrameReceived(const std::shared_ptr<const Http2ContinuationFrame> &frame);
 				uint32_t _stream_id = 0;
 
+				std::shared_ptr<const Http2HeadersFrame> _headers_frame;
 				std::shared_ptr<ov::Data> _header_block = nullptr;
 				std::shared_ptr<Http2Request> _request = nullptr;
 				std::shared_ptr<Http2Response> _response = nullptr;

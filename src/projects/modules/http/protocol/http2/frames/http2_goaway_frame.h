@@ -112,11 +112,10 @@ namespace http
 						return false;
 					}
 
-					// The payload of a SETTINGS frame consists of zero or more parameters,
 					auto payload = GetPayload();
 					if (payload == nullptr)
 					{
-						SetParsingState(ParsingState::Completed);
+						SetParsingState(ParsingState::Error);
 						return false;
 					}
 					

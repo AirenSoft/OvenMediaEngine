@@ -47,12 +47,12 @@ namespace http
 
 			uint32_t Http2Response::SendHeader()
 			{
-				std::shared_ptr<ov::Data> response = std::make_shared<ov::Data>();
+				std::shared_ptr<ov::Data> header_block = std::make_shared<ov::Data>();
 				size_t sent_size = 0;
 
 				// :status header field is must on top
-				auto header_block = _hpack_encoder->Encode({":status", ov::Converter::ToString(static_cast<uint16_t>(GetStatusCode()))}, hpack::Encoder::EncodingType::LiteralWithIndexing);
-				response->Append(header_block);
+				auto header_field = _hpack_encoder->Encode({":status", ov::Converter::ToString(static_cast<uint16_t>(GetStatusCode()))}, hpack::Encoder::EncodingType::LiteralWithIndexing);
+				header_block->Append(header_field);
 
 				for (const auto &[name, values] : GetResponseHeaderList())
 				{
@@ -61,34 +61,34 @@ namespace http
 						// https://httpwg.org/http2-spec/draft-ietf-httpbis-http2bis.html#section-8.2
 						// Field names MUST be converted to lowercase when constructing an HTTP/2 message.
 						auto header_block = _hpack_encoder->Encode({name.LowerCaseString(), value}, hpack::Encoder::EncodingType::LiteralWithIndexing);
-						response->Append(header_block);
-
-						logtw("Send Headers : [%s] %s", name.CStr(), value.CStr());
-
-						// Send fragmented header block if the header block size is larger than MAX_HTTP2_HEADER_SIZE
-						if (response->GetLength() > MAX_HTTP2_HEADER_SIZE)
-						{
-							// Send the header block
-							auto headers_frame = std::make_shared<prot::h2::Http2HeadersFrame>(_stream_id);
-							headers_frame->SetHeaderBlockFragment(response);
-
-							if (Send(headers_frame) == false)
-							{
-								return 0;
-							}
-
-							sent_size += response->GetLength();
-							// Reset
-							response = std::make_shared<ov::Data>();
-						}
+						header_block->Append(header_block);
 					}
 				}
 
+				std::shared_ptr<ov::Data> head_block_fragment;
+				bool fragmented = false;
+				
+				if (header_block->GetLength() > MAX_HTTP2_HEADER_SIZE)
+				{
+					head_block_fragment = header_block->Subdata(0, MAX_HTTP2_HEADER_SIZE);
+					fragmented = true;
+				}
+				else
+				{
+					head_block_fragment = header_block;
+					fragmented = false;
+				}
+				
+				// Send Headers frame
 				auto headers_frame = std::make_shared<prot::h2::Http2HeadersFrame>(_stream_id);
-				headers_frame->SetHeaderBlockFragment(response);
+				headers_frame->SetHeaderBlockFragment(head_block_fragment);
 
 				// Set flags
-				headers_frame->SetEndHeaders();
+				if (fragmented == false)
+				{
+					headers_frame->SetEndHeaders();
+				}
+
 				if (_keep_stream == false && GetResponseDataSize() == 0)
 				{
 					headers_frame->SetEndStream();
@@ -99,7 +99,37 @@ namespace http
 					return 0;
 				}
 
-				sent_size += response->GetLength();
+				sent_size += head_block_fragment->GetLength();
+
+				// Send Continuation frames if header block is fragmented
+				if (fragmented == true)
+				{
+					auto remaining_size = header_block->GetLength() - MAX_HTTP2_HEADER_SIZE;
+					auto remaining_data = header_block->Subdata(MAX_HTTP2_HEADER_SIZE, remaining_size);
+
+					while (remaining_size > 0)
+					{
+						auto fragment_size = remaining_size > MAX_HTTP2_HEADER_SIZE ? MAX_HTTP2_HEADER_SIZE : remaining_size;
+						auto fragment_data = remaining_data->Subdata(0, fragment_size);
+
+						auto continuation_frame = std::make_shared<prot::h2::Http2ContinuationFrame>(_stream_id);
+						continuation_frame->SetHeaderBlockFragment(fragment_data);
+
+						if (remaining_size - fragment_size == 0)
+						{
+							continuation_frame->SetEndHeaders();
+						}
+
+						if (Send(continuation_frame) == false)
+						{
+							return 0;
+						}
+
+						sent_size += fragment_size;
+						remaining_size -= fragment_size;
+						remaining_data = remaining_data->Subdata(fragment_size, remaining_size);
+					}
+				}
 
 				return sent_size;
 			}
