@@ -25,7 +25,7 @@ namespace http
 				Http2PriorityFrame(uint32_t stream_id)
 					: Http2Frame(stream_id)
 				{
-					SetType(Http2Frame::Type::Headers);
+					SetType(Http2Frame::Type::Priority);
 				}
 
 				Http2PriorityFrame(const std::shared_ptr<Http2Frame> &frame)
@@ -81,7 +81,7 @@ namespace http
 			private:
 				bool ParsePayload() override
 				{
-					if (GetType() != Type::Headers)
+					if (GetType() != Type::Priority)
 					{
 						return false;
 					}
@@ -89,7 +89,7 @@ namespace http
 					auto payload = GetPayload();
 					if (payload == nullptr)
 					{
-						SetParsingState(ParsingState::Completed);
+						SetParsingState(ParsingState::Error);
 						return false;
 					}
 
