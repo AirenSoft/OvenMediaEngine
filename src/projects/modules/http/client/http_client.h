@@ -53,8 +53,8 @@ namespace http
 			// Request headers (Headers to sent to HTTP server)
 			void SetRequestHeader(const ov::String &key, const ov::String &value);
 			ov::String GetRequestHeader(const ov::String &key);
-			const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetRequestHeaders() const;
-			std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetRequestHeaders();
+			const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &GetRequestHeaders() const;
+			std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &GetRequestHeaders();
 
 			// HttpClient can send a request body even when the method is GET, but the server may not actually accept it
 			void SetRequestBody(const std::shared_ptr<const ov::Data> &body);
@@ -67,7 +67,7 @@ namespace http
 
 			// Response headers (Headers received from HTTP server)
 			ov::String GetResponseHeader(const ov::String &key);
-			const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetResponseHeaders() const;
+			const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &GetResponseHeaders() const;
 
 		protected:
 			enum class ChunkParseStatus
@@ -151,14 +151,14 @@ namespace http
 
 			std::shared_ptr<ov::Socket> _socket;
 
-			std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> _request_header;
+			std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> _request_header;
 			std::shared_ptr<ov::Data> _request_body;
 
 			// response header
 			bool _is_header_found = false;
 			// A temporary string buffer to extract headers
 			ov::String _response_string;
-			std::map<ov::String, ov::String, ov::CaseInsensitiveComparator> _response_header;
+			std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> _response_header;
 
 			std::shared_ptr<ov::Data> _response_body;
 		};

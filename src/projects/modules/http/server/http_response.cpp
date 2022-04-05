@@ -93,8 +93,7 @@ namespace http
 				return false;
 			}
 			
-			// TODO(h2) : Why ov::CaseInsensitiveComparator is not working?
-			_response_header[key.LowerCaseString()].push_back(value);
+			_response_header[key].push_back(value);
 
 			return true;
 		}
@@ -107,7 +106,7 @@ namespace http
 				return false;
 			}
 			
-			_response_header[key.LowerCaseString()] = {value};
+			_response_header[key] = {value};
 
 			return true;
 		}
@@ -190,7 +189,7 @@ namespace http
 		}
 
 		// Get Response Header
-		const std::unordered_map<ov::String, std::vector<ov::String>, ov::CaseInsensitiveComparator> &HttpResponse::GetResponseHeaderList() const
+		const std::unordered_map<ov::String, std::vector<ov::String>, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &HttpResponse::GetResponseHeaderList() const
 		{
 			return _response_header;
 		}

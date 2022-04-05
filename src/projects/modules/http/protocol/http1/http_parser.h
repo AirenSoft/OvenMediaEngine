@@ -40,7 +40,7 @@ namespace http
 					return _parse_status;
 				}
 
-				const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetHeaders() const noexcept
+				const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &GetHeaders() const noexcept
 				{
 					return _headers;
 				}
@@ -74,7 +74,7 @@ namespace http
 
 				ov::String GetHeader(const ov::String &key, ov::String default_value) const noexcept
 				{
-					auto item = _headers.find(key.UpperCaseString());
+					auto item = _headers.find(key);
 
 					if (item == _headers.cend())
 					{
@@ -86,7 +86,7 @@ namespace http
 
 				const bool IsHeaderExists(const ov::String &key) const noexcept
 				{
-					return _headers.find(key.UpperCaseString()) != _headers.cend();
+					return _headers.find(key) != _headers.cend();
 				}
 
 				bool HasContentLength() const
@@ -112,7 +112,7 @@ namespace http
 				bool _is_header_found = false;
 				// A temporary buffer to extract HTTP header
 				ov::String _header_string;
-				std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> _headers;
+				std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> _headers;
 
 				// Frequently used headers
 				size_t _content_length = 0L;

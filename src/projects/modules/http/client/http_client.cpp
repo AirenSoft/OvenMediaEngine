@@ -111,12 +111,12 @@ namespace http
 			return iterator->second;
 		}
 
-		const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &HttpClient::GetRequestHeaders() const
+		const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &HttpClient::GetRequestHeaders() const
 		{
 			return _request_header;
 		}
 
-		std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &HttpClient::GetRequestHeaders()
+		std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &HttpClient::GetRequestHeaders()
 		{
 			return _request_header;
 		}
@@ -402,7 +402,7 @@ namespace http
 			return _parser.GetHeader(key);
 		}
 
-		const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &HttpClient::GetResponseHeaders() const
+		const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &HttpClient::GetResponseHeaders() const
 		{
 			return _parser.GetHeaders();
 		}

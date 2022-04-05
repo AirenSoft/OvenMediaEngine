@@ -174,7 +174,7 @@ namespace http
 					SetKeepAlive(true);
 
 					// Notify to interceptor
-					if (OnRequestPrepared(GetSharedPtr()) == false)
+					if (OnRequestPrepared() == false)
 					{
 						return -1;
 					}
@@ -188,7 +188,7 @@ namespace http
 				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndStream))
 				{
 					// End of Stream, that means no more data will be sent
-					auto result = OnRequestCompleted(GetSharedPtr());
+					auto result = OnRequestCompleted();
 					switch (result)
 					{
 						case InterceptorResult::Completed:
@@ -215,7 +215,7 @@ namespace http
 			// Data frame received
 			bool HttpStream::OnDataFrameReceived(const std::shared_ptr<const Http2DataFrame> &frame)
 			{
-				if (OnDataReceived(GetSharedPtr(), frame->GetData()) == false)
+				if (OnDataReceived(frame->GetData()) == false)
 				{
 					return false;
 				}
@@ -223,7 +223,7 @@ namespace http
 				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2DataFrame::Flags::EndStream))
 				{
 					// End of Stream, that means no more data will be sent
-					auto result = OnRequestCompleted(GetSharedPtr());
+					auto result = OnRequestCompleted();
 					switch (result)
 					{
 						case InterceptorResult::Completed:

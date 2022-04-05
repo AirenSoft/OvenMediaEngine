@@ -88,9 +88,9 @@ namespace http
 			void SetStatus(Status status);
 			void SetKeepAlive(bool keep_alive);
 
-			bool OnRequestPrepared(const std::shared_ptr<HttpExchange> &exchange);
-			bool OnDataReceived(const std::shared_ptr<HttpExchange> &exchange, const std::shared_ptr<const ov::Data> &data);
-			InterceptorResult OnRequestCompleted(const std::shared_ptr<HttpExchange> &exchange);
+			bool OnRequestPrepared();
+			bool OnDataReceived(const std::shared_ptr<const ov::Data> &data);
+			InterceptorResult OnRequestCompleted();
 
 		private:
 			std::shared_ptr<HttpConnection> _connection = nullptr;

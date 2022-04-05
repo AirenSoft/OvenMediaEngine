@@ -197,7 +197,7 @@ namespace http
 			}
 		}
 
-		bool HttpExchange::OnRequestPrepared(const std::shared_ptr<HttpExchange> &exchange)
+		bool HttpExchange::OnRequestPrepared()
 		{
 			// Find interceptor using received header
 			auto interceptor = GetConnection()->FindInterceptor(GetSharedPtr());
@@ -207,14 +207,14 @@ namespace http
 				SetStatus(Status::Error);
 				GetResponse()->SetStatusCode(StatusCode::InternalServerError);
 				GetResponse()->Response();
-				return -1;
+				return false;
 			}
 
 			// Call interceptor
-			return interceptor->OnRequestPrepared(exchange);
+			return interceptor->OnRequestPrepared(GetSharedPtr());
 		}
 
-		bool HttpExchange::OnDataReceived(const std::shared_ptr<HttpExchange> &exchange, const std::shared_ptr<const ov::Data> &data)
+		bool HttpExchange::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
 		{
 			auto interceptor = GetConnection()->FindInterceptor(GetSharedPtr());
 			if (interceptor == nullptr)
@@ -226,10 +226,10 @@ namespace http
 				return false;
 			}
 
-			return interceptor->OnDataReceived(exchange, data);
+			return interceptor->OnDataReceived(GetSharedPtr(), data);
 		}
 
-		InterceptorResult HttpExchange::OnRequestCompleted(const std::shared_ptr<HttpExchange> &exchange)
+		InterceptorResult HttpExchange::OnRequestCompleted()
 		{
 			auto interceptor = GetConnection()->FindInterceptor(GetSharedPtr());
 			if (interceptor == nullptr)
@@ -241,7 +241,7 @@ namespace http
 				return InterceptorResult::Error;
 			}
 
-			return interceptor->OnRequestCompleted(exchange);
+			return interceptor->OnRequestCompleted(GetSharedPtr());
 		}
 
 	}  // namespace svr
