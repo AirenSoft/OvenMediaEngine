@@ -101,9 +101,9 @@ namespace http
 			std::deque<HeaderField> _header_fields_table;
 
 			// name : inserted order
-			std::unordered_map<ov::String, uint32_t, ov::CaseInsensitiveComparator> _header_field_name_sequence_map;
+			std::unordered_map<ov::String, uint32_t, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> _header_field_name_sequence_map;
 			// key(name + value) : inserted order
-			std::unordered_map<ov::String, uint32_t, ov::CaseInsensitiveComparator> _header_field_sequence_map;
+			std::unordered_map<ov::String, uint32_t, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> _header_field_sequence_map;
 
 		private:
 			virtual bool Insert(const HeaderField &header_field) = 0;

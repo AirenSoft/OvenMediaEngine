@@ -63,7 +63,7 @@ namespace http
 			// Get Response Data List
 			const std::vector<std::shared_ptr<const ov::Data>> &GetResponseDataList() const;
 			// Get Response Header
-			const std::unordered_map<ov::String, std::vector<ov::String>, ov::CaseInsensitiveComparator> &GetResponseHeaderList() const;
+			const std::unordered_map<ov::String, std::vector<ov::String>, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &GetResponseHeaderList() const;
 			void ResetResponseData();
 
 			// Can be used for response without content-length
@@ -102,7 +102,7 @@ namespace http
 			// encoding in HTTP/2.
 
 			// So _response_header is a map of case insentitive header key and value
-			std::unordered_map<ov::String, std::vector<ov::String>, ov::CaseInsensitiveComparator> _response_header;
+			std::unordered_map<ov::String, std::vector<ov::String>, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> _response_header;
 			std::vector<std::shared_ptr<const ov::Data>> _response_data_list;
 			size_t _response_data_size = 0;
 

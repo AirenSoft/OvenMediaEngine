@@ -58,7 +58,7 @@ namespace http
 					}
 
 					// Here, payload data is passed to the interceptor rather than stored in the request. The interceptor may or may not store the payload in the request according to each role.
-					OnDataReceived(GetSharedPtr(), input_data);
+					OnDataReceived(input_data);
 
 					_received_data_size += input_data->GetLength();
 
@@ -66,7 +66,7 @@ namespace http
 
 					if (_received_data_size >= _request->GetContentLength())
 					{
-						auto result = OnRequestCompleted(GetSharedPtr());
+						auto result = OnRequestCompleted();
 						switch (result)
 						{
 							case InterceptorResult::Completed:
@@ -121,7 +121,7 @@ namespace http
 						SetConnectionPolicyByRequest();
 
 						// Notify to interceptor
-						auto need_to_disconnect = OnRequestPrepared(GetSharedPtr());
+						auto need_to_disconnect = OnRequestPrepared();
 						if (need_to_disconnect == false)
 						{
 							return -1;
@@ -131,7 +131,7 @@ namespace http
 						// If Content-length is 0, it means that the request is completed.
 						if (_request->GetContentLength() == 0)
 						{
-							auto result = OnRequestCompleted(GetSharedPtr());
+							auto result = OnRequestCompleted();
 							switch (result)
 							{
 								case InterceptorResult::Completed:

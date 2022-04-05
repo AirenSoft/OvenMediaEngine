@@ -160,18 +160,28 @@ namespace ov
 		size_t _capacity = 0;
 	};
 
+	struct CaseInsensitiveHash
+	{
+		std::size_t operator()(const String &str) const
+		{
+			return str.LowerCaseString().Hash();
+		}
+	};
+
+	struct CaseInsensitiveEqual
+	{
+		bool operator()(const String &lhs, const String &rhs) const
+		{
+			return lhs.LowerCaseString() == rhs.LowerCaseString();
+		}
+	};
+
 	struct CaseInsensitiveComparator
 	{
 		// for std::map
 		bool operator()(const String &s1, const String &s2) const
 		{
 			return s1.UpperCaseString() < s2.UpperCaseString();
-		}
-
-		// for std::unordered_map
-		std::size_t operator()(const String &str) const
-		{
-			return str.UpperCaseString().Hash();
 		}
 	};
 }  // namespace ov
