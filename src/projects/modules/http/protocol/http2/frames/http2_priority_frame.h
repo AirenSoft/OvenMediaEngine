@@ -25,7 +25,7 @@ namespace http
 				Http2PriorityFrame(uint32_t stream_id)
 					: Http2Frame(stream_id)
 				{
-					SetType(Http2Frame::Type::Headers);
+					SetType(Http2Frame::Type::Priority);
 				}
 
 				Http2PriorityFrame(const std::shared_ptr<Http2Frame> &frame)

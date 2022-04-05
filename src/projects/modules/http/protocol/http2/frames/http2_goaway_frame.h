@@ -23,13 +23,9 @@ namespace http
 			public:
 				// Make by itself
 				Http2GoAwayFrame()
-					// https://datatracker.ietf.org/doc/html/rfc7540#section-6.5
-					// SETTINGS frames always apply to a connection, never a single stream. 
-					// The stream identifier for a SETTINGS frame MUST be zero (0x00).
 					: Http2Frame(0)
 				{
 					SetType(Http2Frame::Type::GoAway);
-					// Settings Frame's stream id is 0
 					SetStreamId(0);
 				}
 
@@ -104,6 +100,14 @@ namespace http
 				bool ParsePayload() override
 				{
 					if (GetType() != Http2Frame::Type::GoAway)
+					{
+						return false;
+					}
+
+					// The GOAWAY frame applies to the connection, not a specific stream.
+					// An endpoint MUST treat a GOAWAY frame with a stream identifier other
+					// than 0x0 as a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
+					if (GetStreamId() == 0x0)
 					{
 						return false;
 					}

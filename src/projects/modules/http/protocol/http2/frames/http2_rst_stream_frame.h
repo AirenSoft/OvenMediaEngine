@@ -22,15 +22,10 @@ namespace http
 			{
 			public:
 				// Make by itself
-				Http2RstStreamFrame()
-					// https://datatracker.ietf.org/doc/html/rfc7540#section-6.5
-					// SETTINGS frames always apply to a connection, never a single stream. 
-					// The stream identifier for a SETTINGS frame MUST be zero (0x00).
-					: Http2Frame(0)
+				Http2RstStreamFrame(uint32_t stream_id)
+					: Http2Frame(stream_id)
 				{
 					SetType(Http2Frame::Type::GoAway);
-					// Settings Frame's stream id is 0
-					SetStreamId(0);
 				}
 
 				Http2RstStreamFrame(const std::shared_ptr<Http2Frame> &frame)

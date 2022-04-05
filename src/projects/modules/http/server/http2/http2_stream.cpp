@@ -119,7 +119,10 @@ namespace http
 						break;
 					}
 					case Http2Frame::Type::PushPromise:
+					{
+						// Not for server
 						break;
+					}
 					case Http2Frame::Type::Ping:
 						break;
 					case Http2Frame::Type::GoAway:
