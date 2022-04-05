@@ -95,7 +95,17 @@ namespace http
 						break;
 					}
 					case Http2Frame::Type::RstStream:
+					{
+						parsed_frame = frame->GetFrameAs<Http2RstStreamFrame>();
+						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
+						{
+							logte("Failed to parse settings frame");
+							return false;
+						}
+
+						result = OnRstStreamFrameReceived(std::static_pointer_cast<const Http2RstStreamFrame>(parsed_frame));
 						break;
+					}
 					case Http2Frame::Type::Settings:
 					{
 						parsed_frame = frame->GetFrameAs<Http2SettingsFrame>();
@@ -253,6 +263,11 @@ namespace http
 			}
 
 			bool HttpStream::OnPriorityFrameReceived(const std::shared_ptr<const Http2PriorityFrame> &frame)
+			{
+				return true;
+			}
+
+			bool HttpStream::OnRstStreamFrameReceived(const std::shared_ptr<const Http2RstStreamFrame> &frame)
 			{
 				return true;
 			}
