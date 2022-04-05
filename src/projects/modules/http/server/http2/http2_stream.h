@@ -45,6 +45,8 @@ namespace http
 				bool OnDataFrameReceived(const std::shared_ptr<const Http2DataFrame> &frame);
 				// Headers frame received
 				bool OnHeadersFrameReceived(const std::shared_ptr<const Http2HeadersFrame> &frame);
+				// Priority frame received
+				bool OnPriorityFrameReceived(const std::shared_ptr<const Http2PriorityFrame> &frame);
 				// Settings frame received
 				bool OnSettingsFrameReceived(const std::shared_ptr<const Http2SettingsFrame> &frame);
 				// WindowUpdate frame received
