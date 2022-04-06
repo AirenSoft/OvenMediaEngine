@@ -81,9 +81,7 @@ namespace http
 			bool IsHttp2UpgradeRequest();
 
 		protected:
-			// Check if the request is for upgrade, and 
-			bool IsUpgradeRequest();
-			bool AcceptUpgrade();
+			bool AcceptWebSocketUpgrade();
 			void SetConnectionPolicyByRequest();
 			void SetStatus(Status status);
 			void SetKeepAlive(bool keep_alive);

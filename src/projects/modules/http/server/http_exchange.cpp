@@ -122,49 +122,35 @@ namespace http
 			return false;
 		}
 
-		bool HttpExchange::IsUpgradeRequest()
+		bool HttpExchange::AcceptWebSocketUpgrade()
 		{
-			return IsWebSocketUpgradeRequest() || IsHttp2UpgradeRequest();
-		}
+			// RFC6455 - 4.2.2.  Sending the Server's Opening Handshake
+			GetResponse()->SetStatusCode(StatusCode::SwitchingProtocols);
 
-		bool HttpExchange::AcceptUpgrade()
-		{
-			if (IsWebSocketUpgradeRequest())
-			{
-				// RFC6455 - 4.2.2.  Sending the Server's Opening Handshake
-				GetResponse()->SetStatusCode(StatusCode::SwitchingProtocols);
+			GetResponse()->SetHeader("Upgrade", "websocket");
+			GetResponse()->SetHeader("Connection", "Upgrade");
 
-				GetResponse()->SetHeader("Upgrade", "websocket");
-				GetResponse()->SetHeader("Connection", "Upgrade");
+			// 4.  A |Sec-WebSocket-Accept| header field.  The value of this
+			//    header field is constructed by concatenating /key/, defined
+			//    above in step 4 in Section 4.2.2, with the string "258EAFA5-
+			//    E914-47DA-95CA-C5AB0DC85B11", taking the SHA-1 hash of this
+			//    concatenated value to obtain a 20-byte value and base64-
+			//    encoding (see Section 4 of [RFC4648]) this 20-byte hash.
+			const ov::String unique_id = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+			ov::String key = GetRequest()->GetHeader("SEC-WEBSOCKET-KEY");
 
-				// 4.  A |Sec-WebSocket-Accept| header field.  The value of this
-				//    header field is constructed by concatenating /key/, defined
-				//    above in step 4 in Section 4.2.2, with the string "258EAFA5-
-				//    E914-47DA-95CA-C5AB0DC85B11", taking the SHA-1 hash of this
-				//    concatenated value to obtain a 20-byte value and base64-
-				//    encoding (see Section 4 of [RFC4648]) this 20-byte hash.
-				const ov::String unique_id = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-				ov::String key = GetRequest()->GetHeader("SEC-WEBSOCKET-KEY");
+			std::shared_ptr<ov::Data> hash = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Sha1, (key + unique_id).ToData(false));
+			ov::String base64 = ov::Base64::Encode(hash);
 
-				std::shared_ptr<ov::Data> hash = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Sha1, (key + unique_id).ToData(false));
-				ov::String base64 = ov::Base64::Encode(hash);
+			GetResponse()->SetHeader("Sec-WebSocket-Accept", base64);
 
-				GetResponse()->SetHeader("Sec-WebSocket-Accept", base64);
-
-				// Send headers to client
-				if (GetResponse()->Response() <= 0)
-				{
-					return false;
-				}
-
-				return true;
-			}
-			else if (IsHttp2UpgradeRequest())
+			// Send headers to client
+			if (GetResponse()->Response() <= 0)
 			{
 				return false;
 			}
 
-			return false;
+			return true;
 		}
 
 		// Get Connection Policy

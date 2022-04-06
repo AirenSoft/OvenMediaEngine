@@ -104,11 +104,11 @@ namespace http
 					else if (_request->GetHeaderParingStatus() == StatusCode::OK)
 					{
 						// Header parsing is done
-						logti("Client(%s) is requested uri: [%s]", GetConnection()->GetSocket()->ToString().CStr(), _request->GetUri().CStr());
-
-						if (IsUpgradeRequest() == true)
+						if (IsWebSocketUpgradeRequest() == true)
 						{
-							if (AcceptUpgrade() == false)
+							logti("Client(%s) is requested uri: [%s] for WebSocket upgrade", GetConnection()->GetSocket()->ToString().CStr(), _request->GetUri().CStr());
+
+							if (AcceptWebSocketUpgrade() == false)
 							{
 								SetStatus(Status::Error);
 								return -1;
@@ -116,6 +116,10 @@ namespace http
 
 							SetStatus(Status::Upgrade);
 							return comsumed_bytes;
+						}
+						else
+						{
+							logti("Client(%s) is requested uri: [%s]", GetConnection()->GetSocket()->ToString().CStr(), _request->GetUri().CStr());
 						}
 
 						SetConnectionPolicyByRequest();
