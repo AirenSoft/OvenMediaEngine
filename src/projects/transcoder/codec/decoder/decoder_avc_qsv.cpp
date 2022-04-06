@@ -20,7 +20,7 @@ bool DecoderAVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	AVCodec *_codec = ::avcodec_find_decoder_by_name("h264_qsv");
+	const AVCodec *_codec = ::avcodec_find_decoder_by_name("h264_qsv");
 	if (_codec == nullptr)
 	{
 		logte("Codec not found: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());

@@ -41,7 +41,7 @@ bool EncoderFFOPUS::Configure(std::shared_ptr<TranscodeContext> output_context)
 	}
 
 	auto codec_id = GetCodecID();
-	AVCodec *codec = ::avcodec_find_encoder(codec_id);
+	const AVCodec *codec = ::avcodec_find_encoder(codec_id);
 	if (codec == nullptr)
 	{
 		logte("Codec not found: %s (%d)", ::avcodec_get_name(codec_id), codec_id);
