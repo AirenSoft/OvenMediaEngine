@@ -60,9 +60,9 @@ namespace http
 					return false;
 				}
 
-				if (IsUpgradeRequest() == true)
+				if (IsWebSocketUpgradeRequest() == true)
 				{
-					if (AcceptUpgrade() == false)
+					if (AcceptWebSocketUpgrade() == false)
 					{
 						SetStatus(Status::Error);
 						return -1;
