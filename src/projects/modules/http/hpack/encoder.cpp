@@ -14,13 +14,34 @@ namespace http
 {
 	namespace hpack
 	{
+		bool Encoder::UpdateDynamicTableSize(size_t size)
+		{
+			if (_table_connector.UpdateDynamicTableSize(size) == false)
+			{
+				return false;
+			}
+
+			_need_signal_table_size_update = true;
+			return true;
+		}
+
 		std::shared_ptr<ov::Data> Encoder::Encode(const HeaderField &header_fields, EncodingType type)
 		{
 			std::shared_ptr<ov::Data> encoded_data = std::make_shared<ov::Data>(header_fields.GetSize());
-
 			ov::ByteStream stream(encoded_data.get());
 
 			bool result = false;
+
+			if (_need_signal_table_size_update)
+			{
+				if (EncodeDynamicTableSizeUpdate(stream, _table_connector.GetDynamicTableSize()) == false)
+				{
+					logte("Failed to encode DynamicTableSizeUpdate (%u) field", _table_connector.GetDynamicTableSize());
+					return nullptr;
+				}
+
+				_need_signal_table_size_update = false;
+			}
 
 			// First check if the header field is in the table
 			auto [name_indexed, value_indexed, index] = _table_connector.LookupIndex(header_fields);
@@ -95,6 +116,11 @@ namespace http
 			return true;
 		}
 
+		bool Encoder::EncodeDynamicTableSizeUpdate(ov::ByteStream &stream, size_t size)
+		{
+			return WriteInteger(stream, 0x20, 5, size);
+		}
+
 		bool Encoder::WriteLiteralHeaderField(ov::ByteStream &stream, const HeaderField &header_fields, uint32_t name_index, uint8_t mask, uint8_t index_bits, bool huffman_encoding)
 		{
 			// https://www.rfc-editor.org/rfc/rfc7541.html#section-6.2
@@ -155,10 +181,10 @@ namespace http
 			return true;
 		}
 
-		bool Encoder::WriteInteger(ov::ByteStream &stream, uint8_t mask, uint8_t index_bits, uint64_t value)
+		bool Encoder::WriteInteger(ov::ByteStream &stream, uint8_t mask, uint8_t value_bits, uint64_t value)
 		{
 			uint8_t first_octet = mask;
-			uint8_t max_prefix_value = std::pow(2, index_bits) - 1;
+			uint8_t max_prefix_value = std::pow(2, value_bits) - 1;
 			
 			if (value < max_prefix_value)
 			{
@@ -181,7 +207,7 @@ namespace http
 			auto temp = value;
 			do
 			{
-				uint8_t octet = value & 0x7f;
+				uint8_t octet = temp & 0x7f;
 				temp >>= 7;
 
 				if (temp != 0)

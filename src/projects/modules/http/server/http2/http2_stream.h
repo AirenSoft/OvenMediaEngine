@@ -13,6 +13,7 @@
 #include "http2_request.h"
 #include "http2_response.h"
 
+#define MAX_HEADER_TABLE_SIZE 65536u
 namespace http
 {
 	using namespace prot::h2;

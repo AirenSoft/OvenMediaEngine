@@ -57,9 +57,14 @@ namespace http
 			return {false, false, 0};
 		}
 
-		bool TableConnector::ResizeTable(size_t size)
+		bool TableConnector::UpdateDynamicTableSize(size_t size)
 		{
-			return _dynamic_table->ResizeTable(size);
+			return _dynamic_table->UpdateTableSize(size);
+		}
+
+		size_t TableConnector::GetDynamicTableSize()
+		{
+			return _dynamic_table->GetTableSize();
 		}
 	}
 }

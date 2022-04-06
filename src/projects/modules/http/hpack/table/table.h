@@ -41,6 +41,17 @@ namespace http
 					return false;
 				}
 
+				// https://datatracker.ietf.org/doc/html/rfc7541#section-4.4
+				// If the size of the new entry is less than or equal to the maximum
+				// size, that entry is added to the table.  It is not an error to
+				// attempt to add an entry that is larger than the maximum size; an
+				// attempt to add an entry larger than the maximum size causes the table
+				// to be emptied of all existing entries and results in an empty table.
+				if (header_field.GetSize() + _table_usage > _table_size)
+				{
+					return true;
+				}
+
 				if (Insert(header_field) == false)
 				{
 					return false;
@@ -54,6 +65,8 @@ namespace http
 				logd("DEBUG", "Indexed header field: %s", header_field.ToString().CStr());
 
 				_append_sequence++;
+
+				_table_usage += header_field.GetSize();
 
 				return false;
 			};
@@ -87,9 +100,30 @@ namespace http
 				return {false, false, 0};
 			}
 
-			bool ResizeTable(size_t size)
+			bool UpdateTableSize(size_t size)
 			{
+				while (_table_usage >= size)
+				{
+					// Pop the oldest entry from the table.
+					if (PopHeaderField() == 0)
+					{
+						break;
+					}
+				}
+
+				_table_size = size;
+
 				return true;
+			}
+
+			size_t GetTableSize()
+			{
+				return _table_size;
+			}
+
+			size_t GetTableUsage()
+			{
+				return _table_usage;
 			}
 
 			size_t GetNumberOfTableEntries()
@@ -97,9 +131,26 @@ namespace http
 				return _header_fields_table.size();
 			}
 
+			size_t PopHeaderField()
+			{
+				if (_header_fields_table.empty())
+				{
+					return 0;
+				}
+
+				auto header_field = _header_fields_table.back();
+				_header_fields_table.pop_back();
+				
+				_removed_count ++;
+				_table_usage -= header_field.GetSize();
+
+				return header_field.GetSize();
+			}
+
 		protected:
 			std::deque<HeaderField> _header_fields_table;
 
+			// Map for performance 
 			// name : inserted order
 			std::unordered_map<ov::String, uint32_t, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> _header_field_name_sequence_map;
 			// key(name + value) : inserted order
@@ -112,9 +163,22 @@ namespace http
 
 			bool FreeUpSpace(size_t new_entry_size)
 			{
-				// TODO(h2) : Implement
+				while (_table_usage + new_entry_size > _table_size)
+				{
+					// Pop the oldest entry from the table.
+					// PopHeaderField decreases _table_usage.
+					if (PopHeaderField() == 0)
+					{
+						break;
+					}
+				}
+
 				return true;
 			}
+
+			// Initial Table Size : 4096
+			size_t _table_size = 4096;
+			size_t _table_usage = 0;
 
 			// Order Sequence
 			uint32_t _append_sequence = 1;

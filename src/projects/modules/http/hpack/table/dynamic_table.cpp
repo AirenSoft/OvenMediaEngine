@@ -23,14 +23,11 @@ namespace http
 		{
 			////////////////
 			// How to find index by header_field for DynamicTable
-			// Since a new item is input to the front of the table, 
+			// Since a new item is input to the front of the table (first-in, first-out order),
 			// the index of the item increases by one each time a new item is input.
 			// Therefore, the index can be calculated as follows using the input order and table size.
 			// 
 			// index = table.size() - (inserted order number - removed item count)
-			//
-			// <Name found>, <Value found>, <Index Number>
-			// ex : First inserted entry is same as table size
 
 			return (table_size - (sequence - removed_item_count)) + 1;;
 		}

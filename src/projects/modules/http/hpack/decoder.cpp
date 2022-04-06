@@ -187,6 +187,8 @@ namespace http
 				size += extra;
 			}
 
+			_table_connector.UpdateDynamicTableSize(size);
+
 			logtd("DecodeDynamicTableSizeUpdate: %d", size);
 
 			return true;
