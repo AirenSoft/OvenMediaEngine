@@ -163,10 +163,18 @@ namespace http
 						return false;
 					}
 
+					// HEADERS frames MUST be associated with a stream.  If a HEADERS frame
+					// is received whose stream identifier field is 0x0, the recipient MUST
+					// respond with a connection error (Section 5.4.1) of type
+					// PROTOCOL_ERROR.
+					if (GetStreamId() == 0)
+					{
+						return false;
+					}
+
 					auto payload = GetPayload();
 					if (payload == nullptr)
 					{
-						SetParsingState(ParsingState::Completed);
 						return false;
 					}
 					
@@ -178,17 +186,32 @@ namespace http
 					// Get Pad Length if flag is set
 					if (CHECK_HTTP2_FRAME_FLAG(Flags::Padded))
 					{
+						if (header_block_size < 1)
+						{
+							return false;
+						}
+
 						_pad_length = payload_data[payload_offset];
 						payload_offset ++;
 						header_block_size --;
 
 						// Remove Padding
+						if (header_block_size < _pad_length)
+						{
+							return false;
+						}
+
 						header_block_size -= _pad_length;
 					}
 
 					// Get Priority if flag is set
 					if (CHECK_HTTP2_FRAME_FLAG(Flags::Priority))
 					{
+						if (header_block_size < 5)
+						{
+							return false;
+						}
+
 						// Get Exclusive Flag
 						_is_exclusive = payload_data[payload_offset] & 0x80;
 						
@@ -207,9 +230,12 @@ namespace http
 					}
 
 					// Get Header Block Fragment
+					if (header_block_size <= 0)
+					{
+						return false;
+					}
+					
 					_header_block_fragment = payload->Subdata(payload_offset, header_block_size);
-
-					SetParsingState(ParsingState::Completed);
 
 					return true;
 				}

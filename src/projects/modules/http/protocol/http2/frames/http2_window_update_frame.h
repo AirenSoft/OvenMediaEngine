@@ -93,6 +93,11 @@ namespace http
 						return false;
 					}
 
+					// The WINDOW_UPDATE frame can be specific to a stream or to the entire
+					// connection.  In the former case, the frame's stream identifier
+					// indicates the affected stream; in the latter, the value "0" indicates
+					// that the entire connection is the subject of the frame.
+
 					// WindowUpdate frame must have a payload of at least 4 bytes
 					auto payload = GetPayload();
 					if (payload == nullptr)

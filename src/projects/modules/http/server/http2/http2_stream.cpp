@@ -118,6 +118,7 @@ namespace http
 			bool HttpStream::SendInitialControlMessage()
 			{
 				logtd("Send Initial Control Message");
+
 				// Settings Frame
 				auto settings_frame = std::make_shared<Http2SettingsFrame>();
 				// Max decoder table size, encoder(client) will use this value for encoder and notify by DecodeDynamicTableSizeUpdate in HPACK
@@ -137,6 +138,14 @@ namespace http
 				return result;
 			}
 
+			#define PARSE_HTTP2_FRAME_AS(NAME, PARSED_FRAME, ORIGIN_FRAME, TARGET_FRAME_TYPE) \
+				PARSED_FRAME = ORIGIN_FRAME->GetFrameAs<TARGET_FRAME_TYPE>();\
+				if (PARSED_FRAME == nullptr)\
+				{\
+					logte("Failed to parse" NAME "frame : %s", frame->ToString().CStr());\
+					return false;\
+				}
+
 			bool HttpStream::OnFrameReceived(const std::shared_ptr<Http2Frame> &frame)
 			{
 				std::shared_ptr<const Http2Frame> parsed_frame = frame;
@@ -145,61 +154,31 @@ namespace http
 				{
 					case Http2Frame::Type::Data:
 					{
-						parsed_frame = frame->GetFrameAs<Http2DataFrame>();
-						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
-						{
-							logte("Failed to parse Data frame");
-							return false;
-						}
-
+						PARSE_HTTP2_FRAME_AS("Data", parsed_frame, frame, Http2DataFrame)
 						result = OnDataFrameReceived(std::static_pointer_cast<const Http2DataFrame>(parsed_frame));
 						break;
 					}
 					case Http2Frame::Type::Headers:
 					{
-						parsed_frame = frame->GetFrameAs<Http2HeadersFrame>();
-						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
-						{
-							logte("Failed to parse Headers frame");
-							return false;
-						}
-
+						PARSE_HTTP2_FRAME_AS("Headers", parsed_frame, frame, Http2HeadersFrame)
 						result = OnHeadersFrameReceived(std::static_pointer_cast<const Http2HeadersFrame>(parsed_frame));
 						break;
 					}
 					case Http2Frame::Type::Priority:
 					{
-						parsed_frame = frame->GetFrameAs<Http2PriorityFrame>();
-						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
-						{
-							logte("Failed to parse Priority frame");
-							return false;
-						}
-
+						PARSE_HTTP2_FRAME_AS("Priority", parsed_frame, frame, Http2PriorityFrame)
 						result = OnPriorityFrameReceived(std::static_pointer_cast<const Http2PriorityFrame>(parsed_frame));
 						break;
 					}
 					case Http2Frame::Type::RstStream:
 					{
-						parsed_frame = frame->GetFrameAs<Http2RstStreamFrame>();
-						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
-						{
-							logte("Failed to parse RstStream frame");
-							return false;
-						}
-
+						PARSE_HTTP2_FRAME_AS("RstStream", parsed_frame, frame, Http2RstStreamFrame)
 						result = OnRstStreamFrameReceived(std::static_pointer_cast<const Http2RstStreamFrame>(parsed_frame));
 						break;
 					}
 					case Http2Frame::Type::Settings:
 					{
-						parsed_frame = frame->GetFrameAs<Http2SettingsFrame>();
-						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
-						{
-							logte("Failed to parse Settings frame");
-							return false;
-						}
-
+						PARSE_HTTP2_FRAME_AS("Settings", parsed_frame, frame, Http2SettingsFrame)
 						result = OnSettingsFrameReceived(std::static_pointer_cast<const Http2SettingsFrame>(parsed_frame));
 						break;
 					}
@@ -210,50 +189,25 @@ namespace http
 					}
 					case Http2Frame::Type::Ping:
 					{
-						parsed_frame = frame->GetFrameAs<Http2PingFrame>();
-						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
-						{
-							logte("Failed to parse Ping frame");
-							return false;
-						}
-
+						PARSE_HTTP2_FRAME_AS("Ping", parsed_frame, frame, Http2PingFrame)
 						result = OnPingFrameReceived(std::static_pointer_cast<const Http2PingFrame>(parsed_frame));
 						break;
 					}
 					case Http2Frame::Type::GoAway:
 					{
-						parsed_frame = frame->GetFrameAs<Http2GoAwayFrame>();
-						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
-						{
-							logte("Failed to parse GoAway frame");
-							return false;
-						}
-
+						PARSE_HTTP2_FRAME_AS("GoAway", parsed_frame, frame, Http2GoAwayFrame)
 						result = OnGoAwayFrameReceived(std::static_pointer_cast<const Http2GoAwayFrame>(parsed_frame));
-					
 						break;
 					}
 					case Http2Frame::Type::WindowUpdate:
 					{
-						parsed_frame = frame->GetFrameAs<Http2WindowUpdateFrame>();
-						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
-						{
-							logte("Failed to parse WindowUpdate frame");
-							return false;
-						}
-
+						PARSE_HTTP2_FRAME_AS("WindowUpdate", parsed_frame, frame, Http2WindowUpdateFrame)
 						result = OnWindowUpdateFrameReceived(std::static_pointer_cast<const Http2WindowUpdateFrame>(parsed_frame));
 						break;
 					}
 					case Http2Frame::Type::Continuation:
 					{
-						parsed_frame = frame->GetFrameAs<Http2ContinuationFrame>();
-						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
-						{
-							logte("Failed to parse Continuation frame");
-							return false;
-						}
-
+						PARSE_HTTP2_FRAME_AS("Continuation", parsed_frame, frame, Http2ContinuationFrame)
 						result = OnContinuationFrameReceived(std::static_pointer_cast<const Http2ContinuationFrame>(parsed_frame));
 						break;
 					}
@@ -263,7 +217,7 @@ namespace http
 						return false;
 				}
 
-				logti("Frame Processing %s : %s", result?"Completed":"Error", parsed_frame->ToString().CStr());
+				logtd("Frame Processing %s : %s", result?"Completed":"Error", parsed_frame->ToString().CStr());
 
 				return true;
 			}
@@ -304,11 +258,14 @@ namespace http
 
 			bool HttpStream::OnPriorityFrameReceived(const std::shared_ptr<const Http2PriorityFrame> &frame)
 			{
+				// Nothing to do yet, just ignore
 				return true;
 			}
 
 			bool HttpStream::OnRstStreamFrameReceived(const std::shared_ptr<const Http2RstStreamFrame> &frame)
 			{
+				logte("%s", frame->ToString().CStr());
+				SetStatus(HttpExchange::Status::Error);
 				return true;
 			}
 
@@ -335,6 +292,7 @@ namespace http
 
 			bool HttpStream::OnPushPromiseFrameReceived(const std::shared_ptr<const Http2PushPromiseFrame> &frame)
 			{
+				// Server should not receive PushPromise frame, just ignore
 				return true;
 			}
 
@@ -354,11 +312,14 @@ namespace http
 
 			bool HttpStream::OnWindowUpdateFrameReceived(const std::shared_ptr<const Http2WindowUpdateFrame> &frame)
 			{
+				// Nothing to do yet, just ignore
 				return true;
 			}
 
 			bool HttpStream::OnGoAwayFrameReceived(const std::shared_ptr<const Http2GoAwayFrame> &frame)
 			{
+				logte("%s", frame->ToString().CStr());
+				SetStatus(HttpExchange::Status::Error);
 				return true;
 			}
 
