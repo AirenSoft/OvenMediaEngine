@@ -32,7 +32,7 @@ namespace http
 				ssize_t AppendHeaderData(const std::shared_ptr<const ov::Data> &data) override;
 				StatusCode GetHeaderParingStatus() const override;
 
-				Method GetMethod() const noexcept;
+				Method GetMethod() const noexcept override;
 				ov::String GetHttpVersion() const noexcept override;
 				ov::String GetHost() const noexcept override;
 				ov::String GetRequestTarget() const noexcept override;

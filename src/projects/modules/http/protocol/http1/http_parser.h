@@ -52,7 +52,13 @@ namespace http
 
 				ov::String GetHttpVersion() const noexcept
 				{
-					return _http_version;
+					auto tokens = _http_version.Split("/");
+					if (tokens.size() != 2)
+					{
+						return "1.1";
+					}
+					
+					return tokens[1];
 				}
 
 				double GetHttpVersionAsNumber() const noexcept
