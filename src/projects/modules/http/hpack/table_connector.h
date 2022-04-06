@@ -23,7 +23,8 @@ namespace http
 
 			// name_indexed, value_indexed, index
 			std::tuple<bool, bool, uint32_t> LookupIndex(const HeaderField &header_field);
-			bool ResizeTable(size_t size);
+			bool UpdateDynamicTableSize(size_t size);
+			size_t GetDynamicTableSize();
 			
 		private:
 			// StaticTable is singleton instance

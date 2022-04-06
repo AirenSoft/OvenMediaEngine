@@ -15,6 +15,8 @@ namespace http
 	{
 		StaticTable::StaticTable()
 		{
+			// Static Table Usage is 2636 octets so we can use it as a table size(4096)
+
 			// https://www.rfc-editor.org/rfc/rfc7541.html#appendix-A
 			// The index number starts from 1. There are up to 61 static tables.
 			Index(HeaderField(":authority", ""));

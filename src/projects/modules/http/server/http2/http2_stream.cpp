@@ -120,8 +120,9 @@ namespace http
 				logtd("Send Initial Control Message");
 				// Settings Frame
 				auto settings_frame = std::make_shared<Http2SettingsFrame>();
-				settings_frame->SetParameter(Http2SettingsFrame::Parameters::HeaderTableSize, 65536);
-				settings_frame->SetParameter(Http2SettingsFrame::Parameters::MaxConcurrentStreams, 1000);
+				// Max decoder table size, encoder(client) will use this value for encoder and notify by DecodeDynamicTableSizeUpdate in HPACK
+				settings_frame->SetParameter(Http2SettingsFrame::Parameters::HeaderTableSize, MAX_HEADER_TABLE_SIZE); 
+				settings_frame->SetParameter(Http2SettingsFrame::Parameters::MaxConcurrentStreams, 100);
 				settings_frame->SetParameter(Http2SettingsFrame::Parameters::InitialWindowSize, 6291456);
 				settings_frame->SetParameter(Http2SettingsFrame::Parameters::MaxHeaderListSize, 262144);
 
@@ -224,7 +225,7 @@ namespace http
 						parsed_frame = frame->GetFrameAs<Http2GoAwayFrame>();
 						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
-							logte("Failed to parse settings frame");
+							logte("Failed to parse GoAway frame");
 							return false;
 						}
 
@@ -237,7 +238,7 @@ namespace http
 						parsed_frame = frame->GetFrameAs<Http2WindowUpdateFrame>();
 						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
-							logte("Failed to parse window update frame");
+							logte("Failed to parse WindowUpdate frame");
 							return false;
 						}
 
@@ -249,7 +250,7 @@ namespace http
 						parsed_frame = frame->GetFrameAs<Http2ContinuationFrame>();
 						if (parsed_frame == nullptr || parsed_frame->GetParsingState() != Http2Frame::ParsingState::Completed)
 						{
-							logte("Failed to parse continuation frame");
+							logte("Failed to parse Continuation frame");
 							return false;
 						}
 
@@ -262,7 +263,7 @@ namespace http
 						return false;
 				}
 
-				logtd("Frame Processing %s : %s", result?"Completed":"Error", parsed_frame->ToString().CStr());
+				logti("Frame Processing %s : %s", result?"Completed":"Error", parsed_frame->ToString().CStr());
 
 				return true;
 			}
@@ -315,6 +316,14 @@ namespace http
 			{
 				if (frame->IsAck() == false)
 				{
+					// Apply SETTINGS_HEADER_TABLE_SIZE to HPACK encoder
+					auto [exist, size] = frame->GetParameter(Http2SettingsFrame::Parameters::HeaderTableSize);
+					if (exist)
+					{
+						auto hpack_encoder = GetConnection()->GetHpackEncoder();
+						hpack_encoder->UpdateDynamicTableSize(std::min(size, MAX_HEADER_TABLE_SIZE));
+					}
+					
 					// Settings Frame
 					auto settings_frame = std::make_shared<Http2SettingsFrame>();
 					settings_frame->SetAck();
