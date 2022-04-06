@@ -18,8 +18,6 @@ namespace http
 	{
 		bool Decoder::Decode(const std::shared_ptr<const ov::Data> &data, std::vector<HeaderField> &header_fields)
 		{
-			logtw("%s", data->Dump().CStr());
-
 			auto reader = std::make_shared<BitReader>(data->GetDataAs<uint8_t>(), data->GetLength());
 
 			while (reader->BytesReamined() > 0)
@@ -116,7 +114,7 @@ namespace http
 			if (_table_connector.GetHeaderField(index, header_field) == true)
 			{
 				header_fields.push_back(header_field);
-				logtc("DecodeIndexedHeaderField: %s", header_field.ToString().CStr());
+				logtd("DecodeIndexedHeaderField: %s", header_field.ToString().CStr());
 				return true;
 			}
 
@@ -136,7 +134,7 @@ namespace http
 			// Indexing decoded Header Field
 			_table_connector.Index(header_field);
 
-			logtc("DecodeLiteralHeaderFieldWithIndexing: %s", header_field.ToString().CStr());
+			logtd("DecodeLiteralHeaderFieldWithIndexing: %s", header_field.ToString().CStr());
 
 			return true;
 		}
@@ -151,7 +149,7 @@ namespace http
 
 			header_fields.push_back(header_field);
 
-			logtc("DecodeLiteralHeaderFieldWithoutIndexing: %s", header_field.ToString().CStr());
+			logtd("DecodeLiteralHeaderFieldWithoutIndexing: %s", header_field.ToString().CStr());
 
 			return true;
 		}
@@ -166,7 +164,7 @@ namespace http
 
 			header_fields.push_back(header_field);
 
-			logtc("DecodeLiteralHeaderFieldNeverIndexed: %s", header_field.ToString().CStr());
+			logtd("DecodeLiteralHeaderFieldNeverIndexed: %s", header_field.ToString().CStr());
 
 			return true;
 		}
@@ -189,7 +187,7 @@ namespace http
 				size += extra;
 			}
 
-			logtc("DecodeDynamicTableSizeUpdate: %d", size);
+			logtd("DecodeDynamicTableSizeUpdate: %d", size);
 
 			return true;
 		}
