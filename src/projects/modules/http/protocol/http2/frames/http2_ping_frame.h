@@ -105,7 +105,7 @@ namespace http
                     // frame is received with a stream identifier field value other than
                     // 0x0, the recipient MUST respond with a connection error
                     // (Section 5.4.1) of type PROTOCOL_ERROR.
-                    if (GetStreamId() == 0x0)
+                    if (GetStreamId() != 0x0)
                     {
                         return false;
                     }

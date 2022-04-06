@@ -60,8 +60,8 @@ namespace http
 					{
 						// https://httpwg.org/http2-spec/draft-ietf-httpbis-http2bis.html#section-8.2
 						// Field names MUST be converted to lowercase when constructing an HTTP/2 message.
-						auto header_block = _hpack_encoder->Encode({name.LowerCaseString(), value}, hpack::Encoder::EncodingType::LiteralWithIndexing);
-						header_block->Append(header_block);
+						auto header_field = _hpack_encoder->Encode({name.LowerCaseString(), value}, hpack::Encoder::EncodingType::LiteralWithIndexing);
+						header_block->Append(header_field);
 					}
 				}
 

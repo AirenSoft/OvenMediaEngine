@@ -262,7 +262,7 @@ namespace http
 						return false;
 				}
 
-				logti("Frame Processing %s : %s", result?"Completed":"Error", parsed_frame->ToString().CStr());
+				logtd("Frame Processing %s : %s", result?"Completed":"Error", parsed_frame->ToString().CStr());
 
 				return true;
 			}
@@ -276,6 +276,11 @@ namespace http
 
 				_header_block->Append(frame->GetHeaderBlockFragment());
 				_headers_frame = frame;
+
+				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndHeaders))
+				{
+					return OnEndHeaders();
+				}
 
 				return true;
 			}
