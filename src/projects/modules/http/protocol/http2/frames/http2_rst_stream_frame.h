@@ -85,18 +85,25 @@ namespace http
 						return false;
 					}
 
+					// RST_STREAM frames MUST be associated with a stream.  If a RST_STREAM
+					// frame is received with a stream identifier of 0x0, the recipient MUST
+					// treat this as a connection error (Section 5.4.1) of type
+					// PROTOCOL_ERROR.
+					if (GetStreamId() == 0)
+					{
+						return false;
+					}
+
 					// The payload of a SETTINGS frame consists of zero or more parameters,
 					auto payload = GetPayload();
 					if (payload == nullptr)
 					{
-						SetParsingState(ParsingState::Error);
 						return false;
 					}
 
                     // Check payload size
                     if (payload->GetLength() < 4)
                     {
-                        SetParsingState(ParsingState::Error);
                         return false;
                     }
 					
@@ -106,8 +113,6 @@ namespace http
 
 					_error_code = ByteReader<uint32_t>::ReadBigEndian(payload_data + payload_offset);
 					payload_offset += sizeof(uint32_t);
-
-					SetParsingState(ParsingState::Completed);
 
 					return true;
 				}

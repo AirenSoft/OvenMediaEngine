@@ -113,19 +113,15 @@ namespace http
 					auto payload = GetPayload();
 					if (payload == nullptr)
 					{
-						SetParsingState(ParsingState::Error);
 						return false;
 					}
 
                     if (payload->GetLength() != 8)
                     {
-                        SetParsingState(ParsingState::Error);
                         return false;
                     }
 					
 					_opaque_data = payload;
-
-					SetParsingState(ParsingState::Completed);
 
 					return true;
 				}

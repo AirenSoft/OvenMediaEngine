@@ -128,32 +128,44 @@ namespace http
 						return false;
 					}
 
-					// The payload of a SETTINGS frame consists of zero or more parameters,
+					// DATA frames MUST be associated with a stream.  If a DATA frame is
+					// received whose stream identifier field is 0x0, the recipient MUST
+					// respond with a connection error (Section 5.4.1) of type
+					// PROTOCOL_ERROR.
+					if (GetStreamId() == 0)
+					{
+						return false;
+					}
+
 					auto payload = GetPayload();
 					if (payload == nullptr)
 					{
-						SetParsingState(ParsingState::Completed);
 						return false;
 					}
 					
 					// Parse each parameter in the payload
 					auto payload_data = payload->GetDataAs<uint8_t>();
 					auto payload_offset = 0;
-					size_t header_block_size = payload->GetLength();
+					size_t data_block_size = payload->GetLength();
 
 					// Get Pad Length if flag is set
 					if (CHECK_HTTP2_FRAME_FLAG(Flags::Padded))
 					{
+						if (data_block_size < 1)
+						{
+							return false;
+						}
+
 						_pad_length = payload_data[payload_offset];
 						payload_offset ++;
-						header_block_size --;
+						data_block_size --;
 
 						// Remove Padding
-						header_block_size -= _pad_length;
+						data_block_size -= _pad_length;
 					}
 
 					// Get Header Block Fragment
-					_data = payload->Subdata(payload_offset, header_block_size);
+					_data = payload->Subdata(payload_offset, data_block_size);
 
 					SetParsingState(ParsingState::Completed);
 

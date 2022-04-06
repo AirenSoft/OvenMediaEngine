@@ -124,6 +124,11 @@ namespace http
 					auto payload_size = payload->GetLength();
 					size_t payload_offset = 0;
 
+					if (payload_size < 8)
+					{
+						return false;
+					}
+
 					auto _last_stream_id = ByteReader<uint32_t>::ReadBigEndian(payload_data + payload_offset);
 					payload_offset += sizeof(uint32_t);
 

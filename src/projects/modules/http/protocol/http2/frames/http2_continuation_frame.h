@@ -102,10 +102,18 @@ namespace http
 						return false;
 					}
 
+					// CONTINUATION frames MUST be associated with a stream.  If a
+					// CONTINUATION frame is received whose stream identifier field is 0x0,
+					// the recipient MUST respond with a connection error (Section 5.4.1) of
+					// type PROTOCOL_ERROR.
+					if (GetStreamId() == 0)
+					{
+						return false;
+					}
+
 					auto payload = GetPayload();
 					if (payload == nullptr)
 					{
-						SetParsingState(ParsingState::Completed);
 						return false;
 					}
 

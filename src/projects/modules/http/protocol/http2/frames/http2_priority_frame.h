@@ -86,16 +86,23 @@ namespace http
 						return false;
 					}
 
+					// The PRIORITY frame always identifies a stream.  If a PRIORITY frame
+					// is received with a stream identifier of 0x0, the recipient MUST
+					// respond with a connection error (Section 5.4.1) of type
+					// PROTOCOL_ERROR.
+					if (GetStreamId() == 0)
+					{
+						return false;
+					}
+
 					auto payload = GetPayload();
 					if (payload == nullptr)
 					{
-						SetParsingState(ParsingState::Error);
 						return false;
 					}
 
                     if (payload->GetLength() < 5)
                     {
-                        SetParsingState(ParsingState::Error);
                         return false;
                     }
 					
@@ -115,8 +122,6 @@ namespace http
                     
                     // Get Weight
                     _weight = payload_data[payload_offset];
-
-					SetParsingState(ParsingState::Completed);
 
 					return true;
 				}
