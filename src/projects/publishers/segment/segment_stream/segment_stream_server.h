@@ -31,6 +31,7 @@ public:
 		const cfg::Server &server_config,
 		const ov::SocketAddress *address,
 		const ov::SocketAddress *tls_address,
+		bool disable_http2_force,
 		int thread_count,
 		int worker_count);
 	bool Stop();

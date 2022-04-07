@@ -49,6 +49,7 @@ namespace http
 			virtual bool Stop();
 
 			bool IsRunning() const;
+			bool IsHttp2Enabled() const;
 
 			bool AddInterceptor(const std::shared_ptr<RequestInterceptor> &interceptor);
 			std::shared_ptr<RequestInterceptor> FindInterceptor(const std::shared_ptr<HttpExchange> &exchange);
@@ -75,8 +76,6 @@ namespace http
 			{
 				return _physical_port;
 			}
-
-			bool IsHttp2Enabled() const;
 
 			ov::String _server_name;
 			mutable std::mutex _physical_port_mutex;

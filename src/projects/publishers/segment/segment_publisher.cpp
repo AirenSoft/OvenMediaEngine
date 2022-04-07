@@ -25,7 +25,7 @@ SegmentPublisher::~SegmentPublisher()
 	logtd("Publisher has been destroyed");
 }
 
-bool SegmentPublisher::Start(const cfg::cmn::SingularPort &port_config, const cfg::cmn::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server, int worker_count)
+bool SegmentPublisher::Start(const cfg::cmn::SingularPort &port_config, const cfg::cmn::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server, bool disable_http2_force, int worker_count)
 {
 	auto server_config = GetServerConfig();
 	auto ip = server_config.GetIp();
@@ -42,7 +42,7 @@ bool SegmentPublisher::Start(const cfg::cmn::SingularPort &port_config, const cf
 	stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
 	if (stream_server->Start(_server_config, has_port ? &address : nullptr, has_tls_port ? &tls_address : nullptr,
-							 DEFAULT_SEGMENT_WORKER_THREAD_COUNT, worker_count) == false)
+							 disable_http2_force, DEFAULT_SEGMENT_WORKER_THREAD_COUNT, worker_count) == false)
 	{
 		logte("An error occurred while start %s Publisher", GetPublisherName());
 		return false;
