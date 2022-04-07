@@ -57,7 +57,7 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	if (tls_address != nullptr)
 	{
 		_https_server_address = *tls_address;
-		https_server = manager->CreateHttpsServer("RtcSig", *tls_address, worker_count);
+		https_server = manager->CreateHttpsServer("RtcSig", *tls_address, false, worker_count);
 	}
 
 	if (SetWebSocketHandler(interceptor) == false)

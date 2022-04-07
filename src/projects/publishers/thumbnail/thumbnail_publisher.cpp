@@ -78,7 +78,7 @@ bool ThumbnailPublisher::Start()
 	{
 		ov::SocketAddress tls_address = ov::SocketAddress(server_config.GetIp(), tls_port.GetPort());
 
-		_https_server = manager->CreateHttpsServer("thumb_https", tls_address, worker_count);
+		_https_server = manager->CreateHttpsServer("thumb_https", tls_address, false, worker_count);
 		if (_https_server != nullptr)
 		{
 			_https_server->AddInterceptor(CreateInterceptor());

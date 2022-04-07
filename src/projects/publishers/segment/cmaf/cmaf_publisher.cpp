@@ -30,20 +30,29 @@ CmafPublisher::CmafPublisher(PrivateToken token,
 bool CmafPublisher::Start()
 {
 	// LL-DASH uses DASH port
-	auto dash_config = GetServerConfig().GetBind().GetPublishers().GetDash();
+	auto http2_enabled = GetServerConfig().GetModules().GetHttp2().IsEnabled();
+	auto publishers_config = GetServerConfig().GetBind().GetPublishers();
+	auto lldash_config = publishers_config.GetLLDash();
 
-	if (dash_config.IsParsed() == false)
+	if (lldash_config.IsParsed() == false)
 	{
 		logti("%s is disabled by configuration", GetPublisherName());
 		return true;
 	}
 
 	bool is_parsed;
-	auto worker_count = dash_config.GetWorkerCount(&is_parsed);
+	auto worker_count = lldash_config.GetWorkerCount(&is_parsed);
 	worker_count = is_parsed ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
 
-	return SegmentPublisher::Start(dash_config.GetPort(), dash_config.GetTlsPort(),
-								   std::make_shared<CmafStreamServer>(), worker_count);
+	if (http2_enabled == true && publishers_config.IsLLDashTlsPortSeparated() == false)
+	{
+		logte("LLDash failed to start. LLDash only works with HTTP/1.1, but tries to use a TLS port <%d> with HTTP/2 enabled. When HTTP/2 is enabled, you must configure LLDash's ports independently from other ports.", lldash_config.GetTlsPort().GetPort());
+		return false;
+	}
+
+	// LLDASH uses HTTP/1.1 chunked transfer encoding, so it is not working with HTTP/2
+	return SegmentPublisher::Start(lldash_config.GetPort(), lldash_config.GetTlsPort(),
+								   std::make_shared<CmafStreamServer>(), true, worker_count);
 }
 
 std::shared_ptr<pub::Application> CmafPublisher::OnCreatePublisherApplication(const info::Application &application_info)

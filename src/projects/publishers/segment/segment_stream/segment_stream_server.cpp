@@ -28,6 +28,7 @@ std::shared_ptr<SegmentStreamInterceptor> SegmentStreamServer::CreateInterceptor
 bool SegmentStreamServer::Start(const cfg::Server &server_config,
 								const ov::SocketAddress *address,
 								const ov::SocketAddress *tls_address,
+								bool disable_http2_force,
 								int thread_count,
 								int worker_count)
 {
@@ -48,7 +49,7 @@ bool SegmentStreamServer::Start(const cfg::Server &server_config,
 	std::shared_ptr<http::svr::HttpsServer> https_server = nullptr;
 	if (result && (tls_address != nullptr))
 	{
-		https_server = manager->CreateHttpsServer("SegPub", *tls_address, worker_count);
+		https_server = manager->CreateHttpsServer("SegPub", *tls_address, disable_http2_force, worker_count);
 	}
 
 	result = result && ((tls_address != nullptr) ? (https_server != nullptr) : true);

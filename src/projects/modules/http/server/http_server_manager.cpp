@@ -77,11 +77,16 @@ namespace http
 			}
 		}
 
-		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *instance_name, const ov::SocketAddress &address, int worker_count)
+		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *instance_name, const ov::SocketAddress &address, bool disable_http2_force, int worker_count)
 		{
 			std::shared_ptr<HttpsServer> https_server = nullptr;
 			auto module_config = cfg::ConfigManager::GetInstance()->GetServer()->GetModules();
 			auto http2_enabled = module_config.GetHttp2().IsEnabled();
+
+			if (disable_http2_force == true)
+			{
+				http2_enabled = false;
+			}
 
 			auto lock_guard = std::lock_guard(_http_servers_mutex);
 			auto item = _http_servers.find(address);
@@ -92,10 +97,18 @@ namespace http
 
 				// Assume that http_server is not HttpsServer
 				https_server = std::dynamic_pointer_cast<HttpsServer>(http_server);
-
 				if (https_server == nullptr)
 				{
 					logte("Cannot reuse instance: Requested HttpsServer, but previous instance is Server (%s)", address.ToString().CStr());
+				}
+
+				if ((https_server->IsHttp2Enabled() == true && http2_enabled == false))
+				{
+					logtw("Attempting to use HTTP/2 for ports with address %s enabled as HTTP/1.1 only.", address.ToString().CStr());
+				}
+				else if ((https_server->IsHttp2Enabled() == false && http2_enabled == true))
+				{
+					logtw("The %s address is trying to use HTTP/1.1 on a port that is HTTP/2 enabled.", address.ToString().CStr());
 				}
 			}
 			else
@@ -155,33 +168,9 @@ namespace http
 			return true;
 		}
 
-		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *instance_name, const ov::SocketAddress &address, const std::vector<std::shared_ptr<ocst::VirtualHost>> &vhost_list, int worker_count)
+		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *instance_name, const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate, bool disable_http2_force, int worker_count)
 		{
-			auto https_server = CreateHttpsServer(instance_name, address, worker_count);
-			if (https_server != nullptr)
-			{
-				for (auto &vhost : vhost_list)
-				{
-					auto error = https_server->AppendCertificate(vhost->host_info.GetCertificate());
-					if (error != nullptr)
-					{
-						logte("Could not set certificate: %s", error->What());
-						https_server = nullptr;
-						break;
-					}
-					else
-					{
-						// HTTPS server is ready
-					}
-				}
-			}
-
-			return https_server;
-		}
-
-		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *instance_name, const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate, int worker_count)
-		{
-			auto https_server = CreateHttpsServer(instance_name, address, worker_count);
+			auto https_server = CreateHttpsServer(instance_name, address, disable_http2_force, worker_count);
 			if (https_server != nullptr)
 			{
 				auto error = https_server->AppendCertificate(certificate);

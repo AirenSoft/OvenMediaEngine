@@ -76,7 +76,7 @@ namespace api
 
 			if (certificate != nullptr)
 			{
-				_https_server = http_server_manager->CreateHttpsServer("APIServer", tls_address, certificate, worker_count);
+				_https_server = http_server_manager->CreateHttpsServer("APIServer", tls_address, certificate, false, worker_count);
 
 				if (_https_server != nullptr)
 				{
