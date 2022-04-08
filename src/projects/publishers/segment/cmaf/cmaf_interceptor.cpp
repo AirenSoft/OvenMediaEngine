@@ -26,13 +26,6 @@ bool CmafInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::
 		return false;
 	}
 
-	// LLDASH does not support HTTP 2.0 
-	if (request->GetHttpVersionAsNumber() >= 2.0)
-	{
-		logte("LLDASH does not support HTTP 2.0 - requested from %s", request->ToString().CStr());
-		return false;
-	}
-
 	// Check file pattern
 	// TODO(dimiden): Check this code later - IsInterceptorForRequest() should not filter method and filename. It is recommended to use Register()
 	auto request_target = request->GetRequestTarget();
@@ -42,6 +35,13 @@ bool CmafInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::
 		(request_target.IndexOf(CMAF_MPD_AUDIO_FULL_SUFFIX) >= 0) ||
 		(request_target.IndexOf(CMAF_PLAYLIST_FULL_FILE_NAME) >= 0))
 	{
+		// LLDASH does not support HTTP 2.0 
+		if (request->GetHttpVersionAsNumber() >= 2.0)
+		{
+			logte("LLDASH does not support HTTP 2.0 - requested from %s", request->ToString().CStr());
+			return false;
+		}
+
 		return true;
 	}
 
