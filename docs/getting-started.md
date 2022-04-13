@@ -41,7 +41,7 @@ OvenMediaEngine-master/misc/prerequisites.sh
 If the prerequisites.sh script fails, proceed with the [manual installation](troubleshooting.md#prerequisites-sh-script-failed).
 {% endhint %}
 
-### ****
+### \*\*\*\*
 
 ### **Build & Run**
 
@@ -56,7 +56,7 @@ make release
 sudo make install
 systemctl start ovenmediaengine
 # If you want automatically start on boot
-systemctl enable ovenmediaengine.service 
+systemctl enable ovenmediaengine.service 
 ```
 {% endtab %}
 
@@ -98,7 +98,7 @@ if `systemctl start ovenmediaengine` fails in Fedora, SELinux may be the cause. 
 
 ## Ports used by default
 
-The default configuration uses the following ports, so you need to open it in your firewall settings.&#x20;
+The default configuration uses the following ports, so you need to open it in your firewall settings.
 
 | Port              | Purpose                                                   |
 | ----------------- | --------------------------------------------------------- |
@@ -137,7 +137,7 @@ The meanings of each item are as follows:
 * `<Server IP>`: IP address or domain of the OvenMediaEngine server.
 * `<RTMP Port>`: You can use `<Port>` of `<Provider>` in the above `Server.xml` file. With the default configuration, the RTMP default port (1935) is used. Also, by setting the default port, you can omit the port.
 * `<Application name>`: This value corresponds to `<Name>` of `<Application>` in `conf/Server.xml`. If you use the default configuration, you can use the `app`.
-* `<Stream name>`:  Name of the stream you defined.
+* `<Stream name>`: Name of the stream you defined.
 
 After you enter the above RTMP URL into the encoder and start publishing, you will have an environment in which the player can view the live stream.
 
@@ -171,7 +171,7 @@ The server address in OBS needs to use `<Application name>` generated in `Server
 * Click "File" in the top menu, then click "Settings" (or press "Settings" on the lower right).
 * Select the "Stream" tab and enter your stream information.
 
-![Press "Service" and select "Custom", your OBS is the same as this image.](<.gitbook/assets/image (8) (1).png>)
+![Press "Service" and select "Custom", your OBS is the same as this image.](<.gitbook/assets/image (8).png>)
 
 * Go to the "Output" tab.
 * Set the following entries.
@@ -196,9 +196,9 @@ Please note that WebRTC Signalling URL is similar to the RTMP URL and consists o
 
 * `ws://<Server IP>:[<Signalling Port>/<Application name>/<Output Stream name>[?transport=tcp]`
   * `<Server IP>`: IP address or domain of the OvenMediaEngine server.
-  * `<Signalling Port>`: You can use the value of `<Signalling><ListenPort>` in `Server.xml` above. If you use the default configuration, the WebRTC Signalling default port (3333) is used.&#x20;
+  * `<Signalling Port>`: You can use the value of `<Signalling><ListenPort>` in `Server.xml` above. If you use the default configuration, the WebRTC Signalling default port (3333) is used.
   * `<Application name>`: This value corresponds to `<Name>` of `<Application>` in `conf/Server.xml`. If you use the default configuration, you can use the `app`.
-  * `<Output Stream name>`: You have to use an output stream name for streaming. If you use the default configuration, an output stream named `<Stream Name>`  is automatically generated when the stream is input.
+  * `<Output Stream name>`: You have to use an output stream name for streaming. If you use the default configuration, an output stream named `<Stream Name>` is automatically generated when the stream is input.
   * `?transport=tcp` : You can use this query string to play through webrtc over tcp. Useful in environments with severe packet loss.
 
 {% hint style="warning" %}
@@ -206,13 +206,13 @@ As of version 0.10.4, the default output stream name has been changed from **\<I
 {% endhint %}
 
 {% hint style="info" %}
-&#x20;If you use the default configuration, the RTMP publishing URL is `rtmp://192.168.0.1:1935/app/stream`
+If you use the default configuration, the RTMP publishing URL is `rtmp://192.168.0.1:1935/app/stream`
 
 Then the WebRTC URL will be`ws://192.168.0.1:3333/app/stream`
 {% endhint %}
 
 {% hint style="info" %}
-In addition,&#x20;
+In addition,
 
 WebRTC over TCP URL will be ws://192.168.0.1:3333/app/stream?**transport=tcp**
 
