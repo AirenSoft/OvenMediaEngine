@@ -36,7 +36,7 @@ source scl_source enable devtoolset-7
 {% endtab %}
 {% endtabs %}
 
-### Common Installation&#x20;
+### Common Installation
 
 {% code title="Install OpenSSL" %}
 ```bash
@@ -200,9 +200,9 @@ rm -rf ${DIR}
 
 ## **`systemctl start ovenmediaengine` failed**
 
-### **Check SELinux**&#x20;
+### **Check SELinux**
 
-If SELinux is running on your system, SELinux can deny the execution of OvenMediaEngine.&#x20;
+If SELinux is running on your system, SELinux can deny the execution of OvenMediaEngine.
 
 ```bash
 # Example of SELinux disallow OvenMediaEngine execution
@@ -230,7 +230,6 @@ $ sudo tail /var/log/messages
 ...
 May 17 12:44:24 localhost audit[1]: AVC avc:  denied  { read } for  pid=1 comm="systemd" name="ovenmediaengine.service" dev="dm-0" ino=16836708 scontext=system_u:system_r:init_t:s0 tcontext=system_u:object_r:default_t:s0 tclass=file permissive=0
 May 17 12:44:24 localhost audit[1]: AVC avc:  denied  { read } for  pid=1 comm="systemd" name="ovenmediaengine.service" dev="dm-0" ino=16836708 scontext=system_u:system_r:init_t:s0 tcontext=system_u:object_r:default_t:s0 tclass=file permissive=0
-
 ```
 
 You can choose between two methods of adding a policy to SELinux or setting SELinux to permissive mode. To add a policy, you must apply the SELinux policy file for the OvenMediaEngine service to your system as follows:
@@ -255,7 +254,7 @@ $ sudo setenforce 0
 
 WebRTC does not support b-frame of H.264. But if your encoder sends b-frames the video will be stuttered in the player. In this case, you can solve the problem by disabling the b-frame function in your encoder. For OBS, you can set bframes=0 option as below.
 
-![](<.gitbook/assets/image (39).png>)
+![](<.gitbook/assets/image (40).png>)
 
 Or by **activating the encoding options** in OvenMediaEngine.
 
@@ -270,7 +269,7 @@ In this case, you are probably trying to stream with UDP in an environment where
 If you want to monitor packet loss in your Chrome browser, you can access it by typing '**chrome://webrtc-internals**' in the address bar.
 
 {% hint style="info" %}
-Setting up WebRTC over TCP in OvenMediaEngine: [https://airensoft.gitbook.io/ovenmediaengine/streaming/webrtc-publishing#webrtc-over-tcp ](https://airensoft.gitbook.io/ovenmediaengine/streaming/webrtc-publishing#webrtc-over-tcp)
+Setting up WebRTC over TCP in OvenMediaEngine: [https://airensoft.gitbook.io/ovenmediaengine/streaming/webrtc-publishing#webrtc-over-tcp](https://airensoft.gitbook.io/ovenmediaengine/streaming/webrtc-publishing#webrtc-over-tcp)
 {% endhint %}
 
 Also, if the device's network speed, which is running the player, isn't fast enough to accommodate the stream's BPS, the stuttering during streaming won't resolve and will eventually drop the connection. In this case, there is no other way than to speed up your network.
@@ -436,4 +435,3 @@ Choosing an Encoding Preset in OvenMediaEngine: [https://airensoft.gitbook.io/ov
 ### 2. If you are using Transcoding as Bypass in OvenMediaEngine
 
 Since the encoder is transmitting video to OvenMediaEngine in low quality, you can solve it by increasing the input quality in the encoder settings.
-
