@@ -212,7 +212,7 @@
 
 			<!--
 			<AdmissionWebhooks>
-				<TargetUrl></TargetUrl>
+				<ControlServerUrl></ControlServerUrl>
 				<SecretKey></SecretKey>
 				<Timeout>3000</Timeout>
 				<Enables>
