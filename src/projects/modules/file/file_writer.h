@@ -114,9 +114,10 @@ private:
 class FileWriter
 {
 public:
-	enum {
-		TIMESTAMP_STARTZERO_MODE 	= 0,
-		TIMESTAMP_PASSTHROUGH_MODE 	= 1
+	enum
+	{
+		TIMESTAMP_STARTZERO_MODE = 0,
+		TIMESTAMP_PASSTHROUGH_MODE = 1
 	};
 
 public:
@@ -128,9 +129,6 @@ public:
 	void SetTimestampRecalcMode(int mode);
 	int GetTimestampRecalcMode();
 
-	// format is muxer(or container)
-	// 	- mpegts
-	//  - mp4
 	bool SetPath(const ov::String path, const ov::String format = nullptr);
 	ov::String GetPath();
 
@@ -144,8 +142,6 @@ public:
 
 	bool IsWritable();
 
-	static void FFmpegLog(void *ptr, int level, const char *fmt, va_list vl);
-
 	static ov::String GetFormatByExtension(ov::String extension, ov::String default_format = "ts");
 
 	static bool IsSupportCodec(ov::String format, cmn::MediaCodecId codec_id);
@@ -153,19 +149,16 @@ public:
 private:
 	ov::String _path;
 	ov::String _format;
-
 	AVFormatContext *_format_context;
-
+	int64_t _start_time;
+	bool _timestamp_recalc_mode;
 
 	// <MediaTrack.id, std::hsared_ptr<FileTrackInfo>>
-	std::map<int32_t, std::shared_ptr<FileTrackInfo>> _trackinfo_map;
+	std::map<int32_t, std::shared_ptr<FileTrackInfo>> _tracks;
 
-	int64_t 	_start_timestamp;
-	bool 		_timestamp_recalc_mode; 
-
-	// Map of track
+	// Map ID from MediaTrack to AVStream
 	// <MediaTrack.id, AVStream.index>
-	std::map<int32_t, int64_t> _track_map;
+	std::map<int32_t, int32_t> _track_to_avstream;
 
 	std::shared_mutex _lock;
 };
