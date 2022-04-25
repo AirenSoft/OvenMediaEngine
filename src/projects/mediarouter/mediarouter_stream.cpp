@@ -778,7 +778,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 		case cmn::BitstreamFormat::H265_ANNEXB:
 			if (_max_warning_count_bframe < 10)
 			{
-				if (_stat_recv_pkt_ldts[track_id] > media_packet->GetDts())
+				if (_stat_recv_pkt_count[track_id] > 0 && _stat_recv_pkt_lpts[track_id] > media_packet->GetPts())
 				{
 					media_track->SetBframes(true);
 				}
