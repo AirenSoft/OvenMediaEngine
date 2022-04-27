@@ -767,15 +767,11 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 {
 	auto track_id = media_track->GetId();
 
-	_stat_recv_pkt_lpts[track_id] = media_packet->GetPts();
-	_stat_recv_pkt_ldts[track_id] = media_packet->GetDts();
-	_stat_recv_pkt_size[track_id] += media_packet->GetData()->GetLength();
-	_stat_recv_pkt_count[track_id]++;
 
 	// Check b-frame of H264/H265 codec
 	//
 	// Basically, in order to check the presence of B-Frame, the SliceType of H264 should be checked,
-	// but in general, it is assumed that there is a B-frame when PTS and DTS are different. This has a performance advantage.
+	// but in general, it is assumed that the B-frame exists when the PTS does not increase sequentially. This has a performance advantage.
 	switch (media_packet->GetBitstreamFormat())
 	{
 		case cmn::BitstreamFormat::H264_ANNEXB:
@@ -783,7 +779,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 		case cmn::BitstreamFormat::H265_ANNEXB:
 			if (_max_warning_count_bframe < 10)
 			{
-				if (media_packet->GetPts() != media_packet->GetDts())
+				if (_stat_recv_pkt_count[track_id] > 0 && _stat_recv_pkt_lpts[track_id] > media_packet->GetPts())
 				{
 					media_track->SetBframes(true);
 				}
@@ -804,6 +800,12 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 		default:
 			break;
 	}
+
+	_stat_recv_pkt_lpts[track_id] = media_packet->GetPts();
+	_stat_recv_pkt_ldts[track_id] = media_packet->GetDts();
+	_stat_recv_pkt_size[track_id] += media_packet->GetData()->GetLength();
+	_stat_recv_pkt_count[track_id]++;
+
 
 	// 	Diffrence time of received first packet with uptime.
 	if (_stat_first_time_diff[track_id] == 0)
@@ -1084,7 +1086,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	if (GetInoutType() == MediaRouterStreamType::INBOUND)
 	{
 		auto it = _pts_last.find(track_id);
-		if(it != _pts_last.end())
+		if (it != _pts_last.end())
 		{
 			int64_t ts_inc = pop_media_packet->GetPts() - _pts_last[track_id];
 			int64_t ts_inc_ms = ts_inc * media_track->GetTimeBase().GetExpr();
@@ -1094,11 +1096,11 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 				if (!(media_track->GetCodecId() == cmn::MediaCodecId::Png || media_track->GetCodecId() == cmn::MediaCodecId::Jpeg))
 				{
 					logtw("Detected abnormal increased timestamp. track:%u last.pts: %lld, cur.pts: %lld, tb(%d/%d), diff: %lldms",
-						track_id, _pts_last[track_id],
-						pop_media_packet->GetPts(),
-						media_track->GetTimeBase().GetNum(),
-						media_track->GetTimeBase().GetDen(),
-						ts_inc_ms);
+						  track_id, _pts_last[track_id],
+						  pop_media_packet->GetPts(),
+						  media_track->GetTimeBase().GetNum(),
+						  media_track->GetTimeBase().GetDen(),
+						  ts_inc_ms);
 				}
 			}
 		}
