@@ -1,15 +1,15 @@
-# "Large-Scale Streaming Server with Sub-Second Latency" OvenMediaEngine
+# "Sub-Second Latency Live Streaming Server with Large-Scale and High-Definition" OvenMediaEngine
 
 
 ## What is OvenMediaEngine?
 
-In short, OvenMediaEngine (OME) is an <b>Open-Source Streaming Server</b> that enables <b>Large-Scale</b> and <b>Sub-Second Latency Live Streaming</b>.
+In short, OvenMediaEngine (OME) is a <b>Sub-Second Latency Live Streaming Server</b> with <b>Large-Scale</b> and <b>High-Definition</b>.
 
 OvenMediaEngine receives a video/audio source from encoders and cameras such as [OvenLiveKit](https://www.ovenmediaengine.com/olk), OBS, XSplit, and more to <b>WebRTC</b>, <b>RTMP</b>, <b>SRT</b>, <b>MPEG-2 TS</b> <sup><i>Beta</sup></i>, or <b>RTSP</b> <sup><i>Beta</sup></i>.  Then, OME transmits it using <b>WebRTC</b>, <b>Low Latency MPEG-DASH</b> (LLDASH), <b>MPEG-DASH</b>, and <b>HLS</b>.
 
 Like the picture below:
 <img src="dist/OME_Overview_GitHub_220117.svg" style="max-width: 100%; height: auto;">
-OvenMediaEngine supports you can create platforms/services/systems that live stream to <b>large audiences of hundreds or more</b> with <b>sub-second latency</b> and be <b>scalable</b>, depending on the number of concurrent viewers.
+OvenMediaEngine supports you can create platforms/services/systems that transmit high-definition video to hundreds-thousand viewers with sub-second latency and be scalable, depending on the number of concurrent viewers.
 
 We also provide [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), an Open-Source and JavaScript-based WebRTC Player for OvenMediaEngine.
 
