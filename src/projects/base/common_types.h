@@ -65,7 +65,8 @@ enum class PublisherType : int8_t
 	RtmpPush,
 	Hls,
 	Dash,
-	LlDash,
+	LLDash,
+	LLHls,
 	Ovt,
 	File,
 	Thumbnail,
@@ -324,8 +325,10 @@ static ov::String StringFromPublisherType(const PublisherType &type)
 			return "HLS";
 		case PublisherType::Dash:
 			return "DASH";
-		case PublisherType::LlDash:
+		case PublisherType::LLDash:
 			return "LLDASH";
+		case PublisherType::LLHls:
+			return "LLHLS";
 		case PublisherType::Ovt:
 			return "OVT";
 		case PublisherType::File:

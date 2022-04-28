@@ -96,6 +96,26 @@ void VideoTrack::SetH264SpsPpsAnnexBFormat(const std::shared_ptr<ov::Data>& data
 	_h264_sps_pps_annexb_fragment_header = header;
 }
 
+void VideoTrack::SetH264SpsData(const std::shared_ptr<ov::Data>& data)
+{
+	_h264_sps_data = data;
+}
+
+void VideoTrack::SetH264PpsData(const std::shared_ptr<ov::Data>& data)
+{
+	_h264_pps_data = data;
+}
+
+std::shared_ptr<ov::Data> VideoTrack::GetH264SpsData() const
+{
+	return _h264_sps_data;
+}
+
+std::shared_ptr<ov::Data> VideoTrack::GetH264PpsData() const
+{
+	return _h264_pps_data;
+}
+
 void VideoTrack::SetPreset(ov::String preset)
 {
 	_preset = preset;

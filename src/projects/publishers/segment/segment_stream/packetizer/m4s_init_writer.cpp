@@ -226,8 +226,8 @@ int M4sInitWriter::MdhdBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 	WriteUint32(0, data);																   // Modification Time
 	WriteUint32(_main_track->GetTimeBase().GetTimescale(), data);						   // Timescale
 	WriteUint32(0, data);																   // Duration
-	WriteUint8((((_language[0] - 0x60) << 2) | (_language[1] - 0x60) >> 3) & 0xFF, data);  // Language 1
-	WriteUint8((((_language[1] - 0x60) << 5) | (_language[2] - 0x60)) & 0xFF, data);	   // Language 2
+	WriteUint8( ( ((_language[0] - 0x60) << 2) | (_language[1] - 0x60) >> 3 ) & 0xFF, data);  // Language 1
+	WriteUint8( ( ((_language[1] - 0x60) << 5) | (_language[2] - 0x60)) & 0xFF, data);	   // Language 2
 	WriteUint16(0, data);																   // Pre Define
 
 	return WriteBoxData("mdhd", 0, 0, data, data_stream);
@@ -344,20 +344,49 @@ int M4sInitWriter::StsdBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 
 int M4sInitWriter::Avc1BoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
+	// class VisualSampleEntry(codingname) extends SampleEntry(codingname)
+	// {
+	// 	unsigned int(16) pre_defined = 0;
+	// 	const unsigned int(16) reserved = 0;
+	// 	unsigned int(32)[3] pre_defined = 0;
+	// 	unsigned int(16) width;
+	// 	unsigned int(16) height;
+	// 	template unsigned int(32) horizresolution = 0x00480000;	 // 72 dpi
+	// 	template unsigned int(32) vertresolution = 0x00480000;	 // 72 dpi
+	// 	const unsigned int(32) reserved = 0;
+	// 	template unsigned int(16) frame_count = 1;
+	// 	string[32] compressorname;
+	// 	template unsigned int(16) depth = 0x0018;
+	// 	int(16) pre_defined = -1;
+	// }
 	auto data = std::make_shared<ov::Data>();
 
 	OV_ASSERT2(_video_track != nullptr);
 
-	WriteUint32(1, data);									  // Child Count
-	WriteUint16(0, data);									  // Pre Define
-	WriteUint16(0, data);									  // Reserve(2Byte)
-	WriteInit(0, 12, data);									  // Pre Define(12byte)
+	// ?????
+	WriteUint32(1, data);									  // Child Count 4
+
+	// -----------------------
+	WriteUint16(0, data);									  // Pre Define 6
+
+	
+	WriteUint16(0, data);									  // Reserve(2Byte) 8
+
+	WriteInit(0, 2, data);									  // Pre Define(12byte) 20
+	WriteInit(0, 2, data);									  // Pre Define(12byte) 20
+	
+	WriteInit(0, 8, data);									  // Pre Define(12byte) 20
 	WriteUint16((uint16_t)_video_track->GetWidth(), data);	// Width
 	WriteUint16((uint16_t)_video_track->GetHeight(), data);   // Height
 	WriteUint32(0x00480000, data);							  // Horiz Resolution
 	WriteUint32(0x00480000, data);							  // Vert Resolution
 	WriteUint32(0, data);									  // Reserve(4Byte)
 	WriteUint16(1, data);									  // Frame Count
+
+	// Compressorname is a name, for informative purposes. It is formatted in a fixed 32-byte field, with the
+	// first byte set to the number of bytes to be displayed, followed by that number of bytes of displayable
+	// data, and then padding to complete 32 bytes total (including the size byte). The field may be set to 0. 
+
 	WriteUint8((uint8_t)_compressor_name.GetLength(), data);  // Compressor Name Size(Max 31Byte)
 	WriteText(_compressor_name, data);						  // Compressor Name
 	WriteInit(0, 31 - _compressor_name.GetLength(), data);	// Padding(31 - Compressor Name Size)
@@ -371,6 +400,44 @@ int M4sInitWriter::Avc1BoxWrite(std::shared_ptr<ov::Data> &data_stream)
 
 int M4sInitWriter::AvccBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
+	// aligned(8) class AVCDecoderConfigurationRecord
+	// {
+	// 	unsigned int(8) configurationVersion = 1;
+	// 	unsigned int(8) AVCProfileIndication;
+	// 	unsigned int(8) profile_compatibility;
+	// 	unsigned int(8) AVCLevelIndication;
+	// 	bit(6) reserved = ‘111111’b;
+	// 	unsigned int(2) lengthSizeMinusOne;
+	// 	bit(3) reserved = ‘111’b;
+	// 	unsigned int(5) numOfSequenceParameterSets;
+	// 	for (i = 0; i < numOfSequenceParameterSets; i++)
+	// 	{
+	// 		unsigned int(16) sequenceParameterSetLength;
+	// 		bit(8 * sequenceParameterSetLength) sequenceParameterSetNALUnit;
+	// 	}
+	// 	unsigned int(8) numOfPictureParameterSets;
+	// 	for (i = 0; i < numOfPictureParameterSets; i++)
+	// 	{
+	// 		unsigned int(16) pictureParameterSetLength;
+	// 		bit(8 * pictureParameterSetLength) pictureParameterSetNALUnit;
+	// 	}
+	// 	if (profile_idc == 100 || profile_idc == 110 ||
+	// 		profile_idc == 122 || profile_idc == 144)
+	// 	{
+	// 		bit(6) reserved = ‘111111’b;
+	// 		unsigned int(2) chroma_format;
+	// 		bit(5) reserved = ‘11111’b;
+	// 		unsigned int(3) bit_depth_luma_minus8;
+	// 		bit(5) reserved = ‘11111’b;
+	// 		unsigned int(3) bit_depth_chroma_minus8;
+	// 		unsigned int(8) numOfSequenceParameterSetExt;
+	// 		for (i = 0; i < numOfSequenceParameterSetExt; i++)
+	// 		{
+	// 			unsigned int(16) sequenceParameterSetExtLength;
+	// 			bit(8 * sequenceParameterSetExtLength) sequenceParameterSetExtNALUnit;
+	// 		}
+	// 	}
+	
 	auto data = std::make_shared<ov::Data>();
 
 	uint8_t avc_profile = 0;

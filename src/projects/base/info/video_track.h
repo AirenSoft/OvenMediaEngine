@@ -9,6 +9,7 @@
 #pragma once
 
 #include "base/common_types.h"
+#include <modules/bitstream/h264/h264_parser.h>
 #include <modules/bitstream/nalu/nal_unit_fragment_header.h>
 
 class VideoTrack
@@ -38,6 +39,10 @@ public:
 	std::shared_ptr<ov::Data> GetH264SpsPpsAnnexBFormat() const;
 	const FragmentationHeader& GetH264SpsPpsAnnexBFragmentHeader() const;
 	void SetH264SpsPpsAnnexBFormat(const std::shared_ptr<ov::Data>& data, const FragmentationHeader &header);
+	void SetH264SpsData(const std::shared_ptr<ov::Data>& data);
+	void SetH264PpsData(const std::shared_ptr<ov::Data>& data);
+	std::shared_ptr<ov::Data> GetH264SpsData() const;
+	std::shared_ptr<ov::Data> GetH264PpsData() const;
 
 	//@Set by Configuration
 	void SetPreset(ov::String preset);
@@ -60,7 +65,11 @@ protected:
 	int32_t _format;
 	ov::String _preset;
 	std::shared_ptr<ov::Data> _h264_sps_pps_annexb_data = nullptr;
+	std::shared_ptr<ov::Data> _h264_sps_data = nullptr;
+	std::shared_ptr<ov::Data> _h264_pps_data = nullptr;
+	
 	FragmentationHeader _h264_sps_pps_annexb_fragment_header;
+	H264SPS _h264_sps;
 	bool _has_bframe;
 
 	int _thread_count;

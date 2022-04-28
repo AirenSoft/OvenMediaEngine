@@ -33,7 +33,7 @@ private:
 	
 	PublisherType GetPublisherType() const override
 	{
-		return PublisherType::LlDash;
+		return PublisherType::LLDash;
 	}
 
 	const char *GetPublisherName() const override

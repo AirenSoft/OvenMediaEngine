@@ -17,7 +17,7 @@ class CmafStreamServer : public DashStreamServer, public ChunkedTransferInterfac
 public:
 	PublisherType GetPublisherType() const noexcept override
 	{
-		return PublisherType::LlDash;
+		return PublisherType::LLDash;
 	}
 
 	const char *GetPublisherName() const noexcept override

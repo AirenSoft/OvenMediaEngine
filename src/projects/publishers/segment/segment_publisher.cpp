@@ -211,7 +211,7 @@ bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<http::svr::HttpExc
 
 	// The first sequence number 0 means init_video and init_audio in MPEG-DASH.
 	// These are excluded because they confuse statistical calculations.
-	if (GetPublisherType() != PublisherType::LlDash && segment->sequence_number != 0)
+	if (GetPublisherType() != PublisherType::LLDash && segment->sequence_number != 0)
 	{
 		auto segment_request_info = SegmentRequestInfo(GetPublisherType(),
 													   *std::static_pointer_cast<info::Stream>(stream),
