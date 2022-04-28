@@ -10,6 +10,11 @@
 
 namespace ov
 {
+	ByteStream::ByteStream(size_t reserve_size)
+		: ByteStream(std::make_shared<Data>(reserve_size))
+	{
+	}
+
 	ByteStream::ByteStream(Data *data, const Data *read_only_data, std::shared_ptr<const Data> data_pointer, off_t offset)
 		: _data(data),
 		  _read_only_data(read_only_data),
@@ -27,6 +32,7 @@ namespace ov
 	ByteStream::ByteStream(const std::shared_ptr<ov::Data> &data)
 		: ByteStream(data.get(), data.get(), data, 0L)
 	{
+		_data_writable_pointer = data;
 	}
 
 	ByteStream::ByteStream(const Data *data)
@@ -110,6 +116,13 @@ namespace ov
 		return _data;
 	}
 
+	std::shared_ptr<Data> ByteStream::GetDataPointer() noexcept
+	{
+		OV_ASSERT2(_data_writable_pointer != nullptr);
+
+		return _data_writable_pointer;
+	}
+
 	std::shared_ptr<const Data> ByteStream::GetDataPointer() const
 	{
 		return _data_pointer;
@@ -128,6 +141,11 @@ namespace ov
 	off_t ByteStream::GetOffset() const noexcept
 	{
 		return _offset;
+	}
+
+	bool ByteStream::MoveOffset(off_t pos) noexcept
+	{
+		return SetOffset(_offset + pos);
 	}
 
 	bool ByteStream::SetOffset(off_t offset) noexcept

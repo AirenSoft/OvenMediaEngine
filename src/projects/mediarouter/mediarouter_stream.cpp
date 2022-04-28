@@ -161,9 +161,16 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 				logte("Could not parse H264 SPS unit");
 				return false;
 			}
-
+			
+			media_track->SetH264SpsData(sps_data);
 			media_track->SetWidth(sps.GetWidth());
 			media_track->SetHeight(sps.GetHeight());
+		}
+		
+		if (config.NumOfPPS() > 0)
+		{
+			auto pps_data = config.GetPPS(0);
+			media_track->SetH264PpsData(pps_data);
 		}
 
 		media_track->SetCodecExtradata(media_packet->GetData());
@@ -364,6 +371,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 					return false;
 				}
 
+				media_track->SetH264SpsData(nalu);
 				media_track->SetWidth(sps.GetWidth());
 				media_track->SetHeight(sps.GetHeight());
 
@@ -385,6 +393,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 			// Parse track info if needed
 			if (media_track->IsValid() == false)
 			{
+				media_track->SetH264PpsData(nalu);
 				avc_decoder_configuration_record.AddPPS(nalu);
 			}
 		}

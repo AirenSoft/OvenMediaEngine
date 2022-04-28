@@ -33,6 +33,10 @@ namespace ov
 	class ByteStream
 	{
 	public:
+
+		// Create Data itself
+		explicit ByteStream(size_t reserve_size = 0);
+
 		/// Reads or writes data from ```data```
 		///
 		/// @param data Data to manipulate
@@ -341,6 +345,11 @@ namespace ov
 			return Write(buffer, 1);
 		}
 
+		bool WriteText(const ov::String &text, bool null_terminate = false) noexcept
+		{
+			return Write(text.ToData(null_terminate));
+		}
+
 		bool WriteBE(uint8_t value)
 		{
 			return Write(&value);
@@ -531,10 +540,18 @@ namespace ov
 
 		bool IsEmpty() const noexcept;
 
+		size_t GetLength() const noexcept
+		{
+			return _read_only_data->GetLength();
+		}
+
 		/// 저장되어 있는 쓰기 가능한 데이터를 얻어옴
 		///
 		/// @return 저장된 데이터
 		Data *GetData() noexcept;
+
+		/// 저장되어 있는 쓰기 가능한 데이터를 얻어옴
+		std::shared_ptr<Data> GetDataPointer() noexcept;
 
 		/// Returns the pointer if shared_ptr<Data> was provided when ByteStream was created.
 		// If Data * is provided, nullptr is returned
@@ -551,6 +568,9 @@ namespace ov
 		///
 		/// @return 현재 위치
 		off_t GetOffset() const noexcept;
+
+		/// 현재 위치 pos 만큼 이동
+		bool MoveOffset(off_t pos) noexcept;
 
 		/// 현재 위치를 설정함
 		///
@@ -616,6 +636,7 @@ namespace ov
 
 		Data *_data = nullptr;
 		const Data *_read_only_data = nullptr;
+		std::shared_ptr<Data> _data_writable_pointer = nullptr;
 		// If the data were provided in std::shared_ptr, retains it
 		std::shared_ptr<const Data> _data_pointer;
 

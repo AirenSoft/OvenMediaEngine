@@ -31,7 +31,7 @@ namespace cfg
 				public:
 					PublisherType GetType() const override
 					{
-						return PublisherType::LlDash;
+						return PublisherType::LLDash;
 					}
 
 					// CFG_DECLARE_CONST_REF_GETTER_OF(GetSegmentCount, _segment_count)
