@@ -260,6 +260,7 @@ namespace ov
 		{
 			int error = Read(buf, OV_COUNTOF(buf), &read_bytes);
 			bool append_data = false;
+			int read_errno = errno;
 
 			switch (error)
 			{
@@ -290,9 +291,24 @@ namespace ov
 					stop = true;
 					break;
 
+				case SSL_ERROR_SYSCALL:
+					if (read_errno == 0)
+					{
+						append_data = true;
+						stop = true;
+						break;
+					}
+
+					[[fallthrough]];
+
 				default:
+					OpensslError ssl_error;
+
 					// Another error occurred
 					OV_ASSERT(read_bytes == 0, "read_bytes must be 0, but %zu (code: %d)", read_bytes, error);
+
+					logtw("Tls::Read() returns %d (errno: %d): %s", error, read_errno, ssl_error.What());
+
 					data = nullptr;
 					stop = true;
 					break;

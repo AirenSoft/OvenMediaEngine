@@ -19,7 +19,7 @@ coverY: 0
 
 ### Advanced Codec
 
-Enterprise Edition includes Beamr H.264/H.265 Codecs.&#x20;
+The Enterprise Edition of OvenMediaEnigne includes H.264/H.265 Codecs from Beamr.
 
 
 
