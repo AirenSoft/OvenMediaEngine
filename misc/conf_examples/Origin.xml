@@ -14,6 +14,25 @@
 	-->
 	<StunServer>stun.l.google.com:19302</StunServer>
 
+	<Modules>
+		<HTTP2>
+			<!-- HTTP2 is under development, disabled by default -->
+			<Enable>false</Enable>
+		</HTTP2>
+
+		<LLHLS>
+			<!-- LLHLS is under development, disabled by default -->
+			<Enable>false</Enable>
+		</LLHLS>
+
+		<!-- P2P works only in WebRTC and is experiment feature -->
+		<P2P>
+			<!-- disabled by default -->
+			<Enable>false</Enable>
+			<MaxClientPeersPerHostPeer>2</MaxClientPeersPerHostPeer>
+		</P2P>
+	</Modules>
+
 	<!-- Settings for the ports to bind -->
 	<Bind>
 		<!-- Enable this configuration if you want to use API Server -->
@@ -77,12 +96,26 @@
 				<!-- If you want to use TLS, specify the TLS port -->
 				<!-- <TLSPort>443</TLSPort> -->
 			</HLS>
+			<LLHLS>
+				<!-- Since LLHLS only works over HTTP/2.0, it will not work on Non-Tls Ports. -->
+				<!-- <Port>80</Port> -->
+				<!-- If you want to use TLS, specify the TLS port -->
+				<!-- <TLSPort>443</TLSPort> -->
+				<WorkerCount>1</WorkerCount>
+			</LLHLS>
 			<DASH>
 				<Port>${env:OME_DASH_STREAM_PORT:8080}</Port>
 				<WorkerCount>1</WorkerCount>
 				<!-- If you want to use TLS, specify the TLS port -->
 				<!-- <TLSPort>443</TLSPort> -->
 			</DASH>
+			<LLDASH>
+				<Port>8080</Port>
+				<!-- If you want to use TLS, specify the TLS port -->
+				<!-- LLDASH only works over HTTP/1.1, so when HTTP/2 is enabled, use a different dedicated TLS port from other modules. -->
+				<!-- <TLSPort>444</TLSPort> -->
+				<WorkerCount>1</WorkerCount>
+			</LLDASH>
 			<WebRTC>
 				<Signalling>
 					<Port>${env:OME_SIGNALLING_PORT:3333}</Port>
@@ -214,6 +247,16 @@
 								<Url>*</Url>
 							</CrossDomains>
 						</HLS>
+						<LLHLS>
+							<!-- ChunkDuration : milliseconds unit -->
+							<ChunkDuration>1000</ChunkDuration>
+							<!-- SegmentDuration : seconds unit -->
+							<SegmentDuration>5</SegmentDuration>
+							<SegmentCount>5</SegmentCount>
+							<CrossDomains>
+								<Url>*</Url>
+							</CrossDomains>
+						</LLHLS>
 						<DASH>
 							<SegmentDuration>5</SegmentDuration>
 							<SegmentCount>3</SegmentCount>

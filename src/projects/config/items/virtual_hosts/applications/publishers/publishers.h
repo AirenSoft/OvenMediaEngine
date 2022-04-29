@@ -17,6 +17,7 @@
 #include "rtmppush_publisher.h"
 #include "thumbnail_publisher.h"
 #include "webrtc_publisher.h"
+#include "ll_hls_publisher.h"
 
 namespace cfg
 {
@@ -37,6 +38,7 @@ namespace cfg
 							&_dash_publisher,
 							&_ll_dash_publisher,
 							&_webrtc_publisher,
+							&_ll_hls_publisher,
 							&_ovt_publisher,
 							&_file_publisher,
 							&_rtmppush_publisher,
@@ -51,6 +53,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetDashPublisher, _dash_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetLlDashPublisher, _ll_dash_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetWebrtcPublisher, _webrtc_publisher)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetLLHlsPublisher, _ll_hls_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetOvtPublisher, _ovt_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFilePublisher, _file_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetRtmpPushPublisher, _rtmppush_publisher)
@@ -67,6 +70,7 @@ namespace cfg
 						Register<Optional>({"DASH", "dash"}, &_dash_publisher);
 						Register<Optional>({"LLDASH", "llDash"}, &_ll_dash_publisher);
 						Register<Optional>({"WebRTC", "webrtc"}, &_webrtc_publisher);
+						Register<Optional>({"LLHLS", "llhls"}, &_ll_hls_publisher);
 						Register<Optional>({"OVT", "ovt"}, &_ovt_publisher);
 						Register<Optional>({"FILE", "file"}, &_file_publisher);
 						Register<Optional>({"RTMPPush", "rtmpPush"}, &_rtmppush_publisher);
@@ -82,6 +86,7 @@ namespace cfg
 					DashPublisher _dash_publisher;
 					LlDashPublisher _ll_dash_publisher;
 					WebrtcPublisher _webrtc_publisher;
+					LLHlsPublisher _ll_hls_publisher;
 					OvtPublisher _ovt_publisher;
 					FilePublisher _file_publisher;
 					ThumbnailPublisher _thumbnail_publisher;

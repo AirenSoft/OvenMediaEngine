@@ -35,7 +35,7 @@ bool OvtPublisher::Start()
 
 	if (ovt_config.IsParsed() == false)
 	{
-		logti("%s is disabled by configuration", GetPublisherName());
+		logtw("%s is disabled by configuration", GetPublisherName());
 		return true;
 	}
 

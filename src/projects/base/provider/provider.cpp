@@ -90,7 +90,7 @@ namespace pvd
 					else
 					{
 						// This provider is diabled
-						logti("%s provider is disabled in %s application, so it was not created", 
+						logtw("%s provider is disabled in %s application, so it was not created", 
 								::StringFromProviderType(GetProviderType()).CStr(), app_info.GetName().CStr());
 						return true;
 					}

@@ -94,7 +94,7 @@ namespace pvd
 
 		if (server_config.GetBind().GetProviders().GetMpegts().IsParsed() == false)
 		{
-			logti("%s is disabled by configuration", GetProviderName());
+			logtw("%s is disabled by configuration", GetProviderName());
 			return true;
 		}
 

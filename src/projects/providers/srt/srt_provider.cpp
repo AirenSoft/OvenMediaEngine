@@ -46,7 +46,7 @@ namespace pvd
 
 		if(srt_config.IsParsed() == false)
 		{
-			logti("%s is disabled by configuration", GetProviderName());
+			logtw("%s is disabled by configuration", GetProviderName());
 			return true;
 		}
 

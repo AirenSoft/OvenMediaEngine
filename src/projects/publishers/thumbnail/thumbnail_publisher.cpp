@@ -42,7 +42,7 @@ bool ThumbnailPublisher::Start()
 	const auto &thumbnail_bind_config = server_config.GetBind().GetPublishers().GetThumbnail();
 	if (thumbnail_bind_config.IsParsed() == false)
 	{
-		logti("%s is disabled by configuration", GetPublisherName());
+		logtw("%s is disabled by configuration", GetPublisherName());
 		return true;
 	}
 
