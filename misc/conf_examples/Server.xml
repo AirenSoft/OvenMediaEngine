@@ -16,11 +16,15 @@
 	<StunServer>stun.l.google.com:19302</StunServer>
 
 	<Modules>
-		<!-- HTTP2 is under development -->
 		<HTTP2>
-			<!-- disabled by default -->
+			<!-- HTTP2 is under development, disabled by default -->
 			<Enable>false</Enable>
 		</HTTP2>
+
+		<LLHLS>
+			<!-- LLHLS is under development, disabled by default -->
+			<Enable>false</Enable>
+		</LLHLS>
 
 		<!-- P2P works only in WebRTC and is experiment feature -->
 		<P2P>
@@ -101,6 +105,13 @@
 				<!-- <TLSPort>443</TLSPort> -->
 				<WorkerCount>1</WorkerCount>
 			</HLS>
+			<LLHLS>
+				<!-- Since LLHLS only works over HTTP/2.0, it will not work on Non-Tls Ports. -->
+				<!-- <Port>80</Port> -->
+				<!-- If you want to use TLS, specify the TLS port -->
+				<!-- <TLSPort>443</TLSPort> -->
+				<WorkerCount>1</WorkerCount>
+			</LLHLS>
 			<DASH>
 				<Port>80</Port>
 				<!-- If you want to use TLS, specify the TLS port -->
@@ -336,6 +347,16 @@
 								<Url>*</Url>
 							</CrossDomains>
 						</HLS>
+						<LLHLS>
+							<!-- ChunkDuration : milliseconds unit -->
+							<ChunkDuration>1000</ChunkDuration>
+							<!-- SegmentDuration : seconds unit -->
+							<SegmentDuration>5</SegmentDuration>
+							<SegmentCount>5</SegmentCount>
+							<CrossDomains>
+								<Url>*</Url>
+							</CrossDomains>
+						</LLHLS>
 						<DASH>
 							<SegmentDuration>5</SegmentDuration>
 							<SegmentCount>3</SegmentCount>

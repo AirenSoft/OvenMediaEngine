@@ -38,6 +38,21 @@ bool LLHlsPublisher::Start()
 {
 	auto server_config = GetServerConfig();
 
+	auto llhls_module_config = server_config.GetModules().GetLLHls();
+	if (llhls_module_config.IsEnabled() == false)
+	{
+		logtw("LLHls Module is disabled");
+		return true;
+	}
+
+	auto llhls_bind_config = server_config.GetBind().GetPublishers().GetLLHls();
+
+	if (llhls_bind_config.IsParsed() == false)
+	{
+		logtw("%s is disabled by configuration", GetPublisherName());
+		return true;
+	}
+
 	return Publisher::Start();
 }
 

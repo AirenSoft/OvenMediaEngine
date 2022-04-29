@@ -66,7 +66,7 @@ namespace pub
 					else
 					{
 						// This provider is diabled
-						logti("%s publisher is disabled in %s application, so it was not created", 
+						logtw("%s publisher is disabled in %s application, so it was not created", 
 								::StringFromPublisherType(GetPublisherType()).CStr(), app_info.GetName().CStr());
 						return true;
 					}
@@ -89,7 +89,12 @@ namespace pub
 		}
 
 		// 생성한 Application을 Router와 연결하고 Start
-		_router->RegisterObserverApp(*application.get(), application);
+		if (_router->RegisterObserverApp(*application.get(), application) == false)
+		{
+			logte("Failed to register application(%s/%s) to router", GetPublisherName(), app_info.GetName().CStr());
+			return false;
+		}
+		
 
 		// Application Map에 보관
 		std::lock_guard<std::shared_mutex> lock(_application_map_mutex);

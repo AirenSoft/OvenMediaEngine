@@ -39,6 +39,8 @@ bool MediaRouter::Start()
 {
 	logti("Mediarouter has been started.");
 
+	SetModuleAvailable(true);
+
 	return true;
 }
 

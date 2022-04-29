@@ -37,6 +37,8 @@ bool Transcoder::Start()
 {
 	logtd("Transcoder has been started");
 
+	SetModuleAvailable(true);
+
 	return true;
 }
 

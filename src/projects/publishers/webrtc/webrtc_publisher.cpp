@@ -41,7 +41,7 @@ bool WebRtcPublisher::Start()
 
 	if (webrtc_bind_config.IsParsed() == false)
 	{
-		logti("%s is disabled by configuration", GetPublisherName());
+		logtw("%s is disabled by configuration", GetPublisherName());
 		return true;
 	}
 
