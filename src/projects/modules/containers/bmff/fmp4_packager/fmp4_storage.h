@@ -12,6 +12,14 @@
 
 namespace bmff
 {
+	class FMp4StorageObserver : public ov::EnableSharedFromThis<FMp4StorageObserver>
+	{
+	public:
+		virtual void OnFMp4StorageInitialized(const int32_t &track_id) = 0;
+		virtual void OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t &segment_number) = 0;
+		virtual void OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number) = 0;
+	};
+
 	class FMP4Storage
 	{
 	public:
@@ -21,18 +29,18 @@ namespace bmff
 			uint32_t segment_duration_ms = 5000;
 		};
 
-		FMP4Storage(const std::shared_ptr<const MediaTrack> &track, const Config &config);
+		FMP4Storage(const std::shared_ptr<FMp4StorageObserver> &observer, const std::shared_ptr<const MediaTrack> &track, const Config &config);
 
 		std::shared_ptr<ov::Data> GetInitializationSection() const;
 		std::shared_ptr<FMP4Segment> GetMediaSegment(uint32_t segment_number) const;
 		std::shared_ptr<FMP4Segment> GetLastSegment() const;
 		std::shared_ptr<FMP4Chunk> GetMediaChunk(uint32_t segment_number, uint32_t chunk_number) const;
 
-		uint32_t GetLastChunkNumber() const;
-		uint32_t GetLastSegmentNumber() const;
+		int64_t GetLastChunkNumber() const;
+		int64_t GetLastSegmentNumber() const;
 
 		bool StoreInitializationSection(const std::shared_ptr<ov::Data> &section);
-		bool AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, uint32_t duration_ms);
+		bool AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, uint64_t start_timestamp, uint32_t duration_ms, bool independent);
 
 	private:
 		Config	_config;
@@ -44,5 +52,9 @@ namespace bmff
 		mutable std::shared_mutex _segments_lock;
 
 		size_t _number_of_deleted_segments = 0; // For indexing of _segments
+
+		int64_t _last_segment_number = -1;
+
+		std::shared_ptr<FMp4StorageObserver> _observer;
 	};
 }

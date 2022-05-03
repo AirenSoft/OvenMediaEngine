@@ -29,6 +29,16 @@ namespace bmff
 					return false;
 				}
 
+				if (_list.size() == 0)
+				{
+					_start_timestamp = media_packet->GetPts();
+				}
+
+				if (media_packet->GetFlag() == MediaPacketFlag::Key)
+				{
+					_independent = true;
+				}
+
 				_list.push_back(media_packet);
 
 				_total_duration += media_packet->GetDuration();
@@ -50,8 +60,14 @@ namespace bmff
 				return _list.at(index);
 			}
 
+			// Get Start Timestamp
+			uint64_t GetStartTimestamp() const
+			{
+				return _start_timestamp;
+			}
+
 			// Get Total Duration
-			uint32_t GetTotalDuration() const
+			double GetTotalDuration() const
 			{
 				return _total_duration;
 			}
@@ -74,11 +90,19 @@ namespace bmff
 				return _list.empty();
 			}
 
+			// Is Independent
+			bool IsIndependent() const
+			{
+				return _independent;
+			}
+
 		private:
 			std::vector<std::shared_ptr<const MediaPacket>> _list;
+			uint64_t _start_timestamp = 0;
 			double _total_duration = 0.0;
 			uint64_t _total_size = 0;
 			uint32_t _total_count = 0;
+			bool _independent = false;
 		};
 
 		Packager(const std::shared_ptr<const MediaTrack> &track);

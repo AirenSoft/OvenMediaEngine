@@ -36,8 +36,7 @@ namespace bmff
 		const Config &GetConfig() const;
 
 		bool StoreInitializationSection(const std::shared_ptr<ov::Data> &segment);
-		bool AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, uint32_t duration_ms);
-		bool StoreMediaSegment(const std::shared_ptr<ov::Data> &segment, uint32_t duration_ms);
+		bool AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, uint64_t start_timestamp, uint32_t duration_ms, bool independent);
 
 		bool WriteFtypBox(ov::ByteStream &data_stream) override;
 

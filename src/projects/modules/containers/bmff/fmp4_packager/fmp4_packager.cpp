@@ -61,6 +61,69 @@ namespace bmff
 	// Generate Media FMP4Segment
 	bool FMP4Packager::AppendSample(const std::shared_ptr<const MediaPacket> &media_packet)
 	{
+		if (_samples_buffer != nullptr)
+		{
+			// https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-4.4.3.8
+			// The duration of a Partial Segment MUST be less than or equal to the Part Target Duration.  
+			// The duration of each Partial Segment MUST be at least 85% of the Part Target Duration, 
+			// with the exception of Partial Segments with the INDEPENDENT=YES attribute 
+			// and the final Partial Segment of any Parent Segment.
+
+			// Calculate duration as milliseconds
+			uint64_t total_duration = _samples_buffer->GetTotalDuration();
+			uint64_t expected_duration = total_duration + media_packet->GetDuration();
+
+			uint64_t total_duration_ms = (static_cast<double>(total_duration) / GetTrack()->GetTimeBase().GetTimescale()) * 1000.0;
+			uint64_t expected_duration_ms = (static_cast<double>(expected_duration) / GetTrack()->GetTimeBase().GetTimescale()) * 1000.0;
+
+			if (total_duration_ms > _config.chunk_duration_ms)
+			{
+				logtw("Too long duration chunk (%llu) was created. (configured : %llu) - - The duration of one frame may be too long, which may be longer than the configured chunk duration.", total_duration_ms, _config.chunk_duration_ms);
+			}
+
+			// 1. When adding samples, if the Part Target Duration is exceeded, a chunk is created immediately.
+			// 2. If it exceeds 85% and the next sample is independent, a chunk is created. This makes the next chunk start independent.
+			if ( (_samples_buffer->GetTotalCount() > 0 && expected_duration_ms > _config.chunk_duration_ms) ||
+				(GetTrack()->GetMediaType() == cmn::MediaType::Video && total_duration_ms >= _config.chunk_duration_ms * 0.85 && media_packet->GetFlag() == MediaPacketFlag::Key))
+			{
+				double reserve_buffer_size;
+				
+				if (GetTrack()->GetMediaType() == cmn::MediaType::Video)
+				{
+					// Reserve 10 Mbps.
+					reserve_buffer_size = ((double)GetConfig().chunk_duration_ms / 1000.0) * ((10.0 * 1000.0 * 1000.0) / 8.0);
+				}
+				else
+				{
+					// Reserve 0.5 Mbps.
+					reserve_buffer_size = ((double)GetConfig().chunk_duration_ms / 1000.0) * ((0.5 * 1000.0 * 1000.0) / 8.0);
+				}
+
+				ov::ByteStream chunk_stream(reserve_buffer_size);
+
+				if (WriteMoofBox(chunk_stream, _samples_buffer) == false)
+				{
+					logte("FMP4Packager::AppendSample() - Failed to write moof box");
+					return false;
+				}
+
+				if (WriteMdatBox(chunk_stream, _samples_buffer) == false)
+				{
+					logte("FMP4Packager::AppendSample() - Failed to write mdat box");
+					return false;
+				}
+
+				auto chunk = chunk_stream.GetDataPointer();
+				if (AppendMediaChunk(chunk, _samples_buffer->GetStartTimestamp(), _samples_buffer->GetTotalDuration(), _samples_buffer->IsIndependent()) == false)
+				{
+					logte("FMP4Packager::AppendSample() - Failed to store media chunk");
+					return false;
+				}
+
+				_samples_buffer.reset();
+			}
+		}
+
 		if (_samples_buffer == nullptr)
 		{
 			_samples_buffer = std::make_shared<Samples>();
@@ -70,35 +133,6 @@ namespace bmff
 		{
 			logte("FMP4Packager::AppendSample() - Failed to append sample");
 			return false;
-		}
-
-		if (_samples_buffer->GetTotalDuration() >= _config.chunk_duration_ms)
-		{
-			auto reserve_buffer_size = ((double)GetConfig().chunk_duration_ms / 1000.0) * ((10.0 * 1000.0 * 1000.0) / 8.0);
-			ov::ByteStream chunk_stream(reserve_buffer_size);
-
-			if (WriteMoofBox(chunk_stream, _samples_buffer) == false)
-			{
-				logte("FMP4Packager::AppendSample() - Failed to write moof box");
-				return false;
-			}
-
-			if (WriteMdatBox(chunk_stream, _samples_buffer) == false)
-			{
-				logte("FMP4Packager::AppendSample() - Failed to write mdat box");
-				return false;
-			}
-
-			auto chunk = chunk_stream.GetDataPointer();
-			if (AppendMediaChunk(chunk, _samples_buffer->GetTotalDuration()) == false)
-			{
-				logte("FMP4Packager::AppendSample() - Failed to store media chunk");
-				return false;
-			}
-
-			_samples_buffer.reset();
-
-			return true;
 		}
 
 		return true;
@@ -125,14 +159,14 @@ namespace bmff
 		return true;
 	}
 
-	bool FMP4Packager::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, uint32_t duration_ms)
+	bool FMP4Packager::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, uint64_t start_timestamp, uint32_t duration_ms, bool independent)
 	{
 		if (chunk == nullptr || _storage == nullptr)
 		{
 			return false;
 		}
 
-		if (_storage->AppendMediaChunk(chunk, duration_ms) == false)
+		if (_storage->AppendMediaChunk(chunk, start_timestamp, duration_ms, independent) == false)
 		{
 			return false;
 		}
