@@ -15,21 +15,39 @@ namespace bmff
 	class FMP4Chunk
 	{
 	public:
-		FMP4Chunk(const std::shared_ptr<ov::Data> &data, uint64_t number, uint64_t duration_ms)
+		FMP4Chunk(const std::shared_ptr<ov::Data> &data, uint64_t number, uint64_t start_timestamp, uint64_t duration_ms, bool independent)
 		{
 			_data = data;
 			_number = number;
 			_duration_ms = duration_ms;
+			_start_timestamp = start_timestamp;
+			_independent = independent;
 		}
 
-		uint64_t GetNumber() const
+		int64_t GetNumber() const
 		{
 			return _number;
 		}
 
-		uint64_t GetDurationMs() const
+		uint64_t GetStartTimestamp() const
+		{
+			return _start_timestamp;
+		}
+
+		uint64_t GetDuration() const
 		{
 			return _duration_ms;
+		}
+
+		// Get Size
+		uint64_t GetSize() const
+		{
+			return _data->GetLength();
+		}
+
+		bool IsIndependent() const
+		{
+			return _independent;
 		}
 
 		const std::shared_ptr<ov::Data> &GetData() const
@@ -38,8 +56,10 @@ namespace bmff
 		}
 
 	private:
-		uint64_t _number = 0;
+		int64_t _number = -1;
+		uint64_t _start_timestamp = 0;
 		uint64_t _duration_ms = 0;
+		bool _independent = false;
 		std::shared_ptr<ov::Data> _data;
 	};
 
@@ -64,7 +84,7 @@ namespace bmff
 			return _is_completed;
 		}
 
-		bool AppendChunkData(const std::shared_ptr<ov::Data> &chunk_data, uint64_t duration_ms)
+		bool AppendChunkData(const std::shared_ptr<ov::Data> &chunk_data, uint64_t start_timestamp, uint64_t duration_ms, bool independent)
 		{
 			if (_is_completed)
 			{
@@ -72,12 +92,20 @@ namespace bmff
 			}
 
 			std::unique_lock<std::shared_mutex> lock(_chunks_lock);
-			_chunks.emplace_back(std::make_shared<FMP4Chunk>(chunk_data, _chunks.size(), duration_ms));
+
+			auto chunk_number = _chunks.size();
+			if (chunk_number == 0)
+			{
+				_start_timestamp = start_timestamp;
+			}
+
+			_chunks.emplace_back(std::make_shared<FMP4Chunk>(chunk_data, chunk_number, start_timestamp, duration_ms, independent));
+			_last_chunk_number = chunk_number;
+
 			lock.unlock();
 			
 			// Append data
 			_duration_ms += duration_ms;
-
 			_data->Append(chunk_data);
 
 			return true;
@@ -90,9 +118,15 @@ namespace bmff
 		}
 
 		// Get Number
-		uint64_t GetNumber() const
+		int64_t GetNumber() const
 		{
 			return _number;
+		}
+
+		// Get Start Timestamp
+		uint64_t GetStartTimestamp() const
+		{
+			return _start_timestamp;
 		}
 
 		// Get Duration
@@ -106,6 +140,17 @@ namespace bmff
 		{
 			std::shared_lock<std::shared_mutex> lock(_chunks_lock);
 			return _chunks.size();
+		}
+
+		size_t GetSize() const
+		{
+			return _data->GetLength();
+		}
+
+		// Get Last Chunk Number
+		int64_t GetLastChunkNumber() const
+		{
+			return _last_chunk_number;
 		}
 
 		// Get Chunk At
@@ -124,11 +169,15 @@ namespace bmff
 	private:
 		bool _is_completed = false;
 
-		uint64_t _number = 0;
+		int64_t _number = -1;
+
+		uint64_t _start_timestamp = 0;
 		uint64_t _duration_ms = 0;
 
 		std::deque<std::shared_ptr<FMP4Chunk>> _chunks;
 		mutable std::shared_mutex _chunks_lock;
+
+		int64_t _last_chunk_number = -1;
 
 		// Segment Data
 		std::shared_ptr<ov::Data> _data;

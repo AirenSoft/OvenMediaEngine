@@ -38,19 +38,16 @@ bool LLHlsStream::Start()
 
 	logtd("LLHlsStream(%ld) has been started", GetId());
 	
-	bmff::FMP4Storage::Config storage_config;
-	storage_config.max_segments = 5;
-	storage_config.segment_duration_ms = 5000;
-
-	bmff::FMP4Packager::Config packager_config;
-	packager_config.chunk_duration_ms = 1000;
+	_packager_config.chunk_duration_ms = 1000;
+	_storage_config.max_segments = 10;
+	_storage_config.segment_duration_ms = 5000;
 
 	for (const auto &[id, track] : _tracks)
 	{
 		if ( (track->GetCodecId() == cmn::MediaCodecId::H264) || 
 			 (track->GetCodecId() == cmn::MediaCodecId::Aac) )
 		{
-			if (AddPackager(track, packager_config, storage_config) == false)
+			if (AddPackager(track) == false)
 			{
 				logte("LLHlsStream(%s/%s) - Failed to add packager for track(%ld)", GetApplication()->GetName().CStr(), GetName().CStr(), track->GetId());
 				return false;
@@ -77,6 +74,10 @@ bool LLHlsStream::Stop()
 	// clear all storages
 	std::lock_guard<std::shared_mutex> lock2(_storage_map_lock);
 	_storage_map.clear();
+
+	// clear all playlist
+	std::lock_guard<std::shared_mutex> lock3(_playlist_map_lock);
+	_playlist_map.clear();
 
 	return Stream::Stop();
 }
@@ -130,13 +131,13 @@ bool LLHlsStream::AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_pa
 }
 
 // Create and Get fMP4 packager with track info, storage and packager_config
-bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &track, const bmff::FMP4Packager::Config &packager_config, const bmff::FMP4Storage::Config &storage_config)
+bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &track)
 {
 	// Create Storage
-	auto storage = std::make_shared<bmff::FMP4Storage>(track, storage_config);
+	auto storage = std::make_shared<bmff::FMP4Storage>(bmff::FMp4StorageObserver::GetSharedPtr(), track, _storage_config);
 
 	// Create fMP4 Packager
-	auto packager = std::make_shared<bmff::FMP4Packager>(storage, track, packager_config);
+	auto packager = std::make_shared<bmff::FMP4Packager>(storage, track, _packager_config);
 
 	// Create Initialization Segment
 	if (packager->CreateInitializationSegment() == false)
@@ -180,4 +181,184 @@ std::shared_ptr<bmff::FMP4Packager> LLHlsStream::GetPackager(const int32_t &trac
 	}
 
 	return it->second;
+}
+
+std::shared_ptr<LLHlsPlaylist> LLHlsStream::GetPlaylist(const int32_t &track_id)
+{
+	std::shared_lock<std::shared_mutex> lock(_playlist_map_lock);
+	auto it = _playlist_map.find(track_id);
+	if (it == _playlist_map.end())
+	{
+		return nullptr;
+	}
+
+	return it->second;
+}
+
+ov::String LLHlsStream::GetIntializationSegmentName(const int32_t &track_id)
+{
+	// init_<track id>_<media type>.m4s
+	return ov::String::FormatString("init_%d_%s.m4s", 
+									track_id,
+									StringFromMediaType(GetTrack(track_id)->GetMediaType()).CStr());
+}
+
+ov::String LLHlsStream::GetSegmentName(const int32_t &track_id, const int64_t &segment_number)
+{
+	// seg_<track id>_<segment number>_<media type>.m4s
+	return ov::String::FormatString("seg_%d_%lld_%s.m4s", 
+									track_id,
+									segment_number,
+									StringFromMediaType(GetTrack(track_id)->GetMediaType()).CStr());
+}
+
+ov::String LLHlsStream::GetPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number)
+{
+	// part_<track id>_<segment number>_<partial number>_<media type>.m4s
+	return ov::String::FormatString("part_%d_%lld_%lld_%s.m4s", 
+									track_id,
+									segment_number,
+									partial_number,
+									StringFromMediaType(GetTrack(track_id)->GetMediaType()).CStr());
+}
+
+ov::String LLHlsStream::GetNextPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number)
+{
+	// part_<track id>_<segment number>_<partial number>_<media type>.m4s
+	return ov::String::FormatString("part_%d_%lld_%lld_%s.m4s", 
+									track_id,
+									segment_number,
+									partial_number + 1,
+									StringFromMediaType(GetTrack(track_id)->GetMediaType()).CStr());
+}
+
+bool LLHlsStream::ParseFileName(const ov::String &file_name, FileType &type, int32_t &track_id, int64_t &segment_number, int64_t &partial_number)
+{
+	// Split to filename.ext
+	auto name_ext_items = file_name.Split(".");
+	if (name_ext_items.size() != 2 || name_ext_items[1] != "m4s")
+	{
+		logtw("Invalid file name requested: %s", file_name.CStr());
+		return false;
+	}
+
+	// Split to <file type>_<track id>_<segment number>_<partial number>
+	auto name_items = name_ext_items[0].Split("_");
+	if (name_items[0] == "init")
+	{
+		// init_<track id>_<media type>
+		if (name_items.size() != 3)
+		{
+			logtw("Invalid file name requested: %s", file_name.CStr());
+			return false;
+		}
+
+		type = FileType::InitializationSegment;
+		track_id = ov::Converter::ToInt32(name_items[1].CStr());
+	}
+	else if (name_items[0] == "seg")
+	{
+		// seg_<track id>_<segment number>_<media type>
+		if (name_items.size() != 4)
+		{
+			logtw("Invalid file name requested: %s", file_name.CStr());
+			return false;
+		}
+
+		type = FileType::Segment;
+		track_id = ov::Converter::ToInt32(name_items[1].CStr());
+		segment_number = ov::Converter::ToInt64(name_items[2].CStr());
+	}
+	else if (name_items[0] == "part")
+	{
+		// part_<track id>_<segment number>_<partial number>_<media type>
+		if (name_items.size() != 5)
+		{
+			logtw("Invalid file name requested: %s", file_name.CStr());
+			return false;
+		}
+
+		type = FileType::PartialSegment;
+		track_id = ov::Converter::ToInt32(name_items[1].CStr());
+		segment_number = ov::Converter::ToInt64(name_items[2].CStr());
+		partial_number = ov::Converter::ToInt64(name_items[3].CStr());
+	}
+	else
+	{
+		logtw("Invalid file name requested: %s", file_name.CStr());
+		return false;
+	}
+
+	return true;
+}
+
+void LLHlsStream::OnFMp4StorageInitialized(const int32_t &track_id)
+{
+	// milliseconds to seconds
+	auto segment_duration = static_cast<float_t>(_storage_config.segment_duration_ms) / 1000.0;
+	auto chunk_duration = static_cast<float_t>(_packager_config.chunk_duration_ms) / 1000.0;
+
+	auto playlist = std::make_shared<LLHlsPlaylist>(GetTrack(track_id),
+													_storage_config.max_segments, 
+													segment_duration, 
+													chunk_duration, 
+													GetIntializationSegmentName(track_id));
+
+	std::unique_lock<std::shared_mutex> lock(_playlist_map_lock);
+	_playlist_map[track_id] = playlist;
+}
+
+void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t &segment_number)
+{
+	auto playlist = GetPlaylist(track_id);
+	if (playlist == nullptr)
+	{
+		logte("Playlist is not found : track_id = %d", track_id);
+		return;
+	}
+
+	auto segment = GetStorage(track_id)->GetMediaSegment(segment_number);
+
+	// Timescale to seconds(demical)
+	auto segment_duration = static_cast<float>(segment->GetDuration()) / static_cast<float>(GetTrack(track_id)->GetTimeBase().GetTimescale());
+
+	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetCreatedTime().time_since_epoch()).count() + segment->GetStartTimestamp();
+
+	auto segment_info = LLHlsPlaylist::SegmentInfo(segment->GetNumber(), start_timestamp, segment_duration,
+													segment->GetSize(), GetSegmentName(track_id, segment->GetNumber()), "", true);
+
+	playlist->AppendSegmentInfo(segment_info);
+
+	logti("Media segment updated : track_id = %d, segment_number = %d, start_timestamp = %llu, segment_duration = %f", track_id, segment_number, segment->GetStartTimestamp(), segment_duration);
+	
+	// Output playlist
+	logti("[Playlist]\n%s", playlist->ToString().CStr());
+}
+
+void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number)
+{
+	auto playlist = GetPlaylist(track_id);
+	if (playlist == nullptr)
+	{
+		logte("Playlist is not found : track_id = %d", track_id);
+		return;
+	}
+
+	auto chunk = GetStorage(track_id)->GetMediaChunk(segment_number, chunk_number);
+	// Timescale to seconds(demical)
+	auto chunk_duration = static_cast<float>(chunk->GetDuration()) / static_cast<float>(GetTrack(track_id)->GetTimeBase().GetTimescale());
+
+	// Human readable timestamp
+	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetCreatedTime().time_since_epoch()).count() + chunk->GetStartTimestamp();
+
+	auto chunk_info = LLHlsPlaylist::SegmentInfo(chunk->GetNumber(), start_timestamp, chunk_duration, chunk->GetSize(), 
+												GetPartialSegmentName(track_id, segment_number, chunk->GetNumber()), 
+												GetNextPartialSegmentName(track_id, segment_number, chunk->GetNumber()), chunk->IsIndependent());
+
+	playlist->AppendPartialSegmentInfo(segment_number, chunk_info);
+
+	logti("Media chunk updated : track_id = %d, segment_number = %d, chunk_number = %d, start_timestamp = %llu, chunk_duration = %f", track_id, segment_number, chunk_number, chunk->GetStartTimestamp(), chunk_duration);
+
+	// Output playlist
+	logti("[Playlist]\n%s", playlist->ToString().CStr());
 }
