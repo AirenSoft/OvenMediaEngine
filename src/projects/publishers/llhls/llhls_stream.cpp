@@ -195,48 +195,65 @@ std::shared_ptr<LLHlsPlaylist> LLHlsStream::GetPlaylist(const int32_t &track_id)
 	return it->second;
 }
 
+ov::String LLHlsStream::GetPlaylistName()
+{
+	// llhls.m3u8
+	return ov::String::FormatString("llhls.m3u8");
+}
+
+ov::String LLHlsStream::GetChunklistName(const int32_t &track_id)
+{
+	// chunklist_<track id>_<media type>_llhls.m3u8
+	return ov::String::FormatString("chunklist_%d_%s_llhls.m3u8",
+										track_id, 
+										StringFromMediaType(GetTrack(track_id)->GetMediaType()).CStr());
+}
+
 ov::String LLHlsStream::GetIntializationSegmentName(const int32_t &track_id)
 {
-	// init_<track id>_<media type>.m4s
-	return ov::String::FormatString("init_%d_%s.m4s", 
+	// init_<track id>_<media type>_llhls.m4s
+	return ov::String::FormatString("init_%d_%s_llhls.m4s",
 									track_id,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).CStr());
+									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr());
 }
 
 ov::String LLHlsStream::GetSegmentName(const int32_t &track_id, const int64_t &segment_number)
 {
-	// seg_<track id>_<segment number>_<media type>.m4s
-	return ov::String::FormatString("seg_%d_%lld_%s.m4s", 
+	// seg_<track id>_<segment number>_<media type>_llhls.m4s
+	return ov::String::FormatString("seg_%d_%lld_%s_llhls.m4s", 
 									track_id,
 									segment_number,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).CStr());
+									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr());
 }
 
 ov::String LLHlsStream::GetPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number)
 {
-	// part_<track id>_<segment number>_<partial number>_<media type>.m4s
-	return ov::String::FormatString("part_%d_%lld_%lld_%s.m4s", 
+	// part_<track id>_<segment number>_<partial number>_<media type>_llhls.m4s
+	return ov::String::FormatString("part_%d_%lld_%lld_%s_llhls.m4s", 
 									track_id,
 									segment_number,
 									partial_number,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).CStr());
+									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr());
 }
 
 ov::String LLHlsStream::GetNextPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number)
 {
-	// part_<track id>_<segment number>_<partial number>_<media type>.m4s
-	return ov::String::FormatString("part_%d_%lld_%lld_%s.m4s", 
+	// part_<track id>_<segment number>_<partial number>_<media type>_llhls.m4s
+	return ov::String::FormatString("part_%d_%lld_%lld_%s_llhls.m4s", 
 									track_id,
 									segment_number,
 									partial_number + 1,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).CStr());
+									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr());
 }
 
 bool LLHlsStream::ParseFileName(const ov::String &file_name, FileType &type, int32_t &track_id, int64_t &segment_number, int64_t &partial_number)
 {
+	// Split the querystring if it has a '?'
+	auto name_query_items = file_name.Split("?");
+	
 	// Split to filename.ext
-	auto name_ext_items = file_name.Split(".");
-	if (name_ext_items.size() != 2 || name_ext_items[1] != "m4s")
+	auto name_ext_items = name_query_items[0].Split(".");
+	if (name_ext_items.size() != 2 || name_ext_items[1] != "m4s" || name_ext_items[1] != "m3u8")
 	{
 		logtw("Invalid file name requested: %s", file_name.CStr());
 		return false;
@@ -244,10 +261,32 @@ bool LLHlsStream::ParseFileName(const ov::String &file_name, FileType &type, int
 
 	// Split to <file type>_<track id>_<segment number>_<partial number>
 	auto name_items = name_ext_items[0].Split("_");
-	if (name_items[0] == "init")
+	if (name_items[0] == "llhls")
+	{
+		if (name_ext_items[1] != "m3u8")
+		{
+			logtw("Invalid file name requested: %s", file_name.CStr());
+			return false;
+		}
+
+		type = FileType::Playlist;
+	}
+	else if (name_items[0] == "chunklist")
+	{
+		// chunklist_<track id>_<media type>_llhls.m3u8
+		if (name_items.size() != 4 || name_ext_items[1] != "m3u8")
+		{
+			logtw("Invalid chunklist file name requested: %s", file_name.CStr());
+			return false;
+		}
+
+		type = FileType::Chunklist;
+		track_id = ov::Converter::ToInt32(name_items[1].CStr());
+	}
+	else if (name_items[0] == "init")
 	{
 		// init_<track id>_<media type>
-		if (name_items.size() != 3)
+		if (name_items.size() != 3 || name_ext_items[1] != "m4s")
 		{
 			logtw("Invalid file name requested: %s", file_name.CStr());
 			return false;
@@ -256,7 +295,7 @@ bool LLHlsStream::ParseFileName(const ov::String &file_name, FileType &type, int
 		type = FileType::InitializationSegment;
 		track_id = ov::Converter::ToInt32(name_items[1].CStr());
 	}
-	else if (name_items[0] == "seg")
+	else if (name_items[0] == "seg" || name_ext_items[1] != "m4s")
 	{
 		// seg_<track id>_<segment number>_<media type>
 		if (name_items.size() != 4)
@@ -269,7 +308,7 @@ bool LLHlsStream::ParseFileName(const ov::String &file_name, FileType &type, int
 		track_id = ov::Converter::ToInt32(name_items[1].CStr());
 		segment_number = ov::Converter::ToInt64(name_items[2].CStr());
 	}
-	else if (name_items[0] == "part")
+	else if (name_items[0] == "part" || name_ext_items[1] != "m4s")
 	{
 		// part_<track id>_<segment number>_<partial number>_<media type>
 		if (name_items.size() != 5)

@@ -44,6 +44,9 @@ private:
 	// Get Playlist with the track id
 	std::shared_ptr<LLHlsPlaylist> GetPlaylist(const int32_t &track_id);
 
+	ov::String GetPlaylistName();
+	ov::String GetChunklistName(const int32_t &track_id);
+
 	ov::String GetIntializationSegmentName(const int32_t &track_id);
 	ov::String GetSegmentName(const int32_t &track_id, const int64_t &segment_number);
 	ov::String GetPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number);
@@ -51,6 +54,8 @@ private:
 
 	enum class FileType : uint8_t
 	{
+		Playlist,
+		Chunklist,
 		InitializationSegment,
 		Segment,
 		PartialSegment,
