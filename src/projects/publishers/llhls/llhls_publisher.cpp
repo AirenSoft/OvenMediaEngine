@@ -10,6 +10,7 @@
 #include <base/ovlibrary/url.h>
 
 #include "llhls_publisher.h"
+#include "llhls_session.h"
 #include "llhls_private.h"
 
 std::shared_ptr<LLHlsPublisher> LLHlsPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
@@ -135,13 +136,51 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		auto request = exchange->GetRequest();
 		auto response = exchange->GetResponse();
 
-		logti("LLHLS requested: %s", request->ToString().CStr());
+		logtd("LLHLS requested: %s", request->GetUri().CStr());
 
-		response->SetStatusCode(http::StatusCode::OK);
-		response->AppendString("Test!!!");
-		response->Response();
+		auto request_url = ov::Url::Parse(request->GetUri());
+		if (request_url == nullptr)
+		{
+			logte("Could not parse request url: %s", request->GetUri().CStr());
+			response->SetStatusCode(http::StatusCode::BadRequest);
+			return http::svr::NextHandler::DoNotCall;
+		}
 
-		return http::svr::NextHandler::DoNotCall;
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
+		if (vhost_app_name.IsValid() == false)
+		{
+			logte("Could not resolve application name from domain: %s", request_url->Host().CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		auto stream = GetStream(vhost_app_name, request_url->Stream());
+		if (stream == nullptr)
+		{
+			logte("Could not find stream: %s", request_url->Stream().CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		session_id_t session_id = exchange->GetConnection()->GetId();
+		auto session = stream->GetSession(session_id);
+		if (session == nullptr)
+		{
+			// New HTTP Connection
+			session = LLHlsSession::Create(session_id, stream->GetApplication(), stream);
+			if (session == nullptr)
+			{
+				logte("Could not create llhls session for request: %s", request->ToString().CStr());
+				response->SetStatusCode(http::StatusCode::InternalServerError);
+				return http::svr::NextHandler::DoNotCall;
+			}
+
+			stream->AddSession(session);
+		}
+
+		stream->SendMessage(session, std::make_any<std::shared_ptr<http::svr::HttpExchange>>(exchange));
+
+		return http::svr::NextHandler::DoNotCallAndDoNotResponse;
 	});
 
 	return http_interceptor;

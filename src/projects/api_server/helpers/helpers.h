@@ -10,7 +10,7 @@
 
 #include <monitoring/monitoring.h>
 #include <orchestrator/orchestrator.h>
-
+#include <modules/http/server/http_exchange.h>
 #include "./multiple_status.h"
 
 namespace api

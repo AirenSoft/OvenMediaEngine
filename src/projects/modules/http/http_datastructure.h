@@ -401,22 +401,6 @@ namespace http
 			Error,
 			Moved		// Control is transferred to another thread so DO NOT close the connection
 		};
-
-		enum class NextHandler : char
-		{
-			// Call the next handler
-			Call,
-			// Do not call the next handler
-			DoNotCall
-		};
-
-		class HttpServer;
-		class HttpExchange;
-
-		using RequestHandler = std::function<NextHandler(const std::shared_ptr<HttpExchange> &exchange)>;
-		using RequestErrorHandler = std::function<void(const std::shared_ptr<HttpExchange> &exchange)>;
-
-		using ResponseWriteHandler = std::function<bool(const std::shared_ptr<ov::Data> &data)>;
 	}  // namespace svr
 
 	class HttpError;

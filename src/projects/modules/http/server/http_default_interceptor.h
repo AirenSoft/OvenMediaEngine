@@ -17,6 +17,24 @@ namespace http
 {
 	namespace svr
 	{
+		enum class NextHandler : char
+		{
+			// Call the next handler
+			Call,
+			// Do not call the next handler
+			DoNotCall,
+			// Do not call the following handlers. 
+			// And since control of it has moved to another thread, the response will be sent later.
+			DoNotCallAndDoNotResponse
+		};
+
+		class HttpServer;
+		class HttpExchange;
+
+		using RequestHandler = std::function<NextHandler(const std::shared_ptr<HttpExchange> &exchange)>;
+		using RequestErrorHandler = std::function<void(const std::shared_ptr<HttpExchange> &exchange)>;
+		using ResponseWriteHandler = std::function<bool(const std::shared_ptr<ov::Data> &data)>;
+
 		/// Default HTTP processor
 		class DefaultInterceptor : public RequestInterceptor
 		{

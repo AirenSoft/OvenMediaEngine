@@ -13,14 +13,14 @@
 #include "llhls_stream.h"
 #include "llhls_private.h"
 
-std::shared_ptr<LLHlsStream> LLHlsStream::Create(const std::shared_ptr<pub::Application> application, const info::Stream &info)
+std::shared_ptr<LLHlsStream> LLHlsStream::Create(const std::shared_ptr<pub::Application> application, const info::Stream &info, uint32_t worker_count)
 {
-	auto stream = std::make_shared<LLHlsStream>(application, info);
+	auto stream = std::make_shared<LLHlsStream>(application, info, worker_count);
 	return stream;
 }
 
-LLHlsStream::LLHlsStream(const std::shared_ptr<pub::Application> application, const info::Stream &info)
-	: Stream(application, info)
+LLHlsStream::LLHlsStream(const std::shared_ptr<pub::Application> application, const info::Stream &info, uint32_t worker_count)
+	: Stream(application, info), _worker_count(worker_count)
 {
 }
 
@@ -32,6 +32,11 @@ LLHlsStream::~LLHlsStream()
 bool LLHlsStream::Start()
 {
 	if (GetState() != State::CREATED)
+	{
+		return false;
+	}
+
+	if (CreateStreamWorker(_worker_count) == false)
 	{
 		return false;
 	}
@@ -368,10 +373,10 @@ void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t 
 
 	playlist->AppendSegmentInfo(segment_info);
 
-	logti("Media segment updated : track_id = %d, segment_number = %d, start_timestamp = %llu, segment_duration = %f", track_id, segment_number, segment->GetStartTimestamp(), segment_duration);
+	logtd("Media segment updated : track_id = %d, segment_number = %d, start_timestamp = %llu, segment_duration = %f", track_id, segment_number, segment->GetStartTimestamp(), segment_duration);
 	
 	// Output playlist
-	logti("[Playlist]\n%s", playlist->ToString().CStr());
+	logtd("[Playlist]\n%s", playlist->ToString().CStr());
 }
 
 void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number)
@@ -396,8 +401,8 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 
 	playlist->AppendPartialSegmentInfo(segment_number, chunk_info);
 
-	logti("Media chunk updated : track_id = %d, segment_number = %d, chunk_number = %d, start_timestamp = %llu, chunk_duration = %f", track_id, segment_number, chunk_number, chunk->GetStartTimestamp(), chunk_duration);
+	logtd("Media chunk updated : track_id = %d, segment_number = %d, chunk_number = %d, start_timestamp = %llu, chunk_duration = %f", track_id, segment_number, chunk_number, chunk->GetStartTimestamp(), chunk_duration);
 
 	// Output playlist
-	logti("[Playlist]\n%s", playlist->ToString().CStr());
+	logtd("[Playlist]\n%s", playlist->ToString().CStr());
 }

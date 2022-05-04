@@ -18,9 +18,11 @@
 class LLHlsStream : public pub::Stream, public bmff::FMp4StorageObserver
 {
 public:
-	static std::shared_ptr<LLHlsStream> Create(const std::shared_ptr<pub::Application> application, const info::Stream &info);
+	static std::shared_ptr<LLHlsStream> Create(const std::shared_ptr<pub::Application> application, 
+												const info::Stream &info,
+												uint32_t worker_count);
 
-	explicit LLHlsStream(const std::shared_ptr<pub::Application> application, const info::Stream &info);
+	explicit LLHlsStream(const std::shared_ptr<pub::Application> application, const info::Stream &info, uint32_t worker_count);
 	~LLHlsStream() final;
 
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
@@ -76,4 +78,6 @@ private:
 	std::shared_mutex _packager_map_lock;
 	std::map<int32_t, std::shared_ptr<LLHlsPlaylist>> _playlist_map;
 	std::shared_mutex _playlist_map_lock;
+
+	uint32_t _worker_count = 0;
 };
