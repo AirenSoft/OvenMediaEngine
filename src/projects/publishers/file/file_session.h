@@ -25,9 +25,7 @@ public:
 	bool StartRecord();
 	bool StopRecord();
 
-	bool SendOutgoingData(const std::any &packet) override;
-	void OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
-						  const std::shared_ptr<const ov::Data> &data) override;
+	void SendOutgoingData(const std::any &packet) override;
 
 	void SetRecord(std::shared_ptr<info::Record> &record);
 	std::shared_ptr<info::Record> &GetRecord();

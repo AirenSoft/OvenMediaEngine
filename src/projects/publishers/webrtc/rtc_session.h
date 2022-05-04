@@ -56,8 +56,8 @@ public:
 	const std::shared_ptr<http::svr::ws::WebSocketSession>& GetWSClient();
 
 	// pub::Session Interface
-	bool SendOutgoingData(const std::any &packet) override;
-	void OnPacketReceived(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data) override;
+	void SendOutgoingData(const std::any &packet) override;
+	void OnMessageReceived(const std::any &message) override;
 	
 	// RtpRtcp Interface
 	void OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) override;

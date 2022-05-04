@@ -8,8 +8,7 @@
 namespace pub
 {
 	ApplicationWorker::ApplicationWorker(uint32_t worker_id, ov::String worker_name)
-		: _stream_data_queue(nullptr, 500),
-		  _incoming_packet_queue(nullptr, 500)
+		: _stream_data_queue(nullptr, 500)
 	{
 		_worker_id = worker_id;
 		_worker_name = worker_name;
@@ -27,9 +26,6 @@ namespace pub
 		queue_name.Format("%s - Stream Data Queue", _worker_name.CStr());
 		_stream_data_queue.SetAlias(queue_name.CStr());
 
-		queue_name.Format("%s - Incoming Packet Queue", _worker_name.CStr());
-		_incoming_packet_queue.SetAlias(queue_name.CStr());
-
 		logti("%s ApplicationWorker has been created", _worker_name.CStr());
 
 		return true;
@@ -43,7 +39,6 @@ namespace pub
 		}
 
 		_stream_data_queue.Clear();
-		_incoming_packet_queue.Clear();
 
 		_stop_thread_flag = true;
 
@@ -67,16 +62,6 @@ namespace pub
 		return true;
 	}
 
-	bool ApplicationWorker::PushNetworkPacket(const std::shared_ptr<Session> &session, const std::shared_ptr<const ov::Data> &data)
-	{
-		auto packet = std::make_shared<ApplicationWorker::IncomingPacket>(session, data);
-		_incoming_packet_queue.Enqueue(std::move(packet));
-
-		_queue_event.Notify();
-
-		return true;
-	}
-
 	std::shared_ptr<ApplicationWorker::StreamData> ApplicationWorker::PopStreamData()
 	{
 		if (_stream_data_queue.IsEmpty())
@@ -85,22 +70,6 @@ namespace pub
 		}
 
 		auto data = _stream_data_queue.Dequeue(0);
-		if (data.has_value())
-		{
-			return data.value();
-		}
-
-		return nullptr;
-	}
-
-	std::shared_ptr<ApplicationWorker::IncomingPacket> ApplicationWorker::PopIncomingPacket()
-	{
-		if (_incoming_packet_queue.IsEmpty())
-		{
-			return nullptr;
-		}
-
-		auto data = _incoming_packet_queue.Dequeue(0);
 		if (data.has_value())
 		{
 			return data.value();
@@ -131,13 +100,6 @@ namespace pub
 				{
 					// Nothing can do
 				}
-			}
-
-			// Check incoming packet is available
-			std::shared_ptr<IncomingPacket> packet = PopIncomingPacket();
-			if (packet)
-			{
-				packet->_session->OnPacketReceived(packet->_session, packet->_data);
 			}
 		}
 	}
@@ -177,7 +139,7 @@ namespace pub
 		}
 		if (_application_worker_count > MAX_APPLICATION_WORKER_COUNT)
 		{
-			_application_worker_count = MIN_APPLICATION_WORKER_COUNT;
+			_application_worker_count = MAX_APPLICATION_WORKER_COUNT;
 		}
 
 		std::lock_guard<std::shared_mutex> worker_lock(_application_worker_lock);
@@ -344,19 +306,6 @@ namespace pub
 		}
 
 		return application_worker->PushMediaPacket(GetStream(stream->GetId()), media_packet);
-	}
-
-	bool Application::PushIncomingPacket(const std::shared_ptr<info::Session> &session_info,
-										 const std::shared_ptr<const ov::Data> &data)
-	{
-		auto stream_id = session_info->GetStream().GetId();
-		auto application_worker = GetWorkerByStreamID(stream_id);
-		if (application_worker == nullptr)
-		{
-			return false;
-		}
-
-		return application_worker->PushNetworkPacket(std::static_pointer_cast<Session>(session_info), data);
 	}
 
 	uint32_t Application::GetStreamCount()

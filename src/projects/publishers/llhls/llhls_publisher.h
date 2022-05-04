@@ -12,7 +12,9 @@
 #include "base/mediarouter/mediarouter_application_interface.h"
 #include "base/ovlibrary/url.h"
 #include "base/publisher/publisher.h"
+
 #include "llhls_application.h"
+#include "llhls_http_interceptor.h"
 
 class LLHlsPublisher : public pub::Publisher
 {
@@ -42,4 +44,7 @@ private:
 	bool OnDeleteHost(const info::Host &host_info) override;
 	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
 	bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) override;
+	std::shared_ptr<LLHlsHttpInterceptor> CreateInterceptor();
+
+	std::shared_ptr<http::svr::HttpsServer> _https_server;
 };

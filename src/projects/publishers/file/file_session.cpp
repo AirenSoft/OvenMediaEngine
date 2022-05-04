@@ -281,7 +281,7 @@ bool FileSession::StopRecord()
 	return true;
 }
 
-bool FileSession::SendOutgoingData(const std::any &packet)
+void FileSession::SendOutgoingData(const std::any &packet)
 {
 	std::lock_guard<std::shared_mutex> mlock(_lock);
 
@@ -292,14 +292,14 @@ bool FileSession::SendOutgoingData(const std::any &packet)
 		session_packet = std::any_cast<std::shared_ptr<MediaPacket>>(packet);
 		if (session_packet == nullptr)
 		{
-			return false;
+			return;
 		}
 	}
 	catch (const std::bad_any_cast &e)
 	{
 		logtd("An incorrect type of packet was input from the stream. (%s)", e.what());
 
-		return false;
+		return;
 	}
 
 	if (_writer != nullptr)
@@ -320,7 +320,7 @@ bool FileSession::SendOutgoingData(const std::any &packet)
 			_writer->Stop();
 			_writer = nullptr;
 
-			return false;
+			return;
 		}
 
 		GetRecord()->UpdateRecordTime();
@@ -359,14 +359,6 @@ bool FileSession::SendOutgoingData(const std::any &packet)
 	{
 		Split();
 	}
-
-	return true;
-}
-
-void FileSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
-								   const std::shared_ptr<const ov::Data> &data)
-{
-	// Not used
 }
 
 void FileSession::SetRecord(std::shared_ptr<info::Record> &record)

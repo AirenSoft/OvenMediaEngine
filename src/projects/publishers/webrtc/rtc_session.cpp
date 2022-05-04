@@ -213,26 +213,42 @@ const std::shared_ptr<http::svr::ws::WebSocketSession>& RtcSession::GetWSClient(
 	return _ws_session;
 }
 
-void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
-								const std::shared_ptr<const ov::Data> &data)
+void RtcSession::OnMessageReceived(const std::any &message)
 {
 	//It must not be called during start and stop.
 	std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
 
+	std::shared_ptr<const ov::Data> data = nullptr;
+	try 
+	{
+        data = std::any_cast<std::shared_ptr<const ov::Data>>(message);
+		if(data == nullptr)
+		{
+			return;
+		}
+    }
+    catch(const std::bad_any_cast& e) 
+	{
+        logtd("An incorrect type of packet was input from the stream.");
+		return;
+    }
+
 	_received_bytes += data->GetLength();
+
+	logtd("Received %u bytes", _received_bytes);
 
 	// RTP_RTCP -> SRTP -> DTLS -> Edge Node(RtcSession)
 	SendDataToPrevNode(data);
 }
 
-bool RtcSession::SendOutgoingData(const std::any &packet)
+void RtcSession::SendOutgoingData(const std::any &packet)
 {
 	//It must not be called during start and stop.
 	std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
 
 	if(pub::Session::GetState() != SessionState::Started)
 	{
-		return false;
+		return;
 	}
 
 	// Check expired time
@@ -240,7 +256,7 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 	{
 		_publisher->DisconnectSession(pub::Session::GetSharedPtrAs<RtcSession>());
 		SetState(SessionState::Stopping);
-		return false;
+		return;
 	}
 
 	std::shared_ptr<RtpPacket> session_packet;
@@ -250,13 +266,13 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
         session_packet = std::any_cast<std::shared_ptr<RtpPacket>>(packet);
 		if(session_packet == nullptr)
 		{
-			return false;
+			return;
 		}
     }
     catch(const std::bad_any_cast& e) 
 	{
         logtd("An incorrect type of packet was input from the stream.");
-		return false;
+		return;
     }
 
 	// Check if this session wants the packet
@@ -277,7 +293,7 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 
 	if(rtp_payload_type != _video_payload_type && rtp_payload_type != _audio_payload_type)
 	{
-		return false;
+		return;
 	}
 
 	if(rtp_payload_type == static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE))
@@ -285,7 +301,7 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 		// When red_block_pt is ULPFEC_PAYLOAD_TYPE, origin_pt_of_fec is origin media payload type.
 		if(red_block_pt != _red_block_pt && origin_pt_of_fec != _red_block_pt)
 		{
-			return false;
+			return;
 		}
 	}
 
@@ -295,7 +311,7 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 	MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::Webrtc, copy_packet->GetData()->GetLength());
 
 	// rtp_rtcp -> srtp -> dtls -> Edge Node(RtcSession)
-	return _rtp_rtcp->SendRtpPacket(copy_packet);
+	_rtp_rtcp->SendRtpPacket(copy_packet);
 }
 
 void RtcSession::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
@@ -323,7 +339,7 @@ void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 		}
 	}
 
-	//rtcp_info->DebugPrint();
+	rtcp_info->DebugPrint();
 }
 
 

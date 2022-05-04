@@ -20,10 +20,7 @@ public:
 	bool Start() override;
 	bool Stop() override;
 
-	bool SendOutgoingData(const std::any &packet) override;
-	void OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
-						const std::shared_ptr<const ov::Data> &data) override;
-
+	void SendOutgoingData(const std::any &packet) override;
 	
 	void SetPush(std::shared_ptr<info::Push> &record);
 	std::shared_ptr<info::Push>& GetPush();

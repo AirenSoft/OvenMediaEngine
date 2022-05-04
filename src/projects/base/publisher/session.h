@@ -27,8 +27,8 @@ namespace pub
 		virtual bool Start();
 		virtual bool Stop();
 		
-		virtual bool SendOutgoingData(const std::any &packet) = 0;
-		virtual void OnPacketReceived(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data) = 0;
+		virtual void SendOutgoingData(const std::any &packet){};
+		virtual void OnMessageReceived(const std::any &message){};
 
 		enum class SessionState : int8_t
 		{
