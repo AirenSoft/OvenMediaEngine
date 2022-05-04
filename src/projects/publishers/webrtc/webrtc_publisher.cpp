@@ -775,6 +775,6 @@ void WebRtcPublisher::OnDataReceived(IcePort &port,uint32_t session_id, std::sha
 
 	logtd("WebRtcPublisher::OnDataReceived : %d", session_id);
 
-	auto application = session->GetApplication();
-	application->PushIncomingPacket(session, data);
+	auto stream = session->GetStream();
+	stream->SendMessage(session, std::make_any<std::shared_ptr<const ov::Data>>(data));
 }

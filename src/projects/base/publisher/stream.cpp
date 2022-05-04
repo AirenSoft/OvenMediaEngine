@@ -62,7 +62,7 @@ namespace pub
 		return true;
 	}
 
-	bool StreamWorker::AddSession(std::shared_ptr<Session> session)
+	bool StreamWorker::AddSession(const std::shared_ptr<Session> &session)
 	{
 		// Cannot add session after StreamWorker is stopped
 		if (_stop_thread_flag)
@@ -118,6 +118,13 @@ namespace pub
 		_queue_event.Notify();
 	}
 
+	// Send to a specific session
+	void StreamWorker::SendMessage(const std::shared_ptr<Session> &session, const std::any &message)
+	{
+		_session_message_queue.Enqueue(std::make_shared<SessionMessage>(session, message));
+		_queue_event.Notify();
+	}
+
 	std::any StreamWorker::PopStreamPacket()
 	{
 		if (_packet_queue.IsEmpty())
@@ -134,6 +141,22 @@ namespace pub
 		return nullptr;
 	}
 
+	std::shared_ptr<StreamWorker::SessionMessage> StreamWorker::PopSessionMessage()
+	{
+		if (_session_message_queue.IsEmpty())
+		{
+			return nullptr;
+		}
+
+		auto data = _session_message_queue.Dequeue();
+		if(data.has_value())
+		{
+			return data.value();
+		}
+
+		return nullptr;
+	}
+
 	void StreamWorker::WorkerThread()
 	{
 		std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex, std::defer_lock);
@@ -142,19 +165,23 @@ namespace pub
 		{
 			_queue_event.Wait();
 
+			auto session_message = PopSessionMessage();
+			if (session_message != nullptr && session_message->_session != nullptr && session_message->_message.has_value())
+			{
+				session_message->_session->OnMessageReceived(session_message->_message);
+			}
+
 			auto packet = PopStreamPacket();
-			if (!packet.has_value())
-			{
-				continue;
+			if (packet.has_value())
+			{		
+				session_lock.lock();
+				for (auto const &x : _sessions)
+				{
+					auto session = std::static_pointer_cast<Session>(x.second);
+					session->SendOutgoingData(packet);
+				}
+				session_lock.unlock();
 			}
-			
-			session_lock.lock();
-			for (auto const &x : _sessions)
-			{
-				auto session = std::static_pointer_cast<Session>(x.second);
-				session->SendOutgoingData(packet);
-			}
-			session_lock.unlock();
 		}
 	}
 
@@ -370,6 +397,20 @@ namespace pub
 			}
 		}
 	
+		return true;
+	}
+
+	bool Stream::SendMessage(const std::shared_ptr<Session> &session, const std::any &message)
+	{
+		if(_worker_count > 0)
+		{
+			GetWorkerBySessionID(session->GetId())->SendMessage(session, message);
+		}
+		else
+		{
+			session->OnMessageReceived(message);
+		}
+
 		return true;
 	}
 

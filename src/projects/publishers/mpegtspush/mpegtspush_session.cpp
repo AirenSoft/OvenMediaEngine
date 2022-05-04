@@ -131,7 +131,7 @@ bool MpegtsPushSession::Stop()
 	return Session::Stop();
 }
 
-bool MpegtsPushSession::SendOutgoingData(const std::any &packet)
+void MpegtsPushSession::SendOutgoingData(const std::any &packet)
 {
 	std::shared_ptr<MediaPacket> session_packet;
 
@@ -140,14 +140,14 @@ bool MpegtsPushSession::SendOutgoingData(const std::any &packet)
         session_packet = std::any_cast<std::shared_ptr<MediaPacket>>(packet);
 		if(session_packet == nullptr)
 		{
-			return false;
+			return;
 		}
     }
     catch(const std::bad_any_cast& e) 
 	{
         logtd("An incorrect type of packet was input from the stream. (%s)", e.what());
 
-		return false;
+		return;
     }
 
 	std::lock_guard<std::shared_mutex> lock(_mutex);
@@ -172,20 +172,12 @@ bool MpegtsPushSession::SendOutgoingData(const std::any &packet)
 			_writer->Stop();
 			_writer = nullptr;
 
-			return false;
+			return;
 		} 
 
 		GetPush()->UpdatePushTime();
 		GetPush()->IncreasePushBytes(session_packet->GetData()->GetLength());		
     }    
-
-	return true;
-}
-
-void MpegtsPushSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
-									const std::shared_ptr<const ov::Data> &data)
-{
-	// Not used
 }
 
 void MpegtsPushSession::SetPush(std::shared_ptr<info::Push> &push)

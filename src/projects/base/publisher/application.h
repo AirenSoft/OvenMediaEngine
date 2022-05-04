@@ -35,7 +35,6 @@ namespace pub
 		bool Start();
 		bool Stop();
 		bool PushMediaPacket(const std::shared_ptr<Stream> &stream, const std::shared_ptr<MediaPacket> &media_packet);
-		bool PushNetworkPacket(const std::shared_ptr<Session> &session, const std::shared_ptr<const ov::Data> &data);
 
 	private:
 		void WorkerThread();
@@ -58,27 +57,11 @@ namespace pub
 		};
 		std::shared_ptr<ApplicationWorker::StreamData> PopStreamData();
 
-		class IncomingPacket
-		{
-		public:
-			IncomingPacket(const std::shared_ptr<Session> &session,
-						   const std::shared_ptr<const ov::Data> &data)
-			{
-				_session = session;
-				_data = data;
-			}
-
-			std::shared_ptr<Session> _session;
-			std::shared_ptr<const ov::Data> _data;
-		};
-		std::shared_ptr<ApplicationWorker::IncomingPacket> PopIncomingPacket();
-
 		bool _stop_thread_flag;
 		std::thread _worker_thread;
 		ov::Semaphore _queue_event;
 
 		ov::Queue<std::shared_ptr<StreamData>> _stream_data_queue;
-		ov::Queue<std::shared_ptr<IncomingPacket>> _incoming_packet_queue;
 
 		int64_t	_last_video_ts_ms = 0;
 		int64_t	_last_audio_ts_ms = 0;
@@ -98,10 +81,6 @@ namespace pub
 		// Put data in ApplicationWorker's queue.
 		bool OnSendFrame(const std::shared_ptr<info::Stream> &stream,
 							  const std::shared_ptr<MediaPacket> &media_packet) override;
-
-		// Put packet in ApplicationWorker's queue.
-		bool PushIncomingPacket(const std::shared_ptr<info::Session> &session_info,
-								const std::shared_ptr<const ov::Data> &data);
 
 		uint32_t GetStreamCount();
 		std::shared_ptr<Stream> GetStream(uint32_t stream_id);

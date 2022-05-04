@@ -49,7 +49,7 @@ bool OvtSession::Stop()
 	return Session::Stop();
 }
 
-bool OvtSession::SendOutgoingData(const std::any &packet)
+void OvtSession::SendOutgoingData(const std::any &packet)
 {
 	std::shared_ptr<OvtPacket> session_packet;
 
@@ -58,13 +58,13 @@ bool OvtSession::SendOutgoingData(const std::any &packet)
         session_packet = std::any_cast<std::shared_ptr<OvtPacket>>(packet);
 		if(session_packet == nullptr)
 		{
-			return false;
+			return;
 		}
     }
     catch(const std::bad_any_cast& e) 
 	{
         logtd("An incorrect type of packet was input from the stream. (%s)", e.what());
-		return false;
+		return;
     }
 
 	// OvtSession should send full packet so it will start to send from next packet of marker packet.
@@ -75,18 +75,14 @@ bool OvtSession::SendOutgoingData(const std::any &packet)
 			_sent_ready = true;
 		}
 
-		return false;
+		return;
 	}
 
 	// Set OVT Session ID into packet
 	auto copy_packet = std::make_shared<OvtPacket>(*session_packet);
 	copy_packet->SetSessionId(GetId());
 
-	
-
 	_connector->Send(copy_packet->GetData());
-
-	return true;
 }
 
 const std::shared_ptr<ov::Socket> OvtSession::GetConnector()
@@ -94,8 +90,7 @@ const std::shared_ptr<ov::Socket> OvtSession::GetConnector()
 	return _connector;
 }
 
-void OvtSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
-									const std::shared_ptr<const ov::Data> &data)
+void OvtSession::OnMessageReceived(const std::any &message)
 {
 	// NOTHING YET
 }

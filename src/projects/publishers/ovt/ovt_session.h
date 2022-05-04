@@ -21,10 +21,8 @@ public:
 	bool Start() override;
 	bool Stop() override;
 
-	bool SendOutgoingData(const std::any &packet) override;
-	void OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
-						const std::shared_ptr<const ov::Data> &data) override;
-
+	void SendOutgoingData(const std::any &packet) override;
+	void OnMessageReceived(const std::any &message) override;
 
 	const std::shared_ptr<ov::Socket> GetConnector();
 
