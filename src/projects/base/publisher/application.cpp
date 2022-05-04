@@ -177,7 +177,7 @@ namespace pub
 		}
 		if (_application_worker_count > MAX_APPLICATION_WORKER_COUNT)
 		{
-			_application_worker_count = MIN_APPLICATION_WORKER_COUNT;
+			_application_worker_count = MAX_APPLICATION_WORKER_COUNT;
 		}
 
 		std::lock_guard<std::shared_mutex> worker_lock(_application_worker_lock);
