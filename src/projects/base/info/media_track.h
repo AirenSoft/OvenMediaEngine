@@ -21,6 +21,10 @@ public:
 	void SetId(uint32_t id);
 	uint32_t GetId() const;
 
+	// Track Name (used for variant playlist)
+	void SetName(const ov::String &name);
+	ov::String GetName() const;
+
 	// Video Type Settings
 	void SetMediaType(cmn::MediaType type);
 	cmn::MediaType GetMediaType() const;
@@ -68,7 +72,9 @@ public:
 
 private:
 	bool _is_valid = false;
+
 	uint32_t _id;
+	ov::String _name;
 
 	cmn::MediaCodecId _codec_id;
 	cmn::BitstreamFormat _origin_bitstream_format = cmn::BitstreamFormat::Unknown;

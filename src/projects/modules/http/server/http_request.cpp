@@ -79,6 +79,7 @@ namespace http
 			}
 
 			_request_uri = ov::String::FormatString("%s%s://%s%s", scheme.CStr(), (_tls_data != nullptr) ? "s" : "", host.CStr(), GetRequestTarget().CStr());
+			_parsed_uri = ov::Url::Parse(_request_uri);
 		}
 
 		ov::String HttpRequest::ToString() const

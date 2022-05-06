@@ -41,6 +41,12 @@ namespace http
 				return _request_uri;
 			}
 
+			// Get parsed URI
+			const std::shared_ptr<ov::Url> &GetParsedUri() const noexcept
+			{
+				return _parsed_uri;
+			}
+
 			std::shared_ptr<const ov::Data> GetRequestBody() const
 			{
 				return _request_body;
@@ -114,6 +120,7 @@ namespace http
 
 			ov::MatchResult _match_result;
 			ov::String _request_uri;
+			std::shared_ptr<ov::Url> _parsed_uri;
 
 		private:
 			// HTTP body

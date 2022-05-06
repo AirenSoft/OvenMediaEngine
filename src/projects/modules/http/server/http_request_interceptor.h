@@ -21,6 +21,7 @@ namespace http
 	{
 		class HttpRequest;
 		class HttpConnection;
+		class HttpExchange;
 		class RequestInterceptor
 		{
 		public:

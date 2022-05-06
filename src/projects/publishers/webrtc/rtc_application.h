@@ -1,3 +1,11 @@
+//==============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by Getroot
+//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//
+//==============================================================================
 #pragma once
 
 #include <base/common_types.h>

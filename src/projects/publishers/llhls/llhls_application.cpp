@@ -44,7 +44,7 @@ std::shared_ptr<pub::Stream> LLHlsApplication::CreateStream(const std::shared_pt
 {
 	logtd("Created stream : %s/%u", info->GetName().CStr(), info->GetId());
 
-	return LLHlsStream::Create(GetSharedPtrAs<pub::Application>(), *info);
+	return LLHlsStream::Create(GetSharedPtrAs<pub::Application>(), *info, worker_count);
 }
 
 bool LLHlsApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)

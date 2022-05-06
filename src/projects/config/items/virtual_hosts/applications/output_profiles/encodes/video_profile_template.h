@@ -69,8 +69,7 @@ namespace cfg
 							// <Codec> is an option when _bypass is true
 							return (_bypass) ? nullptr : CreateConfigErrorPtr("Codec must be specified when bypass is false");
 						});
-						Register<Optional>(
-							"Bitrate", &_bitrate_string,
+						Register<Optional>("Bitrate", &_bitrate_string,	
 							[=]() -> std::shared_ptr<ConfigError> {
 								// <Bitrate> is an option when _bypass is true
 								return (_bypass) ? nullptr : CreateConfigErrorPtr("Bitrate must be specified when bypass is false");
@@ -100,6 +99,6 @@ namespace cfg
 					}
 				};
 			}  // namespace oprf
-		}	   // namespace app
-	}		   // namespace vhost
+		} // namespace app
+	} // namespace vhost
 }  // namespace cfg

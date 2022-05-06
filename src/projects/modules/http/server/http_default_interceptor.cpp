@@ -124,10 +124,15 @@ namespace http
 						handler_count++;
 
 						request->SetMatchResult(matches);
-
-						if (request_info.handler(exchange) == NextHandler::DoNotCall)
+						
+						auto request_result = request_info.handler(exchange);
+						if (request_result == NextHandler::DoNotCall)
 						{
 							break;
+						}
+						else if (request_result == NextHandler::DoNotCallAndDoNotResponse)
+						{
+							return InterceptorResult::Moved;
 						}
 
 						// Call the next handler

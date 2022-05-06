@@ -1,3 +1,11 @@
+//==============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by Getroot
+//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//
+//==============================================================================
 #include <utility>
 
 #include "rtc_private.h"

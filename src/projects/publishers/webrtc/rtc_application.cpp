@@ -1,3 +1,11 @@
+//==============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by Getroot
+//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//
+//==============================================================================
 #include "rtc_application.h"
 
 #include "modules/ice/ice_port_manager.h"

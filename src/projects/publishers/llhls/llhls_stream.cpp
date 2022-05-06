@@ -13,14 +13,14 @@
 #include "llhls_stream.h"
 #include "llhls_private.h"
 
-std::shared_ptr<LLHlsStream> LLHlsStream::Create(const std::shared_ptr<pub::Application> application, const info::Stream &info)
+std::shared_ptr<LLHlsStream> LLHlsStream::Create(const std::shared_ptr<pub::Application> application, const info::Stream &info, uint32_t worker_count)
 {
-	auto stream = std::make_shared<LLHlsStream>(application, info);
+	auto stream = std::make_shared<LLHlsStream>(application, info, worker_count);
 	return stream;
 }
 
-LLHlsStream::LLHlsStream(const std::shared_ptr<pub::Application> application, const info::Stream &info)
-	: Stream(application, info)
+LLHlsStream::LLHlsStream(const std::shared_ptr<pub::Application> application, const info::Stream &info, uint32_t worker_count)
+	: Stream(application, info), _worker_count(worker_count)
 {
 }
 
@@ -36,11 +36,19 @@ bool LLHlsStream::Start()
 		return false;
 	}
 
+	if (CreateStreamWorker(_worker_count) == false)
+	{
+		return false;
+	}
+
 	logtd("LLHlsStream(%ld) has been started", GetId());
 	
 	_packager_config.chunk_duration_ms = 1000;
 	_storage_config.max_segments = 10;
 	_storage_config.segment_duration_ms = 5000;
+
+	//TODO(Getroot): It will be replaced with ABR config
+	std::shared_ptr<MediaTrack> first_video_track = nullptr, first_audio_track = nullptr;
 
 	for (const auto &[id, track] : _tracks)
 	{
@@ -52,6 +60,18 @@ bool LLHlsStream::Start()
 				logte("LLHlsStream(%s/%s) - Failed to add packager for track(%ld)", GetApplication()->GetName().CStr(), GetName().CStr(), track->GetId());
 				return false;
 			}
+
+			// Add EXT-X-MEDIA
+			AddMediaCandidateToMasterPlaylist(track);
+
+			if ( first_video_track == nullptr && track->GetMediaType() == cmn::MediaType::Video )
+			{
+				first_video_track = track;
+			}
+			else if ( first_audio_track == nullptr && track->GetMediaType() == cmn::MediaType::Audio )
+			{
+				first_audio_track = track;
+			}
 		}
 		else 
 		{
@@ -59,6 +79,11 @@ bool LLHlsStream::Start()
 			continue;
 		}
 	}
+
+	//TODO(Getroot): It will be replaced with ABR config
+	AddStreamInfToMasterPlaylist(first_video_track, first_audio_track);
+
+	logti("Master Playlist : %s", _master_playlist.ToString().CStr());
 
 	return Stream::Start();
 }
@@ -146,13 +171,15 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &track)
 		return false;
 	}
 	
-	// lock
-	std::lock_guard<std::shared_mutex> storage_lock(_storage_map_lock);
-	std::lock_guard<std::shared_mutex> packager_lock(_packager_map_lock);
+	{
+		std::lock_guard<std::shared_mutex> storage_lock(_storage_map_lock);
+		_storage_map.emplace(track->GetId(), storage);
+	}
 
-	// Add to map
-	_storage_map.emplace(track->GetId(), storage);
-	_packager_map.emplace(track->GetId(), packager);
+	{
+		std::lock_guard<std::shared_mutex> packager_lock(_packager_map_lock);
+		_packager_map.emplace(track->GetId(), packager);
+	}
 
 	return true;
 }
@@ -246,91 +273,6 @@ ov::String LLHlsStream::GetNextPartialSegmentName(const int32_t &track_id, const
 									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr());
 }
 
-bool LLHlsStream::ParseFileName(const ov::String &file_name, FileType &type, int32_t &track_id, int64_t &segment_number, int64_t &partial_number)
-{
-	// Split the querystring if it has a '?'
-	auto name_query_items = file_name.Split("?");
-	
-	// Split to filename.ext
-	auto name_ext_items = name_query_items[0].Split(".");
-	if (name_ext_items.size() != 2 || name_ext_items[1] != "m4s" || name_ext_items[1] != "m3u8")
-	{
-		logtw("Invalid file name requested: %s", file_name.CStr());
-		return false;
-	}
-
-	// Split to <file type>_<track id>_<segment number>_<partial number>
-	auto name_items = name_ext_items[0].Split("_");
-	if (name_items[0] == "llhls")
-	{
-		if (name_ext_items[1] != "m3u8")
-		{
-			logtw("Invalid file name requested: %s", file_name.CStr());
-			return false;
-		}
-
-		type = FileType::Playlist;
-	}
-	else if (name_items[0] == "chunklist")
-	{
-		// chunklist_<track id>_<media type>_llhls.m3u8
-		if (name_items.size() != 4 || name_ext_items[1] != "m3u8")
-		{
-			logtw("Invalid chunklist file name requested: %s", file_name.CStr());
-			return false;
-		}
-
-		type = FileType::Chunklist;
-		track_id = ov::Converter::ToInt32(name_items[1].CStr());
-	}
-	else if (name_items[0] == "init")
-	{
-		// init_<track id>_<media type>
-		if (name_items.size() != 3 || name_ext_items[1] != "m4s")
-		{
-			logtw("Invalid file name requested: %s", file_name.CStr());
-			return false;
-		}
-
-		type = FileType::InitializationSegment;
-		track_id = ov::Converter::ToInt32(name_items[1].CStr());
-	}
-	else if (name_items[0] == "seg" || name_ext_items[1] != "m4s")
-	{
-		// seg_<track id>_<segment number>_<media type>
-		if (name_items.size() != 4)
-		{
-			logtw("Invalid file name requested: %s", file_name.CStr());
-			return false;
-		}
-
-		type = FileType::Segment;
-		track_id = ov::Converter::ToInt32(name_items[1].CStr());
-		segment_number = ov::Converter::ToInt64(name_items[2].CStr());
-	}
-	else if (name_items[0] == "part" || name_ext_items[1] != "m4s")
-	{
-		// part_<track id>_<segment number>_<partial number>_<media type>
-		if (name_items.size() != 5)
-		{
-			logtw("Invalid file name requested: %s", file_name.CStr());
-			return false;
-		}
-
-		type = FileType::PartialSegment;
-		track_id = ov::Converter::ToInt32(name_items[1].CStr());
-		segment_number = ov::Converter::ToInt64(name_items[2].CStr());
-		partial_number = ov::Converter::ToInt64(name_items[3].CStr());
-	}
-	else
-	{
-		logtw("Invalid file name requested: %s", file_name.CStr());
-		return false;
-	}
-
-	return true;
-}
-
 void LLHlsStream::OnFMp4StorageInitialized(const int32_t &track_id)
 {
 	// milliseconds to seconds
@@ -368,10 +310,10 @@ void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t 
 
 	playlist->AppendSegmentInfo(segment_info);
 
-	logti("Media segment updated : track_id = %d, segment_number = %d, start_timestamp = %llu, segment_duration = %f", track_id, segment_number, segment->GetStartTimestamp(), segment_duration);
+	logtd("Media segment updated : track_id = %d, segment_number = %d, start_timestamp = %llu, segment_duration = %f", track_id, segment_number, segment->GetStartTimestamp(), segment_duration);
 	
 	// Output playlist
-	logti("[Playlist]\n%s", playlist->ToString().CStr());
+	logtd("[Playlist]\n%s", playlist->ToString().CStr());
 }
 
 void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number)
@@ -396,8 +338,46 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 
 	playlist->AppendPartialSegmentInfo(segment_number, chunk_info);
 
-	logti("Media chunk updated : track_id = %d, segment_number = %d, chunk_number = %d, start_timestamp = %llu, chunk_duration = %f", track_id, segment_number, chunk_number, chunk->GetStartTimestamp(), chunk_duration);
+	logtd("Media chunk updated : track_id = %d, segment_number = %d, chunk_number = %d, start_timestamp = %llu, chunk_duration = %f", track_id, segment_number, chunk_number, chunk->GetStartTimestamp(), chunk_duration);
 
 	// Output playlist
-	logti("[Playlist]\n%s", playlist->ToString().CStr());
+	logtd("[Playlist]\n%s", playlist->ToString().CStr());
+}
+
+// Add X-MEDIA to the master playlist
+void LLHlsStream::AddMediaCandidateToMasterPlaylist(const std::shared_ptr<const MediaTrack> &track)
+{
+	LLHlsMasterPlaylist::MediaInfo media_info;
+
+	media_info._type = track->GetMediaType()==cmn::MediaType::Video ? LLHlsMasterPlaylist::MediaInfo::Type::Video : LLHlsMasterPlaylist::MediaInfo::Type::Audio;
+	media_info._group_id = ov::Converter::ToString(track->GetId()); // Currently there is only one element per group.
+	media_info._name = "none";
+	media_info._default = true; // There is no group media so all track is default
+	media_info._uri = GetChunklistName(track->GetId());
+	media_info._track = track;
+
+	_master_playlist.AddGroupMedia(media_info);
+}
+
+// Add X-STREAM-INF to the master playlist
+void LLHlsStream::AddStreamInfToMasterPlaylist(const std::shared_ptr<const MediaTrack> &video_track, const std::shared_ptr<const MediaTrack> &audio_track)
+{
+	LLHlsMasterPlaylist::StreamInfo stream_info;
+	if (video_track != nullptr)
+	{
+		stream_info._track = video_track;
+		stream_info._uri = GetChunklistName(video_track->GetId());
+		
+		if (audio_track != nullptr)
+		{
+			stream_info._audio_group_id = ov::Converter::ToString(audio_track->GetId());
+		}
+	}
+	else
+	{
+		stream_info._track = audio_track;
+		stream_info._uri = GetChunklistName(audio_track->GetId());
+	}
+
+	_master_playlist.AddStreamInfo(stream_info);
 }
