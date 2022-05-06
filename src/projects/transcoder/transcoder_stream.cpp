@@ -320,16 +320,30 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 
 	output_track->SetMediaType(cmn::MediaType::Video);
 	output_track->SetId(NewTrackId(output_track->GetMediaType()));
+	output_track->SetName(profile.GetName());
 
 	if (profile.IsBypass() == true)
 	{
 		output_track->SetBypass(true);
 		output_track->SetCodecId(input_track->GetCodecId());
-		output_track->SetBitrate(input_track->GetBitrate());
 		output_track->SetWidth(input_track->GetWidth());
 		output_track->SetHeight(input_track->GetHeight());
 		output_track->SetFrameRate(input_track->GetFrameRate());
 		output_track->SetTimeBase(input_track->GetTimeBase());
+
+		bool is_parsed;
+		profile.GetBitrateString(&is_parsed);
+		if (is_parsed == true)
+		{
+			// If bitrates information is not provided in the input stream or if it is ABR, 
+			// the user can input information manually and use it. 
+			// Bitrates information is essential in ABR.
+			output_track->SetBitrate(profile.GetBitrate());
+		}
+		else
+		{
+			output_track->SetBitrate(input_track->GetBitrate());
+		}
 	}
 	else
 	{
@@ -385,12 +399,12 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 
 	output_track->SetMediaType(cmn::MediaType::Audio);
 	output_track->SetId(NewTrackId(output_track->GetMediaType()));
+	output_track->SetName(profile.GetName());
 
 	if (profile.IsBypass() == true)
 	{
 		output_track->SetBypass(true);
 		output_track->SetCodecId(input_track->GetCodecId());
-		output_track->SetBitrate(input_track->GetBitrate());
 		output_track->SetChannel(input_track->GetChannel());
 		output_track->GetSample().SetFormat(input_track->GetSample().GetFormat());
 		output_track->SetTimeBase(input_track->GetTimeBase());
@@ -400,6 +414,20 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 		{
 			logtw("OPUS codec only supports 48000Hz samplerate. Do not create bypass track");
 			return nullptr;
+		}
+
+		bool is_parsed;
+		profile.GetBitrateString(&is_parsed);
+		if (is_parsed == true)
+		{
+			// If bitrates information is not provided in the input stream or if it is ABR, 
+			// the user can input information manually and use it. 
+			// Bitrates information is essential in ABR.
+			output_track->SetBitrate(profile.GetBitrate());
+		}
+		else
+		{
+			output_track->SetBitrate(input_track->GetBitrate());
 		}
 	}
 	else

@@ -30,4 +30,20 @@ public:
 
 private:
 
+	enum class FileType : uint8_t
+	{
+		Playlist,
+		Chunklist,
+		InitializationSegment,
+		Segment,
+		PartialSegment,
+	};
+
+	bool ParseFileName(const ov::String &file_name, FileType &type, int32_t &track_id, int64_t &segment_number, int64_t &partial_number);
+
+	void ResponsePlaylist();
+	void ResponseChunklist();
+	void ResponseInitializationSegment();
+	void ResponseSegment();
+	void ResponsePartialSegment();
 };

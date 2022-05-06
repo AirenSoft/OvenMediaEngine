@@ -97,11 +97,21 @@ bool LLHlsPublisher::Stop()
 
 bool LLHlsPublisher::OnCreateHost(const info::Host &host_info)
 {
+	if (_https_server != nullptr && host_info.GetCertificate() != nullptr)
+	{
+		return _https_server->AppendCertificate(host_info.GetCertificate()) == nullptr;
+	}
+
 	return true;
 }
 
 bool LLHlsPublisher::OnDeleteHost(const info::Host &host_info)
 {
+	if (_https_server != nullptr && host_info.GetCertificate() != nullptr)
+	{
+		return _https_server->RemoveCertificate(host_info.GetCertificate()) == nullptr;
+	}
+
 	return true;
 }
 
@@ -138,7 +148,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 
 		logtd("LLHLS requested: %s", request->GetUri().CStr());
 
-		auto request_url = ov::Url::Parse(request->GetUri());
+		auto request_url = request->GetParsedUri();
 		if (request_url == nullptr)
 		{
 			logte("Could not parse request url: %s", request->GetUri().CStr());

@@ -13,6 +13,7 @@
 #include "monitoring/monitoring.h"
 
 #include "modules/containers/bmff/fmp4_packager/fmp4_packager.h"
+#include "llhls_master_playlist.h"
 #include "llhls_playlist.h"
 
 class LLHlsStream : public pub::Stream, public bmff::FMp4StorageObserver
@@ -46,24 +47,17 @@ private:
 	// Get Playlist with the track id
 	std::shared_ptr<LLHlsPlaylist> GetPlaylist(const int32_t &track_id);
 
+	// Add X-MEDIA to the master playlist
+	void AddMediaCandidateToMasterPlaylist(const std::shared_ptr<const MediaTrack> &track);
+	// Add X-STREAM-INF to the master playlist
+	void AddStreamInfToMasterPlaylist(const std::shared_ptr<const MediaTrack> &video_track, const std::shared_ptr<const MediaTrack> &audio_track);
+
 	ov::String GetPlaylistName();
 	ov::String GetChunklistName(const int32_t &track_id);
-
 	ov::String GetIntializationSegmentName(const int32_t &track_id);
 	ov::String GetSegmentName(const int32_t &track_id, const int64_t &segment_number);
 	ov::String GetPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number);
 	ov::String GetNextPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number);
-
-	enum class FileType : uint8_t
-	{
-		Playlist,
-		Chunklist,
-		InitializationSegment,
-		Segment,
-		PartialSegment,
-	};
-
-	bool ParseFileName(const ov::String &file_name, FileType &type, int32_t &track_id, int64_t &segment_number, int64_t &partial_number);
 
 	bool AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_packet);
 
@@ -78,6 +72,8 @@ private:
 	std::shared_mutex _packager_map_lock;
 	std::map<int32_t, std::shared_ptr<LLHlsPlaylist>> _playlist_map;
 	std::shared_mutex _playlist_map_lock;
+
+	LLHlsMasterPlaylist _master_playlist;
 
 	uint32_t _worker_count = 0;
 };
