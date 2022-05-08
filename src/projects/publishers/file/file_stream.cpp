@@ -7,106 +7,109 @@
 #include "file_application.h"
 #include "file_private.h"
 
-std::shared_ptr<FileStream> FileStream::Create(const std::shared_ptr<pub::Application> application,
-											   const info::Stream &info)
+namespace pub
 {
-	auto stream = std::make_shared<FileStream>(application, info);
-	return stream;
-}
-
-FileStream::FileStream(const std::shared_ptr<pub::Application> application,
-					   const info::Stream &info)
-	: Stream(application, info)
-{
-}
-
-FileStream::~FileStream()
-{
-	logtd("FileStream(%s/%s) has been terminated finally",
-		  GetApplicationName(), GetName().CStr());
-}
-
-bool FileStream::Start()
-{
-	if (GetState() != Stream::State::CREATED)
+	std::shared_ptr<FileStream> FileStream::Create(const std::shared_ptr<pub::Application> application,
+												   const info::Stream &info)
 	{
-		return false;
+		auto stream = std::make_shared<FileStream>(application, info);
+		return stream;
 	}
 
-	logtd("FileStream(%ld) has been started", GetId());
-
-	if (!CreateStreamWorker(2))
+	FileStream::FileStream(const std::shared_ptr<pub::Application> application,
+						   const info::Stream &info)
+		: Stream(application, info)
 	{
-		return false;
 	}
 
-	std::static_pointer_cast<FileApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<FileStream>(GetSharedPtr()), false);
-
-	return Stream::Start();
-}
-
-bool FileStream::Stop()
-{
-	if (GetState() != Stream::State::STARTED)
+	FileStream::~FileStream()
 	{
-		return false;
+		logtd("FileStream(%s/%s) has been terminated finally",
+			  GetApplicationName(), GetName().CStr());
 	}
 
-	logtd("FileStream(%u) has been stopped", GetId());
-
-	std::static_pointer_cast<FileApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<FileStream>(GetSharedPtr()), true);
-
-	return Stream::Stop();
-}
-
-void FileStream::SendFrame(const std::shared_ptr<MediaPacket> &media_packet)
-{
-	// Periodically check the session. Retry the session in which the error occurred.
-	if (_stop_watch.IsElapsed(5000) && _stop_watch.Update())
+	bool FileStream::Start()
 	{
+		if (GetState() != Stream::State::CREATED)
+		{
+			return false;
+		}
+
+		logtd("FileStream(%ld) has been started", GetId());
+
+		if (!CreateStreamWorker(2))
+		{
+			return false;
+		}
+
 		std::static_pointer_cast<FileApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<FileStream>(GetSharedPtr()), false);
+
+		return Stream::Start();
 	}
 
-	auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
-
-	BroadcastPacket(stream_packet);
-}
-
-void FileStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
-{
-	if (GetState() != Stream::State::STARTED)
+	bool FileStream::Stop()
 	{
-		return;
+		if (GetState() != Stream::State::STARTED)
+		{
+			return false;
+		}
+
+		logtd("FileStream(%u) has been stopped", GetId());
+
+		std::static_pointer_cast<FileApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<FileStream>(GetSharedPtr()), true);
+
+		return Stream::Stop();
 	}
 
-	SendFrame(media_packet);
-}
-
-void FileStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
-{
-	if (GetState() != Stream::State::STARTED)
+	void FileStream::SendFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	{
-		return;
-	}
-	
-	SendFrame(media_packet);
-}
+		// Periodically check the session. Retry the session in which the error occurred.
+		if (_stop_watch.IsElapsed(5000) && _stop_watch.Update())
+		{
+			std::static_pointer_cast<FileApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<FileStream>(GetSharedPtr()), false);
+		}
 
-std::shared_ptr<FileSession> FileStream::CreateSession()
-{
-	auto session = FileSession::Create(GetApplication(), GetSharedPtrAs<pub::Stream>(), this->IssueUniqueSessionId());
-	if (session == nullptr)
+		auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
+
+		BroadcastPacket(stream_packet);
+	}
+
+	void FileStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	{
-		logte("Internal Error : Cannot create session");
-		return nullptr;
+		if (GetState() != Stream::State::STARTED)
+		{
+			return;
+		}
+
+		SendFrame(media_packet);
 	}
 
-	AddSession(session);
+	void FileStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
+	{
+		if (GetState() != Stream::State::STARTED)
+		{
+			return;
+		}
 
-	return session;
-}
+		SendFrame(media_packet);
+	}
 
-bool FileStream::DeleteSession(uint32_t session_id)
-{
-	return RemoveSession(session_id);
-}
+	std::shared_ptr<FileSession> FileStream::CreateSession()
+	{
+		auto session = FileSession::Create(GetApplication(), GetSharedPtrAs<pub::Stream>(), this->IssueUniqueSessionId());
+		if (session == nullptr)
+		{
+			logte("Internal Error : Cannot create session");
+			return nullptr;
+		}
+
+		AddSession(session);
+
+		return session;
+	}
+
+	bool FileStream::DeleteSession(uint32_t session_id)
+	{
+		return RemoveSession(session_id);
+	}
+}  // namespace pub
