@@ -10,42 +10,45 @@
 #include "file_application.h"
 #include "file_userdata.h"
 
-class FilePublisher : public pub::Publisher
+namespace pub
 {
-public:
-	static std::shared_ptr<FilePublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
-
-	FilePublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
-	~FilePublisher() override;
-	bool Stop() override;
-
-private:
-	bool Start() override;
-
-	//--------------------------------------------------------------------
-	// Implementation of Publisher
-	//--------------------------------------------------------------------
-	PublisherType GetPublisherType() const override
+	class FilePublisher : public pub::Publisher
 	{
-		return PublisherType::File;
-	}
-	const char *GetPublisherName() const override
-	{
-		return "FilePublisher";
-	}
+	public:
+		static std::shared_ptr<FilePublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 
-	bool OnCreateHost(const info::Host &host_info) override;
-	bool OnDeleteHost(const info::Host &host_info) override;
-	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
-	bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) override;
+		FilePublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+		~FilePublisher() override;
+		bool Stop() override;
 
-public:
-	enum FilePublisherStatusCode
-	{
-		Success,
-		FailureInvalidParameter,
-		FailureDupulicateKey,
-		FailureNotExist,
-		FailureUnknown
+	private:
+		bool Start() override;
+
+		//--------------------------------------------------------------------
+		// Implementation of Publisher
+		//--------------------------------------------------------------------
+		PublisherType GetPublisherType() const override
+		{
+			return PublisherType::File;
+		}
+		const char *GetPublisherName() const override
+		{
+			return "FilePublisher";
+		}
+
+		bool OnCreateHost(const info::Host &host_info) override;
+		bool OnDeleteHost(const info::Host &host_info) override;
+		std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
+		bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) override;
+
+	public:
+		enum FilePublisherStatusCode
+		{
+			Success,
+			FailureInvalidParameter,
+			FailureDupulicateKey,
+			FailureNotExist,
+			FailureUnknown
+		};
 	};
-};
+}  // namespace pub 

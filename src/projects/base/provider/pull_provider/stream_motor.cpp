@@ -120,10 +120,18 @@ namespace pvd
 		_streams[stream->GetId()] = stream;
 		lock.unlock();
 
-		if(!AddStreamToEpoll(stream))
+		switch (stream->GetProcessMediaEventTriggerMode())
 		{
-			DelStream(stream);
-			return false;
+			case PullStream::ProcessMediaEventTrigger::TRIGGER_EPOLL:
+				if (!AddStreamToEpoll(stream))
+				{
+					DelStream(stream);
+					return false;
+				}
+				break;
+			case PullStream::ProcessMediaEventTrigger::TRIGGER_INTERVAL:
+			default:
+				break;
 		}
 
 		logti("%s/%s(%u) stream has added to %u StreamMotor", stream->GetApplicationName(), stream->GetName().CStr(), stream->GetId(), GetId());
@@ -140,10 +148,18 @@ namespace pvd
 		}
 		lock.unlock();
 
-		if(!AddStreamToEpoll(stream))
+		switch (stream->GetProcessMediaEventTriggerMode())
 		{
-			DelStream(stream);
-			return false;
+			case PullStream::ProcessMediaEventTrigger::TRIGGER_EPOLL:
+				if (!AddStreamToEpoll(stream))
+				{
+					DelStream(stream);
+					return false;
+				}
+				break;
+			case PullStream::ProcessMediaEventTrigger::TRIGGER_INTERVAL:
+			default:
+				break;
 		}
 
 		logti("%s/%s(%u) stream has added to %u StreamMotor", stream->GetApplicationName(), stream->GetName().CStr(), stream->GetId(), GetId());
@@ -164,7 +180,16 @@ namespace pvd
 
 		logti("%s/%s(%u) stream has deleted from %u StreamMotor", stream->GetApplicationName(), stream->GetName().CStr(), stream->GetId(), GetId());
 
-		DelStreamFromEpoll(stream);
+		switch (stream->GetProcessMediaEventTriggerMode())
+		{
+			case PullStream::ProcessMediaEventTrigger::TRIGGER_EPOLL:
+				DelStreamFromEpoll(stream);
+				break;
+			case PullStream::ProcessMediaEventTrigger::TRIGGER_INTERVAL:
+			default:
+				break;
+		}
+
 		stream->Stop();
 
 		return true;
@@ -192,7 +217,7 @@ namespace pvd
 				else
 				{
 					logtc("%d StreamMotor terminated : epoll_wait error (errno : %d)", _id, errno);
-					return ;
+					return;
 				}
 			}
 
@@ -224,11 +249,9 @@ namespace pvd
 						auto result = stream->ProcessMediaPacket();
 						if(result == PullStream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS)
 						{
-							
 						}
 						else if(result == PullStream::ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN)
 						{
-							
 						}
 						else
 						{
@@ -243,7 +266,6 @@ namespace pvd
 						DelStreamFromEpoll(stream);
 						stream->Stop();
 					}
-					
 				}
 				else
 				{
@@ -253,6 +275,31 @@ namespace pvd
 					stream->Stop();
 				}
 			}
+
+			// TODO: Performacne Optimized
+			for (const auto &x : _streams)
+			{
+				auto stream = x.second;
+				if (stream->GetProcessMediaEventTriggerMode() != PullStream::ProcessMediaEventTrigger::TRIGGER_INTERVAL)
+					continue;
+
+				if (stream->GetState() == Stream::State::PLAYING)
+				{
+					auto result = stream->ProcessMediaPacket();
+					if (result == PullStream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS ||
+						result == PullStream::ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN)
+					{
+										}
+					else
+					{
+						stream->Stop();
+					}
+				}
+				else
+				{
+					stream->Stop();
+				}
+			}
 		}
 	}
-}
+}  // namespace pvd

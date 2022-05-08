@@ -15,6 +15,7 @@
 #include "rtsp_pull_provider.h"
 #include "webrtc_provider.h"
 #include "srt_provider.h"
+#include "file_provider.h"
 
 namespace cfg
 {
@@ -45,6 +46,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetSrtProvider, _srt_provider)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetMpegtsProvider, _mpegts_provider)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetWebrtcProvider, _webrtc_provider)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetFileProvider, _file_provider)
 
 				protected:
 					void MakeList() override
@@ -56,6 +58,7 @@ namespace cfg
 						Register<Optional>({"SRT", "srt"}, &_srt_provider);
 						Register<Optional>({"MPEGTS", "mpegts"}, &_mpegts_provider);
 						Register<Optional>({"WebRTC", "webrtc"}, &_webrtc_provider);
+						Register<Optional>({"File", "file"}, &_file_provider);
 					};
 
 					RtmpProvider _rtmp_provider;
@@ -65,6 +68,7 @@ namespace cfg
 					SrtProvider _srt_provider;
 					MpegtsProvider _mpegts_provider;
 					WebrtcProvider _webrtc_provider;
+					FileProvider _file_provider;
 				};
 			}  // namespace pvd
 		}	   // namespace app

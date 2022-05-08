@@ -33,7 +33,15 @@ namespace pvd
 		bool Start();
 		bool Stop();
 		bool Resume(); // Resume with another URL
-	
+
+		// Defines the event detection method to process media packets in Pull Stream. 
+		// There are EPOLL event method by socket and INTERVAL event method called at regular time.	
+		enum class ProcessMediaEventTrigger {
+			TRIGGER_EPOLL,
+			TRIGGER_INTERVAL
+		};
+		virtual ProcessMediaEventTrigger GetProcessMediaEventTriggerMode() = 0;
+
 		// It is used to detect event by StreamMotor and then StreamMotor calls ProcessMediaPacket
 		// Internally it is used for epoll
 		virtual int GetFileDescriptorForDetectingEvent() = 0;

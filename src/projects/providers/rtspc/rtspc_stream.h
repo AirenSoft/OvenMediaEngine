@@ -39,6 +39,9 @@ namespace pvd
 		RtspcStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list);
 		~RtspcStream() final;
 
+		ProcessMediaEventTrigger GetProcessMediaEventTriggerMode() override {
+			return ProcessMediaEventTrigger::TRIGGER_EPOLL;
+		}
 		// PullStream Implementation
 		int GetFileDescriptorForDetectingEvent() override;
 		// If this stream belongs to the Pull provider, 

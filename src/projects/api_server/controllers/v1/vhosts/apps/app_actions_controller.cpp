@@ -58,7 +58,7 @@ namespace api
 		{
 			Json::Value response;
 
-			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
+			auto publisher = std::dynamic_pointer_cast<pub::FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
@@ -67,7 +67,7 @@ namespace api
 									  app->GetName().GetAppName().CStr());
 			}
 
-			auto application = std::static_pointer_cast<FileApplication>(publisher->GetApplicationByName(app->GetName()));
+			auto application = std::static_pointer_cast<pub::FileApplication>(publisher->GetApplicationByName(app->GetName()));
 			if (application == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
@@ -92,7 +92,7 @@ namespace api
 			std::vector<std::shared_ptr<info::Record>> results;
 
 			auto error = application->GetRecords(record, results);
-			if (error->GetCode() != FilePublisher::FilePublisherStatusCode::Success || results.size() == 0)
+			if (error->GetCode() != pub::FilePublisher::FilePublisherStatusCode::Success || results.size() == 0)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "There is no record information");
@@ -113,7 +113,7 @@ namespace api
 		{
 			Json::Value response;
 
-			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
+			auto publisher = std::dynamic_pointer_cast<pub::FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
@@ -121,7 +121,7 @@ namespace api
 									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
-			auto application = std::static_pointer_cast<FileApplication>(publisher->GetApplicationByName(app->GetName()));
+			auto application = std::static_pointer_cast<pub::FileApplication>(publisher->GetApplicationByName(app->GetName()));
 			if (application == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
@@ -144,12 +144,12 @@ namespace api
 			}
 
 			auto error = application->RecordStart(record);
-			if (error->GetCode() == FilePublisher::FilePublisherStatusCode::FailureInvalidParameter)
+			if (error->GetCode() == pub::FilePublisher::FilePublisherStatusCode::FailureInvalidParameter)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  error->GetMessage());
 			}
-			else if (error->GetCode() == FilePublisher::FilePublisherStatusCode::FailureDupulicateKey)
+			else if (error->GetCode() == pub::FilePublisher::FilePublisherStatusCode::FailureDupulicateKey)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  error->GetMessage());
@@ -167,7 +167,7 @@ namespace api
 		{
 			Json::Value response;
 
-			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
+			auto publisher = std::dynamic_pointer_cast<pub::FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
@@ -176,7 +176,7 @@ namespace api
 									  app->GetName().GetAppName().CStr());
 			}
 
-			auto application = std::static_pointer_cast<FileApplication>(publisher->GetApplicationByName(app->GetName()));
+			auto application = std::static_pointer_cast<pub::FileApplication>(publisher->GetApplicationByName(app->GetName()));
 			if (application == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
@@ -200,11 +200,11 @@ namespace api
 			}
 
 			auto error = application->RecordStop(record);
-			if (error->GetCode() == FilePublisher::FilePublisherStatusCode::FailureInvalidParameter)
+			if (error->GetCode() == pub::FilePublisher::FilePublisherStatusCode::FailureInvalidParameter)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest, error->GetMessage());
 			}
-			else if (error->GetCode() == FilePublisher::FilePublisherStatusCode::FailureNotExist)
+			else if (error->GetCode() == pub::FilePublisher::FilePublisherStatusCode::FailureNotExist)
 			{
 				throw http::HttpError(http::StatusCode::NotFound, error->GetMessage());
 			}
