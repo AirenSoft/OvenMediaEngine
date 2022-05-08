@@ -15,3 +15,4 @@
 #include "./rtsp/rtsp_provider.h"
 #include "./rtspc/rtspc_provider.h"
 #include "./webrtc/webrtc_provider.h"
+#include "./file/file_provider.h"
