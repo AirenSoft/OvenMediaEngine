@@ -34,3 +34,6 @@ enum class H265NALUnitType : uint8_t
 	SEI_PREFIX = 39,
 	SEI_SUFFIX = 40,
 };
+
+bool operator==(uint8_t first, H265NALUnitType second);
+bool operator!=(uint8_t first, H265NALUnitType second);
