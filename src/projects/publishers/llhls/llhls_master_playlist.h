@@ -76,11 +76,15 @@ public:
 	bool AddGroupMedia(const MediaInfo &media_info);
 	bool AddStreamInfo(const StreamInfo &stream_info);
 
-	ov::String ToString();
+	ov::String ToString() const;
 
 private:
 	bool SetActiveMediaGroup(const ov::String &group_id);
 	const MediaInfo &GetDefaultMediaInfo(const ov::String &group_id) const;
+
+	// Cache
+	mutable ov::String _playlist_cache;
+	mutable bool _updated = true;
 
 	// Group ID : MediaInfo
 	std::map<ov::String, std::vector<MediaInfo>>	_media_infos;

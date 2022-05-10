@@ -7,10 +7,10 @@
 //
 //==============================================================================
 
-#include "llhls_playlist.h"
+#include "llhls_chunklist.h"
 #include "llhls_private.h"
 
-LLHlsPlaylist::LLHlsPlaylist(const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, float part_target_duration, const ov::String &map_uri)
+LLHlsChunklist::LLHlsChunklist(const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, float part_target_duration, const ov::String &map_uri)
 {
 	_track = track;
 	_max_segments = max_segments;
@@ -19,7 +19,7 @@ LLHlsPlaylist::LLHlsPlaylist(const std::shared_ptr<const MediaTrack> &track, uin
 	_map_uri = map_uri;
 }
 
-bool LLHlsPlaylist::AppendSegmentInfo(const SegmentInfo &info)
+bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
 {
 	if (info.GetSequence() < _last_segment_sequence)
 	{
@@ -35,11 +35,18 @@ bool LLHlsPlaylist::AppendSegmentInfo(const SegmentInfo &info)
 			return false;
 		}
 
+		// Lock
+		std::unique_lock<std::shared_mutex> lock(_segments_guard);
 		// Create segment
 		segment = std::make_shared<SegmentInfo>(info);
 		_segments.push_back(segment);
 
 		_last_segment_sequence += 1;
+
+		if (_segments.size() > _max_segments)
+		{
+			_segments.pop_front();
+		}
 	}
 	else
 	{
@@ -54,7 +61,7 @@ bool LLHlsPlaylist::AppendSegmentInfo(const SegmentInfo &info)
 	return true;
 }
 
-bool LLHlsPlaylist::AppendPartialSegmentInfo(uint32_t segment_sequence, const SegmentInfo &info)
+bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const SegmentInfo &info)
 {
 	if (segment_sequence < _last_segment_sequence)
 	{
@@ -64,27 +71,40 @@ bool LLHlsPlaylist::AppendPartialSegmentInfo(uint32_t segment_sequence, const Se
 	std::shared_ptr<SegmentInfo> segment = GetSegmentInfo(segment_sequence);
 	if (segment == nullptr)
 	{
+		// Lock
+		std::unique_lock<std::shared_mutex> lock(_segments_guard);
+
 		// Create segment
 		segment = std::make_shared<SegmentInfo>(segment_sequence);
 		_segments.push_back(segment);
 
-		_last_segment_sequence += 1;
+		_last_segment_sequence = segment_sequence;
+
+		if (_segments.size() > _max_segments)
+		{
+			_segments.pop_front();
+			_deleted_segments += 1;
+		}
 	}
 
 	segment->InsertPartialSegmentInfo(std::make_shared<SegmentInfo>(info));
+	_last_partial_segment_sequence = info.GetSequence();
 
 	_content_updated = true;
 
 	return true;
 }
 
-int64_t LLHlsPlaylist::GetSegmentIndex(uint32_t segment_sequence) const
+int64_t LLHlsChunklist::GetSegmentIndex(uint32_t segment_sequence) const
 {
 	return segment_sequence - _deleted_segments;
 }
 
-std::shared_ptr<LLHlsPlaylist::SegmentInfo> LLHlsPlaylist::GetSegmentInfo(uint32_t segment_sequence) const
+std::shared_ptr<LLHlsChunklist::SegmentInfo> LLHlsChunklist::GetSegmentInfo(uint32_t segment_sequence) const
 {
+	// lock
+	std::unique_lock<std::shared_mutex> lock(_segments_guard);
+
 	auto index = GetSegmentIndex(segment_sequence);
 	if (index < 0)
 	{
@@ -101,12 +121,20 @@ std::shared_ptr<LLHlsPlaylist::SegmentInfo> LLHlsPlaylist::GetSegmentInfo(uint32
 	return _segments[index];
 }
 
-ov::String LLHlsPlaylist::ToString(bool skip/*=false*/)
+bool LLHlsChunklist::GetLastSequenceNumber(int64_t &msn, int64_t &psn) const
+{
+	msn = _last_segment_sequence;
+	psn = _last_partial_segment_sequence;
+
+	return true;
+}
+
+ov::String LLHlsChunklist::ToString(bool skip/*=false*/) const
 {
 	// Create playlist
 	if (_content_updated == true)
 	{
-		CreatePlaylist();
+		return GetPlaylist(skip);
 	}
 
 	if (skip == false)
@@ -121,11 +149,11 @@ ov::String LLHlsPlaylist::ToString(bool skip/*=false*/)
 	return "";
 }
 
-bool LLHlsPlaylist::CreatePlaylist()
+ov::String LLHlsChunklist::GetPlaylist(bool skip) const
 {
 	if (_segments.size() == 0)
 	{
-		return false;
+		return "";
 	}
 
 	// In OME, CAN-SKIP-UNTIL works if the playlist has at least 10 segments
@@ -137,12 +165,13 @@ bool LLHlsPlaylist::CreatePlaylist()
 		skipped_segment = (_segments.size()/3);
 	}
 
+	ov::String playlist;
+
 	// version 0 : EXT-X-VERSION:6 - Contains EXT-X-MAP tag
 	// version 1 : EXT-X-VERSION:9 - Contains EXT-X-SKIP tag
 	for (int version=0; version<2; version++)
 	{
-		ov::String playlist;
-
+		playlist.Clear();
 		playlist.AppendFormat("#EXTM3U\n");
 
 		// Note that in protocol version 6, the semantics of the EXT-
@@ -169,13 +198,14 @@ bool LLHlsPlaylist::CreatePlaylist()
 
 		uint32_t skip_count = 0;
 
+		std::shared_lock<std::shared_mutex> lock(_segments_guard);
 		for (auto &segment : _segments)
 		{
 			if (version == 1 && skip_count < skipped_segment)
 			{
 				if (skip_count == 0) 
 				{
-					playlist.AppendFormat("#EXT-X-SKIP:SKIPPED-SEGMENTS=%u\n", skip_count);
+					playlist.AppendFormat("#EXT-X-SKIP:SKIPPED-SEGMENTS=%u\n", skipped_segment);
 				}
 				skip_count += 1;
 				continue;
@@ -224,5 +254,12 @@ bool LLHlsPlaylist::CreatePlaylist()
 		}
 	}
 
-	return true;
+	_content_updated = false;
+
+	if (skip == true)
+	{
+		return _playlist_skipped_cache;
+	}
+
+	return _playlist_cache;
 }

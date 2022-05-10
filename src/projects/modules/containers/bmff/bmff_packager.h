@@ -168,7 +168,7 @@ namespace bmff
 		
 	private:
 		std::shared_ptr<const MediaTrack> _track;
-		uint32_t _sequence_number = 0; // For Mfhd Box
+		uint32_t _sequence_number = 1; // For Mfhd Box
 
 		// Trun box size
 		uint32_t _last_trun_box_size = 0;

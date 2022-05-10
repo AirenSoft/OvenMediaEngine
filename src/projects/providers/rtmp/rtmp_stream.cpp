@@ -1270,7 +1270,7 @@ namespace pvd
 															 packet_type);
 
 			SendFrame(video_frame);
-
+			
 			// Statistics for debugging
 			if (flv_video.FrameType() == FlvVideoFrameTypes::KEY_FRAME)
 			{

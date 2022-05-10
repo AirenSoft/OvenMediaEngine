@@ -27,7 +27,7 @@ bool H264Converter::GetExtraDataFromAvccSequenceHeader(const cmn::PacketType typ
 	return false;
 }
 
-std::shared_ptr<const ov::Data> H264Converter::ConvertAvccToAnnexb(const std::shared_ptr<const ov::Data> &data)
+std::shared_ptr<ov::Data> H264Converter::ConvertAvccToAnnexb(const std::shared_ptr<const ov::Data> &data)
 {
 	auto annexb_data = std::make_shared<ov::Data>();
 
@@ -269,7 +269,7 @@ static bool ExtractSpsPpsOffset(const std::shared_ptr<const ov::Data> &data, con
 }
 #endif
 
-std::shared_ptr<const ov::Data> H264Converter::ConvertAnnexbToAvcc(const std::shared_ptr<const ov::Data> &data)
+std::shared_ptr<ov::Data> H264Converter::ConvertAnnexbToAvcc(const std::shared_ptr<const ov::Data> &data)
 {
 	// size_t total_pattern_length = 0;
 
@@ -278,7 +278,7 @@ std::shared_ptr<const ov::Data> H264Converter::ConvertAnnexbToAvcc(const std::sh
 	off_t offset = 0;
 	off_t last_offset = 0;
 
-	auto avcc_data = std::make_shared<ov::Data>();
+	auto avcc_data = std::make_shared<ov::Data>(data->GetLength() + 32);
 	ov::ByteStream byte_stream(avcc_data);
 
 	// This code assumes that (NALULengthSizeMinusOne == 3)

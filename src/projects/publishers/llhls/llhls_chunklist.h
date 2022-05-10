@@ -12,7 +12,7 @@
 #include <base/info/media_track.h>
 #include <base/mediarouter/media_buffer.h>
 
-class LLHlsPlaylist
+class LLHlsChunklist
 {
 public:
 	class SegmentInfo
@@ -53,7 +53,7 @@ public:
 			return _start_time;
 		}
 
-		uint32_t GetSequence() const
+		int64_t GetSequence() const
 		{
 			return _sequence;
 		}
@@ -113,7 +113,7 @@ public:
 		}
 
 	private:
-		uint32_t _sequence;
+		int64_t _sequence = -1;
 		uint64_t _start_time; // milliseconds since epoce (1970-01-01 00:00:00)
 		float_t _duration; // seconds
 		uint64_t _size;
@@ -125,19 +125,20 @@ public:
 		std::deque<std::shared_ptr<SegmentInfo>> _partial_segments;
 	}; // class SegmentInfo
 
-	LLHlsPlaylist(const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, float part_target_duration, const ov::String &map_uri);
+	LLHlsChunklist(const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, float part_target_duration, const ov::String &map_uri);
 
 	bool AppendSegmentInfo(const SegmentInfo &info);
 	bool AppendPartialSegmentInfo(uint32_t segment_sequence, const SegmentInfo &info);
 
-	ov::String ToString(bool skip=false);
+	ov::String ToString(bool skip=false) const;
 
 	std::shared_ptr<SegmentInfo> GetSegmentInfo(uint32_t segment_sequence) const;
+	bool GetLastSequenceNumber(int64_t &msn, int64_t &psn) const;
 
 private:
 
 	int64_t GetSegmentIndex(uint32_t segment_sequence) const;
-	bool CreatePlaylist();
+	ov::String GetPlaylist(bool skip) const;
 
 	std::shared_ptr<const MediaTrack> _track;
 
@@ -147,12 +148,14 @@ private:
 	ov::String _map_uri;
 
 	int64_t _last_segment_sequence = -1;
+	int64_t _last_partial_segment_sequence = -1;
 
-	bool _content_updated = true;
-	ov::String _playlist_cache;
-	ov::String _playlist_skipped_cache;
+	mutable bool _content_updated = true;
+	mutable ov::String _playlist_cache;
+	mutable ov::String _playlist_skipped_cache;
 
 	// Segment number -> SegmentInfo
 	std::deque<std::shared_ptr<SegmentInfo>> _segments;
+	mutable std::shared_mutex _segments_guard;
 	uint64_t _deleted_segments = 0;
 };

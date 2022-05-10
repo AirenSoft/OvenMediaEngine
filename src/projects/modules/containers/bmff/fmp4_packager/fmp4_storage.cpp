@@ -58,6 +58,18 @@ namespace bmff
 			return nullptr;
 		}
 
+		// last chunk number + 1 of completed segment is the first chunk of the next segment
+		if (segment->IsCompleted() && segment->GetLastChunkNumber() + 1 == chunk_number)
+		{
+			segment = GetMediaSegment(segment_number + 1);
+			if (segment == nullptr)
+			{
+				return nullptr;
+			}
+
+			chunk_number = 0;
+		}
+
 		// Get Media Chunk
 		auto chunk = segment->GetChunk(chunk_number);
 		if (chunk == nullptr)
@@ -68,19 +80,22 @@ namespace bmff
 		return chunk;
 	}
 
-	int64_t FMP4Storage::GetLastChunkNumber() const
+	std::tuple<int64_t, int64_t> FMP4Storage::GetLastChunkNumber() const
 	{
 		std::shared_lock<std::shared_mutex> lock(_segments_lock);
 		if (_segments.empty())
 		{
-			return -1;
+			return { -1, -1 };
 		}
 
-		return _segments.back()->GetLastChunkNumber();
+		auto last_segment = _segments.back();
+
+		return { last_segment->GetNumber(), last_segment->GetLastChunkNumber() };
 	}
 
 	int64_t FMP4Storage::GetLastSegmentNumber() const
 	{
+		std::shared_lock<std::shared_mutex> lock(_segments_lock);
 		return _last_segment_number;
 	}
 

@@ -10,6 +10,7 @@
 #include "base/publisher/application.h"
 #include "base/publisher/stream.h"
 
+#include "llhls_application.h"
 #include "llhls_stream.h"
 #include "llhls_private.h"
 
@@ -81,9 +82,11 @@ bool LLHlsStream::Start()
 	}
 
 	//TODO(Getroot): It will be replaced with ABR config
-	AddStreamInfToMasterPlaylist(first_video_track, first_audio_track);
+	
+	// Debug audio track
+	AddStreamInfToMasterPlaylist(first_video_track, nullptr);
 
-	logti("Master Playlist : %s", _master_playlist.ToString().CStr());
+	logtd("Master Playlist : %s", _master_playlist.ToString().CStr());
 
 	return Stream::Start();
 }
@@ -101,10 +104,120 @@ bool LLHlsStream::Stop()
 	_storage_map.clear();
 
 	// clear all playlist
-	std::lock_guard<std::shared_mutex> lock3(_playlist_map_lock);
-	_playlist_map.clear();
+	std::lock_guard<std::shared_mutex> lock3(_chunklist_map_lock);
+	_chunklist_map.clear();
 
 	return Stream::Stop();
+}
+
+std::tuple<LLHlsStream::RequestResult, ov::String> LLHlsStream::GetPlaylist() const
+{
+	if (GetState() != State::STARTED)
+	{
+		return { RequestResult::NotFound, "" };
+	}
+
+	return { RequestResult::Success, _master_playlist.ToString() };
+}
+
+std::tuple<LLHlsStream::RequestResult, ov::String> LLHlsStream::GetChunklist(const int32_t &track_id, int64_t msn, int64_t psn, bool skip) const
+{
+	auto chunklist = GetChunklistWriter(track_id);
+	if (chunklist == nullptr)
+	{
+		logtw("Could not find chunklist for track_id = %d", track_id);
+		return { RequestResult::NotFound, "" };
+	}
+
+	if (msn >= 0 && psn >= 0)
+	{
+		int64_t last_msn, last_psn;
+		if (chunklist->GetLastSequenceNumber(last_msn, last_psn) == false)
+		{
+			logtw("Could not get last sequence number for track_id = %d", track_id);
+			return { RequestResult::NotFound, "" };
+		}
+
+		if (last_msn < 0 || last_psn < 0)
+		{
+			logtw("Could not get last sequence number for track_id = %d", track_id);
+			return { RequestResult::NotFound, "" };
+		}
+
+		if (msn > last_msn || (msn >= last_msn && psn > last_psn))
+		{
+			// Hold the request until a Playlist contains a Segment with the requested Sequence Number
+			return { RequestResult::Accepted, "" };
+		}
+	}
+
+	return { RequestResult::Success, chunklist->ToString(skip) };
+}
+
+std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::GetInitializationSegment(const int32_t &track_id) const
+{
+	auto storage = GetStorage(track_id);
+	if (storage == nullptr)
+	{
+		logtw("Could not find storage for track_id = %d", track_id);
+		return { RequestResult::NotFound, nullptr };
+	}
+
+	return { RequestResult::Success, storage->GetInitializationSection() };
+}
+
+std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::GetSegment(const int32_t &track_id, const int64_t &segment_number) const
+{
+	auto storage = GetStorage(track_id);
+	if (storage == nullptr)
+	{
+		logtw("Could not find storage for track_id = %d", track_id);
+		return { RequestResult::NotFound, nullptr };
+	}
+
+	auto segment = storage->GetMediaSegment(segment_number);
+	if (segment == nullptr)
+	{
+		logtw("Could not find segment for track_id = %d, segment_number = %ld", track_id, segment_number);
+		return { RequestResult::NotFound, nullptr };
+	}
+
+	return { RequestResult::Success, storage->GetMediaSegment(segment_number)->GetData() };
+}
+
+std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::GetChunk(const int32_t &track_id, const int64_t &segment_number, const int64_t &chunk_number) const
+{
+	logtd("LLHlsStream(%s) - GetChunk(%d, %ld, %ld)", GetName().CStr(), track_id, segment_number, chunk_number);
+
+	auto storage = GetStorage(track_id);
+	if (storage == nullptr)
+	{
+		logtw("Could not find storage for track_id = %d", track_id);
+		return { RequestResult::NotFound, nullptr };
+	}
+
+	auto [last_segment_number, last_chunk_number] = storage->GetLastChunkNumber();
+
+	if (segment_number == last_segment_number && chunk_number > last_chunk_number)
+	{
+		// Hold the request until a Playlist contains a Segment with the requested Sequence Number
+		return { RequestResult::Accepted, nullptr };
+	}
+	else if (segment_number > last_segment_number)
+	{
+		// Not Found
+		logtw("Could not find segment for track_id = %d, segment_number = %ld (last_segemnt = %ld)", track_id, segment_number, last_segment_number);
+		return { RequestResult::NotFound, nullptr };
+	}
+
+	auto chunk = storage->GetMediaChunk(segment_number, chunk_number);
+	if (chunk == nullptr)
+	{
+		logtw("Could not find segment for track_id = %d, segment_number = %ld, partial_number = %ld", track_id, segment_number, chunk_number);
+		return { RequestResult::NotFound, nullptr };
+	}
+
+	return { RequestResult::Success, chunk->GetData() };
 }
 
 void LLHlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
@@ -185,7 +298,7 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &track)
 }
 
 // Get storage with the track id
-std::shared_ptr<bmff::FMP4Storage> LLHlsStream::GetStorage(const int32_t &track_id)
+std::shared_ptr<bmff::FMP4Storage> LLHlsStream::GetStorage(const int32_t &track_id) const
 {
 	std::shared_lock<std::shared_mutex> lock(_storage_map_lock);
 	auto it = _storage_map.find(track_id);
@@ -198,7 +311,7 @@ std::shared_ptr<bmff::FMP4Storage> LLHlsStream::GetStorage(const int32_t &track_
 }
 
 // Get fMP4 packager with the track id
-std::shared_ptr<bmff::FMP4Packager> LLHlsStream::GetPackager(const int32_t &track_id)
+std::shared_ptr<bmff::FMP4Packager> LLHlsStream::GetPackager(const int32_t &track_id) const
 {
 	std::shared_lock<std::shared_mutex> lock(_packager_map_lock);
 	auto it = _packager_map.find(track_id);
@@ -210,11 +323,11 @@ std::shared_ptr<bmff::FMP4Packager> LLHlsStream::GetPackager(const int32_t &trac
 	return it->second;
 }
 
-std::shared_ptr<LLHlsPlaylist> LLHlsStream::GetPlaylist(const int32_t &track_id)
+std::shared_ptr<LLHlsChunklist> LLHlsStream::GetChunklistWriter(const int32_t &track_id) const
 {
-	std::shared_lock<std::shared_mutex> lock(_playlist_map_lock);
-	auto it = _playlist_map.find(track_id);
-	if (it == _playlist_map.end())
+	std::shared_lock<std::shared_mutex> lock(_chunklist_map_lock);
+	auto it = _chunklist_map.find(track_id);
+	if (it == _chunklist_map.end())
 	{
 		return nullptr;
 	}
@@ -279,19 +392,19 @@ void LLHlsStream::OnFMp4StorageInitialized(const int32_t &track_id)
 	auto segment_duration = static_cast<float_t>(_storage_config.segment_duration_ms) / 1000.0;
 	auto chunk_duration = static_cast<float_t>(_packager_config.chunk_duration_ms) / 1000.0;
 
-	auto playlist = std::make_shared<LLHlsPlaylist>(GetTrack(track_id),
+	auto playlist = std::make_shared<LLHlsChunklist>(GetTrack(track_id),
 													_storage_config.max_segments, 
 													segment_duration, 
 													chunk_duration, 
 													GetIntializationSegmentName(track_id));
 
-	std::unique_lock<std::shared_mutex> lock(_playlist_map_lock);
-	_playlist_map[track_id] = playlist;
+	std::unique_lock<std::shared_mutex> lock(_chunklist_map_lock);
+	_chunklist_map[track_id] = playlist;
 }
 
 void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t &segment_number)
 {
-	auto playlist = GetPlaylist(track_id);
+	auto playlist = GetChunklistWriter(track_id);
 	if (playlist == nullptr)
 	{
 		logte("Playlist is not found : track_id = %d", track_id);
@@ -305,7 +418,7 @@ void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t 
 
 	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetCreatedTime().time_since_epoch()).count() + segment->GetStartTimestamp();
 
-	auto segment_info = LLHlsPlaylist::SegmentInfo(segment->GetNumber(), start_timestamp, segment_duration,
+	auto segment_info = LLHlsChunklist::SegmentInfo(segment->GetNumber(), start_timestamp, segment_duration,
 													segment->GetSize(), GetSegmentName(track_id, segment->GetNumber()), "", true);
 
 	playlist->AppendSegmentInfo(segment_info);
@@ -318,7 +431,7 @@ void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t 
 
 void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number)
 {
-	auto playlist = GetPlaylist(track_id);
+	auto playlist = GetChunklistWriter(track_id);
 	if (playlist == nullptr)
 	{
 		logte("Playlist is not found : track_id = %d", track_id);
@@ -332,7 +445,7 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 	// Human readable timestamp
 	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetCreatedTime().time_since_epoch()).count() + chunk->GetStartTimestamp();
 
-	auto chunk_info = LLHlsPlaylist::SegmentInfo(chunk->GetNumber(), start_timestamp, chunk_duration, chunk->GetSize(), 
+	auto chunk_info = LLHlsChunklist::SegmentInfo(chunk->GetNumber(), start_timestamp, chunk_duration, chunk->GetSize(), 
 												GetPartialSegmentName(track_id, segment_number, chunk->GetNumber()), 
 												GetNextPartialSegmentName(track_id, segment_number, chunk->GetNumber()), chunk->IsIndependent());
 
@@ -342,6 +455,9 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 
 	// Output playlist
 	logtd("[Playlist]\n%s", playlist->ToString().CStr());
+
+	// Notify
+	NotifyPlaylistUpdated(track_id, segment_number, chunk_number);
 }
 
 // Add X-MEDIA to the master playlist
@@ -380,4 +496,13 @@ void LLHlsStream::AddStreamInfToMasterPlaylist(const std::shared_ptr<const Media
 	}
 
 	_master_playlist.AddStreamInfo(stream_info);
+}
+
+void LLHlsStream::NotifyPlaylistUpdated(const int32_t &track_id, const int64_t &msn, const int64_t &part)
+{
+	// Make std::any for broadcast
+	// I think make_shared is better than copy sizeof(PlaylistUpdatedEvent) to all sessions
+	auto event = std::make_shared<PlaylistUpdatedEvent>(track_id, msn, part);
+	auto notification = std::make_any<std::shared_ptr<PlaylistUpdatedEvent>>(event);
+	BroadcastPacket(notification);
 }

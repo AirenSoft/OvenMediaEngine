@@ -9,6 +9,9 @@
 #pragma once
 
 #include <base/publisher/session.h>
+#include <list>
+
+#define MAX_PENDING_REQUESTS 5
 
 class LLHlsSession : public pub::Session
 {
@@ -30,7 +33,7 @@ public:
 
 private:
 
-	enum class FileType : uint8_t
+	enum class RequestType : uint8_t
 	{
 		Playlist,
 		Chunklist,
@@ -39,11 +42,30 @@ private:
 		PartialSegment,
 	};
 
-	bool ParseFileName(const ov::String &file_name, FileType &type, int32_t &track_id, int64_t &segment_number, int64_t &partial_number);
+	bool ParseFileName(const ov::String &file_name, RequestType &type, int32_t &track_id, int64_t &segment_number, int64_t &partial_number);
 
-	void ResponsePlaylist();
-	void ResponseChunklist();
-	void ResponseInitializationSegment();
-	void ResponseSegment();
-	void ResponsePartialSegment();
+	void ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchange> &exchange);
+	void ResponseChunklist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id, int64_t msn, int64_t part, bool skip);
+	void ResponseInitializationSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id);
+	void ResponseSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id, const int64_t &segment_number);
+	void ResponsePartialSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number);
+
+	void OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn, const int64_t &part);
+
+	// Pending requests
+	struct PendingRequest
+	{
+		RequestType type;
+		int32_t track_id;
+		int64_t segment_number = -1;
+		int64_t partial_number = -1;
+		bool skip = false;
+
+		std::shared_ptr<http::svr::HttpExchange> exchange;
+	};
+
+	bool AddPendingRequest(const std::shared_ptr<http::svr::HttpExchange> &exchange, const RequestType &type, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number, const bool &skip = false);
+
+	// Session runs on a single thread, so it doesn't need mutex
+	std::list<PendingRequest> _pending_requests;
 };

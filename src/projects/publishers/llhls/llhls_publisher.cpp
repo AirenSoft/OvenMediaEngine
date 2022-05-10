@@ -164,7 +164,16 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		auto stream = GetStream(vhost_app_name, request_url->Stream());
+		// Get Application
+		auto application = std::static_pointer_cast<LLHlsApplication>(GetApplicationByName(vhost_app_name));
+		if (application == nullptr)
+		{
+			logte("Could not find application: %s", vhost_app_name.CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		auto stream = application->GetStream(request_url->Stream());
 		if (stream == nullptr)
 		{
 			logte("Could not find stream: %s", request_url->Stream().CStr());
@@ -188,6 +197,8 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			stream->AddSession(session);
 		}
 
+		// Cors Setting
+		application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response);
 		stream->SendMessage(session, std::make_any<std::shared_ptr<http::svr::HttpExchange>>(exchange));
 
 		return http::svr::NextHandler::DoNotCallAndDoNotResponse;

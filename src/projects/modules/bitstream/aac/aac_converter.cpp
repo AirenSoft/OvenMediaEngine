@@ -112,7 +112,7 @@ std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const uint8_t *data, si
 	return adts_data;
 }
 
-std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const std::shared_ptr<ov::Data> &data, const std::shared_ptr<AACSpecificConfig> &aac_config)
+std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const std::shared_ptr<const ov::Data> &data, const std::shared_ptr<AACSpecificConfig> &aac_config)
 {
 	if(aac_config == nullptr)
 	{
