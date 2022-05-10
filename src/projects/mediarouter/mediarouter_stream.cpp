@@ -182,7 +182,7 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 	// Convert to AnnexB and Insert SPS/PPS if there are no SPS/PPS nal units.
 	else if (media_packet->GetPacketType() == cmn::PacketType::NALU)
 	{
-		auto converted_data = std::make_shared<ov::Data>();
+		auto converted_data = std::make_shared<ov::Data>(65535);
 		FragmentationHeader fragment_header;
 		size_t nalu_offset = 0;
 
@@ -214,7 +214,7 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 
 			// Exception handling for encoder that transmits AVCC in non-standard format ([Size][Start Code][NalU])
 			if ((nalu->GetLength() > 3 && nalu->GetDataAs<uint8_t>()[0] == 0x00 && nalu->GetDataAs<uint8_t>()[1] == 0x00 && nalu->GetDataAs<uint8_t>()[2] == 0x01) ||
-				(nalu->GetLength() > 3 && nalu->GetDataAs<uint8_t>()[0] == 0x00 && nalu->GetDataAs<uint8_t>()[1] == 0x00 && nalu->GetDataAs<uint8_t>()[2] == 0x00 && nalu->GetDataAs<uint8_t>()[3] == 0x01))
+				(nalu->GetLength() > 4 && nalu->GetDataAs<uint8_t>()[0] == 0x00 && nalu->GetDataAs<uint8_t>()[1] == 0x00 && nalu->GetDataAs<uint8_t>()[2] == 0x00 && nalu->GetDataAs<uint8_t>()[3] == 0x01))
 			{
 				size_t start_code_size = (nalu->GetDataAs<uint8_t>()[2] == 0x01) ? 3 : 4;
 
@@ -261,7 +261,7 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 		if (has_idr == true && (has_sps == false || has_pps == false) && media_track->GetH264SpsPpsAnnexBFormat() != nullptr)
 		{
 			// Insert SPS/PPS nal units so that player can start to play faster
-			auto processed_data = std::make_shared<ov::Data>();
+			auto processed_data = std::make_shared<ov::Data>(65535);
 			auto decode_parmeters = media_track->GetH264SpsPpsAnnexBFormat();
 
 			processed_data->Append(decode_parmeters);

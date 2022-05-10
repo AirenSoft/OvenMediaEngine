@@ -21,7 +21,14 @@ std::shared_ptr<LLHlsApplication> LLHlsApplication::Create(const std::shared_ptr
 LLHlsApplication::LLHlsApplication(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
 	: Application(publisher, application_info)
 {
+	auto llhls_config = application_info.GetConfig().GetPublishers().GetLLHlsPublisher();
+	bool is_parsed;
+	const auto &cross_domains = llhls_config.GetCrossDomainList(&is_parsed);
 
+	if (is_parsed)
+	{
+		_cors_manager.SetCrossDomains(application_info.GetName(), cross_domains);
+	}
 }
 
 LLHlsApplication::~LLHlsApplication()

@@ -125,20 +125,14 @@ namespace pub
 		_queue_event.Notify();
 	}
 
-	std::any StreamWorker::PopStreamPacket()
+	std::optional<std::any> StreamWorker::PopStreamPacket()
 	{
 		if (_packet_queue.IsEmpty())
 		{
-			return nullptr;
+			return std::nullopt;
 		}
 
-		auto data = _packet_queue.Dequeue();
-		if(data.has_value())
-		{
-			return data.value();
-		}
-
-		return nullptr;
+		return _packet_queue.Dequeue();
 	}
 
 	std::shared_ptr<StreamWorker::SessionMessage> StreamWorker::PopSessionMessage()
@@ -177,8 +171,8 @@ namespace pub
 				session_lock.lock();
 				for (auto const &x : _sessions)
 				{
-					auto session = std::static_pointer_cast<Session>(x.second);
-					session->SendOutgoingData(packet);
+					auto session = x.second;
+					session->SendOutgoingData(packet.value());
 				}
 				session_lock.unlock();
 			}

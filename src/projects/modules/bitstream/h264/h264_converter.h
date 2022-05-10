@@ -17,6 +17,6 @@ public:
 	static ov::String GetProfileString(const std::vector<uint8_t> &codec_extradata);
 	static ov::String GetProfileString(const std::shared_ptr<ov::Data> &codec_extradata);
 
-	static std::shared_ptr<const ov::Data> ConvertAvccToAnnexb(const std::shared_ptr<const ov::Data> &data);
-	static std::shared_ptr<const ov::Data> ConvertAnnexbToAvcc(const std::shared_ptr<const ov::Data> &data);
+	static std::shared_ptr<ov::Data> ConvertAvccToAnnexb(const std::shared_ptr<const ov::Data> &data);
+	static std::shared_ptr<ov::Data> ConvertAnnexbToAvcc(const std::shared_ptr<const ov::Data> &data);
 };

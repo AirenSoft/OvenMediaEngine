@@ -14,7 +14,7 @@
 
 #include "modules/containers/bmff/fmp4_packager/fmp4_packager.h"
 #include "llhls_master_playlist.h"
-#include "llhls_playlist.h"
+#include "llhls_chunklist.h"
 
 class LLHlsStream : public pub::Stream, public bmff::FMp4StorageObserver
 {
@@ -29,9 +29,39 @@ public:
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 
+	enum class RequestResult : uint8_t
+	{
+		Success, // Success
+		Accepted, // The request is accepted but not yet processed, it will be processed later
+		NotFound, // The request is not found
+		UnknownError,
+	};
+
+	struct PlaylistUpdatedEvent
+	{
+		PlaylistUpdatedEvent(const int32_t &id, const int64_t &new_msn, const int64_t &new_part)
+		{
+			track_id = id;
+			msn = new_msn;
+			part = new_part;
+		}
+
+		int32_t track_id;
+		int64_t msn;
+		int64_t part;
+	};
+
+	std::tuple<RequestResult, ov::String> GetPlaylist() const;
+	std::tuple<RequestResult, ov::String> GetChunklist(const int32_t &track_id, int64_t msn, int64_t psn, bool skip = false) const;
+	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetInitializationSegment(const int32_t &track_id) const;
+	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetSegment(const int32_t &track_id, const int64_t &segment_number) const;
+	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetChunk(const int32_t &track_id, const int64_t &segment_number, const int64_t &chunk_number) const;
+
 private:
 	bool Start() override;
 	bool Stop() override;
+
+	void NotifyPlaylistUpdated(const int32_t &track_id, const int64_t &msn, const int64_t &part);
 
 	// bmff::FMp4StorageObserver implementation
 	void OnFMp4StorageInitialized(const int32_t &track_id) override;
@@ -41,11 +71,11 @@ private:
 	// Create and Get fMP4 packager and storage with track info, storage and packager_config
 	bool AddPackager(const std::shared_ptr<const MediaTrack> &track);
 	// Get fMP4 packager with the track id
-	std::shared_ptr<bmff::FMP4Packager> GetPackager(const int32_t &track_id);
+	std::shared_ptr<bmff::FMP4Packager> GetPackager(const int32_t &track_id) const;
 	// Get storage with the track id
-	std::shared_ptr<bmff::FMP4Storage> GetStorage(const int32_t &track_id);
+	std::shared_ptr<bmff::FMP4Storage> GetStorage(const int32_t &track_id) const;
 	// Get Playlist with the track id
-	std::shared_ptr<LLHlsPlaylist> GetPlaylist(const int32_t &track_id);
+	std::shared_ptr<LLHlsChunklist> GetChunklistWriter(const int32_t &track_id) const;
 
 	// Add X-MEDIA to the master playlist
 	void AddMediaCandidateToMasterPlaylist(const std::shared_ptr<const MediaTrack> &track);
@@ -67,11 +97,11 @@ private:
 
 	// Track ID : Stroage
 	std::map<int32_t, std::shared_ptr<bmff::FMP4Storage>> _storage_map;
-	std::shared_mutex _storage_map_lock;
+	mutable std::shared_mutex _storage_map_lock;
 	std::map<int32_t, std::shared_ptr<bmff::FMP4Packager>> _packager_map;
-	std::shared_mutex _packager_map_lock;
-	std::map<int32_t, std::shared_ptr<LLHlsPlaylist>> _playlist_map;
-	std::shared_mutex _playlist_map_lock;
+	mutable std::shared_mutex _packager_map_lock;
+	std::map<int32_t, std::shared_ptr<LLHlsChunklist>> _chunklist_map;
+	mutable std::shared_mutex _chunklist_map_lock;
 
 	LLHlsMasterPlaylist _master_playlist;
 

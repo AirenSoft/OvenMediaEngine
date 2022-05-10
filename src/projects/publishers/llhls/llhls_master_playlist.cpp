@@ -33,6 +33,8 @@ bool LLHlsMasterPlaylist::AddGroupMedia(const MediaInfo &media_info)
 
 	_media_infos[media_info._group_id].push_back(media_info);
 
+	_updated = true;
+
 	return true;
 }
 
@@ -70,6 +72,8 @@ bool LLHlsMasterPlaylist::AddStreamInfo(const StreamInfo &stream_info)
 	}
 	
 	_stream_infos.push_back(stream_info);
+
+	_updated = true;
 
 	return true;
 }
@@ -114,8 +118,13 @@ const LLHlsMasterPlaylist::MediaInfo &LLHlsMasterPlaylist::GetDefaultMediaInfo(c
 	return MediaInfo::InvalidMediaInfo();
 }
 
-ov::String LLHlsMasterPlaylist::ToString()
+ov::String LLHlsMasterPlaylist::ToString() const
 {
+	if (_updated == false)
+	{
+		return _playlist_cache;
+	}
+
 	ov::String playlist;
 
 	playlist.AppendFormat("#EXTM3U\n");
@@ -171,7 +180,7 @@ ov::String LLHlsMasterPlaylist::ToString()
 	// Write EXT-X-STREAM-INF from _stream_infos
 	for (const auto &variant_info : _stream_infos)
 	{
-		playlist.AppendFormat("#EXT-X-STREAM-INF:PROGRAM-ID=%d", variant_info._program_id);
+		playlist.AppendFormat("#EXT-X-STREAM-INF:");
 
 		std::shared_ptr<const MediaTrack> video_track = nullptr, audio_track = nullptr;
 
@@ -208,7 +217,7 @@ ov::String LLHlsMasterPlaylist::ToString()
 		}
 
 		// Output Bandwidth
-		playlist.AppendFormat(",BANDWIDTH=%d", bandwidth);
+		playlist.AppendFormat("BANDWIDTH=%d", bandwidth);
 
 		// If variant_info is video, output RESOLUTION, FRAME-RATE
 		if (variant_info._track->GetMediaType() == cmn::MediaType::Video)
@@ -226,7 +235,11 @@ ov::String LLHlsMasterPlaylist::ToString()
 		}
 		if (audio_track != nullptr)
 		{
-			playlist.AppendFormat(",%s", CodecMediaType::GetCodecsParameter(audio_track).CStr());
+			if (video_track != nullptr)
+			{
+				playlist.AppendFormat(",");
+			}
+			playlist.AppendFormat("%s", CodecMediaType::GetCodecsParameter(audio_track).CStr());
 		}
 		playlist.AppendFormat("\"");
 
@@ -241,9 +254,13 @@ ov::String LLHlsMasterPlaylist::ToString()
 		}
 
 		// URI
-		playlist.AppendFormat(",URI=\"%s\"", variant_info._uri.CStr());
+		playlist.AppendFormat("\n");
+		playlist.AppendFormat("%s", variant_info._uri.CStr());
 		playlist.AppendFormat("\n");
 	}
+
+	_playlist_cache = playlist;
+	_updated = false;
 
 	return playlist;
 }

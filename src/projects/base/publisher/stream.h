@@ -37,7 +37,7 @@ namespace pub
 		
 		ov::Semaphore _queue_event;
 
-		std::any PopStreamPacket();
+		std::optional<std::any> PopStreamPacket();
 		ov::Queue<std::any> _packet_queue;
 
 		struct SessionMessage
@@ -104,7 +104,7 @@ namespace pub
 		std::shared_ptr<Application> GetApplication();
 		const char * GetApplicationTypeName();
 
-		State GetState()
+		State GetState() const
 		{
 			return _state;
 		}
