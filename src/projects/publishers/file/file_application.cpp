@@ -6,6 +6,8 @@
 
 #define FILE_PUBLISHER_ERROR_DOMAIN "FilePublisher"
 
+namespace pub
+{
 std::shared_ptr<FileApplication> FileApplication::Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
 {
 	auto application = std::make_shared<FileApplication>(publisher, application_info);
@@ -194,64 +196,6 @@ void FileApplication::SessionUpdateByUser()
 	}
 }
 
-#if 0
-void FileApplication::SessionController()
-{
-	for (uint32_t i = 0; i < _userdata_sets.GetCount(); i++)
-	{
-		auto userdata = _userdata_sets.GetAt(i);
-		if (userdata == nullptr)
-			continue;
-
-		// Find a session related to Userdata.
-		auto stream = std::static_pointer_cast<FileStream>(GetStream(userdata->GetStreamName()));
-
-		if (stream != nullptr && stream->GetState() == pub::Stream::State::STARTED)
-		{
-			// If there is no session, create a new file(record) session.
-			auto session = std::static_pointer_cast<FileSession>(stream->GetSession(userdata->GetSessionId()));
-			if (session == nullptr)
-			{
-				session = stream->CreateSession();
-				if (session == nullptr)
-				{
-					logte("Could not create session");
-					continue;
-				}
-				userdata->SetSessionId(session->GetId());
-
-				session->SetRecord(userdata);
-			}
-
-			if (userdata->GetEnable() == true && userdata->GetRemove() == false)
-			{
-				SessionStart(session);
-			}
-
-			if (userdata->GetEnable() == false || userdata->GetRemove() == true)
-			{
-				SessionStop(session);
-			}
-		}
-		else
-		{
-			userdata->SetState(info::Record::RecordState::Ready);
-		}
-
-		// Garbage collector of removed userdata sets
-		if (userdata->GetRemove() == true)
-		{
-			logtd("Remove userdata of file publiser. id(%s)", userdata->GetId().CStr());
-
-			if (stream != nullptr && userdata->GetSessionId() != 0)
-				stream->DeleteSession(userdata->GetSessionId());
-
-			_userdata_sets.DeleteByKey(userdata->GetId());
-		}
-	}
-}
-#endif
-
 std::shared_ptr<ov::Error> FileApplication::RecordStart(const std::shared_ptr<info::Record> record)
 {
 	// Checking for the required parameters
@@ -393,4 +337,5 @@ std::shared_ptr<ov::Error> FileApplication::GetRecords(const std::shared_ptr<inf
 	}
 
 	return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::Success, "Success");
+}
 }

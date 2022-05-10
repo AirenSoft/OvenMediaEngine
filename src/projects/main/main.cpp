@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
 	INIT_MODULE(dash_publisher, "MPEG-DASH Publisher", DashPublisher::Create(*server_config, media_router));
 	INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(*server_config, media_router));
 	INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, media_router));
-	INIT_MODULE(file_publisher, "File Publisher", FilePublisher::Create(*server_config, media_router));
+	INIT_MODULE(file_publisher, "File Publisher", pub::FilePublisher::Create(*server_config, media_router));
 	INIT_MODULE(mpegtspush_publisher, "MpegtsPush Publisher", MpegtsPushPublisher::Create(*server_config, media_router));
 	INIT_MODULE(rtmppush_publisher, "RtmpPush Publisher", RtmpPushPublisher::Create(*server_config, media_router));
 	INIT_MODULE(thumbnail_publisher, "Thumbnail Publisher", ThumbnailPublisher::Create(*server_config, media_router));
@@ -132,6 +132,7 @@ int main(int argc, char *argv[])
 	INIT_MODULE(rtmp_provider, "RTMP Provider", pvd::RtmpProvider::Create(*server_config, media_router));
 	INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
 	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
+	INIT_MODULE(file_provider, "File Provider", pvd::FileProvider::Create(*server_config, media_router));
 	// PENDING : INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
 
 	auto api_server = std::make_shared<api::Server>();
@@ -166,6 +167,8 @@ int main(int argc, char *argv[])
 	RELEASE_MODULE(rtmp_provider, "RTMP Provider");
 	RELEASE_MODULE(ovt_provider, "OVT Provider");
 	RELEASE_MODULE(rtspc_provider, "RTSPC Provider");
+	RELEASE_MODULE(file_provider, "File Provider");
+	
 	// PENDING : RELEASE_MODULE(rtsp_provider, "RTSP Provider");
 
 	RELEASE_MODULE(transcoder, "Transcoder");

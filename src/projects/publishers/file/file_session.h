@@ -6,44 +6,47 @@
 
 #include "base/info/record.h"
 
-class FileSession : public pub::Session
+namespace pub
 {
-public:
-	static std::shared_ptr<FileSession> Create(const std::shared_ptr<pub::Application> &application,
-											   const std::shared_ptr<pub::Stream> &stream,
-											   uint32_t ovt_session_id);
+	class FileSession : public pub::Session
+	{
+	public:
+		static std::shared_ptr<FileSession> Create(const std::shared_ptr<pub::Application> &application,
+												   const std::shared_ptr<pub::Stream> &stream,
+												   uint32_t ovt_session_id);
 
-	FileSession(const info::Session &session_info,
-				const std::shared_ptr<pub::Application> &application,
-				const std::shared_ptr<pub::Stream> &stream);
-	~FileSession() override;
+		FileSession(const info::Session &session_info,
+					const std::shared_ptr<pub::Application> &application,
+					const std::shared_ptr<pub::Stream> &stream);
+		~FileSession() override;
 
-	bool Start() override;
-	bool Stop() override;
+		bool Start() override;
+		bool Stop() override;
 
-	bool Split();
-	bool StartRecord();
-	bool StopRecord();
+		bool Split();
+		bool StartRecord();
+		bool StopRecord();
 
-	void SendOutgoingData(const std::any &packet) override;
+		void SendOutgoingData(const std::any &packet) override;
 
-	void SetRecord(std::shared_ptr<info::Record> &record);
-	std::shared_ptr<info::Record> &GetRecord();
+		void SetRecord(std::shared_ptr<info::Record> &record);
+		std::shared_ptr<info::Record> &GetRecord();
 
-private:
-	ov::String GetRootPath();
-	ov::String GetOutputTempFilePath(std::shared_ptr<info::Record> &record);
-	ov::String GetOutputFilePath();
-	ov::String GetOutputFileInfoPath();
-	ov::String ConvertMacro(ov::String src);
-	bool MakeDirectoryRecursive(std::string s);
+	private:
+		ov::String GetRootPath();
+		ov::String GetOutputTempFilePath(std::shared_ptr<info::Record> &record);
+		ov::String GetOutputFilePath();
+		ov::String GetOutputFileInfoPath();
+		ov::String ConvertMacro(ov::String src);
+		bool MakeDirectoryRecursive(std::string s);
 
-private:
-	std::shared_ptr<FileWriter> _writer;
+	private:
+		std::shared_ptr<FileWriter> _writer;
 
-	std::shared_ptr<info::Record> _record;
+		std::shared_ptr<info::Record> _record;
 
-	std::vector<int32_t> selected_tracks;
+		std::vector<int32_t> selected_tracks;
 
-	std::shared_mutex _lock;
-};
+		std::shared_mutex _lock;
+	};
+}  // namespace pub

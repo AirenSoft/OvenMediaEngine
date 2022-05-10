@@ -30,6 +30,10 @@ namespace pvd
 
 		bool OnOvtPacketized(std::shared_ptr<OvtPacket> &packet) override;
 
+		ProcessMediaEventTrigger GetProcessMediaEventTriggerMode() override {
+			return ProcessMediaEventTrigger::TRIGGER_EPOLL;
+		}
+
 		int GetFileDescriptorForDetectingEvent() override;
 		// If this stream belongs to the Pull provider, 
 		// this function is called periodically by the StreamMotor of application. 

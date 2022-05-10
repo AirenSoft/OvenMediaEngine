@@ -47,6 +47,7 @@ LOCAL_STATIC_LIBRARIES := \
 	jsoncpp \
 	file \
 	rtmp \
+	file_provider \
 
 # rtsp_provider 
 

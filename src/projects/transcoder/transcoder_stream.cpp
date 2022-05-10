@@ -951,7 +951,7 @@ bool TranscoderStream::CreateEncoder(int32_t encoder_track_id, std::shared_ptr<T
 	auto encoder = std::move(TranscodeEncoder::CreateEncoder(output_context));
 	if (encoder == nullptr)
 	{
-		logte("%d track encoder allication failed", encoder_track_id);
+		logte("%d track encoder allocation failed", encoder_track_id);
 		return false;
 	}
 

@@ -1,16 +1,19 @@
 #pragma once
 
-#include "base/ovlibrary/ovlibrary.h"
 #include "base/info/record.h"
+#include "base/ovlibrary/ovlibrary.h"
 
-
-class FileExport : public ov::Singleton<FileExport>
+namespace pub
 {
-public:
-	FileExport();
-	~FileExport();
+	class FileExport : public ov::Singleton<FileExport>
+	{
+	public:
+		FileExport();
+		~FileExport();
 
-	bool ExportRecordToXml(const ov::String path, const std::shared_ptr<info::Record> &record);
+		bool ExportRecordToXml(const ov::String path, const std::shared_ptr<info::Record> &record);
 
-	std::shared_mutex _mutex;;
-};
+		std::shared_mutex _mutex;
+		;
+	};
+}  // namespace pub
