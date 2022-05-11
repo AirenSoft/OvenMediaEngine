@@ -141,8 +141,10 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 {
 	auto http_interceptor = std::make_shared<LLHlsHttpInterceptor>();
 
+	// Register Request Handler
 	http_interceptor->Register(http::Method::Get, R"(.+llhls\.(m3u8|m4s)$)", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
 
+		auto connection = exchange->GetConnection();
 		auto request = exchange->GetRequest();
 		auto response = exchange->GetResponse();
 
@@ -186,15 +188,20 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		if (session == nullptr)
 		{
 			// New HTTP Connection
-			session = LLHlsSession::Create(session_id, stream->GetApplication(), stream);
-			if (session == nullptr)
+			auto new_session = LLHlsSession::Create(session_id, stream->GetApplication(), stream);
+			if (new_session == nullptr)
 			{
 				logte("Could not create llhls session for request: %s", request->ToString().CStr());
 				response->SetStatusCode(http::StatusCode::InternalServerError);
 				return http::svr::NextHandler::DoNotCall;
 			}
 
-			stream->AddSession(session);
+			// It will be used in CloseHandler
+			connection->SetUserData(new_session);
+
+			stream->AddSession(new_session);
+
+			session = new_session;
 		}
 
 		// Cors Setting
@@ -202,6 +209,35 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		stream->SendMessage(session, std::make_any<std::shared_ptr<http::svr::HttpExchange>>(exchange));
 
 		return http::svr::NextHandler::DoNotCallAndDoNotResponse;
+	});
+
+	// Set Close Handler
+	http_interceptor->SetCloseHandler([this](const std::shared_ptr<http::svr::HttpConnection> &connection, PhysicalPortDisconnectReason reason) -> void {
+
+		try 
+		{
+			// Get session from user_data of connection
+			auto session = std::any_cast<std::shared_ptr<LLHlsSession>>(connection->GetUserData());
+			if (session == nullptr)
+			{
+				// Never reach here
+				logte("Could not get llhls session from user_data of connection");
+				return;
+			}
+			// Remove session from stream
+			auto stream = session->GetStream();
+			if (stream != nullptr)
+			{
+				stream->RemoveSession(session->GetId());
+			}
+
+			session->Stop();
+		}
+		catch (const std::bad_any_cast &)
+		{
+			// Never reach here
+			logtc("Could not get llhls session from user data");
+		}
 	});
 
 	return http_interceptor;

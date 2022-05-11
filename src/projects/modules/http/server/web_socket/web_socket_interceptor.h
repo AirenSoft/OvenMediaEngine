@@ -43,7 +43,6 @@ namespace http
 				bool OnRequestPrepared(const std::shared_ptr<HttpExchange> &exchange) override;
 				bool OnDataReceived(const std::shared_ptr<HttpExchange> &exchange, const std::shared_ptr<const ov::Data> &data) override;
 				InterceptorResult OnRequestCompleted(const std::shared_ptr<HttpExchange> &exchange) override;
-				void OnError(const std::shared_ptr<HttpExchange> &exchange, StatusCode status_code) override;
 				void OnClosed(const std::shared_ptr<HttpConnection> &stream, PhysicalPortDisconnectReason reason) override;
 
 				ConnectionHandler _connection_handler;

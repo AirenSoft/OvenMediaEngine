@@ -83,7 +83,7 @@ bool LLHlsStream::Start()
 
 	//TODO(Getroot): It will be replaced with ABR config
 	
-	// Debug audio track
+	// Need to debug audio track
 	AddStreamInfToMasterPlaylist(first_video_track, nullptr);
 
 	logtd("Master Playlist : %s", _master_playlist.ToString().CStr());
