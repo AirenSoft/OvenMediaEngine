@@ -108,23 +108,28 @@ bool LLHlsStream::Stop()
 	return Stream::Stop();
 }
 
-std::tuple<LLHlsStream::RequestResult, ov::String> LLHlsStream::GetPlaylist() const
+std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetPlaylist(bool gzip/*=false*/) const
 {
 	if (GetState() != State::STARTED)
 	{
-		return { RequestResult::NotFound, "" };
+		return { RequestResult::NotFound, nullptr };
 	}
 
-	return { RequestResult::Success, _master_playlist.ToString() };
+	if (gzip == true)
+	{
+		return { RequestResult::Success, _master_playlist.ToGzipData() };
+	}
+
+	return { RequestResult::Success, _master_playlist.ToString().ToData(false) };
 }
 
-std::tuple<LLHlsStream::RequestResult, ov::String> LLHlsStream::GetChunklist(const int32_t &track_id, int64_t msn, int64_t psn, bool skip) const
+std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetChunklist(const int32_t &track_id, int64_t msn, int64_t psn, bool skip/*=false*/, bool gzip/*=false*/) const
 {
 	auto chunklist = GetChunklistWriter(track_id);
 	if (chunklist == nullptr)
 	{
 		logtw("Could not find chunklist for track_id = %d", track_id);
-		return { RequestResult::NotFound, "" };
+		return { RequestResult::NotFound, nullptr };
 	}
 
 	if (msn >= 0 && psn >= 0)
@@ -133,23 +138,28 @@ std::tuple<LLHlsStream::RequestResult, ov::String> LLHlsStream::GetChunklist(con
 		if (chunklist->GetLastSequenceNumber(last_msn, last_psn) == false)
 		{
 			logtw("Could not get last sequence number for track_id = %d", track_id);
-			return { RequestResult::NotFound, "" };
+			return { RequestResult::NotFound, nullptr };
 		}
 
 		if (last_msn < 0 || last_psn < 0)
 		{
 			logtw("Could not get last sequence number for track_id = %d", track_id);
-			return { RequestResult::NotFound, "" };
+			return { RequestResult::NotFound, nullptr };
 		}
 
 		if (msn > last_msn || (msn >= last_msn && psn > last_psn))
 		{
 			// Hold the request until a Playlist contains a Segment with the requested Sequence Number
-			return { RequestResult::Accepted, "" };
+			return { RequestResult::Accepted, nullptr };
 		}
 	}
 
-	return { RequestResult::Success, chunklist->ToString(skip) };
+	if (gzip == true)
+	{
+		return { RequestResult::Success, chunklist->ToGzipData() };
+	}
+
+	return { RequestResult::Success, chunklist->ToString(skip).ToData(false) };
 }
 
 std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::GetInitializationSegment(const int32_t &track_id) const

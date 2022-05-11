@@ -10,6 +10,8 @@
 #include "llhls_chunklist.h"
 #include "llhls_private.h"
 
+#include <base/ovlibrary/zip.h>
+
 LLHlsChunklist::LLHlsChunklist(const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, float part_target_duration, const ov::String &map_uri)
 {
 	_track = track;
@@ -56,7 +58,8 @@ bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
 
 	segment->SetCompleted();
 
-	_content_updated = true;
+	_need_playlist_updated = true;
+	_need_gzipped_playlist_updated = true;
 
 	return true;
 }
@@ -90,7 +93,8 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 	segment->InsertPartialSegmentInfo(std::make_shared<SegmentInfo>(info));
 	_last_partial_segment_sequence = info.GetSequence();
 
-	_content_updated = true;
+	_need_playlist_updated = true;
+	_need_gzipped_playlist_updated = true;
 
 	return true;
 }
@@ -132,21 +136,47 @@ bool LLHlsChunklist::GetLastSequenceNumber(int64_t &msn, int64_t &psn) const
 ov::String LLHlsChunklist::ToString(bool skip/*=false*/) const
 {
 	// Create playlist
-	if (_content_updated == true)
+	if (_need_playlist_updated == true)
 	{
 		return GetPlaylist(skip);
 	}
 
+	std::shared_lock<std::shared_mutex> lock(_playlist_cache_guard);
 	if (skip == false)
 	{
 		return _playlist_cache;
 	}
-	else
+
+	return _playlist_skipped_cache;
+}
+
+std::shared_ptr<const ov::Data> LLHlsChunklist::ToGzipData(bool skip/*=false*/) const
+{
+	if (_need_gzipped_playlist_updated == false)
 	{
-		return _playlist_skipped_cache;
+		std::shared_lock<std::shared_mutex> lock(_gzipped_playlist_cache_guard);
+		if (skip == false)
+		{
+			return _gzipped_playlist_cache;
+		}
+		else
+		{
+			return _gzipped_playlist_skipped_cache;
+		}
 	}
 
-	return "";
+	std::lock_guard<std::shared_mutex> lock(_gzipped_playlist_cache_guard);
+	_gzipped_playlist_cache = ov::Zip::CompressGzip(ToString(true).ToData(false));
+	_gzipped_playlist_skipped_cache = ov::Zip::CompressGzip(ToString(false).ToData(false));
+
+	_need_gzipped_playlist_updated = false;
+
+	if (skip == true)
+	{
+		return _gzipped_playlist_skipped_cache;
+	}
+
+	return _gzipped_playlist_cache;
 }
 
 ov::String LLHlsChunklist::GetPlaylist(bool skip) const
@@ -164,6 +194,10 @@ ov::String LLHlsChunklist::GetPlaylist(bool skip) const
 		can_skip_until = _target_duration * (_segments.size()/3);
 		skipped_segment = (_segments.size()/3);
 	}
+	
+	// debug
+	can_skip_until = 0;
+	skipped_segment = 0;
 
 	ov::String playlist;
 
@@ -198,7 +232,7 @@ ov::String LLHlsChunklist::GetPlaylist(bool skip) const
 
 		uint32_t skip_count = 0;
 
-		std::shared_lock<std::shared_mutex> lock(_segments_guard);
+		std::shared_lock<std::shared_mutex> segment_lock(_segments_guard);
 		for (auto &segment : _segments)
 		{
 			if (version == 1 && skip_count < skipped_segment)
@@ -243,7 +277,9 @@ ov::String LLHlsChunklist::GetPlaylist(bool skip) const
 				playlist.AppendFormat("%s\n", segment->GetUrl().CStr());
 			}
 		}
+		segment_lock.unlock();
 
+		std::unique_lock<std::shared_mutex> cache_lock(_playlist_cache_guard);
 		if (version == 0)
 		{
 			_playlist_cache = playlist;
@@ -252,10 +288,12 @@ ov::String LLHlsChunklist::GetPlaylist(bool skip) const
 		{
 			_playlist_skipped_cache = playlist;
 		}
+		cache_lock.unlock();
 	}
 
-	_content_updated = false;
+	_need_playlist_updated = false;
 
+	std::shared_lock<std::shared_mutex> lock(_playlist_cache_guard);
 	if (skip == true)
 	{
 		return _playlist_skipped_cache;
@@ -263,3 +301,4 @@ ov::String LLHlsChunklist::GetPlaylist(bool skip) const
 
 	return _playlist_cache;
 }
+
