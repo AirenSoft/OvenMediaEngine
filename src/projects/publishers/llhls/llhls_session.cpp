@@ -264,7 +264,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 		response->SetStatusCode(http::StatusCode::NotFound);
 	}
 
-	response->Response();
+	ResponseData(response);
 }
 
 void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id, int64_t msn, int64_t part, bool skip)
@@ -299,7 +299,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		response->SetStatusCode(http::StatusCode::NotFound);
 	}
 
-	response->Response();
+	ResponseData(response);
 }
 
 void LLHlsSession::ResponseInitializationSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id)
@@ -336,7 +336,7 @@ void LLHlsSession::ResponseInitializationSegment(const std::shared_ptr<http::svr
 		response->SetStatusCode(http::StatusCode::NotFound);
 	}
 
-	response->Response();
+	ResponseData(response);
 }
 
 void LLHlsSession::ResponseSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id, const int64_t &segment_number)
@@ -372,7 +372,7 @@ void LLHlsSession::ResponseSegment(const std::shared_ptr<http::svr::HttpExchange
 		response->SetStatusCode(http::StatusCode::NotFound);
 	}
 
-	response->Response();
+	ResponseData(response);
 }
 
 void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number)
@@ -414,7 +414,13 @@ void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpE
 		response->SetStatusCode(http::StatusCode::NotFound);
 	}
 
-	response->Response();
+	ResponseData(response);
+}
+
+void LLHlsSession::ResponseData(const std::shared_ptr<http::svr::HttpResponse> &response)
+{
+	auto sent_size = response->Response();
+	MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::LLHls, sent_size);
 }
 
 void LLHlsSession::OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn, const int64_t &part)

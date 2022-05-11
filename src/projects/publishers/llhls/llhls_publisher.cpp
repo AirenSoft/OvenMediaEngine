@@ -200,6 +200,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			connection->SetUserData(new_session);
 
 			stream->AddSession(new_session);
+			MonitorInstance->OnSessionConnected(*stream, PublisherType::LLHls);
 
 			session = new_session;
 		}
@@ -229,6 +230,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			if (stream != nullptr)
 			{
 				stream->RemoveSession(session->GetId());
+				MonitorInstance->OnSessionDisconnected(*stream, PublisherType::LLHls);
 			}
 
 			session->Stop();
