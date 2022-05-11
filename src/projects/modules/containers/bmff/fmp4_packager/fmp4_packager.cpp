@@ -207,24 +207,17 @@ namespace bmff
 		}
 		else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::AAC_ADTS)
 		{
-			
-		}
-		else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::AAC_RAW)
-		{
-			// Convert to adts (raw aac data should be 1 frame)
-			auto adts_data = AacConverter::ConvertRawToAdts(media_packet->GetData(), GetTrack()->GetAacConfig());
-			if (adts_data == nullptr)
-			{
-				logte("Failed to convert raw aac to adts.");
-				return nullptr;
-			}
-
+			auto raw_data = AacConverter::ConvertAdtsToRaw(media_packet->GetData(), nullptr);
 			auto new_packet = std::make_shared<MediaPacket>(*media_packet);
-			new_packet->SetData(adts_data);
-			new_packet->SetBitstreamFormat(cmn::BitstreamFormat::AAC_ADTS);
+			new_packet->SetData(raw_data);
+			new_packet->SetBitstreamFormat(cmn::BitstreamFormat::AAC_RAW);
 			new_packet->SetPacketType(cmn::PacketType::RAW);
 
 			converted_packet = new_packet;
+		}
+		else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::AAC_RAW)
+		{
+
 		}
 		else
 		{

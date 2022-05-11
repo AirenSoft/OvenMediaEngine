@@ -890,7 +890,7 @@ namespace bmff
 		}
 
 		// uint(16) channelcount = 2;
-		stream.WriteBE16(2);
+		stream.WriteBE16(GetTrack()->GetChannel().GetCounts());
 		// uint(16) samplesize = 16;
 		stream.WriteBE16(16);
 		// uint(16) pre_defined = 0;
@@ -1589,7 +1589,9 @@ namespace bmff
 		// it is used to find the position of the data_offset of the trun box in reverse.
 		_last_trun_box_size = BMFF_FULL_BOX_HEADER_SIZE + stream.GetOffset();
 
-		return WriteFullBox(container_stream, "trun", *stream.GetData(), 1, tr_flags);
+		uint8_t version = GetTrack()->GetMediaType() == cmn::MediaType::Video ? 1 : 0;
+
+		return WriteFullBox(container_stream, "trun", *stream.GetData(), version, tr_flags);
 	}
 
 	bool Packager::GetSampleFlags(const std::shared_ptr<const MediaPacket> &sample, uint32_t &flags)

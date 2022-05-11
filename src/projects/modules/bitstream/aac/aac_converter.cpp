@@ -135,7 +135,7 @@ std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const std::shared_ptr<c
 	return adts_data;
 }
 
-std::shared_ptr<const ov::Data> AacConverter::ConvertAdtsToRaw(const std::shared_ptr<const ov::Data> &data, std::vector<size_t> *length_list)
+std::shared_ptr<ov::Data> AacConverter::ConvertAdtsToRaw(const std::shared_ptr<const ov::Data> &data, std::vector<size_t> *length_list)
 {
 	auto raw_data = std::make_shared<ov::Data>();
 	size_t remained = data->GetLength();
