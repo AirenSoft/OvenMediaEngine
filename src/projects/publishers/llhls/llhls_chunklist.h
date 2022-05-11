@@ -131,6 +131,7 @@ public:
 	bool AppendPartialSegmentInfo(uint32_t segment_sequence, const SegmentInfo &info);
 
 	ov::String ToString(bool skip=false) const;
+	std::shared_ptr<const ov::Data> ToGzipData(bool skip=false) const;
 
 	std::shared_ptr<SegmentInfo> GetSegmentInfo(uint32_t segment_sequence) const;
 	bool GetLastSequenceNumber(int64_t &msn, int64_t &psn) const;
@@ -150,9 +151,15 @@ private:
 	int64_t _last_segment_sequence = -1;
 	int64_t _last_partial_segment_sequence = -1;
 
-	mutable bool _content_updated = true;
+	mutable bool _need_playlist_updated = true;
 	mutable ov::String _playlist_cache;
 	mutable ov::String _playlist_skipped_cache;
+	mutable std::shared_mutex _playlist_cache_guard;
+
+	mutable bool _need_gzipped_playlist_updated = true;
+	mutable std::shared_ptr<ov::Data> _gzipped_playlist_cache;
+	mutable std::shared_ptr<ov::Data> _gzipped_playlist_skipped_cache;
+	mutable std::shared_mutex _gzipped_playlist_cache_guard;
 
 	// Segment number -> SegmentInfo
 	std::deque<std::shared_ptr<SegmentInfo>> _segments;

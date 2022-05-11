@@ -9,6 +9,7 @@
 #include "llhls_master_playlist.h"
 #include "llhls_private.h"
 
+#include <base/ovlibrary/zip.h>
 #include <modules/bitstream/codec_media_type.h>
 
 bool LLHlsMasterPlaylist::AddGroupMedia(const MediaInfo &media_info)
@@ -33,7 +34,7 @@ bool LLHlsMasterPlaylist::AddGroupMedia(const MediaInfo &media_info)
 
 	_media_infos[media_info._group_id].push_back(media_info);
 
-	_updated = true;
+	_need_playlist_updated = true;
 
 	return true;
 }
@@ -73,7 +74,8 @@ bool LLHlsMasterPlaylist::AddStreamInfo(const StreamInfo &stream_info)
 	
 	_stream_infos.push_back(stream_info);
 
-	_updated = true;
+	_need_playlist_updated = true;
+	_need_gzipped_playlist_updated = true;
 
 	return true;
 }
@@ -120,7 +122,7 @@ const LLHlsMasterPlaylist::MediaInfo &LLHlsMasterPlaylist::GetDefaultMediaInfo(c
 
 ov::String LLHlsMasterPlaylist::ToString() const
 {
-	if (_updated == false)
+	if (_need_playlist_updated == false)
 	{
 		return _playlist_cache;
 	}
@@ -146,7 +148,7 @@ ov::String LLHlsMasterPlaylist::ToString() const
 
 				if (media_info._type == MediaInfo::Type::Audio)
 				{
-					playlist.AppendFormat(",CHANNELS=%d", media_info._track->GetChannel().GetCounts());
+					playlist.AppendFormat(",CHANNELS=\"%d\"", media_info._track->GetChannel().GetCounts());
 				}
 
 				if (!media_info._language.IsEmpty())
@@ -260,7 +262,21 @@ ov::String LLHlsMasterPlaylist::ToString() const
 	}
 
 	_playlist_cache = playlist;
-	_updated = false;
+	_need_playlist_updated = false;
+	_need_gzipped_playlist_updated = true;
 
 	return playlist;
+}
+
+std::shared_ptr<const ov::Data> LLHlsMasterPlaylist::ToGzipData() const
+{
+	if (_need_gzipped_playlist_updated == false)
+	{
+		return _gzipped_playlist_cache;
+	}
+
+	_gzipped_playlist_cache = ov::Zip::CompressGzip(ToString().ToData(false));
+	_need_gzipped_playlist_updated = false;
+
+	return _gzipped_playlist_cache;
 }

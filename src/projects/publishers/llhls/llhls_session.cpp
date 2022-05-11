@@ -249,14 +249,16 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 	auto response = exchange->GetResponse();
 
 	// Get the playlist
-	auto [result, playlist] = llhls_stream->GetPlaylist();
+	auto [result, playlist] = llhls_stream->GetPlaylist(true);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
 		// Send the playlist
 		response->SetStatusCode(http::StatusCode::OK);
 		// Set Content-Type header
 		response->SetHeader("Content-Type", "application/vnd.apple.mpegurl");
-		response->AppendString(playlist);
+		// gzip compression
+		response->SetHeader("Content-Encoding", "gzip");
+		response->AppendData(playlist);
 	}
 	else
 	{
@@ -278,18 +280,22 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 	auto response = exchange->GetResponse();
 
 	// Get the chunklist
-	auto [result, chunklist] = llhls_stream->GetChunklist(track_id, msn, part, skip);
+	auto [result, chunklist] = llhls_stream->GetChunklist(track_id, msn, part, skip, true);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
 		// Send the chunklist
 		response->SetStatusCode(http::StatusCode::OK);
 		// Set Content-Type header
 		response->SetHeader("Content-Type", "application/vnd.apple.mpegurl");
-		response->AppendString(chunklist);
+		// gzip compression
+		response->SetHeader("Content-Encoding", "gzip");
+		response->AppendData(chunklist);
 	}
 	else if (result == LLHlsStream::RequestResult::Accepted)
 	{
 		// Hold
+		//TODO(Getroot): EXT-X-SKIP is under debugging
+		skip = false;
 		AddPendingRequest(exchange, RequestType::Chunklist, track_id, msn, part, skip);
 		return ;
 	}
