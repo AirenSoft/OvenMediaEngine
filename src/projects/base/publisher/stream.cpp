@@ -334,7 +334,7 @@ namespace pub
 		std::unique_lock<std::shared_mutex> session_lock(_session_map_mutex);
 		if (_sessions.count(id) <= 0)
 		{
-			logte("Cannot find session : %u", id);
+			logtd("Cannot find session : %u", id);
 			return false;
 		}
 		_sessions.erase(id);

@@ -94,16 +94,6 @@ namespace http
 				return InterceptorResult::Completed;
 			}
 
-			void Interceptor::OnError(const std::shared_ptr<HttpExchange> &exchange, StatusCode status_code)
-			{
-				auto websocket_session = std::dynamic_pointer_cast<WebSocketSession>(exchange);
-
-				if ((_error_handler != nullptr))
-				{
-					_error_handler(websocket_session, ov::Error::CreateError(WEBSOCKET_ERROR_DOMAIN, static_cast<int>(status_code), "%s", StringFromStatusCode(status_code)));
-				}
-			}
-
 			void Interceptor::OnClosed(const std::shared_ptr<HttpConnection> &connection, PhysicalPortDisconnectReason reason)
 			{
 				auto websocket_session = connection->GetWebSocketSession();

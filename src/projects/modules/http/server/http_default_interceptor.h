@@ -32,8 +32,7 @@ namespace http
 		class HttpExchange;
 
 		using RequestHandler = std::function<NextHandler(const std::shared_ptr<HttpExchange> &exchange)>;
-		using RequestErrorHandler = std::function<void(const std::shared_ptr<HttpExchange> &exchange)>;
-		using ResponseWriteHandler = std::function<bool(const std::shared_ptr<ov::Data> &data)>;
+		using CloseHandler = std::function<void(const std::shared_ptr<HttpConnection> &connection, PhysicalPortDisconnectReason reason)>;
 
 		/// Default HTTP processor
 		class DefaultInterceptor : public RequestInterceptor
@@ -66,6 +65,12 @@ namespace http
 				return Register(Method::Delete, pattern, handler);
 			}
 
+			bool SetCloseHandler(const CloseHandler &handler)
+			{
+				_close_handler = handler;
+				return true;
+			}
+
 			//--------------------------------------------------------------------
 			// Implementation of RequestInterceptor
 			//--------------------------------------------------------------------
@@ -73,7 +78,6 @@ namespace http
 			virtual bool OnRequestPrepared(const std::shared_ptr<HttpExchange> &exchange) override;
 			virtual bool OnDataReceived(const std::shared_ptr<HttpExchange> &exchange, const std::shared_ptr<const ov::Data> &data) override;
 			virtual InterceptorResult OnRequestCompleted(const std::shared_ptr<HttpExchange> &exchange) override;
-			virtual void OnError(const std::shared_ptr<HttpExchange> &exchange, StatusCode status_code) override;
 			virtual void OnClosed(const std::shared_ptr<HttpConnection> &stream, PhysicalPortDisconnectReason reason) override;
 
 		protected:
@@ -88,8 +92,8 @@ namespace http
 			};
 
 			ov::String _pattern_prefix;
-
 			std::vector<RequestInfo> _request_handler_list;
+			CloseHandler _close_handler;
 		};
 	}  // namespace svr
 }  // namespace http

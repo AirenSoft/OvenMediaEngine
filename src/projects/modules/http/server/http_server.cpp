@@ -204,27 +204,18 @@ namespace http
 				_connection_list.erase(client_iterator);
 			}
 
+			// It comes from HttpConnection::Close()
 			if (reason == PhysicalPortDisconnectReason::Disconnect)
 			{
 				logti("Client(%s) has been disconnected by %s",
 					  remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 			}
+			// It comes from PhysicalPort::Close()
 			else
 			{
 				connection->Close(reason);
 				logti("Client(%s) has disconnected from %s",
 					  remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
-			}
-
-			auto interceptor = connection->GetInterceptor();
-			if (interceptor != nullptr)
-			{
-				interceptor->OnClosed(connection, reason);
-			}
-			else
-			{
-				// It probably be disconnected before the interceptor is set.
-				logtd("Interceptor does not exists for HTTP client %p", connection.get());
 			}
 		}
 

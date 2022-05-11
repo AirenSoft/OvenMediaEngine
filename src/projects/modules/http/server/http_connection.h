@@ -65,6 +65,10 @@ namespace http
 			// To string
 			virtual ov::String ToString() const;
 
+			// User data
+			void SetUserData(std::any user_data);
+			std::any GetUserData() const;
+
 		private:
 			// For HTTP 1.0 and HTTP 1.1
 			ssize_t OnHttp1RequestReceived(const std::shared_ptr<const ov::Data> &data);
@@ -80,6 +84,9 @@ namespace http
 			void InitializeHttp2Connection();
 
 			void CheckTimeout();
+
+			// User Data
+			std::any _user_data;
 			
 			// Default : HTTP 1.1
 			ConnectionType _connection_type = ConnectionType::Http11;

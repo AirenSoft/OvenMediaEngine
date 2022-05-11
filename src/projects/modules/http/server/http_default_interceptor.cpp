@@ -168,16 +168,9 @@ namespace http
 			return InterceptorResult::Completed;
 		}
 
-		void DefaultInterceptor::OnError(const std::shared_ptr<HttpExchange> &exchange, StatusCode status_code)
-		{
-			auto response = exchange->GetResponse();
-
-			response->SetStatusCode(status_code);
-		}
-
 		void DefaultInterceptor::OnClosed(const std::shared_ptr<HttpConnection> &connection, PhysicalPortDisconnectReason reason)
 		{
-			// Nothing to do
+			_close_handler(connection, reason);
 		}
 	}  // namespace svr
 }  // namespace http

@@ -22,6 +22,16 @@ namespace http
 			return _client_socket->GetNativeHandle();
 		}
 
+		void HttpConnection::SetUserData(std::any user_data)
+		{
+			_user_data = user_data;
+		}
+		
+		std::any HttpConnection::GetUserData() const
+		{
+			return _user_data;
+		}
+
 		// To string
 		ov::String HttpConnection::ToString() const
 		{

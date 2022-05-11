@@ -54,14 +54,6 @@ namespace http
 			/// @return Whether to disconnect with the client
 			virtual InterceptorResult OnRequestCompleted(const std::shared_ptr<HttpExchange> &exchange) = 0;
 
-			/// A callback called if an error occurs during processing.
-			///
-			/// @param client An instance that contains informations related to HTTP request/response
-			/// @param status_code A status code
-			///
-			/// @remark If the interceptor is the default interceptor of the Server, it can be called before OnHttpPrepare() is called.
-			virtual void OnError(const std::shared_ptr<HttpExchange> &exchange, StatusCode status_code) = 0;
-
 			/// A callback called when the client is disconnects.
 			///
 			/// @param client An instance that contains informations related to HTTP request/response
