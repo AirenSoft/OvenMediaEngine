@@ -42,11 +42,12 @@ bool LLHlsStream::Start()
 		return false;
 	}
 
-	logtd("LLHlsStream(%ld) has been started", GetId());
-	
-	_packager_config.chunk_duration_ms = 1000;
-	_storage_config.max_segments = 10;
-	_storage_config.segment_duration_ms = 5000;
+	auto config = GetApplication()->GetConfig();
+	auto llhls_config = config.GetPublishers().GetLLHlsPublisher();
+
+	_packager_config.chunk_duration_ms = llhls_config.GetChunkDuration() * 1000.0;
+	_storage_config.max_segments = llhls_config.GetSegmentCount();
+	_storage_config.segment_duration_ms = llhls_config.GetSegmentDuration() * 1000;
 
 	//TODO(Getroot): It will be replaced with ABR config
 	std::shared_ptr<MediaTrack> first_video_track = nullptr, first_audio_track = nullptr;
@@ -85,6 +86,8 @@ bool LLHlsStream::Start()
 	AddStreamInfToMasterPlaylist(first_video_track, first_audio_track);
 
 	logtd("Master Playlist : %s", _master_playlist.ToString().CStr());
+
+	logti("LLHlsStream has been created : %s/%u\nChunk Duration(%.2f) Segment Duration(%u) Segment Count(%u)", GetName().CStr(), GetId(), llhls_config.GetChunkDuration(), llhls_config.GetSegmentDuration(), llhls_config.GetSegmentCount());
 
 	return Stream::Start();
 }

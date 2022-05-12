@@ -23,9 +23,9 @@ namespace cfg
 				{
 				protected:
 					
-					int _segment_count = 3;
-					int _chunk_duration_ms = 1000;
-					int _segment_duration = 4;
+					int _segment_count = 10;
+					double _chunk_duration = 0.2;
+					int _segment_duration = 6;
 
 				public:
 					PublisherType GetType() const override
@@ -33,9 +33,8 @@ namespace cfg
 						return PublisherType::LLHls;
 					}
 
-					// CFG_DECLARE_CONST_REF_GETTER_OF(GetSegmentCount, _segment_count)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetSegmentDuration, _segment_duration)
-					CFG_DECLARE_CONST_REF_GETTER_OF(GetChunkDurationMs, _chunk_duration_ms)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetChunkDuration, _chunk_duration)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetSegmentCount, _segment_count)
 
 				protected:
@@ -43,13 +42,13 @@ namespace cfg
 					{
 						Publisher::MakeList();
 
-						Register<Optional>("ChunkDuration", &_chunk_duration_ms);
+						Register<Optional>("ChunkDuration", &_chunk_duration);
 						Register<Optional>("SegmentDuration", &_segment_duration);
 						Register<Optional>("SegmentCount", &_segment_count);
 						Register<Optional>("CrossDomains", &_cross_domains);
 					}
 				};
 			}  // namespace pub
-		}	   // namespace app
-	}		   // namespace vhost
+		} // namespace app
+	} // namespace vhost
 }  // namespace cfg

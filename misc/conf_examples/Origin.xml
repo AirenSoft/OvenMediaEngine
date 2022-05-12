@@ -248,11 +248,9 @@
 							</CrossDomains>
 						</HLS>
 						<LLHLS>
-							<!-- ChunkDuration : milliseconds unit -->
-							<ChunkDuration>1000</ChunkDuration>
-							<!-- SegmentDuration : seconds unit -->
-							<SegmentDuration>5</SegmentDuration>
-							<SegmentCount>5</SegmentCount>
+							<ChunkDuration>0.2</ChunkDuration>
+							<SegmentDuration>6</SegmentDuration>
+							<SegmentCount>10</SegmentCount>
 							<CrossDomains>
 								<Url>*</Url>
 							</CrossDomains>
