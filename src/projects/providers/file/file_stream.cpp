@@ -22,7 +22,7 @@ namespace pvd
 												   const uint32_t stream_id, const ov::String &stream_name,
 												   const std::vector<ov::String> &url_list)
 	{
-		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::RtmpPull);
+		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::File);
 
 		stream_info.SetId(stream_id);
 		stream_info.SetName(stream_name);
