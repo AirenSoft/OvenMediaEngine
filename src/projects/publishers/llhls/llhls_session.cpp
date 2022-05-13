@@ -421,6 +421,7 @@ void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpE
 	}
 
 	ResponseData(response);
+	exchange->Release();
 }
 
 void LLHlsSession::ResponseData(const std::shared_ptr<http::svr::HttpResponse> &response)

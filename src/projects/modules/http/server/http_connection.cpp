@@ -91,6 +91,28 @@ namespace http
 			}
 		}
 
+		void HttpConnection::OnExchangeCompleted(const std::shared_ptr<HttpExchange> &exchange)
+		{
+			switch (_connection_type)
+			{
+				case ConnectionType::Http20:
+				{
+					auto http2_stream = std::static_pointer_cast<h2::HttpStream>(exchange);
+
+					// Lock
+					std::unique_lock<std::mutex> lock(_http_stream_map_guard);
+					_http_stream_map.erase(http2_stream->GetStreamId());
+					break;
+				}
+				case ConnectionType::Http10:
+				case ConnectionType::Http11:
+				case ConnectionType::WebSocket:
+				default:
+					// Nothing to do
+					break;
+			}
+		}
+
 		// Called from HttpsServer
 		void HttpConnection::SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data)
 		{
@@ -399,6 +421,8 @@ namespace http
 			{
 				logtd("HTTP/2 Frame Received : %s", _http2_frame->ToString().CStr());
 				
+				// lock
+				std::unique_lock<std::mutex> lock(_http_stream_map_guard);
 				std::shared_ptr<h2::HttpStream> stream;
 				auto stream_it = _http_stream_map.find(_http2_frame->GetStreamId());
 				if (stream_it != _http_stream_map.end())
@@ -410,6 +434,7 @@ namespace http
 					stream = std::make_shared<h2::HttpStream>(GetSharedPtr(), _http2_frame->GetStreamId());
 					_http_stream_map.emplace(_http2_frame->GetStreamId(), stream);
 				}
+				lock.unlock();
 
 				stream->OnFrameReceived(_http2_frame);
 
