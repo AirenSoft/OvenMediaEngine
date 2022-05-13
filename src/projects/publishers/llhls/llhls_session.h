@@ -11,7 +11,7 @@
 #include <base/publisher/session.h>
 #include <list>
 
-#define MAX_PENDING_REQUESTS 5
+#define MAX_PENDING_REQUESTS 10
 
 class LLHlsSession : public pub::Session
 {

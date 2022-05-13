@@ -175,8 +175,8 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 {
 	auto http_interceptor = std::make_shared<ThumbnailInterceptor>();
 
-	http_interceptor->Register(http::Method::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<http::svr::HttpExchange> &client) -> http::svr::NextHandler {
-		auto request = client->GetRequest();
+	http_interceptor->Register(http::Method::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
+		auto request = exchange->GetRequest();
 
 		auto host_name = request->GetHeader("HOST").Split(":")[0];
 		if (host_name.IsEmpty() == true)
@@ -215,7 +215,7 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 
 		auto app_config = app_info->GetConfig();
 		auto thumbnail_config = app_config.GetPublishers().GetThumbnailPublisher();
-		auto response = client->GetResponse();
+		auto response = exchange->GetResponse();
 
 		// Check CORS
 		auto application = std::static_pointer_cast<ThumbnailApplication>(GetApplicationByName(vhost_app_name));
@@ -224,6 +224,8 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 			response->AppendString("Could not found application of thumbnail publiser");
 			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
+			
+			exchange->Release();
 
 			return http::svr::NextHandler::DoNotCall;
 		}
@@ -237,6 +239,8 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 			response->AppendString("There are no thumbnails available stream");
 			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
+
+			exchange->Release();
 
 			return http::svr::NextHandler::DoNotCall;
 		}
@@ -260,6 +264,8 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
 
+			exchange->Release();
+
 			return http::svr::NextHandler::DoNotCall;
 		}
 
@@ -267,6 +273,8 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 		response->SetStatusCode(http::StatusCode::OK);
 		response->AppendData(std::move(endcoded_video_frame->Clone()));
 		response->Response();
+
+		exchange->Release();
 
 		return http::svr::NextHandler::DoNotCall;
 	});

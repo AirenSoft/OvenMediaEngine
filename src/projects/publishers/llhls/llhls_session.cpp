@@ -421,6 +421,7 @@ void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpE
 	}
 
 	ResponseData(response);
+	exchange->Release();
 }
 
 void LLHlsSession::ResponseData(const std::shared_ptr<http::svr::HttpResponse> &response)
@@ -486,7 +487,7 @@ bool LLHlsSession::AddPendingRequest(const std::shared_ptr<http::svr::HttpExchan
 
 	if (_pending_requests.size() > MAX_PENDING_REQUESTS)
 	{
-		logtw("[%s/%s/%u] Too many pending requests (%u)", 
+		logtd("[%s/%s/%u] Too many pending requests (%u)", 
 				GetApplication()->GetName().CStr(),
 				GetStream()->GetName().CStr(),
 				GetId(),

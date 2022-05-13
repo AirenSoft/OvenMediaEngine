@@ -30,6 +30,13 @@ namespace http
 			_keep_alive = exchange->_keep_alive;
 		}
 
+		// Terminate
+		void HttpExchange::Release()
+		{
+			_status = Status::Completed;
+			_connection->OnExchangeCompleted(GetSharedPtr());
+		}
+
 		ov::String HttpExchange::ToString() const
 		{
 			return GetConnection()->ToString();

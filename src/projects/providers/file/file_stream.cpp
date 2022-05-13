@@ -334,9 +334,8 @@ namespace pvd
 			return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 		}
 
-//		AVPacket packet = {.data = NULL, .size = 0};
 		AVPacket packet;
-		packet.data = NULL;
+		packet.data = nullptr;
 		packet.size = 0;
 
 		while (true)

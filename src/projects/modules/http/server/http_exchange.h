@@ -40,6 +40,9 @@ namespace http
 
 			// Get connection
 			std::shared_ptr<HttpConnection> GetConnection() const;
+
+			// Terminate
+			void Release();
 			
 			// Get Status
 			Status GetStatus() const;
