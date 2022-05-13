@@ -94,6 +94,7 @@ namespace http
 				
 				response->SetStatusCode(StatusCode::BadRequest);
 				response->Response();
+				exchange->Release();
 
 				return InterceptorResult::Error;
 			}
@@ -165,6 +166,7 @@ namespace http
 			}
 
 			response->Response();
+			exchange->Release();
 			return InterceptorResult::Completed;
 		}
 

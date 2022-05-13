@@ -159,7 +159,7 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 
 	if (gzip == true)
 	{
-		return { RequestResult::Success, chunklist->ToGzipData() };
+		return { RequestResult::Success, chunklist->ToGzipData(skip) };
 	}
 
 	return { RequestResult::Success, chunklist->ToString(skip).ToData(false) };

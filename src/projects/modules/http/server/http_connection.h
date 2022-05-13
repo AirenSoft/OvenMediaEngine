@@ -38,6 +38,8 @@ namespace http
 			void OnDataReceived(const std::shared_ptr<const ov::Data> &data);
 			void Close(PhysicalPortDisconnectReason reason);
 
+			void OnExchangeCompleted(const std::shared_ptr<HttpExchange> &exchange);
+
 			bool OnRepeatTask();
 
 			void SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data);
@@ -109,6 +111,8 @@ namespace http
 			std::shared_ptr<Http2Frame> _http2_frame = nullptr;
 			// Stream Identifier, HttpExchange
 			std::map<uint32_t, std::shared_ptr<h2::HttpStream>> _http_stream_map;
+			// mutex
+			std::mutex _http_stream_map_guard;
 			// HTTP/2 HPACK Codec
 			std::shared_ptr<hpack::Encoder> _hpack_encoder = nullptr;
 			std::shared_ptr<hpack::Decoder> _hpack_decoder = nullptr;

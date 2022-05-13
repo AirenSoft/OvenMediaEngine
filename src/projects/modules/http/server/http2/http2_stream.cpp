@@ -264,7 +264,7 @@ namespace http
 
 			bool HttpStream::OnRstStreamFrameReceived(const std::shared_ptr<const Http2RstStreamFrame> &frame)
 			{
-				logte("%s", frame->ToString().CStr());
+				logtd("%s", frame->ToString().CStr());
 				SetStatus(HttpExchange::Status::Error);
 				return true;
 			}

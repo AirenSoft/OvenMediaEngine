@@ -120,9 +120,9 @@ bool WebConsoleServer::InitializeServer()
 		return http::svr::NextHandler::DoNotCall;
 	});
 
-	http_interceptor->Register(http::Method::Get, ".*", [document_root, this](const std::shared_ptr<http::svr::HttpExchange> &client) -> http::svr::NextHandler {
-		auto request = client->GetRequest();
-		auto response = client->GetResponse();
+	http_interceptor->Register(http::Method::Get, ".*", [document_root, this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
+		auto request = exchange->GetRequest();
+		auto response = exchange->GetResponse();
 
 		auto path = ov::PathManager::Combine(document_root, request->GetRequestTarget());
 		auto real_path = ov::PathManager::GetCanonicalPath(path);
@@ -131,6 +131,8 @@ bool WebConsoleServer::InitializeServer()
 		{
 			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
+
+			exchange->Release();
 
 			return http::svr::NextHandler::DoNotCall;
 		}
@@ -142,6 +144,8 @@ bool WebConsoleServer::InitializeServer()
 			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
 
+			exchange->Release();
+
 			return http::svr::NextHandler::DoNotCall;
 		}
 
@@ -151,6 +155,8 @@ bool WebConsoleServer::InitializeServer()
 		{
 			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
+
+			exchange->Release();
 
 			return http::svr::NextHandler::DoNotCall;
 		}
@@ -181,6 +187,8 @@ bool WebConsoleServer::InitializeServer()
 		::fclose(file);
 
 		response->Response();
+
+		exchange->Release();
 
 		return http::svr::NextHandler::DoNotCall;
 	});
