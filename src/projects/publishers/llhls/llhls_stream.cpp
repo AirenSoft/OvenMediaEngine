@@ -82,6 +82,12 @@ bool LLHlsStream::Start()
 		}
 	}
 
+	if (first_video_track == nullptr && first_audio_track == nullptr)
+	{
+		logtw("LLHlsStream(%s/%s) - This stream has not created because there is no codec supported by LLHLS.", GetApplication()->GetName().CStr(), GetName().CStr());
+		return false;
+	}
+
 	//TODO(Getroot): It will be replaced with ABR config
 	AddStreamInfToMasterPlaylist(first_video_track, first_audio_track);
 
