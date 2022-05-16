@@ -172,7 +172,10 @@ namespace http
 
 		void DefaultInterceptor::OnClosed(const std::shared_ptr<HttpConnection> &connection, PhysicalPortDisconnectReason reason)
 		{
-			_close_handler(connection, reason);
+			if (_close_handler != nullptr)
+			{
+				_close_handler(connection, reason);
+			}
 		}
 	}  // namespace svr
 }  // namespace http
