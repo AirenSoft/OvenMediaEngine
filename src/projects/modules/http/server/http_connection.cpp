@@ -433,6 +433,7 @@ namespace http
 				{
 					stream = std::make_shared<h2::HttpStream>(GetSharedPtr(), _http2_frame->GetStreamId());
 					_http_stream_map.emplace(_http2_frame->GetStreamId(), stream);
+					logtd("%s : Streams [%u]", ToString().CStr(), _http_stream_map.size());
 				}
 				lock.unlock();
 
