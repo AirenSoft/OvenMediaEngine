@@ -279,6 +279,14 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 
 	auto response = exchange->GetResponse();
 
+	// If there are not enough segments and chunks in the beginning, 
+	// the player cannot start playing, so the request is pending until at least one segment is created.
+	if (msn == -1 && part == -1)
+	{
+		msn = 2;
+		part = 0;
+	}
+
 	// Get the chunklist
 	auto [result, chunklist] = llhls_stream->GetChunklist(track_id, msn, part, skip, true);
 	if (result == LLHlsStream::RequestResult::Success)

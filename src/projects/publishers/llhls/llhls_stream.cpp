@@ -144,11 +144,11 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 			return { RequestResult::NotFound, nullptr };
 		}
 
-		if (last_msn < 0 || last_psn < 0)
-		{
-			logtw("Could not get last sequence number for track_id = %d", track_id);
-			return { RequestResult::NotFound, nullptr };
-		}
+		// if (last_msn < 0 || last_psn < 0)
+		// {
+		// 	logtw("Could not get last sequence number for track_id = %d", track_id);
+		// 	return { RequestResult::NotFound, nullptr };
+		// }
 
 		if (msn > last_msn || (msn >= last_msn && psn > last_psn))
 		{
@@ -511,6 +511,7 @@ void LLHlsStream::AddStreamInfToMasterPlaylist(const std::shared_ptr<const Media
 
 void LLHlsStream::NotifyPlaylistUpdated(const int32_t &track_id, const int64_t &msn, const int64_t &part)
 {
+
 	// Make std::any for broadcast
 	// I think make_shared is better than copy sizeof(PlaylistUpdatedEvent) to all sessions
 	auto event = std::make_shared<PlaylistUpdatedEvent>(track_id, msn, part);

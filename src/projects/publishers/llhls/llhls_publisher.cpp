@@ -166,21 +166,28 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		// Get Application
-		auto application = std::static_pointer_cast<LLHlsApplication>(GetApplicationByName(vhost_app_name));
-		if (application == nullptr)
-		{
-			logte("Could not find application: %s", vhost_app_name.CStr());
-			response->SetStatusCode(http::StatusCode::NotFound);
-			return http::svr::NextHandler::DoNotCall;
-		}
-
-		auto stream = application->GetStream(request_url->Stream());
+		auto orchestrator = ocst::Orchestrator::GetInstance();
+		auto stream_name = request_url->Stream();
+		auto stream = GetStream(vhost_app_name, request_url->Stream());
 		if (stream == nullptr)
 		{
-			logte("Could not find stream: %s", request_url->Stream().CStr());
-			response->SetStatusCode(http::StatusCode::NotFound);
-			return http::svr::NextHandler::DoNotCall;
+			// If the stream does not exists, request to the provider
+			if (orchestrator->RequestPullStream(request_url, vhost_app_name, stream_name) == false)
+			{
+				logte("Could not pull the stream : %s", request_url->Stream().CStr());
+				response->SetStatusCode(http::StatusCode::NotFound);
+				return http::svr::NextHandler::DoNotCall;
+			}
+			else
+			{
+				stream = GetStream(vhost_app_name, stream_name);
+				if (stream == nullptr)
+				{
+					logte("Could not pull the stream : %s", request_url->Stream().CStr());
+					response->SetStatusCode(http::StatusCode::NotFound);
+					return http::svr::NextHandler::DoNotCall;
+				}
+			}
 		}
 
 		session_id_t session_id = exchange->GetConnection()->GetId();
@@ -206,6 +213,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		}
 
 		// Cors Setting
+		auto application = std::static_pointer_cast<LLHlsApplication>(stream->GetApplication());
 		application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response);
 		stream->SendMessage(session, std::make_any<std::shared_ptr<http::svr::HttpExchange>>(exchange));
 

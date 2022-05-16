@@ -369,6 +369,9 @@ namespace pvd
 						logte("There is no SPS/PPS in the AVCDecoderConfigurationRecord");
 						return false;
 					}
+
+					new_track->SetH264SpsData(config.GetSPS(0));
+					new_track->SetH264PpsData(config.GetPPS(0));
 					
 					auto [sps_pps_data, frag_header] = config.GetSpsPpsAsAnnexB(4);
 					new_track->SetH264SpsPpsAnnexBFormat(sps_pps_data, frag_header);
