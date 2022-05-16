@@ -17,13 +17,11 @@
 
 	<Modules>
 		<HTTP2>
-			<!-- HTTP2 is under development, disabled by default -->
-			<Enable>false</Enable>
+			<Enable>true</Enable>
 		</HTTP2>
 
 		<LLHLS>
-			<!-- LLHLS is under development, disabled by default -->
-			<Enable>false</Enable>
+			<Enable>true</Enable>
 		</LLHLS>
 
 		<!-- P2P works only in WebRTC and is experiment feature -->

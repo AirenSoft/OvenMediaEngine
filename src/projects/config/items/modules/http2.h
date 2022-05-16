@@ -23,9 +23,6 @@ namespace cfg
 		protected:
 			void MakeList() override
 			{
-				// Experimental feature is disabled by default
-				SetEnable(false);
-
 				ModuleTemplate::MakeList();
 			}
 		};
