@@ -50,7 +50,7 @@ private:
 	void ResponseSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id, const int64_t &segment_number);
 	void ResponsePartialSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number);
 
-	void ResponseData(const std::shared_ptr<http::svr::HttpResponse> &response);
+	void ResponseData(const std::shared_ptr<http::svr::HttpExchange> &exchange);
 
 	void OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn, const int64_t &part);
 
