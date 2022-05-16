@@ -20,16 +20,22 @@ namespace cfg
 			{
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetLocation, _location)
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetPass, _pass)
+				CFG_DECLARE_CONST_REF_GETTER_OF(IsPersist, _persist)
+				CFG_DECLARE_CONST_REF_GETTER_OF(IsFailBack, _fail_back)
 
 			protected:
 				void MakeList() override
 				{
 					Register("Location", &_location);
 					Register("Pass", &_pass);
+					Register<Optional>("Persist", &_persist);
+					Register<Optional>("FailBack", &_fail_back);
 				}
 
 				ov::String _location;
 				Pass _pass;
+				bool _persist = false;
+				bool _fail_back = false;		
 			};
 		}  // namespace orgn
 	}	   // namespace vhost
