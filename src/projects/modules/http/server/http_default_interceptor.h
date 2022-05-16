@@ -93,7 +93,7 @@ namespace http
 
 			ov::String _pattern_prefix;
 			std::vector<RequestInfo> _request_handler_list;
-			CloseHandler _close_handler;
+			CloseHandler _close_handler = nullptr;
 		};
 	}  // namespace svr
 }  // namespace http
