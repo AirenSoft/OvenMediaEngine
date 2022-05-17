@@ -178,13 +178,6 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 	http_interceptor->Register(http::Method::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
 		auto request = exchange->GetRequest();
 
-		auto host_name = request->GetHeader("HOST").Split(":")[0];
-		if (host_name.IsEmpty() == true)
-		{
-			logtw("Failed to parse hostname");
-			return http::svr::NextHandler::Call;
-		}
-
 		auto uri = request->GetUri();
 		auto parsed_url = ov::Url::Parse(uri);
 		if(parsed_url == nullptr)
@@ -199,7 +192,7 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 			return http::svr::NextHandler::Call;
 		}
 
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, parsed_url->App());
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
 		if (vhost_app_name.IsValid() == false)
 		{
 			logtw("Could not found virtual host");
