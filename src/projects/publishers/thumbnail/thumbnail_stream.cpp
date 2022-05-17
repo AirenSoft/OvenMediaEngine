@@ -39,6 +39,21 @@ bool ThumbnailStream::Start()
 {
 	logtd("ThumbnailStream(%ld) has been started", GetId());
 
+	bool found = false;
+	for (const auto &[id, track] : _tracks)
+	{
+		if ((track->GetCodecId() == cmn::MediaCodecId::Png || track->GetCodecId() == cmn::MediaCodecId::Jpeg))
+		{
+			found = true;
+			break;
+		}
+	}
+
+	if (found == false)
+	{
+		logtw("Stream [%s/%s] was not created because there were no supported codecs by the Thumbnail Publisher.", GetApplication()->GetName().CStr(), GetName().CStr());
+	}
+
 	return Stream::Start();
 }
 

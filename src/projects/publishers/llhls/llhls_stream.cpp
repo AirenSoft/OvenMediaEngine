@@ -84,7 +84,7 @@ bool LLHlsStream::Start()
 
 	if (first_video_track == nullptr && first_audio_track == nullptr)
 	{
-		logtw("LLHlsStream(%s/%s) - This stream has not created because there is no codec supported by LLHLS.", GetApplication()->GetName().CStr(), GetName().CStr());
+		logtw("Stream [%s/%s] was not created because there were no supported codecs by LLHLS.", GetApplication()->GetName().CStr(), GetName().CStr());
 		return false;
 	}
 
