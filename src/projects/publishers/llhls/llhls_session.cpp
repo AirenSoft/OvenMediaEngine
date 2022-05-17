@@ -14,10 +14,12 @@
 
 std::shared_ptr<LLHlsSession> LLHlsSession::Create(session_id_t session_id,
 												const std::shared_ptr<pub::Application> &application,
-												const std::shared_ptr<pub::Stream> &stream)
+												const std::shared_ptr<pub::Stream> &stream,
+												const std::shared_ptr<http::svr::HttpConnection> &connection,
+												uint64_t session_life_time)
 {
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), session_id);
-	auto session = std::make_shared<LLHlsSession>(session_info, application, stream);
+	auto session = std::make_shared<LLHlsSession>(session_info, application, stream, connection, session_life_time);
 
 	if (session->Start() == false)
 	{
@@ -29,11 +31,14 @@ std::shared_ptr<LLHlsSession> LLHlsSession::Create(session_id_t session_id,
 
 LLHlsSession::LLHlsSession(const info::Session &session_info, 
 							const std::shared_ptr<pub::Application> &application, 
-							const std::shared_ptr<pub::Stream> &stream)
+							const std::shared_ptr<pub::Stream> &stream,
+							const std::shared_ptr<http::svr::HttpConnection> &connection,
+							uint64_t session_life_time)
 	: pub::Session(session_info, application, stream)
 
 {
-
+	_connection = connection;
+	_session_life_time = session_life_time;
 }
 
 bool LLHlsSession::Start()
@@ -43,12 +48,20 @@ bool LLHlsSession::Start()
 
 bool LLHlsSession::Stop()
 {
+	_connection.reset();
+
 	return Session::Stop();
 }
 
 // pub::Session Interface
 void LLHlsSession::SendOutgoingData(const std::any &notification)
 {
+	// Check expired time
+	if(_session_life_time != 0 && _session_life_time < ov::Clock::NowMSec())
+	{
+		return;
+	}
+
 	std::shared_ptr<LLHlsStream::PlaylistUpdatedEvent> event;
 	try
 	{
@@ -83,6 +96,17 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
         logtc("An incorrect type of packet was input from the stream.");
 		return;
     }
+
+	// Check expired time
+	if(_session_life_time != 0 && _session_life_time < ov::Clock::NowMSec())
+	{
+		auto response = exchange->GetResponse();
+
+		response->SetStatusCode(http::StatusCode::Unauthorized);
+		response->Response();
+		exchange->Release();
+		return;
+	}
 
 	logtd("LLHlsSession::OnMessageReceived(%u) - %s", GetId(), exchange->ToString().CStr());
 
