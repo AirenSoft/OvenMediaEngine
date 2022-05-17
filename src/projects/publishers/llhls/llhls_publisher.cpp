@@ -147,8 +147,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		auto connection = exchange->GetConnection();
 		auto request = exchange->GetRequest();
 		auto response = exchange->GetResponse();
-
-		logtd("LLHLS requested: %s", request->GetUri().CStr());
+		auto remote_address = request->GetRemote()->GetRemoteAddress();
 
 		auto request_url = request->GetParsedUri();
 		if (request_url == nullptr)
@@ -158,6 +157,14 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
+		// PORT can be omitted if port is default port, but SignedPolicy requires this information.
+		if(request_url->Port() == 0)
+		{
+			request_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+		}
+
+		logtd("LLHLS requested: %s", request->GetUri().CStr());
+
 		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
 		if (vhost_app_name.IsValid() == false)
 		{
@@ -165,37 +172,99 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			response->SetStatusCode(http::StatusCode::NotFound);
 			return http::svr::NextHandler::DoNotCall;
 		}
-
-		auto orchestrator = ocst::Orchestrator::GetInstance();
+		auto host_name = request_url->Host();
 		auto stream_name = request_url->Stream();
+
+		uint64_t session_life_time = 0;
+
+		bool start_session = (request_url->File().LowerCaseString() == "llhls.m3u8");
+
+		if (start_session)
+		{
+			auto [signed_policy_result, signed_policy] =  Publisher::VerifyBySignedPolicy(request_url, remote_address);
+			if(signed_policy_result == AccessController::VerificationResult::Pass)
+			{
+				session_life_time = signed_policy->GetStreamExpireEpochMSec();
+			}
+			else if(signed_policy_result == AccessController::VerificationResult::Error)
+			{
+				logte("Could not resolve application name from domain: %s", request_url->Host().CStr());
+				response->SetStatusCode(http::StatusCode::Unauthorized);
+				return http::svr::NextHandler::DoNotCall;
+			}
+			else if(signed_policy_result == AccessController::VerificationResult::Fail)
+			{
+				logtw("%s", signed_policy->GetErrMessage().CStr());
+				response->SetStatusCode(http::StatusCode::Unauthorized);
+				return http::svr::NextHandler::DoNotCall;
+			}
+
+			// Admission Webhooks
+			auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_url, remote_address);
+			if(webhooks_result == AccessController::VerificationResult::Off)
+			{
+				// Success
+			}
+			else if(webhooks_result == AccessController::VerificationResult::Pass)
+			{
+				// Lifetime
+				if(admission_webhooks->GetLifetime() != 0)
+				{
+					// Choice smaller value
+					auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + admission_webhooks->GetLifetime();
+					if(session_life_time == 0 || stream_expired_msec_from_webhooks < session_life_time)
+					{
+						session_life_time = stream_expired_msec_from_webhooks;
+					}
+				}
+
+				// Redirect URL
+				if(admission_webhooks->GetNewURL() != nullptr)
+				{
+					request_url = admission_webhooks->GetNewURL();
+					if(request_url->Port() == 0)
+					{
+						request_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+					}
+
+					vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
+					host_name = request_url->Host();
+					stream_name = request_url->Stream();
+				}
+			}
+			else if(webhooks_result == AccessController::VerificationResult::Error)
+			{
+				logtw("AdmissionWebhooks error : %s", request_url->ToUrlString().CStr());
+				response->SetStatusCode(http::StatusCode::Unauthorized);
+				return http::svr::NextHandler::DoNotCall;
+			}
+			else if(webhooks_result == AccessController::VerificationResult::Fail)
+			{
+				logtw("AdmissionWebhooks error : %s", admission_webhooks->GetErrReason().CStr());
+				response->SetStatusCode(http::StatusCode::Unauthorized);
+				return http::svr::NextHandler::DoNotCall;
+			}
+		}
+
 		auto stream = GetStream(vhost_app_name, request_url->Stream());
 		if (stream == nullptr)
 		{
 			// If the stream does not exists, request to the provider
-			if (orchestrator->RequestPullStream(request_url, vhost_app_name, stream_name) == false)
+			stream = PullStream(request_url, vhost_app_name, host_name, stream_name);
+			if(stream == nullptr)
 			{
 				logte("Could not pull the stream : %s", request_url->Stream().CStr());
 				response->SetStatusCode(http::StatusCode::NotFound);
 				return http::svr::NextHandler::DoNotCall;
 			}
-			else
-			{
-				stream = GetStream(vhost_app_name, stream_name);
-				if (stream == nullptr)
-				{
-					logte("Could not pull the stream : %s", request_url->Stream().CStr());
-					response->SetStatusCode(http::StatusCode::NotFound);
-					return http::svr::NextHandler::DoNotCall;
-				}
-			}
 		}
 
-		session_id_t session_id = exchange->GetConnection()->GetId();
+		session_id_t session_id = connection->GetId();
 		auto session = stream->GetSession(session_id);
-		if (session == nullptr)
+		if (start_session == true && session == nullptr)
 		{
 			// New HTTP Connection
-			auto new_session = LLHlsSession::Create(session_id, stream->GetApplication(), stream);
+			auto new_session = LLHlsSession::Create(session_id, stream->GetApplication(), stream, connection, session_life_time);
 			if (new_session == nullptr)
 			{
 				logte("Could not create llhls session for request: %s", request->ToString().CStr());
@@ -210,6 +279,11 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			MonitorInstance->OnSessionConnected(*stream, PublisherType::LLHls);
 
 			session = new_session;
+		}
+		else if (start_session == false && session == nullptr)
+		{
+			response->SetStatusCode(http::StatusCode::Unauthorized);
+			return http::svr::NextHandler::DoNotCall;
 		}
 
 		// Cors Setting
@@ -245,8 +319,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		}
 		catch (const std::bad_any_cast &)
 		{
-			// Never reach here
-			logtc("Could not get llhls session from user data");
+			logtd("Could not get llhls session from user data");
 		}
 	});
 

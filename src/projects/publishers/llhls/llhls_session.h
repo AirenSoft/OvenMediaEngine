@@ -18,11 +18,15 @@ class LLHlsSession : public pub::Session
 public:
 	static std::shared_ptr<LLHlsSession> Create(session_id_t session_id,
 												const std::shared_ptr<pub::Application> &application,
-												const std::shared_ptr<pub::Stream> &stream);
+												const std::shared_ptr<pub::Stream> &stream,
+												const std::shared_ptr<http::svr::HttpConnection> &connection,
+												uint64_t session_life_time);
 
 	LLHlsSession(const info::Session &session_info, 
 				const std::shared_ptr<pub::Application> &application, 
-				const std::shared_ptr<pub::Stream> &stream);
+				const std::shared_ptr<pub::Stream> &stream,
+				const std::shared_ptr<http::svr::HttpConnection> &connection,
+				uint64_t session_life_time);
 
 	bool Start() override;
 	bool Stop() override;
@@ -70,4 +74,9 @@ private:
 
 	// Session runs on a single thread, so it doesn't need mutex
 	std::list<PendingRequest> _pending_requests;
+
+	// connection
+	std::shared_ptr<http::svr::HttpConnection> _connection;
+	// session life time
+	uint64_t _session_life_time = 0;
 };

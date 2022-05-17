@@ -170,7 +170,7 @@
 
 				<Enables>
 					<Providers>rtmp,webrtc,srt</Providers>
-					<Publishers>webrtc,hls,dash,lldash</Publishers>
+					<Publishers>webrtc,hls,llhls,dash,lldash</Publishers>
 				</Enables>
 			</SignedPolicy>
 			-->
