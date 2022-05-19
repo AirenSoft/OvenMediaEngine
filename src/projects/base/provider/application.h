@@ -71,6 +71,5 @@ namespace pvd
 	private:
 		std::shared_ptr<Provider> _provider;
 		ApplicationState		_state = ApplicationState::Idle;
-		std::atomic<info::stream_id_t>	_last_issued_stream_id { 0 };
 	};
 }

@@ -18,7 +18,6 @@ namespace pvd
 		: info::Application(application_info)
 	{
 		_provider = provider;
-		_last_issued_stream_id = 100;
 	}
 
 	Application::~Application()
@@ -65,7 +64,9 @@ namespace pvd
 
 	info::stream_id_t Application::IssueUniqueStreamId()
 	{
-		return _last_issued_stream_id++;
+		static std::atomic<info::stream_id_t>	last_issued_stream_id(100);
+
+		return last_issued_stream_id++;
 	}
 
 	const std::shared_ptr<Stream> Application::GetStreamById(uint32_t stream_id)
