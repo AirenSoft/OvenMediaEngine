@@ -10,6 +10,7 @@
 #include "provider.h"
 #include "application.h"
 #include "stream.h"
+#include "stream_props.h"
 #include "provider_private.h"
 
 namespace pvd
@@ -52,9 +53,7 @@ namespace pvd
 	// It works only with pull provider
 	void PullApplication::WhiteElephantStreamCollector()
 	{
-		auto no_input_timeout = GetHostInfo().GetOrigins().GetProperties().GetNoInputFailoverTimeout();
-		auto unused_stream_timeout = GetHostInfo().GetOrigins().GetProperties().GetUnusedStreamDeletionTimeout();
-
+		
 		while(!_stop_collector_thread_flag)
 		{
 			// TODO (Getroot): If there is no stream, use semaphore to wait until the stream is added.
@@ -64,40 +63,84 @@ namespace pvd
 			auto streams = _streams;
 			lock.unlock();
 
-			for(auto const &x : streams)
+			for (auto const &x : streams)
 			{
-				auto stream = x.second;
-			
-				if(stream->GetState() == Stream::State::STOPPED || stream->GetState() == Stream::State::ERROR)
+				auto stream = std::dynamic_pointer_cast<PullStream>(x.second);
+
+				if (stream->GetState() == Stream::State::STOPPED || stream->GetState() == Stream::State::ERROR)
 				{
 					// Retry
 					ResumeStream(stream);
 				}
-				else if(stream->GetState() == Stream::State::TERMINATED)
+				else if (stream->GetState() == Stream::State::TERMINATED)
 				{
 					// Tried several times, but if unsuccessful, delete it completely.
 					DeleteStream(stream);
 				}
 				else
 				{
+					auto current = std::chrono::high_resolution_clock::now();
+
+					// Default Properties of PullStream
+					auto is_persist = false;
+					auto is_failback = false;
+					auto no_input_timeout = GetHostInfo().GetOrigins().GetProperties().GetNoInputFailoverTimeout(); 
+					auto unused_stream_timeout = GetHostInfo().GetOrigins().GetProperties().GetUnusedStreamDeletionTimeout();
+					auto failback_timeout = GetHostInfo().GetOrigins().GetProperties().GetStreamFailbackTimeout();					
+
+					auto props = stream->GetProperties();
+					if (props)
+					{
+						is_persist = props->IsPersist();
+						is_failback = props->IsFailback();
+					
+						// Check whether the primary URL can be used for failback.
+						auto elapsed_time_from_last_failback_check = std::chrono::duration_cast<std::chrono::milliseconds>(current - props->GetLastFailbackCheckTime()).count();
+
+						if ((is_failback) && (elapsed_time_from_last_failback_check > failback_timeout) && (!stream->IsCurrPrimaryURL()))
+						{
+							auto failback_url = stream->GetPrimaryURL()->ToUrlString(true);
+							logtd("%s/%s(%u) Try to check if primary url is alive. url(%s)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), failback_url.CStr());
+							auto failback_stream = CreateStream(0, "_CHECK_FOR_FAILBACK_STREAM_", {failback_url}, nullptr);
+							if (failback_stream)
+							{
+								if((failback_stream->GetState() == pvd::Stream::State::PLAYING) || (failback_stream->GetState() == pvd::Stream::State::DESCRIBED))
+								{
+									// Stop the current stream and switch to the Primary URL.
+									stream->Stop();
+									stream->InitCurrUrlIndex();
+
+									ResumeStream(stream);
+								}
+								
+								failback_stream->Stop();
+							}
+							else 
+							{
+								logtd("%s/%s(%u) primary stream is not available.", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+							}
+
+							props->UpdateFailbackCheckTime();
+						}
+					}
+
 					// Check if there are streams have no any viewers
 					auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
 					if(stream_metrics != nullptr)
 					{
-						auto current = std::chrono::high_resolution_clock::now();
 						auto elapsed_time_from_last_sent = std::chrono::duration_cast<std::chrono::milliseconds>(current - stream_metrics->GetLastSentTime()).count();
 						auto elapsed_time_from_last_recv = std::chrono::duration_cast<std::chrono::milliseconds>(current - stream_metrics->GetLastRecvTime()).count();
-						
-						if(elapsed_time_from_last_sent > unused_stream_timeout)
+
+						if((elapsed_time_from_last_sent > unused_stream_timeout) && (!is_persist))
 						{
 							logtw("%s/%s(%u) stream will be deleted because it hasn't been used for %u milliseconds", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_sent);
 							DeleteStream(stream);
 						}
 						// The stream type is pull stream, if packets do NOT arrive for more than 3 seconds, it is a seriously warning situation
-						else if(elapsed_time_from_last_recv > no_input_timeout)
+						else if(elapsed_time_from_last_recv > no_input_timeout && (!is_persist))
 						{
-							logtw("Stop stream %s/%s(%u) : there are no incoming packets. %d milliseconds have elapsed since the last packet was received.", 
-									stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
+							logtw("Stop stream %s/%s(%u) : there are no incoming packets. %d milliseconds have elapsed since the last packet was received.",
+								  stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
 
 							// When the stream is stopped, it tries to reconnect using the next url.
 							stream->Stop();
@@ -125,7 +168,7 @@ namespace pvd
 
 		std::unique_lock<std::shared_mutex> lock(_stream_motors_guard);
 		_stream_motors.emplace(motor_id, motor);
-		
+
 		logti("%s application has created %u stream motor", stream->GetApplicationInfo().GetName().CStr(), motor_id);
 
 		return motor;
@@ -158,7 +201,7 @@ namespace pvd
 			logtc("Could not find stream motor to remove stream : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
 			return false;
 		}
-		
+
 		motor->DelStream(stream);
 
 		if(motor->GetStreamCount() == 0)
@@ -175,7 +218,7 @@ namespace pvd
 		return true;
 	}
 
-	std::shared_ptr<pvd::Stream> PullApplication::CreateStream(const ov::String &stream_name, const std::vector<ov::String> &url_list)
+	std::shared_ptr<pvd::Stream> PullApplication::CreateStream(const ov::String &stream_name, const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties)
 	{
 		// Check if same stream name is exist in MediaRouter(may be created by another provider)
 		if(IsExistingInboundStream(stream_name) == true)
@@ -184,14 +227,14 @@ namespace pvd
 			return nullptr;
 		}
 
-		auto stream = CreateStream(IssueUniqueStreamId(), stream_name, url_list);
+		auto stream = CreateStream(IssueUniqueStreamId(), stream_name, url_list, properties);
 		if(stream == nullptr)
 		{
 			return nullptr;
 		}
 
 		std::unique_lock<std::shared_mutex> streams_lock(_streams_guard);
-		
+
 		_streams[stream->GetId()] = stream;
 		auto motor = GetStreamMotorInternal(stream);
 		if(motor == nullptr)

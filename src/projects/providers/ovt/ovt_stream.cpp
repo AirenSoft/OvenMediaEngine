@@ -16,14 +16,14 @@ namespace pvd
 {
 	std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pvd::PullApplication> &application, 
 											const uint32_t stream_id, const ov::String &stream_name,
-					  						const std::vector<ov::String> &url_list)
+					  						const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties)
 	{
 		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::Ovt);
 
 		stream_info.SetId(stream_id);
 		stream_info.SetName(stream_name);
 
-		auto stream = std::make_shared<OvtStream>(application, stream_info, url_list);
+		auto stream = std::make_shared<OvtStream>(application, stream_info, url_list, properties);
 		if (!stream->Start())
 		{
 			// Explicit deletion
@@ -34,8 +34,8 @@ namespace pvd
 		return stream;
 	}
 
-	OvtStream::OvtStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
-			: pvd::PullStream(application, stream_info, url_list)
+	OvtStream::OvtStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties)
+			: pvd::PullStream(application, stream_info, url_list, properties)
 	{
 		_last_request_id = 0;
 		SetState(State::IDLE);

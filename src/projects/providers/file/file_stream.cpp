@@ -19,15 +19,17 @@
 namespace pvd
 {
 	std::shared_ptr<FileStream> FileStream::Create(const std::shared_ptr<pvd::PullApplication> &application,
-												   const uint32_t stream_id, const ov::String &stream_name,
-												   const std::vector<ov::String> &url_list)
+												   const uint32_t stream_id, 
+												   const ov::String &stream_name,
+												   const std::vector<ov::String> &url_list, 
+												   std::shared_ptr<pvd::PullStreamProperties> properties)
 	{
 		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::File);
 
 		stream_info.SetId(stream_id);
 		stream_info.SetName(stream_name);
 
-		auto stream = std::make_shared<FileStream>(application, stream_info, url_list);
+		auto stream = std::make_shared<FileStream>(application, stream_info, url_list, properties);
 		if (!stream->PullStream::Start())
 		{
 			// Explicit deletion
@@ -38,12 +40,10 @@ namespace pvd
 		return stream;
 	}
 
-	FileStream::FileStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
-		: pvd::PullStream(application, stream_info, url_list)
+	FileStream::FileStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties)
+		: pvd::PullStream(application, stream_info, url_list, properties)
 	{
 		SetState(State::IDLE);
-
-		logtd("Root Path: %s", GetApplicationInfo().GetConfig().GetProviders().GetFileProvider().GetRootPath().CStr());
 	}
 
 	FileStream::~FileStream()
@@ -70,7 +70,7 @@ namespace pvd
 		}
 
 		_url = url;
-
+		
 		ov::StopWatch stop_watch;
 
 		stop_watch.Start();
@@ -105,7 +105,6 @@ namespace pvd
 			_stream_metrics->SetOriginSubscribeTimeMSec(_origin_response_time_msec);
 		}
 
-		logte("Started StartStream");
 		return true;
 	}
 
@@ -158,16 +157,13 @@ namespace pvd
 			return false;
 		}
 
-		// const char *ss_url = _url->Source().CStr();
-		if (_format_context != nullptr)
-		{
-			logte("illegal!!!");
-		}
-
 		int err = 0;
 
+		auto url = ov::String::FormatString("%s%s", GetApplicationInfo().GetConfig().GetProviders().GetFileProvider().GetRootPath().CStr(), _url->Path().CStr());
+
 		_format_context = nullptr;
-		if ((err = ::avformat_open_input(&_format_context, "/home/soulk/ome_rec/bipbop.mp4", nullptr, nullptr)) < 0)
+		logtw("Trying to open file: %s", url.CStr());
+		if ((err = ::avformat_open_input(&_format_context, url.CStr(), nullptr, nullptr)) < 0)
 		{
 			SetState(State::ERROR);
 
@@ -225,8 +221,6 @@ namespace pvd
 		{
 			return false;
 		}
-
-		logte("RequestPlay");
 
 		SetState(State::PLAYING);
 
@@ -318,7 +312,6 @@ namespace pvd
 		{
 			return false;
 		}
-		logte("RequestStop");
 
 		avformat_close_input(&_format_context);
 		_format_context = nullptr;
@@ -357,7 +350,7 @@ namespace pvd
 				}
 
 				// If the connection is broken, terminate the thread.
-				logte("%s/%s(%u) FileStream's connection has broken.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+				logte("%s/%s(%u) FileStream's I/O has broken.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 				SetState(State::ERROR);
 				return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 			}
@@ -395,13 +388,15 @@ namespace pvd
 			media_packet->SetMsid(GetMsid());
 			::av_packet_unref(&packet);
 
-			int64_t pkt_pts = static_cast<int64_t>(static_cast<double>(media_packet->GetPts()) * track->GetTimeBase().GetExpr() * 1000);
+			int64_t pkt_ms = static_cast<int64_t>(static_cast<double>(media_packet->GetPts()) * track->GetTimeBase().GetExpr() * 1000);
 
-			// logti("playback.time: %lld, packet.pts: %lld, timebase: %s", _play_request_time.Elapsed(), pkt_pts, track->GetTimeBase().GetStringExpr().CStr());
+			auto pts = AdjustTimestampByBase(media_packet->GetTrackId(), media_packet->GetPts(), std::numeric_limits<int64_t>::max());
+			media_packet->SetPts(pts);
+			// media_packet->SetDts(dts); // Keep the dts
 
 			SendFrame(media_packet);
 
-			if (_play_request_time.Elapsed() < pkt_pts)
+			if (_play_request_time.Elapsed() < pkt_ms)
 			{
 				break;
 			}
