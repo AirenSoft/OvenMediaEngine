@@ -52,6 +52,7 @@ namespace mon
 		void IncreaseBytesOut(PublisherType type, uint64_t value) override;
 		void OnSessionConnected(PublisherType type) override;
 		void OnSessionDisconnected(PublisherType type) override;
+		void OnSessionsDisconnected(PublisherType type, uint64_t number_of_sessions) override;
 	private:
 		// Related to origin, From Provider
 		std::atomic<int64_t> _connection_time_to_origin_msec = 0;

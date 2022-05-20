@@ -138,6 +138,8 @@ namespace pub
 		virtual std::shared_ptr<Application> OnCreatePublisherApplication(const info::Application &application_info) = 0;
 		virtual bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) = 0;
 
+		bool IsAccessControlEnabled(const std::shared_ptr<const ov::Url> &request_url);
+
 		// SignedPolicy is an official feature
 		std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPolicy>> VerifyBySignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address);
 		// AdmissionWebhooks is an official feature

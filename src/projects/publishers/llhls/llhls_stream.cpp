@@ -91,7 +91,7 @@ bool LLHlsStream::Start()
 	//TODO(Getroot): It will be replaced with ABR config
 	AddStreamInfToMasterPlaylist(first_video_track, first_audio_track);
 
-	logtd("Master Playlist : %s", _master_playlist.ToString().CStr());
+	logtd("Master Playlist : %s", _master_playlist.ToString("").CStr());
 
 	logti("LLHlsStream has been created : %s/%u\nChunk Duration(%.2f) Segment Duration(%u) Segment Count(%u)", GetName().CStr(), GetId(), llhls_config.GetChunkDuration(), llhls_config.GetSegmentDuration(), llhls_config.GetSegmentCount());
 
@@ -117,7 +117,7 @@ bool LLHlsStream::Stop()
 	return Stream::Stop();
 }
 
-std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetPlaylist(bool gzip/*=false*/) const
+std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetPlaylist(const ov::String &chunk_query_string, bool gzip/*=false*/) const
 {
 	if (GetState() != State::STARTED)
 	{
@@ -126,13 +126,13 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 
 	if (gzip == true)
 	{
-		return { RequestResult::Success, _master_playlist.ToGzipData() };
+		return { RequestResult::Success, _master_playlist.ToGzipData(chunk_query_string) };
 	}
 
-	return { RequestResult::Success, _master_playlist.ToString().ToData(false) };
+	return { RequestResult::Success, _master_playlist.ToString(chunk_query_string).ToData(false) };
 }
 
-std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetChunklist(const int32_t &track_id, int64_t msn, int64_t psn, bool skip/*=false*/, bool gzip/*=false*/) const
+std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetChunklist(const ov::String &query_string,const int32_t &track_id, int64_t msn, int64_t psn, bool skip/*=false*/, bool gzip/*=false*/) const
 {
 	auto chunklist = GetChunklistWriter(track_id);
 	if (chunklist == nullptr)
@@ -165,10 +165,10 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 
 	if (gzip == true)
 	{
-		return { RequestResult::Success, chunklist->ToGzipData(skip) };
+		return { RequestResult::Success, chunklist->ToGzipData(query_string, skip) };
 	}
 
-	return { RequestResult::Success, chunklist->ToString(skip).ToData(false) };
+	return { RequestResult::Success, chunklist->ToString(query_string, skip).ToData(false) };
 }
 
 std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::GetInitializationSegment(const int32_t &track_id) const
@@ -443,7 +443,7 @@ void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t 
 	logtd("Media segment updated : track_id = %d, segment_number = %d, start_timestamp = %llu, segment_duration = %f", track_id, segment_number, segment->GetStartTimestamp(), segment_duration);
 	
 	// Output playlist
-	logtd("[Playlist]\n%s", playlist->ToString().CStr());
+	logtd("[Playlist]\n%s", playlist->ToString("").CStr());
 }
 
 void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number)
@@ -471,7 +471,7 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 	logtd("Media chunk updated : track_id = %d, segment_number = %d, chunk_number = %d, start_timestamp = %llu, chunk_duration = %f", track_id, segment_number, chunk_number, chunk->GetStartTimestamp(), chunk_duration);
 
 	// Output playlist
-	logtd("[Playlist]\n%s", playlist->ToString().CStr());
+	logtd("[Playlist]\n%s", playlist->ToString("").CStr());
 
 	// Notify
 	NotifyPlaylistUpdated(track_id, segment_number, chunk_number);

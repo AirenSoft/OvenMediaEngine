@@ -51,8 +51,8 @@ public:
 		int64_t part;
 	};
 
-	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetPlaylist(bool gzip=false) const;
-	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetChunklist(const int32_t &track_id, int64_t msn, int64_t psn, bool skip = false, bool gzip=false) const;
+	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetPlaylist(const ov::String &chunk_query_string, bool gzip=false) const;
+	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetChunklist(const ov::String &chunk_query_string, const int32_t &track_id, int64_t msn, int64_t psn, bool skip = false, bool gzip=false) const;
 	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetInitializationSegment(const int32_t &track_id) const;
 	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetSegment(const int32_t &track_id, const int64_t &segment_number) const;
 	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetChunk(const int32_t &track_id, const int64_t &segment_number, const int64_t &chunk_number) const;

@@ -139,4 +139,32 @@ namespace mon
 		}
 	}
 
+	void StreamMetrics::OnSessionsDisconnected(PublisherType type, uint64_t number_of_sessions)
+	{
+		if (number_of_sessions == 0)
+		{
+			return ;
+		}
+
+		CommonMetrics::OnSessionsDisconnected(type, number_of_sessions);
+
+		// If this stream is child then send event to parent
+		auto origin_stream_info = GetLinkedInputStream();
+		if(origin_stream_info != nullptr)
+		{
+			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
+			if(origin_stream_metric != nullptr)
+			{
+				origin_stream_metric->OnSessionsDisconnected(type, number_of_sessions);
+			}
+		}
+		else
+		{
+			logti("%u sessions has been stopped playing %s/%s on the %s publisher. Concurrent Viewers[%s(%u)/Stream total(%u)/App total(%u)]", 
+					number_of_sessions,
+					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
+					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
+		}
+	}
+
 }  // namespace mon

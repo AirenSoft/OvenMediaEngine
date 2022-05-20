@@ -338,6 +338,7 @@ namespace pub
 			return false;
 		}
 		_sessions.erase(id);
+
 		session_lock.unlock();
 
 		if(_worker_count > 0)

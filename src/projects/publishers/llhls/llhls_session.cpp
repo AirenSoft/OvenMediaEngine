@@ -15,30 +15,35 @@
 std::shared_ptr<LLHlsSession> LLHlsSession::Create(session_id_t session_id,
 												const std::shared_ptr<pub::Application> &application,
 												const std::shared_ptr<pub::Stream> &stream,
-												const std::shared_ptr<http::svr::HttpConnection> &connection,
 												uint64_t session_life_time)
 {
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), session_id);
-	auto session = std::make_shared<LLHlsSession>(session_info, application, stream, connection, session_life_time);
+	auto session = std::make_shared<LLHlsSession>(session_info, application, stream, session_life_time);
 
 	if (session->Start() == false)
 	{
 		return nullptr;
 	}
 
-	return session;		
+	return session;
 }
 
 LLHlsSession::LLHlsSession(const info::Session &session_info, 
 							const std::shared_ptr<pub::Application> &application, 
 							const std::shared_ptr<pub::Stream> &stream,
-							const std::shared_ptr<http::svr::HttpConnection> &connection,
 							uint64_t session_life_time)
 	: pub::Session(session_info, application, stream)
 
 {
-	_connection = connection;
 	_session_life_time = session_life_time;
+
+	_session_key = ov::Random::GenerateString(8);
+}
+
+LLHlsSession::~LLHlsSession()
+{
+	logtd("~LLHlsSession(%d) is deleted", GetId());
+	MonitorInstance->OnSessionsDisconnected(*GetStream(), PublisherType::LLHls, _number_of_players);
 }
 
 bool LLHlsSession::Start()
@@ -48,9 +53,40 @@ bool LLHlsSession::Start()
 
 bool LLHlsSession::Stop()
 {
-	_connection.reset();
-
 	return Session::Stop();
+}
+
+const ov::String &LLHlsSession::GetSessionKey() const
+{
+	return _session_key;
+}
+
+void LLHlsSession::UpdateLastRequest(uint32_t connection_id)
+{
+	_last_request_time[connection_id] = ov::Clock::NowMSec();
+}
+
+uint64_t LLHlsSession::GetLastRequestTime(uint32_t connection_id) const
+{
+	auto itr = _last_request_time.find(connection_id);
+	if (itr == _last_request_time.end())
+	{
+		return 0;
+	}
+
+	return itr->second;
+}
+
+void LLHlsSession::OnConnectionDisconnected(uint32_t connection_id)
+{
+	_last_request_time.erase(connection_id);
+
+	logtd("LLHlsSession %u disconnected : size(%d)", connection_id, _last_request_time.size());
+}
+
+bool LLHlsSession::IsNoConnection() const
+{
+	return _last_request_time.empty();
 }
 
 // pub::Session Interface
@@ -204,7 +240,7 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 	}
 	else if (name_items[0] == "chunklist")
 	{
-		// chunklist_<track id>_<media type>_llhls.m3u8?_HLS_msn=<M>&_HLS_part=<N>&_HLS_skip=YES|v2
+		// chunklist_<track id>_<media type>_llhls.m3u8?session_key=<key>&_HLS_msn=<M>&_HLS_part=<N>&_HLS_skip=YES|v2
 		if (name_items.size() != 4 || name_ext_items[1] != "m3u8")
 		{
 			logtw("Invalid chunklist file name requested: %s", file_name.CStr());
@@ -271,9 +307,11 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 	}
 
 	auto response = exchange->GetResponse();
+	auto request_uri = exchange->GetRequest()->GetParsedUri();
 
 	// Get the playlist
-	auto [result, playlist] = llhls_stream->GetPlaylist(true);
+	auto query_string = ov::String::FormatString("session=%u_%s", GetId(), _session_key.CStr());
+	auto [result, playlist] = llhls_stream->GetPlaylist(query_string, true);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
 		// Send the playlist
@@ -283,6 +321,9 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 		// gzip compression
 		response->SetHeader("Content-Encoding", "gzip");
 		response->AppendData(playlist);
+
+		MonitorInstance->OnSessionConnected(*GetStream(), PublisherType::LLHls);
+		_number_of_players += 1;
 	}
 	else
 	{
@@ -312,7 +353,8 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 	}
 
 	// Get the chunklist
-	auto [result, chunklist] = llhls_stream->GetChunklist(track_id, msn, part, skip, true);
+	auto query_string = ov::String::FormatString("session=%u_%s", GetId(), _session_key.CStr());
+	auto [result, chunklist] = llhls_stream->GetChunklist(query_string, track_id, msn, part, skip, true);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
 		// Send the chunklist

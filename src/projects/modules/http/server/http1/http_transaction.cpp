@@ -106,7 +106,7 @@ namespace http
 						// Header parsing is done
 						if (IsWebSocketUpgradeRequest() == true)
 						{
-							logti("Client(%s) is requested uri: [%s] for WebSocket upgrade", GetConnection()->GetSocket()->ToString().CStr(), _request->GetUri().CStr());
+							logtd("Client(%s) is requested uri: [%s] for WebSocket upgrade", GetConnection()->GetSocket()->ToString().CStr(), _request->GetUri().CStr());
 
 							if (AcceptWebSocketUpgrade() == false)
 							{
@@ -119,7 +119,7 @@ namespace http
 						}
 						else
 						{
-							logti("Client(%s) is requested uri: [%s]", GetConnection()->GetSocket()->ToString().CStr(), _request->GetUri().CStr());
+							logtd("Client(%s) is requested uri: [%s]", GetConnection()->GetSocket()->ToString().CStr(), _request->GetUri().CStr());
 						}
 
 						SetConnectionPolicyByRequest();

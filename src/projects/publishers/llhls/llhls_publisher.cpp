@@ -177,9 +177,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 
 		uint64_t session_life_time = 0;
 
-		bool start_session = (request_url->File().LowerCaseString() == "llhls.m3u8");
-
-		if (start_session)
+		if (IsAccessControlEnabled(request_url) == true && request_url->File() == "llhls.m3u8")
 		{
 			auto [signed_policy_result, signed_policy] =  Publisher::VerifyBySignedPolicy(request_url, remote_address);
 			if(signed_policy_result == AccessController::VerificationResult::Pass)
@@ -259,32 +257,62 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			}
 		}
 
-		session_id_t session_id = connection->GetId();
-		auto session = stream->GetSession(session_id);
-		if (start_session == true && session == nullptr)
+		std::shared_ptr<LLHlsSession> session = nullptr; 
+
+		if (request_url->File() == "llhls.m3u8")
 		{
-			// New HTTP Connection
-			auto new_session = LLHlsSession::Create(session_id, stream->GetApplication(), stream, connection, session_life_time);
-			if (new_session == nullptr)
+			session_id_t session_id = connection->GetId();
+			session = std::static_pointer_cast<LLHlsSession>(stream->GetSession(session_id));
+			if (session == nullptr)
 			{
-				logte("Could not create llhls session for request: %s", request->ToString().CStr());
-				response->SetStatusCode(http::StatusCode::InternalServerError);
+				// New HTTP Connection
+				session = LLHlsSession::Create(session_id, stream->GetApplication(), stream, session_life_time);
+				if (session == nullptr)
+				{
+					logte("Could not create llhls session for request: %s", request->ToString().CStr());
+					response->SetStatusCode(http::StatusCode::InternalServerError);
+					return http::svr::NextHandler::DoNotCall;
+				}
+
+				stream->AddSession(session);
+			}
+		}
+		// chunklist_x_x.m3u8?session=<session id>_<key>
+		// x_x_x.m4s?session=<session id>_<key>
+		else
+		{
+			// ?session=<session id>_<key>
+			auto query_string = request_url->GetQueryValue("session");
+			auto id_key = query_string.Split("_");
+			if (id_key.size() != 2)
+			{
+				logte("Invalid session_key : %s", query_string.CStr());
+				response->SetStatusCode(http::StatusCode::Unauthorized);
 				return http::svr::NextHandler::DoNotCall;
 			}
 
-			// It will be used in CloseHandler
-			connection->SetUserData(new_session);
+			auto session_id = ov::Converter::ToUInt32(id_key[0].CStr());
+			auto session_key = id_key[1];
 
-			stream->AddSession(new_session);
-			MonitorInstance->OnSessionConnected(*stream, PublisherType::LLHls);
+			session = std::static_pointer_cast<LLHlsSession>(stream->GetSession(session_id));
+			if (session == nullptr)
+			{
+				logte("Invalid session_key : %s", query_string.CStr());
+				response->SetStatusCode(http::StatusCode::Unauthorized);
+				return http::svr::NextHandler::DoNotCall;
+			}
 
-			session = new_session;
+			if (session_key != session->GetSessionKey())
+			{
+				logte("Invalid session_key : %s", query_string.CStr());
+				response->SetStatusCode(http::StatusCode::Unauthorized);
+				return http::svr::NextHandler::DoNotCall;
+			}
 		}
-		else if (start_session == false && session == nullptr)
-		{
-			response->SetStatusCode(http::StatusCode::Unauthorized);
-			return http::svr::NextHandler::DoNotCall;
-		}
+
+		// It will be used in CloseHandler
+		connection->SetUserData(session);
+		session->UpdateLastRequest(connection->GetId());
 
 		// Cors Setting
 		auto application = std::static_pointer_cast<LLHlsApplication>(stream->GetApplication());
@@ -296,7 +324,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 
 	// Set Close Handler
 	http_interceptor->SetCloseHandler([this](const std::shared_ptr<http::svr::HttpConnection> &connection, PhysicalPortDisconnectReason reason) -> void {
-
+		
 		try 
 		{
 			// Get session from user_data of connection
@@ -307,19 +335,26 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 				logte("Could not get llhls session from user_data of connection");
 				return;
 			}
-			// Remove session from stream
-			auto stream = session->GetStream();
-			if (stream != nullptr)
+
+			session->OnConnectionDisconnected(connection->GetId());
+
+			if (session->IsNoConnection())
 			{
-				stream->RemoveSession(session->GetId());
-				MonitorInstance->OnSessionDisconnected(*stream, PublisherType::LLHls);
+				logtd("llhls session is closed : %u", session->GetId());
+				// Remove session from stream
+				auto stream = session->GetStream();
+				if (stream != nullptr)
+				{
+					stream->RemoveSession(session->GetId());
+				}
 			}
 
+			connection->SetUserData(nullptr);
 			session->Stop();
 		}
 		catch (const std::bad_any_cast &)
 		{
-			logtd("Could not get llhls session from user data");
+			logte("Could not get llhls session from user data");
 		}
 	});
 

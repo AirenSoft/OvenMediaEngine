@@ -76,21 +76,16 @@ public:
 	bool AddGroupMedia(const MediaInfo &media_info);
 	bool AddStreamInfo(const StreamInfo &stream_info);
 
-	ov::String ToString() const;
-	std::shared_ptr<const ov::Data> ToGzipData() const;
+	ov::String ToString(const ov::String &chunk_query_string) const;
+	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &chunk_query_string) const;
 
 private:
 	bool SetActiveMediaGroup(const ov::String &group_id);
 	const MediaInfo &GetDefaultMediaInfo(const ov::String &group_id) const;
 
-	// Cache
-	mutable ov::String _playlist_cache;
-	mutable bool _need_playlist_updated = true;
-
-	mutable std::shared_ptr<ov::Data> _gzipped_playlist_cache;
-	mutable bool _need_gzipped_playlist_updated = true;
-
 	// Group ID : MediaInfo
 	std::map<ov::String, std::vector<MediaInfo>>	_media_infos;
+	mutable std::shared_mutex _media_infos_guard;
 	std::vector<StreamInfo> _stream_infos;
+	mutable std::shared_mutex _stream_infos_guard;
 };

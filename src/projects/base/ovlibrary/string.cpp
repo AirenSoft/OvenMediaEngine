@@ -19,6 +19,11 @@
 
 namespace ov
 {
+	String::String(uint32_t capacity)
+	{
+		SetCapacity(capacity);
+	}
+
 	String::String(const char *string)
 	{
 		Append(string);
@@ -911,7 +916,7 @@ namespace ov
 			// 기존에 할당된 버퍼가 충분 하지 않거나
 			(_capacity < length) ||
 			// 기존에 할당된 버퍼가 너무 크거나
-			(_capacity > (length * 2)) ||
+			//(_capacity > (length * 2)) ||
 			// alloc_exactly flag가 켜져 있으면서 capacity가 정확히 일치하지 않는 경우
 			(alloc_exactly && (_capacity != length)))
 		{
