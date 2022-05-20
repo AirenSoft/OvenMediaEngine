@@ -21,14 +21,14 @@ namespace pvd
 {
 	std::shared_ptr<RtspcStream> RtspcStream::Create(const std::shared_ptr<pvd::PullApplication> &application,
 													 const uint32_t stream_id, const ov::String &stream_name,
-													 const std::vector<ov::String> &url_list)
+													 const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties)
 	{
 		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::RtspPull);
 
 		stream_info.SetId(stream_id);
 		stream_info.SetName(stream_name);
 
-		auto stream = std::make_shared<RtspcStream>(application, stream_info, url_list);
+		auto stream = std::make_shared<RtspcStream>(application, stream_info, url_list, properties);
 		if (!stream->PullStream::Start())
 		{
 			// Explicit deletion
@@ -39,8 +39,8 @@ namespace pvd
 		return stream;
 	}
 
-	RtspcStream::RtspcStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
-	: pvd::PullStream(application, stream_info, url_list), Node(NodeType::Rtsp)
+	RtspcStream::RtspcStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties)
+	: pvd::PullStream(application, stream_info, url_list, properties), Node(NodeType::Rtsp)
 	{
 		SetState(State::IDLE);
 	}

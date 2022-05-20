@@ -596,10 +596,10 @@ namespace ocst
 		}
 
 		// Find the origin using the location
+		logtd("Trying to find the item from origin_list that match location: %s", location.CStr());		
+
 		for (auto &origin : origin_list)
 		{
-			logtd("Trying to find the item from origin_list that match location: %s", location.CStr());
-
 			// TODO(dimien): Replace with the regex
 			if (location.HasPrefix(origin.location))
 			{
