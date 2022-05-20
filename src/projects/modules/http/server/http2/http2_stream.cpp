@@ -318,7 +318,7 @@ namespace http
 
 			bool HttpStream::OnGoAwayFrameReceived(const std::shared_ptr<const Http2GoAwayFrame> &frame)
 			{
-				logte("%s", frame->ToString().CStr());
+				logtd("%s", frame->ToString().CStr());
 				SetStatus(HttpExchange::Status::Error);
 				return true;
 			}
