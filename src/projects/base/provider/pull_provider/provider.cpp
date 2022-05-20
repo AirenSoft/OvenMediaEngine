@@ -116,7 +116,7 @@ namespace pvd
 	std::shared_ptr<pvd::Stream> PullProvider::PullStream(
 		const std::shared_ptr<const ov::Url> &request_from,
 		const info::Application &app_info, const ov::String &stream_name,
-		const std::vector<ov::String> &url_list, off_t offset)
+		const std::vector<ov::String> &url_list, off_t offset, std::shared_ptr<pvd::PullStreamProperties> properties)
 	{
 		LockPullStreamIfNeeded(app_info, stream_name, url_list, offset);
 
@@ -147,7 +147,7 @@ namespace pvd
 		}
 
 		// Create Stream
-		stream = app->CreateStream(stream_name, url_list);
+		stream = app->CreateStream(stream_name, url_list, properties);
 		if (stream == nullptr)
 		{
 			logte("%s could not create [%s] stream.", app->GetApplicationTypeName(), stream_name.CStr());

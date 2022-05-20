@@ -16,6 +16,7 @@
 namespace pvd
 {
 	class Stream;
+	class PullStreamProperties;
 }
 
 namespace ocst
@@ -74,12 +75,13 @@ namespace ocst
 		/// @param stream_name A stream name to create
 		/// @param url_list The streaming URLs to pull
 		/// @param offset Specifies the starting point of the streaming URL (unit: milliseconds)
+		/// @param properties properties if PullStream
 		///
 		/// @return Newly created stream instance
 		virtual std::shared_ptr<pvd::Stream> PullStream(
 			const std::shared_ptr<const ov::Url> &request_from,
 			const info::Application &app_info, const ov::String &stream_name,
-			const std::vector<ov::String> &url_list, off_t offset) = 0;
+			const std::vector<ov::String> &url_list, off_t offset, std::shared_ptr<pvd::PullStreamProperties> properties) = 0;
 
 		virtual bool StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream) = 0;
 	};

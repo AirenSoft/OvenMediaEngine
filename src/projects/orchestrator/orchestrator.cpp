@@ -10,6 +10,7 @@
 
 #include <base/mediarouter/mediarouter_interface.h>
 #include <base/provider/stream.h>
+#include <base/provider/pull_provider/stream_props.h>
 #include <mediarouter/mediarouter.h>
 #include <monitoring/monitoring.h>
 
@@ -27,17 +28,7 @@ namespace ocst
 
 		auto &vhost_conf_list = _server_config->GetVirtualHostList();
 
-		for (const auto &vhost_conf : vhost_conf_list)
-		{
-			// Create VirtualHost in Orchestrator
-			if(CreateVirtualHost(vhost_conf) != Result::Succeeded)
-			{
-				logte("Could not create VirtualHost(%s)", vhost_conf.GetName().CStr());
-				return false;
-			}
-		}
-
-		return true;
+		return CreateVirtualHosts(vhost_conf_list);
 	}
 
 	ocst::Result Orchestrator::Release()
@@ -73,6 +64,59 @@ namespace ocst
 		return Result::Succeeded;
 	}
 
+	bool Orchestrator::CreateVirtualHosts(const std::vector<cfg::vhost::VirtualHost> &vhost_conf_list)
+	{
+		for (const auto &vhost_conf : vhost_conf_list)
+		{
+			// Create VirtualHost in Orchestrator
+			if (CreateVirtualHost(vhost_conf) != Result::Succeeded)
+			{
+				logte("Could not create VirtualHost(%s)", vhost_conf.GetName().CStr());
+				return false;
+			}
+		}
+
+		RequestProcessPersistOrigins();
+
+		return true;
+	}
+
+	void Orchestrator::RequestProcessPersistOrigins()
+	{
+		std::thread t1([&]() {
+			sleep(1);
+			Orchestrator::GetInstance()->ProcessPersistOrigins();
+		});
+		t1.detach();
+	}
+
+	void Orchestrator::ProcessPersistOrigins()
+	{
+		for (auto &vhost_item : _virtual_host_list)
+		{
+			for (auto &origin : vhost_item->origin_list)
+			{
+				// logti("scheme : %s, location : %s, persist : %s", origin.scheme.CStr(), origin.location.CStr(), origin.origin_config.IsPersist() ? "true" : "false");
+
+				if (origin.origin_config.IsPersist() != true)
+				{
+					continue;
+				}
+
+				auto url = ov::Url::Parse(ov::String::FormatString("persist://localhost%s", origin.location.CStr()));
+
+				auto app = GetApplicationInfo(vhost_item->name, url->App());
+				if (!app.IsValid())
+				{
+					continue;
+				}
+
+				// logte("app : %s, stream : %s", url->App().CStr(), url->Stream().CStr());
+
+				RequestPullStream(url, app.GetName(), url->Stream());
+			}
+		}
+	}
 	Result Orchestrator::CreateVirtualHost(const cfg::vhost::VirtualHost &vhost_cfg)
 	{
 		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
@@ -351,6 +395,8 @@ namespace ocst
 
 		logtd("All items are applied");
 
+		RequestProcessPersistOrigins();
+
 		return result;
 	}
 
@@ -541,7 +587,7 @@ namespace ocst
 				  vhost_app_name.CStr(), stream_name.CStr(),
 				  GetModuleTypeName(provider_module->GetModuleType()).CStr());
 
-			auto stream = provider_module->PullStream(request_from, app_info, stream_name, {source}, offset);
+			auto stream = provider_module->PullStream(request_from, app_info, stream_name, {source}, offset, std::make_shared<pvd::PullStreamProperties>());
 
 			if (stream != nullptr)
 			{
@@ -683,7 +729,9 @@ namespace ocst
 			  vhost_app_name.CStr(), stream_name.CStr(),
 			  GetModuleTypeName(provider_module->GetModuleType()).CStr());
 
-		auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset);
+		// Use Matched Origin information as an properties in Pull Stream.
+		auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset, 
+			std::make_shared<pvd::PullStreamProperties>(matched_origin->origin_config.IsPersist(), matched_origin->origin_config.IsFailBack()));
 
 		if (stream != nullptr)
 		{
@@ -720,7 +768,8 @@ namespace ocst
 			else
 			{
 				logtc("Out of sync: origin: %d, domain: %d (This is a bug)", exists_in_origin, exists_in_domain);
-				OV_ASSERT2(false);
+				// TODO
+				// OV_ASSERT2(false);
 			}
 		}
 

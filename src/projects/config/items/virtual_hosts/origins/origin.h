@@ -29,7 +29,7 @@ namespace cfg
 					Register("Location", &_location);
 					Register("Pass", &_pass);
 					Register<Optional>("Persist", &_persist);
-					Register<Optional>("FailBack", &_fail_back);
+					Register<Optional>("Failback", &_fail_back);
 				}
 
 				ov::String _location;

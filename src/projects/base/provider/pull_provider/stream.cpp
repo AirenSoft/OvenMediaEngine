@@ -1,43 +1,47 @@
 //==============================================================================
 //
-//  PullProvider Base Class 
+//  PullProvider Base Class
 //
 //  Created by Getroot
 //  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
 
-
 #include "stream.h"
+
 #include "application.h"
 #include "base/info/application.h"
 #include "provider_private.h"
+#include "stream_props.h"
 
 namespace pvd
 {
-	PullStream::PullStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
+	PullStream::PullStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties)
 		: Stream(application, stream_info)
 	{
-		for(auto &url : url_list)
+		for (auto &url : url_list)
 		{
 			auto parsed_url = ov::Url::Parse(url);
-			if(parsed_url)
+			if (parsed_url)
 			{
 				_url_list.push_back(parsed_url);
 			}
 		}
+
+		// In case of Pull Stream created by Origins, Properties information is included.
+		_properties = properties;
 	}
 
-	bool PullStream::Start()
+	bool PullStream::Start(uint32_t max_retry_count)
 	{
 		std::lock_guard<std::mutex> lock(_start_stop_stream_lock);
 		_restart_count = 0;
-		while(true)
+		while (true)
 		{
-			if(StartStream(GetNextURL()) == false)
+			if (StartStream(GetNextURL()) == false)
 			{
-				_restart_count ++;
-				if(_restart_count > _url_list.size() * MAX_PULL_STREAM_RETRY_COUNT)
+				_restart_count++;
+				if (_restart_count > _url_list.size() * max_retry_count)
 				{
 					SetState(Stream::State::TERMINATED);
 					return false;
@@ -61,13 +65,13 @@ namespace pvd
 		return Stream::Stop();
 	}
 
-	bool PullStream::Resume()
+	bool PullStream::Resume(uint32_t max_retry_count)
 	{
-		if(RestartStream(GetNextURL()) == false)
+		if (RestartStream(GetNextURL()) == false)
 		{
 			Stop();
-			_restart_count ++;
-			if(_restart_count > _url_list.size() * MAX_PULL_STREAM_RETRY_COUNT)
+			_restart_count++;
+			if (_restart_count > _url_list.size() * max_retry_count)
 			{
 				SetState(Stream::State::TERMINATED);
 			}
@@ -81,12 +85,12 @@ namespace pvd
 
 	const std::shared_ptr<const ov::Url> PullStream::GetNextURL()
 	{
-		if(_url_list.size() == 0)
+		if (_url_list.size() == 0)
 		{
 			return nullptr;
 		}
 
-		if(static_cast<size_t>(_curr_url_index + 1) > _url_list.size())
+		if (static_cast<size_t>(_curr_url_index + 1) > _url_list.size())
 		{
 			_curr_url_index = 0;
 		}
@@ -94,8 +98,40 @@ namespace pvd
 		auto curr_url = _url_list[_curr_url_index];
 		SetMediaSource(curr_url->ToUrlString(true));
 
-		_curr_url_index ++;
+		_curr_url_index++;
 
 		return curr_url;
 	}
-}
+
+	const std::shared_ptr<const ov::Url> PullStream::GetPrimaryURL()
+	{
+		if (_url_list.size() == 0)
+		{
+			return nullptr;
+		}
+
+		auto curr_url = _url_list[0];
+
+		return curr_url;
+	}
+
+	bool PullStream::IsCurrPrimaryURL()
+	{
+		// If the currently playing URL and the 0th URL are the same, it is the primary URL.
+		if (GetMediaSource() == _url_list[0]->ToUrlString(true))
+			return true;
+
+		return false;
+	}
+
+	void PullStream::InitCurrUrlIndex()
+	{
+		_curr_url_index = 0;
+	}
+
+	std::shared_ptr<pvd::PullStreamProperties> PullStream::GetProperties()
+	{
+		return _properties;
+	}
+
+}  // namespace pvd

@@ -16,6 +16,7 @@
 namespace pvd
 {
 	class Application;
+	class PullStreamProperties;
 	
 	#define MAX_PULL_STREAM_RETRY_COUNT		2		// 2 * url_count
 	class PullStream : public Stream
@@ -30,9 +31,9 @@ namespace pvd
 		};
 
 		// PullStream API
-		bool Start();
+		bool Start(uint32_t max_retry_count = MAX_PULL_STREAM_RETRY_COUNT);
 		bool Stop();
-		bool Resume(); // Resume with another URL
+		bool Resume(uint32_t max_retry_count = MAX_PULL_STREAM_RETRY_COUNT); // Resume with another URL
 
 		// Defines the event detection method to process media packets in Pull Stream. 
 		// There are EPOLL event method by socket and INTERVAL event method called at regular time.	
@@ -52,7 +53,7 @@ namespace pvd
 		virtual ProcessMediaResult ProcessMediaPacket() = 0;
 
 	protected:
-		PullStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list);
+		PullStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties = nullptr);
 
 		virtual bool StartStream(const std::shared_ptr<const ov::Url> &url) = 0; // Start
 		virtual bool RestartStream(const std::shared_ptr<const ov::Url> &url) = 0; // Failover
@@ -63,9 +64,17 @@ namespace pvd
 		std::vector<std::shared_ptr<const ov::Url>> _url_list;
 		int _curr_url_index = 0;
 
+		std::shared_ptr<pvd::PullStreamProperties> _properties;
+
 		// It can be called by multiple thread
 		std::mutex _start_stop_stream_lock;
 
+	public:
 		const std::shared_ptr<const ov::Url> GetNextURL();
+		const std::shared_ptr<const ov::Url> GetPrimaryURL();
+		void InitCurrUrlIndex();
+		bool IsCurrPrimaryURL();
+
+		std::shared_ptr<pvd::PullStreamProperties> GetProperties();
 	};
 }

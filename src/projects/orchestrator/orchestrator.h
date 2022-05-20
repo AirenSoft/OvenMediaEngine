@@ -28,6 +28,7 @@ namespace ocst
 						 protected OrchestratorInternal
 	{
 	public:
+
 		/// Register the module
 		///
 		/// @param module Module to register
@@ -52,9 +53,14 @@ namespace ocst
 		Result DeleteVirtualHost(const info::Host &vhost_info);
 
 		std::optional<info::Host> GetHostInfo(ov::String vhost_name);
-		
+
+		bool CreateVirtualHosts(const std::vector<cfg::vhost::VirtualHost> &vhost_conf_list);
 		bool UpdateVirtualHosts(const std::vector<info::Host> &host_list);
 		std::vector<std::shared_ptr<ocst::VirtualHost>> GetVirtualHostList();
+
+		// Process persistent origins settings. Executed when VirtualHost configuration is created or updated.		
+		void RequestProcessPersistOrigins();
+		void ProcessPersistOrigins();
 
 		/// Create an application and notify the modules
 		///
