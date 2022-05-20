@@ -340,6 +340,8 @@ bool MediaRouteApplication::NotifyStreamCreate(
 {
 	std::shared_lock<std::shared_mutex> lock(_observers_lock);
 
+	int32_t last_observer_type = -1;
+
 	for (auto observer : _observers)
 	{
 		auto oberver_type = observer->GetObserverType();
@@ -352,6 +354,10 @@ bool MediaRouteApplication::NotifyStreamCreate(
 				if (oberver_type == MediaRouteApplicationObserver::ObserverType::Transcoder ||
 					oberver_type == MediaRouteApplicationObserver::ObserverType::Relay)
 				{
+					if (last_observer_type != (int32_t)oberver_type)
+					{
+						logtd("Notify created stream to relay or trasncoder. %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
+					}
 					observer->OnStreamCreated(stream_info);
 				}
 			}
@@ -361,11 +367,17 @@ bool MediaRouteApplication::NotifyStreamCreate(
 			case MediaRouteApplicationConnector::ConnectorType::Relay: {
 				if (oberver_type == MediaRouteApplicationObserver::ObserverType::Publisher)
 				{
+					if (last_observer_type != (int32_t)oberver_type)
+					{
+						logtd("Notify created stream to publisher. %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
+					}
 					observer->OnStreamCreated(stream_info);
 				}
 			}
 			break;
 		}
+
+		last_observer_type = (int32_t)oberver_type;
 	}
 
 	return true;
@@ -375,6 +387,7 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 {
 	std::shared_lock<std::shared_mutex> lock(_observers_lock);
 
+	int32_t last_observer_type = -1;
 	for (auto observer : _observers)
 	{
 		auto oberver_type = observer->GetObserverType();
@@ -385,7 +398,10 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 				// Flow: Provider -> MediaRoute -> Transcoder
 				if (oberver_type == MediaRouteApplicationObserver::ObserverType::Transcoder)
 				{
-					logtd("Notify to prepared stream to trasncoder. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
+					if (last_observer_type != (int32_t)oberver_type)
+					{
+						logtd("Notify prepared stream to trasncoder. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
+					}
 					observer->OnStreamPrepared(stream->GetStream());
 				}
 			}
@@ -394,12 +410,19 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 			case MediaRouterStreamType::OUTBOUND: {
 				if (oberver_type == MediaRouteApplicationObserver::ObserverType::Publisher)
 				{
-					logtd("Notify to prepared stream to publisher. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
+					if (last_observer_type != (int32_t)oberver_type)
+					{
+						logtd("Notify prepared stream to publisher. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
+					}
 					observer->OnStreamPrepared(stream->GetStream());
 				}
 				else if (oberver_type == MediaRouteApplicationObserver::ObserverType::Relay)
 				{
-					logtd("Notify to prepared stream to relay. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
+					if (last_observer_type != (int32_t)oberver_type)
+					{
+						logtd("Notify prepared stream to relay. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
+					}
+
 					observer->OnStreamPrepared(stream->GetStream());
 				}
 			}
@@ -411,6 +434,7 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 			}
 			break;
 		}
+		last_observer_type = (int32_t)oberver_type;
 	}
 
 	stream->OnStreamPrepared(true);
@@ -454,7 +478,6 @@ bool MediaRouteApplication::OnStreamUpdated(
 	{
 		return false;
 	}
-
 
 	return true;
 }
@@ -521,6 +544,8 @@ bool MediaRouteApplication::NotifyStreamDeleted(
 	const MediaRouteApplicationConnector::ConnectorType connector_type)
 {
 	std::shared_lock<std::shared_mutex> lock_guard(_observers_lock);
+	int32_t last_observer_type = -1;
+
 	for (auto it = _observers.begin(); it != _observers.end(); ++it)
 	{
 		auto observer = *it;
@@ -533,6 +558,10 @@ bool MediaRouteApplication::NotifyStreamDeleted(
 				(observer_type == MediaRouteApplicationObserver::ObserverType::Relay) ||
 				(observer_type == MediaRouteApplicationObserver::ObserverType::Orchestrator))
 			{
+				if (last_observer_type != (int32_t)observer_type)
+				{
+					logtd("Notify created stream from provider to transcoder, relay, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
+				}
 				observer->OnStreamDeleted(stream_info);
 			}
 		}
@@ -542,6 +571,10 @@ bool MediaRouteApplication::NotifyStreamDeleted(
 				(observer_type == MediaRouteApplicationObserver::ObserverType::Relay) ||
 				(observer_type == MediaRouteApplicationObserver::ObserverType::Orchestrator))
 			{
+				if (last_observer_type != (int32_t)observer_type)
+				{
+					logtd("Notify created stream from transcoder to publisher, relay, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
+				}				
 				observer->OnStreamDeleted(stream_info);
 			}
 		}
@@ -551,9 +584,15 @@ bool MediaRouteApplication::NotifyStreamDeleted(
 				(observer_type == MediaRouteApplicationObserver::ObserverType::Publisher) ||
 				(observer_type == MediaRouteApplicationObserver::ObserverType::Orchestrator))
 			{
+				if (last_observer_type != (int32_t)observer_type)
+				{
+					logtd("Notify created stream from relay to transcoder, publisher, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
+				}								
 				observer->OnStreamDeleted(stream_info);
 			}
 		}
+
+		last_observer_type = (int32_t)observer_type;
 	}
 
 	return true;
@@ -564,6 +603,8 @@ bool MediaRouteApplication::NotifyStreamUpdated(
 	const MediaRouteApplicationConnector::ConnectorType connector_type)
 {
 	std::shared_lock<std::shared_mutex> lock_guard(_observers_lock);
+	int32_t last_observer_type = -1;
+
 	for (auto it = _observers.begin(); it != _observers.end(); ++it)
 	{
 		auto observer = *it;
@@ -576,6 +617,10 @@ bool MediaRouteApplication::NotifyStreamUpdated(
 				(observer_type == MediaRouteApplicationObserver::ObserverType::Relay) ||
 				(observer_type == MediaRouteApplicationObserver::ObserverType::Orchestrator))
 			{
+				if (last_observer_type != (int32_t)observer_type)
+				{
+					logtd("Notify updated stream from provider to transcoder, relay, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
+				}				
 				observer->OnStreamUpdated(stream_info);
 			}
 		}
@@ -585,6 +630,10 @@ bool MediaRouteApplication::NotifyStreamUpdated(
 				(observer_type == MediaRouteApplicationObserver::ObserverType::Relay) ||
 				(observer_type == MediaRouteApplicationObserver::ObserverType::Orchestrator))
 			{
+				if (last_observer_type != (int32_t)observer_type)
+				{
+					logtd("Notify updated stream from transcoder to publisher, relay, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
+				}					
 				observer->OnStreamUpdated(stream_info);
 			}
 		}
@@ -594,14 +643,19 @@ bool MediaRouteApplication::NotifyStreamUpdated(
 				(observer_type == MediaRouteApplicationObserver::ObserverType::Publisher) ||
 				(observer_type == MediaRouteApplicationObserver::ObserverType::Orchestrator))
 			{
+				if (last_observer_type != (int32_t)observer_type)
+				{
+					logtd("Notify updated stream from transcoder to publisher, transcoder, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
+				}					
 				observer->OnStreamUpdated(stream_info);
 			}
 		}
+
+		last_observer_type = (int32_t)observer_type;
 	}
 
 	return true;
 }
-
 
 // @from Provider
 // @from TranscoderProvider

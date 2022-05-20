@@ -873,7 +873,8 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 
 		ov::String stat_stream_str = "";
 
-		stat_stream_str.AppendFormat("\n - MediaRouter Stream | type: %s, name: %s/%s, uptime: %lldms, queue: %d, min/max gap: %lldms",
+		stat_stream_str.AppendFormat("\n - MediaRouter Stream | id: %u, type: %s, name: %s/%s, uptime: %lldms, queue: %d, sync: %lldms",
+									 _stream->GetId(),
 									 _inout_type == MediaRouterStreamType::INBOUND ? "Inbound" : "Outbound",
 									 _stream->GetApplicationInfo().GetName().CStr(),
 									 _stream->GetName().CStr(),
