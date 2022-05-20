@@ -109,12 +109,12 @@ namespace ov
 		ov::String	_cidr;
 		uint32_t	_ui32_ip_addr = 0;
 		uint32_t	_ui32_bitmask = 0;
-		ov::String	_str_ip_addr = 0;
-		ov::String	_str_bitmask = 0;
+		ov::String	_str_ip_addr;
+		ov::String	_str_bitmask;
 		
 		uint32_t	_ui32_network_address = 0;	// Begin
 		uint32_t	_ui32_broadcast_address = 0; // End
-		ov::String	_str_network_address = 0;	// Begin
-		ov::String	_str_broadcast_address = 0; // End
+		ov::String	_str_network_address;	// Begin
+		ov::String	_str_broadcast_address; // End
 	};
 }

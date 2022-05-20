@@ -30,6 +30,7 @@ namespace ov
 		String() = default;
 		String(const char *string);	 // NOLINT
 		String(const char *string, size_t length);
+		String(uint32_t capacity);
 
 		// copy constructor
 		String(const String &str);

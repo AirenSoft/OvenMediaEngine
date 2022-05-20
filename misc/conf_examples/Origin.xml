@@ -15,6 +15,9 @@
 	<StunServer>stun.l.google.com:19302</StunServer>
 
 	<Modules>
+		<!-- 
+		Currently OME only supports h2 like all browsers do. Therefore, HTTP/2 only works on TLS ports.			
+		-->
 		<HTTP2>
 			<Enable>true</Enable>
 		</HTTP2>
@@ -95,8 +98,12 @@
 				<!-- <TLSPort>443</TLSPort> -->
 			</HLS>
 			<LLHLS>
-				<!-- Since LLHLS only works over HTTP/2.0, it will not work on Non-Tls Ports. -->
-				<!-- <Port>80</Port> -->
+				<!-- 
+				OME only supports h2, so LLHLS works over HTTP/1.1 on non-TLS port. 
+				Note that LLHLS runs higher performance over HTTP/2.
+				Therefore, it is recommended to use TLS Port.
+				-->
+				<Port>80</Port>
 				<!-- If you want to use TLS, specify the TLS port -->
 				<!-- <TLSPort>443</TLSPort> -->
 				<WorkerCount>1</WorkerCount>

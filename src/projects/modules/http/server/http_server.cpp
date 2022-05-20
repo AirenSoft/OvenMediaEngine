@@ -193,7 +193,6 @@ namespace http
 				std::lock_guard<std::shared_mutex> guard(_client_list_mutex);
 
 				auto client_iterator = _connection_list.find(remote.get());
-
 				if (client_iterator == _connection_list.end())
 				{
 					// If an error occurs during TCP or HTTP connection processing, it may not exist in _connection_list.

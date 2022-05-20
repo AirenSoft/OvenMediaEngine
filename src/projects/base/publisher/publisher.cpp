@@ -265,6 +265,43 @@ namespace pub
 		return nullptr;
 	}
 
+	bool Publisher::IsAccessControlEnabled(const std::shared_ptr<const ov::Url> &request_url)
+	{
+		auto orchestrator = ocst::Orchestrator::GetInstance();
+		auto vhost_name = orchestrator->GetVhostNameFromDomain(request_url->Host());
+
+		if (vhost_name.IsEmpty())
+		{
+			return false;
+		}
+
+		auto item = ocst::Orchestrator::GetInstance()->GetHostInfo(vhost_name);
+		if (item.has_value())
+		{
+			auto vhost_item = item.value();
+
+			auto &webhooks_config = vhost_item.GetAdmissionWebhooks();
+			auto &signed_policy_config = vhost_item.GetSignedPolicy();
+			if (webhooks_config.IsParsed() == true)
+			{
+				if (webhooks_config.IsEnabledPublisher(GetPublisherType()) == true)
+				{
+					return true;
+				}
+			}
+
+			if (signed_policy_config.IsParsed() == true)
+			{
+				if (signed_policy_config.IsEnabledPublisher(GetPublisherType()) == true)
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
 	std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPolicy>> Publisher::VerifyBySignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address)
 	{
 		if(_access_controller == nullptr)

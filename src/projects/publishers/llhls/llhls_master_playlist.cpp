@@ -32,9 +32,9 @@ bool LLHlsMasterPlaylist::AddGroupMedia(const MediaInfo &media_info)
 		}
 	}
 
+	// lock
+	std::lock_guard<std::shared_mutex> lock(_media_infos_guard);
 	_media_infos[media_info._group_id].push_back(media_info);
-
-	_need_playlist_updated = true;
 
 	return true;
 }
@@ -72,10 +72,9 @@ bool LLHlsMasterPlaylist::AddStreamInfo(const StreamInfo &stream_info)
 		SetActiveMediaGroup(stream_info._closed_captions_group_id);
 	}
 	
+	// lock
+	std::lock_guard<std::shared_mutex> lock(_stream_infos_guard);
 	_stream_infos.push_back(stream_info);
-
-	_need_playlist_updated = true;
-	_need_gzipped_playlist_updated = true;
 
 	return true;
 }
@@ -84,6 +83,7 @@ bool LLHlsMasterPlaylist::SetActiveMediaGroup(const ov::String &group_id)
 {
 	if (group_id.IsEmpty() == false)
 	{
+		std::shared_lock<std::shared_mutex> media_infos_lock(_media_infos_guard);
 		auto it = _media_infos.find(group_id);
 		if (it == _media_infos.end())
 		{
@@ -102,6 +102,8 @@ bool LLHlsMasterPlaylist::SetActiveMediaGroup(const ov::String &group_id)
 
 const LLHlsMasterPlaylist::MediaInfo &LLHlsMasterPlaylist::GetDefaultMediaInfo(const ov::String &group_id) const
 {
+	std::shared_lock<std::shared_mutex> media_infos_lock(_media_infos_guard);
+
 	auto it = _media_infos.find(group_id);
 	if (it == _media_infos.end())
 	{
@@ -120,20 +122,17 @@ const LLHlsMasterPlaylist::MediaInfo &LLHlsMasterPlaylist::GetDefaultMediaInfo(c
 	return MediaInfo::InvalidMediaInfo();
 }
 
-ov::String LLHlsMasterPlaylist::ToString() const
+ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string) const
 {
-	if (_need_playlist_updated == false)
-	{
-		return _playlist_cache;
-	}
-
-	ov::String playlist;
+	ov::String playlist(1024);
 
 	playlist.AppendFormat("#EXTM3U\n");
 	playlist.AppendFormat("#EXT-X-VERSION:7\n");
 	playlist.AppendFormat("#EXT-X-INDEPENDENT-SEGMENTS\n");
 
 	// Write EXT-X-MEDIA from _media_infos
+	// shared lock
+	std::shared_lock<std::shared_mutex> media_infos_lock(_media_infos_guard);
 	for (const auto &[group_id, media_infos] : _media_infos)
 	{
 		for (const auto &media_info : media_infos)
@@ -169,17 +168,25 @@ ov::String LLHlsMasterPlaylist::ToString() const
 
 				if (!media_info._uri.IsEmpty())
 				{
-					playlist.AppendFormat(",URI=\"%s\"", media_info._uri.CStr());
+					playlist.AppendFormat(",URI=\"%s", media_info._uri.CStr());
+
+					if (chunk_query_string.IsEmpty() == false)
+					{
+						playlist.AppendFormat("?%s", chunk_query_string.CStr());
+					}
 				}
 
-				playlist.AppendFormat("\n");
+				playlist.AppendFormat("\"\n");
 			}
 		}
 	}
+	media_infos_lock.unlock();
 
 	playlist.AppendFormat("\n");
 
 	// Write EXT-X-STREAM-INF from _stream_infos
+	// shared lock
+	std::shared_lock<std::shared_mutex> stream_infos_lock(_stream_infos_guard);
 	for (const auto &variant_info : _stream_infos)
 	{
 		playlist.AppendFormat("#EXT-X-STREAM-INF:");
@@ -258,25 +265,18 @@ ov::String LLHlsMasterPlaylist::ToString() const
 		// URI
 		playlist.AppendFormat("\n");
 		playlist.AppendFormat("%s", variant_info._uri.CStr());
+		if (chunk_query_string.IsEmpty() == false)
+		{
+			playlist.AppendFormat("?%s", chunk_query_string.CStr());
+		}
 		playlist.AppendFormat("\n");
 	}
-
-	_playlist_cache = playlist;
-	_need_playlist_updated = false;
-	_need_gzipped_playlist_updated = true;
+	stream_infos_lock.unlock();
 
 	return playlist;
 }
 
-std::shared_ptr<const ov::Data> LLHlsMasterPlaylist::ToGzipData() const
+std::shared_ptr<const ov::Data> LLHlsMasterPlaylist::ToGzipData(const ov::String &chunk_query_string) const
 {
-	if (_need_gzipped_playlist_updated == false)
-	{
-		return _gzipped_playlist_cache;
-	}
-
-	_gzipped_playlist_cache = ov::Zip::CompressGzip(ToString().ToData(false));
-	_need_gzipped_playlist_updated = false;
-
-	return _gzipped_playlist_cache;
+	return  ov::Zip::CompressGzip(ToString(chunk_query_string).ToData(false));
 }

@@ -19,14 +19,14 @@ public:
 	static std::shared_ptr<LLHlsSession> Create(session_id_t session_id,
 												const std::shared_ptr<pub::Application> &application,
 												const std::shared_ptr<pub::Stream> &stream,
-												const std::shared_ptr<http::svr::HttpConnection> &connection,
 												uint64_t session_life_time);
 
 	LLHlsSession(const info::Session &session_info, 
 				const std::shared_ptr<pub::Application> &application, 
 				const std::shared_ptr<pub::Stream> &stream,
-				const std::shared_ptr<http::svr::HttpConnection> &connection,
 				uint64_t session_life_time);
+	
+	~LLHlsSession() override;
 
 	bool Start() override;
 	bool Stop() override;
@@ -34,6 +34,17 @@ public:
 	// pub::Session Interface
 	void SendOutgoingData(const std::any &packet) override;
 	void OnMessageReceived(const std::any &message) override;
+
+	void OnPlayerConnected();
+	uint32_t GetPlayerCount() const;
+
+	void UpdateLastRequest(uint32_t connection_id);
+	uint64_t GetLastRequestTime(uint32_t connection_id) const;
+	void OnConnectionDisconnected(uint32_t connection_id);
+	bool IsNoConnection() const;
+
+	// Get session key
+	const ov::String &GetSessionKey() const;
 
 private:
 
@@ -75,8 +86,13 @@ private:
 	// Session runs on a single thread, so it doesn't need mutex
 	std::list<PendingRequest> _pending_requests;
 
-	// connection
-	std::shared_ptr<http::svr::HttpConnection> _connection;
+	// ID list of connections requesting this session
+	// Connection ID : last request time
+	std::map<uint32_t, uint64_t> _last_request_time;
+	
 	// session life time
 	uint64_t _session_life_time = 0;
+	uint32_t _number_of_players = 0;
+
+	ov::String _session_key;
 };
