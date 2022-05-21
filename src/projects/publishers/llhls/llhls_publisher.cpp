@@ -58,18 +58,35 @@ bool LLHlsPublisher::Start()
 	auto worker_count = llhls_bind_config.GetWorkerCount(&is_parsed);
 	worker_count = is_parsed ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
 
+	auto manager = http::svr::HttpServerManager::GetInstance();
+	
+	// Initialize HTTP Server (Non-TLS)
+	bool http_server_result = true;
 	auto port = llhls_bind_config.GetPort(&is_parsed);
+	ov::SocketAddress address;
 	if (is_parsed == true)
 	{
-		logtw("LLHLS does not work on Non-TLS HTTP Ports. Ignores the <LLHLS><Port>%u</Port></LLHLS> setting.", port.GetPort());
+		address = ov::SocketAddress(server_config.GetIp(), port.GetPort());
+
+		_http_server = manager->CreateHttpServer("llhls", address, worker_count);
+		if (_http_server != nullptr)
+		{
+			_http_server->AddInterceptor(CreateInterceptor());
+		}
+		else
+		{
+			logte("Could not initialize LLHLS http server : %s", address.ToString().CStr());
+			http_server_result = false;
+		}
 	}
 
 	// Initialze HTTPS Server
-	auto manager = http::svr::HttpServerManager::GetInstance();
+	bool https_server_result = true;
 	auto &tls_port = llhls_bind_config.GetTlsPort(&is_parsed);
-	if (is_parsed)
+	ov::SocketAddress tls_address;
+	if (http_server_result == true && is_parsed)
 	{
-		ov::SocketAddress tls_address = ov::SocketAddress(server_config.GetIp(), tls_port.GetPort());
+		tls_address = ov::SocketAddress(server_config.GetIp(), tls_port.GetPort());
 
 		_https_server = manager->CreateHttpsServer("llhls", tls_address, false, worker_count);
 		if (_https_server != nullptr)
@@ -78,14 +95,23 @@ bool LLHlsPublisher::Start()
 		}
 		else
 		{
-			logte("Could not initialize LLHLS https server");
+			logte("Could not initialize LLHLS https server : %s", tls_address.ToString().CStr());
+			https_server_result = false;
 		}
 	}
-	else
+
+	if (http_server_result == false ||  https_server_result == false)
 	{
-		logte("In LLHLS, TlsPort must be enabled since LLHLS works only over HTTP/2");
+		manager->ReleaseServer(_http_server);
+		manager->ReleaseServer(_https_server);
 		return false;
 	}
+
+	logti("LLHLS Publisher is listening on %s%s%s%s", 
+					port.GetPort() ? address.ToString().CStr() : "",
+					tls_port.GetPort() ? ", " : "",
+					tls_port.GetPort() ? "TLS: " : "",
+					tls_port.GetPort() ? tls_address.ToString().CStr() : "");
 
 	return Publisher::Start();
 }
