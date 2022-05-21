@@ -46,5 +46,6 @@ private:
 	bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) override;
 	std::shared_ptr<LLHlsHttpInterceptor> CreateInterceptor();
 
+	std::shared_ptr<http::svr::HttpServer> _http_server;
 	std::shared_ptr<http::svr::HttpsServer> _https_server;
 };
