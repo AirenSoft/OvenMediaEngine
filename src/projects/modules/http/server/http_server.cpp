@@ -187,6 +187,8 @@ namespace http
 
 		void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
 		{
+			logtd("HttpServer::OnDisconnected : %d", remote->GetNativeHandle());
+
 			std::shared_ptr<HttpConnection> connection;
 
 			{
@@ -196,6 +198,7 @@ namespace http
 				if (client_iterator == _connection_list.end())
 				{
 					// If an error occurs during TCP or HTTP connection processing, it may not exist in _connection_list.
+					logtc("Could not find HTTP connection : %d / size(%d)", remote->GetNativeHandle(), _connection_list.size());
 					return;
 				}
 
@@ -206,7 +209,8 @@ namespace http
 			// It comes from HttpConnection::Close()
 			if (reason == PhysicalPortDisconnectReason::Disconnect)
 			{
-				logti("Client(%s) has been disconnected by %s",
+				connection->Close(reason);
+ 				logti("Client(%s) has been disconnected by %s",
 					  remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 			}
 			// It comes from PhysicalPort::Close()

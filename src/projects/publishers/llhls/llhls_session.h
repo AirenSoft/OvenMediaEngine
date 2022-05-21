@@ -16,12 +16,12 @@
 class LLHlsSession : public pub::Session
 {
 public:
-	static std::shared_ptr<LLHlsSession> Create(session_id_t session_id,
+	static std::shared_ptr<LLHlsSession> Create(session_id_t session_id, const ov::String session_key, 
 												const std::shared_ptr<pub::Application> &application,
 												const std::shared_ptr<pub::Stream> &stream,
 												uint64_t session_life_time);
 
-	LLHlsSession(const info::Session &session_info, 
+	LLHlsSession(const info::Session &session_info, const ov::String session_key,
 				const std::shared_ptr<pub::Application> &application, 
 				const std::shared_ptr<pub::Stream> &stream,
 				uint64_t session_life_time);
