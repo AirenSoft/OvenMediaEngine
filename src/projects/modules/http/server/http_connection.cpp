@@ -207,6 +207,10 @@ namespace http
 		{
 			// mutex
 			std::lock_guard<std::recursive_mutex> lock(_close_mutex);
+			if (_closed == true)
+			{
+				return;
+			}
 
 			if (_interceptor != nullptr)
 			{
@@ -234,6 +238,8 @@ namespace http
 			{
 				_client_socket->Close();
 			}
+
+			_closed = true;
 		}
 
 		void HttpConnection::OnDataReceived(const std::shared_ptr<const ov::Data> &data)

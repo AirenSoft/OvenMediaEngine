@@ -12,23 +12,23 @@
 #include "llhls_stream.h"
 #include "llhls_private.h"
 
-std::shared_ptr<LLHlsSession> LLHlsSession::Create(session_id_t session_id,
+std::shared_ptr<LLHlsSession> LLHlsSession::Create(session_id_t session_id, const ov::String session_key,
 												const std::shared_ptr<pub::Application> &application,
 												const std::shared_ptr<pub::Stream> &stream,
 												uint64_t session_life_time)
 {
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), session_id);
-	auto session = std::make_shared<LLHlsSession>(session_info, application, stream, session_life_time);
+	auto session = std::make_shared<LLHlsSession>(session_info, session_key, application, stream, session_life_time);
 
 	if (session->Start() == false)
 	{
 		return nullptr;
-	}
+	} 
 
 	return session;
 }
 
-LLHlsSession::LLHlsSession(const info::Session &session_info, 
+LLHlsSession::LLHlsSession(const info::Session &session_info, const ov::String session_key,
 							const std::shared_ptr<pub::Application> &application, 
 							const std::shared_ptr<pub::Stream> &stream,
 							uint64_t session_life_time)
@@ -36,13 +36,17 @@ LLHlsSession::LLHlsSession(const info::Session &session_info,
 
 {
 	_session_life_time = session_life_time;
+	if (session_key.IsEmpty())
+	{
+		_session_key = ov::Random::GenerateString(8);
+	}
 
-	_session_key = ov::Random::GenerateString(8);
+	logtd("LLHlsSession::LLHlsSession (%d)", session_info.GetId());
 }
 
 LLHlsSession::~LLHlsSession()
 {
-	logtd("~LLHlsSession(%d) is deleted", GetId());
+	logtd("LLHlsSession::~LLHlsSession(%d)", GetId());
 	MonitorInstance->OnSessionsDisconnected(*GetStream(), PublisherType::LLHls, _number_of_players);
 }
 
@@ -64,6 +68,8 @@ const ov::String &LLHlsSession::GetSessionKey() const
 void LLHlsSession::UpdateLastRequest(uint32_t connection_id)
 {
 	_last_request_time[connection_id] = ov::Clock::NowMSec();
+
+	logtd("LLHlsSession(%u) : Request updated from %u : size(%d)", GetId(), connection_id, _last_request_time.size());
 }
 
 uint64_t LLHlsSession::GetLastRequestTime(uint32_t connection_id) const
@@ -81,7 +87,7 @@ void LLHlsSession::OnConnectionDisconnected(uint32_t connection_id)
 {
 	_last_request_time.erase(connection_id);
 
-	logtd("LLHlsSession %u disconnected : size(%d)", connection_id, _last_request_time.size());
+	logtd("LLHlsSession(%u) : Disconnected from %u : size(%d)", GetId(), connection_id, _last_request_time.size());
 }
 
 bool LLHlsSession::IsNoConnection() const
@@ -364,6 +370,13 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		// gzip compression
 		response->SetHeader("Content-Encoding", "gzip");
 		response->AppendData(chunklist);
+
+		// If a client uses previously cached llhls.m3u8 and requests chunklist
+		if (_number_of_players == 0)
+		{
+			MonitorInstance->OnSessionConnected(*GetStream(), PublisherType::LLHls);
+			_number_of_players += 1;
+		}
 	}
 	else if (result == LLHlsStream::RequestResult::Accepted)
 	{

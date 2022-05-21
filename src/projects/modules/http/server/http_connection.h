@@ -127,6 +127,7 @@ namespace http
 			std::shared_ptr<RequestInterceptor> _interceptor = nullptr;
 
 			std::recursive_mutex _close_mutex;
+			bool _closed = false;
 		};
 	} // namespace svr
 } // namespace http
