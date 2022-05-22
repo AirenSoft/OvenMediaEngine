@@ -170,10 +170,27 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 	int32_t track_id;
 	int64_t segment_number;
 	int64_t partial_number;
+	ov::String stream_key;
 
-	if (ParseFileName(file, file_type, track_id, segment_number, partial_number) == false)
+	if (ParseFileName(file, file_type, track_id, segment_number, partial_number, stream_key) == false)
 	{
 		return;
+	}
+
+	auto llhls_stream = std::static_pointer_cast<LLHlsStream>(GetStream());
+	if (llhls_stream == nullptr)
+	{
+		return;
+	}
+
+	if (file_type != RequestType::Playlist)
+	{
+		// All reqeusts except playlist have a stream key
+		if (stream_key != llhls_stream->GetStreamKey())
+		{
+			logtw("LLHlsSession::OnMessageReceived(%u) - Invalid stream key : %s (expected : %s)", GetId(), stream_key.CStr(), llhls_stream->GetStreamKey().CStr());
+			return;
+		}
 	}
 
 	switch (file_type)
@@ -222,7 +239,7 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 	}
 }
 
-bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type, int32_t &track_id, int64_t &segment_number, int64_t &partial_number)
+bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type, int32_t &track_id, int64_t &segment_number, int64_t &partial_number, ov::String &stream_key) const
 {
 	// Split to filename.ext
 	auto name_ext_items = file_name.Split(".");
@@ -232,10 +249,10 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 		return false;
 	}
 
-	// Split to <file type>_<track id>_<segment number>_<partial number>
 	auto name_items = name_ext_items[0].Split("_");
 	if (name_items[0] == "llhls")
 	{
+		// llhls.m3u8
 		if (name_ext_items[1] != "m3u8")
 		{
 			logtw("Invalid file name requested: %s", file_name.CStr());
@@ -246,8 +263,8 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 	}
 	else if (name_items[0] == "chunklist")
 	{
-		// chunklist_<track id>_<media type>_llhls.m3u8?session_key=<key>&_HLS_msn=<M>&_HLS_part=<N>&_HLS_skip=YES|v2
-		if (name_items.size() != 4 || name_ext_items[1] != "m3u8")
+		// chunklist_<track id>_<media type>_<stream_key>_llhls.m3u8?session_key=<key>&_HLS_msn=<M>&_HLS_part=<N>&_HLS_skip=YES|v2
+		if (name_items.size() != 5 || name_ext_items[1] != "m3u8")
 		{
 			logtw("Invalid chunklist file name requested: %s", file_name.CStr());
 			return false;
@@ -255,11 +272,12 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 
 		type = RequestType::Chunklist;
 		track_id = ov::Converter::ToInt32(name_items[1].CStr());
+		stream_key = name_items[3];
 	}
 	else if (name_items[0] == "init")
 	{
-		// init_<track id>_<media type>_llhls
-		if (name_items.size() != 4 || name_ext_items[1] != "m4s")
+		// init_<track id>_<media type>_<stream key>_llhls
+		if (name_items.size() != 5 || name_ext_items[1] != "m4s")
 		{
 			logtw("Invalid file name requested: %s", file_name.CStr());
 			return false;
@@ -267,11 +285,12 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 
 		type = RequestType::InitializationSegment;
 		track_id = ov::Converter::ToInt32(name_items[1].CStr());
+		stream_key = name_items[3];
 	}
 	else if (name_items[0] == "seg" || name_ext_items[1] != "m4s")
 	{
-		// seg_<track id>_<segment number>_<media type>_llhls
-		if (name_items.size() != 5)
+		// seg_<track id>_<segment number>_<media type>_<stream key>_llhls
+		if (name_items.size() != 6)
 		{
 			logtw("Invalid file name requested: %s", file_name.CStr());
 			return false;
@@ -280,11 +299,12 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 		type = RequestType::Segment;
 		track_id = ov::Converter::ToInt32(name_items[1].CStr());
 		segment_number = ov::Converter::ToInt64(name_items[2].CStr());
+		stream_key = name_items[4];
 	}
 	else if (name_items[0] == "part" || name_ext_items[1] != "m4s")
 	{
-		// part_<track id>_<segment number>_<partial number>_<media type>_llhls
-		if (name_items.size() != 6)
+		// part_<track id>_<segment number>_<partial number>_<media type>_<stream key>_llhls
+		if (name_items.size() != 7)
 		{
 			logtw("Invalid file name requested: %s", file_name.CStr());
 			return false;
@@ -294,6 +314,7 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 		track_id = ov::Converter::ToInt32(name_items[1].CStr());
 		segment_number = ov::Converter::ToInt64(name_items[2].CStr());
 		partial_number = ov::Converter::ToInt64(name_items[3].CStr());
+		stream_key = name_items[5];
 	}
 	else
 	{
