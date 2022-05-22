@@ -57,7 +57,7 @@ private:
 		PartialSegment,
 	};
 
-	bool ParseFileName(const ov::String &file_name, RequestType &type, int32_t &track_id, int64_t &segment_number, int64_t &partial_number);
+	bool ParseFileName(const ov::String &file_name, RequestType &type, int32_t &track_id, int64_t &segment_number, int64_t &partial_number, ov::String &stream_key) const;
 
 	void ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchange> &exchange);
 	void ResponseChunklist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id, int64_t msn, int64_t part, bool skip);

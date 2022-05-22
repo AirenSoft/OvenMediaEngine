@@ -50,6 +50,8 @@ public:
 		int64_t msn;
 		int64_t part;
 	};
+	
+	const ov::String &GetStreamKey() const;
 
 	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetPlaylist(const ov::String &chunk_query_string, bool gzip=false) const;
 	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetChunklist(const ov::String &chunk_query_string, const int32_t &track_id, int64_t msn, int64_t psn, bool skip = false, bool gzip=false) const;
@@ -104,6 +106,8 @@ private:
 	mutable std::shared_mutex _chunklist_map_lock;
 
 	LLHlsMasterPlaylist _master_playlist;
+
+	ov::String _stream_key;
 
 	uint32_t _worker_count = 0;
 };

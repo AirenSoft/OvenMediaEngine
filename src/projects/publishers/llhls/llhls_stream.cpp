@@ -23,6 +23,7 @@ std::shared_ptr<LLHlsStream> LLHlsStream::Create(const std::shared_ptr<pub::Appl
 LLHlsStream::LLHlsStream(const std::shared_ptr<pub::Application> application, const info::Stream &info, uint32_t worker_count)
 	: Stream(application, info), _worker_count(worker_count)
 {
+	_stream_key = ov::Random::GenerateString(8);
 }
 
 LLHlsStream::~LLHlsStream()
@@ -115,6 +116,11 @@ bool LLHlsStream::Stop()
 	_chunklist_map.clear();
 
 	return Stream::Stop();
+}
+
+const ov::String &LLHlsStream::GetStreamKey() const
+{
+	return _stream_key;
 }
 
 std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetPlaylist(const ov::String &chunk_query_string, bool gzip/*=false*/) const
@@ -360,47 +366,52 @@ ov::String LLHlsStream::GetPlaylistName()
 
 ov::String LLHlsStream::GetChunklistName(const int32_t &track_id)
 {
-	// chunklist_<track id>_<media type>_llhls.m3u8
-	return ov::String::FormatString("chunklist_%d_%s_llhls.m3u8",
+	// chunklist_<track id>_<media type>_<stream key>_llhls.m3u8
+	return ov::String::FormatString("chunklist_%d_%s_%s_llhls.m3u8",
 										track_id, 
-										StringFromMediaType(GetTrack(track_id)->GetMediaType()).CStr());
+										StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+										_stream_key.CStr());
 }
 
 ov::String LLHlsStream::GetIntializationSegmentName(const int32_t &track_id)
 {
-	// init_<track id>_<media type>_llhls.m4s
-	return ov::String::FormatString("init_%d_%s_llhls.m4s",
+	// init_<track id>_<media type>_<random str>_llhls.m4s
+	return ov::String::FormatString("init_%d_%s_%s_llhls.m4s",
 									track_id,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr());
+									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+									_stream_key.CStr());
 }
 
 ov::String LLHlsStream::GetSegmentName(const int32_t &track_id, const int64_t &segment_number)
 {
-	// seg_<track id>_<segment number>_<media type>_llhls.m4s
-	return ov::String::FormatString("seg_%d_%lld_%s_llhls.m4s", 
+	// seg_<track id>_<segment number>_<media type>_<random str>_llhls.m4s
+	return ov::String::FormatString("seg_%d_%lld_%s_%s_llhls.m4s", 
 									track_id,
 									segment_number,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr());
+									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+									_stream_key.CStr());
 }
 
 ov::String LLHlsStream::GetPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number)
 {
-	// part_<track id>_<segment number>_<partial number>_<media type>_llhls.m4s
-	return ov::String::FormatString("part_%d_%lld_%lld_%s_llhls.m4s", 
+	// part_<track id>_<segment number>_<partial number>_<media type>_<random str>_llhls.m4s
+	return ov::String::FormatString("part_%d_%lld_%lld_%s_%s_llhls.m4s", 
 									track_id,
 									segment_number,
 									partial_number,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr());
+									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+									_stream_key.CStr());
 }
 
 ov::String LLHlsStream::GetNextPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number)
 {
-	// part_<track id>_<segment number>_<partial number>_<media type>_llhls.m4s
-	return ov::String::FormatString("part_%d_%lld_%lld_%s_llhls.m4s", 
+	// part_<track id>_<segment number>_<partial number>_<media type>_<random str>_llhls.m4s
+	return ov::String::FormatString("part_%d_%lld_%lld_%s_%s_llhls.m4s", 
 									track_id,
 									segment_number,
 									partial_number + 1,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr());
+									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+									_stream_key.CStr());
 }
 
 void LLHlsStream::OnFMp4StorageInitialized(const int32_t &track_id)
