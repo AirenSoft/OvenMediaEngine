@@ -9,7 +9,6 @@
 #include "decoder_hevc_qsv.h"
 
 #include "../../transcoder_private.h"
-#include "../codec_utilities.h"
 #include "base/info/application.h"
 
 bool DecoderHEVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
@@ -209,9 +208,9 @@ void DecoderHEVCxQSV::CodecThread()
 				}
 
 				// If there is no duration, the duration is calculated by framerate and timebase.
-				_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? TranscoderUtilities::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : _frame->pkt_duration;
+				_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : _frame->pkt_duration;
 
-				auto decoded_frame = TranscoderUtilities::AvFrameToMediaFrame(cmn::MediaType::Video, _frame);
+				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				::av_frame_unref(_frame);
 				if (decoded_frame == nullptr)
 				{

@@ -9,7 +9,6 @@
 #include "encoder_ffopus.h"
 
 #include "../../transcoder_private.h"
-#include "../codec_utilities.h"
 
 EncoderFFOPUS::~EncoderFFOPUS()
 {
@@ -101,7 +100,7 @@ void EncoderFFOPUS::CodecThread()
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-		auto av_frame = TranscoderUtilities::MediaFrameToAVFrame(cmn::MediaType::Audio, media_frame);
+		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Audio, media_frame);
 		if(!av_frame)
 		{
 			logte("Could not allocate the frame data");
@@ -133,7 +132,7 @@ void EncoderFFOPUS::CodecThread()
 			}
 			else
 			{
-				auto media_packet = TranscoderUtilities::AvPacketToMediaPacket(_packet, cmn::MediaType::Audio, cmn::BitstreamFormat::OPUS, cmn::PacketType::RAW);
+				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, cmn::MediaType::Audio, cmn::BitstreamFormat::OPUS, cmn::PacketType::RAW);
 				if (media_packet == nullptr)
 				{
 					logte("Could not allocate the media packet");

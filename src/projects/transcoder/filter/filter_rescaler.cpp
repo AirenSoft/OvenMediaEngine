@@ -11,7 +11,6 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 
-#include "../codec/codec_utilities.h"
 #include "../transcoder_gpu.h"
 #include "../transcoder_private.h"
 
@@ -225,7 +224,7 @@ void MediaFilterRescaler::FilterThread()
 
 		auto media_frame = std::move(obj.value());
 
-		auto av_frame = TranscoderUtilities::MediaFrameToAVFrame(cmn::MediaType::Video, media_frame);
+		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
 		if (!av_frame)
 		{
 			logte("Could not allocate the video frame data");
@@ -260,7 +259,7 @@ void MediaFilterRescaler::FilterThread()
 			}
 			else
 			{
-				auto output_frame = TranscoderUtilities::AvFrameToMediaFrame(cmn::MediaType::Video, _frame);
+				auto output_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				::av_frame_unref(_frame);
 				if (output_frame == nullptr)
 				{
