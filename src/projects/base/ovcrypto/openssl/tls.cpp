@@ -249,7 +249,7 @@ namespace ov
 
 	std::shared_ptr<ov::Data> Tls::Read()
 	{
-		auto data = std::make_shared<ov::Data>();
+		auto data = std::make_shared<ov::Data>(65535);
 
 		unsigned char buf[1024];
 

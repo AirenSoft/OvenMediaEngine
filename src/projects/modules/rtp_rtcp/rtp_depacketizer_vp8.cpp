@@ -8,7 +8,14 @@ std::shared_ptr<ov::Data> RtpDepacketizerVP8::ParseAndAssembleFrame(std::vector<
 		return nullptr;
 	}
 
-	auto bitstream = std::make_shared<ov::Data>();
+	auto reserve_size = 0;
+	for(auto &payload : payload_list)
+	{
+		reserve_size += payload->GetLength();
+		reserve_size += 16; // spare
+	}
+
+	auto bitstream = std::make_shared<ov::Data>(reserve_size);
 	bool first_packet = true;
 	for(const auto &payload : payload_list)
 	{

@@ -219,7 +219,7 @@ aligned(8) class AVCDecoderConfigurationRecord {
 
 std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> AVCDecoderConfigurationRecord::GetSpsPpsAsAnnexB(uint8_t start_code_size)
 {
-	auto data = std::make_shared<ov::Data>();
+	auto data = std::make_shared<ov::Data>(1024);
 	FragmentationHeader frag_header;
 	size_t offset = 0;
 

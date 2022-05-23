@@ -3,32 +3,33 @@
 NalUnitBitstreamParser::NalUnitBitstreamParser(const uint8_t *bitstream, size_t length)
 	: BitReader(nullptr, 0)
 {
-    /*
-        Parse the bitstream and skip emulation_prevention_three_byte instances along the way
+    // Parse the bitstream and skip emulation_prevention_three_byte
+   	_bitstream.reserve(length);
 
-        7.3.1 NAL unit syntax
-
-        for( i = nalUnitHeaderBytes; i < NumBytesInNALunit; i++ ) {
-            if( i + 2 < NumBytesInNALunit && next_bits( 24 ) = = 0x000003 ) {
-                rbsp_byte[ NumBytesInRBSP++ ] All b(8)
-                rbsp_byte[ NumBytesInRBSP++ ] All b(8)
-                i += 2
-                emulation_prevention_three_byte // equal to 0x03 All f(8)
-            } else
-                rbsp_byte[ NumBytesInRBSP++ ] All b(8)
-        }
-    */
     for (size_t original_bitstream_offset = 0; original_bitstream_offset < length;)
     {
-        if (original_bitstream_offset < length + 2 && bitstream[original_bitstream_offset] == 0x00 && bitstream[original_bitstream_offset + 1] == 0x00 && bitstream[original_bitstream_offset + 2] == 0x03)
+		// 00 00 03 00 ==> 00 00 00
+		// 00 00 03 01 ==> 00 00 01
+		// 00 00 03 02 ==> 00 00 02
+		// 00 00 03 03 ==> 00 00 03
+
+        if (original_bitstream_offset + 3 < length && 
+					bitstream[original_bitstream_offset] == 0x00 && 
+					bitstream[original_bitstream_offset + 1] == 0x00 && 
+					bitstream[original_bitstream_offset + 2] == 0x03 &&
+					(bitstream[original_bitstream_offset + 3] & 0xFC) == 0) // 0b00 (0) || 0b01 (1) || 0b10 (2) || 0b11 (3)
         {
-            _bitstream.emplace_back(bitstream[original_bitstream_offset++]);
-            _bitstream.emplace_back(bitstream[original_bitstream_offset++]);
-            original_bitstream_offset++;
+            _bitstream.emplace_back(bitstream[original_bitstream_offset]);
+			original_bitstream_offset ++;
+            _bitstream.emplace_back(bitstream[original_bitstream_offset]);
+			original_bitstream_offset += 2; // skip the '03'
+			_bitstream.emplace_back(bitstream[original_bitstream_offset]);
+			original_bitstream_offset ++;
         }
         else
         {
-            _bitstream.emplace_back(bitstream[original_bitstream_offset++]);
+            _bitstream.emplace_back(bitstream[original_bitstream_offset]);
+			original_bitstream_offset ++;
         }
     }
     

@@ -47,7 +47,7 @@ namespace http
 
 			uint32_t Http2Response::SendHeader()
 			{
-				std::shared_ptr<ov::Data> header_block = std::make_shared<ov::Data>();
+				std::shared_ptr<ov::Data> header_block = std::make_shared<ov::Data>(65535);
 				size_t sent_size = 0;
 
 				// :status header field is must on top

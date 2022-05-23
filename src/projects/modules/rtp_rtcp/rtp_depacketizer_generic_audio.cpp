@@ -13,7 +13,14 @@ std::shared_ptr<ov::Data> RtpDepacketizerGenericAudio::ParseAndAssembleFrame(std
 		return payload_list.at(0);
 	}
 
-	auto bitstream = std::make_shared<ov::Data>();
+	auto reserve_size = 0;
+	for(auto &payload : payload_list)
+	{
+		reserve_size += payload->GetLength();
+		reserve_size += 16; // spare
+	}
+
+	auto bitstream = std::make_shared<ov::Data>(reserve_size);
 
 	for(const auto &payload : payload_list)
 	{

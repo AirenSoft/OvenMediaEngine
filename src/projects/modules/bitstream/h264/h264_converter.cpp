@@ -29,7 +29,7 @@ bool H264Converter::GetExtraDataFromAvccSequenceHeader(const cmn::PacketType typ
 
 std::shared_ptr<ov::Data> H264Converter::ConvertAvccToAnnexb(const std::shared_ptr<const ov::Data> &data)
 {
-	auto annexb_data = std::make_shared<ov::Data>();
+	auto annexb_data = std::make_shared<ov::Data>(data->GetLength() + (data->GetLength() / 2));
 
 	ov::ByteStream read_stream(data.get());
 
@@ -62,7 +62,7 @@ std::shared_ptr<ov::Data> H264Converter::ConvertAvccToAnnexb(const std::shared_p
 
 bool H264Converter::ConvertAvccToAnnexb(cmn::PacketType type, const std::shared_ptr<ov::Data> &data, const std::shared_ptr<ov::Data> &sps_pps_annexb)
 {
-	auto annexb_data = std::make_shared<ov::Data>();
+	auto annexb_data = std::make_shared<ov::Data>(data->GetLength() + (data->GetLength() / 2));
 
 	if (type == cmn::PacketType::SEQUENCE_HEADER)
 	{

@@ -681,7 +681,7 @@ bool StunMessage::AddAttribute(std::shared_ptr<StunAttribute> attribute)
 // Generate only FINGERPRINT attribute
 std::shared_ptr<ov::Data> StunMessage::Serialize()
 {
-	std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>();
+	std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>(65535);
 	ov::ByteStream stream(data.get());
 
 	bool result = true;
@@ -695,7 +695,7 @@ std::shared_ptr<ov::Data> StunMessage::Serialize()
 
 std::shared_ptr<ov::Data> StunMessage::Serialize(const std::shared_ptr<const ov::Data> &integrity_key)
 {
-	std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>();
+	std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>(65535);
 	ov::ByteStream stream(data.get());
 
 	bool result = true;
