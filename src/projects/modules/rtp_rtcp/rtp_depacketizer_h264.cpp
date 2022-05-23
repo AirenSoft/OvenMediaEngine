@@ -8,7 +8,14 @@ std::shared_ptr<ov::Data> RtpDepacketizerH264::ParseAndAssembleFrame(std::vector
 		return nullptr;
 	}
 
-	auto bitstream = std::make_shared<ov::Data>();
+	auto reserve_size = 0;
+	for(auto &payload : payload_list)
+	{
+		reserve_size += payload->GetLength();
+		reserve_size += 16; // spare
+	}
+
+	auto bitstream = std::make_shared<ov::Data>(reserve_size);
 	bool start_payload = true;
 	for(const auto &payload : payload_list)
 	{
@@ -55,7 +62,7 @@ std::shared_ptr<ov::Data> RtpDepacketizerH264::ParseAndAssembleFrame(std::vector
 
 std::shared_ptr<ov::Data> RtpDepacketizerH264::ParseFuaAndConvertAnnexB(const std::shared_ptr<ov::Data> &payload, bool start)
 {
-	auto bitstream = std::make_shared<ov::Data>();
+	auto bitstream = std::make_shared<ov::Data>(payload->GetLength() + 16);
 
 	if(payload->GetLength() < FUA_HEADER_SIZE)
 	{
@@ -111,7 +118,7 @@ std::shared_ptr<ov::Data> RtpDepacketizerH264::ParseStapAAndConvertToAnnexB(cons
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	*/
 
-	auto bitstream = std::make_shared<ov::Data>();
+	auto bitstream = std::make_shared<ov::Data>(payload->GetLength() + 1024);
 	uint8_t start_prefix[ANNEXB_START_PREFIX_LENGTH] = {0, 0, 0, 1};
 
 	if(payload->GetLength() < NAL_HEADER_SIZE + LENGTH_FIELD_SIZE)

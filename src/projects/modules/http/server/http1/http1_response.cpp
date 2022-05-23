@@ -57,7 +57,7 @@ namespace http
 
 			uint32_t Http1Response::SendHeader()
 			{
-				std::shared_ptr<ov::Data> response = std::make_shared<ov::Data>();
+				std::shared_ptr<ov::Data> response = std::make_shared<ov::Data>(65535);
 				ov::ByteStream stream(response.get());
 
 				if (_chunked_transfer == false)

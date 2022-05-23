@@ -182,7 +182,7 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 	// Convert to AnnexB and Insert SPS/PPS if there are no SPS/PPS nal units.
 	else if (media_packet->GetPacketType() == cmn::PacketType::NALU)
 	{
-		auto converted_data = std::make_shared<ov::Data>(65535);
+		auto converted_data = std::make_shared<ov::Data>(media_packet->GetDataLength() + (media_packet->GetDataLength() / 2));
 		FragmentationHeader fragment_header;
 		size_t nalu_offset = 0;
 
@@ -356,7 +356,6 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 
 		if (nal_header.GetNalUnitType() == H264NalUnitType::Sps)
 		{
-			auto nalu = std::make_shared<ov::Data>(bitstream + offset, offset_length);
 			has_sps = true;
 
 			// logtd("[-SPS] %s ", ov::Base64::Encode(nalu).CStr());
@@ -364,6 +363,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 			// Parse track info if needed
 			if (media_track->IsValid() == false)
 			{
+				auto nalu = std::make_shared<ov::Data>(bitstream + offset, offset_length);
 				H264SPS sps;
 				if (H264Parser::ParseSPS(nalu->GetDataAs<uint8_t>(), nalu->GetLength(), sps) == false)
 				{
@@ -385,7 +385,6 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 		}
 		else if (nal_header.GetNalUnitType() == H264NalUnitType::Pps)
 		{
-			auto nalu = std::make_shared<ov::Data>(bitstream + offset, offset_length);
 			has_pps = true;
 
 			// logtd("[-PPS] %s ", ov::Base64::Encode(nalu).CStr());
@@ -393,6 +392,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 			// Parse track info if needed
 			if (media_track->IsValid() == false)
 			{
+				auto nalu = std::make_shared<ov::Data>(bitstream + offset, offset_length);
 				media_track->SetH264PpsData(nalu);
 				avc_decoder_configuration_record.AddPPS(nalu);
 			}
@@ -426,7 +426,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 	if (has_idr == true && (has_sps == false || has_pps == false) && media_track->GetH264SpsPpsAnnexBFormat() != nullptr)
 	{
 		// Insert SPS/PPS nal units so that player can start to play faster
-		auto processed_data = std::make_shared<ov::Data>();
+		auto processed_data = std::make_shared<ov::Data>(media_packet->GetData()->GetLength() + 1024);
 		auto decode_parmeters = media_track->GetH264SpsPpsAnnexBFormat();
 		processed_data->Append(decode_parmeters);
 		processed_data->Append(media_packet->GetData());

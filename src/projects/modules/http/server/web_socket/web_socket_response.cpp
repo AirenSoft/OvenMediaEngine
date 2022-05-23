@@ -64,7 +64,7 @@ namespace http
 					header.payload_length = 127;
 				}
 
-				auto response_data = std::make_shared<ov::Data>();
+				auto response_data = std::make_shared<ov::Data>(65535);
 
 				response_data->Append(&header, sizeof(header));
 

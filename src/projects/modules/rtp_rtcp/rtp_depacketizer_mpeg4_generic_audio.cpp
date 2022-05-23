@@ -23,7 +23,14 @@ std::shared_ptr<ov::Data> RtpDepacketizerMpeg4GenericAudio::ParseAndAssembleFram
 	// Fragmented AU
 	else
 	{
-		auto bitstream = std::make_shared<ov::Data>();
+		auto reserve_size = 0;
+		for(auto &payload : payload_list)
+		{
+			reserve_size += payload->GetLength();
+			reserve_size += 16; // spare
+		}
+
+		auto bitstream = std::make_shared<ov::Data>(reserve_size);
 		bool first = true;
 		uint16_t raw_aac_data_length = 0;
 		for(const auto &payload : payload_list)
@@ -90,7 +97,7 @@ bool RtpDepacketizerMpeg4GenericAudio::SetConfigParams(RtpDepacketizerMpeg4Gener
 
 std::shared_ptr<ov::Data> RtpDepacketizerMpeg4GenericAudio::Convert(const std::shared_ptr<ov::Data> &payload, bool include_adts_header)
 {
-	auto aac_data = std::make_shared<ov::Data>();
+	auto aac_data = std::make_shared<ov::Data>(payload->GetLength() * 2);
 	auto payload_ptr = payload->GetDataAs<uint8_t>();
 	size_t payload_len = payload->GetLength();
 
