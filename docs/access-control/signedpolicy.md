@@ -71,18 +71,18 @@ To enable SignedPolicy, you need to add the following \<SingedPolicy> setting in
 
         <Enables>
             <Providers>rtmp</Providers>
-            <Publishers>webrtc,hls,dash,lldash</Publishers>
+            <Publishers>webrtc,llhls</Publishers>
         </Enables>
     </SignedPolicy>
 </VirtualHost>
 ```
 
-| Key                   | Description                                                                                                                                                                                                     |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PolicyQueryKeyName    | The query string key name in the URL pointing to the policy value                                                                                                                                               |
-| SignatureQueryKeyName | The query string key name in the URL pointing to the signature value                                                                                                                                            |
-| SecretKey             | The secret key used when encoding with HMAC-SHA1                                                                                                                                                                |
-| Enables               | List of providers and publishers to enable SignedPolicy. Currently, SingedPolicy supports rtmp among providers, and among publishers, WebRTC, HLS, MPEG-DASH, and Low-Latency MPEG-DASH (LLDASH) are supported. |
+| Key                   | Description                                                                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| PolicyQueryKeyName    | The query string key name in the URL pointing to the policy value                                                                                                  |
+| SignatureQueryKeyName | The query string key name in the URL pointing to the signature value                                                                                               |
+| SecretKey             | The secret key used when encoding with HMAC-SHA1                                                                                                                   |
+| Enables               | List of providers and publishers to enable SignedPolicy. Currently, SingedPolicy supports rtmp among providers, and among publishers, WebRTC, LLHLS are supported. |
 
 ## Make SignedPolicy URL with a script
 

@@ -20,7 +20,7 @@ AdmissionWebhooks can be set up on VirtualHost, as shown below.
 		<Timeout>3000</Timeout>
 		<Enables>
 			<Providers>rtmp,webrtc,srt</Providers>
-			<Publishers>webrtc,hls,dash,lldash</Publishers>
+			<Publishers>webrtc,llhls</Publishers>
 		</Enables>
 	</AdmissionWebhooks>
 </VirtualHost>
@@ -54,7 +54,7 @@ X-OME-Signature: f871jd991jj1929jsjd91pqa0amm1
   "request":
   {
     "direction": "incoming | outgoing",
-    "protocol": "webrtc | rtmp | srt | hls | dash | lldash",
+    "protocol": "webrtc | rtmp | srt | llhls",
     "status": "opening | closing",
     "url": "scheme://host[:port]/app/stream/file?query=value&query2=value2",
     "time": ""2021-05-12T13:45:00.000Z"
@@ -86,19 +86,16 @@ The control server may need to validate incoming http requests for security reas
 
 As shown below, the trigger condition of request is different for each protocol.
 
-| Protocol  | Condition                                                                                                                |
-| --------- | ------------------------------------------------------------------------------------------------------------------------ |
-| WebRTC    | When a client requests Offer SDP                                                                                         |
-| RTMP      | When a client sends a publish message                                                                                    |
-| SRT       | When a client send a [streamid](https://airensoft.gitbook.io/ovenmediaengine/live-source/srt-beta#encoders-and-streamid) |
-| HLS       | Every time a client requests a playlist                                                                                  |
-| DASH      | Every time a client requests a playlist                                                                                  |
-| LL-DASH   | Every time a client requests a playlist                                                                                  |
+| Protocol | Condition                                                                                                                |
+| -------- | ------------------------------------------------------------------------------------------------------------------------ |
+| WebRTC   | When a client requests Offer SDP                                                                                         |
+| RTMP     | When a client sends a publish message                                                                                    |
+| SRT      | When a client send a [streamid](https://airensoft.gitbook.io/ovenmediaengine/live-source/srt-beta#encoders-and-streamid) |
+| LLHLS    | When a client requests a playlist (llhls.m3u8)                                                                           |
 
-## Response for closing status&#x20;
+## Response for closing status
 
-The engine in the closing state does not need any parameter in response.
-To the query just answer with empty json object.
+The engine in the closing state does not need any parameter in response. To the query just answer with empty json object.
 
 ```http
 HTTP/1.1 200 OK
@@ -109,7 +106,7 @@ Connection: Closed
 }
 ```
 
-## Response for opening status&#x20;
+## Response for opening status
 
 ### Format
 
@@ -137,9 +134,9 @@ Connection: Closed
 
 ### User authentication and control
 
-`new_url `redirects the original request to another app/stream. This can be used to hide the actual app/stream name from the user or to authenticate the user by inserting additional information instead of the app/stream name.
+`new_url` redirects the original request to another app/stream. This can be used to hide the actual app/stream name from the user or to authenticate the user by inserting additional information instead of the app/stream name.
 
-For example, you can issue a WebRTC streaming URL by inserting the user ID as follows: `ws://domain.com:3333/user_id` It will be more effective if you issue a URl with the encrypted value that contains the user ID, url expiration time, and other information.&#x20;
+For example, you can issue a WebRTC streaming URL by inserting the user ID as follows: `ws://domain.com:3333/user_id` It will be more effective if you issue a URl with the encrypted value that contains the user ID, url expiration time, and other information.
 
 After the Control Server checks whether the user is authorized to play using `user_id`, and responds with `ws://domain.com:3333/app/sport-3` to `new_url`, the user can play app/sport-3.
 
