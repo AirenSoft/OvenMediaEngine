@@ -48,57 +48,33 @@
 		-->
 		<Providers>
 			<!-- Pull providers -->
-			<RTSPC>
-				<WorkerCount>1</WorkerCount>
-			</RTSPC>
 			<OVT>
 				<WorkerCount>1</WorkerCount>
 			</OVT>
 		</Providers>
 
 		<Publishers>
-			<HLS>
-				<Port>${env:OME_HLS_STREAM_PORT:8090}</Port>
-				<WorkerCount>1</WorkerCount>
-				<!-- If you want to use TLS, specify the TLS port -->
-				<!-- <TLSPort>8443</TLSPort> -->
-			</HLS>
 			<LLHLS>
 				<!-- 
 				OME only supports h2, so LLHLS works over HTTP/1.1 on non-TLS port. 
 				Note that LLHLS runs higher performance over HTTP/2.
 				Therefore, it is recommended to use TLS Port.
 				-->
-				<Port>${env:OME_LLHLS_STREAM_PORT:8090}</Port>
-				<!-- If you want to use TLS, specify the TLS port -->
-				<!-- <TLSPort>8443</TLSPort> -->
+				<Port>${env:OME_LLHLS_STREAM_PORT:3333}</Port>
+				<TLSPort>${env:OME_LLHLS_STREAM_TLS_PORT:3334}</TLSPort>
 				<WorkerCount>1</WorkerCount>
 			</LLHLS>
-			<DASH>
-				<Port>${env:OME_DASH_STREAM_PORT:8090}</Port>
-				<WorkerCount>1</WorkerCount>
-				<!-- If you want to use TLS, specify the TLS port -->
-				<!-- <TLSPort>8443</TLSPort> -->
-			</DASH>
-			<LLDASH>
-				<Port>${env:OME_DASH_STREAM_PORT:8090}</Port>
-				<!-- If you want to use TLS, specify the TLS port -->
-				<!-- LLDASH only works over HTTP/1.1, so when HTTP/2 is enabled, use a different dedicated TLS port from other modules. -->
-				<!-- <TLSPort>444</TLSPort> -->
-				<WorkerCount>1</WorkerCount>
-			</LLDASH>
 			<WebRTC>
 				<Signalling>
-					<Port>${env:OME_SIGNALLING_PORT:3334}</Port>
+					<Port>${env:OME_SIGNALLING_PORT:3333}</Port>
+					<TLSPort>${env:OME_SIGNALLING_TLS_PORT:3334}</TLSPort>
 					<WorkerCount>1</WorkerCount>
-					<!-- If you want to use TLS, specify the TLS port -->
-					<!-- <TLSPort>5556</TLSPort> -->
 				</Signalling>
 				<IceCandidates>
+					<IceCandidate>*:10000-10005/udp</IceCandidate>
 					<TcpRelay>${env:OME_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
-					<TcpForce>false</TcpForce>
+					<TcpForce>true</TcpForce>
 					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
-					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10000/udp}</IceCandidate>
 				</IceCandidates>
 			</WebRTC>
 		</Publishers>
@@ -225,16 +201,22 @@
 						<OVT />
 					</Providers>
 					<Publishers>
-						<HLS>
-							<SegmentDuration>2</SegmentDuration>
-							<SegmentCount>3</SegmentCount>
+						<AppWorkerCount>1</AppWorkerCount>
+						<StreamWorkerCount>8</StreamWorkerCount>
+						<WebRTC>
+							<Timeout>30000</Timeout>
+							<Rtx>false</Rtx>
+							<Ulpfec>false</Ulpfec>
+							<JitterBuffer>false</JitterBuffer>
+						</WebRTC>
+						<LLHLS>
+							<ChunkDuration>0.2</ChunkDuration>
+							<SegmentDuration>6</SegmentDuration>
+							<SegmentCount>10</SegmentCount>
 							<CrossDomains>
-								<Url>*.airensoft.com</Url>
-								<Url>http://*.sub-domain.airensoft.com</Url>
-								<Url>http?://airensoft.*</Url>
+								<Url>*</Url>
 							</CrossDomains>
-						</HLS>
-						<WebRTC />
+						</LLHLS>
 					</Publishers>
 				</Application>
 			</Applications>

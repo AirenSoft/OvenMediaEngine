@@ -64,23 +64,23 @@
 			</SRT>
 			<MPEGTS>
 				<!--
-					Listen on port 4000-4005
+					Listen on port 4000
 					This is just a demonstration to show that you can configure the port in several ways
+					<Port>${env:OME_MPEGTS_PROV_PORT:4000-4001,4004,4005/udp}</Port>
 				-->
 				<Port>${env:OME_MPEGTS_PROV_PORT:4000/udp}</Port>
 			</MPEGTS>
 			<WebRTC>
 				<Signalling>
-					<Port>${env:OME_SIGNALLING_PORT:3333}</Port>
+					<Port>${env:OME_WEBRTC_SIGNALLING_PORT:3333}</Port>
+					<TLSPort>${env:OME_WEBRTC_SIGNALLING_TLS_PORT:3334}</TLSPort>
 					<WorkerCount>1</WorkerCount>
-					<!-- If you want to use TLS, specify the TLS port -->
-					<!-- <TLSPort>3334</TLSPort> -->
 				</Signalling>
 				<IceCandidates>
-					<TcpRelay>${env:OME_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
+					<TcpRelay>${env:OME_WEBRTC_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
 					<TcpForce>true</TcpForce>
 					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
-					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006/udp}</IceCandidate>
+					<IceCandidate>*:10006/udp</IceCandidate>
 				</IceCandidates>
 			</WebRTC>
 		</Providers>
@@ -91,48 +91,27 @@
 				<Port>${env:OME_ORIGIN_PORT:9000}</Port>
 				<WorkerCount>1</WorkerCount>
 			</OVT>
-			<HLS>
-				<Port>${env:OME_HLS_STREAM_PORT:8080}</Port>
-				<WorkerCount>1</WorkerCount>
-				<!-- If you want to use TLS, specify the TLS port -->
-				<!-- <TLSPort>443</TLSPort> -->
-			</HLS>
 			<LLHLS>
 				<!-- 
 				OME only supports h2, so LLHLS works over HTTP/1.1 on non-TLS port. 
 				Note that LLHLS runs higher performance over HTTP/2.
 				Therefore, it is recommended to use TLS Port.
 				-->
-				<Port>80</Port>
-				<!-- If you want to use TLS, specify the TLS port -->
-				<!-- <TLSPort>443</TLSPort> -->
+				<Port>${env:OME_LLHLS_STREAM_PORT:3333}</Port>
+				<TLSPort>${env:OME_LLHLS_STREAM_TLS_PORT:3334}</TLSPort>
 				<WorkerCount>1</WorkerCount>
 			</LLHLS>
-			<DASH>
-				<Port>${env:OME_DASH_STREAM_PORT:8080}</Port>
-				<WorkerCount>1</WorkerCount>
-				<!-- If you want to use TLS, specify the TLS port -->
-				<!-- <TLSPort>443</TLSPort> -->
-			</DASH>
-			<LLDASH>
-				<Port>8080</Port>
-				<!-- If you want to use TLS, specify the TLS port -->
-				<!-- LLDASH only works over HTTP/1.1, so when HTTP/2 is enabled, use a different dedicated TLS port from other modules. -->
-				<!-- <TLSPort>444</TLSPort> -->
-				<WorkerCount>1</WorkerCount>
-			</LLDASH>
 			<WebRTC>
 				<Signalling>
-					<Port>${env:OME_SIGNALLING_PORT:3333}</Port>
+					<Port>${env:OME_WEBRTC_SIGNALLING_PORT:3333}</Port>
+					<TLSPort>${env:OME_WEBRTC_SIGNALLING_TLS_PORT:3334}</TLSPort>
 					<WorkerCount>1</WorkerCount>
-					<!-- If you want to use TLS, specify the TLS port -->
-					<!-- <TLSPort>3334</TLSPort> -->
 				</Signalling>
 				<IceCandidates>
-					<TcpRelay>${env:OME_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
+					<IceCandidate>*:10000-10005/udp</IceCandidate>
+					<TcpRelay>${env:OME_WEBRTC_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
 					<TcpForce>true</TcpForce>
 					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
-					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006/udp}</IceCandidate>
 				</IceCandidates>
 			</WebRTC>
 		</Publishers>
@@ -245,13 +224,6 @@
 							<Ulpfec>false</Ulpfec>
 							<JitterBuffer>false</JitterBuffer>
 						</WebRTC>
-						<HLS>
-							<SegmentDuration>5</SegmentDuration>
-							<SegmentCount>3</SegmentCount>
-							<CrossDomains>
-								<Url>*</Url>
-							</CrossDomains>
-						</HLS>
 						<LLHLS>
 							<ChunkDuration>0.2</ChunkDuration>
 							<SegmentDuration>6</SegmentDuration>
@@ -260,21 +232,6 @@
 								<Url>*</Url>
 							</CrossDomains>
 						</LLHLS>
-						<DASH>
-							<SegmentDuration>5</SegmentDuration>
-							<SegmentCount>3</SegmentCount>
-							<CrossDomains>
-								<Url>*</Url>
-							</CrossDomains>
-							<UTCTiming />
-						</DASH>
-						<LLDASH>
-							<SegmentDuration>5</SegmentDuration>
-							<CrossDomains>
-								<Url>*</Url>
-							</CrossDomains>
-							<UTCTiming />
-						</LLDASH>
 					</Publishers>
 				</Application>
 			</Applications>

@@ -40,8 +40,7 @@ Would you please click on each link below for details:
     * <i>VP8, H.264</i>
   * In-band FEC (Forward Error Correction)
     * <i>Opus</i>
-* <b>Low Latency MPEG-DASH Streaming</b> (Beta)
-* <b>Legacy HLS and MPEG-DASH Streaming</b>
+* <b>Low Latency HLS Streaming</b> 
 * <b>Embedded Live Transcoder</b>
   * Video: VP8, H.264, Pass-through
   * Audio: Opus, AAC, Pass-through
@@ -50,11 +49,10 @@ Would you please click on each link below for details:
 * <b>Access Control</b>
   * Admission Webhooks
   * Singed Policy
-* <b>Beta</b>
-  * File Recording
-  * RTMP Push Publishing (Re-streaming)
-  * Thumbnail
-  * REST API
+* File Recording
+* RTMP Push Publishing (Re-streaming)
+* Thumbnail
+* <b>REST API<b>
 * <b>Experiment</b>
   * P2P Traffic Distribution (Only WebRTC)
 
@@ -77,12 +75,11 @@ We have tested OvenMediaEngine on the platforms listed below. However, we think 
 docker run -d \
 -p 1935:1935 \
 -p 3333:3333 \
+-p 3334:3334 \
 -p 3478:3478 \
--p 8080:8080 \
 -p 9000:9000 \
 -p 9999:9999/udp \
--p 4000-4005:4000-4005/udp \
--p 10006-10010:10006-10010/udp \
+-p 4000:4000/udp \
 --name ovenmediaengine \
 airensoft/ovenmediaengine:latest
 ```
@@ -93,12 +90,11 @@ You can also store the configuration files on your host:
 docker run -d \
 -p 1935:1935 \
 -p 3333:3333 \
+-p 3334:3334 \
 -p 3478:3478 \
--p 8080:8080 \
 -p 9000:9000 \
 -p 9999:9999/udp \
--p 4000-4005:4000-4005/udp \
--p 10006-10010:10006-10010/udp \
+-p 4000:4000/udp \
 -v ome-origin-conf:/opt/ovenmediaengine/bin/origin_conf \
 -v ome-edge-conf:/opt/ovenmediaengine/bin/edge_conf \
 --name ovenmediaengine \
