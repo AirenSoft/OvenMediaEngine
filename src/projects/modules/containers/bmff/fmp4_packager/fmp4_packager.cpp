@@ -126,7 +126,7 @@ namespace bmff
 				}
 
 				auto chunk = chunk_stream.GetDataPointer();
-				if (AppendMediaChunk(chunk, _samples_buffer->GetStartTimestamp(), _samples_buffer->GetTotalDuration(), _samples_buffer->IsIndependent()) == false)
+				if (AppendMediaChunk(chunk, _samples_buffer->GetStartTimestamp(), total_duration_ms, _samples_buffer->IsIndependent()) == false)
 				{
 					logte("FMP4Packager::AppendSample() - Failed to store media chunk");
 					return false;
