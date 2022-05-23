@@ -9,7 +9,6 @@
 #include "encoder_vp8.h"
 
 #include "../../transcoder_private.h"
-#include "../codec_utilities.h"
 
 EncoderVP8::~EncoderVP8()
 {
@@ -120,7 +119,7 @@ void EncoderVP8::CodecThread()
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-		auto av_frame = TranscoderUtilities::MediaFrameToAVFrame(cmn::MediaType::Video, media_frame);
+		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
 		if (!av_frame)
 		{
 			logte("Could not allocate the frame data");
@@ -152,7 +151,7 @@ void EncoderVP8::CodecThread()
 			}
 			else
 			{
-				auto media_packet = TranscoderUtilities::AvPacketToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::VP8, cmn::PacketType::RAW);
+				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::VP8, cmn::PacketType::RAW);
 				if (media_packet == nullptr)
 				{
 					logte("Could not allocate the media packet");

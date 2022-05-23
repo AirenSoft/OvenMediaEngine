@@ -11,7 +11,6 @@
 #include <unistd.h>
 
 #include "../../transcoder_private.h"
-#include "../codec_utilities.h"
 
 EncoderHEVCxNV::~EncoderHEVCxNV()
 {
@@ -135,7 +134,7 @@ void EncoderHEVCxNV::CodecThread()
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-		auto av_frame = TranscoderUtilities::MediaFrameToAVFrame(cmn::MediaType::Video, media_frame);
+		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
 		if(!av_frame)
 		{
 			logte("Could not allocate the frame data");
@@ -167,7 +166,7 @@ void EncoderHEVCxNV::CodecThread()
 			}
 			else
 			{
-				auto media_packet = TranscoderUtilities::AvPacketToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::H265_ANNEXB, cmn::PacketType::NALU);
+				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::H265_ANNEXB, cmn::PacketType::NALU);
 				if (media_packet == nullptr)
 				{
 					logte("Could not allocate the media packet");

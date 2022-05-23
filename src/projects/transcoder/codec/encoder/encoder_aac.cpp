@@ -9,7 +9,6 @@
 #include "encoder_aac.h"
 
 #include "../../transcoder_private.h"
-#include "../codec_utilities.h"
 
 EncoderAAC::~EncoderAAC()
 {
@@ -96,7 +95,7 @@ void EncoderAAC::CodecThread()
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-		auto av_frame = TranscoderUtilities::MediaFrameToAVFrame(cmn::MediaType::Audio, media_frame);
+		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Audio, media_frame);
 		if (!av_frame)
 		{
 			logte("Could not allocate the frame data");
@@ -126,7 +125,7 @@ void EncoderAAC::CodecThread()
 			}
 			else
 			{
-				auto media_packet = TranscoderUtilities::AvPacketToMediaPacket(_packet, cmn::MediaType::Audio, cmn::BitstreamFormat::AAC_ADTS, cmn::PacketType::RAW);
+				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, cmn::MediaType::Audio, cmn::BitstreamFormat::AAC_ADTS, cmn::PacketType::RAW);
 				if (media_packet == nullptr)
 				{
 					logte("Could not allocate the media packet");
