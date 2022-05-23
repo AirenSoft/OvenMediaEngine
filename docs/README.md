@@ -4,7 +4,7 @@
 
 [**OvenMediaEngine**](https://github.com/AirenSoft/OvenMediaEngine) (OME) is a **Sub**-**Second Latency Live Streaming Server** with **Large**-**Scale** and **High**-**Definition**. With OME, you can create platforms/services/systems that transmit high-definition video to hundreds-thousand viewers with sub-second latency and be scalable, depending on the number of concurrent viewers.
 
-OvenMediaEngine can receive a video/audio, video, or audio source from encoders and cameras such as [OvenLiveKit](https://www.ovenmediaengine.com/olk), OBS, XSplit, and more, to WebRTC, RTMP, SRT, MPEG-2 TS (Beta), or RTSP (Beta) as Input. Then, OME transmits this source using WebRTC, Low Latency MPEG-DASH (LLDASH), MPEG-DASH, and HLS as output. Also, we provide [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), an Open-Source and JavaScript-based WebRTC Player for OvenMediaEngine.
+OvenMediaEngine can receive a video/audio, video, or audio source from encoders and cameras such as [OvenLiveKit](https://www.ovenmediaengine.com/olk), OBS, XSplit, and more, to WebRTC, RTMP, SRT, MPEG-2 TS (Beta), or RTSP (Beta) as Input. Then, OME transmits this source using WebRTC, Low Latency HLS(LLHLS) as output. Also, we provide [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), an Open-Source and JavaScript-based WebRTC/LLHLS Player for OvenMediaEngine.
 
 Our goal is to make it easier for you to build a stable broadcasting/streaming service with sub-second latency.
 
@@ -23,21 +23,19 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
     * _VP8, H.264_
   * In-band FEC (Forward Error Correction)
     * _Opus_
-* **Low-Latency MPEG-DASH Streaming** (Beta)
-* **Legacy HLS/MPEG-DASH Streaming**
+* **Low-Latency HLS Streaming**
 * **Embedded Live Transcoder**
   * Video: VP8, H.264, Pass-through
   * Audio: Opus, AAC, Pass-through
 * **Clustering** (Origin-Edge Structure)
 * **Monitoring**
 * **Access Control**
-  * Admission Webhooks
-  * Signed Policy
-* **Beta**
-  * File Recording
-  * RTMP, MPEGTS Push Publishing (Re-streaming)
-  * Thumbnail
-  * REST API
+  * AdmissionWebhooks
+  * SignedPolicy
+* File Recording
+* RTMP, MPEGTS Push Publishing (Re-streaming)
+* Thumbnail
+* REST API
 * **Experiment**
   * P2P Traffic Distribution (Only WebRTC)
 

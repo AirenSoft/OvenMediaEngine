@@ -21,7 +21,3 @@ coverY: 0
 
 The Enterprise Edition of OvenMediaEnigne includes H.264/H.265 Codecs from Beamr.
 
-
-
-blah blah blah&#x20;
-
