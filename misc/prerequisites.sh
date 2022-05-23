@@ -10,7 +10,7 @@ SRT_VERSION=1.4.4
 OPUS_VERSION=1.3.1
 VPX_VERSION=1.11.0
 FDKAAC_VERSION=2.0.2
-NASM_VERSION=2.15.02
+NASM_VERSION=2.15.05
 FFMPEG_VERSION=4.4.1
 JEMALLOC_VERSION=5.2.1
 PCRE2_VERSION=10.39
@@ -163,7 +163,7 @@ install_nasm()
     (DIR=${TEMP_PATH}/nasm && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf http://www.nasm.us/pub/nasm/releasebuilds/${NASM_VERSION}/nasm-${NASM_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sLf https://github.com/netwide-assembler/nasm/archive/refs/tags/nasm-${NASM_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     ./configure --prefix="${PREFIX}" && \
     make -j$(nproc) && \
     sudo make install && \
