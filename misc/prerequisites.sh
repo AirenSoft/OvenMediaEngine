@@ -167,6 +167,8 @@ install_nasm()
 	./autogen.sh && \
     ./configure --prefix="${PREFIX}" && \
     make -j$(nproc) && \
+	touch nasm.1 && \ # To avoid error in nasm install package
+	touch ndisasm.1 && \ # To avoid error in nasm install package
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "nasm"
 }
