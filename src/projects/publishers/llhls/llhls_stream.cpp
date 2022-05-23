@@ -442,9 +442,10 @@ void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t 
 	auto segment = GetStorage(track_id)->GetMediaSegment(segment_number);
 
 	// Timescale to seconds(demical)
-	auto segment_duration = static_cast<float>(segment->GetDuration()) / static_cast<float>(GetTrack(track_id)->GetTimeBase().GetTimescale());
+	auto segment_duration = static_cast<float>(segment->GetDuration()) / static_cast<float>(1000.0);
 
-	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetCreatedTime().time_since_epoch()).count() + segment->GetStartTimestamp();
+	auto start_timestamp_ms = (static_cast<float>(segment->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
+	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetCreatedTime().time_since_epoch()).count() + start_timestamp_ms;
 
 	auto segment_info = LLHlsChunklist::SegmentInfo(segment->GetNumber(), start_timestamp, segment_duration,
 													segment->GetSize(), GetSegmentName(track_id, segment->GetNumber()), "", true);
@@ -467,11 +468,13 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 	}
 
 	auto chunk = GetStorage(track_id)->GetMediaChunk(segment_number, chunk_number);
-	// Timescale to seconds(demical)
-	auto chunk_duration = static_cast<float>(chunk->GetDuration()) / static_cast<float>(GetTrack(track_id)->GetTimeBase().GetTimescale());
+	
+	// Milliseconds
+	auto chunk_duration = static_cast<float>(chunk->GetDuration()) / static_cast<float>(1000.0);
 
 	// Human readable timestamp
-	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetCreatedTime().time_since_epoch()).count() + chunk->GetStartTimestamp();
+	auto start_timestamp_ms = (static_cast<float>(chunk->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
+	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetCreatedTime().time_since_epoch()).count() + start_timestamp_ms;
 
 	auto chunk_info = LLHlsChunklist::SegmentInfo(chunk->GetNumber(), start_timestamp, chunk_duration, chunk->GetSize(), 
 												GetPartialSegmentName(track_id, segment_number, chunk->GetNumber()), 
