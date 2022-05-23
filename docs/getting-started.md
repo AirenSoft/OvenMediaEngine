@@ -214,17 +214,15 @@ As of version 0.10.4, the default output stream name has been changed from **\<I
 {% endhint %}
 
 {% hint style="info" %}
-If you use the default configuration, the RTMP publishing URL is `rtmp://192.168.0.1:1935/app/stream`
+If you use the default configuration and the RTMP publishing URL is `rtmp://192.168.0.1:1935/app/stream`
 
-Then the WebRTC URL will be`ws://192.168.0.1:3333/app/stream`
+then the WebRTC URL will be`ws://192.168.0.1:3333/app/stream`
 {% endhint %}
 
 {% hint style="info" %}
 In addition,
 
-WebRTC over TCP URL will be ws://192.168.0.1:3333/app/stream?**transport=tcp**
-
-LLHLS streaming URL will be`http://192.168.0.1:8080/app/stream/llhls.m3u8`
+LLHLS streaming URL will be`https://domain:3334/app/stream/llhls.m3u8`
 {% endhint %}
 
 If you want to build OvenPlayer in your environment, see [OvenPlayer QuickStart](https://github.com/AirenSoft/OvenPlayer#quick-start).

@@ -22,11 +22,15 @@ If you want to use the WebRTC feature, you need to add `<WebRTC>` element to the
 	<Publishers>
 		<WebRTC>
 			<Signalling>
-			  <Port>3333</Port>
+				<Port>3333</Port>
+				<TLSPort>3334</TLSPort>
+				<WorkerCount>1</WorkerCount>
 			</Signalling>
 			<IceCandidates>
-				<TcpRelay>*:3478</TcpRelay>
 				<IceCandidate>*:10000-10005/udp</IceCandidate>
+				<TcpRelay>*:3478</TcpRelay>
+				<TcpForce>true</TcpForce>
+				<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
 			</IceCandidates>
 		</WebRTC>
 	</Publishers>

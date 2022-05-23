@@ -117,6 +117,6 @@ When you create a stream, as shown above, you can play LLHLS with the following 
 
 If you use the default configuration, you can start streaming with the following URL:
 
-`https://domain:443/app/<stream name>/llhls.m3u8`
+`https://domain:3334/app/<stream name>/llhls.m3u8`
 
 We have prepared a test player that you can quickly see if OvenMediaEngine is working. Please refer to the [Test Player](../test-player.md) for more information.
