@@ -76,12 +76,3 @@ ffmpeg.exe -re -stream_loop -1 -i <file.ext> -vn  -acodec aac -pes_payload_size 
 {% hint style="info" %}
 Giving the -pes\_payload\_size 0 option to the AAC codec is very important for AV synchronization and low latency. If this option is not given, FFMPEG bundles several ADTSs and is transmitted at once, which may cause high latency and AV synchronization errors.
 {% endhint %}
-
-### Streaming URL
-
-If you use the default configuration, you can stream with the following streaming URLs when you start broadcasting to OBS:
-
-* **`WebRTC`**`   ``ws://192.168.0.1:3333/app/stream_4000`
-* **`HLS`**`      ``http://192.168.0.1:8080/app/stream_4000/playlist.m3u8`
-* **`MPEG-DASH`**`http://192.168.0.1:8080/app/stream_4000/manifest.mpd`
-

@@ -22,11 +22,15 @@ If you want to use the WebRTC feature, you need to add `<WebRTC>` element to the
 	<Publishers>
 		<WebRTC>
 			<Signalling>
-			  <Port>3333</Port>
+				<Port>3333</Port>
+				<TLSPort>3334</TLSPort>
+				<WorkerCount>1</WorkerCount>
 			</Signalling>
 			<IceCandidates>
-				<TcpRelay>*:3478</TcpRelay>
 				<IceCandidate>*:10000-10005/udp</IceCandidate>
+				<TcpRelay>*:3478</TcpRelay>
+				<TcpForce>true</TcpForce>
+				<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
 			</IceCandidates>
 		</WebRTC>
 	</Publishers>
@@ -37,7 +41,7 @@ If you want to use the WebRTC feature, you need to add `<WebRTC>` element to the
 
 WebRTC uses ICE for connections and specifically NAT traversal. The web browser or player exchanges the Ice Candidate with each other in the Signalling phase. Therefore, OvenMediaEngine provides an ICE for WebRTC connectivity.
 
-If you set IceCandidate to `*: 10000-10005/udp`, as in the example above, OvenMediaEngine automatically gets IP from the server and generates `IceCandidate `using UDP ports from 10000 to 10005. If you want to use a specific IP as IceCandidate, specify a specific IP. You can also use only one 10000 UDP Port, not a range, by setting it to \*: 10000.
+If you set IceCandidate to `*: 10000-10005/udp`, as in the example above, OvenMediaEngine automatically gets IP from the server and generates `IceCandidate` using UDP ports from 10000 to 10005. If you want to use a specific IP as IceCandidate, specify a specific IP. You can also use only one 10000 UDP Port, not a range, by setting it to \*: 10000.
 
 ### Signalling
 
@@ -169,7 +173,7 @@ You can turn on the TURN server by setting \<TcpRelay> in the WebRTC Bind.&#x20;
 
 > Example : \<TcpRelay>\*:3478\</TcpRelay>
 
-OME may sometimes not be able to get the server's public IP to its local interface. (Environment like Docker or AWS) So, specify the public IP for `Relay IP`. If \* is used, the public IP obtained from [\<StunServer>](../configuration.md#stunserver) and all IPs obtained from the local interface are used. `Port` is the tcp port on which the TURN server is listening.
+OME may sometimes not be able to get the server's public IP to its local interface. (Environment like Docker or AWS) So, specify the public IP for `Relay IP`. If \* is used, the public IP obtained from [\<StunServer>](../configuration/#stunserver) and all IPs obtained from the local interface are used. `Port` is the tcp port on which the TURN server is listening.
 
 ```markup
 <Server version="8">
@@ -227,7 +231,7 @@ myPeerConnection = new RTCPeerConnection({
 });
 ```
 
-When sending `Request Offer` in the [signaling ](webrtc-publishing.md#signalling-protocol)phase with OvenMediaEngine, if you send the `transport=tcp` query string, `ice_servers `information is delivered as follows. You can use this information to set iceServers.
+When sending `Request Offer` in the [signaling ](webrtc-publishing.md#signalling-protocol)phase with OvenMediaEngine, if you send the `transport=tcp` query string, `ice_servers` information is delivered as follows. You can use this information to set iceServers.
 
 ```markup
 candidates: [{candidate: "candidate:0 1 UDP 50 192.168.0.200 10006 typ host", sdpMLineIndex: 0}]

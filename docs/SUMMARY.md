@@ -2,7 +2,8 @@
 
 * [Introduction](README.md)
 * [Getting Started](getting-started.md)
-* [Configuration](configuration.md)
+* [Configuration](configuration/README.md)
+  * [TLS Encryption](configuration/tls-encryption.md)
 * [Live Source](live-source/README.md)
   * [RTMP](live-source/rtmp.md)
   * [WebRTC (Beta)](live-source/webrtc-beta.md)
@@ -14,8 +15,8 @@
     * [Manual Installation](transcoding/gpu-usage/manual-installation.md)
 * [Streaming](streaming/README.md)
   * [WebRTC Streaming](streaming/webrtc-publishing.md)
+  * [Low-Latency HLS](streaming/low-latency-hls.md)
   * [Low-Latency DASH and HLS streaming](streaming/hls-mpeg-dash.md)
-  * [TLS Encryption](streaming/tls-encryption.md)
 * [Access Control](access-control/README.md)
   * [SignedPolicy](access-control/signedpolicy.md)
   * [AdmissionWebhooks (beta)](access-control/admission-webhooks.md)
@@ -47,6 +48,5 @@
 
 * [Introduction](enterprise/introduction.md)
 * [Advanced Features](enterprise/advanced-features.md)
-* [Install and Configure](enterprise/install-and-configure.md)
 * [Web Console](enterprise/web-console.md)
 * [Release Note](enterprise/release-note.md)

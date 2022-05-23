@@ -10,7 +10,7 @@ OvenMediaEngine supports the Origin-Edge structure for cluster configuration and
 
 The OvenMediaEngine running as edge pulls a stream from an external server when a user requests it. The external server could be another OvenMediaEngine with OVT enabled or another stream server that supports RTSP.&#x20;
 
-The OVT is a protocol defined by OvenMediaEngine to relay stream between Origin-Edge and OVT can be run over SRT and TCP. For more information on the SRT Protocol, please visit the [SRT Alliance](https://www.srtalliance.org) site.
+The OVT is a protocol defined by OvenMediaEngine to relay stream between Origin-Edge and OVT can be run over SRT and TCP. For more information on the SRT Protocol, please visit the [SRT Alliance](https://www.srtalliance.org/) site.
 
 ### Origin&#x20;
 
