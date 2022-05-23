@@ -48,7 +48,7 @@ namespace pvd
 			return ProcessMediaEventTrigger::TRIGGER_INTERVAL;
 		}
 
-		// PullStream Implementation 
+		// PullStream Implementation
 		int GetFileDescriptorForDetectingEvent() override
 		{
 			return 0;
@@ -70,29 +70,28 @@ namespace pvd
 		bool RequestDescribe();
 		bool RequestPlay();
 		bool RequestStop();
+		bool RequestRewind();
 		void Release();
-
+		
 		void SendSequenceHeader();
 
 		std::shared_ptr<const ov::Url> _url;
-
-		// Payload type : Timestamp
-		std::map<uint8_t, uint32_t> _last_timestamp_map;
-		std::map<uint8_t, uint32_t> _timestamp_map;
+		AVFormatContext *_format_context;
 
 		ov::StopWatch _play_request_time;
-
-		bool _sent_sequence_header = false;
 
 		// Statistics
 		int64_t _origin_request_time_msec = 0;
 		int64_t _origin_response_time_msec = 0;
 		std::shared_ptr<mon::StreamMetrics> _stream_metrics;
 
-		static std::shared_ptr<MediaTrack> AvStreamToMediaTrack(AVStream *stream);
-		static std::shared_ptr<MediaPacket> AvPacketToMediaPacket(AVPacket *src, cmn::MediaType media_type, cmn::BitstreamFormat format, cmn::PacketType packet_type);
+	private:
+		void InitPrivBaseTimestamp();
+		void UpdatePrivBaseTimestamp();
+		void UpdateTimestamp(std::shared_ptr<MediaPacket> &packet);
 
-		std::shared_ptr<AVFormatContext> CreateFormatContext();
-		AVFormatContext *_format_context;
+		// TrackID, Timestamp
+		std::map<uint8_t, uint64_t> _base_timestamp;
+		std::map<uint8_t, uint64_t> _last_timestamp;
 	};
 }  // namespace pvd

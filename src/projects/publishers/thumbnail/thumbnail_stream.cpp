@@ -52,6 +52,7 @@ bool ThumbnailStream::Start()
 	if (found == false)
 	{
 		logtw("Stream [%s/%s] was not created because there were no supported codecs by the Thumbnail Publisher.", GetApplication()->GetName().CStr(), GetName().CStr());
+		return false;
 	}
 
 	return Stream::Start();

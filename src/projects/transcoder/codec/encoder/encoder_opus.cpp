@@ -12,7 +12,6 @@
 #include <unistd.h>
 
 #include "../../transcoder_private.h"
-#include "../codec_utilities.h"
 
 #if 0
 size_t AudioEncoderOpusImpl::SufficientOutputBufferSize() const {
@@ -156,7 +155,7 @@ void EncoderOPUS::CodecThread()
 			OV_ASSERT2(media_frame != nullptr);
 
 			// const MediaFrame *frame = media_frame.get();
-			auto av_frame = TranscoderUtilities::MediaFrameToAVFrame(cmn::MediaType::Audio, media_frame);
+			auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Audio, media_frame);
 			if (!av_frame)
 			{
 				logte("Could not allocate the frame data");

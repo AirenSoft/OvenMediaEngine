@@ -167,6 +167,17 @@ namespace pvd
 		return _last_timestamp_map[track_id];
 	}
 
+	uint64_t Stream::GetBaseTimestamp(uint32_t track_id)
+	{
+		uint64_t base_timestamp = 0;
+		if(_base_timestamp_map.find(track_id) != _base_timestamp_map.end())
+		{
+			base_timestamp = _base_timestamp_map[track_id];
+		}
+
+		return base_timestamp;
+	}
+
 	// This is a method of generating a PTS with an increment value (delta) when it cannot be used as a PTS because the start value of the timestamp is random like the RTP timestamp.
 	uint64_t Stream::AdjustTimestampByDelta(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp)
 	{
@@ -181,7 +192,7 @@ namespace pvd
 			curr_timestamp = _last_timestamp_map[track_id];
 		}
 
-		auto delta = GetTimestampDelta(track_id, timestamp, max_timestamp);
+		auto delta = GetDeltaTimestamp(track_id, timestamp, max_timestamp);
 		curr_timestamp += delta;
 
 		_last_timestamp_map[track_id] = curr_timestamp;
@@ -189,7 +200,7 @@ namespace pvd
 		return curr_timestamp;
 	}
 
-	uint64_t Stream::GetTimestampDelta(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp)
+	uint64_t Stream::GetDeltaTimestamp(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp)
 	{
 		auto track = GetTrack(track_id);
 

@@ -10,8 +10,6 @@
 #include "filter_resampler.h"
 
 #include <base/ovlibrary/ovlibrary.h>
-
-#include "../codec/codec_utilities.h"
 #include "../transcoder_private.h"
 
 MediaFilterResampler::MediaFilterResampler()
@@ -214,7 +212,7 @@ void MediaFilterResampler::FilterThread()
 
 		auto media_frame = std::move(obj.value());
 
-		auto av_frame = TranscoderUtilities::MediaFrameToAVFrame(cmn::MediaType::Video, media_frame);
+		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
 		if(!av_frame)
 		{
 			logte("Could not allocate the frame data");
@@ -248,7 +246,7 @@ void MediaFilterResampler::FilterThread()
 			}
 			else
 			{
-				auto output_frame = TranscoderUtilities::AvFrameToMediaFrame(cmn::MediaType::Audio, _frame);
+				auto output_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Audio, _frame);
 				::av_frame_unref(_frame);
 				if (output_frame == nullptr)
 				{

@@ -22,6 +22,7 @@ extern "C"
 #include <base/mediarouter/media_buffer.h>
 #include <base/mediarouter/media_type.h>
 #include <base/ovlibrary/ovlibrary.h>
+#include <modules/ffmpeg/conv.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -40,7 +41,6 @@ enum class TranscodeResult : int32_t
 	NoData = -2,
 	// End of file
 	EndOfFile = -1,
-
 	// Decode/Encoder Complete and Reamin more data
 	DataReady = 0,
 	// Change Output Format
