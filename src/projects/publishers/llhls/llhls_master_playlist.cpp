@@ -147,7 +147,7 @@ ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string) c
 
 				if (media_info._type == MediaInfo::Type::Audio)
 				{
-					playlist.AppendFormat(",CHANNELS=\"%d\"", media_info._track->GetChannel().GetCounts());
+					playlist.AppendFormat(",CHANNELS=\"%d\"", media_info._track->GetChannel().GetCounts() == 0 ? 2 : media_info._track->GetChannel().GetCounts());
 				}
 
 				if (!media_info._language.IsEmpty())
@@ -226,13 +226,13 @@ ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string) c
 		}
 
 		// Output Bandwidth
-		playlist.AppendFormat("BANDWIDTH=%d", bandwidth);
+		playlist.AppendFormat("BANDWIDTH=%d", bandwidth == 0 ? 2000000 : bandwidth);
 
 		// If variant_info is video, output RESOLUTION, FRAME-RATE
 		if (variant_info._track->GetMediaType() == cmn::MediaType::Video)
 		{
 			playlist.AppendFormat(",RESOLUTION=%dx%d", variant_info._track->GetWidth(), variant_info._track->GetHeight());
-			playlist.AppendFormat(",FRAME-RATE=%.1f", variant_info._track->GetFrameRate());
+			playlist.AppendFormat(",FRAME-RATE=%.1f", variant_info._track->GetFrameRate() == 0 ? 30.0 : variant_info._track->GetFrameRate());
 		}
 
 		// CODECS
