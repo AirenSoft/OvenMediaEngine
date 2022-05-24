@@ -234,7 +234,12 @@ ov::String LLHlsChunklist::GetPlaylist(const ov::String &query_string, bool skip
 				if (segment == _segments.back() &&
 					partial_segment == segment->GetPartialSegments().back())
 				{
-					playlist.AppendFormat("#EXT-X-PRELOAD-HINT:TYPE=PART,URI=\"%s\"\n", partial_segment->GetNextUrl().CStr());
+					playlist.AppendFormat("#EXT-X-PRELOAD-HINT:TYPE=PART,URI=\"%s", partial_segment->GetNextUrl().CStr());
+					if (query_string.IsEmpty() == false)
+					{
+						playlist.AppendFormat("?%s", query_string.CStr());
+					}
+					playlist.AppendFormat("\"\n");
 				}
 			}
 		}

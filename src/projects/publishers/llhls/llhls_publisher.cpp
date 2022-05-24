@@ -314,7 +314,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			auto id_key = query_string.Split("_");
 			if (id_key.size() != 2)
 			{
-				logte("Invalid session key : %s", query_string.CStr());
+				logte("Invalid session key : %s", request_url->ToUrlString().CStr());
 				response->SetStatusCode(http::StatusCode::Unauthorized);
 				return http::svr::NextHandler::DoNotCall;
 			}
