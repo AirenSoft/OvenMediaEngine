@@ -347,6 +347,12 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 		response->SetHeader("Content-Type", "application/vnd.apple.mpegurl");
 		// gzip compression
 		response->SetHeader("Content-Encoding", "gzip");
+
+		// Cache-Control header
+		// When the stream is recreated, llhls.m3u8 file is changed.
+		auto cache_control = ov::String::FormatString("max-age=%u, public", 5);
+		response->SetHeader("Cache-Control", cache_control);
+
 		response->AppendData(playlist);
 
 		MonitorInstance->OnSessionConnected(*GetStream(), PublisherType::LLHls);
@@ -371,12 +377,21 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 
 	auto response = exchange->GetResponse();
 
-	// If there are not enough segments and chunks in the beginning, 
-	// the player cannot start playing, so the request is pending until at least one segment is created.
+	uint32_t cache_control_max_age = 0;
 	if (msn == -1 && part == -1)
 	{
+		// The chunklist changes very quickly. Shouldn't be cached
+		cache_control_max_age = 0;
+
+		// If there are not enough segments and chunks in the beginning, 
+		// the player cannot start playing, so the request is pending until at least one segment is created.
 		msn = 2;
 		part = 0;
+	}
+	else
+	{
+		// If msn and part are non-zero, they may continue to be cached.
+		cache_control_max_age = 3600;
 	}
 
 	// Get the chunklist
@@ -390,6 +405,11 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		response->SetHeader("Content-Type", "application/vnd.apple.mpegurl");
 		// gzip compression
 		response->SetHeader("Content-Encoding", "gzip");
+
+		// Cache-Control header
+		auto cache_control = ov::String::FormatString("max-age=%u, public", cache_control_max_age);
+		response->SetHeader("Cache-Control", cache_control);
+
 		response->AppendData(chunklist);
 
 		// If a client uses previously cached llhls.m3u8 and requests chunklist
