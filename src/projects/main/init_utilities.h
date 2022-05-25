@@ -26,9 +26,13 @@
 			{                                                        \
 				if (orchestrator->RegisterModule(variable) == false) \
 				{                                                    \
-					logte("Failed to register" name);                \
+					logte("Failed to register " name);               \
 					succeeded = false;                               \
 				}                                                    \
+			}                                                        \
+			else                                                     \
+			{                                                        \
+				variable.reset();                                    \
 			}                                                        \
 		}                                                            \
 	}
@@ -44,7 +48,7 @@
 		}                                                      \
 		else                                                   \
 		{                                                      \
-			logte("Failed to unregister" name);                \
+			logte("Failed to unregister " name);                \
 		}                                                      \
 	}
 

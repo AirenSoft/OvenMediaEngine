@@ -180,6 +180,7 @@ int main(int argc, char *argv[])
 	RELEASE_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher");
 	RELEASE_MODULE(ovt_publisher, "OVT Publisher");
 	RELEASE_MODULE(file_publisher, "File Publisher");
+	RELEASE_MODULE(mpegtspush_publisher, "MpegtsPush Publisher");
 	RELEASE_MODULE(rtmppush_publisher, "RtmpPush Publisher");
 	RELEASE_MODULE(thumbnail_publisher, "Thumbnail Publisher");
 
