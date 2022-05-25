@@ -26,7 +26,7 @@ namespace pub
 		queue_name.Format("%s - Stream Data Queue", _worker_name.CStr());
 		_stream_data_queue.SetAlias(queue_name.CStr());
 
-		logti("%s ApplicationWorker has been created", _worker_name.CStr());
+		logtd("%s ApplicationWorker has been created", _worker_name.CStr());
 
 		return true;
 	}
