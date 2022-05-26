@@ -19,7 +19,7 @@
 #include "chunk/rtmp_handshake.h"
 #include "chunk/rtmp_import_chunk.h"
 
-#define MAX_STREAM_MESSAGE_COUNT (100)
+#define MAX_STREAM_MESSAGE_COUNT (500)
 #define BASELINE_PROFILE (66)
 #define MAIN_PROFILE (77)
 
