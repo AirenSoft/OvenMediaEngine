@@ -2,6 +2,7 @@
 
 #include "base/common_types.h"
 #include "base/info/media_track.h"
+#include <config/config_manager.h>
 
 namespace info
 {
@@ -40,6 +41,10 @@ namespace info
 		bool IsInputStream() const;
 		bool IsOutputStream() const;
 
+		// _output_profile
+		void SetOutputProfile(const cfg::vhost::app::oprf::OutputProfile &profile);
+		const cfg::vhost::app::oprf::OutputProfile &GetOutputProfile() const;
+
 		void LinkInputStream(const std::shared_ptr<Stream> &stream);
 		const std::shared_ptr<Stream> GetLinkedInputStream() const;
 
@@ -53,6 +58,7 @@ namespace info
 
 		bool AddTrack(std::shared_ptr<MediaTrack> track);
 		const std::shared_ptr<MediaTrack> GetTrack(int32_t id) const;
+		const std::shared_ptr<MediaTrack> GetTrack(const ov::String &name) const;
 		const std::map<int32_t, std::shared_ptr<MediaTrack>> &GetTracks() const;
 
 		ov::String GetInfoString();
@@ -92,5 +98,7 @@ namespace info
 
 		// If the source if this stream is a remote stream of the origin server, store the uuid of origin stream
 		ov::String _origin_stream_uuid;
+
+		cfg::vhost::app::oprf::OutputProfile _output_profile;
 	};
 }  // namespace info

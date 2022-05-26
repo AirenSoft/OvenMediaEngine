@@ -42,15 +42,14 @@ namespace cfg
 
 						Register<Optional>("Renditions", &_renditions,
 							[=]() -> std::shared_ptr<ConfigError> {
-								return nullptr; // : CreateConfigErrorPtr("");
+								return nullptr;
 							},
 							[=]() -> std::shared_ptr<ConfigError> {
 								auto result = _renditions.SetEncodes(_encodes);
 
 								return result ? nullptr : CreateConfigErrorPtr("Rendition Error");
-							});
-
-						_renditions.SetEncodes(_encodes);
+							}
+						);
 					}
 				};
 			}  // namespace oprf

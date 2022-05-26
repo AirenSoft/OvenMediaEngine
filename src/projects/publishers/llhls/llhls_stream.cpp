@@ -83,16 +83,36 @@ bool LLHlsStream::Start()
 		}
 	}
 
-	if (first_video_track == nullptr && first_audio_track == nullptr)
+	bool rendition_enabled = false;
+	auto renditions = GetOutputProfile().GetRenditions(&rendition_enabled);
+	if (rendition_enabled)
 	{
-		logtw("Stream [%s/%s] was not created because there were no supported codecs by LLHLS.", GetApplication()->GetName().CStr(), GetName().CStr());
-		return false;
+		for (const auto &rendition : renditions.GetRenditionList())
+		{
+			bool video_enabled = false;
+			bool audio_enabled = false;
+
+			auto video_track_name = rendition.GetVideoName(&video_enabled);
+			auto audio_track_name = rendition.GetAudioName(&audio_enabled);
+			
+			auto video_track = GetTrack(video_track_name);
+			auto audio_track = GetTrack(audio_track_name);
+
+			AddStreamInfToMasterPlaylist(video_track, audio_track);
+		}
+	}
+	else
+	{
+		if (first_video_track == nullptr && first_audio_track == nullptr)
+		{
+			logtw("Stream [%s/%s] was not created because there were no supported codecs by LLHLS.", GetApplication()->GetName().CStr(), GetName().CStr());
+			return false;
+		}
+
+		AddStreamInfToMasterPlaylist(first_video_track, first_audio_track);
 	}
 
-	//TODO(Getroot): It will be replaced with ABR config
-	AddStreamInfToMasterPlaylist(first_video_track, first_audio_track);
-
-	logtd("Master Playlist : %s", _master_playlist.ToString("").CStr());
+	logti("Master Playlist : %s", _master_playlist.ToString("").CStr());
 
 	logti("LLHlsStream has been created : %s/%u\nChunk Duration(%.2f) Segment Duration(%u) Segment Count(%u)", GetName().CStr(), GetId(), llhls_config.GetChunkDuration(), llhls_config.GetSegmentDuration(), llhls_config.GetSegmentCount());
 
@@ -169,12 +189,14 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 		}
 	}
 
+	// lock
+	std::shared_lock<std::shared_mutex> lock(_chunklist_map_lock);
 	if (gzip == true)
 	{
-		return { RequestResult::Success, chunklist->ToGzipData(query_string, skip) };
+		return { RequestResult::Success, chunklist->ToGzipData(query_string, _chunklist_map, skip) };
 	}
 
-	return { RequestResult::Success, chunklist->ToString(query_string, skip).ToData(false) };
+	return { RequestResult::Success, chunklist->ToString(query_string, _chunklist_map, skip).ToData(false) };
 }
 
 std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::GetInitializationSegment(const int32_t &track_id) const
@@ -420,7 +442,8 @@ void LLHlsStream::OnFMp4StorageInitialized(const int32_t &track_id)
 	auto segment_duration = static_cast<float_t>(_storage_config.segment_duration_ms) / 1000.0;
 	auto chunk_duration = static_cast<float_t>(_packager_config.chunk_duration_ms) / 1000.0;
 
-	auto playlist = std::make_shared<LLHlsChunklist>(GetTrack(track_id),
+	auto playlist = std::make_shared<LLHlsChunklist>(GetChunklistName(track_id),
+													GetTrack(track_id),
 													_storage_config.max_segments, 
 													segment_duration, 
 													chunk_duration, 
@@ -453,9 +476,6 @@ void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t 
 	playlist->AppendSegmentInfo(segment_info);
 
 	logtd("Media segment updated : track_id = %d, segment_number = %d, start_timestamp = %llu, segment_duration = %f", track_id, segment_number, segment->GetStartTimestamp(), segment_duration);
-	
-	// Output playlist
-	logtd("[Playlist]\n%s", playlist->ToString("").CStr());
 }
 
 void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number)
@@ -483,9 +503,6 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 	playlist->AppendPartialSegmentInfo(segment_number, chunk_info);
 
 	logtd("Media chunk updated : track_id = %d, segment_number = %d, chunk_number = %d, start_timestamp = %llu, chunk_duration = %f", track_id, segment_number, chunk_number, chunk->GetStartTimestamp(), chunk_duration);
-
-	// Output playlist
-	logtd("[Playlist]\n%s", playlist->ToString("").CStr());
 
 	// Notify
 	NotifyPlaylistUpdated(track_id, segment_number, chunk_number);
