@@ -47,6 +47,7 @@ namespace info
 		_created_time = stream._created_time;
 		_app_info = stream._app_info;
 		_origin_stream = stream._origin_stream;
+		_output_profile = stream._output_profile;
 
 		for (auto &track : stream._tracks)
 		{
@@ -134,6 +135,16 @@ namespace info
 		return GetSourceType() == StreamSourceType::Transcoder || GetLinkedInputStream() != nullptr;
 	}
 
+	void Stream::SetOutputProfile(const cfg::vhost::app::oprf::OutputProfile &profile)
+	{
+		_output_profile = profile;
+	}
+
+	const cfg::vhost::app::oprf::OutputProfile &Stream::GetOutputProfile() const
+	{
+		return _output_profile;
+	}
+
 	void Stream::LinkInputStream(const std::shared_ptr<Stream> &stream)
 	{
 		_origin_stream = stream;
@@ -185,6 +196,20 @@ namespace info
 		}
 
 		return item->second;
+	}
+
+	// Get Track by name
+	const std::shared_ptr<MediaTrack> Stream::GetTrack(const ov::String &name) const
+	{
+		for (auto &item : _tracks)
+		{
+			if (item.second->GetName() == name)
+			{
+				return item.second;
+			}
+		}
+
+		return nullptr;
 	}
 
 	const std::map<int32_t, std::shared_ptr<MediaTrack>> &Stream::GetTracks() const

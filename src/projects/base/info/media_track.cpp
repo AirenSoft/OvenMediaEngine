@@ -67,7 +67,7 @@ uint32_t MediaTrack::GetId() const
 	return _id;
 }
 
-// Track Name (used for variant playlist)
+// Track Name (used for Renditions)
 void MediaTrack::SetName(const ov::String &name)
 {
 	_name = name;

@@ -12,13 +12,19 @@
 
 #include <base/ovlibrary/zip.h>
 
-LLHlsChunklist::LLHlsChunklist(const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, float part_target_duration, const ov::String &map_uri)
+LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, float part_target_duration, const ov::String &map_uri)
 {
+	_url = url;
 	_track = track;
 	_max_segments = max_segments;
 	_target_duration = target_duration;
 	_part_target_duration = part_target_duration;
 	_map_uri = map_uri;
+}
+
+const ov::String& LLHlsChunklist::GetUrl() const
+{
+	return _url;
 }
 
 bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
@@ -127,22 +133,7 @@ bool LLHlsChunklist::GetLastSequenceNumber(int64_t &msn, int64_t &psn) const
 	return true;
 }
 
-ov::String LLHlsChunklist::ToString(const ov::String &query_string, bool skip/*=false*/) const
-{
-	return  GetPlaylist(query_string, skip);
-}
-
-std::shared_ptr<const ov::Data> LLHlsChunklist::ToGzipData(const ov::String &query_string, bool skip/*=false*/) const
-{
-	if (skip == false)
-	{
-		return ov::Zip::CompressGzip(ToString(query_string, true).ToData(false));
-	}
-
-	return ov::Zip::CompressGzip(ToString(query_string, false).ToData(false));
-}
-
-ov::String LLHlsChunklist::GetPlaylist(const ov::String &query_string, bool skip) const
+ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip/*=false*/) const
 {
 	if (_segments.size() == 0)
 	{
@@ -257,6 +248,39 @@ ov::String LLHlsChunklist::GetPlaylist(const ov::String &query_string, bool skip
 	}
 	segment_lock.unlock();
 
+	// Output #EXT-X-RENDITION-REPORT
+	for (const auto &[track_id, rendition] : renditions)
+	{
+		// Skip mine 
+		if (track_id == static_cast<int32_t>(_track->GetId()))
+		{
+			continue;
+		}
+
+		playlist.AppendFormat("#EXT-X-RENDITION-REPORT:URI=\"%s", rendition->GetUrl().CStr());
+		if (query_string.IsEmpty() == false)
+		{
+			playlist.AppendFormat("?%s", query_string.CStr());
+		}
+		playlist.AppendFormat("\"");
+
+		// LAST-MSN, LAST-PART
+		int64_t last_msn, last_part;
+		rendition->GetLastSequenceNumber(last_msn, last_part);
+		playlist.AppendFormat(",LAST-MSN=%llu,LAST-PART=%llu", last_msn, last_part);
+
+		playlist.AppendFormat("\n");
+	}
+
 	return playlist;
 }
 
+std::shared_ptr<const ov::Data> LLHlsChunklist::ToGzipData(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip/*=false*/) const
+{
+	if (skip == false)
+	{
+		return ov::Zip::CompressGzip(ToString(query_string, renditions, true).ToData(false));
+	}
+
+	return ov::Zip::CompressGzip(ToString(query_string, renditions, false).ToData(false));
+}

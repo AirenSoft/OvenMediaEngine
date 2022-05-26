@@ -125,13 +125,15 @@ public:
 		std::deque<std::shared_ptr<SegmentInfo>> _partial_segments;
 	}; // class SegmentInfo
 
-	LLHlsChunklist(const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, float part_target_duration, const ov::String &map_uri);
+	LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, float part_target_duration, const ov::String &map_uri);
+
+	const ov::String& GetUrl() const;
 
 	bool AppendSegmentInfo(const SegmentInfo &info);
 	bool AppendPartialSegmentInfo(uint32_t segment_sequence, const SegmentInfo &info);
 
-	ov::String ToString(const ov::String &query_string, bool skip=false) const;
-	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &query_string, bool skip=false) const;
+	ov::String ToString(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip=false) const;
+	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip=false) const;
 
 	std::shared_ptr<SegmentInfo> GetSegmentInfo(uint32_t segment_sequence) const;
 	bool GetLastSequenceNumber(int64_t &msn, int64_t &psn) const;
@@ -139,9 +141,10 @@ public:
 private:
 
 	int64_t GetSegmentIndex(uint32_t segment_sequence) const;
-	ov::String GetPlaylist(const ov::String &query_string, bool skip) const;
 
 	std::shared_ptr<const MediaTrack> _track;
+
+	ov::String _url;
 
 	uint32_t _max_segments;
 	float_t _target_duration;

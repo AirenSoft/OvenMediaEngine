@@ -308,6 +308,7 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 		name = name.Replace("${OriginStreamName}", _input_stream->GetName());
 	}
 	stream->SetName(name);
+	stream->SetOutputProfile(cfg_output_profile);
 
 	return stream;
 }
