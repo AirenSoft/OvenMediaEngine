@@ -409,7 +409,7 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 		output_track->SetChannel(input_track->GetChannel());
 		output_track->GetSample().SetFormat(input_track->GetSample().GetFormat());
 		output_track->SetTimeBase(input_track->GetTimeBase());
-		output_track->SetSampleRate(input_track->GetTimeBase().GetDen());
+		output_track->SetSampleRate(input_track->GetSampleRate());
 
 		if (output_track->GetCodecId() == cmn::MediaCodecId::Opus && output_track->GetSampleRate() != 48000)
 		{
