@@ -333,12 +333,22 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 		return;
 	}
 
+	auto request = exchange->GetRequest();
 	auto response = exchange->GetResponse();
 	auto request_uri = exchange->GetRequest()->GetParsedUri();
 
+	ov::String content_encoding = "identity";
+	bool gzip = false;
+	auto encodings = request->GetHeader("Accept-Encoding");
+	if (encodings.IndexOf("gzip") > 0 || encodings.IndexOf("*") > 0)
+	{
+		gzip = true;
+		content_encoding = "gzip";
+	}
+
 	// Get the playlist
 	auto query_string = ov::String::FormatString("session=%u_%s", GetId(), _session_key.CStr());
-	auto [result, playlist] = llhls_stream->GetPlaylist(query_string, true);
+	auto [result, playlist] = llhls_stream->GetPlaylist(query_string, gzip);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
 		// Send the playlist
@@ -346,7 +356,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 		// Set Content-Type header
 		response->SetHeader("Content-Type", "application/vnd.apple.mpegurl");
 		// gzip compression
-		response->SetHeader("Content-Encoding", "gzip");
+		response->SetHeader("Content-Encoding", content_encoding);
 
 		// Cache-Control header
 		// When the stream is recreated, llhls.m3u8 file is changed.
@@ -381,6 +391,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		return;
 	}
 
+	auto request = exchange->GetRequest();
 	auto response = exchange->GetResponse();
 
 	if (msn == -1 && part == -1)
@@ -391,9 +402,18 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		part = 0;
 	}
 
+	ov::String content_encoding = "identity";
+	bool gzip = false;
+	auto encodings = request->GetHeader("Accept-Encoding");
+	if (encodings.IndexOf("gzip") > 0 || encodings.IndexOf("*") > 0)
+	{
+		gzip = true;
+		content_encoding = "gzip";
+	}
+
 	// Get the chunklist
 	auto query_string = ov::String::FormatString("session=%u_%s", GetId(), _session_key.CStr());
-	auto [result, chunklist] = llhls_stream->GetChunklist(query_string, track_id, msn, part, skip, true);
+	auto [result, chunklist] = llhls_stream->GetChunklist(query_string, track_id, msn, part, skip, gzip);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
 		// Send the chunklist
@@ -401,7 +421,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		// Set Content-Type header
 		response->SetHeader("Content-Type", "application/vnd.apple.mpegurl");
 		// gzip compression
-		response->SetHeader("Content-Encoding", "gzip");
+		response->SetHeader("Content-Encoding", content_encoding);
 
 		// Cache-Control header
 		auto cache_control = ov::String::FormatString("no-cache");
