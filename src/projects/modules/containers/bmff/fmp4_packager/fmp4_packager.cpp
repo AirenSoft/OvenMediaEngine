@@ -88,11 +88,6 @@ namespace bmff
 			uint64_t total_duration_ms = (static_cast<double>(total_duration) / GetTrack()->GetTimeBase().GetTimescale()) * 1000.0;
 			uint64_t expected_duration_ms = (static_cast<double>(expected_duration) / GetTrack()->GetTimeBase().GetTimescale()) * 1000.0;
 
-			if (total_duration_ms > _config.chunk_duration_ms)
-			{
-				logtw("Too long duration chunk (%llu) was created. (configured : %llu) - - The duration of one frame may be too long, which may be longer than the configured chunk duration.", total_duration_ms, _config.chunk_duration_ms);
-			}
-
 			// 1. When adding samples, if the Part Target Duration is exceeded, a chunk is created immediately.
 			// 2. If it exceeds 85% and the next sample is independent, a chunk is created. This makes the next chunk start independent.
 			
