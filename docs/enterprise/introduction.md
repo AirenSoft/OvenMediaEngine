@@ -13,7 +13,7 @@ All features of OvenMediaEngine are identical to the Open Source version and the
 Enterprise adds:
 
 * Commercial library
-* The features that the customer does not allow to be disclosed as open source among the features developed by the customer commissioned by AirenSoft.
+* The features that the customer does not allow to be disclosed as open source among the features developed by the customer.
 
 
 
