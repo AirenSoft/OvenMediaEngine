@@ -73,7 +73,7 @@ namespace bmff
 			return false;
 		}
 
-		if (_samples_buffer != nullptr)
+		if (_samples_buffer != nullptr && _samples_buffer->GetTotalCount() > 0)
 		{
 			// https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-4.4.3.8
 			// The duration of a Partial Segment MUST be less than or equal to the Part Target Duration.  
@@ -95,8 +95,16 @@ namespace bmff
 
 			// 1. When adding samples, if the Part Target Duration is exceeded, a chunk is created immediately.
 			// 2. If it exceeds 85% and the next sample is independent, a chunk is created. This makes the next chunk start independent.
-			if ( (_samples_buffer->GetTotalCount() > 0 && expected_duration_ms > _config.chunk_duration_ms) ||
-				(GetTrack()->GetMediaType() == cmn::MediaType::Video && total_duration_ms >= _config.chunk_duration_ms * 0.85 && converted_packet->GetFlag() == MediaPacketFlag::Key))
+			
+			if ( 
+				((total_duration_ms >= _config.chunk_duration_ms)) ||
+
+				((expected_duration_ms > _config.chunk_duration_ms) && (total_duration_ms >= _config.chunk_duration_ms * 0.85)) || 
+
+				( (GetTrack()->GetMediaType() == cmn::MediaType::Video && 
+					total_duration_ms >= _config.chunk_duration_ms * 0.85 && 
+					converted_packet->GetFlag() == MediaPacketFlag::Key) ) 
+				)
 			{
 				double reserve_buffer_size;
 				

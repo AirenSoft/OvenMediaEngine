@@ -347,7 +347,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			}
 			else
 			{
-				if (session_key != session->GetSessionKey())
+				if (access_control_enabled == true && session_key != session->GetSessionKey())
 				{
 					logte("Invalid session_key : %s", query_string.CStr());
 					response->SetStatusCode(http::StatusCode::Unauthorized);

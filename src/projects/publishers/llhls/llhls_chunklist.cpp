@@ -93,6 +93,8 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 		}
 	}
 
+	_max_part_duration = std::max(_max_part_duration, info.GetDuration());
+
 	segment->InsertPartialSegmentInfo(std::make_shared<SegmentInfo>(info));
 	_last_partial_segment_sequence = info.GetSequence();
 
@@ -165,7 +167,7 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 	playlist.AppendFormat("#EXT-X-TARGETDURATION:%u\n", static_cast<uint32_t>(std::round(_target_duration)));
 
 	// X-SERVER-CONTROL
-	playlist.AppendFormat("#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=%.1f",	_part_target_duration * 3);
+	playlist.AppendFormat("#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=%.1f",	_max_part_duration * 3);
 	if (can_skip_until > 0)
 	{
 		playlist.AppendFormat(",CAN-SKIP-UNTIL=%.1f\n", can_skip_until);
@@ -175,7 +177,7 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 		playlist.AppendFormat("\n");
 	}
 	playlist.AppendFormat("#EXT-X-VERSION:%d\n", skipped_segment > 0 ? 6 : 9);
-	playlist.AppendFormat("#EXT-X-PART-INF:PART-TARGET=%f\n", _part_target_duration);
+	playlist.AppendFormat("#EXT-X-PART-INF:PART-TARGET=%f\n", _max_part_duration);
 	playlist.AppendFormat("#EXT-X-MEDIA-SEQUENCE:%u\n", _segments[0]->GetSequence());
 	playlist.AppendFormat("#EXT-X-MAP:URI=\"%s", _map_uri.CStr());
 	if (query_string.IsEmpty() == false)

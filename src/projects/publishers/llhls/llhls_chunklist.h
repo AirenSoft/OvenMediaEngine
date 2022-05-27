@@ -149,6 +149,7 @@ private:
 	uint32_t _max_segments;
 	float_t _target_duration;
 	float_t _part_target_duration;
+	float_t _max_part_duration;
 	ov::String _map_uri;
 
 	int64_t _last_segment_sequence = -1;
