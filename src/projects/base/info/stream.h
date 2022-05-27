@@ -2,6 +2,7 @@
 
 #include "base/common_types.h"
 #include "base/info/media_track.h"
+#include "base/info/rendition.h"
 #include <config/config_manager.h>
 
 namespace info
@@ -41,10 +42,6 @@ namespace info
 		bool IsInputStream() const;
 		bool IsOutputStream() const;
 
-		// _output_profile
-		void SetOutputProfile(const cfg::vhost::app::oprf::OutputProfile &profile);
-		const cfg::vhost::app::oprf::OutputProfile &GetOutputProfile() const;
-
 		void LinkInputStream(const std::shared_ptr<Stream> &stream);
 		const std::shared_ptr<Stream> GetLinkedInputStream() const;
 
@@ -56,10 +53,13 @@ namespace info
 		uint32_t GetUptimeSec();
 		StreamSourceType GetSourceType() const;
 
-		bool AddTrack(std::shared_ptr<MediaTrack> track);
+		bool AddTrack(const std::shared_ptr<MediaTrack> &track);
 		const std::shared_ptr<MediaTrack> GetTrack(int32_t id) const;
 		const std::shared_ptr<MediaTrack> GetTrack(const ov::String &name) const;
 		const std::map<int32_t, std::shared_ptr<MediaTrack>> &GetTracks() const;
+
+		bool AddRendition(const std::shared_ptr<Rendition> &rendition);
+		const std::vector<std::shared_ptr<Rendition>> &GetRenditions() const;
 
 		ov::String GetInfoString();
 		void ShowInfo();
@@ -84,6 +84,7 @@ namespace info
 		
 		// Key : MediaTrack ID
 		std::map<int32_t, std::shared_ptr<MediaTrack>> _tracks;
+		std::vector<std::shared_ptr<Rendition>> _renditions;
 
 	private:
 		std::chrono::system_clock::time_point _created_time;
@@ -98,7 +99,5 @@ namespace info
 
 		// If the source if this stream is a remote stream of the origin server, store the uuid of origin stream
 		ov::String _origin_stream_uuid;
-
-		cfg::vhost::app::oprf::OutputProfile _output_profile;
 	};
 }  // namespace info

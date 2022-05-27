@@ -47,12 +47,9 @@ namespace info
 		_created_time = stream._created_time;
 		_app_info = stream._app_info;
 		_origin_stream = stream._origin_stream;
-		_output_profile = stream._output_profile;
 
-		for (auto &track : stream._tracks)
-		{
-			AddTrack(track.second);
-		}
+		_tracks = stream._tracks;
+		_renditions = stream._renditions;
 	}
 
 	Stream::Stream(StreamSourceType source)
@@ -135,16 +132,6 @@ namespace info
 		return GetSourceType() == StreamSourceType::Transcoder || GetLinkedInputStream() != nullptr;
 	}
 
-	void Stream::SetOutputProfile(const cfg::vhost::app::oprf::OutputProfile &profile)
-	{
-		_output_profile = profile;
-	}
-
-	const cfg::vhost::app::oprf::OutputProfile &Stream::GetOutputProfile() const
-	{
-		return _output_profile;
-	}
-
 	void Stream::LinkInputStream(const std::shared_ptr<Stream> &stream)
 	{
 		_origin_stream = stream;
@@ -182,7 +169,7 @@ namespace info
 		return _source_type;
 	}
 
-	bool Stream::AddTrack(std::shared_ptr<MediaTrack> track)
+	bool Stream::AddTrack(const std::shared_ptr<MediaTrack> &track)
 	{
 		return _tracks.insert(std::make_pair(track->GetId(), track)).second;
 	}
@@ -215,6 +202,17 @@ namespace info
 	const std::map<int32_t, std::shared_ptr<MediaTrack>> &Stream::GetTracks() const
 	{
 		return _tracks;
+	}
+
+	bool Stream::AddRendition(const std::shared_ptr<Rendition> &rendition)
+	{
+		_renditions.push_back(rendition);
+		return true;
+	}
+
+	const std::vector<std::shared_ptr<Rendition>> &Stream::GetRenditions() const
+	{
+		return _renditions;
 	}
 
 	const char *Stream::GetApplicationName()
