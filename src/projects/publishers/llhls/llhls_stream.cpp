@@ -390,10 +390,9 @@ ov::String LLHlsStream::GetPlaylistName()
 ov::String LLHlsStream::GetChunklistName(const int32_t &track_id)
 {
 	// chunklist_<track id>_<media type>_<stream key>_llhls.m3u8
-	return ov::String::FormatString("chunklist_%d_%s_%s_llhls.m3u8",
+	return ov::String::FormatString("chunklist_%d_%s_llhls.m3u8",
 										track_id, 
-										StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
-										_stream_key.CStr());
+										StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr());
 }
 
 ov::String LLHlsStream::GetIntializationSegmentName(const int32_t &track_id)

@@ -183,7 +183,7 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 		return;
 	}
 
-	if (file_type != RequestType::Playlist)
+	if (file_type != RequestType::Playlist && file_type != RequestType::Chunklist)
 	{
 		// All reqeusts except playlist have a stream key
 		if (stream_key != llhls_stream->GetStreamKey())
@@ -263,8 +263,8 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 	}
 	else if (name_items[0] == "chunklist")
 	{
-		// chunklist_<track id>_<media type>_<stream_key>_llhls.m3u8?session_key=<key>&_HLS_msn=<M>&_HLS_part=<N>&_HLS_skip=YES|v2
-		if (name_items.size() != 5 || name_ext_items[1] != "m3u8")
+		// chunklist_<track id>_<media type>_llhls.m3u8?session_key=<key>&_HLS_msn=<M>&_HLS_part=<N>&_HLS_skip=YES|v2
+		if (name_items.size() != 4 || name_ext_items[1] != "m3u8")
 		{
 			logtw("Invalid chunklist file name requested: %s", file_name.CStr());
 			return false;
@@ -272,7 +272,6 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 
 		type = RequestType::Chunklist;
 		track_id = ov::Converter::ToInt32(name_items[1].CStr());
-		stream_key = name_items[3];
 	}
 	else if (name_items[0] == "init")
 	{
