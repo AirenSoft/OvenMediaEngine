@@ -172,12 +172,12 @@ namespace http
 					return StatusCode::BadRequest;
 				}
 
-				// Convert all header names to uppercase
-				ov::String field_name = line.Left(static_cast<size_t>(colon_index)).UpperCaseString();
+				// Convert all header names to lower case
+				ov::String field_name = line.Left(static_cast<size_t>(colon_index)).LowerCaseString();
 				// Eliminate OWS(optional white space) to simplify processing
 				ov::String field_value = line.Substring(colon_index + 1).Trim();
 
-				_headers[field_name] = field_value;
+				_headers[field_name.Trim()] = field_value.Trim();
 
 				return StatusCode::OK;
 			}

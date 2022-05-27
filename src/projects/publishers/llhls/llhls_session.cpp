@@ -340,7 +340,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 	ov::String content_encoding = "identity";
 	bool gzip = false;
 	auto encodings = request->GetHeader("Accept-Encoding");
-	if (encodings.IndexOf("gzip") > 0 || encodings.IndexOf("*") > 0)
+	if (encodings.IndexOf("gzip") >= 0 || encodings.IndexOf("*") >= 0)
 	{
 		gzip = true;
 		content_encoding = "gzip";
@@ -405,7 +405,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 	ov::String content_encoding = "identity";
 	bool gzip = false;
 	auto encodings = request->GetHeader("Accept-Encoding");
-	if (encodings.IndexOf("gzip") > 0 || encodings.IndexOf("*") > 0)
+	if (encodings.IndexOf("gzip") >= 0 || encodings.IndexOf("*") >= 0)
 	{
 		gzip = true;
 		content_encoding = "gzip";
