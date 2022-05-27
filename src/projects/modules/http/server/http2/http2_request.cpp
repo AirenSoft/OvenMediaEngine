@@ -53,7 +53,7 @@ namespace http
 
 				for (const auto &header_field : header_fields)
 				{
-					_headers.emplace(header_field.GetName(), header_field.GetValue());
+					_headers.emplace(header_field.GetName().Trim(), header_field.GetValue().Trim());
 				}
 
 				_parse_status = StatusCode::OK;
@@ -114,7 +114,7 @@ namespace http
 
 			ov::String Http2Request::GetHeader(const ov::String &key) const noexcept
 			{
-				auto it = _headers.find(key);
+				auto it = _headers.find(key.LowerCaseString());
 				if (it == _headers.end())
 				{
 					return "";
@@ -125,7 +125,7 @@ namespace http
 
 			bool Http2Request::IsHeaderExists(const ov::String &key) const noexcept
 			{
-				auto it = _headers.find(key);
+				auto it = _headers.find(key.LowerCaseString());
 				if (it == _headers.end())
 				{
 					return false;

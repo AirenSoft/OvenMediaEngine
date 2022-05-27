@@ -14,6 +14,7 @@ namespace ov
 		StopWatch() = default;
 		explicit StopWatch(String tag);
 
+		bool IsStart();
 		void Start();
 		bool Update();
 		int64_t Elapsed(bool nano=false) const;

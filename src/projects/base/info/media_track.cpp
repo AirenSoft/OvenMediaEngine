@@ -337,3 +337,36 @@ bool MediaTrack::IsValid()
 
 	return false;
 }
+
+void MediaTrack::OnFrameAdded(uint64_t bytes)
+{
+	if (_clock_from_first_frame_received.IsStart() == false)
+	{
+		_clock_from_first_frame_received.Start();
+	}
+
+	_total_frame_count ++;
+	_total_frame_bytes += bytes;
+
+	// If bitrate is not set, calculate bitrate
+	if (_bitrate == 0 && _clock_from_first_frame_received.IsElapsed(VALID_BITRATE_CALCULATION_THRESHOLD_MSEC) == true)
+	{
+		auto seconds = static_cast<double>(_clock_from_first_frame_received.Elapsed()) / 1000.0;
+		auto bytes_per_second = static_cast<double>(_total_frame_bytes) / seconds;
+		auto bitrate = static_cast<int32_t>(bytes_per_second * 8.0);
+		SetBitrate(bitrate);
+
+		logtd("Track(%u) Bitrates(%s)", GetId(), ov::Converter::BitToString(bitrate).CStr());
+	}
+
+	// If framerate is not set, calculate framerate
+	if (_framerate == 0 && _clock_from_first_frame_received.IsElapsed(VALID_BITRATE_CALCULATION_THRESHOLD_MSEC) == true)
+	{
+		auto seconds = static_cast<double>(_clock_from_first_frame_received.Elapsed()) / 1000.0;
+		auto frame_count = static_cast<double>(_total_frame_count);
+		auto framerate = frame_count / seconds;
+		SetFrameRate(framerate);
+
+		logtd("Track(%u) FPS(%f)", GetId(), framerate);
+	}
+}

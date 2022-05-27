@@ -80,7 +80,7 @@ namespace http
 
 				ov::String GetHeader(const ov::String &key, ov::String default_value) const noexcept
 				{
-					auto item = _headers.find(key);
+					auto item = _headers.find(key.LowerCaseString());
 
 					if (item == _headers.cend())
 					{
@@ -92,7 +92,7 @@ namespace http
 
 				const bool IsHeaderExists(const ov::String &key) const noexcept
 				{
-					return _headers.find(key) != _headers.cend();
+					return _headers.find(key.LowerCaseString()) != _headers.cend();
 				}
 
 				bool HasContentLength() const
