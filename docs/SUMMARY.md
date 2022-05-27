@@ -10,7 +10,7 @@
   * [SRT (Beta)](live-source/srt-beta.md)
   * [MPEG-2 TS](live-source/mpeg-2-ts-beta.md)
   * [RTSP Pull](live-source/rtsp-pull-beta.md)
-* [Transcoding](transcoding/README.md)
+* [ABR and Transcoding](transcoding/README.md)
   * [Enable GPU Acceleration](transcoding/gpu-usage/README.md)
     * [Manual Installation](transcoding/gpu-usage/manual-installation.md)
 * [Streaming](streaming/README.md)
