@@ -18,7 +18,7 @@ protected:
 	{
 		auto request = exchange->GetRequest();
 
-		if (request->GetMethod() == http::Method::Get)
+		if (request->GetMethod() == http::Method::Get || request->GetMethod() == http::Method::Options)
 		{
 			if (request->GetRequestTarget().IndexOf("llhls.m3u8") >= 0 || request->GetRequestTarget().IndexOf("llhls.m4s") >= 0)
 			{

@@ -16,7 +16,7 @@
 * [Streaming](streaming/README.md)
   * [WebRTC Streaming](streaming/webrtc-publishing.md)
   * [Low-Latency HLS](streaming/low-latency-hls.md)
-  * [Low-Latency DASH and HLS streaming](streaming/hls-mpeg-dash.md)
+  * [Low-Latency DASH and Legacy HLS streaming](streaming/hls-mpeg-dash.md)
 * [Access Control](access-control/README.md)
   * [SignedPolicy](access-control/signedpolicy.md)
   * [AdmissionWebhooks (beta)](access-control/admission-webhooks.md)
