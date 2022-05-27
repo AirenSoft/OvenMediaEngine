@@ -168,6 +168,39 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 	auto http_interceptor = std::make_shared<LLHlsHttpInterceptor>();
 
 	// Register Request Handler
+	http_interceptor->Register(http::Method::Options, R"(.+llhls\.(m3u8|m4s)$)", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
+		auto connection = exchange->GetConnection();
+		auto request = exchange->GetRequest();
+		auto response = exchange->GetResponse();
+
+		auto request_url = request->GetParsedUri();
+		if (request_url == nullptr)
+		{
+			logte("Could not parse request url: %s", request->GetUri().CStr());
+			response->SetStatusCode(http::StatusCode::BadRequest);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
+		if (vhost_app_name.IsValid() == false)
+		{
+			logte("Could not resolve application name from domain: %s", request_url->Host().CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		response->SetStatusCode(http::StatusCode::OK);
+		response->SetHeader("Content-Encoding", "gzip");
+		response->SetHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+		response->SetHeader("Access-Control-Allow-Private-Network", "true");
+
+		auto application = std::static_pointer_cast<LLHlsApplication>(GetApplicationByName(vhost_app_name));
+		application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response);
+
+		return http::svr::NextHandler::DoNotCall;
+	});
+
+
 	http_interceptor->Register(http::Method::Get, R"(.+llhls\.(m3u8|m4s)$)", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
 
 		auto connection = exchange->GetConnection();
