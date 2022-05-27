@@ -33,6 +33,7 @@ namespace serdes
 		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Webrtc).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Webrtc));
 		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::LLDash).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::LLDash));
 		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Hls).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Hls));
+		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::LLHls).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::LLHls));
 		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Dash).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Dash));
 		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Ovt).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Ovt));
 
