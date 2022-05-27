@@ -645,14 +645,13 @@ namespace pvd
 		{
 			if(_depacketizer.IsAvaliableMediaPacket())
 			{
-				
 				auto media_packet = _depacketizer.PopMediaPacket();
 				
 				media_packet->SetMsid(GetMsid());
 				media_packet->SetPacketType(cmn::PacketType::OVT);
 
 				auto pts = AdjustTimestampByBase(media_packet->GetTrackId(), media_packet->GetPts(), std::numeric_limits<int64_t>::max());
-				auto dts = pts;
+				auto dts = media_packet->GetDts() + (pts - media_packet->GetPts());
 			
 				media_packet->SetPts(pts);
 				media_packet->SetDts(dts);
