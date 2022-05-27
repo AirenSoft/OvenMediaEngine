@@ -74,10 +74,19 @@ bool OvtStream::GenerateDecription()
 		"appName" : "app",
 		"streamName" : "stream_720p",
 		"streamUUID" : "OvenMediaEngine_90b8b53e-3140-4e59-813d-9ace51c0e186/default/#default#app/stream",
+		"renditions":
+		[
+			{
+				"name" : "1080p",
+				"video_track_name" : "1080p",
+				"audio_track_name" : "default",
+			}
+		],
 		"tracks":
 		[
 			{
 				"id" : 3291291,
+				"name" : "1080p",
 				"codecId" : 32198392,
 				"mediaType" : 0 | 1 | 2, # video | audio | data
 				"timebase_num" : 90000,
@@ -105,12 +114,31 @@ bool OvtStream::GenerateDecription()
 	Json::Value 	json_root;
 	Json::Value		json_stream;
 	Json::Value		json_tracks;
+	Json::Value		json_renditions;
 
 	json_stream["appName"] = GetApplicationName();
 	json_stream["streamName"] = GetName().CStr();
 
 	// Since the OVT publisher is also an output stream, it transmits the UUID of the input stream.
-	json_stream["originStreamUUID"] = GetLinkedInputStream()->GetUUID().CStr();
+	if (GetLinkedInputStream() != nullptr)
+	{
+		json_stream["originStreamUUID"] = GetLinkedInputStream()->GetUUID().CStr();
+	}
+	else
+	{
+		json_stream["originStreamUUID"] = GetUUID().CStr();
+	}
+
+	for(auto &rendition : _renditions)
+	{
+		Json::Value json_rendition;
+
+		json_rendition["name"] = rendition->GetName().CStr();
+		json_rendition["video_track_name"] = rendition->GetVideoTrackName().CStr();
+		json_rendition["audio_track_name"] = rendition->GetAudioTrackName().CStr();
+
+		json_renditions.append(json_rendition);
+	}
 
 	for(auto &track_item : _tracks)
 	{
@@ -121,6 +149,7 @@ bool OvtStream::GenerateDecription()
 		Json::Value json_audio_track;
 
 		json_track["id"] = track->GetId();
+		json_track["name"] = track->GetName().CStr();
 		json_track["codecId"] = static_cast<int8_t>(track->GetCodecId());
 		json_track["mediaType"] = static_cast<int8_t>(track->GetMediaType());
 		json_track["timebase_num"] = track->GetTimeBase().GetNum();
@@ -150,6 +179,7 @@ bool OvtStream::GenerateDecription()
 		json_tracks.append(json_track);
 	}
 
+	json_stream["renditions"] = json_renditions;
 	json_stream["tracks"] = json_tracks;
 	json_root["stream"] = json_stream;
 	

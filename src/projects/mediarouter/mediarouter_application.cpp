@@ -327,7 +327,9 @@ std::shared_ptr<MediaRouteStream> MediaRouteApplication::CreateOutboundStream(
 
 	auto new_stream = std::make_shared<MediaRouteStream>(stream_info, MediaRouterStreamType::OUTBOUND);
 	if (!new_stream)
+	{
 		return nullptr;
+	}
 
 	_outbound_streams.insert(std::make_pair(stream_info->GetId(), new_stream));
 

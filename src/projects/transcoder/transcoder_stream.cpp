@@ -308,7 +308,16 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 		name = name.Replace("${OriginStreamName}", _input_stream->GetName());
 	}
 	stream->SetName(name);
-	stream->SetOutputProfile(cfg_output_profile);
+
+	bool is_parsed = false;
+	auto renditions = cfg_output_profile.GetRenditions(&is_parsed);
+	if (is_parsed)
+	{
+		for (const auto &rendition : renditions.GetRenditionList())
+		{
+			stream->AddRendition(std::make_shared<Rendition>(rendition.GetName(), rendition.GetVideoName(), rendition.GetAudioName()));
+		}
+	}
 
 	return stream;
 }

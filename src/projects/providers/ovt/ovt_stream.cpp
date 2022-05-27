@@ -304,8 +304,10 @@ namespace pvd
 		// Parse stream and add track
 		auto json_stream = json_contents["stream"];
 		auto json_tracks = json_stream["tracks"];
-
+		auto json_renditions = json_stream["renditions"];
+		
 		// Validation
+		// renditions is optional
 		if (json_stream["appName"].isNull() || json_stream["streamName"].isNull() || json_stream["tracks"].isNull() ||
 			!json_tracks.isArray())
 		{
@@ -320,6 +322,19 @@ namespace pvd
 			SetOriginStreamUUID(json_stream["originStreamUUID"].asString().c_str());
 		}
 
+		// Renditions
+		
+		for (size_t i = 0; i < json_renditions.size(); i++)
+		{
+			auto json_rendition = json_renditions[static_cast<int>(i)];
+
+			auto name = json_rendition["name"].asString().c_str();
+			auto video_track_name = json_rendition["video_track_name"].asString().c_str();
+			auto audio_track_name = json_rendition["audio_track_name"].asString().c_str();
+
+			AddRendition(std::make_shared<Rendition>(name, video_track_name, audio_track_name));
+		}
+
 		//SetName(json_stream["streamName"].asString().c_str());
 		std::shared_ptr<MediaTrack> new_track;
 
@@ -330,7 +345,7 @@ namespace pvd
 			new_track = std::make_shared<MediaTrack>();
 
 			// Validation
-			if (!json_track["id"].isUInt() || !json_track["codecId"].isUInt() || !json_track["mediaType"].isUInt() ||
+			if (!json_track["id"].isUInt() || !json_track["name"].isString() || !json_track["codecId"].isUInt() || !json_track["mediaType"].isUInt() ||
 				!json_track["timebase_num"].isUInt() || !json_track["timebase_den"].isUInt() ||
 				!json_track["bitrate"].isUInt() ||
 				!json_track["startFrameTime"].isUInt64() || !json_track["lastFrameTime"].isUInt64())
@@ -341,6 +356,7 @@ namespace pvd
 			}
 
 			new_track->SetId(json_track["id"].asUInt());
+			new_track->SetName(json_track["name"].asString().c_str());
 			new_track->SetCodecId(static_cast<cmn::MediaCodecId>(json_track["codecId"].asUInt()));
 			new_track->SetMediaType(static_cast<cmn::MediaType>(json_track["mediaType"].asUInt()));
 			new_track->SetTimeBase(json_track["timebase_num"].asUInt(), json_track["timebase_den"].asUInt());

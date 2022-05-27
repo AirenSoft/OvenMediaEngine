@@ -83,17 +83,13 @@ bool LLHlsStream::Start()
 		}
 	}
 
-	bool rendition_enabled = false;
-	auto renditions = GetOutputProfile().GetRenditions(&rendition_enabled);
-	if (rendition_enabled)
+	auto renditions = GetRenditions();
+	if (renditions.size() > 0)
 	{
-		for (const auto &rendition : renditions.GetRenditionList())
+		for (const auto &rendition : renditions)
 		{
-			bool video_enabled = false;
-			bool audio_enabled = false;
-
-			auto video_track_name = rendition.GetVideoName(&video_enabled);
-			auto audio_track_name = rendition.GetAudioName(&audio_enabled);
+			auto video_track_name = rendition->GetVideoTrackName();
+			auto audio_track_name = rendition->GetAudioTrackName();
 			
 			auto video_track = GetTrack(video_track_name);
 			auto audio_track = GetTrack(audio_track_name);
@@ -537,7 +533,7 @@ void LLHlsStream::AddStreamInfToMasterPlaylist(const std::shared_ptr<const Media
 			stream_info._audio_group_id = ov::Converter::ToString(audio_track->GetId());
 		}
 	}
-	else
+	else if (audio_track != nullptr)
 	{
 		stream_info._track = audio_track;
 		stream_info._uri = GetChunklistName(audio_track->GetId());
