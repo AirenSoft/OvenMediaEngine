@@ -258,13 +258,16 @@
 							<Name>bypass_stream</Name>
 							<OutputStreamName>${OriginStreamName}</OutputStreamName>
 
+							<!-- 
+							You can provide ABR with Renditions. Currently, ABR is only supported in LLHLS.
+							
 							<Renditions>
 								<Rendition>
 									<Name>Bypass</Name>
 									<Video>bypass_video</Video>
 									<Audio>bypass_audio</Audio>
 								</Rendition>
-								<!-- <Rendition>
+								<Rendition>
 									<Name>FHD</Name>
 									<Video>video_1280</Video>
 									<Audio>bypass_audio</Audio>
@@ -273,8 +276,9 @@
 									<Name>HD</Name>
 									<Video>video_720</Video>
 									<Audio>bypass_audio</Audio>
-								</Rendition> -->
-							</Renditions>
+								</Rendition>
+							</Renditions> 
+							-->
 
 							<Encodes>
 								<Audio>

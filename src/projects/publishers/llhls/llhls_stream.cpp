@@ -94,6 +94,18 @@ bool LLHlsStream::Start()
 			auto video_track = GetTrack(video_track_name);
 			auto audio_track = GetTrack(audio_track_name);
 
+			if (video_track != nullptr && video_track->GetCodecId() != cmn::MediaCodecId::H264)
+			{
+				logtw("LLHlsStream(%s/%s) - Rendition(%s) has unsupported video codec(%s). This rendition is not used", GetApplication()->GetName().CStr(), GetName().CStr(), video_track_name.CStr(), StringFromMediaCodecId(video_track->GetCodecId()).CStr());
+				continue;
+			}
+
+			if (audio_track != nullptr && audio_track->GetCodecId() != cmn::MediaCodecId::Aac)
+			{
+				logtw("LLHlsStream(%s/%s) - Rendition(%s) has unsupported audio codec(%s). This rendition is not used", GetApplication()->GetName().CStr(), GetName().CStr(), audio_track_name.CStr(), StringFromMediaCodecId(audio_track->GetCodecId()).CStr());
+				continue;
+			}
+
 			AddStreamInfToMasterPlaylist(video_track, audio_track);
 		}
 	}
@@ -390,10 +402,9 @@ ov::String LLHlsStream::GetPlaylistName()
 ov::String LLHlsStream::GetChunklistName(const int32_t &track_id)
 {
 	// chunklist_<track id>_<media type>_<stream key>_llhls.m3u8
-	return ov::String::FormatString("chunklist_%d_%s_%s_llhls.m3u8",
+	return ov::String::FormatString("chunklist_%d_%s_llhls.m3u8",
 										track_id, 
-										StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
-										_stream_key.CStr());
+										StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr());
 }
 
 ov::String LLHlsStream::GetIntializationSegmentName(const int32_t &track_id)
