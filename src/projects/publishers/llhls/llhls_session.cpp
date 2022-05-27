@@ -358,6 +358,12 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 		MonitorInstance->OnSessionConnected(*GetStream(), PublisherType::LLHls);
 		_number_of_players += 1;
 	}
+	else if (result == LLHlsStream::RequestResult::Accepted)
+	{
+		// llhls.m3u8 is transmitted when more than one segment (any track) is created.
+		AddPendingRequest(exchange, RequestType::Playlist, 0, 1, 0);
+		return ;
+	}
 	else
 	{
 		// Send error response
@@ -559,7 +565,15 @@ void LLHlsSession::OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn
 	auto it = _pending_requests.begin();
 	while (it != _pending_requests.end())
 	{
-		if ( (it->track_id == track_id) && 
+		if ( (it->type == RequestType::Playlist) &&
+			 ((it->segment_number < msn) || (it->segment_number <= msn && it->partial_number <= part)) )
+		{
+			// Send the playlist
+			auto exchange = it->exchange;
+			ResponsePlaylist(exchange);
+			it = _pending_requests.erase(it);
+		}
+		else if ( (it->track_id == track_id) && 
 			 ((it->segment_number < msn) || (it->segment_number <= msn && it->partial_number <= part)) )
 		{
 			// Resume the request

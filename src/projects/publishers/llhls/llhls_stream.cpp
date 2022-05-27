@@ -108,7 +108,7 @@ bool LLHlsStream::Start()
 		AddStreamInfToMasterPlaylist(first_video_track, first_audio_track);
 	}
 
-	logti("Master Playlist : %s", _master_playlist.ToString("").CStr());
+	logtd("Master Playlist : %s", _master_playlist.ToString("").CStr());
 
 	logti("LLHlsStream has been created : %s/%u\nChunk Duration(%.2f) Segment Duration(%u) Segment Count(%u)", GetName().CStr(), GetId(), llhls_config.GetChunkDuration(), llhls_config.GetSegmentDuration(), llhls_config.GetSegmentCount());
 
@@ -144,6 +144,11 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 	if (GetState() != State::STARTED)
 	{
 		return { RequestResult::NotFound, nullptr };
+	}
+
+	if (_master_playlist_ready == false)
+	{
+		return { RequestResult::Accepted, nullptr };
 	}
 
 	if (gzip == true)
@@ -451,6 +456,9 @@ void LLHlsStream::OnFMp4StorageInitialized(const int32_t &track_id)
 
 void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t &segment_number)
 {
+	// The master playlist is sent when more than one segment is created.
+	_master_playlist_ready = true;
+
 	auto playlist = GetChunklistWriter(track_id);
 	if (playlist == nullptr)
 	{

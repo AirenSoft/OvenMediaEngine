@@ -106,6 +106,7 @@ private:
 	mutable std::shared_mutex _chunklist_map_lock;
 
 	LLHlsMasterPlaylist _master_playlist;
+	bool _master_playlist_ready = false;
 
 	ov::String _stream_key;
 

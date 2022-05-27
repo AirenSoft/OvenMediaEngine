@@ -11,6 +11,11 @@ namespace ov
 	{
 	}
 
+	bool StopWatch::IsStart()
+	{
+		return _is_valid;
+	}
+
 	void StopWatch::Start()
 	{
 		_is_valid = true;

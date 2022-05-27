@@ -1129,6 +1129,8 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	// Statistics
 	UpdateStatistics(media_track, pop_media_packet);
 
+	media_track->OnFrameAdded(pop_media_packet->GetDataLength());
+
 	return pop_media_packet;
 }
 
