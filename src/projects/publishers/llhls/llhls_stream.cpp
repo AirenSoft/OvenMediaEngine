@@ -158,7 +158,7 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 		return { RequestResult::NotFound, nullptr };
 	}
 
-	if (_master_playlist_ready == false)
+	if (_playlist_ready == false)
 	{
 		return { RequestResult::Accepted, nullptr };
 	}
@@ -180,6 +180,11 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 		return { RequestResult::NotFound, nullptr };
 	}
 
+	if (_playlist_ready == false)
+	{
+		return { RequestResult::Accepted, nullptr };
+	}
+
 	if (msn >= 0 && psn >= 0)
 	{
 		int64_t last_msn, last_psn;
@@ -188,12 +193,6 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 			logtw("Could not get last sequence number for track_id = %d", track_id);
 			return { RequestResult::NotFound, nullptr };
 		}
-
-		// if (last_msn < 0 || last_psn < 0)
-		// {
-		// 	logtw("Could not get last sequence number for track_id = %d", track_id);
-		// 	return { RequestResult::NotFound, nullptr };
-		// }
 
 		if (msn > last_msn || (msn >= last_msn && psn > last_psn))
 		{
@@ -465,10 +464,40 @@ void LLHlsStream::OnFMp4StorageInitialized(const int32_t &track_id)
 	_chunklist_map[track_id] = playlist;
 }
 
+void LLHlsStream::CheckPlaylistReady()
+{
+	std::shared_lock<std::shared_mutex> storage_lock(_storage_map_lock);
+
+	for (const auto &[track_id, storage] : _storage_map)
+	{
+		if (storage->GetLastSegmentNumber() < 0)
+		{
+			return;
+		}
+
+		_max_chunk_duration_ms = std::max(_max_chunk_duration_ms, storage->GetMaxChunkDurationMs());
+		_min_chunk_duration_ms = std::min(_min_chunk_duration_ms, storage->GetMinChunkDurationMs());
+	}
+
+	storage_lock.unlock();
+
+	std::shared_lock<std::shared_mutex> chunklist_lock(_chunklist_map_lock);
+	
+	float_t part_hold_back = (static_cast<float_t>(_max_chunk_duration_ms) / 1000.0f) * 3.0f;
+	for (const auto &[track_id, chunklist] : _chunklist_map)
+	{
+		chunklist->SetPartHoldBack(part_hold_back);
+	}
+
+	_playlist_ready = true;
+}
+
 void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t &segment_number)
 {
-	// The master playlist is sent when more than one segment is created.
-	_master_playlist_ready = true;
+	if (_playlist_ready == false)
+	{
+		CheckPlaylistReady();
+	}
 
 	auto playlist = GetChunklistWriter(track_id);
 	if (playlist == nullptr)

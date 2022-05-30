@@ -129,6 +129,8 @@ public:
 
 	const ov::String& GetUrl() const;
 
+	void SetPartHoldBack(const float &part_hold_back);
+
 	bool AppendSegmentInfo(const SegmentInfo &info);
 	bool AppendPartialSegmentInfo(uint32_t segment_sequence, const SegmentInfo &info);
 
@@ -150,6 +152,7 @@ private:
 	float_t _target_duration = 0;
 	float_t _part_target_duration = 0;
 	float_t _max_part_duration = 0;
+	float_t _part_hold_back = 0;
 	ov::String _map_uri;
 
 	int64_t _last_segment_sequence = -1;

@@ -28,6 +28,11 @@ const ov::String& LLHlsChunklist::GetUrl() const
 	return _url;
 }
 
+void LLHlsChunklist::SetPartHoldBack(const float &part_hold_back)
+{
+	_part_hold_back = part_hold_back;
+}
+
 bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
 {
 	if (info.GetSequence() < _last_segment_sequence)
@@ -168,7 +173,7 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 	playlist.AppendFormat("#EXT-X-TARGETDURATION:%u\n", static_cast<uint32_t>(std::round(_target_duration)));
 
 	// X-SERVER-CONTROL
-	playlist.AppendFormat("#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=%.1f",	_max_part_duration * 3);
+	playlist.AppendFormat("#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=%f", _part_hold_back);
 	if (can_skip_until > 0)
 	{
 		playlist.AppendFormat(",CAN-SKIP-UNTIL=%.1f\n", can_skip_until);
