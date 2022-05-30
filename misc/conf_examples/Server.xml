@@ -359,7 +359,7 @@
 							<JitterBuffer>false</JitterBuffer>
 						</WebRTC>
 						<LLHLS>
-							<ChunkDuration>0.2</ChunkDuration>
+							<ChunkDuration>0.5</ChunkDuration>
 							<SegmentDuration>6</SegmentDuration>
 							<SegmentCount>10</SegmentCount>
 							<CrossDomains>
