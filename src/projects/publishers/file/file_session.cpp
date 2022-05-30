@@ -161,8 +161,8 @@ namespace pub
 
 			// If the selected track list exists. if the current trackid does not exist on the list, ignore it.
 			// If no track list is selected, save all tracks.
-			if ((selected_tracks.empty() != true) &&
-				(std::find(selected_tracks.begin(), selected_tracks.end(), track->GetId()) == selected_tracks.end()))
+			auto selected_tracks = GetRecord()->GetStream().GetTracks();
+			if ((selected_tracks.empty() != true) && selected_tracks.find(track->GetId()) == selected_tracks.end())
 			{
 				continue;
 			}

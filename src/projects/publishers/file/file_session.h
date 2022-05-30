@@ -45,8 +45,6 @@ namespace pub
 
 		std::shared_ptr<info::Record> _record;
 
-		std::vector<int32_t> selected_tracks;
-
 		std::shared_mutex _lock;
 	};
 }  // namespace pub
