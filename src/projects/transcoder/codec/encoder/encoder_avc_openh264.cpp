@@ -41,8 +41,25 @@ bool EncoderAVCxOpenH264::SetCodecParams()
 	::av_opt_set(_codec_context->priv_data, "rc_mode", "bitrate", 0);
 	::av_opt_set(_codec_context->priv_data, "allow_skip_frames", "false", 0);
 
-	// - B-frame must be disabled. because, WEBRTC does not support B-Frame.
-	::av_opt_set(_codec_context->priv_data, "profile", "constrained_baseline", 0);
+	
+	// Profile
+	if (GetRefTrack()->GetProfile() == "constrained_baseline")
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "constrained_baseline", 0);
+	}
+	else if (GetRefTrack()->GetProfile() == "main")
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "main", 0);
+	}
+	else if (GetRefTrack()->GetProfile() == "high")
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "high", 0);
+	}
+	else
+	{
+		// Default - B-frame must be disabled. because, WEBRTC does not support B-Frame.
+		::av_opt_set(_codec_context->priv_data, "profile", "constrained_baseline", 0);
+	}
 	::av_opt_set(_codec_context->priv_data, "coder", "default", 0);
 
 	if (GetRefTrack()->GetPreset() == "slower" || GetRefTrack()->GetPreset() == "slow")

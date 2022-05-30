@@ -45,6 +45,10 @@ public:
 	//@Set by Configuration
 	void SetPreset(ov::String preset);
 	ov::String GetPreset() const;
+	void SetProfile(ov::String profile);
+	ov::String GetProfile() const;
+	void SetTune(ov::String tune);
+	ov::String GetTune() const;
 
 	//@Set by mediarouter
 	void SetHasBframes(bool has_bframe);
@@ -73,6 +77,8 @@ protected:
 	bool _has_bframe;
 
 	ov::String _preset;
+	ov::String _profile;
+	ov::String _tune;
 	std::shared_ptr<ov::Data> _h264_sps_pps_annexb_data = nullptr;
 	std::shared_ptr<ov::Data> _h264_sps_data = nullptr;
 	std::shared_ptr<ov::Data> _h264_pps_data = nullptr;

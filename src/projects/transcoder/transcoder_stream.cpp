@@ -386,6 +386,8 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 		output_track->SetFrameRate(profile.GetFramerate());
 		output_track->SetTimeBase(GetDefaultTimebaseByCodecId(output_track->GetCodecId()));
 		output_track->SetPreset(profile.GetPreset());
+		output_track->SetProfile(profile.GetProfile());
+		output_track->SetTune(profile.GetTune());
 		output_track->SetThreadCount(profile.GetThreadCount());
 		output_track->SetKeyFrameInterval(profile.GetKeyFrameInterval());
 		output_track->SetBFrames(profile.GetBFrames());

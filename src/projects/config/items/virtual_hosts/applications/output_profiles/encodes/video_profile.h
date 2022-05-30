@@ -30,6 +30,8 @@ namespace cfg
 					ov::String _bitrate_string;
 					double _framerate = 0.0;
 					ov::String _preset;
+					ov::String _profile;
+					ov::String _tune;
 					int _thread_count = -1;
 					int _key_frame_interval = 0;
 					int _b_frames = 0;
@@ -46,6 +48,8 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBitrateString, _bitrate_string)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFramerate, _framerate)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetPreset, _preset)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetProfile, _profile)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetTune, _tune)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetThreadCount, _thread_count)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetKeyFrameInterval, _key_frame_interval)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBFrames, _b_frames)
@@ -61,6 +65,8 @@ namespace cfg
 					void SetBitrateString(const ov::String &bitrate_string){_bitrate_string = bitrate_string;}
 					void SetFramerate(double framerate){_framerate = framerate;}
 					void SetPreset(const ov::String &preset){_preset = preset;}
+					void SetProfile(const ov::String &profile){_profile = profile;}
+					void SetTune(const ov::String &tune){_tune = tune;}
 					void SetThreadCount(int thread_count){_thread_count = thread_count;}
 					void SetKeyFrameInterval(int key_frame_interval){_key_frame_interval = key_frame_interval;}
 					void SetBFrames(int b_frames){_b_frames = b_frames;}
@@ -101,6 +107,8 @@ namespace cfg
 						Register<Optional>("Height", &_height);
 						Register<Optional>("Framerate", &_framerate);
 						Register<Optional>("Preset", &_preset);
+						Register<Optional>("Profile", &_profile);
+						Register<Optional>("Tune", &_tune);
 						Register<Optional>("ThreadCount", &_thread_count);
 						Register<Optional>("KeyFrameInterval", &_key_frame_interval, [=]() -> std::shared_ptr<ConfigError> {
 								return (_key_frame_interval >= 0 && _key_frame_interval <= 600) ? nullptr : CreateConfigErrorPtr("KeyFrameInterval must be between 0 and 600");

@@ -57,8 +57,49 @@ bool EncoderHEVCxNV::SetCodecParams()
 		// Default
 		::av_opt_set(_codec_context->priv_data, "preset", "p7", 0);
 	}
-	
-	::av_opt_set(_codec_context->priv_data, "tune", "ull", 0);
+
+	// Tune
+	if (GetRefTrack()->GetTune() == "hq")
+	{
+		::av_opt_set(_codec_context->priv_data, "tune", "hq", 0);
+	}
+	else if (GetRefTrack()->GetTune() == "ll")
+	{
+		::av_opt_set(_codec_context->priv_data, "tune", "ll", 0);
+	}
+	else if (GetRefTrack()->GetTune() == "ull")
+	{
+		::av_opt_set(_codec_context->priv_data, "tune", "ull", 0);
+	}
+	else if (GetRefTrack()->GetTune() == "lossless")
+	{
+		::av_opt_set(_codec_context->priv_data, "tune", "lossless", 0);
+	}
+	else
+	{
+		// Default
+		::av_opt_set(_codec_context->priv_data, "tune", "ull", 0);
+	}
+
+	// Profile
+	if (GetRefTrack()->GetProfile() == "main")
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "main", 0);
+	}
+	else if (GetRefTrack()->GetProfile() == "main10")
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "main10", 0);
+	}
+	else if (GetRefTrack()->GetProfile() == "rext")
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "rext", 0);
+	}
+	else
+	{
+		// Default
+		::av_opt_set(_codec_context->priv_data, "profile", "main", 0);
+	}
+
 	::av_opt_set(_codec_context->priv_data, "rc", "cbr", 0);
 
 	return true;

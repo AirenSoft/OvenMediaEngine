@@ -18,6 +18,8 @@ VideoTrack::VideoTrack()
 	  _b_frames(0),
 	  _has_bframe(false),
 	  _preset(""),
+	  _profile(""),
+	  _tune(""),
 	  _thread_count(0)
 
 {
@@ -117,6 +119,26 @@ void VideoTrack::SetPreset(ov::String preset)
 ov::String VideoTrack::GetPreset() const
 {
 	return _preset;
+}
+
+void VideoTrack::SetProfile(ov::String profile)
+{
+	_profile = profile;
+}
+
+ov::String VideoTrack::GetProfile() const
+{
+	return _profile;
+}
+
+void VideoTrack::SetTune(ov::String tune)
+{
+	_tune = tune;
+}
+
+ov::String VideoTrack::GetTune() const
+{
+	return _tune;
 }
 
 void VideoTrack::SetHasBframes(bool has_bframe)

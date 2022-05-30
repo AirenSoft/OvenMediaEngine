@@ -59,9 +59,53 @@ bool EncoderAVCxNV::SetCodecParams()
 		// Default
 		::av_opt_set(_codec_context->priv_data, "preset", "p7", 0);
 	}
-	
-	::av_opt_set(_codec_context->priv_data, "tune", "ull", 0);
-	::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+
+	// Tune
+	if (GetRefTrack()->GetTune() == "hq")
+	{
+		::av_opt_set(_codec_context->priv_data, "tune", "hq", 0);
+	}
+	else if (GetRefTrack()->GetTune() == "ll")
+	{
+		::av_opt_set(_codec_context->priv_data, "tune", "ll", 0);
+	}
+	else if (GetRefTrack()->GetTune() == "ull")
+	{
+		::av_opt_set(_codec_context->priv_data, "tune", "ull", 0);
+	}
+	else if (GetRefTrack()->GetTune() == "lossless")
+	{
+		::av_opt_set(_codec_context->priv_data, "tune", "lossless", 0);
+	}
+	else
+	{
+		// Default
+		::av_opt_set(_codec_context->priv_data, "tune", "ull", 0);
+	}
+
+	// Profile
+	if (GetRefTrack()->GetProfile() == "baseline")
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+	}
+	else if (GetRefTrack()->GetProfile() == "main")
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "main", 0);
+	}
+	else if (GetRefTrack()->GetProfile() == "high")
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "high", 0);
+	}
+	else if (GetRefTrack()->GetProfile() == "high444p")
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "high444p", 0);
+	}
+	else
+	{
+		// Default
+		::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+	}
+
 	::av_opt_set(_codec_context->priv_data, "rc", "cbr", 0);
 
 	return true;

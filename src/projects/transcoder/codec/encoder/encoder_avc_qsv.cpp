@@ -34,7 +34,24 @@ bool EncoderAVCxQSV::SetCodecParams()
 	_codec_context->height = GetRefTrack()->GetHeight();
 	_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
 
-	::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+	// Profile
+	if (GetRefTrack()->GetProfile() == "baseline")
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+	}
+	else if (GetRefTrack()->GetProfile() == "main")
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "main", 0);
+	}
+	else if (GetRefTrack()->GetProfile() == "high")
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "high", 0);
+	}
+	else
+	{
+		// Default
+		::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+	}
 
 	return true;
 }
