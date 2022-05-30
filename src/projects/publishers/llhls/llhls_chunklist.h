@@ -114,9 +114,9 @@ public:
 
 	private:
 		int64_t _sequence = -1;
-		uint64_t _start_time; // milliseconds since epoce (1970-01-01 00:00:00)
-		float_t _duration; // seconds
-		uint64_t _size;
+		uint64_t _start_time = 0; // milliseconds since epoce (1970-01-01 00:00:00)
+		float_t _duration = 0; // seconds
+		uint64_t _size = 0;
 		ov::String _url;
 		ov::String _next_url;
 		bool _is_independent = false;
