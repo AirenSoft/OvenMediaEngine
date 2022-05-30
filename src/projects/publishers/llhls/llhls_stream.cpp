@@ -287,7 +287,7 @@ void LLHlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packe
 
 	if (_initial_media_packet_buffer.IsEmpty() == false)
 	{
-		logtc("SendVideoFrame() - BufferSize (%u)", _initial_media_packet_buffer.Size());
+		logtd("SendVideoFrame() - BufferSize (%u)", _initial_media_packet_buffer.Size());
 		while (_initial_media_packet_buffer.IsEmpty() == false)
 		{
 			auto buffered_media_packet = _initial_media_packet_buffer.Dequeue();
@@ -313,7 +313,7 @@ void LLHlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packe
 
 	if (_initial_media_packet_buffer.IsEmpty() == false)
 	{
-		logtc("SendAudioFrame() - BufferSize (%u)", _initial_media_packet_buffer.Size());
+		logtd("SendAudioFrame() - BufferSize (%u)", _initial_media_packet_buffer.Size());
 		while (_initial_media_packet_buffer.IsEmpty() == false)
 		{
 			auto buffered_media_packet = _initial_media_packet_buffer.Dequeue();
