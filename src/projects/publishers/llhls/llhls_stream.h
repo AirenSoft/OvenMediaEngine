@@ -113,6 +113,8 @@ private:
 	LLHlsMasterPlaylist _master_playlist;
 	bool _playlist_ready = false;
 
+	ov::Queue<std::shared_ptr<MediaPacket>> _initial_media_packet_buffer;
+
 	ov::String _stream_key;
 
 	uint32_t _worker_count = 0;
