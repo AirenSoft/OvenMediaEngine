@@ -281,7 +281,23 @@ void LLHlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packe
 {
 	if (GetState() != State::STARTED)
 	{
+		_initial_media_packet_buffer.Enqueue(media_packet);
 		return;
+	}
+
+	if (_initial_media_packet_buffer.IsEmpty() == false)
+	{
+		logtd("SendVideoFrame() - BufferSize (%u)", _initial_media_packet_buffer.Size());
+		while (_initial_media_packet_buffer.IsEmpty() == false)
+		{
+			auto buffered_media_packet = _initial_media_packet_buffer.Dequeue();
+			if (buffered_media_packet.has_value() == false)
+			{
+				continue;
+			}
+
+			AppendMediaPacket(buffered_media_packet.value());
+		}
 	}
 
 	AppendMediaPacket(media_packet);
@@ -291,7 +307,23 @@ void LLHlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packe
 {
 	if (GetState() != State::STARTED)
 	{
+		_initial_media_packet_buffer.Enqueue(media_packet);
 		return;
+	}
+
+	if (_initial_media_packet_buffer.IsEmpty() == false)
+	{
+		logtd("SendAudioFrame() - BufferSize (%u)", _initial_media_packet_buffer.Size());
+		while (_initial_media_packet_buffer.IsEmpty() == false)
+		{
+			auto buffered_media_packet = _initial_media_packet_buffer.Dequeue();
+			if (buffered_media_packet.has_value() == false)
+			{
+				continue;
+			}
+
+			AppendMediaPacket(buffered_media_packet.value());
+		}
 	}
 
 	AppendMediaPacket(media_packet);
