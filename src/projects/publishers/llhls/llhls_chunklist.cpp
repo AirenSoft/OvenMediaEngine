@@ -18,6 +18,7 @@ LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<cons
 	_track = track;
 	_max_segments = max_segments;
 	_target_duration = target_duration;
+	_max_part_duration = 0;
 	_part_target_duration = part_target_duration;
 	_map_uri = map_uri;
 }
