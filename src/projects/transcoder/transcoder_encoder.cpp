@@ -59,14 +59,14 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(std::shared_pt
 {
 	std::shared_ptr<TranscodeEncoder> encoder = nullptr;
 
-	bool use_hwaceel = context->GetHardwareAccel();
-	logtd("Use hardware accelerator for encdoer is %s", use_hwaceel ? "enabled" : "disabled");
+	bool use_hwaccel = context->GetHardwareAccel();
+	logtd("Use hardware accelerator for encoder is %s", use_hwaccel ? "enabled" : "disabled");
 
 	switch (context->GetCodecId())
 	{
 		case cmn::MediaCodecId::H264:
 #if SUPPORT_HWACCELS
-			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
+			if (use_hwaccel == true && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
 			{
 				encoder = std::make_shared<EncoderAVCxQSV>();
 				if (encoder != nullptr && encoder->Configure(context) == true)
@@ -75,7 +75,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(std::shared_pt
 				}
 			}
 
-			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
+			if (use_hwaccel == true && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
 			{
 				encoder = std::make_shared<EncoderAVCxNV>();
 				if (encoder != nullptr && encoder->Configure(context) == true)
@@ -93,7 +93,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(std::shared_pt
 			break;
 		case cmn::MediaCodecId::H265:
 #if SUPPORT_HWACCELS
-			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
+			if (use_hwaccel == true && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
 			{
 				encoder = std::make_shared<EncoderHEVCxQSV>();
 				if (encoder != nullptr && encoder->Configure(context) == true)
@@ -102,7 +102,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(std::shared_pt
 				}
 			}
 
-			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
+			if (use_hwaccel == true && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
 			{
 				encoder = std::make_shared<EncoderHEVCxNV>();
 				if (encoder != nullptr && encoder->Configure(context) == true)
