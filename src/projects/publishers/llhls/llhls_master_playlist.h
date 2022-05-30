@@ -19,7 +19,7 @@ public:
 	{
 		enum class Type : uint8_t
 		{
-			Video, Audio, Subtitle, ClosedCaptions
+			Video, Audio, Subtitle, ClosedCaptions, Unknown
 		};
 
 		static MediaInfo &InvalidMediaInfo()
@@ -40,12 +40,14 @@ public:
 				return "SUBTITLES";
 			case Type::ClosedCaptions:
 				return "CLOSED-CAPTIONS";
+			default:
+				break;
 			}
 
 			return "UNKNOWN";
 		}
 
-		Type _type; // Required
+		Type _type = Type::Unknown; // Required
 		ov::String _group_id; // Required
 		ov::String _name; // Required
 		ov::String _language; // Optional

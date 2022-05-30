@@ -318,6 +318,13 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			}
 		}
 
+		if(stream->WaitUntilStart(10000) == false)
+		{
+			logtw("(%s/%s) stream has not started.", vhost_app_name.CStr(), stream_name.CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
 		std::shared_ptr<LLHlsSession> session = nullptr; 
 
 		if (request_url->File() == "llhls.m3u8")

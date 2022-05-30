@@ -12,7 +12,7 @@
 #include "llhls_stream.h"
 #include "llhls_private.h"
 
-std::shared_ptr<LLHlsSession> LLHlsSession::Create(session_id_t session_id, const ov::String session_key,
+std::shared_ptr<LLHlsSession> LLHlsSession::Create(session_id_t session_id, const ov::String &session_key,
 												const std::shared_ptr<pub::Application> &application,
 												const std::shared_ptr<pub::Stream> &stream,
 												uint64_t session_life_time)
@@ -28,7 +28,7 @@ std::shared_ptr<LLHlsSession> LLHlsSession::Create(session_id_t session_id, cons
 	return session;
 }
 
-LLHlsSession::LLHlsSession(const info::Session &session_info, const ov::String session_key,
+LLHlsSession::LLHlsSession(const info::Session &session_info, const ov::String &session_key,
 							const std::shared_ptr<pub::Application> &application, 
 							const std::shared_ptr<pub::Stream> &stream,
 							uint64_t session_life_time)

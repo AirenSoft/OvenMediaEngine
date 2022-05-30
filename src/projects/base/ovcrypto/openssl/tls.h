@@ -105,5 +105,7 @@ namespace ov
 		SSL *_ssl = nullptr;
 
 		TlsBioCallback _callback;
+
+		std::mutex _ssl_lock;
 	};
 }  // namespace ov

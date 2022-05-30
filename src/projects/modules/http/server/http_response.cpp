@@ -265,6 +265,7 @@ namespace http
 			{
 				if (_tls_data->Encrypt(data, &send_data) == false)
 				{
+					logte("Failed to encrypt data: %s", _client_socket->ToString().CStr());
 					return false;
 				}
 

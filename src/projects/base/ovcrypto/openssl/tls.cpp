@@ -249,6 +249,9 @@ namespace ov
 
 	std::shared_ptr<ov::Data> Tls::Read()
 	{
+		// lock
+		std::lock_guard lock(_ssl_lock);
+
 		auto data = std::make_shared<ov::Data>(65535);
 
 		unsigned char buf[1024];
@@ -332,6 +335,9 @@ namespace ov
 	{
 		OV_ASSERT2(_ssl != nullptr);
 
+		// lock
+		std::lock_guard lock(_ssl_lock);
+
 		size_t write_size = 0;
 
 		do
@@ -344,7 +350,10 @@ namespace ov
 				// The write operation was not successful, because either the connection was closed,
 				// an error occurred or action must be taken by the calling process.
 				// Call SSL_get_error() with the return value ret to find out the reason.
-				return GetError(result);
+				
+				auto get_rror =  GetError(result);
+				logtd("Tls::Write()::SSL_write returns %d %d, errno: %d", result, get_rror, errno);
+				return get_rror;
 			}
 
 			write_size += static_cast<size_t>(result);

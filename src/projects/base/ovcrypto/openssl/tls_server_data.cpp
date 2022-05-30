@@ -158,12 +158,16 @@ namespace ov
 		logtd("Trying to encrypt the data for TLS\n%s", plain_data->Dump(32).CStr());
 
 		size_t written_bytes = 0;
-
-		if (_tls.Write(plain_data, &written_bytes) == SSL_ERROR_NONE)
+		auto result = _tls.Write(plain_data, &written_bytes);
+		if (result == SSL_ERROR_NONE)
 		{
 			std::lock_guard lock_guard(_plain_data_mutex);
 			*cipher_data = std::move(_plain_data);
 			return true;
+		}
+		else
+		{
+			logtd("An error occurred while encrypting data: data_len(%u), error code: %d", plain_data->GetLength(), result);
 		}
 
 		return false;
