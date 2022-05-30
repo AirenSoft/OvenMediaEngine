@@ -99,6 +99,16 @@ namespace bmff
 		return _last_segment_number;
 	}
 
+	uint64_t FMP4Storage::GetMaxChunkDurationMs() const
+	{
+		return _max_chunk_duration_ms;
+	}
+
+	uint64_t FMP4Storage::GetMinChunkDurationMs() const
+	{
+		return _min_chunk_duration_ms;
+	}
+
 	bool FMP4Storage::StoreInitializationSection(const std::shared_ptr<ov::Data> &section)
 	{
 		_initialization_section = section;
@@ -109,7 +119,7 @@ namespace bmff
 		return true;
 	}
 
-	bool FMP4Storage::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, uint64_t start_timestamp, uint32_t duration_ms, bool independent)
+	bool FMP4Storage::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, uint64_t start_timestamp, uint64_t duration_ms, bool independent)
 	{
 		auto segment = GetLastSegment();
 
@@ -163,6 +173,9 @@ namespace bmff
 		{
 			return false;
 		}
+
+		_max_chunk_duration_ms = std::max(_max_chunk_duration_ms, duration_ms);
+		_min_chunk_duration_ms = std::min(_min_chunk_duration_ms, duration_ms);
 
 		// Notify observer
 		if (_observer != nullptr)

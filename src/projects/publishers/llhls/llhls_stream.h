@@ -93,6 +93,8 @@ private:
 
 	bool AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_packet);
 
+	void CheckPlaylistReady();
+
 	// Config
 	bmff::FMP4Packager::Config _packager_config;
 	bmff::FMP4Storage::Config _storage_config;
@@ -105,8 +107,11 @@ private:
 	std::map<int32_t, std::shared_ptr<LLHlsChunklist>> _chunklist_map;
 	mutable std::shared_mutex _chunklist_map_lock;
 
+	uint64_t _max_chunk_duration_ms = 0;
+	uint64_t _min_chunk_duration_ms = std::numeric_limits<uint64_t>::max();
+
 	LLHlsMasterPlaylist _master_playlist;
-	bool _master_playlist_ready = false;
+	bool _playlist_ready = false;
 
 	ov::String _stream_key;
 
