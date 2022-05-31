@@ -5,7 +5,7 @@
 
 In short, OvenMediaEngine (OME) is a <b>Sub-Second Latency Live Streaming Server</b> with <b>Large-Scale</b> and <b>High-Definition</b>.
 
-OvenMediaEngine receives a video/audio source from encoders and cameras such as [OvenLiveKit](https://www.ovenmediaengine.com/olk), OBS, XSplit, and more to <b>WebRTC</b>, <b>RTMP</b>, <b>SRT</b>, <b>MPEG-2 TS</b> <sup><i>Beta</sup></i>, or <b>RTSP</b> <sup><i>Beta</sup></i>.  Then, OME transmits it using <b>Low Latency HLS</b>(LLHLS), <b>WebRTC</b>.
+OvenMediaEngine receives a video/audio source from encoders and cameras such as [OvenLiveKit](https://www.ovenmediaengine.com/olk), OBS, XSplit, and more to <b>WebRTC</b>, <b>RTMP</b>, <b>SRT</b>, <b>MPEG-2 TS</b> <sup><i>Beta</sup></i> and <b>RTSP</b> <sup><i>Beta</sup></i>.  Then, OME transmits it over <b>LLHLS</b>(Low Latency HLS) and <b>WebRTC</b>.
 
 Like the picture below:
 <img src="dist/OME_Overview_GitHub_220117.svg" style="max-width: 100%; height: auto;">
