@@ -109,6 +109,8 @@ namespace pub
 			return _state;
 		}
 
+		const std::chrono::system_clock::time_point &GetStartedTime() const;
+
 	protected:
 		Stream(const std::shared_ptr<Application> application, const info::Stream &info);
 		virtual ~Stream();
@@ -125,6 +127,8 @@ namespace pub
 		std::shared_ptr<Application> _application;
 
 		session_id_t _last_issued_session_id;
+
+		std::chrono::system_clock::time_point _started_time;
 
 		State _state = State::CREATED;
 	};

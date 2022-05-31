@@ -71,14 +71,14 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::St
 {
 	std::shared_ptr<TranscodeDecoder> decoder = nullptr;
 
-	bool use_hwaceel = context->GetHardwareAccel();
-	logtd("Use hardware accelerator for decoder is %s", use_hwaceel ? "enabled" : "disabled");
+	bool use_hwaccel = context->GetHardwareAccel();
+	logtd("Use hardware accelerator for decoder is %s", use_hwaccel ? "enabled" : "disabled");
 
 	switch (context->GetCodecId())
 	{
 		case cmn::MediaCodecId::H264:
 #if SUPPORT_HWACCELS
-			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
+			if (use_hwaccel == true && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
 			{
 				decoder = std::make_shared<DecoderAVCxQSV>(info);
 				if (decoder != nullptr && decoder->Configure(context) == true)
@@ -87,7 +87,7 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::St
 				}
 			}
 
-			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
+			if (use_hwaccel == true && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
 			{
 				decoder = std::make_shared<DecoderAVCxNV>(info);
 				if (decoder != nullptr && decoder->Configure(context) == true)
@@ -105,7 +105,7 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::St
 
 		case cmn::MediaCodecId::H265:
 #if SUPPORT_HWACCELS
-			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
+			if (use_hwaccel == true && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
 			{
 				decoder = std::make_shared<DecoderHEVCxQSV>(info);
 				if (decoder != nullptr && decoder->Configure(context) == true)
@@ -114,7 +114,7 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::St
 				}
 			}
 
-			if (use_hwaceel == true && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
+			if (use_hwaccel == true && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
 			{
 				decoder = std::make_shared<DecoderHEVCxNV>(info);
 				if (decoder != nullptr && decoder->Configure(context) == true)

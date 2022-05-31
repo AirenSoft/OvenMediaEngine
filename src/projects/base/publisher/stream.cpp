@@ -200,6 +200,8 @@ namespace pub
 		}
 
 		logti("%s application has started [%s(%u)] stream (MSID : %d)", GetApplicationTypeName(), GetName().CStr(), GetId(), GetMsid());
+
+		_started_time = std::chrono::system_clock::now();
 		_state = State::STARTED;
 		return true;
 	}
@@ -288,6 +290,11 @@ namespace pub
 							info->GetName().CStr(), info->GetId(), GetApplicationTypeName(), info->GetMsid());
 
 		return true;
+	}
+
+	const std::chrono::system_clock::time_point &Stream::GetStartedTime() const
+	{
+		return _started_time;
 	}
 
 	std::shared_ptr<Application> Stream::GetApplication()
