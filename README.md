@@ -5,7 +5,7 @@
 
 In short, OvenMediaEngine (OME) is a <b>Sub-Second Latency Live Streaming Server</b> with <b>Large-Scale</b> and <b>High-Definition</b>.
 
-OvenMediaEngine receives a video/audio source from encoders and cameras such as [OvenLiveKit](https://www.ovenmediaengine.com/olk), OBS, XSplit, and more to <b>WebRTC</b>, <b>RTMP</b>, <b>SRT</b>, <b>MPEG-2 TS</b> <sup><i>Beta</sup></i>, or <b>RTSP</b> <sup><i>Beta</sup></i>.  Then, OME transmits it using <b>WebRTC</b>, <b>Low Latency MPEG-DASH</b> (LLDASH), <b>MPEG-DASH</b>, and <b>HLS</b>.
+OvenMediaEngine receives a video/audio source from encoders and cameras such as [OvenLiveKit](https://www.ovenmediaengine.com/olk), OBS, XSplit, and more to <b>WebRTC</b>, <b>RTMP</b>, <b>SRT</b>, <b>MPEG-2 TS</b> <sup><i>Beta</sup></i>, or <b>RTSP</b> <sup><i>Beta</sup></i>.  Then, OME transmits it using <b>Low Latency HLS</b>(LLHLS), <b>WebRTC</b>.
 
 Like the picture below:
 <img src="dist/OME_Overview_GitHub_220117.svg" style="max-width: 100%; height: auto;">
@@ -30,6 +30,8 @@ Would you please click on each link below for details:
 * <b>Ingest</b>
   * Push: WebRTC, RTMP, SRT, MPEG-2 TS
   * Pull: RTSP
+* <b>Low Latency HLS Streaming</b> 
+  * Support Adaptive Bitrate Streaming (ABR)
 * <b>Sub-Second Latency Streaming with WebRTC</b>
   * WebRTC over TCP (With Embedded TURN Server)
   * Embedded WebRTC Signalling Server (WebSocket based)
@@ -40,7 +42,6 @@ Would you please click on each link below for details:
     * <i>VP8, H.264</i>
   * In-band FEC (Forward Error Correction)
     * <i>Opus</i>
-* <b>Low Latency HLS Streaming</b> 
 * <b>Embedded Live Transcoder</b>
   * Video: VP8, H.264, Pass-through
   * Audio: Opus, AAC, Pass-through
