@@ -152,7 +152,7 @@ namespace pvd
 			char errbuf[256];
 			av_strerror(err, errbuf, sizeof(errbuf));
 
-			logte("%s/%s(%u) Failed to open file : %s", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), errbuf);
+			logte("%s/%s(%u) Failed to open file : %s (%s)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), errbuf, url.CStr());
 
 			return false;
 		}
@@ -179,16 +179,24 @@ namespace pvd
 
 		for (uint32_t track_id = 0; track_id < _format_context->nb_streams; track_id++)
 		{
-			AVStream *stream = _format_context->streams[track_id];
+			auto stream = _format_context->streams[track_id];
+			if(!stream)
+			{
+				continue;
+			}
+
 			auto track = std::make_shared<MediaTrack>();
 			if (!track)
 			{
 				continue;
 			}
 
-			logtd("[%d] media_type[%d] codec_id[%d], extradata_size[%d] tb[%d/%d]", track_id, stream->codecpar->codec_type, stream->codecpar->codec_id, stream->codecpar->extradata_size, stream->time_base.num, stream->time_base.den);
+			if(ffmpeg::Conv::ToMediaTrack(stream, track) == false) {
+				continue;
+			}
+			
+			logtd("track_id:%d,  media_type: %d,  codec_id:%d, extradata_size: %d,  tb: %d/%d,  start_time: %lld", track_id, stream->codecpar->codec_type, stream->codecpar->codec_id, stream->codecpar->extradata_size, stream->time_base.num, stream->time_base.den, stream->start_time);
 
-			ffmpeg::Conv::ToMediaTrack(stream, track);
 			AddTrack(track);
 		}
 

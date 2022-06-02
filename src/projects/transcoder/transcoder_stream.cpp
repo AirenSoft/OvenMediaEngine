@@ -562,7 +562,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 		// Add to Output Stream List. The key is the output stream name.
 		_output_streams.insert(std::make_pair(output_stream->GetName(), output_stream));
 
-		logti("[%s/%s(%u)] -> [%s/%s(%u)] Output stream has been created.",
+		logti("[%s/%s(%u)] -> [%s/%s(%u)] Output stream has been created",
 			  _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId(),
 			  _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
 

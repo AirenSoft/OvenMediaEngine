@@ -150,8 +150,6 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 			return false;
 		}
 
-		logtd("[SPS] %s [PPS] %s", ov::Base64::Encode(config.GetSPS(0)).CStr(), ov::Base64::Encode(config.GetPPS(0)).CStr());
-
 		if (config.NumOfSPS() > 0)
 		{
 			auto sps_data = config.GetSPS(0);
@@ -858,7 +856,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			min_pts = std::min(min_pts, rescaled_last_pts);
 			max_pts = std::max(max_pts, rescaled_last_pts);
 
-			stat_track_str.AppendFormat("\n\ttrack:%3d, type: %4s, codec: %4s(%2d), pts: %lldms(%5lldms), tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %dKbps",
+			stat_track_str.AppendFormat("\n\ttrack:%3d, type: %4s, codec: %4s(%2d), pts: %lldms, dly: %5lldms, tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %dKbps",
 										track_id,
 										track->GetMediaType() == MediaType::Video ? "video" : "audio",
 										::StringFromMediaCodecId(track->GetCodecId()).CStr(),
