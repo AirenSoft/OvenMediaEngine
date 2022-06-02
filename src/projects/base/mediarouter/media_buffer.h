@@ -24,6 +24,19 @@ enum class MediaPacketFlag : uint8_t
 	Key		  // Key Frame
 };
 
+static ov::String StringFromMediaPacketFlag(const MediaPacketFlag flag) 
+{
+	switch (flag)
+	{
+		case MediaPacketFlag::NoFlag:
+			return "NoFlag";
+		case MediaPacketFlag::Key:
+			return "Key";
+		default:
+			return "Unknown";
+	}
+}
+
 class MediaPacket
 {
 public:

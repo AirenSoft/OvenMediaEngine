@@ -652,17 +652,57 @@ namespace pvd
 
 				auto pts = AdjustTimestampByBase(media_packet->GetTrackId(), media_packet->GetPts(), std::numeric_limits<int64_t>::max());
 				auto dts = media_packet->GetDts() + (pts - media_packet->GetPts());
-			
+				[[maybe_unused]] auto old_pts = media_packet->GetPts();
+				[[maybe_unused]] auto old_dts = media_packet->GetDts();
 				media_packet->SetPts(pts);
 				media_packet->SetDts(dts);
 
-				// logtd("%s(%d) - pts(%llu)", StringFromMediaType(media_packet->GetMediaType()).CStr(), media_packet->GetTrackId(), pts);
-				SendFrame(media_packet);
+				logtp("%s/%s / msid(%d), id(%d) type(%s) flag(%6s), pts_ms(%10lld) pts(%10lld -> %10lld) dts(%10lld -> %10lld) tb(%d/%d)", 
+					GetApplicationName(), 
+					GetName().CStr(), 
+					media_packet->GetMsid(),
+					media_packet->GetTrackId(), 
+					StringFromMediaType(media_packet->GetMediaType()).CStr(), 
+					StringFromMediaPacketFlag(media_packet->GetFlag()).CStr(),
+					(int64_t)(pts * GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000),
+					old_pts, 
+					pts, 
+					old_dts,
+					dts,
+					GetTrack(media_packet->GetTrackId())->GetTimeBase().GetNum(), 
+					GetTrack(media_packet->GetTrackId())->GetTimeBase().GetDen()
+				);
+
+				// After the MSID is changed, the packet is dropped until key frame is received.
+				bool drop = false;
+				if(_last_msid_map[media_packet->GetTrackId()] != media_packet->GetMsid())
+				{
+					if(media_packet->GetFlag() == MediaPacketFlag::Key ) 
+					{
+						_last_msid_map[media_packet->GetTrackId()] = media_packet->GetMsid();
+					}
+					else 
+					{
+						drop = true;
+					}
+				}
+
+				// When switching streams, the PTS of the packet may become negative due to the start time of the first packet. Packets before the base timestamp are defined as a drop policy.
+ 				if(media_packet->GetPts() < 0) 
+				 {
+					drop = true;
+				 }
+
+				if(drop == false)
+				{
+					SendFrame(media_packet);
+				}
 
 				if(_depacketizer.IsAvaliableMediaPacket() || _depacketizer.IsAvailableMessage())
 				{
 					continue;
 				}
+
 				return PullStream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
 			}
 			else if(_depacketizer.IsAvailableMessage())

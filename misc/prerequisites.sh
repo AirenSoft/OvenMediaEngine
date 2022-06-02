@@ -253,7 +253,7 @@ install_ffmpeg()
     --enable-encoder=libvpx_vp8,libopus,libfdk_aac,libopenh264,mjpeg,png${ADDI_ENCODER} \
     --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8${ADDI_DECODER} \
     --enable-parser=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
-    --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp,tls,rtmps --enable-demuxer=rtsp,flv,live_flv --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
+    --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp,tls,rtmps --enable-demuxer=rtsp,flv,live_flv,mp4 --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
     --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb,format${ADDI_FILTERS} && \
     make -j$(nproc) && \
     sudo make install && \

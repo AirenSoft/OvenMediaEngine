@@ -66,18 +66,18 @@ namespace pvd
 		bool SendFrame(const std::shared_ptr<MediaPacket> &packet);
 
 		void ResetSourceStreamTimestamp();
-		uint64_t AdjustTimestampByBase(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp);
-		uint64_t AdjustTimestampByDelta(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp);
-		uint64_t GetDeltaTimestamp(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp);
-		uint64_t GetBaseTimestamp(uint32_t track_id);
+		int64_t AdjustTimestampByBase(uint32_t track_id, int64_t timestamp, int64_t max_timestamp);
+		int64_t AdjustTimestampByDelta(uint32_t track_id, int64_t timestamp, int64_t max_timestamp);
+		int64_t GetDeltaTimestamp(uint32_t track_id, int64_t timestamp, int64_t max_timestamp);
+		int64_t GetBaseTimestamp(uint32_t track_id);
 		std::shared_ptr<pvd::Application> _application = nullptr;
 
 	private:
-		// Track ID : Timestamp
-		std::map<uint32_t, uint64_t>			_source_timestamp_map;
-		std::map<uint32_t, uint64_t>			_last_timestamp_map;
-		std::map<uint32_t, uint64_t>			_base_timestamp_map;
-
+		// TrackID : Timestamp(us)
+		std::map<uint32_t, int64_t>			_source_timestamp_map;
+		std::map<uint32_t, int64_t>			_last_timestamp_map;
+		std::map<uint32_t, int64_t>			_base_timestamp_map;
+		int64_t								_start_timestamp = -1LL;
 		State 	_state = State::IDLE;
 	};
 }

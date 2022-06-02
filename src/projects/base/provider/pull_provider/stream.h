@@ -18,7 +18,6 @@ namespace pvd
 	class Application;
 	class PullStreamProperties;
 	
-	#define MAX_PULL_STREAM_RETRY_COUNT		2		// 2 * url_count
 	class PullStream : public Stream
 	{
 	public:
@@ -31,9 +30,9 @@ namespace pvd
 		};
 
 		// PullStream API
-		bool Start(uint32_t max_retry_count = MAX_PULL_STREAM_RETRY_COUNT);
+		bool Start();
 		bool Stop();
-		bool Resume(uint32_t max_retry_count = MAX_PULL_STREAM_RETRY_COUNT); // Resume with another URL
+		bool Resume(); // Resume with another URL
 
 		// Defines the event detection method to process media packets in Pull Stream. 
 		// There are EPOLL event method by socket and INTERVAL event method called at regular time.	
@@ -72,7 +71,7 @@ namespace pvd
 	public:
 		const std::shared_ptr<const ov::Url> GetNextURL();
 		const std::shared_ptr<const ov::Url> GetPrimaryURL();
-		void InitCurrUrlIndex();
+		void ResetUrlIndex();
 		bool IsCurrPrimaryURL();
 
 		std::shared_ptr<pvd::PullStreamProperties> GetProperties();

@@ -91,7 +91,7 @@ namespace pvd
 		void UpdateTimestamp(std::shared_ptr<MediaPacket> &packet);
 
 		// TrackID, Timestamp
-		std::map<uint8_t, uint64_t> _base_timestamp;
-		std::map<uint8_t, uint64_t> _last_timestamp;
+		std::map<uint8_t, int64_t> _base_timestamp;
+		std::map<uint8_t, int64_t> _last_timestamp;
 	};
 }  // namespace pvd

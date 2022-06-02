@@ -83,5 +83,7 @@ namespace pvd
 		std::shared_ptr<OvtPacketizer>	_packetizer;
 		OvtDepacketizer _depacketizer;
 		std::shared_ptr<mon::StreamMetrics> _stream_metrics;
+
+		 std::map<int32_t,uint32_t> _last_msid_map;
 	};
 }
