@@ -24,7 +24,7 @@ std::shared_ptr<RtxRtpPacket> RtpHistory::GetRtxRtpPacket(uint16_t seq_no)
 {
 	auto index = GetIndex(seq_no);
 	// First, look in the cache
-	std::shared_lock<std::shared_mutex> cache_guard(_history_cache_lock);
+	std::shared_lock<std::shared_mutex> cache_read_guard(_history_cache_lock);
 	auto cache_item = _history_cache.find(index);
 	if(cache_item != _history_cache.end())
 	{
@@ -36,7 +36,7 @@ std::shared_ptr<RtxRtpPacket> RtpHistory::GetRtxRtpPacket(uint16_t seq_no)
 			return rtx_packet;
 		}
 	}
-	cache_guard.unlock();
+	cache_read_guard.unlock();
 
 	// find in rtp history
 	std::shared_lock<std::shared_mutex> history_guard(_history_lock);
@@ -53,8 +53,10 @@ std::shared_ptr<RtxRtpPacket> RtpHistory::GetRtxRtpPacket(uint16_t seq_no)
 		{
 			// Create Rtx Packet and store it
 			auto rtx_packet = std::make_shared<RtxRtpPacket>(GetRtxSsrc(), GetRtxPayloadType(), *rtp_packet);
-			cache_guard.lock();
+
+			std::lock_guard<std::shared_mutex> cache_write_guard(_history_cache_lock);
 			_history_cache[index] = rtx_packet;
+			
 			return rtx_packet;
 		}
 	}
