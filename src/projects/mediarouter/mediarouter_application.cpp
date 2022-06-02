@@ -15,6 +15,21 @@
 
 #define MIN_APPLICATION_WORKER_COUNT 1
 #define MAX_APPLICATION_WORKER_COUNT 64
+
+#define CONNECTOR(var) MediaRouteApplicationConnector::ConnectorType::var
+#define OBSERVER(var) MediaRouteApplicationObserver::ObserverType::var
+
+#define IS_REPRENT_SOURCE(var) (var == StreamRepresentationType::Source)
+#define IS_REPRENT_RELAY(var) (var == StreamRepresentationType::Relay)
+
+#define IS_CONNECTOR_PROVIDER(var) (var == MediaRouteApplicationConnector::ConnectorType::Provider)
+#define IS_CONNECTOR_TRANSCODER(var) (var == MediaRouteApplicationConnector::ConnectorType::Transcoder)
+
+#define IS_OBSERVER_PUBLISHER(var) (var == MediaRouteApplicationObserver::ObserverType::Publisher)
+#define IS_OBSERVER_TRANSCODER(var) (var == MediaRouteApplicationObserver::ObserverType::Transcoder)
+#define IS_OBSERVER_RELAY(var) (var == MediaRouteApplicationObserver::ObserverType::Relay)
+#define IS_OBSERVER_ORCHESTRATOR(var) (var == MediaRouteApplicationObserver::ObserverType::Orchestrator)
+
 using namespace cmn;
 
 std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info::Application &application_info)
@@ -30,16 +45,7 @@ std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info:
 MediaRouteApplication::MediaRouteApplication(const info::Application &application_info)
 	: _application_info(application_info)
 {
-	_max_worker_thread_count = (_application_info.GetConfig().GetPublishers().GetAppWorkerCount());
-
-	if (_max_worker_thread_count < MIN_APPLICATION_WORKER_COUNT)
-	{
-		_max_worker_thread_count = MIN_APPLICATION_WORKER_COUNT;
-	}
-	if (_max_worker_thread_count > MAX_APPLICATION_WORKER_COUNT)
-	{
-		_max_worker_thread_count = MAX_APPLICATION_WORKER_COUNT;
-	}
+	_max_worker_thread_count = std::min(std::max((uint32_t)_application_info.GetConfig().GetPublishers().GetAppWorkerCount(), (uint32_t)MIN_APPLICATION_WORKER_COUNT), (uint32_t)MAX_APPLICATION_WORKER_COUNT);
 
 	logti("Created Mediarouter application. application id(%u), app(%s), worker(%d)", _application_info.GetId(), _application_info.GetName().CStr(), _max_worker_thread_count);
 
@@ -147,37 +153,35 @@ bool MediaRouteApplication::Stop()
 }
 
 // Called when an application is created
-bool MediaRouteApplication::RegisterConnectorApp(
-	std::shared_ptr<MediaRouteApplicationConnector> app_conn)
+bool MediaRouteApplication::RegisterConnectorApp(std::shared_ptr<MediaRouteApplicationConnector> connector)
 {
 	std::lock_guard<std::shared_mutex> lock(_connectors_lock);
 
-	if (app_conn == nullptr)
+	if (connector == nullptr)
 	{
 		return false;
 	}
 
-	app_conn->SetMediaRouterApplication(GetSharedPtr());
+	connector->SetMediaRouterApplication(GetSharedPtr());
 
-	_connectors.push_back(app_conn);
+	_connectors.push_back(connector);
 
-	logtd("Registered connector. %p app(%s) type(%d)", app_conn.get(), _application_info.GetName().CStr(), app_conn->GetConnectorType());
+	logtd("Registered connector. app(%s) type(%d)", _application_info.GetName().CStr(), connector->GetConnectorType());
 
 	return true;
 }
 
 // Called when an application is remvoed
-bool MediaRouteApplication::UnregisterConnectorApp(
-	std::shared_ptr<MediaRouteApplicationConnector> app_conn)
+bool MediaRouteApplication::UnregisterConnectorApp(std::shared_ptr<MediaRouteApplicationConnector> connector)
 {
 	std::lock_guard<std::shared_mutex> lock(_connectors_lock);
 
-	if (!app_conn)
+	if (!connector)
 	{
 		return false;
 	}
 
-	auto position = std::find(_connectors.begin(), _connectors.end(), app_conn);
+	auto position = std::find(_connectors.begin(), _connectors.end(), connector);
 	if (position == _connectors.end())
 	{
 		return true;
@@ -185,39 +189,37 @@ bool MediaRouteApplication::UnregisterConnectorApp(
 
 	_connectors.erase(position);
 
-	logti("Unregistered connector. %p app(%s) type(%d)", app_conn.get(), _application_info.GetName().CStr(), app_conn->GetConnectorType());
+	logti("Unregistered connector. app(%s) type(%d)", _application_info.GetName().CStr(), connector->GetConnectorType());
 
 	return true;
 }
 
-bool MediaRouteApplication::RegisterObserverApp(
-	std::shared_ptr<MediaRouteApplicationObserver> app_obsrv)
+bool MediaRouteApplication::RegisterObserverApp(std::shared_ptr<MediaRouteApplicationObserver> observer)
 {
 	std::lock_guard<std::shared_mutex> lock(_observers_lock);
 
-	if (!app_obsrv)
+	if (!observer)
 	{
 		return false;
 	}
 
-	_observers.push_back(app_obsrv);
+	_observers.push_back(observer);
 
-	logtd("Registered observer. %p app(%s) type(%d)", app_obsrv.get(), _application_info.GetName().CStr(), app_obsrv->GetObserverType());
+	logtd("Registered observer. app(%s) type(%d)", _application_info.GetName().CStr(), observer->GetObserverType());
 
 	return true;
 }
 
-bool MediaRouteApplication::UnregisterObserverApp(
-	std::shared_ptr<MediaRouteApplicationObserver> app_obsrv)
+bool MediaRouteApplication::UnregisterObserverApp(std::shared_ptr<MediaRouteApplicationObserver> observer)
 {
 	std::lock_guard<std::shared_mutex> lock(_observers_lock);
 
-	if (!app_obsrv)
+	if (!observer)
 	{
 		return false;
 	}
 
-	auto position = std::find(_observers.begin(), _observers.end(), app_obsrv);
+	auto position = std::find(_observers.begin(), _observers.end(), observer);
 	if (position == _observers.end())
 	{
 		return true;
@@ -225,15 +227,13 @@ bool MediaRouteApplication::UnregisterObserverApp(
 
 	_observers.erase(position);
 
-	logti("Unregistered observer. %p app(%s) type(%d)", app_obsrv.get(), _application_info.GetName().CStr(), app_obsrv->GetObserverType());
+	logti("Unregistered observer. app(%s) type(%d)", _application_info.GetName().CStr(), observer->GetObserverType());
 
 	return true;
 }
 
-// OnStreamCreated is called from Provider, Transcoder, Relay
-bool MediaRouteApplication::OnStreamCreated(
-	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
-	const std::shared_ptr<info::Stream> &stream_info)
+// OnStreamCreated is called from Provider, Transcoder
+bool MediaRouteApplication::OnStreamCreated(const std::shared_ptr<MediaRouteApplicationConnector> &app_conn, const std::shared_ptr<info::Stream> &stream_info)
 {
 	if (!app_conn || !stream_info)
 	{
@@ -244,10 +244,12 @@ bool MediaRouteApplication::OnStreamCreated(
 	logti("Trying to create a stream: [%s/%s(%u)]", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 	logti("%s", stream_info->GetInfoString().CStr());
 
-	auto connector = app_conn->GetConnectorType();
+	auto connector_type = app_conn->GetConnectorType();
+	auto representation_type = stream_info->GetRepresentationType();
+
 	std::shared_ptr<MediaRouteStream> stream = nullptr;
 
-	if (connector == MediaRouteApplicationConnector::ConnectorType::Provider)
+	if (IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_SOURCE(representation_type))
 	{
 		// Check there is a duplicate inbound stream
 		if (GetInboundStreamByName(stream_info->GetName()) != nullptr)
@@ -262,7 +264,8 @@ bool MediaRouteApplication::OnStreamCreated(
 			return false;
 		}
 	}
-	else if (connector == MediaRouteApplicationConnector::ConnectorType::Transcoder || connector == MediaRouteApplicationConnector::ConnectorType::Relay)
+	else if ((IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_RELAY(representation_type)) ||
+			 (IS_CONNECTOR_TRANSCODER(connector_type)))
 	{
 		if (GetOutboundStreamByName(stream_info->GetName()) != nullptr)
 		{
@@ -278,8 +281,7 @@ bool MediaRouteApplication::OnStreamCreated(
 	}
 	else
 	{
-		logte("Unsupported connector type %d", connector);
-
+		logte("Unknown connector");
 		return false;
 	}
 
@@ -292,7 +294,7 @@ bool MediaRouteApplication::OnStreamCreated(
 	// 			    Notifies the Observer that streaming has been created.
 	// - from Transcoder : Notify to Observer(Publisher)
 	// - from Relay : Notify to Observer(Publisher)
-	if (!NotifyStreamCreate(stream->GetStream(), connector))
+	if (!NotifyStreamCreate(stream->GetStream(), connector_type))
 	{
 		return false;
 	}
@@ -306,8 +308,7 @@ bool MediaRouteApplication::OnStreamCreated(
 	return true;
 }
 
-std::shared_ptr<MediaRouteStream> MediaRouteApplication::CreateInboundStream(
-	const std::shared_ptr<info::Stream> &stream_info)
+std::shared_ptr<MediaRouteStream> MediaRouteApplication::CreateInboundStream(const std::shared_ptr<info::Stream> &stream_info)
 {
 	std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
 
@@ -320,8 +321,7 @@ std::shared_ptr<MediaRouteStream> MediaRouteApplication::CreateInboundStream(
 	return new_stream;
 }
 
-std::shared_ptr<MediaRouteStream> MediaRouteApplication::CreateOutboundStream(
-	const std::shared_ptr<info::Stream> &stream_info)
+std::shared_ptr<MediaRouteStream> MediaRouteApplication::CreateOutboundStream(const std::shared_ptr<info::Stream> &stream_info)
 {
 	std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
 
@@ -336,50 +336,36 @@ std::shared_ptr<MediaRouteStream> MediaRouteApplication::CreateOutboundStream(
 	return new_stream;
 }
 
-bool MediaRouteApplication::NotifyStreamCreate(
-	const std::shared_ptr<info::Stream> &stream_info,
-	MediaRouteApplicationConnector::ConnectorType connector_type)
+bool MediaRouteApplication::NotifyStreamCreate(const std::shared_ptr<info::Stream> &stream_info, MediaRouteApplicationConnector::ConnectorType connector_type)
 {
 	std::shared_lock<std::shared_mutex> lock(_observers_lock);
 
-	int32_t last_observer_type = -1;
+	auto representation_type = stream_info->GetRepresentationType();
 
 	for (auto observer : _observers)
 	{
 		auto oberver_type = observer->GetObserverType();
 
-		switch (connector_type)
+		// Provider(source) => Transcoder, Relay(not used)
+		if (IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_SOURCE(representation_type))
 		{
-			case MediaRouteApplicationConnector::ConnectorType::Provider: {
-				// Flow: Provider -> MediaRoute -> Transcoder
-				// Flow: Provider -> MediaRoute -> Relay
-				if (oberver_type == MediaRouteApplicationObserver::ObserverType::Transcoder ||
-					oberver_type == MediaRouteApplicationObserver::ObserverType::Relay)
-				{
-					if (last_observer_type != (int32_t)oberver_type)
-					{
-						logtd("Notify created stream to relay or trasncoder. %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
-					}
-					observer->OnStreamCreated(stream_info);
-				}
-			}
-			break;
+			if (IS_OBSERVER_TRANSCODER(oberver_type) || IS_OBSERVER_RELAY(oberver_type))
+			{
+				logtd("Notify created stream to relay or trasncoder. %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
 
-			case MediaRouteApplicationConnector::ConnectorType::Transcoder:
-			case MediaRouteApplicationConnector::ConnectorType::Relay: {
-				if (oberver_type == MediaRouteApplicationObserver::ObserverType::Publisher)
-				{
-					if (last_observer_type != (int32_t)oberver_type)
-					{
-						logtd("Notify created stream to publisher. %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
-					}
-					observer->OnStreamCreated(stream_info);
-				}
+				observer->OnStreamCreated(stream_info);
 			}
-			break;
 		}
+		// Provider(relay), Transcoder => Publisher
+		else if ((IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_RELAY(representation_type)) || (IS_CONNECTOR_TRANSCODER(connector_type)))
+		{
+			if (IS_OBSERVER_PUBLISHER(oberver_type))
+			{
+				logtd("Notify created stream to publisher. %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
 
-		last_observer_type = (int32_t)oberver_type;
+				observer->OnStreamCreated(stream_info);
+			}
+		}
 	}
 
 	return true;
@@ -389,7 +375,6 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 {
 	std::shared_lock<std::shared_mutex> lock(_observers_lock);
 
-	int32_t last_observer_type = -1;
 	for (auto observer : _observers)
 	{
 		auto oberver_type = observer->GetObserverType();
@@ -397,33 +382,19 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 		switch (stream->GetInoutType())
 		{
 			case MediaRouterStreamType::INBOUND: {
-				// Flow: Provider -> MediaRoute -> Transcoder
-				if (oberver_type == MediaRouteApplicationObserver::ObserverType::Transcoder)
+				if (IS_OBSERVER_TRANSCODER(oberver_type))
 				{
-					if (last_observer_type != (int32_t)oberver_type)
-					{
-						logtd("Notify prepared stream to trasncoder. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
-					}
+					logtd("Notify prepared stream to trasncoder. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
+
 					observer->OnStreamPrepared(stream->GetStream());
 				}
 			}
 			break;
 
 			case MediaRouterStreamType::OUTBOUND: {
-				if (oberver_type == MediaRouteApplicationObserver::ObserverType::Publisher)
+				if (IS_OBSERVER_PUBLISHER(oberver_type) || IS_OBSERVER_RELAY(oberver_type))
 				{
-					if (last_observer_type != (int32_t)oberver_type)
-					{
-						logtd("Notify prepared stream to publisher. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
-					}
-					observer->OnStreamPrepared(stream->GetStream());
-				}
-				else if (oberver_type == MediaRouteApplicationObserver::ObserverType::Relay)
-				{
-					if (last_observer_type != (int32_t)oberver_type)
-					{
-						logtd("Notify prepared stream to relay. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
-					}
+					logtd("Notify prepared stream to publisher. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
 
 					observer->OnStreamPrepared(stream->GetStream());
 				}
@@ -436,7 +407,6 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 			}
 			break;
 		}
-		last_observer_type = (int32_t)oberver_type;
 	}
 
 	stream->OnStreamPrepared(true);
@@ -444,9 +414,7 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 	return true;
 }
 
-bool MediaRouteApplication::OnStreamUpdated(
-	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
-	const std::shared_ptr<info::Stream> &stream_info)
+bool MediaRouteApplication::OnStreamUpdated(const std::shared_ptr<MediaRouteApplicationConnector> &app_conn, const std::shared_ptr<info::Stream> &stream_info)
 {
 	logti("Trying to update a stream: [%s/%s(%u)]", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
@@ -456,24 +424,35 @@ bool MediaRouteApplication::OnStreamUpdated(
 		return false;
 	}
 
+	auto connector_type = app_conn->GetConnectorType();
+	auto representation_type = stream_info->GetRepresentationType();
+
 	// For Monitoring
 	mon::Monitoring::GetInstance()->OnStreamUpdated(*stream_info);
 
-	switch (app_conn->GetConnectorType())
+	// Provider(source) => Inbound Stream
+	if (IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_SOURCE(representation_type))
 	{
-		case MediaRouteApplicationConnector::ConnectorType::Provider: {
-			GetInboundStream(stream_info->GetId())->Flush();
+		auto stream = GetInboundStream(stream_info->GetId());
+		if (stream)
+		{
+			stream->Flush();
 		}
-		break;
-
-		case MediaRouteApplicationConnector::ConnectorType::Transcoder:
-		case MediaRouteApplicationConnector::ConnectorType::Relay: {
-			GetOutboundStream(stream_info->GetId())->Flush();
+	}
+	// Provider(relay), Transcoder => Outbound Stream
+	else if ((IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_RELAY(representation_type)) ||
+			 (IS_CONNECTOR_TRANSCODER(connector_type)))
+	{
+		auto stream = GetOutboundStream(stream_info->GetId());
+		if (stream)
+		{
+			stream->Flush();
 		}
-		break;
-		default:
-			logte("Unknown connector type %d", app_conn->GetConnectorType());
-			break;
+	}
+	else
+	{
+		logte("Unknown connector");
+		return false;
 	}
 
 	if (!NotifyStreamUpdated(stream_info, app_conn->GetConnectorType()))
@@ -484,9 +463,7 @@ bool MediaRouteApplication::OnStreamUpdated(
 	return true;
 }
 
-bool MediaRouteApplication::OnStreamDeleted(
-	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
-	const std::shared_ptr<info::Stream> &stream_info)
+bool MediaRouteApplication::OnStreamDeleted(const std::shared_ptr<MediaRouteApplicationConnector> &app_conn, const std::shared_ptr<info::Stream> &stream_info)
 {
 	logti("Trying to delete a stream: [%s/%s(%u)]", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
@@ -496,6 +473,9 @@ bool MediaRouteApplication::OnStreamDeleted(
 		return false;
 	}
 
+	auto connector_type = app_conn->GetConnectorType();
+	auto representation_type = stream_info->GetRepresentationType();
+
 	// For Monitoring
 	mon::Monitoring::GetInstance()->OnStreamDeleted(*stream_info);
 
@@ -504,36 +484,34 @@ bool MediaRouteApplication::OnStreamDeleted(
 		return false;
 	}
 
-	switch (app_conn->GetConnectorType())
+	// Provider(source) => Inbound Stream
+	if (IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_SOURCE(representation_type))
 	{
-		case MediaRouteApplicationConnector::ConnectorType::Provider: {
-			DeleteInboundStream(stream_info);
-		}
-		break;
-
-		case MediaRouteApplicationConnector::ConnectorType::Transcoder:
-		case MediaRouteApplicationConnector::ConnectorType::Relay: {
-			DeleteOutboundStream(stream_info);
-		}
-		break;
-		default:
-			logte("Unknown connector type %d", app_conn->GetConnectorType());
-			break;
+		DeleteInboundStream(stream_info);
+	}
+	// Provider(relay), Transcoder => Outbound Stream
+	else if ((IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_RELAY(representation_type)) ||
+			 (IS_CONNECTOR_TRANSCODER(connector_type)))
+	{
+		DeleteOutboundStream(stream_info);
+	}
+	else
+	{
+		logte("Unknown connector");
+		return false;
 	}
 
 	return true;
 }
 
-bool MediaRouteApplication::DeleteInboundStream(
-	const std::shared_ptr<info::Stream> &stream_info)
+bool MediaRouteApplication::DeleteInboundStream(const std::shared_ptr<info::Stream> &stream_info)
 {
 	std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
 	_inbound_streams.erase(stream_info->GetId());
 
 	return true;
 }
-bool MediaRouteApplication::DeleteOutboundStream(
-	const std::shared_ptr<info::Stream> &stream_info)
+bool MediaRouteApplication::DeleteOutboundStream(const std::shared_ptr<info::Stream> &stream_info)
 {
 	std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
 	_outbound_streams.erase(stream_info->GetId());
@@ -541,12 +519,11 @@ bool MediaRouteApplication::DeleteOutboundStream(
 	return true;
 }
 
-bool MediaRouteApplication::NotifyStreamDeleted(
-	const std::shared_ptr<info::Stream> &stream_info,
-	const MediaRouteApplicationConnector::ConnectorType connector_type)
+bool MediaRouteApplication::NotifyStreamDeleted(const std::shared_ptr<info::Stream> &stream_info, const MediaRouteApplicationConnector::ConnectorType connector_type)
 {
 	std::shared_lock<std::shared_mutex> lock_guard(_observers_lock);
-	int32_t last_observer_type = -1;
+
+	auto representation_type = stream_info->GetRepresentationType();
 
 	for (auto it = _observers.begin(); it != _observers.end(); ++it)
 	{
@@ -554,58 +531,43 @@ bool MediaRouteApplication::NotifyStreamDeleted(
 
 		auto observer_type = observer->GetObserverType();
 
-		if (connector_type == MediaRouteApplicationConnector::ConnectorType::Provider)
+		// Provider(source) => Transcoder, Relay(not used), Orchestrator
+		if (IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_SOURCE(representation_type))
 		{
-			if ((observer_type == MediaRouteApplicationObserver::ObserverType::Transcoder) ||
-				(observer_type == MediaRouteApplicationObserver::ObserverType::Relay) ||
-				(observer_type == MediaRouteApplicationObserver::ObserverType::Orchestrator))
+			if (IS_OBSERVER_TRANSCODER(observer_type) ||
+				IS_OBSERVER_RELAY(observer_type) ||
+				IS_OBSERVER_ORCHESTRATOR(observer_type))
 			{
-				if (last_observer_type != (int32_t)observer_type)
-				{
-					logtd("Notify created stream from provider to transcoder, relay, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
-				}
+				logtd("Notify deleted stream from provider(source) to transcoder, relay, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
 				observer->OnStreamDeleted(stream_info);
 			}
 		}
-		else if (connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder)
+		// Provider(Relay), Transcoder  => Publisher, Relay(not used), Orchestrator
+		else if ((IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_RELAY(representation_type)) ||
+				 (IS_CONNECTOR_TRANSCODER(connector_type)))
 		{
-			if ((observer_type == MediaRouteApplicationObserver::ObserverType::Publisher) ||
-				(observer_type == MediaRouteApplicationObserver::ObserverType::Relay) ||
-				(observer_type == MediaRouteApplicationObserver::ObserverType::Orchestrator))
+			if (IS_OBSERVER_PUBLISHER(observer_type) ||
+				IS_OBSERVER_RELAY(observer_type) ||
+				IS_OBSERVER_ORCHESTRATOR(observer_type))
 			{
-				if (last_observer_type != (int32_t)observer_type)
-				{
-					logtd("Notify created stream from transcoder to publisher, relay, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
-				}				
+				logtd("Notify deleted stream from transcoder, provider(relay) to publisher, relay, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
 				observer->OnStreamDeleted(stream_info);
 			}
 		}
-		else if (connector_type == MediaRouteApplicationConnector::ConnectorType::Relay)
+		else
 		{
-			if ((observer_type == MediaRouteApplicationObserver::ObserverType::Transcoder) ||
-				(observer_type == MediaRouteApplicationObserver::ObserverType::Publisher) ||
-				(observer_type == MediaRouteApplicationObserver::ObserverType::Orchestrator))
-			{
-				if (last_observer_type != (int32_t)observer_type)
-				{
-					logtd("Notify created stream from relay to transcoder, publisher, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
-				}								
-				observer->OnStreamDeleted(stream_info);
-			}
+			logtw("Unknown Connector");
 		}
-
-		last_observer_type = (int32_t)observer_type;
 	}
 
 	return true;
 }
 
-bool MediaRouteApplication::NotifyStreamUpdated(
-	const std::shared_ptr<info::Stream> &stream_info,
-	const MediaRouteApplicationConnector::ConnectorType connector_type)
+bool MediaRouteApplication::NotifyStreamUpdated(const std::shared_ptr<info::Stream> &stream_info, const MediaRouteApplicationConnector::ConnectorType connector_type)
 {
 	std::shared_lock<std::shared_mutex> lock_guard(_observers_lock);
-	int32_t last_observer_type = -1;
+
+	auto representation_type = stream_info->GetRepresentationType();
 
 	for (auto it = _observers.begin(); it != _observers.end(); ++it)
 	{
@@ -613,47 +575,33 @@ bool MediaRouteApplication::NotifyStreamUpdated(
 
 		auto observer_type = observer->GetObserverType();
 
-		if (connector_type == MediaRouteApplicationConnector::ConnectorType::Provider)
+		// Provider(source) => Transcoder, Relay(not used), Orchestrator
+		if (IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_SOURCE(representation_type))
 		{
-			if ((observer_type == MediaRouteApplicationObserver::ObserverType::Transcoder) ||
-				(observer_type == MediaRouteApplicationObserver::ObserverType::Relay) ||
-				(observer_type == MediaRouteApplicationObserver::ObserverType::Orchestrator))
+			if (IS_OBSERVER_TRANSCODER(observer_type) ||
+				IS_OBSERVER_RELAY(observer_type) ||
+				IS_OBSERVER_ORCHESTRATOR(observer_type))
 			{
-				if (last_observer_type != (int32_t)observer_type)
-				{
-					logtd("Notify updated stream from provider to transcoder, relay, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
-				}				
+				logtd("Notify updated stream from provider(source) to transcoder, relay, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
 				observer->OnStreamUpdated(stream_info);
 			}
 		}
-		else if (connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder)
+		// Provider(Relay), Transcoder  => Publisher, Relay(not used), Orchestrator
+		else if ((IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_RELAY(representation_type)) ||
+				 (IS_CONNECTOR_TRANSCODER(connector_type)))
 		{
-			if ((observer_type == MediaRouteApplicationObserver::ObserverType::Publisher) ||
-				(observer_type == MediaRouteApplicationObserver::ObserverType::Relay) ||
-				(observer_type == MediaRouteApplicationObserver::ObserverType::Orchestrator))
+			if (IS_OBSERVER_PUBLISHER(observer_type) ||
+				IS_OBSERVER_RELAY(observer_type) ||
+				IS_OBSERVER_ORCHESTRATOR(observer_type))
 			{
-				if (last_observer_type != (int32_t)observer_type)
-				{
-					logtd("Notify updated stream from transcoder to publisher, relay, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
-				}					
+				logtd("Notify updated stream from transcoder, provider(relay) to publisher, relay, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
 				observer->OnStreamUpdated(stream_info);
 			}
 		}
-		else if (connector_type == MediaRouteApplicationConnector::ConnectorType::Relay)
+		else
 		{
-			if ((observer_type == MediaRouteApplicationObserver::ObserverType::Transcoder) ||
-				(observer_type == MediaRouteApplicationObserver::ObserverType::Publisher) ||
-				(observer_type == MediaRouteApplicationObserver::ObserverType::Orchestrator))
-			{
-				if (last_observer_type != (int32_t)observer_type)
-				{
-					logtd("Notify updated stream from transcoder to publisher, transcoder, orchestrator.  %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
-				}					
-				observer->OnStreamUpdated(stream_info);
-			}
+			logtw("Unknown Connector");
 		}
-
-		last_observer_type = (int32_t)observer_type;
 	}
 
 	return true;
@@ -661,51 +609,47 @@ bool MediaRouteApplication::NotifyStreamUpdated(
 
 // @from Provider
 // @from TranscoderProvider
-bool MediaRouteApplication::OnPacketReceived(
-	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
-	const std::shared_ptr<info::Stream> &stream_info,
-	const std::shared_ptr<MediaPacket> &packet)
+bool MediaRouteApplication::OnPacketReceived(const std::shared_ptr<MediaRouteApplicationConnector> &app_conn, const std::shared_ptr<info::Stream> &stream_info, const std::shared_ptr<MediaPacket> &packet)
 {
 	if (!app_conn || !stream_info)
 	{
 		return false;
 	}
 
-	std::shared_ptr<MediaRouteStream> stream = nullptr;
-	switch (app_conn->GetConnectorType())
+	auto connector_type = app_conn->GetConnectorType();
+	auto representation_type = stream_info->GetRepresentationType();
+
+	// Provider(source) => Inbound Stream
+	if (IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_SOURCE(representation_type))
 	{
-		case MediaRouteApplicationConnector::ConnectorType::Provider: {
-			stream = GetInboundStream(stream_info->GetId());
-			if (!stream)
-			{
-				// logte("Could not foun inbound stream. name(%s/%s)", _application_info.GetName().CStr(), stream_info->GetName().CStr());
-				return false;
-			}
-
-			stream->Push(packet);
-
-			_inbound_stream_indicator[GetWorkerIDByStreamID(stream_info->GetId())]->Enqueue(stream);
-		}
-		break;
-
-		case MediaRouteApplicationConnector::ConnectorType::Transcoder:
-		case MediaRouteApplicationConnector::ConnectorType::Relay: {
-			stream = GetOutboundStream(stream_info->GetId());
-			if (!stream)
-			{
-				// logte("Could not found outbound stream. name(%s/%s)", _application_info.GetName().CStr(), stream_info->GetName().CStr());
-				return false;
-			}
-
-			stream->Push(packet);
-
-			_outbound_stream_indicator[GetWorkerIDByStreamID(stream_info->GetId())]->Enqueue(stream);
-		}
-		break;
-		default: {
-			logte("Unknown connector type");
+		auto stream = GetInboundStream(stream_info->GetId());
+		if (!stream)
+		{
 			return false;
 		}
+
+		stream->Push(packet);
+
+		_inbound_stream_indicator[GetWorkerIDByStreamID(stream_info->GetId())]->Enqueue(stream);
+	}
+	// Provider(relay), Transcoder => Outbound Stream
+	else if ((IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_RELAY(representation_type)) ||
+			 (IS_CONNECTOR_TRANSCODER(connector_type)))
+	{
+		auto stream = GetOutboundStream(stream_info->GetId());
+		if (!stream)
+		{
+			return false;
+		}
+
+		stream->Push(packet);
+
+		_outbound_stream_indicator[GetWorkerIDByStreamID(stream_info->GetId())]->Enqueue(stream);
+	}
+	else
+	{
+		logte("Unknown connector");
+		return false;
 	}
 
 	return true;

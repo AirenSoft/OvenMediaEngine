@@ -96,14 +96,12 @@ namespace ocst
 		{
 			for (auto &origin : vhost_item->origin_list)
 			{
-				// logti("scheme : %s, location : %s, persist : %s", origin.scheme.CStr(), origin.location.CStr(), origin.origin_config.IsPersist() ? "true" : "false");
-
 				if (origin.origin_config.IsPersist() != true)
 				{
 					continue;
 				}
 
-				auto url = ov::Url::Parse(ov::String::FormatString("persist://localhost%s", origin.location.CStr()));
+				auto url = ov::Url::Parse(ov::String::FormatString("scheme://localhost%s", origin.location.CStr()));
 
 				auto app = GetApplicationInfo(vhost_item->name, url->App());
 				if (!app.IsValid())
@@ -731,7 +729,7 @@ namespace ocst
 
 		// Use Matched Origin information as an properties in Pull Stream.
 		auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset, 
-			std::make_shared<pvd::PullStreamProperties>(matched_origin->origin_config.IsPersist(), matched_origin->origin_config.IsFailBack()));
+			std::make_shared<pvd::PullStreamProperties>(matched_origin->origin_config.IsPersist(), matched_origin->origin_config.IsFailback(), matched_origin->origin_config.IsRelay()));
 
 		if (stream != nullptr)
 		{

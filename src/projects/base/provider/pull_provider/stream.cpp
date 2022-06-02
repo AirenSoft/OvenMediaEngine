@@ -30,9 +30,11 @@ namespace pvd
 
 		// In case of Pull Stream created by Origins, Properties information is included.
 		_properties = properties;
+		
+		SetRepresentationType((_properties->IsRelay()==true)?StreamRepresentationType::Relay:StreamRepresentationType::Source);
 	}
 
-	bool PullStream::Start(uint32_t max_retry_count)
+	bool PullStream::Start()
 	{
 		std::lock_guard<std::mutex> lock(_start_stop_stream_lock);
 		_restart_count = 0;
@@ -41,7 +43,7 @@ namespace pvd
 			if (StartStream(GetNextURL()) == false)
 			{
 				_restart_count++;
-				if (_restart_count > _url_list.size() * max_retry_count)
+				if (_restart_count > (_url_list.size() * _properties->GetRetryConnectCount()))
 				{
 					SetState(Stream::State::TERMINATED);
 					return false;
@@ -65,13 +67,13 @@ namespace pvd
 		return Stream::Stop();
 	}
 
-	bool PullStream::Resume(uint32_t max_retry_count)
+	bool PullStream::Resume()
 	{
 		if (RestartStream(GetNextURL()) == false)
 		{
 			Stop();
 			_restart_count++;
-			if (_restart_count > _url_list.size() * max_retry_count)
+			if (_restart_count > _url_list.size() * _properties->GetRetryConnectCount())
 			{
 				SetState(Stream::State::TERMINATED);
 			}
@@ -124,7 +126,7 @@ namespace pvd
 		return false;
 	}
 
-	void PullStream::InitCurrUrlIndex()
+	void PullStream::ResetUrlIndex()
 	{
 		_curr_url_index = 0;
 	}

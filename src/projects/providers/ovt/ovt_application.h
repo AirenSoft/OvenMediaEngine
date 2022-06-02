@@ -24,7 +24,7 @@ namespace pvd
 
 		MediaRouteApplicationConnector::ConnectorType GetConnectorType() override
 		{
-			return MediaRouteApplicationConnector::ConnectorType::Relay;
+			return MediaRouteApplicationConnector::ConnectorType::Provider;
 		}
 
 	private:

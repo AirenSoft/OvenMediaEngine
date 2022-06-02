@@ -1,14 +1,14 @@
 //==============================================================================
 //
-//  Provider Base Class 
+//  Provider Base Class
 //
 //  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
 
-
 #include "stream.h"
+
 #include "application.h"
 #include "base/info/application.h"
 #include "provider_private.h"
@@ -116,72 +116,108 @@ namespace pvd
 	{
 		// _timestamp_map is the timetamp for this stream, _last_timestamp_map is the timestamp for source timestamp
 		// reset last timestamp map
-		double max_timestamp_ms = 0;
-		for(const auto &item : _last_timestamp_map)
+		double max_timestamp_us = 0;
+		for (const auto &item : _last_timestamp_map)
 		{
 			auto track_id = item.first;
-			auto timestamp = item.second;
+			auto timestamp_us = item.second;
 			auto track = GetTrack(track_id);
-			if(track == nullptr)
+			if (track == nullptr)
 			{
 				return;
 			}
 
-			auto timestamp_ms = (timestamp * 1000) / track->GetTimeBase().GetTimescale();
-			logtd("%d old timestamp : %f ms", track_id, timestamp_ms);
+			// auto timestamp_ms = (int64_t)((double)timestamp * (double)track->GetTimeBase().GetExpr() * 1000000);
 
-			max_timestamp_ms = std::max<double>(timestamp_ms, max_timestamp_ms);
+			max_timestamp_us = std::max<double>(timestamp_us, max_timestamp_us);
 		}
 
-		for(const auto &item : _last_timestamp_map)
+		logtd("%s/%s(%u) Find maximum timestamp: %f ms", GetApplicationName(), GetName().CStr(), GetId(), max_timestamp_us);
+
+		for (const auto &item : _last_timestamp_map)
 		{
 			auto track_id = item.first;
 			[[maybe_unused]] auto old_timestamp = item.second;
 			auto track = GetTrack(track_id);
 
-			// Since the stream is switched, initialize last_timestamp and base_timestamp to receive a new stream. However, some players do not allow the timestamp to decrease, so it is initialized based on the largest timestamp value among previous tracks. 
-			// If the timestamp is incremented by 60 seconds (big jump), it seems that the player flushes the old stream and starts anew. (This is an experimental estimate. If 60 seconds are added to the timestamp, no video stuttering in the webrtc browser is observed.)
-			auto adjust_timestamp = (max_timestamp_ms * track->GetTimeBase().GetTimescale() / 1000) + (60 * track->GetTimeBase().GetTimescale());
-
 			// base_timestamp is the last timestamp value of the previous stream. Increase it based on this.
 			// last_timestamp is a value that is updated every time a packet is received.
-			_base_timestamp_map[track_id] = adjust_timestamp;
-			_last_timestamp_map[track_id] = adjust_timestamp;
+			_base_timestamp_map[track_id] = max_timestamp_us;
+			_last_timestamp_map[track_id] = max_timestamp_us;
 
-			logtd("Reset %d last timestamp : %lld => %lld", track_id, old_timestamp, _last_timestamp_map[track_id]);
+			logtw("%s/%s(%u) Reset %d last timestamp : %lld => %lld (%d/%d)", 
+			GetApplicationName(), GetName().CStr(), GetId(), 
+			track_id, old_timestamp, _last_timestamp_map[track_id], track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen());
 		}
+
+		// Initialzed start timestamp
+		_start_timestamp = -1LL;
 
 		_source_timestamp_map.clear();
 	}
 
 	// This keeps the pts value of the input track (only the start value<base_timestamp> is different), meaning that this value can be used for A/V sync.
-	uint64_t Stream::AdjustTimestampByBase(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp)
+	int64_t Stream::AdjustTimestampByBase(uint32_t track_id, int64_t timestamp, int64_t max_timestamp)
 	{
-		uint64_t base_timestamp = 0;
-		if(_base_timestamp_map.find(track_id) != _base_timestamp_map.end())
+		auto track = GetTrack(track_id);
+		if (track == nullptr)
 		{
-			base_timestamp = _base_timestamp_map[track_id];
+			return -1LL;			
 		}
 
-		_last_timestamp_map[track_id] = base_timestamp + timestamp;
-		return _last_timestamp_map[track_id];
+		// Find start timestamp (us)
+		if (_start_timestamp == -1LL)
+		{
+			_start_timestamp = timestamp * (track->GetTimeBase().GetExpr() * 1000000);
+			logtw("Set Start timestamp is %lld(%lld us)", timestamp, _start_timestamp);
+		}
+
+		// timestamp(tb) -> timestamp(us)
+		auto timestamp_us = (int64_t)((double)timestamp * track->GetTimeBase().GetExpr() * 1000000);
+		int64_t zerobase_pkt_tmiestamp_us = timestamp_us - _start_timestamp;
+			
+		// find base timestamp
+		int64_t base_timestamp_us = 0;
+		if (_base_timestamp_map.find(track_id) != _base_timestamp_map.end())
+		{
+			base_timestamp_us = _base_timestamp_map[track_id];
+		}
+
+		// base timebase + pkt timebase
+		auto final_pkt_timestamp_us = base_timestamp_us + zerobase_pkt_tmiestamp_us;
+
+		// Update last timestamp
+		_last_timestamp_map[track_id] = final_pkt_timestamp_us;
+
+		auto final_pkt_timestamp_tb =  (final_pkt_timestamp_us * track->GetTimeBase().GetTimescale() / 1000000);
+		
+		return final_pkt_timestamp_tb;
 	}
 
-	uint64_t Stream::GetBaseTimestamp(uint32_t track_id)
+	int64_t Stream::GetBaseTimestamp(uint32_t track_id)
 	{
-		uint64_t base_timestamp = 0;
-		if(_base_timestamp_map.find(track_id) != _base_timestamp_map.end())
+		auto track = GetTrack(track_id);
+		if (track == nullptr)
+		{
+			return -1LL;			
+		}
+
+		int64_t base_timestamp = 0;
+		if (_base_timestamp_map.find(track_id) != _base_timestamp_map.end())
 		{
 			base_timestamp = _base_timestamp_map[track_id];
 		}
 
-		return base_timestamp;
+		auto base_timestamp_tb =  (base_timestamp * track->GetTimeBase().GetTimescale() / 1000000);
+
+
+		return base_timestamp_tb;
 	}
 
 	// This is a method of generating a PTS with an increment value (delta) when it cannot be used as a PTS because the start value of the timestamp is random like the RTP timestamp.
-	uint64_t Stream::AdjustTimestampByDelta(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp)
+	int64_t Stream::AdjustTimestampByDelta(uint32_t track_id, int64_t timestamp, int64_t max_timestamp)
 	{
-		uint32_t curr_timestamp; 
+		int64_t curr_timestamp; 
 
 		if(_last_timestamp_map.find(track_id) == _last_timestamp_map.end())
 		{
@@ -200,7 +236,7 @@ namespace pvd
 		return curr_timestamp;
 	}
 
-	uint64_t Stream::GetDeltaTimestamp(uint32_t track_id, uint64_t timestamp, uint64_t max_timestamp)
+	int64_t Stream::GetDeltaTimestamp(uint32_t track_id, int64_t timestamp, int64_t max_timestamp)
 	{
 		auto track = GetTrack(track_id);
 
@@ -214,7 +250,7 @@ namespace pvd
 			return 0;
 		}
 
-		uint64_t delta = 0;
+		int64_t delta = 0;
 
 		// Wrap around or change source
 		if(timestamp < _source_timestamp_map[track_id])

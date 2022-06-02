@@ -39,11 +39,18 @@ enum class StreamSourceType : int8_t
 	File,
 };
 
+enum class StreamRepresentationType : int8_t 
+{
+	Source,
+	Relay
+};
+
 enum class ProviderStreamDirection : int8_t
 {
 	Pull,
 	Push
 };
+
 
 // Note : If you update ProviderType, you have to update /base/ovlibrary/converter.h:ToString(ProviderType type)
 enum class ProviderType : int8_t
@@ -290,6 +297,19 @@ static ov::String StringFromStreamSourceType(const StreamSourceType &type)
 	return "Unknown";
 }
 
+static ov::String StringFromStreamRepresentationType(const StreamRepresentationType &type)
+{
+	switch (type)
+	{
+		case StreamRepresentationType::Relay:
+			return "Relay";
+		case StreamRepresentationType::Source:
+			return "Source";			
+	}
+
+	return "Unknown";
+}
+
 static ov::String StringFromProviderType(const ProviderType &type)
 {
 	switch (type)
@@ -398,3 +418,4 @@ static ov::String StringFromMediaType(const cmn::MediaType &type)
 			return "Unknown";
 	}
 }
+

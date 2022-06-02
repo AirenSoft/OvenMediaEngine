@@ -621,6 +621,12 @@ namespace ocst
 				//                        ~~ <= remaining part
 				auto remaining_part = location.Substring(origin.location.GetLength());
 
+
+				if(remaining_part.GetLength() > 0 && origin.origin_config.IsStrictLocation() ==true) {
+					logtw("This origin does not support match sub location. matched location: %s, requested location: %s", origin.location.CStr(), location.CStr());
+					continue;
+				}
+
 				logtd("Found: location: %s (app: %s, stream: %s), remaining_part: %s", origin.location.CStr(), vhost_app_name.GetAppName().CStr(), stream_name.CStr(), remaining_part.CStr());
 
 				for (auto url : origin.url_list)
@@ -634,6 +640,15 @@ namespace ocst
 
 					// Prepend "<scheme>://"
 					url.Prepend("://");
+
+					// Exception to avoid url parsing errors. Patterns like "file:///path/filename.mp4" cannot be parsed by ov:Url.
+					// So, added a fake host string. Finally, need to update the regex pattern of ov::URL.
+					// TODO: Improve ov::URL class 
+					// TODO: Replace with the regex
+					if(url.HasPrefix(":///")) {
+						url = url.Replace(":///", "://fakeip/");
+					}
+
 					url.Prepend(origin.scheme);
 
 					// Exclude query string from url

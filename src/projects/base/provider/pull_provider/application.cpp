@@ -94,33 +94,43 @@ namespace pvd
 						is_persist = props->IsPersist();
 						is_failback = props->IsFailback();
 					
-						// Check whether the primary URL can be used for failback.
-						auto elapsed_time_from_last_failback_check = std::chrono::duration_cast<std::chrono::milliseconds>(current - props->GetLastFailbackCheckTime()).count();
-
-						if ((is_failback) && (elapsed_time_from_last_failback_check > failback_timeout) && (!stream->IsCurrPrimaryURL()))
+						// If Failback is enabled, try to connect periodically to see if the Primary URL is available.
+						if(is_failback) 
 						{
-							auto failback_url = stream->GetPrimaryURL()->ToUrlString(true);
-							logtd("%s/%s(%u) Try to check if primary url is alive. url(%s)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), failback_url.CStr());
-							auto failback_stream = CreateStream(0, "_CHECK_FOR_FAILBACK_STREAM_", {failback_url}, nullptr);
-							if (failback_stream)
+							auto elapsed_time_from_last_failback_check = std::chrono::duration_cast<std::chrono::milliseconds>(current - props->GetLastFailbackCheckTime()).count();
+
+							if((elapsed_time_from_last_failback_check > failback_timeout) && (!stream->IsCurrPrimaryURL()))
 							{
-								if((failback_stream->GetState() == pvd::Stream::State::PLAYING) || (failback_stream->GetState() == pvd::Stream::State::DESCRIBED))
+								auto failback_url = stream->GetPrimaryURL()->ToUrlString(true);
+							
+								logtd("%s/%s(%u) Attempt to connect to verify that the primary stream is available. url(%s)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), failback_url.CStr());
+							
+								auto ping_props = std::make_shared<pvd::PullStreamProperties>();
+								ping_props->SetRetryConnectCount(0);
+								auto ping = CreateStream(0, "_CHECK_FOR_FAILBACK_STREAM_", {failback_url}, ping_props);
+								if (ping)
 								{
-									// Stop the current stream and switch to the Primary URL.
-									stream->Stop();
-									stream->InitCurrUrlIndex();
+									auto state = ping->GetState() ;
+									ping->Stop();
 
-									ResumeStream(stream);
+									if((state == pvd::Stream::State::PLAYING) || (state == pvd::Stream::State::DESCRIBED))
+									{
+										// Stop the current stream and switch to the Primary URL.
+										stream->Stop();
+										
+										stream->ResetUrlIndex();
+
+										ResumeStream(stream);
+									}
+									
 								}
-								
-								failback_stream->Stop();
-							}
-							else 
-							{
-								logtd("%s/%s(%u) primary stream is not available.", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
-							}
+								else 
+								{
+									logtd("%s/%s(%u) primary stream is not available.", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+								}
 
-							props->UpdateFailbackCheckTime();
+								props->UpdateFailbackCheckTime();
+							}
 						}
 					}
 
@@ -279,6 +289,7 @@ namespace pvd
 		}
 
 		pull_stream->SetMsid(pull_stream->GetMsid() + 1);
+
 		NotifyStreamUpdated(pull_stream);
 
 		if(motor->UpdateStream(pull_stream) == false)

@@ -19,8 +19,7 @@ public:
 	enum class ConnectorType : int8_t
 	{
 		Provider = 0,
-		Transcoder,
-		Relay
+		Transcoder
 	};
 
 	inline bool IsExistingInboundStream(const ov::String &stream_name)

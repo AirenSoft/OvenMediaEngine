@@ -169,9 +169,26 @@ namespace info
 		return _source_type;
 	}
 
+	StreamRepresentationType Stream::GetRepresentationType() const {
+		return _representation_type;		
+	}
+	
+	void Stream::SetRepresentationType(const StreamRepresentationType &type) {
+		_representation_type = type;
+	}
+
 	bool Stream::AddTrack(const std::shared_ptr<MediaTrack> &track)
 	{
-		return _tracks.insert(std::make_pair(track->GetId(), track)).second;
+		// If there is an existing track with the same track id, it will be deleted.
+		auto item = _tracks.find(track->GetId());
+		if (item != _tracks.end())
+		{
+			_tracks.erase(item);
+		}
+
+		auto result = _tracks.insert(std::make_pair(track->GetId(), track)).second;
+
+		return result;
 	}
 
 	const std::shared_ptr<MediaTrack> Stream::GetTrack(int32_t id) const
@@ -227,8 +244,8 @@ namespace info
 
 	ov::String Stream::GetInfoString()
 	{
-		ov::String out_str = ov::String::FormatString("\n[Stream Info]\nid(%u), msid(%u), output(%s), SourceType(%s), Created Time (%s) UUID(%s)\n",
-													  GetId(), GetMsid(), GetName().CStr(), ::StringFromStreamSourceType(_source_type).CStr(),
+		ov::String out_str = ov::String::FormatString("\n[Stream Info]\nid(%u), msid(%u), output(%s), SourceType(%s), RepresentationType(%s), Created Time (%s) UUID(%s)\n",
+													  GetId(), GetMsid(), GetName().CStr(), ::StringFromStreamSourceType(_source_type).CStr(), ::StringFromStreamRepresentationType(_representation_type).CStr(),
 													  ov::Converter::ToString(_created_time).CStr(), GetUUID().CStr());
 		if (GetLinkedInputStream() != nullptr)
 		{
