@@ -70,8 +70,8 @@ namespace bmff
 		{
 			_number = number;
 
-			// For performance, reserve memory for 4Mbps * target_duration
-			_data = std::make_shared<ov::Data>(((1000 * 1000 * 4)/8) * target_duration);
+			// For performance, reserve memory for 4Mbps * target_duration (sec)
+			_data = std::make_shared<ov::Data>(((1000.0 * 1000.0 * 4.0)/8.0) * (static_cast<double>(target_duration) / 1000.0));
 		}
 
 		void SetCompleted()
