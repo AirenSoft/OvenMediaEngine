@@ -13,6 +13,8 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
 * **Ingest**
   * Push: WebRTC, RTMP, SRT, MPEG-2 TS
   * Pull: RTSP
+* **Low-Latency HLS Streaming**
+  * Support Adaptive Bitrates Streaming (ABR)
 * **Sub-Second Latency Streaming with WebRTC**
   * WebRTC over TCP (with embedded TURN server)
   * Embedded WebRTC Signalling Server (WebSocket based)
@@ -23,7 +25,6 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
     * _VP8, H.264_
   * In-band FEC (Forward Error Correction)
     * _Opus_
-* **Low-Latency HLS Streaming**
 * **Embedded Live Transcoder**
   * Video: VP8, H.264, Pass-through
   * Audio: Opus, AAC, Pass-through
