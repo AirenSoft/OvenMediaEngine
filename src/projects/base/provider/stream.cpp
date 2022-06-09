@@ -165,32 +165,42 @@ namespace pvd
 			return -1LL;			
 		}
 
-		// Find start timestamp (us)
+		double expr_tb2us = (track->GetTimeBase().GetExpr() * 1000000);
+		double expr_us2tb = (track->GetTimeBase().GetTimescale() / 1000000);
+
+
+		// 1. Set the start imestamp value of this stream.
+		// * Managed in microseconds
 		if (_start_timestamp == -1LL)
 		{
-			_start_timestamp = timestamp * (track->GetTimeBase().GetExpr() * 1000000);
+			_start_timestamp = timestamp * expr_tb2us;
 			logtw("Set Start timestamp is %lld(%lld us)", timestamp, _start_timestamp);
 		}
 
-		// timestamp(tb) -> timestamp(us)
-		auto timestamp_us = (int64_t)((double)timestamp * track->GetTimeBase().GetExpr() * 1000000);
-		int64_t zerobase_pkt_tmiestamp_us = timestamp_us - _start_timestamp;
-			
-		// find base timestamp
-		int64_t base_timestamp_us = 0;
+
+		// 2. Zero based packet timestamp
+		// - Convert start timestamp to timbase based timesatmp
+		int64_t start_timestamp_tb = (int64_t)((double)_start_timestamp * expr_us2tb);
+		// - Zerostart timestamp = source timesatmp - start timestamp
+		int64_t zerostart_pkt_tmiestamp_tb = timestamp - (int64_t)start_timestamp_tb;
+
+
+		// 3. Calculate the final timestamp
+		// - Convert base timestamp to timbase based timesatmp
+		int64_t base_timestamp_tb = 0;
 		if (_base_timestamp_map.find(track_id) != _base_timestamp_map.end())
 		{
-			base_timestamp_us = _base_timestamp_map[track_id];
+			int64_t base_timestamp_us = _base_timestamp_map[track_id];
+			base_timestamp_tb = (int64_t)((double)base_timestamp_us * expr_us2tb);
 		}
+		// - Fianl timestamp = base timesatmp - zerostart timestamp
+		int64_t final_pkt_timestamp_tb = base_timestamp_tb + zerostart_pkt_tmiestamp_tb;
 
-		// base timebase + pkt timebase
-		auto final_pkt_timestamp_us = base_timestamp_us + zerobase_pkt_tmiestamp_us;
 
-		// Update last timestamp
-		_last_timestamp_map[track_id] = final_pkt_timestamp_us;
+		// 4. Update last timestamp
+		// * Managed in microseconds.
+		_last_timestamp_map[track_id] = (int64_t)((double)final_pkt_timestamp_tb * expr_tb2us);
 
-		auto final_pkt_timestamp_tb =  (final_pkt_timestamp_us * track->GetTimeBase().GetTimescale() / 1000000);
-		
 		return final_pkt_timestamp_tb;
 	}
 
