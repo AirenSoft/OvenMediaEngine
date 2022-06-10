@@ -5,10 +5,10 @@
 
 In short, OvenMediaEngine (OME) is a <b>Sub-Second Latency Live Streaming Server</b> with <b>Large-Scale</b> and <b>High-Definition</b>.
 
-OvenMediaEngine receives a video/audio source from encoders and cameras such as [OvenLiveKit](https://www.ovenmediaengine.com/olk), OBS, XSplit, and more to <b>WebRTC</b>, <b>RTMP</b>, <b>SRT</b>, <b>MPEG-2 TS</b> <sup><i>Beta</sup></i> and <b>RTSP</b> <sup><i>Beta</sup></i>.  Then, OME transmits it over <b>LLHLS</b>(Low Latency HLS) and <b>WebRTC</b>.
+OvenMediaEngine receives a video/audio source from encoders and cameras such as [OvenLiveKit](https://www.ovenmediaengine.com/olk), OBS, XSplit, and more to <b>WebRTC</b>, <b>SRT</b>, <b>RTMP</b>, <b>MPEG-2 TS</b> and <b>RTSP</b>.  Then, OME transmits it over <b>LLHLS</b> (Low Latency HLS) and <b>WebRTC</b>.
 
 Like the picture below:
-<img src="dist/OME_Overview_GitHub_220117.svg" style="max-width: 100%; height: auto;">
+<img src="dist/OME_LLHLS_220610.svg" style="max-width: 100%; height: auto;">
 OvenMediaEngine supports you can create platforms/services/systems that transmit high-definition video to hundreds-thousand viewers with sub-second latency and be scalable, depending on the number of concurrent viewers.
 
 We also provide [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), an Open-Source and JavaScript-based WebRTC Player for OvenMediaEngine.
@@ -28,11 +28,11 @@ Would you please click on each link below for details:
 ## Features
 
 * <b>Ingest</b>
-  * Push: WebRTC, RTMP, SRT, MPEG-2 TS
+  * Push: WebRTC, SRT, RTMP, MPEG-2 TS
   * Pull: RTSP
-* <b>Low Latency HLS Streaming</b> 
+* <b>Low Latency Streaming using LLHLS</b> 
   * Support Adaptive Bitrate Streaming (ABR)
-* <b>Sub-Second Latency Streaming with WebRTC</b>
+* <b>Sub-Second Latency Streaming using WebRTC</b>
   * WebRTC over TCP (With Embedded TURN Server)
   * Embedded WebRTC Signalling Server (WebSocket based)
   * ICE (Interactive Connectivity Establishment)
@@ -50,10 +50,10 @@ Would you please click on each link below for details:
 * <b>Access Control</b>
   * Admission Webhooks
   * Singed Policy
-* File Recording
-* RTMP Push Publishing (Re-streaming)
-* Thumbnail
-* <b>REST API<b>
+* <b>File Recording</b>
+* <b>RTMP Push Publishing</b> (Re-streaming)
+* <b>Thumbnail</b>
+* <b>REST API</b>
 * <b>Experiment</b>
   * P2P Traffic Distribution (Only WebRTC)
 
