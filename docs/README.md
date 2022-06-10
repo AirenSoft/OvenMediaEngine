@@ -35,10 +35,10 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
 * **Access Control**
   * AdmissionWebhooks
   * SignedPolicy
-* File Recording
-* RTMP, MPEGTS Push Publishing (Re-streaming)
-* Thumbnail
-* REST API
+* **File Recording**
+* **Push Publishing using RTMP and MPEG-TS** (Re-streaming)
+* **Thumbnail**
+* **REST API**
 * **Experiment**
   * P2P Traffic Distribution (Only WebRTC)
 
