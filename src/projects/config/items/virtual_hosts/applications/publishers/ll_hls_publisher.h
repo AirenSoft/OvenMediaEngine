@@ -23,8 +23,9 @@ namespace cfg
 				{
 				protected:
 					
+					bool _origin_mode = false;
 					int _segment_count = 10;
-					double _chunk_duration = 0.2;
+					double _chunk_duration = 0.5;
 					int _segment_duration = 6;
 
 				public:
@@ -33,6 +34,7 @@ namespace cfg
 						return PublisherType::LLHls;
 					}
 
+					CFG_DECLARE_CONST_REF_GETTER_OF(IsOriginMode, _origin_mode)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetSegmentDuration, _segment_duration)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetChunkDuration, _chunk_duration)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetSegmentCount, _segment_count)
@@ -42,6 +44,7 @@ namespace cfg
 					{
 						Publisher::MakeList();
 
+						Register<Optional>("OriginMode", &_origin_mode);
 						Register<Optional>("ChunkDuration", &_chunk_duration);
 						Register<Optional>("SegmentDuration", &_segment_duration);
 						Register<Optional>("SegmentCount", &_segment_count);

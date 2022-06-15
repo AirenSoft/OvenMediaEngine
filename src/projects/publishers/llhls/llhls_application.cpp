@@ -29,6 +29,8 @@ LLHlsApplication::LLHlsApplication(const std::shared_ptr<pub::Publisher> &publis
 	{
 		_cors_manager.SetCrossDomains(application_info.GetName(), cross_domains);
 	}
+
+	_origin_mode = llhls_config.IsOriginMode();
 }
 
 LLHlsApplication::~LLHlsApplication()
