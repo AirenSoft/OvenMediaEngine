@@ -53,6 +53,8 @@ public:
 	
 	const ov::String &GetStreamKey() const;
 
+	uint64_t GetMaxChunkDurationMS() const;
+
 	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetPlaylist(const ov::String &chunk_query_string, bool gzip=false) const;
 	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetChunklist(const ov::String &chunk_query_string, const int32_t &track_id, int64_t msn, int64_t psn, bool skip = false, bool gzip=false) const;
 	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetInitializationSegment(const int32_t &track_id) const;
