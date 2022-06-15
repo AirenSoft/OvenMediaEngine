@@ -151,6 +151,11 @@ const ov::String &LLHlsStream::GetStreamKey() const
 	return _stream_key;
 }
 
+uint64_t LLHlsStream::GetMaxChunkDurationMS() const
+{
+	return _max_chunk_duration_ms;
+}
+
 std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetPlaylist(const ov::String &chunk_query_string, bool gzip/*=false*/) const
 {
 	if (GetState() != State::STARTED)

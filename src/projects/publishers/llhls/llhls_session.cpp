@@ -441,13 +441,19 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		response->SetHeader("Content-Encoding", content_encoding);
 
 		// Cache-Control header
+		ov::String cache_control;
 		if (has_delivery_directives == false)
 		{
 			// Always respond with lastest chunklist
-			auto cache_control = ov::String::FormatString("no-cache, no-store");
-			response->SetHeader("Cache-Control", cache_control);
+			cache_control = ov::String::FormatString("no-cache, no-store");	
+		}
+		else
+		{
+			auto max_age = (llhls_stream->GetMaxChunkDurationMS() / 1000.0f) * 3.0f;
+			cache_control = ov::String::FormatString("max-age=%.f", std::ceil(max_age));
 		}
 
+		response->SetHeader("Cache-Control", cache_control);
 		response->AppendData(chunklist);
 
 		// If a client uses previously cached llhls.m3u8 and requests chunklist
