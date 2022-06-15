@@ -222,7 +222,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			request_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 		}
 
-		logtd("LLHLS requested: %s", request->GetUri().CStr());
+		logtd("LLHLS requested(connection : %u): %s", connection->GetId(), request->GetUri().CStr());
 
 		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
 		if (vhost_app_name.IsValid() == false)
@@ -339,7 +339,17 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		if (request_url->File() == "llhls.m3u8")
 		{
 			session_id_t session_id = connection->GetId();
-			session = std::static_pointer_cast<LLHlsSession>(stream->GetSession(session_id));
+
+			try
+			{
+				// If this connection has been used by another session in the past, it is reused.
+				session = std::any_cast<std::shared_ptr<LLHlsSession>>(connection->GetUserData());
+			}
+			catch (const std::bad_any_cast& e)
+			{
+				session = std::static_pointer_cast<LLHlsSession>(stream->GetSession(session_id));
+			}
+
 			if (session == nullptr)
 			{
 				// New HTTP Connection
