@@ -4,18 +4,20 @@
 
 [**OvenMediaEngine**](https://github.com/AirenSoft/OvenMediaEngine) (OME) is a **Sub**-**Second Latency Live Streaming Server** with **Large**-**Scale** and **High**-**Definition**. With OME, you can create platforms/services/systems that transmit high-definition video to hundreds-thousand viewers with sub-second latency and be scalable, depending on the number of concurrent viewers.
 
-OvenMediaEngine can receive a video/audio, video, or audio source from encoders and cameras such as [OvenLiveKit](https://www.ovenmediaengine.com/olk), OBS, XSplit, and more, to WebRTC, RTMP, SRT, MPEG-2 TS (Beta), or RTSP (Beta) as Input. Then, OME transmits this source using WebRTC, Low Latency HLS(LLHLS) as output. Also, we provide [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), an Open-Source and JavaScript-based WebRTC/LLHLS Player for OvenMediaEngine.
+![](.gitbook/assets/OME\_LLHLS\_220610.png)
+
+OvenMediaEngine can receive a video/audio, video, or audio source from encoders and cameras such as [OvenLiveKit](https://www.ovenmediaengine.com/olk), OBS, XSplit, and more, to WebRTC, SRT, RTMP, MPEG-2 TS, and RTSP as Input. Then, OME transmits this source using **LLHLS** (Low Latency HLS) and **WebRTC** as output. Also, we provide [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), an Open-Source and JavaScript-based WebRTC/LLHLS Player for OvenMediaEngine.
 
 Our goal is to make it easier for you to build a stable broadcasting/streaming service with sub-second latency.
 
 ## Features
 
 * **Ingest**
-  * Push: WebRTC, RTMP, SRT, MPEG-2 TS
+  * Push: WebRTC, SRT, RTMP, MPEG-2 TS
   * Pull: RTSP
-* **Low-Latency HLS Streaming**
+* **Low-Latency Streaming using LLHLS**
   * Support Adaptive Bitrates Streaming (ABR)
-* **Sub-Second Latency Streaming with WebRTC**
+* **Sub-Second Latency Streaming using WebRTC**
   * WebRTC over TCP (with embedded TURN server)
   * Embedded WebRTC Signalling Server (WebSocket based)
   * ICE (Interactive Connectivity Establishment)
@@ -33,10 +35,10 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
 * **Access Control**
   * AdmissionWebhooks
   * SignedPolicy
-* File Recording
-* RTMP, MPEGTS Push Publishing (Re-streaming)
-* Thumbnail
-* REST API
+* **File Recording**
+* **Push Publishing using RTMP and MPEG-TS** (Re-streaming)
+* **Thumbnail**
+* **REST API**
 * **Experiment**
   * P2P Traffic Distribution (Only WebRTC)
 
@@ -51,7 +53,7 @@ We have tested OvenMediaEngine on platforms, listed below. However, we think it 
 
 ## Getting Started
 
-Please read [Getting Started](getting-started.md) chapter in tutorials.
+Please read [Getting Started](getting-started.md) chapter in the tutorials.
 
 ## How to Contribute
 

@@ -179,7 +179,7 @@ The server address in OBS needs to use `<Application name>` generated in `Server
 * Click "File" in the top menu, then click "Settings" (or press "Settings" on the lower right).
 * Select the "Stream" tab and enter your stream information.
 
-![Press "Service" and select "Custom", your OBS is the same as this image.](<.gitbook/assets/image (8).png>)
+![Press "Service" and select "Custom", your OBS is the same as this image.](<.gitbook/assets/image (8) (1).png>)
 
 * Go to the "Output" tab.
 * Set the following entries.
