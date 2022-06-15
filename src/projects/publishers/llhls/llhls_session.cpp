@@ -12,13 +12,15 @@
 #include "llhls_stream.h"
 #include "llhls_private.h"
 
-std::shared_ptr<LLHlsSession> LLHlsSession::Create(session_id_t session_id, const ov::String &session_key,
+std::shared_ptr<LLHlsSession> LLHlsSession::Create(session_id_t session_id, 
+												const bool &origin_mode,
+												const ov::String &session_key,
 												const std::shared_ptr<pub::Application> &application,
 												const std::shared_ptr<pub::Stream> &stream,
 												uint64_t session_life_time)
 {
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), session_id);
-	auto session = std::make_shared<LLHlsSession>(session_info, session_key, application, stream, session_life_time);
+	auto session = std::make_shared<LLHlsSession>(session_info, origin_mode, session_key, application, stream, session_life_time);
 
 	if (session->Start() == false)
 	{
@@ -28,13 +30,16 @@ std::shared_ptr<LLHlsSession> LLHlsSession::Create(session_id_t session_id, cons
 	return session;
 }
 
-LLHlsSession::LLHlsSession(const info::Session &session_info, const ov::String &session_key,
+LLHlsSession::LLHlsSession(const info::Session &session_info, 
+							const bool &origin_mode,
+							const ov::String &session_key,
 							const std::shared_ptr<pub::Application> &application, 
 							const std::shared_ptr<pub::Stream> &stream,
 							uint64_t session_life_time)
 	: pub::Session(session_info, application, stream)
 
 {
+	_origin_mode = origin_mode;
 	_session_life_time = session_life_time;
 	if (session_key.IsEmpty())
 	{
@@ -347,6 +352,12 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 
 	// Get the playlist
 	auto query_string = ov::String::FormatString("session=%u_%s", GetId(), _session_key.CStr());
+	
+	if (_origin_mode == true)
+	{
+		query_string.Clear();
+	}
+
 	auto [result, playlist] = llhls_stream->GetPlaylist(query_string, gzip);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
@@ -359,7 +370,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 
 		// Cache-Control header
 		// When the stream is recreated, llhls.m3u8 file is changed.
-		auto cache_control = ov::String::FormatString("no-cache");
+		auto cache_control = ov::String::FormatString("no-cache, no-store");
 		response->SetHeader("Cache-Control", cache_control);
 
 		response->AppendData(playlist);
@@ -392,6 +403,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 
 	auto request = exchange->GetRequest();
 	auto response = exchange->GetResponse();
+	bool has_delivery_directives = true;
 
 	if (msn == -1 && part == -1)
 	{
@@ -399,6 +411,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		// the player cannot start playing, so the request is pending until at least one segment is created.
 		msn = 2;
 		part = 0;
+		has_delivery_directives = false;
 	}
 
 	ov::String content_encoding = "identity";
@@ -412,6 +425,11 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 
 	// Get the chunklist
 	auto query_string = ov::String::FormatString("session=%u_%s", GetId(), _session_key.CStr());
+	if (_origin_mode == true)
+	{
+		query_string.Clear();
+	}
+
 	auto [result, chunklist] = llhls_stream->GetChunklist(query_string, track_id, msn, part, skip, gzip);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
@@ -423,8 +441,12 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		response->SetHeader("Content-Encoding", content_encoding);
 
 		// Cache-Control header
-		auto cache_control = ov::String::FormatString("no-cache");
-		response->SetHeader("Cache-Control", cache_control);
+		if (has_delivery_directives == false)
+		{
+			// Always respond with lastest chunklist
+			auto cache_control = ov::String::FormatString("no-cache, no-store");
+			response->SetHeader("Cache-Control", cache_control);
+		}
 
 		response->AppendData(chunklist);
 

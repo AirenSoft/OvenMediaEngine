@@ -27,6 +27,11 @@ public:
 		return _cors_manager;
 	}
 
+	bool IsOriginMode() const
+	{
+		return _origin_mode;
+	}
+
 private:
 	bool Start() override;
 	bool Stop() override;
@@ -36,4 +41,5 @@ private:
 	bool DeleteStream(const std::shared_ptr<info::Stream> &info) override;
 
 	http::CorsManager _cors_manager;
+	bool _origin_mode = false;
 };

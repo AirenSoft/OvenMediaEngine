@@ -231,12 +231,21 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			response->SetStatusCode(http::StatusCode::NotFound);
 			return http::svr::NextHandler::DoNotCall;
 		}
+
+		auto application = std::static_pointer_cast<LLHlsApplication>(GetApplicationByName(vhost_app_name));
+		if (application == nullptr)
+		{
+			logte("Could not found application: %s", vhost_app_name.CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		auto origin_mode = application->IsOriginMode();
 		auto host_name = request_url->Host();
 		auto stream_name = request_url->Stream();
 
 		uint64_t session_life_time = 0;
-
-		bool access_control_enabled = IsAccessControlEnabled(request_url);
+		bool access_control_enabled = (origin_mode == true) && IsAccessControlEnabled(request_url);
 
 		if (access_control_enabled == true && request_url->File() == "llhls.m3u8")
 		{
@@ -305,7 +314,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			}
 		}
 
-		auto stream = GetStream(vhost_app_name, request_url->Stream());
+		auto stream = application->GetStream(request_url->Stream());
 		if (stream == nullptr)
 		{
 			// If the stream does not exists, request to the provider
@@ -334,7 +343,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			if (session == nullptr)
 			{
 				// New HTTP Connection
-				session = LLHlsSession::Create(session_id, "", stream->GetApplication(), stream, session_life_time);
+				session = LLHlsSession::Create(session_id, origin_mode, "", stream->GetApplication(), stream, session_life_time);
 				if (session == nullptr)
 				{
 					logte("Could not create llhls session for request: %s", request->ToString().CStr());
@@ -349,32 +358,39 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		// x_x_x.m4s?session=<session id>_<key>
 		else
 		{
-			// ?session=<session id>_<key>
-			auto query_string = request_url->GetQueryValue("session");
-			auto id_key = query_string.Split("_");
-			if (id_key.size() != 2)
-			{
-				logte("Invalid session key : %s", request_url->ToUrlString().CStr());
-				response->SetStatusCode(http::StatusCode::Unauthorized);
-				return http::svr::NextHandler::DoNotCall;
-			}
+			session_id_t session_id = connection->GetId();
+			ov::String session_key;
 
-			auto session_id = ov::Converter::ToUInt32(id_key[0].CStr());
-			auto session_key = id_key[1];
+			if (origin_mode == false)
+			{
+				// ?session=<session id>_<key>
+				// This collects them into one session even if one player connects through multiple connections.
+				auto query_string = request_url->GetQueryValue("session");
+				auto id_key = query_string.Split("_");
+				if (id_key.size() != 2)
+				{
+					logte("Invalid session key : %s", request_url->ToUrlString().CStr());
+					response->SetStatusCode(http::StatusCode::Unauthorized);
+					return http::svr::NextHandler::DoNotCall;
+				}
+
+				session_id = ov::Converter::ToUInt32(id_key[0].CStr());
+				session_key = id_key[1];
+			}
 
 			session = std::static_pointer_cast<LLHlsSession>(stream->GetSession(session_id));
 			if (session == nullptr)
 			{
 				if (access_control_enabled == true)
 				{
-					logte("Invalid session_key : %s", query_string.CStr());
+					logte("Invalid session_key : %s", request_url->ToUrlString().CStr());
 					response->SetStatusCode(http::StatusCode::Unauthorized);
 					return http::svr::NextHandler::DoNotCall;
 				}
 				else
 				{
 					// New HTTP Connection
-					session = LLHlsSession::Create(session_id, session_key, stream->GetApplication(), stream, session_life_time);
+					session = LLHlsSession::Create(session_id, origin_mode, session_key, stream->GetApplication(), stream, session_life_time);
 					if (session == nullptr)
 					{
 						logte("Could not create llhls session for request: %s", request->ToString().CStr());
@@ -389,7 +405,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			{
 				if (access_control_enabled == true && session_key != session->GetSessionKey())
 				{
-					logte("Invalid session_key : %s", query_string.CStr());
+					logte("Invalid session_key : %s", request_url->ToUrlString().CStr());
 					response->SetStatusCode(http::StatusCode::Unauthorized);
 					return http::svr::NextHandler::DoNotCall;
 				}
@@ -401,7 +417,6 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		session->UpdateLastRequest(connection->GetId());
 
 		// Cors Setting
-		auto application = std::static_pointer_cast<LLHlsApplication>(stream->GetApplication());
 		application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response);
 		stream->SendMessage(session, std::make_any<std::shared_ptr<http::svr::HttpExchange>>(exchange));
 
