@@ -49,7 +49,7 @@ namespace info
 		_origin_stream = stream._origin_stream;
 
 		_tracks = stream._tracks;
-		_renditions = stream._renditions;
+		_playlists = stream._playlists;
 	}
 
 	Stream::Stream(StreamSourceType source)
@@ -221,15 +221,26 @@ namespace info
 		return _tracks;
 	}
 
-	bool Stream::AddRendition(const std::shared_ptr<Rendition> &rendition)
+	bool Stream::AddPlaylist(const std::shared_ptr<Playlist> &playlist)
 	{
-		_renditions.push_back(rendition);
+		_playlists.emplace(playlist->GetFileName(), playlist);
 		return true;
 	}
 
-	const std::vector<std::shared_ptr<Rendition>> &Stream::GetRenditions() const
+	std::shared_ptr<const Playlist> Stream::GetPlaylist(const ov::String &file_name) const
 	{
-		return _renditions;
+		auto item = _playlists.find(file_name);
+		if (item == _playlists.end())
+		{
+			return nullptr;
+		}
+
+		return item->second;
+	}
+
+	const std::map<ov::String, std::shared_ptr<Playlist>> &Stream::GetPlaylists() const
+	{
+		return _playlists;
 	}
 
 	const char *Stream::GetApplicationName()

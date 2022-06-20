@@ -2,7 +2,7 @@
 
 #include "base/common_types.h"
 #include "base/info/media_track.h"
-#include "base/info/rendition.h"
+#include "base/info/playlist.h"
 #include <config/config_manager.h>
 
 namespace info
@@ -61,8 +61,9 @@ namespace info
 		const std::shared_ptr<MediaTrack> GetTrack(const ov::String &name) const;
 		const std::map<int32_t, std::shared_ptr<MediaTrack>> &GetTracks() const;
 
-		bool AddRendition(const std::shared_ptr<Rendition> &rendition);
-		const std::vector<std::shared_ptr<Rendition>> &GetRenditions() const;
+		bool AddPlaylist(const std::shared_ptr<Playlist> &playlist);
+		std::shared_ptr<const Playlist> GetPlaylist(const ov::String &file_name) const;
+		const std::map<ov::String, std::shared_ptr<Playlist>> &GetPlaylists() const;
 
 		ov::String GetInfoString();
 		void ShowInfo();
@@ -87,7 +88,9 @@ namespace info
 		
 		// Key : MediaTrack ID
 		std::map<int32_t, std::shared_ptr<MediaTrack>> _tracks;
-		std::vector<std::shared_ptr<Rendition>> _renditions;
+
+		// File name : Playlist
+		std::map<ov::String, std::shared_ptr<Playlist>> _playlists;
 
 	private:
 		std::chrono::system_clock::time_point _created_time;

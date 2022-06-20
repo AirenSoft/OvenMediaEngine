@@ -9,7 +9,7 @@
 #pragma once
 
 #include "rendition.h"
-#include "encodes/encodes.h"
+#include "../encodes/encodes.h"
 
 namespace cfg
 {
@@ -19,13 +19,17 @@ namespace cfg
 		{
 			namespace oprf
 			{
-				struct Renditions : public Item
+				struct Playlist : public Item
 				{
 				protected:
+					ov::String _name;
+					ov::String _file_name;
 					std::vector<Rendition> _renditions;
 
 				public:
-					CFG_DECLARE_CONST_REF_GETTER_OF(GetRenditionList, _renditions);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetFileName, _file_name);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetRenditions, _renditions);
 
 					bool SetEncodes(const Encodes &encodes)
 					{
@@ -91,6 +95,21 @@ namespace cfg
 				protected:
 					void MakeList() override
 					{
+						Register<Optional>("Name", &_name);
+						Register("FileName", &_file_name,	// Required
+							[=]() -> std::shared_ptr<ConfigError> {
+								return nullptr;
+							},
+							[=]() -> std::shared_ptr<ConfigError> {
+								
+								if (_file_name.IndexOf("playlist") > 0 || _file_name.IndexOf("chunklist") > 0)
+								{
+										return CreateConfigErrorPtr("Playlist's FileName cannot contain 'playlist' or 'chunklist'");
+								}
+								
+								return nullptr;
+							}
+						);
 						Register<Optional>({"Rendition", "renditions"}, &_renditions);
 					}
 				};

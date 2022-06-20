@@ -46,6 +46,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetPreset, _preset)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetThreadCount, _thread_count)
 
+					void SetName(const ov::String &name){_name = name;}
 					void SetBypass(bool bypass){_bypass = bypass;}
 					void SetActive(bool active){_active = active;}
 					void SetCodec(const ov::String &codec){_codec = codec;}
