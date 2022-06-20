@@ -241,15 +241,30 @@ Currently, ABR is only supported in LLHLS. Webrtc ABR will soon be supported.
 
 From version 0.14.0, OvenMediaEngine can encode same source with multiple bitrates renditions and deliver it to the player.
 
-As shown in the example configuration below, you can provide ABR by adding `<Renditions>` to `<OutputProfile>`. To set up `<Rendition>`, you need to add `<Name>` to the elements of `<Encodes>`. Connect the set `<Name>` into `<Rendition><Video>` or `<Rendition><Audio>`.&#x20;
+As shown in the example configuration below, you can provide ABR by adding `<Playlists>` to `<OutputProfile>`.  There can be multiple playlists, and each playlist can be accessed with `<FileName>`.
 
-In the example below, three quality renditions are provided.
+The method to access the playlist set through LLHLS is as follows.&#x20;
+
+`http[s]://<domain>[:port]/<app>/<stream>/`**`<FileName>`**`.m3u8`
+
+The method to access the Playlist set through WebRTC is as follows.&#x20;
+
+`ws[s]://<domain>[:port]/<app>/<stream>/`**`<FileName>`**
+
+Note that `<FileName>` must never contain the **`playlist`** and **`chunklist`** keywords. This is a reserved word used inside the system.
+
+To set up `<Rendition>`, you need to add `<Name>` to the elements of `<Encodes>`. Connect the set `<Name>` into `<Rendition><Video>` or `<Rendition><Audio>`.&#x20;
+
+In the example below, three quality renditions are provided and the URL to play the abr playlist as LLHLS is https://domain:port/app/stream/abr.m3u8.
 
 ```xml
 <OutputProfile>
 	<Name>bypass_stream</Name>
 	<OutputStreamName>${OriginStreamName}</OutputStreamName>
-	<Renditions>
+	<!--LLHLS URL : https://domain/app/stream/abr.m3u8 --> 
+	<Playlist>
+		<Name>For LLHLS</Name>
+		<FileName>abr</FileName>
 		<Rendition>
 			<Name>Bypass</Name>
 			<Video>bypass_video</Video>
@@ -265,7 +280,17 @@ In the example below, three quality renditions are provided.
 			<Video>video_720</Video>
 			<Audio>bypass_audio</Audio>
 		</Rendition>
-	</Renditions> 
+	</Playlist>
+	<!--LLHLS URL : https://domain/app/stream/llhls.m3u8 --> 
+	<Playlist>
+		<Name>Change Default</Name>
+		<FileName>llhls</FileName>
+		<Rendition>
+			<Name>HD</Name>
+			<Video>video_720</Video>
+			<Audio>bypass_audio</Audio>
+		</Rendition>
+	</Playlist> 
 	<Encodes>
 		<Audio>
 			<Name>bypass_audio</Name>
