@@ -168,7 +168,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 	auto http_interceptor = std::make_shared<LLHlsHttpInterceptor>();
 
 	// Register Request Handler
-	http_interceptor->Register(http::Method::Options, R"(.+\.m3u8$)|(.+llhls\.m4s$)", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
+	http_interceptor->Register(http::Method::Options, R"((.+\.m3u8$)|(.+llhls\.m4s$))", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
 		auto connection = exchange->GetConnection();
 		auto request = exchange->GetRequest();
 		auto response = exchange->GetResponse();
