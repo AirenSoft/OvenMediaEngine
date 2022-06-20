@@ -304,7 +304,7 @@ namespace pvd
 		// Parse stream and add track
 		auto json_stream = json_contents["stream"];
 		auto json_tracks = json_stream["tracks"];
-		auto json_renditions = json_stream["renditions"];
+		auto json_playlists = json_stream["playlists"];
 		
 		// Validation
 		// renditions is optional
@@ -324,15 +324,27 @@ namespace pvd
 
 		// Renditions
 		
-		for (size_t i = 0; i < json_renditions.size(); i++)
+		for (size_t i = 0; i < json_playlists.size(); i++)
 		{
-			auto json_rendition = json_renditions[static_cast<int>(i)];
+			auto json_playlist = json_playlists[static_cast<int>(i)];
+			
+			auto playlist_name = json_playlist["name"].asString().c_str();
+			auto playlist_file_name = json_playlist["fileName"].asString().c_str();
 
-			auto name = json_rendition["name"].asString().c_str();
-			auto video_track_name = json_rendition["video_track_name"].asString().c_str();
-			auto audio_track_name = json_rendition["audio_track_name"].asString().c_str();
+			auto playlist = std::make_shared<info::Playlist>(playlist_name, playlist_file_name);
 
-			AddRendition(std::make_shared<Rendition>(name, video_track_name, audio_track_name));
+			for (size_t j = 0; j < json_playlist["renditions"].size(); j++)
+			{
+				auto json_rendition = json_playlist["renditions"][static_cast<int>(j)];
+
+				auto rendition_name = json_rendition["name"].asString().c_str();
+				auto video_track_name = json_rendition["videoTrackName"].asString().c_str();
+				auto audio_track_name = json_rendition["audioTrackName"].asString().c_str();
+
+				playlist->AdddRendition(std::make_shared<info::Rendition>(rendition_name, video_track_name, audio_track_name));
+			}
+
+			AddPlaylist(playlist);
 		}
 
 		//SetName(json_stream["streamName"].asString().c_str());

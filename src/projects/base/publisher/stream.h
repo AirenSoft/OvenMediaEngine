@@ -101,8 +101,8 @@ namespace pub
 
 		uint32_t IssueUniqueSessionId();
 
-		std::shared_ptr<Application> GetApplication();
-		const char * GetApplicationTypeName();
+		std::shared_ptr<Application> GetApplication() const;
+		const char * GetApplicationTypeName() const;
 
 		State GetState() const
 		{

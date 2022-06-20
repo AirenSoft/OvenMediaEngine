@@ -20,7 +20,9 @@ protected:
 
 		if (request->GetMethod() == http::Method::Get || request->GetMethod() == http::Method::Options)
 		{
-			if (request->GetRequestTarget().IndexOf("llhls.m3u8") >= 0 || request->GetRequestTarget().IndexOf("llhls.m4s") >= 0)
+			// playlist.m3u8 is for legacy HLS
+			if ((request->GetRequestTarget() != "playlist.m3u8"	&& request->GetRequestTarget().IndexOf(".m3u8") >= 0) || 
+				request->GetRequestTarget().IndexOf("llhls.m4s") >= 0)
 			{
 				return true;
 			}

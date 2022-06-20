@@ -12,6 +12,48 @@
 #include <base/ovlibrary/zip.h>
 #include <modules/bitstream/codec_media_type.h>
 
+// Add X-MEDIA to the master playlist
+void LLHlsMasterPlaylist::AddMediaCandidateToMasterPlaylist(const ov::String &group_id, const std::shared_ptr<const MediaTrack> &track, const ov::String &chunk_uri)
+{
+	LLHlsMasterPlaylist::MediaInfo media_info;
+
+	media_info._type = track->GetMediaType()==cmn::MediaType::Video ? LLHlsMasterPlaylist::MediaInfo::Type::Video : LLHlsMasterPlaylist::MediaInfo::Type::Audio;
+	media_info._group_id = group_id; // Currently there is only one element per group.
+	media_info._name = "none";
+	media_info._default = true; // Currently there is no group media so all track is default
+	media_info._uri = chunk_uri;
+	media_info._track = track;
+
+	//TODO(Getroot) : If a group such as multilingual audio is supported in the future, the language value of the track must be supported.
+
+	AddGroupMedia(media_info);
+}
+
+// Add X-STREAM-INF to the master playlist
+void LLHlsMasterPlaylist::AddStreamInfToMasterPlaylist(const std::shared_ptr<const MediaTrack> &video_track, const ov::String &video_chunk_uri, 
+														const std::shared_ptr<const MediaTrack> &audio_track, const ov::String &audio_chunk_uri)
+{
+	LLHlsMasterPlaylist::StreamInfo stream_info;
+	if (video_track != nullptr)
+	{
+		stream_info._track = video_track;
+		stream_info._uri = video_chunk_uri;
+		
+		if (audio_track != nullptr)
+		{
+			stream_info._audio_group_id = ov::Converter::ToString(audio_track->GetId());
+		}
+	}
+	else if (audio_track != nullptr)
+	{
+		stream_info._track = audio_track;
+		stream_info._uri = audio_chunk_uri;
+	}
+
+	AddStreamInfo(stream_info);
+}
+
+
 bool LLHlsMasterPlaylist::AddGroupMedia(const MediaInfo &media_info)
 {
 	if (media_info._group_id.IsEmpty())

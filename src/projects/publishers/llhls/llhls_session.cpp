@@ -201,7 +201,7 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 	switch (file_type)
 	{
 	case RequestType::Playlist:
-		ResponsePlaylist(exchange);
+		ResponsePlaylist(exchange, file);
 		break;
 	case RequestType::Chunklist:
 	{
@@ -227,17 +227,17 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 			// v2 is not supported yet
 		}
 
-		ResponseChunklist(exchange, track_id, msn, part, skip);
+		ResponseChunklist(exchange, file, track_id, msn, part, skip);
 		break;
 	}
 	case RequestType::InitializationSegment:
-		ResponseInitializationSegment(exchange, track_id);
+		ResponseInitializationSegment(exchange, file, track_id);
 		break;
 	case RequestType::Segment:
-		ResponseSegment(exchange, track_id, segment_number);
+		ResponseSegment(exchange, file, track_id, segment_number);
 		break;
 	case RequestType::PartialSegment:
-		ResponsePartialSegment(exchange, track_id, segment_number, partial_number);
+		ResponsePartialSegment(exchange, file, track_id, segment_number, partial_number);
 		break;
 	default:
 		break;
@@ -255,15 +255,9 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 	}
 
 	auto name_items = name_ext_items[0].Split("_");
-	if (name_items[0] == "llhls")
+	if (name_ext_items[1] == "m3u8" && name_items[0] != "chunklist")
 	{
-		// llhls.m3u8
-		if (name_ext_items[1] != "m3u8")
-		{
-			logtw("Invalid file name requested: %s", file_name.CStr());
-			return false;
-		}
-
+		// *.m3u8 and NOT chunklist*.m3u8
 		type = RequestType::Playlist;
 	}
 	else if (name_items[0] == "chunklist")
@@ -329,7 +323,7 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 	return true;
 }
 
-void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchange> &exchange)
+void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name)
 {
 	auto llhls_stream = std::static_pointer_cast<LLHlsStream>(GetStream());
 	if (llhls_stream == nullptr)
@@ -358,7 +352,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 		query_string.Clear();
 	}
 
-	auto [result, playlist] = llhls_stream->GetPlaylist(query_string, gzip);
+	auto [result, playlist] = llhls_stream->GetMasterPlaylist(file_name, query_string, gzip);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
 		// Send the playlist
@@ -381,7 +375,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 	else if (result == LLHlsStream::RequestResult::Accepted)
 	{
 		// llhls.m3u8 is transmitted when more than one segment (any track) is created.
-		AddPendingRequest(exchange, RequestType::Playlist, 0, 1, 0);
+		AddPendingRequest(exchange, RequestType::Playlist, file_name, 0, 1, 0);
 		return ;
 	}
 	else
@@ -393,7 +387,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 	ResponseData(exchange);
 }
 
-void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id, int64_t msn, int64_t part, bool skip)
+void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, int64_t msn, int64_t part, bool skip)
 {
 	auto llhls_stream = std::static_pointer_cast<LLHlsStream>(GetStream());
 	if (llhls_stream == nullptr)
@@ -468,7 +462,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		// Hold
 		//TODO(Getroot): EXT-X-SKIP is under debugging
 		skip = false;
-		AddPendingRequest(exchange, RequestType::Chunklist, track_id, msn, part, skip);
+		AddPendingRequest(exchange, RequestType::Chunklist, file_name, track_id, msn, part, skip);
 		return ;
 	}
 	else
@@ -480,7 +474,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 	ResponseData(exchange);
 }
 
-void LLHlsSession::ResponseInitializationSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id)
+void LLHlsSession::ResponseInitializationSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id)
 {
 	auto llhls_stream = std::static_pointer_cast<LLHlsStream>(GetStream());
 	if (llhls_stream == nullptr)
@@ -517,7 +511,7 @@ void LLHlsSession::ResponseInitializationSegment(const std::shared_ptr<http::svr
 	ResponseData(exchange);
 }
 
-void LLHlsSession::ResponseSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id, const int64_t &segment_number)
+void LLHlsSession::ResponseSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, const int64_t &segment_number)
 {
 	auto llhls_stream = std::static_pointer_cast<LLHlsStream>(GetStream());
 	if (llhls_stream == nullptr)
@@ -553,7 +547,7 @@ void LLHlsSession::ResponseSegment(const std::shared_ptr<http::svr::HttpExchange
 	ResponseData(exchange);
 }
 
-void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number)
+void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number)
 {
 	auto llhls_stream = std::static_pointer_cast<LLHlsStream>(GetStream());
 	if (llhls_stream == nullptr)
@@ -583,7 +577,7 @@ void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpE
 	else if (result == LLHlsStream::RequestResult::Accepted)
 	{
 		// Hold
-		AddPendingRequest(exchange, RequestType::PartialSegment, track_id, segment_number, partial_number);
+		AddPendingRequest(exchange, RequestType::PartialSegment, file_name, track_id, segment_number, partial_number);
 		return ;
 	}
 	else
@@ -617,7 +611,7 @@ void LLHlsSession::OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn
 		{
 			// Send the playlist
 			auto exchange = it->exchange;
-			ResponsePlaylist(exchange);
+			ResponsePlaylist(exchange, it->file_name);
 			it = _pending_requests.erase(it);
 		}
 		else if ( (it->track_id == track_id) && 
@@ -627,16 +621,18 @@ void LLHlsSession::OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn
 			switch (it->type)
 			{
 			case RequestType::Chunklist:
-				ResponseChunklist(it->exchange, it->track_id, it->segment_number, it->partial_number, it->skip);
+				ResponseChunklist(it->exchange, it->file_name, it->track_id, it->segment_number, it->partial_number, it->skip);
 				break;
 			case RequestType::PartialSegment:
-				ResponsePartialSegment(it->exchange, it->track_id, it->segment_number, it->partial_number);
+				ResponsePartialSegment(it->exchange, it->file_name, it->track_id, it->segment_number, it->partial_number);
 				break;
 			case RequestType::Segment:
-				ResponseSegment(it->exchange, it->track_id, it->segment_number);
+				ResponseSegment(it->exchange, it->file_name, it->track_id, it->segment_number);
 				break;
 			case RequestType::Playlist:
+				// Playlist is processed already above
 			case RequestType::InitializationSegment:
+				// Initialization segment request is not pending 
 			default:
 				// Assertion
 				OV_ASSERT2(false);
@@ -654,11 +650,12 @@ void LLHlsSession::OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn
 	}
 }
 
-bool LLHlsSession::AddPendingRequest(const std::shared_ptr<http::svr::HttpExchange> &exchange, const RequestType &type, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number, const bool &skip)
+bool LLHlsSession::AddPendingRequest(const std::shared_ptr<http::svr::HttpExchange> &exchange, const RequestType &type, const ov::String &file_name, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number, const bool &skip)
 {
 	// Add the request to the pending list
 	PendingRequest request;
 	request.type = type;
+	request.file_name = file_name;
 	request.track_id = track_id;
 	request.segment_number = segment_number;
 	request.partial_number = partial_number;

@@ -168,7 +168,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 	auto http_interceptor = std::make_shared<LLHlsHttpInterceptor>();
 
 	// Register Request Handler
-	http_interceptor->Register(http::Method::Options, R"(.+llhls\.(m3u8|m4s)$)", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
+	http_interceptor->Register(http::Method::Options, R"(.+\.m3u8$)|(.+llhls\.m4s$)", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
 		auto connection = exchange->GetConnection();
 		auto request = exchange->GetRequest();
 		auto response = exchange->GetResponse();
@@ -201,7 +201,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 	});
 
 
-	http_interceptor->Register(http::Method::Get, R"(.+llhls\.(m3u8|m4s)$)", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
+	http_interceptor->Register(http::Method::Get, R"((.+\.m3u8$)|(.+llhls\.m4s$))", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
 
 		auto connection = exchange->GetConnection();
 		auto request = exchange->GetRequest();
@@ -336,7 +336,8 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 
 		std::shared_ptr<LLHlsSession> session = nullptr; 
 
-		if (request_url->File() == "llhls.m3u8")
+		// Master playlist (.m3u8 and NOT *chunklist*.m3u8)
+		if (request_url->File().IndexOf(".m3u8") > 0 && request_url->File().IndexOf("chunklist") == -1)
 		{
 			session_id_t session_id = connection->GetId();
 

@@ -41,7 +41,7 @@ bool HlsInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::s
 
 	// ts/m3u8
 	if ((request->GetRequestTarget().IndexOf(".ts") >= 0) ||
-		(request->GetRequestTarget().IndexOf(".m3u8") >= 0))
+		(request->GetRequestTarget().IndexOf("playlist.m3u8") >= 0))
 	{
 		return true;
 	}

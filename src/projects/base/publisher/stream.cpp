@@ -297,12 +297,12 @@ namespace pub
 		return _started_time;
 	}
 
-	std::shared_ptr<Application> Stream::GetApplication()
+	std::shared_ptr<Application> Stream::GetApplication() const
 	{
 		return _application;
 	}
 
-	const char * Stream::GetApplicationTypeName()
+	const char * Stream::GetApplicationTypeName() const
 	{
 		if(GetApplication() == nullptr)
 		{

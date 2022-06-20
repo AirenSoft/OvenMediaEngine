@@ -9,7 +9,7 @@
 #pragma once
 
 #include "encodes/encodes.h"
-#include "renditions.h"
+#include "playlist/playlist.h"
 
 namespace cfg
 {
@@ -25,13 +25,13 @@ namespace cfg
 					ov::String _name;
 					ov::String _output_stream_name;
 					Encodes _encodes;
-					Renditions _renditions;
+					std::vector<Playlist> _playlists;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetOutputStreamName, _output_stream_name)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetEncodes, _encodes)
-					CFG_DECLARE_CONST_REF_GETTER_OF(GetRenditions, _renditions)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetPlaylists, _playlists)
 
 				protected:
 					void MakeList() override
@@ -40,14 +40,21 @@ namespace cfg
 						Register("OutputStreamName", &_output_stream_name);
 						Register<Optional>("Encodes", &_encodes);
 
-						Register<Optional>("Renditions", &_renditions,
+						Register<Optional>({"Playlist", "playlists"}, &_playlists,
 							[=]() -> std::shared_ptr<ConfigError> {
 								return nullptr;
 							},
 							[=]() -> std::shared_ptr<ConfigError> {
-								auto result = _renditions.SetEncodes(_encodes);
 
-								return result ? nullptr : CreateConfigErrorPtr("Rendition Error");
+								for (auto &playlist : _playlists)
+								{
+									if (playlist.SetEncodes(_encodes) == false)
+									{
+										return CreateConfigErrorPtr("Playlist Error");
+									}	
+								}
+								
+								return nullptr;
 							}
 						);
 					}

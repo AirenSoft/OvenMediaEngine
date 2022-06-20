@@ -74,12 +74,30 @@ bool OvtStream::GenerateDecription()
 		"appName" : "app",
 		"streamName" : "stream_720p",
 		"streamUUID" : "OvenMediaEngine_90b8b53e-3140-4e59-813d-9ace51c0e186/default/#default#app/stream",
-		"renditions":
+		"playlists":
 		[
 			{
-				"name" : "1080p",
-				"video_track_name" : "1080p",
-				"audio_track_name" : "default",
+				"name" : "for llhls",
+				"fileName" : "llhls_abr.oven",
+				"renditions":
+				[
+					{
+						"name" : "1080p",
+						"videoTrackName" : "1080p",
+						"audioTrackName" : "default",
+					},
+					{
+						"name" : "720",
+						"videoTrackName" : "720p",
+						"audioTrackName" : "default",
+					}
+				],
+				[
+					...
+				]
+			},
+			{
+				...
 			}
 		],
 		"tracks":
@@ -114,7 +132,7 @@ bool OvtStream::GenerateDecription()
 	Json::Value 	json_root;
 	Json::Value		json_stream;
 	Json::Value		json_tracks;
-	Json::Value		json_renditions;
+	Json::Value		json_playlists;
 
 	json_stream["appName"] = GetApplicationName();
 	json_stream["streamName"] = GetName().CStr();
@@ -129,15 +147,25 @@ bool OvtStream::GenerateDecription()
 		json_stream["originStreamUUID"] = GetUUID().CStr();
 	}
 
-	for(auto &rendition : _renditions)
+	for(const auto &[file_name, playlist] : GetPlaylists())
 	{
-		Json::Value json_rendition;
+		Json::Value json_playlist;
+		
+		json_playlist["name"] = playlist->GetName().CStr();
+		json_playlist["fileName"] = playlist->GetFileName().CStr();
 
-		json_rendition["name"] = rendition->GetName().CStr();
-		json_rendition["video_track_name"] = rendition->GetVideoTrackName().CStr();
-		json_rendition["audio_track_name"] = rendition->GetAudioTrackName().CStr();
+		for (const auto &rendition : playlist->GetRenditionList())
+		{
+			Json::Value json_rendition;
 
-		json_renditions.append(json_rendition);
+			json_rendition["name"] = rendition->GetName().CStr();
+			json_rendition["videoTrackName"] = rendition->GetVideoTrackName().CStr();
+			json_rendition["audioTrackName"] = rendition->GetAudioTrackName().CStr();
+
+			json_playlist["renditions"].append(json_rendition);
+		}
+
+		json_playlists.append(json_playlist);
 	}
 
 	for(auto &track_item : _tracks)
@@ -179,7 +207,7 @@ bool OvtStream::GenerateDecription()
 		json_tracks.append(json_track);
 	}
 
-	json_stream["renditions"] = json_renditions;
+	json_stream["playlists"] = json_playlists;
 	json_stream["tracks"] = json_tracks;
 	json_root["stream"] = json_stream;
 	

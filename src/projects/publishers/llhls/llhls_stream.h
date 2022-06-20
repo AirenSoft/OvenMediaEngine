@@ -16,6 +16,8 @@
 #include "llhls_master_playlist.h"
 #include "llhls_chunklist.h"
 
+#define DEFAULT_PLAYLIST_NAME	"llhls.m3u8"
+
 class LLHlsStream : public pub::Stream, public bmff::FMp4StorageObserver
 {
 public:
@@ -55,7 +57,7 @@ public:
 
 	uint64_t GetMaxChunkDurationMS() const;
 
-	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetPlaylist(const ov::String &chunk_query_string, bool gzip=false) const;
+	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetMasterPlaylist(const ov::String &file_name, const ov::String &chunk_query_string, bool gzip=false);
 	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetChunklist(const ov::String &chunk_query_string, const int32_t &track_id, int64_t msn, int64_t psn, bool skip = false, bool gzip=false) const;
 	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetInitializationSegment(const int32_t &track_id) const;
 	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetSegment(const int32_t &track_id, const int64_t &segment_number) const;
@@ -81,17 +83,14 @@ private:
 	// Get Playlist with the track id
 	std::shared_ptr<LLHlsChunklist> GetChunklistWriter(const int32_t &track_id) const;
 
-	// Add X-MEDIA to the master playlist
-	void AddMediaCandidateToMasterPlaylist(const std::shared_ptr<const MediaTrack> &track);
-	// Add X-STREAM-INF to the master playlist
-	void AddStreamInfToMasterPlaylist(const std::shared_ptr<const MediaTrack> &video_track, const std::shared_ptr<const MediaTrack> &audio_track);
+	std::shared_ptr<LLHlsMasterPlaylist> CreateMasterPlaylist(const std::shared_ptr<const info::Playlist> &playlist) const;
 
 	ov::String GetPlaylistName();
-	ov::String GetChunklistName(const int32_t &track_id);
-	ov::String GetIntializationSegmentName(const int32_t &track_id);
-	ov::String GetSegmentName(const int32_t &track_id, const int64_t &segment_number);
-	ov::String GetPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number);
-	ov::String GetNextPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number);
+	ov::String GetChunklistName(const int32_t &track_id) const;
+	ov::String GetIntializationSegmentName(const int32_t &track_id) const;
+	ov::String GetSegmentName(const int32_t &track_id, const int64_t &segment_number) const;
+	ov::String GetPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number) const;
+	ov::String GetNextPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number) const;
 
 	bool AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_packet);
 
@@ -112,7 +111,7 @@ private:
 	uint64_t _max_chunk_duration_ms = 0;
 	uint64_t _min_chunk_duration_ms = std::numeric_limits<uint64_t>::max();
 
-	LLHlsMasterPlaylist _master_playlist;
+	std::map<ov::String, std::shared_ptr<LLHlsMasterPlaylist>> _master_playlists;
 	bool _playlist_ready = false;
 
 	ov::Queue<std::shared_ptr<MediaPacket>> _initial_media_packet_buffer;

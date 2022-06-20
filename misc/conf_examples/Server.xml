@@ -259,25 +259,40 @@
 							<OutputStreamName>${OriginStreamName}</OutputStreamName>
 
 							<!-- 
-							You can provide ABR with Renditions. Currently, ABR is only supported in LLHLS.
+							You can provide ABR with Playlist. Currently, ABR is only supported in LLHLS.
 							
-							<Renditions>
+							<Playlist>
+								<Name>Paid</Name>
+								You can play this playlist with 
+								LLHLS : http[s]://<domain>[:port]/<app>/<stream>/<FileName>.m3u8 
+								WebRTC : ws[s]://<domain>[:port]/<app>/<stream>/<FileName>
+								Note that the keywords "playlist" and "chunklist" MUST NOT be included in FileName.
+								<FileName>premium</FileName>
 								<Rendition>
-									<Name>Bypass</Name>
+									<Name>bypass</Name>
 									<Video>bypass_video</Video>
 									<Audio>bypass_audio</Audio>
 								</Rendition>
 								<Rendition>
-									<Name>FHD</Name>
-									<Video>video_1280</Video>
+									<Name>480p</Name>
+									<Video>480p</Video>
 									<Audio>bypass_audio</Audio>
 								</Rendition>
 								<Rendition>
-									<Name>HD</Name>
-									<Video>video_720</Video>
+									<Name>720p</Name>
+									<Video>720p</Video>
 									<Audio>bypass_audio</Audio>
 								</Rendition>
-							</Renditions> 
+							</Playlist>
+							<Playlist>
+								<Name>free</Name>
+								<FileName>free</FileName>
+								<Rendition>
+									<Name>720p</Name>
+									<Video>720p</Video>
+									<Audio>bypass_audio</Audio>
+								</Rendition>
+							</Playlist>
 							-->
 
 							<Encodes>

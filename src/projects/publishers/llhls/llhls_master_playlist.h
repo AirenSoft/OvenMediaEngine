@@ -15,6 +15,16 @@
 class LLHlsMasterPlaylist
 {
 public:
+	// Add X-MEDIA to the master playlist
+	void AddMediaCandidateToMasterPlaylist(const ov::String &group_id, const std::shared_ptr<const MediaTrack> &track, const ov::String &chunk_uri);
+	// Add X-STREAM-INF to the master playlist
+	void AddStreamInfToMasterPlaylist(const std::shared_ptr<const MediaTrack> &video_track, const ov::String &video_chunk_uri, 
+										const std::shared_ptr<const MediaTrack> &audio_track, const ov::String &audio_chunk_uri);
+
+	ov::String ToString(const ov::String &chunk_query_string) const;
+	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &chunk_query_string) const;
+
+private:
 	struct MediaInfo
 	{
 		enum class Type : uint8_t
@@ -78,10 +88,6 @@ public:
 	bool AddGroupMedia(const MediaInfo &media_info);
 	bool AddStreamInfo(const StreamInfo &stream_info);
 
-	ov::String ToString(const ov::String &chunk_query_string) const;
-	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &chunk_query_string) const;
-
-private:
 	bool SetActiveMediaGroup(const ov::String &group_id);
 	const MediaInfo &GetDefaultMediaInfo(const ov::String &group_id) const;
 

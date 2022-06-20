@@ -8,8 +8,8 @@
 //==============================================================================
 #pragma once
 
-#include "encodes/video_profile.h"
-#include "encodes/audio_profile.h"
+#include "../encodes/video_profile.h"
+#include "../encodes/audio_profile.h"
 
 namespace cfg
 {

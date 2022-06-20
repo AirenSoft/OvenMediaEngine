@@ -310,12 +310,19 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 	stream->SetName(name);
 
 	bool is_parsed = false;
-	auto renditions = cfg_output_profile.GetRenditions(&is_parsed);
+	auto cfg_playlists = cfg_output_profile.GetPlaylists(&is_parsed);
 	if (is_parsed)
 	{
-		for (const auto &rendition : renditions.GetRenditionList())
+		for (const auto &cfg_playlist : cfg_playlists)
 		{
-			stream->AddRendition(std::make_shared<Rendition>(rendition.GetName(), rendition.GetVideoName(), rendition.GetAudioName()));
+			auto playlist = std::make_shared<info::Playlist>(cfg_playlist.GetName(), cfg_playlist.GetFileName());
+
+			for (const auto &cfg_rendition : cfg_playlist.GetRenditions())
+			{
+				playlist->AdddRendition(std::make_shared<info::Rendition>(cfg_rendition.GetName(), cfg_rendition.GetVideoName(), cfg_rendition.GetAudioName()));
+			}
+
+			stream->AddPlaylist(playlist);
 		}
 	}
 
