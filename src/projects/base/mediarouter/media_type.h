@@ -93,6 +93,16 @@ namespace cmn
 		return false;
 	}
 
+	static bool IsImageCodec(cmn::MediaCodecId codec_id) {
+		if (codec_id == cmn::MediaCodecId::Jpeg || 
+		    codec_id == cmn::MediaCodecId::Png)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 	static bool IsAudioCodec(cmn::MediaCodecId codec_id)
 	{
 		if (codec_id == cmn::MediaCodecId::Aac ||
