@@ -2,7 +2,7 @@
 //
 //  TranscoderStream
 //
-//  Created by Kwon Keuk Han
+//  Created by Keukhan
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
@@ -22,10 +22,11 @@
 #include "transcoder_decoder.h"
 #include "transcoder_encoder.h"
 #include "transcoder_filter.h"
+#include "transcoder_stream_internal.h"
 
 class TranscodeApplication;
 
-class TranscoderStream : public ov::EnableSharedFromThis<TranscoderStream>
+class TranscoderStream : public ov::EnableSharedFromThis<TranscoderStream>, public TranscoderStreamInternal
 {
 public:
 	class CompositeContext
@@ -86,10 +87,18 @@ public:
 	bool Stop();
 	bool Prepare();
 	bool Update(const std::shared_ptr<info::Stream> &stream);
-
 	bool Push(std::shared_ptr<MediaPacket> packet);
 
+	// Notify event to mediarouter
+	void NotifyCreateStreams();
+	void NotifyDeleteStreams();
+	void NotifyUpdateStreams();
+
 private:
+	ov::String _log_prefix;
+
+	TranscodeApplication *_parent;
+
 	const info::Application _application_info;
 
 	// Input Stream Info
@@ -99,6 +108,7 @@ private:
 	// [OUTPUT_STREAM_NAME, OUTPUT_stream]
 	std::map<ov::String, std::shared_ptr<info::Stream>> _output_streams;
 
+private:
 	// Store information for track mapping by stage
 	void AddCompositeMap(ov::String unique_id,
 						 std::shared_ptr<info::Stream> input_stream,
@@ -143,22 +153,14 @@ private:
 	// ENCODER_ID, ENCODER
 	std::map<MediaTrackId, std::shared_ptr<TranscodeEncoder>> _encoders;
 
-	// last generated output track id.
-	std::atomic<MediaTrackId> _last_track_index = 0;
-
-	TranscodeApplication *_parent;
-
 	std::shared_ptr<MediaTrack> GetInputTrack(MediaTrackId track_id);
 
+	int32_t CreateOutputStreamDynamic();
 	int32_t CreateOutputStreams();
 	std::shared_ptr<info::Stream> CreateOutputStream(const cfg::vhost::app::oprf::OutputProfile &cfg_output_profile);
 	std::shared_ptr<MediaTrack> CreateOutputTrack(const std::shared_ptr<MediaTrack> &input_track, const cfg::vhost::app::oprf::VideoProfile &profile);
 	std::shared_ptr<MediaTrack> CreateOutputTrack(const std::shared_ptr<MediaTrack> &input_track, const cfg::vhost::app::oprf::AudioProfile &profile);
 	std::shared_ptr<MediaTrack> CreateOutputTrack(const std::shared_ptr<MediaTrack> &input_track, const cfg::vhost::app::oprf::ImageProfile &profile);
-	MediaTrackId NewTrackId();
-
-	// for dynamically generated applications
-	int32_t CreateOutputStreamDynamic();
 
 	int32_t CreatePipeline();
 
@@ -193,7 +195,7 @@ private:
 	TranscodeResult EncodeFrame(std::shared_ptr<const MediaFrame> frame);
 	void OnEncodedPacket(int32_t encoder_id, std::shared_ptr<MediaPacket> encoded_packet);
 
-	// Send frame with output stream's information
+	// Send encoded packet to mediarouter via transcoder application
 	void SendFrame(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> packet);
 
 	void RemoveAllComponents();
@@ -202,18 +204,5 @@ private:
 	void RemoveEncoders();
 
 	void UpdateMsidOfOutputStreams(uint32_t msid);
-
 	bool IsAvailableSmoothTransitionStream(const std::shared_ptr<info::Stream> &stream);
-
-public:
-	ov::String GetIdentifiedForVideoProfile(const uint32_t track_id, const cfg::vhost::app::oprf::VideoProfile &profile);
-	ov::String GetIdentifiedForAudioProfile(const uint32_t track_id, const cfg::vhost::app::oprf::AudioProfile &profile);
-	ov::String GetIdentifiedForImageProfile(const uint32_t track_id, const cfg::vhost::app::oprf::ImageProfile &profile);
-
-	const cmn::Timebase GetDefaultTimebaseByCodecId(cmn::MediaCodecId codec_id);
-
-	// Notify event to mediarouter
-	void NotifyCreateStreams();
-	void NotifyDeleteStreams();
-	void NotifyUpdateStreams();
 };

@@ -2,7 +2,7 @@
 //
 //  MediaRouteStream
 //
-//  Created by Kwon Keuk Han
+//  Created by Keukhan
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
@@ -51,7 +51,7 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 	: _stream(stream),
 	  _packets_queue(nullptr, 100)
 {
-	logti("Trying to create media route stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
+	logti("[%s/%s(%u)] Trying to create media route stream", _stream->GetApplicationName(), _stream->GetName().CStr(), _stream->GetId());
 	_inout_type = MediaRouterStreamType::UNKNOWN;
 
 	_max_warning_count_bframe = 0;
@@ -68,7 +68,7 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream, 
 
 MediaRouteStream::~MediaRouteStream()
 {
-	logti("Delete media route stream name(%s) id(%u)", _stream->GetName().CStr(), _stream->GetId());
+	logti("[%s/%s(%u)] Delete media route stream ", _stream->GetApplicationName(), _stream->GetName().CStr(), _stream->GetId());
 
 	_media_packet_stash.clear();
 
@@ -91,7 +91,7 @@ void MediaRouteStream::SetInoutType(MediaRouterStreamType inout_type)
 {
 	_inout_type = inout_type;
 
-	_packets_queue.SetAlias(ov::String::FormatString("%s/%s - Mediarouter stream packet %s", _stream->GetApplicationInfo().GetName().CStr(), _stream->GetName().CStr(), (_inout_type == MediaRouterStreamType::INBOUND) ? "Inbound" : "Outbound"));
+	_packets_queue.SetAlias(ov::String::FormatString("%s/%s-MR-%s", _stream->GetApplicationInfo().GetName().CStr(), _stream->GetName().CStr(), (_inout_type == MediaRouterStreamType::INBOUND) ? "Inbound" : "Outbound"));
 }
 
 MediaRouterStreamType MediaRouteStream::GetInoutType()
@@ -373,7 +373,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 				media_track->SetWidth(sps.GetWidth());
 				media_track->SetHeight(sps.GetHeight());
 
-				logtd("%s", sps.GetInfoString().CStr());
+				logtd("[%s/%s(%u)] %s", _stream->GetApplicationName(), _stream->GetName().CStr(), _stream->GetId(), sps.GetInfoString().CStr());
 
 				avc_decoder_configuration_record.AddSPS(nalu);
 				avc_decoder_configuration_record.SetProfileIndication(sps.GetProfileIdc());
@@ -798,8 +798,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 						  _stream->GetName().CStr(),
 						  _stream->GetId(),
 						  track_id,
-						  _inout_type == MediaRouterStreamType::INBOUND ? "inbound" : "outbound"
-					);
+						  _inout_type == MediaRouterStreamType::INBOUND ? "inbound" : "outbound");
 
 					_max_warning_count_bframe++;
 				}
@@ -1110,9 +1109,12 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 			if (std::abs(ts_inc_ms) > PTS_CORRECT_THRESHOLD_MS)
 			{
-				if (!(media_track->GetCodecId() == cmn::MediaCodecId::Png || media_track->GetCodecId() == cmn::MediaCodecId::Jpeg))
+				if (IsImageCodec(media_track->GetCodecId()) == false)
 				{
-					logtw("Detected abnormal increased timestamp. track:%u last.pts: %lld, cur.pts: %lld, tb(%d/%d), diff: %lldms",
+					logtw("[%s/%s(%u)] Detected abnormal increased timestamp. track:%u last.pts: %lld, cur.pts: %lld, tb(%d/%d), diff: %lldms",
+						  _stream->GetApplicationInfo().GetName().CStr(),
+						  _stream->GetName().CStr(),
+						  _stream->GetId(),
 						  track_id, _pts_last[track_id],
 						  pop_media_packet->GetPts(),
 						  media_track->GetTimeBase().GetNum(),
