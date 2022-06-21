@@ -13,11 +13,14 @@
 class TranscodeEncoder : public TranscodeBase<MediaFrame, MediaPacket>
 {
 public:
+	typedef std::function<void(int32_t, std::shared_ptr<MediaPacket>)> _cb_func;
+
+public:
 	TranscodeEncoder();
 	~TranscodeEncoder() override;
 
-	static std::shared_ptr<TranscodeEncoder> CreateEncoder(std::shared_ptr<TranscodeContext> output_context);
-	void SetTrackId(int32_t track_id);
+	static std::shared_ptr<TranscodeEncoder> Create(int32_t encoder_id, std::shared_ptr<TranscodeContext> output_context, _cb_func on_complete_handler);
+	void SetEncoderId(int32_t encdoer_id);
 
 	virtual int GetPixelFormat() const noexcept = 0;
 
@@ -34,16 +37,11 @@ public:
 
 	cmn::Timebase GetTimebase() const;
 
-	// TODO(soulk): The encoder and decoder are also changed to the way callback is called
-	// when the encoder and decoder are completed.
-	typedef std::function<TranscodeResult(int32_t)> _cb_func;
-	_cb_func OnCompleteHandler;
+	_cb_func _on_complete_handler;
 	void SetOnCompleteHandler(_cb_func func)
 	{
-		OnCompleteHandler = move(func);
+		_on_complete_handler = move(func);
 	}
-
-	std::shared_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
 
 private:
 	virtual bool SetCodecParams() = 0;
@@ -51,7 +49,7 @@ private:
 protected:
 	std::shared_ptr<TranscodeContext> _encoder_context = nullptr;
 
-	int32_t _track_id;
+	int32_t _encoder_id;
 
 	AVCodecContext *_codec_context = nullptr;
 	AVCodecParserContext *_parser = nullptr;

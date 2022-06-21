@@ -33,7 +33,7 @@ bool DecoderHEVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	_context->time_base = TimebaseToAVRational(GetTimebase());
+	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 
 	::av_opt_set(_context->priv_data, "gpu_copy", "on", 0);
 
@@ -113,9 +113,9 @@ void DecoderHEVCxNV::CodecThread()
 				_pkt->dts = _parser->dts;
 				_pkt->flags = (_parser->key_frame == 1) ? AV_PKT_FLAG_KEY : 0;
 				_pkt->duration = _pkt->dts - _parser->last_dts;
-				if(_pkt->duration <= 0LL)
+				if (_pkt->duration <= 0LL)
 				{
-					// It may not be the exact packet duration. 
+					// It may not be the exact packet duration.
 					// However, in general, this method is applied under the assumption that the duration of all packets is similar.
 					_pkt->duration = duration;
 				}
@@ -230,7 +230,6 @@ void DecoderHEVCxNV::CodecThread()
 				}
 				tmp_frame->pts = _frame->pts;
 
-
 				// If there is no duration, the duration is calculated by framerate and timebase.
 				tmp_frame->pkt_duration = (tmp_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : tmp_frame->pkt_duration;
 
@@ -243,7 +242,7 @@ void DecoderHEVCxNV::CodecThread()
 				::av_frame_unref(_frame);
 				::av_frame_free(&sw_frame);
 
-				SendOutputBuffer(need_to_change_notify, _track_id, std::move(decoded_frame));
+				SendOutputBuffer(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
 			}
 		}
 	}

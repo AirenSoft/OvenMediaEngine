@@ -32,35 +32,18 @@ extern "C"
 #include <base/mediarouter/media_buffer.h>
 #include <base/mediarouter/media_type.h>
 
-class MediaFilterImpl
+class FilterBase
 {
 public:
-	MediaFilterImpl() = default;
-	virtual ~MediaFilterImpl() = default;
+	typedef std::function<void(std::shared_ptr<MediaFrame>)> CB_FUNC;
+	FilterBase() = default;
+	virtual ~FilterBase() = default;
 
 	virtual bool Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context) = 0;
 
 	virtual int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer) = 0;
-	virtual std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) = 0;
 	virtual bool Start() = 0;
-	
-	static AVRational TimebaseToAVRational(const cmn::Timebase &timebase)
-	{
-		return (AVRational){
-			.num = timebase.GetNum(),
-			.den = timebase.GetDen()};
-	}
-
-	uint32_t GetInputBufferSize()
-	{
-		return _input_buffer.Size();
-	}
-
-	uint32_t GetOutputBufferSize()
-	{
-		return _output_buffer.Size();
-	}
-
+	virtual void Stop() = 0;
 	cmn::Timebase GetInputTimebase() const
 	{
 		return _input_context->GetTimeBase();
@@ -71,9 +54,12 @@ public:
 		return _output_context->GetTimeBase();
 	}
 
+	void SetOnCompleteHandler(CB_FUNC on_complete_handler) {
+		_on_complete_handler = on_complete_handler;
+	}
+
 protected:
 	ov::Queue<std::shared_ptr<MediaFrame>> _input_buffer;
-	ov::Queue<std::shared_ptr<MediaFrame>> _output_buffer;
 
 	AVFrame *_frame = nullptr;
 	AVFilterContext *_buffersink_ctx = nullptr;
@@ -89,4 +75,6 @@ protected:
 
 	bool _kill_flag = false;
 	std::thread _thread_work;
+
+	CB_FUNC _on_complete_handler;
 };

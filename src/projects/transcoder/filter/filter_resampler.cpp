@@ -10,9 +10,10 @@
 #include "filter_resampler.h"
 
 #include <base/ovlibrary/ovlibrary.h>
+
 #include "../transcoder_private.h"
 
-MediaFilterResampler::MediaFilterResampler()
+FilterResampler::FilterResampler()
 {
 	_frame = ::av_frame_alloc();
 
@@ -21,15 +22,13 @@ MediaFilterResampler::MediaFilterResampler()
 
 	_input_buffer.SetAlias("Input queue of media resampler filter");
 	_input_buffer.SetThreshold(100);
-	_output_buffer.SetAlias("Output queue of media resampler filter");
-	_output_buffer.SetThreshold(100);
 
 	OV_ASSERT2(_frame != nullptr);
 	OV_ASSERT2(_inputs != nullptr);
 	OV_ASSERT2(_outputs != nullptr);
 }
 
-MediaFilterResampler::~MediaFilterResampler()
+FilterResampler::~FilterResampler()
 {
 	Stop();
 
@@ -41,10 +40,9 @@ MediaFilterResampler::~MediaFilterResampler()
 	OV_SAFE_FUNC(_filter_graph, nullptr, ::avfilter_graph_free, &);
 
 	_input_buffer.Clear();
-	_output_buffer.Clear();
 }
 
-bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context)
+bool FilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context)
 {
 	int ret;
 
@@ -62,8 +60,8 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 	// Limit the number of filter threads to 1. I think 1 thread is usually enough for audio filtering processing.
 	_filter_graph->nb_threads = 1;
 
-	AVRational input_timebase = TimebaseToAVRational(input_context->GetTimeBase());
-	AVRational output_timebase = TimebaseToAVRational(output_context->GetTimeBase());
+	AVRational input_timebase = ffmpeg::Conv::TimebaseToAVRational(input_context->GetTimeBase());
+	AVRational output_timebase = ffmpeg::Conv::TimebaseToAVRational(output_context->GetTimeBase());
 
 	_scale = ::av_q2d(::av_div_q(input_timebase, output_timebase));
 
@@ -99,16 +97,10 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 
 	// Prepare output filters
 	std::vector<ov::String> filters = {
-		// "asettb" filter options
 		ov::String::FormatString("asettb=%s", output_context->GetTimeBase().GetStringExpr().CStr()),
-		// "aresample" filter options
-		// Restore Missing Samples
-		ov::String::FormatString("aresample=async=1000", output_context->GetAudioSampleRate()),
-		// Change the number of samples
+		ov::String::FormatString("aresample=async=1000"),
 		ov::String::FormatString("aresample=%d", output_context->GetAudioSampleRate()),
-		// "aformat" filter options
 		ov::String::FormatString("aformat=sample_fmts=%s:channel_layouts=%s", output_context->GetAudioSample().GetName(), output_context->GetAudioChannel().GetName()),
-		// "asetnsamples" filter options
 		ov::String::FormatString("asetnsamples=n=%d", output_context->GetAudioSamplesPerFrame())};
 
 	ov::String output_filters = ov::String::Join(filters, ",");
@@ -157,19 +149,17 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 	_input_context = input_context;
 	_output_context = output_context;
 
-
-
 	return true;
 }
 
-bool MediaFilterResampler::Start()
+bool FilterResampler::Start()
 {
 	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
 	try
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&MediaFilterResampler::FilterThread, this);
+		_thread_work = std::thread(&FilterResampler::FilterThread, this);
 		pthread_setname_np(_thread_work.native_handle(), "Resampler");
 	}
 	catch (const std::system_error &e)
@@ -184,23 +174,22 @@ bool MediaFilterResampler::Start()
 	return true;
 }
 
-void MediaFilterResampler::Stop()
+void FilterResampler::Stop()
 {
 	_kill_flag = true;
 
 	// _queue_event.Notify();
 
 	_input_buffer.Stop();
-	_output_buffer.Stop();
 
 	if (_thread_work.joinable())
 	{
 		_thread_work.join();
-		logtd("Terminated transcode resample filter thread.");
+		logtd("resampler filter thread has ended");
 	}
 }
 
-void MediaFilterResampler::FilterThread()
+void FilterResampler::FilterThread()
 {
 	logtd("Start transcode resampler filter thread.");
 
@@ -213,7 +202,7 @@ void MediaFilterResampler::FilterThread()
 		auto media_frame = std::move(obj.value());
 
 		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
-		if(!av_frame)
+		if (!av_frame)
 		{
 			logte("Could not allocate the frame data");
 			break;
@@ -254,34 +243,18 @@ void MediaFilterResampler::FilterThread()
 					continue;
 				}
 
-				_output_buffer.Enqueue(std::move(output_frame));
+				if (_on_complete_handler)
+				{
+					_on_complete_handler(std::move(output_frame));
+				}
 			}
 		}
 	}
 }
 
-int32_t MediaFilterResampler::SendBuffer(std::shared_ptr<MediaFrame> buffer)
+int32_t FilterResampler::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 {
 	_input_buffer.Enqueue(std::move(buffer));
 
 	return 0;
-}
-
-std::shared_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *result)
-{
-	// std::unique_lock<std::mutex> mlock(_mutex);
-	if (!_output_buffer.IsEmpty())
-	{
-		*result = TranscodeResult::DataReady;
-
-		auto obj = _output_buffer.Dequeue();
-		if (obj.has_value())
-		{
-			return obj.value();
-		}
-	}
-
-	*result = TranscodeResult::NoData;
-
-	return nullptr;
 }

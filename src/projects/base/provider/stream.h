@@ -71,13 +71,17 @@ namespace pvd
 		int64_t GetDeltaTimestamp(uint32_t track_id, int64_t timestamp, int64_t max_timestamp);
 		int64_t GetBaseTimestamp(uint32_t track_id);
 		std::shared_ptr<pvd::Application> _application = nullptr;
-
+		void UpdateReconnectTimeToBaseTimestamp();
+	
 	private:
 		// TrackID : Timestamp(us)
 		std::map<uint32_t, int64_t>			_source_timestamp_map;
 		std::map<uint32_t, int64_t>			_last_timestamp_map;
 		std::map<uint32_t, int64_t>			_base_timestamp_map;
+
 		int64_t								_start_timestamp = -1LL;
+		std::chrono::time_point<std::chrono::system_clock>	_stopped_time = std::chrono::time_point<std::chrono::system_clock>::min();
+
 		State 	_state = State::IDLE;
 	};
 }
