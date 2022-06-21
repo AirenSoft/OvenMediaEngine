@@ -1283,6 +1283,10 @@ namespace pvd
 			{
 				_key_frame_interval = message->header->completed.timestamp - _previous_key_frame_timestamp;
 				_previous_key_frame_timestamp = message->header->completed.timestamp;
+				video_frame->SetFlag(MediaPacketFlag::Key);
+			}
+			else {
+				video_frame->SetFlag(MediaPacketFlag::NoFlag);
 			}
 
 			_last_video_timestamp = message->header->completed.timestamp;
