@@ -33,7 +33,7 @@ bool DecoderAVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	_context->time_base = TimebaseToAVRational(GetTimebase());
+	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 	_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext());
 	::av_opt_set(_context->priv_data, "gpu_copy", "on", 0);
 
@@ -242,7 +242,7 @@ void DecoderAVCxNV::CodecThread()
 				::av_frame_unref(_frame);
 				::av_frame_free(&sw_frame);
 
-				SendOutputBuffer(need_to_change_notify, _track_id, std::move(decoded_frame));
+				SendOutputBuffer(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
 			}
 		}
 	}

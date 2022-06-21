@@ -82,6 +82,80 @@ namespace cmn
 		Png
 	};
 
+	static bool IsVideoCodec(cmn::MediaCodecId codec_id)
+	{
+		if (codec_id == cmn::MediaCodecId::H264 || codec_id == cmn::MediaCodecId::H265 || codec_id == cmn::MediaCodecId::Vp8 || codec_id == cmn::MediaCodecId::Flv ||
+			codec_id == cmn::MediaCodecId::Vp9 || codec_id == cmn::MediaCodecId::Jpeg || codec_id == cmn::MediaCodecId::Png)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	static bool IsAudioCodec(cmn::MediaCodecId codec_id)
+	{
+		if (codec_id == cmn::MediaCodecId::Aac ||
+			codec_id == cmn::MediaCodecId::Mp3 ||
+			codec_id == cmn::MediaCodecId::Opus)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	static cmn::MediaCodecId GetCodecIdByName(ov::String name)
+	{
+		name.MakeUpper();
+
+		// Video codecs
+		if (name == "H264")
+		{
+			return cmn::MediaCodecId::H264;
+		}
+		else if (name == "H265")
+		{
+			return cmn::MediaCodecId::H265;
+		}
+		else if (name == "VP8")
+		{
+			return cmn::MediaCodecId::Vp8;
+		}
+		else if (name == "VP9")
+		{
+			return cmn::MediaCodecId::Vp9;
+		}
+		else if (name == "FLV")
+		{
+			return cmn::MediaCodecId::Flv;
+		}		
+		else if (name == "JPEG")
+		{
+			return cmn::MediaCodecId::Jpeg;
+		}
+		else if (name == "PNG")
+		{
+			return cmn::MediaCodecId::Png;
+		}
+
+		// Audio codecs
+		if (name == "AAC")
+		{
+			return cmn::MediaCodecId::Aac;
+		}
+		else if (name == "MP3")
+		{
+			return cmn::MediaCodecId::Mp3;
+		}
+		else if (name == "OPUS")
+		{
+			return cmn::MediaCodecId::Opus;
+		}
+
+		return cmn::MediaCodecId::None;
+	}
+
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	// Timebase
 	//////////////////////////////////////////////////////////////////////////////////////////////////
@@ -149,7 +223,7 @@ namespace cmn
 			{
 				return 0.0;
 			}
-			
+
 			return (double)_den / (double)_num;
 		}
 
@@ -285,7 +359,7 @@ namespace cmn
 		{
 			return _sample_size;
 		}
-		
+
 		AudioSample::Format GetFormat() const
 		{
 			return _format;

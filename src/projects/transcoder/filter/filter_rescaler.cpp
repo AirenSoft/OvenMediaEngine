@@ -14,7 +14,7 @@
 #include "../transcoder_gpu.h"
 #include "../transcoder_private.h"
 
-MediaFilterRescaler::MediaFilterRescaler()
+FilterRescaler::FilterRescaler()
 {
 	_frame = ::av_frame_alloc();
 
@@ -23,15 +23,13 @@ MediaFilterRescaler::MediaFilterRescaler()
 
 	_input_buffer.SetAlias("Input queue of media rescaler filter");
 	_input_buffer.SetThreshold(100);
-	_output_buffer.SetAlias("Output queue of media rescaler filter");
-	_output_buffer.SetThreshold(100);
 
 	OV_ASSERT2(_frame != nullptr);
 	OV_ASSERT2(_inputs != nullptr);
 	OV_ASSERT2(_outputs != nullptr);
 }
 
-MediaFilterRescaler::~MediaFilterRescaler()
+FilterRescaler::~FilterRescaler()
 {
 	Stop();
 
@@ -43,10 +41,9 @@ MediaFilterRescaler::~MediaFilterRescaler()
 	OV_SAFE_FUNC(_filter_graph, nullptr, ::avfilter_graph_free, &);
 
 	_input_buffer.Clear();
-	_output_buffer.Clear();
 }
 
-bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context)
+bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context)
 {
 	int ret;
 
@@ -64,8 +61,8 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	// Limit the number of filter threads to 4. I think 4 thread is usually enough for video filtering processing.
 	_filter_graph->nb_threads = 4;
 
-	AVRational input_timebase = TimebaseToAVRational(input_context->GetTimeBase());
-	AVRational output_timebase = TimebaseToAVRational(output_context->GetTimeBase());
+	AVRational input_timebase = ffmpeg::Conv::TimebaseToAVRational(input_context->GetTimeBase());
+	AVRational output_timebase = ffmpeg::Conv::TimebaseToAVRational(output_context->GetTimeBase());
 
 	_scale = ::av_q2d(::av_div_q(input_timebase, output_timebase));
 
@@ -122,18 +119,18 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()));
 	}
 
-	if (output_context->GetHardwareAccel() == true && 
-		TranscodeGPU::GetInstance()->IsSupportedNV() == true && 
-		input_media_track->GetFormat() == AV_PIX_FMT_NV12 && 
+	if (output_context->GetHardwareAccel() == true &&
+		TranscodeGPU::GetInstance()->IsSupportedNV() == true &&
+		input_media_track->GetFormat() == AV_PIX_FMT_NV12 &&
 		output_context->GetColorspace() == AV_PIX_FMT_NV12)
 	{
-		filters.push_back(ov::String::FormatString("hwupload_cuda,scale_cuda=%d:%d,hwdownload", 
-			output_context->GetVideoWidth(), output_context->GetVideoHeight()));
+		filters.push_back(ov::String::FormatString("hwupload_cuda,scale_cuda=%d:%d,hwdownload",
+												   output_context->GetVideoWidth(), output_context->GetVideoHeight()));
 	}
 	else
 	{
-		filters.push_back(ov::String::FormatString("scale=%dx%d:flags=bilinear", 
-			output_context->GetVideoWidth(), output_context->GetVideoHeight()));
+		filters.push_back(ov::String::FormatString("scale=%dx%d:flags=bilinear",
+												   output_context->GetVideoWidth(), output_context->GetVideoHeight()));
 	}
 
 	filters.push_back(ov::String::FormatString("settb=%s", output_context->GetTimeBase().GetStringExpr().CStr()));
@@ -170,21 +167,21 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	return true;
 }
 
-int32_t MediaFilterRescaler::SendBuffer(std::shared_ptr<MediaFrame> buffer)
+int32_t FilterRescaler::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 {
 	_input_buffer.Enqueue(std::move(buffer));
 
 	return 0;
 }
 
-bool MediaFilterRescaler::Start()
+bool FilterRescaler::Start()
 {
 	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
 	try
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&MediaFilterRescaler::FilterThread, this);
+		_thread_work = std::thread(&FilterRescaler::FilterThread, this);
 		pthread_setname_np(_thread_work.native_handle(), "Rescaler");
 	}
 	catch (const std::system_error &e)
@@ -198,23 +195,22 @@ bool MediaFilterRescaler::Start()
 	return true;
 }
 
-void MediaFilterRescaler::Stop()
+void FilterRescaler::Stop()
 {
 	_kill_flag = true;
 
 	_input_buffer.Stop();
-	_output_buffer.Stop();
 
 	if (_thread_work.joinable())
 	{
 		_thread_work.join();
-		logtd("Terminated transcode rescale filter thread.");
+		logtd("rescaling filter thread has ended");
 	}
 }
 
-void MediaFilterRescaler::FilterThread()
+void FilterRescaler::FilterThread()
 {
-	logtd("Start transcode rescaler filter thread.");
+	logtd("Start transcode rescaling filter thread.");
 
 	while (!_kill_flag)
 	{
@@ -266,25 +262,11 @@ void MediaFilterRescaler::FilterThread()
 					continue;
 				}
 
-				_output_buffer.Enqueue(std::move(output_frame));
+				if (_on_complete_handler)
+				{
+					_on_complete_handler(std::move(output_frame));
+				}
 			}
 		}
 	}
-}
-std::shared_ptr<MediaFrame> MediaFilterRescaler::RecvBuffer(TranscodeResult *result)
-{
-	if (!_output_buffer.IsEmpty())
-	{
-		*result = TranscodeResult::DataReady;
-
-		auto obj = _output_buffer.Dequeue();
-		if (obj.has_value())
-		{
-			return obj.value();
-		}
-	}
-
-	*result = TranscodeResult::NoData;
-
-	return nullptr;
 }

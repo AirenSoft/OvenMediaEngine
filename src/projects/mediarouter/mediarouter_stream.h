@@ -26,7 +26,6 @@ enum class MediaRouterStreamType : int8_t
 	OUTBOUND
 };
 
-typedef int32_t MediaTrackId;
 
 class MediaRouteStream
 {

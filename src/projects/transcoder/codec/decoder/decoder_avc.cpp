@@ -32,7 +32,7 @@ bool DecoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	_context->time_base = TimebaseToAVRational(GetTimebase());
+	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 
 	// Set the number of b frames for compatibility with specific encoders.
 	auto bframes = GetContext()->GetH264hasBframes();
@@ -150,7 +150,14 @@ void DecoderAVC::CodecThread()
 				{
 					// If only SPS/PPS Nalunit is entered in the decoder, an invalid data error occurs.
 					// There is no particular problem.
-					logtd("Invalid data found when processing input (%d)", ret);
+					// logtd("Invalid data found when processing input. pts(%lld), dts(%lld), duration(%lld)", (int64_t)((double)pts * _stream_info.GetTrack(buffer->GetTrackId())->GetTimeBase().GetExpr() * 1000), (int64_t)((double)dts * _stream_info.GetTrack(buffer->GetTrackId())->GetTimeBase().GetExpr() * 1000), duration);
+
+					auto empty_frame = std::make_shared<MediaFrame>();
+					empty_frame->SetPts(pts);
+					empty_frame->SetMediaType(cmn::MediaType::Video);
+
+					SendOutputBuffer(TranscodeResult::NoData, std::move(empty_frame));
+
 					break;
 				}
 				else if (ret < 0)
@@ -220,7 +227,7 @@ void DecoderAVC::CodecThread()
 				}
 
 				// If there is no duration, the duration is calculated by framerate and timebase.
-				_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : _frame->pkt_duration;
+				// _frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : _frame->pkt_duration;
 
 				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				::av_frame_unref(_frame);
@@ -229,7 +236,7 @@ void DecoderAVC::CodecThread()
 					continue;
 				}
 
-				SendOutputBuffer(need_to_change_notify, _track_id, std::move(decoded_frame));
+				SendOutputBuffer(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
 			}
 		}
 	}

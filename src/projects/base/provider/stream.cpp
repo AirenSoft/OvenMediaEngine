@@ -16,43 +16,46 @@
 namespace pvd
 {
 	Stream::Stream(StreamSourceType source_type)
-		:info::Stream(source_type),
-		_application(nullptr)
+		: info::Stream(source_type),
+		  _application(nullptr)
 	{
 	}
 
 	Stream::Stream(const std::shared_ptr<pvd::Application> &application, StreamSourceType source_type)
-		:info::Stream(*(std::static_pointer_cast<info::Application>(application)), source_type),
-		_application(application)
+		: info::Stream(*(std::static_pointer_cast<info::Application>(application)), source_type),
+		  _application(application)
 	{
 	}
 
 	Stream::Stream(const std::shared_ptr<pvd::Application> &application, info::stream_id_t stream_id, StreamSourceType source_type)
-		:info::Stream((*std::static_pointer_cast<info::Application>(application)), stream_id, source_type),
-		_application(application)
+		: info::Stream((*std::static_pointer_cast<info::Application>(application)), stream_id, source_type),
+		  _application(application)
 	{
 	}
 
 	Stream::Stream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info)
-		:info::Stream(stream_info),
-		_application(application)
+		: info::Stream(stream_info),
+		  _application(application)
 	{
 	}
 
 	Stream::~Stream()
 	{
-
 	}
 
-	bool Stream::Start() 
+	bool Stream::Start()
 	{
 		logti("%s/%s(%u) has been started stream", GetApplicationName(), GetName().CStr(), GetId());
+
+		// TODO(Keukhan): The audio is fast and the video is slow. That is, video frames are generated for an increased amount of time, but audio is not generated, so there is a problem in AV synchronization.
+		// UpdateReconnectTimeToBaseTimestamp();
+
 		return true;
 	}
-	
-	bool Stream::Stop() 
+
+	bool Stream::Stop()
 	{
-		if(GetState() == Stream::State::STOPPED)
+		if (GetState() == Stream::State::STOPPED)
 		{
 			return true;
 		}
@@ -61,12 +64,35 @@ namespace pvd
 		ResetSourceStreamTimestamp();
 
 		_state = State::STOPPED;
+
+		_stopped_time = std::chrono::system_clock::now();
+
 		return true;
 	}
 
-	const char* Stream::GetApplicationTypeName()
+	// Consider the reconnection time and add it to the base timestamp
+	void Stream::UpdateReconnectTimeToBaseTimestamp()
 	{
-		if(GetApplication() == nullptr)
+		if (_stopped_time != std::chrono::time_point<std::chrono::system_clock>::min())
+		{
+			auto reconnection_time_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - _stopped_time).count();
+
+			for (const auto &[track_id, timestamp] : _base_timestamp_map)
+			{
+				auto old_base_timestamp_us = timestamp;
+				auto new_base_timestamp_us = old_base_timestamp_us + reconnection_time_us;
+
+				_base_timestamp_map[track_id] = new_base_timestamp_us;
+
+				logtw("%s/%s(%u) Update base timestamp [%d] %lld => %lld. recoonection time: %lldus", GetApplicationName(), GetName().CStr(), GetId(),
+					  track_id, old_base_timestamp_us, new_base_timestamp_us, reconnection_time_us);
+			}
+		}
+	}
+
+	const char *Stream::GetApplicationTypeName()
+	{
+		if (GetApplication() == nullptr)
 		{
 			return "Unknown";
 		}
@@ -76,18 +102,18 @@ namespace pvd
 
 	bool Stream::SendFrame(const std::shared_ptr<MediaPacket> &packet)
 	{
-		if(_application == nullptr)
+		if (_application == nullptr)
 		{
 			return false;
 		}
 
-		if(packet->GetPacketType() == cmn::PacketType::Unknown)
+		if (packet->GetPacketType() == cmn::PacketType::Unknown)
 		{
 			logte("The packet type must be specified. %s/%s(%u)", GetApplicationName(), GetName().CStr(), GetId());
 			return false;
 		}
 
-		if(packet->GetPacketType() != cmn::PacketType::OVT && 
+		if (packet->GetPacketType() != cmn::PacketType::OVT &&
 			packet->GetBitstreamFormat() == cmn::BitstreamFormat::Unknown)
 		{
 			logte("The bitstream format must be specified. %s/%s(%u)", GetApplicationName(), GetName().CStr(), GetId());
@@ -102,12 +128,12 @@ namespace pvd
 
 	bool Stream::SetState(State state)
 	{
-		// STOPPED state is only set by calling Stream::Stop() 
-		if(state == State::STOPPED)
+		// STOPPED state is only set by calling Stream::Stop()
+		if (state == State::STOPPED)
 		{
 			return false;
 		}
-		
+
 		_state = state;
 		return true;
 	}
@@ -127,12 +153,8 @@ namespace pvd
 				return;
 			}
 
-			// auto timestamp_ms = (int64_t)((double)timestamp * (double)track->GetTimeBase().GetExpr() * 1000000);
-
 			max_timestamp_us = std::max<double>(timestamp_us, max_timestamp_us);
 		}
-
-		logtd("%s/%s(%u) Find maximum timestamp: %f ms", GetApplicationName(), GetName().CStr(), GetId(), max_timestamp_us);
 
 		for (const auto &item : _last_timestamp_map)
 		{
@@ -145,9 +167,9 @@ namespace pvd
 			_base_timestamp_map[track_id] = max_timestamp_us;
 			_last_timestamp_map[track_id] = max_timestamp_us;
 
-			logtw("%s/%s(%u) Reset %d last timestamp : %lld => %lld (%d/%d)", 
-			GetApplicationName(), GetName().CStr(), GetId(), 
-			track_id, old_timestamp, _last_timestamp_map[track_id], track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen());
+			logtd("%s/%s(%u) Update base timestamp [%d] %lld => %lld (%d/%d). max_last_timestamp: %lld",
+				  GetApplicationName(), GetName().CStr(), GetId(),
+				  track_id, old_timestamp, _last_timestamp_map[track_id], track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(), max_timestamp_us);
 		}
 
 		// Initialzed start timestamp
@@ -162,28 +184,25 @@ namespace pvd
 		auto track = GetTrack(track_id);
 		if (track == nullptr)
 		{
-			return -1LL;			
+			return -1LL;
 		}
 
 		double expr_tb2us = (track->GetTimeBase().GetExpr() * 1000000);
 		double expr_us2tb = (track->GetTimeBase().GetTimescale() / 1000000);
-
 
 		// 1. Set the start imestamp value of this stream.
 		// * Managed in microseconds
 		if (_start_timestamp == -1LL)
 		{
 			_start_timestamp = timestamp * expr_tb2us;
-			logtw("Set Start timestamp is %lld(%lld us)", timestamp, _start_timestamp);
+			logtd("[%s/%s(%d] Set Start timestamp %lld(%lld us)", _application->GetName().CStr(), GetName().CStr(), GetId(), timestamp, _start_timestamp);
 		}
-
 
 		// 2. Zero based packet timestamp
 		// - Convert start timestamp to timbase based timesatmp
 		int64_t start_timestamp_tb = (int64_t)((double)_start_timestamp * expr_us2tb);
-		// - Zerostart timestamp = source timesatmp - start timestamp
+		// - Zerostart timestamp = currnet timesatmp(tb) - start timestamp(tb)
 		int64_t zerostart_pkt_tmiestamp_tb = timestamp - (int64_t)start_timestamp_tb;
-
 
 		// 3. Calculate the final timestamp
 		// - Convert base timestamp to timbase based timesatmp
@@ -196,10 +215,9 @@ namespace pvd
 		// - Fianl timestamp = base timesatmp - zerostart timestamp
 		int64_t final_pkt_timestamp_tb = base_timestamp_tb + zerostart_pkt_tmiestamp_tb;
 
-
 		// 4. Update last timestamp
 		// * Managed in microseconds.
-		_last_timestamp_map[track_id] = (int64_t)((double)final_pkt_timestamp_tb * expr_tb2us);
+		_last_timestamp_map[track_id] = (int64_t)((double)final_pkt_timestamp_tb * expr_tb2us + 1);
 
 		return final_pkt_timestamp_tb;
 	}
@@ -209,7 +227,7 @@ namespace pvd
 		auto track = GetTrack(track_id);
 		if (track == nullptr)
 		{
-			return -1LL;			
+			return -1LL;
 		}
 
 		int64_t base_timestamp = 0;
@@ -218,8 +236,7 @@ namespace pvd
 			base_timestamp = _base_timestamp_map[track_id];
 		}
 
-		auto base_timestamp_tb =  (base_timestamp * track->GetTimeBase().GetTimescale() / 1000000);
-
+		auto base_timestamp_tb = (base_timestamp * track->GetTimeBase().GetTimescale() / 1000000);
 
 		return base_timestamp_tb;
 	}
@@ -227,9 +244,9 @@ namespace pvd
 	// This is a method of generating a PTS with an increment value (delta) when it cannot be used as a PTS because the start value of the timestamp is random like the RTP timestamp.
 	int64_t Stream::AdjustTimestampByDelta(uint32_t track_id, int64_t timestamp, int64_t max_timestamp)
 	{
-		int64_t curr_timestamp; 
+		int64_t curr_timestamp;
 
-		if(_last_timestamp_map.find(track_id) == _last_timestamp_map.end())
+		if (_last_timestamp_map.find(track_id) == _last_timestamp_map.end())
 		{
 			curr_timestamp = 0;
 		}
@@ -251,7 +268,7 @@ namespace pvd
 		auto track = GetTrack(track_id);
 
 		// First timestamp
-		if(_source_timestamp_map.find(track_id) == _source_timestamp_map.end())
+		if (_source_timestamp_map.find(track_id) == _source_timestamp_map.end())
 		{
 			logtd("New track timestamp(%u) : curr(%lld)", track_id, timestamp);
 			_source_timestamp_map[track_id] = timestamp;
@@ -263,10 +280,10 @@ namespace pvd
 		int64_t delta = 0;
 
 		// Wrap around or change source
-		if(timestamp < _source_timestamp_map[track_id])
+		if (timestamp < _source_timestamp_map[track_id])
 		{
 			// If the last timestamp exceeds 99.99%, it is judged to be wrapped around.
-			if(_source_timestamp_map[track_id] > ((double)max_timestamp * 99.99) / 100)
+			if (_source_timestamp_map[track_id] > ((double)max_timestamp * 99.99) / 100)
 			{
 				logtd("Wrapped around(%u) : last(%lld) curr(%lld)", track_id, _source_timestamp_map[track_id], timestamp);
 				delta = (max_timestamp - _source_timestamp_map[track_id]) + timestamp;
@@ -286,4 +303,4 @@ namespace pvd
 		_source_timestamp_map[track_id] = timestamp;
 		return delta;
 	}
-}
+}  // namespace pvd

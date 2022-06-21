@@ -669,34 +669,12 @@ namespace pvd
 				media_packet->SetPts(pts);
 				media_packet->SetDts(dts);
 
-				logtp("%s/%s / msid(%d), id(%d) type(%s) flag(%6s), pts_ms(%10lld) pts(%10lld -> %10lld) dts(%10lld -> %10lld) tb(%d/%d)", 
-					GetApplicationName(), 
-					GetName().CStr(), 
-					media_packet->GetMsid(),
-					media_packet->GetTrackId(), 
-					StringFromMediaType(media_packet->GetMediaType()).CStr(), 
-					StringFromMediaPacketFlag(media_packet->GetFlag()).CStr(),
-					(int64_t)(pts * GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000),
-					old_pts, 
-					pts, 
-					old_dts,
-					dts,
-					GetTrack(media_packet->GetTrackId())->GetTimeBase().GetNum(), 
-					GetTrack(media_packet->GetTrackId())->GetTimeBase().GetDen()
-				);
-
 				// After the MSID is changed, the packet is dropped until key frame is received.
 				bool drop = false;
 				if(_last_msid_map[media_packet->GetTrackId()] != media_packet->GetMsid())
 				{
-					if(media_packet->GetFlag() == MediaPacketFlag::Key ) 
-					{
-						_last_msid_map[media_packet->GetTrackId()] = media_packet->GetMsid();
-					}
-					else 
-					{
-						drop = true;
-					}
+					_last_msid_map[media_packet->GetTrackId()] = media_packet->GetMsid();
+					//  Do not anything if the msid is changed
 				}
 
 				// When switching streams, the PTS of the packet may become negative due to the start time of the first packet. Packets before the base timestamp are defined as a drop policy.

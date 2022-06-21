@@ -32,7 +32,7 @@ bool DecoderHEVC::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	_context->time_base = TimebaseToAVRational(GetTimebase());
+	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
@@ -110,9 +110,9 @@ void DecoderHEVC::CodecThread()
 				_pkt->dts = _parser->dts;
 				_pkt->flags = (_parser->key_frame == 1) ? AV_PKT_FLAG_KEY : 0;
 				_pkt->duration = _pkt->dts - _parser->last_dts;
-				if(_pkt->duration <= 0LL)
+				if (_pkt->duration <= 0LL)
 				{
-					// It may not be the exact packet duration. 
+					// It may not be the exact packet duration.
 					// However, in general, this method is applied under the assumption that the duration of all packets is similar.
 					_pkt->duration = duration;
 				}
@@ -223,7 +223,7 @@ void DecoderHEVC::CodecThread()
 					continue;
 				}
 
-				SendOutputBuffer(need_to_change_notify, _track_id, std::move(decoded_frame));
+				SendOutputBuffer(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
 			}
 		}
 	}

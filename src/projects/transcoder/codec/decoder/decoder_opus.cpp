@@ -32,7 +32,7 @@ bool DecoderOPUS::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	_context->time_base = TimebaseToAVRational(GetTimebase());
+	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
@@ -233,7 +233,7 @@ void DecoderOPUS::CodecThread()
 			}
 
 			// If there is no duration, the duration is calculated by timebase.
-			_frame->pkt_duration = (_frame->pkt_duration <= 0LL)?ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Audio, _input_context, _frame):_frame->pkt_duration;
+			_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Audio, _input_context, _frame) : _frame->pkt_duration;
 
 			// If the decoded audio frame does not have a PTS, Increase frame duration time in PTS of previous frame
 			_frame->pts = (_frame->pts == AV_NOPTS_VALUE) ? (_last_pkt_pts + _frame->pkt_duration) : _frame->pts;
@@ -245,7 +245,7 @@ void DecoderOPUS::CodecThread()
 
 			_last_pkt_pts = output_frame->GetPts();
 
-			SendOutputBuffer(need_to_change_notify, _track_id, std::move(output_frame));
+			SendOutputBuffer(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(output_frame));
 		}
 	}
 }

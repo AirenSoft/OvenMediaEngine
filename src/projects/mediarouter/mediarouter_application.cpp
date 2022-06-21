@@ -351,7 +351,7 @@ bool MediaRouteApplication::NotifyStreamCreate(const std::shared_ptr<info::Strea
 		{
 			if (IS_OBSERVER_TRANSCODER(oberver_type) || IS_OBSERVER_RELAY(oberver_type))
 			{
-				logtd("Notify created stream to relay or trasncoder. %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
+				logtd("[%s/%s(%u)] Notify created stream to relay or trasncoder", stream_info->GetApplicationName(), stream_info->GetName().CStr(), stream_info->GetId());
 
 				observer->OnStreamCreated(stream_info);
 			}
@@ -361,7 +361,7 @@ bool MediaRouteApplication::NotifyStreamCreate(const std::shared_ptr<info::Strea
 		{
 			if (IS_OBSERVER_PUBLISHER(oberver_type))
 			{
-				logtd("Notify created stream to publisher. %s/%s", stream_info->GetApplicationName(), stream_info->GetName().CStr());
+				logtd("[%s/%s(%u)]Notify created stream to publisher", stream_info->GetApplicationName(), stream_info->GetName().CStr(), stream_info->GetId());
 
 				observer->OnStreamCreated(stream_info);
 			}
@@ -384,7 +384,7 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 			case MediaRouterStreamType::INBOUND: {
 				if (IS_OBSERVER_TRANSCODER(oberver_type))
 				{
-					logtd("Notify prepared stream to trasncoder. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
+					logtd("[%s/%s(%u)] Notify prepared stream to trasncoder", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId());
 
 					observer->OnStreamPrepared(stream->GetStream());
 				}
@@ -394,7 +394,7 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 			case MediaRouterStreamType::OUTBOUND: {
 				if (IS_OBSERVER_PUBLISHER(oberver_type) || IS_OBSERVER_RELAY(oberver_type))
 				{
-					logtd("Notify prepared stream to publisher. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
+					logtd("[%s/%s(%u)] Notify prepared stream to publisher", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId());
 
 					observer->OnStreamPrepared(stream->GetStream());
 				}
@@ -416,7 +416,7 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 
 bool MediaRouteApplication::OnStreamUpdated(const std::shared_ptr<MediaRouteApplicationConnector> &app_conn, const std::shared_ptr<info::Stream> &stream_info)
 {
-	logti("Trying to update a stream: [%s/%s(%u)]", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
+	logti(" [%s/%s(%u)] Trying to update a stream", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
 	if (!app_conn || !stream_info)
 	{
@@ -465,7 +465,7 @@ bool MediaRouteApplication::OnStreamUpdated(const std::shared_ptr<MediaRouteAppl
 
 bool MediaRouteApplication::OnStreamDeleted(const std::shared_ptr<MediaRouteApplicationConnector> &app_conn, const std::shared_ptr<info::Stream> &stream_info)
 {
-	logti("Trying to delete a stream: [%s/%s(%u)]", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
+	logti("[%s/%s(%u)] Trying to delete a stream", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
 	if (!app_conn || !stream_info)
 	{
