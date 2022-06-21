@@ -87,15 +87,18 @@ bool LLHlsStream::Start()
 
 		if (first_video_track == nullptr && first_audio_track == nullptr)
 		{
-			logtw("Stream [%s/%s] was not created because there were no supported codecs by LLHLS.", GetApplication()->GetName().CStr(), GetName().CStr());
+			logtw("LLHLS stream [%s/%s] could not be created because there is no supported codec.", GetApplication()->GetName().CStr(), GetName().CStr());
 			return false;
 		}
 
 		auto playlist = std::make_shared<info::Playlist>("default", default_playlist_name_without_ext);
 		auto rendition = std::make_shared<info::Rendition>("default", first_video_track?first_video_track->GetName():"", first_audio_track?first_audio_track->GetName():"");
 
-		playlist->AdddRendition(rendition);
-		AddPlaylist(playlist);
+		playlist->AddRendition(rendition);
+		auto master_playlist = CreateMasterPlaylist(playlist);
+
+		std::lock_guard<std::mutex> guard(_master_playlists_lock);
+		_master_playlists[default_playlist_name_without_ext] = master_playlist;
 	}
 
 	logti("LLHlsStream has been created : %s/%u\nOriginMode(%s) Chunk Duration(%.2f) Segment Duration(%u) Segment Count(%u)", GetName().CStr(), GetId(), 
@@ -187,6 +190,8 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 	
 	std::shared_ptr<LLHlsMasterPlaylist> master_playlist = nullptr;
 
+	// _master_playlists_lock
+	std::unique_lock<std::mutex> guard(_master_playlists_lock);
 	auto it = _master_playlists.find(file_name);
 	if (it == _master_playlists.end())
 	{
@@ -208,6 +213,7 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 	{
 		master_playlist = it->second;
 	}
+	guard.unlock();
 
 	if (master_playlist == nullptr)
 	{
