@@ -58,7 +58,7 @@ namespace cfg
 						Register<Optional>({"SRT", "srt"}, &_srt_provider);
 						Register<Optional>({"MPEGTS", "mpegts"}, &_mpegts_provider);
 						Register<Optional>({"WebRTC", "webrtc"}, &_webrtc_provider);
-						Register<Optional>({"File", "file"}, &_file_provider);
+						Register<Optional>({"FILE", "file"}, &_file_provider);
 					};
 
 					RtmpProvider _rtmp_provider;

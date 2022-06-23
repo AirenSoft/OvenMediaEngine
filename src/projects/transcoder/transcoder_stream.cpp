@@ -432,12 +432,6 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 		output_track->SetTimeBase(input_track->GetTimeBase());
 		output_track->SetSampleRate(input_track->GetSampleRate());
 
-		if (output_track->GetCodecId() == cmn::MediaCodecId::Opus && output_track->GetSampleRate() != 48000)
-		{
-			logtw("OPUS codec only supports 48000Hz samplerate. Do not create bypass track");
-			return nullptr;
-		}
-
 		bool is_parsed;
 		profile.GetBitrateString(&is_parsed);
 		if (is_parsed == true)
