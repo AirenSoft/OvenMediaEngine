@@ -50,11 +50,11 @@ namespace ov
 		return false;
 	}
 
-	bool DatagramSocket::CloseInternal()
+	bool DatagramSocket::CloseInternal(SocketState close_reason)
 	{
 		_callback = nullptr;
 
-		if (Socket::CloseInternal())
+		if (Socket::CloseInternal(close_reason))
 		{
 			SetState(SocketState::Closed);
 			return true;

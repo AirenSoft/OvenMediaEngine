@@ -143,7 +143,7 @@ namespace ov
 		AcceptClients();
 	}
 
-	bool ServerSocket::CloseInternal()
+	bool ServerSocket::CloseInternal(SocketState close_reason)
 	{
 		_client_list_mutex.lock();
 		auto client_list = std::move(_client_list);
@@ -156,7 +156,7 @@ namespace ov
 
 		_callback = nullptr;
 
-		if (Socket::CloseInternal())
+		if (Socket::CloseInternal(close_reason))
 		{
 			SetState(SocketState::Closed);
 			return true;
