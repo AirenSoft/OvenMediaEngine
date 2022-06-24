@@ -112,6 +112,7 @@ private:
 	uint64_t _min_chunk_duration_ms = std::numeric_limits<uint64_t>::max();
 
 	std::map<ov::String, std::shared_ptr<LLHlsMasterPlaylist>> _master_playlists;
+	std::mutex _master_playlists_lock;
 	bool _playlist_ready = false;
 
 	ov::Queue<std::shared_ptr<MediaPacket>> _initial_media_packet_buffer;

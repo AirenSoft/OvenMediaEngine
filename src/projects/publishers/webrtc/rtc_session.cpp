@@ -12,6 +12,7 @@
 #include "webrtc_publisher.h"
 #include "rtc_application.h"
 #include "rtc_stream.h"
+#include "rtc_common_types.h"
 
 #include "modules/rtp_rtcp/rtcp_info/nack.h"
 
@@ -20,6 +21,7 @@
 std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<WebRtcPublisher> &publisher,
 											   const std::shared_ptr<pub::Application> &application,
                                                const std::shared_ptr<pub::Stream> &stream,
+											   const ov::String &file_name,
                                                const std::shared_ptr<const SessionDescription> &offer_sdp,
                                                const std::shared_ptr<const SessionDescription> &peer_sdp,
                                                const std::shared_ptr<IcePort> &ice_port,
@@ -27,7 +29,7 @@ std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<WebRtcPubli
 {
 	// Session Id of the offer sdp is unique value
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), offer_sdp->GetSessionId());
-	auto session = std::make_shared<RtcSession>(session_info, publisher, application, stream, offer_sdp, peer_sdp, ice_port, ws_session);
+	auto session = std::make_shared<RtcSession>(session_info, publisher, application, stream, file_name, offer_sdp, peer_sdp, ice_port, ws_session);
 	if(!session->Start())
 	{
 		return nullptr;
@@ -39,6 +41,7 @@ RtcSession::RtcSession(const info::Session &session_info,
 					   const std::shared_ptr<WebRtcPublisher> &publisher,
 					   const std::shared_ptr<pub::Application> &application,
 					   const std::shared_ptr<pub::Stream> &stream,
+					   const ov::String &file_name,
 					   const std::shared_ptr<const SessionDescription> &offer_sdp,
 					   const std::shared_ptr<const SessionDescription> &peer_sdp,
 					   const std::shared_ptr<IcePort> &ice_port,
@@ -50,6 +53,7 @@ RtcSession::RtcSession(const info::Session &session_info,
 	_peer_sdp = peer_sdp;
 	_ice_port = ice_port;
 	_ws_session = ws_session;
+	_file_name = file_name;
 }
 
 RtcSession::~RtcSession()
@@ -92,7 +96,6 @@ bool RtcSession::Start()
 	_dtls_transport->SetLocalCertificate(application->GetCertificate());
 	_dtls_transport->StartDTLS();
 
-
 	// RFC3264
 	// For each "m=" line in the offer, there MUST be a corresponding "m=" line in the answer.
 	for(size_t i = 0; i < peer_media_desc_list.size(); i++)
@@ -116,34 +119,49 @@ bool RtcSession::Start()
 		}
 		else
 		{
-			if(peer_media_desc->GetPayload(static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE)))
+			_video_payload_type = first_payload->GetId();
+			_video_ssrc = offer_media_desc->GetSsrc();
+			_rtp_rtcp->AddRtpSender(_video_payload_type, _video_ssrc, first_payload->GetCodecRate(), offer_media_desc->GetCname());
+
+			auto payload = peer_media_desc->GetPayload(static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE));
+			if(payload != nullptr)
 			{
-				_video_payload_type = static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE);
-				_red_block_pt = first_payload->GetId();
-			}
-			else
-			{
-				_video_payload_type = first_payload->GetId();
+				if(payload->GetCodec() == PayloadAttr::SupportCodec::RED)
+				{	
+					_red_enabled = true;
+				}
 			}
 
 			// Retransmission, We always define the RTX payload as payload + 1
-			auto payload = peer_media_desc->GetPayload(_video_payload_type+1);
+			payload = peer_media_desc->GetPayload(_video_payload_type+1);
 			if(payload != nullptr)
 			{
 				if(payload->GetCodec() == PayloadAttr::SupportCodec::RTX)
 				{
 					_rtx_enabled = true;
-					_video_rtx_ssrc = offer_media_desc->GetRtxSsrc();
-
-					// Now, no RTCP with RTX
-					// ssrc_list.push_back(_video_rtx_ssrc);
 				}
 			}
-
-			_video_ssrc = offer_media_desc->GetSsrc();
-			_rtp_rtcp->AddRtpSender(_video_payload_type, _video_ssrc, first_payload->GetCodecRate(), offer_media_desc->GetCname());
 		}
 	}
+
+	// Get Playlist
+	_playlist = std::static_pointer_cast<RtcStream>(GetStream())->GetRtcPlaylist(_file_name, 
+																				CodecIdFromPayloadTypeNumber(_video_payload_type), 
+																				CodecIdFromPayloadTypeNumber(_audio_payload_type));
+	if (_playlist == nullptr)
+	{
+		logte("Failed to get the playlist (%s/%s/%s) because there is no available rendition", GetApplication()->GetName().CStr(), GetStream()->GetName().CStr(), _file_name.CStr());
+		return false;
+	}
+
+	_current_rendition = _playlist->GetFirstRendition();
+
+	auto current_video_track = _current_rendition->GetVideoTrack();
+	auto current_audio_track = _current_rendition->GetAudioTrack();
+
+	logtc("Video PT(%d) Audio PT(%d) Video TrackID(%u) Audio TrackID(%u)", _video_payload_type, _audio_payload_type, 
+														current_video_track ? current_video_track->GetId() : -1,
+														current_audio_track ? current_audio_track->GetId() : -1);
 
 	// Connect nodes
 
@@ -162,6 +180,8 @@ bool RtcSession::Start()
 	RegisterPrevNode(_dtls_transport);
 	RegisterNextNode(nullptr);
 	ov::Node::Start();
+
+	_abr_test_watch.Start();
 
 	return Session::Start();
 }
@@ -221,6 +241,26 @@ const std::shared_ptr<http::svr::ws::WebSocketSession>& RtcSession::GetWSClient(
 	return _ws_session;
 }
 
+bool RtcSession::ChangeRendition(const ov::String &rendition_name)
+{
+	auto rendition = _playlist->GetRendition(rendition_name);
+	if(rendition == nullptr)
+	{
+		logte("Failed to get the rendition (%s) because there is no available rendition", rendition_name.CStr());
+		return false;
+	}
+
+	if (rendition == _current_rendition)
+	{
+		logtd("The rendition (%s) is already selected", rendition_name.CStr());
+		return true;
+	}
+
+	_next_rendition = rendition;
+
+	return true;
+}
+
 void RtcSession::OnMessageReceived(const std::any &message)
 {
 	//It must not be called during start and stop.
@@ -247,6 +287,74 @@ void RtcSession::OnMessageReceived(const std::any &message)
 
 	// RTP_RTCP -> SRTP -> DTLS -> Edge Node(RtcSession)
 	SendDataToPrevNode(data);
+}
+
+bool RtcSession::IsSelectedPacket(const std::shared_ptr<const RtpPacket> &rtp_packet)
+{
+	logtd("RTP PT(%d) TrackID(%u) => Video PT(%d) Audio PT(%d) Video TrackID(%d) Audio TrackID(%d)", rtp_packet->PayloadType(), rtp_packet->GetTrackId(),
+											_video_payload_type, _audio_payload_type, 
+											_current_rendition->GetVideoTrack() ? _current_rendition->GetVideoTrack()->GetId() : -1, 
+											_current_rendition->GetAudioTrack() ? _current_rendition->GetAudioTrack()->GetId() : -1);
+
+	if (_next_rendition != nullptr)
+	{
+		// Try to change rendition
+		// When a video packet of the next rendition is a keyframe
+		if (_next_rendition->GetVideoTrack() != nullptr && _next_rendition->GetVideoTrack()->GetId() == rtp_packet->GetTrackId() && rtp_packet->IsKeyframe())
+		{
+			_current_rendition = _next_rendition;
+			_next_rendition = nullptr;
+		}
+		// Can change rendition immediately if next rendition has only audio track
+		else if (_next_rendition->GetVideoTrack() == nullptr)
+		{
+			_current_rendition = _next_rendition;
+			_next_rendition = nullptr;
+		}
+	}
+
+	// Select Track for ABR
+	auto selected_track = rtp_packet->IsVideoPacket() ? _current_rendition->GetVideoTrack() : _current_rendition->GetAudioTrack();
+	if (selected_track == nullptr || rtp_packet->GetTrackId() != selected_track->GetId())
+	{
+		return false;
+	}
+
+	uint32_t rtp_payload_type = rtp_packet->PayloadType(); 
+
+	// Select Payload Type
+	if (_red_enabled == false && rtp_payload_type == static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE))
+	{
+		return false;
+	}
+	// If red is enabled and if the packet type is video, only RED is selected.
+	else if (_red_enabled == true && rtp_packet->IsVideoPacket() && rtp_payload_type != static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE))
+	{
+		return false;
+	}
+
+	// Get original payload type in the RED packet
+	if (rtp_payload_type == static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE))
+	{
+		auto red_packet = std::dynamic_pointer_cast<const RedRtpPacket>(rtp_packet);
+
+		// RED includes FEC packet or Media packet.
+		if(rtp_packet->IsUlpfec())
+		{
+			rtp_payload_type = red_packet->OriginPayloadType();
+		}
+		else
+		{
+			rtp_payload_type = red_packet->BlockPT();
+		}
+	}
+
+	if(rtp_payload_type == _audio_payload_type || rtp_payload_type == _video_payload_type)
+	{
+		return true;
+	}
+
+	return false;
 }
 
 void RtcSession::SendOutgoingData(const std::any &packet)
@@ -283,43 +391,28 @@ void RtcSession::SendOutgoingData(const std::any &packet)
 		return;
     }
 
-	// Check if this session wants the packet
-	uint32_t rtp_payload_type = session_packet->PayloadType();
-	uint32_t red_block_pt = 0;
-	uint32_t origin_pt_of_fec = 0;
-
-	if(rtp_payload_type == static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE))
-	{
-		red_block_pt = std::dynamic_pointer_cast<RedRtpPacket>(session_packet)->BlockPT();
-
-		// RED includes FEC packet or Media packet.
-		if(session_packet->IsUlpfec())
-		{
-			origin_pt_of_fec = session_packet->OriginPayloadType();
-		}
-	}
-
-	if(rtp_payload_type != _video_payload_type && rtp_payload_type != _audio_payload_type)
+	// Check the packet is selected.
+	if (IsSelectedPacket(session_packet) == false)
 	{
 		return;
 	}
 
-	if(rtp_payload_type == static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE))
-	{
-		// When red_block_pt is ULPFEC_PAYLOAD_TYPE, origin_pt_of_fec is origin media payload type.
-		if(red_block_pt != _red_block_pt && origin_pt_of_fec != _red_block_pt)
-		{
-			return;
-		}
-	}
-
 	// RTP Session must be copied and sent because data is altered due to SRTP.
 	auto copy_packet = std::make_shared<RtpPacket>(*session_packet);
-	
-	MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::Webrtc, copy_packet->GetData()->GetLength());
+
+	if (copy_packet->IsVideoPacket())
+	{
+		copy_packet->SetSequenceNumber(_video_rtp_sequence_number++);
+	}
+	else
+	{
+		copy_packet->SetSequenceNumber(_audio_rtp_sequence_number++);
+	}
 
 	// rtp_rtcp -> srtp -> dtls -> Edge Node(RtcSession)
 	_rtp_rtcp->SendRtpPacket(copy_packet);
+
+	MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::Webrtc, copy_packet->GetData()->GetLength());
 }
 
 void RtcSession::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)

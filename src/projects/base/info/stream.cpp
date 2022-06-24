@@ -47,6 +47,8 @@ namespace info
 		_created_time = stream._created_time;
 		_app_info = stream._app_info;
 		_origin_stream = stream._origin_stream;
+		_has_video_track = stream._has_video_track;
+		_has_audio_track = stream._has_audio_track;
 
 		_tracks = stream._tracks;
 		_playlists = stream._playlists;
@@ -187,6 +189,15 @@ namespace info
 		}
 
 		auto result = _tracks.insert(std::make_pair(track->GetId(), track)).second;
+
+		if (track->GetMediaType() == cmn::MediaType::Video)
+		{
+			_has_video_track = true;
+		}
+		else if (track->GetMediaType() == cmn::MediaType::Audio)
+		{
+			_has_audio_track = true;
+		}
 
 		return result;
 	}

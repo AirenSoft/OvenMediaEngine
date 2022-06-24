@@ -15,16 +15,16 @@
 class RtpPacketizer
 {
 public:
-	RtpPacketizer(std::shared_ptr<RtpPacketizerInterface> session);
+	RtpPacketizer(const std::shared_ptr<RtpPacketizerInterface> &session);
 	~RtpPacketizer();
 
-	void SetPlayoutDelay(uint32_t min, uint32_t max);
-	void SetVideoCodec(cmn::MediaCodecId codec_type);
-	void SetAudioCodec(cmn::MediaCodecId codec_type);
+	bool SetCodec(cmn::MediaCodecId codec_type);
 	void SetUlpfec(uint8_t _red_payload_type, uint8_t _ulpfec_payload_type);
+	void SetTrackId(uint32_t track_id);
 	void SetPayloadType(uint8_t payload_type);
 	void SetSSRC(uint32_t ssrc);
 	void SetCsrcs(const std::vector<uint32_t> &csrcs);
+	void SetPlayoutDelay(uint32_t min, uint32_t max);
 
 	// RTP Packet
 	bool Packetize(FrameType frame_type,
@@ -36,6 +36,8 @@ public:
 	               const RTPVideoHeader *rtp_header);
 
 private:
+	void SetVideoCodec(cmn::MediaCodecId codec_type);
+	void SetAudioCodec(cmn::MediaCodecId codec_type);
 	// Basic
 	std::shared_ptr<RtpPacket> AllocatePacket(bool ulpfec=false);
 	std::shared_ptr<RedRtpPacket> PackageAsRed(std::shared_ptr<RtpPacket> rtp_packet);
@@ -66,6 +68,7 @@ private:
 	bool _audio_configured;
 
 	// Session Information
+	uint32_t _track_id;
 	uint32_t _ssrc;
 	uint8_t _payload_type;
 	std::vector<uint32_t> _csrcs;

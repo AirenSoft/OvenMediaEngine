@@ -55,7 +55,7 @@ namespace info
 		~Playlist() = default;
 
 		// Append Rendition
-		void AdddRendition(const std::shared_ptr<Rendition> &rendition)
+		void AddRendition(const std::shared_ptr<Rendition> &rendition)
 		{
 			_renditions.push_back(rendition);
 		}

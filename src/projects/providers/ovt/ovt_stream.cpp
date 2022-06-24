@@ -341,7 +341,7 @@ namespace pvd
 				auto video_track_name = json_rendition["videoTrackName"].asString().c_str();
 				auto audio_track_name = json_rendition["audioTrackName"].asString().c_str();
 
-				playlist->AdddRendition(std::make_shared<info::Rendition>(rendition_name, video_track_name, audio_track_name));
+				playlist->AddRendition(std::make_shared<info::Rendition>(rendition_name, video_track_name, audio_track_name));
 			}
 
 			AddPlaylist(playlist);

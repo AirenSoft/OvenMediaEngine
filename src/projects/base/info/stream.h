@@ -80,6 +80,16 @@ namespace info
 
 		const char* GetApplicationName();
 
+		bool HasVideoTrack() const
+		{
+			return _has_video_track;
+		}
+
+		bool HasAudioTrack() const
+		{
+			return _has_audio_track;
+		}
+
 	protected:
 		info::stream_id_t _id = 0;
 		uint32_t _msid = 0;
@@ -93,6 +103,9 @@ namespace info
 		std::map<ov::String, std::shared_ptr<Playlist>> _playlists;
 
 	private:
+		bool _has_video_track = false;
+		bool _has_audio_track = false;
+
 		std::chrono::system_clock::time_point _created_time;
 
 		// Where does the stream come from?
