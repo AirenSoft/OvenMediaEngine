@@ -635,23 +635,12 @@ bool WebRtcPublisher::OnChangeRendition(const std::shared_ptr<http::svr::ws::Web
 {
 	auto [autorized_exist, authorized] = ws_session->GetUserData("authorized");
 	ov::String uri;
-	uint64_t session_life_time = 0;
 	if(autorized_exist == true && std::holds_alternative<bool>(authorized) == true && std::get<bool>(authorized) == true)
 	{
 		auto [new_url_exist, new_url] = ws_session->GetUserData("new_url");
 		if(new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
 		{
 			uri = std::get<ov::String>(new_url);
-		}
-		else
-		{
-			return false;
-		}
-
-		auto [stream_expired_exist, stream_expired] = ws_session->GetUserData("stream_expired");
-		if(stream_expired_exist == true && std::holds_alternative<uint64_t>(stream_expired) == true)
-		{
-			session_life_time = std::get<uint64_t>(stream_expired);
 		}
 		else
 		{
