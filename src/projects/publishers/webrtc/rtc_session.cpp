@@ -359,17 +359,6 @@ bool RtcSession::IsSelectedPacket(const std::shared_ptr<const RtpPacket> &rtp_pa
 
 void RtcSession::SendOutgoingData(const std::any &packet)
 {
-	if (_changed == false && _abr_test_watch.IsElapsed(5000))
-	{
-		ChangeRendition("480p");
-	}
-
-	if (_changed == false && _abr_test_watch.IsElapsed(10000))
-	{
-		ChangeRendition("720p");
-		_changed = true;
-	}
-
 	//It must not be called during start and stop.
 	std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
 
