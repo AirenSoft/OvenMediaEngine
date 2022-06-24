@@ -86,6 +86,8 @@ private:
 	bool ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info);
 	bool IsSelectedPacket(const std::shared_ptr<const RtpPacket> &rtp_packet);
 
+	uint8_t GetOriginPayloadTypeFromRedRtpPacket(const std::shared_ptr<const RedRtpPacket> &red_rtp_packet);
+
 	void ChangeRendition();
 	bool SendPlaylistInfo(const std::shared_ptr<const RtcPlaylist> &playlist) const;
 	bool SendRenditionChanged(const std::shared_ptr<const RtcRendition> &rendition) const;
@@ -118,8 +120,10 @@ private:
 	// For ABR
 	ov::String 							_file_name;
 	std::shared_ptr<const RtcPlaylist>	_playlist;
+
 	std::shared_ptr<const RtcRendition>	_current_rendition = nullptr;
 	std::shared_ptr<const RtcRendition>	_next_rendition = nullptr;
+	std::shared_mutex					_change_rendition_lock;
 
 	uint16_t _video_rtp_sequence_number = 0;
 	uint16_t _audio_rtp_sequence_number = 0;

@@ -253,6 +253,8 @@ bool RtcSession::RequestChangeRendition(const ov::String &rendition_name)
 		return false;
 	}
 
+	std::lock_guard<std::shared_mutex> lock(_change_rendition_lock);
+
 	if (rendition == _current_rendition)
 	{
 		logtd("The rendition (%s) is already selected", rendition_name.CStr());
@@ -345,6 +347,8 @@ void RtcSession::OnMessageReceived(const std::any &message)
 
 void RtcSession::ChangeRendition()
 {
+	std::unique_lock<std::shared_mutex> lock(_change_rendition_lock);
+
 	if (_next_rendition == nullptr)
 	{
 		return;
@@ -359,33 +363,56 @@ void RtcSession::ChangeRendition()
 	_current_rendition = _next_rendition;
 	_next_rendition = nullptr;
 
+	lock.unlock();
+
 	SendRenditionChanged(_current_rendition);
+}
+
+uint8_t RtcSession::GetOriginPayloadTypeFromRedRtpPacket(const std::shared_ptr<const RedRtpPacket> &red_rtp_packet)
+{
+	uint8_t rtp_payload_type = 0;
+
+	// RED includes FEC packet or Media packet.
+	if(red_rtp_packet->IsUlpfec())
+	{
+		rtp_payload_type = red_rtp_packet->OriginPayloadType();
+	}
+	else
+	{
+		rtp_payload_type = red_rtp_packet->BlockPT();
+	}
+
+	return rtp_payload_type;
 }
 
 bool RtcSession::IsSelectedPacket(const std::shared_ptr<const RtpPacket> &rtp_packet)
 {
-	logtd("RTP PT(%d) TrackID(%u) => Video PT(%d) Audio PT(%d) Video TrackID(%d) Audio TrackID(%d)", rtp_packet->PayloadType(), rtp_packet->GetTrackId(),
-											_video_payload_type, _audio_payload_type, 
-											_current_rendition->GetVideoTrack() ? _current_rendition->GetVideoTrack()->GetId() : -1, 
-											_current_rendition->GetAudioTrack() ? _current_rendition->GetAudioTrack()->GetId() : -1);
+	std::shared_lock<std::shared_mutex> change_lock(_change_rendition_lock);
+	auto next_rendition = _next_rendition;
+	change_lock.unlock();
 
-	if (_next_rendition != nullptr)
+	// Check if need to change rendition
+	if (next_rendition != nullptr)
 	{
 		// Try to change rendition
 		// When a video packet of the next rendition is a keyframe
-		if (_next_rendition->GetVideoTrack() != nullptr && _next_rendition->GetVideoTrack()->GetId() == rtp_packet->GetTrackId() && rtp_packet->IsKeyframe())
+		if (next_rendition->GetVideoTrack() != nullptr && next_rendition->GetVideoTrack()->GetId() == rtp_packet->GetTrackId() && rtp_packet->IsKeyframe())
 		{
 			ChangeRendition();
 		}
 		// Can change rendition immediately if next rendition has only audio track
-		else if (_next_rendition->GetVideoTrack() == nullptr)
+		else if (next_rendition->GetVideoTrack() == nullptr)
 		{
 			ChangeRendition();
 		}
 	}
 
+	change_lock.lock();
+	auto current_rendition = _current_rendition;
+	change_lock.unlock();
+
 	// Select Track for ABR
-	auto selected_track = rtp_packet->IsVideoPacket() ? _current_rendition->GetVideoTrack() : _current_rendition->GetAudioTrack();
+	auto selected_track = rtp_packet->IsVideoPacket() ? current_rendition->GetVideoTrack() : current_rendition->GetAudioTrack();
 	if (selected_track == nullptr || rtp_packet->GetTrackId() != selected_track->GetId())
 	{
 		return false;
@@ -393,34 +420,11 @@ bool RtcSession::IsSelectedPacket(const std::shared_ptr<const RtpPacket> &rtp_pa
 
 	uint32_t rtp_payload_type = rtp_packet->PayloadType(); 
 
-	// Select Payload Type
-	if (_red_enabled == false && rtp_payload_type == static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE))
-	{
-		return false;
-	}
-	// If red is enabled and if the packet type is video, only RED is selected.
-	else if (_red_enabled == true && rtp_packet->IsVideoPacket() && rtp_payload_type != static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE))
-	{
-		return false;
-	}
-
-	// Get original payload type in the RED packet
-	if (rtp_payload_type == static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE))
-	{
-		auto red_packet = std::dynamic_pointer_cast<const RedRtpPacket>(rtp_packet);
-
-		// RED includes FEC packet or Media packet.
-		if(rtp_packet->IsUlpfec())
-		{
-			rtp_payload_type = red_packet->OriginPayloadType();
-		}
-		else
-		{
-			rtp_payload_type = red_packet->BlockPT();
-		}
-	}
-
-	if(rtp_payload_type == _audio_payload_type || rtp_payload_type == _video_payload_type)
+	if(rtp_payload_type == _audio_payload_type || 
+		// if RED is disabled, origin RTP packet is selected
+		(_red_enabled == false && rtp_payload_type == _video_payload_type) || 
+		// if RED is enabled, RED packet is selected
+		(_red_enabled == true && rtp_payload_type == static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE)))
 	{
 		return true;
 	}
@@ -430,6 +434,18 @@ bool RtcSession::IsSelectedPacket(const std::shared_ptr<const RtpPacket> &rtp_pa
 
 void RtcSession::SendOutgoingData(const std::any &packet)
 {
+	// ABR Test Codes
+	// if (_changed == false && _abr_test_watch.IsElapsed(5000))
+	// {
+	// 	RequestChangeRendition("480p");
+	// }
+
+	// if (_changed == false && _abr_test_watch.IsElapsed(10000))
+	// {
+	// 	RequestChangeRendition("720p");
+	// 	_changed = true;
+	// }
+
 	//It must not be called during start and stop.
 	std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
 
