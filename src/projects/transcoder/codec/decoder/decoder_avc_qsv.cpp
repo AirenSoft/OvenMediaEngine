@@ -33,7 +33,7 @@ bool DecoderAVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	_context->time_base = TimebaseToAVRational(GetTimebase());
+	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 
 	::av_opt_set(_context->priv_data, "gpu_copy", "on", 0);
 
@@ -219,7 +219,7 @@ void DecoderAVCxQSV::CodecThread()
 					continue;
 				}
 
-				SendOutputBuffer(need_to_change_notify, _track_id, std::move(decoded_frame));
+				SendOutputBuffer(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
 			}
 		}
 	}

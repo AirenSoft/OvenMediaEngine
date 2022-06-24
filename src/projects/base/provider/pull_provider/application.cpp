@@ -91,7 +91,7 @@ namespace pvd
 					auto props = stream->GetProperties();
 					if (props)
 					{
-						is_persist = props->IsPersist();
+						is_persist = props->IsPersistence();
 						is_failback = props->IsFailback();
 					
 						// If Failback is enabled, try to connect periodically to see if the Primary URL is available.
@@ -107,7 +107,7 @@ namespace pvd
 							
 								auto ping_props = std::make_shared<pvd::PullStreamProperties>();
 								ping_props->SetRetryConnectCount(0);
-								auto ping = CreateStream(0, "_CHECK_FOR_FAILBACK_STREAM_", {failback_url}, ping_props);
+								auto ping = CreateStream(0, "_PING_FOR_FAILBACK_", {failback_url}, ping_props);
 								if (ping)
 								{
 									auto state = ping->GetState() ;
@@ -117,9 +117,7 @@ namespace pvd
 									{
 										// Stop the current stream and switch to the Primary URL.
 										stream->Stop();
-										
 										stream->ResetUrlIndex();
-
 										ResumeStream(stream);
 									}
 									

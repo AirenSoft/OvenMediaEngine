@@ -234,7 +234,7 @@ namespace ov
 
 		if (callback != nullptr)
 		{
-			auto state = (GetState() == SocketState::Disconnected) ? (SocketConnectionState::Disconnected) : (SocketConnectionState::Disconnect);
+			auto state = (_close_reason == SocketState::Disconnected) ? (SocketConnectionState::Disconnected) : (SocketConnectionState::Disconnect);
 
 			callback(GetSharedPtrAs<ClientSocket>(), state, nullptr);
 		}
@@ -242,7 +242,7 @@ namespace ov
 		server_socket->OnClientDisconnected(GetSharedPtrAs<ClientSocket>());
 	}
 
-	bool ClientSocket::CloseInternal()
+	bool ClientSocket::CloseInternal(SocketState close_reason)
 	{
 		auto server_socket = _server_socket.lock();
 
@@ -252,7 +252,7 @@ namespace ov
 			return false;
 		}
 
-		if (Socket::CloseInternal())
+		if (Socket::CloseInternal(close_reason))
 		{
 			SetState(SocketState::Closed);
 		}

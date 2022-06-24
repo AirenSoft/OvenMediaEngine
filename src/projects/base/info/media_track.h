@@ -13,6 +13,8 @@
 
 #define VALID_BITRATE_CALCULATION_THRESHOLD_MSEC (2000)
 
+typedef uint32_t MediaTrackId;
+
 class MediaTrack : public VideoTrack, public AudioTrack
 {
 public:

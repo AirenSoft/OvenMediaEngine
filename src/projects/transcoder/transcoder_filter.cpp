@@ -7,17 +7,11 @@
 
 using namespace cmn;
 
-#define PTS_INCREMENT_LIMIT 3
+#define PTS_INCREMENT_LIMIT 15
 
 TranscodeFilter::TranscodeFilter()
 	: _impl(nullptr)
 {
-}
-
-TranscodeFilter::TranscodeFilter(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context)
-	: _impl(nullptr)
-{
-	Configure(input_media_track, input_context, output_context);
 }
 
 TranscodeFilter::~TranscodeFilter()
@@ -28,13 +22,15 @@ TranscodeFilter::~TranscodeFilter()
 	}
 }
 
-bool TranscodeFilter::Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context)
+bool TranscodeFilter::Configure(int32_t filter_id, std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context, _cb_func on_complete_hander)
 {
 	logtd("Create a transcode filter. track_id(%d). type(%s)", input_media_track->GetId(), (input_media_track->GetMediaType() == MediaType::Video) ? "Video" : "Audio");
 
+	_filter_id = filter_id;
 	_input_media_track = input_media_track;
 	_input_context = input_context;
 	_output_context = output_context;
+	_on_complete_hander = on_complete_hander;
 	_threshold_ts_increment = (int64_t)_input_media_track->GetTimeBase().GetTimescale() * PTS_INCREMENT_LIMIT;
 
 	return CreateFilter();
@@ -50,15 +46,17 @@ bool TranscodeFilter::CreateFilter()
 	switch (_input_media_track->GetMediaType())
 	{
 		case MediaType::Audio:
-			_impl = new MediaFilterResampler();
+			_impl = new FilterResampler();
 			break;
 		case MediaType::Video:
-			_impl = new MediaFilterRescaler();
+			_impl = new FilterRescaler();
 			break;
 		default:
 			logte("Unsupported media type in filter");
 			return false;
 	}
+
+	_impl->SetOnCompleteHandler(bind(&TranscodeFilter::OnComplete, this, std::placeholders::_1));
 
 	bool success = _impl->Configure(_input_media_track, _input_context, _output_context);
 	if (success == false)
@@ -69,6 +67,13 @@ bool TranscodeFilter::CreateFilter()
 	}
 
 	return _impl->Start();
+}
+
+void TranscodeFilter::Stop() {
+	if(_impl)
+	{
+		_impl->Stop();
+	}
 }
 
 bool TranscodeFilter::SendBuffer(std::shared_ptr<MediaFrame> buffer)
@@ -105,7 +110,6 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 
 	if (_input_media_track->GetMediaType() == MediaType::Video)
 	{
-		// logtd("in : %dx%d -> out : %dx%d", buffer->GetWidth(), buffer->GetHeight(), _input_context->GetVideoWidth(), _input_context->GetVideoHeight());
 		if (buffer->GetWidth() != (int32_t)_input_context->GetVideoWidth() || buffer->GetHeight() != (int32_t)_input_context->GetVideoHeight())
 		{
 			_input_media_track->SetWidth(buffer->GetWidth());
@@ -120,19 +124,11 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 	return false;
 }
 
-std::shared_ptr<MediaFrame> TranscodeFilter::RecvBuffer(TranscodeResult *result)
-{
-	return _impl->RecvBuffer(result);
-}
-
-uint32_t TranscodeFilter::GetInputBufferSize()
-{
-	return _impl->GetInputBufferSize();
-}
-
-uint32_t TranscodeFilter::GetOutputBufferSize()
-{
-	return _impl->GetOutputBufferSize();
+void TranscodeFilter::OnComplete(std::shared_ptr<MediaFrame> frame) {
+	if(_on_complete_hander)
+	{
+		_on_complete_hander(_filter_id, frame);
+	}
 }
 
 cmn::Timebase TranscodeFilter::GetInputTimebase() const
@@ -143,4 +139,9 @@ cmn::Timebase TranscodeFilter::GetInputTimebase() const
 cmn::Timebase TranscodeFilter::GetOutputTimebase() const
 {
 	return _impl->GetOutputTimebase();
+}
+
+void TranscodeFilter::SetAlias(ov::String alias)
+{
+	_alias = alias;
 }

@@ -32,7 +32,7 @@ bool DecoderHEVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	_context->time_base = TimebaseToAVRational(GetTimebase());
+	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
@@ -217,7 +217,7 @@ void DecoderHEVCxQSV::CodecThread()
 					continue;
 				}
 
-				SendOutputBuffer(need_to_change_notify, _track_id, std::move(decoded_frame));
+				SendOutputBuffer(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
 			}
 		}
 	}

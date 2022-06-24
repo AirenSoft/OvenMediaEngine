@@ -42,7 +42,7 @@ namespace ov
 		//--------------------------------------------------------------------
 		// Overriding of Socket
 		//--------------------------------------------------------------------
-		bool CloseInternal() override;
+		bool CloseInternal(SocketState close_reason) override;
 
 		//--------------------------------------------------------------------
 		// Implementation of SocketAsyncInterface

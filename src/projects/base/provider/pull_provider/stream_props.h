@@ -27,7 +27,7 @@ namespace pvd
 			_retry_connect_count = retry_connect_count;
 		};
 
-		bool IsPersist()
+		bool IsPersistence()
 		{
 			return _persist;
 		}

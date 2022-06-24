@@ -220,7 +220,7 @@ namespace ffmpeg
 					// Calculate duration using framerate in timebase
 					int den = context->GetTimeBase().GetDen();
 
-					// TODO(soulk) : If there is no framerate value, the frame rate value cannot be calculated normally.
+					// TODO(Keukhan) : If there is no framerate value, the frame rate value cannot be calculated normally.
 					int64_t duration = (den == 0) ? 0LL : (float)den / context->GetFrameRate();
 					return duration;
 				}
@@ -318,6 +318,13 @@ namespace ffmpeg
 			packet_buffer->SetPacketType(packet_type);
 
 			return packet_buffer;
+		}
+
+		static AVRational TimebaseToAVRational(const cmn::Timebase& timebase)
+		{
+			return (AVRational){
+				.num = timebase.GetNum(),
+				.den = timebase.GetDen()};
 		}
 	};
 

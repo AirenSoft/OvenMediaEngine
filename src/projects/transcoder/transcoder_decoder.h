@@ -17,17 +17,17 @@ public:
 	TranscodeDecoder(info::Stream stream_info);
 	~TranscodeDecoder() override;
 
-	static std::shared_ptr<TranscodeDecoder> CreateDecoder(const info::Stream &info, std::shared_ptr<TranscodeContext> context);
+	typedef std::function<void(TranscodeResult, int32_t, std::shared_ptr<MediaFrame>)> _cb_func;
 
-	void SetTrackId(int32_t track_id);
+	static std::shared_ptr<TranscodeDecoder> Create(int32_t decoder_id, const info::Stream &info, std::shared_ptr<TranscodeContext> context,  _cb_func func);
+
+	void SetDecoderId(int32_t decoder_id);
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
 	void SendBuffer(std::shared_ptr<const MediaPacket> packet) override;
-	void SendOutputBuffer(bool change_format, int32_t track_id, std::shared_ptr<MediaFrame> frame);
-
-	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
-
+	void SendOutputBuffer(TranscodeResult result, std::shared_ptr<MediaFrame> frame);
+	
 	std::shared_ptr<TranscodeContext> &GetContext();
 
 	cmn::Timebase GetTimebase() const;
@@ -36,18 +36,17 @@ public:
 
 	virtual void Stop();
 
-	typedef std::function<void(TranscodeResult, int32_t)> _cb_func;
-	_cb_func OnCompleteHandler;
 	void SetOnCompleteHandler(_cb_func func)
 	{
-		OnCompleteHandler = move(func);
+		_on_complete_hander = move(func);
 	}
 
 protected:
 	static const ov::String ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters);
 
+	int32_t _decoder_id;
+
 	std::shared_ptr<TranscodeContext> _input_context;
-	int32_t _track_id;
 
 	AVCodecContext *_context = nullptr;
 	AVCodecParserContext *_parser = nullptr;
@@ -62,4 +61,6 @@ protected:
 
 	bool _kill_flag = false;
 	std::thread _codec_thread;
+
+	_cb_func _on_complete_hander;
 };

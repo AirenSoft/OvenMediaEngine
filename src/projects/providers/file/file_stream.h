@@ -80,6 +80,8 @@ namespace pvd
 
 		ov::StopWatch _play_request_time;
 
+		bool _sent_sequence_header = false;
+		
 		// Statistics
 		int64_t _origin_request_time_msec = 0;
 		int64_t _origin_response_time_msec = 0;

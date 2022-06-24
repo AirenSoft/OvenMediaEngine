@@ -231,6 +231,11 @@ public:
 	void SetPts(int64_t pts)
 	{
 		_pts = pts;
+
+		if(_priv_data) {
+			_priv_data->pts = pts;
+			_priv_data->pkt_dts = pts;
+		}
 	}
 
 	int64_t GetDuration() const
@@ -347,6 +352,8 @@ public:
 		if(_priv_data != nullptr){
 			frame->SetPrivData(::av_frame_clone(_priv_data));
 		}
+
+		frame->SetMediaType(_media_type);
 
 		if (_media_type == cmn::MediaType::Video)
 		{

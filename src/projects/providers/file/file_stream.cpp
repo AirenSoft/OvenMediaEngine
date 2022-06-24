@@ -144,7 +144,7 @@ namespace pvd
 		auto url = ov::String::FormatString("%s%s", GetApplicationInfo().GetConfig().GetProviders().GetFileProvider().GetRootPath().CStr(), _url->Path().CStr());
 
 		_format_context = nullptr;
-		logtd("%s/%s(%u) Trying to open file: %s", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), url.CStr());
+		logtd("%s/%s(%u) Trying to open file. path(%s)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), url.CStr());
 		if ((err = ::avformat_open_input(&_format_context, url.CStr(), nullptr, nullptr)) < 0)
 		{
 			SetState(State::ERROR);
@@ -180,7 +180,7 @@ namespace pvd
 		for (uint32_t track_id = 0; track_id < _format_context->nb_streams; track_id++)
 		{
 			auto stream = _format_context->streams[track_id];
-			if(!stream)
+			if (!stream)
 			{
 				continue;
 			}
@@ -191,10 +191,11 @@ namespace pvd
 				continue;
 			}
 
-			if(ffmpeg::Conv::ToMediaTrack(stream, track) == false) {
+			if (ffmpeg::Conv::ToMediaTrack(stream, track) == false)
+			{
 				continue;
 			}
-			
+
 			logtd("track_id:%d,  media_type: %d,  codec_id:%d, extradata_size: %d,  tb: %d/%d,  start_time: %lld", track_id, stream->codecpar->codec_type, stream->codecpar->codec_id, stream->codecpar->extradata_size, stream->time_base.num, stream->time_base.den, stream->start_time);
 
 			AddTrack(track);
@@ -223,6 +224,9 @@ namespace pvd
 
 	void FileStream::SendSequenceHeader()
 	{
+		if (_sent_sequence_header == true)
+			return;
+
 		for (uint32_t track_id = 0; track_id < _format_context->nb_streams; ++track_id)
 		{
 			AVStream *stream = _format_context->streams[track_id];
@@ -267,6 +271,8 @@ namespace pvd
 				SendFrame(media_packet);
 			}
 		}
+
+		_sent_sequence_header = true;
 	}
 
 	bool FileStream::RequestStop()
@@ -308,6 +314,8 @@ namespace pvd
 		packet.data = nullptr;
 		packet.size = 0;
 
+		SendSequenceHeader();
+
 		while (true)
 		{
 			int32_t ret = ::av_read_frame(_format_context, &packet);
@@ -322,10 +330,13 @@ namespace pvd
 					RequestRewind();
 
 					UpdatePrivBaseTimestamp();
-
 					logtd("%s/%s(%u) Reached the end of the file. rewind to the first frame.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-
 					continue;
+
+					// logtd("%s/%s(%u) Reached the end of the file. go to the next file.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+					// UpdatePrivBaseTimestamp();
+					// SetState(State::STOPPED);
+					// return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 				}
 
 				// If the I/O is broken, terminate the thread.
@@ -350,10 +361,6 @@ namespace pvd
 				case cmn::MediaCodecId::H264:
 					bitstream_format = cmn::BitstreamFormat::H264_AVCC;
 					packet_type = cmn::PacketType::NALU;
-					if (packet.flags == 1)
-					{
-						SendSequenceHeader();
-					}
 					break;
 				case cmn::MediaCodecId::Aac:
 					bitstream_format = cmn::BitstreamFormat::AAC_RAW;
@@ -365,7 +372,6 @@ namespace pvd
 			}
 
 			auto media_packet = ffmpeg::Conv::ToMediaPacket(GetMsid(), track->GetId(), &packet, track->GetMediaType(), bitstream_format, packet_type);
-
 			::av_packet_unref(&packet);
 
 			// Calculate PTS/DTS + Base Timestamp
@@ -374,8 +380,23 @@ namespace pvd
 			// The purpose of updating the global Timestamp value when the URL is changed due to PullStream's failover.
 			AdjustTimestampByBase(media_packet->GetTrackId(), media_packet->GetPts(), std::numeric_limits<int64_t>::max());
 
+			// logtd("%s/%s / msid(%d), id(%d) type(%s) flag(%6s), pts_ms(%10lld) pts%10lld) dts(%10lld) dur(%5lld) tb(%d/%d)",
+			// 		GetApplicationName(),
+			// 		GetName().CStr(),
+			// 		media_packet->GetMsid(),
+			// 		media_packet->GetTrackId(),
+			// 		StringFromMediaType(media_packet->GetMediaType()).CStr(),
+			// 		StringFromMediaPacketFlag(media_packet->GetFlag()).CStr(),
+			// 		(int64_t)(media_packet->GetPts() * GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000),
+			// 		media_packet->GetPts(),
+			// 		media_packet->GetDts(),
+			// 		media_packet->GetDuration(),
+			// 		GetTrack(media_packet->GetTrackId())->GetTimeBase().GetNum(),
+			// 		GetTrack(media_packet->GetTrackId())->GetTimeBase().GetDen()
+			// 	);
+
 			// Send to MediaRouter
-			SendFrame(media_packet);
+			SendFrame(std::move(media_packet));
 
 			// Real-time processing - It treats the packet the same as the real time.
 			if (_play_request_time.Elapsed() < (static_cast<int64_t>(static_cast<double>(media_packet->GetPts()) * track->GetTimeBase().GetExpr() * 1000)))
@@ -440,7 +461,8 @@ namespace pvd
 				continue;
 			}
 
-			auto rescale_ts = highest_ts_ms * track->GetTimeBase().GetTimescale() / 1000;  // avoid to non monotonically increasing dts problem
+			// avoid to non monotonically increasing dts problem
+			auto rescale_ts = highest_ts_ms * track->GetTimeBase().GetTimescale() / 1000;  
 
 			_base_timestamp[track_id] = rescale_ts;
 			_last_timestamp[track_id] = rescale_ts;

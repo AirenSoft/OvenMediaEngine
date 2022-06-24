@@ -197,7 +197,7 @@ namespace ov
 
 		{
 			std::lock_guard lock_guard(_dispatch_queue_lock);
-			if (CloseInternal())
+			if (CloseInternal(_state))
 			{
 				SetState(SocketState::Closed);
 			}
@@ -871,7 +871,7 @@ namespace ov
 				// Remove the socket from epoll
 				auto result = _worker->DeleteFromEpoll(this->GetSharedPtr());
 
-				CloseInternal();
+				CloseInternal(command.new_state);
 
 				if (result == false)
 				{
@@ -1784,7 +1784,7 @@ namespace ov
 				{
 					std::lock_guard lock_guard(_dispatch_queue_lock);
 
-					if (CloseInternal())
+					if (CloseInternal(new_state))
 					{
 						SetState(new_state);
 					}
@@ -1847,7 +1847,7 @@ namespace ov
 		std::lock_guard lock_guard(_dispatch_queue_lock);
 
 		// We must call DispatchEvents() so that the _post_callback can be called.
-		return CloseInternal() && (DispatchEvents() != DispatchResult::Error);
+		return CloseInternal(_state) && (DispatchEvents() != DispatchResult::Error);
 	}
 
 	bool Socket::CloseImmediatelyWithState(SocketState new_state)
@@ -1855,7 +1855,7 @@ namespace ov
 		std::lock_guard lock_guard(_dispatch_queue_lock);
 
 		// We must call DispatchEvents() so that the _post_callback can be called.
-		if (CloseInternal() && (DispatchEvents() != DispatchResult::Error))
+		if (CloseInternal(new_state) && (DispatchEvents() != DispatchResult::Error))
 		{
 			SetState(new_state);
 			return true;
@@ -1942,11 +1942,12 @@ namespace ov
 		}
 	}
 
-	bool Socket::CloseInternal()
+	bool Socket::CloseInternal(SocketState close_reason)
 	{
 		CHECK_STATE(!= SocketState::Closed, false);
 
 		_post_callback = std::move(_callback);
+		_close_reason = close_reason;
 
 		if (_socket.IsValid())
 		{

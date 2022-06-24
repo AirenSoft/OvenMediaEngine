@@ -20,7 +20,7 @@ bool EncoderVP8::SetCodecParams()
 	_codec_context->rc_max_rate = _codec_context->bit_rate;
 	_codec_context->rc_min_rate = _codec_context->bit_rate;
 	_codec_context->sample_aspect_ratio = (AVRational){1, 1};
-	_codec_context->time_base = TimebaseToAVRational(_encoder_context->GetTimeBase());
+	_codec_context->time_base = ffmpeg::Conv::TimebaseToAVRational(_encoder_context->GetTimeBase());
 	_codec_context->framerate = ::av_d2q((_encoder_context->GetFrameRate() > 0) ? _encoder_context->GetFrameRate() : _encoder_context->GetEstimateFrameRate(), AV_TIME_BASE);
 	_codec_context->gop_size = _codec_context->framerate.num / _codec_context->framerate.den;
 	_codec_context->max_b_frames = 0;

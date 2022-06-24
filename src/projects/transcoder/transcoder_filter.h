@@ -20,18 +20,18 @@ enum class TranscodeFilterType : int8_t
 class TranscodeFilter
 {
 public:
+	typedef std::function<void(int32_t, std::shared_ptr<MediaFrame>)> _cb_func;
+
+public:
 	TranscodeFilter();
-	TranscodeFilter(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context);
+
 	~TranscodeFilter();
 
-	bool Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context);
+	bool Configure(int32_t filter_id, std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context, _cb_func on_complete_hander);
 
 	bool SendBuffer(std::shared_ptr<MediaFrame> buffer);
-	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result);
 
-	uint32_t GetInputBufferSize();
-	uint32_t GetOutputBufferSize();
-
+	void Stop(); 
 	cmn::Timebase GetInputTimebase() const;
 	cmn::Timebase GetOutputTimebase() const;
 
@@ -42,9 +42,24 @@ public:
 	std::shared_ptr<TranscodeContext> _input_context;
 	std::shared_ptr<TranscodeContext> _output_context;
 
+	void SetAlias(ov::String alias);
+
+	void SetOnCompleteHandler(_cb_func func)
+	{
+		_on_complete_hander = move(func);
+	}
+
+	void OnComplete(std::shared_ptr<MediaFrame> frame);
+
 private:
 	bool CreateFilter();
 	bool IsNeedUpdate(std::shared_ptr<MediaFrame> buffer);
 
-	MediaFilterImpl *_impl;
+	int32_t _filter_id;
+
+	FilterBase *_impl;
+
+	ov::String _alias;
+
+	_cb_func _on_complete_hander;
 };
