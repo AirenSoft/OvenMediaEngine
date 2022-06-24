@@ -95,6 +95,9 @@ public:
 	ov::String	Dump();
 
 	// Extensions for OME specific
+	void		SetTrackId(uint32_t track_id) { _track_id = track_id; }
+	uint32_t	GetTrackId() const { return _track_id; }
+
 	void		SetNTPTimestamp(uint64_t nts) {_ntp_timestamp = nts;}
 	uint64_t	NTPTimestamp() const {return _ntp_timestamp;}
 
@@ -137,6 +140,7 @@ protected:
 	std::chrono::system_clock::time_point _created_time;
 
 	// Extensions for OME specific
+	uint32_t	_track_id = 0;
 	uint64_t	_ntp_timestamp = 0;
 	bool		_is_video_packet = false;
 	bool		_is_keyframe = false;

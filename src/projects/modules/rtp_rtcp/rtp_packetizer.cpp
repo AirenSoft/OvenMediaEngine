@@ -8,7 +8,7 @@
 
 #define OV_LOG_TAG "RtpRtcp"
 
-RtpPacketizer::RtpPacketizer(std::shared_ptr<RtpPacketizerInterface> session)
+RtpPacketizer::RtpPacketizer(const std::shared_ptr<RtpPacketizerInterface> &session)
 {
 	_stream = session;
 
@@ -22,6 +22,30 @@ RtpPacketizer::RtpPacketizer(std::shared_ptr<RtpPacketizerInterface> session)
 RtpPacketizer::~RtpPacketizer()
 {
 
+}
+
+bool RtpPacketizer::SetCodec(cmn::MediaCodecId codec_type)
+{
+	switch (codec_type)
+	{
+		case cmn::MediaCodecId::H264:
+			SetVideoCodec(cmn::MediaCodecId::H264);
+			break;
+		case cmn::MediaCodecId::Vp8:
+			SetVideoCodec(cmn::MediaCodecId::Vp8);
+			break;
+		case cmn::MediaCodecId::H265:
+			SetVideoCodec(cmn::MediaCodecId::H265);
+			break;
+		case cmn::MediaCodecId::Opus:
+			SetAudioCodec(cmn::MediaCodecId::Opus);
+			break;
+		default:
+			// Unsupported Codec
+			return false;
+	}
+
+	return true;
 }
 
 void RtpPacketizer::SetVideoCodec(cmn::MediaCodecId codec_type)
@@ -46,6 +70,11 @@ void RtpPacketizer::SetPlayoutDelay(uint32_t min, uint32_t max)
 	_playout_delay_extension = std::make_shared<RtpHeaderExtensionPlayoutDelay>();
 	_playout_delay_extension->SetDelayMilliseconds(min, max);
 	_rtp_extensions.AddExtention(_playout_delay_extension);
+}
+
+void RtpPacketizer::SetTrackId(uint32_t track_id)
+{
+	_track_id = track_id;
 }
 
 void RtpPacketizer::SetPayloadType(uint8_t payload_type)
@@ -164,6 +193,7 @@ bool RtpPacketizer::PacketizeVideo(cmn::MediaCodecId video_type,
 		}
 
 		packet->SetNTPTimestamp(ntp_timestamp);
+		packet->SetTrackId(_track_id);
 		packet->SetExtensions(_rtp_extensions);
 
 		// Set Payload
@@ -201,6 +231,9 @@ bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 	while(_ulpfec_generator.IsAvailableFecPackets())
 	{
 		auto red_fec_packet = AllocatePacket(true);
+
+		// RED packet is for only video 
+		red_fec_packet->SetVideoPacket(true);
 
 		// Timestamp is same as last packet
 		red_fec_packet->SetTimestamp(packet->Timestamp());
@@ -243,6 +276,7 @@ bool RtpPacketizer::PacketizeAudio(FrameType frame_type,
 	packet->SetPayloadType(_payload_type);
 	packet->SetTimestamp(rtp_timestamp);
 	packet->SetNTPTimestamp(ntp_timestamp);
+	packet->SetTrackId(_track_id);
 
 	uint8_t *payload = packet->AllocatePayload(payload_size);
 

@@ -173,45 +173,6 @@ bool WebRtcPublisher::Start()
 
 	_message_thread.Start(ov::MessageThreadObserver<std::shared_ptr<ov::CommonMessage>>::GetSharedPtr());
 
-	// Deprecated by Getroot 210830
-	// _timer.Push(
-	// 	[this](void *parameter) -> ov::DelayQueueAction 
-	// 	{
-	// 		// 2018-12-24 23:06:25.035,RTSP.SS,CONN_COUNT,INFO,,,[Live users], [Playback users]
-	// 		std::shared_ptr<info::Application> rtsp_live_app_info;
-	// 		std::shared_ptr<mon::ApplicationMetrics> rtsp_live_app_metrics;
-	// 		std::shared_ptr<info::Application> rtsp_play_app_info;
-	// 		std::shared_ptr<mon::ApplicationMetrics> rtsp_play_app_metrics;
-
-	// 		rtsp_live_app_metrics = nullptr;
-	// 		rtsp_play_app_metrics = nullptr;
-			
-	// 		// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
-	// 		rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
-	// 		if (rtsp_live_app_info != nullptr)
-	// 		{
-	// 			rtsp_live_app_metrics = ApplicationMetrics(*rtsp_live_app_info);
-	// 		}
-	// 		rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
-	// 		if (rtsp_play_app_info != nullptr)
-	// 		{
-	// 			rtsp_play_app_metrics = ApplicationMetrics(*rtsp_play_app_info);
-	// 		}
-
-	// 		stat_log(STAT_LOG_WEBRTC_EDGE_VIEWERS, "%s,%s,%s,%s,,,%u,%u",
-	// 				ov::Clock::Now().CStr(),
-	// 				"WEBRTC.SS",
-	// 				"CONN_COUNT",
-	// 				"INFO",
-	// 				rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
-	// 				rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0);
-
-	// 		return ov::DelayQueueAction::Repeat;
-	// 	}
-	// 	, 1000);
-
-	// _timer.Start();
-
 	return Publisher::Start();
 }
 
@@ -378,6 +339,8 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		return nullptr;
 	}
 
+	ov::String final_file_name = parsed_url->File();
+
 	// PORT can be omitted if port is default port, but SignedPolicy requires this information.
 	if(parsed_url->Port() == 0)
 	{
@@ -450,6 +413,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 			final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
 			final_host_name = parsed_url->Host();
 			final_stream_name = parsed_url->Stream();
+			final_file_name = parsed_url->File();
 		}
 	}
 	else if(webhooks_result == AccessController::VerificationResult::Error)
@@ -498,6 +462,13 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		return nullptr;
 	}
 
+	auto file_sdp = stream->GetSessionDescription(final_file_name);
+	if(file_sdp == nullptr)
+	{
+		logte("Cannot find file (%s/%s/%s)", final_vhost_app_name.CStr(), final_stream_name.CStr(), final_file_name.CStr());
+		return nullptr;
+	}
+
 	if(stream->WaitUntilStart(10000) == false)
 	{
 		logtw("(%s/%s) stream has not started.", final_vhost_app_name.CStr(), final_stream_name.CStr());
@@ -518,7 +489,8 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
 	}
 
-	auto session_description = std::make_shared<SessionDescription>(*stream->GetSessionDescription());
+	// Copy SDP
+	auto session_description = std::make_shared<SessionDescription>(*file_sdp);
 	session_description->SetOrigin("OvenMediaEngine", ov::Unique::GenerateUint32(), 2, "IN", 4, "127.0.0.1");
 	session_description->SetIceUfrag(_ice_port->GenerateUfrag());
 	session_description->Update();
@@ -577,6 +549,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 
 	auto final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
 	auto final_stream_name = parsed_url->Stream();
+	auto final_file_name = parsed_url->File();
 
 	// SignedPolicy and SignedToken
 	auto request = ws_session->GetRequest();
@@ -586,14 +559,14 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	logtd("OnAddRemoteDescription: %s", remote_sdp_text.CStr());
 
 	auto application = GetApplicationByName(final_vhost_app_name);
-	auto stream = GetStream(final_vhost_app_name, final_stream_name);
+	auto stream = std::static_pointer_cast<RtcStream>(GetStream(final_vhost_app_name, final_stream_name));
 	if (!stream)
 	{
 		logte("Cannot find stream (%s/%s)", final_vhost_app_name.CStr(), final_stream_name.CStr());
 		return false;
 	}
 
-	auto session = RtcSession::Create(Publisher::GetSharedPtrAs<WebRtcPublisher>(), application, stream, offer_sdp, peer_sdp, _ice_port, ws_session);
+	auto session = RtcSession::Create(Publisher::GetSharedPtrAs<WebRtcPublisher>(), application, stream, final_file_name, offer_sdp, peer_sdp, _ice_port, ws_session);
 	if (session != nullptr)
 	{
 		stream->AddSession(session);
@@ -648,7 +621,8 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	}
 	else
 	{
-		logte("Cannot create session");
+		logte("Cannot create session for (%s/%s/%s)", final_vhost_app_name.CStr(), final_stream_name.CStr(), final_file_name.CStr());
+		return false;
 	}
 
 	return true;

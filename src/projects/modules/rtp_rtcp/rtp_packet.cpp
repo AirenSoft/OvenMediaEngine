@@ -47,10 +47,10 @@ RtpPacket::RtpPacket(RtpPacket &src)
 	_extension_size = src._extension_size;
 	_extensions = src._extensions;
 	_data = src._data->Clone();
-	_data->SetLength(src._data->GetLength());
 	_buffer = _data->GetWritableDataAs<uint8_t>();
 
 	// Extra Data
+	_track_id = src._track_id;
 	_ntp_timestamp = src._ntp_timestamp;
 	_is_keyframe = src._is_keyframe;
 	_is_first_packet_of_frame = src._is_first_packet_of_frame;

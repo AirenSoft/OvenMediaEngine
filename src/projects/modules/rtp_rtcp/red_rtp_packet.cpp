@@ -58,7 +58,7 @@ void RedRtpPacket::PackageAsRtp()
 	_payload_size = _payload_size + RED_HEADER_SIZE;
 }
 
-uint8_t RedRtpPacket::BlockPT()
+uint8_t RedRtpPacket::BlockPT() const
 {
 	return _block_pt;
 }

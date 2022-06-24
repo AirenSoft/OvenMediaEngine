@@ -15,7 +15,7 @@ public:
 	void 		PackageAsRed(uint8_t red_payload_type);
 	// Readjust the payload area that was adjusted for RED.
 	void		PackageAsRtp();
-	uint8_t 	BlockPT();
+	uint8_t 	BlockPT() const;
 
 private:
 	uint8_t		_block_pt;
