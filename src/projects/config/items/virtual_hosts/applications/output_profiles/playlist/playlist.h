@@ -110,7 +110,28 @@ namespace cfg
 								return nullptr;
 							}
 						);
-						Register<Optional>({"Rendition", "renditions"}, &_renditions);
+						Register<Optional>({"Rendition", "renditions"}, &_renditions,
+							[=]() -> std::shared_ptr<ConfigError> {
+								return nullptr;
+							},
+							[=]() -> std::shared_ptr<ConfigError> {
+								
+								std::map<ov::String, bool> rendition_names;
+
+								// Check if there are duplicate renditions
+								for (auto &rendition : _renditions)
+								{
+									auto name = rendition.GetName();
+									if (rendition_names.find(name) != rendition_names.end())
+									{
+										return CreateConfigErrorPtr("Duplicate rendition name: %s", name.CStr());
+									}
+									rendition_names[name] = true;
+								}
+								
+								return nullptr;
+							}
+						);
 					}
 				};
 			}  // namespace oprf
