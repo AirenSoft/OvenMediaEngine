@@ -61,7 +61,8 @@ public:
 	bool Start() override;
 	bool Stop() override;
 
-	bool ChangeRendition(const ov::String &rendition_name);
+	bool RequestChangeRendition(const ov::String &rendition_name);
+	bool SetAutoAbr(bool auto_abr);
 
 	void SetSessionExpiredTime(uint64_t expired_time);
 
@@ -83,8 +84,11 @@ public:
 
 private:
 	bool ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info);
-
 	bool IsSelectedPacket(const std::shared_ptr<const RtpPacket> &rtp_packet);
+
+	void ChangeRendition();
+	bool SendPlaylistInfo(const std::shared_ptr<const RtcPlaylist> &playlist) const;
+	bool SendRenditionChanged(const std::shared_ptr<const RtcRendition> &rendition) const;
 
 	std::shared_ptr<WebRtcPublisher>	_publisher;
 
@@ -96,11 +100,6 @@ private:
 	std::shared_ptr<const SessionDescription> _peer_sdp;
 	std::shared_ptr<IcePort>            _ice_port;
 	std::shared_ptr<http::svr::ws::WebSocketSession> 	_ws_session; // Signalling  
-
-	ov::String 							_file_name;
-	std::shared_ptr<const RtcPlaylist>	_playlist;
-	std::shared_ptr<const RtcRendition>	_current_rendition = nullptr;
-	std::shared_ptr<const RtcRendition>	_next_rendition = nullptr;
 
 	uint8_t                             _video_payload_type = 0;
 	uint32_t							_video_ssrc = 0;
@@ -116,8 +115,16 @@ private:
 
 	std::shared_mutex					_start_stop_lock;
 
+	// For ABR
+	ov::String 							_file_name;
+	std::shared_ptr<const RtcPlaylist>	_playlist;
+	std::shared_ptr<const RtcRendition>	_current_rendition = nullptr;
+	std::shared_ptr<const RtcRendition>	_next_rendition = nullptr;
+
 	uint16_t _video_rtp_sequence_number = 0;
 	uint16_t _audio_rtp_sequence_number = 0;
+
+	bool _auto_abr = false;
 
 	ov::StopWatch _abr_test_watch;
 	bool _changed = false;

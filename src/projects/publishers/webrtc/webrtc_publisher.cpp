@@ -628,6 +628,82 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	return true;
 }
 
+bool WebRtcPublisher::OnChangeRendition(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
+								   bool change_rendition, const ov::String &rendition_name, bool change_auto, bool &auto_abr,
+								   const std::shared_ptr<const SessionDescription> &offer_sdp,
+									const std::shared_ptr<const SessionDescription> &peer_sdp)
+{
+	auto [autorized_exist, authorized] = ws_session->GetUserData("authorized");
+	ov::String uri;
+	uint64_t session_life_time = 0;
+	if(autorized_exist == true && std::holds_alternative<bool>(authorized) == true && std::get<bool>(authorized) == true)
+	{
+		auto [new_url_exist, new_url] = ws_session->GetUserData("new_url");
+		if(new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
+		{
+			uri = std::get<ov::String>(new_url);
+		}
+		else
+		{
+			return false;
+		}
+
+		auto [stream_expired_exist, stream_expired] = ws_session->GetUserData("stream_expired");
+		if(stream_expired_exist == true && std::holds_alternative<uint64_t>(stream_expired) == true)
+		{
+			session_life_time = std::get<uint64_t>(stream_expired);
+		}
+		else
+		{
+			return false;
+		}
+	}
+	else
+	{
+		// This client was unauthoized when request offer situation
+		return false;
+	}
+
+	auto parsed_url = ov::Url::Parse(uri);
+	if (parsed_url == nullptr)
+	{
+		logte("Could not parse the url: %s", uri.CStr());
+		return false;
+	}
+
+	auto final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
+	auto final_stream_name = parsed_url->Stream();
+
+	logti("ChangeRendition command received : %s/%s/%u", final_vhost_app_name.CStr(), final_stream_name.CStr(), offer_sdp->GetSessionId());
+
+	// Find Stream
+	auto stream = std::static_pointer_cast<RtcStream>(GetStream(final_vhost_app_name, final_stream_name));
+	if (!stream)
+	{
+		logte("To change rendition in session(%u) failed. Cannot find stream (%s/%s)", offer_sdp->GetSessionId(), final_vhost_app_name.CStr(), final_stream_name.CStr());
+		return false;
+	}
+
+	auto session = std::static_pointer_cast<RtcSession>(stream->GetSession(offer_sdp->GetSessionId()));
+	if (session == nullptr)
+	{
+		logte("To change rendition in session(%d) failed. Cannot find session by offer sdp session id", offer_sdp->GetSessionId());
+		return false;
+	}
+
+	if (change_auto == true)
+	{
+		session->SetAutoAbr(auto_abr);
+	}
+
+	if (change_rendition == true)
+	{
+		session->RequestChangeRendition(rendition_name);
+	}
+
+	return true;
+}
+
 bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
 									const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 									const std::shared_ptr<const SessionDescription> &offer_sdp,
@@ -675,7 +751,7 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::WebSock
 	auto session = std::static_pointer_cast<RtcSession>(stream->GetSession(offer_sdp->GetSessionId()));
 	if (session == nullptr)
 	{
-		logte("To stop session failed. Cannot find session by peer sdp session id (%u)", offer_sdp->GetSessionId());
+		logte("To stop session failed. Cannot find session by offer sdp session id (%u)", offer_sdp->GetSessionId());
 		return false;
 	}
 

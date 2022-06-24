@@ -516,6 +516,10 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCommand(const std:
 	{
 		return DispatchAnswer(ws_session, object, info);
 	}
+	else if (command == "change_rendition")
+	{
+		return DispatchChangeRendition(ws_session, object, info);
+	}
 	else if (command == "candidate")
 	{
 		return DispatchCandidate(ws_session, object, info);
@@ -806,6 +810,38 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchAnswer(const std::
 		value["sdp"] = sdp_value;
 
 		host_peer->GetSession()->GetWebSocketResponse()->Send(value);
+	}
+
+	return nullptr;
+}
+
+std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchChangeRendition(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+{
+	auto has_rendition_name = object.IsMember("rendition_name");
+	auto has_auto_abr = object.IsMember("auto");
+
+	ov::String rendition_name; 
+	bool auto_abr = false;  
+
+	if (has_rendition_name)
+	{
+		rendition_name = object.GetStringValue("rendition_name");
+	}
+
+	if (has_auto_abr)
+	{
+		auto_abr = object.GetBoolValue("auto");
+	}
+
+	if (info->peer_sdp != nullptr)
+	{
+		for (auto &observer : _observers)
+		{
+			if (observer->OnChangeRendition(ws_session, has_rendition_name, rendition_name, has_auto_abr, auto_abr, info->offer_sdp, info->peer_sdp) == false)
+			{
+				return std::make_shared<http::HttpError>(http::StatusCode::Forbidden, "Forbidden");
+			}
+		}
 	}
 
 	return nullptr;

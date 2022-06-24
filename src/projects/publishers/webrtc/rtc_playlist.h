@@ -10,6 +10,7 @@
 
 #include <base/common_types.h>
 #include <base/info/media_track.h>
+#include <modules/json_serdes/stream.h>
 
 class RtcRendition
 {
@@ -39,10 +40,18 @@ public:
         Json::Value json;
         
         json["name"] = _name.CStr();
-        json["video_track_name"] = _video_track->GetName().CStr();
-        json["audio_track_name"] = _audio_track->GetName().CStr();
 
-        // TODO(ABR) : Add other attributes
+        if (_video_track)
+        {
+            auto video_track_json = serdes::JsonFromTrack(_video_track);
+            json["video_track"] = video_track_json;
+        }
+        
+        if (_audio_track)
+        {
+            auto audio_track_json = serdes::JsonFromTrack(_audio_track);
+            json["audio_track"] = audio_track_json;
+        }
 
         return json;
     }
@@ -57,9 +66,10 @@ private:
 class RtcPlaylist
 {
 public:
-    RtcPlaylist(const ov::String &name, cmn::MediaCodecId video_codec_id, cmn::MediaCodecId audio_codec_id)
+    RtcPlaylist(const ov::String &name, const ov::String &file_name, cmn::MediaCodecId video_codec_id, cmn::MediaCodecId audio_codec_id)
     {
         _name = name;
+        _file_name = file_name;
         _video_codec_id = video_codec_id;
         _audio_codec_id = audio_codec_id;
     }
@@ -91,11 +101,13 @@ public:
         return _first_rendition;
     }
 
-    Json::Value ToJson(cmn::MediaCodecId video_codec_id, cmn::MediaCodecId audio_codec_id) const
+    Json::Value ToJson(bool auto_abr = false) const
     {
         Json::Value playlist_json;
 
         playlist_json["name"] = _name.CStr();
+        playlist_json["file_name"] = _file_name.CStr();
+        playlist_json["auto"] = auto_abr;
 
         Json::Value renditions_json;
         for (const auto &it : _rendition_map)
@@ -105,13 +117,12 @@ public:
 
         playlist_json["renditions"] = renditions_json;
 
-        // TODO(ABR) : Add other attributes
-
         return playlist_json;
     }
 
 private:
     ov::String _name;
+    ov::String _file_name;
     cmn::MediaCodecId _video_codec_id;
     cmn::MediaCodecId _audio_codec_id;
 
@@ -184,7 +195,7 @@ private:
 
     std::shared_ptr<RtcPlaylist> CreatePlaylist(cmn::MediaCodecId video_codec_id, cmn::MediaCodecId audio_codec_id) const
     {
-        return std::make_shared<RtcPlaylist>(_name, video_codec_id, audio_codec_id);
+        return std::make_shared<RtcPlaylist>(_name, _file_name, video_codec_id, audio_codec_id);
     }
 
     ov::String GetPlaylistKey(cmn::MediaCodecId video_codec_id, cmn::MediaCodecId audio_codec_id) const

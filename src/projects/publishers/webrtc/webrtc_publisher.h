@@ -45,6 +45,12 @@ public:
 								const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 								const std::shared_ptr<const SessionDescription> &offer_sdp,
 								const std::shared_ptr<const SessionDescription> &peer_sdp) override;
+
+	bool OnChangeRendition(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
+							bool change_rendition, const ov::String &rendition_name, bool change_auto, bool &auto_abr,
+							const std::shared_ptr<const SessionDescription> &offer_sdp,
+							const std::shared_ptr<const SessionDescription> &peer_sdp) override;
+
 	bool OnIceCandidate(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
 						const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 	                    const std::shared_ptr<RtcIceCandidate> &candidate,

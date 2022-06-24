@@ -23,7 +23,7 @@ namespace serdes
 		SetInt(object, "den", timebase.GetDen());
 	}
 
-	static void SetVideoTrack(Json::Value &parent_object, const char *key, const std::shared_ptr<MediaTrack> &track, Optional optional)
+	static void SetVideoTrack(Json::Value &parent_object, const char *key, const std::shared_ptr<const MediaTrack> &track, Optional optional)
 	{
 		CONVERTER_RETURN_IF(track == nullptr, Json::objectValue);
 
@@ -48,7 +48,7 @@ namespace serdes
 		SetInt(object, "count", channel.GetCounts());
 	}
 
-	static void SetAudioTrack(Json::Value &parent_object, const char *key, const std::shared_ptr<MediaTrack> &track, Optional optional)
+	static void SetAudioTrack(Json::Value &parent_object, const char *key, const std::shared_ptr<const MediaTrack> &track, Optional optional)
 	{
 		CONVERTER_RETURN_IF(track == nullptr, Json::objectValue);
 
@@ -65,6 +65,36 @@ namespace serdes
 		}
 	}
 
+	static void SetTrack(Json::Value &parent_object, const char *key, const std::shared_ptr<const MediaTrack> &track, Optional optional)
+	{
+		CONVERTER_RETURN_IF(false, Json::objectValue);
+
+		SetInt(object, "id", track->GetId());
+		SetString(object, "name", track->GetName(), Optional::False);
+		SetString(object, "type", ::StringFromMediaType(track->GetMediaType()), Optional::False);
+
+		switch (track->GetMediaType())
+		{
+			case cmn::MediaType::Video:
+				SetVideoTrack(object, "video", track, Optional::False);
+				break;
+			case cmn::MediaType::Audio:
+				SetAudioTrack(object, "audio", track, Optional::False);
+				break;
+
+			case cmn::MediaType::Unknown:
+				[[fallthrough]];
+			case cmn::MediaType::Data:
+				[[fallthrough]];
+			case cmn::MediaType::Subtitle:
+				[[fallthrough]];
+			case cmn::MediaType::Attachment:
+				[[fallthrough]];
+			case cmn::MediaType::Nb:
+				break;
+		}
+	}
+
 	static void SetTracks(Json::Value &parent_object, const char *key, const std::map<int32_t, std::shared_ptr<MediaTrack>> &tracks, Optional optional)
 	{
 		CONVERTER_RETURN_IF(false, Json::arrayValue);
@@ -75,29 +105,7 @@ namespace serdes
 
 			Json::Value track_value;
 
-			SetInt(track_value, "id", track->GetId());
-			SetString(track_value, "type", ::StringFromMediaType(track->GetMediaType()), Optional::False);
-
-			switch (track->GetMediaType())
-			{
-				case cmn::MediaType::Video:
-					SetVideoTrack(track_value, "video", track, Optional::False);
-					break;
-				case cmn::MediaType::Audio:
-					SetAudioTrack(track_value, "audio", track, Optional::False);
-					break;
-
-				case cmn::MediaType::Unknown:
-					[[fallthrough]];
-				case cmn::MediaType::Data:
-					[[fallthrough]];
-				case cmn::MediaType::Subtitle:
-					[[fallthrough]];
-				case cmn::MediaType::Attachment:
-					[[fallthrough]];
-				case cmn::MediaType::Nb:
-					break;
-			}
+			SetTrack(track_value, nullptr, track, Optional::False);
 
 			object.append(track_value);
 		}
@@ -130,6 +138,13 @@ namespace serdes
 
 			object.append(output_value);
 		}
+	}
+
+	Json::Value JsonFromTrack(const std::shared_ptr<const MediaTrack> &track)
+	{
+		Json::Value response(Json::ValueType::objectValue);
+		SetTrack(response, nullptr, track, Optional::False);
+		return response;
 	}
 
 	Json::Value JsonFromTracks(const std::map<int32_t, std::shared_ptr<MediaTrack>> &tracks)

@@ -107,6 +107,7 @@ protected:
 	std::shared_ptr<const ov::Error> DispatchCommand(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const ov::Data> &message);
 	std::shared_ptr<const ov::Error> DispatchRequestOffer(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, std::shared_ptr<RtcSignallingInfo> &info);
 	std::shared_ptr<const ov::Error> DispatchAnswer(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<const ov::Error> DispatchChangeRendition(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
 	std::shared_ptr<const ov::Error> DispatchCandidate(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
 	std::shared_ptr<const ov::Error> DispatchOfferP2P(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
 	std::shared_ptr<const ov::Error> DispatchCandidateP2P(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
