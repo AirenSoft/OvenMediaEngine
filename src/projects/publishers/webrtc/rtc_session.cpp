@@ -159,7 +159,10 @@ bool RtcSession::Start()
 	auto current_video_track = _current_rendition->GetVideoTrack();
 	auto current_audio_track = _current_rendition->GetAudioTrack();
 
-	logtc("Video PT(%d) Audio PT(%d) Video TrackID(%u) Audio TrackID(%u)", _video_payload_type, _audio_payload_type, 
+	SendPlaylistInfo(_playlist);
+	SendRenditionChanged(_current_rendition);
+
+	logtd("Video PT(%d) Audio PT(%d) Video TrackID(%u) Audio TrackID(%u)", _video_payload_type, _audio_payload_type, 
 														current_video_track ? current_video_track->GetId() : -1,
 														current_audio_track ? current_audio_track->GetId() : -1);
 
@@ -241,7 +244,7 @@ const std::shared_ptr<http::svr::ws::WebSocketSession>& RtcSession::GetWSClient(
 	return _ws_session;
 }
 
-bool RtcSession::ChangeRendition(const ov::String &rendition_name)
+bool RtcSession::RequestChangeRendition(const ov::String &rendition_name)
 {
 	auto rendition = _playlist->GetRendition(rendition_name);
 	if(rendition == nullptr)
@@ -259,6 +262,57 @@ bool RtcSession::ChangeRendition(const ov::String &rendition_name)
 	_next_rendition = rendition;
 
 	return true;
+}
+
+bool RtcSession::SetAutoAbr(bool auto_abr)
+{
+	_auto_abr = auto_abr;
+	return true;
+}
+
+bool RtcSession::SendPlaylistInfo(const std::shared_ptr<const RtcPlaylist> &playlist) const
+{
+	auto ws_response = std::static_pointer_cast<http::svr::ws::WebSocketResponse>(_ws_session->GetResponse());
+	if(ws_response == nullptr)
+	{
+		logte("Failed to get the websocket response");
+		return false;
+	}
+
+	Json::Value json_response;
+
+	json_response["command"] = "notification";
+	json_response["type"] = "playlist";
+	
+	// Message
+	json_response["message"] = playlist->ToJson(_auto_abr);
+
+	return ws_response->Send(json_response) > 0;
+}
+
+bool RtcSession::SendRenditionChanged(const std::shared_ptr<const RtcRendition> &rendition) const
+{
+	auto ws_response = std::static_pointer_cast<http::svr::ws::WebSocketResponse>(_ws_session->GetResponse());
+	if(ws_response == nullptr)
+	{
+		logte("Failed to get the websocket response");
+		return false;
+	}
+
+	Json::Value json_response;
+
+	json_response["command"] = "notification";
+	json_response["type"] = "rendition_changed";
+	
+	// Message
+	Json::Value json_message;
+	
+	json_message["rendition_name"] = rendition->GetName().CStr();
+	json_message["auto"] = _auto_abr;
+
+	json_response["message"] = json_message;
+
+	return ws_response->Send(json_response) > 0;
 }
 
 void RtcSession::OnMessageReceived(const std::any &message)
@@ -289,6 +343,25 @@ void RtcSession::OnMessageReceived(const std::any &message)
 	SendDataToPrevNode(data);
 }
 
+void RtcSession::ChangeRendition()
+{
+	if (_next_rendition == nullptr)
+	{
+		return;
+	}
+
+	if (_next_rendition == _current_rendition)
+	{
+		logtd("The rendition is already selected");
+		return;
+	}
+
+	_current_rendition = _next_rendition;
+	_next_rendition = nullptr;
+
+	SendRenditionChanged(_current_rendition);
+}
+
 bool RtcSession::IsSelectedPacket(const std::shared_ptr<const RtpPacket> &rtp_packet)
 {
 	logtd("RTP PT(%d) TrackID(%u) => Video PT(%d) Audio PT(%d) Video TrackID(%d) Audio TrackID(%d)", rtp_packet->PayloadType(), rtp_packet->GetTrackId(),
@@ -302,14 +375,12 @@ bool RtcSession::IsSelectedPacket(const std::shared_ptr<const RtpPacket> &rtp_pa
 		// When a video packet of the next rendition is a keyframe
 		if (_next_rendition->GetVideoTrack() != nullptr && _next_rendition->GetVideoTrack()->GetId() == rtp_packet->GetTrackId() && rtp_packet->IsKeyframe())
 		{
-			_current_rendition = _next_rendition;
-			_next_rendition = nullptr;
+			ChangeRendition();
 		}
 		// Can change rendition immediately if next rendition has only audio track
 		else if (_next_rendition->GetVideoTrack() == nullptr)
 		{
-			_current_rendition = _next_rendition;
-			_next_rendition = nullptr;
+			ChangeRendition();
 		}
 	}
 

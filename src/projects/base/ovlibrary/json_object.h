@@ -108,9 +108,26 @@ namespace ov
 			return nullptr;			
 		}
 
+		bool GetBoolValue(const ov::String &key) const
+		{
+			auto &value = _value[key];
+
+			if (value.isBool())
+			{
+				return value.asBool();
+			}
+
+			return false;
+		}
+
 		const ::Json::Value &GetJsonValue(const ov::String &key) const
 		{
 			return _value[key];
+		}
+
+		bool IsMember(const ov::String &key) const
+		{
+			return _value.isMember(key.CStr());
 		}
 
 		String ToString() const;

@@ -158,7 +158,7 @@ void MediaTrack::SetBypass(bool flag)
 	_byass = flag;
 }
 
-bool MediaTrack::IsBypass()
+bool MediaTrack::IsBypass() const
 {
 	return _byass;
 }

@@ -60,7 +60,7 @@ public:
 
 	// Bypass Settings
 	void SetBypass(bool flag);
-	bool IsBypass();
+	bool IsBypass() const;
 
 	ov::String GetInfoString();
 	bool IsValid();
