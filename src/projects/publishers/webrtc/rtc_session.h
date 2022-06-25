@@ -156,12 +156,10 @@ private:
 	};
 
 	// sequence number % MAX_RTP_RECORDS : RtpSentRecord
-	// 0 : video
-	// 1 : audio
-	std::unordered_map<uint16_t, std::shared_ptr<RtpSentLog>> _rtp_sent_record_map[2];
-	std::shared_mutex _rtp_sent_record_map_lock;
+	std::unordered_map<uint16_t, std::shared_ptr<RtpSentLog>> _video_rtp_sent_record_map;
+	std::shared_mutex _video_rtp_sent_record_map_lock;
 
 	bool RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packet, uint16_t origin_sequence_number);
 	// Get RTP Sent Log from RTP History
-	std::shared_ptr<RtpSentLog> TraceRtpSent(cmn::MediaType media_type, uint16_t sequence_number);
+	std::shared_ptr<RtpSentLog> TraceRtpSent(uint16_t sequence_number);
 };
