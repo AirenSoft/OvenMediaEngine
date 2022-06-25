@@ -522,19 +522,27 @@ bool RtcSession::RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packe
 
 	std::lock_guard<std::shared_mutex> lock(_rtp_sent_record_map_lock);
 	auto key = sent_log->_sequence_number % MAX_RTP_RECORDS;
-	_rtp_sent_record_map[key] = sent_log;
+
+	auto place = rtp_packet->IsVideoPacket() ? 0 : 1;
+	_rtp_sent_record_map[place][key] = sent_log;
 
 	return true;
 }
 
-std::shared_ptr<RtcSession::RtpSentLog> RtcSession::TraceRtpSent(uint16_t sequence_number)
+std::shared_ptr<RtcSession::RtpSentLog> RtcSession::TraceRtpSent(cmn::MediaType media_type, uint16_t sequence_number)
 {
+	if (media_type != cmn::MediaType::Audio && media_type != cmn::MediaType::Video)
+	{
+		return nullptr;
+	}
+
 	std::shared_lock<std::shared_mutex> lock(_rtp_sent_record_map_lock);
 
+	auto place = (media_type == cmn::MediaType::Video) ? 0 : 1;
 	auto key = sequence_number % MAX_RTP_RECORDS;
 
-	auto it = _rtp_sent_record_map.find(key);
-	if (it == _rtp_sent_record_map.end())
+	auto it = _rtp_sent_record_map[place].find(key);
+	if (it == _rtp_sent_record_map[place].end())
 	{
 		return nullptr;
 	}
@@ -594,7 +602,7 @@ bool RtcSession::ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	for(size_t i=0; i<nack->GetLostIdCount(); i++)
 	{
 		auto seq_no = nack->GetLostId(i);
-		auto sent_log = TraceRtpSent(seq_no);
+		auto sent_log = TraceRtpSent(cmn::MediaType::Video, seq_no);
 		if (sent_log == nullptr)
 		{
 			continue;

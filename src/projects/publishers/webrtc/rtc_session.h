@@ -147,13 +147,21 @@ private:
 
 		uint32_t _sent_bytes = 0;
 		uint64_t _send_time = 0; // system clock milliseconds
+
+		ov::String ToString()
+		{
+			return ov::String::FormatString("Seq(%d) Track(%d) PT(%d) OriginSeq(%d) SentBytes(%u)", 
+				_sequence_number, _track_id, _payload_type, _origin_sequence_number, _sent_bytes);
+		}
 	};
 
 	// sequence number % MAX_RTP_RECORDS : RtpSentRecord
-	std::unordered_map<uint16_t, std::shared_ptr<RtpSentLog>> _rtp_sent_record_map;
+	// 0 : video
+	// 1 : audio
+	std::unordered_map<uint16_t, std::shared_ptr<RtpSentLog>> _rtp_sent_record_map[2];
 	std::shared_mutex _rtp_sent_record_map_lock;
 
 	bool RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packet, uint16_t origin_sequence_number);
 	// Get RTP Sent Log from RTP History
-	std::shared_ptr<RtpSentLog> TraceRtpSent(uint16_t sequence_number);
+	std::shared_ptr<RtpSentLog> TraceRtpSent(cmn::MediaType media_type, uint16_t sequence_number);
 };
