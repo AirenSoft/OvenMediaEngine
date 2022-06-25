@@ -25,56 +25,59 @@ using namespace cmn;
  SDP Sample
 ****************************
 v=0
-o=OvenMediaEngine 101 2 IN IP4 127.0.0.1
+o=OvenMediaEngine 100 2 IN IP4 127.0.0.1
 s=-
 t=0 0
-a=group:BUNDLE jyJ5Pe 7LdTsW
-a=group:LS jyJ5Pe 7LdTsW
-a=msid-semantic:WMS 0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf
-a=fingerprint:sha-256 9A:F5:91:C4:C8:AD:9B:FB:95:5F:2E:30:49:E6:98:EC:63:BF:B0:15:26:DF:B7:E9:5F:9F:6C:C9:90:6F:0B:F4
+a=group:BUNDLE ifUNok 8TKNaB
+a=group:LS ifUNok 8TKNaB
+a=msid-semantic:WMS a6Dt3TF7zAXnsj0SECUobPQNRvhH2r5YqieJ
+a=fingerprint:sha-256 68:BD:A0:DE:31:67:01:AD:14:7F:92:7A:81:3F:01:5E:47:A0:82:72:84:E0:71:38:EF:87:2D:04:7C:0E:5D:61
 a=ice-options:trickle
-a=ice-ufrag:Xnh541
-a=ice-pwd:fR9dQgrLynGWq3iF07teYKu2STHJPIkM
-m=video 9 UDP/TLS/RTP/SAVPF 100 101 120 121 122
+a=ice-ufrag:W3x6EQ
+a=ice-pwd:4q1k7P8gwrDoBmbxiNQSH0aUOyCJlT5u
+m=video 9 UDP/TLS/RTP/SAVPF 98 99 120 121 122
 c=IN IP4 0.0.0.0
 a=sendonly
-a=mid:jyJ5Pe
+a=mid:ifUNok
 a=setup:actpass
 a=rtcp-mux
+a=msid:a6Dt3TF7zAXnsj0SECUobPQNRvhH2r5YqieJ aSo7tDegF8TYyC6U2NR9qM5vm1dQrGjZBuVL
 a=extmap:1 urn:ietf:params:rtp-hdrext:framemarking
-a=msid:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf 6jHsvxRPcpiEVZbA5QegGowmCtOlh8kTaXJ4
-a=rtpmap:100 H264/90000
-a=fmtp:100 packetization-mode=1;profile-level-id=42e01f;level-asymmetry-allowed=1
-a=rtcp-fb:100 nack
-a=rtpmap:101 rtx/90000
-a=fmtp:101 apt=100
+a=extmap:3 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
+a=rtpmap:98 H264/90000
+a=fmtp:98 packetization-mode=1;profile-level-id=42e01f;level-asymmetry-allowed=1
+a=rtcp-fb:98 transport-cc
+a=rtcp-fb:98 nack
+a=rtpmap:99 rtx/90000
+a=fmtp:99 apt=98
 a=rtpmap:120 red/90000
 a=rtpmap:121 rtx/90000
 a=fmtp:121 apt=120
 a=rtpmap:122 ulpfec/90000
-a=ssrc-group:FID 2808715097 1263422112
-a=ssrc:2808715097 cname:A9KW3tqkuJhs25BN
-a=ssrc:2808715097 msid:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf 6jHsvxRPcpiEVZbA5QegGowmCtOlh8kTaXJ4
-a=ssrc:2808715097 mslabel:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf
-a=ssrc:2808715097 label:6jHsvxRPcpiEVZbA5QegGowmCtOlh8kTaXJ4
-a=ssrc:1263422112 cname:A9KW3tqkuJhs25BN
-a=ssrc:1263422112 msid:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf 6jHsvxRPcpiEVZbA5QegGowmCtOlh8kTaXJ4
-a=ssrc:1263422112 mslabel:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf
-a=ssrc:1263422112 label:6jHsvxRPcpiEVZbA5QegGowmCtOlh8kTaXJ4
-m=audio 9 UDP/TLS/RTP/SAVPF 102
+a=ssrc-group:FID 649759348 536933936
+a=ssrc:649759348 cname:YQ5Ss9POwjA6ypoJ
+a=ssrc:649759348 msid:a6Dt3TF7zAXnsj0SECUobPQNRvhH2r5YqieJ aSo7tDegF8TYyC6U2NR9qM5vm1dQrGjZBuVL
+a=ssrc:649759348 mslabel:a6Dt3TF7zAXnsj0SECUobPQNRvhH2r5YqieJ
+a=ssrc:649759348 label:aSo7tDegF8TYyC6U2NR9qM5vm1dQrGjZBuVL
+a=ssrc:536933936 cname:YQ5Ss9POwjA6ypoJ
+a=ssrc:536933936 msid:a6Dt3TF7zAXnsj0SECUobPQNRvhH2r5YqieJ aSo7tDegF8TYyC6U2NR9qM5vm1dQrGjZBuVL
+a=ssrc:536933936 mslabel:a6Dt3TF7zAXnsj0SECUobPQNRvhH2r5YqieJ
+a=ssrc:536933936 label:aSo7tDegF8TYyC6U2NR9qM5vm1dQrGjZBuVL
+m=audio 9 UDP/TLS/RTP/SAVPF 110
 c=IN IP4 0.0.0.0
 a=sendonly
-a=mid:7LdTsW
+a=mid:8TKNaB
 a=setup:actpass
 a=rtcp-mux
-a=msid:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf X6EozKm0lj57uafc3JW2sOven1Sp9RMFY8kB
-a=rtpmap:102 OPUS/48000/2
-a=fmtp:102 stereo=1;useinbandfec=1;
-a=ssrc:1049140135 cname:A9KW3tqkuJhs25BN
-a=ssrc:1049140135 msid:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf X6EozKm0lj57uafc3JW2sOven1Sp9RMFY8kB
-a=ssrc:1049140135 mslabel:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf
-a=ssrc:1049140135 label:X6EozKm0lj57uafc3JW2sOven1Sp9RMFY8kB
-
+a=msid:a6Dt3TF7zAXnsj0SECUobPQNRvhH2r5YqieJ U59mpow1QKCqzIT80tekN4yDxsjM62vJbAVB
+a=extmap:3 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
+a=rtpmap:110 OPUS/48000/2
+a=fmtp:110 sprop-stereo=1;stereo=1;minptime=10;useinbandfec=1
+a=rtcp-fb:110 transport-cc
+a=ssrc:1273183178 cname:YQ5Ss9POwjA6ypoJ
+a=ssrc:1273183178 msid:a6Dt3TF7zAXnsj0SECUobPQNRvhH2r5YqieJ U59mpow1QKCqzIT80tekN4yDxsjM62vJbAVB
+a=ssrc:1273183178 mslabel:a6Dt3TF7zAXnsj0SECUobPQNRvhH2r5YqieJ
+a=ssrc:1273183178 label:U59mpow1QKCqzIT80tekN4yDxsjM62vJbAVB
 ****************************/
 
 std::shared_ptr<RtcStream> RtcStream::Create(const std::shared_ptr<pub::Application> application,
@@ -414,16 +417,7 @@ std::shared_ptr<SessionDescription> RtcStream::CreateSessionDescription(const ov
 		// RED & ULPFEC
 		auto red_payload = std::make_shared<PayloadAttr>();
 		red_payload->SetRtpmap(static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE), "red", 90000);
-		if (_rtx_enabled == true)
-		{
-			red_payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
-		}
 		video_media_desc->AddPayload(red_payload);
-
-		// ULPFEC
-		auto ulpfec_payload = std::make_shared<PayloadAttr>();
-		ulpfec_payload->SetRtpmap(static_cast<uint8_t>(FixedRtcPayloadType::ULPFEC_PAYLOAD_TYPE), "ulpfec", 90000);
-		video_media_desc->AddPayload(ulpfec_payload);
 
 		// For RTX
 		if (_rtx_enabled == true)
@@ -434,6 +428,11 @@ std::shared_ptr<SessionDescription> RtcStream::CreateSessionDescription(const ov
 			rtx_payload->SetFmtp(ov::String::FormatString("apt=%d", static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE)));
 			video_media_desc->AddPayload(rtx_payload);
 		}
+
+		// ULPFEC
+		auto ulpfec_payload = std::make_shared<PayloadAttr>();
+		ulpfec_payload->SetRtpmap(static_cast<uint8_t>(FixedRtcPayloadType::ULPFEC_PAYLOAD_TYPE), "ulpfec", 90000);
+		video_media_desc->AddPayload(ulpfec_payload);
 
 		video_media_desc->Update();
 	}
@@ -479,6 +478,8 @@ std::shared_ptr<MediaDescription> RtcStream::MakeVideoDescription() const
 		video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ID, RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ATTRIBUTE);
 	}
 
+	video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_TRANSPORT_CC_ID, RTP_HEADER_EXTENSION_TRANSPORT_CC_ATTRIBUTE);
+
 	return video_media_desc;
 }
 
@@ -499,6 +500,8 @@ std::shared_ptr<MediaDescription> RtcStream::MakeAudioDescription() const
 	audio_media_desc->SetCname(_cname);
 	// Media SSRC
 	audio_media_desc->SetSsrc(_audio_ssrc);
+
+	audio_media_desc->AddExtmap(RTP_HEADER_EXTENSION_TRANSPORT_CC_ID, RTP_HEADER_EXTENSION_TRANSPORT_CC_ATTRIBUTE);
 	
 	return audio_media_desc;
 }
@@ -565,6 +568,8 @@ std::shared_ptr<PayloadAttr> RtcStream::MakePayloadAttr(const std::shared_ptr<co
 					::StringFromMediaCodecId(track->GetCodecId()).CStr());
 			return nullptr;
 	}
+
+	payload->EnableRtcpFb(PayloadAttr::RtcpFbType::TransportCc, true);
 
 	return payload;
 }
@@ -804,6 +809,9 @@ void RtcStream::AddPacketizer(const std::shared_ptr<const MediaTrack> &track)
 	packetizer->SetPayloadType(payload_type);
 	packetizer->SetTrackId(track->GetId());
 	packetizer->SetSSRC(ssrc);
+
+	// Transport-wide-cc-extensions is default
+	packetizer->SetTransportCc(0);
 
 	if (_ulpfec_enabled == true)
 	{

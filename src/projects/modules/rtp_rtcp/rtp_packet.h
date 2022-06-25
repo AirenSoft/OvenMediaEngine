@@ -84,6 +84,7 @@ public:
 	uint8_t*	AllocatePayload(size_t size_bytes);
 	uint8_t*	Header() const;
 	uint8_t*	Payload() const;
+	uint8_t* 	Extension(uint8_t id) const;
 
 	// Data
 	std::shared_ptr<ov::Data> GetData() const;
@@ -113,6 +114,9 @@ public:
 	void		SetRtspChannel(uint32_t rtsp_channel) {_rtsp_channel = rtsp_channel;}
 	uint32_t	GetRtspChannel() const {return _rtsp_channel;}
 
+	// Get Extension Type
+	RtpHeaderExtension::HeaderType GetExtensionType() const { return _extension_type; }
+
 protected:
 	size_t		_payload_offset = 0;	// Payload Start Point (Header size)
 	bool		_has_padding = false;
@@ -129,6 +133,10 @@ protected:
 	size_t		_payload_size = 0;		// Payload Size
 	size_t		_extension_size;
 	std::map<uint8_t, ov::Data> _extensions;
+
+	// extension ID : data offset
+	RtpHeaderExtension::HeaderType _extension_type;
+	std::map<uint8_t, off_t> _extension_buffer_offset;
 
 	bool		_is_available = false;
 

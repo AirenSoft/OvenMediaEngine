@@ -21,6 +21,7 @@ enum class RtcpPacketType : uint8_t
 enum class RTPFBFMT : uint8_t
 {
 	NACK = 1,	// General Negative acknowledgements
+	TRANSPORT_CC = 15, // Transport-CC (https://datatracker.ietf.org/doc/html/draft-holmer-rmcat-transport-wide-cc-extensions-01)
 	EXT = 31, 	// Reserved for future extensions
 };
 

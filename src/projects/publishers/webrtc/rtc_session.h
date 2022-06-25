@@ -162,4 +162,13 @@ private:
 	bool RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packet, uint16_t origin_sequence_number);
 	// Get RTP Sent Log from RTP History
 	std::shared_ptr<RtpSentLog> TraceRtpSent(uint16_t sequence_number);
+
+
+	/////////////////
+	// TRANSPORT-CC
+	/////////////////
+
+	uint16_t _transport_wide_sequence_number = 1;
+
+	bool SetTransportWideSequenceNumber(const std::shared_ptr<RtpPacket> &rtp_packet);
 };
