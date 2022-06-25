@@ -22,6 +22,7 @@ class RtxRtpPacket : public RtpPacket
 {
 public:
 	RtxRtpPacket(uint32_t rtx_ssrc, uint8_t rtx_payload_type, const RtpPacket &src);
+	RtxRtpPacket(const RtxRtpPacket &src);
 
 	uint8_t GetOriginalPayloadType()
 	{
@@ -31,6 +32,9 @@ public:
 	{
 		return _origin_seq_no;
 	}
+
+	void SetOriginalSequenceNumber(uint16_t seq_no);
+
 private:
 	bool PackageAsRtx(uint32_t rtx_ssrc, uint8_t rtx_payload_type, const RtpPacket &src);
 

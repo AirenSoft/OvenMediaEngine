@@ -10,6 +10,8 @@
 
 #include <base/common_types.h>
 
+#define MAX_RTP_RECORDS	1500
+
 // https://tools.ietf.org/html/rfc5761#section-4
 // - payload type values in the range 64-95 MUST NOT be used
 // - dynamic RTP payload types SHOULD be chosen in the range 96-127 where possible

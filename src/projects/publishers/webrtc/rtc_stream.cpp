@@ -594,7 +594,7 @@ bool RtcStream::OnRtpPacketized(std::shared_ptr<RtpPacket> packet)
 	if (_rtx_enabled == true)
 	{
 		// Store for retransmission
-		auto history = GetHistory(packet->PayloadType());
+		auto history = GetHistory(packet->GetTrackId(), packet->PayloadType());
 		if (history != nullptr)
 		{
 			history->StoreRtpPacket(packet);
@@ -831,6 +831,11 @@ std::shared_ptr<RtpPacketizer> RtcStream::GetPacketizer(uint32_t id)
 	return _packetizers[id];
 }
 
+ov::String RtcStream::GetRtpHistoryKey(uint32_t track_id, uint8_t payload_type)
+{
+	return ov::String::FormatString("%u:%u", track_id, payload_type);
+}
+
 void RtcStream::AddRtpHistory(const std::shared_ptr<const MediaTrack> &track)
 {
 	auto origin_payload_type = PayloadTypeFromCodecId(track->GetCodecId());
@@ -841,28 +846,39 @@ void RtcStream::AddRtpHistory(const std::shared_ptr<const MediaTrack> &track)
 		return;
 	}
 
-	auto history = std::make_shared<RtpHistory>(origin_payload_type, rtx_payload_type, _video_rtx_ssrc);
-	_rtp_history_map[track->GetId()] = history;
+	auto history = std::make_shared<RtpHistory>(origin_payload_type, rtx_payload_type, _video_rtx_ssrc, MAX_RTP_RECORDS);
+	_rtp_history_map[GetRtpHistoryKey(track->GetId(), origin_payload_type)] = history;
+
+	if (_ulpfec_enabled == true)
+	{
+		auto red_pt = static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE);
+		auto red_rtx_pt = static_cast<uint8_t>(FixedRtcPayloadType::RED_RTX_PAYLOAD_TYPE);
+		auto red_history = std::make_shared<RtpHistory>(red_pt, red_rtx_pt, _video_rtx_ssrc, MAX_RTP_RECORDS);
+
+		_rtp_history_map[GetRtpHistoryKey(track->GetId(), red_pt)] = red_history;
+	}
 }
 
-std::shared_ptr<RtpHistory> RtcStream::GetHistory(uint8_t origin_payload_type)
+std::shared_ptr<RtpHistory> RtcStream::GetHistory(uint32_t track_id, uint8_t origin_payload_type)
 {
-	if (!_rtp_history_map.count(origin_payload_type))
+	auto key = GetRtpHistoryKey(track_id, origin_payload_type);
+
+	if (_rtp_history_map.find(key) == _rtp_history_map.end())
 	{
 		return nullptr;
 	}
 
-	return _rtp_history_map[origin_payload_type];
+	return _rtp_history_map[key];
 }
 
-std::shared_ptr<RtxRtpPacket> RtcStream::GetRtxRtpPacket(uint8_t origin_payload_type, uint16_t origin_sequence_number)
+std::shared_ptr<RtxRtpPacket> RtcStream::GetRtxRtpPacket(uint32_t track_id, uint8_t origin_payload_type, uint16_t origin_sequence_number)
 {
 	if(GetState() != State::STARTED)
 	{
 		return nullptr;
 	}
 
-	auto history = GetHistory(origin_payload_type);
+	auto history = GetHistory(track_id, origin_payload_type);
 	if (history == nullptr)
 	{
 		return nullptr;

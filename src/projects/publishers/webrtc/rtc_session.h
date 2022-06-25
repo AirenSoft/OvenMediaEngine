@@ -132,4 +132,28 @@ private:
 
 	ov::StopWatch _abr_test_watch;
 	bool _changed = false;
+
+	//////////////////
+	// RTP Recording
+	//////////////////
+
+	struct RtpSentLog
+	{
+		uint16_t _sequence_number = 0;
+
+		uint32_t _track_id = 0;
+		uint8_t _payload_type = 0;
+		uint16_t _origin_sequence_number = 0;
+
+		uint32_t _sent_bytes = 0;
+		uint64_t _send_time = 0; // system clock milliseconds
+	};
+
+	// sequence number % MAX_RTP_RECORDS : RtpSentRecord
+	std::unordered_map<uint16_t, std::shared_ptr<RtpSentLog>> _rtp_sent_record_map;
+	std::shared_mutex _rtp_sent_record_map_lock;
+
+	bool RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packet, uint16_t origin_sequence_number);
+	// Get RTP Sent Log from RTP History
+	std::shared_ptr<RtpSentLog> TraceRtpSent(uint16_t sequence_number);
 };

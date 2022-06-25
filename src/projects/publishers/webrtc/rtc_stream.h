@@ -39,7 +39,7 @@ public:
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 
-	std::shared_ptr<RtxRtpPacket> GetRtxRtpPacket(uint8_t origin_payload_type, uint16_t origin_sequence_number);
+	std::shared_ptr<RtxRtpPacket> GetRtxRtpPacket(uint32_t track_id, uint8_t origin_payload_type, uint16_t origin_sequence_number);
 
 	// RtpRtcpPacketizerInterface Implementation
 	bool OnRtpPacketized(std::shared_ptr<RtpPacket> packet) override;
@@ -74,8 +74,9 @@ private:
 	void AddPacketizer(const std::shared_ptr<const MediaTrack> &track);
 	std::shared_ptr<RtpPacketizer> GetPacketizer(uint32_t track_id);
 
+	ov::String GetRtpHistoryKey(uint32_t track_id, uint8_t payload_type);
 	void AddRtpHistory(const std::shared_ptr<const MediaTrack> &track);
-	std::shared_ptr<RtpHistory> GetHistory(uint8_t origin_payload_type);
+	std::shared_ptr<RtpHistory> GetHistory(uint32_t track_id, uint8_t origin_payload_type);
 
 
 	uint32_t GetSsrc(cmn::MediaType media_type);
@@ -93,8 +94,8 @@ private:
 	std::shared_mutex _packetizers_lock;
 	std::map<uint32_t, std::shared_ptr<RtpPacketizer>> _packetizers;
 
-	// Origin payload type, RtpHistory
-	std::map<uint8_t, std::shared_ptr<RtpHistory>> _rtp_history_map;
+	// RtpHistoryKey string, RtpHistory
+	std::map<ov::String, std::shared_ptr<RtpHistory>> _rtp_history_map;
 
 	uint32_t _video_ssrc = 0;
 	uint32_t _video_rtx_ssrc = 0;

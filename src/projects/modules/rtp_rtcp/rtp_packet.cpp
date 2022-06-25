@@ -32,7 +32,7 @@ RtpPacket::RtpPacket(const std::shared_ptr<const ov::Data> &data)
 	_is_available = Parse(data);
 }
 
-RtpPacket::RtpPacket(RtpPacket &src)
+RtpPacket::RtpPacket(const RtpPacket &src)
 {
 	_marker = src._marker;
 	_payload_type = src._payload_type;
@@ -211,7 +211,7 @@ bool RtpPacket::Parse(const std::shared_ptr<const ov::Data> &data)
 	return true;
 }
 
-std::shared_ptr<ov::Data> RtpPacket::GetData()
+std::shared_ptr<ov::Data> RtpPacket::GetData() const
 {
 	return _data;
 }
