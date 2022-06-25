@@ -506,7 +506,7 @@ void RtcSession::SendOutgoingData(const std::any &packet)
 
 bool RtcSession::RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packet, uint16_t origin_sequence_number)
 {
-	if (rtp_packet == nullptr)
+	if (rtp_packet == nullptr || rtp_packet->IsVideoPacket() == false)
 	{
 		return false;
 	}
@@ -520,21 +520,21 @@ bool RtcSession::RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packe
 	sent_log->_sent_bytes = rtp_packet->GetData()->GetLength();
 	sent_log->_send_time = ov::Clock::NowMSec();
 
-	std::lock_guard<std::shared_mutex> lock(_rtp_sent_record_map_lock);
+	std::lock_guard<std::shared_mutex> lock(_video_rtp_sent_record_map_lock);
 	auto key = sent_log->_sequence_number % MAX_RTP_RECORDS;
-	_rtp_sent_record_map[key] = sent_log;
+
+	_video_rtp_sent_record_map[key] = sent_log;
 
 	return true;
 }
 
 std::shared_ptr<RtcSession::RtpSentLog> RtcSession::TraceRtpSent(uint16_t sequence_number)
 {
-	std::shared_lock<std::shared_mutex> lock(_rtp_sent_record_map_lock);
+	std::shared_lock<std::shared_mutex> lock(_video_rtp_sent_record_map_lock);
 
 	auto key = sequence_number % MAX_RTP_RECORDS;
-
-	auto it = _rtp_sent_record_map.find(key);
-	if (it == _rtp_sent_record_map.end())
+	auto it = _video_rtp_sent_record_map.find(key);
+	if (it == _video_rtp_sent_record_map.end())
 	{
 		return nullptr;
 	}
