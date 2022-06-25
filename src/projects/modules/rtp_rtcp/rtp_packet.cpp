@@ -46,6 +46,8 @@ RtpPacket::RtpPacket(const RtpPacket &src)
 	_timestamp = src._timestamp;
 	_extension_size = src._extension_size;
 	_extensions = src._extensions;
+	_extension_buffer_offset = src._extension_buffer_offset;
+	_extension_type = src._extension_type;
 	_data = src._data->Clone();
 	_buffer = _data->GetWritableDataAs<uint8_t>();
 
@@ -360,6 +362,8 @@ void RtpPacket::SetCsrcs(const std::vector<uint32_t>& csrcs)
 
 void RtpPacket::SetExtensions(const RtpHeaderExtensions& extensions)
 {
+	// TODO(Getroot) : Add item to _extensions
+
 	auto extension_length = extensions.GetTotalDataLength();
 	auto pad_length = (4 - (extension_length % 4)) % 4;
 
@@ -376,7 +380,8 @@ void RtpPacket::SetExtensions(const RtpHeaderExtensions& extensions)
 
 	auto offset = FIXED_HEADER_SIZE + (_cc * 4);
 
-	if(extensions.GetHeaderType() == RtpHeaderExtension::HeaderType::ONE_BYTE_HEADER)
+	_extension_type = extensions.GetHeaderType();
+	if(_extension_type == RtpHeaderExtension::HeaderType::ONE_BYTE_HEADER)
 	{
 		// Write profile (Use Two Byte Header)
 		ByteWriter<uint8_t>::WriteBigEndian(&_buffer[offset], 0xBE);
@@ -398,6 +403,8 @@ void RtpPacket::SetExtensions(const RtpHeaderExtensions& extensions)
 	auto extensions_map = extensions.GetMap();
 	for(const auto [id, extension] : extensions_map)
 	{
+		_extension_buffer_offset[id] = offset;
+
 		auto extension_data = extension->Marshal(extensions.GetHeaderType());
 		memcpy(&_buffer[offset], extension_data->GetData(), extension_data->GetLength());
 		offset += extension_data->GetLength();
@@ -470,6 +477,19 @@ uint8_t* RtpPacket::Header() const
 uint8_t* RtpPacket::Payload() const
 {
 	return &_buffer[_payload_offset];
+}
+
+uint8_t* RtpPacket::Extension(uint8_t id) const
+{ 
+	auto it = _extension_buffer_offset.find(id);
+	if (it == _extension_buffer_offset.end())
+	{
+		return nullptr;
+	}
+
+	auto offset = it->second;
+
+	return &_buffer[offset];
 }
 
 std::chrono::system_clock::time_point RtpPacket::GetCreatedTime()

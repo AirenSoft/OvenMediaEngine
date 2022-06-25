@@ -72,6 +72,14 @@ void RtpPacketizer::SetPlayoutDelay(uint32_t min, uint32_t max)
 	_rtp_extensions.AddExtention(_playout_delay_extension);
 }
 
+void RtpPacketizer::SetTransportCc(uint16_t dummy_seq_num)
+{
+	_transport_cc_extension = std::make_shared<RtpHeaderExtensionTransportCc>();
+	// The transport-wide sequence number will be set just before transmission in the session.
+	_transport_cc_extension->SetSequenceNumber(dummy_seq_num);
+	_rtp_extensions.AddExtention(_transport_cc_extension);
+}
+
 void RtpPacketizer::SetTrackId(uint32_t track_id)
 {
 	_track_id = track_id;
@@ -277,6 +285,7 @@ bool RtpPacketizer::PacketizeAudio(FrameType frame_type,
 	packet->SetTimestamp(rtp_timestamp);
 	packet->SetNTPTimestamp(ntp_timestamp);
 	packet->SetTrackId(_track_id);
+	packet->SetExtensions(_rtp_extensions);
 
 	uint8_t *payload = packet->AllocatePayload(payload_size);
 

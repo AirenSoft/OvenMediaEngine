@@ -1,21 +1,21 @@
 #include "rtcp_receiver.h"
-#include "rtcp_info/sender_report.h"
-#include "rtcp_info/receiver_report.h"
+
 #include "rtcp_info/nack.h"
-
+#include "rtcp_info/receiver_report.h"
 #include "rtcp_info/rtcp_private.h"
+#include "rtcp_info/sender_report.h"
 
-bool RtcpReceiver::ParseCompoundPacket(const std::shared_ptr<const ov::Data> &packet)
+bool RtcpReceiver::ParseCompoundPacket(const std::shared_ptr<const ov::Data>& packet)
 {
 	const uint8_t* buffer = packet->GetDataAs<uint8_t>();
 	size_t buffer_size = packet->GetLength();
 	size_t offset = 0;
-	
-	while(offset < buffer_size)
+
+	while (offset < buffer_size)
 	{
 		RtcpPacket rtcp_packet;
 		size_t block_size;
-		if(rtcp_packet.Parse(buffer + offset, buffer_size - offset, block_size) == false)
+		if (rtcp_packet.Parse(buffer + offset, buffer_size - offset, block_size) == false)
 		{
 			logte("Could not parse RTCP header");
 			return false;
@@ -24,30 +24,35 @@ bool RtcpReceiver::ParseCompoundPacket(const std::shared_ptr<const ov::Data> &pa
 		offset += block_size;
 
 		std::shared_ptr<RtcpInfo> info;
-		switch(rtcp_packet.GetType())
+		switch (rtcp_packet.GetType())
 		{
-			case RtcpPacketType::SR:
+			case RtcpPacketType::SR: 
 			{
 				info = std::make_shared<SenderReport>();
 				break;
 			}
-			case RtcpPacketType::RR:
+			case RtcpPacketType::RR: 
 			{
 				info = std::make_shared<ReceiverReport>();
 				break;
 			}
-			case RtcpPacketType::RTPFB:
+			case RtcpPacketType::RTPFB: 
 			{
-				if(rtcp_packet.GetFMT() == static_cast<uint8_t>(RTPFBFMT::NACK))
+				if (rtcp_packet.GetFMT() == static_cast<uint8_t>(RTPFBFMT::NACK))
 				{
 					info = std::make_shared<NACK>();
+				}
+				else if (rtcp_packet.GetFMT() == static_cast<uint8_t>(RTPFBFMT::TRANSPORT_CC))
+				{
+					// TODO(ABR) : Implement this 2022-06-26
+					logtd("Transport-cc received : %u", rtcp_packet.GetPayloadSize());
 				}
 				else
 				{
 					logtd("Does not support RTPFB format : %d", rtcp_packet.GetFMT());
 					continue;
 				}
-				
+
 				break;
 			}
 
@@ -64,12 +69,12 @@ bool RtcpReceiver::ParseCompoundPacket(const std::shared_ptr<const ov::Data> &pa
 				continue;
 		}
 
-		if(info == nullptr)
+		if (info == nullptr)
 		{
 			continue;
 		}
 
-		if(info->Parse(rtcp_packet) == false)
+		if (info->Parse(rtcp_packet) == false)
 		{
 			return false;
 		}
@@ -87,7 +92,7 @@ bool RtcpReceiver::HasAvailableRtcpInfo()
 
 std::shared_ptr<RtcpInfo> RtcpReceiver::PopRtcpInfo()
 {
-	if(HasAvailableRtcpInfo() == false)
+	if (HasAvailableRtcpInfo() == false)
 	{
 		return nullptr;
 	}

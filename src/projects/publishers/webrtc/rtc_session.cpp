@@ -496,12 +496,35 @@ void RtcSession::SendOutgoingData(const std::any &packet)
 		copy_packet->SetSequenceNumber(_audio_rtp_sequence_number++);
 	}
 
+	// Set transport-wide sequence number
+	SetTransportWideSequenceNumber(copy_packet);
+
 	// rtp_rtcp -> srtp -> dtls -> Edge Node(RtcSession)
-	_rtp_rtcp->SendRtpPacket(copy_packet);
+
+	// Packet loss simulation codes
+	// if (ov::Random::GenerateUInt32(1, 33) != 10)
+	{
+		_rtp_rtcp->SendRtpPacket(copy_packet);
+	}
 
 	RecordRtpSent(copy_packet, session_packet->SequenceNumber());
 
 	MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::Webrtc, copy_packet->GetData()->GetLength());
+}
+
+bool RtcSession::SetTransportWideSequenceNumber(const std::shared_ptr<RtpPacket> &rtp_packet)
+{
+	auto extension_buffer = rtp_packet->Extension(RTP_HEADER_EXTENSION_TRANSPORT_CC_ID);
+	if (extension_buffer == nullptr)
+	{
+		return false;
+	}
+
+	auto payload_offset = rtp_packet->GetExtensionType() == RtpHeaderExtension::HeaderType::ONE_BYTE_HEADER ? 1 : 2;
+	
+	ByteWriter<uint16_t>::WriteBigEndian(extension_buffer + payload_offset, _transport_wide_sequence_number++);
+
+	return true;
 }
 
 bool RtcSession::RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packet, uint16_t origin_sequence_number)

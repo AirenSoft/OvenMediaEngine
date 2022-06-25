@@ -11,6 +11,7 @@
 #include "rtp_header_extension/rtp_header_extensions.h"
 #include "rtp_header_extension/rtp_header_extension_framemarking.h"
 #include "rtp_header_extension/rtp_header_extension_playout_delay.h"
+#include "rtp_header_extension/rtp_header_extension_transport_cc.h"
 
 class RtpPacketizer
 {
@@ -25,6 +26,7 @@ public:
 	void SetSSRC(uint32_t ssrc);
 	void SetCsrcs(const std::vector<uint32_t> &csrcs);
 	void SetPlayoutDelay(uint32_t min, uint32_t max);
+	void SetTransportCc(uint16_t dummy_seq_num);
 
 	// RTP Packet
 	bool Packetize(FrameType frame_type,
@@ -92,7 +94,7 @@ private:
 	RtpHeaderExtensions _rtp_extensions;
 	std::shared_ptr<RtpHeaderExtensionFrameMarking>	_framemarking_extension;
 	std::shared_ptr<RtpHeaderExtensionPlayoutDelay> _playout_delay_extension;
-
+	std::shared_ptr<RtpHeaderExtensionTransportCc> _transport_cc_extension;
 
 	// Session Descriptor
 	std::shared_ptr<RtpPacketizerInterface> _stream;
