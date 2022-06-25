@@ -40,7 +40,7 @@ class RtpPacket
 public:
 	RtpPacket();
 	RtpPacket(const std::shared_ptr<const ov::Data> &data);
-	RtpPacket(RtpPacket &src);
+	RtpPacket(const RtpPacket &src);
 	virtual ~RtpPacket();
 
 	// Parse from Data
@@ -86,7 +86,7 @@ public:
 	uint8_t*	Payload() const;
 
 	// Data
-	std::shared_ptr<ov::Data> GetData();
+	std::shared_ptr<ov::Data> GetData() const;
 
 	// Created time
 	std::chrono::system_clock::time_point GetCreatedTime();

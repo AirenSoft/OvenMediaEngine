@@ -499,12 +499,52 @@ void RtcSession::SendOutgoingData(const std::any &packet)
 	// rtp_rtcp -> srtp -> dtls -> Edge Node(RtcSession)
 	_rtp_rtcp->SendRtpPacket(copy_packet);
 
+	RecordRtpSent(copy_packet, session_packet->SequenceNumber());
+
 	MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::Webrtc, copy_packet->GetData()->GetLength());
+}
+
+bool RtcSession::RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packet, uint16_t origin_sequence_number)
+{
+	if (rtp_packet == nullptr)
+	{
+		return false;
+	}
+
+	auto sent_log = std::make_shared<RtpSentLog>();
+	sent_log->_sequence_number = rtp_packet->SequenceNumber();
+	sent_log->_track_id = rtp_packet->GetTrackId();
+	sent_log->_payload_type = rtp_packet->PayloadType();
+	sent_log->_origin_sequence_number = origin_sequence_number;
+
+	sent_log->_sent_bytes = rtp_packet->GetData()->GetLength();
+	sent_log->_send_time = ov::Clock::NowMSec();
+
+	std::lock_guard<std::shared_mutex> lock(_rtp_sent_record_map_lock);
+	auto key = sent_log->_sequence_number % MAX_RTP_RECORDS;
+	_rtp_sent_record_map[key] = sent_log;
+
+	return true;
+}
+
+std::shared_ptr<RtcSession::RtpSentLog> RtcSession::TraceRtpSent(uint16_t sequence_number)
+{
+	std::shared_lock<std::shared_mutex> lock(_rtp_sent_record_map_lock);
+
+	auto key = sequence_number % MAX_RTP_RECORDS;
+
+	auto it = _rtp_sent_record_map.find(key);
+	if (it == _rtp_sent_record_map.end())
+	{
+		return nullptr;
+	}
+
+	return it->second;
 }
 
 void RtcSession::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
 {
-	// No player send RTP packet 
+	// No player sends RTP packet
 }
 
 void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
@@ -538,13 +578,13 @@ bool RtcSession::ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info)
 		return true;
 	}
 
-	auto stream = std::dynamic_pointer_cast<RtcStream>(GetStream());
+	auto stream = std::static_pointer_cast<RtcStream>(GetStream());
 	if(stream == nullptr)
 	{
 		return false;
 	}
 	
-	auto nack = std::dynamic_pointer_cast<NACK>(rtcp_info);
+	auto nack = std::static_pointer_cast<NACK>(rtcp_info);
 	if(nack->GetMediaSsrc() != _video_ssrc)
 	{
 		return false;
@@ -554,13 +594,21 @@ bool RtcSession::ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	for(size_t i=0; i<nack->GetLostIdCount(); i++)
 	{
 		auto seq_no = nack->GetLostId(i);
-		auto packet = stream->GetRtxRtpPacket(_video_payload_type, seq_no);
-		if(packet != nullptr)
+		auto sent_log = TraceRtpSent(seq_no);
+		if (sent_log == nullptr)
 		{
-			logd("RTCP", "Send RTX packet : %u/%u", _video_payload_type, seq_no);
-			auto copy_packet = std::make_shared<RtpPacket>(*(std::dynamic_pointer_cast<RtpPacket>(packet)));
-			copy_packet->SetSequenceNumber(_rtx_sequence_number++);
-			return _rtp_rtcp->SendRtpPacket(copy_packet);
+			continue;
+		}
+
+		logtd("RTX requested(%d) - TrackID(%u) PayloadType(%d) OriginSeqNo(%u)", seq_no, sent_log->_track_id, sent_log->_payload_type, sent_log->_origin_sequence_number);
+
+		auto rtx_packet = stream->GetRtxRtpPacket(sent_log->_track_id, sent_log->_payload_type, sent_log->_origin_sequence_number);
+		if(rtx_packet != nullptr)
+		{
+			auto copy_rtx_packet = std::make_shared<RtxRtpPacket>(*rtx_packet);
+			copy_rtx_packet->SetSequenceNumber(_rtx_sequence_number++);
+			copy_rtx_packet->SetOriginalSequenceNumber(sent_log->_sequence_number);
+			return _rtp_rtcp->SendRtpPacket(copy_rtx_packet);
 		}
 	}
 
