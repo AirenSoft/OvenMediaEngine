@@ -62,6 +62,14 @@ public:
 	bool Stop() override;
 
 	bool RequestChangeRendition(const ov::String &rendition_name);
+
+	enum class SwitchOver : uint8_t
+	{
+		HIGHER, 
+		LOWER
+	};
+
+	bool RequestChangeRendition(SwitchOver switch_over);
 	bool SetAutoAbr(bool auto_abr);
 
 	void SetSessionExpiredTime(uint64_t expired_time);
@@ -84,11 +92,13 @@ public:
 
 private:
 	bool ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info);
+	bool ProcessTransportCc(const std::shared_ptr<RtcpInfo> &rtcp_info);
 	bool IsSelectedPacket(const std::shared_ptr<const RtpPacket> &rtp_packet);
 
 	uint8_t GetOriginPayloadTypeFromRedRtpPacket(const std::shared_ptr<const RedRtpPacket> &red_rtp_packet);
 
 	void ChangeRendition();
+	
 	bool SendPlaylistInfo(const std::shared_ptr<const RtcPlaylist> &playlist) const;
 	bool SendRenditionChanged(const std::shared_ptr<const RtcRendition> &rendition) const;
 
@@ -127,18 +137,14 @@ private:
 
 	uint16_t _video_rtp_sequence_number = 0;
 	uint16_t _audio_rtp_sequence_number = 0;
-
-	bool _auto_abr = false;
+	uint16_t _wide_sequence_number = 0;
 
 	ov::StopWatch _abr_test_watch;
 	bool _changed = false;
 
-	//////////////////
-	// RTP Recording
-	//////////////////
-
 	struct RtpSentLog
 	{
+		uint16_t _wide_sequence_number = 0;
 		uint16_t _sequence_number = 0;
 
 		uint32_t _track_id = 0;
@@ -146,7 +152,7 @@ private:
 		uint16_t _origin_sequence_number = 0;
 
 		uint32_t _sent_bytes = 0;
-		uint64_t _send_time = 0; // system clock milliseconds
+		std::chrono::system_clock::time_point _sent_time;
 
 		ov::String ToString()
 		{
@@ -155,20 +161,27 @@ private:
 		}
 	};
 
-	// sequence number % MAX_RTP_RECORDS : RtpSentRecord
+	bool RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packet, uint16_t origin_sequence_number, uint16_t wide_sequence_number);
+
+	std::shared_mutex _rtp_record_map_lock;
+	// For NACK
+	// video sequence number % MAX_RTP_RECORDS : RtpSentRecord
 	std::unordered_map<uint16_t, std::shared_ptr<RtpSentLog>> _video_rtp_sent_record_map;
-	std::shared_mutex _video_rtp_sent_record_map_lock;
+	// For TRANSPORT-CC
+	// wide sequence number % MAX_RTP_RECORDS : RtpSentRecord
+	std::unordered_map<uint16_t, std::shared_ptr<RtpSentLog>> _wide_rtp_sent_record_map;
 
-	bool RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packet, uint16_t origin_sequence_number);
-	// Get RTP Sent Log from RTP History
-	std::shared_ptr<RtpSentLog> TraceRtpSent(uint16_t sequence_number);
+	std::shared_ptr<RtpSentLog> TraceRtpSentByVideoSeqNo(uint16_t sequence_number);
+	std::shared_ptr<RtpSentLog> TraceRtpSentByWideSeqNo(uint16_t wide_sequence_number);
 
+	bool SetTransportWideSequenceNumber(const std::shared_ptr<RtpPacket> &rtp_packet, uint16_t wide_sequence_number);
 
-	/////////////////
-	// TRANSPORT-CC
-	/////////////////
+	// For Estimated bitrate
+	double _total_sent_seconds = 0;
+	uint64_t _total_sent_bytes = 0;
+	double _estimated_bitrates = 0;
 
-	uint16_t _transport_wide_sequence_number = 1;
-
-	bool SetTransportWideSequenceNumber(const std::shared_ptr<RtpPacket> &rtp_packet);
+	// Auto switch rendition
+	bool _auto_abr = true;
+	void ChangeRenditionIfNeeded();
 };

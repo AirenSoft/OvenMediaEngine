@@ -15,6 +15,7 @@
 #include "rtc_common_types.h"
 
 #include "modules/rtp_rtcp/rtcp_info/nack.h"
+#include "modules/rtp_rtcp/rtcp_info/transport_cc.h"
 
 #include <utility>
 
@@ -266,9 +267,40 @@ bool RtcSession::RequestChangeRendition(const ov::String &rendition_name)
 	return true;
 }
 
+bool RtcSession::RequestChangeRendition(SwitchOver switch_over)
+{
+	std::lock_guard<std::shared_mutex> lock(_change_rendition_lock);
+
+	// Changing
+	if (_next_rendition != nullptr)
+	{
+		return false;
+	}
+
+	std::shared_ptr<const RtcRendition> next_rendition = nullptr;
+
+	if (switch_over == SwitchOver::HIGHER)
+	{
+		next_rendition = _playlist->GetNextHigherBitrateRendition(_current_rendition);
+	}
+	else 
+	{
+		next_rendition = _playlist->GetNextLowerBitrateRendition(_current_rendition);
+	}
+
+	if (next_rendition != nullptr)
+	{
+		logtd("Change rendition : Estimated Bitrates(%f) Current Bitrates(%llu) Next Bitrates(%llu) ", _estimated_bitrates, _current_rendition->GetBitrates(), next_rendition->GetBitrates());
+		_next_rendition = next_rendition;
+	}
+
+	return true;
+}
+
 bool RtcSession::SetAutoAbr(bool auto_abr)
 {
 	_auto_abr = auto_abr;
+	SendRenditionChanged(_current_rendition);
 	return true;
 }
 
@@ -497,7 +529,7 @@ void RtcSession::SendOutgoingData(const std::any &packet)
 	}
 
 	// Set transport-wide sequence number
-	SetTransportWideSequenceNumber(copy_packet);
+	SetTransportWideSequenceNumber(copy_packet, _wide_sequence_number);
 
 	// rtp_rtcp -> srtp -> dtls -> Edge Node(RtcSession)
 
@@ -507,12 +539,14 @@ void RtcSession::SendOutgoingData(const std::any &packet)
 		_rtp_rtcp->SendRtpPacket(copy_packet);
 	}
 
-	RecordRtpSent(copy_packet, session_packet->SequenceNumber());
+	RecordRtpSent(copy_packet, session_packet->SequenceNumber(), _wide_sequence_number);
+
+	_wide_sequence_number ++;
 
 	MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::Webrtc, copy_packet->GetData()->GetLength());
 }
 
-bool RtcSession::SetTransportWideSequenceNumber(const std::shared_ptr<RtpPacket> &rtp_packet)
+bool RtcSession::SetTransportWideSequenceNumber(const std::shared_ptr<RtpPacket> &rtp_packet, uint16_t wide_sequence_number)
 {
 	auto extension_buffer = rtp_packet->Extension(RTP_HEADER_EXTENSION_TRANSPORT_CC_ID);
 	if (extension_buffer == nullptr)
@@ -522,42 +556,64 @@ bool RtcSession::SetTransportWideSequenceNumber(const std::shared_ptr<RtpPacket>
 
 	auto payload_offset = rtp_packet->GetExtensionType() == RtpHeaderExtension::HeaderType::ONE_BYTE_HEADER ? 1 : 2;
 	
-	ByteWriter<uint16_t>::WriteBigEndian(extension_buffer + payload_offset, _transport_wide_sequence_number++);
+	ByteWriter<uint16_t>::WriteBigEndian(extension_buffer + payload_offset, wide_sequence_number);
 
 	return true;
 }
 
-bool RtcSession::RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packet, uint16_t origin_sequence_number)
+bool RtcSession::RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packet, uint16_t origin_sequence_number, uint16_t wide_sequence_number)
 {
-	if (rtp_packet == nullptr || rtp_packet->IsVideoPacket() == false)
+	if (rtp_packet == nullptr)
 	{
 		return false;
 	}
 
 	auto sent_log = std::make_shared<RtpSentLog>();
 	sent_log->_sequence_number = rtp_packet->SequenceNumber();
+	sent_log->_wide_sequence_number = wide_sequence_number;
 	sent_log->_track_id = rtp_packet->GetTrackId();
 	sent_log->_payload_type = rtp_packet->PayloadType();
 	sent_log->_origin_sequence_number = origin_sequence_number;
 
 	sent_log->_sent_bytes = rtp_packet->GetData()->GetLength();
-	sent_log->_send_time = ov::Clock::NowMSec();
+	sent_log->_sent_time = std::chrono::system_clock::now();
 
-	std::lock_guard<std::shared_mutex> lock(_video_rtp_sent_record_map_lock);
-	auto key = sent_log->_sequence_number % MAX_RTP_RECORDS;
+	auto video_rtp_key = sent_log->_sequence_number % MAX_RTP_RECORDS;
+	auto wide_rtp_key = sent_log->_wide_sequence_number % MAX_RTP_RECORDS;
 
-	_video_rtp_sent_record_map[key] = sent_log;
+	std::lock_guard<std::shared_mutex> lock(_rtp_record_map_lock);
+
+	if (rtp_packet->IsVideoPacket())
+	{
+		_video_rtp_sent_record_map[video_rtp_key] = sent_log;
+	}
+	_wide_rtp_sent_record_map[wide_rtp_key] = sent_log;
 
 	return true;
 }
 
-std::shared_ptr<RtcSession::RtpSentLog> RtcSession::TraceRtpSent(uint16_t sequence_number)
+std::shared_ptr<RtcSession::RtpSentLog> RtcSession::TraceRtpSentByVideoSeqNo(uint16_t sequence_number)
 {
-	std::shared_lock<std::shared_mutex> lock(_video_rtp_sent_record_map_lock);
+	std::shared_lock<std::shared_mutex> lock(_rtp_record_map_lock);
 
 	auto key = sequence_number % MAX_RTP_RECORDS;
 	auto it = _video_rtp_sent_record_map.find(key);
 	if (it == _video_rtp_sent_record_map.end())
+	{
+		return nullptr;
+	}
+
+	return it->second;
+}
+
+// Get RTP Sent Log from RTP History
+std::shared_ptr<RtcSession::RtpSentLog> RtcSession::TraceRtpSentByWideSeqNo(uint16_t wide_sequence_number)
+{
+	std::shared_lock<std::shared_mutex> lock(_rtp_record_map_lock);
+
+	auto key = wide_sequence_number % MAX_RTP_RECORDS;
+	auto it = _wide_rtp_sent_record_map.find(key);
+	if (it == _wide_rtp_sent_record_map.end())
 	{
 		return nullptr;
 	}
@@ -588,9 +644,14 @@ void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 			// Process
 			ProcessNACK(rtcp_info);
 		}
+		else if (rtcp_info->GetCountOrFmt() == static_cast<uint8_t>(RTPFBFMT::TRANSPORT_CC))
+		{
+			// Process
+			ProcessTransportCc(rtcp_info);
+		}
 	}
 
-	rtcp_info->DebugPrint();
+	//rtcp_info->DebugPrint();
 }
 
 
@@ -617,7 +678,7 @@ bool RtcSession::ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	for(size_t i=0; i<nack->GetLostIdCount(); i++)
 	{
 		auto seq_no = nack->GetLostId(i);
-		auto sent_log = TraceRtpSent(seq_no);
+		auto sent_log = TraceRtpSentByVideoSeqNo(seq_no);
 		if (sent_log == nullptr)
 		{
 			continue;
@@ -636,6 +697,108 @@ bool RtcSession::ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	}
 
 	return true;
+}
+
+bool RtcSession::ProcessTransportCc(const std::shared_ptr<RtcpInfo> &rtcp_info)
+{
+	auto transport_cc = std::static_pointer_cast<TransportCc>(rtcp_info);
+
+	if (transport_cc->GetPacketStatusCount() == 0)
+	{
+		// what?
+		return false;
+	}
+
+	uint64_t total_sent_bytes = 0;
+	uint64_t total_sent_duration = 0;
+
+	for (size_t i = 0; i < transport_cc->GetPacketStatusCount(); i++)
+	{
+		auto packet_status = transport_cc->GetPacketFeedbackInfo(i);
+		auto sent_log = TraceRtpSentByWideSeqNo(packet_status->_wide_sequence_number);
+		if (sent_log == nullptr)
+		{
+			logte("TransportCC - No sent log found for seqno(%u)", packet_status->_wide_sequence_number);
+			continue;
+		}
+		auto prev_sent_log = TraceRtpSentByWideSeqNo(packet_status->_wide_sequence_number - 1);
+		if (prev_sent_log == nullptr)
+		{
+			logtd("TransportCC - No prev sent log found for seqno(%u)", packet_status->_wide_sequence_number - 1);
+			continue;
+		}
+
+		// Calc delta of sent_log and prev_sent_log
+		auto sent_delta_time = (std::chrono::duration_cast<std::chrono::microseconds>(sent_log->_sent_time - prev_sent_log->_sent_time).count()) / 250; 
+
+		auto duration = packet_status->_received_delta - sent_delta_time;
+		if (duration <= 0)
+		{
+			//duration = 1;
+		}
+
+		total_sent_bytes += sent_log->_sent_bytes;
+		total_sent_duration += duration;
+
+		logtd("WideSeqNo(%u) Refer(%u) RecvDelta(%u) SentDelta(%u) SentBytes(%u) Duration(%d)", packet_status->_wide_sequence_number, transport_cc->GetReferenceTime(), packet_status->_received_delta, sent_delta_time, sent_log->_sent_bytes, duration);
+	}
+	logtd("--------------------------------------------------------------");
+
+	if (total_sent_bytes > 0)
+	{
+		double total_sent_seconds = total_sent_duration / 4000.0;
+		_total_sent_seconds += total_sent_seconds;
+		_total_sent_bytes += total_sent_bytes;
+
+		if (_total_sent_seconds > 3)
+		{
+			_estimated_bitrates = (_total_sent_bytes * 8) / _total_sent_seconds;
+
+			ChangeRenditionIfNeeded();
+			
+			logtd("Estimated BPS(%f) TotalSentBytes(%u) TotalSentDuration(%f)", _estimated_bitrates, _total_sent_bytes * 8, _total_sent_seconds);
+
+			_total_sent_seconds = 0;
+			_total_sent_bytes = 0;
+		}
+	}
+
+	return true;
+}
+
+void RtcSession::ChangeRenditionIfNeeded()
+{
+	if (_auto_abr == false)
+	{
+		return;
+	}
+
+	auto current_bitrates = _current_rendition->GetBitrates();
+
+	if (0.95 * _estimated_bitrates <= current_bitrates)
+	{
+		if (_playlist->GetNextLowerBitrateRendition(_current_rendition) != nullptr)
+		{
+			logtd("ChangeRenditionIfNeeded - Change to low bitrate");
+			if (RequestChangeRendition(SwitchOver::LOWER) == true)
+			{
+				
+			}
+		}
+	}
+	else if (0.7 * _estimated_bitrates > current_bitrates)
+	{
+		// Next higher rendition
+		auto next_rendition = _playlist->GetNextHigherBitrateRendition(_current_rendition);
+		if (next_rendition != nullptr && 0.95 * _estimated_bitrates >= next_rendition->GetBitrates())
+		{
+			logtd("ChangeRenditionIfNeeded - Change to high bitrate");
+			if (RequestChangeRendition(SwitchOver::HIGHER) == true)
+			{
+				
+			}
+		}
+	}
 }
 
 // ov::Node Interface

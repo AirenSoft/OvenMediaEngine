@@ -4,6 +4,7 @@
 #include "rtcp_info/receiver_report.h"
 #include "rtcp_info/rtcp_private.h"
 #include "rtcp_info/sender_report.h"
+#include "rtcp_info/transport_cc.h"
 
 bool RtcpReceiver::ParseCompoundPacket(const std::shared_ptr<const ov::Data>& packet)
 {
@@ -44,8 +45,7 @@ bool RtcpReceiver::ParseCompoundPacket(const std::shared_ptr<const ov::Data>& pa
 				}
 				else if (rtcp_packet.GetFMT() == static_cast<uint8_t>(RTPFBFMT::TRANSPORT_CC))
 				{
-					// TODO(ABR) : Implement this 2022-06-26
-					logtd("Transport-cc received : %u", rtcp_packet.GetPayloadSize());
+					info = std::make_shared<TransportCc>();
 				}
 				else
 				{
