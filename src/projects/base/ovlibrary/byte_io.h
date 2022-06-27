@@ -119,6 +119,27 @@ public:
 };
 
 template<typename T>
+class ByteReader<T, 3, false>
+{
+public:
+	static T ReadBigEndian(const uint8_t *data)
+	{
+		return (Get(data, 0) << 16) | (Get(data, 1) << 8) | (Get(data, 2));
+	}
+
+	static T ReadLittleEndian(const uint8_t *data)
+	{
+		return Get(data, 0) | (Get(data, 1) << 8) | (Get(data, 2) << 16);
+	}
+
+private:
+	inline static T Get(const uint8_t *data, unsigned int index)
+	{
+		return static_cast<T>(data[index]);
+	}
+};
+
+template<typename T>
 class ByteReader<T, 4, false>
 {
 public:

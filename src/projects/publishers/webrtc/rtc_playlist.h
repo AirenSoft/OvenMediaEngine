@@ -35,6 +35,24 @@ public:
         return _audio_track;
     }
 
+	// Get bitrates
+	uint64_t GetBitrates() const
+	{
+		uint64_t bitrates = 0;
+
+		if (_video_track != nullptr)
+		{
+			bitrates += _video_track->GetBitrate();
+		}
+
+		if (_audio_track != nullptr)
+		{
+			bitrates += _audio_track->GetBitrate();
+		}
+
+		return bitrates;
+	}
+
     Json::Value ToJson() const
     {
         Json::Value json;
@@ -85,6 +103,73 @@ public:
 
         return true;
     }
+
+	// Get Rendition Map
+	const std::map<ov::String, std::shared_ptr<const RtcRendition>> &GetRenditions() const
+	{
+		return _rendition_map;
+	}
+
+	// Get next higher bitrates rendition
+	std::shared_ptr<const RtcRendition> GetNextHigherBitrateRendition(const std::shared_ptr<const RtcRendition> &base_rendition) const
+	{
+		std::shared_ptr<const RtcRendition> next_rendition = nullptr;
+		uint64_t base_bitrates = base_rendition->GetBitrates();
+
+		for (const auto &[name, rendition] : _rendition_map)
+		{
+			if (rendition == base_rendition)
+			{
+				continue;
+			}
+
+			auto bitrate = rendition->GetBitrates();
+			if (bitrate > base_bitrates)
+			{
+				if (next_rendition == nullptr)
+				{
+					next_rendition = rendition;
+				}
+				else if (next_rendition != nullptr && next_rendition->GetBitrates() > bitrate)
+				{
+					next_rendition = rendition;
+				}
+			}
+		}
+
+		return next_rendition;
+	}
+
+	// Get next lower bitrates rendition
+	std::shared_ptr<const RtcRendition> GetNextLowerBitrateRendition(const std::shared_ptr<const RtcRendition> &base_rendition) const
+	{
+		std::shared_ptr<const RtcRendition> next_rendition = nullptr;
+		uint64_t base_bitrates = base_rendition->GetBitrates();
+
+		for (const auto &[name, rendition] : _rendition_map)
+		{
+			if (rendition == base_rendition)
+			{
+				continue;
+			}
+
+			auto bitrate = rendition->GetBitrates();
+			if (bitrate < base_bitrates)
+			{
+				if (next_rendition == nullptr)
+				{
+					next_rendition = rendition;
+				}
+				else if (next_rendition != nullptr && next_rendition->GetBitrates() < bitrate)
+				{
+					next_rendition = rendition;
+				}
+			}
+		}
+
+		return next_rendition;
+	}
+
     std::shared_ptr<const RtcRendition> GetRendition(const ov::String &name) const
     {
         auto it = _rendition_map.find(name);
