@@ -345,7 +345,8 @@ namespace pub
 		bool need_file_split = false;
 
 		// When setting interval parameter, perform segmentation recording.
-		if ((uint64_t)GetRecord()->GetInterval() > 0 && (GetRecord()->GetRecordTime() > (uint64_t)GetRecord()->GetInterval()) && session_packet->GetFlag() == MediaPacketFlag::Key && session_packet->GetMediaType() == cmn::MediaType::Video)
+		if (((uint64_t)GetRecord()->GetInterval() > 0) && (GetRecord()->GetRecordTime() > (uint64_t)GetRecord()->GetInterval()) &&
+			(session_packet->GetFlag() == MediaPacketFlag::Key) && (session_packet->GetTrackId() == _default_track))
 		{
 			need_file_split = true;
 		}
