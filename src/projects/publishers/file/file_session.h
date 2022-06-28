@@ -40,11 +40,17 @@ namespace pub
 		ov::String ConvertMacro(ov::String src);
 		bool MakeDirectoryRecursive(std::string s);
 
+		void UpdateDefaultTrack(const std::shared_ptr<MediaTrack> &track);
+
 	private:
 		std::shared_ptr<FileWriter> _writer;
 
 		std::shared_ptr<info::Record> _record;
 
 		std::shared_mutex _lock;
+
+		std::map<cmn::MediaType, MediaTrackId> _default_track_by_type;
+		int32_t _default_track;
+		bool _found_first_keyframe = false;
 	};
 }  // namespace pub
