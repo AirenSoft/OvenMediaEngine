@@ -156,6 +156,8 @@ bool RtcSession::Start()
 		return false;
 	}
 
+	_auto_abr = _playlist->IsWebRtcAutoAbr();
+
 	_current_rendition = _playlist->GetFirstRendition();
 	RecordAutoSelectedRendition(_current_rendition, true);
 

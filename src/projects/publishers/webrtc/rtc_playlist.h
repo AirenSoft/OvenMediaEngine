@@ -92,6 +92,16 @@ public:
         _audio_codec_id = audio_codec_id;
     }
 
+	void SetWebRtcAutoAbr(bool auto_abr)
+	{
+		_webrtc_auto_abr = auto_abr;
+	}
+
+	bool IsWebRtcAutoAbr() const
+	{
+		return _webrtc_auto_abr;
+	}
+
     bool AddRendition(const std::shared_ptr<const RtcRendition> &rendition)
     {
         if (_first_rendition == nullptr)
@@ -208,6 +218,7 @@ public:
 private:
     ov::String _name;
     ov::String _file_name;
+	bool _webrtc_auto_abr = false;
     cmn::MediaCodecId _video_codec_id;
     cmn::MediaCodecId _audio_codec_id;
 
@@ -225,6 +236,16 @@ public:
         _file_name = file_name;
     }
 
+	void SetWebRtcAutoAbr(bool auto_abr)
+	{
+		_webrtc_auto_abr = auto_abr;
+	}
+
+	bool IsWebRtcAutoAbr() const
+	{
+		return _webrtc_auto_abr;
+	}
+
     bool AddRendition(const std::shared_ptr<const RtcRendition> &rendition)
     {
         auto video_codec_id = rendition->GetVideoTrack() ? rendition->GetVideoTrack()->GetCodecId() : cmn::MediaCodecId::None;
@@ -234,6 +255,10 @@ public:
         if (playlist == nullptr)
         {
             playlist = CreatePlaylist(video_codec_id, audio_codec_id);
+			
+			// Options
+			playlist->SetWebRtcAutoAbr(_webrtc_auto_abr);
+
             _playlist_map.emplace(GetPlaylistKey(video_codec_id, audio_codec_id), playlist);
         }
 
@@ -300,6 +325,7 @@ private:
 
     ov::String _name;
     ov::String _file_name;
+	bool _webrtc_auto_abr = false;
 
     // Track list for payload list
     // OME specifies only one payload per codec in WebRTC SDP.

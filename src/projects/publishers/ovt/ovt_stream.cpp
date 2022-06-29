@@ -79,6 +79,10 @@ bool OvtStream::GenerateDecription()
 			{
 				"name" : "for llhls",
 				"fileName" : "llhls_abr.oven",
+				"options" :	// Optional
+				{
+					"webrtcAutoAbr" : true // default true
+				},
 				"renditions":
 				[
 					{
@@ -153,6 +157,11 @@ bool OvtStream::GenerateDecription()
 		
 		json_playlist["name"] = playlist->GetName().CStr();
 		json_playlist["fileName"] = playlist->GetFileName().CStr();
+
+		Json::Value json_options;
+		json_options["webrtcAutoAbr"] = playlist->IsWebRtcAutoAbr();
+
+		json_playlist["options"] = json_options;
 
 		for (const auto &rendition : playlist->GetRenditionList())
 		{

@@ -54,6 +54,16 @@ namespace info
 		}
 		~Playlist() = default;
 
+		void SetWebRtcAutoAbr(bool enabled)
+		{
+			_webrtc_auto_abr = enabled;
+		}
+
+		bool IsWebRtcAutoAbr() const
+		{
+			return _webrtc_auto_abr;
+		}
+
 		// Append Rendition
 		void AddRendition(const std::shared_ptr<Rendition> &rendition)
 		{
@@ -80,6 +90,9 @@ namespace info
 	private:
 		ov::String _name;
 		ov::String _file_name;
+
+		bool _webrtc_auto_abr = false;
+
 		std::vector<std::shared_ptr<Rendition>> _renditions;
 	};
 } // namespace info

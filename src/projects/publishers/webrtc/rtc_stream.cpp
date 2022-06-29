@@ -176,6 +176,7 @@ bool RtcStream::Start()
 	// Create Default Playlist for no file name (ws://domain/app/stream)
 	_default_playlist_name = ov::Random::GenerateString(8);
 	auto rtc_master_playlist = std::make_shared<RtcMasterPlaylist>(_default_playlist_name, _default_playlist_name);
+	rtc_master_playlist->SetWebRtcAutoAbr(false);
 
 	// Default Playlist : Connect all the first tracks for each supported codec
 	for (const auto &[video_codec_id, video_track] : default_tracks)
@@ -306,6 +307,7 @@ std::shared_ptr<RtcMasterPlaylist> RtcStream::CreateRtcMasterPlaylist(const ov::
 	}
 
 	auto rtc_master_playlist = std::make_shared<RtcMasterPlaylist>(file_name, playlist->GetName());
+	rtc_master_playlist->SetWebRtcAutoAbr(playlist->IsWebRtcAutoAbr());
 
 	for (const auto &rendition : playlist->GetRenditionList())
 	{

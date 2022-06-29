@@ -9,6 +9,7 @@
 #pragma once
 
 #include "rendition.h"
+#include "options.h"
 #include "../encodes/encodes.h"
 
 namespace cfg
@@ -24,11 +25,13 @@ namespace cfg
 				protected:
 					ov::String _name;
 					ov::String _file_name;
+					Options _options;
 					std::vector<Rendition> _renditions;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFileName, _file_name);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetOptions, _options);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetRenditions, _renditions);
 
 					bool SetEncodes(const Encodes &encodes)
@@ -110,6 +113,8 @@ namespace cfg
 								return nullptr;
 							}
 						);
+						Register<Optional>("Options", &_options);
+
 						Register<Optional>({"Rendition", "renditions"}, &_renditions,
 							[=]() -> std::shared_ptr<ConfigError> {
 								return nullptr;
