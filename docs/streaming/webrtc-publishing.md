@@ -110,32 +110,32 @@ WebRTC doesn't support AAC, so when trying to bypass transcoding RTMP input, aud
 
 ```markup
 <OutputProfiles>
-	<OutputProfile>
-		<Name>bypass_stream</Name>
-		<OutputStreamName>${OriginStreamName}</OutputStreamName>
-		<Encodes>
-			<Audio>
-				<Bypass>true</Bypass>
-			</Audio>
-			<Video>
-				<Bypass>true</Bypass>
-			</Video>
-			<Video>
-         <!-- vp8, h264 -->
-         <Codec>vp8</Codec>
-         <Width>1280</Width>
-         <Height>720</Height>
-         <Bitrate>2000000</Bitrate>
-         <Framerate>30.0</Framerate>
-      </Video>
-			<Audio>
-				<Codec>opus</Codec>
-				<Bitrate>128000</Bitrate>
-				<Samplerate>48000</Samplerate>
-				<Channel>2</Channel>
-			</Audio>
-		</Encodes>
-	</OutputProfile>
+    <OutputProfile>
+        <Name>bypass_stream</Name>
+        <OutputStreamName>${OriginStreamName}</OutputStreamName>
+        <Encodes>
+            <Audio>
+                <Bypass>true</Bypass>
+            </Audio>
+            <Video>
+                <Bypass>true</Bypass>
+            </Video>
+            <Video>
+                <!-- vp8, h264 -->
+                <Codec>vp8</Codec>
+                <Width>1280</Width>
+                <Height>720</Height>
+                <Bitrate>2000000</Bitrate>
+                <Framerate>30.0</Framerate>
+            </Video>
+            <Audio>
+                <Codec>opus</Codec>
+                <Bitrate>128000</Bitrate>
+                <Samplerate>48000</Samplerate>
+                <Channel>2</Channel>
+            </Audio>
+        </Encodes>
+    </OutputProfile>
 </OutputProfiles>
 ```
 
@@ -162,6 +162,173 @@ If you use the default configuration, you can stream to the following URL:
 We have prepared a test player to make it easy to check if OvenMediaEngine is working. Please see the [Test Player](../test-player.md) chapter for more information.
 
 
+
+## Adaptive Bitrates Streaming (ABR)
+
+OvenMediaEnigne provides adaptive bitrates streaming over WebRTC. OvenPlayer can also play and display OvenMediaEngine's WebRTC ABR URL.
+
+![](<../.gitbook/assets/image (39).png>)
+
+### Create Playlist for WebRTC ABR
+
+You can provide ABR by creating a `playlist` in `<OutputProfile>` as shown below. The URL to play the playlist is `ws[s]://domain[:port]/<app name>/<stream name>/<playlist file name>`
+
+`<Playlist><Rendition><Video>` and `<Playlist><Rendition><Audio>` can connected using `<Encodes><Video><Name>` or `<Encodes><Audio><Name>`.
+
+{% hint style="warning" %}
+It is not recommended to use a \<Bypass>true\</Bypass> encode item if you want a seamless transition between renditions because there is a time difference between the transcoded track and bypassed track.
+{% endhint %}
+
+If `<Options><WebRtcAutoAbr>` is set to true, OvenMediaEngine will measure the bandwidth of the player session and automatically switch to the appropriate rendition.
+
+Here is an example play URL for ABR in the playlist settings below. `wss://domain:13334/app/stream/abr`
+
+{% hint style="info" %}
+Streaming starts from the top rendition of Playlist, and when Auto ABR is true, the server finds the best rendition and switches to it. Alternatively, the user can switch manually by selecting a rendition in the player.
+{% endhint %}
+
+```xml
+<OutputProfiles>
+<OutputProfile>
+	<Name>default</Name>
+	<OutputStreamName>${OriginStreamName}</OutputStreamName>
+
+	<Playlist>
+		<Name>for Webrtc</Name>
+		<FileName>abr</FileName>
+		<Options>
+			<WebRtcAutoAbr>false</WebRtcAutoAbr> 
+		</Options>
+		<Rendition>
+			<Name>1080p</Name>
+			<Video>1080p</Video>
+			<Audio>opus</Audio>
+		</Rendition>
+		<Rendition>
+			<Name>480p</Name>
+			<Video>480p</Video>
+			<Audio>opus</Audio>
+		</Rendition>
+		<Rendition>
+			<Name>720p</Name>
+			<Video>720p</Video>
+			<Audio>opus</Audio>
+		</Rendition>
+	</Playlist>
+
+	<Playlist>
+		<Name>for llhls</Name>
+		<FileName>llhls_abr</FileName>
+		<Rendition>
+			<Name>480p</Name>
+			<Video>480p</Video>
+			<Audio>bypass_audio</Audio>
+		</Rendition>
+		<Rendition>
+			<Name>720p</Name>
+			<Video>720p</Video>
+			<Audio>bypass_audio</Audio>
+		</Rendition>
+	</Playlist>
+	
+	<Encodes>
+		<Video>
+			<Name>bypass_video</Name>
+			<Bypass>true</Bypass>
+		</Video>
+		<Video>
+			<Name>480p</Name>
+			<Codec>h264</Codec>
+			<Width>640</Width>
+			<Height>480</Height>
+			<Bitrate>500000</Bitrate>
+			<Framerate>30</Framerate>
+		</Video>
+		<Video>
+			<Name>720p</Name>
+			<Codec>h264</Codec>
+			<Width>1280</Width>
+			<Height>720</Height>
+			<Bitrate>2000000</Bitrate>
+			<Framerate>30</Framerate>
+		</Video>
+		<Video>
+			<Name>1080p</Name>
+			<Codec>h264</Codec>
+			<Width>1920</Width>
+			<Height>1080</Height>
+			<Bitrate>5000000</Bitrate>
+			<Framerate>30</Framerate>
+		</Video>
+		<Audio>
+			<Name>bypass_audio</Name>
+			<Bypass>True</Bypass>
+		</Audio>
+		<Audio>
+			<Name>opus</Name>
+			<Codec>opus</Codec>
+			<Bitrate>128000</Bitrate>
+			<Samplerate>48000</Samplerate>
+			<Channel>2</Channel>
+		</Audio>
+	</Encodes>
+</OutputProfile>
+</OutputProfiles>
+```
+
+See the [Adaptive Bitrates Streaming](../transcoding/#adaptive-bitrates-streaming-abr) section for more details on how to configure renditions.
+
+### Multiple codec support in Playlist
+
+WebRTC can negotiate codecs with SDP to support more devices. Playlist can set rendition with different kinds of codec. And OvenMediaEngine includes only renditions corresponding to the negotiated codec in the playlist and provides it to the player.
+
+{% hint style="warning" %}
+If an unsupported codec is included in the Rendition, the Rendition is not used. For example, if the Rendition's Audio contains aac, WebRTC ignores the Rendition.
+{% endhint %}
+
+In the example below, it consists of renditions with H.264 and Opus codecs set and renditions with VP8 and Opus codecs set. If the player selects VP8 in the answer SDP, OvenMediaEngine creates a playlist with only renditions containing VP8 and Opus and passes it to the player.
+
+```xml
+<Playlist>
+	<Name>for Webrtc</Name>
+	<FileName>abr</FileName>
+	<Options>
+		<WebRtcAutoAbr>false</WebRtcAutoAbr> 
+	</Options>
+	<Rendition>
+		<Name>1080p</Name>
+		<Video>1080p</Video>
+		<Audio>opus</Audio>
+	</Rendition>
+	<Rendition>
+		<Name>480p</Name>
+		<Video>480p</Video>
+		<Audio>opus</Audio>
+	</Rendition>
+	<Rendition>
+		<Name>720p</Name>
+		<Video>720p</Video>
+		<Audio>opus</Audio>
+	</Rendition>
+	
+	<Rendition>
+		<Name>1080pVp8</Name>
+		<Video>1080pVp8</Video>
+		<Audio>opus</Audio>
+	</Rendition>
+	<Rendition>
+		<Name>480pVp8</Name>
+		<Video>480pVp8</Video>
+		<Audio>opus</Audio>
+	</Rendition>
+	<Rendition>
+		<Name>720pVp8</Name>
+		<Video>720pVp8</Video>
+		<Audio>opus</Audio>
+	</Rendition>
+	
+</Playlist>
+```
 
 ## WebRTC over TCP
 
