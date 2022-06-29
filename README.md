@@ -30,14 +30,12 @@ Would you please click on each link below for details:
 * <b>Ingest</b>
   * Push: WebRTC, SRT, RTMP, MPEG-2 TS
   * Pull: RTSP
+* <b>Adaptive Bitrate Streaming(ABR) for LLHLS and WebRTC</b>
 * <b>Low Latency Streaming using LLHLS</b> 
-  * Support Adaptive Bitrate Streaming (ABR)
 * <b>Sub-Second Latency Streaming using WebRTC</b>
   * WebRTC over TCP (With Embedded TURN Server)
   * Embedded WebRTC Signalling Server (WebSocket based)
-  * ICE (Interactive Connectivity Establishment)
-  * DTLS (Datagram Transport Layer Security)
-  * SRTP (Secure Real-time Transport Protocol)
+  * Retransmission with NACK
   * ULPFEC (Uneven Level Protection Forward Error Correction)
     * <i>VP8, H.264</i>
   * In-band FEC (Forward Error Correction)
