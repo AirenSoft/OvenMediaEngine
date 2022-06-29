@@ -186,6 +186,7 @@ bool RtcSession::Start()
 	ov::Node::Start();
 
 	_abr_test_watch.Start();
+	_bitrate_estimate_watch.Start();
 
 	return Session::Start();
 }
@@ -709,10 +710,10 @@ bool RtcSession::ProcessTransportCc(const std::shared_ptr<RtcpInfo> &rtcp_info)
 		return false;
 	}
 
-	uint64_t total_sent_bytes = 0;
-	uint64_t total_sent_duration = 0;
+	uint64_t sent_bytes = 0;
+	int64_t sent_duration = 0;
 
-	for (size_t i = 0; i < transport_cc->GetPacketStatusCount(); i++)
+	for (size_t i = 1; i < transport_cc->GetPacketStatusCount(); i++)
 	{
 		auto packet_status = transport_cc->GetPacketFeedbackInfo(i);
 		auto sent_log = TraceRtpSentByWideSeqNo(packet_status->_wide_sequence_number);
@@ -729,7 +730,7 @@ bool RtcSession::ProcessTransportCc(const std::shared_ptr<RtcpInfo> &rtcp_info)
 		}
 
 		// Calc delta of sent_log and prev_sent_log
-		auto sent_delta_time = (std::chrono::duration_cast<std::chrono::microseconds>(sent_log->_sent_time - prev_sent_log->_sent_time).count()) / 250; 
+		int32_t sent_delta_time = (std::chrono::duration_cast<std::chrono::microseconds>(sent_log->_sent_time - prev_sent_log->_sent_time).count()) / 250; 
 
 		auto duration = packet_status->_received_delta - sent_delta_time;
 		if (duration <= 0)
@@ -737,26 +738,26 @@ bool RtcSession::ProcessTransportCc(const std::shared_ptr<RtcpInfo> &rtcp_info)
 			//duration = 1;
 		}
 
-		total_sent_bytes += sent_log->_sent_bytes;
-		total_sent_duration += duration;
+		sent_bytes += sent_log->_sent_bytes;
+		sent_duration += duration;
 
 		logtd("WideSeqNo(%u) Refer(%u) RecvDelta(%u) SentDelta(%u) SentBytes(%u) Duration(%d)", packet_status->_wide_sequence_number, transport_cc->GetReferenceTime(), packet_status->_received_delta, sent_delta_time, sent_log->_sent_bytes, duration);
 	}
-	logtd("--------------------------------------------------------------");
 
-	if (total_sent_bytes > 0)
+	if (sent_bytes > 0)
 	{
-		double total_sent_seconds = total_sent_duration / 4000.0;
-		_total_sent_seconds += total_sent_seconds;
-		_total_sent_bytes += total_sent_bytes;
+		double sent_seconds = static_cast<double>(sent_duration) / 4000.0;
 
-		if (_total_sent_seconds > 3)
+		_total_sent_seconds += sent_seconds;
+		_total_sent_bytes += sent_bytes;
+		_estimated_bitrates = static_cast<double>((_total_sent_bytes * 8)) / _total_sent_seconds;
+
+		if (_bitrate_estimate_watch.IsElapsed(3000) == true)
 		{
-			_estimated_bitrates = (_total_sent_bytes * 8) / _total_sent_seconds;
-
+			_bitrate_estimate_watch.Update();
 			ChangeRenditionIfNeeded();
-			
-			logtd("Estimated BPS(%f) TotalSentBytes(%u) TotalSentDuration(%f)", _estimated_bitrates, _total_sent_bytes * 8, _total_sent_seconds);
+
+			logtd("Estimated Bandwidth(%f) TotalSentBytes(%u) TotalSentSeconds(%f)", static_cast<double>(_total_sent_bytes * 8) / _total_sent_seconds, _total_sent_bytes, _total_sent_seconds);
 
 			_total_sent_seconds = 0;
 			_total_sent_bytes = 0;

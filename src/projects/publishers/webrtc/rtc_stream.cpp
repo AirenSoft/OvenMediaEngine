@@ -126,6 +126,15 @@ bool RtcStream::Start()
 	_playout_delay_min = playoutDelay.GetMin();
 	_playout_delay_max = playoutDelay.GetMax();
 
+	if (webrtc_config.GetBandwidthEstimationType() == WebRtcBandwidthEstimationType::TransportCc)
+	{
+		_transport_cc_enabled = true;
+	}
+	else if (webrtc_config.GetBandwidthEstimationType() == WebRtcBandwidthEstimationType::REMB)
+	{
+		_remb_enabled = true;
+	}
+
 	// MSID
 	_msid = ov::Random::GenerateString(36);
 	_cname = ov::Random::GenerateString(16);
@@ -478,7 +487,12 @@ std::shared_ptr<MediaDescription> RtcStream::MakeVideoDescription() const
 		video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ID, RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ATTRIBUTE);
 	}
 
-	video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_TRANSPORT_CC_ID, RTP_HEADER_EXTENSION_TRANSPORT_CC_ATTRIBUTE);
+	if (_transport_cc_enabled == true)
+	{
+		video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_TRANSPORT_CC_ID, RTP_HEADER_EXTENSION_TRANSPORT_CC_ATTRIBUTE);
+	}
+
+
 
 	return video_media_desc;
 }
@@ -501,7 +515,10 @@ std::shared_ptr<MediaDescription> RtcStream::MakeAudioDescription() const
 	// Media SSRC
 	audio_media_desc->SetSsrc(_audio_ssrc);
 
-	audio_media_desc->AddExtmap(RTP_HEADER_EXTENSION_TRANSPORT_CC_ID, RTP_HEADER_EXTENSION_TRANSPORT_CC_ATTRIBUTE);
+	if (_transport_cc_enabled == true)
+	{
+		audio_media_desc->AddExtmap(RTP_HEADER_EXTENSION_TRANSPORT_CC_ID, RTP_HEADER_EXTENSION_TRANSPORT_CC_ATTRIBUTE);
+	}
 	
 	return audio_media_desc;
 }
@@ -569,7 +586,10 @@ std::shared_ptr<PayloadAttr> RtcStream::MakePayloadAttr(const std::shared_ptr<co
 			return nullptr;
 	}
 
-	payload->EnableRtcpFb(PayloadAttr::RtcpFbType::TransportCc, true);
+	if (_transport_cc_enabled == true)
+	{
+		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::TransportCc, true);
+	}
 
 	return payload;
 }
@@ -810,8 +830,11 @@ void RtcStream::AddPacketizer(const std::shared_ptr<const MediaTrack> &track)
 	packetizer->SetTrackId(track->GetId());
 	packetizer->SetSSRC(ssrc);
 
-	// Transport-wide-cc-extensions is default
-	packetizer->SetTransportCc(0);
+	if (_transport_cc_enabled == true)
+	{
+		// Transport-wide-cc-extensions is default
+		packetizer->SetTransportCc(0);
+	}
 
 	if (_ulpfec_enabled == true)
 	{
