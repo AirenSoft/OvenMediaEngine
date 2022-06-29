@@ -180,6 +180,7 @@ private:
 	double _total_sent_seconds = 0;
 	uint64_t _total_sent_bytes = 0;
 	double _estimated_bitrates = 0;
+	ov::StopWatch _bitrate_estimate_watch;
 
 	// Auto switch rendition
 	bool _auto_abr = true;

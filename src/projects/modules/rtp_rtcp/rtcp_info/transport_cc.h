@@ -42,7 +42,7 @@ public:
 		uint16_t _wide_sequence_number = 0;
 		bool _received = false;
 		uint8_t _delta_size = 0; // 0, 1, 2, 3
-		uint16_t _received_delta = 0;	// 1/4000 scale
+		int32_t _received_delta = 0;	// 1/4000 scale
 	};
 
 	///////////////////////////////////////////

@@ -108,6 +108,9 @@ private:
 	int _playout_delay_min = 0;
 	int _playout_delay_max = 0;
 
+	bool _transport_cc_enabled = false;
+	bool _remb_enabled = false;
+
 	uint32_t _worker_count = 0;
 
 	JitterBufferDelay	_jitter_buffer_delay;
