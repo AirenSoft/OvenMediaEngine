@@ -353,7 +353,6 @@ namespace pvd
 				return false;
 			}
 			
-			logtc("WebRTC Auto ABR : %s", json_options["webrtcAutoAbr"].asBool() ? "true" : "false");
 			playlist->SetWebRtcAutoAbr(json_options["webrtcAutoAbr"].asBool());
 
 			for (size_t j = 0; j < json_playlist["renditions"].size(); j++)
