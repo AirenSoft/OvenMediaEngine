@@ -327,15 +327,46 @@ namespace pvd
 		for (size_t i = 0; i < json_playlists.size(); i++)
 		{
 			auto json_playlist = json_playlists[static_cast<int>(i)];
+
+			// Validate
+			if (json_playlist["name"].isNull() || json_playlist["fileName"].isNull() || 
+				!json_playlist["options"].isObject() || !json_playlist["renditions"].isArray())
+			{
+				SetState(State::ERROR);
+				logte("Invalid json payload : playlist");
+				return false;
+			}
 			
 			auto playlist_name = json_playlist["name"].asString().c_str();
 			auto playlist_file_name = json_playlist["fileName"].asString().c_str();
 
 			auto playlist = std::make_shared<info::Playlist>(playlist_name, playlist_file_name);
 
+			// Options
+			auto json_options = json_playlist["options"];
+
+			// Validate
+			if (!json_options["webrtcAutoAbr"].isBool())
+			{
+				SetState(State::ERROR);
+				logte("Invalid json payload : playlist options");
+				return false;
+			}
+			
+			logtc("WebRTC Auto ABR : %s", json_options["webrtcAutoAbr"].asBool() ? "true" : "false");
+			playlist->SetWebRtcAutoAbr(json_options["webrtcAutoAbr"].asBool());
+
 			for (size_t j = 0; j < json_playlist["renditions"].size(); j++)
 			{
 				auto json_rendition = json_playlist["renditions"][static_cast<int>(j)];
+
+				// Validate
+				if (!json_rendition["name"].isString() || !json_rendition["videoTrackName"].isString() || !json_rendition["audioTrackName"].isString())
+				{
+					SetState(State::ERROR);
+					logte("Invalid json payload : playlist rendition");
+					return false;
+				}
 
 				auto rendition_name = json_rendition["name"].asString().c_str();
 				auto video_track_name = json_rendition["videoTrackName"].asString().c_str();
