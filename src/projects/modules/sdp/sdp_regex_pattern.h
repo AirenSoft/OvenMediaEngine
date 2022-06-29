@@ -57,6 +57,7 @@ public:
 		RegisterPattern(_rtp_map_pattern, R"(rtpmap:(\d*) ([\w\-\.]*)(?:\s*\/(\d*)(?:\s*\/(\S*))?)?)");
 											
 		RegisterPattern(_rtcp_mux_pattern, R"(^(rtcp-mux))");
+		RegisterPattern(_rtcp_rsize_pattern, R"(^(rtcp-rsize))");
 		RegisterPattern(_rtcp_fb_pattern, R"(rtcp-fb:(\*|\d*) (.*))");
 
 		RegisterPattern(_mid_pattern, R"(^mid:([^\s]*))");
@@ -97,6 +98,7 @@ public:
 	RegisterMatchFunction(_connection_pattern, MatchConnection)
 	RegisterMatchFunction(_rtp_map_pattern, MatchRtpmap)
 	RegisterMatchFunction(_rtcp_mux_pattern, MatchRtcpMux)
+	RegisterMatchFunction(_rtcp_rsize_pattern, MatchRtcpRsize)
 	RegisterMatchFunction(_rtcp_fb_pattern, MatchRtcpFb)
 
 	RegisterMatchFunction(_mid_pattern, MatchMid)
@@ -134,6 +136,7 @@ private:
 	ov::Regex _connection_pattern; // c=IN IP4 0.0.0.0
 	ov::Regex _rtp_map_pattern; // a=rtpmap:
 	ov::Regex _rtcp_mux_pattern; // a=rtcp-mux
+	ov::Regex _rtcp_rsize_pattern; // a=rtcp-rsize
 	ov::Regex _rtcp_fb_pattern; // a=rtcp-fb:
 
 	ov::Regex _mid_pattern; // a=mid:

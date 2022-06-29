@@ -31,7 +31,7 @@
 // |           recv delta          |  recv delta   | zero padding  |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-#define TRANSPORT_CC_MIN_SIZE (4 + 4 + 2 + 2 + 3 + 1)
+#define MIN_TRANSPORT_CC_RTCP_SIZE (4 + 4 + 2 + 2 + 3 + 1)
 #define PACKET_CHUNK_BYTES 2
 
 class TransportCc : public RtcpInfo

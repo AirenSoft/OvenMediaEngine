@@ -16,6 +16,7 @@
 
 #include "modules/rtp_rtcp/rtcp_info/nack.h"
 #include "modules/rtp_rtcp/rtcp_info/transport_cc.h"
+#include "modules/rtp_rtcp/rtcp_info/remb.h"
 
 #include <utility>
 
@@ -156,6 +157,7 @@ bool RtcSession::Start()
 	}
 
 	_current_rendition = _playlist->GetFirstRendition();
+	RecordAutoSelectedRendition(_current_rendition, true);
 
 	auto current_video_track = _current_rendition->GetVideoTrack();
 	auto current_audio_track = _current_rendition->GetAudioTrack();
@@ -291,7 +293,9 @@ bool RtcSession::RequestChangeRendition(SwitchOver switch_over)
 
 	if (next_rendition != nullptr)
 	{
-		logtd("Change rendition : Estimated Bitrates(%f) Current Bitrates(%llu) Next Bitrates(%llu) ", _estimated_bitrates, _current_rendition->GetBitrates(), next_rendition->GetBitrates());
+		logtd("Change rendition - EstimatedBandwidth(%f) CurrentRendition(%s - %lld) NextRendition(%s - %lld)", 
+		_estimated_bitrates, _current_rendition->GetName().CStr(), _current_rendition->GetBitrates(), next_rendition->GetName().CStr(), next_rendition->GetBitrates());
+
 		_next_rendition = next_rendition;
 	}
 
@@ -531,6 +535,7 @@ void RtcSession::SendOutgoingData(const std::any &packet)
 
 	// Set transport-wide sequence number
 	SetTransportWideSequenceNumber(copy_packet, _wide_sequence_number);
+	SetAbsSendTime(copy_packet, ov::Clock::NowMSec());
 
 	// rtp_rtcp -> srtp -> dtls -> Edge Node(RtcSession)
 
@@ -558,6 +563,22 @@ bool RtcSession::SetTransportWideSequenceNumber(const std::shared_ptr<RtpPacket>
 	auto payload_offset = rtp_packet->GetExtensionType() == RtpHeaderExtension::HeaderType::ONE_BYTE_HEADER ? 1 : 2;
 	
 	ByteWriter<uint16_t>::WriteBigEndian(extension_buffer + payload_offset, wide_sequence_number);
+
+	return true;
+}
+
+bool RtcSession::SetAbsSendTime(const std::shared_ptr<RtpPacket> &rtp_packet, uint64_t time_ms)
+{
+	auto extension_buffer = rtp_packet->Extension(RTP_HEADER_EXTENSION_ABS_SEND_TIME_ID);
+	if (extension_buffer == nullptr)
+	{
+		return false;
+	}
+
+	auto payload_offset = rtp_packet->GetExtensionType() == RtpHeaderExtension::HeaderType::ONE_BYTE_HEADER ? 1 : 2;
+
+	auto abs_send_time = RtpHeaderExtensionAbsSendTime::MsToAbsSendTime(time_ms);
+	ByteWriter<uint24_t>::WriteBigEndian(extension_buffer + payload_offset, abs_send_time);
 
 	return true;
 }
@@ -629,7 +650,7 @@ void RtcSession::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>
 
 void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 {
-	if(pub::Session::GetState() != SessionState::Started)
+	if (pub::Session::GetState() != SessionState::Started)
 	{
 		return;
 	}
@@ -638,9 +659,9 @@ void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	{
 		// Process
 	}
-	else if(rtcp_info->GetPacketType() == RtcpPacketType::RTPFB)
+	else if (rtcp_info->GetPacketType() == RtcpPacketType::RTPFB)
 	{
-		if(rtcp_info->GetCountOrFmt() == static_cast<uint8_t>(RTPFBFMT::NACK))
+		if (rtcp_info->GetCountOrFmt() == static_cast<uint8_t>(RTPFBFMT::NACK))
 		{
 			// Process
 			ProcessNACK(rtcp_info);
@@ -649,6 +670,14 @@ void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 		{
 			// Process
 			ProcessTransportCc(rtcp_info);
+		}
+	}
+	else if (rtcp_info->GetPacketType() == RtcpPacketType::PSFB)
+	{
+		if (rtcp_info->GetCountOrFmt() == static_cast<uint8_t>(PSFBFMT::AFB)) // REMB
+		{
+			// Process
+			ProcessRemb(rtcp_info);
 		}
 	}
 
@@ -767,6 +796,24 @@ bool RtcSession::ProcessTransportCc(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	return true;
 }
 
+bool RtcSession::ProcessRemb(const std::shared_ptr<RtcpInfo> &rtcp_info)
+{
+	auto remb = std::static_pointer_cast<REMB>(rtcp_info);
+
+	logtd("REMB Estimated Bandwidth(%lld)", remb->GetBitrateBps());
+
+	_previous_estimated_bitrate = _estimated_bitrates;
+	_estimated_bitrates = remb->GetBitrateBps();
+
+	if (_bitrate_estimate_watch.IsElapsed(1000) == true)
+	{
+		_bitrate_estimate_watch.Update();
+		ChangeRenditionIfNeeded();
+	}
+
+	return true;
+}
+
 void RtcSession::ChangeRenditionIfNeeded()
 {
 	if (_auto_abr == false)
@@ -774,32 +821,123 @@ void RtcSession::ChangeRenditionIfNeeded()
 		return;
 	}
 
-	auto current_bitrates = _current_rendition->GetBitrates();
+	auto current_rendition_bitrates = _current_rendition->GetBitrates();
 
-	if (0.95 * _estimated_bitrates <= current_bitrates)
+	if (_estimated_bitrates <= current_rendition_bitrates)
 	{
-		if (_playlist->GetNextLowerBitrateRendition(_current_rendition) != nullptr)
+		auto lower = _playlist->GetNextLowerBitrateRendition(_current_rendition);
+		if (lower != nullptr && IsNextRenditionGoodChoice(lower) == true)
 		{
 			logtd("ChangeRenditionIfNeeded - Change to low bitrate");
 			if (RequestChangeRendition(SwitchOver::LOWER) == true)
 			{
-				
+				RecordAutoSelectedRendition(lower, false);
 			}
 		}
 	}
-	else if (0.7 * _estimated_bitrates > current_bitrates)
+	else if (0.75 * _estimated_bitrates > current_rendition_bitrates)
 	{
 		// Next higher rendition
-		auto next_rendition = _playlist->GetNextHigherBitrateRendition(_current_rendition);
-		if (next_rendition != nullptr && 0.95 * _estimated_bitrates >= next_rendition->GetBitrates())
+		auto upper = _playlist->GetNextHigherBitrateRendition(_current_rendition);
+		if (upper != nullptr && IsNextRenditionGoodChoice(upper) == true)
 		{
 			logtd("ChangeRenditionIfNeeded - Change to high bitrate");
 			if (RequestChangeRendition(SwitchOver::HIGHER) == true)
 			{
-				
+				RecordAutoSelectedRendition(upper, true);
 			}
 		}
 	}
+}
+
+bool RtcSession::RecordAutoSelectedRendition(const std::shared_ptr<const RtcRendition> &rendition, bool higher_quality)
+{
+	if (rendition == nullptr)
+	{
+		return false;
+	}
+
+	std::shared_ptr<SelectedRecord> record;
+	auto it = _auto_rendition_selected_records.find(rendition->GetName());
+	if (it == _auto_rendition_selected_records.end())
+	{
+		record = std::make_shared<SelectedRecord>();
+		record->_rendition_name = rendition->GetName();
+		_auto_rendition_selected_records[rendition->GetName()] = record;
+	}
+	else
+	{
+		record = it->second;
+	}
+
+	record->_selected_count ++;
+	record->_last_selected_time = std::chrono::system_clock::now();
+
+	if (higher_quality == true)
+	{
+		_switched_rendition_to_higher = true;
+		_switched_rendition_to_higher_time = std::chrono::system_clock::now();
+	}
+	else
+	{
+		_switched_rendition_to_higher = false;
+	}
+
+	return true;
+}
+
+bool RtcSession::IsNextRenditionGoodChoice(const std::shared_ptr<const RtcRendition> &rendition)
+{
+	auto current_bitrates = _current_rendition->GetBitrates();
+	auto next_bitrates = rendition->GetBitrates();
+
+	// Go lower
+	if (current_bitrates > next_bitrates)
+	{
+		if (_previous_estimated_bitrate < _estimated_bitrates)
+		{
+			// The bandwidth is getting higher, so let's wait
+			return false;
+		}
+
+		if (_switched_rendition_to_higher == true)
+		{
+			auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - _switched_rendition_to_higher_time).count();
+			
+			// We have switched to a higher rendition recently, so let's wait
+			if (elapsed_time < 10)
+			{
+				return false;
+			}
+		}
+
+		// Since the next rendition has lower bitrates, it will run better than it is now.
+		return true;
+	}
+	// Go higher
+	else 
+	{
+		auto it = _auto_rendition_selected_records.find(rendition->GetName());
+		if (it == _auto_rendition_selected_records.end())
+		{
+			// Never experienced it, let's try.
+			return true;
+		}
+
+		auto record = it->second;
+
+		// get elapsed time from now
+		auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - record->_last_selected_time).count();
+
+		if (elapsed_time > 10 * ( /*1 <<*/ record->_selected_count))
+		{
+			// 10 -> 20 -> 30 -> 40 seconds after it can be selected again
+			// It has been long enough since the last time we selected this rendition.
+			return true;
+		}
+	}
+
+	return false;
 }
 
 // ov::Node Interface
