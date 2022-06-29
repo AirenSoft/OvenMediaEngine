@@ -235,10 +235,6 @@ To change the video resolution when transcoding, use the values of width and hei
 
 ## Adaptive Bitrates Streaming (ABR)
 
-{% hint style="warning" %}
-Currently, ABR is only supported in LLHLS. Webrtc ABR will soon be supported.
-{% endhint %}
-
 From version 0.14.0, OvenMediaEngine can encode same source with multiple bitrates renditions and deliver it to the player.
 
 As shown in the example configuration below, you can provide ABR by adding `<Playlists>` to `<OutputProfile>`.  There can be multiple playlists, and each playlist can be accessed with `<FileName>`.
@@ -255,7 +251,7 @@ Note that `<FileName>` must never contain the **`playlist`** and **`chunklist`**
 
 To set up `<Rendition>`, you need to add `<Name>` to the elements of `<Encodes>`. Connect the set `<Name>` into `<Rendition><Video>` or `<Rendition><Audio>`.&#x20;
 
-In the example below, three quality renditions are provided and the URL to play the abr playlist as LLHLS is https://domain:port/app/stream/abr.m3u8.
+In the example below, three quality renditions are provided and the URL to play the `abr` playlist as LLHLS is `https://domain:port/app/stream/abr.m3u8` and The WebRTC playback URL is `wss://domain:port/app/stream/abr`
 
 ```xml
 <OutputProfile>
@@ -265,6 +261,13 @@ In the example below, three quality renditions are provided and the URL to play 
 	<Playlist>
 		<Name>For LLHLS</Name>
 		<FileName>abr</FileName>
+		<Options> <!-- Optinal -->
+			<!-- 
+			Automatically switch rendition in WebRTC ABR 
+			[Default] : true
+			-->
+			<WebRtcAutoAbr>true</WebRtcAutoAbr> 
+		</Options>
 		<Rendition>
 			<Name>Bypass</Name>
 			<Video>bypass_video</Video>
