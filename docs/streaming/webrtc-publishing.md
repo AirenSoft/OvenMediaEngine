@@ -183,6 +183,10 @@ If `<Options><WebRtcAutoAbr>` is set to true, OvenMediaEngine will measure the b
 
 Here is an example play URL for ABR in the playlist settings below. `wss://domain:13334/app/stream/abr`
 
+{% hint style="info" %}
+Streaming starts from the top rendition of Playlist, and when Auto ABR is true, the server finds the best rendition and switches to it. Alternatively, the user can switch manually by selecting a rendition in the player.
+{% endhint %}
+
 ```xml
 <OutputProfiles>
 <OutputProfile>
