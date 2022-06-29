@@ -7,7 +7,7 @@ bool TransportCc::Parse(const RtcpPacket &packet)
 	const uint8_t *payload = packet.GetPayload();
 	size_t payload_size = packet.GetPayloadSize();
 
-	if(payload_size < static_cast<size_t>(TRANSPORT_CC_MIN_SIZE))
+	if(payload_size < static_cast<size_t>(MIN_TRANSPORT_CC_RTCP_SIZE))
 	{
 		logtd("Payload is too small to parse transport-cc");
 		return false;

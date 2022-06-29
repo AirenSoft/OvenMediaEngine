@@ -93,6 +93,7 @@ public:
 private:
 	bool ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info);
 	bool ProcessTransportCc(const std::shared_ptr<RtcpInfo> &rtcp_info);
+	bool ProcessRemb(const std::shared_ptr<RtcpInfo> &rtcp_info);
 	bool IsSelectedPacket(const std::shared_ptr<const RtpPacket> &rtp_packet);
 
 	uint8_t GetOriginPayloadTypeFromRedRtpPacket(const std::shared_ptr<const RedRtpPacket> &red_rtp_packet);
@@ -175,6 +176,7 @@ private:
 	std::shared_ptr<RtpSentLog> TraceRtpSentByWideSeqNo(uint16_t wide_sequence_number);
 
 	bool SetTransportWideSequenceNumber(const std::shared_ptr<RtpPacket> &rtp_packet, uint16_t wide_sequence_number);
+	bool SetAbsSendTime(const std::shared_ptr<RtpPacket> &rtp_packet, uint64_t time_ms);
 
 	// For Estimated bitrate
 	double _total_sent_seconds = 0;
@@ -185,4 +187,23 @@ private:
 	// Auto switch rendition
 	bool _auto_abr = true;
 	void ChangeRenditionIfNeeded();
+	
+	// true means Don't know yet
+	bool IsNextRenditionGoodChoice(const std::shared_ptr<const RtcRendition> &rendition);
+	bool RecordAutoSelectedRendition(const std::shared_ptr<const RtcRendition> &rendition, bool higher_quality);
+	// Redition Name, boolean
+	struct SelectedRecord
+	{
+		ov::String _rendition_name;
+		uint32_t _selected_count = 0;
+		std::chrono::system_clock::time_point _last_selected_time;
+	};
+
+	double _previous_estimated_bitrate = 0;
+
+	bool _switched_rendition_to_higher = false;
+	std::chrono::system_clock::time_point _switched_rendition_to_higher_time = {};
+
+	// rendition name, SelectedRecord
+	std::map<ov::String, std::shared_ptr<SelectedRecord>> _auto_rendition_selected_records;
 };

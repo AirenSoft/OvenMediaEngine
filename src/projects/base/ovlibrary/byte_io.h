@@ -161,6 +161,26 @@ private:
 };
 
 template<typename T>
+class ByteWriter<T, 3, false>
+{
+public:
+	static void WriteBigEndian(uint8_t *data, T val)
+	{
+		data[0] = val >> 16;
+		data[1] = val >> 8;
+		data[2] = val;
+	}
+
+	static void WriteLittleEndian(uint8_t *data, T val)
+	{
+		data[0] = val;
+		data[1] = val >> 8;
+		data[2] = val >> 16;
+	}
+};
+
+
+template<typename T>
 class ByteWriter<T, 4, false>
 {
 public:

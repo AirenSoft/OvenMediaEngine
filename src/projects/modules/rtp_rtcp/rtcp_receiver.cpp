@@ -5,6 +5,7 @@
 #include "rtcp_info/rtcp_private.h"
 #include "rtcp_info/sender_report.h"
 #include "rtcp_info/transport_cc.h"
+#include "rtcp_info/remb.h"
 
 bool RtcpReceiver::ParseCompoundPacket(const std::shared_ptr<const ov::Data>& packet)
 {
@@ -56,10 +57,21 @@ bool RtcpReceiver::ParseCompoundPacket(const std::shared_ptr<const ov::Data>& pa
 				break;
 			}
 
-			// It will be implemented soon
 			case RtcpPacketType::PSFB:
-				continue;
+			{
+				// Remb
+				if (rtcp_packet.GetFMT() == static_cast<uint8_t>(PSFBFMT::AFB))
+				{
+					info = std::make_shared<REMB>();
+				}
+				else
+				{
+					logtd("Does not support PSFB format : %d", rtcp_packet.GetFMT());
+					continue;
+				}
 
+				break;
+			}
 			case RtcpPacketType::SDES:
 			case RtcpPacketType::BYE:
 			case RtcpPacketType::APP:

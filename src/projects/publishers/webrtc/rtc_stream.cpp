@@ -12,6 +12,7 @@
 #include <modules/bitstream/h264/h264_converter.h>
 #include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_framemarking.h>
 #include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_playout_delay.h>
+#include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_abs_send_time.h>
 
 #include "rtc_application.h"
 #include "rtc_private.h"
@@ -468,6 +469,7 @@ std::shared_ptr<MediaDescription> RtcStream::MakeVideoDescription() const
 	video_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
 	video_media_desc->UseDtls(true);
 	video_media_desc->UseRtcpMux(true);
+	video_media_desc->UseRtcpRsize(true);
 	video_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
 	video_media_desc->SetMediaType(MediaDescription::MediaType::Video);
 	// Cname
@@ -492,7 +494,10 @@ std::shared_ptr<MediaDescription> RtcStream::MakeVideoDescription() const
 		video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_TRANSPORT_CC_ID, RTP_HEADER_EXTENSION_TRANSPORT_CC_ATTRIBUTE);
 	}
 
-
+	if (_remb_enabled == true)
+	{
+		video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_ABS_SEND_TIME_ID, RTP_HEADER_EXTENSION_ABS_SEND_TIME_ATTRIBUTE);
+	}
 
 	return video_media_desc;
 }
@@ -508,6 +513,7 @@ std::shared_ptr<MediaDescription> RtcStream::MakeAudioDescription() const
 	audio_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
 	audio_media_desc->UseDtls(true);
 	audio_media_desc->UseRtcpMux(true);
+	audio_media_desc->UseRtcpRsize(true);
 	audio_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
 	audio_media_desc->SetMediaType(MediaDescription::MediaType::Audio);
 	// Cname
@@ -518,6 +524,11 @@ std::shared_ptr<MediaDescription> RtcStream::MakeAudioDescription() const
 	if (_transport_cc_enabled == true)
 	{
 		audio_media_desc->AddExtmap(RTP_HEADER_EXTENSION_TRANSPORT_CC_ID, RTP_HEADER_EXTENSION_TRANSPORT_CC_ATTRIBUTE);
+	}
+
+	if (_remb_enabled == true)
+	{
+		audio_media_desc->AddExtmap(RTP_HEADER_EXTENSION_ABS_SEND_TIME_ID, RTP_HEADER_EXTENSION_ABS_SEND_TIME_ATTRIBUTE);
 	}
 	
 	return audio_media_desc;
@@ -589,6 +600,11 @@ std::shared_ptr<PayloadAttr> RtcStream::MakePayloadAttr(const std::shared_ptr<co
 	if (_transport_cc_enabled == true)
 	{
 		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::TransportCc, true);
+	}
+
+	if (track->GetMediaType() == cmn::MediaType::Video && _remb_enabled == true)
+	{
+		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::GoogRemb, true);
 	}
 
 	return payload;
@@ -833,7 +849,12 @@ void RtcStream::AddPacketizer(const std::shared_ptr<const MediaTrack> &track)
 	if (_transport_cc_enabled == true)
 	{
 		// Transport-wide-cc-extensions is default
-		packetizer->SetTransportCc(0);
+		packetizer->EnableTransportCc(0);
+	}
+
+	if (_remb_enabled == true)
+	{
+		packetizer->EnableAbsSendTime();
 	}
 
 	if (_ulpfec_enabled == true)

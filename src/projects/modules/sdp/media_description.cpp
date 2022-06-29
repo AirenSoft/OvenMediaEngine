@@ -71,6 +71,11 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 		sdp.AppendFormat("a=rtcp-mux\r\n");
 	}
 
+	if (_use_rtcprsize_flag)
+	{
+		sdp.AppendFormat("a=rtcp-rsize\r\n");
+	}
+
 	if(_msid_appdata.IsEmpty() == false)
 	{
 		sdp.AppendFormat("a=msid:%s %s\r\n", _msid.CStr(), _msid_appdata.CStr());
@@ -110,7 +115,7 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 
 		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::GoogRemb))
 		{
-			sdp.AppendFormat("a=rtcp-fb:%d goog_remb\r\n", payload_id);
+			sdp.AppendFormat("a=rtcp-fb:%d goog-remb\r\n", payload_id);
 		}
 		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::TransportCc))
 		{
@@ -409,6 +414,20 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 				if(match.GetError() == nullptr)
 				{
 					UseRtcpMux(true);
+				}
+			}
+			else if(content.compare(0, OV_COUNTOF("rtcp-r") - 1,"rtcp-r") == 0)
+			{
+				/*
+				if(std::regex_search(content, matches, std::regex("^(rtcp-rsize)")))
+				{
+					UseRtcpRsize(true);
+				}
+				*/
+				auto match = SDPRegexPattern::GetInstance()->MatchRtcpRsize(content.c_str());
+				if(match.GetError() == nullptr)
+				{
+					UseRtcpRsize(true);
 				}
 			}
 			else if(content.compare(0, OV_COUNTOF("rtcp-f") - 1, "rtcp-f") == 0)
@@ -836,6 +855,17 @@ void MediaDescription::UseRtcpMux(bool flag)
 bool MediaDescription::IsUseRtcpMux() const
 {
 	return _use_rtcpmux_flag;
+}
+
+// a=rtcp-rsize
+void MediaDescription::UseRtcpRsize(bool flag)
+{
+	_use_rtcprsize_flag = flag;
+}
+
+bool MediaDescription::IsUseRtcpRsize() const
+{
+	return _use_rtcprsize_flag;
 }
 
 // a=sendonly

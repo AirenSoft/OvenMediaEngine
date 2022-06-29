@@ -69,6 +69,10 @@ public:
 	void UseRtcpMux(bool flag = true);
 	bool IsUseRtcpMux() const;
 
+	// a=rtcp-rsize
+	void UseRtcpRsize(bool flag = true);
+	bool IsUseRtcpRsize() const;
+
 	// a=sendonly
 	void SetDirection(Direction dir);
 	bool SetDirection(const ov::String &dir);
@@ -132,6 +136,7 @@ private:
 	ov::String _protocol;
 
 	bool _use_rtcpmux_flag = false;
+	bool _use_rtcprsize_flag = false;
 
 	Direction _direction = Direction::Unknown;
 	ov::String _direction_str = "UNKNOWN";
