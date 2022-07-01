@@ -201,12 +201,26 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 	switch (file_type)
 	{
 	case RequestType::Playlist:
-		ResponsePlaylist(exchange, file);
+	{	
+		bool legacy = false;
+
+		if (request_uri->HasQueryKey("_HLS_legacy"))
+		{
+			if (request_uri->GetQueryValue("_HLS_legacy").UpperCaseString() == "YES")
+			{
+				legacy = true;
+			}
+		}
+
+		ResponsePlaylist(exchange, file, legacy);
 		break;
+	}
 	case RequestType::Chunklist:
 	{
 		int64_t msn = -1, part = -1;
 		bool skip = false;
+		bool legacy = false;
+
 		// ?_HLS_msn=<M>&_HLS_part=<N>&_HLS_skip=YES|v2
 		if (request_uri->HasQueryKey("_HLS_msn"))
 		{
@@ -227,7 +241,15 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 			// v2 is not supported yet
 		}
 
-		ResponseChunklist(exchange, file, track_id, msn, part, skip);
+		if (request_uri->HasQueryKey("_HLS_legacy"))
+		{
+			if (request_uri->GetQueryValue("_HLS_legacy").UpperCaseString() == "YES")
+			{
+				legacy = true;
+			}
+		}
+
+		ResponseChunklist(exchange, file, track_id, msn, part, skip, legacy);
 		break;
 	}
 	case RequestType::InitializationSegment:
@@ -262,7 +284,7 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 	}
 	else if (name_items[0] == "chunklist")
 	{
-		// chunklist_<track id>_<media type>_llhls.m3u8?session_key=<key>&_HLS_msn=<M>&_HLS_part=<N>&_HLS_skip=YES|v2
+		// chunklist_<track id>_<media type>_llhls.m3u8?session_key=<key>&_HLS_msn=<M>&_HLS_part=<N>&_HLS_skip=YES|v2&_HLS_legacy=YES
 		if (name_items.size() != 4 || name_ext_items[1] != "m3u8")
 		{
 			logtw("Invalid chunklist file name requested: %s", file_name.CStr());
@@ -323,7 +345,7 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 	return true;
 }
 
-void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name)
+void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, bool legacy)
 {
 	auto llhls_stream = std::static_pointer_cast<LLHlsStream>(GetStream());
 	if (llhls_stream == nullptr)
@@ -352,7 +374,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 		query_string.Clear();
 	}
 
-	auto [result, playlist] = llhls_stream->GetMasterPlaylist(file_name, query_string, gzip);
+	auto [result, playlist] = llhls_stream->GetMasterPlaylist(file_name, query_string, gzip, legacy);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
 		// Send the playlist
@@ -375,7 +397,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 	else if (result == LLHlsStream::RequestResult::Accepted)
 	{
 		// llhls.m3u8 is transmitted when more than one segment (any track) is created.
-		AddPendingRequest(exchange, RequestType::Playlist, file_name, 0, 1, 0);
+		AddPendingRequest(exchange, RequestType::Playlist, file_name, 0, 1, 0, false, legacy);
 		return ;
 	}
 	else
@@ -387,7 +409,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 	ResponseData(exchange);
 }
 
-void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, int64_t msn, int64_t part, bool skip)
+void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, int64_t msn, int64_t part, bool skip, bool legacy)
 {
 	auto llhls_stream = std::static_pointer_cast<LLHlsStream>(GetStream());
 	if (llhls_stream == nullptr)
@@ -424,7 +446,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		query_string.Clear();
 	}
 
-	auto [result, chunklist] = llhls_stream->GetChunklist(query_string, track_id, msn, part, skip, gzip);
+	auto [result, chunklist] = llhls_stream->GetChunklist(query_string, track_id, msn, part, skip, gzip, legacy);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
 		// Send the chunklist
@@ -462,7 +484,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		// Hold
 		//TODO(Getroot): EXT-X-SKIP is under debugging
 		skip = false;
-		AddPendingRequest(exchange, RequestType::Chunklist, file_name, track_id, msn, part, skip);
+		AddPendingRequest(exchange, RequestType::Chunklist, file_name, track_id, msn, part, skip, legacy);
 		return ;
 	}
 	else
@@ -577,7 +599,7 @@ void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpE
 	else if (result == LLHlsStream::RequestResult::Accepted)
 	{
 		// Hold
-		AddPendingRequest(exchange, RequestType::PartialSegment, file_name, track_id, segment_number, partial_number);
+		AddPendingRequest(exchange, RequestType::PartialSegment, file_name, track_id, segment_number, partial_number, false, false);
 		return ;
 	}
 	else
@@ -611,7 +633,7 @@ void LLHlsSession::OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn
 		{
 			// Send the playlist
 			auto exchange = it->exchange;
-			ResponsePlaylist(exchange, it->file_name);
+			ResponsePlaylist(exchange, it->file_name, it->legacy);
 			it = _pending_requests.erase(it);
 		}
 		else if ( (it->track_id == track_id) && 
@@ -621,7 +643,7 @@ void LLHlsSession::OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn
 			switch (it->type)
 			{
 			case RequestType::Chunklist:
-				ResponseChunklist(it->exchange, it->file_name, it->track_id, it->segment_number, it->partial_number, it->skip);
+				ResponseChunklist(it->exchange, it->file_name, it->track_id, it->segment_number, it->partial_number, it->skip, it->legacy);
 				break;
 			case RequestType::PartialSegment:
 				ResponsePartialSegment(it->exchange, it->file_name, it->track_id, it->segment_number, it->partial_number);
@@ -650,7 +672,7 @@ void LLHlsSession::OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn
 	}
 }
 
-bool LLHlsSession::AddPendingRequest(const std::shared_ptr<http::svr::HttpExchange> &exchange, const RequestType &type, const ov::String &file_name, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number, const bool &skip)
+bool LLHlsSession::AddPendingRequest(const std::shared_ptr<http::svr::HttpExchange> &exchange, const RequestType &type, const ov::String &file_name, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number, const bool &skip, const bool &legacy)
 {
 	// Add the request to the pending list
 	PendingRequest request;
@@ -660,6 +682,7 @@ bool LLHlsSession::AddPendingRequest(const std::shared_ptr<http::svr::HttpExchan
 	request.segment_number = segment_number;
 	request.partial_number = partial_number;
 	request.skip = skip;
+	request.legacy = legacy;
 	request.exchange = exchange;
 
 	// Add the request to the pending list

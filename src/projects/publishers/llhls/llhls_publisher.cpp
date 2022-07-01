@@ -247,7 +247,8 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		uint64_t session_life_time = 0;
 		bool access_control_enabled = (origin_mode == true) && IsAccessControlEnabled(request_url);
 
-		if (access_control_enabled == true && request_url->File() == "llhls.m3u8")
+		// Check if the request is for the master playlist
+		if (access_control_enabled == true && (request_url->File().IndexOf(".m3u8") > 0 && request_url->File().IndexOf("chunklist") == -1))
 		{
 			auto [signed_policy_result, signed_policy] =  Publisher::VerifyBySignedPolicy(request_url, remote_address);
 			if(signed_policy_result == AccessController::VerificationResult::Pass)
