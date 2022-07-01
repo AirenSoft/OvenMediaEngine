@@ -164,7 +164,7 @@ const LLHlsMasterPlaylist::MediaInfo &LLHlsMasterPlaylist::GetDefaultMediaInfo(c
 	return MediaInfo::InvalidMediaInfo();
 }
 
-ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string) const
+ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string, bool legacy) const
 {
 	ov::String playlist(1024);
 
@@ -215,6 +215,18 @@ ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string) c
 					if (chunk_query_string.IsEmpty() == false)
 					{
 						playlist.AppendFormat("?%s", chunk_query_string.CStr());
+					}
+
+					if (legacy)
+					{
+						if (chunk_query_string.IsEmpty() == false)
+						{
+							playlist.AppendFormat("&_HLS_legacy=YES");
+						}
+						else
+						{
+							playlist.AppendFormat("?_HLS_legacy=YES");
+						}
 					}
 				}
 
@@ -311,6 +323,17 @@ ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string) c
 		{
 			playlist.AppendFormat("?%s", chunk_query_string.CStr());
 		}
+		if (legacy)
+		{
+			if (chunk_query_string.IsEmpty() == false)
+			{
+				playlist.AppendFormat("&_HLS_legacy=YES");
+			}
+			else
+			{
+				playlist.AppendFormat("?_HLS_legacy=YES");
+			}
+		}
 		playlist.AppendFormat("\n");
 	}
 	stream_infos_lock.unlock();
@@ -318,7 +341,7 @@ ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string) c
 	return playlist;
 }
 
-std::shared_ptr<const ov::Data> LLHlsMasterPlaylist::ToGzipData(const ov::String &chunk_query_string) const
+std::shared_ptr<const ov::Data> LLHlsMasterPlaylist::ToGzipData(const ov::String &chunk_query_string, bool legacy) const
 {
-	return  ov::Zip::CompressGzip(ToString(chunk_query_string).ToData(false));
+	return  ov::Zip::CompressGzip(ToString(chunk_query_string, legacy).ToData(false));
 }

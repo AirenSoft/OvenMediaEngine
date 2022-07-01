@@ -98,7 +98,7 @@ bool LLHlsStream::Start()
 		auto master_playlist = CreateMasterPlaylist(playlist);
 
 		std::lock_guard<std::mutex> guard(_master_playlists_lock);
-		_master_playlists[default_playlist_name_without_ext] = master_playlist;
+		_master_playlists[defautl_playlist_name] = master_playlist;
 	}
 
 	logti("LLHlsStream has been created : %s/%u\nOriginMode(%s) Chunk Duration(%.2f) Segment Duration(%u) Segment Count(%u)", GetName().CStr(), GetId(), 
@@ -176,7 +176,7 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 	return master_playlist;
 }
 
-std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetMasterPlaylist(const ov::String &file_name, const ov::String &chunk_query_string, bool gzip)
+std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetMasterPlaylist(const ov::String &file_name, const ov::String &chunk_query_string, bool gzip, bool legacy)
 {
 	if (GetState() != State::STARTED)
 	{
@@ -222,13 +222,13 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 
 	if (gzip == true)
 	{
-		return { RequestResult::Success, master_playlist->ToGzipData(chunk_query_string) };
+		return { RequestResult::Success, master_playlist->ToGzipData(chunk_query_string, legacy) };
 	}
 
-	return { RequestResult::Success, master_playlist->ToString(chunk_query_string).ToData(false) };
+	return { RequestResult::Success, master_playlist->ToString(chunk_query_string, legacy).ToData(false) };
 }
 
-std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetChunklist(const ov::String &query_string,const int32_t &track_id, int64_t msn, int64_t psn, bool skip/*=false*/, bool gzip/*=false*/) const
+std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetChunklist(const ov::String &query_string,const int32_t &track_id, int64_t msn, int64_t psn, bool skip, bool gzip, bool legacy) const
 {
 	auto chunklist = GetChunklistWriter(track_id);
 	if (chunklist == nullptr)
@@ -262,10 +262,10 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 	std::shared_lock<std::shared_mutex> lock(_chunklist_map_lock);
 	if (gzip == true)
 	{
-		return { RequestResult::Success, chunklist->ToGzipData(query_string, _chunklist_map, skip) };
+		return { RequestResult::Success, chunklist->ToGzipData(query_string, _chunklist_map, skip, legacy) };
 	}
 
-	return { RequestResult::Success, chunklist->ToString(query_string, _chunklist_map, skip).ToData(false) };
+	return { RequestResult::Success, chunklist->ToString(query_string, _chunklist_map, skip, legacy).ToData(false) };
 }
 
 std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::GetInitializationSegment(const int32_t &track_id) const
@@ -479,12 +479,6 @@ std::shared_ptr<LLHlsChunklist> LLHlsStream::GetChunklistWriter(const int32_t &t
 	}
 
 	return it->second;
-}
-
-ov::String LLHlsStream::GetPlaylistName()
-{
-	// llhls.m3u8
-	return ov::String::FormatString("llhls.m3u8");
 }
 
 ov::String LLHlsStream::GetChunklistName(const int32_t &track_id) const

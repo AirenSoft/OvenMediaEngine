@@ -141,30 +141,20 @@ bool LLHlsChunklist::GetLastSequenceNumber(int64_t &msn, int64_t &psn) const
 	return true;
 }
 
-ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip/*=false*/) const
+ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip, bool legacy) const
 {
 	if (_segments.size() == 0)
 	{
 		return "";
 	}
 
-	// In OME, CAN-SKIP-UNTIL works if the playlist has at least 10 segments
-	float can_skip_until = 0;
-	uint32_t skipped_segment = 0;
-	if (skip == true && _segments.size() >= 10)
-	{
-		can_skip_until = _target_duration * (_segments.size()/3);
-		skipped_segment = (_segments.size()/3);
-	}
-	
-	// debug
-	can_skip_until = 0;
-	skipped_segment = 0;
+	// TODO(Getroot) : Implement _HLS_skip=YES (skip = true)
 
 	ov::String playlist(20480);
 
 	playlist.AppendFormat("#EXTM3U\n");
 
+	playlist.AppendFormat("#EXT-X-VERSION:%d\n", 6);
 	// Note that in protocol version 6, the semantics of the EXT-
 	// X-TARGETDURATION tag changed slightly.  In protocol version 5 and
 	// earlier it indicated the maximum segment duration; in protocol
@@ -172,18 +162,14 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 	// rounded to the nearest integer number of seconds.
 	playlist.AppendFormat("#EXT-X-TARGETDURATION:%u\n", static_cast<uint32_t>(std::round(_target_duration)));
 
-	// X-SERVER-CONTROL
-	playlist.AppendFormat("#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=%f", _part_hold_back);
-	if (can_skip_until > 0)
+	// Low Latency Mode
+	if (legacy == false)
 	{
-		playlist.AppendFormat(",CAN-SKIP-UNTIL=%.1f\n", can_skip_until);
+		// X-SERVER-CONTROL
+		playlist.AppendFormat("#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=%f\n", _part_hold_back);
+		playlist.AppendFormat("#EXT-X-PART-INF:PART-TARGET=%f\n", _max_part_duration);
 	}
-	else
-	{
-		playlist.AppendFormat("\n");
-	}
-	playlist.AppendFormat("#EXT-X-VERSION:%d\n", skipped_segment > 0 ? 6 : 9);
-	playlist.AppendFormat("#EXT-X-PART-INF:PART-TARGET=%f\n", _max_part_duration);
+
 	playlist.AppendFormat("#EXT-X-MEDIA-SEQUENCE:%u\n", _segments[0]->GetSequence());
 	playlist.AppendFormat("#EXT-X-MAP:URI=\"%s", _map_uri.CStr());
 	if (query_string.IsEmpty() == false)
@@ -192,53 +178,45 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 	}
 	playlist.AppendFormat("\"\n");
 
-	uint32_t skip_count = 0;
-
 	std::shared_lock<std::shared_mutex> segment_lock(_segments_guard);
 	for (auto &segment : _segments)
 	{
-		if (skip_count < skipped_segment)
-		{
-			if (skip_count == 0) 
-			{
-				playlist.AppendFormat("#EXT-X-SKIP:SKIPPED-SEGMENTS=%u\n", skipped_segment);
-			}
-			skip_count += 1;
-			continue;
-		}
-
 		std::chrono::system_clock::time_point tp{std::chrono::milliseconds{segment->GetStartTime()}};
 		playlist.AppendFormat("#EXT-X-PROGRAM-DATE-TIME:%s\n", ov::Converter::ToISO8601String(tp).CStr());
 
-		// Output partial segments info
-		// Only output partial segments for the last 4 segments.
-		if (int(segment->GetSequence()) > int(_segments.back()->GetSequence()) - 3)
+		// Low Latency Mode
+		if (legacy == false)
 		{
-			for (auto &partial_segment : segment->GetPartialSegments())
+			// Output partial segments info
+			// Only output partial segments for the last 4 segments.
+			if (int(segment->GetSequence()) > int(_segments.back()->GetSequence()) - 3)
 			{
-				playlist.AppendFormat("#EXT-X-PART:DURATION=%.3f,URI=\"%s",
-									partial_segment->GetDuration(), partial_segment->GetUrl().CStr());
-				if (query_string.IsEmpty() == false)
+				for (auto &partial_segment : segment->GetPartialSegments())
 				{
-					playlist.AppendFormat("?%s", query_string.CStr());
-				}
-				playlist.AppendFormat("\"");
-				if (_track->GetMediaType() == cmn::MediaType::Video && partial_segment->IsIndependent() == true)
-				{
-					playlist.AppendFormat(",INDEPENDENT=YES");
-				}
-				playlist.Append("\n");
-
-				// If it is the last one, output PRELOAD-HINT
-				if (segment == _segments.back() &&
-					partial_segment == segment->GetPartialSegments().back())
-				{
-					playlist.AppendFormat("#EXT-X-PRELOAD-HINT:TYPE=PART,URI=\"%s", partial_segment->GetNextUrl().CStr());
+					playlist.AppendFormat("#EXT-X-PART:DURATION=%.3f,URI=\"%s",
+										partial_segment->GetDuration(), partial_segment->GetUrl().CStr());
 					if (query_string.IsEmpty() == false)
 					{
 						playlist.AppendFormat("?%s", query_string.CStr());
 					}
-					playlist.AppendFormat("\"\n");
+					playlist.AppendFormat("\"");
+					if (_track->GetMediaType() == cmn::MediaType::Video && partial_segment->IsIndependent() == true)
+					{
+						playlist.AppendFormat(",INDEPENDENT=YES");
+					}
+					playlist.Append("\n");
+
+					// If it is the last one, output PRELOAD-HINT
+					if (segment == _segments.back() &&
+						partial_segment == segment->GetPartialSegments().back())
+					{
+						playlist.AppendFormat("#EXT-X-PRELOAD-HINT:TYPE=PART,URI=\"%s", partial_segment->GetNextUrl().CStr());
+						if (query_string.IsEmpty() == false)
+						{
+							playlist.AppendFormat("?%s", query_string.CStr());
+						}
+						playlist.AppendFormat("\"\n");
+					}
 				}
 			}
 		}
@@ -275,20 +253,31 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 		// LAST-MSN, LAST-PART
 		int64_t last_msn, last_part;
 		rendition->GetLastSequenceNumber(last_msn, last_part);
-		playlist.AppendFormat(",LAST-MSN=%llu,LAST-PART=%llu", last_msn, last_part);
 
+		if (legacy == true && last_msn > 0)
+		{
+			// https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-4.4.5.4
+			// If the Rendition contains Partial Segments then this value 
+			// is the Media Sequence Number of the last Partial Segment. 
+
+			// In legacy, the completed msn is reported.
+			last_msn -= 1;
+		}
+
+		playlist.AppendFormat(",LAST-MSN=%llu", last_msn);
+
+		if (legacy == false)
+		{
+			playlist.AppendFormat(",LAST-PART=%llu", last_part);
+		}
+		
 		playlist.AppendFormat("\n");
 	}
 
 	return playlist;
 }
 
-std::shared_ptr<const ov::Data> LLHlsChunklist::ToGzipData(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip/*=false*/) const
+std::shared_ptr<const ov::Data> LLHlsChunklist::ToGzipData(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip, bool legacy) const
 {
-	if (skip == false)
-	{
-		return ov::Zip::CompressGzip(ToString(query_string, renditions, true).ToData(false));
-	}
-
-	return ov::Zip::CompressGzip(ToString(query_string, renditions, false).ToData(false));
+	return ov::Zip::CompressGzip(ToString(query_string, renditions, skip, legacy).ToData(false));
 }

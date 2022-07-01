@@ -21,8 +21,8 @@ public:
 	void AddStreamInfToMasterPlaylist(const std::shared_ptr<const MediaTrack> &video_track, const ov::String &video_chunk_uri, 
 										const std::shared_ptr<const MediaTrack> &audio_track, const ov::String &audio_chunk_uri);
 
-	ov::String ToString(const ov::String &chunk_query_string) const;
-	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &chunk_query_string) const;
+	ov::String ToString(const ov::String &chunk_query_string, bool legacy) const;
+	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &chunk_query_string, bool legacy) const;
 
 private:
 	struct MediaInfo
