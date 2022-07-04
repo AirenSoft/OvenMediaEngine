@@ -47,7 +47,7 @@ public:
 
 		if (_audio_track != nullptr)
 		{
-			//bitrates += _audio_track->GetBitrate();
+			bitrates += _audio_track->GetBitrate();
 		}
 
 		return bitrates;
