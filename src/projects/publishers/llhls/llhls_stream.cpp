@@ -50,6 +50,41 @@ bool LLHlsStream::Start()
 	_storage_config.max_segments = llhls_config.GetSegmentCount();
 	_storage_config.segment_duration_ms = llhls_config.GetSegmentDuration() * 1000;
 
+	std::shared_ptr<MediaTrack> first_video_track = nullptr, first_audio_track = nullptr;
+	for (const auto &[id, track] : _tracks)
+	{
+		if ( (track->GetCodecId() == cmn::MediaCodecId::H264) || 
+			(track->GetCodecId() == cmn::MediaCodecId::Aac) )
+		{
+			if (AddPackager(track) == false)
+			{
+				logte("LLHlsStream(%s/%s) - Failed to add packager for track(%ld)", GetApplication()->GetName().CStr(), GetName().CStr(), track->GetId());
+				return false;
+			}
+
+			// For default llhls.m3u8
+			if ( first_video_track == nullptr && track->GetMediaType() == cmn::MediaType::Video )
+			{
+				first_video_track = track;
+			}
+			else if ( first_audio_track == nullptr && track->GetMediaType() == cmn::MediaType::Audio )
+			{
+				first_audio_track = track;
+			}
+		}
+		else 
+		{
+			logti("LLHlsStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
+			continue;
+		}
+	}
+
+	if (first_video_track == nullptr && first_audio_track == nullptr)
+	{
+		logtw("LLHLS stream [%s/%s] could not be created because there is no supported codec.", GetApplication()->GetName().CStr(), GetName().CStr());
+		return false;
+	}
+
 	// If there is no default playlist, make default playlist
 	// Default playlist is consist of first compatible video and audio track among all tracks
 	ov::String defautl_playlist_name = DEFAULT_PLAYLIST_NAME;
@@ -57,40 +92,6 @@ bool LLHlsStream::Start()
 	auto default_playlist = Stream::GetPlaylist(default_playlist_name_without_ext);
 	if (default_playlist == nullptr)
 	{
-		std::shared_ptr<MediaTrack> first_video_track = nullptr, first_audio_track = nullptr;
-		for (const auto &[id, track] : _tracks)
-		{
-			if ( (track->GetCodecId() == cmn::MediaCodecId::H264) || 
-				(track->GetCodecId() == cmn::MediaCodecId::Aac) )
-			{
-				if (AddPackager(track) == false)
-				{
-					logte("LLHlsStream(%s/%s) - Failed to add packager for track(%ld)", GetApplication()->GetName().CStr(), GetName().CStr(), track->GetId());
-					return false;
-				}
-
-				if ( first_video_track == nullptr && track->GetMediaType() == cmn::MediaType::Video )
-				{
-					first_video_track = track;
-				}
-				else if ( first_audio_track == nullptr && track->GetMediaType() == cmn::MediaType::Audio )
-				{
-					first_audio_track = track;
-				}
-			}
-			else 
-			{
-				logti("LLHlsStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
-				continue;
-			}
-		}
-
-		if (first_video_track == nullptr && first_audio_track == nullptr)
-		{
-			logtw("LLHLS stream [%s/%s] could not be created because there is no supported codec.", GetApplication()->GetName().CStr(), GetName().CStr());
-			return false;
-		}
-
 		auto playlist = std::make_shared<info::Playlist>("default", default_playlist_name_without_ext);
 		auto rendition = std::make_shared<info::Rendition>("default", first_video_track?first_video_track->GetName():"", first_audio_track?first_audio_track->GetName():"");
 
