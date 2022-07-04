@@ -825,7 +825,8 @@ void RtcSession::ChangeRenditionIfNeeded()
 
 	auto current_rendition_bitrates = _current_rendition->GetBitrates();
 
-	if (_estimated_bitrates <= current_rendition_bitrates)
+	// If the estimated bitrates are not high enough (10%) then the playback may not be smooth, so go for the lower bitrates.
+	if (1.1 * _estimated_bitrates <= current_rendition_bitrates)
 	{
 		auto lower = _playlist->GetNextLowerBitrateRendition(_current_rendition);
 		if (lower != nullptr && IsNextRenditionGoodChoice(lower) == true)
