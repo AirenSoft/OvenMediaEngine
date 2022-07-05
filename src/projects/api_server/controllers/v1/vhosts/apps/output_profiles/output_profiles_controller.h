@@ -35,10 +35,10 @@ namespace api
 										   const std::shared_ptr<mon::HostMetrics> &vhost,
 										   const std::shared_ptr<mon::ApplicationMetrics> &app);
 
-			// PUT /v1/vhosts/<vhost_name>/apps/<app_name>/outputProfiles/<output_profile_name>
-			ApiResponse OnPutOutputProfile(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
-										   const std::shared_ptr<mon::HostMetrics> &vhost,
-										   const std::shared_ptr<mon::ApplicationMetrics> &app);
+			// PATCH /v1/vhosts/<vhost_name>/apps/<app_name>/outputProfiles/<output_profile_name>
+			ApiResponse OnPatchOutputProfile(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
+											 const std::shared_ptr<mon::HostMetrics> &vhost,
+											 const std::shared_ptr<mon::ApplicationMetrics> &app);
 
 			// DELETE /v1/vhosts/<vhost_name>/apps/<app_name>/outputProfiles/<output_profile_name>
 			ApiResponse OnDeleteOutputProfile(const std::shared_ptr<http::svr::HttpExchange> &client,

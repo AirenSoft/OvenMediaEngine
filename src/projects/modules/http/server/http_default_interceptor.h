@@ -55,6 +55,11 @@ namespace http
 				return Register(Method::Post, pattern, handler);
 			}
 
+			bool RegisterPatch(const ov::String &pattern, const RequestHandler &handler)
+			{
+				return Register(Method::Patch, pattern, handler);
+			}
+
 			bool RegisterPut(const ov::String &pattern, const RequestHandler &handler)
 			{
 				return Register(Method::Put, pattern, handler);

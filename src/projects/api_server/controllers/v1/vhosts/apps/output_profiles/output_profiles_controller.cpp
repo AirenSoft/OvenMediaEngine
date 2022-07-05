@@ -31,7 +31,7 @@ namespace api
 			RegisterPost(R"()", &OutputProfilesController::OnPostOutputProfile);
 			RegisterGet(R"()", &OutputProfilesController::OnGetOutputProfileList);
 			RegisterGet(R"(\/(?<output_profile_name>[^\/]*))", &OutputProfilesController::OnGetOutputProfile);
-			RegisterPut(R"(\/(?<output_profile_name>[^\/]*))", &OutputProfilesController::OnPutOutputProfile);
+			RegisterPatch(R"(\/(?<output_profile_name>[^\/]*))", &OutputProfilesController::OnPatchOutputProfile);
 			RegisterDelete(R"(\/(?<output_profile_name>[^\/]*))", &OutputProfilesController::OnDeleteOutputProfile);
 		};
 
@@ -160,10 +160,10 @@ namespace api
 			throw CreateNotFoundError(vhost, app, profile_name);
 		}
 
-		ApiResponse OutputProfilesController::OnPutOutputProfile(const std::shared_ptr<http::svr::HttpExchange> &client,
-																 const Json::Value &request_body,
-																 const std::shared_ptr<mon::HostMetrics> &vhost,
-																 const std::shared_ptr<mon::ApplicationMetrics> &app)
+		ApiResponse OutputProfilesController::OnPatchOutputProfile(const std::shared_ptr<http::svr::HttpExchange> &client,
+																   const Json::Value &request_body,
+																   const std::shared_ptr<mon::HostMetrics> &vhost,
+																   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
 			ThrowIfVirtualIsReadOnly(*(vhost.get()));
 
