@@ -99,10 +99,7 @@ namespace cfg
 					void MakeList() override
 					{
 						Register<Optional>("Name", &_name);
-						Register("FileName", &_file_name,	// Required
-							[=]() -> std::shared_ptr<ConfigError> {
-								return nullptr;
-							},
+						Register("FileName", &_file_name, nullptr, // Required
 							[=]() -> std::shared_ptr<ConfigError> {
 								
 								if (_file_name.IndexOf("playlist") > 0 || _file_name.IndexOf("chunklist") > 0)
@@ -115,10 +112,7 @@ namespace cfg
 						);
 						Register<Optional>("Options", &_options);
 
-						Register<Optional>({"Rendition", "renditions"}, &_renditions,
-							[=]() -> std::shared_ptr<ConfigError> {
-								return nullptr;
-							},
+						Register<Optional>({"Rendition", "renditions"}, &_renditions, nullptr, 
 							[=]() -> std::shared_ptr<ConfigError> {
 								
 								std::map<ov::String, bool> rendition_names;
