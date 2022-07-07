@@ -96,7 +96,7 @@ namespace ocst
 		{
 			for (auto &origin : vhost_item->origin_list)
 			{
-				if (origin.origin_config.IsPersistence() != true)
+				if (origin.origin_config.IsPersistent() != true)
 				{
 					continue;
 				}
@@ -729,7 +729,7 @@ namespace ocst
 
 		// Use Matched Origin information as an properties in Pull Stream.
 		auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset, 
-			std::make_shared<pvd::PullStreamProperties>(matched_origin->origin_config.IsPersistence(), matched_origin->origin_config.IsFailback(), matched_origin->origin_config.IsRelay()));
+			std::make_shared<pvd::PullStreamProperties>(matched_origin->origin_config.IsPersistent(), matched_origin->origin_config.IsFailback(), matched_origin->origin_config.IsRelay()));
 
 		if (stream != nullptr)
 		{
