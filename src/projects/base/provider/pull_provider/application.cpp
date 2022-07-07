@@ -82,7 +82,7 @@ namespace pvd
 					auto current = std::chrono::high_resolution_clock::now();
 
 					// Default Properties of PullStream
-					auto is_persist = false;
+					auto is_persistent = false;
 					auto is_failback = false;
 					auto no_input_timeout = GetHostInfo().GetOrigins().GetProperties().GetNoInputFailoverTimeout(); 
 					auto unused_stream_timeout = GetHostInfo().GetOrigins().GetProperties().GetUnusedStreamDeletionTimeout();
@@ -91,7 +91,7 @@ namespace pvd
 					auto props = stream->GetProperties();
 					if (props)
 					{
-						is_persist = props->IsPersistence();
+						is_persistent = props->IsPersistent();
 						is_failback = props->IsFailback();
 					
 						// If Failback is enabled, try to connect periodically to see if the Primary URL is available.
@@ -139,13 +139,13 @@ namespace pvd
 						auto elapsed_time_from_last_sent = std::chrono::duration_cast<std::chrono::milliseconds>(current - stream_metrics->GetLastSentTime()).count();
 						auto elapsed_time_from_last_recv = std::chrono::duration_cast<std::chrono::milliseconds>(current - stream_metrics->GetLastRecvTime()).count();
 
-						if((elapsed_time_from_last_sent > unused_stream_timeout) && (!is_persist))
+						if((elapsed_time_from_last_sent > unused_stream_timeout) && (!is_persistent))
 						{
 							logtw("%s/%s(%u) stream will be deleted because it hasn't been used for %u milliseconds", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_sent);
 							DeleteStream(stream);
 						}
 						// The stream type is pull stream, if packets do NOT arrive for more than 3 seconds, it is a seriously warning situation
-						else if(elapsed_time_from_last_recv > no_input_timeout && (!is_persist))
+						else if(elapsed_time_from_last_recv > no_input_timeout && (!is_persistent))
 						{
 							logtw("Stop stream %s/%s(%u) : there are no incoming packets. %d milliseconds have elapsed since the last packet was received.",
 								  stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
