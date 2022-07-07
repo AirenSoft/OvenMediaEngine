@@ -102,10 +102,11 @@ namespace cfg
 						Register<Optional>("Framerate", &_framerate);
 						Register<Optional>("Preset", &_preset);
 						Register<Optional>("ThreadCount", &_thread_count);
-						Register<Optional>("KeyFrameInterval", &_key_frame_interval);
+						Register<Optional>("KeyFrameInterval", &_key_frame_interval, [=]() -> std::shared_ptr<ConfigError> {
+								return (_key_frame_interval >= 1 && _key_frame_interval <= 600) ? nullptr : CreateConfigErrorPtr("KeyFrameInterval must be between 0 and 600");
+							});
 						Register<Optional>("BFrames", &_b_frames, [=]() -> std::shared_ptr<ConfigError> {
-								// <Bitrate> is an option when _bypass is true
-								return (_b_frames >= 0) ? nullptr : CreateConfigErrorPtr("BFrames must be more then 0");
+								return (_b_frames >= 0 && _b_frames <= 16) ? nullptr : CreateConfigErrorPtr("BFrames must be between 0 and 16");
 							});
 					}
 				};
