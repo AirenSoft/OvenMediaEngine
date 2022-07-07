@@ -31,7 +31,9 @@ namespace cfg
 					double _framerate = 0.0;
 					ov::String _preset;
 					int _thread_count = 0;
-
+					int _key_frame_interval = 1;
+					int _b_frames = 0;
+					
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsBypass, _bypass)
@@ -45,6 +47,8 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFramerate, _framerate)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetPreset, _preset)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetThreadCount, _thread_count)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetKeyFrameInterval, _key_frame_interval)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetBFrames, _b_frames)
 
 					void SetName(const ov::String &name){_name = name;}
 					void SetBypass(bool bypass){_bypass = bypass;}
@@ -58,7 +62,8 @@ namespace cfg
 					void SetFramerate(double framerate){_framerate = framerate;}
 					void SetPreset(const ov::String &preset){_preset = preset;}
 					void SetThreadCount(int thread_count){_thread_count = thread_count;}
-					
+					void SetKeyFrameInterval(int key_frame_interval){_key_frame_interval = key_frame_interval;}
+					void SetBFrames(int b_frames){_b_frames = b_frames;}
 
 				protected:
 					void MakeList() override
@@ -97,6 +102,11 @@ namespace cfg
 						Register<Optional>("Framerate", &_framerate);
 						Register<Optional>("Preset", &_preset);
 						Register<Optional>("ThreadCount", &_thread_count);
+						Register<Optional>("KeyFrameInterval", &_key_frame_interval);
+						Register<Optional>("BFrames", &_b_frames, [=]() -> std::shared_ptr<ConfigError> {
+								// <Bitrate> is an option when _bypass is true
+								return (_b_frames >= 0) ? nullptr : CreateConfigErrorPtr("BFrames must be more then 0");
+							});
 					}
 				};
 			}  // namespace oprf
