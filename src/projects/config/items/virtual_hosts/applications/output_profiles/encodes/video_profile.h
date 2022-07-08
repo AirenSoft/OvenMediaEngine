@@ -31,7 +31,7 @@ namespace cfg
 					double _framerate = 0.0;
 					ov::String _preset;
 					int _thread_count = 0;
-					int _key_frame_interval = 1;
+					int _key_frame_interval = 0;
 					int _b_frames = 0;
 					
 				public:
@@ -103,7 +103,7 @@ namespace cfg
 						Register<Optional>("Preset", &_preset);
 						Register<Optional>("ThreadCount", &_thread_count);
 						Register<Optional>("KeyFrameInterval", &_key_frame_interval, [=]() -> std::shared_ptr<ConfigError> {
-								return (_key_frame_interval >= 1 && _key_frame_interval <= 600) ? nullptr : CreateConfigErrorPtr("KeyFrameInterval must be between 0 and 600");
+								return (_key_frame_interval >= 0 && _key_frame_interval <= 600) ? nullptr : CreateConfigErrorPtr("KeyFrameInterval must be between 0 and 600");
 							});
 						Register<Optional>("BFrames", &_b_frames, [=]() -> std::shared_ptr<ConfigError> {
 								return (_b_frames >= 0 && _b_frames <= 16) ? nullptr : CreateConfigErrorPtr("BFrames must be between 0 and 16");

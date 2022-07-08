@@ -16,11 +16,11 @@ EncoderFFOPUS::~EncoderFFOPUS()
 
 bool EncoderFFOPUS::SetCodecParams()
 {
-	_codec_context->bit_rate = _encoder_context->GetBitrate();
+	_codec_context->bit_rate = GetRefTrack()->GetBitrate();
 	_codec_context->sample_fmt = AV_SAMPLE_FMT_S16;
-	_codec_context->sample_rate = _encoder_context->GetAudioSampleRate();
-	_codec_context->channel_layout = static_cast<uint64_t>(_encoder_context->GetAudioChannel().GetLayout());
-	_codec_context->channels = _encoder_context->GetAudioChannel().GetCounts();
+	_codec_context->sample_rate = GetRefTrack()->GetSampleRate();
+	_codec_context->channel_layout = static_cast<uint64_t>(GetRefTrack()->GetChannel().GetLayout());
+	_codec_context->channels = GetRefTrack()->GetChannel().GetCounts();
 	_codec_context->cutoff = 12000;	 // SuperWideBand
 	_codec_context->compression_level = 10;
 
@@ -32,7 +32,7 @@ bool EncoderFFOPUS::SetCodecParams()
 	return true;
 }
 
-bool EncoderFFOPUS::Configure(std::shared_ptr<TranscodeContext> output_context)
+bool EncoderFFOPUS::Configure(std::shared_ptr<MediaTrack> output_context)
 {
 	if (TranscodeEncoder::Configure(output_context) == false)
 	{
@@ -66,7 +66,7 @@ bool EncoderFFOPUS::Configure(std::shared_ptr<TranscodeContext> output_context)
 		return false;
 	}
 
-	_encoder_context->SetAudioSamplesPerFrame(_codec_context->frame_size);
+	GetRefTrack()->SetAudioSamplesPerFrame(_codec_context->frame_size);
 
 	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
 	try

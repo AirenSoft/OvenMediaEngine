@@ -19,18 +19,18 @@ public:
 
 	typedef std::function<void(TranscodeResult, int32_t, std::shared_ptr<MediaFrame>)> _cb_func;
 
-	static std::shared_ptr<TranscodeDecoder> Create(int32_t decoder_id, const info::Stream &info, std::shared_ptr<TranscodeContext> context,  _cb_func func);
+	static std::shared_ptr<TranscodeDecoder> Create(int32_t decoder_id, const info::Stream &info, std::shared_ptr<MediaTrack> track,  _cb_func func);
 
 	void SetDecoderId(int32_t decoder_id);
 
-	bool Configure(std::shared_ptr<TranscodeContext> context) override;
+	bool Configure(std::shared_ptr<MediaTrack> track) override;
 
 	void SendBuffer(std::shared_ptr<const MediaPacket> packet) override;
 	void SendOutputBuffer(TranscodeResult result, std::shared_ptr<MediaFrame> frame);
 	
-	std::shared_ptr<TranscodeContext> &GetContext();
+	std::shared_ptr<MediaTrack> &GetRefTrack();
 
-	cmn::Timebase GetTimebase() const;
+	cmn::Timebase GetTimebase();
 
 	virtual void CodecThread() = 0;
 
@@ -41,12 +41,13 @@ public:
 		_on_complete_hander = move(func);
 	}
 
+
 protected:
 	static const ov::String ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters);
 
 	int32_t _decoder_id;
 
-	std::shared_ptr<TranscodeContext> _input_context;
+	std::shared_ptr<MediaTrack> _track;
 
 	AVCodecContext *_context = nullptr;
 	AVCodecParserContext *_parser = nullptr;

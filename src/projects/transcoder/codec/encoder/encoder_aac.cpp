@@ -16,16 +16,16 @@ EncoderAAC::~EncoderAAC()
 
 bool EncoderAAC::SetCodecParams()
 {
-	_codec_context->bit_rate = _encoder_context->GetBitrate();
+	_codec_context->bit_rate = GetRefTrack()->GetBitrate();
 	_codec_context->sample_fmt = AV_SAMPLE_FMT_S16;
-	_codec_context->sample_rate = _encoder_context->GetAudioSampleRate();
-	_codec_context->channel_layout = static_cast<uint64_t>(_encoder_context->GetAudioChannel().GetLayout());
-	_codec_context->channels = _encoder_context->GetAudioChannel().GetCounts();
+	_codec_context->sample_rate = GetRefTrack()->GetSampleRate();
+	_codec_context->channel_layout = static_cast<uint64_t>(GetRefTrack()->GetChannel().GetLayout());
+	_codec_context->channels = GetRefTrack()->GetChannel().GetCounts();
 
 	return true;
 }
 
-bool EncoderAAC::Configure(std::shared_ptr<TranscodeContext> context)
+bool EncoderAAC::Configure(std::shared_ptr<MediaTrack> context)
 {
 	if (TranscodeEncoder::Configure(context) == false)
 	{
@@ -61,7 +61,7 @@ bool EncoderAAC::Configure(std::shared_ptr<TranscodeContext> context)
 		return false;
 	}
 
-	_encoder_context->SetAudioSamplesPerFrame(_codec_context->frame_size);
+	GetRefTrack()->SetAudioSamplesPerFrame(_codec_context->frame_size);
 
 	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
 	try

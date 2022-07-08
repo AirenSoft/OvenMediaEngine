@@ -11,7 +11,7 @@
 #include "../../transcoder_private.h"
 #include "base/info/application.h"
 
-bool DecoderHEVC::Configure(std::shared_ptr<TranscodeContext> context)
+bool DecoderHEVC::Configure(std::shared_ptr<MediaTrack> context)
 {
 	if (TranscodeDecoder::Configure(context) == false)
 	{
@@ -214,7 +214,7 @@ void DecoderHEVC::CodecThread()
 				}
 
 				// If there is no duration, the duration is calculated by framerate and timebase.
-				_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : _frame->pkt_duration;
+				_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, GetRefTrack()) : _frame->pkt_duration;
 
 				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				::av_frame_unref(_frame);

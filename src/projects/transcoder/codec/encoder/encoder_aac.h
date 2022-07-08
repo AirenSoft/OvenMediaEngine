@@ -25,7 +25,7 @@ public:
 		return AV_PIX_FMT_NONE;
 	}
 
-	bool Configure(std::shared_ptr<TranscodeContext> output_context) override;
+	bool Configure(std::shared_ptr<MediaTrack> output_context) override;
 
 	void CodecThread() override;
 

@@ -27,7 +27,7 @@ public:
 
 	~TranscodeFilter();
 
-	bool Configure(int32_t filter_id, std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context, _cb_func on_complete_hander);
+	bool Configure(int32_t filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track, _cb_func on_complete_hander);
 
 	bool SendBuffer(std::shared_ptr<MediaFrame> buffer);
 
@@ -38,9 +38,8 @@ public:
 	int64_t _last_pts = -1LL;
 	int64_t _threshold_ts_increment = 0LL;
 
-	std::shared_ptr<MediaTrack> _input_media_track;
-	std::shared_ptr<TranscodeContext> _input_context;
-	std::shared_ptr<TranscodeContext> _output_context;
+	std::shared_ptr<MediaTrack> _input_track;
+	std::shared_ptr<MediaTrack> _output_track;
 
 	void SetAlias(ov::String alias);
 

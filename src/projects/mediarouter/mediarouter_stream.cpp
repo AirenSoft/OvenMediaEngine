@@ -787,7 +787,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			{
 				if (_stat_recv_pkt_count[track_id] > 0 && _stat_recv_pkt_lpts[track_id] > media_packet->GetPts())
 				{
-					media_track->SetBframes(true);
+					media_track->SetHasBframes(true);
 				}
 
 				// Display a warning message that b-frame exists

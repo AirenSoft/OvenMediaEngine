@@ -229,7 +229,7 @@ ov::String MediaTrack::GetInfoString()
 
 bool MediaTrack::IsValid()
 {
-	if(_is_valid == true)
+	if (_is_valid == true)
 	{
 		return true;
 	}
@@ -311,7 +311,7 @@ bool MediaTrack::IsValid()
 			if (_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
 				_channel_layout.GetCounts() > 0 &&
-				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown && 
+				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown &&
 				_sample.GetRate() == cmn::AudioSample::Rate::R48000)
 			{
 				_is_valid = true;
@@ -345,7 +345,7 @@ void MediaTrack::OnFrameAdded(uint64_t bytes)
 		_clock_from_first_frame_received.Start();
 	}
 
-	_total_frame_count ++;
+	_total_frame_count++;
 	_total_frame_bytes += bytes;
 
 	// If bitrate is not set, calculate bitrate
@@ -369,4 +369,13 @@ void MediaTrack::OnFrameAdded(uint64_t bytes)
 
 		logtd("Track(%u) FPS(%f)", GetId(), framerate);
 	}
+}
+
+void MediaTrack::SetHardwareAccel(bool hwaccel)
+{
+	_use_hwaccel = hwaccel;
+}
+bool MediaTrack::GetHardwareAccel() const
+{
+	return _use_hwaccel;
 }

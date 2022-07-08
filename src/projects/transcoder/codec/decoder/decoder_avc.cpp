@@ -11,7 +11,7 @@
 #include "../../transcoder_private.h"
 #include "base/info/application.h"
 
-bool DecoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
+bool DecoderAVC::Configure(std::shared_ptr<MediaTrack> context)
 {
 	if (TranscodeDecoder::Configure(context) == false)
 	{
@@ -35,7 +35,7 @@ bool DecoderAVC::Configure(std::shared_ptr<TranscodeContext> context)
 	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 
 	// Set the number of b frames for compatibility with specific encoders.
-	auto bframes = GetContext()->GetH264hasBframes();
+	auto bframes = GetRefTrack()->HasBframes()?1:0;
 	if (bframes > 0)
 	{
 		_context->has_b_frames = bframes;
@@ -227,7 +227,7 @@ void DecoderAVC::CodecThread()
 				}
 
 				// If there is no duration, the duration is calculated by framerate and timebase.
-				// _frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : _frame->pkt_duration;
+				// _frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, GetRefTrack()) : _frame->pkt_duration;
 
 				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				::av_frame_unref(_frame);

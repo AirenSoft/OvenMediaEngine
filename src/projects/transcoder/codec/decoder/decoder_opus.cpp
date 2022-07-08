@@ -11,7 +11,7 @@
 #include "../../transcoder_private.h"
 #include "base/info/application.h"
 
-bool DecoderOPUS::Configure(std::shared_ptr<TranscodeContext> context)
+bool DecoderOPUS::Configure(std::shared_ptr<MediaTrack> context)
 {
 	if (TranscodeDecoder::Configure(context) == false)
 	{
@@ -233,7 +233,7 @@ void DecoderOPUS::CodecThread()
 			}
 
 			// If there is no duration, the duration is calculated by timebase.
-			_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Audio, _input_context, _frame) : _frame->pkt_duration;
+			_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Audio, GetRefTrack(), _frame) : _frame->pkt_duration;
 
 			// If the decoded audio frame does not have a PTS, Increase frame duration time in PTS of previous frame
 			_frame->pts = (_frame->pts == AV_NOPTS_VALUE) ? (_last_pkt_pts + _frame->pkt_duration) : _frame->pts;
