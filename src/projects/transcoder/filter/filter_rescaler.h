@@ -20,7 +20,7 @@ public:
 	FilterRescaler();
 	~FilterRescaler();
 
-	bool Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context) override;
+	bool Configure(const std::shared_ptr<MediaTrack> &input_track, const std::shared_ptr<MediaTrack> &output_track) override;
 
 	int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer) override;
 

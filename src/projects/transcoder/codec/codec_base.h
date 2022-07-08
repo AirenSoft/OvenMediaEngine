@@ -55,7 +55,7 @@ public:
 
 	virtual AVCodecID GetCodecID() const noexcept = 0;
 
-	virtual bool Configure(std::shared_ptr<TranscodeContext> context) = 0;
+	virtual bool Configure(std::shared_ptr<MediaTrack> track) = 0;
 
 	virtual void SendBuffer(std::shared_ptr<const InputType> buf) = 0;
 

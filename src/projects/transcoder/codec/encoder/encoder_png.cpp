@@ -21,16 +21,16 @@ EncoderPNG::~EncoderPNG()
 bool EncoderPNG::SetCodecParams()
 {
 	_codec_context->codec_type = AVMEDIA_TYPE_VIDEO;
-	_codec_context->framerate = ::av_d2q((_encoder_context->GetFrameRate() > 0) ? _encoder_context->GetFrameRate() : _encoder_context->GetEstimateFrameRate(), AV_TIME_BASE);
+	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRate() > 0) ? GetRefTrack()->GetFrameRate() : GetRefTrack()->GetEstimateFrameRate(), AV_TIME_BASE);
 	_codec_context->time_base = ::av_inv_q(::av_mul_q(_codec_context->framerate, (AVRational){_codec_context->ticks_per_frame, 1}));
 	_codec_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
-	_codec_context->width = _encoder_context->GetVideoWidth();
-	_codec_context->height = _encoder_context->GetVideoHeight();
+	_codec_context->width = GetRefTrack()->GetWidth();
+	_codec_context->height = GetRefTrack()->GetHeight();
 
 	return true;
 }
 
-bool EncoderPNG::Configure(std::shared_ptr<TranscodeContext> context)
+bool EncoderPNG::Configure(std::shared_ptr<MediaTrack> context)
 {
 	if (TranscodeEncoder::Configure(context) == false)
 	{

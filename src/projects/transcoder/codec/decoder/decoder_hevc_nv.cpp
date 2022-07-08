@@ -12,7 +12,7 @@
 #include "../../transcoder_private.h"
 #include "base/info/application.h"
 
-bool DecoderHEVCxNV::Configure(std::shared_ptr<TranscodeContext> context)
+bool DecoderHEVCxNV::Configure(std::shared_ptr<MediaTrack> context)
 {
 	if (TranscodeDecoder::Configure(context) == false)
 	{
@@ -231,7 +231,7 @@ void DecoderHEVCxNV::CodecThread()
 				tmp_frame->pts = _frame->pts;
 
 				// If there is no duration, the duration is calculated by framerate and timebase.
-				tmp_frame->pkt_duration = (tmp_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : tmp_frame->pkt_duration;
+				tmp_frame->pkt_duration = (tmp_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, GetRefTrack()) : tmp_frame->pkt_duration;
 
 				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, tmp_frame);
 				if (decoded_frame == nullptr)

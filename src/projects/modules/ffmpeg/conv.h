@@ -212,7 +212,7 @@ namespace ffmpeg
 			return nullptr;
 		}
 
-		static inline int64_t GetDurationPerFrame(cmn::MediaType media_type, std::shared_ptr<TranscodeContext>& context, AVFrame* frame = nullptr)
+		static inline int64_t GetDurationPerFrame(cmn::MediaType media_type, std::shared_ptr<MediaTrack>& context, AVFrame* frame = nullptr)
 		{
 			switch (media_type)
 			{
