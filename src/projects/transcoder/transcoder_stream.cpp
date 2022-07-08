@@ -945,9 +945,22 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 					{
 						auto &input_track = _input_stream->GetTrack(input_track_id);
 
-						float estimated_framerate = 1 / ((double)buffer->GetDuration() * input_track->GetTimeBase().GetExpr());
-						output_track->SetEstimateFrameRate(estimated_framerate);
-						logti("Framerate of the output stream is not set. set the estimated framerate from decoded frame duration. %.2ffps", output_track->GetEstimateFrameRate());
+						if (input_track->GetFrameRate() != 0.0f)
+						{
+							output_track->SetEstimateFrameRate(input_track->GetFrameRate());
+							logti("Framerate of the output stream is not set. set the estimated framerate from framerate of input track. %.2ffps", output_track->GetEstimateFrameRate());
+						}
+						else if (input_track->GetEstimateFrameRate() != 0.0f)
+						{
+							output_track->SetEstimateFrameRate(input_track->GetEstimateFrameRate());
+							logti("Framerate of the output stream is not set. set the estimated framerate from estimated framerate of input track. %.2ffps", output_track->GetEstimateFrameRate());
+						}
+						else
+						{
+							float estimated_framerate = 1 / ((double)buffer->GetDuration() * input_track->GetTimeBase().GetExpr());
+							output_track->SetEstimateFrameRate(estimated_framerate);
+							logti("Framerate of the output stream is not set. set the estimated framerate from decoded frame duration. %.2ffps", output_track->GetEstimateFrameRate());
+						}
 					}
 				}
 
