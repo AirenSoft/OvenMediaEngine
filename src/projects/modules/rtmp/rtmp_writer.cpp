@@ -225,7 +225,7 @@ bool RtmpWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 			}
 			else
 			{
-				logte("there is no avc configuration %d", track_info->GetExtradata()->GetLength());
+				logtw("there is no avc decoder configuration");
 			}
 
 			stream->time_base = AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()};
