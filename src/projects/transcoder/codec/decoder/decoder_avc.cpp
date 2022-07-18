@@ -18,7 +18,7 @@ bool DecoderAVC::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
-	AVCodec *_codec = ::avcodec_find_decoder(GetCodecID());
+	const AVCodec *_codec = ::avcodec_find_decoder(GetCodecID());
 	if (_codec == nullptr)
 	{
 		logte("Codec not found: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());

@@ -19,7 +19,7 @@ bool DecoderAVCxNV::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
-	AVCodec *_codec = ::avcodec_find_decoder_by_name("h264_cuvid");
+	const AVCodec *_codec = ::avcodec_find_decoder_by_name("h264_cuvid");
 	if (_codec == nullptr)
 	{
 		logte("Codec not found: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());

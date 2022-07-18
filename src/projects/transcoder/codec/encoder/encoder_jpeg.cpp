@@ -41,7 +41,7 @@ bool EncoderJPEG::Configure(std::shared_ptr<MediaTrack> context)
 
 	auto codec_id = GetCodecID();
 
-	AVCodec *codec = ::avcodec_find_encoder(codec_id);
+	const AVCodec *codec = ::avcodec_find_encoder(codec_id);
 	if (codec == nullptr)
 	{
 		logte("Could not find encoder: %d (%s)", codec_id, ::avcodec_get_name(codec_id));

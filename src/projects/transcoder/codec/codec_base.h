@@ -17,6 +17,9 @@ extern "C"
 #include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
 #include <libswscale/swscale.h>
+#include <libavutil/samplefmt.h>
+#include <libavutil/channel_layout.h>
+#include <libavutil/cpu.h>
 }
 
 #include <base/mediarouter/media_buffer.h>

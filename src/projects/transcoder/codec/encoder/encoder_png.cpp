@@ -39,7 +39,7 @@ bool EncoderPNG::Configure(std::shared_ptr<MediaTrack> context)
 
 	auto codec_id = GetCodecID();
 
-	AVCodec *codec = ::avcodec_find_encoder(codec_id);
+	const AVCodec *codec = ::avcodec_find_encoder(codec_id);
 
 	if (codec == nullptr)
 	{
