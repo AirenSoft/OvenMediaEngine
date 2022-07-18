@@ -52,7 +52,7 @@ bool EncoderAVCxQSV::Configure(std::shared_ptr<MediaTrack> context)
 
 	auto codec_id = GetCodecID();
 
-	AVCodec *codec = ::avcodec_find_encoder_by_name("h264_qsv");
+	const AVCodec *codec = ::avcodec_find_encoder_by_name("h264_qsv");
 	if (codec == nullptr)
 	{
 		logte("Could not find encoder: %d (%s)", codec_id, ::avcodec_get_name(codec_id));
