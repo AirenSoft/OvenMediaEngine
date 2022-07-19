@@ -285,47 +285,7 @@ namespace info
 		{
 			auto track = it->second;
 
-			switch (track->GetMediaType())
-			{
-				case MediaType::Video:
-					out_str.AppendFormat(
-						"\n\tVideo Track #%d: "
-						"Bypass(%s) "
-						"Bitrate(%s) "
-						"codec(%d, %s) "
-						"resolution(%dx%d) "
-						"framerate(%.2ffps) ",
-						track->GetId(),
-						track->IsBypass() ? "true" : "false",
-						ov::Converter::BitToString(track->GetBitrate()).CStr(),
-						track->GetCodecId(), ::StringFromMediaCodecId(track->GetCodecId()).CStr(),
-						track->GetWidth(), track->GetHeight(),
-						track->GetFrameRate());
-					break;
-
-				case MediaType::Audio:
-					out_str.AppendFormat(
-						"\n\tAudio Track #%d: "
-						"Bypass(%s) "
-						"Bitrate(%s) "
-						"codec(%d, %s) "
-						"samplerate(%s) "
-						"format(%s, %d) "
-						"channel(%s, %d) ",
-						track->GetId(),
-						track->IsBypass() ? "true" : "false",
-						ov::Converter::BitToString(track->GetBitrate()).CStr(),
-						track->GetCodecId(), ::StringFromMediaCodecId(track->GetCodecId()).CStr(),
-						ov::Converter::ToSiString(track->GetSampleRate(), 1).CStr(),
-						track->GetSample().GetName(), track->GetSample().GetSampleSize() * 8,
-						track->GetChannel().GetName(), track->GetChannel().GetCounts());
-					break;
-
-				default:
-					break;
-			}
-
-			out_str.AppendFormat("timebase(%s)", track->GetTimeBase().ToString().CStr());
+			out_str.AppendFormat("\n\t%s", track->GetInfoString().CStr());
 		}
 
 		return out_str;
