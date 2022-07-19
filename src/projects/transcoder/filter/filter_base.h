@@ -55,6 +55,16 @@ public:
 		return _output_track->GetTimeBase();
 	}
 
+	int32_t GetInputWidth() const 
+	{
+		return _input_width;
+	}
+
+	int32_t GetInputHeight() const 
+	{
+		return _input_height;
+	}
+
 	void SetOnCompleteHandler(CB_FUNC on_complete_handler) {
 		_on_complete_handler = on_complete_handler;
 	}
@@ -70,6 +80,10 @@ protected:
 	AVFilterInOut *_outputs = nullptr;
 
 	double _scale = 0.0;
+
+	// resolution of the input video frame
+	int32_t _input_width = 0;
+	int32_t _input_height = 0;
 
 	std::shared_ptr<MediaTrack> _input_track;
 	std::shared_ptr<MediaTrack> _output_track;
