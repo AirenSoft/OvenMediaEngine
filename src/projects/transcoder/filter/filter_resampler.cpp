@@ -146,7 +146,7 @@ bool FilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_track, 
 		return false;
 	}
 
-	logtd("Resampler is enabled for track #%u using parameters. input: %s / outputs: %s", input_track->GetId(), src_args.CStr(), output_filters.CStr());
+	logti("Resampler is enabled for track #%u using parameters. input: %s / outputs: %s", input_track->GetId(), src_args.CStr(), output_filters.CStr());
 
 	return true;
 }
