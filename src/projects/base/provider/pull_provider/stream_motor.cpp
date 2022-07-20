@@ -276,10 +276,10 @@ namespace pvd
 				}
 			}
 
-			// TODO: Performacne Optimized
-			for (const auto &x : _streams)
+			std::shared_lock<std::shared_mutex> stream_lock(_streams_map_guard);
+			for (const auto &[stream_id, stream] : _streams)
 			{
-				auto stream = x.second;
+
 				if (stream->GetProcessMediaEventTriggerMode() != PullStream::ProcessMediaEventTrigger::TRIGGER_INTERVAL)
 					continue;
 
@@ -289,7 +289,7 @@ namespace pvd
 					if (result == PullStream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS ||
 						result == PullStream::ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN)
 					{
-										}
+					}
 					else
 					{
 						stream->Stop();
@@ -300,6 +300,7 @@ namespace pvd
 					stream->Stop();
 				}
 			}
+			stream_lock.unlock();
 		}
 	}
 }  // namespace pvd
