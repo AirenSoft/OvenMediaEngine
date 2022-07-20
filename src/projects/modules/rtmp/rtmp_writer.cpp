@@ -84,7 +84,7 @@ bool RtmpWriter::SetPath(const ov::String path, const ov::String format)
 		_format_context = nullptr;
 	}
 
-	AVOutputFormat *output_format = nullptr;
+	const AVOutputFormat *output_format = nullptr;
 
 	// If the format is nullptr, it is automatically set based on the extension.
 	if (format != nullptr)
@@ -225,7 +225,7 @@ bool RtmpWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 			}
 			else
 			{
-				logte("there is no avc configuration %d", track_info->GetExtradata()->GetLength());
+				logtw("there is no avc decoder configuration");
 			}
 
 			stream->time_base = AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()};

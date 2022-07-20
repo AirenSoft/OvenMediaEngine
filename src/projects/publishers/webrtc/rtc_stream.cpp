@@ -145,7 +145,9 @@ bool RtcStream::Start()
 	_video_rtx_ssrc = ov::Random::GenerateUInt32();
 	_audio_ssrc = ov::Random::GenerateUInt32();
 
-	std::map<cmn::MediaCodecId, std::shared_ptr<MediaTrack>> default_tracks;
+	std::shared_ptr<MediaTrack> _first_video_track = nullptr;
+	std::shared_ptr<MediaTrack> _first_audio_track = nullptr;
+
 	// Create Packetizer
 	for (auto &[track_id, track] : GetTracks())
 	{
@@ -155,9 +157,13 @@ bool RtcStream::Start()
 		}
 
 		// For default Playlist : the first tracks for each supported codec
-		if (default_tracks.find(track->GetCodecId()) == default_tracks.end())
+		if (_first_video_track == nullptr && track->GetMediaType() == cmn::MediaType::Video)
 		{
-			default_tracks.emplace(track->GetCodecId(), track);
+			_first_video_track = track;
+		}
+		else if (_first_audio_track == nullptr && track->GetMediaType() == cmn::MediaType::Audio)
+		{
+			_first_audio_track = track;
 		}
 
 		AddPacketizer(track);
@@ -177,26 +183,7 @@ bool RtcStream::Start()
 	_default_playlist_name = ov::Random::GenerateString(8);
 	auto rtc_master_playlist = std::make_shared<RtcMasterPlaylist>(_default_playlist_name, _default_playlist_name);
 	rtc_master_playlist->SetWebRtcAutoAbr(false);
-
-	// Default Playlist : Connect all the first tracks for each supported codec
-	for (const auto &[video_codec_id, video_track] : default_tracks)
-	{
-		if (video_track->GetMediaType() != cmn::MediaType::Video)
-		{
-			continue;
-		}
-
-		for (const auto &[audio_track_id, audio_track] : default_tracks)
-		{
-			if (audio_track->GetMediaType() != cmn::MediaType::Audio)
-			{
-				continue;
-			}
-
-			auto rendition_name = ov::String::FormatString("%s-%s", video_track->GetName().CStr(), audio_track->GetName().CStr());
-			rtc_master_playlist->AddRendition(std::make_shared<RtcRendition>(rendition_name, video_track, audio_track));
-		}
-	}
+	rtc_master_playlist->AddRendition(std::make_shared<RtcRendition>("default", _first_video_track, _first_audio_track));
 
 	// lock
 	std::lock_guard<std::shared_mutex> lock(_rtc_master_playlist_map_lock);

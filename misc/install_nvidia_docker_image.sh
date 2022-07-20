@@ -61,6 +61,6 @@ NVCC_HEADERS=11.0.10.1
 DIR=/tmp/nvcc-hdr && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/FFmpeg/nv-codec-headers/releases/download/n${NVCC_HEADERS}/nv-codec-headers-${NVCC_HEADERS}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sLf https://github.com/FFmpeg/nv-codec-headers/releases/download/n${NVCC_HEADERS}/nv-codec-headers-${NVCC_HEADERS}.tar.gz | tar -xz --strip-components=1 && sed -i 's|PREFIX.*=\(.*\)|PREFIX =|g' Makefile && \
     make install && \
     rm -rf ${DIR} 

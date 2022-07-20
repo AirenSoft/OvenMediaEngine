@@ -54,15 +54,15 @@ TranscodeEncoder::~TranscodeEncoder()
 	_input_buffer.Clear();
 }
 
-std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, std::shared_ptr<TranscodeContext> context, _cb_func on_complete_handler)
+std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, std::shared_ptr<MediaTrack> output_track, _cb_func on_complete_handler)
 {
 	std::shared_ptr<TranscodeEncoder> encoder = nullptr;
 
-	bool use_hwaccel = context->GetHardwareAccel();
+	bool use_hwaccel = output_track->GetHardwareAccel();
 
 	logtd("Hardware acceleration of the encoder is %s", use_hwaccel ? "enabled" : "disabled");
 
-	switch (context->GetCodecId())
+	switch (output_track->GetCodecId())
 	{
 		case cmn::MediaCodecId::H264:
 #if SUPPORT_HWACCELS
@@ -71,7 +71,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 				if (TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
 				{
 					encoder = std::make_shared<EncoderAVCxQSV>();
-					if (encoder != nullptr && encoder->Configure(context) == true)
+					if (encoder != nullptr && encoder->Configure(output_track) == true)
 					{
 						goto done;
 					}
@@ -80,7 +80,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 				if (TranscodeGPU::GetInstance()->IsSupportedNV() == true)
 				{
 					encoder = std::make_shared<EncoderAVCxNV>();
-					if (encoder != nullptr && encoder->Configure(context) == true)
+					if (encoder != nullptr && encoder->Configure(output_track) == true)
 					{
 						goto done;
 					}
@@ -88,7 +88,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 			}
 #endif
 			encoder = std::make_shared<EncoderAVCxOpenH264>();
-			if (encoder != nullptr && encoder->Configure(context) == true)
+			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
 				goto done;
 			}
@@ -101,7 +101,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 				if (TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
 				{
 					encoder = std::make_shared<EncoderHEVCxQSV>();
-					if (encoder != nullptr && encoder->Configure(context) == true)
+					if (encoder != nullptr && encoder->Configure(output_track) == true)
 					{
 						goto done;
 					}
@@ -110,7 +110,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 				if (TranscodeGPU::GetInstance()->IsSupportedNV() == true)
 				{
 					encoder = std::make_shared<EncoderHEVCxNV>();
-					if (encoder != nullptr && encoder->Configure(context) == true)
+					if (encoder != nullptr && encoder->Configure(output_track) == true)
 					{
 						goto done;
 					}
@@ -120,7 +120,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 			break;
 		case cmn::MediaCodecId::Vp8:
 			encoder = std::make_shared<EncoderVP8>();
-			if (encoder != nullptr && encoder->Configure(context) == true)
+			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
 				goto done;
 			}
@@ -128,7 +128,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 			break;
 		case cmn::MediaCodecId::Jpeg:
 			encoder = std::make_shared<EncoderJPEG>();
-			if (encoder != nullptr && encoder->Configure(context) == true)
+			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
 				goto done;
 			}
@@ -136,7 +136,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 			break;
 		case cmn::MediaCodecId::Png:
 			encoder = std::make_shared<EncoderPNG>();
-			if (encoder != nullptr && encoder->Configure(context) == true)
+			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
 				goto done;
 			}
@@ -144,7 +144,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 			break;
 		case cmn::MediaCodecId::Aac:
 			encoder = std::make_shared<EncoderAAC>();
-			if (encoder != nullptr && encoder->Configure(context) == true)
+			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
 				goto done;
 			}
@@ -153,7 +153,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 		case cmn::MediaCodecId::Opus:
 #if USE_LEGACY_LIBOPUS
 			encoder = std::make_shared<EncoderOPUS>();
-			if (encoder != nullptr && encoder->Configure(context) == true)
+			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
 				goto done;
 			}
@@ -166,7 +166,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 #endif
 			break;
 		default:
-			OV_ASSERT(false, "Not supported codec: %d", context->GetCodecId());
+			OV_ASSERT(false, "Not supported codec: %d", output_track->GetCodecId());
 			break;
 	}
 
@@ -181,7 +181,7 @@ done:
 
 cmn::Timebase TranscodeEncoder::GetTimebase() const
 {
-	return _encoder_context->GetTimeBase();
+	return _track->GetTimeBase();
 }
 
 void TranscodeEncoder::SetEncoderId(int32_t encoder_id)
@@ -189,19 +189,19 @@ void TranscodeEncoder::SetEncoderId(int32_t encoder_id)
 	_encoder_id = encoder_id;
 }
 
-bool TranscodeEncoder::Configure(std::shared_ptr<TranscodeContext> context)
+bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 {
-	_encoder_context = context;
+	_track = output_track;
 
 	_input_buffer.SetAlias(ov::String::FormatString("Input queue of Encoder. codec(%s/%d)", ::avcodec_get_name(GetCodecID()), GetCodecID()));
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
-	return (_encoder_context != nullptr);
+	return (_track != nullptr);
 }
 
-std::shared_ptr<TranscodeContext> &TranscodeEncoder::GetContext()
+std::shared_ptr<MediaTrack> &TranscodeEncoder::GetRefTrack()
 {
-	return _encoder_context;
+	return _track;
 }
 
 void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)

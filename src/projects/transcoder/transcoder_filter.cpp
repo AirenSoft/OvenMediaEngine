@@ -22,16 +22,15 @@ TranscodeFilter::~TranscodeFilter()
 	}
 }
 
-bool TranscodeFilter::Configure(int32_t filter_id, std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context, _cb_func on_complete_hander)
+bool TranscodeFilter::Configure(int32_t filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track, _cb_func on_complete_hander)
 {
-	logtd("Create a transcode filter. track_id(%d). type(%s)", input_media_track->GetId(), (input_media_track->GetMediaType() == MediaType::Video) ? "Video" : "Audio");
+	logtd("Create a transcode filter. track_id(%d). type(%s)", input_track->GetId(), (input_track->GetMediaType() == MediaType::Video) ? "Video" : "Audio");
 
 	_filter_id = filter_id;
-	_input_media_track = input_media_track;
-	_input_context = input_context;
-	_output_context = output_context;
+	_input_track = input_track;
+	_output_track = output_track;
 	_on_complete_hander = on_complete_hander;
-	_threshold_ts_increment = (int64_t)_input_media_track->GetTimeBase().GetTimescale() * PTS_INCREMENT_LIMIT;
+	_threshold_ts_increment = (int64_t)_input_track->GetTimeBase().GetTimescale() * PTS_INCREMENT_LIMIT;
 
 	return CreateFilter();
 }
@@ -43,7 +42,7 @@ bool TranscodeFilter::CreateFilter()
 		delete _impl;
 	}
 
-	switch (_input_media_track->GetMediaType())
+	switch (_input_track->GetMediaType())
 	{
 		case MediaType::Audio:
 			_impl = new FilterResampler();
@@ -58,7 +57,7 @@ bool TranscodeFilter::CreateFilter()
 
 	_impl->SetOnCompleteHandler(bind(&TranscodeFilter::OnComplete, this, std::placeholders::_1));
 
-	bool success = _impl->Configure(_input_media_track, _input_context, _output_context);
+	bool success = _impl->Configure(_input_track, _output_track);
 	if (success == false)
 	{
 		logte("Could not craete filter");
@@ -93,8 +92,7 @@ bool TranscodeFilter::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 
 bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 {
-	//	If the timestamp increases rapidly, out of memory occurs while padding is performed in the fps and aresample filters.
-	// To prevent this, the filter is regenerated.
+	// In case of pts/dts jumps
 	int64_t ts_increment = abs(buffer->GetPts() - _last_pts);
 	int64_t tmp_last_pts = _last_pts;
 	bool detect_abnormal_increace_pts = (_last_pts != -1LL && ts_increment > _threshold_ts_increment) ? true : false;
@@ -108,15 +106,14 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 		return true;
 	}
 
-	if (_input_media_track->GetMediaType() == MediaType::Video)
+	// In case of resolution change
+	if (_input_track->GetMediaType() == MediaType::Video)
 	{
-		if (buffer->GetWidth() != (int32_t)_input_context->GetVideoWidth() || buffer->GetHeight() != (int32_t)_input_context->GetVideoHeight())
+		if (buffer->GetWidth() != (int32_t)_impl->GetInputWidth() || buffer->GetHeight() != (int32_t)_impl->GetInputHeight())
 		{
-			_input_media_track->SetWidth(buffer->GetWidth());
-			_input_media_track->SetHeight(buffer->GetHeight());
-			_input_context->SetVideoWidth(buffer->GetWidth());
-			_input_context->SetVideoHeight(buffer->GetHeight());
-			logti("Changed resolution %u track", _input_media_track->GetId());
+			logti("Changed input resolution of %u track. (%dx%d -> %dx%d)", _input_track->GetId(), _impl->GetInputWidth(), _impl->GetInputHeight(), buffer->GetWidth(), buffer->GetHeight());
+			_input_track->SetWidth(buffer->GetWidth());
+			_input_track->SetHeight(buffer->GetHeight());
 			return true;
 		}
 	}

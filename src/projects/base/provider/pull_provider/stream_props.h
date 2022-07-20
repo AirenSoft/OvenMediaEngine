@@ -14,11 +14,11 @@ namespace pvd
 	{
 	public:
 		PullStreamProperties()
-			: _persist(false), _failback(false), _relay(true), _failback_timeout(-1), _no_input_failover_timeout(-1), _unused_stream_deletion_timeout(-1), _retry_connect_count(2) {};
+			: _persistent(false), _failback(false), _relay(true), _failback_timeout(-1), _no_input_failover_timeout(-1), _unused_stream_deletion_timeout(-1), _retry_connect_count(2) {};
 
-		PullStreamProperties(bool persist, bool failback, bool relay, int32_t failback_timeout = -1, int32_t no_input_failover_timeout = -1, int32_t unused_stream_deletion_timeout = -1, int32_t retry_connect_count = 2)
+		PullStreamProperties(bool persistent, bool failback, bool relay, int32_t failback_timeout = -1, int32_t no_input_failover_timeout = -1, int32_t unused_stream_deletion_timeout = -1, int32_t retry_connect_count = 2)
 		{
-			_persist = persist;
+			_persistent = persistent;
 			_failback = failback;
 			_relay = relay;
 			_failback_timeout = failback_timeout;
@@ -27,9 +27,9 @@ namespace pvd
 			_retry_connect_count = retry_connect_count;
 		};
 
-		bool IsPersistence()
+		bool IsPersistent()
 		{
-			return _persist;
+			return _persistent;
 		}
 
 		bool IsFailback()
@@ -67,7 +67,7 @@ namespace pvd
 		}
 
 	private:
-		bool _persist;
+		bool _persistent;
 
 		bool _failback;
 

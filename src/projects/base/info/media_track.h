@@ -107,4 +107,9 @@ private:
 
 	uint64_t _total_frame_count = 0;
 	uint64_t _total_frame_bytes = 0;
+
+public:
+	void SetHardwareAccel(bool hwaccel);
+	bool GetHardwareAccel() const;
+	bool _use_hwaccel;
 };

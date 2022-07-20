@@ -12,14 +12,14 @@
 #include "../../transcoder_private.h"
 #include "base/info/application.h"
 
-bool DecoderAVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
+bool DecoderAVCxQSV::Configure(std::shared_ptr<MediaTrack> context)
 {
 	if (TranscodeDecoder::Configure(context) == false)
 	{
 		return false;
 	}
 
-	AVCodec *_codec = ::avcodec_find_decoder_by_name("h264_qsv");
+	const AVCodec *_codec = ::avcodec_find_decoder_by_name("h264_qsv");
 	if (_codec == nullptr)
 	{
 		logte("Codec not found: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
@@ -210,7 +210,7 @@ void DecoderAVCxQSV::CodecThread()
 				}
 
 				// If there is no duration, the duration is calculated by framerate and timebase.
-				_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, _input_context) : _frame->pkt_duration;
+				_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, GetRefTrack()) : _frame->pkt_duration;
 
 				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				::av_frame_unref(_frame);

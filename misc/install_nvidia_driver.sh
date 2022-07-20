@@ -36,7 +36,7 @@ install_nvcc_headers() {
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     export DESTDIR=${PREFIX} && \
-    curl -sLf https://github.com/FFmpeg/nv-codec-headers/releases/download/n${NVCC_HEADERS}/nv-codec-headers-${NVCC_HEADERS}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sLf https://github.com/FFmpeg/nv-codec-headers/releases/download/n${NVCC_HEADERS}/nv-codec-headers-${NVCC_HEADERS}.tar.gz | tar -xz --strip-components=1 && sed -i 's|PREFIX.*=\(.*\)|PREFIX =|g' Makefile && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "nvcc_headers"
 }
@@ -86,7 +86,7 @@ install_base_centos()
         yum -y groupinstall "Development Tools"
         yum -y install kernel-devel
         yum -y install epel-release
-        yum -y install dkms curl
+        yum -y install dkms curl lshw
         echo "Reboot is required to run with a new version of the kernel."
 
         # Remove the nouveau driver. If the nouveau driver is in use, the nvidia driver cannot be installed.

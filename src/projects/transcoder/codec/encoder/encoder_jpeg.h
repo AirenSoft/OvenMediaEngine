@@ -25,7 +25,7 @@ public:
 		return AV_PIX_FMT_YUVJ420P;
 	}
 
-	bool Configure(std::shared_ptr<TranscodeContext> context) override;
+	bool Configure(std::shared_ptr<MediaTrack> context) override;
 
 	void CodecThread() override;
 

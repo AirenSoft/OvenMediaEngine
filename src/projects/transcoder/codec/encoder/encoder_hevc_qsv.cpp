@@ -19,18 +19,18 @@ EncoderHEVCxQSV::~EncoderHEVCxQSV()
 
 bool EncoderHEVCxQSV::SetCodecParams()
 {
-	_codec_context->framerate = ::av_d2q((_encoder_context->GetFrameRate() > 0) ? _encoder_context->GetFrameRate() : _encoder_context->GetEstimateFrameRate(), AV_TIME_BASE);
-	_codec_context->bit_rate = _encoder_context->GetBitrate();
+	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRate() > 0) ? GetRefTrack()->GetFrameRate() : GetRefTrack()->GetEstimateFrameRate(), AV_TIME_BASE);
+	_codec_context->bit_rate = GetRefTrack()->GetBitrate();
 	_codec_context->rc_min_rate = _codec_context->rc_max_rate = _codec_context->bit_rate;
 	_codec_context->rc_buffer_size = static_cast<int>(_codec_context->bit_rate / 2);
 	_codec_context->sample_aspect_ratio = (AVRational){1, 1};
 	_codec_context->ticks_per_frame = 2;
 	_codec_context->time_base = ::av_inv_q(::av_mul_q(_codec_context->framerate, (AVRational){_codec_context->ticks_per_frame, 1}));
-	_codec_context->gop_size = _codec_context->framerate.num / _codec_context->framerate.den;
 	_codec_context->max_b_frames = 0;
 	_codec_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
-	_codec_context->width = _encoder_context->GetVideoWidth();
-	_codec_context->height = _encoder_context->GetVideoHeight();
+	_codec_context->width = GetRefTrack()->GetWidth();
+	_codec_context->height = GetRefTrack()->GetHeight();
+	_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
 
 	return true;
 }
@@ -39,7 +39,7 @@ bool EncoderHEVCxQSV::SetCodecParams()
 //
 // - B-frame must be disabled. because, WEBRTC does not support B-Frame.
 //
-bool EncoderHEVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
+bool EncoderHEVCxQSV::Configure(std::shared_ptr<MediaTrack> context)
 {
 	if (TranscodeEncoder::Configure(context) == false)
 	{
@@ -48,7 +48,7 @@ bool EncoderHEVCxQSV::Configure(std::shared_ptr<TranscodeContext> context)
 
 	auto codec_id = GetCodecID();
 
-	AVCodec *codec = ::avcodec_find_encoder_by_name("hevc_qsv");
+	const AVCodec *codec = ::avcodec_find_encoder_by_name("hevc_qsv");
 	if (codec == nullptr)
 	{
 		logte("Could not find encoder: %d (%s)", codec_id, ::avcodec_get_name(codec_id));

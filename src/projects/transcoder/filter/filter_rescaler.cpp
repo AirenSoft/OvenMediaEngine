@@ -43,13 +43,16 @@ FilterRescaler::~FilterRescaler()
 	_input_buffer.Clear();
 }
 
-bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context)
+bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, const std::shared_ptr<MediaTrack> &output_track)
 {
-	int ret;
+	_input_track = input_track;
+	_output_track = output_track;
+
+
 
 	const AVFilter *buffersrc = ::avfilter_get_by_name("buffer");
 	const AVFilter *buffersink = ::avfilter_get_by_name("buffersink");
-
+	int ret;
 	_filter_graph = ::avfilter_graph_alloc();
 
 	if ((_filter_graph == nullptr) || (_inputs == nullptr) || (_outputs == nullptr))
@@ -61,8 +64,8 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_media_tr
 	// Limit the number of filter threads to 4. I think 4 thread is usually enough for video filtering processing.
 	_filter_graph->nb_threads = 4;
 
-	AVRational input_timebase = ffmpeg::Conv::TimebaseToAVRational(input_context->GetTimeBase());
-	AVRational output_timebase = ffmpeg::Conv::TimebaseToAVRational(output_context->GetTimeBase());
+	AVRational input_timebase = ffmpeg::Conv::TimebaseToAVRational(input_track->GetTimeBase());
+	AVRational output_timebase = ffmpeg::Conv::TimebaseToAVRational(output_track->GetTimeBase());
 
 	_scale = ::av_q2d(::av_div_q(input_timebase, output_timebase));
 
@@ -82,10 +85,11 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_media_tr
 
 	// Prepare the input parameters
 	std::vector<ov::String> src_params = {
-		ov::String::FormatString("video_size=%dx%d", input_media_track->GetWidth(), input_media_track->GetHeight()),
-		ov::String::FormatString("pix_fmt=%d", input_media_track->GetFormat()),
-		ov::String::FormatString("time_base=%s", input_media_track->GetTimeBase().GetStringExpr().CStr()),
+		ov::String::FormatString("video_size=%dx%d", input_track->GetWidth(), input_track->GetHeight()),
+		ov::String::FormatString("pix_fmt=%d", input_track->GetFormat()),
+		ov::String::FormatString("time_base=%s", input_track->GetTimeBase().GetStringExpr().CStr()),
 		ov::String::FormatString("pixel_aspect=%d/%d", 1, 1)};
+
 
 	ov::String src_args = ov::String::Join(src_params, ":");
 
@@ -104,7 +108,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_media_tr
 		return false;
 	}
 
-	enum AVPixelFormat pix_fmts[] = {(AVPixelFormat)output_context->GetColorspace(), AV_PIX_FMT_NONE};
+	enum AVPixelFormat pix_fmts[] = {(AVPixelFormat)output_track->GetColorspace(), AV_PIX_FMT_NONE};
 	ret = av_opt_set_int_list(_buffersink_ctx, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
 	if (ret < 0)
 	{
@@ -114,26 +118,26 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_media_tr
 
 	std::vector<ov::String> filters;
 
-	if (output_context->GetFrameRate() > 0.0f)
+	if (output_track->GetFrameRate() > 0.0f)
 	{
-		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()));
+		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", output_track->GetFrameRate()));
 	}
 
-	if (output_context->GetHardwareAccel() == true &&
+	if (output_track->GetHardwareAccel() == true &&
 		TranscodeGPU::GetInstance()->IsSupportedNV() == true &&
-		input_media_track->GetFormat() == AV_PIX_FMT_NV12 &&
-		output_context->GetColorspace() == AV_PIX_FMT_NV12)
+		input_track->GetFormat() == AV_PIX_FMT_NV12 &&
+		output_track->GetColorspace() == AV_PIX_FMT_NV12)
 	{
 		filters.push_back(ov::String::FormatString("hwupload_cuda,scale_cuda=%d:%d,hwdownload",
-												   output_context->GetVideoWidth(), output_context->GetVideoHeight()));
+												   output_track->GetWidth(), output_track->GetHeight()));
 	}
 	else
 	{
 		filters.push_back(ov::String::FormatString("scale=%dx%d:flags=bilinear",
-												   output_context->GetVideoWidth(), output_context->GetVideoHeight()));
+												   output_track->GetWidth(), output_track->GetHeight()));
 	}
 
-	filters.push_back(ov::String::FormatString("settb=%s", output_context->GetTimeBase().GetStringExpr().CStr()));
+	filters.push_back(ov::String::FormatString("settb=%s", output_track->GetTimeBase().GetStringExpr().CStr()));
 
 	ov::String output_filters = ov::String::Join(filters, ",");
 
@@ -159,10 +163,11 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_media_tr
 		return false;
 	}
 
-	logtd("Rescaler is enabled for track #%u using parameters. input: %s / outputs: %s", input_media_track->GetId(), src_args.CStr(), output_filters.CStr());
+	logti("Rescaler is enabled for track #%u using parameters. input: %s / outputs: %s", input_track->GetId(), src_args.CStr(), output_filters.CStr());
 
-	_input_context = input_context;
-	_output_context = output_context;
+	_input_width = input_track->GetWidth();
+	_input_height = input_track->GetHeight();
+
 
 	return true;
 }

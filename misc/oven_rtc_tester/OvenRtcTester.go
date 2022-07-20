@@ -215,6 +215,23 @@ func (sc *signalingClient) sendAnswer(answer signalMessage) error {
 	return sc.socket.WriteMessage(websocket.TextMessage, byteAnswer)
 }
 
+func (sc *signalingClient) readPump() error {
+	for {
+		_, data, err := sc.socket.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				return fmt.Errorf("error: %v", err)
+			}
+			break
+		}
+		
+		// Not used
+		_ = data
+	}
+
+	return nil
+}
+
 // Old version of OME gives username as user_name
 type ICEServer struct {
 	URLs       []string `json:"urls"`
@@ -641,6 +658,9 @@ func (c *omeClient) run(url string) error {
 	if err != nil {
 		return err
 	}
+
+	// Read signaling messages 
+	go c.sc.readPump()
 
 	return nil
 }

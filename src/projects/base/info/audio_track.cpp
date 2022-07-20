@@ -55,7 +55,8 @@ const AudioChannel &AudioTrack::GetChannel() const
 	return _channel_layout;
 }
 
-void AudioTrack::SetChannel(AudioChannel channel) {
+void AudioTrack::SetChannel(AudioChannel channel)
+{
 	_channel_layout = channel;
 }
 
@@ -67,4 +68,14 @@ std::shared_ptr<AACSpecificConfig> AudioTrack::GetAacConfig() const
 void AudioTrack::SetAacConfig(const std::shared_ptr<AACSpecificConfig> &config)
 {
 	_aac_config = config;
+}
+
+void AudioTrack::SetAudioSamplesPerFrame(int nbsamples)
+{
+	_audio_samples_per_frame = nbsamples;
+}
+
+int AudioTrack::GetAudioSamplesPerFrame() const
+{
+	return _audio_samples_per_frame;
 }

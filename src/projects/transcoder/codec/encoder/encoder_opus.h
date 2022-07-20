@@ -27,7 +27,7 @@ public:
 		return AV_PIX_FMT_NONE;
 	}
 
-	bool Configure(std::shared_ptr<TranscodeContext> context) override;
+	bool Configure(std::shared_ptr<MediaTrack> context) override;
 
 	// void SendBuffer(std::shared_ptr<const MediaFrame> frame) override;
 

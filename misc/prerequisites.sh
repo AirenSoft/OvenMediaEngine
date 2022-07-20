@@ -11,10 +11,11 @@ OPUS_VERSION=1.3.1
 VPX_VERSION=1.11.0
 FDKAAC_VERSION=2.0.2
 NASM_VERSION=2.15.05
-FFMPEG_VERSION=4.4.1
+FFMPEG_VERSION=5.0.1
 JEMALLOC_VERSION=5.2.1
 PCRE2_VERSION=10.39
 OPENH264_VERSION=2.1.1
+
 INTEL_QSV_HWACCELS=false
 NVIDIA_VIDEO_CODEC_HWACCELS=false
 
@@ -213,8 +214,7 @@ install_ffmpeg()
         PATH=$PATH:/usr/local/nvidia/bin:/usr/local/cuda/bin
     fi
 
-    # Add options as environmental variable values.
-
+    # Options are added by external scripts.
     if [[ -n "${EXT_FFMPEG_LICENSE}" ]]; then 
         ADDI_LICENSE+=${EXT_FFMPEG_LICENSE}
     fi
@@ -227,16 +227,28 @@ install_ffmpeg()
         ADDI_ENCODER+=${EXT_FFMPEG_ENCODER}
     fi
 
+    if [[ -n "${EXT_FFMPEG_DECODER}" ]] ; then 
+        ADDI_DECODER+=${EXT_FFMPEG_DECODER}
+    fi
 
-    (DIR=${TEMP_PATH}/ffmpeg && \
-    mkdir -p ${DIR} && \
+    # Defining a Temporary Installation Path
+    DIR=${TEMP_PATH}/ffmpeg
+
+    # Download
+    (rm -rf ${DIR}  && mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n${FFMPEG_VERSION}.tar.gz | tar -xz --strip-components=1 && \
-    sed -i 's/compute_30/compute_60/g' ./configure && \
-    sed -i 's/sm_30/sm_60/g' ./configure && \
-    PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PREFIX}/lib64/pkgconfig:${PREFIX}/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH} ./configure \
+    curl -sLf https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n${FFMPEG_VERSION}.tar.gz | tar -xz --strip-components=1 ) || fail_exit "ffmpeg"
+
+    # Patch for Enterprise
+    if [[ "$(type -t install_patch_ffmpeg)"  == 'function' ]];
+    then
+        install_patch_ffmpeg ${DIR}
+    fi
+
+    # Build & Install 
+    (cd ${DIR} && PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PREFIX}/lib64/pkgconfig:${PREFIX}/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH} ./configure \
     --prefix="${PREFIX}" \
-    --extra-cflags="-I${PREFIX}/include ${ADDI_CFLAGS}"  \
+    --extra-cflags="-I${PREFIX}/include -g ${ADDI_CFLAGS}"  \
     --extra-ldflags="-L${PREFIX}/lib ${ADDI_LDFLAGS} -Wl,-rpath,${PREFIX}/lib" \
     --extra-libs=-ldl \
     ${ADDI_LICENSE} \
