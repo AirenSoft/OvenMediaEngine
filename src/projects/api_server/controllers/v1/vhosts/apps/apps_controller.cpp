@@ -28,7 +28,7 @@ namespace api
 			RegisterPost(R"()", &AppsController::OnPostApp);
 			RegisterGet(R"()", &AppsController::OnGetAppList);
 			RegisterGet(R"(\/(?<app_name>[^\/:]*))", &AppsController::OnGetApp);
-			RegisterPut(R"(\/(?<app_name>[^\/:]*))", &AppsController::OnPutApp);
+			RegisterPatch(R"(\/(?<app_name>[^\/:]*))", &AppsController::OnPatchApp);
 			RegisterDelete(R"(\/(?<app_name>[^\/:]*))", &AppsController::OnDeleteApp);
 
 			// Branch into action controller
@@ -126,9 +126,9 @@ namespace api
 			return ::serdes::JsonFromApplication(app);
 		}
 
-		ApiResponse AppsController::OnPutApp(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
-											 const std::shared_ptr<mon::HostMetrics> &vhost,
-											 const std::shared_ptr<mon::ApplicationMetrics> &app)
+		ApiResponse AppsController::OnPatchApp(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
+											   const std::shared_ptr<mon::HostMetrics> &vhost,
+											   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
 			ThrowIfVirtualIsReadOnly(*(vhost.get()));
 

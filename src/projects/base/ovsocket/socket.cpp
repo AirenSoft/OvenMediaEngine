@@ -195,6 +195,7 @@ namespace ov
 			return true;
 		} while (false);
 
+		// An error occurred - reset all variables
 		{
 			std::lock_guard lock_guard(_dispatch_queue_lock);
 			if (CloseInternal(_state))
@@ -331,8 +332,8 @@ namespace ov
 			return true;
 		}
 
-		auto old_callback = _callback;
-		_callback = nullptr;
+		// Prevent to call the callback while change blocking mode
+		auto old_callback = std::move(_callback);
 
 		if (
 			SetBlockingInternal(BlockingMode::Blocking) &&
@@ -343,7 +344,7 @@ namespace ov
 		}
 
 		// Rollback
-		_callback = old_callback;
+		_callback = std::move(old_callback);
 
 		return false;
 	}
@@ -357,7 +358,7 @@ namespace ov
 			return false;
 		}
 
-		return MakeNonBlockingInternal(callback, true);
+		return MakeNonBlockingInternal(std::move(callback), true);
 	}
 
 	bool Socket::MakeNonBlockingInternal(std::shared_ptr<SocketAsyncInterface> callback, bool need_to_wait_first_epoll_event)
@@ -365,14 +366,14 @@ namespace ov
 		if (_blocking_mode == BlockingMode::NonBlocking)
 		{
 			// Socket is already non-blocking mode
-			_callback = callback;
+			_callback = std::move(callback);
 
 			return true;
 		}
 
-		auto old_callback = _callback;
+		auto old_callback = std::move(_callback);
 
-		_callback = callback;
+		_callback = std::move(callback);
 		_blocking_mode = BlockingMode::NonBlocking;
 
 		if (
@@ -383,7 +384,7 @@ namespace ov
 		}
 
 		// Rollback
-		_callback = old_callback;
+		_callback = std::move(old_callback);
 		_blocking_mode = BlockingMode::Blocking;
 
 		return false;
@@ -989,17 +990,6 @@ namespace ov
 			}
 		}
 
-		// Since the resource is usually cleaned inside the OnClosed() callback,
-		// callback is performed outside the lock_guard to prevent acquiring the lock.
-		auto post_callback = std::move(_post_callback);
-		if (post_callback != nullptr)
-		{
-			if (_connection_event_fired)
-			{
-				post_callback->OnClosed();
-			}
-		}
-
 		return result;
 	}
 
@@ -1020,7 +1010,11 @@ namespace ov
 			case BlockingMode::NonBlocking: {
 				// Due to the connection callback point, the DispatchEventsInternal() specifically performs mutex.lock inside.
 				// std::lock_guard lock_guard(_dispatch_queue_lock);
-				return DispatchEventsInternal();
+				auto result = DispatchEventsInternal();
+
+				CallCloseCallbackIfNeeded();
+
+				return result;
 			}
 		}
 
@@ -1719,7 +1713,7 @@ namespace ov
 	{
 		_last_recv_time = std::chrono::high_resolution_clock::now();
 	}
-	
+
 	void Socket::UpdateLastSentTime()
 	{
 		_last_sent_time = std::chrono::high_resolution_clock::now();
@@ -1844,24 +1838,37 @@ namespace ov
 
 	bool Socket::CloseImmediately()
 	{
-		std::lock_guard lock_guard(_dispatch_queue_lock);
+		bool result = false;
 
-		// We must call DispatchEvents() so that the _post_callback can be called.
-		return CloseInternal(_state) && (DispatchEvents() != DispatchResult::Error);
+		{
+			std::lock_guard lock_guard(_dispatch_queue_lock);
+
+			result = CloseInternal(_state);
+		}
+
+		CallCloseCallbackIfNeeded();
+
+		return result;
 	}
 
 	bool Socket::CloseImmediatelyWithState(SocketState new_state)
 	{
-		std::lock_guard lock_guard(_dispatch_queue_lock);
+		bool result = false;
 
-		// We must call DispatchEvents() so that the _post_callback can be called.
-		if (CloseInternal(new_state) && (DispatchEvents() != DispatchResult::Error))
 		{
-			SetState(new_state);
-			return true;
+			std::lock_guard lock_guard(_dispatch_queue_lock);
+
+			result = CloseInternal(new_state);
+
+			if (result)
+			{
+				SetState(new_state);
+			}
 		}
 
-		return false;
+		CallCloseCallbackIfNeeded();
+
+		return result;
 	}
 
 	Socket::DispatchResult Socket::HalfClose()
@@ -2000,6 +2007,19 @@ namespace ov
 				  "Invalid state: %s", StringFromSocketState(_state));
 
 		return false;
+	}
+
+	void Socket::CallCloseCallbackIfNeeded()
+	{
+		auto post_callback = std::move(_post_callback);
+
+		if (post_callback != nullptr)
+		{
+			if (_connection_event_fired)
+			{
+				post_callback->OnClosed();
+			}
+		}
 	}
 
 	String Socket::ToString(const char *class_name) const

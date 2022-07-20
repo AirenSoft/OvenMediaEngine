@@ -40,12 +40,8 @@ namespace cfg
 						Register("OutputStreamName", &_output_stream_name);
 						Register<Optional>("Encodes", &_encodes);
 
-						Register<Optional>({"Playlist", "playlists"}, &_playlists,
+						Register<Optional>({"Playlist", "playlists"}, &_playlists, nullptr,
 							[=]() -> std::shared_ptr<ConfigError> {
-								return nullptr;
-							},
-							[=]() -> std::shared_ptr<ConfigError> {
-								
 								std::map<ov::String, bool> playlist_file_names;
 
 								for (auto &playlist : _playlists)
