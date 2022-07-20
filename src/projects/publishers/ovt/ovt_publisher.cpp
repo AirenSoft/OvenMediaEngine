@@ -222,7 +222,7 @@ void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 									PhysicalPortDisconnectReason reason,
 									const std::shared_ptr<const ov::Error> &error)
 {
-	logti("OvtProvider is disconnected : %s", remote->ToString().CStr());
+	logti("OvtProvider is disconnected(%d) : %s", static_cast<uint8_t>(reason), remote->ToString().CStr());
 	// disconnect means when the stream disconnects itself.
 	if(reason != PhysicalPortDisconnectReason::Disconnect)
 	{
