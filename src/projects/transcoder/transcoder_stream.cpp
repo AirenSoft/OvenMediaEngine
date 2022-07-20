@@ -794,7 +794,7 @@ int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 
 			if (CreateEncoder(encoder_id, output_track) == false)
 			{
-				logte("Could not create encoder");
+				logte("[%s/%s(%u)] Could not create encoder. encoder_id: %d, track_id: %d", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId(), encoder_id, output_track->GetId());
 				continue;
 			}
 
@@ -811,7 +811,8 @@ bool TranscoderStream::CreateEncoder(int32_t encoder_id, std::shared_ptr<MediaTr
 	// If there is an existing encoder, do not create encoder
 	if (_encoders.find(encoder_id) != _encoders.end())
 	{
-		return false;
+		logtd("[%s/%s(%u)] Encoder have already been created and will be shared. encoder_id: %d, track_id: %d", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId(), encoder_id, output_track->GetId());
+		return true;
 	}
 
 	auto encoder = TranscodeEncoder::Create(encoder_id, output_track, bind(&TranscoderStream::OnEncodedPacket, this, std::placeholders::_1, std::placeholders::_2));

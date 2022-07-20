@@ -191,13 +191,17 @@ ov::String MediaTrack::GetInfoString()
 				"Bitrate(%s) "
 				"codec(%d, %s) "
 				"resolution(%dx%d) "
-				"framerate(%.2ffps) ",
+				"framerate(%.2ffps) "
+				"KeyInterval(%d) "
+				"BFrames(%d) ",
 				GetId(),
 				IsBypass() ? "true" : "false",
 				ov::Converter::BitToString(GetBitrate()).CStr(),
 				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(),
 				GetWidth(), GetHeight(),
-				GetFrameRate());
+				GetFrameRate(),
+				GetKeyFrameInterval(),
+				GetBFrames());
 			break;
 
 		case MediaType::Audio:

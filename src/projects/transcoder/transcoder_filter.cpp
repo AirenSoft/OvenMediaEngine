@@ -92,8 +92,7 @@ bool TranscodeFilter::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 
 bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 {
-	//	If the timestamp increases rapidly, out of memory occurs while padding is performed in the fps and aresample filters.
-	// To prevent this, the filter is regenerated.
+	// In case of pts/dts jumps
 	int64_t ts_increment = abs(buffer->GetPts() - _last_pts);
 	int64_t tmp_last_pts = _last_pts;
 	bool detect_abnormal_increace_pts = (_last_pts != -1LL && ts_increment > _threshold_ts_increment) ? true : false;
@@ -107,13 +106,14 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 		return true;
 	}
 
+	// In case of resolution change
 	if (_input_track->GetMediaType() == MediaType::Video)
 	{
-		if (buffer->GetWidth() != (int32_t)_input_track->GetWidth() || buffer->GetHeight() != (int32_t)_input_track->GetHeight())
+		if (buffer->GetWidth() != (int32_t)_impl->GetInputWidth() || buffer->GetHeight() != (int32_t)_impl->GetInputHeight())
 		{
+			logti("Changed input resolution of %u track. (%dx%d -> %dx%d)", _input_track->GetId(), _impl->GetInputWidth(), _impl->GetInputHeight(), buffer->GetWidth(), buffer->GetHeight());
 			_input_track->SetWidth(buffer->GetWidth());
 			_input_track->SetHeight(buffer->GetHeight());
-			logti("Changed resolution %u track", _input_track->GetId());
 			return true;
 		}
 	}

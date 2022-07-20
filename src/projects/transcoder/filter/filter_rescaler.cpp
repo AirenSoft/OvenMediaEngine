@@ -90,6 +90,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 		ov::String::FormatString("time_base=%s", input_track->GetTimeBase().GetStringExpr().CStr()),
 		ov::String::FormatString("pixel_aspect=%d/%d", 1, 1)};
 
+
 	ov::String src_args = ov::String::Join(src_params, ":");
 
 	ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, buffersrc, "in", src_args, nullptr, _filter_graph);
@@ -162,7 +163,10 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 		return false;
 	}
 
-	logtd("Rescaler is enabled for track #%u using parameters. input: %s / outputs: %s", input_track->GetId(), src_args.CStr(), output_filters.CStr());
+	logti("Rescaler is enabled for track #%u using parameters. input: %s / outputs: %s", input_track->GetId(), src_args.CStr(), output_filters.CStr());
+
+	_input_width = input_track->GetWidth();
+	_input_height = input_track->GetHeight();
 
 
 	return true;
