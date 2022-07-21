@@ -1034,6 +1034,14 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 		pop_media_packet->SetDuration(duration);
 
+		// [#743] Recording and HLS packetizing are failing due to non-monotonically increasing dts.
+		// So, the code below is a temporary measure to avoid this problem. A more fundamental solution should be considered.
+		if (pop_media_packet->GetDts() == media_packet->GetDts())
+		{
+			media_packet->SetPts(media_packet->GetPts() + 1);
+			media_packet->SetDts(media_packet->GetDts() + 1);
+		}  // end of temporary measure code
+
 		_media_packet_stash[media_packet->GetTrackId()] = std::move(media_packet);
 	}
 	else
