@@ -28,19 +28,19 @@ You can set the port for TLS in `TLSPort`. Currently, LLHLS and WebRTC Signaling
 Add your certificate files to  as follows:
 
 ```markup
-<Domain>
+<Host>
 	<Names>
 		<Name>*.airensoft.com</Name>
 	</Names>
 	<TLS>
-		<CertPath>path/to/file.crt</CertPath>
-		<KeyPath>path/to/file.key</KeyPath>
-		<ChainCertPath>path/to/file.crt</ChainCertPath>
+		<CertPath>/etc/pki/airensoft.com/_airensoft_com.crt</CertPath>
+		<KeyPath>/etc/pki/airensoft.com/_airensoft_com.key</KeyPath>
+		<ChainCertPath>/etc/pki/airensoft.com/_airensoft_com.ca-bundle</ChainCertPath>
 	</TLS>
-</Domain>
+</Host>
 ```
 
-To configure HTTPs for HLS, DASH, and WebRTC Signalling servers, the TLS element must be enabled. The `CertPath` has to indicate a server certificate and the `KeyPath` has to indicate a private key file. They can be set to absolute paths or relative paths from the executable. If the server certificate is issued using an intermediate certificate, some browsers may complain about a certificate. In this case, you should set a bundle of chained certificates provided by a Certificate Authority in `ChainCertPath`.
+To configure HTTPs for HLS, and WebRTC Signaling server, the TLS element must be enabled. The `CertPath` has to indicate a server certificate and the `KeyPath` has to indicate a private key file. They can be set to absolute paths or relative paths from the executable. If the server certificate is issued using an intermediate certificate, some browsers may complain about a certificate. In this case, you should set a bundle of chained certificates provided by a Certificate Authority in `ChainCertPath`.
 
 If you set up TLS, you can't set IP or \* into \<Name>. You can only set Domains that the certificate contains. If you have a certificate for `*.host.com`, it means you can set domains such as `aaa.host.com`, `bbb.host.com`, and `*.host.com`.
 

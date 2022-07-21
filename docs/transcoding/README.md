@@ -347,7 +347,3 @@ Therefore, you set it up as shown in the table. If you want to stream using LLHL
 Also, if you are going to use WebRTC on all platforms, you need to configure both VP8 and H.264. This is because different codecs are supported for each browser, for example, VP8 only, H264 only, or both.
 
 However, don't worry. If you set the codecs correctly, OME automatically sends the stream of codecs requested by the browser.
-
-{% hint style="info" %}
-Currently, OME doesn't support adaptive streaming on HLS, MPEG-DASH. However, it will be updated soon.
-{% endhint %}
