@@ -214,13 +214,16 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 		return ov::Daemon::State::PARENT_FAIL;
 	}
 
-	if (parse_option->version)
 	{
-		::printf("OvenMediaEngine v%s\n", OME_VERSION);
-		return ov::Daemon::State::PARENT_FAIL;
-	}
+		auto version_instance = info::OmeVersion::GetInstance();
+		version_instance->SetVersion(OME_VERSION, OME_GIT_VERSION);
 
-	info::OmeVersion::GetInstance()->SetVersion(OME_VERSION, OME_GIT_VERSION);
+		if (parse_option->version)
+		{
+			::printf("OvenMediaEngine %s\n", version_instance->ToString().CStr());
+			return ov::Daemon::State::PARENT_FAIL;
+		}
+	}
 
 	// Daemonize OME with start_service argument
 	if (parse_option->start_service)
