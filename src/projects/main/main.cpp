@@ -220,7 +220,7 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 
 		if (parse_option->version)
 		{
-			::printf("OvenMediaEngine v%s\n", version_instance->ToString().CStr());
+			::printf("OvenMediaEngine %s\n", version_instance->ToString().CStr());
 			return ov::Daemon::State::PARENT_FAIL;
 		}
 	}
