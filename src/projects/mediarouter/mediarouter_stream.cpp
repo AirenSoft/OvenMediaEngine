@@ -54,7 +54,8 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 	logti("[%s/%s(%u)] Trying to create media route stream", _stream->GetApplicationName(), _stream->GetName().CStr(), _stream->GetId());
 	_inout_type = MediaRouterStreamType::UNKNOWN;
 
-	_max_warning_count_bframe = 0;
+	_warning_count_bframe = 0;
+	_warning_count_out_of_order = 0;
 
 	_stat_start_time = std::chrono::system_clock::now();
 	_stop_watch.Start();
@@ -783,7 +784,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 		case cmn::BitstreamFormat::H264_ANNEXB:
 		case cmn::BitstreamFormat::H264_AVCC:
 		case cmn::BitstreamFormat::H265_ANNEXB:
-			if (_max_warning_count_bframe < 10)
+			if (_warning_count_bframe < 10)
 			{
 				if (_stat_recv_pkt_count[track_id] > 0 && _stat_recv_pkt_lpts[track_id] > media_packet->GetPts())
 				{
@@ -800,7 +801,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 						  track_id,
 						  _inout_type == MediaRouterStreamType::INBOUND ? "inbound" : "outbound");
 
-					_max_warning_count_bframe++;
+					_warning_count_bframe++;
 				}
 			}
 			break;
@@ -1030,17 +1031,26 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 		pop_media_packet = std::move(it->second);
 
-		int64_t duration = media_packet->GetDts() - pop_media_packet->GetDts();
-
-		pop_media_packet->SetDuration(duration);
-
 		// [#743] Recording and HLS packetizing are failing due to non-monotonically increasing dts.
 		// So, the code below is a temporary measure to avoid this problem. A more fundamental solution should be considered.
-		if (pop_media_packet->GetDts() == media_packet->GetDts())
+		if (pop_media_packet->GetDts() >= media_packet->GetDts())
 		{
-			media_packet->SetPts(media_packet->GetPts() + 1);
-			media_packet->SetDts(media_packet->GetDts() + 1);
+			if (_warning_count_out_of_order++ < 10)
+			{
+				logtw("[%s/%s] Detected out of order DTS of packet. track_id:%d dts:%lld->%lld",
+					  _stream->GetApplicationName(), _stream->GetName().CStr(), pop_media_packet->GetTrackId(), pop_media_packet->GetDts(), media_packet->GetDts());
+			}
+
+			// If a packet has entered this function, it's a really weird stream.
+			// It must be seen that the order of the packets is jumbled.
+			media_packet->SetPts(pop_media_packet->GetPts() + 1);
+			media_packet->SetDts(pop_media_packet->GetDts() + 1);
 		}  // end of temporary measure code
+
+		int64_t duration = media_packet->GetDts() - pop_media_packet->GetDts();
+		pop_media_packet->SetDuration(duration);
+
+		// logti("%lld / %lld / %d", pop_media_packet->GetPts(), pop_media_packet->GetDts(), pop_media_packet->GetDuration());
 
 		_media_packet_stash[media_packet->GetTrackId()] = std::move(media_packet);
 	}

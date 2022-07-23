@@ -113,7 +113,8 @@ private:
 	std::chrono::time_point<std::chrono::system_clock> _stat_start_time;
 
 
-	uint32_t _max_warning_count_bframe;
+	uint32_t _warning_count_bframe;
+	uint32_t _warning_count_out_of_order;
 
 
 	void DumpPacket(std::shared_ptr<MediaPacket> &media_packet, bool dump = false);

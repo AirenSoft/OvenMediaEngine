@@ -15,8 +15,10 @@ VideoTrack::VideoTrack()
 	  _width(0),
 	  _height(0),
 	  _format(0),
-	  _preset(""),
+	  _key_frame_interval(0),
+	  _b_frames(0),
 	  _has_bframe(false),
+	  _preset(""),
 	  _thread_count(0)
 
 {
