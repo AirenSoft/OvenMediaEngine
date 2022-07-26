@@ -15,6 +15,7 @@
 #define CFG_LAST_CONFIG_FILE_NAME_LEGACY "LastConfig.json"
 #define CFG_LAST_CONFIG_FILE_NAME "LastConfig.xml"
 #define SERVER_ID_STORAGE_FILE "Server.id"
+#define LICENSE_STORAGE_FILE "License"
 
 namespace cfg
 {
@@ -53,6 +54,9 @@ namespace cfg
 		void LoadServerConfig(const ov::String &config_path);
 
 		MAY_THROWS(cfg::ConfigError)
+		void LoadLicenseKey(const ov::String &config_path);
+
+		MAY_THROWS(cfg::ConfigError)
 		void LoadServerID(const ov::String &config_path);
 
 		MAY_THROWS(cfg::ConfigError)
@@ -62,6 +66,7 @@ namespace cfg
 
 		std::shared_ptr<Server> _server;
 		ov::String _server_id;
+		ov::String _license_key;
 		std::map<ov::String, ov::String> _macros;
 
 		timespec _last_modified;
