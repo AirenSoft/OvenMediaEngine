@@ -74,11 +74,45 @@ namespace cfg
 
 		LoadServerID(config_path);
 		_server->SetID(_server_id);
+
+		LoadLicenseKey(config_path);
+		_server->SetLicenseKey(_license_key);
 	}
 
 	void ConfigManager::ReloadConfigs()
 	{
 		LoadConfigs(_config_path);
+	}
+
+	void ConfigManager::LoadLicenseKey(const ov::String &config_path)
+	{
+		// Load from environment variable first
+		auto license_key_env = std::getenv("OME_LICENSE_KEY");
+		if (license_key_env != nullptr)
+		{
+			_license_key = license_key_env;
+		}
+		else
+		{
+			// Load from file
+			auto file_path = ov::PathManager::Combine(config_path, LICENSE_STORAGE_FILE);
+
+			std::ifstream fs(file_path);
+			if (!fs.is_open())
+			{
+				return;
+			}
+
+			std::string line;
+			std::getline(fs, line);
+			fs.close();
+
+			line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
+			
+			_license_key = line.c_str();
+		}
+
+		logti("License key loaded: %s", _license_key.CStr());
 	}
 
 	void ConfigManager::LoadServerID(const ov::String &config_path)

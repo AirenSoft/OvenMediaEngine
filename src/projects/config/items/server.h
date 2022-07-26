@@ -33,6 +33,7 @@ namespace cfg
 
 		ov::String _name;
 		ov::String _id;
+		ov::String _license_key;
 
 		bool _privacy_protection_on = false;
 
@@ -81,6 +82,16 @@ namespace cfg
 		void SetID(ov::String id)
 		{
 			_id = id;
+		}
+
+		ov::String GetLicenseKey() const
+		{
+			return _license_key;
+		}
+
+		void SetLicenseKey(ov::String license_key)
+		{
+			_license_key = license_key;
 		}
 
 		// Deprecated - It has a bug
