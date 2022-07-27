@@ -22,7 +22,7 @@ public:
 	static std::shared_ptr<TranscodeEncoder> Create(int32_t encoder_id, std::shared_ptr<MediaTrack> output_track, _cb_func on_complete_handler);
 	void SetEncoderId(int32_t encdoer_id);
 
-	virtual int GetPixelFormat() const noexcept = 0;
+	virtual int GetSupportedFormat() const noexcept = 0;
 
 	bool Configure(std::shared_ptr<MediaTrack> output_track) override;
 

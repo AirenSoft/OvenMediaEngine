@@ -20,9 +20,9 @@ public:
 		return AV_CODEC_ID_AAC;
 	}
 
-	int GetPixelFormat() const noexcept override
+	int GetSupportedFormat() const noexcept override
 	{
-		return AV_PIX_FMT_NONE;
+		return AV_SAMPLE_FMT_S16;
 	}
 
 	bool Configure(std::shared_ptr<MediaTrack> output_context) override;

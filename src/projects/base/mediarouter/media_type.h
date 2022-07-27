@@ -419,8 +419,6 @@ namespace cmn
 			LayoutUnknown = 0x00000000U,				// AV_CH_LAYOUT_Unknown
 			LayoutMono = 0x00000004U,					// AV_CH_LAYOUT_MONO
 			LayoutStereo = (0x00000001U | 0x00000002U)  // AV_CH_FRONT_LEFT|AV_CH_FRONT_RIGHT
-
-			// TODO(SOULK) : Need to support additional layout
 		};
 
 	public:

@@ -23,7 +23,7 @@ bool EncoderAVCxOpenH264::SetCodecParams()
 	_codec_context->sample_aspect_ratio = ::av_make_q(1, 1);
 	_codec_context->ticks_per_frame = 2;
 	_codec_context->time_base = ::av_inv_q(::av_mul_q(_codec_context->framerate, (AVRational){_codec_context->ticks_per_frame, 1}));
-	_codec_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
+	_codec_context->pix_fmt = (AVPixelFormat)GetSupportedFormat();
 	_codec_context->width = GetRefTrack()->GetWidth();
 	_codec_context->height = GetRefTrack()->GetHeight();
 
