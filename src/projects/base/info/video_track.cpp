@@ -14,7 +14,6 @@ VideoTrack::VideoTrack()
 	  _video_timescale(0),
 	  _width(0),
 	  _height(0),
-	  _format(0),
 	  _key_frame_interval(0),
 	  _b_frames(0),
 	  _has_bframe(false),
@@ -62,16 +61,6 @@ void VideoTrack::SetHeight(int32_t height)
 int32_t VideoTrack::GetHeight() const
 {
 	return _height;
-}
-
-void VideoTrack::SetFormat(int32_t format)
-{
-	_format = format;
-}
-
-int32_t VideoTrack::GetFormat() const
-{
-	return _format;
 }
 
 void VideoTrack::SetVideoTimestampScale(double scale)

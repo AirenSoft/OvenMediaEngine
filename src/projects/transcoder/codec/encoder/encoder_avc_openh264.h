@@ -20,7 +20,7 @@ public:
 		return AV_CODEC_ID_H264;
 	}
 
-	int GetPixelFormat() const noexcept override
+	int GetSupportedFormat() const noexcept override
 	{
 		return AV_PIX_FMT_YUV420P;
 	}

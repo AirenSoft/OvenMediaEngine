@@ -17,7 +17,7 @@ EncoderFFOPUS::~EncoderFFOPUS()
 bool EncoderFFOPUS::SetCodecParams()
 {
 	_codec_context->bit_rate = GetRefTrack()->GetBitrate();
-	_codec_context->sample_fmt = AV_SAMPLE_FMT_S16;
+	_codec_context->sample_fmt = (AVSampleFormat)GetSupportedFormat();
 	_codec_context->sample_rate = GetRefTrack()->GetSampleRate();
 	_codec_context->channel_layout = static_cast<uint64_t>(GetRefTrack()->GetChannel().GetLayout());
 	_codec_context->channels = GetRefTrack()->GetChannel().GetCounts();

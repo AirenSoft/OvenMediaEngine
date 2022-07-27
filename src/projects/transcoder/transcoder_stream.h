@@ -177,7 +177,6 @@ private:
 	void ChangeOutputFormat(MediaFrame *buffer);
 	void UpdateInputTrack(MediaFrame *buffer);
 	void UpdateOutputTrack(MediaFrame *buffer);
-	void UpdateDecoderContext(MediaFrame *buffer);
 
 	// There are 3 steps to process packet
 	// Step 1: Decode (Decode a frame from given packets)

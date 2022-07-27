@@ -30,9 +30,6 @@ public:
 	void SetHeight(int32_t height);
 	int32_t GetHeight() const;
 
-	void SetFormat(int32_t format);
-	int32_t GetFormat() const;
-
 	void SetVideoTimestampScale(double scale);
 	double GetVideoTimestampScale() const;
 
@@ -71,7 +68,6 @@ protected:
 	double _video_timescale;
 	int32_t _width;
 	int32_t _height;
-	int32_t _format;
 	int32_t _key_frame_interval;
 	int32_t _b_frames;
 	bool _has_bframe;
