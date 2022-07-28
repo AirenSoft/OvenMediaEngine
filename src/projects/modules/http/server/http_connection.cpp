@@ -232,7 +232,9 @@ namespace http
 				_websocket_session.reset();
 			}
 			
+			std::unique_lock<std::mutex> map_guard(_http_stream_map_guard);
 			_http_stream_map.clear();
+			map_guard.unlock();
 
 			if (reason != PhysicalPortDisconnectReason::Disconnected)
 			{
@@ -245,6 +247,10 @@ namespace http
 		void HttpConnection::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
 		{
 			std::lock_guard<std::recursive_mutex> lock(_close_mutex);
+			if (_closed == true)
+			{
+				return;
+			}
 
 			auto process_data = data->Clone();
 			while (process_data->GetLength() > 0)
@@ -459,6 +465,7 @@ namespace http
 			_hpack_decoder = std::make_shared<hpack::Decoder>();
 
 			// Control Stream (stream id : 0) is always open
+			std::unique_lock<std::mutex> lock(_http_stream_map_guard);
 			_http_stream_map.emplace(0, std::make_shared<h2::HttpStream>(GetSharedPtr(), 0));
 		}
 	}  // namespace svr
