@@ -798,8 +798,16 @@ int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 				continue;
 			}
 
-			// Get the color space supported by the generated encoder and sets it to Output Transcode Context
-			output_track->SetColorspace(_encoders[encoder_id]->GetPixelFormat());
+			// Set the sample format and color space supported by the encoder to the output track.
+			// These values are used in the Resampler/Rescaler filter.
+			if (output_track->GetMediaType() == cmn::MediaType::Video)
+			{
+				output_track->SetColorspace(_encoders[encoder_id]->GetSupportedFormat());
+			}
+			else if (output_track->GetMediaType() == cmn::MediaType::Audio)
+			{
+				output_track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(_encoders[encoder_id]->GetSupportedFormat()));
+			}
 		}
 	}
 
@@ -827,44 +835,12 @@ bool TranscoderStream::CreateEncoder(int32_t encoder_id, std::shared_ptr<MediaTr
 	return true;
 }
 
-void TranscoderStream::UpdateDecoderContext(MediaFrame *buffer)
-{
-	MediaTrackId track_id = buffer->GetTrackId();
-
-	logtd("[%s/%s(%u)] Update Input Track. track_id: %d", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId(), track_id);
-
-	auto track = _input_stream->GetTrack(track_id);
-	if (track == nullptr)
-	{
-		return;
-	}
-
-	switch (track->GetMediaType())
-	{
-		case cmn::MediaType::Video:
-			track->SetWidth(buffer->GetWidth());
-			track->SetHeight(buffer->GetHeight());
-			track->SetFormat(buffer->GetFormat());	// used AVFrame's format
-			break;
-
-		case cmn::MediaType::Audio:
-			// TODO: Set Sample Format
-			track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(buffer->GetFormat()));
-			track->SetFormat(buffer->GetFormat());	// used AVFrame's format
-			track->SetSampleRate(buffer->GetSampleRate());
-			track->GetChannel().SetCount(buffer->GetChannelCount());
-
-			break;
-		default:
-			// Do nothing
-			break;
-	}
-}
-
 // Information of the input track is updated by the decoded frame
 void TranscoderStream::UpdateInputTrack(MediaFrame *buffer)
 {
 	MediaTrackId track_id = buffer->GetTrackId();
+
+	logtd("[%s/%s(%u)] Update Input Track. track_id: %d", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId(), track_id);
 
 	auto &input_track = _input_stream->GetTrack(track_id);
 	if (input_track == nullptr)
@@ -877,13 +853,13 @@ void TranscoderStream::UpdateInputTrack(MediaFrame *buffer)
 	{
 		input_track->SetWidth(buffer->GetWidth());
 		input_track->SetHeight(buffer->GetHeight());
-		input_track->SetFormat(buffer->GetFormat());
+		input_track->SetColorspace(buffer->GetFormat());  // used AVPixelFormat
 	}
 	else if (input_track->GetMediaType() == cmn::MediaType::Audio)
 	{
 		input_track->SetSampleRate(buffer->GetSampleRate());
-		input_track->GetSample().SetFormat(buffer->GetFormat<cmn::AudioSample::Format>());
 		input_track->SetChannel(buffer->GetChannels());
+		input_track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(buffer->GetFormat()));
 	}
 }
 
@@ -908,12 +884,18 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 			// Case of ByPass
 			if (output_track->IsBypass() == true)
 			{
-				output_track->SetWidth(buffer->GetWidth());
-				output_track->SetHeight(buffer->GetHeight());
-				output_track->SetFormat(buffer->GetFormat());
-				output_track->SetSampleRate(buffer->GetSampleRate());
-				output_track->GetSample().SetFormat(buffer->GetFormat<cmn::AudioSample::Format>());
-				output_track->SetChannel(buffer->GetChannels());
+				if (output_track->GetMediaType() == cmn::MediaType::Video)
+				{
+					output_track->SetWidth(buffer->GetWidth());
+					output_track->SetHeight(buffer->GetHeight());
+					output_track->SetColorspace(buffer->GetFormat());
+				}
+				else if (output_track->GetMediaType() == cmn::MediaType::Audio)
+				{
+					output_track->SetSampleRate(buffer->GetSampleRate());
+					output_track->GetSample().SetFormat(buffer->GetFormat<cmn::AudioSample::Format>());
+					output_track->SetChannel(buffer->GetChannels());
+				}
 			}
 			else
 			{
@@ -964,8 +946,7 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 						}
 					}
 				}
-
-				if (output_track->GetMediaType() == cmn::MediaType::Audio)
+				else if (output_track->GetMediaType() == cmn::MediaType::Audio)
 				{
 					if (output_track->GetSampleRate() == 0)
 					{
@@ -977,11 +958,6 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 					{
 						output_track->SetChannel(buffer->GetChannels());
 					}
-				}
-
-				if (output_track->GetFormat() == 0)
-				{
-					output_track->SetFormat(buffer->GetFormat());
 				}
 			}
 		}
@@ -1001,9 +977,6 @@ void TranscoderStream::ChangeOutputFormat(MediaFrame *buffer)
 
 	// Update Track of Input Stream
 	UpdateInputTrack(buffer);
-
-	// Update Decoder Context
-	UpdateDecoderContext(buffer);
 
 	// Udpate Track of Output Stream
 	UpdateOutputTrack(buffer);

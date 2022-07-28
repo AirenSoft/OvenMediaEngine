@@ -23,7 +23,7 @@ bool EncoderVP8::SetCodecParams()
 	_codec_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetRefTrack()->GetTimeBase());
 	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRate() > 0) ? GetRefTrack()->GetFrameRate() : GetRefTrack()->GetEstimateFrameRate(), AV_TIME_BASE);
 	_codec_context->max_b_frames = 0;
-	_codec_context->pix_fmt = (AVPixelFormat)GetPixelFormat();
+	_codec_context->pix_fmt = (AVPixelFormat)GetSupportedFormat();
 	_codec_context->width = GetRefTrack()->GetWidth();
 	_codec_context->height = GetRefTrack()->GetHeight();
 

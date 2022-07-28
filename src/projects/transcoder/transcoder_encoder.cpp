@@ -24,7 +24,7 @@
 #include "transcoder_gpu.h"
 #include "transcoder_private.h"
 
-#define USE_LEGACY_LIBOPUS true
+#define USE_LEGACY_LIBOPUS false
 #define MAX_QUEUE_SIZE 120
 
 TranscodeEncoder::TranscodeEncoder()
@@ -159,9 +159,9 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 			}
 #else
 			encoder = std::make_shared<EncoderFFOPUS>();
-			if (encoder != nullptr && encoder->Configure(context) == true)
+			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
-				return encoder;
+				goto done;
 			}
 #endif
 			break;

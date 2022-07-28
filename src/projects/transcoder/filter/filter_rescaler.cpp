@@ -86,7 +86,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	// Prepare the input parameters
 	std::vector<ov::String> src_params = {
 		ov::String::FormatString("video_size=%dx%d", input_track->GetWidth(), input_track->GetHeight()),
-		ov::String::FormatString("pix_fmt=%d", input_track->GetFormat()),
+		ov::String::FormatString("pix_fmt=%d", input_track->GetColorspace()),
 		ov::String::FormatString("time_base=%s", input_track->GetTimeBase().GetStringExpr().CStr()),
 		ov::String::FormatString("pixel_aspect=%d/%d", 1, 1)};
 
@@ -125,7 +125,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 
 	if (output_track->GetHardwareAccel() == true &&
 		TranscodeGPU::GetInstance()->IsSupportedNV() == true &&
-		input_track->GetFormat() == AV_PIX_FMT_NV12 &&
+		input_track->GetColorspace() == AV_PIX_FMT_NV12 &&
 		output_track->GetColorspace() == AV_PIX_FMT_NV12)
 	{
 		filters.push_back(ov::String::FormatString("hwupload_cuda,scale_cuda=%d:%d,hwdownload",
