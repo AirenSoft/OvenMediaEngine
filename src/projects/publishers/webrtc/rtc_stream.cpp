@@ -565,8 +565,7 @@ std::shared_ptr<PayloadAttr> RtcStream::MakePayloadAttr(const std::shared_ptr<co
 
 			break;
 		case MediaCodecId::Opus:
-			payload->SetRtpmap(PayloadTypeFromCodecId(track->GetCodecId()), "OPUS", static_cast<uint32_t>(track->GetSample().GetRateNum()),
-								std::to_string(track->GetChannel().GetCounts()).c_str());
+			payload->SetRtpmap(PayloadTypeFromCodecId(track->GetCodecId()), "OPUS", static_cast<uint32_t>(track->GetSample().GetRateNum()), "2");
 
 			// Enable inband-fec
 			// a=fmtp:111 maxplaybackrate=16000; useinbandfec=1; maxaveragebitrate=20000
@@ -576,7 +575,7 @@ std::shared_ptr<PayloadAttr> RtcStream::MakePayloadAttr(const std::shared_ptr<co
 			}
 			else
 			{
-				payload->SetFmtp("minptime=10;useinbandfec=1");
+				payload->SetFmtp("sprop-stereo=0;stereo=0;minptime=10;useinbandfec=1");
 			}
 			break;
 		default:
