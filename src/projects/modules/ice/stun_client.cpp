@@ -1,6 +1,10 @@
 #include "stun_client.h"
 #include "stun/stun_message.h"
 #include "stun/attributes/stun_xor_mapped_address_attribute.h"
+#include "stun/attributes/stun_realm_attribute.h"
+#include "stun/attributes/stun_software_attribute.h"
+
+#include <main/main.h>
 
 #define OV_LOG_TAG "StunClient"
 
@@ -20,6 +24,10 @@ bool StunClient::GetMappedAddress(const ov::SocketAddress &stun_server, ov::Sock
 		transaction_id[index] = charset[rand() % OV_COUNTOF(charset)];
 	}
 	message.SetTransactionId(&(transaction_id[0]));
+
+	auto software_attribute = std::make_shared<StunSoftwareAttribute>();
+	software_attribute->SetText(ov::String::FormatString("OvenMediaEngine v%s", OME_VERSION));
+	message.AddAttribute(software_attribute);
 
 	auto send_data = message.Serialize();
 	
