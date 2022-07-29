@@ -24,7 +24,6 @@ namespace http
 		{
 			// Default request headers
 			_request_header["User-Agent"] = "OvenMediaEngine";
-			_request_header["Accept"] = "*/*";
 		}
 
 		HttpClient::HttpClient(const std::shared_ptr<ov::SocketPool> &socket_pool)
