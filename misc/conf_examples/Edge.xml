@@ -178,7 +178,6 @@
 
 				(https://github.com/AirenSoft/OvenMediaEngine/issues/621#issuecomment-1026892776)
 			-->
-			<!--
 			<Applications>
 				<Application>
 					<Name>app</Name>
@@ -200,6 +199,7 @@
 					<Providers>
 						<OVT />
 					</Providers>
+					<!--
 					<Publishers>
 						<AppWorkerCount>1</AppWorkerCount>
 						<StreamWorkerCount>8</StreamWorkerCount>
@@ -218,9 +218,9 @@
 							</CrossDomains>
 						</LLHLS>
 					</Publishers>
+					-->
 				</Application>
 			</Applications>
-			-->
 		</VirtualHost>
 	</VirtualHosts>
 </Server>
