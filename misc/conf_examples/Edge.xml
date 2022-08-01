@@ -199,7 +199,6 @@
 					<Providers>
 						<OVT />
 					</Providers>
-					<!--
 					<Publishers>
 						<AppWorkerCount>1</AppWorkerCount>
 						<StreamWorkerCount>8</StreamWorkerCount>
@@ -218,7 +217,6 @@
 							</CrossDomains>
 						</LLHLS>
 					</Publishers>
-					-->
 				</Application>
 			</Applications>
 		</VirtualHost>
