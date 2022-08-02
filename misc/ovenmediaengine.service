@@ -1,6 +1,6 @@
 [Unit]
 Description=OvenMediaEngine
-After=network.target
+After=network-online.target
 
 [Service]
 Type=forking
