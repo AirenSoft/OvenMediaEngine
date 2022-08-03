@@ -55,13 +55,13 @@ This section describes the common user interface of Web Console.
 
 ### Sign in
 
-![](../.gitbook/assets/1.png)
+![](<../.gitbook/assets/1 (1).png>)
 
 You can sign in from this login screen. A Username and Password of the initial account are `admin`.
 
 ### Common Layout
 
-![](../.gitbook/assets/2.png)
+![](<../.gitbook/assets/1 (2).png>)
 
 #### ① Home Link (Server page)&#x20;
 
@@ -105,7 +105,7 @@ The OvenMediaEngine Console displays each Server, Virtual Host, Application, and
 
 #### Server Configuration
 
-![](../.gitbook/assets/3.png)
+![](<../.gitbook/assets/3 (1).png>)
 
 **① Display Configuration Files**
 
@@ -115,7 +115,7 @@ If you select Server, you will see all the configuration files used by OvenMedia
 
 If you select Virtual Host, Application, or Stream, you can see traffic/connection statistics and configuration.
 
-![Display statistics](../.gitbook/assets/4.png)
+![Display statistics](<../.gitbook/assets/2 (1).png>)
 
 ![Display of configuration of Virtual Host, Application](../.gitbook/assets/5.png)
 
@@ -137,13 +137,7 @@ Display detailed information about the selected resource. When Virtual Host or A
 
 If you change the Virtual Host or Application settings directly in the Server.xml or include the Virtual Host configuration file, you can apply the changes to OvenMediaEngine without restarting OvenMediaEngine. Use the Actions → Reload button on the details page of Virtual Host or Application.
 
-![Reload Virtual Host](../.gitbook/assets/7.png)
-
-![Reload Application](../.gitbook/assets/8.png)
-
-{% hint style="info" %}
-Disabled features such as New Application and Modify application will be added in the near future.
-{% endhint %}
+![Reload Virtual Host](../.gitbook/assets/3.png) ![Reload Application](<../.gitbook/assets/4 (1).png>)
 
 ### Add or Remove Virtual Hosts Dynamically
 
@@ -183,13 +177,13 @@ Similarly, if an existing Application is removed from the configuration file, an
 
 ### Test Player
 
-If you select a Stream, we provide a Player that can play that Stream.
+We provide a Test Player that can play that Stream.
 
-![](../.gitbook/assets/11.png)
+![](<../.gitbook/assets/5 (1).png>)
 
 **① Test Playback Link**
 
-If you select a Stream, you can enter the page where you can play the stream with the `Test Playback` link.
+If you select a Stream, you can find the section where you can play the stream with the `Test Playback` link.
 
 **② OvenMediaEngine Host Settings**
 

@@ -15,14 +15,12 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
 * **Ingest**
   * Push: WebRTC, SRT, RTMP, MPEG-2 TS
   * Pull: RTSP
+* **Adaptive Bitrate Streaming (ABR) for LLHLS and WebRTC**
 * **Low-Latency Streaming using LLHLS**
-  * Support Adaptive Bitrates Streaming (ABR)
 * **Sub-Second Latency Streaming using WebRTC**
   * WebRTC over TCP (with embedded TURN server)
-  * Embedded WebRTC Signalling Server (WebSocket based)
-  * ICE (Interactive Connectivity Establishment)
-  * DTLS (Datagram Transport Layer Security)
-  * SRTP (Secure Real-time Transport Protocol)
+  * Embedded WebRTC Signaling Server (WebSocket based)
+  * Retransmission with NACK
   * ULPFEC (Uneven Level Protection Forward Error Correction)
     * _VP8, H.264_
   * In-band FEC (Forward Error Correction)
