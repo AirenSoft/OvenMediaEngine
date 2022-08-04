@@ -49,7 +49,7 @@ ov::String TranscoderStreamInternal::GetIdentifiedForAudioProfile(const uint32_t
 {
 	if (profile.IsBypass() == true)
 	{
-		return ov::String::FormatString("T%d_PBYPASS");
+		return ov::String::FormatString("T%d_PBYPASS", track_id);
 	}
 
 	return ov::String::FormatString("T%d_P%s-%d-%d-%d",
