@@ -23,15 +23,15 @@ class SignedPolicy:
 
     def generate(self, url_expire: datetime, url_activate: Optional[datetime] = None, stream_expire: Optional[datetime] = None, allow_ip: Optional[str] = None) -> dict:
         policy_dict = {
-            "url_expire": int(url_expire.timestamp())
+            "url_expire": int(url_expire.timestamp() * 1000)
         }
 
         if url_activate:
             policy_dict["url_activate"] = url_activate
         if stream_expire:
-            policy_dict["stream_expire"] = int(stream_expire.timestamp())
+            policy_dict["stream_expire"] = int(stream_expire.timestamp() * 1000)
         if allow_ip:
-            policy["allow_ip"] = allow_ip
+            policy_dict["allow_ip"] = allow_ip
         
         policy_base64 = urlsafe_b64encode(json.dumps(policy_dict).encode("utf-8")).rstrip(b"=")
         stream_url = f"{self.base_url}?policy={policy_base64.decode('utf-8')}"
