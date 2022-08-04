@@ -242,9 +242,8 @@ int32_t TranscoderStream::CreateOutputStreamDynamic()
 	output_stream->SetMediaSource(_input_stream->GetUUID());
 	output_stream->LinkInputStream(_input_stream);
 
-	for (auto &it : _input_stream->GetTracks())
+	for (auto &[input_track_id, input_track] : _input_stream->GetTracks())
 	{
-		auto &input_track = it.second;
 		auto output_track = std::make_shared<MediaTrack>();
 		if (output_track == nullptr)
 		{
