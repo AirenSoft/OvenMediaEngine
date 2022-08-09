@@ -245,7 +245,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		auto stream_name = request_url->Stream();
 
 		uint64_t session_life_time = 0;
-		bool access_control_enabled = (origin_mode == true) && IsAccessControlEnabled(request_url);
+		bool access_control_enabled = IsAccessControlEnabled(request_url);
 
 		// Check if the request is for the master playlist
 		if (access_control_enabled == true && (request_url->File().IndexOf(".m3u8") > 0 && request_url->File().IndexOf("chunklist") == -1))
