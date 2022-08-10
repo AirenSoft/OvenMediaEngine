@@ -30,6 +30,9 @@ namespace http
 			// StaticTable is singleton instance
 			StaticTable* _static_table = StaticTable::GetInstance();
 			std::shared_ptr<DynamicTable> _dynamic_table = std::make_shared<DynamicTable>();
+
+			// The dynamic table must be atomic
+			std::mutex _dynamic_table_lock;
 		};
 	}
 }
