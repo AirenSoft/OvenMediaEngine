@@ -19,7 +19,6 @@ namespace http
 	{
 		class HttpConnection;
 
-		// For HTTP/1.1
 		class HttpExchange : public ov::EnableSharedFromThis<HttpExchange>
 		{
 		public:
