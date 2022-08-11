@@ -485,7 +485,8 @@ std::shared_ptr<LLHlsChunklist> LLHlsStream::GetChunklistWriter(const int32_t &t
 ov::String LLHlsStream::GetChunklistName(const int32_t &track_id) const
 {
 	// chunklist_<track id>_<media type>_<stream key>_llhls.m3u8
-	return ov::String::FormatString("chunklist_%d_%s_llhls.m3u8",
+	return ov::String::FormatString("../%s/chunklist_%d_%s_llhls.m3u8",
+										GetName().CStr(),
 										track_id, 
 										StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr());
 }
