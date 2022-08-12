@@ -187,6 +187,7 @@ ov::String MediaTrack::GetInfoString()
 		case MediaType::Video:
 			out_str.AppendFormat(
 				"Video Track #%d: "
+				"Name(%s) "
 				"Bypass(%s) "
 				"Bitrate(%s) "
 				"codec(%d, %s) "
@@ -194,7 +195,7 @@ ov::String MediaTrack::GetInfoString()
 				"framerate(%.2ffps) "
 				"KeyInterval(%d) "
 				"BFrames(%d) ",
-				GetId(),
+				GetId(), GetName().CStr(),
 				IsBypass() ? "true" : "false",
 				ov::Converter::BitToString(GetBitrate()).CStr(),
 				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(),
@@ -207,13 +208,14 @@ ov::String MediaTrack::GetInfoString()
 		case MediaType::Audio:
 			out_str.AppendFormat(
 				"Audio Track #%d: "
+				"Name(%s) "
 				"Bypass(%s) "
 				"Bitrate(%s) "
 				"codec(%d, %s) "
 				"samplerate(%s) "
 				"format(%s, %d) "
 				"channel(%s, %d) ",
-				GetId(),
+				GetId(), GetName().CStr(),
 				IsBypass() ? "true" : "false",
 				ov::Converter::BitToString(GetBitrate()).CStr(),
 				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(),
