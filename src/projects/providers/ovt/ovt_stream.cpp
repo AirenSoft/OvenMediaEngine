@@ -337,8 +337,8 @@ namespace pvd
 				return false;
 			}
 			
-			auto playlist_name = json_playlist["name"].asString().c_str();
-			auto playlist_file_name = json_playlist["fileName"].asString().c_str();
+			ov::String playlist_name = json_playlist["name"].asString().c_str();
+			ov::String playlist_file_name = json_playlist["fileName"].asString().c_str();
 
 			auto playlist = std::make_shared<info::Playlist>(playlist_name, playlist_file_name);
 
@@ -367,9 +367,9 @@ namespace pvd
 					return false;
 				}
 
-				auto rendition_name = json_rendition["name"].asString().c_str();
-				auto video_track_name = json_rendition["videoTrackName"].asString().c_str();
-				auto audio_track_name = json_rendition["audioTrackName"].asString().c_str();
+				ov::String rendition_name = json_rendition["name"].asString().c_str();
+				ov::String video_track_name = json_rendition["videoTrackName"].asString().c_str();
+				ov::String audio_track_name = json_rendition["audioTrackName"].asString().c_str();
 
 				playlist->AddRendition(std::make_shared<info::Rendition>(rendition_name, video_track_name, audio_track_name));
 			}
