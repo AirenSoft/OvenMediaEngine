@@ -48,5 +48,5 @@ Also, we are preparing a smarter algorithm based on user location, platform perf
 
 If you have a better idea, we hope that you improve our code and contribute to our project. Please visit [OvenMediaEngine GitHub](https://github.com/AirenSoft/OvenMediaEngine).
 
-{% embed url="https://github.com/AirenSoft/OvenMediaEngine/blob/master/src/projects/rtc_signalling/p2p/" %}
+{% embed url="https://github.com/AirenSoft/OvenMediaEngine/blob/master/src/projects/modules/rtc_signalling/p2p" %}
 
