@@ -15,6 +15,7 @@ FFMPEG_VERSION=5.0.1
 JEMALLOC_VERSION=5.2.1
 PCRE2_VERSION=10.39
 OPENH264_VERSION=2.3.0
+HIREDIS_VERSION=1.0.2
 
 INTEL_QSV_HWACCELS=false
 NVIDIA_VIDEO_CODEC_HWACCELS=false
@@ -299,6 +300,16 @@ install_libpcre2()
     rm -rf ${DIR} ) || fail_exit "libpcre2"
 }
 
+install_hiredis()
+{
+	(DIR=${TEMP_PATH}/hiredis && \
+    mkdir -p ${DIR} && \
+    cd ${DIR} && \
+    curl -sLf https://github.com/redis/hiredis/archive/refs/tags/v${HIREDIS_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    make -j$(nproc) && \
+    sudo make install PREFIX=/opt/ovenmediaengine && \
+    rm -rf ${DIR} ) || fail_exit "hiredis"
+}
 
 install_base_ubuntu()
 {
@@ -445,6 +456,7 @@ install_fdk_aac
 install_ffmpeg
 install_jemalloc
 install_libpcre2
+install_hiredis
 
 if [ "${WITH_OME}" == "true" ]; then
     install_ovenmediaengine

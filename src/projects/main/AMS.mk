@@ -19,6 +19,7 @@ LOCAL_STATIC_LIBRARIES := \
 	transcoder \
 	rtc_signalling \
 	address_utilities \
+	origin_map_client \
 	ice \
 	api_server \
 	json_serdes \
@@ -73,6 +74,7 @@ $(call add_pkg_config,vpx)
 $(call add_pkg_config,opus)
 $(call add_pkg_config,libsrtp2)
 $(call add_pkg_config,libpcre2-8)
+$(call add_pkg_config,hiredis)
 
 # Temporarily stop using JEMALLOC. We will test it more and use it again.
 #ifeq ($(MAKECMDGOALS),release)
