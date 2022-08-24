@@ -21,7 +21,8 @@ bool EncoderFFOPUS::SetCodecParams()
 	_codec_context->sample_rate = GetRefTrack()->GetSampleRate();
 	_codec_context->channel_layout = static_cast<uint64_t>(GetRefTrack()->GetChannel().GetLayout());
 	_codec_context->channels = GetRefTrack()->GetChannel().GetCounts();
-	_codec_context->cutoff = 12000;	 // SuperWideBand
+	// _codec_context->cutoff = 12000;	 // SuperWideBand (SamplingRate 24k)
+	// _codec_context->cutoff = 20000;	 // FullBand (SamplingRate 48k)
 	_codec_context->compression_level = 10;
 
 	::av_opt_set(_codec_context->priv_data, "application", "lowdelay", 0);
