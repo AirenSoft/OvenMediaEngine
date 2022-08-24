@@ -374,6 +374,22 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 		query_string.Clear();
 	}
 
+	ov::String stream_key;
+	if (request_uri->HasQueryKey("stream_key"))
+	{
+		stream_key = request_uri->GetQueryValue("stream_key");
+	}
+
+	if (stream_key.IsEmpty() == false)
+	{
+		if (query_string.IsEmpty() == false)
+		{
+			query_string += "&";
+		}
+
+		query_string.AppendFormat("stream_key=%s", stream_key.CStr());
+	}
+
 	auto [result, playlist] = llhls_stream->GetMasterPlaylist(file_name, query_string, gzip, legacy);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
@@ -418,6 +434,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 	}
 
 	auto request = exchange->GetRequest();
+	auto request_uri = request->GetParsedUri();
 	auto response = exchange->GetResponse();
 	bool has_delivery_directives = true;
 
@@ -444,6 +461,22 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 	if (_origin_mode == true)
 	{
 		query_string.Clear();
+	}
+
+	ov::String stream_key;
+	if (request_uri->HasQueryKey("stream_key"))
+	{
+		stream_key = request_uri->GetQueryValue("stream_key");
+	}
+
+	if (stream_key.IsEmpty() == false)
+	{
+		if (query_string.IsEmpty() == false)
+		{
+			query_string += "&";
+		}
+
+		query_string.AppendFormat("stream_key=%s", stream_key.CStr());
 	}
 
 	auto [result, chunklist] = llhls_stream->GetChunklist(query_string, track_id, msn, part, skip, gzip, legacy);
