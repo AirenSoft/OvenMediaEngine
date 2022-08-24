@@ -82,6 +82,19 @@ namespace cmn
 		Png
 	};
 
+	enum class MediaCodecLibraryId : uint8_t
+	{
+		AUTO,
+		OPENH264,
+		BEAMR,
+		NVENC,
+		QSV,
+		LIBVPX,
+		FDKAAC,
+		LIBOPUS,
+		NB
+	};
+
 	static bool IsVideoCodec(cmn::MediaCodecId codec_id)
 	{
 		if (codec_id == cmn::MediaCodecId::H264 || codec_id == cmn::MediaCodecId::H265 || codec_id == cmn::MediaCodecId::Vp8 || codec_id == cmn::MediaCodecId::Flv ||
@@ -115,16 +128,74 @@ namespace cmn
 		return false;
 	}
 
+	static cmn::MediaCodecLibraryId GetCodecLibraryIdByName(ov::String name)
+	{
+		name.MakeUpper();
+
+		if (name.HasSuffix("_OPENH264"))
+		{
+			return cmn::MediaCodecLibraryId::OPENH264;
+		}
+		else if (name.HasSuffix("_BEAMR"))
+		{
+			return cmn::MediaCodecLibraryId::BEAMR;
+		}
+		else if (name.HasSuffix("_NVENC"))
+		{
+			return cmn::MediaCodecLibraryId::NVENC;
+		}
+		else if (name.HasSuffix("_QSV"))
+		{
+			return cmn::MediaCodecLibraryId::QSV;
+		}
+		else if (name.HasSuffix("_LIBVPX"))
+		{
+			return cmn::MediaCodecLibraryId::LIBVPX;
+		}
+		else if (name.HasSuffix("_FDKAAC"))
+		{
+			return cmn::MediaCodecLibraryId::FDKAAC;
+		}
+
+		return cmn::MediaCodecLibraryId::AUTO;
+	}
+
+	static ov::String GetStringFromCodecLibraryId(cmn::MediaCodecLibraryId id)
+	{
+		switch (id)
+		{
+			case cmn::MediaCodecLibraryId::OPENH264:
+				return "OpenH264";
+			case cmn::MediaCodecLibraryId::BEAMR:
+				return "Beamr";
+			case cmn::MediaCodecLibraryId::NVENC:
+				return "nvenc";
+			case cmn::MediaCodecLibraryId::QSV:
+				return "qsv";
+			case cmn::MediaCodecLibraryId::LIBVPX:
+				return "libvpx";
+			case cmn::MediaCodecLibraryId::FDKAAC:
+				return "fdkaac";
+			case cmn::MediaCodecLibraryId::LIBOPUS:
+				return "libopus";				
+			case cmn::MediaCodecLibraryId::AUTO:
+			default:
+				break;
+		}
+
+		return "Auto";
+	}
+
 	static cmn::MediaCodecId GetCodecIdByName(ov::String name)
 	{
 		name.MakeUpper();
 
 		// Video codecs
-		if (name == "H264")
+		if (name == "H264" || name == "H264_OPENH264" || name == "H264_BEAMR" || name == "H264_NVENC" || name == "H264_QSV")
 		{
 			return cmn::MediaCodecId::H264;
 		}
-		else if (name == "H265")
+		else if (name == "H265" || name == "H265_NVENC" || name == "H265_QSV")
 		{
 			return cmn::MediaCodecId::H265;
 		}
@@ -139,7 +210,7 @@ namespace cmn
 		else if (name == "FLV")
 		{
 			return cmn::MediaCodecId::Flv;
-		}		
+		}
 		else if (name == "JPEG")
 		{
 			return cmn::MediaCodecId::Jpeg;
@@ -229,7 +300,7 @@ namespace cmn
 
 		double GetTimescale() const
 		{
-			if(_num == 0)
+			if (_num == 0)
 			{
 				return 0.0;
 			}
@@ -276,7 +347,7 @@ namespace cmn
 		{
 			None = -1,
 
-			U8 = 0,   ///< unsigned 8 bits
+			U8 = 0,	  ///< unsigned 8 bits
 			S16 = 1,  ///< signed 16 bits
 			S32 = 2,  ///< signed 32 bits
 			Flt = 3,  ///< float
@@ -418,7 +489,7 @@ namespace cmn
 		{
 			LayoutUnknown = 0x00000000U,				// AV_CH_LAYOUT_Unknown
 			LayoutMono = 0x00000004U,					// AV_CH_LAYOUT_MONO
-			LayoutStereo = (0x00000001U | 0x00000002U)  // AV_CH_FRONT_LEFT|AV_CH_FRONT_RIGHT
+			LayoutStereo = (0x00000001U | 0x00000002U)	// AV_CH_FRONT_LEFT|AV_CH_FRONT_RIGHT
 		};
 
 	public:
@@ -446,15 +517,15 @@ namespace cmn
 			}
 		}
 
-		void SetCount(uint32_t count) {
+		void SetCount(uint32_t count)
+		{
 			_count = count;
 			switch (_count)
 			{
-				OV_MEDIA_TYPE_SET_VALUE(0, _layout=Layout::LayoutUnknown, _name = "unknown");
-				OV_MEDIA_TYPE_SET_VALUE(1, _layout=Layout::LayoutMono, _name = "mono");
-				OV_MEDIA_TYPE_SET_VALUE(2, _layout=Layout::LayoutStereo, _name = "stereo");
-				
-			}			
+				OV_MEDIA_TYPE_SET_VALUE(0, _layout = Layout::LayoutUnknown, _name = "unknown");
+				OV_MEDIA_TYPE_SET_VALUE(1, _layout = Layout::LayoutMono, _name = "mono");
+				OV_MEDIA_TYPE_SET_VALUE(2, _layout = Layout::LayoutStereo, _name = "stereo");
+			}
 		}
 
 		// channel layout

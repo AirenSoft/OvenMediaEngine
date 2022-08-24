@@ -242,7 +242,7 @@ bool MediaRouteApplication::OnStreamCreated(const std::shared_ptr<MediaRouteAppl
 		return false;
 	}
 
-	logti("[%s/%s(%u)] Trying to create a stream %s", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId(), stream_info->GetInfoString().CStr());
+	logti("[%s/%s(%u)] Trying to create a stream", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
 	auto connector_type = app_conn->GetConnectorType();
 	auto representation_type = stream_info->GetRepresentationType();
@@ -764,6 +764,8 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 		// Notify the Observer that the stream is parsed
 		if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
 		{
+			logti("[%s/%s(%u)] All tracks in the stream are parsed %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
+			
 			NotifyStreamPrepared(stream);
 		}
 
@@ -814,6 +816,8 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 
 		if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
 		{
+			logti("[%s/%s(%u)] All tracks in the stream are parsed %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
+
 			NotifyStreamPrepared(stream);
 		}
 

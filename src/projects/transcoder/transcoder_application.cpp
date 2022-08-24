@@ -38,7 +38,6 @@ TranscodeApplication::~TranscodeApplication()
 
 bool TranscodeApplication::Start()
 {
-#if SUPPORT_HWACCELS
 	if(_application_info.GetConfig().GetOutputProfiles().IsHardwareAcceleration() == true)
 	{
 		if (TranscodeGPU::GetInstance()->Initialze() == false)
@@ -46,7 +45,7 @@ bool TranscodeApplication::Start()
 			logtw("There is no supported hardware accelerator");
 		}
 	}
-#endif	
+
 	return true;
 }
 

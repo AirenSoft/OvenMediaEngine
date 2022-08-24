@@ -18,6 +18,7 @@ using namespace cmn;
 MediaTrack::MediaTrack()
 	: _id(0),
 	  _codec_id(MediaCodecId::None),
+	  _codec_library_id(cmn::MediaCodecLibraryId::AUTO),
 	  _media_type(MediaType::Unknown),
 	  _bitrate(0),
 	  _byass(false),
@@ -31,6 +32,7 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 	_id = media_track._id;
 	_media_type = media_track._media_type;
 	_codec_id = media_track._codec_id;
+	_codec_library_id = media_track._codec_library_id;
 
 	// Video
 	_framerate = media_track._framerate;
@@ -96,6 +98,15 @@ void MediaTrack::SetCodecId(MediaCodecId id)
 MediaCodecId MediaTrack::GetCodecId() const
 {
 	return _codec_id;
+}
+
+void MediaTrack::SetCodecLibraryId(cmn::MediaCodecLibraryId id)
+{
+	_codec_library_id = id;
+}
+cmn::MediaCodecLibraryId MediaTrack::GetCodecLibraryId() const
+{
+	return _codec_library_id;
 }
 
 void MediaTrack::SetOriginBitstream(cmn::BitstreamFormat format)
@@ -188,17 +199,15 @@ ov::String MediaTrack::GetInfoString()
 			out_str.AppendFormat(
 				"Video Track #%d: "
 				"Name(%s) "
-				"Bypass(%s) "
 				"Bitrate(%s) "
-				"codec(%d, %s) "
+				"codec(%d,%s,%s) "
 				"resolution(%dx%d) "
 				"framerate(%.2ffps) "
 				"KeyInterval(%d) "
 				"BFrames(%d) ",
 				GetId(), GetName().CStr(),
-				IsBypass() ? "true" : "false",
 				ov::Converter::BitToString(GetBitrate()).CStr(),
-				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(),
+				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecLibraryId(GetCodecLibraryId()).CStr(),
 				GetWidth(), GetHeight(),
 				GetFrameRate(),
 				GetKeyFrameInterval(),
@@ -209,16 +218,14 @@ ov::String MediaTrack::GetInfoString()
 			out_str.AppendFormat(
 				"Audio Track #%d: "
 				"Name(%s) "
-				"Bypass(%s) "
 				"Bitrate(%s) "
-				"codec(%d, %s) "
+				"codec(%d,%s,%s) "
 				"samplerate(%s) "
 				"format(%s, %d) "
 				"channel(%s, %d) ",
 				GetId(), GetName().CStr(),
-				IsBypass() ? "true" : "false",
 				ov::Converter::BitToString(GetBitrate()).CStr(),
-				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(),
+				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecLibraryId(GetCodecLibraryId()).CStr(),
 				ov::Converter::ToSiString(GetSampleRate(), 1).CStr(),
 				GetSample().GetName(), GetSample().GetSampleSize() * 8,
 				GetChannel().GetName(), GetChannel().GetCounts());

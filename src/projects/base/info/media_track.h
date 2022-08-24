@@ -38,6 +38,9 @@ public:
 	void SetCodecId(cmn::MediaCodecId id);
 	cmn::MediaCodecId GetCodecId() const;
 
+	void SetCodecLibraryId(cmn::MediaCodecLibraryId id);
+	cmn::MediaCodecLibraryId GetCodecLibraryId() const;
+
 	// Origin bitstream foramt
 	void SetOriginBitstream(cmn::BitstreamFormat format);
 	cmn::BitstreamFormat GetOriginBitstream() const;
@@ -85,6 +88,7 @@ private:
 	ov::String _name;
 
 	cmn::MediaCodecId _codec_id;
+	cmn::MediaCodecLibraryId _codec_library_id;
 	cmn::BitstreamFormat _origin_bitstream_format = cmn::BitstreamFormat::Unknown;
 	cmn::MediaType _media_type;
 	cmn::Timebase _time_base;

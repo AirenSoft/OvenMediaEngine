@@ -351,6 +351,7 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 	{
 		output_track->SetBypass(true);
 		output_track->SetCodecId(input_track->GetCodecId());
+		output_track->SetCodecLibraryId(input_track->GetCodecLibraryId());
 		output_track->SetWidth(input_track->GetWidth());
 		output_track->SetHeight(input_track->GetHeight());
 		output_track->SetFrameRate(input_track->GetFrameRate());
@@ -374,6 +375,7 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 	{
 		output_track->SetBypass(false);
 		output_track->SetCodecId(cmn::GetCodecIdByName(profile.GetCodec()));
+		output_track->SetCodecLibraryId(cmn::GetCodecLibraryIdByName(profile.GetCodec()));
 		output_track->SetBitrate(profile.GetBitrate());
 		output_track->SetWidth(profile.GetWidth());
 		output_track->SetHeight(profile.GetHeight());
@@ -405,6 +407,7 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 	output_track->SetId(NewTrackId());
 	output_track->SetBypass(false);
 	output_track->SetCodecId(cmn::GetCodecIdByName(profile.GetCodec()));
+	output_track->SetCodecLibraryId(cmn::GetCodecLibraryIdByName(profile.GetCodec()));
 	output_track->SetBitrate(0);
 	output_track->SetWidth(profile.GetWidth());
 	output_track->SetHeight(profile.GetHeight());
@@ -435,6 +438,7 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 	{
 		output_track->SetBypass(true);
 		output_track->SetCodecId(input_track->GetCodecId());
+		output_track->SetCodecLibraryId(input_track->GetCodecLibraryId());
 		output_track->SetChannel(input_track->GetChannel());
 		output_track->GetSample().SetFormat(input_track->GetSample().GetFormat());
 		output_track->SetTimeBase(input_track->GetTimeBase());
@@ -458,6 +462,7 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 	{
 		output_track->SetBypass(false);
 		output_track->SetCodecId(cmn::GetCodecIdByName(profile.GetCodec()));
+		output_track->SetCodecLibraryId(cmn::GetCodecLibraryIdByName(profile.GetCodec()));
 		output_track->SetBitrate(profile.GetBitrate());
 		output_track->GetChannel().SetLayout(profile.GetChannel() == 1 ? cmn::AudioChannel::Layout::LayoutMono : cmn::AudioChannel::Layout::LayoutStereo);
 		output_track->GetSample().SetFormat(input_track->GetSample().GetFormat());	// The sample format will change by the decoder event.

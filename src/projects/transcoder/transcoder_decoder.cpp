@@ -32,28 +32,24 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(int32_t decoder_id, c
 	switch (track->GetCodecId())
 	{
 		case cmn::MediaCodecId::H264:
-#if SUPPORT_HWACCELS
-			if (use_hwaccel == true)
+			if ((use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
 			{
-				if (TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
+				decoder = std::make_shared<DecoderAVCxQSV>(info);
+				if (decoder != nullptr && decoder->Configure(track) == true)
 				{
-					decoder = std::make_shared<DecoderAVCxQSV>(info);
-					if (decoder != nullptr && decoder->Configure(track) == true)
-					{
-						goto done;
-					}
-				}
-
-				if (TranscodeGPU::GetInstance()->IsSupportedNV() == true)
-				{
-					decoder = std::make_shared<DecoderAVCxNV>(info);
-					if (decoder != nullptr && decoder->Configure(track) == true)
-					{
-						goto done;
-					}
+					goto done;
 				}
 			}
-#endif
+
+			if ((use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
+			{
+				decoder = std::make_shared<DecoderAVCxNV>(info);
+				if (decoder != nullptr && decoder->Configure(track) == true)
+				{
+					goto done;
+				}
+			}
+
 			decoder = std::make_shared<DecoderAVC>(info);
 			if (decoder != nullptr && decoder->Configure(track) == true)
 			{
@@ -62,28 +58,25 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(int32_t decoder_id, c
 			break;
 
 		case cmn::MediaCodecId::H265:
-#if SUPPORT_HWACCELS
-			if (use_hwaccel == true)
-			{
-				if (TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
-				{
-					decoder = std::make_shared<DecoderHEVCxQSV>(info);
-					if (decoder != nullptr && decoder->Configure(track) == true)
-					{
-						goto done;
-					}
-				}
 
-				if (TranscodeGPU::GetInstance()->IsSupportedNV() == true)
+			if ((use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
+			{
+				decoder = std::make_shared<DecoderHEVCxQSV>(info);
+				if (decoder != nullptr && decoder->Configure(track) == true)
 				{
-					decoder = std::make_shared<DecoderHEVCxNV>(info);
-					if (decoder != nullptr && decoder->Configure(track) == true)
-					{
-						goto done;
-					}
+					goto done;
 				}
 			}
-#endif
+
+			if ((use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
+			{
+				decoder = std::make_shared<DecoderHEVCxNV>(info);
+				if (decoder != nullptr && decoder->Configure(track) == true)
+				{
+					goto done;
+				}
+			}
+
 			decoder = std::make_shared<DecoderHEVC>(info);
 			if (decoder != nullptr && decoder->Configure(track) == true)
 			{
@@ -125,7 +118,6 @@ done:
 
 	return decoder;
 }
-
 
 TranscodeDecoder::TranscodeDecoder(info::Stream stream_info)
 	: _stream_info(stream_info)
@@ -185,7 +177,6 @@ void TranscodeDecoder::SendBuffer(std::shared_ptr<const MediaPacket> packet)
 {
 	_input_buffer.Enqueue(std::move(packet));
 }
-
 
 void TranscodeDecoder::SendOutputBuffer(TranscodeResult result, std::shared_ptr<MediaFrame> frame)
 {

@@ -51,7 +51,7 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 	: _stream(stream),
 	  _packets_queue(nullptr, 100)
 {
-	logti("[%s/%s(%u)] Trying to create media route stream", _stream->GetApplicationName(), _stream->GetName().CStr(), _stream->GetId());
+	logti("[%s/%s(%u)] Trying to create a mediarouter stream", _stream->GetApplicationName(), _stream->GetName().CStr(), _stream->GetId());
 	_inout_type = MediaRouterStreamType::UNKNOWN;
 
 	_warning_count_bframe = 0;
@@ -69,7 +69,7 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream, 
 
 MediaRouteStream::~MediaRouteStream()
 {
-	logti("[%s/%s(%u)] Delete media route stream ", _stream->GetApplicationName(), _stream->GetName().CStr(), _stream->GetId());
+	logti("[%s/%s(%u)] Delete mediarouter stream ", _stream->GetApplicationName(), _stream->GetName().CStr(), _stream->GetId());
 
 	_media_packet_stash.clear();
 
@@ -857,11 +857,12 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			min_pts = std::min(min_pts, rescaled_last_pts);
 			max_pts = std::max(max_pts, rescaled_last_pts);
 
-			stat_track_str.AppendFormat("\n\ttrack:%3d, type: %4s, codec: %4s(%2d), pts: %lldms, dly: %5lldms, tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %dKbps",
+			stat_track_str.AppendFormat("\n\ttrack:%3d, type: %4s, codec: %4s(%d,%s), pts: %lldms, dly: %5lldms, tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %dKbps",
 										track_id,
 										track->GetMediaType() == MediaType::Video ? "video" : "audio",
 										::StringFromMediaCodecId(track->GetCodecId()).CStr(),
 										track->GetCodecId(),
+										track->IsBypass()?"Passthrough":GetStringFromCodecLibraryId(track->GetCodecLibraryId()).CStr(),
 										rescaled_last_pts,
 										(first_delay - last_delay) * -1,
 										track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(),
