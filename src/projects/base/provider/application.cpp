@@ -99,6 +99,13 @@ namespace pvd
 
 	bool Application::AddStream(const std::shared_ptr<Stream> &stream)
 	{
+		// Check if same stream name is exist in MediaRouter(may be created by another provider)
+		if(IsExistingInboundStream(stream->GetName()) == true)
+		{
+			logtw("Reject to add stream : there is already an incoming stream (%s) with the same name in application(%s) ", stream->GetName().CStr(), GetName().CStr());
+			return false;
+		}
+
 		stream->SetApplication(GetSharedPtrAs<Application>());
 		stream->SetApplicationInfo(GetSharedPtrAs<Application>());
 

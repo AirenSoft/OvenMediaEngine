@@ -228,22 +228,18 @@ namespace pvd
 
 	std::shared_ptr<pvd::Stream> PullApplication::CreateStream(const ov::String &stream_name, const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties)
 	{
-		// Check if same stream name is exist in MediaRouter(may be created by another provider)
-		if(IsExistingInboundStream(stream_name) == true)
-		{
-			logtw("Reject stream creation : there is already an incoming stream with the same name. (%s)", stream_name.CStr());
-			return nullptr;
-		}
-
 		auto stream = CreateStream(IssueUniqueStreamId(), stream_name, url_list, properties);
 		if(stream == nullptr)
 		{
 			return nullptr;
 		}
 
-		std::unique_lock<std::shared_mutex> streams_lock(_streams_guard);
+		if (AddStream(stream) == false)
+		{
+			logte("Could not add stream : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+			return nullptr;
+		}
 
-		_streams[stream->GetId()] = stream;
 		auto motor = GetStreamMotorInternal(stream);
 		if(motor == nullptr)
 		{
@@ -254,11 +250,6 @@ namespace pvd
 				return nullptr;
 			}
 		}
-
-		streams_lock.unlock();
-
-		// Notify first
-		NotifyStreamCreated(stream);
 
 		// And push data next
 		motor->AddStream(stream);
