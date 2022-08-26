@@ -14,6 +14,7 @@
 #include "access_control/signed_token.h"
 #include "applications/applications.h"
 #include "origins/origins.h"
+#include "origin_map_store/origin_map_store.h"
 
 namespace cfg
 {
@@ -30,6 +31,7 @@ namespace cfg
 			sig::SignedToken _signed_token;
 			sig::AdmissionWebhooks _admission_webhooks;
 			orgn::Origins _origins;
+			orgn::OriginMapStore _origin_map_store;
 			app::Applications _applications;
 
 		public:
@@ -44,6 +46,7 @@ namespace cfg
 
 			CFG_DECLARE_CONST_REF_GETTER_OF(GetOrigins, _origins)
 			CFG_DECLARE_CONST_REF_GETTER_OF(GetOriginList, _origins.GetOriginList())
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetOriginMapStore, _origin_map_store)
 			CFG_DECLARE_CONST_REF_GETTER_OF(GetApplicationList, _applications.GetApplicationList())
 
 			bool GetApplicationByName(ov::String name, cfg::vhost::app::Application &application) const
@@ -74,6 +77,7 @@ namespace cfg
 				Register<Optional>("AdmissionWebhooks", &_admission_webhooks);
 
 				Register<Optional>("Origins", &_origins);
+				Register<Optional>("OriginMapStore", &_origin_map_store);
 				Register<Optional>("Applications", &_applications);
 			}
 		};

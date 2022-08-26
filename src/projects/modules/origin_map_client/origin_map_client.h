@@ -9,32 +9,8 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <base/ovlibrary/delay_queue.h>
 #include <hiredis/hiredis.h>
-
-/*
-
-// Test origin_map_client
-OriginMapClient origin_map_client;
-if (origin_map_client.ConnectRedis("127.0.0.1:6379", "airensoft!@#ovenmediaengine") == true)
-{
-	if (origin_map_client.Reigster("app/stream", "192.168.0.160:9000") == true)
-	{
-		logtc("Success Register");
-	}
-
-	ov::String origin_host;
-	if (origin_map_client.GetOrigin("app/stream", origin_host) == true)
-	{
-		logtc("Success Get : %s", origin_host.CStr());
-	}
-
-	if (origin_map_client.Unregister("app/stream") == true)
-	{
-		logtc("Success Unregister");
-	}
-}
-
-*/
 
 // If Origins-Edges cluster uses OriginMapStore, app/stream must be unique in the cluster.
 class OriginMapClient
@@ -42,24 +18,34 @@ class OriginMapClient
 public:
 	// redis_host: redis server host (ex: 192.168.0.160:6379)
 	// redis_password: redis server password (ex: password!@#)
-	bool ConnectRedis(const ov::String &redis_host, const ov::String &redis_password);
+	OriginMapClient(const ov::String &redis_host, const ov::String &redis_password);
 
 	// if return false, it means that the app_stream_name is already registered from other origin server
 	// app_stream_name : app/stream name (ex: app/stream)
 	// origin_host : OVT provided origin host info (ex: 192.168.0.160:9000)
-	bool Reigster(const ov::String &app_stream_name, const ov::String &origin_host);
+	bool Register(const ov::String &app_stream_name, const ov::String &origin_host);
+	bool Update(const ov::String &app_stream_name, const ov::String &origin_host);
 	bool Unregister(const ov::String &app_stream_name);
 
-	// if return false, it means that the app_stream_name is not exist in cluster
-	bool GetOrigin(const ov::String &app_stream_name, ov::String &origin_host);
+	// -1 : error
+	// 0 : the app_stream_name is not exist in cluster
+	// 1 : the app_stream_name is exist in cluster
+	int GetOrigin(const ov::String &app_stream_name, ov::String &origin_host);
 
 private:
 	bool CheckConnection();
 	bool ConnectRedis();
 
+	bool NofifyStreamsAlive();
+
 	ov::String _redis_ip;
 	uint16_t _redis_port;
 	ov::String _redis_password;
+
+	ov::DelayQueue _update_timer{"OriginMapClient"};
+
+	std::map<ov::String, ov::String> _origin_map;
+	std::mutex _origin_map_mutex;
 
 	redisContext *_redis_context = nullptr;
 };

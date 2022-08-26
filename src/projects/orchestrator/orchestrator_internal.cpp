@@ -444,9 +444,27 @@ namespace ocst
 			vhost->origin_list.emplace_back(origin_config);
 		}
 
+		bool enabled = false;
+		auto store = vhost_info.GetOriginMapStore(&enabled);
+		if (enabled == true)
+		{
+			// Make ovt base url
+			auto ovt_port = cfg::ConfigManager::GetInstance()->GetServer()->GetBind().GetPublishers().GetOvt().GetPort();
+			vhost->origin_map_client = std::make_shared<OriginMapClient>(store.GetRedisServer().GetHost(), store.GetRedisServer().GetAuth());
+			vhost->is_origin_map_store_enabled = true;
+
+			if (store.GetOriginHostName().IsEmpty() == false)
+			{
+				vhost->origin_base_url = ov::String::FormatString("ovt://%s:%d", store.GetOriginHostName().CStr(), ovt_port.GetPort());
+			}
+			else
+			{
+				logti("OriginMapStore::OriginHostName is not specified. This OriginMapStore can work only as a edge.");
+			}
+		}
+
 		_virtual_host_map[vhost_info.GetName()] = vhost;
 		_virtual_host_list.push_back(vhost);
-
 
 		// Notification 
 		for (auto &module : _module_list)

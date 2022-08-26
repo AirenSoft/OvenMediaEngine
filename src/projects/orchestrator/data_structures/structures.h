@@ -10,7 +10,7 @@
 
 #include <base/info/host.h>
 #include <base/mediarouter/mediarouter_application_observer.h>
-
+#include <modules/origin_map_client/origin_map_client.h>
 #include <regex>
 
 #include "interfaces.h"
@@ -138,6 +138,11 @@ namespace ocst
 
 		// Origin list
 		std::vector<Origin> origin_list;
+
+		// OriginMapStore
+		bool is_origin_map_store_enabled = false;
+		ov::String origin_base_url;
+		std::shared_ptr<OriginMapClient> origin_map_client = nullptr;
 
 		// Application list
 		std::map<info::application_id_t, std::shared_ptr<Application>> app_map;

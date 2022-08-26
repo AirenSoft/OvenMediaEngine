@@ -172,13 +172,27 @@
 			</Origins>
 
 			<!--
+			When Edge tries to pull a stream, it looks first in <Origins> in local, and in OriginMapStore. 
+			Therefore, it is recommended to disable Origins when using OriginMapStore.
+			<OriginMapStore>
+				In order to use OriginMap, you must enable OVT Publisher in Origin and OVT Provider in Edge.
+				<RedisServer>
+					<Host>192.168.0.160:6379</Host>
+					<Auth>!@#ovenmediaengine</Auth>
+				</RedisServer>
+				
+				This is only needed for the origin server and used to register the ovt address of the stream. 
+				<OriginHostName>ome-dev.airensoft.com</OriginHostName>
+			</OriginMapStore>
+			-->
+
+			<!--
 				Apply the following settings for /app/<stream_name> requests.
 
 				This demonstrates setting <OutputProfiles>/<Providers>/<Pubishers> for a specific application.
 
 				(https://github.com/AirenSoft/OvenMediaEngine/issues/621#issuecomment-1026892776)
 			-->
-			<!--
 			<Applications>
 				<Application>
 					<Name>app</Name>
@@ -220,7 +234,6 @@
 					</Publishers>
 				</Application>
 			</Applications>
-			-->
 		</VirtualHost>
 	</VirtualHosts>
 </Server>

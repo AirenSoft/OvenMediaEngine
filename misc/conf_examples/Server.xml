@@ -245,6 +245,19 @@
 				</Origin>
 			</Origins> -->
 			
+			<!--
+			<OriginMapStore>
+				In order to use OriginMap, you must enable OVT Publisher in Origin and OVT Provider in Edge.
+				<RedisServer>
+					<Host>192.168.0.160:6379</Host>
+					<Auth>!@#ovenmediaengine</Auth>
+				</RedisServer>
+				
+				This is only needed for the origin server and used to register the ovt address of the stream. 
+				<OriginHostName>ome-dev.airensoft.com</OriginHostName>
+			</OriginMapStore>
+			-->
+			
 			<!-- Settings for applications -->
 			<Applications>
 				<Application>

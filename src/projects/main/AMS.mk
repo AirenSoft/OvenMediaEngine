@@ -19,7 +19,6 @@ LOCAL_STATIC_LIBRARIES := \
 	transcoder \
 	rtc_signalling \
 	address_utilities \
-	origin_map_client \
 	ice \
 	api_server \
 	json_serdes \
@@ -36,6 +35,7 @@ LOCAL_STATIC_LIBRARIES := \
 	jitter_buffer \
 	ovt_packetizer \
 	orchestrator \
+	origin_map_client \
 	publisher \
 	application \
 	access_controller \

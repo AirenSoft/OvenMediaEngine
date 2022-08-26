@@ -11,23 +11,40 @@
 
 #define OV_LOG_TAG "OriginMapClient"
 
-bool OriginMapClient::ConnectRedis(const ov::String &redis_host, const ov::String &redis_password)
+OriginMapClient::OriginMapClient(const ov::String &redis_host, const ov::String &redis_password)
 {
 	// Parse ip:port 
 	auto ip_port = redis_host.Split(":");
 	if (ip_port.size() != 2)
 	{
-		return false;
+		return;
 	}
 
 	_redis_ip = ip_port[0];
 	_redis_port = ov::Converter::ToUInt16(ip_port[1]);
 	_redis_password = redis_password;
 
-	return ConnectRedis();
+	_update_timer.Push(
+		[this](void *paramter) -> ov::DelayQueueAction {
+			NofifyStreamsAlive();
+			return ov::DelayQueueAction::Repeat;
+		},
+		2500);
+	_update_timer.Start();
 }
 
-bool OriginMapClient::Reigster(const ov::String &app_stream_name, const ov::String &origin_host)
+bool OriginMapClient::NofifyStreamsAlive()
+{
+	std::lock_guard<std::mutex> lock(_origin_map_mutex);
+	for (auto &[key, value] : _origin_map)
+	{
+		Update(key, value);
+	}
+
+	return true;
+}
+
+bool OriginMapClient::Register(const ov::String &app_stream_name, const ov::String &origin_host)
 {
 	if (ConnectRedis() == false)
 	{
@@ -36,13 +53,52 @@ bool OriginMapClient::Reigster(const ov::String &app_stream_name, const ov::Stri
 	}
 
 	// Set origin host to redis
+	// The EXPIRE option is to prevent locking the app/stream when OvenMediaEngine unexpectedly stops.
+	// So _update_timer updates the expire time once every 2.5 seconds.
 	redisReply *reply = (redisReply *)redisCommand(_redis_context, "SET %s %s EX 10 NX", app_stream_name.CStr(), origin_host.CStr());
-	if (reply == nullptr || reply->type == REDIS_REPLY_NIL || reply->type == REDIS_REPLY_ERROR)
+	if (reply == nullptr || reply->type == REDIS_REPLY_ERROR)
 	{
 		logte("Failed to set origin host to redis : %s:%d (err:%s)", _redis_ip.CStr(), _redis_port, reply!=nullptr?reply->str:"nil");
 		return false;
 	}
+	else if (reply->type == REDIS_REPLY_NIL)
+	{
+		logte("<%s> stream is already registered.", app_stream_name.CStr());
+		return false;
+	}
+
 	freeReplyObject(reply);
+
+	std::lock_guard<std::mutex> lock(_origin_map_mutex);
+	_origin_map[app_stream_name] = origin_host;
+
+	return true;
+}
+
+bool OriginMapClient::Update(const ov::String &app_stream_name, const ov::String &origin_host)
+{
+	if (ConnectRedis() == false)
+	{
+		logte("Failed to connect redis server : %s:%d (err:%s)", _redis_ip.CStr(), _redis_port, _redis_context!=nullptr?_redis_context->errstr:"nil");
+		return false;
+	}
+
+	// Set origin host to redis
+	// XX option or EXPIRE cmd are not used because if redis server is restarted, update() can restore the origin stream info.
+	redisReply *reply = (redisReply *)redisCommand(_redis_context, "SET %s %s EX 10", app_stream_name.CStr(), origin_host.CStr());
+	if (reply == nullptr || reply->type == REDIS_REPLY_ERROR)
+	{
+		logte("Failed to set origin host to redis : %s:%d (err:%s)", _redis_ip.CStr(), _redis_port, reply!=nullptr?reply->str:"nil");
+		return false;
+	}
+	else if (reply->type == REDIS_REPLY_NIL)
+	{
+		// Not exist
+		return false;
+	}
+
+	freeReplyObject(reply);
+
 	return true;
 }
 
@@ -57,26 +113,35 @@ bool OriginMapClient::Unregister(const ov::String &app_stream_name)
 	redisReply *reply = (redisReply *)redisCommand(_redis_context, "DEL %s", app_stream_name.CStr());
 	freeReplyObject(reply);
 
+	std::lock_guard<std::mutex> lock(_origin_map_mutex);
+	_origin_map.erase(app_stream_name);
+
 	return true;
 }
 
-bool OriginMapClient::GetOrigin(const ov::String &app_stream_name, ov::String &origin_host)
+int OriginMapClient::GetOrigin(const ov::String &app_stream_name, ov::String &origin_host)
 {
 	if (ConnectRedis() == false)
 	{
 		logte("Failed to connect redis server : %s:%d (err:%s)", _redis_ip.CStr(), _redis_port, _redis_context!=nullptr?_redis_context->errstr:"nil");
-		return false;
+		return -1;
 	}
 
 	redisReply *reply = (redisReply *)redisCommand(_redis_context, "GET %s", app_stream_name.CStr());
-	if (reply == nullptr || reply->type == REDIS_REPLY_NIL || reply->type == REDIS_REPLY_ERROR)
+	if (reply == nullptr || reply->type == REDIS_REPLY_ERROR)
 	{
 		logte("Failed to get origin host from redis : %s:%d (err:%s)", _redis_ip.CStr(), _redis_port, reply!=nullptr?reply->str:"nil");
-		return false;
+		return -1;
 	}
+	else if (reply->type == REDIS_REPLY_NIL)
+	{
+		return 0;
+	}
+
 	origin_host = reply->str;
 	freeReplyObject(reply);
-	return true;
+
+	return 1;
 }
 
 bool OriginMapClient::ConnectRedis()

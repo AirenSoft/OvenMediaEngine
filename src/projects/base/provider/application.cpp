@@ -12,6 +12,7 @@
 #include "stream.h"
 #include "provider_private.h"
 
+#include "orchestrator/orchestrator.h"
 namespace pvd
 {
 	Application::Application(const std::shared_ptr<Provider> &provider, const info::Application &application_info)
@@ -100,10 +101,21 @@ namespace pvd
 	bool Application::AddStream(const std::shared_ptr<Stream> &stream)
 	{
 		// Check if same stream name is exist in MediaRouter(may be created by another provider)
-		if(IsExistingInboundStream(stream->GetName()) == true)
+		if (IsExistingInboundStream(stream->GetName()) == true)
 		{
 			logtw("Reject to add stream : there is already an incoming stream (%s) with the same name in application(%s) ", stream->GetName().CStr(), GetName().CStr());
 			return false;
+		}
+
+		// If provider is OVT, it is running in Edge mode.
+		if (_provider->GetProviderType() != ProviderType::Ovt)
+		{
+			// Register stream if OriginMapStore is enabled
+			if (ocst::Orchestrator::GetInstance()->RegisterStreamToOriginMapStore(GetName(), stream->GetName()) == false)
+			{
+				logtw("Reject to add stream : failed to register stream to origin map store");
+				return false;
+			}
 		}
 
 		stream->SetApplication(GetSharedPtrAs<Application>());
@@ -134,6 +146,17 @@ namespace pvd
 		stream->Stop();
 
 		NotifyStreamDeleted(stream);
+
+		// If provider is OVT, it is running in Edge mode.
+		if (_provider->GetProviderType() != ProviderType::Ovt)
+		{
+			// Unegister stream if OriginMapStore is enabled
+			if (ocst::Orchestrator::GetInstance()->UnregisterStreamFromOriginMapStore(GetName(), stream->GetName()) == false)
+			{
+				logtw("Reject to add stream : failed to register stream to origin map store");
+				return false;
+			}
+		}
 
 		return true;
 	}

@@ -182,68 +182,19 @@ namespace pub
 		auto orchestrator = ocst::Orchestrator::GetInstance();
 		auto &vapp_name = vhost_app_name.ToString();
 
-		ov::String pull_url;
-		ov::String desire_stream_name = stream_name;
-
-		// TODO(dimiden): This is temporalily codes, needs to be removed in the future
-		// Orchestrator::RequestPullStream should receive ov::Url instead of rtsp_uri in the future and
-		// extract rtsp_uri by itself according to the configuration.
-		if (vapp_name.HasSuffix("#rtsp_live") || vapp_name.HasSuffix("#rtsp_playback") ||
-			vapp_name.HasSuffix("#rtsp_live_insecure") || vapp_name.HasSuffix("#rtsp_playback_insecure"))
+		// Pull stream with the local origin map
+		logti("Try to pull stream from local origin map: [%s/%s]", vapp_name.CStr(), stream_name.CStr());
+		if (orchestrator->RequestPullStream(request_from, vhost_app_name, stream_name) == false)
 		{
-			if (request_from != nullptr)
-			{
-				auto &query_map = request_from->QueryMap();
-				auto rtsp_uri_item = query_map.find("rtspURI");
-				if (rtsp_uri_item == query_map.end())
-				{
-					logte("There is no rtspURI parameter in the query string: %s", request_from->ToString().CStr());
-
-					logtd("Query map:");
-					for ([[maybe_unused]] auto &query : query_map)
-					{
-						logtd("    %s = %s", query.first.CStr(), query.second.CStr());
-					}
-				}
-				else
-				{
-					pull_url = rtsp_uri_item->second;
-				}
-			}
-		}
-#if 0
-		//	Unit test code for pull request
-		else
-		{
-			if (request_from != nullptr)
-			{
-				auto &query_map = request_from->QueryMap();
-				auto pull_uri_item = query_map.find("pullURI");
-				if (pull_uri_item != query_map.end())
-				{
-					pull_url = pull_uri_item->second;
-				}
-
-				auto target_stream_item = query_map.find("targetStream");
-				if (target_stream_item != query_map.end())
-				{
-					desire_stream_name = target_stream_item->second;
-					logtd("Replace source stream name %s to %s", stream_name.CStr(), desire_stream_name.CStr());
-				}
-			}
-		}
-#endif
-
-		if (pull_url.IsEmpty())
-		{
-			if(orchestrator->RequestPullStream(request_from, vhost_app_name, desire_stream_name) == false)
+			// Pull stream with the origin map store
+			logti("Try to pull stream from origin map store: [%s/%s]", vapp_name.CStr(), stream_name.CStr());
+			auto ovt_url = orchestrator->GetOriginUrlFromOriginMapStore(vhost_app_name, stream_name);
+			if (ovt_url == nullptr)
 			{
 				return nullptr;
 			}
-		}
-		else
-		{
-			if(orchestrator->RequestPullStream(request_from, vhost_app_name, desire_stream_name, pull_url) == false)
+
+			if (orchestrator->RequestPullStream(request_from, vhost_app_name, stream_name, ovt_url->ToUrlString()) == false)
 			{
 				return nullptr;
 			}

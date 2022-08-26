@@ -851,5 +851,121 @@ namespace ocst
 		logtw("Publisher (%d) is not found from type");
 
 		return nullptr;
-	}	
+	}
+
+	int Orchestrator::IsExistStreamInOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name) const
+	{
+		auto vhost = GetVirtualHost(vhost_app_name);
+		if (vhost == nullptr)
+		{
+			// Error
+			return -1;
+		}
+
+		if (vhost->is_origin_map_store_enabled == false)
+		{
+			// disabled by user
+			return 0;
+		}
+		
+		auto client = vhost->origin_map_client;
+		if (client == nullptr)
+		{
+			// Error
+			return -1;
+		}
+
+		auto app_stream_name = ov::String::FormatString("%s/%s", vhost_app_name.GetAppName().CStr(), stream_name.CStr());
+
+		ov::String temp_str;
+		return client->GetOrigin(app_stream_name, temp_str);
+	}
+
+	std::shared_ptr<ov::Url> Orchestrator::GetOriginUrlFromOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name) const
+	{
+		auto vhost = GetVirtualHost(vhost_app_name);
+		if (vhost == nullptr)
+		{
+			// Error
+			return nullptr;
+		}
+
+		if (vhost->is_origin_map_store_enabled == false)
+		{
+			// disabled by user
+			return nullptr;
+		}
+		
+		auto client = vhost->origin_map_client;
+		if (client == nullptr)
+		{
+			// Error
+			return nullptr;
+		}
+
+		auto app_stream_name = ov::String::FormatString("%s/%s", vhost_app_name.GetAppName().CStr(), stream_name.CStr());
+
+		ov::String url_str;
+		if (client->GetOrigin(app_stream_name, url_str) == 1)
+		{
+			return ov::Url::Parse(url_str);
+		}
+
+		return nullptr;
+	}
+
+	bool Orchestrator::RegisterStreamToOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+	{
+		auto vhost = GetVirtualHost(vhost_app_name);
+		if (vhost == nullptr)
+		{
+			// Error
+			return false;
+		}
+
+		if (vhost->is_origin_map_store_enabled == false)
+		{
+			// disabled by user
+			return false;
+		}
+		
+		auto client = vhost->origin_map_client;
+		if (client == nullptr)
+		{
+			// Error
+			return false;
+		}
+
+		auto app_stream_name = ov::String::FormatString("%s/%s", vhost_app_name.GetAppName().CStr(), stream_name.CStr());
+		auto ovt_url = ov::String::FormatString("%s/%s", vhost->origin_base_url.CStr(), app_stream_name.CStr());
+		return client->Register(app_stream_name, ovt_url);
+	}
+
+	bool Orchestrator::UnregisterStreamFromOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+	{
+		auto vhost = GetVirtualHost(vhost_app_name);
+		if (vhost == nullptr)
+		{
+			// Error
+			return false;
+		}
+
+		if (vhost->is_origin_map_store_enabled == false)
+		{
+			// disabled by user
+			return false;
+		}
+		
+		auto client = vhost->origin_map_client;
+		if (client == nullptr)
+		{
+			// Error
+			return false;
+		}
+
+		auto app_stream_name = ov::String::FormatString("%s/%s", vhost_app_name.GetAppName().CStr(), stream_name.CStr());
+
+		return client->Unregister(app_stream_name);
+	}
+
 }  // namespace ocst
