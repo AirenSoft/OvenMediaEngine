@@ -302,6 +302,8 @@ bool MediaRouteApplication::OnStreamCreated(const std::shared_ptr<MediaRouteAppl
 	// If all track information is validity, Notify the observer that the current stream is preapred.
 	if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
 	{
+		logti("[%s/%s(%u)] Stream has been created %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
+		
 		NotifyStreamPrepared(stream);
 	}
 
