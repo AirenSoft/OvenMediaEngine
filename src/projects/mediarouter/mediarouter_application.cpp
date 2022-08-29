@@ -766,7 +766,7 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 		// Notify the Observer that the stream is parsed
 		if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
 		{
-			logti("[%s/%s(%u)] All tracks in the stream are parsed %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
+			logti("[%s/%s(%u)] Stream has been created %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
 			
 			NotifyStreamPrepared(stream);
 		}
@@ -818,7 +818,7 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 
 		if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
 		{
-			logti("[%s/%s(%u)] All tracks in the stream are parsed %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
+			logti("[%s/%s(%u)] Stream has been created %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
 
 			NotifyStreamPrepared(stream);
 		}
