@@ -195,6 +195,13 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		response->SetHeader("Access-Control-Allow-Private-Network", "true");
 
 		auto application = std::static_pointer_cast<LLHlsApplication>(GetApplicationByName(vhost_app_name));
+		if(application == nullptr)
+		{
+			logte("Could not found application: %s", vhost_app_name.CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
 		application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response);
 
 		return http::svr::NextHandler::DoNotCall;
