@@ -173,10 +173,6 @@ The meaning of each element is shown in the following table:
 | OVT               | <p>OVT port for an origin server.</p><p>OVT is a protocol defined by OvenMediaEngine for Origin-Edge communication. For more information about Origin-Edge, see the <a href="../origin-edge-clustering.md">Origin-Edge Clustering</a> chapter.</p> |
 | LLHLS             | HTTP(s) port for LLHLS streaming.                                                                                                                                                                                                                  |
 
-{% hint style="info" %}
-HLS and DASH can be set to the same port, but all other protocols have to use different ports. The ability for all protocols to use the same port will be updated in the future.
-{% endhint %}
-
 ## Virtual Host
 
 `VirtualHosts` are a way to run more than one streaming server on a single machine. OvenMediaEngine supports IP-based virtual host and Domain-based virtual host. "IP-based" means that you can separate streaming servers into multiples by setting different IP addresses, and "Domain-based" means that even if the streaming servers use the same IP address, you can split the streaming servers into multiples by setting different domain names.
