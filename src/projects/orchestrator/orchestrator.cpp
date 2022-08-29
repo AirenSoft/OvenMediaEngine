@@ -926,7 +926,7 @@ namespace ocst
 		if (vhost->is_origin_map_store_enabled == false)
 		{
 			// disabled by user
-			return false;
+			return true;
 		}
 		
 		auto client = vhost->origin_map_client;
