@@ -853,26 +853,26 @@ namespace ocst
 		return nullptr;
 	}
 
-	int Orchestrator::IsExistStreamInOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name) const
+	CommonErrorCode Orchestrator::IsExistStreamInOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name) const
 	{
 		auto vhost = GetVirtualHost(vhost_app_name);
 		if (vhost == nullptr)
 		{
 			// Error
-			return -1;
+			return CommonErrorCode::ERROR;
 		}
 
 		if (vhost->is_origin_map_store_enabled == false)
 		{
 			// disabled by user
-			return 0;
+			return CommonErrorCode::DISABLED;
 		}
 		
 		auto client = vhost->origin_map_client;
 		if (client == nullptr)
 		{
 			// Error
-			return -1;
+			return CommonErrorCode::ERROR;
 		}
 
 		auto app_stream_name = ov::String::FormatString("%s/%s", vhost_app_name.GetAppName().CStr(), stream_name.CStr());
@@ -906,7 +906,7 @@ namespace ocst
 		auto app_stream_name = ov::String::FormatString("%s/%s", vhost_app_name.GetAppName().CStr(), stream_name.CStr());
 
 		ov::String url_str;
-		if (client->GetOrigin(app_stream_name, url_str) == 1)
+		if (client->GetOrigin(app_stream_name, url_str) == CommonErrorCode::SUCCESS)
 		{
 			return ov::Url::Parse(url_str);
 		}
@@ -914,58 +914,68 @@ namespace ocst
 		return nullptr;
 	}
 
-	bool Orchestrator::RegisterStreamToOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+	CommonErrorCode Orchestrator::RegisterStreamToOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
 		auto vhost = GetVirtualHost(vhost_app_name);
 		if (vhost == nullptr)
 		{
 			// Error
-			return false;
+			return CommonErrorCode::ERROR;
 		}
 
 		if (vhost->is_origin_map_store_enabled == false)
 		{
 			// disabled by user
-			return true;
+			return CommonErrorCode::DISABLED;
 		}
 		
 		auto client = vhost->origin_map_client;
 		if (client == nullptr)
 		{
 			// Error
-			return false;
+			return CommonErrorCode::ERROR;
 		}
 
 		auto app_stream_name = ov::String::FormatString("%s/%s", vhost_app_name.GetAppName().CStr(), stream_name.CStr());
 		auto ovt_url = ov::String::FormatString("%s/%s", vhost->origin_base_url.CStr(), app_stream_name.CStr());
-		return client->Register(app_stream_name, ovt_url);
+		if (client->Register(app_stream_name, ovt_url) == true)
+		{
+			return CommonErrorCode::SUCCESS;
+		}
+
+		return CommonErrorCode::ERROR;
 	}
 
-	bool Orchestrator::UnregisterStreamFromOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+	CommonErrorCode Orchestrator::UnregisterStreamFromOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
 		auto vhost = GetVirtualHost(vhost_app_name);
 		if (vhost == nullptr)
 		{
 			// Error
-			return false;
+			return CommonErrorCode::ERROR;
 		}
 
 		if (vhost->is_origin_map_store_enabled == false)
 		{
 			// disabled by user
-			return true;
+			return CommonErrorCode::DISABLED;
 		}
 		
 		auto client = vhost->origin_map_client;
 		if (client == nullptr)
 		{
 			// Error
-			return false;
+			return CommonErrorCode::ERROR;
 		}
 
 		auto app_stream_name = ov::String::FormatString("%s/%s", vhost_app_name.GetAppName().CStr(), stream_name.CStr());
 
-		return client->Unregister(app_stream_name);
+		if (client->Unregister(app_stream_name) == true)
+		{
+			return CommonErrorCode::SUCCESS;
+		}
+
+		return CommonErrorCode::ERROR;
 	}
 
 }  // namespace ocst

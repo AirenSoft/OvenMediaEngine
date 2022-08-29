@@ -119,29 +119,29 @@ bool OriginMapClient::Unregister(const ov::String &app_stream_name)
 	return true;
 }
 
-int OriginMapClient::GetOrigin(const ov::String &app_stream_name, ov::String &origin_host)
+CommonErrorCode OriginMapClient::GetOrigin(const ov::String &app_stream_name, ov::String &origin_host)
 {
 	if (ConnectRedis() == false)
 	{
 		logte("Failed to connect redis server : %s:%d (err:%s)", _redis_ip.CStr(), _redis_port, _redis_context!=nullptr?_redis_context->errstr:"nil");
-		return -1;
+		return CommonErrorCode::ERROR;
 	}
 
 	redisReply *reply = (redisReply *)redisCommand(_redis_context, "GET %s", app_stream_name.CStr());
 	if (reply == nullptr || reply->type == REDIS_REPLY_ERROR)
 	{
 		logte("Failed to get origin host from redis : %s:%d (err:%s)", _redis_ip.CStr(), _redis_port, reply!=nullptr?reply->str:"nil");
-		return -1;
+		return CommonErrorCode::ERROR;
 	}
 	else if (reply->type == REDIS_REPLY_NIL)
 	{
-		return 0;
+		return CommonErrorCode::NOT_FOUND;
 	}
 
 	origin_host = reply->str;
 	freeReplyObject(reply);
 
-	return 1;
+	return CommonErrorCode::SUCCESS;
 }
 
 bool OriginMapClient::ConnectRedis()

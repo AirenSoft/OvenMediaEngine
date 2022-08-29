@@ -111,7 +111,8 @@ namespace pvd
 		if (_provider->GetProviderType() != ProviderType::Ovt)
 		{
 			// Register stream if OriginMapStore is enabled
-			if (ocst::Orchestrator::GetInstance()->RegisterStreamToOriginMapStore(GetName(), stream->GetName()) == false)
+			auto result = ocst::Orchestrator::GetInstance()->RegisterStreamToOriginMapStore(GetName(), stream->GetName());
+			if (result == CommonErrorCode::ERROR)
 			{
 				logtw("Reject to add stream : failed to register stream to origin map store");
 				return false;
@@ -151,7 +152,8 @@ namespace pvd
 		if (_provider->GetProviderType() != ProviderType::Ovt)
 		{
 			// Unegister stream if OriginMapStore is enabled
-			if (ocst::Orchestrator::GetInstance()->UnregisterStreamFromOriginMapStore(GetName(), stream->GetName()) == false)
+			auto result = ocst::Orchestrator::GetInstance()->UnregisterStreamFromOriginMapStore(GetName(), stream->GetName());
+			if (result == CommonErrorCode::ERROR)
 			{
 				logtw("Reject to add stream : failed to register stream to origin map store");
 				return false;

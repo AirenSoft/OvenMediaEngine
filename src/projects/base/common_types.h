@@ -25,6 +25,14 @@
 
 #define MAX_FRAG_COUNT 20
 
+enum class CommonErrorCode : int16_t
+{
+	NOT_FOUND = -2,
+	ERROR = -1,
+	DISABLED = 0,
+	SUCCESS = 1
+};
+
 enum class StreamSourceType : int8_t
 {
 	WebRTC,

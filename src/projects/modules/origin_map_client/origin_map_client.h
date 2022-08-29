@@ -8,6 +8,7 @@
 //==============================================================================
 #pragma once
 
+#include <base/common_types.h>
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovlibrary/delay_queue.h>
 #include <hiredis/hiredis.h>
@@ -27,10 +28,7 @@ public:
 	bool Update(const ov::String &app_stream_name, const ov::String &origin_host);
 	bool Unregister(const ov::String &app_stream_name);
 
-	// -1 : error
-	// 0 : the app_stream_name is not exist in cluster
-	// 1 : the app_stream_name is exist in cluster
-	int GetOrigin(const ov::String &app_stream_name, ov::String &origin_host);
+	CommonErrorCode GetOrigin(const ov::String &app_stream_name, ov::String &origin_host);
 
 private:
 	bool CheckConnection();

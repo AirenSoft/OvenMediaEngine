@@ -161,13 +161,10 @@ namespace ocst
 		// OriginMapStore
 		// key : <app/stream>
 		// value : ovt://host:port/<app/stream>
-		// -1 : error
-		// 0 : not exist
-		// 1 : exist
-		int IsExistStreamInOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name) const;
+		CommonErrorCode IsExistStreamInOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name) const;
 		std::shared_ptr<ov::Url> GetOriginUrlFromOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name) const;
-		bool RegisterStreamToOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
-		bool UnregisterStreamFromOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
+		CommonErrorCode RegisterStreamToOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
+		CommonErrorCode UnregisterStreamFromOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
 
 		//--------------------------------------------------------------------
 		// Implementation of ocst::Application::CallbackInterface
