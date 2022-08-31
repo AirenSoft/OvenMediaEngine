@@ -20,6 +20,7 @@ public:
 	void SendFrame(const std::shared_ptr<MediaPacket> &media_packet);
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
+	void SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet) override {} // Not supported
 
 	std::shared_ptr<RtmpPushSession> CreateSession();
 	bool DeleteSession(uint32_t session_id);

@@ -387,6 +387,12 @@ void LLHlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packe
 	AppendMediaPacket(media_packet);
 }
 
+void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
+{
+	//TODO(getroot) - implement
+	
+}
+
 bool LLHlsStream::AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_packet)
 {
 	auto track = GetTrack(media_packet->GetTrackId());

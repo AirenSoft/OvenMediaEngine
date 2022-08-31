@@ -38,6 +38,7 @@ public:
 
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
+	void SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet) override {} // Not supported
 
 	std::shared_ptr<RtxRtpPacket> GetRtxRtpPacket(uint32_t track_id, uint8_t origin_payload_type, uint16_t origin_sequence_number);
 
