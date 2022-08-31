@@ -10,14 +10,18 @@ To enable recording, add the `<FILE>` publisher to the configuration file as sho
 
 You must specify `.ts` or `.mp4` at the end of the FilePath string to select a container for the recording file. We recommend using .ts unless you have a special case. This is because vp8 and opus codecs are not recorded due to container limitations if you choose .mp4.
 
-```markup
-<Publishers>
-	<FILE>
-		<RootPath>/mnt/shared_volumes</RootPath>
-		<FilePath>/${VirtualHost}/${Application}/${Stream}/${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.ts</FilePath>
-		<InfoPath>/${VirtualHost}/${Application}/${Stream}.xml</InfoPath>
+```xml
+<Applications>
+  <Application>
+     ...
+     <Publishers>
+        <FILE>
+           <RootPath>/mnt/shared_volumes</RootPath>
+           <FilePath>/${VirtualHost}/${Application}/${Stream}/${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.ts</FilePath>
+           <InfoPath>/${VirtualHost}/${Application}/${Stream}.xml</InfoPath>
 	</FILE>
-</Publishers>
+   </Publishers>
+...
 ```
 
 Various macro values are supported for file paths and names as shown below.
@@ -28,8 +32,8 @@ Various macro values are supported for file paths and names as shown below.
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ${TransactionId}            | Unique ID for the recording transaction. It is automatically created when recording starts. and is released when recording is stopped. In case of split recording, it is distinguished that it is the same transaction. |
 | ${Id}                       | User-defined identification ID                                                                                                                                                                                          |
-| ${StartTime:YYYYMMDDhhmmss} | <p>Recording start time</p><p>YYYY - Year</p><p>MM - Month</p><p>DD - Days</p><p>hh : Hours (0~23) </p><p>mm : Minutes (00~59) </p><p>ss : Seconds (00~59)</p>                                                          |
-| ${EndTime:YYYYMMDDhhmmss}   | <p>Recording end time</p><p>YYYY - Year</p><p>MM - Month</p><p>DD - Days</p><p>hh : Hours (0~23) </p><p>mm : Minutes (00~59) </p><p>ss : Seconds (00~59)</p>                                                            |
+| ${StartTime:YYYYMMDDhhmmss} | <p>Recording start time</p><p>YYYY - Year</p><p>MM - Month</p><p>DD - Days</p><p>hh : Hours (0<del>23)</del></p><p>mm : Minutes (0059)</p><p>ss : Seconds (00~59)</p>                                                   |
+| ${EndTime:YYYYMMDDhhmmss}   | <p>Recording end time</p><p>YYYY - Year</p><p>MM - Month</p><p>DD - Days</p><p>hh : Hours (0<del>23)</del></p><p>mm : Minutes (0059)</p><p>ss : Seconds (00~59)</p>                                                     |
 | ${VirtualHost}              | Virtual host name                                                                                                                                                                                                       |
 | ${Application}              | Application name                                                                                                                                                                                                        |
 | ${SourceStream}             | Source stream name                                                                                                                                                                                                      |
@@ -50,10 +54,10 @@ For how to use the API, please refer to the link below.
 
 ### Split Recording
 
-Split recording methods provide **interval** and **schedule**.  The interval method splits files based on the accumulated recording time. The Schedule method then splits files according to scheduling options based on system time. The scheduling option is the same as the pattern used in crontab. However, only three options are used: seconds/minutes/hour.
+Split recording methods provide **interval** and **schedule**. The interval method splits files based on the accumulated recording time. The Schedule method then splits files according to scheduling options based on system time. The scheduling option is the same as the pattern used in crontab. However, only three options are used: seconds/minutes/hour.
 
 {% hint style="info" %}
-**interval** and **schedule** methods cannot be used simultaneously.&#x20;
+**interval** and **schedule** methods cannot be used simultaneously.
 {% endhint %}
 
 ## Appendix A. Recorded File Information Specification
@@ -113,4 +117,3 @@ The following is a sample of an XML file that expresses information on a recorde
   </file>
 </files>
 ```
-
