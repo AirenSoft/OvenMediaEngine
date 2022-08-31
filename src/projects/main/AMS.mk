@@ -28,6 +28,7 @@ LOCAL_STATIC_LIBRARIES := \
 	dtls_srtp \
 	rtp_rtcp \
 	sdp \
+	id3v2 \
 	segment_writer \
 	web_console \
 	mediarouter \
