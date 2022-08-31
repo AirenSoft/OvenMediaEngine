@@ -32,6 +32,9 @@ namespace bmff
 		// Generate Media FMP4Segment
 		bool AppendSample(const std::shared_ptr<const MediaPacket> &media_packet);
 
+		// For MediaType::Data MediaPacket, It will be emplaced in emsg box.
+		bool AppendDataSample(const std::shared_ptr<const MediaPacket> &media_packet);
+
 	private:
 		const Config &GetConfig() const;
 
@@ -45,6 +48,6 @@ namespace bmff
 		Config _config;
 		std::shared_ptr<FMP4Storage> _storage = nullptr;
 		std::shared_ptr<Samples> _samples_buffer = nullptr;
-
+		std::shared_ptr<Samples> _data_samples_buffer = nullptr;
 	};
 }

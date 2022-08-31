@@ -148,6 +148,9 @@ namespace bmff
 		virtual bool WriteMvexBox(ov::ByteStream &container_stream);
 		virtual bool WriteTrexBox(ov::ByteStream &container_stream);
 
+		// Emsg Box
+		virtual bool WriteEmsgBox(ov::ByteStream &container_stream, const std::shared_ptr<const Samples> &samples);
+
 		// Moof Box Gourp
 		virtual bool WriteMoofBox(ov::ByteStream &container_stream, const std::shared_ptr<const Samples> &samples);
 		virtual bool WriteMfhdBox(ov::ByteStream &container_stream, const std::shared_ptr<const Samples> &samples);

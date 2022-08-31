@@ -1327,12 +1327,100 @@ namespace bmff
 		return WriteFullBox(container_stream, "trex", *stream.GetData(), 0, 0);
 	}
 
+	bool Packager::WriteEmsgBox(ov::ByteStream &container_stream, const std::shared_ptr<const Samples> &samples)
+	{
+		// aligned(8) class DASHEventMessageBox extends FullBox('emsg', version, flags=0){
+		// 	if (version==0) {
+		// 		string scheme_id_uri;
+		// 		string value;
+		// 		unsigned int(32) timescale;
+		// 		unsigned int(32) presentation_time_delta;
+		// 		unsigned int(32) event_duration;
+		// 		unsigned int(32) id;
+		// 	} else if (version==1) {
+		// 		unsigned int(32) timescale;
+		// 		unsigned int(64) presentation_time;
+		// 		unsigned int(32) event_duration;
+		// 		unsigned int(32) id;
+		// 		string scheme_id_uri;
+		// 		string value;
+		// 	}
+		// 	unsigned int(8) message_data[];
+		// }
+
+		// scheme_id_uri: is a null-terminated ('C') string in UTF-8 characters that identifies the message
+		// scheme. The semantics and syntax of the message_data[] are defined by the owner of the scheme
+		// identified. 
+
+		// value: is a null-terminated ('C') string in UTF-8 characters that specifies the value for the event. The
+		// value space and semantics must be defined by the owners of the scheme identified in the scheme_id_
+		// uri field.
+
+		// timescale provides the timescale, in ticks per second, for the time delta and duration fields within
+		// version 0 of this box.
+
+		// presentation_time_delta provides the Media Presentation time delta of the media presentation
+		// time of the event and the earliest presentation time in this segment.
+
+		// event_duration provides the duration of event in media presentation time. In version 0-, the
+		// timescale is indicated in the timescale field; in version 1, the timescale of the MovieHeaderBox is
+		// used. The value 0xFFFF indicates an unknown duration.
+
+		// id: a field identifying this instance of the message. Messages with equivalent semantics shall have
+		// the same value, i.e. processing of any one event message box with the same id is sufficient.
+
+		// message_data: body of the message, which fills the remainder of the message box. This may be empty
+		// depending on the above information. The syntax and semantics of this field must be defined by the
+		// owner of the scheme identified in the scheme_id_uri field.
+
+		for (const auto &sample : samples->GetList())
+		{
+			ov::ByteStream stream(512);
+			
+			// version == 1
+
+			// timescale
+			stream.WriteBE32(GetTrack()->GetTimeBase().GetTimescale());
+
+			// presentation_time
+			stream.WriteBE64(sample->GetPts());
+
+			// event_duration
+			stream.WriteBE32(0xFFFFFFFF);
+
+			// id
+			static uint32_t i = 0;
+			stream.WriteBE32(i++);
+
+			// scheme_id_uri
+			// now only support ID3v2 (https://aomediacodec.github.io/id3-emsg/)
+			stream.WriteText("https://aomedia.org/emsg/ID3", true);
+
+			// value
+			stream.WriteText("OvenMediaEngine", true);
+
+			// message_data
+			stream.WriteText(sample->GetData()->ToString());
+
+			// One or more Event Message boxes (‘emsg’) [CMAF] can be included per segment. Version 1 of the Event Message box [DASH] must be used.
+			if (WriteFullBox(container_stream, "emsg", *stream.GetData(), 1, 0) == false)
+			{
+				logtw("Failed to write emsg box");
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	bool Packager::WriteMoofBox(ov::ByteStream &container_stream, const std::shared_ptr<const Samples> &samples)
 	{
 		// ISO/IEC 14496-12 8.8.4
 		// aligned(8) class MovieFragmentBox extends Box(‘moof’)
 		// {
 		// }
+
+		auto start_offset = container_stream.GetLength();
 
 		if (samples->IsEmpty() == true)
 		{
@@ -1371,7 +1459,7 @@ namespace bmff
 		auto p = container->GetWritableDataAs<uint8_t>();
 		auto pos = container_stream.GetLength() - _last_trun_box_size + BMFF_FULL_BOX_HEADER_SIZE + 4;
 
-		ByteWriter<uint32_t>::WriteBigEndian(p + pos, container_stream.GetLength() + BMFF_BOX_HEADER_SIZE /* mdat header size */);
+		ByteWriter<uint32_t>::WriteBigEndian(p + pos, container_stream.GetLength() - start_offset + BMFF_BOX_HEADER_SIZE /* mdat header size */);
 
 		return true;
 	}

@@ -13,6 +13,9 @@
 #include <modules/bitstream/h264/h264_converter.h>
 #include <modules/bitstream/aac/aac_converter.h>
 
+#include <modules/id3v2/id3v2.h>
+#include <modules/id3v2/frames/id3v2_text_frame.h>
+
 namespace bmff
 {
 	FMP4Packager::FMP4Packager(const std::shared_ptr<FMP4Storage> &storage, const std::shared_ptr<const MediaTrack> &track, const Config &config)
@@ -59,6 +62,18 @@ namespace bmff
 		}
 
 		return StoreInitializationSection(stream.GetDataPointer());
+	}
+
+	bool FMP4Packager::AppendDataSample(const std::shared_ptr<const MediaPacket> &media_packet)
+	{
+		if (_data_samples_buffer == nullptr)
+		{
+			_data_samples_buffer = std::make_shared<Samples>();
+		}
+
+		_data_samples_buffer->AppendSample(media_packet);
+
+		return true;
 	}
 
 	// Generate Media FMP4Segment
@@ -115,6 +130,23 @@ namespace bmff
 				}
 
 				ov::ByteStream chunk_stream(reserve_buffer_size);
+				
+				// ID3v2 Injection Test
+				// ID3v2 tag;
+				// tag.SetVersion(4, 0);
+				// tag.AddFrame(std::make_shared<ID3v2TextFrame>("TIT2", "Test"));
+				// auto sample_data = std::make_shared<MediaPacket>(0, cmn::MediaType::Data, 0, tag.Serialize(), _samples_buffer->GetStartTimestamp(), _samples_buffer->GetStartTimestamp(), 0, MediaPacketFlag::NoFlag);
+				// AppendDataSample(sample_data);
+
+				if (_data_samples_buffer != nullptr)
+				{
+					if (WriteEmsgBox(chunk_stream, _data_samples_buffer) == false)
+					{
+						logtw("FMP4Packager::AppendSample() - Failed to write emsg box");
+					}
+
+					_data_samples_buffer.reset();
+				}
 
 				if (WriteMoofBox(chunk_stream, _samples_buffer) == false)
 				{
@@ -236,7 +268,7 @@ namespace bmff
 
 		stream.WriteText("iso6"); // major brand
 		stream.WriteBE32(0); // minor version
-		stream.WriteText("iso6mp42avc1dashhlsf"); // compatible brands
+		stream.WriteText("iso6mp42avc1dashhlsfaid3"); // compatible brands
 
 		// stream.WriteText("mp42"); // major brand
 		// stream.WriteBE32(0); // minor version
