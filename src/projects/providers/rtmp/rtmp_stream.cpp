@@ -1108,7 +1108,7 @@ namespace pvd
 		}
 		else
 		{
-			logtw("Unknown Amf0DataMessage - Message(%s)", message_name.CStr());
+			logtw("Unknown Amf0DataMessage - Message(%s / %s)", message_name.CStr(), data_name.CStr());
 			return;
 		}
 	}
