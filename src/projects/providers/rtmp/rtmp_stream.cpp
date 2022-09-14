@@ -103,6 +103,8 @@ namespace pvd
 
 		// For debug statistics
 		_stream_check_time = time(nullptr);
+
+		_event_generator = GetApplication()->GetConfig().GetProviders().GetRtmpProvider().GetEventGenerator();
 	}
 
 	RtmpStream::~RtmpStream()
@@ -1108,9 +1110,88 @@ namespace pvd
 		}
 		else
 		{
-			logtw("Unknown Amf0DataMessage - Message(%s / %s)", message_name.CStr(), data_name.CStr());
-			return;
+			// Find it in Events
+			if (CheckEventMessage(message->header, document) == false)
+			{
+				logtw("Unknown Amf0DataMessage - Message(%s / %s)", message_name.CStr(), data_name.CStr());
+				return;
+			}
 		}
+	}
+
+	bool RtmpStream::CheckEventMessage(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document)
+	{
+		bool found = false;
+		
+		for (const auto &event : _event_generator.GetEvents())
+		{
+			auto trigger = event.GetTrigger();
+			auto trigger_list = trigger.Split(".");
+
+			// Trigger length must be 3 or more
+			// AMFDataMessage.[<Property>.<Property>...<Property>.]<Object Name>.<Key Name>
+			if (trigger_list.size() < 3)
+			{
+				logtd("Invalid trigger: %s", trigger.CStr());
+				continue;
+			}
+
+			if (header->completed.type_id == RTMP_MSGID_AMF0_DATA_MESSAGE && trigger_list.at(0) == "AMFDataMessage")
+			{
+				for (std::size_t i=1; i<trigger_list.size(); i++)
+				{
+					auto property = document.GetProperty(i-1);
+					if (property == nullptr)
+					{
+						logtd("Document has no property at %d: %s", i-1, trigger.CStr());
+						break;
+					}
+
+					if (trigger_list.at(i) != property->GetString())
+					{
+						logtd("Document property mismatch at %d: %s != %s", i-1, trigger_list.at(i).CStr(), property->GetString());
+						break;
+					}
+
+					// if last item - 1 is must be object or array
+					if (i == trigger_list.size()-2)
+					{
+						if (property->GetType() != AmfDataType::Object && property->GetType() != AmfDataType::Array)
+						{
+							logtd("Property type is not object or array: %s", property->GetString());
+							break;
+						}
+
+						auto object = property->GetObject();
+						if (object == nullptr)
+						{
+							logtd("Property is not object: %s", property->GetString());
+							break;
+						}
+
+						auto key = trigger_list.at(i+1);
+						int32_t index = 0;
+						if ((index = object->FindName(key.CStr())) >= 0 && object->GetType(index) == AmfDataType::String)
+						{
+							found = true;
+							auto value = object->GetString(index);
+							if (value == trigger_list.at(i))
+							{
+								GenerateEvent(event, value);
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return found;
+	}
+
+	void RtmpStream::GenerateEvent(const cfg::vhost::app::pvd::Event &event, const ov::String &value)
+	{
+		logti("Event generated: %s / %s", event.GetTrigger().CStr(), value.CStr());
 	}
 
 	bool RtmpStream::CheckReadyToPublish()

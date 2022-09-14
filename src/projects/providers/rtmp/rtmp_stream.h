@@ -104,6 +104,9 @@ namespace pvd
 		void ReceiveAmfCommandMessage(const std::shared_ptr<const RtmpMessage> &message);
 		void ReceiveAmfDataMessage(const std::shared_ptr<const RtmpMessage> &message);
 
+		bool CheckEventMessage(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document);
+		void GenerateEvent(const cfg::vhost::app::pvd::Event &event, const ov::String &value);
+
 		bool ReceiveAudioMessage(const std::shared_ptr<const RtmpMessage> &message);
 		bool ReceiveVideoMessage(const std::shared_ptr<const RtmpMessage> &message);
 
@@ -178,5 +181,7 @@ namespace pvd
 		uint32_t _audio_frame_count = 0;
 
 		bool _negative_cts_detected = false;
+
+		cfg::vhost::app::pvd::EventGenerator _event_generator;
 	};
 }
