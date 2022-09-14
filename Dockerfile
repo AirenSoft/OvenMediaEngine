@@ -19,7 +19,7 @@ ENV     TEMP_DIR=/tmp/ome
 RUN \
         mkdir -p ${TEMP_DIR} && \
         cd ${TEMP_DIR} && \
-        curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/v${OME_VERSION}.tar.gz | tar -xz --strip-components=1
+        curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/{OME_VERSION}.tar.gz | tar -xz --strip-components=1
 
 ## Install dependencies
 RUN \
