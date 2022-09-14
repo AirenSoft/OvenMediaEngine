@@ -1145,18 +1145,12 @@ namespace pvd
 						break;
 					}
 
-					if (trigger_list.at(i) != property->GetString())
-					{
-						logtd("Document property mismatch at %d: %s != %s", i-1, trigger_list.at(i).CStr(), property->GetString());
-						break;
-					}
-
-					// if last item - 1 is must be object or array
-					if (i == trigger_list.size()-2)
+					// if last item is must be object or array
+					if (i == trigger_list.size()-1)
 					{
 						if (property->GetType() != AmfDataType::Object && property->GetType() != AmfDataType::Array)
 						{
-							logtd("Property type is not object or array: %s", property->GetString());
+							logtd("Property type is not object or array: %s / %d", property->GetString(), static_cast<int32_t>(property->GetType()));
 							break;
 						}
 
@@ -1167,17 +1161,21 @@ namespace pvd
 							break;
 						}
 
-						auto key = trigger_list.at(i+1);
+						auto key = trigger_list.at(i);
 						int32_t index = 0;
 						if ((index = object->FindName(key.CStr())) >= 0 && object->GetType(index) == AmfDataType::String)
 						{
 							found = true;
 							auto value = object->GetString(index);
-							if (value == trigger_list.at(i))
-							{
-								GenerateEvent(event, value);
-								break;
-							}
+							GenerateEvent(event, value);
+						}
+					}
+					else
+					{
+						if (trigger_list.at(i) != property->GetString())
+						{
+							logtd("Document property mismatch at %d: %s != %s", i-1, trigger_list.at(i).CStr(), property->GetString());
+							break;
 						}
 					}
 				}
