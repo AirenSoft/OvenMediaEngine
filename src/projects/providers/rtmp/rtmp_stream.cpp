@@ -103,8 +103,6 @@ namespace pvd
 
 		// For debug statistics
 		_stream_check_time = time(nullptr);
-
-		_event_generator = GetApplication()->GetConfig().GetProviders().GetRtmpProvider().GetEventGenerator();
 	}
 
 	RtmpStream::~RtmpStream()
@@ -1551,6 +1549,8 @@ namespace pvd
 			Stop();
 			return false;
 		}
+
+		_event_generator = GetApplication()->GetConfig().GetProviders().GetRtmpProvider().GetEventGenerator();
 
 		//   stored messages
 		for (auto message : _stream_message_cache)
