@@ -60,6 +60,12 @@ ov::String TranscoderStreamInternal::GetIdentifiedForAudioProfile(const uint32_t
 									profile.GetChannel());
 }
 
+ov::String TranscoderStreamInternal::GetIdentifiedForDataProfile(const uint32_t track_id)
+{
+		return ov::String::FormatString("T%d_PBYPASS", track_id);
+}
+
+
 cmn::Timebase TranscoderStreamInternal::GetDefaultTimebaseByCodecId(cmn::MediaCodecId codec_id)
 {
 	cmn::Timebase timebase(1, 1000);

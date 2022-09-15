@@ -346,6 +346,7 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 	output_track->SetMediaType(cmn::MediaType::Video);
 	output_track->SetId(NewTrackId());
 	output_track->SetName(profile.GetName());
+	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
 
 	if (profile.IsBypass() == true)
 	{
@@ -403,6 +404,7 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 		return nullptr;
 	}
 
+	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
 	output_track->SetMediaType(cmn::MediaType::Video);
 	output_track->SetId(NewTrackId());
 	output_track->SetBypass(false);
@@ -433,6 +435,7 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 	output_track->SetMediaType(cmn::MediaType::Audio);
 	output_track->SetId(NewTrackId());
 	output_track->SetName(profile.GetName());
+	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
 
 	if (profile.IsBypass() == true)
 	{
@@ -496,6 +499,29 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 	return output_track;
 }
 
+std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrackDataType(const std::shared_ptr<MediaTrack> &input_track)
+{
+	auto output_track = std::make_shared<MediaTrack>();
+	if (output_track == nullptr)
+	{
+		return nullptr;
+	}
+
+	output_track->SetMediaType(cmn::MediaType::Data);
+	output_track->SetId(NewTrackId());
+	output_track->SetName("");
+	output_track->SetBypass(true);
+	output_track->SetCodecId(input_track->GetCodecId());
+	output_track->SetCodecLibraryId(input_track->GetCodecLibraryId());
+	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
+	output_track->SetWidth(input_track->GetWidth());
+	output_track->SetHeight(input_track->GetHeight());
+	output_track->SetFrameRate(input_track->GetFrameRate());
+	output_track->SetTimeBase(input_track->GetTimeBase());
+
+	return output_track;
+}
+
 // Create output stream and track
 int32_t TranscoderStream::CreateOutputStreams()
 {
@@ -527,7 +553,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 						auto output_track = CreateOutputTrack(input_track, profile);
 						if (output_track == nullptr)
 						{
-							logtw("Encoding codec set is not a video codec, track_id(%d)", input_track_id);
+							logtw("Failed to create media tracks. Encoding options need to be checked. track_id(%d)", input_track_id);
 							continue;
 						}
 
@@ -542,7 +568,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 						auto output_track = CreateOutputTrack(input_track, profile);
 						if (output_track == nullptr)
 						{
-							logtw("Encoding codec set is not a video codec, track_id(%d)", input_track_id);
+							logtw("Failed to create media tracks. Encoding options need to be checked. track_id(%d)", input_track_id);
 							continue;
 						}
 
@@ -559,7 +585,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 						auto output_track = CreateOutputTrack(input_track, profile);
 						if (output_track == nullptr)
 						{
-							logtw("Encoding codec set is not a audio codec, track_id(%d)", input_track_id);
+							logtw("Failed to create media tracks. Encoding options need to be checked. track_id(%d)", input_track_id);
 							continue;
 						}
 
@@ -568,6 +594,21 @@ int32_t TranscoderStream::CreateOutputStreams()
 						AddCompositeMap(GetIdentifiedForAudioProfile(input_track_id, profile), _input_stream, input_track, output_stream, output_track);
 					}
 				}
+				break;
+				
+				// If there is a data type track in the input stream, it must be created equally in all output streams.
+				case cmn::MediaType::Data: {
+						auto output_track = CreateOutputTrackDataType(input_track);
+						if (output_track == nullptr)
+						{
+							logtw("Failed to create media tracks. Encoding options need to be checked. track_id(%d)", input_track_id);
+							continue;
+						}
+						output_stream->AddTrack(output_track);
+
+						AddCompositeMap(GetIdentifiedForDataProfile(input_track_id), _input_stream, input_track, output_stream, output_track);
+				}
+
 				break;
 				default: {
 					logtw("Unsupported media type of input track. type(%d)", input_track->GetMediaType());
@@ -663,7 +704,7 @@ int32_t TranscoderStream::CreatePipeline()
 		}
 
 		temp_debug_msg.AppendFormat(" [%s/%32s]: InputTrack[%d] -> Decoder[%d] -> Filter[%d] -> Encoder[%d] -> OutputTrack[%s]\n",
-									(encode_media_type == cmn::MediaType::Video) ? "Video" : "Audio",
+									GetMediaTypeString(encode_media_type).CStr(),
 									encode_profile_name.CStr(),
 									composite->GetInputTrack()->GetId(),
 									composite->GetInputTrack()->GetId(),

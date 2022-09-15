@@ -694,6 +694,9 @@ bool MediaRouteStream::ProcessInboundStream(std::shared_ptr<MediaTrack> &media_t
 		case cmn::BitstreamFormat::OPUS:
 			result = ProcessOPUSStream(media_track, media_packet);
 			break;
+		case cmn::BitstreamFormat::ID3v2:
+			result = true;
+			break;
 		case cmn::BitstreamFormat::AAC_LATM:
 		case cmn::BitstreamFormat::JPEG:
 		case cmn::BitstreamFormat::PNG:
@@ -735,6 +738,7 @@ bool MediaRouteStream::ProcessOutboundStream(std::shared_ptr<MediaTrack> &media_
 			break;
 		case cmn::BitstreamFormat::JPEG:
 		case cmn::BitstreamFormat::PNG:
+		case cmn::BitstreamFormat::ID3v2:
 			result = true;
 			break;
 		case cmn::BitstreamFormat::AAC_LATM:
@@ -859,7 +863,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 
 			stat_track_str.AppendFormat("\n\ttrack:%3d, type: %4s, codec: %4s(%d,%s), pts: %lldms, dly: %5lldms, tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %dKbps",
 										track_id,
-										track->GetMediaType() == MediaType::Video ? "video" : "audio",
+										GetMediaTypeString(track->GetMediaType()).CStr(),
 										::StringFromMediaCodecId(track->GetCodecId()).CStr(),
 										track->GetCodecId(),
 										track->IsBypass()?"Passthrough":GetStringFromCodecLibraryId(track->GetCodecLibraryId()).CStr(),
@@ -1070,7 +1074,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	{
 		logte("Could not find the media track. track_id: %d, media_type: %s",
 			  track_id,
-			  (media_type == MediaType::Video) ? "video" : "audio");
+			  GetMediaTypeString(media_type).CStr());
 
 		return nullptr;
 	}
@@ -1153,7 +1157,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 	media_track->OnFrameAdded(pop_media_packet->GetDataLength());
 
-	return pop_media_packet;
+	return std::move(pop_media_packet);
 }
 
 void MediaRouteStream::DumpPacket(
