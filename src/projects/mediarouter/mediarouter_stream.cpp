@@ -1024,7 +1024,9 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	//	- 3) and then, the current packet stash.
 	std::shared_ptr<MediaPacket> pop_media_packet = nullptr;
 
-	if (GetInoutType() == MediaRouterStreamType::OUTBOUND)
+	if ( (GetInoutType() == MediaRouterStreamType::OUTBOUND) && 
+		// The packet duration recalculation applies only to video and audio types.
+		 (media_packet->GetMediaType() == MediaType::Video || media_packet->GetMediaType() == MediaType::Audio) )
 	{
 		auto it = _media_packet_stash.find(media_packet->GetTrackId());
 		if (it == _media_packet_stash.end())
@@ -1061,7 +1063,14 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	}
 	else
 	{
+		
 		pop_media_packet = std::move(media_packet);
+
+		// The packet duration of data type is always 0.
+		if(pop_media_packet->GetMediaType() == MediaType::Data)
+		{
+			pop_media_packet->SetDuration(0);
+		}
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
@@ -1157,7 +1166,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 	media_track->OnFrameAdded(pop_media_packet->GetDataLength());
 
-	return std::move(pop_media_packet);
+	return pop_media_packet;
 }
 
 void MediaRouteStream::DumpPacket(
