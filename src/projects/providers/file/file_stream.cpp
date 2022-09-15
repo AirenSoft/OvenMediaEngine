@@ -64,6 +64,12 @@ namespace pvd
 
 	bool FileStream::StartStream(const std::shared_ptr<const ov::Url> &url)
 	{
+		if(url == nullptr)
+		{
+			SetState(State::ERROR);
+			return true;
+		}
+		
 		// Only start from IDLE, ERROR, STOPPED
 		if (!(GetState() == State::IDLE || GetState() == State::ERROR || GetState() == State::STOPPED))
 		{

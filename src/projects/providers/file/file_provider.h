@@ -43,6 +43,8 @@ namespace pvd
 		    return "FileProvider";
 	    }
 
+		void CreateStreamFromStreamMap(const info::Application &app_info);
+
 	protected:
 		bool OnCreateHost(const info::Host &host_info) override;
 		bool OnDeleteHost(const info::Host &host_info) override;
