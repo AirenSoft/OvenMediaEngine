@@ -135,6 +135,83 @@ namespace cmn
 		return false;
 	}
 
+	static ov::String GetMeiaPacketTypeString(cmn::PacketType packet_type)
+	{
+		switch (packet_type)
+		{
+			case cmn::PacketType::OVT:
+				return "OVT";
+			case cmn::PacketType::RAW:
+				return "RAW";
+			case cmn::PacketType::SEQUENCE_HEADER:
+				return "SEQUENCE_HEADER";
+			case cmn::PacketType::NALU:
+				return "NALU";
+			case cmn::PacketType::VIDEO_EVENT:
+				return "VIDEO_EVENT";
+			case cmn::PacketType::AUDIO_EVENT:
+				return "AUDIO_EVENT";
+			default:
+				return "Unknown";
+		}
+	}
+
+	static ov::String GetMediaTypeString(cmn::MediaType media_type)
+	{
+		switch (media_type)
+		{
+			case cmn::MediaType::Video:
+				return "Video";
+			case cmn::MediaType::Audio:
+				return "Audio";
+			case cmn::MediaType::Data:
+				return "Data";
+			case cmn::MediaType::Subtitle:
+				return "Subtitle";
+			case cmn::MediaType::Attachment:
+				return "Attachment";
+			default:
+				return "Unknown";
+		}
+	}
+
+	static ov::String GetBitstreamFormatString(cmn::BitstreamFormat format) {
+		switch (format) {
+			case cmn::BitstreamFormat::H264_AVCC:
+				return "H264_AVCC";
+			case cmn::BitstreamFormat::H264_ANNEXB:
+				return "H264_ANNEXB";
+			case cmn::BitstreamFormat::H264_RTP_RFC_6184:
+				return "H264_RTP_RFC_6184";
+			case cmn::BitstreamFormat::H265_ANNEXB:
+				return "H265_ANNEXB";
+			case cmn::BitstreamFormat::VP8:
+				return "VP8";
+			case cmn::BitstreamFormat::VP8_RTP_RFC_7741:
+				return "VP8_RTP_RFC_7741";
+			case cmn::BitstreamFormat::AAC_RAW:
+				return "AAC_RAW";
+			case cmn::BitstreamFormat::AAC_MPEG4_GENERIC:
+				return "AAC_MPEG4_GENERIC";
+			case cmn::BitstreamFormat::AAC_ADTS:
+				return "AAC_ADTS";
+			case cmn::BitstreamFormat::AAC_LATM:
+				return "AAC_LATM";
+			case cmn::BitstreamFormat::OPUS:
+				return "OPUS";
+			case cmn::BitstreamFormat::OPUS_RTP_RFC_7587:
+				return "OPUS_RTP_RFC_7587";
+			case cmn::BitstreamFormat::JPEG:
+				return "JPEG";
+			case cmn::BitstreamFormat::PNG:
+				return "PNG";
+			case cmn::BitstreamFormat::ID3v2:
+				return "ID3v2";
+			default:
+				return "Unknown";
+		}
+	}
+
 	static cmn::MediaCodecLibraryId GetCodecLibraryIdByName(ov::String name)
 	{
 		name.MakeUpper();

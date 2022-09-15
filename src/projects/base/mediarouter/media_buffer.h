@@ -24,7 +24,7 @@ enum class MediaPacketFlag : uint8_t
 	Key		  // Key Frame
 };
 
-static ov::String StringFromMediaPacketFlag(const MediaPacketFlag flag) 
+static ov::String GetMediaPacketFlagString(const MediaPacketFlag flag) 
 {
 	switch (flag)
 	{
@@ -246,6 +246,22 @@ public:
 		packet->_frag_hdr = _frag_hdr;
 
 		return packet;
+	}
+
+	ov::String GetInfoString() {
+		ov::String info;
+
+		info.AppendFormat("MSID(%u) ", GetMsid());
+		info.AppendFormat("TrackID(%d) ", GetTrackId());
+		info.AppendFormat("PTS(%" PRId64 ") ", GetPts());
+		info.AppendFormat("DTS(%" PRId64 ") ", GetDts());
+		info.AppendFormat("Duration(%" PRId64 ") ", GetDuration());
+		info.AppendFormat("Flag(%s) ", GetMediaPacketFlagString(GetFlag()).CStr());
+		info.AppendFormat("BitstreamFormat(%s) ", GetBitstreamFormatString(GetBitstreamFormat()).CStr());
+		info.AppendFormat("PacketType(%s) ", GetMeiaPacketTypeString(GetPacketType()).CStr());
+		info.AppendFormat("DataLength(%zu) ", GetDataLength());
+
+		return info;
 	}
 
 protected:
