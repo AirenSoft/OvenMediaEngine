@@ -39,7 +39,10 @@ namespace cmn
 		OPUS,/*raw*/		// OME's default internal bitstream format for OPUS
 		OPUS_RTP_RFC_7587,
 		JPEG,
-		PNG
+		PNG,
+
+		// For Data Track
+		ID3v2,
 	};
 
 	enum class PacketType : int8_t
@@ -53,6 +56,10 @@ namespace cmn
 		// H.264
 		SEQUENCE_HEADER, // For H.264 AVCC, AAC RAW
 		NALU, // For H.264 AVCC, ANNEXB	
+
+		// For Data Track
+		VIDEO_EVENT,
+		AUDIO_EVENT,
 	};
 
 	enum class PictureType : uint8_t
@@ -79,7 +86,7 @@ namespace cmn
 		Mp3,
 		Opus,
 		Jpeg,
-		Png
+		Png,
 	};
 
 	enum class MediaCodecLibraryId : uint8_t

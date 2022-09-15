@@ -16,6 +16,9 @@
 #include <modules/containers/flv/flv_parser.h>
 #include <orchestrator/orchestrator.h>
 
+#include <modules/id3v2/id3v2.h>
+#include <modules/id3v2/frames/id3v2_frames.h>
+
 #include "base/info/application.h"
 #include "base/provider/push_provider/application.h"
 #include "base/provider/push_provider/provider.h"
@@ -1188,6 +1191,76 @@ namespace pvd
 	void RtmpStream::GenerateEvent(const cfg::vhost::app::pvd::Event &event, const ov::String &value)
 	{
 		logti("Event generated: %s / %s", event.GetTrigger().CStr(), value.CStr());
+
+		bool id3_enabled = false;
+		auto id3v2_event = event.GetHLSID3v2(&id3_enabled);
+
+		if (id3_enabled == true)
+		{
+			ID3v2 tag;
+			tag.SetVersion(4, 0);
+
+			if (id3v2_event.GetFrameType() == "TXXX")
+			{
+				auto info = id3v2_event.GetInfo();
+				auto data = id3v2_event.GetData();
+
+				if (info == "${TriggerValue}")
+				{
+					info = value;
+				}
+				else if (data == "${TriggerValue}")
+				{
+					data = value;
+				}
+
+				tag.AddFrame(std::make_shared<ID3v2TxxxFrame>(info, data));
+			}
+			else if (id3v2_event.GetFrameType().UpperCaseString().Get(0) == 'T')
+			{
+				auto data = id3v2_event.GetData();
+
+				if (data == "${TriggerValue}")
+				{
+					data = value;
+				}
+
+				tag.AddFrame(std::make_shared<ID3v2TextFrame>(id3v2_event.GetFrameType(), data));
+			}
+			else
+			{
+				logtw("Unsupported ID3v2 frame type: %s", id3v2_event.GetFrameType().CStr());
+				return;
+			}
+
+			cmn::PacketType packet_type = cmn::PacketType::Unknown;
+			if (id3v2_event.GetInjectTo().LowerCaseString() == "video")
+			{
+				packet_type = cmn::PacketType::VIDEO_EVENT;
+			}
+			else if (id3v2_event.GetInjectTo().LowerCaseString() == "audio")
+			{
+				packet_type = cmn::PacketType::AUDIO_EVENT;
+			}
+			else
+			{
+				logtw("Unsupported inject type: %s", id3v2_event.GetInjectTo().CStr());
+				return;
+			}
+
+			auto pts = (packet_type == cmn::PacketType::VIDEO_EVENT) ? _last_video_timestamp : _last_audio_timestamp;
+			auto dts = pts;
+			auto event_message = std::make_shared<MediaPacket>(GetMsid(),
+															cmn::MediaType::Data,
+															RTMP_DATA_TRACK_ID,
+															tag.Serialize(), 
+															pts,
+															dts,
+															cmn::BitstreamFormat::ID3v2,
+															packet_type);
+			
+			SendFrame(event_message);
+		}
 	}
 
 	bool RtmpStream::CheckReadyToPublish()
@@ -1550,6 +1623,22 @@ namespace pvd
 
 		_event_generator = GetApplication()->GetConfig().GetProviders().GetRtmpProvider().GetEventGenerator();
 
+// Test Event
+#if 0
+		_event_test_timer.Push(
+		[this](void *paramter) -> ov::DelayQueueAction {
+
+			for (const auto &event : _event_generator.GetEvents())
+			{
+				GenerateEvent(event, "test");
+			}
+
+			return ov::DelayQueueAction::Repeat;
+		},
+		3000);
+		_event_test_timer.Start();
+#endif
+
 		//   stored messages
 		for (auto message : _stream_message_cache)
 		{
@@ -1621,6 +1710,17 @@ namespace pvd
 			}
 
 			AddTrack(new_track);
+		}
+
+		// Data Track 
+		{
+			auto data_track = std::make_shared<MediaTrack>();
+
+			data_track->SetId(RTMP_DATA_TRACK_ID);
+			data_track->SetMediaType(cmn::MediaType::Data);
+			data_track->SetTimeBase(1, 1000);
+			
+			AddTrack(data_track);
 		}
 
 		return true;

@@ -26,7 +26,7 @@ namespace cfg
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetTrigger, _trigger);
-					CFG_DECLARE_REF_GETTER_OF(GetHLSID3v2, _hls_id3v2);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetHLSID3v2, _hls_id3v2);
 
 				protected:
 					void MakeList() override

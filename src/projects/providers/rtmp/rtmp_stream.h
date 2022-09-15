@@ -26,6 +26,7 @@
 // Fix track id
 #define RTMP_VIDEO_TRACK_ID		0
 #define RTMP_AUDIO_TRACK_ID		1
+#define RTMP_DATA_TRACK_ID		2
 
 namespace pvd
 {
@@ -183,5 +184,6 @@ namespace pvd
 		bool _negative_cts_detected = false;
 
 		cfg::vhost::app::pvd::EventGenerator _event_generator;
+		ov::DelayQueue _event_test_timer{"RtmpEventTestTimer"};
 	};
 }
