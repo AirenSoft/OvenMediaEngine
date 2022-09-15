@@ -351,7 +351,7 @@ bool MediaRouteApplication::NotifyStreamCreate(const std::shared_ptr<info::Strea
 		// Provider(source) => Transcoder, Relay(not used)
 		if (IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_SOURCE(representation_type))
 		{
-			if (IS_OBSERVER_TRANSCODER(oberver_type) || IS_OBSERVER_RELAY(oberver_type))
+			if (IS_OBSERVER_TRANSCODER(oberver_type) || IS_OBSERVER_RELAY(oberver_type) || IS_OBSERVER_ORCHESTRATOR(oberver_type) )
 			{
 				logtd("[%s/%s(%u)] Notify created stream to relay or trasncoder", stream_info->GetApplicationName(), stream_info->GetName().CStr(), stream_info->GetId());
 
@@ -361,7 +361,7 @@ bool MediaRouteApplication::NotifyStreamCreate(const std::shared_ptr<info::Strea
 		// Provider(relay), Transcoder => Publisher
 		else if ((IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_RELAY(representation_type)) || (IS_CONNECTOR_TRANSCODER(connector_type)))
 		{
-			if (IS_OBSERVER_PUBLISHER(oberver_type))
+			if (IS_OBSERVER_PUBLISHER(oberver_type) || IS_OBSERVER_ORCHESTRATOR(oberver_type))
 			{
 				logtd("[%s/%s(%u)] Notify created stream to publisher", stream_info->GetApplicationName(), stream_info->GetName().CStr(), stream_info->GetId());
 
@@ -384,7 +384,7 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 		switch (stream->GetInoutType())
 		{
 			case MediaRouterStreamType::INBOUND: {
-				if (IS_OBSERVER_TRANSCODER(oberver_type))
+				if (IS_OBSERVER_TRANSCODER(oberver_type) || IS_OBSERVER_ORCHESTRATOR(oberver_type))
 				{
 					logtd("[%s/%s(%u)] Notify prepared stream to trasncoder", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId());
 
@@ -394,7 +394,7 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 			break;
 
 			case MediaRouterStreamType::OUTBOUND: {
-				if (IS_OBSERVER_PUBLISHER(oberver_type) || IS_OBSERVER_RELAY(oberver_type))
+				if (IS_OBSERVER_PUBLISHER(oberver_type) || IS_OBSERVER_RELAY(oberver_type) || IS_OBSERVER_ORCHESTRATOR(oberver_type))
 				{
 					logtd("[%s/%s(%u)] Notify prepared stream to publisher", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId());
 

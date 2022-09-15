@@ -38,8 +38,11 @@ namespace ocst
 		: scheme(origin_config.GetPass().GetScheme()),
 		  location(origin_config.GetLocation()),
 		  forward_query_params(origin_config.GetPass().IsForwardQueryParamsEnabled()),
-		  state(ItemState::New)
-
+		  state(ItemState::New),
+		  _persistent(origin_config.IsPersistent()),
+		  _failback(origin_config.IsFailback()),
+		  _strict_location(origin_config.IsStrictLocation()),
+		  _relay(origin_config.IsRelay())
 	{
 		for (auto &url : origin_config.GetPass().GetUrlList())
 		{

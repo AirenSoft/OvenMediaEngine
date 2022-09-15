@@ -14,6 +14,7 @@
 #include "providers/providers.h"
 #include "publishers/publishers.h"
 #include "web_console/web_console.h"
+#include "persistent_streams/persistent_streams.h"
 
 namespace cfg
 {
@@ -39,6 +40,7 @@ namespace cfg
 				oprf::OutputProfiles _output_profiles;
 				pvd::Providers _providers;
 				pub::Publishers _publishers;
+				prst::PersistentStreams _persistent_streams;
 
 			public:
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
@@ -52,6 +54,7 @@ namespace cfg
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetPublishers, _publishers)
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetAppWorkerCount, _publishers.GetAppWorkerCount())
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamWorkerCount, _publishers.GetStreamWorkerCount())
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetPersistentStreams, _persistent_streams)
 
 			protected:
 				void MakeList() override
@@ -76,6 +79,7 @@ namespace cfg
 					Register<Optional>("OutputProfiles", &_output_profiles);
 					Register<Optional>("Providers", &_providers);
 					Register<Optional>("Publishers", &_publishers);
+					Register<Optional>("PersistentStreams", &_persistent_streams);
 				}
 			};
 		}  // namespace app

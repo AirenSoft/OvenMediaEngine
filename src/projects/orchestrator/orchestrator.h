@@ -58,10 +58,6 @@ namespace ocst
 		bool UpdateVirtualHosts(const std::vector<info::Host> &host_list);
 		std::vector<std::shared_ptr<ocst::VirtualHost>> GetVirtualHostList();
 
-		// Process persistent origins settings. Executed when VirtualHost configuration is created or updated.		
-		void RequestProcessPersistOrigins();
-		void ProcessPersistOrigins();
-
 		/// Create an application and notify the modules
 		///
 		/// @param vhost_name A name of VirtualHost
@@ -166,6 +162,9 @@ namespace ocst
 		CommonErrorCode RegisterStreamToOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
 		CommonErrorCode UnregisterStreamFromOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
 
+		// Persistent Stream
+		CommonErrorCode CreatePersistentStreamIfNeed(const info::Application &app_info, const std::shared_ptr<info::Stream> &stream_info);
+		
 		//--------------------------------------------------------------------
 		// Implementation of ocst::Application::CallbackInterface
 		//--------------------------------------------------------------------

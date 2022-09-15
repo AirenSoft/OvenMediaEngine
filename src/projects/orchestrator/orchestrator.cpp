@@ -76,45 +76,10 @@ namespace ocst
 			}
 		}
 
-		RequestProcessPersistOrigins();
-
 		return true;
 	}
 
-	void Orchestrator::RequestProcessPersistOrigins()
-	{
-		std::thread t1([&]() {
-			sleep(1);
-			Orchestrator::GetInstance()->ProcessPersistOrigins();
-		});
-		t1.detach();
-	}
 
-	void Orchestrator::ProcessPersistOrigins()
-	{
-		for (auto &vhost_item : _virtual_host_list)
-		{
-			for (auto &origin : vhost_item->origin_list)
-			{
-				if (origin.origin_config.IsPersistent() != true)
-				{
-					continue;
-				}
-
-				auto url = ov::Url::Parse(ov::String::FormatString("scheme://localhost%s", origin.location.CStr()));
-
-				auto app = GetApplicationInfo(vhost_item->name, url->App());
-				if (!app.IsValid())
-				{
-					continue;
-				}
-
-				// logte("app : %s, stream : %s", url->App().CStr(), url->Stream().CStr());
-
-				RequestPullStream(url, app.GetName(), url->Stream());
-			}
-		}
-	}
 	Result Orchestrator::CreateVirtualHost(const cfg::vhost::VirtualHost &vhost_cfg)
 	{
 		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
@@ -392,8 +357,6 @@ namespace ocst
 		}
 
 		logtd("All items are applied");
-
-		RequestProcessPersistOrigins();
 
 		return result;
 	}
@@ -729,7 +692,7 @@ namespace ocst
 
 		// Use Matched Origin information as an properties in Pull Stream.
 		auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset, 
-			std::make_shared<pvd::PullStreamProperties>(matched_origin->origin_config.IsPersistent(), matched_origin->origin_config.IsFailback(), matched_origin->origin_config.IsRelay()));
+			std::make_shared<pvd::PullStreamProperties>(matched_origin->_persistent, matched_origin->_failback, matched_origin->_relay));
 
 		if (stream != nullptr)
 		{
@@ -803,25 +766,29 @@ namespace ocst
 
 	bool Orchestrator::OnStreamCreated(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s stream is created", info->GetName().CStr());
+		logtd("%s/%s stream of %s is created", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
+
 		return true;
 	}
 
 	bool Orchestrator::OnStreamDeleted(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s stream is deleted", info->GetName().CStr());
+		logtd("%s/%s stream of %s is deleted", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
 		return true;
 	}
 
 	bool Orchestrator::OnStreamPrepared(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s stream is parsed", info->GetName().CStr());
+		logtd("%s/%s stream of %s is parsed", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
+
+		CreatePersistentStreamIfNeed(app_info, info);
+
 		return true;
 	}
 
 	bool Orchestrator::OnStreamUpdated(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s stream is updated", info->GetName().CStr());
+		logtd("%s/%s stream of %s is updated", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
 		return true;
 	}
 
@@ -978,4 +945,64 @@ namespace ocst
 		return CommonErrorCode::ERROR;
 	}
 
+	// This feature is set in Application.PersistentStream. Creates a persistent and non-terminating stream based on the input stream. 
+	// If the input stream is terminated, it is played as a fallback stream.
+	// - Create a persistent stream only for the input stream.
+	// - Main stream will use Input Stream. The fallback stream will use the stream specified in PersistentStreams.Stream.FallbackStreamName. It can only be used within the same application.
+	// - The created Persistent Stream can be terminated when the API(TODO) or Application is deleted.
+	// - Internally it uses multiple urls from OVT provider/publisher within localhost.
+	CommonErrorCode Orchestrator::CreatePersistentStreamIfNeed(const info::Application &app_info, const std::shared_ptr<info::Stream> &stream_info)
+	{
+		auto vhost = GetVirtualHost(app_info.GetName());
+		if(!vhost)
+		{
+			return CommonErrorCode::NOT_FOUND;
+		}
+
+		// Streams created by OVT or Transcoder Provider are excluded.
+		if(stream_info->GetSourceType() == StreamSourceType::Ovt || stream_info->GetSourceType() == StreamSourceType::Transcoder || stream_info->GetRepresentationType() != StreamRepresentationType::Source)
+		{
+			return CommonErrorCode::DISABLED;
+		}
+
+		auto persist_streams = app_info.GetConfig().GetPersistentStreams();
+		for(auto conf : persist_streams.GetStreams())
+		{
+			auto ovt_scheme = ov::String("ovt");
+			auto ovt_port = _server_config->GetBind().GetPublishers().GetOvt().GetPort().GetPort();
+			auto ovt_provider = GetProviderModuleForScheme(ovt_scheme);
+
+			auto vhost_name = app_info.GetName().GetVHostName();
+			auto app_name = app_info.GetName().GetAppName();
+
+			auto source_stream_match = conf.GetSourceStreamMatch();
+			auto source_stream_name = stream_info->GetName();
+
+			auto fallback_stream_name = conf.GetFallbackStreamName();
+
+			auto output_stream_name = conf.GetOutputStreamName().Replace("${OriginStreamName}", source_stream_name.CStr());
+
+			// Check that the created stream matches the SourceStreamMatch value
+			ov::Regex regex(ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(source_stream_match)));
+			if(regex.Matches(source_stream_name.CStr()).IsMatched() == false)
+			{
+				continue;
+			}
+
+			// Set url of main/fallback stream
+			std::vector<ov::String> url_list;
+			url_list.push_back(ov::String::FormatString("%s://localhost:%d/%s/%s", ovt_scheme.CStr(), ovt_port, app_name.CStr(), source_stream_name.CStr(), vhost_name.CStr())); // Main
+			url_list.push_back(ov::String::FormatString("%s://localhost:%d/%s/%s", ovt_scheme.CStr(), ovt_port, app_name.CStr(), fallback_stream_name.CStr(), vhost_name.CStr())); // Fallback
+
+			// Persistent = true
+			// Failback = true
+			// Relay = false
+			auto stream_props = std::make_shared<pvd::PullStreamProperties>(true, true, false);
+
+			// Request pull stream
+			ovt_provider->PullStream(std::make_shared<ov::Url>(), app_info, output_stream_name.CStr(), url_list, 0,  stream_props);
+		}
+
+		return CommonErrorCode::SUCCESS;
+	}
 }  // namespace ocst
