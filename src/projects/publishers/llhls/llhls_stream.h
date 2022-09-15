@@ -68,6 +68,8 @@ private:
 	bool Start() override;
 	bool Stop() override;
 
+	bool SendBufferedPackets();
+
 	void NotifyPlaylistUpdated(const int32_t &track_id, const int64_t &msn, const int64_t &part);
 
 	// bmff::FMp4StorageObserver implementation
@@ -76,7 +78,7 @@ private:
 	void OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number) override;
 
 	// Create and Get fMP4 packager and storage with track info, storage and packager_config
-	bool AddPackager(const std::shared_ptr<const MediaTrack> &track);
+	bool AddPackager(const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<const MediaTrack> &data_track);
 	// Get fMP4 packager with the track id
 	std::shared_ptr<bmff::FMP4Packager> GetPackager(const int32_t &track_id) const;
 	// Get storage with the track id

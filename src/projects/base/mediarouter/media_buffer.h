@@ -229,13 +229,13 @@ public:
 		return &_frag_hdr;
 	}
 
-	std::shared_ptr<MediaPacket> ClonePacket()
+	std::shared_ptr<MediaPacket> ClonePacket() const
 	{
 		auto packet = std::make_shared<MediaPacket>(
 			GetMsid(),
 			GetMediaType(),
 			GetTrackId(),
-			GetData(),
+			GetData()->Clone(),
 			GetPts(),
 			GetDts(),
 			GetDuration(),

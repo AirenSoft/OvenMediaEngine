@@ -50,13 +50,16 @@ bool LLHlsStream::Start()
 	_storage_config.max_segments = llhls_config.GetSegmentCount();
 	_storage_config.segment_duration_ms = llhls_config.GetSegmentDuration() * 1000;
 
+	// Find data track
+	auto data_track = GetFirstTrack(cmn::MediaType::Data);
+
 	std::shared_ptr<MediaTrack> first_video_track = nullptr, first_audio_track = nullptr;
 	for (const auto &[id, track] : _tracks)
 	{
 		if ( (track->GetCodecId() == cmn::MediaCodecId::H264) || 
 			(track->GetCodecId() == cmn::MediaCodecId::Aac) )
 		{
-			if (AddPackager(track) == false)
+			if (AddPackager(track, data_track) == false)
 			{
 				logte("LLHlsStream(%s/%s) - Failed to add packager for track(%ld)", GetApplication()->GetName().CStr(), GetName().CStr(), track->GetId());
 				return false;
@@ -335,6 +338,31 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::G
 	return { RequestResult::Success, chunk->GetData() };
 }
 
+bool LLHlsStream::SendBufferedPackets()
+{
+	logtd("SendBufferedPackets - BufferSize (%u)", _initial_media_packet_buffer.Size());
+	while (_initial_media_packet_buffer.IsEmpty() == false)
+	{
+		auto buffered_media_packet = _initial_media_packet_buffer.Dequeue();
+		if (buffered_media_packet.has_value() == false)
+		{
+			continue;
+		}
+
+		auto media_packet = buffered_media_packet.value();
+		if (media_packet->GetMediaType() == cmn::MediaType::Data)
+		{
+			SendDataFrame(media_packet);
+		}
+		else
+		{
+			AppendMediaPacket(media_packet);
+		}
+	}
+
+	return true;
+}
+
 void LLHlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
 	if (GetState() != State::STARTED)
@@ -345,17 +373,7 @@ void LLHlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packe
 
 	if (_initial_media_packet_buffer.IsEmpty() == false)
 	{
-		logtd("SendVideoFrame() - BufferSize (%u)", _initial_media_packet_buffer.Size());
-		while (_initial_media_packet_buffer.IsEmpty() == false)
-		{
-			auto buffered_media_packet = _initial_media_packet_buffer.Dequeue();
-			if (buffered_media_packet.has_value() == false)
-			{
-				continue;
-			}
-
-			AppendMediaPacket(buffered_media_packet.value());
-		}
+		SendBufferedPackets();
 	}
 
 	AppendMediaPacket(media_packet);
@@ -371,17 +389,7 @@ void LLHlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packe
 
 	if (_initial_media_packet_buffer.IsEmpty() == false)
 	{
-		logtd("SendAudioFrame() - BufferSize (%u)", _initial_media_packet_buffer.Size());
-		while (_initial_media_packet_buffer.IsEmpty() == false)
-		{
-			auto buffered_media_packet = _initial_media_packet_buffer.Dequeue();
-			if (buffered_media_packet.has_value() == false)
-			{
-				continue;
-			}
-
-			AppendMediaPacket(buffered_media_packet.value());
-		}
+		SendBufferedPackets();
 	}
 
 	AppendMediaPacket(media_packet);
@@ -389,8 +397,45 @@ void LLHlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packe
 
 void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	//TODO(getroot) - implement
-	
+	if (media_packet->GetBitstreamFormat() != cmn::BitstreamFormat::ID3v2)
+	{
+		// Not supported
+		return;
+	}
+
+	if (GetState() != State::STARTED)
+	{
+		_initial_media_packet_buffer.Enqueue(media_packet);
+		return;
+	}
+
+	if (_initial_media_packet_buffer.IsEmpty() == false)
+	{
+		SendBufferedPackets();
+	}
+
+	auto target_media_type = (media_packet->GetPacketType() == cmn::PacketType::VIDEO_EVENT) ? cmn::MediaType::Video : cmn::MediaType::Audio;
+
+	for (const auto &it : GetTracks())
+	{
+		auto track = it.second;
+		
+		if (track->GetMediaType() != target_media_type)
+		{
+			continue;
+		}
+
+		// Get Packager
+		auto packager = GetPackager(track->GetId());
+		if (packager == nullptr)
+		{
+			logtw("Could not find packager. track id: %d", track->GetId());
+			return;
+		}
+		logtd("AppendSample : track(%d) length(%d)", media_packet->GetTrackId(), media_packet->GetDataLength());
+
+		packager->ReserveDataPacket(media_packet);
+	}
 }
 
 bool LLHlsStream::AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_packet)
@@ -422,13 +467,13 @@ bool LLHlsStream::AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_pa
 }
 
 // Create and Get fMP4 packager with track info, storage and packager_config
-bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &track)
+bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<const MediaTrack> &data_track)
 {
 	// Create Storage
-	auto storage = std::make_shared<bmff::FMP4Storage>(bmff::FMp4StorageObserver::GetSharedPtr(), track, _storage_config);
+	auto storage = std::make_shared<bmff::FMP4Storage>(bmff::FMp4StorageObserver::GetSharedPtr(), media_track, _storage_config);
 
 	// Create fMP4 Packager
-	auto packager = std::make_shared<bmff::FMP4Packager>(storage, track, _packager_config);
+	auto packager = std::make_shared<bmff::FMP4Packager>(storage, media_track, data_track, _packager_config);
 
 	// Create Initialization Segment
 	if (packager->CreateInitializationSegment() == false)
@@ -439,12 +484,12 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &track)
 	
 	{
 		std::lock_guard<std::shared_mutex> storage_lock(_storage_map_lock);
-		_storage_map.emplace(track->GetId(), storage);
+		_storage_map.emplace(media_track->GetId(), storage);
 	}
 
 	{
 		std::lock_guard<std::shared_mutex> packager_lock(_packager_map_lock);
-		_packager_map.emplace(track->GetId(), packager);
+		_packager_map.emplace(media_track->GetId(), packager);
 	}
 
 	return true;

@@ -169,6 +169,12 @@ namespace pvd
 		// Singed Policy
 		uint64_t _stream_expired_msec = 0;
 
+		// Data frame
+		int64_t _last_video_pts = 0;
+		ov::StopWatch _last_video_pts_clock;
+		int64_t _last_audio_pts = 0;
+		ov::StopWatch _last_audio_pts_clock;
+
 		// For statistics 
 		time_t _stream_check_time = 0;
 

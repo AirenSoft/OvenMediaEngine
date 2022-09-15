@@ -1190,7 +1190,7 @@ namespace pvd
 
 	void RtmpStream::GenerateEvent(const cfg::vhost::app::pvd::Event &event, const ov::String &value)
 	{
-		logti("Event generated: %s / %s", event.GetTrigger().CStr(), value.CStr());
+		logtd("Event generated: %s / %s", event.GetTrigger().CStr(), value.CStr());
 
 		bool id3_enabled = false;
 		auto id3v2_event = event.GetHLSID3v2(&id3_enabled);
@@ -1248,8 +1248,20 @@ namespace pvd
 				return;
 			}
 
-			auto pts = (packet_type == cmn::PacketType::VIDEO_EVENT) ? _last_video_timestamp : _last_audio_timestamp;
-			auto dts = pts;
+
+			int64_t pts = 0;
+			if (packet_type == cmn::PacketType::VIDEO_EVENT)
+			{
+				pts = _last_video_pts;
+				pts += _last_video_pts_clock.Elapsed();
+			}
+			else if (packet_type == cmn::PacketType::AUDIO_EVENT)
+			{
+				pts = _last_audio_pts;
+				pts += _last_audio_pts_clock.Elapsed();
+			}
+
+			int64_t dts = pts;
 			auto event_message = std::make_shared<MediaPacket>(GetMsid(),
 															cmn::MediaType::Data,
 															RTMP_DATA_TRACK_ID,
@@ -1427,6 +1439,17 @@ namespace pvd
 															 packet_type);
 
 			SendFrame(video_frame);
+
+			// logtc("Video packet sent - stream(%s/%s) type(%d) size(%d) pts(%lld) dts(%lld)",
+			// 	  _vhost_app_name.CStr(),
+			// 	  _stream_name.CStr(),
+			// 	  flv_video.PacketType(),
+			// 	  flv_video.PayloadLength(),
+			// 	  pts,
+			// 	  dts);
+
+			_last_video_pts = pts;
+			_last_video_pts_clock.Start();
 			
 			// Statistics for debugging
 			if (flv_video.FrameType() == FlvVideoFrameTypes::KEY_FRAME)
@@ -1593,6 +1616,9 @@ namespace pvd
 
 			SendFrame(frame);
 
+			_last_audio_pts = pts;
+			_last_audio_pts_clock.Start();
+
 			_last_audio_timestamp = message->header->completed.timestamp;
 			_audio_frame_count++;
 		}
@@ -1719,6 +1745,7 @@ namespace pvd
 			data_track->SetId(RTMP_DATA_TRACK_ID);
 			data_track->SetMediaType(cmn::MediaType::Data);
 			data_track->SetTimeBase(1, 1000);
+			data_track->SetOriginBitstream(cmn::BitstreamFormat::ID3v2);
 			
 			AddTrack(data_track);
 		}

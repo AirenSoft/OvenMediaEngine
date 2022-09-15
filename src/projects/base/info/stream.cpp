@@ -228,6 +228,19 @@ namespace info
 		return nullptr;
 	}
 
+	const std::shared_ptr<MediaTrack> Stream::GetFirstTrack(const cmn::MediaType &type) const
+	{
+		for (auto &item : _tracks)
+		{
+			if (item.second->GetMediaType() == type)
+			{
+				return item.second;
+			}
+		}
+
+		return nullptr;
+	}
+
 	const std::map<int32_t, std::shared_ptr<MediaTrack>> &Stream::GetTracks() const
 	{
 		return _tracks;

@@ -59,6 +59,7 @@ namespace info
 		bool AddTrack(const std::shared_ptr<MediaTrack> &track);
 		const std::shared_ptr<MediaTrack> GetTrack(int32_t id) const;
 		const std::shared_ptr<MediaTrack> GetTrack(const ov::String &name) const;
+		const std::shared_ptr<MediaTrack> GetFirstTrack(const cmn::MediaType &type) const;
 		const std::map<int32_t, std::shared_ptr<MediaTrack>> &GetTracks() const;
 
 		bool AddPlaylist(const std::shared_ptr<Playlist> &playlist);

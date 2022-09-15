@@ -18,8 +18,8 @@
 
 namespace bmff
 {
-	FMP4Packager::FMP4Packager(const std::shared_ptr<FMP4Storage> &storage, const std::shared_ptr<const MediaTrack> &track, const Config &config)
-		: Packager(track)
+	FMP4Packager::FMP4Packager(const std::shared_ptr<FMP4Storage> &storage, const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<const MediaTrack> &data_track, const Config &config)
+		: Packager(media_track, data_track)
 	{
 		_storage = storage;
 		_config = config;
@@ -28,7 +28,7 @@ namespace bmff
 	// Generate Initialization FMP4Segment
 	bool FMP4Packager::CreateInitializationSegment()
 	{
-		auto track = GetTrack();
+		auto track = GetMediaTrack();
 		if (track == nullptr)
 		{
 			logte("Failed to create initialization segment. Track is null");
@@ -64,16 +64,78 @@ namespace bmff
 		return StoreInitializationSection(stream.GetDataPointer());
 	}
 
-	bool FMP4Packager::AppendDataSample(const std::shared_ptr<const MediaPacket> &media_packet)
+	bool FMP4Packager::ReserveDataPacket(const std::shared_ptr<const MediaPacket> &media_packet)
 	{
-		if (_data_samples_buffer == nullptr)
+		if (GetDataTrack() == nullptr)
 		{
-			_data_samples_buffer = std::make_shared<Samples>();
+			return false;
 		}
 
-		_data_samples_buffer->AppendSample(media_packet);
-
+		_reserved_data_packets.emplace(media_packet);
 		return true;
+	}
+
+	std::shared_ptr<bmff::Packager::Samples> FMP4Packager::GetDataSamples(int64_t start_timestamp, int64_t end_timestamp)
+	{
+		if (GetDataTrack() == nullptr)
+		{
+			return nullptr;
+		}
+
+		auto rescaled_start_timestamp = ((double)start_timestamp / (double)GetMediaTrack()->GetTimeBase().GetTimescale()) * (double)GetDataTrack()->GetTimeBase().GetTimescale();
+		auto rescaled_end_timestamp = ((double)end_timestamp / (double)GetMediaTrack()->GetTimeBase().GetTimescale()) * (double)GetDataTrack()->GetTimeBase().GetTimescale();
+
+		auto samples = std::make_shared<Samples>();
+
+		while (true)
+		{
+			if (_reserved_data_packets.size() == 0)
+			{
+				break;
+			}
+
+			auto data_packet = _reserved_data_packets.front();
+
+			// Convert data pts timescale to media timescale
+			auto pts = (double)data_packet->GetPts();
+
+			logtd("pts: %lf, start_timestamp: %lf, end_timestamp: %lf", pts, rescaled_start_timestamp, rescaled_end_timestamp);
+
+			if (pts > rescaled_end_timestamp)
+			{
+				//Waits for a segment within a time interval.
+				break;
+			}
+			else if (pts < rescaled_start_timestamp)
+			{
+				// Too old data, ajust to start_timestamp
+				pts = rescaled_start_timestamp + 1;
+
+				logtd("Old data packet found - Adjust pts: %lld -> %lf", data_packet->GetPts(), pts);
+
+				// Copy data packet
+				auto new_data_packet = data_packet->ClonePacket();
+				new_data_packet->SetPts(pts);
+				new_data_packet->SetDts(pts);
+				samples->AppendSample(data_packet);
+
+				_reserved_data_packets.pop();
+			}
+			else
+			{
+				// Within the time interval
+				samples->AppendSample(data_packet);
+
+				_reserved_data_packets.pop();
+			}
+		}
+
+		if (samples->GetTotalCount() == 0)
+		{
+			return nullptr;
+		}
+
+		return samples;
 	}
 
 	// Generate Media FMP4Segment
@@ -100,8 +162,8 @@ namespace bmff
 			uint64_t total_duration = _samples_buffer->GetTotalDuration();
 			uint64_t expected_duration = total_duration + converted_packet->GetDuration();
 
-			uint64_t total_duration_ms = (static_cast<double>(total_duration) / GetTrack()->GetTimeBase().GetTimescale()) * 1000.0;
-			uint64_t expected_duration_ms = (static_cast<double>(expected_duration) / GetTrack()->GetTimeBase().GetTimescale()) * 1000.0;
+			uint64_t total_duration_ms = (static_cast<double>(total_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
+			uint64_t expected_duration_ms = (static_cast<double>(expected_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
 
 			// 1. When adding samples, if the Part Target Duration is exceeded, a chunk is created immediately.
 			// 2. If it exceeds 85% and the next sample is independent, a chunk is created. This makes the next chunk start independent.
@@ -111,14 +173,14 @@ namespace bmff
 
 				((expected_duration_ms > _config.chunk_duration_ms) && (total_duration_ms >= _config.chunk_duration_ms * 0.85)) || 
 
-				( (GetTrack()->GetMediaType() == cmn::MediaType::Video && 
+				( (GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && 
 					total_duration_ms >= _config.chunk_duration_ms * 0.85 && 
 					converted_packet->GetFlag() == MediaPacketFlag::Key) ) 
 				)
 			{
 				double reserve_buffer_size;
 				
-				if (GetTrack()->GetMediaType() == cmn::MediaType::Video)
+				if (GetMediaTrack()->GetMediaType() == cmn::MediaType::Video)
 				{
 					// Reserve 10 Mbps.
 					reserve_buffer_size = ((double)GetConfig().chunk_duration_ms / 1000.0) * ((10.0 * 1000.0 * 1000.0) / 8.0);
@@ -131,21 +193,13 @@ namespace bmff
 
 				ov::ByteStream chunk_stream(reserve_buffer_size);
 				
-				// ID3v2 Injection Test
-				// ID3v2 tag;
-				// tag.SetVersion(4, 0);
-				// tag.AddFrame(std::make_shared<ID3v2TextFrame>("TIT2", "Test"));
-				// auto sample_data = std::make_shared<MediaPacket>(0, cmn::MediaType::Data, 0, tag.Serialize(), _samples_buffer->GetStartTimestamp(), _samples_buffer->GetStartTimestamp(), 0, MediaPacketFlag::NoFlag);
-				// AppendDataSample(sample_data);
-
-				if (_data_samples_buffer != nullptr)
+				auto data_samples = GetDataSamples(_samples_buffer->GetStartTimestamp(), _samples_buffer->GetEndTimestamp());
+				if (data_samples != nullptr)
 				{
-					if (WriteEmsgBox(chunk_stream, _data_samples_buffer) == false)
+					if (WriteEmsgBox(chunk_stream, data_samples) == false)
 					{
 						logtw("FMP4Packager::AppendSample() - Failed to write emsg box");
 					}
-
-					_data_samples_buffer.reset();
 				}
 
 				if (WriteMoofBox(chunk_stream, _samples_buffer) == false)
