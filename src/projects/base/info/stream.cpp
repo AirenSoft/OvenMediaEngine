@@ -52,6 +52,7 @@ namespace info
 
 		_tracks = stream._tracks;
 		_playlists = stream._playlists;
+		_representation_type = stream._representation_type;
 	}
 
 	Stream::Stream(StreamSourceType source)
