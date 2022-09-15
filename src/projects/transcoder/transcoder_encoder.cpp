@@ -202,6 +202,7 @@ bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 
 	_input_buffer.SetAlias(ov::String::FormatString("Input queue of Encoder. codec(%s/%d)", ::avcodec_get_name(GetCodecID()), GetCodecID()));
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
+	_track->SetOriginBitstream(GetBitstreamFormat());
 
 	return (_track != nullptr);
 }

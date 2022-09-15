@@ -27,6 +27,11 @@ public:
 		return AV_SAMPLE_FMT_S16;
 	}
 
+	cmn::BitstreamFormat GetBitstreamFormat() const noexcept override
+	{
+		return cmn::BitstreamFormat::OPUS;
+	}
+	
 	bool Configure(std::shared_ptr<MediaTrack> context) override;
 
 	// void SendBuffer(std::shared_ptr<const MediaFrame> frame) override;

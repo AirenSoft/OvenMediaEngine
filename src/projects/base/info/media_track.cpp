@@ -53,6 +53,8 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 	_last_frame_time = 0;
 
 	_codec_extradata = media_track._codec_extradata;
+
+	_origin_bitstream_format = media_track._origin_bitstream_format;
 }
 
 MediaTrack::~MediaTrack()
@@ -200,14 +202,16 @@ ov::String MediaTrack::GetInfoString()
 				"Video Track #%d: "
 				"Name(%s) "
 				"Bitrate(%s) "
-				"codec(%d,%s,%s) "
-				"resolution(%dx%d) "
-				"framerate(%.2ffps) "
+				"Codec(%d,%s,%s) "
+				"BSF(%s) "
+				"Resolution(%dx%d) "
+				"Framerate(%.2ffps) "
 				"KeyInterval(%d) "
 				"BFrames(%d) ",
 				GetId(), GetName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
 				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecLibraryId(GetCodecLibraryId()).CStr(),
+				GetBitstreamFormatString(GetOriginBitstream()).CStr(),
 				GetWidth(), GetHeight(),
 				GetFrameRate(),
 				GetKeyFrameInterval(),
@@ -219,16 +223,28 @@ ov::String MediaTrack::GetInfoString()
 				"Audio Track #%d: "
 				"Name(%s) "
 				"Bitrate(%s) "
-				"codec(%d,%s,%s) "
-				"samplerate(%s) "
-				"format(%s, %d) "
-				"channel(%s, %d) ",
+				"Codec(%d,%s,%s) "
+				"BSF(%s) "
+				"Samplerate(%s) "
+				"Format(%s, %d) "
+				"Channel(%s, %d) ",
 				GetId(), GetName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
 				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecLibraryId(GetCodecLibraryId()).CStr(),
+				GetBitstreamFormatString(GetOriginBitstream()).CStr(),
 				ov::Converter::ToSiString(GetSampleRate(), 1).CStr(),
 				GetSample().GetName(), GetSample().GetSampleSize() * 8,
 				GetChannel().GetName(), GetChannel().GetCounts());
+			break;
+		case MediaType::Data:
+			out_str.AppendFormat(
+				"Data  Track #%d: "
+				"Name(%s) "
+				"Codec(%d,%s,%s) "
+				"BSF(%s) ",
+				GetId(), GetName().CStr(),
+				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecLibraryId(GetCodecLibraryId()).CStr(),
+				GetBitstreamFormatString(GetOriginBitstream()).CStr());
 			break;
 
 		default:
@@ -244,6 +260,13 @@ bool MediaTrack::IsValid()
 {
 	if (_is_valid == true)
 	{
+		return true;
+	}
+
+	// data type is always valid
+	if(GetMediaType() == MediaType::Data)
+	{
+		_is_valid = true;
 		return true;
 	}
 

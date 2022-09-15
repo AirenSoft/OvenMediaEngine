@@ -25,6 +25,11 @@ public:
 		return AV_PIX_FMT_NV12;
 	}
 
+	cmn::BitstreamFormat GetBitstreamFormat() const noexcept override
+	{
+		return cmn::BitstreamFormat::H264_ANNEXB;
+	}
+	
 	bool Configure(std::shared_ptr<MediaTrack> context) override;
 
 	void CodecThread() override;

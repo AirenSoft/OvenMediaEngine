@@ -23,7 +23,7 @@ public:
 	void SetEncoderId(int32_t encdoer_id);
 
 	virtual int GetSupportedFormat() const noexcept = 0;
-
+	virtual cmn::BitstreamFormat GetBitstreamFormat() const noexcept = 0;
 	bool Configure(std::shared_ptr<MediaTrack> output_track) override;
 
 	void SendBuffer(std::shared_ptr<const MediaFrame> frame) override;
