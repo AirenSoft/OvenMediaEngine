@@ -56,12 +56,14 @@ func main() {
 	fmt.Println(fmt.Sprintf("URL: %s", u.String()))
 }
 
+// signs url with secret key
 func signURL(url, secretKey string) string {
 	h := hmac.New(sha1.New, []byte(secretKey))
 	h.Write([]byte(url))
 	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }
 
+// removes golangs padding
 func removeEncodePadding(s string) string {
 	return strings.TrimRight(s, "=")
 }
