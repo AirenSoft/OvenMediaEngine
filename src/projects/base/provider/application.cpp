@@ -122,6 +122,17 @@ namespace pvd
 		stream->SetApplication(GetSharedPtrAs<Application>());
 		stream->SetApplicationInfo(GetSharedPtrAs<Application>());
 
+		// This is not an official feature
+		// OutputProfile(without encoding) is not applied to a specific provider.
+		// To reduce transcoding cost when using Persistent Stream
+		if (_provider->GetProviderType() == ProviderType::Rtmp)
+		{
+			if(GetConfig().GetProviders().GetRtmpProvider().IsPassthroughOutputProfile() == true)
+			{
+				stream->SetRepresentationType(StreamRepresentationType::Relay);
+			}
+		}
+
 		std::unique_lock<std::shared_mutex> streams_lock(_streams_guard);
 		_streams[stream->GetId()] = stream;
 		streams_lock.unlock();

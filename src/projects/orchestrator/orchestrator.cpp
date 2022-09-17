@@ -960,7 +960,7 @@ namespace ocst
 		}
 
 		// Streams created by OVT or Transcoder Provider are excluded.
-		if(stream_info->GetSourceType() == StreamSourceType::Ovt || stream_info->GetSourceType() == StreamSourceType::Transcoder || stream_info->GetRepresentationType() != StreamRepresentationType::Source)
+		if(stream_info->GetSourceType() == StreamSourceType::Ovt || stream_info->GetSourceType() == StreamSourceType::Transcoder)
 		{
 			return CommonErrorCode::DISABLED;
 		}
