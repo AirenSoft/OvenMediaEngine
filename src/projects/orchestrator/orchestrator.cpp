@@ -975,12 +975,12 @@ namespace ocst
 			auto vhost_name = app_info.GetName().GetVHostName();
 			auto app_name = app_info.GetName().GetAppName();
 
-			auto source_stream_match = conf.GetSourceStreamMatch();
+			auto source_stream_match = conf.GetOriginStreamName();
 			auto source_stream_name = stream_info->GetName();
 
 			auto fallback_stream_name = conf.GetFallbackStreamName();
 
-			auto output_stream_name = conf.GetOutputStreamName().Replace("${OriginStreamName}", source_stream_name.CStr());
+			auto new_stream_name = conf.GetName().Replace("${OriginStreamName}", source_stream_name.CStr());
 
 			// Check that the created stream matches the SourceStreamMatch value
 			ov::Regex regex(ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(source_stream_match)));
@@ -1000,7 +1000,7 @@ namespace ocst
 			auto stream_props = std::make_shared<pvd::PullStreamProperties>(true, true, false);
 
 			// Request pull stream
-			ovt_provider->PullStream(std::make_shared<ov::Url>(), app_info, output_stream_name.CStr(), url_list, 0,  stream_props);
+			ovt_provider->PullStream(std::make_shared<ov::Url>(), app_info, new_stream_name.CStr(), url_list, 0,  stream_props);
 		}
 
 		return CommonErrorCode::SUCCESS;

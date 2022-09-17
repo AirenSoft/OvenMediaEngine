@@ -20,20 +20,20 @@ namespace cfg
 				struct Stream : public Item
 				{
 				protected:
-					ov::String _output_stream_name;
-					ov::String _source_stream_match = "*";
+					ov::String _name;
+					ov::String _origin_stream_name = "*";
 					ov::String _fallback_stream_name = "";
 
 				public:
-					CFG_DECLARE_CONST_REF_GETTER_OF(GetOutputStreamName, _output_stream_name)
-					CFG_DECLARE_CONST_REF_GETTER_OF(GetSourceStreamMatch, _source_stream_match)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetOriginStreamName, _origin_stream_name)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFallbackStreamName, _fallback_stream_name)
 
 				protected:
 					void MakeList() override
 					{
-						Register("OutputStreamName", &_output_stream_name);
-						Register<Optional>("SourceStreamMatch", &_source_stream_match);
+						Register("Name", &_name);
+						Register<Optional>("OriginStreamName", &_origin_stream_name);
 						Register<Optional>("FallbackStreamName", &_fallback_stream_name);
 					}
 				};
