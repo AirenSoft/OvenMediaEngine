@@ -838,28 +838,12 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 
 		ov::String stat_track_str = "";
 
-		for (const auto &iter : _stream->GetTracks())
+		for (const auto &[track_id, track] : _stream->GetTracks())
 		{
-			auto track_id = iter.first;
-			auto track = iter.second;
-
 			int64_t rescaled_last_pts = (int64_t)((double)(_stat_recv_pkt_lpts[track_id] * 1000) * track->GetTimeBase().GetExpr());
 			int64_t first_delay = _stat_first_time_diff[track_id];
 			int64_t last_delay = uptime - rescaled_last_pts;
 
-			// calc min/max pts
-			if (min_pts == -1LL)
-			{
-				min_pts = rescaled_last_pts;
-			}
-
-			if (max_pts == -1LL)
-			{
-				max_pts = rescaled_last_pts;
-			}
-
-			min_pts = std::min(min_pts, rescaled_last_pts);
-			max_pts = std::max(max_pts, rescaled_last_pts);
 
 			stat_track_str.AppendFormat("\n\ttrack:%3d, type: %4s, codec: %4s(%d,%s), pts: %lldms, dly: %5lldms, tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %dKbps",
 										track_id,
@@ -873,6 +857,25 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 										_stat_recv_pkt_count[track_id],
 										ov::Converter::ToSiString(_stat_recv_pkt_size[track_id], 1).CStr(),
 										_stat_recv_pkt_size[track_id] / (uptime / 1000) * 8 / 1000);
+
+			if(track->GetMediaType() == MediaType::Data)
+			{
+				continue;
+			}
+
+			// calc min/max pts
+			if (min_pts == -1LL)
+			{
+				min_pts = rescaled_last_pts;
+			}
+
+			if (max_pts == -1LL)
+			{
+				max_pts = rescaled_last_pts;
+			}
+
+			min_pts = std::min(min_pts, rescaled_last_pts);
+			max_pts = std::max(max_pts, rescaled_last_pts);										
 		}
 
 		ov::String stat_stream_str = "";
