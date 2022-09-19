@@ -63,7 +63,7 @@ func signURL(url, secretKey string) string {
 	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }
 
-// removes golangs padding
+// removes padding
 func removeEncodePadding(s string) string {
 	return strings.TrimRight(s, "=")
 }
