@@ -959,8 +959,8 @@ namespace ocst
 			return CommonErrorCode::NOT_FOUND;
 		}
 
-		// Streams created by OVT or Transcoder Provider are excluded.
-		if(stream_info->GetSourceType() == StreamSourceType::Ovt || stream_info->GetSourceType() == StreamSourceType::Transcoder)
+		// Streams created by OVT, FILE or Transcoder Provider are excluded.
+		if(stream_info->GetSourceType() == StreamSourceType::Ovt || stream_info->GetSourceType() == StreamSourceType::File || stream_info->GetSourceType() == StreamSourceType::Transcoder)
 		{
 			return CommonErrorCode::DISABLED;
 		}
