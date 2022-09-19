@@ -1689,6 +1689,7 @@ namespace pvd
 			auto new_track = std::make_shared<MediaTrack>();
 
 			new_track->SetId(RTMP_VIDEO_TRACK_ID);
+			new_track->SetName("video_0");
 			new_track->SetMediaType(cmn::MediaType::Video);
 			new_track->SetCodecId(cmn::MediaCodecId::H264);
 			new_track->SetOriginBitstream(cmn::BitstreamFormat::H264_AVCC);
@@ -1711,6 +1712,7 @@ namespace pvd
 			auto new_track = std::make_shared<MediaTrack>();
 
 			new_track->SetId(RTMP_AUDIO_TRACK_ID);
+			new_track->SetName("audio_0");
 			new_track->SetMediaType(cmn::MediaType::Audio);
 			new_track->SetCodecId(cmn::MediaCodecId::Aac);
 			new_track->SetOriginBitstream(cmn::BitstreamFormat::AAC_RAW);
