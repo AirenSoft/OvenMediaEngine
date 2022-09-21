@@ -86,6 +86,13 @@ namespace info
 		return _id;
 	}
 
+	ov::String Stream::GetUri()
+	{
+		// #vhost name#appname/stream name
+		ov::String vhost_app_name = _app_info != nullptr ? _app_info->GetName().CStr() : "Unknown";
+		return ov::String::FormatString("%s/%s", vhost_app_name.CStr(), GetName().CStr());
+	}
+
 	void Stream::SetMsid(uint32_t msid)
 	{
 		_msid = msid;

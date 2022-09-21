@@ -352,7 +352,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			try
 			{
 				// If this connection has been used by another session in the past, it is reused.
-				session = std::any_cast<std::shared_ptr<LLHlsSession>>(connection->GetUserData());
+				session = std::any_cast<std::shared_ptr<LLHlsSession>>(connection->GetUserData(stream->GetUri()));
 			}
 			catch (const std::bad_any_cast& e)
 			{
@@ -432,7 +432,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		}
 
 		// It will be used in CloseHandler
-		connection->SetUserData(session);
+		connection->AddUserData(stream->GetUri(), session);
 		session->UpdateLastRequest(connection->GetId());
 
 		// Cors Setting
@@ -445,36 +445,35 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 	// Set Close Handler
 	http_interceptor->SetCloseHandler([this](const std::shared_ptr<http::svr::HttpConnection> &connection, PhysicalPortDisconnectReason reason) -> void {
 		
-		try 
+		for (auto &user_data : connection->GetUserDataMap())
 		{
-			// Get session from user_data of connection
-			auto session = std::any_cast<std::shared_ptr<LLHlsSession>>(connection->GetUserData());
-			if (session == nullptr)
+			std::shared_ptr<LLHlsSession> session;
+
+			try
 			{
-				// Never reach here
-				logte("Could not get llhls session from user_data of connection");
-				return;
+				session = std::any_cast<std::shared_ptr<LLHlsSession>>(user_data.second);
 			}
-
-			session->OnConnectionDisconnected(connection->GetId());
-
-			if (session->IsNoConnection())
+			catch (const std::bad_any_cast &)
 			{
-				logtd("llhls session is closed : %u", session->GetId());
-				// Remove session from stream
-				auto stream = session->GetStream();
-				if (stream != nullptr)
+				continue;
+			}
+			
+			if (session != nullptr)
+			{
+				session->OnConnectionDisconnected(connection->GetId());
+				if (session->IsNoConnection())
 				{
-					stream->RemoveSession(session->GetId());
+					logtd("llhls session is closed : %u", session->GetId());
+					// Remove session from stream
+					auto stream = session->GetStream();
+					if (stream != nullptr)
+					{
+						stream->RemoveSession(session->GetId());
+					}
 				}
-			}
 
-			connection->SetUserData(nullptr);
-			session->Stop();
-		}
-		catch (const std::bad_any_cast &)
-		{
-			logte("Could not get llhls session from user data");
+				session->Stop();
+			}
 		}
 	});
 

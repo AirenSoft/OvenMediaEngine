@@ -29,6 +29,9 @@ namespace info
 		void SetId(info::stream_id_t id);
 		info::stream_id_t GetId() const;
 
+		// Get Stream Resource ID in ovenmediaengine (vhost#app/stream)
+		ov::String GetUri();
+
 		void SetMsid(uint32_t );
 		uint32_t GetMsid();
 

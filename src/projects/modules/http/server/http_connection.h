@@ -71,6 +71,11 @@ namespace http
 			void SetUserData(std::any user_data);
 			std::any GetUserData() const;
 
+			void AddUserData(const ov::String &key, std::any user_data);
+			std::any GetUserData(const ov::String &key) const;
+			// Get user datas
+			std::map<ov::String, std::any> GetUserDataMap() const;
+
 		private:
 			// For HTTP 1.0 and HTTP 1.1
 			ssize_t OnHttp1RequestReceived(const std::shared_ptr<const ov::Data> &data);
@@ -89,6 +94,7 @@ namespace http
 
 			// User Data
 			std::any _user_data;
+			std::map<ov::String, std::any> _user_data_map;
 			
 			// Default : HTTP 1.1
 			ConnectionType _connection_type = ConnectionType::Http11;
