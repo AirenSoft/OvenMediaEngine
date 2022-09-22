@@ -159,11 +159,11 @@ namespace bmff
 			// and the final Partial Segment of any Parent Segment.
 
 			// Calculate duration as milliseconds
-			uint64_t total_duration = _samples_buffer->GetTotalDuration();
-			uint64_t expected_duration = total_duration + converted_packet->GetDuration();
+			double total_duration = _samples_buffer->GetTotalDuration();
+			double expected_duration = total_duration + converted_packet->GetDuration();
 
-			uint64_t total_duration_ms = (static_cast<double>(total_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
-			uint64_t expected_duration_ms = (static_cast<double>(expected_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
+			double total_duration_ms = (static_cast<double>(total_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
+			double expected_duration_ms = (static_cast<double>(expected_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
 
 			// 1. When adding samples, if the Part Target Duration is exceeded, a chunk is created immediately.
 			// 2. If it exceeds 85% and the next sample is independent, a chunk is created. This makes the next chunk start independent.
@@ -260,7 +260,7 @@ namespace bmff
 		return true;
 	}
 
-	bool FMP4Packager::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, uint64_t start_timestamp, uint32_t duration_ms, bool independent)
+	bool FMP4Packager::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent)
 	{
 		if (chunk == nullptr || _storage == nullptr)
 		{

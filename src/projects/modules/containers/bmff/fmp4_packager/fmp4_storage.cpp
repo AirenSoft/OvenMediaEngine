@@ -119,7 +119,7 @@ namespace bmff
 		return true;
 	}
 
-	bool FMP4Storage::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, uint64_t start_timestamp, uint64_t duration_ms, bool independent)
+	bool FMP4Storage::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent)
 	{
 		auto segment = GetLastSegment();
 

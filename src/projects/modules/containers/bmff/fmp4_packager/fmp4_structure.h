@@ -15,7 +15,7 @@ namespace bmff
 	class FMP4Chunk
 	{
 	public:
-		FMP4Chunk(const std::shared_ptr<ov::Data> &data, uint64_t number, uint64_t start_timestamp, uint64_t duration_ms, bool independent)
+		FMP4Chunk(const std::shared_ptr<ov::Data> &data, uint64_t number, int64_t start_timestamp, double duration_ms, bool independent)
 		{
 			_data = data;
 			_number = number;
@@ -29,12 +29,12 @@ namespace bmff
 			return _number;
 		}
 
-		uint64_t GetStartTimestamp() const
+		int64_t GetStartTimestamp() const
 		{
 			return _start_timestamp;
 		}
 
-		uint64_t GetDuration() const
+		double GetDuration() const
 		{
 			return _duration_ms;
 		}
@@ -57,8 +57,8 @@ namespace bmff
 
 	private:
 		int64_t _number = -1;
-		uint64_t _start_timestamp = 0;
-		uint64_t _duration_ms = 0;
+		int64_t _start_timestamp = 0;
+		double _duration_ms = 0;
 		bool _independent = false;
 		std::shared_ptr<ov::Data> _data;
 	};
@@ -84,7 +84,7 @@ namespace bmff
 			return _is_completed;
 		}
 
-		bool AppendChunkData(const std::shared_ptr<ov::Data> &chunk_data, uint64_t start_timestamp, uint64_t duration_ms, bool independent)
+		bool AppendChunkData(const std::shared_ptr<ov::Data> &chunk_data, int64_t start_timestamp, double duration_ms, bool independent)
 		{
 			if (_is_completed)
 			{
@@ -130,7 +130,7 @@ namespace bmff
 		}
 
 		// Get Duration
-		uint64_t GetDuration() const
+		double GetDuration() const
 		{
 			return _duration_ms;
 		}
@@ -171,8 +171,8 @@ namespace bmff
 
 		int64_t _number = -1;
 
-		uint64_t _start_timestamp = 0;
-		uint64_t _duration_ms = 0;
+		int64_t _start_timestamp = 0;
+		double _duration_ms = 0;
 
 		std::deque<std::shared_ptr<FMP4Chunk>> _chunks;
 		mutable std::shared_mutex _chunks_lock;

@@ -23,7 +23,7 @@ public:
 		{
 		}
 
-		SegmentInfo(uint32_t sequence, uint64_t start_time, float_t duration, uint64_t size, ov::String url, ov::String next_url, bool is_independent)
+		SegmentInfo(uint32_t sequence, int64_t start_time, double duration, uint64_t size, ov::String url, ov::String next_url, bool is_independent)
 			: _sequence(sequence)
 			, _start_time(start_time)
 			, _duration(duration)
@@ -34,7 +34,7 @@ public:
 		{
 		}
 
-		void UpdateInfo(uint64_t start_time, float_t duration, uint64_t size, ov::String url, bool is_independent)
+		void UpdateInfo(int64_t start_time, double duration, uint64_t size, ov::String url, bool is_independent)
 		{
 			this->_start_time = start_time;
 			this->_duration = duration;
@@ -43,7 +43,7 @@ public:
 			this->_is_independent = is_independent;
 		}
 
-		uint64_t GetStartTime() const
+		int64_t GetStartTime() const
 		{
 			if (_partial_segments.empty() == false)
 			{
@@ -58,7 +58,7 @@ public:
 			return _sequence;
 		}
 
-		float_t GetDuration() const
+		double GetDuration() const
 		{
 			return _duration;
 		}
@@ -114,8 +114,8 @@ public:
 
 	private:
 		int64_t _sequence = -1;
-		uint64_t _start_time = 0; // milliseconds since epoce (1970-01-01 00:00:00)
-		float_t _duration = 0; // seconds
+		int64_t _start_time = 0; // milliseconds since epoce (1970-01-01 00:00:00)
+		double _duration = 0; // seconds
 		uint64_t _size = 0;
 		ov::String _url;
 		ov::String _next_url;
@@ -125,7 +125,7 @@ public:
 		std::deque<std::shared_ptr<SegmentInfo>> _partial_segments;
 	}; // class SegmentInfo
 
-	LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, float part_target_duration, const ov::String &map_uri);
+	LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, double part_target_duration, const ov::String &map_uri);
 
 	const ov::String& GetUrl() const;
 
@@ -149,10 +149,10 @@ private:
 	ov::String _url;
 
 	uint32_t _max_segments = 0;
-	float_t _target_duration = 0;
-	float_t _part_target_duration = 0;
-	float_t _max_part_duration = 0;
-	float_t _part_hold_back = 0;
+	double _target_duration = 0;
+	double _part_target_duration = 0;
+	double _max_part_duration = 0;
+	double _part_hold_back = 0;
 	ov::String _map_uri;
 
 	int64_t _last_segment_sequence = -1;

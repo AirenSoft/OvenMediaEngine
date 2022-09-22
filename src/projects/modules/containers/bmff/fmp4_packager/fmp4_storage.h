@@ -26,7 +26,7 @@ namespace bmff
 		struct Config
 		{
 			uint32_t max_segments = 10;
-			uint32_t segment_duration_ms = 6000;
+			uint64_t segment_duration_ms = 6000;
 		};
 
 		FMP4Storage(const std::shared_ptr<FMp4StorageObserver> &observer, const std::shared_ptr<const MediaTrack> &track, const Config &config);
@@ -40,7 +40,7 @@ namespace bmff
 		int64_t GetLastSegmentNumber() const;
 
 		bool StoreInitializationSection(const std::shared_ptr<ov::Data> &section);
-		bool AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, uint64_t start_timestamp, uint64_t duration_ms, bool independent);
+		bool AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent);
 
 		uint64_t GetMaxChunkDurationMs() const;
 		uint64_t GetMinChunkDurationMs() const;
@@ -58,8 +58,8 @@ namespace bmff
 
 		int64_t _last_segment_number = -1;
 
-		uint64_t _max_chunk_duration_ms = 0;
-		uint64_t _min_chunk_duration_ms = std::numeric_limits<uint64_t>::max();
+		double _max_chunk_duration_ms = 0;
+		double _min_chunk_duration_ms = std::numeric_limits<uint64_t>::max();
 
 		std::shared_ptr<FMp4StorageObserver> _observer;
 	};

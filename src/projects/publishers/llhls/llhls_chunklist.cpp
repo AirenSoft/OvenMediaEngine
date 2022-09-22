@@ -12,7 +12,7 @@
 
 #include <base/ovlibrary/zip.h>
 
-LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, float part_target_duration, const ov::String &map_uri)
+LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, double part_target_duration, const ov::String &map_uri)
 {
 	_url = url;
 	_track = track;
@@ -167,7 +167,7 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 	{
 		// X-SERVER-CONTROL
 		playlist.AppendFormat("#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=%f\n", _part_hold_back);
-		playlist.AppendFormat("#EXT-X-PART-INF:PART-TARGET=%f\n", _max_part_duration);
+		playlist.AppendFormat("#EXT-X-PART-INF:PART-TARGET=%lf\n", _max_part_duration);
 	}
 
 	playlist.AppendFormat("#EXT-X-MEDIA-SEQUENCE:%u\n", _segments[0]->GetSequence());
@@ -193,7 +193,7 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 			{
 				for (auto &partial_segment : segment->GetPartialSegments())
 				{
-					playlist.AppendFormat("#EXT-X-PART:DURATION=%.3f,URI=\"%s",
+					playlist.AppendFormat("#EXT-X-PART:DURATION=%lf,URI=\"%s",
 										partial_segment->GetDuration(), partial_segment->GetUrl().CStr());
 					if (query_string.IsEmpty() == false)
 					{
@@ -223,7 +223,7 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 
 		if (segment->IsCompleted())
 		{
-			playlist.AppendFormat("#EXTINF:%.3f,\n", segment->GetDuration());
+			playlist.AppendFormat("#EXTINF:%lf,\n", segment->GetDuration());
 			playlist.AppendFormat("%s", segment->GetUrl().CStr());
 			if (query_string.IsEmpty() == false)
 			{
