@@ -1406,7 +1406,7 @@ namespace bmff
 			stream.WriteText("OvenMediaEngine", true);
 
 			// message_data
-			stream.WriteText(sample->GetData()->ToString());
+			stream.Write(sample->GetData());
 
 			// One or more Event Message boxes (‘emsg’) [CMAF] can be included per segment. Version 1 of the Event Message box [DASH] must be used.
 			if (WriteFullBox(container_stream, "emsg", *stream.GetData(), 1, 0) == false)

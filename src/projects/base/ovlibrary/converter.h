@@ -78,5 +78,7 @@ namespace ov
 		static uint64_t SecondsToNtpTs(double seconds);
 		static double NtpTsToSeconds(uint64_t ntp_timestamp);
 		static double NtpTsToSeconds(uint32_t msw, uint32_t lsw);
+
+		static uint32_t ToSynchSafe(uint32_t value);
 	};
 }  // namespace ov

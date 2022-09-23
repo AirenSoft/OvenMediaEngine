@@ -122,8 +122,12 @@ std::shared_ptr<ov::Data> ID3v2Frame::Serialize() const
 
 	ov::ByteStream stream(4096);
 
+    //  Frame ID   $xx xx xx xx  (four characters)
+    //  Size       4 * %0xxxxxxx
+    //  Flags      $xx xx
+
 	stream.Write(_frame_id.ToData(false));
-	stream.WriteBE32(data->GetLength());
+	stream.WriteBE32(ov::Converter::ToSynchSafe(data->GetLength()));
 	stream.WriteBE(_flag_status_message);
 	stream.WriteBE(_flag_format_description);
 

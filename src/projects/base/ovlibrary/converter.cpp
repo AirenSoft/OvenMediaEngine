@@ -408,4 +408,16 @@ namespace ov
 
 		return seconds + frac;
 	}
+
+	uint32_t Converter::ToSynchSafe(uint32_t value)
+	{
+		uint32_t result = 0;
+
+		result |= (value & 0x7F000000) >> 3;
+		result |= (value & 0x007F0000) >> 2;
+		result |= (value & 0x00007F00) >> 1;
+		result |= (value & 0x0000007F);
+
+		return result;
+	}
 }  // namespace ov

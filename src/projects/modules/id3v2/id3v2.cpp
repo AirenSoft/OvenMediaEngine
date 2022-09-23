@@ -104,7 +104,7 @@ std::shared_ptr<ov::Data> ID3v2::Serialize() const
 	stream.WriteBE(_version_major);
 	stream.WriteBE(_version_minor);
 	stream.WriteBE(_flags);
-	stream.WriteBE32(GetSize());
+	stream.WriteBE32(ov::Converter::ToSynchSafe(GetSize()));
 	stream.Write(_frame_data);
 	
 	return stream.GetDataPointer();
