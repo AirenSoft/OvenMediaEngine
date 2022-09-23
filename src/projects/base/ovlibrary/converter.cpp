@@ -409,7 +409,7 @@ namespace ov
 		return seconds + frac;
 	}
 
-	int32_t Converter::ToSynchSafe(int32_t value)
+	uint32_t Converter::ToSynchSafe(uint32_t value)
 	{
 		int32_t out, mask = 0x7F;
 
