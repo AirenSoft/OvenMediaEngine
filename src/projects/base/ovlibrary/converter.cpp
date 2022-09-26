@@ -411,17 +411,18 @@ namespace ov
 
 	uint32_t Converter::ToSynchSafe(uint32_t value)
 	{
-		int32_t out, mask = 0x7F;
+		unsigned int a, b, c, d, x_final = 0x0;
 
-		while (mask ^ 0x7FFFFFFF) 
-		{
-			out = value & ~mask;
-			out <<= 1;
-			out |= value & mask;
-			mask = ((mask + 1) << 8) - 1;
-			value = out;
-		}
+		a = value & 0x7f;
+		b = (value >> 7) & 0x7f;
+		c = (value >> 14) & 0x7f;
+		d = (value >> 21) & 0x7f;
 
-		return out;
+		x_final = x_final | a;
+		x_final = x_final | (b << 8);
+		x_final = x_final | (c << 16);
+		x_final = x_final | (d << 24);
+
+		return x_final;
 	}
 }  // namespace ov

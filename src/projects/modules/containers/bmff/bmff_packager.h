@@ -34,7 +34,7 @@ namespace bmff
 					_start_timestamp = media_packet->GetPts();
 				}
 
-				_end_timestamp = media_packet->GetPts();
+				_end_timestamp = media_packet->GetPts() + media_packet->GetDuration();
 
 				if (media_packet->GetFlag() == MediaPacketFlag::Key)
 				{

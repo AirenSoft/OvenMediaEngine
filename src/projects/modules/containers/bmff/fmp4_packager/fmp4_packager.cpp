@@ -109,16 +109,6 @@ namespace bmff
 			else if (pts < rescaled_start_timestamp)
 			{
 				// Too old data, ajust to start_timestamp
-				pts = rescaled_start_timestamp + 1;
-
-				logtd("Old data packet found - Adjust pts: %lld -> %lf", data_packet->GetPts(), pts);
-
-				// Copy data packet
-				auto new_data_packet = data_packet->ClonePacket();
-				new_data_packet->SetPts(pts);
-				new_data_packet->SetDts(pts);
-				samples->AppendSample(data_packet);
-
 				_reserved_data_packets.pop();
 			}
 			else
