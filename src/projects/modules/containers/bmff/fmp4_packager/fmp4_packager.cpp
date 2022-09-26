@@ -23,6 +23,8 @@ namespace bmff
 	{
 		_storage = storage;
 		_config = config;
+
+		_empty_data_packets = std::make_shared<Samples>();
 	}
 
 	// Generate Initialization FMP4Segment
@@ -187,6 +189,13 @@ namespace bmff
 				if (data_samples != nullptr)
 				{
 					if (WriteEmsgBox(chunk_stream, data_samples) == false)
+					{
+						logtw("FMP4Packager::AppendSample() - Failed to write emsg box");
+					}
+				}
+				else
+				{
+					if (WriteEmsgBox(chunk_stream, _empty_data_packets) == false)
 					{
 						logtw("FMP4Packager::AppendSample() - Failed to write emsg box");
 					}

@@ -53,5 +53,6 @@ namespace bmff
 		std::shared_ptr<Samples> _samples_buffer = nullptr;
 
 		std::queue<std::shared_ptr<const MediaPacket>> _reserved_data_packets;
+		std::shared_ptr<bmff::Packager::Samples> _empty_data_packets;
 	};
 }

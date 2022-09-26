@@ -9,7 +9,8 @@
 
 #include "bmff_packager.h"
 #include "bmff_private.h"
-
+#include <modules/id3v2/id3v2.h>
+#include <modules/id3v2/frames/id3v2_frames.h>
 namespace bmff
 {
 	Packager::Packager(const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<const MediaTrack> &data_track)
@@ -1379,24 +1380,27 @@ namespace bmff
 		// depending on the above information. The syntax and semantics of this field must be defined by the
 		// owner of the scheme identified in the scheme_id_uri field.
 
-		for (const auto &sample : samples->GetList())
+		static uint32_t seq = 0;
+
+		// Empty
+		if (samples->GetTotalCount() == 0)
 		{
 			ov::ByteStream stream(512);
-			
+				
 			// version == 1
 
 			// timescale of data packet is always 1000
 			stream.WriteBE32(GetDataTrack()->GetTimeBase().GetTimescale());
 
 			// presentation_time
-			stream.WriteBE64(sample->GetPts());
+			stream.WriteBE64(0);
 
 			// event_duration
 			stream.WriteBE32(0xFFFFFFFF);
 
 			// id
 			static uint32_t i = 0;
-			stream.WriteBE32(i++);
+			stream.WriteBE32(seq++);
 
 			// scheme_id_uri
 			// now only support ID3v2 (https://aomediacodec.github.io/id3-emsg/)
@@ -1406,13 +1410,53 @@ namespace bmff
 			stream.WriteText("OvenMediaEngine", true);
 
 			// message_data
-			stream.Write(sample->GetData());
+			ID3v2 tag;
+			tag.SetVersion(4, 0);
+			tag.AddFrame(std::make_shared<ID3v2TxxxFrame>("oven", "empty"));
 
 			// One or more Event Message boxes (‘emsg’) [CMAF] can be included per segment. Version 1 of the Event Message box [DASH] must be used.
 			if (WriteFullBox(container_stream, "emsg", *stream.GetData(), 1, 0) == false)
 			{
 				logtw("Failed to write emsg box");
 				return false;
+			}
+		}
+		else 
+		{
+			for (const auto &sample : samples->GetList())
+			{
+				ov::ByteStream stream(512);
+				
+				// version == 1
+
+				// timescale of data packet is always 1000
+				stream.WriteBE32(GetDataTrack()->GetTimeBase().GetTimescale());
+
+				// presentation_time
+				stream.WriteBE64(sample->GetPts());
+
+				// event_duration
+				stream.WriteBE32(0xFFFFFFFF);
+
+				// id
+				stream.WriteBE32(seq++);
+
+				// scheme_id_uri
+				// now only support ID3v2 (https://aomediacodec.github.io/id3-emsg/)
+				stream.WriteText("https://aomedia.org/emsg/ID3", true);
+
+				// value
+				stream.WriteText("OvenMediaEngine", true);
+
+				// message_data
+				stream.Write(sample->GetData());
+
+				// One or more Event Message boxes (‘emsg’) [CMAF] can be included per segment. Version 1 of the Event Message box [DASH] must be used.
+				if (WriteFullBox(container_stream, "emsg", *stream.GetData(), 1, 0) == false)
+				{
+					logtw("Failed to write emsg box");
+					return false;
+				}
 			}
 		}
 
