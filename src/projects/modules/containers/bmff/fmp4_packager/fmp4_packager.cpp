@@ -122,7 +122,22 @@ namespace bmff
 
 		if (samples->GetTotalCount() == 0)
 		{
-			return nullptr;
+			ID3v2 tag;
+			tag.AddFrame(std::make_shared<ID3v2TextFrame>("TIT2", "Keep-alive"));
+
+			auto packet_type = GetMediaTrack()->GetMediaType() == cmn::MediaType::Video ? cmn::PacketType::VIDEO_EVENT : cmn::PacketType::AUDIO_EVENT;
+
+			auto pts = rescaled_start_timestamp + (rescaled_end_timestamp - rescaled_start_timestamp) / 2;
+			auto dts = pts;
+			auto event_message = std::make_shared<MediaPacket>(0,
+															cmn::MediaType::Data,
+															2,
+															tag.Serialize(), 
+															pts,
+															dts,
+															cmn::BitstreamFormat::ID3v2,
+															packet_type);
+			samples->AppendSample(event_message);
 		}
 
 		return samples;

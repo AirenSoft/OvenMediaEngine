@@ -1649,6 +1649,7 @@ namespace pvd
 
 		_event_generator = GetApplication()->GetConfig().GetProviders().GetRtmpProvider().GetEventGenerator();
 
+#if 0
 		// Keep Alive Data Channel
 		_event_test_timer.Push(
 		[this](void *paramter) -> ov::DelayQueueAction {
@@ -1665,6 +1666,7 @@ namespace pvd
 		},
 		500);
 		_event_test_timer.Start();
+#endif
 
 		//   stored messages
 		for (auto message : _stream_message_cache)
@@ -1741,7 +1743,8 @@ namespace pvd
 			AddTrack(new_track);
 		}
 
-		// Data Track 
+		// Data Track
+		if (_event_generator.GetEvents().size() > 0)
 		{
 			auto data_track = std::make_shared<MediaTrack>();
 
