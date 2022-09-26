@@ -429,8 +429,8 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 		auto packager = GetPackager(track->GetId());
 		if (packager == nullptr)
 		{
-			logtw("Could not find packager. track id: %d", track->GetId());
-			return;
+			logtd("Could not find packager. track id: %d", track->GetId());
+			continue;
 		}
 		logtd("AppendSample : track(%d) length(%d)", media_packet->GetTrackId(), media_packet->GetDataLength());
 

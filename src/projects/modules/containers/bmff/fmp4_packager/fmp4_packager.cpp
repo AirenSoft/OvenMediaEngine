@@ -99,7 +99,7 @@ namespace bmff
 			// Convert data pts timescale to media timescale
 			auto pts = (double)data_packet->GetPts();
 
-			logtd("pts: %lf, start_timestamp: %lf, end_timestamp: %lf", pts, rescaled_start_timestamp, rescaled_end_timestamp);
+			logtd("track(%d), pts: %lf, start_timestamp: %lf, end_timestamp: %lf", GetMediaTrack()->GetId(), pts, rescaled_start_timestamp, rescaled_end_timestamp);
 
 			if (pts > rescaled_end_timestamp)
 			{
