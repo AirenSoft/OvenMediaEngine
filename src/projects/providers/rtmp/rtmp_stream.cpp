@@ -1649,21 +1649,22 @@ namespace pvd
 
 		_event_generator = GetApplication()->GetConfig().GetProviders().GetRtmpProvider().GetEventGenerator();
 
-// Test Event
-#if 0
+		// Keep Alive Data Channel
 		_event_test_timer.Push(
 		[this](void *paramter) -> ov::DelayQueueAction {
-
+			
 			for (const auto &event : _event_generator.GetEvents())
 			{
-				GenerateEvent(event, "test");
+				if (event.GetTrigger() == "KEEP-ALIVE")
+				{
+					GenerateEvent(event, "KEEP-ALIVE");
+				}
 			}
 
 			return ov::DelayQueueAction::Repeat;
 		},
-		3000);
+		500);
 		_event_test_timer.Start();
-#endif
 
 		//   stored messages
 		for (auto message : _stream_message_cache)
