@@ -113,7 +113,7 @@ The default configuration uses the following ports, so you need to open it in yo
 | <p>3333/TCP <br>3334/TLS</p> | <p>LLHLS Streaming<br><mark style="color:red;"><strong>* Streaming over Non-TLS is not allowed with modern browsers.</strong></mark></p> |
 | <p>3333/TCP<br>3334/TLS</p>  | WebRTC Signaling (both ingest and streaming)                                                                                             |
 | 3478/TCP                     | WebRTC TCP relay (TURN Server, both ingest and streaming)                                                                                |
-| 10000 - 1005/UDP             | WebRTC Ice candidate (both ingest and streaming)                                                                                         |
+| 10000 - 10005/UDP             | WebRTC Ice candidate (both ingest and streaming)                                                                                         |
 
 {% hint style="warning" %}
 To use TLS, you must set up a certificate. See [TLS Encryption](configuration/tls-encryption.md) for more information.
