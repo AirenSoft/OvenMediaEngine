@@ -129,12 +129,15 @@ public:
 
 	const ov::String& GetUrl() const;
 
+	// Get Track
+	const std::shared_ptr<const MediaTrack> &GetTrack() const;
+
 	void SetPartHoldBack(const float &part_hold_back);
 
 	bool AppendSegmentInfo(const SegmentInfo &info);
 	bool AppendPartialSegmentInfo(uint32_t segment_sequence, const SegmentInfo &info);
 
-	ov::String ToString(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip, bool legacy) const;
+	ov::String ToString(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip, bool legacy, bool vod = false, uint32_t vod_start_segment_number = 0) const;
 	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip, bool legacy) const;
 
 	std::shared_ptr<SegmentInfo> GetSegmentInfo(uint32_t segment_sequence) const;
@@ -160,6 +163,7 @@ private:
 
 	// Segment number -> SegmentInfo
 	std::deque<std::shared_ptr<SegmentInfo>> _segments;
+	std::deque<std::shared_ptr<SegmentInfo>> _old_segments;
 	mutable std::shared_mutex _segments_guard;
 	uint64_t _deleted_segments = 0;
 };

@@ -7,6 +7,8 @@
 //
 //==============================================================================
 
+#include <filesystem>
+
 #include "base/publisher/application.h"
 #include "base/publisher/stream.h"
 
@@ -45,6 +47,7 @@ bool LLHlsStream::Start()
 
 	auto config = GetApplication()->GetConfig();
 	auto llhls_config = config.GetPublishers().GetLLHlsPublisher();
+	auto dump_config = llhls_config.GetDumps();
 
 	_packager_config.chunk_duration_ms = llhls_config.GetChunkDuration() * 1000.0;
 	_storage_config.max_segments = llhls_config.GetSegmentCount();
@@ -103,6 +106,36 @@ bool LLHlsStream::Start()
 
 		std::lock_guard<std::mutex> guard(_master_playlists_lock);
 		_master_playlists[defautl_playlist_name] = master_playlist;
+	}
+
+	// Select the dump setting for this stream.
+	std::lock_guard<std::shared_mutex> lock(_dumps_lock);
+	for (auto dump : dump_config.GetDumps())
+	{
+		if (dump.IsEnabled() == false)
+		{
+			continue;
+		}
+
+		// check if dump.TargetStreamName is same as this stream name
+		auto match_result = dump.GetTargetStreamNameRegex().Matches(GetName().CStr());
+		if (match_result.IsMatched())
+		{
+			// Replace output path with macro
+			auto output_path = dump.GetOutputPath();
+			// ${VHostName}, ${AppName}, ${StreamName}
+			output_path = output_path.Replace("${VHostName}", GetApplication()->GetName().GetVHostName().CStr());
+			output_path = output_path.Replace("${AppName}", GetApplication()->GetName().GetAppName().CStr());
+			output_path = output_path.Replace("${StreamName}", GetName().CStr());
+
+			auto dump_item = std::make_shared<info::Dump>(output_path);
+			dump_item->SetPlaylists(dump.GetPlaylists());
+			
+			// Dump from the beginning of the stream
+			dump_item->SetEnabled(true);
+
+			_dumps.emplace_back(dump_item);
+		}
 	}
 
 	logti("LLHlsStream has been created : %s/%u\nOriginMode(%s) Chunk Duration(%.2f) Segment Duration(%u) Segment Count(%u)", GetName().CStr(), GetId(), 
@@ -180,6 +213,179 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 	return master_playlist;
 }
 
+void LLHlsStream::DumpMasterPlaylistsOfAllItems()
+{
+	// lock
+	std::shared_lock<std::shared_mutex> lock(_dumps_lock);
+	for (auto &dump : _dumps)
+	{
+		if (dump->IsEnabled() == false)
+		{
+			continue;
+		}
+
+		if (DumpMasterPlaylists(dump) == false)
+		{
+			dump->SetEnabled(false);
+		}
+	}
+}
+
+bool LLHlsStream::DumpMasterPlaylists(const std::shared_ptr<info::Dump> &item)
+{
+	if (item->IsEnabled() == false)
+	{
+		return false;
+	}
+	
+	for (auto &playlist : item->GetPlaylists())
+	{
+		auto [result, data] = GetMasterPlaylist(playlist, "", false, false);
+		if (result != RequestResult::Success)
+		{
+			logtw("Could not get master playlist(%s) for dump", playlist.CStr());
+			return false;
+		}
+
+		if (DumpData(item, playlist, data) == false)
+		{
+			logtw("Could not dump master playlist(%s)", playlist.CStr());
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void LLHlsStream::DumpInitSegmentOfAllItems(const int32_t &track_id)
+{
+	std::shared_lock<std::shared_mutex> lock(_dumps_lock);
+	for (auto &dump : _dumps)
+	{
+		if (dump->IsEnabled() == false)
+		{
+			continue;
+		}
+
+		if (DumpInitSegment(dump, track_id) == false)
+		{
+			dump->SetEnabled(false);
+		}
+	}
+}
+
+bool LLHlsStream::DumpInitSegment(const std::shared_ptr<info::Dump> &item, const int32_t &track_id)
+{
+	if (item->IsEnabled() == false)
+	{
+		return false;
+	}
+
+	// Get segment
+	auto [result, data] = GetInitializationSegment(track_id);
+	if (result != RequestResult::Success)
+	{
+		logtw("Could not get init segment for dump");
+		return false;
+	}
+
+	auto init_segment_name = GetIntializationSegmentName(track_id);
+
+	return DumpData(item, init_segment_name, data);
+}
+
+void LLHlsStream::DumpSegmentOfAllItems(const int32_t &track_id, const uint32_t &segment_number)
+{
+	std::shared_lock<std::shared_mutex> lock(_dumps_lock);
+	for (auto &dump : _dumps)
+	{
+		if (dump->IsEnabled() == false)
+		{
+			continue;
+		}
+
+		if (DumpSegment(dump, track_id, segment_number) == false)
+		{
+			dump->SetEnabled(false);
+			continue;
+		}
+	}
+}
+
+bool LLHlsStream::DumpSegment(const std::shared_ptr<info::Dump> &item, const int32_t &track_id, const uint32_t &segment_number)
+{
+	if (item->IsEnabled() == false)
+	{
+		return false;
+	}
+
+	if (item->HasFirstSegmentNumber(track_id) == false)
+	{
+		item->SetFirstSegmentNumber(track_id, segment_number);
+	}
+
+	// Get segment
+	auto segment = GetStorage(track_id)->GetMediaSegment(segment_number);
+	if (segment == nullptr)
+	{
+		logtw("Could not get segment(%u) for dump", segment_number);
+		return false;
+	}
+
+	auto segment_data = segment->GetData();
+
+	// Get updated chunklist
+	auto chunklist = GetChunklistWriter(track_id);
+	if (chunklist == nullptr)
+	{
+		logtw("Could not find chunklist for track_id = %d", track_id);
+		return false;
+	}
+
+	auto chunklist_data = chunklist->ToString("", _chunklist_map, false, true, true, item->GetFirstSegmentNumber(track_id)).ToData(false);
+	
+	auto segment_file_name = GetSegmentName(track_id, segment_number);
+	auto chunklist_file_name = GetChunklistName(track_id);
+
+	if (DumpData(item, segment_file_name, segment_data) == false)
+	{
+		logtw("Could not dump segment(%s)", segment_file_name.CStr());
+		return false;
+	}
+
+	if (DumpData(item, chunklist_file_name, chunklist_data) == false)
+	{
+		logtw("Could not dump chunklist(%s)", chunklist_file_name.CStr());
+		return false;
+	}
+
+	return true;
+}
+
+bool LLHlsStream::DumpData(const std::shared_ptr<info::Dump> &item, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data)
+{
+	auto dump_path = item->GetOutputPath();
+	auto file_path_name = ov::PathManager::Combine(dump_path, file_name);
+
+	try
+	{
+		std::filesystem::create_directories(dump_path.CStr());
+	}
+	catch(std::filesystem::filesystem_error const& e)
+	{
+		logte("Could not create path(%s) for LLHLS dump - %s", dump_path.CStr(), e.what());
+		return false;
+	}
+
+	if (ov::DumpToFile(file_path_name, data) == nullptr)
+	{
+		logte("Could not dump file(%s)", file_path_name.CStr());
+		return false;
+	}
+
+	return true;
+}
+
 std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetMasterPlaylist(const ov::String &file_name, const ov::String &chunk_query_string, bool gzip, bool legacy)
 {
 	if (GetState() != State::STARTED)
@@ -187,7 +393,7 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 		return { RequestResult::NotFound, nullptr };
 	}
 
-	if (_playlist_ready == false)
+	if (IsReadyToPlay() == false)
 	{
 		return { RequestResult::Accepted, nullptr };
 	}
@@ -241,7 +447,7 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 		return { RequestResult::NotFound, nullptr };
 	}
 
-	if (_playlist_ready == false)
+	if (IsReadyToPlay() == false)
 	{
 		return { RequestResult::Accepted, nullptr };
 	}
@@ -536,8 +742,7 @@ std::shared_ptr<LLHlsChunklist> LLHlsStream::GetChunklistWriter(const int32_t &t
 ov::String LLHlsStream::GetChunklistName(const int32_t &track_id) const
 {
 	// chunklist_<track id>_<media type>_<stream key>_llhls.m3u8
-	return ov::String::FormatString("../%s/chunklist_%d_%s_llhls.m3u8",
-										GetName().CStr(),
+	return ov::String::FormatString("chunklist_%d_%s_llhls.m3u8",
 										track_id, 
 										StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr());
 }
@@ -600,20 +805,26 @@ void LLHlsStream::OnFMp4StorageInitialized(const int32_t &track_id)
 	_chunklist_map[track_id] = playlist;
 }
 
-void LLHlsStream::CheckPlaylistReady()
+bool LLHlsStream::IsReadyToPlay() const
+{
+	return _playlist_ready;
+}
+
+bool LLHlsStream::CheckPlaylistReady()
 {
 	if (_playlist_ready == true)
 	{
-		return;
+		return true;
 	}
 
 	std::shared_lock<std::shared_mutex> storage_lock(_storage_map_lock);
 
 	for (const auto &[track_id, storage] : _storage_map)
 	{
+		// At least one segment must be created.
 		if (storage->GetLastSegmentNumber() < 0)
 		{
-			return;
+			return false;
 		}
 
 		_max_chunk_duration_ms = std::max(_max_chunk_duration_ms, storage->GetMaxChunkDurationMs());
@@ -628,17 +839,24 @@ void LLHlsStream::CheckPlaylistReady()
 	for (const auto &[track_id, chunklist] : _chunklist_map)
 	{
 		chunklist->SetPartHoldBack(part_hold_back);
+
+		DumpInitSegmentOfAllItems(chunklist->GetTrack()->GetId());
 	}
 
+	chunklist_lock.unlock();
+
 	_playlist_ready = true;
+
+	// Dump master playlist if configured
+	DumpMasterPlaylistsOfAllItems();
+
+	return true;
 }
 
 void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t &segment_number)
 {
-	if (_playlist_ready == false)
-	{
-		CheckPlaylistReady();
-	}
+	// Check whether at least one segment of every track has been created.
+	CheckPlaylistReady();
 
 	auto playlist = GetChunklistWriter(track_id);
 	if (playlist == nullptr)
@@ -653,7 +871,7 @@ void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t 
 	auto segment_duration = static_cast<double>(segment->GetDuration()) / static_cast<double>(1000.0);
 
 	auto start_timestamp_ms = (static_cast<double>(segment->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
-	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetStartedTime().time_since_epoch()).count() + start_timestamp_ms;
+	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetCreatedTime().time_since_epoch()).count() + start_timestamp_ms;
 
 	auto segment_info = LLHlsChunklist::SegmentInfo(segment->GetNumber(), start_timestamp, segment_duration,
 													segment->GetSize(), GetSegmentName(track_id, segment->GetNumber()), "", true);
@@ -661,6 +879,8 @@ void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t 
 	playlist->AppendSegmentInfo(segment_info);
 
 	logtd("Media segment updated : track_id = %d, segment_number = %d, start_timestamp = %llu, segment_duration = %f", track_id, segment_number, segment->GetStartTimestamp(), segment_duration);
+
+	DumpSegmentOfAllItems(track_id, segment_number);
 }
 
 void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number)
@@ -679,7 +899,7 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 
 	// Human readable timestamp
 	auto start_timestamp_ms = (static_cast<float>(chunk->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
-	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetStartedTime().time_since_epoch()).count() + start_timestamp_ms;
+	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetCreatedTime().time_since_epoch()).count() + start_timestamp_ms;
 
 	auto chunk_info = LLHlsChunklist::SegmentInfo(chunk->GetNumber(), start_timestamp, chunk_duration, chunk->GetSize(), 
 												GetPartialSegmentName(track_id, segment_number, chunk->GetNumber()), 

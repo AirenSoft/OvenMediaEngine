@@ -23,6 +23,11 @@ LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<cons
 	_map_uri = map_uri;
 }
 
+const std::shared_ptr<const MediaTrack> &LLHlsChunklist::GetTrack() const
+{
+	return _track;
+}
+
 const ov::String& LLHlsChunklist::GetUrl() const
 {
 	return _url;
@@ -59,7 +64,12 @@ bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
 
 		if (_segments.size() > _max_segments)
 		{
+			// For VoD Dump
+			auto old_segment = _segments.front();
+			_old_segments.push_back(old_segment);
+
 			_segments.pop_front();
+			_deleted_segments += 1;
 		}
 	}
 	else
@@ -94,6 +104,10 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 
 		if (_segments.size() > _max_segments)
 		{
+			// For VoD Dump
+			auto old_segment = _segments.front();
+			_old_segments.push_back(old_segment);
+
 			_segments.pop_front();
 			_deleted_segments += 1;
 		}
@@ -141,11 +155,17 @@ bool LLHlsChunklist::GetLastSequenceNumber(int64_t &msn, int64_t &psn) const
 	return true;
 }
 
-ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip, bool legacy) const
+ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip, bool legacy, bool vod, uint32_t vod_start_segment_number) const
 {
 	if (_segments.size() == 0)
 	{
 		return "";
+	}
+
+	if (vod == true)
+	{
+		// VoD doesn't need Low-Latency HLS
+		legacy = true;
 	}
 
 	// TODO(Getroot) : Implement _HLS_skip=YES (skip = true)
@@ -170,7 +190,7 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 		playlist.AppendFormat("#EXT-X-PART-INF:PART-TARGET=%lf\n", _max_part_duration);
 	}
 
-	playlist.AppendFormat("#EXT-X-MEDIA-SEQUENCE:%u\n", _segments[0]->GetSequence());
+	playlist.AppendFormat("#EXT-X-MEDIA-SEQUENCE:%u\n", vod == false ? _segments[0]->GetSequence() : 0);
 	playlist.AppendFormat("#EXT-X-MAP:URI=\"%s", _map_uri.CStr());
 	if (query_string.IsEmpty() == false)
 	{
@@ -179,8 +199,34 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 	playlist.AppendFormat("\"\n");
 
 	std::shared_lock<std::shared_mutex> segment_lock(_segments_guard);
+	if (vod == true)
+	{
+		for (auto &segment : _old_segments)
+		{
+			if (segment->GetSequence() < vod_start_segment_number)
+			{
+				continue;
+			}
+
+			std::chrono::system_clock::time_point tp{std::chrono::milliseconds{segment->GetStartTime()}};
+			playlist.AppendFormat("#EXT-X-PROGRAM-DATE-TIME:%s\n", ov::Converter::ToISO8601String(tp).CStr());
+			playlist.AppendFormat("#EXTINF:%lf,\n", segment->GetDuration());
+			playlist.AppendFormat("%s", segment->GetUrl().CStr());
+			if (query_string.IsEmpty() == false)
+			{
+				playlist.AppendFormat("?%s", query_string.CStr());
+			}
+			playlist.Append("\n");
+		}
+	}
+
 	for (auto &segment : _segments)
 	{
+		if (vod == true && segment->GetSequence() < vod_start_segment_number)
+		{
+			continue;
+		}
+
 		std::chrono::system_clock::time_point tp{std::chrono::milliseconds{segment->GetStartTime()}};
 		playlist.AppendFormat("#EXT-X-PROGRAM-DATE-TIME:%s\n", ov::Converter::ToISO8601String(tp).CStr());
 
@@ -272,6 +318,11 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 		}
 		
 		playlist.AppendFormat("\n");
+	}
+
+	if (vod == true)
+	{
+		playlist.AppendFormat("#EXT-X-ENDLIST\n");
 	}
 
 	return playlist;

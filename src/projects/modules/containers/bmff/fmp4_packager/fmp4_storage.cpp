@@ -121,6 +121,13 @@ namespace bmff
 
 	bool FMP4Storage::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent)
 	{
+		if (_start_timestamp_delta == -1)
+		{
+			_start_timestamp_delta = start_timestamp;
+		}
+
+		start_timestamp = start_timestamp - _start_timestamp_delta;
+
 		auto segment = GetLastSegment();
 
 		// Complete Segment if segment duration is over and new chunk data is independent(new segment should be started with independent chunk)

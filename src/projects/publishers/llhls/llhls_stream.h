@@ -10,6 +10,8 @@
 
 #include <base/common_types.h>
 #include <base/publisher/stream.h>
+#include <base/info/dump.h>
+
 #include "monitoring/monitoring.h"
 
 #include "modules/containers/bmff/fmp4_packager/fmp4_packager.h"
@@ -96,7 +98,17 @@ private:
 
 	bool AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_packet);
 
-	void CheckPlaylistReady();
+	bool IsReadyToPlay() const;
+	bool CheckPlaylistReady();
+
+	void DumpMasterPlaylistsOfAllItems();
+	bool DumpMasterPlaylists(const std::shared_ptr<info::Dump> &item);
+	void DumpInitSegmentOfAllItems(const int32_t &track_id);
+	bool DumpInitSegment(const std::shared_ptr<info::Dump> &item, const int32_t &track_id);
+	void DumpSegmentOfAllItems(const int32_t &track_id, const uint32_t &segment_number);
+	bool DumpSegment(const std::shared_ptr<info::Dump> &item, const int32_t &track_id, const uint32_t &segment_number);
+
+	bool DumpData(const std::shared_ptr<info::Dump> &item, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data);
 
 	// Config
 	bmff::FMP4Packager::Config _packager_config;
@@ -115,6 +127,7 @@ private:
 
 	std::map<ov::String, std::shared_ptr<LLHlsMasterPlaylist>> _master_playlists;
 	std::mutex _master_playlists_lock;
+
 	bool _playlist_ready = false;
 
 	ov::Queue<std::shared_ptr<MediaPacket>> _initial_media_packet_buffer;
@@ -122,4 +135,7 @@ private:
 	ov::String _stream_key;
 
 	uint32_t _worker_count = 0;
+
+	std::vector<std::shared_ptr<info::Dump>> _dumps;
+	std::shared_mutex _dumps_lock;
 };

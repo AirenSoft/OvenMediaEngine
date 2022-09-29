@@ -58,6 +58,8 @@ namespace bmff
 
 		int64_t _last_segment_number = -1;
 
+		int64_t _start_timestamp_delta = -1;
+
 		double _max_chunk_duration_ms = 0;
 		double _min_chunk_duration_ms = std::numeric_limits<uint64_t>::max();
 
