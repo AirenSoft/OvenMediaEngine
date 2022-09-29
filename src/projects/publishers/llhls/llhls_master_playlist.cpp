@@ -12,6 +12,11 @@
 #include <base/ovlibrary/zip.h>
 #include <modules/bitstream/codec_media_type.h>
 
+void LLHlsMasterPlaylist::SetChunkPath(const ov::String &chunk_path)
+{
+	_chunk_path = chunk_path;
+}
+
 // Add X-MEDIA to the master playlist
 void LLHlsMasterPlaylist::AddMediaCandidateToMasterPlaylist(const ov::String &group_id, const std::shared_ptr<const MediaTrack> &track, const ov::String &chunk_uri)
 {
@@ -164,7 +169,7 @@ const LLHlsMasterPlaylist::MediaInfo &LLHlsMasterPlaylist::GetDefaultMediaInfo(c
 	return MediaInfo::InvalidMediaInfo();
 }
 
-ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string, bool legacy) const
+ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string, bool legacy, bool include_path) const
 {
 	ov::String playlist(1024);
 
@@ -210,7 +215,7 @@ ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string, b
 
 				if (!media_info._uri.IsEmpty())
 				{
-					playlist.AppendFormat(",URI=\"%s", media_info._uri.CStr());
+					playlist.AppendFormat(",URI=\"%s%s", include_path?_chunk_path.CStr():"", media_info._uri.CStr());
 
 					if (chunk_query_string.IsEmpty() == false)
 					{
@@ -318,7 +323,7 @@ ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string, b
 
 		// URI
 		playlist.AppendFormat("\n");
-		playlist.AppendFormat("%s", variant_info._uri.CStr());
+		playlist.AppendFormat("%s%s", include_path?_chunk_path.CStr():"", variant_info._uri.CStr());
 		if (chunk_query_string.IsEmpty() == false)
 		{
 			playlist.AppendFormat("?%s", chunk_query_string.CStr());

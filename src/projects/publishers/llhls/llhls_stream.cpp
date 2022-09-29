@@ -177,6 +177,8 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 {
 	auto master_playlist = std::make_shared<LLHlsMasterPlaylist>();
 
+	master_playlist->SetChunkPath(ov::String::FormatString("/%s/%s/", GetApplication()->GetName().GetAppName().CStr(), GetName().CStr()));
+
 	// Add all media candidates to master playlist
 	for (const auto &[track_id, track] : GetTracks())
 	{
@@ -240,7 +242,7 @@ bool LLHlsStream::DumpMasterPlaylists(const std::shared_ptr<info::Dump> &item)
 	
 	for (auto &playlist : item->GetPlaylists())
 	{
-		auto [result, data] = GetMasterPlaylist(playlist, "", false, false);
+		auto [result, data] = GetMasterPlaylist(playlist, "", false, false, false);
 		if (result != RequestResult::Success)
 		{
 			logtw("Could not get master playlist(%s) for dump", playlist.CStr());
@@ -386,7 +388,7 @@ bool LLHlsStream::DumpData(const std::shared_ptr<info::Dump> &item, const ov::St
 	return true;
 }
 
-std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetMasterPlaylist(const ov::String &file_name, const ov::String &chunk_query_string, bool gzip, bool legacy)
+std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetMasterPlaylist(const ov::String &file_name, const ov::String &chunk_query_string, bool gzip, bool legacy, bool include_path)
 {
 	if (GetState() != State::STARTED)
 	{
@@ -435,7 +437,7 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 		return { RequestResult::Success, master_playlist->ToGzipData(chunk_query_string, legacy) };
 	}
 
-	return { RequestResult::Success, master_playlist->ToString(chunk_query_string, legacy).ToData(false) };
+	return { RequestResult::Success, master_playlist->ToString(chunk_query_string, legacy, include_path).ToData(false) };
 }
 
 std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetChunklist(const ov::String &query_string,const int32_t &track_id, int64_t msn, int64_t psn, bool skip, bool gzip, bool legacy) const
