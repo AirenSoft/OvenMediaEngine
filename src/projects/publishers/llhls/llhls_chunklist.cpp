@@ -280,44 +280,47 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 	}
 	segment_lock.unlock();
 
-	// Output #EXT-X-RENDITION-REPORT
-	for (const auto &[track_id, rendition] : renditions)
+	if (vod == false)
 	{
-		// Skip mine 
-		if (track_id == static_cast<int32_t>(_track->GetId()))
+		// Output #EXT-X-RENDITION-REPORT
+		for (const auto &[track_id, rendition] : renditions)
 		{
-			continue;
+			// Skip mine 
+			if (track_id == static_cast<int32_t>(_track->GetId()))
+			{
+				continue;
+			}
+
+			playlist.AppendFormat("#EXT-X-RENDITION-REPORT:URI=\"%s", rendition->GetUrl().CStr());
+			if (query_string.IsEmpty() == false)
+			{
+				playlist.AppendFormat("?%s", query_string.CStr());
+			}
+			playlist.AppendFormat("\"");
+
+			// LAST-MSN, LAST-PART
+			int64_t last_msn, last_part;
+			rendition->GetLastSequenceNumber(last_msn, last_part);
+
+			if (legacy == true && last_msn > 0)
+			{
+				// https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-4.4.5.4
+				// If the Rendition contains Partial Segments then this value 
+				// is the Media Sequence Number of the last Partial Segment. 
+
+				// In legacy, the completed msn is reported.
+				last_msn -= 1;
+			}
+
+			playlist.AppendFormat(",LAST-MSN=%llu", last_msn);
+
+			if (legacy == false)
+			{
+				playlist.AppendFormat(",LAST-PART=%llu", last_part);
+			}
+			
+			playlist.AppendFormat("\n");
 		}
-
-		playlist.AppendFormat("#EXT-X-RENDITION-REPORT:URI=\"%s", rendition->GetUrl().CStr());
-		if (query_string.IsEmpty() == false)
-		{
-			playlist.AppendFormat("?%s", query_string.CStr());
-		}
-		playlist.AppendFormat("\"");
-
-		// LAST-MSN, LAST-PART
-		int64_t last_msn, last_part;
-		rendition->GetLastSequenceNumber(last_msn, last_part);
-
-		if (legacy == true && last_msn > 0)
-		{
-			// https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-4.4.5.4
-			// If the Rendition contains Partial Segments then this value 
-			// is the Media Sequence Number of the last Partial Segment. 
-
-			// In legacy, the completed msn is reported.
-			last_msn -= 1;
-		}
-
-		playlist.AppendFormat(",LAST-MSN=%llu", last_msn);
-
-		if (legacy == false)
-		{
-			playlist.AppendFormat(",LAST-PART=%llu", last_part);
-		}
-		
-		playlist.AppendFormat("\n");
 	}
 
 	if (vod == true)
