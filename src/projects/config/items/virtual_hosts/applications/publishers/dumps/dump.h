@@ -21,6 +21,7 @@ namespace cfg
 				struct Dump : public Item
 				{
 				protected:
+					ov::String _id;
 					bool _enabled = false;
 					ov::String _target_stream_name;
 					mutable ov::Regex _target_stream_name_regex;
@@ -28,6 +29,7 @@ namespace cfg
 					Playlists _playlists;
 					
 				public:
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetId, _id);
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsEnabled, _enabled);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetTargetStreamName, _target_stream_name);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetPlaylists, _playlists.GetPlaylists());
@@ -46,6 +48,15 @@ namespace cfg
 				protected:
 					void MakeList() override
 					{
+						Register<Optional>("Id", &_id, nullptr, 
+							[=]() -> std::shared_ptr<ConfigError> {
+								if (_id.IsEmpty())
+								{
+									_id = ov::Random::GenerateString(8);
+								}
+								return nullptr;
+						});
+
 						Register("Enable", &_enabled);
 						Register("TargetStreamName", &_target_stream_name);
 						Register("OutputPath", &_output_path);

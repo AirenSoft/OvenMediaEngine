@@ -15,9 +15,34 @@ namespace info
 	class Dump
 	{
 	public:
-		Dump(const ov::String &output_path)
+		void SetId(const ov::String &id)
 		{
-			_output_path = output_path;
+			_id = id;
+		}
+
+		const ov::String &GetId() const
+		{
+			return _id;
+		}
+
+		void SetStreamName(const ov::String &stream_name)
+		{
+			_stream_name = stream_name;
+		}
+
+		const ov::String &GetStreamName() const
+		{
+			return _stream_name;
+		}
+
+		void SetUserData(const ov::String &user_data)
+		{
+			_user_data = user_data;
+		}
+
+		const ov::String &GetUserData() const
+		{
+			return _user_data;
 		}
 
 		void SetEnabled(bool enabled)
@@ -50,6 +75,31 @@ namespace info
 			return _output_path;
 		}
 
+		// Info file
+		void SetInfoFile(const ov::String &info_file_url)
+		{
+			_info_file_url = info_file_url;
+
+			// Split file name and path
+			_info_file_name = info_file_url.Split("/").back();
+			_info_file_path = info_file_url.Substring(0, info_file_url.GetLength() - _info_file_name.GetLength());
+		}
+
+		const ov::String &GetInfoFileUrl() const
+		{
+			return _info_file_url;
+		}
+
+		const ov::String &GetInfoFileName() const
+		{
+			return _info_file_name;
+		}
+
+		const ov::String &GetInfoFilePath() const
+		{
+			return _info_file_path;
+		}
+
 		// Playlists
 		void AddPlaylist(const ov::String &playlist)
 		{
@@ -66,27 +116,20 @@ namespace info
 			return _playlists;
 		}
 
-		bool HasFirstSegmentNumber(const int32_t &track_id)
-		{
-			return _first_segment_numbers.find(track_id) != _first_segment_numbers.end();
-		}
+		
+	protected:
+		ov::String _id;
+		ov::String _stream_name;
 
-		uint32_t GetFirstSegmentNumber(const int32_t &track_id)
-		{
-			return _first_segment_numbers[track_id];
-		}
+		ov::String _user_data;
 
-		void SetFirstSegmentNumber(const int32_t &track_id, const uint32_t &segment_number)
-		{
-			_first_segment_numbers[track_id] = segment_number;
-		}
-
-	private:
 		bool _enabled = false;
 		std::chrono::system_clock::time_point _enabled_time;
 		ov::String _output_path;
 
-		std::map<int32_t, uint32_t> _first_segment_numbers;
+		ov::String _info_file_url;
+		ov::String _info_file_path;
+		ov::String _info_file_name;
 
 		std::vector<ov::String> _playlists;
 	};

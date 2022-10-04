@@ -12,6 +12,7 @@
 
 #include <functional>
 
+#include "stream_actions_controller.h"
 #include "../../../../../api_private.h"
 
 namespace api
@@ -24,6 +25,8 @@ namespace api
 			RegisterGet(R"()", &StreamsController::OnGetStreamList);
 			RegisterGet(R"(\/(?<stream_name>[^\/]*))", &StreamsController::OnGetStream);
 			RegisterDelete(R"(\/(?<stream_name>[^\/]*))", &StreamsController::OnDeleteStream);
+
+			CreateSubController<StreamActionsController>(R"(\/(?<stream_name>[^\/:]*):)");
 		};
 
 		ApiResponse StreamsController::OnPostStream(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,

@@ -11,6 +11,7 @@
 #include <base/common_types.h>
 #include <base/publisher/stream.h>
 #include <base/info/dump.h>
+#include <modules/dump/dump.h>
 
 #include "monitoring/monitoring.h"
 
@@ -65,7 +66,15 @@ public:
 	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetInitializationSegment(const int32_t &track_id) const;
 	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetSegment(const int32_t &track_id, const int64_t &segment_number) const;
 	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetChunk(const int32_t &track_id, const int64_t &segment_number, const int64_t &chunk_number) const;
-	
+
+	// <result, error message>
+	std::tuple<bool, ov::String> StartDump(const std::shared_ptr<info::Dump> &dump_info);
+	std::tuple<bool, ov::String> StopDump(const std::shared_ptr<info::Dump> &dump_info);
+	// Get dump info
+	std::shared_ptr<const mdl::Dump> GetDumpInfo(const ov::String &dump_id) const;
+	// Get dumps
+	std::vector<std::shared_ptr<const mdl::Dump>> GetDumpInfoList() const;
+
 private:
 	bool Start() override;
 	bool Stop() override;
@@ -102,13 +111,15 @@ private:
 	bool CheckPlaylistReady();
 
 	void DumpMasterPlaylistsOfAllItems();
-	bool DumpMasterPlaylists(const std::shared_ptr<info::Dump> &item);
+	bool DumpMasterPlaylist(const std::shared_ptr<mdl::Dump> &item);
 	void DumpInitSegmentOfAllItems(const int32_t &track_id);
-	bool DumpInitSegment(const std::shared_ptr<info::Dump> &item, const int32_t &track_id);
+	bool DumpInitSegment(const std::shared_ptr<mdl::Dump> &item, const int32_t &track_id);
 	void DumpSegmentOfAllItems(const int32_t &track_id, const uint32_t &segment_number);
-	bool DumpSegment(const std::shared_ptr<info::Dump> &item, const int32_t &track_id, const uint32_t &segment_number);
+	bool DumpSegment(const std::shared_ptr<mdl::Dump> &item, const int32_t &track_id, const int64_t &segment_number);
 
-	bool DumpData(const std::shared_ptr<info::Dump> &item, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data);
+	bool DumpData(const std::shared_ptr<mdl::Dump> &item, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data);
+
+	int64_t GetMinimumLastSegmentNumber() const;
 
 	// Config
 	bmff::FMP4Packager::Config _packager_config;
@@ -136,6 +147,6 @@ private:
 
 	uint32_t _worker_count = 0;
 
-	std::vector<std::shared_ptr<info::Dump>> _dumps;
+	std::map<ov::String, std::shared_ptr<mdl::Dump>> _dumps;
 	std::shared_mutex _dumps_lock;
 };

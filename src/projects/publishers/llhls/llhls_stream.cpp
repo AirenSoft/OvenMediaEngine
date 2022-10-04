@@ -129,13 +129,13 @@ bool LLHlsStream::Start()
 			output_path = output_path.Replace("${AppName}", GetApplication()->GetName().GetAppName().CStr());
 			output_path = output_path.Replace("${StreamName}", GetName().CStr());
 
-			auto dump_item = std::make_shared<info::Dump>(output_path);
+			auto dump_item = std::make_shared<mdl::Dump>();
+			dump_item->SetId(dump.GetId());
+			dump_item->SetOutputPath(output_path);
 			dump_item->SetPlaylists(dump.GetPlaylists());
-			
-			// Dump from the beginning of the stream
 			dump_item->SetEnabled(true);
 
-			_dumps.emplace_back(dump_item);
+			_dumps.emplace(dump_item->GetId(), dump_item);
 		}
 	}
 
@@ -220,21 +220,22 @@ void LLHlsStream::DumpMasterPlaylistsOfAllItems()
 {
 	// lock
 	std::shared_lock<std::shared_mutex> lock(_dumps_lock);
-	for (auto &dump : _dumps)
+	for (auto &it : _dumps)
 	{
+		auto dump = it.second;
 		if (dump->IsEnabled() == false)
 		{
 			continue;
 		}
 
-		if (DumpMasterPlaylists(dump) == false)
+		if (DumpMasterPlaylist(dump) == false)
 		{
 			dump->SetEnabled(false);
 		}
 	}
 }
 
-bool LLHlsStream::DumpMasterPlaylists(const std::shared_ptr<info::Dump> &item)
+bool LLHlsStream::DumpMasterPlaylist(const std::shared_ptr<mdl::Dump> &item)
 {
 	if (item->IsEnabled() == false)
 	{
@@ -263,8 +264,9 @@ bool LLHlsStream::DumpMasterPlaylists(const std::shared_ptr<info::Dump> &item)
 void LLHlsStream::DumpInitSegmentOfAllItems(const int32_t &track_id)
 {
 	std::shared_lock<std::shared_mutex> lock(_dumps_lock);
-	for (auto &dump : _dumps)
+	for (auto &it : _dumps)
 	{
+		auto dump = it.second;
 		if (dump->IsEnabled() == false)
 		{
 			continue;
@@ -277,7 +279,7 @@ void LLHlsStream::DumpInitSegmentOfAllItems(const int32_t &track_id)
 	}
 }
 
-bool LLHlsStream::DumpInitSegment(const std::shared_ptr<info::Dump> &item, const int32_t &track_id)
+bool LLHlsStream::DumpInitSegment(const std::shared_ptr<mdl::Dump> &item, const int32_t &track_id)
 {
 	if (item->IsEnabled() == false)
 	{
@@ -300,8 +302,9 @@ bool LLHlsStream::DumpInitSegment(const std::shared_ptr<info::Dump> &item, const
 void LLHlsStream::DumpSegmentOfAllItems(const int32_t &track_id, const uint32_t &segment_number)
 {
 	std::shared_lock<std::shared_mutex> lock(_dumps_lock);
-	for (auto &dump : _dumps)
+	for (auto &it : _dumps)
 	{
+		auto dump = it.second;
 		if (dump->IsEnabled() == false)
 		{
 			continue;
@@ -315,16 +318,16 @@ void LLHlsStream::DumpSegmentOfAllItems(const int32_t &track_id, const uint32_t 
 	}
 }
 
-bool LLHlsStream::DumpSegment(const std::shared_ptr<info::Dump> &item, const int32_t &track_id, const uint32_t &segment_number)
+bool LLHlsStream::DumpSegment(const std::shared_ptr<mdl::Dump> &item, const int32_t &track_id, const int64_t &segment_number)
 {
 	if (item->IsEnabled() == false)
 	{
 		return false;
 	}
 
-	if (item->HasFirstSegmentNumber(track_id) == false)
+	if (item->HasExtraData(track_id) == false)
 	{
-		item->SetFirstSegmentNumber(track_id, segment_number);
+		item->SetExtraData(track_id, segment_number);
 	}
 
 	// Get segment
@@ -365,28 +368,9 @@ bool LLHlsStream::DumpSegment(const std::shared_ptr<info::Dump> &item, const int
 	return true;
 }
 
-bool LLHlsStream::DumpData(const std::shared_ptr<info::Dump> &item, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data)
+bool LLHlsStream::DumpData(const std::shared_ptr<mdl::Dump> &item, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data)
 {
-	auto dump_path = item->GetOutputPath();
-	auto file_path_name = ov::PathManager::Combine(dump_path, file_name);
-
-	try
-	{
-		std::filesystem::create_directories(dump_path.CStr());
-	}
-	catch(std::filesystem::filesystem_error const& e)
-	{
-		logte("Could not create path(%s) for LLHLS dump - %s", dump_path.CStr(), e.what());
-		return false;
-	}
-
-	if (ov::DumpToFile(file_path_name, data) == nullptr)
-	{
-		logte("Could not dump file(%s)", file_path_name.CStr());
-		return false;
-	}
-
-	return true;
+	return item->DumpData(file_name, data);
 }
 
 std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetMasterPlaylist(const ov::String &file_name, const ov::String &chunk_query_string, bool gzip, bool legacy, bool include_path)
@@ -924,4 +908,108 @@ void LLHlsStream::NotifyPlaylistUpdated(const int32_t &track_id, const int64_t &
 	auto event = std::make_shared<PlaylistUpdatedEvent>(track_id, msn, part);
 	auto notification = std::make_any<std::shared_ptr<PlaylistUpdatedEvent>>(event);
 	BroadcastPacket(notification);
+}
+
+int64_t LLHlsStream::GetMinimumLastSegmentNumber() const
+{
+	// lock storage map
+	std::shared_lock<std::shared_mutex> storage_lock(_storage_map_lock);
+	int64_t min_segment_number = std::numeric_limits<int64_t>::max();
+	for (const auto &it : _storage_map)
+	{
+		auto storage = it.second;
+		if (storage == nullptr)
+		{
+			continue;
+		}
+
+		auto segment_number = storage->GetLastSegmentNumber();
+		if (segment_number < min_segment_number)
+		{
+			min_segment_number = segment_number;
+		}
+	}
+
+	return min_segment_number;
+}
+
+std::tuple<bool, ov::String> LLHlsStream::StartDump(const std::shared_ptr<info::Dump> &info)
+{
+	if (IsReadyToPlay() == false)
+	{
+		// TODO(Getroot) : Emplace dump_info to _dumps before IsReadyToPlay state is changed (need lock). 
+		// It is also a good idea to test the directory creation before that.
+		return {false, "Stream is not ready to dump"};
+	}
+
+	// Check duplicate ID
+	std::lock_guard<std::shared_mutex> lock(_dumps_lock);
+	
+	auto it = _dumps.find(info->GetId());
+	if (it != _dumps.end())
+	{
+		return {false, "Duplicate ID"};
+	}
+	
+	auto dump_info = std::make_shared<mdl::Dump>(info);
+	dump_info->SetEnabled(true);
+	_dumps.emplace(dump_info->GetId(), dump_info);
+
+	// Dump Init Segment for all tracks
+	std::shared_lock<std::shared_mutex> storage_lock(_storage_map_lock);
+	auto storage_map = _storage_map;
+	storage_lock.unlock();
+
+	// Find minimum segment number
+	int64_t min_segment_number = GetMinimumLastSegmentNumber();
+
+	for (const auto &it : storage_map)
+	{
+		auto track_id = it.first;
+		if (DumpInitSegment(dump_info, track_id) == false)
+		{
+			return {false, "Could not dump init segment"};
+		}
+
+		if (DumpSegment(dump_info, track_id, min_segment_number) == false)
+		{
+			return {false, "Could not dump segment"};
+		}
+	}
+	
+	// Dump Master Playlist
+	if (DumpMasterPlaylist(dump_info) == false)
+	{
+		return {false, "Could not dump master playlist"};
+	}
+
+	return {true, ""};
+}
+
+std::tuple<bool, ov::String> LLHlsStream::StopDump(const std::shared_ptr<info::Dump> &dump_info)
+{
+	std::shared_lock<std::shared_mutex> lock(_dumps_lock);
+	auto it = _dumps.find(dump_info->GetId());
+	if (it == _dumps.end())
+	{
+		return {false, "Could not find dump info"};
+	}
+	auto dump_item = it->second;
+	lock.unlock();
+
+	dump_item->SetEnabled(false);
+
+	return {true, ""};
+}
+
+// Get dump info
+std::shared_ptr<const mdl::Dump> LLHlsStream::GetDumpInfo(const ov::String &dump_id) const
+{
+	return nullptr;
+}
+
+// Get dumps
+std::vector<std::shared_ptr<const mdl::Dump>> LLHlsStream::GetDumpInfoList() const
+{
+	return {};
 }

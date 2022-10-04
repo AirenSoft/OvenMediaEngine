@@ -15,3 +15,4 @@
 #include "./record.h"
 #include "./stream.h"
 #include "./virtual_host.h"
+#include "./dump.h"

@@ -48,6 +48,7 @@ LOCAL_STATIC_LIBRARIES := \
 	monitoring \
 	jsoncpp \
 	file \
+	dump \
 	rtmp \
 	file_provider \
 
