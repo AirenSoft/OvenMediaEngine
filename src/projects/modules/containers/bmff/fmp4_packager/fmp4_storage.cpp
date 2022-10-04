@@ -18,6 +18,8 @@ namespace bmff
 		_config = config;
 		_track = track;
 		_observer = observer;
+
+		_target_segment_duration_ms = _config.segment_duration_ms;
 	}
 
 	std::shared_ptr<ov::Data> FMP4Storage::GetInitializationSection() const
@@ -119,45 +121,15 @@ namespace bmff
 		return true;
 	}
 
-	bool FMP4Storage::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent)
+	uint64_t FMP4Storage::GetTargetSegmentDuration() const
 	{
-		// if (_start_timestamp_delta == -1)
-		// {
-		// 	_start_timestamp_delta = start_timestamp;
-		// }
+		return _target_segment_duration_ms;
+	}
 
-		// start_timestamp = start_timestamp - _start_timestamp_delta;
-
+	bool FMP4Storage::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent, bool last_chunk)
+	{
 		auto segment = GetLastSegment();
 
-		// Complete Segment if segment duration is over and new chunk data is independent(new segment should be started with independent chunk)
-		if (segment != nullptr && segment->GetDuration() + duration_ms > _config.segment_duration_ms && independent == true)
-		{
-			segment->SetCompleted();
-
-			// Notify observer
-			if (_observer != nullptr)
-			{
-				_observer->OnMediaSegmentUpdated(_track->GetId(), segment->GetNumber());
-			}
-			
-			logtd("Segment[%u] is created : track(%u), duration(%u) chunks(%u)", segment->GetNumber(), _track->GetId(),segment->GetDuration(), segment->GetChunkCount());
-
-#if DEBUG
-			static bool dump = ov::Converter::ToBool(std::getenv("OME_DUMP_LLHLS"));
-			if (dump)
-			{
-				auto file_name = ov::String::FormatString("%s_%u.mp4", StringFromMediaType(_track->GetMediaType()).CStr(), segment->GetNumber());
-
-				auto dump_data = std::make_shared<ov::Data>(1000*1000);
-				dump_data->Append(GetInitializationSection());
-				dump_data->Append(segment->GetData());
-
-				ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/llhls"), file_name), dump_data);
-			}
-#endif
-		}
-		
 		if (segment == nullptr || segment->IsCompleted())
 		{
 			// Create new segment
@@ -179,6 +151,24 @@ namespace bmff
 		if (segment->AppendChunkData(chunk, start_timestamp, duration_ms, independent) == false)
 		{
 			return false;
+		}
+
+		// Complete Segment if segment duration is over and new chunk data is independent(new segment should be started with independent chunk)
+		if (last_chunk == true)
+		{
+			segment->SetCompleted();
+
+			// Notify observer
+			if (_observer != nullptr)
+			{
+				_observer->OnMediaSegmentUpdated(_track->GetId(), segment->GetNumber());
+			}
+			
+			logtd("Segment[%u] is created : track(%u), duration(%u) chunks(%u)", segment->GetNumber(), _track->GetId(),segment->GetDuration(), segment->GetChunkCount());
+
+			// avg segment duration 
+			_target_segment_duration_ms -= segment->GetDuration();
+			_target_segment_duration_ms += _config.segment_duration_ms;
 		}
 
 		_max_chunk_duration_ms = std::max(_max_chunk_duration_ms, duration_ms);

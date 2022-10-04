@@ -23,6 +23,8 @@ namespace bmff
 	{
 		_storage = storage;
 		_config = config;
+
+		_target_chunk_duration_ms = _config.chunk_duration_ms;
 	}
 
 	// Generate Initialization FMP4Segment
@@ -147,8 +149,8 @@ namespace bmff
 	bool FMP4Packager::AppendSample(const std::shared_ptr<const MediaPacket> &media_packet)
 	{
 		// Convert bitstream format
-		auto converted_packet = ConvertBitstreamFormat(media_packet);
-		if (converted_packet == nullptr)
+		auto next_frame = ConvertBitstreamFormat(media_packet);
+		if (next_frame == nullptr)
 		{
 			// Never reached
 			logtc("Failed to convert bitstream format");
@@ -163,24 +165,43 @@ namespace bmff
 			// with the exception of Partial Segments with the INDEPENDENT=YES attribute 
 			// and the final Partial Segment of any Parent Segment.
 
+			auto last_segment = _storage->GetLastSegment();
+			bool last_partial_segment = false;
+			if (last_segment != nullptr && last_segment->IsCompleted() == false)
+			{
+				// https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-4.4.4.9
+				// The duration of a Partial Segment MUST be less than or equal to the
+				// Part Target Duration.  The duration of each Partial Segment MUST be
+				// at least 85% of the Part Target Duration, with the exception of
+				// Partial Segments with the INDEPENDENT=YES attribute and the final
+				// Partial Segment of any Parent Segment.
+				if (_target_chunk_duration_ms + last_segment->GetDuration() >= _storage->GetTargetSegmentDuration())
+				{
+					// Last partial segment
+					last_partial_segment = true;
+				}
+			}
+
+			bool next_frame_is_idr = (next_frame->GetFlag() == MediaPacketFlag::Key) || (GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio);
+
 			// Calculate duration as milliseconds
 			double total_duration = _samples_buffer->GetTotalDuration();
-			double expected_duration = total_duration + converted_packet->GetDuration();
+			double expected_duration = total_duration + next_frame->GetDuration();
 
 			double total_duration_ms = (static_cast<double>(total_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
 			double expected_duration_ms = (static_cast<double>(expected_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
 
-			// 1. When adding samples, if the Part Target Duration is exceeded, a chunk is created immediately.
-			// 2. If it exceeds 85% and the next sample is independent, a chunk is created. This makes the next chunk start independent.
-			
+			// - In the last partial segment, if the next frame is a keyframe, a segment is created immediately. This allows the segment to start with a keyframe.
+			// - When adding samples, if the Part Target Duration is exceeded, a chunk is created immediately.
+			// - If it exceeds 85% and the next sample is independent, a chunk is created. This makes the next chunk start independent.
 			if ( 
-				((total_duration_ms >= _config.chunk_duration_ms)) ||
+				   (last_partial_segment == true && 
+					GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && 
+					next_frame->GetFlag() == MediaPacketFlag::Key)
 
-				((expected_duration_ms > _config.chunk_duration_ms) && (total_duration_ms >= _config.chunk_duration_ms * 0.85)) || 
+				|| (total_duration_ms >= _target_chunk_duration_ms) 
 
-				( (GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && 
-					total_duration_ms >= _config.chunk_duration_ms * 0.85 && 
-					converted_packet->GetFlag() == MediaPacketFlag::Key) ) 
+				|| ((expected_duration_ms > _target_chunk_duration_ms) && (total_duration_ms >= _target_chunk_duration_ms * 0.85)) 
 				)
 			{
 				double reserve_buffer_size;
@@ -188,12 +209,12 @@ namespace bmff
 				if (GetMediaTrack()->GetMediaType() == cmn::MediaType::Video)
 				{
 					// Reserve 10 Mbps.
-					reserve_buffer_size = ((double)GetConfig().chunk_duration_ms / 1000.0) * ((10.0 * 1000.0 * 1000.0) / 8.0);
+					reserve_buffer_size = (_target_chunk_duration_ms / 1000.0) * ((10.0 * 1000.0 * 1000.0) / 8.0);
 				}
 				else
 				{
 					// Reserve 0.5 Mbps.
-					reserve_buffer_size = ((double)GetConfig().chunk_duration_ms / 1000.0) * ((0.5 * 1000.0 * 1000.0) / 8.0);
+					reserve_buffer_size = (_target_chunk_duration_ms / 1000.0) * ((0.5 * 1000.0 * 1000.0) / 8.0);
 				}
 
 				ov::ByteStream chunk_stream(reserve_buffer_size);
@@ -220,13 +241,21 @@ namespace bmff
 				}
 
 				auto chunk = chunk_stream.GetDataPointer();
-				if (AppendMediaChunk(chunk, _samples_buffer->GetStartTimestamp(), total_duration_ms, _samples_buffer->IsIndependent()) == false)
+
+				if (_storage != nullptr && _storage->AppendMediaChunk(chunk, 
+												_samples_buffer->GetStartTimestamp(), 
+												total_duration_ms, 
+												_samples_buffer->IsIndependent(), (last_partial_segment && next_frame_is_idr)) == false)
 				{
 					logte("FMP4Packager::AppendSample() - Failed to store media chunk");
 					return false;
 				}
 
 				_samples_buffer.reset();
+
+				// Set the average chunk duration to config.chunk_duration_ms
+				// _target_chunk_duration_ms -= total_duration_ms;
+				// _target_chunk_duration_ms += _config.chunk_duration_ms;
 			}
 		}
 
@@ -235,7 +264,7 @@ namespace bmff
 			_samples_buffer = std::make_shared<Samples>();
 		}
 
-		if (_samples_buffer->AppendSample(converted_packet) == false)
+		if (_samples_buffer->AppendSample(next_frame) == false)
 		{
 			logte("FMP4Packager::AppendSample() - Failed to append sample");
 			return false;
@@ -258,21 +287,6 @@ namespace bmff
 		}
 
 		if (_storage->StoreInitializationSection(section) == false)
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	bool FMP4Packager::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent)
-	{
-		if (chunk == nullptr || _storage == nullptr)
-		{
-			return false;
-		}
-
-		if (_storage->AppendMediaChunk(chunk, start_timestamp, duration_ms, independent) == false)
 		{
 			return false;
 		}

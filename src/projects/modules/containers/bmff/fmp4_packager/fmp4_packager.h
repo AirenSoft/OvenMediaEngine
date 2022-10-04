@@ -21,7 +21,8 @@ namespace bmff
 	public:
 		struct Config
 		{
-			double chunk_duration_ms = 1000.0;
+			double chunk_duration_ms = 500.0;
+			double segment_duration_ms = 6000.0;
 		};
 
 		FMP4Packager(const std::shared_ptr<FMP4Storage> &storage, const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<const MediaTrack> &data_track, const Config &config);
@@ -42,7 +43,6 @@ namespace bmff
 		std::shared_ptr<bmff::Packager::Samples> GetDataSamples(int64_t start_timestamp, int64_t end_timestamp);
 
 		bool StoreInitializationSection(const std::shared_ptr<ov::Data> &segment);
-		bool AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent);
 
 		std::shared_ptr<const MediaPacket> ConvertBitstreamFormat(const std::shared_ptr<const MediaPacket> &media_packet);
 
@@ -51,6 +51,8 @@ namespace bmff
 		Config _config;
 		std::shared_ptr<FMP4Storage> _storage = nullptr;
 		std::shared_ptr<Samples> _samples_buffer = nullptr;
+
+		double _target_chunk_duration_ms = 0.0;
 
 		std::queue<std::shared_ptr<const MediaPacket>> _reserved_data_packets;
 	};

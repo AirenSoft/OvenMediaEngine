@@ -40,10 +40,12 @@ namespace bmff
 		int64_t GetLastSegmentNumber() const;
 
 		bool StoreInitializationSection(const std::shared_ptr<ov::Data> &section);
-		bool AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent);
+		bool AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent, bool last_chunk);
 
 		uint64_t GetMaxChunkDurationMs() const;
 		uint64_t GetMinChunkDurationMs() const;
+
+		uint64_t GetTargetSegmentDuration() const;
 
 	private:
 		Config	_config;
@@ -62,6 +64,8 @@ namespace bmff
 
 		double _max_chunk_duration_ms = 0;
 		double _min_chunk_duration_ms = std::numeric_limits<uint64_t>::max();
+
+		uint64_t _target_segment_duration_ms = 0;
 
 		std::shared_ptr<FMp4StorageObserver> _observer;
 	};

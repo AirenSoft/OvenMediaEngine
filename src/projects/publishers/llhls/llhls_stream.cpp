@@ -50,6 +50,7 @@ bool LLHlsStream::Start()
 	auto dump_config = llhls_config.GetDumps();
 
 	_packager_config.chunk_duration_ms = llhls_config.GetChunkDuration() * 1000.0;
+	_packager_config.segment_duration_ms = llhls_config.GetSegmentDuration() * 1000.0;
 	_storage_config.max_segments = llhls_config.GetSegmentCount();
 	_storage_config.segment_duration_ms = llhls_config.GetSegmentDuration() * 1000;
 
