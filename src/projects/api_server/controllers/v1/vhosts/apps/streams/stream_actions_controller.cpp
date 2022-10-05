@@ -174,11 +174,10 @@ namespace api
 									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), stream->GetName().CStr());
 			}
 
-			if (dump_info->GetId().IsEmpty() == true || 
-				dump_info->GetStreamName().IsEmpty() == true)
+			if (dump_info->GetStreamName().IsEmpty() == true)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest,
-									  "id and outputStreamName are required");
+									  "outputStreamName is required");
 			}
 
 			auto output_stream_it = std::find_if(output_streams.begin(), output_streams.end(), [&](const auto &output_stream) {

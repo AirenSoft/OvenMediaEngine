@@ -1004,15 +1004,32 @@ std::tuple<bool, ov::String> LLHlsStream::StartDump(const std::shared_ptr<info::
 std::tuple<bool, ov::String> LLHlsStream::StopDump(const std::shared_ptr<info::Dump> &dump_info)
 {
 	std::shared_lock<std::shared_mutex> lock(_dumps_lock);
-	auto it = _dumps.find(dump_info->GetId());
-	if (it == _dumps.end())
-	{
-		return {false, "Could not find dump info"};
-	}
-	auto dump_item = it->second;
-	lock.unlock();
 
-	dump_item->SetEnabled(false);
+	if (dump_info->GetId().IsEmpty() == false)
+	{
+		auto it = _dumps.find(dump_info->GetId());
+		if (it == _dumps.end())
+		{
+			return {false, "Could not find dump info"};
+		}
+		auto dump_item = it->second;
+		dump_item->SetEnabled(false);
+
+		return {true, ""};
+	}
+	// All stop
+	else
+	{
+		for (const auto &it : _dumps)
+		{
+			auto dump_item = it.second;
+			dump_item->SetEnabled(false);
+		}
+
+		return {true, ""};
+	}
+
+	lock.unlock();
 
 	return {true, ""};
 }
