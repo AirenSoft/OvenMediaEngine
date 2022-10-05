@@ -778,8 +778,6 @@ namespace ocst
 	/// Delete PullStream
 	bool Orchestrator::RequestReleasePulledStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
-		logtc("Trying to release stream [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
-
 		auto pull_stream = GetPullStream(vhost_app_name, stream_name);
 		if (pull_stream == nullptr)
 		{
