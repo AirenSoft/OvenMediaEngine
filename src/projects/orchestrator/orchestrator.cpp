@@ -489,19 +489,21 @@ namespace ocst
 	}
 
 	bool Orchestrator::RequestPullStream(
-		const std::shared_ptr<const ov::Url> &request_from,
-		const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
-		const ov::String &url, off_t offset)
+			const std::shared_ptr<const ov::Url> &request_from,
+			const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
+			const std::vector<ov::String> &url_list, off_t offset)
 	{
+		if (url_list.empty() == true)
+		{
+			logtw("RequestPullStream must have at least one URL");
+			return false;
+		}
+
+		auto url = url_list[0];
 		auto parsed_url = ov::Url::Parse(url);
 
 		if (parsed_url != nullptr)
 		{
-			// The URL has a scheme
-			auto source = parsed_url->Source();
-
-			OV_ASSERT(url == source, "url and source must be the same, but url: %s, source: %s", url.CStr(), source.CStr());
-
 			std::shared_ptr<PullProviderModuleInterface> provider_module;
 			auto app_info = info::Application::GetInvalidApplication();
 			Result result = Result::Failed;
@@ -548,7 +550,7 @@ namespace ocst
 				  vhost_app_name.CStr(), stream_name.CStr(),
 				  GetModuleTypeName(provider_module->GetModuleType()).CStr());
 
-			auto stream = provider_module->PullStream(request_from, app_info, stream_name, {source}, offset, std::make_shared<pvd::PullStreamProperties>());
+			auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset, std::make_shared<pvd::PullStreamProperties>());
 
 			if (stream != nullptr)
 			{
@@ -595,6 +597,14 @@ namespace ocst
 		}
 
 		return false;
+	}
+
+	bool Orchestrator::RequestPullStream(
+		const std::shared_ptr<const ov::Url> &request_from,
+		const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
+		const ov::String &url, off_t offset)
+	{
+		return RequestPullStream(request_from, vhost_app_name, stream_name, {url}, offset);
 	}
 
 	// Pull a stream using Origin map

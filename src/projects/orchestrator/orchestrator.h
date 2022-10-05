@@ -114,6 +114,11 @@ namespace ocst
 			const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
 			const ov::String &url, off_t offset);
 
+		bool RequestPullStream(
+			const std::shared_ptr<const ov::Url> &request_from,
+			const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
+			const std::vector<ov::String> &url_list, off_t offset);
+
 		/// Pull a stream using specified URL
 		///
 		/// @param request_from Source from which RequestPullStream() invoked (Mainly provided when requested by Publisher)
