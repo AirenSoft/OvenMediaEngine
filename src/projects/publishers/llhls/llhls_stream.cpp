@@ -942,13 +942,21 @@ std::tuple<bool, ov::String> LLHlsStream::StartDump(const std::shared_ptr<info::
 		return {false, "Stream is not ready to dump"};
 	}
 
-	// Check duplicate ID
 	std::lock_guard<std::shared_mutex> lock(_dumps_lock);
 	
-	auto it = _dumps.find(info->GetId());
-	if (it != _dumps.end())
+	for (const auto &it : _dumps)
 	{
-		return {false, "Duplicate ID"};
+		// Check duplicate ID
+		if (it.second->GetId() == info->GetId())
+		{
+			return {false, "Duplicate ID"};
+		}
+
+		// Check duplicate infoFile
+		if (it.second->GetInfoFileUrl() == info->GetInfoFileUrl())
+		{
+			return {false, "Duplicate info file"};
+		}
 	}
 	
 	auto dump_info = std::make_shared<mdl::Dump>(info);
