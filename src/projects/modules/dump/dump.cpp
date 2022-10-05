@@ -50,7 +50,7 @@ namespace mdl
 				return false;
 			}
 
-			if (DumpToFile(GetInfoFilePath(), GetInfoFileName(), dump_history.ToData(), false) == false)
+			if (DumpToFile(GetInfoFilePath(), GetInfoFileName(), dump_history.ToData(false), false) == false)
 			{
 				return false;
 			}
