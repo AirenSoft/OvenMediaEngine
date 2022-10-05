@@ -799,6 +799,8 @@ bool LLHlsStream::IsReadyToPlay() const
 
 bool LLHlsStream::CheckPlaylistReady()
 {
+	// lock
+	std::lock_guard<std::shared_mutex> lock(_playlist_ready_lock);
 	if (_playlist_ready == true)
 	{
 		return true;
@@ -935,13 +937,6 @@ int64_t LLHlsStream::GetMinimumLastSegmentNumber() const
 
 std::tuple<bool, ov::String> LLHlsStream::StartDump(const std::shared_ptr<info::Dump> &info)
 {
-	if (IsReadyToPlay() == false)
-	{
-		// TODO(Getroot) : Emplace dump_info to _dumps before IsReadyToPlay state is changed (need lock). 
-		// It is also a good idea to test the directory creation before that.
-		return {false, "Stream is not ready to dump"};
-	}
-
 	std::lock_guard<std::shared_mutex> lock(_dumps_lock);
 	
 	for (const auto &it : _dumps)
@@ -958,10 +953,20 @@ std::tuple<bool, ov::String> LLHlsStream::StartDump(const std::shared_ptr<info::
 			return {false, "Duplicate info file"};
 		}
 	}
-	
+
 	auto dump_info = std::make_shared<mdl::Dump>(info);
 	dump_info->SetEnabled(true);
-	_dumps.emplace(dump_info->GetId(), dump_info);
+
+	// lock playlist ready
+	std::shared_lock<std::shared_mutex> lock_playlist_ready(_playlist_ready_lock);
+	if (IsReadyToPlay() == false)
+	{
+		// If the playlist is not ready, add it to the queue and wait for the playlist to be ready.
+		// It will work when the playlist is ready (CheckPlaylistReady()).
+		_dumps.emplace(dump_info->GetId(), dump_info);
+		return {true, ""};
+	}
+	lock_playlist_ready.unlock();
 
 	// Dump Init Segment for all tracks
 	std::shared_lock<std::shared_mutex> storage_lock(_storage_map_lock);
@@ -990,6 +995,8 @@ std::tuple<bool, ov::String> LLHlsStream::StartDump(const std::shared_ptr<info::
 	{
 		return {false, "Could not dump master playlist"};
 	}
+
+	_dumps.emplace(dump_info->GetId(), dump_info);
 
 	return {true, ""};
 }

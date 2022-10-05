@@ -140,6 +140,7 @@ private:
 	std::mutex _master_playlists_lock;
 
 	bool _playlist_ready = false;
+	mutable std::shared_mutex _playlist_ready_lock;
 
 	ov::Queue<std::shared_ptr<MediaPacket>> _initial_media_packet_buffer;
 
