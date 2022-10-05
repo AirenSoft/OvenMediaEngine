@@ -791,14 +791,14 @@ namespace ocst
 
 	bool Orchestrator::OnStreamCreated(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtc("%s/%s stream of %s is created", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
+		logtd("%s/%s stream of %s is created", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
 
 		return true;
 	}
 
 	bool Orchestrator::OnStreamDeleted(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtc("%s/%s stream of %s is deleted", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
+		logtd("%s/%s stream of %s is deleted", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
 
 		RemovePullStream(info->GetId());
 
