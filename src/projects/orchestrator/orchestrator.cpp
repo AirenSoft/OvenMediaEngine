@@ -552,6 +552,7 @@ namespace ocst
 
 			if (stream != nullptr)
 			{
+				StorePullStream(stream);
 				logti("The stream was pulled successfully: [%s/%s] (%u)",
 					  vhost_app_name.CStr(), stream_name.CStr(), stream->GetId());
 
@@ -696,42 +697,52 @@ namespace ocst
 
 		if (stream != nullptr)
 		{
-			auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
+			StorePullStream(stream);
+			return true;
 
-			auto stream_id = stream->GetId();
+			////////////////////////////////
+			// Comment(Getroot): 2022-10-05
+			// The code commented below exists for UpdateVirtualHosts. 
+			// However, since the UpdateVirtualHosts function is currently deprecated, comment out the code below. 
+			// If the UpdateVirtualHosts function is developed again in the future, consider the code below again.
+			////////////////////////////////
 
-			auto &origin_stream_map = matched_origin->stream_map;
-			auto exists_in_origin = (origin_stream_map.find(stream_id) != origin_stream_map.end());
+			// auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
-			auto key_pair = std::pair(host_name, vhost_app_name.GetAppName());
+			// auto stream_id = stream->GetId();
 
-			auto &host_stream_map = matched_host->stream_map[key_pair];
-			bool exists_in_domain = (host_stream_map.find(stream_id) != host_stream_map.end());
+			// auto &origin_stream_map = matched_origin->stream_map;
+			// auto exists_in_origin = (origin_stream_map.find(stream_id) != origin_stream_map.end());
 
-			if (exists_in_origin == exists_in_domain)
-			{
-				if (exists_in_origin == false)
-				{
-					// New stream
-					auto orchestrator_stream = std::make_shared<Stream>(app_info, provider_module, stream, ov::String::FormatString("%s/%s", vhost_app_name.CStr(), stream_name.CStr()));
+			// auto key_pair = std::pair(host_name, vhost_app_name.GetAppName());
 
-					origin_stream_map[stream_id] = orchestrator_stream;
-					host_stream_map[stream_id] = orchestrator_stream;
+			// auto &host_stream_map = matched_host->stream_map[key_pair];
+			// bool exists_in_domain = (host_stream_map.find(stream_id) != host_stream_map.end());
 
-					logti("The stream was pulled successfully: [%s/%s] (%u)", vhost_app_name.CStr(), stream_name.CStr(), stream_id);
-					return true;
-				}
+			// if (exists_in_origin == exists_in_domain)
+			// {
+			// 	if (exists_in_origin == false)
+			// 	{
+			// 		// New stream
+			// 		auto orchestrator_stream = std::make_shared<Stream>(app_info, provider_module, stream, ov::String::FormatString("%s/%s", vhost_app_name.CStr(), stream_name.CStr()));
 
-				// The stream exists
-				logti("The stream was pulled successfully (stream exists): [%s/%s] (%u)", vhost_app_name.CStr(), stream_name.CStr(), stream_id);
-				return true;
-			}
-			else
-			{
-				logtc("Out of sync: origin: %d, domain: %d (This is a bug)", exists_in_origin, exists_in_domain);
-				// TODO
-				// OV_ASSERT2(false);
-			}
+			// 		origin_stream_map[stream_id] = orchestrator_stream;
+			// 		host_stream_map[stream_id] = orchestrator_stream;
+
+			// 		logti("The stream was pulled successfully: [%s/%s] (%u)", vhost_app_name.CStr(), stream_name.CStr(), stream_id);
+			// 		return true;
+			// 	}
+
+			// 	// The stream exists
+			// 	logti("The stream was pulled successfully (stream exists): [%s/%s] (%u)", vhost_app_name.CStr(), stream_name.CStr(), stream_id);
+			// 	return true;
+			// }
+			// else
+			// {
+			// 	logtc("Out of sync: origin: %d, domain: %d (This is a bug)", exists_in_origin, exists_in_domain);
+			// 	// TODO
+			// 	// OV_ASSERT2(false);
+			// }
 		}
 
 		logte("Could not pull stream [%s/%s] from provider: %s",
@@ -764,16 +775,35 @@ namespace ocst
 		return false;
 	}
 
+	/// Delete PullStream
+	bool Orchestrator::RequestReleasePulledStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+	{
+		logtc("Trying to release stream [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
+
+		auto pull_stream = GetPullStream(vhost_app_name, stream_name);
+		if (pull_stream == nullptr)
+		{
+			return false;
+		}
+
+		pull_stream->Terminate();
+
+		return true;
+	}
+
 	bool Orchestrator::OnStreamCreated(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s/%s stream of %s is created", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
+		logtc("%s/%s stream of %s is created", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
 
 		return true;
 	}
 
 	bool Orchestrator::OnStreamDeleted(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s/%s stream of %s is deleted", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
+		logtc("%s/%s stream of %s is deleted", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
+
+		RemovePullStream(info->GetId());
+
 		return true;
 	}
 

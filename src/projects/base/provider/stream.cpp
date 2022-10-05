@@ -70,6 +70,12 @@ namespace pvd
 		return true;
 	}
 
+	bool Stream::Terminate()
+	{
+		_state = State::TERMINATED;
+		return true;
+	}
+
 	// Consider the reconnection time and add it to the base timestamp
 	void Stream::UpdateReconnectTimeToBaseTimestamp()
 	{

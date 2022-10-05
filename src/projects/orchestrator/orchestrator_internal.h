@@ -90,5 +90,14 @@ namespace ocst
 		std::map<ov::String, std::shared_ptr<VirtualHost>> _virtual_host_map;
 		// ordered vhost list
 		std::vector<std::shared_ptr<VirtualHost>> _virtual_host_list;
+
+		void StorePullStream(const std::shared_ptr<pvd::Stream> &stream);
+		void RemovePullStream(const info::stream_id_t &stream_id);
+		std::shared_ptr<pvd::Stream> GetPullStream(const info::stream_id_t &stream_id);
+		std::shared_ptr<pvd::Stream> GetPullStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
+
+		// stream id, stream
+		std::map<info::stream_id_t, std::shared_ptr<pvd::Stream>> _pull_stream_map;
+		std::shared_mutex _pull_stream_map_mutex;
 	};
 }  // namespace ocst

@@ -151,6 +151,9 @@ namespace ocst
 			return RequestPullStream(request_from, vhost_app_name, stream_name, 0);
 		}
 
+		/// Release Pulled Stream
+		bool RequestReleasePulledStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
+
 		/// Find Publisher from PublisehrType
 		std::shared_ptr<pub::Publisher> GetPublisherFromType(const PublisherType type);
 

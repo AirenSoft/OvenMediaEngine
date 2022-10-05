@@ -7,9 +7,8 @@
 //
 //==============================================================================
 #include "orchestrator_internal.h"
-
 #include <monitoring/monitoring.h>
-
+#include <base/provider/pull_provider/stream.h>
 #include "orchestrator_private.h"
 
 namespace ocst
@@ -913,4 +912,48 @@ namespace ocst
 
 		return info::Application::GetInvalidApplication();
 	}
+
+	void OrchestratorInternal::StorePullStream(const std::shared_ptr<pvd::Stream> &stream)
+	{
+		// lock
+		std::lock_guard<std::shared_mutex> lock(_pull_stream_map_mutex);
+		_pull_stream_map[stream->GetId()] = stream;
+	}
+	
+	void OrchestratorInternal::RemovePullStream(const info::stream_id_t &stream_id)
+	{
+		// lock
+		std::lock_guard<std::shared_mutex> lock(_pull_stream_map_mutex);
+		_pull_stream_map.erase(stream_id);
+	}
+
+	std::shared_ptr<pvd::Stream> OrchestratorInternal::GetPullStream(const info::stream_id_t &stream_id)
+	{
+		// lock
+		std::shared_lock<std::shared_mutex> lock(_pull_stream_map_mutex);
+		auto item = _pull_stream_map.find(stream_id);
+		if (item != _pull_stream_map.end())
+		{
+			return item->second;
+		}
+
+		return nullptr;
+	}
+
+	std::shared_ptr<pvd::Stream> OrchestratorInternal::GetPullStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+	{
+		// lock
+		std::shared_lock<std::shared_mutex> lock(_pull_stream_map_mutex);
+		for (auto &item : _pull_stream_map)
+		{
+			auto &stream = item.second;
+			if (stream->GetApplicationInfo().GetName() == vhost_app_name && stream->GetName() == stream_name)
+			{
+				return stream;
+			}
+		}
+
+		return nullptr;
+	}
+
 }  // namespace ocst

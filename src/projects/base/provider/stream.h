@@ -53,6 +53,7 @@ namespace pvd
 
 		virtual bool Start();
 		virtual bool Stop();
+		virtual bool Terminate();
 
 	protected:
 		Stream(const std::shared_ptr<pvd::Application> &application, StreamSourceType source_type);

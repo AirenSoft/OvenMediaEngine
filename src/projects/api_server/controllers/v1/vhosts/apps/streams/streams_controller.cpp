@@ -120,7 +120,17 @@ namespace api
 													  const std::shared_ptr<mon::ApplicationMetrics> &app,
 													  const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
-			return http::StatusCode::NotImplemented;
+			auto orchestrator = ocst::Orchestrator::GetInstance();
+
+			auto app_name = app->GetName();
+			auto stream_name = stream->GetName();
+
+			if (orchestrator->RequestReleasePulledStream(app_name, stream_name) == false)
+			{
+				throw http::HttpError(http::StatusCode::Forbidden, "Only pull streams can be deleted.");
+			}
+
+			return {http::StatusCode::OK};
 		}
 	}  // namespace v1
 }  // namespace api
