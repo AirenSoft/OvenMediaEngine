@@ -264,7 +264,7 @@ namespace pvd
 					{
 						// it will be deleted from WhiteElephantCollector
 						DelStreamFromEpoll(stream);
-						stream->Stop();
+						//stream->Stop();
 					}
 				}
 				else
