@@ -953,7 +953,7 @@ std::tuple<bool, ov::String> LLHlsStream::StartDump(const std::shared_ptr<info::
 		}
 
 		// Check duplicate infoFile
-		if (it.second->GetInfoFileUrl() == info->GetInfoFileUrl())
+		if ((it.second->GetInfoFileUrl().IsEmpty() == false) && it.second->GetInfoFileUrl() == info->GetInfoFileUrl())
 		{
 			return {false, "Duplicate info file"};
 		}
