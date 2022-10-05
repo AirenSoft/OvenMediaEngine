@@ -14,5 +14,5 @@
 namespace serdes
 {
 	std::shared_ptr<info::Dump>  DumpInfoFromJson(const Json::Value &json_body);
-	Json::Value JsonFromDumpInfo(const std::shared_ptr<info::Dump> &dump);
+	Json::Value JsonFromDumpInfo(const std::shared_ptr<const info::Dump> &dump);
 }  // namespace serdes

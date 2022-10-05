@@ -66,7 +66,7 @@ namespace serdes
 		return dump;
 	}
 
-	Json::Value JsonFromDumpInfo(const std::shared_ptr<info::Dump> &record)
+	Json::Value JsonFromDumpInfo(const std::shared_ptr<const info::Dump> &record)
 	{
 		Json::Value response(Json::ValueType::objectValue);
 

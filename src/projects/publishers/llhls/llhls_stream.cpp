@@ -1003,13 +1003,25 @@ std::tuple<bool, ov::String> LLHlsStream::StopDump(const std::shared_ptr<info::D
 }
 
 // Get dump info
-std::shared_ptr<const mdl::Dump> LLHlsStream::GetDumpInfo(const ov::String &dump_id) const
+std::shared_ptr<const mdl::Dump> LLHlsStream::GetDumpInfo(const ov::String &dump_id)
 {
-	return nullptr;
+	std::shared_lock<std::shared_mutex> lock(_dumps_lock);
+	auto it = _dumps.find(dump_id);
+	if (it == _dumps.end())
+	{
+		return nullptr;
+	}
+	return it->second;
 }
 
 // Get dumps
-std::vector<std::shared_ptr<const mdl::Dump>> LLHlsStream::GetDumpInfoList() const
+std::vector<std::shared_ptr<const mdl::Dump>> LLHlsStream::GetDumpInfoList()
 {
-	return {};
+	std::vector<std::shared_ptr<const mdl::Dump>> dump_list;
+	std::shared_lock<std::shared_mutex> lock(_dumps_lock);
+	for (const auto &it : _dumps)
+	{
+		dump_list.push_back(it.second);
+	}
+	return dump_list;
 }

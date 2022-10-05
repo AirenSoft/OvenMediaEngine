@@ -71,9 +71,9 @@ public:
 	std::tuple<bool, ov::String> StartDump(const std::shared_ptr<info::Dump> &dump_info);
 	std::tuple<bool, ov::String> StopDump(const std::shared_ptr<info::Dump> &dump_info);
 	// Get dump info
-	std::shared_ptr<const mdl::Dump> GetDumpInfo(const ov::String &dump_id) const;
+	std::shared_ptr<const mdl::Dump> GetDumpInfo(const ov::String &dump_id);
 	// Get dumps
-	std::vector<std::shared_ptr<const mdl::Dump>> GetDumpInfoList() const;
+	std::vector<std::shared_ptr<const mdl::Dump>> GetDumpInfoList();
 
 private:
 	bool Start() override;

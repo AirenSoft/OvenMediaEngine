@@ -33,7 +33,62 @@ namespace api
 									const std::shared_ptr<mon::StreamMetrics> &stream,
 									const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
-			return {http::StatusCode::InternalServerError, "Not implemented"};
+			auto dump_info = ::serdes::DumpInfoFromJson(request_body);
+			if (dump_info == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::BadRequest,
+									  "Could not parse json context: [%s/%s/%s]",
+									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), stream->GetName().CStr());
+			}
+
+			if (dump_info->GetStreamName().IsEmpty() == true)
+			{
+				throw http::HttpError(http::StatusCode::BadRequest,
+									  "outputStreamName is required");
+			}
+
+			auto output_stream_it = std::find_if(output_streams.begin(), output_streams.end(), [&](const auto &output_stream) {
+				return output_stream->GetName() == dump_info->GetStreamName();
+			});
+
+			if (output_stream_it == output_streams.end())
+			{
+				throw http::HttpError(http::StatusCode::NotFound,
+									  "Could not find output stream: [%s/%s/%s]",
+									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), dump_info->GetStreamName().CStr());
+			}
+
+			auto output_stream = *output_stream_it;
+			auto llhls_stream = GetLLHlsStream(output_stream);
+			if (llhls_stream == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::NotFound,
+									  "Could not find LLHLS stream: [%s/%s/%s]",
+									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), dump_info->GetStreamName().CStr());
+			}
+
+			Json::Value response = Json::Value(Json::arrayValue);
+			std::vector<std::shared_ptr<const mdl::Dump>> dumps;
+
+			if (dump_info->GetId().IsEmpty() == true)
+			{
+				dumps = llhls_stream->GetDumpInfoList();
+			}
+			else
+			{
+				auto info = llhls_stream->GetDumpInfo(dump_info->GetId());
+				if (info != nullptr)
+				{
+					dumps.push_back(info);
+				}
+			}
+
+			for (auto &dump : dumps)
+			{
+				response.append(::serdes::JsonFromDumpInfo(dump));
+			}
+			
+			return response;
 		}
 
 		// POST /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>:startHlsDump
@@ -123,7 +178,7 @@ namespace api
 				dump_info->GetStreamName().IsEmpty() == true)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest,
-									  "id, outputStreamName and outputPath are required");
+									  "id and outputStreamName are required");
 			}
 
 			auto output_stream_it = std::find_if(output_streams.begin(), output_streams.end(), [&](const auto &output_stream) {
