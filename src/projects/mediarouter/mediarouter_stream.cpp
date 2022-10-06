@@ -77,10 +77,8 @@ MediaRouteStream::~MediaRouteStream()
 	_stat_recv_pkt_ldts.clear();
 	_stat_recv_pkt_size.clear();
 	_stat_recv_pkt_count.clear();
-	_stat_first_time_diff.clear();
 
 	_pts_last.clear();
-	_dts_last.clear();
 }
 
 std::shared_ptr<info::Stream> MediaRouteStream::GetStream()
@@ -818,16 +816,6 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 	_stat_recv_pkt_size[track_id] += media_packet->GetData()->GetLength();
 	_stat_recv_pkt_count[track_id]++;
 
-	// 	Diffrence time of received first packet with uptime.
-	if (_stat_first_time_diff[track_id] == 0)
-	{
-		int64_t uptime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - _stat_start_time).count();
-
-		int64_t rescaled_last_pts = (int64_t)((double)(_stat_recv_pkt_lpts[track_id] * 1000) * _stream->GetTrack(track_id)->GetTimeBase().GetExpr());
-
-		_stat_first_time_diff[track_id] = uptime - rescaled_last_pts;
-	}
-
 	if (_stop_watch.IsElapsed(10000) && _stop_watch.Update())
 	{
 		// Uptime
@@ -841,7 +829,8 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 		for (const auto &[track_id, track] : _stream->GetTracks())
 		{
 			int64_t rescaled_last_pts = (int64_t)((double)(_stat_recv_pkt_lpts[track_id] * 1000) * track->GetTimeBase().GetExpr());
-			int64_t first_delay = _stat_first_time_diff[track_id];
+			
+			// Time difference in pts values relative to uptime
 			int64_t last_delay = uptime - rescaled_last_pts;
 
 
@@ -852,7 +841,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 										track->GetCodecId(),
 										track->IsBypass()?"Passthrough":GetStringFromCodecLibraryId(track->GetCodecLibraryId()).CStr(),
 										rescaled_last_pts,
-										(first_delay - last_delay) * -1,
+										last_delay,
 										track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(),
 										_stat_recv_pkt_count[track_id],
 										ov::Converter::ToSiString(_stat_recv_pkt_size[track_id], 1).CStr(),
@@ -1060,13 +1049,10 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		int64_t duration = media_packet->GetDts() - pop_media_packet->GetDts();
 		pop_media_packet->SetDuration(duration);
 
-		// logti("%lld / %lld / %d", pop_media_packet->GetPts(), pop_media_packet->GetDts(), pop_media_packet->GetDuration());
-
 		_media_packet_stash[media_packet->GetTrackId()] = std::move(media_packet);
 	}
 	else
 	{
-		
 		pop_media_packet = std::move(media_packet);
 
 		// The packet duration of data type is always 0.
@@ -1139,10 +1125,10 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		auto it = _pts_last.find(track_id);
 		if (it != _pts_last.end())
 		{
-			int64_t ts_inc = pop_media_packet->GetPts() - _pts_last[track_id];
-			int64_t ts_inc_ms = ts_inc * media_track->GetTimeBase().GetExpr();
+			int64_t ts_ms = pop_media_packet->GetPts() * media_track->GetTimeBase().GetExpr();
+			int64_t ts_diff_ms = ts_ms - _pts_last[track_id];
 
-			if (std::abs(ts_inc_ms) > PTS_CORRECT_THRESHOLD_MS)
+			if (std::abs(ts_diff_ms) > PTS_CORRECT_THRESHOLD_MS)
 			{
 				if (IsImageCodec(media_track->GetCodecId()) == false)
 				{
@@ -1154,13 +1140,12 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 						  pop_media_packet->GetPts(),
 						  media_track->GetTimeBase().GetNum(),
 						  media_track->GetTimeBase().GetDen(),
-						  ts_inc_ms);
+						  ts_diff_ms);
 				}
 			}
-		}
 
-		_pts_last[track_id] = pop_media_packet->GetPts();
-		_dts_last[track_id] = pop_media_packet->GetDts();
+			_pts_last[track_id] = ts_ms;
+		}
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
