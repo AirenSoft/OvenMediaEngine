@@ -126,3 +126,40 @@ If you use the default configuration, you can start streaming with the following
 `https://domain:3334/app/<stream name>/llhls.m3u8`
 
 We have prepared a test player that you can quickly see if OvenMediaEngine is working. Please refer to the [Test Player](../test-player.md) for more information.
+
+
+
+## Dump
+
+You can dump the LLHLS stream for VoD. You can enable it by setting the following in `<Application><Publishers><LLHLS>`.
+
+```xml
+<LLHLS>
+<Dumps>
+	<Dump>
+		<Enable>true</Enable>
+		<TargetStreamName>stream*</TargetStreamName>
+		
+		<Playlists>
+			<Playlist>llhls.m3u8</Playlist>
+			<Playlist>abr.m3u8</Playlist>
+		</Playlists>
+
+		<OutputPath>/service/www/ome-dev.airensoft.com/html/${VHostName}_${AppName}_${StreamName}/</OutputPath>
+	</Dump>
+</Dumps>
+        ...
+</LLHLS>
+```
+
+**TargetStreamName**
+
+&#x20;   The name of the stream to dump to. You can use \* and ? to filter stream names.
+
+**Playlists**
+
+&#x20;   The name of the master playlist file to be dumped together.
+
+**OutputPath**
+
+&#x20;   The folder to output to. You can use ${VHostName}, ${AppName}, ${StreamName} macros. You must have write permission on the specified folder.
