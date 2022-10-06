@@ -491,7 +491,7 @@ namespace ocst
 	bool Orchestrator::RequestPullStream(
 			const std::shared_ptr<const ov::Url> &request_from,
 			const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
-			const std::vector<ov::String> &url_list, off_t offset)
+			const std::vector<ov::String> &url_list, off_t offset, std::shared_ptr<pvd::PullStreamProperties> properties)
 	{
 		if (url_list.empty() == true)
 		{
@@ -550,7 +550,8 @@ namespace ocst
 				  vhost_app_name.CStr(), stream_name.CStr(),
 				  GetModuleTypeName(provider_module->GetModuleType()).CStr());
 
-			auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset, std::make_shared<pvd::PullStreamProperties>());
+			
+			auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset, properties);
 
 			if (stream != nullptr)
 			{
@@ -1008,7 +1009,6 @@ namespace ocst
 		{
 			auto ovt_scheme = ov::String("ovt");
 			auto ovt_port = _server_config->GetBind().GetPublishers().GetOvt().GetPort().GetPort();
-			auto ovt_provider = GetProviderModuleForScheme(ovt_scheme);
 
 			auto vhost_name = app_info.GetName().GetVHostName();
 			auto app_name = app_info.GetName().GetAppName();
@@ -1037,8 +1037,12 @@ namespace ocst
 			// Relay = false
 			auto stream_props = std::make_shared<pvd::PullStreamProperties>(true, true, false);
 
-			// Request pull stream
-			ovt_provider->PullStream(std::make_shared<ov::Url>(), app_info, new_stream_name.CStr(), url_list, 0,  stream_props);
+ 			// Request pull stream
+			if( RequestPullStream(nullptr, app_info.GetName(), new_stream_name, url_list, 0, stream_props) == false)
+			{
+				logte("Could not create persistent stream : %s/%s", app_name.CStr(), new_stream_name.CStr());
+				return CommonErrorCode::ERROR;
+			}
 		}
 
 		return CommonErrorCode::SUCCESS;
