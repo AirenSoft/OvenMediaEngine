@@ -345,15 +345,19 @@ namespace pvd
 			// Options
 			auto json_options = json_playlist["options"];
 
-			// Validate
-			if (!json_options["webrtcAutoAbr"].isBool())
+			if (json_options.isNull() == false)
 			{
-				SetState(State::ERROR);
-				logte("Invalid json payload : playlist options");
-				return false;
+				// Validate
+				if (json_options["webrtcAutoAbr"].isBool())
+				{
+					playlist->SetWebRtcAutoAbr(json_options["webrtcAutoAbr"].asBool());
+				}
+
+				if (json_options["hlsChunklistPathDepth"].isInt())
+				{
+					playlist->SetHlsChunklistPathDepth(json_options["hlsChunklistPathDepth"].asInt());
+				}
 			}
-			
-			playlist->SetWebRtcAutoAbr(json_options["webrtcAutoAbr"].asBool());
 
 			for (size_t j = 0; j < json_playlist["renditions"].size(); j++)
 			{

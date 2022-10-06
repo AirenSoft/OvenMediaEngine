@@ -64,6 +64,16 @@ namespace info
 			return _webrtc_auto_abr;
 		}
 
+		void SetHlsChunklistPathDepth(int depth)
+		{
+			_hls_chunklist_path_depth = depth;
+		}
+
+		int GetHlsChunklistPathDepth() const
+		{
+			return _hls_chunklist_path_depth;
+		}
+
 		// Append Rendition
 		void AddRendition(const std::shared_ptr<Rendition> &rendition)
 		{
@@ -92,6 +102,7 @@ namespace info
 		ov::String _file_name;
 
 		bool _webrtc_auto_abr = false;
+		int _hls_chunklist_path_depth = -1;
 
 		std::vector<std::shared_ptr<Rendition>> _renditions;
 	};

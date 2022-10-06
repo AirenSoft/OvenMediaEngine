@@ -178,7 +178,27 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 {
 	auto master_playlist = std::make_shared<LLHlsMasterPlaylist>();
 
-	master_playlist->SetChunkPath(ov::String::FormatString("/%s/%s/", GetApplication()->GetName().GetAppName().CStr(), GetName().CStr()));
+	ov::String chunk_path;
+	ov::String app_name = GetApplicationInfo().GetName().GetAppName();
+	ov::String stream_name = GetName();
+	switch(playlist->GetHlsChunklistPathDepth())
+	{
+		case 0:
+			chunk_path = "";
+			break;
+		case 1:
+			chunk_path = ov::String::FormatString("../%s/", stream_name.CStr());
+			break;
+		case 2:
+			chunk_path = ov::String::FormatString("../../%s/%s/", app_name.CStr(), stream_name.CStr());
+			break;
+		case -1:
+		default:
+			chunk_path = ov::String::FormatString("/%s/%s/", app_name.CStr(), stream_name.CStr());
+			break;
+	}
+
+	master_playlist->SetChunkPath(chunk_path);
 
 	// Add all media candidates to master playlist
 	for (const auto &[track_id, track] : GetTracks())
