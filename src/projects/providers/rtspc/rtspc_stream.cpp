@@ -995,7 +995,7 @@ namespace pvd
 				return;
 			}
 
-			timestamp = AdjustTimestampByBase(channel, pts.value(), std::numeric_limits<uint64_t>::max());
+			timestamp = AdjustTimestampByBase(channel, pts.value(), pts.value(), std::numeric_limits<uint64_t>::max());
 		}
 		else if(_pts_calculation_method == PtsCalculationMethod::SINGLE_DELTA)
 		{

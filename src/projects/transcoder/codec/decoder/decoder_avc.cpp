@@ -150,10 +150,8 @@ void DecoderAVC::CodecThread()
 				{
 					// If only SPS/PPS Nalunit is entered in the decoder, an invalid data error occurs.
 					// There is no particular problem.
-					// logtd("Invalid data found when processing input. pts(%lld), dts(%lld), duration(%lld)", (int64_t)((double)pts * _stream_info.GetTrack(buffer->GetTrackId())->GetTimeBase().GetExpr() * 1000), (int64_t)((double)dts * _stream_info.GetTrack(buffer->GetTrackId())->GetTimeBase().GetExpr() * 1000), duration);
-
 					auto empty_frame = std::make_shared<MediaFrame>();
-					empty_frame->SetPts(pts);
+					empty_frame->SetPts(dts);
 					empty_frame->SetMediaType(cmn::MediaType::Video);
 
 					SendOutputBuffer(TranscodeResult::NoData, std::move(empty_frame));

@@ -107,7 +107,7 @@ namespace pvd
 							
 								auto ping_props = std::make_shared<pvd::PullStreamProperties>();
 								ping_props->SetRetryConnectCount(0);
-								auto ping = CreateStream(0, "_PING_FOR_FAILBACK_", {failback_url}, ping_props);
+								auto ping = CreateStream(0, "_ping_for_failback_", {failback_url}, ping_props);
 								if (ping)
 								{
 									auto state = ping->GetState() ;

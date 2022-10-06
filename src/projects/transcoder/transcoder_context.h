@@ -173,6 +173,23 @@ public:
 		return _flags;
 	}
 
+	// 데이터를 빈값으로 채움
+	// FillZero
+	void FillZeroData()
+	{
+		if(!_priv_data) {
+			return;
+		}
+
+		for (int i = 0; i < AV_NUM_DATA_POINTERS; i++)
+		{
+			if(_priv_data->linesize[i] > 0)
+			{
+				memset(_priv_data->data[i], 0, _priv_data->linesize[i]);
+			}	
+		}
+	}
+
 	// This function should only be called before filtering (_track_id 0, 1)
 	std::shared_ptr<MediaFrame> CloneFrame()
 	{

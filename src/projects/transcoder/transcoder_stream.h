@@ -153,6 +153,11 @@ private:
 	// ENCODER_ID, ENCODER
 	std::map<MediaTrackId, std::shared_ptr<TranscodeEncoder>> _encoders;
 
+	// Last timestamp decoded frame. 
+	// DECODER_ID, Timestamp(microseconds)
+	std::map<MediaTrackId, int64_t> _last_decoded_frame_pts;
+
+
 	std::shared_ptr<MediaTrack> GetInputTrack(MediaTrackId track_id);
 
 	int32_t CreateOutputStreamDynamic();

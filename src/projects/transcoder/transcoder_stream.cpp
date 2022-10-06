@@ -15,7 +15,7 @@
 #include "transcoder_private.h"
 
 #define MAX_QUEUE_SIZE 100
-
+#define GENERATE_FILLER_FRAME true
 TranscoderStream::TranscoderStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &stream, TranscodeApplication *parent)
 	: _parent(parent), _application_info(application_info), _input_stream(stream)
 {
@@ -40,6 +40,8 @@ TranscoderStream::~TranscoderStream()
 	_stage_filter_to_encoder.clear();
 	_stage_encoder_to_outputs.clear();
 
+	_last_decoded_frame_pts.clear();
+	
 	_output_streams.clear();
 
 	_last_decoded_frames.clear();
@@ -1101,8 +1103,15 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, int32_t decoder_id
 
 	switch (result)
 	{
-		// Distribute the last decoded frame to the Filter
 		case TranscodeResult::NoData: {
+ #if GENERATE_FILLER_FRAME
+			///////////////////////////////////////////////////////////////////
+			// Generate a filler frame (Part 1). * Using previously decoded frame
+			///////////////////////////////////////////////////////////////////
+			// - It is mainly used in Persistent Stream.
+			// - When the input stream is switched, decoding fails until a KeyFrame is received. 
+			//   If the keyframe interval is longer than the buffered length of the player, buffering occurs in the player.
+			//   Therefore, the number of frames in which decoding fails is replaced with the last decoded frame and used as a filler frame.
 			auto last_frame = GetLastDecodedFrame(decoder_id);
 			if (last_frame == nullptr)
 			{
@@ -1116,29 +1125,112 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, int32_t decoder_id
 				break;
 			}
 
-			// The decoded frame pts should be modified to fit the Timebase of the filter input.
 			double input_expr = input_track->GetTimeBase().GetExpr();
 			double filter_expr = filter_context->GetTimeBase().GetExpr();
+
+			if(last_frame->GetPts()*filter_expr >= decoded_frame->GetPts()*input_expr)
+			{
+				break;
+			}
+
+			// The decoded frame pts should be modified to fit the Timebase of the filter input.
 			last_frame->SetPts((int64_t)((double)decoded_frame->GetPts() * input_expr / filter_expr));
+
+			// Record the timestamp of the last decoded frame. managed by microseconds.
+			_last_decoded_frame_pts[decoder_id] = last_frame->GetPts() * filter_expr * 1000000;
 
 			// Send Temorary Frame to Filter
 			SpreadToFilters(decoder_id, last_frame);
+#endif // End of Filler Frame Generation
 		}
 		break;
 
 		// It indicates output format is changed
 		case TranscodeResult::FormatChanged: {
-			// Re-create filter and encoder using the format
+
+			// Re-create filter and encoder using the format of decoded frame
 			ChangeOutputFormat(decoded_frame.get());
+
+ #if GENERATE_FILLER_FRAME
+			///////////////////////////////////////////////////////////////////
+			// Generate a filler frame (Part 2). * Using latest decoded frame
+			///////////////////////////////////////////////////////////////////
+			// - It is mainly used in Persistent Stream.
+			// - When the input stream is changed, an empty section occurs in sequential frames. There is a problem with the A/V sync in the player.
+			//   If there is a section where the frame is empty, may be out of sync in the player.
+			//   Therefore, the filler frame is inserted in the hole of the sequential frame.
+			auto it = _last_decoded_frame_pts.find(decoder_id);
+			if(it != _last_decoded_frame_pts.end())
+			{
+				auto input_track = GetInputTrack(decoder_id);
+				if(!input_track)
+				{
+					logte("Could not found input track. decoder_id(%d)", decoder_id);
+					return;
+				}
+
+				int64_t frame_hole_time_us = (int64_t)((double)decoded_frame->GetPts() * input_track->GetTimeBase().GetExpr() * 1000000) - (int64_t)it->second;
+				if(frame_hole_time_us > 0)
+				{
+					int32_t number_of_filler_frames_needed = 0;
+
+					switch(input_track->GetMediaType())
+					{
+						case cmn::MediaType::Video:
+							number_of_filler_frames_needed = (int32_t)(((double)frame_hole_time_us/1000000) / (1.0f / input_track->GetFrameRate()));
+							break;
+						case cmn::MediaType::Audio:
+							number_of_filler_frames_needed = (int32_t)(((double)frame_hole_time_us/1000000) / (input_track->GetTimeBase().GetExpr() * (double)decoded_frame->GetNbSamples()));
+							break;
+						default:
+							break;
+					}
+
+					logtd("Number of fillter frames needed. decoder_id:%d, needed_frames:%d", decoder_id, number_of_filler_frames_needed);
+
+					if(number_of_filler_frames_needed > 0)					
+					{
+						int64_t frame_hole_time_tb = (int64_t)((double)frame_hole_time_us / input_track->GetTimeBase().GetExpr() / 1000000);
+						int64_t frame_duration_avg = frame_hole_time_tb / number_of_filler_frames_needed;
+						int64_t start_pts = decoded_frame->GetPts() - frame_hole_time_tb + frame_duration_avg;
+						int64_t end_pts = decoded_frame->GetPts();
+						
+						for(int64_t filler_pts = start_pts ; filler_pts < end_pts ; filler_pts+=frame_duration_avg)
+						{
+							// logtd("Spread to filter. [%d], filter_frame_pts(%lld), avg_frame_duration(%lld)", decoder_id, filler_pts, frame_duration_avg);
+
+							// TODO(soulk): More tests are needed.
+							// Video frames do not create filler frames. 
+							// Even if there are no filler frames of the video type, there is no problem with AV sync in the player.
+							if (input_track->GetMediaType() == cmn::MediaType::Audio)
+							{
+								auto cloned_filler_frame = decoded_frame->CloneFrame();
+								cloned_filler_frame->SetPts(filler_pts);
+
+								// Fill the silence in the audio frame.
+								cloned_filler_frame->FillZeroData();
+								SpreadToFilters(decoder_id, cloned_filler_frame);
+							}
+						}
+					}
+				}
+			} 
+#endif // End of Filler Frame Generation	
 
 			[[fallthrough]];
 		}
-		// The last decoded frame is temporarily stored and distributed to the filter.
+		
 		case TranscodeResult::DataReady: {
-			// Save to Temporary Frame
+
+			auto input_track = GetInputTrack(decoder_id);
+
+			// Record the timestamp of the last decoded frame. managed by microseconds.
+			_last_decoded_frame_pts[decoder_id] = decoded_frame->GetPts() * input_track->GetTimeBase().GetExpr() * 1000000;
+
+			// The last decoded frame is kept and used as a filling frame in the blank section.
 			SetLastDecodedFrame(decoder_id, decoded_frame);
 
-			// Send New Frame to Filter
+			// 
 			SpreadToFilters(decoder_id, decoded_frame);
 		}
 		break;
@@ -1361,7 +1453,7 @@ void TranscoderStream::CreateFilters(MediaFrame *buffer)
 		bool ret = filter->Configure(filter_id, input_track, output_track, bind(&TranscoderStream::OnFilteredFrame, this, std::placeholders::_1, std::placeholders::_2));
 		if (ret != true)
 		{
-			logte("%s Failed to create filter. filterId: %d", _log_prefix.CStr(), filter_id);
+			logte("%s `ed to create filter. filterId: %d", _log_prefix.CStr(), filter_id);
 			continue;
 		}
 

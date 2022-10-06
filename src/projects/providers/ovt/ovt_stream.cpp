@@ -692,7 +692,7 @@ namespace pvd
 				media_packet->SetMsid(GetMsid());
 				media_packet->SetPacketType(cmn::PacketType::OVT);
 
-				auto pts = AdjustTimestampByBase(media_packet->GetTrackId(), media_packet->GetPts(), std::numeric_limits<int64_t>::max());
+				auto pts = AdjustTimestampByBase(media_packet->GetTrackId(), media_packet->GetPts(), media_packet->GetDts(), std::numeric_limits<int64_t>::max());
 				auto dts = media_packet->GetDts() + (pts - media_packet->GetPts());
 				[[maybe_unused]] auto old_pts = media_packet->GetPts();
 				[[maybe_unused]] auto old_dts = media_packet->GetDts();
