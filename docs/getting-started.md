@@ -42,7 +42,7 @@ OvenMediaEngine-master/misc/prerequisites.sh
 ```
 
 {% hint style="info" %}
-If the prerequisites.sh script fails, proceed with the [manual installation](troubleshooting.md#prerequisites-sh-script-failed).
+If the prerequisites.sh script fails, try to run `sudo apt-get update` and rerun it. If it's not enough proceed with the [manual installation](troubleshooting.md#prerequisites-sh-script-failed).
 {% endhint %}
 
 ### \*\*\*\*
