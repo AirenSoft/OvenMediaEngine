@@ -551,6 +551,17 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::G
 	return { RequestResult::Success, chunk->GetData() };
 }
 
+void LLHlsStream::BufferMediaPacketUntilReadyToPlay(const std::shared_ptr<MediaPacket> &media_packet)
+{
+	if (_initial_media_packet_buffer.Size() >= MAX_INITIAL_MEDIA_PACKET_BUFFER_SIZE)
+	{
+		// Drop the oldest packet, for OOM protection
+		_initial_media_packet_buffer.Dequeue(0);
+	}
+
+	_initial_media_packet_buffer.Enqueue(media_packet);
+}
+
 bool LLHlsStream::SendBufferedPackets()
 {
 	logtd("SendBufferedPackets - BufferSize (%u)", _initial_media_packet_buffer.Size());
@@ -578,9 +589,9 @@ bool LLHlsStream::SendBufferedPackets()
 
 void LLHlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (GetState() != State::STARTED)
+	if (GetState() == State::CREATED)
 	{
-		_initial_media_packet_buffer.Enqueue(media_packet);
+		BufferMediaPacketUntilReadyToPlay(media_packet);
 		return;
 	}
 
@@ -594,9 +605,9 @@ void LLHlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packe
 
 void LLHlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (GetState() != State::STARTED)
+	if (GetState() == State::CREATED)
 	{
-		_initial_media_packet_buffer.Enqueue(media_packet);
+		BufferMediaPacketUntilReadyToPlay(media_packet);
 		return;
 	}
 
@@ -616,9 +627,9 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 		return;
 	}
 
-	if (GetState() != State::STARTED)
+	if (GetState() == State::CREATED)
 	{
-		_initial_media_packet_buffer.Enqueue(media_packet);
+		BufferMediaPacketUntilReadyToPlay(media_packet);
 		return;
 	}
 

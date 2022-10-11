@@ -10,16 +10,6 @@ std::shared_ptr<ThumbnailStream> ThumbnailStream::Create(const std::shared_ptr<p
 														 const info::Stream &info)
 {
 	auto stream = std::make_shared<ThumbnailStream>(application, info);
-	if (!stream->Start())
-	{
-		return nullptr;
-	}
-
-	if (!stream->CreateStreamWorker(2))
-	{
-		return nullptr;
-	}
-
 	return stream;
 }
 
@@ -38,6 +28,11 @@ ThumbnailStream::~ThumbnailStream()
 bool ThumbnailStream::Start()
 {
 	logtd("ThumbnailStream(%ld) has been started", GetId());
+
+	if (GetState() != Stream::State::CREATED)
+	{
+		return false;
+	}
 
 	bool found = false;
 	for (const auto &[id, track] : _tracks)
@@ -67,6 +62,12 @@ bool ThumbnailStream::Stop()
 
 void ThumbnailStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	// if not started return
+	if (GetState() != Stream::State::STARTED)
+	{
+		return;
+	}
+	
 	auto track = GetTrack(media_packet->GetTrackId());
 	if (track == nullptr)
 	{

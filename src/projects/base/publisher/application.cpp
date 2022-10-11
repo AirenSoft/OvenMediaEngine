@@ -265,7 +265,12 @@ namespace pub
 		lock.unlock();
 
 		// Start stream
-		stream->Start();
+		if (stream->Start() == false)
+		{
+			stream->SetState(Stream::State::ERROR);
+			logtw("%s could not start [%s] stream.", GetApplicationTypeName(), info->GetName().CStr(), info->GetId());
+			return false;
+		}
 
 		return true;
 	}
