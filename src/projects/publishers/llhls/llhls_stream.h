@@ -21,6 +21,10 @@
 
 #define DEFAULT_PLAYLIST_NAME	"llhls.m3u8"
 
+
+// max initial media packet buffer size, for OOM protection
+#define MAX_INITIAL_MEDIA_PACKET_BUFFER_SIZE		10000
+
 class LLHlsStream : public pub::Stream, public bmff::FMp4StorageObserver
 {
 public:
@@ -78,8 +82,6 @@ public:
 private:
 	bool Start() override;
 	bool Stop() override;
-
-	bool SendBufferedPackets();
 
 	void NotifyPlaylistUpdated(const int32_t &track_id, const int64_t &msn, const int64_t &part);
 
@@ -142,6 +144,9 @@ private:
 	bool _playlist_ready = false;
 	mutable std::shared_mutex _playlist_ready_lock;
 
+	// Reserve
+	void BufferMediaPacketUntilReadyToPlay(const std::shared_ptr<MediaPacket> &media_packet);
+	bool SendBufferedPackets();
 	ov::Queue<std::shared_ptr<MediaPacket>> _initial_media_packet_buffer;
 
 	ov::String _stream_key;

@@ -105,6 +105,12 @@ namespace pub
 		std::shared_ptr<Application> GetApplication() const;
 		const char * GetApplicationTypeName() const;
 
+		// Set the stream state
+		void SetState(State state)
+		{
+			_state = state;
+		}
+
 		State GetState() const
 		{
 			return _state;
