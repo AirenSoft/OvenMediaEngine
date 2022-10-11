@@ -31,6 +31,9 @@ namespace pvd
 		virtual bool Start() override;
 		virtual bool Stop() override;
 
+		// Get Application by name
+		std::shared_ptr<PushApplication> GetApplicationByName(const info::VHostAppName &vhost_app_name);
+
 		// To be interleaved mode, a channel must have applicaiton/stream and track informaiton
 		virtual bool PublishChannel(uint32_t channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &channel);
 

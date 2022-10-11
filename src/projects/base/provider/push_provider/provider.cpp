@@ -24,6 +24,11 @@ namespace pvd
         return Provider::Stop();
     }
 
+	std::shared_ptr<PushApplication> PushProvider::GetApplicationByName(const info::VHostAppName &vhost_app_name)
+	{
+		return std::static_pointer_cast<PushApplication>(Provider::GetApplicationByName(vhost_app_name));
+	}
+
 	// To be interleaved mode, a channel must have applicaiton/stream and track informaiton
 	bool PushProvider::PublishChannel(uint32_t channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &channel)
 	{

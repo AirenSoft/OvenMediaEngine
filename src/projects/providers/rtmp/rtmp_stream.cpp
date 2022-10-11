@@ -1630,15 +1630,32 @@ namespace pvd
 	{
 		if (_publish_url == nullptr)
 		{
+			logte("Publish url is not set, stream(%s/%s)", _vhost_app_name.CStr(), _stream_name.CStr());
 			return false;
 		}
+
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(_publish_url->Host(), _publish_url->App());
+
+		// Get application config
+		if (GetProvider() == nullptr)
+		{
+			logte("Could not find provider: stream(%s/%s)", _vhost_app_name.CStr(), _stream_name.CStr());
+			return false;
+		}
+
+		auto application = GetProvider()->GetApplicationByName(vhost_app_name);
+		if (application == nullptr)
+		{
+			logte("Could not find application: stream(%s/%s)", _vhost_app_name.CStr(), _stream_name.CStr());
+			return false;
+		}
+
+		_event_generator = application->GetConfig().GetProviders().GetRtmpProvider().GetEventGenerator();
 
 		SetName(_publish_url->Stream());
 
 		// Set Track Info
 		SetTrackInfo(_media_info);
-
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(_publish_url->Host(), _publish_url->App());
 
 		// Publish
 		if (PublishChannel(vhost_app_name) == false)
@@ -1646,8 +1663,6 @@ namespace pvd
 			Stop();
 			return false;
 		}
-
-		_event_generator = GetApplication()->GetConfig().GetProviders().GetRtmpProvider().GetEventGenerator();
 
 #if 0
 		// Keep Alive Data Channel
