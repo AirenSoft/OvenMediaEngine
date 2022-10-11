@@ -249,8 +249,9 @@ void LLHlsStream::DumpMasterPlaylistsOfAllItems()
 		}
 
 		if (DumpMasterPlaylist(dump) == false)
-		{
-			dump->SetEnabled(false);
+		{ 
+			// Event if the dump fails, it will not be deleted
+			//dump->SetEnabled(false);
 		}
 	}
 }
