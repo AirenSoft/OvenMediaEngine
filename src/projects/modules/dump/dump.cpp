@@ -6,7 +6,7 @@
 //  Copyright (c) 2022 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include <filesystem>
+#include <base/ovlibrary/directory.h>
 #include "dump.h"
 
 namespace mdl
@@ -115,11 +115,7 @@ namespace mdl
 
 	bool Dump::DumpToFile(const ov::String &path, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data, bool add_hitory)
 	{
-		try
-		{
-			std::filesystem::create_directories(path.CStr());
-		}
-		catch(std::filesystem::filesystem_error const& e)
+		if (ov::CreateDirectories(path) == false)
 		{
 			return false;
 		}
