@@ -49,8 +49,9 @@ And we are love to hear about your experience and story using OvenMediaEngine an
 
 ---
 ### Recurring Donations
-If you want to help us continue developing OvenMediaEngine and OvenPlayer, or if our open-source has helped your business, please support us through the Open Collective.
+If you want to help us continue developing OvenMediaEngine and OvenPlayer, or if our open-source has helped your business, please support us through GitHub Sponsor or Open Collective.
 Your financial contribution to OvenMediaEngine and OvenPlayer will be used to reward the developer's efforts, cover the cost of servers and hardware that are continuously used, and attend related exhibitions. And these are transparent, publicly visible, and is used to develop our open-source projects.
+- [GitHub Sponsor](https://github.com/AirenSoft)
 - [Open Collective](https://opencollective.com/ovenmediaengine)
 
 ---
