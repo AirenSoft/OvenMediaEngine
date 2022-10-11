@@ -6,9 +6,6 @@
 //  Copyright (c) 2022 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
-#include <filesystem>
-
 #include "base/publisher/application.h"
 #include "base/publisher/stream.h"
 
