@@ -372,6 +372,10 @@ namespace pvd
 					bitstream_format = cmn::BitstreamFormat::AAC_RAW;
 					packet_type = cmn::PacketType::RAW;
 					break;
+				case cmn::MediaCodecId::Opus:
+					bitstream_format = cmn::BitstreamFormat::OPUS;
+					packet_type = cmn::PacketType::RAW;
+					break;
 				default:
 					::av_packet_unref(&packet);
 					continue;
