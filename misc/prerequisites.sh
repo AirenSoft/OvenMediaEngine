@@ -385,6 +385,10 @@ check_version()
         proceed_yn
     fi
 
+	if [[ "${OSNAME}" == "Red" && "${OSVERSION}" != "8" ]]; then
+        proceed_yn
+    fi
+
 	if [[ "${OSNAME}" == "Amazon Linux" && "${OSVERSION}" != "2" ]]; then
         proceed_yn
     fi
@@ -436,6 +440,9 @@ elif  [ "${OSNAME}" == "Amazon Linux" ]; then
      check_version
      install_base_centos
 elif  [ "${OSNAME}" == "Fedora" ]; then
+    check_version
+    install_base_fedora
+elif  [ "${OSNAME}" == "Red" ]; then
     check_version
     install_base_fedora
 elif  [ "${OSNAME}" == "Mac OS X" ]; then
