@@ -383,6 +383,8 @@ bool LLHlsStream::DumpSegment(const std::shared_ptr<mdl::Dump> &item, const int3
 		return false;
 	}
 
+	chunklist->SaveOldSegmentInfo(true);
+
 	return true;
 }
 
@@ -1005,6 +1007,8 @@ std::tuple<bool, ov::String> LLHlsStream::StartDump(const std::shared_ptr<info::
 	// Find minimum segment number
 	int64_t min_segment_number = GetMinimumLastSegmentNumber();
 
+	logtd("Start dump : stream_name = %s, dump_id = %s, min_segment_number = %d", GetName().CStr(), dump_info->GetId().CStr(), min_segment_number);
+
 	for (const auto &it : storage_map)
 	{
 		auto track_id = it.first;
@@ -1022,6 +1026,7 @@ std::tuple<bool, ov::String> LLHlsStream::StartDump(const std::shared_ptr<info::
 	// Dump Master Playlist
 	if (DumpMasterPlaylist(dump_info) == false)
 	{
+		StopToSaveOldSegmentsInfo();
 		return {false, "Could not dump master playlist"};
 	}
 
@@ -1043,8 +1048,6 @@ std::tuple<bool, ov::String> LLHlsStream::StopDump(const std::shared_ptr<info::D
 		}
 		auto dump_item = it->second;
 		dump_item->SetEnabled(false);
-
-		return {true, ""};
 	}
 	// All stop
 	else
@@ -1054,13 +1057,43 @@ std::tuple<bool, ov::String> LLHlsStream::StopDump(const std::shared_ptr<info::D
 			auto dump_item = it.second;
 			dump_item->SetEnabled(false);
 		}
-
-		return {true, ""};
 	}
+
+	StopToSaveOldSegmentsInfo();
 
 	lock.unlock();
 
 	return {true, ""};
+}
+
+// It must be called in the lock of _dumps_lock
+bool LLHlsStream::StopToSaveOldSegmentsInfo()
+{
+	// check if all dumps are disabled
+	bool all_disabled = true;
+	for (const auto &it : _dumps)
+	{
+		auto dump_item = it.second;
+		if (dump_item->IsEnabled())
+		{
+			all_disabled = false;
+			break;
+		}
+	}
+
+	if (all_disabled == true)
+	{
+		// stop to keep old segments in _chunklist_map
+		// shared lock
+		std::shared_lock<std::shared_mutex> chunk_lock(_chunklist_map_lock);
+		for (const auto &it : _chunklist_map)
+		{
+			auto chunklist = it.second;
+			chunklist->SaveOldSegmentInfo(false);
+		}
+	}
+
+	return true;
 }
 
 // Get dump info

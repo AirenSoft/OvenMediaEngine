@@ -102,6 +102,13 @@ public:
 			return _partial_segments;
 		}
 
+		// Clear partial segments
+		void ClearPartialSegments()
+		{
+			_partial_segments.clear();
+			_partial_segments.shrink_to_fit();
+		}
+
 		void SetCompleted()
 		{
 			_completed = true;
@@ -129,6 +136,8 @@ public:
 
 	const ov::String& GetUrl() const;
 
+	void SaveOldSegmentInfo(bool enable);
+
 	// Get Track
 	const std::shared_ptr<const MediaTrack> &GetTrack() const;
 
@@ -144,8 +153,8 @@ public:
 	bool GetLastSequenceNumber(int64_t &msn, int64_t &psn) const;
 
 private:
-
 	int64_t GetSegmentIndex(uint32_t segment_sequence) const;
+	bool SaveOldSegmentInfo(std::shared_ptr<SegmentInfo> &segment_info);
 
 	std::shared_ptr<const MediaTrack> _track;
 
@@ -166,4 +175,5 @@ private:
 	std::deque<std::shared_ptr<SegmentInfo>> _old_segments;
 	mutable std::shared_mutex _segments_guard;
 	uint64_t _deleted_segments = 0;
+	bool _keep_old_segments = false;
 };

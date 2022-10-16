@@ -23,6 +23,17 @@ LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<cons
 	_map_uri = map_uri;
 }
 
+void LLHlsChunklist::SaveOldSegmentInfo(bool enable)
+{
+	_keep_old_segments = enable;
+
+	if (_keep_old_segments == false)
+	{
+		_old_segments.clear();
+		_old_segments.shrink_to_fit();
+	}
+}
+
 const std::shared_ptr<const MediaTrack> &LLHlsChunklist::GetTrack() const
 {
 	return _track;
@@ -66,7 +77,7 @@ bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
 		{
 			// For VoD Dump
 			auto old_segment = _segments.front();
-			_old_segments.push_back(old_segment);
+			SaveOldSegmentInfo(old_segment);
 
 			_segments.pop_front();
 			_deleted_segments += 1;
@@ -106,7 +117,7 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 		{
 			// For VoD Dump
 			auto old_segment = _segments.front();
-			_old_segments.push_back(old_segment);
+			SaveOldSegmentInfo(old_segment);
 
 			_segments.pop_front();
 			_deleted_segments += 1;
@@ -117,6 +128,24 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 
 	segment->InsertPartialSegmentInfo(std::make_shared<SegmentInfo>(info));
 	_last_partial_segment_sequence = info.GetSequence();
+
+	return true;
+}
+
+bool LLHlsChunklist::SaveOldSegmentInfo(std::shared_ptr<SegmentInfo> &segment_info)
+{
+	if (_keep_old_segments == false)
+	{
+		return true;
+	}
+
+	// no longer need partial segment info - for memory saving
+	segment_info->ClearPartialSegments();
+
+	logtd("Save old segment info: %d / %s", segment_info->GetSequence(), segment_info->GetUrl().CStr());
+	_old_segments.push_back(segment_info);
+
+	//TODD[CRITICAL](Getroot): _old_segments must be saved to file because memory should be exhausted
 
 	return true;
 }

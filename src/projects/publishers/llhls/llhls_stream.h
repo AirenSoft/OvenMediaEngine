@@ -122,6 +122,7 @@ private:
 	bool DumpData(const std::shared_ptr<mdl::Dump> &item, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data);
 
 	int64_t GetMinimumLastSegmentNumber() const;
+	bool StopToSaveOldSegmentsInfo();
 
 	// Config
 	bmff::FMP4Packager::Config _packager_config;
