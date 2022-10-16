@@ -165,7 +165,7 @@ void TranscodeDecoder::SetDecoderId(int32_t decoder_id)
 
 bool TranscodeDecoder::Configure(std::shared_ptr<MediaTrack> track)
 {
-	_input_buffer.SetAlias(ov::String::FormatString("Input queue of Decoder. codec(%s/%d)", ::avcodec_get_name(GetCodecID()), GetCodecID()));
+	_input_buffer.SetAlias(ov::String::FormatString("Input queue of Decoder. track(%d) codec(%s/%d)", track->GetId(), ::avcodec_get_name(GetCodecID()), GetCodecID()));
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
 	_track = track;
