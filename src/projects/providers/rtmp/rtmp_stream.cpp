@@ -1409,6 +1409,8 @@ namespace pvd
 			dts *= video_track->GetVideoTimestampScale();
 			pts *= video_track->GetVideoTimestampScale();
 
+			AdjustTimestamp(pts, dts);
+
 			cmn::PacketType packet_type = cmn::PacketType::Unknown;
 			if (flv_video.PacketType() == FlvAvcPacketType::AVC_SEQUENCE_HEADER)
 			{
@@ -1590,6 +1592,8 @@ namespace pvd
 
 			pts *= audio_track->GetAudioTimestampScale();
 			dts *= audio_track->GetAudioTimestampScale();
+
+			AdjustTimestamp(pts, dts);
 	 
 			cmn::PacketType packet_type = cmn::PacketType::Unknown;
 			if (flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
@@ -1624,6 +1628,20 @@ namespace pvd
 		}
 
 		return true;
+	}
+
+	// Make PTS/DTS of first frame are 0
+	void RtmpStream::AdjustTimestamp(int64_t &pts, int64_t &dts)
+	{
+		if (_first_frame == true)
+		{
+			_first_frame = false;
+			_first_pts_offset = pts;
+			_first_dts_offset = dts;
+		}
+
+		pts -= _first_pts_offset;
+		dts -= _first_dts_offset;
 	}
 
 	bool RtmpStream::PublishStream()

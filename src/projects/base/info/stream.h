@@ -52,6 +52,8 @@ namespace info
 		void SetOriginStreamUUID(const ov::String &uuid);
 		ov::String GetOriginStreamUUID() const;
 
+		const std::chrono::system_clock::time_point &GetInputStreamCreatedTime() const;
+
 		const std::chrono::system_clock::time_point &GetCreatedTime() const;
 		uint32_t GetUptimeSec();
 		StreamSourceType GetSourceType() const;

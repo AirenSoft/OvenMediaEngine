@@ -891,7 +891,7 @@ void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t 
 	auto segment_duration = static_cast<double>(segment->GetDuration()) / static_cast<double>(1000.0);
 
 	auto start_timestamp_ms = (static_cast<double>(segment->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
-	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetStartedTime().time_since_epoch()).count() + start_timestamp_ms;
+	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetInputStreamCreatedTime().time_since_epoch()).count() + start_timestamp_ms;
 
 	auto segment_info = LLHlsChunklist::SegmentInfo(segment->GetNumber(), start_timestamp, segment_duration,
 													segment->GetSize(), GetSegmentName(track_id, segment->GetNumber()), "", true);
@@ -919,7 +919,7 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 
 	// Human readable timestamp
 	auto start_timestamp_ms = (static_cast<float>(chunk->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
-	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetStartedTime().time_since_epoch()).count() + start_timestamp_ms;
+	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetInputStreamCreatedTime().time_since_epoch()).count() + start_timestamp_ms;
 
 	auto chunk_info = LLHlsChunklist::SegmentInfo(chunk->GetNumber(), start_timestamp, chunk_duration, chunk->GetSize(), 
 												GetPartialSegmentName(track_id, segment_number, chunk->GetNumber()), 

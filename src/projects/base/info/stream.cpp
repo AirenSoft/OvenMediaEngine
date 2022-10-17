@@ -163,6 +163,16 @@ namespace info
 		return _origin_stream_uuid;
 	}
 
+	const std::chrono::system_clock::time_point &Stream::GetInputStreamCreatedTime() const
+	{
+		if (GetLinkedInputStream() != nullptr)
+		{
+			return GetLinkedInputStream()->GetCreatedTime();
+		}
+
+		return GetCreatedTime();
+	}
+
 	const std::chrono::system_clock::time_point &Stream::GetCreatedTime() const
 	{
 		return _created_time;
