@@ -150,6 +150,7 @@ private:
 	bool SendBufferedPackets();
 	ov::Queue<std::shared_ptr<MediaPacket>> _initial_media_packet_buffer;
 
+	bool _origin_mode = false;
 	ov::String _stream_key;
 
 	uint32_t _worker_count = 0;

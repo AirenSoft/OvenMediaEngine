@@ -22,7 +22,7 @@ std::shared_ptr<LLHlsStream> LLHlsStream::Create(const std::shared_ptr<pub::Appl
 LLHlsStream::LLHlsStream(const std::shared_ptr<pub::Application> application, const info::Stream &info, uint32_t worker_count)
 	: Stream(application, info), _worker_count(worker_count)
 {
-	_stream_key = ov::Random::GenerateString(8);
+	
 }
 
 LLHlsStream::~LLHlsStream()
@@ -45,6 +45,8 @@ bool LLHlsStream::Start()
 	auto config = GetApplication()->GetConfig();
 	auto llhls_config = config.GetPublishers().GetLLHlsPublisher();
 	auto dump_config = llhls_config.GetDumps();
+
+	_stream_key = ov::Random::GenerateString(8);
 
 	_packager_config.chunk_duration_ms = llhls_config.GetChunkDuration() * 1000.0;
 	_packager_config.segment_duration_ms = llhls_config.GetSegmentDuration() * 1000.0;

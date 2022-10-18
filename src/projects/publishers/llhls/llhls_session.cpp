@@ -144,11 +144,11 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 		return;
     }
 
+	auto response = exchange->GetResponse();
+
 	// Check expired time
 	if(_session_life_time != 0 && _session_life_time < ov::Clock::NowMSec())
 	{
-		auto response = exchange->GetResponse();
-
 		response->SetStatusCode(http::StatusCode::Unauthorized);
 		response->Response();
 		exchange->Release();
@@ -162,6 +162,10 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 
 	if (request_uri == nullptr)
 	{
+		response->SetStatusCode(http::StatusCode::InternalServerError);
+		response->Response();
+		exchange->Release();
+
 		return;
 	}
 
@@ -179,21 +183,33 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 
 	if (ParseFileName(file, file_type, track_id, segment_number, partial_number, stream_key) == false)
 	{
+		response->SetStatusCode(http::StatusCode::NotFound);
+		response->Response();
+		exchange->Release();
+
 		return;
 	}
 
 	auto llhls_stream = std::static_pointer_cast<LLHlsStream>(GetStream());
 	if (llhls_stream == nullptr)
 	{
+		response->SetStatusCode(http::StatusCode::InternalServerError);
+		response->Response();
+		exchange->Release();
+
 		return;
 	}
 
-	if (file_type != RequestType::Playlist && file_type != RequestType::Chunklist)
+	if (_origin_mode == false && file_type != RequestType::Playlist && file_type != RequestType::Chunklist)
 	{
 		// All reqeusts except playlist have a stream key
 		if (stream_key != llhls_stream->GetStreamKey())
 		{
 			logtw("LLHlsSession::OnMessageReceived(%u) - Invalid stream key : %s (expected : %s)", GetId(), stream_key.CStr(), llhls_stream->GetStreamKey().CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			response->Response();
+			exchange->Release();
+
 			return;
 		}
 	}
@@ -555,6 +571,7 @@ void LLHlsSession::ResponseInitializationSegment(const std::shared_ptr<http::svr
 		{
 			response->SetHeader("Content-Type", "audio/mp4");
 		}
+
 		response->AppendData(initialization_segment);
 	}
 	else
