@@ -2,9 +2,9 @@
 
 ## Overview
 
-SignedPolicy is a module that limits the user's privileges and time. For example, operators can distribute RTMP URLs that can be accessed for 60 seconds to authorized users, and limit RTMP transmission to 1 hour. The provided URL will be destroyed after 60 seconds, and transmission will automatically stop after 1 hour. Users who are provided with a SingedPolicy URL cannot access resources other than the provided URL. This is because the SignedPolicy URL is authenticated.
+SignedPolicy is a module that limits the user's privileges and time. For example, operators can distribute RTMP URLs that can be accessed for 60 seconds to authorized users, and limit RTMP transmission to 1 hour. The provided URL will be destroyed after 60 seconds, and transmission will automatically stop after 1 hour. Users who are provided with a SignedPolicy URL cannot access resources other than the provided URL. This is because the SignedPolicy URL is authenticated.
 
-SingedPolicy URL consists of the query string of the streaming URL with Policy and Signature as shown below. If SignedPolicy is enabled in the configuration of OvenMediaEngine, access to URLs with no signature or invalid signature is not allowed. Signature uses HMAC-SHA1 to authenticate all URLs except signature.
+SignedPolicy URL consists of the query string of the streaming URL with Policy and Signature as shown below. If SignedPolicy is enabled in the configuration of OvenMediaEngine, access to URLs with no signature or invalid signature is not allowed. Signature uses HMAC-SHA1 to authenticate all URLs except signature.
 
 ```
 scheme://domain.com:port/app/stream?policy=<>&signature=<>
@@ -60,7 +60,7 @@ When using SignedPolicy with SRT providers, only use the **streamid** portion of
 
 ## Configuration
 
-To enable SignedPolicy, you need to add the following \<SingedPolicy> setting in Server.xml under \<VirtualHost>.
+To enable SignedPolicy, you need to add the following \<SignedPolicy> setting in Server.xml under \<VirtualHost>.
 
 ```
 <VirtualHost>
@@ -82,11 +82,11 @@ To enable SignedPolicy, you need to add the following \<SingedPolicy> setting in
 | PolicyQueryKeyName    | The query string key name in the URL pointing to the policy value                                                                                                  |
 | SignatureQueryKeyName | The query string key name in the URL pointing to the signature value                                                                                               |
 | SecretKey             | The secret key used when encoding with HMAC-SHA1                                                                                                                   |
-| Enables               | List of providers and publishers to enable SignedPolicy. Currently, SingedPolicy supports rtmp among providers, and among publishers, WebRTC, LLHLS are supported. |
+| Enables               | List of providers and publishers to enable SignedPolicy. Currently, SignedPolicy supports rtmp among providers, and among publishers, WebRTC, LLHLS are supported. |
 
 ## Make SignedPolicy URL with a script
 
-We provide a script that can easily generate SingedPolicy URL. The script can be found in the path below.
+We provide a script that can easily generate SignedPolicy URL. The script can be found in the path below.
 
 ```
 /misc/signed_policy_url_generator.sh
@@ -102,7 +102,7 @@ For example, you can use it like this:
 
 ![](<../.gitbook/assets/image (17).png>)
 
-## Make SingedPolicy URL manually
+## Make SignedPolicy URL manually
 
 {% hint style="success" %}
 We hope to provide SignedPolicy URL Generator Library in various languages. If you have created the SignedPolicy URL Generator Library in another language, please send a Pull Request to our [GITHUB](https://github.com/AirenSoft/OvenMediaEngine/pulls). Thank you for your open source contributions.
@@ -160,7 +160,7 @@ ws://192.168.0.100/app/stream?policy=eyJ1cmxfZXhwaXJlIjoxMzk5NzIxNTgxfQ&signatur
 
 ### Applying SignedPolicy in OBS
 
-Generate SingedPolicy URL with the script.
+Generate SignedPolicy URL with the script.
 
 ![](<../.gitbook/assets/image (23).png>)
 
