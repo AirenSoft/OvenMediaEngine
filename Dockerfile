@@ -8,7 +8,7 @@ FROM    base AS build
 
 WORKDIR /tmp
 
-ARG     OME_VERSION=master
+ARG     OME_VERSION=v0.14.13
 ARG 	STRIP=TRUE
 ARG     GPU=FALSE
 
