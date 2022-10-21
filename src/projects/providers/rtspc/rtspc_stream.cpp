@@ -375,6 +375,12 @@ namespace pvd
 		auto media_desc_list = _sdp.GetMediaList();
 		for (const auto &media_desc : media_desc_list)
 		{
+			if (media_desc->GetMediaType() == MediaDescription::MediaType::Application || media_desc->GetMediaType() == MediaDescription::MediaType::Unknown)
+			{
+				logtw("Ignored not supported media type : %s", media_desc->GetMediaTypeStr().CStr());
+				continue;
+			}
+
 			auto control = media_desc->GetControl();
 			if(control.IsEmpty())
 			{
@@ -514,7 +520,7 @@ namespace pvd
 
 				default:
 					logte("%s - Unsupported codec  : %s", GetName().CStr(), first_payload->GetCodecParams().CStr());
-					return false;
+					continue;
 			}
 
 			// Add Depacketizer
