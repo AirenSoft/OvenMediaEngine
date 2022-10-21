@@ -132,6 +132,12 @@ namespace bmff
 
 		if (segment == nullptr || segment->IsCompleted())
 		{
+			// Notify observer
+			if (segment != nullptr && _observer != nullptr)
+			{
+				_observer->OnMediaSegmentUpdated(_track->GetId(), segment->GetNumber());
+			}
+
 			// Create new segment
 			segment = std::make_shared<FMP4Segment>(GetLastSegmentNumber() + 1, _config.segment_duration_ms);
 			{
@@ -158,12 +164,6 @@ namespace bmff
 		{
 			segment->SetCompleted();
 
-			// Notify observer
-			if (_observer != nullptr)
-			{
-				_observer->OnMediaSegmentUpdated(_track->GetId(), segment->GetNumber());
-			}
-			
 			logtd("Segment[%u] is created : track(%u), duration(%u) chunks(%u)", segment->GetNumber(), _track->GetId(),segment->GetDuration(), segment->GetChunkCount());
 
 			// avg segment duration 
