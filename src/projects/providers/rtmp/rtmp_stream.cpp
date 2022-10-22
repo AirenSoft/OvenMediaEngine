@@ -1450,7 +1450,7 @@ namespace pvd
 			// 	  pts,
 			// 	  dts);
 
-			_last_video_pts = pts;
+			_last_video_pts = dts;
 			_last_video_pts_clock.Start();
 			
 			// Statistics for debugging
@@ -1620,7 +1620,7 @@ namespace pvd
 
 			SendFrame(frame);
 
-			_last_audio_pts = pts;
+			_last_audio_pts = dts;
 			_last_audio_pts_clock.Start();
 
 			_last_audio_timestamp = message->header->completed.timestamp;

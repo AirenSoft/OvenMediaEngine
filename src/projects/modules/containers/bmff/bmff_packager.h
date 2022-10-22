@@ -31,14 +31,14 @@ namespace bmff
 
 				if (_list.size() == 0)
 				{
-					_start_timestamp = media_packet->GetPts();
+					_start_timestamp = media_packet->GetDts();
 					if (media_packet->GetFlag() == MediaPacketFlag::Key)
 					{
 						_independent = true;
 					}
 				}
 
-				_end_timestamp = media_packet->GetPts() + media_packet->GetDuration();
+				_end_timestamp = media_packet->GetDts() + media_packet->GetDuration();
 
 				_list.push_back(media_packet);
 
