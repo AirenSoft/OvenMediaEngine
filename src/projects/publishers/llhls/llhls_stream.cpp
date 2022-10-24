@@ -53,6 +53,8 @@ bool LLHlsStream::Start()
 	_storage_config.max_segments = llhls_config.GetSegmentCount();
 	_storage_config.segment_duration_ms = llhls_config.GetSegmentDuration() * 1000;
 
+	_configured_part_hold_back = llhls_config.GetPartHoldBack();
+
 	// Find data track
 	auto data_track = GetFirstTrack(cmn::MediaType::Data);
 
@@ -858,10 +860,11 @@ bool LLHlsStream::CheckPlaylistReady()
 
 	std::shared_lock<std::shared_mutex> chunklist_lock(_chunklist_map_lock);
 	
-	float_t part_hold_back = (static_cast<float_t>(_max_chunk_duration_ms) / 1000.0f) * 3.0f;
+	double min_part_hold_back = (static_cast<double>(_max_chunk_duration_ms) / 1000.0f) * 3.0f;
+	double final_part_hold_back = std::max(min_part_hold_back, _configured_part_hold_back);
 	for (const auto &[track_id, chunklist] : _chunklist_map)
 	{
-		chunklist->SetPartHoldBack(part_hold_back);
+		chunklist->SetPartHoldBack(final_part_hold_back);
 
 		DumpInitSegmentOfAllItems(chunklist->GetTrack()->GetId());
 	}

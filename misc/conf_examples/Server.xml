@@ -395,6 +395,8 @@
 						</WebRTC>
 						<LLHLS>
 							<ChunkDuration>0.5</ChunkDuration>
+							<!-- <PartHoldBack> SHOULD be at least three times the <ChunkDuration> -->
+							<PartHoldBack>1.5</PartHoldBack>
 							<SegmentDuration>6</SegmentDuration>
 							<SegmentCount>10</SegmentCount>
 							<CrossDomains>
