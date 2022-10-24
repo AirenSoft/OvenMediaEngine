@@ -150,8 +150,7 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 	if(_session_life_time != 0 && _session_life_time < ov::Clock::NowMSec())
 	{
 		response->SetStatusCode(http::StatusCode::Unauthorized);
-		response->Response();
-		exchange->Release();
+		ResponseData(exchange);
 		return;
 	}
 
@@ -163,9 +162,7 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 	if (request_uri == nullptr)
 	{
 		response->SetStatusCode(http::StatusCode::InternalServerError);
-		response->Response();
-		exchange->Release();
-
+		ResponseData(exchange);
 		return;
 	}
 
@@ -184,9 +181,7 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 	if (ParseFileName(file, file_type, track_id, segment_number, partial_number, stream_key) == false)
 	{
 		response->SetStatusCode(http::StatusCode::NotFound);
-		response->Response();
-		exchange->Release();
-
+		ResponseData(exchange);
 		return;
 	}
 
@@ -194,9 +189,7 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 	if (llhls_stream == nullptr)
 	{
 		response->SetStatusCode(http::StatusCode::InternalServerError);
-		response->Response();
-		exchange->Release();
-
+		ResponseData(exchange);
 		return;
 	}
 
@@ -207,9 +200,7 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 		{
 			logtw("LLHlsSession::OnMessageReceived(%u) - Invalid stream key : %s (expected : %s)", GetId(), stream_key.CStr(), llhls_stream->GetStreamKey().CStr());
 			response->SetStatusCode(http::StatusCode::NotFound);
-			response->Response();
-			exchange->Release();
-
+			ResponseData(exchange);
 			return;
 		}
 	}
@@ -666,6 +657,8 @@ void LLHlsSession::ResponseData(const std::shared_ptr<http::svr::HttpExchange> &
 	auto response = exchange->GetResponse();
 	auto sent_size = response->Response();
 	MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::LLHls, sent_size);
+
+	logtd("%s", exchange->GetDebugInfo().CStr());
 
 	// Terminate the HTTP/2 stream
 	exchange->Release();

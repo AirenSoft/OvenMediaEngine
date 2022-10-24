@@ -78,6 +78,12 @@ namespace http
 				return ov::Converter::ToDouble(GetHttpVersion().CStr());
 			}
 
+			// Get Create Time
+			const std::chrono::system_clock::time_point &GetCreateTime() const noexcept
+			{
+				return _created_time;
+			}
+
 			ov::String ToString() const;
 
 			virtual ssize_t AppendHeaderData(const std::shared_ptr<const ov::Data> &data) = 0;
@@ -125,6 +131,8 @@ namespace http
 		private:
 			// HTTP body
 			std::shared_ptr<ov::Data> _request_body;
+			// Created time
+			std::chrono::system_clock::time_point _created_time;
 		};
 	}  // namespace svr
 }  // namespace http

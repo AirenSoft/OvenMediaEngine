@@ -24,6 +24,8 @@ namespace http
 			: _client_socket(client_socket)
 		{
 			OV_ASSERT2(_client_socket != nullptr);
+
+			_created_time = std::chrono::system_clock::now();
 		}
 
 		HttpResponse::HttpResponse(const std::shared_ptr<HttpResponse> &http_response)
@@ -39,6 +41,7 @@ namespace http
 			_response_data_list = http_response->_response_data_list;
 			_response_data_size = http_response->_response_data_size;
 			_default_value = http_response->_default_value;
+			_created_time = http_response->_created_time;
 		}
 
 		void HttpResponse::SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data)
@@ -200,6 +203,24 @@ namespace http
 			_response_data_size = 0ULL;
 		}
 
+		// Get Created Time
+		std::chrono::system_clock::time_point HttpResponse::GetCreatedTime() const
+		{
+			return _created_time;
+		}
+
+		// Get Resopnsed Time
+		std::chrono::system_clock::time_point HttpResponse::GetResponseTime() const
+		{
+			return _response_time;
+		}
+		
+		// Get Sent size
+		uint32_t HttpResponse::GetSentSize() const
+		{
+			return _sent_size;
+		}
+
 		uint32_t HttpResponse::Response()
 		{
 			std::lock_guard<decltype(_response_mutex)> lock(_response_mutex);
@@ -228,6 +249,10 @@ namespace http
 			}
 
 			sent_size += sent_data_size;
+
+			_sent_size += sent_size;
+
+			_response_time = std::chrono::system_clock::now();
 
 			return sent_size;
 		}	

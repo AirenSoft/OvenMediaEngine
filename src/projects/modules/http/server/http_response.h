@@ -54,12 +54,20 @@ namespace http
 
 			uint32_t Response();
 
+			// Get Created Time
+			std::chrono::system_clock::time_point GetCreatedTime() const;
+			// Get Response Time
+			std::chrono::system_clock::time_point GetResponseTime() const;
+
+			// Get Response Data Size
+			size_t GetResponseDataSize() const;
+			uint32_t GetSentSize() const;
+
 			bool Close();
 
 		protected:
 			bool IsHeaderSent() const;
-			// Get Response Data Size
-			size_t GetResponseDataSize() const;
+			
 			// Get Response Data List
 			const std::vector<std::shared_ptr<const ov::Data>> &GetResponseDataList() const;
 			// Get Response Header
@@ -107,6 +115,12 @@ namespace http
 			size_t _response_data_size = 0;
 
 			std::vector<ov::String> _default_value{};
+
+			// Created time
+			std::chrono::system_clock::time_point _created_time;
+			// Responsed time
+			std::chrono::system_clock::time_point _response_time;
+			uint32_t _sent_size = 0;
 		};
 	}  // namespace svr
 }  // namespace http

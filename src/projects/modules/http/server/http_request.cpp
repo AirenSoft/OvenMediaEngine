@@ -20,6 +20,7 @@ namespace http
 			: _client_socket(client_socket)
 		{
 			OV_ASSERT2(client_socket != nullptr);
+			_created_time = std::chrono::system_clock::now();
 		}
 
 		void HttpRequest::SetTlsData(const std::shared_ptr<ov::TlsServerData> &tls_data)

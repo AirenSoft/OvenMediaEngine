@@ -50,6 +50,7 @@ namespace http
 			bool IsKeepAlive() const;
 
 			ov::String ToString() const;
+			ov::String GetDebugInfo() const;
 
 			virtual std::shared_ptr<HttpRequest> GetRequest() const = 0;
 			virtual std::shared_ptr<HttpResponse> GetResponse() const = 0;
