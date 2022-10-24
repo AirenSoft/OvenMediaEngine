@@ -186,6 +186,7 @@ void PayloadAttr::SetFmtp(const ov::String &fmtp)
 			{
 				// fmtp parsing error
 				logd("SDP", "fmtp parsing error : %s", fmtp.CStr());
+				continue;
 			}
 
 			auto key = key_value[0].Trim();
