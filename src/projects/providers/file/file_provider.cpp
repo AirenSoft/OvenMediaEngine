@@ -95,7 +95,10 @@ namespace pvd
 			// Persistent = true
 			// Failback = false
 			// Relay = true
-			auto stream_props = std::make_shared<pvd::PullStreamProperties>(true, false, true);
+			auto stream_props = std::make_shared<pvd::PullStreamProperties>();
+			stream_props->SetPersistent(true);
+			stream_props->SetFailback(false);
+			stream_props->SetRelay(true);
 
 			PullStream(std::make_shared<ov::Url>(), app_info, stream.GetName(), url_list, 0, stream_props);
 		}

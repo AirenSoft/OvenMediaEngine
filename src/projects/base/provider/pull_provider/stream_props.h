@@ -14,7 +14,7 @@ namespace pvd
 	{
 	public:
 		PullStreamProperties()
-			: _persistent(false), _failback(false), _relay(true), _failback_timeout(-1), _no_input_failover_timeout(-1), _unused_stream_deletion_timeout(-1), _retry_connect_count(2) {};
+			: _persistent(false), _failback(false), _relay(false), _failback_timeout(-1), _no_input_failover_timeout(-1), _unused_stream_deletion_timeout(-1), _retry_connect_count(2) {};
 
 		PullStreamProperties(bool persistent, bool failback, bool relay, int32_t failback_timeout = -1, int32_t no_input_failover_timeout = -1, int32_t unused_stream_deletion_timeout = -1, int32_t retry_connect_count = 2)
 		{
@@ -39,6 +39,21 @@ namespace pvd
 
 		bool IsRelay() {
 			return _relay;
+		}
+
+		void SetFailback(bool failback)
+		{
+			_failback = failback;
+		}
+
+		void SetPersistent(bool persistent)
+		{
+			_persistent = persistent;
+		}
+
+		void SetRelay(bool relay)
+		{
+			_relay = relay;
 		}
 
 		int32_t GetFailbackTimeout()

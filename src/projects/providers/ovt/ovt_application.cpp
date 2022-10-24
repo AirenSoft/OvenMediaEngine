@@ -29,7 +29,7 @@ namespace pvd
 
 	}
 
-	std::shared_ptr<pvd::PullStream> OvtApplication::CreateStream(const uint32_t stream_id, const ov::String &stream_name, const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties)
+	std::shared_ptr<pvd::PullStream> OvtApplication::CreateStream(const uint32_t stream_id, const ov::String &stream_name, const std::vector<ov::String> &url_list, const std::shared_ptr<pvd::PullStreamProperties> &properties)
 	{
 		return OvtStream::Create(GetSharedPtrAs<pvd::PullApplication>(), stream_id, stream_name, url_list, properties);
 	}

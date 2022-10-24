@@ -491,7 +491,7 @@ namespace ocst
 	bool Orchestrator::RequestPullStream(
 			const std::shared_ptr<const ov::Url> &request_from,
 			const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
-			const std::vector<ov::String> &url_list, off_t offset, std::shared_ptr<pvd::PullStreamProperties> properties)
+			const std::vector<ov::String> &url_list, off_t offset, const std::shared_ptr<pvd::PullStreamProperties> &properties)
 	{
 		if (url_list.empty() == true)
 		{
@@ -1035,7 +1035,10 @@ namespace ocst
 			// Persistent = true
 			// Failback = true
 			// Relay = false
-			auto stream_props = std::make_shared<pvd::PullStreamProperties>(true, true, false);
+			auto stream_props = std::make_shared<pvd::PullStreamProperties>();
+			stream_props->SetPersistent(true);
+			stream_props->SetFailback(true);
+			stream_props->SetRelay(false);
 
  			// Request pull stream
 			if( RequestPullStream(nullptr, app_info.GetName(), new_stream_name, url_list, 0, stream_props) == false)

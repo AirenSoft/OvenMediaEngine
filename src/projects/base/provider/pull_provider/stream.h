@@ -52,7 +52,7 @@ namespace pvd
 		virtual ProcessMediaResult ProcessMediaPacket() = 0;
 
 	protected:
-		PullStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties = nullptr);
+		PullStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list, const std::shared_ptr<pvd::PullStreamProperties> &properties = nullptr);
 
 		virtual bool StartStream(const std::shared_ptr<const ov::Url> &url) = 0; // Start
 		virtual bool RestartStream(const std::shared_ptr<const ov::Url> &url) = 0; // Failover

@@ -26,7 +26,7 @@ namespace pvd
 		virtual bool Stop() override;
 
 		// For pulling
-		std::shared_ptr<pvd::Stream> CreateStream(const ov::String &stream_name, const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties);
+		std::shared_ptr<pvd::Stream> CreateStream(const ov::String &stream_name, const std::vector<ov::String> &url_list, const std::shared_ptr<pvd::PullStreamProperties> &properties);
 
 		// Delete stream
 		virtual bool DeleteStream(const std::shared_ptr<Stream> &stream) override;
@@ -36,7 +36,7 @@ namespace pvd
 		explicit PullApplication(const std::shared_ptr<PullProvider> &provider, const info::Application &application_info);
 		virtual ~PullApplication() override;
 
-		virtual std::shared_ptr<pvd::PullStream> CreateStream(const uint32_t stream_id, const ov::String &stream_name, const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties) = 0;
+		virtual std::shared_ptr<pvd::PullStream> CreateStream(const uint32_t stream_id, const ov::String &stream_name, const std::vector<ov::String> &url_list, const std::shared_ptr<pvd::PullStreamProperties> &properties) = 0;
 
 	private:
 		uint32_t GetStreamMotorId(const std::shared_ptr<PullStream> &stream);

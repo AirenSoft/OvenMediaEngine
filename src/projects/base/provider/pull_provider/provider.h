@@ -93,7 +93,7 @@ namespace pvd
 		std::shared_ptr<pvd::Stream> PullStream(
 			const std::shared_ptr<const ov::Url> &request_from,
 			const info::Application &app_info, const ov::String &stream_name,
-			const std::vector<ov::String> &url_list, off_t offset, std::shared_ptr<pvd::PullStreamProperties> properties) override;
+			const std::vector<ov::String> &url_list, off_t offset, const std::shared_ptr<pvd::PullStreamProperties> &properties) override;
 
 		bool StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream) override;
 		//--------------------------------------------------------------------

@@ -21,7 +21,8 @@ namespace pvd
 {
 	std::shared_ptr<RtspcStream> RtspcStream::Create(const std::shared_ptr<pvd::PullApplication> &application,
 													 const uint32_t stream_id, const ov::String &stream_name,
-													 const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties)
+													 const std::vector<ov::String> &url_list, 
+													 const std::shared_ptr<pvd::PullStreamProperties> &properties)
 	{
 		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::RtspPull);
 
@@ -39,7 +40,7 @@ namespace pvd
 		return stream;
 	}
 
-	RtspcStream::RtspcStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list, std::shared_ptr<pvd::PullStreamProperties> properties)
+	RtspcStream::RtspcStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list, const std::shared_ptr<pvd::PullStreamProperties> &properties)
 	: pvd::PullStream(application, stream_info, url_list, properties), Node(NodeType::Rtsp)
 	{
 		SetState(State::IDLE);
