@@ -33,14 +33,22 @@ namespace cfg
 					Register<Optional>("Persistent", &_persistent);
 					Register<Optional>("Failback", &_failback);
 					Register<Optional>("StrictLocation", &_strict_location);
-					Register<Optional>("Relay", &_relay);
+					Register<Optional>("Relay", &_relay, [=]() -> std::shared_ptr<ConfigError> {
+						if(_pass.GetScheme().LowerCaseString() == "ovt")
+						{
+							logd("Config", "OVT schema defaults to relay mode");
+							_relay = true;
+						}
+
+						return nullptr;
+					}, nullptr);
 				}
 				ov::String _location;
 				Pass _pass;
 				bool _persistent = false;
 				bool _failback = false;
 				bool _strict_location = false;
-				bool _relay = true;
+				bool _relay = false;
 			};
 		}  // namespace orgn
 	}	   // namespace vhost
