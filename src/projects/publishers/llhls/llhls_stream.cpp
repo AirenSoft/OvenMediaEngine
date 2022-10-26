@@ -305,6 +305,7 @@ bool LLHlsStream::DumpInitSegment(const std::shared_ptr<mdl::Dump> &item, const 
 {
 	if (item->IsEnabled() == false)
 	{
+		logtw("Dump(%s) is disabled", item->GetId().CStr());
 		return false;
 	}
 
