@@ -57,7 +57,10 @@ namespace ov
 					if (CreateDirectories(parent_path))
 					{
 						// Parent directory was successfully created, try it again
-						return (mkdir(path.CStr(), mode) == 0);
+						if (mkdir(path.CStr(), mode) == 0 || errno == EEXIST)
+						{
+							return true;
+						}
 					}
 				}
 				break;
