@@ -34,8 +34,8 @@ ifneq ($(CONFIG_PKG_PATHS),)
 __PKG_CONFIG_PATH := PKG_CONFIG_PATH="$(CONFIG_PKG_PATHS)"
 endif
 
-__EXTRA_CFLAGS :=
-__EXTRA_LDFLAGS :=
+__EXTRA_CFLAGS := $(CPPFLAGS)
+__EXTRA_LDFLAGS := $(LDFLAGS)
 # Increase stack size if the OS is Alpine Linux)
 ifneq ($(shell cat /etc/*release 2>/dev/null | grep "^ID=" | grep "alpine"),)
     # 1048576 = 1MB
