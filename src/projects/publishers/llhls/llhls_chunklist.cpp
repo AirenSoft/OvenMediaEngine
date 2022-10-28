@@ -124,7 +124,11 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 		}
 	}
 
-	_max_part_duration = std::max(_max_part_duration, info.GetDuration());
+	// part duration is calculated on first segment
+	if (segment_sequence == 0)
+	{
+		_max_part_duration = std::max(_max_part_duration, info.GetDuration());
+	}
 
 	segment->InsertPartialSegmentInfo(std::make_shared<SegmentInfo>(info));
 	_last_partial_segment_sequence = info.GetSequence();
