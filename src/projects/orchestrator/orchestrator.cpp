@@ -605,7 +605,14 @@ namespace ocst
 		const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
 		const ov::String &url, off_t offset)
 	{
-		return RequestPullStream(request_from, vhost_app_name, stream_name, {url}, offset);
+		auto properties = std::make_shared<pvd::PullStreamProperties>();
+		auto url_item = ov::Url::Parse(url);
+		if (url_item->Scheme().UpperCaseString() == "OVT")
+		{
+			properties->SetRelay(true);
+		}
+
+		return RequestPullStream(request_from, vhost_app_name, stream_name, {url}, offset, properties);
 	}
 
 	// Pull a stream using Origin map

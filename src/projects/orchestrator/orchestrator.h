@@ -118,7 +118,7 @@ namespace ocst
 			const std::shared_ptr<const ov::Url> &request_from,
 			const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
 			const std::vector<ov::String> &url_list, off_t offset,
-			const std::shared_ptr<pvd::PullStreamProperties> &roperties);
+			const std::shared_ptr<pvd::PullStreamProperties> &properties);
 
 		/// Pull a stream using specified URL
 		///
