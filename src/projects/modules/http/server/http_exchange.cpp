@@ -30,9 +30,23 @@ namespace http
 			_keep_alive = exchange->_keep_alive;
 		}
 
+		HttpExchange::~HttpExchange()
+		{
+		}
+
 		// Terminate
 		void HttpExchange::Release()
 		{
+			// print debug info
+			if (GetResponse()->GetStatusCode() != http::StatusCode::OK)
+			{
+				logte("%s", GetDebugInfo().CStr());
+			}
+			else
+			{
+				logtd("%s", GetDebugInfo().CStr());
+			}
+
 			_status = Status::Completed;
 			_connection->OnExchangeCompleted(GetSharedPtr());
 		}
@@ -215,8 +229,9 @@ namespace http
 			{
 				logtd("Interceptor is nullptr");
 				SetStatus(Status::Error);
-				GetResponse()->SetStatusCode(StatusCode::InternalServerError);
+				GetResponse()->SetStatusCode(StatusCode::NotFound);
 				GetResponse()->Response();
+				Release();
 				return false;
 			}
 
@@ -231,8 +246,9 @@ namespace http
 			{
 				logtd("Interceptor is nullptr");
 				SetStatus(Status::Error);
-				GetResponse()->SetStatusCode(StatusCode::InternalServerError);
+				GetResponse()->SetStatusCode(StatusCode::NotFound);
 				GetResponse()->Response();
+				Release();
 				return false;
 			}
 
@@ -246,8 +262,9 @@ namespace http
 			{
 				logtd("Interceptor is nullptr");
 				SetStatus(Status::Error);
-				GetResponse()->SetStatusCode(StatusCode::InternalServerError);
+				GetResponse()->SetStatusCode(StatusCode::NotFound);
 				GetResponse()->Response();
+				Release();
 				return InterceptorResult::Error;
 			}
 

@@ -224,7 +224,8 @@ namespace http
 		uint32_t HttpResponse::Response()
 		{
 			std::lock_guard<decltype(_response_mutex)> lock(_response_mutex);
-			
+			_response_time = std::chrono::system_clock::now();
+
 			uint32_t sent_size = 0;
 
 			if (IsHeaderSent() == false)
@@ -251,8 +252,6 @@ namespace http
 			sent_size += sent_data_size;
 
 			_sent_size += sent_size;
-
-			_response_time = std::chrono::system_clock::now();
 
 			return sent_size;
 		}	

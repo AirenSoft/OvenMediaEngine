@@ -35,7 +35,7 @@ namespace http
 
 			HttpExchange(const std::shared_ptr<HttpConnection> &connection);
 			HttpExchange(const std::shared_ptr<HttpExchange> &exchange); // Copy
-			virtual ~HttpExchange() = default;
+			~HttpExchange();
 
 			// Get connection
 			std::shared_ptr<HttpConnection> GetConnection() const;
