@@ -505,7 +505,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		}
 		else
 		{
-			auto max_age = (llhls_stream->GetMaxChunkDurationMS() / 1000.0f) * 3.0f;
+			auto max_age = (llhls_stream->GetMaxChunkDurationMS() / 1000.0f) * 10.0f;
 			cache_control = ov::String::FormatString("max-age=%.f", std::ceil(max_age));
 		}
 
