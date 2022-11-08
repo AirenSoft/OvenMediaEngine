@@ -19,6 +19,9 @@ namespace bmff
 		_track = track;
 		_observer = observer;
 
+		// Keep 2x more even if pushed out of chunklist
+		_config.max_segments *= 2;
+		
 		_target_segment_duration_ms = _config.segment_duration_ms;
 	}
 
