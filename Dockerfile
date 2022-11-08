@@ -15,11 +15,8 @@ ARG     GPU=FALSE
 ENV     PREFIX=/opt/ovenmediaengine
 ENV     TEMP_DIR=/tmp/ome
 
-## Download OvenMediaEngine
-RUN \
-        mkdir -p ${TEMP_DIR} && \
-        cd ${TEMP_DIR} && \
-        curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1
+## Copy code to image
+COPY ./ ${TEMP_DIR}/
 
 ## Install dependencies
 RUN \
