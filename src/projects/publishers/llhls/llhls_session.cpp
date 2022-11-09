@@ -443,7 +443,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 	auto request = exchange->GetRequest();
 	auto request_uri = request->GetParsedUri();
 	auto response = exchange->GetResponse();
-	bool has_delivery_directives = true;
+	bool has_delivery_directives = request_uri->HasQueryKey("_HLS_msn");
 
 	if (msn == -1 && part == -1)
 	{
@@ -451,7 +451,6 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		// the player cannot start playing, so the request is pending until at least one segment is created.
 		msn = 2;
 		part = 0;
-		has_delivery_directives = false;
 	}
 
 	ov::String content_encoding = "identity";
