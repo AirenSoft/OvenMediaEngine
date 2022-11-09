@@ -305,6 +305,16 @@
 							<JitterBuffer>false</JitterBuffer>
 						</WebRTC>
 						<LLHLS>
+							<OriginMode>true</OriginMode>
+							<!--
+							<CacheControl>
+								<MasterPlaylistMaxAge>0</MasterPlaylistMaxAge>
+								<ChunklistMaxAge>0</ChunklistMaxAge>
+								<ChunklistWithDirectivesMaxAge>60</ChunklistWithDirectivesMaxAge>
+								<SegmentMaxAge>-1</SegmentMaxAge>
+								<PartialSegmentMaxAge>-1</PartialSegmentMaxAge>
+							</CacheControl>
+							-->
 							<ChunkDuration>0.5</ChunkDuration>
 							<!-- PartHoldBack SHOULD be at least three times the Part Target Duration -->
 							<PartHoldBack>1.5</PartHoldBack>

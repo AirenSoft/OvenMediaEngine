@@ -57,6 +57,15 @@ LLHlsSession::~LLHlsSession()
 
 bool LLHlsSession::Start()
 {
+	auto llhls_conf = GetApplication()->GetConfig().GetPublishers().GetLLHlsPublisher();
+	auto cache_control = llhls_conf.GetCacheControl();
+
+	_master_playlist_max_age = cache_control.GetMasterPlaylistMaxAge();
+	_chunklist_max_age = cache_control.GetChunklistMaxAge();
+	_chunklist_with_directives_max_age = cache_control.GetChunklistWithDirectivesMaxAge();
+	_segment_max_age = cache_control.GetSegmentMaxAge();
+	_partial_segment_max_age = cache_control.GetPartialSegmentMaxAge();
+
 	return Session::Start();
 }
 
@@ -409,8 +418,21 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 
 		// Cache-Control header
 		// When the stream is recreated, llhls.m3u8 file is changed.
-		auto cache_control = ov::String::FormatString("no-cache, no-store");
-		response->SetHeader("Cache-Control", cache_control);
+
+		if (_master_playlist_max_age >= 0)
+		{
+			ov::String cache_control;
+			if (_master_playlist_max_age == 0)
+			{
+				cache_control = ov::String::FormatString("no-cache, no-store");
+			}
+			else
+			{
+				cache_control = ov::String::FormatString("max-age=%d", _master_playlist_max_age);
+			}
+
+			response->SetHeader("Cache-Control", cache_control);
+		}
 
 		response->AppendData(playlist);
 
@@ -499,16 +521,35 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		ov::String cache_control;
 		if (has_delivery_directives == false)
 		{
-			// Always respond with lastest chunklist
-			cache_control = ov::String::FormatString("no-cache, no-store");	
+			if (_chunklist_max_age >= 0)
+			{
+				if (_chunklist_max_age == 0)
+				{
+					cache_control = ov::String::FormatString("no-cache, no-store");
+				}
+				else
+				{
+					cache_control = ov::String::FormatString("max-age=%d", _chunklist_max_age);
+				}
+				response->SetHeader("Cache-Control", cache_control);
+			}
 		}
 		else
 		{
-			auto max_age = (llhls_stream->GetMaxChunkDurationMS() / 1000.0f) * 10.0f;
-			cache_control = ov::String::FormatString("max-age=%.f", std::ceil(max_age));
+			if (_chunklist_with_directives_max_age >= 0)
+			{
+				if (_chunklist_with_directives_max_age == 0)
+				{
+					cache_control = ov::String::FormatString("no-cache, no-store");
+				}
+				else
+				{
+					cache_control = ov::String::FormatString("max-age=%d", _chunklist_with_directives_max_age);
+				}
+				response->SetHeader("Cache-Control", cache_control);
+			}
 		}
 
-		response->SetHeader("Cache-Control", cache_control);
 		response->AppendData(chunklist);
 
 		// If a client uses previously cached llhls.m3u8 and requests chunklist
@@ -562,6 +603,20 @@ void LLHlsSession::ResponseInitializationSegment(const std::shared_ptr<http::svr
 			response->SetHeader("Content-Type", "audio/mp4");
 		}
 
+		if (_segment_max_age >= 0)
+		{
+			ov::String cache_control;
+			if (_segment_max_age == 0)
+			{
+				cache_control = ov::String::FormatString("no-cache, no-store");
+			}
+			else
+			{
+				cache_control = ov::String::FormatString("max-age=%d", _segment_max_age);
+			}
+			response->SetHeader("Cache-Control", cache_control);
+		}
+
 		response->AppendData(initialization_segment);
 	}
 	else
@@ -598,6 +653,21 @@ void LLHlsSession::ResponseSegment(const std::shared_ptr<http::svr::HttpExchange
 		{
 			response->SetHeader("Content-Type", "audio/mp4");
 		}
+
+		if (_segment_max_age >= 0)
+		{
+			ov::String cache_control;
+			if (_segment_max_age == 0)
+			{
+				cache_control = ov::String::FormatString("no-cache, no-store");
+			}
+			else
+			{
+				cache_control = ov::String::FormatString("max-age=%d", _segment_max_age);
+			}
+			response->SetHeader("Cache-Control", cache_control);
+		}
+
 		response->AppendData(segment);
 	}
 	else
@@ -634,6 +704,21 @@ void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpE
 		{
 			response->SetHeader("Content-Type", "audio/mp4");
 		}
+
+		if (_partial_segment_max_age >= 0)
+		{
+			ov::String cache_control;
+			if (_partial_segment_max_age == 0)
+			{
+				cache_control = ov::String::FormatString("no-cache, no-store");
+			}
+			else
+			{
+				cache_control = ov::String::FormatString("max-age=%d", _partial_segment_max_age);
+			}
+			response->SetHeader("Cache-Control", cache_control);
+		}
+
 		response->AppendData(partial_segment);
 	}
 	else if (result == LLHlsStream::RequestResult::Accepted)

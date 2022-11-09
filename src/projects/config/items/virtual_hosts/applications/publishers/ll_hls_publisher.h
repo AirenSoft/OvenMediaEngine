@@ -10,6 +10,7 @@
 
 #include "../../../common/cross_domain_support.h"
 #include "dumps/dumps.h"
+#include "ll_hls_cache_control.h"
 #include "publisher.h"
 
 namespace cfg
@@ -30,6 +31,7 @@ namespace cfg
 					double _part_hold_back = 0; // it will be set to 3 * chunk_duration automatically
 					int _segment_duration = 6;
 					Dumps _dumps;
+					LLHlsCacheControl _cache_control;
 
 				public:
 					PublisherType GetType() const override
@@ -43,6 +45,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetPartHoldBack, _part_hold_back)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetSegmentCount, _segment_count)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetDumps, _dumps)
+					CFG_DECLARE_REF_GETTER_OF(GetCacheControl, _cache_control)
 
 				protected:
 					void MakeList() override
@@ -56,6 +59,7 @@ namespace cfg
 						Register<Optional>("SegmentCount", &_segment_count);
 						Register<Optional>("CrossDomains", &_cross_domains);
 						Register<Optional>("Dumps", &_dumps);
+						Register<Optional>("CacheControl", &_cache_control);
 					}
 				};
 			}  // namespace pub
