@@ -165,6 +165,8 @@ private:
 	int64_t GetSegmentIndex(uint32_t segment_sequence) const;
 	bool SaveOldSegmentInfo(std::shared_ptr<SegmentInfo> &segment_info);
 
+	ov::String MakeChunklist(const ov::String &query_string, bool skip, bool legacy, bool vod = false, uint32_t vod_start_segment_number = 0) const;
+
 	std::shared_ptr<const MediaTrack> _track;
 
 	ov::String _url;
@@ -176,8 +178,8 @@ private:
 	double _part_hold_back = 0;
 	ov::String _map_uri;
 
-	int64_t _last_segment_sequence = -1;
-	int64_t _last_partial_segment_sequence = -1;
+	std::atomic<int64_t> _last_segment_sequence = -1;
+	std::atomic<int64_t> _last_partial_segment_sequence = -1;
 
 	// Segment number -> SegmentInfo
 	std::deque<std::shared_ptr<SegmentInfo>> _segments;
@@ -187,4 +189,12 @@ private:
 	bool _keep_old_segments = false;
 
 	std::map<int32_t, std::shared_ptr<LLHlsChunklist>> _renditions;
+
+	ov::String _cached_default_chunklist;
+	mutable std::shared_mutex _cached_default_chunklist_guard;
+
+	std::shared_ptr<ov::Data> _cached_default_chunklist_gzip;
+	mutable std::shared_mutex _cached_default_chunklist_gzip_guard;
+
+	void UpdateCacheForDefaultChunklist();
 };
