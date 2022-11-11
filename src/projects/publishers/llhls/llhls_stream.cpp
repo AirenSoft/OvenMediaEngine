@@ -250,6 +250,8 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 		master_playlist->AddStreamInfToMasterPlaylist(video_track, video_chunklist_name, audio_track, audio_chunklist_name);
 	}
 
+	master_playlist->UpdateCacheForDefaultPlaylist();
+
 	return master_playlist;
 }
 

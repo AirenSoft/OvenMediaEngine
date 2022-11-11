@@ -415,7 +415,7 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, bool skip, b
 		return "";
 	}
 
-	if (query_string.IsEmpty() && skip == false && legacy == false && vod == false && vod_start_segment_number == 0)
+	if (query_string.IsEmpty() && skip == false && legacy == false && vod == false && vod_start_segment_number == 0 && !_cached_default_chunklist.IsEmpty())
 	{
 		// return cached chunklist for default chunklist
 		std::shared_lock<std::shared_mutex> lock(_cached_default_chunklist_guard);
@@ -427,7 +427,7 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, bool skip, b
 
 std::shared_ptr<const ov::Data> LLHlsChunklist::ToGzipData(const ov::String &query_string, bool skip, bool legacy) const
 {
-	if (query_string.IsEmpty() && skip == false && legacy == false)
+	if (query_string.IsEmpty() && skip == false && legacy == false && _cached_default_chunklist_gzip != nullptr)
 	{
 		std::shared_lock<std::shared_mutex> lock(_cached_default_chunklist_gzip_guard);
 		return _cached_default_chunklist_gzip;

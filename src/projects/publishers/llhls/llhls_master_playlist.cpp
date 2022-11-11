@@ -169,9 +169,25 @@ const LLHlsMasterPlaylist::MediaInfo &LLHlsMasterPlaylist::GetDefaultMediaInfo(c
 	return MediaInfo::InvalidMediaInfo();
 }
 
-ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string, bool legacy, bool include_path) const
+void LLHlsMasterPlaylist::UpdateCacheForDefaultPlaylist()
 {
-	ov::String playlist(1024);
+	ov::String playlist = MakePlaylist("", false);
+	{
+		// lock 
+		std::lock_guard<std::shared_mutex> lock(_cached_default_playlist_guard);
+		_cached_default_playlist = playlist;
+	}
+
+	{
+		// lock 
+		std::lock_guard<std::shared_mutex> lock(_cached_default_playlist_gzip_guard);
+		_cached_default_playlist_gzip = ov::Zip::CompressGzip(playlist.ToData(false));
+	}
+}
+
+ov::String LLHlsMasterPlaylist::MakePlaylist(const ov::String &chunk_query_string, bool legacy, bool include_path) const
+{
+	ov::String playlist(10240);
 
 	playlist.AppendFormat("#EXTM3U\n");
 	playlist.AppendFormat("#EXT-X-VERSION:7\n");
@@ -346,7 +362,24 @@ ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string, b
 	return playlist;
 }
 
+ov::String LLHlsMasterPlaylist::ToString(const ov::String &chunk_query_string, bool legacy, bool include_path) const
+{
+	if (chunk_query_string.IsEmpty() && legacy == false && include_path == true && !_cached_default_playlist.IsEmpty())
+	{
+		std::shared_lock<std::shared_mutex> lock(_cached_default_playlist_guard);
+		return _cached_default_playlist;
+	}
+
+	return MakePlaylist(chunk_query_string, legacy, include_path);
+}
+
 std::shared_ptr<const ov::Data> LLHlsMasterPlaylist::ToGzipData(const ov::String &chunk_query_string, bool legacy) const
 {
+	if (chunk_query_string.IsEmpty() && legacy == false && _cached_default_playlist_gzip != nullptr)
+	{
+		std::shared_lock<std::shared_mutex> lock(_cached_default_playlist_gzip_guard);
+		return _cached_default_playlist_gzip;
+	}
+
 	return  ov::Zip::CompressGzip(ToString(chunk_query_string, legacy).ToData(false));
 }

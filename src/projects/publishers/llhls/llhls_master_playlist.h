@@ -22,6 +22,8 @@ public:
 	// Add X-STREAM-INF to the master playlist
 	void AddStreamInfToMasterPlaylist(const std::shared_ptr<const MediaTrack> &video_track, const ov::String &video_chunk_uri, 
 										const std::shared_ptr<const MediaTrack> &audio_track, const ov::String &audio_chunk_uri);
+	
+	void UpdateCacheForDefaultPlaylist();
 
 	ov::String ToString(const ov::String &chunk_query_string, bool legacy, bool include_path=true) const;
 	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &chunk_query_string, bool legacy) const;
@@ -100,4 +102,12 @@ private:
 	mutable std::shared_mutex _stream_infos_guard;
 
 	ov::String _chunk_path;
+
+	ov::String _cached_default_playlist;
+	mutable std::shared_mutex _cached_default_playlist_guard;
+
+	std::shared_ptr<ov::Data> _cached_default_playlist_gzip = nullptr;
+	mutable std::shared_mutex _cached_default_playlist_gzip_guard;
+
+	ov::String MakePlaylist(const ov::String &chunk_query_string, bool legacy, bool include_path=true) const;
 };
