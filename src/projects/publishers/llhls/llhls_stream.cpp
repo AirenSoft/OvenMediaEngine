@@ -496,8 +496,6 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 		}
 	}
 
-	// lock
-	std::shared_lock<std::shared_mutex> lock(_chunklist_map_lock);
 	if (gzip == true)
 	{
 		return { RequestResult::Success, chunklist->ToGzipData(query_string, skip, legacy) };
