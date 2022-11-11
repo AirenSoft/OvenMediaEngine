@@ -71,15 +71,18 @@ bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
 {
 	if (info.GetSequence() < _last_segment_sequence)
 	{
+		logtc("The sequence number of the segment to be added is less than the last segment. segment(%lld) last(%lld)", info.GetSequence(), _last_segment_sequence.load());
 		return false;
 	}
 
 	std::shared_ptr<SegmentInfo> segment = GetSegmentInfo(info.GetSequence());
+	bool is_new_segment = false;
 	if (segment == nullptr)
 	{
 		// Sequence must be sequential
 		if (_last_segment_sequence + 1 != info.GetSequence())
 		{
+			logtc("Sequence is not sequential. last_sequence(%lld) current_sequence(%lld)", _last_segment_sequence.load(), info.GetSequence());
 			return false;
 		}
 
@@ -88,8 +91,7 @@ bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
 		// Create segment
 		segment = std::make_shared<SegmentInfo>(info);
 		_segments.push_back(segment);
-
-		_last_segment_sequence += 1;
+		is_new_segment = true;
 
 		if (_segments.size() > _max_segments)
 		{
@@ -110,6 +112,10 @@ bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
 	segment->SetCompleted();
 
 	UpdateCacheForDefaultChunklist();
+	if (is_new_segment)
+	{
+		_last_segment_sequence = info.GetSequence();
+	}
 
 	return true;
 }
@@ -120,7 +126,7 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 	{
 		return false;
 	}
-
+	
 	std::shared_ptr<SegmentInfo> segment = GetSegmentInfo(segment_sequence);
 	if (segment == nullptr)
 	{
@@ -151,9 +157,9 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 	}
 
 	segment->InsertPartialSegmentInfo(std::make_shared<SegmentInfo>(info));
-	_last_partial_segment_sequence = info.GetSequence();
-
+	
 	UpdateCacheForDefaultChunklist();
+	_last_partial_segment_sequence = info.GetSequence();
 
 	return true;
 }
