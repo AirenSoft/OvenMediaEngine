@@ -87,6 +87,16 @@ bool LLHlsStream::Start()
 		}
 	}
 
+	// Set renditions to each chunklist writer
+	{
+		std::lock_guard<std::shared_mutex> lock(_chunklist_map_lock);
+		for (auto &it : _chunklist_map)
+		{
+			auto chunklist_writer = it.second;
+			chunklist_writer->SetRenditions(_chunklist_map);
+		}
+	}
+
 	if (first_video_track == nullptr && first_audio_track == nullptr)
 	{
 		logtw("LLHLS stream [%s/%s] could not be created because there is no supported codec.", GetApplication()->GetName().CStr(), GetName().CStr());
@@ -160,6 +170,12 @@ bool LLHlsStream::Stop()
 
 	// clear all playlist
 	std::lock_guard<std::shared_mutex> lock3(_chunklist_map_lock);
+	for (auto &it : _chunklist_map)
+	{
+		auto chunklist_writer = it.second;
+		chunklist_writer->Release();
+	}
+
 	_chunklist_map.clear();
 
 	return Stream::Stop();
@@ -371,7 +387,7 @@ bool LLHlsStream::DumpSegment(const std::shared_ptr<mdl::Dump> &item, const int3
 		return false;
 	}
 
-	auto chunklist_data = chunklist->ToString("", _chunklist_map, false, true, true, item->GetFirstSegmentNumber(track_id)).ToData(false);
+	auto chunklist_data = chunklist->ToString("", false, true, true, item->GetFirstSegmentNumber(track_id)).ToData(false);
 	
 	auto segment_file_name = GetSegmentName(track_id, segment_number);
 	auto chunklist_file_name = GetChunklistName(track_id);
@@ -484,10 +500,10 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 	std::shared_lock<std::shared_mutex> lock(_chunklist_map_lock);
 	if (gzip == true)
 	{
-		return { RequestResult::Success, chunklist->ToGzipData(query_string, _chunklist_map, skip, legacy) };
+		return { RequestResult::Success, chunklist->ToGzipData(query_string, skip, legacy) };
 	}
 
-	return { RequestResult::Success, chunklist->ToString(query_string, _chunklist_map, skip, legacy).ToData(false) };
+	return { RequestResult::Success, chunklist->ToString(query_string, skip, legacy).ToData(false) };
 }
 
 std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::GetInitializationSegment(const int32_t &track_id) const
@@ -710,7 +726,19 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 		logtc("LLHlsStream::AddPackager() - Failed to create initialization segment");
 		return false;
 	}
-	
+
+	// milliseconds to seconds
+	auto segment_duration = static_cast<float_t>(_storage_config.segment_duration_ms) / 1000.0;
+	auto chunk_duration = static_cast<float_t>(_packager_config.chunk_duration_ms) / 1000.0;
+	auto track_id = media_track->GetId();
+
+	auto chunklist = std::make_shared<LLHlsChunklist>(GetChunklistName(track_id),
+													GetTrack(track_id),
+													_storage_config.max_segments, 
+													segment_duration, 
+													chunk_duration, 
+													GetIntializationSegmentName(track_id));
+
 	{
 		std::lock_guard<std::shared_mutex> storage_lock(_storage_map_lock);
 		_storage_map.emplace(media_track->GetId(), storage);
@@ -721,8 +749,15 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 		_packager_map.emplace(media_track->GetId(), packager);
 	}
 
+	{
+		std::unique_lock<std::shared_mutex> lock(_chunklist_map_lock);
+		_chunklist_map.emplace(track_id, chunklist);
+	}
+
 	return true;
 }
+
+
 
 // Get storage with the track id
 std::shared_ptr<bmff::FMP4Storage> LLHlsStream::GetStorage(const int32_t &track_id) const
@@ -814,19 +849,7 @@ ov::String LLHlsStream::GetNextPartialSegmentName(const int32_t &track_id, const
 
 void LLHlsStream::OnFMp4StorageInitialized(const int32_t &track_id)
 {
-	// milliseconds to seconds
-	auto segment_duration = static_cast<float_t>(_storage_config.segment_duration_ms) / 1000.0;
-	auto chunk_duration = static_cast<float_t>(_packager_config.chunk_duration_ms) / 1000.0;
-
-	auto playlist = std::make_shared<LLHlsChunklist>(GetChunklistName(track_id),
-													GetTrack(track_id),
-													_storage_config.max_segments, 
-													segment_duration, 
-													chunk_duration, 
-													GetIntializationSegmentName(track_id));
-
-	std::unique_lock<std::shared_mutex> lock(_chunklist_map_lock);
-	_chunklist_map[track_id] = playlist;
+	// Not to do anything
 }
 
 bool LLHlsStream::IsReadyToPlay() const

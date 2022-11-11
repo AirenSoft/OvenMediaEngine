@@ -134,7 +134,16 @@ public:
 
 	LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, double part_target_duration, const ov::String &map_uri);
 
+	~LLHlsChunklist();
+
+	// A LLHlsChunklist has circular dependency issues because it holds its own pointer and pointers to all other chunklists. 
+	// Therefore, you must call the Release function.
+	void Release();
+
 	const ov::String& GetUrl() const;
+
+	// Set all renditions info for ABR
+	void SetRenditions(const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions);
 
 	void SaveOldSegmentInfo(bool enable);
 
@@ -146,8 +155,8 @@ public:
 	bool AppendSegmentInfo(const SegmentInfo &info);
 	bool AppendPartialSegmentInfo(uint32_t segment_sequence, const SegmentInfo &info);
 
-	ov::String ToString(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip, bool legacy, bool vod = false, uint32_t vod_start_segment_number = 0) const;
-	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip, bool legacy) const;
+	ov::String ToString(const ov::String &query_string, bool skip, bool legacy, bool vod = false, uint32_t vod_start_segment_number = 0) const;
+	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &query_string, bool skip, bool legacy) const;
 
 	std::shared_ptr<SegmentInfo> GetSegmentInfo(uint32_t segment_sequence) const;
 	bool GetLastSequenceNumber(int64_t &msn, int64_t &psn) const;
@@ -176,4 +185,6 @@ private:
 	mutable std::shared_mutex _segments_guard;
 	uint64_t _deleted_segments = 0;
 	bool _keep_old_segments = false;
+
+	std::map<int32_t, std::shared_ptr<LLHlsChunklist>> _renditions;
 };

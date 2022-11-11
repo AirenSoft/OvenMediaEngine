@@ -21,6 +21,24 @@ LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<cons
 	_max_part_duration = 0;
 	_part_target_duration = part_target_duration;
 	_map_uri = map_uri;
+
+	logtd("LLHLS Chunklist has been created. track(%s)", _track->GetName().CStr());
+}
+
+LLHlsChunklist::~LLHlsChunklist()
+{
+	logtd("Chunklist has been deleted. %s", GetTrack()->GetName().CStr());
+}
+
+// Set all renditions info for ABR
+void LLHlsChunklist::SetRenditions(const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions)
+{
+	_renditions = renditions;
+}
+
+void LLHlsChunklist::Release()
+{
+	_renditions.clear();
 }
 
 void LLHlsChunklist::SaveOldSegmentInfo(bool enable)
@@ -182,13 +200,13 @@ std::shared_ptr<LLHlsChunklist::SegmentInfo> LLHlsChunklist::GetSegmentInfo(uint
 
 bool LLHlsChunklist::GetLastSequenceNumber(int64_t &msn, int64_t &psn) const
 {
+	std::shared_lock<std::shared_mutex> lock(_segments_guard);
 	msn = _last_segment_sequence;
 	psn = _last_partial_segment_sequence;
-
 	return true;
 }
 
-ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip, bool legacy, bool vod, uint32_t vod_start_segment_number) const
+ov::String LLHlsChunklist::ToString(const ov::String &query_string, bool skip, bool legacy, bool vod, uint32_t vod_start_segment_number) const
 {
 	if (_segments.size() == 0)
 	{
@@ -316,7 +334,7 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 	if (vod == false)
 	{
 		// Output #EXT-X-RENDITION-REPORT
-		for (const auto &[track_id, rendition] : renditions)
+		for (const auto &[track_id, rendition] : _renditions)
 		{
 			// Skip mine 
 			if (track_id == static_cast<int32_t>(_track->GetId()))
@@ -364,7 +382,7 @@ ov::String LLHlsChunklist::ToString(const ov::String &query_string, const std::m
 	return playlist;
 }
 
-std::shared_ptr<const ov::Data> LLHlsChunklist::ToGzipData(const ov::String &query_string, const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions, bool skip, bool legacy) const
+std::shared_ptr<const ov::Data> LLHlsChunklist::ToGzipData(const ov::String &query_string, bool skip, bool legacy) const
 {
-	return ov::Zip::CompressGzip(ToString(query_string, renditions, skip, legacy).ToData(false));
+	return ov::Zip::CompressGzip(ToString(query_string, skip, legacy).ToData(false));
 }
