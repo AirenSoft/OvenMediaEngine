@@ -136,6 +136,9 @@ void EncoderAVCxOpenH264::CodecThread()
 			break;
 		}
 
+		// AV_Frame.pict_type must be set to AV_PICTURE_TYPE_NONE. This will ensure that the keyframe interval option is applied correctly.
+		av_frame->pict_type = AV_PICTURE_TYPE_NONE;
+
 		int ret = ::avcodec_send_frame(_codec_context, av_frame);
 		if (ret < 0)
 		{
