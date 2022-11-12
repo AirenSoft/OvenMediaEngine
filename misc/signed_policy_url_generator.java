@@ -71,9 +71,8 @@ public class OvenMediaEngineKeygen {
     public static String generate(String rtmpUrl, Long url_expire, Long url_activate, Long stream_expire, String allow_ip) throws UnsupportedEncodingException {
 
         Map<String, Object> policyMap = new HashMap<String, Object>();
+        policyMap.put("url_expire", url_expire);
 
-        if (url_expire != null)
-            policyMap.put("url_expire", url_expire);
         if (url_activate != null)
             policyMap.put("url_activate", url_activate);
         if (stream_expire != null)
