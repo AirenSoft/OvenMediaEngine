@@ -80,10 +80,6 @@ public class OvenMediaEngineKeygen {
         if (StringUtils.isNotBlank(allow_ip))
             policyMap.put("allow_ip", allow_ip);
 
-        if (policyMap.size() < 1)
-            throw new RuntimeException("At least one parameter is required.");
-
-
         String policy = gson.toJson(policyMap);
         String encodePolicy = encode(policy);
 
