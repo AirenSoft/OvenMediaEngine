@@ -30,9 +30,8 @@ bool EncoderAVCxOpenH264::SetCodecParams()
 	// Set KeyFrame Interval
 	_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
 
-	// Limit the number of threads suitable for h264 encoding to between 4 and 8.
 	// The peculiar thing is that openh264 does not increase the actual number of threads even if the number of threads is increased.
-	_codec_context->thread_count = (GetRefTrack()->GetThreadCount() > 0) ? GetRefTrack()->GetThreadCount() : FFMIN(FFMAX(4, av_cpu_count() / 3), 8);
+	_codec_context->thread_count = GetRefTrack()->GetThreadCount();
 	_codec_context->slices = _codec_context->thread_count;
 
 	// bitrate can't be controlled for RC_QUALITY_MODE,RC_BITRATE_MODE and RC_TIMESTAMP_MODE without enabling skip frame
