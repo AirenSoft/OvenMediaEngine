@@ -955,8 +955,10 @@ namespace ocst
 		{
 			return CommonErrorCode::SUCCESS;
 		}
-
-		return CommonErrorCode::ERROR;
+        
+		logti("LogFrom=%s, ovt_url=%s, app_stream_name=%s ", "MACBOOK", ovt_url, app_stream_name);
+		return CommonErrorCode::SUCCESS;
+		// return CommonErrorCode::ERROR;
 	}
 
 	CommonErrorCode Orchestrator::UnregisterStreamFromOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)

@@ -46,6 +46,9 @@ bool OriginMapClient::NofifyStreamsAlive()
 
 bool OriginMapClient::Register(const ov::String &app_stream_name, const ov::String &origin_host)
 {
+    logti()
+
+	logti("LogFrom=%s, origin_host=%s, app_stream_name=%s ", "MACBOOK", origin_host, app_stream_name);
 	if (ConnectRedis() == false)
 	{
 		logte("Failed to connect redis server : %s:%d (err:%s)", _redis_ip.CStr(), _redis_port, _redis_context!=nullptr?_redis_context->errstr:"nil");
