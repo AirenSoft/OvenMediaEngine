@@ -36,8 +36,6 @@ bool EncoderAVCxOpenH264::SetCodecParams()
 	_codec_context->thread_count = GetRefTrack()->GetThreadCount() < 0 ? FFMIN(FFMAX(4, av_cpu_count() / 3), 8) : GetRefTrack()->GetThreadCount();
 	_codec_context->slices = _codec_context->thread_count;
 
-	logtc("Thread count: %d", _codec_context->thread_count);
-
 	// bitrate can't be controlled for RC_QUALITY_MODE,RC_BITRATE_MODE and RC_TIMESTAMP_MODE without enabling skip frame
 	// If the auto skip frame option is enabled, intermittent frame drop occurs. It has nothing to do with CPU usage.
 	::av_opt_set(_codec_context->priv_data, "rc_mode", "bitrate", 0);
