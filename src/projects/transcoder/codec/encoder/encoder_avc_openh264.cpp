@@ -30,9 +30,13 @@ bool EncoderAVCxOpenH264::SetCodecParams()
 	// Set KeyFrame Interval
 	_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
 
-	// The peculiar thing is that openh264 does not increase the actual number of threads even if the number of threads is increased.
-	_codec_context->thread_count = GetRefTrack()->GetThreadCount();
+	// -1(Default) => FFMIN(FFMAX(4, av_cpu_count() / 3), 8) 
+	// 0 => Auto
+	// >1 => Set
+	_codec_context->thread_count = GetRefTrack()->GetThreadCount() < 0 ? FFMIN(FFMAX(4, av_cpu_count() / 3), 8) : GetRefTrack()->GetThreadCount();
 	_codec_context->slices = _codec_context->thread_count;
+
+	logtc("Thread count: %d", _codec_context->thread_count);
 
 	// bitrate can't be controlled for RC_QUALITY_MODE,RC_BITRATE_MODE and RC_TIMESTAMP_MODE without enabling skip frame
 	// If the auto skip frame option is enabled, intermittent frame drop occurs. It has nothing to do with CPU usage.

@@ -30,7 +30,7 @@ namespace cfg
 					ov::String _bitrate_string;
 					double _framerate = 0.0;
 					ov::String _preset;
-					int _thread_count = 0;
+					int _thread_count = -1;
 					int _key_frame_interval = 0;
 					int _b_frames = 0;
 					

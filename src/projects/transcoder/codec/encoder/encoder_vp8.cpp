@@ -32,8 +32,10 @@ bool EncoderVP8::SetCodecParams()
 	
 	// VP8 does not support bframe
 
-	// Limit the number of threads suitable for vp8 encoding to between 4 and 8.
-	_codec_context->thread_count = (GetRefTrack()->GetThreadCount() > 0) ? GetRefTrack()->GetThreadCount() : FFMIN(FFMAX(4, av_cpu_count() / 3), 8);
+	// -1(Default) => FFMIN(FFMAX(4, av_cpu_count() / 3), 8) 
+	// 0 => Auto
+	// >1 => Set
+	_codec_context->thread_count = GetRefTrack()->GetThreadCount() < 0 ? FFMIN(FFMAX(4, av_cpu_count() / 3), 8) : GetRefTrack()->GetThreadCount();
 
 	// Preset
 	if (GetRefTrack()->GetPreset() == "slower" || GetRefTrack()->GetPreset() == "slow")
