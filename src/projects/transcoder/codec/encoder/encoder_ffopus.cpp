@@ -33,7 +33,7 @@ bool EncoderFFOPUS::SetCodecParams()
 	// Compression Level (0~10)
 	// 0 Low quality and fast encoding (less CPU usage)
 	// 10 - High quality, slow encoding (high CPU usage)
-	_codec_context->compression_level = 1;
+	_codec_context->compression_level = 10;
 
 	::av_opt_set(_codec_context->priv_data, "application", "lowdelay", 0);
 	::av_opt_set(_codec_context->priv_data, "frame_duration", "20.0", 0);
