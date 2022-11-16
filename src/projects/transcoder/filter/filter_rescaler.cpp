@@ -260,6 +260,7 @@ void FilterRescaler::FilterThread()
 			}
 			else
 			{
+				_frame->pict_type = AV_PICTURE_TYPE_NONE;
 				auto output_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				::av_frame_unref(_frame);
 				if (output_frame == nullptr)
