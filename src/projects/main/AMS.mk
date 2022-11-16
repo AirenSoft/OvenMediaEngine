@@ -78,11 +78,10 @@ $(call add_pkg_config,libsrtp2)
 $(call add_pkg_config,libpcre2-8)
 $(call add_pkg_config,hiredis)
 
-# Temporarily stop using JEMALLOC. We will test it more and use it again.
-#ifeq ($(MAKECMDGOALS),release)
-	# Enable jemalloc 
-	# $(call add_pkg_config,jemalloc)
-#endif
+# Enable jemalloc 
+ifeq ($(MAKECMDGOALS),release)
+$(call add_pkg_config,jemalloc)
+endif
 
 LOCAL_TARGET := OvenMediaEngine
 
