@@ -21,16 +21,18 @@ bool AVCDecoderConfigurationRecord::Parse(const uint8_t *data, size_t data_lengt
 	record._profile_compatibility = parser.ReadBytes<uint8_t>();
 	record._level_indication = parser.ReadBytes<uint8_t>();
 	record._reserved1 = parser.ReadBits<uint8_t>(6);
-	if (record._reserved1 != 0b111111)
-	{
-		return false;
-	}
+	// 2022-11-16 Some encoder does not set the _reserved1 to 0b111111
+	// if (record._reserved1 != 0b111111)
+	// {
+	// 	return false;
+	// }
 	record._lengthMinusOne = parser.ReadBits<uint8_t>(2);
 	record._reserved2 = parser.ReadBits<uint8_t>(3);
-	if (record._reserved2 != 0b111)
-	{
-		return false;
-	}
+	// 2022-11-16 Some encoder does not set the _reserved2 to 0b111
+	// if (record._reserved2 != 0b111)
+	// {
+	// 	return false;
+	// }
 
 	record._num_of_sps = parser.ReadBits<uint8_t>(5);
 	for (int i = 0; i < record._num_of_sps; i++)
