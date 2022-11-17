@@ -140,6 +140,20 @@ bool LLHlsStream::Start()
 			output_path = output_path.Replace("${AppName}", GetApplication()->GetName().GetAppName().CStr());
 			output_path = output_path.Replace("${StreamName}", GetName().CStr());
 
+			// ${YYYY}, ${MM}, ${DD}, ${hh}, ${mm}, ${ss}
+			auto now = std::chrono::system_clock::now();
+			auto time = std::chrono::system_clock::to_time_t(now);
+			struct tm tm;
+			::localtime_r(&time, &tm);
+
+			// Replace ${YYYY}, ${MM}, ${DD}, ${hh}, ${mm}, ${ss}
+			output_path = output_path.Replace("${YYYY}", ov::Converter::ToString(tm.tm_year + 1900).CStr());
+			output_path = output_path.Replace("${MM}", ov::Converter::ToString(tm.tm_mon + 1).CStr());
+			output_path = output_path.Replace("${DD}", ov::Converter::ToString(tm.tm_mday).CStr());
+			output_path = output_path.Replace("${hh}", ov::Converter::ToString(tm.tm_hour).CStr());
+			output_path = output_path.Replace("${mm}", ov::Converter::ToString(tm.tm_min).CStr());
+			output_path = output_path.Replace("${ss}", ov::Converter::ToString(tm.tm_sec).CStr());
+			
 			auto dump_item = std::make_shared<mdl::Dump>();
 			dump_item->SetId(dump.GetId());
 			dump_item->SetOutputPath(output_path);
