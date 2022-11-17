@@ -145,7 +145,7 @@ You can dump the LLHLS stream for VoD. You can enable it by setting the followin
 			<Playlist>abr.m3u8</Playlist>
 		</Playlists>
 
-		<OutputPath>/service/www/ome-dev.airensoft.com/html/${VHostName}_${AppName}_${StreamName}/</OutputPath>
+		<OutputPath>/service/www/ome-dev.airensoft.com/html/${VHostName}_${AppName}_${StreamName}/${YYYY}_${MM}_${DD}_${hh}_${mm}_${ss}</OutputPath>
 	</Dump>
 </Dumps>
         ...
@@ -162,4 +162,17 @@ You can dump the LLHLS stream for VoD. You can enable it by setting the followin
 
 **OutputPath**
 
-&#x20;   The folder to output to. You can use ${VHostName}, ${AppName}, ${StreamName} macros. You must have write permission on the specified folder.
+&#x20;   The folder to output to. In the OutputPath you can use the macros shown in the table below. You must have write permission on the specified folder.
+
+| Macro         | Description       |
+| ------------- | ----------------- |
+| ${VHostName}  | Virtual Host Name |
+| ${AppName}    | Application Name  |
+| ${StreamName} | Stream Name       |
+| ${YYYY}       | Year              |
+| ${MM}         | Month             |
+| ${DD}         | Day               |
+| ${hh}         | Hour              |
+| ${mm}         | Minute            |
+| ${ss}         | Second            |
+
