@@ -1470,9 +1470,9 @@ namespace pvd
 			time_t current_time = time(nullptr);
 			uint32_t check_gap = current_time - _stream_check_time;
 
-			if (check_gap >= 60)
+			if (check_gap >= 10)
 			{
-				logtd("Rtmp Provider Info - stream(%s/%s) key(%ums) timestamp(v:%ums/a:%ums/g:%dms) fps(v:%u/a:%u) gap(v:%ums/a:%ums)",
+				logi("RTMPProvider.Stat", "Rtmp Provider Info - stream(%s/%s) key(%ums) timestamp(v:%ums/a:%ums/g:%dms) fps(v:%u/a:%u) gap(v:%ums/a:%ums)",
 					  _vhost_app_name.CStr(),
 					  _stream_name.CStr(),
 					  _key_frame_interval,
