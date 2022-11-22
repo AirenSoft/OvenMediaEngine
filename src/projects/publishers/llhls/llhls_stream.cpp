@@ -557,7 +557,7 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::G
 	auto segment = storage->GetMediaSegment(segment_number);
 	if (segment == nullptr)
 	{
-		logtw("Could not find segment for track_id = %d, segment_number = %ld", track_id, segment_number);
+		logtw("Could not find segment for track_id = %d, segment = %ld (last_segment = %ld)", track_id, segment_number, storage->GetLastSegmentNumber());
 		return { RequestResult::NotFound, nullptr };
 	}
 
@@ -585,14 +585,14 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::G
 	else if (segment_number > last_segment_number)
 	{
 		// Not Found
-		logtw("Could not find segment for track_id = %d, segment_number = %ld (last_segemnt = %ld)", track_id, segment_number, last_segment_number);
+		logtw("Could not find segment for track_id = %d, segment = %ld (last_segemnt = %ld)", track_id, segment_number, last_segment_number);
 		return { RequestResult::NotFound, nullptr };
 	}
 
 	auto chunk = storage->GetMediaChunk(segment_number, chunk_number);
 	if (chunk == nullptr)
 	{
-		logtw("Could not find segment for track_id = %d, segment_number = %ld, partial_number = %ld", track_id, segment_number, chunk_number);
+		logtw("Could not find partial segment for track_id = %d, segment = %ld, partial = %ld (last_segment = %ld, last_partial = %ld)", track_id, segment_number, chunk_number, last_segment_number, last_chunk_number);
 		return { RequestResult::NotFound, nullptr };
 	}
 
