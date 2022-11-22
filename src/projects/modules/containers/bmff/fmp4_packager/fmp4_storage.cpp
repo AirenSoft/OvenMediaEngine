@@ -13,7 +13,7 @@
 
 namespace bmff
 {
-	FMP4Storage::FMP4Storage(const std::shared_ptr<FMp4StorageObserver> &observer, const std::shared_ptr<const MediaTrack> &track, const FMP4Storage::Config &config)
+	FMP4Storage::FMP4Storage(const std::shared_ptr<FMp4StorageObserver> &observer, const std::shared_ptr<const MediaTrack> &track, const FMP4Storage::Config &config, const ov::String &log_tag)
 	{
 		_config = config;
 		_track = track;
@@ -22,7 +22,9 @@ namespace bmff
 		// Keep 2x more even if pushed out of chunklist
 		_config.max_segments *= 2;
 		
-		_target_segment_duration_ms = _config.segment_duration_ms;
+		_target_segment_duration_ms = static_cast<int64_t>(_config.segment_duration_ms);
+
+		_log_tag = log_tag;
 	}
 
 	std::shared_ptr<ov::Data> FMP4Storage::GetInitializationSection() const
@@ -124,7 +126,7 @@ namespace bmff
 		return true;
 	}
 
-	uint64_t FMP4Storage::GetTargetSegmentDuration() const
+	int64_t FMP4Storage::GetTargetSegmentDuration() const
 	{
 		return _target_segment_duration_ms;
 	}
@@ -172,6 +174,11 @@ namespace bmff
 			// avg segment duration 
 			_target_segment_duration_ms -= segment->GetDuration();
 			_target_segment_duration_ms += _config.segment_duration_ms;
+
+			if (_target_segment_duration_ms < static_cast<int64_t>(_config.segment_duration_ms / 2))
+			{
+				logtw("LLHLS stream(%s) is creating segments that are too large(%f ms). It seems that the keyframe interval is longer than the configured segment size.", _log_tag.CStr(), segment->GetDuration());
+			}
 		}
 
 		_max_chunk_duration_ms = std::max(_max_chunk_duration_ms, duration_ms);

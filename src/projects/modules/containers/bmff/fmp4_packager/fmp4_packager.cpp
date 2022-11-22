@@ -191,6 +191,8 @@ namespace bmff
 			double total_duration_ms = (static_cast<double>(total_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
 			double expected_duration_ms = (static_cast<double>(expected_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
 
+			logtd("track(%d), total_duration_ms: %lf, expected_duration_ms: %lf, target_chunk_duration_ms: %lf, next_frame_is_idr: %d, last_partial_segment: %d last_segment_duration: %lf, target_segment_duration: %lld", GetMediaTrack()->GetId(), total_duration_ms, expected_duration_ms, _target_chunk_duration_ms, next_frame_is_idr, last_partial_segment, last_segment != nullptr ? last_segment->GetDuration() : -1, _storage->GetTargetSegmentDuration());
+
 			// - In the last partial segment, if the next frame is a keyframe, a segment is created immediately. This allows the segment to start with a keyframe.
 			// - When adding samples, if the Part Target Duration is exceeded, a chunk is created immediately.
 			// - If it exceeds 85% and the next sample is independent, a chunk is created. This makes the next chunk start independent.

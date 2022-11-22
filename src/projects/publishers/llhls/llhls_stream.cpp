@@ -728,8 +728,10 @@ bool LLHlsStream::AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_pa
 // Create and Get fMP4 packager with track info, storage and packager_config
 bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<const MediaTrack> &data_track)
 {
+	auto tag = ov::String::FormatString("%s/%s", GetApplicationInfo().GetName().CStr(), GetName().CStr());
+
 	// Create Storage
-	auto storage = std::make_shared<bmff::FMP4Storage>(bmff::FMp4StorageObserver::GetSharedPtr(), media_track, _storage_config);
+	auto storage = std::make_shared<bmff::FMP4Storage>(bmff::FMp4StorageObserver::GetSharedPtr(), media_track, _storage_config, tag);
 
 	// Create fMP4 Packager
 	auto packager = std::make_shared<bmff::FMP4Packager>(storage, media_track, data_track, _packager_config);

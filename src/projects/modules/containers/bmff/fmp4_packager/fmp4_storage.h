@@ -29,7 +29,7 @@ namespace bmff
 			uint64_t segment_duration_ms = 6000;
 		};
 
-		FMP4Storage(const std::shared_ptr<FMp4StorageObserver> &observer, const std::shared_ptr<const MediaTrack> &track, const Config &config);
+		FMP4Storage(const std::shared_ptr<FMp4StorageObserver> &observer, const std::shared_ptr<const MediaTrack> &track, const Config &config, const ov::String &log_tag);
 
 		std::shared_ptr<ov::Data> GetInitializationSection() const;
 		std::shared_ptr<FMP4Segment> GetMediaSegment(uint32_t segment_number) const;
@@ -45,7 +45,7 @@ namespace bmff
 		uint64_t GetMaxChunkDurationMs() const;
 		uint64_t GetMinChunkDurationMs() const;
 
-		uint64_t GetTargetSegmentDuration() const;
+		int64_t GetTargetSegmentDuration() const;
 
 	private:
 		Config	_config;
@@ -65,8 +65,10 @@ namespace bmff
 		double _max_chunk_duration_ms = 0;
 		double _min_chunk_duration_ms = std::numeric_limits<uint64_t>::max();
 
-		uint64_t _target_segment_duration_ms = 0;
+		int64_t _target_segment_duration_ms = 0;
 
 		std::shared_ptr<FMp4StorageObserver> _observer;
+
+		ov::String _log_tag;
 	};
 }
