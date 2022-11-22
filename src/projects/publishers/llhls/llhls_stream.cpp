@@ -146,13 +146,26 @@ bool LLHlsStream::Start()
 			struct tm tm;
 			::localtime_r(&time, &tm);
 
+			char tmbuf[2048];
+
+			// Replace ${ISO8601} to ISO8601 format
+			memset(tmbuf, 0, sizeof(tmbuf));
+			::strftime(tmbuf, sizeof(tmbuf), "%Y-%m-%dT%H:%M:%S%z", &tm);
+			output_path = output_path.Replace("${ISO8601}", tmbuf);
+
 			// Replace ${YYYY}, ${MM}, ${DD}, ${hh}, ${mm}, ${ss}
 			output_path = output_path.Replace("${YYYY}", ov::Converter::ToString(tm.tm_year + 1900).CStr());
-			output_path = output_path.Replace("${MM}", ov::Converter::ToString(tm.tm_mon + 1).CStr());
-			output_path = output_path.Replace("${DD}", ov::Converter::ToString(tm.tm_mday).CStr());
-			output_path = output_path.Replace("${hh}", ov::Converter::ToString(tm.tm_hour).CStr());
-			output_path = output_path.Replace("${mm}", ov::Converter::ToString(tm.tm_min).CStr());
-			output_path = output_path.Replace("${ss}", ov::Converter::ToString(tm.tm_sec).CStr());
+			output_path = output_path.Replace("${MM}", ov::String::FormatString("%02d", tm.tm_mon + 1).CStr());
+			output_path = output_path.Replace("${DD}", ov::String::FormatString("%02d", tm.tm_mday).CStr());
+			output_path = output_path.Replace("${hh}", ov::String::FormatString("%02d", tm.tm_hour).CStr());
+			output_path = output_path.Replace("${mm}", ov::String::FormatString("%02d", tm.tm_min).CStr());
+			output_path = output_path.Replace("${ss}", ov::String::FormatString("%02d", tm.tm_sec).CStr());
+			output_path = output_path.Replace("${S}", tm.tm_zone);
+
+			// +hhmm or -hhmm
+			memset(tmbuf, 0, sizeof(tmbuf));
+			strftime(tmbuf, sizeof(tmbuf), "%z", &tm);
+			output_path = output_path.Replace("${z}", tmbuf);
 			
 			auto dump_item = std::make_shared<mdl::Dump>();
 			dump_item->SetId(dump.GetId());
