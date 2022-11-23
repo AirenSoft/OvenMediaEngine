@@ -164,15 +164,18 @@ You can dump the LLHLS stream for VoD. You can enable it by setting the followin
 
 &#x20;   The folder to output to. In the OutputPath you can use the macros shown in the table below. You must have write permission on the specified folder.
 
-| Macro         | Description       |
-| ------------- | ----------------- |
-| ${VHostName}  | Virtual Host Name |
-| ${AppName}    | Application Name  |
-| ${StreamName} | Stream Name       |
-| ${YYYY}       | Year              |
-| ${MM}         | Month             |
-| ${DD}         | Day               |
-| ${hh}         | Hour              |
-| ${mm}         | Minute            |
-| ${ss}         | Second            |
+| Macro         | Description                    |
+| ------------- | ------------------------------ |
+| ${VHostName}  | Virtual Host Name              |
+| ${AppName}    | Application Name               |
+| ${StreamName} | Stream Name                    |
+| ${YYYY}       | Year                           |
+| ${MM}         | Month                          |
+| ${DD}         | Day                            |
+| ${hh}         | Hour                           |
+| ${mm}         | Minute                         |
+| ${ss}         | Second                         |
+| ${S}          | Timezone                       |
+| ${z}          | UTC offset (ex: +0900)         |
+| ${ISO8601}    | Current time in ISO8601 format |
 

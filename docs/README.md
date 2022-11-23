@@ -34,7 +34,7 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
   * AdmissionWebhooks
   * SignedPolicy
 * **File Recording**
-* **Push Publishing using RTMP and MPEG-TS** (Re-streaming)
+* **Push Publishing using RTMP and MPEG2-TS** (Re-streaming)
 * **Thumbnail**
 * **REST API**
 * **Experiment**
@@ -82,4 +82,4 @@ We always hope that OvenMediaEngine will give you good inspiration.
 
 ## License
 
-OvenMediaEngine is licensed under the [AGPL-3.0-only](../LICENSE). However, if you need another license, please feel free to email us at [contact@airensoft.com](mailto:contact@airensoft.com).
+OvenMediaEngine is licensed under the [AGPL-3.0-only](../LICENSE/). However, if you need another license, please feel free to email us at [contact@airensoft.com](mailto:contact@airensoft.com).
