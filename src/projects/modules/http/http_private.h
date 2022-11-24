@@ -10,4 +10,4 @@
 
 #define OV_LOG_TAG                          "HttpServer"
 
-#define HTTP_CHECK_METHOD(method, flag)     OV_CHECK_FLAG((uint8_t)method, (uint8_t)flag)
+#define HTTP_CHECK_METHOD(method, flag)     OV_CHECK_FLAG((uint16_t)method, (uint16_t)flag)
