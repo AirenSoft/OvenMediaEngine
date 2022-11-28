@@ -398,8 +398,15 @@ bool LLHlsStream::DumpSegment(const std::shared_ptr<mdl::Dump> &item, const int3
 		item->SetExtraData(track_id, segment_number);
 	}
 
+	auto storage = GetStorage(track_id);
+	if (storage == nullptr)
+	{
+		logtw("Could not find storage for track(%s/%d)", GetName().CStr(), track_id);
+		return false;
+	}
+
 	// Get segment
-	auto segment = GetStorage(track_id)->GetMediaSegment(segment_number);
+	auto segment = storage->GetMediaSegment(segment_number);
 	if (segment == nullptr)
 	{
 		logtw("Could not get segment(%u) for dump", segment_number);
@@ -944,7 +951,19 @@ void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t 
 		return;
 	}
 
-	auto segment = GetStorage(track_id)->GetMediaSegment(segment_number);
+	auto storage = GetStorage(track_id);
+	if (storage == nullptr)
+	{
+		logte("Storage is not found : stream = %s, track_id = %d", GetName().CStr(), track_id);
+		return;
+	}
+
+	auto segment = storage->GetMediaSegment(segment_number);
+	if (segment == nullptr)
+	{
+		logte("Segment is not found : stream = %s, track_id = %d, segment_number = %u", GetName().CStr(), track_id, segment_number);
+		return;
+	}
 
 	// Timescale to seconds(demical)
 	auto segment_duration = static_cast<double>(segment->GetDuration()) / static_cast<double>(1000.0);
@@ -971,7 +990,19 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 		return;
 	}
 
-	auto chunk = GetStorage(track_id)->GetMediaChunk(segment_number, chunk_number);
+	auto storage = GetStorage(track_id);
+	if (storage == nullptr)
+	{
+		logte("Storage is not found : stream = %s, track_id = %d", GetName().CStr(), track_id);
+		return;
+	}
+
+	auto chunk = storage->GetMediaChunk(segment_number, chunk_number);
+	if (chunk == nullptr)
+	{
+		logte("Chunk is not found : stream = %s, track_id = %d, segment_number = %u, chunk_number = %u", GetName().CStr(), track_id, segment_number, chunk_number);
+		return;
+	}
 	
 	// Milliseconds
 	auto chunk_duration = static_cast<float>(chunk->GetDuration()) / static_cast<float>(1000.0);
