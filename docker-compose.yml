@@ -24,7 +24,7 @@ services:
     - OME_SIGNALLING_PORT=3333
     - OME_TCP_RELAY_ADDRESS=*:3478
     - OME_ICE_CANDIDATES=*:10006-10010/udp
-    bind:
+    devices:
     # Temporary hack to forward /dev/dri/renderD128
     # https://gitlab.com/nvidia/container-toolkit/container-toolkit/-/merge_requests/235
     - /dev/dri:/dev/dri
@@ -39,7 +39,7 @@ services:
     - "3479:3479/tcp"
     - "8090:8090/tcp"
     - "10000-10005:10000-10005/udp"
-    bind:
+    devices:
     # Temporary hack to forward /dev/dri/renderD128
     # https://gitlab.com/nvidia/container-toolkit/container-toolkit/-/merge_requests/235
     - /dev/dri:/dev/dri
