@@ -26,7 +26,7 @@ bool TranscodeGPU::Initialze()
 
 	logtd("Trying to initialize a hardware accelerator");
 
-	int ret = ::av_hwdevice_ctx_create(&_device_context, AV_HWDEVICE_TYPE_QSV, "/dev/dri/render128", NULL, 0);
+	int ret = ::av_hwdevice_ctx_create(&_device_context, AV_HWDEVICE_TYPE_QSV, "/dev/dri/renderD128", NULL, 0);
 	if (ret < 0)
 	{
 		av_buffer_unref(&_device_context);
@@ -46,7 +46,7 @@ bool TranscodeGPU::Initialze()
 		return true;
 	}
 
-	ret = ::av_hwdevice_ctx_create(&_device_context, AV_HWDEVICE_TYPE_CUDA, "/dev/dri/render128", NULL, 0);
+	ret = ::av_hwdevice_ctx_create(&_device_context, AV_HWDEVICE_TYPE_CUDA, "/dev/dri/renderD128", NULL, 0);
 	if (ret < 0)
 	{
 		av_buffer_unref(&_device_context);
