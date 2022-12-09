@@ -838,6 +838,32 @@ namespace ocst
 		return true;
 	}
 
+	std::shared_ptr<pvd::Provider> Orchestrator::GetProviderFromType(const ProviderType type)
+	{
+		// Find the provider
+		for (auto info = _module_list.begin(); info != _module_list.end(); ++info)
+		{
+			if (info->type == ModuleType::PushProvider || info->type == ModuleType::PullProvider)
+			{
+				auto provider = std::dynamic_pointer_cast<pvd::Provider>(info->module);
+
+				if (provider == nullptr)
+				{
+					OV_ASSERT(provider != nullptr, "Provider must inherit from pvd::Provider");
+					continue;
+				}
+
+				if (provider->GetProviderType() == type)
+				{
+					return provider;
+				}
+			}
+		}
+
+		logtw("Provider (%d) is not found from type");
+
+		return nullptr;
+	}
 
 	std::shared_ptr<pub::Publisher> Orchestrator::GetPublisherFromType(const PublisherType type)
 	{

@@ -796,6 +796,8 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 			[[fallthrough]];
 		case cmn::BitstreamFormat::OPUS_RTP_RFC_7587:
 			[[fallthrough]];
+		case cmn::BitstreamFormat::ID3v2:
+			[[fallthrough]];
 		case cmn::BitstreamFormat::PNG:
 			break;
 	}

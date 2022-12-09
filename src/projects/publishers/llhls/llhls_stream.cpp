@@ -82,6 +82,11 @@ bool LLHlsStream::Start()
 		}
 		else 
 		{
+			if (track == data_track)
+			{
+				continue;
+			}
+
 			logti("LLHlsStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
 			continue;
 		}
@@ -699,7 +704,7 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 	{
 		auto track = it.second;
 		
-		if (track->GetMediaType() != target_media_type)
+		if (media_packet->GetPacketType() != cmn::PacketType::EVENT && track->GetMediaType() != target_media_type)
 		{
 			continue;
 		}

@@ -119,6 +119,21 @@ namespace pvd
 			}
 		}
 
+		// If there is no data track, add data track
+		if (stream->GetFirstTrack(cmn::MediaType::Data) == nullptr)
+		{
+			// Add data track 
+			auto data_track = std::make_shared<MediaTrack>();
+
+			// Issue unique track id
+			data_track->SetId(stream->IssueUniqueTrackId());
+			data_track->SetMediaType(cmn::MediaType::Data);
+			data_track->SetTimeBase(1, 1000);
+			data_track->SetOriginBitstream(cmn::BitstreamFormat::Unknown);
+			
+			stream->AddTrack(data_track);
+		}
+
 		stream->SetApplication(GetSharedPtrAs<Application>());
 		stream->SetApplicationInfo(GetSharedPtrAs<Application>());
 

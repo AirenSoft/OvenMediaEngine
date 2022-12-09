@@ -1233,18 +1233,22 @@ namespace pvd
 				return;
 			}
 
-			cmn::PacketType packet_type = cmn::PacketType::Unknown;
-			if (id3v2_event.GetInjectTo().LowerCaseString() == "video")
+			cmn::PacketType packet_type = cmn::PacketType::EVENT;
+			if (id3v2_event.GetEventType().LowerCaseString() == "video")
 			{
 				packet_type = cmn::PacketType::VIDEO_EVENT;
 			}
-			else if (id3v2_event.GetInjectTo().LowerCaseString() == "audio")
+			else if (id3v2_event.GetEventType().LowerCaseString() == "audio")
 			{
 				packet_type = cmn::PacketType::AUDIO_EVENT;
 			}
+			else if (id3v2_event.GetEventType().LowerCaseString() == "event")
+			{
+				packet_type = cmn::PacketType::EVENT;
+			}
 			else
 			{
-				logtw("Unsupported inject type: %s", id3v2_event.GetInjectTo().CStr());
+				logtw("Unsupported inject type: %s", id3v2_event.GetEventType().CStr());
 				return;
 			}
 
@@ -1261,17 +1265,7 @@ namespace pvd
 				pts += _last_audio_pts_clock.Elapsed();
 			}
 
-			int64_t dts = pts;
-			auto event_message = std::make_shared<MediaPacket>(GetMsid(),
-															cmn::MediaType::Data,
-															RTMP_DATA_TRACK_ID,
-															tag.Serialize(), 
-															pts,
-															dts,
-															cmn::BitstreamFormat::ID3v2,
-															packet_type);
-			
-			SendFrame(event_message);
+			SendDataFrame(pts, cmn::BitstreamFormat::ID3v2, packet_type, tag.Serialize());
 		}
 	}
 

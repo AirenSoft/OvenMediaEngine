@@ -197,6 +197,24 @@ namespace info
 		_representation_type = type;
 	}
 
+	int32_t Stream::IssueUniqueTrackId()
+	{
+		int32_t track_id = ov::Random::GenerateInt32(100, 0x7FFFFFFF);
+
+		while (true)
+		{
+			auto item = _tracks.find(track_id);
+			if (item == _tracks.end())
+			{
+				break;
+			}
+
+			track_id = ov::Random::GenerateInt32(100, 0x7FFFFFFF);
+		}
+
+		return track_id;
+	}
+
 	bool Stream::AddTrack(const std::shared_ptr<MediaTrack> &track)
 	{
 		// If there is an existing track with the same track id, it will be deleted.

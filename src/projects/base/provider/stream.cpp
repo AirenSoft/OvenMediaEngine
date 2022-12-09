@@ -100,6 +100,32 @@ namespace pvd
 		return GetApplication()->GetApplicationTypeName();
 	}
 
+	bool Stream::SendDataFrame(int64_t timestamp, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame)
+	{
+		if (frame == nullptr)
+		{
+			return false;
+		}
+
+		auto data_track = GetFirstTrack(cmn::MediaType::Data);
+		if (data_track == nullptr)
+		{
+			logte("Data track is not found. %s/%s(%u)", GetApplicationName(), GetName().CStr(), GetId());
+			return false;
+		}
+
+		auto event_message = std::make_shared<MediaPacket>(GetMsid(),
+															cmn::MediaType::Data,
+															data_track->GetId(),
+															frame, 
+															timestamp,
+															timestamp,
+															format,
+															packet_type);
+
+		return SendFrame(event_message);
+	}
+
 	bool Stream::SendFrame(const std::shared_ptr<MediaPacket> &packet)
 	{
 		if (_application == nullptr)

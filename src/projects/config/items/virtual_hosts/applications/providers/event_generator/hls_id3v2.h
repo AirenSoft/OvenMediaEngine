@@ -19,13 +19,13 @@ namespace cfg
 				struct HLSID3v2 : public Item
 				{
 				protected:
-					ov::String _inject_to; // video, audio, both
-					ov::String _frame_type; // TXXX, WXXX, PRIV, T???, W???
+					ov::String _event_type; // video, audio, both
+					ov::String _frame_type; // TXXX, T???
 					ov::String _info;
 					ov::String _data;
 
 				public:
-					CFG_DECLARE_CONST_REF_GETTER_OF(GetInjectTo, _inject_to);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetEventType, _event_type);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFrameType, _frame_type);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetInfo, _info);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetData, _data);
@@ -33,7 +33,7 @@ namespace cfg
 				protected:
 					void MakeList() override
 					{
-						Register("InjectTo", &_inject_to);
+						Register("EventType", &_event_type);
 						Register("FrameType", &_frame_type);
 						Register<Optional>("Info", &_info);
 						Register("Data", &_data);

@@ -103,7 +103,18 @@ namespace bmff
 
 			logtd("track(%d), pts: %lf, start_timestamp: %lf, end_timestamp: %lf", GetMediaTrack()->GetId(), pts, rescaled_start_timestamp, rescaled_end_timestamp);
 
-			if (pts > rescaled_end_timestamp)
+			if (pts == -1)
+			{
+				// Packets that must be inserted immediately
+				auto copy_data_packet = data_packet->ClonePacket();
+				copy_data_packet->SetPts(rescaled_start_timestamp);
+				copy_data_packet->SetDts(rescaled_start_timestamp);
+				
+				samples->AppendSample(copy_data_packet);
+
+				_reserved_data_packets.pop();
+			}
+			else if (pts > rescaled_end_timestamp)
 			{
 				//Waits for a segment within a time interval.
 				break;
@@ -121,28 +132,6 @@ namespace bmff
 				_reserved_data_packets.pop();
 			}
 		}
-
-		// This is the code to avoid a bug for some players, so comment it out.
-		// If this is needed in the future, we will enable it by setting.
-		// if (samples->GetTotalCount() == 0)
-		// {
-		// 	ID3v2 tag;
-		// 	tag.AddFrame(std::make_shared<ID3v2TextFrame>("TIT2", "Keep-alive"));
-
-		// 	auto packet_type = GetMediaTrack()->GetMediaType() == cmn::MediaType::Video ? cmn::PacketType::VIDEO_EVENT : cmn::PacketType::AUDIO_EVENT;
-
-		// 	auto pts = rescaled_start_timestamp + (rescaled_end_timestamp - rescaled_start_timestamp) / 2;
-		// 	auto dts = pts;
-		// 	auto event_message = std::make_shared<MediaPacket>(0,
-		// 													cmn::MediaType::Data,
-		// 													2,
-		// 													tag.Serialize(), 
-		// 													pts,
-		// 													dts,
-		// 													cmn::BitstreamFormat::ID3v2,
-		// 													packet_type);
-		// 	samples->AppendSample(event_message);
-		// }
 
 		return samples;
 	}

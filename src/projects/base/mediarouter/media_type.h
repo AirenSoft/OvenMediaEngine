@@ -58,6 +58,7 @@ namespace cmn
 		NALU, // For H.264 AVCC, ANNEXB	
 
 		// For Data Track
+		EVENT,
 		VIDEO_EVENT,
 		AUDIO_EVENT,
 	};

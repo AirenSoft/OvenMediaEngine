@@ -61,6 +61,7 @@ namespace info
 		StreamRepresentationType GetRepresentationType() const;
 		void SetRepresentationType(const StreamRepresentationType &type);
 
+		int32_t IssueUniqueTrackId();
 		bool AddTrack(const std::shared_ptr<MediaTrack> &track);
 		const std::shared_ptr<MediaTrack> GetTrack(int32_t id) const;
 		const std::shared_ptr<MediaTrack> GetTrack(const ov::String &name) const;

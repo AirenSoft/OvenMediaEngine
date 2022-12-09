@@ -55,6 +55,8 @@ namespace pvd
 		virtual bool Stop();
 		virtual bool Terminate();
 
+		bool SendDataFrame(int64_t timestamp, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame);
+
 	protected:
 		Stream(const std::shared_ptr<pvd::Application> &application, StreamSourceType source_type);
 		Stream(const std::shared_ptr<pvd::Application> &application, info::stream_id_t stream_id, StreamSourceType source_type);

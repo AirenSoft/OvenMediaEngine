@@ -160,6 +160,8 @@ namespace ocst
 		/// Release Pulled Stream
 		bool RequestReleasePulledStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
 
+		/// Find Provider from ProviderType
+		std::shared_ptr<pvd::Provider> GetProviderFromType(const ProviderType type);
 		/// Find Publisher from PublisehrType
 		std::shared_ptr<pub::Publisher> GetPublisherFromType(const PublisherType type);
 
