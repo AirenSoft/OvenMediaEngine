@@ -129,6 +129,12 @@ We have prepared a test player that you can quickly see if OvenMediaEngine is wo
 
 
 
+## ID3v2 Timed Metadata
+
+ID3 Timed metadata can be sent to the LLHLS stream through the [Send Event API](../rest-api/v1/virtualhost/application/stream/send-event.md).
+
+
+
 ## Dump
 
 You can dump the LLHLS stream for VoD. You can enable it by setting the following in `<Application><Publishers><LLHLS>`.
