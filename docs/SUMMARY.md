@@ -34,6 +34,7 @@
       * [Application](rest-api/v1/virtualhost/application/README.md)
         * [Stream](rest-api/v1/virtualhost/application/stream/README.md)
           * [Send Event](rest-api/v1/virtualhost/application/stream/send-event.md)
+          * [HLS Dump](rest-api/v1/virtualhost/application/stream/hls-dump.md)
         * [Output Profile](rest-api/v1/virtualhost/application/output-profile.md)
         * [Recording](rest-api/v1/virtualhost/application/recording.md)
         * [Push](rest-api/v1/virtualhost/application/push.md)

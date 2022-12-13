@@ -137,7 +137,7 @@ ID3 Timed metadata can be sent to the LLHLS stream through the [Send Event API](
 
 ## Dump
 
-You can dump the LLHLS stream for VoD. You can enable it by setting the following in `<Application><Publishers><LLHLS>`.
+You can dump the LLHLS stream for VoD. You can enable it by setting the following in `<Application><Publishers><LLHLS>`. Dump function can also be controlled by [Dump API](../rest-api/v1/virtualhost/application/stream/hls-dump.md).
 
 ```xml
 <LLHLS>
