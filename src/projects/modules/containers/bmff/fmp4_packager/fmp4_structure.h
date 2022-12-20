@@ -74,6 +74,15 @@ namespace bmff
 			_data = std::make_shared<ov::Data>(((1000.0 * 1000.0 * 4.0)/8.0) * (static_cast<double>(target_duration) / 1000.0));
 		}
 
+		FMP4Segment(uint64_t number, double duration_ms, const std::shared_ptr<ov::Data> &data)
+		{
+			_number = number;
+			_duration_ms = duration_ms;
+			_data = data;
+
+			SetCompleted();
+		}
+
 		void SetCompleted()
 		{
 			_is_completed = true;

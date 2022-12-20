@@ -12,11 +12,10 @@
 
 #include <base/ovlibrary/zip.h>
 
-LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, double part_target_duration, const ov::String &map_uri)
+LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, uint32_t target_duration, double part_target_duration, const ov::String &map_uri)
 {
 	_url = url;
 	_track = track;
-	_max_segments = max_segments;
 	_target_duration = target_duration;
 	_max_part_duration = 0;
 	_part_target_duration = part_target_duration;
@@ -92,16 +91,6 @@ bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
 		segment = std::make_shared<SegmentInfo>(info);
 		_segments.push_back(segment);
 		is_new_segment = true;
-
-		if (_segments.size() > _max_segments)
-		{
-			// For VoD Dump
-			auto old_segment = _segments.front();
-			SaveOldSegmentInfo(old_segment);
-
-			_segments.pop_front();
-			_deleted_segments += 1;
-		}
 	}
 	else
 	{
@@ -138,16 +127,6 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 		_segments.push_back(segment);
 
 		_last_segment_sequence = segment_sequence;
-
-		if (_segments.size() > _max_segments)
-		{
-			// For VoD Dump
-			auto old_segment = _segments.front();
-			SaveOldSegmentInfo(old_segment);
-
-			_segments.pop_front();
-			_deleted_segments += 1;
-		}
 	}
 
 	// part duration is calculated on first segment
@@ -161,6 +140,17 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 	UpdateCacheForDefaultChunklist();
 	_last_partial_segment_sequence = info.GetSequence();
 
+	return true;
+}
+
+bool LLHlsChunklist::RemoveSegmentInfo(uint32_t segment_sequence)
+{
+	std::unique_lock<std::shared_mutex> lock(_segments_guard);
+	auto old_segment = _segments.front();
+	SaveOldSegmentInfo(old_segment);
+
+	_segments.pop_front();
+	_deleted_segments += 1;
 	return true;
 }
 

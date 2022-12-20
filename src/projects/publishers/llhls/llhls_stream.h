@@ -89,6 +89,7 @@ private:
 	void OnFMp4StorageInitialized(const int32_t &track_id) override;
 	void OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t &segment_number) override;
 	void OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number) override;
+	void OnMediaSegmentDeleted(const int32_t &track_id, const uint32_t &segment_number) override;
 
 	// Create and Get fMP4 packager and storage with track info, storage and packager_config
 	bool AddPackager(const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<const MediaTrack> &data_track);

@@ -132,7 +132,7 @@ public:
 		std::deque<std::shared_ptr<SegmentInfo>> _partial_segments;
 	}; // class SegmentInfo
 
-	LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, uint32_t max_segments, uint32_t target_duration, double part_target_duration, const ov::String &map_uri);
+	LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, uint32_t target_duration, double part_target_duration, const ov::String &map_uri);
 
 	~LLHlsChunklist();
 
@@ -154,6 +154,7 @@ public:
 
 	bool AppendSegmentInfo(const SegmentInfo &info);
 	bool AppendPartialSegmentInfo(uint32_t segment_sequence, const SegmentInfo &info);
+	bool RemoveSegmentInfo(uint32_t segment_sequence);
 
 	ov::String ToString(const ov::String &query_string, bool skip, bool legacy, bool vod = false, uint32_t vod_start_segment_number = 0) const;
 	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &query_string, bool skip, bool legacy) const;
@@ -171,7 +172,6 @@ private:
 
 	ov::String _url;
 
-	uint32_t _max_segments = 0;
 	double _target_duration = 0;
 	double _part_target_duration = 0;
 	double _max_part_duration = 0;

@@ -45,6 +45,7 @@ bool LLHlsStream::Start()
 	auto config = GetApplication()->GetConfig();
 	auto llhls_config = config.GetPublishers().GetLLHlsPublisher();
 	auto dump_config = llhls_config.GetDumps();
+	auto dvr_config = llhls_config.GetDvr();
 
 	_stream_key = ov::Random::GenerateString(8);
 
@@ -52,6 +53,9 @@ bool LLHlsStream::Start()
 	_packager_config.segment_duration_ms = llhls_config.GetSegmentDuration() * 1000.0;
 	_storage_config.max_segments = llhls_config.GetSegmentCount();
 	_storage_config.segment_duration_ms = llhls_config.GetSegmentDuration() * 1000;
+	_storage_config.dvr_enabled = dvr_config.IsEnabled();
+	_storage_config.dvr_storage_path = dvr_config.GetTempStoragePath();
+	_storage_config.dvr_duration_sec = dvr_config.GetMaxDuration();
 
 	_configured_part_hold_back = llhls_config.GetPartHoldBack();
 
@@ -573,7 +577,7 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::G
 		return { RequestResult::NotFound, nullptr };
 	}
 
-	return { RequestResult::Success, storage->GetMediaSegment(segment_number)->GetData() };
+	return { RequestResult::Success, segment->GetData() };
 }
 
 std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::GetChunk(const int32_t &track_id, const int64_t &segment_number, const int64_t &chunk_number) const
@@ -775,7 +779,6 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 
 	auto chunklist = std::make_shared<LLHlsChunklist>(GetChunklistName(track_id),
 													GetTrack(track_id),
-													_storage_config.max_segments, 
 													segment_duration, 
 													chunk_duration, 
 													GetIntializationSegmentName(track_id));
@@ -1026,6 +1029,20 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 
 	// Notify
 	NotifyPlaylistUpdated(track_id, segment_number, chunk_number);
+}
+
+void LLHlsStream::OnMediaSegmentDeleted(const int32_t &track_id, const uint32_t &segment_number)
+{
+	auto playlist = GetChunklistWriter(track_id);
+	if (playlist == nullptr)
+	{
+		logte("Playlist is not found : track_id = %d", track_id);
+		return;
+	}
+
+	playlist->RemoveSegmentInfo(segment_number);
+
+	logtd("Media segment deleted : track_id = %d, segment_number = %d", track_id, segment_number);
 }
 
 void LLHlsStream::NotifyPlaylistUpdated(const int32_t &track_id, const int64_t &msn, const int64_t &part)

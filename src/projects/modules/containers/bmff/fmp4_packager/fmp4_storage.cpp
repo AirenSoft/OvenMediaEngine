@@ -8,23 +8,29 @@
 //==============================================================================
 
 #include <base/info/media_track.h>
+#include <base/ovlibrary/directory.h>
+#include <filesystem>
+
 #include "fmp4_storage.h"
 #include "fmp4_private.h"
 
 namespace bmff
 {
-	FMP4Storage::FMP4Storage(const std::shared_ptr<FMp4StorageObserver> &observer, const std::shared_ptr<const MediaTrack> &track, const FMP4Storage::Config &config, const ov::String &log_tag)
+	FMP4Storage::FMP4Storage(const std::shared_ptr<FMp4StorageObserver> &observer, const std::shared_ptr<const MediaTrack> &track, const FMP4Storage::Config &config, const ov::String &stream_tag)
 	{
 		_config = config;
 		_track = track;
 		_observer = observer;
 
-		// Keep 2x more even if pushed out of chunklist
-		_config.max_segments *= 2;
-		
+		// Keep one more to prevent download failure due to timing issue
 		_target_segment_duration_ms = static_cast<int64_t>(_config.segment_duration_ms);
+		_stream_tag = stream_tag;
+	}
 
-		_log_tag = log_tag;
+	FMP4Storage::~FMP4Storage()
+	{
+		// Delete all dvr directory and files
+		ov::DeleteDirectories(GetDVRDirectory());
 	}
 
 	std::shared_ptr<ov::Data> FMP4Storage::GetInitializationSection() const
@@ -39,7 +45,8 @@ namespace bmff
 
 		if (index >= _segments.size())
 		{
-			return nullptr;
+			// If the segment is not in the list, try to load it from the file
+			return LoadMediaSegmentFromFile(segment_number);
 		}
 
 		return _segments[index];
@@ -131,6 +138,100 @@ namespace bmff
 		return _target_segment_duration_ms;
 	}
 
+	ov::String FMP4Storage::GetDVRDirectory() const
+	{
+		return ov::String::FormatString("%s/%s/%d", _config.dvr_storage_path.CStr(), _stream_tag.CStr(), _track->GetId());
+	}
+
+	ov::String FMP4Storage::GetSegmentFilePath(uint32_t segment_number) const
+	{
+		return ov::String::FormatString("%s/%d.m4s", GetDVRDirectory().CStr(), segment_number);
+	}
+
+	bool FMP4Storage::SaveMediaSegmentToFile(const std::shared_ptr<FMP4Segment> &segment)
+	{
+		if (_config.dvr_enabled == false)
+		{
+			return false;
+		}
+
+		// Save to file
+		auto file_path = GetSegmentFilePath(segment->GetNumber());
+		auto dir = GetDVRDirectory();
+
+		// Create directory
+		if (ov::CreateDirectories(dir) == false)
+		{
+			logte("Could not create directory for DVR: %s", dir.CStr());
+			return false;
+		}
+
+		// Save to file
+		if (ov::DumpToFile(file_path, segment->GetData()) == nullptr)
+		{
+			logte("Could not save segment to file: %s", file_path.CStr());
+			return false;
+		}
+
+		_dvr_info.AppendSegment(segment->GetNumber(), segment->GetDuration(), segment->GetData()->GetLength());
+
+		// Delete old segments until the total duration is less than the maximum DVR duration
+		while (_dvr_info.GetTotalDurationMs() > (_config.dvr_duration_sec * 1000.0))
+		{
+			auto segment_to_delete = _dvr_info.PopOldestSegmentInfo();
+			if (segment_to_delete.IsAvailable() == false)
+			{
+				break;
+			}
+
+			auto file_path = GetSegmentFilePath(segment_to_delete.segment_number);
+			if (std::remove(file_path) != 0)
+			{
+				logte("Could not delete DVR segment file: %s", file_path.CStr());
+			}
+
+			if (_observer != nullptr)
+			{
+				_observer->OnMediaSegmentDeleted(_track->GetId(), segment_to_delete.segment_number);
+			}
+		}
+
+		return true;
+	}
+
+	std::shared_ptr<FMP4Segment> FMP4Storage::LoadMediaSegmentFromFile(uint32_t segment_number) const
+	{
+		if (_config.dvr_enabled == false)
+		{
+			return nullptr;
+		}
+
+		auto info = _dvr_info.GetSegmentInfo(segment_number);
+		if (info.IsAvailable() == false)
+		{
+			logte("Could not find segment info: %u", segment_number);
+			return nullptr;
+		}
+
+		auto file_path = GetSegmentFilePath(segment_number);
+
+		auto data = ov::LoadFromFile(file_path);
+		if (data == nullptr)
+		{
+			logte("Could not load segment from file: %s", file_path.CStr());
+			return nullptr;
+		}
+
+		auto segment = std::make_shared<FMP4Segment>(segment_number, info.duration_ms, data);
+		if (segment == nullptr)
+		{
+			logte("Could not create segment: %u", segment_number);
+			return nullptr;
+		}
+
+		return segment;
+	}
+
 	bool FMP4Storage::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent, bool last_chunk)
 	{
 		auto segment = GetLastSegment();
@@ -154,7 +255,21 @@ namespace bmff
 				if (_segments.size() > _config.max_segments)
 				{
 					_number_of_deleted_segments++;
+					auto old_segment = _segments.front();
 					_segments.pop_front();
+
+					// DVR
+					if (_config.dvr_enabled)
+					{
+						SaveMediaSegmentToFile(old_segment);
+					}
+					else
+					{
+						if (_observer != nullptr)
+						{
+							_observer->OnMediaSegmentDeleted(_track->GetId(), old_segment->GetNumber());
+						}
+					}
 				}
 			}
 		}
@@ -177,7 +292,7 @@ namespace bmff
 
 			if (_target_segment_duration_ms < static_cast<int64_t>(_config.segment_duration_ms / 2))
 			{
-				logtw("LLHLS stream(%s) is creating segments that are too large(%f ms). It seems that the keyframe interval is longer than the configured segment size.", _log_tag.CStr(), segment->GetDuration());
+				logtw("LLHLS stream(%s) is creating segments that are too large(%f ms). It seems that the keyframe interval is longer than the configured segment size.", _stream_tag.CStr(), segment->GetDuration());
 			}
 		}
 

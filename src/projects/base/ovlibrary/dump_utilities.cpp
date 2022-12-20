@@ -215,4 +215,32 @@ namespace ov
 
 		return DumpToFile(file_name, data->GetData(), data->GetLength(), offset, append);
 	}
+
+	std::shared_ptr<Data> LoadFromFile(const char *file_name) noexcept
+	{
+		FILE *file = ::fopen(file_name, "rb");
+
+		if (file == nullptr)
+		{
+			return nullptr;
+		}
+
+		::fseek(file, 0L, SEEK_END);
+		auto length = ::ftell(file);
+		::fseek(file, 0L, SEEK_SET);
+
+		auto data = std::make_shared<Data>(length);
+		data->SetLength(length);
+
+		if (::fread(data->GetWritableData(), sizeof(uint8_t), length, file) != static_cast<size_t>(length))
+		{
+			::fclose(file);
+			return nullptr;
+		}
+
+		::fclose(file);
+
+		return data;
+	}
+
 }  // namespace ov

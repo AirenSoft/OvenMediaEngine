@@ -399,6 +399,11 @@
 							<PartHoldBack>1.5</PartHoldBack>
 							<SegmentDuration>6</SegmentDuration>
 							<SegmentCount>10</SegmentCount>
+							<DVR>
+								<Enable>false</Enable>
+								<TempStoragePath>/tmp/ome_dvr/</TempStoragePath>
+								<MaxDuration>3600</MaxDuration>
+							</DVR>
 							<CrossDomains>
 								<Url>*</Url>
 							</CrossDomains>
