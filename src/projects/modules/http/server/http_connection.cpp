@@ -264,6 +264,8 @@ namespace http
 				_client_socket->Close();
 			}
 
+			_user_data_map.clear();
+
 			_closed = true;
 		}
 

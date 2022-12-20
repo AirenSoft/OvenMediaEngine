@@ -359,7 +359,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 				session = std::static_pointer_cast<LLHlsSession>(stream->GetSession(session_id));
 			}
 
-			if (session == nullptr)
+			if (session == nullptr || session->GetStream() != stream)
 			{
 				// New HTTP Connection
 				session = LLHlsSession::Create(session_id, origin_mode, "", stream->GetApplication(), stream, session_life_time);

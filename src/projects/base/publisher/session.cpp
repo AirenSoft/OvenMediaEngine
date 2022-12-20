@@ -63,6 +63,10 @@ namespace pub
 		_state = SessionState::Error;
 		_error_reason = reason;
 
-		GetStream()->RemoveSession(GetId());
+		auto stream = GetStream();
+		if (stream != nullptr)
+		{
+			stream->RemoveSession(GetId());
+		}
 	}
 }  // namespace pub
