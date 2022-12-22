@@ -340,7 +340,14 @@ namespace pub
 
 		if(_worker_count > 0)
 		{
-			return GetWorkerBySessionID(session->GetId())->AddSession(session);
+			auto worker = GetWorkerBySessionID(session->GetId());
+			if(worker == nullptr)
+			{
+				logte("Cannot find worker for session : %u", session->GetId());
+				return false;
+			}
+
+			return worker->AddSession(session);
 		}
 
 		return true;
@@ -360,7 +367,14 @@ namespace pub
 
 		if(_worker_count > 0)
 		{
-			return GetWorkerBySessionID(id)->RemoveSession(id);
+			auto worker = GetWorkerBySessionID(id);
+			if (worker == nullptr)
+			{
+				logte("Cannot find worker for session : %u", id);
+				return false;
+			}
+
+			return worker->RemoveSession(id);
 		}
 
 		return true;
