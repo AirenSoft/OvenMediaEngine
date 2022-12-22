@@ -321,7 +321,15 @@ namespace pub
 			return nullptr;
 		}
 		std::shared_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
-		return _stream_workers[session_id % _worker_count];
+
+		size_t worker_id = session_id % _worker_count;
+		if(worker_id >= _stream_workers.size())
+		{
+			logtw("Invalid worker id : %d", worker_id);
+			return nullptr;
+		}
+
+		return _stream_workers[worker_id];
 	}
 
 	bool Stream::AddSession(std::shared_ptr<Session> session)
@@ -408,7 +416,13 @@ namespace pub
 	{
 		if(_worker_count > 0)
 		{
-			GetWorkerBySessionID(session->GetId())->SendMessage(session, message);
+			auto worker = GetWorkerBySessionID(session->GetId());
+			if(worker == nullptr)
+			{
+				logtw("Cannot find worker for session : %u", session->GetId());
+				return false;
+			}
+			worker->SendMessage(session, message);
 		}
 		else
 		{
