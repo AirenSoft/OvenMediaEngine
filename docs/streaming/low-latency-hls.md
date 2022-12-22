@@ -131,7 +131,7 @@ We have prepared a test player that you can quickly see if OvenMediaEngine is wo
 
 ## Live Rewind
 
-You can create as long a playlist as you want by setting to the LLHLS publisher as shown below. This allows the player to rewind the live stream and play older segments. OvenMediaEngine keeps and uses old segments in to avoid keeping all segments in memory. It stores as much as and the unit is seconds.
+You can create as long a playlist as you want by setting `<DVR>` to the LLHLS publisher as shown below. This allows the player to rewind the live stream and play older segments. OvenMediaEngine saves and uses old segments in a file in `<DVR><TempStoragePath>` to avoid keeping all segments in memory. It stores as much as `<DVR><MaxDuration>` and the unit is seconds.
 
 ```xml
 <LLHLS>
