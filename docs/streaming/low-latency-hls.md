@@ -129,6 +129,22 @@ We have prepared a test player that you can quickly see if OvenMediaEngine is wo
 
 
 
+## Live Rewind
+
+You can create as long a playlist as you want by setting to the LLHLS publisher as shown below. This allows the player to rewind the live stream and play older segments. OvenMediaEngine keeps and uses old segments in to avoid keeping all segments in memory. It stores as much as and the unit is seconds.
+
+```xml
+<LLHLS>
+	...
+	<DVR>
+		<Enable>true</Enable>
+		<TempStoragePath>/tmp/ome_dvr/</TempStoragePath>
+		<MaxDuration>3600</MaxDuration>
+	</DVR>
+	...
+</LLHLS>
+```
+
 ## ID3v2 Timed Metadata
 
 ID3 Timed metadata can be sent to the LLHLS stream through the [Send Event API](../rest-api/v1/virtualhost/application/stream/send-event.md).
