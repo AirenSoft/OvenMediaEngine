@@ -116,7 +116,7 @@ namespace mdl
 		return true;
 	}
 
-	bool Dump::DumpToFile(const ov::String &path, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data, bool add_hitory)
+	bool Dump::DumpToFile(const ov::String &path, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data, bool add_history)
 	{
 		if (ov::CreateDirectories(path) == false)
 		{
@@ -132,7 +132,7 @@ namespace mdl
 			return false;
 		}
 
-		if (add_hitory == true)
+		if (add_history == true)
 		{
 			_dump_history_map.emplace_back(file_path_name);
 		}

@@ -37,7 +37,7 @@ namespace mdl
 		}
 
 	private:
-		bool DumpToFile(const ov::String &path, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data, bool add_hitory=true);
+		bool DumpToFile(const ov::String &path, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data, bool add_history = true);
 		bool MakeDumpInfo(ov::String &dump_info);
 
 		struct DumpHistory
@@ -57,4 +57,4 @@ namespace mdl
 
 		std::map<int32_t, uint32_t> _extra_datas;
 	};
-}
+}  // namespace mdl
