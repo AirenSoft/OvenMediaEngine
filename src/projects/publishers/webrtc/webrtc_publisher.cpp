@@ -395,17 +395,6 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		}
 		else
 		{
-			// Connection Request log
-			// 2019-11-06 09:46:45.390 , RTSP.SS ,REQUEST,INFO,,,Live,rtsp://50.1.111.154:10915/1135/1/,220.103.225.254_44757_1573001205_389304_128855562
-			stat_log(STAT_LOG_WEBRTC_EDGE_REQUEST, "%s,%s,%s,%s,,,%s,%s,%s",
-						ov::Clock::Now().CStr(),
-						"WEBRTC.SS",
-						"REQUEST",
-						"INFO",
-						final_vhost_app_name.CStr(),
-						stream->GetMediaSource().CStr(),
-						remote_address->ToString(false).CStr());
-
 			logti("URL %s is requested", stream->GetMediaSource().CStr());
 		}
 	}
@@ -532,50 +521,6 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 
 		auto ice_timeout = application->GetConfig().GetPublishers().GetWebrtcPublisher().GetTimeout();
 		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), session->GetId(), offer_sdp, peer_sdp, ice_timeout, session_life_time, session);
-
-		// Session is created
-
-		// Special purpose log
-		stat_log(STAT_LOG_WEBRTC_EDGE_SESSION, "%s,%s,%s,%s,,,%s,%s,%u",
-					 ov::Clock::Now().CStr(),
-					 "WEBRTC.SS",
-					 "SESSION",
-					 "INFO",
-					 "createClientSession",
-					 stream->GetName().CStr(),
-					 session->GetId());
-
-		std::shared_ptr<info::Application> rtsp_live_app_info;
-		std::shared_ptr<mon::ApplicationMetrics> rtsp_live_app_metrics;
-		std::shared_ptr<info::Application> rtsp_play_app_info;
-		std::shared_ptr<mon::ApplicationMetrics> rtsp_play_app_metrics;
-
-		rtsp_live_app_metrics = nullptr;
-		rtsp_play_app_metrics = nullptr;
-
-		// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
-		rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
-		if (rtsp_live_app_info != nullptr)
-		{
-			rtsp_live_app_metrics = ApplicationMetrics(*rtsp_live_app_info);
-		}
-		rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
-		if (rtsp_play_app_info != nullptr)
-		{
-			rtsp_play_app_metrics = ApplicationMetrics(*rtsp_play_app_info);
-		}
-
-		stat_log(STAT_LOG_WEBRTC_EDGE_SESSION, "%s,%s,%s,%s,,,%s:%d,%s:%d,%s,%u",
-					ov::Clock::Now().CStr(),
-					"WEBRTC.SS",
-					"SESSION",
-					"INFO",
-					"Live",
-					rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
-					"Playback",
-					rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0,
-					stream->GetName().CStr(),
-					session->GetId());
 	}
 	else
 	{
