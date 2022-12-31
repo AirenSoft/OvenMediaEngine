@@ -52,6 +52,8 @@ bool OriginMapClient::Register(const ov::String &app_stream_name, const ov::Stri
 		return false;
 	}
 
+	std::lock_guard<std::mutex> lock(_redis_context_mutex);
+
 	// Set origin host to redis
 	// The EXPIRE option is to prevent locking the app/stream when OvenMediaEngine unexpectedly stops.
 	// So _update_timer updates the expire time once every 2.5 seconds.
@@ -69,7 +71,7 @@ bool OriginMapClient::Register(const ov::String &app_stream_name, const ov::Stri
 
 	freeReplyObject(reply);
 
-	std::lock_guard<std::mutex> lock(_origin_map_mutex);
+	std::lock_guard<std::mutex> origin_map_lock(_origin_map_mutex);
 	_origin_map[app_stream_name] = origin_host;
 
 	return true;
@@ -82,6 +84,8 @@ bool OriginMapClient::Update(const ov::String &app_stream_name, const ov::String
 		logte("Failed to connect redis server : %s:%d (err:%s)", _redis_ip.CStr(), _redis_port, _redis_context!=nullptr?_redis_context->errstr:"nil");
 		return false;
 	}
+
+	std::lock_guard<std::mutex> lock(_redis_context_mutex);
 
 	// Set origin host to redis
 	// XX option or EXPIRE cmd are not used because if redis server is restarted, update() can restore the origin stream info.
@@ -110,10 +114,12 @@ bool OriginMapClient::Unregister(const ov::String &app_stream_name)
 		return false;
 	}
 
+	std::lock_guard<std::mutex> lock(_redis_context_mutex);
+
 	redisReply *reply = (redisReply *)redisCommand(_redis_context, "DEL %s", app_stream_name.CStr());
 	freeReplyObject(reply);
 
-	std::lock_guard<std::mutex> lock(_origin_map_mutex);
+	std::lock_guard<std::mutex> origin_map_lock(_origin_map_mutex);
 	_origin_map.erase(app_stream_name);
 
 	return true;
@@ -126,6 +132,8 @@ CommonErrorCode OriginMapClient::GetOrigin(const ov::String &app_stream_name, ov
 		logte("Failed to connect redis server : %s:%d (err:%s)", _redis_ip.CStr(), _redis_port, _redis_context!=nullptr?_redis_context->errstr:"nil");
 		return CommonErrorCode::ERROR;
 	}
+
+	std::lock_guard<std::mutex> lock(_redis_context_mutex);
 
 	redisReply *reply = (redisReply *)redisCommand(_redis_context, "GET %s", app_stream_name.CStr());
 	if (reply == nullptr || reply->type == REDIS_REPLY_ERROR)
@@ -146,6 +154,8 @@ CommonErrorCode OriginMapClient::GetOrigin(const ov::String &app_stream_name, ov
 
 bool OriginMapClient::ConnectRedis()
 {
+	std::lock_guard<std::mutex> lock(_redis_context_mutex);
+
 	if (CheckConnection() == true)
 	{
 		return true;

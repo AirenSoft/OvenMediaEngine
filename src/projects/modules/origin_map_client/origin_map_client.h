@@ -46,4 +46,5 @@ private:
 	std::mutex _origin_map_mutex;
 
 	redisContext *_redis_context = nullptr;
+	std::mutex _redis_context_mutex;
 };
