@@ -212,48 +212,6 @@ bool WebRtcPublisher::DisconnectSessionInternal(const std::shared_ptr<RtcSession
 
 	session->Stop();
 
-	// Special purpose log
-	stat_log(STAT_LOG_WEBRTC_EDGE_SESSION, "%s,%s,%s,%s,,,%s,%s,%u",
-					ov::Clock::Now().CStr(),
-					"WEBRTC.SS",
-					"SESSION",
-					"INFO",
-					"deleteClientSession",
-					stream->GetName().CStr(),
-					session->GetId());
-
-	std::shared_ptr<info::Application> rtsp_live_app_info;
-	std::shared_ptr<mon::ApplicationMetrics> rtsp_live_app_metrics;
-	std::shared_ptr<info::Application> rtsp_play_app_info;
-	std::shared_ptr<mon::ApplicationMetrics> rtsp_play_app_metrics;
-
-	rtsp_live_app_metrics = nullptr;
-	rtsp_play_app_metrics = nullptr;
-
-	// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
-	rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
-	if (rtsp_live_app_info != nullptr)
-	{
-		rtsp_live_app_metrics = ApplicationMetrics(*rtsp_live_app_info);
-	}
-	rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
-	if (rtsp_play_app_info != nullptr)
-	{
-		rtsp_play_app_metrics = ApplicationMetrics(*rtsp_play_app_info);
-	}
-
-	stat_log(STAT_LOG_WEBRTC_EDGE_SESSION, "%s,%s,%s,%s,,,%s:%d,%s:%d,%s,%u",
-				ov::Clock::Now().CStr(),
-				"WEBRTC.SS",
-				"SESSION",
-				"INFO",
-				"Live",
-				rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
-				"Playback",
-				rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0,
-				stream->GetName().CStr(),
-				session->GetId());
-
 	return true;
 }
 
