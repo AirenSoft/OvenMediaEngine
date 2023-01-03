@@ -32,6 +32,9 @@ Would you please click on each link below for details:
   * Pull: RTSP
 * <b>Adaptive Bitrate Streaming(ABR) for LLHLS and WebRTC</b>
 * <b>Low Latency Streaming using LLHLS</b> 
+  * DVR (Live Rewind)
+  * Dump for VoD
+  * ID3v2 timed metadata
 * <b>Sub-Second Latency Streaming using WebRTC</b>
   * WebRTC over TCP (With Embedded TURN Server)
   * Embedded WebRTC Signalling Server (WebSocket based)
