@@ -133,7 +133,7 @@ namespace ocst
 		VirtualHost(const info::Host &new_host_info);
 
 		void MarkAllAs(ItemState state);
-		bool MarkAllAs(ItemState expected_old_state, ItemState state);
+		bool MarkAllAs(ItemState state, int state_count, ...);
 
 		// Origin Host Info
 		info::Host host_info;

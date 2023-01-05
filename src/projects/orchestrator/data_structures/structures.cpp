@@ -130,8 +130,6 @@ namespace ocst
 		return callback->OnStreamPrepared(app_info, info);
 	}
 
-
-
 	bool Application::OnSendFrame(const std::shared_ptr<info::Stream> &info, const std::shared_ptr<MediaPacket> &packet)
 	{
 		// Ignore packets
@@ -167,9 +165,20 @@ namespace ocst
 		}
 	}
 
-	bool VirtualHost::MarkAllAs(ItemState expected_old_state, ItemState state)
+	bool VirtualHost::MarkAllAs(ItemState state, int state_count, ...)
 	{
-		if (this->state != expected_old_state)
+		va_list list;
+		va_start(list, state_count);
+
+		std::map<ItemState, bool> expected_state_map;
+
+		for (int index = 0; index < state_count; index++)
+		{
+			expected_state_map[va_arg(list, ItemState)] = true;
+		}
+		va_end(list);
+
+		if (expected_state_map.find(this->state) == expected_state_map.end())
 		{
 			return false;
 		}
@@ -178,7 +187,7 @@ namespace ocst
 
 		for (auto &host : host_list)
 		{
-			if (host.state != expected_old_state)
+			if (expected_state_map.find(host.state) == expected_state_map.end())
 			{
 				return false;
 			}
@@ -188,7 +197,7 @@ namespace ocst
 
 		for (auto &origin : origin_list)
 		{
-			if (origin.state != expected_old_state)
+			if (expected_state_map.find(origin.state) == expected_state_map.end())
 			{
 				return false;
 			}

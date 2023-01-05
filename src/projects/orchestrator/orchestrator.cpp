@@ -260,7 +260,7 @@ namespace ocst
 		// Mark all items as NeedToCheck
 		for (auto &vhost_item : _virtual_host_map)
 		{
-			if (vhost_item.second->MarkAllAs(ItemState::Applied, ItemState::NeedToCheck) == false)
+			if (vhost_item.second->MarkAllAs(ItemState::NeedToCheck, 2, ItemState::New, ItemState::Applied) == false)
 			{
 				logtd("Something was wrong with VirtualHost: %s", vhost_item.second->name.CStr());
 
