@@ -100,7 +100,7 @@ bool RtpRtcp::SendRtpPacket(const std::shared_ptr<RtpPacket> &rtp_packet)
     if(it != _rtcp_sr_generators.end())
     {
 		auto rtcp_sr_generator = it->second;
-		rtcp_sr_generator->AddRTPPacketAndGenerateRtcpSR(*rtp_packet);
+		rtcp_sr_generator->AddRTPPacketInfo(rtp_packet);
 	}
 
 	if(_rtcp_sent_count == 0 || _rtcp_send_stop_watch.Elapsed() > SDES_CYCLE_MS)

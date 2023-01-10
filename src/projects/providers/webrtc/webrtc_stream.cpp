@@ -385,7 +385,7 @@ namespace pvd
 		{
 			_fir_timer.Update();
 			_rtp_rtcp->SendPLI(first_rtp_packet->Ssrc());
-			//_rtp_rtcp->SendFIR(_video_ssrc);
+			//_rtp_rtcp->SendFIR(first_rtp_packet->Ssrc());
 		}
 
 		// Send Receiver Report
@@ -403,7 +403,7 @@ namespace pvd
 	}
 
 	// ov::Node Interface
-	// RtpRtcp -> SRTP -> DTLS -> Edge(this)
+	// RtpRtcp -> SRTP -> DTLS -> Edge(this) -> IcePort
 	bool WebRTCStream::OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data)
 	{
 		if (ov::Node::GetNodeState() != ov::Node::NodeState::Started)
