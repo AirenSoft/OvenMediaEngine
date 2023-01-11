@@ -176,6 +176,7 @@ namespace pvd
 				{
 					video_track->SetCodecId(cmn::MediaCodecId::H264);
 					video_track->SetOriginBitstream(cmn::BitstreamFormat::H264_RTP_RFC_6184);
+					_h264_extradata_nalu = first_payload->GetH264ExtraDataAsAnnexB();
 					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::H264;
 				}
 				else if (codec == PayloadAttr::SupportCodec::VP8)
@@ -220,6 +221,8 @@ namespace pvd
 		ov::Node::Start();
 
 		_fir_timer.Start();
+
+		_sent_sequence_header = false;
 
 		return pvd::Stream::Start();
 	}
@@ -319,6 +322,7 @@ namespace pvd
 		std::vector<std::shared_ptr<ov::Data>> payload_list;
 		for (const auto &packet : rtp_packets)
 		{
+			logtd("%s", packet->Dump().CStr());
 			auto payload = std::make_shared<ov::Data>(packet->Payload(), packet->PayloadSize());
 			payload_list.push_back(payload);
 		}
@@ -378,14 +382,29 @@ namespace pvd
 
 		logtd("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%u)", track->GetId(), track->GetCodecId(), bitstream_format, packet_type, bitstream->GetLength(), first_rtp_packet->Timestamp());
 
+		// This may not work since almost WebRTC browser sends SRS/PPS in-band
+		if (_sent_sequence_header == false && track->GetCodecId() == cmn::MediaCodecId::H264 && _h264_extradata_nalu != nullptr)
+		{
+			auto media_packet = std::make_shared<MediaPacket>(GetMsid(),	
+																track->GetMediaType(), 
+																track->GetId(), 
+																_h264_extradata_nalu,
+																timestamp, 
+																timestamp, 
+																cmn::BitstreamFormat::H264_ANNEXB, 
+																cmn::PacketType::NALU);
+			SendFrame(media_packet);
+			_sent_sequence_header = true;
+		}
+
 		SendFrame(frame);
 
 		// Send FIR to reduce keyframe interval
-		if (_fir_timer.IsElapsed(2000) && track->GetMediaType() == cmn::MediaType::Video)
+		if (_fir_timer.IsElapsed(3000) && track->GetMediaType() == cmn::MediaType::Video)
 		{
 			_fir_timer.Update();
-			_rtp_rtcp->SendPLI(first_rtp_packet->Ssrc());
-			//_rtp_rtcp->SendFIR(first_rtp_packet->Ssrc());
+			//_rtp_rtcp->SendPLI(first_rtp_packet->Ssrc());
+			_rtp_rtcp->SendFIR(first_rtp_packet->Ssrc());
 		}
 
 		// Send Receiver Report

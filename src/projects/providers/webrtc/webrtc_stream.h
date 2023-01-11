@@ -84,5 +84,8 @@ namespace pvd
 		std::map<uint8_t, std::shared_ptr<RtpDepacketizingManager>> _depacketizers;
 
 		LipSyncClock 						_lip_sync_clock;
+
+		std::shared_ptr<ov::Data> _h264_extradata_nalu = nullptr;
+		bool _sent_sequence_header = false;
 	};
 }

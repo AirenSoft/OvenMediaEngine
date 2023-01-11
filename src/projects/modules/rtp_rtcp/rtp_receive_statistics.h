@@ -39,28 +39,25 @@ private:
 	uint32_t	_clock_rate = 0;
 
 	// From SR
-	double		_last_sr_ntp = 0;
-	uint32_t	_last_sr_msw = 0;
-	uint32_t 	_last_sr_lsw = 0;
+	uint64_t	_last_sr_received_time_ms = 0;
+	uint32_t	_last_sr_timestamp = 0;
 
 	// For Receiver Report
 	bool		_first = true;
 	
 	// https://tools.ietf.org/html/rfc3550#page-75
-	uint16_t	_max_seq = 0;
+	uint16_t	_highest_seq = 0;
 	uint32_t	_cycles = 0;
-	uint32_t	_base_seq = 0;
-	uint32_t	_probation = 0;
+	uint32_t	_init_seq = 0;
 	uint32_t	_received_packets = 0;
-	uint32_t	_expected_prior = 0;
-	uint32_t	_received_prior = 0;
-	uint32_t	_transit = 0;
-	uint32_t	_jitter = 0;
+	uint32_t	_expected_packets_prior = 0;
+	uint32_t	_received_packets_prior = 0;
+	uint32_t	_interarrival_jitter = 0;
+
+	uint32_t 	_last_rtp_timestamp = 0;
+	uint64_t 	_last_rtp_received_time;
 
 	uint32_t	_received_bytes = 0;
-
-	uint64_t	_initial_ntp = 0;
-	uint32_t	_initial_rtp_timestamp = 0;
 
 	uint64_t	_fir_request_count = 0;
 

@@ -391,7 +391,7 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 			if(packet == nullptr)
 			{
 				// can not happen
-				logte("Could not get first rtp packet from jitter buffer - ssrc : %u", packet->Ssrc());
+				logtw("Could not get first rtp packet from jitter buffer - track(%u)", track_id);
 				return false;
 			}
 

@@ -11,7 +11,7 @@ public:
 
 	void AddRTPPacketInfo(const std::shared_ptr<RtpPacket> &rtp_packet);
 	bool IsAvailableRtcpSRPacket() const;
-	std::shared_ptr<RtcpPacket>   PopRtcpSRPacket();
+	std::shared_ptr<RtcpPacket> PopRtcpSRPacket();
 	
 private:
 	uint32_t GetElapsedTimeMSFromCreated();
