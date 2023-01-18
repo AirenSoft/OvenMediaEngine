@@ -307,7 +307,7 @@ install_hiredis()
     cd ${DIR} && \
     curl -sLf https://github.com/redis/hiredis/archive/refs/tags/v${HIREDIS_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     make -j$(nproc) && \
-    sudo make install PREFIX=/opt/ovenmediaengine && \
+    sudo make install PREFIX="${PREFIX}" && \
     rm -rf ${DIR} ) || fail_exit "hiredis"
 }
 
