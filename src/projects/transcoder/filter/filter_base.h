@@ -35,7 +35,7 @@ extern "C"
 class FilterBase
 {
 public:
-	typedef std::function<void(std::shared_ptr<MediaFrame>)> CB_FUNC;
+	typedef std::function<void(std::shared_ptr<MediaFrame>)> CompleteHandler;
 	FilterBase() = default;
 	virtual ~FilterBase() = default;
 
@@ -65,8 +65,8 @@ public:
 		return _input_height;
 	}
 
-	void SetOnCompleteHandler(CB_FUNC on_complete_handler) {
-		_on_complete_handler = on_complete_handler;
+	void SetCompleteHandler(CompleteHandler complete_handler) {
+		_complete_handler = complete_handler;
 	}
 
 protected:
@@ -91,5 +91,5 @@ protected:
 	bool _kill_flag = false;
 	std::thread _thread_work;
 
-	CB_FUNC _on_complete_handler;
+	CompleteHandler _complete_handler;
 };

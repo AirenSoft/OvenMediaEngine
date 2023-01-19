@@ -54,7 +54,7 @@ TranscodeEncoder::~TranscodeEncoder()
 	_input_buffer.Clear();
 }
 
-std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, std::shared_ptr<MediaTrack> output_track, _cb_func on_complete_handler)
+std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, std::shared_ptr<MediaTrack> output_track, CompleteHandler complete_handler)
 {
 	std::shared_ptr<TranscodeEncoder> encoder = nullptr;
 
@@ -180,7 +180,7 @@ done:
 	if (encoder)
 	{
 		encoder->SetEncoderId(encoder_id);
-		encoder->SetOnCompleteHandler(on_complete_handler);
+		encoder->SetCompleteHandler(complete_handler);
 	}
 	
 	return encoder;
@@ -219,9 +219,9 @@ void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 
 void TranscodeEncoder::SendOutputBuffer(std::shared_ptr<MediaPacket> packet)
 {
-	if (_on_complete_handler)
+	if (_complete_handler)
 	{
-		_on_complete_handler(_encoder_id, std::move(packet));
+		_complete_handler(_encoder_id, std::move(packet));
 	}
 }
 

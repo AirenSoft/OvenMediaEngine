@@ -268,9 +268,9 @@ void FilterRescaler::FilterThread()
 					continue;
 				}
 
-				if (_on_complete_handler)
+				if (_complete_handler)
 				{
-					_on_complete_handler(std::move(output_frame));
+					_complete_handler(std::move(output_frame));
 				}
 			}
 		}

@@ -13,13 +13,13 @@
 class TranscodeEncoder : public TranscodeBase<MediaFrame, MediaPacket>
 {
 public:
-	typedef std::function<void(int32_t, std::shared_ptr<MediaPacket>)> _cb_func;
+	typedef std::function<void(int32_t, std::shared_ptr<MediaPacket>)> CompleteHandler;
 
 public:
 	TranscodeEncoder();
 	~TranscodeEncoder() override;
 
-	static std::shared_ptr<TranscodeEncoder> Create(int32_t encoder_id, std::shared_ptr<MediaTrack> output_track, _cb_func on_complete_handler);
+	static std::shared_ptr<TranscodeEncoder> Create(int32_t encoder_id, std::shared_ptr<MediaTrack> output_track, CompleteHandler complete_handler);
 	void SetEncoderId(int32_t encdoer_id);
 
 	virtual int GetSupportedFormat() const noexcept = 0;
@@ -37,10 +37,12 @@ public:
 
 	cmn::Timebase GetTimebase() const;
 
-	_cb_func _on_complete_handler;
-	void SetOnCompleteHandler(_cb_func func)
+
+public:
+
+	void SetCompleteHandler(CompleteHandler complete_handler)
 	{
-		_on_complete_handler = move(func);
+		_complete_handler = move(complete_handler);
 	}
 
 private:
@@ -62,4 +64,7 @@ protected:
 
 	bool _kill_flag = false;
 	std::thread _codec_thread;
+
+	CompleteHandler _complete_handler;
+
 };

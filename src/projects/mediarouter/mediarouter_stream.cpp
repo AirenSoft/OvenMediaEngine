@@ -355,8 +355,6 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 		{
 			has_sps = true;
 
-			// logtd("[-SPS] %s ", ov::Base64::Encode(nalu).CStr());
-
 			// Parse track info if needed
 			if (media_track->IsValid() == false)
 			{
@@ -383,8 +381,6 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 		else if (nal_header.GetNalUnitType() == H264NalUnitType::Pps)
 		{
 			has_pps = true;
-
-			// logtd("[-PPS] %s ", ov::Base64::Encode(nalu).CStr());
 
 			// Parse track info if needed
 			if (media_track->IsValid() == false)
@@ -834,7 +830,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			int64_t last_delay = uptime - rescaled_last_pts;
 
 
-			stat_track_str.AppendFormat("\n\ttrack:%3d, type: %4s, codec: %4s(%d,%s), pts: %lldms, dly: %5lldms, tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %dKbps",
+			stat_track_str.AppendFormat("\n\ttrack:%11d, type: %4s, codec: %4s(%d,%s), pts: %lldms, dly: %5lldms, tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %dKbps",
 										track_id,
 										GetMediaTypeString(track->GetMediaType()).CStr(),
 										::StringFromMediaCodecId(track->GetCodecId()).CStr(),

@@ -129,9 +129,6 @@ bool FilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_track, 
 		return false;
 	}
 
-	// logte("%s", input_args.CStr());
-	// logte("%s", output_filters.CStr());
-
 	ret = ::avfilter_graph_parse_ptr(_filter_graph, output_filters, &_inputs, &_outputs, nullptr);
 	if (ret < 0)
 	{
@@ -176,8 +173,6 @@ bool FilterResampler::Start()
 void FilterResampler::Stop()
 {
 	_kill_flag = true;
-
-	// _queue_event.Notify();
 
 	_input_buffer.Stop();
 
@@ -242,9 +237,9 @@ void FilterResampler::FilterThread()
 					continue;
 				}
 
-				if (_on_complete_handler)
+				if (_complete_handler)
 				{
-					_on_complete_handler(std::move(output_frame));
+					_complete_handler(std::move(output_frame));
 				}
 			}
 		}
