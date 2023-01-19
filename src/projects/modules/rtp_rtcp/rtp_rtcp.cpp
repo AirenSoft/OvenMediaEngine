@@ -15,7 +15,6 @@ RtpRtcp::RtpRtcp(const std::shared_ptr<RtpRtcpInterface> &observer)
 	        : ov::Node(NodeType::Rtp)
 {
 	_observer = observer;
-	_receiver_report_timer.Start();
 	_rtcp_send_stop_watch.Start();
 }
 
@@ -194,6 +193,22 @@ bool RtpRtcp::SendFIR(uint32_t media_ssrc)
 	return SendDataToNextNode(NodeType::Rtcp, rtcp_packet->GetData());
 }
 
+bool RtpRtcp::IsTransportCcFeedbackEnabled() const
+{
+	return _transport_cc_feedback_enabled;
+}
+
+void RtpRtcp::EnableTransportCcFeedback(uint8_t extension_id)
+{
+	_transport_cc_feedback_enabled = true;
+	_transport_cc_feedback_extension_id = extension_id;
+}
+
+void RtpRtcp::DisableTransportCcFeedback()
+{
+	_transport_cc_feedback_enabled = false;
+}
+
 uint8_t RtpRtcp::GetReceivedPayloadType(uint32_t ssrc)
 {
 	auto stat_it = _receive_statistics.find(ssrc);
@@ -322,6 +337,7 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 	}
 	auto track = track_it->second;
 
+	// For RTCP Receiver Report
 	std::shared_ptr<RtpReceiveStatistics> stat;
 	auto stat_it = _receive_statistics.find(packet->Ssrc());
 	if(stat_it == _receive_statistics.end())
@@ -338,7 +354,7 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 	stat->AddReceivedRtpPacket(packet);
 
 	// Send ReceiverReport
-	if(stat->HasElapsedSinceLastReportBlock(RECEIVER_REPORT_CYCLE_MS))
+	if (stat->HasElapsedSinceLastReportBlock(RECEIVER_REPORT_CYCLE_MS))
 	{
 		auto report = std::make_shared<ReceiverReport>();
 		report->SetRtpSsrc(packet->Ssrc());
@@ -350,6 +366,35 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 		{
 			_last_sent_rtcp_packet = rtcp_packet;
 			SendDataToNextNode(NodeType::Rtcp, rtcp_packet->GetData());
+		}
+	}
+
+	// For Transport-wide CC feedback
+	if (_transport_cc_feedback_enabled == true)
+	{
+		if (_transport_cc_generator == nullptr)
+		{
+			// Since the Receiver SSRC is unknown, the same as the RR of the first track is used. Since it is a wide sequence, media ssrc may not be one. So this also just uses the first media ssrc.
+			_transport_cc_generator = std::make_shared<RtcpTransportCcFeedbackGenerator>(
+										_transport_cc_feedback_extension_id, 
+										stat->GetReceiverSSRC(), 
+										packet->Ssrc());
+		}
+
+		_transport_cc_generator->AddReceivedRtpPacket(packet);
+
+		// Send Transport-wide CC feedback
+		if (_transport_cc_generator->HasElapsedSinceLastTransportCc(TRANSPORT_CC_CYCLE_MS))
+		{
+			auto feedback = _transport_cc_generator->GenerateTransportCcMessage();
+			if (feedback != nullptr)
+			{
+				_last_sent_rtcp_packet = feedback;
+
+				auto feedback_data = feedback->GetData();
+				logtd("Send Transport-wide CC feedback: %s", feedback_data->Dump().CStr());
+				SendDataToNextNode(NodeType::Rtcp, feedback_data);
+			}
 		}
 	}
 

@@ -31,11 +31,6 @@ public:
 		memset(_buffer, 0, sizeof(_buffer));
 	}
 
-	RtpHeaderExtensionAbsSendTime(uint8_t id, std::shared_ptr<ov::Data> data)
-		: RtpHeaderExtension(id, data)
-	{
-	}
-
 	void SetAbsSendTime(uint32_t abs_send_time)
 	{
 		_abs_send_time = abs_send_time;
@@ -55,18 +50,18 @@ public:
 		return abs_send_time;
 	}
 
-protected:
-	std::shared_ptr<ov::Data> GetData(HeaderType type) override
-	{
-		return _data;
-	}
-
 	bool SetData(const std::shared_ptr<ov::Data> &data) override
 	{
 		//TODO(Getroot): Parsing
 		_data = data;
 
 		return true;
+	}
+
+protected:
+	std::shared_ptr<ov::Data> GetData(HeaderType type) override
+	{
+		return _data;
 	}
 
 private:

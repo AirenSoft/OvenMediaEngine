@@ -105,10 +105,15 @@ bool RtpReceiveStatistics::UpdateStat(const std::shared_ptr<RtpPacket> &packet)
 		_interarrival_jitter = _interarrival_jitter + ((int)(abs((int)rtp_timestamp_diff - (int)rtp_received_time_diff) - _interarrival_jitter) / 16);
 
 		logd("DEBUG", "RTP Interarrival Jitter: %u - rtp_timestamp_diff(%u), rtp_received_time_diff(%u)", _interarrival_jitter, rtp_timestamp_diff, rtp_received_time_diff);
-	}
 
-	_last_rtp_timestamp = packet->Timestamp();
-	_last_rtp_received_time = ov::Clock::NowMSec();
+		_last_rtp_received_time = ov::Clock::NowMSec();
+		_last_rtp_timestamp = packet->Timestamp();
+	}
+	else if (_received_packets == 0)
+	{
+		_last_rtp_received_time = ov::Clock::NowMSec();
+		_last_rtp_timestamp = packet->Timestamp();
+	}
 
 	_received_packets += 1;
 	_received_bytes += packet->GetData()->GetLength();

@@ -26,7 +26,7 @@ bool RtcpPacket::Build(const std::shared_ptr<RtcpInfo> &info)
 
 	// Version:2 | padding:0 | count_or_fmt
 	uint8_t version = 2 << 6;
-	uint8_t padding = false ? 1 << 5 : 0; // We don't use padding bit
+	uint8_t padding = info->HasPadding() ? 1 << 5 : 0; 
 	
 	buffer[0] = version | padding | info->GetCountOrFmt();
 	buffer[1] = static_cast<uint8_t>(info->GetPacketType());

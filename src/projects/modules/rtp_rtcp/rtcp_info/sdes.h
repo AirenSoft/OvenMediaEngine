@@ -4,6 +4,23 @@
 #include "../rtcp_packet.h"
 #include "sdes_chunk.h"
 
+
+//         0                   1                   2                   3
+//         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// header |V=2|P|    SC   |  PT=SDES=202  |             length            |
+//        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+// chunk  |                          SSRC/CSRC_1                          |
+//   1    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//        |                           SDES items                          |
+//        |                              ...                              |
+//        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+// chunk  |                          SSRC/CSRC_2                          |
+//   2    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//        |                           SDES items                          |
+//        |                              ...                              |
+//        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+
 class Sdes : public RtcpInfo
 {
 public:
@@ -24,6 +41,11 @@ public:
 	uint8_t GetCountOrFmt() const override
 	{
 		return static_cast<uint8_t>(GetChunkCount());
+	}
+
+	bool HasPadding() const override
+	{
+		return false;
 	}
 
 	size_t GetChunkCount() const

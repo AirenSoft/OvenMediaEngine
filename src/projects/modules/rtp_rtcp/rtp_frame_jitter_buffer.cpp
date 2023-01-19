@@ -64,7 +64,8 @@ uint32_t RtpFrame::GetExtendedSequenceNumber(uint16_t sequence_number)
 
 bool RtpFrame::InsertPacket(const std::shared_ptr<RtpPacket> &packet)
 {
-	packet->SetSequenceNumber(55000 + packet->SequenceNumber());
+	logtd("Insert packet : %s", packet->Dump().CStr());
+
 	auto sequence_number = GetExtendedSequenceNumber(packet->SequenceNumber());
 
 	auto inserted = _packets.emplace(sequence_number, packet);
@@ -95,6 +96,11 @@ bool RtpFrame::InsertPacket(const std::shared_ptr<RtpPacket> &packet)
 	}
 
 	return true;
+}
+
+bool RtpFrame::IsMarked()
+{
+	return _marked;
 }
 
 bool RtpFrame::IsCompleted()
@@ -132,6 +138,11 @@ bool RtpFrame::CheckCompleted()
 	if (need_number_of_packets == _packets.size())
 	{
 		_completed = true;
+		logtd("Frame completed: timestamp(%u) packets(%u) need packets(%u)", _timestamp, _packets.size(), need_number_of_packets);
+	}
+	else
+	{
+		logte("Invalid frame: timestamp(%u) %u/%u", _timestamp, _packets.size(), need_number_of_packets);
 	}
 
 	return _completed;
@@ -209,7 +220,8 @@ void RtpFrameJitterBuffer::BurnOutExpiredFrames()
 	auto it = _rtp_frames.begin();
 	while (it != completed_frame_it)
 	{
-		logtw("Frame discarded - timestamp(%u) packets(%d)", it->second->Timestamp(), it->second->PacketCount());
+		auto frame = it->second;
+		logti("Frame discarded (It may be PADDING frame for BWE) - timestamp(%u) packets(%d) marked(%s)", frame->Timestamp(), frame->PacketCount(), frame->IsMarked() ? "true" : "false");
 		it = _rtp_frames.erase(it);
 	}
 }

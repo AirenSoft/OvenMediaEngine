@@ -123,6 +123,7 @@ public:
 	void AddExtmap(uint8_t id, ov::String attribute);
 	std::map<uint8_t, ov::String> GetExtmap() const;
 	ov::String GetExtmapItem(uint8_t id) const;
+	bool FindExtmapItem(const ov::String &keyword, uint8_t &id, ov::String &uri) const;
 
 private:
 	bool UpdateData(ov::String &sdp) override;

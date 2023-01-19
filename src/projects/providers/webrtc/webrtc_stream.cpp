@@ -155,6 +155,18 @@ namespace pvd
 
 				AddTrack(audio_track);
 				_rtp_rtcp->AddRtpReceiver(ssrc, audio_track);
+
+				if (_rtp_rtcp->IsTransportCcFeedbackEnabled() == false && first_payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::TransportCc) == true)
+				{
+					// a=extmap:id http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
+					uint8_t transport_cc_extension_id = 0;
+					ov::String transport_cc_extension_uri;
+					if (peer_media_desc->FindExtmapItem("transport-wide-cc-extensions", transport_cc_extension_id, transport_cc_extension_uri) == true)
+					{
+						_rtp_rtcp->EnableTransportCcFeedback(transport_cc_extension_id);
+					}
+				}
+
 				_lip_sync_clock.RegisterClock(ssrc, audio_track->GetTimeBase().GetExpr());
 			}
 			else
@@ -201,6 +213,18 @@ namespace pvd
 
 				AddTrack(video_track);
 				_rtp_rtcp->AddRtpReceiver(ssrc, video_track);
+
+				if (_rtp_rtcp->IsTransportCcFeedbackEnabled() == false && first_payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::TransportCc) == true)
+				{
+					// a=extmap:id http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
+					uint8_t transport_cc_extension_id = 0;
+					ov::String transport_cc_extension_uri;
+					if (peer_media_desc->FindExtmapItem("transport-wide-cc-extensions", transport_cc_extension_id, transport_cc_extension_uri) == true)
+					{
+						_rtp_rtcp->EnableTransportCcFeedback(transport_cc_extension_id);
+					}
+				}
+				
 				_lip_sync_clock.RegisterClock(ssrc, video_track->GetTimeBase().GetExpr());
 			}
 		}

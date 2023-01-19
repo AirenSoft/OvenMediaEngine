@@ -10,6 +10,8 @@
 #include "webrtc_private.h"
 #include "webrtc_application.h"
 
+#include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_transport_cc.h>
+
 namespace pvd
 {
 	std::shared_ptr<WebRTCApplication> WebRTCApplication::Create(const std::shared_ptr<pvd::PushProvider> &provider, const info::Application &application_info, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<IcePort> &ice_port, const std::shared_ptr<RtcSignallingServer> &rtc_signalling)
@@ -60,6 +62,8 @@ namespace pvd
 			return nullptr;
 		}
 
+		bool transport_cc_enabled = true;
+
 		auto offer_sdp = std::make_shared<SessionDescription>();
 		offer_sdp->SetOrigin("OvenMediaEngine", ov::Random::GenerateUInt32(), 2, "IN", 4, "127.0.0.1");
 		offer_sdp->SetTiming(0, 0);
@@ -88,6 +92,10 @@ namespace pvd
 		video_media_desc->UseDtls(true);
 		video_media_desc->UseRtcpMux(true);
 		video_media_desc->SetDirection(MediaDescription::Direction::RecvOnly);
+		if (transport_cc_enabled)
+		{
+			video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_TRANSPORT_CC_ID, RTP_HEADER_EXTENSION_TRANSPORT_CC_ATTRIBUTE);
+		}
 
 		std::shared_ptr<PayloadAttr> payload;
 		// H264
@@ -96,6 +104,7 @@ namespace pvd
 		payload->SetFmtp(ov::String::FormatString("packetization-mode=1;profile-level-id=%x;level-asymmetry-allowed=1",	0x42e01f));
 		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::CcmFir, true);
 		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::NackPli, true);
+		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::TransportCc, true);
 		video_media_desc->AddPayload(payload);
 
 		// VP8
@@ -103,6 +112,12 @@ namespace pvd
 		payload->SetRtpmap(payload_type_num++, "VP8", 90000);
 		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::CcmFir, true);
 		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::NackPli, true);
+		
+		if (transport_cc_enabled)
+		{
+			payload->EnableRtcpFb(PayloadAttr::RtcpFbType::TransportCc, true);
+		}
+
 		video_media_desc->AddPayload(payload);
 
 		video_media_desc->Update();
@@ -121,10 +136,20 @@ namespace pvd
 		audio_media_desc->SetDirection(MediaDescription::Direction::RecvOnly);
 		audio_media_desc->SetMediaType(MediaDescription::MediaType::Audio);
 
+		if (transport_cc_enabled)
+		{
+			audio_media_desc->AddExtmap(RTP_HEADER_EXTENSION_TRANSPORT_CC_ID, RTP_HEADER_EXTENSION_TRANSPORT_CC_ATTRIBUTE);
+		}
+
 		// OPUS
 		payload = std::make_shared<PayloadAttr>();
 		payload->SetFmtp("sprop-stereo=1;stereo=1;minptime=10;useinbandfec=1");
 		payload->SetRtpmap(payload_type_num++, "OPUS", 48000, "2");
+		
+		if (transport_cc_enabled)
+		{
+			payload->EnableRtcpFb(PayloadAttr::RtcpFbType::TransportCc, true);
+		}
 		audio_media_desc->AddPayload(payload);
 
 		audio_media_desc->Update();

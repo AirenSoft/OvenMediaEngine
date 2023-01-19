@@ -1032,6 +1032,24 @@ ov::String MediaDescription::GetExtmapItem(uint8_t id) const
 	return _extmap.at(id);
 }
 
+bool MediaDescription::FindExtmapItem(const ov::String &keyword, uint8_t &id, ov::String &uri) const
+{
+	for(auto const &extmap : _extmap)
+	{
+		auto tmp_id = extmap.first;
+		auto tmp_uri = extmap.second;
+
+		if (tmp_uri.IndexOf(keyword.CStr()) != -1)
+		{
+			id = tmp_id;
+			uri = tmp_uri;
+			return true;
+		}
+	}
+
+	return false;
+}
+
 // a=rtpmap:96 VP8/50000
 bool MediaDescription::AddRtpmap(uint8_t payload_type, const ov::String &codec,
                                  uint32_t rate, const ov::String &parameters)

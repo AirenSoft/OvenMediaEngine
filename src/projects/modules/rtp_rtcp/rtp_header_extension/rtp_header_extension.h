@@ -17,12 +17,6 @@ public:
 		_id = id;
 	}
 
-	RtpHeaderExtension(uint8_t id, std::shared_ptr<ov::Data> data)
-	{
-		_id = id;
-		SetData(data);
-	}
-
 	uint8_t GetId()
 	{
 		return _id;
@@ -85,23 +79,15 @@ public:
 
 		return _element;
 	}
+
+	virtual bool SetData(const std::shared_ptr<ov::Data> &data) = 0;
 	
 protected:
 	// child class must implement below functions
-	virtual std::shared_ptr<ov::Data> GetData(HeaderType type)
-	{
-		return _payload_data;
-	}
-
-	virtual bool SetData(const std::shared_ptr<ov::Data> &data)
-	{
-		_payload_data = data;
-		return true;
-	}
+	virtual std::shared_ptr<ov::Data> GetData(HeaderType type) = 0;
 
 private:
-	uint8_t		_id;
-	std::shared_ptr<ov::Data> _payload_data = nullptr;
+	uint8_t	_id;
 	std::shared_ptr<ov::Data> _element = nullptr;
 
 	bool _updated = true;

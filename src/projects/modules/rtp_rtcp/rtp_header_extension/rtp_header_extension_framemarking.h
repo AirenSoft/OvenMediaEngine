@@ -39,11 +39,6 @@ public:
 		memset(_buffer, 0, sizeof(_buffer));
 	}
 
-	RtpHeaderExtensionFrameMarking(uint8_t id, std::shared_ptr<ov::Data> data)
-		: RtpHeaderExtension(id, data)
-	{
-	}
-
 	void Reset()
 	{
 		_start_of_frame = false;
@@ -111,12 +106,6 @@ public:
 		UpdateData();
 	}
 
-protected:
-	std::shared_ptr<ov::Data> GetData(HeaderType type) override
-	{
-		return _data;
-	}
-
 	bool SetData(const std::shared_ptr<ov::Data> &data) override
 	{
 		//TODO(Getroot): Parsing
@@ -124,6 +113,13 @@ protected:
 
 		return true;
 	}
+
+protected:
+	std::shared_ptr<ov::Data> GetData(HeaderType type) override
+	{
+		return _data;
+	}
+
 
 private:
 	std::shared_ptr<ov::Data>	_data;

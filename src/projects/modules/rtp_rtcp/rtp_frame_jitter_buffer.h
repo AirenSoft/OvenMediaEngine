@@ -13,6 +13,7 @@ public:
 	RtpFrame();
 	bool InsertPacket(const std::shared_ptr<RtpPacket> &packet);
 	bool IsCompleted();
+	bool IsMarked();
 	uint64_t GetElapsed();
 
 	std::shared_ptr<RtpPacket> GetFirstRtpPacket();

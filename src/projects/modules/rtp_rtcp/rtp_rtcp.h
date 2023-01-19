@@ -5,13 +5,16 @@
 #include "base/ovlibrary/node.h"
 #include "base/info/media_track.h"
 #include "rtcp_info/rtcp_sr_generator.h"
+#include "rtcp_info/rtcp_transport_cc_feedback_generator.h"
 #include "rtcp_info/sdes.h"
 #include "rtcp_info/receiver_report.h"
 #include "rtp_frame_jitter_buffer.h"
 #include "rtp_minimal_jitter_buffer.h"
 #include "rtp_receive_statistics.h"
 
+
 #define RECEIVER_REPORT_CYCLE_MS	3000
+#define TRANSPORT_CC_CYCLE_MS		50
 #define SDES_CYCLE_MS 500
 
 class RtpRtcpInterface : public ov::EnableSharedFromThis<RtpRtcpInterface>
@@ -34,6 +37,10 @@ public:
 	bool SendRtpPacket(const std::shared_ptr<RtpPacket> &packet);
 	bool SendPLI(uint32_t media_ssrc);
 	bool SendFIR(uint32_t media_ssrc);
+
+	bool IsTransportCcFeedbackEnabled() const;
+	void EnableTransportCcFeedback(uint8_t extension_id);
+	void DisableTransportCcFeedback();
 
 	uint8_t GetReceivedPayloadType(uint32_t ssrc);
 
@@ -63,11 +70,15 @@ private:
 	std::shared_ptr<RtcpPacket> _rtcp_sdes = nullptr;
 	ov::StopWatch _rtcp_send_stop_watch;
 	uint64_t _rtcp_sent_count = 0;
+
+	bool _transport_cc_feedback_enabled = false;
+	uint8_t _transport_cc_feedback_extension_id = 0;
 	
 	// Receiver SSRC (For RTCP RR, FIR... etc)
 	std::unordered_map<uint32_t, std::shared_ptr<RtpReceiveStatistics>> _receive_statistics;
-	// Receiver Report Timer
-	ov::StopWatch _receiver_report_timer;
+
+	// Transport-cc feedback
+	std::shared_ptr<RtcpTransportCcFeedbackGenerator> _transport_cc_generator = nullptr;
 
 	// Jitter buffer
 	// payload type : Jitter buffer

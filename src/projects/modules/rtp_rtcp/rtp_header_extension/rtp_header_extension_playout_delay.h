@@ -31,11 +31,6 @@ public:
 		memset(_buffer, 0, sizeof(_buffer));
 	}
 
-	RtpHeaderExtensionPlayoutDelay(uint8_t id, std::shared_ptr<ov::Data> data)
-		: RtpHeaderExtension(id, data)
-	{
-	}
-
 	void SetDelayMilliseconds(uint32_t min_delay_ms, uint32_t max_delay_ms)
 	{
 		// 12 bits for Minimum and Maximum delay. This represents a range of 0 - 40950 milliseconds for minimum and maximum (with a granularity of 10 ms). A granularity of 10 ms is sufficient since we expect the following typical use cases:
@@ -52,18 +47,18 @@ public:
 		SetDelay(min_delay_ms / 10, max_delay_ms / 10);
 	}
 
-protected:
-	std::shared_ptr<ov::Data> GetData(HeaderType type) override
-	{
-		return _data;
-	}
-
 	bool SetData(const std::shared_ptr<ov::Data> &data) override
 	{
 		//TODO(Getroot): Parsing
 		_data = data;
 
 		return true;
+	}
+
+protected:
+	std::shared_ptr<ov::Data> GetData(HeaderType type) override
+	{
+		return _data;
 	}
 
 private:

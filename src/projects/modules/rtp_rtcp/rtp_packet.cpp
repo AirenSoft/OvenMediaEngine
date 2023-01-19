@@ -192,7 +192,7 @@ bool RtpPacket::Parse(const std::shared_ptr<const ov::Data> &data)
 				len = buffer[extension_offset++];
 			}
 
-			_extensions.emplace(id, ov::Data(&buffer[extension_offset], len));
+			_extensions.emplace(id, ov::Data(&buffer[extension_offset], len, true));
 			extension_offset += len;
 		}
 	}

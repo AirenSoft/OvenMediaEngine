@@ -31,11 +31,6 @@ public:
 		memset(_buffer, 0, sizeof(_buffer));
 	}
 
-	RtpHeaderExtensionTransportCc(uint8_t id, std::shared_ptr<ov::Data> data)
-		: RtpHeaderExtension(id, data)
-	{
-	}
-
 	void SetSequenceNumber(uint16_t sequence_number)
 	{
 		_tw_sequence_number = sequence_number;
@@ -43,18 +38,32 @@ public:
 		UpdateData();
 	}
 
-protected:
-	std::shared_ptr<ov::Data> GetData(HeaderType type) override
+	uint16_t GetSequenceNumber() const
 	{
-		return _data;
+		return _tw_sequence_number;
 	}
 
 	bool SetData(const std::shared_ptr<ov::Data> &data) override
 	{
-		//TODO(Getroot): Parsing
+		// Parsing
+		if(data->GetLength() != 2)
+		{
+			return false;
+		}
+
+		auto p = data->GetDataAs<uint8_t>();
+
+		_tw_sequence_number = ByteReader<uint16_t>::ReadBigEndian(&p[0]);
+
 		_data = data;
 
 		return true;
+	}
+
+protected:
+	std::shared_ptr<ov::Data> GetData(HeaderType type) override
+	{
+		return _data;
 	}
 
 private:
