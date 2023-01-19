@@ -55,7 +55,7 @@ private:
 	uint32_t	_interarrival_jitter = 0;
 
 	uint32_t 	_last_rtp_timestamp = 0;
-	uint64_t 	_last_rtp_received_time;
+	std::chrono::system_clock::time_point _last_rtp_received_time;
 
 	uint32_t	_received_bytes = 0;
 

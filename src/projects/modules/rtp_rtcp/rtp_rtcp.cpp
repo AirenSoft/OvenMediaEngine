@@ -308,7 +308,6 @@ bool RtpRtcp::OnDataReceivedFromNextNode(NodeType from_node, const std::shared_p
 bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
 	auto packet = std::make_shared<RtpPacket>(data);
-	logtd("%s", packet->Dump().CStr());
 
 	uint32_t track_id = 0;
 	if(from_node == NodeType::Rtsp)
@@ -392,7 +391,6 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 				_last_sent_rtcp_packet = feedback;
 
 				auto feedback_data = feedback->GetData();
-				logtd("Send Transport-wide CC feedback: %s", feedback_data->Dump().CStr());
 				SendDataToNextNode(NodeType::Rtcp, feedback_data);
 			}
 		}

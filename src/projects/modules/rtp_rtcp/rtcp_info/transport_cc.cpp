@@ -302,7 +302,7 @@ std::shared_ptr<ov::Data> TransportCc::GetData() const
 	}
 
 	// write delta
-	logtd("Feedback packet status count (%u) reference_time(%u)", _packet_feedbacks.size(), _reference_time * 64);
+	logtd("Feedback packet status count (%u) reference_time(%u ms)", _packet_feedbacks.size(), _reference_time * 64);
 	for (const auto &info : _packet_feedbacks)
 	{
 		logtd("Feedback - seq(%u) delta_size(%u) received_delta (%d ms)", info->_wide_sequence_number, info->_delta_size, (info->_received_delta * 250) / 1000);

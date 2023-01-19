@@ -13,8 +13,8 @@
 #include "rtp_receive_statistics.h"
 
 
-#define RECEIVER_REPORT_CYCLE_MS	3000
-#define TRANSPORT_CC_CYCLE_MS		50
+#define RECEIVER_REPORT_CYCLE_MS	1500
+#define TRANSPORT_CC_CYCLE_MS		100
 #define SDES_CYCLE_MS 500
 
 class RtpRtcpInterface : public ov::EnableSharedFromThis<RtpRtcpInterface>

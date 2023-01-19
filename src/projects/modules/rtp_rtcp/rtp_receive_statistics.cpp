@@ -96,22 +96,27 @@ bool RtpReceiveStatistics::UpdateStat(const std::shared_ptr<RtpPacket> &packet)
 	if (_received_packets > 0 && _last_rtp_timestamp != packet->Timestamp())
 	{
 		uint32_t rtp_timestamp_diff = packet->Timestamp() - _last_rtp_timestamp;
-		uint32_t rtp_received_time_diff = ov::Clock::NowMSec() - _last_rtp_received_time;
+
+		auto now = std::chrono::system_clock::now();
+		uint32_t rtp_received_time_diff = std::chrono::duration_cast<std::chrono::microseconds>(now - _last_rtp_received_time).count();
 
 		// Calculate wall clock diff in RTP timestamp units
-		rtp_received_time_diff = (rtp_received_time_diff * _clock_rate) / 1000;
+		rtp_received_time_diff = (uint32_t)((double)rtp_received_time_diff / 1000000.0 * (double)_clock_rate);
 
 		// J(i) = J(i-1) + (|D(i-1,i)| - J(i-1))/16
-		_interarrival_jitter = _interarrival_jitter + ((int)(abs((int)rtp_timestamp_diff - (int)rtp_received_time_diff) - _interarrival_jitter) / 16);
 
-		logd("DEBUG", "RTP Interarrival Jitter: %u - rtp_timestamp_diff(%u), rtp_received_time_diff(%u)", _interarrival_jitter, rtp_timestamp_diff, rtp_received_time_diff);
+		auto d = abs((int)rtp_received_time_diff - (int)rtp_timestamp_diff);
 
-		_last_rtp_received_time = ov::Clock::NowMSec();
+		_interarrival_jitter = _interarrival_jitter + ((d - (int)_interarrival_jitter) / 16);
+
+		logi("DEBUG", "RTP Interarrival Jitter: %u - rtp_timestamp_diff(%u), rtp_received_time_diff(%u) d(%d)", _interarrival_jitter, rtp_timestamp_diff, rtp_received_time_diff, d);
+
+		_last_rtp_received_time = now;
 		_last_rtp_timestamp = packet->Timestamp();
 	}
 	else if (_received_packets == 0)
 	{
-		_last_rtp_received_time = ov::Clock::NowMSec();
+		_last_rtp_received_time = std::chrono::system_clock::now();
 		_last_rtp_timestamp = packet->Timestamp();
 	}
 
