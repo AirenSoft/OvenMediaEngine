@@ -22,7 +22,7 @@
 
 #define MAX_QUEUE_SIZE 120
 
-std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(int32_t decoder_id, const info::Stream &info, std::shared_ptr<MediaTrack> track, _cb_func complete_handler)
+std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(int32_t decoder_id, const info::Stream &info, std::shared_ptr<MediaTrack> track, CompleteHandler complete_handler)
 {
 	std::shared_ptr<TranscodeDecoder> decoder = nullptr;
 
@@ -113,7 +113,7 @@ done:
 	if (decoder != nullptr)
 	{
 		decoder->SetDecoderId(decoder_id);
-		decoder->SetOnCompleteHandler(complete_handler);
+		decoder->SetCompleteHandler(complete_handler);
 	}
 
 	return decoder;
@@ -137,13 +137,30 @@ TranscodeDecoder::~TranscodeDecoder()
 		}
 	}
 
-	::avcodec_free_context(&_context);
-	::avcodec_parameters_free(&_codec_par);
+	if (_context != nullptr)
+	{
+		::avcodec_free_context(&_context);
+	}
 
-	::av_frame_free(&_frame);
-	::av_packet_free(&_pkt);
+	if (_codec_par != nullptr)
+	{
+		::avcodec_parameters_free(&_codec_par);
+	}
 
-	::av_parser_close(_parser);
+	if (_frame != nullptr)
+	{
+		::av_frame_free(&_frame);
+	}
+
+	if (_pkt != nullptr)
+	{
+		::av_packet_free(&_pkt);
+	}
+
+	if (_parser != nullptr)
+	{
+		::av_parser_close(_parser);
+	}
 
 	_input_buffer.Clear();
 }
@@ -181,10 +198,10 @@ void TranscodeDecoder::SendBuffer(std::shared_ptr<const MediaPacket> packet)
 void TranscodeDecoder::SendOutputBuffer(TranscodeResult result, std::shared_ptr<MediaFrame> frame)
 {
 	// Invoke callback function when encoding/decoding is completed.
-	if (_on_complete_hander)
+	if (_complete_handler)
 	{
 		frame->SetTrackId(_decoder_id);
-		_on_complete_hander(result, _decoder_id, std::move(frame));
+		_complete_handler(result, _decoder_id, std::move(frame));
 	}
 }
 

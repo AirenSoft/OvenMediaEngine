@@ -14,12 +14,13 @@
 class TranscodeDecoder : public TranscodeBase<MediaPacket, MediaFrame>
 {
 public:
+	typedef std::function<void(TranscodeResult, int32_t, std::shared_ptr<MediaFrame>)> CompleteHandler;
+
+public:
 	TranscodeDecoder(info::Stream stream_info);
 	~TranscodeDecoder() override;
 
-	typedef std::function<void(TranscodeResult, int32_t, std::shared_ptr<MediaFrame>)> _cb_func;
-
-	static std::shared_ptr<TranscodeDecoder> Create(int32_t decoder_id, const info::Stream &info, std::shared_ptr<MediaTrack> track,  _cb_func func);
+	static std::shared_ptr<TranscodeDecoder> Create(int32_t decoder_id, const info::Stream &info, std::shared_ptr<MediaTrack> track,  CompleteHandler complete_handler);
 
 	void SetDecoderId(int32_t decoder_id);
 
@@ -36,11 +37,10 @@ public:
 
 	virtual void Stop();
 
-	void SetOnCompleteHandler(_cb_func func)
+	void SetCompleteHandler(CompleteHandler complete_handler)
 	{
-		_on_complete_hander = move(func);
+		_complete_handler = move(complete_handler);
 	}
-
 
 protected:
 	static const ov::String ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters);
@@ -63,5 +63,5 @@ protected:
 	bool _kill_flag = false;
 	std::thread _codec_thread;
 
-	_cb_func _on_complete_hander;
+	CompleteHandler _complete_handler;
 };

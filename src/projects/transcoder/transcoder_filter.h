@@ -20,14 +20,14 @@ enum class TranscodeFilterType : int8_t
 class TranscodeFilter
 {
 public:
-	typedef std::function<void(int32_t, std::shared_ptr<MediaFrame>)> _cb_func;
+	typedef std::function<void(int32_t, std::shared_ptr<MediaFrame>)> CompleteHandler;
 
 public:
 	TranscodeFilter();
 
 	~TranscodeFilter();
 
-	bool Configure(int32_t filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track, _cb_func on_complete_hander);
+	bool Configure(int32_t filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track, CompleteHandler complete_handler);
 
 	bool SendBuffer(std::shared_ptr<MediaFrame> buffer);
 
@@ -43,9 +43,9 @@ public:
 
 	void SetAlias(ov::String alias);
 
-	void SetOnCompleteHandler(_cb_func func)
+	void SetCompleteHandler(CompleteHandler func)
 	{
-		_on_complete_hander = move(func);
+		_complete_handler = move(func);
 	}
 
 	void OnComplete(std::shared_ptr<MediaFrame> frame);
@@ -60,7 +60,5 @@ private:
 
 	ov::String _alias;
 
-	
-
-	_cb_func _on_complete_hander;
+	CompleteHandler _complete_handler;
 };
