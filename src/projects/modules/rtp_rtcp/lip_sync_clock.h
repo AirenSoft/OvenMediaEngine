@@ -21,6 +21,8 @@ private:
 		bool		_updated = false;
 		double		_timebase = 0;
 		uint32_t	_rtcp_timestamp = 0;
+		uint32_t 	_last_rtp_timestamp = 0;
+		uint64_t	_extended_rtp_timestamp = 0;
 		uint64_t	_pts = 0;	// converted NTP timestamp to timebase timestamp
 	};
 
@@ -30,4 +32,7 @@ private:
 	bool _enabled = false;
 
 	std::shared_ptr<Clock> GetClock(uint32_t id);
+
+	bool _first_pts = true;
+	uint64_t _adjust_pts_us = 0;
 };

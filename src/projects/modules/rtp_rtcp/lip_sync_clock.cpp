@@ -43,9 +43,55 @@ std::optional<uint64_t> LipSyncClock::CalcPTS(uint32_t id, uint32_t rtp_timestam
 		// UpdateSenderReportTime(id, msw, lsw, rtp_timestamp);
 	}
 
+	uint32_t delta = 0;
+	if (clock->_last_rtp_timestamp == 0)
+	{
+		clock->_extended_rtp_timestamp = rtp_timestamp;
+	}
+	else
+	{
+		if (rtp_timestamp > clock->_last_rtp_timestamp)
+		{
+			delta = rtp_timestamp - clock->_last_rtp_timestamp;
+		}
+		else
+		{
+			delta = clock->_last_rtp_timestamp - rtp_timestamp;
+			if (delta > 0x80000000)
+			{
+				// wrap around
+				delta = 0xFFFFFFFF - clock->_last_rtp_timestamp + rtp_timestamp + 1;
+			}
+			else
+			{
+				// reordering or duplicate or error
+				delta = 0;
+				logtw("RTP timestamp is not monotonic: %u -> %u", clock->_last_rtp_timestamp, rtp_timestamp);
+			}
+		}
+
+		clock->_extended_rtp_timestamp += delta;
+	}
+
+	logtd("Calc PTS : id(%u) last_rtp_timestamp(%u) rtp_timestamp(%u) delta(%u) extended_rtp_timestamp(%llu)", id, clock->_last_rtp_timestamp, rtp_timestamp, delta, clock->_extended_rtp_timestamp);
+
+	clock->_last_rtp_timestamp = rtp_timestamp;
+
 	std::shared_lock<std::shared_mutex> lock(clock->_clock_lock);
 	// The timestamp difference can be negative.
-	return clock->_pts + ((int64_t)rtp_timestamp - (int64_t)clock->_rtcp_timestamp);
+	auto pts = clock->_pts + ((int64_t)clock->_extended_rtp_timestamp - (int64_t)clock->_rtcp_timestamp);
+
+	// This is to make pts start at zero.
+	if (_first_pts == true)
+	{
+		// pts in 100/10000000
+		_adjust_pts_us = (double)pts * clock->_timebase * 100000.0;
+		_first_pts = false;
+	}
+
+	pts = pts - (int64_t)(_adjust_pts_us / clock->_timebase / 100000.0);
+
+	return pts; 
 }
 
 bool LipSyncClock::UpdateSenderReportTime(uint32_t id, uint32_t ntp_msw, uint32_t ntp_lsw, uint32_t rtcp_timestamp)
