@@ -792,7 +792,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 				// Display a warning message that b-frame exists
 				if (media_track->HasBframes() == true)
 				{
-					logtw("[%s/%s(%u)] b-frame has been detected in the %d track of %s stream",
+					logtw("[%s/%s(%u)] b-frame has been detected in the %u track of %s stream",
 						  _stream->GetApplicationInfo().GetName().CStr(),
 						  _stream->GetName().CStr(),
 						  _stream->GetId(),
