@@ -13,8 +13,8 @@
 #include "rtp_receive_statistics.h"
 
 
-#define RECEIVER_REPORT_CYCLE_MS	1500
-#define TRANSPORT_CC_CYCLE_MS		100
+#define RECEIVER_REPORT_CYCLE_MS	500
+#define TRANSPORT_CC_CYCLE_MS		50
 #define SDES_CYCLE_MS 500
 
 class RtpRtcpInterface : public ov::EnableSharedFromThis<RtpRtcpInterface>
@@ -39,10 +39,8 @@ public:
 	bool SendFIR(uint32_t media_ssrc);
 
 	bool IsTransportCcFeedbackEnabled() const;
-	void EnableTransportCcFeedback(uint8_t extension_id);
+	bool EnableTransportCcFeedback(uint8_t extension_id);
 	void DisableTransportCcFeedback();
-
-	uint8_t GetReceivedPayloadType(uint32_t ssrc);
 
 	// These functions help the next node to not have to parse the packet again.
 	// Because next node receives raw data format.
@@ -58,6 +56,8 @@ private:
 	bool OnRtcpReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data);
 
 	std::shared_ptr<RtpFrameJitterBuffer> GetJitterBuffer(uint8_t payload_type);
+
+	std::shared_ptr<RtcpPacket> GenerateTransportCcFeedbackIfNeeded();
 
     time_t _first_receiver_report_time = 0; // 0 - not received RR packet
     time_t _last_sender_report_time = 0;
@@ -87,6 +87,8 @@ private:
 
 	// payload type : MediaTrack Info
 	std::unordered_map<uint8_t, std::shared_ptr<MediaTrack>> _tracks;
+	bool _video_receiver_enabled = false;
+	bool _audio_receiver_enabled = false;
 
 	// Latest packet
 	std::shared_ptr<RtpPacket>		_last_sent_rtp_packet = nullptr;

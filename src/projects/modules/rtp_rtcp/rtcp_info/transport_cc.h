@@ -99,6 +99,11 @@ public:
 	}
 	void SetReferenceTime(int32_t reference_time){_reference_time = reference_time;}
 
+	void SetFeedbackPacketCount(uint8_t sequence_number)
+	{
+		_fb_packet_count = sequence_number;
+	}
+
 	// Add PacketFeedbackInfo
 	bool AddPacketFeedbackInfo(const std::shared_ptr<PacketFeedbackInfo> &packet_feedback_info);
 
@@ -142,7 +147,7 @@ private:
 	uint16_t _next_sequence_number = 0;
 	uint16_t _packet_status_count = 0;
 	int32_t _reference_time = 0; // 24bit signed integer (64/1000 scale, multiples of 64ms)
-	uint8_t _fb_sequence_number = 0;
+	uint8_t _fb_packet_count = 0;
 
 	mutable bool _has_padding = false;
 

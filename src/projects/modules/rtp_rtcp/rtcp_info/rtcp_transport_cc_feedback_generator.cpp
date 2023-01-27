@@ -8,15 +8,15 @@
 //==============================================================================
 
 #include "rtcp_transport_cc_feedback_generator.h"
+
 #include "../rtp_header_extension/rtp_header_extension_transport_cc.h"
 
 #define OV_LOG_TAG "transport-cc"
 
-RtcpTransportCcFeedbackGenerator::RtcpTransportCcFeedbackGenerator(uint8_t extension_id, uint32_t sender_ssrc, uint32_t media_ssrc)
+RtcpTransportCcFeedbackGenerator::RtcpTransportCcFeedbackGenerator(uint8_t extension_id, uint32_t sender_ssrc)
 {
 	_extension_id = extension_id;
 	_sender_ssrc = sender_ssrc;
-	_media_ssrc = media_ssrc;
 
 	_created_time = std::chrono::system_clock::now();
 	_last_report_time = _created_time;
@@ -24,11 +24,12 @@ RtcpTransportCcFeedbackGenerator::RtcpTransportCcFeedbackGenerator(uint8_t exten
 
 bool RtcpTransportCcFeedbackGenerator::AddReceivedRtpPacket(const std::shared_ptr<RtpPacket> &packet)
 {
-	// Parsing RTP header extension 
+	// Parsing RTP header extension
 	auto extension_data = packet->GetExtension(_extension_id);
 	if (extension_data.has_value() == false || extension_data.value().GetLength() < 2)
 	{
 		// There is no transport-wide sequence number in the RTP header extension
+		logte("AddReceivedRtpPacket: There is no transport-wide sequence number in the RTP header extension : %s", packet->Dump().CStr());
 		return false;
 	}
 
@@ -36,6 +37,8 @@ bool RtcpTransportCcFeedbackGenerator::AddReceivedRtpPacket(const std::shared_pt
 	auto *data = extension_data.value().GetDataAs<uint8_t>();
 	// Read transport-wide sequence number
 	auto wide_sequence_number = ByteReader<uint16_t>::ReadBigEndian(data);
+
+	logtd("AddReceivedRtpPacket: wide_seq(%u) %s", wide_sequence_number, packet->Dump().CStr());
 
 	// Add feedback info
 	int64_t delta = 0;
@@ -46,8 +49,10 @@ bool RtcpTransportCcFeedbackGenerator::AddReceivedRtpPacket(const std::shared_pt
 	{
 		_transport_cc = std::make_shared<TransportCc>();
 
+		_transport_cc->SetFeedbackPacketCount(_fb_pkt_count);
+		_fb_pkt_count++;
+
 		_transport_cc->SetSenderSsrc(_sender_ssrc);
-		_transport_cc->SetMediaSsrc(_media_ssrc);
 		_transport_cc->SetBaseSequenceNumber(wide_sequence_number);
 
 		// Reference time
@@ -67,7 +72,7 @@ bool RtcpTransportCcFeedbackGenerator::AddReceivedRtpPacket(const std::shared_pt
 		}
 		else
 		{
-			if (wide_sequence_number != _last_wide_sequence_number + 1)
+			if (wide_sequence_number != static_cast<uint16_t>(_last_wide_sequence_number + 1))
 			{
 				logtw("wide sequence number is not continuous : %u -> %u", _last_wide_sequence_number, wide_sequence_number);
 			}
@@ -77,9 +82,14 @@ bool RtcpTransportCcFeedbackGenerator::AddReceivedRtpPacket(const std::shared_pt
 
 		_transport_cc->SetBaseSequenceNumber(base_sequence_number);
 
-		// delta
-		delta = 0;
-		delta_size = 1;
+		// Delta of first packet : Decimal part in reference_time is expressed in units of 250us.
+		// The integer part in reference_time is expressed in units of 64ms.
+		double decimal = static_cast<double>((std::chrono::duration_cast<std::chrono::milliseconds>(_last_reference_time - _created_time).count() / 64.0)) - static_cast<double>(reference_time);
+
+		// to multiple of 250 microseconds
+		decimal = (decimal * 64 * 1000) / 250;
+		delta = static_cast<int64_t>(decimal);
+
 		_last_rtp_received_time = _last_reference_time;
 
 		logtd("last rtp received time : %lld", std::chrono::duration_cast<std::chrono::milliseconds>(_last_rtp_received_time.time_since_epoch()).count());
@@ -99,44 +109,45 @@ bool RtcpTransportCcFeedbackGenerator::AddReceivedRtpPacket(const std::shared_pt
 		_last_rtp_received_time = now;
 
 		logtd("last rtp received time : %lld, diff(%lld), delta(%d)", std::chrono::duration_cast<std::chrono::milliseconds>(_last_rtp_received_time.time_since_epoch()).count(), diff, delta);
+	}
 
-		// delta size
-		// 1 : [0 ~ 63.75ms] (0 * 250us ~ 0xFF * 250us)
-		// 2 : [-8192.0 ~ 8191.75ms] (-0x8000 * 250us ~ 0x7FFF * 250us)
-		if (delta >= 0 && delta <= 0xFF)
-		{
-			delta_size = 1;
-		}
-		else if (delta >= -0x8000 && delta <= 0x7FFF)
-		{
-			delta_size = 2;
-		}
-		// https://datatracker.ietf.org/doc/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#section-3.1.5
-		// If the delta exceeds even the larger limits, a new feedback
-		// message must be used, where the 24-bit base receive delta can
-		// cover very large gaps.
+	// delta size
+	// 1 : [0 ~ 63.75ms] (0 * 250us ~ 0xFF * 250us)
+	// 2 : [-8192.0 ~ 8191.75ms] (-0x8000 * 250us ~ 0x7FFF * 250us)
+	if (delta >= 0 && delta <= 0xFF)
+	{
+		delta_size = 1;
+	}
+	else if (delta >= -0x8000 && delta <= 0x7FFF)
+	{
+		delta_size = 2;
+	}
+	// https://datatracker.ietf.org/doc/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#section-3.1.5
+	// If the delta exceeds even the larger limits, a new feedback
+	// message must be used, where the 24-bit base receive delta can
+	// cover very large gaps.
 
-		// TODO(Getroot) : If the delta exceeds the large range, 
-		// a new feedback message is created and the delta of the packet is reduced 
-		// using the 24-bit reference time. However, this is a very inefficient 
-		// specification because only one delta is entered in one feedback message 
-		// in the worst case in a very slow situation. Temporarily, I clamped the min/max, 
-		// and I'll try to see if there is a way to improve this.
-		else if (delta < -0x8000)
-		{
-			delta = -0x8000;
-			delta_size = 2;
-		}
-		else if (delta > 0x7FFF)
-		{
-			delta = 0x7FFF;
-			delta_size = 2;
-		}
+	// TODO(Getroot) : If the delta exceeds the large range,
+	// a new feedback message is created and the delta of the packet is reduced
+	// using the 24-bit reference time. However, this is a very inefficient
+	// specification because only one delta is entered in one feedback message
+	// in the worst case in a very slow situation. Temporarily, I clamped the min/max,
+	// and I'll try to see if there is a way to improve this.
+	else if (delta < -0x8000)
+	{
+		delta = -0x8000;
+		delta_size = 2;
+	}
+	else if (delta > 0x7FFF)
+	{
+		delta = 0x7FFF;
+		delta_size = 2;
 	}
 
 	_transport_cc->AddPacketFeedbackInfo(std::make_shared<TransportCc::PacketFeedbackInfo>(wide_sequence_number, true, delta_size, delta));
 
 	_last_wide_sequence_number = wide_sequence_number;
+	_last_media_ssrc = packet->Ssrc();
 
 	return true;
 }
@@ -160,6 +171,11 @@ std::shared_ptr<RtcpPacket> RtcpTransportCcFeedbackGenerator::GenerateTransportC
 	{
 		return nullptr;
 	}
+
+	_transport_cc->SetMediaSsrc(_last_media_ssrc);
+
+	logtd("Generate Transport CC message : Sender SSRC(%u), Media SSRC(%u), Base Sequence Number(%u), Reference Time(%u), Packet Feedback Count(%u)",
+		  _transport_cc->GetSenderSsrc(), _transport_cc->GetMediaSsrc(), _transport_cc->GetBaseSequenceNumber(), _transport_cc->GetReferenceTime(), _transport_cc->GetPacketStatusCount());
 
 	auto rtcp_packet = std::make_shared<RtcpPacket>();
 	rtcp_packet->Build(_transport_cc);

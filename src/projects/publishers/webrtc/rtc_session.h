@@ -91,6 +91,7 @@ public:
 	bool OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 
 private:
+	bool ProcessReceiverReport(const std::shared_ptr<RtcpInfo> &rtcp_info);
 	bool ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info);
 	bool ProcessTransportCc(const std::shared_ptr<RtcpInfo> &rtcp_info);
 	bool ProcessRemb(const std::shared_ptr<RtcpInfo> &rtcp_info);
@@ -152,13 +153,17 @@ private:
 		uint8_t _payload_type = 0;
 		uint16_t _origin_sequence_number = 0;
 
+		uint32_t _ssrc = 0;
+		uint32_t _timestamp = 0;
+		bool _marker = false;
+
 		uint32_t _sent_bytes = 0;
 		std::chrono::system_clock::time_point _sent_time;
 
 		ov::String ToString()
 		{
-			return ov::String::FormatString("Seq(%d) Track(%d) PT(%d) OriginSeq(%d) SentBytes(%u)", 
-				_sequence_number, _track_id, _payload_type, _origin_sequence_number, _sent_bytes);
+			return ov::String::FormatString("WideSeq(%d) SSRC(%u) Seq(%d) Track(%d) PT(%d) Timestamp(%u) Marker(%s) OriginSeq(%d) SentBytes(%u)", 
+				_wide_sequence_number, _ssrc, _sequence_number, _track_id, _payload_type, _timestamp, _marker==true?"O":"X",_origin_sequence_number, _sent_bytes);
 		}
 	};
 

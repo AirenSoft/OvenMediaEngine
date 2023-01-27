@@ -28,8 +28,10 @@ bool TransportCc::Parse(const RtcpPacket &packet)
 	offset += 2;
 	_reference_time = ByteReader<uint24_t>::ReadBigEndian(&payload[offset]);
 	offset += 3;
-	_fb_sequence_number = ByteReader<uint8_t>::ReadBigEndian(&payload[offset]);
+	_fb_packet_count = ByteReader<uint8_t>::ReadBigEndian(&payload[offset]);
 	offset += 1;
+
+	logtd("Transport-cc: base_sequence_number(%d), packet_status_count(%d), reference_time(%d), fb_sequence_number(%d)", _base_sequence_number, _packet_status_count, _reference_time, _fb_packet_count);
 
 	for (uint16_t i=0; i<_packet_status_count; i++)
 	{
@@ -40,7 +42,7 @@ bool TransportCc::Parse(const RtcpPacket &packet)
 		}
 
 		// Read Packet Chunk
-		uint16_t packet_chunk = ByteReader<uint16_t>::ReadBigEndian(&payload[offset]);
+		uint16_t packet_chunk = ByteReader<uint16_t>::ReadBigEndian(&payload[offset]);	
 		offset += 2;
 
 		// Parse Packet Chunk
@@ -79,9 +81,15 @@ bool TransportCc::Parse(const RtcpPacket &packet)
 		// 0: not received 1: received, small delta
 		else if ((packet_chunk & 0x4000) == 0)
 		{
-			// loop each bits in symbol list
-			for (uint16_t j=0; j<14; j++)
+			// loop each bits in symbol list, j cannot exceed packet_status_count - i
+			uint16_t j=0;
+			for (j=0; j<14; j++)
 			{
+				if (i + j >= _packet_status_count)
+				{
+					break;
+				}
+
 				bool received = ((packet_chunk >> (14 - 1 - j)) & 0x01) == 1;
 				uint8_t symbol = received == true ? 1 : 0;
 				uint8_t delta_size = GetDeltaSize(symbol);
@@ -93,7 +101,7 @@ bool TransportCc::Parse(const RtcpPacket &packet)
 				_packet_feedbacks.push_back(info);
 			}
 
-			i += 14 - 1;
+			i += j;
 		}
 		//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
 		// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -103,8 +111,14 @@ bool TransportCc::Parse(const RtcpPacket &packet)
 		else
 		{
 			// 2bits
-			for (uint16_t j=0; j<7; j++)
+			uint16_t j=0;
+			for (j=0; j<7; j++)
 			{
+				if (i + j >= _packet_status_count)
+				{
+					break;
+				}
+
 				uint8_t symbol = (packet_chunk >> (2 * (7 - 1 - j))) & 0x03;
 				uint8_t delta_size = GetDeltaSize(symbol);
 
@@ -116,7 +130,7 @@ bool TransportCc::Parse(const RtcpPacket &packet)
 				_packet_feedbacks.push_back(info); 
 			}
 
-			i += 7 - 1;
+			i += j;
 		}
 	}
 
@@ -161,7 +175,7 @@ bool TransportCc::Parse(const RtcpPacket &packet)
 
 	if (offset != payload_size)
 	{
-		logtd("Even though parsing transport-cc was completed, the payload is not fully parsed");
+		logte("Even though parsing transport-cc was completed, the payload is not fully parsed");
 		return false;
 	}
 
@@ -184,10 +198,10 @@ std::shared_ptr<ov::Data> TransportCc::GetData() const
 	// reference time
 	write_stream.WriteBE24(_reference_time);
 	// fb pkt count
-	write_stream.WriteBE(_fb_sequence_number);
+	write_stream.WriteBE(_fb_packet_count);
 
 	logtd("Feedback - sender_ssrc(%u) media_ssrc(%u) base_sequence_number(%u) packet_status_count(%u) reference_time(%u) fb_sequence_number(%u)", 
-		_sender_ssrc, _media_ssrc, _base_sequence_number, _packet_status_count, _reference_time, _fb_sequence_number);
+		_sender_ssrc, _media_ssrc, _base_sequence_number, _packet_status_count, _reference_time, _fb_packet_count);
 
 	// Make packet status chunk
 	uint32_t index = 0;
@@ -196,7 +210,7 @@ std::shared_ptr<ov::Data> TransportCc::GetData() const
 		uint16_t run_length = 0;
 		uint16_t one_bit_symbol_length = 0;
 
-		uint8_t symbol_count = 0;
+		uint16_t symbol_count = 0;
 		uint8_t chunk_type = 0; // 0 : run length chunk, 1 : one bit symbol chunk, 2 : two bit symbol chunk
 
 		CountSymbolContinuity(index, run_length, one_bit_symbol_length);
@@ -207,6 +221,12 @@ std::shared_ptr<ov::Data> TransportCc::GetData() const
 		{
 			// Make run length chunk
 			symbol_count = run_length;
+			// max run length is 13 bits (0x1FFF)
+			if (symbol_count > 0x1FFF)
+			{
+				symbol_count = 0x1FFF;
+			}
+
 			chunk_type = 0;
 		}
 		else if (one_bit_symbol_length >= 14)
@@ -414,7 +434,17 @@ bool TransportCc::CountSymbolContinuity(uint32_t feedbacks_start_index, uint16_t
 			is_one_bit_symbol_continuity = false;
 		}
 
-		if (!is_run_length_continuity && !is_one_bit_symbol_continuity)
+		// max run length : 13bits max value is 0x1FFF
+		// max one bit symbol length : 14
+		if (run_length >= 0x1FFF)
+		{
+			break;
+		}
+		else if (is_run_length_continuity == false && one_bit_symbol_length >= 14)
+		{
+			break;
+		}
+		else if (!is_run_length_continuity && !is_one_bit_symbol_continuity)
 		{
 			break;
 		}
@@ -428,6 +458,6 @@ void TransportCc::DebugPrint()
 	for (auto& info : _packet_feedbacks)
 	{
 		logtd("PacketFeedbackInfo: reference_time=%u, fb_seq_no=%d, wide_sequence_number=%d, received=%d, delta_size=%d, received_delta=%d", 
-		_reference_time, _fb_sequence_number, info->_wide_sequence_number, info->_received, info->_delta_size, info->_received_delta);
+		_reference_time, _fb_packet_count, info->_wide_sequence_number, info->_received, info->_delta_size, info->_received_delta);
 	}
 }

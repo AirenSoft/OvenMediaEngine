@@ -598,6 +598,9 @@ bool RtcSession::RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packe
 	sent_log->_track_id = rtp_packet->GetTrackId();
 	sent_log->_payload_type = rtp_packet->PayloadType();
 	sent_log->_origin_sequence_number = origin_sequence_number;
+	sent_log->_timestamp = rtp_packet->Timestamp();
+	sent_log->_marker = rtp_packet->Marker();
+	sent_log->_ssrc = rtp_packet->Ssrc();
 
 	sent_log->_sent_bytes = rtp_packet->GetData()->GetLength();
 	sent_log->_sent_time = std::chrono::system_clock::now();
@@ -660,6 +663,7 @@ void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	if(rtcp_info->GetPacketType() == RtcpPacketType::RR)
 	{
 		// Process
+		ProcessReceiverReport(rtcp_info);
 	}
 	else if (rtcp_info->GetPacketType() == RtcpPacketType::RTPFB)
 	{
@@ -686,6 +690,19 @@ void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	//rtcp_info->DebugPrint();
 }
 
+bool RtcSession::ProcessReceiverReport(const std::shared_ptr<RtcpInfo> &rtcp_info)
+{
+	auto rr = std::static_pointer_cast<ReceiverReport>(rtcp_info);
+	if (rr == nullptr)
+	{
+		logte("Could not parse ReceiverReport");
+		return false;
+	}
+
+	//rr->DebugPrint();
+
+	return true;
+}
 
 bool RtcSession::ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info)
 {
@@ -744,6 +761,24 @@ bool RtcSession::ProcessTransportCc(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	uint64_t sent_bytes = 0;
 	int64_t sent_duration = 0;
 
+	// For debug
+	// logtd("TransportCC - SenderSsrc(%u) MediaSsrc(%u) PacketStatusCount(%u)", transport_cc->GetSenderSsrc(), transport_cc->GetMediaSsrc(), transport_cc->GetPacketStatusCount());
+
+	// for (size_t i = 0; i < transport_cc->GetPacketStatusCount(); i++)
+	// {
+	// 	auto packet_status = transport_cc->GetPacketFeedbackInfo(i);
+	// 	auto sent_log = TraceRtpSentByWideSeqNo(packet_status->_wide_sequence_number);
+	// 	if (sent_log == nullptr)
+	// 	{
+	// 		logte("TransportCC - No sent log found for seqno(%u)", packet_status->_wide_sequence_number);
+	// 		continue;
+	// 	}
+
+	// 	logtd("%s", sent_log->ToString().CStr());
+	// }
+
+	// return true;
+
 	for (size_t i = 1; i < transport_cc->GetPacketStatusCount(); i++)
 	{
 		auto packet_status = transport_cc->GetPacketFeedbackInfo(i);
@@ -783,7 +818,7 @@ bool RtcSession::ProcessTransportCc(const std::shared_ptr<RtcpInfo> &rtcp_info)
 		_total_sent_bytes += sent_bytes;
 		_estimated_bitrates = static_cast<double>((_total_sent_bytes * 8)) / _total_sent_seconds;
 
-		if (_bitrate_estimate_watch.IsElapsed(3000) == true)
+		if (_bitrate_estimate_watch.IsElapsed(1000) == true)
 		{
 			_bitrate_estimate_watch.Update();
 			ChangeRenditionIfNeeded();

@@ -51,9 +51,24 @@ protected:
 		// If this packet is from a turn data channel, store the channel number.
 		uint16_t channel_number = 0;
 
+		ov::String GetGateTypeString()
+		{
+			switch (input_method)
+			{
+				case GateType::DIRECT:
+					return "DIRECT";
+				case GateType::SEND_INDICATION:
+					return "SEND_INDICATION";
+				case GateType::DATA_CHANNEL:
+					return "DATA_CHANNEL";
+				default:
+					return "UNKNOWN";
+			}
+		}
+
 		ov::String ToString()
 		{
-			return ov::String::FormatString("Packet type : %d GateType : %d", packet_type, input_method);
+			return ov::String::FormatString("Packet type : %s GateType : %s", IcePacketIdentifier::GetPacketTypeString(packet_type).CStr(), GetGateTypeString().CStr());
 		}
 	};
 

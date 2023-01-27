@@ -221,7 +221,7 @@ void RtpFrameJitterBuffer::BurnOutExpiredFrames()
 	while (it != completed_frame_it)
 	{
 		auto frame = it->second;
-		logti("Frame discarded (It may be PADDING frame for BWE) - timestamp(%u) packets(%d) marked(%s)", frame->Timestamp(), frame->PacketCount(), frame->IsMarked() ? "true" : "false");
+		logtd("Frame discarded (It may be PADDING frame for BWE) - timestamp(%u) packets(%d) marked(%s)", frame->Timestamp(), frame->PacketCount(), frame->IsMarked() ? "true" : "false");
 		it = _rtp_frames.erase(it);
 	}
 }

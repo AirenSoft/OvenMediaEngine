@@ -63,6 +63,7 @@ std::shared_ptr<ov::Data> ReceiverReport::GetData() const
 
 void ReceiverReport::DebugPrint()
 {
+	logti("Receiver Report : Sender SSRC(%u)", GetSenderSsrc());
 	for(size_t i=0; i<GetReportBlockCount(); i++)
 	{
 		auto report = GetReportBlock(i);
