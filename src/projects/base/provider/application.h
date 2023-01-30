@@ -39,7 +39,7 @@ namespace pvd
 		const std::shared_ptr<Stream> GetStreamById(uint32_t stream_id);
 		const std::shared_ptr<Stream> GetStreamByName(ov::String stream_name);
 
-		uint32_t 	IssueUniqueStreamId();
+		static uint32_t 	IssueUniqueStreamId();
 
 		virtual bool AddStream(const std::shared_ptr<Stream> &stream);
 		virtual bool DeleteStream(const std::shared_ptr<Stream> &stream);

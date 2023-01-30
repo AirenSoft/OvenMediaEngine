@@ -431,8 +431,7 @@ namespace pvd
 		}
 
 		// Create Stream
-		auto channel_id = offer_sdp->GetSessionId();
-		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, final_stream_name, channel_id, PushProvider::GetSharedPtrAs<PushProvider>(), offer_sdp, peer_sdp, _certificate, _ice_port);
+		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, final_stream_name, PushProvider::GetSharedPtrAs<PushProvider>(), offer_sdp, peer_sdp, _certificate, _ice_port);
 		if(stream == nullptr)
 		{
 			logte("Could not create %s stream in %s application", final_stream_name.CStr(), final_vhost_app_name.CStr());
@@ -441,12 +440,12 @@ namespace pvd
 		stream->SetMediaSource(request->GetRemote()->GetRemoteAddressAsUrl());
 		
 		// The stream of the webrtc provider has already completed signaling at this point.
-		if(PublishChannel(channel_id, final_vhost_app_name, stream) == false)
+		if(PublishChannel(stream->GetId(), final_vhost_app_name, stream) == false)
 		{
 			return false;
 		}
 
-		if(OnChannelCreated(channel_id, stream) == false)
+		if(OnChannelCreated(stream->GetId(), stream) == false)
 		{
 			return false;
 		}

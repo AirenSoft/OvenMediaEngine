@@ -228,7 +228,7 @@ namespace pvd
 
 	std::shared_ptr<pvd::Stream> PullApplication::CreateStream(const ov::String &stream_name, const std::vector<ov::String> &url_list, const std::shared_ptr<pvd::PullStreamProperties> &properties)
 	{
-		auto stream = CreateStream(IssueUniqueStreamId(), stream_name, url_list, properties);
+		auto stream = CreateStream(pvd::Application::IssueUniqueStreamId(), stream_name, url_list, properties);
 		if(stream == nullptr)
 		{
 			return nullptr;

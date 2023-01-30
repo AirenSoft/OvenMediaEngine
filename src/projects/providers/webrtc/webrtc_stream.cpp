@@ -16,14 +16,14 @@
 
 namespace pvd
 {
-	std::shared_ptr<WebRTCStream> WebRTCStream::Create(StreamSourceType source_type, ov::String stream_name, uint32_t stream_id,
+	std::shared_ptr<WebRTCStream> WebRTCStream::Create(StreamSourceType source_type, ov::String stream_name,
 													   const std::shared_ptr<PushProvider> &provider,
 													   const std::shared_ptr<const SessionDescription> &offer_sdp,
 													   const std::shared_ptr<const SessionDescription> &peer_sdp,
 													   const std::shared_ptr<Certificate> &certificate,
 													   const std::shared_ptr<IcePort> &ice_port)
 	{
-		auto stream = std::make_shared<WebRTCStream>(source_type, stream_name, stream_id, provider, offer_sdp, peer_sdp, certificate, ice_port);
+		auto stream = std::make_shared<WebRTCStream>(source_type, stream_name, provider, offer_sdp, peer_sdp, certificate, ice_port);
 		if (stream != nullptr)
 		{
 			if (stream->Start() == false)
@@ -34,13 +34,13 @@ namespace pvd
 		return stream;
 	}
 
-	WebRTCStream::WebRTCStream(StreamSourceType source_type, ov::String stream_name, uint32_t stream_id,
+	WebRTCStream::WebRTCStream(StreamSourceType source_type, ov::String stream_name,
 							   const std::shared_ptr<PushProvider> &provider,
 							   const std::shared_ptr<const SessionDescription> &offer_sdp,
 							   const std::shared_ptr<const SessionDescription> &peer_sdp,
 							   const std::shared_ptr<Certificate> &certificate,
 							   const std::shared_ptr<IcePort> &ice_port)
-		: PushStream(source_type, stream_name, stream_id, provider), Node(NodeType::Edge)
+		: PushStream(source_type, stream_name, provider), Node(NodeType::Edge)
 	{
 		_offer_sdp = offer_sdp;
 		_peer_sdp = peer_sdp;

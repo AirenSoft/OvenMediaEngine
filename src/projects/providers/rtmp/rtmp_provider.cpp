@@ -151,7 +151,7 @@ namespace pvd
 
 		logti("A RTMP client has connected from %s", remote->ToString().CStr());
 
-		PushProvider::OnChannelCreated(remote->GetNativeHandle(), stream);
+		PushProvider::OnChannelCreated(channel_id, stream);
 	}
 
 	void RtmpProvider::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
