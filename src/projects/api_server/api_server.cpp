@@ -185,19 +185,25 @@ namespace api
 			auto response = client->GetResponse();
 			auto request = client->GetRequest();
 
-			do
-			{
-				// Set default headers
-				response->SetHeader("Server", "OvenMediaEngine");
-				response->SetHeader("Content-Type", "text/html");
+			// Set default headers
+			response->SetHeader("Server", "OvenMediaEngine");
+			response->SetHeader("Content-Type", "text/html");
 
-				auto vhost_app_name = info::VHostAppName::InvalidVHostAppName();
+			// API Server uses OPTIONS/GET/POST/PUT/PATCH/DELETE methods
+			_cors_manager.SetupHttpCorsHeader(
+				info::VHostAppName::InvalidVHostAppName(),
+				request, response,
+				{http::Method::Options, http::Method::Get, http::Method::Post, http::Method::Put, http::Method::Patch, http::Method::Delete});
 
-				_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
+			return http::svr::NextHandler::Call;
+		});
 
-				return http::svr::NextHandler::Call;
-			} while (false);
+		// Preflight request processor
+		http_interceptor->Register(http::Method::Options, R"(.+)", [=](const std::shared_ptr<http::svr::HttpExchange> &client) -> http::svr::NextHandler {
+			// Respond 204 No Content for preflight request
+			client->GetResponse()->SetStatusCode(http::StatusCode::NoContent);
 
+			// Do not call the next handler to prevent 404 Not Found
 			return http::svr::NextHandler::DoNotCall;
 		});
 
