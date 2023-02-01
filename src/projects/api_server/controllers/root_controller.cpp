@@ -39,7 +39,7 @@ namespace api
 
 		// This handler is called if it does not match all other registered handlers
 		Register(http::Method::All, R"(.+)", &RootController::OnNotFound);
-	};
+	}
 
 	void RootController::PrepareAccessTokenHandler()
 	{
