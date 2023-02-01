@@ -38,7 +38,7 @@ namespace http
 		void HttpExchange::Release()
 		{
 			// print debug info
-			if (GetResponse()->GetStatusCode() != http::StatusCode::OK)
+			if ((static_cast<int>(GetResponse()->GetStatusCode()) / 100) != 2)
 			{
 				logte("%s", GetDebugInfo().CStr());
 			}
