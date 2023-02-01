@@ -10,10 +10,8 @@
 
 #include "../http_private.h"
 
-static constexpr char CORS_HTTP_PREFIX[] = "http://";
-static constexpr auto CORS_HTTP_PREFIX_LENGTH = OV_COUNTOF(CORS_HTTP_PREFIX) - 1;
-static constexpr char CORS_HTTPS_PREFIX[] = "https://";
-static constexpr auto CORS_HTTPS_PREFIX_LENGTH = OV_COUNTOF(CORS_HTTPS_PREFIX) - 1;
+#undef OV_LOG_TAG
+#define OV_LOG_TAG "HttpServer.CORS"
 
 namespace http
 {
@@ -43,13 +41,16 @@ namespace http
 			if (url == "*")
 			{
 				cors_regex_list.clear();
-				cors_regex_list.emplace_back(false, ov::Regex::CompiledRegex(ov::Regex::WildCardRegex("*")));
+
+				const auto regex = ov::Regex::CompiledRegex(ov::Regex::WildCardRegex("*"));
+				cors_regex_list.emplace_back(url, regex);
+
 				cors_policy = CorsPolicy::All;
 
 				if (url_list.size() > 1)
 				{
 					// Ignore other items if "*" is specified
-					logtw("Invalid CORS settings found for %s: '*' cannot be used like other items. Other items are ignored.", vhost_app_name.CStr());
+					logtw("Invalid CORS settings found for %s: '*' cannot be used with other CORS patterns. Other CORS patterns are ignored.", vhost_app_name.CStr());
 				}
 
 				break;
@@ -58,7 +59,7 @@ namespace http
 			{
 				if (url_list.size() > 1)
 				{
-					logtw("Invalid CORS settings found for %s: '*' cannot be used like other items. 'null' item is ignored.", vhost_app_name.CStr());
+					logtw("Invalid CORS settings found for %s: 'null' cannot be used with other CORS patterns. 'null' is ignored.", vhost_app_name.CStr());
 				}
 				else
 				{
@@ -68,10 +69,18 @@ namespace http
 				continue;
 			}
 
-			bool has_protocol = url.HasPrefix(CORS_HTTP_PREFIX) || url.HasPrefix(CORS_HTTPS_PREFIX);
+			auto regex = ov::Regex::WildCardRegex(url, false);
 
-			cors_regex_list.emplace_back(has_protocol, ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(url)));
+			if (url.IndexOf("://") < 0)
+			{
+				// Scheme doesn't exists in the URL - allow http:// and https:// for a request URL
+				regex.Prepend(R"((http.?:\/\/)?)");
+			}
 
+			regex.Prepend("^");
+			regex.Append("$");
+
+			cors_regex_list.emplace_back(url, ov::Regex::CompiledRegex(regex));
 			cors_domains_for_rtmp.push_back(url);
 		}
 
@@ -131,7 +140,10 @@ namespace http
 		return true;
 	}
 
-	bool CorsManager::SetupHttpCorsHeader(const info::VHostAppName &vhost_app_name, const std::shared_ptr<const http::svr::HttpRequest> &request, const std::shared_ptr<http::svr::HttpResponse> &response) const
+	bool CorsManager::SetupHttpCorsHeader(
+		const info::VHostAppName &vhost_app_name,
+		const std::shared_ptr<const http::svr::HttpRequest> &request, const std::shared_ptr<http::svr::HttpResponse> &response,
+		const std::vector<http::Method> &allowed_methods) const
 	{
 		ov::String origin_header = request->GetHeader("ORIGIN");
 		ov::String cors_header = "";
@@ -171,21 +183,18 @@ namespace http
 
 				case CorsPolicy::Origin: {
 					const auto &cors_item_list = cors_regex_list_iterator->second;
-					auto origin_header_without_protocol = origin_header;
-
-					if (origin_header.HasPrefix(CORS_HTTP_PREFIX))
-					{
-						origin_header_without_protocol = origin_header.Substring(CORS_HTTP_PREFIX_LENGTH);
-					}
-					else if (origin_header.HasPrefix(CORS_HTTPS_PREFIX))
-					{
-						origin_header_without_protocol = origin_header.Substring(CORS_HTTPS_PREFIX_LENGTH);
-					}
 
 					auto item = std::find_if(
-						cors_item_list.begin(), cors_item_list.end(),
-						[&origin_header, &origin_header_without_protocol](auto &cors_item) -> bool {
-							return cors_item.regex.Matches(cors_item.has_protocol ? origin_header : origin_header_without_protocol).IsMatched();
+						cors_item_list.cbegin(), cors_item_list.cend(),
+						[&origin_header](const auto &cors_item) -> bool {
+							const auto result = cors_item.IsMatches(origin_header);
+
+							logtd("Checking CORS for origin header [%s] with config [%s] (%s): %s",
+								  origin_header.CStr(),
+								  cors_item.regex.GetPattern().CStr(), cors_item.url.CStr(),
+								  result ? "MATCHED" : "not matched");
+
+							return result;
 						});
 
 					if (item == cors_item_list.end())
@@ -202,8 +211,19 @@ namespace http
 		response->SetHeader("Access-Control-Allow-Origin", cors_header);
 		response->SetHeader("Vary", "Origin");
 
+		std::vector<ov::String> method_list;
+
+		for (const auto &method : allowed_methods)
+		{
+			method_list.push_back(http::StringFromMethod(method));
+		}
+
 		response->SetHeader("Access-Control-Allow-Credentials", "true");
-		response->SetHeader("Access-Control-Allow-Methods", "GET");
+
+		if (method_list.empty() == false)
+		{
+			response->SetHeader("Access-Control-Allow-Methods", ov::String::Join(method_list, ", "));
+		}
 		response->SetHeader("Access-Control-Allow-Headers", "*");
 
 		return true;

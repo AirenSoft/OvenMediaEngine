@@ -31,7 +31,11 @@ namespace http
 		void SetCrossDomains(const info::VHostAppName &vhost_app_name, const std::vector<ov::String> &url_list);
 
 		bool SetupRtmpCorsXml(const std::shared_ptr<http::svr::HttpResponse> &response) const;
-		bool SetupHttpCorsHeader(const info::VHostAppName &vhost_app_name, const std::shared_ptr<const http::svr::HttpRequest> &request, const std::shared_ptr<http::svr::HttpResponse> &response) const;
+
+		bool SetupHttpCorsHeader(
+			const info::VHostAppName &vhost_app_name,
+			const std::shared_ptr<const http::svr::HttpRequest> &request, const std::shared_ptr<http::svr::HttpResponse> &response,
+			const std::vector<http::Method> &allowed_methods = {http::Method::Get}) const;
 
 	protected:
 		// https://fetch.spec.whatwg.org/#http-access-control-allow-origin
@@ -57,13 +61,17 @@ namespace http
 
 		struct CorsItem
 		{
-			CorsItem(bool has_protocol, const ov::Regex &regex)
-				: has_protocol(has_protocol),
-				  regex(regex)
+			CorsItem(ov::String url, ov::Regex regex)
+				: url(url), regex(regex)
 			{
 			}
 
-			bool has_protocol;
+			bool IsMatches(const ov::String &origin_header) const
+			{
+				return regex.Matches(origin_header).IsMatched();
+			}
+
+			ov::String url;
 			ov::Regex regex;
 		};
 
