@@ -70,6 +70,7 @@ install_base_ubuntu()
         # Install Nvidia Driver and Nvidia Toolkit
         sudo add-apt-repository ppa:graphics-drivers/ppa
         sudo apt -y update
+        sudo apt-get install -y ubuntu-drivers-common
         sudo apt-get install -y $(ubuntu-drivers devices | grep recommended | awk '{print $3}')
         sudo apt-get install -y nvidia-cuda-toolkit curl make
         
