@@ -18,7 +18,7 @@ namespace cfg
 			{
 			protected:
 				bool _enabled = true;
-				ov::String _path = "conf/api_data";
+				ov::String _path = "";
 
 			public:
 				CFG_DECLARE_CONST_REF_GETTER_OF(IsEnabled, _enabled)

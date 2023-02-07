@@ -25,6 +25,9 @@ namespace api
 			// GET /v1/vhosts
 			ApiResponse OnGetVHostList(const std::shared_ptr<http::svr::HttpExchange> &client);
 
+			// GET /v1/vhosts/storage
+			ApiResponse OnGetVHostStorage(const std::shared_ptr<http::svr::HttpExchange> &client);
+
 			// GET /v1/vhosts/<vhost_name>
 			ApiResponse OnGetVHost(const std::shared_ptr<http::svr::HttpExchange> &client,
 								   const std::shared_ptr<mon::HostMetrics> &vhost);

@@ -164,7 +164,7 @@ namespace cfg
 
 		void GetApplicationFromMetrics(pugi::xml_node app_node, const std::shared_ptr<const mon::ApplicationMetrics> &app_metrics)
 		{
-			app_metrics->GetConfig().ToXml(app_node);
+			app_metrics->GetConfig().ToXml(app_node, false);
 
 			auto reserved_stream_list = app_metrics->GetReservedStreamMetricsMap();
 
@@ -211,7 +211,7 @@ namespace cfg
 
 		void GetVirtualHostFromMetrics(pugi::xml_node vhost_node, const std::shared_ptr<mon::HostMetrics> &vhost_metrics, bool include_dynamic_app)
 		{
-			std::static_pointer_cast<cfg::vhost::VirtualHost>(vhost_metrics)->ToXml(vhost_node);
+			std::static_pointer_cast<cfg::vhost::VirtualHost>(vhost_metrics)->ToXml(vhost_node, false);
 
 			// Overwrite application list (Currently, vhost contains the settings that were loaded at the beginning of the OME run)
 			GetApplicationListFromMetrics(vhost_node, vhost_metrics->GetApplicationMetricsList(), include_dynamic_app);

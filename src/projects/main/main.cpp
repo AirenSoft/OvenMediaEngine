@@ -158,8 +158,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	orchestrator->Release();
 	api_server->Stop();
+	orchestrator->Release();
 
 	RELEASE_MODULE(webrtc_provider, "WebRTC Provider");
 	RELEASE_MODULE(mpegts_provider, "MPEG-TS Provider");

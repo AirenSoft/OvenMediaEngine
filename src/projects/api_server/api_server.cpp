@@ -19,6 +19,198 @@
 
 namespace api
 {
+	void Storage::Load(const cfg::mgr::api::Storage &storage_config)
+	{
+		Reset();
+
+		const ov::String message { "You will lose the configurations modified using the API." };
+		if (storage_config.IsParsed() == false || storage_config.IsEnabled() == false)
+		{
+			logtw("<Server><Managers><API><Storage> is not specified or is disabled. %s", message.CStr());
+			return;
+		}
+
+		CheckPath(storage_config.GetPath());
+		if (_is_initialized == true)
+		{
+			LoadXml();
+		}
+		else
+		{
+			logte("An Error occured while check API storage file permissions. %s", message.CStr());
+		}
+	}
+
+	std::set<ov::String> Storage::Save()
+	{
+		if (_is_initialized == true)
+		{
+			if (_vhost_names.size() > 0)
+			{
+				SaveXml(GetVhosts());
+			}
+			else
+			{
+				ov::PathManager::DeleteFile(_file_path);
+			}
+		}
+
+		return _vhost_names;
+	}
+
+	void Storage::Close()
+	{
+		Save();
+		Reset();
+	}
+
+	bool Storage::IsEnabled()
+	{
+		return _is_initialized;
+	}
+
+	void Storage::AddVhost(const ov::String &vhost)
+	{
+		if (_is_initialized && _vhost_names.find(vhost) == _vhost_names.end())
+		{
+			_vhost_names.insert(vhost);
+		}
+	}
+
+	void Storage::DelVhost(const ov::String &vhost)
+	{
+		if (_is_initialized && _vhost_names.find(vhost) != _vhost_names.end())
+		{
+			_vhost_names.erase(vhost);
+		}
+	}
+
+	void Storage::Reset()
+	{
+		_is_initialized = false;
+		_file_path = ov::String();
+		_vhost_names.clear();
+	}
+
+	void Storage::CheckPath(const ov::String &path)
+	{
+		auto file_path { path };
+		if (file_path.IsEmpty())
+		{
+			auto config_path { cfg::ConfigManager::GetInstance()->GetConfigPath() };
+			file_path = ov::PathManager::Combine(config_path, "Storage.xml");
+		}
+
+		logti("Check API storage file permission: %s", file_path.CStr());
+		if (ov::PathManager::IsFile(file_path))
+		{
+			if (::access(file_path.CStr(), W_OK | R_OK ) != 0)
+			{
+				loge("Write/Read permission denied. Unable to write: %s", file_path.CStr());
+				return;
+			}
+		}
+		else
+		{
+			auto directory_path { ov::PathManager::ExtractPath(file_path) };
+			if (::access(directory_path.CStr(), W_OK | R_OK ) != 0)
+			{
+				loge("Write/Read permission denied. Unable to write in: %s", directory_path.CStr());
+				return;
+			}
+		}
+
+		_is_initialized = true;
+		_file_path = file_path;
+	}
+
+	void Storage::LoadXml()
+	{
+		if (ov::PathManager::IsFile(_file_path) == false)
+		{
+			return;
+		}
+
+		logti("Trying to load settings, API storage file: %s", _file_path.CStr());
+
+		cfg::vhost::VirtualHosts vhosts_config;
+
+		try
+		{
+			cfg::DataSource data_source(cfg::DataType::Xml, _file_path, "VirtualHosts");
+			vhosts_config.SetItemName("VirtualHosts");
+			vhosts_config.FromDataSource(data_source);
+			vhosts_config.SetReadOnly(false);
+		}
+		catch (const cfg::ConfigError &error)
+		{
+			logte("An error occurred while load API storage file: %s", error.What());
+			return;
+		}
+
+		for (auto vhost_config : vhosts_config.GetVirtualHostList())
+		{
+			vhost_config.SetReadOnly(false);
+
+			auto vhost_name { vhost_config.GetName() };
+			auto result { ocst::Orchestrator::GetInstance()->CreateVirtualHost(vhost_config) };
+			if (result == ocst::Result::Succeeded)
+			{
+				AddVhost(vhost_config.GetName());
+				logti("Created a new VirtualHost '%s' from API storage file", vhost_name.CStr());
+			}
+			else
+			{
+				logti("Could not create a new VirtualHost '%s' from API storage file", vhost_name.CStr());
+			}
+		}
+	}
+
+	std::map<uint32_t, std::shared_ptr<mon::HostMetrics>> Storage::GetVhosts()
+	{
+		uint32_t index { 0 };
+		std::map<uint32_t, std::shared_ptr<mon::HostMetrics>> vhosts;
+
+		for (const auto &vhost_name : _vhost_names)
+		{
+			auto vhost { GetVirtualHost(vhost_name) };
+			if (vhost != nullptr)
+			{
+				vhosts.insert( { index++, vhost } );
+			}
+		}
+
+		return vhosts;
+	}
+
+	void Storage::SaveXml(const std::map<uint32_t, std::shared_ptr<mon::HostMetrics>> &vhosts)
+	{
+		logti("Trying to save settings, API storage file: %s", _file_path.CStr());
+
+		pugi::xml_document document;
+
+		auto declaration_node = document.append_child(pugi::node_declaration);
+		declaration_node.append_attribute("version") = "1.0";
+		declaration_node.append_attribute("encoding") = "utf-8";
+
+		try
+		{
+			cfg::serdes::GetVirtualHostListFromMetrics(document, vhosts, true);
+		}
+		catch (const cfg::ConfigError &error)
+		{
+			logte("An error occurred while load API storage file: %s", error.What());
+			return;
+		}
+
+		bool is_success = document.save_file(_file_path.CStr());
+		if (is_success != true)
+		{
+			logte("An Error occured while saving API storage file");
+		}
+	}
+
+
 	struct XmlWriter : pugi::xml_writer
 	{
 		ov::String result;
@@ -173,6 +365,8 @@ namespace api
 			return false;
 		}
 
+		_storage.Load(api_config.GetStorage());
+
 		return PrepareHttpServers(server_config->GetIp(), managers_config, api_bind_config);
 	}
 
@@ -226,9 +420,7 @@ namespace api
 		bool http_result = (http_server != nullptr) ? manager->ReleaseServer(http_server) : true;
 		bool https_result = (https_server != nullptr) ? manager->ReleaseServer(https_server) : true;
 
-		_is_storage_path_initialized = false;
-		_storage_path = "";
-
+		_storage.Close();
 		_root_controller = nullptr;
 
 		return http_result && https_result;
@@ -246,6 +438,7 @@ namespace api
 									  vhost_config.GetName().CStr());
 
 			case ocst::Result::Succeeded:
+				_storage.AddVhost(vhost_config.GetName());
 				break;
 
 			case ocst::Result::Exists:
@@ -276,6 +469,7 @@ namespace api
 									  host_info.GetName().CStr());
 
 			case ocst::Result::Succeeded:
+				_storage.DelVhost(host_info.GetName());
 				break;
 
 			case ocst::Result::Exists:
@@ -292,4 +486,21 @@ namespace api
 									  host_info.GetName().CStr());
 		}
 	}
+
+	void Server::StorageVHosts()
+	{
+		logti("Storing dynamic virtual hosts ...");
+
+		if (_storage.IsEnabled() == false)
+		{
+			throw http::HttpError(http::StatusCode::MethodNotAllowed, "<Server><Managers><API><Storage> is not specified or is disabled.");
+		}
+
+		auto vhost_names { _storage.Save() };
+		if (vhost_names.empty() == true)
+		{
+			throw http::HttpError(http::StatusCode::NotFound, "No settings to save.");
+		}
+	}
+
 }  // namespace api

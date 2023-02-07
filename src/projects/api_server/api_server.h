@@ -19,6 +19,30 @@
 
 namespace api
 {
+	class Storage
+	{
+	public:
+		void Load(const cfg::mgr::api::Storage &storage_config);
+		std::set<ov::String> Save();
+		void Close();
+		bool IsEnabled();
+
+		void AddVhost(const ov::String &vhost);
+		void DelVhost(const ov::String &vhost);
+
+	private:
+		void Reset();
+		void CheckPath(const ov::String &path);
+		void LoadXml();
+
+		std::map<uint32_t, std::shared_ptr<mon::HostMetrics>> GetVhosts();
+		void SaveXml(const std::map<uint32_t, std::shared_ptr<mon::HostMetrics>> &vhosts);
+
+		bool _is_initialized { false };
+		ov::String _file_path;
+		std::set<ov::String> _vhost_names;
+	};
+
 	class Server : public ov::EnableSharedFromThis<Server>
 	{
 	public:
@@ -29,6 +53,7 @@ namespace api
 		void CreateVHost(const cfg::vhost::VirtualHost &vhost_config);
 		MAY_THROWS(http::HttpError)
 		void DeleteVHost(const info::Host &host_info);
+		void StorageVHosts();
 
 	protected:
 		bool PrepareHttpServers(const ov::String &server_ip, const cfg::mgr::Managers &managers, const cfg::bind::mgr::API &api_bind_config);
@@ -43,10 +68,8 @@ namespace api
 
 		std::shared_ptr<RootController> _root_controller;
 
+		Storage _storage;
 		ov::String _access_token;
-
-		bool _is_storage_path_initialized = false;
-		ov::String _storage_path;
 
 		http::CorsManager _cors_manager;
 	};
