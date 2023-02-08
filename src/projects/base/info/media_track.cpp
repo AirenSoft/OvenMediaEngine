@@ -226,6 +226,7 @@ ov::String MediaTrack::GetInfoString()
 		case MediaType::Video:
 			out_str.AppendFormat(
 				"Video Track #%d: "
+				"Public Name(%s) "
 				"Variant Name(%s) "
 				"Bitrate(%s) "
 				"Codec(%d,%s,%s) "
@@ -234,7 +235,7 @@ ov::String MediaTrack::GetInfoString()
 				"Framerate(%.2ffps) "
 				"KeyInterval(%d) "
 				"BFrames(%d) ",
-				GetId(), GetVariantName().CStr(),
+				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
 				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecLibraryId(GetCodecLibraryId()).CStr(),
 				GetBitstreamFormatString(GetOriginBitstream()).CStr(),
@@ -247,6 +248,7 @@ ov::String MediaTrack::GetInfoString()
 		case MediaType::Audio:
 			out_str.AppendFormat(
 				"Audio Track #%d: "
+				"Public Name(%s) "
 				"Variant Name(%s) "
 				"Bitrate(%s) "
 				"Codec(%d,%s,%s) "
@@ -254,7 +256,7 @@ ov::String MediaTrack::GetInfoString()
 				"Samplerate(%s) "
 				"Format(%s, %d) "
 				"Channel(%s, %d) ",
-				GetId(), GetVariantName().CStr(),
+				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
 				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecLibraryId(GetCodecLibraryId()).CStr(),
 				GetBitstreamFormatString(GetOriginBitstream()).CStr(),
@@ -265,10 +267,11 @@ ov::String MediaTrack::GetInfoString()
 		case MediaType::Data:
 			out_str.AppendFormat(
 				"Data  Track #%d: "
+				"Public Name(%s) "
 				"Variant Name(%s) "
 				"Codec(%d,%s,%s) "
 				"BSF(%s) ",
-				GetId(), GetVariantName().CStr(),
+				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecLibraryId(GetCodecLibraryId()).CStr(),
 				GetBitstreamFormatString(GetOriginBitstream()).CStr());
 			break;

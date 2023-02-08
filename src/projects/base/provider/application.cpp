@@ -124,9 +124,10 @@ namespace pvd
 		{
 			// Add data track 
 			auto data_track = std::make_shared<MediaTrack>();
-
 			// Issue unique track id
 			data_track->SetId(stream->IssueUniqueTrackId());
+			auto public_name = ov::String::FormatString("Data_%d", data_track->GetId());
+			data_track->SetPublicName(public_name);
 			data_track->SetMediaType(cmn::MediaType::Data);
 			data_track->SetTimeBase(1, 1000);
 			data_track->SetOriginBitstream(cmn::BitstreamFormat::Unknown);
@@ -163,6 +164,18 @@ namespace pvd
 
 				audio_track->SetPublicName(audio_map_item->GetName());
 				audio_track->SetLanguage(audio_map_item->GetLanguage());
+			}
+		}
+
+		// If track has not PublicName, set PublicName as TrackId
+		for (auto &it : stream->GetTracks())
+		{
+			auto track = it.second;
+			if (track->GetPublicName().IsEmpty())
+			{
+				// MediaType_TrackId
+				auto public_name = ov::String::FormatString("%s_%u", cmn::GetMediaTypeString(track->GetMediaType()).CStr(), track->GetId());
+				track->SetPublicName(public_name);
 			}
 		}
 
