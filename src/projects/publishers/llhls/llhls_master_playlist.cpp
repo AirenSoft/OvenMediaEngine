@@ -121,6 +121,15 @@ bool LLHlsMasterPlaylist::AddStreamInfo(const ov::String &video_group_id, const 
 
 		// first media info is used for stream info
 		new_stream_info->_media_info = audio_group->_media_infos[0];
+		auto audio_track = new_stream_info->_media_info->_track;
+		if (audio_track == nullptr)
+		{
+			logte("Audio track is not valid in first media info of audio group: %s", audio_group_id.CStr());
+			return false;
+		}
+
+		new_stream_info->_bandwidth += audio_track->GetBitrate();
+		new_stream_info->_codecs = CodecMediaType::GetCodecsParameter(audio_track);
 
 		if (audio_group->_media_infos.size() > 1)
 		{
