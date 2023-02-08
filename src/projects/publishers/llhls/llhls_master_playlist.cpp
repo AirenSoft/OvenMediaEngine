@@ -28,19 +28,13 @@ bool LLHlsMasterPlaylist::AddMediaCandidateGroup(const std::shared_ptr<const Med
 	bool first = true;
 	for(auto &track : track_group->GetTracks())
 	{
-		if (first == false && (track->GetPublicName().IsEmpty() || track->GetLanguage().IsEmpty()))
-		{
-			logtw("Track %d is ignored in master playlist because only media info with defined public name and language can be included in a group.", track->GetId());
-			continue;
-		}
-
 		auto new_media_info = std::make_shared<MediaInfo>();
 		new_media_info->_group_id = track_group->GetName();
 		new_media_info->_type = track->GetMediaType();
 		new_media_info->_name = track->GetPublicName();
 		new_media_info->_language = track->GetLanguage();
 		new_media_info->_default = first;
-		new_media_info->_auto_select = first || (track->GetPublicName().IsEmpty() == false && track->GetLanguage().IsEmpty() == false);
+		new_media_info->_auto_select = first || (track->GetLanguage().IsEmpty() == false);
 		new_media_info->_instream_id = "";
 		new_media_info->_assoc_language = "";
 		new_media_info->_uri = chunk_uri_generator(track);
