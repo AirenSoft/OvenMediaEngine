@@ -1081,6 +1081,8 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 				return nullptr;
 			}
 
+			media_track->OnFrameAdded(pop_media_packet->GetDataLength());
+
 			// If the parsing of track information is not complete, discard the packet.
 			if (media_track->IsValid() == false)
 			{
@@ -1094,6 +1096,8 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 			{
 				return nullptr;
 			}
+
+			media_track->OnFrameAdded(pop_media_packet->GetDataLength());
 
 			if (pop_media_packet->GetDuration() < 0)
 			{
@@ -1147,8 +1151,6 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	////////////////////////////////////////////////////////////////////////////////////
 	// Statistics
 	UpdateStatistics(media_track, pop_media_packet);
-
-	media_track->OnFrameAdded(pop_media_packet->GetDataLength());
 
 	return pop_media_packet;
 }

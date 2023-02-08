@@ -11,7 +11,7 @@
 #include "video_track.h"
 #include "audio_track.h"
 
-#define VALID_BITRATE_CALCULATION_THRESHOLD_MSEC (2000)
+#define VALID_BITRATE_CALCULATION_THRESHOLD_MSEC (1000)
 
 typedef uint32_t MediaTrackId;
 

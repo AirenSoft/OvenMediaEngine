@@ -303,6 +303,8 @@ bool MediaTrack::IsValid()
 				_height > 0 &&
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
+				_bitrate > 0 &&
+				_framerate > 0.0 &&
 				_codec_extradata != nullptr)
 
 			{
@@ -314,6 +316,8 @@ bool MediaTrack::IsValid()
 		case MediaCodecId::H265: {
 			if (_width > 0 &&
 				_height > 0 &&
+				_bitrate > 0 &&
+				_framerate > 0.0 &&
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0)
 			{
@@ -325,6 +329,8 @@ bool MediaTrack::IsValid()
 		case MediaCodecId::Vp8: {
 			if (_width > 0 &&
 				_height > 0 &&
+				_bitrate > 0 &&
+				_framerate > 0.0 &&
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0)
 			{
@@ -337,6 +343,8 @@ bool MediaTrack::IsValid()
 		case MediaCodecId::Flv: {
 			if (_width > 0 &&
 				_height > 0 &&
+				_bitrate > 0 &&
+				_framerate > 0.0 &&
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0)
 			{
@@ -360,6 +368,7 @@ bool MediaTrack::IsValid()
 		case MediaCodecId::Aac: {
 			if (_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
+				_bitrate > 0 &&
 				_channel_layout.GetCounts() > 0 &&
 				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown &&
 				_codec_extradata != nullptr)
@@ -372,6 +381,7 @@ bool MediaTrack::IsValid()
 		case MediaCodecId::Opus: {
 			if (_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
+				_bitrate > 0 &&
 				_channel_layout.GetCounts() > 0 &&
 				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown &&
 				_sample.GetRate() == cmn::AudioSample::Rate::R48000)
@@ -384,6 +394,7 @@ bool MediaTrack::IsValid()
 		case MediaCodecId::Mp3: {
 			if (_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
+				_bitrate > 0 &&
 				_channel_layout.GetCounts() > 0 &&
 				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown)
 			{
@@ -411,7 +422,7 @@ void MediaTrack::OnFrameAdded(uint64_t bytes)
 	_total_frame_bytes += bytes;
 
 	// If bitrate is not set, calculate bitrate
-	if (_bitrate == 0 && _clock_from_first_frame_received.IsElapsed(VALID_BITRATE_CALCULATION_THRESHOLD_MSEC) == true)
+	if (_clock_from_first_frame_received.IsElapsed(VALID_BITRATE_CALCULATION_THRESHOLD_MSEC))
 	{
 		auto seconds = static_cast<double>(_clock_from_first_frame_received.Elapsed()) / 1000.0;
 		auto bytes_per_second = static_cast<double>(_total_frame_bytes) / seconds;
@@ -422,7 +433,7 @@ void MediaTrack::OnFrameAdded(uint64_t bytes)
 	}
 
 	// If framerate is not set, calculate framerate
-	if (_framerate == 0 && _clock_from_first_frame_received.IsElapsed(VALID_BITRATE_CALCULATION_THRESHOLD_MSEC) == true)
+	if (_clock_from_first_frame_received.IsElapsed(VALID_BITRATE_CALCULATION_THRESHOLD_MSEC))
 	{
 		auto seconds = static_cast<double>(_clock_from_first_frame_received.Elapsed()) / 1000.0;
 		auto frame_count = static_cast<double>(_total_frame_count);
