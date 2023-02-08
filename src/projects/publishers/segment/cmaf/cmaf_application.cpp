@@ -43,7 +43,7 @@ CmafApplication::~CmafApplication()
 
 bool CmafApplication::Start()
 {
-	auto publisher_info = GetPublisher<cfg::vhost::app::pub::LlDashPublisher>();
+	auto publisher_info = GetPublisherCfg<cfg::vhost::app::pub::LlDashPublisher>();
 
 	_segment_count = 1;
 	_segment_duration = publisher_info->GetSegmentDuration();

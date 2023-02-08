@@ -21,12 +21,12 @@ LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<cons
 	_part_target_duration = part_target_duration;
 	_map_uri = map_uri;
 
-	logtd("LLHLS Chunklist has been created. track(%s)", _track->GetName().CStr());
+	logtd("LLHLS Chunklist has been created. track(%s)", _track->GetVariantName().CStr());
 }
 
 LLHlsChunklist::~LLHlsChunklist()
 {
-	logtd("Chunklist has been deleted. %s", GetTrack()->GetName().CStr());
+	logtd("Chunklist has been deleted. %s", GetTrack()->GetVariantName().CStr());
 }
 
 // Set all renditions info for ABR

@@ -128,7 +128,7 @@ namespace pvd
 	{
 		return true;
 	}
-	
+
 	bool MpegTsProvider::OnDeleteHost(const info::Host &host_info)
 	{
 		return true;
@@ -136,7 +136,7 @@ namespace pvd
 
 	std::shared_ptr<pvd::Application> MpegTsProvider::OnCreateProviderApplication(const info::Application &application_info)
 	{
-		if(IsModuleAvailable() == false)
+		if (IsModuleAvailable() == false)
 		{
 			return nullptr;
 		}
@@ -189,7 +189,16 @@ namespace pvd
 			}
 		}
 
-		return MpegTsApplication::Create(GetSharedPtrAs<pvd::PushProvider>(), application_info);
+		auto application = MpegTsApplication::Create(GetSharedPtrAs<pvd::PushProvider>(), application_info);
+		if (application == nullptr)
+		{
+			return nullptr;
+		}
+
+		auto audio_map = app_config.GetProviders().GetMpegtsProvider().GetAudioMap();
+		application->AddAudioMapItems(audio_map);
+
+		return application;
 	}
 
 	bool MpegTsProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
@@ -224,7 +233,7 @@ namespace pvd
 	// This function is not called by PhysicalPort when the protocol is udp (MPEGTS/UDP)
 	void MpegTsProvider::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	{
-		if(remote->GetRemoteAddress() == nullptr)
+		if (remote->GetRemoteAddress() == nullptr)
 		{
 			logte("A client connecting via MPEG-TS/TCP must have the remote address information");
 			return;
@@ -274,7 +283,7 @@ namespace pvd
 		// UDP
 		if (stream_port_item->IsClientConnected() == false)
 		{
-			if(OnConnected(remote, address) == false)
+			if (OnConnected(remote, address) == false)
 			{
 				return;
 			}

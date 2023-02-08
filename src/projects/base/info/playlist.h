@@ -16,8 +16,8 @@ namespace info
 	class Rendition
 	{
 	public:
-		Rendition(const ov::String &name, const ov::String &video_track_name, const ov::String &audio_track_name)
-			: _name(name), _video_track_name(video_track_name), _audio_track_name(audio_track_name)
+		Rendition(const ov::String &name, const ov::String &video_variant_name, const ov::String &audio_variant_name)
+			: _name(name), _video_variant_name(video_variant_name), _audio_variant_name(audio_variant_name)
 		{
 
 		}
@@ -28,20 +28,20 @@ namespace info
 			return _name;
 		}
 
-		ov::String GetVideoTrackName() const
+		ov::String GetVideoVariantName() const
 		{
-			return _video_track_name;
+			return _video_variant_name;
 		}
 
-		ov::String GetAudioTrackName() const
+		ov::String GetAudioVariantName() const
 		{
-			return _audio_track_name;
+			return _audio_variant_name;
 		}
 
 	private:
 		ov::String _name;
-		ov::String _video_track_name;
-		ov::String _audio_track_name;
+		ov::String _video_variant_name;
+		ov::String _audio_variant_name;
 	};
 
 	class Playlist

@@ -348,7 +348,9 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 
 	output_track->SetMediaType(cmn::MediaType::Video);
 	output_track->SetId(NewTrackId());
-	output_track->SetName(profile.GetName());
+	output_track->SetVariantName(profile.GetName());
+	output_track->SetPublicName(input_track->GetPublicName());
+	output_track->SetLanguage(input_track->GetLanguage());
 	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
 
 	if (profile.IsBypass() == true)
@@ -407,6 +409,9 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 		return nullptr;
 	}
 
+	output_track->SetPublicName(input_track->GetPublicName());
+	output_track->SetLanguage(input_track->GetLanguage());
+	output_track->SetVariantName(profile.GetName());
 	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
 	output_track->SetMediaType(cmn::MediaType::Video);
 	output_track->SetId(NewTrackId());
@@ -437,7 +442,9 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 
 	output_track->SetMediaType(cmn::MediaType::Audio);
 	output_track->SetId(NewTrackId());
-	output_track->SetName(profile.GetName());
+	output_track->SetVariantName(profile.GetName());
+	output_track->SetPublicName(input_track->GetPublicName());
+	output_track->SetLanguage(input_track->GetLanguage());
 	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
 
 	if (profile.IsBypass() == true)
@@ -512,7 +519,9 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrackDataType(const st
 
 	output_track->SetMediaType(cmn::MediaType::Data);
 	output_track->SetId(NewTrackId());
-	output_track->SetName("");
+	output_track->SetVariantName("");
+	output_track->SetPublicName(input_track->GetPublicName());
+	output_track->SetLanguage(input_track->GetLanguage());
 	output_track->SetBypass(true);
 	output_track->SetCodecId(input_track->GetCodecId());
 	output_track->SetCodecLibraryId(input_track->GetCodecLibraryId());

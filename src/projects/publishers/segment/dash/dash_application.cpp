@@ -42,7 +42,7 @@ DashApplication::~DashApplication()
 
 bool DashApplication::Start()
 {
-	auto publisher_info = GetPublisher<cfg::vhost::app::pub::DashPublisher>();
+	auto publisher_info = GetPublisherCfg<cfg::vhost::app::pub::DashPublisher>();
 
 	_segment_count = publisher_info->GetSegmentCount();
 	_segment_duration = publisher_info->GetSegmentDuration();

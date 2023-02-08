@@ -403,7 +403,7 @@ namespace pvd
 			}
 
 			new_track->SetId(json_track["id"].asUInt());
-			new_track->SetName(json_track["name"].asString().c_str());
+			new_track->SetVariantName(json_track["name"].asString().c_str());
 			new_track->SetCodecId(static_cast<cmn::MediaCodecId>(json_track["codecId"].asUInt()));
 			new_track->SetMediaType(static_cast<cmn::MediaType>(json_track["mediaType"].asUInt()));
 			new_track->SetTimeBase(json_track["timebase_num"].asUInt(), json_track["timebase_den"].asUInt());

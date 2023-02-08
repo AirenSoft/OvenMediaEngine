@@ -242,16 +242,6 @@ bool MediaRouteApplication::OnStreamCreated(const std::shared_ptr<MediaRouteAppl
 		return false;
 	}
 
-	// If track name of stream_info is empty, create a new name as a random string and set it.
-	for (auto &track_it : stream_info->GetTracks())
-	{
-		auto &track = track_it.second;
-		if (track->GetName().IsEmpty())
-		{
-			track->SetName(ov::Random::GenerateString(8));
-		}
-	}
-
 	logti("[%s/%s(%u)] Trying to create a stream", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
 	auto connector_type = app_conn->GetConnectorType();

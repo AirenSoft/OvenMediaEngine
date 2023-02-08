@@ -71,7 +71,23 @@ namespace cfg
 
 							return nullptr;
 						});
-						Register<Optional>({"Image", "images"}, &_image_profiles);
+						Register<Optional>({"Image", "images"}, &_image_profiles,
+						[=]() -> std::shared_ptr<ConfigError> {
+							return nullptr;
+						},
+						[=]() -> std::shared_ptr<ConfigError> {
+							uint32_t index = 0;
+							for (auto &profile : _image_profiles)
+							{
+								if (profile.GetName().IsEmpty())
+								{
+									profile.SetName(ov::String::FormatString("image_%d", index));
+									index++;
+								}
+							}
+
+							return nullptr;
+						});
 					}
 				};
 			}  // namespace oprf

@@ -41,7 +41,7 @@ HlsApplication::~HlsApplication()
 
 bool HlsApplication::Start()
 {
-	auto publisher_info = GetPublisher<cfg::vhost::app::pub::HlsPublisher>();
+	auto publisher_info = GetPublisherCfg<cfg::vhost::app::pub::HlsPublisher>();
 
 	_segment_count = publisher_info->GetSegmentCount();
 	_segment_duration = publisher_info->GetSegmentDuration();
