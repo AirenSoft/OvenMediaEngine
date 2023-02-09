@@ -125,7 +125,7 @@ OvenMediaEngine-master/misc/prerequisites.sh --enable-qsv
 #### When using Docker container
 
 ```bash
-docker build --file Dockerfile -t airensoft/ovenmediaengine:dev --build-arg GPU=TRU
+docker build --file Dockerfile -t airensoft/ovenmediaengine:dev --build-arg GPU=TRUE
 ```
 
 ## Configuration
