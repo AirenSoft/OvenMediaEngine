@@ -1086,7 +1086,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 			// If the parsing of track information is not complete, discard the packet.
 			if (media_track->IsValid() == false)
 			{
-				return nullptr;
+			//	return nullptr;
 			}
 		}
 		break;
@@ -1109,7 +1109,11 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 			// If the parsing of track information is not complete, discard the packet.
 			if (media_track->IsValid() == false)
 			{
-				return nullptr;
+				logtd("[%s/%s] track #%d is not valid yet. track_id: %d, media_type: %s",
+					  _stream->GetApplicationName(), _stream->GetName().CStr(), track_id,
+					  track_id,
+					  GetMediaTypeString(media_type).CStr());
+			//	return nullptr;
 			}
 		}
 		break;
