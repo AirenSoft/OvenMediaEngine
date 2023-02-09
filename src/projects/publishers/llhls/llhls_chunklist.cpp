@@ -68,6 +68,8 @@ void LLHlsChunklist::SetPartHoldBack(const float &part_hold_back)
 
 bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
 {
+	logtd("AppendSegmentInfo[Track : %s/%s]: %s", _track->GetPublicName().CStr(), _track->GetVariantName().CStr(), info.ToString().CStr());
+
 	if (info.GetSequence() < _last_segment_sequence)
 	{
 		logtc("The sequence number of the segment to be added is less than the last segment. segment(%lld) last(%lld)", info.GetSequence(), _last_segment_sequence.load());
