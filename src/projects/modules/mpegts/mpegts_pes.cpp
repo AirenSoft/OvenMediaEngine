@@ -174,6 +174,8 @@ namespace mpegts
 				logte("Could not parse PTS");
 				return false;
 			}
+
+			_dts = _pts;
 		}
 		// pts, dts
 		else if(pts_flag == 1 && dts_flag == 1)

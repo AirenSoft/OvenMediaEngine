@@ -39,6 +39,8 @@ namespace pvd
 		bool Start() override;	
 		bool Publish();
 
+		void AdjustTimestamp(int64_t &pts, int64_t &dts);
+
 		// Client socket
 		std::shared_ptr<ov::Socket> _remote = nullptr;
 
@@ -48,5 +50,10 @@ namespace pvd
 		info::VHostAppName _vhost_app_name;
 
 		uint64_t _lifetime_epoch_msec;
+
+
+		bool _first_frame = true;
+		int64_t _pts_offset = 0;
+		int64_t _dts_offset = 0;
 	};
 }
