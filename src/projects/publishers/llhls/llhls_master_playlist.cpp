@@ -268,7 +268,11 @@ ov::String LLHlsMasterPlaylist::MakePlaylist(const ov::String &chunk_query_strin
 		if (stream_info->_media_info->_type == cmn::MediaType::Video)
 		{
 			playlist.AppendFormat(",RESOLUTION=%dx%d", stream_info->_width, stream_info->_height);
-			playlist.AppendFormat(",FRAME-RATE=%.1f", stream_info->_framerate == 0 ? 30.0 : stream_info->_framerate);
+			// https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-4.4.6.2
+			// The value is a decimal-floating-point describing the maximum frame
+      		// rate for all the video in the Variant Stream, rounded to three
+      		// decimal places.
+			playlist.AppendFormat(",FRAME-RATE=%.3f", stream_info->_framerate == 0 ? 30.0 : stream_info->_framerate);
 		}
 
 		// CODECS
