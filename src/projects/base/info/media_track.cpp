@@ -306,8 +306,6 @@ bool MediaTrack::IsValid()
 				_height > 0 &&
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
-				_bitrate > 0 &&
-				_framerate > 0.0 &&
 				_codec_extradata != nullptr)
 
 			{
@@ -319,8 +317,6 @@ bool MediaTrack::IsValid()
 		case MediaCodecId::H265: {
 			if (_width > 0 &&
 				_height > 0 &&
-				_bitrate > 0 &&
-				_framerate > 0.0 &&
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0)
 			{
@@ -332,8 +328,6 @@ bool MediaTrack::IsValid()
 		case MediaCodecId::Vp8: {
 			if (_width > 0 &&
 				_height > 0 &&
-				_bitrate > 0 &&
-				_framerate > 0.0 &&
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0)
 			{
@@ -346,8 +340,6 @@ bool MediaTrack::IsValid()
 		case MediaCodecId::Flv: {
 			if (_width > 0 &&
 				_height > 0 &&
-				_bitrate > 0 &&
-				_framerate > 0.0 &&
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0)
 			{
@@ -371,7 +363,6 @@ bool MediaTrack::IsValid()
 		case MediaCodecId::Aac: {
 			if (_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
-				_bitrate > 0 &&
 				_channel_layout.GetCounts() > 0 &&
 				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown &&
 				_codec_extradata != nullptr)
@@ -384,7 +375,6 @@ bool MediaTrack::IsValid()
 		case MediaCodecId::Opus: {
 			if (_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
-				_bitrate > 0 &&
 				_channel_layout.GetCounts() > 0 &&
 				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown &&
 				_sample.GetRate() == cmn::AudioSample::Rate::R48000)
@@ -397,7 +387,6 @@ bool MediaTrack::IsValid()
 		case MediaCodecId::Mp3: {
 			if (_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
-				_bitrate > 0 &&
 				_channel_layout.GetCounts() > 0 &&
 				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown)
 			{
@@ -412,6 +401,41 @@ bool MediaTrack::IsValid()
 	}
 
 	return false;
+}
+
+bool MediaTrack::HasQualityMeasured()
+{
+	if (_has_quality_measured == true)
+	{
+		return true;
+	}
+
+	switch (GetMediaType())
+	{
+		case MediaType::Video:
+		{
+			if (_bitrate > 0 &&	_framerate > 0.0)
+			{
+				_has_quality_measured = true;
+			}
+		}
+		break;
+
+		case MediaType::Audio:
+		{
+			if (_bitrate > 0)
+			{
+				_has_quality_measured = true;
+			}
+		}
+		break;
+
+		default:
+			_has_quality_measured = true;
+			break;
+	}
+
+	return _has_quality_measured;
 }
 
 void MediaTrack::OnFrameAdded(uint64_t bytes)

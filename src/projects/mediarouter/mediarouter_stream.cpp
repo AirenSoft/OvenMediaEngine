@@ -746,7 +746,7 @@ bool MediaRouteStream::ProcessOutboundStream(std::shared_ptr<MediaTrack> &media_
 }
 
 // Check whether the information extraction for all tracks has been completed.
-bool MediaRouteStream::AreAllTracksParsed()
+bool MediaRouteStream::AreAllTracksReady()
 {
 	if (_are_all_tracks_parsed == true)
 	{
@@ -759,6 +759,12 @@ bool MediaRouteStream::AreAllTracksParsed()
 	{
 		auto track = track_it.second;
 		if (track->IsValid() == false)
+		{
+			return false;
+		}
+
+		// If the track is an outbound track, it is necessary to check the quality.
+		if (GetInoutType() == MediaRouterStreamType::OUTBOUND && track->HasQualityMeasured() == false)
 		{
 			return false;
 		}
@@ -1073,6 +1079,8 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		return nullptr;
 	}
 
+	media_track->OnFrameAdded(pop_media_packet->GetDataLength());
+
 	switch (GetInoutType())
 	{
 		case MediaRouterStreamType::INBOUND: {
@@ -1081,13 +1089,12 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 				return nullptr;
 			}
 
-			media_track->OnFrameAdded(pop_media_packet->GetDataLength());
-
 			// If the parsing of track information is not complete, discard the packet.
-			if (media_track->IsValid() == false)
-			{
-			//	return nullptr;
-			}
+			// Deprecated(2023-02-10) : Don't discard the packet even if the track information is not parsed.
+			// if (media_track->IsValid() == false)
+			// {
+			// 	return nullptr;
+			// }
 		}
 		break;
 
@@ -1097,8 +1104,6 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 				return nullptr;
 			}
 
-			media_track->OnFrameAdded(pop_media_packet->GetDataLength());
-
 			if (pop_media_packet->GetDuration() < 0)
 			{
 				logtw("[%s/%s] found invalid duration of packet. We need to find the cause of the incorrect Duration.", _stream->GetApplicationName(), _stream->GetName().CStr());
@@ -1107,14 +1112,11 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 			}
 
 			// If the parsing of track information is not complete, discard the packet.
-			if (media_track->IsValid() == false)
-			{
-				logtd("[%s/%s] track #%d is not valid yet. track_id: %d, media_type: %s",
-					  _stream->GetApplicationName(), _stream->GetName().CStr(), track_id,
-					  track_id,
-					  GetMediaTypeString(media_type).CStr());
-			//	return nullptr;
-			}
+			// Deprecated(2023-02-10) : Don't discard the packet even if the track information is not parsed.
+			// if (media_track->IsValid() == false)
+			// {
+			// 	return nullptr;
+			// }
 		}
 		break;
 

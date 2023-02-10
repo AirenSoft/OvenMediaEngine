@@ -50,7 +50,7 @@ public:
 
 	void OnStreamPrepared(bool completed);
 	bool IsStreamPrepared();
-	bool AreAllTracksParsed();
+	bool AreAllTracksReady();
 
 	void Flush();
 	

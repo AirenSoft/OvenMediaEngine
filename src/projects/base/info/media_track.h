@@ -75,6 +75,7 @@ public:
 
 	ov::String GetInfoString();
 	bool IsValid();
+	bool HasQualityMeasured();
 
 	// Define extradata by codec
 	//  H264 : AVCDecoderConfigurationRecord
@@ -91,6 +92,7 @@ public:
 
 private:
 	bool _is_valid = false;
+	bool _has_quality_measured = false;
 
 	uint32_t _id;
 

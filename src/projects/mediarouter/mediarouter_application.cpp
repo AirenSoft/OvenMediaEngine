@@ -300,7 +300,7 @@ bool MediaRouteApplication::OnStreamCreated(const std::shared_ptr<MediaRouteAppl
 	}
 
 	// If all track information is validity, Notify the observer that the current stream is preapred.
-	if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
+	if (stream->IsStreamPrepared() == false && stream->AreAllTracksReady() == true)
 	{
 		logti("[%s/%s(%u)] Stream has been created %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
 		
@@ -764,7 +764,7 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 
 		// When the inbound stream is finished parsing track information,
 		// Notify the Observer that the stream is parsed
-		if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
+		if (stream->IsStreamPrepared() == false && stream->AreAllTracksReady() == true)
 		{
 			logti("[%s/%s(%u)] Stream has been created %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
 			
@@ -816,7 +816,7 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 			continue;
 		}
 
-		if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
+		if (stream->IsStreamPrepared() == false && stream->AreAllTracksReady() == true)
 		{
 			logti("[%s/%s(%u)] Stream has been created %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
 
