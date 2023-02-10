@@ -131,9 +131,10 @@ bool FileWriter::Start()
 	std::lock_guard<std::shared_mutex> mlock(_lock);
 
 	AVDictionary *options = nullptr;
-
+	
 	_start_time = -1LL;
-
+	_need_to_flush = false;
+	_need_to_close = false;
 	if (!(_format_context->oformat->flags & AVFMT_NOFILE))
 	{
 		int error = avio_open2(&_format_context->pb, _format_context->url, AVIO_FLAG_READ_WRITE, nullptr, &options);
@@ -143,12 +144,16 @@ bool FileWriter::Start()
 			return false;
 		}
 	}
+	_need_to_close = true;
 
 	if (avformat_write_header(_format_context, nullptr) < 0)
 	{
 		logte("Could not create header");
+		
 		return false;
 	}
+	
+	_need_to_flush = true;
 
 	av_dump_format(_format_context, 0, _format_context->url, 1);
 
@@ -173,12 +178,15 @@ bool FileWriter::Stop()
 	if (_format_context != nullptr)
 	{
 		ov::String path = _format_context->url;
-		if (_format_context->pb != nullptr)
+		if (_need_to_flush)
 		{
 			av_write_trailer(_format_context);
 		}
 
-		avformat_close_input(&_format_context);
+		if(_need_to_close)
+		{
+			avformat_close_input(&_format_context);
+		}
 
 		avformat_free_context(_format_context);
 
@@ -459,7 +467,8 @@ bool FileWriter::IsSupportCodec(ov::String format, cmn::MediaCodecId codec_id)
 	}
 	else if (format == "webm")
 	{
-		if (codec_id == cmn::MediaCodecId::Vp8 ||
+		if (
+			codec_id == cmn::MediaCodecId::Vp8 ||
 			codec_id == cmn::MediaCodecId::Vp9 ||
 			codec_id == cmn::MediaCodecId::Opus)
 		{

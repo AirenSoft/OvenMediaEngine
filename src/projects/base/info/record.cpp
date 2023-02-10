@@ -11,12 +11,18 @@ namespace info
 {
 	Record::Record()
 	{
-		_stream = nullptr;
+		// _stream = nullptr;
 
 		_created_time = std::chrono::system_clock::now();
 		_id = "";
 		_metadata = "";
 		_transaction_id = "";
+
+		_vhost_name = "";
+		_application_name = "";
+		_stream_name = "";
+		_selected_track_ids.clear();
+		_selected_track_names.clear();
 
 		_tmp_path = "";
 		_file_path = "";
@@ -85,12 +91,53 @@ namespace info
 
 	void Record::SetApplication(ov::String value)
 	{
-		_aplication_name = value;
+		_application_name = value;
 	}
 
 	ov::String Record::GetApplication()
 	{
-		return _aplication_name;
+		return _application_name;
+	}
+
+	void Record::SetStreamName(ov::String stream_name) {
+		_stream_name = stream_name;
+	}
+
+	ov::String Record::GetStreamName()
+	{
+		return _stream_name;
+	}
+
+	void Record::AddTrackId(uint32_t selected_id) 
+	{
+		_selected_track_ids.push_back(selected_id);
+	}
+
+	void Record::AddTrackName(ov::String selected_name)
+	{
+		_selected_track_names.push_back(selected_name);
+	}
+
+	void Record::SetTrackIds(const std::vector<uint32_t>& ids)
+	{
+		_selected_track_ids.clear();
+		_selected_track_ids.assign( ids.begin(), ids.end() ); 
+	}
+
+	void Record::SetTrackNames(const std::vector<ov::String>& names)
+	{
+		_selected_track_names.clear();
+		_selected_track_names.assign( names.begin(), names.end() ); 
+	}
+
+	const std::vector<uint32_t>& Record::GetTrackIds() 
+	{
+		return _selected_track_ids;
+	}
+
+	const std::vector<ov::String>& Record::GetTrackNames()
+	{
+		return _selected_track_names;
 	}
 
 	void Record::SetRemove(bool value)
@@ -103,11 +150,6 @@ namespace info
 		return _remove;
 	}
 
-	ov::String Record::GetStreamName()
-	{
-		return _stream->GetName();
-	}
-
 	void Record::SetSessionId(session_id_t id)
 	{
 		_session_id = id;
@@ -116,11 +158,6 @@ namespace info
 	session_id_t Record::GetSessionId()
 	{
 		return _session_id;
-	}
-
-	void Record::SetStream(const info::Stream &stream)
-	{
-		_stream = std::make_shared<info::Stream>(stream);
 	}
 
 	const std::chrono::system_clock::time_point &Record::GetCreatedTime() const
@@ -377,7 +414,7 @@ namespace info
 		ov::String info = "\n";
 
 		info.AppendFormat(" id=%s\n", _id.CStr());
-		info.AppendFormat(" stream=%s\n", (_stream != nullptr) ? _stream->GetName().CStr() : "");
+		info.AppendFormat(" stream=%s\n", _stream_name.CStr());
 		info.AppendFormat(" file_path=%s\n", _file_path.CStr());
 		info.AppendFormat(" tmp_path=%s\n", _tmp_path.CStr());
 		info.AppendFormat(" info_path=%s\n", _info_path.CStr());

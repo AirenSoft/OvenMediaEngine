@@ -73,11 +73,17 @@ bool RtmpPushSession::Start()
 	{
 		auto &track = track_item.second;
 
-		// If the user selected a track, ignore the unselected track.
-		auto selected_track = GetPush()->GetStream().GetTracks();		
-		if (selected_track.size() > 0 && selected_track.find(track->GetId()) == selected_track.end())
+		// If the selected track list exists. if the current trackid does not exist on the list, ignore it.
+		// If no track list is selected, save all tracks.
+		auto selected_track_ids = GetPush()->GetTrackIds();
+		auto selected_track_names = GetPush()->GetTrackNames();
+		if (selected_track_ids.size() > 0 || selected_track_names.size() > 0)
 		{
-			continue;
+			if ((find(selected_track_ids.begin(), selected_track_ids.end(), track->GetId()) == selected_track_ids.end()) &&
+				(find(selected_track_names.begin(), selected_track_names.end(), track->GetVariantName()) == selected_track_names.end()))
+			{
+				continue;
+			}
 		}
 
 		// Rtmp does not supported except for H264 and AAC codec.
