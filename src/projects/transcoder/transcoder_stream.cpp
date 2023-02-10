@@ -1032,6 +1032,8 @@ void TranscoderStream::ChangeOutputFormat(MediaFrame *buffer)
 
 	logtd("%s ChangeOutputFormat. track_id: %d", _log_prefix.CStr(), buffer->GetTrackId());
 
+	std::lock_guard<std::mutex> lock(_mutex);
+
 	// Update Track of Input Stream
 	UpdateInputTrack(buffer);
 
