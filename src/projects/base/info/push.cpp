@@ -12,7 +12,12 @@ namespace info
 	{
 		_created_time = std::chrono::system_clock::now();
 		_id = "";
-		_stream = nullptr;
+
+		_vhost_name = "";
+		_application_name = "";
+		_stream_name = "";
+		_selected_track_ids.clear();
+		_selected_track_names.clear();
 
 		_protocol = "";
 		_url = "";
@@ -58,12 +63,53 @@ namespace info
 
 	void Push::SetApplication(ov::String value)
 	{
-		_aplication_name = value;
+		_application_name = value;
 	}
 
 	ov::String Push::GetApplication()
 	{
-		return _aplication_name;
+		return _application_name;
+	}
+
+	void Push::SetStreamName(ov::String stream_name) {
+		_stream_name = stream_name;
+	}
+
+	ov::String Push::GetStreamName()
+	{
+		return _stream_name;
+	}
+
+	void Push::AddTrackId(uint32_t selected_id) 
+	{
+		_selected_track_ids.push_back(selected_id);
+	}
+
+	void Push::AddTrackName(ov::String selected_name)
+	{
+		_selected_track_names.push_back(selected_name);
+	}
+
+	void Push::SetTrackIds(const std::vector<uint32_t>& ids)
+	{
+		_selected_track_ids.clear();
+		_selected_track_ids.assign( ids.begin(), ids.end() ); 
+	}
+
+	void Push::SetTrackNames(const std::vector<ov::String>& names)
+	{
+		_selected_track_names.clear();
+		_selected_track_names.assign( names.begin(), names.end() ); 
+	}
+
+	const std::vector<uint32_t>& Push::GetTrackIds() 
+	{
+		return _selected_track_ids;
+	}
+
+	const std::vector<ov::String>& Push::GetTrackNames()
+	{
+		return _selected_track_names;
 	}
 
 	void Push::SetRemove(bool value)
@@ -76,16 +122,6 @@ namespace info
 		return _remove;
 	}
 
-	ov::String Push::GetStreamName()
-	{
-		if (_stream == nullptr)
-		{
-			return "";
-		}
-
-		return _stream->GetName();
-	}
-
 	void Push::SetSessionId(session_id_t id)
 	{
 		_session_id = id;
@@ -94,11 +130,6 @@ namespace info
 	session_id_t Push::GetSessionId()
 	{
 		return _session_id;
-	}
-
-	void Push::SetStream(const info::Stream &stream)
-	{
-		_stream = std::make_shared<info::Stream>(stream);
 	}
 
 	const std::chrono::system_clock::time_point &Push::GetCreatedTime() const
@@ -219,7 +250,7 @@ namespace info
 		ov::String info = "\n";
 
 		info.AppendFormat(" id=%s\n", _id.CStr());
-		info.AppendFormat(" stream=%s\n", (_stream != nullptr) ? _stream->GetName().CStr() : "");
+		info.AppendFormat(" stream=%s\n", _stream_name.CStr());
 		info.AppendFormat(" protocol=%s\n", _protocol.CStr());
 		info.AppendFormat(" url=%s\n", _url.CStr());
 		info.AppendFormat(" stream_key=%s\n", _stream_key.CStr());

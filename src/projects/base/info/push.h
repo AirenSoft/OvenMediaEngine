@@ -20,12 +20,6 @@ namespace info
 		void SetId(ov::String id);
 		ov::String GetId() const;
 
-		void SetStream(const info::Stream &stream);
-		const info::Stream &GetStream() const
-		{
-			return *_stream;
-		}
-		
 		void SetEnable(bool eanble) ;
 		bool GetEnable();
 
@@ -35,10 +29,22 @@ namespace info
 		void SetApplication(ov::String value);
 		ov::String GetApplication();
 
+		// set by user
+		void SetStreamName(ov::String stream_name);
+		ov::String GetStreamName();
+
+		// set by user
+		void AddTrackId(uint32_t selected_id);
+		void AddTrackName(ov::String selected_name);
+
+		void SetTrackIds(const std::vector<uint32_t>& ids);
+		void SetTrackNames(const std::vector<ov::String>& names);
+
+		const std::vector<uint32_t>& GetTrackIds();
+		const std::vector<ov::String>& GetTrackNames();
+
 		void SetRemove(bool value);
 		bool GetRemove();
-
-		ov::String GetStreamName();
 
 		void SetSessionId(session_id_t id);
 		session_id_t GetSessionId();
@@ -99,9 +105,14 @@ namespace info
 		ov::String _vhost_name;
 
 		// Application
-		ov::String _aplication_name;
+		ov::String _application_name;
 
-		std::shared_ptr<info::Stream> _stream;
+		// Stream
+		ov::String _stream_name;
+
+		// The stream target for the Outbound that you want to record
+		std::vector<uint32_t> _selected_track_ids;
+		std::vector<ov::String> _selected_track_names;
 
 		ov::String _protocol;
 		ov::String _url;

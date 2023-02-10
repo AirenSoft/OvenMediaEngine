@@ -291,9 +291,7 @@ namespace api
 			}
 
 			auto push_protocol{push->GetProtocol().LowerCaseString()};
-			auto publisher_type{
-				(push_protocol == "rtmp") ? PublisherType::RtmpPush : (push_protocol == "mpegts") ? PublisherType::MpegtsPush
-																								  : PublisherType::Unknown};
+			auto publisher_type{(push_protocol == "rtmp") ? PublisherType::RtmpPush : (push_protocol == "mpegts") ? PublisherType::MpegtsPush : PublisherType::Unknown};
 
 			if (publisher_type == PublisherType::Unknown)
 			{
@@ -304,8 +302,7 @@ namespace api
 									  app->GetName().GetAppName().CStr());
 			}
 
-			auto publisher{
-				ocst::Orchestrator::GetInstance()->GetPublisherFromType(publisher_type)};
+			auto publisher{ocst::Orchestrator::GetInstance()->GetPublisherFromType(publisher_type)};
 			if (publisher == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
@@ -314,8 +311,7 @@ namespace api
 									  app->GetName().GetAppName().CStr());
 			}
 
-			auto application{
-				std::static_pointer_cast<pub::PushApplication>(publisher->GetApplicationByName(app->GetName()))};
+			auto application{std::static_pointer_cast<pub::PushApplication>(publisher->GetApplicationByName(app->GetName()))};
 			if (application == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
