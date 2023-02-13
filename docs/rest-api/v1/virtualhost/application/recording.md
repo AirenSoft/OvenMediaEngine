@@ -1,4 +1,4 @@
-# Recording
+# Record
 
 {% swagger baseUrl="http://<OME_HOST>:<API_PORT>/v1/vhosts/{vhost_name}/apps" path="/{app_name}:startRecord" method="post" summary="Start Recording" %}
 {% swagger-description %}
@@ -6,53 +6,53 @@ Description of the Start Recording API \
 
 
 **Example - Recording by Output Stream Name**\
-`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:startRecord`                       \
+`POST http[s]://{host}/v1/vhosts/default/apps/app:startRecord`                       \
 `{`\
-&#x20; `"id": "custom_record_id",`\
+&#x20; `"id": "{unique_record_id}",`\
 &#x20; `"stream": {`\
-&#x20;   `"name": "stream_o",`\
+&#x20;   `"name": "{output_stream_name}",`\
 &#x20; `}`\
 `}`\
 ``
 
 **Example - Recording by Output Stream Name with Track Ids**\
-`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:startRecord`                       \
+`POST http[s]://{host}/v1/vhosts/default/apps/app:startRecord`                       \
 `{`\
-&#x20; `"id": "custom_record_id",`\
+&#x20; `"id": "{unique_record_id}",`\
 &#x20; `"stream": {`\
-&#x20;   `"name": "stream_o",`\
+&#x20;   `"name": "{output_stream_name}",`\
 &#x20;   `"trackIds": [ 100, 200 ]`\
 &#x20; `}`\
 `}`\
 ``
 
 **Example - Recording by Output Stream Name with Variant Names**\
-`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:startRecord`                       \
+`POST http[s]://{host}/v1/vhosts/default/apps/app:startRecord`                       \
 `{`\
-&#x20; `"id": "custom_record_id",`\
+&#x20; `"id": "{unique_record_id}",`\
 &#x20; `"stream": {`\
-&#x20;   `"name": "stream_o",`\
+&#x20;   `"name": "{output_stream_name}",`\
 &#x20;   `"variantNames": [ "h264_fhd", "aac" ]`\
 &#x20; `}`\
 `}`\
 ``\
 ``**Example - Split Recording by Interval**\
-`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:startRecord`                       \
+`POST http[s]://{host}/v1/vhosts/default/apps/app:startRecord`                       \
 `{`\
-&#x20; `"id": "custom_record_id",`\
+&#x20; `"id": "{unique_record_id}",`\
 &#x20; `"stream": {`\
-&#x20;   `"name": "stream_o"`\
+&#x20;   `"name": "{output_stream_name}"`\
 &#x20; `},`\
 &#x20; `"interval": 60000,`\
 &#x20; `"segmentationRule": "discontinuity"`\
 `}`\
 ``\
 ``**Example - Split Recording by Schedule**\
-`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:startRecord`                       \
+`POST http[s]://{host}/v1/vhosts/default/apps/app:startRecord`                       \
 `{`\
-&#x20; `"id": "custom_record_id",`\
+&#x20; `"id": "{unique_record_id}",`\
 &#x20; `"stream": {`\
-&#x20;   `"name": "stream_o"`\
+&#x20;   `"name": "{output_stream_name}"`\
 &#x20; `},`\
 &#x20; ``  "schedule" : "0 \*/1 \*"\
 &#x20; `"segmentationRule": "continuity"`\
@@ -239,9 +239,9 @@ Description of the Stop Recording API \
 
 
 **Request Example**\
-`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:stopRecord`                         \
+`POST http[s]://{host}/v1/vhosts/default/apps/app:stopRecord`                         \
 `{`\
-&#x20; `"id": "custom_record_id"`\
+&#x20; `"id": "{unique_record_id}"`\
 `}`
 {% endswagger-description %}
 
@@ -354,7 +354,7 @@ Request Example:
 
 
 
-`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:records`
+`POST http[s]://{host}/v1/vhosts/default/apps/app:records`
 
        
 
@@ -368,7 +368,7 @@ Request Example:
 
    
 
-`"id" : "custom_record_id"`
+`"id" : "{unique_record_id}"`
 
 \
 
