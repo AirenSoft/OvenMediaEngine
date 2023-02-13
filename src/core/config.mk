@@ -35,6 +35,9 @@ CONFIG_CXX_HEADER_EXTENSION := .h
 ifneq ($(DISABLE_CUSTOM_LIBRARY_PATHS),true)
     CONFIG_LIBRARY_PATHS := /opt/ovenmediaengine/lib:/opt/ovenmediaengine/lib64
     CONFIG_PKG_PATHS := /opt/ovenmediaengine/lib/pkgconfig:/opt/ovenmediaengine/lib64/pkgconfig
+else
+    CONFIG_LIBRARY_PATHS :=
+    CONFIG_PKG_PATHS :=
 endif
 
 ifeq (${OS_VERSION},darwin)
