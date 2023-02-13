@@ -1,68 +1,139 @@
 # Push
 
-{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}:startPush" method="post" summary="Start push publishing" %}
+{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}:startPush" method="post" summary="/v1/vhosts/{vhost_name}/apps/{app_name}:startPush" %}
 {% swagger-description %}
-**Example - RTMP push publishing by Output Stream Name**\
-`POST http[s]://{host}/v1/vhosts/default/apps/app:startPush`\
-`{`\
-&#x20; `"id": "{unique_push_id}",`\
-&#x20; `"stream": {`\
-&#x20;   `"name": "{output_stream_name}"`\
-&#x20; `},`\
-&#x20; `"protocol": "rtmp",`\
-&#x20; `"url":"rtmp://{host}[:port]/{app_ame}",`\
-&#x20; `"streamKey":"{stream_name}"`\
+This is an action to request a push of a selected stream. Please refer to the "Push" document for detail setting.
+
+\
+
+
+
+
+\
+
+
+Request Example:
+
+\
+
+
+
+
+`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:startPush                               `
+
+\
+
+
+`{`
+
+\
+
+
+`   "id": "{UserDefinedUniqueId}", `
+
+\
+
+
+`   "stream": { `
+
+\
+
+
+`     "name": "output_stream_name", `
+
+\
+
+
+`     "tracks": [ 101, 102 ] `
+
+\
+
+
+`  },`
+
+\
+
+
+`  "protocol": "rtmp",`
+
+\
+
+
+`  "url":"rtmp://{host}[:port]/{appName}",`
+
+\
+
+
+`   "streamKey":"{streamName}" `
+
+\
+
+
 `}`
 
-**Example - MPEG TS push publishing by Output Stream Name**\
-`POST http[s]://{host}/v1/vhosts/default/apps/app:startPush`\
-`{`\
-&#x20; `"id": "{unique_push_id}",`\
-&#x20; `"stream": {`\
-&#x20;   `"name": "{output_stream_name}"`\
-&#x20; `},`\
-&#x20; `"protocol": "mpegts",`\
-&#x20; `"url":"udp://{host}[:port]",`\
-&#x20; `"streamKey":""`\
-`}`
 
-**Example - Push publishing by Output Stream Name and Track Ids**\
-`POST http[s]://{host}/v1/vhosts/default/apps/app:startPush`\
-`{`\
-&#x20; `"id": "{unique_push_id}",`\
-&#x20; `"stream": {`\
-&#x20;   `"name": "{output_stream_name}",`\
-&#x20;   `"trackIds": [ 101, 102 ]`\
-&#x20; `},`\
-&#x20; `"protocol": "rtmp",`\
-&#x20; `"url":"rtmp://{host}[:port]/{appName}",`\
-&#x20; `"streamKey":"{stream_name}"`\
-`}`
 
-**Example - Push publishing by Output Stream Name and Variant Names**\
-`POST http[s]://{host}/v1/vhosts/default/apps/app:startPush`\
-`{`\
-&#x20; `"id": "{unique_push_id}",`\
-&#x20; `"stream": {`\
-&#x20;   `"name": "{output_stream_name}",`\
-&#x20;   `"variantNames": [ "h264_fhd", "aac" ]`\
-&#x20; `},`\
-&#x20; `"protocol": "rtmp",`\
-&#x20; `"url":"rtmp://{host}[:port]/{app_name}",`\
-&#x20; `"streamKey":"{stream_name}"`\
-`}`
+`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:startPush                               `
 
-&#x20;<mark style="color:green;">**\* variantName**</mark> means <mark style="color:green;">**Application.OutputProfiles.OutputProfie.Encodes.\[Video|Audio|Data].Name**</mark> <mark style="color:green;"></mark><mark style="color:green;"></mark> in the Server.xml configuration file.
+\
+
+
+`{`
+
+\
+
+
+`   "id": "{UserDefinedUniqueId}", `
+
+\
+
+
+`   "stream": { `
+
+\
+
+
+`     "name": "output_stream_name", `
+
+\
+
+
+`     "tracks": [ 101, 102 ] `
+
+\
+
+
+`  },`
+
+\
+
+
+`  "protocol": "mpegts",`
+
+\
+
+
+`  "url":"udp://{host}[:port]",`
+
+\
+
+
+`   "streamKey":"" `
+
+\
+
+
+`}`
 {% endswagger-description %}
 
 {% swagger-parameter in="path" name="vhost_name" type="string" required="true" %}
-A name of
+A name of 
 
 `VirtualHost`
 {% endswagger-parameter %}
 
 {% swagger-parameter in="path" name="app_name" type="string" required="true" %}
-A name of
+A name of 
 
 `Application`
 {% endswagger-parameter %}
@@ -74,23 +145,19 @@ For example, `Basic b21lLWFjY2Vzcy10b2tlbg==` if access token is `ome-access-tok
 {% endswagger-parameter %}
 
 {% swagger-parameter in="body" name="id" type="string" required="true" %}
-Unique identifier of push publishing
+Unique identifier for push management. if there is no value,  automatically created and returned
 {% endswagger-parameter %}
 
 {% swagger-parameter in="body" name="stream" type="string" required="true" %}
-Output stream for push.
+Output stream for push
 {% endswagger-parameter %}
 
 {% swagger-parameter in="body" name="name" type="string" required="true" %}
 Output stream name
 {% endswagger-parameter %}
 
-{% swagger-parameter in="body" name="trackIds" type="array" required="false" %}
-Used for push publishing specific track ids.
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="variantNames" type="array" %}
-Used for push publishing specific variant names.
+{% swagger-parameter in="body" name="tracks" type="string" %}
+Track id for want to push, if there is no value, all tracks are push
 {% endswagger-parameter %}
 
 {% swagger-parameter in="body" name="protocol" type="string" required="true" %}
@@ -98,11 +165,11 @@ Transport protocol [rtmp | mpegts]
 {% endswagger-parameter %}
 
 {% swagger-parameter in="body" name="url" type="string" required="true" %}
-Destination URL.
+Destination URL
 {% endswagger-parameter %}
 
 {% swagger-parameter in="body" name="streamKey" type="object" required="true" %}
-Destination stream key.
+Destination stream key
 {% endswagger-parameter %}
 
 {% swagger-response status="200" description="Success" %}
@@ -154,28 +221,41 @@ Destination stream key.
 {% endswagger-response %}
 {% endswagger %}
 
-{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}:stopPush" method="post" summary="Stop push publishing" %}
+{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}:stopPush" method="post" summary="/v1/vhosts/{vhost_name}/apps/{app_name}:stopPush" %}
 {% swagger-description %}
-**Example**
+Request to stop pushing
 
 \
 
 
 
 
-`POST http[s]://{host}/v1/vhosts/default/apps/app:stopRecord`
+\
+
+
+Request Example:
 
 \
 
 
-`{`
+
+
+`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:stopRecord`
 
 \
 
 
-  
+``
 
-`"id": "{unique_push_id}"`
+\
+
+
+`{`
+
+\
+
+
+`   "id": "{userDefinedUniqueId}" `
 
 \
 
@@ -184,13 +264,13 @@ Destination stream key.
 {% endswagger-description %}
 
 {% swagger-parameter in="path" name="vhost_name" type="string" required="true" %}
-A name of
+A name of 
 
 `VirtualHost`
 {% endswagger-parameter %}
 
 {% swagger-parameter in="path" name="app_name" type="string" required="true" %}
-A name of
+A name of 
 
 `Application`
 {% endswagger-parameter %}
@@ -202,7 +282,7 @@ For example, `Basic b21lLWFjY2Vzcy10b2tlbg==` if access token is `ome-access-tok
 {% endswagger-parameter %}
 
 {% swagger-parameter in="body" name="id" type="string" required="true" %}
-Unique identifier of push publishing
+Unique identifier for push management
 {% endswagger-parameter %}
 
 {% swagger-response status="200" description="Success" %}
@@ -253,53 +333,59 @@ Unique identifier of push publishing
 {% endswagger-response %}
 {% endswagger %}
 
-{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}:pushes" method="post" summary="Push publishing status" %}
+{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}:pushes" method="post" summary="/v1/vhosts/{vhost_name}/apps/{app_name}:pushes" %}
 {% swagger-description %}
+Get all push lists for a specific application
+
+\
 
 
-**Example**
 
-`POST http[s]://{host}/v1/vhosts/default/apps/app:pushes`\
-`{`\
-&#x20; `"id": "{unique_push_id}"`\
-`}`\
-``
+
+\
+
+
+Request Example:
+
+\
+
+
+
+
+`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:pushes`
 {% endswagger-description %}
 
 {% swagger-parameter in="path" name="vhost_name" type="string" required="true" %}
-A name of
+A name of 
 
 `VirtualHost`
 {% endswagger-parameter %}
 
 {% swagger-parameter in="path" name="app_name" type="string" required="true" %}
-A name of
+A name of 
 
 `Application`
 {% endswagger-parameter %}
 
 {% swagger-parameter in="header" name="authorization" type="string" required="true" %}
-A string for authentication in
+A string for authentication in 
 
 `Basic Base64(AccessToken)`
 
-format.
+ format.
 
-\\
+\
 
-For example,
+
+For example, 
 
 `Basic b21lLWFjY2Vzcy10b2tlbg==`
 
-if access token is
+ if access token is 
 
 `ome-access-token`
 
 .
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="id" type="string" %}
-Unique identifier of push publishing
 {% endswagger-parameter %}
 
 {% swagger-response status="200" description="Success" %}
