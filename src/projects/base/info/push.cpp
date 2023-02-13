@@ -17,7 +17,7 @@ namespace info
 		_application_name = "";
 		_stream_name = "";
 		_selected_track_ids.clear();
-		_selected_track_names.clear();
+		_selected_variant_names.clear();
 
 		_protocol = "";
 		_url = "";
@@ -85,9 +85,9 @@ namespace info
 		_selected_track_ids.push_back(selected_id);
 	}
 
-	void Push::AddTrackName(ov::String selected_name)
+	void Push::AddVariantName(ov::String selected_name)
 	{
-		_selected_track_names.push_back(selected_name);
+		_selected_variant_names.push_back(selected_name);
 	}
 
 	void Push::SetTrackIds(const std::vector<uint32_t>& ids)
@@ -96,10 +96,10 @@ namespace info
 		_selected_track_ids.assign( ids.begin(), ids.end() ); 
 	}
 
-	void Push::SetTrackNames(const std::vector<ov::String>& names)
+	void Push::SetVariantNames(const std::vector<ov::String>& names)
 	{
-		_selected_track_names.clear();
-		_selected_track_names.assign( names.begin(), names.end() ); 
+		_selected_variant_names.clear();
+		_selected_variant_names.assign( names.begin(), names.end() ); 
 	}
 
 	const std::vector<uint32_t>& Push::GetTrackIds() 
@@ -107,9 +107,9 @@ namespace info
 		return _selected_track_ids;
 	}
 
-	const std::vector<ov::String>& Push::GetTrackNames()
+	const std::vector<ov::String>& Push::GetVariantNames()
 	{
-		return _selected_track_names;
+		return _selected_variant_names;
 	}
 
 	void Push::SetRemove(bool value)

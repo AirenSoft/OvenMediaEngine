@@ -162,7 +162,7 @@ namespace pub
 			// If the selected track list exists. if the current trackid does not exist on the list, ignore it.
 			// If no track list is selected, save all tracks.
 			auto selected_track_ids = GetRecord()->GetTrackIds();
-			auto selected_track_names = GetRecord()->GetTrackNames();
+			auto selected_track_names = GetRecord()->GetVariantNames();
 			if (selected_track_ids.size() > 0 || selected_track_names.size() > 0)
 			{
 				if ((find(selected_track_ids.begin(), selected_track_ids.end(), track->GetId()) == selected_track_ids.end()) &&

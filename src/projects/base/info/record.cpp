@@ -22,7 +22,7 @@ namespace info
 		_application_name = "";
 		_stream_name = "";
 		_selected_track_ids.clear();
-		_selected_track_names.clear();
+		_selected_variant_names.clear();
 
 		_tmp_path = "";
 		_file_path = "";
@@ -113,9 +113,9 @@ namespace info
 		_selected_track_ids.push_back(selected_id);
 	}
 
-	void Record::AddTrackName(ov::String selected_name)
+	void Record::AddVariantName(ov::String selected_name)
 	{
-		_selected_track_names.push_back(selected_name);
+		_selected_variant_names.push_back(selected_name);
 	}
 
 	void Record::SetTrackIds(const std::vector<uint32_t>& ids)
@@ -124,10 +124,10 @@ namespace info
 		_selected_track_ids.assign( ids.begin(), ids.end() ); 
 	}
 
-	void Record::SetTrackNames(const std::vector<ov::String>& names)
+	void Record::SetVariantNames(const std::vector<ov::String>& names)
 	{
-		_selected_track_names.clear();
-		_selected_track_names.assign( names.begin(), names.end() ); 
+		_selected_variant_names.clear();
+		_selected_variant_names.assign( names.begin(), names.end() ); 
 	}
 
 	const std::vector<uint32_t>& Record::GetTrackIds() 
@@ -135,9 +135,9 @@ namespace info
 		return _selected_track_ids;
 	}
 
-	const std::vector<ov::String>& Record::GetTrackNames()
+	const std::vector<ov::String>& Record::GetVariantNames()
 	{
-		return _selected_track_names;
+		return _selected_variant_names;
 	}
 
 	void Record::SetRemove(bool value)

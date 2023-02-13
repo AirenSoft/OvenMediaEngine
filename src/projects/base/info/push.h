@@ -35,13 +35,13 @@ namespace info
 
 		// set by user
 		void AddTrackId(uint32_t selected_id);
-		void AddTrackName(ov::String selected_name);
+		void AddVariantName(ov::String selected_name);
 
 		void SetTrackIds(const std::vector<uint32_t>& ids);
-		void SetTrackNames(const std::vector<ov::String>& names);
+		void SetVariantNames(const std::vector<ov::String>& names);
 
 		const std::vector<uint32_t>& GetTrackIds();
-		const std::vector<ov::String>& GetTrackNames();
+		const std::vector<ov::String>& GetVariantNames();
 
 		void SetRemove(bool value);
 		bool GetRemove();
@@ -112,7 +112,7 @@ namespace info
 
 		// The stream target for the Outbound that you want to record
 		std::vector<uint32_t> _selected_track_ids;
-		std::vector<ov::String> _selected_track_names;
+		std::vector<ov::String> _selected_variant_names;
 
 		ov::String _protocol;
 		ov::String _url;

@@ -22,11 +22,11 @@ namespace serdes
 		}
 	}
 
-	static void SetRecordStreamTrackNames(Json::Value &parent_object, const char *key, const std::shared_ptr<info::Record> &record, Optional optional)
+	static void SetRecordStreamVariantNames(Json::Value &parent_object, const char *key, const std::shared_ptr<info::Record> &record, Optional optional)
 	{
 		CONVERTER_RETURN_IF(false, Json::arrayValue);
 
-		for (auto &item : record->GetTrackNames())
+		for (auto &item : record->GetVariantNames())
 		{
 			object.append(item.CStr());
 		}
@@ -38,7 +38,7 @@ namespace serdes
 
 		SetString(object, "name", record->GetStreamName(), Optional::False);
 		SetRecordStreamTrackIds(object, "trackIds", record, Optional::False);
-		SetRecordStreamTrackNames(object, "trackNames", record, Optional::False);
+		SetRecordStreamVariantNames(object, "variantNames", record, Optional::False);
 	}
 
 	// -----------------------
@@ -49,7 +49,7 @@ namespace serdes
 	// 		"stream" : {
 	// 			"name" : "<OutputStreamName>",
 	// 			"trackIds" : [ 101, 102 ],
-	// 			"trackNames" : [ "encodes_name_h264", "encodes_name_aac" ]
+	// 			"variantNames" : [ "encodes_name_h264", "encodes_name_aac" ]
 	// 		},
 	//
 	// 		"interval": 60000,
@@ -120,14 +120,14 @@ namespace serdes
 			}
 
 			// <Optional>
-			auto json_stream_track_names = json_stream["trackNames"];
-			if (json_stream_track_names.empty() == false && json_stream_track_names.isArray() == true)
+			auto json_stream_variant_names = json_stream["variantNames"];
+			if (json_stream_variant_names.empty() == false && json_stream_variant_names.isArray() == true)
 			{
-				for (uint32_t i = 0; i < json_stream_track_names.size(); i++)
+				for (uint32_t i = 0; i < json_stream_variant_names.size(); i++)
 				{
-					if (json_stream_track_names[i].isString())
+					if (json_stream_variant_names[i].isString())
 					{
-						record->AddTrackName(json_stream_track_names[i].asString().c_str());
+						record->AddVariantName(json_stream_variant_names[i].asString().c_str());
 					}
 				}
 			}
