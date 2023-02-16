@@ -97,8 +97,14 @@ ln -s /var/lib/docker/volumes/ome-origin-conf/_data/ /my/new/path/to/ome-origin-
 && ln -s /var/lib/docker/volumes/ome-edge-conf/_data/ /my/new/path/to/ome-edge-conf
 ```
 
-#### Other Methods
-Please read the [Getting Started](https://airensoft.gitbook.io/ovenmediaengine/getting-started).
+Please read the [Getting Started](https://airensoft.gitbook.io/ovenmediaengine/getting-started) for more information.
+
+### WebRTC Live Encoder for Testing
+* https://demo.ovenplayer.com/demo_input.html
+
+### Player for Testing
+* Without TLS: http://demo.ovenplayer.com
+* With TLS: https://demo.ovenplayer.com
 
 ## How to contribute
 Thank you so much for being so interested in OvenMediaEngine.
