@@ -44,7 +44,7 @@ namespace OvenSignedPolicyUrl
             string policy_json = new JavaScriptSerializer().Serialize(policy_dict);
             
             var policy_base64 = System.Convert.ToBase64String(Encoding.UTF8.GetBytes(policy_json)).TrimEnd(padding).Replace('+', '-').Replace('/', '_');
-            //Check if url present parameter
+            //Check if paramete present in url 
             if (base_url.Contains("?")) { base_url = base_url + "&"; }
             else { base_url = base_url + "?"; }
             var stream_url = string.Format("{0}?policy={1}", base_url, policy_base64);
