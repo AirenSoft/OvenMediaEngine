@@ -12,7 +12,7 @@ With OvenMediaEngine, you can build your powerful and sub-second latency media s
 ## Demo
 <img src="dist/05_OvenSpace_230214.png" style="max-width: 100%; height: auto;">
 
-OvenSpace is a sub-second latency streaming demo service using [OvenMediaEngine](https://github.com/AirenSoft/OvenMediaEngine), [OvenPlayer](https://github.com/AirenSoft/OvenPlayer) and [OvenLiveKit](https://github.com/AirenSoft/OvenLiveKit-Web). You can experience OvenMediaEngine in the **[OvenSpace Demo](https://space.ovenplayer.com/)** and and see examples of applying in [OvenSpace Repository](https://github.com/AirenSoft/OvenSpace).
+OvenSpace is a sub-second latency streaming demo service using [OvenMediaEngine](https://github.com/AirenSoft/OvenMediaEngine), [OvenPlayer](https://github.com/AirenSoft/OvenPlayer) and [OvenLiveKit](https://github.com/AirenSoft/OvenLiveKit-Web). You can experience OvenMediaEngine in the **[OvenSpace Demo](https://space.ovenplayer.com/)** and see examples of applying in [OvenSpace Repository](https://github.com/AirenSoft/OvenSpace).
 
 ## Features
 * Ingest
@@ -38,7 +38,7 @@ OvenSpace is a sub-second latency streaming demo service using [OvenMediaEngine]
 * Monitoring
 * Access Control
   * Admission Webhooks
-  * Singed Policy
+  * Signed Policy
 * File Recording
 * RTMP Push Publishing (Re-streaming)
 * Thumbnail
@@ -47,7 +47,8 @@ OvenSpace is a sub-second latency streaming demo service using [OvenMediaEngine]
   * P2P Traffic Distribution (Only WebRTC)
 
 ## Supported Platforms
-We have tested OvenMediaEngine on the platforms listed below. However, we think it can work with other Linux packages as well:
+We have tested OvenMediaEngine on the platforms listed below.
+Although we have tested OvenMediaEngine on the platforms listed below, it may work with other Linux packages as well:
 
 * [Docker](https://hub.docker.com/r/airensoft/ovenmediaengine)
 * Ubuntu 18+
@@ -109,7 +110,8 @@ Please read the [Getting Started](https://airensoft.gitbook.io/ovenmediaengine/g
 ## How to contribute
 Thank you so much for being so interested in OvenMediaEngine.
 
-We need your help to keep and develop our open-source project, and we want to tell you that you can contribute in many ways. Please see our [Guidelines](CONTRIBUTING.md), [Rules](CODE_OF_CONDUCT.md), and [Contribute](https://www.ovenmediaengine.com/contribute).
+We need your help to keep and develop our open-source project, and we want to tell you that you can contribute in many ways.
+For more information on how to contribute, please see our [Guidelines](CONTRIBUTING.md), [Rules](CODE_OF_CONDUCT.md), and [Contribute](https://www.ovenmediaengine.com/contribute).
 
 - [Finding Bugs](https://github.com/AirenSoft/OvenMediaEngine/blob/master/CONTRIBUTING.md#finding-bugs)
 - [Reviewing Code](https://github.com/AirenSoft/OvenMediaEngine/blob/master/CONTRIBUTING.md#reviewing-code)
@@ -146,6 +148,6 @@ AirenSoft aims to make it easier for you to build a stable broadcasting/streamin
 Therefore, we will continue developing and providing the most optimized tools for smooth Sub-Second Latency Streaming.
 
 Would you please click on each link below for details:
-* ["JavaScript-based Live Streaming Encdoer" **OvenLiveKit**](https://github.com/AirenSoft/OvenLiveKit-Web)
+* ["JavaScript-based Live Streaming Encoder" **OvenLiveKit**](https://github.com/AirenSoft/OvenLiveKit-Web)
 * ["Sub-Second Latency Streaming Server with LLHLS and WebRTC" **OvenMediaEngine**](https://github.com/AirenSoft/OvenMediaEngine)
 * ["JavaScript-based Player with LLHLS and WebRTC" **OvenPlayer**](https://github.com/AirenSoft/OvenPlayer)
