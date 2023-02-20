@@ -4,7 +4,9 @@
 	<Name>OvenMediaEngine</Name>
 	<!-- Host type (origin/edge) -->
 	<Type>origin</Type>
-	<!-- Specify IP address to bind (* means all IPs) -->
+	<!-- Specify IP address to bind ("*" means all IPv4 IPs, "::" means all IPv6 IPs) -->
+	<!-- Uncomment the line below to enable IPv6 -->
+	<!-- <IP>::</IP> -->
 	<IP>*</IP>
 	<PrivacyProtection>false</PrivacyProtection>
 
@@ -80,6 +82,8 @@
 				</Signalling>
 
 				<IceCandidates>
+					<!-- Uncomment the line below to use IPv6 ICE Candidate -->
+					<!-- <IceCandidate>[::]:10000-10005/udp</IceCandidate> -->
 					<IceCandidate>*:10000-10005/udp</IceCandidate>
 					<!-- 
 						If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
