@@ -33,10 +33,44 @@ ThumbnailPublisher::~ThumbnailPublisher()
 	logtd("ThumbnailPublisher has been terminated finally");
 }
 
+bool ThumbnailPublisher::PrepareHttpServers(
+	const std::vector<ov::String> &ip_list,
+	const bool is_port_configured, const uint16_t port,
+	const bool is_tls_port_configured, const uint16_t tls_port,
+	const int worker_count)
+{
+	auto http_server_manager = http::svr::HttpServerManager::GetInstance();
+
+	std::vector<std::shared_ptr<http::svr::HttpServer>> http_server_list;
+	std::vector<std::shared_ptr<http::svr::HttpsServer>> https_server_list;
+
+	if (http_server_manager->CreateServers(
+			GetPublisherName(),
+			&http_server_list, &https_server_list,
+			ip_list,
+			is_port_configured, port,
+			is_tls_port_configured, tls_port,
+			nullptr,
+			false,
+			[&](const ov::SocketAddress &address, bool is_https, const std::shared_ptr<http::svr::HttpServer> &http_server) {
+				http_server->AddInterceptor(CreateInterceptor());
+			},
+			worker_count))
+	{
+		_http_server_list = std::move(http_server_list);
+		_https_server_list = std::move(https_server_list);
+
+		return true;
+	}
+
+	http_server_manager->ReleaseServers(&http_server_list);
+	http_server_manager->ReleaseServers(&https_server_list);
+
+	return false;
+}
+
 bool ThumbnailPublisher::Start()
 {
-	auto manager = http::svr::HttpServerManager::GetInstance();
-
 	auto server_config = GetServerConfig();
 
 	const auto &thumbnail_bind_config = server_config.GetBind().GetPublishers().GetThumbnail();
@@ -46,106 +80,85 @@ bool ThumbnailPublisher::Start()
 		return true;
 	}
 
-	bool is_parsed = false;
+	bool is_configured = false;
+	auto worker_count = thumbnail_bind_config.GetWorkerCount(&is_configured);
+	worker_count = is_configured ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
 
-	auto worker_count = thumbnail_bind_config.GetWorkerCount(&is_parsed);
-	worker_count = is_parsed ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
+	bool is_port_configured;
+	auto &port_config = thumbnail_bind_config.GetPort(&is_port_configured);
 
-	// Initialze HTTP Server
-	bool http_server_result = true;
-	auto &port = thumbnail_bind_config.GetPort(&is_parsed);
-	if (is_parsed)
+	bool is_tls_port_configured;
+	auto &tls_port_config = thumbnail_bind_config.GetTlsPort(&is_tls_port_configured);
+
+	if ((is_port_configured == false) && (is_tls_port_configured == false))
 	{
-		auto address = ov::SocketAddress::CreateAndGetFirst(server_config.GetIPList()[0], port.GetPort());
-
-		_http_server = manager->CreateHttpServer("thumb_http", address, worker_count);
-
-		if (_http_server != nullptr)
-		{
-			_http_server->AddInterceptor(CreateInterceptor());
-		}
-		else
-		{
-			logte("Could not initialize thumbnail http server");
-			http_server_result = false;
-		}
+		logtw("%s is disabled - No port is configured", GetPublisherName());
+		return true;
 	}
 
-	// Initialze HTTPS Server
-	bool https_server_result = true;
-	auto &tls_port = thumbnail_bind_config.GetTlsPort(&is_parsed);
-	if (is_parsed)
-	{
-		auto tls_address = ov::SocketAddress::CreateAndGetFirst(server_config.GetIPList()[0], tls_port.GetPort());
-
-		_https_server = manager->CreateHttpsServer("thumb_https", tls_address, false, worker_count);
-		if (_https_server != nullptr)
-		{
-			_https_server->AddInterceptor(CreateInterceptor());
-		}
-		else
-		{
-			logte("Could not initialize thumbnail https server");
-			https_server_result = false;
-		}
-	}
-
-	if (http_server_result == false && _http_server != nullptr)
-	{
-		manager->ReleaseServer(_http_server);
-	}
-
-	if (https_server_result == false && _https_server != nullptr)
-	{
-		manager->ReleaseServer(_https_server);
-	}
-
-	if (http_server_result || https_server_result)
-	{
-		logti("Thumbnail publisher is listening on %s", server_config.GetIPList()[0].CStr());
-	}
-
-	return Publisher::Start();
+	return PrepareHttpServers(
+			   server_config.GetIPList(),
+			   is_port_configured, port_config.GetPort(),
+			   is_tls_port_configured, tls_port_config.GetPort(),
+			   worker_count) &&
+		   Publisher::Start();
 }
 
 bool ThumbnailPublisher::Stop()
 {
 	auto manager = http::svr::HttpServerManager::GetInstance();
 
-	std::shared_ptr<http::svr::HttpServer> http_server = std::move(_http_server);
-	std::shared_ptr<http::svr::HttpsServer> https_server = std::move(_https_server);
+	_http_server_list_mutex.lock();
+	auto http_server_list = std::move(_http_server_list);
+	auto https_server_list = std::move(_https_server_list);
+	_http_server_list_mutex.unlock();
 
-	if (http_server != nullptr)
-	{
-		manager->ReleaseServer(_http_server);
-	}
-
-	if (https_server != nullptr)
-	{
-		manager->ReleaseServer(https_server);
-	}
+	manager->ReleaseServers(&http_server_list);
+	manager->ReleaseServers(&https_server_list);
 
 	return Publisher::Stop();
 }
 
 bool ThumbnailPublisher::OnCreateHost(const info::Host &host_info)
 {
-	if (_https_server != nullptr && host_info.GetCertificate() != nullptr)
+	bool result = true;
+	auto certificate = host_info.GetCertificate();
+
+	if (certificate != nullptr)
 	{
-		return _https_server->AppendCertificate(host_info.GetCertificate()) == nullptr;
+		std::lock_guard lock_guard{_http_server_list_mutex};
+
+		for (auto &https_server : _https_server_list)
+		{
+			if (https_server->AppendCertificate(certificate) == nullptr)
+			{
+				result = false;
+			}
+		}
 	}
 
-	return true;
+	return result;
 }
 
 bool ThumbnailPublisher::OnDeleteHost(const info::Host &host_info)
 {
-	if (_https_server != nullptr && host_info.GetCertificate() != nullptr)
+	bool result = true;
+	auto certificate = host_info.GetCertificate();
+
+	if (certificate != nullptr)
 	{
-		return _https_server->RemoveCertificate(host_info.GetCertificate()) == nullptr;
+		std::lock_guard lock_guard{_http_server_list_mutex};
+
+		for (auto &https_server : _https_server_list)
+		{
+			if (https_server->RemoveCertificate(certificate) == nullptr)
+			{
+				result = false;
+			}
+		}
 	}
 
-	return true;
+	return result;
 }
 
 std::shared_ptr<pub::Application> ThumbnailPublisher::OnCreatePublisherApplication(const info::Application &application_info)

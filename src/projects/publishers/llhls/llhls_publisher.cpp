@@ -44,7 +44,7 @@ bool LLHlsPublisher::PrepareHttpServers(
 	std::vector<std::shared_ptr<http::svr::HttpsServer>> https_server_list;
 
 	if (http_server_manager->CreateServers(
-			"LLHLS",
+			GetPublisherName(),
 			&http_server_list, &https_server_list,
 			ip_list,
 			is_port_configured, port,
