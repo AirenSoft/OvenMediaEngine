@@ -42,42 +42,96 @@ namespace pvd
 	bool SrtProvider::Start()
 	{
 		auto &server_config = GetServerConfig();
-		auto &srt_config = server_config.GetBind().GetProviders().GetSrt();
+		auto &srt_bind_config = server_config.GetBind().GetProviders().GetSrt();
 
-		if (srt_config.IsParsed() == false)
+		if (srt_bind_config.IsParsed() == false)
 		{
 			logtw("%s is disabled by configuration", GetProviderName());
 			return true;
 		}
 
-		auto srt_address_list = ov::SocketAddress::CreateAndGetFirst(server_config.GetIPList()[0], static_cast<uint16_t>(srt_config.GetPort().GetPort()));
-		bool is_parsed;
-		auto worker_count = srt_config.GetWorkerCount(&is_parsed);
-		worker_count = is_parsed ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+		bool is_configured;
+		auto worker_count = srt_bind_config.GetWorkerCount(&is_configured);
+		worker_count = is_configured ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
 
-		_physical_port = PhysicalPortManager::GetInstance()->CreatePort("SRT", ov::SocketType::Srt, srt_address_list, worker_count);
-		if (_physical_port == nullptr)
+		bool is_port_configured;
+		auto &port_config = srt_bind_config.GetPort(&is_port_configured);
+
+		if (is_port_configured == false)
 		{
-			logte("Could not initialize phyiscal port for SRT server: %s", srt_address_list.ToString().CStr());
+			logtw("%s is disabled - No port is configured", GetProviderName());
+			return true;
+		}
+
+		std::vector<ov::SocketAddress> address_list;
+		try
+		{
+			address_list = ov::SocketAddress::Create(server_config.GetIPList(), static_cast<uint16_t>(port_config.GetPort()));
+		}
+		catch (const ov::Error &e)
+		{
+			logte("Could not listen for %s Server: %s", GetProviderName(), e.What());
 			return false;
 		}
-		else
+
+		bool result = true;
+		std::vector<ov::String> address_string_list;
+		std::vector<std::shared_ptr<PhysicalPort>> physical_port_list;
+
+		auto physical_port_manager = PhysicalPortManager::GetInstance();
+
+		for (const auto &address : address_list)
 		{
-			logti("%s is listening on %s/%s", GetProviderName(), srt_address_list.ToString().CStr(), ov::StringFromSocketType(ov::SocketType::Srt));
+			auto physical_port = physical_port_manager->CreatePort("SRT", ov::SocketType::Srt, address, worker_count);
+
+			if (physical_port == nullptr)
+			{
+				logte("Could not initialize phyiscal port for %s on %s", GetProviderName(), address.ToString().CStr());
+				result = false;
+				break;
+			}
+
+			address_string_list.emplace_back(address.ToString());
+			physical_port->AddObserver(this);
+			physical_port_list.push_back(physical_port);
 		}
 
-		_physical_port->AddObserver(this);
+		if (result)
+		{
+			logti("%s is listening on %s/%s",
+				  GetProviderName(),
+				  ov::String::Join(address_string_list, ", "),
+				  ov::StringFromSocketType(ov::SocketType::Srt));
 
-		return Provider::Start();
+			{
+				std::lock_guard lock_guard{_physical_port_list_mutex};
+				_physical_port_list = std::move(physical_port_list);
+			}
+
+			return Provider::Start();
+		}
+
+		for (auto &physical_port : physical_port_list)
+		{
+			physical_port->RemoveObserver(this);
+			physical_port_manager->DeletePort(physical_port);
+		}
+
+		return false;
 	}
 
 	bool SrtProvider::Stop()
 	{
-		if (_physical_port != nullptr)
+		_physical_port_list_mutex.lock();
+		auto physical_port_list = std::move(_physical_port_list);
+		_physical_port_list_mutex.unlock();
+
+		auto physical_port_manager = PhysicalPortManager::GetInstance();
+
+		for (auto &physical_port : physical_port_list)
 		{
-			_physical_port->RemoveObserver(this);
-			PhysicalPortManager::GetInstance()->DeletePort(_physical_port);
-			_physical_port = nullptr;
+			physical_port->RemoveObserver(this);
+			physical_port_manager->DeletePort(physical_port);
 		}
 
 		return Provider::Stop();
