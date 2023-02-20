@@ -1465,7 +1465,7 @@ void TranscoderStream::CreateFilters(MediaFrame *buffer)
 		bool ret = filter->Configure(filter_id, input_track, output_track, bind(&TranscoderStream::OnFilteredFrame, this, std::placeholders::_1, std::placeholders::_2));
 		if (ret != true)
 		{
-			logte("%s `ed to create filter. filterId: %d", _log_prefix.CStr(), filter_id);
+			logte("%s Failed to create filter. filterId: %d", _log_prefix.CStr(), filter_id);
 			continue;
 		}
 
