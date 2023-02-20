@@ -27,17 +27,18 @@ RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config, const
 {
 }
 
-void RtcSignallingServer::PrepareForICE()
+bool RtcSignallingServer::PrepareForTCPRelay()
 {
 	_ice_servers = Json::arrayValue;
 	_new_ice_servers = Json::arrayValue;
 
-	// for internal turn/tcp relay configuration
+	// For internal TURN/TCP relay configuration
 	_tcp_force = _webrtc_config.GetIceCandidates().IsTcpForce();
 
-	bool tcp_relay_parsed = false;
-	auto tcp_relay_address = _webrtc_config.GetIceCandidates().GetTcpRelay(&tcp_relay_parsed);
-	if (tcp_relay_parsed)
+	bool is_tcp_relay_configured = false;
+	auto tcp_relay_address = _webrtc_config.GetIceCandidates().GetTcpRelay(&is_tcp_relay_configured);
+
+	if (is_tcp_relay_configured)
 	{
 		Json::Value ice_server = Json::objectValue;
 		Json::Value new_ice_server = Json::objectValue;
@@ -144,48 +145,21 @@ void RtcSignallingServer::PrepareForICE()
 	{
 		_ice_servers = Json::nullValue;
 	}
-}
-
-bool RtcSignallingServer::PrepareForHttpServers(
-	const std::vector<ov::SocketAddress> &address_list,
-	std::vector<std::shared_ptr<http::svr::HttpServer>> *http_server_list,
-	const std::vector<ov::SocketAddress> &tls_address_list,
-	std::vector<std::shared_ptr<http::svr::HttpsServer>> *https_server_list,
-	const int worker_count,
-	const std::shared_ptr<http::svr::ws::Interceptor> &interceptor)
-{
-	auto manager = http::svr::HttpServerManager::GetInstance();
-
-	for (const auto &address : address_list)
-	{
-		auto http_server = manager->CreateHttpServer("RtcSig", address, worker_count);
-		http_server_list->push_back(http_server);
-
-		if (http_server->AddInterceptor(interceptor) == false)
-		{
-			return false;
-		}
-	}
-
-	for (const auto &tls_address : tls_address_list)
-	{
-		auto https_server = manager->CreateHttpsServer("RtcSig", tls_address, false, worker_count);
-		https_server_list->push_back(https_server);
-
-		if (https_server->AddInterceptor(interceptor) == false)
-		{
-			return false;
-		}
-	}
 
 	return true;
 }
 
-bool RtcSignallingServer::Start(const std::vector<ov::SocketAddress> &address_list, const std::vector<ov::SocketAddress> &tls_address_list, int worker_count, std::shared_ptr<http::svr::ws::Interceptor> interceptor)
+bool RtcSignallingServer::Start(
+	const char *server_name,
+	const std::vector<ov::String> &ip_list,
+	bool is_port_configured, uint16_t port,
+	bool is_tls_port_configured, uint16_t tls_port,
+	int worker_count, std::shared_ptr<http::svr::ws::Interceptor> interceptor)
 {
 	if ((_http_server_list.empty() == false) || (_https_server_list.empty() == false))
 	{
-		OV_ASSERT(false, "Server is already running (%zu, %zu)",
+		OV_ASSERT(false, "%s is already running (%zu, %zu)",
+				  server_name,
 				  _http_server_list.size(),
 				  _https_server_list.size());
 		return false;
@@ -197,38 +171,75 @@ bool RtcSignallingServer::Start(const std::vector<ov::SocketAddress> &address_li
 		return false;
 	}
 
+	auto http_server_manager = http::svr::HttpServerManager::GetInstance();
+
 	std::vector<std::shared_ptr<http::svr::HttpServer>> http_server_list;
 	std::vector<std::shared_ptr<http::svr::HttpsServer>> https_server_list;
 
-	if (PrepareForHttpServers(
-			address_list, &_http_server_list,
-			tls_address_list, &_https_server_list,
-			worker_count,
-			interceptor))
+	do
 	{
-		PrepareForICE();
+		std::vector<ov::String> address_string_list;
+		if (is_port_configured)
+		{
+			if (http_server_manager->CreateHttpServers(
+					&http_server_list, "RtcSig",
+					ip_list, port,
+					[&](const ov::SocketAddress &address, std::shared_ptr<http::svr::HttpServer> http_server) {
+						http_server->AddInterceptor(interceptor);
+					},
+					worker_count) == false)
+			{
+				break;
+			}
+		}
 
-		_http_server_address_list = address_list;
-		_https_server_address_list = tls_address_list;
+		std::vector<ov::String> tls_address_string_list;
+		if (is_tls_port_configured)
+		{
+			if (http_server_manager->CreateHttpsServers(
+					&https_server_list, "RtcSig",
+					ip_list, port, false,
+					[&](const ov::SocketAddress &address, std::shared_ptr<http::svr::HttpsServer> https_server) {
+						https_server->AddInterceptor(interceptor);
+					},
+					worker_count) == false)
+			{
+				break;
+			}
+		}
+
+		if (PrepareForTCPRelay() == false)
+		{
+			break;
+		}
+
+		auto tls_description = ov::String::Join(tls_address_string_list, ", ");
+		if (tls_description.IsEmpty() == false)
+		{
+			if (address_string_list.empty())
+			{
+				tls_description.Prepend("TLS: ");
+			}
+			else
+			{
+				tls_description.Prepend(" (TLS: ");
+				tls_description.Append(')');
+			}
+		}
+
+		logti("%s is listening on %s%s...",
+			  server_name,
+			  ov::String::Join(address_string_list, ", ").CStr(),
+			  tls_description.CStr());
 
 		_http_server_list = std::move(http_server_list);
 		_https_server_list = std::move(https_server_list);
 
 		return true;
-	}
+	} while (false);
 
-	// Rollback
-	auto manager = http::svr::HttpServerManager::GetInstance();
-
-	for (auto http_server : http_server_list)
-	{
-		manager->ReleaseServer(http_server);
-	}
-
-	for (auto https_server : https_server_list)
-	{
-		manager->ReleaseServer(https_server);
-	}
+	http_server_manager->ReleaseServers(http_server_list);
+	http_server_manager->ReleaseServers(https_server_list);
 
 	return false;
 }

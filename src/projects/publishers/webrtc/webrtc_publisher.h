@@ -62,6 +62,10 @@ public:
 					   const std::shared_ptr<const SessionDescription> &offer_sdp,
 					   const std::shared_ptr<const SessionDescription> &peer_sdp) override;
 
+protected:
+	bool StartSignallingServer(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config);
+	bool StartICEPorts(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config);
+
 private:
 	enum class MessageCode : uint32_t
 	{

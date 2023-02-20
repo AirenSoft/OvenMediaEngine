@@ -33,6 +33,7 @@ namespace http
 			std::shared_ptr<HttpsServer> CreateHttpsServer(const char *instance_name, const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate, bool disable_http2_force, int worker_count);
 
 			bool CreateHttpServers(std::vector<std::shared_ptr<HttpServer>> *http_server_list, const char *instance_name, const std::vector<ov::String> &server_ip_list, const uint16_t port, HttpServerCreationCallback<HttpServer> callback = nullptr, int worker_count = HTTP_SERVER_USE_DEFAULT_COUNT);
+			bool CreateHttpsServers(std::vector<std::shared_ptr<HttpsServer>> *https_server_list, const char *instance_name, const std::vector<ov::String> &server_ip_list, const uint16_t port, bool disable_http2_force, HttpServerCreationCallback<HttpsServer> callback = nullptr, int worker_count = HTTP_SERVER_USE_DEFAULT_COUNT);
 			bool CreateHttpsServers(std::vector<std::shared_ptr<HttpsServer>> *https_server_list, const char *instance_name, const std::vector<ov::String> &server_ip_list, const uint16_t port, const std::shared_ptr<const info::Certificate> &certificate, bool disable_http2_force, HttpServerCreationCallback<HttpsServer> callback = nullptr, int worker_count = HTTP_SERVER_USE_DEFAULT_COUNT);
 
 			std::shared_ptr<HttpsServer> GetHttpsServer(const ov::SocketAddress &address);

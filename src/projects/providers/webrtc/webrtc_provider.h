@@ -8,10 +8,10 @@
 //==============================================================================
 #pragma once
 
+#include "base/ovlibrary/ovlibrary.h"
 #include "base/provider/push_provider/provider.h"
 #include "modules/ice/ice_port_manager.h"
 #include "modules/rtc_signalling/rtc_signalling.h"
-#include "base/ovlibrary/ovlibrary.h"
 #include "orchestrator/orchestrator.h"
 
 namespace pvd
@@ -42,7 +42,7 @@ namespace pvd
 			return ProviderType::WebRTC;
 		}
 
-		const char* GetProviderName() const override
+		const char *GetProviderName() const override
 		{
 			return "WebRTCProvider";
 		}
@@ -51,7 +51,7 @@ namespace pvd
 		//--------------------------------------------------------------------
 		// IcePortObserver Implementation
 		//--------------------------------------------------------------------
-		void OnStateChanged(IcePort &port, uint32_t session_id, IcePortConnectionState state, std::any user_data) 	override;
+		void OnStateChanged(IcePort &port, uint32_t session_id, IcePortConnectionState state, std::any user_data) override;
 		void OnDataReceived(IcePort &port, uint32_t session_id, std::shared_ptr<const ov::Data> data, std::any user_data) override;
 		//--------------------------------------------------------------------
 
@@ -59,8 +59,8 @@ namespace pvd
 		// SignallingObserver Implementation
 		//--------------------------------------------------------------------
 		std::shared_ptr<const SessionDescription> OnRequestOffer(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
-														const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
-														std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay) override;
+																 const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
+																 std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay) override;
 		bool OnAddRemoteDescription(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
 									const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 									const std::shared_ptr<const SessionDescription> &offer_sdp,
@@ -71,10 +71,15 @@ namespace pvd
 							const ov::String &username_fragment) override;
 
 		bool OnStopCommand(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
-						const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
-						const std::shared_ptr<const SessionDescription> &offer_sdp,
-						const std::shared_ptr<const SessionDescription> &peer_sdp) override;
+						   const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
+						   const std::shared_ptr<const SessionDescription> &offer_sdp,
+						   const std::shared_ptr<const SessionDescription> &peer_sdp) override;
 		//--------------------------------------------------------------------
+
+	protected:
+		bool StartSignallingServer(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config);
+		bool StartICEPorts(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config);
+
 	private:
 		std::shared_ptr<Certificate> CreateCertificate();
 		std::shared_ptr<Certificate> GetCertificate();
@@ -97,6 +102,6 @@ namespace pvd
 		std::shared_ptr<RtcSignallingServer> _signalling_server = nullptr;
 		std::shared_ptr<Certificate> _certificate = nullptr;
 
-		std::mutex	_stream_lock;
+		std::mutex _stream_lock;
 	};
-}
+}  // namespace pvd

@@ -262,6 +262,24 @@ namespace http
 			std::vector<std::shared_ptr<HttpsServer>> *https_server_list,
 			const char *instance_name,
 			const std::vector<ov::String> &server_ip_list, const uint16_t port,
+			bool disable_http2_force,
+			HttpServerCreationCallback<HttpsServer> callback,
+			int worker_count)
+		{
+			return CreateServers<HttpsServer>(
+				"HTTPS",
+				https_server_list,
+				server_ip_list, port,
+				[=](const ov::SocketAddress &address) -> std::shared_ptr<HttpsServer> {
+					return CreateHttpsServer(instance_name, address, disable_http2_force, worker_count);
+				},
+				callback);
+		}
+
+		bool HttpServerManager::CreateHttpsServers(
+			std::vector<std::shared_ptr<HttpsServer>> *https_server_list,
+			const char *instance_name,
+			const std::vector<ov::String> &server_ip_list, const uint16_t port,
 			const std::shared_ptr<const info::Certificate> &certificate,
 			bool disable_http2_force,
 			HttpServerCreationCallback<HttpsServer> callback,

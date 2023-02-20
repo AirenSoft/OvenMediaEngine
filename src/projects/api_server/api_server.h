@@ -35,7 +35,7 @@ namespace api
 			const std::vector<ov::String> &server_ip_list,
 			const bool is_port_configured, const uint16_t port,
 			const bool is_tls_port_configured, const uint16_t tls_port,
-			const cfg::mgr::Managers &managers,
+			const cfg::mgr::Managers &managers_config,
 			const int worker_count);
 
 		void SetupCORS(const cfg::mgr::api::API &api_config);

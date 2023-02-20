@@ -36,6 +36,126 @@ namespace pvd
 		logtd("WebRTCProvider has been terminated finally");
 	}
 
+	bool WebRTCProvider::StartSignallingServer(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config)
+	{
+		auto &signalling_config = webrtc_bind_config.GetSignalling();
+
+		bool is_configured;
+		auto worker_count = signalling_config.GetWorkerCount(&is_configured);
+		worker_count = is_configured ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
+
+		bool is_port_configured;
+		auto &port_config = signalling_config.GetPort(&is_port_configured);
+		bool is_tls_port_configured;
+		auto &tls_port_config = signalling_config.GetTlsPort(&is_tls_port_configured);
+
+		if ((is_port_configured == false) && (is_tls_port_configured == false))
+		{
+			logtw("%s is disabled - No port is configured", GetProviderName());
+			return true;
+		}
+
+		auto signalling_server = std::make_shared<RtcSignallingServer>(server_config, webrtc_bind_config);
+		signalling_server->AddObserver(RtcSignallingObserver::GetSharedPtr());
+
+		auto interceptor = std::make_shared<WebRtcProviderSignallingInterceptor>();
+
+		if (signalling_server->Start(
+				GetProviderName(),
+				server_config.GetIPList(),
+				is_port_configured, port_config.GetPort(),
+				is_tls_port_configured, tls_port_config.GetPort(),
+				worker_count, interceptor) == false)
+		{
+			_signalling_server = std::move(signalling_server);
+
+			return true;
+		}
+
+		return false;
+	}
+
+	bool WebRTCProvider::StartICEPorts(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config)
+	{
+		auto &ip_list = server_config.GetIPList();
+
+		_ice_port = IcePortManager::GetInstance()->CreatePort(IcePortObserver::GetSharedPtr());
+		if (_ice_port == nullptr)
+		{
+			logte("Could not initialize ICE Port. Check your ICE configuration");
+			return false;
+		}
+
+		auto &ice_candidates_config = webrtc_bind_config.GetIceCandidates();
+
+		if (IcePortManager::GetInstance()->CreateIceCandidates(IcePortObserver::GetSharedPtr(), ice_candidates_config) == false)
+		{
+			logte("Could not create ICE Candidates. Check your ICE configuration");
+			return false;
+		}
+
+		bool tcp_relay_parsed = false;
+		auto tcp_relay = ice_candidates_config.GetTcpRelay(&tcp_relay_parsed);
+
+		if (tcp_relay_parsed)
+		{
+			auto items = tcp_relay.Split(":");
+			if (items.size() != 2)
+			{
+				logte("TcpRelay format is incorrect: %s (Must be in <Relay IP>:<Port> format)", tcp_relay.CStr());
+				return false;
+			}
+
+			bool tcp_relay_bind_parsed{false};
+			auto tcp_relay_bind{webrtc_bind_config.GetTcpRelayBind(&tcp_relay_bind_parsed)};
+			if (tcp_relay_bind_parsed)
+			{
+				auto l_tokens{tcp_relay_bind.Split(":")};
+				if (l_tokens.size() == 2)
+				{
+					auto l_ip{(l_tokens[0].IsEmpty()) ? ip_list[0] : l_tokens[0]};
+					auto l_port{l_tokens[1]};
+					tcp_relay_bind = ov::String::FormatString("%s:%s", l_ip.CStr(), l_port.CStr());
+					auto l_tcp_address = ov::SocketAddress::CreateAndGetFirst(tcp_relay_bind);
+					tcp_relay_bind_parsed = l_tcp_address.IsValid();
+
+					if (tcp_relay_bind_parsed == false)
+					{
+						logte("TcpRelayBind invalid address: %s", tcp_relay_bind.CStr());
+					}
+				}
+				else
+				{
+					tcp_relay_bind_parsed = false;
+					logte("TcpRelayBind format is incorrect: %s (Must be in <Relay Local IP>:<Port> format)", tcp_relay_bind.CStr());
+				}
+			}
+
+			auto tcp_relay_listen{(tcp_relay_bind_parsed) ? tcp_relay_bind : ov::String::FormatString("*:%s", items[1].CStr())};
+			auto tcp_relay_address = ov::SocketAddress::CreateAndGetFirst(tcp_relay_listen);
+
+			bool tcp_relay_worker_count_parsed{false};
+			auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&tcp_relay_worker_count_parsed);
+			tcp_relay_worker_count = tcp_relay_worker_count_parsed ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+
+			if (IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), tcp_relay_address, ov::SocketType::Tcp, tcp_relay_worker_count) == false)
+			{
+				logte("Could not create Turn Server. Check your configuration");
+				return false;
+			}
+		}
+
+		_certificate = CreateCertificate();
+
+		if (_certificate == nullptr)
+		{
+			logte("Could not create certificate.");
+			return false;
+		}
+
+		return true;
+	}
+
 	bool WebRTCProvider::Start()
 	{
 		auto server_config = GetServerConfig();
@@ -47,170 +167,19 @@ namespace pvd
 			return true;
 		}
 
-		auto &signalling_config = webrtc_bind_config.GetSignalling();
-		auto &port_config = signalling_config.GetPort();
-		auto &tls_port_config = signalling_config.GetTlsPort();
-
-		bool is_configured;
-		auto worker_count = signalling_config.GetWorkerCount(&is_configured);
-		worker_count = is_configured ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
-
-		const auto port = static_cast<uint16_t>(port_config.GetPort());
-		const bool has_port = (port != 0);
-
-		const auto tls_port = static_cast<uint16_t>(tls_port_config.GetPort());
-		const bool has_tls_port = (tls_port != 0);
-
-		if ((has_port == false) && (has_tls_port == false))
+		if (StartSignallingServer(server_config, webrtc_bind_config) &&
+			StartICEPorts(server_config, webrtc_bind_config))
 		{
-			logte("Invalid %s port setting", GetProviderName());
-			return false;
+			return Provider::Start();
 		}
 
-		std::vector<ov::SocketAddress> address_list;
-		std::vector<ov::SocketAddress> tls_address_list;
+		logte("An error occurred while initialize %s. Stopping RtcSignallingServer...", GetProviderName());
 
-		try
-		{
-			if (has_port)
-			{
-				address_list = ov::SocketAddress::Create(server_config.GetIPList(), port);
-			}
+		_signalling_server->Stop();
 
-			if (has_tls_port)
-			{
-				tls_address_list = ov::SocketAddress::Create(server_config.GetIPList(), tls_port);
-			}
-		}
-		catch (const ov::Error &e)
-		{
-			logte("Could not obtain IP addresses to bind: %s", e.What());
-			return false;
-		}
+		IcePortManager::GetInstance()->Release(IcePortObserver::GetSharedPtr());
 
-		// Initialize RtcSignallingServer
-		auto interceptor = std::make_shared<WebRtcProviderSignallingInterceptor>();
-		_signalling_server = std::make_shared<RtcSignallingServer>(server_config, server_config.GetBind().GetProviders().GetWebrtc());
-		_signalling_server->AddObserver(RtcSignallingObserver::GetSharedPtr());
-
-		if (_signalling_server->Start(address_list, tls_address_list, worker_count, interceptor) == false)
-		{
-			return false;
-		}
-
-		bool result = true;
-
-		_ice_port = IcePortManager::GetInstance()->CreatePort(IcePortObserver::GetSharedPtr());
-		if (_ice_port == nullptr)
-		{
-			logte("Could not initialize ICE Port. Check your ICE configuration");
-			result = false;
-		}
-
-		auto &ice_candidates_config = webrtc_bind_config.GetIceCandidates();
-
-		if (IcePortManager::GetInstance()->CreateIceCandidates(IcePortObserver::GetSharedPtr(), ice_candidates_config) == false)
-		{
-			logte("Could not create ICE Candidates. Check your ICE configuration");
-			result = false;
-		}
-
-		bool tcp_relay_parsed = false;
-		auto tcp_relay = ice_candidates_config.GetTcpRelay(&tcp_relay_parsed);
-		if (tcp_relay_parsed)
-		{
-			auto items = tcp_relay.Split(":");
-			if (items.size() != 2)
-			{
-				logte("TcpRelay format is incorrect : <Relay IP>:<Port>");
-			}
-			else
-			{
-				bool tcp_relay_bind_parsed{false};
-				auto tcp_relay_bind{webrtc_bind_config.GetTcpRelayBind(&tcp_relay_bind_parsed)};
-				if (tcp_relay_bind_parsed)
-				{
-					auto l_tokens{tcp_relay_bind.Split(":")};
-					if (l_tokens.size() == 2)
-					{
-						auto l_ip{(l_tokens[0].IsEmpty()) ? server_config.GetIPList()[0] : l_tokens[0]};
-						auto l_port{l_tokens[1]};
-						tcp_relay_bind = ov::String::FormatString("%s:%s", l_ip.CStr(), l_port.CStr());
-						auto l_tcp_address = ov::SocketAddress::CreateAndGetFirst(tcp_relay_bind);
-						tcp_relay_bind_parsed = l_tcp_address.IsValid();
-						if (!tcp_relay_bind_parsed)
-						{
-							logte("TcpRelayBind invalid address: %s", tcp_relay_bind.CStr());
-						}
-					}
-					else
-					{
-						tcp_relay_bind_parsed = false;
-						logte("TcpRelayBind format is incorrect: <Relay Local IP>:<Port>");
-					}
-				}
-
-				auto tcp_relay_listen{(tcp_relay_bind_parsed) ? tcp_relay_bind : ov::String::FormatString("*:%s", items[1].CStr())};
-				auto tcp_relay_address = ov::SocketAddress::CreateAndGetFirst(tcp_relay_listen);
-
-				bool tcp_relay_worker_count_parsed{false};
-				auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&tcp_relay_worker_count_parsed);
-				tcp_relay_worker_count = tcp_relay_worker_count_parsed ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
-
-				if (IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), tcp_relay_address, ov::SocketType::Tcp, tcp_relay_worker_count) == false)
-				{
-					logte("Could not create Turn Server. Check your configuration");
-					result = false;
-				}
-			}
-		}
-
-		_certificate = CreateCertificate();
-		if (_certificate == nullptr)
-		{
-			logte("Could not create certificate.");
-			result = false;
-		}
-
-		if (result)
-		{
-			std::vector<ov::String> address_string_list;
-			for (auto &signalling_address : address_list)
-			{
-				address_string_list.emplace_back(signalling_address.ToString());
-			}
-
-			std::vector<ov::String> tls_address_string_list;
-			for (auto &tls_address : tls_address_list)
-			{
-				tls_address_string_list.emplace_back(tls_address.ToString());
-			}
-
-			ov::String tls_description = ov::String::Join(tls_address_string_list, ",");
-
-			if (tls_description.IsEmpty() == false)
-			{
-				tls_description.Prepend("(TLS: ");
-				tls_description.Append(')');
-			}
-
-			logti("%s is listening on %s%s...",
-				  GetProviderName(),
-				  ov::String::Join(address_string_list, ", ").CStr(),
-				  tls_address_list.empty() ? "" : tls_description.CStr());
-		}
-		else
-		{
-			// Rollback
-			logte("An error occurred while initialize %s. Stopping RtcSignallingServer...", GetProviderName());
-
-			_signalling_server->Stop();
-			IcePortManager::GetInstance()->Release(IcePortObserver::GetSharedPtr());
-
-			return false;
-		}
-
-		return Provider::Start();
+		return false;
 	}
 
 	bool WebRTCProvider::Stop()
