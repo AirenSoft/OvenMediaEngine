@@ -14,9 +14,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <string>
 #include <map>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace ov
@@ -97,13 +97,16 @@ namespace ov
 		String UpperCaseString() const;
 		String LowerCaseString() const;
 
+		static std::vector<String> Split(const char *string, size_t string_length, const char *separator, size_t max_count = SIZE_MAX);
+		static std::vector<String> Split(const char *string, const char *separator, size_t max_count = SIZE_MAX);
 		std::vector<String> Split(const char *separator, size_t max_count = SIZE_MAX) const;
-		std::vector<String> Split(const char *string, const char *separator, size_t max_count = SIZE_MAX) const;
 
 		static String Join(const std::vector<String> &list, const char *seperator);
 
 		bool HasPrefix(String prefix) const;
+		bool HasPrefix(char prefix) const;
 		bool HasSuffix(String suffix) const;
+		bool HasSuffix(char suffix) const;
 
 		String Left(size_t length) const;
 		String Right(size_t length) const;
@@ -136,6 +139,7 @@ namespace ov
 		bool Clear();
 
 		bool IsEmpty() const noexcept;
+		bool IsNumeric() const noexcept;
 
 		std::shared_ptr<Data> ToData(bool include_null_char = true) const;
 
