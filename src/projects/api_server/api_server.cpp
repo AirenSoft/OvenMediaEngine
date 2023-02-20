@@ -36,82 +36,68 @@ namespace api
 									const int worker_count)
 	{
 		auto http_server_manager = http::svr::HttpServerManager::GetInstance();
-		auto http_interceptor = CreateInterceptor();
 
-		auto certificate = is_tls_port_configured ? info::Certificate::CreateCertificate("api_server", managers.GetHost().GetNameList(), managers.GetHost().GetTls()) : nullptr;
-
-		for (const auto &server_ip : server_ip_list)
+		do
 		{
-			std::vector<ov::SocketAddress> address_list;
-			std::vector<ov::SocketAddress> tls_address_list;
-
-			try
-			{
-				address_list = is_port_configured ? ov::SocketAddress::Create(server_ip, port) : std::vector<ov::SocketAddress>();
-				tls_address_list = (is_tls_port_configured && (certificate != nullptr)) ? ov::SocketAddress::Create(server_ip, tls_port) : std::vector<ov::SocketAddress>();
-			}
-			catch (const ov::Error &e)
-			{
-				logte("Could not listen for API Server: %s", e.What());
-				return false;
-			}
+			auto http_interceptor = CreateInterceptor();
 
 			std::vector<ov::String> address_string_list;
-			std::vector<ov::String> tls_address_string_list;
-
-			for (const auto &address : address_list)
+			if (is_port_configured)
 			{
-				logtd("Attempting to create HTTP Server instance on %s...", address.ToString().CStr());
-				auto http_server = http_server_manager->CreateHttpServer("APISvr", address, worker_count);
-
-				if (http_server != nullptr)
+				if (http_server_manager->CreateHttpServers(
+						&_http_server_list, "APISvr", server_ip_list, port,
+						[&](const ov::SocketAddress &address, std::shared_ptr<http::svr::HttpServer> http_server) {
+							http_server->AddInterceptor(http_interceptor);
+							address_string_list.emplace_back(address.ToString());
+						},
+						worker_count) == false)
 				{
-					http_server->AddInterceptor(http_interceptor);
-					_http_server_list.push_back(http_server);
-					address_string_list.emplace_back(address.ToString());
-				}
-				else
-				{
-					logte("Could not initialize HTTP Server on %s", address.ToString().CStr());
-					return false;
+					break;
 				}
 			}
 
-			for (const auto &tls_address : tls_address_list)
+			std::vector<ov::String> tls_address_string_list;
+			if (is_tls_port_configured)
 			{
-				logtd("Attempting to create HTTPS Server instance on %s...", tls_address.ToString().CStr());
-				auto https_server = http_server_manager->CreateHttpsServer("APISvr", tls_address, certificate, false, worker_count);
+				auto certificate = is_tls_port_configured ? info::Certificate::CreateCertificate("api_server", managers.GetHost().GetNameList(), managers.GetHost().GetTls()) : nullptr;
 
-				if (https_server != nullptr)
+				if (http_server_manager->CreateHttpsServers(
+						&_https_server_list, "APISvr", server_ip_list, tls_port,
+						certificate, false,
+						[&](const ov::SocketAddress &address, std::shared_ptr<http::svr::HttpsServer> https_server) {
+							https_server->AddInterceptor(http_interceptor);
+							tls_address_string_list.emplace_back(address.ToString());
+						},
+						worker_count) == false)
 				{
-					https_server->AddInterceptor(http_interceptor);
-					_https_server_list.push_back(https_server);
-					tls_address_string_list.emplace_back(tls_address.ToString());
-				}
-				else
-				{
-					logte("Could not initialize HTTPS Server on %s", tls_address.ToString().CStr());
-					return false;
+					break;
 				}
 			}
 
 			auto tls_description = ov::String::Join(tls_address_string_list, ", ");
-
 			if (tls_description.IsEmpty() == false)
 			{
-				tls_description.Prepend("(TLS: ");
+				tls_description.Prepend(" (TLS: ");
 				tls_description.Append(')');
 			}
 
 			logti("API Server is listening on %s%s...",
 				  ov::String::Join(address_string_list, ", ").CStr(),
-				  tls_address_list.empty() ? "" : tls_description.CStr());
-		}
+				  tls_description.CStr());
 
-		return true;
+			return true;
+		} while (false);
+
+		http_server_manager->ReleaseServers(_http_server_list);
+		http_server_manager->ReleaseServers(_https_server_list);
+
+		_http_server_list.clear();
+		_https_server_list.clear();
+
+		return false;
 	}
 
-	void Server::SetupCors(const cfg::mgr::api::API &api_config)
+	void Server::SetupCORS(const cfg::mgr::api::API &api_config)
 	{
 		bool is_cors_parsed;
 		auto cross_domains = api_config.GetCrossDomainList(&is_cors_parsed);
@@ -172,7 +158,7 @@ namespace api
 			return true;
 		}
 
-		SetupCors(api_config);
+		SetupCORS(api_config);
 		if (SetupAccessToken(api_config) == false)
 		{
 			return false;

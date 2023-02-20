@@ -38,7 +38,7 @@ namespace api
 			const cfg::mgr::Managers &managers,
 			const int worker_count);
 
-		void SetupCors(const cfg::mgr::api::API &api_config);
+		void SetupCORS(const cfg::mgr::api::API &api_config);
 		bool SetupAccessToken(const cfg::mgr::api::API &api_config);
 
 		std::shared_ptr<http::svr::RequestInterceptor> CreateInterceptor();

@@ -100,13 +100,14 @@ namespace http
 				if (https_server == nullptr)
 				{
 					logte("Cannot reuse instance: Requested HTTPS Server, but previous instance is HTTP Server (%s)", address.ToString().CStr());
+					return nullptr;
 				}
 
-				if ((https_server->IsHttp2Enabled() == true && http2_enabled == false))
+				if (https_server->IsHttp2Enabled() && (http2_enabled == false))
 				{
 					logtw("Attempting to use HTTP/2 for ports with address %s enabled as HTTP/1.1 only.", address.ToString().CStr());
 				}
-				else if ((https_server->IsHttp2Enabled() == false && http2_enabled == true))
+				else if ((https_server->IsHttp2Enabled() == false) && http2_enabled)
 				{
 					logtw("The %s address is trying to use HTTP/1.1 on a port that is HTTP/2 enabled.", address.ToString().CStr());
 				}
@@ -186,6 +187,94 @@ namespace http
 			}
 
 			return https_server;
+		}
+
+		template <typename T>
+		bool CreateServers(
+			const char *http_server_name,
+			std::vector<std::shared_ptr<T>> *http_server_list,
+			const std::vector<ov::String> &server_ip_list, const uint16_t port,
+			std::function<std::shared_ptr<T>(const ov::SocketAddress &address)> creation_function,
+			HttpServerManager::HttpServerCreationCallback<T> creation_callback)
+		{
+			std::vector<std::shared_ptr<T>> server_list;
+
+			for (const auto &server_ip : server_ip_list)
+			{
+				std::vector<ov::SocketAddress> address_list;
+				try
+				{
+					address_list = ov::SocketAddress::Create(server_ip, port);
+				}
+				catch (const ov::Error &e)
+				{
+					logte("Could not listen for %s Server: %s", http_server_name, e.What());
+					return false;
+				}
+
+				for (const auto &address : address_list)
+				{
+					logtd("Attempting to create %s Server instance on %s...", http_server_name, address.ToString().CStr());
+
+					auto server = creation_function(address);
+
+					if (server != nullptr)
+					{
+						if (creation_callback != nullptr)
+						{
+							creation_callback(address, server);
+						}
+
+						server_list.push_back(server);
+					}
+					else
+					{
+						logte("Could not initialize HTTP Server on %s", address.ToString().CStr());
+						HttpServerManager::GetInstance()->ReleaseServers(server_list);
+						return false;
+					}
+				}
+			}
+
+			http_server_list->insert(http_server_list->end(), server_list.begin(), server_list.end());
+
+			return true;
+		}
+
+		bool HttpServerManager::CreateHttpServers(
+			std::vector<std::shared_ptr<HttpServer>> *http_server_list,
+			const char *instance_name,
+			const std::vector<ov::String> &server_ip_list, const uint16_t port,
+			HttpServerCreationCallback<HttpServer> callback,
+			int worker_count)
+		{
+			return CreateServers<HttpServer>(
+				"HTTP",
+				http_server_list,
+				server_ip_list, port,
+				[=](const ov::SocketAddress &address) -> std::shared_ptr<HttpServer> {
+					return CreateHttpServer(instance_name, address, worker_count);
+				},
+				callback);
+		}
+
+		bool HttpServerManager::CreateHttpsServers(
+			std::vector<std::shared_ptr<HttpsServer>> *https_server_list,
+			const char *instance_name,
+			const std::vector<ov::String> &server_ip_list, const uint16_t port,
+			const std::shared_ptr<const info::Certificate> &certificate,
+			bool disable_http2_force,
+			HttpServerCreationCallback<HttpsServer> callback,
+			int worker_count)
+		{
+			return CreateServers<HttpsServer>(
+				"HTTPS",
+				https_server_list,
+				server_ip_list, port,
+				[=](const ov::SocketAddress &address) -> std::shared_ptr<HttpsServer> {
+					return CreateHttpsServer(instance_name, address, certificate, disable_http2_force, worker_count);
+				},
+				callback);
 		}
 
 		bool HttpServerManager::ReleaseServer(const std::shared_ptr<HttpServer> &http_server)
