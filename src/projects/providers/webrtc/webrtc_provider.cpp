@@ -7,10 +7,11 @@
 //
 //==============================================================================
 
-#include "webrtc_private.h"
 #include "webrtc_provider.h"
-#include "webrtc_provider_signalling_interceptor.h"
+
 #include "webrtc_application.h"
+#include "webrtc_private.h"
+#include "webrtc_provider_signalling_interceptor.h"
 #include "webrtc_stream.h"
 
 namespace pvd
@@ -28,7 +29,6 @@ namespace pvd
 	WebRTCProvider::WebRTCProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 		: pvd::PushProvider(server_config, router)
 	{
-
 	}
 
 	WebRTCProvider::~WebRTCProvider()
@@ -36,15 +36,11 @@ namespace pvd
 		logtd("WebRTCProvider has been terminated finally");
 	}
 
-	//------------------------
-	// Provider
-	//------------------------
-
 	bool WebRTCProvider::Start()
 	{
 		auto server_config = GetServerConfig();
 		auto webrtc_bind_config = server_config.GetBind().GetProviders().GetWebrtc();
-		
+
 		if (webrtc_bind_config.IsParsed() == false)
 		{
 			logtw("%s is disabled by configuration", GetProviderName());
@@ -54,30 +50,50 @@ namespace pvd
 		auto &signalling_config = webrtc_bind_config.GetSignalling();
 		auto &port_config = signalling_config.GetPort();
 		auto &tls_port_config = signalling_config.GetTlsPort();
-		bool is_parsed;
 
-		auto worker_count = signalling_config.GetWorkerCount(&is_parsed);
-		worker_count = is_parsed ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
+		bool is_configured;
+		auto worker_count = signalling_config.GetWorkerCount(&is_configured);
+		worker_count = is_configured ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
 
-		auto port = static_cast<uint16_t>(port_config.GetPort());
-		auto tls_port = static_cast<uint16_t>(tls_port_config.GetPort());
-		bool has_port = (port != 0);
-		bool has_tls_port = (tls_port != 0);
+		const auto port = static_cast<uint16_t>(port_config.GetPort());
+		const bool has_port = (port != 0);
+
+		const auto tls_port = static_cast<uint16_t>(tls_port_config.GetPort());
+		const bool has_tls_port = (tls_port != 0);
 
 		if ((has_port == false) && (has_tls_port == false))
 		{
-			logte("Invalid WebRTC Port settings");
+			logte("Invalid %s port setting", GetProviderName());
 			return false;
 		}
 
-		ov::SocketAddress signalling_address = ov::SocketAddress(server_config.GetIp(), port);
-		ov::SocketAddress signalling_tls_address = ov::SocketAddress(server_config.GetIp(), tls_port);
+		std::vector<ov::SocketAddress> address_list;
+		std::vector<ov::SocketAddress> tls_address_list;
+
+		try
+		{
+			if (has_port)
+			{
+				address_list = ov::SocketAddress::Create(server_config.GetIPList(), port);
+			}
+
+			if (has_tls_port)
+			{
+				tls_address_list = ov::SocketAddress::Create(server_config.GetIPList(), tls_port);
+			}
+		}
+		catch (const ov::Error &e)
+		{
+			logte("Could not obtain IP addresses to bind: %s", e.What());
+			return false;
+		}
 
 		// Initialize RtcSignallingServer
 		auto interceptor = std::make_shared<WebRtcProviderSignallingInterceptor>();
 		_signalling_server = std::make_shared<RtcSignallingServer>(server_config, server_config.GetBind().GetProviders().GetWebrtc());
 		_signalling_server->AddObserver(RtcSignallingObserver::GetSharedPtr());
-		if (_signalling_server->Start(has_port ? &signalling_address : nullptr, has_tls_port ? &signalling_tls_address : nullptr, worker_count, interceptor) == false)
+
+		if (_signalling_server->Start(address_list, tls_address_list, worker_count, interceptor) == false)
 		{
 			return false;
 		}
@@ -93,36 +109,36 @@ namespace pvd
 
 		auto &ice_candidates_config = webrtc_bind_config.GetIceCandidates();
 
-		if(IcePortManager::GetInstance()->CreateIceCandidates(IcePortObserver::GetSharedPtr(), ice_candidates_config) == false)
+		if (IcePortManager::GetInstance()->CreateIceCandidates(IcePortObserver::GetSharedPtr(), ice_candidates_config) == false)
 		{
 			logte("Could not create ICE Candidates. Check your ICE configuration");
 			result = false;
 		}
-		
+
 		bool tcp_relay_parsed = false;
 		auto tcp_relay = ice_candidates_config.GetTcpRelay(&tcp_relay_parsed);
-		if(tcp_relay_parsed)
+		if (tcp_relay_parsed)
 		{
 			auto items = tcp_relay.Split(":");
-			if(items.size() != 2)
+			if (items.size() != 2)
 			{
 				logte("TcpRelay format is incorrect : <Relay IP>:<Port>");
 			}
 			else
 			{
-				bool tcp_relay_bind_parsed { false };
-				auto tcp_relay_bind { webrtc_bind_config.GetTcpRelayBind(&tcp_relay_bind_parsed) };
-				if(tcp_relay_bind_parsed)
+				bool tcp_relay_bind_parsed{false};
+				auto tcp_relay_bind{webrtc_bind_config.GetTcpRelayBind(&tcp_relay_bind_parsed)};
+				if (tcp_relay_bind_parsed)
 				{
-					auto l_tokens { tcp_relay_bind.Split(":") };
-					if(l_tokens.size() == 2)
+					auto l_tokens{tcp_relay_bind.Split(":")};
+					if (l_tokens.size() == 2)
 					{
-						auto l_ip { (l_tokens[0].IsEmpty()) ? server_config.GetIp() : l_tokens[0] };
-						auto l_port { l_tokens[1] };
+						auto l_ip{(l_tokens[0].IsEmpty()) ? server_config.GetIPList()[0] : l_tokens[0]};
+						auto l_port{l_tokens[1]};
 						tcp_relay_bind = ov::String::FormatString("%s:%s", l_ip.CStr(), l_port.CStr());
-						ov::SocketAddress l_tcp_address(tcp_relay_bind);
+						auto l_tcp_address = ov::SocketAddress::CreateAndGetFirst(tcp_relay_bind);
 						tcp_relay_bind_parsed = l_tcp_address.IsValid();
-						if(!tcp_relay_bind_parsed)
+						if (!tcp_relay_bind_parsed)
 						{
 							logte("TcpRelayBind invalid address: %s", tcp_relay_bind.CStr());
 						}
@@ -134,14 +150,14 @@ namespace pvd
 					}
 				}
 
-				auto tcp_relay_listen { (tcp_relay_bind_parsed) ? tcp_relay_bind : ov::String::FormatString("*:%s", items[1].CStr()) };
-				ov::SocketAddress tcp_relay_address(tcp_relay_listen);
+				auto tcp_relay_listen{(tcp_relay_bind_parsed) ? tcp_relay_bind : ov::String::FormatString("*:%s", items[1].CStr())};
+				auto tcp_relay_address = ov::SocketAddress::CreateAndGetFirst(tcp_relay_listen);
 
-				bool tcp_relay_worker_count_parsed { false };
+				bool tcp_relay_worker_count_parsed{false};
 				auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&tcp_relay_worker_count_parsed);
 				tcp_relay_worker_count = tcp_relay_worker_count_parsed ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
 
-				if(IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), tcp_relay_address, ov::SocketType::Tcp, tcp_relay_worker_count) == false)
+				if (IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), tcp_relay_address, ov::SocketType::Tcp, tcp_relay_worker_count) == false)
 				{
 					logte("Could not create Turn Server. Check your configuration");
 					result = false;
@@ -150,7 +166,7 @@ namespace pvd
 		}
 
 		_certificate = CreateCertificate();
-		if(_certificate == nullptr)
+		if (_certificate == nullptr)
 		{
 			logte("Could not create certificate.");
 			result = false;
@@ -158,17 +174,35 @@ namespace pvd
 
 		if (result)
 		{
-			logti("%s is listening on %s%s%s%s...",
-				GetProviderName(),
-				has_port ? signalling_address.ToString().CStr() : "",
-				(has_port && has_tls_port) ? ", " : "",
-				has_tls_port ? "TLS: " : "",
-				has_tls_port ? signalling_tls_address.ToString().CStr() : "");
+			std::vector<ov::String> address_string_list;
+			for (auto &signalling_address : address_list)
+			{
+				address_string_list.emplace_back(signalling_address.ToString());
+			}
+
+			std::vector<ov::String> tls_address_string_list;
+			for (auto &tls_address : tls_address_list)
+			{
+				tls_address_string_list.emplace_back(tls_address.ToString());
+			}
+
+			ov::String tls_description = ov::String::Join(tls_address_string_list, ",");
+
+			if (tls_description.IsEmpty() == false)
+			{
+				tls_description.Prepend("(TLS: ");
+				tls_description.Append(')');
+			}
+
+			logti("%s is listening on %s%s...",
+				  GetProviderName(),
+				  ov::String::Join(address_string_list, ", ").CStr(),
+				  tls_address_list.empty() ? "" : tls_description.CStr());
 		}
 		else
 		{
 			// Rollback
-			logte("An error occurred while initialize WebRTC Provider. Stopping RtcSignallingServer...");
+			logte("An error occurred while initialize %s. Stopping RtcSignallingServer...", GetProviderName());
 
 			_signalling_server->Stop();
 			IcePortManager::GetInstance()->Release(IcePortObserver::GetSharedPtr());
@@ -183,7 +217,7 @@ namespace pvd
 	{
 		IcePortManager::GetInstance()->Release(IcePortObserver::GetSharedPtr());
 
-		if(_signalling_server != nullptr)
+		if (_signalling_server != nullptr)
 		{
 			_signalling_server->RemoveObserver(RtcSignallingObserver::GetSharedPtr());
 			_signalling_server->Stop();
@@ -194,7 +228,7 @@ namespace pvd
 
 	bool WebRTCProvider::OnCreateHost(const info::Host &host_info)
 	{
-		if(_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+		if (_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
 		{
 			return _signalling_server->AppendCertificate(host_info.GetCertificate());
 		}
@@ -204,7 +238,7 @@ namespace pvd
 
 	bool WebRTCProvider::OnDeleteHost(const info::Host &host_info)
 	{
-		if(_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+		if (_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
 		{
 			return _signalling_server->RemoveCertificate(host_info.GetCertificate());
 		}
@@ -212,8 +246,8 @@ namespace pvd
 	}
 
 	std::shared_ptr<pvd::Application> WebRTCProvider::OnCreateProviderApplication(const info::Application &application_info)
-	{	
-		if(IsModuleAvailable() == false)
+	{
+		if (IsModuleAvailable() == false)
 		{
 			return nullptr;
 		}
@@ -231,8 +265,8 @@ namespace pvd
 	//------------------------
 
 	std::shared_ptr<const SessionDescription> WebRTCProvider::OnRequestOffer(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
-													const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
-													std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay)
+																			 const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
+																			 std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay)
 	{
 		info::VHostAppName final_vhost_app_name = vhost_app_name;
 		ov::String final_host_name = host_name;
@@ -250,26 +284,26 @@ namespace pvd
 		}
 
 		// PORT can be omitted if port is rtmp default port, but SignedPolicy requires this information.
-		if(parsed_url->Port() == 0)
+		if (parsed_url->Port() == 0)
 		{
 			parsed_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 		}
 
 		uint64_t session_life_time = 0;
 		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(parsed_url, remote_address);
-		if(signed_policy_result == AccessController::VerificationResult::Off)
+		if (signed_policy_result == AccessController::VerificationResult::Off)
 		{
 			// Success
 		}
-		else if(signed_policy_result == AccessController::VerificationResult::Pass)
+		else if (signed_policy_result == AccessController::VerificationResult::Pass)
 		{
 			session_life_time = signed_policy->GetStreamExpireEpochMSec();
 		}
-		else if(signed_policy_result == AccessController::VerificationResult::Error)
+		else if (signed_policy_result == AccessController::VerificationResult::Error)
 		{
 			return nullptr;
 		}
-		else if(signed_policy_result == AccessController::VerificationResult::Fail)
+		else if (signed_policy_result == AccessController::VerificationResult::Fail)
 		{
 			logtw("%s", signed_policy->GetErrMessage().CStr());
 			return nullptr;
@@ -277,28 +311,28 @@ namespace pvd
 
 		// Admission Webhooks
 		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(parsed_url, remote_address);
-		if(webhooks_result == AccessController::VerificationResult::Off)
+		if (webhooks_result == AccessController::VerificationResult::Off)
 		{
 			// Success
 		}
-		else if(webhooks_result == AccessController::VerificationResult::Pass)
+		else if (webhooks_result == AccessController::VerificationResult::Pass)
 		{
 			// Lifetime
-			if(admission_webhooks->GetLifetime() != 0)
+			if (admission_webhooks->GetLifetime() != 0)
 			{
 				// Choice smaller value
 				auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + admission_webhooks->GetLifetime();
-				if(session_life_time == 0 || stream_expired_msec_from_webhooks < session_life_time)
+				if (session_life_time == 0 || stream_expired_msec_from_webhooks < session_life_time)
 				{
 					session_life_time = stream_expired_msec_from_webhooks;
 				}
 			}
 
 			// Redirect URL
-			if(admission_webhooks->GetNewURL() != nullptr)
+			if (admission_webhooks->GetNewURL() != nullptr)
 			{
 				parsed_url = admission_webhooks->GetNewURL();
-				if(parsed_url->Port() == 0)
+				if (parsed_url->Port() == 0)
 				{
 					parsed_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 				}
@@ -308,12 +342,12 @@ namespace pvd
 				final_stream_name = parsed_url->Stream();
 			}
 		}
-		else if(webhooks_result == AccessController::VerificationResult::Error)
+		else if (webhooks_result == AccessController::VerificationResult::Error)
 		{
 			logtw("AdmissionWebhooks error : %s", parsed_url->ToUrlString().CStr());
 			return nullptr;
 		}
-		else if(webhooks_result == AccessController::VerificationResult::Fail)
+		else if (webhooks_result == AccessController::VerificationResult::Fail)
 		{
 			logtw("AdmissionWebhooks error : %s", admission_webhooks->GetErrReason().CStr());
 			return nullptr;
@@ -321,23 +355,23 @@ namespace pvd
 
 		// Check if same stream name is exist
 		auto application = std::dynamic_pointer_cast<WebRTCApplication>(GetApplicationByName(final_vhost_app_name));
-		if(application == nullptr)
+		if (application == nullptr)
 		{
 			logte("Could not find %s application", final_vhost_app_name.CStr());
 			return nullptr;
 		}
-		
+
 		std::lock_guard<std::mutex> lock(_stream_lock);
 
 		// TODO(Getroot): Implement BlockDuplicateStreamName option
-		if(application->GetStreamByName(final_stream_name) != nullptr)
+		if (application->GetStreamByName(final_stream_name) != nullptr)
 		{
 			logte("%s stream is already exist in %s application", final_stream_name.CStr(), final_vhost_app_name.CStr());
 			return nullptr;
 		}
 
 		auto transport = parsed_url->GetQueryValue("transport");
-		if(transport.UpperCaseString() == "TCP")
+		if (transport.UpperCaseString() == "TCP")
 		{
 			tcp_relay = true;
 		}
@@ -364,17 +398,17 @@ namespace pvd
 	}
 
 	bool WebRTCProvider::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
-								const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
-								const std::shared_ptr<const SessionDescription> &offer_sdp,
-								const std::shared_ptr<const SessionDescription> &peer_sdp)
+												const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
+												const std::shared_ptr<const SessionDescription> &offer_sdp,
+												const std::shared_ptr<const SessionDescription> &peer_sdp)
 	{
 		auto [autorized_exist, authorized] = ws_session->GetUserData("authorized");
 		ov::String uri;
 		uint64_t session_life_time = 0;
-		if(autorized_exist == true && std::holds_alternative<bool>(authorized) == true && std::get<bool>(authorized) == true)
+		if (autorized_exist == true && std::holds_alternative<bool>(authorized) == true && std::get<bool>(authorized) == true)
 		{
 			auto [new_url_exist, new_url] = ws_session->GetUserData("new_url");
-			if(new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
+			if (new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
 			{
 				uri = std::get<ov::String>(new_url);
 			}
@@ -384,7 +418,7 @@ namespace pvd
 			}
 
 			auto [stream_expired_exist, stream_expired] = ws_session->GetUserData("stream_expired");
-			if(stream_expired_exist == true && std::holds_alternative<uint64_t>(stream_expired) == true)
+			if (stream_expired_exist == true && std::holds_alternative<uint64_t>(stream_expired) == true)
 			{
 				session_life_time = std::get<uint64_t>(stream_expired);
 			}
@@ -412,19 +446,19 @@ namespace pvd
 		logtd("WebRTCProvider::OnAddRemoteDescription");
 		auto request = ws_session->GetRequest();
 		auto remote_address = request->GetRemote()->GetRemoteAddress();
-		
+
 		// Check if same stream name is exist
 		auto application = std::dynamic_pointer_cast<WebRTCApplication>(GetApplicationByName(final_vhost_app_name));
-		if(application == nullptr)
+		if (application == nullptr)
 		{
 			logte("Could not find %s application", final_vhost_app_name.CStr());
 			return false;
 		}
-		
+
 		std::lock_guard<std::mutex> lock(_stream_lock);
 
 		// TODO(Getroot): Implement BlockDuplicateStreamName option
-		if(application->GetStreamByName(final_stream_name) != nullptr)
+		if (application->GetStreamByName(final_stream_name) != nullptr)
 		{
 			logte("%s stream is already exist in %s application", final_stream_name.CStr(), final_vhost_app_name.CStr());
 			return false;
@@ -432,20 +466,20 @@ namespace pvd
 
 		// Create Stream
 		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, final_stream_name, PushProvider::GetSharedPtrAs<PushProvider>(), offer_sdp, peer_sdp, _certificate, _ice_port);
-		if(stream == nullptr)
+		if (stream == nullptr)
 		{
 			logte("Could not create %s stream in %s application", final_stream_name.CStr(), final_vhost_app_name.CStr());
 			return false;
 		}
 		stream->SetMediaSource(request->GetRemote()->GetRemoteAddressAsUrl());
-		
+
 		// The stream of the webrtc provider has already completed signaling at this point.
-		if(PublishChannel(stream->GetId(), final_vhost_app_name, stream) == false)
+		if (PublishChannel(stream->GetId(), final_vhost_app_name, stream) == false)
 		{
 			return false;
 		}
 
-		if(OnChannelCreated(stream->GetId(), stream) == false)
+		if (OnChannelCreated(stream->GetId(), stream) == false)
 		{
 			return false;
 		}
@@ -457,29 +491,29 @@ namespace pvd
 	}
 
 	bool WebRTCProvider::OnIceCandidate(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
-						const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
-						const std::shared_ptr<RtcIceCandidate> &candidate,
-						const ov::String &username_fragment)
+										const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
+										const std::shared_ptr<RtcIceCandidate> &candidate,
+										const ov::String &username_fragment)
 	{
 		return true;
 	}
 
 	bool WebRTCProvider::OnStopCommand(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
-					const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
-					const std::shared_ptr<const SessionDescription> &offer_sdp,
-					const std::shared_ptr<const SessionDescription> &peer_sdp)
+									   const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
+									   const std::shared_ptr<const SessionDescription> &offer_sdp,
+									   const std::shared_ptr<const SessionDescription> &peer_sdp)
 	{
 		logti("Stop command received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 
 		// Send Close to Admission Webhooks
-		auto parsed_url { ov::Url::Parse(ws_session->GetRequest()->GetUri()) };
-		auto remote_address { ws_session->GetRequest()->GetRemote()->GetRemoteAddress() };
+		auto parsed_url{ov::Url::Parse(ws_session->GetRequest()->GetUri())};
+		auto remote_address{ws_session->GetRequest()->GetRemote()->GetRemoteAddress()};
 		if (parsed_url && remote_address)
 		{
 			SendCloseAdmissionWebhooks(parsed_url, remote_address);
 		}
 		// the return check is not necessary
-		
+
 		// Find Stream
 		auto stream = std::static_pointer_cast<WebRTCStream>(GetStreamByName(vhost_app_name, stream_name));
 		if (!stream)
@@ -505,16 +539,16 @@ namespace pvd
 		std::shared_ptr<WebRTCStream> stream;
 		try
 		{
-			stream = std::any_cast<std::shared_ptr<WebRTCStream>>(user_data);	
+			stream = std::any_cast<std::shared_ptr<WebRTCStream>>(user_data);
 			application = stream->GetApplication();
 		}
-		catch(const std::bad_any_cast& e)
+		catch (const std::bad_any_cast &e)
 		{
 			// Internal Error
 			logtc("WebRTCProvider::OnDataReceived - Could not convert user_data, internal error");
 			return;
 		}
-		
+
 		switch (state)
 		{
 			case IcePortConnectionState::New:
@@ -525,9 +559,8 @@ namespace pvd
 				break;
 			case IcePortConnectionState::Failed:
 			case IcePortConnectionState::Disconnected:
-			case IcePortConnectionState::Closed:
-			{
-				logti("IcePort is disconnected. : (%s/%s) reason(%d)", stream->GetApplicationName(), stream->GetName().CStr(),  state);
+			case IcePortConnectionState::Closed: {
+				logti("IcePort is disconnected. : (%s/%s) reason(%d)", stream->GetApplicationName(), stream->GetName().CStr(), state);
 
 				// Signalling server will call OnStopCommand, then stream will be removed in that function
 				_signalling_server->Disconnect(stream->GetApplicationInfo().GetName(), stream->GetName(), stream->GetPeerSDP());
@@ -547,9 +580,9 @@ namespace pvd
 		std::shared_ptr<WebRTCStream> stream;
 		try
 		{
-			stream = std::any_cast<std::shared_ptr<WebRTCStream>>(user_data);	
+			stream = std::any_cast<std::shared_ptr<WebRTCStream>>(user_data);
 		}
-		catch(const std::bad_any_cast& e)
+		catch (const std::bad_any_cast &e)
 		{
 			// Internal Error
 			logtc("WebRTCProvider::OnDataReceived - Could not convert user_data, internal error");
@@ -564,7 +597,7 @@ namespace pvd
 		auto certificate = std::make_shared<Certificate>();
 
 		auto error = certificate->Generate();
-		if(error != nullptr)
+		if (error != nullptr)
 		{
 			logte("Cannot create certificate: %s", error->What());
 			return nullptr;
@@ -577,4 +610,4 @@ namespace pvd
 	{
 		return _certificate;
 	}
-}
+}  // namespace pvd

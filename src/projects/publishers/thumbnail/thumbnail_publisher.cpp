@@ -56,7 +56,7 @@ bool ThumbnailPublisher::Start()
 	auto &port = thumbnail_bind_config.GetPort(&is_parsed);
 	if (is_parsed)
 	{
-		ov::SocketAddress address = ov::SocketAddress(server_config.GetIp(), port.GetPort());
+		auto address = ov::SocketAddress::CreateAndGetFirst(server_config.GetIPList()[0], port.GetPort());
 
 		_http_server = manager->CreateHttpServer("thumb_http", address, worker_count);
 
@@ -76,7 +76,7 @@ bool ThumbnailPublisher::Start()
 	auto &tls_port = thumbnail_bind_config.GetTlsPort(&is_parsed);
 	if (is_parsed)
 	{
-		ov::SocketAddress tls_address = ov::SocketAddress(server_config.GetIp(), tls_port.GetPort());
+		auto tls_address = ov::SocketAddress::CreateAndGetFirst(server_config.GetIPList()[0], tls_port.GetPort());
 
 		_https_server = manager->CreateHttpsServer("thumb_https", tls_address, false, worker_count);
 		if (_https_server != nullptr)
@@ -102,7 +102,7 @@ bool ThumbnailPublisher::Start()
 
 	if (http_server_result || https_server_result)
 	{
-		logti("Thumbnail publisher is listening on %s", server_config.GetIp().CStr());
+		logti("Thumbnail publisher is listening on %s", server_config.GetIPList()[0].CStr());
 	}
 
 	return Publisher::Start();
@@ -128,10 +128,9 @@ bool ThumbnailPublisher::Stop()
 	return Publisher::Stop();
 }
 
-
 bool ThumbnailPublisher::OnCreateHost(const info::Host &host_info)
 {
-	if(_https_server != nullptr && host_info.GetCertificate() != nullptr)
+	if (_https_server != nullptr && host_info.GetCertificate() != nullptr)
 	{
 		return _https_server->AppendCertificate(host_info.GetCertificate()) == nullptr;
 	}
@@ -141,7 +140,7 @@ bool ThumbnailPublisher::OnCreateHost(const info::Host &host_info)
 
 bool ThumbnailPublisher::OnDeleteHost(const info::Host &host_info)
 {
-	if(_https_server != nullptr && host_info.GetCertificate() != nullptr)
+	if (_https_server != nullptr && host_info.GetCertificate() != nullptr)
 	{
 		return _https_server->RemoveCertificate(host_info.GetCertificate()) == nullptr;
 	}
@@ -180,7 +179,7 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 
 		auto uri = request->GetUri();
 		auto parsed_url = ov::Url::Parse(uri);
-		if(parsed_url == nullptr)
+		if (parsed_url == nullptr)
 		{
 			logtw("Failed to parse url: %s", request->GetRequestTarget().CStr());
 			return http::svr::NextHandler::Call;
@@ -188,7 +187,7 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 
 		if (parsed_url->App().IsEmpty() == true || parsed_url->Stream().IsEmpty() == true || parsed_url->File().IsEmpty() == true)
 		{
-			logtw("Invalid request url: %s",uri.CStr());
+			logtw("Invalid request url: %s", uri.CStr());
 			return http::svr::NextHandler::Call;
 		}
 
@@ -217,7 +216,7 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 			response->AppendString("Could not found application of thumbnail publiser");
 			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
-			
+
 			exchange->Release();
 
 			return http::svr::NextHandler::DoNotCall;
@@ -304,4 +303,3 @@ bool ThumbnailPublisher::SetAllowOrigin(const ov::String &origin_url, std::vecto
 
 	return true;
 }
-

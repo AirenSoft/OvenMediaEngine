@@ -29,97 +29,86 @@ namespace api
 		}
 	};
 
-	bool Server::PrepareHttpServers(const ov::String &server_ip, const cfg::mgr::Managers &managers, const cfg::bind::mgr::API &api_bind_config)
+	bool Server::PrepareHttpServers(const std::vector<ov::String> &server_ip_list,
+									const bool is_port_configured, const uint16_t port,
+									const bool is_tls_port_configured, const uint16_t tls_port,
+									const cfg::mgr::Managers &managers,
+									const int worker_count)
 	{
 		auto http_server_manager = http::svr::HttpServerManager::GetInstance();
 		auto http_interceptor = CreateInterceptor();
 
-		bool http_server_result = true;
-		bool is_parsed;
+		auto certificate = is_tls_port_configured ? info::Certificate::CreateCertificate("api_server", managers.GetHost().GetNameList(), managers.GetHost().GetTls()) : nullptr;
 
-		auto worker_count = api_bind_config.GetWorkerCount(&is_parsed);
-		worker_count = is_parsed ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
-
-		auto &port = api_bind_config.GetPort(&is_parsed);
-		ov::SocketAddress address;
-		if (is_parsed)
+		for (const auto &server_ip : server_ip_list)
 		{
-			address = ov::SocketAddress(server_ip, port.GetPort());
+			std::vector<ov::SocketAddress> address_list;
+			std::vector<ov::SocketAddress> tls_address_list;
 
-			_http_server = http_server_manager->CreateHttpServer("APISvr", address, worker_count);
-
-			if (_http_server != nullptr)
+			try
 			{
-				_http_server->AddInterceptor(http_interceptor);
+				address_list = is_port_configured ? ov::SocketAddress::Create(server_ip, port) : std::vector<ov::SocketAddress>();
+				tls_address_list = (is_tls_port_configured && (certificate != nullptr)) ? ov::SocketAddress::Create(server_ip, tls_port) : std::vector<ov::SocketAddress>();
 			}
-			else
+			catch (const ov::Error &e)
 			{
-				logte("Could not initialize http::svr::Server");
-				http_server_result = false;
-			}
-		}
-
-		bool https_server_result = true;
-		auto &tls_port = api_bind_config.GetTlsPort(&is_parsed);
-		ov::SocketAddress tls_address;
-		if (is_parsed)
-		{
-			auto host_name_list = std::vector<ov::String>();
-
-			for (auto &name : managers.GetHost().GetNameList())
-			{
-				host_name_list.push_back(name);
+				logte("Could not listen for API Server: %s", e.What());
+				return false;
 			}
 
-			tls_address = ov::SocketAddress(server_ip, tls_port.GetPort());
-			auto certificate = info::Certificate::CreateCertificate("api_server", host_name_list, managers.GetHost().GetTls());
+			std::vector<ov::String> address_string_list;
+			std::vector<ov::String> tls_address_string_list;
 
-			if (certificate != nullptr)
+			for (const auto &address : address_list)
 			{
-				_https_server = http_server_manager->CreateHttpsServer("APISvr", tls_address, certificate, false, worker_count);
+				logtd("Attempting to create HTTP Server instance on %s...", address.ToString().CStr());
+				auto http_server = http_server_manager->CreateHttpServer("APISvr", address, worker_count);
 
-				if (_https_server != nullptr)
+				if (http_server != nullptr)
 				{
-					_https_server->AddInterceptor(http_interceptor);
+					http_server->AddInterceptor(http_interceptor);
+					_http_server_list.push_back(http_server);
+					address_string_list.emplace_back(address.ToString());
 				}
 				else
 				{
-					logte("Could not initialize http::svr::HttpsServer");
-					https_server_result = false;
+					logte("Could not initialize HTTP Server on %s", address.ToString().CStr());
+					return false;
 				}
 			}
-		}
 
-		if (http_server_result && https_server_result)
-		{
-			ov::String port_description;
-
-			if (_http_server != nullptr)
+			for (const auto &tls_address : tls_address_list)
 			{
-				port_description.AppendFormat("%s/%s", address.ToString().CStr(), ov::StringFromSocketType(ov::SocketType::Tcp));
-			}
+				logtd("Attempting to create HTTPS Server instance on %s...", tls_address.ToString().CStr());
+				auto https_server = http_server_manager->CreateHttpsServer("APISvr", tls_address, certificate, false, worker_count);
 
-			if (_https_server != nullptr)
-			{
-				if (port_description.IsEmpty() == false)
+				if (https_server != nullptr)
 				{
-					port_description.Append(", ");
+					https_server->AddInterceptor(http_interceptor);
+					_https_server_list.push_back(https_server);
+					tls_address_string_list.emplace_back(tls_address.ToString());
 				}
-
-				port_description.AppendFormat("TLS: %s/%s", tls_address.ToString().CStr(), ov::StringFromSocketType(ov::SocketType::Tcp));
+				else
+				{
+					logte("Could not initialize HTTPS Server on %s", tls_address.ToString().CStr());
+					return false;
+				}
 			}
 
-			// Everything is OK
-			logti("API Server is listening on %s...", port_description.CStr());
+			auto tls_description = ov::String::Join(tls_address_string_list, ", ");
 
-			return true;
+			if (tls_description.IsEmpty() == false)
+			{
+				tls_description.Prepend("(TLS: ");
+				tls_description.Append(')');
+			}
+
+			logti("API Server is listening on %s%s...",
+				  ov::String::Join(address_string_list, ", ").CStr(),
+				  tls_address_list.empty() ? "" : tls_description.CStr());
 		}
 
-		// Rollback
-		http_server_manager->ReleaseServer(_http_server);
-		http_server_manager->ReleaseServer(_https_server);
-
-		return false;
+		return true;
 	}
 
 	void Server::SetupCors(const cfg::mgr::api::API &api_config)
@@ -163,7 +152,23 @@ namespace api
 
 		if (api_bind_config.IsParsed() == false)
 		{
-			logti("API Server is disabled");
+			logti("API Server is disabled by configuration");
+			return true;
+		}
+
+		bool is_configured;
+		auto worker_count = api_bind_config.GetWorkerCount(&is_configured);
+		worker_count = is_configured ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
+
+		bool is_port_configured;
+		auto &port = api_bind_config.GetPort(&is_port_configured);
+
+		bool is_tls_port_configured;
+		auto &tls_port = api_bind_config.GetTlsPort(&is_tls_port_configured);
+
+		if ((is_port_configured == false) && (is_tls_port_configured == false))
+		{
+			logtw("API Server is disabled - No port is configured");
 			return true;
 		}
 
@@ -173,7 +178,37 @@ namespace api
 			return false;
 		}
 
-		return PrepareHttpServers(server_config->GetIp(), managers_config, api_bind_config);
+		auto result = PrepareHttpServers(
+			server_config->GetIPList(),
+			is_port_configured, port.GetPort(),
+			is_tls_port_configured, tls_port.GetPort(),
+			managers_config,
+			worker_count);
+
+		if (result == false)
+		{
+			auto http_server_manager = http::svr::HttpServerManager::GetInstance();
+
+			while (_http_server_list.empty() == false)
+			{
+				auto http_server = _http_server_list.back();
+				_http_server_list.pop_back();
+
+				http_server_manager->ReleaseServer(http_server);
+			}
+			_http_server_list.clear();
+
+			while (_https_server_list.empty() == false)
+			{
+				auto https_server = _https_server_list.back();
+				_https_server_list.pop_back();
+
+				http_server_manager->ReleaseServer(https_server);
+			}
+			_https_server_list.clear();
+		}
+
+		return result;
 	}
 
 	std::shared_ptr<http::svr::RequestInterceptor> Server::CreateInterceptor()
@@ -220,11 +255,27 @@ namespace api
 	{
 		auto manager = http::svr::HttpServerManager::GetInstance();
 
-		std::shared_ptr<http::svr::HttpServer> http_server = std::move(_http_server);
-		std::shared_ptr<http::svr::HttpsServer> https_server = std::move(_https_server);
+		std::vector<std::shared_ptr<http::svr::HttpServer>> http_server_list = std::move(_http_server_list);
+		std::vector<std::shared_ptr<http::svr::HttpsServer>> https_server_list = std::move(_https_server_list);
 
-		bool http_result = (http_server != nullptr) ? manager->ReleaseServer(http_server) : true;
-		bool https_result = (https_server != nullptr) ? manager->ReleaseServer(https_server) : true;
+		bool http_result = true;
+		bool https_result = true;
+
+		for (auto &http_server : http_server_list)
+		{
+			if (manager->ReleaseServer(http_server) == false)
+			{
+				http_result = false;
+			}
+		}
+
+		for (auto &https_server : https_server_list)
+		{
+			if (manager->ReleaseServer(https_server) == false)
+			{
+				https_result = false;
+			}
+		}
 
 		_is_storage_path_initialized = false;
 		_storage_path = "";

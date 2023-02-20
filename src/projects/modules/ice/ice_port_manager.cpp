@@ -7,29 +7,30 @@
 //
 //==============================================================================
 #include "ice_port_manager.h"
-#include "ice_private.h"
 
 #include <modules/address/address_utilities.h>
 #include <modules/rtc_signalling/rtc_ice_candidate.h>
 
+#include "ice_private.h"
+
 std::shared_ptr<IcePort> IcePortManager::CreatePort(std::shared_ptr<IcePortObserver> observer)
 {
-	if(_ice_port == nullptr)
+	if (_ice_port == nullptr)
 	{
 		_ice_port = std::make_shared<IcePort>();
 
 		observer->SetId(_last_issued_observer_id++);
 		_observers.push_back(observer);
 	}
-	
+
 	return _ice_port;
 }
 
 bool IcePortManager::IsRegisteredObserver(const std::shared_ptr<IcePortObserver> &observer)
 {
-	for(const auto &item : _observers)
+	for (const auto &item : _observers)
 	{
-		if(item->GetId() == observer->GetId())
+		if (item->GetId() == observer->GetId())
 		{
 			return true;
 		}
@@ -40,14 +41,14 @@ bool IcePortManager::IsRegisteredObserver(const std::shared_ptr<IcePortObserver>
 
 bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::cmm::IceCandidates &ice_candidates_config)
 {
-	if(_ice_port == nullptr || IsRegisteredObserver(observer) == false)
+	if (_ice_port == nullptr || IsRegisteredObserver(observer) == false)
 	{
 		return false;
 	}
 
-	std::vector<std::vector<RtcIceCandidate>> ice_candidate_list;
+	RtcIceCandidateList ice_candidate_list;
 
-	if(GenerateIceCandidates(ice_candidates_config, &ice_candidate_list) == false)
+	if (GenerateIceCandidates(ice_candidates_config, &ice_candidate_list) == false)
 	{
 		logte("Could not parse ICE candidates");
 		return false;
@@ -57,7 +58,7 @@ bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePortObserver> observ
 	auto ice_worker_count = ice_candidates_config.GetIceWorkerCount(&is_parsed);
 	ice_worker_count = is_parsed ? ice_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
 
-	if(_ice_port->CreateIceCandidates(ice_candidate_list, ice_worker_count) == false)
+	if (_ice_port->CreateIceCandidates(ice_candidate_list, ice_worker_count) == false)
 	{
 		Release(observer);
 
@@ -67,7 +68,7 @@ bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePortObserver> observ
 	else
 	{
 		observer->AppendIceCandidates(ice_candidate_list);
-		logtd("IceCandidates is created successfully: %s", _ice_port->ToString().CStr());
+		logtd("IceCandidates are created successfully: %s", _ice_port->ToString().CStr());
 	}
 
 	return true;
@@ -75,12 +76,12 @@ bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePortObserver> observ
 
 bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePortObserver> observer, const ov::SocketAddress &listening, const ov::SocketType socket_type, int tcp_relay_worker_count)
 {
-	if(_ice_port == nullptr || IsRegisteredObserver(observer) == false)
+	if (_ice_port == nullptr || IsRegisteredObserver(observer) == false)
 	{
 		return false;
 	}
 
-	if(_ice_port->CreateTurnServer(listening, socket_type, tcp_relay_worker_count) == false)
+	if (_ice_port->CreateTurnServer(listening, socket_type, tcp_relay_worker_count) == false)
 	{
 		Release(observer);
 
@@ -93,18 +94,18 @@ bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePortObserver> observer,
 		observer->SetTurnServerPort(listening.Port());
 		logti("RelayServer is created successfully: host:%d?transport=tcp", listening.Port());
 	}
-	
+
 	return true;
 }
 
 bool IcePortManager::Release(std::shared_ptr<IcePortObserver> observer)
 {
-	if(IsRegisteredObserver(observer) == false)
+	if (IsRegisteredObserver(observer) == false)
 	{
 		return false;
 	}
 
-	if(_ice_port != nullptr)
+	if (_ice_port != nullptr)
 	{
 		_ice_port->Close();
 		_ice_port = nullptr;
@@ -115,24 +116,24 @@ bool IcePortManager::Release(std::shared_ptr<IcePortObserver> observer)
 	return true;
 }
 
-bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &ice_candidates_config, std::vector<std::vector<RtcIceCandidate>> *ice_candidate_list)
+bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &ice_candidates_config, RtcIceCandidateList *ice_candidate_list)
 {
 	auto &list_config = ice_candidates_config.GetIceCandidateList();
 
-	for(auto &ice_candidate_config : list_config)
+	for (auto &ice_candidate_config : list_config)
 	{
 		std::vector<ov::String> ip_list;
 		ov::SocketType socket_type;
-		int start_port;
-		int end_port;
+		uint16_t start_port;
+		uint16_t end_port;
 
-		if(ParseIceCandidate(ice_candidate_config, &ip_list, &socket_type, &start_port, &end_port) == false)
+		if (ParseIceCandidate(ice_candidate_config, &ip_list, &socket_type, &start_port, &end_port) == false)
 		{
-			logte("Invalid ICE candidate in configuration: %s", ice_candidate_config.CStr());
 			return false;
 		}
 
-		ov::String protocol = (socket_type == ov::SocketType::Tcp) ? "TCP" : "UDP";
+		ov::String protocol = StringFromSocketType(socket_type);
+		std::vector<ov::SocketAddress> address_list;
 
 		for (int port_num = start_port; port_num <= end_port; port_num++)
 		{
@@ -140,8 +141,25 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 
 			for (const auto &local_ip : ip_list)
 			{
-				// Create an ICE candidate using local_ip & port_num
-				ice_candidates.emplace_back(protocol, local_ip, static_cast<uint16_t>(port_num), 0, "");
+				try
+				{
+					address_list = ov::SocketAddress::Create(local_ip, static_cast<uint16_t>(port_num));
+				}
+				catch (const ov::Error &e)
+				{
+					logte("Could not create socket address: %s", e.What());
+					return false;
+				}
+
+				for (const auto &address : address_list)
+				{
+					// Create an ICE candidate using local_ip & port_num
+					RtcIceCandidate ice_candidate(protocol, address, 0, "");
+
+					logtd("ICE Candidate is created: %s (from %s)", ice_candidate.ToString().CStr(), address.ToString().CStr());
+
+					ice_candidates.emplace_back(std::move(ice_candidate));
+				}
 			}
 
 			ice_candidate_list->push_back(std::move(ice_candidates));
@@ -151,7 +169,7 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 	return true;
 }
 
-bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, int *start_port, int *end_port)
+bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, uint16_t *start_port, uint16_t *end_port)
 {
 	// Create SocketAddress instances from string
 	//
@@ -160,22 +178,22 @@ bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vec
 	// - Case #1
 	//   - Expression: 192.168.0.1:10000
 	//   - Meaning: IP = 192.168.0.1, Port = 10000, Protocol: TCP
-	//   - It generates single instance:
+	//   - It generates a instance:
 	//     [0] 192.168.0.1, 10000/TCP
 	// - Case #2
 	//   - Expression: 192.168.0.1:10000/udp
 	//   - Meaning: IP = 192.168.0.1, Port = 10000, Protocol: UDP
-	//   - It generates single instance:
+	//   - It generates a instance:
 	//     [0] 192.168.0.1, 10000/UDP
 	// - Case #3
 	//   - Expression: *:10000/udp
-	//   - Meaning: IP = <All IP addresses>, Port = 10000, Protocol: UDP
+	//   - Meaning: IP = <All IPv4 addresses>, Port = 10000, Protocol: UDP
 	//   - It may generates multiple instances:
 	//     [0] 192.168.0.1, 10000/UDP
 	//     [1] 10.0.0.1, 10000/UDP
 	// - Case #4
 	//   - Expression: *:10000-10002/udp
-	//   - Meaning: IP = <All IP addresses>, Port = Total 3 ports (10000 to 10002), Protocol: UDP
+	//   - Meaning: IP = <All IPv4 addresses>, Port = Total 3 ports (10000 to 10002), Protocol: UDP
 	//   - It may generates multiple instances:
 	//     [0] 192.168.0.1, 10000/UDP
 	//     [1] 192.168.0.1, 10001/UDP
@@ -183,119 +201,73 @@ bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vec
 	//     [3] 10.0.0.1, 10000/UDP
 	//     [4] 10.0.0.1, 10001/UDP
 	//     [5] 10.0.0.1, 10002/UDP
+	// - Case #5
+	//   - Expression: [::]:10000/udp
+	//   - Meaning: IP = <All IPv6 addresses>, Port = 10000, Protocol: UDP
+	//   - It may generates multiple instances:
+	//     [0] fe80::1, 10000/UDP
+	//     [1] fe80::2, 10000/UDP
 
 	// <IP>:<Port range>[/<Protocol>]
-	auto tokens = ice_candidate.Split(":");
+	// Split by "/" to parse IP and Port range
+	auto tokens = ice_candidate.Split("/");
 
-	if(tokens.size() != 2)
+	if (tokens.size() > 2)
 	{
+		logte("Invalid ICE candidate in configuration: %s", ice_candidate.CStr());
 		return false;
 	}
 
-	// <IP>:<Port range>[/<Protocol>]
-	// ~~~~
-	ov::String ip = tokens[0];
-	// <IP>:<Port range>[/<Protocol>]
-	//      ~~~~~~~~~~~~~~~~~~~~~~~~~
-	ov::String port_protocol = tokens[1];
-
-	// Extract protocol
-	tokens = port_protocol.Split("/");
-
-	// <IP>:<Port range>[/<Protocol>]
-	//      ~~~~~~~~~~~~
-	ov::String port = tokens[0];
+	auto protocol = (tokens.size() == 2) ? tokens[1].UpperCaseString() : "";
 
 	ov::SocketType type = ov::SocketType::Tcp;
-	int start = 0;
-	int end = 0;
-
-	switch(tokens.size())
+	if (protocol == "UDP")
 	{
-		case 2:
-		{
-			// Port with protocol
-			// <IP>:<Port range>[/<Protocol>]
-			//                    ~~~~~~~~~~
-			ov::String protocol = tokens[1];
-			protocol.MakeUpper();
-
-			if(protocol == "UDP")
-			{
-				type = ov::SocketType::Udp;
-			}
-			else if(protocol == "TCP")
-			{
-				type = ov::SocketType::Tcp;
-			}
-			else
-			{
-				logte("Invalid ICE candidate found - not supported protocol: %s", tokens[1].CStr());
-				return false;
-			}
-
-			[[fallthrough]];
-		}
-
-		case 1:
-		{
-			// Parse the port
-			tokens = port.Split("-");
-
-			switch(tokens.size())
-			{
-				case 1:
-					// Single port
-					start = ov::Converter::ToInt32(port);
-					end = start;
-					break;
-
-				case 2:
-					// Port range
-					start = ov::Converter::ToInt32(tokens[0]);
-					end = ov::Converter::ToInt32(tokens[1]);
-					break;
-
-				default:
-					// Invalid port value
-					logte("Invalid ICE candidate found - invalid port expression: %s", ice_candidate.CStr());
-					return false;
-			}
-
-			break;
-		}
-
-		default:
-			// Invalid expression
-			logte("Invalid ICE candidate found - too many port expressions: %s", ice_candidate.CStr());
-			return false;
+		type = ov::SocketType::Udp;
 	}
-
-	if(
-		(start <= 0) || (start >= 65535) ||
-		(end <= 0) || (end >= 65535) ||
-		(start > end)
-		)
+	else if (protocol == "TCP")
 	{
-		logte("Invalid ICE candidate found - invalid port range: %s", ice_candidate.CStr());
+		type = ov::SocketType::Tcp;
+	}
+	else if (protocol.IsEmpty() == false)
+	{
+		logte("Invalid ICE candidate found - not supported protocol: %s", tokens[1].CStr());
 		return false;
 	}
-
-	if(ip == "*")
+	else
 	{
-		// multiple ip
-		auto local_ip_list = ov::AddressUtilities::GetInstance()->GetIpList();
+		// Use default value
+	}
 
+	ov::String host;
+	ov::SocketAddress::ParseAddress(tokens[0], &host, start_port, end_port);
+
+	if (host.IsEmpty())
+	{
+		// Add both of IPv4 and IPv6 addresses
+		auto local_ip_list = ov::AddressUtilities::GetInstance()->GetIpList(ov::SocketFamily::Inet);
+		ip_list->insert(ip_list->end(), local_ip_list.cbegin(), local_ip_list.cend());
+		local_ip_list = ov::AddressUtilities::GetInstance()->GetIpList(ov::SocketFamily::Inet6);
+		ip_list->insert(ip_list->end(), local_ip_list.cbegin(), local_ip_list.cend());
+	}
+	else if (host == "*")
+	{
+		// IPv4 wildcard - Add IPv4 addresses
+		auto local_ip_list = ov::AddressUtilities::GetInstance()->GetIpList(ov::SocketFamily::Inet);
+		ip_list->insert(ip_list->end(), local_ip_list.cbegin(), local_ip_list.cend());
+	}
+	else if (host == "::")
+	{
+		// IPv6 wildcard - Add IPv6 addresses
+		auto local_ip_list = ov::AddressUtilities::GetInstance()->GetIpList(ov::SocketFamily::Inet6);
 		ip_list->insert(ip_list->end(), local_ip_list.cbegin(), local_ip_list.cend());
 	}
 	else
 	{
-		ip_list->push_back(ip);
+		ip_list->push_back(host);
 	}
 
 	*socket_type = type;
-	*start_port = start;
-	*end_port = end;
 
 	return true;
 }

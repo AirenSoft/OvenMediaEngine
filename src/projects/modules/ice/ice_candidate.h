@@ -56,7 +56,7 @@ public:
 	//   extension-att-value ----------------------------------------------------------->~
 	IceCandidate(const ov::String &foundation, const ov::String &component_id, const ov::String &transport, uint32_t priority, const ov::String &cand_type, const ov::String &candidate_types, const ov::String &rel_addr, const ov::String &rel_port, const std::map<ov::String, ov::String> &extension_att) = delete;
 	IceCandidate(const IceCandidate &candidate) = default;
-	IceCandidate(ov::String transport, ov::String ip_address, int port);
+	IceCandidate(ov::String transport, const ov::SocketAddress &address);
 	IceCandidate(IceCandidate &&candidate) noexcept;
 
 	virtual ~IceCandidate();
@@ -79,9 +79,7 @@ public:
 
 	ov::SocketAddress GetAddress() const;
 	ov::String GetIpAddress() const;
-	void SetIpAddress(const ov::String &ip_address);
 	int GetPort() const;
-	void SetPort(int port);
 
 	const ov::String &GetCandidateTypes() const;
 	void SetCandidateTypes(const ov::String &candidate_types);
@@ -117,8 +115,9 @@ protected:
 	// 1*10DIGIT
 	uint32_t _priority;
 	// <connection-address> <port> (RFC4566)
-	ov::String _ip_address;
-	int _port;
+	// ov::String _ip_address;
+	// int _port;
+	ov::SocketAddress _address;
 	// "typ" ["host" | "srflx" | "prflx" | "relay" | token]
 	ov::String _candidate_types;
 	// "raddr" <connection-address>

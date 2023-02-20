@@ -59,7 +59,8 @@ namespace http
 			ov::Socket *FindClient(ClientIterator iterator);
 
 			// If the iterator returns true, the client will be disconnected
-			bool DisconnectIf(ClientIterator iterator);
+			// And returns the number of disconnected clients
+			size_t DisconnectIf(ClientIterator iterator);
 
 		protected:
 			std::shared_ptr<HttpConnection> FindClient(const std::shared_ptr<ov::Socket> &remote);
@@ -90,8 +91,11 @@ namespace http
 
 		private:
 			ov::DelayQueueAction Repeater(void *parameter);
-			ov::DelayQueue _repeater{"HTTPTimer"};
+
+			static ov::DelayQueue _repeater;
+
 			bool _http2_enabled = true;
 		};
+
 	}  // namespace svr
 }  // namespace http

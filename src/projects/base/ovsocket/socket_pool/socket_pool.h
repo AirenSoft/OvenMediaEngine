@@ -90,13 +90,13 @@ namespace ov
 		}
 
 		template <typename Tsocket = ov::Socket, typename... Targuments>
-		std::shared_ptr<Tsocket> AllocSocket(Targuments... args)
+		std::shared_ptr<Tsocket> AllocSocket(const SocketFamily family, Targuments... args)
 		{
 			std::shared_ptr<SocketPoolWorker> worker = GetIdleWorker();
 
 			if (worker != nullptr)
 			{
-				auto socket = worker->AllocSocket<Tsocket>(args...);
+				auto socket = worker->AllocSocket<Tsocket>(family, args...);
 
 				if (socket == nullptr)
 				{

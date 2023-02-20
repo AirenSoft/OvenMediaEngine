@@ -21,7 +21,7 @@ namespace pvd
 {
 	std::shared_ptr<RtspcStream> RtspcStream::Create(const std::shared_ptr<pvd::PullApplication> &application,
 													 const uint32_t stream_id, const ov::String &stream_name,
-													 const std::vector<ov::String> &url_list, 
+													 const std::vector<ov::String> &url_list,
 													 const std::shared_ptr<pvd::PullStreamProperties> &properties)
 	{
 		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::RtspPull);
@@ -41,7 +41,7 @@ namespace pvd
 	}
 
 	RtspcStream::RtspcStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list, const std::shared_ptr<pvd::PullStreamProperties> &properties)
-	: pvd::PullStream(application, stream_info, url_list, properties), Node(NodeType::Rtsp)
+		: pvd::PullStream(application, stream_info, url_list, properties), Node(NodeType::Rtsp)
 	{
 		SetState(State::IDLE);
 	}
@@ -85,7 +85,7 @@ namespace pvd
 
 	void RtspcStream::Release()
 	{
-		if(_rtp_rtcp != nullptr)
+		if (_rtp_rtcp != nullptr)
 		{
 			_rtp_rtcp->Stop();
 		}
@@ -99,7 +99,7 @@ namespace pvd
 	bool RtspcStream::StartStream(const std::shared_ptr<const ov::Url> &url)
 	{
 		// Only start from IDLE, ERROR, STOPPED
-		if(!(GetState() == State::IDLE || GetState() == State::ERROR || GetState() == State::STOPPED))
+		if (!(GetState() == State::IDLE || GetState() == State::ERROR || GetState() == State::STOPPED))
 		{
 			return true;
 		}
@@ -130,7 +130,7 @@ namespace pvd
 			return false;
 		}
 
-		if(RequestPlay() == false)
+		if (RequestPlay() == false)
 		{
 			Release();
 			return false;
@@ -138,7 +138,7 @@ namespace pvd
 
 		_origin_response_time_msec = stop_watch.Elapsed();
 
-		// Stream was created completly 
+		// Stream was created completly
 		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(PullStream::GetSharedPtr()));
 		if (_stream_metrics != nullptr)
 		{
@@ -157,14 +157,14 @@ namespace pvd
 
 	bool RtspcStream::StopStream()
 	{
-		if(GetState() == State::STOPPED)
+		if (GetState() == State::STOPPED)
 		{
 			return true;
 		}
 
-		if(!RequestStop())
+		if (!RequestStop())
 		{
-			// Force terminate 
+			// Force terminate
 			SetState(State::ERROR);
 		}
 
@@ -177,12 +177,12 @@ namespace pvd
 
 	bool RtspcStream::ConnectTo()
 	{
-		if(GetState() == State::PLAYING || GetState() == State::TERMINATED)
+		if (GetState() == State::PLAYING || GetState() == State::TERMINATED)
 		{
 			return false;
 		}
 
-		logtd("Requested url[%d] : %s", strlen(_curr_url->Source().CStr()), _curr_url->Source().CStr() );
+		logtd("Requested url[%d] : %s", strlen(_curr_url->Source().CStr()), _curr_url->Source().CStr());
 
 		auto scheme = _curr_url->Scheme();
 		if (scheme.UpperCaseString() != "RTSP")
@@ -200,8 +200,11 @@ namespace pvd
 			return false;
 		}
 
+		// 554 is default port of RTSP
+		auto socket_address = ov::SocketAddress::CreateAndGetFirst(_curr_url->Host(), _curr_url->Port() == 0 ? 554 : _curr_url->Port());
+
 		// Connect
-		_signalling_socket = signalling_socket_pool->AllocSocket();
+		_signalling_socket = signalling_socket_pool->AllocSocket(socket_address.GetFamily());
 		if (_signalling_socket == nullptr)
 		{
 			SetState(State::ERROR);
@@ -212,9 +215,6 @@ namespace pvd
 		}
 
 		_signalling_socket->MakeBlocking();
-
-		// 554 is default port of RTSP
-		ov::SocketAddress socket_address(_curr_url->Host(), _curr_url->Port() == 0 ? 554 : _curr_url->Port());
 
 		auto error = _signalling_socket->Connect(socket_address, 3000);
 		if (error != nullptr)
@@ -231,7 +231,7 @@ namespace pvd
 
 	bool RtspcStream::RequestDescribe()
 	{
-		if(GetState() != State::CONNECTED)
+		if (GetState() != State::CONNECTED)
 		{
 			return false;
 		}
@@ -241,7 +241,7 @@ namespace pvd
 		describe->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
 
 		std::shared_ptr<RtspMessage> reply = nullptr;
-		for(int i=0; i<2; i++)
+		for (int i = 0; i < 2; i++)
 		{
 			if (SendRequestMessage(describe) == false)
 			{
@@ -261,7 +261,7 @@ namespace pvd
 			else if (reply->GetStatusCode() == 401)
 			{
 				// Authorization has been failed
-				if(i == 1)
+				if (i == 1)
 				{
 					SetState(State::ERROR);
 					logte("Rtsp server(%s) rejected the describe request : %d(%s) | ID/Password may be incorrect.", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
@@ -277,7 +277,7 @@ namespace pvd
 				}
 
 				// Add authorization field
-				if(authenticate_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Basic)
+				if (authenticate_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Basic)
 				{
 					_authorization_field = RtspHeaderAuthorizationField::CreateRtspBasicAuthorizationField(_curr_url->Id(), _curr_url->Password());
 					describe->AddHeaderField(_authorization_field);
@@ -287,7 +287,7 @@ namespace pvd
 				}
 				else if (authenticate_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
 				{
-					_authorization_field = RtspHeaderAuthorizationField::CreateRtspDigestAuthorizationField(_curr_url->Id(), _curr_url->Password(), 
+					_authorization_field = RtspHeaderAuthorizationField::CreateRtspDigestAuthorizationField(_curr_url->Id(), _curr_url->Password(),
 																											describe->GetMethodStr(), describe->GetRequestUri(),
 																											authenticate_field->GetRealm(), authenticate_field->GetNonce());
 					describe->AddHeaderField(_authorization_field);
@@ -308,7 +308,7 @@ namespace pvd
 				logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
 				return false;
 			}
-			else 
+			else
 			{
 				// Success
 				break;
@@ -364,7 +364,7 @@ namespace pvd
 
 	bool RtspcStream::RequestSetup()
 	{
-		if(GetState() != State::DESCRIBED)
+		if (GetState() != State::DESCRIBED)
 		{
 			return false;
 		}
@@ -383,7 +383,7 @@ namespace pvd
 			}
 
 			auto control = media_desc->GetControl();
-			if(control.IsEmpty())
+			if (control.IsEmpty())
 			{
 				SetState(State::ERROR);
 				logte("Could not get control attribute in (%s) ", _curr_url->ToUrlString().CStr());
@@ -391,7 +391,7 @@ namespace pvd
 			}
 
 			auto control_url = GenerateControlUrl(control);
-			if(control_url.IsEmpty())
+			if (control_url.IsEmpty())
 			{
 				SetState(State::ERROR);
 				logte("Could not make control url with (%s) ", control.CStr());
@@ -399,10 +399,10 @@ namespace pvd
 			}
 
 			auto setup = std::make_shared<RtspMessage>(RtspMethod::SETUP, GetNextCSeq(), control_url);
-			if(_authorization_field != nullptr)
+			if (_authorization_field != nullptr)
 			{
 				// If authorization method is Digest, update the method and uri
-				if(_authorization_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+				if (_authorization_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
 				{
 					_authorization_field->UpdateDigestAuth(setup->GetMethodStr(), setup->GetRequestUri());
 				}
@@ -459,8 +459,8 @@ namespace pvd
 
 			// Transport
 			auto transport_field = reply->GetHeaderFieldAs<RtspHeaderTransportField>(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::Transport));
-			if(transport_field == nullptr)
-			{	
+			if (transport_field == nullptr)
+			{
 				SetState(State::ERROR);
 				logte("There is no Transport header in the response from the RTSP server(%s)", _curr_url->ToUrlString().CStr());
 				return false;
@@ -486,7 +486,7 @@ namespace pvd
 			track->SetTimeBase(1, first_payload->GetCodecRate());
 			track->SetVideoTimestampScale(1.0);
 
-			switch(first_payload->GetCodec())
+			switch (first_payload->GetCodec())
 			{
 				case PayloadAttr::SupportCodec::H264:
 					track->SetMediaType(cmn::MediaType::Video);
@@ -525,14 +525,14 @@ namespace pvd
 			}
 
 			// Add Depacketizer
-			if(AddDepacketizer(interleaved_channel, depacketizer_type) == false)
+			if (AddDepacketizer(interleaved_channel, depacketizer_type) == false)
 			{
 				logte("%s - Could not add depacketizer for channel %u codec  : %s", GetName().CStr(), interleaved_channel, first_payload->GetCodecParams().CStr());
 				return false;
 			}
 
 			// Set Parameters
-			if(depacketizer_type == RtpDepacketizingManager::SupportedDepacketizerType::MPEG4_GENERIC_AUDIO)
+			if (depacketizer_type == RtpDepacketizingManager::SupportedDepacketizerType::MPEG4_GENERIC_AUDIO)
 			{
 				RtpDepacketizerMpeg4GenericAudio::Mode mpeg4_mode;
 				if (first_payload->GetMpeg4GenericMode() == PayloadAttr::Mpeg4GenericMode::AAC_lbr)
@@ -589,16 +589,16 @@ namespace pvd
 
 	bool RtspcStream::RequestPlay()
 	{
-		if(GetState() != State::DESCRIBED)
+		if (GetState() != State::DESCRIBED)
 		{
 			return false;
 		}
 
 		auto play = std::make_shared<RtspMessage>(RtspMethod::PLAY, GetNextCSeq(), _curr_url->ToUrlString(true));
-		if(_authorization_field != nullptr)
+		if (_authorization_field != nullptr)
 		{
 			// If authorization method is Digest, update the method and uri
-			if(_authorization_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+			if (_authorization_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
 			{
 				_authorization_field->UpdateDigestAuth(play->GetMethodStr(), play->GetRequestUri());
 			}
@@ -648,10 +648,10 @@ namespace pvd
 		}
 
 		auto teardown = std::make_shared<RtspMessage>(RtspMethod::TEARDOWN, GetNextCSeq(), _curr_url->ToUrlString(true));
-		if(_authorization_field != nullptr)
+		if (_authorization_field != nullptr)
 		{
 			// If authorization method is Digest, update the method and uri
-			if(_authorization_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+			if (_authorization_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
 			{
 				_authorization_field->UpdateDigestAuth(teardown->GetMethodStr(), teardown->GetRequestUri());
 			}
@@ -966,35 +966,35 @@ namespace pvd
 				return;
 		}
 
-		if(_pts_calculation_method == PtsCalculationMethod::UNDER_DECISION)
+		if (_pts_calculation_method == PtsCalculationMethod::UNDER_DECISION)
 		{
-			if(GetTracks().size() == 1)
+			if (GetTracks().size() == 1)
 			{
 				logti("Since this stream has a single track, it computes PTS alone without RTCP SR.");
 				_pts_calculation_method = PtsCalculationMethod::SINGLE_DELTA;
 			}
-			else if(_lip_sync_clock.IsEnabled() == true)
+			else if (_lip_sync_clock.IsEnabled() == true)
 			{
 				logti("Since this stream has received an RTCP SR, it counts the PTS with the SR.");
 				_pts_calculation_method = PtsCalculationMethod::WITH_RTCP_SR;
 			}
 			// If it exceeds 5 seconds, it is calculated independently without RTCP SR.
-			else if(_lip_sync_clock.IsEnabled() == false && _play_request_time.Elapsed() > 5000)
+			else if (_lip_sync_clock.IsEnabled() == false && _play_request_time.Elapsed() > 5000)
 			{
 				logtw("Since the RTCP SR was not received within 5 seconds, the PTS is calculated for each track without RTCP SR. (Lip-Sync may be out of sync)");
 				_pts_calculation_method = PtsCalculationMethod::SINGLE_DELTA;
 			}
-			else if(_lip_sync_clock.IsEnabled() == false && _play_request_time.Elapsed() <= 5000)
+			else if (_lip_sync_clock.IsEnabled() == false && _play_request_time.Elapsed() <= 5000)
 			{
 				// Wait for RTCP SR for 5 seconds
 			}
 		}
 
 		uint64_t timestamp = 0;
-		if(_pts_calculation_method == PtsCalculationMethod::WITH_RTCP_SR)
+		if (_pts_calculation_method == PtsCalculationMethod::WITH_RTCP_SR)
 		{
 			auto pts = _lip_sync_clock.CalcPTS(channel, first_rtp_packet->Timestamp());
-			if(pts.has_value() == false)
+			if (pts.has_value() == false)
 			{
 				logtd("not yet received sr packet : %u", first_rtp_packet->Ssrc());
 				// Prevents the stream from being deleted because there is no input data
@@ -1004,7 +1004,7 @@ namespace pvd
 
 			timestamp = AdjustTimestampByBase(channel, pts.value(), pts.value(), std::numeric_limits<uint64_t>::max());
 		}
-		else if(_pts_calculation_method == PtsCalculationMethod::SINGLE_DELTA)
+		else if (_pts_calculation_method == PtsCalculationMethod::SINGLE_DELTA)
 		{
 			timestamp = AdjustTimestampByDelta(channel, first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
 		}
@@ -1016,8 +1016,8 @@ namespace pvd
 			return;
 		}
 
-		logtd("Channel(%d) Payload Type(%d) Ssrc(%u) Timestamp(%u) PTS(%lld) Time scale(%f) Adjust Timestamp(%f)", 
-				channel, first_rtp_packet->PayloadType(), first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
+		logtd("Channel(%d) Payload Type(%d) Ssrc(%u) Timestamp(%u) PTS(%lld) Time scale(%f) Adjust Timestamp(%f)",
+			  channel, first_rtp_packet->PayloadType(), first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
 
 		auto frame = std::make_shared<MediaPacket>(GetMsid(),
 												   track->GetMediaType(),
@@ -1033,18 +1033,18 @@ namespace pvd
 		// Send SPS/PPS if stream is H264
 		if (_sent_sequence_header == false && track->GetCodecId() == cmn::MediaCodecId::H264 && _h264_extradata_nalu != nullptr)
 		{
-			auto media_packet = std::make_shared<MediaPacket>(GetMsid(),	
-																track->GetMediaType(), 
-																track->GetId(), 
-																_h264_extradata_nalu,
-																timestamp, 
-																timestamp, 
-																cmn::BitstreamFormat::H264_ANNEXB, 
-																cmn::PacketType::NALU);
+			auto media_packet = std::make_shared<MediaPacket>(GetMsid(),
+															  track->GetMediaType(),
+															  track->GetId(),
+															  _h264_extradata_nalu,
+															  timestamp,
+															  timestamp,
+															  cmn::BitstreamFormat::H264_ANNEXB,
+															  cmn::PacketType::NALU);
 			SendFrame(media_packet);
 			_sent_sequence_header = true;
 		}
-		
+
 		SendFrame(frame);
 	}
 
@@ -1106,7 +1106,7 @@ namespace pvd
 			auto rtcp_info = rtcp_packet->GetRtcpInfo();
 
 			auto rtp_ssrc = rtcp_info->GetRtpSsrc();
-			channel_id = _ssrc_channel_id_map[rtp_ssrc] + 1; // RTCP Channel ID is rtp channel id + 1
+			channel_id = _ssrc_channel_id_map[rtp_ssrc] + 1;  // RTCP Channel ID is rtp channel id + 1
 
 			auto channel_data = std::make_shared<ov::Data>();
 			// $ + 1 bytes channel id + length + payload

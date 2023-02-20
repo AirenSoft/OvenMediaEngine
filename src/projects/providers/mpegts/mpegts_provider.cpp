@@ -42,7 +42,7 @@ namespace pvd
 	bool MpegTsProvider::BindMpegTSPorts()
 	{
 		auto &server_config = GetServerConfig();
-		auto &ip = server_config.GetIp();
+		auto &ip = server_config.GetIPList()[0];
 		auto &mpegts_provider_config = server_config.GetBind().GetProviders().GetMpegts();
 		auto &port_config = mpegts_provider_config.GetPort();
 		auto &port_list_config = port_config.GetPortList();
@@ -50,7 +50,7 @@ namespace pvd
 
 		for (const auto &port : port_list_config)
 		{
-			auto address = ov::SocketAddress(ip, port);
+			auto address = ov::SocketAddress::CreateAndGetFirst(ip, port);
 			auto physical_port = PhysicalPortManager::GetInstance()->CreatePort("MPEGTS", socket_type, address, 1);
 			if (physical_port == nullptr)
 			{

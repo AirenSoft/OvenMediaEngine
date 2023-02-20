@@ -17,6 +17,8 @@ namespace http
 {
 	namespace svr
 	{
+		ov::DelayQueue HttpServer::_repeater{"HTTPTimer"};
+
 		HttpServer::HttpServer(const char *server_name)
 			: _server_name(server_name)
 		{
@@ -37,7 +39,7 @@ namespace http
 				logtw("Server is running");
 				return false;
 			}
-			
+
 			_http2_enabled = enable_http2;
 
 			auto manager = PhysicalPortManager::GetInstance();
@@ -210,7 +212,7 @@ namespace http
 			if (reason == PhysicalPortDisconnectReason::Disconnect)
 			{
 				connection->Close(reason);
- 				logti("Client(%s) has been disconnected by %s",
+				logti("Client(%s) has been disconnected by %s",
 					  remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 			}
 			// It comes from PhysicalPort::Close()
@@ -255,7 +257,7 @@ namespace http
 				}
 			}
 
-			// TODO(h2) : Check if default interceptor should be used 
+			// TODO(h2) : Check if default interceptor should be used
 
 			return nullptr;
 		}
@@ -295,7 +297,7 @@ namespace http
 			return nullptr;
 		}
 
-		bool HttpServer::DisconnectIf(ClientIterator iterator)
+		size_t HttpServer::DisconnectIf(ClientIterator iterator)
 		{
 			std::vector<std::shared_ptr<HttpConnection>> temp_list;
 
@@ -318,7 +320,7 @@ namespace http
 				client_iterator->Close(PhysicalPortDisconnectReason::Disconnect);
 			}
 
-			return true;
+			return temp_list.size();
 		}
 	}  // namespace svr
 }  // namespace http

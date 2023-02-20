@@ -170,6 +170,22 @@ namespace ov
 		}
 	}
 
+	static const char *StringFromSocketFamily(SocketFamily family)
+	{
+		switch (family)
+		{
+			case SocketFamily::Inet:
+				return "Inet";
+
+			case SocketFamily::Inet6:
+				return "Inet6";
+
+			case SocketFamily::Unknown:
+			default:
+				return "Unknown";
+		}
+	}
+
 	class SocketAddress;
 
 	// For SocketPoolWorker callback

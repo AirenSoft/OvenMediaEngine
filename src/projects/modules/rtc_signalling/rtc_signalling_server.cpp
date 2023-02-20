@@ -27,176 +27,225 @@ RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config, const
 {
 }
 
-bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address, int worker_count, std::shared_ptr<http::svr::ws::Interceptor> interceptor)
+void RtcSignallingServer::PrepareForICE()
 {
-	//	const auto &webrtc_config = _server_config.GetBind().GetPublishers().GetWebrtc();
+	_ice_servers = Json::arrayValue;
+	_new_ice_servers = Json::arrayValue;
 
-	if ((_http_server != nullptr) || (_https_server != nullptr))
+	// for internal turn/tcp relay configuration
+	_tcp_force = _webrtc_config.GetIceCandidates().IsTcpForce();
+
+	bool tcp_relay_parsed = false;
+	auto tcp_relay_address = _webrtc_config.GetIceCandidates().GetTcpRelay(&tcp_relay_parsed);
+	if (tcp_relay_parsed)
 	{
-		OV_ASSERT(false, "Server is already running (%p, %p)", _http_server.get(), _https_server.get());
-		return false;
+		Json::Value ice_server = Json::objectValue;
+		Json::Value new_ice_server = Json::objectValue;
+		Json::Value urls = Json::arrayValue;
+
+		// <TcpRelay>IP:Port</TcpRelay>
+		// <TcpRelay>*:Port</TcpRelay>
+		// <TcpRelay>${PublicIP}:Port</TcpRelay>
+		// Check tcp_relay_address is * or ${PublicIP}
+		auto address_items = tcp_relay_address.Split(":");
+		if (address_items.size() != 2)
+		{
+		}
+
+		if (address_items[0] == "*")
+		{
+			auto ip_list = ov::AddressUtilities::GetInstance()->GetIpList(ov::SocketFamily::Inet);
+			for (const auto &ip : ip_list)
+			{
+				urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", ip.CStr(), address_items[1].CStr()).CStr());
+			}
+		}
+		else if (address_items[0] == "::")
+		{
+			auto ip_list = ov::AddressUtilities::GetInstance()->GetIpList(ov::SocketFamily::Inet6);
+			for (const auto &ip : ip_list)
+			{
+				urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", ip.CStr(), address_items[1].CStr()).CStr());
+			}
+		}
+		else if (address_items[0] == "${PublicIP}")
+		{
+			auto public_ip = ov::AddressUtilities::GetInstance()->GetMappedAddress();
+			urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", public_ip->GetIpAddress().CStr(), address_items[1].CStr()).CStr());
+		}
+		else
+		{
+			urls.append(ov::String::FormatString("turn:%s?transport=tcp", tcp_relay_address.CStr()).CStr());
+		}
+
+		ice_server["urls"] = urls;
+		new_ice_server["urls"] = urls;
+
+		// Embedded turn server has fixed user_name and credential. Security is provided by signed policy after this. This is because the embedded turn server does not relay other servers and only transmits the local stream to tcp when transmitting to webrtc.
+
+		// "user_name" is out of specification. This is a bug and "username" is correct. "user_name" will be deprecated in the future.
+		ice_server["user_name"] = DEFAULT_RELAY_USERNAME;
+		new_ice_server["username"] = DEFAULT_RELAY_USERNAME;
+
+		ice_server["credential"] = DEFAULT_RELAY_KEY;
+		new_ice_server["credential"] = DEFAULT_RELAY_KEY;
+
+		_ice_servers.append(ice_server);
+		_new_ice_servers.append(new_ice_server);
 	}
 
-	if (interceptor == nullptr)
+	// for external ice server configuration
+	auto &ice_servers_config = _webrtc_config.GetIceServers();
+	if (ice_servers_config.IsParsed())
 	{
-		OV_ASSERT(false, "Interceptor must not be nullptr");
-		return false;
-	}
-
-	bool result = true;
-	auto manager = http::svr::HttpServerManager::GetInstance();
-	std::shared_ptr<http::svr::HttpServer> http_server = nullptr;
-	std::shared_ptr<http::svr::HttpsServer> https_server = nullptr;
-
-	if (address != nullptr)
-	{
-		_http_server_address = *address;
-		http_server = manager->CreateHttpServer("RtcSig", *address, worker_count);
-	}
-
-	if (tls_address != nullptr)
-	{
-		_https_server_address = *tls_address;
-		https_server = manager->CreateHttpsServer("RtcSig", *tls_address, false, worker_count);
-	}
-
-	if (SetWebSocketHandler(interceptor) == false)
-	{
-		OV_ASSERT(false, "SetWebSocketHandler failed");
-		return false;
-	}
-
-	result = result && ((http_server == nullptr) || http_server->AddInterceptor(interceptor));
-	result = result && ((https_server == nullptr) || https_server->AddInterceptor(interceptor));
-
-	if (result)
-	{
-		_ice_servers = Json::arrayValue;
-		_new_ice_servers = Json::arrayValue;
-
-		// for internal turn/tcp relay configuration
-		_tcp_force = _webrtc_config.GetIceCandidates().IsTcpForce();
-
-		bool tcp_relay_parsed = false;
-		auto tcp_relay_address = _webrtc_config.GetIceCandidates().GetTcpRelay(&tcp_relay_parsed);
-		if (tcp_relay_parsed)
+		for (auto ice_server_config : ice_servers_config.GetIceServerList())
 		{
 			Json::Value ice_server = Json::objectValue;
 			Json::Value new_ice_server = Json::objectValue;
+
+			// URLS
+			auto &url_list = ice_server_config.GetUrls().GetUrlList();
+
+			if (url_list.size() == 0)
+			{
+				logtw("There is no URL list in ICE Servers");
+				continue;
+			}
+
 			Json::Value urls = Json::arrayValue;
-
-			// <TcpRelay>IP:Port</TcpRelay>
-			// <TcpRelay>*:Port</TcpRelay>
-			// <TcpRelay>${PublicIP}:Port</TcpRelay>
-			// Check tcp_relay_address is * or ${PublicIP}
-			auto address_items = tcp_relay_address.Split(":");
-			if (address_items.size() != 2)
+			for (auto url : url_list)
 			{
+				urls.append(url.CStr());
 			}
-
-			if (address_items[0] == "*")
-			{
-				auto ip_list = ov::AddressUtilities::GetInstance()->GetIpList();
-				for (const auto &ip : ip_list)
-				{
-					urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", ip.CStr(), address_items[1].CStr()).CStr());
-				}
-			}
-			else if (address_items[0] == "${PublicIP}")
-			{
-				auto public_ip = ov::AddressUtilities::GetInstance()->GetMappedAddress();
-				urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", public_ip->GetIpAddress().CStr(), address_items[1].CStr()).CStr());
-			}
-			else
-			{
-				urls.append(ov::String::FormatString("turn:%s?transport=tcp", tcp_relay_address.CStr()).CStr());
-			}
-
 			ice_server["urls"] = urls;
 			new_ice_server["urls"] = urls;
 
-			// Embedded turn server has fixed user_name and credential. Security is provided by signed policy after this. This is because the embedded turn server does not relay other servers and only transmits the local stream to tcp when transmitting to webrtc.
+			// UserName
+			if (ice_server_config.GetUserName().IsEmpty() == false)
+			{
+				// "user_name" is out of specification. This is a bug and "username" is correct. "user_name" will be deprecated in the future.
+				ice_server["user_name"] = ice_server_config.GetUserName().CStr();
+				new_ice_server["username"] = ice_server_config.GetUserName().CStr();
+			}
 
-			// "user_name" is out of specification. This is a bug and "username" is correct. "user_name" will be deprecated in the future.
-			ice_server["user_name"] = DEFAULT_RELAY_USERNAME;
-			new_ice_server["username"] = DEFAULT_RELAY_USERNAME;
-
-			ice_server["credential"] = DEFAULT_RELAY_KEY;
-			new_ice_server["credential"] = DEFAULT_RELAY_KEY;
+			// Credential
+			if (ice_server_config.GetCredential().IsEmpty() == false)
+			{
+				ice_server["credential"] = ice_server_config.GetCredential().CStr();
+				new_ice_server["credential"] = ice_server_config.GetCredential().CStr();
+			}
 
 			_ice_servers.append(ice_server);
 			_new_ice_servers.append(new_ice_server);
 		}
-
-		// for external ice server configuration
-		auto &ice_servers_config = _webrtc_config.GetIceServers();
-		if (ice_servers_config.IsParsed())
-		{
-			for (auto ice_server_config : ice_servers_config.GetIceServerList())
-			{
-				Json::Value ice_server = Json::objectValue;
-				Json::Value new_ice_server = Json::objectValue;
-
-				// URLS
-				auto &url_list = ice_server_config.GetUrls().GetUrlList();
-
-				if (url_list.size() == 0)
-				{
-					logtw("There is no URL list in ICE Servers");
-					continue;
-				}
-
-				Json::Value urls = Json::arrayValue;
-				for (auto url : url_list)
-				{
-					urls.append(url.CStr());
-				}
-				ice_server["urls"] = urls;
-				new_ice_server["urls"] = urls;
-
-				// UserName
-				if (ice_server_config.GetUserName().IsEmpty() == false)
-				{
-					// "user_name" is out of specification. This is a bug and "username" is correct. "user_name" will be deprecated in the future.
-					ice_server["user_name"] = ice_server_config.GetUserName().CStr();
-					new_ice_server["username"] = ice_server_config.GetUserName().CStr();
-				}
-
-				// Credential
-				if (ice_server_config.GetCredential().IsEmpty() == false)
-				{
-					ice_server["credential"] = ice_server_config.GetCredential().CStr();
-					new_ice_server["credential"] = ice_server_config.GetCredential().CStr();
-				}
-
-				_ice_servers.append(ice_server);
-				_new_ice_servers.append(new_ice_server);
-			}
-		}
-
-		if (_ice_servers.empty())
-		{
-			_ice_servers = Json::nullValue;
-		}
-
-		_http_server = http_server;
-		_https_server = https_server;
 	}
-	else
+
+	if (_ice_servers.empty())
 	{
-		// Rollback
+		_ice_servers = Json::nullValue;
+	}
+}
+
+bool RtcSignallingServer::PrepareForHttpServers(
+	const std::vector<ov::SocketAddress> &address_list,
+	std::vector<std::shared_ptr<http::svr::HttpServer>> *http_server_list,
+	const std::vector<ov::SocketAddress> &tls_address_list,
+	std::vector<std::shared_ptr<http::svr::HttpsServer>> *https_server_list,
+	const int worker_count,
+	const std::shared_ptr<http::svr::ws::Interceptor> &interceptor)
+{
+	auto manager = http::svr::HttpServerManager::GetInstance();
+
+	for (const auto &address : address_list)
+	{
+		auto http_server = manager->CreateHttpServer("RtcSig", address, worker_count);
+		http_server_list->push_back(http_server);
+
+		if (http_server->AddInterceptor(interceptor) == false)
+		{
+			return false;
+		}
+	}
+
+	for (const auto &tls_address : tls_address_list)
+	{
+		auto https_server = manager->CreateHttpsServer("RtcSig", tls_address, false, worker_count);
+		https_server_list->push_back(https_server);
+
+		if (https_server->AddInterceptor(interceptor) == false)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool RtcSignallingServer::Start(const std::vector<ov::SocketAddress> &address_list, const std::vector<ov::SocketAddress> &tls_address_list, int worker_count, std::shared_ptr<http::svr::ws::Interceptor> interceptor)
+{
+	if ((_http_server_list.empty() == false) || (_https_server_list.empty() == false))
+	{
+		OV_ASSERT(false, "Server is already running (%zu, %zu)",
+				  _http_server_list.size(),
+				  _https_server_list.size());
+		return false;
+	}
+
+	if (SetupWebSocketHandler(interceptor) == false)
+	{
+		OV_ASSERT(false, "SetupWebSocketHandler() failed");
+		return false;
+	}
+
+	std::vector<std::shared_ptr<http::svr::HttpServer>> http_server_list;
+	std::vector<std::shared_ptr<http::svr::HttpsServer>> https_server_list;
+
+	if (PrepareForHttpServers(
+			address_list, &_http_server_list,
+			tls_address_list, &_https_server_list,
+			worker_count,
+			interceptor))
+	{
+		PrepareForICE();
+
+		_http_server_address_list = address_list;
+		_https_server_address_list = tls_address_list;
+
+		_http_server_list = std::move(http_server_list);
+		_https_server_list = std::move(https_server_list);
+
+		return true;
+	}
+
+	// Rollback
+	auto manager = http::svr::HttpServerManager::GetInstance();
+
+	for (auto http_server : http_server_list)
+	{
 		manager->ReleaseServer(http_server);
+	}
+
+	for (auto https_server : https_server_list)
+	{
 		manager->ReleaseServer(https_server);
 	}
 
-	return result;
+	return false;
 }
 
 bool RtcSignallingServer::AppendCertificate(const std::shared_ptr<const info::Certificate> &certificate)
 {
-	if (_https_server != nullptr && certificate != nullptr)
+	if (certificate != nullptr)
 	{
-		return _https_server->AppendCertificate(certificate) == nullptr;
+		for (auto &https_server : _https_server_list)
+		{
+			auto error = https_server->AppendCertificate(certificate);
+			if (error != nullptr)
+			{
+				logte("Could not append certificate to %p: %s", https_server.get(), error->What());
+				return false;
+			}
+		}
 	}
 
 	return true;
@@ -204,16 +253,30 @@ bool RtcSignallingServer::AppendCertificate(const std::shared_ptr<const info::Ce
 
 bool RtcSignallingServer::RemoveCertificate(const std::shared_ptr<const info::Certificate> &certificate)
 {
-	if (_https_server != nullptr && certificate != nullptr)
+	if (certificate != nullptr)
 	{
-		return _https_server->RemoveCertificate(certificate) == nullptr;
+		for (auto &https_server : _https_server_list)
+		{
+			auto error = https_server->RemoveCertificate(certificate);
+			if (error != nullptr)
+			{
+				logte("Could not remove certificate from %p: %s", https_server.get(), error->What());
+				return false;
+			}
+		}
 	}
 
 	return true;
 }
 
-bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<http::svr::ws::Interceptor> interceptor)
+bool RtcSignallingServer::SetupWebSocketHandler(std::shared_ptr<http::svr::ws::Interceptor> interceptor)
 {
+	if (interceptor == nullptr)
+	{
+		OV_ASSERT(false, "Interceptor must not be nullptr");
+		return false;
+	}
+
 	interceptor->SetConnectionHandler(
 		[this](const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session) -> bool {
 			auto request = ws_session->GetRequest();
@@ -413,14 +476,13 @@ bool RtcSignallingServer::RemoveObserver(const std::shared_ptr<RtcSignallingObse
 
 bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
-	bool disconnected = false;
+	size_t disconnected_count = 0;
 
-	if ((disconnected == false) && (_http_server != nullptr))
+	for (auto &http_server : _http_server_list)
 	{
-		disconnected = _http_server->DisconnectIf(
+		disconnected_count += http_server->DisconnectIf(
 			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<http::svr::HttpConnection> &connection) -> bool {
-				
-				if(connection->GetConnectionType() != http::ConnectionType::WebSocket)
+				if (connection->GetConnectionType() != http::ConnectionType::WebSocket)
 				{
 					return false;
 				}
@@ -436,24 +498,22 @@ bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, c
 				{
 					return false;
 				}
-				
+
 				return (info->vhost_app_name == vhost_app_name) &&
-						(info->stream_name == stream_name) &&
-						((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
-				
+					   (info->stream_name == stream_name) &&
+					   ((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
 			});
 	}
 
-	if ((disconnected == false) && (_https_server != nullptr))
+	for (auto &https_server : _https_server_list)
 	{
-		disconnected = _https_server->DisconnectIf(
+		disconnected_count += https_server->DisconnectIf(
 			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<http::svr::HttpConnection> &connection) -> bool {
-				
-				if(connection->GetConnectionType() != http::ConnectionType::WebSocket)
+				if (connection->GetConnectionType() != http::ConnectionType::WebSocket)
 				{
 					return false;
 				}
-				
+
 				auto websocket_session = connection->GetWebSocketSession();
 				if (websocket_session == nullptr)
 				{
@@ -465,22 +525,22 @@ bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, c
 				{
 					return false;
 				}
-				
+
 				return (info->vhost_app_name == vhost_app_name) &&
-						(info->stream_name == stream_name) &&
-						((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
+					   (info->stream_name == stream_name) &&
+					   ((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
 			});
 	}
 
-	if (disconnected == false)
+	if (disconnected_count == 0)
 	{
-		// May fail after http::svr::HttpServer::OnDisconnected() is handled 
-		// because the WebSocket connection is disconnected at the timing immediately 
-		// after Disconnect() is called due to ICE disconnection, 
+		// May fail after http::svr::HttpServer::OnDisconnected() is handled
+		// because the WebSocket connection is disconnected at the timing immediately
+		// after Disconnect() is called due to ICE disconnection,
 		// but before _http_server->Disconnect() is executed
 	}
 
-	return disconnected;
+	return (disconnected_count > 0);
 }
 
 int RtcSignallingServer::GetTotalPeerCount() const
@@ -495,10 +555,27 @@ int RtcSignallingServer::GetClientPeerCount() const
 
 bool RtcSignallingServer::Stop()
 {
-	auto http_result = (_http_server != nullptr) ? _http_server->Stop() : true;
-	auto https_result = (_https_server != nullptr) ? _https_server->Stop() : true;
+	auto result = true;
 
-	return http_result && https_result;
+	for (auto &http_server : _http_server_list)
+	{
+		if (http_server->Stop() == false)
+		{
+			logte("Could not stop HTTP Server: %p", http_server.get());
+			result = false;
+		}
+	}
+
+	for (auto &https_server : _https_server_list)
+	{
+		if (https_server->Stop() == false)
+		{
+			logte("Could not stop HTTPS Server: %p", https_server.get());
+			result = false;
+		}
+	}
+
+	return result;
 }
 
 std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchCommand(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const ov::Data> &message)
@@ -820,8 +897,8 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchChangeRendition(co
 	auto has_rendition_name = object.IsMember("rendition_name");
 	auto has_auto_abr = object.IsMember("auto");
 
-	ov::String rendition_name; 
-	bool auto_abr = false;  
+	ov::String rendition_name;
+	bool auto_abr = false;
 
 	if (has_rendition_name)
 	{

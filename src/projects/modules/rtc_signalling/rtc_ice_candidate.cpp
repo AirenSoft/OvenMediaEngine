@@ -10,8 +10,8 @@
 
 #include <utility>
 
-RtcIceCandidate::RtcIceCandidate(ov::String transport, ov::String ip_address, int port, uint16_t sdp_m_line_index, ov::String sdp_mid)
-	: IceCandidate(std::move(transport), ip_address, port),
+RtcIceCandidate::RtcIceCandidate(ov::String transport, const ov::SocketAddress &address, uint16_t sdp_m_line_index, ov::String sdp_mid)
+	: IceCandidate(std::move(transport), address),
 
 	  _sdp_m_line_index(sdp_m_line_index),
 	  _sdp_mid(std::move(sdp_mid))
@@ -50,5 +50,8 @@ void RtcIceCandidate::SetSdpMid(ov::String sdp_mid) noexcept
 
 ov::String RtcIceCandidate::ToString() const noexcept
 {
-	return ov::String::FormatString("%s typ host generation 0 MLineIndex: %d, Mid: %s", IceCandidate::ToString().CStr(), _sdp_m_line_index, _sdp_mid.CStr());
+	return ov::String::FormatString(
+		"%s typ host generation 0 MLineIndex: %d, Mid: %s",
+		IceCandidate::ToString().CStr(),
+		_sdp_m_line_index, _sdp_mid.CStr());
 }

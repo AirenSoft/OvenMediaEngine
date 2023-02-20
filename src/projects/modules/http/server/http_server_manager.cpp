@@ -99,7 +99,7 @@ namespace http
 				https_server = std::dynamic_pointer_cast<HttpsServer>(http_server);
 				if (https_server == nullptr)
 				{
-					logte("Cannot reuse instance: Requested HttpsServer, but previous instance is Server (%s)", address.ToString().CStr());
+					logte("Cannot reuse instance: Requested HTTPS Server, but previous instance is HTTP Server (%s)", address.ToString().CStr());
 				}
 
 				if ((https_server->IsHttp2Enabled() == true && http2_enabled == false))

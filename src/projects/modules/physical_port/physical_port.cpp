@@ -12,6 +12,59 @@
 
 #include "physical_port_private.h"
 
+//
+// Format: <Name> + "-" + <Type> + <Port>
+//
+// Example: APISvr-T1234 ("APISvr", IPv6, TCP, Port 1234)
+// Example: APISvr-t1234 ("APISvr", IPv4, TCP, Port 1234)
+// Example: APISvr-U1234 ("APISvr", IPv6, UCP, Port 1234)
+// Example: APISvr-u1234 ("APISvr", IPv4, UCP, Port 1234)
+static ov::String GetSocketPoolName(const ov::SocketType type, const char *name, const ov::SocketAddress &address)
+{
+	ov::String pool_name(name);
+	char family_name;
+
+	pool_name = pool_name.Substring(0, 6);
+
+	switch (type)
+	{
+		case ov::SocketType::Tcp:
+			family_name = 'T';
+			break;
+
+		case ov::SocketType::Udp:
+			family_name = 'U';
+			break;
+
+		case ov::SocketType::Srt:
+			family_name = 'S';
+			break;
+
+		default:
+			family_name = '?';
+			break;
+	}
+
+	switch (address.GetFamily())
+	{
+		case ov::SocketFamily::Inet:
+			family_name = ::tolower(family_name);
+			break;
+
+		case ov::SocketFamily::Inet6:
+			family_name = ::toupper(family_name);
+			break;
+
+		default:
+			family_name = '?';
+			break;
+	}
+
+	pool_name.AppendFormat("-%c%d", family_name, address.Port());
+
+	return pool_name;
+}
+
 PhysicalPort::~PhysicalPort()
 {
 	OV_ASSERT2(_observer_list.empty());
@@ -64,13 +117,13 @@ bool PhysicalPort::CreateServerSocket(
 	int send_buffer_size,
 	int recv_buffer_size)
 {
-	_socket_pool = ov::SocketPool::Create(ov::String::FormatString("%s-T%d", name, address.Port()), type);
+	_socket_pool = ov::SocketPool::Create(GetSocketPoolName(type, name, address), type);
 
 	if (_socket_pool != nullptr)
 	{
 		if (_socket_pool->Initialize(worker_count))
 		{
-			auto socket = _socket_pool->AllocSocket<ov::ServerSocket>(_socket_pool);
+			auto socket = _socket_pool->AllocSocket<ov::ServerSocket>(address.GetFamily(), _socket_pool);
 
 			if (socket != nullptr)
 			{
@@ -109,13 +162,13 @@ bool PhysicalPort::CreateDatagramSocket(
 	const ov::SocketAddress &address,
 	int worker_count)
 {
-	_socket_pool = ov::SocketPool::Create(ov::String::FormatString("%s-U%d", name, address.Port()), type);
+	_socket_pool = ov::SocketPool::Create(GetSocketPoolName(type, name, address), type);
 
 	if (_socket_pool != nullptr)
 	{
 		if (_socket_pool->Initialize(worker_count))
 		{
-			auto socket = _socket_pool->AllocSocket<ov::DatagramSocket>();
+			auto socket = _socket_pool->AllocSocket<ov::DatagramSocket>(address.GetFamily());
 
 			if (socket != nullptr)
 			{

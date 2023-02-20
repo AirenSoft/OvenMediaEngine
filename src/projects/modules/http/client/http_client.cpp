@@ -246,14 +246,14 @@ namespace http
 				parsed_url->SetPort(port);
 			}
 
-			auto socket_address = ov::SocketAddress(parsed_url->Host(), port);
+			auto socket_address = ov::SocketAddress::CreateAndGetFirst(parsed_url->Host(), port);
 
 			if (socket_address.IsValid() == false)
 			{
 				return ov::Error::CreateError("HTTP", "Invalid address: %s:%d, URL: %s", parsed_url->Host().CStr(), port, url.CStr());
 			}
 
-			_socket = _socket_pool->AllocSocket();
+			_socket = _socket_pool->AllocSocket(socket_address.GetFamily());
 
 			if (_socket == nullptr)
 			{

@@ -47,7 +47,7 @@ namespace ov
 							   int recv_buffer_size,
 							   int backlog)
 	{
-		return Prepare(SocketAddress(port), connection_callback, data_callback, send_buffer_size, recv_buffer_size, backlog);
+		return Prepare(SocketAddress::CreateAndGetFirst(nullptr, port), connection_callback, data_callback, send_buffer_size, recv_buffer_size, backlog);
 	}
 
 	bool ServerSocket::Prepare(const SocketAddress &address,
@@ -92,7 +92,7 @@ namespace ov
 
 			logad("Trying to allocate a socket for client: %s", address.ToString(false).CStr());
 
-			auto client = _pool->AllocSocket<ClientSocket>(GetSharedPtrAs<ServerSocket>(), client_socket, address);
+			auto client = _pool->AllocSocket<ClientSocket>(address.GetFamily(), GetSharedPtrAs<ServerSocket>(), client_socket, address);
 
 			if (client != nullptr)
 			{

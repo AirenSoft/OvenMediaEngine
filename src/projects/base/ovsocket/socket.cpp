@@ -148,7 +148,7 @@ namespace ov
 		CHECK_STATE2(== SocketState::Closed, >= SocketState::Disconnected, );
 	}
 
-	bool Socket::Create(SocketType type)
+	bool Socket::Create(const SocketType type, const SocketFamily family)
 	{
 		CHECK_STATE(== SocketState::Closed, false);
 
@@ -164,7 +164,7 @@ namespace ov
 		{
 			case SocketType::Tcp:
 			case SocketType::Udp:
-				_socket.SetSocket(type, ::socket(PF_INET, (type == SocketType::Tcp) ? SOCK_STREAM : SOCK_DGRAM, 0));
+				_socket.SetSocket(type, ::socket(GetSocketProtocolFamily(family), (type == SocketType::Tcp) ? SOCK_STREAM : SOCK_DGRAM, 0));
 				break;
 
 			case SocketType::Srt:
@@ -183,12 +183,24 @@ namespace ov
 				break;
 			}
 
-			logad("Socket descriptor is created for type %s", StringFromSocketType(type));
+			if (family == SocketFamily::Inet6)
+			{
+				// In some environments, listening to IPv6 will also listen to IPv4
+				// This setting lets this socket listen to IPv6 only
+				const int flag = 1;
+				::setsockopt(_socket.GetNativeHandle(), IPPROTO_IPV6, IPV6_V6ONLY, &flag, sizeof(flag));
+			}
+
+			logad("Socket descriptor is created (%s/%s)",
+				  StringFromSocketFamily(family),
+				  StringFromSocketType(type));
 
 			_has_close_command = false;
 			_end_of_stream = false;
 
 			_connection_event_fired = false;
+
+			_family = family;
 
 			SetState(SocketState::Created);
 
@@ -407,17 +419,20 @@ namespace ov
 		{
 			case SocketType::Udp:
 			case SocketType::Tcp: {
-				int result = ::bind(GetNativeHandle(), address.Address(), static_cast<socklen_t>(address.AddressLength()));
+				int result = ::bind(GetNativeHandle(), address, address.GetSockAddrInLength());
 
 				if (result == 0)
 				{
-					// 성공
+					// Succeeded
 					_local_address = std::make_shared<SocketAddress>(address);
 				}
 				else
 				{
-					// 실패
-					logae("Could not bind to %s (%d)", address.ToString().CStr(), result);
+					// Failed
+					logae("Could not bind to %s (%d, %s)",
+						  address.ToString().CStr(),
+						  result,
+						  ov::Error::CreateErrorFromErrno()->What());
 					return false;
 				}
 
@@ -425,16 +440,16 @@ namespace ov
 			}
 
 			case SocketType::Srt: {
-				int result = ::srt_bind(GetNativeHandle(), address.Address(), static_cast<int>(address.AddressLength()));
+				int result = ::srt_bind(GetNativeHandle(), address, static_cast<int>(address.GetSockAddrInLength()));
 
 				if (result != SRT_ERROR)
 				{
-					// 성공
+					// Succeeded
 					_local_address = std::make_shared<SocketAddress>(address);
 				}
 				else
 				{
-					// 실패
+					// Failed
 					logae("Could not bind to %s for SRT (%s)", address.ToString().CStr(), srt_getlasterror_str());
 					return false;
 				}
@@ -463,7 +478,7 @@ namespace ov
 				int result = ::listen(GetNativeHandle(), backlog);
 				if (result == 0)
 				{
-					// 성공
+					// Succeeded
 					SetState(SocketState::Listening);
 					return true;
 				}
@@ -499,14 +514,14 @@ namespace ov
 		switch (GetType())
 		{
 			case SocketType::Tcp: {
-				sockaddr_in client_addr{};
+				sockaddr_storage client_addr{};
 				socklen_t client_length = sizeof(client_addr);
 
 				socket_t client_socket = ::accept(GetNativeHandle(), reinterpret_cast<sockaddr *>(&client_addr), &client_length);
 
 				if (client_socket != InvalidSocket)
 				{
-					*client = SocketAddress(client_addr);
+					*client = SocketAddress("", client_addr);
 				}
 
 				return SocketWrapper(GetType(), client_socket);
@@ -520,7 +535,7 @@ namespace ov
 
 				if (client_socket != SRT_INVALID_SOCK)
 				{
-					*client = SocketAddress(client_addr);
+					*client = SocketAddress("", client_addr);
 				}
 
 				return SocketWrapper(GetType(), client_socket);
@@ -595,7 +610,7 @@ namespace ov
 				SetState(SocketState::Connecting);
 
 				logad("Trying to connect to %s...", endpoint.ToString().CStr());
-				int result = ::connect(GetNativeHandle(), endpoint.Address(), endpoint.AddressLength());
+				int result = ::connect(GetNativeHandle(), endpoint, endpoint.GetSockAddrInLength());
 
 				if (result == 0)
 				{
@@ -667,7 +682,7 @@ namespace ov
 			case SocketType::Srt:
 				if (SetSockOpt(SRTO_CONNTIMEO, timeout_msec))
 				{
-					if (::srt_connect(GetNativeHandle(), endpoint.Address(), endpoint.AddressLength()) != SRT_ERROR)
+					if (::srt_connect(GetNativeHandle(), endpoint, endpoint.GetSockAddrInLength()) != SRT_ERROR)
 					{
 						return DoConnectionCallback(nullptr);
 					}
@@ -1156,8 +1171,6 @@ namespace ov
 
 	ssize_t Socket::SendToInternal(const SocketAddress &address, const std::shared_ptr<const Data> &data)
 	{
-		OV_ASSERT2(address.AddressForIPv4()->sin_addr.s_addr != 0);
-
 		if (GetState() == SocketState::Closed)
 		{
 			return -1L;
@@ -1175,7 +1188,7 @@ namespace ov
 			case SocketType::Tcp:
 				while ((remained > 0L) && (_force_stop == false))
 				{
-					ssize_t sent = ::sendto(GetNativeHandle(), data_to_send, remained, MSG_NOSIGNAL | MSG_DONTWAIT, address.Address(), address.AddressLength());
+					ssize_t sent = ::sendto(GetNativeHandle(), data_to_send, remained, MSG_NOSIGNAL | MSG_DONTWAIT, address, address.GetSockAddrInLength());
 
 					if (sent < 0L)
 					{
@@ -1633,7 +1646,7 @@ namespace ov
 		{
 			case SocketType::Udp:
 			case SocketType::Tcp: {
-				sockaddr_in remote = {0};
+				sockaddr_storage remote = {0};
 				socklen_t remote_length = sizeof(remote);
 
 				logad("Trying to read from the socket...");
@@ -1667,7 +1680,7 @@ namespace ov
 
 					if (address != nullptr)
 					{
-						*address = SocketAddress(remote);
+						*address = SocketAddress("", remote);
 					}
 
 					UpdateLastRecvTime();

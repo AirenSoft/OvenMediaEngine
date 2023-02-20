@@ -50,20 +50,20 @@ namespace pvd
 			return true;
 		}
 
-		auto srt_address = ov::SocketAddress(server_config.GetIp(), static_cast<uint16_t>(srt_config.GetPort().GetPort()));
+		auto srt_address_list = ov::SocketAddress::CreateAndGetFirst(server_config.GetIPList()[0], static_cast<uint16_t>(srt_config.GetPort().GetPort()));
 		bool is_parsed;
 		auto worker_count = srt_config.GetWorkerCount(&is_parsed);
 		worker_count = is_parsed ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
 
-		_physical_port = PhysicalPortManager::GetInstance()->CreatePort("SRT", ov::SocketType::Srt, srt_address, worker_count);
+		_physical_port = PhysicalPortManager::GetInstance()->CreatePort("SRT", ov::SocketType::Srt, srt_address_list, worker_count);
 		if (_physical_port == nullptr)
 		{
-			logte("Could not initialize phyiscal port for SRT server: %s", srt_address.ToString().CStr());
+			logte("Could not initialize phyiscal port for SRT server: %s", srt_address_list.ToString().CStr());
 			return false;
 		}
 		else
 		{
-			logti("%s is listening on %s/%s", GetProviderName(), srt_address.ToString().CStr(), ov::StringFromSocketType(ov::SocketType::Srt));
+			logti("%s is listening on %s/%s", GetProviderName(), srt_address_list.ToString().CStr(), ov::StringFromSocketType(ov::SocketType::Srt));
 		}
 
 		_physical_port->AddObserver(this);

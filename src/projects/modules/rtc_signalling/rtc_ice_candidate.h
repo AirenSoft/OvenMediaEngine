@@ -13,11 +13,11 @@
 class RtcIceCandidate : public IceCandidate
 {
 public:
-	RtcIceCandidate(ov::String transport, ov::String ip_address, int port, uint16_t sdp_m_line_index, ov::String sdp_mid);
+	RtcIceCandidate(ov::String transport, const ov::SocketAddress &address, uint16_t sdp_m_line_index, ov::String sdp_mid);
 	RtcIceCandidate(uint16_t sdp_m_line_index, ov::String sdp_mid);
 	~RtcIceCandidate() override;
 
-	RtcIceCandidate &operator =(const RtcIceCandidate &candidate) = default;
+	RtcIceCandidate &operator=(const RtcIceCandidate &candidate) = default;
 
 	uint16_t GetSdpMLineIndex() const noexcept;
 	void SetSdpMLineIndex(uint16_t sdp_m_line_index) noexcept;
@@ -31,3 +31,7 @@ protected:
 	uint16_t _sdp_m_line_index;
 	ov::String _sdp_mid;
 };
+
+// To use ICE Candidate in rotation, keep the grouped list by port
+// Initially grouped by port, then ICE Candidates generated from that port are stored in the vector
+using RtcIceCandidateList = std::vector<std::vector<RtcIceCandidate>>;

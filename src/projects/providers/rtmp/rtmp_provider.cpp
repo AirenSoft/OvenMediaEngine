@@ -6,17 +6,18 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
+#include "rtmp_provider.h"
+
+#include <base/info/media_extradata.h>
 #include <config/config.h>
+#include <modules/physical_port/physical_port_manager.h>
 #include <unistd.h>
+
 #include <iostream>
 
-#include "rtmp_provider.h"
 #include "rtmp_application.h"
-#include "rtmp_stream.h"
 #include "rtmp_provider_private.h"
-
-#include <modules/physical_port/physical_port_manager.h>
-#include <base/info/media_extradata.h>
+#include "rtmp_stream.h"
 
 namespace pvd
 {
@@ -67,7 +68,7 @@ namespace pvd
 
 	bool RtmpProvider::Start()
 	{
-		if (_physical_port != nullptr)
+		if (_physical_port_list.empty() == false)
 		{
 			logtw("RTMP server is already running");
 			return false;
@@ -76,44 +77,78 @@ namespace pvd
 		auto server = GetServerConfig();
 		const auto &rtmp_config = server.GetBind().GetProviders().GetRtmp();
 
-		if(rtmp_config.IsParsed() == false)
+		if (rtmp_config.IsParsed() == false)
 		{
 			logtw("%s is disabled by configuration", GetProviderName());
 			return true;
 		}
 
-		auto rtmp_address = ov::SocketAddress(server.GetIp(), static_cast<uint16_t>(rtmp_config.GetPort().GetPort()));
-		auto socket_type = ov::SocketType::Tcp;
+		bool is_configured;
+		auto worker_count = rtmp_config.GetWorkerCount(&is_configured);
+		worker_count = is_configured ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
 
-		bool is_parsed;
+		std::vector<ov::SocketAddress> rtmp_address_list;
 
-		auto worker_count = rtmp_config.GetWorkerCount(&is_parsed);
-		worker_count = is_parsed ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
-
-		_physical_port = PhysicalPortManager::GetInstance()->CreatePort("RTMP", socket_type, rtmp_address, worker_count);
-		if (_physical_port == nullptr)
+		try
 		{
-			logte("Could not initialize phyiscal port for RTMP server: %s", rtmp_address.ToString().CStr());
+			rtmp_address_list = ov::SocketAddress::Create(server.GetIPList(), static_cast<uint16_t>(rtmp_config.GetPort().GetPort()));
+		}
+		catch (const ov::Error &e)
+		{
+			logte("Could not listen for RTMP: %s", e.What());
 			return false;
 		}
-		else
+
+		if (rtmp_address_list.empty())
 		{
-			logti("%s is listening on %s/%s", GetProviderName(), rtmp_address.ToString().CStr(), ov::StringFromSocketType(socket_type));
+			logte("Could not obtain IP list from IP(s): %s, port: %d",
+				  ov::String::Join(server.GetIPList(), ", "),
+				  static_cast<uint16_t>(rtmp_config.GetPort().GetPort()));
+
+			return false;
 		}
 
-		_physical_port->AddObserver(this);
+		auto port_manager = PhysicalPortManager::GetInstance();
+
+		for (const auto &rtmp_address : rtmp_address_list)
+		{
+			auto physical_port = port_manager->CreatePort("RTMP", ov::SocketType::Tcp, rtmp_address, worker_count);
+
+			if (physical_port == nullptr)
+			{
+				logte("Could not initialize physical port for RTMP server: %s", rtmp_address.ToString().CStr());
+
+				for (auto &physical_port : _physical_port_list)
+				{
+					physical_port->RemoveObserver(this);
+					port_manager->DeletePort(physical_port);
+				}
+				_physical_port_list.clear();
+
+				return false;
+			}
+			else
+			{
+				logti("%s is listening on %s/%s", GetProviderName(), rtmp_address.ToString().CStr(), ov::StringFromSocketType(ov::SocketType::Tcp));
+			}
+
+			physical_port->AddObserver(this);
+			_physical_port_list.push_back(physical_port);
+		}
 
 		return Provider::Start();
 	}
 
 	bool RtmpProvider::Stop()
 	{
-		if(_physical_port != nullptr)
+		auto port_manager = PhysicalPortManager::GetInstance();
+
+		for (auto &physical_port : _physical_port_list)
 		{
-			_physical_port->RemoveObserver(this);
-			PhysicalPortManager::GetInstance()->DeletePort(_physical_port);
-			_physical_port = nullptr;
+			physical_port->RemoveObserver(this);
+			port_manager->DeletePort(physical_port);
 		}
+		_physical_port_list.clear();
 
 		return Provider::Stop();
 	}
@@ -122,16 +157,15 @@ namespace pvd
 	{
 		return true;
 	}
-	
+
 	bool RtmpProvider::OnDeleteHost(const info::Host &host_info)
 	{
 		return true;
 	}
 
-
 	std::shared_ptr<pvd::Application> RtmpProvider::OnCreateProviderApplication(const info::Application &application_info)
 	{
-		if(IsModuleAvailable() == false)
+		if (IsModuleAvailable() == false)
 		{
 			return nullptr;
 		}
@@ -155,8 +189,8 @@ namespace pvd
 	}
 
 	void RtmpProvider::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
-						const ov::SocketAddress &address,
-						const std::shared_ptr<const ov::Data> &data)
+									  const ov::SocketAddress &address,
+									  const std::shared_ptr<const ov::Data> &data)
 	{
 #if DEBUG
 		DumpDataToFile(remote, address, data);
@@ -166,20 +200,20 @@ namespace pvd
 	}
 
 	void RtmpProvider::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
-						PhysicalPortDisconnectReason reason,
-						const std::shared_ptr<const ov::Error> &error)
+									  PhysicalPortDisconnectReason reason,
+									  const std::shared_ptr<const ov::Error> &error)
 	{
 		auto channel = GetChannel(remote->GetNativeHandle());
-		if(channel == nullptr)
+		if (channel == nullptr)
 		{
 			logte("Failed to find channel to delete stream (remote : %s)", remote->ToString().CStr());
 			return;
 		}
 
 		logti("The RTMP client has disconnected: [%s/%s], remote: %s",
-					channel->GetApplicationName(), channel->GetName().CStr(),
-					remote->ToString().CStr());
+			  channel->GetApplicationName(), channel->GetName().CStr(),
+			  remote->ToString().CStr());
 
 		PushProvider::OnChannelDeleted(remote->GetNativeHandle());
 	}
-}
+}  // namespace pvd
