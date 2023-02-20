@@ -17,8 +17,6 @@ namespace ov
 	class Url
 	{
 	public:
-		Url();
-		
 		static ov::String Encode(const ov::String &value);
 		static ov::String Decode(const ov::String &value);
 
