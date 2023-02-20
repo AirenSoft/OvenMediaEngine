@@ -17,12 +17,8 @@
 std::shared_ptr<LLHlsPublisher> LLHlsPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
 	auto llhls = std::make_shared<LLHlsPublisher>(server_config, router);
-	if (!llhls->Start())
-	{
-		return nullptr;
-	}
 
-	return llhls;
+	return llhls->Start() ? llhls : nullptr;
 }
 
 LLHlsPublisher::LLHlsPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
@@ -36,22 +32,57 @@ LLHlsPublisher::~LLHlsPublisher()
 	logtd("LLHlsPublisher has been terminated finally");
 }
 
+bool LLHlsPublisher::PrepareHttpServers(
+	const std::vector<ov::String> &ip_list,
+	const bool is_port_configured, const uint16_t port,
+	const bool is_tls_port_configured, const uint16_t tls_port,
+	const int worker_count)
+{
+	auto http_server_manager = http::svr::HttpServerManager::GetInstance();
+
+	std::vector<std::shared_ptr<http::svr::HttpServer>> http_server_list;
+	std::vector<std::shared_ptr<http::svr::HttpsServer>> https_server_list;
+
+	if (http_server_manager->CreateServers(
+			"LLHLS",
+			&http_server_list, &https_server_list,
+			ip_list,
+			is_port_configured, port,
+			is_tls_port_configured, tls_port,
+			nullptr, false,
+			[&](const ov::SocketAddress &address, bool is_https, const std::shared_ptr<http::svr::HttpServer> &http_server) {
+				http_server->AddInterceptor(CreateInterceptor());
+			},
+			worker_count))
+	{
+		std::lock_guard lock_guard{_http_server_list_mutex};
+		_http_server_list = std::move(http_server_list);
+		_https_server_list = std::move(https_server_list);
+
+		return true;
+	}
+
+	http_server_manager->ReleaseServers(&http_server_list);
+	http_server_manager->ReleaseServers(&https_server_list);
+
+	return false;
+}
+
 bool LLHlsPublisher::Start()
 {
 	auto server_config = GetServerConfig();
 
-	auto llhls_module_config = server_config.GetModules().GetLLHls();
-	if (llhls_module_config.IsEnabled() == false)
-	{
-		logtw("LLHls Module is disabled");
-		return true;
-	}
-
 	auto llhls_bind_config = server_config.GetBind().GetPublishers().GetLLHls();
-
 	if (llhls_bind_config.IsParsed() == false)
 	{
 		logtw("%s is disabled by configuration", GetPublisherName());
+		return true;
+	}
+
+	auto llhls_module_config = server_config.GetModules().GetLLHls();
+	if (llhls_module_config.IsEnabled() == false)
+	{
+		logtw("%s is disabled by configuration (Module is disabled)", GetPublisherName());
 		return true;
 	}
 
@@ -59,82 +90,24 @@ bool LLHlsPublisher::Start()
 	auto worker_count = llhls_bind_config.GetWorkerCount(&is_configured);
 	worker_count = is_configured ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
 
-	auto manager = http::svr::HttpServerManager::GetInstance();
+	bool is_port_configured;
+	auto &port_config = llhls_bind_config.GetPort(&is_port_configured);
 
-	// Initialize HTTP Server (Non-TLS)
-	auto port = llhls_bind_config.GetPort(&is_configured);
-	ov::SocketAddress address;
-	do
+	bool is_tls_port_configured;
+	auto &tls_port_config = llhls_bind_config.GetTlsPort(&is_tls_port_configured);
+
+	if ((is_port_configured == false) && (is_tls_port_configured == false))
 	{
-		if (is_configured)
-		{
-			address = ov::SocketAddress::CreateAndGetFirst(server_config.GetIPList()[0], port.GetPort());
-
-			_http_server = manager->CreateHttpServer("llhls", address, worker_count);
-			if (_http_server != nullptr)
-			{
-				_http_server->AddInterceptor(CreateInterceptor());
-				break;
-			}
-
-			logte("Could not initialize LLHLS HTTP server with IP: %s, port: %d",
-				  server_config.GetIPList()[0].CStr(), port.GetPort());
-
-			manager->ReleaseServer(_http_server);
-			return false;
-		}
-	} while (false);
-
-	// Initialze HTTPS Server
-	auto &tls_port = llhls_bind_config.GetTlsPort(&is_configured);
-	ov::SocketAddress tls_address;
-	do
-	{
-		if (is_configured)
-		{
-			tls_address = ov::SocketAddress::CreateAndGetFirst(server_config.GetIPList()[0], tls_port.GetPort());
-
-			_https_server = manager->CreateHttpsServer("llhls", tls_address, false, worker_count);
-			if (_https_server != nullptr)
-			{
-				_https_server->AddInterceptor(CreateInterceptor());
-				break;
-			}
-
-			logte("Could not initialize LLHLS HTTPS server with IP: %s, port: %d",
-				  server_config.GetIPList()[0].CStr(), tls_port.GetPort());
-
-			manager->ReleaseServer(_https_server);
-			return false;
-		}
-	} while (false);
-
-	ov::String description;
-
-	if (port.GetPort())
-	{
-		if (address.IsValid())
-		{
-			description.Append(address.ToString());
-		}
+		logtw("%s Server is disabled - No port is configured", GetPublisherName());
+		return true;
 	}
 
-	if (tls_port.GetPort())
-	{
-		if (tls_address.IsValid())
-		{
-			if (description.IsEmpty() == false)
-			{
-				description.Append(", ");
-			}
-
-			description.AppendFormat("TLS: %s", tls_address.ToString().CStr());
-		}
-	}
-
-	logti("LLHLS Publisher is listening on %s", description.CStr());
-
-	return Publisher::Start();
+	return PrepareHttpServers(
+			   server_config.GetIPList(),
+			   is_port_configured, port_config.GetPort(),
+			   is_tls_port_configured, tls_port_config.GetPort(),
+			   worker_count) &&
+		   Publisher::Start();
 }
 
 bool LLHlsPublisher::Stop()
@@ -144,22 +117,44 @@ bool LLHlsPublisher::Stop()
 
 bool LLHlsPublisher::OnCreateHost(const info::Host &host_info)
 {
-	if (_https_server != nullptr && host_info.GetCertificate() != nullptr)
+	bool result = true;
+	auto certificate = host_info.GetCertificate();
+
+	if (certificate != nullptr)
 	{
-		return _https_server->AppendCertificate(host_info.GetCertificate()) == nullptr;
+		std::lock_guard lock_guard{_http_server_list_mutex};
+
+		for (auto &https_server : _https_server_list)
+		{
+			if (https_server->AppendCertificate(certificate) == nullptr)
+			{
+				result = false;
+			}
+		}
 	}
 
-	return true;
+	return result;
 }
 
 bool LLHlsPublisher::OnDeleteHost(const info::Host &host_info)
 {
-	if (_https_server != nullptr && host_info.GetCertificate() != nullptr)
+	bool result = true;
+	auto certificate = host_info.GetCertificate();
+
+	if (certificate != nullptr)
 	{
-		return _https_server->RemoveCertificate(host_info.GetCertificate()) == nullptr;
+		std::lock_guard lock_guard{_http_server_list_mutex};
+
+		for (auto &https_server : _https_server_list)
+		{
+			if (https_server->RemoveCertificate(certificate) == nullptr)
+			{
+				result = false;
+			}
+		}
 	}
 
-	return true;
+	return result;
 }
 
 std::shared_ptr<pub::Application> LLHlsPublisher::OnCreatePublisherApplication(const info::Application &application_info)

@@ -176,70 +176,32 @@ bool RtcSignallingServer::Start(
 	std::vector<std::shared_ptr<http::svr::HttpServer>> http_server_list;
 	std::vector<std::shared_ptr<http::svr::HttpsServer>> https_server_list;
 
-	do
+	if (http_server_manager->CreateServers(
+			"RtcSig",
+			&http_server_list, &https_server_list,
+			ip_list,
+			is_port_configured, port,
+			is_tls_port_configured, tls_port,
+			nullptr, false,
+			[&](const ov::SocketAddress &address, bool is_https, const std::shared_ptr<http::svr::HttpServer> &http_server) {
+				http_server->AddInterceptor(interceptor);
+			},
+			worker_count))
 	{
-		std::vector<ov::String> address_string_list;
-		if (is_port_configured)
+		if (PrepareForTCPRelay())
 		{
-			if (http_server_manager->CreateHttpServers(
-					&http_server_list, "RtcSig",
-					ip_list, port,
-					[&](const ov::SocketAddress &address, std::shared_ptr<http::svr::HttpServer> http_server) {
-						http_server->AddInterceptor(interceptor);
-					},
-					worker_count) == false)
-			{
-				break;
-			}
+			std::lock_guard lock_guard{_http_server_list_mutex};
+			_http_server_list = std::move(http_server_list);
+			_https_server_list = std::move(https_server_list);
+
+			return true;
 		}
 
-		std::vector<ov::String> tls_address_string_list;
-		if (is_tls_port_configured)
-		{
-			if (http_server_manager->CreateHttpsServers(
-					&https_server_list, "RtcSig",
-					ip_list, port, false,
-					[&](const ov::SocketAddress &address, std::shared_ptr<http::svr::HttpsServer> https_server) {
-						https_server->AddInterceptor(interceptor);
-					},
-					worker_count) == false)
-			{
-				break;
-			}
-		}
+		logte("Could not prepare TCP relay. Uninitializing RtcSignallingServer...");
+	}
 
-		if (PrepareForTCPRelay() == false)
-		{
-			break;
-		}
-
-		auto tls_description = ov::String::Join(tls_address_string_list, ", ");
-		if (tls_description.IsEmpty() == false)
-		{
-			if (address_string_list.empty())
-			{
-				tls_description.Prepend("TLS: ");
-			}
-			else
-			{
-				tls_description.Prepend(" (TLS: ");
-				tls_description.Append(')');
-			}
-		}
-
-		logti("%s is listening on %s%s...",
-			  server_name,
-			  ov::String::Join(address_string_list, ", ").CStr(),
-			  tls_description.CStr());
-
-		_http_server_list = std::move(http_server_list);
-		_https_server_list = std::move(https_server_list);
-
-		return true;
-	} while (false);
-
-	http_server_manager->ReleaseServers(http_server_list);
-	http_server_manager->ReleaseServers(https_server_list);
+	http_server_manager->ReleaseServers(&http_server_list);
+	http_server_manager->ReleaseServers(&https_server_list);
 
 	return false;
 }
@@ -566,9 +528,14 @@ int RtcSignallingServer::GetClientPeerCount() const
 
 bool RtcSignallingServer::Stop()
 {
+	_http_server_list_mutex.lock();
+	auto http_server_list = std::move(_http_server_list);
+	auto https_server_list = std::move(_https_server_list);
+	_http_server_list_mutex.unlock();
+
 	auto result = true;
 
-	for (auto &http_server : _http_server_list)
+	for (auto &http_server : http_server_list)
 	{
 		if (http_server->Stop() == false)
 		{
@@ -577,7 +544,7 @@ bool RtcSignallingServer::Stop()
 		}
 	}
 
-	for (auto &https_server : _https_server_list)
+	for (auto &https_server : https_server_list)
 	{
 		if (https_server->Stop() == false)
 		{

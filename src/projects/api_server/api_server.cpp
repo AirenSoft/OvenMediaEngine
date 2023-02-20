@@ -29,7 +29,7 @@ namespace api
 		}
 	};
 
-	void Server::SetupCORS(const cfg::mgr::api::API &api_config)
+	bool Server::SetupCORS(const cfg::mgr::api::API &api_config)
 	{
 		bool is_cors_parsed;
 		auto cross_domains = api_config.GetCrossDomainList(&is_cors_parsed);
@@ -40,6 +40,8 @@ namespace api
 			auto vhost_app_name = info::VHostAppName::InvalidVHostAppName();
 			_cors_manager.SetCrossDomains(vhost_app_name, cross_domains);
 		}
+
+		return true;
 	}
 
 	bool Server::SetupAccessToken(const cfg::mgr::api::API &api_config)
@@ -71,72 +73,38 @@ namespace api
 		std::vector<std::shared_ptr<http::svr::HttpServer>> http_server_list;
 		std::vector<std::shared_ptr<http::svr::HttpsServer>> https_server_list;
 
-		do
+		auto http_interceptor = CreateInterceptor();
+		std::shared_ptr<info::Certificate> certificate;
+
+		if (is_tls_port_configured)
 		{
-			auto http_interceptor = CreateInterceptor();
+			certificate = info::Certificate::CreateCertificate(
+				"api_server",
+				managers_config.GetHost().GetNameList(),
+				managers_config.GetHost().GetTls());
+		}
 
-			std::vector<ov::String> address_string_list;
-			if (is_port_configured)
-			{
-				if (http_server_manager->CreateHttpServers(
-						&http_server_list, "APISvr", ip_list, port,
-						[&](const ov::SocketAddress &address, std::shared_ptr<http::svr::HttpServer> http_server) {
-							http_server->AddInterceptor(http_interceptor);
-							address_string_list.emplace_back(address.ToString());
-						},
-						worker_count) == false)
-				{
-					break;
-				}
-			}
-
-			std::vector<ov::String> tls_address_string_list;
-			if (is_tls_port_configured)
-			{
-				auto certificate = info::Certificate::CreateCertificate(
-					"api_server",
-					managers_config.GetHost().GetNameList(),
-					managers_config.GetHost().GetTls());
-
-				if (http_server_manager->CreateHttpsServers(
-						&https_server_list, "APISvr", ip_list, tls_port,
-						certificate, false,
-						[&](const ov::SocketAddress &address, std::shared_ptr<http::svr::HttpsServer> https_server) {
-							https_server->AddInterceptor(http_interceptor);
-							tls_address_string_list.emplace_back(address.ToString());
-						},
-						worker_count) == false)
-				{
-					break;
-				}
-			}
-
-			auto tls_description = ov::String::Join(tls_address_string_list, ", ");
-			if (tls_description.IsEmpty() == false)
-			{
-				if (address_string_list.empty())
-				{
-					tls_description.Prepend("TLS: ");
-				}
-				else
-				{
-					tls_description.Prepend(" (TLS: ");
-					tls_description.Append(')');
-				}
-			}
-
-			logti("API Server is listening on %s%s...",
-				  ov::String::Join(address_string_list, ", ").CStr(),
-				  tls_description.CStr());
-
+		if (http_server_manager->CreateServers(
+				"APISvr",
+				&http_server_list, &https_server_list,
+				ip_list,
+				is_port_configured, port,
+				is_tls_port_configured, tls_port,
+				certificate,
+				false,
+				[&](const ov::SocketAddress &address, bool is_https, const std::shared_ptr<http::svr::HttpServer> &http_server) {
+					http_server->AddInterceptor(http_interceptor);
+				},
+				worker_count))
+		{
 			_http_server_list = std::move(http_server_list);
 			_https_server_list = std::move(https_server_list);
 
 			return true;
-		} while (false);
+		}
 
-		http_server_manager->ReleaseServers(http_server_list);
-		http_server_manager->ReleaseServers(https_server_list);
+		http_server_manager->ReleaseServers(&http_server_list);
+		http_server_manager->ReleaseServers(&https_server_list);
 
 		return false;
 	}
@@ -172,18 +140,14 @@ namespace api
 			return true;
 		}
 
-		SetupCORS(api_config);
-		if (SetupAccessToken(api_config) == false)
-		{
-			return false;
-		}
-
-		return PrepareHttpServers(
-			server_config->GetIPList(),
-			is_port_configured, port_config.GetPort(),
-			is_tls_port_configured, tls_port_config.GetPort(),
-			managers_config,
-			worker_count);
+		return SetupCORS(api_config) &&
+			   SetupAccessToken(api_config) &&
+			   PrepareHttpServers(
+				   server_config->GetIPList(),
+				   is_port_configured, port_config.GetPort(),
+				   is_tls_port_configured, tls_port_config.GetPort(),
+				   managers_config,
+				   worker_count);
 	}
 
 	std::shared_ptr<http::svr::RequestInterceptor> Server::CreateInterceptor()
@@ -230,27 +194,13 @@ namespace api
 	{
 		auto manager = http::svr::HttpServerManager::GetInstance();
 
-		std::vector<std::shared_ptr<http::svr::HttpServer>> http_server_list = std::move(_http_server_list);
-		std::vector<std::shared_ptr<http::svr::HttpsServer>> https_server_list = std::move(_https_server_list);
+		_http_server_list_mutex.lock();
+		auto http_server_list = std::move(_http_server_list);
+		auto https_server_list = std::move(_https_server_list);
+		_http_server_list_mutex.unlock();
 
-		bool http_result = true;
-		bool https_result = true;
-
-		for (auto &http_server : http_server_list)
-		{
-			if (manager->ReleaseServer(http_server) == false)
-			{
-				http_result = false;
-			}
-		}
-
-		for (auto &https_server : https_server_list)
-		{
-			if (manager->ReleaseServer(https_server) == false)
-			{
-				https_result = false;
-			}
-		}
+		auto http_result = manager->ReleaseServers(&http_server_list);
+		auto https_result = manager->ReleaseServers(&https_server_list);
 
 		_is_storage_path_initialized = false;
 		_storage_path = "";

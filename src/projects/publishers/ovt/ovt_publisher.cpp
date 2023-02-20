@@ -40,44 +40,85 @@ bool OvtPublisher::Start()
 		return true;
 	}
 
-	auto &port_config = ovt_config.GetPort();
-	int port = port_config.GetPort();
+	bool is_configured;
+	auto &port_config = ovt_config.GetPort(&is_configured);
 
-	if (port > 0)
+	if (is_configured == false)
 	{
-		const ov::String &ip = server_config.GetIPList()[0];
-		auto address = ov::SocketAddress::CreateAndGetFirst(ip.IsEmpty() ? nullptr : ip.CStr(), static_cast<uint16_t>(port));
-
-		bool is_parsed;
-
-		auto worker_count = ovt_config.GetWorkerCount(&is_parsed);
-		worker_count = is_parsed ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
-
-		_server_port = PhysicalPortManager::GetInstance()->CreatePort("OvtPub", port_config.GetSocketType(), address, worker_count);
-		if (_server_port != nullptr)
-		{
-			logti("%s is listening on %s/%s", GetPublisherName(), address.ToString().CStr(), ov::StringFromSocketType(port_config.GetSocketType()));
-			_server_port->AddObserver(this);
-		}
-		else
-		{
-			logte("Could not create relay port. Origin features will not work.");
-		}
-	}
-	else
-	{
-		logte("Invalid ovt port: %d", port);
+		logtw("API Server is disabled - No port is configured");
+		return true;
 	}
 
-	return Publisher::Start();
+	auto &ip_list = server_config.GetIPList();
+	std::vector<ov::SocketAddress> address_list;
+	try
+	{
+		address_list = ov::SocketAddress::Create(ip_list, static_cast<uint16_t>(port_config.GetPort()));
+	}
+	catch (const ov::Error &e)
+	{
+		logte("Could not listen for %s Server: %s", GetPublisherName(), e.What());
+		return false;
+	}
+
+	auto worker_count = ovt_config.GetWorkerCount(&is_configured);
+	worker_count = is_configured ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+
+	bool result = true;
+	std::vector<std::shared_ptr<PhysicalPort>> server_port_list;
+	std::vector<ov::String> address_string_list;
+
+	for (auto &address : address_list)
+	{
+		auto server_port = PhysicalPortManager::GetInstance()->CreatePort("OvtPub", port_config.GetSocketType(), address, worker_count);
+
+		if (server_port == nullptr)
+		{
+			logte("Could not listen for %s on %s", GetPublisherName(), address.ToString().CStr());
+			result = false;
+			break;
+		}
+
+		server_port->AddObserver(this);
+		server_port_list.push_back(server_port);
+
+		address_string_list.emplace_back(address.ToString());
+	}
+
+	if (result)
+	{
+		logti("%s is listening on %s/%s...",
+			  GetPublisherName(),
+			  ov::String::Join(address_string_list, ", ").CStr(),
+			  ov::StringFromSocketType(port_config.GetSocketType()));
+
+		{
+			std::lock_guard lock_guard{_server_port_list_mutex};
+			_server_port_list = std::move(server_port_list);
+		}
+
+		return Publisher::Start();
+	}
+
+	for (auto &server_port : server_port_list)
+	{
+		server_port->RemoveObserver(this);
+		server_port->Close();
+	}
+
+	return false;
 }
 
 bool OvtPublisher::Stop()
 {
-	if (_server_port != nullptr)
+	_server_port_list_mutex.lock();
+	auto server_port_list = std::move(_server_port_list);
+	_server_port_list_mutex.unlock();
+
+	for (auto &server_port : server_port_list)
 	{
-		_server_port->RemoveObserver(this);
-		_server_port->Close();
+		server_port->RemoveObserver(this);
+		server_port->Close();
 	}
 
 	return Publisher::Stop();
