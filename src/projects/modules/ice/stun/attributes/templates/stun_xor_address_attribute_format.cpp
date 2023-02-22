@@ -118,7 +118,7 @@ bool StunXorAddressAttributeFormat::SerializeXoredAddress(const StunMessage *stu
 	{
 		case ov::SocketFamily::Inet: {
 			auto addr = (_address.ToIn4Addr())->s_addr ^ ov::HostToNetwork32(OV_STUN_MAGIC_COOKIE);
-			return stream.Write(&addr, _address.GetInAddrLength());
+			return stream.Write(static_cast<void *>(&addr), _address.GetInAddrLength());
 		}
 
 		case ov::SocketFamily::Inet6: {
