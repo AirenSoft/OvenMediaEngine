@@ -175,7 +175,7 @@ private:
 	bool CreateDecoder(int32_t decoder_id, std::shared_ptr<MediaTrack> input_track);
 
 	void CreateFilters(MediaFrame *buffer);
-	std::shared_ptr<MediaTrack> GetFilterInputContext(int32_t decoder_id);
+	std::shared_ptr<MediaTrack> GetTrackOfFilterInput(int32_t decoder_id);
 
 	int32_t CreateEncoders(MediaFrame *buffer);
 	bool CreateEncoder(int32_t encoder_id, std::shared_ptr<MediaTrack> output_track);
