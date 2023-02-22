@@ -278,6 +278,7 @@ namespace http
 								}
 							}) == false)
 					{
+						logte("Could not create HTTP Server for %s", server_name);
 						break;
 					}
 				}
@@ -299,6 +300,7 @@ namespace http
 								}
 							}) == false)
 					{
+						logte("Could not create HTTPS Server for %s", server_name);
 						break;
 					}
 				}
