@@ -181,7 +181,7 @@ namespace ov
 			auto start_port = port_range.start_port;
 			auto end_port = port_range.end_port;
 
-			for (auto port = start_port; port <= end_port; port++)
+			for (int port = start_port; port <= end_port; port++)
 			{
 				CreateInternal(address.host, port, &address_list);
 			}
