@@ -193,7 +193,7 @@ bool FilterRescaler::Start()
 	{
 		_kill_flag = true;
 
-		logte("Failed to start transcode rescale filter thread.");
+		logte("Failed to start rescaling filter thread");
 		return false;
 	}
 
@@ -215,7 +215,7 @@ void FilterRescaler::Stop()
 
 void FilterRescaler::FilterThread()
 {
-	logtd("Start transcode rescaling filter thread.");
+	logtd("Start rescaling filter thread");
 
 	while (!_kill_flag)
 	{

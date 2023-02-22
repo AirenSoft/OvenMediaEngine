@@ -51,7 +51,6 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 	: _stream(stream),
 	  _packets_queue(nullptr, 100)
 {
-	logti("[%s/%s(%u)] Trying to create a mediarouter stream", _stream->GetApplicationName(), _stream->GetName().CStr(), _stream->GetId());
 	_inout_type = MediaRouterStreamType::UNKNOWN;
 
 	_warning_count_bframe = 0;
@@ -69,8 +68,6 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream, 
 
 MediaRouteStream::~MediaRouteStream()
 {
-	logti("[%s/%s(%u)] Delete mediarouter stream ", _stream->GetApplicationName(), _stream->GetName().CStr(), _stream->GetId());
-
 	_media_packet_stash.clear();
 
 	_stat_recv_pkt_lpts.clear();
@@ -882,7 +879,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 
 		stat_track_str = stat_stream_str + stat_track_str;
 
-		logtd("%s", stat_track_str.CStr());
+		logts("%s", stat_track_str.CStr());
 	}
 }
 

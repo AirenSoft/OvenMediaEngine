@@ -185,7 +185,7 @@ void FilterResampler::Stop()
 
 void FilterResampler::FilterThread()
 {
-	logtd("Start transcode resampler filter thread.");
+	logtd("Start resampler filter thread.");
 
 	while (!_kill_flag)
 	{

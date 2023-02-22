@@ -24,7 +24,7 @@ TranscodeFilter::~TranscodeFilter()
 
 bool TranscodeFilter::Configure(int32_t filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track, CompleteHandler complete_handler)
 {
-	logtd("Create a transcode filter. track_id(%d). type(%s)", input_track->GetId(), (input_track->GetMediaType() == MediaType::Video) ? "Video" : "Audio");
+	logtd("Create a transcode filter. ITrack(%d). Type(%s)", input_track->GetId(), (input_track->GetMediaType() == MediaType::Video) ? "Video" : "Audio");
 
 	_filter_id = filter_id;
 	_input_track = input_track;

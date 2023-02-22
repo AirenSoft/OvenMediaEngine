@@ -107,8 +107,6 @@ bool TranscodeApplication::OnStreamPrepared(const std::shared_ptr<info::Stream> 
 {
 	std::unique_lock<std::mutex> lock(_mutex);
 
-	// logte("Called OnStreamParsed. *Please delete this log after checking.*");
-
 	auto stream_bucket = _streams.find(stream_info->GetId());
 	if (stream_bucket == _streams.end())
 	{
@@ -127,8 +125,6 @@ bool TranscodeApplication::OnStreamPrepared(const std::shared_ptr<info::Stream> 
 bool TranscodeApplication::OnStreamUpdated(const std::shared_ptr<info::Stream> &stream_info)
 {
 	std::unique_lock<std::mutex> lock(_mutex);
-
-	// logte("Called OnStreamUpdated. *Please delete this log after checking.*");
 
 	auto stream_bucket = _streams.find(stream_info->GetId());
 	if (stream_bucket == _streams.end())

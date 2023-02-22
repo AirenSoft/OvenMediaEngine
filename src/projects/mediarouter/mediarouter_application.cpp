@@ -302,8 +302,6 @@ bool MediaRouteApplication::OnStreamCreated(const std::shared_ptr<MediaRouteAppl
 	// If all track information is validity, Notify the observer that the current stream is preapred.
 	if (stream->IsStreamPrepared() == false && stream->AreAllTracksReady() == true)
 	{
-		logti("[%s/%s(%u)] Stream has been created %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
-		
 		NotifyStreamPrepared(stream);
 	}
 
@@ -342,6 +340,8 @@ bool MediaRouteApplication::NotifyStreamCreate(const std::shared_ptr<info::Strea
 {
 	std::shared_lock<std::shared_mutex> lock(_observers_lock);
 
+	logti("[%s/%s(%u)] Stream has been created", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
+
 	auto representation_type = stream_info->GetRepresentationType();
 
 	for (auto observer : _observers)
@@ -376,6 +376,8 @@ bool MediaRouteApplication::NotifyStreamCreate(const std::shared_ptr<info::Strea
 bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStream> &stream)
 {
 	std::shared_lock<std::shared_mutex> lock(_observers_lock);
+
+	logti("[%s/%s(%u)] Stream has been prepared %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
 
 	for (auto observer : _observers)
 	{
@@ -766,8 +768,6 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 		// Notify the Observer that the stream is parsed
 		if (stream->IsStreamPrepared() == false && stream->AreAllTracksReady() == true)
 		{
-			logti("[%s/%s(%u)] Stream has been created %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
-			
 			NotifyStreamPrepared(stream);
 		}
 
@@ -787,7 +787,7 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 		}
 	}
 
-	logtd("Inbound worker thread #%d has beed stopped", worker_id);
+	logtd("Inbound worker thread #%d has been stopped", worker_id);
 }
 
 void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
@@ -818,8 +818,6 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 
 		if (stream->IsStreamPrepared() == false && stream->AreAllTracksReady() == true)
 		{
-			logti("[%s/%s(%u)] Stream has been created %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
-
 			NotifyStreamPrepared(stream);
 		}
 
@@ -838,5 +836,5 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 		}
 	}
 
-	logtd("Outbound worker thread #%d has beed stopped", worker_id);
+	logtd("Outbound worker thread #%d has been stopped", worker_id);
 }
