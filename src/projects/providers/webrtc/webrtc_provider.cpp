@@ -65,7 +65,7 @@ namespace pvd
 				server_config.GetIPList(),
 				is_port_configured, port_config.GetPort(),
 				is_tls_port_configured, tls_port_config.GetPort(),
-				worker_count, interceptor) == false)
+				worker_count, interceptor))
 		{
 			_signalling_server = std::move(signalling_server);
 
