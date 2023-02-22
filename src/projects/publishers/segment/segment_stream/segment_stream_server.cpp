@@ -43,13 +43,13 @@ bool SegmentStreamServer::Start(const cfg::Server &server_config,
 	bool result = true;
 	auto manager = http::svr::HttpServerManager::GetInstance();
 
-	std::shared_ptr<http::svr::HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("SegPub", *address, worker_count) : nullptr;
+	std::shared_ptr<http::svr::HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer(GetPublisherName(), "SegPub", *address, worker_count) : nullptr;
 	result = result && ((address != nullptr) ? (http_server != nullptr) : true);
 
 	std::shared_ptr<http::svr::HttpsServer> https_server = nullptr;
 	if (result && (tls_address != nullptr))
 	{
-		https_server = manager->CreateHttpsServer("SegPub", *tls_address, disable_http2_force, worker_count);
+		https_server = manager->CreateHttpsServer(GetPublisherName(), "SegPub", *tls_address, disable_http2_force, worker_count);
 	}
 
 	result = result && ((tls_address != nullptr) ? (https_server != nullptr) : true);
@@ -93,7 +93,7 @@ bool SegmentStreamServer::Stop()
 
 bool SegmentStreamServer::AppendCertificate(const std::shared_ptr<const info::Certificate> &certificate)
 {
-	if(_https_server != nullptr && certificate != nullptr)
+	if (_https_server != nullptr && certificate != nullptr)
 	{
 		return _https_server->AppendCertificate(certificate) == nullptr;
 	}
@@ -103,14 +103,13 @@ bool SegmentStreamServer::AppendCertificate(const std::shared_ptr<const info::Ce
 
 bool SegmentStreamServer::RemoveCertificate(const std::shared_ptr<const info::Certificate> &certificate)
 {
-	if(_https_server != nullptr && certificate != nullptr)
+	if (_https_server != nullptr && certificate != nullptr)
 	{
 		return _https_server->RemoveCertificate(certificate) == nullptr;
 	}
 
 	return true;
 }
-
 
 bool SegmentStreamServer::AddObserver(const std::shared_ptr<SegmentStreamObserver> &observer)
 {

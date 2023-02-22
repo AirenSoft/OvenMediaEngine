@@ -16,7 +16,7 @@ namespace http
 {
 	namespace svr
 	{
-		std::shared_ptr<HttpServer> HttpServerManager::CreateHttpServer(const char *instance_name, const ov::SocketAddress &address, int worker_count)
+		std::shared_ptr<HttpServer> HttpServerManager::CreateHttpServer(const char *server_name, const char *server_short_name, const ov::SocketAddress &address, int worker_count)
 		{
 			std::shared_ptr<HttpServer> http_server = nullptr;
 
@@ -60,7 +60,7 @@ namespace http
 				else
 				{
 					// Create a new HTTP server
-					http_server = std::make_shared<HttpServer>(instance_name);
+					http_server = std::make_shared<HttpServer>(server_name, server_short_name);
 
 					if (http_server->Start(address, worker_count, http2_enabled))
 					{
@@ -115,7 +115,7 @@ namespace http
 			return true;
 		}
 
-		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *instance_name, const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate, bool disable_http2_force, int worker_count)
+		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *server_name, const char *server_short_name, const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate, bool disable_http2_force, int worker_count)
 		{
 			std::shared_ptr<HttpsServer> https_server = nullptr;
 			auto module_config = cfg::ConfigManager::GetInstance()->GetServer()->GetModules();
@@ -137,7 +137,7 @@ namespace http
 				https_server = std::dynamic_pointer_cast<HttpsServer>(http_server);
 				if (https_server == nullptr)
 				{
-					logte("Cannot reuse instance of %s: Requested HTTPS Server, but previous instance is HTTP Server (%s)", instance_name, address.ToString().CStr());
+					logte("Cannot reuse instance of %s: Requested HTTPS Server, but previous instance is HTTP Server (%s)", server_name, address.ToString().CStr());
 					return nullptr;
 				}
 
@@ -153,7 +153,7 @@ namespace http
 			else
 			{
 				// Create a new HTTP server
-				https_server = std::make_shared<HttpsServer>(instance_name);
+				https_server = std::make_shared<HttpsServer>(server_name, server_short_name);
 
 				if (https_server->Start(address, worker_count, http2_enabled))
 				{
@@ -183,9 +183,9 @@ namespace http
 			return https_server;
 		}
 
-		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *instance_name, const ov::SocketAddress &address, bool disable_http2_force, int worker_count)
+		std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const char *server_name, const char *server_short_name, const ov::SocketAddress &address, bool disable_http2_force, int worker_count)
 		{
-			return CreateHttpsServer(instance_name, address, nullptr, disable_http2_force, worker_count);
+			return CreateHttpsServer(server_name, server_short_name, address, nullptr, disable_http2_force, worker_count);
 		}
 
 		template <typename T>
@@ -245,7 +245,7 @@ namespace http
 		}
 
 		bool HttpServerManager::CreateServers(
-			const char *server_name,
+			const char *server_name, const char *server_short_name,
 			std::vector<std::shared_ptr<HttpServer>> *http_server_list,
 			std::vector<std::shared_ptr<HttpsServer>> *https_server_list,
 			const std::vector<ov::String> &server_ip_list,
@@ -268,7 +268,7 @@ namespace http
 							this,
 							false, http_server_list, server_ip_list, port,
 							[=](const ov::SocketAddress &address) -> std::shared_ptr<HttpServer> {
-								return CreateHttpServer(server_name, address, worker_count);
+								return CreateHttpServer(server_name, server_short_name, address, worker_count);
 							},
 							[&](const ov::SocketAddress &address, bool is_https, const std::shared_ptr<HttpServer> &http_server) {
 								address_string_list.emplace_back(address.ToString());
@@ -290,7 +290,7 @@ namespace http
 							this,
 							true, https_server_list, server_ip_list, tls_port,
 							[=](const ov::SocketAddress &address) -> std::shared_ptr<HttpsServer> {
-								return CreateHttpsServer(server_name, address, certificate, disable_http2_force, worker_count);
+								return CreateHttpsServer(server_name, server_short_name, address, certificate, disable_http2_force, worker_count);
 							},
 							[&](const ov::SocketAddress &address, bool is_https, const std::shared_ptr<HttpServer> &http_server) {
 								address_string_list.emplace_back(address.ToString());

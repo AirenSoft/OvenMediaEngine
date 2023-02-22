@@ -42,7 +42,7 @@ namespace http
 			using ClientList = std::unordered_map<ov::Socket *, std::shared_ptr<HttpConnection>>;
 			using ClientIterator = std::function<bool(const std::shared_ptr<HttpConnection> &stream)>;
 
-			HttpServer(const char *server_name);
+			HttpServer(const char *server_name, const char *server_short_name);
 			~HttpServer() override;
 
 			virtual bool Start(const ov::SocketAddress &address, int worker_count, bool enable_http2);
@@ -79,6 +79,7 @@ namespace http
 			}
 
 			ov::String _server_name;
+			ov::String _server_short_name;
 			mutable std::mutex _physical_port_mutex;
 			std::shared_ptr<PhysicalPort> _physical_port = nullptr;
 

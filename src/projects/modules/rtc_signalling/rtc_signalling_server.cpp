@@ -150,7 +150,7 @@ bool RtcSignallingServer::PrepareForTCPRelay()
 }
 
 bool RtcSignallingServer::Start(
-	const char *server_name,
+	const char *server_name, const char *server_short_name,
 	const std::vector<ov::String> &ip_list,
 	bool is_port_configured, uint16_t port,
 	bool is_tls_port_configured, uint16_t tls_port,
@@ -177,7 +177,7 @@ bool RtcSignallingServer::Start(
 	std::vector<std::shared_ptr<http::svr::HttpsServer>> https_server_list;
 
 	if (http_server_manager->CreateServers(
-			"RtcSig",
+			server_name, server_short_name,
 			&http_server_list, &https_server_list,
 			ip_list,
 			is_port_configured, port,

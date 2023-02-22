@@ -64,7 +64,7 @@ bool WebRtcPublisher::StartSignallingServer(const cfg::Server &server_config, co
 	auto interceptor = std::make_shared<WebRtcPublisherSignallingInterceptor>();
 
 	if (signalling_server->Start(
-			GetPublisherName(),
+			GetPublisherName(), "RtcSig",
 			server_config.GetIPList(),
 			is_port_configured, port_config.GetPort(),
 			is_tls_port_configured, tls_port_config.GetPort(),

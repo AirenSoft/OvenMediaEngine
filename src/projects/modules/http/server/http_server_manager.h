@@ -23,16 +23,16 @@ namespace http
 			using HttpServerCreationCallback = std::function<void(const ov::SocketAddress &address, bool is_https, const std::shared_ptr<HttpServer> &http_server)>;
 
 		public:
-			std::shared_ptr<HttpServer> CreateHttpServer(const char *instance_name, const ov::SocketAddress &address, int worker_count = HTTP_SERVER_USE_DEFAULT_COUNT);
+			std::shared_ptr<HttpServer> CreateHttpServer(const char *server_name, const char *server_short_name, const ov::SocketAddress &address, int worker_count = HTTP_SERVER_USE_DEFAULT_COUNT);
 
 			bool AppendCertificate(const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate);
 			bool RemoveCertificate(const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate);
 
-			std::shared_ptr<HttpsServer> CreateHttpsServer(const char *instance_name, const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate, bool disable_http2_force, int worker_count);
-			std::shared_ptr<HttpsServer> CreateHttpsServer(const char *instance_name, const ov::SocketAddress &address, bool disable_http2_force, int worker_count = HTTP_SERVER_USE_DEFAULT_COUNT);
+			std::shared_ptr<HttpsServer> CreateHttpsServer(const char *server_name, const char *server_short_name, const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate, bool disable_http2_force, int worker_count);
+			std::shared_ptr<HttpsServer> CreateHttpsServer(const char *server_name, const char *server_short_name, const ov::SocketAddress &address, bool disable_http2_force, int worker_count = HTTP_SERVER_USE_DEFAULT_COUNT);
 
 			bool CreateServers(
-				const char *server_name,
+				const char *server_name, const char *server_short_name,
 				std::vector<std::shared_ptr<HttpServer>> *http_server_list,
 				std::vector<std::shared_ptr<HttpsServer>> *https_server_list,
 				const std::vector<ov::String> &server_ip_list,

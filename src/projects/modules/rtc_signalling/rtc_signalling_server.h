@@ -28,7 +28,7 @@ public:
 	~RtcSignallingServer() override = default;
 
 	bool Start(
-		const char *server_name,
+		const char *server_name, const char *server_short_name,
 		const std::vector<ov::String> &ip_list,
 		bool is_port_configured, uint16_t port,
 		bool is_tls_port_configured, uint16_t tls_port,

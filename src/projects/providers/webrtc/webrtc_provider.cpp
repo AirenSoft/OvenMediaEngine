@@ -61,7 +61,7 @@ namespace pvd
 		auto interceptor = std::make_shared<WebRtcProviderSignallingInterceptor>();
 
 		if (signalling_server->Start(
-				GetProviderName(),
+				GetProviderName(), "RtcSig",
 				server_config.GetIPList(),
 				is_port_configured, port_config.GetPort(),
 				is_tls_port_configured, tls_port_config.GetPort(),

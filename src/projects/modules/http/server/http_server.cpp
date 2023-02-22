@@ -19,8 +19,9 @@ namespace http
 	{
 		ov::DelayQueue HttpServer::_repeater{"HTTPTimer"};
 
-		HttpServer::HttpServer(const char *server_name)
-			: _server_name(server_name)
+		HttpServer::HttpServer(const char *server_name, const char *server_short_name)
+			: _server_name(server_name),
+			  _server_short_name(server_short_name)
 		{
 		}
 
@@ -44,7 +45,7 @@ namespace http
 
 			auto manager = PhysicalPortManager::GetInstance();
 
-			auto physical_port = manager->CreatePort(_server_name.CStr(), ov::SocketType::Tcp, address, worker_count);
+			auto physical_port = manager->CreatePort(_server_short_name, ov::SocketType::Tcp, address, worker_count);
 
 			if (physical_port != nullptr)
 			{

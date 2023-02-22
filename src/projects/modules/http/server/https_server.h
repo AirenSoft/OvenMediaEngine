@@ -19,8 +19,8 @@ namespace http
 		class HttpsServer : public HttpServer
 		{
 		public:
-			HttpsServer(const char *server_name)
-				: HttpServer(server_name)
+			HttpsServer(const char *server_name, const char *server_short_name)
+				: HttpServer(server_name, server_short_name)
 			{
 			}
 
