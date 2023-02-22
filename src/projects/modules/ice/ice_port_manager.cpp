@@ -124,10 +124,9 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 	{
 		std::vector<ov::String> ip_list;
 		ov::SocketType socket_type;
-		uint16_t start_port;
-		uint16_t end_port;
+		std::vector<ov::SocketAddress::PortRange> port_range_list;
 
-		if (ParseIceCandidate(ice_candidate_config, &ip_list, &socket_type, &start_port, &end_port) == false)
+		if (ParseIceCandidate(ice_candidate_config, &ip_list, &socket_type, &port_range_list) == false)
 		{
 			return false;
 		}
@@ -135,41 +134,44 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 		ov::String protocol = StringFromSocketType(socket_type);
 		std::vector<ov::SocketAddress> address_list;
 
-		for (int port_num = start_port; port_num <= end_port; port_num++)
+		for (const auto &port_range : port_range_list)
 		{
-			std::vector<RtcIceCandidate> ice_candidates;
-
-			for (const auto &local_ip : ip_list)
+			for (int port_num = port_range.start_port; port_num <= port_range.end_port; port_num++)
 			{
-				try
+				std::vector<RtcIceCandidate> ice_candidates;
+
+				for (const auto &local_ip : ip_list)
 				{
-					address_list = ov::SocketAddress::Create(local_ip, static_cast<uint16_t>(port_num));
-				}
-				catch (const ov::Error &e)
-				{
-					logte("Could not create socket address: %s", e.What());
-					return false;
+					try
+					{
+						address_list = ov::SocketAddress::Create(local_ip, static_cast<uint16_t>(port_num));
+					}
+					catch (const ov::Error &e)
+					{
+						logte("Could not create socket address: %s", e.What());
+						return false;
+					}
+
+					for (const auto &address : address_list)
+					{
+						// Create an ICE candidate using local_ip & port_num
+						RtcIceCandidate ice_candidate(protocol, address, 0, "");
+
+						logtd("ICE Candidate is created: %s (from %s)", ice_candidate.ToString().CStr(), address.ToString().CStr());
+
+						ice_candidates.emplace_back(std::move(ice_candidate));
+					}
 				}
 
-				for (const auto &address : address_list)
-				{
-					// Create an ICE candidate using local_ip & port_num
-					RtcIceCandidate ice_candidate(protocol, address, 0, "");
-
-					logtd("ICE Candidate is created: %s (from %s)", ice_candidate.ToString().CStr(), address.ToString().CStr());
-
-					ice_candidates.emplace_back(std::move(ice_candidate));
-				}
+				ice_candidate_list->push_back(std::move(ice_candidates));
 			}
-
-			ice_candidate_list->push_back(std::move(ice_candidates));
 		}
 	}
 
 	return true;
 }
 
-bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, uint16_t *start_port, uint16_t *end_port)
+bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, std::vector<ov::SocketAddress::PortRange> *port_range_list)
 {
 	// Create SocketAddress instances from string
 	//
@@ -239,8 +241,9 @@ bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vec
 		// Use default value
 	}
 
-	ov::String host;
-	ov::SocketAddress::ParseAddress(tokens[0], &host, start_port, end_port);
+	const auto address = ov::SocketAddress::ParseAddress(tokens[0]);
+	const auto &host = address.host;
+	*port_range_list = address.port_range_list;
 
 	if (host.IsEmpty())
 	{

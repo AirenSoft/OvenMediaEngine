@@ -21,43 +21,56 @@
 
 namespace ov
 {
-	void SocketAddress::ParsePort(const ov::String &string, uint16_t *start_port, uint16_t *end_port)
+	std::vector<SocketAddress::PortRange> SocketAddress::ParsePort(const ov::String &string)
 	{
-		if (string.IsEmpty())
+		std::vector<SocketAddress::PortRange> range_list;
+
+		if (string.IsEmpty() == false)
 		{
-			*start_port = 0;
-			*end_port = 0;
-			return;
+			auto port_groups = string.Split(",");
+
+			for (const auto &port_group : port_groups)
+			{
+				auto group = port_group.Trim();
+
+				// Check whether port_part is ranged port
+				auto tokens = group.Split("-");
+
+				if (tokens.size() > 2)
+				{
+					throw SocketAddressError("Invalid port range format: %s", string.CStr());
+				}
+
+				if (
+					(tokens[0].IsNumeric() == false) ||
+					((tokens.size() > 1) && (tokens[1].IsNumeric() == false)))
+				{
+					throw SocketAddressError("Invalid port range: %s (The port number must be numeric)", string.CStr());
+				}
+
+				auto start_port = ov::Converter::ToInt64(tokens[0]);
+				auto end_port = (tokens.size() == 2) ? ov::Converter::ToInt64(tokens[1]) : start_port;
+
+				if (start_port > end_port)
+				{
+					throw SocketAddressError("Invalid port range: %s (The end port number must be greater than the start port number)", string.CStr());
+				}
+
+				if (
+					(start_port < 0LL) || (start_port >= UINT16_MAX) ||
+					(end_port < 0LL) || (end_port >= UINT16_MAX))
+				{
+					throw SocketAddressError("Invalid port number: %s (The port number must be a value between 0 and %d)", string.CStr(), UINT16_MAX);
+				}
+
+				range_list.emplace_back(start_port, end_port);
+			}
 		}
 
-		// Check whether port_part is ranged port
-		auto tokens = string.Split("-");
-
-		if (tokens.size() > 2)
-		{
-			throw SocketAddressError("Invalid port range format: %s", string.CStr());
-		}
-
-		auto start_port_number = ov::Converter::ToInt64(tokens[0]);
-		auto end_port_number = (tokens.size() == 2) ? ov::Converter::ToInt64(tokens[1]) : start_port_number;
-
-		if (start_port_number > end_port_number)
-		{
-			throw SocketAddressError("Invalid port range: %s (The end port number must be greater than the start port number)", string.CStr());
-		}
-
-		if (
-			(start_port_number < 0LL) || (start_port_number >= 65536LL) ||
-			(end_port_number < 0LL) || (end_port_number >= 65536LL))
-		{
-			throw SocketAddressError("Invalid port number: %s (The port number must be a value between 0 and 65535)", string.CStr());
-		}
-
-		*start_port = start_port_number;
-		*end_port = end_port_number;
+		return range_list;
 	}
 
-	void SocketAddress::ParseAddress(const ov::String &string, ov::String *host, uint16_t *start_port, uint16_t *end_port)
+	SocketAddress::Address SocketAddress::ParseAddress(const ov::String &string)
 	{
 		const auto separator = string.IndexOfRev(':');
 
@@ -91,28 +104,21 @@ namespace ov
 				port_part = string.Substring(separator + 1);
 			}
 
-			*host = host_part;
-			ParsePort(port_part, start_port, end_port);
-			return;
+			return Address{host_part, ParsePort(port_part)};
 		}
 
 		// There is no ':' in the string, So try to parse it as a port number
 		try
 		{
-			ParsePort(string, start_port, end_port);
-
 			// If succeess, string consists only of a port number or a range of port numbers
-			*host = "";
-			return;
+			return Address("", ParsePort(string));
 		}
 		catch (const ov::Error &e)
 		{
 		}
 
 		// If failed, string consists only of a host name or an IP address
-		*host = string;
-		*start_port = 0;
-		*end_port = 0;
+		return Address(string, {});
 	}
 
 	void SocketAddress::CreateInternal(const ov::String &host, uint16_t port, std::vector<SocketAddress> *address_list)
@@ -163,16 +169,22 @@ namespace ov
 	std::vector<SocketAddress> SocketAddress::Create(const ov::String &string)
 	{
 		ov::String host;
-		uint16_t start_port;
-		uint16_t end_port;
 
-		ParseAddress(string, &host, &start_port, &end_port);
+		auto address = ParseAddress(string);
 
 		std::vector<SocketAddress> address_list;
 
-		for (auto port = start_port; port <= end_port; port++)
+		auto &port_range_list = address.port_range_list;
+
+		for (const auto &port_range : port_range_list)
 		{
-			CreateInternal(host, static_cast<uint16_t>(port), &address_list);
+			auto start_port = port_range.start_port;
+			auto end_port = port_range.end_port;
+
+			for (auto port = start_port; port <= end_port; port++)
+			{
+				CreateInternal(address.host, port, &address_list);
+			}
 		}
 
 		return address_list;
@@ -617,7 +629,7 @@ namespace ov
 			{
 				if ((hostname.IsEmpty() == false) && (hostname != ip))
 				{
-					description.AppendFormat("%s (%s)", hostname.CStr(), ip.CStr());
+					description.AppendFormat("%s(%s)", hostname.CStr(), ip.CStr());
 				}
 				else
 				{

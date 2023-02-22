@@ -124,7 +124,7 @@ protected:
 	const cfg::Server _server_config;
 	const cfg::bind::cmm::Webrtc _webrtc_config;
 
-	std::mutex _http_server_list_mutex;
+	std::recursive_mutex _http_server_list_mutex;
 	std::vector<std::shared_ptr<http::svr::HttpServer>> _http_server_list;
 	std::vector<std::shared_ptr<http::svr::HttpsServer>> _https_server_list;
 

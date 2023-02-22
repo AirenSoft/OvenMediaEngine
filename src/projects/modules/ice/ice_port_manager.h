@@ -40,7 +40,7 @@ protected:
 
 	bool IsRegisteredObserver(const std::shared_ptr<IcePortObserver> &observer);
 	bool GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &ice_candidates_config, RtcIceCandidateList *ice_candidate_list);
-	bool ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, uint16_t *start_port, uint16_t *end_port);
+	bool ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, std::vector<ov::SocketAddress::PortRange> *port_range_list);
 
 private:
 	std::shared_ptr<IcePort> _ice_port = nullptr;
