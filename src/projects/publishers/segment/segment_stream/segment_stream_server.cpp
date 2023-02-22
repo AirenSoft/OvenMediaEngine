@@ -95,7 +95,7 @@ bool SegmentStreamServer::AppendCertificate(const std::shared_ptr<const info::Ce
 {
 	if (_https_server != nullptr && certificate != nullptr)
 	{
-		return _https_server->AppendCertificate(certificate) == nullptr;
+		return (_https_server->AppendCertificate(certificate) == nullptr);
 	}
 
 	return true;
@@ -105,7 +105,7 @@ bool SegmentStreamServer::RemoveCertificate(const std::shared_ptr<const info::Ce
 {
 	if (_https_server != nullptr && certificate != nullptr)
 	{
-		return _https_server->RemoveCertificate(certificate) == nullptr;
+		return (_https_server->RemoveCertificate(certificate) == nullptr);
 	}
 
 	return true;

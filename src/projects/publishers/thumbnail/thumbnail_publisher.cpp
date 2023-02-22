@@ -130,7 +130,7 @@ bool ThumbnailPublisher::OnCreateHost(const info::Host &host_info)
 
 		for (auto &https_server : _https_server_list)
 		{
-			if (https_server->AppendCertificate(certificate) == nullptr)
+			if (https_server->AppendCertificate(certificate) != nullptr)
 			{
 				result = false;
 			}
@@ -151,7 +151,7 @@ bool ThumbnailPublisher::OnDeleteHost(const info::Host &host_info)
 
 		for (auto &https_server : _https_server_list)
 		{
-			if (https_server->RemoveCertificate(certificate) == nullptr)
+			if (https_server->RemoveCertificate(certificate) != nullptr)
 			{
 				result = false;
 			}
