@@ -47,7 +47,7 @@ namespace OvenSignedPolicyUrl
             //Check if parameter present in url 
             if (base_url.Contains("?")) { base_url = base_url + "&"; }
             else { base_url = base_url + "?"; }
-            var stream_url = string.Format("{0}?policy={1}", base_url, policy_base64);
+            var stream_url = string.Format("{0}policy={1}", base_url, policy_base64);
             var sig = make_digest(stream_url);
             
             return string.Format("{0}&signature={1}", stream_url, sig);
