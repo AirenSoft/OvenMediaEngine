@@ -196,7 +196,7 @@ namespace pvd
 		// Check if application is exist
 		if (GetApplicationByName(vhost_app_name) == nullptr)
 		{
-			logte("Could not find %s application : %s", vhost_app_name.CStr());
+			logte("Could not find vhost/app: %s", vhost_app_name.CStr());
 			remote->Close();
 			return;
 		}

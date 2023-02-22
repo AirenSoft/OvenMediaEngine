@@ -755,7 +755,7 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 			continue;
 		}
 
-		// StreamDeliver media packet to Publiser(observer) of Transcoder(observer)
+		// StreamDeliver media packet to Publisher(observer) of Transcoder(observer)
 		auto media_packet = stream->Pop();
 		if (media_packet == nullptr)
 		{
@@ -809,7 +809,7 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 			continue;
 		}
 
-		// StreamDeliver media packet to Publiser(observer) of Transcoder(observer)
+		// StreamDeliver media packet to Publisher(observer) of Transcoder(observer)
 		auto media_packet = stream->Pop();
 		if (media_packet == nullptr)
 		{

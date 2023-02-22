@@ -226,7 +226,7 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 		auto application = std::static_pointer_cast<ThumbnailApplication>(GetApplicationByName(vhost_app_name));
 		if (application == nullptr)
 		{
-			response->AppendString("Could not found application of thumbnail publiser");
+			response->AppendString("Could not found application of thumbnail publisher");
 			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
 
