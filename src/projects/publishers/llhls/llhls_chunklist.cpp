@@ -21,12 +21,12 @@ LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<cons
 	_part_target_duration = part_target_duration;
 	_map_uri = map_uri;
 
-	logtd("LLHLS Chunklist has been created. track(%s)", _track->GetName().CStr());
+	logtd("LLHLS Chunklist has been created. track(%s)", _track->GetVariantName().CStr());
 }
 
 LLHlsChunklist::~LLHlsChunklist()
 {
-	logtd("Chunklist has been deleted. %s", GetTrack()->GetName().CStr());
+	logtd("Chunklist has been deleted. %s", GetTrack()->GetVariantName().CStr());
 }
 
 // Set all renditions info for ABR
@@ -68,6 +68,8 @@ void LLHlsChunklist::SetPartHoldBack(const float &part_hold_back)
 
 bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
 {
+	logtd("AppendSegmentInfo[Track : %s/%s]: %s", _track->GetPublicName().CStr(), _track->GetVariantName().CStr(), info.ToString().CStr());
+
 	if (info.GetSequence() < _last_segment_sequence)
 	{
 		logtc("The sequence number of the segment to be added is less than the last segment. segment(%lld) last(%lld)", info.GetSequence(), _last_segment_sequence.load());

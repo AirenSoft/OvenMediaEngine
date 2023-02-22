@@ -246,14 +246,15 @@ namespace http
 				parsed_url->SetPort(port);
 			}
 
-			auto socket_address = ov::SocketAddress(parsed_url->Host(), port);
+			auto host_port_string = ov::String::FormatString("%s:%d", parsed_url->Host().CStr(), port);
+			auto socket_address = ov::SocketAddress::CreateAndGetFirst(host_port_string);
 
 			if (socket_address.IsValid() == false)
 			{
-				return ov::Error::CreateError("HTTP", "Invalid address: %s:%d, URL: %s", parsed_url->Host().CStr(), port, url.CStr());
+				return ov::Error::CreateError("HTTP", "Invalid address: %s, URL: %s", host_port_string.CStr(), url.CStr());
 			}
 
-			_socket = _socket_pool->AllocSocket();
+			_socket = _socket_pool->AllocSocket(socket_address.GetFamily());
 
 			if (_socket == nullptr)
 			{
@@ -327,7 +328,7 @@ namespace http
 				_request_header["Content-Length"] = ov::Converter::ToString(_request_body->GetLength());
 			}
 
-			logtd("Request headers: %zu:", _request_header.size());
+			logtd("Request headers: total %zu item(s):", _request_header.size());
 
 			for (auto header : _request_header)
 			{

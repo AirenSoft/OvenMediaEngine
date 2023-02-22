@@ -14,34 +14,17 @@
 
 namespace ov
 {
-	static bool g_url_parse_regex_initialized = false;
-	static ov::Regex g_url_parse_regex;
-	static std::mutex g_url_parse_regex_mutex;
-
-	Url::Url()
-	{
-		if (g_url_parse_regex_initialized == false)
-		{
-			std::lock_guard lock_guard(g_url_parse_regex_mutex);
-
-			// DCL
-			if (g_url_parse_regex_initialized == false)
-			{
-				g_url_parse_regex = ov::Regex(
-					// <scheme>://[id:password@]
-					R"((?<scheme>.*)://((?<id>.+):(?<password>.+)@)?)"
-					// <host>[:<port>]
-					R"((?<host>[^:/]+)(:(?<port>[0-9]+))?)"
-					// [/<path/to/resource>]
-					R"((?<path>/([^\?]+)?)?)"
-					// [?<query string>]
-					R"((\?(?<qs>[^\?]+)?(.+)?)?)");
-				g_url_parse_regex.Compile();
-
-				g_url_parse_regex_initialized = true;
-			}
-		}
-	}
+	static ov::Regex g_url_parse_regex = ov::Regex::CompiledRegex(
+		// <scheme>://[id:password@]
+		R"((?<scheme>.*):\/\/((?<id>.+):(?<password>.+)@)?)"
+		// <host>
+		R"((?<host>((\[[a-zA-Z0-9:]+\])|([^:\/]+))))"
+		// [:<port>]
+		R"((:(?<port>[0-9]+))?)"
+		// [/<path/to/resource>]
+		R"((?<path>\/([^\?]+)?)?)"
+		// [?<query string>]
+		R"((\?(?<qs>[^\?]+)?(.+)?)?)");
 
 	ov::String Url::Encode(const ov::String &value)
 	{
@@ -90,14 +73,16 @@ namespace ov
 			return "";
 		}
 
+		const auto val = value.CStr();
+		const auto length = value.GetLength();
+
 		ov::String result_string;
-		auto val = value.CStr();
-		auto length = value.GetLength();
 		result_string.SetLength(length);
 		auto result = result_string.GetBuffer();
 		size_t result_index = 0;
-		char place_holder[3];
-		place_holder[2] = '\0';
+
+		char place_holder[3]{};
+
 		for (size_t index = 0; index < length;)
 		{
 			char character = val[index];
@@ -112,7 +97,7 @@ namespace ov
 					{
 						place_holder[0] = val1;
 						place_holder[1] = val2;
-						result[result_index] = static_cast<char>(static_cast<int>(::strtol(place_holder, nullptr, 16)));
+						result[result_index] = static_cast<char>(::strtol(place_holder, nullptr, 16));
 						index += 3;
 						result_index++;
 						continue;
@@ -124,6 +109,7 @@ namespace ov
 				// Change '+' to ' '
 				character = ' ';
 			}
+
 			result[result_index] = val[index];
 			index++;
 			result_index++;

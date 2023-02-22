@@ -7,21 +7,18 @@
 //
 //==============================================================================
 
+#include "llhls_publisher.h"
+
 #include <base/ovlibrary/url.h>
 
-#include "llhls_publisher.h"
-#include "llhls_session.h"
 #include "llhls_private.h"
+#include "llhls_session.h"
 
 std::shared_ptr<LLHlsPublisher> LLHlsPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
 	auto llhls = std::make_shared<LLHlsPublisher>(server_config, router);
-	if (!llhls->Start())
-	{
-		return nullptr;
-	}
 
-	return llhls;
+	return llhls->Start() ? llhls : nullptr;
 }
 
 LLHlsPublisher::LLHlsPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
@@ -35,85 +32,82 @@ LLHlsPublisher::~LLHlsPublisher()
 	logtd("LLHlsPublisher has been terminated finally");
 }
 
+bool LLHlsPublisher::PrepareHttpServers(
+	const std::vector<ov::String> &ip_list,
+	const bool is_port_configured, const uint16_t port,
+	const bool is_tls_port_configured, const uint16_t tls_port,
+	const int worker_count)
+{
+	auto http_server_manager = http::svr::HttpServerManager::GetInstance();
+
+	std::vector<std::shared_ptr<http::svr::HttpServer>> http_server_list;
+	std::vector<std::shared_ptr<http::svr::HttpsServer>> https_server_list;
+
+	if (http_server_manager->CreateServers(
+			GetPublisherName(), "LLHLS",
+			&http_server_list, &https_server_list,
+			ip_list,
+			is_port_configured, port,
+			is_tls_port_configured, tls_port,
+			nullptr, false,
+			[&](const ov::SocketAddress &address, bool is_https, const std::shared_ptr<http::svr::HttpServer> &http_server) {
+				http_server->AddInterceptor(CreateInterceptor());
+			},
+			worker_count))
+	{
+		std::lock_guard lock_guard{_http_server_list_mutex};
+		_http_server_list = std::move(http_server_list);
+		_https_server_list = std::move(https_server_list);
+
+		return true;
+	}
+
+	http_server_manager->ReleaseServers(&http_server_list);
+	http_server_manager->ReleaseServers(&https_server_list);
+
+	return false;
+}
+
 bool LLHlsPublisher::Start()
 {
 	auto server_config = GetServerConfig();
 
-	auto llhls_module_config = server_config.GetModules().GetLLHls();
-	if (llhls_module_config.IsEnabled() == false)
-	{
-		logtw("LLHls Module is disabled");
-		return true;
-	}
-
 	auto llhls_bind_config = server_config.GetBind().GetPublishers().GetLLHls();
-
 	if (llhls_bind_config.IsParsed() == false)
 	{
 		logtw("%s is disabled by configuration", GetPublisherName());
 		return true;
 	}
 
-	bool is_parsed = false;
-	auto worker_count = llhls_bind_config.GetWorkerCount(&is_parsed);
-	worker_count = is_parsed ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
-
-	auto manager = http::svr::HttpServerManager::GetInstance();
-	
-	// Initialize HTTP Server (Non-TLS)
-	bool http_server_result = true;
-	auto port = llhls_bind_config.GetPort(&is_parsed);
-	ov::SocketAddress address;
-	if (is_parsed == true)
+	auto llhls_module_config = server_config.GetModules().GetLLHls();
+	if (llhls_module_config.IsEnabled() == false)
 	{
-		address = ov::SocketAddress(server_config.GetIp(), port.GetPort());
-
-		_http_server = manager->CreateHttpServer("llhls", address, worker_count);
-		if (_http_server != nullptr)
-		{
-			_http_server->AddInterceptor(CreateInterceptor());
-		}
-		else
-		{
-			logte("Could not initialize LLHLS http server : %s", address.ToString().CStr());
-			http_server_result = false;
-		}
+		logtw("%s is disabled by configuration (Module is disabled)", GetPublisherName());
+		return true;
 	}
 
-	// Initialze HTTPS Server
-	bool https_server_result = true;
-	auto &tls_port = llhls_bind_config.GetTlsPort(&is_parsed);
-	ov::SocketAddress tls_address;
-	if (http_server_result == true && is_parsed)
-	{
-		tls_address = ov::SocketAddress(server_config.GetIp(), tls_port.GetPort());
+	bool is_configured = false;
+	auto worker_count = llhls_bind_config.GetWorkerCount(&is_configured);
+	worker_count = is_configured ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
 
-		_https_server = manager->CreateHttpsServer("llhls", tls_address, false, worker_count);
-		if (_https_server != nullptr)
-		{
-			_https_server->AddInterceptor(CreateInterceptor());
-		}
-		else
-		{
-			logte("Could not initialize LLHLS https server : %s", tls_address.ToString().CStr());
-			https_server_result = false;
-		}
+	bool is_port_configured;
+	auto &port_config = llhls_bind_config.GetPort(&is_port_configured);
+
+	bool is_tls_port_configured;
+	auto &tls_port_config = llhls_bind_config.GetTlsPort(&is_tls_port_configured);
+
+	if ((is_port_configured == false) && (is_tls_port_configured == false))
+	{
+		logtw("%s Server is disabled - No port is configured", GetPublisherName());
+		return true;
 	}
 
-	if (http_server_result == false ||  https_server_result == false)
-	{
-		manager->ReleaseServer(_http_server);
-		manager->ReleaseServer(_https_server);
-		return false;
-	}
-
-	logti("LLHLS Publisher is listening on %s%s%s%s", 
-					port.GetPort() ? address.ToString().CStr() : "",
-					tls_port.GetPort() ? ", " : "",
-					tls_port.GetPort() ? "TLS: " : "",
-					tls_port.GetPort() ? tls_address.ToString().CStr() : "");
-
-	return Publisher::Start();
+	return PrepareHttpServers(
+			   server_config.GetIPList(),
+			   is_port_configured, port_config.GetPort(),
+			   is_tls_port_configured, tls_port_config.GetPort(),
+			   worker_count) &&
+		   Publisher::Start();
 }
 
 bool LLHlsPublisher::Stop()
@@ -123,22 +117,44 @@ bool LLHlsPublisher::Stop()
 
 bool LLHlsPublisher::OnCreateHost(const info::Host &host_info)
 {
-	if (_https_server != nullptr && host_info.GetCertificate() != nullptr)
+	bool result = true;
+	auto certificate = host_info.GetCertificate();
+
+	if (certificate != nullptr)
 	{
-		return _https_server->AppendCertificate(host_info.GetCertificate()) == nullptr;
+		std::lock_guard lock_guard{_http_server_list_mutex};
+
+		for (auto &https_server : _https_server_list)
+		{
+			if (https_server->AppendCertificate(certificate) != nullptr)
+			{
+				result = false;
+			}
+		}
 	}
 
-	return true;
+	return result;
 }
 
 bool LLHlsPublisher::OnDeleteHost(const info::Host &host_info)
 {
-	if (_https_server != nullptr && host_info.GetCertificate() != nullptr)
+	bool result = true;
+	auto certificate = host_info.GetCertificate();
+
+	if (certificate != nullptr)
 	{
-		return _https_server->RemoveCertificate(host_info.GetCertificate()) == nullptr;
+		std::lock_guard lock_guard{_http_server_list_mutex};
+
+		for (auto &https_server : _https_server_list)
+		{
+			if (https_server->RemoveCertificate(certificate) != nullptr)
+			{
+				result = false;
+			}
+		}
 	}
 
-	return true;
+	return result;
 }
 
 std::shared_ptr<pub::Application> LLHlsPublisher::OnCreatePublisherApplication(const info::Application &application_info)
@@ -195,7 +211,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		response->SetHeader("Access-Control-Allow-Private-Network", "true");
 
 		auto application = std::static_pointer_cast<LLHlsApplication>(GetApplicationByName(vhost_app_name));
-		if(application == nullptr)
+		if (application == nullptr)
 		{
 			logte("Could not found application: %s", vhost_app_name.CStr());
 			response->SetStatusCode(http::StatusCode::NotFound);
@@ -207,9 +223,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		return http::svr::NextHandler::DoNotCall;
 	});
 
-
 	http_interceptor->Register(http::Method::Get, R"((.+\.m3u8$)|(.+llhls\.m4s$))", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
-
 		auto connection = exchange->GetConnection();
 		auto request = exchange->GetRequest();
 		auto response = exchange->GetResponse();
@@ -224,7 +238,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		}
 
 		// PORT can be omitted if port is default port, but SignedPolicy requires this information.
-		if(request_url->Port() == 0)
+		if (request_url->Port() == 0)
 		{
 			request_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 		}
@@ -257,18 +271,18 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		// Check if the request is for the master playlist
 		if (access_control_enabled == true && (request_url->File().IndexOf(".m3u8") > 0 && request_url->File().IndexOf("chunklist") == -1))
 		{
-			auto [signed_policy_result, signed_policy] =  Publisher::VerifyBySignedPolicy(request_url, remote_address);
-			if(signed_policy_result == AccessController::VerificationResult::Pass)
+			auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(request_url, remote_address);
+			if (signed_policy_result == AccessController::VerificationResult::Pass)
 			{
 				session_life_time = signed_policy->GetStreamExpireEpochMSec();
 			}
-			else if(signed_policy_result == AccessController::VerificationResult::Error)
+			else if (signed_policy_result == AccessController::VerificationResult::Error)
 			{
 				logte("Could not resolve application name from domain: %s", request_url->Host().CStr());
 				response->SetStatusCode(http::StatusCode::Unauthorized);
 				return http::svr::NextHandler::DoNotCall;
 			}
-			else if(signed_policy_result == AccessController::VerificationResult::Fail)
+			else if (signed_policy_result == AccessController::VerificationResult::Fail)
 			{
 				logtw("%s", signed_policy->GetErrMessage().CStr());
 				response->SetStatusCode(http::StatusCode::Unauthorized);
@@ -277,28 +291,28 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 
 			// Admission Webhooks
 			auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_url, remote_address);
-			if(webhooks_result == AccessController::VerificationResult::Off)
+			if (webhooks_result == AccessController::VerificationResult::Off)
 			{
 				// Success
 			}
-			else if(webhooks_result == AccessController::VerificationResult::Pass)
+			else if (webhooks_result == AccessController::VerificationResult::Pass)
 			{
 				// Lifetime
-				if(admission_webhooks->GetLifetime() != 0)
+				if (admission_webhooks->GetLifetime() != 0)
 				{
 					// Choice smaller value
 					auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + admission_webhooks->GetLifetime();
-					if(session_life_time == 0 || stream_expired_msec_from_webhooks < session_life_time)
+					if (session_life_time == 0 || stream_expired_msec_from_webhooks < session_life_time)
 					{
 						session_life_time = stream_expired_msec_from_webhooks;
 					}
 				}
 
 				// Redirect URL
-				if(admission_webhooks->GetNewURL() != nullptr)
+				if (admission_webhooks->GetNewURL() != nullptr)
 				{
 					request_url = admission_webhooks->GetNewURL();
-					if(request_url->Port() == 0)
+					if (request_url->Port() == 0)
 					{
 						request_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 					}
@@ -308,13 +322,13 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 					stream_name = request_url->Stream();
 				}
 			}
-			else if(webhooks_result == AccessController::VerificationResult::Error)
+			else if (webhooks_result == AccessController::VerificationResult::Error)
 			{
 				logtw("AdmissionWebhooks error : %s", request_url->ToUrlString().CStr());
 				response->SetStatusCode(http::StatusCode::Unauthorized);
 				return http::svr::NextHandler::DoNotCall;
 			}
-			else if(webhooks_result == AccessController::VerificationResult::Fail)
+			else if (webhooks_result == AccessController::VerificationResult::Fail)
 			{
 				logtw("AdmissionWebhooks error : %s", admission_webhooks->GetErrReason().CStr());
 				response->SetStatusCode(http::StatusCode::Unauthorized);
@@ -327,7 +341,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		{
 			// If the stream does not exists, request to the provider
 			stream = PullStream(request_url, vhost_app_name, host_name, stream_name);
-			if(stream == nullptr)
+			if (stream == nullptr)
 			{
 				logte("Could not pull the stream : %s", request_url->Stream().CStr());
 				response->SetStatusCode(http::StatusCode::NotFound);
@@ -335,14 +349,14 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			}
 		}
 
-		if(stream->WaitUntilStart(10000) == false)
+		if (stream->WaitUntilStart(10000) == false)
 		{
 			logtw("(%s/%s) stream has not started.", vhost_app_name.CStr(), stream_name.CStr());
 			response->SetStatusCode(http::StatusCode::NotFound);
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		std::shared_ptr<LLHlsSession> session = nullptr; 
+		std::shared_ptr<LLHlsSession> session = nullptr;
 
 		// Master playlist (.m3u8 and NOT *chunklist*.m3u8)
 		if (request_url->File().IndexOf(".m3u8") > 0 && request_url->File().IndexOf("chunklist") == -1)
@@ -354,7 +368,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 				// If this connection has been used by another session in the past, it is reused.
 				session = std::any_cast<std::shared_ptr<LLHlsSession>>(connection->GetUserData(stream->GetUri()));
 			}
-			catch (const std::bad_any_cast& e)
+			catch (const std::bad_any_cast &e)
 			{
 				session = std::static_pointer_cast<LLHlsSession>(stream->GetSession(session_id));
 			}
@@ -444,7 +458,6 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 
 	// Set Close Handler
 	http_interceptor->SetCloseHandler([this](const std::shared_ptr<http::svr::HttpConnection> &connection, PhysicalPortDisconnectReason reason) -> void {
-		
 		for (auto &user_data : connection->GetUserDataMap())
 		{
 			std::shared_ptr<LLHlsSession> session;
@@ -457,7 +470,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			{
 				continue;
 			}
-			
+
 			if (session != nullptr)
 			{
 				session->OnConnectionDisconnected(connection->GetId());

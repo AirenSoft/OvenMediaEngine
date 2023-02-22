@@ -165,7 +165,7 @@ bool StunMessage::ParseAttributes(ov::ByteStream &stream)
 	// Parsing starts when the minimum data is found
 	while (stream.Remained() >= minimum_length)
 	{
-		std::shared_ptr<StunAttribute> attribute = StunAttribute::CreateAttribute(stream);
+		std::shared_ptr<StunAttribute> attribute = StunAttribute::CreateAttribute(this, stream);
 
 		if (attribute == nullptr)
 		{
@@ -195,7 +195,7 @@ std::shared_ptr<StunAttribute> StunMessage::ParseFingerprintAttribute(ov::ByteSt
 		return nullptr;
 	}
 
-	std::shared_ptr<StunAttribute> attribute = StunAttribute::CreateAttribute(stream);
+	std::shared_ptr<StunAttribute> attribute = StunAttribute::CreateAttribute(this, stream);
 
 	if ((attribute != nullptr) && (attribute->GetType() != StunAttributeType::Fingerprint))
 	{
@@ -270,7 +270,7 @@ bool StunMessage::WriteAttributes(ov::ByteStream &stream)
 			continue;
 		}
 
-		if (attribute->Serialize(stream) == false)
+		if (attribute->Serialize(this, stream) == false)
 		{
 			return false;
 		}
@@ -321,7 +321,7 @@ bool StunMessage::WriteMessageIntegrityAttribute(ov::ByteStream &stream, const s
 													  stream.GetData()->GetData(), stream.GetData()->GetLength(),
 													  hash, OV_STUN_HASH_LENGTH);
 	result = result && attribute->SetHash(hash);
-	result = result && attribute->Serialize(stream);
+	result = result && attribute->Serialize(this, stream);
 
 	if (result)
 	{
@@ -352,7 +352,7 @@ bool StunMessage::WriteFingerprintAttribute(ov::ByteStream &stream)
 	bool result = true;
 
 	result = result && attribute->SetValue(crc ^ OV_STUN_FINGERPRINT_XOR_VALUE);
-	result = result && attribute->Serialize(stream);
+	result = result && attribute->Serialize(this, stream);
 
 	if (result)
 	{

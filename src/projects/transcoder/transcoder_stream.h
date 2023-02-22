@@ -96,6 +96,7 @@ public:
 
 private:
 	ov::String _log_prefix;
+	mutable std::mutex _mutex;
 
 	TranscodeApplication *_parent;
 

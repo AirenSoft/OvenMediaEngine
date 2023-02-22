@@ -28,15 +28,15 @@ SegmentPublisher::~SegmentPublisher()
 bool SegmentPublisher::Start(const cfg::cmn::SingularPort &port_config, const cfg::cmn::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server, bool disable_http2_force, int worker_count)
 {
 	auto server_config = GetServerConfig();
-	auto ip = server_config.GetIp();
+	auto ip = server_config.GetIPList()[0];
 
 	auto port = port_config.GetPort();
 	auto tls_port = tls_port_config.GetPort();
 	bool has_port = (port != 0);
 	bool has_tls_port = (tls_port != 0);
 
-	ov::SocketAddress address(ip, port);
-	ov::SocketAddress tls_address(ip, tls_port);
+	auto address = ov::SocketAddress::CreateAndGetFirst(ip, port);
+	auto tls_address = ov::SocketAddress::CreateAndGetFirst(ip, tls_port);
 
 	// Register as observer
 	stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
@@ -79,7 +79,7 @@ bool SegmentPublisher::Stop()
 
 bool SegmentPublisher::OnCreateHost(const info::Host &host_info)
 {
-	if(_stream_server != nullptr && host_info.GetCertificate() != nullptr)
+	if (_stream_server != nullptr && host_info.GetCertificate() != nullptr)
 	{
 		return _stream_server->AppendCertificate(host_info.GetCertificate());
 	}
@@ -89,7 +89,7 @@ bool SegmentPublisher::OnCreateHost(const info::Host &host_info)
 
 bool SegmentPublisher::OnDeleteHost(const info::Host &host_info)
 {
-	if(_stream_server != nullptr && host_info.GetCertificate() != nullptr)
+	if (_stream_server != nullptr && host_info.GetCertificate() != nullptr)
 	{
 		return _stream_server->RemoveCertificate(host_info.GetCertificate());
 	}
@@ -386,7 +386,7 @@ void SegmentPublisher::RequestTableUpdateThread()
 
 					// send close to admin webhook
 					auto request_url = ov::Url::Parse(request_info->GetUri());
-					auto remote_address { std::make_shared<ov::SocketAddress>(request_info->GetIpAddressPort()) };
+					auto remote_address{std::make_shared<ov::SocketAddress>(ov::SocketAddress::CreateAndGetFirst(request_info->GetIpAddressPort()))};
 					if (request_url && remote_address)
 					{
 						SendCloseAdmissionWebhooks(request_url, remote_address);
@@ -549,18 +549,15 @@ void SegmentPublisher::UpdateWebhooksRequestInfo(const WebhooksRequestInfo &info
 {
 	std::unique_lock<std::recursive_mutex> table_lock(_webhooks_request_table_lock);
 
-	auto its { _webhooks_request_table.equal_range(info.GetIpAddress().CStr()) };
-	auto item
-	{
+	auto its{_webhooks_request_table.equal_range(info.GetIpAddress().CStr())};
+	auto item{
 		std::find_if(its.first, its.second,
-			[info](std::pair<std::string, std::shared_ptr<WebhooksRequestInfo>> const &webhook) -> bool {
-				return webhook.second->GetUri() == info.GetUri();
-			}
-		)
-	};
+					 [info](std::pair<std::string, std::shared_ptr<WebhooksRequestInfo>> const &webhook) -> bool {
+						 return webhook.second->GetUri() == info.GetUri();
+					 })};
 
 	ov::String operation;
-	auto webhook { std::make_shared<WebhooksRequestInfo>(info) };
+	auto webhook{std::make_shared<WebhooksRequestInfo>(info)};
 	if (item == _webhooks_request_table.end())
 	{
 		_webhooks_request_table.emplace(info.GetIpAddress().CStr(), std::move(webhook));
@@ -573,10 +570,9 @@ void SegmentPublisher::UpdateWebhooksRequestInfo(const WebhooksRequestInfo &info
 	}
 
 	logti("%s webhook request info : %s/%s - %s - %s - %d",
-		operation.CStr(), info.GetAppName().CStr(),
-		info.GetStreamName().CStr(), info.GetSessionId().CStr(),
-		info.GetIpAddress().CStr(), info.GetSegmentDuration());
-
+		  operation.CStr(), info.GetAppName().CStr(),
+		  info.GetStreamName().CStr(), info.GetSessionId().CStr(),
+		  info.GetIpAddress().CStr(), info.GetSegmentDuration());
 }
 
 bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, ov::String &stream_name,
@@ -605,8 +601,8 @@ bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, o
 														 remote_address->GetIpAddress(),
 														 session_id);
 
-	auto stream { GetStreamAs<SegmentStream>(vhost_app_name, stream_name) };
-	auto segment_duration { (stream == nullptr) ? request_info->GetSegmentDuration() : stream->GetSegmentDuration() };
+	auto stream{GetStreamAs<SegmentStream>(vhost_app_name, stream_name)};
+	auto segment_duration{(stream == nullptr) ? request_info->GetSegmentDuration() : stream->GetSegmentDuration()};
 	request_info->SetSegmentDuration(segment_duration);
 
 	// SingedPolicy is first
@@ -694,7 +690,7 @@ bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, o
 		// Lifetime cannot work in HTTP-based streaming. In HTTP-based streaming, the playlist is continuously requested, so the ControlServer can control the session by disallowing it at the appropriate time.
 		// admission_webhooks->GetLifetime();
 
-		auto uri { request_url->ToUrlString(true) };
+		auto uri{request_url->ToUrlString(true)};
 		// Redirect URL
 		if (admission_webhooks->GetNewURL() != nullptr)
 		{
@@ -706,12 +702,10 @@ bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, o
 			stream_name = new_url->Stream();
 		}
 
-		WebhooksRequestInfo webhooks_info
-		{
+		WebhooksRequestInfo webhooks_info{
 			GetPublisherType(), vhost_app_name, stream_name,
 			remote_address->GetIpAddress(), session_id,
-			remote_address->ToString(false).CStr(), uri, segment_duration
-		};
+			remote_address->ToString(false).CStr(), uri, segment_duration};
 
 		UpdateWebhooksRequestInfo(webhooks_info);
 	}

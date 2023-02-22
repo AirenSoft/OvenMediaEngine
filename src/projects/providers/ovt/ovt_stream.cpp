@@ -2,22 +2,22 @@
 // Created by getroot on 19. 12. 9.
 //
 
-#include "base/info/application.h"
-
 #include "ovt_stream.h"
-#include "ovt_provider.h"
 
-#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/bitstream/aac/aac_specific_config.h>
+#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
+
+#include "base/info/application.h"
+#include "ovt_provider.h"
 
 #define OV_LOG_TAG "OvtStream"
 
 namespace pvd
 {
-	std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pvd::PullApplication> &application, 
-											const uint32_t stream_id, const ov::String &stream_name,
-					  						const std::vector<ov::String> &url_list, 
-											const std::shared_ptr<pvd::PullStreamProperties> &properties)
+	std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pvd::PullApplication> &application,
+												 const uint32_t stream_id, const ov::String &stream_name,
+												 const std::vector<ov::String> &url_list,
+												 const std::shared_ptr<pvd::PullStreamProperties> &properties)
 	{
 		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::Ovt);
 
@@ -36,7 +36,7 @@ namespace pvd
 	}
 
 	OvtStream::OvtStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list, const std::shared_ptr<pvd::PullStreamProperties> &properties)
-			: pvd::PullStream(application, stream_info, url_list, properties)
+		: pvd::PullStream(application, stream_info, url_list, properties)
 	{
 		_last_request_id = 0;
 		SetState(State::IDLE);
@@ -52,7 +52,7 @@ namespace pvd
 
 	void OvtStream::Release()
 	{
-		if(_client_socket != nullptr)
+		if (_client_socket != nullptr)
 		{
 			_client_socket->Close();
 		}
@@ -60,7 +60,7 @@ namespace pvd
 		_curr_url = nullptr;
 
 		std::lock_guard<std::shared_mutex> mlock(_packetizer_lock);
-		if(_packetizer != nullptr)
+		if (_packetizer != nullptr)
 		{
 			_packetizer->Release();
 			_packetizer.reset();
@@ -70,14 +70,14 @@ namespace pvd
 	bool OvtStream::StartStream(const std::shared_ptr<const ov::Url> &url)
 	{
 		// Only start from IDLE, ERROR, STOPPED
-		if(!(GetState() == State::IDLE || GetState() == State::ERROR || GetState() == State::STOPPED))
+		if (!(GetState() == State::IDLE || GetState() == State::ERROR || GetState() == State::STOPPED))
 		{
 			return true;
 		}
-		
+
 		_curr_url = url;
 
-		if(_packetizer == nullptr)
+		if (_packetizer == nullptr)
 		{
 			_packetizer = std::make_shared<OvtPacketizer>(OvtPacketizerInterface::GetSharedPtr());
 		}
@@ -110,7 +110,7 @@ namespace pvd
 		_origin_response_time_msec = stop_watch.Elapsed();
 
 		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pvd::Stream::GetSharedPtr()));
-		if(_stream_metrics != nullptr)
+		if (_stream_metrics != nullptr)
 		{
 			_stream_metrics->SetOriginConnectionTimeMSec(_origin_request_time_msec);
 			_stream_metrics->SetOriginSubscribeTimeMSec(_origin_response_time_msec);
@@ -122,7 +122,7 @@ namespace pvd
 	bool OvtStream::RestartStream(const std::shared_ptr<const ov::Url> &url)
 	{
 		logti("[%s/%s(%u)] stream tries to reconnect to %s", GetApplicationTypeName(), GetName().CStr(), GetId(), url->ToUrlString().CStr());
-		if(StartStream(url) == false)
+		if (StartStream(url) == false)
 		{
 			return false;
 		}
@@ -132,14 +132,14 @@ namespace pvd
 
 	bool OvtStream::StopStream()
 	{
-		if(GetState() == State::STOPPED)
+		if (GetState() == State::STOPPED)
 		{
 			return true;
 		}
-	
-		if(!RequestStop())
+
+		if (!RequestStop())
 		{
-			// Force terminate 
+			// Force terminate
 			SetState(State::ERROR);
 		}
 
@@ -155,12 +155,12 @@ namespace pvd
 
 	bool OvtStream::ConnectOrigin()
 	{
-		if(GetState() == State::PLAYING || GetState() == State::TERMINATED)
+		if (GetState() == State::PLAYING || GetState() == State::TERMINATED)
 		{
 			return false;
 		}
 
-		if(_curr_url == nullptr)
+		if (_curr_url == nullptr)
 		{
 			logte("Origin url is not set");
 			return false;
@@ -182,13 +182,15 @@ namespace pvd
 			return false;
 		}
 
-		_client_socket = pool->AllocSocket();
+		auto socket_address = ov::SocketAddress::CreateAndGetFirst(_curr_url->Host(), _curr_url->Port());
+
+		_client_socket = pool->AllocSocket(socket_address.GetFamily());
 
 		if (_client_socket == nullptr)
 		{
 			SetState(State::ERROR);
 			logte("To create client socket is failed.");
-			
+
 			_client_socket = nullptr;
 			return false;
 		}
@@ -197,10 +199,8 @@ namespace pvd
 		_client_socket->SetSockOpt<int>(IPPROTO_TCP, TCP_QUICKACK, 1);
 		_client_socket->MakeBlocking();
 
-		struct timeval tv = {1, 500000}; // 1.5 sec
+		struct timeval tv = {1, 500000};  // 1.5 sec
 		_client_socket->SetRecvTimeout(tv);
-
-		ov::SocketAddress socket_address(_curr_url->Host(), _curr_url->Port());
 
 		auto error = _client_socket->Connect(socket_address, 1500);
 		if (error != nullptr)
@@ -217,7 +217,7 @@ namespace pvd
 
 	bool OvtStream::RequestDescribe()
 	{
-		if(GetState() != State::CONNECTED)
+		if (GetState() != State::CONNECTED)
 		{
 			return false;
 		}
@@ -232,7 +232,7 @@ namespace pvd
 		auto message = ov::Json::Stringify(root).ToData(false);
 
 		std::shared_lock<std::shared_mutex> lock(_packetizer_lock);
-		if(_packetizer->PacketizeMessage(OVT_PAYLOAD_TYPE_MESSAGE_REQUEST, ov::Clock::NowMSec(), message) == false)
+		if (_packetizer->PacketizeMessage(OVT_PAYLOAD_TYPE_MESSAGE_REQUEST, ov::Clock::NowMSec(), message) == false)
 		{
 			return false;
 		}
@@ -306,7 +306,7 @@ namespace pvd
 		auto json_stream = json_contents["stream"];
 		auto json_tracks = json_stream["tracks"];
 		auto json_playlists = json_stream["playlists"];
-		
+
 		// Validation
 		// renditions is optional
 		if (json_stream["appName"].isNull() || json_stream["streamName"].isNull() || json_stream["tracks"].isNull() ||
@@ -318,26 +318,26 @@ namespace pvd
 		}
 
 		// Lastest version origin server sends UUID of origin stream
-		if(json_stream["originStreamUUID"].isString())
+		if (json_stream["originStreamUUID"].isString())
 		{
 			SetOriginStreamUUID(json_stream["originStreamUUID"].asString().c_str());
 		}
 
 		// Renditions
-		
+
 		for (size_t i = 0; i < json_playlists.size(); i++)
 		{
 			auto json_playlist = json_playlists[static_cast<int>(i)];
 
 			// Validate
-			if (json_playlist["name"].isNull() || json_playlist["fileName"].isNull() || 
+			if (json_playlist["name"].isNull() || json_playlist["fileName"].isNull() ||
 				!json_playlist["options"].isObject() || !json_playlist["renditions"].isArray())
 			{
 				SetState(State::ERROR);
 				logte("Invalid json payload : playlist");
 				return false;
 			}
-			
+
 			ov::String playlist_name = json_playlist["name"].asString().c_str();
 			ov::String playlist_file_name = json_playlist["fileName"].asString().c_str();
 
@@ -403,7 +403,7 @@ namespace pvd
 			}
 
 			new_track->SetId(json_track["id"].asUInt());
-			new_track->SetName(json_track["name"].asString().c_str());
+			new_track->SetVariantName(json_track["name"].asString().c_str());
 			new_track->SetCodecId(static_cast<cmn::MediaCodecId>(json_track["codecId"].asUInt()));
 			new_track->SetMediaType(static_cast<cmn::MediaType>(json_track["mediaType"].asUInt()));
 			new_track->SetTimeBase(json_track["timebase_num"].asUInt(), json_track["timebase_den"].asUInt());
@@ -412,13 +412,13 @@ namespace pvd
 			new_track->SetLastFrameTime(json_track["lastFrameTime"].asUInt64());
 
 			auto json_extra_data = json_track["extra_data"];
-			if(!json_extra_data.isNull())
+			if (!json_extra_data.isNull())
 			{
 				ov::String extra_data_base64 = json_track["extra_data"].asString().c_str();
 				auto extra_data = ov::Base64::Decode(extra_data_base64);
 				new_track->SetCodecExtradata(extra_data);
 
-				if(new_track->GetCodecId() == cmn::MediaCodecId::H264)
+				if (new_track->GetCodecId() == cmn::MediaCodecId::H264)
 				{
 					AVCDecoderConfigurationRecord config;
 					if (!AVCDecoderConfigurationRecord::Parse(extra_data->GetDataAs<uint8_t>(), extra_data->GetLength(), config))
@@ -435,11 +435,11 @@ namespace pvd
 
 					new_track->SetH264SpsData(config.GetSPS(0));
 					new_track->SetH264PpsData(config.GetPPS(0));
-					
+
 					auto [sps_pps_data, frag_header] = config.GetSpsPpsAsAnnexB(4);
 					new_track->SetH264SpsPpsAnnexBFormat(sps_pps_data, frag_header);
 				}
-				else if(new_track->GetCodecId() == cmn::MediaCodecId::Aac)
+				else if (new_track->GetCodecId() == cmn::MediaCodecId::Aac)
 				{
 					AACSpecificConfig config;
 					if (!AACSpecificConfig::Parse(extra_data->GetDataAs<uint8_t>(), extra_data->GetLength(), config))
@@ -491,7 +491,7 @@ namespace pvd
 
 	bool OvtStream::RequestPlay()
 	{
-		if(GetState() != State::DESCRIBED)
+		if (GetState() != State::DESCRIBED)
 		{
 			logte("%s/%s(%u) - Could not request to play. Before receiving describe.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			return false;
@@ -506,7 +506,7 @@ namespace pvd
 		auto message = ov::Json::Stringify(root).ToData(false);
 
 		std::shared_lock<std::shared_mutex> lock(_packetizer_lock);
-		if(_packetizer->PacketizeMessage(OVT_PAYLOAD_TYPE_MESSAGE_REQUEST, ov::Clock::NowMSec(), message) == false)
+		if (_packetizer->PacketizeMessage(OVT_PAYLOAD_TYPE_MESSAGE_REQUEST, ov::Clock::NowMSec(), message) == false)
 		{
 			logte("%s/%s(%u) - Could not request to play. Socket send error", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			return false;
@@ -518,13 +518,13 @@ namespace pvd
 	bool OvtStream::ReceivePlay(uint32_t request_id)
 	{
 		auto message = ReceiveMessage();
-		if(message == nullptr)
+		if (message == nullptr)
 		{
 			logte("%s/%s(%u) - Could not receive message", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			SetState(State::ERROR);
 			return false;
 		}
-		
+
 		// Parsing Payload
 		ov::String payload(message->GetDataAs<char>(), message->GetLength());
 		ov::JsonObject object = ov::Json::Parse(payload);
@@ -550,7 +550,7 @@ namespace pvd
 
 		ov::String applicaiton = json_app.asString().c_str();
 
-		if(applicaiton.UpperCaseString() != "PLAY")
+		if (applicaiton.UpperCaseString() != "PLAY")
 		{
 			SetState(State::ERROR);
 			logte("An invalid response : application is wrong (%s).", applicaiton.CStr());
@@ -577,7 +577,7 @@ namespace pvd
 
 	bool OvtStream::RequestStop()
 	{
-		if(GetState() != State::PLAYING)
+		if (GetState() != State::PLAYING)
 		{
 			return false;
 		}
@@ -591,17 +591,17 @@ namespace pvd
 		auto message = ov::Json::Stringify(root).ToData(false);
 
 		std::shared_lock<std::shared_mutex> lock(_packetizer_lock);
-		if(_packetizer->PacketizeMessage(OVT_PAYLOAD_TYPE_MESSAGE_REQUEST, ov::Clock::NowMSec(), message) == false)
+		if (_packetizer->PacketizeMessage(OVT_PAYLOAD_TYPE_MESSAGE_REQUEST, ov::Clock::NowMSec(), message) == false)
 		{
 			return false;
 		}
 
-		return true; 
+		return true;
 	}
 
 	bool OvtStream::OnOvtPacketized(std::shared_ptr<OvtPacket> &packet)
 	{
-		if(_client_socket->Send(packet->GetData()) == false)
+		if (_client_socket->Send(packet->GetData()) == false)
 		{
 			SetState(State::ERROR);
 			logte("Could not send message");
@@ -613,17 +613,17 @@ namespace pvd
 
 	std::shared_ptr<ov::Data> OvtStream::ReceiveMessage()
 	{
-		while(true)
+		while (true)
 		{
 			auto result = ReceivePacket();
-			if(result == false)
+			if (result == false)
 			{
 				logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), static_cast<uint8_t>(result));
 				SetState(State::ERROR);
 				return nullptr;
 			}
 
-			if(_depacketizer.IsAvailableMessage())
+			if (_depacketizer.IsAvailableMessage())
 			{
 				auto message = _depacketizer.PopMessage();
 				return message;
@@ -635,11 +635,11 @@ namespace pvd
 
 	bool OvtStream::ReceivePacket(bool non_block)
 	{
-		uint8_t	buffer[65535];
+		uint8_t buffer[65535];
 		size_t read_bytes = 0ULL;
 
 		auto error = _client_socket->Recv(buffer, 65535, &read_bytes, non_block);
-		if(read_bytes == 0)
+		if (read_bytes == 0)
 		{
 			if (error != nullptr)
 			{
@@ -650,7 +650,7 @@ namespace pvd
 			}
 			else
 			{
-				if(non_block == true)
+				if (non_block == true)
 				{
 					// retry later
 					return true;
@@ -663,7 +663,7 @@ namespace pvd
 			}
 		}
 
-		if(_depacketizer.AppendPacket(buffer, read_bytes) == false)
+		if (_depacketizer.AppendPacket(buffer, read_bytes) == false)
 		{
 			logte("[%s/%s] An error occurred while parsing packet: Invalid packet", GetApplicationName(), GetName().CStr());
 			return false;
@@ -681,19 +681,19 @@ namespace pvd
 	{
 		// Non block
 		auto result = ReceivePacket(true);
-		if(result == false)
+		if (result == false)
 		{
 			logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), static_cast<uint8_t>(result));
 			SetState(State::ERROR);
 			return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 		}
 
-		while(true)
+		while (true)
 		{
-			if(_depacketizer.IsAvaliableMediaPacket())
+			if (_depacketizer.IsAvaliableMediaPacket())
 			{
 				auto media_packet = _depacketizer.PopMediaPacket();
-				
+
 				media_packet->SetMsid(GetMsid());
 				media_packet->SetPacketType(cmn::PacketType::OVT);
 
@@ -706,31 +706,31 @@ namespace pvd
 
 				// After the MSID is changed, the packet is dropped until key frame is received.
 				bool drop = false;
-				if(_last_msid_map[media_packet->GetTrackId()] != media_packet->GetMsid())
+				if (_last_msid_map[media_packet->GetTrackId()] != media_packet->GetMsid())
 				{
 					_last_msid_map[media_packet->GetTrackId()] = media_packet->GetMsid();
 					//  Do not anything if the msid is changed
 				}
 
 				// When switching streams, the PTS of the packet may become negative due to the start time of the first packet. Packets before the base timestamp are defined as a drop policy.
- 				if(media_packet->GetPts() < 0) 
-				 {
+				if (media_packet->GetPts() < 0)
+				{
 					drop = true;
-				 }
+				}
 
-				if(drop == false)
+				if (drop == false)
 				{
 					SendFrame(media_packet);
 				}
 
-				if(_depacketizer.IsAvaliableMediaPacket() || _depacketizer.IsAvailableMessage())
+				if (_depacketizer.IsAvaliableMediaPacket() || _depacketizer.IsAvailableMessage())
 				{
 					continue;
 				}
 
 				return PullStream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
 			}
-			else if(_depacketizer.IsAvailableMessage())
+			else if (_depacketizer.IsAvailableMessage())
 			{
 				auto message = _depacketizer.PopMessage();
 
@@ -751,15 +751,15 @@ namespace pvd
 
 				ov::String applicaiton = json_app.asString().c_str();
 
-				if(applicaiton.UpperCaseString() == "STOP")
+				if (applicaiton.UpperCaseString() == "STOP")
 				{
 					logte("An invalid response : application is wrong (%s).", applicaiton.CStr());
 					return PullStream::ProcessMediaResult::PROCESS_MEDIA_FINISH;
 				}
 				else
 				{
-					logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
-						GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+					logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)",
+						  GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 					SetState(State::ERROR);
 					return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 				}
@@ -772,4 +772,4 @@ namespace pvd
 
 		return PullStream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
 	}
-}
+}  // namespace pvd

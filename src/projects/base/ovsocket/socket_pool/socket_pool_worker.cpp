@@ -175,9 +175,9 @@ namespace ov
 		return (error == nullptr);
 	}
 
-	bool SocketPoolWorker::PrepareSocket(std::shared_ptr<Socket> socket)
+	bool SocketPoolWorker::PrepareSocket(std::shared_ptr<Socket> socket, const SocketFamily family)
 	{
-		return socket->Create(GetType());
+		return socket->Create(GetType(), family);
 	}
 
 	void SocketPoolWorker::MergeSocketList()

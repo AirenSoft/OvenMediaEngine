@@ -46,7 +46,7 @@ StunAttribute::~StunAttribute()
 {
 }
 
-std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &stream)
+std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(const StunMessage *stun_message, ov::ByteStream &stream)
 {
 	if(stream.Remained() % 4 != 0)
 	{
@@ -86,7 +86,7 @@ std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 		}
 	}
 
-	std::shared_ptr<StunAttribute> attribute = CreateAttribute(type, length);
+	std::shared_ptr<StunAttribute> attribute = CreateAttribute(stun_message, type, length);
 
 	if(attribute == nullptr)
 	{
@@ -96,7 +96,7 @@ std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 	}
 	else
 	{
-		if(attribute->Parse(stream) == false)
+		if(attribute->Parse(stun_message, stream) == false)
 		{
 			logtw("Could not parse attribute: type: 0x%04X, length: %d", type, length);
 			return nullptr;
@@ -110,7 +110,7 @@ std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 	return attribute;
 }
 
-std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(StunAttributeType type, int length)
+std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(const StunMessage *stun_message, StunAttributeType type, int length)
 {
 	std::shared_ptr<StunAttribute> attribute = nullptr;
 
@@ -215,7 +215,7 @@ size_t StunAttribute::GetLength(bool include_header, bool padding) const noexcep
 	return length;
 }
 
-bool StunAttribute::Serialize(ov::ByteStream &stream) const noexcept
+bool StunAttribute::Serialize(const StunMessage *message, ov::ByteStream &stream) const noexcept
 {
 	// Attribute header: Type + Length + (variable)
 	// 여기서는 Type + Length만 기록하고, variable는 하위 클래스들에서 기록함

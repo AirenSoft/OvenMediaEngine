@@ -72,14 +72,40 @@ uint32_t MediaTrack::GetId() const
 }
 
 // Track Name (used for Renditions)
-void MediaTrack::SetName(const ov::String &name)
+void MediaTrack::SetVariantName(const ov::String &name)
 {
-	_name = name;
+	_variant_name = name;
 }
 
-ov::String MediaTrack::GetName() const
+ov::String MediaTrack::GetVariantName() const
 {
-	return _name;
+	if (_variant_name.IsEmpty())
+	{
+		// If variant name is not set, return media type string
+		return cmn::GetMediaTypeString(GetMediaType());
+	}
+
+	return _variant_name;
+}
+
+// Public Name (used for multiple audio/video tracks. e.g. multilingual audio)
+void MediaTrack::SetPublicName(const ov::String &name)
+{
+	_public_name = name;
+}
+ov::String MediaTrack::GetPublicName() const
+{
+	return _public_name;
+}
+
+// Language (rfc5646)
+void MediaTrack::SetLanguage(const ov::String &language)
+{
+	_language = language;
+}
+ov::String MediaTrack::GetLanguage() const
+{
+	return _language;
 }
 
 void MediaTrack::SetMediaType(MediaType type)
@@ -200,7 +226,8 @@ ov::String MediaTrack::GetInfoString()
 		case MediaType::Video:
 			out_str.AppendFormat(
 				"Video Track #%d: "
-				"Name(%s) "
+				"Public Name(%s) "
+				"Variant Name(%s) "
 				"Bitrate(%s) "
 				"Codec(%d,%s,%s) "
 				"BSF(%s) "
@@ -208,7 +235,7 @@ ov::String MediaTrack::GetInfoString()
 				"Framerate(%.2ffps) "
 				"KeyInterval(%d) "
 				"BFrames(%d) ",
-				GetId(), GetName().CStr(),
+				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
 				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecLibraryId(GetCodecLibraryId()).CStr(),
 				GetBitstreamFormatString(GetOriginBitstream()).CStr(),
@@ -221,14 +248,15 @@ ov::String MediaTrack::GetInfoString()
 		case MediaType::Audio:
 			out_str.AppendFormat(
 				"Audio Track #%d: "
-				"Name(%s) "
+				"Public Name(%s) "
+				"Variant Name(%s) "
 				"Bitrate(%s) "
 				"Codec(%d,%s,%s) "
 				"BSF(%s) "
 				"Samplerate(%s) "
 				"Format(%s, %d) "
 				"Channel(%s, %d) ",
-				GetId(), GetName().CStr(),
+				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
 				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecLibraryId(GetCodecLibraryId()).CStr(),
 				GetBitstreamFormatString(GetOriginBitstream()).CStr(),
@@ -239,10 +267,11 @@ ov::String MediaTrack::GetInfoString()
 		case MediaType::Data:
 			out_str.AppendFormat(
 				"Data  Track #%d: "
-				"Name(%s) "
+				"Public Name(%s) "
+				"Variant Name(%s) "
 				"Codec(%d,%s,%s) "
 				"BSF(%s) ",
-				GetId(), GetName().CStr(),
+				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecLibraryId(GetCodecLibraryId()).CStr(),
 				GetBitstreamFormatString(GetOriginBitstream()).CStr());
 			break;
@@ -374,6 +403,41 @@ bool MediaTrack::IsValid()
 	return false;
 }
 
+bool MediaTrack::HasQualityMeasured()
+{
+	if (_has_quality_measured == true)
+	{
+		return true;
+	}
+
+	switch (GetMediaType())
+	{
+		case MediaType::Video:
+		{
+			if (_bitrate > 0 &&	_framerate > 0.0)
+			{
+				_has_quality_measured = true;
+			}
+		}
+		break;
+
+		case MediaType::Audio:
+		{
+			if (_bitrate > 0)
+			{
+				_has_quality_measured = true;
+			}
+		}
+		break;
+
+		default:
+			_has_quality_measured = true;
+			break;
+	}
+
+	return _has_quality_measured;
+}
+
 void MediaTrack::OnFrameAdded(uint64_t bytes)
 {
 	if (_clock_from_first_frame_received.IsStart() == false)
@@ -385,7 +449,7 @@ void MediaTrack::OnFrameAdded(uint64_t bytes)
 	_total_frame_bytes += bytes;
 
 	// If bitrate is not set, calculate bitrate
-	if (_bitrate == 0 && _clock_from_first_frame_received.IsElapsed(VALID_BITRATE_CALCULATION_THRESHOLD_MSEC) == true)
+	if (_clock_from_first_frame_received.IsElapsed(VALID_BITRATE_CALCULATION_THRESHOLD_MSEC))
 	{
 		auto seconds = static_cast<double>(_clock_from_first_frame_received.Elapsed()) / 1000.0;
 		auto bytes_per_second = static_cast<double>(_total_frame_bytes) / seconds;
@@ -396,7 +460,7 @@ void MediaTrack::OnFrameAdded(uint64_t bytes)
 	}
 
 	// If framerate is not set, calculate framerate
-	if (_framerate == 0 && _clock_from_first_frame_received.IsElapsed(VALID_BITRATE_CALCULATION_THRESHOLD_MSEC) == true)
+	if (_clock_from_first_frame_received.IsElapsed(VALID_BITRATE_CALCULATION_THRESHOLD_MSEC))
 	{
 		auto seconds = static_cast<double>(_clock_from_first_frame_received.Elapsed()) / 1000.0;
 		auto frame_count = static_cast<double>(_total_frame_count);

@@ -51,7 +51,7 @@ namespace ov
 	{
 	}
 
-	bool ClientSocket::Create(SocketType type)
+	bool ClientSocket::Create(const SocketType type, const SocketFamily family)
 	{
 		auto server_socket = _server_socket.lock();
 

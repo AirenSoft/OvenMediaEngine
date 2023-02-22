@@ -348,7 +348,9 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 
 	output_track->SetMediaType(cmn::MediaType::Video);
 	output_track->SetId(NewTrackId());
-	output_track->SetName(profile.GetName());
+	output_track->SetVariantName(profile.GetName());
+	output_track->SetPublicName(input_track->GetPublicName());
+	output_track->SetLanguage(input_track->GetLanguage());
 	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
 
 	if (profile.IsBypass() == true)
@@ -407,6 +409,9 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 		return nullptr;
 	}
 
+	output_track->SetPublicName(input_track->GetPublicName());
+	output_track->SetLanguage(input_track->GetLanguage());
+	output_track->SetVariantName(profile.GetName());
 	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
 	output_track->SetMediaType(cmn::MediaType::Video);
 	output_track->SetId(NewTrackId());
@@ -437,7 +442,9 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrack(const std::share
 
 	output_track->SetMediaType(cmn::MediaType::Audio);
 	output_track->SetId(NewTrackId());
-	output_track->SetName(profile.GetName());
+	output_track->SetVariantName(profile.GetName());
+	output_track->SetPublicName(input_track->GetPublicName());
+	output_track->SetLanguage(input_track->GetLanguage());
 	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
 
 	if (profile.IsBypass() == true)
@@ -512,7 +519,9 @@ std::shared_ptr<MediaTrack> TranscoderStream::CreateOutputTrackDataType(const st
 
 	output_track->SetMediaType(cmn::MediaType::Data);
 	output_track->SetId(NewTrackId());
-	output_track->SetName("");
+	output_track->SetVariantName("");
+	output_track->SetPublicName(input_track->GetPublicName());
+	output_track->SetLanguage(input_track->GetLanguage());
 	output_track->SetBypass(true);
 	output_track->SetCodecId(input_track->GetCodecId());
 	output_track->SetCodecLibraryId(input_track->GetCodecLibraryId());
@@ -1023,6 +1032,8 @@ void TranscoderStream::ChangeOutputFormat(MediaFrame *buffer)
 
 	logtd("%s ChangeOutputFormat. track_id: %d", _log_prefix.CStr(), buffer->GetTrackId());
 
+	std::lock_guard<std::mutex> lock(_mutex);
+
 	// Update Track of Input Stream
 	UpdateInputTrack(buffer);
 
@@ -1454,7 +1465,7 @@ void TranscoderStream::CreateFilters(MediaFrame *buffer)
 		bool ret = filter->Configure(filter_id, input_track, output_track, bind(&TranscoderStream::OnFilteredFrame, this, std::placeholders::_1, std::placeholders::_2));
 		if (ret != true)
 		{
-			logte("%s `ed to create filter. filterId: %d", _log_prefix.CStr(), filter_id);
+			logte("%s Failed to create filter. filterId: %d", _log_prefix.CStr(), filter_id);
 			continue;
 		}
 

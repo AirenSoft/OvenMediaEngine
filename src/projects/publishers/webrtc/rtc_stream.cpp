@@ -298,8 +298,8 @@ std::shared_ptr<RtcMasterPlaylist> RtcStream::CreateRtcMasterPlaylist(const ov::
 
 	for (const auto &rendition : playlist->GetRenditionList())
 	{
-		auto video_track = GetTrack(rendition->GetVideoTrackName());
-		auto audio_track = GetTrack(rendition->GetAudioTrackName());
+		auto video_track = GetFirstTrackByVariant(rendition->GetVideoVariantName());
+		auto audio_track = GetFirstTrackByVariant(rendition->GetAudioVariantName());
 
 		if (video_track == nullptr && audio_track == nullptr)
 		{

@@ -169,8 +169,8 @@ bool OvtStream::GenerateDecription()
 			Json::Value json_rendition;
 
 			json_rendition["name"] = rendition->GetName().CStr();
-			json_rendition["videoTrackName"] = rendition->GetVideoTrackName().CStr();
-			json_rendition["audioTrackName"] = rendition->GetAudioTrackName().CStr();
+			json_rendition["videoTrackName"] = rendition->GetVideoVariantName().CStr();
+			json_rendition["audioTrackName"] = rendition->GetAudioVariantName().CStr();
 
 			json_playlist["renditions"].append(json_rendition);
 		}
@@ -187,7 +187,7 @@ bool OvtStream::GenerateDecription()
 		Json::Value json_audio_track;
 
 		json_track["id"] = track->GetId();
-		json_track["name"] = track->GetName().CStr();
+		json_track["name"] = track->GetVariantName().CStr();
 		json_track["codecId"] = static_cast<int8_t>(track->GetCodecId());
 		json_track["mediaType"] = static_cast<int8_t>(track->GetMediaType());
 		json_track["timebase_num"] = track->GetTimeBase().GetNum();

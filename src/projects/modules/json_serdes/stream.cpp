@@ -70,7 +70,7 @@ namespace serdes
 		CONVERTER_RETURN_IF(false, Json::objectValue);
 
 		SetInt(object, "id", track->GetId());
-		SetString(object, "name", track->GetName(), Optional::False);
+		SetString(object, "name", track->GetVariantName(), Optional::False);
 		SetString(object, "type", ::StringFromMediaType(track->GetMediaType()), Optional::False);
 
 		switch (track->GetMediaType())

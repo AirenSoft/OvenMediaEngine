@@ -15,7 +15,7 @@ template<typename T>
 class StunOctetAttributeFormat : public StunAttribute
 {
 public:
-	virtual bool Parse(ov::ByteStream &stream) override
+	virtual bool Parse(const StunMessage *stun_message, ov::ByteStream &stream) override
 	{
 		if(stream.IsRemained(sizeof(T)) == false)
 		{
@@ -38,9 +38,9 @@ public:
 		return true;
 	}
 
-	bool Serialize(ov::ByteStream &stream) const noexcept override
+	bool Serialize(const StunMessage *stun_message, ov::ByteStream &stream) const noexcept override
 	{
-		return StunAttribute::Serialize(stream) && stream.WriteBE(static_cast<T>(_value));
+		return StunAttribute::Serialize(stun_message, stream) && stream.WriteBE(static_cast<T>(_value));
 	}
 
 	ov::String ToString() const override

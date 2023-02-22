@@ -34,11 +34,11 @@ namespace ov
 		int GetNativeHandle() const;
 
 		template <typename Tsocket = Socket, typename... Targuments>
-		std::shared_ptr<Tsocket> AllocSocket(Targuments... args)
+		std::shared_ptr<Tsocket> AllocSocket(const SocketFamily family, Targuments... args)
 		{
 			auto socket = std::make_shared<Tsocket>(Socket::PrivateToken{nullptr}, this->GetSharedPtr(), args...);
 
-			if (PrepareSocket(socket))
+			if (PrepareSocket(socket, family))
 			{
 				return socket;
 			}
@@ -59,7 +59,7 @@ namespace ov
 			return worker1->_socket_count < worker2->_socket_count;
 		}
 
-		bool PrepareSocket(std::shared_ptr<Socket> socket);
+		bool PrepareSocket(std::shared_ptr<Socket> socket, const SocketFamily family);
 
 		void IncreaseSocketCount()
 		{

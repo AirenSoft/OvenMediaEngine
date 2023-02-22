@@ -119,6 +119,27 @@ public:
 			return _completed;
 		}
 
+		ov::String GetStartDate() const
+		{
+			ov::String start_date;
+
+			// Convert start time to date
+			{
+				time_t start_time = _start_time / 1000;
+				struct tm *tm = localtime(&start_time);
+				char date[64];
+				strftime(date, sizeof(date), "%Y-%m-%dT%H:%M:%S", tm);
+				start_date = date;
+			}
+
+			return start_date;
+		}
+
+		ov::String ToString() const
+		{
+			return ov::String::FormatString("seq(%d) start_date(%s) duration(%f) size(%lu) url(%s) next_url(%s) is_independent(%s) completed(%s)", _sequence, GetStartDate().CStr(), _duration, _size, _url.CStr(), _next_url.CStr(), _is_independent ? "true" : "false", _completed ? "true" : "false");
+		}
+
 	private:
 		int64_t _sequence = -1;
 		int64_t _start_time = 0; // milliseconds since epoce (1970-01-01 00:00:00)

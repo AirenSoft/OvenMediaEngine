@@ -27,7 +27,7 @@ namespace ov
 {
 	bool DatagramSocket::Prepare(int port, DatagramCallback datagram_callback)
 	{
-		return Prepare(SocketAddress(port), std::move(datagram_callback));
+		return Prepare(SocketAddress::CreateAndGetFirst(nullptr, port), std::move(datagram_callback));
 	}
 
 	bool DatagramSocket::Prepare(const SocketAddress &address, DatagramCallback datagram_callback)

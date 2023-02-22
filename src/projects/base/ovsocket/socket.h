@@ -387,7 +387,7 @@ namespace ov
 		};
 
 	protected:
-		virtual bool Create(SocketType type);
+		virtual bool Create(const SocketType type, const SocketFamily family);
 
 		// Internal version of MakeNonBlocking() - It doesn't check state
 		bool MakeNonBlockingInternal(std::shared_ptr<SocketAsyncInterface> callback, bool need_to_wait_first_epoll_event);
@@ -472,6 +472,7 @@ namespace ov
 		std::shared_ptr<SocketPoolWorker> _worker;
 
 		SocketWrapper _socket;
+		SocketFamily _family;
 
 		SocketState _state = SocketState::Closed;
 
@@ -504,7 +505,7 @@ namespace ov
 		void UpdateLastRecvTime();
 		void UpdateLastSentTime();
 
-		std::chrono::system_clock::time_point	_last_recv_time = std::chrono::system_clock::now();
-		std::chrono::system_clock::time_point	_last_sent_time = std::chrono::system_clock::now();
+		std::chrono::system_clock::time_point _last_recv_time = std::chrono::system_clock::now();
+		std::chrono::system_clock::time_point _last_sent_time = std::chrono::system_clock::now();
 	};
 }  // namespace ov

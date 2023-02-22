@@ -7,22 +7,21 @@
 //
 //==============================================================================
 #include "ice_port.h"
-#include "ice_private.h"
 
-#include "main/main.h"
-
-#include "modules/ice/stun/attributes/stun_attributes.h"
-#include "modules/ice/stun/stun_message.h"
-#include "modules/ice/stun/channel_data_message.h"
+#include <base/info/application.h>
+#include <base/info/stream.h>
+#include <base/ovcrypto/message_digest.h>
+#include <base/ovlibrary/ovlibrary.h>
+#include <config/config.h>
+#include <modules/rtc_signalling/rtc_ice_candidate.h>
 
 #include <algorithm>
 
-#include <base/ovlibrary/ovlibrary.h>
-#include <base/ovcrypto/message_digest.h>
-#include <config/config.h>
-#include <modules/rtc_signalling/rtc_ice_candidate.h>
-#include <base/info/stream.h>
-#include <base/info/application.h>
+#include "ice_private.h"
+#include "main/main.h"
+#include "modules/ice/stun/attributes/stun_attributes.h"
+#include "modules/ice/stun/channel_data_message.h"
+#include "modules/ice/stun/stun_message.h"
 
 IcePort::IcePort()
 {
@@ -42,25 +41,24 @@ IcePort::~IcePort()
 	Close();
 }
 
-bool IcePort::CreateIceCandidates(const std::vector<std::vector<RtcIceCandidate>> &ice_candidate_list, int ice_worker_count)
+bool IcePort::CreateIceCandidates(const RtcIceCandidateList &ice_candidate_list, int ice_worker_count)
 {
 	std::lock_guard<std::recursive_mutex> lock_guard(_physical_port_list_mutex);
 
-	bool succeeded = true;
-	std::map<int, bool> bounded;
+	bool result = true;
+	std::map<ov::SocketAddress, bool> bounded;
 
 	for (auto &ice_candidates : ice_candidate_list)
 	{
 		for (auto &ice_candidate : ice_candidates)
 		{
-			// Find same candidate already created
+			// Find same candidate is already created
 			auto transport = ice_candidate.GetTransport().UpperCaseString();
 			auto address = ice_candidate.GetAddress();
 			ov::SocketType socket_type = (transport == "TCP") ? ov::SocketType::Tcp : ov::SocketType::Udp;
 
 			{
-				auto port = address.Port();
-				auto item = bounded.find(port);
+				auto item = bounded.find(address);
 
 				if (item != bounded.end())
 				{
@@ -68,18 +66,15 @@ bool IcePort::CreateIceCandidates(const std::vector<std::vector<RtcIceCandidate>
 					continue;
 				}
 
-				bounded[port] = true;
+				bounded[address] = true;
 			}
-
-			// Bind to 0.0.0.0
-			address.SetHostname(nullptr);
 
 			// Create an ICE port using candidate information
 			auto physical_port = CreatePhysicalPort(address, socket_type, ice_worker_count);
 			if (physical_port == nullptr)
 			{
 				logte("Could not create physical port for %s/%s", address.ToString().CStr(), transport.CStr());
-				succeeded = false;
+				result = false;
 				break;
 			}
 
@@ -88,16 +83,12 @@ bool IcePort::CreateIceCandidates(const std::vector<std::vector<RtcIceCandidate>
 		}
 	}
 
-	if (succeeded)
-	{
-
-	}
-	else
+	if (result == false)
 	{
 		Close();
 	}
 
-	return succeeded;
+	return result;
 }
 
 bool IcePort::CreateTurnServer(const ov::SocketAddress &address, ov::SocketType socket_type, int tcp_relay_worker_count)
@@ -105,12 +96,12 @@ bool IcePort::CreateTurnServer(const ov::SocketAddress &address, ov::SocketType 
 	// {[Browser][WebRTC][TURN Client]} <----(TCP)-----> {[TURN Server][OvenMediaEngine]}
 
 	// OME introduces a built-in TURN server to support WebRTC/TCP.
-	// there are networks although the network speed is high but UDP packet loss occurs very seriously. There, WebRTC/udp does not play normally. 
-	
-	// In order to playback in such an environment with good quality, 
-	// we have built in TURN server in OME to transmit WebRTC stream to tcp. 
-	// The built-in turn server does not use UDP when transmitting or receiving data from the relayed port to the peer, 
-	// and only needs to copy the memory within the same process, thus the udp transmission section between OME and Player is omitted. 
+	// there are networks although the network speed is high but UDP packet loss occurs very seriously. There, WebRTC/udp does not play normally.
+
+	// In order to playback in such an environment with good quality,
+	// we have built in TURN server in OME to transmit WebRTC stream to tcp.
+	// The built-in turn server does not use UDP when transmitting or receiving data from the relayed port to the peer,
+	// and only needs to copy the memory within the same process, thus the udp transmission section between OME and Player is omitted.
 	// In other words, Player and OME can communicate with only TCP.
 
 	// If the peer is the same process as TurnServer (OME), it does not transmit through UDP and calls the function directly.
@@ -131,8 +122,8 @@ bool IcePort::CreateTurnServer(const ov::SocketAddress &address, ov::SocketType 
 	// make HMAC key
 	// https://tools.ietf.org/html/rfc8489#section-9.2.2
 	//  key = MD5(username ":" OpaqueString(realm) ":" OpaqueString(password))
-	_hmac_key = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Md5, 
-		ov::String::FormatString("%s:%s:%s", DEFAULT_RELAY_USERNAME, DEFAULT_RELAY_REALM, DEFAULT_RELAY_KEY).ToData(false));
+	_hmac_key = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Md5,
+												 ov::String::FormatString("%s:%s:%s", DEFAULT_RELAY_USERNAME, DEFAULT_RELAY_REALM, DEFAULT_RELAY_KEY).ToData(false));
 
 	// Creating an attribute to be used in advance
 
@@ -155,7 +146,7 @@ bool IcePort::CreateTurnServer(const ov::SocketAddress &address, ov::SocketType 
 	// This is the player's candidate and passed to OME.
 	// However, OME does not use the player's candidate. So we pass anything by this value.
 	auto xor_relayed_address_attribute = std::make_shared<StunXorRelayedAddressAttribute>();
-	xor_relayed_address_attribute->SetParameters(ov::SocketAddress(FAKE_RELAY_IP, FAKE_RELAY_PORT));
+	xor_relayed_address_attribute->SetParameters(ov::SocketAddress::CreateAndGetFirst(FAKE_RELAY_IP, FAKE_RELAY_PORT));
 	_xor_relayed_address_attribute = std::move(xor_relayed_address_attribute);
 
 	return true;
@@ -223,9 +214,9 @@ ov::String IcePort::GenerateUfrag()
 	}
 }
 
-void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint32_t session_id, 
-							std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp, 
-							int expired_ms, uint64_t life_time_epoch_ms, std::any user_data)
+void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint32_t session_id,
+						 std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp,
+						 int expired_ms, uint64_t life_time_epoch_ms, std::any user_data)
 {
 	const ov::String &local_ufrag = offer_sdp->GetIceUfrag();
 	const ov::String &remote_ufrag = peer_sdp->GetIceUfrag();
@@ -285,7 +276,7 @@ bool IcePort::RemoveSession(uint32_t session_id)
 				std::lock_guard<std::mutex> lock_guard(_user_port_table_lock);
 
 				auto it = _user_port_table.begin();
-				while(it != _user_port_table.end())
+				while (it != _user_port_table.end())
 				{
 					auto ice_port_info = it->second;
 					if (ice_port_info->session_id == session_id)
@@ -319,7 +310,7 @@ bool IcePort::RemoveSession(uint32_t session_id)
 		ice_port_info = item->second;
 
 		_session_port_table.erase(item);
-		for(const auto &item : ice_port_info->address_map)
+		for (const auto &item : ice_port_info->address_map)
 		{
 			_address_port_table.erase(item.first);
 		}
@@ -350,9 +341,9 @@ void IcePort::CheckTimedoutItem()
 	{
 		std::lock_guard<std::shared_mutex> brt_lock(_binding_request_table_lock);
 
-		for(auto it = _binding_request_table.begin(); it != _binding_request_table.end();)
+		for (auto it = _binding_request_table.begin(); it != _binding_request_table.end();)
 		{
-			if(it->second.IsExpired())
+			if (it->second.IsExpired())
 			{
 				it = _binding_request_table.erase(it);
 			}
@@ -387,7 +378,7 @@ void IcePort::CheckTimedoutItem()
 		for (auto &deleted_ice_port : delete_list)
 		{
 			_session_port_table.erase(deleted_ice_port->session_id);
-			for(const auto &item : deleted_ice_port->address_map)
+			for (const auto &item : deleted_ice_port->address_map)
 			{
 				_address_port_table.erase(item.first);
 			}
@@ -400,7 +391,7 @@ void IcePort::CheckTimedoutItem()
 		logtw("Client %s(session id: %d) has expired", deleted_ice_port->address.ToString(false).CStr(), deleted_ice_port->session_id);
 
 		// Close only TCP (TURN)
-		if(deleted_ice_port->remote != nullptr && deleted_ice_port->remote->GetSocket().GetType() == ov::SocketType::Tcp)
+		if (deleted_ice_port->remote != nullptr && deleted_ice_port->remote->GetSocket().GetType() == ov::SocketType::Tcp)
 		{
 			deleted_ice_port->remote->CloseIfNeeded();
 		}
@@ -438,12 +429,12 @@ bool IcePort::Send(uint32_t session_id, const std::shared_ptr<const ov::Data> &d
 	std::shared_ptr<const ov::Data> send_data = nullptr;
 
 	// Send throutgh TURN data channel
-	if(ice_port_info->is_turn_client == true && ice_port_info->is_data_channel_enabled == true)
-	{	
+	if (ice_port_info->is_turn_client == true && ice_port_info->is_data_channel_enabled == true)
+	{
 		send_data = CreateChannelDataMessage(ice_port_info->data_channle_number, data);
 	}
 	// Send thourgh DATA indication
-	else if(ice_port_info->is_turn_client == true && ice_port_info->is_data_channel_enabled == false)
+	else if (ice_port_info->is_turn_client == true && ice_port_info->is_data_channel_enabled == false)
 	{
 		send_data = CreateDataIndication(ice_port_info->peer_address, data);
 	}
@@ -453,7 +444,7 @@ bool IcePort::Send(uint32_t session_id, const std::shared_ptr<const ov::Data> &d
 		send_data = data;
 	}
 
-	if(send_data == nullptr)
+	if (send_data == nullptr)
 	{
 		return false;
 	}
@@ -485,7 +476,7 @@ void IcePort::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physical
 	std::lock_guard<std::shared_mutex> lock_guard(_demultiplexers_lock);
 
 	auto it = _demultiplexers.find(remote->GetNativeHandle());
-	if(it != _demultiplexers.end())
+	if (it != _demultiplexers.end())
 	{
 		_demultiplexers.erase(remote->GetNativeHandle());
 	}
@@ -496,11 +487,11 @@ void IcePort::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physical
 void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 {
 	// The only packet input to IcePort/TCP is STUN and TURN DATA CHANNEL.
-	if(remote->GetType() == ov::SocketType::Tcp)
+	if (remote->GetType() == ov::SocketType::Tcp)
 	{
 		std::shared_lock<std::shared_mutex> lock(_demultiplexers_lock);
 		// If remote protocol is tcp, it must be TURN
-		if(_demultiplexers.find(remote->GetNativeHandle()) == _demultiplexers.end())
+		if (_demultiplexers.find(remote->GetNativeHandle()) == _demultiplexers.end())
 		{
 			// If the client disconnects at this time, it cannot be found.
 			logtd("TCP packet input but cannot find the demultiplexer of %s.", remote->ToString().CStr());
@@ -510,19 +501,19 @@ void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov
 		auto demultiplexer = _demultiplexers[remote->GetNativeHandle()];
 		lock.unlock();
 
-		// TCP demultiplexer 
+		// TCP demultiplexer
 		demultiplexer->AppendData(data);
 
-		while(demultiplexer->IsAvailablePacket())
+		while (demultiplexer->IsAvailablePacket())
 		{
 			auto packet = demultiplexer->PopPacket();
-		
+
 			GateInfo gate_info;
 			gate_info.packet_type = packet->GetPacketType();
 			OnPacketReceived(remote, address, gate_info, packet->GetData());
 		}
 	}
-	else if(remote->GetType() == ov::SocketType::Udp)
+	else if (remote->GetType() == ov::SocketType::Udp)
 	{
 		GateInfo gate_info;
 		gate_info.packet_type = IcePacketIdentifier::FindPacketType(data);
@@ -535,7 +526,7 @@ void IcePort::OnPacketReceived(const std::shared_ptr<ov::Socket> &remote, const 
 {
 	logtd("OnPacketReceived : %s", gate_info.ToString().CStr());
 
-	switch(gate_info.packet_type)
+	switch (gate_info.packet_type)
 	{
 		case IcePacketIdentifier::PacketType::TURN_CHANNEL_DATA:
 			OnChannelDataPacketReceived(remote, address, gate_info, data);
@@ -553,8 +544,8 @@ void IcePort::OnPacketReceived(const std::shared_ptr<ov::Socket> &remote, const 
 	}
 }
 
-void IcePort::OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
-						GateInfo &gate_info, const std::shared_ptr<const ov::Data> &data)
+void IcePort::OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address,
+										  GateInfo &gate_info, const std::shared_ptr<const ov::Data> &data)
 {
 	std::shared_ptr<IcePortInfo> ice_port_info;
 	{
@@ -564,7 +555,7 @@ void IcePort::OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &rem
 		{
 			ice_port_info = item->second;
 			// When the candidate pair is determined, the peer starts sending DTLS messages. This can be seen as a true connected.
-			if(ice_port_info->state != IcePortConnectionState::Connected)
+			if (ice_port_info->state != IcePortConnectionState::Connected)
 			{
 				SetIceState(ice_port_info, IcePortConnectionState::Connected);
 				// It communicates with the candidate address that sends application data first.
@@ -578,8 +569,8 @@ void IcePort::OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &rem
 		logtw("Could not find client(%s) information. Dropping...", address.ToString(false).CStr());
 		return;
 	}
-	
-	if(ice_port_info->observer != nullptr)
+
+	if (ice_port_info->observer != nullptr)
 	{
 		ice_port_info->observer->OnDataReceived(*this, ice_port_info->session_id, data, ice_port_info->user_data);
 	}
@@ -589,7 +580,7 @@ void IcePort::OnChannelDataPacketReceived(const std::shared_ptr<ov::Socket> &rem
 {
 	ChannelDataMessage message;
 
-	if(message.Load(data) == false)
+	if (message.Load(data) == false)
 	{
 		return;
 	}
@@ -632,11 +623,11 @@ void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, co
 
 	logtd("Received message:\n%s", message.ToString().CStr());
 
-	if(message.GetClass() == StunClass::ErrorResponse)
+	if (message.GetClass() == StunClass::ErrorResponse)
 	{
 		// Print
 		auto error_code = message.GetAttribute<StunErrorCodeAttribute>(StunAttributeType::ErrorCode);
-		if(error_code == nullptr)
+		if (error_code == nullptr)
 		{
 			logtw("Received stun error response, but there is no ErrorCode attribute");
 		}
@@ -646,12 +637,11 @@ void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, co
 		}
 	}
 
-	switch(message.GetMethod())
+	switch (message.GetMethod())
 	{
 		// STUN
-		case StunMethod::Binding:
-		{
-			switch(message.GetClass())
+		case StunMethod::Binding: {
+			switch (message.GetClass())
 			{
 				case StunClass::Request:
 				case StunClass::Indication:
@@ -661,7 +651,7 @@ void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, co
 					ProcessStunBindingResponse(remote, address, gate_info, message);
 					break;
 				case StunClass::ErrorResponse:
-					//TODO(Getroot): Delete the transaction immediately. 
+					//TODO(Getroot): Delete the transaction immediately.
 					break;
 			}
 			break;
@@ -669,31 +659,31 @@ void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, co
 		// TURN Server
 		// Because it is a turn server, no response class comes.
 		case StunMethod::Allocate:
-			if(message.GetClass() == StunClass::Request)
+			if (message.GetClass() == StunClass::Request)
 			{
 				ProcessTurnAllocateRequest(remote, address, gate_info, message);
 			}
 			break;
 		case StunMethod::Refresh:
-			if(message.GetClass() == StunClass::Request)
+			if (message.GetClass() == StunClass::Request)
 			{
 				ProcessTurnRefreshRequest(remote, address, gate_info, message);
 			}
 			break;
 		case StunMethod::Send:
-			if(message.GetClass() == StunClass::Indication)
+			if (message.GetClass() == StunClass::Indication)
 			{
 				ProcessTurnSendIndication(remote, address, gate_info, message);
 			}
 			break;
 		case StunMethod::CreatePermission:
-			if(message.GetClass() == StunClass::Request)
+			if (message.GetClass() == StunClass::Request)
 			{
 				ProcessTurnCreatePermissionRequest(remote, address, gate_info, message);
 			}
 			break;
 		case StunMethod::ChannelBind:
-			if(message.GetClass() == StunClass::Request)
+			if (message.GetClass() == StunClass::Request)
 			{
 				ProcessTurnChannelBindRequest(remote, address, gate_info, message);
 			}
@@ -723,10 +713,9 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 
 	logtd("[From %s To %s] Received STUN binding request: %s:%s", address.ToString(false).CStr(), remote->GetLocalAddress()->ToString().CStr(), local_ufrag.CStr(), remote_ufrag.CStr());
 
-	
 	std::shared_ptr<IcePortInfo> ice_port_info;
 	{
-		// WebRTC Publisher registers ufrag with session information 
+		// WebRTC Publisher registers ufrag with session information
 		// through IcePort::AddSession function after signaling with player
 		std::unique_lock<std::mutex> lock_guard(_user_port_table_lock);
 		auto info = _user_port_table.find(local_ufrag);
@@ -759,7 +748,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		{
 			std::lock_guard<std::mutex> lock_guard(_port_table_lock);
 
-			for(const auto &item : ice_port_info->address_map)
+			for (const auto &item : ice_port_info->address_map)
 			{
 				_address_port_table.erase(item.first);
 			}
@@ -769,12 +758,12 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		return false;
 	}
 
-	if (ice_port_info->state == IcePortConnectionState::New || 
-		(ice_port_info->state == IcePortConnectionState::Checking && ice_port_info->address != address) )
+	if (ice_port_info->state == IcePortConnectionState::New ||
+		(ice_port_info->state == IcePortConnectionState::Checking && ice_port_info->address != address))
 	{
 		std::lock_guard<std::mutex> lock_guard(_port_table_lock);
 
-		if(ice_port_info->state == IcePortConnectionState::New)
+		if (ice_port_info->state == IcePortConnectionState::New)
 		{
 			logti("Add the client to the port list: %s / %s", address.ToString(false).CStr(), gate_info.ToString().CStr());
 		}
@@ -796,7 +785,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 	ice_port_info->UpdateBindingTime();
 
 	// If the class is Indication it doesn't need to send response
-	if(message.GetClass() == StunClass::Request)
+	if (message.GetClass() == StunClass::Request)
 	{
 		StunMessage response_message;
 		response_message.SetHeader(StunClass::SuccessResponse, StunMethod::Binding, message.GetTransactionId());
@@ -804,14 +793,14 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		// Add XOR-MAPPED-ADDRESS attribute
 		// If client is relay, then use relay IP/port
 		auto xor_mapped_attribute = std::make_shared<StunXorMappedAddressAttribute>();
-		
-		if(gate_info.input_method == GateInfo::GateType::DIRECT)
+
+		if (gate_info.input_method == GateInfo::GateType::DIRECT)
 		{
 			xor_mapped_attribute->SetParameters(address);
 		}
 		else
 		{
-			xor_mapped_attribute->SetParameters(ov::SocketAddress(FAKE_RELAY_IP, FAKE_RELAY_PORT));
+			xor_mapped_attribute->SetParameters(ov::SocketAddress::CreateAndGetFirst(FAKE_RELAY_IP, FAKE_RELAY_PORT));
 		}
 
 		response_message.AddAttribute(std::move(xor_mapped_attribute));
@@ -824,7 +813,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		SendStunBindingRequest(remote, address, gate_info, ice_port_info);
 	}
 
-	return true; 
+	return true;
 }
 
 bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const std::shared_ptr<IcePortInfo> &info)
@@ -840,13 +829,13 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 	// generate transaction id ramdomly
 	for (int index = 0; index < OV_STUN_TRANSACTION_ID_LENGTH; index++)
 	{
-		transaction_id[index] = charset[rand() % (OV_COUNTOF(charset)-1)];
+		transaction_id[index] = charset[rand() % (OV_COUNTOF(charset) - 1)];
 	}
 	message.SetTransactionId(&(transaction_id[0]));
 
 	std::shared_ptr<StunAttribute> attribute;
 
-	// USERNAME attribute 
+	// USERNAME attribute
 	attribute = std::make_shared<StunUserNameAttribute>();
 	auto *user_name_attribute = dynamic_cast<StunUserNameAttribute *>(attribute.get());
 	user_name_attribute->SetText(ov::String::FormatString("%s:%s", info->peer_sdp->GetIceUfrag().CStr(), info->offer_sdp->GetIceUfrag().CStr()));
@@ -854,7 +843,7 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 
 	// ICE-CONTROLLED
 	//attribute = std::make_shared<StunUnknownAttribute>(0x8029, 8);
-	// ICE-CONTROLLING 
+	// ICE-CONTROLLING
 	attribute = std::make_shared<StunUnknownAttribute>(0x802A, 8);
 	auto *tie_break_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
 
@@ -865,7 +854,7 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 	*/
 	//uint8_t tie_break_value[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 	uint8_t tie_break_value[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
-	
+
 	tie_break_attribute->SetData(&(tie_break_value[0]), 8);
 	message.AddAttribute(std::move(attribute));
 
@@ -888,7 +877,7 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 	{
 		std::lock_guard<std::shared_mutex> brt_lock(_binding_request_table_lock);
 
-		ov::String transaction_id_key((char*)(&transaction_id[0]), OV_STUN_TRANSACTION_ID_LENGTH);
+		ov::String transaction_id_key((char *)(&transaction_id[0]), OV_STUN_TRANSACTION_ID_LENGTH);
 		_binding_request_table.emplace(transaction_id_key, BindingRequestInfo(transaction_id_key, info));
 
 		logtd("Send Binding Request to(%s) id(%s)", address.ToString(false).CStr(), transaction_id_key.CStr());
@@ -907,10 +896,10 @@ bool IcePort::ProcessStunBindingResponse(const std::shared_ptr<ov::Socket> &remo
 		// Find reqeusted info in the table
 		std::lock_guard<std::shared_mutex> brt_lock(_binding_request_table_lock);
 
-		ov::String transaction_id_key((char*)(&message.GetTransactionId()[0]), OV_STUN_TRANSACTION_ID_LENGTH);
+		ov::String transaction_id_key((char *)(&message.GetTransactionId()[0]), OV_STUN_TRANSACTION_ID_LENGTH);
 
 		auto item = _binding_request_table.find(transaction_id_key);
-		if(item == _binding_request_table.end())
+		if (item == _binding_request_table.end())
 		{
 			logtw("Could not find binding request info : address(%s) transaction id(%s)", address.ToString(false).CStr(), transaction_id_key.CStr());
 			return false;
@@ -935,11 +924,11 @@ bool IcePort::ProcessStunBindingResponse(const std::shared_ptr<ov::Socket> &remo
 	return true;
 }
 
-bool IcePort::SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info,  StunMessage &message, const std::shared_ptr<const ov::Data> &integrity_key)
+bool IcePort::SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, StunMessage &message, const std::shared_ptr<const ov::Data> &integrity_key)
 {
 	std::shared_ptr<const ov::Data> source_data, send_data;
 
-	if(integrity_key == nullptr)
+	if (integrity_key == nullptr)
 	{
 		source_data = message.Serialize();
 	}
@@ -947,23 +936,23 @@ bool IcePort::SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const o
 	{
 		source_data = message.Serialize(integrity_key);
 	}
-	
+
 	logtd("Send message:\n%s", message.ToString().CStr());
 
-	if(gate_info.input_method == IcePort::GateInfo::GateType::DIRECT)
+	if (gate_info.input_method == IcePort::GateInfo::GateType::DIRECT)
 	{
 		send_data = source_data;
 	}
-	else if(gate_info.input_method == IcePort::GateInfo::GateType::SEND_INDICATION)
+	else if (gate_info.input_method == IcePort::GateInfo::GateType::SEND_INDICATION)
 	{
 		send_data = CreateDataIndication(gate_info.peer_address, source_data);
 	}
-	else if(gate_info.input_method == IcePort::GateInfo::GateType::DATA_CHANNEL)
+	else if (gate_info.input_method == IcePort::GateInfo::GateType::DATA_CHANNEL)
 	{
 		send_data = CreateChannelDataMessage(gate_info.channel_number, source_data);
 	}
 
-	if(send_data == nullptr)
+	if (send_data == nullptr)
 	{
 		return false;
 	}
@@ -997,17 +986,16 @@ const std::shared_ptr<const ov::Data> IcePort::CreateDataIndication(ov::SocketAd
 
 const std::shared_ptr<const ov::Data> IcePort::CreateChannelDataMessage(uint16_t channel_number, const std::shared_ptr<const ov::Data> &data)
 {
-	ChannelDataMessage	channel_data_message(channel_number, data);
+	ChannelDataMessage channel_data_message(channel_number, data);
 	return channel_data_message.GetPacket();
 }
-
 
 bool IcePort::ProcessTurnAllocateRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const StunMessage &message)
 {
 	StunMessage response_message;
 
 	auto requested_transport_attr = message.GetAttribute<StunRequestedTransportAttribute>(StunAttributeType::RequestedTransport);
-	if(requested_transport_attr == nullptr)
+	if (requested_transport_attr == nullptr)
 	{
 		response_message.SetHeader(StunClass::ErrorResponse, StunMethod::Allocate, message.GetTransactionId());
 		response_message.SetErrorCodeAttribute(StunErrorCode::BadRequest, "REQUESTED-TRANSPORT attribute is not included");
@@ -1016,7 +1004,7 @@ bool IcePort::ProcessTurnAllocateRequest(const std::shared_ptr<ov::Socket> &remo
 	}
 
 	// only protocol number 17(UDP) is allowed (https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml)
-	if(requested_transport_attr->GetProtocolNumber() != 17)
+	if (requested_transport_attr->GetProtocolNumber() != 17)
 	{
 		response_message.SetHeader(StunClass::ErrorResponse, StunMethod::Allocate, message.GetTransactionId());
 		response_message.SetErrorCodeAttribute(StunErrorCode::UnsupportedTransportProtocol);
@@ -1025,7 +1013,7 @@ bool IcePort::ProcessTurnAllocateRequest(const std::shared_ptr<ov::Socket> &remo
 	}
 
 	auto integrity_attribute = message.GetAttribute<StunMessageIntegrityAttribute>(StunAttributeType::MessageIntegrity);
-	if(integrity_attribute == nullptr)
+	if (integrity_attribute == nullptr)
 	{
 		// First request
 		response_message.SetHeader(StunClass::ErrorResponse, StunMethod::Allocate, message.GetTransactionId());
@@ -1053,7 +1041,7 @@ bool IcePort::ProcessTurnAllocateRequest(const std::shared_ptr<ov::Socket> &remo
 	// Add lifetime
 	uint32_t lifetime = DEFAULT_LIFETIME;
 	auto requested_lifetime_attribute = message.GetAttribute<StunLifetimeAttribute>(StunAttributeType::Lifetime);
-	if(requested_lifetime_attribute != nullptr)
+	if (requested_lifetime_attribute != nullptr)
 	{
 		lifetime = std::min(static_cast<uint32_t>(DEFAULT_LIFETIME), requested_lifetime_attribute->GetValue());
 	}
@@ -1064,7 +1052,7 @@ bool IcePort::ProcessTurnAllocateRequest(const std::shared_ptr<ov::Socket> &remo
 
 	response_message.AddAttribute(_xor_relayed_address_attribute);
 	response_message.AddAttribute(_software_attribute);
-	
+
 	SendStunMessage(remote, address, gate_info, response_message, _hmac_key);
 
 	return true;
@@ -1073,13 +1061,13 @@ bool IcePort::ProcessTurnAllocateRequest(const std::shared_ptr<ov::Socket> &remo
 bool IcePort::ProcessTurnSendIndication(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const StunMessage &message)
 {
 	auto xor_peer_attribute = message.GetAttribute<StunXorPeerAddressAttribute>(StunAttributeType::XorPeerAddress);
-	if(xor_peer_attribute == nullptr)
+	if (xor_peer_attribute == nullptr)
 	{
 		return false;
 	}
-	
+
 	auto data_attribute = message.GetAttribute<StunDataAttribute>(StunAttributeType::Data);
-	if(data_attribute == nullptr)
+	if (data_attribute == nullptr)
 	{
 		return false;
 	}
@@ -1124,7 +1112,7 @@ bool IcePort::ProcessTurnChannelBindRequest(const std::shared_ptr<ov::Socket> &r
 	StunMessage response_message;
 
 	auto channel_number_attribute = message.GetAttribute<StunChannelNumberAttribute>(StunAttributeType::ChannelNumber);
-	if(channel_number_attribute == nullptr)
+	if (channel_number_attribute == nullptr)
 	{
 		response_message.SetHeader(StunClass::ErrorResponse, StunMethod::ChannelBind, message.GetTransactionId());
 		response_message.SetErrorCodeAttribute(StunErrorCode::BadRequest);
@@ -1159,7 +1147,7 @@ bool IcePort::ProcessTurnRefreshRequest(const std::shared_ptr<ov::Socket> &remot
 	uint32_t lifetime = DEFAULT_LIFETIME;
 
 	auto requested_lifetime_attr = message.GetAttribute<StunLifetimeAttribute>(StunAttributeType::Lifetime);
-	if(requested_lifetime_attr != nullptr)
+	if (requested_lifetime_attr != nullptr)
 	{
 		lifetime = std::min(static_cast<uint32_t>(DEFAULT_LIFETIME), requested_lifetime_attr->GetValue());
 	}
@@ -1172,7 +1160,7 @@ bool IcePort::ProcessTurnRefreshRequest(const std::shared_ptr<ov::Socket> &remot
 	response_message.AddAttribute(lifetime_attribute);
 	SendStunMessage(remote, address, gate_info, response_message, _hmac_key);
 
-	logtd("Turn Refresh Request : %s", lifetime_attribute->ToString().CStr());	
+	logtd("Turn Refresh Request : %s", lifetime_attribute->ToString().CStr());
 
 	return true;
 }
@@ -1180,7 +1168,7 @@ bool IcePort::ProcessTurnRefreshRequest(const std::shared_ptr<ov::Socket> &remot
 void IcePort::SetIceState(std::shared_ptr<IcePortInfo> &info, IcePortConnectionState state)
 {
 	info->state = state;
-	if(info->observer != nullptr)
+	if (info->observer != nullptr)
 	{
 		info->observer->OnStateChanged(*this, info->session_id, state, info->user_data);
 	}

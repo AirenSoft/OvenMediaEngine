@@ -19,6 +19,7 @@ namespace cfg
 				struct ImageProfile : public Item
 				{
 				protected:
+					ov::String _name;
 					bool _active = true;
 					ov::String _codec;
 					ov::String _scale;
@@ -27,6 +28,7 @@ namespace cfg
 					double _framerate = 0.0;
 
 				public:
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsActive, _active)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetCodec, _codec)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetScale, _scale)
@@ -34,9 +36,12 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetHeight, _height)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFramerate, _framerate)
 
+					void SetName(const ov::String &name){_name = name;}
+
 				protected:
 					void MakeList() override
 					{
+						Register<Optional>("Name", &_name);
 						Register<Optional>("Active", &_active);
 						Register<Optional>("Codec", &_codec);
 						Register<Optional>("Scale", &_scale);

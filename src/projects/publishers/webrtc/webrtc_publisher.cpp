@@ -6,16 +6,17 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
+#include "webrtc_publisher.h"
+
+#include <orchestrator/orchestrator.h>
+
 #include <utility>
 
+#include "config/config_manager.h"
 #include "rtc_private.h"
 #include "rtc_session.h"
 #include "rtc_stream.h"
-#include "webrtc_publisher.h"
 #include "webrtc_publisher_signalling_interceptor.h"
-#include "config/config_manager.h"
-
-#include <orchestrator/orchestrator.h>
 
 std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
@@ -38,9 +39,117 @@ WebRtcPublisher::~WebRtcPublisher()
 	logtd("WebRtcPublisher has been terminated finally");
 }
 
-/*
- * Publisher Implementation
- */
+bool WebRtcPublisher::StartSignallingServer(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config)
+{
+	auto &signalling_config = webrtc_bind_config.GetSignalling();
+
+	bool is_configured;
+	auto worker_count = signalling_config.GetWorkerCount(&is_configured);
+	worker_count = is_configured ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
+
+	bool is_port_configured;
+	auto &port_config = signalling_config.GetPort(&is_port_configured);
+	bool is_tls_port_configured;
+	auto &tls_port_config = signalling_config.GetTlsPort(&is_tls_port_configured);
+
+	if ((is_port_configured == false) && (is_tls_port_configured == false))
+	{
+		logtw("%s is disabled - No port is configured", GetPublisherName());
+		return true;
+	}
+
+	auto signalling_server = std::make_shared<RtcSignallingServer>(server_config, webrtc_bind_config);
+	signalling_server->AddObserver(RtcSignallingObserver::GetSharedPtr());
+
+	auto interceptor = std::make_shared<WebRtcPublisherSignallingInterceptor>();
+
+	if (signalling_server->Start(
+			GetPublisherName(), "RtcSig",
+			server_config.GetIPList(),
+			is_port_configured, port_config.GetPort(),
+			is_tls_port_configured, tls_port_config.GetPort(),
+			worker_count, interceptor))
+	{
+		_signalling_server = std::move(signalling_server);
+
+		return true;
+	}
+
+	return false;
+}
+
+bool WebRtcPublisher::StartICEPorts(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config)
+{
+	auto &ip_list = server_config.GetIPList();
+
+	_ice_port = IcePortManager::GetInstance()->CreatePort(IcePortObserver::GetSharedPtr());
+	if (_ice_port == nullptr)
+	{
+		logte("Could not initialize ICE Port. Check your ICE configuration");
+		return false;
+	}
+
+	auto &ice_candidates_config = webrtc_bind_config.GetIceCandidates();
+
+	if (IcePortManager::GetInstance()->CreateIceCandidates(IcePortObserver::GetSharedPtr(), ice_candidates_config) == false)
+	{
+		logte("Could not create ICE Candidates. Check your ICE configuration");
+		return false;
+	}
+
+	bool tcp_relay_parsed = false;
+	auto tcp_relay = ice_candidates_config.GetTcpRelay(&tcp_relay_parsed);
+
+	if (tcp_relay_parsed)
+	{
+		auto items = tcp_relay.Split(":");
+		if (items.size() != 2)
+		{
+			logte("TcpRelay format is incorrect: %s (Must be in <Relay IP>:<Port> format)", tcp_relay.CStr());
+			return false;
+		}
+
+		bool tcp_relay_bind_parsed{false};
+		ov::String tcp_relay_bind{webrtc_bind_config.GetTcpRelayBind(&tcp_relay_bind_parsed)};
+		if (tcp_relay_bind_parsed)
+		{
+			auto l_tokens{tcp_relay_bind.Split(":")};
+			if (l_tokens.size() == 2)
+			{
+				auto l_ip{(l_tokens[0].IsEmpty()) ? ip_list[0] : l_tokens[0]};
+				auto l_port{l_tokens[1]};
+				tcp_relay_bind = ov::String::FormatString("%s:%s", l_ip.CStr(), l_port.CStr());
+				auto l_tcp_address = ov::SocketAddress::CreateAndGetFirst(tcp_relay_bind);
+				tcp_relay_bind_parsed = l_tcp_address.IsValid();
+
+				if (tcp_relay_bind_parsed == false)
+				{
+					logte("TcpRelayBind invalid address: %s", tcp_relay_bind.CStr());
+				}
+			}
+			else
+			{
+				tcp_relay_bind_parsed = false;
+				logte("TcpRelayBind format is incorrect: %s (Must be in <Relay Local IP>:<Port> format)", tcp_relay_bind.CStr());
+			}
+		}
+
+		auto tcp_relay_listen{(tcp_relay_bind_parsed) ? tcp_relay_bind : ov::String::FormatString("*:%s", items[1].CStr())};
+		auto tcp_relay_address = ov::SocketAddress::CreateAndGetFirst(tcp_relay_listen);
+
+		bool tcp_relay_worker_count_parsed{false};
+		auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&tcp_relay_worker_count_parsed);
+		tcp_relay_worker_count = tcp_relay_worker_count_parsed ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+
+		if (IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), tcp_relay_address, ov::SocketType::Tcp, tcp_relay_worker_count) == false)
+		{
+			logte("Could not create Turn Server. Check your configuration");
+			return false;
+		}
+	}
+
+	return true;
+}
 
 bool WebRtcPublisher::Start()
 {
@@ -53,127 +162,21 @@ bool WebRtcPublisher::Start()
 		return true;
 	}
 
-	auto &signalling_config = webrtc_bind_config.GetSignalling();
-	auto &port_config = signalling_config.GetPort();
-	auto &tls_port_config = signalling_config.GetTlsPort();
-
-	bool is_parsed;
-	auto worker_count = signalling_config.GetWorkerCount(&is_parsed);
-	worker_count = is_parsed ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
-
-	auto port = static_cast<uint16_t>(port_config.GetPort());
-	auto tls_port = static_cast<uint16_t>(tls_port_config.GetPort());
-	bool has_port = (port != 0);
-	bool has_tls_port = (tls_port != 0);
-
-	if ((has_port == false) && (has_tls_port == false))
+	if (StartSignallingServer(server_config, webrtc_bind_config) &&
+		StartICEPorts(server_config, webrtc_bind_config))
 	{
-		logte("Invalid WebRTC Port settings");
-		return false;
+		_message_thread.Start(ov::MessageThreadObserver<std::shared_ptr<ov::CommonMessage>>::GetSharedPtr());
+
+		return Publisher::Start();
 	}
 
-	ov::SocketAddress signalling_address = ov::SocketAddress(server_config.GetIp(), port);
-	ov::SocketAddress signalling_tls_address = ov::SocketAddress(server_config.GetIp(), tls_port);
+	logte("An error occurred while initialize %s. Stopping RtcSignallingServer...", GetPublisherName());
 
-	// Initialize RtcSignallingServer
-	auto interceptor = std::make_shared<WebRtcPublisherSignallingInterceptor>();
-	_signalling_server = std::make_shared<RtcSignallingServer>(server_config, server_config.GetBind().GetPublishers().GetWebrtc());
-	_signalling_server->AddObserver(RtcSignallingObserver::GetSharedPtr());
-	if (_signalling_server->Start(has_port ? &signalling_address : nullptr, has_tls_port ? &signalling_tls_address : nullptr, worker_count, interceptor) == false)
-	{
-		return false;
-	}
+	_signalling_server->Stop();
 
-	bool result = true;
+	IcePortManager::GetInstance()->Release(IcePortObserver::GetSharedPtr());
 
-	_ice_port = IcePortManager::GetInstance()->CreatePort(IcePortObserver::GetSharedPtr());
-	if (_ice_port == nullptr)
-	{
-		logte("Could not initialize ICE Port. Check your ICE configuration");
-		result = false;
-	}
-
-	auto &ice_candidates_config = webrtc_bind_config.GetIceCandidates();
-
-	if(IcePortManager::GetInstance()->CreateIceCandidates(IcePortObserver::GetSharedPtr(), ice_candidates_config) == false)
-	{
-		logte("Could not create ICE Candidates. Check your ICE configuration");
-		result = false;
-	}
-	
-	bool tcp_relay_parsed = false;
-	auto tcp_relay = ice_candidates_config.GetTcpRelay(&tcp_relay_parsed);
-	if(tcp_relay_parsed)
-	{
-		auto items = tcp_relay.Split(":");
-		if(items.size() != 2)
-		{
-			logte("TcpRelay format is incorrect : <Relay IP>:<Port>");
-		}
-		else
-		{
-			bool tcp_relay_bind_parsed { false };
-			ov::String tcp_relay_bind { webrtc_bind_config.GetTcpRelayBind(&tcp_relay_bind_parsed) };
-			if(tcp_relay_bind_parsed)
-			{
-				auto l_tokens { tcp_relay_bind.Split(":") };
-				if(l_tokens.size() == 2)
-				{
-					auto l_ip { (l_tokens[0].IsEmpty()) ? server_config.GetIp() : l_tokens[0] };
-					auto l_port { l_tokens[1] };
-					tcp_relay_bind = ov::String::FormatString("%s:%s", l_ip.CStr(), l_port.CStr());
-					ov::SocketAddress l_tcp_address(tcp_relay_bind);
-					tcp_relay_bind_parsed = l_tcp_address.IsValid();
-					if(!tcp_relay_bind_parsed)
-					{
-						logte("TcpRelayBind invalid address: %s", tcp_relay_bind.CStr());
-					}
-				}
-				else
-				{
-					tcp_relay_bind_parsed = false;
-					logte("TcpRelayBind format is incorrect: <Relay Local IP>:<Port>");
-				}
-			}
-
-			auto tcp_relay_listen { (tcp_relay_bind_parsed) ? tcp_relay_bind : ov::String::FormatString("*:%s", items[1].CStr()) };
-			ov::SocketAddress tcp_relay_address(tcp_relay_listen);
-
-			bool tcp_relay_worker_count_parsed { false };
-			auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&tcp_relay_worker_count_parsed);
-			tcp_relay_worker_count = tcp_relay_worker_count_parsed ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
-
-			if(IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), tcp_relay_address, ov::SocketType::Tcp, tcp_relay_worker_count) == false)
-			{
-				logte("Could not create Turn Server. Check your configuration");
-				result = false;
-			}
-		}
-	}
-
-	if (result)
-	{
-		logti("%s is listening on %s%s%s%s...",
-			  GetPublisherName(),
-			  has_port ? signalling_address.ToString().CStr() : "",
-			  (has_port && has_tls_port) ? ", " : "",
-			  has_tls_port ? "TLS: " : "",
-			  has_tls_port ? signalling_tls_address.ToString().CStr() : "");
-	}
-	else
-	{
-		// Rollback
-		logte("An error occurred while initialize WebRTC Publisher. Stopping RtcSignallingServer...");
-
-		_signalling_server->Stop();
-		IcePortManager::GetInstance()->Release(IcePortObserver::GetSharedPtr());
-
-		return false;
-	}
-
-	_message_thread.Start(ov::MessageThreadObserver<std::shared_ptr<ov::CommonMessage>>::GetSharedPtr());
-
-	return Publisher::Start();
+	return false;
 }
 
 bool WebRtcPublisher::Stop()
@@ -218,12 +221,12 @@ bool WebRtcPublisher::DisconnectSessionInternal(const std::shared_ptr<RtcSession
 void WebRtcPublisher::OnMessage(const std::shared_ptr<ov::CommonMessage> &message)
 {
 	auto code = static_cast<MessageCode>(message->_code);
-	if(code == MessageCode::DISCONNECT_SESSION)
+	if (code == MessageCode::DISCONNECT_SESSION)
 	{
-		try 
+		try
 		{
 			auto session = std::any_cast<std::shared_ptr<RtcSession>>(message->_message);
-			if(session == nullptr)
+			if (session == nullptr)
 			{
 				return;
 			}
@@ -231,7 +234,7 @@ void WebRtcPublisher::OnMessage(const std::shared_ptr<ov::CommonMessage> &messag
 			_ice_port->RemoveSession(session->GetId());
 			DisconnectSessionInternal(session);
 		}
-		catch(const std::bad_any_cast& e) 
+		catch (const std::bad_any_cast &e)
 		{
 			logtc("Wrong message!");
 			return;
@@ -241,7 +244,7 @@ void WebRtcPublisher::OnMessage(const std::shared_ptr<ov::CommonMessage> &messag
 
 bool WebRtcPublisher::OnCreateHost(const info::Host &host_info)
 {
-	if(_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+	if (_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
 	{
 		return _signalling_server->AppendCertificate(host_info.GetCertificate());
 	}
@@ -251,7 +254,7 @@ bool WebRtcPublisher::OnCreateHost(const info::Host &host_info)
 
 bool WebRtcPublisher::OnDeleteHost(const info::Host &host_info)
 {
-	if(_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+	if (_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
 	{
 		return _signalling_server->RemoveCertificate(host_info.GetCertificate());
 	}
@@ -260,7 +263,7 @@ bool WebRtcPublisher::OnDeleteHost(const info::Host &host_info)
 
 std::shared_ptr<pub::Application> WebRtcPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
-	if(IsModuleAvailable() == false)
+	if (IsModuleAvailable() == false)
 	{
 		return nullptr;
 	}
@@ -300,41 +303,41 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 	ov::String final_file_name = parsed_url->File();
 
 	// PORT can be omitted if port is default port, but SignedPolicy requires this information.
-	if(parsed_url->Port() == 0)
+	if (parsed_url->Port() == 0)
 	{
 		parsed_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 	}
 
 	uint64_t session_life_time = 0;
 	std::shared_ptr<const SignedToken> signed_token;
-	auto [signed_policy_result, signed_policy] =  Publisher::VerifyBySignedPolicy(parsed_url, remote_address);
-	if(signed_policy_result == AccessController::VerificationResult::Pass)
+	auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(parsed_url, remote_address);
+	if (signed_policy_result == AccessController::VerificationResult::Pass)
 	{
 		session_life_time = signed_policy->GetStreamExpireEpochMSec();
 	}
-	else if(signed_policy_result == AccessController::VerificationResult::Error)
+	else if (signed_policy_result == AccessController::VerificationResult::Error)
 	{
 		return nullptr;
 	}
-	else if(signed_policy_result == AccessController::VerificationResult::Fail)
+	else if (signed_policy_result == AccessController::VerificationResult::Fail)
 	{
 		logtw("%s", signed_policy->GetErrMessage().CStr());
 		return nullptr;
 	}
-	else if(signed_policy_result == AccessController::VerificationResult::Off)
+	else if (signed_policy_result == AccessController::VerificationResult::Off)
 	{
 		// SingedToken
 		auto [signed_token_result, signed_token] = Publisher::VerifyBySignedToken(parsed_url, remote_address);
-		if(signed_token_result == AccessController::VerificationResult::Error)
+		if (signed_token_result == AccessController::VerificationResult::Error)
 		{
 			return nullptr;
 		}
-		else if(signed_token_result == AccessController::VerificationResult::Fail)
+		else if (signed_token_result == AccessController::VerificationResult::Fail)
 		{
 			logtw("%s", signed_token->GetErrMessage().CStr());
 			return nullptr;
 		}
-		else if(signed_token_result == AccessController::VerificationResult::Pass)
+		else if (signed_token_result == AccessController::VerificationResult::Pass)
 		{
 			session_life_time = signed_token->GetStreamExpiredTime();
 		}
@@ -342,28 +345,28 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 
 	// Admission Webhooks
 	auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(parsed_url, remote_address);
-	if(webhooks_result == AccessController::VerificationResult::Off)
+	if (webhooks_result == AccessController::VerificationResult::Off)
 	{
 		// Success
 	}
-	else if(webhooks_result == AccessController::VerificationResult::Pass)
+	else if (webhooks_result == AccessController::VerificationResult::Pass)
 	{
 		// Lifetime
-		if(admission_webhooks->GetLifetime() != 0)
+		if (admission_webhooks->GetLifetime() != 0)
 		{
 			// Choice smaller value
 			auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + admission_webhooks->GetLifetime();
-			if(session_life_time == 0 || stream_expired_msec_from_webhooks < session_life_time)
+			if (session_life_time == 0 || stream_expired_msec_from_webhooks < session_life_time)
 			{
 				session_life_time = stream_expired_msec_from_webhooks;
 			}
 		}
 
 		// Redirect URL
-		if(admission_webhooks->GetNewURL() != nullptr)
+		if (admission_webhooks->GetNewURL() != nullptr)
 		{
 			parsed_url = admission_webhooks->GetNewURL();
-			if(parsed_url->Port() == 0)
+			if (parsed_url->Port() == 0)
 			{
 				parsed_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 			}
@@ -374,22 +377,22 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 			final_file_name = parsed_url->File();
 		}
 	}
-	else if(webhooks_result == AccessController::VerificationResult::Error)
+	else if (webhooks_result == AccessController::VerificationResult::Error)
 	{
 		logtw("AdmissionWebhooks error : %s", parsed_url->ToUrlString().CStr());
 		return nullptr;
 	}
-	else if(webhooks_result == AccessController::VerificationResult::Fail)
+	else if (webhooks_result == AccessController::VerificationResult::Fail)
 	{
 		logtw("AdmissionWebhooks error : %s", admission_webhooks->GetErrReason().CStr());
 		return nullptr;
 	}
 
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(final_vhost_app_name, final_stream_name));
-	if(stream == nullptr)
+	if (stream == nullptr)
 	{
 		stream = std::dynamic_pointer_cast<RtcStream>(PullStream(parsed_url, final_vhost_app_name, final_host_name, final_stream_name));
-		if(stream == nullptr)
+		if (stream == nullptr)
 		{
 			result = RequestStreamResult::origin_failed;
 		}
@@ -409,21 +412,21 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		return nullptr;
 	}
 
-	if(stream->WaitUntilStart(10000) == false)
+	if (stream->WaitUntilStart(10000) == false)
 	{
 		logtw("(%s/%s) stream has not started.", final_vhost_app_name.CStr(), final_stream_name.CStr());
 		return nullptr;
 	}
 
 	auto file_sdp = stream->GetSessionDescription(final_file_name);
-	if(file_sdp == nullptr)
+	if (file_sdp == nullptr)
 	{
 		logte("Cannot find file (%s/%s/%s)", final_vhost_app_name.CStr(), final_stream_name.CStr(), final_file_name.CStr());
 		return nullptr;
 	}
 
 	auto transport = parsed_url->GetQueryValue("transport");
-	if(transport.UpperCaseString() == "TCP")
+	if (transport.UpperCaseString() == "TCP")
 	{
 		tcp_relay = true;
 	}
@@ -438,7 +441,8 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 
 	// Copy SDP
 	auto session_description = std::make_shared<SessionDescription>(*file_sdp);
-	session_description->SetOrigin("OvenMediaEngine", ov::Unique::GenerateUint32(), 2, "IN", 4, "127.0.0.1");
+
+	session_description->SetOrigin("OvenMediaEngine", ov::Unique::GenerateUint32(), 2, "IN", 6, "::1");
 	session_description->SetIceUfrag(_ice_port->GenerateUfrag());
 	session_description->Update();
 
@@ -459,10 +463,10 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	auto [autorized_exist, authorized] = ws_session->GetUserData("authorized");
 	ov::String uri;
 	uint64_t session_life_time = 0;
-	if(autorized_exist == true && std::holds_alternative<bool>(authorized) == true && std::get<bool>(authorized) == true)
+	if (autorized_exist == true && std::holds_alternative<bool>(authorized) == true && std::get<bool>(authorized) == true)
 	{
 		auto [new_url_exist, new_url] = ws_session->GetUserData("new_url");
-		if(new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
+		if (new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
 		{
 			uri = std::get<ov::String>(new_url);
 		}
@@ -472,7 +476,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 		}
 
 		auto [stream_expired_exist, stream_expired] = ws_session->GetUserData("stream_expired");
-		if(stream_expired_exist == true && std::holds_alternative<uint64_t>(stream_expired) == true)
+		if (stream_expired_exist == true && std::holds_alternative<uint64_t>(stream_expired) == true)
 		{
 			session_life_time = std::get<uint64_t>(stream_expired);
 		}
@@ -501,7 +505,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	// SignedPolicy and SignedToken
 	auto request = ws_session->GetRequest();
 	auto remote_address = request->GetRemote()->GetRemoteAddress();
-	
+
 	ov::String remote_sdp_text = peer_sdp->ToString();
 	logtd("OnAddRemoteDescription: %s", remote_sdp_text.CStr());
 
@@ -532,16 +536,16 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 }
 
 bool WebRtcPublisher::OnChangeRendition(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
-								   bool change_rendition, const ov::String &rendition_name, bool change_auto, bool &auto_abr,
-								   const std::shared_ptr<const SessionDescription> &offer_sdp,
-									const std::shared_ptr<const SessionDescription> &peer_sdp)
+										bool change_rendition, const ov::String &rendition_name, bool change_auto, bool &auto_abr,
+										const std::shared_ptr<const SessionDescription> &offer_sdp,
+										const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
 	auto [autorized_exist, authorized] = ws_session->GetUserData("authorized");
 	ov::String uri;
-	if(autorized_exist == true && std::holds_alternative<bool>(authorized) == true && std::get<bool>(authorized) == true)
+	if (autorized_exist == true && std::holds_alternative<bool>(authorized) == true && std::get<bool>(authorized) == true)
 	{
 		auto [new_url_exist, new_url] = ws_session->GetUserData("new_url");
-		if(new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
+		if (new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
 		{
 			uri = std::get<ov::String>(new_url);
 		}
@@ -603,8 +607,8 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::WebSock
 {
 	logti("Stop command received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 
-	ov::String uri { ws_session->GetRequest()->GetUri() };
-	auto parsed_url { ov::Url::Parse(uri) };
+	ov::String uri{ws_session->GetRequest()->GetUri()};
+	auto parsed_url{ov::Url::Parse(uri)};
 
 	auto final_vhost_app_name = vhost_app_name;
 	auto final_stream_name = stream_name;
@@ -625,7 +629,7 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::WebSock
 	}
 
 	// Send Close to Admission Webhooks
-	auto remote_address { ws_session->GetRequest()->GetRemote()->GetRemoteAddress() };
+	auto remote_address{ws_session->GetRequest()->GetRemote()->GetRemoteAddress()};
 	if (parsed_url && remote_address)
 	{
 		SendCloseAdmissionWebhooks(parsed_url, remote_address);
@@ -669,19 +673,19 @@ bool WebRtcPublisher::OnIceCandidate(const std::shared_ptr<http::svr::ws::WebSoc
 void WebRtcPublisher::OnStateChanged(IcePort &port, uint32_t session_id, IcePortConnectionState state, std::any user_data)
 {
 	logtd("IcePort OnStateChanged : %d", state);
-	
+
 	std::shared_ptr<RtcSession> session;
 	try
 	{
-		session = std::any_cast<std::shared_ptr<RtcSession>>(user_data);	
+		session = std::any_cast<std::shared_ptr<RtcSession>>(user_data);
 	}
-	catch(const std::bad_any_cast& e)
+	catch (const std::bad_any_cast &e)
 	{
 		// Internal Error
 		logtc("WebRtcPublisher::OnDataReceived - Could not convert user_data, internal error");
 		return;
 	}
-	
+
 	auto application = session->GetApplication();
 	auto stream = std::static_pointer_cast<RtcStream>(session->GetStream());
 
@@ -695,8 +699,7 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, uint32_t session_id, IcePort
 			break;
 		case IcePortConnectionState::Failed:
 		case IcePortConnectionState::Disconnected:
-		case IcePortConnectionState::Closed:
-		{
+		case IcePortConnectionState::Closed: {
 			logti("IcePort is disconnected. : (%s/%s/%u) reason(%d)", stream->GetApplicationName(), stream->GetName().CStr(), session->GetId(), state);
 
 			_signalling_server->Disconnect(session->GetApplication()->GetName(), session->GetStream()->GetName(), session->GetPeerSDP());
@@ -709,14 +712,14 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, uint32_t session_id, IcePort
 	}
 }
 
-void WebRtcPublisher::OnDataReceived(IcePort &port,uint32_t session_id, std::shared_ptr<const ov::Data> data, std::any user_data)
+void WebRtcPublisher::OnDataReceived(IcePort &port, uint32_t session_id, std::shared_ptr<const ov::Data> data, std::any user_data)
 {
 	std::shared_ptr<RtcSession> session;
 	try
 	{
-		session = std::any_cast<std::shared_ptr<RtcSession>>(user_data);	
+		session = std::any_cast<std::shared_ptr<RtcSession>>(user_data);
 	}
-	catch(const std::bad_any_cast& e)
+	catch (const std::bad_any_cast &e)
 	{
 		// Internal Error
 		logtc("WebRtcPublisher::OnDataReceived - Could not convert user_data, internal error");

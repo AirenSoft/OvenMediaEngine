@@ -271,6 +271,33 @@ namespace cmn
 		return "Auto";
 	}
 
+	static ov::String GetStringFromCodecId(cmn::MediaCodecId id)
+	{
+		switch (id)
+		{
+			case cmn::MediaCodecId::H264:
+				return "H264";
+			case cmn::MediaCodecId::H265:
+				return "H265";
+			case cmn::MediaCodecId::Vp8:
+				return "VP8";
+			case cmn::MediaCodecId::Vp9:
+				return "VP9";
+			case cmn::MediaCodecId::Aac:
+				return "AAC";
+			case cmn::MediaCodecId::Opus:
+				return "OPUS";
+			case cmn::MediaCodecId::Jpeg:
+				return "JPEG";
+			case cmn::MediaCodecId::Png:
+				return "PNG";
+			default:
+				break;
+		}
+
+		return "Unknown";
+	}
+
 	static cmn::MediaCodecId GetCodecIdByName(ov::String name)
 	{
 		name.MakeUpper();

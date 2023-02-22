@@ -107,7 +107,7 @@ namespace pvd
 			return false;
 		}
 
-		auto data_track = GetFirstTrack(cmn::MediaType::Data);
+		auto data_track = GetFirstTrackByType(cmn::MediaType::Data);
 		if (data_track == nullptr)
 		{
 			logte("Data track is not found. %s/%s(%u)", GetApplicationName(), GetName().CStr(), GetId());

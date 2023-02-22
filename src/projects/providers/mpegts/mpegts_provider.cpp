@@ -42,33 +42,72 @@ namespace pvd
 	bool MpegTsProvider::BindMpegTSPorts()
 	{
 		auto &server_config = GetServerConfig();
-		auto &ip = server_config.GetIp();
+		auto &ip_list = server_config.GetIPList();
 		auto &mpegts_provider_config = server_config.GetBind().GetProviders().GetMpegts();
 		auto &port_config = mpegts_provider_config.GetPort();
 		auto &port_list_config = port_config.GetPortList();
 		auto socket_type = port_config.GetSocketType();
 
+		std::map<uint16_t, std::shared_ptr<MpegTsStreamPortItem>> stream_port_map;
+		std::vector<ov::String> address_string_list;
+
+		auto physical_port_manager = PhysicalPortManager::GetInstance();
+
+		bool result = true;
+
 		for (const auto &port : port_list_config)
 		{
-			auto address = ov::SocketAddress(ip, port);
-			auto physical_port = PhysicalPortManager::GetInstance()->CreatePort("MPEGTS", socket_type, address, 1);
-			if (physical_port == nullptr)
+			const auto address_list = ov::SocketAddress::Create(ip_list, port);
+			std::vector<std::shared_ptr<PhysicalPort>> physical_port_list;
+
+			for (const auto &address : address_list)
 			{
-				logte("Could not initialize phyiscal port for MPEG-TS server: %s/%s", address.ToString().CStr(), ov::StringFromSocketType(socket_type));
-				return false;
-			}
-			else
-			{
-				logti("%s is listening on %s/%s", GetProviderName(), address.ToString().CStr(), ov::StringFromSocketType(socket_type));
+				auto physical_port = physical_port_manager->CreatePort("MPEGTS", socket_type, address, 1);
+
+				if (physical_port == nullptr)
+				{
+					logte("Could not initialize phyiscal port for MPEG-TS server: %s/%s", address.ToString().CStr(), ov::StringFromSocketType(socket_type));
+					result = false;
+					break;
+				}
+				else
+				{
+					address_string_list.emplace_back(address.ToString());
+				}
+
+				physical_port->AddObserver(this);
+
+				physical_port_list.emplace_back(physical_port);
 			}
 
-			physical_port->AddObserver(this);
-
-			auto stream_map_item = std::make_shared<MpegTsStreamPortItem>(socket_type, port, physical_port);
-			_stream_port_map.emplace(port, stream_map_item);
+			stream_port_map.emplace(port, std::make_shared<MpegTsStreamPortItem>(socket_type, port, physical_port_list));
 		}
 
-		return true;
+		if (result)
+		{
+			auto socket_type_string = ov::StringFromSocketType(socket_type);
+			ov::String suffix = ov::String::FormatString("/%s, ", socket_type_string);
+			logti("%s is listening on %s/%s", GetProviderName(), ov::String::Join(address_string_list, suffix).CStr(), socket_type_string);
+
+			{
+				std::unique_lock lock_guard{_stream_port_map_lock};
+				_stream_port_map = std::move(stream_port_map);
+			}
+			return true;
+		}
+
+		for (const auto &stream_port : stream_port_map)
+		{
+			auto physical_port_list = stream_port.second->GetPhysicalPortList();
+
+			for (auto &physical_port : physical_port_list)
+			{
+				physical_port->RemoveObserver(this);
+				physical_port_manager->DeletePort(physical_port);
+			}
+		}
+
+		return false;
 	}
 
 	std::shared_ptr<MpegTsStreamPortItem> MpegTsProvider::GetDetachedStreamPortItem()
@@ -110,14 +149,19 @@ namespace pvd
 
 	bool MpegTsProvider::Stop()
 	{
-		for (const auto &x : _stream_port_map)
+		auto stream_port_map = std::move(_stream_port_map);
+
+		for (const auto &x : stream_port_map)
 		{
 			auto stream_port_item = x.second;
-			auto physical_port = stream_port_item->GetPhysicalPort();
-			physical_port->RemoveObserver(this);
-			PhysicalPortManager::GetInstance()->DeletePort(physical_port);
+			auto physical_port_list = stream_port_item->GetPhysicalPortList();
+
+			for (auto &physical_port : physical_port_list)
+			{
+				physical_port->RemoveObserver(this);
+				PhysicalPortManager::GetInstance()->DeletePort(physical_port);
+			}
 		}
-		_stream_port_map.clear();
 
 		StopTimer();
 
@@ -128,7 +172,7 @@ namespace pvd
 	{
 		return true;
 	}
-	
+
 	bool MpegTsProvider::OnDeleteHost(const info::Host &host_info)
 	{
 		return true;
@@ -136,7 +180,7 @@ namespace pvd
 
 	std::shared_ptr<pvd::Application> MpegTsProvider::OnCreateProviderApplication(const info::Application &application_info)
 	{
-		if(IsModuleAvailable() == false)
+		if (IsModuleAvailable() == false)
 		{
 			return nullptr;
 		}
@@ -189,7 +233,16 @@ namespace pvd
 			}
 		}
 
-		return MpegTsApplication::Create(GetSharedPtrAs<pvd::PushProvider>(), application_info);
+		auto application = MpegTsApplication::Create(GetSharedPtrAs<pvd::PushProvider>(), application_info);
+		if (application == nullptr)
+		{
+			return nullptr;
+		}
+
+		auto audio_map = app_config.GetProviders().GetMpegtsProvider().GetAudioMap();
+		application->AddAudioMapItems(audio_map);
+
+		return application;
 	}
 
 	bool MpegTsProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
@@ -224,7 +277,7 @@ namespace pvd
 	// This function is not called by PhysicalPort when the protocol is udp (MPEGTS/UDP)
 	void MpegTsProvider::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	{
-		if(remote->GetRemoteAddress() == nullptr)
+		if (remote->GetRemoteAddress() == nullptr)
 		{
 			logte("A client connecting via MPEG-TS/TCP must have the remote address information");
 			return;
@@ -274,7 +327,7 @@ namespace pvd
 		// UDP
 		if (stream_port_item->IsClientConnected() == false)
 		{
-			if(OnConnected(remote, address) == false)
+			if (OnConnected(remote, address) == false)
 			{
 				return;
 			}

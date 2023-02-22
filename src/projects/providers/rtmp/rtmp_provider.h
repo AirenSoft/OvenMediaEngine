@@ -74,6 +74,6 @@ namespace pvd
 							const std::shared_ptr<const ov::Error> &error) override;
 
 	private:
-		std::shared_ptr<PhysicalPort> _physical_port;
+		std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
 	};
 }

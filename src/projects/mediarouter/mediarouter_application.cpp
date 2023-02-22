@@ -242,16 +242,6 @@ bool MediaRouteApplication::OnStreamCreated(const std::shared_ptr<MediaRouteAppl
 		return false;
 	}
 
-	// If track name of stream_info is empty, create a new name as a random string and set it.
-	for (auto &track_it : stream_info->GetTracks())
-	{
-		auto &track = track_it.second;
-		if (track->GetName().IsEmpty())
-		{
-			track->SetName(ov::Random::GenerateString(8));
-		}
-	}
-
 	logti("[%s/%s(%u)] Trying to create a stream", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
 	auto connector_type = app_conn->GetConnectorType();
@@ -310,7 +300,7 @@ bool MediaRouteApplication::OnStreamCreated(const std::shared_ptr<MediaRouteAppl
 	}
 
 	// If all track information is validity, Notify the observer that the current stream is preapred.
-	if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
+	if (stream->IsStreamPrepared() == false && stream->AreAllTracksReady() == true)
 	{
 		logti("[%s/%s(%u)] Stream has been created %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
 		
@@ -765,7 +755,7 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 			continue;
 		}
 
-		// StreamDeliver media packet to Publiser(observer) of Transcoder(observer)
+		// StreamDeliver media packet to Publisher(observer) of Transcoder(observer)
 		auto media_packet = stream->Pop();
 		if (media_packet == nullptr)
 		{
@@ -774,7 +764,7 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 
 		// When the inbound stream is finished parsing track information,
 		// Notify the Observer that the stream is parsed
-		if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
+		if (stream->IsStreamPrepared() == false && stream->AreAllTracksReady() == true)
 		{
 			logti("[%s/%s(%u)] Stream has been created %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
 			
@@ -819,14 +809,14 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 			continue;
 		}
 
-		// StreamDeliver media packet to Publiser(observer) of Transcoder(observer)
+		// StreamDeliver media packet to Publisher(observer) of Transcoder(observer)
 		auto media_packet = stream->Pop();
 		if (media_packet == nullptr)
 		{
 			continue;
 		}
 
-		if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
+		if (stream->IsStreamPrepared() == false && stream->AreAllTracksReady() == true)
 		{
 			logti("[%s/%s(%u)] Stream has been created %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
 

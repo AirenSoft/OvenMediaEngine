@@ -22,11 +22,11 @@ namespace api
 			// POST /v1/vhosts
 			ApiResponse OnPostVHost(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body);
 
+			// POST /v1/vhosts:store
+			ApiResponse OnPostVHostStore(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body);
+
 			// GET /v1/vhosts
 			ApiResponse OnGetVHostList(const std::shared_ptr<http::svr::HttpExchange> &client);
-
-			// GET /v1/vhosts/storage
-			ApiResponse OnGetVHostStorage(const std::shared_ptr<http::svr::HttpExchange> &client);
 
 			// GET /v1/vhosts/<vhost_name>
 			ApiResponse OnGetVHost(const std::shared_ptr<http::svr::HttpExchange> &client,

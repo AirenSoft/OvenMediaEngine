@@ -161,10 +161,15 @@ namespace pub
 
 			// If the selected track list exists. if the current trackid does not exist on the list, ignore it.
 			// If no track list is selected, save all tracks.
-			auto selected_tracks = GetRecord()->GetStream().GetTracks();
-			if ((selected_tracks.empty() != true) && selected_tracks.find(track->GetId()) == selected_tracks.end())
+			auto selected_track_ids = GetRecord()->GetTrackIds();
+			auto selected_track_names = GetRecord()->GetVariantNames();
+			if (selected_track_ids.size() > 0 || selected_track_names.size() > 0)
 			{
-				continue;
+				if ((find(selected_track_ids.begin(), selected_track_ids.end(), track->GetId()) == selected_track_ids.end()) &&
+					(find(selected_track_names.begin(), selected_track_names.end(), track->GetVariantName()) == selected_track_names.end()))
+				{
+					continue;
+				}
 			}
 
 			if (FileWriter::IsSupportCodec(output_format, track->GetCodecId()) == false)

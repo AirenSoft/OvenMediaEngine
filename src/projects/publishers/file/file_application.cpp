@@ -300,7 +300,9 @@ std::shared_ptr<ov::Error> FileApplication::RecordStop(const std::shared_ptr<inf
 	//
 	record->SetState(info::Record::RecordState::Stopping);
 	record->SetMetadata(userdata->GetMetadata());
-	record->SetStream(userdata->GetStream());
+	record->SetStreamName(userdata->GetStreamName());
+	record->SetTrackIds(userdata->GetTrackIds());
+	record->SetVariantNames(userdata->GetVariantNames());
 	record->SetSessionId(userdata->GetSessionId());
 	record->SetInterval(userdata->GetInterval());
 	record->SetSchedule(userdata->GetSchedule());

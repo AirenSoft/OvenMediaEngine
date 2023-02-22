@@ -21,9 +21,9 @@ namespace api
 		void VHostsController::PrepareHandlers()
 		{
 			RegisterPost(R"()", &VHostsController::OnPostVHost);
+			RegisterPost(R"(:store)", &VHostsController::OnPostVHostStore);
 
 			RegisterGet(R"()", &VHostsController::OnGetVHostList);
-			RegisterGet(R"(\/storage)", &VHostsController::OnGetVHostStorage);
 
 			RegisterGet(R"(\/(?<vhost_name>[^\/]*))", &VHostsController::OnGetVHost);
 
@@ -82,6 +82,12 @@ namespace api
 			return {status_codes, std::move(response_value)};
 		}
 
+		ApiResponse VHostsController::OnPostVHostStore(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body)
+		{
+			_server->StorageVHosts();
+			return {};
+		}
+
 		ApiResponse VHostsController::OnGetVHostList(const std::shared_ptr<http::svr::HttpExchange> &client)
 		{
 			auto vhost_list = GetVirtualHostList();
@@ -93,13 +99,6 @@ namespace api
 			}
 
 			return response;
-		}
-
-		ApiResponse VHostsController::OnGetVHostStorage(const std::shared_ptr<http::svr::HttpExchange> &client)
-		{
-			_server->StorageVHosts();
-
-			return {};
 		}
 
 		ApiResponse VHostsController::OnGetVHost(const std::shared_ptr<http::svr::HttpExchange> &client,

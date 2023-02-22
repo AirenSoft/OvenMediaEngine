@@ -115,6 +115,7 @@ enum class StunErrorCode : uint16_t
 };
 
 // TODO: legacy 버전(RFC3489)에서는 길이가 다름. RFC3489는 나중에 추가할 것
+// Unit: bytes
 #define OV_STUN_TRANSACTION_ID_LENGTH                           12
 
 #define OV_STUN_FINGERPRINT_XOR_VALUE                           0x5354554E

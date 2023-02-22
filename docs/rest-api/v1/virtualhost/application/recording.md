@@ -1,136 +1,80 @@
-# Recording
+# Record
 
-{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}:startRecord" method="post" summary="/v1/vhosts/{vhost_name}/apps/{app_name}:startRecord" %}
+{% swagger baseUrl="http://<OME_HOST>:<API_PORT>/v1/vhosts/{vhost_name}/apps" path="/{app_name}:startRecord" method="post" summary="Start Recording" %}
 {% swagger-description %}
-This API performs a recording start request operation.  for recording, the output stream name must be specified. file path, information path, recording interval and schedule parameters can be specified as options.
-
-\
-
-
-
-
-\
-
-
-Request Example:
-
-\
-
-
-
-
-`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:startRecord`
-
-                       
-
-\
-
-
-`{`
-
-
-
-\
-
-
-  
-
-`"id": "custom_id",`
-
-
-
-\
-
-
-  
-
-`"stream": {`
-
-
-
-\
-
-
-    
-
-`"name": "stream_o",`
-
-
-
-\
-
-
-    
-
-`"tracks": [ 100, 200 ]`
-
-
-
-\
-
-
-  
-
-`},`
-
-\
-
-
-  
-
-`"filePath" : "/path/to/save/recorded/file_${Sequence}.ts",`
-
-\
-
-
-  
-
-`"infoPath" : "/path/to/save/information/file.xml",`
-
-\
-
-
-  
-
-`"interval" : 60000,    # Split it every 60 seconds`
-
-\
-
-
-  
-
-`"schedule" : "0 0 */1" # Split it at second 0, minute 0, every hours.`
-
- 
-
-\
-
-
-  
-
-`"segmentationRule" : "continuity"`
-
-\
-
-
-
-
+Description of the Start Recording API \
+
+
+**Example - Recording by Output Stream Name**\
+`POST http[s]://{host}/v1/vhosts/default/apps/app:startRecord`                       \
+`{`\
+&#x20; `"id": "{unique_record_id}",`\
+&#x20; `"stream": {`\
+&#x20;   `"name": "{output_stream_name}",`\
+&#x20; `}`\
+`}`\
+``
+
+**Example - Recording by Output Stream Name with Track Ids**\
+`POST http[s]://{host}/v1/vhosts/default/apps/app:startRecord`                       \
+`{`\
+&#x20; `"id": "{unique_record_id}",`\
+&#x20; `"stream": {`\
+&#x20;   `"name": "{output_stream_name}",`\
+&#x20;   `"trackIds": [ 100, 200 ]`\
+&#x20; `}`\
+`}`\
+``
+
+**Example - Recording by Output Stream Name with Variant Names**\
+`POST http[s]://{host}/v1/vhosts/default/apps/app:startRecord`                       \
+`{`\
+&#x20; `"id": "{unique_record_id}",`\
+&#x20; `"stream": {`\
+&#x20;   `"name": "{output_stream_name}",`\
+&#x20;   `"variantNames": [ "h264_fhd", "aac" ]`\
+&#x20; `}`\
 `}`
+
+&#x20;<mark style="color:green;">**\* variantName**</mark> means <mark style="color:green;">**Application.OutputProfiles.OutputProfie.Encodes.\[Video|Audio|Data].Name**</mark> <mark style="color:green;"></mark><mark style="color:green;"></mark> in the Server.xml configuration file.\
+``\
+``**Example - Split Recording by Interval**\
+`POST http[s]://{host}/v1/vhosts/default/apps/app:startRecord`                       \
+`{`\
+&#x20; `"id": "{unique_record_id}",`\
+&#x20; `"stream": {`\
+&#x20;   `"name": "{output_stream_name}"`\
+&#x20; `},`\
+&#x20; `"interval": 60000,`\
+&#x20; `"segmentationRule": "discontinuity"`\
+`}`\
+``\
+``**Example - Split Recording by Schedule**\
+`POST http[s]://{host}/v1/vhosts/default/apps/app:startRecord`                       \
+`{`\
+&#x20; `"id": "{unique_record_id}",`\
+&#x20; `"stream": {`\
+&#x20;   `"name": "{output_stream_name}"`\
+&#x20; `},`\
+&#x20; ``  "schedule" : "0 \*/1 \*"\
+&#x20; `"segmentationRule": "continuity"`\
+`}`\
+``
 {% endswagger-description %}
 
-{% swagger-parameter in="path" name="vhost_name" type="string" %}
+{% swagger-parameter in="path" name="vhost_name" type="string" required="true" %}
 A name of 
 
 `VirtualHost`
 {% endswagger-parameter %}
 
-{% swagger-parameter in="path" name="app_name" type="string" %}
+{% swagger-parameter in="path" name="app_name" type="string" required="true" %}
 A name of 
 
 `Application`
 {% endswagger-parameter %}
 
-{% swagger-parameter in="header" name="authorization" type="string" %}
+{% swagger-parameter in="header" name="authorization" type="string" required="true" %}
 A string for authentication in 
 
 `Basic Base64(AccessToken)`
@@ -149,8 +93,56 @@ For example,
 `ome-access-token`
 {% endswagger-parameter %}
 
+{% swagger-parameter in="body" name="id" type="string" required="true" %}
+An unique identifier for recording job.
+{% endswagger-parameter %}
+
+{% swagger-parameter in="body" name="stream" type="string" required="true" %}
+Output stream.
+{% endswagger-parameter %}
+
+{% swagger-parameter in="body" name="name" type="string" required="true" %}
+Output stream name.
+{% endswagger-parameter %}
+
+{% swagger-parameter in="body" name="trackIds" type="array" %}
+Used for recording specific track IDs.
+{% endswagger-parameter %}
+
+{% swagger-parameter in="body" name="variantNames" type="array" %}
+Used for recording specific variant names.
+{% endswagger-parameter %}
+
+{% swagger-parameter in="body" name="schedule" type="string" required="false" %}
+Schedule-based split recording settings.  Same as crontab setting. Unable to use with interval.
+
+\
+
+
+
+
+\
+
+
+Format :  <second minute hour> 
+{% endswagger-parameter %}
+
+{% swagger-parameter in="body" name="interval" type="number" %}
+Interval based split recording settings.  Unable to use with schedule.
+
+\
+
+
+
+
+\
+
+
+Format : Milliseconds
+{% endswagger-parameter %}
+
 {% swagger-parameter in="body" name="segmentationRule" type="string" %}
-Define the policy for continuously or discontinuously generating timestamp in divided recorded files.
+Define the policy for continuously or discontinuously timestamp in divided recorded files.
 
 \
 
@@ -168,51 +160,32 @@ Define the policy for continuously or discontinuously generating timestamp in di
 \- discontinuity  (default)
 {% endswagger-parameter %}
 
-{% swagger-parameter in="body" name="id" type="string" %}
-An unique identifier for recording job.
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="stream" type="string" %}
-Output stream.
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="name" type="string" %}
-Output stream name.
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="tracks" type="array" %}
-Default is all tracks. It is possible to record only a specific track using the track Id.
-
-\
-
-
-
-
-\
-
-
-\- default is all tracks
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="schedule" type="string" %}
-Schedule based split recording.  set only <second minute hour> using crontab method.
-
-\
-
-
-It cannot be used simultaneously with interval.
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="interval" type="number" %}
-Interval based split recording. It cannot be used simultaneously with schedule.
-{% endswagger-parameter %}
-
 {% swagger-parameter in="body" name="filePath" type="string" %}
-Set the path of the file to be recorded. same as setting macro pattern in Config file.
+Set the path of the file to be recorded. 
+
+\
+
+
+
+
+\
+
+
+Format: See Config Settings
 {% endswagger-parameter %}
 
 {% swagger-parameter in="body" name="infoPath" type="string" %}
-Set the path to the information file to be recorded. same as setting macro pattern in Config file.
+Set the path to the information file to be recorded. 
+
+\
+
+
+
+
+\
+
+
+Format: See Config Settings
 {% endswagger-parameter %}
 
 {% swagger-response status="200" description="" %}
@@ -262,64 +235,31 @@ Set the path to the information file to be recorded. same as setting macro patte
 {% endswagger-response %}
 {% endswagger %}
 
-{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}:stopRecord" method="post" summary="/v1/vhosts/{vhost_name}/apps/{app_name}:stopRecord" %}
+{% swagger baseUrl="http://<OME_HOST>:<API_PORT>/v1/vhosts/{vhost_name}/apps" path="/{app_name}:stopRecord" method="post" summary="Stop Recording" %}
 {% swagger-description %}
-This API performs a recording stop request. 
-
-\
+Description of the Stop Recording API \
 
 
-
-
-\
-
-
-Request Example:
-
-\
-
-
-
-
-`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:stopRecord`
-
-                         
-
-\
-
-
-`{`
-
-
-
-\
-
-
-  
-
-`"id": "custom_id"`
-
-
-
-\
-
-
+**Request Example**\
+`POST http[s]://{host}/v1/vhosts/default/apps/app:stopRecord`                         \
+`{`\
+&#x20; `"id": "{unique_record_id}"`\
 `}`
 {% endswagger-description %}
 
-{% swagger-parameter in="path" name="vhost_name" type="string" %}
+{% swagger-parameter in="path" name="vhost_name" type="string" required="true" %}
 A name of 
 
 `VirtualHost`
 {% endswagger-parameter %}
 
-{% swagger-parameter in="path" name="app_name" type="string" %}
+{% swagger-parameter in="path" name="app_name" type="string" required="true" %}
 A name of 
 
 `Application`
 {% endswagger-parameter %}
 
-{% swagger-parameter in="header" name="authorization" type="string" %}
+{% swagger-parameter in="header" name="authorization" type="string" required="true" %}
 A string for authentication in 
 
 `Basic Base64(AccessToken)`
@@ -340,7 +280,7 @@ For example,
 .
 {% endswagger-parameter %}
 
-{% swagger-parameter in="body" name="id" type="string" %}
+{% swagger-parameter in="body" name="id" type="string" required="true" %}
 An unique identifier for recording job.
 {% endswagger-parameter %}
 
@@ -397,9 +337,9 @@ An unique identifier for recording job.
 {% endswagger-response %}
 {% endswagger %}
 
-{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}:records" method="post" summary="/v1/vhosts/{vhost_name}/apps/{app_name}:records" %}
+{% swagger baseUrl="http://<OME_HOST>:<API_PORT>/v1/vhosts/{vhost_name}/apps" path="/{app_name}:records" method="post" summary="Recording Status" %}
 {% swagger-description %}
-This API performs a query of the job being recorded. Provides job inquiry function for all or custom Id. 
+Description of the Recording Status API 
 
 \
 
@@ -416,7 +356,7 @@ Request Example:
 
 
 
-`POST http://1.2.3.4:8081/v1/vhosts/default/apps/app:records`
+`POST http[s]://{host}/v1/vhosts/default/apps/app:records`
 
        
 
@@ -430,7 +370,7 @@ Request Example:
 
    
 
-`"id" : "custom_id"`
+`"id" : "{unique_record_id}"`
 
 \
 
@@ -440,19 +380,19 @@ Request Example:
                     
 {% endswagger-description %}
 
-{% swagger-parameter in="path" name="vhost_name" type="string" %}
+{% swagger-parameter in="path" name="vhost_name" type="string" required="true" %}
 A name of 
 
 `VirtualHost`
 {% endswagger-parameter %}
 
-{% swagger-parameter in="path" name="app_name" type="string" %}
+{% swagger-parameter in="path" name="app_name" type="string" required="true" %}
 A name of 
 
 `Application`
 {% endswagger-parameter %}
 
-{% swagger-parameter in="header" name="authorization" type="string" %}
+{% swagger-parameter in="header" name="authorization" type="string" required="true" %}
 A string for authentication in 
 
 `Basic Base64(AccessToken)`
@@ -473,7 +413,7 @@ For example,
 .
 {% endswagger-parameter %}
 
-{% swagger-parameter in="body" name="id" type="string" %}
+{% swagger-parameter in="body" name="id" type="string" required="false" %}
 An unique identifier for recording job. If no value is specified, the entire recording job is requested.
 {% endswagger-parameter %}
 

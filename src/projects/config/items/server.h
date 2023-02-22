@@ -40,7 +40,7 @@ namespace cfg
 		ov::String _typeName;
 		ServerType _type;
 
-		ov::String _ip;
+		std::vector<ov::String> _ip_list;
 		ov::String _stun_server;
 		bind::Bind _bind;
 		modules::modules _modules;
@@ -59,7 +59,7 @@ namespace cfg
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetTypeName, _typeName)
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetType, _type)
 
-		CFG_DECLARE_CONST_REF_GETTER_OF(GetIp, _ip)
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetIPList, _ip_list)
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetStunServer, _stun_server)
 
 		CFG_DECLARE_CONST_REF_GETTER_OF(IsPrivaryProtectionOn, _privacy_protection_on)
@@ -134,7 +134,7 @@ namespace cfg
 				return CreateConfigErrorPtr("Unknown type: %s", _typeName.CStr());
 			});
 
-			Register({"IP", "ip"}, &_ip);
+			Register({"IP", "ip"}, &_ip_list);
 			Register<Optional>("StunServer", &_stun_server);
 			Register<Optional>("PrivacyProtection", &_privacy_protection_on);
 			Register("Bind", &_bind);

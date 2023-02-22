@@ -47,10 +47,13 @@ namespace info
 		_created_time = stream._created_time;
 		_app_info = stream._app_info;
 		_origin_stream = stream._origin_stream;
-		_has_video_track = stream._has_video_track;
-		_has_audio_track = stream._has_audio_track;
 
 		_tracks = stream._tracks;
+		_video_tracks = stream._video_tracks;
+		_audio_tracks = stream._audio_tracks;
+
+		_track_group_map = stream._track_group_map;
+
 		_playlists = stream._playlists;
 		_representation_type = stream._representation_type;
 	}
@@ -97,7 +100,7 @@ namespace info
 	{
 		_msid = msid;
 	}
-	
+
 	uint32_t Stream::GetMsid()
 	{
 		return _msid;
@@ -189,11 +192,13 @@ namespace info
 		return _source_type;
 	}
 
-	StreamRepresentationType Stream::GetRepresentationType() const {
-		return _representation_type;		
+	StreamRepresentationType Stream::GetRepresentationType() const
+	{
+		return _representation_type;
 	}
-	
-	void Stream::SetRepresentationType(const StreamRepresentationType &type) {
+
+	void Stream::SetRepresentationType(const StreamRepresentationType &type)
+	{
 		_representation_type = type;
 	}
 
@@ -228,11 +233,25 @@ namespace info
 
 		if (track->GetMediaType() == cmn::MediaType::Video)
 		{
-			_has_video_track = true;
+			_video_tracks.push_back(track);
 		}
 		else if (track->GetMediaType() == cmn::MediaType::Audio)
 		{
-			_has_audio_track = true;
+			_audio_tracks.push_back(track);
+		}
+
+		// Add to group
+		auto group_it = _track_group_map.find(track->GetVariantName());
+		if (group_it == _track_group_map.end())
+		{
+			auto group = std::make_shared<MediaTrackGroup>(track->GetVariantName());
+			group->AddTrack(track);
+			_track_group_map.emplace(track->GetVariantName(), group);
+		}
+		else
+		{
+			auto group = group_it->second;
+			group->AddTrack(track);
 		}
 
 		return result;
@@ -249,21 +268,74 @@ namespace info
 		return item->second;
 	}
 
-	// Get Track by name
-	const std::shared_ptr<MediaTrack> Stream::GetTrack(const ov::String &name) const
+	const std::shared_ptr<MediaTrackGroup> Stream::GetMediaTrackGroup(const ov::String &group_name) const
 	{
-		for (auto &item : _tracks)
+		auto item = _track_group_map.find(group_name);
+		if (item == _track_group_map.end())
 		{
-			if (item.second->GetName() == name)
+			return nullptr;
+		}
+
+		return item->second;
+	}
+
+	const std::map<ov::String, std::shared_ptr<MediaTrackGroup>> &Stream::GetMediaTrackGroups() const
+	{
+		return _track_group_map;
+	}
+
+	uint32_t Stream::GetMediaTrackCount(const cmn::MediaType &type) const
+	{
+		if (type == cmn::MediaType::Video)
+		{
+			return _video_tracks.size();
+		}
+		else if (type == cmn::MediaType::Audio)
+		{
+			return _audio_tracks.size();
+		}
+
+		return 0;
+	}
+	
+	// start from 0
+	const std::shared_ptr<MediaTrack> Stream::GetMediaTrackByOrder(const cmn::MediaType &type, uint32_t order) const
+	{
+		if (type == cmn::MediaType::Video)
+		{
+			if (order >= _video_tracks.size())
 			{
-				return item.second;
+				return nullptr;
 			}
+
+			return _video_tracks[order];
+		}
+		else if (type == cmn::MediaType::Audio)
+		{
+			if (order >= _audio_tracks.size())
+			{
+				return nullptr;
+			}
+
+			return _audio_tracks[order];
 		}
 
 		return nullptr;
 	}
 
-	const std::shared_ptr<MediaTrack> Stream::GetFirstTrack(const cmn::MediaType &type) const
+	// Get Track by variant name
+	const std::shared_ptr<MediaTrack> Stream::GetFirstTrackByVariant(const ov::String &variant_name) const
+	{
+		auto group = GetMediaTrackGroup(variant_name);
+		if (group == nullptr || group->GetTrackCount() == 0)
+		{
+			return nullptr;
+		}
+
+		return group->GetTrack(0);
+	}
+
+	const std::shared_ptr<MediaTrack> Stream::GetFirstTrackByType(const cmn::MediaType &type) const
 	{
 		for (auto &item : _tracks)
 		{

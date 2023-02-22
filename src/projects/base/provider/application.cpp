@@ -120,13 +120,14 @@ namespace pvd
 		}
 
 		// If there is no data track, add data track
-		if (stream->GetFirstTrack(cmn::MediaType::Data) == nullptr)
+		if (stream->GetFirstTrackByType(cmn::MediaType::Data) == nullptr)
 		{
 			// Add data track 
 			auto data_track = std::make_shared<MediaTrack>();
-
 			// Issue unique track id
 			data_track->SetId(stream->IssueUniqueTrackId());
+			auto public_name = ov::String::FormatString("Data_%d", data_track->GetId());
+			data_track->SetPublicName(public_name);
 			data_track->SetMediaType(cmn::MediaType::Data);
 			data_track->SetTimeBase(1, 1000);
 			data_track->SetOriginBitstream(cmn::BitstreamFormat::Unknown);
@@ -145,6 +146,36 @@ namespace pvd
 			if(GetConfig().GetProviders().GetRtmpProvider().IsPassthroughOutputProfile() == true)
 			{
 				stream->SetRepresentationType(StreamRepresentationType::Relay);
+			}
+		}
+
+		// Add mapped audio track info
+		auto audio_map_item_count = GetAudioMapItemCount();
+		if (audio_map_item_count > 0)
+		{
+			for (size_t index=0; index < audio_map_item_count; index++)
+			{
+				auto audio_map_item = GetAudioMapItem(index);
+				auto audio_track = stream->GetMediaTrackByOrder(cmn::MediaType::Audio, index);
+				if (audio_map_item == nullptr || audio_track == nullptr)
+				{
+					break;
+				}
+
+				audio_track->SetPublicName(audio_map_item->GetName());
+				audio_track->SetLanguage(audio_map_item->GetLanguage());
+			}
+		}
+
+		// If track has not PublicName, set PublicName as TrackId
+		for (auto &it : stream->GetTracks())
+		{
+			auto track = it.second;
+			if (track->GetPublicName().IsEmpty())
+			{
+				// MediaType_TrackId
+				auto public_name = ov::String::FormatString("%s_%u", cmn::GetMediaTypeString(track->GetMediaType()).CStr(), track->GetId());
+				track->SetPublicName(public_name);
 			}
 		}
 

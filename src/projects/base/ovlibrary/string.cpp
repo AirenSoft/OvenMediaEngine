@@ -639,12 +639,7 @@ namespace ov
 		return lower;
 	}
 
-	std::vector<String> String::Split(const char *separator, size_t max_count) const
-	{
-		return String::Split(CStr(), separator, max_count);
-	}
-
-	std::vector<String> String::Split(const char *string, const char *separator, size_t max_count) const
+	std::vector<String> String::Split(const char *string, size_t string_length, const char *separator, size_t max_count)
 	{
 		std::vector<String> list;
 		const char *last;
@@ -660,9 +655,9 @@ namespace ov
 			return list;
 		}
 
-		seperator_length = (int)::strlen(separator);
+		seperator_length = ::strlen(separator);
 
-		if (((string == nullptr) || (::strlen(string) == 0L)) || (seperator_length == 0L))
+		if (((string == nullptr) || (string_length == 0L)) || (seperator_length == 0L))
 		{
 			if (string != nullptr)
 			{
@@ -679,7 +674,7 @@ namespace ov
 		{
 			last = ::strstr(string, separator);
 
-			auto length = ((last == nullptr) || (token_count == (max_count - 1))) ? (::strlen(string) * sizeof(char)) : ((last - string) * sizeof(char));
+			auto length = ((last == nullptr) || (token_count == (max_count - 1))) ? (string_length * sizeof(char)) : ((last - string) * sizeof(char));
 
 			list.emplace_back(string, length);
 
@@ -688,11 +683,23 @@ namespace ov
 				break;
 			}
 
+			string_length -= (last - string) + seperator_length;
 			string = last + seperator_length;
+
 			token_count++;
 		}
 
 		return list;
+	}
+
+	std::vector<String> String::Split(const char *string, const char *separator, size_t max_count)
+	{
+		return Split(string, ::strlen(string), separator, max_count);
+	}
+
+	std::vector<String> String::Split(const char *separator, size_t max_count) const
+	{
+		return Split(CStr(), GetLength(), separator, max_count);
 	}
 
 	String String::Join(const std::vector<String> &list, const char *seperator)
@@ -722,9 +729,19 @@ namespace ov
 		return (Left(prefix.GetLength()) == prefix);
 	}
 
+	bool String::HasPrefix(char prefix) const
+	{
+		return (Get(0) == prefix);
+	}
+
 	bool String::HasSuffix(String suffix) const
 	{
 		return (Right(suffix.GetLength()) == suffix);
+	}
+
+	bool String::HasSuffix(char suffix) const
+	{
+		return (Get(GetLength() - 1) == suffix);
 	}
 
 	String String::Left(size_t length) const
@@ -772,7 +789,9 @@ namespace ov
 		}
 
 		// Because we compare the two values above to see if they are the same, none of them are nullptr here.
-		if ((str == nullptr) || (_buffer == nullptr))
+		if (
+			((str == nullptr) || (_buffer == nullptr)) &&
+			(length != _length))
 		{
 			return false;
 		}
@@ -898,6 +917,24 @@ namespace ov
 	bool String::IsEmpty() const noexcept
 	{
 		return (_length == 0L);
+	}
+
+	bool String::IsNumeric() const noexcept
+	{
+		if (_buffer == nullptr)
+		{
+			return false;
+		}
+
+		for (size_t i = 0; i < _length; i++)
+		{
+			if (::isdigit(_buffer[i]) == 0)
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	std::shared_ptr<Data> String::ToData(bool include_null_char) const

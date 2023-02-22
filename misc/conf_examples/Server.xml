@@ -4,7 +4,9 @@
 	<Name>OvenMediaEngine</Name>
 	<!-- Host type (origin/edge) -->
 	<Type>origin</Type>
-	<!-- Specify IP address to bind (* means all IPs) -->
+	<!-- Specify IP address to bind ("*" means all IPv4 IPs, "::" means all IPv6 IPs) -->
+	<!-- Uncomment the line below to enable IPv6 -->
+	<!-- <IP>::</IP> -->
 	<IP>*</IP>
 	<PrivacyProtection>false</PrivacyProtection>
 
@@ -67,8 +69,10 @@
 			</SRT>
 			<MPEGTS>
 				<!--
-					Listen on port 4000~4005 (<Port>4000-4004,4005/udp</Port>)
+					Below is an example of listening on port 4000-4005 (<Port>4000-4004,4005/udp</Port>)
 					This is just a demonstration to show that you can configure the port in several ways
+				
+					<Port>4000-4004,4005/udp</Port>
 				-->
 				<Port>4000/udp</Port>
 			</MPEGTS>
@@ -80,6 +84,8 @@
 				</Signalling>
 
 				<IceCandidates>
+					<!-- Uncomment the line below to use IPv6 ICE Candidate -->
+					<!-- <IceCandidate>[::]:10000-10005/udp</IceCandidate> -->
 					<IceCandidate>*:10000-10005/udp</IceCandidate>
 					<!-- 
 						If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
@@ -362,7 +368,7 @@
 							<StreamMap>
 								<!--
 									Set the stream name of the client connected to the port to "stream_${Port}"
-									For example, if a client connets to port 4000, OME creates a "stream_4000" stream
+									For example, if a client connects to port 4000, OME creates a "stream_4000" stream
 									<Stream>
 										<Name>stream_${Port}</Name>
 										<Port>4000,4001-4004</Port>

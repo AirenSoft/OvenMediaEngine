@@ -460,9 +460,11 @@ namespace mon
 	{
 		if(_collector_url->Scheme().UpperCaseString() == "TCP")
 		{
+			auto address = ov::SocketAddress::CreateAndGetFirst(_collector_url->Host().CStr(), _collector_url->Port());
+
 			if(_socket == nullptr)
 			{
-				_socket = ov::SocketPool::GetTcpPool()->AllocSocket();
+				_socket = ov::SocketPool::GetTcpPool()->AllocSocket(address.GetFamily());
 			}
 
 			if(_socket->GetState() == ov::SocketState::Connected)
@@ -471,7 +473,6 @@ namespace mon
 			}
 			else
 			{
-				ov::SocketAddress address(_collector_url->Host().CStr(), _collector_url->Port());
 				auto error = _socket->Connect(address);
 				if(error != nullptr)
 				{
