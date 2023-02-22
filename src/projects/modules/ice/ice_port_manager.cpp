@@ -136,7 +136,7 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 
 		for (const auto &port_range : port_range_list)
 		{
-			for (int port_num = port_range.start_port; port_num <= port_range.end_port; port_num++)
+			for (int port = port_range.start_port; port <= port_range.end_port; port++)
 			{
 				std::vector<RtcIceCandidate> ice_candidates;
 
@@ -144,7 +144,7 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 				{
 					try
 					{
-						address_list = ov::SocketAddress::Create(local_ip, static_cast<uint16_t>(port_num));
+						address_list = ov::SocketAddress::Create(local_ip, static_cast<uint16_t>(port));
 					}
 					catch (const ov::Error &e)
 					{
