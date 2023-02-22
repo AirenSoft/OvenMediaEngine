@@ -191,20 +191,41 @@ namespace pvd
 				continue;
 			}
 
-			auto track = std::make_shared<MediaTrack>();
-			if (!track)
+			auto media_track = std::make_shared<MediaTrack>();
+			if (!media_track)
 			{
 				continue;
 			}
 
-			if (ffmpeg::Conv::ToMediaTrack(stream, track) == false)
+			if (ffmpeg::Conv::ToMediaTrack(stream, media_track) == false)
 			{
 				continue;
 			}
 
-			logtd("track_id:%d,  media_type: %d,  codec_id:%d, extradata_size: %d,  tb: %d/%d,  start_time: %lld", track_id, stream->codecpar->codec_type, stream->codecpar->codec_id, stream->codecpar->extradata_size, stream->time_base.num, stream->time_base.den, stream->start_time);
+#if FILE_FIXED_TRACK_ID 
+			if(GetFirstTrackByType(media_track->GetMediaType()) == nullptr)
+			{
+				media_track->SetId(GetFixedTrackIdOfMediaType(media_track->GetMediaType()));
+				AddTrack(media_track);
+			}
+			else{
+				logtd("Duplicate media types are not used and ignored. %s", media_track->GetInfoString().CStr());
+			}
+#else
+			AddTrack(media_track);
+#endif
+		}
 
-			AddTrack(track);
+		// If there is no data track, add a dummy data track
+		if(GetFirstTrackByType(cmn::MediaType::Data) == nullptr)
+		{
+			auto data_track = std::make_shared<MediaTrack>();
+			data_track->SetId(FILE_DATA_TRACK_ID);
+			data_track->SetMediaType(cmn::MediaType::Data);
+			data_track->SetTimeBase(1, 1000);
+			data_track->SetOriginBitstream(cmn::BitstreamFormat::ID3v2);
+			
+			AddTrack(data_track);
 		}
 
 		InitPrivBaseTimestamp();
@@ -237,7 +258,12 @@ namespace pvd
 		{
 			AVStream *stream = _format_context->streams[track_id];
 
-			auto track = GetTrack(stream->index);
+#if FILE_FIXED_TRACK_ID
+			auto fix_track_id = GetFixedTrackIdOfMediaType(ffmpeg::Conv::ToMediaType(stream->codecpar->codec_type));
+			auto track = GetTrack(fix_track_id);
+#else
+			auto track = GetTrack(track_id);
+#endif
 			if (track == nullptr)
 			{
 				continue;
@@ -351,8 +377,12 @@ namespace pvd
 				return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 			}
 
-			// Get Track
+#if FILE_FIXED_TRACK_ID
+			auto fix_track_id = GetFixedTrackIdOfMediaType(ffmpeg::Conv::ToMediaType(_format_context->streams[packet.stream_index]->codecpar->codec_type));
+			auto track = GetTrack(fix_track_id);
+#else			
 			auto track = GetTrack(packet.stream_index);
+#endif			
 			if (track == nullptr)
 			{
 				::av_packet_unref(&packet);
@@ -389,21 +419,6 @@ namespace pvd
 
 			// The purpose of updating the global Timestamp value when the URL is changed due to PullStream's failover.
 			AdjustTimestampByBase(media_packet->GetTrackId(), media_packet->GetPts(), media_packet->GetDts(), std::numeric_limits<int64_t>::max());
-
-			// logtd("%s/%s / msid(%d), id(%d) type(%s) flag(%6s), pts_ms(%10lld) pts%10lld) dts(%10lld) dur(%5lld) tb(%d/%d)",
-			// 		GetApplicationName(),
-			// 		GetName().CStr(),
-			// 		media_packet->GetMsid(),
-			// 		media_packet->GetTrackId(),
-			// 		StringFromMediaType(media_packet->GetMediaType()).CStr(),
-			// 		StringFromMediaPacketFlag(media_packet->GetFlag()).CStr(),
-			// 		(int64_t)(media_packet->GetPts() * GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000),
-			// 		media_packet->GetPts(),
-			// 		media_packet->GetDts(),
-			// 		media_packet->GetDuration(),
-			// 		GetTrack(media_packet->GetTrackId())->GetTimeBase().GetNum(),
-			// 		GetTrack(media_packet->GetTrackId())->GetTimeBase().GetDen()
-			// 	);
 
 			// Send to MediaRouter
 			SendFrame(std::move(media_packet));
@@ -478,4 +493,19 @@ namespace pvd
 			_last_timestamp[track_id] = rescale_ts;
 		}
 	}
+
+	uint8_t FileStream::GetFixedTrackIdOfMediaType(cmn::MediaType media_type)
+	{
+		switch (media_type)
+		{
+			case cmn::MediaType::Video:
+				return FILE_VIDEO_TRACK_ID;
+			case cmn::MediaType::Audio:
+				return FILE_AUDIO_TRACK_ID;
+			case cmn::MediaType::Data:
+			default:
+				return FILE_DATA_TRACK_ID;
+		}
+	}
+
 }  // namespace pvd

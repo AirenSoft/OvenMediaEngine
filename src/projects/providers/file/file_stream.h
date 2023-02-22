@@ -33,6 +33,12 @@ extern "C"
 
 namespace pvd
 {
+	#define FILE_VIDEO_TRACK_ID		0
+	#define FILE_AUDIO_TRACK_ID		1
+	#define FILE_DATA_TRACK_ID		2
+
+	#define FILE_FIXED_TRACK_ID		true
+
 	class FileProvider;
 
 	class FileStream : public pvd::PullStream
@@ -95,5 +101,8 @@ namespace pvd
 		// TrackID, Timestamp
 		std::map<uint8_t, int64_t> _base_timestamp;
 		std::map<uint8_t, int64_t> _last_timestamp;
+
+	private:
+		uint8_t GetFixedTrackIdOfMediaType(cmn::MediaType media_type);
 	};
 }  // namespace pvd

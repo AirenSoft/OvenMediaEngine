@@ -38,6 +38,8 @@ namespace ffmpeg
 					return cmn::MediaType::Video;
 				case AVMEDIA_TYPE_AUDIO:
 					return cmn::MediaType::Audio;
+				case AVMEDIA_TYPE_DATA:
+					return cmn::MediaType::Data;
 				default:
 					break;
 			}

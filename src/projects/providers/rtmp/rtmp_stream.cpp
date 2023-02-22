@@ -1769,7 +1769,7 @@ namespace pvd
 		}
 
 		// Data Track
-		if (_event_generator.GetEvents().size() > 0)
+		if ( GetFirstTrackByType(cmn::MediaType::Data) == nullptr )
 		{
 			auto data_track = std::make_shared<MediaTrack>();
 
