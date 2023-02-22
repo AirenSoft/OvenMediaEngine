@@ -70,7 +70,7 @@ namespace http
 		}
 
 		// Get Reason
-		ov::String HttpResponse::GetReason()
+		ov::String HttpResponse::GetReason() const
 		{
 			return _reason;
 		}
@@ -313,6 +313,28 @@ namespace http
 			}
 
 			return _client_socket->CloseIfNeeded();
+		}
+
+		ov::String HttpResponse::ToString() const
+		{
+			ov::String output;
+
+			output.AppendFormat("<HttpResponse> Status(%d) Reason(%s) Header(%zu) Data(%zu)\n",
+								GetStatusCode(),
+								GetReason().CStr(),
+								_response_header.size(),
+								_response_data_size);
+
+			output.AppendFormat("\n[Header]\n");
+			for (auto &[key, values] : _response_header)
+			{	
+				for (auto &value : values)
+				{
+					output.AppendFormat("%s: %s\n", key.CStr(), value.CStr());
+				}
+			}
+
+			return output;
 		}
 	}  // namespace svr
 }  // namespace http

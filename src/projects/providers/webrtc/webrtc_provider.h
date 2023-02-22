@@ -12,13 +12,15 @@
 #include "base/provider/push_provider/provider.h"
 #include "modules/ice/ice_port_manager.h"
 #include "modules/rtc_signalling/rtc_signalling.h"
+#include "modules/whip/whip_server.h"
 #include "orchestrator/orchestrator.h"
 
 namespace pvd
 {
 	class WebRTCProvider : public PushProvider,
 						   public IcePortObserver,
-						   public RtcSignallingObserver
+						   public RtcSignallingObserver,
+						   public WhipObserver
 	{
 	public:
 		static std::shared_ptr<WebRTCProvider> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
@@ -76,8 +78,23 @@ namespace pvd
 						   const std::shared_ptr<const SessionDescription> &peer_sdp) override;
 		//--------------------------------------------------------------------
 
+		//--------------------------------------------------------------------
+		// WhipObserver Implementation
+		//--------------------------------------------------------------------
+		WhipObserver::Answer OnSdpOffer(const std::shared_ptr<const http::svr::HttpRequest> &request,
+										const std::shared_ptr<const SessionDescription> &offer_sdp) override;
+
+		WhipObserver::Answer OnTrickleCandidate(const std::shared_ptr<const http::svr::HttpRequest> &request,
+												const ov::String &session_id,
+												const ov::String &if_match,
+												const std::shared_ptr<const SessionDescription> &patch) override;
+
+		bool OnSessionDelete(const std::shared_ptr<const http::svr::HttpRequest> &request,
+							 const ov::String &session_id) override;
+		//--------------------------------------------------------------------
+
 	protected:
-		bool StartSignallingServer(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config);
+		bool StartSignallingServers(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config);
 		bool StartICEPorts(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config);
 
 	private:
@@ -100,6 +117,7 @@ namespace pvd
 
 		std::shared_ptr<IcePort> _ice_port = nullptr;
 		std::shared_ptr<RtcSignallingServer> _signalling_server = nullptr;
+		std::shared_ptr<WhipServer> _whip_server = nullptr;
 		std::shared_ptr<Certificate> _certificate = nullptr;
 
 		std::mutex _stream_lock;

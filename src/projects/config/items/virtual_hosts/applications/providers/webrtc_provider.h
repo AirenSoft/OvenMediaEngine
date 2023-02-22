@@ -8,6 +8,7 @@
 //==============================================================================
 #pragma once
 
+#include "../../../common/cross_domain_support.h"
 #include "provider.h"
 
 namespace cfg
@@ -18,7 +19,7 @@ namespace cfg
 		{
 			namespace pvd
 			{
-				struct WebrtcProvider : public Provider
+				struct WebrtcProvider : public Provider, public cmn::CrossDomainSupport
 				{
 					ProviderType GetType() const override
 					{

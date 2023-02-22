@@ -18,6 +18,7 @@ LOCAL_STATIC_LIBRARIES := \
 	webrtc_provider \
 	transcoder \
 	rtc_signalling \
+	whip \
 	address_utilities \
 	ice \
 	api_server \

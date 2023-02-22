@@ -87,6 +87,20 @@ namespace http
 			{
 				return _http_header_parser.IsHeaderExists(key);
 			}
+
+			ov::String Http1Request::ToString() const
+			{
+				auto result = HttpRequest::ToString();
+
+				auto headers = _http_header_parser.GetHeaders();
+				result.AppendFormat("\n[Headers] (%zu):\n", headers.size());
+				for (auto &header : headers)
+				{
+					result.AppendFormat("%s: %s\n", header.first.CStr(), header.second.CStr());
+				}
+
+				return result;
+			}
 		} // namespace h1
 	} // namespace svr
 } // namespace http

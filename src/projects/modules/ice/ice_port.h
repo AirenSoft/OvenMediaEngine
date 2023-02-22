@@ -81,7 +81,7 @@ protected:
 		uint32_t session_id;
 		std::any user_data;
 
-		std::shared_ptr<const SessionDescription> offer_sdp;
+		std::shared_ptr<const SessionDescription> local_sdp;
 		std::shared_ptr<const SessionDescription> peer_sdp;
 
 		std::shared_ptr<ov::Socket> remote;

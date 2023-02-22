@@ -32,7 +32,7 @@ namespace http
 
 			StatusCode GetStatusCode() const;
 			// Get Reason
-			ov::String GetReason();
+			ov::String GetReason() const;
 
 			// reason = default
 			void SetStatusCode(StatusCode status_code);
@@ -62,6 +62,8 @@ namespace http
 			// Get Response Data Size
 			size_t GetResponseDataSize() const;
 			uint32_t GetSentSize() const;
+
+			virtual ov::String ToString() const;
 
 			bool Close();
 

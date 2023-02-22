@@ -54,6 +54,7 @@ public:
 	//   candidate-types ----------------------------------------------->~~~~      v     |
 	//   extension-att-name -------------------------------------------------->~~~~~~~~~ v
 	//   extension-att-value ----------------------------------------------------------->~
+	IceCandidate();
 	IceCandidate(const ov::String &foundation, const ov::String &component_id, const ov::String &transport, uint32_t priority, const ov::String &cand_type, const ov::String &candidate_types, const ov::String &rel_addr, const ov::String &rel_port, const std::map<ov::String, ov::String> &extension_att) = delete;
 	IceCandidate(const IceCandidate &candidate) = default;
 	IceCandidate(ov::String transport, const ov::SocketAddress &address);
@@ -100,7 +101,6 @@ public:
 	virtual ov::String ToString() const noexcept;
 
 protected:
-	IceCandidate();
 
 	void Swap(IceCandidate &from) noexcept;
 

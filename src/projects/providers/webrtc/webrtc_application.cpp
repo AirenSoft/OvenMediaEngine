@@ -34,7 +34,7 @@ namespace pvd
 
 	bool WebRTCApplication::Start()
 	{
-		_offer_sdp = CreateOfferSDP(_certificate);
+		_offer_sdp = CreateOfferSDP();
 
 		if(_certificate == nullptr || _offer_sdp == nullptr)
 		{
@@ -55,9 +55,9 @@ namespace pvd
 		return _offer_sdp;
 	}
 
-	std::shared_ptr<SessionDescription> WebRTCApplication::CreateOfferSDP(const std::shared_ptr<Certificate> &certificate)
+	std::shared_ptr<SessionDescription> WebRTCApplication::CreateOfferSDP()
 	{
-		if(certificate == nullptr)
+		if(_certificate == nullptr)
 		{
 			return nullptr;
 		}
@@ -74,7 +74,7 @@ namespace pvd
 		// MSID
 		auto msid = ov::Random::GenerateString(36);
 		offer_sdp->SetMsidSemantic("WMS", msid);
-		offer_sdp->SetFingerprint("sha-256", certificate->GetFingerprint("sha-256"));
+		offer_sdp->SetFingerprint("sha-256", _certificate->GetFingerprint("sha-256"));
 
 		uint8_t payload_type_num = 100;
 
@@ -159,5 +159,137 @@ namespace pvd
 		logtd("Offer SDP created : %s", offer_sdp->ToString().CStr());
 
 		return offer_sdp;
+	}
+
+	std::shared_ptr<SessionDescription> WebRTCApplication::CreateAnswerSDP(const std::shared_ptr<const SessionDescription> &offer_sdp, const ov::String &local_ufrag, const std::vector<IceCandidate> &ice_candidates)
+	{
+		if(offer_sdp == nullptr)
+		{
+			return nullptr;
+		}
+
+		auto answer_sdp = std::make_shared<SessionDescription>();
+		answer_sdp->SetOrigin("OvenMediaEngine", ov::Random::GenerateUInt32(), 2, "IN", 4, "127.0.0.1");
+		answer_sdp->SetTiming(0, 0);
+
+		// msid-semantic, only add if offer has msid-semantic
+		ov::String msid_semantic;
+		if (offer_sdp->GetMsidSemantic().IsEmpty() == false)
+		{
+			msid_semantic = ov::Random::GenerateString(36);
+			answer_sdp->SetMsidSemantic("WMS", msid_semantic);
+		}
+
+		auto ice_local_ufrag = local_ufrag;
+		auto ice_local_pwd = ov::Random::GenerateString(32);
+
+		for (auto &offer_media_desc : offer_sdp->GetMediaList())
+		{
+			if (offer_media_desc->GetMediaType() != MediaDescription::MediaType::Video &&
+				offer_media_desc->GetMediaType() != MediaDescription::MediaType::Audio)
+			{
+				logte("Offer SDP has invalid media type - %s", offer_media_desc->GetMediaTypeStr().CStr());
+				continue;
+			}
+
+			auto answer_media_desc = std::make_shared<MediaDescription>();
+			answer_media_desc->SetMediaType(offer_media_desc->GetMediaType());
+			answer_media_desc->SetConnection(4, "0.0.0.0");
+
+			// rtcp-mux
+			if (offer_media_desc->IsRtcpMux() == false)
+			{
+				logtw("Offer SDP has no rtcp-mux");
+			}
+			answer_media_desc->UseRtcpMux(true);
+
+			// recvonly
+			answer_media_desc->SetDirection(MediaDescription::Direction::RecvOnly);
+
+			// msid
+			if (msid_semantic.IsEmpty() == false)
+			{
+				answer_media_desc->SetMsid(msid_semantic, ov::Random::GenerateString(36));
+			}
+
+			// ice-ufrag, ice-pwd, ice-options, fingerprint
+			answer_media_desc->SetIceUfrag(ice_local_ufrag);
+			answer_media_desc->SetIcePwd(ice_local_pwd);
+			answer_media_desc->SetFingerprint("sha-256", _certificate->GetFingerprint("sha-256"));
+
+			// setup
+			if (offer_media_desc->GetSetup() == MediaDescription::SetupType::Passive)
+			{
+				logte("Offer SDP has invalid setup type - a=setup:passive");
+				return nullptr;
+			}
+			answer_media_desc->SetSetup(MediaDescription::SetupType::Passive);
+
+			// mid
+			answer_media_desc->SetMid(offer_media_desc->GetMid());
+
+			// extmaps : now only support transport-cc
+
+			// transport-cc
+			uint8_t extmap_id = 0;
+			ov::String extmap_attribute;
+			if (offer_media_desc->FindExtmapItem("transport-wide-cc", extmap_id, extmap_attribute))
+			{
+				answer_media_desc->AddExtmap(extmap_id, extmap_attribute);
+			}
+
+			// a=candidate
+			for (const auto &ice_candidate : ice_candidates)
+			{
+				answer_media_desc->AddIceCandidate(std::make_shared<IceCandidate>(ice_candidate));
+			}
+
+			// payloads
+			for (auto &offer_payload : offer_media_desc->GetPayloadList())
+			{
+				if (offer_payload->GetCodec() != PayloadAttr::SupportCodec::H264 && 
+					offer_payload->GetCodec() != PayloadAttr::SupportCodec::VP8 && 
+					offer_payload->GetCodec() != PayloadAttr::SupportCodec::OPUS)
+				{
+					logti("unsupported codec(%s) has ignored", offer_payload->GetCodecStr().CStr());
+					continue;
+				}
+
+				auto answer_payload = std::make_shared<PayloadAttr>();
+				answer_payload->SetRtpmap(offer_payload->GetId(), offer_payload->GetCodecStr(), offer_payload->GetCodecRate(), offer_payload->GetCodecParams());
+				answer_payload->SetFmtp(offer_payload->GetFmtp());
+
+				// rtcp-fb
+
+				// CCM FIR
+				if (offer_payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::CcmFir))
+				{
+					answer_payload->EnableRtcpFb(PayloadAttr::RtcpFbType::CcmFir, true);
+				}
+
+				// NACK PLI
+				if (offer_payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::NackPli))
+				{
+					answer_payload->EnableRtcpFb(PayloadAttr::RtcpFbType::NackPli, true);
+				}
+
+				// Transport CC
+				if (offer_payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::TransportCc))
+				{
+					answer_payload->EnableRtcpFb(PayloadAttr::RtcpFbType::TransportCc, true);
+				}
+				
+				answer_media_desc->AddPayload(answer_payload);
+			}
+
+			answer_media_desc->Update();
+			answer_sdp->AddMedia(answer_media_desc);
+		}
+		
+		answer_sdp->Update();
+
+		logtd("Answer SDP created : %s", answer_sdp->ToString().CStr());
+
+		return answer_sdp;
 	}
 }

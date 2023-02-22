@@ -73,8 +73,6 @@ std::optional<uint64_t> LipSyncClock::CalcPTS(uint32_t id, uint32_t rtp_timestam
 		clock->_extended_rtp_timestamp += delta;
 	}
 
-	logtd("Calc PTS : id(%u) last_rtp_timestamp(%u) rtp_timestamp(%u) delta(%u) extended_rtp_timestamp(%llu)", id, clock->_last_rtp_timestamp, rtp_timestamp, delta, clock->_extended_rtp_timestamp);
-
 	clock->_last_rtp_timestamp = rtp_timestamp;
 
 	std::shared_lock<std::shared_mutex> lock(clock->_clock_lock);
@@ -89,20 +87,28 @@ std::optional<uint64_t> LipSyncClock::CalcPTS(uint32_t id, uint32_t rtp_timestam
 		_first_pts = false;
 	}
 
-	pts = pts - (int64_t)(_adjust_pts_us / clock->_timebase / 100000.0);
+	int64_t final_pts = pts - (int64_t)(_adjust_pts_us / clock->_timebase / 100000.0);
 
-	return pts; 
+	logtd("Calc PTS : id(%u) pts(%lld) final_pts(%lld) last_rtp_timestamp(%u) rtp_timestamp(%u) delta(%u) extended_rtp_timestamp(%llu)", id, pts, final_pts, clock->_last_rtp_timestamp, rtp_timestamp, delta, clock->_extended_rtp_timestamp);
+
+	return final_pts; 
 }
 
 bool LipSyncClock::UpdateSenderReportTime(uint32_t id, uint32_t ntp_msw, uint32_t ntp_lsw, uint32_t rtcp_timestamp)
 {
-	_enabled = true;
-
 	auto clock = GetClock(id);
 	if(clock == nullptr)
 	{
 		return false;
 	}
+
+	// OBS WHIP incorrectly sends RTP Timestamp with 0xFFFFFFFF in the first SR. Below is the code to avoid this.
+	if (rtcp_timestamp == 0xFFFFFFFF)
+	{
+		return false;
+	}
+
+	_enabled = true;
 
 	std::lock_guard<std::shared_mutex> lock(clock->_clock_lock);
 	clock->_updated = true;

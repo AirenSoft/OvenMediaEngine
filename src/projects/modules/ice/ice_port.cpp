@@ -214,11 +214,11 @@ ov::String IcePort::GenerateUfrag()
 	}
 }
 
-void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint32_t session_id,
-						 std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp,
-						 int expired_ms, uint64_t life_time_epoch_ms, std::any user_data)
+void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint32_t session_id, 
+							std::shared_ptr<const SessionDescription> local_sdp, std::shared_ptr<const SessionDescription> peer_sdp, 
+							int expired_ms, uint64_t life_time_epoch_ms, std::any user_data)
 {
-	const ov::String &local_ufrag = offer_sdp->GetIceUfrag();
+	const ov::String &local_ufrag = local_sdp->GetIceUfrag();
 	const ov::String &remote_ufrag = peer_sdp->GetIceUfrag();
 
 	{
@@ -237,7 +237,7 @@ void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint3
 		info->observer = observer;
 		info->user_data = user_data;
 		info->session_id = session_id;
-		info->offer_sdp = offer_sdp;
+		info->local_sdp = local_sdp;
 		info->peer_sdp = peer_sdp;
 		info->remote = nullptr;
 		info->address = ov::SocketAddress();
@@ -246,6 +246,8 @@ void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint3
 		info->UpdateBindingTime();
 
 		_user_port_table[local_ufrag] = info;
+
+		logti("Added session: %d (ufrag: %s:%s)", session_id, local_ufrag.CStr(), remote_ufrag.CStr());
 	}
 
 	SetIceState(_user_port_table[local_ufrag], IcePortConnectionState::New);
@@ -329,7 +331,7 @@ bool IcePort::RemoveSession(uint32_t session_id)
 
 	{
 		std::lock_guard<std::mutex> lock_guard(_user_port_table_lock);
-		_user_port_table.erase(ice_port_info->offer_sdp->GetIceUfrag());
+		_user_port_table.erase(ice_port_info->local_sdp->GetIceUfrag());
 	}
 
 	return true;
@@ -524,7 +526,7 @@ void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov
 
 void IcePort::OnPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const std::shared_ptr<const ov::Data> &data)
 {
-	logtd("OnPacketReceived : %s", gate_info.ToString().CStr());
+	logtd("OnPacketReceived : %s (%s)", gate_info.ToString().CStr(), remote->GetLocalAddress()->ToString().CStr());
 
 	switch (gate_info.packet_type)
 	{
@@ -572,6 +574,8 @@ void IcePort::OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &rem
 
 	if (ice_port_info->observer != nullptr)
 	{
+		// Some webrtc peer does not send STUN Binding Request repeatedly. So, I determine the peer is alive by receiving application data.
+		ice_port_info->UpdateBindingTime();
 		ice_port_info->observer->OnDataReceived(*this, ice_port_info->session_id, data, ice_port_info->user_data);
 	}
 }
@@ -722,7 +726,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		if (info == _user_port_table.end())
 		{
 			// Stun may arrive first before AddSession, it is not an error
-			logtd("User not found: %s (AddSession() needed)", local_ufrag.CStr());
+			logti("User not found: %s (AddSession() needed)", local_ufrag.CStr());
 			return false;
 		}
 
@@ -734,7 +738,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		logtw("Mismatched ufrag: %s (ufrag in peer SDP: %s)", remote_ufrag.CStr(), ice_port_info->peer_sdp->GetIceUfrag().CStr());
 	}
 
-	if (message.CheckIntegrity(ice_port_info->offer_sdp->GetIcePwd()) == false)
+	if (message.CheckIntegrity(ice_port_info->local_sdp->GetIcePwd()) == false)
 	{
 		logtw("Failed to check integrity");
 
@@ -807,7 +811,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 
 		// Send Stun Binding Response
 		// TODO: apply SASLprep(password)
-		SendStunMessage(remote, address, gate_info, response_message, ice_port_info->offer_sdp->GetIcePwd().ToData(false));
+		SendStunMessage(remote, address, gate_info, response_message, ice_port_info->local_sdp->GetIcePwd().ToData(false));
 
 		// Immediately, the server also sends a bind request.
 		SendStunBindingRequest(remote, address, gate_info, ice_port_info);
@@ -838,7 +842,7 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 	// USERNAME attribute
 	attribute = std::make_shared<StunUserNameAttribute>();
 	auto *user_name_attribute = dynamic_cast<StunUserNameAttribute *>(attribute.get());
-	user_name_attribute->SetText(ov::String::FormatString("%s:%s", info->peer_sdp->GetIceUfrag().CStr(), info->offer_sdp->GetIceUfrag().CStr()));
+	user_name_attribute->SetText(ov::String::FormatString("%s:%s", info->peer_sdp->GetIceUfrag().CStr(), info->local_sdp->GetIceUfrag().CStr()));
 	message.AddAttribute(std::move(attribute));
 
 	// ICE-CONTROLLED
@@ -913,7 +917,7 @@ bool IcePort::ProcessStunBindingResponse(const std::shared_ptr<ov::Socket> &remo
 		logtd("Receive stun binding response from %s, table size(%d)", address.ToString(false).CStr(), _binding_request_table.size());
 	}
 
-	if (message.CheckIntegrity(ice_port_info->offer_sdp->GetIcePwd()) == false)
+	if (message.CheckIntegrity(ice_port_info->local_sdp->GetIcePwd()) == false)
 	{
 		logtw("Failed to check integrity");
 		return false;

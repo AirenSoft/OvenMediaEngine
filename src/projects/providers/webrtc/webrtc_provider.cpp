@@ -36,7 +36,7 @@ namespace pvd
 		logtd("WebRTCProvider has been terminated finally");
 	}
 
-	bool WebRTCProvider::StartSignallingServer(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config)
+	bool WebRTCProvider::StartSignallingServers(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config)
 	{
 		auto &signalling_config = webrtc_bind_config.GetSignalling();
 
@@ -55,22 +55,52 @@ namespace pvd
 			return true;
 		}
 
-		auto signalling_server = std::make_shared<RtcSignallingServer>(server_config, webrtc_bind_config);
-		signalling_server->AddObserver(RtcSignallingObserver::GetSharedPtr());
+		auto rtc_signalling_server = std::make_shared<RtcSignallingServer>(server_config, webrtc_bind_config);
+		auto rtc_signalling_observer = RtcSignallingObserver::GetSharedPtr();
 
-		auto interceptor = std::make_shared<WebRtcProviderSignallingInterceptor>();
+		auto whip_server = std::make_shared<WhipServer>(webrtc_bind_config);
 
-		if (signalling_server->Start(
-				GetProviderName(), "RtcSig",
-				server_config.GetIPList(),
-				is_port_configured, port_config.GetPort(),
-				is_tls_port_configured, tls_port_config.GetPort(),
-				worker_count, interceptor))
+		do
 		{
-			_signalling_server = std::move(signalling_server);
+			const auto &ip_list = server_config.GetIPList();
+
+			// Initialize WebSocket Server
+			rtc_signalling_server->AddObserver(rtc_signalling_observer);
+			if (rtc_signalling_server->Start(
+					GetProviderName(), "RtcSig",
+					ip_list,
+					is_port_configured, port_config.GetPort(),
+					is_tls_port_configured, tls_port_config.GetPort(),
+					worker_count, std::make_shared<WebRtcProviderSignallingInterceptor>()) == false)
+			{
+				break;
+			}
+
+			// Initialize WHIP Server
+			if (whip_server->Start(
+					WhipObserver::GetSharedPtr(),
+					GetProviderName(), "WhpSig",
+					ip_list,
+					is_port_configured, port_config.GetPort(),
+					is_tls_port_configured, tls_port_config.GetPort(),
+					worker_count) == false)
+			{
+				break;
+			}
+
+			_signalling_server = std::move(rtc_signalling_server);
+			_whip_server = std::move(whip_server);
 
 			return true;
-		}
+		} while (false);
+
+		OV_SAFE_RESET(
+			rtc_signalling_server, nullptr, {
+				rtc_signalling_server->RemoveObserver(rtc_signalling_observer);
+				rtc_signalling_server->Stop();
+			},
+			rtc_signalling_server);
+		OV_SAFE_RESET(whip_server, nullptr, whip_server->Stop(), whip_server);
 
 		return false;
 	}
@@ -167,15 +197,13 @@ namespace pvd
 			return true;
 		}
 
-		if (StartSignallingServer(server_config, webrtc_bind_config) &&
+		if (StartSignallingServers(server_config, webrtc_bind_config) &&
 			StartICEPorts(server_config, webrtc_bind_config))
 		{
 			return Provider::Start();
 		}
 
 		logte("An error occurred while initialize %s. Stopping RtcSignallingServer...", GetProviderName());
-
-		_signalling_server->Stop();
 
 		IcePortManager::GetInstance()->Release(IcePortObserver::GetSharedPtr());
 
@@ -192,14 +220,31 @@ namespace pvd
 			_signalling_server->Stop();
 		}
 
+		if (_whip_server != nullptr)
+		{
+			_whip_server->Stop();
+		}
+
 		return Provider::Stop();
 	}
 
 	bool WebRTCProvider::OnCreateHost(const info::Host &host_info)
 	{
-		if (_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+		auto certificate = host_info.GetCertificate();
+
+		if (certificate == nullptr)
 		{
-			return _signalling_server->AppendCertificate(host_info.GetCertificate());
+			return true;  // not failed, just no certificate
+		}
+
+		if (_signalling_server != nullptr)
+		{
+			_signalling_server->AppendCertificate(certificate);
+		}
+
+		if (_whip_server != nullptr)
+		{
+			_whip_server->AppendCertificate(certificate);
 		}
 
 		return true;
@@ -207,10 +252,23 @@ namespace pvd
 
 	bool WebRTCProvider::OnDeleteHost(const info::Host &host_info)
 	{
-		if (_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+		auto certificate = host_info.GetCertificate();
+
+		if (certificate == nullptr)
 		{
-			return _signalling_server->RemoveCertificate(host_info.GetCertificate());
+			return true;  // not failed, just no certificate
 		}
+
+		if (_signalling_server != nullptr)
+		{
+			_signalling_server->RemoveCertificate(certificate);
+		}
+
+		if (_whip_server != nullptr)
+		{
+			_whip_server->RemoveCertificate(certificate);
+		}
+
 		return true;
 	}
 
@@ -219,6 +277,18 @@ namespace pvd
 		if (IsModuleAvailable() == false)
 		{
 			return nullptr;
+		}
+
+		if (_whip_server != nullptr)
+		{
+			auto webrtc_cfg = application_info.GetConfig().GetProviders().GetWebrtcProvider();
+			auto cross_domains = webrtc_cfg.GetCrossDomainList();
+			if (cross_domains.empty())
+			{
+				// There is no CORS setting in the WebRTC Provider in the already deployed Server.xml. In this case, provide * to avoid confusion.
+				cross_domains.push_back("*");
+			}
+			_whip_server->SetCors(application_info.GetName(), cross_domains);
 		}
 
 		return WebRTCApplication::Create(PushProvider::GetSharedPtrAs<PushProvider>(), application_info, _certificate, _ice_port, _signalling_server);
@@ -542,9 +612,125 @@ namespace pvd
 		}
 	}
 
+	// WHIP API
+	WhipObserver::Answer WebRTCProvider::OnSdpOffer(const std::shared_ptr<const http::svr::HttpRequest> &request,
+													const std::shared_ptr<const SessionDescription> &offer_sdp)
+	{
+		auto uri = request->GetParsedUri();
+		if (uri == nullptr || uri->Host().IsEmpty() || uri->App().IsEmpty() || uri->Stream().IsEmpty())
+		{
+			return {http::StatusCode::BadRequest, "Invalid URI"};
+		}
+
+		info::VHostAppName final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(uri->Host(), uri->App());
+		ov::String final_host_name = uri->Host();
+		ov::String final_stream_name = uri->Stream();
+
+		if (uri->Port() == 0)
+		{
+			uri->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+		}
+
+		// Signed Policy & Admission Webhooks
+		uint64_t session_life_time = 0;
+
+		auto application = std::dynamic_pointer_cast<WebRTCApplication>(GetApplicationByName(final_vhost_app_name));
+		if (application == nullptr)
+		{
+			logte("Could not find %s application", final_vhost_app_name.CStr());
+			return {http::StatusCode::NotFound, "Could not find application"};
+		}
+
+		std::lock_guard<std::mutex> lock(_stream_lock);
+
+		if (application->GetStreamByName(final_stream_name) != nullptr)
+		{
+			logte("%s stream is already exist in %s application", final_stream_name.CStr(), final_vhost_app_name.CStr());
+			return {http::StatusCode::Conflict, "Stream is already exist"};
+		}
+
+		std::vector<IceCandidate> ice_candidates;
+		if (_ice_candidate_list.empty() == false)
+		{
+			auto candidate_index_to_send = _current_ice_candidate_index++ % _ice_candidate_list.size();
+			const auto &candidates = _ice_candidate_list[candidate_index_to_send];
+
+			ice_candidates.insert(ice_candidates.end(), candidates.cbegin(), candidates.cend());
+		}
+
+		auto answer_sdp = application->CreateAnswerSDP(offer_sdp, _ice_port->GenerateUfrag(), ice_candidates);
+		if (answer_sdp == nullptr)
+		{
+			logte("Could not create answer SDP");
+			return {http::StatusCode::InternalServerError, "Could not create answer SDP"};
+		}
+
+		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, final_stream_name, PushProvider::GetSharedPtrAs<PushProvider>(), answer_sdp, offer_sdp, _certificate, _ice_port);
+		if (stream == nullptr)
+		{
+			logte("Could not create %s stream in %s application", final_stream_name.CStr(), final_vhost_app_name.CStr());
+			return {http::StatusCode::InternalServerError, "Could not create stream"};
+		}
+
+		stream->SetMediaSource(request->GetRemote()->GetRemoteAddressAsUrl());
+
+		if (PublishChannel(stream->GetId(), final_vhost_app_name, stream) == false)
+		{
+			return {http::StatusCode::InternalServerError, "Could not publish stream"};
+		}
+
+		if (OnChannelCreated(stream->GetId(), stream) == false)
+		{
+			return {http::StatusCode::InternalServerError, "Could not publish stream"};
+		}
+
+		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), answer_sdp, offer_sdp, ice_timeout, session_life_time, stream);
+
+		return {stream->GetSessionKey(), ov::Random::GenerateString(8), answer_sdp, http::StatusCode::Created};
+	}
+
+	WhipObserver::Answer WebRTCProvider::OnTrickleCandidate(const std::shared_ptr<const http::svr::HttpRequest> &request,
+															const ov::String &session_id,
+															const ov::String &if_match,
+															const std::shared_ptr<const SessionDescription> &patch)
+	{
+		return {http::StatusCode::NoContent, ""};
+	}
+
+	bool WebRTCProvider::OnSessionDelete(const std::shared_ptr<const http::svr::HttpRequest> &request, const ov::String &session_key)
+	{
+		auto uri = request->GetParsedUri();
+		if (uri == nullptr || uri->Host().IsEmpty() || uri->App().IsEmpty() || uri->Stream().IsEmpty())
+		{
+			return false;
+		}
+
+		info::VHostAppName vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(uri->Host(), uri->App());
+		ov::String stream_name = uri->Stream();
+
+		// Find Stream
+		auto stream = std::static_pointer_cast<WebRTCStream>(GetStreamByName(vhost_app_name, stream_name));
+		if (!stream)
+		{
+			logte("To stop stream failed. Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
+			return false;
+		}
+
+		if (stream->GetSessionKey() != session_key)
+		{
+			logte("To stop stream failed. Invalid session key : expected(%s) / actual(%s)", stream->GetSessionKey().CStr(), session_key.CStr());
+			return false;
+		}
+
+		_ice_port->RemoveSession(stream->GetId());
+
+		return OnChannelDeleted(stream);
+	}
+
 	void WebRTCProvider::OnDataReceived(IcePort &port, uint32_t session_id, std::shared_ptr<const ov::Data> data, std::any user_data)
 	{
-		logtd("WebRTCProvider::OnDataReceived");
+		logtp("WebRTCProvider::OnDataReceived");
 
 		std::shared_ptr<WebRTCStream> stream;
 		try

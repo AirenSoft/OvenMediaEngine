@@ -95,6 +95,11 @@ bool RtcSignallingServer::PrepareForTCPRelay()
 		_new_ice_servers.append(new_ice_server);
 	}
 
+	return true;
+}
+
+bool RtcSignallingServer::PrepareForExternalIceServer()
+{
 	// for external ice server configuration
 	auto &ice_servers_config = _webrtc_config.GetIceServers();
 	if (ice_servers_config.IsParsed())
@@ -188,7 +193,7 @@ bool RtcSignallingServer::Start(
 			},
 			worker_count))
 	{
-		if (PrepareForTCPRelay())
+		if (PrepareForTCPRelay() && PrepareForExternalIceServer())
 		{
 			std::lock_guard lock_guard{_http_server_list_mutex};
 			_http_server_list = std::move(http_server_list);
@@ -210,7 +215,11 @@ bool RtcSignallingServer::AppendCertificate(const std::shared_ptr<const info::Ce
 {
 	if (certificate != nullptr)
 	{
-		for (auto &https_server : _https_server_list)
+		_http_server_list_mutex.lock();
+		auto https_server_list = _https_server_list;
+		_http_server_list_mutex.unlock();
+
+		for (auto &https_server : https_server_list)
 		{
 			auto error = https_server->AppendCertificate(certificate);
 			if (error != nullptr)
@@ -228,7 +237,11 @@ bool RtcSignallingServer::RemoveCertificate(const std::shared_ptr<const info::Ce
 {
 	if (certificate != nullptr)
 	{
-		for (auto &https_server : _https_server_list)
+		_http_server_list_mutex.lock();
+		auto https_server_list = _https_server_list;
+		_http_server_list_mutex.unlock();
+
+		for (auto &https_server : https_server_list)
 		{
 			auto error = https_server->RemoveCertificate(certificate);
 			if (error != nullptr)

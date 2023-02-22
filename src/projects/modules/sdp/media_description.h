@@ -64,10 +64,12 @@ public:
 	std::shared_ptr<const PayloadAttr> GetPayload(uint8_t id) const;
 	std::shared_ptr<PayloadAttr> GetPayload(uint8_t id);
 	std::shared_ptr<const PayloadAttr> GetFirstPayload() const;
+	// payload list
+	const std::vector<std::shared_ptr<PayloadAttr>> &GetPayloadList() const;
 
 	// a=rtcp-mux
 	void UseRtcpMux(bool flag = true);
-	bool IsUseRtcpMux() const;
+	bool IsRtcpMux() const;
 
 	// a=rtcp-rsize
 	void UseRtcpRsize(bool flag = true);
@@ -89,6 +91,7 @@ public:
 
 	// a=setup:actpass
 	void SetSetup(SetupType type);
+	SetupType GetSetup() const;
 	bool SetSetup(const ov::String &type);
 
 	// c=IN IP4 0.0.0.0

@@ -29,7 +29,12 @@ bool RtcpTransportCcFeedbackGenerator::AddReceivedRtpPacket(const std::shared_pt
 	if (extension_data.has_value() == false || extension_data.value().GetLength() < 2)
 	{
 		// There is no transport-wide sequence number in the RTP header extension
-		logte("AddReceivedRtpPacket: There is no transport-wide sequence number in the RTP header extension : %s", packet->Dump().CStr());
+		static int log_times = 10;
+		if (log_times > 0)
+		{
+			logtw("AddReceivedRtpPacket: There is no transport-wide sequence number in the RTP header extension : %s", packet->Dump().CStr());
+			log_times--;
+		}
 		return false;
 	}
 

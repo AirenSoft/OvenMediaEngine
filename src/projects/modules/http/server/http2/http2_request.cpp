@@ -133,6 +133,22 @@ namespace http
 
 				return true;
 			}
+
+			ov::String Http2Request::ToString() const
+			{
+				ov::String result; 
+
+				result = HttpRequest::ToString();
+
+				// Output all headers
+				result.AppendFormat("\n[Headers] (%zu):\n", _headers.size());
+				for (const auto &header : _headers)
+				{
+					result.AppendFormat("%s: %s\n", header.first.CStr(), header.second.CStr());
+				}
+
+				return result;
+			}
 		}  // namespace h2
 	}	   // namespace svr
 }  // namespace http

@@ -47,6 +47,9 @@ bool SessionDescription::UpdateData(ov::String &sdp)
 		sdp.AppendFormat(" %s", media_description->GetMid().CStr());
 	}
 
+	/* 
+	Deprecated 
+	
 	sdp += "\r\n";
 	sdp += "a=group:LS";
 
@@ -54,6 +57,7 @@ bool SessionDescription::UpdateData(ov::String &sdp)
 	{
 		sdp.AppendFormat(" %s", media_description->GetMid().CStr());
 	}
+	*/
 
 	sdp += "\r\n";
 
