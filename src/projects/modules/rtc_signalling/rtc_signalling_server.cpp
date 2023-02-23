@@ -20,9 +20,9 @@
 #include "rtc_ice_candidate.h"
 #include "rtc_signalling_server_private.h"
 
-RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_config)
+RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_cfg)
 	: _server_config(server_config),
-	  _webrtc_config(webrtc_config),
+	  _webrtc_bind_cfg(webrtc_bind_cfg),
 	  _p2p_manager(server_config)
 {
 }
@@ -33,10 +33,10 @@ bool RtcSignallingServer::PrepareForTCPRelay()
 	_new_ice_servers = Json::arrayValue;
 
 	// For internal TURN/TCP relay configuration
-	_tcp_force = _webrtc_config.GetIceCandidates().IsTcpForce();
+	_tcp_force = _webrtc_bind_cfg.GetIceCandidates().IsTcpForce();
 
 	bool is_tcp_relay_configured = false;
-	auto tcp_relay_address = _webrtc_config.GetIceCandidates().GetTcpRelay(&is_tcp_relay_configured);
+	auto tcp_relay = _webrtc_bind_cfg.GetIceCandidates().GetTcpRelay(&is_tcp_relay_configured);
 
 	if (is_tcp_relay_configured)
 	{
@@ -46,37 +46,58 @@ bool RtcSignallingServer::PrepareForTCPRelay()
 
 		// <TcpRelay>IP:Port</TcpRelay>
 		// <TcpRelay>*:Port</TcpRelay>
+		// <TcpRelay>[::]:Port</TcpRelay>
 		// <TcpRelay>${PublicIP}:Port</TcpRelay>
-		// Check tcp_relay_address is * or ${PublicIP}
-		auto address_items = tcp_relay_address.Split(":");
-		if (address_items.size() != 2)
+
+		// Check whether tcp_relay_address indicates "any address"(*, ::) or ${PublicIP}
+		const auto tcp_relay_address = ov::SocketAddress::ParseAddress(tcp_relay);
+		if (tcp_relay_address.HasPortList() == false)
 		{
+			logte("Invalid TCP relay address: %s (The TCP relay address must be in <IP>:<Port> format)", tcp_relay.CStr());
+			return false;
 		}
 
-		if (address_items[0] == "*")
+		auto address_utilities = ov::AddressUtilities::GetInstance();
+		std::vector<ov::String> ip_list;
+
+		auto &tcp_relay_host = tcp_relay_address.host;
+		if (tcp_relay_host == "*")
 		{
-			auto ip_list = ov::AddressUtilities::GetInstance()->GetIpList(ov::SocketFamily::Inet);
-			for (const auto &ip : ip_list)
-			{
-				urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", ip.CStr(), address_items[1].CStr()).CStr());
-			}
+			// Case 1 - IPv4
+			ip_list = address_utilities->GetIpList(ov::SocketFamily::Inet);
 		}
-		else if (address_items[0] == "::")
+		else if (tcp_relay_host == "::")
 		{
-			auto ip_list = ov::AddressUtilities::GetInstance()->GetIpList(ov::SocketFamily::Inet6);
-			for (const auto &ip : ip_list)
-			{
-				urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", ip.CStr(), address_items[1].CStr()).CStr());
-			}
+			// Case 2 - IPv6 wildcard
+			ip_list = address_utilities->GetIpList(ov::SocketFamily::Inet6);
 		}
-		else if (address_items[0] == "${PublicIP}")
+		else if (tcp_relay_host == "${PublicIP}")
 		{
-			auto public_ip = ov::AddressUtilities::GetInstance()->GetMappedAddress();
-			urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", public_ip->GetIpAddress().CStr(), address_items[1].CStr()).CStr());
+			auto public_ip = address_utilities->GetMappedAddress();
+
+			if (public_ip != nullptr)
+			{
+				// Case 3 - Get an IP from external STUN server
+				ip_list.emplace_back(public_ip->GetIpAddress());
+			}
+			else
+			{
+				// Case 4 - Could not obtain an IP from the STUN server
+			}
 		}
 		else
 		{
-			urls.append(ov::String::FormatString("turn:%s?transport=tcp", tcp_relay_address.CStr()).CStr());
+			// Case 5 - Use the domain as it is
+			urls.append(ov::String::FormatString("turn:%s?transport=tcp", tcp_relay.CStr()).CStr());
+		}
+
+		// This loop runs only when Case 1/2/3
+		for (const auto &ip : ip_list)
+		{
+			tcp_relay_address.EachPort([&](const ov::String &host, const uint16_t port) -> bool {
+				urls.append(ov::String::FormatString("turn:%s:%d?transport=tcp", ip.CStr(), port).CStr());
+				return true;
+			});
 		}
 
 		ice_server["urls"] = urls;
@@ -101,7 +122,7 @@ bool RtcSignallingServer::PrepareForTCPRelay()
 bool RtcSignallingServer::PrepareForExternalIceServer()
 {
 	// for external ice server configuration
-	auto &ice_servers_config = _webrtc_config.GetIceServers();
+	auto &ice_servers_config = _webrtc_bind_cfg.GetIceServers();
 	if (ice_servers_config.IsParsed())
 	{
 		for (auto ice_server_config : ice_servers_config.GetIceServerList())

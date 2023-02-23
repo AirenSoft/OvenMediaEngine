@@ -80,9 +80,9 @@ bool WebRtcPublisher::StartSignallingServer(const cfg::Server &server_config, co
 
 bool WebRtcPublisher::StartICEPorts(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config)
 {
-	auto &ip_list = server_config.GetIPList();
+	auto ice_port_manager = IcePortManager::GetInstance();
 
-	_ice_port = IcePortManager::GetInstance()->CreatePort(IcePortObserver::GetSharedPtr());
+	_ice_port = ice_port_manager->CreatePort(IcePortObserver::GetSharedPtr());
 	if (_ice_port == nullptr)
 	{
 		logte("Could not initialize ICE Port. Check your ICE configuration");
@@ -91,59 +91,65 @@ bool WebRtcPublisher::StartICEPorts(const cfg::Server &server_config, const cfg:
 
 	auto &ice_candidates_config = webrtc_bind_config.GetIceCandidates();
 
-	if (IcePortManager::GetInstance()->CreateIceCandidates(IcePortObserver::GetSharedPtr(), ice_candidates_config) == false)
+	if (ice_port_manager->CreateIceCandidates(IcePortObserver::GetSharedPtr(), ice_candidates_config) == false)
 	{
 		logte("Could not create ICE Candidates. Check your ICE configuration");
 		return false;
 	}
 
-	bool tcp_relay_parsed = false;
-	auto tcp_relay = ice_candidates_config.GetTcpRelay(&tcp_relay_parsed);
+	bool is_tcp_relay_configured = false;
+	auto tcp_relay = ice_candidates_config.GetTcpRelay(&is_tcp_relay_configured);
 
-	if (tcp_relay_parsed)
+	if (is_tcp_relay_configured)
 	{
-		auto items = tcp_relay.Split(":");
-		if (items.size() != 2)
+		bool is_tcp_relay_worker_count_configured;
+		auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&is_tcp_relay_worker_count_configured);
+		tcp_relay_worker_count = is_tcp_relay_worker_count_configured ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+
+		auto &ip_list = server_config.GetIPList();
+
+		if (ip_list.empty())
 		{
-			logte("TcpRelay format is incorrect: %s (Must be in <Relay IP>:<Port> format)", tcp_relay.CStr());
+			logte("No IP is configured");
 			return false;
 		}
 
-		bool tcp_relay_bind_parsed{false};
-		ov::String tcp_relay_bind{webrtc_bind_config.GetTcpRelayBind(&tcp_relay_bind_parsed)};
-		if (tcp_relay_bind_parsed)
-		{
-			auto l_tokens{tcp_relay_bind.Split(":")};
-			if (l_tokens.size() == 2)
-			{
-				auto l_ip{(l_tokens[0].IsEmpty()) ? ip_list[0] : l_tokens[0]};
-				auto l_port{l_tokens[1]};
-				tcp_relay_bind = ov::String::FormatString("%s:%s", l_ip.CStr(), l_port.CStr());
-				auto l_tcp_address = ov::SocketAddress::CreateAndGetFirst(tcp_relay_bind);
-				tcp_relay_bind_parsed = l_tcp_address.IsValid();
+		const auto tcp_relay_address = ov::SocketAddress::ParseAddress(tcp_relay);
 
-				if (tcp_relay_bind_parsed == false)
-				{
-					logte("TcpRelayBind invalid address: %s", tcp_relay_bind.CStr());
-				}
-			}
-			else
-			{
-				tcp_relay_bind_parsed = false;
-				logte("TcpRelayBind format is incorrect: %s (Must be in <Relay Local IP>:<Port> format)", tcp_relay_bind.CStr());
-			}
+		if (tcp_relay_address.HasPortList() == false)
+		{
+			logte("Invalid TCP relay address: %s (The TCP relay address must be in <IP>:<Port> format)", tcp_relay.CStr());
+			return false;
 		}
 
-		auto tcp_relay_listen{(tcp_relay_bind_parsed) ? tcp_relay_bind : ov::String::FormatString("*:%s", items[1].CStr())};
-		auto tcp_relay_address = ov::SocketAddress::CreateAndGetFirst(tcp_relay_listen);
+		auto observer = IcePortObserver::GetSharedPtr();
 
-		bool tcp_relay_worker_count_parsed{false};
-		auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&tcp_relay_worker_count_parsed);
-		tcp_relay_worker_count = tcp_relay_worker_count_parsed ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+		if (tcp_relay_address.EachPort(
+				[&](const ov::String &host, const uint16_t port) -> bool {
+					std::vector<ov::SocketAddress> tcp_relay_address_list;
 
-		if (IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), tcp_relay_address, ov::SocketType::Tcp, tcp_relay_worker_count) == false)
+					try
+					{
+						tcp_relay_address_list = ov::SocketAddress::Create("*", port);
+					}
+					catch (ov::Error &e)
+					{
+						logte("Could not get address for port: %d", port);
+						return false;
+					}
+
+					for (auto &address : tcp_relay_address_list)
+					{
+						if (ice_port_manager->CreateTurnServer(observer, address, ov::SocketType::Tcp, tcp_relay_worker_count) == false)
+						{
+							logte("Could not create TURN Server. Check your configuration");
+							return false;
+						}
+					}
+
+					return true;
+				}) == false)
 		{
-			logte("Could not create Turn Server. Check your configuration");
 			return false;
 		}
 	}
@@ -442,7 +448,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 	// Copy SDP
 	auto session_description = std::make_shared<SessionDescription>(*file_sdp);
 
-	session_description->SetOrigin("OvenMediaEngine", ov::Unique::GenerateUint32(), 2, "IN", 6, "::1");
+	session_description->SetOrigin("OvenMediaEngine", ov::Unique::GenerateUint32(), 2, "IN", 4, "127.0.0.1");
 	session_description->SetIceUfrag(_ice_port->GenerateUfrag());
 	session_description->Update();
 

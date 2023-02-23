@@ -36,10 +36,35 @@ namespace ov
 			ov::String host;
 			std::vector<PortRange> port_range_list;
 
+			Address() = default;
 			Address(const ov::String &host, const std::vector<PortRange> &port_range_list)
 				: host(host),
 				  port_range_list(port_range_list)
 			{
+			}
+
+			bool HasPortList() const
+			{
+				return (port_range_list.empty() == false);
+			}
+
+			using Iterator = std::function<bool(const ov::String &host, const uint16_t port)>;
+
+			// Returns false if a callback returns false, otherwise returns true
+			bool EachPort(Iterator callback, const bool *dummy = nullptr) const
+			{
+				for (const auto &port_range : port_range_list)
+				{
+					for (int port = port_range.start_port; port <= port_range.end_port; port++)
+					{
+						if (callback(host, port) == false)
+						{
+							return false;
+						}
+					}
+				}
+
+				return true;
 			}
 		};
 

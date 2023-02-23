@@ -619,6 +619,8 @@ void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, co
 	ov::ByteStream stream(data.get());
 	StunMessage message;
 
+	logtd("Trying to parse a STUN message from data...\n%s", data->Dump().CStr());
+
 	if (message.Parse(stream) == false)
 	{
 		logte("Could not parse STUN packet from %s", remote->ToString().CStr());

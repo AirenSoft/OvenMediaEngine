@@ -118,24 +118,14 @@ namespace ov
 										  : reinterpret_cast<void *>(&ToSockAddrIn4(storage)->sin_addr);
 	}
 
-	inline static in_port_t &GetPort(sockaddr_storage *storage)
+	inline static in_port_t &GetInPort(sockaddr_storage *storage)
 	{
-		if (storage->ss_family == AF_INET6)
-		{
-			return ToSockAddrIn6(storage)->sin6_port;
-		}
-
-		return ToSockAddrIn4(storage)->sin_port;
+		return (storage->ss_family == AF_INET6) ? (ToSockAddrIn6(storage)->sin6_port) : ToSockAddrIn4(storage)->sin_port;
 	}
 
-	inline static const in_port_t &GetPort(const sockaddr_storage *storage)
+	inline static const in_port_t &GetInPort(const sockaddr_storage *storage)
 	{
-		if (storage->ss_family == AF_INET6)
-		{
-			return ToSockAddrIn6(storage)->sin6_port;
-		}
-
-		return ToSockAddrIn4(storage)->sin_port;
+		return (storage->ss_family == AF_INET6) ? ToSockAddrIn6(storage)->sin6_port : ToSockAddrIn4(storage)->sin_port;
 	}
 
 	inline static size_t GetInAddrLength(const sockaddr_storage &storage)

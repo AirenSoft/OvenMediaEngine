@@ -168,24 +168,12 @@ namespace ov
 
 	std::vector<SocketAddress> SocketAddress::Create(const ov::String &string)
 	{
-		ov::String host;
-
-		auto address = ParseAddress(string);
-
 		std::vector<SocketAddress> address_list;
 
-		auto &port_range_list = address.port_range_list;
-
-		for (const auto &port_range : port_range_list)
-		{
-			auto start_port = port_range.start_port;
-			auto end_port = port_range.end_port;
-
-			for (int port = start_port; port <= end_port; port++)
-			{
-				CreateInternal(address.host, port, &address_list);
-			}
-		}
+		ParseAddress(string).EachPort([&](const ov::String &host, const uint16_t port) -> bool {
+			CreateInternal(host, port, &address_list);
+			return true;
+		});
 
 		return address_list;
 	}
@@ -457,7 +445,7 @@ namespace ov
 									(IsIPv6() && (::memcmp(&(ov::ToSockAddrIn6(&_address_storage)->sin6_addr), &in6addr_any, sizeof(in6addr_any)) == 0));
 			}
 
-			_port = GetPort(&_address_storage);
+			_port = NetworkToHost16(GetInPort(&_address_storage));
 			_port_set = true;
 		}
 		else
@@ -480,7 +468,7 @@ namespace ov
 	{
 		OV_ASSERT2(_address_storage.ss_family != AF_UNSPEC);
 
-		GetPort(&_address_storage) = HostToNetwork16(port);
+		GetInPort(&_address_storage) = HostToNetwork16(port);
 
 		_port = port;
 		_port_set = true;

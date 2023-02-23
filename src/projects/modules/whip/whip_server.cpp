@@ -20,41 +20,74 @@ WhipServer::WhipServer(const cfg::bind::cmm::Webrtc &webrtc_bind_cfg)
 
 bool WhipServer::PrepareForTCPRelay()
 {
-	// for internal turn/tcp relay configuration
+	// For internal TURN/TCP relay configuration
 	_tcp_force = _webrtc_bind_cfg.GetIceCandidates().IsTcpForce();
 
-	bool tcp_relay_parsed = false;
-	auto tcp_relay_address = _webrtc_bind_cfg.GetIceCandidates().GetTcpRelay(&tcp_relay_parsed);
-	if (tcp_relay_parsed)
+	bool is_tcp_relay_configured = false;
+	auto tcp_relay = _webrtc_bind_cfg.GetIceCandidates().GetTcpRelay(&is_tcp_relay_configured);
+
+	if (is_tcp_relay_configured)
 	{
 		// <TcpRelay>IP:Port</TcpRelay>
 		// <TcpRelay>*:Port</TcpRelay>
+		// <TcpRelay>[::]:Port</TcpRelay>
 		// <TcpRelay>${PublicIP}:Port</TcpRelay>
 
-		auto address_items = tcp_relay_address.Split(":");
-		if (address_items.size() != 2)
+		// Check whether tcp_relay_address indicates "any address"(*, ::) or ${PublicIP}
+		const auto tcp_relay_address = ov::SocketAddress::ParseAddress(tcp_relay);
+		if (tcp_relay_address.HasPortList() == false)
 		{
-			logte("Invalid TCP relay address(%s). The TCP relay address format must be IP:Port ", tcp_relay_address.CStr());
+			logte("Invalid TCP relay address: %s (The TCP relay address must be in <IP>:<Port> format)", tcp_relay.CStr());
+			return false;
 		}
-		else if (address_items[0] == "*")
+
+		auto address_utilities = ov::AddressUtilities::GetInstance();
+
+		std::vector<ov::String> ip_list;
+		std::vector<ov::String> url_list;
+
+		auto &tcp_relay_host = tcp_relay_address.host;
+		if (tcp_relay_host == "*")
 		{
-			auto ip_list = ov::AddressUtilities::GetInstance()->GetIpList(ov::SocketFamily::Inet);
-			for (const auto &ip : ip_list)
+			// Case 1 - IPv4 wildcard
+			ip_list = address_utilities->GetIpList(ov::SocketFamily::Inet);
+		}
+		else if (tcp_relay_host == "::")
+		{
+			// Case 2 - IPv6 wildcard
+			ip_list = address_utilities->GetIpList(ov::SocketFamily::Inet6);
+		}
+		else if (tcp_relay_host == "${PublicIP}")
+		{
+			auto public_ip = address_utilities->GetMappedAddress();
+
+			if (public_ip != nullptr)
 			{
-				auto address = ov::String::FormatString("turn:%s:%s?transport=tcp", ip.CStr(), address_items[1].CStr());
-				_link_headers.push_back(GetIceServerLinkValue(address, DEFAULT_RELAY_USERNAME, DEFAULT_RELAY_KEY));
+				// Case 3 - Get an IP from external STUN server
+				ip_list.emplace_back(public_ip->GetIpAddress());
 			}
-		}
-		else if (address_items[0] == "${PublicIP}")
-		{
-			auto public_ip = ov::AddressUtilities::GetInstance()->GetMappedAddress();
-			auto address = ov::String::FormatString("turn:%s:%s?transport=tcp", public_ip->GetIpAddress().CStr(), address_items[1].CStr());
-			_link_headers.push_back(GetIceServerLinkValue(address, DEFAULT_RELAY_USERNAME, DEFAULT_RELAY_KEY));
+			else
+			{
+				// Case 4 - Could not obtain an IP from the STUN server
+			}
 		}
 		else
 		{
-			auto address = ov::String::FormatString("turn:%s?transport=tcp", tcp_relay_address.CStr());
-			_link_headers.push_back(GetIceServerLinkValue(address, DEFAULT_RELAY_USERNAME, DEFAULT_RELAY_KEY));
+			// Case 5 - Use the domain as it is
+			url_list.emplace_back(ov::String::FormatString("turn:%s?transport=tcp", tcp_relay.CStr()));
+		}
+
+		for (const auto &ip : ip_list)
+		{
+			tcp_relay_address.EachPort([&](const ov::String &host, const uint16_t port) -> bool {
+				url_list.emplace_back(ov::String::FormatString("turn:%s:%d?transport=tcp", ip.CStr(), port));
+				return true;
+			});
+		}
+
+		for (const auto &url : url_list)
+		{
+			_link_headers.push_back(GetIceServerLinkValue(url, DEFAULT_RELAY_USERNAME, DEFAULT_RELAY_KEY));
 		}
 	}
 

@@ -24,7 +24,7 @@
 class RtcSignallingServer : public ov::EnableSharedFromThis<RtcSignallingServer>
 {
 public:
-	RtcSignallingServer(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_config);
+	RtcSignallingServer(const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_cfg);
 	~RtcSignallingServer() override = default;
 
 	bool Start(
@@ -123,7 +123,7 @@ protected:
 
 protected:
 	const cfg::Server _server_config;
-	const cfg::bind::cmm::Webrtc _webrtc_config;
+	const cfg::bind::cmm::Webrtc _webrtc_bind_cfg;
 
 	std::recursive_mutex _http_server_list_mutex;
 	std::vector<std::shared_ptr<http::svr::HttpServer>> _http_server_list;
