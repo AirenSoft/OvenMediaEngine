@@ -146,7 +146,7 @@ bool IcePort::CreateTurnServer(const ov::SocketAddress &address, ov::SocketType 
 	// This is the player's candidate and passed to OME.
 	// However, OME does not use the player's candidate. So we pass anything by this value.
 	auto xor_relayed_address_attribute = std::make_shared<StunXorRelayedAddressAttribute>();
-	xor_relayed_address_attribute->SetParameters(ov::SocketAddress::CreateAndGetFirst(FAKE_RELAY_IP, FAKE_RELAY_PORT));
+	xor_relayed_address_attribute->SetParameters(ov::SocketAddress::CreateAndGetFirst(address.IsIPv6() ? FAKE_RELAY_IP6 : FAKE_RELAY_IP4, FAKE_RELAY_PORT));
 	_xor_relayed_address_attribute = std::move(xor_relayed_address_attribute);
 
 	return true;
@@ -806,7 +806,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		}
 		else
 		{
-			xor_mapped_attribute->SetParameters(ov::SocketAddress::CreateAndGetFirst(FAKE_RELAY_IP, FAKE_RELAY_PORT));
+			xor_mapped_attribute->SetParameters(ov::SocketAddress::CreateAndGetFirst(address.IsIPv6() ? FAKE_RELAY_IP6 : FAKE_RELAY_IP4, FAKE_RELAY_PORT));
 		}
 
 		response_message.AddAttribute(std::move(xor_mapped_attribute));

@@ -36,7 +36,7 @@ bool RtcSignallingServer::PrepareForTCPRelay()
 	_tcp_force = _webrtc_bind_cfg.GetIceCandidates().IsTcpForce();
 
 	bool is_tcp_relay_configured = false;
-	auto tcp_relay = _webrtc_bind_cfg.GetIceCandidates().GetTcpRelay(&is_tcp_relay_configured);
+	const auto &tcp_relay_list = _webrtc_bind_cfg.GetIceCandidates().GetTcpRelayList(&is_tcp_relay_configured);
 
 	if (is_tcp_relay_configured)
 	{
@@ -44,60 +44,74 @@ bool RtcSignallingServer::PrepareForTCPRelay()
 		Json::Value new_ice_server = Json::objectValue;
 		Json::Value urls = Json::arrayValue;
 
-		// <TcpRelay>IP:Port</TcpRelay>
-		// <TcpRelay>*:Port</TcpRelay>
-		// <TcpRelay>[::]:Port</TcpRelay>
-		// <TcpRelay>${PublicIP}:Port</TcpRelay>
-
-		// Check whether tcp_relay_address indicates "any address"(*, ::) or ${PublicIP}
-		const auto tcp_relay_address = ov::SocketAddress::ParseAddress(tcp_relay);
-		if (tcp_relay_address.HasPortList() == false)
+		for (auto &tcp_relay : tcp_relay_list)
 		{
-			logte("Invalid TCP relay address: %s (The TCP relay address must be in <IP>:<Port> format)", tcp_relay.CStr());
-			return false;
-		}
+			// <TcpRelay>IP:Port</TcpRelay>
+			// <TcpRelay>*:Port</TcpRelay>
+			// <TcpRelay>[::]:Port</TcpRelay>
+			// <TcpRelay>${PublicIP}:Port</TcpRelay>
 
-		auto address_utilities = ov::AddressUtilities::GetInstance();
-		std::vector<ov::String> ip_list;
-
-		auto &tcp_relay_host = tcp_relay_address.host;
-		if (tcp_relay_host == "*")
-		{
-			// Case 1 - IPv4
-			ip_list = address_utilities->GetIpList(ov::SocketFamily::Inet);
-		}
-		else if (tcp_relay_host == "::")
-		{
-			// Case 2 - IPv6 wildcard
-			ip_list = address_utilities->GetIpList(ov::SocketFamily::Inet6);
-		}
-		else if (tcp_relay_host == "${PublicIP}")
-		{
-			auto public_ip = address_utilities->GetMappedAddress();
-
-			if (public_ip != nullptr)
+			// Check whether tcp_relay_address indicates "any address"(*, ::) or ${PublicIP}
+			const auto tcp_relay_address = ov::SocketAddress::ParseAddress(tcp_relay);
+			if (tcp_relay_address.HasPortList() == false)
 			{
-				// Case 3 - Get an IP from external STUN server
-				ip_list.emplace_back(public_ip->GetIpAddress());
+				logte("Invalid TCP relay address: %s (The TCP relay address must be in <IP>:<Port> format)", tcp_relay.CStr());
+				return false;
+			}
+
+			auto address_utilities = ov::AddressUtilities::GetInstance();
+			std::vector<ov::String> ip_list;
+			ov::SocketFamily family = ov::SocketFamily::Unknown;
+
+			auto &tcp_relay_host = tcp_relay_address.host;
+			if (tcp_relay_host == "*")
+			{
+				// Case 1 - IPv4
+				ip_list = address_utilities->GetIpList(ov::SocketFamily::Inet);
+				family = ov::SocketFamily::Inet;
+			}
+			else if (tcp_relay_host == "::")
+			{
+				// Case 2 - IPv6 wildcard
+				ip_list = address_utilities->GetIpList(ov::SocketFamily::Inet6);
+				family = ov::SocketFamily::Inet6;
+			}
+			else if (tcp_relay_host == "${PublicIP}")
+			{
+				auto public_ip = address_utilities->GetMappedAddress();
+
+				if (public_ip != nullptr)
+				{
+					// Case 3 - Get an IP from external STUN server
+					ip_list.emplace_back(public_ip->GetIpAddress());
+					family = public_ip->GetFamily();
+				}
+				else
+				{
+					// Case 4 - Could not obtain an IP from the STUN server
+				}
 			}
 			else
 			{
-				// Case 4 - Could not obtain an IP from the STUN server
+				// Case 5 - Use the domain as it is
+				urls.append(ov::String::FormatString("turn:%s?transport=tcp", tcp_relay.CStr()).CStr());
 			}
-		}
-		else
-		{
-			// Case 5 - Use the domain as it is
-			urls.append(ov::String::FormatString("turn:%s?transport=tcp", tcp_relay.CStr()).CStr());
-		}
 
-		// This loop runs only when Case 1/2/3
-		for (const auto &ip : ip_list)
-		{
-			tcp_relay_address.EachPort([&](const ov::String &host, const uint16_t port) -> bool {
-				urls.append(ov::String::FormatString("turn:%s:%d?transport=tcp", ip.CStr(), port).CStr());
-				return true;
-			});
+			// This loop runs only when Case 1/2/3
+			for (const auto &ip : ip_list)
+			{
+				tcp_relay_address.EachPort([&](const ov::String &host, const uint16_t port) -> bool {
+					if (family == ov::SocketFamily::Inet6)
+					{
+						urls.append(ov::String::FormatString("turn:[%s]:%d?transport=tcp", ip.CStr(), port).CStr());
+					}
+					else
+					{
+						urls.append(ov::String::FormatString("turn:%s:%d?transport=tcp", ip.CStr(), port).CStr());
+					}
+					return true;
+				});
+			}
 		}
 
 		ice_server["urls"] = urls;

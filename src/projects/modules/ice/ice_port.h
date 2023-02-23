@@ -27,7 +27,8 @@
 #define DEFAULT_LIFETIME		3600
 // This is the player's candidate and eventually passed to OME. 
 // However, OME does not use the player's candidate. So we pass anything by this value.
-#define FAKE_RELAY_IP			"1.1.1.1"
+#define FAKE_RELAY_IP4			"1.1.1.1"
+#define FAKE_RELAY_IP6			"1::1"
 #define FAKE_RELAY_PORT			14090
 
 class RtcIceCandidate;

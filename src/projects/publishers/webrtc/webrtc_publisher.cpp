@@ -98,7 +98,7 @@ bool WebRtcPublisher::StartICEPorts(const cfg::Server &server_config, const cfg:
 	}
 
 	bool is_tcp_relay_configured = false;
-	auto tcp_relay = ice_candidates_config.GetTcpRelay(&is_tcp_relay_configured);
+	const auto &tcp_relay_list = ice_candidates_config.GetTcpRelayList(&is_tcp_relay_configured);
 
 	if (is_tcp_relay_configured)
 	{
@@ -114,43 +114,46 @@ bool WebRtcPublisher::StartICEPorts(const cfg::Server &server_config, const cfg:
 			return false;
 		}
 
-		const auto tcp_relay_address = ov::SocketAddress::ParseAddress(tcp_relay);
-
-		if (tcp_relay_address.HasPortList() == false)
+		for (auto &tcp_relay : tcp_relay_list)
 		{
-			logte("Invalid TCP relay address: %s (The TCP relay address must be in <IP>:<Port> format)", tcp_relay.CStr());
-			return false;
-		}
+			const auto tcp_relay_address = ov::SocketAddress::ParseAddress(tcp_relay);
 
-		auto observer = IcePortObserver::GetSharedPtr();
+			if (tcp_relay_address.HasPortList() == false)
+			{
+				logte("Invalid TCP relay address: %s (The TCP relay address must be in <IP>:<Port> format)", tcp_relay.CStr());
+				return false;
+			}
 
-		if (tcp_relay_address.EachPort(
-				[&](const ov::String &host, const uint16_t port) -> bool {
-					std::vector<ov::SocketAddress> tcp_relay_address_list;
+			auto observer = IcePortObserver::GetSharedPtr();
 
-					try
-					{
-						tcp_relay_address_list = ov::SocketAddress::Create("*", port);
-					}
-					catch (ov::Error &e)
-					{
-						logte("Could not get address for port: %d", port);
-						return false;
-					}
+			if (tcp_relay_address.EachPort(
+					[&](const ov::String &host, const uint16_t port) -> bool {
+						std::vector<ov::SocketAddress> tcp_relay_address_list;
 
-					for (auto &address : tcp_relay_address_list)
-					{
-						if (ice_port_manager->CreateTurnServer(observer, address, ov::SocketType::Tcp, tcp_relay_worker_count) == false)
+						try
 						{
-							logte("Could not create TURN Server. Check your configuration");
+							tcp_relay_address_list = ov::SocketAddress::Create(ip_list, port);
+						}
+						catch (ov::Error &e)
+						{
+							logte("Could not get address for port: %d", port);
 							return false;
 						}
-					}
 
-					return true;
-				}) == false)
-		{
-			return false;
+						for (auto &address : tcp_relay_address_list)
+						{
+							if (ice_port_manager->CreateTurnServer(observer, address, ov::SocketType::Tcp, tcp_relay_worker_count) == false)
+							{
+								logte("Could not create TURN Server. Check your configuration");
+								return false;
+							}
+						}
+
+						return true;
+					}) == false)
+			{
+				return false;
+			}
 		}
 	}
 
