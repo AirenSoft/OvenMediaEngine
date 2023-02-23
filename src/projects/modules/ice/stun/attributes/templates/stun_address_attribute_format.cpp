@@ -149,7 +149,7 @@ bool StunAddressAttributeFormat::Serialize(const StunMessage *stun_message, ov::
 
 ov::String StunAddressAttributeFormat::ToString(const char *class_name) const
 {
-	return StunAttribute::ToString(class_name, ov::String::FormatString(", address: %s:%d", _address.ToString().CStr()).CStr());
+	return StunAttribute::ToString(class_name, ov::String::FormatString(", address: %s", _address.ToString().CStr()).CStr());
 }
 
 ov::String StunAddressAttributeFormat::ToString() const
