@@ -272,7 +272,7 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 				}
 				catch (const ov::Error &e)
 				{
-					logte("Could not create socket address: %s", e.What());
+					logtw("Invalid address: %s, port: %d (%s) - %s", local_ip.CStr(), port, e.What());
 					return false;
 				}
 

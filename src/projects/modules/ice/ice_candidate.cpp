@@ -137,7 +137,7 @@ bool IceCandidate::ParseFromString(const ov::String &candidate_string)
 		}
 		catch (const ov::Error &e)
 		{
-			logtw("Invalid address: %s", connection_address.CStr());
+			logtw("Invalid address: %s, port: %d - %s", connection_address.CStr(), port, e.What());
 			return false;
 		}
 	}

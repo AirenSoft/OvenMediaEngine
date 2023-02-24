@@ -61,7 +61,17 @@ bool IcePort::CreateIceCandidates(const char *server_name, const cfg::Server &se
 			ov::SocketType socket_type = (transport == "TCP") ? ov::SocketType::Tcp : ov::SocketType::Udp;
 
 			// Create address list for the candidates from IP addresses
-			auto ice_address_list = ov::SocketAddress::Create(ip_list, address.Port());
+			std::vector<ov::SocketAddress> ice_address_list;
+
+			try
+			{
+				ice_address_list = ov::SocketAddress::Create(ip_list, address.Port());
+			}
+			catch (const ov::Error &e)
+			{
+				logte("Could not create socket address: %s", e.What());
+				return false;
+			}
 
 			for (auto &ice_address : ice_address_list)
 			{
