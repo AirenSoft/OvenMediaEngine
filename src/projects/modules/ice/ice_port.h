@@ -242,7 +242,9 @@ private:
 	std::shared_ptr<StunAttribute>	_realm_attribute;
 	std::shared_ptr<StunAttribute>	_software_attribute;
 	std::shared_ptr<StunAttribute>	_nonce_attribute;
-	std::shared_ptr<StunAttribute>	_xor_relayed_address_attribute;
+
+	std::shared_ptr<StunAttribute>	_xor_relayed_address_attribute_for_ipv4;
+	std::shared_ptr<StunAttribute>	_xor_relayed_address_attribute_for_ipv6;
 
 	std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
 	std::recursive_mutex _physical_port_list_mutex;

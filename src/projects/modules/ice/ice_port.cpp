@@ -167,8 +167,17 @@ bool IcePort::CreateTurnServer(const ov::SocketAddress &address, ov::SocketType 
 	// This is the player's candidate and passed to OME.
 	// However, OME does not use the player's candidate. So we pass anything by this value.
 	auto xor_relayed_address_attribute = std::make_shared<StunXorRelayedAddressAttribute>();
-	xor_relayed_address_attribute->SetParameters(ov::SocketAddress::CreateAndGetFirst(address.IsIPv6() ? FAKE_RELAY_IP6 : FAKE_RELAY_IP4, FAKE_RELAY_PORT));
-	_xor_relayed_address_attribute = std::move(xor_relayed_address_attribute);
+
+	if (address.IsIPv4())
+	{
+		xor_relayed_address_attribute->SetParameters(ov::SocketAddress::CreateAndGetFirst(FAKE_RELAY_IP4, FAKE_RELAY_PORT));
+		_xor_relayed_address_attribute_for_ipv4 = std::move(xor_relayed_address_attribute);
+	}
+	else
+	{
+		xor_relayed_address_attribute->SetParameters(ov::SocketAddress::CreateAndGetFirst(FAKE_RELAY_IP6, FAKE_RELAY_PORT));
+		_xor_relayed_address_attribute_for_ipv6 = std::move(xor_relayed_address_attribute);
+	}
 
 	return true;
 }
@@ -1077,7 +1086,7 @@ bool IcePort::ProcessTurnAllocateRequest(const std::shared_ptr<ov::Socket> &remo
 	lifetime_attribute->SetValue(lifetime);
 	response_message.AddAttribute(lifetime_attribute);
 
-	response_message.AddAttribute(_xor_relayed_address_attribute);
+	response_message.AddAttribute(address.IsIPv6() ? _xor_relayed_address_attribute_for_ipv6 : _xor_relayed_address_attribute_for_ipv4);
 	response_message.AddAttribute(_software_attribute);
 
 	SendStunMessage(remote, address, gate_info, response_message, _hmac_key);
