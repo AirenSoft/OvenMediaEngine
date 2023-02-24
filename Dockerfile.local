@@ -4,24 +4,29 @@ FROM    ubuntu:20.04 AS base
 ENV     DEBIAN_FRONTEND=noninteractive
 RUN     apt-get update && apt-get install -y tzdata sudo curl
 
-FROM    base AS build
-
 WORKDIR /tmp
+
+ENV     PREFIX=/opt/ovenmediaengine
+ENV     TEMP_DIR=/tmp/ome
 
 ARG     OME_VERSION=local
 ARG 	STRIP=TRUE
 ARG     GPU=FALSE
 
-ENV     PREFIX=/opt/ovenmediaengine
-ENV     TEMP_DIR=/tmp/ome
-
 ## Copy code to image
 COPY    ./ ${TEMP_DIR}/
+
+## Install GPU dependencies
+RUN \
+        if [ "$GPU" = "TRUE" ] ; then \
+                ${TEMP_DIR}/misc/install_nvidia_driver.sh --docker ; \
+        fi
+
+FROM    base AS build
 
 ## Install dependencies
 RUN \
         if [ "$GPU" = "TRUE" ] ; then \
-                ${TEMP_DIR}/misc/install_nvidia_driver.sh --docker ; \
                 ${TEMP_DIR}/misc/prerequisites.sh  --enable-nvc ; \
         else \
                 ${TEMP_DIR}/misc/prerequisites.sh ; \
@@ -45,7 +50,7 @@ RUN \
         cp ../misc/conf_examples/Logger.xml ${PREFIX}/bin/origin_conf/Logger.xml && \
         cp ../misc/conf_examples/Edge.xml ${PREFIX}/bin/edge_conf/Server.xml && \
         cp ../misc/conf_examples/Logger.xml ${PREFIX}/bin/edge_conf/Logger.xml && \
-        rm -rf ${DIR}
+        rm -rf ${TEMP_DIR}
 
 FROM	base AS release
 
