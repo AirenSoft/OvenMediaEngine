@@ -126,13 +126,20 @@ namespace ov
 		StorageList storage_list;
 		bool is_wildcard_host = false;
 
-		if (Resolve(host, &storage_list, &is_wildcard_host))
+		ov::String new_host = host;
+
+		if (host.HasPrefix('[') && host.HasSuffix(']'))
+		{
+			new_host = host.Substring(1, host.GetLength() - 2);
+		}
+
+		if (Resolve(new_host, &storage_list, &is_wildcard_host))
 		{
 			for (const auto &storage : storage_list)
 			{
-				SocketAddress address(host, storage);
+				SocketAddress address(new_host, storage);
 
-				address.SetHostname(host);
+				address.SetHostname(new_host);
 				address.SetPort(port);
 				address._is_wildcard_host = is_wildcard_host;
 
@@ -144,7 +151,7 @@ namespace ov
 			// Could not obtain IP address from the host
 			SocketAddress address;
 
-			address.SetHostname(host);
+			address.SetHostname(new_host);
 			address.SetPort(port);
 
 			address_list->push_back(std::move(address));
@@ -157,12 +164,19 @@ namespace ov
 		{
 			StorageList storage_list;
 			bool is_wildcard_host;
-			
-			Resolve(host, &storage_list, &is_wildcard_host);
+
+			ov::String new_host = host;
+
+			if (host.HasPrefix('[') && host.HasSuffix(']'))
+			{
+				new_host = host.Substring(1, host.GetLength() - 2);
+			}
+
+			Resolve(new_host, &storage_list, &is_wildcard_host);
 
 			for (const auto &storage : storage_list)
 			{
-				SocketAddress address(host, storage);
+				SocketAddress address(new_host, storage);
 				address.SetPort(port);
 				address._is_wildcard_host = is_wildcard_host;
 
