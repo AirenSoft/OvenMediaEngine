@@ -1,6 +1,7 @@
 #include "publisher.h"
 #include "publisher_private.h"
 #include <orchestrator/orchestrator.h>
+#include <base/provider/pull_provider/stream_props.h>
 
 namespace pub
 {
@@ -184,17 +185,24 @@ namespace pub
 
 		// Pull stream with the local origin map
 		logti("Try to pull stream from local origin map: [%s/%s]", vapp_name.CStr(), stream_name.CStr());
-		if (orchestrator->RequestPullStream(request_from, vhost_app_name, stream_name) == false)
+		if (orchestrator->RequestPullStreamWithOriginMap(request_from, vhost_app_name, stream_name) == false)
 		{
 			// Pull stream with the origin map store
 			logti("Try to pull stream from origin map store: [%s/%s]", vapp_name.CStr(), stream_name.CStr());
-			auto ovt_url = orchestrator->GetOriginUrlFromOriginMapStore(vhost_app_name, stream_name);
-			if (ovt_url == nullptr)
+			auto origin_url = orchestrator->GetOriginUrlFromOriginMapStore(vhost_app_name, stream_name);
+			if (origin_url == nullptr)
 			{
 				return nullptr;
 			}
 
-			if (orchestrator->RequestPullStream(request_from, vhost_app_name, stream_name, ovt_url->ToUrlString()) == false)
+			auto properties = std::make_shared<pvd::PullStreamProperties>();
+			properties->EnableFromOriginMapStroe(true);
+			if (origin_url->Scheme().UpperCaseString() == "OVT")
+			{
+				properties->EnableRelay(true);
+			}
+
+			if (orchestrator->RequestPullStreamWithUrls(request_from, vhost_app_name, stream_name, {origin_url->ToUrlString()}, 0, properties) == false)
 			{
 				return nullptr;
 			}

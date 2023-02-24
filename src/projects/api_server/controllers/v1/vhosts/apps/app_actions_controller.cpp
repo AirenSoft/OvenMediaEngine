@@ -332,7 +332,7 @@ namespace api
 			auto url = ov::Url::Parse(client->GetRequest()->GetUri());
 			auto a_name = app->GetName();
 			auto s_name = push->GetStreamName();
-			ocst::Orchestrator::GetInstance()->RequestPullStream(url, a_name, s_name);
+			ocst::Orchestrator::GetInstance()->RequestPullStreamWithOriginMap(url, a_name, s_name);
 
 			response.append(::serdes::JsonFromPush(push));
 

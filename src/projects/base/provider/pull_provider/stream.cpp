@@ -30,8 +30,14 @@ namespace pvd
 
 		// In case of Pull Stream created by Origins, Properties information is included.
 		_properties = properties;
+		if (_properties == nullptr)
+		{
+			_properties = std::make_shared<pvd::PullStreamProperties>();
+		}
 		
 		SetRepresentationType((_properties->IsRelay()==true)?StreamRepresentationType::Relay:StreamRepresentationType::Source);
+
+		_from_origin_map_store = _properties->IsFromOriginMapStore();
 	}
 
 	bool PullStream::Start()

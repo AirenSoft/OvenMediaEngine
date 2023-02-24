@@ -639,7 +639,7 @@ namespace ocst
 				auto remaining_part = location.Substring(origin.location.GetLength());
 
 
-				if(remaining_part.GetLength() > 0 && origin._strict_location == true) {
+				if(remaining_part.GetLength() > 0 && origin.strict_location == true) {
 					logtw("This origin does not support match sub location. matched location: %s, requested location: %s", origin.location.CStr(), location.CStr());
 					continue;
 				}

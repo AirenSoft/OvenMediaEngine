@@ -55,7 +55,7 @@ namespace api
 				{
 					if (stream == nullptr)
 					{
-						auto result = orchestrator->RequestPullStream(
+						auto result = orchestrator->RequestPullStreamWithUrl(
 							url, app->GetName(),
 							stream_name, item["url"].asCString());
 

@@ -109,6 +109,11 @@ namespace info
 			return _audio_tracks.size() > 0;
 		}
 
+		bool IsFromOriginMapStore() const
+		{
+			return _from_origin_map_store;
+		}
+
 	protected:
 		info::stream_id_t _id = 0;
 		uint32_t _msid = 0;
@@ -125,6 +130,8 @@ namespace info
 
 		// File name : Playlist
 		std::map<ov::String, std::shared_ptr<Playlist>> _playlists;
+
+		bool _from_origin_map_store = false;
 
 	private:
 		std::chrono::system_clock::time_point _created_time;

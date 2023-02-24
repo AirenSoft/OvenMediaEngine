@@ -107,8 +107,8 @@ namespace pvd
 			return false;
 		}
 
-		// If provider is OVT, it is running in Edge mode.
-		if (_provider->GetProviderType() != ProviderType::Ovt)
+		// DO NOT register again if the stream is already from OriginMapStore
+		if (stream->IsFromOriginMapStore() == false)
 		{
 			// Register stream if OriginMapStore is enabled
 			auto result = ocst::Orchestrator::GetInstance()->RegisterStreamToOriginMapStore(GetName(), stream->GetName());

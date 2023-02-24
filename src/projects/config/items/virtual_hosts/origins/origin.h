@@ -33,15 +33,7 @@ namespace cfg
 					Register<Optional>("Persistent", &_persistent);
 					Register<Optional>("Failback", &_failback);
 					Register<Optional>("StrictLocation", &_strict_location);
-					Register<Optional>("Relay", &_relay, [=]() -> std::shared_ptr<ConfigError> {
-						if(_pass.GetScheme().LowerCaseString() == "ovt")
-						{
-							logd("Config", "OVT schema defaults to relay mode");
-							_relay = true;
-						}
-
-						return nullptr;
-					}, nullptr);
+					Register<Optional>("Relay", &_relay);
 				}
 				ov::String _location;
 				Pass _pass;
