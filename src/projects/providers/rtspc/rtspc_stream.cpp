@@ -201,7 +201,14 @@ namespace pvd
 		}
 
 		// 554 is default port of RTSP
-		auto socket_address = ov::SocketAddress::CreateAndGetFirst(_curr_url->Host(), _curr_url->Port() == 0 ? 554 : _curr_url->Port());
+		auto host = _curr_url->Host();
+
+		if (host.HasPrefix('[') && host.HasSuffix(']'))
+		{
+			host = host.Substring(1, host.GetLength() - 2);
+		}
+
+		auto socket_address = ov::SocketAddress::CreateAndGetFirst(host, _curr_url->Port() == 0 ? 554 : _curr_url->Port());
 
 		// Connect
 		_signalling_socket = signalling_socket_pool->AllocSocket(socket_address.GetFamily());
