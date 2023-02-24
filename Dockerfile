@@ -24,7 +24,7 @@ RUN \
 ## Install dependencies
 RUN \
         if [ "$GPU" = "TRUE" ] ; then \
-                ${TEMP_DIR}/misc/install_nvidia_driver.sh ; \
+                ${TEMP_DIR}/misc/install_nvidia_driver.sh --docker ; \
                 ${TEMP_DIR}/misc/prerequisites.sh  --enable-nvc ; \
         else \
                 ${TEMP_DIR}/misc/prerequisites.sh ; \
