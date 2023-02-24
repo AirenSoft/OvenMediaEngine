@@ -4,16 +4,14 @@ FROM    ubuntu:20.04 AS base
 ENV     DEBIAN_FRONTEND=noninteractive
 RUN     apt-get update && apt-get install -y tzdata sudo curl
 
-FROM    base AS build
-
 WORKDIR /tmp
+
+ENV     PREFIX=/opt/ovenmediaengine
+ENV     TEMP_DIR=/tmp/ome
 
 ARG     OME_VERSION=master
 ARG 	STRIP=TRUE
 ARG     GPU=FALSE
-
-ENV     PREFIX=/opt/ovenmediaengine
-ENV     TEMP_DIR=/tmp/ome
 
 ## Download OvenMediaEngine
 RUN \
@@ -21,10 +19,18 @@ RUN \
         cd ${TEMP_DIR} && \
         curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1
 
+## Install GPU dependencies
+RUN \
+        if [ "$GPU" = "TRUE" ] ; then \
+                ${TEMP_DIR}/misc/install_nvidia_driver.sh --docker ; \
+        fi
+
+FROM    base AS build
+
+
 ## Install dependencies
 RUN \
         if [ "$GPU" = "TRUE" ] ; then \
-                ${TEMP_DIR}/misc/install_nvidia_docker_image.sh ; \
                 ${TEMP_DIR}/misc/prerequisites.sh  --enable-nvc ; \
         else \
                 ${TEMP_DIR}/misc/prerequisites.sh ; \
@@ -48,7 +54,7 @@ RUN \
         cp ../misc/conf_examples/Logger.xml ${PREFIX}/bin/origin_conf/Logger.xml && \
         cp ../misc/conf_examples/Edge.xml ${PREFIX}/bin/edge_conf/Server.xml && \
         cp ../misc/conf_examples/Logger.xml ${PREFIX}/bin/edge_conf/Logger.xml && \
-        rm -rf ${DIR}
+        rm -rf ${TEMP_DIR}
 
 FROM	base AS release
 

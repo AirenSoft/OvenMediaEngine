@@ -156,7 +156,7 @@ public:
 	~IcePort() override;
 
 	bool CreateTurnServer(const ov::SocketAddress &address, ov::SocketType socket_type, int tcp_relay_worker_count);
-	bool CreateIceCandidates(const RtcIceCandidateList &ice_candidate_list, int ice_worker_count);
+	bool CreateIceCandidates(const char *server_name, const cfg::Server &server_config, const RtcIceCandidateList &ice_candidate_list, int ice_worker_count);
 	bool Close();
 
 	IcePortConnectionState GetState(uint32_t session_id) const
@@ -242,7 +242,9 @@ private:
 	std::shared_ptr<StunAttribute>	_realm_attribute;
 	std::shared_ptr<StunAttribute>	_software_attribute;
 	std::shared_ptr<StunAttribute>	_nonce_attribute;
-	std::shared_ptr<StunAttribute>	_xor_relayed_address_attribute;
+
+	std::shared_ptr<StunAttribute>	_xor_relayed_address_attribute_for_ipv4;
+	std::shared_ptr<StunAttribute>	_xor_relayed_address_attribute_for_ipv6;
 
 	std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
 	std::recursive_mutex _physical_port_list_mutex;

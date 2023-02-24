@@ -45,7 +45,7 @@ install_base_ubuntu()
     sudo systemctl restart docker
 
     # Test
-    sudo docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
+    sudo docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu20.04 nvidia-smi
 }
 
 install_base_centos()
@@ -57,26 +57,26 @@ install_base_centos()
         sudo yum install -y yum-utils
 
         sudo yum-config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-        
+
         sudo yum repolist -v
-        
+
         sudo yum install -y https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.4.3-3.1.el7.x86_64.rpm
 
         sudo yum install docker-ce -y
-        
+
         sudo systemctl --now enable docker
 
     elif [[ "${OSVERSION}" == "8" ]]; then
         sudo dnf install -y dnf-utils
 
         sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-        
+
         sudo dnf repolist -v
-        
+
         sudo dnf install -y https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.4.3-3.1.el7.x86_64.rpm
 
         sudo dnf install docker-ce -y
-        
+
         sudo systemctl --now enable docker
     else
         fail_exit
@@ -94,13 +94,13 @@ install_base_centos()
         sudo dnf install -y nvidia-docker2
     else
         fail_exit
-    fi    
+    fi
 
     # Restart Docker
-    sudo systemctl restart docker    
+    sudo systemctl restart docker
 
     # Test
-    sudo docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
+    sudo docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu20.04 nvidia-smi
 }
 
 fail_exit()
@@ -143,11 +143,7 @@ if [ "${OSNAME}" == "Ubuntu" ]; then
 elif  [ "${OSNAME}" == "CentOS" ]; then
     check_version
     install_base_centos
-elif  [ "${OSNAME}" == "AmazonLinux" ]; then
-    check_version
-    # TODO : For Cloud Instance
 else
     echo "This program [$0] does not support your operating system [${OSNAME}]"
     echo "Please refer to manual installation page"
 fi
-

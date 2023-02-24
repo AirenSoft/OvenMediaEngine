@@ -25,8 +25,13 @@ public:
 	~IcePortManager() override = default;
 
 	std::shared_ptr<IcePort> CreatePort(std::shared_ptr<IcePortObserver> observer);
-	bool CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::cmm::IceCandidates &ice_candidates_config);
+	bool CreateIceCandidates(const char *server_name, std::shared_ptr<IcePortObserver> observer, const cfg::Server &server_config, const cfg::bind::cmm::IceCandidates &ice_candidates_config);
 	bool CreateTurnServer(std::shared_ptr<IcePortObserver> observer, const ov::SocketAddress &listening, const ov::SocketType socket_type, int tcp_relay_worker_count);
+
+	std::shared_ptr<IcePort> CreateTurnServers(
+		const char *server_name,
+		std::shared_ptr<IcePortObserver> observer,
+		const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config);
 
 	// TODO(Getroot): In the future, each IceCandidate and TurnServer can be released flexibly.
 	// In the future, each IceCandidate and TurnServer can be released flexibly.
@@ -41,6 +46,12 @@ protected:
 	bool IsRegisteredObserver(const std::shared_ptr<IcePortObserver> &observer);
 	bool GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &ice_candidates_config, RtcIceCandidateList *ice_candidate_list);
 	bool ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, ov::SocketAddress::Address *address);
+
+	bool CreateTurnServersInternal(
+		const char *server_name,
+		const std::shared_ptr<IcePort> &ice_port,
+		const std::shared_ptr<IcePortObserver> &observer,
+		const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config);
 
 private:
 	std::shared_ptr<IcePort> _ice_port = nullptr;

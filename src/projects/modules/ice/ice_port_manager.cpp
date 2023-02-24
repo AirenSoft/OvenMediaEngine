@@ -39,7 +39,11 @@ bool IcePortManager::IsRegisteredObserver(const std::shared_ptr<IcePortObserver>
 	return false;
 }
 
-bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::cmm::IceCandidates &ice_candidates_config)
+bool IcePortManager::CreateIceCandidates(
+	const char *server_name,
+	std::shared_ptr<IcePortObserver> observer,
+	const cfg::Server &server_config,
+	const cfg::bind::cmm::IceCandidates &ice_candidates_config)
 {
 	if (_ice_port == nullptr || IsRegisteredObserver(observer) == false)
 	{
@@ -58,7 +62,7 @@ bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePortObserver> observ
 	auto ice_worker_count = ice_candidates_config.GetIceWorkerCount(&is_parsed);
 	ice_worker_count = is_parsed ? ice_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
 
-	if (_ice_port->CreateIceCandidates(ice_candidate_list, ice_worker_count) == false)
+	if (_ice_port->CreateIceCandidates(server_name, server_config, ice_candidate_list, ice_worker_count) == false)
 	{
 		Release(observer);
 
@@ -84,18 +88,141 @@ bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePortObserver> observer,
 	if (_ice_port->CreateTurnServer(listening, socket_type, tcp_relay_worker_count) == false)
 	{
 		Release(observer);
+		logte("Could not create TURN server");
 
-		logte("Could not create turn server");
 		return false;
 	}
 	else
 	{
 		observer->SetTurnServerSocketType(socket_type);
 		observer->SetTurnServerPort(listening.Port());
-		logti("RelayServer is created successfully: host:%d?transport=tcp", listening.Port());
 	}
 
 	return true;
+}
+
+bool IcePortManager::CreateTurnServersInternal(
+	const char *server_name,
+	const std::shared_ptr<IcePort> &ice_port,
+	const std::shared_ptr<IcePortObserver> &observer,
+	const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config)
+{
+	auto &ice_candidates_config = webrtc_bind_config.GetIceCandidates();
+
+	if (CreateIceCandidates(server_name, observer, server_config, ice_candidates_config) == false)
+	{
+		logte("Could not create ICE Candidates for %s. Check your ICE configuration", server_name);
+		return false;
+	}
+
+	bool is_tcp_relay_configured = false;
+	const auto &tcp_relay_list = ice_candidates_config.GetTcpRelayList(&is_tcp_relay_configured);
+	std::vector<ov::String> tcp_relay_address_string_list;
+
+	if (is_tcp_relay_configured)
+	{
+		bool is_tcp_relay_worker_count_configured;
+		auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&is_tcp_relay_worker_count_configured);
+		tcp_relay_worker_count = is_tcp_relay_worker_count_configured ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+
+		auto &ip_list = server_config.GetIPList();
+
+		if (ip_list.empty())
+		{
+			logtw("No IP is configured");
+			return false;
+		}
+
+		std::map<ov::SocketAddress, bool> bound_map;
+
+		for (auto &tcp_relay : tcp_relay_list)
+		{
+			const auto tcp_relay_address = ov::SocketAddress::ParseAddress(tcp_relay);
+
+			if (tcp_relay_address.HasPortList() == false)
+			{
+				logte("Invalid TCP relay address of %s: %s (The TCP relay address must be in <IP>:<Port> format)",
+					  server_name,
+					  tcp_relay.CStr());
+				return false;
+			}
+
+			if (tcp_relay_address.EachPort(
+					[&](const ov::String &host, const uint16_t port) -> bool {
+						std::vector<ov::SocketAddress> tcp_relay_address_list;
+
+						try
+						{
+							tcp_relay_address_list = ov::SocketAddress::Create(ip_list, port);
+						}
+						catch (ov::Error &e)
+						{
+							logte("Could not get address for port: %d (%s)", port, server_name);
+							return false;
+						}
+
+						for (auto &address : tcp_relay_address_list)
+						{
+							auto found = bound_map.find(address);
+							auto address_string = ov::String::FormatString("%s/%s", address.ToString().CStr(), ov::StringFromSocketType(ov::SocketType::Tcp));
+
+							if (found != bound_map.end())
+							{
+								logtd("TURN port is already bound to %s", address_string.CStr());
+								continue;
+							}
+
+							bound_map.emplace(address, true);
+
+							if (CreateTurnServer(observer, address, ov::SocketType::Tcp, tcp_relay_worker_count) == false)
+							{
+								logte("Could not create TURN Server on %s for %s. Check your configuration", address_string.CStr(), server_name);
+								return false;
+							}
+
+							logtd("TURN port is bound to %s", address_string.CStr());
+
+							tcp_relay_address_string_list.emplace_back(address_string);
+						}
+
+						return true;
+					}) == false)
+			{
+				return false;
+			}
+		}
+	}
+
+	logti("TURN port%s listening on %s (for %s)",
+		  (tcp_relay_address_string_list.size() == 1) ? " is" : "s are",
+		  ov::String::Join(tcp_relay_address_string_list, ", ").CStr(),
+		  server_name);
+
+	return true;
+}
+
+std::shared_ptr<IcePort> IcePortManager::CreateTurnServers(
+	const char *server_name,
+	std::shared_ptr<IcePortObserver> observer,
+	const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config)
+{
+	std::shared_ptr<IcePort> ice_port = CreatePort(observer);
+
+	if (ice_port == nullptr)
+	{
+		logte("Could not initialize ICE port. Check your ICE configuration");
+		return nullptr;
+	}
+
+	if (CreateTurnServersInternal(server_name, ice_port, observer, server_config, webrtc_bind_config))
+	{
+		return ice_port;
+	}
+
+	ice_port->Close();
+
+	// TODO: Need to do something for unscribed observer
+	return nullptr;
 }
 
 bool IcePortManager::Release(std::shared_ptr<IcePortObserver> observer)

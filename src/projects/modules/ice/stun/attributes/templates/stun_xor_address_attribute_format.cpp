@@ -106,7 +106,7 @@ bool StunXorAddressAttributeFormat::Parse(const StunMessage *stun_message, ov::B
 				return false;
 		}
 
-		_address.UpdateIPAddress();
+		_address.UpdateFromStorage();
 	}
 
 	return true;

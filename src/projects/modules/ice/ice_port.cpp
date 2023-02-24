@@ -41,12 +41,15 @@ IcePort::~IcePort()
 	Close();
 }
 
-bool IcePort::CreateIceCandidates(const RtcIceCandidateList &ice_candidate_list, int ice_worker_count)
+bool IcePort::CreateIceCandidates(const char *server_name, const cfg::Server &server_config, const RtcIceCandidateList &ice_candidate_list, int ice_worker_count)
 {
 	std::lock_guard<std::recursive_mutex> lock_guard(_physical_port_list_mutex);
 
 	bool result = true;
 	std::map<ov::SocketAddress, bool> bounded;
+
+	auto &ip_list = server_config.GetIPList();
+	std::vector<ov::String> ice_address_string_list;
 
 	for (auto &ice_candidates : ice_candidate_list)
 	{
@@ -54,36 +57,55 @@ bool IcePort::CreateIceCandidates(const RtcIceCandidateList &ice_candidate_list,
 		{
 			// Find same candidate is already created
 			auto transport = ice_candidate.GetTransport().UpperCaseString();
-			auto address = ice_candidate.GetAddress();
+			const auto address = ice_candidate.GetAddress();
 			ov::SocketType socket_type = (transport == "TCP") ? ov::SocketType::Tcp : ov::SocketType::Udp;
 
-			{
-				auto item = bounded.find(address);
+			// Create address list for the candidates from IP addresses
+			auto ice_address_list = ov::SocketAddress::Create(ip_list, address.Port());
 
-				if (item != bounded.end())
+			for (auto &ice_address : ice_address_list)
+			{
 				{
-					// Already opened
-					continue;
+					auto item = bounded.find(ice_address);
+					if (item != bounded.end())
+					{
+						// Already opened
+						logtd("ICE port is already bound to %s/%s", ice_address.ToString().CStr(), transport.CStr());
+						continue;
+					}
+
+					bounded[ice_address] = true;
 				}
 
-				bounded[address] = true;
-			}
+				// Create an ICE port using candidate information
+				auto physical_port = CreatePhysicalPort(ice_address, socket_type, ice_worker_count);
+				if (physical_port == nullptr)
+				{
+					logte("Could not create physical port for %s/%s", ice_address.ToString().CStr(), transport.CStr());
+					result = false;
+					break;
+				}
 
-			// Create an ICE port using candidate information
-			auto physical_port = CreatePhysicalPort(address, socket_type, ice_worker_count);
-			if (physical_port == nullptr)
-			{
-				logte("Could not create physical port for %s/%s", address.ToString().CStr(), transport.CStr());
-				result = false;
-				break;
-			}
+				ice_address_string_list.push_back(
+					ov::String::FormatString(
+						"%s/%s (%p)",
+						ice_address.ToString().CStr(),
+						transport.CStr(),
+						physical_port.get()));
 
-			logti("ICE port is bound to %s/%s (%p)", address.ToString().CStr(), transport.CStr(), physical_port.get());
-			_physical_port_list.push_back(physical_port);
+				_physical_port_list.push_back(physical_port);
+			}
 		}
 	}
 
-	if (result == false)
+	if (result)
+	{
+		logti("ICE port%s listening on %s (for %s)",
+			  (ice_address_string_list.size() == 1) ? " is" : "s are",
+			  ov::String::Join(ice_address_string_list, ", ").CStr(),
+			  server_name);
+	}
+	else
 	{
 		Close();
 	}
@@ -116,7 +138,6 @@ bool IcePort::CreateTurnServer(const ov::SocketAddress &address, ov::SocketType 
 		return false;
 	}
 
-	logti("ICE port is bound to %s/%s (%p)", address.ToString().CStr(), StringFromSocketType(socket_type), physical_port.get());
 	_physical_port_list.push_back(physical_port);
 
 	// make HMAC key
@@ -146,8 +167,17 @@ bool IcePort::CreateTurnServer(const ov::SocketAddress &address, ov::SocketType 
 	// This is the player's candidate and passed to OME.
 	// However, OME does not use the player's candidate. So we pass anything by this value.
 	auto xor_relayed_address_attribute = std::make_shared<StunXorRelayedAddressAttribute>();
-	xor_relayed_address_attribute->SetParameters(ov::SocketAddress::CreateAndGetFirst(address.IsIPv6() ? FAKE_RELAY_IP6 : FAKE_RELAY_IP4, FAKE_RELAY_PORT));
-	_xor_relayed_address_attribute = std::move(xor_relayed_address_attribute);
+
+	if (address.IsIPv4())
+	{
+		xor_relayed_address_attribute->SetParameters(ov::SocketAddress::CreateAndGetFirst(FAKE_RELAY_IP4, FAKE_RELAY_PORT));
+		_xor_relayed_address_attribute_for_ipv4 = std::move(xor_relayed_address_attribute);
+	}
+	else
+	{
+		xor_relayed_address_attribute->SetParameters(ov::SocketAddress::CreateAndGetFirst(FAKE_RELAY_IP6, FAKE_RELAY_PORT));
+		_xor_relayed_address_attribute_for_ipv6 = std::move(xor_relayed_address_attribute);
+	}
 
 	return true;
 }
@@ -214,9 +244,9 @@ ov::String IcePort::GenerateUfrag()
 	}
 }
 
-void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint32_t session_id, 
-							std::shared_ptr<const SessionDescription> local_sdp, std::shared_ptr<const SessionDescription> peer_sdp, 
-							int expired_ms, uint64_t life_time_epoch_ms, std::any user_data)
+void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint32_t session_id,
+						 std::shared_ptr<const SessionDescription> local_sdp, std::shared_ptr<const SessionDescription> peer_sdp,
+						 int expired_ms, uint64_t life_time_epoch_ms, std::any user_data)
 {
 	const ov::String &local_ufrag = local_sdp->GetIceUfrag();
 	const ov::String &remote_ufrag = peer_sdp->GetIceUfrag();
@@ -1056,7 +1086,7 @@ bool IcePort::ProcessTurnAllocateRequest(const std::shared_ptr<ov::Socket> &remo
 	lifetime_attribute->SetValue(lifetime);
 	response_message.AddAttribute(lifetime_attribute);
 
-	response_message.AddAttribute(_xor_relayed_address_attribute);
+	response_message.AddAttribute(address.IsIPv6() ? _xor_relayed_address_attribute_for_ipv6 : _xor_relayed_address_attribute_for_ipv4);
 	response_message.AddAttribute(_software_attribute);
 
 	SendStunMessage(remote, address, gate_info, response_message, _hmac_key);

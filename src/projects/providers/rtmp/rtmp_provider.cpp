@@ -109,6 +109,7 @@ namespace pvd
 		}
 
 		auto port_manager = PhysicalPortManager::GetInstance();
+		std::vector<ov::String> rtmp_address_string_list;
 
 		for (const auto &rtmp_address : rtmp_address_list)
 		{
@@ -127,14 +128,16 @@ namespace pvd
 
 				return false;
 			}
-			else
-			{
-				logti("%s is listening on %s/%s", GetProviderName(), rtmp_address.ToString().CStr(), ov::StringFromSocketType(ov::SocketType::Tcp));
-			}
+
+			rtmp_address_string_list.emplace_back(rtmp_address.ToString());
 
 			physical_port->AddObserver(this);
 			_physical_port_list.push_back(physical_port);
 		}
+
+		logti("%s is listening on %s",
+			  GetProviderName(),
+			  ov::String::Join(rtmp_address_string_list, ", ").CStr());
 
 		return Provider::Start();
 	}

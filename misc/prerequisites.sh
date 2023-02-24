@@ -16,7 +16,7 @@ JEMALLOC_VERSION=5.3.0
 PCRE2_VERSION=10.39
 OPENH264_VERSION=2.3.0
 HIREDIS_VERSION=1.0.2
-
+NVCC_HDR_VERSION=11.1.5.2
 INTEL_QSV_HWACCELS=false
 NVIDIA_VIDEO_CODEC_HWACCELS=false
 
@@ -173,6 +173,17 @@ install_nasm()
 	touch ndisasm.1 && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "nasm"
+}
+
+install_nvcc_hdr() {
+    if [ "$NVIDIA_VIDEO_CODEC_HWACCELS" = true ] ; then    
+        (DIR=${TEMP_PATH}/nvcc-hdr && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
+        export DESTDIR=${PREFIX} && \
+        curl -sLf https://github.com/FFmpeg/nv-codec-headers/releases/download/n${NVCC_HDR_VERSION}/nv-codec-headers-${NVCC_HDR_VERSION}.tar.gz | tar -xz --strip-components=1 && sed -i 's|PREFIX.*=\(.*\)|PREFIX =|g' Makefile && \
+        sudo make install ) || fail_exit "nvcc_headers"
+    fi
 }
 
 install_ffmpeg()
@@ -460,6 +471,7 @@ install_libopus
 install_libopenh264
 install_libvpx
 install_fdk_aac
+install_nvcc_hdr
 install_ffmpeg
 install_jemalloc
 install_libpcre2
