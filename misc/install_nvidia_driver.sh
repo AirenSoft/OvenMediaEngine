@@ -1,4 +1,5 @@
 #!/bin/bash
+
 ##########################################################################################
 # Environment Variables
 ##########################################################################################
@@ -22,162 +23,103 @@ else
 fi
     CURRENT=$(pwd)
 
-echo ${OSTYPE} / ${OSNAME} / ${OSVERSION}.${OSMINORVERSION}
+WITH_DOCKER=false
+
+echo "##########################################################################################"
+echo " Install NVIDIA drivers and CUDA Toolkit"
+echo "##########################################################################################"
+echo ${OSTYPE} / ${OSNAME} / ${OSVERSION} . ${OSMINORVERSION}
 echo ${CURRENT}
+
+
 ##########################################################################################
-
-PREFIX=/opt/ovenmediaengine
-TEMP_PATH=/tmp
-NVCC_HEADERS=11.0.10.1
-
-
-install_nvcc_headers() {
-    (DIR=${TEMP_PATH}/nvcc-hdr && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    export DESTDIR=${PREFIX} && \
-    curl -sLf https://github.com/FFmpeg/nv-codec-headers/releases/download/n${NVCC_HEADERS}/nv-codec-headers-${NVCC_HEADERS}.tar.gz | tar -xz --strip-components=1 && sed -i 's|PREFIX.*=\(.*\)|PREFIX =|g' Makefile && \
-    sudo make install && \
-    rm -rf ${DIR}) || fail_exit "nvcc_headers"
-}
-
+# Drivers for Ubuntu 18.04 / 20.04
+##########################################################################################
 install_base_ubuntu()
 {
-    if [[ "${OSVERSION}" == "18" || "${OSVERSION}" == "20" ]]; then
+    sudo apt-get -y update
+    sudo apt-get -y install --no-install-recommends build-essential autoconf pkg-config  apt-utils make curl ubuntu-drivers-common lshw
+    sudo apt-get -y install --no-install-recommends gnupg2 ca-certificates software-properties-common
 
-        # Uninstalling a previously installed NVIDIA Driver
-        sudo apt-get remove --purge nvidia-*
-        sudo apt-get -y autoremove
-        sudo apt-get -y update
+    # Uninstalling a previously installed NVIDIA Driver
+    sudo apt-get -y remove --purge nvidia-*
+    sudo apt-get -y autoremove
+    sudo apt-get -y update
 
-        # Remove the nouveau driver. If the nouveau driver is in use, the nvidia driver cannot be installed.
-        USE_NOUVEAU=`sudo lshw -class video | grep nouveau`
-        if [ ! -z "$USE_NOUVEAU" ]; then
+    # Remove the nouveau driver.
+    # If the nouveau driver is in use, the nvidia driver cannot be installed.
+    USE_NOUVEAU=`sudo lshw -class video | grep nouveau`
+    if [ ! -z "$USE_NOUVEAU" ]; then
 
-                # Disable nouveau Driver
-                echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
-                echo "blacklist lbm-nouveau" >> /etc/modprobe.d/blacklist.conf
-                echo "options nouveau modeset=0" >> /etc/modprobe.d/blacklist.conf
-                echo "alias nouveau off" >> /etc/modprobe.d/blacklist.conf
-                echo "alias lbm-nouveau off" >> /etc/modprobe.d/blacklist.conf
-                sudo update-initramfs -u
-                echo "Using a driver display nouveau.Remove the driver and reboot.Reboot and installation script to rerun the nvidia display the driver to complete the installation."
+            # Disable nouveau Driver
+            echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
+            echo "blacklist lbm-nouveau" >> /etc/modprobe.d/blacklist.conf
+            echo "options nouveau modeset=0" >> /etc/modprobe.d/blacklist.conf
+            echo "alias nouveau off" >> /etc/modprobe.d/blacklist.conf
+            echo "alias lbm-nouveau off" >> /etc/modprobe.d/blacklist.conf
+            sudo update-initramfs -u
+            echo "Using a driver display nouveau.Remove the driver and reboot.Reboot and installation script to rerun the nvidia display the driver to complete the installation."
 
-                sleep 5s
-                reboot
-        fi
-
-        # Install Nvidia Driver and Nvidia Toolkit
-        sudo add-apt-repository ppa:graphics-drivers/ppa
-        sudo apt -y update
-        sudo apt-get install -y ubuntu-drivers-common
-        sudo apt-get install -y $(ubuntu-drivers devices | grep recommended | awk '{print $3}')
-        sudo apt-get install -y nvidia-cuda-toolkit curl make
-        
+            sleep 5s
+            reboot
     fi
-}
 
-
-install_base_centos()
-{
-    if [[ "${OSVERSION}" == "7" ]]; then
-
-        # Update Kernel
-        yum -y update
-        yum -y groupinstall "Development Tools"
-        yum -y install kernel-devel
-        yum -y install epel-release
-        yum -y install dkms curl lshw
-        echo "Reboot is required to run with a new version of the kernel."
-
-        # Remove the nouveau driver. If the nouveau driver is in use, the nvidia driver cannot be installed.
-        USE_NOUVEAU=`sudo lshw -class video | grep nouveau`
-        if [ ! -z "$USE_NOUVEAU" ]; then
-
-                # Disable nouveau Driver
-                sed "s/GRUB_CMDLINE_LINUX=\"\(.*\)\"/GRUB_CMDLINE_LINUX=\"\1 rd.driver.blacklist=nouveau nouveau.modeset=0\"/" /etc/default/grub
-                grub2-mkconfig -o /boot/grub2/grub.cfg
-                echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
-                mv /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r)-nouveau.img
-                dracut /boot/initramfs-$(uname -r).img $(uname -r)
-
-                echo "Using a driver display nouveau. so, remove the driver and reboot. "
-                echo "After reboot and installation script to rerun the nvidia display the driver to complete the installation."
-
-                sleep 5s
-                reboot
-        fi
-
-        # Install Nvidia Driver
-        # https://www.nvidia.com/en-us/drivers/unix/
-        systemctl isolate multi-user.target
-        wget -N https://us.download.nvidia.com/XFree86/Linux-x86_64/460.84/NVIDIA-Linux-x86_64-460.84.run
-        sh ./NVIDIA-Linux-x86_64-460.84.run --ui=none --no-questions
-
-        # Install Nvidia Toolkit
-        # https://developer.nvidia.com/cuda-downloads
-        wget -N https://developer.download.nvidia.com/compute/cuda/11.3.1/local_installers/cuda_11.3.1_465.19.01_linux.run
-        sh cuda_11.3.1_465.19.01_linux.run --silent
-
-        # Configure Envionment Variables
-        echo "Please add the PATH below to the environment variable."
-        echo ""
-        echo "export PATH=${PATH}:/usr/local/cuda/bin/"
-        echo ""
-        export PATH=${PATH}:/usr/local/cuda/bin/
-
-    elif [[ "${OSVERSION}" == "8" ]]; then
-
-        dnf update -y
-        dnf groupinstall -y "Development Tools" 
-        dnf install -y elfutils-libelf-devel "kernel-devel-uname-r == $(uname -r)"
-
-        # Remove the nouveau driver. If the nouveau driver is in use, the nvidia driver cannot be installed.
-        USE_NOUVEAU=`sudo lshw -class video | grep nouveau`
-        if [ ! -z "$USE_NOUVEAU" ]; then
-
-                # Disable nouveau Driver
-                echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
-                mv /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r)-nouveau.img
-                dracut /boot/initramfs-$(uname -r).img $(uname -r)
-
-                systemctl set-default multi-user.target
-                systemctl get-default
-
-                echo "Using a driver display nouveau. so, remove the driver and reboot. "
-                echo "After reboot and installation script to rerun the nvidia display the driver to complete the installation."
-
-                sleep 5s
-                reboot
-        fi
-
-        wget -N https://us.download.nvidia.com/XFree86/Linux-x86_64/460.84/NVIDIA-Linux-x86_64-460.84.run
-        sh ./NVIDIA-Linux-x86_64-460.84.run --ui=none --no-questions
-
-        # Install Nvidia Toolkit
-        # https://developer.nvidia.com/cuda-downloads
-        wget -N https://developer.download.nvidia.com/compute/cuda/11.3.1/local_installers/cuda_11.3.1_465.19.01_linux.run
-        sh cuda_11.3.1_465.19.01_linux.run --silent
-
-        systemctl set-default graphical.target
-        systemctl get-default
-
-        # Configure Envionment Variables
-        echo "Please add the PATH below to the environment variable."
-        echo ""
-        echo "export PATH=${PATH}:/usr/local/cuda/bin/"
-        echo ""
-        export PATH=${PATH}:/usr/local/cuda/bin/
-
-    else
-        fail_exit
+    # Install nvidia drivers and cuda-toolit
+    sudo add-apt-repository ppa:graphics-drivers/ppa
+    sudo apt -y update
+    if [ ${WITH_DOCKER} == false ]; then
+            sudo apt-get install -y --no-install-recommends $(ubuntu-drivers devices | grep recommended | awk '{print $3}')
     fi
+    sudo apt-get install -y --no-install-recommends nvidia-cuda-toolkit
 }
 
-install_base_amazonlinux()
+##########################################################################################
+# Drivers for CentOS 7
+##########################################################################################
+install_base_centos7()
 {
-    echo "TODO"
+    yum -y update
+    yum -y install kernel-devel
+    yum -y install epel-release
+    yum -y install dkms curl lshw
+    yum -y install subscription-manager
+
+    echo "Reboot is required to run with a new version of the kernel."
+
+    # Remove the nouveau driver.
+    USE_NOUVEAU=`lshw -class video | grep nouveau`
+    if [ ! -z "$USE_NOUVEAU" ]; then
+
+            # Disable nouveau Driver
+            sed "s/GRUB_CMDLINE_LINUX=\"\(.*\)\"/GRUB_CMDLINE_LINUX=\"\1 rd.driver.blacklist=nouveau nouveau.modeset=0\"/" /etc/default/grub
+            grub2-mkconfig -o /boot/grub2/grub.cfg
+            echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
+            mv /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r)-nouveau.img
+            dracut /boot/initramfs-$(uname -r).img $(uname -r)
+
+            echo "Using a driver display nouveau. so, remove the driver and reboot. "
+            echo "After reboot and installation script to rerun the nvidia display the driver to complete the installation."
+
+            sleep 5s
+            reboot
+    fi
+
+    subscription-manager repos --enable=rhel-7-server-optional-rpms
+    yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo
+    yum clean expire-cache
+
+    yum -y install nvidia-driver-latest-dkms
+    yum -y install cuda
+    yum -y install cuda-drivers
+
+    # Configure Envionment Variables
+    echo "Please add the PATH below to the environment variable."
+    echo ""
+    echo "export PATH=${PATH}:/usr/local/cuda/bin/"
+    echo ""
+    export PATH=${PATH}:/usr/local/cuda/bin/
 }
+
 
 fail_exit()
 {
@@ -206,28 +148,36 @@ proceed_yn()
     fi
 }
 
-no_supported()
-{
-    echo "Nvidia driver and toolkit are not supported on this platform"
-    exit 1
-}
+for i in "$@"
+do
+case $i in
+    --docker|--with-docker)
+    WITH_DOCKER=true
+    shift
+    ;;
+    *)
+            # unknown option
+    ;;
+esac
+done
+
 
 if [ "${OSNAME}" == "Ubuntu" ]; then
     check_version
     install_base_ubuntu
 elif  [ "${OSNAME}" == "CentOS" ]; then
     check_version
-    install_base_centos
-elif  [ "${OSNAME}" == "AmazonLinux" ]; then
-    check_version
-    install_base_amazonlinux
+    if [[ "${OSVERSION}" == "7" ]]; then
+            install_base_centos7
+    elif [[ "${OSVERSION}" == "8" ]]; then
+            echo "Deprecated"
+    fi
 else
     echo "This program [$0] does not support your operating system [${OSNAME}]"
     echo "Please refer to manual installation page"
 fi
 
-install_nvcc_headers
 
-echo "-----------------------------------------------------"
+echo "##########################################################################################"
 echo " Reboot is required to use the nvidia video driver"
-echo "-----------------------------------------------------"
+echo "##########################################################################################"
