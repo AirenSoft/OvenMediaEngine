@@ -293,7 +293,7 @@ namespace http
 								return CreateHttpsServer(server_name, server_short_name, address, certificate, disable_http2_force, worker_count);
 							},
 							[&](const ov::SocketAddress &address, bool is_https, const std::shared_ptr<HttpServer> &http_server) {
-								address_string_list.emplace_back(address.ToString());
+								tls_address_string_list.emplace_back(address.ToString());
 								if (creation_callback != nullptr)
 								{
 									creation_callback(address, is_https, http_server);

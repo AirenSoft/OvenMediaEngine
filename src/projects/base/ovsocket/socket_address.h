@@ -200,7 +200,12 @@ namespace ov
 		}
 
 		ov::String GetHostname() const noexcept;
+
+		// Make this instance point to INET_ADDR or in6addr_any
+		bool SetToAnyAddress() noexcept;
 		ov::String GetIpAddress() const noexcept;
+		// Copy this instance and make it point to INET_ADDR or in6addr_any
+		SocketAddress AnySocketAddress() const noexcept;
 
 		bool SetPort(uint16_t port);
 		uint16_t Port() const noexcept;
@@ -252,7 +257,7 @@ namespace ov
 		socklen_t GetInAddrLength() const noexcept;
 		socklen_t GetIPAddrLength() const noexcept;
 
-		void UpdateIPAddress();
+		void UpdateFromStorage();
 
 		ov::String ToString(bool ignore_privacy_protect_config = true) const noexcept;
 
@@ -297,16 +302,11 @@ namespace ov
 		}
 
 	protected:
-		void SetIPAddress(const ov::String &ip_address)
-		{
-			_ip_address = ip_address;
-		}
-
 		// Returns true if the host is resolved successfully
 		// Returns false if the DNS doesn't work
 		// Throws an exception if the host is invalid
 		MAY_THROWS(ov::SocketAddressError)
-		static bool Resolve(ov::String host, SocketAddress::StorageList *storage_list);
+		static bool Resolve(ov::String host, SocketAddress::StorageList *storage_list, bool *is_wildcard_host);
 
 	protected:
 		sockaddr_storage _address_storage{};
