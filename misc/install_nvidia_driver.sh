@@ -38,7 +38,7 @@ echo ${CURRENT}
 install_base_ubuntu()
 {
     sudo apt-get -y update
-    sudo apt-get -y install --no-install-recommends build-essential autoconf pkg-config  apt-utils make curl ubuntu-drivers-common lshw
+    sudo apt-get -y install --no-install-recommends apt-utils ubuntu-drivers-common lshw
     sudo apt-get -y install --no-install-recommends gnupg2 ca-certificates software-properties-common
 
     # Uninstalling a previously installed NVIDIA Driver
