@@ -269,7 +269,12 @@
 					</OutputProfiles>
 					<Providers>
 						<OVT />
-						<WebRTC />
+						<WebRTC>
+							<Timeout>30000</Timeout>
+							<CrossDomains>
+								<Url>*</Url>
+							</CrossDomains>
+						</WebRTC>
 						<RTMP />
 						<SRT />
 						<RTSPPull />
