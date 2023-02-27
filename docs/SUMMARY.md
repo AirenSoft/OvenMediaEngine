@@ -4,6 +4,7 @@
 * [Getting Started](getting-started.md)
 * [Configuration](configuration/README.md)
   * [TLS Encryption](configuration/tls-encryption.md)
+  * [IPv6](configuration/ipv6.md)
 * [Live Source](live-source/README.md)
   * [RTMP](live-source/rtmp.md)
   * [WebRTC (Beta)](live-source/webrtc-beta.md)

@@ -159,6 +159,7 @@ Returns the specified stream information" %}
 			"sourceType": "Rtmp",
 			"tracks": [
 				{
+					"id": 0,
 					"type": "Video",
 					"video": {
 						"bitrate": "2500000",
@@ -170,6 +171,7 @@ Returns the specified stream information" %}
 					}
 				},
 				{
+					"id": 1,				
 					"audio": {
 						"bitrate": "128000",
 						"bypass": false,
@@ -187,18 +189,21 @@ Returns the specified stream information" %}
 				"name": "stream",
 				"tracks": [
 					{
+						"id": 0,
 						"type": "Video",
 						"video": {
 							"bypass": true
 						}
 					},
 					{
+						"id": 1,					
 						"audio": {
 							"bypass": true
 						},
 						"type": "Audio"
 					},
 					{
+						"id": 2,					
 						"audio": {
 							"bitrate": "128000",
 							"bypass": false,
