@@ -7,6 +7,7 @@ std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(ProviderType provide
 															const ov::String secret_key,
 															const std::shared_ptr<ov::SocketAddress> &client_address,
 															const std::shared_ptr<const ov::Url> &request_url,
+															const ov::String &user_agent,
 															const Status::Code status)
 {
 	auto hooks = std::make_shared<AdmissionWebhooks>();
@@ -17,6 +18,7 @@ std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(ProviderType provide
 	hooks->_secret_key = secret_key;
 	hooks->_client_address = client_address;
 	hooks->_requested_url = request_url;
+	hooks->_user_agent = user_agent;
 	hooks->_status = status;
 
 	hooks->Run();
@@ -29,6 +31,7 @@ std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(PublisherType publis
 															const ov::String secret_key,
 															const std::shared_ptr<ov::SocketAddress> &client_address,
 															const std::shared_ptr<const ov::Url> &request_url,
+															const ov::String &user_agent,
 															const Status::Code status)
 {
 	auto hooks = std::make_shared<AdmissionWebhooks>();
@@ -39,6 +42,7 @@ std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(PublisherType publis
 	hooks->_secret_key = secret_key;
 	hooks->_client_address = client_address;
 	hooks->_requested_url = request_url;
+	hooks->_user_agent = user_agent;
 	hooks->_status = status;
 
 	hooks->Run();
@@ -84,7 +88,8 @@ ov::String AdmissionWebhooks::GetMessageBody()
 		"client": 
 		{
 			"address": "211.233.58.86",
-			"port": 29291
+			"port": 29291,
+			"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
 		},
 		"request":
 		{
@@ -105,6 +110,10 @@ ov::String AdmissionWebhooks::GetMessageBody()
 	{
 		jv_client["address"] = _client_address->GetIpAddress().CStr();
 		jv_client["port"] = _client_address->Port();
+		if(!_user_agent.IsEmpty())
+		{
+			jv_client["user-agent"] = _user_agent.CStr();
+		}
 		jv_root["client"] = jv_client;
 	}
 

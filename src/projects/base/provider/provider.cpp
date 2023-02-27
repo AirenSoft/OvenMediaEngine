@@ -254,13 +254,13 @@ namespace pvd
 		return _access_controller->SendCloseWebhooks(request_url, client_address);
 	}
 
-	std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> Provider::VerifyByAdmissionWebhooks(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address)
+	std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> Provider::VerifyByAdmissionWebhooks(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, const ov::String &user_agent)
 	{
 		if(_access_controller == nullptr)
 		{
 			return {AccessController::VerificationResult::Error, nullptr};
 		}
 
-		return _access_controller->VerifyByWebhooks(request_url, client_address);
+		return _access_controller->VerifyByWebhooks(request_url, client_address, user_agent);
 	}
 }

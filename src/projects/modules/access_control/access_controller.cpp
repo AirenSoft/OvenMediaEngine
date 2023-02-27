@@ -71,12 +71,12 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const Admission
 		if(_provider_type != ProviderType::Unknown)
 		{
 			admission_webhooks = AdmissionWebhooks::Query(
-				_provider_type, control_server_url, timeout_msec, secret_key, client_address, request_url, AdmissionWebhooks::Status::Code::CLOSING);
+				_provider_type, control_server_url, timeout_msec, secret_key, client_address, request_url);
 		}
 		else if(_publisher_type != PublisherType::Unknown)
 		{
 			admission_webhooks = AdmissionWebhooks::Query(
-				_publisher_type, control_server_url, timeout_msec, secret_key, client_address, request_url, AdmissionWebhooks::Status::Code::CLOSING);
+				_publisher_type, control_server_url, timeout_msec, secret_key, client_address, request_url, nullptr, AdmissionWebhooks::Status::Code::CLOSING);
 		}
 		else
 		{
@@ -108,7 +108,7 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const Admission
 	return {AccessController::VerificationResult::Error, nullptr};
 }
 
-std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> AccessController::VerifyByWebhooks(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address)
+std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> AccessController::VerifyByWebhooks(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, const ov::String &user_agent)
 {
 	auto orchestrator = ocst::Orchestrator::GetInstance();
 	auto vhost_name = orchestrator->GetVhostNameFromDomain(request_url->Host());
@@ -161,11 +161,11 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const Admission
 		std::shared_ptr<AdmissionWebhooks> admission_webhooks;
 		if(_provider_type != ProviderType::Unknown)
 		{
-			admission_webhooks = AdmissionWebhooks::Query(_provider_type, control_server_url, timeout_msec, secret_key, client_address, request_url);
+			admission_webhooks = AdmissionWebhooks::Query(_provider_type, control_server_url, timeout_msec, secret_key, client_address, request_url, user_agent);
 		}
 		else if(_publisher_type != PublisherType::Unknown)
 		{
-			admission_webhooks = AdmissionWebhooks::Query(_publisher_type, control_server_url, timeout_msec, secret_key, client_address, request_url);
+			admission_webhooks = AdmissionWebhooks::Query(_publisher_type, control_server_url, timeout_msec, secret_key, client_address, request_url, user_agent);
 		}
 		else
 		{

@@ -35,7 +35,7 @@ public:
 
 	std::tuple<VerificationResult, std::shared_ptr<const AdmissionWebhooks>> SendCloseWebhooks(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address);
 
-	std::tuple<VerificationResult, std::shared_ptr<const AdmissionWebhooks>> VerifyByWebhooks(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address);
+	std::tuple<VerificationResult, std::shared_ptr<const AdmissionWebhooks>> VerifyByWebhooks(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, const ov::String &user_agent);
 	
 private:
 	const ProviderType _provider_type;

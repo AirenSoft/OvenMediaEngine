@@ -293,7 +293,9 @@ namespace pvd
 		}
 
 		// Admission Webhooks
-		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(parsed_url, remote_address);
+		auto user_agent = request->GetHeader("USER-AGENT");
+
+		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(parsed_url, remote_address, user_agent);
 		if (webhooks_result == AccessController::VerificationResult::Off)
 		{
 			// Success

@@ -46,12 +46,15 @@ public:
 													const ov::String secret_key,
 													const std::shared_ptr<ov::SocketAddress> &client_address,
 													const std::shared_ptr<const ov::Url> &request_url,
+													const ov::String &user_agent = "",
 													const Status::Code status = Status::Code::OPENING);
+
 	static std::shared_ptr<AdmissionWebhooks> Query(PublisherType publisher,
 													const std::shared_ptr<ov::Url> &control_server_url, uint32_t timeout_msec,
 													const ov::String secret_key,
 													const std::shared_ptr<ov::SocketAddress> &client_address,
 													const std::shared_ptr<const ov::Url> &request_url,
+													const ov::String &user_agent = "",
 													const Status::Code status = Status::Code::OPENING);
 
 	ErrCode GetErrCode() const;
@@ -77,6 +80,7 @@ private:
 	PublisherType _publisher_type = PublisherType::Unknown;
 	std::shared_ptr<ov::SocketAddress> _client_address;
 	std::shared_ptr<const ov::Url> _requested_url;
+	ov::String _user_agent;
 	Status::Code _status;
 
 	// Response
