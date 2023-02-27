@@ -72,7 +72,9 @@ WebRTC transmission is sensitive to packet loss because it affects all players w
 > ws\[s]://\<host>\[:port]/\<app name>/\<stream name>**?direction=send\&transport=tcp**
 
 {% hint style="warning" %}
-To use WebRTC/tcp, \*\*<\*\*TcpRelay> must be turned on in \<Bind> setting.
+To use WebRTC/tcp, `<TcpRelay>` must be turned on in `<Bind>` setting.&#x20;
+
+If `<TcpForce>` is set to true, it works over TCP even if you omit the `?transport=tcp` query string from the URL.
 {% endhint %}
 
 ## WebRTC Producer
