@@ -70,6 +70,8 @@ For ingest from the WHIP client, put `?direction=whip` in the query string in th
 WebRTC transmission is sensitive to packet loss because it affects all players who access the stream. Therefore, it is recommended to provide WebRTC transmission over TCP. OvenMediaEngine has a built-in TURN server for WebRTC/TCP, and receives or transmits streams using the TCP session that the player's TURN client connects to the TURN server as it is. To use WebRTC/TCP, use transport=tcp query string as in WebRTC playback. See [WebRTC/tcp playback](../streaming/webrtc-publishing.md#webrtc-over-tcp) for more information.
 
 > ws\[s]://\<host>\[:port]/\<app name>/\<stream name>**?direction=send\&transport=tcp**
+>
+> http\[s]://\<host>\[:port]/\<app name>/\<stream name>**?direction=whip\&transport=tcp**
 
 {% hint style="warning" %}
 To use WebRTC/tcp, `<TcpRelay>` must be turned on in `<Bind>` setting.&#x20;
