@@ -229,7 +229,7 @@ namespace pvd
 			return;
 		}
 
-		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(parsed_url, remote_address, nullptr);
+		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(parsed_url, remote_address, "");
 		if (webhooks_result == AccessController::VerificationResult::Off)
 		{
 			// Success

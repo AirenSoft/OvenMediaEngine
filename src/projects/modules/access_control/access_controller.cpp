@@ -71,12 +71,12 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const Admission
 		if(_provider_type != ProviderType::Unknown)
 		{
 			admission_webhooks = AdmissionWebhooks::Query(
-				_provider_type, control_server_url, timeout_msec, secret_key, client_address, request_url);
+				_provider_type, control_server_url, timeout_msec, secret_key, client_address, request_url, "", AdmissionWebhooks::Status::Code::CLOSING);
 		}
 		else if(_publisher_type != PublisherType::Unknown)
 		{
 			admission_webhooks = AdmissionWebhooks::Query(
-				_publisher_type, control_server_url, timeout_msec, secret_key, client_address, request_url, nullptr, AdmissionWebhooks::Status::Code::CLOSING);
+				_publisher_type, control_server_url, timeout_msec, secret_key, client_address, request_url, "", AdmissionWebhooks::Status::Code::CLOSING);
 		}
 		else
 		{
