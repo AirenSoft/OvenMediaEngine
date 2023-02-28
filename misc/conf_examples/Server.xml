@@ -85,12 +85,11 @@
 
 				<IceCandidates>
 					<!-- Uncomment the line below to use IPv6 ICE Candidate -->
-					<!-- <IceCandidate>[::]:10000-10005/udp</IceCandidate> -->
-					<IceCandidate>*:10000-10005/udp</IceCandidate>
+					<!-- <IceCandidate>[::]:10000-10004/udp</IceCandidate> -->
+					<IceCandidate>*:10000-10004/udp</IceCandidate>
 					<!-- 
 						If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
 						This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
-						For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/streaming/webrtc-publishing#webrtc-over-tcp
 					-->
 					<TcpRelay>*:3478</TcpRelay>
 					<!-- TcpForce is an option to force the use of TCP rather than UDP in WebRTC streaming. (You can omit ?transport=tcp accordingly.) If <TcpRelay> is not set, playback may fail. -->
@@ -123,11 +122,12 @@
 					<WorkerCount>1</WorkerCount>
 				</Signalling>
 				<IceCandidates>
-					<IceCandidate>*:10000-10005/udp</IceCandidate>
+					<!-- Uncomment the line below to use IPv6 ICE Candidate -->
+					<!-- <IceCandidate>[::]:10000-10004/udp</IceCandidate> -->
+					<IceCandidate>*:10000-10004/udp</IceCandidate>
 					<!-- 
 						If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
 						This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
-						For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/streaming/webrtc-publishing#webrtc-over-tcp
 					-->
 					<TcpRelay>*:3478</TcpRelay>
 					<!-- TcpForce is an option to force the use of TCP rather than UDP in WebRTC streaming. (You can omit ?transport=tcp accordingly.) If <TcpRelay> is not set, playback may fail. -->

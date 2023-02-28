@@ -13,17 +13,20 @@ services:
     - "9000:9000/tcp"
     - "9999:9999/udp"
     - "4000-4005:4000-4005/udp"
-    - "10006-10010:10006-10010/udp"
+    - "10000-10004:10000-10004/udp"
     environment:
     - OME_ORIGIN_PORT=9000
     - OME_RTMP_PROV_PORT=1935
     - OME_SRT_PROV_PORT=9999
     - OME_MPEGTS_PROV_PORT=4000-4005/udp
-    - OME_HLS_STREAM_PORT=8080
-    - OME_DASH_STREAM_PORT=8080
-    - OME_SIGNALLING_PORT=3333
-    - OME_TCP_RELAY_ADDRESS=*:3478
-    - OME_ICE_CANDIDATES=*:10006-10010/udp
+    - OME_LLHLS_STREAM_PORT=8080
+    - OME_WEBRTC_SIGNALLING_PORT=3333
+    - OME_WEBRTC_TCP_RELAY_ADDRESS=*:3478
+    - OME_WEBRTC_CANDIDATES=*:10000-10004/udp
+    restart: always
+    # Uncomment the following line to use your own configuration file (./origin_conf/Server.xml)
+    #volumes:
+    #- ./origin_conf:/opt/ovenmediaengine/origin_conf
     command: /opt/ovenmediaengine/bin/OvenMediaEngine -c origin_conf
 
   edge:
@@ -37,9 +40,12 @@ services:
     - "10000-10005:10000-10005/udp"
     environment:
     - DEFAULT_ORIGIN_SERVER=192.168.0.160
-    - OME_HLS_STREAM_PORT=8090
-    - OME_DASH_STREAM_PORT=8090
-    - OME_SIGNALLING_PORT=3334
-    - OME_TCP_RELAY_ADDRESS=*:3479
-    - OME_ICE_CANDIDATES=*:10000-10005/udp
+    - OME_LLHLS_STREAM_PORT=8090
+    - OME_WEBRTC_SIGNALLING_PORT=3334
+    - OME_WEBRTC_TCP_RELAY_ADDRESS=*:3479
+    - OME_WEBRTC_CANDIDATES=*:10005-10010/udp
+    restart: always
+    # Uncomment the following line to use your own configuration file (./edge_conf/Server.xml)
+    #volumes:
+    #- ./edge_conf:/opt/ovenmediaengine/edge_conf
     command: /opt/ovenmediaengine/bin/OvenMediaEngine -c edge_conf
