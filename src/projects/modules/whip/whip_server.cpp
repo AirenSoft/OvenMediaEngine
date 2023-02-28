@@ -384,11 +384,15 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			response->SetHeader("ETag", answer._entity_tag);
 			response->SetHeader("Location", ov::String::FormatString("/%s/%s/%s", request_url->App().CStr(), request_url->Stream().CStr(), answer._session_id.CStr()));
 
-			// Add ICE Server Link
-			for (const auto &ice_server : _link_headers)
+			// IF TcpForce == true or ?transport=tcp
+			if (_tcp_force == true || request_url->GetQueryValue("transport").UpperCaseString() == "TCP")
 			{
-				// Multiple Link headers are allowed
-				response->AddHeader("Link", ice_server);
+				// Add ICE Server Link
+				for (const auto &ice_server : _link_headers)
+				{
+					// Multiple Link headers are allowed
+					response->AddHeader("Link", ice_server);
+				}
 			}
 
 			response->AppendString(answer._sdp->ToString());
