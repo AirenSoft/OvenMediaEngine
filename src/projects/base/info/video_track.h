@@ -80,7 +80,6 @@ protected:
 	FragmentationHeader _h264_sps_pps_annexb_fragment_header;
 	H264SPS _h264_sps;
 	
-
 	int _thread_count;
 
 public:

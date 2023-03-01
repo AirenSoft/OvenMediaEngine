@@ -8,6 +8,8 @@
 //==============================================================================
 #pragma once
 
+#include "bypass_if_match.h"
+
 namespace cfg
 {
 	namespace vhost
@@ -23,7 +25,6 @@ namespace cfg
 					bool _bypass = false;
 					bool _active = true;
 					ov::String _codec;
-					ov::String _scale;
 					int _width = 0;
 					int _height = 0;
 					int _bitrate = 0;
@@ -33,13 +34,13 @@ namespace cfg
 					int _thread_count = -1;
 					int _key_frame_interval = 0;
 					int _b_frames = 0;
-					
+					BypassIfMatch _bypass_if_match;
+
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsBypass, _bypass)
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsActive, _active)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetCodec, _codec)
-					CFG_DECLARE_CONST_REF_GETTER_OF(GetScale, _scale)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetWidth, _width)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetHeight, _height)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBitrate, _bitrate)
@@ -49,12 +50,12 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetThreadCount, _thread_count)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetKeyFrameInterval, _key_frame_interval)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBFrames, _b_frames)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetBypassIfMatch, _bypass_if_match)
 
 					void SetName(const ov::String &name){_name = name;}
 					void SetBypass(bool bypass){_bypass = bypass;}
 					void SetActive(bool active){_active = active;}
 					void SetCodec(const ov::String &codec){_codec = codec;}
-					void SetScale(const ov::String &scale){_scale = scale;}
 					void SetWidth(int width){_width = width;}
 					void SetHeight(int height){_height = height;}
 					void SetBitrate(int bitrate){_bitrate = bitrate;}
@@ -96,7 +97,6 @@ namespace cfg
 
 								return (_bitrate > 0) ? nullptr : CreateConfigErrorPtr("Bitrate must be greater than 0");
 							});
-						Register<Optional>("Scale", &_scale);
 						Register<Optional>("Width", &_width);
 						Register<Optional>("Height", &_height);
 						Register<Optional>("Framerate", &_framerate);
@@ -108,6 +108,7 @@ namespace cfg
 						Register<Optional>("BFrames", &_b_frames, [=]() -> std::shared_ptr<ConfigError> {
 								return (_b_frames >= 0 && _b_frames <= 16) ? nullptr : CreateConfigErrorPtr("BFrames must be between 0 and 16");
 							});
+						Register<Optional>("BypassIfMatch", &_bypass_if_match);
 					}
 				};
 			}  // namespace oprf

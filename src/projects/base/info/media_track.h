@@ -90,6 +90,7 @@ public:
 	// For statistics
 	void OnFrameAdded(uint64_t bytes);
 
+	std::shared_ptr<MediaTrack> Clone();
 private:
 	bool _is_valid = false;
 	bool _has_quality_measured = false;
