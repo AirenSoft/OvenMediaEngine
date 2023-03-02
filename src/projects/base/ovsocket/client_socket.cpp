@@ -44,7 +44,9 @@ namespace ov
 	{
 		OV_ASSERT2(server_socket != nullptr);
 
-		_local_address = (server_socket != nullptr) ? server_socket->GetLocalAddress() : nullptr;
+		// _local_address = (server_socket != nullptr) ? server_socket->GetLocalAddress() : nullptr;
+
+		RetrieveLocalAddress();
 	}
 
 	ClientSocket::~ClientSocket()
@@ -66,7 +68,7 @@ namespace ov
 		return false;
 	}
 
-	bool ClientSocket::GetSrtStreamId()
+	bool ClientSocket::StoreSrtStreamId()
 	{
 		if (GetType() == ov::SocketType::Srt)
 		{
@@ -82,6 +84,18 @@ namespace ov
 				return false;
 			}
 		}
+
+		return true;
+	}
+
+	bool ClientSocket::RetrieveLocalAddress()
+	{
+		// get local address
+		sockaddr_storage local_addr{};
+		socklen_t local_length = sizeof(local_addr);
+		getsockname(GetNativeHandle(), reinterpret_cast<sockaddr *>(&local_addr), &local_length);
+
+		_local_address = std::make_shared<SocketAddress>("", local_addr);
 
 		return true;
 	}
@@ -128,7 +142,7 @@ namespace ov
 	{
 		// In the case of SRT, app/stream is classified by streamid.
 		// Since the streamid is processed by the application, error is not checked here.
-		GetSrtStreamId();
+		StoreSrtStreamId();
 
 		return
 			// Set socket options
