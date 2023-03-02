@@ -322,40 +322,93 @@
 							-->
 
 							<Encodes>
-								<Audio>
-									<Name>bypass_audio</Name>
-									<Bypass>true</Bypass>
-								</Audio>
 								<Video>
 									<Name>bypass_video</Name>
 									<Bypass>true</Bypass>
 								</Video>
 								<Audio>
+									<Name>aac_audio</Name>
+									<Codec>aac</Codec>
+									<Bitrate>128000</Bitrate>
+									<Samplerate>48000</Samplerate>
+									<Channel>2</Channel>
+									<BypassIfMatch>
+										<Codec>eq</Codec>
+									</BypassIfMatch>
+								</Audio>								
+								<Audio>
+									<Name>opus_audio</Name>
 									<Codec>opus</Codec>
 									<Bitrate>128000</Bitrate>
 									<Samplerate>48000</Samplerate>
 									<Channel>2</Channel>
+									<BypassIfMatch>
+										<Codec>eq</Codec>
+									</BypassIfMatch>									
 								</Audio>
-								<!-- 							
+								<!--
 								<Video>
 									<Name>video_1280</Name>
 									<Codec>h264</Codec>
 									<Bitrate>5024000</Bitrate>
-									<Framerate>30</Framerate>
 									<Width>1920</Width>
 									<Height>1280</Height>
+									<Framerate>30</Framerate>
+									<KeyFrameInterval>30</KeyFrameInterval>
+									<BFrames>0</BFrames>
 									<Preset>faster</Preset>
 								</Video>
 								<Video>
 									<Name>video_720</Name>
 									<Codec>h264</Codec>
 									<Bitrate>2024000</Bitrate>
-									<Framerate>30</Framerate>
 									<Width>1280</Width>
 									<Height>720</Height>
+									<Framerate>30</Framerate>
+									<KeyFrameInterval>30</KeyFrameInterval>
+									<BFrames>0</BFrames>									
 									<Preset>faster</Preset>
-								</Video>
+								</Video>	
+								<Audio>
+									<Name>bypass_audio</Name>
+									<Bypass>true</Bypass>
+								</Audio>																
 								-->
+								<!-- 
+									 If all conditions of BypassIfMatch are matched, bypass is used without encoding.
+									 [Options] 
+									   eq: euqal to
+									   lte: less than or equal to
+									   gte: greater than or equal to
+
+								<Video>
+									<Name>conditional_video_encoding</Name>
+									<Codec>h264</Codec>
+									<Bitrate>2024000</Bitrate>
+									<Width>1280</Width>
+									<Height>720</Height>
+									<Framerate>30</Framerate>
+									<BypassIfMatch>
+										<Codec>eq</Codec>
+										<Framerate>lte</Framerate>
+										<Width>lte</Width>
+										<Height>lte</Height>
+										<SAR>eq</SAR>
+									</BypassIfMatch>									
+								</Video>
+								<Audio>
+									<Name>conditional_audio_encoding</Name>
+									<Codec>aac</Codec>
+									<Bitrate>128000</Bitrate>
+									<Samplerate>48000</Samplerate>
+									<Channel>2</Channel>
+									<BypassIfMatch>
+										<Codec>eq</Codec>
+										<Samplerate>lte</Samplerate>
+										<Channel>eq</Channel>
+									</BypassIfMatch>
+								</Audio>																			
+								-->								
 							</Encodes>
 						</OutputProfile>
 					</OutputProfiles>

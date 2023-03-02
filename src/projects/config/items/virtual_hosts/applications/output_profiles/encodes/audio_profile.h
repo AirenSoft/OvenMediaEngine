@@ -8,6 +8,8 @@
 //==============================================================================
 #pragma once
 
+#include "bypass_if_match.h"
+
 namespace cfg
 {
 	namespace vhost
@@ -27,7 +29,8 @@ namespace cfg
 					ov::String _bitrate_string;
 					int _samplerate = 0;
 					int _channel = 0;
-
+					BypassIfMatch _bypass_if_match;
+					
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsBypass, _bypass)
@@ -37,6 +40,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBitrateString, _bitrate_string)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetSamplerate, _samplerate)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetChannel, _channel)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetBypassIfMatch, _bypass_if_match)
 
 					void SetName(const ov::String &name){_name = name;}
 					void SetBypass(bool bypass){_bypass = bypass;}
@@ -80,19 +84,9 @@ namespace cfg
 
 								return (_bitrate > 0) ? nullptr : CreateConfigErrorPtr("Bitrate must be greater than 0");
 							});
-#if 1
 						Register<Optional>("Samplerate", &_samplerate);
 						Register<Optional>("Channel", &_channel);
-#else
-						Register<Optional>("Samplerate", &_samplerate, [=]() -> std::shared_ptr<ConfigError> {
-							// <Samplerate> is an option when _bypass is true
-							return (_bypass) ? nullptr : CreateConfigErrorPtr("Samplerate must be specified when bypass is false");
-						});
-						Register<Optional>("Channel", &_channel, [=]() -> std::shared_ptr<ConfigError> {
-							// <Channel> is an option when _bypass is true
-							return (_bypass) ? nullptr : CreateConfigErrorPtr("Channel must be specified when bypass is false");
-						});
-#endif
+						Register<Optional>("BypassIfMatch", &_bypass_if_match);
 					}
 				};
 			}  // namespace oprf

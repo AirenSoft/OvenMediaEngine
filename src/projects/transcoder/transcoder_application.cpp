@@ -114,7 +114,7 @@ bool TranscodeApplication::OnStreamPrepared(const std::shared_ptr<info::Stream> 
 	}
 
 	auto stream = stream_bucket->second;
-	if (stream->Prepare() == false)
+	if (stream->Prepare(stream_info) == false)
 	{
 		return false;
 	}
