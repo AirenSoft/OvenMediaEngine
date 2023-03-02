@@ -304,7 +304,7 @@
 								-->
 								<Stream>
 									<Name>stream_${Port}</Name>
-									<Port>4000</Port>
+									<Port>${env:OME_MPEGTS_PROV_PORT:4000/udp}</Port>
 								</Stream>
 							</StreamMap>
 						</MPEGTS>
