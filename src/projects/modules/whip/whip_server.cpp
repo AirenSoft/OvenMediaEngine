@@ -36,8 +36,8 @@ bool WhipServer::PrepareForTCPRelay()
 			// <TcpRelay>${PublicIP}:Port</TcpRelay>
 
 			// Check whether tcp_relay_address indicates "any address"(*, ::) or ${PublicIP}
-			const auto tcp_relay_address = ov::SocketAddress::ParseAddress(tcp_relay);
-			if (tcp_relay_address.HasPortList() == false)
+			_tcp_relay_address = ov::SocketAddress::ParseAddress(tcp_relay);
+			if (_tcp_relay_address.HasPortList() == false)
 			{
 				logte("Invalid TCP relay address: %s (The TCP relay address must be in <IP>:<Port> format)", tcp_relay.CStr());
 				return false;
@@ -49,7 +49,7 @@ bool WhipServer::PrepareForTCPRelay()
 			ov::SocketFamily family = ov::SocketFamily::Unknown;
 			std::vector<ov::String> url_list;
 
-			auto &tcp_relay_host = tcp_relay_address.host;
+			auto &tcp_relay_host = _tcp_relay_address.host;
 			if (tcp_relay_host == "*")
 			{
 				// Case 1 - IPv4 wildcard
@@ -85,7 +85,7 @@ bool WhipServer::PrepareForTCPRelay()
 
 			for (const auto &ip : ip_list)
 			{
-				tcp_relay_address.EachPort([&](const ov::String &host, const uint16_t port) -> bool {
+				_tcp_relay_address.EachPort([&](const ov::String &host, const uint16_t port) -> bool {
 					if (family == ov::SocketFamily::Inet6)
 					{
 						url_list.emplace_back(ov::String::FormatString("turn:[%s]:%d?transport=tcp", ip.CStr(), port));
@@ -100,7 +100,7 @@ bool WhipServer::PrepareForTCPRelay()
 
 			for (const auto &url : url_list)
 			{
-				_link_headers.push_back(GetIceServerLinkValue(url, DEFAULT_RELAY_USERNAME, DEFAULT_RELAY_KEY));
+				_link_headers.emplace(GetIceServerLinkValue(url, DEFAULT_RELAY_USERNAME, DEFAULT_RELAY_KEY));
 			}
 		}
 	}
@@ -142,7 +142,7 @@ bool WhipServer::PrepareForExternalIceServer()
 			for (auto url : url_list)
 			{
 				auto address = ov::String::FormatString("turn:%s?transport=tcp", url.CStr());
-				_link_headers.push_back(GetIceServerLinkValue(address, username, credential));
+				_link_headers.emplace(GetIceServerLinkValue(address, username, credential));
 			}
 		}
 	}
@@ -388,6 +388,20 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			if (_tcp_force == true || request_url->GetQueryValue("transport").UpperCaseString() == "TCP")
 			{
 				// Add ICE Server Link
+				auto server_address = request->GetRemote()->GetLocalAddress();
+				if (server_address != nullptr)
+				{
+					// Create a TURN Server Address using the IP address of the server that the signaling client connects to (that can be worked in most environments)
+					auto server_ip_address = server_address->GetIpAddress();	
+					// Make ICE Server URL using signaling server IP
+					_tcp_relay_address.EachPort([&](const ov::String &host, const uint16_t port) -> bool {
+						ov::String url = ov::String::FormatString("turn:%s:%d?transport=tcp", server_ip_address.CStr(), port);
+						_link_headers.emplace(GetIceServerLinkValue(url, DEFAULT_RELAY_USERNAME, DEFAULT_RELAY_KEY));
+						return true;
+					});
+				}
+
+				// Add ICE Server Link from configuration
 				for (const auto &ice_server : _link_headers)
 				{
 					// Multiple Link headers are allowed

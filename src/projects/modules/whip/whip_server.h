@@ -49,8 +49,10 @@ private:
 	std::vector<std::shared_ptr<http::svr::HttpServer>> _http_server_list;
 	std::vector<std::shared_ptr<http::svr::HttpsServer>> _https_server_list;
 
-	std::vector<ov::String> _link_headers;
+	std::set<ov::String> _link_headers;
 	bool _tcp_force = false;
 
 	http::CorsManager _cors_manager;
+
+	ov::SocketAddress::Address _tcp_relay_address;
 };
