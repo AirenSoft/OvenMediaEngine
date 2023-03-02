@@ -364,7 +364,7 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		logti("WHIP SDP Offer: %s", data->ToString().CStr());
+		logtd("WHIP SDP Offer: %s", data->ToString().CStr());
 
 		auto offer_sdp = std::make_shared<SessionDescription>();
 		if (offer_sdp->FromString(data->ToString()) == false)
