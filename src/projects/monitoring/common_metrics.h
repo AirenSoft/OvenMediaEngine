@@ -22,6 +22,8 @@ namespace mon
 		
 		virtual uint64_t GetTotalBytesIn() const;
 		virtual uint64_t GetTotalBytesOut() const;
+		virtual uint64_t GetAvgBitrateIn() const;
+		virtual uint64_t GetAvgBitrateOut() const;		
 		virtual uint32_t GetTotalConnections() const;
 		virtual uint32_t GetMaxTotalConnections() const;
 		virtual std::chrono::system_clock::time_point GetMaxTotalConnectionsTime() const;
@@ -59,6 +61,13 @@ namespace mon
 		std::chrono::system_clock::time_point	_max_total_connection_time;
 		std::chrono::system_clock::time_point	_last_recv_time;
 		std::chrono::system_clock::time_point	_last_sent_time;
+
+		std::atomic<uint64_t> _avg_bitrate_in;
+		std::atomic<uint64_t> _avg_bitrate_out;
+		std::atomic<uint64_t> _bitrate_measure_bytes_in;
+		std::atomic<uint64_t> _bitrate_measure_bytes_out;
+		std::chrono::system_clock::time_point	_last_bitrate_measure_in_time;
+		std::chrono::system_clock::time_point	_last_bitrate_measure_out_time;
 
 		// From Publishers
 		class PublisherMetrics
