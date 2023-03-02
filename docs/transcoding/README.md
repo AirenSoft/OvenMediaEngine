@@ -188,11 +188,77 @@ WebRTC doesn't support AAC, so if video bypasses transcoding, audio must be enco
 </Encodes>
 ```
 
+### **Conditional transcoding**
+
+If the input codec is the same as the option to be transcoded, there is no need to perform re-transcoding while unnecessarily consuming a lot of system resources.&#x20;
+
+If the quality of the input track matches all the conditions of **BypassIfMatch**, it will be bypassed without encoding
+
+* eq: euqal to&#x20;
+* lte: less than or equal to&#x20;
+* gte: greater than or equal to
+
+To support WebRTC and LLHLS, AAC and Opus codecs must be supported at the same time. Use the settings below to reduce unnecessary audio encoding.
+
+```xml
+<Encodes>
+	<Video>
+                <Bypass>true</Bypass>									
+	</Video>
+	<Audio>
+		<Name>cond_audio_aac</Name>
+		<Codec>aac</Codec>
+		<Bitrate>128000</Bitrate>
+		<Samplerate>48000</Samplerate>
+		<Channel>2</Channel>
+		<BypassIfMatch>
+			<Codec>eq</Codec>
+			<Samplerate>lte</Samplerate>
+			<Channel>eq</Channel>			
+		</BypassIfMatch>
+	</Audio>								
+	<Audio>
+		<Name>cond_audio_opus</Name>
+		<Codec>opus</Codec>
+		<Bitrate>128000</Bitrate>
+		<Samplerate>48000</Samplerate>
+		<Channel>2</Channel>
+		<BypassIfMatch>
+			<Codec>eq</Codec>
+			<Samplerate>lte</Samplerate>
+			<Channel>eq</Channel>			
+		</BypassIfMatch>									
+	</Audio>
+</Encodes>
+```
+
+If a video track with a lower quality than the encoding option is input, unnecessary upscaling can be prevented.
+
+```xml
+<Encodes>
+	<Video>
+		<Name>prevent_upscaling_video</Name>
+		<Codec>h264</Codec>
+		<Bitrate>2048000</Bitrate>
+		<Width>1280</Width>
+		<Height>720</Height>
+		<Framerate>30</Framerate>
+		<BypassIfMatch>
+			<Codec>eq</Codec>
+			<Framerate>lte</Framerate>
+			<Width>lte</Width>
+			<Height>lte</Height>
+			<SAR>eq</SAR>
+		</BypassIfMatch>									
+	</Video>
+</Encodes>
+```
+
 ### **Keep the original with transcoding**
 
 &#x20;If you want to transcode with the same quality as the original. See the sample below for possible parameters that OME supports to keep original. If you remove the **Width**, **Height**, **Framerate**, **Samplerate**, and **Channel** parameters. then, It is transcoded with the same options as the original.
 
-```
+```xml
 <Encodes>
     <Video>
         <Codec>vp8</Codec>
