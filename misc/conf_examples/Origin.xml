@@ -230,19 +230,29 @@
 							-->
 
 							<Encodes>
-								<Audio>
-									<Name>bypass_audio</Name>
-									<Bypass>true</Bypass>
-								</Audio>
 								<Video>
 									<Name>bypass_video</Name>
 									<Bypass>true</Bypass>
 								</Video>
 								<Audio>
+									<Name>aac_audio</Name>
+									<Codec>aac</Codec>
+									<Bitrate>128000</Bitrate>
+									<Samplerate>48000</Samplerate>
+									<Channel>2</Channel>
+									<BypassIfMatch>
+										<Codec>eq</Codec>
+									</BypassIfMatch>
+								</Audio>								
+								<Audio>
+									<Name>opus_audio</Name>
 									<Codec>opus</Codec>
 									<Bitrate>128000</Bitrate>
 									<Samplerate>48000</Samplerate>
 									<Channel>2</Channel>
+									<BypassIfMatch>
+										<Codec>eq</Codec>
+									</BypassIfMatch>									
 								</Audio>
 								<!-- 							
 								<Video>
