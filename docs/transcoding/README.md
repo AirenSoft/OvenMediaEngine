@@ -12,8 +12,6 @@ OvenMediaEngine currently supports the following codecs:
 | Audio | AAC, OPUS         | AAC, OPUS                   |
 | Image |                   | JPEG, PNG                   |
 
-
-
 ## OutputProfiles
 
 ### OutputProfile
@@ -45,8 +43,8 @@ The `<OutputProfile>` setting allows incoming streams to be re-encoded via the `
 
 According to the above setting, if the incoming stream name is `stream`, the output stream becomes `stream_bypass`and the stream URL can be used as follows.
 
-* **`WebRTC`**    ws://192.168.0.1:3333/app/<mark style="background-color:blue;">stream\_bypass</mark>
-* **`LLHLS`**       http://192.168.0.1:8080/app/<mark style="background-color:blue;">stream\_bypass</mark>/llhls.m3u8
+* **`WebRTC`** ws://192.168.0.1:3333/app/<mark style="background-color:blue;">stream\_bypass</mark>
+* **`LLHLS`** http://192.168.0.1:8080/app/<mark style="background-color:blue;">stream\_bypass</mark>/llhls.m3u8
 
 ### Encodes
 
@@ -86,13 +84,13 @@ The meaning of each property is as follows:
 
 A table in which presets provided for each codec library are mapped to OvenMediaEngine's presets. Slow presets are of good quality and use a lot of resources, whereas Fast presets have lower quality and better performance. It can be set according to your own system environment and service purpose.
 
-| Presets     | openh264         | libvpx      | h264/265 NVC | h264/265 QSV |
-| ----------- | ---------------- | ----------- | ------------ | ------------ |
-| **slower**  | Quantizer(10-41) | best        | hq           | -            |
-| **slow**    | Quantizer(10-41) | best        | llhq         | -            |
-| **medium**  | Quantizer(10-51) | good        | bd           | -            |
-| **fast**    | Quantizer(25-51) | realtime    | hp           | -            |
-| **faster**  | Quantizer(25-51) | \*realtime  | \*llhp       | -            |
+| Presets    | openh264         | libvpx     | h264/265 NVC | h264/265 QSV |
+| ---------- | ---------------- | ---------- | ------------ | ------------ |
+| **slower** | Quantizer(10-41) | best       | hq           | -            |
+| **slow**   | Quantizer(10-41) | best       | llhq         | -            |
+| **medium** | Quantizer(10-51) | good       | bd           | -            |
+| **fast**   | Quantizer(25-51) | realtime   | hp           | -            |
+| **faster** | Quantizer(25-51) | \*realtime | \*llhp       | -            |
 
 _References_
 
@@ -190,12 +188,12 @@ WebRTC doesn't support AAC, so if video bypasses transcoding, audio must be enco
 
 ### **Conditional transcoding**
 
-If the input codec is the same as the option to be transcoded, there is no need to perform re-transcoding while unnecessarily consuming a lot of system resources.&#x20;
+If the input codec is the same as the option to be transcoded, there is no need to perform re-transcoding while unnecessarily consuming a lot of system resources.
 
 If the quality of the input track matches all the conditions of **BypassIfMatch**, it will be bypassed without encoding
 
-* eq: euqal to&#x20;
-* lte: less than or equal to&#x20;
+* eq: equal to
+* lte: less than or equal to
 * gte: greater than or equal to
 
 To support WebRTC and LLHLS, AAC and Opus codecs must be supported at the same time. Use the settings below to reduce unnecessary audio encoding.
@@ -245,7 +243,6 @@ If a video track with a lower quality than the encoding option is input, unneces
 		<Framerate>30</Framerate>
 		<BypassIfMatch>
 			<Codec>eq</Codec>
-			<Framerate>lte</Framerate>
 			<Width>lte</Width>
 			<Height>lte</Height>
 			<SAR>eq</SAR>
@@ -256,7 +253,7 @@ If a video track with a lower quality than the encoding option is input, unneces
 
 ### **Keep the original with transcoding**
 
-&#x20;If you want to transcode with the same quality as the original. See the sample below for possible parameters that OME supports to keep original. If you remove the **Width**, **Height**, **Framerate**, **Samplerate**, and **Channel** parameters. then, It is transcoded with the same options as the original.
+If you want to transcode with the same quality as the original. See the sample below for possible parameters that OME supports to keep original. If you remove the **Width**, **Height**, **Framerate**, **Samplerate**, and **Channel** parameters. then, It is transcoded with the same options as the original.
 
 ```xml
 <Encodes>
@@ -297,25 +294,23 @@ To change the video resolution when transcoding, use the values of width and hei
 </Encodes>
 ```
 
-
-
 ## Adaptive Bitrates Streaming (ABR)
 
 From version 0.14.0, OvenMediaEngine can encode same source with multiple bitrates renditions and deliver it to the player.
 
-As shown in the example configuration below, you can provide ABR by adding `<Playlists>` to `<OutputProfile>`.  There can be multiple playlists, and each playlist can be accessed with `<FileName>`.
+As shown in the example configuration below, you can provide ABR by adding `<Playlists>` to `<OutputProfile>`. There can be multiple playlists, and each playlist can be accessed with `<FileName>`.
 
-The method to access the playlist set through LLHLS is as follows.&#x20;
+The method to access the playlist set through LLHLS is as follows.
 
 `http[s]://<domain>[:port]/<app>/<stream>/`**`<FileName>`**`.m3u8`
 
-The method to access the Playlist set through WebRTC is as follows.&#x20;
+The method to access the Playlist set through WebRTC is as follows.
 
 `ws[s]://<domain>[:port]/<app>/<stream>/`**`<FileName>`**
 
 Note that `<FileName>` must never contain the **`playlist`** and **`chunklist`** keywords. This is a reserved word used inside the system.
 
-To set up `<Rendition>`, you need to add `<Name>` to the elements of `<Encodes>`. Connect the set `<Name>` into `<Rendition><Video>` or `<Rendition><Audio>`.&#x20;
+To set up `<Rendition>`, you need to add `<Name>` to the elements of `<Encodes>`. Connect the set `<Name>` into `<Rendition><Video>` or `<Rendition><Audio>`.
 
 In the example below, three quality renditions are provided and the URL to play the `abr` playlist as LLHLS is `https://domain:port/app/stream/abr.m3u8` and The WebRTC playback URL is `wss://domain:port/app/stream/abr`
 
