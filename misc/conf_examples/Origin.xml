@@ -62,14 +62,14 @@
 				<Port>${env:OME_SRT_PROV_PORT:9999}</Port>
 				<WorkerCount>1</WorkerCount>
 			</SRT>
+			<!--
 			<MPEGTS>
-				<!--
-					Listen on port 4000
-					This is just a demonstration to show that you can configure the port in several ways
+					<- Listen on port 4000
+					This is just a demonstration to show that you can configure the port in several ways ->
 					<Port>${env:OME_MPEGTS_PROV_PORT:4000-4001,4004,4005/udp}</Port>
-				-->
-				<Port>${env:OME_MPEGTS_PROV_PORT:4000/udp}</Port>
+				<Port>${env:OME_MPEGTS_PROV_PORT:4000-4005/udp}</Port>
 			</MPEGTS>
+			-->
 			<WebRTC>
 				<Signalling>
 					<Port>${env:OME_WEBRTC_SIGNALLING_PORT:3333}</Port>
@@ -288,11 +288,10 @@
 						<RTMP />
 						<SRT />
 						<RTSPPull />
-						<MPEGTS>
+						<!-- <MPEGTS>
 							<StreamMap>
-								<!--
-									Set the stream name of the client connected to the port to "stream_${Port}"
-									For example, if a client connets to port 4000, OME creates a "stream_4000" stream
+									<- Set the stream name of the client connected to the port to "stream_${Port}"
+									For example, if a client connets to port 4000, OME creates a "stream_4000" stream ->
 									<Stream>
 										<Name>stream_${Port}</Name>
 										<Port>4000,4001-4004</Port>
@@ -301,13 +300,12 @@
 										<Name>stream_4005</Name>
 										<Port>4005</Port>
 									</Stream>
-								-->
 								<Stream>
 									<Name>stream_${Port}</Name>
-									<Port>${env:OME_MPEGTS_PROV_PORT:4000/udp}</Port>
+									<Port>${env:OME_MPEGTS_PROV_PORT:4000-4005/udp}</Port>
 								</Stream>
 							</StreamMap>
-						</MPEGTS>
+						</MPEGTS> -->
 					</Providers>
 					<Publishers>
 						<AppWorkerCount>1</AppWorkerCount>

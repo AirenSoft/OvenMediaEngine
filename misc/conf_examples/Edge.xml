@@ -71,7 +71,7 @@
 					<WorkerCount>1</WorkerCount>
 				</Signalling>
 				<IceCandidates>
-					<IceCandidate>${env:OME_WEBRTC_CANDIDATES:*:10005-10010/udp}</IceCandidate>
+					<IceCandidate>${env:OME_WEBRTC_CANDIDATES:*:10005-10009/udp}</IceCandidate>
 					<TcpRelay>${env:OME_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
 					<TcpForce>true</TcpForce>
 					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
