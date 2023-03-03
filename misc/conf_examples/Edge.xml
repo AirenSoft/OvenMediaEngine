@@ -71,8 +71,8 @@
 					<WorkerCount>1</WorkerCount>
 				</Signalling>
 				<IceCandidates>
-					<IceCandidate>${env:OME_WEBRTC_CANDIDATES:*:10005-10009/udp}</IceCandidate>
-					<TcpRelay>${env:OME_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
+					<IceCandidate>${env:OME_HOST_IP:*}:${env:OME_WEBRTC_CANDIDATE_PORT:10005-10009/udp}</IceCandidate>
+					<TcpRelay>${env:OME_HOST_IP:*}:${env:OME_WEBRTC_TCP_RELAY_PORT:3478}</TcpRelay>
 					<TcpForce>true</TcpForce>
 					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
 				</IceCandidates>
@@ -180,9 +180,6 @@
 					<Host>192.168.0.160:6379</Host>
 					<Auth>!@#ovenmediaengine</Auth>
 				</RedisServer>
-				
-				This is only needed for the origin server and used to register the ovt address of the stream. 
-				<OriginHostName>ome-dev.airensoft.com</OriginHostName>
 			</OriginMapStore>
 			-->
 
