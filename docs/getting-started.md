@@ -5,8 +5,8 @@
 OvenMediaEngine supports the Docker image from [AirenSoft's Docker Hub](https://hub.docker.com/r/airensoft/ovenmediaengine) (**airensoft/ovenmediaengine)** repository. After installing [Docker](https://www.docker.com), you can simply run the following command:
 
 ```
-docker run -d \
--p 1935:1935 -p 4000:4000/udp -p 3333:3333 -p 3334:3334 -p 3478:3478 -p 9000:9000 -p 9999:9999/udp \
+docker run --name ome -d -e OME_HOST_IP=Your.HOST.IP.Address \
+-p 1935:1935 -p 9999:9999/udp -p 9000:9000 -p 3333:3333 -p 3478:3478 -p 10000-10009:10000-10009/udp \
 airensoft/ovenmediaengine:dev
 ```
 
@@ -18,17 +18,19 @@ You can set the following environment variables.
 
 ### Ports
 
-| Env                                | Default Value |
-| ---------------------------------- | ------------- |
-| OME\_ORIGIN\_PORT                  | 9000          |
-| OME\_RTMP\_PROV\_PORT              | 1935          |
-| OME\_SRT\_PROV\_PORT               | 9999/udp      |
-| OME\_MPEGTS\_PROV\_PORT            | 4000/udp      |
-| OME\_LLHLS\_STREAM\_PORT           | 3333          |
-| OME\_LLHLS\_STREAM\_TLS\_PORT      | 3334          |
-| OME\_WEBRTC\_SIGNALLING\_PORT      | 3333          |
-| OME\_WEBRTC\_SIGNALLING\_TLS\_PORT | 3334          |
-| OME\_TCP\_RELAY\_ADDRESS           | \*:3478       |
+| Env                                | Default Value   |
+| ---------------------------------- | --------------- |
+| OME\_HOST\_IP                      | \*              |
+| OME\_ORIGIN\_PORT                  | 9000            |
+| OME\_RTMP\_PROV\_PORT              | 1935            |
+| OME\_SRT\_PROV\_PORT               | 9999/udp        |
+| OME\_MPEGTS\_PROV\_PORT            | 4000/udp        |
+| OME\_LLHLS\_STREAM\_PORT           | 3333            |
+| OME\_LLHLS\_STREAM\_TLS\_PORT      | 3334            |
+| OME\_WEBRTC\_SIGNALLING\_PORT      | 3333            |
+| OME\_WEBRTC\_SIGNALLING\_TLS\_PORT | 3334            |
+| OME\_WEBRTC\_TCP\_RELAY\_PORT      | 3478            |
+| OME\_WEBRTC\_CANDIDATE\_PORT       | 10000-10004/udp |
 
 ## Manual Installation and Execution
 
@@ -104,16 +106,16 @@ if `systemctl start ovenmediaengine` fails in Fedora, SELinux may be the cause. 
 
 The default configuration uses the following ports, so you need to open it in your firewall settings.
 
-| Port                         | Purpose                                                                                                                                  |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| 1935/TCP                     | RTMP Input                                                                                                                               |
-| 9999/UDP                     | SRT Input                                                                                                                                |
-| 4000/UDP                     | MPEG-2 TS Input                                                                                                                          |
-| 9000/TCP                     | Origin Server (OVT)                                                                                                                      |
-| <p>3333/TCP <br>3334/TLS</p> | <p>LLHLS Streaming<br><mark style="color:red;"><strong>* Streaming over Non-TLS is not allowed with modern browsers.</strong></mark></p> |
-| <p>3333/TCP<br>3334/TLS</p>  | WebRTC Signaling (both ingest and streaming)                                                                                             |
-| 3478/TCP                     | WebRTC TCP relay (TURN Server, both ingest and streaming)                                                                                |
-| 10000 - 1005/UDP             | WebRTC Ice candidate (both ingest and streaming)                                                                                         |
+| Port                        | Purpose                                                                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 1935/TCP                    | RTMP Input                                                                                                                               |
+| 9999/UDP                    | SRT Input                                                                                                                                |
+| 4000/UDP                    | MPEG-2 TS Input                                                                                                                          |
+| 9000/TCP                    | Origin Server (OVT)                                                                                                                      |
+| <p>3333/TCP<br>3334/TLS</p> | <p>LLHLS Streaming<br><mark style="color:red;"><strong>* Streaming over Non-TLS is not allowed with modern browsers.</strong></mark></p> |
+| <p>3333/TCP<br>3334/TLS</p> | WebRTC Signaling (both ingest and streaming)                                                                                             |
+| 3478/TCP                    | WebRTC TCP relay (TURN Server, both ingest and streaming)                                                                                |
+| 10000 - 1005/UDP            | WebRTC Ice candidate (both ingest and streaming)                                                                                         |
 
 {% hint style="warning" %}
 To use TLS, you must set up a certificate. See [TLS Encryption](configuration/tls-encryption.md) for more information.
@@ -179,7 +181,7 @@ The server address in OBS needs to use `<Application name>` generated in `Server
 * Click "File" in the top menu, then click "Settings" (or press "Settings" on the lower right).
 * Select the "Stream" tab and enter your stream information.
 
-![Press "Service" and select "Custom", your OBS is the same as this image.](<.gitbook/assets/image (8) (1).png>)
+![Press "Service" and select "Custom", your OBS is the same as this image.](<.gitbook/assets/image (8).png>)
 
 * Go to the "Output" tab.
 * Set the following entries.
