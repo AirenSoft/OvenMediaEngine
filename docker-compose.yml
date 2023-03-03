@@ -31,11 +31,12 @@ services:
       context: .
     image: airensoft/ovenmediaengine:latest
     ports:
-    - "4333:3333/tcp"
-    - "3479:3479/tcp"
-    - "10005-10009:10005-10009/udp"
+    - "4333:3333/tcp" # WebRTC Signaling / LLHLS
+    - "3479:3479/tcp" # WebRTC TURN
+    - "10005-10009:10005-10009/udp" # WebRTC Candidate
     environment:
     - DEFAULT_ORIGIN_SERVER=192.168.0.160
+    - DEFAULT_ORIGIN_PORT=9000
     - OME_LLHLS_STREAM_PORT=3333
     - OME_WEBRTC_SIGNALLING_PORT=3333
     - OME_WEBRTC_TCP_RELAY_ADDRESS=*:3479
