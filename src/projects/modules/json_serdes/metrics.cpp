@@ -23,6 +23,8 @@ namespace serdes
 		SetTimestamp(value, "lastUpdatedTime", metrics->GetLastUpdatedTime());
 		SetInt64(value, "totalBytesIn", metrics->GetTotalBytesIn());
 		SetInt64(value, "totalBytesOut", metrics->GetTotalBytesOut());
+		SetInt64(value, "avgBitrateIn", metrics->GetAvgBitrateIn());
+		SetInt64(value, "avgBitrateOut", metrics->GetAvgBitrateOut());		
 		SetTimestamp(value, "lastRecvTime", metrics->GetLastRecvTime());
 		SetTimestamp(value, "lastSentTime", metrics->GetLastSentTime());
 		SetInt(value, "totalConnections", metrics->GetTotalConnections());
@@ -36,6 +38,10 @@ namespace serdes
 		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::LLHls).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::LLHls));
 		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Dash).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Dash));
 		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Ovt).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Ovt));
+		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::File).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::File));
+		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::RtmpPush).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::RtmpPush));
+		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::MpegtsPush).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::MpegtsPush));
+		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Thumbnail).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Thumbnail));
 
 		return value;
 	}

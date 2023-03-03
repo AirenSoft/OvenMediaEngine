@@ -6,12 +6,21 @@
 
 namespace mon
 {
+	#define BITRATE_MEASURE_INTERVAL 3
+
     CommonMetrics::CommonMetrics()
     {
         _total_bytes_in = 0;
         _total_bytes_out = 0;
         _total_connections = 0;
 		_max_total_connections = 0;
+
+		_avg_bitrate_in = 0;
+		_avg_bitrate_out = 0;
+		_bitrate_measure_bytes_in = 0;
+		_bitrate_measure_bytes_out = 0;
+		_last_bitrate_measure_in_time = std::chrono::system_clock::now();
+		_last_bitrate_measure_out_time = std::chrono::system_clock::now();
 
         _max_total_connection_time = std::chrono::system_clock::now();
 		_last_recv_time = std::chrono::system_clock::now();
@@ -79,6 +88,16 @@ namespace mon
 	{
 		return _total_bytes_out;
 	}
+
+    uint64_t CommonMetrics::GetAvgBitrateIn() const
+	{
+		return _avg_bitrate_in;
+	}
+	uint64_t CommonMetrics::GetAvgBitrateOut() const
+	{
+		return _avg_bitrate_out;
+	}
+
 	uint32_t CommonMetrics::GetTotalConnections() const
 	{
 		return _total_connections;
@@ -116,8 +135,20 @@ namespace mon
 	{
 		_total_bytes_in += value;
 		_last_recv_time = std::chrono::system_clock::now();
+
+		_bitrate_measure_bytes_in += value;
+		if( _last_recv_time - _last_bitrate_measure_in_time > std::chrono::seconds(BITRATE_MEASURE_INTERVAL))
+		{
+			_last_bitrate_measure_in_time = _last_recv_time;
+
+			_avg_bitrate_in = _bitrate_measure_bytes_in * 8 / BITRATE_MEASURE_INTERVAL;
+			
+			_bitrate_measure_bytes_in = 0;
+		}
+
 		UpdateDate();
 	}
+
 	void CommonMetrics::IncreaseBytesOut(PublisherType type, uint64_t value)
 	{
 		if(value == 0)
@@ -128,6 +159,19 @@ namespace mon
 		_publisher_metrics[static_cast<int8_t>(type)]._bytes_out += value;
 		_total_bytes_out += value;
 		_last_sent_time = std::chrono::system_clock::now();
+
+		_bitrate_measure_bytes_out += value;
+		
+		// TODO (soulk): Performance tuning is required. This function is very very called a lot. too much time comparison operation.
+		if( _last_sent_time - _last_bitrate_measure_out_time > std::chrono::seconds(BITRATE_MEASURE_INTERVAL))
+		{
+			_last_bitrate_measure_out_time = _last_sent_time;
+
+			_avg_bitrate_out = _bitrate_measure_bytes_out * 8 / BITRATE_MEASURE_INTERVAL;
+			
+			_bitrate_measure_bytes_out = 0;
+		}
+
 		UpdateDate();
 	}
 
