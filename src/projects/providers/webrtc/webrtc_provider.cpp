@@ -599,15 +599,8 @@ namespace pvd
 			auto candidate_index_to_send = _current_ice_candidate_index++ % _ice_candidate_list.size();
 			const auto &candidates = _ice_candidate_list[candidate_index_to_send];
 
-			for (auto &candidate : candidates)
+			for (const auto &candidate : candidates)
 			{
-				// Create a candidate using the IP address of the server that the signaling client connects to (a candidate that works in most environments)
-				auto local_address = request->GetRemote()->GetLocalAddress();
-				if (local_address != nullptr)
-				{
-					ice_candidates.emplace(candidate.GetTransport(), local_address->GetIpAddress(), candidate.GetPort());
-				}				
-
 				ice_candidates.emplace(candidate);
 			}
 		}

@@ -388,18 +388,6 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			if (_tcp_force == true || request_url->GetQueryValue("transport").UpperCaseString() == "TCP")
 			{
 				// Add ICE Server Link
-				auto server_address = request->GetRemote()->GetLocalAddress();
-				if (server_address != nullptr)
-				{
-					// Create a TURN Server Address using the IP address of the server that the signaling client connects to (that can be worked in most environments)
-					auto server_ip_address = server_address->GetIpAddress();	
-					// Make ICE Server URL using signaling server IP
-					_tcp_relay_address.EachPort([&](const ov::String &host, const uint16_t port) -> bool {
-						ov::String url = ov::String::FormatString("turn:%s:%d?transport=tcp", server_ip_address.CStr(), port);
-						_link_headers.emplace(GetIceServerLinkValue(url, DEFAULT_RELAY_USERNAME, DEFAULT_RELAY_KEY));
-						return true;
-					});
-				}
 
 				// Add ICE Server Link from configuration
 				for (const auto &ice_server : _link_headers)
@@ -421,7 +409,7 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			}
 		}
 
-		logtd("WHIP Response: %s", response->ToString().CStr());
+		logti("WHIP Response: %s", response->ToString().CStr());
 
 		return http::svr::NextHandler::DoNotCall;
 	});

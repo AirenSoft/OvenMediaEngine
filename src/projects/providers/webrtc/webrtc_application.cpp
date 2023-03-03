@@ -288,7 +288,7 @@ namespace pvd
 		
 		answer_sdp->Update();
 
-		logtd("Answer SDP created : %s", answer_sdp->ToString().CStr());
+		logti("Answer SDP created : %s", answer_sdp->ToString().CStr());
 
 		return answer_sdp;
 	}

@@ -22,3 +22,15 @@ ov::String ov::Random::GenerateString(uint32_t size)
 
 	return random_str;
 }
+
+ov::String ov::Random::GenerateNumberString(uint32_t length)
+{
+	std::string str("0123456789");
+
+	std::random_device rd;
+	std::mt19937 generator(rd());
+	std::shuffle(str.begin(), str.end(), generator);
+	ov::String random_str = str.substr(0, length).c_str();
+
+	return random_str;
+}

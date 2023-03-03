@@ -19,11 +19,11 @@
 IceCandidate::IceCandidate()
 	: IceCandidate("UDP", ov::SocketAddress())
 {
+	_foundation = ov::Random::GenerateNumberString(10);
 }
 
 IceCandidate::IceCandidate(const ov::String &transport, const ov::SocketAddress &address)
-	: _foundation("0"),
-	  _component_id(1),
+	: _component_id(1),
 	  _transport(std::move(transport)),
 	  _priority(50),
 	  _address(address),
@@ -31,12 +31,12 @@ IceCandidate::IceCandidate(const ov::String &transport, const ov::SocketAddress 
 	  _candidate_types("host"),
 	  _rel_port(0)
 {
+	_foundation = ov::Random::GenerateNumberString(10);
 }
 
 // without resolving address
 IceCandidate::IceCandidate(const ov::String &transport, const ov::String &address, int port)
-	: _foundation("0"),
-	  _component_id(1),
+	: _component_id(1),
 	  _transport(std::move(transport)),
 	  _priority(50),
 	  _address_str(std::move(address)),
@@ -44,7 +44,7 @@ IceCandidate::IceCandidate(const ov::String &transport, const ov::String &addres
 	  _candidate_types("host"),
 	  _rel_port(0)
 {
-
+	_foundation = ov::Random::GenerateNumberString(10);
 }
 
 IceCandidate::IceCandidate(IceCandidate &&candidate) noexcept
@@ -233,7 +233,17 @@ IceCandidate &IceCandidate::operator=(IceCandidate candidate) noexcept
 
 bool IceCandidate::operator<(const IceCandidate &candidate) const noexcept
 {
-	return ToString() < candidate.ToString();
+	if (_address.IsValid())
+	{
+		return _address < candidate._address;
+	}
+
+	if (_address_str == candidate._address_str)
+	{
+		return _port < candidate._port;
+	}
+
+	return _address_str < candidate._address_str;
 }
 
 const ov::String &IceCandidate::GetFoundation() const noexcept
