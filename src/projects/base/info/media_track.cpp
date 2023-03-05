@@ -23,7 +23,8 @@ MediaTrack::MediaTrack()
 	  _bitrate(0),
 	  _byass(false),
 	  _start_frame_time(0),
-	  _last_frame_time(0)
+	  _last_frame_time(0),
+	  _cfg(nullptr)
 {
 }
 
@@ -55,6 +56,8 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 	_codec_extradata = media_track._codec_extradata;
 
 	_origin_bitstream_format = media_track._origin_bitstream_format;
+
+	_cfg = media_track._cfg;
 }
 
 MediaTrack::~MediaTrack()
@@ -528,5 +531,6 @@ std::shared_ptr<MediaTrack> MediaTrack::Clone()
 
 	track->_colorspace = _colorspace;
 
+	track->_cfg;
 	return track;
 }
