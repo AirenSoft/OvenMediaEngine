@@ -92,8 +92,18 @@ namespace ov
 	{
 		// get local address
 		sockaddr_storage local_addr{};
-		socklen_t local_length = sizeof(local_addr);
-		getsockname(GetNativeHandle(), reinterpret_cast<sockaddr *>(&local_addr), &local_length);
+
+		if (GetType() == ov::SocketType::Srt)
+		{
+			int local_length = sizeof(local_addr);
+			srt_getsockname(GetNativeHandle(), reinterpret_cast<sockaddr *>(&local_addr), &local_length);
+			return true;
+		}
+		else
+		{	
+			socklen_t local_length = sizeof(local_addr);
+			getsockname(GetNativeHandle(), reinterpret_cast<sockaddr *>(&local_addr), &local_length);
+		}
 
 		_local_address = std::make_shared<SocketAddress>("", local_addr);
 
