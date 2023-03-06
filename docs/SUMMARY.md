@@ -1,6 +1,7 @@
 # Table of contents
 
 * [Introduction](README.md)
+* [Quick Start](quick-start.md)
 * [Getting Started](getting-started.md)
 * [Configuration](configuration/README.md)
   * [TLS Encryption](configuration/tls-encryption.md)

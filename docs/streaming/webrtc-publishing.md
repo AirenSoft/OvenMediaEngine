@@ -163,7 +163,7 @@ We have prepared a test player to make it easy to check if OvenMediaEngine is wo
 
 OvenMediaEnigne provides adaptive bitrates streaming over WebRTC. OvenPlayer can also play and display OvenMediaEngine's WebRTC ABR URL.
 
-![](<../.gitbook/assets/image (41).png>)
+![](<../.gitbook/assets/image (39).png>)
 
 ### Create Playlist for WebRTC ABR
 

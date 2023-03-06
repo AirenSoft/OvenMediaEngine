@@ -61,21 +61,21 @@ You can sign in from this login screen. A Username and Password of the initial a
 
 ### Common Layout
 
-![](<../.gitbook/assets/1 (2).png>)
+![](../.gitbook/assets/1.png)
 
-#### ① Home Link (Server page)&#x20;
+#### ① Home Link (Server page)
 
 This logo is a link to the first entry screen. You can check the settings of OvenMediaEngine.
 
-#### ② Account Information Link&#x20;
+#### ② Account Information Link
 
 This tab is a link to a page where you can edit your account information.
 
-#### ③ Sign Out&#x20;
+#### ③ Sign Out
 
 Sign out and then expire the session.
 
-#### ④ Virtual Host, Application, Stream Navigation&#x20;
+#### ④ Virtual Host, Application, Stream Navigation
 
 Tree-structured navigation with access to Virtual Hosts, Applications, and Streams running on OvenMediaEngine. The selected resource is highlighted.
 
@@ -83,7 +83,7 @@ Tree-structured navigation with access to Virtual Hosts, Applications, and Strea
 You can load and unload virtual hosts or applications when added or removed from the OvenMediaEngine configuration.
 {% endhint %}
 
-#### ⑤ Update Virtual Host, Application, Stream Navigation&#x20;
+#### ⑤ Update Virtual Host, Application, Stream Navigation
 
 Reload the Virtual Host, Application, and Stream information. If a new stream is added to your application, you can view the new stream.
 
@@ -91,7 +91,7 @@ Reload the Virtual Host, Application, and Stream information. If a new stream is
 
 Shows the path of the selected Virtual Host, Application, and Stream. You can click the parent path to choose that resource.
 
-#### ⑦ Virtual Host, Application, Stream Details&#x20;
+#### ⑦ Virtual Host, Application, Stream Details
 
 Displays Statistics, Actions, and Setting information of the selected resource.
 
@@ -121,7 +121,7 @@ If you select Virtual Host, Application, or Stream, you can see traffic/connecti
 
 ![Displaying input/output stream information](../.gitbook/assets/6.png)
 
-**① Statistics**&#x20;
+**① Statistics**
 
 You can check the cumulative bytes in/out and the number of connected sessions for each protocol.
 
@@ -129,7 +129,7 @@ You can check the cumulative bytes in/out and the number of connected sessions f
 
 You can check the creation time of the selected resource.
 
-**③ Detailed Information**&#x20;
+**③ Detailed Information**
 
 Display detailed information about the selected resource. When Virtual Host or Application is selected, the configuration is displayed, and when Stream is selected, the input stream and output stream information is displayed.
 
@@ -149,11 +149,11 @@ Suppose you modify the OvenMediaEngine Server.xml directly to add a new Virtual 
 
 To reload the modified configuration file, refresh each page or use the `Refresh` button in the left navigation.
 
-**② Add a new Virtual Host**&#x20;
+**② Add a new Virtual Host**
 
 Suppose a new Virtual Host is added to the configuration file. In that case, the new Virtual Host will be added to the left navigation, and you will see a `Load` button that can be immediately reflected in the OvenMediaEngine.
 
-**③ Remove the existing Virtual Host**&#x20;
+**③ Remove the existing Virtual Host**
 
 Similarly, if an existing Virtual Host is removed from the configuration file, you will see an `Unload` button in the left navigation. You can use the Unload button to remove a current Virtual Host from OvenMediaEngine.
 
@@ -167,11 +167,11 @@ As with Virtual Host, if you modify the OvenMediaEngine configuration file direc
 
 To reread the modified configuration file, refresh each page or use the `Refresh` button in the left navigation.
 
-**② Add a new Application**&#x20;
+**② Add a new Application**
 
 When a new Application is added to the config file, the new Application is added to the left navigation with a Load button that can be immediately applied to the OvenMediaEngine. You can use the Load button to apply the new Application to OvenMediaEngine.
 
-**③ Remove the existing Application**&#x20;
+**③ Remove the existing Application**
 
 Similarly, if an existing Application is removed from the configuration file, an `Unload` button will appear in the left navigation.
 
@@ -193,15 +193,15 @@ Set the IP address or domain of OvenMediaEngine (<mark style="color:red;">requir
 Host information is different depending on the operating environment of OvenMediaEngine, so enter it manually.
 {% endhint %}
 
-**③ TCP Playback Settings**&#x20;
+**③ TCP Playback Settings**
 
 Check if you want to play the WebRTC stream with TCP.
 
-**④ Output Stream List**&#x20;
+**④ Output Stream List**
 
 It interprets the information set in `②` and `③` and the configurations of OvenMediaEngine and display the list of playable output streams.
 
-**⑤ Output Stream Playback**&#x20;
+**⑤ Output Stream Playback**
 
 If you click the `Play` button, the stream is played with `⑥` Test Player (OvenPlayer).
 
@@ -216,4 +216,3 @@ You can change the account information to sign in to the Web Console.
 You can enter the account information page through the `Account` link.
 
 The default account is set to username: `admin`, password: `admin`. If you change your account information, your session will be expired, and you will need to sign in again.
-
