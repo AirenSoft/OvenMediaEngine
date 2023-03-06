@@ -47,8 +47,6 @@ OvenMediaEngine-master/misc/prerequisites.sh
 If the prerequisites.sh script fails, try to run `sudo apt-get update` and rerun it. If it's not enough proceed with the [manual installation](troubleshooting.md#prerequisites-sh-script-failed).
 {% endhint %}
 
-### \*\*\*\*
-
 ### **Build & Run**
 
 You can build the OvenMediaEngine source using the following command:
@@ -131,5 +129,5 @@ $ sudo firewall-cmd --add-port=9999/udp
 $ sudo firewall-cmd --add-port=4000/udp
 $ sudo firewall-cmd --add-port=3478/tcp
 $ sudo firewall-cmd --add-port=9000/tcp
-$ sudo firewall-cmd --add-port=10000-10005/udp
+$ sudo firewall-cmd --add-port=10000-10009/udp
 ```
