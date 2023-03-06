@@ -95,6 +95,6 @@ The getUserMedia API to access the local device only works in a [secure context]
 
 To create a custom WebRTC Producer, you need to implement OvenMediaEngine's Self-defined Signaling Protocol or WHIP. Self-defined protocol is structured in a simple format and uses the[ same method as WebRTC Streaming](../streaming/webrtc-publishing.md#signalling-protocol).
 
-![](<../.gitbook/assets/image (10).png>)
+![](<../.gitbook/assets/image (10) (1).png>)
 
 When the player connects to ws\[s]://host:port/app/stream?**direction=send** through a web socket and sends a request offer command, the server responds to the offer sdp. If transport=tcp exists in the query string of the URL, [iceServers ](https://developer.mozilla.org/en-US/docs/Web/API/RTCIceServer)information is included in offer sdp, which contains the information of OvenMediaEngine's built-in TURN server, so you need to set this in RTCPeerConnection to use WebRTC/TCP. The player then setsRemoteDescription and addIceCandidate offer sdp, generates an answer sdp, and responds to the server.
