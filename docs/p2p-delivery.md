@@ -10,7 +10,7 @@ According to our experiments so far, P2P Delivery provides the best performance 
 
 In other words, P2P Delivery has distributed two-thirds of existing Traffic. So, this means that it can expand the Capacity of the Edge Network by three times and reduce Traffic costs by two-thirds.
 
-![](<.gitbook/assets/image (9) (1).png>)
+![](<.gitbook/assets/image (9).png>)
 
 ## How does it work?
 
