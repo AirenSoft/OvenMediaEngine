@@ -75,6 +75,21 @@ The settings below are recommended for ultra-low latency.&#x20;
 
 <figure><img src=".gitbook/assets/image (4).png" alt=""><figcaption></figcaption></figure>
 
+<details>
+
+<summary>Ingest URLs</summary>
+
+**RTMP** - rtmp://Your.Docker.Host.IP:1935/app/stream
+
+**SRT** - srt://Your.Docker.Host.IP:9999?streamid=srt%3A%2F%2FYour.Docker.Host.IP%3A9999%2Fapp%2Fstream
+
+**WHIP** - ws://Your.Docker.Host.IP:3333/app/stream?direction=whip
+
+**WebRTC** - ws://Your.Docker.Host.IP:3333/app/stream?direction=send\
+Web browsers do not allow access to WebRTC devices from unsecured addresses. A certificate is required for this. See [TLS Encryption](configuration/tls-encryption.md).
+
+</details>
+
 ## Playback
 
 Open the installed OvenPlayer Demo page in your browser.&#x20;
