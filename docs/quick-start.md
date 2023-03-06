@@ -68,16 +68,13 @@ Publish your live stream to OvenMediaEngine using a live encoder like [OBS](http
 
 **WHIP** - ws://Your.Docker.Host.IP:3333/app/stream?direction=whip
 
-**WebRTC** - ws://Your.Docker.Host.IP:3333/app/stream?direction=send\
-Web browsers do not allow access to WebRTC devices from unsecured addresses. A certificate is required for this. See [TLS Encryption](configuration/tls-encryption.md).
-
 </details>
 
 The RTMP publishing address is :&#x20;
 
-Server :`rtmp://Your.Docker.Host.IP:1935/app`
+**Server** `rtmp://Your.Docker.Host.IP:1935/app`
 
-Stream Key : `stream`
+**Stream Key** `stream`
 
 <figure><img src=".gitbook/assets/image (22).png" alt=""><figcaption></figcaption></figure>
 
