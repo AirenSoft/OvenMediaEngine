@@ -1,4 +1,4 @@
-# REST API (Beta)
+# REST API
 
 ## Overview
 
@@ -180,6 +180,10 @@ if you set
 
 
 
+{% hint style="info" %}
+OvenMediaEngine API uses Basic HTTP Authentication Scheme to authenticate clients. [https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication)
+{% endhint %}
+
 #### \<OME\_HOST>
 
 This means the IP or domain of the server on which your OME is running.
@@ -201,6 +205,8 @@ Indicates the API path to be called. The API path is usually in the following fo
 ```
 
 `resource` means an item, such as `VirtualHost` or `Application`, and `action` is used to command an action to a specific resource, such as `push` or `record`.
+
+
 
 ### Response
 
