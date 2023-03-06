@@ -26,6 +26,22 @@ public:
 		Pass = 1		// Check signature and pass
 	};
 
+	class RequestInfo
+	{
+	public:
+		RequestInfo(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address);
+		RequestInfo(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, const ov::String &user_agent);
+
+		std::shared_ptr<const ov::Url> GetRequestUrl() const;
+		std::shared_ptr<ov::SocketAddress> GetClientAddress() const;
+		const ov::String &GetUserAgent() const;
+
+	private:
+		const std::shared_ptr<const ov::Url> _request_url;
+		const std::shared_ptr<ov::SocketAddress> _client_address;
+		const ov::String _user_agent;
+	};
+
 	AccessController(ProviderType provider_type, const cfg::Server &server_config);
 	AccessController(PublisherType publisher_type, const cfg::Server &server_config);
 
@@ -33,9 +49,9 @@ public:
 
 	std::tuple<VerificationResult, std::shared_ptr<const SignedToken>> VerifyBySignedToken(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address);
 
-	std::tuple<VerificationResult, std::shared_ptr<const AdmissionWebhooks>> SendCloseWebhooks(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address);
+	std::tuple<VerificationResult, std::shared_ptr<const AdmissionWebhooks>> SendCloseWebhooks(const std::shared_ptr<const RequestInfo> &request_info);
 
-	std::tuple<VerificationResult, std::shared_ptr<const AdmissionWebhooks>> VerifyByWebhooks(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, const ov::String &user_agent);
+	std::tuple<VerificationResult, std::shared_ptr<const AdmissionWebhooks>> VerifyByWebhooks(const std::shared_ptr<const RequestInfo> &request_info);
 	
 private:
 	const ProviderType _provider_type;

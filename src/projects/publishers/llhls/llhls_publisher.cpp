@@ -290,9 +290,9 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			}
 
 			// Admission Webhooks
-			auto user_agent = request->GetHeader("USER-AGENT");
+			auto request_info = std::make_shared<AccessController::RequestInfo>(request_url, remote_address, request->GetHeader("USER-AGENT"));
 
-			auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_url, remote_address, user_agent);
+			auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
 			if (webhooks_result == AccessController::VerificationResult::Off)
 			{
 				// Success

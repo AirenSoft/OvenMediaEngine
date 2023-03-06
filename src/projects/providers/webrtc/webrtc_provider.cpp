@@ -293,9 +293,9 @@ namespace pvd
 		}
 
 		// Admission Webhooks
-		auto user_agent = request->GetHeader("USER-AGENT");
+		auto request_info = std::make_shared<AccessController::RequestInfo>(parsed_url, remote_address, request->GetHeader("USER-AGENT"));
 
-		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(parsed_url, remote_address, user_agent);
+		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
 		if (webhooks_result == AccessController::VerificationResult::Off)
 		{
 			// Success
@@ -491,11 +491,14 @@ namespace pvd
 		logti("Stop command received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 
 		// Send Close to Admission Webhooks
-		auto parsed_url{ov::Url::Parse(ws_session->GetRequest()->GetUri())};
-		auto remote_address{ws_session->GetRequest()->GetRemote()->GetRemoteAddress()};
+		auto request = ws_session->GetRequest();
+		auto parsed_url{ov::Url::Parse(request->GetUri())};
+		auto remote_address{request->GetRemote()->GetRemoteAddress()};
 		if (parsed_url && remote_address)
 		{
-			SendCloseAdmissionWebhooks(parsed_url, remote_address);
+			auto request_info = std::make_shared<AccessController::RequestInfo>(parsed_url, remote_address, request->GetHeader("USER-AGENT"));
+
+			SendCloseAdmissionWebhooks(request_info);
 		}
 		// the return check is not necessary
 
