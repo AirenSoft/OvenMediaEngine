@@ -33,12 +33,14 @@ Content-Type: application/json
 **Body**
 
 ```json
+{
 	"statusCode": 200,
 	"message": "OK",
-    "response": [
-        "stream",
-        "stream2"
-    ]
+	"response": [
+		"stream",
+		"stream2"
+	]
+}
 ```
 
 _statusCode_
@@ -78,6 +80,7 @@ Content-Type: application/json
 
 </details>
 
+---
 
 ## Create Stream (Pull)
 
@@ -93,6 +96,7 @@ Content-Type: application/json
 ```
 
 _Authorization_
+
  Credentials for HTTP Basic Authentication created with \<AccessToken>
 
 ### **Body**
@@ -113,17 +117,25 @@ _Authorization_
 }
 ```
 _name_ (required)
+
  Stream name to create
 
 _urls_ (required)
+
  A list of URLs to pull streams from, in Json array format. All URLs must have the same scheme.
 
 _properties_ (optional)
+
 	_persistent_
+
 		Created as a persistent stream, not deleted until DELETE
+
 	_noInputFailoverTimeoutMs_
+
 		If no data is input during this period, the stream is deleted, but ignored if persistent is true
+
 	_unusedStreamDeletionTimeoutMs_
+
 		If no data is output during this period (if there is no viewer), the stream is deleted, but ignored if persistent is true
 
 ### Responses
@@ -237,6 +249,7 @@ Unknown error
 
 </details>
 
+---
 
 ## Get Stream Info
 
