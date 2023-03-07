@@ -389,7 +389,9 @@ void SegmentPublisher::RequestTableUpdateThread()
 					auto remote_address{std::make_shared<ov::SocketAddress>(ov::SocketAddress::CreateAndGetFirst(request_info->GetIpAddressPort()))};
 					if (request_url && remote_address)
 					{
-						SendCloseAdmissionWebhooks(request_url, remote_address);
+						auto access_controller_request_info = std::make_shared<AccessController::RequestInfo>(request_url, remote_address);
+
+						SendCloseAdmissionWebhooks(access_controller_request_info);
 					}
 					// it is not necessary to check the return
 
@@ -577,7 +579,7 @@ void SegmentPublisher::UpdateWebhooksRequestInfo(const WebhooksRequestInfo &info
 
 bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, ov::String &stream_name,
 										   const std::shared_ptr<http::svr::HttpExchange> &client, const std::shared_ptr<const ov::Url> &request_url,
-										   std::shared_ptr<PlaylistRequestInfo> &request_info)
+										   std::shared_ptr<PlaylistRequestInfo> &playlist_request_info)
 {
 	auto request = client->GetRequest();
 	auto remote_address = request->GetRemote()->GetRemoteAddress();
@@ -596,20 +598,20 @@ bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, o
 	}
 
 	auto session_id = remote_address->GetIpAddress();
-	request_info = std::make_shared<PlaylistRequestInfo>(GetPublisherType(),
+	playlist_request_info = std::make_shared<PlaylistRequestInfo>(GetPublisherType(),
 														 vhost_app_name, stream_name,
 														 remote_address->GetIpAddress(),
 														 session_id);
 
 	auto stream{GetStreamAs<SegmentStream>(vhost_app_name, stream_name)};
-	auto segment_duration{(stream == nullptr) ? request_info->GetSegmentDuration() : stream->GetSegmentDuration()};
-	request_info->SetSegmentDuration(segment_duration);
+	auto segment_duration{(stream == nullptr) ? playlist_request_info->GetSegmentDuration() : stream->GetSegmentDuration()};
+	playlist_request_info->SetSegmentDuration(segment_duration);
 
 	// SingedPolicy is first
 	auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(requested_url, remote_address);
 	if (signed_policy_result == AccessController::VerificationResult::Pass)
 	{
-		UpdatePlaylistRequestInfo(request_info);
+		UpdatePlaylistRequestInfo(playlist_request_info);
 		// Check Admission Webhooks
 		//return true;
 	}
@@ -624,10 +626,10 @@ bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, o
 			// Because this is chunked streaming publisher,
 			// players will continue to request playlists after token expiration while playing.
 			// Therefore, once authorized session must be maintained.
-			if (IsAuthorizedSession(*request_info))
+			if (IsAuthorizedSession(*playlist_request_info))
 			{
 				// Update the authorized session info
-				UpdatePlaylistRequestInfo(request_info);
+				UpdatePlaylistRequestInfo(playlist_request_info);
 				// Check Admission Webhooks
 				// return true;
 			}
@@ -645,7 +647,7 @@ bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, o
 
 		if (signed_token_result == AccessController::VerificationResult::Pass)
 		{
-			UpdatePlaylistRequestInfo(request_info);
+			UpdatePlaylistRequestInfo(playlist_request_info);
 			// Check Admission Webhooks
 		}
 		else if (signed_token_result == AccessController::VerificationResult::Off)
@@ -663,10 +665,10 @@ bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, o
 				// Because this is chunked streaming publisher,
 				// players will continue to request playlists after token expiration while playing.
 				// Therefore, once authorized session must be maintained.
-				if (IsAuthorizedSession(*request_info))
+				if (IsAuthorizedSession(*playlist_request_info))
 				{
 					// Update the authorized session info
-					UpdatePlaylistRequestInfo(request_info);
+					UpdatePlaylistRequestInfo(playlist_request_info);
 					// Check Admission Webhooks
 				}
 			}
@@ -679,7 +681,9 @@ bool SegmentPublisher::HandleAccessControl(info::VHostAppName &vhost_app_name, o
 	}
 
 	// Admission Webhooks
-	auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(requested_url, remote_address);
+	auto request_info = std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, request->GetHeader("USER-AGENT"));
+
+	auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
 	if (webhooks_result == AccessController::VerificationResult::Off)
 	{
 		// Success

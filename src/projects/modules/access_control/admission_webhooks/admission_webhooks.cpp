@@ -5,8 +5,8 @@
 std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(ProviderType provider,
 															const std::shared_ptr<ov::Url> &control_server_url, uint32_t timeout_msec,
 															const ov::String secret_key,
-															const std::shared_ptr<ov::SocketAddress> &client_address,
 															const std::shared_ptr<const ov::Url> &request_url,
+															const std::shared_ptr<const ClientInfo> &client_info,
 															const Status::Code status)
 {
 	auto hooks = std::make_shared<AdmissionWebhooks>();
@@ -15,8 +15,8 @@ std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(ProviderType provide
 	hooks->_control_server_url = control_server_url;
 	hooks->_timeout_msec = timeout_msec;
 	hooks->_secret_key = secret_key;
-	hooks->_client_address = client_address;
 	hooks->_requested_url = request_url;
+	hooks->_client_info = client_info;
 	hooks->_status = status;
 
 	hooks->Run();
@@ -27,8 +27,8 @@ std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(ProviderType provide
 std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(PublisherType publisher,
 															const std::shared_ptr<ov::Url> &control_server_url, uint32_t timeout_msec,
 															const ov::String secret_key,
-															const std::shared_ptr<ov::SocketAddress> &client_address,
 															const std::shared_ptr<const ov::Url> &request_url,
+															const std::shared_ptr<const ClientInfo> &client_info,
 															const Status::Code status)
 {
 	auto hooks = std::make_shared<AdmissionWebhooks>();
@@ -37,13 +37,45 @@ std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(PublisherType publis
 	hooks->_control_server_url = control_server_url;
 	hooks->_timeout_msec = timeout_msec;
 	hooks->_secret_key = secret_key;
-	hooks->_client_address = client_address;
 	hooks->_requested_url = request_url;
+	hooks->_client_info = client_info;
 	hooks->_status = status;
 
 	hooks->Run();
 
 	return hooks;
+}
+
+AdmissionWebhooks::ClientInfo::ClientInfo(const std::shared_ptr<ov::SocketAddress> &client_address)
+	: _client_address(client_address), _user_agent("")
+{
+
+}
+
+AdmissionWebhooks::ClientInfo::ClientInfo(const std::shared_ptr<ov::SocketAddress> &client_address, const ov::String &user_agent)
+	: _client_address(client_address), _user_agent(user_agent)
+{
+
+}
+
+std::shared_ptr<ov::SocketAddress> AdmissionWebhooks::ClientInfo::GetClientAddress() const
+{
+	return _client_address;
+}
+
+ov::String AdmissionWebhooks::ClientInfo::GetAddress() const
+{
+	return _client_address->GetIpAddress();
+}
+
+uint16_t AdmissionWebhooks::ClientInfo::GetPort() const
+{
+	return _client_address->Port();
+}
+
+const ov::String &AdmissionWebhooks::ClientInfo::GetUserAgent() const
+{
+	return _user_agent;
 }
 
 AdmissionWebhooks::ErrCode AdmissionWebhooks::GetErrCode() const
@@ -84,7 +116,8 @@ ov::String AdmissionWebhooks::GetMessageBody()
 		"client": 
 		{
 			"address": "211.233.58.86",
-			"port": 29291
+			"port": 29291,
+			"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
 		},
 		"request":
 		{
@@ -101,10 +134,14 @@ ov::String AdmissionWebhooks::GetMessageBody()
 	Json::Value jv_client;
 	Json::Value jv_request;
 
-	if(_client_address != nullptr)
+	if(_client_info != nullptr)
 	{
-		jv_client["address"] = _client_address->GetIpAddress().CStr();
-		jv_client["port"] = _client_address->Port();
+		jv_client["address"] = _client_info->GetAddress().CStr();
+		jv_client["port"] = _client_info->GetPort();
+		if(!_client_info->GetUserAgent().IsEmpty())
+		{
+			jv_client["user-agent"] = _client_info->GetUserAgent().CStr();
+		}
 		jv_root["client"] = jv_client;
 	}
 
@@ -178,7 +215,7 @@ void AdmissionWebhooks::ParseResponse(const std::shared_ptr<ov::Data> &data)
 	_allowed = jv_allowed.asBool();
 	if(_allowed == false)
 	{
-		_err_reason.Format("ControlServer(%s) denied admission to %s by %s.", _control_server_url->ToUrlString().CStr(), _requested_url->ToUrlString().CStr(), _client_address->ToString(false).CStr());
+		_err_reason.Format("ControlServer(%s) denied admission to %s by %s.", _control_server_url->ToUrlString().CStr(), _requested_url->ToUrlString().CStr(), _client_info->GetClientAddress()->ToString(false).CStr());
 	}
 
 	// Optional data

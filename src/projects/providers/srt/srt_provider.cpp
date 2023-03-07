@@ -229,7 +229,9 @@ namespace pvd
 			return;
 		}
 
-		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(parsed_url, remote_address);
+		auto request_info = std::make_shared<AccessController::RequestInfo>(parsed_url, remote_address);
+
+		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
 		if (webhooks_result == AccessController::VerificationResult::Off)
 		{
 			// Success
@@ -307,7 +309,9 @@ namespace pvd
 			auto remote_address = remote->GetRemoteAddress();
 			if (parsed_url && remote_address)
 			{
-				SendCloseAdmissionWebhooks(parsed_url, remote_address);
+				auto request_info = std::make_shared<AccessController::RequestInfo>(parsed_url, remote_address);
+
+				SendCloseAdmissionWebhooks(request_info);
 			}
 		}
 		// the return check is not necessary

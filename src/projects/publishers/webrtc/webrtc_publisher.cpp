@@ -288,7 +288,9 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 	}
 
 	// Admission Webhooks
-	auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(parsed_url, remote_address);
+	auto request_info = std::make_shared<AccessController::RequestInfo>(parsed_url, remote_address, request->GetHeader("USER-AGENT"));
+
+	auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
 	if (webhooks_result == AccessController::VerificationResult::Off)
 	{
 		// Success
@@ -576,7 +578,9 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::WebSock
 	auto remote_address{ws_session->GetRequest()->GetRemote()->GetRemoteAddress()};
 	if (parsed_url && remote_address)
 	{
-		SendCloseAdmissionWebhooks(parsed_url, remote_address);
+		auto request_info = std::make_shared<AccessController::RequestInfo>(parsed_url, remote_address, ws_session->GetRequest()->GetHeader("USER-AGENT"));
+
+		SendCloseAdmissionWebhooks(request_info);
 	}
 	// the return check is not necessary
 

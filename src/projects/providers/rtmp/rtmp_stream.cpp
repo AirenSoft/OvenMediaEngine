@@ -133,7 +133,9 @@ namespace pvd
 			auto remote_address { _remote->GetRemoteAddress() };
 			if (remote_address)
 			{
-				GetProvider()->SendCloseAdmissionWebhooks(_url, remote_address);
+				auto request_info = std::make_shared<AccessController::RequestInfo>(_url, remote_address);
+
+				GetProvider()->SendCloseAdmissionWebhooks(request_info);
 			}
 		}
 		// the return check is not necessary
@@ -345,7 +347,9 @@ namespace pvd
 			return false;
 		}
 
-		auto [webhooks_result, _admission_webhooks] = GetProvider()->VerifyByAdmissionWebhooks(_url, _remote->GetRemoteAddress());
+		auto request_info = std::make_shared<AccessController::RequestInfo>(_url, _remote->GetRemoteAddress());
+
+		auto [webhooks_result, _admission_webhooks] = GetProvider()->VerifyByAdmissionWebhooks(request_info);
 		if (webhooks_result == AccessController::VerificationResult::Off)
 		{
 			return true;
