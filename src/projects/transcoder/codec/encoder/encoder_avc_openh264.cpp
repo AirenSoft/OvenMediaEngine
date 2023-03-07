@@ -36,43 +36,60 @@ bool EncoderAVCxOpenH264::SetCodecParams()
 	_codec_context->thread_count = GetRefTrack()->GetThreadCount() < 0 ? FFMIN(FFMAX(4, av_cpu_count() / 3), 8) : GetRefTrack()->GetThreadCount();
 	_codec_context->slices = _codec_context->thread_count;
 
-	// bitrate can't be controlled for RC_QUALITY_MODE,RC_BITRATE_MODE and RC_TIMESTAMP_MODE without enabling skip frame
-	// If the auto skip frame option is enabled, intermittent frame drop occurs. It has nothing to do with CPU usage.
-	::av_opt_set(_codec_context->priv_data, "rc_mode", "bitrate", 0);
+	::av_opt_set(_codec_context->priv_data, "coder", "default", 0);
 
-#if 1
-	::av_opt_set(_codec_context->priv_data, "allow_skip_frames", "false", 0);
-#else	
 	// Use the main/high profile to remove this log.
 	//  'Warning:bEnableFrameSkip = 0,bitrate can't be controlled for RC_QUALITY_MODE,RC_BITRATE_MODE and RC_TIMESTAMP_MODE without enabling skip frame'
 	::av_opt_set(_codec_context->priv_data, "allow_skip_frames", "false", 0);
-#endif
 
-#if 1
+	// Profile
 	// - B-frame must be disabled. because, WEBRTC does not support B-Frame.
 	::av_opt_set(_codec_context->priv_data, "profile", "constrained_baseline", 0);
-#else
-	// Use the main/high profile to remove this log.
-	//  - [OpenH264] this = 0x0x7fff24016310, Warning:layerId(0) doesn't support profile(578), change to UNSPECIFIC profile
-	// ::av_opt_set(_codec_context->priv_data, "profile", "main", 0);
-#endif
+	// ::av_opt_set(_codec_context->priv_data, "profile", "high", 0);
 
-	::av_opt_set(_codec_context->priv_data, "coder", "default", 0);
+	// Loop Filter
+	::av_opt_set_int(_codec_context->priv_data, "loopfilter", 1, 0);
 
-	if (GetRefTrack()->GetPreset() == "slower" || GetRefTrack()->GetPreset() == "slow")
+	auto preset = GetRefTrack()->GetPreset().LowerCaseString();
+	if (preset.IsEmpty() == true)
 	{
-		_codec_context->qmin = 5;
-		_codec_context->qmax = 51;
+		::av_opt_set(_codec_context->priv_data, "rc_mode", "bitrate", 0);
 	}
-	else if (GetRefTrack()->GetPreset() == "fast" || GetRefTrack()->GetPreset() == "faster")
+	else
 	{
-		_codec_context->qmin = 30;
-		_codec_context->qmax = 51;
-	}
-	else  
-	{
-		_codec_context->qmin = 10;
-		_codec_context->qmax = 51;
+		logtd("If the preset is used in the openh264 codec, constant bitrate is not supported");
+
+		::av_opt_set(_codec_context->priv_data, "rc_mode", "quality", 0);
+
+		if (preset == "slower")
+		{
+			_codec_context->qmin = 10;
+			_codec_context->qmax = 39;
+
+		}
+		else if (preset == "slow")
+		{
+			_codec_context->qmin = 16;
+			_codec_context->qmax = 45;
+		}
+		else if (preset == "medium")
+		{
+			_codec_context->qmin = 24;
+			_codec_context->qmax = 51;
+		}		
+		else if (preset == "fast")
+		{
+			_codec_context->qmin = 32;
+			_codec_context->qmax = 51;
+		}
+		else if (preset == "faster")
+		{
+			_codec_context->qmin = 40;
+			_codec_context->qmax = 51;
+		}		
+		else{
+			logtw("Unknown preset: %s", preset.CStr());
+		}
 	}
 
 	return true;
