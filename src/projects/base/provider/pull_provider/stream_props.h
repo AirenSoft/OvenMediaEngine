@@ -92,24 +92,47 @@ namespace pvd
 			_retry_connect_count = retry_connect_count;
 		}
 
+		int32_t GetNoInputFailoverTimeoutMSec()
+		{
+			return _no_input_failover_timeout;
+		}
+
+		int32_t GetUnusedStreamDeletionTimeoutMSec()
+		{
+			return _unused_stream_deletion_timeout;
+		}
+
+		int32_t GetStreamFailbackTimeoutMSec()
+		{
+			return _failback_timeout;
+		}
+
+		// Setter
+		void SetNoInputFailoverTimeout(int32_t milliseconds)
+		{
+			_no_input_failover_timeout = milliseconds;
+		}
+
+		void SetUnusedStreamDeletionTimeout(int32_t milliseconds)
+		{
+			_unused_stream_deletion_timeout = milliseconds;
+		}
+
+		void SetStreamFailbackTimeout(int32_t milliseconds)
+		{
+			_failback_timeout = milliseconds;
+		}
+
 	private:
 		bool _persistent = false;
-
 		bool _failback = false;
-
 		bool _relay = false;
-
 		bool _from_origin_map_store = false;
 
-		// not used yet. using the Origins->Properties option instead.
+		// -1 means that the values in configuration file will be used. (Conf/Origins/Properties)
 		int32_t _failback_timeout = -1;
-
-		// not used yet. using the Origins->Properties option instead.
 		int32_t _no_input_failover_timeout = -1;
-
-		// not used yet. using the Origins->Properties option instead.
 		int32_t _unused_stream_deletion_timeout = -1;
-
 		int32_t _retry_connect_count = 2;
 
 	public:

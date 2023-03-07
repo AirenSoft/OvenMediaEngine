@@ -186,6 +186,7 @@ namespace http
 		UnsupportedMediaType = 415,
 		RangeNotSatisfiable = 416,
 		ExpectationFailed = 417,
+		FailedDependency = 424,
 		UpgradeRequired = 426,
 		InternalServerError = 500,
 		NotImplemented = 501,
@@ -248,6 +249,7 @@ namespace http
 			HTTP_CASE_RETURN(StatusCode::UnsupportedMediaType, true);
 			HTTP_CASE_RETURN(StatusCode::RangeNotSatisfiable, true);
 			HTTP_CASE_RETURN(StatusCode::ExpectationFailed, true);
+			HTTP_CASE_RETURN(StatusCode::FailedDependency, true);
 			HTTP_CASE_RETURN(StatusCode::UpgradeRequired, true);
 			HTTP_CASE_RETURN(StatusCode::InternalServerError, true);
 			HTTP_CASE_RETURN(StatusCode::NotImplemented, true);
@@ -300,6 +302,7 @@ namespace http
 			HTTP_CASE_RETURN(StatusCode::UnsupportedMediaType, "Unsupported Media Type");
 			HTTP_CASE_RETURN(StatusCode::RangeNotSatisfiable, "Range Not Satisfiable");
 			HTTP_CASE_RETURN(StatusCode::ExpectationFailed, "Expectation Failed");
+			HTTP_CASE_RETURN(StatusCode::FailedDependency, "Failed Dependency");
 			HTTP_CASE_RETURN(StatusCode::UpgradeRequired, "Upgrade Required");
 			HTTP_CASE_RETURN(StatusCode::InternalServerError, "Internal Server Error");
 			HTTP_CASE_RETURN(StatusCode::NotImplemented, "Not Implemented");
