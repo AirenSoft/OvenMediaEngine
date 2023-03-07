@@ -2,7 +2,7 @@
 
 ## Get Stream List
 
-> #### <mark style="color:blue;">**GET**</mark> /v1/vhosts/{vhost name}/apps/{app name}/streams
+> <mark style="color:blue;">**GET**</mark>** /v1/vhosts/{vhost name}/apps/{app name}/streams**
 
 Get all stream names in the {vhost name}/{app name} application.
 
@@ -14,7 +14,7 @@ Authorization: Basic {credentials}
 
 _Authorization_
 
-  Credentials for HTTP Basic Authentication created with \<AccessToken>
+&#x20;   Credentials for HTTP Basic Authentication created with \<AccessToken>
 
 ### Responses
 
@@ -45,15 +45,15 @@ Content-Type: application/json
 
 _statusCode_
 
-  Same as HTTP Status Code
+&#x20;   Same as HTTP Status Code
 
 _message_
 
-  A human-readable description of the response code
+&#x20;   A human-readable description of the response code
 
 _response_
 
-  Json array containing a list of stream names
+&#x20;   Json array containing a list of stream names
 
 </details>
 
@@ -80,11 +80,11 @@ Content-Type: application/json
 
 </details>
 
----
+***
 
 ## Create Stream (Pull)
 
-> #### <mark style="color:blue;">**GET**</mark> /v1/vhosts/{vhost name}/apps/{app name}/streams
+> <mark style="color:blue;">**GET**</mark>** /v1/vhosts/{vhost name}/apps/{app name}/streams**
 
 Create a stream by pulling an external URL. External URL protocols currently support RTSP and OVT.
 
@@ -97,7 +97,7 @@ Content-Type: application/json
 
 _Authorization_
 
-  Credentials for HTTP Basic Authentication created with \<AccessToken>
+&#x20;   Credentials for HTTP Basic Authentication created with \<AccessToken>
 
 ### **Body**
 
@@ -116,27 +116,28 @@ _Authorization_
   	}
 }
 ```
+
 _name_ (required)
 
-  Stream name to create
+&#x20;   Stream name to create
 
 _urls_ (required)
 
-  A list of URLs to pull streams from, in Json array format. All URLs must have the same scheme.
+&#x20;   A list of URLs to pull streams from, in Json array format. All URLs must have the same scheme.
 
 _properties_ (optional)
 
-  _persistent_
+&#x20;   _persistent_
 
-    Created as a persistent stream, not deleted until DELETE
+&#x20;       __        Created as a persistent stream, not deleted until DELETE
 
-  _noInputFailoverTimeoutMs_
+&#x20;   _noInputFailoverTimeoutMs_
 
-    If no data is input during this period, the stream is deleted, but ignored if persistent is true
+&#x20;       __        If no data is input during this period, the stream is deleted, but ignored if persistent is true
 
-  _unusedStreamDeletionTimeoutMs_
+&#x20;   _unusedStreamDeletionTimeoutMs_
 
-    If no data is output during this period (if there is no viewer), the stream is deleted, but ignored if persistent is true
+&#x20;       __        If no data is output during this period (if there is no viewer), the stream is deleted, but ignored if persistent is true
 
 ### Responses
 
@@ -163,11 +164,11 @@ Content-Type: application/json
 
 _statusCode_
 
- Same as HTTP Status Code
+&#x20;   Same as HTTP Status Code
 
 _message_
 
- A human-readable description of the response code
+&#x20;   A human-readable description of the response code
 
 </details>
 
@@ -245,15 +246,15 @@ Failed to pull provided URL
 
 <summary>500 Internal Server Error</summary>
 
-Unknown error 
+Unknown error
 
 </details>
 
----
+***
 
 ## Get Stream Info
 
-> #### <mark style="color:blue;">**GET**</mark> /v1/vhosts/{vhost name}/apps/{app name}/streams/{stream name}
+> <mark style="color:blue;">**GET**</mark>** /v1/vhosts/{vhost name}/apps/{app name}/streams/{stream name}**
 
 Get detailed information of {vhost name}/{app name}/{stream name} stream.
 
