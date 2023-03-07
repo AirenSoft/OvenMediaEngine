@@ -14,7 +14,7 @@ Authorization: Basic {credentials}
 
 _Authorization_
 
-&#x20;   Credentials for HTTP Basic Authentication created with \<AccessToken>
+&nbsp;&nbsp;&nbsp;&nbsp;Credentials for HTTP Basic Authentication created with \<AccessToken>
 
 ### Responses
 
