@@ -2,19 +2,18 @@
 
 ## Get Stream List
 
-> <mark style="color:blue;">**GET**</mark>** /v1/vhosts/{vhost name}/apps/{app name}/streams**
+> #### <mark style="color:blue;">**GET**</mark> /v1/vhosts/{vhost name}/apps/{app name}/streams
 
 Get all stream names in the {vhost name}/{app name} application.
 
 ### **Header**
 
-```
+```http
 Authorization: Basic {credentials}
+
+# Authorization
+    Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
-
-_Authorization_
-
-&nbsp;&nbsp;&nbsp;&nbsp;Credentials for HTTP Basic Authentication created with \<AccessToken>
 
 ### Responses
 
@@ -41,19 +40,14 @@ Content-Type: application/json
 		"stream2"
 	]
 }
+
+# statusCode
+	Same as HTTP Status Code
+# message
+	A human-readable description of the response code
+# response
+	Json array containing a list of stream names
 ```
-
-_statusCode_
-
-&#x20;   Same as HTTP Status Code
-
-_message_
-
-&#x20;   A human-readable description of the response code
-
-_response_
-
-&#x20;   Json array containing a list of stream names
 
 </details>
 
@@ -84,20 +78,19 @@ Content-Type: application/json
 
 ## Create Stream (Pull)
 
-> <mark style="color:blue;">**POST**</mark>** /v1/vhosts/{vhost name}/apps/{app name}/streams**
+> #### <mark style="color:blue;">**POST**</mark> /v1/vhosts/{vhost name}/apps/{app name}/streams
 
 Create a stream by pulling an external URL. External URL protocols currently support RTSP and OVT.
 
 ### **Header**
 
-```
+```http
 Authorization: Basic {credentials}
 Content-Type: application/json
+
+# Authorization
+    Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
-
-_Authorization_
-
-&#x20;   Credentials for HTTP Basic Authentication created with \<AccessToken>
 
 ### **Body**
 
@@ -115,29 +108,22 @@ _Authorization_
 		"unusedStreamDeletionTimeoutMs": 60000,
   	}
 }
+
+# name (required)
+	Stream name to create
+# urls (required)
+	A list of URLs to pull streams from, in Json array format. 
+	All URLs must have the same scheme.
+# properties (optional)
+	## persistent
+		Created as a persistent stream, not deleted until DELETE
+	## noInputFailoverTimeoutMs
+		If no data is input during this period, the stream is deleted, 
+		but ignored if persistent is true
+	## unusedStreamDeletionTimeoutMs
+		If no data is output during this period (if there is no viewer), 
+		the stream is deleted, but ignored if persistent is true
 ```
-
-_name_ (required)
-
-&#x20;   Stream name to create
-
-_urls_ (required)
-
-&#x20;   A list of URLs to pull streams from, in Json array format. All URLs must have the same scheme.
-
-_properties_ (optional)
-
-&#x20;   _persistent_
-
-&#x20;       __        Created as a persistent stream, not deleted until DELETE
-
-&#x20;   _noInputFailoverTimeoutMs_
-
-&#x20;       __        If no data is input during this period, the stream is deleted, but ignored if persistent is true
-
-&#x20;   _unusedStreamDeletionTimeoutMs_
-
-&#x20;       __        If no data is output during this period (if there is no viewer), the stream is deleted, but ignored if persistent is true
 
 ### Responses
 
@@ -149,7 +135,7 @@ A stream has been created.
 
 **Header**
 
-```
+```http
 Content-Type: application/json
 ```
 
@@ -160,15 +146,12 @@ Content-Type: application/json
     "message": "Created",
     "statusCode": 201
 }
+
+# statusCode
+    Same as HTTP Status Code
+# message
+    A human-readable description of the response code
 ```
-
-_statusCode_
-
-&#x20;   Same as HTTP Status Code
-
-_message_
-
-&#x20;   A human-readable description of the response code
 
 </details>
 
@@ -188,7 +171,7 @@ Authentication required
 
 **Header**
 
-```json
+```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
@@ -208,12 +191,6 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 <summary>404 Not Found</summary>
 
 The given vhost name or app name could not be found.
-
-**Header**
-
-```json
-Content-Type: application/json
-```
 
 **Body**
 
@@ -250,11 +227,9 @@ Unknown error
 
 </details>
 
-***
-
 ## Get Stream Info
 
-> <mark style="color:blue;">**GET**</mark>** /v1/vhosts/{vhost name}/apps/{app name}/streams/{stream name}**
+> #### <mark style="color:blue;">**GET**</mark> /v1/vhosts/{vhost name}/apps/{app name}/streams/{stream name}
 
 Get detailed information of {vhost name}/{app name}/{stream name} stream.
 
@@ -266,7 +241,7 @@ Authorization: Basic {credentials}
 
 _Authorization_
 
- Credentials for HTTP Basic Authentication created with \<AccessToken>
+Credentials for HTTP Basic Authentication created with \<AccessToken>
 
 ### Responses
 
@@ -293,79 +268,75 @@ Content-Type: application/json
 			"createdTime": "2021-01-11T03:45:21.879+09:00",
 			"sourceType": "Rtmp",
 			"tracks": [
-				{
-					"id": 0,
-					"type": "Video",
-					"video": {
-						"bitrate": "2500000",
-						"bypass": false,
-						"codec": "H264",
-						"framerate": 30.0,
-						"height": 720,
-						"width": 1280
-					}
-				},
-				{
-					"id": 1,				
-					"audio": {
-						"bitrate": "128000",
-						"bypass": false,
-						"channel": 2,
-						"codec": "AAC",
-						"samplerate": 48000
-					},
-					"type": "Audio"
+			{
+				"id": 0,
+				"type": "Video",
+				"video": {
+					"bitrate": "2500000",
+					"bypass": false,
+					"codec": "H264",
+					"framerate": 30.0,
+					"height": 720,
+					"width": 1280
 				}
+			},
+			{
+				"id": 1,				
+				"audio": {
+					"bitrate": "128000",
+					"bypass": false,
+					"channel": 2,
+					"codec": "AAC",
+					"samplerate": 48000
+				},
+				"type": "Audio"
+			}
 			]
 		},
 		"name": "stream",
 		"outputs": [
+		{
+			"name": "stream",
+			"tracks": [
 			{
-				"name": "stream",
-				"tracks": [
-					{
-						"id": 0,
-						"type": "Video",
-						"video": {
-							"bypass": true
-						}
-					},
-					{
-						"id": 1,					
-						"audio": {
-							"bypass": true
-						},
-						"type": "Audio"
-					},
-					{
-						"id": 2,					
-						"audio": {
-							"bitrate": "128000",
-							"bypass": false,
-							"channel": 2,
-							"codec": "OPUS",
-							"samplerate": 48000
-						},
-						"type": "Audio"
-					}
-				]
+				"id": 0,
+				"type": "Video",
+				"video": {
+					"bypass": true
+				}
+			},
+			{
+				"id": 1,					
+				"audio": {
+					"bypass": true
+				},
+				"type": "Audio"
+			},
+			{
+				"id": 2,					
+				"audio": {
+					"bitrate": "128000",
+					"bypass": false,
+					"channel": 2,
+					"codec": "OPUS",
+					"samplerate": 48000
+				},
+				"type": "Audio"
 			}
-		]
+			]
+		}
+	]
 	}
 }
+
+
+# statusCode
+	Same as HTTP Status Code
+# message
+	A human-readable description of the response code
+# response
+	Details of the stream
 ```
-
-_statusCode_
-
- Same as HTTP Status Code
-
-_message_
-
- A human-readable description of the response code
-
-_response_
-
- Details of the stream
 
 </details>
 
