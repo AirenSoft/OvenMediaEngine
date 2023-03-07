@@ -190,21 +190,20 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 	http_interceptor->Register(http::Method::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
 		auto request = exchange->GetRequest();
 
-		auto uri = request->GetUri();
-		auto parsed_url = ov::Url::Parse(uri);
-		if (parsed_url == nullptr)
+		auto request_url = request->GetParsedUri();
+		if (request_url == nullptr)
 		{
 			logtw("Failed to parse url: %s", request->GetRequestTarget().CStr());
 			return http::svr::NextHandler::Call;
 		}
 
-		if (parsed_url->App().IsEmpty() == true || parsed_url->Stream().IsEmpty() == true || parsed_url->File().IsEmpty() == true)
+		if (request_url->App().IsEmpty() == true || request_url->Stream().IsEmpty() == true || request_url->File().IsEmpty() == true)
 		{
-			logtw("Invalid request url: %s", uri.CStr());
+			logtw("Invalid request url: %s", request->GetUri().CStr());
 			return http::svr::NextHandler::Call;
 		}
 
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
 		if (vhost_app_name.IsValid() == false)
 		{
 			logtw("Could not found virtual host");
@@ -237,39 +236,55 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 
 		application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response);
 
+		auto host_name = request_url->Host();
+		auto stream_name = request_url->Stream();
+
 		// Check Stream
-		auto stream = std::static_pointer_cast<ThumbnailStream>(GetStream(vhost_app_name, parsed_url->Stream()));
+		auto stream = GetStream(vhost_app_name, request_url->Stream());		
 		if (stream == nullptr)
 		{
-			response->AppendString("There are no thumbnails available stream");
+			// If the stream does not exists, request to the provider
+			stream = PullStream(request_url, vhost_app_name, host_name, stream_name);
+			if (stream == nullptr)
+			{
+				logte("There is no stream or cannot pull a stream : %s", request_url->Stream().CStr());
+				response->AppendString("There is no stream or cannot pull a stream");
+				response->SetStatusCode(http::StatusCode::NotFound);
+				response->Response();
+				exchange->Release();				
+				return http::svr::NextHandler::DoNotCall;
+			}			
+		}
+
+		if (stream->WaitUntilStart(100000) == false)
+		{
+			logtw("(%s/%s) stream has not started", vhost_app_name.CStr(), stream_name.CStr());
+			response->AppendString(ov::String::FormatString("stream has not started"));
 			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
-
-			exchange->Release();
-
+			exchange->Release();							
 			return http::svr::NextHandler::DoNotCall;
 		}
 
 		// Check Extentions
 		auto media_codec_id = cmn::MediaCodecId::None;
-		if (parsed_url->File().LowerCaseString().IndexOf(".jpg") >= 0)
+		if (request_url->File().LowerCaseString().IndexOf(".jpg") >= 0)
 		{
 			media_codec_id = cmn::MediaCodecId::Jpeg;
 		}
-		else if (parsed_url->File().LowerCaseString().IndexOf(".png") >= 0)
+		else if (request_url->File().LowerCaseString().IndexOf(".png") >= 0)
 		{
 			media_codec_id = cmn::MediaCodecId::Png;
 		}
 
-		// There is no endcoded thumbnail image
-		auto endcoded_video_frame = stream->GetVideoFrameByCodecId(media_codec_id);
+		// Wait O seconds for thumbnail image to be received
+		auto endcoded_video_frame = std::static_pointer_cast<ThumbnailStream>(stream)->GetVideoFrameByCodecId(media_codec_id, 5000);
 		if (endcoded_video_frame == nullptr)
 		{
-			response->AppendString("There is no thumbnail image");
+			response->AppendString(ov::String::FormatString("There is no thumbnail image"));
 			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
-
-			exchange->Release();
+			exchange->Release();							
 
 			return http::svr::NextHandler::DoNotCall;
 		}
@@ -277,15 +292,17 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 		response->SetHeader("Content-Type", (media_codec_id == cmn::MediaCodecId::Jpeg) ? "image/jpeg" : "image/png");
 		response->SetStatusCode(http::StatusCode::OK);
 		response->AppendData(std::move(endcoded_video_frame->Clone()));
-		response->Response();
-
+		auto sent_size = response->Response();
 		exchange->Release();
+
+		MonitorInstance->IncreaseBytesOut(*stream, PublisherType::Thumbnail, sent_size);
 
 		return http::svr::NextHandler::DoNotCall;
 	});
 
 	return http_interceptor;
-}
+} 
+
 
 // @Refer to segment_stream_server.cpp
 bool ThumbnailPublisher::SetAllowOrigin(const ov::String &origin_url, std::vector<ov::String> &cors_urls, const std::shared_ptr<http::svr::HttpResponse> &response)
