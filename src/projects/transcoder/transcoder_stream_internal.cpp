@@ -26,13 +26,14 @@ ov::String TranscoderStreamInternal::GetIdentifiedForVideoProfile(const uint32_t
 		return ov::String::FormatString("In_T%d_Out_Pbypass", track_id);
 	}
 
-	return ov::String::FormatString("In_T%d_Out_P%s-%d-%.02f-%d-%d",
+	return ov::String::FormatString("In_T%d_Out_P%s-%d-%.02f-%d-%d-%s",
 									track_id,
 									profile.GetCodec().CStr(),
 									profile.GetBitrate(),
 									profile.GetFramerate(),
 									profile.GetWidth(),
-									profile.GetHeight());
+									profile.GetHeight(),
+									profile.GetPreset().CStr());
 }
 
 ov::String TranscoderStreamInternal::GetIdentifiedForImageProfile(const uint32_t track_id, const cfg::vhost::app::oprf::ImageProfile &profile)
