@@ -268,7 +268,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 	output_track->SetFrameRate(profile.GetFramerate());
 	output_track->SetTimeBase(GetDefaultTimebaseByCodecId(output_track->GetCodecId()));
 
-	if (cmn::IsVideoCodec(output_track->GetCodecId()) == false)
+	if (cmn::IsImageCodec(output_track->GetCodecId()) == false)
 	{
 		return nullptr;
 	}

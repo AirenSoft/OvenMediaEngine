@@ -747,9 +747,17 @@ int32_t TranscoderStream::CreateFilters(MediaFrame *buffer)
 		// Set the frame rate of the output track of video configuration
 		// If the video filter is recreated, refer to framerate of MediaTrack. This value can be dynamically changed, An incorrect output fps value may be set.
 		// So, set the framerate in the config file.
-		if (output_track->GetMediaType() == cmn::MediaType::Video)
+		if (cmn::IsVideoCodec(output_track->GetCodecId()) == true)
 		{
-			auto video_cfg = static_cast<cfg::vhost::app::oprf::VideoProfile*>(output_track->_cfg);
+			auto video_cfg = static_cast<cfg::vhost::app::oprf::VideoProfile *>(output_track->_cfg);
+			if (video_cfg != nullptr && video_cfg->GetFramerate() > 0)
+			{
+				output_track->SetFrameRate(video_cfg->GetFramerate());
+			}
+		}
+		else if (cmn::IsImageCodec(output_track->GetCodecId()) == true)
+		{
+			auto video_cfg = static_cast<cfg::vhost::app::oprf::ImageProfile *>(output_track->_cfg);
 			if (video_cfg != nullptr && video_cfg->GetFramerate() > 0)
 			{
 				output_track->SetFrameRate(video_cfg->GetFramerate());
