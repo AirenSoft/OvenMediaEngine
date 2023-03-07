@@ -84,7 +84,7 @@ Content-Type: application/json
 
 ## Create Stream (Pull)
 
-> <mark style="color:blue;">**GET**</mark>** /v1/vhosts/{vhost name}/apps/{app name}/streams**
+> <mark style="color:blue;">**POST**</mark>** /v1/vhosts/{vhost name}/apps/{app name}/streams**
 
 Create a stream by pulling an external URL. External URL protocols currently support RTSP and OVT.
 
