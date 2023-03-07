@@ -47,8 +47,6 @@ private:
 	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
 	bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) override;
 
-	bool SetAllowOrigin(const ov::String &origin_url, std::vector<ov::String> &cors_urls, const std::shared_ptr<http::svr::HttpResponse> &response);
-
 private:
 	std::shared_ptr<ThumbnailInterceptor> CreateInterceptor();
 

@@ -303,33 +303,3 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 	return http_interceptor;
 } 
 
-
-// @Refer to segment_stream_server.cpp
-bool ThumbnailPublisher::SetAllowOrigin(const ov::String &origin_url, std::vector<ov::String> &cors_urls, const std::shared_ptr<http::svr::HttpResponse> &response)
-{
-	if (cors_urls.empty())
-	{
-		// Not need to check CORS
-		response->SetHeader("Access-Control-Allow-Origin", "*");
-		return true;
-	}
-
-	auto item = std::find_if(cors_urls.begin(), cors_urls.end(),
-							 [&origin_url](auto &url) -> bool {
-								 if (url.HasPrefix("http://*."))
-									 return origin_url.HasSuffix(url.Substring(strlen("http://*")));
-								 else if (url.HasPrefix("https://*."))
-									 return origin_url.HasSuffix(url.Substring(strlen("https://*")));
-
-								 return (origin_url == url);
-							 });
-
-	if (item == cors_urls.end())
-	{
-		return false;
-	}
-
-	response->SetHeader("Access-Control-Allow-Origin", origin_url);
-
-	return true;
-}
