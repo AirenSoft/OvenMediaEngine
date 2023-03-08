@@ -472,12 +472,17 @@ void IcePort::CheckTimedoutItem()
 	// Notify to observer
 	for (auto &deleted_ice_port : delete_list)
 	{
+		IcePortConnectionState state;
 		if (deleted_ice_port->IsExpired())
 		{
+			state = IcePortConnectionState::Disconnected;
+
 			logtw("Client %s(session id: %d) has expired", deleted_ice_port->address.ToString(false).CStr(), deleted_ice_port->session_id);
 		}
 		else
 		{
+			state = IcePortConnectionState::Closed;
+
 			logti("Client %s(session id: %d) has terminated", deleted_ice_port->address.ToString(false).CStr(), deleted_ice_port->session_id);
 		}
 
@@ -487,7 +492,7 @@ void IcePort::CheckTimedoutItem()
 			deleted_ice_port->remote->CloseIfNeeded();
 		}
 
-		SetIceState(deleted_ice_port, IcePortConnectionState::Disconnected);
+		SetIceState(deleted_ice_port, state);
 	}
 }
 
