@@ -17,7 +17,8 @@
 #include "../ovlibrary/byte_ordering.h"
 #include "../ovlibrary/converter.h"
 #include "../ovlibrary/ovlibrary.h"
-#include "socket_private.h"
+#include "./ipv6_support.h"
+#include "./socket_private.h"
 
 namespace ov
 {
@@ -251,10 +252,20 @@ namespace ov
 
 	bool SocketAddress::Resolve(ov::String host, SocketAddress::StorageList *storage_list, bool *is_wildcard_host)
 	{
+		const auto ipv4_supported = ov::ipv6::Checker::GetInstance()->IsIPv4Supported();
+		const auto ipv6_supported = ov::ipv6::Checker::GetInstance()->IsIPv6Supported();
+
 		if (host.IsEmpty())
 		{
-			Resolve("*", storage_list, is_wildcard_host);
-			Resolve("::", storage_list, is_wildcard_host);
+			if (ipv4_supported)
+			{
+				Resolve("*", storage_list, is_wildcard_host);
+			}
+
+			if (ipv6_supported)
+			{
+				Resolve("::", storage_list, is_wildcard_host);
+			}
 
 			OV_ASSERT2(*is_wildcard_host == true);
 			return true;
@@ -262,14 +273,30 @@ namespace ov
 
 		if (host == "*")
 		{
-			// IPv4: INADDR_ANY
-			host = "0.0.0.0";
-			*is_wildcard_host = true;
+			if (ipv4_supported)
+			{
+				// IPv4: INADDR_ANY
+				host = "0.0.0.0";
+				*is_wildcard_host = true;
+			}
+			else
+			{
+				logtw("The wildcard \"*\" is used, but IPv4 is not supported");
+				return true;
+			}
 		}
 		else if (host == "::")
 		{
-			// IPv6: in6addr_any
-			*is_wildcard_host = true;
+			if (ipv6_supported)
+			{
+				// IPv6: in6addr_any
+				*is_wildcard_host = true;
+			}
+			else
+			{
+				logtw("The wildcard \"::\" is used, but IPv6 is not supported");
+				return true;
+			}
 		}
 		else
 		{
@@ -315,11 +342,19 @@ namespace ov
 				switch (item->ai_family)
 				{
 					case AF_INET:
-						*ov::ToSockAddrIn4(&storage) = *ov::ToSockAddrIn4(item->ai_addr);
+						if (ipv4_supported)
+						{
+							*ov::ToSockAddrIn4(&storage) = *ov::ToSockAddrIn4(item->ai_addr);
+							storage_list->insert(storage);
+						}
 						break;
 
 					case AF_INET6:
-						*ov::ToSockAddrIn6(&storage) = *ov::ToSockAddrIn6(item->ai_addr);
+						if (ipv6_supported)
+						{
+							*ov::ToSockAddrIn6(&storage) = *ov::ToSockAddrIn6(item->ai_addr);
+							storage_list->insert(storage);
+						}
 						break;
 
 					default:
@@ -331,8 +366,6 @@ namespace ov
 				logtc("ai_addr must not be nullptr");
 				OV_ASSERT2(false);
 			}
-
-			storage_list->insert(storage);
 
 			item = item->ai_next;
 		}

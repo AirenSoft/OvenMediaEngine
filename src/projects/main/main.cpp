@@ -12,6 +12,7 @@
 #include <base/info/ome_version.h>
 #include <base/ovlibrary/daemon.h>
 #include <base/ovlibrary/log_write.h>
+#include <base/ovsocket/ovsocket.h>
 #include <config/config_manager.h>
 #include <mediarouter/mediarouter.h>
 #include <modules/address/address_utilities.h>
@@ -93,6 +94,8 @@ int main(int argc, char *argv[])
 		return false;
 	}
 
+	logti("This host supports %s", ov::ipv6::Checker::GetInstance()->ToString().CStr());
+
 	bool succeeded = true;
 
 	INIT_EXTERNAL_MODULE("FFmpeg", InitializeFFmpeg);
@@ -168,7 +171,7 @@ int main(int argc, char *argv[])
 	RELEASE_MODULE(ovt_provider, "OVT Provider");
 	RELEASE_MODULE(rtspc_provider, "RTSPC Provider");
 	RELEASE_MODULE(file_provider, "File Provider");
-	
+
 	// PENDING : RELEASE_MODULE(rtsp_provider, "RTSP Provider");
 
 	RELEASE_MODULE(transcoder, "Transcoder");
