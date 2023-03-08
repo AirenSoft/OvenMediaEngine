@@ -38,18 +38,41 @@ bool EncoderAVCxOpenH264::SetCodecParams()
 
 	::av_opt_set(_codec_context->priv_data, "coder", "default", 0);
 
-	// Use the main/high profile to remove this log.
+	// Use the high profile to remove this log.
 	//  'Warning:bEnableFrameSkip = 0,bitrate can't be controlled for RC_QUALITY_MODE,RC_BITRATE_MODE and RC_TIMESTAMP_MODE without enabling skip frame'
 	::av_opt_set(_codec_context->priv_data, "allow_skip_frames", "false", 0);
 
 	// Profile
-	// - B-frame must be disabled. because, WEBRTC does not support B-Frame.
-	::av_opt_set(_codec_context->priv_data, "profile", "constrained_baseline", 0);
-	// ::av_opt_set(_codec_context->priv_data, "profile", "high", 0);
+	auto profile = GetRefTrack()->GetProfile();
+	if (profile.IsEmpty() == true)
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "constrained_baseline", 0);
+	}
+	else
+	{
+		if (profile == "baseline")
+		{
+			::av_opt_set(_codec_context->priv_data, "profile", "constrained_baseline", 0);
+		}
+		else if (profile == "high")
+		{
+			::av_opt_set(_codec_context->priv_data, "profile", "high", 0);
+		}
+		else
+		{
+			 if (profile == "main") 
+				logtw("OpenH264 does not support the main profile. The main profile is changed to the baseline profile.");
+			else
+				logtw("This is an unknown profile. change to the default(baseline) profile.");
+
+			::av_opt_set(_codec_context->priv_data, "profile", "constrained_baseline", 0);
+		}
+	}
 
 	// Loop Filter
 	::av_opt_set_int(_codec_context->priv_data, "loopfilter", 1, 0);
 
+	// Preset
 	auto preset = GetRefTrack()->GetPreset().LowerCaseString();
 	if (preset.IsEmpty() == true)
 	{
@@ -65,7 +88,6 @@ bool EncoderAVCxOpenH264::SetCodecParams()
 		{
 			_codec_context->qmin = 10;
 			_codec_context->qmax = 39;
-
 		}
 		else if (preset == "slow")
 		{

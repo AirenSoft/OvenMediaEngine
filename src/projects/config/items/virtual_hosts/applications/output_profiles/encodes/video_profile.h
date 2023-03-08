@@ -35,6 +35,7 @@ namespace cfg
 					int _key_frame_interval = 0;
 					int _b_frames = 0;
 					BypassIfMatch _bypass_if_match;
+					ov::String _profile;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
@@ -51,6 +52,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetKeyFrameInterval, _key_frame_interval)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBFrames, _b_frames)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBypassIfMatch, _bypass_if_match)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetProfile, _profile)
 
 					void SetName(const ov::String &name){_name = name;}
 					void SetBypass(bool bypass){_bypass = bypass;}
@@ -100,15 +102,31 @@ namespace cfg
 						Register<Optional>("Width", &_width);
 						Register<Optional>("Height", &_height);
 						Register<Optional>("Framerate", &_framerate);
-						Register<Optional>("Preset", &_preset);
+
+						Register<Optional>("Preset", &_preset, nullptr, [=]() -> std::shared_ptr<ConfigError> {
+							auto preset = _preset.LowerCaseString();
+							if(preset == "slower" || preset == "slow" || preset == "medium" || preset == "fast" || preset == "faster")
+							{
+								return nullptr;
+							}
+							return CreateConfigErrorPtr("Preset must be slower, slow, medium, fast, or faster");
+						});
 						Register<Optional>("ThreadCount", &_thread_count);
-						Register<Optional>("KeyFrameInterval", &_key_frame_interval, [=]() -> std::shared_ptr<ConfigError> {
+						Register<Optional>("KeyFrameInterval", &_key_frame_interval, nullptr, [=]() -> std::shared_ptr<ConfigError> {
 								return (_key_frame_interval >= 0 && _key_frame_interval <= 600) ? nullptr : CreateConfigErrorPtr("KeyFrameInterval must be between 0 and 600");
 							});
-						Register<Optional>("BFrames", &_b_frames, [=]() -> std::shared_ptr<ConfigError> {
+						Register<Optional>("BFrames", &_b_frames, nullptr, [=]() -> std::shared_ptr<ConfigError> {
 								return (_b_frames >= 0 && _b_frames <= 16) ? nullptr : CreateConfigErrorPtr("BFrames must be between 0 and 16");
 							});
 						Register<Optional>("BypassIfMatch", &_bypass_if_match);
+						Register<Optional>("Profile", &_profile, nullptr, [=]() -> std::shared_ptr<ConfigError> {
+							auto profile = _profile.LowerCaseString();
+							if(profile == "baseline" || profile == "main" || profile == "high")
+							{
+								return nullptr;
+							}
+							return CreateConfigErrorPtr("Profile must be baseline, main or high");
+						});
 					}
 				};
 			}  // namespace oprf
