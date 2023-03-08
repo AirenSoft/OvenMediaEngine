@@ -65,6 +65,7 @@ namespace pvd
 
 	info::stream_id_t Application::IssueUniqueStreamId()
 	{
+		// Don't get confused: Because this is static, a unique id is created even if different applications are different.
 		static std::atomic<info::stream_id_t>	last_issued_stream_id(100);
 
 		return last_issued_stream_id++;
@@ -182,6 +183,9 @@ namespace pvd
 		std::unique_lock<std::shared_mutex> streams_lock(_streams_guard);
 		_streams[stream->GetId()] = stream;
 		streams_lock.unlock();
+
+		// Register stream to Orchestrator
+		ocst::Orchestrator::GetInstance()->RegisterProviderStream(stream);
 
 		NotifyStreamCreated(stream);
 		

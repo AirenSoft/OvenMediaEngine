@@ -172,7 +172,7 @@ namespace api
 			auto app_name = app->GetName();
 			auto stream_name = stream->GetName();
 
-			if (orchestrator->RequestReleasePulledStream(app_name, stream_name) == false)
+			if (orchestrator->TerminateStream(app_name, stream_name) == false)
 			{
 				throw http::HttpError(http::StatusCode::Forbidden, "Only pull streams can be deleted.");
 			}

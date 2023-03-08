@@ -30,8 +30,8 @@ namespace pvd
 		};
 
 		// PullStream API
-		bool Start();
-		bool Stop();
+		bool Start() override;
+		bool Stop() override;
 		bool Resume(); // Resume with another URL
 
 		// Defines the event detection method to process media packets in Pull Stream. 

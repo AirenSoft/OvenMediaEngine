@@ -91,13 +91,15 @@ namespace ocst
 		// ordered vhost list
 		std::vector<std::shared_ptr<VirtualHost>> _virtual_host_list;
 
-		void StorePullStream(const std::shared_ptr<pvd::Stream> &stream);
-		void RemovePullStream(const info::stream_id_t &stream_id);
-		std::shared_ptr<pvd::Stream> GetPullStream(const info::stream_id_t &stream_id);
-		std::shared_ptr<pvd::Stream> GetPullStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
+		bool InsertProviderStream(const std::shared_ptr<pvd::Stream> &stream);
+		void DeleteProviderStream(const std::shared_ptr<pvd::Stream> &stream);
+		void DeleteProviderStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
+		std::shared_ptr<pvd::Stream> GetProviderStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
+		ov::String GetStreamKey(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
+		ov::String GetStreamKey(const std::shared_ptr<pvd::Stream> &stream);
 
-		// stream id, stream
-		std::map<info::stream_id_t, std::shared_ptr<pvd::Stream>> _pull_stream_map;
-		std::shared_mutex _pull_stream_map_mutex;
+		// stream uri, stream
+		std::map<ov::String, std::shared_ptr<pvd::Stream>> _stream_map;
+		std::shared_mutex _stream_map_mutex;
 	};
 }  // namespace ocst

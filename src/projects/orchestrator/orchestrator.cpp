@@ -554,7 +554,6 @@ namespace ocst
 
 			if (stream != nullptr)
 			{
-				StorePullStream(stream);
 				logti("The stream was pulled successfully: [%s/%s] (%u)",
 					  vhost_app_name.CStr(), stream_name.CStr(), stream->GetId());
 
@@ -704,7 +703,6 @@ namespace ocst
 
 		if (stream != nullptr)
 		{
-			StorePullStream(stream);
 			return true;
 
 			////////////////////////////////
@@ -782,18 +780,30 @@ namespace ocst
 		return false;
 	}
 
-	/// Delete PullStream
-	bool Orchestrator::RequestReleasePulledStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+	// Orchestrator manages provider streams to control the stream (e.g. stop, start, etc.)
+	bool Orchestrator::RegisterProviderStream(const std::shared_ptr<pvd::Stream> &stream)
 	{
-		auto pull_stream = GetPullStream(vhost_app_name, stream_name);
-		if (pull_stream == nullptr)
+		logti("Registering provider stream: %s/%s", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr());
+
+		// It will overwrite if the stream already exists
+		if (InsertProviderStream(stream) == false)
 		{
 			return false;
 		}
 
-		pull_stream->Terminate();
-
 		return true;
+	}
+
+	/// Delete PullStream
+	bool Orchestrator::TerminateStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+	{
+		auto stream = GetProviderStream(vhost_app_name, stream_name);
+		if (stream == nullptr)
+		{
+			return false;
+		}
+
+		return stream->Terminate();
 	}
 
 	bool Orchestrator::OnStreamCreated(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
@@ -805,9 +815,13 @@ namespace ocst
 
 	bool Orchestrator::OnStreamDeleted(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s/%s stream of %s is deleted", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
+		logti("%s/%s stream of %s is deleted", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
 
-		RemovePullStream(info->GetId());
+		// Provider stream was registered by the provider, so it should be deleted
+		if (info->IsInputStream())
+		{
+			DeleteProviderStream(info->GetApplicationInfo().GetName(), info->GetName());
+		}
 
 		return true;
 	}

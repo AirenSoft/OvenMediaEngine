@@ -913,47 +913,58 @@ namespace ocst
 		return info::Application::GetInvalidApplication();
 	}
 
-	void OrchestratorInternal::StorePullStream(const std::shared_ptr<pvd::Stream> &stream)
+	ov::String OrchestratorInternal::GetStreamKey(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
-		// lock
-		std::lock_guard<std::shared_mutex> lock(_pull_stream_map_mutex);
-		_pull_stream_map[stream->GetId()] = stream;
-	}
-	
-	void OrchestratorInternal::RemovePullStream(const info::stream_id_t &stream_id)
-	{
-		// lock
-		std::lock_guard<std::shared_mutex> lock(_pull_stream_map_mutex);
-		_pull_stream_map.erase(stream_id);
+		return ov::String::FormatString("%s/%s", vhost_app_name.CStr(), stream_name.CStr());
 	}
 
-	std::shared_ptr<pvd::Stream> OrchestratorInternal::GetPullStream(const info::stream_id_t &stream_id)
+	ov::String OrchestratorInternal::GetStreamKey(const std::shared_ptr<pvd::Stream> &stream)
+	{
+		return GetStreamKey(stream->GetApplicationInfo().GetName(), stream->GetName());
+	}
+
+	bool OrchestratorInternal::InsertProviderStream(const std::shared_ptr<pvd::Stream> &stream)
 	{
 		// lock
-		std::shared_lock<std::shared_mutex> lock(_pull_stream_map_mutex);
-		auto item = _pull_stream_map.find(stream_id);
-		if (item != _pull_stream_map.end())
+		std::lock_guard<std::shared_mutex> lock(_stream_map_mutex);
+
+		// Check if the stream already exists
+		auto stream_key = GetStreamKey(stream);
+		if (_stream_map.find(stream_key) != _stream_map.end())
+		{
+			logtw("Could not store privider stream %s because it already exists", stream_key.CStr());
+			return false;
+		}
+
+		_stream_map.emplace(stream_key, stream);
+
+		return true;
+	}
+	
+	void OrchestratorInternal::DeleteProviderStream(const std::shared_ptr<pvd::Stream> &stream)
+	{
+		// lock
+		std::lock_guard<std::shared_mutex> lock(_stream_map_mutex);
+		_stream_map.erase(GetStreamKey(stream));
+	}
+
+	void OrchestratorInternal::DeleteProviderStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+	{
+		// lock
+		std::lock_guard<std::shared_mutex> lock(_stream_map_mutex);
+		_stream_map.erase(GetStreamKey(vhost_app_name, stream_name));
+	}
+
+	std::shared_ptr<pvd::Stream> OrchestratorInternal::GetProviderStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+	{
+		// lock
+		std::shared_lock<std::shared_mutex> lock(_stream_map_mutex);
+		auto item = _stream_map.find(GetStreamKey(vhost_app_name, stream_name));
+		if (item != _stream_map.end())
 		{
 			return item->second;
 		}
 
 		return nullptr;
 	}
-
-	std::shared_ptr<pvd::Stream> OrchestratorInternal::GetPullStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
-	{
-		// lock
-		std::shared_lock<std::shared_mutex> lock(_pull_stream_map_mutex);
-		for (auto &item : _pull_stream_map)
-		{
-			auto &stream = item.second;
-			if (stream->GetApplicationInfo().GetName() == vhost_app_name && stream->GetName() == stream_name)
-			{
-				return stream;
-			}
-		}
-
-		return nullptr;
-	}
-
 }  // namespace ocst
