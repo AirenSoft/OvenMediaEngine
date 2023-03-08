@@ -272,7 +272,8 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 				}
 				catch (const ov::Error &e)
 				{
-					logtw("Invalid address: %s, port: %d (%s) - %s", local_ip.CStr(), port, e.What());
+					logtw("Invalid address: %s, port: %d - %s",
+						  local_ip.CStr(), port, e.What());
 					return false;
 				}
 

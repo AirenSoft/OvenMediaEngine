@@ -26,19 +26,30 @@ ov::String TranscoderStreamInternal::GetIdentifiedForVideoProfile(const uint32_t
 		return ov::String::FormatString("In_T%d_Out_Pbypass", track_id);
 	}
 
-	return ov::String::FormatString("In_T%d_Out_P%s-%d-%.02f-%d-%d-%s",
+	auto unique_profile_name = ov::String::FormatString("In_T%d_Out_C%s-%d-%.02f-%d-%d",
 									track_id,
 									profile.GetCodec().CStr(),
 									profile.GetBitrate(),
 									profile.GetFramerate(),
 									profile.GetWidth(),
-									profile.GetHeight(),
-									profile.GetPreset().CStr());
+									profile.GetHeight());
+
+	if(profile.GetPreset().IsEmpty() == false)
+	{
+		unique_profile_name +=  ov::String::FormatString("-Pr%s", profile.GetPreset().CStr());
+	}
+
+	if(profile.GetProfile().IsEmpty() == false)
+	{
+		unique_profile_name +=  ov::String::FormatString("-Pf%s", profile.GetProfile().CStr());
+	}
+
+	return unique_profile_name;
 }
 
 ov::String TranscoderStreamInternal::GetIdentifiedForImageProfile(const uint32_t track_id, const cfg::vhost::app::oprf::ImageProfile &profile)
 {
-	return ov::String::FormatString("In_T%d_Out_P%s-%.02f-%d-%d",
+	return ov::String::FormatString("In_T%d_Out_C%s-%.02f-%d-%d",
 									track_id,
 									profile.GetCodec().CStr(),
 									profile.GetFramerate(),
@@ -53,7 +64,7 @@ ov::String TranscoderStreamInternal::GetIdentifiedForAudioProfile(const uint32_t
 		return ov::String::FormatString("In_T%d_Out_Pbypass", track_id);
 	}
 
-	return ov::String::FormatString("In_T%d_Out_P%s-%d-%d-%d",
+	return ov::String::FormatString("In_T%d_Out_C%s-%d-%d-%d",
 									track_id,
 									profile.GetCodec().CStr(),
 									profile.GetBitrate(),
@@ -63,7 +74,7 @@ ov::String TranscoderStreamInternal::GetIdentifiedForAudioProfile(const uint32_t
 
 ov::String TranscoderStreamInternal::GetIdentifiedForDataProfile(const uint32_t track_id)
 {
-	return ov::String::FormatString("In_T%d_Out_Pbypass", track_id);
+	return ov::String::FormatString("In_T%d_Out_Cbypass", track_id);
 }
 
 cmn::Timebase TranscoderStreamInternal::GetDefaultTimebaseByCodecId(cmn::MediaCodecId codec_id)
@@ -154,6 +165,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 		output_track->SetThreadCount(profile.GetThreadCount());
 		output_track->SetKeyFrameInterval(profile.GetKeyFrameInterval());
 		output_track->SetBFrames(profile.GetBFrames());
+		output_track->SetProfile(profile.GetProfile());
 
 		output_track->_cfg = (void*)&profile;
 	}

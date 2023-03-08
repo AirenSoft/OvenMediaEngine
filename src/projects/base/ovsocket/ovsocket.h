@@ -8,6 +8,7 @@
 //==============================================================================
 #pragma once
 
+// Common
 #include "socket.h"
 #include "socket_address.h"
 
@@ -20,3 +21,6 @@
 
 // Socket pool
 #include "socket_pool/socket_pool.h"
+
+// Misc
+#include "ipv6_support.h"
