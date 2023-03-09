@@ -165,7 +165,7 @@ namespace ocst
 		bool RegisterProviderStream(const std::shared_ptr<pvd::Stream> &stream);
 		
 		/// Release Pulled Stream
-		bool TerminateStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
+		CommonErrorCode TerminateStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
 
 		/// Find Provider from ProviderType
 		std::shared_ptr<pvd::Provider> GetProviderFromType(const ProviderType type);

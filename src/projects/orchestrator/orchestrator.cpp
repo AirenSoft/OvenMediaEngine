@@ -795,15 +795,20 @@ namespace ocst
 	}
 
 	/// Delete PullStream
-	bool Orchestrator::TerminateStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+	CommonErrorCode Orchestrator::TerminateStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
 		auto stream = GetProviderStream(vhost_app_name, stream_name);
 		if (stream == nullptr)
 		{
-			return false;
+			return CommonErrorCode::NOT_FOUND;
 		}
 
-		return stream->Terminate();
+		if (stream->Terminate() == false)
+		{
+			return CommonErrorCode::ERROR;
+		}
+
+		return CommonErrorCode::SUCCESS;
 	}
 
 	bool Orchestrator::OnStreamCreated(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)

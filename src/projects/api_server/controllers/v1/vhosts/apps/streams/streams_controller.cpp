@@ -172,12 +172,14 @@ namespace api
 			auto app_name = app->GetName();
 			auto stream_name = stream->GetName();
 
-			if (orchestrator->TerminateStream(app_name, stream_name) == false)
-			{
-				throw http::HttpError(http::StatusCode::Forbidden, "Only pull streams can be deleted.");
+			auto code = orchestrator->TerminateStream(app_name, stream_name);
+			auto http_code = http::StatusCodeFromCommonError(code);
+			if (http_code != http::StatusCode::OK)
+			{	
+				throw http::HttpError(http_code, "Could not terminate the stream");
 			}
 
-			return {http::StatusCode::OK};
+			return {http_code};
 		}
 	}  // namespace v1
 }  // namespace api
