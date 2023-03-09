@@ -53,7 +53,7 @@ namespace ov
 				::memset(&addr, 0, sizeof(addr));
 				addr.sin6_family = AF_INET6;
 				addr.sin6_addr = in6addr_loopback;
-				addr.sin6_port = ::htons(0);
+				addr.sin6_port = ov::HostToNetwork16(0);
 
 				const int flag = 1;
 				int result = ::setsockopt(handle, IPPROTO_IPV6, IPV6_V6ONLY, &flag, sizeof(flag));
@@ -92,8 +92,8 @@ namespace ov
 				struct sockaddr_in addr;
 				::memset(&addr, 0, sizeof(addr));
 				addr.sin_family = AF_INET;
-				addr.sin_addr.s_addr = ::htonl(INADDR_LOOPBACK);
-				addr.sin_port = ::htons(0);
+				addr.sin_addr.s_addr = ov::HostToNetwork32(INADDR_LOOPBACK);
+				addr.sin_port = ov::HostToNetwork16(0);
 
 				int result = ::bind(handle, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
 
