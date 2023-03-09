@@ -2,11 +2,15 @@
 
 ## Get Stream List
 
-> #### <mark style="color:blue;">**GET**</mark> /v1/vhosts/{vhost name}/apps/{app name}/streams
-
 Get all stream names in the {vhost name}/{app name} application.
 
-### **Header**
+> #### Method / Path
+
+```http
+GET: /v1/vhosts/{vhost name}/apps/{app name}/streams
+```
+
+> #### Header
 
 ```http
 Authorization: Basic {credentials}
@@ -15,11 +19,11 @@ Authorization: Basic {credentials}
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-### Responses
+> #### Responses
 
 <details>
 
-<summary>200 Ok</summary>
+<summary><mark style="color:blue;">200</mark> Ok</summary>
 
 The request has succeeded
 
@@ -53,7 +57,30 @@ Content-Type: application/json
 
 <details>
 
-<summary>404 Not Found</summary>
+<summary><mark style="color:red;">401</mark> Unauthorized</summary>
+
+Authentication required
+
+**Header**
+
+```http
+WWW-Authenticate: Basic realm=”OvenMediaEngine”
+```
+
+**Body**
+
+```json
+{
+    "message": "[HTTP] Authorization header is required to call API (401)",
+    "statusCode": 401
+}
+```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">404</mark> Not Found</summary>
 
 The given vhost name or app name could not be found.
 
@@ -74,15 +101,17 @@ Content-Type: application/json
 
 </details>
 
-***
-
 ## Create Stream (Pull)
-
-> #### <mark style="color:blue;">**POST**</mark> /v1/vhosts/{vhost name}/apps/{app name}/streams
 
 Create a stream by pulling an external URL. External URL protocols currently support RTSP and OVT.
 
-### **Header**
+> #### Method / Path
+
+```http
+POST: /v1/vhosts/{vhost name}/apps/{app name}/streams
+```
+
+> #### Header
 
 ```http
 Authorization: Basic {credentials}
@@ -92,7 +121,7 @@ Content-Type: application/json
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-### **Body**
+> #### Body
 
 ```json
 {
@@ -122,14 +151,14 @@ Content-Type: application/json
 		but ignored if persistent is true
 	## unusedStreamDeletionTimeoutMs
 		If no data is output during this period (if there is no viewer), 
-		the stream is deleted, but ignored if persistent is true
+		the stream is deleted, but ignored if persistent is true 
 ```
 
-### Responses
+> #### Responses
 
 <details>
 
-<summary>201 Created</summary>
+<summary><mark style="color:blue;">201</mark> Created</summary>
 
 A stream has been created.
 
@@ -157,7 +186,7 @@ Content-Type: application/json
 
 <details>
 
-<summary>400 Bad Request</summary>
+<summary><mark style="color:red;">400</mark> Bad Request</summary>
 
 Invalid request. Body is not a Json Object or does not have a required value
 
@@ -165,7 +194,7 @@ Invalid request. Body is not a Json Object or does not have a required value
 
 <details>
 
-<summary>401 Unauthorized</summary>
+<summary><mark style="color:red;">401</mark> Unauthorized</summary>
 
 Authentication required
 
@@ -188,7 +217,7 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 <details>
 
-<summary>404 Not Found</summary>
+<summary><mark style="color:red;">404</mark> Not Found</summary>
 
 The given vhost name or app name could not be found.
 
@@ -205,7 +234,7 @@ The given vhost name or app name could not be found.
 
 <details>
 
-<summary>409 Conflict</summary>
+<summary><mark style="color:red;">409</mark> Conflict</summary>
 
 A stream with the same name already exists
 
@@ -213,7 +242,7 @@ A stream with the same name already exists
 
 <details>
 
-<summary>502 Bad Gateway</summary>
+<summary><mark style="color:red;">502</mark> Bad Gateway</summary>
 
 Failed to pull provided URL
 
@@ -221,7 +250,7 @@ Failed to pull provided URL
 
 <details>
 
-<summary>500 Internal Server Error</summary>
+<summary><mark style="color:red;">500</mark> Internal Server Error</summary>
 
 Unknown error
 
@@ -229,25 +258,28 @@ Unknown error
 
 ## Get Stream Info
 
-> #### <mark style="color:blue;">**GET**</mark> /v1/vhosts/{vhost name}/apps/{app name}/streams/{stream name}
+Get detailed information of stream.
 
-Get detailed information of {vhost name}/{app name}/{stream name} stream.
+> #### Method / Path
 
-### **Header**
-
+```http
+GET: /v1/vhosts/{vhost name}/apps/{app name}/streams/{stream name}
 ```
+
+> #### Header
+
+```http
 Authorization: Basic {credentials}
+
+# Authorization
+    Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-_Authorization_
-
-Credentials for HTTP Basic Authentication created with \<AccessToken>
-
-### Responses
+> #### Responses
 
 <details>
 
-<summary>200 Ok</summary>
+<summary><mark style="color:blue;">200</mark> Ok</summary>
 
 The request has succeeded
 
@@ -342,7 +374,30 @@ Content-Type: application/json
 
 <details>
 
-<summary>404 Not Found</summary>
+<summary><mark style="color:red;">401</mark> Unauthorized</summary>
+
+Authentication required
+
+**Header**
+
+```http
+WWW-Authenticate: Basic realm=”OvenMediaEngine”
+```
+
+**Body**
+
+```json
+{
+    "message": "[HTTP] Authorization header is required to call API (401)",
+    "statusCode": 401
+}
+```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">404</mark> Not Found</summary>
 
 The given vhost name or app name could not be found.
 
@@ -358,6 +413,106 @@ Content-Type: application/json
 {
     "statusCode": 404,
     "message": "Could not find the application or stream (404)"
+}
+```
+
+</details>
+
+## Delete Stream
+
+Delete Stream. This terminates the ingress connection.&#x20;
+
+{% hint style="warning" %}
+The sender can reconnect after the connection is terminated. To prevent reconnection, you must use [AccessControl](../../../../../access-control/).
+{% endhint %}
+
+> #### Method / Path
+
+```http
+DELETE: /v1/vhosts/{vhost name}/apps/{app name}/streams/{stream name}
+```
+
+> #### Header
+
+```http
+Authorization: Basic {credentials}
+
+# Authorization
+    Credentials for HTTP Basic Authentication created with <AccessToken>
+```
+
+> #### Responses
+
+<details>
+
+<summary><mark style="color:blue;">200</mark> Ok</summary>
+
+The request has succeeded
+
+**Header**
+
+```
+Content-Type: application/json
+```
+
+**Body**
+
+```json
+{
+	"statusCode": 200,
+	"message": "OK",
+}
+
+
+# statusCode
+	Same as HTTP Status Code
+# message
+	A human-readable description of the response code
+```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">401</mark> Unauthorized</summary>
+
+Authentication required
+
+**Header**
+
+```http
+WWW-Authenticate: Basic realm=”OvenMediaEngine”
+```
+
+**Body**
+
+```json
+{
+    "message": "[HTTP] Authorization header is required to call API (401)",
+    "statusCode": 401
+}
+```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">404</mark> Not Found</summary>
+
+The given vhost name or app name could not be found.
+
+**Header**
+
+```json
+Content-Type: application/json
+```
+
+**Body**
+
+```json
+{
+    "message": "[HTTP] Could not find the stream: [default/#default#app/stream] (404)",
+    "statusCode": 404
 }
 ```
 
