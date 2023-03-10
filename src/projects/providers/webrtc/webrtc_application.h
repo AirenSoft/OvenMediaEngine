@@ -31,7 +31,7 @@ namespace pvd
 		bool Stop() override;
 
 		std::shared_ptr<const SessionDescription> GetOfferSDP();
-		std::shared_ptr<SessionDescription> CreateAnswerSDP(const std::shared_ptr<const SessionDescription> &offer_sdp, const ov::String &local_ufrag, const std::vector<IceCandidate> &ice_candidates);
+		std::shared_ptr<SessionDescription> CreateAnswerSDP(const std::shared_ptr<const SessionDescription> &offer_sdp, const ov::String &local_ufrag, const std::set<IceCandidate> &ice_candidates);
 		
 	private:
 		std::shared_ptr<SessionDescription> CreateOfferSDP();

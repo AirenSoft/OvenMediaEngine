@@ -54,5 +54,6 @@ namespace ov
 		}
 
 		static ov::String GenerateString(uint32_t length);
+		static ov::String GenerateNumberString(uint32_t length);
 	};
 }

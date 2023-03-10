@@ -24,11 +24,15 @@ namespace ov
 		std::shared_ptr<ov::SocketAddress> GetMappedAddress();
 
 		// Get all IP addresses
-		std::vector<String> GetIpList(ov::SocketFamily family, bool include_mapped_address = true);
+		std::vector<String> GetIPv4List(bool include_mapped_address = true);
+		std::vector<String> GetIPv6List(bool include_link_local_address, bool include_mapped_address = true);
 
 		// A wrapper if inet_pton()
 		MAY_THROWS(ov::SocketAddressError)
 		static void InetPton(int address_family, const char *__restrict address, void *__restrict __buf);
+
+	protected:
+		std::vector<String> GetIPListInternal(ov::SocketFamily family, bool include_link_local_address, bool include_mapped_address);
 
 	private:
 		std::shared_ptr<ov::SocketAddress> _mapped_address = nullptr;

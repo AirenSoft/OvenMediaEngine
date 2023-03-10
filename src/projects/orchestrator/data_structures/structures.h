@@ -67,13 +67,13 @@ namespace ocst
 		// A flag used to determine if an item has changed
 		ItemState state = ItemState::Unknown;
 
-		bool _persistent = false;
+		bool persistent = false;
 
-		bool _failback = false;
+		bool failback = false;
 
-		bool _strict_location = false;
+		bool strict_location = false;
 		
-		bool _relay = true;
+		bool relay = true;
 	};
 
 	struct Host

@@ -4,14 +4,16 @@ FROM    ubuntu:20.04 AS base
 ENV     DEBIAN_FRONTEND=noninteractive
 RUN     apt-get update && apt-get install -y tzdata sudo curl
 
-WORKDIR /tmp
+FROM    base AS build
 
-ENV     PREFIX=/opt/ovenmediaengine
-ENV     TEMP_DIR=/tmp/ome
+WORKDIR /tmp
 
 ARG     OME_VERSION=master
 ARG 	STRIP=TRUE
 ARG     GPU=FALSE
+
+ENV     PREFIX=/opt/ovenmediaengine
+ENV     TEMP_DIR=/tmp/ome
 
 ## Download OvenMediaEngine
 RUN \
@@ -19,18 +21,10 @@ RUN \
         cd ${TEMP_DIR} && \
         curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1
 
-## Install GPU dependencies
-RUN \
-        if [ "$GPU" = "TRUE" ] ; then \
-                ${TEMP_DIR}/misc/install_nvidia_driver.sh --docker ; \
-        fi
-
-FROM    base AS build
-
-
 ## Install dependencies
 RUN \
         if [ "$GPU" = "TRUE" ] ; then \
+                ${TEMP_DIR}/misc/install_nvidia_driver.sh --docker ; \        
                 ${TEMP_DIR}/misc/prerequisites.sh  --enable-nvc ; \
         else \
                 ${TEMP_DIR}/misc/prerequisites.sh ; \
@@ -54,12 +48,20 @@ RUN \
         cp ../misc/conf_examples/Logger.xml ${PREFIX}/bin/origin_conf/Logger.xml && \
         cp ../misc/conf_examples/Edge.xml ${PREFIX}/bin/edge_conf/Server.xml && \
         cp ../misc/conf_examples/Logger.xml ${PREFIX}/bin/edge_conf/Logger.xml && \
+        cp ../misc/install_nvidia_driver.sh ${PREFIX}/bin/install_nvidia_driver.sh && \
         rm -rf ${TEMP_DIR}
 
 FROM	base AS release
 
+ARG     GPU=FALSE
+
 WORKDIR         /opt/ovenmediaengine/bin
 EXPOSE          80/tcp 8080/tcp 8090/tcp 1935/tcp 3333/tcp 3334/tcp 4000-4005/udp 10000-10010/udp 9000/tcp
 COPY            --from=build /opt/ovenmediaengine /opt/ovenmediaengine
+
+# If the gpu is enabled, reinstall the Nvidia driver into the release image
+RUN \
+        if [ "$GPU" = "TRUE" ] ; then /opt/ovenmediaengine/bin/install_nvidia_driver.sh --docker ; fi
+
 # Default run as Origin mode
 CMD             ["/opt/ovenmediaengine/bin/OvenMediaEngine", "-c", "origin_conf"]

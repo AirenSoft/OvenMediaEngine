@@ -186,6 +186,8 @@ namespace http
 		UnsupportedMediaType = 415,
 		RangeNotSatisfiable = 416,
 		ExpectationFailed = 417,
+		Locked = 423,
+		FailedDependency = 424,
 		UpgradeRequired = 426,
 		InternalServerError = 500,
 		NotImplemented = 501,
@@ -248,6 +250,8 @@ namespace http
 			HTTP_CASE_RETURN(StatusCode::UnsupportedMediaType, true);
 			HTTP_CASE_RETURN(StatusCode::RangeNotSatisfiable, true);
 			HTTP_CASE_RETURN(StatusCode::ExpectationFailed, true);
+			HTTP_CASE_RETURN(StatusCode::Locked, true);
+			HTTP_CASE_RETURN(StatusCode::FailedDependency, true);
 			HTTP_CASE_RETURN(StatusCode::UpgradeRequired, true);
 			HTTP_CASE_RETURN(StatusCode::InternalServerError, true);
 			HTTP_CASE_RETURN(StatusCode::NotImplemented, true);
@@ -300,6 +304,8 @@ namespace http
 			HTTP_CASE_RETURN(StatusCode::UnsupportedMediaType, "Unsupported Media Type");
 			HTTP_CASE_RETURN(StatusCode::RangeNotSatisfiable, "Range Not Satisfiable");
 			HTTP_CASE_RETURN(StatusCode::ExpectationFailed, "Expectation Failed");
+			HTTP_CASE_RETURN(StatusCode::Locked, "Locked");
+			HTTP_CASE_RETURN(StatusCode::FailedDependency, "Failed Dependency");
 			HTTP_CASE_RETURN(StatusCode::UpgradeRequired, "Upgrade Required");
 			HTTP_CASE_RETURN(StatusCode::InternalServerError, "Internal Server Error");
 			HTTP_CASE_RETURN(StatusCode::NotImplemented, "Not Implemented");
@@ -393,6 +399,33 @@ namespace http
 		return method_enum;
 	}
 
+	inline http::StatusCode StatusCodeFromCommonError(const CommonErrorCode &code)
+	{
+		switch (code)
+		{
+			case CommonErrorCode::SUCCESS:
+				return http::StatusCode::OK;
+			case CommonErrorCode::DISABLED:
+				return http::StatusCode::Locked;
+			case CommonErrorCode::CREATED:
+				return http::StatusCode::Created;
+
+			case CommonErrorCode::ERROR:
+				return http::StatusCode::InternalServerError;
+			case CommonErrorCode::NOT_FOUND:
+				return http::StatusCode::NotFound;
+			case CommonErrorCode::ALREADY_EXISTS:
+				return http::StatusCode::Conflict;
+			case CommonErrorCode::INVALID_REQUEST:
+				return http::StatusCode::BadRequest;
+			case CommonErrorCode::UNAUTHORIZED:
+				return http::StatusCode::Unauthorized;
+			default :
+				break;
+		}
+
+		return http::StatusCode::InternalServerError;
+	}
 	namespace svr
 	{
 		enum class InterceptorResult : char

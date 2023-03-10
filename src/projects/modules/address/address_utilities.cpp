@@ -43,7 +43,7 @@ namespace ov
 		return _mapped_address;
 	}
 
-	std::vector<ov::String> AddressUtilities::GetIpList(ov::SocketFamily family, bool include_mapped_address)
+	std::vector<ov::String> AddressUtilities::GetIPListInternal(ov::SocketFamily family, bool include_link_local_address, bool include_mapped_address)
 	{
 		std::vector<ov::String> list;
 
@@ -93,13 +93,19 @@ namespace ov
 								auto addr6 = &(addr->sin6_addr);
 								auto is_link_local_address = IN6_IS_ADDR_LINKLOCAL(addr6);
 
-								if (::memcmp(addr6, &in6addr_loopback, sizeof(in6addr_loopback)) != 0)
+								if (::memcmp(addr6, &in6addr_loopback, sizeof(in6addr_loopback)) == 0)
 								{
-									// The address doesn't indicates loopback address
-									char buffer[INET6_ADDRSTRLEN];
-									::inet_ntop(addr_family, addr6, buffer, INET6_ADDRSTRLEN);
+									// Exclude loopback addresses
+									break;
+								}
 
-									if (is_link_local_address)
+								// The address doesn't indicates loopback address
+								char buffer[INET6_ADDRSTRLEN];
+								::inet_ntop(addr_family, addr6, buffer, INET6_ADDRSTRLEN);
+
+								if (is_link_local_address)
+								{
+									if (include_link_local_address)
 									{
 										// Append scope id for link-local address
 										ov::String address(buffer);
@@ -108,8 +114,12 @@ namespace ov
 									}
 									else
 									{
-										list.emplace_back(buffer);
+										// Don't include link local address for IPv6
 									}
+								}
+								else
+								{
+									list.emplace_back(buffer);
 								}
 								break;
 							}
@@ -127,6 +137,16 @@ namespace ov
 		}
 
 		return list;
+	}
+
+	std::vector<String> AddressUtilities::GetIPv4List(bool include_mapped_address)
+	{
+		return GetIPListInternal(ov::SocketFamily::Inet, false, include_mapped_address);
+	}
+
+	std::vector<String> AddressUtilities::GetIPv6List(bool include_link_local_address, bool include_mapped_address)
+	{
+		return GetIPListInternal(ov::SocketFamily::Inet6, include_link_local_address, include_mapped_address);
 	}
 
 	void AddressUtilities::InetPton(int address_family, const char *__restrict address, void *__restrict __buf)

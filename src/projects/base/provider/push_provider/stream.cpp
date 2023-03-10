@@ -45,6 +45,17 @@ namespace pvd
 		_provider = provider;
 	}
 
+	bool PushStream::Terminate()
+	{
+		// To PushStream, Terminate has the same meaning as Stop.
+		if (Stop() == false)
+		{
+			return false;
+		}
+
+		return Stream::Terminate();
+	}
+
 	uint32_t PushStream::GetChannelId()
 	{
 		return _channel_id;

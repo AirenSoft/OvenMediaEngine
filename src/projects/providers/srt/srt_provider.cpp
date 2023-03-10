@@ -100,7 +100,7 @@ namespace pvd
 		{
 			logti("%s is listening on %s/%s",
 				  GetProviderName(),
-				  ov::String::Join(address_string_list, ", "),
+				  ov::String::Join(address_string_list, ", ").CStr(),
 				  ov::StringFromSocketType(ov::SocketType::Srt));
 
 			{

@@ -13,7 +13,7 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
 ## Features
 
 * **Ingest**
-  * Push: WebRTC, SRT, RTMP, MPEG-2 TS
+  * Push: WebRTC, WHIP, SRT, RTMP, MPEG-2 TS
   * Pull: RTSP
 * **Adaptive Bitrate Streaming (ABR) for LLHLS and WebRTC**
 * **Low-Latency Streaming using LLHLS**

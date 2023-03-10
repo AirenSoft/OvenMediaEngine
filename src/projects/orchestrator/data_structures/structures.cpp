@@ -35,15 +35,22 @@ namespace ocst
 	// ocst::Origin
 	//--------------------------------------------------------------------
 	Origin::Origin(const cfg::vhost::orgn::Origin &origin_config)
-		: scheme(origin_config.GetPass().GetScheme()),
-		  location(origin_config.GetLocation()),
-		  forward_query_params(origin_config.GetPass().IsForwardQueryParamsEnabled()),
-		  state(ItemState::New),
-		  _persistent(origin_config.IsPersistent()),
-		  _failback(origin_config.IsFailback()),
-		  _strict_location(origin_config.IsStrictLocation()),
-		  _relay(origin_config.IsRelay())
+		: state(ItemState::New)
 	{
+		scheme = origin_config.GetPass().GetScheme();
+		location = origin_config.GetLocation();
+		forward_query_params = origin_config.GetPass().IsForwardQueryParamsEnabled();
+
+		bool parsed = false;
+		persistent = origin_config.IsPersistent();
+		failback = origin_config.IsFailback();
+		strict_location = origin_config.IsStrictLocation();
+		relay = origin_config.IsRelay(&parsed);
+		if (parsed == false && scheme.UpperCaseString() == "OVT")
+		{
+			relay = true;
+		}
+
 		for (auto &url : origin_config.GetPass().GetUrlList())
 		{
 			url_list.push_back(url);

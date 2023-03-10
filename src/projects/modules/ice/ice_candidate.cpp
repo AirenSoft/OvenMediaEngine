@@ -19,11 +19,11 @@
 IceCandidate::IceCandidate()
 	: IceCandidate("UDP", ov::SocketAddress())
 {
+	_foundation = ov::Random::GenerateNumberString(10);
 }
 
-IceCandidate::IceCandidate(ov::String transport, const ov::SocketAddress &address)
-	: _foundation("0"),
-	  _component_id(1),
+IceCandidate::IceCandidate(const ov::String &transport, const ov::SocketAddress &address)
+	: _component_id(1),
 	  _transport(std::move(transport)),
 	  _priority(50),
 	  _address(address),
@@ -31,6 +31,20 @@ IceCandidate::IceCandidate(ov::String transport, const ov::SocketAddress &addres
 	  _candidate_types("host"),
 	  _rel_port(0)
 {
+	_foundation = ov::Random::GenerateNumberString(10);
+}
+
+// without resolving address
+IceCandidate::IceCandidate(const ov::String &transport, const ov::String &address, int port)
+	: _component_id(1),
+	  _transport(std::move(transport)),
+	  _priority(50),
+	  _address_str(std::move(address)),
+	  _port(port),
+	  _candidate_types("host"),
+	  _rel_port(0)
+{
+	_foundation = ov::Random::GenerateNumberString(10);
 }
 
 IceCandidate::IceCandidate(IceCandidate &&candidate) noexcept
@@ -50,6 +64,8 @@ void IceCandidate::Swap(IceCandidate &from) noexcept
 	std::swap(_transport, from._transport);
 	std::swap(_priority, from._priority);
 	std::swap(_address, from._address);
+	std::swap(_address_str, from._address_str);
+	std::swap(_port, from._port);
 	std::swap(_candidate_types, from._candidate_types);
 	std::swap(_rel_addr, from._rel_addr);
 	std::swap(_rel_port, from._rel_port);
@@ -118,28 +134,32 @@ bool IceCandidate::ParseFromString(const ov::String &candidate_string)
 		auto connection_address = *iterator++;
 		auto port = ov::Converter::ToUInt16(*iterator++);
 
-		try
-		{
-			auto address_list = ov::SocketAddress::Create(connection_address, port);
+		temp_candidate._address_str = connection_address;
+		temp_candidate._port = port;
 
-			if (address_list.empty())
-			{
-				logtw("Could not resolve an address from %s:%d", connection_address.CStr(), port);
-				return false;
-			}
+		// Check if this is a necessary procedure
+		// try
+		// {
+		// 	auto address_list = ov::SocketAddress::Create(connection_address, port);
 
-			if (address_list.size() >= 2)
-			{
-				logtw("Multiple addresses are found from %s:%d. OME will use the first address", connection_address.CStr(), port);
-			}
+		// 	if (address_list.empty())
+		// 	{
+		// 		logtw("Could not resolve an address from %s:%d", connection_address.CStr(), port);
+		// 		return false;
+		// 	}
 
-			_address = address_list[0];
-		}
-		catch (const ov::Error &e)
-		{
-			logtw("Invalid address: %s", connection_address.CStr());
-			return false;
-		}
+		// 	if (address_list.size() >= 2)
+		// 	{
+		// 		logtw("Multiple addresses are found from %s:%d. OME will use the first address", connection_address.CStr(), port);
+		// 	}
+
+		// 	temp_candidate._address = address_list[0];
+		// }
+		// catch (const ov::Error &e)
+		// {
+		// 	logtw("Invalid address: %s, port: %d - %s", connection_address.CStr(), port, e.What());
+		// 	return false;
+		// }
 	}
 
 	ov::String cand_type = *iterator++;
@@ -211,6 +231,21 @@ IceCandidate &IceCandidate::operator=(IceCandidate candidate) noexcept
 	return *this;
 }
 
+bool IceCandidate::operator<(const IceCandidate &candidate) const noexcept
+{
+	if (_address.IsValid())
+	{
+		return _address < candidate._address;
+	}
+
+	if (_address_str == candidate._address_str)
+	{
+		return _port < candidate._port;
+	}
+
+	return _address_str < candidate._address_str;
+}
+
 const ov::String &IceCandidate::GetFoundation() const noexcept
 {
 	return _foundation;
@@ -256,14 +291,24 @@ ov::SocketAddress IceCandidate::GetAddress() const
 	return _address;
 }
 
-ov::String IceCandidate::GetIpAddress() const
+ov::String IceCandidate::GetConnectionAddress() const
 {
-	return _address.GetIpAddress();
+	if (_address.IsValid())
+	{
+		return _address.GetIpAddress();
+	}
+	
+	return _address_str;
 }
 
 int IceCandidate::GetPort() const
 {
-	return _address.Port();
+	if (_address.IsValid())
+	{
+		return _address.Port();
+	}
+
+	return _port;
 }
 
 const ov::String &IceCandidate::GetCandidateTypes() const
@@ -346,8 +391,8 @@ ov::String IceCandidate::GetCandidateString() const noexcept
 		_foundation.CStr(), _component_id,
 		_transport.UpperCaseString().CStr(),
 		_priority,
-		_address.GetIpAddress().CStr(),
-		_address.Port(),
+		GetConnectionAddress().CStr(),
+		GetPort(),
 		_candidate_types.CStr());
 
 	if (_rel_addr.IsEmpty() == false)

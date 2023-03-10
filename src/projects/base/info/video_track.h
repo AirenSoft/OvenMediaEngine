@@ -46,6 +46,10 @@ public:
 	void SetPreset(ov::String preset);
 	ov::String GetPreset() const;
 
+	//@Set by Configuration
+	void SetProfile(ov::String profile);
+	ov::String GetProfile() const;
+
 	//@Set by mediarouter
 	void SetHasBframes(bool has_bframe);
 	bool HasBframes();
@@ -62,6 +66,8 @@ public:
 	void SetBFrames(int32_t b_frames);
 	int32_t GetBFrames();
 
+
+
 protected:
 	double _framerate;
 	double _estimate_framerate;
@@ -73,6 +79,8 @@ protected:
 	bool _has_bframe;
 
 	ov::String _preset;
+	ov::String _profile;
+
 	std::shared_ptr<ov::Data> _h264_sps_pps_annexb_data = nullptr;
 	std::shared_ptr<ov::Data> _h264_sps_data = nullptr;
 	std::shared_ptr<ov::Data> _h264_pps_data = nullptr;
@@ -80,7 +88,6 @@ protected:
 	FragmentationHeader _h264_sps_pps_annexb_fragment_header;
 	H264SPS _h264_sps;
 	
-
 	int _thread_count;
 
 public:

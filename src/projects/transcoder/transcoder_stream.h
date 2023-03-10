@@ -47,7 +47,7 @@ public:
 			_input_track = std::make_pair(s, t);
 		}
 
-		void InsertOutput(std::shared_ptr<info::Stream> s, std::shared_ptr<MediaTrack> t)
+		void AddOutput(std::shared_ptr<info::Stream> s, std::shared_ptr<MediaTrack> t)
 		{
 			_output_tracks.push_back(std::make_pair(s, t));
 		}
@@ -85,7 +85,7 @@ public:
 
 	bool Start();
 	bool Stop();
-	bool Prepare();
+	bool Prepare(const std::shared_ptr<info::Stream> &stream);
 	bool Update(const std::shared_ptr<info::Stream> &stream);
 	bool Push(std::shared_ptr<MediaPacket> packet);
 
@@ -110,12 +110,6 @@ private:
 	std::map<ov::String, std::shared_ptr<info::Stream>> _output_streams;
 
 private:
-	// Store information for track mapping by stage
-	void AddCompositeMap(ov::String unique_id,
-						 std::shared_ptr<info::Stream> input_stream,
-						 std::shared_ptr<MediaTrack> input_track,
-						 std::shared_ptr<info::Stream> output_stream,
-						 std::shared_ptr<MediaTrack> output_track);
 
 	// Map of CompositeContext
 	// [
@@ -124,22 +118,22 @@ private:
 	// 	 - OUTPUTS -> STREAM + TRACK
 	// ]
 	std::map<std::pair<ov::String, cmn::MediaType>, std::shared_ptr<CompositeContext>> _composite_map;
-	std::atomic<MediaTrackId> _last_map_id = 0;
+	std::atomic<MediaTrackId> _last_composite_id = 0;
 
 	// [INPUT_TRACK, Output Stream + Track Id]
-	std::map<MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>>> _stage_input_to_outputs;
+	std::map<MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>>> _link_input_to_outputs;
 
 	// [INPUT_TRACK, DECODER_ID]
-	std::map<MediaTrackId, MediaTrackId> _stage_input_to_decoder;
+	std::map<MediaTrackId, MediaTrackId> _link_input_to_decoder;
 
 	// [DECODER_ID, FILTER_ID]
-	std::map<MediaTrackId, std::vector<MediaTrackId>> _stage_decoder_to_filters;
+	std::map<MediaTrackId, std::vector<MediaTrackId>> _link_decoder_to_filters;
 
 	// [FILTER_ID, ENCODER_ID]
-	std::map<MediaTrackId, MediaTrackId> _stage_filter_to_encoder;
+	std::map<MediaTrackId, MediaTrackId> _link_filter_to_encoder;
 
 	// [ENCODER_ID, OUTPUT_TRACKS]
-	std::map<MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>>> _stage_encoder_to_outputs;
+	std::map<MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>>> _link_encoder_to_outputs;
 
 	// Decoder Component
 	// DECODR_ID, DECODER
@@ -164,38 +158,45 @@ private:
 	int32_t CreateOutputStreamDynamic();
 	int32_t CreateOutputStreams();
 	std::shared_ptr<info::Stream> CreateOutputStream(const cfg::vhost::app::oprf::OutputProfile &cfg_output_profile);
-	std::shared_ptr<MediaTrack> CreateOutputTrack(const std::shared_ptr<MediaTrack> &input_track, const cfg::vhost::app::oprf::VideoProfile &profile);
-	std::shared_ptr<MediaTrack> CreateOutputTrack(const std::shared_ptr<MediaTrack> &input_track, const cfg::vhost::app::oprf::AudioProfile &profile);
-	std::shared_ptr<MediaTrack> CreateOutputTrack(const std::shared_ptr<MediaTrack> &input_track, const cfg::vhost::app::oprf::ImageProfile &profile);
-	std::shared_ptr<MediaTrack> CreateOutputTrackDataType(const std::shared_ptr<MediaTrack> &input_track);
-	
-	int32_t CreatePipeline();
+
+	int32_t BuildComposite();
+	// Store information for track mapping by stage
+	void AddComposite(ov::String unique_id,
+						 std::shared_ptr<info::Stream> input_stream,
+						 std::shared_ptr<MediaTrack> input_track,
+						 std::shared_ptr<info::Stream> output_stream,
+						 std::shared_ptr<MediaTrack> output_track);
+
+	ov::String GetInfoStringComposite();
 
 	int32_t CreateDecoders();
 	bool CreateDecoder(int32_t decoder_id, std::shared_ptr<MediaTrack> input_track);
 
-	void CreateFilters(MediaFrame *buffer);
-	std::shared_ptr<MediaTrack> GetTrackOfFilterInput(int32_t decoder_id);
+	int32_t CreateFilters(MediaFrame *buffer);
+	bool CreateFilter(int32_t filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track);
+	std::shared_ptr<MediaTrack> GetInputTrackOfFilter(int32_t decoder_id);
 
 	int32_t CreateEncoders(MediaFrame *buffer);
 	bool CreateEncoder(int32_t encoder_id, std::shared_ptr<MediaTrack> output_track);
 
-	// Called when formatting of decoded frames is analyzed or changed.
-	void ChangeOutputFormat(MediaFrame *buffer);
-	void UpdateInputTrack(MediaFrame *buffer);
-	void UpdateOutputTrack(MediaFrame *buffer);
 
-	// There are 3 steps to process packet
 	// Step 1: Decode (Decode a frame from given packets)
 	void DecodePacket(std::shared_ptr<MediaPacket> packet);
 	void OnDecodedFrame(TranscodeResult result, int32_t decoder_id, std::shared_ptr<MediaFrame> decoded_frame);
 	void SetLastDecodedFrame(int32_t decoder_id, std::shared_ptr<MediaFrame> &decoded_frame);
 	std::shared_ptr<MediaFrame> GetLastDecodedFrame(int32_t decoder_id);
 
+	// Called when formatting of decoded frames is analyzed or changed.
+	void ChangeOutputFormat(MediaFrame *buffer);
+	void UpdateInputTrack(MediaFrame *buffer);
+	void UpdateOutputTrack(MediaFrame *buffer);
+	void UpdateMsidOfOutputStreams(uint32_t msid);
+
 	// Step 2: Filter (resample/rescale the decoded frame)
 	void SpreadToFilters(int32_t decoder_id, std::shared_ptr<MediaFrame> frame);
 	TranscodeResult FilterFrame(int32_t track_id, std::shared_ptr<MediaFrame> frame);
 	void OnFilteredFrame(int32_t filter_id, std::shared_ptr<MediaFrame> decoded_frame);
+	bool IsAvailableSmoothTransitionStream(const std::shared_ptr<info::Stream> &stream);
 
 	// Step 3: Encode (Encode the filtered frame to packets)
 	TranscodeResult EncodeFrame(std::shared_ptr<const MediaFrame> frame);
@@ -204,11 +205,9 @@ private:
 	// Send encoded packet to mediarouter via transcoder application
 	void SendFrame(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> packet);
 
+	// Remove all components
 	void RemoveAllComponents();
 	void RemoveDecoders();
 	void RemoveFilters();
 	void RemoveEncoders();
-
-	void UpdateMsidOfOutputStreams(uint32_t msid);
-	bool IsAvailableSmoothTransitionStream(const std::shared_ptr<info::Stream> &stream);
 };

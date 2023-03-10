@@ -1,155 +1,297 @@
 # Stream
 
-{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}/streams" method="get" summary="/v1/vhosts/{vhost_name}/apps/{app_name}/streams" %}
-{% swagger-description %}
-Lists all stream names in the 
+## Get Stream List
 
-`Application`
+Get all stream names in the {vhost name}/{app name} application.
 
-\
+> #### Method / Path
 
-
-
-
-\
-
-
-Request Example:
-
-\
-
-
-
-
-`GET http://1.2.3.4:8081/v1/vhosts/default/apps/app/streams`
-{% endswagger-description %}
-
-{% swagger-parameter in="path" name="vhost_name" type="string" %}
-A name of 
-
-`VirtualHost`
-{% endswagger-parameter %}
-
-{% swagger-parameter in="path" name="app_name" type="string" %}
-A name of 
-
-`Application`
-{% endswagger-parameter %}
-
-{% swagger-parameter in="header" name="authorization" type="string" %}
-A string for authentication in 
-
-`Basic Base64(AccessToken)`
-
- format.
-
-\
-
-
-For example, 
-
-`Basic b21lLWFjY2Vzcy10b2tlbg==`
-
- if access token is 
-
-`ome-access-token`
-
-.
-{% endswagger-parameter %}
-
-{% swagger-response status="200" description="- Return type: Response<List<string>>
-- Description
-Returns a list of stream names" %}
+```http
+GET: /v1/vhosts/{vhost name}/apps/{app name}/streams
 ```
+
+> #### Header
+
+```http
+Authorization: Basic {credentials}
+
+# Authorization
+    Credentials for HTTP Basic Authentication created with <AccessToken>
+```
+
+> #### Responses
+
+<details>
+
+<summary><mark style="color:blue;">200</mark> Ok</summary>
+
+The request has succeeded
+
+**Header**
+
+```
+Content-Type: application/json
+```
+
+**Body**
+
+```json
 {
 	"statusCode": 200,
 	"message": "OK",
 	"response": [
-		"stream"
+		"stream",
+		"stream2"
 	]
 }
-```
-{% endswagger-response %}
 
-{% swagger-response status="404" description="- Return type: Response<>
-- Description
-Not Found" %}
+# statusCode
+	Same as HTTP Status Code
+# message
+	A human-readable description of the response code
+# response
+	Json array containing a list of stream names
 ```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">401</mark> Unauthorized</summary>
+
+Authentication required
+
+**Header**
+
+```http
+WWW-Authenticate: Basic realm=”OvenMediaEngine”
+```
+
+**Body**
+
+```json
 {
-	"statusCode": 404,
-	"message": "Could not find the application: [default/non-exists] (404)"
+    "message": "[HTTP] Authorization header is required to call API (401)",
+    "statusCode": 401
 }
 ```
-{% endswagger-response %}
-{% endswagger %}
 
-{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}/streams/{stream_name}" method="get" summary="/v1/vhosts/{vhost_name}/apps/{app_name}/streams/{stream_name}" %}
-{% swagger-description %}
-Gets the configuration of the 
+</details>
 
-`Stream`
+<details>
 
-\
+<summary><mark style="color:red;">404</mark> Not Found</summary>
 
+The given vhost name or app name could not be found.
 
+**Header**
 
-
-\
-
-
-Request Example:
-
-\
-
-
-
-
-`GET http://1.2.3.4:8081/v1/vhosts/default/apps/app/streams/stream`
-{% endswagger-description %}
-
-{% swagger-parameter in="path" name="vhost_name" type="string" %}
-A name of 
-
-`VirtualHost`
-{% endswagger-parameter %}
-
-{% swagger-parameter in="path" name="app_name" type="string" %}
-A name of 
-
-`Application`
-{% endswagger-parameter %}
-
-{% swagger-parameter in="path" name="stream_name" type="string" %}
-A name of 
-
-`Stream`
-{% endswagger-parameter %}
-
-{% swagger-parameter in="header" name="authorization" type="string" %}
-A string for authentication in 
-
-`Basic Base64(AccessToken)`
-
- format.
-
-\
-
-
-For example, 
-
-`Basic b21lLWFjY2Vzcy10b2tlbg==`
-
- if access token is 
-
-`ome-access-token`
-
-.
-{% endswagger-parameter %}
-
-{% swagger-response status="200" description="- Return type: Response<Stream>
-- Description
-Returns the specified stream information" %}
+```json
+Content-Type: application/json
 ```
+
+**Body**
+
+```json
+{
+    "statusCode": 404,
+    "message": "Could not find the application: [default/non-exists] (404)"
+}
+```
+
+</details>
+
+## Create Stream (Pull)
+
+Create a stream by pulling an external URL. External URL protocols currently support RTSP and OVT.
+
+> #### Method / Path
+
+```http
+POST: /v1/vhosts/{vhost name}/apps/{app name}/streams
+```
+
+> #### Header
+
+```http
+Authorization: Basic {credentials}
+Content-Type: application/json
+
+# Authorization
+    Credentials for HTTP Basic Authentication created with <AccessToken>
+```
+
+> #### Body
+
+```json
+{
+	"name": "new_stream_name",
+	"urls": [
+		"rtsp://192.168.0.160:553/app/stream",
+		"url to pull the stream from - support OVT/RTSP",
+		"Only urls with the same scheme can be sent as a group."
+  	],
+  	"properties":{
+		"persistent": false,
+		"noInputFailoverTimeoutMs": 3000,
+		"unusedStreamDeletionTimeoutMs": 60000,
+  	}
+}
+
+# name (required)
+	Stream name to create
+# urls (required)
+	A list of URLs to pull streams from, in Json array format. 
+	All URLs must have the same scheme.
+# properties (optional)
+	## persistent
+		Created as a persistent stream, not deleted until DELETE
+	## noInputFailoverTimeoutMs
+		If no data is input during this period, the stream is deleted, 
+		but ignored if persistent is true
+	## unusedStreamDeletionTimeoutMs
+		If no data is output during this period (if there is no viewer), 
+		the stream is deleted, but ignored if persistent is true 
+```
+
+> #### Responses
+
+<details>
+
+<summary><mark style="color:blue;">201</mark> Created</summary>
+
+A stream has been created.
+
+**Header**
+
+```http
+Content-Type: application/json
+```
+
+**Body**
+
+```json
+{
+    "message": "Created",
+    "statusCode": 201
+}
+
+# statusCode
+    Same as HTTP Status Code
+# message
+    A human-readable description of the response code
+```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">400</mark> Bad Request</summary>
+
+Invalid request. Body is not a Json Object or does not have a required value
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">401</mark> Unauthorized</summary>
+
+Authentication required
+
+**Header**
+
+```http
+WWW-Authenticate: Basic realm=”OvenMediaEngine”
+```
+
+**Body**
+
+```json
+{
+    "message": "[HTTP] Authorization header is required to call API (401)",
+    "statusCode": 401
+}
+```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">404</mark> Not Found</summary>
+
+The given vhost name or app name could not be found.
+
+**Body**
+
+```json
+{
+    "statusCode": 404,
+    "message": "Could not find the application: [default/non-exists] (404)"
+}
+```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">409</mark> Conflict</summary>
+
+A stream with the same name already exists
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">502</mark> Bad Gateway</summary>
+
+Failed to pull provided URL
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">500</mark> Internal Server Error</summary>
+
+Unknown error
+
+</details>
+
+## Get Stream Info
+
+Get detailed information of stream.
+
+> #### Method / Path
+
+```http
+GET: /v1/vhosts/{vhost name}/apps/{app name}/streams/{stream name}
+```
+
+> #### Header
+
+```http
+Authorization: Basic {credentials}
+
+# Authorization
+    Credentials for HTTP Basic Authentication created with <AccessToken>
+```
+
+> #### Responses
+
+<details>
+
+<summary><mark style="color:blue;">200</mark> Ok</summary>
+
+The request has succeeded
+
+**Header**
+
+```
+Content-Type: application/json
+```
+
+**Body**
+
+```json
 {
 	"statusCode": 200,
 	"message": "OK",
@@ -158,72 +300,220 @@ Returns the specified stream information" %}
 			"createdTime": "2021-01-11T03:45:21.879+09:00",
 			"sourceType": "Rtmp",
 			"tracks": [
-				{
-					"type": "Video",
-					"video": {
-						"bitrate": "2500000",
-						"bypass": false,
-						"codec": "H264",
-						"framerate": 30.0,
-						"height": 720,
-						"width": 1280
-					}
-				},
-				{
-					"audio": {
-						"bitrate": "128000",
-						"bypass": false,
-						"channel": 2,
-						"codec": "AAC",
-						"samplerate": 48000
-					},
-					"type": "Audio"
+			{
+				"id": 0,
+				"type": "Video",
+				"video": {
+					"bitrate": "2500000",
+					"bypass": false,
+					"codec": "H264",
+					"framerate": 30.0,
+					"height": 720,
+					"width": 1280
 				}
+			},
+			{
+				"id": 1,				
+				"audio": {
+					"bitrate": "128000",
+					"bypass": false,
+					"channel": 2,
+					"codec": "AAC",
+					"samplerate": 48000
+				},
+				"type": "Audio"
+			}
 			]
 		},
 		"name": "stream",
 		"outputs": [
+		{
+			"name": "stream",
+			"tracks": [
 			{
-				"name": "stream",
-				"tracks": [
-					{
-						"type": "Video",
-						"video": {
-							"bypass": true
-						}
-					},
-					{
-						"audio": {
-							"bypass": true
-						},
-						"type": "Audio"
-					},
-					{
-						"audio": {
-							"bitrate": "128000",
-							"bypass": false,
-							"channel": 2,
-							"codec": "OPUS",
-							"samplerate": 48000
-						},
-						"type": "Audio"
-					}
-				]
+				"id": 0,
+				"type": "Video",
+				"video": {
+					"bypass": true
+				}
+			},
+			{
+				"id": 1,					
+				"audio": {
+					"bypass": true
+				},
+				"type": "Audio"
+			},
+			{
+				"id": 2,					
+				"audio": {
+					"bitrate": "128000",
+					"bypass": false,
+					"channel": 2,
+					"codec": "OPUS",
+					"samplerate": 48000
+				},
+				"type": "Audio"
 			}
-		]
+			]
+		}
+	]
 	}
 }
-```
-{% endswagger-response %}
 
-{% swagger-response status="404" description="- Return type: Response<>
-- Description
-Not Found" %}
+
+# statusCode
+	Same as HTTP Status Code
+# message
+	A human-readable description of the response code
+# response
+	Details of the stream
 ```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">401</mark> Unauthorized</summary>
+
+Authentication required
+
+**Header**
+
+```http
+WWW-Authenticate: Basic realm=”OvenMediaEngine”
+```
+
+**Body**
+
+```json
 {
-	"statusCode": 404,
-	"message": "Could not find the output profile: [default/app/non-exists] (404)"
+    "message": "[HTTP] Authorization header is required to call API (401)",
+    "statusCode": 401
 }
 ```
-{% endswagger-response %}
-{% endswagger %}
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">404</mark> Not Found</summary>
+
+The given vhost name or app name could not be found.
+
+**Header**
+
+```json
+Content-Type: application/json
+```
+
+**Body**
+
+```json
+{
+    "statusCode": 404,
+    "message": "Could not find the application or stream (404)"
+}
+```
+
+</details>
+
+## Delete Stream
+
+Delete Stream. This terminates the ingress connection.&#x20;
+
+{% hint style="warning" %}
+The sender can reconnect after the connection is terminated. To prevent reconnection, you must use [AccessControl](../../../../../access-control/).
+{% endhint %}
+
+> #### Method / Path
+
+```http
+DELETE: /v1/vhosts/{vhost name}/apps/{app name}/streams/{stream name}
+```
+
+> #### Header
+
+```http
+Authorization: Basic {credentials}
+
+# Authorization
+    Credentials for HTTP Basic Authentication created with <AccessToken>
+```
+
+> #### Responses
+
+<details>
+
+<summary><mark style="color:blue;">200</mark> Ok</summary>
+
+The request has succeeded
+
+**Header**
+
+```
+Content-Type: application/json
+```
+
+**Body**
+
+```json
+{
+	"statusCode": 200,
+	"message": "OK",
+}
+
+
+# statusCode
+	Same as HTTP Status Code
+# message
+	A human-readable description of the response code
+```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">401</mark> Unauthorized</summary>
+
+Authentication required
+
+**Header**
+
+```http
+WWW-Authenticate: Basic realm=”OvenMediaEngine”
+```
+
+**Body**
+
+```json
+{
+    "message": "[HTTP] Authorization header is required to call API (401)",
+    "statusCode": 401
+}
+```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">404</mark> Not Found</summary>
+
+The given vhost name or app name could not be found.
+
+**Header**
+
+```json
+Content-Type: application/json
+```
+
+**Body**
+
+```json
+{
+    "message": "[HTTP] Could not find the stream: [default/#default#app/stream] (404)",
+    "statusCode": 404
+}
+```
+
+</details>

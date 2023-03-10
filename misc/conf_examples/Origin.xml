@@ -62,14 +62,14 @@
 				<Port>${env:OME_SRT_PROV_PORT:9999}</Port>
 				<WorkerCount>1</WorkerCount>
 			</SRT>
+			<!--
 			<MPEGTS>
-				<!--
-					Listen on port 4000
-					This is just a demonstration to show that you can configure the port in several ways
+					<- Listen on port 4000
+					This is just a demonstration to show that you can configure the port in several ways ->
 					<Port>${env:OME_MPEGTS_PROV_PORT:4000-4001,4004,4005/udp}</Port>
-				-->
-				<Port>${env:OME_MPEGTS_PROV_PORT:4000/udp}</Port>
+				<Port>${env:OME_MPEGTS_PROV_PORT:4000-4005/udp}</Port>
 			</MPEGTS>
+			-->
 			<WebRTC>
 				<Signalling>
 					<Port>${env:OME_WEBRTC_SIGNALLING_PORT:3333}</Port>
@@ -77,10 +77,10 @@
 					<WorkerCount>1</WorkerCount>
 				</Signalling>
 				<IceCandidates>
-					<TcpRelay>${env:OME_WEBRTC_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
+					<IceCandidate>${env:OME_HOST_IP:*}:${env:OME_WEBRTC_CANDIDATE_PORT:10000-10004/udp}</IceCandidate>
+					<TcpRelay>${env:OME_HOST_IP:*}:${env:OME_WEBRTC_TCP_RELAY_PORT:3478}</TcpRelay>
 					<TcpForce>true</TcpForce>
 					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
-					<IceCandidate>*:10006/udp</IceCandidate>
 				</IceCandidates>
 			</WebRTC>
 		</Providers>
@@ -108,8 +108,8 @@
 					<WorkerCount>1</WorkerCount>
 				</Signalling>
 				<IceCandidates>
-					<IceCandidate>*:10000-10005/udp</IceCandidate>
-					<TcpRelay>${env:OME_WEBRTC_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
+					<IceCandidate>${env:OME_WEBRTC_CANDIDATE_IP:*}:${env:OME_WEBRTC_CANDIDATE_PORT:10000-10004/udp}</IceCandidate>
+					<TcpRelay>${env:OME_WEBRTC_CANDIDATE_IP:*}:${env:OME_WEBRTC_TCP_RELAY_PORT:3478}</TcpRelay>
 					<TcpForce>true</TcpForce>
 					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
 				</IceCandidates>
@@ -170,7 +170,7 @@
 				</RedisServer>
 				
 				This is only needed for the origin server and used to register the ovt address of the stream. 
-				<OriginHostName>ome-dev.airensoft.com</OriginHostName>
+				<OriginHostName>${env:OME_HOST_IP:192.168.0.160}</OriginHostName>
 			</OriginMapStore>
 			-->
 
@@ -230,19 +230,29 @@
 							-->
 
 							<Encodes>
-								<Audio>
-									<Name>bypass_audio</Name>
-									<Bypass>true</Bypass>
-								</Audio>
 								<Video>
 									<Name>bypass_video</Name>
 									<Bypass>true</Bypass>
 								</Video>
 								<Audio>
+									<Name>aac_audio</Name>
+									<Codec>aac</Codec>
+									<Bitrate>128000</Bitrate>
+									<Samplerate>48000</Samplerate>
+									<Channel>2</Channel>
+									<BypassIfMatch>
+										<Codec>eq</Codec>
+									</BypassIfMatch>
+								</Audio>								
+								<Audio>
+									<Name>opus_audio</Name>
 									<Codec>opus</Codec>
 									<Bitrate>128000</Bitrate>
 									<Samplerate>48000</Samplerate>
 									<Channel>2</Channel>
+									<BypassIfMatch>
+										<Codec>eq</Codec>
+									</BypassIfMatch>									
 								</Audio>
 								<!-- 							
 								<Video>
@@ -269,15 +279,19 @@
 					</OutputProfiles>
 					<Providers>
 						<OVT />
-						<WebRTC />
+						<WebRTC>
+							<Timeout>30000</Timeout>
+							<CrossDomains>
+								<Url>*</Url>
+							</CrossDomains>
+						</WebRTC>
 						<RTMP />
 						<SRT />
 						<RTSPPull />
-						<MPEGTS>
+						<!-- <MPEGTS>
 							<StreamMap>
-								<!--
-									Set the stream name of the client connected to the port to "stream_${Port}"
-									For example, if a client connets to port 4000, OME creates a "stream_4000" stream
+									<- Set the stream name of the client connected to the port to "stream_${Port}"
+									For example, if a client connets to port 4000, OME creates a "stream_4000" stream ->
 									<Stream>
 										<Name>stream_${Port}</Name>
 										<Port>4000,4001-4004</Port>
@@ -286,13 +300,12 @@
 										<Name>stream_4005</Name>
 										<Port>4005</Port>
 									</Stream>
-								-->
 								<Stream>
 									<Name>stream_${Port}</Name>
-									<Port>4000</Port>
+									<Port>${env:OME_MPEGTS_PROV_PORT:4000-4005/udp}</Port>
 								</Stream>
 							</StreamMap>
-						</MPEGTS>
+						</MPEGTS> -->
 					</Providers>
 					<Publishers>
 						<AppWorkerCount>1</AppWorkerCount>

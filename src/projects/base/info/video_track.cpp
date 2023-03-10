@@ -119,6 +119,16 @@ ov::String VideoTrack::GetPreset() const
 	return _preset;
 }
 
+void VideoTrack::SetProfile(ov::String profile)
+{
+	_profile = profile;
+}
+
+ov::String VideoTrack::GetProfile() const
+{
+	return _profile;
+}
+
 void VideoTrack::SetHasBframes(bool has_bframe)
 {
 	_has_bframe = has_bframe;

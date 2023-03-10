@@ -10,17 +10,26 @@
 
 #include <utility>
 
-RtcIceCandidate::RtcIceCandidate(ov::String transport, const ov::SocketAddress &address, uint16_t sdp_m_line_index, ov::String sdp_mid)
-	: IceCandidate(std::move(transport), address),
+RtcIceCandidate::RtcIceCandidate(const ov::String &transport, const ov::SocketAddress &address, uint16_t sdp_m_line_index, ov::String sdp_mid)
+	: IceCandidate(transport, address),
 
 	  _sdp_m_line_index(sdp_m_line_index),
-	  _sdp_mid(std::move(sdp_mid))
+	  _sdp_mid(sdp_mid)
 {
 }
 
-RtcIceCandidate::RtcIceCandidate(uint16_t sdp_m_line_index, ov::String sdp_mid)
+RtcIceCandidate::RtcIceCandidate(const ov::String &transport, const ov::String &address, int port, uint16_t sdp_m_line_index, ov::String sdp_mid)
+	: IceCandidate(transport, address, port),
+
+	  _sdp_m_line_index(sdp_m_line_index),
+	  _sdp_mid(sdp_mid)
+{
+
+}
+
+RtcIceCandidate::RtcIceCandidate(uint16_t sdp_m_line_index, const ov::String &sdp_mid)
 	: _sdp_m_line_index(sdp_m_line_index),
-	  _sdp_mid(std::move(sdp_mid))
+	  _sdp_mid(sdp_mid)
 {
 }
 

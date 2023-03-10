@@ -209,7 +209,7 @@ namespace http
 				}
 				catch (const ov::Error &e)
 				{
-					logte("Could not listen for %s Server: %s", http_server_name, e.What());
+					logtw("Invalid address: %s, port: %d (%s) - %s", server_ip.CStr(), port, http_server_name, e.What());
 					return false;
 				}
 

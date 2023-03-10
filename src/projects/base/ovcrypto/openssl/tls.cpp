@@ -60,6 +60,14 @@ namespace ov
 		return true;
 	}
 
+	void Tls::Shutdown()
+	{
+		if (_ssl != nullptr)
+		{
+			::SSL_shutdown(_ssl);
+		}
+	}
+
 	BIO_METHOD *Tls::PrepareBioMethod()
 	{
 		static std::mutex bio_mutex;

@@ -91,15 +91,34 @@ void ThumbnailStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_p
 	// Nothing..
 }
 
-std::shared_ptr<ov::Data> ThumbnailStream::GetVideoFrameByCodecId(cmn::MediaCodecId codec_id)
+std::shared_ptr<ov::Data> ThumbnailStream::GetVideoFrameByCodecId(cmn::MediaCodecId codec_id, int64_t timeout_ms)
 {
-	std::shared_lock<std::shared_mutex> lock(_encoded_frame_mutex);
+	ov::StopWatch	watch;
+	
+	watch.Start();
 
-	auto it = _encoded_frames.find(codec_id);
-	if (it == _encoded_frames.end())
+	do
 	{
-		return nullptr;
-	}
+		if (true)
+		{
+			std::shared_lock<std::shared_mutex> lock(_encoded_frame_mutex);
+			auto it = _encoded_frames.find(codec_id);
+			if (it != _encoded_frames.end())
+			{
+				return it->second;
+			}
+		}
 
-	return it->second;
+		if( (timeout_ms > 0) && (watch.Elapsed() < timeout_ms))
+		{
+			usleep(100 * 1000);	 // 100ms
+		}
+		else
+		{
+			break;
+		}
+
+	} while (true);
+
+	return nullptr;
 }

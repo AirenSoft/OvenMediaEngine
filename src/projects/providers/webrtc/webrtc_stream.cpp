@@ -287,6 +287,11 @@ namespace pvd
 	{
 		std::lock_guard<std::shared_mutex> lock(_start_stop_lock);
 
+		if (GetState() == Stream::State::STOPPED || GetState() == Stream::State::TERMINATED)
+		{
+			return true;
+		}
+
 		if (_rtp_rtcp != nullptr)
 		{
 			_rtp_rtcp->Stop();
@@ -301,6 +306,8 @@ namespace pvd
 		{
 			_srtp_transport->Stop();
 		}
+
+		_ice_port->TerminateSession(GetId());
 
 		ov::Node::Stop();
 

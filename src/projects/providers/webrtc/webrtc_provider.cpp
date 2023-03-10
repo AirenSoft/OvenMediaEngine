@@ -611,13 +611,16 @@ namespace pvd
 			return {http::StatusCode::Conflict, "Stream is already exist"};
 		}
 
-		std::vector<IceCandidate> ice_candidates;
+		std::set<IceCandidate> ice_candidates;
 		if (_ice_candidate_list.empty() == false)
 		{
 			auto candidate_index_to_send = _current_ice_candidate_index++ % _ice_candidate_list.size();
 			const auto &candidates = _ice_candidate_list[candidate_index_to_send];
 
-			ice_candidates.insert(ice_candidates.end(), candidates.cbegin(), candidates.cend());
+			for (const auto &candidate : candidates)
+			{
+				ice_candidates.emplace(candidate);
+			}
 		}
 
 		auto answer_sdp = application->CreateAnswerSDP(offer_sdp, _ice_port->GenerateUfrag(), ice_candidates);

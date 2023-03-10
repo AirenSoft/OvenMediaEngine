@@ -488,7 +488,7 @@ namespace ocst
 		return OrchestratorInternal::GetUrlListForLocation(vhost_app_name, host_name, stream_name, url_list, nullptr, nullptr);
 	}
 
-	bool Orchestrator::RequestPullStream(
+	bool Orchestrator::RequestPullStreamWithUrls(
 			const std::shared_ptr<const ov::Url> &request_from,
 			const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
 			const std::vector<ov::String> &url_list, off_t offset, const std::shared_ptr<pvd::PullStreamProperties> &properties)
@@ -549,13 +549,11 @@ namespace ocst
 			logti("Trying to pull stream [%s/%s] from provider using URL: %s",
 				  vhost_app_name.CStr(), stream_name.CStr(),
 				  GetModuleTypeName(provider_module->GetModuleType()).CStr());
-
 			
 			auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset, properties);
 
 			if (stream != nullptr)
 			{
-				StorePullStream(stream);
 				logti("The stream was pulled successfully: [%s/%s] (%u)",
 					  vhost_app_name.CStr(), stream_name.CStr(), stream->GetId());
 
@@ -600,23 +598,8 @@ namespace ocst
 		return false;
 	}
 
-	bool Orchestrator::RequestPullStream(
-		const std::shared_ptr<const ov::Url> &request_from,
-		const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
-		const ov::String &url, off_t offset)
-	{
-		auto properties = std::make_shared<pvd::PullStreamProperties>();
-		auto url_item = ov::Url::Parse(url);
-		if (url_item->Scheme().UpperCaseString() == "OVT")
-		{
-			properties->SetRelay(true);
-		}
-
-		return RequestPullStream(request_from, vhost_app_name, stream_name, {url}, offset, properties);
-	}
-
 	// Pull a stream using Origin map
-	bool Orchestrator::RequestPullStream(
+	bool Orchestrator::RequestPullStreamWithOriginMap(
 		const std::shared_ptr<const ov::Url> &request_from,
 		const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
 		off_t offset)
@@ -710,12 +693,16 @@ namespace ocst
 			  GetModuleTypeName(provider_module->GetModuleType()).CStr());
 
 		// Use Matched Origin information as an properties in Pull Stream.
-		auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset, 
-			std::make_shared<pvd::PullStreamProperties>(matched_origin->_persistent, matched_origin->_failback, matched_origin->_relay));
+		auto properties = std::make_shared<pvd::PullStreamProperties>();
+		properties->EnablePersistent(matched_origin->persistent);
+		properties->EnableFailback(matched_origin->failback);
+		properties->EnableRelay(matched_origin->relay);
+		properties->EnableFromOriginMapStroe(false);
+		
+		auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset, properties);
 
 		if (stream != nullptr)
 		{
-			StorePullStream(stream);
 			return true;
 
 			////////////////////////////////
@@ -793,18 +780,35 @@ namespace ocst
 		return false;
 	}
 
-	/// Delete PullStream
-	bool Orchestrator::RequestReleasePulledStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+	// Orchestrator manages provider streams to control the stream (e.g. stop, start, etc.)
+	bool Orchestrator::RegisterProviderStream(const std::shared_ptr<pvd::Stream> &stream)
 	{
-		auto pull_stream = GetPullStream(vhost_app_name, stream_name);
-		if (pull_stream == nullptr)
+		logti("Registering provider stream: %s/%s", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr());
+
+		// It will overwrite if the stream already exists
+		if (InsertProviderStream(stream) == false)
 		{
 			return false;
 		}
 
-		pull_stream->Terminate();
-
 		return true;
+	}
+
+	/// Delete PullStream
+	CommonErrorCode Orchestrator::TerminateStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+	{
+		auto stream = GetProviderStream(vhost_app_name, stream_name);
+		if (stream == nullptr)
+		{
+			return CommonErrorCode::NOT_FOUND;
+		}
+
+		if (stream->Terminate() == false)
+		{
+			return CommonErrorCode::ERROR;
+		}
+
+		return CommonErrorCode::SUCCESS;
 	}
 
 	bool Orchestrator::OnStreamCreated(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
@@ -816,9 +820,13 @@ namespace ocst
 
 	bool Orchestrator::OnStreamDeleted(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s/%s stream of %s is deleted", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
+		logti("%s/%s stream of %s is deleted", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
 
-		RemovePullStream(info->GetId());
+		// Provider stream was registered by the provider, so it should be deleted
+		if (info->IsInputStream())
+		{
+			DeleteProviderStream(info->GetApplicationInfo().GetName(), info->GetName());
+		}
 
 		return true;
 	}
@@ -1069,12 +1077,13 @@ namespace ocst
 			// Failback = true
 			// Relay = false
 			auto stream_props = std::make_shared<pvd::PullStreamProperties>();
-			stream_props->SetPersistent(true);
-			stream_props->SetFailback(true);
-			stream_props->SetRelay(false);
+			stream_props->EnablePersistent(true);
+			stream_props->EnableFailback(true);
+			stream_props->EnableRelay(false);
+			stream_props->EnableFromOriginMapStroe(false);
 
  			// Request pull stream
-			if( RequestPullStream(nullptr, app_info.GetName(), new_stream_name, url_list, 0, stream_props) == false)
+			if( RequestPullStreamWithUrls(nullptr, app_info.GetName(), new_stream_name, url_list, 0, stream_props) == false)
 			{
 				logte("Could not create persistent stream : %s/%s", app_name.CStr(), new_stream_name.CStr());
 				return CommonErrorCode::ERROR;

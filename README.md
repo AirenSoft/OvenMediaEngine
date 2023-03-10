@@ -16,7 +16,7 @@ OvenSpace is a sub-second latency streaming demo service using [OvenMediaEngine]
 
 ## Features
 * Ingest
-  * Push: WebRTC, SRT, RTMP, MPEG-2 TS
+  * Push: WebRTC, WHIP, SRT, RTMP, MPEG-2 TS
   * Pull: RTSP
 * Adaptive Bitrate Streaming (ABR) for LLHLS and WebRTC
 * Low Latency Streaming using LLHLS
@@ -55,36 +55,25 @@ Although we have tested OvenMediaEngine on the platforms listed below, it may wo
 * CentOS 7+
 * Fedora 28+
 
-## Getting Started
+## Quick Start
+
+* [Quick Start Guide](https://airensoft.gitbook.io/ovenmediaengine/quick-start)
+* [Manual](https://airensoft.gitbook.io/ovenmediaengine/)
 
 ### Docker
 ```bash
-docker run -d \
--p 1935:1935 \
--p 3333:3333 \
--p 3334:3334 \
--p 3478:3478 \
--p 9000:9000 \
--p 9999:9999/udp \
--p 4000:4000/udp \
---name ovenmediaengine \
+docker run --name ome -d -e OME_HOST_IP=Your.HOST.IP.Address \
+-p 1935:1935 -p 9999:9999/udp -p 9000:9000 -p 3333:3333 -p 3478:3478 -p 10000-10009:10000-10009/udp \
 airensoft/ovenmediaengine:latest
 ```
 
 You can also store the configuration files on your host:
 
 ```bash
-docker run -d \
--p 1935:1935 \
--p 3333:3333 \
--p 3334:3334 \
--p 3478:3478 \
--p 9000:9000 \
--p 9999:9999/udp \
--p 4000:4000/udp \
+docker run --name ome -d -e OME_HOST_IP=Your.HOST.IP.Address \
+-p 1935:1935 -p 9999:9999/udp -p 9000:9000 -p 3333:3333 -p 3478:3478 -p 10000-10009:10000-10009/udp \
 -v ome-origin-conf:/opt/ovenmediaengine/bin/origin_conf \
 -v ome-edge-conf:/opt/ovenmediaengine/bin/edge_conf \
---name ovenmediaengine \
 airensoft/ovenmediaengine:latest
 ```
 

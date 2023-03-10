@@ -28,13 +28,41 @@ bool EncoderAVCxQSV::SetCodecParams()
 	_codec_context->ticks_per_frame = 2;
 	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRate() > 0) ? GetRefTrack()->GetFrameRate() : GetRefTrack()->GetEstimateFrameRate(), AV_TIME_BASE);
 	_codec_context->time_base = ::av_inv_q(::av_mul_q(_codec_context->framerate, (AVRational){_codec_context->ticks_per_frame, 1}));
-	_codec_context->max_b_frames = 0;
 	_codec_context->pix_fmt = (AVPixelFormat)GetSupportedFormat();
 	_codec_context->width = GetRefTrack()->GetWidth();
 	_codec_context->height = GetRefTrack()->GetHeight();
 	_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
 
-	::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+	// Bframes
+	_codec_context->max_b_frames = GetRefTrack()->GetBFrames();
+
+	// Profile
+	auto profile = GetRefTrack()->GetProfile();
+	if (profile.IsEmpty() == true)
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+	}
+	else
+	{
+		if (profile == "baseline")
+		{
+			::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+		}
+		else if (profile == "main")
+		{
+			::av_opt_set(_codec_context->priv_data, "profile", "main", 0);
+		}
+		else if (profile == "high")
+		{
+			::av_opt_set(_codec_context->priv_data, "profile", "high", 0);
+		}
+		else
+		{
+			logtw("This is an unknown profile. change to the default(baseline) profile.");
+			::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+		}
+	}
+
 
 	return true;
 }

@@ -35,6 +35,18 @@
 #define OV_SAFE_FREE(x) OV_SAFE_FUNC(x, nullptr, OV_GLOBAL_NAMESPACE_PREFIX free, )	 // NOLINT
 #define OV_CHECK_FLAG(x, flag) (((x) & (flag)) == (flag))
 
+#if __cplusplus
+namespace ov
+{
+	template <typename T, typename std::enable_if_t<std::is_enum_v<T>, int> = 0>
+	inline bool CheckFlag(const T &lhs, const T &rhs)
+	{
+		using U = typename std::underlying_type<T>::type;
+		return OV_CHECK_FLAG(static_cast<U>(lhs), static_cast<U>(rhs));
+	}
+}  // namespace ov
+#endif	// __cplusplus
+
 // Gets the <index>th bit from the value (0-based)
 // You can use (((value) & (1 << index)) >> index) instead of the expression below
 //

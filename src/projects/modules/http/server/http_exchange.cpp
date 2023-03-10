@@ -19,7 +19,6 @@ namespace http
 		HttpExchange::HttpExchange(const std::shared_ptr<HttpConnection> &connection)
 			: _connection(connection)
 		{
-			
 		}
 
 		HttpExchange::HttpExchange(const std::shared_ptr<HttpExchange> &exchange)
@@ -40,11 +39,11 @@ namespace http
 			// print debug info
 			if ((static_cast<int>(GetResponse()->GetStatusCode()) / 100) != 2)
 			{
-				logte("%s", GetDebugInfo().CStr());
+				logte("\n%s", GetDebugInfo().CStr());
 			}
 			else
 			{
-				logtd("%s", GetDebugInfo().CStr());
+				logtd("\n%s", GetDebugInfo().CStr());
 			}
 
 			_status = Status::Completed;
@@ -64,13 +63,17 @@ namespace http
 			// Get duration with reqeust->GetCreateTime and response->GetResponseTime
 			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(response->GetResponseTime() - request->GetCreateTime()).count();
 
-			return ov::String::FormatString("\n[Client] %s [Duration] %llu \n"
-				"[Request] URL(%s) Method(%s) Version(%s) Request Time(%s)\n"
-				"[Response] Status(%d) Sent Size(%d) Response Time(%s)\n",
+			return ov::String::FormatString(
+				"[Client] %s (Elapsed: %llu) \n"
+				"[Request] %s %s (HTTP/%s, Request Time: %s)\n"
+				"[Response] %d %s (%d bytes sent, Response Time: %s)",
 
 				ToString().CStr(), duration,
-				request->GetUri().CStr(), http::StringFromMethod(request->GetMethod()).CStr(), request->GetHttpVersion().CStr(), ov::Converter::ToISO8601String(request->GetCreateTime()).CStr(),
-				response->GetStatusCode(), response->GetSentSize(), ov::Converter::ToISO8601String(response->GetResponseTime()).CStr());
+
+				http::StringFromMethod(request->GetMethod()).CStr(), request->GetUri().CStr(), request->GetHttpVersion().CStr(), ov::Converter::ToISO8601String(request->GetCreateTime()).CStr(),
+
+				response->GetStatusCode(), http::StringFromStatusCode(response->GetStatusCode()),
+				response->GetSentSize(), ov::Converter::ToISO8601String(response->GetResponseTime()).CStr());
 		}
 
 		void HttpExchange::SetKeepAlive(bool keep_alive)

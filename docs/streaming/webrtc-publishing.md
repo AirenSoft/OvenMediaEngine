@@ -7,7 +7,7 @@ OvenMediaEngine provides the following features:
 | Title            | Functions                                                             |
 | ---------------- | --------------------------------------------------------------------- |
 | Delivery         | RTP / RTCP                                                            |
-| Security         | DTLS,  SRTP                                                           |
+| Security         | DTLS, SRTP                                                            |
 | Connectivity     | ICE                                                                   |
 | Error Correction | ULPFEC (VP8, H.264), In-band FEC (Opus)                               |
 | Codec            | VP8, H.264, Opus                                                      |
@@ -45,15 +45,15 @@ If you set IceCandidate to `*: 10000-10005/udp`, as in the example above, OvenMe
 
 ### Signalling
 
-OvenMediaEngine has embedded a WebSocket-based signalling server and provides our defined signalling protocol. Also, OvenPlayer supports our signalling protocol. WebRTC requires signalling to exchange Offer SDP and Answer SDP, but this part isn't standardized. If you want to use SDP, you need to create your exchange protocol yourself.&#x20;
+OvenMediaEngine has embedded a WebSocket-based signalling server and provides our defined signalling protocol. Also, OvenPlayer supports our signalling protocol. WebRTC requires signalling to exchange Offer SDP and Answer SDP, but this part isn't standardized. If you want to use SDP, you need to create your exchange protocol yourself.
 
-If you want to change the signaling port, change the value of  `<Ports><WebRTC><Signalling>`.
+If you want to change the signaling port, change the value of `<Ports><WebRTC><Signalling>`.
 
 #### Signalling Protocol
 
 The Signalling protocol is defined in a simple way:
 
-![](<../.gitbook/assets/image (3).png>)
+![](<../.gitbook/assets/image (3) (1).png>)
 
 If you want to use a player other than OvenPlayer, you need to develop the signalling protocol as shown above and can integrate OvenMediaEngine.
 
@@ -61,7 +61,7 @@ If you want to use a player other than OvenPlayer, you need to develop the signa
 
 ### Publisher
 
-Add `WebRTC` element to Publisher to provide streaming through WebRTC.&#x20;
+Add `WebRTC` element to Publisher to provide streaming through WebRTC.
 
 ```markup
 <Server version="7">
@@ -83,8 +83,6 @@ Add `WebRTC` element to Publisher to provide streaming through WebRTC.&#x20;
 	</VirtualHosts>
 </Server>
 ```
-
-
 
 | Option       | Description                                                                                                                          | Default |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ------- |
@@ -161,13 +159,11 @@ If you use the default configuration, you can stream to the following URL:
 
 We have prepared a test player to make it easy to check if OvenMediaEngine is working. Please see the [Test Player](../test-player.md) chapter for more information.
 
-
-
 ## Adaptive Bitrates Streaming (ABR)
 
 OvenMediaEnigne provides adaptive bitrates streaming over WebRTC. OvenPlayer can also play and display OvenMediaEngine's WebRTC ABR URL.
 
-![](<../.gitbook/assets/image (41).png>)
+![](<../.gitbook/assets/image (39).png>)
 
 ### Create Playlist for WebRTC ABR
 
@@ -336,7 +332,7 @@ There are environments where the network speed is fast but UDP packet loss is ab
 
 ### Turn on TURN server
 
-You can turn on the TURN server by setting \<TcpRelay> in the WebRTC Bind.&#x20;
+You can turn on the TURN server by setting \<TcpRelay> in the WebRTC Bind.
 
 > Example : \<TcpRelay>\*:3478\</TcpRelay>
 
@@ -368,7 +364,7 @@ If \* is used as the IP of TcpRelay and IceCandidate, all available candidates a
 
 ### WebRTC over TCP with OvenPlayer
 
-WebRTC players can configure the TURN server through the [iceServers ](https://developer.mozilla.org/en-US/docs/Web/API/RTCIceServer/urls#a\_single\_ice\_server\_with\_authentication)setting.&#x20;
+WebRTC players can configure the TURN server through the [iceServers ](https://developer.mozilla.org/en-US/docs/Web/API/RTCIceServer/urls#a\_single\_ice\_server\_with\_authentication)setting.
 
 You can play the WebRTC stream over TCP by attaching the query `transport=tcp` to the existing WebRTC play URL as follows.
 
@@ -376,7 +372,7 @@ You can play the WebRTC stream over TCP by attaching the query `transport=tcp` t
 ws(s)://host:port/app/stream?transport=tcp
 ```
 
-OvenPlayer automatically sets iceServers by obtaining TURN server information set in \<TcpRelay> through signaling with OvenMediaEngine.&#x20;
+OvenPlayer automatically sets iceServers by obtaining TURN server information set in \<TcpRelay> through signaling with OvenMediaEngine.
 
 {% hint style="info" %}
 If `<TcpForce>` is set to true, it will force a TCP connection even if `?transport=tcp` is not present. To use this, `<TcpRelay>` must be set.
@@ -409,6 +405,3 @@ id: 506764844
 peer_id: 0
 sdp: {,…}
 ```
-
-
-

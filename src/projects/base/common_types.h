@@ -27,10 +27,15 @@
 
 enum class CommonErrorCode : int16_t
 {
-	NOT_FOUND = -2,
-	ERROR = -1,
 	DISABLED = 0,
-	SUCCESS = 1
+	SUCCESS = 1,
+	CREATED = 2,
+
+	ERROR = -1,
+	NOT_FOUND = -2,
+	ALREADY_EXISTS = -3,
+	INVALID_REQUEST = -4,
+	UNAUTHORIZED = -5
 };
 
 enum class StreamSourceType : int8_t

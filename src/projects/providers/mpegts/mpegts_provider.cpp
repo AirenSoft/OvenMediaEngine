@@ -57,7 +57,18 @@ namespace pvd
 
 		for (const auto &port : port_list_config)
 		{
-			const auto address_list = ov::SocketAddress::Create(ip_list, port);
+			std::vector<ov::SocketAddress> address_list;
+
+			try
+			{
+				address_list = ov::SocketAddress::Create(ip_list, port);
+			}
+			catch (const ov::Error &e)
+			{
+				logte("Could not create socket address: %s", e.What());
+				return false;
+			}
+
 			std::vector<std::shared_ptr<PhysicalPort>> physical_port_list;
 
 			for (const auto &address : address_list)

@@ -90,6 +90,7 @@ public:
 	// For statistics
 	void OnFrameAdded(uint64_t bytes);
 
+	std::shared_ptr<MediaTrack> Clone();
 private:
 	bool _is_valid = false;
 	bool _has_quality_measured = false;
@@ -129,8 +130,13 @@ private:
 	uint64_t _total_frame_count = 0;
 	uint64_t _total_frame_bytes = 0;
 
+	
 public:
 	void SetHardwareAccel(bool hwaccel);
 	bool GetHardwareAccel() const;
 	bool _use_hwaccel;
+
+	// TODO(soulk) : Refactoring is needed
+	// outputprofile.encodes configruation
+	void* _cfg;	
 };

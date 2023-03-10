@@ -57,7 +57,8 @@ public:
 	IceCandidate();
 	IceCandidate(const ov::String &foundation, const ov::String &component_id, const ov::String &transport, uint32_t priority, const ov::String &cand_type, const ov::String &candidate_types, const ov::String &rel_addr, const ov::String &rel_port, const std::map<ov::String, ov::String> &extension_att) = delete;
 	IceCandidate(const IceCandidate &candidate) = default;
-	IceCandidate(ov::String transport, const ov::SocketAddress &address);
+	IceCandidate(const ov::String &transport, const ov::SocketAddress &address);
+	IceCandidate(const ov::String &transport, const ov::String &address, int port);
 	IceCandidate(IceCandidate &&candidate) noexcept;
 
 	virtual ~IceCandidate();
@@ -65,6 +66,7 @@ public:
 	bool ParseFromString(const ov::String &candidate_string);
 
 	IceCandidate &operator =(IceCandidate candidate) noexcept;
+	bool operator <(const IceCandidate &candidate) const noexcept;
 
 	const ov::String &GetFoundation() const noexcept;
 	void SetFoundation(ov::String foundation);
@@ -79,7 +81,7 @@ public:
 	void SetPriority(uint32_t priority);
 
 	ov::SocketAddress GetAddress() const;
-	ov::String GetIpAddress() const;
+	ov::String GetConnectionAddress() const;
 	int GetPort() const;
 
 	const ov::String &GetCandidateTypes() const;
@@ -115,8 +117,8 @@ protected:
 	// 1*10DIGIT
 	uint32_t _priority;
 	// <connection-address> <port> (RFC4566)
-	// ov::String _ip_address;
-	// int _port;
+	ov::String _address_str;
+	int _port;
 	ov::SocketAddress _address;
 	// "typ" ["host" | "srflx" | "prflx" | "relay" | token]
 	ov::String _candidate_types;

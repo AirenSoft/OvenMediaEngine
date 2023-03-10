@@ -53,6 +53,9 @@ namespace pvd
 	// It works only with pull provider
 	void PullApplication::WhiteElephantStreamCollector()
 	{
+		auto global_no_input_timeout_ms = GetHostInfo().GetOrigins().GetProperties().GetNoInputFailoverTimeout(); 
+		auto global_unused_stream_timeout_ms = GetHostInfo().GetOrigins().GetProperties().GetUnusedStreamDeletionTimeout();
+		auto global_failback_timeout_ms = GetHostInfo().GetOrigins().GetProperties().GetStreamFailbackTimeout();	
 		
 		while(!_stop_collector_thread_flag)
 		{
@@ -84,22 +87,37 @@ namespace pvd
 					// Default Properties of PullStream
 					auto is_persistent = false;
 					auto is_failback = false;
-					auto no_input_timeout = GetHostInfo().GetOrigins().GetProperties().GetNoInputFailoverTimeout(); 
-					auto unused_stream_timeout = GetHostInfo().GetOrigins().GetProperties().GetUnusedStreamDeletionTimeout();
-					auto failback_timeout = GetHostInfo().GetOrigins().GetProperties().GetStreamFailbackTimeout();					
+					int64_t no_input_timeout_ms = global_no_input_timeout_ms;
+					int64_t unused_stream_timeout_ms = global_unused_stream_timeout_ms;
+					int64_t failback_timeout_ms = global_failback_timeout_ms;
 
 					auto props = stream->GetProperties();
 					if (props)
 					{
 						is_persistent = props->IsPersistent();
 						is_failback = props->IsFailback();
+
+						if (props->GetNoInputFailoverTimeout() > 0)
+						{
+							no_input_timeout_ms = props->GetNoInputFailoverTimeout();
+						}
+
+						if (props->GetUnusedStreamDeletionTimeout() > 0)
+						{
+							unused_stream_timeout_ms = props->GetUnusedStreamDeletionTimeout();
+						}
+
+						if (props->GetStreamFailbackTimeoutMSec() > 0)
+						{
+							failback_timeout_ms = props->GetStreamFailbackTimeoutMSec();
+						}
 					
 						// If Failback is enabled, try to connect periodically to see if the Primary URL is available.
 						if(is_failback) 
 						{
 							auto elapsed_time_from_last_failback_check = std::chrono::duration_cast<std::chrono::milliseconds>(current - props->GetLastFailbackCheckTime()).count();
 
-							if((elapsed_time_from_last_failback_check > failback_timeout) && (!stream->IsCurrPrimaryURL()))
+							if((elapsed_time_from_last_failback_check > failback_timeout_ms) && (!stream->IsCurrPrimaryURL()))
 							{
 								auto failback_url = stream->GetPrimaryURL()->ToUrlString(true);
 							
@@ -139,13 +157,13 @@ namespace pvd
 						auto elapsed_time_from_last_sent = std::chrono::duration_cast<std::chrono::milliseconds>(current - stream_metrics->GetLastSentTime()).count();
 						auto elapsed_time_from_last_recv = std::chrono::duration_cast<std::chrono::milliseconds>(current - stream_metrics->GetLastRecvTime()).count();
 
-						if((elapsed_time_from_last_sent > unused_stream_timeout) && (!is_persistent))
+						if((elapsed_time_from_last_sent > unused_stream_timeout_ms) && (!is_persistent))
 						{
 							logtw("%s/%s(%u) stream will be deleted because it hasn't been used for %u milliseconds", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_sent);
 							DeleteStream(stream);
 						}
 						// The stream type is pull stream, if packets do NOT arrive for more than 3 seconds, it is a seriously warning situation
-						else if(elapsed_time_from_last_recv > no_input_timeout && (!is_persistent))
+						else if(elapsed_time_from_last_recv > no_input_timeout_ms && (!is_persistent))
 						{
 							logtw("Stop stream %s/%s(%u) : there are no incoming packets. %d milliseconds have elapsed since the last packet was received.",
 								  stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);

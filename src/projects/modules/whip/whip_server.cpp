@@ -21,10 +21,11 @@ WhipServer::WhipServer(const cfg::bind::cmm::Webrtc &webrtc_bind_cfg)
 bool WhipServer::PrepareForTCPRelay()
 {
 	// For internal TURN/TCP relay configuration
-	_tcp_force = _webrtc_bind_cfg.GetIceCandidates().IsTcpForce();
+	const auto &ice_candidates_config = _webrtc_bind_cfg.GetIceCandidates();
+	_tcp_force = ice_candidates_config.IsTcpForce();
 
 	bool is_tcp_relay_configured = false;
-	const auto &tcp_relay_list = _webrtc_bind_cfg.GetIceCandidates().GetTcpRelayList(&is_tcp_relay_configured);
+	const auto &tcp_relay_list = ice_candidates_config.GetTcpRelayList(&is_tcp_relay_configured);
 
 	if (is_tcp_relay_configured)
 	{
@@ -36,8 +37,8 @@ bool WhipServer::PrepareForTCPRelay()
 			// <TcpRelay>${PublicIP}:Port</TcpRelay>
 
 			// Check whether tcp_relay_address indicates "any address"(*, ::) or ${PublicIP}
-			const auto tcp_relay_address = ov::SocketAddress::ParseAddress(tcp_relay);
-			if (tcp_relay_address.HasPortList() == false)
+			_tcp_relay_address = ov::SocketAddress::ParseAddress(tcp_relay);
+			if (_tcp_relay_address.HasPortList() == false)
 			{
 				logte("Invalid TCP relay address: %s (The TCP relay address must be in <IP>:<Port> format)", tcp_relay.CStr());
 				return false;
@@ -49,17 +50,17 @@ bool WhipServer::PrepareForTCPRelay()
 			ov::SocketFamily family = ov::SocketFamily::Unknown;
 			std::vector<ov::String> url_list;
 
-			auto &tcp_relay_host = tcp_relay_address.host;
+			auto &tcp_relay_host = _tcp_relay_address.host;
 			if (tcp_relay_host == "*")
 			{
 				// Case 1 - IPv4 wildcard
-				ip_list = address_utilities->GetIpList(ov::SocketFamily::Inet);
+				ip_list = address_utilities->GetIPv4List();
 				family = ov::SocketFamily::Inet;
 			}
 			else if (tcp_relay_host == "::")
 			{
 				// Case 2 - IPv6 wildcard
-				ip_list = address_utilities->GetIpList(ov::SocketFamily::Inet6);
+				ip_list = address_utilities->GetIPv6List(ice_candidates_config.GetEnableLinkLocalAddress());
 				family = ov::SocketFamily::Inet6;
 			}
 			else if (tcp_relay_host == "${PublicIP}")
@@ -85,7 +86,7 @@ bool WhipServer::PrepareForTCPRelay()
 
 			for (const auto &ip : ip_list)
 			{
-				tcp_relay_address.EachPort([&](const ov::String &host, const uint16_t port) -> bool {
+				_tcp_relay_address.EachPort([&](const ov::String &host, const uint16_t port) -> bool {
 					if (family == ov::SocketFamily::Inet6)
 					{
 						url_list.emplace_back(ov::String::FormatString("turn:[%s]:%d?transport=tcp", ip.CStr(), port));
@@ -100,7 +101,7 @@ bool WhipServer::PrepareForTCPRelay()
 
 			for (const auto &url : url_list)
 			{
-				_link_headers.push_back(GetIceServerLinkValue(url, DEFAULT_RELAY_USERNAME, DEFAULT_RELAY_KEY));
+				_link_headers.emplace(GetIceServerLinkValue(url, DEFAULT_RELAY_USERNAME, DEFAULT_RELAY_KEY));
 			}
 		}
 	}
@@ -142,7 +143,7 @@ bool WhipServer::PrepareForExternalIceServer()
 			for (auto url : url_list)
 			{
 				auto address = ov::String::FormatString("turn:%s?transport=tcp", url.CStr());
-				_link_headers.push_back(GetIceServerLinkValue(address, username, credential));
+				_link_headers.emplace(GetIceServerLinkValue(address, username, credential));
 			}
 		}
 	}
@@ -364,7 +365,7 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		logti("WHIP SDP Offer: %s", data->ToString().CStr());
+		logtd("WHIP SDP Offer: %s", data->ToString().CStr());
 
 		auto offer_sdp = std::make_shared<SessionDescription>();
 		if (offer_sdp->FromString(data->ToString()) == false)
@@ -384,11 +385,17 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			response->SetHeader("ETag", answer._entity_tag);
 			response->SetHeader("Location", ov::String::FormatString("/%s/%s/%s", request_url->App().CStr(), request_url->Stream().CStr(), answer._session_id.CStr()));
 
-			// Add ICE Server Link
-			for (const auto &ice_server : _link_headers)
+			// IF TcpForce == true or ?transport=tcp
+			if (_tcp_force == true || request_url->GetQueryValue("transport").UpperCaseString() == "TCP")
 			{
-				// Multiple Link headers are allowed
-				response->AddHeader("Link", ice_server);
+				// Add ICE Server Link
+
+				// Add ICE Server Link from configuration
+				for (const auto &ice_server : _link_headers)
+				{
+					// Multiple Link headers are allowed
+					response->AddHeader("Link", ice_server);
+				}
 			}
 
 			response->AppendString(answer._sdp->ToString());
@@ -403,7 +410,7 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			}
 		}
 
-		logtd("WHIP Response: %s", response->ToString().CStr());
+		logti("WHIP Response: %s", response->ToString().CStr());
 
 		return http::svr::NextHandler::DoNotCall;
 	});

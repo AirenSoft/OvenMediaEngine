@@ -27,6 +27,8 @@ namespace pvd
 			INTERLEAVED
 		};
 
+		bool Terminate() override;
+
 		virtual bool OnDataReceived(const std::shared_ptr<const ov::Data> &data) = 0;
 		uint32_t GetChannelId();
 		bool DoesBelongApplication();

@@ -33,10 +33,11 @@ bool RtcSignallingServer::PrepareForTCPRelay()
 	_new_ice_servers = Json::arrayValue;
 
 	// For internal TURN/TCP relay configuration
-	_tcp_force = _webrtc_bind_cfg.GetIceCandidates().IsTcpForce();
+	const auto &ice_candidates_config = _webrtc_bind_cfg.GetIceCandidates();
+	_tcp_force = ice_candidates_config.IsTcpForce();
 
 	bool is_tcp_relay_configured = false;
-	const auto &tcp_relay_list = _webrtc_bind_cfg.GetIceCandidates().GetTcpRelayList(&is_tcp_relay_configured);
+	const auto &tcp_relay_list = ice_candidates_config.GetTcpRelayList(&is_tcp_relay_configured);
 
 	if (is_tcp_relay_configured)
 	{
@@ -67,13 +68,13 @@ bool RtcSignallingServer::PrepareForTCPRelay()
 			if (tcp_relay_host == "*")
 			{
 				// Case 1 - IPv4
-				ip_list = address_utilities->GetIpList(ov::SocketFamily::Inet);
+				ip_list = address_utilities->GetIPv4List();
 				family = ov::SocketFamily::Inet;
 			}
 			else if (tcp_relay_host == "::")
 			{
 				// Case 2 - IPv6 wildcard
-				ip_list = address_utilities->GetIpList(ov::SocketFamily::Inet6);
+				ip_list = address_utilities->GetIPv6List(ice_candidates_config.GetEnableLinkLocalAddress());
 				family = ov::SocketFamily::Inet6;
 			}
 			else if (tcp_relay_host == "${PublicIP}")

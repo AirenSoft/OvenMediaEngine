@@ -25,6 +25,8 @@ namespace ov
 		// @return Returns SSL_ERROR_NONE on success
 		int Accept();
 
+		void Shutdown();
+
 		std::shared_ptr<const OpensslError> Connect();
 
 		// @return Returns SSL_ERROR_NONE on success

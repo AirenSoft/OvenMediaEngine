@@ -19,8 +19,7 @@
 
 class WebRtcPublisher : public pub::Publisher,
 						public IcePortObserver,
-						public RtcSignallingObserver,
-						public ov::MessageThreadObserver<std::shared_ptr<ov::CommonMessage>>
+						public RtcSignallingObserver
 {
 public:
 	static std::shared_ptr<WebRtcPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
@@ -29,10 +28,6 @@ public:
 	~WebRtcPublisher() override;
 
 	bool Stop() override;
-	bool DisconnectSession(const std::shared_ptr<RtcSession> &session);
-
-	// MessageThread Implementation
-	void OnMessage(const std::shared_ptr<ov::CommonMessage> &message) override;
 
 	// IcePortObserver Implementation
 	void OnStateChanged(IcePort &port, uint32_t session_id, IcePortConnectionState state, std::any user_data) override;
@@ -108,7 +103,6 @@ private:
 
 	std::shared_ptr<IcePort> _ice_port;
 	std::shared_ptr<RtcSignallingServer> _signalling_server;
-	ov::MessageThread<std::shared_ptr<ov::CommonMessage>> _message_thread;
 
 	// for special purpose log - Deprecated
 	// ov::DelayQueue _timer;

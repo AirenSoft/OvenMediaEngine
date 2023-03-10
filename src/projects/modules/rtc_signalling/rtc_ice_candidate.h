@@ -13,8 +13,11 @@
 class RtcIceCandidate : public IceCandidate
 {
 public:
-	RtcIceCandidate(ov::String transport, const ov::SocketAddress &address, uint16_t sdp_m_line_index, ov::String sdp_mid);
-	RtcIceCandidate(uint16_t sdp_m_line_index, ov::String sdp_mid);
+	RtcIceCandidate(const ov::String &transport, const ov::SocketAddress &address, uint16_t sdp_m_line_index, ov::String sdp_mid);
+	RtcIceCandidate(const ov::String &transport, const ov::String &address, int port, uint16_t sdp_m_line_index, ov::String sdp_mid);
+
+	// using for parsing
+	RtcIceCandidate(uint16_t sdp_m_line_index, const ov::String &sdp_mid);
 	~RtcIceCandidate() override;
 
 	RtcIceCandidate &operator=(const RtcIceCandidate &candidate) = default;

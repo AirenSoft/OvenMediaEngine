@@ -61,7 +61,17 @@ bool IcePort::CreateIceCandidates(const char *server_name, const cfg::Server &se
 			ov::SocketType socket_type = (transport == "TCP") ? ov::SocketType::Tcp : ov::SocketType::Udp;
 
 			// Create address list for the candidates from IP addresses
-			auto ice_address_list = ov::SocketAddress::Create(ip_list, address.Port());
+			std::vector<ov::SocketAddress> ice_address_list;
+
+			try
+			{
+				ice_address_list = ov::SocketAddress::Create(ip_list, address.Port());
+			}
+			catch (const ov::Error &e)
+			{
+				logte("Could not create socket address: %s", e.What());
+				return false;
+			}
 
 			for (auto &ice_address : ice_address_list)
 			{
@@ -244,6 +254,33 @@ ov::String IcePort::GenerateUfrag()
 	}
 }
 
+std::shared_ptr<IcePort::IcePortInfo> IcePort::FindIcePortInfo(uint32_t session_id)
+{
+	{
+		std::lock_guard<std::mutex> lock_guard(_port_table_lock);
+		auto item = _session_port_table.find(session_id);
+		if (item != _session_port_table.end())
+		{
+			return item->second;
+		}
+	}
+
+	{
+		std::lock_guard<std::mutex> lock_guard(_user_port_table_lock);
+		for (auto &item : _user_port_table)
+		{
+			auto ice_port_info = item.second;
+
+			if (ice_port_info->session_id == session_id)
+			{
+				return ice_port_info;
+			}
+		}
+	}
+
+	return nullptr;
+}
+
 void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint32_t session_id,
 						 std::shared_ptr<const SessionDescription> local_sdp, std::shared_ptr<const SessionDescription> peer_sdp,
 						 int expired_ms, uint64_t life_time_epoch_ms, std::any user_data)
@@ -281,6 +318,21 @@ void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint3
 	}
 
 	SetIceState(_user_port_table[local_ufrag], IcePortConnectionState::New);
+}
+
+bool IcePort::TerminateSession(uint32_t session_id)
+{
+	auto ice_port_info = FindIcePortInfo(session_id);
+	if (ice_port_info == nullptr)
+	{
+		logtd("Could not find session: %d", session_id);
+		return false;
+	}
+
+	// It will be deleted in the next timer (for thread safety)
+	ice_port_info->Terminate();
+
+	return true;
 }
 
 bool IcePort::RemoveSession(uint32_t session_id)
@@ -392,7 +444,7 @@ void IcePort::CheckTimedoutItem()
 
 		for (auto item = _user_port_table.begin(); item != _user_port_table.end();)
 		{
-			if (item->second->IsExpired())
+			if (item->second->IsExpired() || item->second->IsTerminated())
 			{
 				delete_list.push_back(item->second);
 				item = _user_port_table.erase(item);
@@ -420,7 +472,19 @@ void IcePort::CheckTimedoutItem()
 	// Notify to observer
 	for (auto &deleted_ice_port : delete_list)
 	{
-		logtw("Client %s(session id: %d) has expired", deleted_ice_port->address.ToString(false).CStr(), deleted_ice_port->session_id);
+		IcePortConnectionState state;
+		if (deleted_ice_port->IsExpired())
+		{
+			state = IcePortConnectionState::Disconnected;
+
+			logtw("Client %s(session id: %d) has expired", deleted_ice_port->address.ToString(false).CStr(), deleted_ice_port->session_id);
+		}
+		else
+		{
+			state = IcePortConnectionState::Closed;
+
+			logti("Client %s(session id: %d) has terminated", deleted_ice_port->address.ToString(false).CStr(), deleted_ice_port->session_id);
+		}
 
 		// Close only TCP (TURN)
 		if (deleted_ice_port->remote != nullptr && deleted_ice_port->remote->GetSocket().GetType() == ov::SocketType::Tcp)
@@ -428,7 +492,7 @@ void IcePort::CheckTimedoutItem()
 			deleted_ice_port->remote->CloseIfNeeded();
 		}
 
-		SetIceState(deleted_ice_port, IcePortConnectionState::Disconnected);
+		SetIceState(deleted_ice_port, state);
 	}
 }
 
@@ -598,7 +662,7 @@ void IcePort::OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &rem
 
 	if (ice_port_info == nullptr)
 	{
-		logtw("Could not find client(%s) information. Dropping...", address.ToString(false).CStr());
+		logtd("Could not find client(%s) information. Dropping...", address.ToString(false).CStr());
 		return;
 	}
 
@@ -758,7 +822,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		if (info == _user_port_table.end())
 		{
 			// Stun may arrive first before AddSession, it is not an error
-			logti("User not found: %s (AddSession() needed)", local_ufrag.CStr());
+			logtd("User not found: %s", local_ufrag.CStr());
 			return false;
 		}
 

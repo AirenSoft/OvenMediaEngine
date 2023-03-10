@@ -34,6 +34,7 @@ namespace cfg
 						Provider::MakeList();
 
 						Register<Optional>("Timeout", &_timeout);
+						Register<Optional>("CrossDomains", &_cross_domains);
 					}
 
 					int _timeout = 30000;

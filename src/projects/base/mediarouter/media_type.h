@@ -105,8 +105,7 @@ namespace cmn
 
 	static bool IsVideoCodec(cmn::MediaCodecId codec_id)
 	{
-		if (codec_id == cmn::MediaCodecId::H264 || codec_id == cmn::MediaCodecId::H265 || codec_id == cmn::MediaCodecId::Vp8 || codec_id == cmn::MediaCodecId::Flv ||
-			codec_id == cmn::MediaCodecId::Vp9 || codec_id == cmn::MediaCodecId::Jpeg || codec_id == cmn::MediaCodecId::Png)
+		if (codec_id == cmn::MediaCodecId::H264 || codec_id == cmn::MediaCodecId::H265 || codec_id == cmn::MediaCodecId::Vp8 || codec_id == cmn::MediaCodecId::Flv || codec_id == cmn::MediaCodecId::Vp9)
 		{
 			return true;
 		}

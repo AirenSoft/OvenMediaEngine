@@ -85,12 +85,15 @@
 
 				<IceCandidates>
 					<!-- Uncomment the line below to use IPv6 ICE Candidate -->
-					<!-- <IceCandidate>[::]:10000-10005/udp</IceCandidate> -->
-					<IceCandidate>*:10000-10005/udp</IceCandidate>
+					<!-- <IceCandidate>[::]:10000-10004/udp</IceCandidate> -->
+					<IceCandidate>*:10000-10004/udp</IceCandidate>
+
+					<!-- Uncomment the line below to use a link local address when specifying an address with IPv6 wildcard (::) -->
+					<!-- <EnableLinkLocalAddress>true</EnableLinkLocalAddress> -->
+
 					<!-- 
 						If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
 						This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
-						For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/streaming/webrtc-publishing#webrtc-over-tcp
 					-->
 					<TcpRelay>*:3478</TcpRelay>
 					<!-- TcpForce is an option to force the use of TCP rather than UDP in WebRTC streaming. (You can omit ?transport=tcp accordingly.) If <TcpRelay> is not set, playback may fail. -->
@@ -123,11 +126,16 @@
 					<WorkerCount>1</WorkerCount>
 				</Signalling>
 				<IceCandidates>
-					<IceCandidate>*:10000-10005/udp</IceCandidate>
+					<!-- Uncomment the line below to use IPv6 ICE Candidate -->
+					<!-- <IceCandidate>[::]:10000-10004/udp</IceCandidate> -->
+					<IceCandidate>*:10000-10004/udp</IceCandidate>
+					
+					<!-- Uncomment the line below to use a link local address when specifying an address with IPv6 wildcard (::) -->
+					<!-- <EnableLinkLocalAddress>true</EnableLinkLocalAddress> -->
+
 					<!-- 
 						If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
 						This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
-						For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/streaming/webrtc-publishing#webrtc-over-tcp
 					-->
 					<TcpRelay>*:3478</TcpRelay>
 					<!-- TcpForce is an option to force the use of TCP rather than UDP in WebRTC streaming. (You can omit ?transport=tcp accordingly.) If <TcpRelay> is not set, playback may fail. -->
@@ -250,7 +258,7 @@
 					</Pass>
 				</Origin>
 			</Origins> -->
-			
+
 			<!--
 			<OriginMapStore>
 				In order to use OriginMap, you must enable OVT Publisher in Origin and OVT Provider in Edge.
@@ -263,7 +271,7 @@
 				<OriginHostName>ome-dev.airensoft.com</OriginHostName>
 			</OriginMapStore>
 			-->
-			
+
 			<!-- Settings for applications -->
 			<Applications>
 				<Application>
@@ -322,39 +330,92 @@
 							-->
 
 							<Encodes>
-								<Audio>
-									<Name>bypass_audio</Name>
-									<Bypass>true</Bypass>
-								</Audio>
 								<Video>
 									<Name>bypass_video</Name>
 									<Bypass>true</Bypass>
 								</Video>
 								<Audio>
+									<Name>aac_audio</Name>
+									<Codec>aac</Codec>
+									<Bitrate>128000</Bitrate>
+									<Samplerate>48000</Samplerate>
+									<Channel>2</Channel>
+									<BypassIfMatch>
+										<Codec>eq</Codec>
+									</BypassIfMatch>
+								</Audio>
+								<Audio>
+									<Name>opus_audio</Name>
 									<Codec>opus</Codec>
 									<Bitrate>128000</Bitrate>
 									<Samplerate>48000</Samplerate>
 									<Channel>2</Channel>
+									<BypassIfMatch>
+										<Codec>eq</Codec>
+									</BypassIfMatch>
 								</Audio>
-								<!-- 							
+								<!--
 								<Video>
 									<Name>video_1280</Name>
 									<Codec>h264</Codec>
 									<Bitrate>5024000</Bitrate>
-									<Framerate>30</Framerate>
 									<Width>1920</Width>
 									<Height>1280</Height>
+									<Framerate>30</Framerate>
+									<KeyFrameInterval>30</KeyFrameInterval>
+									<BFrames>0</BFrames>
 									<Preset>faster</Preset>
 								</Video>
 								<Video>
 									<Name>video_720</Name>
 									<Codec>h264</Codec>
 									<Bitrate>2024000</Bitrate>
-									<Framerate>30</Framerate>
 									<Width>1280</Width>
 									<Height>720</Height>
+									<Framerate>30</Framerate>
+									<KeyFrameInterval>30</KeyFrameInterval>
+									<BFrames>0</BFrames>									
 									<Preset>faster</Preset>
+								</Video>	
+								<Audio>
+									<Name>bypass_audio</Name>
+									<Bypass>true</Bypass>
+								</Audio>																
+								-->
+								<!-- 
+									 If all conditions of BypassIfMatch are matched, bypass is used without encoding.
+									 [Options] 
+									   eq: euqal to
+									   lte: less than or equal to
+									   gte: greater than or equal to
+
+								<Video>
+									<Name>conditional_video_encoding</Name>
+									<Codec>h264</Codec>
+									<Bitrate>2024000</Bitrate>
+									<Width>1280</Width>
+									<Height>720</Height>
+									<Framerate>30</Framerate>
+									<BypassIfMatch>
+										<Codec>eq</Codec>
+										<Framerate>lte</Framerate>
+										<Width>lte</Width>
+										<Height>lte</Height>
+										<SAR>eq</SAR>
+									</BypassIfMatch>									
 								</Video>
+								<Audio>
+									<Name>conditional_audio_encoding</Name>
+									<Codec>aac</Codec>
+									<Bitrate>128000</Bitrate>
+									<Samplerate>48000</Samplerate>
+									<Channel>2</Channel>
+									<BypassIfMatch>
+										<Codec>eq</Codec>
+										<Samplerate>lte</Samplerate>
+										<Channel>eq</Channel>
+									</BypassIfMatch>
+								</Audio>																			
 								-->
 							</Encodes>
 						</OutputProfile>
@@ -387,6 +448,9 @@
 						<RTSPPull />
 						<WebRTC>
 							<Timeout>30000</Timeout>
+							<CrossDomains>
+								<Url>*</Url>
+							</CrossDomains>
 						</WebRTC>
 					</Providers>
 					<Publishers>

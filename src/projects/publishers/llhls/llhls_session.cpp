@@ -758,7 +758,7 @@ void LLHlsSession::ResponseData(const std::shared_ptr<http::svr::HttpExchange> &
 	auto sent_size = response->Response();
 	MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::LLHls, sent_size);
 
-	logtd("%s", exchange->GetDebugInfo().CStr());
+	logtd("\n%s", exchange->GetDebugInfo().CStr());
 
 	// Terminate the HTTP/2 stream
 	exchange->Release();

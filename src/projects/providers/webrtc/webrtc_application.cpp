@@ -161,7 +161,7 @@ namespace pvd
 		return offer_sdp;
 	}
 
-	std::shared_ptr<SessionDescription> WebRTCApplication::CreateAnswerSDP(const std::shared_ptr<const SessionDescription> &offer_sdp, const ov::String &local_ufrag, const std::vector<IceCandidate> &ice_candidates)
+	std::shared_ptr<SessionDescription> WebRTCApplication::CreateAnswerSDP(const std::shared_ptr<const SessionDescription> &offer_sdp, const ov::String &local_ufrag, const std::set<IceCandidate> &ice_candidates)
 	{
 		if(offer_sdp == nullptr)
 		{
@@ -288,7 +288,7 @@ namespace pvd
 		
 		answer_sdp->Update();
 
-		logtd("Answer SDP created : %s", answer_sdp->ToString().CStr());
+		logti("Answer SDP created : %s", answer_sdp->ToString().CStr());
 
 		return answer_sdp;
 	}

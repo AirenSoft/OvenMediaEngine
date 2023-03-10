@@ -15,4 +15,4 @@ We provide you our test player to make sure that OvenMediaEngine works well. Mos
 
 When playing Low-Latency DASH, you can control the delay time in the player as shown below. Delay time is closely related to the buffering size. The smaller the value, the shorter the latency, but if it is too small, there is no buffer and playback may not be smooth. In a typical network environment, it is most stable to give 2 as the delay value.
 
-![](<.gitbook/assets/image (22).png>)
+![](<.gitbook/assets/image (22) (1).png>)

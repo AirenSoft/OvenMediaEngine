@@ -109,8 +109,6 @@ bool WebRtcPublisher::Start()
 	if (StartSignallingServer(server_config, webrtc_bind_config) &&
 		StartICEPorts(server_config, webrtc_bind_config))
 	{
-		_message_thread.Start(ov::MessageThreadObserver<std::shared_ptr<ov::CommonMessage>>::GetSharedPtr());
-
 		return Publisher::Start();
 	}
 
@@ -133,20 +131,7 @@ bool WebRtcPublisher::Stop()
 		_signalling_server->Stop();
 	}
 
-	_message_thread.Stop();
-
 	return Publisher::Stop();
-}
-
-bool WebRtcPublisher::DisconnectSession(const std::shared_ptr<RtcSession> &session)
-{
-	auto message = std::make_shared<ov::CommonMessage>();
-	message->_code = static_cast<uint32_t>(MessageCode::DISCONNECT_SESSION);
-	message->_message = std::make_any<std::shared_ptr<RtcSession>>(session);
-
-	_message_thread.PostMessage(message);
-
-	return true;
 }
 
 bool WebRtcPublisher::DisconnectSessionInternal(const std::shared_ptr<RtcSession> &session)
@@ -160,30 +145,6 @@ bool WebRtcPublisher::DisconnectSessionInternal(const std::shared_ptr<RtcSession
 	session->Stop();
 
 	return true;
-}
-
-void WebRtcPublisher::OnMessage(const std::shared_ptr<ov::CommonMessage> &message)
-{
-	auto code = static_cast<MessageCode>(message->_code);
-	if (code == MessageCode::DISCONNECT_SESSION)
-	{
-		try
-		{
-			auto session = std::any_cast<std::shared_ptr<RtcSession>>(message->_message);
-			if (session == nullptr)
-			{
-				return;
-			}
-
-			_ice_port->RemoveSession(session->GetId());
-			DisconnectSessionInternal(session);
-		}
-		catch (const std::bad_any_cast &e)
-		{
-			logtc("Wrong message!");
-			return;
-		}
-	}
 }
 
 bool WebRtcPublisher::OnCreateHost(const info::Host &host_info)
