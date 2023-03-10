@@ -62,7 +62,7 @@ namespace cfg
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetIPList, _ip_list)
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetStunServer, _stun_server)
 
-		CFG_DECLARE_CONST_REF_GETTER_OF(IsPrivaryProtectionOn, _privacy_protection_on)
+		CFG_DECLARE_CONST_REF_GETTER_OF(IsPrivacyProtectionOn, _privacy_protection_on)
 
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetBind, _bind)
 

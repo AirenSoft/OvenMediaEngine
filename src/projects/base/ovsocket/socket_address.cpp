@@ -111,7 +111,7 @@ namespace ov
 		// There is no ':' in the string, So try to parse it as a port number
 		try
 		{
-			// If succeess, string consists only of a port number or a range of port numbers
+			// If success, string consists only of a port number or a range of port numbers
 			return Address("", ParsePort(string));
 		}
 		catch (const ov::Error &e)
@@ -676,7 +676,7 @@ namespace ov
 	ov::String SocketAddress::ToString(bool ignore_privacy_protect_config) const noexcept
 	{
 		auto server_config = cfg::ConfigManager::GetInstance()->GetServer();
-		const bool protect_privacy = (ignore_privacy_protect_config == false) && ((server_config != nullptr) && server_config->IsPrivaryProtectionOn());
+		const bool protect_privacy = (ignore_privacy_protect_config == false) && ((server_config != nullptr) && server_config->IsPrivacyProtectionOn());
 
 		ov::String description;
 
