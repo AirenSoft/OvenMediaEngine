@@ -394,7 +394,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 
 	// Passed AccessControl
 	ws_session->AddUserData("authorized", true);
-	ws_session->AddUserData("new_url", parsed_url->ToUrlString(true));
+	ws_session->AddUserData("final_url", parsed_url->ToUrlString(true));
 	ws_session->AddUserData("stream_expired", session_life_time);
 
 	return session_description;
@@ -411,10 +411,10 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	uint64_t session_life_time = 0;
 	if (autorized_exist == true && std::holds_alternative<bool>(authorized) == true && std::get<bool>(authorized) == true)
 	{
-		auto [new_url_exist, new_url] = ws_session->GetUserData("new_url");
-		if (new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
+		auto [final_url_exist, final_url] = ws_session->GetUserData("final_url");
+		if (final_url_exist == true && std::holds_alternative<ov::String>(final_url) == true)
 		{
-			uri = std::get<ov::String>(new_url);
+			uri = std::get<ov::String>(final_url);
 		}
 		else
 		{
@@ -490,10 +490,10 @@ bool WebRtcPublisher::OnChangeRendition(const std::shared_ptr<http::svr::ws::Web
 	ov::String uri;
 	if (autorized_exist == true && std::holds_alternative<bool>(authorized) == true && std::get<bool>(authorized) == true)
 	{
-		auto [new_url_exist, new_url] = ws_session->GetUserData("new_url");
-		if (new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
+		auto [final_url_exist, final_url] = ws_session->GetUserData("final_url");
+		if (final_url_exist == true && std::holds_alternative<ov::String>(final_url) == true)
 		{
-			uri = std::get<ov::String>(new_url);
+			uri = std::get<ov::String>(final_url);
 		}
 		else
 		{
@@ -553,15 +553,17 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::WebSock
 {
 	logti("Stop command received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 
-	ov::String uri{ws_session->GetRequest()->GetUri()};
+	auto request = ws_session->GetRequest();
+	ov::String uri{request->GetUri()};
 	auto parsed_url{ov::Url::Parse(uri)};
+	auto requested_url = parsed_url;
 
 	auto final_vhost_app_name = vhost_app_name;
 	auto final_stream_name = stream_name;
-	auto [new_url_exist, new_url] = ws_session->GetUserData("new_url");
-	if (new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
+	auto [final_url_exist, final_url] = ws_session->GetUserData("final_url");
+	if (final_url_exist == true && std::holds_alternative<ov::String>(final_url) == true)
 	{
-		uri = std::get<ov::String>(new_url);
+		uri = std::get<ov::String>(final_url);
 
 		parsed_url = ov::Url::Parse(uri);
 		if (parsed_url == nullptr)
@@ -575,10 +577,12 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::WebSock
 	}
 
 	// Send Close to Admission Webhooks
-	auto remote_address{ws_session->GetRequest()->GetRemote()->GetRemoteAddress()};
+	auto remote_address{request->GetRemote()->GetRemoteAddress()};
 	if (parsed_url && remote_address)
 	{
-		auto request_info = std::make_shared<AccessController::RequestInfo>(parsed_url, remote_address, ws_session->GetRequest()->GetHeader("USER-AGENT"));
+		std::shared_ptr<ov::Url> new_url = (request->GetUri() != uri) ? parsed_url : nullptr;
+
+		auto request_info = std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, new_url, request->GetHeader("USER-AGENT"));
 
 		SendCloseAdmissionWebhooks(request_info);
 	}

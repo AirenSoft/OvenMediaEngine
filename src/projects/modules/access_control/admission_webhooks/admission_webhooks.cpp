@@ -5,8 +5,8 @@
 std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(ProviderType provider,
 															const std::shared_ptr<ov::Url> &control_server_url, uint32_t timeout_msec,
 															const ov::String secret_key,
-															const std::shared_ptr<const ov::Url> &request_url,
-															const std::shared_ptr<const ClientInfo> &client_info,
+															const std::shared_ptr<const AdmissionWebhooks::RequestInfo> &request_info,
+															const std::shared_ptr<const AdmissionWebhooks::ClientInfo> &client_info,
 															const Status::Code status)
 {
 	auto hooks = std::make_shared<AdmissionWebhooks>();
@@ -15,7 +15,7 @@ std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(ProviderType provide
 	hooks->_control_server_url = control_server_url;
 	hooks->_timeout_msec = timeout_msec;
 	hooks->_secret_key = secret_key;
-	hooks->_requested_url = request_url;
+	hooks->_request_info = request_info;
 	hooks->_client_info = client_info;
 	hooks->_status = status;
 
@@ -27,8 +27,8 @@ std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(ProviderType provide
 std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(PublisherType publisher,
 															const std::shared_ptr<ov::Url> &control_server_url, uint32_t timeout_msec,
 															const ov::String secret_key,
-															const std::shared_ptr<const ov::Url> &request_url,
-															const std::shared_ptr<const ClientInfo> &client_info,
+															const std::shared_ptr<const AdmissionWebhooks::RequestInfo> &request_info,
+															const std::shared_ptr<const AdmissionWebhooks::ClientInfo> &client_info,
 															const Status::Code status)
 {
 	auto hooks = std::make_shared<AdmissionWebhooks>();
@@ -37,7 +37,7 @@ std::shared_ptr<AdmissionWebhooks> AdmissionWebhooks::Query(PublisherType publis
 	hooks->_control_server_url = control_server_url;
 	hooks->_timeout_msec = timeout_msec;
 	hooks->_secret_key = secret_key;
-	hooks->_requested_url = request_url;
+	hooks->_request_info = request_info;
 	hooks->_client_info = client_info;
 	hooks->_status = status;
 
@@ -81,6 +81,28 @@ const ov::String &AdmissionWebhooks::ClientInfo::GetUserAgent() const
 AdmissionWebhooks::ErrCode AdmissionWebhooks::GetErrCode() const
 {
 	return _err_code;
+}
+
+AdmissionWebhooks::RequestInfo::RequestInfo(const std::shared_ptr<const ov::Url> &url)
+	: _url(url)
+{
+
+}
+
+AdmissionWebhooks::RequestInfo::RequestInfo(const std::shared_ptr<const ov::Url> &url, const std::shared_ptr<const ov::Url> &new_url)
+	: _url(url), _new_url(new_url)
+{
+
+}
+
+std::shared_ptr<const ov::Url> AdmissionWebhooks::RequestInfo::GetUrl() const
+{
+	return _url;
+}
+
+std::shared_ptr<const ov::Url> AdmissionWebhooks::RequestInfo::GetNewUrl() const
+{
+	return _new_url;
 }
 
 ov::String AdmissionWebhooks::GetErrReason() const
@@ -165,7 +187,11 @@ ov::String AdmissionWebhooks::GetMessageBody()
 
 	jv_request["direction"] = direction.CStr();
 	jv_request["protocol"] = protocol.CStr();
-	jv_request["url"] = _requested_url->ToUrlString(true).CStr();
+	jv_request["url"] = _request_info->GetUrl()->ToUrlString(true).CStr();
+	if (_request_info->GetNewUrl() != nullptr)
+	{
+		jv_request["new_url"] = _request_info->GetNewUrl()->ToUrlString(true).CStr();
+	}
 	jv_request["status"] = Status::Description(_status).CStr();
 	jv_request["time"] = ov::Converter::ToISO8601String(std::chrono::system_clock::now()).CStr();
 	jv_root["request"] = jv_request;
@@ -215,7 +241,7 @@ void AdmissionWebhooks::ParseResponse(const std::shared_ptr<ov::Data> &data)
 	_allowed = jv_allowed.asBool();
 	if(_allowed == false)
 	{
-		_err_reason.Format("ControlServer(%s) denied admission to %s by %s.", _control_server_url->ToUrlString().CStr(), _requested_url->ToUrlString().CStr(), _client_info->GetClientAddress()->ToString(false).CStr());
+		_err_reason.Format("ControlServer(%s) denied admission to %s by %s.", _control_server_url->ToUrlString().CStr(), _request_info->GetUrl()->ToUrlString().CStr(), _client_info->GetClientAddress()->ToString(false).CStr());
 	}
 
 	// Optional data

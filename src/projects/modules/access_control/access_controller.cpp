@@ -28,9 +28,26 @@ AccessController::RequestInfo::RequestInfo(const std::shared_ptr<const ov::Url> 
 
 }
 
+AccessController::RequestInfo::RequestInfo(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, const std::shared_ptr<const ov::Url> &new_url)
+	: _request_url(request_url), _client_address(client_address), _new_url(new_url)
+{
+
+}
+
+AccessController::RequestInfo::RequestInfo(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, const std::shared_ptr<const ov::Url> &new_url, const ov::String &user_agent)
+	: _request_url(request_url), _client_address(client_address), _new_url(new_url), _user_agent(user_agent)
+{
+
+}
+
 std::shared_ptr<const ov::Url> AccessController::RequestInfo::GetRequestUrl() const
 {
 	return _request_url;
+}
+
+std::shared_ptr<const ov::Url> AccessController::RequestInfo::GetNewUrl() const
+{
+	return _new_url;
 }
 
 std::shared_ptr<ov::SocketAddress> AccessController::RequestInfo::GetClientAddress() const
@@ -44,7 +61,7 @@ const ov::String &AccessController::RequestInfo::GetUserAgent() const
 }
 
 
-std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> AccessController::SendCloseWebhooks(const std::shared_ptr<const RequestInfo> &request_info)
+std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> AccessController::SendCloseWebhooks(const std::shared_ptr<const AccessController::RequestInfo> &request_info)
 {
 	auto orchestrator = ocst::Orchestrator::GetInstance();
 	auto request_url = request_info->GetRequestUrl();
@@ -100,17 +117,19 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const Admission
 		std::shared_ptr<AdmissionWebhooks> admission_webhooks;
 		if(_provider_type != ProviderType::Unknown)
 		{
+			auto webhooks_request_info = std::make_shared<AdmissionWebhooks::RequestInfo>(request_url, request_info->GetNewUrl());
 			auto client_info = std::make_shared<AdmissionWebhooks::ClientInfo>(client_address, request_info->GetUserAgent());
 
 			admission_webhooks = AdmissionWebhooks::Query(
-				_provider_type, control_server_url, timeout_msec, secret_key, request_url, client_info, AdmissionWebhooks::Status::Code::CLOSING);
+				_provider_type, control_server_url, timeout_msec, secret_key, webhooks_request_info, client_info, AdmissionWebhooks::Status::Code::CLOSING);
 		}
 		else if(_publisher_type != PublisherType::Unknown)
 		{
+			auto webhooks_request_info = std::make_shared<AdmissionWebhooks::RequestInfo>(request_url, request_info->GetNewUrl());
 			auto client_info = std::make_shared<AdmissionWebhooks::ClientInfo>(client_address, request_info->GetUserAgent());
 
 			admission_webhooks = AdmissionWebhooks::Query(
-				_publisher_type, control_server_url, timeout_msec, secret_key, request_url, client_info, AdmissionWebhooks::Status::Code::CLOSING);
+				_publisher_type, control_server_url, timeout_msec, secret_key, webhooks_request_info, client_info, AdmissionWebhooks::Status::Code::CLOSING);
 		}
 		else
 		{
@@ -142,7 +161,7 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const Admission
 	return {AccessController::VerificationResult::Error, nullptr};
 }
 
-std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> AccessController::VerifyByWebhooks(const std::shared_ptr<const RequestInfo> &request_info)
+std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> AccessController::VerifyByWebhooks(const std::shared_ptr<const AccessController::RequestInfo> &request_info)
 {
 	auto orchestrator = ocst::Orchestrator::GetInstance();
 	auto request_url = request_info->GetRequestUrl();
@@ -198,15 +217,17 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const Admission
 		std::shared_ptr<AdmissionWebhooks> admission_webhooks;
 		if(_provider_type != ProviderType::Unknown)
 		{
+			auto webhooks_request_info = std::make_shared<AdmissionWebhooks::RequestInfo>(request_url);
 			auto client_info = std::make_shared<AdmissionWebhooks::ClientInfo>(client_address, request_info->GetUserAgent());
 
-			admission_webhooks = AdmissionWebhooks::Query(_provider_type, control_server_url, timeout_msec, secret_key, request_url, client_info);
+			admission_webhooks = AdmissionWebhooks::Query(_provider_type, control_server_url, timeout_msec, secret_key, webhooks_request_info, client_info);
 		}
 		else if(_publisher_type != PublisherType::Unknown)
 		{
+			auto webhooks_request_info = std::make_shared<AdmissionWebhooks::RequestInfo>(request_url);
 			auto client_info = std::make_shared<AdmissionWebhooks::ClientInfo>(client_address, request_info->GetUserAgent());
 
-			admission_webhooks = AdmissionWebhooks::Query(_publisher_type, control_server_url, timeout_msec, secret_key, request_url, client_info);
+			admission_webhooks = AdmissionWebhooks::Query(_publisher_type, control_server_url, timeout_msec, secret_key, webhooks_request_info, client_info);
 		}
 		else
 		{

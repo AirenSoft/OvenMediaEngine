@@ -133,7 +133,7 @@ namespace pvd
 			auto remote_address { _remote->GetRemoteAddress() };
 			if (remote_address)
 			{
-				auto request_info = std::make_shared<AccessController::RequestInfo>(_url, remote_address);
+				auto request_info = std::make_shared<AccessController::RequestInfo>(_url, remote_address, _url->ToUrlString(true) == _publish_url->ToUrlString(true) ? nullptr : _publish_url);
 
 				GetProvider()->SendCloseAdmissionWebhooks(request_info);
 			}
