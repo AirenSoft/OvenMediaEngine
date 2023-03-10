@@ -13,8 +13,8 @@
 #include "analytics/analytics.h"
 #include "base/ovlibrary/uuid.h"
 #include "bind/bind.h"
-#include "modules/modules.h"
 #include "managers/managers.h"
+#include "modules/modules.h"
 #include "virtual_hosts/virtual_hosts.h"
 
 namespace cfg

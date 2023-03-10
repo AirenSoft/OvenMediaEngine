@@ -87,6 +87,10 @@
 					<!-- Uncomment the line below to use IPv6 ICE Candidate -->
 					<!-- <IceCandidate>[::]:10000-10004/udp</IceCandidate> -->
 					<IceCandidate>*:10000-10004/udp</IceCandidate>
+
+					<!-- Uncomment the line below to use a link local address when specifying an address with IPv6 wildcard (::) -->
+					<!-- <EnableLinkLocalAddress>true</EnableLinkLocalAddress> -->
+
 					<!-- 
 						If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
 						This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
@@ -125,6 +129,10 @@
 					<!-- Uncomment the line below to use IPv6 ICE Candidate -->
 					<!-- <IceCandidate>[::]:10000-10004/udp</IceCandidate> -->
 					<IceCandidate>*:10000-10004/udp</IceCandidate>
+					
+					<!-- Uncomment the line below to use a link local address when specifying an address with IPv6 wildcard (::) -->
+					<!-- <EnableLinkLocalAddress>true</EnableLinkLocalAddress> -->
+
 					<!-- 
 						If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
 						This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
@@ -250,7 +258,7 @@
 					</Pass>
 				</Origin>
 			</Origins> -->
-			
+
 			<!--
 			<OriginMapStore>
 				In order to use OriginMap, you must enable OVT Publisher in Origin and OVT Provider in Edge.
@@ -263,7 +271,7 @@
 				<OriginHostName>ome-dev.airensoft.com</OriginHostName>
 			</OriginMapStore>
 			-->
-			
+
 			<!-- Settings for applications -->
 			<Applications>
 				<Application>
@@ -335,7 +343,7 @@
 									<BypassIfMatch>
 										<Codec>eq</Codec>
 									</BypassIfMatch>
-								</Audio>								
+								</Audio>
 								<Audio>
 									<Name>opus_audio</Name>
 									<Codec>opus</Codec>
@@ -344,7 +352,7 @@
 									<Channel>2</Channel>
 									<BypassIfMatch>
 										<Codec>eq</Codec>
-									</BypassIfMatch>									
+									</BypassIfMatch>
 								</Audio>
 								<!--
 								<Video>
@@ -408,7 +416,7 @@
 										<Channel>eq</Channel>
 									</BypassIfMatch>
 								</Audio>																			
-								-->								
+								-->
 							</Encodes>
 						</OutputProfile>
 					</OutputProfiles>

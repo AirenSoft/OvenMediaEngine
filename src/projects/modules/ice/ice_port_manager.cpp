@@ -253,7 +253,7 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 		ov::SocketType socket_type;
 		ov::SocketAddress::Address address;
 
-		if (ParseIceCandidate(ice_candidate_config, &ip_list, &socket_type, &address) == false)
+		if (ParseIceCandidate(ice_candidate_config, &ip_list, &socket_type, &address, ice_candidates_config.GetEnableLinkLocalAddress()) == false)
 		{
 			return false;
 		}
@@ -296,7 +296,7 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 	return true;
 }
 
-bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, ov::SocketAddress::Address *address)
+bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, ov::SocketAddress::Address *address, const bool include_local_link_address)
 {
 	// Create SocketAddress instances from string
 	//
@@ -367,27 +367,28 @@ bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vec
 	}
 
 	*address = ov::SocketAddress::ParseAddress(tokens[0]);
+	auto address_utilities = ov::AddressUtilities::GetInstance();
 
 	const auto &host = address->host;
 
 	if (host.IsEmpty())
 	{
 		// Add both of IPv4 and IPv6 addresses
-		auto local_ip_list = ov::AddressUtilities::GetInstance()->GetIpList(ov::SocketFamily::Inet);
+		auto local_ip_list = address_utilities->GetIPv4List();
 		ip_list->insert(ip_list->end(), local_ip_list.cbegin(), local_ip_list.cend());
-		local_ip_list = ov::AddressUtilities::GetInstance()->GetIpList(ov::SocketFamily::Inet6);
+		local_ip_list = address_utilities->GetIPv6List(include_local_link_address);
 		ip_list->insert(ip_list->end(), local_ip_list.cbegin(), local_ip_list.cend());
 	}
 	else if (host == "*")
 	{
 		// IPv4 wildcard - Add IPv4 addresses
-		auto local_ip_list = ov::AddressUtilities::GetInstance()->GetIpList(ov::SocketFamily::Inet);
+		auto local_ip_list = address_utilities->GetIPv4List();
 		ip_list->insert(ip_list->end(), local_ip_list.cbegin(), local_ip_list.cend());
 	}
 	else if (host == "::")
 	{
 		// IPv6 wildcard - Add IPv6 addresses
-		auto local_ip_list = ov::AddressUtilities::GetInstance()->GetIpList(ov::SocketFamily::Inet6);
+		auto local_ip_list = address_utilities->GetIPv6List(include_local_link_address);
 		ip_list->insert(ip_list->end(), local_ip_list.cbegin(), local_ip_list.cend());
 	}
 	else
