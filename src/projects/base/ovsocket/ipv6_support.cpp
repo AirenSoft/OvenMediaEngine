@@ -21,16 +21,15 @@ namespace ov
 	{
 		namespace internal
 		{
-			using socket_ptr_t = std::unique_ptr<socket_t, std::function<void(int *handle)>>;
+			using socket_ptr_t = std::unique_ptr<socket_t, std::function<void(socket_t *handle)>>;
 			socket_ptr_t MakeSocketPtr(socket_t handle)
 			{
 				// For RAII
-				socket_ptr_t raii_handle(
+				return socket_ptr_t(
+					// The handle passed here is not actually a pointer, but a socket descriptor
 					reinterpret_cast<socket_t *>(handle), [](socket_t *handle) {
 						::close(static_cast<socket_t>(reinterpret_cast<std::uintptr_t>(handle)));
 					});
-
-				return raii_handle;
 			}
 
 			std::shared_ptr<ov::Error> CheckIPv6Support()
