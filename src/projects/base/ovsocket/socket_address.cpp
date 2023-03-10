@@ -22,6 +22,8 @@
 
 namespace ov
 {
+	ov::Regex g_port_range_regex = ov::Regex::CompiledRegex("^[0-9-,]+$");
+
 	std::vector<SocketAddress::PortRange> SocketAddress::ParsePort(const ov::String &string)
 	{
 		std::vector<SocketAddress::PortRange> range_list;
@@ -67,6 +69,10 @@ namespace ov
 				range_list.emplace_back(start_port, end_port);
 			}
 		}
+		else
+		{
+			range_list.emplace_back(0, 0);
+		}
 
 		return range_list;
 	}
@@ -109,17 +115,14 @@ namespace ov
 		}
 
 		// There is no ':' in the string, So try to parse it as a port number
-		try
+		if (g_port_range_regex.Matches(string).IsMatched())
 		{
-			// If success, string consists only of a port number or a range of port numbers
-			return Address("", ParsePort(string));
-		}
-		catch (const ov::Error &e)
-		{
+			// The ```string``` consists only of a port number or a range of port numbers
+			return Address{"", ParsePort(string)};
 		}
 
 		// If failed, string consists only of a host name or an IP address
-		return Address(string, {});
+		return Address{string, {PortRange{0, 0}}};
 	}
 
 	void SocketAddress::CreateInternal(const ov::String &host, uint16_t port, std::vector<SocketAddress> *address_list)
@@ -250,6 +253,40 @@ namespace ov
 		return {};
 	}
 
+	SocketAddress::AddrInfoPtr SocketAddress::GetAddrInfo(const ov::String &host)
+	{
+		addrinfo *info = nullptr;
+
+		int result = ::getaddrinfo(host, nullptr, nullptr, &info);
+
+		if (result != 0)
+		{
+			switch (result)
+			{
+				case EAI_NONAME:
+					// NAME or SERVICE is unknown
+					throw ov::SocketAddressError("Name or service is unknown: \"%s\"", host.CStr());
+
+				case EAI_AGAIN:
+					// Temporary failure in name resolution (Is the DNS not working?)
+					throw ov::SocketAddressError("Temporary failure in name resolution: \"%s\"", host.CStr());
+
+				default:
+					throw ov::SocketAddressError("Could not resolve name: \"%s\" (%d)", host.CStr(), result);
+			}
+		}
+
+		if (info != nullptr)
+		{
+			return AddrInfoPtr(info, [](addrinfo *info) {
+				OV_SAFE_FUNC(info, nullptr, ::freeaddrinfo, );
+			});
+		}
+
+		OV_ASSERT2(info != nullptr);
+		throw ov::SocketAddressError(ov::Error::CreateErrorFromErrno(), "getaddrinfo() returns invalid value: %s", host);
+	}
+
 	bool SocketAddress::Resolve(ov::String host, SocketAddress::StorageList *storage_list, bool *is_wildcard_host)
 	{
 		const auto ipv4_supported = ov::ipv6::Checker::GetInstance()->IsIPv4Supported();
@@ -259,12 +296,18 @@ namespace ov
 		{
 			if (ipv4_supported)
 			{
-				Resolve("*", storage_list, is_wildcard_host);
+				if (Resolve("*", storage_list, is_wildcard_host) == false)
+				{
+					return false;
+				}
 			}
 
 			if (ipv6_supported)
 			{
-				Resolve("::", storage_list, is_wildcard_host);
+				if (Resolve("::", storage_list, is_wildcard_host) == false)
+				{
+					return false;
+				}
 			}
 
 			OV_ASSERT2(*is_wildcard_host == true);
@@ -273,63 +316,42 @@ namespace ov
 
 		if (host == "*")
 		{
-			if (ipv4_supported)
-			{
-				// IPv4: INADDR_ANY
-				host = "0.0.0.0";
-				*is_wildcard_host = true;
-			}
-			else
+			if (ipv4_supported == false)
 			{
 				logtw("The wildcard \"*\" is used, but IPv4 is not supported");
 				return true;
 			}
+
+			// IPv4: INADDR_ANY
+			host = "0.0.0.0";
+			*is_wildcard_host = true;
 		}
 		else if (host == "::")
 		{
-			if (ipv6_supported)
-			{
-				// IPv6: in6addr_any
-				*is_wildcard_host = true;
-			}
-			else
+			if (ipv6_supported == false)
 			{
 				logtw("The wildcard \"::\" is used, but IPv6 is not supported");
 				return true;
 			}
+
+			// IPv6: in6addr_any
+			*is_wildcard_host = true;
 		}
 		else
 		{
 			*is_wildcard_host = false;
 		}
 
-		addrinfo *result = nullptr;
+		auto addr_info = GetAddrInfo(host);
 
-		if (::getaddrinfo(host, nullptr, nullptr, &result) != 0)
+		if (addr_info == nullptr)
 		{
-			// If the DNS server is not working, -3 is returned, errno: 11 (Resource temporarily unavailable)
-			// If the form of host is invalid like '1.2.3.4:1234', -2 is returned, errno: 22 (Invalid argument)
-			auto error = ov::Error::CreateErrorFromErrno();
-
-			if (error->GetCode() == -3)
-			{
-				// DNS server is not working - ignore this error
-				return false;
-			}
-			else
-			{
-				throw ov::SocketAddressError(error, "Invalid host format: \"%s\"", host.CStr());
-			}
-		}
-
-		if (result == nullptr)
-		{
-			OV_ASSERT2(result != nullptr);
-			throw ov::SocketAddressError(ov::Error::CreateErrorFromErrno(), "getaddrinfo() returns invalid value: %s", host);
+			OV_ASSERT2(addr_info != nullptr);
+			return false;
 		}
 
 		sockaddr_storage storage;
-		const addrinfo *item = result;
+		const addrinfo *item = addr_info.get();
 		ov::String description;
 
 		while (item != nullptr)
@@ -370,7 +392,6 @@ namespace ov
 			item = item->ai_next;
 		}
 
-		OV_SAFE_FUNC(result, nullptr, ::freeaddrinfo, );
 		return true;
 	}
 
@@ -703,20 +724,13 @@ namespace ov
 			}
 			else
 			{
-				if ((hostname.IsEmpty() == false) && (hostname != ip))
+				if (IsIPv6())
 				{
-					description.AppendFormat("%s(%s)", hostname.CStr(), ip.CStr());
+					description.AppendFormat("[%s]", ip.CStr());
 				}
 				else
 				{
-					if (IsIPv6())
-					{
-						description.AppendFormat("[%s]", ip.CStr());
-					}
-					else
-					{
-						description.Append(ip);
-					}
+					description.Append(ip);
 				}
 			}
 
@@ -727,6 +741,14 @@ namespace ov
 			else
 			{
 				description.AppendFormat(":%d", Port());
+			}
+
+			if (hostname != ip)
+			{
+				description.AppendFormat(" (host: '%s')", hostname.CStr());
+			}
+			else
+			{
 			}
 		}
 		else
