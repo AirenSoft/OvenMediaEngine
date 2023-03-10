@@ -49,7 +49,8 @@ X-OME-Signature: f871jd991jj1929jsjd91pqa0amm1
   "client": 
   {
     "address": "211.233.58.86",
-    "port": 29291
+    "port": 29291,
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
   },
   "request":
   {
@@ -66,17 +67,18 @@ The message is sent in POST method and the payload is in application/json format
 
 Here is a detailed explanation of each element of Json payload:
 
-| Element | Sub-Element | Description                                                                                                 |
-| ------- | ----------- | ----------------------------------------------------------------------------------------------------------- |
-| client  |             | Information of the client who requested the connection.                                                     |
-|         | address     | Client's IP address                                                                                         |
-|         | port        | Client's Port number                                                                                        |
-| request |             | Information about the client's request                                                                      |
-|         | direction   | <p>incoming : A client requests to publish a stream</p><p>outgoing : A client requests to play a stream</p> |
-|         | protocol    | webrtc, srt, rtmp, hls, dash, lldash                                                                        |
-|         | status      | <p>opening : A client requests to open a stream</p><p>outgoing : A client closed the stream</p>             |
-|         | url         | url requested by the client                                                                                 |
-|         | time        | time requested by the client (ISO8601 format)                                                               |
+| Element | Sub-Element               | Description                                                                                                 |
+| ------- | ------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| client  |                           | Information of the client who requested the connection.                                                     |
+|         | address                   | Client's IP address                                                                                         |
+|         | port                      | Client's Port number                                                                                        |
+|         | user-agent<br/>(optional) | Client's User-Agent                                                                                         |
+| request |                           | Information about the client's request                                                                      |
+|         | direction                 | <p>incoming : A client requests to publish a stream</p><p>outgoing : A client requests to play a stream</p> |
+|         | protocol                  | webrtc, srt, rtmp, hls, dash, lldash                                                                        |
+|         | status                    | <p>opening : A client requests to open a stream</p><p>outgoing : A client closed the stream</p>             |
+|         | url                       | url requested by the client                                                                                 |
+|         | time                      | time requested by the client (ISO8601 format)                                                               |
 
 ### Security
 
