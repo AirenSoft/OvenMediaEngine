@@ -81,8 +81,8 @@ namespace ov
 	{
 		while (true)
 		{
-			SocketAddress address;
-			SocketWrapper client_socket = Socket::Accept(&address);
+			SocketAddress remote_address;
+			SocketWrapper client_socket = Socket::Accept(&remote_address);
 
 			if (client_socket.IsValid() == false)
 			{
@@ -90,9 +90,9 @@ namespace ov
 				return;
 			}
 
-			logad("Trying to allocate a socket for client: %s", address.ToString(false).CStr());
+			logad("Trying to allocate a socket for client: %s", remote_address.ToString(false).CStr());
 
-			auto client = _pool->AllocSocket<ClientSocket>(address.GetFamily(), GetSharedPtrAs<ServerSocket>(), client_socket, address);
+			auto client = _pool->AllocSocket<ClientSocket>(remote_address.GetFamily(), GetSharedPtrAs<ServerSocket>(), client_socket, remote_address);
 
 			if (client != nullptr)
 			{

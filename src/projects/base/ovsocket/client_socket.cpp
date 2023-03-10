@@ -44,8 +44,6 @@ namespace ov
 	{
 		OV_ASSERT2(server_socket != nullptr);
 
-		// _local_address = (server_socket != nullptr) ? server_socket->GetLocalAddress() : nullptr;
-
 		RetrieveLocalAddress();
 	}
 
@@ -70,22 +68,21 @@ namespace ov
 
 	bool ClientSocket::StoreSrtStreamId()
 	{
-		if (GetType() == ov::SocketType::Srt)
+		if (GetType() != ov::SocketType::Srt)
 		{
-			char stream_id_buff[512];
-			int stream_id_len = sizeof(stream_id_buff);
-			if (srt_getsockflag(GetNativeHandle(), SRT_SOCKOPT::SRTO_STREAMID, &stream_id_buff[0], &stream_id_len) != SRT_ERROR)
-			{
-				_stream_id = ov::String(stream_id_buff, stream_id_len);
-				return true;
-			}
-			else
-			{
-				return false;
-			}
+			return true;
 		}
 
-		return true;
+		char stream_id_buff[512];
+		int stream_id_len = sizeof(stream_id_buff);
+
+		if (::srt_getsockflag(GetNativeHandle(), SRT_SOCKOPT::SRTO_STREAMID, &stream_id_buff[0], &stream_id_len) != SRT_ERROR)
+		{
+			_stream_id = ov::String(stream_id_buff, stream_id_len);
+			return true;
+		}
+
+		return false;
 	}
 
 	bool ClientSocket::RetrieveLocalAddress()
@@ -96,13 +93,12 @@ namespace ov
 		if (GetType() == ov::SocketType::Srt)
 		{
 			int local_length = sizeof(local_addr);
-			srt_getsockname(GetNativeHandle(), reinterpret_cast<sockaddr *>(&local_addr), &local_length);
-			return true;
+			::srt_getsockname(GetNativeHandle(), reinterpret_cast<sockaddr *>(&local_addr), &local_length);
 		}
 		else
-		{	
+		{
 			socklen_t local_length = sizeof(local_addr);
-			getsockname(GetNativeHandle(), reinterpret_cast<sockaddr *>(&local_addr), &local_length);
+			::getsockname(GetNativeHandle(), reinterpret_cast<sockaddr *>(&local_addr), &local_length);
 		}
 
 		_local_address = std::make_shared<SocketAddress>("", local_addr);
