@@ -19,8 +19,19 @@ std::shared_ptr<LLHlsSession> LLHlsSession::Create(session_id_t session_id,
 												const std::shared_ptr<pub::Stream> &stream,
 												uint64_t session_life_time)
 {
+	return LLHlsSession::Create(session_id, origin_mode, session_key, application, stream, nullptr, session_life_time);
+}
+
+std::shared_ptr<LLHlsSession> LLHlsSession::Create(session_id_t session_id, 
+												const bool &origin_mode,
+												const ov::String &session_key,
+												const std::shared_ptr<pub::Application> &application,
+												const std::shared_ptr<pub::Stream> &stream,
+												const std::shared_ptr<const AccessController::RequestInfo> &access_control_request,
+												uint64_t session_life_time)
+{
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), session_id);
-	auto session = std::make_shared<LLHlsSession>(session_info, origin_mode, session_key, application, stream, session_life_time);
+	auto session = std::make_shared<LLHlsSession>(session_info, origin_mode, session_key, application, stream, access_control_request, session_life_time);
 
 	if (session->Start() == false)
 	{
@@ -35,9 +46,9 @@ LLHlsSession::LLHlsSession(const info::Session &session_info,
 							const ov::String &session_key,
 							const std::shared_ptr<pub::Application> &application, 
 							const std::shared_ptr<pub::Stream> &stream,
+							const std::shared_ptr<const AccessController::RequestInfo> &access_control_request,
 							uint64_t session_life_time)
-	: pub::Session(session_info, application, stream)
-
+	: pub::Session(session_info, application, stream), _access_control_request(access_control_request)
 {
 	_origin_mode = origin_mode;
 	_session_life_time = session_life_time;
@@ -77,6 +88,11 @@ bool LLHlsSession::Stop()
 const ov::String &LLHlsSession::GetSessionKey() const
 {
 	return _session_key;
+}
+
+std::shared_ptr<const AccessController::RequestInfo> LLHlsSession::GetAccessControlRequest() const
+{
+	return _access_control_request;
 }
 
 void LLHlsSession::UpdateLastRequest(uint32_t connection_id)

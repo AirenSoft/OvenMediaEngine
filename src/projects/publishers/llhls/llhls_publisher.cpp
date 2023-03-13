@@ -229,8 +229,8 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		auto response = exchange->GetResponse();
 		auto remote_address = request->GetRemote()->GetRemoteAddress();
 
-		auto request_url = request->GetParsedUri();
-		if (request_url == nullptr)
+		auto final_url = request->GetParsedUri();
+		if (final_url == nullptr)
 		{
 			logte("Could not parse request url: %s", request->GetUri().CStr());
 			response->SetStatusCode(http::StatusCode::BadRequest);
@@ -238,17 +238,18 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		}
 
 		// PORT can be omitted if port is default port, but SignedPolicy requires this information.
-		if (request_url->Port() == 0)
+		if (final_url->Port() == 0)
 		{
-			request_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+			final_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 		}
+		auto requested_url = final_url;
 
 		logtd("LLHLS requested(connection : %u): %s", connection->GetId(), request->GetUri().CStr());
 
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
 		if (vhost_app_name.IsValid() == false)
 		{
-			logte("Could not resolve application name from domain: %s", request_url->Host().CStr());
+			logte("Could not resolve application name from domain: %s", final_url->Host().CStr());
 			response->SetStatusCode(http::StatusCode::NotFound);
 			return http::svr::NextHandler::DoNotCall;
 		}
@@ -262,23 +263,23 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		}
 
 		auto origin_mode = application->IsOriginMode();
-		auto host_name = request_url->Host();
-		auto stream_name = request_url->Stream();
+		auto host_name = final_url->Host();
+		auto stream_name = final_url->Stream();
 
 		uint64_t session_life_time = 0;
-		bool access_control_enabled = IsAccessControlEnabled(request_url);
+		bool access_control_enabled = IsAccessControlEnabled(final_url);
 
 		// Check if the request is for the master playlist
-		if (access_control_enabled == true && (request_url->File().IndexOf(".m3u8") > 0 && request_url->File().IndexOf("chunklist") == -1))
+		if (access_control_enabled == true && (final_url->File().IndexOf(".m3u8") > 0 && final_url->File().IndexOf("chunklist") == -1))
 		{
-			auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(request_url, remote_address);
+			auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(final_url, remote_address);
 			if (signed_policy_result == AccessController::VerificationResult::Pass)
 			{
 				session_life_time = signed_policy->GetStreamExpireEpochMSec();
 			}
 			else if (signed_policy_result == AccessController::VerificationResult::Error)
 			{
-				logte("Could not resolve application name from domain: %s", request_url->Host().CStr());
+				logte("Could not resolve application name from domain: %s", final_url->Host().CStr());
 				response->SetStatusCode(http::StatusCode::Unauthorized);
 				return http::svr::NextHandler::DoNotCall;
 			}
@@ -290,7 +291,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			}
 
 			// Admission Webhooks
-			auto request_info = std::make_shared<AccessController::RequestInfo>(request_url, remote_address, request->GetHeader("USER-AGENT"));
+			auto request_info = std::make_shared<AccessController::RequestInfo>(final_url, remote_address, request->GetHeader("USER-AGENT"));
 
 			auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
 			if (webhooks_result == AccessController::VerificationResult::Off)
@@ -313,20 +314,20 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 				// Redirect URL
 				if (admission_webhooks->GetNewURL() != nullptr)
 				{
-					request_url = admission_webhooks->GetNewURL();
-					if (request_url->Port() == 0)
+					final_url = admission_webhooks->GetNewURL();
+					if (final_url->Port() == 0)
 					{
-						request_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+						final_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 					}
 
-					vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
-					host_name = request_url->Host();
-					stream_name = request_url->Stream();
+					vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+					host_name = final_url->Host();
+					stream_name = final_url->Stream();
 				}
 			}
 			else if (webhooks_result == AccessController::VerificationResult::Error)
 			{
-				logtw("AdmissionWebhooks error : %s", request_url->ToUrlString().CStr());
+				logtw("AdmissionWebhooks error : %s", final_url->ToUrlString().CStr());
 				response->SetStatusCode(http::StatusCode::Unauthorized);
 				return http::svr::NextHandler::DoNotCall;
 			}
@@ -338,14 +339,14 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			}
 		}
 
-		auto stream = application->GetStream(request_url->Stream());
+		auto stream = application->GetStream(final_url->Stream());
 		if (stream == nullptr)
 		{
 			// If the stream does not exists, request to the provider
-			stream = PullStream(request_url, vhost_app_name, host_name, stream_name);
+			stream = PullStream(final_url, vhost_app_name, host_name, stream_name);
 			if (stream == nullptr)
 			{
-				logte("Could not pull the stream : %s", request_url->Stream().CStr());
+				logte("Could not pull the stream : %s", final_url->Stream().CStr());
 				response->SetStatusCode(http::StatusCode::NotFound);
 				return http::svr::NextHandler::DoNotCall;
 			}
@@ -361,7 +362,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		std::shared_ptr<LLHlsSession> session = nullptr;
 
 		// Master playlist (.m3u8 and NOT *chunklist*.m3u8)
-		if (request_url->File().IndexOf(".m3u8") > 0 && request_url->File().IndexOf("chunklist") == -1)
+		if (final_url->File().IndexOf(".m3u8") > 0 && final_url->File().IndexOf("chunklist") == -1)
 		{
 			session_id_t session_id = connection->GetId();
 
@@ -378,7 +379,11 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			if (session == nullptr || session->GetStream() != stream)
 			{
 				// New HTTP Connection
-				session = LLHlsSession::Create(session_id, origin_mode, "", stream->GetApplication(), stream, session_life_time);
+				auto new_url = (final_url == requested_url) ? nullptr : final_url;
+				auto access_control_request = (access_control_enabled == true)
+																			? std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, new_url, request->GetHeader("USER-AGENT")) : nullptr;
+
+				session = LLHlsSession::Create(session_id, origin_mode, "", stream->GetApplication(), stream, access_control_request, session_life_time);
 				if (session == nullptr)
 				{
 					logte("Could not create llhls session for request: %s", request->ToString().CStr());
@@ -400,11 +405,11 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			{
 				// ?session=<session id>_<key>
 				// This collects them into one session even if one player connects through multiple connections.
-				auto query_string = request_url->GetQueryValue("session");
+				auto query_string = final_url->GetQueryValue("session");
 				auto id_key = query_string.Split("_");
 				if (id_key.size() != 2)
 				{
-					logte("Invalid session key : %s", request_url->ToUrlString().CStr());
+					logte("Invalid session key : %s", final_url->ToUrlString().CStr());
 					response->SetStatusCode(http::StatusCode::Unauthorized);
 					return http::svr::NextHandler::DoNotCall;
 				}
@@ -418,7 +423,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			{
 				if (access_control_enabled == true)
 				{
-					logte("Invalid session_key : %s", request_url->ToUrlString().CStr());
+					logte("Invalid session_key : %s", final_url->ToUrlString().CStr());
 					response->SetStatusCode(http::StatusCode::Unauthorized);
 					return http::svr::NextHandler::DoNotCall;
 				}
@@ -440,7 +445,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			{
 				if (access_control_enabled == true && session_key != session->GetSessionKey())
 				{
-					logte("Invalid session_key : %s", request_url->ToUrlString().CStr());
+					logte("Invalid session_key : %s", final_url->ToUrlString().CStr());
 					response->SetStatusCode(http::StatusCode::Unauthorized);
 					return http::svr::NextHandler::DoNotCall;
 				}
@@ -483,6 +488,12 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 					auto stream = session->GetStream();
 					if (stream != nullptr)
 					{
+						auto access_control_request = session->GetAccessControlRequest();
+						if (access_control_request != nullptr)
+						{
+							SendCloseAdmissionWebhooks(access_control_request);
+						}
+
 						stream->RemoveSession(session->GetId());
 					}
 				}

@@ -11,6 +11,8 @@
 #include <base/publisher/session.h>
 #include <list>
 
+#include <modules/access_control/access_controller.h>
+
 #define MAX_PENDING_REQUESTS 10
 
 class LLHlsSession : public pub::Session
@@ -23,11 +25,20 @@ public:
 												const std::shared_ptr<pub::Stream> &stream,
 												uint64_t session_life_time);
 
+	static std::shared_ptr<LLHlsSession> Create(session_id_t session_id, 
+												const bool &origin_mode,
+												const ov::String &session_key, 
+												const std::shared_ptr<pub::Application> &application,
+												const std::shared_ptr<pub::Stream> &stream,
+												const std::shared_ptr<const AccessController::RequestInfo> &access_control_request,
+												uint64_t session_life_time);
+
 	LLHlsSession(const info::Session &session_info, 
 				const bool &origin_mode,
 				const ov::String &session_key,
 				const std::shared_ptr<pub::Application> &application, 
 				const std::shared_ptr<pub::Stream> &stream,
+				const std::shared_ptr<const AccessController::RequestInfo> &access_control_request,
 				uint64_t session_life_time);
 	
 	~LLHlsSession() override;
@@ -49,6 +60,8 @@ public:
 
 	// Get session key
 	const ov::String &GetSessionKey() const;
+
+	std::shared_ptr<const AccessController::RequestInfo> GetAccessControlRequest() const;
 
 private:
 
@@ -109,4 +122,6 @@ private:
 	int _partial_segment_max_age = -1;
 
 	bool _origin_mode = false;
+
+	const std::shared_ptr<const AccessController::RequestInfo> _access_control_request;
 };

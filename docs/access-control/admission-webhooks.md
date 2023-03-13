@@ -58,6 +58,7 @@ X-OME-Signature: f871jd991jj1929jsjd91pqa0amm1
     "protocol": "webrtc | rtmp | srt | llhls",
     "status": "opening | closing",
     "url": "scheme://host[:port]/app/stream/file?query=value&query2=value2",
+    "new_url": "scheme://host[:port]/app/new_stream/file?query=value&query2=value2",
     "time": ""2021-05-12T13:45:00.000Z"
   }
 }
@@ -76,8 +77,9 @@ Here is a detailed explanation of each element of Json payload:
 | request |                           | Information about the client's request                                                                      |
 |         | direction                 | <p>incoming : A client requests to publish a stream</p><p>outgoing : A client requests to play a stream</p> |
 |         | protocol                  | webrtc, srt, rtmp, hls, dash, lldash                                                                        |
-|         | status                    | <p>opening : A client requests to open a stream</p><p>outgoing : A client closed the stream</p>             |
+|         | status                    | <p>opening : A client requests to open a stream</p><p>closing : A client closed the stream</p>              |
 |         | url                       | url requested by the client                                                                                 |
+|         | new_url<br/>(optional)    | url redirected from user's control server (status "closing" only)                                           |
 |         | time                      | time requested by the client (ISO8601 format)                                                               |
 
 ### Security

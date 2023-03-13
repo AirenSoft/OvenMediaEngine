@@ -376,7 +376,7 @@ namespace pvd
 
 		// Passed AccessControl
 		ws_session->AddUserData("authorized", true);
-		ws_session->AddUserData("new_url", parsed_url->ToUrlString(true));
+		ws_session->AddUserData("final_url", parsed_url->ToUrlString(true));
 		ws_session->AddUserData("stream_expired", session_life_time);
 
 		return session_description;
@@ -392,10 +392,10 @@ namespace pvd
 		uint64_t session_life_time = 0;
 		if (autorized_exist == true && std::holds_alternative<bool>(authorized) == true && std::get<bool>(authorized) == true)
 		{
-			auto [new_url_exist, new_url] = ws_session->GetUserData("new_url");
-			if (new_url_exist == true && std::holds_alternative<ov::String>(new_url) == true)
+			auto [final_url_exist, final_url] = ws_session->GetUserData("final_url");
+			if (final_url_exist == true && std::holds_alternative<ov::String>(final_url) == true)
 			{
-				uri = std::get<ov::String>(new_url);
+				uri = std::get<ov::String>(final_url);
 			}
 			else
 			{
@@ -496,7 +496,20 @@ namespace pvd
 		auto remote_address{request->GetRemote()->GetRemoteAddress()};
 		if (parsed_url && remote_address)
 		{
-			auto request_info = std::make_shared<AccessController::RequestInfo>(parsed_url, remote_address, request->GetHeader("USER-AGENT"));
+			std::shared_ptr<ov::Url> new_url;
+
+			auto [final_url_exist, final_url] = ws_session->GetUserData("final_url");
+			if (final_url_exist == true && std::holds_alternative<ov::String>(final_url) == true)
+			{
+				ov::String uri = std::get<ov::String>(final_url);
+
+				if (request->GetUri() != uri)
+				{
+					new_url = ov::Url::Parse(uri);
+				}
+			}
+
+			auto request_info = std::make_shared<AccessController::RequestInfo>(parsed_url, remote_address, new_url, request->GetHeader("USER-AGENT"));
 
 			SendCloseAdmissionWebhooks(request_info);
 		}
