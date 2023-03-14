@@ -1120,7 +1120,7 @@ std::tuple<bool, ov::String> LLHlsStream::StartDump(const std::shared_ptr<info::
 	// Find minimum segment number
 	int64_t min_segment_number = GetMinimumLastSegmentNumber();
 
-	logtd("Start dump : stream_name = %s, dump_id = %s, min_segment_number = %d", GetName().CStr(), dump_info->GetId().CStr(), min_segment_number);
+	logti("Start dump requested: stream_name = %s, dump_id = %s, min_segment_number = %d", GetName().CStr(), dump_info->GetId().CStr(), min_segment_number);
 
 	for (const auto &it : storage_map)
 	{
@@ -1130,9 +1130,22 @@ std::tuple<bool, ov::String> LLHlsStream::StartDump(const std::shared_ptr<info::
 			return {false, "Could not dump init segment"};
 		}
 
-		if (DumpSegment(dump_info, track_id, min_segment_number) == false)
+		// Dump from min_segment_number to last segment
+		auto storage = it.second;
+		if (storage == nullptr)
 		{
-			return {false, "Could not dump segment"};
+			continue;
+		}
+
+		auto last_segment_number = storage->GetLastSegmentNumber();
+		for (int64_t segment_number = min_segment_number; segment_number <= last_segment_number; segment_number++)
+		{
+			if (DumpSegment(dump_info, track_id, segment_number) == false)
+			{
+				return {false, "Could not dump segment"};
+			}
+
+			logti("Dump base segment : stream_name = %s, dump_id = %s, track_id = %d, segment_number = %d, min_segment_number = %d, last_segment_number = %d", GetName().CStr(), dump_info->GetId().CStr(), track_id, segment_number, min_segment_number, last_segment_number);
 		}
 	}
 
