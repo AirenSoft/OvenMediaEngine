@@ -232,7 +232,7 @@ To support WebRTC and LLHLS, AAC and Opus codecs must be supported at the same t
 ```xml
 <Encodes>
 	<Video>
-                <Bypass>true</Bypass>									
+                <Bypass>true</Bypass>	
 	</Video>
 	<Audio>
 		<Name>cond_audio_aac</Name>
@@ -245,7 +245,7 @@ To support WebRTC and LLHLS, AAC and Opus codecs must be supported at the same t
 			<Samplerate>lte</Samplerate>
 			<Channel>eq</Channel>			
 		</BypassIfMatch>
-	</Audio>								
+	</Audio>		
 	<Audio>
 		<Name>cond_audio_opus</Name>
 		<Codec>opus</Codec>
@@ -255,8 +255,8 @@ To support WebRTC and LLHLS, AAC and Opus codecs must be supported at the same t
 		<BypassIfMatch>
 			<Codec>eq</Codec>
 			<Samplerate>lte</Samplerate>
-			<Channel>eq</Channel>			
-		</BypassIfMatch>									
+			<Channel>eq</Channel>	
+		</BypassIfMatch>	
 	</Audio>
 </Encodes>
 ```
@@ -277,7 +277,7 @@ If a video track with a lower quality than the encoding option is input, unneces
 			<Width>lte</Width>
 			<Height>lte</Height>
 			<SAR>eq</SAR>
-		</BypassIfMatch>									
+		</BypassIfMatch>
 	</Video>
 </Encodes>
 ```
@@ -318,7 +318,7 @@ To change the video resolution when transcoding, use the values of width and hei
     <Video>
         <Codec>h264</Codec>
         <Bitrate>2000000</Bitrate>
-        <!-- Width is automatically calculated as the original video ratio -->        
+        <!-- Width is automatically calculated as the original video ratio -->
         <Height>720</Height>
         <Framerate>30.0</Framerate>
     </Video>    
