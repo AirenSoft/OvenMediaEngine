@@ -2,13 +2,13 @@
 
 It allows you to insert events into streams. Right now events only support the ID3v2 format and only the LLHLS publisher handles it. Events delivered to LLHLS Publisher are inserted as emsg boxes within the m4s container.
 
-> #### Method / Path
+> ### Request
 
-```http
-POST: v1/vhosts/{vhost name}/apps/{app name}/streams/{stream name}:sendEvent
-```
+<details>
 
-> #### Header
+<summary><mark style="color:blue;">POST</mark> v1/vhosts/{vhost}/apps/{app}/streams/{stream}:sendEvent</summary>
+
+#### <mark style="color:orange;">Header</mark>
 
 ```http
 Authorization: Basic {credentials}
@@ -17,7 +17,7 @@ Authorization: Basic {credentials}
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-> #### Body
+#### <mark style="color:orange;">Body</mark>
 
 ```json
 {
@@ -54,7 +54,9 @@ Authorization: Basic {credentials}
     and if the frameType is "T???", it is entered in the Information field.
 ```
 
-> #### Responses
+</details>
+
+> ### Responses
 
 <details>
 

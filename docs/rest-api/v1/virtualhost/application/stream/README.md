@@ -4,13 +4,13 @@
 
 Get all stream names in the {vhost name}/{app name} application.
 
-> #### Method / Path
+> ### Request
 
-```http
-GET: /v1/vhosts/{vhost name}/apps/{app name}/streams
-```
+<details>
 
-> #### Header
+<summary><mark style="color:blue;">GET</mark> /v1/vhosts/{vhost}/apps/{app}/streams</summary>
+
+<mark style="color:orange;">Header</mark>
 
 ```http
 Authorization: Basic {credentials}
@@ -19,7 +19,9 @@ Authorization: Basic {credentials}
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-> #### Responses
+</details>
+
+> ### Responses
 
 <details>
 
@@ -105,13 +107,13 @@ Content-Type: application/json
 
 Create a stream by pulling an external URL. External URL protocols currently support RTSP and OVT.
 
-> #### Method / Path
+> ### Request
 
-```http
-POST: /v1/vhosts/{vhost name}/apps/{app name}/streams
-```
+<details>
 
-> #### Header
+<summary><mark style="color:blue;">POST</mark> /v1/vhosts/{vhost}/apps/{app}/streams</summary>
+
+#### <mark style="color:orange;">Header</mark>
 
 ```http
 Authorization: Basic {credentials}
@@ -121,9 +123,9 @@ Content-Type: application/json
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-> #### Body
+#### <mark style="color:orange;">Body</mark>
 
-```json
+```
 {
 	"name": "new_stream_name",
 	"urls": [
@@ -154,7 +156,9 @@ Content-Type: application/json
 		the stream is deleted, but ignored if persistent is true 
 ```
 
-> #### Responses
+</details>
+
+> ### Responses
 
 <details>
 
@@ -260,13 +264,13 @@ Unknown error
 
 Get detailed information of stream.
 
-> #### Method / Path
+> ### Request
 
-```http
-GET: /v1/vhosts/{vhost name}/apps/{app name}/streams/{stream name}
-```
+<details>
 
-> #### Header
+<summary><mark style="color:blue;">GET</mark> /v1/vhosts/{vhost}/apps/{app}/streams/{stream}</summary>
+
+#### Header
 
 ```http
 Authorization: Basic {credentials}
@@ -275,7 +279,9 @@ Authorization: Basic {credentials}
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-> #### Responses
+</details>
+
+> ### Responses
 
 <details>
 
@@ -426,13 +432,13 @@ Delete Stream. This terminates the ingress connection.&#x20;
 The sender can reconnect after the connection is terminated. To prevent reconnection, you must use [AccessControl](../../../../../access-control/).
 {% endhint %}
 
-> #### Method / Path
+> ### Request
 
-```http
-DELETE: /v1/vhosts/{vhost name}/apps/{app name}/streams/{stream name}
-```
+<details>
 
-> #### Header
+<summary><mark style="color:blue;">DELETE</mark> /v1/vhosts/{vhost}/apps/{app}/streams/{stream}</summary>
+
+#### <mark style="color:orange;">Header</mark>
 
 ```http
 Authorization: Basic {credentials}
@@ -441,7 +447,9 @@ Authorization: Basic {credentials}
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-> #### Responses
+</details>
+
+> ### Responses
 
 <details>
 

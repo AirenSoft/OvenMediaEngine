@@ -4,13 +4,13 @@ The [LLHLS Dump feature](../../../../../streaming/low-latency-hls.md#dump) can b
 
 ## Start Dump
 
-> #### Method / Path
+> ### Request
 
-```http
-POST: /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>:startHlsDump
-```
+<details>
 
-> #### Header
+<summary><mark style="color:blue;">POST</mark> /v1/vhosts/{vhost name}/apps/{app}/streams/{stream}:startHlsDump</summary>
+
+#### <mark style="color:orange;">Header</mark>
 
 ```http
 Authorization: Basic {credentials}
@@ -20,7 +20,7 @@ Content-Type: application/json
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-> #### Body
+#### <mark style="color:orange;">Body</mark>
 
 ```json
 {
@@ -51,7 +51,9 @@ Content-Type: application/json
   if infoFile is not specified.
 ```
 
-> #### Responses
+</details>
+
+> ### Responses
 
 <details>
 
@@ -151,13 +153,13 @@ Unknown error
 
 ## Stop Dump
 
-> #### Method / Path
+> ### Request
 
-```http
-POST: /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>:stopHlsDump
-```
+<details>
 
-> #### Header
+<summary><mark style="color:blue;">POST</mark> /v1/vhosts/&#x3C;vhost name>/apps/{app}/streams/{stream}:stopHlsDump</summary>
+
+#### <mark style="color:orange;">Header</mark>
 
 ```http
 Authorization: Basic {credentials}
@@ -167,7 +169,7 @@ Content-Type: application/json
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-> #### Body
+#### <mark style="color:orange;">Body</mark>
 
 ```json
 {
@@ -181,6 +183,10 @@ Content-Type: application/json
   This is the id passed when calling the startHlsDump API. 
   If id is not passed, all dump in progress at outputStreamName is aborted.
 ```
+
+</details>
+
+> ### Responses
 
 <details>
 
