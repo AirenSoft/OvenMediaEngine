@@ -2,7 +2,7 @@
 
 OvenMediaEngine supports clustering and ensures High Availability (HA) and scalability.
 
-![](<.gitbook/assets/image (7).png>)
+![](<.gitbook/assets/image (7) (2).png>)
 
 OvenMediaEngine supports the Origin-Edge structure for cluster configuration and provides scalability. Also, you can set Origin as `Primary` and `Secondary` in OvenMediaEngine for HA.
 
