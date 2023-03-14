@@ -8,7 +8,7 @@ It allows you to insert events into streams. Right now events only support the I
 
 <summary><mark style="color:blue;">POST</mark> v1/vhosts/{vhost}/apps/{app}/streams/{stream}:sendEvent</summary>
 
-#### <mark style="color:orange;">Header</mark>
+#### Header
 
 ```http
 Authorization: Basic {credentials}
@@ -17,7 +17,7 @@ Authorization: Basic {credentials}
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-#### <mark style="color:orange;">Body</mark>
+#### Body
 
 ```json
 {
@@ -64,13 +64,13 @@ Authorization: Basic {credentials}
 
 The request has succeeded
 
-**Header**
+#### **Header**
 
 ```
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -106,13 +106,13 @@ Invalid request. Body is not a Json Object or does not have a required value
 
 Authentication required
 
-**Header**
+#### **Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -129,7 +129,7 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost name or app name could not be found.
 
-**Body**
+#### **Body**
 
 ```json
 {

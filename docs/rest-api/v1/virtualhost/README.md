@@ -8,7 +8,7 @@
 
 <summary><mark style="color:blue;">GET</mark> /v1/vhosts</summary>
 
-<mark style="color:orange;">**Header**</mark>
+#### **Header**
 
 ```http
 Authorization: Basic {credentials}
@@ -27,13 +27,13 @@ Authorization: Basic {credentials}
 
 The request has succeeded
 
-**Header**
+#### **Header**
 
 ```
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -62,13 +62,13 @@ Content-Type: application/json
 
 Authentication required
 
-**Header**
+#### **Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -87,7 +87,7 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 <summary><mark style="color:blue;">POST</mark> /v1/vhosts</summary>
 
-<mark style="color:orange;">Header</mark>
+#### **Header**
 
 ```http
 Authorization: Basic {credentials}
@@ -96,7 +96,7 @@ Authorization: Basic {credentials}
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-#### <mark style="color:orange;">Body</mark>
+#### Body
 
 A list of virtual hosts in <mark style="color:green;">**Json array**</mark> format. Multiple virtual hosts can be created with a single request.
 
@@ -205,13 +205,13 @@ A list of virtual hosts in <mark style="color:green;">**Json array**</mark> form
 
 The request has succeeded
 
-**Header**
+#### **Header**
 
 ```
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 It responds with <mark style="color:green;">**Json array**</mark> for each request.
 
@@ -319,13 +319,13 @@ Invalid request. Body is not a Json array or does not have a required value
 
 Authentication required
 
-**Header**
+#### **Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -352,7 +352,7 @@ A virtual host with that name already exists
 
 <summary><mark style="color:blue;">GET</mark> /v1/vhosts/{vhost}</summary>
 
-<mark style="color:orange;">Header</mark>
+#### Header
 
 ```http
 Authorization: Basic {credentials}
@@ -371,13 +371,13 @@ Authorization: Basic {credentials}
 
 The request has succeeded
 
-**Header**
+#### **Header**
 
 ```
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 
@@ -464,13 +464,13 @@ Content-Type: application/json
 
 Authentication required
 
-**Header**
+#### **Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -487,7 +487,7 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost name could not be found.
 
-**Body**
+#### **Body**
 
 ```json
 {

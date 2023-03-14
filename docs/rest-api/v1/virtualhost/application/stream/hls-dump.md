@@ -10,7 +10,7 @@ The [LLHLS Dump feature](../../../../../streaming/low-latency-hls.md#dump) can b
 
 <summary><mark style="color:blue;">POST</mark> /v1/vhosts/{vhost name}/apps/{app}/streams/{stream}:startHlsDump</summary>
 
-#### <mark style="color:orange;">Header</mark>
+#### Header
 
 ```http
 Authorization: Basic {credentials}
@@ -20,7 +20,7 @@ Content-Type: application/json
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-#### <mark style="color:orange;">Body</mark>
+#### Body
 
 ```json
 {
@@ -61,13 +61,13 @@ Content-Type: application/json
 
 The request has succeeded
 
-**Header**
+#### **Header**
 
 ```
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -103,13 +103,13 @@ Invalid request. Body is not a Json Object or does not have a required value
 
 Authentication required
 
-**Header**
+#### **Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -126,13 +126,13 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost name or app name or stream name could not be found.
 
-**Header**
+#### **Header**
 
 ```json
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -159,7 +159,7 @@ Unknown error
 
 <summary><mark style="color:blue;">POST</mark> /v1/vhosts/&#x3C;vhost name>/apps/{app}/streams/{stream}:stopHlsDump</summary>
 
-#### <mark style="color:orange;">Header</mark>
+#### Header
 
 ```http
 Authorization: Basic {credentials}
@@ -169,7 +169,7 @@ Content-Type: application/json
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-#### <mark style="color:orange;">Body</mark>
+#### Body
 
 ```json
 {
@@ -194,13 +194,13 @@ Content-Type: application/json
 
 The request has succeeded
 
-**Header**
+#### **Header**
 
 ```
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -236,13 +236,13 @@ Invalid request. Body is not a Json Object or does not have a required value
 
 Authentication required
 
-**Header**
+#### **Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -259,13 +259,13 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost name or app name or stream name could not be found.
 
-**Header**
+#### **Header**
 
 ```json
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {

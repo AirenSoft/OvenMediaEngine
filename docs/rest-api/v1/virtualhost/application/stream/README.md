@@ -10,7 +10,7 @@ Get all stream names in the {vhost name}/{app name} application.
 
 <summary><mark style="color:blue;">GET</mark> /v1/vhosts/{vhost}/apps/{app}/streams</summary>
 
-<mark style="color:orange;">Header</mark>
+#### Header
 
 ```http
 Authorization: Basic {credentials}
@@ -29,13 +29,13 @@ Authorization: Basic {credentials}
 
 The request has succeeded
 
-**Header**
+#### **Header**
 
 ```
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -63,13 +63,13 @@ Content-Type: application/json
 
 Authentication required
 
-**Header**
+#### **Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -86,13 +86,13 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost name or app name could not be found.
 
-**Header**
+#### **Header**
 
 ```json
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -113,7 +113,7 @@ Create a stream by pulling an external URL. External URL protocols currently sup
 
 <summary><mark style="color:blue;">POST</mark> /v1/vhosts/{vhost}/apps/{app}/streams</summary>
 
-#### <mark style="color:orange;">Header</mark>
+#### Header
 
 ```http
 Authorization: Basic {credentials}
@@ -123,9 +123,9 @@ Content-Type: application/json
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-#### <mark style="color:orange;">Body</mark>
+#### Body
 
-```
+```json
 {
 	"name": "new_stream_name",
 	"urls": [
@@ -166,13 +166,13 @@ Content-Type: application/json
 
 A stream has been created.
 
-**Header**
+#### **Header**
 
 ```http
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -202,13 +202,13 @@ Invalid request. Body is not a Json Object or does not have a required value
 
 Authentication required
 
-**Header**
+#### **Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -225,7 +225,7 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost name or app name could not be found.
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -289,13 +289,13 @@ Authorization: Basic {credentials}
 
 The request has succeeded
 
-**Header**
+#### **Header**
 
 ```
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -384,13 +384,13 @@ Content-Type: application/json
 
 Authentication required
 
-**Header**
+#### **Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -407,13 +407,13 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost name or app name could not be found.
 
-**Header**
+#### **Header**
 
 ```json
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -438,7 +438,7 @@ The sender can reconnect after the connection is terminated. To prevent reconnec
 
 <summary><mark style="color:blue;">DELETE</mark> /v1/vhosts/{vhost}/apps/{app}/streams/{stream}</summary>
 
-#### <mark style="color:orange;">Header</mark>
+#### Header
 
 ```http
 Authorization: Basic {credentials}
@@ -457,13 +457,13 @@ Authorization: Basic {credentials}
 
 The request has succeeded
 
-**Header**
+#### **Header**
 
 ```
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -486,13 +486,13 @@ Content-Type: application/json
 
 Authentication required
 
-**Header**
+#### **Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
