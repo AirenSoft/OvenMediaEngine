@@ -24,7 +24,7 @@ namespace http
 			{
 			}
 
-			std::shared_ptr<const ov::Error> AppendCertificate(const std::shared_ptr<const info::Certificate> &certificate);
+			std::shared_ptr<const ov::Error> InsertCertificate(const std::shared_ptr<const info::Certificate> &certificate);
 			std::shared_ptr<const ov::Error> RemoveCertificate(const std::shared_ptr<const info::Certificate> &certificate);
 
 			// Deprecated

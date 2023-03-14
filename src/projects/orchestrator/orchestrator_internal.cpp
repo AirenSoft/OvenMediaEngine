@@ -528,6 +528,65 @@ namespace ocst
 		return Result::NotExists;
 	}
 
+	Result OrchestratorInternal::ReloadAllCertificates()
+	{
+		Result total_result = Result::Succeeded;
+
+		for (auto &vhost : _virtual_host_list)
+		{
+			auto result = ReloadCertificate(vhost);
+			if (result != Result::Succeeded)
+			{
+				total_result = Result::Failed;
+			}
+		}
+
+		return total_result;
+	}
+
+	
+	Result OrchestratorInternal::ReloadCertificate(const ov::String &vhost_name)
+	{
+		auto vhost = GetVirtualHost(vhost_name);
+		if (vhost == nullptr)
+		{
+			return Result::NotExists;
+		}
+
+		return ReloadCertificate(vhost);
+	}
+
+	Result OrchestratorInternal::ReloadCertificate(const std::shared_ptr<VirtualHost> &vhost)
+	{
+		auto &vhost_info = vhost->host_info;
+
+		if (vhost_info.LoadCertificate() == false)
+		{
+			logte("Could not load certificate for vhost [%s]", vhost_info.GetName().CStr());
+			return Result::Failed;
+		}
+
+		// Notification
+		for (auto &module : _module_list)
+		{
+			auto &module_interface = module.module;
+
+			logtd("Notifying %p (%s) for the create event (%s)", module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr(), vhost_info.GetName().CStr());
+
+			if (module_interface->OnUpdateCertificate(vhost_info))
+			{
+				logtd("The module %p (%s) returns true", module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr());
+			}
+			else
+			{
+				logte("The module %p (%s) returns error while updating certificate of the vhost [%s]",
+					module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr(), vhost_info.GetName().CStr());
+			}
+		}
+
+		return Result::Succeeded;
+	}
+
 	std::shared_ptr<ocst::VirtualHost> OrchestratorInternal::GetVirtualHost(const ov::String &vhost_name)
 	{
 		auto vhost_item = _virtual_host_map.find(vhost_name);
@@ -925,9 +984,6 @@ namespace ocst
 
 	bool OrchestratorInternal::InsertProviderStream(const std::shared_ptr<pvd::Stream> &stream)
 	{
-		// lock
-		std::lock_guard<std::shared_mutex> lock(_stream_map_mutex);
-
 		// Check if the stream already exists
 		auto stream_key = GetStreamKey(stream);
 		if (_stream_map.find(stream_key) != _stream_map.end())
@@ -943,22 +999,16 @@ namespace ocst
 	
 	void OrchestratorInternal::DeleteProviderStream(const std::shared_ptr<pvd::Stream> &stream)
 	{
-		// lock
-		std::lock_guard<std::shared_mutex> lock(_stream_map_mutex);
 		_stream_map.erase(GetStreamKey(stream));
 	}
 
 	void OrchestratorInternal::DeleteProviderStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
-		// lock
-		std::lock_guard<std::shared_mutex> lock(_stream_map_mutex);
 		_stream_map.erase(GetStreamKey(vhost_app_name, stream_name));
 	}
 
 	std::shared_ptr<pvd::Stream> OrchestratorInternal::GetProviderStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
-		// lock
-		std::shared_lock<std::shared_mutex> lock(_stream_map_mutex);
 		auto item = _stream_map.find(GetStreamKey(vhost_app_name, stream_name));
 		if (item != _stream_map.end())
 		{

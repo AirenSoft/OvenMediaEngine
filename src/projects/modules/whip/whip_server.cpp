@@ -220,7 +220,7 @@ bool WhipServer::Stop()
 	return true;
 }
 
-bool WhipServer::AppendCertificate(const std::shared_ptr<const info::Certificate> &certificate)
+bool WhipServer::InsertCertificate(const std::shared_ptr<const info::Certificate> &certificate)
 {
 	if (certificate != nullptr)
 	{
@@ -230,7 +230,7 @@ bool WhipServer::AppendCertificate(const std::shared_ptr<const info::Certificate
 
 		for (auto &https_server : https_server_list)
 		{
-			auto error = https_server->AppendCertificate(certificate);
+			auto error = https_server->InsertCertificate(certificate);
 			if (error != nullptr)
 			{
 				logte("Could not append certificate to %p: %s", https_server.get(), error->What());

@@ -86,7 +86,7 @@ namespace http
 				return false;
 			}
 
-			auto error = https_server->AppendCertificate(certificate);
+			auto error = https_server->InsertCertificate(certificate);
 			if (error != nullptr)
 			{
 				logte("Could not set certificate to https server(%s) : %s", address.ToString(false).CStr(), error->What());
@@ -168,7 +168,7 @@ namespace http
 
 			if ((https_server != nullptr) && (certificate != nullptr))
 			{
-				auto error = https_server->AppendCertificate(certificate);
+				auto error = https_server->InsertCertificate(certificate);
 				if (error != nullptr)
 				{
 					logte("Could not set certificate: %s", error->What());

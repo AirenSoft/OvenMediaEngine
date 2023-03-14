@@ -91,11 +91,11 @@ bool SegmentStreamServer::Stop()
 	return false;
 }
 
-bool SegmentStreamServer::AppendCertificate(const std::shared_ptr<const info::Certificate> &certificate)
+bool SegmentStreamServer::InsertCertificate(const std::shared_ptr<const info::Certificate> &certificate)
 {
 	if (_https_server != nullptr && certificate != nullptr)
 	{
-		return (_https_server->AppendCertificate(certificate) == nullptr);
+		return (_https_server->InsertCertificate(certificate) == nullptr);
 	}
 
 	return true;

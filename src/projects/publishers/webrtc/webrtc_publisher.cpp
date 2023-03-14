@@ -151,7 +151,7 @@ bool WebRtcPublisher::OnCreateHost(const info::Host &host_info)
 {
 	if (_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
 	{
-		return _signalling_server->AppendCertificate(host_info.GetCertificate());
+		return _signalling_server->InsertCertificate(host_info.GetCertificate());
 	}
 
 	return true;
@@ -163,6 +163,16 @@ bool WebRtcPublisher::OnDeleteHost(const info::Host &host_info)
 	{
 		return _signalling_server->RemoveCertificate(host_info.GetCertificate());
 	}
+	return true;
+}
+
+bool WebRtcPublisher::OnUpdateCertificate(const info::Host &host_info)
+{
+	if (_signalling_server != nullptr && host_info.GetCertificate() != nullptr)
+	{
+		return _signalling_server->InsertCertificate(host_info.GetCertificate());
+	}
+
 	return true;
 }
 

@@ -33,7 +33,7 @@ namespace info
 		if (error == nullptr)
 		{
 			logti(
-				"A certificate has been created for VirtualHost [%s]:\n"
+				"A certificate has been loaded for VirtualHost [%s]:\n"
 				"\tCert file path: %s\n"
 				"\tChain cert file path: %s\n"
 				"\tPrivate key file path: %s",

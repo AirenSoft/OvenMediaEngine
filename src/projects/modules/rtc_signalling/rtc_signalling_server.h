@@ -35,7 +35,7 @@ public:
 		int worker_count, std::shared_ptr<http::svr::ws::Interceptor> interceptor);
 	bool Stop();
 
-	bool AppendCertificate(const std::shared_ptr<const info::Certificate> &certificate);
+	bool InsertCertificate(const std::shared_ptr<const info::Certificate> &certificate);
 	bool RemoveCertificate(const std::shared_ptr<const info::Certificate> &certificate);
 
 	bool AddObserver(const std::shared_ptr<RtcSignallingObserver> &observer);

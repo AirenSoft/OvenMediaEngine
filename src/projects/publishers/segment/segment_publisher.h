@@ -266,6 +266,7 @@ protected:
 	// Implementation of Publisher
 	bool OnCreateHost(const info::Host &host_info) override;
 	bool OnDeleteHost(const info::Host &host_info) override;
+	bool OnUpdateCertificate(const info::Host &host_info) override;
 
 	//--------------------------------------------------------------------
 	// Implementation of SegmentStreamObserver

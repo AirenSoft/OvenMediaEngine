@@ -7,6 +7,7 @@
 //
 //==============================================================================
 #include "vhosts_controller.h"
+#include "vhost_actions_controller.h"
 
 #include <config/config.h>
 
@@ -23,9 +24,13 @@ namespace api
 			RegisterPost(R"()", &VHostsController::OnPostVHost);
 			RegisterGet(R"()", &VHostsController::OnGetVHostList);
 			RegisterGet(R"(\/(?<vhost_name>[^\/]*))", &VHostsController::OnGetVHost);
-
 			RegisterDelete(R"(\/(?<vhost_name>[^\/]*))", &VHostsController::OnDeleteVHost);
 
+			// Branch into action controller
+			CreateSubController<VHostActionsController>(R"(:)");
+			CreateSubController<VHostActionsController>(R"(\/(?<vhost_name>[^\/:]*):)");
+
+			// Branch into appls controller
 			CreateSubController<AppsController>(R"(\/(?<vhost_name>[^\/]*)\/apps)");
 		}
 

@@ -46,6 +46,9 @@ namespace ocst
 		/// @param app_info The information of the vhost
 		virtual bool OnDeleteHost(const info::Host &host_info) = 0;
 
+		// Called when the certificate is updated
+		virtual bool OnUpdateCertificate(const info::Host &host_info) {return true;}
+
 		/// Called when the application is created
 		///
 		/// @param app_info The information of the application

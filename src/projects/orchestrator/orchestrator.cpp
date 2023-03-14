@@ -163,6 +163,62 @@ namespace ocst
 		return result;
 	}
 
+	CommonErrorCode Orchestrator::ReloadAllCertificates()
+	{
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+
+		auto result = OrchestratorInternal::ReloadAllCertificates();
+		switch (result)
+		{
+			case ocst::Result::Failed:
+				logte("Failed to reload certificates");
+				return CommonErrorCode::ERROR;
+
+			case ocst::Result::Succeeded:
+				break;
+
+			case ocst::Result::Exists:
+				// This should never happen
+				OV_ASSERT2(false);
+				logtc("Failed to reload certificates(Conflict)");
+				return CommonErrorCode::ERROR;
+
+			case ocst::Result::NotExists:
+				logte("Could not find any virtual hosts");
+				return CommonErrorCode::ERROR;
+		}
+
+		return CommonErrorCode::SUCCESS;
+	}
+
+	CommonErrorCode Orchestrator::ReloadCertificate(const ov::String &vhost_name)
+	{
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+
+		auto result = OrchestratorInternal::ReloadCertificate(vhost_name);
+		switch (result)
+		{
+			case ocst::Result::Failed:
+				logte("Failed to reload a certificate of virtual host: %s", vhost_name.CStr());
+				return CommonErrorCode::ERROR;
+
+			case ocst::Result::Succeeded:
+				break;
+
+			case ocst::Result::Exists:
+				// This should never happen
+				OV_ASSERT2(false);
+				logtc("Failed to reload a certificate of virtual host(Conflict): %s", vhost_name.CStr());
+				return CommonErrorCode::ERROR;
+
+			case ocst::Result::NotExists:
+				logte("Could not find vhost : %s", vhost_name.CStr());
+				return CommonErrorCode::NOT_FOUND;
+		}
+
+		return CommonErrorCode::SUCCESS;
+	}
+
 	std::optional<info::Host> Orchestrator::GetHostInfo(ov::String vhost_name)
 	{
 		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
@@ -785,6 +841,8 @@ namespace ocst
 	{
 		logti("Registering provider stream: %s/%s", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr());
 
+		// lock
+		std::lock_guard<std::shared_mutex> lock(_stream_map_mutex);
 		// It will overwrite if the stream already exists
 		if (InsertProviderStream(stream) == false)
 		{
@@ -797,6 +855,9 @@ namespace ocst
 	/// Delete PullStream
 	CommonErrorCode Orchestrator::TerminateStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
+		// lock
+		std::shared_lock<std::shared_mutex> lock(_stream_map_mutex);
+
 		auto stream = GetProviderStream(vhost_app_name, stream_name);
 		if (stream == nullptr)
 		{
@@ -825,6 +886,8 @@ namespace ocst
 		// Provider stream was registered by the provider, so it should be deleted
 		if (info->IsInputStream())
 		{
+			// lock
+			std::lock_guard<std::shared_mutex> lock(_stream_map_mutex);
 			DeleteProviderStream(info->GetApplicationInfo().GetName(), info->GetName());
 		}
 

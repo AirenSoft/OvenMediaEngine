@@ -65,6 +65,10 @@ namespace ocst
 		Result CreateVirtualHost(const info::Host &vhost_info);
 		Result DeleteVirtualHost(const info::Host &vhost_info);
 
+		Result ReloadAllCertificates();
+		Result ReloadCertificate(const std::shared_ptr<VirtualHost> &vhost);
+		Result ReloadCertificate(const ov::String &vhost_name);
+
 		Result CreateApplication(const ov::String &vhost_name, const info::Application &app_info);
 		Result CreateApplication(const info::VHostAppName &vhost_app_name, info::Application *app_info);
 
@@ -100,6 +104,5 @@ namespace ocst
 
 		// stream uri, stream
 		std::map<ov::String, std::shared_ptr<pvd::Stream>> _stream_map;
-		std::shared_mutex _stream_map_mutex;
 	};
 }  // namespace ocst

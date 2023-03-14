@@ -25,7 +25,7 @@ namespace http
 {
 	namespace svr
 	{
-		std::shared_ptr<const ov::Error> HttpsServer::AppendCertificate(const std::shared_ptr<const info::Certificate> &certificate)
+		std::shared_ptr<const ov::Error> HttpsServer::InsertCertificate(const std::shared_ptr<const info::Certificate> &certificate)
 		{
 			if (certificate == nullptr)
 			{
@@ -52,6 +52,8 @@ namespace http
 
 			logtd("Append the certificate for host: %s", certificate->ToString().CStr());
 
+			// remove the certificate if it already exists
+			_https_certificate_map.erase(certificate->GetName());
 			_https_certificate_map.emplace(certificate->GetName(), std::make_shared<HttpsCertificate>(certificate, tls_context));
 
 			return nullptr;

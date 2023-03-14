@@ -36,7 +36,7 @@ public:
 		int worker_count);
 	bool Stop();
 
-	bool AppendCertificate(const std::shared_ptr<const info::Certificate> &certificate);
+	bool InsertCertificate(const std::shared_ptr<const info::Certificate> &certificate);
 	bool RemoveCertificate(const std::shared_ptr<const info::Certificate> &certificate);
 
 	bool AddObserver(const std::shared_ptr<SegmentStreamObserver> &observer);

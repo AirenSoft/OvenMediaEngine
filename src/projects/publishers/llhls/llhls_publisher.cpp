@@ -126,7 +126,7 @@ bool LLHlsPublisher::OnCreateHost(const info::Host &host_info)
 
 		for (auto &https_server : _https_server_list)
 		{
-			if (https_server->AppendCertificate(certificate) != nullptr)
+			if (https_server->InsertCertificate(certificate) != nullptr)
 			{
 				result = false;
 			}
@@ -148,6 +148,27 @@ bool LLHlsPublisher::OnDeleteHost(const info::Host &host_info)
 		for (auto &https_server : _https_server_list)
 		{
 			if (https_server->RemoveCertificate(certificate) != nullptr)
+			{
+				result = false;
+			}
+		}
+	}
+
+	return result;
+}
+
+bool LLHlsPublisher::OnUpdateCertificate(const info::Host &host_info)
+{
+	bool result = true;
+	auto certificate = host_info.GetCertificate();
+
+	if (certificate != nullptr)
+	{
+		std::lock_guard lock_guard{_http_server_list_mutex};
+
+		for (auto &https_server : _https_server_list)
+		{
+			if (https_server->InsertCertificate(certificate) != nullptr)
 			{
 				result = false;
 			}

@@ -247,7 +247,7 @@ bool RtcSignallingServer::Start(
 	return false;
 }
 
-bool RtcSignallingServer::AppendCertificate(const std::shared_ptr<const info::Certificate> &certificate)
+bool RtcSignallingServer::InsertCertificate(const std::shared_ptr<const info::Certificate> &certificate)
 {
 	if (certificate != nullptr)
 	{
@@ -257,7 +257,7 @@ bool RtcSignallingServer::AppendCertificate(const std::shared_ptr<const info::Ce
 
 		for (auto &https_server : https_server_list)
 		{
-			auto error = https_server->AppendCertificate(certificate);
+			auto error = https_server->InsertCertificate(certificate);
 			if (error != nullptr)
 			{
 				logte("Could not append certificate to %p: %s", https_server.get(), error->What());

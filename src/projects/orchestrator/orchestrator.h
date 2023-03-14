@@ -51,6 +51,8 @@ namespace ocst
 
 		Result CreateVirtualHost(const cfg::vhost::VirtualHost &vhost_cfg);
 		Result DeleteVirtualHost(const info::Host &vhost_info);
+		CommonErrorCode ReloadCertificate(const ov::String &vhost_name);
+		CommonErrorCode ReloadAllCertificates();
 
 		std::optional<info::Host> GetHostInfo(ov::String vhost_name);
 
@@ -194,5 +196,6 @@ namespace ocst
 	protected:
 		std::recursive_mutex _module_list_mutex;
 		mutable std::recursive_mutex _virtual_host_map_mutex;
+		std::shared_mutex _stream_map_mutex;
 	};
 }  // namespace ocst

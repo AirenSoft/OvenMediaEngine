@@ -27,7 +27,7 @@ public:
 		int worker_count);
 	bool Stop();
 
-	bool AppendCertificate(const std::shared_ptr<const info::Certificate> &certificate);
+	bool InsertCertificate(const std::shared_ptr<const info::Certificate> &certificate);
 	bool RemoveCertificate(const std::shared_ptr<const info::Certificate> &certificate);
 
 	void SetCors(const info::VHostAppName &vhost_app_name, const std::vector<ov::String> &url_list);

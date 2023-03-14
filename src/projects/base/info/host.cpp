@@ -19,9 +19,14 @@ namespace info
 		_server_id = server_id;
 		_host_id = ov::Random::GenerateUInt32();
 
+		LoadCertificate();
+	}
+
+	bool Host::LoadCertificate()
+	{
 		std::vector<ov::String> name_list;
 
-		for (auto name : host_info.GetHost().GetNameList())
+		for (auto name : GetHost().GetNameList())
 		{
 			name_list.push_back(name.CStr());
 		}
@@ -29,7 +34,15 @@ namespace info
 		const cfg::cmn::Tls &tls_config = GetHost().GetTls();
 		std::shared_ptr<ov::Error> error = nullptr;
 
-		_certificate = Certificate::CreateCertificate(host_info.GetName(), name_list, tls_config);
+		auto certificate = Certificate::CreateCertificate(GetName(), name_list, tls_config);
+		if (certificate == nullptr)
+		{
+			return false;
+		}
+
+		_certificate = certificate;
+
+		return true;
 	}
 
 	ov::String Host::GetUUID() const

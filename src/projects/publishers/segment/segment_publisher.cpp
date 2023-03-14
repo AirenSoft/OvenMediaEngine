@@ -81,7 +81,7 @@ bool SegmentPublisher::OnCreateHost(const info::Host &host_info)
 {
 	if (_stream_server != nullptr && host_info.GetCertificate() != nullptr)
 	{
-		return _stream_server->AppendCertificate(host_info.GetCertificate());
+		return _stream_server->InsertCertificate(host_info.GetCertificate());
 	}
 
 	return true;
@@ -93,6 +93,16 @@ bool SegmentPublisher::OnDeleteHost(const info::Host &host_info)
 	{
 		return _stream_server->RemoveCertificate(host_info.GetCertificate());
 	}
+	return true;
+}
+
+bool SegmentPublisher::OnUpdateCertificate(const info::Host &host_info)
+{
+	if (_stream_server != nullptr && host_info.GetCertificate() != nullptr)
+	{
+		return _stream_server->InsertCertificate(host_info.GetCertificate());
+	}
+
 	return true;
 }
 

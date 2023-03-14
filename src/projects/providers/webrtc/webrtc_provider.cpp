@@ -183,12 +183,12 @@ namespace pvd
 
 		if (_signalling_server != nullptr)
 		{
-			_signalling_server->AppendCertificate(certificate);
+			_signalling_server->InsertCertificate(certificate);
 		}
 
 		if (_whip_server != nullptr)
 		{
-			_whip_server->AppendCertificate(certificate);
+			_whip_server->InsertCertificate(certificate);
 		}
 
 		return true;
@@ -211,6 +211,28 @@ namespace pvd
 		if (_whip_server != nullptr)
 		{
 			_whip_server->RemoveCertificate(certificate);
+		}
+
+		return true;
+	}
+
+	bool WebRTCProvider::OnUpdateCertificate(const info::Host &host_info)
+	{
+		auto certificate = host_info.GetCertificate();
+
+		if (certificate == nullptr)
+		{
+			return true;  // not failed, just no certificate
+		}
+
+		if (_signalling_server != nullptr)
+		{
+			_signalling_server->InsertCertificate(certificate);
+		}
+
+		if (_whip_server != nullptr)
+		{
+			_whip_server->InsertCertificate(certificate);
 		}
 
 		return true;
