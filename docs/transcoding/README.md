@@ -6,10 +6,10 @@ OvenMediaEngine has a built-in live transcoder. The live transcoder can decode t
 
 ### Decoders
 
-| Type  | Decoder           |
+| Type  | Codec             |
 | ----- | ----------------- |
 | Video | VP8, H.264, H.265 |
-| Audio | AAC, OPUS         |
+| Audio | AAC, Opus         |
 
 ### Encoders
 
