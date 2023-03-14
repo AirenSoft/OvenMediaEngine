@@ -4,13 +4,13 @@ The [LLHLS Dump feature](../../../../../streaming/low-latency-hls.md#dump) can b
 
 ## Start Dump
 
-> #### Method / Path
+> ### Request
 
-```http
-POST: /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>:startHlsDump
-```
+<details>
 
-> #### Header
+<summary><mark style="color:blue;">POST</mark> /v1/vhosts/{vhost name}/apps/{app}/streams/{stream}:startHlsDump</summary>
+
+#### Header
 
 ```http
 Authorization: Basic {credentials}
@@ -20,7 +20,7 @@ Content-Type: application/json
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-> #### Body
+#### Body
 
 ```json
 {
@@ -51,7 +51,9 @@ Content-Type: application/json
   if infoFile is not specified.
 ```
 
-> #### Responses
+</details>
+
+> ### Responses
 
 <details>
 
@@ -59,13 +61,13 @@ Content-Type: application/json
 
 The request has succeeded
 
-**Header**
+#### **Header**
 
 ```
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -101,13 +103,13 @@ Invalid request. Body is not a Json Object or does not have a required value
 
 Authentication required
 
-**Header**
+#### **Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -124,13 +126,13 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost name or app name or stream name could not be found.
 
-**Header**
+#### **Header**
 
 ```json
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -151,13 +153,13 @@ Unknown error
 
 ## Stop Dump
 
-> #### Method / Path
+> ### Request
 
-```http
-POST: /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>:stopHlsDump
-```
+<details>
 
-> #### Header
+<summary><mark style="color:blue;">POST</mark> /v1/vhosts/&#x3C;vhost name>/apps/{app}/streams/{stream}:stopHlsDump</summary>
+
+#### Header
 
 ```http
 Authorization: Basic {credentials}
@@ -167,7 +169,7 @@ Content-Type: application/json
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-> #### Body
+#### Body
 
 ```json
 {
@@ -182,19 +184,23 @@ Content-Type: application/json
   If id is not passed, all dump in progress at outputStreamName is aborted.
 ```
 
+</details>
+
+> ### Responses
+
 <details>
 
 <summary><mark style="color:blue;">200</mark> Ok</summary>
 
 The request has succeeded
 
-**Header**
+#### **Header**
 
 ```
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -230,13 +236,13 @@ Invalid request. Body is not a Json Object or does not have a required value
 
 Authentication required
 
-**Header**
+#### **Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
@@ -253,13 +259,13 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost name or app name or stream name could not be found.
 
-**Header**
+#### **Header**
 
 ```json
 Content-Type: application/json
 ```
 
-**Body**
+#### **Body**
 
 ```json
 {
