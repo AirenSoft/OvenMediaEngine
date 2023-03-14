@@ -4,13 +4,32 @@ OvenMediaEngine has a built-in live transcoder. The live transcoder can decode t
 
 ## Supported Video, Audio and Image Codecs
 
-OvenMediaEngine currently supports the following codecs:
+### Decoders
 
-| Type  | Decoder           | Encoder                     |
-| ----- | ----------------- | --------------------------- |
-| Video | VP8, H.264, H.265 | VP8, H.264, H.265(GPU only) |
-| Audio | AAC, OPUS         | AAC, OPUS                   |
-| Image |                   | JPEG, PNG                   |
+| Type  | Codec             |
+| ----- | ----------------- |
+| Video | VP8, H.264, H.265 |
+| Audio | AAC, Opus         |
+
+### Encoders
+
+| Type  | Codec | Codec of Configuration                                               |
+| ----- | ----- | -------------------------------------------------------------------- |
+| Video | VP8   | vp8                                                                  |
+|       | H.264 | h264  _<mark style="color:blue;">(Automatic Codec Selection)</mark>_ |
+|       |       | h264\_openh264                                                       |
+|       |       | h264\_nvenc                                                          |
+|       |       | h264\_qsv                                                            |
+|       |       | h264\_beamr _<mark style="color:blue;">(Enterprise Only)</mark>_     |
+|       | H.265 | h265 _<mark style="color:blue;">(Automatic Codec Selection)</mark>_  |
+|       |       | h265\_nvenc                                                          |
+|       |       | h265\_qsv                                                            |
+| Audio | AAC   | aac                                                                  |
+|       | Opus  | opus                                                                 |
+| Image | JPEG  | jpeg                                                                 |
+|       | PNG   | png                                                                  |
+
+
 
 ## OutputProfiles
 
@@ -24,12 +43,12 @@ The `<OutputProfile>` setting allows incoming streams to be re-encoded via the `
         <Name>bypass_stream</Name>
         <OutputStreamName>${OriginStreamName}_bypass</OutputStreamName>
         <Encodes>
-            <Audio>
-                <Bypass>true</Bypass>
-            </Audio>
             <Video>
                 <Bypass>true</Bypass>
             </Video>
+            <Audio>
+                <Bypass>true</Bypass>
+            </Audio>            
             <Audio>
                 <Codec>opus</Codec>
                 <Bitrate>128000</Bitrate>
@@ -55,12 +74,14 @@ You can set the video profile as below:
 ```markup
 <Encodes>
     <Video>
-        <Name>720_vp8</Name>
-        <Codec>vp8</Codec>
+        <Name>h264_hd</Name>
+        <Codec>h264</Codec>
         <Width>1280</Width>
         <Height>720</Height>
         <Bitrate>2000000</Bitrate>
         <Framerate>30.0</Framerate>
+        <KeyFrameInteral>30</KeyFrameInteral>
+        <BFrames>0</BFrames>
         <Preset>fast</Preset>
         <ThreadCount>4</ThreadCount>
     </Video>
@@ -69,28 +90,34 @@ You can set the video profile as below:
 
 The meaning of each property is as follows:
 
-| Property                                  | Description                                 |
-| ----------------------------------------- | ------------------------------------------- |
-| Codec<mark style="color:red;">\*</mark>   | Specifies the `vp8` or `h264` codec to use  |
-| Bitrate<mark style="color:red;">\*</mark> | Bit per second                              |
-| Name                                      | Encode name for Renditions                  |
-| Width                                     | Width of resolution                         |
-| Height                                    | Height of resolution                        |
-| Framerate                                 | Frames per second                           |
-| Preset                                    | Presets of encoding quality and performance |
-| ThreadCount                               | Number of threads in encoding               |
+| Property                                  | Description                                                                                                                    |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Codec<mark style="color:red;">\*</mark>   | Specifies the `vp8` or `h264` codec to use                                                                                     |
+| Bitrate<mark style="color:red;">\*</mark> | Bit per second                                                                                                                 |
+| Name                                      | Encode name for Renditions                                                                                                     |
+| Width                                     | Width of resolution                                                                                                            |
+| Height                                    | Height of resolution                                                                                                           |
+| Framerate                                 | Frames per second                                                                                                              |
+| KeyFrameInterval                          | <p>Number of frames between two keyframes (0~600)<br><mark style="color:blue;">default is framerate (i.e. 1 second)</mark></p> |
+| BFrames                                   | <p>Number of B-frame (0~16)<br><mark style="color:blue;">default is 0</mark></p>                                               |
+| Preset                                    | Presets of encoding quality and performance                                                                                    |
+| ThreadCount                               | Number of threads in encoding                                                                                                  |
+
+&#x20;<mark style="color:red;">\*</mark> required
+
+
 
 **Table of presets**
 
-A table in which presets provided for each codec library are mapped to OvenMediaEngine's presets. Slow presets are of good quality and use a lot of resources, whereas Fast presets have lower quality and better performance. It can be set according to your own system environment and service purpose.
+A table in which presets provided for each codec library are mapped to OvenMediaEngine presets. Slow presets are of good quality and use a lot of resources, whereas Fast presets have lower quality and better performance. It can be set according to your own system environment and service purpose.
 
-| Presets    | openh264         | libvpx     | h264/265 NVC | h264/265 QSV |
-| ---------- | ---------------- | ---------- | ------------ | ------------ |
-| **slower** | Quantizer(10-41) | best       | hq           | -            |
-| **slow**   | Quantizer(10-41) | best       | llhq         | -            |
-| **medium** | Quantizer(10-51) | good       | bd           | -            |
-| **fast**   | Quantizer(25-51) | realtime   | hp           | -            |
-| **faster** | Quantizer(25-51) | \*realtime | \*llhp       | -            |
+| Presets    | openh264   | h264/265 NVENC | h264/265 QSV | libvpx   |
+| ---------- | ---------- | -------------- | ------------ | -------- |
+| **slower** | QP( 10-39) | p7             | No Support   | best     |
+| **slow**   | QP (16-45) | p6             | No Support   | best     |
+| **medium** | QP (24-51) | p5             | No Support   | good     |
+| **fast**   | QP (32-51) | p4             | No Support   | realtime |
+| **faster** | QP (40-51) | p3             | No Support   | realtime |
 
 _References_
 
@@ -122,6 +149,10 @@ The meaning of each property is as follows:
 | Name                                      | Encode name for Renditions                 |
 | Samplerate                                | Samples per second                         |
 | Channel                                   | The number of audio channels               |
+
+&#x20;<mark style="color:red;">\*</mark> required
+
+
 
 It is possible to have an audio only output profile by specifying the Audio profile and omitting a Video one.
 
@@ -201,7 +232,7 @@ To support WebRTC and LLHLS, AAC and Opus codecs must be supported at the same t
 ```xml
 <Encodes>
 	<Video>
-                <Bypass>true</Bypass>									
+                <Bypass>true</Bypass>	
 	</Video>
 	<Audio>
 		<Name>cond_audio_aac</Name>
@@ -214,7 +245,7 @@ To support WebRTC and LLHLS, AAC and Opus codecs must be supported at the same t
 			<Samplerate>lte</Samplerate>
 			<Channel>eq</Channel>			
 		</BypassIfMatch>
-	</Audio>								
+	</Audio>		
 	<Audio>
 		<Name>cond_audio_opus</Name>
 		<Codec>opus</Codec>
@@ -224,8 +255,8 @@ To support WebRTC and LLHLS, AAC and Opus codecs must be supported at the same t
 		<BypassIfMatch>
 			<Codec>eq</Codec>
 			<Samplerate>lte</Samplerate>
-			<Channel>eq</Channel>			
-		</BypassIfMatch>									
+			<Channel>eq</Channel>	
+		</BypassIfMatch>	
 	</Audio>
 </Encodes>
 ```
@@ -246,7 +277,7 @@ If a video track with a lower quality than the encoding option is input, unneces
 			<Width>lte</Width>
 			<Height>lte</Height>
 			<SAR>eq</SAR>
-		</BypassIfMatch>									
+		</BypassIfMatch>
 	</Video>
 </Encodes>
 ```
@@ -275,7 +306,7 @@ If you want to transcode with the same quality as the original. See the sample b
 
 To change the video resolution when transcoding, use the values of width and height in the Video encode option. If you don't know the resolution of the original, it will be difficult to keep the aspect ratio after transcoding. Please use the following methods to solve these problems. For example, if you input only the **Width** value in the Video encoding option, the **Height** value is automatically generated according to the ratio of the original video.
 
-```
+```xml
 <Encodes>
     <Video>
         <Codec>h264</Codec>
@@ -287,14 +318,14 @@ To change the video resolution when transcoding, use the values of width and hei
     <Video>
         <Codec>h264</Codec>
         <Bitrate>2000000</Bitrate>
-        <!-- Width is automatically calculated as the original video ratio -->        
+        <!-- Width is automatically calculated as the original video ratio -->
         <Height>720</Height>
         <Framerate>30.0</Framerate>
     </Video>    
 </Encodes>
 ```
 
-## Adaptive Bitrates Streaming (ABR)
+## Adaptive Bitrate Streaming (ABR)
 
 From version 0.14.0, OvenMediaEngine can encode same source with multiple bitrates renditions and deliver it to the player.
 
