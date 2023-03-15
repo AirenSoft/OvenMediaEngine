@@ -55,7 +55,54 @@ namespace api
 
 			for (auto &item : request_body)
 			{
+				// validate name, outputStreamName, encodes
+				if (item.isMember("name") == false || item.isMember("outputStreamName") == false || item.isMember("encodes") == false)
+				{
+					throw http::HttpError(http::StatusCode::BadRequest, "Invalid request body: \"name\", \"outputStreamName\", \"encodes\" are required");
+				}
+
 				auto name = item["name"];
+				auto outputStreamName = item["outputStreamName"];
+				auto encodes = item["encodes"];
+
+				if (name.isString() == false || outputStreamName.isString() == false || encodes.isObject() == false)
+				{
+					throw http::HttpError(http::StatusCode::BadRequest, "Invalid request body: \"name\" must be a string and \"encodes\" must be an object");
+				}
+
+				// encodes must have at least one item (videos array or audios array)
+				if (encodes.isMember("videos") == false && encodes.isMember("audios") == false)
+				{
+					throw http::HttpError(http::StatusCode::BadRequest, "Invalid request body: \"encodes\" must have at least one item (videos array or audios array)");
+				}
+
+				size_t encodes_count = 0;
+				if (encodes.isMember("videos"))
+				{
+					auto videos = encodes["videos"];
+					if (videos.isArray() == false)
+					{
+						throw http::HttpError(http::StatusCode::BadRequest, "Invalid request body: \"encodes.videos\" must be an array");
+					}
+
+					encodes_count += videos.size();
+				}
+
+				if (encodes.isMember("audios"))
+				{
+					auto audios = encodes["audios"];
+					if (audios.isArray() == false)
+					{
+						throw http::HttpError(http::StatusCode::BadRequest, "Invalid request body: \"encodes.audios\" must be an array");
+					}
+
+					encodes_count += audios.size();
+				}
+
+				if (encodes_count == 0)
+				{
+					throw http::HttpError(http::StatusCode::BadRequest, "Invalid request body: \"encodes\" must have at least one item (videos array or audios array) and each item must have at least one item");
+				}
 
 				try
 				{
