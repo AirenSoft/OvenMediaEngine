@@ -35,87 +35,104 @@ Request Example:
 \
 
 
-`[`
+`[
+`
 
 \
 
 
-`   { `
+`   {
+ `
 
 \
 
 
-`     "name": "bypass_profile", `
+`     "name": "bypass_profile",
+ `
 
 \
 
 
-`     "outputStreamName": "${OriginStreamName}", `
+`     "outputStreamName": "${OriginStreamName}",
+ `
 
 \
 
 
-`     "encodes": { `
+`     "encodes": {
+ `
 
 \
 
 
-`       "videos": [ `
+`       "videos": [
+ `
 
 \
 
 
-`         { `
+`         {
+ `
 
 \
 
 
-`           "bypass": true `
+`           "bypass": true
+ `
 
 \
 
 
-`         } `
+`         }
+ `
 
 \
 
 
-`       ], `
+`       ],
+ `
 
 \
 
 
-`       "audios": [ `
+`       "audios": [
+ `
 
 \
 
 
-`         { `
+`         {
+ `
 
 \
 
 
-`           "bypass": true `
+`           "bypass": true
+ `
 
 \
 
 
-`         } `
+`         }
+ `
 
 \
 
 
-`       ] `
+`       ]
+ `
 
 \
 
 
-`     } `
+`     }
+ `
 
 \
 
 
-`   } `
+`   }
+ `
 
 \
 
@@ -393,7 +410,7 @@ Not Found" %}
 {% endswagger-response %}
 {% endswagger %}
 
-{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}/outputProfiles/{profile_name}" method="put" summary="/v1/vhosts/{vhost_name}/apps/{app_name}/outputProfiles/{profile_name}" %}
+{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}/outputProfiles/{profile_name}" method="patch" summary="/v1/vhosts/{vhost_name}/apps/{app_name}/outputProfiles/{profile_name}" %}
 {% swagger-description %}
 Changes the configuration of the 
 
@@ -414,7 +431,7 @@ Request Example:
 
 
 
-`PUT http://1.2.3.4:8081/v1/vhosts/default/apps/app/outputProfiles/bypass_profile`
+`PATCH http://1.2.3.4:8081/v1/vhosts/default/apps/app/outputProfiles/bypass_profile`
 
 \
 
@@ -424,92 +441,110 @@ Request Example:
 \
 
 
-`{`
+`{
+`
 
 \
 
 
-`   "outputStreamName": "${OriginStreamName}", `
+`   "outputStreamName": "${OriginStreamName}",
+ `
 
 \
 
 
-`   "encodes": { `
+`   "encodes": {
+ `
 
 \
 
 
-`     "videos": [ `
+`     "videos": [
+ `
 
 \
 
 
-`       { `
+`       {
+ `
 
 \
 
 
-`         "codec": "h264", `
+`         "codec": "h264",
+ `
 
 \
 
 
-`         "bitrate": "3M", `
+`         "bitrate": "3M",
+ `
 
 \
 
 
-`         "width": 1280, `
+`         "width": 1280,
+ `
 
 \
 
 
-`         "height": 720, `
+`         "height": 720,
+ `
 
 \
 
 
-`         "framerate": 30 `
+`         "framerate": 30
+ `
 
 \
 
 
-`       } `
+`       }
+ `
 
 \
 
 
-`     ], `
+`     ],
+ `
 
 \
 
 
-`     "audios": [ `
+`     "audios": [
+ `
 
 \
 
 
-`       { `
+`       {
+ `
 
 \
 
 
-`         "bypass": true `
+`         "bypass": true
+ `
 
 \
 
 
-`       } `
+`       }
+ `
 
 \
 
 
-`     ] `
+`     ]
+ `
 
 \
 
 
-`   } `
+`   }
+ `
 
 \
 

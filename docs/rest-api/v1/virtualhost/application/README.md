@@ -367,7 +367,7 @@ Not Found" %}
 {% endswagger-response %}
 {% endswagger %}
 
-{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}" method="put" summary="/v1/vhosts/{vhost_name}/apps/{app_name}" %}
+{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}" method="patch" summary="/v1/vhosts/{vhost_name}/apps/{app_name}" %}
 {% swagger-description %}
 Changes the configuration of the 
 
@@ -388,7 +388,7 @@ Request Example:
 
 
 
-`PUT http://1.2.3.4:8081/v1/vhosts/default/apps/app`
+`PATCH http://1.2.3.4:8081/v1/vhosts/default/apps/app`
 
 \
 
@@ -398,12 +398,14 @@ Request Example:
 \
 
 
-`{`
+`{
+`
 
 \
 
 
-`   "type": "live" `
+`   "type": "live"
+ `
 
 \
 
