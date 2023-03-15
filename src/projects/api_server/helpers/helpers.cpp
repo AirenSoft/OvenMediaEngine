@@ -228,40 +228,54 @@ namespace api
 		{
 			auto &providers = app_config["providers"];
 
+			providers["ovt"] = Json::objectValue;
+			providers["rtspPull"] = Json::objectValue;
+
+			providers["webrtc"] = Json::objectValue;
+			providers["srt"] = Json::objectValue;
 			providers["rtmp"] = Json::objectValue;
-			providers["mpegts"] = Json::objectValue;
 		}
 
 		if (app_config.isMember("publishers") == false)
 		{
 			auto &publishers = app_config["publishers"];
 
-			publishers["hls"] = Json::objectValue;
-			publishers["dash"] = Json::objectValue;
-			publishers["llDash"] = Json::objectValue;
+			publishers["llhls"] = Json::objectValue;
 			publishers["webrtc"] = Json::objectValue;
+			publishers["ovt"] = Json::objectValue;
 		}
 
 		if (app_config.isMember("outputProfiles") == false)
 		{
 			Json::Value output_profile(Json::objectValue);
 
-			output_profile["name"] = "bypass";
+			output_profile["name"] = "default";
 			output_profile["outputStreamName"] = "${OriginStreamName}";
 
-			Json::Value codec;
+			auto &encodes = output_profile["encodes"];
 
+			Json::Value codec;
+			codec["name"] = "bypass_video";
 			codec["bypass"] = true;
 
-			auto &encodes = output_profile["encodes"];
 			encodes["videos"].append(codec);
-			encodes["audios"].append(codec);
 
 			codec = Json::objectValue;
+			codec["name"] = "opus";
 			codec["codec"] = "opus";
 			codec["bitrate"] = 128000;
 			codec["samplerate"] = 48000;
 			codec["channel"] = 2;
+			codec["bypassIfMatch"]["codec"] = "eq";
+			encodes["audios"].append(codec);
+
+			codec = Json::objectValue;
+			codec["name"] = "aac";
+			codec["codec"] = "aac";
+			codec["bitrate"] = 128000;
+			codec["samplerate"] = 48000;
+			codec["channel"] = 2;
+			codec["bypassIfMatch"]["codec"] = "eq";
 			encodes["audios"].append(codec);
 
 			app_config["outputProfiles"]["outputProfile"].append(output_profile);
