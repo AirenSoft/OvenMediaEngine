@@ -90,3 +90,122 @@ To enable CORS on your API Server, you can add a setting. You can add \* to allo
 
 
 
+## API Request
+
+The API of the configured API Server can be called as follows.
+
+> <mark style="color:blue;">Method</mark> http://API.Server.Address\[:Port]/<mark style="color:orange;">v1</mark>/<mark style="color:purple;">Resource</mark>&#x20;
+>
+> <mark style="color:blue;">Method</mark> https://API.Server.Address\[:TLSPort]/<mark style="color:orange;">v1</mark>/<mark style="color:purple;">Resource</mark>
+
+OvenMediaEngine supports <mark style="color:blue;">GET</mark>, <mark style="color:blue;">POST</mark>, and <mark style="color:blue;">DELETE</mark> methods, and sometimes supports <mark style="color:blue;">PATCH</mark> depending on the type of resource. For detailed API specifications, please check the subdirectory of this chapter.
+
+### Action
+
+In OvenMediaEngine's REST API, action is provided in the form below.
+
+> <mark style="color:blue;">POST</mark> http://host/v1/resource<mark style="color:green;">:{action name}</mark>
+
+For example, an action to send an ID3 Timedmeta event to an LLHLS stream is provided by the endpoint below.
+
+> <mark style="color:blue;">POST</mark> http://-/v1/vhosts/{vhost}/apps/{app}/streams/{stream}:<mark style="color:green;">sendEvent</mark>
+
+### Considerations
+
+In this API reference document, the API endpoint is described as follows. Note that scheme://Host\[:Port] is omitted for all endpoints.
+
+<details>
+
+<summary><mark style="color:blue;">METHOD</mark> /v1/resource</summary>
+
+#### Header
+
+```http
+Authorization: Basic {credentials}
+
+# Authorization
+    Credentials for HTTP Basic Authentication created with <AccessToken>
+```
+
+#### Body
+
+Configure applications to be created in <mark style="color:green;">Json array</mark> format.&#x20;
+
+{% code overflow="wrap" %}
+```json
+[
+    {
+        "name": "app",
+        "type": "live",
+        "outputProfiles": {
+            "outputProfile": [
+                {
+                    "name": "default",
+                    "outputStreamName": "${OriginStreamName}",
+                    "encodes": {
+                        "audios": [
+                            {
+                                "name": "opus",
+                                "codec": "opus",
+                                "samplerate": 48000,
+                                "bitrate": 128000,
+                                "channel": 2,
+                                "bypassIfMatch": {
+                                    "codec": "eq"
+                                }
+                            },
+                            {
+                                "name": "aac",
+                                "codec": "aac",
+                                "samplerate": 48000,
+                                "bitrate": 128000,
+                                "channel": 2,
+                                "bypassIfMatch": {
+                                    "codec": "eq"
+                                }
+                            }
+                        ],
+                        "videos": [
+                            {
+                                "name": "bypass_video",
+                                "bypass": true
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        "providers": {
+            "ovt": {},
+            "rtmp": {},
+            "rtspPull": {},
+            "srt": {},
+            "webrtc": {}
+        },
+        "publishers": {
+            "llhls": {},
+            "ovt": {},
+            "webrtc": {}
+        }
+    }
+]
+    
+# name (required)
+    Application name to create
+    
+# type (required)
+    live - currently only support live
+    
+# outputProfiles (optional)
+   Set OutputProfile for Transcoding. See the ABR and Transcoding chapter for             more details. If no outputProfiles are present in the request, a default outputProfile as above is configured.
+   
+# providers (optional)
+    Configure providers. See the Live Source chapter for details. If providers are not present in the request, they are configured with default providers as above.
+
+# publishers (optional)
+    Configure publishers. See the Streaming chapter for details. If publishers are not present in the request, they are configured with default publishers as above.
+```
+{% endcode %}
+
+</details>
+
