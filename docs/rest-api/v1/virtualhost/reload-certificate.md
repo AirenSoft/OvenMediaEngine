@@ -90,23 +90,22 @@ The request has succeeded
 
 **Header**
 
-```
+```http
 Content-Type: application/json
 ```
 
 **Body**
 
-```json
-{
-    "message": "OK",
-    "statusCode": 200
+<pre class="language-json"><code class="lang-json">{
+<strong>    "message": "OK",
+</strong>    "statusCode": 200
 }
 
 # statusCode
-	Same as HTTP Status Code
+    Same as HTTP Status Code
 # message
-	A human-readable description of the response code
-```
+    A human-readable description of the response code
+</code></pre>
 
 </details>
 
