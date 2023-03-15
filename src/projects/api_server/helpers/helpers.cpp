@@ -326,7 +326,7 @@ namespace api
 		switch (result)
 		{
 			case ocst::Result::Failed:
-				throw http::HttpError(http::StatusCode::BadRequest,
+				throw http::HttpError(http::StatusCode::InternalServerError,
 									  "Failed to %s the %s: [%s]", action, resource_name, resource_path);
 
 			case ocst::Result::Succeeded:

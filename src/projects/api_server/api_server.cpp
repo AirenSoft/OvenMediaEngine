@@ -247,7 +247,7 @@ namespace api
 		switch (ocst::Orchestrator::GetInstance()->DeleteVirtualHost(host_info))
 		{
 			case ocst::Result::Failed:
-				throw http::HttpError(http::StatusCode::BadRequest,
+				throw http::HttpError(http::StatusCode::InternalServerError,
 									  "Failed to delete the virtual host: [%s]",
 									  host_info.GetName().CStr());
 
