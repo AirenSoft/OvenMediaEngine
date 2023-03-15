@@ -92,12 +92,13 @@ namespace api
 			std::vector<std::shared_ptr<info::Record>> results;
 
 			auto error = application->GetRecords(record, results);
-			if (error->GetCode() != pub::FilePublisher::FilePublisherStatusCode::Success || results.size() == 0)
+			if (error->GetCode() != pub::FilePublisher::FilePublisherStatusCode::Success)
 			{
-				throw http::HttpError(http::StatusCode::NotFound,
-									  "There is no record information");
+				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get records: [%s/%s]",
+									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
+			response = Json::arrayValue;
 			for (auto &item : results)
 			{
 				response.append(::serdes::JsonFromRecord(item));
@@ -261,11 +262,7 @@ namespace api
 				}
 			}
 
-			if (results.size() == 0)
-			{
-				throw http::HttpError(http::StatusCode::NoContent, "There is no pushes information");
-			}
-
+			response = Json::arrayValue;
 			for (auto &item : results)
 			{
 				response.append(::serdes::JsonFromPush(item));
