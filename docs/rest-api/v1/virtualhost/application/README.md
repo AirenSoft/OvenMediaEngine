@@ -115,8 +115,6 @@ Authorization: Basic {credentials}
 
 # Authorization
     Credentials for HTTP Basic Authentication created with <AccessToken>
-# abc
-    fdjkafjdas
 ```
 
 #### Body
