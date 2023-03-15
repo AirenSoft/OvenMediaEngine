@@ -1,372 +1,480 @@
 # Push
 
-{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}:startPush" method="post" summary="Start push publishing" %}
-{% swagger-description %}
-**Example - RTMP push publishing by Output Stream Name**\
-`POST http[s]://{host}/v1/vhosts/default/apps/app:startPush`\
-`{`\
-&#x20; `"id": "{unique_push_id}",`\
-&#x20; `"stream": {`\
-&#x20;   `"name": "{output_stream_name}"`\
-&#x20; `},`\
-&#x20; `"protocol": "rtmp",`\
-&#x20; `"url":"rtmp://{host}[:port]/{app_ame}",`\
-&#x20; `"streamKey":"{stream_name}"`\
-`}`
+## Start Push Publishing
 
-**Example - MPEG TS push publishing by Output Stream Name**\
-`POST http[s]://{host}/v1/vhosts/default/apps/app:startPush`\
-`{`\
-&#x20; `"id": "{unique_push_id}",`\
-&#x20; `"stream": {`\
-&#x20;   `"name": "{output_stream_name}"`\
-&#x20; `},`\
-&#x20; `"protocol": "mpegts",`\
-&#x20; `"url":"udp://{host}[:port]",`\
-&#x20; `"streamKey":""`\
-`}`
+Start  push publishing the stream with RTMP or MPEG2-TS. If the requested stream does not exist on the server, this task is reserved. And when the stream is created, it automatically starts push publishing.
 
-**Example - Push publishing by Output Stream Name and Track Ids**\
-`POST http[s]://{host}/v1/vhosts/default/apps/app:startPush`\
-`{`\
-&#x20; `"id": "{unique_push_id}",`\
-&#x20; `"stream": {`\
-&#x20;   `"name": "{output_stream_name}",`\
-&#x20;   `"trackIds": [ 101, 102 ]`\
-&#x20; `},`\
-&#x20; `"protocol": "rtmp",`\
-&#x20; `"url":"rtmp://{host}[:port]/{appName}",`\
-&#x20; `"streamKey":"{stream_name}"`\
-`}`
+> ### Request
 
-**Example - Push publishing by Output Stream Name and Variant Names**\
-`POST http[s]://{host}/v1/vhosts/default/apps/app:startPush`\
-`{`\
-&#x20; `"id": "{unique_push_id}",`\
-&#x20; `"stream": {`\
-&#x20;   `"name": "{output_stream_name}",`\
-&#x20;   `"variantNames": [ "h264_fhd", "aac" ]`\
-&#x20; `},`\
-&#x20; `"protocol": "rtmp",`\
-&#x20; `"url":"rtmp://{host}[:port]/{app_name}",`\
-&#x20; `"streamKey":"{stream_name}"`\
-`}`
+<details>
 
-&#x20;<mark style="color:green;">**\* variantName**</mark> means <mark style="color:green;">**Application.OutputProfiles.OutputProfie.Encodes.\[Video|Audio|Data].Name**</mark> <mark style="color:green;"></mark><mark style="color:green;"></mark> in the Server.xml configuration file.
-{% endswagger-description %}
+<summary><mark style="color:blue;">POST</mark> /v1/vhosts/{vhost}/apps/{app}:startPush</summary>
 
-{% swagger-parameter in="path" name="vhost_name" type="string" required="true" %}
-A name of
+#### **Header**
 
-`VirtualHost`
-{% endswagger-parameter %}
+```http
+Authorization: Basic {credentials}
 
-{% swagger-parameter in="path" name="app_name" type="string" required="true" %}
-A name of
-
-`Application`
-{% endswagger-parameter %}
-
-{% swagger-parameter in="header" name="authorization" type="string" required="true" %}
-A string for authentication in `Basic Base64(AccessToken)` format.
-
-For example, `Basic b21lLWFjY2Vzcy10b2tlbg==` if access token is `ome-access-token`
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="id" type="string" required="true" %}
-Unique identifier of push publishing
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="stream" type="string" required="true" %}
-Output stream for push.
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="name" type="string" required="true" %}
-Output stream name
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="trackIds" type="array" required="false" %}
-Used for push publishing specific track ids.
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="variantNames" type="array" %}
-Used for push publishing specific variant names.
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="protocol" type="string" required="true" %}
-Transport protocol [rtmp | mpegts]
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="url" type="string" required="true" %}
-Destination URL.
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="streamKey" type="object" required="true" %}
-Destination stream key.
-{% endswagger-parameter %}
-
-{% swagger-response status="200" description="Success" %}
+# Authorization
+    Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
+
+#### Body : RTMP
+
+{% code overflow="wrap" %}
+```json
 {
-  "message": "OK",
-  "response": [
-    {
-      "app": "app",
-      "createdTime": "2021-02-04T01:42:40.160+0900",
-      "id": "userDefinedUniqueId",
-      "protocol": "rtmp",
-      "sentBytes": 0,
-      "sentTime": 0,
-      "sequence": 0,
-      "startTime": "1970-01-01T09:00:00.000+0900",
-      "state": "ready",
-      "stream": {
-        "name": "stream",
-        "tracks": [
-          101,
-          102
-        ]
-      },
-      "streamKey": "2u5w-rt7q-tepj-91qa-4yft",
-      "totalsentBytes": 0,
-      "totalsentTime": 0,
-      "url": "rtmp://a.rtmp.youtube.com/live2",
-      "vhost": "default"
-    }
-  ],
-  "statusCode": 200
+  "id": "{unique_push_id}",
+  "stream": {
+    "name": "{output_stream_name}",
+    "variantNames": [ "h264_fhd", "aac" ]
+  },
+  "protocol": "rtmp",
+  "url":"rtmp://{host}[:port]/{app_name}",
+  "streamKey":"{stream_name}"
 }
-```
-{% endswagger-response %}
 
-{% swagger-response status="400" description="Invalid Parameters" %}
-```
-{
-	"statusCode": 400,
-	"message": "There is no required parameter [{id}, {stream.name}] (100)"
-}
-	
-{
-	"statusCode": 400,
-	"message": "Duplicate ID already exists [{id}] (400)"
-}
-```
-{% endswagger-response %}
-{% endswagger %}
-
-{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}:stopPush" method="post" summary="Stop push publishing" %}
-{% swagger-description %}
-**Example**
-
-\
-
-
-
-
-`POST http[s]://{host}/v1/vhosts/default/apps/app:stopRecord`
-
-\
-
-
-`{`
-
-\
-
-
-  
-
-`"id": "{unique_push_id}"`
-
-\
-
-
-`}`
-{% endswagger-description %}
-
-{% swagger-parameter in="path" name="vhost_name" type="string" required="true" %}
-A name of
-
-`VirtualHost`
-{% endswagger-parameter %}
-
-{% swagger-parameter in="path" name="app_name" type="string" required="true" %}
-A name of
-
-`Application`
-{% endswagger-parameter %}
-
-{% swagger-parameter in="header" name="authorization" type="string" required="true" %}
-A string for authentication in `Basic Base64(AccessToken)` format.
-
-For example, `Basic b21lLWFjY2Vzcy10b2tlbg==` if access token is `ome-access-token`.
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="id" type="string" required="true" %}
-Unique identifier of push publishing
-{% endswagger-parameter %}
-
-{% swagger-response status="200" description="Success" %}
-```
-    {
-      "id": "userDefinedUniqueId",
-      "app": "app",
-      "createdTime": "2021-01-18T10:25:03.765+0900",
-      "startTime": "2021-01-18T10:25:03.765+0900",
-      "finishTime": "2021-01-18T10:35:03.765+0900",
-      "protocol": "rtmp",
-      "sentBytes": 32841631,
-      "sentTime": 601,
-      "sequence": 0,
-      "state": "stopping",
-      "stream": {
-        "name": "stream",
-        "tracks": [
-          101,
-          102
-        ]
-      },
-      "streamKey": "2u5w-rt7q-tepj-91qa-4yft",
-      "totalsentBytes": 32841631,
-      "totalsentTime": 601000,
-      "url": "rtmp://a.rtmp.youtube.com/live2",
-      "vhost": "default"
+# id (required)
+    unique ID to identify the task
     
-```
-{% endswagger-response %}
+# stream (required)
+    ## name (required)
+        output stream name
+        
+    ## variantNames (optional)
+        Array of track names to publsh. 
+        This value is Encodes.[Video|Audio|Data].Name in the OutputProfile
+        setting.
+        
+        If empty, The first track among video tracks (by ID) and the first 
+        track among audio tracks (by ID) are selected automatically.
 
-{% swagger-response status="400" description="Invalid Parameters" %}
+# protocol (required)
+    rtmp
+    
+# url (required) 
+    address of destination
+    
+# streamKey (required)
+    RTMP stream key
 ```
+{% endcode %}
+
+#### Body : MPEG2-TS
+
+```json
 {
-	"statusCode": 400,
-	"message": "There is no required parameter [id] (400)"
+  "id": "{unique_push_id}",
+  "stream": {
+    "name": "{output_stream_name}",
+    "variantNames": []
+  },
+  "protocol": "mpegts",
+  "url": "udp://{host}[:port]",
+  "streamKey": ""
+}
+
+# id (required)
+    unique ID to identify the task
+    
+# stream (required)
+    ## name (required)
+        output stream name
+        
+    ## variantNames (optional)
+        Array of track names to publsh. 
+        This value is Encodes.[Video|Audio|Data].Name in the OutputProfile
+        setting.
+        
+        If empty, all tracks will be sent.
+
+# protocol (required)
+    mpegts
+    
+# url (required) 
+    address of destination
+    
+# streamKey (optional)
+    not used with mpegts
+```
+
+</details>
+
+> ### Responses
+
+<details>
+
+<summary><mark style="color:blue;">200</mark> Ok</summary>
+
+The request has succeeded
+
+#### **Header**
+
+```
+Content-Type: application/json
+```
+
+#### **Body**
+
+Please note that `responses` are incorrectly returned in Json array format for version 0.15.3 and earlier.
+
+```json
+{
+    "statusCode": 200,
+    "message": "OK",
+    "response": [
+        {
+            "id": "{unique_push_id}",
+            "state": "ready",
+            
+            "vhost": "default",
+            "app": "app",
+            "stream": {
+                "name": "{output_stream_name}",
+                "trackIds": [],
+                "variantNames": []
+            },
+            
+            "protocol": "rtmp",
+            "url": "rtmp://{host}[:port]/{app_name}",
+            "streamKey": "{stream_name}",
+            
+            "sentBytes": 0,
+            "sentTime": 0,
+            "sequence": 0,
+            "totalsentBytes": 0,
+            "totalsentTime": 0,
+            
+            "createdTime": "2023-03-15T23:02:34.371+09:00",
+            "startTime": "1970-01-01T09:00:00.000+09:00",
+            "finishTime": "1970-01-01T09:00:00.000+09:00"
+        }
+    ]
+}
+
+# statusCode
+    Same as HTTP Status Code
+# message
+    A human-readable description of the response code
+# response
+    Created push publishing task information
+```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">400</mark> Bad Request</summary>
+
+Invalid request.
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">401</mark> Unauthorized</summary>
+
+Authentication required
+
+#### **Header**
+
+```http
+WWW-Authenticate: Basic realm=”OvenMediaEngine”
+```
+
+#### **Body**
+
+```json
+{
+    "message": "[HTTP] Authorization header is required to call API (401)",
+    "statusCode": 401
 }
 ```
-{% endswagger-response %}
 
-{% swagger-response status="404" description="No content" %}
-```
+</details>
+
+<details>
+
+<summary><mark style="color:red;">404</mark> Not Found</summary>
+
+The given vhost or application name could not be found.
+
+#### **Body**
+
+```json
 {
-	"statusCode": 404,
-	"message": "There is no push information related to the ID [{id}] (404)"
+    "message": "[HTTP] Could not find the application: [vhost/app1] (404)",
+    "statusCode": 404
 }
 ```
-{% endswagger-response %}
-{% endswagger %}
 
-{% swagger baseUrl="http://<OME_HOST>:<API_PORT>" path="/v1/vhosts/{vhost_name}/apps/{app_name}:pushes" method="post" summary="Push publishing status" %}
-{% swagger-description %}
+</details>
 
+<details>
 
-**Example**
+<summary><mark style="color:red;">409</mark> Conflict</summary>
 
-`POST http[s]://{host}/v1/vhosts/default/apps/app:pushes`\
-`{`\
-&#x20; `"id": "{unique_push_id}"`\
-`}`\
-``
-{% endswagger-description %}
+duplicate ID
 
-{% swagger-parameter in="path" name="vhost_name" type="string" required="true" %}
-A name of
+</details>
 
-`VirtualHost`
-{% endswagger-parameter %}
+## Stop Push Publishing
 
-{% swagger-parameter in="path" name="app_name" type="string" required="true" %}
-A name of
+> ### Request
 
-`Application`
-{% endswagger-parameter %}
+<details>
 
-{% swagger-parameter in="header" name="authorization" type="string" required="true" %}
-A string for authentication in
+<summary><mark style="color:blue;">POST</mark> /v1/vhosts/{vhost}/apps/{app}:stopPush</summary>
 
-`Basic Base64(AccessToken)`
+#### **Header**
 
-format.
+```http
+Authorization: Basic {credentials}
 
-\\
-
-For example,
-
-`Basic b21lLWFjY2Vzcy10b2tlbg==`
-
-if access token is
-
-`ome-access-token`
-
-.
-{% endswagger-parameter %}
-
-{% swagger-parameter in="body" name="id" type="string" %}
-Unique identifier of push publishing
-{% endswagger-parameter %}
-
-{% swagger-response status="200" description="Success" %}
+# Authorization
+    Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
+
+#### Body&#x20;
+
+{% code overflow="wrap" %}
+```json
 {
-	"statusCode": 200,
-	"message": "OK",
-	"response": [
-    {
-      "id": "UniqueId1",
-      "app": "app",
-      "createdTime": "2021-01-18T10:25:03.765+0900",
-      "startTime": "1970-01-01T09:00:00.000+0900",
-      "finishTime": "1970-01-01T09:00:00.000+0900",
-      "protocol": "rtmp",
-      "sentBytes": 0,
-      "sentTime": 0,
-      "sequence": 0,
-      "state": "ready",
-      "stream": {
-        "name": "stream",
-        "tracks": [
-          101,
-          102
-        ]
-      },
-      "streamKey": "2u5w-rt7q-tepj-91qa-4yft",
-      "totalsentBytes": 0,
-      "totalsentTime": 0,
-      "url": "rtmp://a.rtmp.youtube.com/live2",
-      "vhost": "default"
-    },
-    {
-      "id": "UniqueId2",
-      "app": "app",
-      "createdTime": "2021-01-18T10:26:15.968+0900",
-      "startTime": "1970-01-01T09:00:00.000+0900",
-      "finishTime": "1970-01-01T09:00:00.000+0900",
-      "protocol": "rtmp",
-      "sentBytes": 0,
-      "sentTime": 0,
-      "sequence": 0,
-      "state": "ready",
-      "stream": {
-        "name": "strea2m",
-        "tracks": [
-          101,
-          102
-        ]
-      },
-      "streamKey": "2u5w-rt7q-tepj-91qa-4yft",
-      "totalsentBytes": 0,
-      "totalsentTime": 0,
-      "url": "rtmp://a.rtmp.youtube.com/live2",
-      "vhost": "default"
-    }
-	]
+    "id": "{unique_push_id}"
+}
+
+# id (required)
+    unique ID to identify the push publishing task
+```
+{% endcode %}
+
+</details>
+
+> ### Responses
+
+<details>
+
+<summary><mark style="color:blue;">200</mark> Ok</summary>
+
+The request has succeeded
+
+#### **Header**
+
+```
+Content-Type: application/json
+```
+
+#### **Body**
+
+```json
+{
+    "statusCode": 200,
+    "message": "OK",
+}
+
+# statusCode
+	Same as HTTP Status Code
+# message
+	A human-readable description of the response code
+```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">400</mark> Bad Request</summary>
+
+Invalid request.
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">401</mark> Unauthorized</summary>
+
+Authentication required
+
+#### **Header**
+
+```http
+WWW-Authenticate: Basic realm=”OvenMediaEngine”
+```
+
+#### **Body**
+
+```json
+{
+    "message": "[HTTP] Authorization header is required to call API (401)",
+    "statusCode": 401
 }
 ```
-{% endswagger-response %}
 
-{% swagger-response status="204" description="Not Found" %}
-```
+</details>
+
+<details>
+
+<summary><mark style="color:red;">404</mark> Not Found</summary>
+
+The given vhost/application name or id of recording task could not be found.
+
+#### **Body**
+
+```json
 {
-	"code": 204,
-	"message": "There is no pushes information (204)"
+    "message": "[HTTP] Could not find the application: [vhost/app1] (404)",
+    "statusCode": 404
 }
 ```
-{% endswagger-response %}
-{% endswagger %}
+
+</details>
+
+## Get Push Publishing State
+
+> ### Request
+
+<details>
+
+<summary><mark style="color:blue;">POST</mark> /v1/vhosts/{vhost}/apps/{app}:pushes</summary>
+
+#### **Header**
+
+```http
+Authorization: Basic {credentials}
+
+# Authorization
+    Credentials for HTTP Basic Authentication created with <AccessToken>
+```
+
+#### Body&#x20;
+
+{% code overflow="wrap" %}
+```json
+{
+    "id": "{unique_push_id}"
+}
+
+# id (optional)
+    unique ID to identify the push publishing task. If no id is given in the request, the full list is returned.
+```
+{% endcode %}
+
+</details>
+
+> ### Responses
+
+<details>
+
+<summary><mark style="color:blue;">200</mark> Ok</summary>
+
+The request has succeeded
+
+#### **Header**
+
+```
+Content-Type: application/json
+```
+
+#### **Body**
+
+The `response` is <mark style="color:green;">Json array</mark> format.
+
+```json
+{
+    "statusCode": 200,
+    "message": "OK",
+    "response": [
+        {
+            "id": "{unique_push_id}",
+            "state": "started",
+            
+            "vhost": "default",
+            "app": "app",
+            "stream": {
+                "name": "{output_stream_name}",
+                "trackIds": [],
+                "variantNames": []
+            },
+            
+            "protocol": "rtmp",
+            "url": "rtmp://{host}[:port]/{app_name}",
+            "streamKey": "{stream_name}",
+            
+            "sentBytes": 0,
+            "sentTime": 0,
+            "sequence": 0,
+            "totalsentBytes": 0,
+            "totalsentTime": 0,
+            
+            "createdTime": "2023-03-15T23:02:34.371+09:00",
+            "startTime": "1970-01-01T09:00:00.000+09:00",
+            "finishTime": "1970-01-01T09:00:00.000+09:00"
+        },
+        {
+            "id": "4",
+            ...
+        }
+    ]
+}
+
+# statusCode
+	Same as HTTP Status Code
+# message
+	A human-readable description of the response code
+# response
+	Information of recording tasks. If there is no recording task, 
+	response with empty array ("response": [])
+```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">401</mark> Unauthorized</summary>
+
+Authentication required
+
+#### **Header**
+
+```http
+WWW-Authenticate: Basic realm=”OvenMediaEngine”
+```
+
+#### **Body**
+
+```json
+{
+    "message": "[HTTP] Authorization header is required to call API (401)",
+    "statusCode": 401
+}
+```
+
+</details>
+
+<details>
+
+<summary><mark style="color:red;">404</mark> Not Found</summary>
+
+The given vhost or application name could not be found.
+
+#### **Body**
+
+```json
+{
+    "message": "[HTTP] Could not find the application: [vhost/app1] (404)",
+    "statusCode": 404
+}
+```
+
+</details>
+
+## State of Push Publishing
+
+The Push Publishing task has the state shown in the table below. You can get the `state` in the Start Push Publishing and Get Push Publishing State API response.
+
+| Ready    | Preparing to start or waiting for the stream to be created. |
+| -------- | ----------------------------------------------------------- |
+| Started  | In Progress                                                 |
+| Stopping | Is stopping                                                 |
+| Stopped  | Stopped                                                     |
+| Error    | Error                                                       |
+
