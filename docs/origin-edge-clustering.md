@@ -54,36 +54,36 @@ To run OvenMediaEngine as Edge, you need to add Origins elements to the configur
 
 ```markup
 <VirtualHosts>
-	<VirtualHost>
-		<Origins>
-			<Properties>
-				<NoInputFailoverTimeout>3000</NoInputFailoverTimeout>
-				<UnusedStreamDeletionTimeout>60000</UnusedStreamDeletionTimeout>
-			</Properties>
-			<Origin>
-				<Location>/app/stream</Location>
-				<Pass>
-					<Scheme>ovt</Scheme>
-					<Urls><Url>origin.com:9000/app/stream_720p</Url></Urls>
-				</Pass>
-				<ForwardQueryParams>true</ForwardQueryParams>
-			</Origin>
-			<Origin>
-				<Location>/app/</Location>
-				<Pass>
-					<Scheme>OVT</Scheme>
-					<Urls><Url>origin.com:9000/app/</Url></Urls>
-				</Pass>
-			</Origin>
-			<Origin>
-				<Location>/</Location>
-				<Pass>
-					<Scheme>RTSP</Scheme>
-					<Urls><Url>origin2.com:9000/</Url></Urls>
-				</Pass>
-			</Origin>
-		</Origins>
-	</VirtualHost>
+    <VirtualHost>
+        <Origins>
+            <Properties>
+                <NoInputFailoverTimeout>3000</NoInputFailoverTimeout>
+                <UnusedStreamDeletionTimeout>60000</UnusedStreamDeletionTimeout>
+            </Properties>
+            <Origin>
+                <Location>/app/stream</Location>
+                <Pass>
+                    <Scheme>ovt</Scheme>
+                    <Urls><Url>origin.com:9000/app/stream_720p</Url></Urls>
+                </Pass>
+                <ForwardQueryParams>true</ForwardQueryParams>
+            </Origin>
+            <Origin>
+                <Location>/app/</Location>
+                <Pass>
+                    <Scheme>OVT</Scheme>
+                    <Urls><Url>origin.com:9000/app/</Url></Urls>
+                </Pass>
+            </Origin>
+            <Origin>
+                <Location>/</Location>
+                <Pass>
+                    <Scheme>RTSP</Scheme>
+                    <Urls><Url>origin2.com:9000/</Url></Urls>
+                </Pass>
+            </Origin>
+        </Origins>
+    </VirtualHost>
 </VirtualHosts>
 ```
 
@@ -95,41 +95,41 @@ The automatically created application by `<Origin>` enables all providers but if
 
 ```markup
 <VirtualHosts>
-	<VirtualHost>
-		<Origins>
-			<Properties>
-				<NoInputFailoverTimeout>3000</NoInputFailoverTimeout>
-				<UnusedStreamDeletionTimeout>60000</UnusedStreamDeletionTimeout>
-			</Properties>
-			<Origin>
-				<Location>/this_application/stream</Location>
-				<Pass>
-					<Scheme>OVT</Scheme>
-					<Urls><Url>origin.com:9000/app/stream_720p</Url></Urls>
-				</Pass>
-				<ForwardQueryParams>true</ForwardQueryParams>
-			</Origin>
-			<Origin>
-				<Location>/this_application/rtsp_stream</Location>
-				<Pass>
-					<Scheme>RTSP</Scheme>
-					<Urls><Url>rtsp.origin.com/145</Url></Urls>
-				</Pass>
-			</Origin>
-		</Origins>
-		<Applications>
-			<Application>
-				<Name>this_application</Name>
-				<Type>live</Type>
-				<Providers>
-					<!-- You have to enable the OVT provider 
-					because you used the ovt scheme for configuring Origin. -->
-					<OVT />
-					<!-- If you set RTSP into Scheme, 
-					you have to enable RTSPPull provider -->
-					<RTSPPull />
-				</Providers>
-		
+    <VirtualHost>
+        <Origins>
+            <Properties>
+                <NoInputFailoverTimeout>3000</NoInputFailoverTimeout>
+                <UnusedStreamDeletionTimeout>60000</UnusedStreamDeletionTimeout>
+            </Properties>
+            <Origin>
+                <Location>/this_application/stream</Location>
+                <Pass>
+                    <Scheme>OVT</Scheme>
+                    <Urls><Url>origin.com:9000/app/stream_720p</Url></Urls>
+                </Pass>
+                <ForwardQueryParams>true</ForwardQueryParams>
+            </Origin>
+            <Origin>
+                <Location>/this_application/rtsp_stream</Location>
+                <Pass>
+                    <Scheme>RTSP</Scheme>
+                    <Urls><Url>rtsp.origin.com/145</Url></Urls>
+                </Pass>
+            </Origin>
+        </Origins>
+        <Applications>
+            <Application>
+                <Name>this_application</Name>
+                <Type>live</Type>
+                <Providers>
+                    <!-- You have to enable the OVT provider 
+                    because you used the ovt scheme for configuring Origin. -->
+                    <OVT />
+                    <!-- If you set RTSP into Scheme, 
+                    you have to enable RTSPPull provider -->
+                    <RTSPPull />
+                </Providers>
+		...
 ```
 
 #### \<Properties>
@@ -190,22 +190,24 @@ This means that existing settings do not need to be updated when extending Origi
 
 OriginMapStore functionality has been tested with Redis Server 5.0.7. You can enable this feature by adding the following settings to Server.xml of Origin and Edge. Note that must be set in Server.xml of the Origin server. This is used when Origin registers its own OVT url, so you just need to set a domain name or IP address that can be accessed as an OVT publisher.
 
+{% code overflow="wrap" %}
 ```xml
 <VirtualHost>
-	...
-	<OriginMapStore>
-		<!-- In order to use OriginMap, you must enable OVT Publisher in Origin and OVT Provider in Edge. -->
-		<RedisServer>
-			<Host>192.168.0.160:6379</Host>
-			<Auth>!@#ovenmediaengine</Auth>
-		</RedisServer>
-		
-		<!-- This is only needed for the origin server and used to register the ovt address of the stream.  -->
-		<OriginHostName>ome-dev.airensoft.com</OriginHostName>
-	</OriginMapStore>
-	...
+    ...
+    <OriginMapStore>
+        <!-- In order to use OriginMap, you must enable OVT Publisher in Origin and OVT Provider in Edge. -->
+        <RedisServer>
+            <Host>192.168.0.160:6379</Host>
+            <Auth>!@#ovenmediaengine</Auth>
+        </RedisServer>
+        
+        <!-- This is only needed for the origin server and used to register the ovt address of the stream.  -->
+        <OriginHostName>ome-dev.airensoft.com</OriginHostName>
+    </OriginMapStore>
+    ...
 </VirtualHost>
 ```
+{% endcode %}
 
 ## Load Balancer
 

@@ -6,27 +6,27 @@
 
 ```markup
 <Server>
-	...
-	<Bind>
-		<Providers>
-			<RTMP>
-			  <Port>1935</Port>
-			</RTMP>
-		</Providers>
-	</Bind>
-	...
-	<VirtualHosts>
-		<VirtualHost>
-			<Application>
-				<Providers>
-					<RTMP>
-			    	...
-			    </RTMP>
-			    ...
-				</Providers>
-			<Application>
-		</VirtualHost>
-	</VirtualHosts>
+    ...
+    <Bind>
+        <Providers>
+            <RTMP>
+              <Port>1935</Port>
+            </RTMP>
+        </Providers>
+    </Bind>
+    ...
+    <VirtualHosts>
+        <VirtualHost>
+            <Application>
+                <Providers>
+                    <RTMP>
+                    ...
+                </RTMP>
+                ...
+                </Providers>
+            <Application>
+        </VirtualHost>
+    </VirtualHosts>
 </Server>
 ```
 

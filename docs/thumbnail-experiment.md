@@ -10,15 +10,15 @@ Thumbnails are published via HTTP(s). Set the port for thumbnails as follows. Th
 
 ```markup
 <Bind>
-	<Publishers>
-	  ...
-		<Thumbnail>
-			<Port>20080</Port>
-			<!-- If you need TLS support, please uncomment below:
-			<TLSPort>20081</TLSPort>
-			-->
-		</Thumbnail>
-	</Publishers>
+    <Publishers>
+      ...
+        <Thumbnail>
+            <Port>20080</Port>
+            <!-- If you need TLS support, please uncomment below:
+            <TLSPort>20081</TLSPort>
+            -->
+        </Thumbnail>
+    </Publishers>
 </Bind>
 ```
 
@@ -28,24 +28,24 @@ In order to publish thumbnails, an encoding profile for thumbnails must be set. 
 
 ```markup
 <OutputProfiles>
-	<OutputProfile>
-		<Name>default_stream</Name>
-		<OutputStreamName>${OriginStreamName}_preview</OutputStreamName>
-		<Encodes>
-			<Image>
-				<Codec>jpeg</Codec>
-				<Framerate>1</Framerate>
-				<Width>1280</Width>
-				<Height>720</Height>
-			</Image>
-			<Image>
-				<Codec>png</Codec>
-				<Framerate>1</Framerate>
-				<Width>1280</Width>
-				<Height>720</Height>
-			</Image>
-		</Encodes>
-	</OutputProfile>
+    <OutputProfile>
+        <Name>default_stream</Name>
+        <OutputStreamName>${OriginStreamName}_preview</OutputStreamName>
+        <Encodes>
+            <Image>
+                <Codec>jpeg</Codec>
+                <Framerate>1</Framerate>
+                <Width>1280</Width>
+                <Height>720</Height>
+            </Image>
+            <Image>
+                <Codec>png</Codec>
+                <Framerate>1</Framerate>
+                <Width>1280</Width>
+                <Height>720</Height>
+            </Image>
+        </Encodes>
+    </OutputProfile>
 </OutputProfiles>
 ```
 
@@ -55,12 +55,12 @@ Declaring a thumbnail publisher. Cross-domain settings are available as a detail
 
 ```markup
 <Publishers>
-  ...
-	<Thumbnail>
-		<CrossDomains>
-			<Url>*</Url>
-		</CrossDomains>	
-	</Thumbnail>
+    ...
+    <Thumbnail>
+        <CrossDomains>
+            <Url>*</Url>
+        </CrossDomains>	
+    </Thumbnail>
 </Publishers>
 ```
 

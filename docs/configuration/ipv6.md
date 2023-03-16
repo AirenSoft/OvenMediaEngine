@@ -29,17 +29,17 @@ Of course, you can also specify a specific IP address of an interface instead of
 
 ```xml
 <Server version="8">
-	<Name>OvenMediaEngine</Name>
-	<Type>origin</Type>
-	<IP>*</IP>
+    <Name>OvenMediaEngine</Name>
+    <Type>origin</Type>
+    <IP>*</IP>
 
-	<Bind>
-		<Providers>
-			<RTMP>
-				<Port>1935</Port>
-			</RTMP>
-		</Providers>
-	</Bind>
+    <Bind>
+        <Providers>
+            <RTMP>
+                <Port>1935</Port>
+            </RTMP>
+        </Providers>
+    </Bind>
 </Server>
 ```
 
@@ -54,17 +54,17 @@ tcp        0      0 0.0.0.0:1935            0.0.0.0:*               LISTEN      
 
 ```xml
 <Server version="8">
-	<Name>OvenMediaEngine</Name>
-	<Type>origin</Type>
-	<IP>::</IP>
+    <Name>OvenMediaEngine</Name>
+    <Type>origin</Type>
+    <IP>::</IP>
 
-	<Bind>
-		<Providers>
-			<RTMP>
-				<Port>1935</Port>
-			</RTMP>
-		</Providers>
-	</Bind>
+    <Bind>
+        <Providers>
+            <RTMP>
+                <Port>1935</Port>
+            </RTMP>
+        </Providers>
+    </Bind>
 </Server>
 ```
 
@@ -79,20 +79,19 @@ tcp6       0      0 :::1935                 :::*                    LISTEN      
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-
 <Server version="8">
-	<Name>OvenMediaEngine</Name>
-	<Type>origin</Type>
-	<IP>*</IP>
-	<IP>::</IP>
+    <Name>OvenMediaEngine</Name>
+    <Type>origin</Type>
+    <IP>*</IP>
+    <IP>::</IP>
 
-	<Bind>
-		<Providers>
-			<RTMP>
-				<Port>1935</Port>
-			</RTMP>
-		</Providers>
-	</Bind>
+    <Bind>
+        <Providers>
+            <RTMP>
+                <Port>1935</Port>
+            </RTMP>
+        </Providers>
+    </Bind>
 </Server>
 
 ```
@@ -115,15 +114,15 @@ To use IPv6 ICE Candidate, you need to add an IPv6 `IceCandidate` to `/Server/Bi
 
 ```xml
 <Server version="8">
-	...
-	<Bind>
-		<Providers>
-			<WebRTC>
-				...
-				<IceCandidates>
-					<IceCandidate>*:10000/udp</IceCandidate>
-					<IceCandidate>[::]:10000/udp</IceCandidate>
-				</IceCandidates>
+    ...
+    <Bind>
+        <Providers>
+            <WebRTC>
+                ...
+                <IceCandidates>
+                    <IceCandidate>*:10000/udp</IceCandidate>
+                    <IceCandidate>[::]:10000/udp</IceCandidate>
+                </IceCandidates>
 ...
 ```
 
@@ -143,23 +142,23 @@ By setting up as above, OME is ready to use ICE Candidates for IPv6 as well as I
 
 Now you can set up the OME edge to look at an origin with an IPv6 IP address. To do this, you can set `/Server/VirtualHosts/VirtualHost/Origins/Origin/Pass/Urls/Url` as follows:
 
-```
+```xml
 <Server version="8">
-	...
-	<VirtualHosts>
-		<VirtualHost>
-			<Origins>
-				<Origin>
-					<Location>/rtsp/stream</Location>
-					<Pass>
-						<Scheme>rtsp</Scheme>
-						<Urls>
-							<Url>airen:airen@[1:2:3:4:5:6:7:8]:1234/app/stream</Url>
-						</Urls>
-					</Pass>
-				</Origin>
-			</Origins>
-...
+    ...
+    <VirtualHosts>
+        <VirtualHost>
+            <Origins>
+                <Origin>
+                    <Location>/rtsp/stream</Location>
+                    <Pass>
+                        <Scheme>rtsp</Scheme>
+                        <Urls>
+                            <Url>airen:airen@[1:2:3:4:5:6:7:8]:1234/app/stream</Url>
+                        </Urls>
+                    </Pass>
+                </Origin>
+            </Origins>
+  ...
 ```
 
 This configuration creates a stream that refers an RTSP source provided on port 1234 of an origin which has an IPv6 address of `1:2:3:4:5:6:7:8`.
@@ -168,13 +167,13 @@ This configuration creates a stream that refers an RTSP source provided on port 
 
 You can also specify an IPv6 address for the server that `AdmissionWebhooks` is using. To do this, set the value of `/Server/VirtualHosts/VirtualHost/AdmissionWebhooks/ControlServerUrl` as follows:
 
-```php-template
+```xml
 <Server version="8">
-	...
-	<VirtualHosts>
-		<VirtualHost>
-			<AdmissionWebhooks>
-				<ControlServerUrl>http://[1:2:3:4:5:6:7:8]:7000/a/b/c</ControlServerUrl>
+    ...
+    <VirtualHosts>
+        <VirtualHost>
+            <AdmissionWebhooks>
+                <ControlServerUrl>http://[1:2:3:4:5:6:7:8]:7000/a/b/c</ControlServerUrl>
 ```
 
 The above configuration asks whether the client has the permission to publish or playback using `http://[1:2:3:4:5:6:7:8]:7000/a/b/c`.

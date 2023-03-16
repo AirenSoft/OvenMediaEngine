@@ -10,40 +10,40 @@ RTSP Pull is provided through OriginMap configuration. OriginMap is the rule tha
 
 ```markup
 <VirtualHosts>
-		<VirtualHost include="VHost*.xml" />
-		<VirtualHost>
-			<Name>default</Name>
+    <VirtualHost include="VHost*.xml" />
+    <VirtualHost>
+        <Name>default</Name>
 
-			<Host>
-				<Names>
-					<!-- Host names
-						<Name>stream1.airensoft.com</Name>
-						<Name>stream2.airensoft.com</Name>
-						<Name>*.sub.airensoft.com</Name>
-						<Name>192.168.0.1</Name>
-					-->
-					<Name>*</Name>
-				</Names>
-				<!--
-				<TLS>
-					<CertPath>path/to/file.crt</CertPath>
-					<KeyPath>path/to/file.key</KeyPath>
-					<ChainCertPath>path/to/file.crt</ChainCertPath>
-				</TLS>
-				-->
-			</Host>
-			
-			<Origins>
-				<Origin>
-					<Location>/app_name/rtsp_stream_name</Location>
-					<Pass>
-						<Scheme>rtsp</Scheme>
-						<Urls><Url>192.168.0.200:554/</Url></Urls>
-					</Pass>
-				</Origin>
-			</Origins>
-		</VirtualHost>
-	</VirtualHosts>
+        <Host>
+            <Names>
+                <!-- Host names
+                    <Name>stream1.airensoft.com</Name>
+                    <Name>stream2.airensoft.com</Name>
+                    <Name>*.sub.airensoft.com</Name>
+                    <Name>192.168.0.1</Name>
+                -->
+                <Name>*</Name>
+            </Names>
+            <!--
+            <TLS>
+                <CertPath>path/to/file.crt</CertPath>
+                <KeyPath>path/to/file.key</KeyPath>
+                <ChainCertPath>path/to/file.crt</ChainCertPath>
+            </TLS>
+            -->
+        </Host>
+        
+        <Origins>
+            <Origin>
+                <Location>/app_name/rtsp_stream_name</Location>
+                <Pass>
+                    <Scheme>rtsp</Scheme>
+                    <Urls><Url>192.168.0.200:554/</Url></Urls>
+                </Pass>
+            </Origin>
+        </Origins>
+    </VirtualHost>
+</VirtualHosts>
 ```
 
 For example, in the above setup, when a player requests "ws://ome.com/**app\_name/rtsp\_stream\_name"** to stream WebRTC, it pulls the stream from "rtsp://**192.168.0.200:554"** and publishes it to WebRTC.
