@@ -72,8 +72,6 @@ MediaRouteStream::~MediaRouteStream()
 
 	_stat_recv_pkt_lpts.clear();
 	_stat_recv_pkt_ldts.clear();
-	_stat_recv_pkt_size.clear();
-	_stat_recv_pkt_count.clear();
 
 	_pts_last.clear();
 }
@@ -173,6 +171,7 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 
 		return false;
 	}
+	
 	// Convert to AnnexB and Insert SPS/PPS if there are no SPS/PPS nal units.
 	else if (media_packet->GetPacketType() == cmn::PacketType::NALU)
 	{
@@ -787,7 +786,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 		case cmn::BitstreamFormat::H265_ANNEXB:
 			if (_warning_count_bframe < 10)
 			{
-				if (_stat_recv_pkt_count[track_id] > 0 && _stat_recv_pkt_lpts[track_id] > media_packet->GetPts())
+				if (media_track->GetTotalFrameCount() > 0 && _stat_recv_pkt_lpts[track_id] > media_packet->GetPts())
 				{
 					media_track->SetHasBframes(true);
 				}
@@ -812,8 +811,6 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 
 	_stat_recv_pkt_lpts[track_id] = media_packet->GetPts();
 	_stat_recv_pkt_ldts[track_id] = media_packet->GetDts();
-	_stat_recv_pkt_size[track_id] += media_packet->GetData()->GetLength();
-	_stat_recv_pkt_count[track_id]++;
 
 	if (_stop_watch.IsElapsed(10000) && _stop_watch.Update())
 	{
@@ -832,19 +829,18 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			// Time difference in pts values relative to uptime
 			int64_t last_delay = uptime - rescaled_last_pts;
 
-
-			stat_track_str.AppendFormat("\n\ttrack:%11d, type: %4s, codec: %4s(%d,%s), pts: %lldms, dly: %5lldms, tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %dKbps",
+			stat_track_str.AppendFormat("\n\ttrack:%11d, type: %4s, codec: %4s(%d,%s), pts: %lldms, dly: %5lldms, tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %s/%s",
 										track_id,
 										GetMediaTypeString(track->GetMediaType()).CStr(),
 										::StringFromMediaCodecId(track->GetCodecId()).CStr(),
 										track->GetCodecId(),
-										track->IsBypass()?"Passthrough":GetStringFromCodecLibraryId(track->GetCodecLibraryId()).CStr(),
+										track->IsBypass() ? "Passthrough" : GetStringFromCodecLibraryId(track->GetCodecLibraryId()).CStr(),
 										rescaled_last_pts,
 										last_delay,
 										track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(),
-										_stat_recv_pkt_count[track_id],
-										ov::Converter::ToSiString(_stat_recv_pkt_size[track_id], 1).CStr(),
-										_stat_recv_pkt_size[track_id] / (uptime / 1000) * 8 / 1000);
+										track->GetTotalFrameCount(),
+										ov::Converter::ToSiString(track->GetTotalFrameBytes(), 1).CStr(),
+										ov::Converter::BitToString(track->GetBitrateByMeasured()).CStr(), ov::Converter::BitToString(track->GetBitrateByConfig()).CStr());
 
 			if(track->GetMediaType() == MediaType::Data)
 			{

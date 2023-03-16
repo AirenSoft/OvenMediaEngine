@@ -103,8 +103,6 @@ private:
 	// <TrackId, Values>
 	std::map<MediaTrackId, int64_t> _stat_recv_pkt_lpts;
 	std::map<MediaTrackId, int64_t> _stat_recv_pkt_ldts;
-	std::map<MediaTrackId, int64_t> _stat_recv_pkt_size;
-	std::map<MediaTrackId, int64_t> _stat_recv_pkt_count;
 
 	// Time for statistics
 	ov::StopWatch _stop_watch;
