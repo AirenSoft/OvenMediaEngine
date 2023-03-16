@@ -100,6 +100,7 @@ The meaning of each property is as follows:
 | Framerate                                 | Frames per second                                                                                                              |
 | KeyFrameInterval                          | <p>Number of frames between two keyframes (0~600)<br><mark style="color:blue;">default is framerate (i.e. 1 second)</mark></p> |
 | BFrames                                   | <p>Number of B-frame (0~16)<br><mark style="color:blue;">default is 0</mark></p>                                               |
+| Profile                                   | H264 only encoding profile (baseline, main, high)                                                                              |
 | Preset                                    | Presets of encoding quality and performance                                                                                    |
 | ThreadCount                               | Number of threads in encoding                                                                                                  |
 
