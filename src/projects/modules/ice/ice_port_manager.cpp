@@ -45,8 +45,9 @@ bool IcePortManager::CreateIceCandidates(
 	const cfg::Server &server_config,
 	const cfg::bind::cmm::IceCandidates &ice_candidates_config)
 {
-	if (_ice_port == nullptr || IsRegisteredObserver(observer) == false)
+	if ((_ice_port == nullptr) || (IsRegisteredObserver(observer) == false))
 	{
+		logte("ICE port should be created before creating ICE candidates");
 		return false;
 	}
 
@@ -54,7 +55,7 @@ bool IcePortManager::CreateIceCandidates(
 
 	if (GenerateIceCandidates(ice_candidates_config, &ice_candidate_list) == false)
 	{
-		logte("Could not parse ICE candidates");
+		logte("Could not parse ICE candidates for %s. Check your ICE configuration", server_name);
 		return false;
 	}
 
@@ -66,7 +67,7 @@ bool IcePortManager::CreateIceCandidates(
 	{
 		Release(observer);
 
-		logte("Could not create ice candidates");
+		logte("Could not create ICE candidates for %s. Check your ICE configuration", server_name);
 		OV_ASSERT2(false);
 	}
 	else
@@ -108,12 +109,6 @@ bool IcePortManager::CreateTurnServersInternal(
 	const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config)
 {
 	auto &ice_candidates_config = webrtc_bind_config.GetIceCandidates();
-
-	if (CreateIceCandidates(server_name, observer, server_config, ice_candidates_config) == false)
-	{
-		logte("Could not create ICE Candidates for %s. Check your ICE configuration", server_name);
-		return false;
-	}
 
 	bool is_tcp_relay_configured = false;
 	const auto &tcp_relay_list = ice_candidates_config.GetTcpRelayList(&is_tcp_relay_configured);
@@ -214,7 +209,11 @@ std::shared_ptr<IcePort> IcePortManager::CreateTurnServers(
 		return nullptr;
 	}
 
-	if (CreateTurnServersInternal(server_name, ice_port, observer, server_config, webrtc_bind_config))
+	auto &ice_candidates_config = webrtc_bind_config.GetIceCandidates();
+
+	if (
+		CreateIceCandidates(server_name, observer, server_config, ice_candidates_config) &&
+		CreateTurnServersInternal(server_name, ice_port, observer, server_config, webrtc_bind_config))
 	{
 		return ice_port;
 	}
