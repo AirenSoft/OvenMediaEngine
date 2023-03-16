@@ -38,22 +38,29 @@ bool EncoderVP8::SetCodecParams()
 	_codec_context->thread_count = GetRefTrack()->GetThreadCount() < 0 ? FFMIN(FFMAX(4, av_cpu_count() / 3), 8) : GetRefTrack()->GetThreadCount();
 
 	// Preset
-	if (GetRefTrack()->GetPreset() == "slower" || GetRefTrack()->GetPreset() == "slow")
-	{
-		::av_opt_set(_codec_context->priv_data, "preset", "best", 0);
-	}
-	else if (GetRefTrack()->GetPreset() == "medium")
-	{
-		::av_opt_set(_codec_context->priv_data, "quality", "good", 0);
-	}
-	else if (GetRefTrack()->GetPreset() == "fast" || GetRefTrack()->GetPreset() == "faster")
+	auto preset = GetRefTrack()->GetPreset().LowerCaseString();
+	if (preset.IsEmpty() == true)
 	{
 		::av_opt_set(_codec_context->priv_data, "quality", "realtime", 0);
 	}
 	else
 	{
-		// Default
-		::av_opt_set(_codec_context->priv_data, "quality", "realtime", 0);
+		if (preset == "slower" || preset == "slow")
+		{
+			::av_opt_set(_codec_context->priv_data, "quality", "best", 0);
+		}
+		else if (preset == "medium")
+		{
+			::av_opt_set(_codec_context->priv_data, "quality", "good", 0);
+
+		}		
+		else if (preset == "fast" || preset == "faster")
+		{
+			::av_opt_set(_codec_context->priv_data, "quality", "realtime", 0);
+		}
+		else{
+			logtw("Unknown preset: %s", preset.CStr());
+		}
 	}
 
 	return true;
