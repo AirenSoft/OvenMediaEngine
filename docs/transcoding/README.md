@@ -6,10 +6,10 @@ OvenMediaEngine has a built-in live transcoder. The live transcoder can decode t
 
 ### Decoders
 
-| Type  | Codec             |
-| ----- | ----------------- |
-| Video | VP8, H.264, H.265 |
-| Audio | AAC, Opus         |
+| Type  | Codec      |
+| ----- | ---------- |
+| Video | VP8, H.264 |
+| Audio | AAC, Opus  |
 
 ### Encoders
 
@@ -21,9 +21,6 @@ OvenMediaEngine has a built-in live transcoder. The live transcoder can decode t
 |       |       | h264\_nvenc                                                          |
 |       |       | h264\_qsv                                                            |
 |       |       | h264\_beamr _<mark style="color:blue;">(Enterprise Only)</mark>_     |
-|       | H.265 | h265 _<mark style="color:blue;">(Automatic Codec Selection)</mark>_  |
-|       |       | h265\_nvenc                                                          |
-|       |       | h265\_qsv                                                            |
 | Audio | AAC   | aac                                                                  |
 |       | Opus  | opus                                                                 |
 | Image | JPEG  | jpeg                                                                 |
@@ -112,13 +109,13 @@ The meaning of each property is as follows:
 
 A table in which presets provided for each codec library are mapped to OvenMediaEngine presets. Slow presets are of good quality and use a lot of resources, whereas Fast presets have lower quality and better performance. It can be set according to your own system environment and service purpose.
 
-| Presets    | openh264   | h264/265 NVENC | h264/265 QSV | libvpx   |
-| ---------- | ---------- | -------------- | ------------ | -------- |
-| **slower** | QP( 10-39) | p7             | No Support   | best     |
-| **slow**   | QP (16-45) | p6             | No Support   | best     |
-| **medium** | QP (24-51) | p5             | No Support   | good     |
-| **fast**   | QP (32-51) | p4             | No Support   | realtime |
-| **faster** | QP (40-51) | p3             | No Support   | realtime |
+| Presets    | openh264   | h264\_nvenc | h264\_qsv  | vp8      |
+| ---------- | ---------- | ----------- | ---------- | -------- |
+| **slower** | QP( 10-39) | p7          | No Support | best     |
+| **slow**   | QP (16-45) | p6          | No Support | best     |
+| **medium** | QP (24-51) | p5          | No Support | good     |
+| **fast**   | QP (32-51) | p4          | No Support | realtime |
+| **faster** | QP (40-51) | p3          | No Support | realtime |
 
 _References_
 
