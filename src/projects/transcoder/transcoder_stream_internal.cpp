@@ -119,6 +119,37 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 		return nullptr;
 	}
 
+	bool is_parsed;
+	profile.IsBypass(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetBypassByConfig(profile.IsBypass());
+	}
+
+	profile.GetBitrateString(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetBitrateByConfig(profile.GetBitrate());
+	}
+
+	profile.GetWidth(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetWidthByConfig(profile.GetWidth());
+	}
+
+	profile.GetHeight(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetHeightByConfig(profile.GetHeight());
+	}
+
+	profile.GetFramerate(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetFrameRateByConfig(profile.GetFramerate());
+	}
+
 	output_track->SetMediaType(cmn::MediaType::Video);
 	output_track->SetId(NewTrackId());
 	output_track->SetVariantName(profile.GetName());
@@ -134,40 +165,31 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 		output_track->SetCodecLibraryId(input_track->GetCodecLibraryId());
 		output_track->SetWidth(input_track->GetWidth());
 		output_track->SetHeight(input_track->GetHeight());
-		output_track->SetFrameRate(input_track->GetFrameRate());
 		output_track->SetTimeBase(input_track->GetTimeBase());
-
-		bool is_parsed;
-		profile.GetBitrateString(&is_parsed);
-		if (is_parsed == true)
-		{
-			// If bitrates information is not provided in the input stream or if it is ABR,
-			// the user can input information manually and use it.
-			// Bitrates information is essential in ABR.
-			output_track->SetBitrate(profile.GetBitrate());
-		}
-		else
-		{
-			output_track->SetBitrate(input_track->GetBitrate());
-		}
 	}
 	else
 	{
 		output_track->SetBypass(false);
 		output_track->SetCodecId(cmn::GetCodecIdByName(profile.GetCodec()));
 		output_track->SetCodecLibraryId(cmn::GetCodecLibraryIdByName(profile.GetCodec()));
-		output_track->SetBitrate(profile.GetBitrate());
 		output_track->SetWidth(profile.GetWidth());
 		output_track->SetHeight(profile.GetHeight());
-		output_track->SetFrameRate(profile.GetFramerate());
 		output_track->SetTimeBase(GetDefaultTimebaseByCodecId(output_track->GetCodecId()));
 		output_track->SetPreset(profile.GetPreset());
 		output_track->SetThreadCount(profile.GetThreadCount());
 		output_track->SetKeyFrameInterval(profile.GetKeyFrameInterval());
 		output_track->SetBFrames(profile.GetBFrames());
 		output_track->SetProfile(profile.GetProfile());
+	}
 
-		output_track->_cfg = (void*)&profile;
+	if(output_track->GetFrameRateByConfig() == 0)
+	{
+		output_track->SetFrameRateByMeasured(input_track->GetFrameRate());
+	}
+
+	if(output_track->GetBitrateByConfig() == 0)
+	{
+		output_track->SetBitrateByMeasured(input_track->GetBitrate());
 	}
 
 	if (cmn::IsVideoCodec(output_track->GetCodecId()) == false)
@@ -184,6 +206,19 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 	if (output_track == nullptr)
 	{
 		return nullptr;
+	}
+
+	bool is_parsed;
+	profile.IsBypass(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetBypassByConfig(profile.IsBypass());
+	}
+
+	profile.GetBitrateString(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetBitrateByConfig(profile.GetBitrate());
 	}
 
 	output_track->SetMediaType(cmn::MediaType::Audio);
@@ -203,31 +238,17 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 		output_track->GetSample().SetFormat(input_track->GetSample().GetFormat());
 		output_track->SetTimeBase(input_track->GetTimeBase());
 		output_track->SetSampleRate(input_track->GetSampleRate());
-
-		bool is_parsed;
-		profile.GetBitrateString(&is_parsed);
-		if (is_parsed == true)
-		{
-			// If bitrates information is not provided in the input stream or if it is ABR,
-			// the user can input information manually and use it.
-			// Bitrates information is essential in ABR.
-			output_track->SetBitrate(profile.GetBitrate());
-		}
-		else
-		{
-			output_track->SetBitrate(input_track->GetBitrate());
-		}
 	}
 	else
 	{
 		output_track->SetBypass(false);
 		output_track->SetCodecId(cmn::GetCodecIdByName(profile.GetCodec()));
 		output_track->SetCodecLibraryId(cmn::GetCodecLibraryIdByName(profile.GetCodec()));
-		output_track->SetBitrate(profile.GetBitrate());
 		output_track->GetChannel().SetLayout(profile.GetChannel() == 1 ? cmn::AudioChannel::Layout::LayoutMono : cmn::AudioChannel::Layout::LayoutStereo);
 		output_track->GetSample().SetFormat(input_track->GetSample().GetFormat());	// The sample format will change by the decoder event.
 		output_track->SetSampleRate(profile.GetSamplerate());
 
+		// Samplerate
 		if (output_track->GetCodecId() == cmn::MediaCodecId::Opus)
 		{
 			if (output_track->GetSampleRate() != 48000)
@@ -237,6 +258,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 			}
 		}
 
+		// Timebase
 		if (output_track->GetSampleRate() == 0)
 		{
 			output_track->SetTimeBase(GetDefaultTimebaseByCodecId(output_track->GetCodecId()));
@@ -245,8 +267,12 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 		{
 			output_track->SetTimeBase(1, output_track->GetSampleRate());
 		}
+	}
 
-		output_track->_cfg = (void*)&profile;
+	// Bitrate
+	if(output_track->GetBitrateByConfig() == 0)
+	{
+		output_track->SetBitrateByMeasured(input_track->GetBitrate());
 	}
 
 	if (cmn::IsAudioCodec(output_track->GetCodecId()) == false)
@@ -266,6 +292,25 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 		return nullptr;
 	}
 
+	bool is_parsed;
+	profile.GetWidth(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetWidthByConfig(profile.GetWidth());
+	}
+
+	profile.GetHeight(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetHeightByConfig(profile.GetHeight());
+	}
+
+	profile.GetFramerate(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetFrameRateByConfig(profile.GetFramerate());
+	}
+
 	output_track->SetPublicName(input_track->GetPublicName());
 	output_track->SetLanguage(input_track->GetLanguage());
 	output_track->SetVariantName(profile.GetName());
@@ -275,18 +320,20 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 	output_track->SetBypass(false);
 	output_track->SetCodecId(cmn::GetCodecIdByName(profile.GetCodec()));
 	output_track->SetCodecLibraryId(cmn::GetCodecLibraryIdByName(profile.GetCodec()));
-	output_track->SetBitrate(0);
+	output_track->SetBitrateByConfig(0);
 	output_track->SetWidth(profile.GetWidth());
 	output_track->SetHeight(profile.GetHeight());
-	output_track->SetFrameRate(profile.GetFramerate());
 	output_track->SetTimeBase(GetDefaultTimebaseByCodecId(output_track->GetCodecId()));
+
+	if(output_track->GetFrameRateByConfig() == 0)
+	{
+		output_track->SetFrameRateByMeasured(input_track->GetFrameRate());
+	}
 
 	if (cmn::IsImageCodec(output_track->GetCodecId()) == false)
 	{
 		return nullptr;
 	}
-
-	output_track->_cfg = (void*)&profile;
 
 	return output_track;
 }
@@ -310,7 +357,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrackDataType(
 	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
 	output_track->SetWidth(input_track->GetWidth());
 	output_track->SetHeight(input_track->GetHeight());
-	output_track->SetFrameRate(input_track->GetFrameRate());
+	output_track->SetFrameRateByMeasured(input_track->GetFrameRate());
 	output_track->SetTimeBase(input_track->GetTimeBase());
 
 	return output_track;

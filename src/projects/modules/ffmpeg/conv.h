@@ -180,7 +180,7 @@ namespace ffmpeg
 			media_track->SetMediaType(ffmpeg::Conv::ToMediaType(stream->codecpar->codec_type));
 			media_track->SetCodecId(ffmpeg::Conv::ToCodecId(stream->codecpar->codec_id));
 			media_track->SetTimeBase(stream->time_base.num, stream->time_base.den);
-			media_track->SetBitrate(stream->codecpar->bit_rate);
+			media_track->SetBitrateByConfig(stream->codecpar->bit_rate);
 			media_track->SetStartFrameTime(0);
 			media_track->SetLastFrameTime(0);
 
@@ -192,7 +192,7 @@ namespace ffmpeg
 			switch (media_track->GetMediaType())
 			{
 				case cmn::MediaType::Video:
-					media_track->SetFrameRate(av_q2d(stream->r_frame_rate));
+					media_track->SetFrameRateByConfig(av_q2d(stream->r_frame_rate));
 					media_track->SetWidth(stream->codecpar->width);
 					media_track->SetHeight(stream->codecpar->height);
 					break;

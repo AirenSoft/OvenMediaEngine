@@ -25,6 +25,14 @@ public:
 	// Track ID
 	void SetId(uint32_t id);
 	uint32_t GetId() const;
+	
+	// Codec 
+	void SetCodecId(cmn::MediaCodecId id);
+	cmn::MediaCodecId GetCodecId() const;
+
+	// Specific Codec Library ID
+	void SetCodecLibraryId(cmn::MediaCodecLibraryId id);
+	cmn::MediaCodecLibraryId GetCodecLibraryId() const;
 
 	// Variant Name (used for rendition of playlist)
 	void SetVariantName(const ov::String &name);
@@ -38,42 +46,46 @@ public:
 	void SetLanguage(const ov::String &language);
 	ov::String GetLanguage() const;
 
-	// Video Type Settings
+	// Media Type 
 	void SetMediaType(cmn::MediaType type);
 	cmn::MediaType GetMediaType() const;
-
-	// Codec Settings
-	void SetCodecId(cmn::MediaCodecId id);
-	cmn::MediaCodecId GetCodecId() const;
-
-	void SetCodecLibraryId(cmn::MediaCodecLibraryId id);
-	cmn::MediaCodecLibraryId GetCodecLibraryId() const;
 
 	// Origin bitstream foramt
 	void SetOriginBitstream(cmn::BitstreamFormat format);
 	cmn::BitstreamFormat GetOriginBitstream() const;
 
-	// Timebase Settings
+	// Bypass 
+	void SetBypass(bool flag);
+	bool IsBypass() const;
+
+	// Bypass (Set by user)
+	void SetBypassByConfig(bool flag);
+	bool IsBypassByConf() const;
+
+	// Timebase 
 	const cmn::Timebase &GetTimeBase() const;
 	void SetTimeBase(int32_t num, int32_t den);
 	void SetTimeBase(const cmn::Timebase &time_base);
 
-	// Bitrate Settings
-	void SetBitrate(int32_t bitrate);
+	// Bitrate 
+	// Return the proper bitrate for this track. 
+	// If there is a bitrate set by the user, it is returned. If not, the automatically measured bitrate is returned	
 	int32_t GetBitrate() const;
 
-	// Frame Time Settings
+	// Bitrate (Set by measured)
+	void SetBitrateByMeasured(int32_t bitrate);
+	int32_t GetBitrateByMeasured() const;
+
+	// Bitrate (Set by user)
+	void SetBitrateByConfig(int32_t bitrate);
+	int32_t GetBitrateByConfig() const;
+	
+	// Frame Time 
 	void SetStartFrameTime(int64_t time);
 	int64_t GetStartFrameTime() const;
-
 	void SetLastFrameTime(int64_t time);
 	int64_t GetLastFrameTime() const;
 
-	// Bypass Settings
-	void SetBypass(bool flag);
-	bool IsBypass() const;
-
-	ov::String GetInfoString();
 	bool IsValid();
 	bool HasQualityMeasured();
 
@@ -81,8 +93,7 @@ public:
 	//  H264 : AVCDecoderConfigurationRecord
 	//  H265 : HEVCDecoderConfiguratinRecord(TODO)
 	//  AAC : AACSpecificConfig
-	//  VP8 : No plan
-	//  OPUS : No plan
+	//  VP8, Opus : Unused
 	void SetCodecExtradata(const std::shared_ptr<ov::Data> &codec_extradata);
 	const std::shared_ptr<ov::Data> &GetCodecExtradata() const;
 	std::shared_ptr<ov::Data> &GetCodecExtradata();
@@ -90,12 +101,24 @@ public:
 	// For statistics
 	void OnFrameAdded(uint64_t bytes);
 
-	std::shared_ptr<MediaTrack> Clone();
-private:
-	bool _is_valid = false;
-	bool _has_quality_measured = false;
+	int64_t GetTotalFrameCount() const;
+	int64_t GetTotalFrameBytes() const;
 
+	std::shared_ptr<MediaTrack> Clone();
+
+	ov::String GetInfoString();
+
+protected: 
+
+	// Track ID
 	uint32_t _id;
+
+	// Media Type
+	cmn::MediaType _media_type;
+
+	// Codec
+	cmn::MediaCodecId _codec_id;
+	cmn::MediaCodecLibraryId _codec_library_id;
 
 	// Variant Name : Original encoder profile that made this track 
 	// from <OutputProfile><Encodes>(<Video> || <Audio> || <Image>)<Name>
@@ -105,14 +128,21 @@ private:
 	ov::String _public_name;
 	ov::String _language;
 
-	cmn::MediaCodecId _codec_id;
-	cmn::MediaCodecLibraryId _codec_library_id;
+	// Bitstream format 
 	cmn::BitstreamFormat _origin_bitstream_format = cmn::BitstreamFormat::Unknown;
-	cmn::MediaType _media_type;
-	cmn::Timebase _time_base;
-	int32_t _bitrate;
 
-	bool	_byass;
+	// Timebase
+	cmn::Timebase _time_base;
+
+	// Bitrate
+	int32_t _bitrate;
+	// Bitrate (Set by user)
+	int32_t _bitrate_conf;
+	
+	// Bypass
+	bool _byass;
+	// Bypass (Set by user)
+	bool _bypass_conf;
 
 	// Time of start frame(packet)
 	int64_t _start_frame_time;
@@ -120,23 +150,19 @@ private:
 	// Time of last frame(packet)
 	int64_t _last_frame_time;
 
+	// Extradata
 	std::shared_ptr<ov::Data> _codec_extradata = nullptr;
-
-	// Statistics
 
 	// First frame received time
 	ov::StopWatch _clock_from_first_frame_received;
 
+	// Statistics
 	uint64_t _total_frame_count = 0;
 	uint64_t _total_frame_bytes = 0;
 
-	
-public:
-	void SetHardwareAccel(bool hwaccel);
-	bool GetHardwareAccel() const;
-	bool _use_hwaccel;
+	// Validity
+	bool _is_valid = false;
 
-	// TODO(soulk) : Refactoring is needed
-	// outputprofile.encodes configruation
-	void* _cfg;	
+
+	bool _has_quality_measured = false;
 };

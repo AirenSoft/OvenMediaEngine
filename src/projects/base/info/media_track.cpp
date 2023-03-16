@@ -17,14 +17,15 @@ using namespace cmn;
 
 MediaTrack::MediaTrack()
 	: _id(0),
+	  _media_type(MediaType::Unknown),
 	  _codec_id(MediaCodecId::None),
 	  _codec_library_id(cmn::MediaCodecLibraryId::AUTO),
-	  _media_type(MediaType::Unknown),
 	  _bitrate(0),
+	  _bitrate_conf(0),
 	  _byass(false),
+	  _bypass_conf(false),
 	  _start_frame_time(0),
-	  _last_frame_time(0),
-	  _cfg(nullptr)
+	  _last_frame_time(0)
 {
 }
 
@@ -37,8 +38,13 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 
 	// Video
 	_framerate = media_track._framerate;
+	_framerate_conf = media_track._framerate_conf;
+
 	_width = media_track._width;
+	_width_conf  = media_track._width_conf;
+	
 	_height = media_track._height;
+	_height_conf = media_track._height_conf;
 
 	// Audio
 	_sample = media_track._sample;
@@ -47,8 +53,10 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 	_time_base = media_track._time_base;
 
 	_bitrate = media_track._bitrate;
+	_bitrate_conf = media_track._bitrate_conf;
 
 	_byass = media_track._byass;
+	_bypass_conf = media_track._bypass_conf;
 
 	_start_frame_time = 0;
 	_last_frame_time = 0;
@@ -56,8 +64,6 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 	_codec_extradata = media_track._codec_extradata;
 
 	_origin_bitstream_format = media_track._origin_bitstream_format;
-
-	_cfg = media_track._cfg;
 }
 
 MediaTrack::~MediaTrack()
@@ -163,16 +169,6 @@ void MediaTrack::SetTimeBase(int32_t num, int32_t den)
 void MediaTrack::SetTimeBase(const cmn::Timebase &time_base)
 {
 	_time_base = time_base;
-}
-
-void MediaTrack::SetBitrate(int32_t bitrate)
-{
-	_bitrate = bitrate;
-}
-
-int32_t MediaTrack::GetBitrate() const
-{
-	return _bitrate;
 }
 
 void MediaTrack::SetStartFrameTime(int64_t time)
@@ -457,7 +453,7 @@ void MediaTrack::OnFrameAdded(uint64_t bytes)
 		auto seconds = static_cast<double>(_clock_from_first_frame_received.Elapsed()) / 1000.0;
 		auto bytes_per_second = static_cast<double>(_total_frame_bytes) / seconds;
 		auto bitrate = static_cast<int32_t>(bytes_per_second * 8.0);
-		SetBitrate(bitrate);
+		SetBitrateByMeasured(bitrate);
 
 		logtd("Track(%u) Bitrates(%s)", GetId(), ov::Converter::BitToString(bitrate).CStr());
 	}
@@ -468,69 +464,119 @@ void MediaTrack::OnFrameAdded(uint64_t bytes)
 		auto seconds = static_cast<double>(_clock_from_first_frame_received.Elapsed()) / 1000.0;
 		auto frame_count = static_cast<double>(_total_frame_count);
 		auto framerate = frame_count / seconds;
-		SetFrameRate(framerate);
+		SetFrameRateByMeasured(framerate);
 
 		logtd("Track(%u) FPS(%f)", GetId(), framerate);
 	}
 }
 
-void MediaTrack::SetHardwareAccel(bool hwaccel)
+int64_t MediaTrack::GetTotalFrameCount() const
 {
-	_use_hwaccel = hwaccel;
+	return _total_frame_count;
 }
-bool MediaTrack::GetHardwareAccel() const
+
+int64_t MediaTrack::GetTotalFrameBytes() const
 {
-	return _use_hwaccel;
+	return _total_frame_bytes;
 }
+
+// void MediaTrack::SetBitrate(int32_t bitrate)
+// {
+// 	_bitrate = bitrate;
+// }
+
+int32_t MediaTrack::GetBitrate() const
+{
+	if (_bitrate_conf > 0)
+	{
+		return _bitrate_conf;
+	}
+
+	return _bitrate;
+}
+
+void MediaTrack::SetBitrateByMeasured(int32_t bitrate)
+{
+	_bitrate = bitrate;
+
+}
+
+int32_t MediaTrack::GetBitrateByMeasured() const
+{
+	return _bitrate;
+}
+
+void MediaTrack::SetBitrateByConfig(int32_t bitrate)
+{
+	_bitrate_conf = bitrate;
+}
+
+int32_t MediaTrack::GetBitrateByConfig() const
+{
+	return _bitrate_conf;
+}
+
+void MediaTrack::SetBypassByConfig(bool flag)
+{
+	_bypass_conf = flag;
+}
+
+bool MediaTrack::IsBypassByConf() const
+{
+	return _bypass_conf;
+}
+
 std::shared_ptr<MediaTrack> MediaTrack::Clone()
 {
 	auto track = std::make_shared<MediaTrack>();
 
+	// Media Track
 	track->_is_valid = _is_valid;
 	track->_has_quality_measured = _has_quality_measured;
-
 	track->_id = _id;
-
 	track->_variant_name = _variant_name;
 	track->_public_name = _public_name;
 	track->_language = _language;
-
 	track->_codec_id = _codec_id;
-
 	track->_codec_library_id = _codec_library_id;
 	track->_origin_bitstream_format = _origin_bitstream_format;	
 	track->_media_type = _media_type;
 	track->_time_base = _time_base;
 	track->_bitrate = _bitrate;
-
+	track->_bitrate_conf = _bitrate_conf;
 	track->_byass = _byass;
-
+	track->_bypass_conf = _bypass_conf;
 	track->_start_frame_time = _start_frame_time;
 	track->_last_frame_time = _last_frame_time;
 	track->_codec_extradata = _codec_extradata->Clone();
-
 	track->_total_frame_count = _total_frame_count;
 	track->_total_frame_bytes = _total_frame_bytes;
 
-	track->_use_hwaccel = _use_hwaccel;
-
-	// 비디오
+	// Video Track
 	track->_framerate = _framerate;
-	track->_estimate_framerate = _estimate_framerate;
+	track->_framerate_conf = _framerate_conf;
+	track->_framerate_estimated = _framerate_estimated;
 	track->_video_timescale = _video_timescale;
 	track->_width = _width;
+	track->_width_conf = _width_conf;
 	track->_height = _height;
+	track->_height_conf = _height_conf;
 	track->_key_frame_interval = _key_frame_interval;
 	track->_b_frames = _b_frames;
 	track->_has_bframe = _has_bframe;
 	track->_preset = _preset;
-
+	track->_use_hwaccel = _use_hwaccel;
 	track->_h264_sps_pps_annexb_data = _h264_sps_pps_annexb_data->Clone();
 	track->_h264_sps_data = _h264_sps_data->Clone();
 	track->_h264_pps_data = _h264_pps_data->Clone();
-
 	track->_colorspace = _colorspace;
 
-	track->_cfg;
+	// Audio Track
+	track->_channel_layout = _channel_layout;
+	track->_sample = _sample;
+	track->_audio_timescale = _audio_timescale;
+	track->_audio_samples_per_frame= _audio_samples_per_frame;
+	track->_aac_config = _aac_config;
+
 	return track;
 }

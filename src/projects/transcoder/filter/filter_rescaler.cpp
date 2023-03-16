@@ -118,9 +118,9 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 
 	std::vector<ov::String> filters;
 
-	if (output_track->GetFrameRate() > 0.0f)
+	if (output_track->GetFrameRateByConfig() > 0.0f)
 	{
-		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", output_track->GetFrameRate()));
+		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", output_track->GetFrameRateByConfig()));
 	}
 
 	if (output_track->GetHardwareAccel() == true &&

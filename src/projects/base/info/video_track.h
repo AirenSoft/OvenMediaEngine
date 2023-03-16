@@ -18,20 +18,58 @@ class VideoTrack
 public:
 	VideoTrack();
 
-	void SetFrameRate(double framerate);
+	// Return the proper framerate for this track. 
+	// If there is a framerate set by the user, it is returned. If not, the automatically measured framerate is returned	
 	double GetFrameRate() const;
 
+	// Estimated at intervals between frames
 	void SetEstimateFrameRate(double framerate);
 	double GetEstimateFrameRate() const;
+
+	void SetFrameRateByMeasured(double framerate);
+	double GetFrameRateByMeasured() const;
+
+	void SetFrameRateByConfig(double framerate);
+	double GetFrameRateByConfig() const;
 
 	void SetWidth(int32_t width);
 	int32_t GetWidth() const;
 
+	void SetWidthByConfig(int32_t width);
+	int32_t GetWidthByConfig() const;
+
 	void SetHeight(int32_t height);
 	int32_t GetHeight() const;
 
+	void SetHeightByConfig(int32_t height);
+	int32_t GetHeightByConfig() const;
+
 	void SetVideoTimestampScale(double scale);
 	double GetVideoTimestampScale() const;
+
+	void SetHasBframes(bool has_bframe);
+	bool HasBframes();
+
+	void SetColorspace(int colorspace);
+	int GetColorspace() const;	
+
+	void SetPreset(ov::String preset);
+	ov::String GetPreset() const;
+
+	void SetProfile(ov::String profile);
+	ov::String GetProfile() const;
+
+	void SetThreadCount(int thread_count);
+	int GetThreadCount();
+
+	void SetKeyFrameInterval(int32_t key_frame_interval);
+	int32_t GetKeyFrameInterval();
+
+	void SetBFrames(int32_t b_frames);
+	int32_t GetBFrames();
+
+	void SetHardwareAccel(bool hwaccel);
+	bool GetHardwareAccel() const;
 
 	// Codec-specific data prepared in advance for performance
 	std::shared_ptr<ov::Data> GetH264SpsPpsAnnexBFormat() const;
@@ -42,58 +80,54 @@ public:
 	std::shared_ptr<ov::Data> GetH264SpsData() const;
 	std::shared_ptr<ov::Data> GetH264PpsData() const;
 
-	//@Set by Configuration
-	void SetPreset(ov::String preset);
-	ov::String GetPreset() const;
-
-	//@Set by Configuration
-	void SetProfile(ov::String profile);
-	ov::String GetProfile() const;
-
-	//@Set by mediarouter
-	void SetHasBframes(bool has_bframe);
-	bool HasBframes();
-
-	// @Set By Configuration
-	void SetThreadCount(int thread_count);
-	int GetThreadCount();
-
-	//@Set by Configuration
-	void SetKeyFrameInterval(int32_t key_frame_interval);
-	int32_t GetKeyFrameInterval();
-
-	//@Set by Configuration
-	void SetBFrames(int32_t b_frames);
-	int32_t GetBFrames();
-
-
-
 protected:
+
+	// framerate (measurement)
 	double _framerate;
-	double _estimate_framerate;
+	// framerate (set by user)
+	double _framerate_conf;
+	// framerate (estimated) 
+	double _framerate_estimated;
+
 	double _video_timescale;
+	
+	// Resolution
 	int32_t _width;
 	int32_t _height;
+
+	// Resolution (set by user)
+	int32_t _width_conf;
+	int32_t _height_conf;
+
+	// Key Frame Interval (set by user)
 	int32_t _key_frame_interval;
+	
+	// Number of B-frame (set by user)
 	int32_t _b_frames;
+	
+	// B-frame (set by mediarouter)
 	bool _has_bframe;
 
-	ov::String _preset;
-	ov::String _profile;
+	// Colorspace of video
+	// This variable is temporarily used in the Pixel Format defined by FFMPEG.
+	int _colorspace;	
 
+	// Enable hardware acceleration
+	bool _use_hwaccel;
+
+	// Preset for encoder (set by user)
+	ov::String _preset;
+
+	// Profile (set by user, used for h264, h265 codec)
+	ov::String _profile;
+	
+	// Thread count of codec (set by user)
+	int _thread_count;	
+
+	// SPS/PPS data for H264
 	std::shared_ptr<ov::Data> _h264_sps_pps_annexb_data = nullptr;
 	std::shared_ptr<ov::Data> _h264_sps_data = nullptr;
 	std::shared_ptr<ov::Data> _h264_pps_data = nullptr;
-
 	FragmentationHeader _h264_sps_pps_annexb_fragment_header;
-	H264SPS _h264_sps;
-	
-	int _thread_count;
-
-public:
-	void SetColorspace(int colorspace);
-	int GetColorspace() const;	
-	// Colorspace
-	// - This variable is temporarily used in the Pixel Format defined by FFMPEG.
-	int _colorspace;	
+	H264SPS _h264_sps;	
 };

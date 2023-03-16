@@ -407,7 +407,7 @@ namespace pvd
 			new_track->SetCodecId(static_cast<cmn::MediaCodecId>(json_track["codecId"].asUInt()));
 			new_track->SetMediaType(static_cast<cmn::MediaType>(json_track["mediaType"].asUInt()));
 			new_track->SetTimeBase(json_track["timebase_num"].asUInt(), json_track["timebase_den"].asUInt());
-			new_track->SetBitrate(json_track["bitrate"].asUInt());
+			new_track->SetBitrateByConfig(json_track["bitrate"].asUInt());
 			new_track->SetStartFrameTime(json_track["startFrameTime"].asUInt64());
 			new_track->SetLastFrameTime(json_track["lastFrameTime"].asUInt64());
 
@@ -463,7 +463,7 @@ namespace pvd
 					return false;
 				}
 
-				new_track->SetFrameRate(json_video_track["framerate"].asDouble());
+				new_track->SetFrameRateByConfig(json_video_track["framerate"].asDouble());
 				new_track->SetWidth(json_video_track["width"].asUInt());
 				new_track->SetHeight(json_video_track["height"].asUInt());
 			}

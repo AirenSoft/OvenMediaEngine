@@ -1732,10 +1732,10 @@ namespace pvd
 			// Below items are not mandatory, it will be parsed again from SPS parser
 			new_track->SetWidth((uint32_t)media_info->video_width);
 			new_track->SetHeight((uint32_t)media_info->video_height);
-			new_track->SetFrameRate(media_info->video_framerate);
+			new_track->SetFrameRateByConfig(media_info->video_framerate);
 
 			// Kbps -> bps, it is just metadata
-			new_track->SetBitrate(media_info->video_bitrate * 1000);
+			new_track->SetBitrateByConfig(media_info->video_bitrate * 1000);
 
 			AddTrack(new_track);
 		}
@@ -1757,7 +1757,7 @@ namespace pvd
 			new_track->SetSampleRate(media_info->audio_samplerate);
 			new_track->GetSample().SetFormat(cmn::AudioSample::Format::S16);
 			// Kbps -> bps
-			new_track->SetBitrate(media_info->audio_bitrate * 1000);
+			new_track->SetBitrateByConfig(media_info->audio_bitrate * 1000);
 			// new_track->SetSampleSize(conn->_audio_samplesize);
 
 			if (media_info->audio_channels == 1)

@@ -10,7 +10,7 @@
 
 VideoTrack::VideoTrack()
 	: _framerate(0),
-	  _estimate_framerate(0),
+	  _framerate_estimated(0),
 	  _video_timescale(0),
 	  _width(0),
 	  _height(0),
@@ -23,25 +23,7 @@ VideoTrack::VideoTrack()
 {
 }
 
-void VideoTrack::SetFrameRate(double framerate)
-{
-	_framerate = framerate;
-}
 
-double VideoTrack::GetFrameRate() const
-{
-	return _framerate;
-}
-
-void VideoTrack::SetEstimateFrameRate(double framerate)
-{
-	_estimate_framerate = framerate;
-}
-
-double VideoTrack::GetEstimateFrameRate() const
-{
-	return _estimate_framerate;
-}
 
 void VideoTrack::SetWidth(int32_t width)
 {
@@ -177,4 +159,76 @@ void VideoTrack::SetColorspace(int colorspace)
 int VideoTrack::GetColorspace() const
 {
 	return _colorspace;
+}
+
+double VideoTrack::GetFrameRate() const
+{
+	if(_framerate_conf > 0)
+	{
+		return _framerate_conf;
+	}
+	else if(_framerate_estimated > 0)
+	{
+		return _framerate_estimated;
+	}
+
+	return _framerate;
+}
+
+void VideoTrack::SetEstimateFrameRate(double framerate)
+{
+	_framerate_estimated = framerate;
+}
+
+double VideoTrack::GetEstimateFrameRate() const
+{
+	return _framerate_estimated;
+}
+
+void VideoTrack::SetFrameRateByMeasured(double framerate)
+{
+	_framerate = framerate;
+}
+
+double VideoTrack::GetFrameRateByMeasured() const
+{
+	return _framerate;
+}
+
+void VideoTrack::SetFrameRateByConfig(double framerate)
+{
+	_framerate_conf = framerate;
+}
+
+double VideoTrack::GetFrameRateByConfig() const
+{
+	return _framerate_conf;
+}
+
+void VideoTrack::SetWidthByConfig(int32_t width)
+{
+	_width_conf = width;
+}
+int32_t VideoTrack::GetWidthByConfig() const
+{
+	return _width_conf;
+}
+
+void VideoTrack::SetHeightByConfig(int32_t height)
+{
+	_height_conf = height;
+}
+
+int32_t VideoTrack::GetHeightByConfig() const
+{
+	return _height_conf;
+}
+
+void VideoTrack::SetHardwareAccel(bool hwaccel)
+{
+	_use_hwaccel = hwaccel;
+}
+bool VideoTrack::GetHardwareAccel() const
+{
+	return _use_hwaccel;
 }
