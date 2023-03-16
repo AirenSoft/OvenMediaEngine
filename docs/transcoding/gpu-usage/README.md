@@ -15,10 +15,12 @@ If you are using an Intel CPU that supports QuickSync, please refer to the follo
 
 When the Intel QuickSync driver installation is complete, the OS must be rebooted for normal operation.
 
+{% code overflow="wrap" lineNumbers="true" %}
 ```bash
 (curl -LOJ https://github.com/AirenSoft/OvenMediaEngine/archive/master.tar.gz && tar xvfz OvenMediaEngine-master.tar.gz) 
 OvenMediaEngine-master/misc/install_intel_driver.sh
 ```
+{% endcode %}
 
 #### How to check driver installation
 
@@ -36,10 +38,12 @@ If you are using an NVIDIA graphics card, please refer to the following guide to
 
 CentOS environment requires the process of uninstalling the nouveau driver. After uninstalling the driver, the first reboot is required, and a new NVIDIA driver must be installed and rebooted. Therefore, two install scripts must be executed.
 
+{% code overflow="wrap" lineNumbers="true" %}
 ```bash
 (curl -LOJ https://github.com/AirenSoft/OvenMediaEngine/archive/master.tar.gz && tar xvfz OvenMediaEngine-master.tar.gz)
 OvenMediaEngine-master/misc/install_nvidia_driver.sh
 ```
+{% endcode %}
 
 #### How to check driver installation
 
@@ -89,12 +93,11 @@ The NVIDIA Driver must have been previously installed
 
 To use GPU when running Docker, you need to add the -**-gpus all** option.
 
+{% code overflow="wrap" lineNumbers="true" %}
 ```
-docker run -d \
--p 1935:1935 -p 4000-4005:4000-4005/udp -p 3333:3333 -p 3478:3478 -p 8080:8080 -p 9000:9000 -p 9999:9999/udp -p 10006-10010:10006-10010/udp \
---gpus all
-airensoft/ovenmediaengine:dev
+docker run -d -p 1935:1935 -p 4000-4005:4000-4005/udp -p 3333:3333 -p 3478:3478 -p 8080:8080 -p 9000:9000 -p 9999:9999/udp -p 10006-10010:10006-10010/udp --gpus all airensoft/ovenmediaengine:dev
 ```
+{% endcode %}
 
 ###
 

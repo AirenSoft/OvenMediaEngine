@@ -1,4 +1,4 @@
-# Recording (Beta)
+# Recording
 
 OvenMediaEngine can record live streams. You can start and stop recording the output stream through REST API. When the recording is complete, a recording information file is created together with the recorded file so that the user can perform various post-recording processing.
 
@@ -13,15 +13,16 @@ You must specify `.ts` or `.mp4` at the end of the FilePath string to select a c
 ```xml
 <Applications>
   <Application>
-     ...
-     <Publishers>
+      ...
+      <Publishers>
         <FILE>
-           <RootPath>/mnt/shared_volumes</RootPath>
-           <FilePath>/${VirtualHost}/${Application}/${Stream}/${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.ts</FilePath>
-           <InfoPath>/${VirtualHost}/${Application}/${Stream}.xml</InfoPath>
-	</FILE>
-   </Publishers>
-...
+          <RootPath>/mnt/shared_volumes</RootPath>
+          <FilePath>/${VirtualHost}/${Application}/${Stream}/
+             ${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.ts</FilePath>
+          <InfoPath>/${VirtualHost}/${Application}/${Stream}.xml</InfoPath>
+        </FILE>
+      </Publishers>
+      ...
 ```
 
 Various macro values are supported for file paths and names as shown below.
@@ -64,6 +65,7 @@ Split recording methods provide **interval** and **schedule**. The interval meth
 
 The following is a sample of an XML file that expresses information on a recorded file.
 
+{% code overflow="wrap" %}
 ```markup
 <?xml version="1.0" encoding="utf-8"?>
 <files>
@@ -117,3 +119,4 @@ The following is a sample of an XML file that expresses information on a recorde
   </file>
 </files>
 ```
+{% endcode %}

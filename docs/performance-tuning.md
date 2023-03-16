@@ -223,7 +223,7 @@ If the OvenMediaEngine's capacity is exceeded, you will notice it in OvenRtcTest
 
 ![](<.gitbook/assets/image (36).png>)
 
-On the right side of the above capture screen, we simulate 400 players with OvenRtcTester.  \<Summary> of OvenRtcTester shows that `Avg Video Delay` and `Avg Audio Delay` are very high, and` Avg FPS` is low.
+On the right side of the above capture screen, we simulate 400 players with OvenRtcTester.  \<Summary> of OvenRtcTester shows that `Avg Video Delay` and `Avg Audio Delay` are very high, and `Avg FPS` is low.
 
 And on the left, you can check the CPU usage by thread with the `top -H -p` command. This confirms that the StreamWorker threads are being used at 100%, and now you can scale the server by increasing the number of StreamWorker threads. If OvenMediaEngine is not using 100% of all cores of the server, you can improve performance by [tuning the number of threads](performance-tuning.md#tuning-the-number-of-threads).
 
@@ -235,34 +235,35 @@ This is the result of tuning the number of StreamWorkerCount to 8 in config. Thi
 
 The WorkerCount in `<Bind>` can set the thread responsible for sending and receiving over the socket. Publisher's AppWorkerCount allows you to set the number of threads used for per-stream processing such as RTP packaging, and StreamWorkerCount allows you to set the number of threads for per-session processing such as SRTP encryption.
 
-```
+```xml
+
 <Bind>
-		<Providers>
-			<RTMP>
-				<Port>1935</Port>
-				<WorkerCount>1</WorkerCount>
-			</RTMP>
-			...
-		</Providers>
-		...
-		<Publishers>
-			<WebRTC>
-				<Signalling>
-					<Port>3333</Port>
-					<WorkerCount>1</WorkerCount>
-				</Signalling>
-				<IceCandidates>
-					<TcpRelay>*:3478</TcpRelay>
-					<IceCandidate>*:10000/udp</IceCandidate>
-					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
-				</IceCandidates>
-		...
+    <Providers>
+        <RTMP>
+            <Port>1935</Port>
+            <WorkerCount>1</WorkerCount>
+        </RTMP>
+        ...
+    </Providers>
+    ...
+    <Publishers>
+        <WebRTC>
+            <Signalling>
+                <Port>3333</Port>
+                <WorkerCount>1</WorkerCount>
+            </Signalling>
+            <IceCandidates>
+                <TcpRelay>*:3478</TcpRelay>
+                <IceCandidate>*:10000/udp</IceCandidate>
+                <TcpRelayWorkerCount>1</TcpRelayWorkerCount>
+            </IceCandidates>
+    ...
 </Bind>
-			
+        
 <Application>
 <Publishers>
-  <AppWorkerCount>1</AppWorkerCount>
-  <StreamWorkerCount>8</StreamWorkerCount>
+<AppWorkerCount>1</AppWorkerCount>
+<StreamWorkerCount>8</StreamWorkerCount>
 </Publishers>
 </Application>
 ```

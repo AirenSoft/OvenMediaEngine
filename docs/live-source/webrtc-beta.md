@@ -10,20 +10,20 @@ OvenMediaEngine supports self-defined signaling protocol and [WHIP ](https://dat
 
 ```markup
 <Bind>
-	<Providers>
-		...
-		<WebRTC>
-			<Signalling>
-				<Port>3333</Port>
-				<TLSPort>3334</TLSPort>
-			</Signalling>
-			<IceCandidates>
-				<TcpRelay>*:3478</TcpRelay>
-				<TcpForce>false</TcpForce>
-				<IceCandidate>*:10000-10005/udp</IceCandidate>
-			</IceCandidates>
-		</WebRTC>
-	</Providers>
+    <Providers>
+        ...
+        <WebRTC>
+            <Signalling>
+                <Port>3333</Port>
+                <TLSPort>3334</TLSPort>
+            </Signalling>
+            <IceCandidates>
+                <TcpRelay>*:3478</TcpRelay>
+                <TcpForce>false</TcpForce>
+                <IceCandidate>*:10000-10005/udp</IceCandidate>
+            </IceCandidates>
+        </WebRTC>
+    </Providers>
 ```
 
 You can set the port to use for signaling in `<Bind><Provider><WebRTC><Signaling>`. `<Port>` is for setting an unsecured HTTP port, and `<TLSPort>` is for setting a secured HTTP port that is encrypted with TLS.&#x20;
@@ -38,15 +38,15 @@ WebRTC input can be turned on/off for each application. As follows Setting enabl
 
 ```markup
 <Applications>
-	<Application>
-		<Name>app</Name>
-		<Providers>
-			<WebRTC>
-				<Timeout>30000</Timeout>
-				<CrossDomains>
-					<Url>*</Url>
-				</CrossDomains>
-			</WebRTC>
+    <Application>
+        <Name>app</Name>
+        <Providers>
+            <WebRTC>
+                <Timeout>30000</Timeout>
+                <CrossDomains>
+                    <Url>*</Url>
+                </CrossDomains>
+            </WebRTC>
 ```
 
 ## URL Pattern

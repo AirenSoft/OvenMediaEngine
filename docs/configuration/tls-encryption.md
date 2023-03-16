@@ -6,22 +6,22 @@ You can set the port for TLS in `TLSPort`. Currently, LLHLS and WebRTC Signaling
 
 ```markup
 <Bind>
-	...
+    ...
 
-	<Publishers>
-	...
-		<LLHLS>
-			<Port>80</Port>
-			<TLSPort>443</TLSPort>
-		</LLHLS>
-		<WebRTC>
-			<Signalling>
-				<Port>3333</Port>
-				<TLSPort>3334</TLSPort>
-			</Signalling>
-			...
-		</WebRTC>
-	</Publishers>
+    <Publishers>
+    ...
+        <LLHLS>
+            <Port>80</Port>
+            <TLSPort>443</TLSPort>
+        </LLHLS>
+        <WebRTC>
+            <Signalling>
+                <Port>3333</Port>
+                <TLSPort>3334</TLSPort>
+            </Signalling>
+            ...
+        </WebRTC>
+    </Publishers>
 </Bind>
 ```
 
@@ -29,14 +29,14 @@ Add your certificate files to  as follows:
 
 ```markup
 <Host>
-	<Names>
-		<Name>*.airensoft.com</Name>
-	</Names>
-	<TLS>
-		<CertPath>/etc/pki/airensoft.com/_airensoft_com.crt</CertPath>
-		<KeyPath>/etc/pki/airensoft.com/_airensoft_com.key</KeyPath>
-		<ChainCertPath>/etc/pki/airensoft.com/_airensoft_com.ca-bundle</ChainCertPath>
-	</TLS>
+    <Names>
+        <Name>*.airensoft.com</Name>
+    </Names>
+    <TLS>
+      <CertPath>/etc/pki/airensoft.com/_airensoft_com.crt</CertPath>
+      <KeyPath>/etc/pki/airensoft.com/_airensoft_com.key</KeyPath>
+      <ChainCertPath>/etc/pki/airensoft.com/_airensoft_com.ca-bundle</ChainCertPath>
+    </TLS>
 </Host>
 ```
 

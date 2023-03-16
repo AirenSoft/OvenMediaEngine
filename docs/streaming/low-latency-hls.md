@@ -1,6 +1,6 @@
 # Low-Latency HLS
 
-Apple supports Low-Latency HLS (LLHLS), which enables low-latency video streaming while maintaining scalability. LLHLS enables broadcasting with an end-to-end latency of about 2 to 5 seconds. OvenMediaEngine officially supports LLHLS as of v0.14.0.&#x20;
+Apple supports Low-Latency HLS (LLHLS), which enables low-latency video streaming while maintaining scalability. LLHLS enables broadcasting with an end-to-end latency of about 2 to 5 seconds. OvenMediaEngine officially supports LLHLS as of v0.14.0.
 
 LLHLS is an extension of HLS, so legacy HLS players can play LLHLS streams. However, the legacy HLS player plays the stream without using the low-latency function.
 
@@ -20,30 +20,30 @@ To use LLHLS, you need to add the `<LLHLS>` elements to the `<Publishers>` in th
     <Bind>
         <Publishers>
             <LLHLS>
-	        <!-- 
-		OME only supports h2, so LLHLS works over HTTP/1.1 on non-TLS ports. 
-		LLHLS works with higher performance over HTTP/2, 
-		so it is recommended to use a TLS port.
-		-->
-		<Port>80</Port>
-		<TLSPort>443</TLSPort>
-		<WorkerCount>1</WorkerCount>
-	    </LLHLS>
+            <!-- 
+        OME only supports h2, so LLHLS works over HTTP/1.1 on non-TLS ports. 
+        LLHLS works with higher performance over HTTP/2, 
+        so it is recommended to use a TLS port.
+        -->
+        <Port>80</Port>
+        <TLSPort>443</TLSPort>
+        <WorkerCount>1</WorkerCount>
+        </LLHLS>
         </Publishers>
     </Bind>
     <VirtualHosts>
-	<VirtualHost>
+    <VirtualHost>
             <Applications>
                 <Application>
                     <Publishers>
-			<LLHLS>
-				<ChunkDuration>0.2</ChunkDuration>
-				<SegmentDuration>6</SegmentDuration>
-				<SegmentCount>10</SegmentCount>
-				<CrossDomains>
-					<Url>*</Url>
-				</CrossDomains>
-			</LLHLS>
+            <LLHLS>
+                <ChunkDuration>0.2</ChunkDuration>
+                <SegmentDuration>6</SegmentDuration>
+                <SegmentCount>10</SegmentCount>
+                <CrossDomains>
+                    <Url>*</Url>
+                </CrossDomains>
+            </LLHLS>
                     </Publishers>
                 </Application>
             </Applications>
@@ -102,18 +102,18 @@ If your input stream is already h.264/aac, you can use the input stream as is li
 
 ```markup
 <OutputProfiles>
-	<OutputProfile>
-		<Name>bypass_stream</Name>
-		<OutputStreamName>${OriginStreamName}</OutputStreamName>
-		<Encodes>
-			<Audio>
-				<Bypass>true</Bypass>
-			</Audio>
-			<Video>
-				<Bypass>true</Bypass>
-			</Video>
-		</Encodes>
-	</OutputProfile>
+    <OutputProfile>
+        <Name>bypass_stream</Name>
+        <OutputStreamName>${OriginStreamName}</OutputStreamName>
+        <Encodes>
+            <Audio>
+                <Bypass>true</Bypass>
+            </Audio>
+            <Video>
+                <Bypass>true</Bypass>
+            </Video>
+        </Encodes>
+    </OutputProfile>
 </OutputProfiles>
 ```
 
@@ -127,21 +127,19 @@ If you use the default configuration, you can start streaming with the following
 
 We have prepared a test player that you can quickly see if OvenMediaEngine is working. Please refer to the [Test Player](../test-player.md) for more information.
 
-
-
 ## Live Rewind
 
 You can create as long a playlist as you want by setting `<DVR>` to the LLHLS publisher as shown below. This allows the player to rewind the live stream and play older segments. OvenMediaEngine stores and uses old segments in a file in `<DVR><TempStoragePath>` to prevent excessive memory usage. It stores as much as `<DVR><MaxDuration>` and the unit is seconds.
 
 ```xml
 <LLHLS>
-	...
-	<DVR>
-		<Enable>true</Enable>
-		<TempStoragePath>/tmp/ome_dvr/</TempStoragePath>
-		<MaxDuration>3600</MaxDuration>
-	</DVR>
-	...
+    ...
+    <DVR>
+        <Enable>true</Enable>
+        <TempStoragePath>/tmp/ome_dvr/</TempStoragePath>
+        <MaxDuration>3600</MaxDuration>
+    </DVR>
+    ...
 </LLHLS>
 ```
 
@@ -149,42 +147,42 @@ You can create as long a playlist as you want by setting `<DVR>` to the LLHLS pu
 
 ID3 Timed metadata can be sent to the LLHLS stream through the [Send Event API](../rest-api/v1/virtualhost/application/stream/send-event.md).
 
-
-
 ## Dump
 
 You can dump the LLHLS stream for VoD. You can enable it by setting the following in `<Application><Publishers><LLHLS>`. Dump function can also be controlled by [Dump API](../rest-api/v1/virtualhost/application/stream/hls-dump.md).
 
+{% code overflow="wrap" %}
 ```xml
 <LLHLS>
-<Dumps>
-	<Dump>
-		<Enable>true</Enable>
-		<TargetStreamName>stream*</TargetStreamName>
-		
-		<Playlists>
-			<Playlist>llhls.m3u8</Playlist>
-			<Playlist>abr.m3u8</Playlist>
-		</Playlists>
-
-		<OutputPath>/service/www/ome-dev.airensoft.com/html/${VHostName}_${AppName}_${StreamName}/${YYYY}_${MM}_${DD}_${hh}_${mm}_${ss}</OutputPath>
-	</Dump>
-</Dumps>
-        ...
+    <Dumps>
+        <Dump>
+            <Enable>true</Enable>
+            <TargetStreamName>stream*</TargetStreamName>
+            
+            <Playlists>
+                <Playlist>llhls.m3u8</Playlist>
+                <Playlist>abr.m3u8</Playlist>
+            </Playlists>
+    
+            <OutputPath>/service/www/ome-dev.airensoft.com/html/${VHostName}_${AppName}_${StreamName}/${YYYY}_${MM}_${DD}_${hh}_${mm}_${ss}</OutputPath>
+        </Dump>
+    </Dumps>
+    ...
 </LLHLS>
 ```
+{% endcode %}
 
 **TargetStreamName**
 
-&#x20;   The name of the stream to dump to. You can use \* and ? to filter stream names.
+The name of the stream to dump to. You can use \* and ? to filter stream names.
 
 **Playlists**
 
-&#x20;   The name of the master playlist file to be dumped together.
+The name of the master playlist file to be dumped together.
 
 **OutputPath**
 
-&#x20;   The folder to output to. In the OutputPath you can use the macros shown in the table below. You must have write permission on the specified folder.
+The folder to output to. In the OutputPath you can use the macros shown in the table below. You must have write permission on the specified folder.
 
 | Macro         | Description                    |
 | ------------- | ------------------------------ |
@@ -200,4 +198,3 @@ You can dump the LLHLS stream for VoD. You can enable it by setting the followin
 | ${S}          | Timezone                       |
 | ${z}          | UTC offset (ex: +0900)         |
 | ${ISO8601}    | Current time in ISO8601 format |
-

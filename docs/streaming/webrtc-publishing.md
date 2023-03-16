@@ -19,21 +19,21 @@ If you want to use the WebRTC feature, you need to add `<WebRTC>` element to the
 
 ```markup
 <Bind>
-	<Publishers>
-		<WebRTC>
-			<Signalling>
-				<Port>3333</Port>
-				<TLSPort>3334</TLSPort>
-				<WorkerCount>1</WorkerCount>
-			</Signalling>
-			<IceCandidates>
-				<IceCandidate>*:10000-10005/udp</IceCandidate>
-				<TcpRelay>*:3478</TcpRelay>
-				<TcpForce>true</TcpForce>
-				<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
-			</IceCandidates>
-		</WebRTC>
-	</Publishers>
+    <Publishers>
+        <WebRTC>
+            <Signalling>
+                <Port>3333</Port>
+                <TLSPort>3334</TLSPort>
+                <WorkerCount>1</WorkerCount>
+            </Signalling>
+            <IceCandidates>
+                <IceCandidate>*:10000-10005/udp</IceCandidate>
+                <TcpRelay>*:3478</TcpRelay>
+                <TcpForce>true</TcpForce>
+                <TcpRelayWorkerCount>1</TcpRelayWorkerCount>
+            </IceCandidates>
+        </WebRTC>
+    </Publishers>
 </Bind>
 ```
 
@@ -65,22 +65,22 @@ Add `WebRTC` element to Publisher to provide streaming through WebRTC.
 
 ```markup
 <Server version="7">
-	<VirtualHosts>
-		<VirtualHost>
-			<Applications>
-				<Application>
-					<Publishers>
-					  <WebRTC>
-							<Timeout>30000</Timeout>
-							<Rtx>false</Rtx>
-							<Ulpfec>false</Ulpfec>
-							<JitterBuffer>false</JitterBuffer>
-						</WebRTC>
-					</Publishers>
-				</Application>
-			</Applications>
-		</VirtualHost>
-	</VirtualHosts>
+    <VirtualHosts>
+        <VirtualHost>
+            <Applications>
+                <Application>
+                    <Publishers>
+                      <WebRTC>
+                            <Timeout>30000</Timeout>
+                            <Rtx>false</Rtx>
+                            <Ulpfec>false</Ulpfec>
+                            <JitterBuffer>false</JitterBuffer>
+                        </WebRTC>
+                    </Publishers>
+                </Application>
+            </Applications>
+        </VirtualHost>
+    </VirtualHosts>
 </Server>
 ```
 
@@ -186,88 +186,88 @@ Streaming starts from the top rendition of Playlist, and when Auto ABR is true, 
 ```xml
 <OutputProfiles>
 <OutputProfile>
-	<Name>default</Name>
-	<OutputStreamName>${OriginStreamName}</OutputStreamName>
+    <Name>default</Name>
+    <OutputStreamName>${OriginStreamName}</OutputStreamName>
 
-	<Playlist>
-		<Name>for Webrtc</Name>
-		<FileName>abr</FileName>
-		<Options>
-			<WebRtcAutoAbr>false</WebRtcAutoAbr> 
-		</Options>
-		<Rendition>
-			<Name>1080p</Name>
-			<Video>1080p</Video>
-			<Audio>opus</Audio>
-		</Rendition>
-		<Rendition>
-			<Name>480p</Name>
-			<Video>480p</Video>
-			<Audio>opus</Audio>
-		</Rendition>
-		<Rendition>
-			<Name>720p</Name>
-			<Video>720p</Video>
-			<Audio>opus</Audio>
-		</Rendition>
-	</Playlist>
+    <Playlist>
+        <Name>for Webrtc</Name>
+        <FileName>abr</FileName>
+        <Options>
+            <WebRtcAutoAbr>false</WebRtcAutoAbr> 
+        </Options>
+        <Rendition>
+            <Name>1080p</Name>
+            <Video>1080p</Video>
+            <Audio>opus</Audio>
+        </Rendition>
+        <Rendition>
+            <Name>480p</Name>
+            <Video>480p</Video>
+            <Audio>opus</Audio>
+        </Rendition>
+        <Rendition>
+            <Name>720p</Name>
+            <Video>720p</Video>
+            <Audio>opus</Audio>
+        </Rendition>
+    </Playlist>
 
-	<Playlist>
-		<Name>for llhls</Name>
-		<FileName>llhls_abr</FileName>
-		<Rendition>
-			<Name>480p</Name>
-			<Video>480p</Video>
-			<Audio>bypass_audio</Audio>
-		</Rendition>
-		<Rendition>
-			<Name>720p</Name>
-			<Video>720p</Video>
-			<Audio>bypass_audio</Audio>
-		</Rendition>
-	</Playlist>
-	
-	<Encodes>
-		<Video>
-			<Name>bypass_video</Name>
-			<Bypass>true</Bypass>
-		</Video>
-		<Video>
-			<Name>480p</Name>
-			<Codec>h264</Codec>
-			<Width>640</Width>
-			<Height>480</Height>
-			<Bitrate>500000</Bitrate>
-			<Framerate>30</Framerate>
-		</Video>
-		<Video>
-			<Name>720p</Name>
-			<Codec>h264</Codec>
-			<Width>1280</Width>
-			<Height>720</Height>
-			<Bitrate>2000000</Bitrate>
-			<Framerate>30</Framerate>
-		</Video>
-		<Video>
-			<Name>1080p</Name>
-			<Codec>h264</Codec>
-			<Width>1920</Width>
-			<Height>1080</Height>
-			<Bitrate>5000000</Bitrate>
-			<Framerate>30</Framerate>
-		</Video>
-		<Audio>
-			<Name>bypass_audio</Name>
-			<Bypass>True</Bypass>
-		</Audio>
-		<Audio>
-			<Name>opus</Name>
-			<Codec>opus</Codec>
-			<Bitrate>128000</Bitrate>
-			<Samplerate>48000</Samplerate>
-			<Channel>2</Channel>
-		</Audio>
-	</Encodes>
+    <Playlist>
+        <Name>for llhls</Name>
+        <FileName>llhls_abr</FileName>
+        <Rendition>
+            <Name>480p</Name>
+            <Video>480p</Video>
+            <Audio>bypass_audio</Audio>
+        </Rendition>
+        <Rendition>
+            <Name>720p</Name>
+            <Video>720p</Video>
+            <Audio>bypass_audio</Audio>
+        </Rendition>
+    </Playlist>
+    
+    <Encodes>
+        <Video>
+            <Name>bypass_video</Name>
+            <Bypass>true</Bypass>
+        </Video>
+        <Video>
+            <Name>480p</Name>
+            <Codec>h264</Codec>
+            <Width>640</Width>
+            <Height>480</Height>
+            <Bitrate>500000</Bitrate>
+            <Framerate>30</Framerate>
+        </Video>
+        <Video>
+            <Name>720p</Name>
+            <Codec>h264</Codec>
+            <Width>1280</Width>
+            <Height>720</Height>
+            <Bitrate>2000000</Bitrate>
+            <Framerate>30</Framerate>
+        </Video>
+        <Video>
+            <Name>1080p</Name>
+            <Codec>h264</Codec>
+            <Width>1920</Width>
+            <Height>1080</Height>
+            <Bitrate>5000000</Bitrate>
+            <Framerate>30</Framerate>
+        </Video>
+        <Audio>
+            <Name>bypass_audio</Name>
+            <Bypass>True</Bypass>
+        </Audio>
+        <Audio>
+            <Name>opus</Name>
+            <Codec>opus</Codec>
+            <Bitrate>128000</Bitrate>
+            <Samplerate>48000</Samplerate>
+            <Channel>2</Channel>
+        </Audio>
+    </Encodes>
 </OutputProfile>
 </OutputProfiles>
 ```
@@ -286,43 +286,42 @@ In the example below, it consists of renditions with H.264 and Opus codecs set a
 
 ```xml
 <Playlist>
-	<Name>for Webrtc</Name>
-	<FileName>abr</FileName>
-	<Options>
-		<WebRtcAutoAbr>false</WebRtcAutoAbr> 
-	</Options>
-	<Rendition>
-		<Name>1080p</Name>
-		<Video>1080p</Video>
-		<Audio>opus</Audio>
-	</Rendition>
-	<Rendition>
-		<Name>480p</Name>
-		<Video>480p</Video>
-		<Audio>opus</Audio>
-	</Rendition>
-	<Rendition>
-		<Name>720p</Name>
-		<Video>720p</Video>
-		<Audio>opus</Audio>
-	</Rendition>
-	
-	<Rendition>
-		<Name>1080pVp8</Name>
-		<Video>1080pVp8</Video>
-		<Audio>opus</Audio>
-	</Rendition>
-	<Rendition>
-		<Name>480pVp8</Name>
-		<Video>480pVp8</Video>
-		<Audio>opus</Audio>
-	</Rendition>
-	<Rendition>
-		<Name>720pVp8</Name>
-		<Video>720pVp8</Video>
-		<Audio>opus</Audio>
-	</Rendition>
-	
+    <Name>for Webrtc</Name>
+    <FileName>abr</FileName>
+    <Options>
+        <WebRtcAutoAbr>false</WebRtcAutoAbr> 
+    </Options>
+    <Rendition>
+        <Name>1080p</Name>
+        <Video>1080p</Video>
+        <Audio>opus</Audio>
+    </Rendition>
+    <Rendition>
+        <Name>480p</Name>
+        <Video>480p</Video>
+        <Audio>opus</Audio>
+    </Rendition>
+    <Rendition>
+        <Name>720p</Name>
+        <Video>720p</Video>
+        <Audio>opus</Audio>
+    </Rendition>
+    
+    <Rendition>
+        <Name>1080pVp8</Name>
+        <Video>1080pVp8</Video>
+        <Audio>opus</Audio>
+    </Rendition>
+    <Rendition>
+        <Name>480pVp8</Name>
+        <Video>480pVp8</Video>
+        <Audio>opus</Audio>
+    </Rendition>
+    <Rendition>
+        <Name>720pVp8</Name>
+        <Video>720pVp8</Video>
+        <Audio>opus</Audio>
+    </Rendition>
 </Playlist>
 ```
 
@@ -342,20 +341,21 @@ OME may sometimes not be able to get the server's public IP to its local interfa
 <Server version="8">
     ...
     <StunServer>stun.l.google.com:19302</StunServer>
-		<Bind>
-			<Publishers>
-				<WebRTC>
-					...
-					<IceCandidates>
-						<!-- <TcpRelay>*:3478</TcpRelay> -->
-						<TcpRelay>Relay IP:Port</TcpRelay>
-						<TcpForce>false</TcpForce>
-						<IceCandidate>*:10000-10005/udp</IceCandidate>
-					</IceCandidates>
-				</WebRTC>
-			</Publishers>
-		</Bind>
-		...
+    <Bind>
+        <Publishers>
+            <WebRTC>
+                ...
+                <IceCandidates>
+                    <!-- <TcpRelay>*:3478</TcpRelay> -->
+                    <TcpRelay>Relay IP:Port</TcpRelay>
+                    <TcpForce>false</TcpForce>
+                    <IceCandidate>*:10000-10005/udp</IceCandidate>
+                </IceCandidates>
+            </WebRTC>
+        </Publishers>
+    </Bind>
+    ...
+</Server>        
 ```
 
 {% hint style="info" %}

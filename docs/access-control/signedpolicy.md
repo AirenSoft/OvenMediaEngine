@@ -94,9 +94,11 @@ We provide a script that can easily generate SignedPolicy URL. The script can be
 
 Here's how to use this script:
 
+{% code overflow="wrap" %}
 ```
 ./signed_policy_generator.sh [HMAC_KEY] [BASE_URL] [SIGNATURE_QUERY_KEY_NAME] [POLICY_QUERY_KEY_NAME] [POLICY]
 ```
+{% endcode %}
 
 For example, you can use it like this:
 
@@ -150,7 +152,7 @@ dvVdBpoxAeCPl94Kt5RoiqLI0YE
 
 If you include it as a signature query string (query string key is set in Server.xml), the following SignedPolicy URL is finally generated.
 
-{% code title="URL with signature" %}
+{% code title="URL with signature" overflow="wrap" %}
 ```
 ws://192.168.0.100/app/stream?policy=eyJ1cmxfZXhwaXJlIjoxMzk5NzIxNTgxfQ&signature=dvVdBpoxAeCPl94Kt5RoiqLI0YE
 ```

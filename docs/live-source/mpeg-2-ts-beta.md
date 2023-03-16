@@ -69,7 +69,7 @@ First, name the stream and map the port bound above. The macro ${Port} is provid
 
 This is an example of publishing using FFMPEG.
 
-{% code overflow="wrap" %}
+{% code overflow="wrap" lineNumbers="true" %}
 ```markup
 # Video / Audio
 ffmpeg.exe -re -stream_loop -1 -i <file.ext> -c:v libx264 -bf 0 -x264-params keyint=30:scenecut=0  -acodec aac -pes_payload_size 0 -f mpegts udp://<IP>:4000?pkt_size=1316

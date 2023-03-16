@@ -1,4 +1,4 @@
-# SRT (Beta)
+# SRT
 
 Secure Reliable Transport (or SRT in short) is an open source video transport protocol and technology stack that optimizes streaming performance across unpredictable networks with secure streams and easy firewall traversal, bringing the best quality live video over the worst networks. We consider SRT to be one of the great alternatives to RTMP, and OvenMediaEngine can receive video streaming over SRT. For more information on SRT, please visit the [SRT Alliance website](https://www.srtalliance.org).
 
@@ -12,25 +12,25 @@ Set the SRT listen port as follows:
 
 ```markup
 <Bind>
-	<Providers>
-		...
-		<SRT>
-			<Port>9999</Port>
-			<!-- <WorkerCount>1</WorkerCount> -->
-		</SRT>
-	</Providers>
+    <Providers>
+        ...
+        <SRT>
+            <Port>9999</Port>
+            <!-- <WorkerCount>1</WorkerCount> -->
+        </SRT>
+    </Providers>
 ```
 
 ### Application
 
-SRT input can be turned on/off for each application. As follows Setting  enables the SRT input function of the application.
+SRT input can be turned on/off for each application. As follows Setting enables the SRT input function of the application.
 
 ```markup
 <Applications>
-	<Application>
-		<Name>app</Name>
-		<Providers>
-			<SRT/>
+    <Application>
+        <Name>app</Name>
+        <Providers>
+            <SRT/>
 ```
 
 ## Encoders and streamid
@@ -44,7 +44,7 @@ Therefore, in order for the SRT encoder to transmit a stream to OvenMediaEngine,
 > streamid = percent\_encoding("srt://{host}\[:port]/{app name}/{stream name}\[?query=value]")
 
 {% hint style="warning" %}
-The **streamid** contains the URL format, so it must be [**percent encoded**](https://tools.ietf.org/html/rfc3986#section-2.1)****
+The **streamid** contains the URL format, so it must be [**percent encoded**](https://tools.ietf.org/html/rfc3986#section-2.1)\*\*\*\*
 {% endhint %}
 
 ### OBS Studio
