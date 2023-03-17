@@ -812,7 +812,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 	_stat_recv_pkt_lpts[track_id] = media_packet->GetPts();
 	_stat_recv_pkt_ldts[track_id] = media_packet->GetDts();
 
-	if (_stop_watch.IsElapsed(10000) && _stop_watch.Update())
+	if (_stop_watch.IsElapsed(30000) && _stop_watch.Update())
 	{
 		// Uptime
 		int64_t uptime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - _stat_start_time).count();
@@ -847,6 +847,11 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 				continue;
 			}
 
+			if(track->GetMediaType() == MediaType::Video)
+			{
+				stat_track_str.AppendFormat(", fps: %.2f", track->GetFrameRate());
+			}
+
 			// calc min/max pts
 			if (min_pts == -1LL)
 			{
@@ -875,7 +880,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 
 		stat_track_str = stat_stream_str + stat_track_str;
 
-		logts("%s", stat_track_str.CStr());
+		logtd("%s", stat_track_str.CStr());
 	}
 }
 
