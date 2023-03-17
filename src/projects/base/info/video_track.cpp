@@ -10,6 +10,7 @@
 
 VideoTrack::VideoTrack()
 	: _framerate(0),
+	  _framerate_conf(0),
 	  _framerate_estimated(0),
 	  _video_timescale(0),
 	  _width(0),
@@ -19,7 +20,6 @@ VideoTrack::VideoTrack()
 	  _has_bframe(false),
 	  _preset(""),
 	  _thread_count(0)
-
 {
 }
 
