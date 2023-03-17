@@ -128,7 +128,7 @@ namespace pvd
 		}
 
 		// Send Close to Admission Webhooks
-		if (_url && _remote)
+		if (_url && _remote && _publish_url)
 		{
 			auto remote_address { _remote->GetRemoteAddress() };
 			if (remote_address)
