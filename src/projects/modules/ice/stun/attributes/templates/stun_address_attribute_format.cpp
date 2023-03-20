@@ -93,6 +93,7 @@ bool StunAddressAttributeFormat::Parse(const StunMessage *stun_message, ov::Byte
 
 	_address.SetPort(port);
 	_address.UpdateFromStorage();
+	_address.SetHostname(_address.GetIpAddress());
 
 	return true;
 }

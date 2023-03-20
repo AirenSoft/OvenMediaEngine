@@ -220,7 +220,7 @@ std::shared_ptr<IcePort> IcePortManager::CreateTurnServers(
 
 	ice_port->Close();
 
-	// TODO: Need to do something for unscribed observer
+	// TODO: Need to do something for unsubscribed observer
 	return nullptr;
 }
 
@@ -246,6 +246,21 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 {
 	auto &list_config = ice_candidates_config.GetIceCandidateList();
 
+	std::unordered_map<
+		// key: port
+		int,
+		std::unordered_map<
+			// key: socket_type
+			ov::SocketType,
+			std::unordered_map<
+				// key: address
+				ov::SocketAddress,
+				// value: always true
+				bool>>>
+		port_map;
+
+	const auto mapped_address_list = ov::AddressUtilities::GetInstance()->GetMappedAddressList();
+
 	for (auto &ice_candidate_config : list_config)
 	{
 		std::vector<ov::String> ip_list;
@@ -257,11 +272,13 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 			return false;
 		}
 
-		ov::String protocol = StringFromSocketType(socket_type);
+		const ov::String protocol = StringFromSocketType(socket_type);
 
 		address.EachPort([&](const ov::String &host, const uint16_t port) -> bool {
+			auto &socket_type_map = port_map[port];
+			auto &address_map = socket_type_map[socket_type];
+
 			std::vector<ov::SocketAddress> address_list;
-			std::vector<RtcIceCandidate> ice_candidates;
 
 			for (const auto &local_ip : ip_list)
 			{
@@ -278,18 +295,61 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 
 				for (const auto &address : address_list)
 				{
-					// Create an ICE candidate using local_ip & port_num
-					RtcIceCandidate ice_candidate(protocol, address, 0, "");
-
-					logtd("ICE Candidate is created: %s (from %s)", ice_candidate.ToString().CStr(), address.ToString().CStr());
-
-					ice_candidates.emplace_back(std::move(ice_candidate));
+					logtd("ICE Candidate will be created using %s",
+						  address.ToString().CStr());
+					address_map.emplace(address, true);
 				}
 			}
-
-			ice_candidate_list->push_back(std::move(ice_candidates));
 			return true;
 		});
+	}
+
+	// Create an ICE candidate using port_map (group by port number)
+	const ov::String protocol = StringFromSocketType(ov::SocketType::Udp);
+
+	for (auto &port_item : port_map)
+	{
+		const auto port = port_item.first;
+		auto &socket_type_map = port_item.second;
+
+		std::vector<RtcIceCandidate> ice_candidates;
+
+		for (auto &socket_type_item : socket_type_map)
+		{
+			const auto socket_type = socket_type_item.first;
+			const auto &address_map = socket_type_item.second;
+
+			const ov::String protocol = StringFromSocketType(socket_type);
+
+			for (auto &address_map_item : address_map)
+			{
+				ice_candidates.emplace_back(protocol, address_map_item.first, 0, "");
+			}
+		}
+
+		auto &address_map = socket_type_map[ov::SocketType::Udp];
+
+		// Create an ICE candidate using mapped address
+		for (const auto &mapped_address : mapped_address_list)
+		{
+			ov::SocketAddress mapped_address_with_port(mapped_address);
+			mapped_address_with_port.SetPort(port);
+
+			if (address_map.find(mapped_address_with_port) != address_map.end())
+			{
+				// Already exists
+				continue;
+			}
+
+			address_map[mapped_address_with_port] = true;
+
+			logtd("ICE Candidate will be created using mapped address %s",
+				  mapped_address_with_port.ToString().CStr());
+
+			ice_candidates.emplace_back(protocol, mapped_address_with_port, 0, "");
+		}
+
+		ice_candidate_list->push_back(std::move(ice_candidates));
 	}
 
 	return true;

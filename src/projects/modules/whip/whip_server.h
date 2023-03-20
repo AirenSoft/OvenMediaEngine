@@ -34,6 +34,37 @@ public:
 	void EraseCors(const info::VHostAppName &vhost_app_name);
 
 protected:
+	struct TurnIP
+	{
+		ov::SocketFamily family;
+		ov::String ip;
+
+		TurnIP(const ov::SocketAddress &address)
+			: family(address.GetFamily()),
+			  ip(address.GetIpAddress())
+		{
+		}
+
+		TurnIP(const ov::SocketFamily family, const ov::String &ip)
+			: family(family),
+			  ip(ip)
+		{
+		}
+
+		static std::vector<TurnIP> FromIPList(const ov::SocketFamily family, const std::vector<ov::String> &ip_list)
+		{
+			std::vector<TurnIP> turn_ip_list;
+
+			for (const auto &ip : ip_list)
+			{
+				turn_ip_list.emplace_back(TurnIP(family, ip));
+			}
+
+			return turn_ip_list;
+		}
+	};
+
+protected:
 	bool PrepareForTCPRelay();
 	bool PrepareForExternalIceServer();
 

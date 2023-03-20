@@ -107,6 +107,7 @@ bool StunXorAddressAttributeFormat::Parse(const StunMessage *stun_message, ov::B
 		}
 
 		_address.UpdateFromStorage();
+		_address.SetHostname(_address.GetIpAddress());
 	}
 
 	return true;

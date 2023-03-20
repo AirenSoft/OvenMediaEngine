@@ -46,32 +46,31 @@ bool WhipServer::PrepareForTCPRelay()
 
 			auto address_utilities = ov::AddressUtilities::GetInstance();
 
-			std::vector<ov::String> ip_list;
-			ov::SocketFamily family = ov::SocketFamily::Unknown;
+			std::vector<TurnIP> ip_list;
 			std::vector<ov::String> url_list;
 
 			auto &tcp_relay_host = _tcp_relay_address.host;
 			if (tcp_relay_host == "*")
 			{
 				// Case 1 - IPv4 wildcard
-				ip_list = address_utilities->GetIPv4List();
-				family = ov::SocketFamily::Inet;
+				ip_list = TurnIP::FromIPList(ov::SocketFamily::Inet, address_utilities->GetIPv4List());
 			}
 			else if (tcp_relay_host == "::")
 			{
 				// Case 2 - IPv6 wildcard
-				ip_list = address_utilities->GetIPv6List(ice_candidates_config.GetEnableLinkLocalAddress());
-				family = ov::SocketFamily::Inet6;
+				ip_list = TurnIP::FromIPList(ov::SocketFamily::Inet6, address_utilities->GetIPv6List(ice_candidates_config.GetEnableLinkLocalAddress()));
 			}
 			else if (tcp_relay_host == "${PublicIP}")
 			{
-				auto public_ip = address_utilities->GetMappedAddress();
+				const auto public_ip_list = address_utilities->GetMappedAddressList();
 
-				if (public_ip != nullptr)
+				if (public_ip_list.empty() == false)
 				{
 					// Case 3 - Get an IP from external STUN server
-					ip_list.emplace_back(public_ip->GetIpAddress());
-					family = public_ip->GetFamily();
+					for (const auto &public_ip : public_ip_list)
+					{
+						ip_list.emplace_back(public_ip);
+					}
 				}
 				else
 				{
@@ -87,13 +86,13 @@ bool WhipServer::PrepareForTCPRelay()
 			for (const auto &ip : ip_list)
 			{
 				_tcp_relay_address.EachPort([&](const ov::String &host, const uint16_t port) -> bool {
-					if (family == ov::SocketFamily::Inet6)
+					if (ip.family == ov::SocketFamily::Inet6)
 					{
-						url_list.emplace_back(ov::String::FormatString("turn:[%s]:%d?transport=tcp", ip.CStr(), port));
+						url_list.emplace_back(ov::String::FormatString("turn:[%s]:%d?transport=tcp", ip.ip.CStr(), port));
 					}
-					else if (family == ov::SocketFamily::Inet6)
+					else
 					{
-						url_list.emplace_back(ov::String::FormatString("turn:%s:%d?transport=tcp", ip.CStr(), port));
+						url_list.emplace_back(ov::String::FormatString("turn:%s:%d?transport=tcp", ip.ip.CStr(), port));
 					}
 					return true;
 				});

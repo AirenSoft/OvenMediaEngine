@@ -11,47 +11,59 @@
 #include <ifaddrs.h>
 #include <modules/ice/stun_client.h>
 
+#define OV_LOG_TAG "AddressUtilities"
+
 namespace ov
 {
 	bool AddressUtilities::ResolveMappedAddress(const ov::String &stun_server_addr)
 	{
-		const auto address = ov::SocketAddress::CreateAndGetFirst(stun_server_addr);
+		std::vector<ov::SocketAddress> address_list;
 
-		if (address.IsValid() == false)
+		try
 		{
+			address_list = ov::SocketAddress::Create(stun_server_addr);
+		}
+		catch (const ov::Error &e)
+		{
+			logte("Could not resolve address: %s, %s", stun_server_addr.CStr(), e.What());
 			return false;
 		}
 
-		return ResolveMappedAddress(address);
+		return ResolveMappedAddress(address_list);
 	}
 
-	bool AddressUtilities::ResolveMappedAddress(const ov::SocketAddress &stun_server_addr)
+	bool AddressUtilities::ResolveMappedAddress(const std::vector<ov::SocketAddress> &stun_server_addr_list)
 	{
 		ov::SocketAddress mapped_address;
 
-		if (StunClient::GetMappedAddress(stun_server_addr, mapped_address) == true)
+		for (const auto &stun_server_addr : stun_server_addr_list)
 		{
-			_mapped_address = std::make_shared<ov::SocketAddress>(mapped_address);
-			return true;
+			if (StunClient::GetMappedAddress(stun_server_addr, mapped_address))
+			{
+				_mapped_address_list.push_back(mapped_address);
+			}
 		}
 
-		return false;
+		return _mapped_address_list.empty() == false;
 	}
 
-	std::shared_ptr<ov::SocketAddress> AddressUtilities::GetMappedAddress()
+	std::vector<ov::SocketAddress> AddressUtilities::GetMappedAddressList() const
 	{
-		return _mapped_address;
+		return _mapped_address_list;
 	}
 
 	std::vector<ov::String> AddressUtilities::GetIPListInternal(ov::SocketFamily family, bool include_link_local_address, bool include_mapped_address)
 	{
 		std::vector<ov::String> list;
 
-		if (include_mapped_address && (_mapped_address != nullptr))
+		if (include_mapped_address)
 		{
-			if (_mapped_address->GetFamily() == family)
+			for (const auto &mapped_address : _mapped_address_list)
 			{
-				list.emplace_back(_mapped_address->GetIpAddress());
+				if (mapped_address.GetFamily() == family)
+				{
+					list.emplace_back(mapped_address.GetIpAddress());
+				}
 			}
 		}
 

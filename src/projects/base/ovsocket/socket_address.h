@@ -261,6 +261,28 @@ namespace ov
 
 		ov::String ToString(bool ignore_privacy_protect_config = true) const noexcept;
 
+		std::size_t Hash() const
+		{
+			switch (GetFamily())
+			{
+				case ov::SocketFamily::Inet: {
+					auto addr_in = ToSockAddrIn4();
+					return std::hash<uint32_t>{}(addr_in->sin_addr.s_addr) ^
+						   std::hash<uint16_t>{}(addr_in->sin_port);
+				}
+
+				case ov::SocketFamily::Inet6: {
+					auto addr_in6 = ToSockAddrIn6();
+					return std::hash<uint64_t>{}(reinterpret_cast<const uint64_t *>(addr_in6->sin6_addr.s6_addr)[0]) ^
+						   std::hash<uint64_t>{}(reinterpret_cast<const uint64_t *>(addr_in6->sin6_addr.s6_addr)[1]) ^
+						   std::hash<uint16_t>{}(addr_in6->sin6_port);
+				}
+
+				default:
+					return 0;
+			}
+		}
+
 	protected:
 		struct StorageCompare
 		{
@@ -324,3 +346,15 @@ namespace ov
 		uint16_t _port = 0;
 	};
 }  // namespace ov
+
+namespace std
+{
+	template <>
+	struct hash<ov::SocketAddress>
+	{
+		std::size_t operator()(ov::SocketAddress const &address) const
+		{
+			return address.Hash();
+		}
+	};
+}  // namespace std

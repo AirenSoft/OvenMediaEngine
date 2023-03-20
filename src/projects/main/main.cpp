@@ -77,9 +77,21 @@ int main(int argc, char *argv[])
 	auto stun_server_address = server_config->GetStunServer(&stun_server_parsed);
 	if (stun_server_parsed)
 	{
-		if (ov::AddressUtilities::GetInstance()->ResolveMappedAddress(stun_server_address) == true)
+		auto address_utilities = ov::AddressUtilities::GetInstance();
+
+		if (address_utilities->ResolveMappedAddress(stun_server_address))
 		{
-			logti("Resolved public IP address (%s) from stun server (%s)", ov::AddressUtilities::GetInstance()->GetMappedAddress()->GetIpAddress().CStr(), stun_server_address.CStr());
+			std::vector<ov::String> address_list;
+
+			for (auto &address : address_utilities->GetMappedAddressList())
+			{
+				address_list.push_back(address.GetIpAddress());
+			}
+
+			logti("Resolved public IP address%s (%s) from stun server (%s)",
+				  (address_list.size() > 1) ? "es" : "",
+				  ov::String::Join(address_list, ", ").CStr(),
+				  stun_server_address.CStr());
 		}
 		else
 		{
