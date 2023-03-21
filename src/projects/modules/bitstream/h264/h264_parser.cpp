@@ -193,7 +193,7 @@ bool H264Parser::ParseSPS(const uint8_t *nalu, size_t length, H264SPS &sps)
 		if (scaling_matrix_present_flag)
 		{
 			const size_t matrix_size = chroma_format == 3 ? 12 : 8;
-			for (size_t index = 0; index < matrix_size; ++index)
+			for (size_t index = 0; index < matrix_size; index++)
 			{
 				uint8_t scaling_list_present_flag;
 				if (!parser.ReadBit(scaling_list_present_flag))
@@ -203,8 +203,24 @@ bool H264Parser::ParseSPS(const uint8_t *nalu, size_t length, H264SPS &sps)
 
 				if (scaling_list_present_flag)
 				{
-					// TODO: add support for scaling list
-					return false;
+					// skip scaling list
+					int32_t delta_scale, last_scale = 8, next_scale = 8;
+					size_t size = index < 6 ? 16 : 64;
+
+					for (size_t i = 0; i < size; i++)
+					{
+						if (next_scale != 0)
+						{
+							if (!parser.ReadSEV(delta_scale))
+							{
+								return false;
+							}
+
+							next_scale = (last_scale + delta_scale + 256) % 256;
+						}
+
+						last_scale = (next_scale == 0) ? last_scale : next_scale;
+					}
 				}
 			}
 		}
@@ -254,7 +270,7 @@ bool H264Parser::ParseSPS(const uint8_t *nalu, size_t length, H264SPS &sps)
 			return false;
 		}
 
-		for (uint32_t index = 0; index < num_ref_frames_in_pic_order_cnt_cycle; ++index)
+		for (uint32_t index = 0; index < num_ref_frames_in_pic_order_cnt_cycle; index++)
 		{
 			int32_t reference_frame_offset;
 			if (!parser.ReadSEV(reference_frame_offset))
