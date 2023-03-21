@@ -743,7 +743,7 @@ namespace ov
 				description.AppendFormat(":%d", Port());
 			}
 
-			if ((hostname.IsEmpty() == false) && (hostname != ip))
+			if ((_is_wildcard_host == false) && ((hostname.IsEmpty() == false) && (hostname != ip)))
 			{
 				description.AppendFormat(" (host: '%s')", hostname.CStr());
 			}
