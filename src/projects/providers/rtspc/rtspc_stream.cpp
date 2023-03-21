@@ -240,6 +240,8 @@ namespace pvd
 		describe->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Accept, "application/sdp"));
 		describe->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
 
+		logti("Request Describe : %s", describe->DumpHeader().CStr());
+
 		std::shared_ptr<RtspMessage> reply = nullptr;
 		for (int i = 0; i < 2; i++)
 		{
@@ -315,7 +317,7 @@ namespace pvd
 			}
 		}
 
-		logtd("Response Describe : %s", reply->DumpHeader().CStr());
+		logti("Response Describe : %s", reply->DumpHeader().CStr());
 
 		// Content-Base
 		auto content_base_field = reply->GetHeaderField(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::ContentBase));
@@ -328,7 +330,7 @@ namespace pvd
 		auto session_field = reply->GetHeaderFieldAs<RtspHeaderSessionField>(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::Session));
 		if (session_field == nullptr)
 		{
-			_rtsp_session_id = 0;
+			_rtsp_session_id = "";
 		}
 		else
 		{
@@ -414,8 +416,10 @@ namespace pvd
 			// The chennel id can be used for demuxing, but since it is already demuxing in a different way, it is not saved.
 			setup->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Transport,
 																	ov::String::FormatString("RTP/AVP/TCP;unicast;interleaved=%d-%d;ssrc=%X", interleaved_channel, interleaved_channel + 1, ov::Random::GenerateUInt32())));
-
-			setup->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
+			if (_rtsp_session_id.IsEmpty() == false)
+			{
+				setup->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
+			}
 			setup->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
 
 			if (SendRequestMessage(setup) == false)
@@ -425,7 +429,7 @@ namespace pvd
 				return false;
 			}
 
-			logtd("Request SETUP : %s", setup->DumpHeader().CStr());
+			logti("Request SETUP : %s", setup->DumpHeader().CStr());
 
 			auto reply = ReceiveResponse(setup->GetCSeq(), 3000);
 			if (reply == nullptr)
@@ -441,13 +445,13 @@ namespace pvd
 				return false;
 			}
 
-			logtd("Response SETUP : %s", reply->DumpHeader().CStr());
+			logti("Response SETUP : %s", reply->DumpHeader().CStr());
 
 			// Session
 			auto session_field = reply->GetHeaderFieldAs<RtspHeaderSessionField>(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::Session));
 			if (session_field == nullptr)
 			{
-				_rtsp_session_id = 0;
+				_rtsp_session_id = "";
 			}
 			else
 			{
@@ -469,6 +473,10 @@ namespace pvd
 			{
 				// Some rtsp server ignores this value, so it is unusable
 				// transport_field->GetSsrc();
+				if (transport_field->IsInterleavedParsed())
+				{
+					interleaved_channel = transport_field->GetInterleavedChannelStart();
+				}
 			}
 
 			auto first_payload = media_desc->GetFirstPayload();
@@ -605,7 +613,11 @@ namespace pvd
 
 			play->AddHeaderField(_authorization_field);
 		}
-		play->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
+
+		if (_rtsp_session_id.IsEmpty() == false)
+		{
+			play->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
+		}
 		play->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
 
 		if (SendRequestMessage(play) == false)
@@ -615,7 +627,7 @@ namespace pvd
 			return false;
 		}
 
-		logtd("Request PLAY : %s", play->DumpHeader().CStr());
+		logti("Request PLAY : %s", play->DumpHeader().CStr());
 
 		auto reply = ReceiveResponse(play->GetCSeq(), 3000);
 
@@ -632,7 +644,7 @@ namespace pvd
 			return false;
 		}
 
-		logtd("Response PLAY : %s", reply->DumpHeader().CStr());
+		logti("Response PLAY : %s", reply->DumpHeader().CStr());
 		_play_request_time.Start();
 
 		SetState(State::PLAYING);
@@ -658,7 +670,11 @@ namespace pvd
 
 			teardown->AddHeaderField(_authorization_field);
 		}
-		teardown->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
+
+		if (_rtsp_session_id.IsEmpty() == false)
+		{
+			teardown->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
+		}
 		teardown->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
 
 		if (SendRequestMessage(teardown) == false)
