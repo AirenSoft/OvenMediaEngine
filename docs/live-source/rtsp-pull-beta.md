@@ -1,8 +1,12 @@
 # RTSP Pull
 
-From version 0.10.4, RTSP Pull input is supported as a beta version. The supported codecs are H.264, AAC(ADTS). Supported codecs will continue to be added.&#x20;
+OvenMediaEngine can pull RTSP Stream in two ways. The first way is to use the Stream creation API, and the second way is to use OriginMap or OriginMapStore. The supported codecs are H.264, AAC(ADTS). Supported codecs will continue to be added.&#x20;
 
-This function pulls a stream from an external RTSP server and operates as an RTSP client.&#x20;
+## Pulling streams using the Stream Creation API
+
+You can create a stream by pulling an RTSP stream using the [Stream Creation API](../rest-api/v1/virtualhost/application/stream/#create-stream-pull). For more information on using the [REST API](../rest-api/), check out that chapter.
+
+## Pulling streams using the OriginMap
 
 ### Configuration
 
@@ -52,16 +56,14 @@ For example, in the above setup, when a player requests "ws://ome.com/**app\_nam
 If the app name set in Location isn't created, OvenMediaEngine creates the app with default settings. The default generated app doesn't have an OPUS encoding profile, so to use WebRTC streaming, you need to add the app to your configuration.
 {% endhint %}
 
-### Publish
+### Event to trigger pulling
 
-The pull-type provider is activated by the publisher's streaming request. And if there is no client playing for 30 seconds, the provider is automatically disabled.
+Pulling type providers are activated by streaming requests from publishers. And by default, the provider is automatically disabled after 30 seconds of no client playback. If you want to change this setting, check out the [Clustering ](../origin-edge-clustering.md#less-than-properties-greater-than)chapter.
 
-According to the above setting, the RTSP pull provider operates for the following streaming URLs.
+When a playback request comes in from the following URL, RTSP pull starts working according to Origins settings.
 
-| Protocol | URL                                                               |
-| -------- | ----------------------------------------------------------------- |
-| WebRTC   | ws:://ome.com:3333/app\_name/rtsp\_stream\_name                   |
-| HLS      | http://ome.com:8080/app\_name/rtsp\_stream\_name/playlist.m3u8    |
-| DASH     | http://ome.com:8080/app\_name/rtsp\_stream\_name/manifest.mpd     |
-| LL DASH  | http://ome.com:8080/app\_name/rtsp\_stream\_name/manifest\_ll.mpd |
+| Protocol | URL                                                                    |
+| -------- | ---------------------------------------------------------------------- |
+| WebRTC   | ws\[s]:://host.com\[:port]/app\_name/rtsp\_stream\_name                |
+| LLHLS    | http\[s]://host.com\[:port]/app\_name/rtsp\_stream\_name/playlist.m3u8 |
 
