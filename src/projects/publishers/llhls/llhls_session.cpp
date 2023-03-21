@@ -27,11 +27,11 @@ std::shared_ptr<LLHlsSession> LLHlsSession::Create(session_id_t session_id,
 												const ov::String &session_key,
 												const std::shared_ptr<pub::Application> &application,
 												const std::shared_ptr<pub::Stream> &stream,
-												const std::shared_ptr<const AccessController::RequestInfo> &access_control_request,
+												const ov::String &user_agent,
 												uint64_t session_life_time)
 {
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), session_id);
-	auto session = std::make_shared<LLHlsSession>(session_info, origin_mode, session_key, application, stream, access_control_request, session_life_time);
+	auto session = std::make_shared<LLHlsSession>(session_info, origin_mode, session_key, application, stream, user_agent, session_life_time);
 
 	if (session->Start() == false)
 	{
@@ -46,9 +46,9 @@ LLHlsSession::LLHlsSession(const info::Session &session_info,
 							const ov::String &session_key,
 							const std::shared_ptr<pub::Application> &application, 
 							const std::shared_ptr<pub::Stream> &stream,
-							const std::shared_ptr<const AccessController::RequestInfo> &access_control_request,
+							const ov::String &user_agent,
 							uint64_t session_life_time)
-	: pub::Session(session_info, application, stream), _access_control_request(access_control_request)
+	: pub::Session(session_info, application, stream), _user_agent(user_agent)
 {
 	_origin_mode = origin_mode;
 	_session_life_time = session_life_time;
@@ -90,9 +90,9 @@ const ov::String &LLHlsSession::GetSessionKey() const
 	return _session_key;
 }
 
-std::shared_ptr<const AccessController::RequestInfo> LLHlsSession::GetAccessControlRequest() const
+const ov::String &LLHlsSession::GetUserAgent() const
 {
-	return _access_control_request;
+	return _user_agent;
 }
 
 void LLHlsSession::UpdateLastRequest(uint32_t connection_id)

@@ -14,6 +14,7 @@
 #include "modules/rtc_signalling/rtc_signalling.h"
 #include "modules/whip/whip_server.h"
 #include "orchestrator/orchestrator.h"
+#include "webrtc_stream.h"
 
 namespace pvd
 {
@@ -90,7 +91,7 @@ namespace pvd
 												const std::shared_ptr<const SessionDescription> &patch) override;
 
 		bool OnSessionDelete(const std::shared_ptr<const http::svr::HttpRequest> &request,
-							 const ov::String &session_id) override;
+				const ov::String &session_key, const std::shared_ptr<ov::Url> &final_url) override;
 		//--------------------------------------------------------------------
 
 	protected:

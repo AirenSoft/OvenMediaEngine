@@ -30,7 +30,7 @@ public:
 												const ov::String &session_key, 
 												const std::shared_ptr<pub::Application> &application,
 												const std::shared_ptr<pub::Stream> &stream,
-												const std::shared_ptr<const AccessController::RequestInfo> &access_control_request,
+												const ov::String &user_agent,
 												uint64_t session_life_time);
 
 	LLHlsSession(const info::Session &session_info, 
@@ -38,7 +38,7 @@ public:
 				const ov::String &session_key,
 				const std::shared_ptr<pub::Application> &application, 
 				const std::shared_ptr<pub::Stream> &stream,
-				const std::shared_ptr<const AccessController::RequestInfo> &access_control_request,
+				const ov::String &user_agent,
 				uint64_t session_life_time);
 	
 	~LLHlsSession() override;
@@ -61,7 +61,7 @@ public:
 	// Get session key
 	const ov::String &GetSessionKey() const;
 
-	std::shared_ptr<const AccessController::RequestInfo> GetAccessControlRequest() const;
+	const ov::String &GetUserAgent() const;
 
 private:
 
@@ -123,5 +123,5 @@ private:
 
 	bool _origin_mode = false;
 
-	const std::shared_ptr<const AccessController::RequestInfo> _access_control_request;
+	ov::String _user_agent;
 };

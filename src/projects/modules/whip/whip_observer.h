@@ -19,10 +19,11 @@ class WhipObserver : public ov::EnableSharedFromThis<WhipObserver>
 public:
 	struct Answer
 	{
-		Answer(const ov::String &session_id, const ov::String &etag, const std::shared_ptr<SessionDescription> &sdp, http::StatusCode status_code, const ov::String &error_message="")
+		Answer(const ov::String &session_id, const ov::String &etag, const std::shared_ptr<SessionDescription> &sdp, const std::shared_ptr<ov::Url> &final_url, http::StatusCode status_code, const ov::String &error_message="")
 			: _session_id(session_id),
 			_entity_tag(etag),
 			_sdp(sdp),
+			_final_url(final_url),
 			_status_code(status_code),
 			_error_message(error_message)
 		{
@@ -44,6 +45,7 @@ public:
 		ov::String _session_id;
 		ov::String _entity_tag;
 		std::shared_ptr<SessionDescription> _sdp = nullptr;
+		std::shared_ptr<ov::Url> _final_url;
 		http::StatusCode _status_code = http::StatusCode::InternalServerError; // 201 Created if success
 		ov::String _error_message;
 	};
@@ -57,5 +59,5 @@ public:
 									const std::shared_ptr<const SessionDescription> &patch){ return {http::StatusCode::NoContent, ""}; }
 
 	virtual bool OnSessionDelete(const std::shared_ptr<const http::svr::HttpRequest> &request,
-								const ov::String &session_id) = 0;
+			const ov::String &session_key, const std::shared_ptr<ov::Url> &final_url) = 0;
 };

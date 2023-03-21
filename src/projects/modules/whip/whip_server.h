@@ -72,6 +72,10 @@ private:
 	std::shared_ptr<WhipInterceptor> CreateInterceptor();
 	ov::String GetIceServerLinkValue(const ov::String &URL, const ov::String &username, const ov::String &credential);
 
+	bool AddFinalUrl(const ov::String &key, const std::shared_ptr<ov::Url> &final_url);
+	bool DeleteFinalUrl(const ov::String &key);
+	std::shared_ptr<ov::Url> GetFinalUrlByKey(const ov::String &key);
+
 	const cfg::bind::cmm::Webrtc _webrtc_bind_cfg;
 
 	std::shared_ptr<WhipObserver> _observer;
@@ -86,4 +90,7 @@ private:
 	http::CorsManager _cors_manager;
 
 	ov::SocketAddress::Address _tcp_relay_address;
+
+	// Key: stream_key / Value: stream
+	std::map<ov::String, std::shared_ptr<ov::Url>> _final_urls;
 };

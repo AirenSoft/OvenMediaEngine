@@ -35,6 +35,26 @@ namespace pub
 		return _stream;
 	}
 
+	std::shared_ptr<ov::Url> Session::GetRequestedUrl() const
+	{
+		return _requested_url;
+	}
+
+	void Session::SetRequestedUrl(const std::shared_ptr<ov::Url> &requested_url)
+	{
+		_requested_url = requested_url;
+	}
+
+	std::shared_ptr<ov::Url> Session::GetFinalUrl() const
+	{
+		return _final_url;
+	}
+
+	void Session::SetFinalUrl(const std::shared_ptr<ov::Url> &final_url)
+	{
+		_final_url = final_url;
+	}
+
 	bool Session::Start()
 	{
 		_state = SessionState::Started;

@@ -126,6 +126,26 @@ namespace pvd
 		return SendFrame(event_message);
 	}
 
+	std::shared_ptr<ov::Url> Stream::GetRequestedUrl() const
+	{
+		return _requested_url;
+	}
+
+	void Stream::SetRequestedUrl(const std::shared_ptr<ov::Url> &requested_url)
+	{
+		_requested_url = requested_url;
+	}
+
+	std::shared_ptr<ov::Url> Stream::GetFinalUrl() const
+	{
+		return _final_url;
+	}
+
+	void Stream::SetFinalUrl(const std::shared_ptr<ov::Url> &final_url)
+	{
+		_final_url = final_url;
+	}
+
 	bool Stream::SendFrame(const std::shared_ptr<MediaPacket> &packet)
 	{
 		if (_application == nullptr)

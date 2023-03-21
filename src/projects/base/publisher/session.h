@@ -24,6 +24,12 @@ namespace pub
 		const std::shared_ptr<Application> &GetApplication();
 		const std::shared_ptr<Stream> &GetStream();
 
+		std::shared_ptr<ov::Url> GetRequestedUrl() const;
+		void SetRequestedUrl(const std::shared_ptr<ov::Url> &requested_url);
+
+		std::shared_ptr<ov::Url> GetFinalUrl() const;
+		void SetFinalUrl(const std::shared_ptr<ov::Url> &final_url);
+
 		virtual bool Start();
 		virtual bool Stop();
 		
@@ -42,6 +48,10 @@ namespace pub
 		SessionState GetState();
 		void SetState(SessionState state);
 		virtual void Terminate(ov::String reason);
+
+	protected:
+		std::shared_ptr<ov::Url> _requested_url;
+		std::shared_ptr<ov::Url> _final_url;
 
 	private:
 		std::shared_ptr<Application> _application;

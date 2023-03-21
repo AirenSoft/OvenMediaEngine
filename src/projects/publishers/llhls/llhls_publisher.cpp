@@ -400,17 +400,15 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			if (session == nullptr || session->GetStream() != stream)
 			{
 				// New HTTP Connection
-				auto new_url = (final_url == requested_url) ? nullptr : final_url;
-				auto access_control_request = (access_control_enabled == true)
-																			? std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, new_url, request->GetHeader("USER-AGENT")) : nullptr;
-
-				session = LLHlsSession::Create(session_id, origin_mode, "", stream->GetApplication(), stream, access_control_request, session_life_time);
+				session = LLHlsSession::Create(session_id, origin_mode, "", stream->GetApplication(), stream, request->GetHeader("USER-AGENT"), session_life_time);
 				if (session == nullptr)
 				{
 					logte("Could not create llhls session for request: %s", request->ToString().CStr());
 					response->SetStatusCode(http::StatusCode::InternalServerError);
 					return http::svr::NextHandler::DoNotCall;
 				}
+				session->SetRequestedUrl(requested_url);
+				session->SetFinalUrl(final_url);
 
 				stream->AddSession(session);
 			}
@@ -458,6 +456,8 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 						response->SetStatusCode(http::StatusCode::InternalServerError);
 						return http::svr::NextHandler::DoNotCall;
 					}
+					session->SetRequestedUrl(requested_url);
+					session->SetFinalUrl(final_url);
 
 					stream->AddSession(session);
 				}
@@ -509,10 +509,14 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 					auto stream = session->GetStream();
 					if (stream != nullptr)
 					{
-						auto access_control_request = session->GetAccessControlRequest();
-						if (access_control_request != nullptr)
+						auto remote_address = connection->GetSocket()->GetRemoteAddress();
+						auto requested_url = session->GetRequestedUrl();
+						auto final_url = session->GetFinalUrl();
+						if (remote_address && requested_url && final_url)
 						{
-							SendCloseAdmissionWebhooks(access_control_request);
+							auto request_info = std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, requested_url->ToUrlString(true) == final_url->ToUrlString(true) ? nullptr : final_url, session->GetUserAgent());
+
+							SendCloseAdmissionWebhooks(request_info);
 						}
 
 						stream->RemoveSession(session->GetId());
