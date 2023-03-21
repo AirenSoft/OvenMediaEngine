@@ -296,7 +296,7 @@ namespace ov
 		{
 			if (ipv4_supported)
 			{
-				if (Resolve("*", storage_list, is_wildcard_host) == false)
+				if (Resolve(OV_SOCKET_WILDCARD_IPV4, storage_list, is_wildcard_host) == false)
 				{
 					return false;
 				}
@@ -304,7 +304,7 @@ namespace ov
 
 			if (ipv6_supported)
 			{
-				if (Resolve("::", storage_list, is_wildcard_host) == false)
+				if (Resolve(OV_SOCKET_WILDCARD_IPV6, storage_list, is_wildcard_host) == false)
 				{
 					return false;
 				}
@@ -314,11 +314,11 @@ namespace ov
 			return true;
 		}
 
-		if (host == "*")
+		if (host == OV_SOCKET_WILDCARD_IPV4)
 		{
 			if (ipv4_supported == false)
 			{
-				logtw("The wildcard \"*\" is used, but IPv4 is not supported");
+				logtw("The wildcard \"" OV_SOCKET_WILDCARD_IPV4 "\" is used, but IPv4 is not supported");
 				return true;
 			}
 
@@ -326,11 +326,11 @@ namespace ov
 			host = "0.0.0.0";
 			*is_wildcard_host = true;
 		}
-		else if (host == "::")
+		else if (host == OV_SOCKET_WILDCARD_IPV6)
 		{
 			if (ipv6_supported == false)
 			{
-				logtw("The wildcard \"::\" is used, but IPv6 is not supported");
+				logtw("The wildcard \"" OV_SOCKET_WILDCARD_IPV6 "\" is used, but IPv6 is not supported");
 				return true;
 			}
 
@@ -720,7 +720,7 @@ namespace ov
 
 			if (_is_wildcard_host)
 			{
-				description.Append(IsIPv4() ? "*" : (IsIPv6() ? "[::]" : "?"));
+				description.Append(IsIPv4() ? OV_SOCKET_WILDCARD_IPV4 : (IsIPv6() ? "[" OV_SOCKET_WILDCARD_IPV6 "]" : "?"));
 			}
 			else
 			{

@@ -12,6 +12,9 @@
 #include "./socket_address_error.h"
 #include "./socket_utilities.h"
 
+#define OV_SOCKET_WILDCARD_IPV4 "*"
+#define OV_SOCKET_WILDCARD_IPV6 "::"
+
 namespace ov
 {
 	/// This is a class that presents IPv4/IPv6 address and port
