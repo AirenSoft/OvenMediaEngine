@@ -50,17 +50,17 @@ bool WhipServer::PrepareForTCPRelay()
 			std::vector<ov::String> url_list;
 
 			auto &tcp_relay_host = _tcp_relay_address.host;
-			if (tcp_relay_host == "*")
+			if (tcp_relay_host == OV_SOCKET_WILDCARD_IPV4)
 			{
 				// Case 1 - IPv4 wildcard
 				ip_list = TurnIP::FromIPList(ov::SocketFamily::Inet, address_utilities->GetIPv4List());
 			}
-			else if (tcp_relay_host == "::")
+			else if (tcp_relay_host == OV_SOCKET_WILDCARD_IPV6)
 			{
 				// Case 2 - IPv6 wildcard
 				ip_list = TurnIP::FromIPList(ov::SocketFamily::Inet6, address_utilities->GetIPv6List(ice_candidates_config.GetEnableLinkLocalAddress()));
 			}
-			else if (tcp_relay_host == "${PublicIP}")
+			else if (tcp_relay_host == OV_ICE_PORT_PUBLIC_IP)
 			{
 				const auto public_ip_list = address_utilities->GetMappedAddressList();
 
@@ -75,6 +75,7 @@ bool WhipServer::PrepareForTCPRelay()
 				else
 				{
 					// Case 4 - Could not obtain an IP from the STUN server
+					logtw(OV_ICE_PORT_PUBLIC_IP " is specified on TCP relay, but failed to obtain public IP: %s", tcp_relay.CStr());
 				}
 			}
 			else

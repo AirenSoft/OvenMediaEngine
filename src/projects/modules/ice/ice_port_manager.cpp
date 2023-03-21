@@ -295,8 +295,14 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 
 				for (const auto &address : address_list)
 				{
-					logtd("ICE Candidate will be created using %s",
-						  address.ToString().CStr());
+					if (address_map.find(address) != address_map.end())
+					{
+						// Already exists
+						logti("Duplicated ICE candidate found: %s", address.ToString().CStr());
+						continue;
+					}
+
+					logti("ICE candidate found: %s", address.ToString().CStr());
 					address_map.emplace(address, true);
 				}
 			}
@@ -305,16 +311,11 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 	}
 
 	// Create an ICE candidate using port_map (group by port number)
-	const ov::String protocol = StringFromSocketType(ov::SocketType::Udp);
-
 	for (auto &port_item : port_map)
 	{
-		const auto port = port_item.first;
-		auto &socket_type_map = port_item.second;
-
 		std::vector<RtcIceCandidate> ice_candidates;
 
-		for (auto &socket_type_item : socket_type_map)
+		for (auto &socket_type_item : port_item.second)
 		{
 			const auto socket_type = socket_type_item.first;
 			const auto &address_map = socket_type_item.second;
@@ -325,28 +326,6 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 			{
 				ice_candidates.emplace_back(protocol, address_map_item.first, 0, "");
 			}
-		}
-
-		auto &address_map = socket_type_map[ov::SocketType::Udp];
-
-		// Create an ICE candidate using mapped address
-		for (const auto &mapped_address : mapped_address_list)
-		{
-			ov::SocketAddress mapped_address_with_port(mapped_address);
-			mapped_address_with_port.SetPort(port);
-
-			if (address_map.find(mapped_address_with_port) != address_map.end())
-			{
-				// Already exists
-				continue;
-			}
-
-			address_map[mapped_address_with_port] = true;
-
-			logtd("ICE Candidate will be created using mapped address %s",
-				  mapped_address_with_port.ToString().CStr());
-
-			ice_candidates.emplace_back(protocol, mapped_address_with_port, 0, "");
 		}
 
 		ice_candidate_list->push_back(std::move(ice_candidates));
@@ -432,23 +411,40 @@ bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vec
 
 	if (host.IsEmpty())
 	{
-		// Add both of IPv4 and IPv6 addresses
-		auto local_ip_list = address_utilities->GetIPv4List();
-		ip_list->insert(ip_list->end(), local_ip_list.cbegin(), local_ip_list.cend());
-		local_ip_list = address_utilities->GetIPv6List(include_local_link_address);
-		ip_list->insert(ip_list->end(), local_ip_list.cbegin(), local_ip_list.cend());
+		// Port only specified - Add both of IPv4 and IPv6 addresses
+		auto mapped_address_list = address_utilities->GetIPv4List();
+		ip_list->insert(ip_list->end(), mapped_address_list.cbegin(), mapped_address_list.cend());
+		mapped_address_list = address_utilities->GetIPv6List(include_local_link_address);
+		ip_list->insert(ip_list->end(), mapped_address_list.cbegin(), mapped_address_list.cend());
 	}
-	else if (host == "*")
+	else if (host == OV_SOCKET_WILDCARD_IPV4)
 	{
 		// IPv4 wildcard - Add IPv4 addresses
 		auto local_ip_list = address_utilities->GetIPv4List();
 		ip_list->insert(ip_list->end(), local_ip_list.cbegin(), local_ip_list.cend());
 	}
-	else if (host == "::")
+	else if (host == OV_SOCKET_WILDCARD_IPV6)
 	{
 		// IPv6 wildcard - Add IPv6 addresses
 		auto local_ip_list = address_utilities->GetIPv6List(include_local_link_address);
 		ip_list->insert(ip_list->end(), local_ip_list.cbegin(), local_ip_list.cend());
+	}
+	else if (host == OV_ICE_PORT_PUBLIC_IP)
+	{
+		// Public IP - Add public IP address
+		auto public_ip_list = address_utilities->GetMappedAddressList();
+
+		if (public_ip_list.empty() == false)
+		{
+			for (auto &public_ip : public_ip_list)
+			{
+				ip_list->emplace_back(public_ip.GetIpAddress());
+			}
+		}
+		else
+		{
+			logtw(OV_ICE_PORT_PUBLIC_IP " is specified on ICE candidate, but failed to obtain public IP: %s", ice_candidate.CStr());
+		}
 	}
 	else
 	{

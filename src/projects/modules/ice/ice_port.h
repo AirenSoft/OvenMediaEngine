@@ -31,6 +31,8 @@
 #define FAKE_RELAY_IP6			"1::1"
 #define FAKE_RELAY_PORT			14090
 
+#define OV_ICE_PORT_PUBLIC_IP	"${PublicIP}"
+
 class RtcIceCandidate;
 
 class IcePort : protected PhysicalPortObserver
