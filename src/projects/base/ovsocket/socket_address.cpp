@@ -743,12 +743,9 @@ namespace ov
 				description.AppendFormat(":%d", Port());
 			}
 
-			if (hostname != ip)
+			if ((hostname.IsEmpty() == false) && (hostname != ip))
 			{
 				description.AppendFormat(" (host: '%s')", hostname.CStr());
-			}
-			else
-			{
 			}
 		}
 		else
