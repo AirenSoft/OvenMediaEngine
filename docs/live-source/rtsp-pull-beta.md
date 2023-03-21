@@ -6,6 +6,10 @@ OvenMediaEngine can pull RTSP Stream in two ways. The first way is to use the St
 
 You can create a stream by pulling an RTSP stream using the [Stream Creation API](../rest-api/v1/virtualhost/application/stream/#create-stream-pull). For more information on using the [REST API](../rest-api/), check out that chapter.
 
+## Pulling streams using the OriginMapStore
+
+If OriginMapStore is configured and Redis Server provides an rtsp URL, OvenMediaEngine pulls the RTSP URL when a playback request comes in. Check out [OriginMapStore ](../origin-edge-clustering.md#originmapstore)for more details.
+
 ## Pulling streams using the OriginMap
 
 ### Configuration
