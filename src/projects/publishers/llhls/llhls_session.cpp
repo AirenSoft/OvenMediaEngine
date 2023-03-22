@@ -97,6 +97,7 @@ std::shared_ptr<const AccessController::RequestInfo> LLHlsSession::GetAccessCont
 
 void LLHlsSession::UpdateLastRequest(uint32_t connection_id)
 {
+	std::lock_guard<std::shared_mutex> lock(_last_request_time_guard);
 	_last_request_time[connection_id] = ov::Clock::NowMSec();
 
 	logtd("LLHlsSession(%u) : Request updated from %u : size(%d)", GetId(), connection_id, _last_request_time.size());
@@ -104,6 +105,7 @@ void LLHlsSession::UpdateLastRequest(uint32_t connection_id)
 
 uint64_t LLHlsSession::GetLastRequestTime(uint32_t connection_id) const
 {
+	std::shared_lock<std::shared_mutex> lock(_last_request_time_guard);
 	auto itr = _last_request_time.find(connection_id);
 	if (itr == _last_request_time.end())
 	{
@@ -115,6 +117,8 @@ uint64_t LLHlsSession::GetLastRequestTime(uint32_t connection_id) const
 
 void LLHlsSession::OnConnectionDisconnected(uint32_t connection_id)
 {
+	// lock
+	std::lock_guard<std::shared_mutex> lock(_last_request_time_guard);
 	_last_request_time.erase(connection_id);
 
 	logtd("LLHlsSession(%u) : Disconnected from %u : size(%d)", GetId(), connection_id, _last_request_time.size());
@@ -122,6 +126,7 @@ void LLHlsSession::OnConnectionDisconnected(uint32_t connection_id)
 
 bool LLHlsSession::IsNoConnection() const
 {
+	std::shared_lock<std::shared_mutex> lock(_last_request_time_guard);
 	return _last_request_time.empty();
 }
 
