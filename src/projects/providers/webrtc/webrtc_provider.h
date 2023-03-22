@@ -90,8 +90,8 @@ namespace pvd
 												const ov::String &if_match,
 												const std::shared_ptr<const SessionDescription> &patch) override;
 
-		bool OnSessionDelete(const std::shared_ptr<const http::svr::HttpRequest> &request,
-				const ov::String &session_key, const std::shared_ptr<ov::Url> &final_url) override;
+		WhipObserver::Answer OnSessionDelete(const std::shared_ptr<const http::svr::HttpRequest> &request,
+												const ov::String &session_key) override;
 		//--------------------------------------------------------------------
 
 	protected:
@@ -101,6 +101,10 @@ namespace pvd
 	private:
 		std::shared_ptr<Certificate> CreateCertificate();
 		std::shared_ptr<Certificate> GetCertificate();
+
+		bool AddStream(const std::shared_ptr<WebRTCStream> &stream);
+		bool DeleteStream(const ov::String &key);
+		std::shared_ptr<WebRTCStream> GetStreamByKey(const ov::String &key);
 
 		//--------------------------------------------------------------------
 		// Implementation of Provider's virtual functions
@@ -123,5 +127,9 @@ namespace pvd
 		std::shared_ptr<Certificate> _certificate = nullptr;
 
 		std::mutex _stream_lock;
+
+		mutable std::shared_mutex _streams_guard;
+		// Key: stream_key / Value: WebRTCStream
+		std::map<ov::String, std::shared_ptr<WebRTCStream>> _streams;
 	};
 }  // namespace pvd

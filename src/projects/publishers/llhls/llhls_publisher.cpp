@@ -268,22 +268,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		logtd("LLHLS requested(connection : %u): %s", connection->GetId(), request->GetUri().CStr());
 
 		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
-		if (vhost_app_name.IsValid() == false)
-		{
-			logte("Could not resolve application name from domain: %s", final_url->Host().CStr());
-			response->SetStatusCode(http::StatusCode::NotFound);
-			return http::svr::NextHandler::DoNotCall;
-		}
-
-		auto application = std::static_pointer_cast<LLHlsApplication>(GetApplicationByName(vhost_app_name));
-		if (application == nullptr)
-		{
-			logte("Could not found application: %s", vhost_app_name.CStr());
-			response->SetStatusCode(http::StatusCode::NotFound);
-			return http::svr::NextHandler::DoNotCall;
-		}
-
-		auto origin_mode = application->IsOriginMode();
+		
 		auto host_name = final_url->Host();
 		auto stream_name = final_url->Stream();
 
@@ -359,6 +344,23 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 				return http::svr::NextHandler::DoNotCall;
 			}
 		}
+
+		if (vhost_app_name.IsValid() == false)
+		{
+			logte("Could not resolve application name from domain: %s", final_url->Host().CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		auto application = std::static_pointer_cast<LLHlsApplication>(GetApplicationByName(vhost_app_name));
+		if (application == nullptr)
+		{
+			logte("Could not found application: %s", vhost_app_name.CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		auto origin_mode = application->IsOriginMode();
 
 		auto stream = application->GetStream(final_url->Stream());
 		if (stream == nullptr)

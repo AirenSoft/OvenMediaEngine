@@ -512,6 +512,8 @@ namespace pvd
 			return false;
 		}
 
+		AddStream(stream);
+
 		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
 		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), offer_sdp, peer_sdp, ice_timeout, session_life_time, stream);
 
@@ -572,6 +574,8 @@ namespace pvd
 		}
 		// the return check is not necessary
 
+		DeleteStream(stream->GetSessionKey());
+
 		_ice_port->RemoveSession(stream->GetId());
 
 		return OnChannelDeleted(stream);
@@ -611,6 +615,33 @@ namespace pvd
 			case IcePortConnectionState::Disconnected:
 			case IcePortConnectionState::Closed: {
 				logti("IcePort is disconnected. : (%s/%s) reason(%d)", stream->GetApplicationName(), stream->GetName().CStr(), state);
+
+				// Send Close to Admission Webhooks
+				std::shared_ptr<ov::SocketAddress> remote_address = nullptr;
+				if (stream->GetMediaSource())
+				{
+					auto source_url = ov::Url::Parse(stream->GetMediaSource());
+					if (source_url != nullptr)
+					{
+						remote_address = std::make_shared<ov::SocketAddress>(ov::SocketAddress::CreateAndGetFirst(source_url->Host(), source_url->Port()));
+					}
+					else
+					{
+						logtd("Could not parse the source url: %s", stream->GetMediaSource().CStr());
+					}
+				}
+
+				auto requested_url = stream->GetRequestedUrl();
+				auto final_url = stream->GetFinalUrl();
+				if (remote_address && requested_url && final_url)
+				{
+					auto request_info = std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, requested_url->ToUrlString(true) == final_url->ToUrlString(true) ? nullptr : final_url);
+
+					SendCloseAdmissionWebhooks(request_info);
+				}
+				// the return check is not necessary
+
+				DeleteStream(stream->GetSessionKey());
 
 				// Signalling server will call OnStopCommand, then stream will be removed in that function
 				_signalling_server->Disconnect(stream->GetApplicationInfo().GetName(), stream->GetName(), stream->GetPeerSDP());
@@ -768,10 +799,12 @@ namespace pvd
 			return {http::StatusCode::InternalServerError, "Could not publish stream"};
 		}
 
+		AddStream(stream);
+
 		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
 		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), answer_sdp, offer_sdp, ice_timeout, session_life_time, stream);
 
-		return {stream->GetSessionKey(), ov::Random::GenerateString(8), answer_sdp, final_url, http::StatusCode::Created};
+		return {stream->GetSessionKey(), ov::Random::GenerateString(8), answer_sdp, final_vhost_app_name.GetVHostName(), final_vhost_app_name.GetAppName(), http::StatusCode::Created};
 	}
 
 	WhipObserver::Answer WebRTCProvider::OnTrickleCandidate(const std::shared_ptr<const http::svr::HttpRequest> &request,
@@ -782,28 +815,25 @@ namespace pvd
 		return {http::StatusCode::NoContent, ""};
 	}
 
-	bool WebRTCProvider::OnSessionDelete(const std::shared_ptr<const http::svr::HttpRequest> &request, const ov::String &session_key, const std::shared_ptr<ov::Url> &final_url)
+	WhipObserver::Answer WebRTCProvider::OnSessionDelete(const std::shared_ptr<const http::svr::HttpRequest> &request, const ov::String &session_key)
 	{
-		if (final_url == nullptr || final_url->Host().IsEmpty() || final_url->App().IsEmpty() || final_url->Stream().IsEmpty())
-		{
-			return false;
-		}
-
-		info::VHostAppName vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
-		ov::String stream_name = final_url->Stream();
-
-		// Find Stream
-		auto stream = std::static_pointer_cast<WebRTCStream>(GetStreamByName(vhost_app_name, stream_name));
+		// Find stream
+		auto stream = GetStreamByKey(session_key);
 		if (!stream)
 		{
-			logte("To stop stream failed. Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
-			return false;
+			logte("To stop stream failed. Cannot find stream. session key: %s", session_key);
+			return {http::StatusCode::NotFound, nullptr, nullptr};
 		}
 
-		if (stream->GetSessionKey() != session_key)
+		auto final_url = stream->GetFinalUrl();
+		auto vhost_name = final_url->Host();
+		auto app_name = final_url->App();
+
+		info::VHostAppName vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(vhost_name, app_name);
+		if (vhost_app_name.IsValid() == false)
 		{
-			logte("To stop stream failed. Invalid session key : expected(%s) / actual(%s)", stream->GetSessionKey().CStr(), session_key.CStr());
-			return false;
+			logte("Could not resolve application name from domain: %s", final_url->Host().CStr());
+			return {http::StatusCode::NotFound, vhost_name, app_name};
 		}
 
 		auto requested_url = stream->GetRequestedUrl();
@@ -816,9 +846,12 @@ namespace pvd
 			SendCloseAdmissionWebhooks(request_info);
 		}
 
-		_ice_port->RemoveSession(stream->GetId());
+		DeleteStream(stream->GetSessionKey());
 
-		return OnChannelDeleted(stream);
+		_ice_port->RemoveSession(stream->GetId());
+		OnChannelDeleted(stream);
+
+		return {http::StatusCode::OK, vhost_name, app_name};
 	}
 
 	void WebRTCProvider::OnDataReceived(IcePort &port, uint32_t session_id, std::shared_ptr<const ov::Data> data, std::any user_data)
@@ -857,5 +890,57 @@ namespace pvd
 	std::shared_ptr<Certificate> WebRTCProvider::GetCertificate()
 	{
 		return _certificate;
+	}
+
+	bool WebRTCProvider::AddStream(const std::shared_ptr<WebRTCStream> &stream)
+	{
+		if (stream == nullptr)
+		{
+			return false;
+		}
+
+		std::lock_guard<std::shared_mutex> lock(_streams_guard);
+
+		_streams.emplace(stream->GetSessionKey(), stream);
+
+		return true;
+	}
+
+	bool WebRTCProvider::DeleteStream(const ov::String &key)
+	{
+		if (key == nullptr)
+		{
+			return false;
+		}
+
+		std::lock_guard<std::shared_mutex> lock(_streams_guard);
+
+		auto item = _streams.find(key);
+		if (item == _streams.end())
+		{
+			return false;
+		}
+
+		_streams.erase(item);
+
+		return true;
+	}
+
+	std::shared_ptr<WebRTCStream> WebRTCProvider::GetStreamByKey(const ov::String &key)
+	{
+		if (key == nullptr)
+		{
+			return nullptr;
+		}
+		
+		std::shared_lock<std::shared_mutex> lock(_streams_guard);
+
+		auto item = _streams.find(key);
+		if (item == _streams.end())
+		{
+			return nullptr;
+		}
+
+		return item->second;
 	}
 }  // namespace pvd

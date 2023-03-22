@@ -195,14 +195,6 @@ namespace pvd
 		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
 		auto stream_name = final_url->Stream();
 
-		// Check if application is exist
-		if (GetApplicationByName(vhost_app_name) == nullptr)
-		{
-			logte("Could not find vhost/app: %s", vhost_app_name.CStr());
-			remote->Close();
-			return;
-		}
-
 		//TODO(Getroot): For security enhancement,
 		// it should be checked whether the actual ip:port is the same as the ip:port of streamid (after dns resolve if it is domain).
 
@@ -268,6 +260,14 @@ namespace pvd
 		else if (webhooks_result == AccessController::VerificationResult::Fail)
 		{
 			logtw("AdmissionWebhooks error : %s", admission_webhooks->GetErrReason().CStr());
+			remote->Close();
+			return;
+		}
+
+		// Check if application is exist
+		if (GetApplicationByName(vhost_app_name) == nullptr)
+		{
+			logte("Could not find vhost/app: %s", vhost_app_name.CStr());
 			remote->Close();
 			return;
 		}
