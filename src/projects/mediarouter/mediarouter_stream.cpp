@@ -15,7 +15,7 @@
 // 		Parsing Track Information ->
 // 		Parsing Fragmentation Header ->
 // 		Parsing Key-frame ->
-// 		Append Decoder PrameterSets ->
+// 		Append Decoder ParameterSets ->
 // 		Changing the timestamp based on the timebase
 
 // Outbound Stream process
@@ -23,7 +23,7 @@
 // 		Parsing Track Information ->
 // 		Parsing Fragmentation Header ->
 // 		Parsing Key-frame ->
-// 		Append Decoder PrameterSets ->
+// 		Append Decoder ParameterSets ->
 // 		Changing the timestamp based on the timebase
 
 #include "mediarouter_stream.h"
@@ -105,9 +105,9 @@ bool MediaRouteStream::IsStreamPrepared()
 
 void MediaRouteStream::Flush()
 {
-	// Clear queued apckets
+	// Clear queued packets
 	_packets_queue.Clear();
-	// Clear stahsed Packets
+	// Clear stashed Packets
 	_media_packet_stash.clear();
 
 	_are_all_tracks_parsed = false;
@@ -118,7 +118,7 @@ void MediaRouteStream::Flush()
 #include <base/ovcrypto/base_64.h>
 bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
 {
-	// Everytime : Convert to AnnexB, Make fragment header, Set keyframe flag, Appned SPS/PPS nal units in front of IDR frame
+	// Everytime : Convert to AnnexB, Make fragment header, Set keyframe flag, Append SPS/PPS nal units in front of IDR frame
 	// one time : Parse track info from sps/pps and generate codec_extra_data
 
 	if (media_packet->GetBitstreamFormat() != cmn::BitstreamFormat::H264_AVCC)
@@ -255,17 +255,17 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 		{
 			// Insert SPS/PPS nal units so that player can start to play faster
 			auto processed_data = std::make_shared<ov::Data>(65535);
-			auto decode_parmeters = media_track->GetH264SpsPpsAnnexBFormat();
+			auto decode_parameters = media_track->GetH264SpsPpsAnnexBFormat();
 
-			processed_data->Append(decode_parmeters);
+			processed_data->Append(decode_parameters);
 			processed_data->Append(converted_data);
 
-			// Update fragment haeader
+			// Update fragment header
 			FragmentationHeader updated_frag_header;
 			updated_frag_header.fragmentation_offset = media_track->GetH264SpsPpsAnnexBFragmentHeader().fragmentation_offset;
 			updated_frag_header.fragmentation_length = media_track->GetH264SpsPpsAnnexBFragmentHeader().fragmentation_length;
 
-			// Existring fragment header offset because SPS/PPS was inserted at front
+			// Existing fragment header offset because SPS/PPS was inserted at front
 			auto offset_offset = updated_frag_header.fragmentation_offset.back() + updated_frag_header.fragmentation_length.back();
 			for (size_t i = 0; i < fragment_header.fragmentation_offset.size(); i++)
 			{
@@ -294,7 +294,7 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 
 bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
 {
-	// Everytime : Make fragment header, Set keyframe flag, Appned SPS/PPS nal units in front of IDR frame
+	// Everytime : Make fragment header, Set keyframe flag, Append SPS/PPS nal units in front of IDR frame
 	// one time : Parse track info from sps/pps and generate codec_extra_data
 
 	AVCDecoderConfigurationRecord avc_decoder_configuration_record;
@@ -371,7 +371,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 				avc_decoder_configuration_record.AddSPS(nalu);
 				avc_decoder_configuration_record.SetProfileIndication(sps.GetProfileIdc());
 				avc_decoder_configuration_record.SetCompatibility(sps.GetConstraintFlag());
-				avc_decoder_configuration_record.SetlevelIndication(sps.GetCodecLevelIdc());
+				avc_decoder_configuration_record.SetLevelIndication(sps.GetCodecLevelIdc());
 			}
 		}
 		else if (nal_header.GetNalUnitType() == H264NalUnitType::Pps)
@@ -416,16 +416,16 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 	{
 		// Insert SPS/PPS nal units so that player can start to play faster
 		auto processed_data = std::make_shared<ov::Data>(media_packet->GetData()->GetLength() + 1024);
-		auto decode_parmeters = media_track->GetH264SpsPpsAnnexBFormat();
-		processed_data->Append(decode_parmeters);
+		auto decode_parameters = media_track->GetH264SpsPpsAnnexBFormat();
+		processed_data->Append(decode_parameters);
 		processed_data->Append(media_packet->GetData());
 
-		// Update fragment haeader
+		// Update fragment header
 		FragmentationHeader updated_frag_header;
 		updated_frag_header.fragmentation_offset = media_track->GetH264SpsPpsAnnexBFragmentHeader().fragmentation_offset;
 		updated_frag_header.fragmentation_length = media_track->GetH264SpsPpsAnnexBFragmentHeader().fragmentation_length;
 
-		// Existring fragment header offset because SPS/PPS was inserted at front
+		// Existing fragment header offset because SPS/PPS was inserted at front
 		auto offset_offset = updated_frag_header.fragmentation_offset.back() + updated_frag_header.fragmentation_length.back();
 		for (size_t i = 0; i < fragment_header.fragmentation_offset.size(); i++)
 		{
@@ -535,7 +535,7 @@ bool MediaRouteStream::ProcessH265AnnexBStream(std::shared_ptr<MediaTrack> &medi
 	// Everytime : Generate fragmentation header, Check key frame
 	// One time : Parse SPS and Set width/height (track information)
 
-	// TODO : Appned SPS/PPS nal units in front of IDR frame
+	// TODO : Append SPS/PPS nal units in front of IDR frame
 
 	auto bitstream = media_packet->GetData()->GetDataAs<uint8_t>();
 	auto bitstream_length = media_packet->GetData()->GetLength();
@@ -954,14 +954,14 @@ void MediaRouteStream::DropNonDecodingPackets()
 	////////////////////////////////////////////////////////////////////////////////////
 	// 3. Drop all packets below PTS by all tracks
 
-	uint32_t dropeed_packets = 0;
+	uint32_t dropped_packets = 0;
 	for (auto it = tmp_packets_queue.begin(); it != tmp_packets_queue.end(); it++)
 	{
 		auto &media_packet = *it;
 
 		if (media_packet->GetPts() < map_near_pts[media_packet->GetTrackId()].second)
 		{
-			dropeed_packets++;
+			dropped_packets++;
 			continue;
 		}
 
@@ -969,9 +969,9 @@ void MediaRouteStream::DropNonDecodingPackets()
 	}
 	tmp_packets_queue.clear();
 
-	if (dropeed_packets > 0)
+	if (dropped_packets > 0)
 	{
-		logtw("Number of dropped packets : %d", dropeed_packets);
+		logtw("Number of dropped packets : %d", dropped_packets);
 	}
 }
 
@@ -1063,7 +1063,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
-	// Bitstream format converting to standard format. and, parsing track informaion
+	// Bitstream format converting to standard format. and, parsing track information
 	auto media_type = pop_media_packet->GetMediaType();
 	auto track_id = pop_media_packet->GetTrackId();
 

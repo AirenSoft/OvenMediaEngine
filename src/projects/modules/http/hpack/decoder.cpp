@@ -20,7 +20,7 @@ namespace http
 		{
 			auto reader = std::make_shared<BitReader>(data->GetDataAs<uint8_t>(), data->GetLength());
 
-			while (reader->BytesReamined() > 0)
+			while (reader->BytesRemained() > 0)
 			{
 				// Check if the next is the Indexed Header Field
 				// Start with 0b1
@@ -273,7 +273,7 @@ namespace http
 					return true;
 				}
 
-			} while(reader->BytesReamined() > 0);
+			} while(reader->BytesRemained() > 0);
 
 			return false;
 		}

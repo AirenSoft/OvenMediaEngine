@@ -110,7 +110,7 @@ namespace bmff
 		// }
 
 		ov::ByteStream stream(128);
-		uint32_t matix[9] = { 0x00010000, 0, 0, 0, 0x00010000, 0, 0, 0, 0x40000000 };
+		uint32_t matrix[9] = { 0x00010000, 0, 0, 0, 0x00010000, 0, 0, 0, 0x40000000 };
 
 		stream.WriteBE32(0); // creation_time
 		stream.WriteBE32(0); // modification_time
@@ -124,7 +124,7 @@ namespace bmff
 		// Matrix
 		for (int i=0; i<9; i++)
 		{
-			stream.WriteBE32(matix[i]);
+			stream.WriteBE32(matrix[i]);
 		}
 		// Pre-defined
 		for (int i=0; i<6; i++)
@@ -196,7 +196,7 @@ namespace bmff
 		// }
 
 		ov::ByteStream stream(128);
-		uint32_t matix[9] = { 0x00010000, 0, 0, 0, 0x00010000, 0, 0, 0, 0x40000000 };
+		uint32_t matrix[9] = { 0x00010000, 0, 0, 0, 0x00010000, 0, 0, 0, 0x40000000 };
 
 		stream.WriteBE32(0); // creation_time
 		stream.WriteBE32(0); // modification_time
@@ -224,7 +224,7 @@ namespace bmff
 		// Matrix
 		for (int i=0; i<9; i++)
 		{
-			stream.WriteBE32(matix[i]);
+			stream.WriteBE32(matrix[i]);
 		}
 
 		// Width and height
@@ -925,7 +925,7 @@ namespace bmff
 
 		ov::ByteStream stream(4096);
 
-		if (WriteESDesciptor(stream) == false) //nl
+		if (WriteESDescriptor(stream) == false) //nl
 		{
 			return false;
 		}
@@ -933,7 +933,7 @@ namespace bmff
 		return WriteFullBox(container_stream, "esds", *stream.GetData(), 0, 0);
 	}
 
-	bool Packager::WriteESDesciptor(ov::ByteStream &container_stream)
+	bool Packager::WriteESDescriptor(ov::ByteStream &container_stream)
 	{
 		// ISO/IEC 14496-1 7.2.2.2.1
 		// abstract aligned(8) expandable(2^28 - 1) class BaseDescriptor : bit(8) tag = 0

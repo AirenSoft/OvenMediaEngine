@@ -105,7 +105,7 @@ ov::String AACAdts::ProfileString()
 			return "AAC HEv2";			
 	}
 
-	return "Unkwnon";
+	return "Unknown";
 }
 
 AacSamplingFrequencies AACAdts::Samplerate()

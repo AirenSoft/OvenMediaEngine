@@ -247,11 +247,11 @@ namespace mpegts
 			bit_reader.SkipBytes(pointer_field);
 
 			// Parsing new section
-			while(bit_reader.BytesReamined() > 0)
+			while(bit_reader.BytesRemained() > 0)
 			{
 				auto new_section = std::make_shared<Section>(packet->PacketIdentifier());
 				// There can be more than 2 sections
-				auto consumed_bytes = new_section->AppendData(bit_reader.CurrentPosition(), bit_reader.BytesReamined());
+				auto consumed_bytes = new_section->AppendData(bit_reader.CurrentPosition(), bit_reader.BytesRemained());
 				if(consumed_bytes == 0)
 				{
 					// Something wrong

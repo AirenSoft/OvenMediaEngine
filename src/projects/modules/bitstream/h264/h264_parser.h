@@ -62,7 +62,7 @@ public:
         out_str.AppendFormat("\tFps(%d)\n", GetFps());
         out_str.AppendFormat("\tId(%d)\n", GetId());
         out_str.AppendFormat("\tMaxNrOfReferenceFrames(%d)\n", GetMaxNrOfReferenceFrames());
-        out_str.AppendFormat("\tAspectRatio(IDC - %d Extented - %d:%d)\n", _aspect_ratio_idc, _aspect_ratio._width, _aspect_ratio._height);
+        out_str.AppendFormat("\tAspectRatio(IDC - %d Extended - %d:%d)\n", _aspect_ratio_idc, _aspect_ratio._width, _aspect_ratio._height);
 
         return out_str;
     }

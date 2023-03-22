@@ -172,7 +172,7 @@ bool MediaRouteApplication::RegisterConnectorApp(std::shared_ptr<MediaRouteAppli
 	return true;
 }
 
-// Called when an application is remvoed
+// Called when an application is removed
 bool MediaRouteApplication::UnregisterConnectorApp(std::shared_ptr<MediaRouteApplicationConnector> connector)
 {
 	std::lock_guard<std::shared_mutex> lock(_connectors_lock);
@@ -299,7 +299,7 @@ bool MediaRouteApplication::OnStreamCreated(const std::shared_ptr<MediaRouteAppl
 		return false;
 	}
 
-	// If all track information is validity, Notify the observer that the current stream is preapred.
+	// If all track information is validity, Notify the observer that the current stream is prepared.
 	if (stream->IsStreamPrepared() == false && stream->AreAllTracksReady() == true)
 	{
 		NotifyStreamPrepared(stream);
@@ -346,14 +346,14 @@ bool MediaRouteApplication::NotifyStreamCreate(const std::shared_ptr<info::Strea
 
 	for (auto observer : _observers)
 	{
-		auto oberver_type = observer->GetObserverType();
+		auto observer_type = observer->GetObserverType();
 
 		// Provider(source) => Transcoder, Relay(not used)
 		if (IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_SOURCE(representation_type))
 		{
-			if (IS_OBSERVER_TRANSCODER(oberver_type) || IS_OBSERVER_RELAY(oberver_type) || IS_OBSERVER_ORCHESTRATOR(oberver_type) )
+			if (IS_OBSERVER_TRANSCODER(observer_type) || IS_OBSERVER_RELAY(observer_type) || IS_OBSERVER_ORCHESTRATOR(observer_type) )
 			{
-				logtd("[%s/%s(%u)] Notify created stream to relay or trasncoder", stream_info->GetApplicationName(), stream_info->GetName().CStr(), stream_info->GetId());
+				logtd("[%s/%s(%u)] Notify created stream to relay or transcoder", stream_info->GetApplicationName(), stream_info->GetName().CStr(), stream_info->GetId());
 
 				observer->OnStreamCreated(stream_info);
 			}
@@ -361,7 +361,7 @@ bool MediaRouteApplication::NotifyStreamCreate(const std::shared_ptr<info::Strea
 		// Provider(relay), Transcoder => Publisher
 		else if ((IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_RELAY(representation_type)) || (IS_CONNECTOR_TRANSCODER(connector_type)))
 		{
-			if (IS_OBSERVER_PUBLISHER(oberver_type) || IS_OBSERVER_ORCHESTRATOR(oberver_type))
+			if (IS_OBSERVER_PUBLISHER(observer_type) || IS_OBSERVER_ORCHESTRATOR(observer_type))
 			{
 				logtd("[%s/%s(%u)] Notify created stream to publisher", stream_info->GetApplicationName(), stream_info->GetName().CStr(), stream_info->GetId());
 
@@ -381,14 +381,14 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 
 	for (auto observer : _observers)
 	{
-		auto oberver_type = observer->GetObserverType();
+		auto observer_type = observer->GetObserverType();
 
 		switch (stream->GetInoutType())
 		{
 			case MediaRouterStreamType::INBOUND: {
-				if (IS_OBSERVER_TRANSCODER(oberver_type) || IS_OBSERVER_ORCHESTRATOR(oberver_type))
+				if (IS_OBSERVER_TRANSCODER(observer_type) || IS_OBSERVER_ORCHESTRATOR(observer_type))
 				{
-					logtd("[%s/%s(%u)] Notify prepared stream to trasncoder", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId());
+					logtd("[%s/%s(%u)] Notify prepared stream to transcoder", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId());
 
 					observer->OnStreamPrepared(stream->GetStream());
 				}
@@ -396,7 +396,7 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 			break;
 
 			case MediaRouterStreamType::OUTBOUND: {
-				if (IS_OBSERVER_PUBLISHER(oberver_type) || IS_OBSERVER_RELAY(oberver_type) || IS_OBSERVER_ORCHESTRATOR(oberver_type))
+				if (IS_OBSERVER_PUBLISHER(observer_type) || IS_OBSERVER_RELAY(observer_type) || IS_OBSERVER_ORCHESTRATOR(observer_type))
 				{
 					logtd("[%s/%s(%u)] Notify prepared stream to publisher", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId());
 

@@ -75,7 +75,7 @@ bool MediaRouter::OnCreateApplication(const info::Application &app_info)
 	auto route_app = MediaRouteApplication::Create(app_info);
 	if (route_app == nullptr)
 	{
-		logte("Failed to memory allcation. app(%s)", app_info.GetName().CStr());
+		logte("Failed to memory allocation. app(%s)", app_info.GetName().CStr());
 		return false;
 	}
 	else
@@ -146,9 +146,9 @@ bool MediaRouter::UnregisterConnectorApp(
 
 // Register requested Observer application
 bool MediaRouter::RegisterObserverApp(
-	const info::Application &application_info, const std::shared_ptr<MediaRouteApplicationObserver> &app_obsrv)
+	const info::Application &application_info, const std::shared_ptr<MediaRouteApplicationObserver> &application_observer)
 {
-	if (app_obsrv == nullptr)
+	if (application_observer == nullptr)
 	{
 		return false;
 	}
@@ -160,19 +160,19 @@ bool MediaRouter::RegisterObserverApp(
 		return false;
 	}
 
-	return media_route_app->RegisterObserverApp(app_obsrv);
+	return media_route_app->RegisterObserverApp(application_observer);
 }
 
 // Unregister requested Observer application
 bool MediaRouter::UnregisterObserverApp(
-	const info::Application &application_info, const std::shared_ptr<MediaRouteApplicationObserver> &app_obsrv)
+	const info::Application &application_info, const std::shared_ptr<MediaRouteApplicationObserver> &application_observer)
 {
-	if (app_obsrv == nullptr)
+	if (application_observer == nullptr)
 	{
 		return false;
 	}
 
-	// logtd("- Unregistred observer applicaiton. app_ptr(%p) name(%s)", app_obsrv.get(), app_name.CStr());
+	// logtd("- Unregistered observer application. app_ptr(%p) name(%s)", application_observer.get(), app_name.CStr());
 
 	auto media_route_app = GetRouteApplicationById(application_info.GetId());
 	if (media_route_app == nullptr)
@@ -181,5 +181,5 @@ bool MediaRouter::UnregisterObserverApp(
 		return false;
 	}
 
-	return media_route_app->UnregisterObserverApp(app_obsrv);
+	return media_route_app->UnregisterObserverApp(application_observer);
 }

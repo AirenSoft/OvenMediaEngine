@@ -1,7 +1,7 @@
 #pragma once
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// Psuedo Code
+// Pseudo Code
 //////////////////////////////////////////////////////////////////////////////////////////
 // AudioSpecificConfig ()
 // {
@@ -148,7 +148,7 @@ public:
 
 	// std::vector<uint8_t> 		Serialize() const;
 	std::shared_ptr<ov::Data>	Serialize();
-	void 						Serialize(std::vector<uint8_t>& serialze);
+	void 						Serialize(std::vector<uint8_t>& serialize);
 
 private:
 	AacObjectType				_object_type;					// 5 bits

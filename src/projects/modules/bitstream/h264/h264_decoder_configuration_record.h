@@ -54,7 +54,7 @@ public:
 	uint8_t LengthOfNALUnit();
 	uint8_t NumOfSPS();
 	uint8_t NumOfPPS();
-	uint8_t NumofSPSExt();
+	uint8_t NumOfSPSExt();
 	std::shared_ptr<ov::Data>	GetSPS(int index);
 	std::shared_ptr<ov::Data>	GetPPS(int index);
 	std::shared_ptr<ov::Data>	GetSPSExt(int index);
@@ -63,15 +63,15 @@ public:
 	uint8_t BitDepthChromaMinus8();
 	
 	std::shared_ptr<ov::Data> Serialize();
-	void Serialize(std::vector<uint8_t>& serialze);
+	void Serialize(std::vector<uint8_t>& serialize);
 	std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> GetSpsPpsAsAnnexB(uint8_t start_code_size);
 
 	ov::String GetInfoString();
 	
 	void SetVersion(uint8_t version);
-	void SetProfileIndication(uint8_t profile_indiciation);
+	void SetProfileIndication(uint8_t profile_indication);
 	void SetCompatibility(uint8_t profile_compatibility);
-	void SetlevelIndication(uint8_t level_indication);
+	void SetLevelIndication(uint8_t level_indication);
 	void SetLengthOfNalUnit(uint8_t lengthMinusOne);
 	void AddSPS(std::shared_ptr<ov::Data> sps);
 	void AddPPS(std::shared_ptr<ov::Data> pps);

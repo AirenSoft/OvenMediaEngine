@@ -20,7 +20,7 @@ bool SignedPolicy::Process(const ov::String &client_address, const ov::String &r
 	
 	if(url->HasQueryKey(signature_query_key) == false)
 	{
-		SetError(ErrCode::NO_SIGNATURE_KEY_IN_URL, ov::String::FormatString("There is no sinature key(%s) in url(%s).", signature_query_key.CStr(), requested_url.CStr()));
+		SetError(ErrCode::NO_SIGNATURE_KEY_IN_URL, ov::String::FormatString("There is no signature key(%s) in url(%s).", signature_query_key.CStr(), requested_url.CStr()));
 		return false;
 	}
 

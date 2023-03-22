@@ -34,7 +34,7 @@ public:
 
 	bool SkipAll()
 	{
-		return SkipBytes(BytesReamined());
+		return SkipBytes(BytesRemained());
 	}
 
 	bool SkipBytes(size_t length)
@@ -51,7 +51,7 @@ public:
 
 	ov::String ReadString(size_t length)
 	{
-		length = std::min(length, BytesReamined());
+		length = std::min(length, BytesRemained());
 
 		ov::String str(reinterpret_cast<const char *>(_position), length);
 
@@ -205,7 +205,7 @@ public:
 		return _position;
 	}
 
-	size_t BytesReamined() const
+	size_t BytesRemained() const
 	{
 		return _capacity - BytesConsumed();
 	}

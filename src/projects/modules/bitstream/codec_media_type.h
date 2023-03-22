@@ -52,7 +52,7 @@ public:
 				// cp = Color Primaries
 				// tc = Transfer Characteristics
 				// mc = Matrix Coefficients
-				// FF = Indicates whether to restrict tlack level and color range of each color
+				// FF = Indicates whether to restrict the black level and color range of each color
 				codec_string = "hev1.1.6.L93.B0";
 				break;
 			}

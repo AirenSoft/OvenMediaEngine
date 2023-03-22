@@ -126,14 +126,14 @@ bool SrtpTransport::OnDataReceivedFromNextNode(NodeType from_node, const std::sh
 }
 
 // Initialize SRTP
-bool SrtpTransport::SetKeyMeterial(uint64_t crypto_suite, std::shared_ptr<ov::Data> server_key, std::shared_ptr<ov::Data> client_key)
+bool SrtpTransport::SetKeyMaterial(uint64_t crypto_suite, std::shared_ptr<ov::Data> server_key, std::shared_ptr<ov::Data> client_key)
 {
 	if(_send_session || _recv_session)
 	{
 		return false;
 	}
 
-	logtd("Try to set key meterial");
+	logtd("Try to set key material");
 
 	_send_session = std::make_shared<SrtpAdapter>();
 	if(_send_session == nullptr)

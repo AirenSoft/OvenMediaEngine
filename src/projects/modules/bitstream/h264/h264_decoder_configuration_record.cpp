@@ -38,7 +38,7 @@ bool AVCDecoderConfigurationRecord::Parse(const uint8_t *data, size_t data_lengt
 	for (int i = 0; i < record._num_of_sps; i++)
 	{
 		uint16_t sps_length = parser.ReadBytes<uint16_t>();
-		if (sps_length == 0 || parser.BytesReamined() < sps_length)
+		if (sps_length == 0 || parser.BytesRemained() < sps_length)
 		{
 			return false;
 		}
@@ -51,7 +51,7 @@ bool AVCDecoderConfigurationRecord::Parse(const uint8_t *data, size_t data_lengt
 	for (int i = 0; i < record._num_of_pps; i++)
 	{
 		uint16_t pps_length = parser.ReadBytes<uint16_t>();
-		if (pps_length == 0 || parser.BytesReamined() < pps_length)
+		if (pps_length == 0 || parser.BytesRemained() < pps_length)
 		{
 			return false;
 		}
@@ -75,7 +75,7 @@ bool AVCDecoderConfigurationRecord::Parse(const uint8_t *data, size_t data_lengt
 		for (int i = 0; i < record._num_of_sps_ext; i++)
 		{
 			uint16_t sps_ext_length = parser.ReadBytes<uint16_t>();
-			if (sps_ext_length == 0 || parser.BytesReamined() < sps_ext_length)
+			if (sps_ext_length == 0 || parser.BytesRemained() < sps_ext_length)
 			{
 				return false;
 			}
@@ -134,7 +134,7 @@ uint8_t AVCDecoderConfigurationRecord::NumOfPPS()
 	return _num_of_pps;
 }
 
-uint8_t AVCDecoderConfigurationRecord::NumofSPSExt()
+uint8_t AVCDecoderConfigurationRecord::NumOfSPSExt()
 {
 	return _num_of_sps_ext;
 }
@@ -302,11 +302,11 @@ std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::Serialize()
 	return std::make_shared<ov::Data>(bits.GetData(), bits.GetDataSize());
 }
 
-void AVCDecoderConfigurationRecord::Serialize(std::vector<uint8_t> &serialze)
+void AVCDecoderConfigurationRecord::Serialize(std::vector<uint8_t> &serialize)
 {
 	auto data = Serialize();
-	serialze.resize(data->GetLength());
-	std::copy(data->GetDataAs<uint8_t>(), data->GetDataAs<uint8_t>() + data->GetLength(), serialze.begin());
+	serialize.resize(data->GetLength());
+	std::copy(data->GetDataAs<uint8_t>(), data->GetDataAs<uint8_t>() + data->GetLength(), serialize.begin());
 }
 
 void AVCDecoderConfigurationRecord::SetVersion(uint8_t version)
@@ -314,9 +314,9 @@ void AVCDecoderConfigurationRecord::SetVersion(uint8_t version)
 	_version = version;
 }
 
-void AVCDecoderConfigurationRecord::SetProfileIndication(uint8_t profile_indiciation)
+void AVCDecoderConfigurationRecord::SetProfileIndication(uint8_t profile_indication)
 {
-	_profile_indication = profile_indiciation;
+	_profile_indication = profile_indication;
 }
 
 void AVCDecoderConfigurationRecord::SetCompatibility(uint8_t profile_compatibility)
@@ -324,7 +324,7 @@ void AVCDecoderConfigurationRecord::SetCompatibility(uint8_t profile_compatibili
 	_profile_compatibility = profile_compatibility;
 }
 
-void AVCDecoderConfigurationRecord::SetlevelIndication(uint8_t level_indication)
+void AVCDecoderConfigurationRecord::SetLevelIndication(uint8_t level_indication)
 {
 	_level_indication = level_indication;
 }
@@ -357,7 +357,7 @@ ov::String AVCDecoderConfigurationRecord::GetInfoString()
 	out_str.AppendFormat("\tLengthOfNALUnit(%d)\n", LengthOfNALUnit());
 	out_str.AppendFormat("\tNumOfSPS(%d)\n", NumOfSPS());
 	out_str.AppendFormat("\tNumOfPPS(%d)\n", NumOfPPS());
-	out_str.AppendFormat("\tNumofSPSExt(%d)\n", NumofSPSExt());
+	out_str.AppendFormat("\tNumOfSPSExt(%d)\n", NumOfSPSExt());
 	out_str.AppendFormat("\tChromaFormat(%d)\n", ChromaFormat());
 	out_str.AppendFormat("\tBitDepthLumaMinus8(%d)\n", BitDepthLumaMinus8());
 	out_str.AppendFormat("\tBitDepthChromaMinus8(%d)\n", BitDepthChromaMinus8());

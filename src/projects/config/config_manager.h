@@ -72,7 +72,7 @@ namespace cfg
 		timespec _last_modified;
 
 		// key: XML file name
-		// value: compatiable version numbers
+		// value: compatible version numbers
 		std::map<ov::String, std::vector<int>> _supported_versions_map;
 
 		mutable std::mutex _config_mutex;

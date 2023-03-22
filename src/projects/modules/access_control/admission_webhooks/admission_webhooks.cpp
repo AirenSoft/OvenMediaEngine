@@ -120,7 +120,7 @@ uint64_t AdmissionWebhooks::GetLifetime() const
 	return _lifetime;
 }
 
-uint64_t AdmissionWebhooks::GetElpasedTime() const
+uint64_t AdmissionWebhooks::GetElapsedTime() const
 {
 	return _elapsed_ms;
 }

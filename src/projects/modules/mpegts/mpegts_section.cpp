@@ -113,7 +113,7 @@ namespace mpegts
 			return false;
 		}
 
-		if(parser->BytesReamined() < 3)
+		if(parser->BytesRemained() < 3)
 		{
 			return false;
 		}
@@ -136,7 +136,7 @@ namespace mpegts
 			return false;
 		}
 		_section_length = parser->ReadBits<uint16_t>(10);
-		if(_section_length != parser->BytesReamined() && _section_length > 1021)
+		if(_section_length != parser->BytesRemained() && _section_length > 1021)
 		{
 			// error
 			return false;
@@ -156,7 +156,7 @@ namespace mpegts
 		}
 
 		// not enough data size to parse
-		if(parser->BytesReamined() < MPEGTS_MIN_TABLE_DATA_SIZE)
+		if(parser->BytesRemained() < MPEGTS_MIN_TABLE_DATA_SIZE)
 		{
 			return false;
 		}
@@ -246,7 +246,7 @@ namespace mpegts
 		}
 
 		// es info, remaining bytes excluding CRC(32bits)
-		while(parser->BytesReamined() - 4 > 0)
+		while(parser->BytesRemained() - 4 > 0)
 		{
 			auto es_info = std::make_shared<ESInfo>();
 
@@ -282,7 +282,7 @@ namespace mpegts
 	{
 		auto descriptor = std::make_shared<Descriptor>();
 
-		if(parser->BytesReamined() < 2)
+		if(parser->BytesRemained() < 2)
 		{
 			return nullptr;
 		}
@@ -290,7 +290,7 @@ namespace mpegts
 		descriptor->_tag = parser->ReadBytes<uint8_t>();
 		descriptor->_length = parser->ReadBytes<uint8_t>();
 
-		if(parser->BytesReamined() < descriptor->_length)
+		if(parser->BytesRemained() < descriptor->_length)
 		{
 			return nullptr;
 		}

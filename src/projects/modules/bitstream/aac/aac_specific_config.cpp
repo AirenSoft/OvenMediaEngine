@@ -48,11 +48,11 @@ std::shared_ptr<ov::Data> AACSpecificConfig::Serialize()
 	return std::make_shared<ov::Data>(bits.GetData(), bits.GetDataSize());
 }
 
-void AACSpecificConfig::Serialize(std::vector<uint8_t>& serialze)
+void AACSpecificConfig::Serialize(std::vector<uint8_t>& serialize)
 {
 	auto data = Serialize();
-	serialze.resize(data->GetLength());
-	std::copy(data->GetDataAs<uint8_t>(), data->GetDataAs<uint8_t>()+data->GetLength(), serialze.begin());
+	serialize.resize(data->GetLength());
+	std::copy(data->GetDataAs<uint8_t>(), data->GetDataAs<uint8_t>()+data->GetLength(), serialize.begin());
 }
 
 AacObjectType AACSpecificConfig::ObjectType() const

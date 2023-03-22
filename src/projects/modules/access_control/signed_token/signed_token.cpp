@@ -140,7 +140,7 @@ bool SignedToken::Process(const ov::String &client_address, const ov::String &re
 
     if(!Decrypt_DES_ECB_PKCS5(secret_key, *decoded_data, final_data))
     {
-		SetError(ErrCode::DECRYPT_FAILED, ov::String::FormatString("Failed to DES decypt the token (%s).", token_query_value.CStr()));
+		SetError(ErrCode::DECRYPT_FAILED, ov::String::FormatString("Failed to DES decrypt the token (%s).", token_query_value.CStr()));
         return false;
     }
 

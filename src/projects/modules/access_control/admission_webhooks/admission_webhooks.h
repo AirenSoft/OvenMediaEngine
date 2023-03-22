@@ -88,7 +88,7 @@ public:
 	ov::String GetErrReason() const;
 	std::shared_ptr<ov::Url> GetNewURL() const;
 	uint64_t GetLifetime() const;
-	uint64_t GetElpasedTime() const;
+	uint64_t GetElapsedTime() const;
 	
 private:
 	void Run();

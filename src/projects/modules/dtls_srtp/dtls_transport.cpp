@@ -9,7 +9,7 @@ DtlsTransport::DtlsTransport()
 	: ov::Node(NodeType::Dtls)
 {
 	_state = SSL_NONE;
-	_peer_cerificate_verified = false;
+	_peer_certificate_verified = false;
 }
 
 DtlsTransport::~DtlsTransport()
@@ -149,7 +149,7 @@ bool DtlsTransport::ContinueSSL()
 
 bool DtlsTransport::MakeSrtpKey()
 {
-	if (_peer_cerificate_verified == false)
+	if (_peer_certificate_verified == false)
 	{
 		return false;
 	}
@@ -168,7 +168,7 @@ bool DtlsTransport::MakeSrtpKey()
 	if (node->GetNodeType() == NodeType::Srtp)
 	{
 		auto srtp_transport = std::static_pointer_cast<SrtpTransport>(node);
-		srtp_transport->SetKeyMeterial(crypto_suite, server_key, client_key);
+		srtp_transport->SetKeyMaterial(crypto_suite, server_key, client_key);
 	}
 
 	return true;
@@ -178,7 +178,7 @@ bool DtlsTransport::VerifyPeerCertificate()
 {
 	// TODO(Getroot): Compare and verify the digest received from the PEER CERTIFICATE and SDP.
 	logtd("Accepted peer certificate");
-	_peer_cerificate_verified = true;
+	_peer_certificate_verified = true;
 	return true;
 }
 
@@ -215,7 +215,7 @@ bool DtlsTransport::OnDataReceivedFromPrevNode(NodeType from_node, const std::sh
 					return true;
 				}
 
-				logte("SSL_wirte error : error(%d)", ssl_error);
+				logte("SSL_write error : error(%d)", ssl_error);
 			}
 			break;
 		case SSL_ERROR:

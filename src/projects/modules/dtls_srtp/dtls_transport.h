@@ -74,7 +74,7 @@ private:
 	};
 
 	SSLState _state;
-	bool _peer_cerificate_verified;
+	bool _peer_certificate_verified;
 	std::shared_ptr<info::Session> _session_info;
 	std::shared_ptr<IcePort> _ice_port;
 	std::shared_ptr<SrtpTransport> _srtp_transport;

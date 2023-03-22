@@ -99,7 +99,7 @@ std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const uint8_t *data, si
 {
 	auto adts_data = std::make_shared<ov::Data>(data_len + 16);
 
-	//Get the AACSecificConfig value from extradata;
+	//Get the AACSpecificConfig value from extradata;
 	uint8_t aac_profile = (uint8_t)aac_config.GetAacProfile();
 	uint8_t aac_sample_rate = (uint8_t)aac_config.SamplingFrequency();
 	uint8_t aac_channels = (uint8_t)aac_config.Channel();
@@ -122,7 +122,7 @@ std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const std::shared_ptr<c
 	auto adts_data = std::make_shared<ov::Data>(data->GetLength() + 16);
 	int16_t aac_raw_length = data->GetLength();
 
-	//Get the AACSecificConfig value from extradata;
+	//Get the AACSpecificConfig value from extradata;
 	uint8_t aac_profile = (uint8_t)aac_config->GetAacProfile();
 	uint8_t aac_sample_rate = (uint8_t)aac_config->SamplingFrequency();
 	uint8_t aac_channels = (uint8_t)aac_config->Channel();
