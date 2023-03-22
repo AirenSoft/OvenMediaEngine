@@ -434,7 +434,7 @@ void OvtPublisher::SendResponse(const std::shared_ptr<ov::Socket> &remote, uint3
 
 bool OvtPublisher::LinkRemoteWithStream(int remote_id, std::shared_ptr<OvtStream> &stream)
 {
-	// For ungracefull disconnect
+	// For ungraceful disconnect
 	// one remote id can be join multiple streams.
 	_remote_stream_map.insert(std::pair<int, std::shared_ptr<OvtStream>>(remote_id, stream));
 

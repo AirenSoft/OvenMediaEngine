@@ -362,7 +362,7 @@ namespace pub
 			{
 				if (GetRecord()->UpdateNextScheduleTime() == false)
 				{
-					logte("Failed to update next schedule time. reqeuset to stop recording.");
+					logte("Failed to update next schedule time. request to stop recording.");
 				}
 			}
 			else if (GetRecord()->GetNextScheduleTime() <= std::chrono::system_clock::now())
@@ -371,7 +371,7 @@ namespace pub
 
 				if (GetRecord()->UpdateNextScheduleTime() == false)
 				{
-					logte("Failed to update next schedule time. reqeuset to stop recording.");
+					logte("Failed to update next schedule time. request to stop recording.");
 				}
 			}
 		}
@@ -680,7 +680,7 @@ namespace pub
 			}
 		}
 
-		// logtd("Regular Expreesion Result : %s", replaced_string.CStr());
+		// logtd("Regular Expression Result : %s", replaced_string.CStr());
 
 		return replaced_string;
 	}

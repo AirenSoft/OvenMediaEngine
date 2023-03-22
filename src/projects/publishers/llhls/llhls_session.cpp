@@ -225,7 +225,7 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 
 	if (_origin_mode == false && file_type != RequestType::Playlist && file_type != RequestType::Chunklist)
 	{
-		// All reqeusts except playlist have a stream key
+		// All requests except playlist have a stream key
 		if (stream_key != llhls_stream->GetStreamKey())
 		{
 			logtw("LLHlsSession::OnMessageReceived(%u) - Invalid stream key : %s (expected : %s)", GetId(), stream_key.CStr(), llhls_stream->GetStreamKey().CStr());

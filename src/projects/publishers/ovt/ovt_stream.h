@@ -32,7 +32,7 @@ private:
 	bool Start() override;
 	bool Stop() override;
 
-	bool GenerateDecription();
+	bool GenerateDescription();
 
 	uint32_t							_worker_count = 0;
 

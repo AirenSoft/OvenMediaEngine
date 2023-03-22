@@ -113,8 +113,8 @@ bool LLHlsStream::Start()
 
 	// If there is no default playlist, make default playlist
 	// Default playlist is consist of first compatible video and audio track among all tracks
-	ov::String defautl_playlist_name = DEFAULT_PLAYLIST_NAME;
-	auto default_playlist_name_without_ext = defautl_playlist_name.Substring(0, defautl_playlist_name.IndexOfRev('.'));
+	ov::String default_playlist_name = DEFAULT_PLAYLIST_NAME;
+	auto default_playlist_name_without_ext = default_playlist_name.Substring(0, default_playlist_name.IndexOfRev('.'));
 	auto default_playlist = Stream::GetPlaylist(default_playlist_name_without_ext);
 	if (default_playlist == nullptr)
 	{
@@ -125,7 +125,7 @@ bool LLHlsStream::Start()
 		auto master_playlist = CreateMasterPlaylist(playlist);
 
 		std::lock_guard<std::mutex> guard(_master_playlists_lock);
-		_master_playlists[defautl_playlist_name] = master_playlist;
+		_master_playlists[default_playlist_name] = master_playlist;
 	}
 
 	// Select the dump setting for this stream.
@@ -374,7 +374,7 @@ bool LLHlsStream::DumpInitSegment(const std::shared_ptr<mdl::Dump> &item, const 
 		return false;
 	}
 
-	auto init_segment_name = GetIntializationSegmentName(track_id);
+	auto init_segment_name = GetInitializationSegmentName(track_id);
 
 	return DumpData(item, init_segment_name, data);
 }
@@ -604,7 +604,7 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::G
 	else if (segment_number > last_segment_number)
 	{
 		// Not Found
-		logtw("Could not find segment for track_id = %d, segment = %ld (last_segemnt = %ld)", track_id, segment_number, last_segment_number);
+		logtw("Could not find segment for track_id = %d, segment = %ld (last_segment = %ld)", track_id, segment_number, last_segment_number);
 		return {RequestResult::NotFound, nullptr};
 	}
 
@@ -785,7 +785,7 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 													  GetTrack(track_id),
 													  segment_duration,
 													  chunk_duration,
-													  GetIntializationSegmentName(track_id));
+													  GetInitializationSegmentName(track_id));
 
 	{
 		std::lock_guard<std::shared_mutex> storage_lock(_storage_map_lock);
@@ -852,7 +852,7 @@ ov::String LLHlsStream::GetChunklistName(const int32_t &track_id) const
 									_stream_key.CStr());
 }
 
-ov::String LLHlsStream::GetIntializationSegmentName(const int32_t &track_id) const
+ov::String LLHlsStream::GetInitializationSegmentName(const int32_t &track_id) const
 {
 	// init_<track id>_<media type>_<random str>_llhls.m4s
 	return ov::String::FormatString("init_%d_%s_%s_llhls.m4s",
@@ -975,7 +975,7 @@ void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t 
 		return;
 	}
 
-	// Timescale to seconds(demical)
+	// Timescale to seconds(decimal)
 	auto segment_duration = static_cast<double>(segment->GetDuration()) / static_cast<double>(1000.0);
 
 	auto start_timestamp_ms = (static_cast<double>(segment->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;

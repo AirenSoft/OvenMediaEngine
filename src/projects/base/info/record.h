@@ -120,7 +120,7 @@ namespace info
 		void UpdateRecordStopTime();
 
 		uint64_t GetSequence();
-		void SetSqeuence(uint64_t sequence);
+		void SetSequence(uint64_t sequence);
 
 		const std::chrono::system_clock::time_point &GetCreatedTime() const;
 		const std::chrono::system_clock::time_point GetRecordStartTime() const;

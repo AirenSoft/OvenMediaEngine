@@ -292,7 +292,7 @@ namespace info
 	{
 		_record_total_bytes = time;
 	}
-	void Record::SetSqeuence(uint64_t sequence)
+	void Record::SetSequence(uint64_t sequence)
 	{
 		_sequence = sequence;
 	}

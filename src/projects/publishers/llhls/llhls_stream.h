@@ -104,7 +104,7 @@ private:
 	std::shared_ptr<LLHlsMasterPlaylist> CreateMasterPlaylist(const std::shared_ptr<const info::Playlist> &playlist) const;
 
 	ov::String GetChunklistName(const int32_t &track_id) const;
-	ov::String GetIntializationSegmentName(const int32_t &track_id) const;
+	ov::String GetInitializationSegmentName(const int32_t &track_id) const;
 	ov::String GetSegmentName(const int32_t &track_id, const int64_t &segment_number) const;
 	ov::String GetPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number) const;
 	ov::String GetNextPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number) const;
@@ -130,7 +130,7 @@ private:
 	bmff::FMP4Packager::Config _packager_config;
 	bmff::FMP4Storage::Config _storage_config;
 
-	// Track ID : Stroage
+	// Track ID : Storage
 	std::map<int32_t, std::shared_ptr<bmff::FMP4Storage>> _storage_map;
 	mutable std::shared_mutex _storage_map_lock;
 	std::map<int32_t, std::shared_ptr<bmff::FMP4Packager>> _packager_map;

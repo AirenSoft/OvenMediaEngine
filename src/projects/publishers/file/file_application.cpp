@@ -239,7 +239,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStart(const std::shared_ptr<in
 			return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::FailureInvalidParameter, error_message);
 		}
 
-		// Just validation for schedule pattren
+		// Just validation for schedule pattern
 		auto match_result = regex.Matches(record->GetSchedule().CStr());
 		if (match_result.GetError() != nullptr)
 		{
@@ -248,7 +248,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStart(const std::shared_ptr<in
 		}
 	}
 
-	// Checking for the dupilicate id
+	// Checking for the duplicate id
 	if (_userdata_sets.GetByKey(record->GetId()) != nullptr)
 	{
 		ov::String error_message = "Duplicate ID already exists";
@@ -314,7 +314,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStop(const std::shared_ptr<inf
 	record->SetRecordTotalBytes(userdata->GetRecordTotalBytes());
 	record->SetRecordTime(userdata->GetRecordTime());
 	record->SetRecordTotalTime(userdata->GetRecordTotalTime());
-	record->SetSqeuence(userdata->GetSequence());
+	record->SetSequence(userdata->GetSequence());
 	record->SetCreatedTime(userdata->GetCreatedTime());
 	record->SetRecordStartTime(userdata->GetRecordStartTime());
 	record->SetRecordStopTime(userdata->GetRecordStopTime());

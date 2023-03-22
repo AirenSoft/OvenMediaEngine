@@ -66,7 +66,7 @@ bool OvtStream::Stop()
 	return Stream::Stop();
 }
 
-bool OvtStream::GenerateDecription()
+bool OvtStream::GenerateDescription()
 {
 /*
 	"stream" :
@@ -277,7 +277,7 @@ bool OvtStream::GetDescription(Json::Value &description)
 		return false;
 	}
 	
-	GenerateDecription();
+	GenerateDescription();
 	description = _description;
 
 	return true;

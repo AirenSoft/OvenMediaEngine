@@ -142,7 +142,7 @@ public:
 
 	private:
 		int64_t _sequence = -1;
-		int64_t _start_time = 0; // milliseconds since epoce (1970-01-01 00:00:00)
+		int64_t _start_time = 0; // milliseconds since epoch (1970-01-01 00:00:00)
 		double _duration = 0; // seconds
 		uint64_t _size = 0;
 		ov::String _url;
