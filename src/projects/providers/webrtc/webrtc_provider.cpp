@@ -512,7 +512,7 @@ namespace pvd
 			return false;
 		}
 
-		AddStream(stream);
+		RegisterStreamToSessionKeyStreamMap(stream);
 
 		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
 		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), offer_sdp, peer_sdp, ice_timeout, session_life_time, stream);
@@ -574,7 +574,7 @@ namespace pvd
 		}
 		// the return check is not necessary
 
-		DeleteStream(stream->GetSessionKey());
+		UnRegisterStreamToSessionKeyStreamMap(stream->GetSessionKey());
 
 		_ice_port->RemoveSession(stream->GetId());
 
@@ -641,7 +641,7 @@ namespace pvd
 				}
 				// the return check is not necessary
 
-				DeleteStream(stream->GetSessionKey());
+				UnRegisterStreamToSessionKeyStreamMap(stream->GetSessionKey());
 
 				// Signalling server will call OnStopCommand, then stream will be removed in that function
 				_signalling_server->Disconnect(stream->GetApplicationInfo().GetName(), stream->GetName(), stream->GetPeerSDP());
@@ -799,7 +799,7 @@ namespace pvd
 			return {http::StatusCode::InternalServerError, "Could not publish stream"};
 		}
 
-		AddStream(stream);
+		RegisterStreamToSessionKeyStreamMap(stream);
 
 		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
 		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), answer_sdp, offer_sdp, ice_timeout, session_life_time, stream);
@@ -818,7 +818,7 @@ namespace pvd
 	WhipObserver::Answer WebRTCProvider::OnSessionDelete(const std::shared_ptr<const http::svr::HttpRequest> &request, const ov::String &session_key)
 	{
 		// Find stream
-		auto stream = GetStreamByKey(session_key);
+		auto stream = GetStreamBySessionKey(session_key);
 		if (!stream)
 		{
 			logte("To stop stream failed. Cannot find stream. session key: %s", session_key);
@@ -846,7 +846,7 @@ namespace pvd
 			SendCloseAdmissionWebhooks(request_info);
 		}
 
-		DeleteStream(stream->GetSessionKey());
+		UnRegisterStreamToSessionKeyStreamMap(stream->GetSessionKey());
 
 		_ice_port->RemoveSession(stream->GetId());
 		OnChannelDeleted(stream);
@@ -892,51 +892,51 @@ namespace pvd
 		return _certificate;
 	}
 
-	bool WebRTCProvider::AddStream(const std::shared_ptr<WebRTCStream> &stream)
+	bool WebRTCProvider::RegisterStreamToSessionKeyStreamMap(const std::shared_ptr<WebRTCStream> &stream)
 	{
 		if (stream == nullptr)
 		{
 			return false;
 		}
 
-		std::lock_guard<std::shared_mutex> lock(_streams_guard);
+		std::lock_guard<std::shared_mutex> lock(_session_key_stream_map_guard);
 
-		_streams.emplace(stream->GetSessionKey(), stream);
-
-		return true;
-	}
-
-	bool WebRTCProvider::DeleteStream(const ov::String &key)
-	{
-		if (key == nullptr)
-		{
-			return false;
-		}
-
-		std::lock_guard<std::shared_mutex> lock(_streams_guard);
-
-		auto item = _streams.find(key);
-		if (item == _streams.end())
-		{
-			return false;
-		}
-
-		_streams.erase(item);
+		_session_key_stream_map.emplace(stream->GetSessionKey(), stream);
 
 		return true;
 	}
 
-	std::shared_ptr<WebRTCStream> WebRTCProvider::GetStreamByKey(const ov::String &key)
+	bool WebRTCProvider::UnRegisterStreamToSessionKeyStreamMap(const ov::String &session_key)
 	{
-		if (key == nullptr)
+		if (session_key == nullptr)
+		{
+			return false;
+		}
+
+		std::lock_guard<std::shared_mutex> lock(_session_key_stream_map_guard);
+
+		auto item = _session_key_stream_map.find(session_key);
+		if (item == _session_key_stream_map.end())
+		{
+			return false;
+		}
+
+		_session_key_stream_map.erase(item);
+
+		return true;
+	}
+
+	std::shared_ptr<WebRTCStream> WebRTCProvider::GetStreamBySessionKey(const ov::String &session_key)
+	{
+		if (session_key == nullptr)
 		{
 			return nullptr;
 		}
 		
-		std::shared_lock<std::shared_mutex> lock(_streams_guard);
+		std::shared_lock<std::shared_mutex> lock(_session_key_stream_map_guard);
 
-		auto item = _streams.find(key);
-		if (item == _streams.end())
+		auto item = _session_key_stream_map.find(session_key);
+		if (item == _session_key_stream_map.end())
 		{
 			return nullptr;
 		}

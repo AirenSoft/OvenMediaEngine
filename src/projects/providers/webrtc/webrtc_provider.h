@@ -102,9 +102,9 @@ namespace pvd
 		std::shared_ptr<Certificate> CreateCertificate();
 		std::shared_ptr<Certificate> GetCertificate();
 
-		bool AddStream(const std::shared_ptr<WebRTCStream> &stream);
-		bool DeleteStream(const ov::String &key);
-		std::shared_ptr<WebRTCStream> GetStreamByKey(const ov::String &key);
+		bool RegisterStreamToSessionKeyStreamMap(const std::shared_ptr<WebRTCStream> &stream);
+		bool UnRegisterStreamToSessionKeyStreamMap(const ov::String &session_key);
+		std::shared_ptr<WebRTCStream> GetStreamBySessionKey(const ov::String &session_key);
 
 		//--------------------------------------------------------------------
 		// Implementation of Provider's virtual functions
@@ -128,8 +128,8 @@ namespace pvd
 
 		std::mutex _stream_lock;
 
-		mutable std::shared_mutex _streams_guard;
+		mutable std::shared_mutex _session_key_stream_map_guard;
 		// Key: stream_key / Value: WebRTCStream
-		std::map<ov::String, std::shared_ptr<WebRTCStream>> _streams;
+		std::map<ov::String, std::shared_ptr<WebRTCStream>> _session_key_stream_map;
 	};
 }  // namespace pvd
