@@ -85,7 +85,7 @@ namespace ov
 		void MakeUpper();
 		void MakeLower();
 
-		// Out-of-place utilties
+		// Out-of-place utilities
 		String Replace(const char *old_token, const char *new_token) const;
 		String Replace(const ov::Regex &regex, const char *new_token, bool replace_all = false) const;
 		String Substring(off_t start) const;
@@ -101,7 +101,7 @@ namespace ov
 		static std::vector<String> Split(const char *string, const char *separator, size_t max_count = SIZE_MAX);
 		std::vector<String> Split(const char *separator, size_t max_count = SIZE_MAX) const;
 
-		static String Join(const std::vector<String> &list, const char *seperator);
+		static String Join(const std::vector<String> &list, const char *separator);
 
 		bool HasPrefix(String prefix) const;
 		bool HasPrefix(char prefix) const;

@@ -20,7 +20,7 @@ namespace info
 		void SetId(ov::String id);
 		ov::String GetId() const;
 
-		void SetEnable(bool eanble) ;
+		void SetEnable(bool enable);
 		bool GetEnable();
 
 		void SetVhost(ov::String value);

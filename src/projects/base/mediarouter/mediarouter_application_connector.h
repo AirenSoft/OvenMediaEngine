@@ -69,7 +69,7 @@ public:
 	{
 		if (GetMediaRouteApplication() == nullptr)
 		{
-			OV_ASSERT(false, "MediaRouteAppplication MUST NOT BE NULL");
+			OV_ASSERT(false, "MediaRouteApplication MUST NOT BE NULL");
 			return false;
 		}
 

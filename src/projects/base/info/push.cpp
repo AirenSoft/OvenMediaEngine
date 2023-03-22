@@ -43,9 +43,9 @@ namespace info
 		return _id;
 	}
 
-	void Push::SetEnable(bool eanble)
+	void Push::SetEnable(bool enable)
 	{
-		_enable = eanble;
+		_enable = enable;
 	}
 	bool Push::GetEnable()
 	{

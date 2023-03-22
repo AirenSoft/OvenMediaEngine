@@ -359,9 +359,9 @@ namespace ov
 				// an error occurred or action must be taken by the calling process.
 				// Call SSL_get_error() with the return value ret to find out the reason.
 				
-				auto get_rror =  GetError(result);
-				logtd("Tls::Write()::SSL_write returns %d %d, errno: %d", result, get_rror, errno);
-				return get_rror;
+				auto get_error = GetError(result);
+				logtd("Tls::Write()::SSL_write returns %d %d, errno: %d", result, get_error, errno);
+				return get_error;
 			}
 
 			write_size += static_cast<size_t>(result);

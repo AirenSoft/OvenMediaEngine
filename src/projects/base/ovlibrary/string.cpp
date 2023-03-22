@@ -643,7 +643,7 @@ namespace ov
 	{
 		std::vector<String> list;
 		const char *last;
-		size_t seperator_length;
+		size_t separator_length;
 
 		if (separator == nullptr)
 		{
@@ -655,9 +655,9 @@ namespace ov
 			return list;
 		}
 
-		seperator_length = ::strlen(separator);
+		separator_length = ::strlen(separator);
 
-		if (((string == nullptr) || (string_length == 0L)) || (seperator_length == 0L))
+		if (((string == nullptr) || (string_length == 0L)) || (separator_length == 0L))
 		{
 			if (string != nullptr)
 			{
@@ -683,8 +683,8 @@ namespace ov
 				break;
 			}
 
-			string_length -= (last - string) + seperator_length;
-			string = last + seperator_length;
+			string_length -= (last - string) + separator_length;
+			string = last + separator_length;
 
 			token_count++;
 		}
@@ -702,7 +702,7 @@ namespace ov
 		return Split(CStr(), GetLength(), separator, max_count);
 	}
 
-	String String::Join(const std::vector<String> &list, const char *seperator)
+	String String::Join(const std::vector<String> &list, const char *separator)
 	{
 		String string;
 		bool is_first = true;
@@ -711,7 +711,7 @@ namespace ov
 		{
 			if (is_first == false)
 			{
-				string.Append(seperator);
+				string.Append(separator);
 			}
 			else
 			{
