@@ -422,12 +422,12 @@ namespace http
 		{
 			logtd("Http2RequestReceived : %u", data->GetLength());
 
-			ssize_t comsumed_bytes = 0;
+			ssize_t consumed_bytes = 0;
 
 			if (_http2_preface.IsConfirmed() == false)
 			{
-				comsumed_bytes = _http2_preface.AppendData(data);
-				if (comsumed_bytes == -1)
+				consumed_bytes = _http2_preface.AppendData(data);
+				if (consumed_bytes == -1)
 				{
 					logte("HTTP/2 preface is not confirmed from %s", _client_socket->ToString().CStr());
 					return -1;
@@ -438,7 +438,7 @@ namespace http
 					InitializeHttp2Connection();
 				}
 
-				return comsumed_bytes;
+				return consumed_bytes;
 			}
 
 			if (_http2_frame == nullptr)
@@ -447,8 +447,8 @@ namespace http
 				_http2_frame = std::make_shared<Http2Frame>();
 			}
 
-			comsumed_bytes = _http2_frame->AppendData(data);
-			if (comsumed_bytes < 0)
+			consumed_bytes = _http2_frame->AppendData(data);
+			if (consumed_bytes < 0)
 			{
 				Close(PhysicalPortDisconnectReason::Error);
 				return -1;
@@ -479,7 +479,7 @@ namespace http
 				_http2_frame.reset();
 			}
 
-			return comsumed_bytes;
+			return consumed_bytes;
 		}
 
 		void HttpConnection::InitializeHttp2Connection()

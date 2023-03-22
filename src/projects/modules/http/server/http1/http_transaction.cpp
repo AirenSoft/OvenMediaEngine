@@ -92,14 +92,14 @@ namespace http
 				else if (_request->GetHeaderParingStatus() == StatusCode::PartialContent)
 				{
 					// Put more data to parse header
-					auto comsumed_bytes = _request->AppendHeaderData(data);
-					_received_header_size += comsumed_bytes;
+					auto consumed_bytes = _request->AppendHeaderData(data);
+					_received_header_size += consumed_bytes;
 
 					// Check if header parsing is complete
 					if (_request->GetHeaderParingStatus() == StatusCode::PartialContent)
 					{
 						// Need more data to parse header
-						return comsumed_bytes;
+						return consumed_bytes;
 					}
 					else if (_request->GetHeaderParingStatus() == StatusCode::OK)
 					{
@@ -115,7 +115,7 @@ namespace http
 							}
 
 							SetStatus(Status::Upgrade);
-							return comsumed_bytes;
+							return consumed_bytes;
 						}
 						else
 						{
@@ -155,7 +155,7 @@ namespace http
 							SetStatus(Status::Exchanging);
 						}
 
-						return comsumed_bytes;
+						return consumed_bytes;
 					}
 				}
 
