@@ -253,7 +253,7 @@ std::shared_ptr<ov::Error> FileApplication::RecordStart(const std::shared_ptr<in
 	{
 		ov::String error_message = "Duplicate ID already exists";
 
-		return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::FailureDupulicateKey, error_message);
+		return ov::Error::CreateError(FILE_PUBLISHER_ERROR_DOMAIN, FilePublisher::FilePublisherStatusCode::FailureDuplicateKey, error_message);
 	}
 
 	record->SetTransactionId(ov::Random::GenerateString(16));

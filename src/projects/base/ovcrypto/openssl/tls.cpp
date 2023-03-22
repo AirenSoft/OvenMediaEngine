@@ -15,7 +15,7 @@
 
 #define OV_TLS_BIO_METHOD_NAME "ov::Tls"
 
-#define DO_CALLBACK_IF_AVAILBLE(return_type, default_value, tls_instance, callback_name, ...) \
+#define DO_CALLBACK_IF_AVAILABLE(return_type, default_value, tls_instance, callback_name, ...) \
 	DoCallback<return_type, default_value, decltype(&TlsBioCallback::callback_name), &TlsBioCallback::callback_name>(tls_instance, ##__VA_ARGS__)
 
 namespace ov
@@ -431,7 +431,7 @@ namespace ov
 
 	long Tls::TlsCtrl(BIO *b, int cmd, long num, void *ptr)
 	{
-		return DO_CALLBACK_IF_AVAILBLE(long, 0, BIO_get_data(b), ctrl_callback, cmd, num, ptr);
+		return DO_CALLBACK_IF_AVAILABLE(long, 0, BIO_get_data(b), ctrl_callback, cmd, num, ptr);
 	}
 
 	int Tls::TlsRead(BIO *b, char *out, int outl)
@@ -441,7 +441,7 @@ namespace ov
 		OV_ASSERT2(out != nullptr);
 		OV_ASSERT2(outl >= 0);
 
-		auto read_bytes = DO_CALLBACK_IF_AVAILBLE(ssize_t, -1, BIO_get_data(b), read_callback, out, static_cast<size_t>(outl));
+		auto read_bytes = DO_CALLBACK_IF_AVAILABLE(ssize_t, -1, BIO_get_data(b), read_callback, out, static_cast<size_t>(outl));
 
 		if (read_bytes > 0)
 		{
@@ -469,7 +469,7 @@ namespace ov
 
 		logtp("Trying to write %d bytes...\n%s", inl, ov::Dump(in, inl).CStr());
 
-		auto written_bytes = DO_CALLBACK_IF_AVAILBLE(ssize_t, -1, BIO_get_data(b), write_callback, in, static_cast<size_t>(inl));
+		auto written_bytes = DO_CALLBACK_IF_AVAILABLE(ssize_t, -1, BIO_get_data(b), write_callback, in, static_cast<size_t>(inl));
 
 		logtd("Written: %zd/%d", written_bytes, inl);
 
@@ -497,7 +497,7 @@ namespace ov
 
 	int Tls::TlsDestroy(BIO *b)
 	{
-		return DO_CALLBACK_IF_AVAILBLE(bool, false, BIO_get_data(b), destroy_callback) ? 1 : 0;
+		return DO_CALLBACK_IF_AVAILABLE(bool, false, BIO_get_data(b), destroy_callback) ? 1 : 0;
 	}
 
 	std::shared_ptr<Certificate> Tls::GetPeerCertificate() const

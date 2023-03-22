@@ -117,7 +117,7 @@ namespace pub
 		{
 			Success,
 			FailureInvalidParameter,
-			FailureDupulicateKey,
+			FailureDuplicateKey,
 			FailureNotExist,
 			FailureUnknown
 		};

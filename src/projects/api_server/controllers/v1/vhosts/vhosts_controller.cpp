@@ -30,7 +30,7 @@ namespace api
 			CreateSubController<VHostActionsController>(R"(:)");
 			CreateSubController<VHostActionsController>(R"(\/(?<vhost_name>[^\/:]*):)");
 
-			// Branch into appls controller
+			// Branch into apps controller
 			CreateSubController<AppsController>(R"(\/(?<vhost_name>[^\/]*)\/apps)");
 		}
 

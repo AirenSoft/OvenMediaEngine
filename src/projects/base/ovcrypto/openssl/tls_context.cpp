@@ -11,7 +11,7 @@
 #include "./openssl_private.h"
 #include "./tls.h"
 
-#define DO_CALLBACK_IF_AVAILBLE(return_type, default_value, tls_context, callback_name, ...) \
+#define DO_CALLBACK_IF_AVAILABLE(return_type, default_value, tls_context, callback_name, ...) \
 	DoCallback<return_type, default_value, decltype(&TlsContextCallback::callback_name), &TlsContextCallback::callback_name>(tls_context, ##__VA_ARGS__)
 
 namespace ov
@@ -27,7 +27,7 @@ namespace ov
 		TlsMethod method,
 		const std::shared_ptr<const CertificatePair> &certificate_pair,
 		const ov::String &cipher_list,
-		bool enable_h2_alpn, 
+		bool enable_h2_alpn,
 		const ov::TlsContextCallback *callback,
 		std::shared_ptr<const ov::Error> *error)
 	{
@@ -83,7 +83,7 @@ namespace ov
 		const SSL_METHOD *method,
 		const std::shared_ptr<const CertificatePair> &certificate_pair,
 		const ov::String &cipher_list,
-		bool enable_h2_alpn, 
+		bool enable_h2_alpn,
 		const TlsContextCallback *callback)
 	{
 		_h2_alpn_enabled = enable_h2_alpn;
@@ -128,7 +128,7 @@ namespace ov
 
 			if (enable_h2_alpn == true)
 			{
-				// Now, only enable TLS 1.3 for HTTP/2 
+				// Now, only enable TLS 1.3 for HTTP/2
 				::SSL_CTX_set_max_proto_version(ctx, TLS1_3_VERSION);
 			}
 			else
@@ -142,7 +142,7 @@ namespace ov
 
 			_ssl_ctx = std::move(ctx);
 
-			bool result = DO_CALLBACK_IF_AVAILBLE(bool, true, this, create_callback, static_cast<SSL_CTX *>(ctx));
+			bool result = DO_CALLBACK_IF_AVAILABLE(bool, true, this, create_callback, static_cast<SSL_CTX *>(ctx));
 
 			if (result == false)
 			{
@@ -214,7 +214,7 @@ namespace ov
 
 			_ssl_ctx = std::move(ctx);
 
-			bool result = DO_CALLBACK_IF_AVAILBLE(bool, true, this, create_callback, static_cast<SSL_CTX *>(ctx));
+			bool result = DO_CALLBACK_IF_AVAILABLE(bool, true, this, create_callback, static_cast<SSL_CTX *>(ctx));
 
 			if (result == false)
 			{
@@ -231,7 +231,7 @@ namespace ov
 		// arg to TlsContext instance
 		auto parent = static_cast<TlsContext *>(arg);
 
-		// h2 first, 
+		// h2 first,
 		if (parent->_h2_alpn_enabled)
 		{
 			if (SelectALPNProtocol("h2", out, outlen, in, inlen) == true)
@@ -250,16 +250,16 @@ namespace ov
 
 	bool TlsContext::SelectALPNProtocol(ov::String key, const unsigned char **out, unsigned char *outlen, const unsigned char *in, unsigned int inlen)
 	{
-		unsigned int i=0;
+		unsigned int i = 0;
 		while (i < inlen)
 		{
 			auto length = in[i];
-			ov::String protocol(reinterpret_cast<const char *>(&in[i+1]), length);
+			ov::String protocol(reinterpret_cast<const char *>(&in[i + 1]), length);
 
 			if (protocol == key)
 			{
 				logtd("Selected ALPN protocol: %s", protocol.CStr());
-				*out = &in[i+1];
+				*out = &in[i + 1];
 				*outlen = length;
 				return true;
 			}
@@ -283,7 +283,7 @@ namespace ov
 		if (server_name.IsEmpty() == false)
 		{
 			// Client set a server name
-			bool result = DO_CALLBACK_IF_AVAILBLE(bool, false, this, sni_callback, ssl, server_name);
+			bool result = DO_CALLBACK_IF_AVAILABLE(bool, false, this, sni_callback, ssl, server_name);
 
 			if (result == false)
 			{
@@ -317,7 +317,7 @@ namespace ov
 
 		if (::SSL_CTX_use_certificate(_ssl_ctx, certificate->GetX509()) != 1)
 		{
-			throw OpensslError("Cannot use certficate: %s", OpensslError().What());
+			throw OpensslError("Cannot use certificate: %s", OpensslError().What());
 		}
 
 		if ((chain_certificate != nullptr) && (::SSL_CTX_add1_chain_cert(_ssl_ctx, chain_certificate->GetX509()) != 1))
@@ -343,7 +343,7 @@ namespace ov
 
 	int TlsContext::TlsVerify(X509_STORE_CTX *store, void *arg)
 	{
-		bool result = DO_CALLBACK_IF_AVAILBLE(bool, false, arg, verify_callback, store);
+		bool result = DO_CALLBACK_IF_AVAILABLE(bool, false, arg, verify_callback, store);
 
 		return result ? 1 : 0;
 	}

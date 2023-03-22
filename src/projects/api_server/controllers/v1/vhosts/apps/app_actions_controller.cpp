@@ -150,7 +150,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  error->GetMessage());
 			}
-			else if (error->GetCode() == pub::FilePublisher::FilePublisherStatusCode::FailureDupulicateKey)
+			else if (error->GetCode() == pub::FilePublisher::FilePublisherStatusCode::FailureDuplicateKey)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  error->GetMessage());

@@ -233,12 +233,12 @@ std::shared_ptr<ov::Error> RtmpPushApplication::PushStart(const std::shared_ptr<
 		return ov::Error::CreateError(RTMP_PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::FailureInvalidParameter, error_message);
 	}
 
-	// Validation check for dupulicate id
+	// Validation check for duplicate id
 	if (_userdata_sets.GetByKey(push->GetId()) != nullptr)
 	{
 		ov::String error_message = "Duplicate ID already exists";
 
-		return ov::Error::CreateError(RTMP_PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::FailureDupulicateKey, error_message);
+		return ov::Error::CreateError(RTMP_PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::FailureDuplicateKey, error_message);
 	}
 
 	// Validation check for protocol scheme
