@@ -81,9 +81,6 @@ namespace pvd
 		int64_t GetBaseTimestamp(uint32_t track_id);
 		std::shared_ptr<pvd::Application> _application = nullptr;
 		void UpdateReconnectTimeToBasetime();
-
-		std::shared_ptr<ov::Url> _requested_url;
-		std::shared_ptr<ov::Url> _final_url;
 	
 	private:
 		// TrackID : Timestamp(us)
@@ -95,5 +92,8 @@ namespace pvd
 		std::chrono::time_point<std::chrono::system_clock>	_last_pkt_received_time = std::chrono::time_point<std::chrono::system_clock>::min();
 
 		State 	_state = State::IDLE;
+
+		std::shared_ptr<ov::Url> _requested_url = nullptr;
+		std::shared_ptr<ov::Url> _final_url = nullptr;
 	};
 }

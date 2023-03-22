@@ -128,12 +128,14 @@ namespace pvd
 		}
 
 		// Send Close to Admission Webhooks
-		if (_requested_url && _remote && _final_url)
+		auto requested_url = GetRequestedUrl();
+		auto final_url = GetFinalUrl();
+		if (_remote && requested_url && final_url)
 		{
 			auto remote_address { _remote->GetRemoteAddress() };
 			if (remote_address)
 			{
-				auto request_info = std::make_shared<AccessController::RequestInfo>(_requested_url, remote_address, _requested_url->ToUrlString(true) == _final_url->ToUrlString(true) ? nullptr : _final_url);
+				auto request_info = std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, requested_url->ToUrlString(true) == final_url->ToUrlString(true) ? nullptr : final_url);
 
 				GetProvider()->SendCloseAdmissionWebhooks(request_info);
 			}
@@ -371,7 +373,7 @@ namespace pvd
 			if (_admission_webhooks->GetNewURL() != nullptr)
 			{
 				_publish_url = _admission_webhooks->GetNewURL();
-				_final_url = _publish_url;
+				SetFinalUrl(_publish_url);
 			}
 
 			return true;
@@ -470,8 +472,8 @@ namespace pvd
 		_stream_name = _url->Stream();
 		_import_chunk->SetStreamName(_stream_name);
 
-		_requested_url = _url;
-		_final_url = _url;
+		SetRequestedUrl(_url);
+		SetFinalUrl(_url);
 
 		return true;
 	}
