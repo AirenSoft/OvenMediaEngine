@@ -41,8 +41,8 @@ public:
 
 	private:
 		const std::shared_ptr<const ov::Url> _request_url;
-		const std::shared_ptr<const ov::Url> _new_url;
 		const std::shared_ptr<ov::SocketAddress> _client_address;
+		const std::shared_ptr<const ov::Url> _new_url;
 		const ov::String _user_agent;
 	};
 

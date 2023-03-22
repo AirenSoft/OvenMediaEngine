@@ -181,25 +181,19 @@ namespace pvd
 		// streamid format is below
 		// urlencode(srt://host[:port]/app/stream?query=value)
 		auto decoded_url = ov::Url::Decode(streamid);
-		auto parsed_url = ov::Url::Parse(decoded_url);
-		if (parsed_url == nullptr)
+		auto final_url = ov::Url::Parse(decoded_url);
+		if (final_url == nullptr)
 		{
 			logte("SRT's streamid streamid must be in the following format, percent encoded. srt://{host}[:port]/{app}/{stream}?{query}={value} : %s", streamid.CStr());
 			remote->Close();
 			return;
 		}
 
-		auto channel_id = remote->GetNativeHandle();
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
-		auto stream_name = parsed_url->Stream();
+		auto requested_url = final_url;
 
-		// Check if application is exist
-		if (GetApplicationByName(vhost_app_name) == nullptr)
-		{
-			logte("Could not find vhost/app: %s", vhost_app_name.CStr());
-			remote->Close();
-			return;
-		}
+		auto channel_id = remote->GetNativeHandle();
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+		auto stream_name = final_url->Stream();
 
 		//TODO(Getroot): For security enhancement,
 		// it should be checked whether the actual ip:port is the same as the ip:port of streamid (after dns resolve if it is domain).
@@ -207,7 +201,7 @@ namespace pvd
 		// SingedPolicy
 		uint64_t life_time = 0;
 		auto remote_address = remote->GetRemoteAddress();
-		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(parsed_url, remote_address);
+		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(final_url, remote_address);
 		if (signed_policy_result == AccessController::VerificationResult::Off)
 		{
 			// Success
@@ -229,7 +223,7 @@ namespace pvd
 			return;
 		}
 
-		auto request_info = std::make_shared<AccessController::RequestInfo>(parsed_url, remote_address);
+		auto request_info = std::make_shared<AccessController::RequestInfo>(final_url, remote_address);
 
 		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
 		if (webhooks_result == AccessController::VerificationResult::Off)
@@ -252,14 +246,14 @@ namespace pvd
 			// Redirect URL
 			if (admission_webhooks->GetNewURL() != nullptr)
 			{
-				auto new_url = admission_webhooks->GetNewURL();
-				vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(new_url->Host(), new_url->App());
-				stream_name = new_url->Stream();
+				final_url = admission_webhooks->GetNewURL();
+				vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+				stream_name = final_url->Stream();
 			}
 		}
 		else if (webhooks_result == AccessController::VerificationResult::Error)
 		{
-			logtw("AdmissionWebhooks error : %s", parsed_url->ToUrlString().CStr());
+			logtw("AdmissionWebhooks error : %s", final_url->ToUrlString().CStr());
 			remote->Close();
 			return;
 		}
@@ -270,7 +264,17 @@ namespace pvd
 			return;
 		}
 
+		// Check if application is exist
+		if (GetApplicationByName(vhost_app_name) == nullptr)
+		{
+			logte("Could not find vhost/app: %s", vhost_app_name.CStr());
+			remote->Close();
+			return;
+		}
+
 		auto stream = MpegTsStream::Create(StreamSourceType::Srt, channel_id, vhost_app_name, stream_name, remote, *remote->GetRemoteAddress(), life_time, GetSharedPtrAs<pvd::PushProvider>());
+		stream->SetRequestedUrl(requested_url);
+		stream->SetFinalUrl(final_url);
 
 		PushProvider::OnChannelCreated(remote->GetNativeHandle(), stream);
 	}
@@ -303,13 +307,14 @@ namespace pvd
 		}
 
 		// Send Close to Admission Webhooks
-		if (remote)
+		auto requested_url = channel->GetRequestedUrl();
+		auto final_url = channel->GetFinalUrl();
+		if (remote && requested_url && final_url)
 		{
-			auto parsed_url = ov::Url::Parse(ov::Url::Decode(remote->GetStreamId()));
 			auto remote_address = remote->GetRemoteAddress();
-			if (parsed_url && remote_address)
+			if (remote_address)
 			{
-				auto request_info = std::make_shared<AccessController::RequestInfo>(parsed_url, remote_address);
+				auto request_info = std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, requested_url->ToUrlString(true) == final_url->ToUrlString(true) ? nullptr : final_url);
 
 				SendCloseAdmissionWebhooks(request_info);
 			}

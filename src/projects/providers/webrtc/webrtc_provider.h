@@ -14,6 +14,7 @@
 #include "modules/rtc_signalling/rtc_signalling.h"
 #include "modules/whip/whip_server.h"
 #include "orchestrator/orchestrator.h"
+#include "webrtc_stream.h"
 
 namespace pvd
 {
@@ -89,8 +90,8 @@ namespace pvd
 												const ov::String &if_match,
 												const std::shared_ptr<const SessionDescription> &patch) override;
 
-		bool OnSessionDelete(const std::shared_ptr<const http::svr::HttpRequest> &request,
-							 const ov::String &session_id) override;
+		WhipObserver::Answer OnSessionDelete(const std::shared_ptr<const http::svr::HttpRequest> &request,
+												const ov::String &session_key) override;
 		//--------------------------------------------------------------------
 
 	protected:
@@ -100,6 +101,10 @@ namespace pvd
 	private:
 		std::shared_ptr<Certificate> CreateCertificate();
 		std::shared_ptr<Certificate> GetCertificate();
+
+		bool RegisterStreamToSessionKeyStreamMap(const std::shared_ptr<WebRTCStream> &stream);
+		bool UnRegisterStreamToSessionKeyStreamMap(const ov::String &session_key);
+		std::shared_ptr<WebRTCStream> GetStreamBySessionKey(const ov::String &session_key);
 
 		//--------------------------------------------------------------------
 		// Implementation of Provider's virtual functions
@@ -122,5 +127,9 @@ namespace pvd
 		std::shared_ptr<Certificate> _certificate = nullptr;
 
 		std::mutex _stream_lock;
+
+		mutable std::shared_mutex _session_key_stream_map_guard;
+		// Key: stream_key / Value: WebRTCStream
+		std::map<ov::String, std::shared_ptr<WebRTCStream>> _session_key_stream_map;
 	};
 }  // namespace pvd

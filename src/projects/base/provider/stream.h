@@ -57,6 +57,12 @@ namespace pvd
 
 		bool SendDataFrame(int64_t timestamp, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame);
 
+		std::shared_ptr<ov::Url> GetRequestedUrl() const;
+		void SetRequestedUrl(const std::shared_ptr<ov::Url> &requested_url);
+
+		std::shared_ptr<ov::Url> GetFinalUrl() const;
+		void SetFinalUrl(const std::shared_ptr<ov::Url> &final_url);
+
 	protected:
 		Stream(const std::shared_ptr<pvd::Application> &application, StreamSourceType source_type);
 		Stream(const std::shared_ptr<pvd::Application> &application, info::stream_id_t stream_id, StreamSourceType source_type);
@@ -86,5 +92,8 @@ namespace pvd
 		std::chrono::time_point<std::chrono::system_clock>	_last_pkt_received_time = std::chrono::time_point<std::chrono::system_clock>::min();
 
 		State 	_state = State::IDLE;
+
+		std::shared_ptr<ov::Url> _requested_url = nullptr;
+		std::shared_ptr<ov::Url> _final_url = nullptr;
 	};
 }

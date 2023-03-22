@@ -12,7 +12,6 @@
 #include "webrtc_application.h"
 #include "webrtc_private.h"
 #include "webrtc_provider_signalling_interceptor.h"
-#include "webrtc_stream.h"
 
 namespace pvd
 {
@@ -281,21 +280,23 @@ namespace pvd
 		auto request = ws_session->GetRequest();
 		auto remote_address = request->GetRemote()->GetRemoteAddress();
 		auto uri = request->GetUri();
-		auto parsed_url = ov::Url::Parse(uri);
-		if (parsed_url == nullptr)
+		auto final_url = ov::Url::Parse(uri);
+		if (final_url == nullptr)
 		{
 			logte("Could not parse the url: %s", uri.CStr());
 			return nullptr;
 		}
 
 		// PORT can be omitted if port is rtmp default port, but SignedPolicy requires this information.
-		if (parsed_url->Port() == 0)
+		if (final_url->Port() == 0)
 		{
-			parsed_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+			final_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 		}
 
+		auto requested_url = final_url;
+
 		uint64_t session_life_time = 0;
-		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(parsed_url, remote_address);
+		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(final_url, remote_address);
 		if (signed_policy_result == AccessController::VerificationResult::Off)
 		{
 			// Success
@@ -315,7 +316,7 @@ namespace pvd
 		}
 
 		// Admission Webhooks
-		auto request_info = std::make_shared<AccessController::RequestInfo>(parsed_url, remote_address, request->GetHeader("USER-AGENT"));
+		auto request_info = std::make_shared<AccessController::RequestInfo>(final_url, remote_address, request->GetHeader("USER-AGENT"));
 
 		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
 		if (webhooks_result == AccessController::VerificationResult::Off)
@@ -338,20 +339,20 @@ namespace pvd
 			// Redirect URL
 			if (admission_webhooks->GetNewURL() != nullptr)
 			{
-				parsed_url = admission_webhooks->GetNewURL();
-				if (parsed_url->Port() == 0)
+				final_url = admission_webhooks->GetNewURL();
+				if (final_url->Port() == 0)
 				{
-					parsed_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+					final_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 				}
 
-				final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
-				final_host_name = parsed_url->Host();
-				final_stream_name = parsed_url->Stream();
+				final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+				final_host_name = final_url->Host();
+				final_stream_name = final_url->Stream();
 			}
 		}
 		else if (webhooks_result == AccessController::VerificationResult::Error)
 		{
-			logtw("AdmissionWebhooks error : %s", parsed_url->ToUrlString().CStr());
+			logtw("AdmissionWebhooks error : %s", final_url->ToUrlString().CStr());
 			return nullptr;
 		}
 		else if (webhooks_result == AccessController::VerificationResult::Fail)
@@ -377,7 +378,7 @@ namespace pvd
 			return nullptr;
 		}
 
-		auto transport = parsed_url->GetQueryValue("transport");
+		auto transport = final_url->GetQueryValue("transport");
 		if (transport.UpperCaseString() == "TCP")
 		{
 			tcp_relay = true;
@@ -398,7 +399,8 @@ namespace pvd
 
 		// Passed AccessControl
 		ws_session->AddUserData("authorized", true);
-		ws_session->AddUserData("final_url", parsed_url->ToUrlString(true));
+		ws_session->AddUserData("final_url", final_url->ToUrlString(true));
+		ws_session->AddUserData("requested_url", requested_url->ToUrlString(true));
 		ws_session->AddUserData("stream_expired", session_life_time);
 
 		return session_description;
@@ -410,14 +412,24 @@ namespace pvd
 												const std::shared_ptr<const SessionDescription> &peer_sdp)
 	{
 		auto [autorized_exist, authorized] = ws_session->GetUserData("authorized");
-		ov::String uri;
+		ov::String requested_uri, final_uri;
 		uint64_t session_life_time = 0;
 		if (autorized_exist == true && std::holds_alternative<bool>(authorized) == true && std::get<bool>(authorized) == true)
 		{
+			auto [requested_url_exist, requested_url] = ws_session->GetUserData("requested_url");
+			if (requested_url_exist == true && std::holds_alternative<ov::String>(requested_url) == true)
+			{
+				requested_uri = std::get<ov::String>(requested_url);
+			}
+			else
+			{
+				return false;
+			}
+
 			auto [final_url_exist, final_url] = ws_session->GetUserData("final_url");
 			if (final_url_exist == true && std::holds_alternative<ov::String>(final_url) == true)
 			{
-				uri = std::get<ov::String>(final_url);
+				final_uri = std::get<ov::String>(final_url);
 			}
 			else
 			{
@@ -440,15 +452,22 @@ namespace pvd
 			return false;
 		}
 
-		auto parsed_url = ov::Url::Parse(uri);
-		if (parsed_url == nullptr)
+		auto requested_url = ov::Url::Parse(requested_uri);
+		if (requested_url == nullptr)
 		{
-			logte("Could not parse the url: %s", uri.CStr());
+			logte("Could not parse the url: %s", requested_uri.CStr());
 			return false;
 		}
 
-		auto final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
-		auto final_stream_name = parsed_url->Stream();
+		auto final_url = ov::Url::Parse(final_uri);
+		if (final_url == nullptr)
+		{
+			logte("Could not parse the url: %s", final_uri.CStr());
+			return false;
+		}
+
+		auto final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+		auto final_stream_name = final_url->Stream();
 
 		logtd("WebRTCProvider::OnAddRemoteDescription");
 		auto request = ws_session->GetRequest();
@@ -479,6 +498,8 @@ namespace pvd
 			return false;
 		}
 		stream->SetMediaSource(request->GetRemote()->GetRemoteAddressAsUrl());
+		stream->SetRequestedUrl(requested_url);
+		stream->SetFinalUrl(final_url);
 
 		// The stream of the webrtc provider has already completed signaling at this point.
 		if (PublishChannel(stream->GetId(), final_vhost_app_name, stream) == false)
@@ -490,6 +511,8 @@ namespace pvd
 		{
 			return false;
 		}
+
+		RegisterStreamToSessionKeyStreamMap(stream);
 
 		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
 		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), offer_sdp, peer_sdp, ice_timeout, session_life_time, stream);
@@ -512,38 +535,46 @@ namespace pvd
 	{
 		logti("Stop command received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 
-		// Send Close to Admission Webhooks
-		auto request = ws_session->GetRequest();
-		auto parsed_url{ov::Url::Parse(request->GetUri())};
-		auto remote_address{request->GetRemote()->GetRemoteAddress()};
-		if (parsed_url && remote_address)
+		info::VHostAppName final_vhost_app_name = vhost_app_name;
+		ov::String final_stream_name = stream_name;
+
+		auto [final_url_exist, url] = ws_session->GetUserData("final_url");
+		if (final_url_exist == true && std::holds_alternative<ov::String>(url) == true)
 		{
-			std::shared_ptr<ov::Url> new_url;
-
-			auto [final_url_exist, final_url] = ws_session->GetUserData("final_url");
-			if (final_url_exist == true && std::holds_alternative<ov::String>(final_url) == true)
+			ov::String uri = std::get<ov::String>(url);
+			std::shared_ptr<ov::Url> final_url = ov::Url::Parse(uri);
+			if (final_url == nullptr)
 			{
-				ov::String uri = std::get<ov::String>(final_url);
-
-				if (request->GetUri() != uri)
-				{
-					new_url = ov::Url::Parse(uri);
-				}
+				logte("Could not parse the url: %s", uri.CStr());
+				return false;
 			}
 
-			auto request_info = std::make_shared<AccessController::RequestInfo>(parsed_url, remote_address, new_url, request->GetHeader("USER-AGENT"));
+			final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+			final_stream_name = final_url->Stream();
+		}
+
+		// Find Stream
+		auto stream = std::static_pointer_cast<WebRTCStream>(GetStreamByName(final_vhost_app_name, final_stream_name));
+		if (!stream)
+		{
+			logte("To stop stream failed. Cannot find stream (%s/%s)", final_vhost_app_name.CStr(), final_stream_name.CStr());
+			return false;
+		}
+
+		// Send Close to Admission Webhooks
+		auto request = ws_session->GetRequest();
+		auto remote_address{request->GetRemote()->GetRemoteAddress()};
+		auto requested_url = stream->GetRequestedUrl();
+		auto final_url = stream->GetFinalUrl();
+		if (remote_address && requested_url && final_url)
+		{
+			auto request_info = std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, requested_url->ToUrlString(true) == final_url->ToUrlString(true) ? nullptr : final_url, request->GetHeader("USER-AGENT"));
 
 			SendCloseAdmissionWebhooks(request_info);
 		}
 		// the return check is not necessary
 
-		// Find Stream
-		auto stream = std::static_pointer_cast<WebRTCStream>(GetStreamByName(vhost_app_name, stream_name));
-		if (!stream)
-		{
-			logte("To stop stream failed. Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
-			return false;
-		}
+		UnRegisterStreamToSessionKeyStreamMap(stream->GetSessionKey());
 
 		_ice_port->RemoveSession(stream->GetId());
 
@@ -585,6 +616,33 @@ namespace pvd
 			case IcePortConnectionState::Closed: {
 				logti("IcePort is disconnected. : (%s/%s) reason(%d)", stream->GetApplicationName(), stream->GetName().CStr(), state);
 
+				// Send Close to Admission Webhooks
+				std::shared_ptr<ov::SocketAddress> remote_address = nullptr;
+				if (stream->GetMediaSource())
+				{
+					auto source_url = ov::Url::Parse(stream->GetMediaSource());
+					if (source_url != nullptr)
+					{
+						remote_address = std::make_shared<ov::SocketAddress>(ov::SocketAddress::CreateAndGetFirst(source_url->Host(), source_url->Port()));
+					}
+					else
+					{
+						logtd("Could not parse the source url: %s", stream->GetMediaSource().CStr());
+					}
+				}
+
+				auto requested_url = stream->GetRequestedUrl();
+				auto final_url = stream->GetFinalUrl();
+				if (remote_address && requested_url && final_url)
+				{
+					auto request_info = std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, requested_url->ToUrlString(true) == final_url->ToUrlString(true) ? nullptr : final_url);
+
+					SendCloseAdmissionWebhooks(request_info);
+				}
+				// the return check is not necessary
+
+				UnRegisterStreamToSessionKeyStreamMap(stream->GetSessionKey());
+
 				// Signalling server will call OnStopCommand, then stream will be removed in that function
 				_signalling_server->Disconnect(stream->GetApplicationInfo().GetName(), stream->GetName(), stream->GetPeerSDP());
 				OnChannelDeleted(stream);
@@ -600,23 +658,91 @@ namespace pvd
 	WhipObserver::Answer WebRTCProvider::OnSdpOffer(const std::shared_ptr<const http::svr::HttpRequest> &request,
 													const std::shared_ptr<const SessionDescription> &offer_sdp)
 	{
-		auto uri = request->GetParsedUri();
-		if (uri == nullptr || uri->Host().IsEmpty() || uri->App().IsEmpty() || uri->Stream().IsEmpty())
+		auto remote_address = request->GetRemote()->GetRemoteAddress();
+		auto final_url = request->GetParsedUri();
+		if (final_url == nullptr || final_url->Host().IsEmpty() || final_url->App().IsEmpty() || final_url->Stream().IsEmpty())
 		{
 			return {http::StatusCode::BadRequest, "Invalid URI"};
 		}
 
-		info::VHostAppName final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(uri->Host(), uri->App());
-		ov::String final_host_name = uri->Host();
-		ov::String final_stream_name = uri->Stream();
+		info::VHostAppName final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+		ov::String final_host_name = final_url->Host();
+		ov::String final_stream_name = final_url->Stream();
 
-		if (uri->Port() == 0)
+		if (final_url->Port() == 0)
 		{
-			uri->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+			final_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 		}
+
+		auto requested_url = final_url;
 
 		// Signed Policy & Admission Webhooks
 		uint64_t session_life_time = 0;
+		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(final_url, remote_address);
+		if (signed_policy_result == AccessController::VerificationResult::Off)
+		{
+			// Success
+		}
+		else if (signed_policy_result == AccessController::VerificationResult::Pass)
+		{
+			session_life_time = signed_policy->GetStreamExpireEpochMSec();
+		}
+		else if (signed_policy_result == AccessController::VerificationResult::Error)
+		{
+			logte("Could not resolve application name from domain: %s", final_url->Host().CStr());
+			return {http::StatusCode::Unauthorized, "Could not resolve application name from domain"};
+		}
+		else if (signed_policy_result == AccessController::VerificationResult::Fail)
+		{
+			logtw("%s", signed_policy->GetErrMessage().CStr());
+			return {http::StatusCode::Unauthorized, signed_policy->GetErrMessage()};
+		}
+
+		// Admission Webhooks
+		auto request_info = std::make_shared<AccessController::RequestInfo>(final_url, remote_address, request->GetHeader("USER-AGENT"));
+
+		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
+		if (webhooks_result == AccessController::VerificationResult::Off)
+		{
+			// Success
+		}
+		else if (webhooks_result == AccessController::VerificationResult::Pass)
+		{
+			// Lifetime
+			if (admission_webhooks->GetLifetime() != 0)
+			{
+				// Choice smaller value
+				auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + admission_webhooks->GetLifetime();
+				if (session_life_time == 0 || stream_expired_msec_from_webhooks < session_life_time)
+				{
+					session_life_time = stream_expired_msec_from_webhooks;
+				}
+			}
+
+			// Redirect URL
+			if (admission_webhooks->GetNewURL() != nullptr)
+			{
+				final_url = admission_webhooks->GetNewURL();
+				if (final_url->Port() == 0)
+				{
+					final_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+				}
+
+				final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+				final_host_name = final_url->Host();
+				final_stream_name = final_url->Stream();
+			}
+		}
+		else if (webhooks_result == AccessController::VerificationResult::Error)
+		{
+			logtw("AdmissionWebhooks error : %s", final_url->ToUrlString().CStr());
+			return {http::StatusCode::Unauthorized, "AdmissionWebhooks error"};
+		}
+		else if (webhooks_result == AccessController::VerificationResult::Fail)
+		{
+			logtw("AdmissionWebhooks error : %s", admission_webhooks->GetErrReason().CStr());
+			return {http::StatusCode::Unauthorized, "AdmissionWebhooks error"};
+		}
 
 		auto application = std::dynamic_pointer_cast<WebRTCApplication>(GetApplicationByName(final_vhost_app_name));
 		if (application == nullptr)
@@ -660,6 +786,8 @@ namespace pvd
 		}
 
 		stream->SetMediaSource(request->GetRemote()->GetRemoteAddressAsUrl());
+		stream->SetRequestedUrl(requested_url);
+		stream->SetFinalUrl(final_url);
 
 		if (PublishChannel(stream->GetId(), final_vhost_app_name, stream) == false)
 		{
@@ -671,10 +799,12 @@ namespace pvd
 			return {http::StatusCode::InternalServerError, "Could not publish stream"};
 		}
 
+		RegisterStreamToSessionKeyStreamMap(stream);
+
 		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
 		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), answer_sdp, offer_sdp, ice_timeout, session_life_time, stream);
 
-		return {stream->GetSessionKey(), ov::Random::GenerateString(8), answer_sdp, http::StatusCode::Created};
+		return {stream->GetSessionKey(), ov::Random::GenerateString(8), answer_sdp, final_vhost_app_name.GetVHostName(), final_vhost_app_name.GetAppName(), http::StatusCode::Created};
 	}
 
 	WhipObserver::Answer WebRTCProvider::OnTrickleCandidate(const std::shared_ptr<const http::svr::HttpRequest> &request,
@@ -685,34 +815,43 @@ namespace pvd
 		return {http::StatusCode::NoContent, ""};
 	}
 
-	bool WebRTCProvider::OnSessionDelete(const std::shared_ptr<const http::svr::HttpRequest> &request, const ov::String &session_key)
+	WhipObserver::Answer WebRTCProvider::OnSessionDelete(const std::shared_ptr<const http::svr::HttpRequest> &request, const ov::String &session_key)
 	{
-		auto uri = request->GetParsedUri();
-		if (uri == nullptr || uri->Host().IsEmpty() || uri->App().IsEmpty() || uri->Stream().IsEmpty())
-		{
-			return false;
-		}
-
-		info::VHostAppName vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(uri->Host(), uri->App());
-		ov::String stream_name = uri->Stream();
-
-		// Find Stream
-		auto stream = std::static_pointer_cast<WebRTCStream>(GetStreamByName(vhost_app_name, stream_name));
+		// Find stream
+		auto stream = GetStreamBySessionKey(session_key);
 		if (!stream)
 		{
-			logte("To stop stream failed. Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
-			return false;
+			logte("To stop stream failed. Cannot find stream. session key: %s", session_key);
+			return {http::StatusCode::NotFound, nullptr, nullptr};
 		}
 
-		if (stream->GetSessionKey() != session_key)
+		auto final_url = stream->GetFinalUrl();
+		auto vhost_name = final_url->Host();
+		auto app_name = final_url->App();
+
+		info::VHostAppName vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(vhost_name, app_name);
+		if (vhost_app_name.IsValid() == false)
 		{
-			logte("To stop stream failed. Invalid session key : expected(%s) / actual(%s)", stream->GetSessionKey().CStr(), session_key.CStr());
-			return false;
+			logte("Could not resolve application name from domain: %s", final_url->Host().CStr());
+			return {http::StatusCode::NotFound, vhost_name, app_name};
 		}
+
+		auto requested_url = stream->GetRequestedUrl();
+		auto remote_address{request->GetRemote()->GetRemoteAddress()};
+
+		if (remote_address && requested_url)
+		{
+			auto request_info = std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, requested_url->ToUrlString(true) == final_url->ToUrlString(true) ? nullptr : final_url, request->GetHeader("USER-AGENT"));
+
+			SendCloseAdmissionWebhooks(request_info);
+		}
+
+		UnRegisterStreamToSessionKeyStreamMap(stream->GetSessionKey());
 
 		_ice_port->RemoveSession(stream->GetId());
+		OnChannelDeleted(stream);
 
-		return OnChannelDeleted(stream);
+		return {http::StatusCode::OK, vhost_name, app_name};
 	}
 
 	void WebRTCProvider::OnDataReceived(IcePort &port, uint32_t session_id, std::shared_ptr<const ov::Data> data, std::any user_data)
@@ -751,5 +890,57 @@ namespace pvd
 	std::shared_ptr<Certificate> WebRTCProvider::GetCertificate()
 	{
 		return _certificate;
+	}
+
+	bool WebRTCProvider::RegisterStreamToSessionKeyStreamMap(const std::shared_ptr<WebRTCStream> &stream)
+	{
+		if (stream == nullptr)
+		{
+			return false;
+		}
+
+		std::lock_guard<std::shared_mutex> lock(_session_key_stream_map_guard);
+
+		_session_key_stream_map.emplace(stream->GetSessionKey(), stream);
+
+		return true;
+	}
+
+	bool WebRTCProvider::UnRegisterStreamToSessionKeyStreamMap(const ov::String &session_key)
+	{
+		if (session_key == nullptr)
+		{
+			return false;
+		}
+
+		std::lock_guard<std::shared_mutex> lock(_session_key_stream_map_guard);
+
+		auto item = _session_key_stream_map.find(session_key);
+		if (item == _session_key_stream_map.end())
+		{
+			return false;
+		}
+
+		_session_key_stream_map.erase(item);
+
+		return true;
+	}
+
+	std::shared_ptr<WebRTCStream> WebRTCProvider::GetStreamBySessionKey(const ov::String &session_key)
+	{
+		if (session_key == nullptr)
+		{
+			return nullptr;
+		}
+		
+		std::shared_lock<std::shared_mutex> lock(_session_key_stream_map_guard);
+
+		auto item = _session_key_stream_map.find(session_key);
+		if (item == _session_key_stream_map.end())
+		{
+			return nullptr;
+		}
+
+		return item->second;
 	}
 }  // namespace pvd

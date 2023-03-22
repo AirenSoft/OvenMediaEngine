@@ -336,26 +336,13 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			logtw("Content-Type is not application/sdp: %s", content_type.CStr());
 		}
 
-		auto request_url = request->GetParsedUri();
-		if (request_url == nullptr)
+		auto requested_url = request->GetParsedUri();
+		if (requested_url == nullptr)
 		{
 			logte("Could not parse request url: %s", request->GetUri().CStr());
 			response->SetStatusCode(http::StatusCode::BadRequest);
 			return http::svr::NextHandler::DoNotCall;
 		}
-
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
-		if (vhost_app_name.IsValid() == false)
-		{
-			logte("Could not resolve application name from domain: %s", request_url->Host().CStr());
-			response->SetStatusCode(http::StatusCode::NotFound);
-			return http::svr::NextHandler::DoNotCall;
-		}
-
-		auto stream_name = request_url->Stream();
-
-		// Set CORS header in response
-		_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
 
 		auto data = request->GetRequestBody();
 		if (data == nullptr)
@@ -380,13 +367,24 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 
 		if (answer._status_code == http::StatusCode::Created)
 		{
+			auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(answer._vhost_name, answer._app_name);
+			if (vhost_app_name.IsValid() == false)
+			{
+				logte("Could not resolve application name from domain: %s", answer._vhost_name.CStr());
+				response->SetStatusCode(http::StatusCode::NotFound);
+				return http::svr::NextHandler::DoNotCall;
+			}
+
+			// Set CORS header in response
+			_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
+
 			// Set SDP
 			response->SetHeader("Content-Type", "application/sdp");
 			response->SetHeader("ETag", answer._entity_tag);
-			response->SetHeader("Location", ov::String::FormatString("/%s/%s/%s", request_url->App().CStr(), request_url->Stream().CStr(), answer._session_id.CStr()));
+			response->SetHeader("Location", ov::String::FormatString("/%s/%s/%s", requested_url->App().CStr(), requested_url->Stream().CStr(), answer._session_id.CStr()));
 
 			// IF TcpForce == true or ?transport=tcp
-			if (_tcp_force == true || request_url->GetQueryValue("transport").UpperCaseString() == "TCP")
+			if (_tcp_force == true || requested_url->GetQueryValue("transport").UpperCaseString() == "TCP")
 			{
 				// Add ICE Server Link
 
@@ -430,42 +428,37 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		auto request_url = request->GetParsedUri();
-		if (request_url == nullptr)
+		auto final_url = request->GetParsedUri();
+		if (final_url == nullptr)
 		{
 			logte("Could not parse request url: %s", request->GetUri().CStr());
 			response->SetStatusCode(http::StatusCode::BadRequest);
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
-		if (vhost_app_name.IsValid() == false)
-		{
-			logte("Could not resolve application name from domain: %s", request_url->Host().CStr());
-			response->SetStatusCode(http::StatusCode::NotFound);
-			return http::svr::NextHandler::DoNotCall;
-		}
-
-		auto stream_name = request_url->Stream();
-
-		// Set CORS header in response
-		_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
-
-		auto session_key = request_url->File();
+		auto session_key = final_url->File();
 		if (session_key.IsEmpty())
 		{
-			logte("Could not get session key from url: %s", request_url->ToUrlString(true).CStr());
+			logte("Could not get session key from url: %s", final_url->ToUrlString(true).CStr());
 			response->SetStatusCode(http::StatusCode::BadRequest);
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		if (_observer->OnSessionDelete(request, session_key) == true)
+		auto answer = _observer->OnSessionDelete(request, session_key);
+		response->SetStatusCode(answer._status_code);
+
+		if (answer._status_code == http::StatusCode::OK)
 		{
-			response->SetStatusCode(http::StatusCode::OK);
-		}
-		else
-		{
-			response->SetStatusCode(http::StatusCode::NotFound);
+			auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(answer._vhost_name, answer._app_name);
+			if (vhost_app_name.IsValid() == false)
+			{
+				logte("Could not resolve application name from domain: %s", answer._vhost_name.CStr());
+				response->SetStatusCode(http::StatusCode::NotFound);
+				return http::svr::NextHandler::DoNotCall;
+			}
+
+			// Set CORS header in response
+			_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
 		}
 
 		return http::svr::NextHandler::DoNotCall;

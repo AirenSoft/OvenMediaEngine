@@ -210,21 +210,25 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 
 	http_interceptor->Register(http::Method::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
 		auto request = exchange->GetRequest();
+		auto response = exchange->GetResponse();
+		auto remote_address = request->GetRemote()->GetRemoteAddress();
 
-		auto request_url = request->GetParsedUri();
-		if (request_url == nullptr)
+		auto final_url = request->GetParsedUri();
+		if (final_url == nullptr)
 		{
 			logtw("Failed to parse url: %s", request->GetRequestTarget().CStr());
 			return http::svr::NextHandler::Call;
 		}
 
-		if (request_url->App().IsEmpty() == true || request_url->Stream().IsEmpty() == true || request_url->File().IsEmpty() == true)
+		auto requested_url = final_url;
+
+		if (final_url->App().IsEmpty() == true || final_url->Stream().IsEmpty() == true || final_url->File().IsEmpty() == true)
 		{
 			logtw("Invalid request url: %s", request->GetUri().CStr());
 			return http::svr::NextHandler::Call;
 		}
 
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
 		if (vhost_app_name.IsValid() == false)
 		{
 			logtw("Could not found virtual host");
@@ -238,9 +242,85 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 			return http::svr::NextHandler::Call;
 		}
 
+		auto host_name = final_url->Host();
+		auto stream_name = final_url->Stream();
+
+		bool access_control_enabled = IsAccessControlEnabled(final_url);
+
+		// Access Control
+		if (access_control_enabled == true)
+		{
+			// Signed Policy
+			auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(final_url, remote_address);
+			if (signed_policy_result == AccessController::VerificationResult::Pass)
+			{
+
+			}
+			else if (signed_policy_result == AccessController::VerificationResult::Error)
+			{
+				logte("Could not resolve application name from domain: %s", final_url->Host().CStr());
+				response->AppendString(ov::String::FormatString("Could not resolve application name from domain"));
+				response->SetStatusCode(http::StatusCode::Unauthorized);
+				response->Response();
+				exchange->Release();
+				return http::svr::NextHandler::DoNotCall;
+			}
+			else if (signed_policy_result == AccessController::VerificationResult::Fail)
+			{
+				logtw("%s", signed_policy->GetErrMessage().CStr());
+				response->AppendString(ov::String::FormatString("%s", signed_policy->GetErrMessage().CStr()));
+				response->SetStatusCode(http::StatusCode::Unauthorized);
+				response->Response();
+				exchange->Release();
+				return http::svr::NextHandler::DoNotCall;
+			}
+
+			// Admission Webhooks
+			auto request_info = std::make_shared<AccessController::RequestInfo>(final_url, remote_address, request->GetHeader("USER-AGENT"));
+
+			auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
+			if (webhooks_result == AccessController::VerificationResult::Off)
+			{
+				// Success
+			}
+			else if (webhooks_result == AccessController::VerificationResult::Pass)
+			{
+				// Redirect URL
+				if (admission_webhooks->GetNewURL() != nullptr)
+				{
+					final_url = admission_webhooks->GetNewURL();
+					if (final_url->Port() == 0)
+					{
+						final_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+					}
+
+					vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+					host_name = final_url->Host();
+					stream_name = final_url->Stream();
+				}
+			}
+			else if (webhooks_result == AccessController::VerificationResult::Error)
+			{
+				logtw("AdmissionWebhooks error : %s", final_url->ToUrlString().CStr());
+				response->AppendString(ov::String::FormatString("AdmissionWebhooks error"));
+				response->SetStatusCode(http::StatusCode::Unauthorized);
+				response->Response();
+				exchange->Release();
+				return http::svr::NextHandler::DoNotCall;
+			}
+			else if (webhooks_result == AccessController::VerificationResult::Fail)
+			{
+				logtw("AdmissionWebhooks error : %s", admission_webhooks->GetErrReason().CStr());
+				response->AppendString(ov::String::FormatString("Unauthorized"));
+				response->SetStatusCode(http::StatusCode::Unauthorized);
+				response->Response();
+				exchange->Release();
+				return http::svr::NextHandler::DoNotCall;
+			}
+		}
+
 		auto app_config = app_info->GetConfig();
 		auto thumbnail_config = app_config.GetPublishers().GetThumbnailPublisher();
-		auto response = exchange->GetResponse();
 
 		// Check CORS
 		auto application = std::static_pointer_cast<ThumbnailApplication>(GetApplicationByName(vhost_app_name));
@@ -257,18 +337,15 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 
 		application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response);
 
-		auto host_name = request_url->Host();
-		auto stream_name = request_url->Stream();
-
 		// Check Stream
-		auto stream = GetStream(vhost_app_name, request_url->Stream());		
+		auto stream = GetStream(vhost_app_name, final_url->Stream());		
 		if (stream == nullptr)
 		{
 			// If the stream does not exists, request to the provider
-			stream = PullStream(request_url, vhost_app_name, host_name, stream_name);
+			stream = PullStream(final_url, vhost_app_name, host_name, stream_name);
 			if (stream == nullptr)
 			{
-				logte("There is no stream or cannot pull a stream : %s", request_url->Stream().CStr());
+				logte("There is no stream or cannot pull a stream : %s", final_url->Stream().CStr());
 				response->AppendString("There is no stream or cannot pull a stream");
 				response->SetStatusCode(http::StatusCode::NotFound);
 				response->Response();
@@ -289,11 +366,11 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 
 		// Check Extentions
 		auto media_codec_id = cmn::MediaCodecId::None;
-		if (request_url->File().LowerCaseString().IndexOf(".jpg") >= 0)
+		if (final_url->File().LowerCaseString().IndexOf(".jpg") >= 0)
 		{
 			media_codec_id = cmn::MediaCodecId::Jpeg;
 		}
-		else if (request_url->File().LowerCaseString().IndexOf(".png") >= 0)
+		else if (final_url->File().LowerCaseString().IndexOf(".png") >= 0)
 		{
 			media_codec_id = cmn::MediaCodecId::Png;
 		}
