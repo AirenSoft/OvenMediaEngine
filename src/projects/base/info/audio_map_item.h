@@ -39,7 +39,7 @@ namespace info
 			_language = language;
 		}
 
-		// Gettter
+		// Getter
 		int GetIndex() const
 		{
 			return _index;

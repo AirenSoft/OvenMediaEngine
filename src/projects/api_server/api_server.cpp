@@ -255,7 +255,7 @@ namespace api
 				break;
 
 			case ocst::Result::Exists:
-				// CreateVirtDeleteVirtualHostualHost() never returns Exists
+				// CreateVirtDeleteVirtualHost() never returns Exists
 				OV_ASSERT2(false);
 				throw http::HttpError(http::StatusCode::InternalServerError,
 									  "Unknown error occurred: [%s]",

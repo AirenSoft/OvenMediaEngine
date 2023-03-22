@@ -196,7 +196,7 @@ namespace pub
 			}
 
 			auto properties = std::make_shared<pvd::PullStreamProperties>();
-			properties->EnableFromOriginMapStroe(true);
+			properties->EnableFromOriginMapStore(true);
 			if (origin_url->Scheme().UpperCaseString() == "OVT")
 			{
 				properties->EnableRelay(true);

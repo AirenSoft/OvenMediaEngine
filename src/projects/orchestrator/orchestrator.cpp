@@ -753,7 +753,7 @@ namespace ocst
 		properties->EnablePersistent(matched_origin->persistent);
 		properties->EnableFailback(matched_origin->failback);
 		properties->EnableRelay(matched_origin->relay);
-		properties->EnableFromOriginMapStroe(false);
+		properties->EnableFromOriginMapStore(false);
 		
 		auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset, properties);
 
@@ -1143,7 +1143,7 @@ namespace ocst
 			stream_props->EnablePersistent(true);
 			stream_props->EnableFailback(true);
 			stream_props->EnableRelay(false);
-			stream_props->EnableFromOriginMapStroe(false);
+			stream_props->EnableFromOriginMapStore(false);
 
  			// Request pull stream
 			if( RequestPullStreamWithUrls(nullptr, app_info.GetName(), new_stream_name, url_list, 0, stream_props) == false)

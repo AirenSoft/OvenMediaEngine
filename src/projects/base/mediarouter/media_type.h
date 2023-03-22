@@ -135,7 +135,7 @@ namespace cmn
 		return false;
 	}
 
-	static ov::String GetMeiaPacketTypeString(cmn::PacketType packet_type)
+	static ov::String GetMediaPacketTypeString(cmn::PacketType packet_type)
 	{
 		switch (packet_type)
 		{

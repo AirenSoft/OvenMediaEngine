@@ -62,7 +62,7 @@ namespace pvd
 			_relay = relay;
 		}
 
-		void EnableFromOriginMapStroe(bool from_origin_map_store)
+		void EnableFromOriginMapStore(bool from_origin_map_store)
 		{
 			_from_origin_map_store = from_origin_map_store;
 		}
