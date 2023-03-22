@@ -29,7 +29,7 @@ TranscoderStream::~TranscoderStream()
 {
 	Stop();
 
-	// Delete all encoders, filters, decodres
+	// Delete all encoders, filters, decoders
 	_encoders.clear();
 	_filters.clear();
 	_decoders.clear();
@@ -324,7 +324,7 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 		return nullptr;
 	}
 
-	// It helps modules to reconize origin stream from provider
+	// It helps modules to recognize origin stream from provider
 	stream->LinkInputStream(_input_stream);
 	stream->SetMediaSource(_input_stream->GetUUID());
 
@@ -796,13 +796,13 @@ void TranscoderStream::ChangeOutputFormat(MediaFrame *buffer)
 	// Update Track of Input Stream
 	UpdateInputTrack(buffer);
 
-	// Udpate Track of Output Stream
+	// Update Track of Output Stream
 	UpdateOutputTrack(buffer);
 
 	// Create Encoder
 	CreateEncoders(buffer);
 
-	// Craete Filter
+	// Create Filter
 	CreateFilters(buffer);
 }
 
@@ -882,16 +882,16 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 					// Width is automatically calculated as the original video ratio					
 					else if (output_track->GetWidth() == 0 && output_track->GetHeight() != 0)
 					{
-						float aspect_raio = (float)buffer->GetWidth() / (float)buffer->GetHeight();
-						int32_t width = (int32_t)((float)output_track->GetHeight() * aspect_raio);
+						float aspect_ratio = (float)buffer->GetWidth() / (float)buffer->GetHeight();
+						int32_t width = (int32_t)((float)output_track->GetHeight() * aspect_ratio);
 						width = (width % 2 == 0) ? width : width + 1;
 						output_track->SetWidth(width);
 					}
 						// Heigh is automatically calculated as the original video ratio
 					else if (output_track->GetWidth() != 0 && output_track->GetHeight() == 0)
 					{
-						float aspect_raio = (float)buffer->GetWidth() / (float)buffer->GetHeight();
-						int32_t height = (int32_t)((float)output_track->GetWidth() / aspect_raio);
+						float aspect_ratio = (float)buffer->GetWidth() / (float)buffer->GetHeight();
+						int32_t height = (int32_t)((float)output_track->GetWidth() / aspect_ratio);
 						height = (height % 2 == 0) ? height : height + 1;
 						output_track->SetHeight(height);
 					}
@@ -1019,14 +1019,14 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, int32_t decoder_id
 			}
 
 			auto input_track = GetInputTrack(decoder_id);
-			auto iput_track_of_filter = GetInputTrackOfFilter(decoder_id);
-			if (input_track == nullptr || iput_track_of_filter == nullptr)
+			auto input_track_of_filter = GetInputTrackOfFilter(decoder_id);
+			if (input_track == nullptr || input_track_of_filter == nullptr)
 			{
 				break;
 			}
 
 			double input_expr = input_track->GetTimeBase().GetExpr();
-			double filter_expr = iput_track_of_filter->GetTimeBase().GetExpr();
+			double filter_expr = input_track_of_filter->GetTimeBase().GetExpr();
 
 			if(last_frame->GetPts()*filter_expr >= decoded_frame->GetPts()*input_expr)
 			{
@@ -1039,7 +1039,7 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, int32_t decoder_id
 			// Record the timestamp of the last decoded frame. managed by microseconds.
 			_last_decoded_frame_pts[decoder_id] = last_frame->GetPts() * filter_expr * 1000000;
 
-			// Send Temorary Frame to Filter
+			// Send Temporary Frame to Filter
 			SpreadToFilters(decoder_id, last_frame);
 #endif // End of Filler Frame Generation
 		}
@@ -1258,7 +1258,7 @@ void TranscoderStream::OnEncodedPacket(int32_t encoder_id, std::shared_ptr<Media
 
 void TranscoderStream::NotifyCreateStreams()
 {
-	for (auto &[output_strea_name, output_stream] : _output_streams)
+	for (auto &[output_stream_name, output_stream] : _output_streams)
 	{
 		bool ret = _parent->CreateStream(output_stream);
 		if (ret == false)
@@ -1270,7 +1270,7 @@ void TranscoderStream::NotifyCreateStreams()
 
 void TranscoderStream::NotifyDeleteStreams()
 {
-	for (auto &[output_strea_name, output_stream] : _output_streams)
+	for (auto &[output_stream_name, output_stream] : _output_streams)
 	{
 		logti("%s Output stream has been deleted. %s/%s(%u)",
 			  _log_prefix.CStr(),
@@ -1285,7 +1285,7 @@ void TranscoderStream::NotifyDeleteStreams()
 void TranscoderStream::UpdateMsidOfOutputStreams(uint32_t msid)
 {
 	// Update info::Stream().msid of all output streams
-	for (auto &[output_strea_name, output_stream] : _output_streams)
+	for (auto &[output_stream_name, output_stream] : _output_streams)
 	{
 		output_stream->SetMsid(msid);
 	}
@@ -1293,7 +1293,7 @@ void TranscoderStream::UpdateMsidOfOutputStreams(uint32_t msid)
 
 void TranscoderStream::NotifyUpdateStreams()
 {
-	for (auto &[output_strea_name, output_stream] : _output_streams)
+	for (auto &[output_stream_name, output_stream] : _output_streams)
 	{
 		logti("%s Output stream has been updated. %s/%s(%u)",
 			  _log_prefix.CStr(),

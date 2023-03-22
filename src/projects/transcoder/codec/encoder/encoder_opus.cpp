@@ -136,7 +136,7 @@ bool EncoderOPUS::Configure(std::shared_ptr<MediaTrack> context)
 
 void EncoderOPUS::CodecThread()
 {
-	// Refrence : https://opus-codec.org/docs/opus_api-1.1.3/group__opus__encoder.html#gad2d6bf6a9ffb6674879d7605ed073e25
+	// Reference : https://opus-codec.org/docs/opus_api-1.1.3/group__opus__encoder.html#gad2d6bf6a9ffb6674879d7605ed073e25
 	// Number of samples per channel in the input signal. This must be an Opus frame size for the encoder's sampling rate.
 	// For example, at 48 kHz the permitted values are 120, 240, 480, 960, 1920, and 2880. Passing in a duration of less than 10 ms (480 samples at 48 kHz)
 

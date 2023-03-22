@@ -62,7 +62,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 	auto codec_id = output_track->GetCodecId();
 	auto library_id = output_track->GetCodecLibraryId();
 
-	logti("[#%d] hwardware acceleration of the encoder is %s. The library to be used will be %s", output_track->GetId(),  use_hwaccel ? "enabled" : "disabled", GetStringFromCodecLibraryId(library_id).CStr());
+	logti("[#%d] hardware acceleration of the encoder is %s. The library to be used will be %s", output_track->GetId(),  use_hwaccel ? "enabled" : "disabled", GetStringFromCodecLibraryId(library_id).CStr());
 
 	switch (codec_id)
 	{

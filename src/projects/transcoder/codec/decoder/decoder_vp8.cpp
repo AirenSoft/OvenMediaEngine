@@ -204,7 +204,7 @@ void DecoderVP8::CodecThread()
 					}
 					else
 					{
-						logte("Could not obtain codec paramters from context %p", _context);
+						logte("Could not obtain codec parameters from context %p", _context);
 					}
 				}
 

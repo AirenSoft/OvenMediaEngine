@@ -136,7 +136,7 @@ private:
 	std::map<MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>>> _link_encoder_to_outputs;
 
 	// Decoder Component
-	// DECODR_ID, DECODER
+	// DECODER_ID, DECODER
 	std::map<MediaTrackId, std::shared_ptr<TranscodeDecoder>> _decoders;
 	std::map<MediaTrackId, std::shared_ptr<MediaFrame>> _last_decoded_frames;
 

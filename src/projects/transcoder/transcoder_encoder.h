@@ -20,7 +20,7 @@ public:
 	~TranscodeEncoder() override;
 
 	static std::shared_ptr<TranscodeEncoder> Create(int32_t encoder_id, std::shared_ptr<MediaTrack> output_track, CompleteHandler complete_handler);
-	void SetEncoderId(int32_t encdoer_id);
+	void SetEncoderId(int32_t encoder_id);
 
 	virtual int GetSupportedFormat() const noexcept = 0;
 	virtual cmn::BitstreamFormat GetBitstreamFormat() const noexcept = 0;

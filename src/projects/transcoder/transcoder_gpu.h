@@ -17,7 +17,7 @@ class TranscodeGPU : public ov::Singleton<TranscodeGPU>
 public:
 	TranscodeGPU();
 
-	bool Initialze();
+	bool Initialize();
 	bool Uninitialize();
 
 	AVBufferRef *GetDeviceContext();
@@ -26,7 +26,7 @@ public:
 	bool IsSupportedNV();
 
 protected:
-	bool _initialzed = false;
+	bool _initialized = false;
 	bool _supported_qsv;
 	bool _supported_cuda;
 

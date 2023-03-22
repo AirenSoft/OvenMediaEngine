@@ -65,7 +65,7 @@ bool Transcoder::OnCreateApplication(const info::Application &app_info)
 
 	auto application = TranscodeApplication::Create(app_info);
 
-	_tracode_apps[application_id] = application;
+	_transcode_apps[application_id] = application;
 
 	// Register to MediaRouter
 	if (_router->RegisterObserverApp(app_info, application) == false)
@@ -92,8 +92,8 @@ bool Transcoder::OnCreateApplication(const info::Application &app_info)
 bool Transcoder::OnDeleteApplication(const info::Application &app_info)
 {
 	auto application_id = app_info.GetId();
-	auto it = _tracode_apps.find(application_id);
-	if (it == _tracode_apps.end())
+	auto it = _transcode_apps.find(application_id);
+	if (it == _transcode_apps.end())
 	{
 		return false;
 	}
@@ -113,7 +113,7 @@ bool Transcoder::OnDeleteApplication(const info::Application &app_info)
 		logte("Could not unregister the application: %p", application.get());
 	}
 
-	_tracode_apps.erase(it);
+	_transcode_apps.erase(it);
 
 	logti("Transcoder has deleted [%s][%s] application", app_info.IsDynamicApp() ? "dynamic" : "config", app_info.GetName().CStr());
 
@@ -123,9 +123,9 @@ bool Transcoder::OnDeleteApplication(const info::Application &app_info)
 //  Application Name으로 TranscodeApplication 찾음
 std::shared_ptr<TranscodeApplication> Transcoder::GetApplicationById(info::application_id_t application_id)
 {
-	auto obj = _tracode_apps.find(application_id);
+	auto obj = _transcode_apps.find(application_id);
 
-	if (obj == _tracode_apps.end())
+	if (obj == _transcode_apps.end())
 	{
 		return nullptr;
 	}

@@ -44,7 +44,7 @@ enum class TranscodeResult : int32_t
 	NoData = -2,
 	// End of file
 	EndOfFile = -1,
-	// Decode/Encoder Complete and Reamin more data
+	// Decode/Encoder Complete and Remain more data
 	DataReady = 0,
 	// Change Output Format
 	FormatChanged = 1,

@@ -40,7 +40,7 @@ bool TranscodeApplication::Start()
 {
 	if(_application_info.GetConfig().GetOutputProfiles().IsHardwareAcceleration() == true)
 	{
-		if (TranscodeGPU::GetInstance()->Initialze() == false)
+		if (TranscodeGPU::GetInstance()->Initialize() == false)
 		{
 			logtw("There is no supported hardware accelerator");
 		}

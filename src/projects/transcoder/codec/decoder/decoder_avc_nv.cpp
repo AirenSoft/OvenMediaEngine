@@ -19,7 +19,7 @@ bool DecoderAVCxNV::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
-	// Initialze H.264 stream parser
+	// Initialize H.264 stream parser
 	_parser = ::av_parser_init(GetCodecID());
 	if (_parser == nullptr)
 	{
@@ -243,7 +243,7 @@ void DecoderAVCxNV::CodecThread()
 					}
 					else
 					{
-						logte("Could not obtain codec paramters from context %p", _context);
+						logte("Could not obtain codec parameters from context %p", _context);
 					}
 				}
 

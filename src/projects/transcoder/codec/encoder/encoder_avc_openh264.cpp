@@ -204,7 +204,7 @@ void EncoderAVCxOpenH264::CodecThread()
 		///////////////////////////////////////////////////
 		while (true)
 		{
-			// Check frame is availble
+			// Check frame is available
 			int ret = ::avcodec_receive_packet(_codec_context, _packet);
 			if (ret == AVERROR(EAGAIN))
 			{

@@ -228,7 +228,7 @@ namespace pvd
 				  track_id, prev_base_timestamp, _base_timestamp_map[track_id], last_timestamp);
 		}
 
-		// Initialzed start timestamp
+		// Initialized start timestamp
 		_start_timestamp = -1LL;
 
 		_source_timestamp_map.clear();

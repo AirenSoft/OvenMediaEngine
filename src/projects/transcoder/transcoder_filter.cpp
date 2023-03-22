@@ -60,7 +60,7 @@ bool TranscodeFilter::CreateFilter()
 	bool success = _impl->Configure(_input_track, _output_track);
 	if (success == false)
 	{
-		logte("Could not craete filter");
+		logte("Could not create filter");
 
 		return false;
 	}
@@ -95,11 +95,11 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 	// In case of pts/dts jumps
 	int64_t ts_increment = abs(buffer->GetPts() - _last_pts);
 	int64_t tmp_last_pts = _last_pts;
-	bool detect_abnormal_increace_pts = (_last_pts != -1LL && ts_increment > _threshold_ts_increment) ? true : false;
+	bool detect_abnormal_increase_pts = (_last_pts != -1LL && ts_increment > _threshold_ts_increment) ? true : false;
 
 	_last_pts = buffer->GetPts();
 
-	if (detect_abnormal_increace_pts)
+	if (detect_abnormal_increase_pts)
 	{
 		logtw("Timestamp has changed abnormally.  %lld -> %lld", tmp_last_pts, buffer->GetPts());
 

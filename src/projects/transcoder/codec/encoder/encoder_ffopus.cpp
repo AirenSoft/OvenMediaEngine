@@ -152,7 +152,7 @@ void EncoderFFOPUS::CodecThread()
 
 				::av_packet_unref(_packet);
 
-				// TODO : If the pts value are under zero, the dash packettizer does not work.
+				// TODO : If the pts value are under zero, the dash packetizer does not work.
 				if (media_packet->GetPts() < 0) {
 					continue;
 				}
