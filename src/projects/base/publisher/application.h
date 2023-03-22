@@ -27,7 +27,7 @@ namespace pub
 
 	class Publisher;
 
-	// Distribute Stream to ApplicaitonWorker.
+	// Distribute Stream to applicationWorker.
 	class ApplicationWorker
 	{
 	public:

@@ -103,7 +103,7 @@ namespace pvd
 
 		_origin_response_time_msec = stop_watch.Elapsed();
 
-		// Stream was created completly
+		// Stream was created completely
 		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(PullStream::GetSharedPtr()));
 		if (_stream_metrics != nullptr)
 		{
@@ -274,7 +274,7 @@ namespace pvd
 
 			if (codec_id == cmn::MediaCodecId::H264)
 			{
-				// @extratata == AVCDecoderConfigurationRecord
+				// @extradata == AVCDecoderConfigurationRecord
 				auto media_packet = std::make_shared<MediaPacket>(
 					GetMsid(),
 					media_type,
@@ -289,7 +289,7 @@ namespace pvd
 			}
 			else if (codec_id == cmn::MediaCodecId::Aac)
 			{
-				// @extratata == AACSpecificConfig
+				// @extradata == AACSpecificConfig
 				auto media_packet = std::make_shared<MediaPacket>(
 					GetMsid(),
 					media_type,

@@ -63,7 +63,7 @@ void RtcpReportBlockGenerator::AddSenderReportInfo(const std::shared_ptr<SenderR
 	_last_sender_report_received_time = std::chrono::system_clock::now();
 }
 
-bool RtcpReportBlockGenerator::IsAvaliableRtcpRRPacket() const
+bool RtcpReportBlockGenerator::IsAvailableRtcpRRPacket() const
 {
 	return _session_packet_count > 0;
 }

@@ -277,7 +277,7 @@ bool RtmpImportChunk::ProcessChunkHeader(const std::shared_ptr<RtmpChunkHeader> 
 		return false;
 	}
 
-	// When the transfered data larger than _chunk_size, type 3 header is in the middle
+	// When the transferred data larger than _chunk_size, type 3 header is in the middle
 	if (CalculateForType3Header(chunk_header) == false)
 	{
 		logte("Could not calculate type 3 headers");

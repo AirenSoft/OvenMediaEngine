@@ -267,7 +267,7 @@ public:
     AmfProperty *GetProperty(int index);
 
 private:
-    std::vector<AmfProperty *> _amf_propertys;
+    std::vector<AmfProperty *> _amf_properties;
 };
  
 

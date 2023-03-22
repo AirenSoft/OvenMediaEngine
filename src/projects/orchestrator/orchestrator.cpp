@@ -938,7 +938,7 @@ namespace ocst
 
 	std::shared_ptr<pub::Publisher> Orchestrator::GetPublisherFromType(const PublisherType type)
 	{
-		// Find the publisehr
+		// Find the publisher
 		for (auto info = _module_list.begin(); info != _module_list.end(); ++info)
 		{
 			if (info->type == ModuleType::Publisher)
@@ -947,7 +947,7 @@ namespace ocst
 
 				if (publisher == nullptr)
 				{
-					OV_ASSERT(publisher != nullptr, "Provider must inherit from pub::Publisehr");
+					OV_ASSERT(publisher != nullptr, "Provider must inherit from pub::Publisher");
 					continue;
 				}
 

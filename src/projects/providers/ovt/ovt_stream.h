@@ -45,7 +45,7 @@ namespace pvd
 		enum class ReceivePacketResult : uint8_t
 		{
 			COMPLETE,
-			IMCOMPLETE,
+			INCOMPLETE,
 			DISCONNECTED,
 			ERROR, 
 			TIMEOUT,

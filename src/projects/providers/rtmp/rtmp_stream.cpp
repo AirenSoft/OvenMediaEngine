@@ -27,7 +27,7 @@
 /*
 Process of publishing 
 
-- Handshakeing
+- Handshaking
  C->S : C0 + C1
  S->C : S0 + S1 + S2
  C->S : C2
@@ -57,7 +57,7 @@ Process of publishing
  - AAC : Control Byte 
 */
 
-// When using b-frames in Wiredcast, sometimes CTS is negative, so a PTS < DTS situation occurs.
+// When using b-frames in Wirecast, sometimes CTS is negative, so a PTS < DTS situation occurs.
 // This is not a normal situation, so we need to adjust it.
 //
 // [OBS]
@@ -284,7 +284,7 @@ namespace pvd
 
 				// TODO(dimiden): If tcUrl is not provided, it's not possible to determine which VHost the request was received,
 				// so it does not work properly.
-				// So, if there is currently one VHost associated with the RTMP Provider, we need to modifiy it to work without tcUrl.
+				// So, if there is currently one VHost associated with the RTMP Provider, we need to modify it to work without tcUrl.
 				_vhost_app_name = info::VHostAppName("", _app_name);
 				_import_chunk->SetAppName(_vhost_app_name);
 			}
@@ -482,8 +482,8 @@ namespace pvd
 	{
 		RtmpCodecType video_codec_type = RtmpCodecType::Unknown;
 		RtmpCodecType audio_codec_type = RtmpCodecType::Unknown;
-		bool video_avaliable = false;
-		bool audio_avaliable = false;
+		bool video_Available = false;
+		bool audio_Available = false;
 		double frame_rate = 30.0;
 		double video_width = 0;
 		double video_height = 0;
@@ -549,7 +549,7 @@ namespace pvd
 		// Video Codec
 		if ((index = object->FindName("videocodecid")) >= 0)
 		{
-			video_avaliable = true;
+			video_Available = true;
 			if (object->GetType(index) == AmfDataType::String && strcmp("avc1", object->GetString(index)) == 0)
 			{
 				video_codec_type = RtmpCodecType::H264;
@@ -604,7 +604,7 @@ namespace pvd
 		// Audio Codec
 		if ((index = object->FindName("audiocodecid")) >= 0)
 		{
-			audio_avaliable = true;
+			audio_Available = true;
 			if (object->GetType(index) == AmfDataType::String && strcmp("mp4a", object->GetString(index)) == 0)
 			{
 				audio_codec_type = RtmpCodecType::AAC;	//AAC
@@ -635,7 +635,7 @@ namespace pvd
 			}  //MP3
 		}
 
-		// Audio bitreate
+		// Audio bitrate
 		if ((index = object->FindName("audiodatarate")) >= 0 && object->GetType(index) == AmfDataType::Number)
 		{
 			audio_bitrate = object->GetNumber(index);  // Audio Data Rate
@@ -674,8 +674,8 @@ namespace pvd
 			audio_samplesize = object->GetNumber(index);
 		}  // Audio Sample Size
 
-		if ((video_avaliable == true && video_codec_type != RtmpCodecType::H264) || 
-			(audio_avaliable == true &&  audio_codec_type != RtmpCodecType::AAC))
+		if ((video_Available == true && video_codec_type != RtmpCodecType::H264) || 
+			(audio_Available == true &&  audio_codec_type != RtmpCodecType::AAC))
 		{
 			logtw("AmfMeta has incompatible codec information. - stream(%s/%s) id(%u/%u) video(%s) audio(%s)",
 				  _vhost_app_name.CStr(),
@@ -1000,11 +1000,11 @@ namespace pvd
 
 	void RtmpStream::ReceiveWindowAcknowledgementSize(const std::shared_ptr<const RtmpMessage> &message)
 	{
-		auto ackledgement_size = RtmpMuxUtil::ReadInt32(message->payload->GetData());
+		auto acknowledgement_size = RtmpMuxUtil::ReadInt32(message->payload->GetData());
 
-		if (ackledgement_size != 0)
+		if (acknowledgement_size != 0)
 		{
-			_acknowledgement_size = ackledgement_size / 2;
+			_acknowledgement_size = acknowledgement_size / 2;
 			_acknowledgement_traffic = 0;
 		}
 	}
@@ -1076,12 +1076,12 @@ namespace pvd
 	void RtmpStream::ReceiveAmfDataMessage(const std::shared_ptr<const RtmpMessage> &message)
 	{
 		AmfDocument document;
-		int32_t decode_lehgth = 0;
+		int32_t decode_length = 0;
 		ov::String message_name;
 		ov::String data_name;
 
-		decode_lehgth = document.Decode(message->payload->GetData(), message->header->payload_size);
-		if (decode_lehgth == 0)
+		decode_length = document.Decode(message->payload->GetData(), message->header->payload_size);
+		if (decode_length == 0)
 		{
 			logte("Amf0DataMessage Document Length 0");
 			return;
@@ -1689,7 +1689,7 @@ namespace pvd
 #if 0
 		// Keep Alive Data Channel
 		_event_test_timer.Push(
-		[this](void *paramter) -> ov::DelayQueueAction {
+		[this](void *parameter) -> ov::DelayQueueAction {
 			
 			for (const auto &event : _event_generator.GetEvents())
 			{

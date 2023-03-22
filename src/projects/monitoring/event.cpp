@@ -33,13 +33,13 @@ namespace mon
 			case EventType::SessionDisconnected:
 				_category = EventCategory::SessionEventType;
 				break;
-			// ActoinEventType
+			// ActionEventType
 			case EventType::ApiCalled:
 			case EventType::RecordingStarted:
 			case EventType::RecordingStopped:
 			case EventType::PushStarted:
 			case EventType::PushStopped:
-				_category = EventCategory::ActoinEventType;
+				_category = EventCategory::ActionEventType;
 				break;
 			// NotificationEventType
 			case EventType::Info:
@@ -92,7 +92,7 @@ namespace mon
 				return "SessionConnected";
 			case EventType::SessionDisconnected:
 				return "SessionDisconnected";
-			// ActoinEventType
+			// ActionEventType
 			case EventType::ApiCalled:
 				return "ApiCalled";
 			case EventType::RecordingStarted:

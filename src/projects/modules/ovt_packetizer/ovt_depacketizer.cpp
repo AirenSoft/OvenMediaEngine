@@ -86,7 +86,7 @@ bool OvtDepacketizer::IsAvailableMessage()
 	return !_messages.empty();
 }
 
-bool OvtDepacketizer::IsAvaliableMediaPacket()
+bool OvtDepacketizer::IsAvailableMediaPacket()
 {
 	return !_media_packets.empty();
 }
@@ -180,7 +180,7 @@ const std::shared_ptr<ov::Data> OvtDepacketizer::PopMessage()
 
 const std::shared_ptr<MediaPacket> OvtDepacketizer::PopMediaPacket()
 {
-	if(!IsAvaliableMediaPacket())
+	if(!IsAvailableMediaPacket())
 	{
 		return nullptr;
 	}

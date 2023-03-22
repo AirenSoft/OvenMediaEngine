@@ -394,7 +394,7 @@ namespace ocst
 		auto provider_module = std::dynamic_pointer_cast<PullProviderModuleInterface>(provider);
 
 		OV_ASSERT((provider == nullptr) || (provider_module != nullptr),
-				  "Provider (%d) shouldmust inherit from ProviderModuleInterface",
+				  "Provider (%d) must inherit from ProviderModuleInterface",
 				  provider->GetProviderType());
 
 		return provider_module;
@@ -676,7 +676,7 @@ namespace ocst
 
 		for (auto &origin : origin_list)
 		{
-			// TODO(dimien): Replace with the regex
+			// TODO(dimiden): Replace with the regex
 			if (location.HasPrefix(origin.location))
 			{
 				// If the location has the prefix that configured in <Origins>, extract the remaining part
@@ -988,7 +988,7 @@ namespace ocst
 		auto stream_key = GetStreamKey(stream);
 		if (_stream_map.find(stream_key) != _stream_map.end())
 		{
-			logtw("Could not store privider stream %s because it already exists", stream_key.CStr());
+			logtw("Could not store provider stream %s because it already exists", stream_key.CStr());
 			return false;
 		}
 

@@ -16,7 +16,7 @@ namespace mon
 		StreamCreated, StreamDeleted, StreamOriginLinkUpdated, StreamOutputsUpdated,
 		// SessionEventType
 		SessionConnected, SessionDisconnected,
-		// ActoinEventType
+		// ActionEventType
 		ApiCalled, 
 		RecordingStarted, RecordingStopped,
 		PushStarted, PushStopped,
@@ -66,7 +66,7 @@ namespace mon
 		{
 			StreamEventType,
 			SessionEventType,
-			ActoinEventType,
+			ActionEventType,
 			NotificationEventType,
 			StatisticsEventType
 		};

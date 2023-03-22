@@ -171,7 +171,7 @@ namespace ocst
 
 		/// Find Provider from ProviderType
 		std::shared_ptr<pvd::Provider> GetProviderFromType(const ProviderType type);
-		/// Find Publisher from PublisehrType
+		/// Find Publisher from PublisherType
 		std::shared_ptr<pub::Publisher> GetPublisherFromType(const PublisherType type);
 
 		// OriginMapStore

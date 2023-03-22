@@ -1161,7 +1161,7 @@ void AmfObject::Dump(std::string &dump_string)
 AmfDocument::AmfDocument()
 {
     // 초기화
-    _amf_propertys.clear();
+    _amf_properties.clear();
 }
 
 //====================================================================================================
@@ -1172,15 +1172,15 @@ AmfDocument::~AmfDocument()
     int i;
 
     // 해제
-    for (i = 0; i < (int) _amf_propertys.size(); i++)
+    for (i = 0; i < (int) _amf_properties.size(); i++)
     {
-        if (_amf_propertys[i])
+        if (_amf_properties[i])
         {
-            delete _amf_propertys[i];
-            _amf_propertys[i] = nullptr;
+            delete _amf_properties[i];
+            _amf_properties[i] = nullptr;
         }
     }
-    _amf_propertys.clear();
+    _amf_properties.clear();
 }
 
 //====================================================================================================
@@ -1192,9 +1192,9 @@ void AmfDocument::Dump(std::string &dump_string)
 
     // 해제
     dump_string += ("\n======= DUMP START =======\n");
-    for (i = 0; i < (int) _amf_propertys.size(); i++)
+    for (i = 0; i < (int) _amf_properties.size(); i++)
     {
-        _amf_propertys[i]->Dump(dump_string);
+        _amf_properties[i]->Dump(dump_string);
     }
     dump_string += ("\n======= DUMP END =======\n");
 }
@@ -1208,9 +1208,9 @@ int AmfDocument::Encode(void *data) // ret=0이면 실패
     int i;
 
     // 인코딩
-    for (i = 0; i < (int) _amf_propertys.size(); i++)
+    for (i = 0; i < (int) _amf_properties.size(); i++)
     {
-        pt_out += _amf_propertys[i]->Encode(pt_out);
+        pt_out += _amf_properties[i]->Encode(pt_out);
     }
 
     return (int) (pt_out - (uint8_t *) data);
@@ -1247,7 +1247,7 @@ int AmfDocument::Decode(const void *data, int data_length) // ret=0이면 실패
         total_len += ret_len;
 
         // 등록
-        _amf_propertys.push_back(pt_item);
+        _amf_properties.push_back(pt_item);
         pt_item = nullptr;
     }
 
@@ -1263,7 +1263,7 @@ bool AmfDocument::AddProperty(AmfDataType type)
     if (type != AmfDataType::Null && type != AmfDataType::Undefined) { return false; }
 
     // 추가
-    _amf_propertys.push_back(new AmfProperty(type));
+    _amf_properties.push_back(new AmfProperty(type));
 
     return true;
 }
@@ -1274,7 +1274,7 @@ bool AmfDocument::AddProperty(AmfDataType type)
 bool AmfDocument::AddProperty(double number)
 {
     // 추가
-    _amf_propertys.push_back(new AmfProperty(number));
+    _amf_properties.push_back(new AmfProperty(number));
 
     return true;
 }
@@ -1285,7 +1285,7 @@ bool AmfDocument::AddProperty(double number)
 bool AmfDocument::AddProperty(bool boolean)
 {
     // 추가
-    _amf_propertys.push_back(new AmfProperty(boolean));
+    _amf_properties.push_back(new AmfProperty(boolean));
 
     return true;
 }
@@ -1299,7 +1299,7 @@ bool AmfDocument::AddProperty(const char *string)
     if (!string) { return false; }
 
     // 추가
-    _amf_propertys.push_back(new AmfProperty(string));
+    _amf_properties.push_back(new AmfProperty(string));
 
     return true;
 }
@@ -1313,7 +1313,7 @@ bool AmfDocument::AddProperty(AmfArray *array)
     if (!array) { return false; }
 
     // 추가
-    _amf_propertys.push_back(new AmfProperty(array));
+    _amf_properties.push_back(new AmfProperty(array));
 
     return true;
 }
@@ -1327,7 +1327,7 @@ bool AmfDocument::AddProperty(AmfObject *object)
     if (!object) { return false; }
 
     // 추가
-    _amf_propertys.push_back(new AmfProperty(object));
+    _amf_properties.push_back(new AmfProperty(object));
 
     return true;
 }
@@ -1337,7 +1337,7 @@ bool AmfDocument::AddProperty(AmfObject *object)
 //====================================================================================================
 int AmfDocument::GetPropertyCount()
 {
-    return (int) _amf_propertys.size();
+    return (int) _amf_properties.size();
 }
 
 //====================================================================================================
@@ -1353,16 +1353,16 @@ int AmfDocument::GetPropertyIndex(char *name)
         return -1;
     }
 
-    if (_amf_propertys.empty())
+    if (_amf_properties.empty())
     {
         return -1;
     }
 
     // 찾기
-    for (i = 0; i < (int) _amf_propertys.size(); i++)
+    for (i = 0; i < (int) _amf_properties.size(); i++)
     {
-        if (_amf_propertys[i]->GetType() != AmfDataType::String) { continue; }
-        if (strcmp(_amf_propertys[i]->GetString(), name)) { continue; }
+        if (_amf_properties[i]->GetType() != AmfDataType::String) { continue; }
+        if (strcmp(_amf_properties[i]->GetString(), name)) { continue; }
 
         return i;
     }
@@ -1377,7 +1377,7 @@ AmfProperty *AmfDocument::GetProperty(int index)
 {
     // 파라미터 체크
     if (index < 0) { return nullptr; }
-    if (index >= (int) _amf_propertys.size()) { return nullptr; }
+    if (index >= (int) _amf_properties.size()) { return nullptr; }
 
-    return _amf_propertys[index];
+    return _amf_properties[index];
 }

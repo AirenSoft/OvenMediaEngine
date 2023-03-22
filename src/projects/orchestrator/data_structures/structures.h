@@ -52,7 +52,7 @@ namespace ocst
 		// Origin/Location
 		ov::String location;
 
-		// Forwrading query params
+		// Forwarding query params
 		bool forward_query_params = true;
 
 		// Generated URL list from <Origin>.<Pass>.<URL>
@@ -83,7 +83,7 @@ namespace ocst
 		bool IsValid() const;
 		bool UpdateRegex();
 
-		// The name of Host in the configuraiton (eg: *, *.airensoft.com)
+		// The name of Host in the configuration (eg: *, *.airensoft.com)
 		ov::String name;
 		std::regex regex_for_domain;
 

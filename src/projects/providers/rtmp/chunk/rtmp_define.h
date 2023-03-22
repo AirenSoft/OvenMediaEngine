@@ -137,11 +137,11 @@ const int g_rtmp_sample_rate_table[] = {96000, 88200, 64000, 48000, 44100, 32000
 
 #define RTMP_SEQUENCE_INFO_TYPE                (0x00)
 #define RTMP_FRAME_DATA_TYPE                    (0x01)
-#define RTMP_VIDEO_DATA_MIN_SIZE                (5) // contdrol(1) + sequece(1) + offsettime(3)
+#define RTMP_VIDEO_DATA_MIN_SIZE                (5) // control(1) + sequence(1) + offsettime(3)
 
 #define RTMP_AUDIO_CONTROL_HEADER_INDEX            (0)
 #define RTMP_AAC_AUDIO_SEQUENCE_HEADER_INDEX    (1)
-#define RTMP_AAC_AUDIO_DATA_MIN_SIZE            (2) // contdrol(1) + sequece(1)
+#define RTMP_AAC_AUDIO_DATA_MIN_SIZE            (2) // control(1) + sequence(1)
 #define RTMP_AAC_AUDIO_FRAME_INDEX                (2)
 #define RTMP_SPEEX_AUDIO_FRAME_INDEX            (1)
 #define RTMP_MP3_AUDIO_FRAME_INDEX                (1)
@@ -156,7 +156,6 @@ const int g_rtmp_sample_rate_table[] = {96000, 88200, 64000, 48000, 44100, 32000
 
 #define RTMP_UNKNOWN_DEVICE_TYPE_STRING            ("unknown_device_type")
 #define RTMP_DEFAULT_CLIENT_VERSION            ("rtmp client 1.0")//"afcCli 11,0,100,1 (compatible; FMSc/1.0)"
-#define RTMP_DEFULT_PORT                        (1935)
 
 enum class RtmpEncoderType : int32_t 
 {

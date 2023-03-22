@@ -894,7 +894,7 @@ namespace pvd
 					return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 				}
 			}
-			else if (_rtsp_demuxer.IsAvaliableData())
+			else if (_rtsp_demuxer.IsAvailableData())
 			{
 				// In an interleaved session, the server sends both messages and data in the same session.
 				// Check if there are available messages and interleaved data

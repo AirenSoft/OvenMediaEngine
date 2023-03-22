@@ -13,7 +13,7 @@ public:
 	void AddRTPPacketInfo(const std::shared_ptr<RtpPacket> &rtp_packet);
 	void AddSenderReportInfo(const std::shared_ptr<SenderReport> &sender_report);
 
-	bool IsAvaliableRtcpRRPacket() const;
+	bool IsAvailableRtcpRRPacket() const;
 	std::shared_ptr<RtcpPacket> PopRtcpRRPacket();
 
 private:

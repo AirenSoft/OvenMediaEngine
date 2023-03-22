@@ -808,7 +808,7 @@ namespace ov
 		return _socket.GetType();
 	}
 
-	// Only avaliable if socket is SRT
+	// Only Available if socket is SRT
 	String Socket::GetStreamId() const
 	{
 		return _stream_id;

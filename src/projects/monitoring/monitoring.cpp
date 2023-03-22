@@ -221,7 +221,7 @@ namespace mon
 				return false;
 			}
 
-			// Linke output stream to input stream
+			// Link output stream to input stream
 			auto output_stream_metric = app_metrics->GetStreamMetrics(stream);
 			stream_metrics->LinkOutputStreamMetrics(output_stream_metric);
 		}

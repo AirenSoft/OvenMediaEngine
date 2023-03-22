@@ -317,7 +317,7 @@ namespace pvd
 			return false;
 		}
 
-		// Lastest version origin server sends UUID of origin stream
+		// Latest version origin server sends UUID of origin stream
 		if (json_stream["originStreamUUID"].isString())
 		{
 			SetOriginStreamUUID(json_stream["originStreamUUID"].asString().c_str());
@@ -444,7 +444,7 @@ namespace pvd
 					AACSpecificConfig config;
 					if (!AACSpecificConfig::Parse(extra_data->GetDataAs<uint8_t>(), extra_data->GetLength(), config))
 					{
-						logte("Could not parse AacSpecifiConfig");
+						logte("Could not parse AACSpecificConfig");
 						return false;
 					}
 
@@ -548,12 +548,12 @@ namespace pvd
 			return false;
 		}
 
-		ov::String applicaiton = json_app.asString().c_str();
+		ov::String application = json_app.asString().c_str();
 
-		if (applicaiton.UpperCaseString() != "PLAY")
+		if (application.UpperCaseString() != "PLAY")
 		{
 			SetState(State::ERROR);
-			logte("An invalid response : application is wrong (%s).", applicaiton.CStr());
+			logte("An invalid response : application is wrong (%s).", application.CStr());
 			return false;
 		}
 
@@ -690,7 +690,7 @@ namespace pvd
 
 		while (true)
 		{
-			if (_depacketizer.IsAvaliableMediaPacket())
+			if (_depacketizer.IsAvailableMediaPacket())
 			{
 				auto media_packet = _depacketizer.PopMediaPacket();
 
@@ -723,7 +723,7 @@ namespace pvd
 					SendFrame(media_packet);
 				}
 
-				if (_depacketizer.IsAvaliableMediaPacket() || _depacketizer.IsAvailableMessage())
+				if (_depacketizer.IsAvailableMediaPacket() || _depacketizer.IsAvailableMessage())
 				{
 					continue;
 				}
@@ -749,11 +749,11 @@ namespace pvd
 				//Json::Value &json_id = object.GetJsonValue()["id"];
 				Json::Value &json_app = object.GetJsonValue()["application"];
 
-				ov::String applicaiton = json_app.asString().c_str();
+				ov::String application = json_app.asString().c_str();
 
-				if (applicaiton.UpperCaseString() == "STOP")
+				if (application.UpperCaseString() == "STOP")
 				{
-					logte("An invalid response : application is wrong (%s).", applicaiton.CStr());
+					logte("An invalid response : application is wrong (%s).", application.CStr());
 					return PullStream::ProcessMediaResult::PROCESS_MEDIA_FINISH;
 				}
 				else

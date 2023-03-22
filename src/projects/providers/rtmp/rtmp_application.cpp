@@ -31,7 +31,7 @@ namespace pvd
 
 	bool RtmpApplication::JoinStream(const std::shared_ptr<PushStream> &stream)
 	{
-		// Check duplicatied stream name
+		// Check duplicated stream name
 		// If there is a same stream name 
 		auto exist_stream = GetStreamByName(stream->GetName());
 		if(exist_stream != nullptr)

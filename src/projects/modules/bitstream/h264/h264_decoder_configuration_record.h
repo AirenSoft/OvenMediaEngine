@@ -82,7 +82,7 @@ private:
 	uint8_t		_profile_compatibility = 0;
 	uint8_t		_level_indication = 0;
 	uint8_t		_reserved1 = 0;			// (6 bits) = 111111b
-	uint8_t		_lengthMinusOne = 0;	// (2 bits)	= length of the NALUnitLength 0, 1, 3 correspoding to 1, 2, 4 (Usually 3)
+	uint8_t		_lengthMinusOne = 0;	// (2 bits)	= length of the NALUnitLength 0, 1, 3 corresponding to 1, 2, 4 (Usually 3)
 	uint8_t		_reserved2 = 0;			// (3 bits) = 111b
 	
 	// for(int i=0; i<_num_of_sps; i++)
