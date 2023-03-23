@@ -2,7 +2,7 @@
 
 * [Introduction](README.md)
 * [Quick Start](quick-start/README.md)
-  * [Online Demo Player and Encoder](quick-start/test-player.md)
+  * [Online Demo](quick-start/test-player.md)
 * [Installation](getting-started.md)
 * [Configuration](configuration/README.md)
   * [TLS Encryption](configuration/tls-encryption.md)
@@ -44,10 +44,3 @@
 * [Logs and Statistics](logs-and-statistics.md)
 * [Troubleshooting](troubleshooting.md)
 * [P2P Delivery (Experiment)](p2p-delivery.md)
-
-## Enterprise
-
-* [Introduction](enterprise/introduction.md)
-* [Advanced Features](enterprise/advanced-features.md)
-* [Web Console](enterprise/web-console.md)
-* [Release Note](enterprise/release-note.md)
