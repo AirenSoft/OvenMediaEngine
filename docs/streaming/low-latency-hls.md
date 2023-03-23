@@ -125,7 +125,7 @@ If you use the default configuration, you can start streaming with the following
 
 `https://domain:3334/app/<stream name>/llhls.m3u8`
 
-We have prepared a test player that you can quickly see if OvenMediaEngine is working. Please refer to the [Test Player](../test-player.md) for more information.
+We have prepared a test player that you can quickly see if OvenMediaEngine is working. Please refer to the [Test Player](../quick-start/test-player.md) for more information.
 
 ## Live Rewind
 

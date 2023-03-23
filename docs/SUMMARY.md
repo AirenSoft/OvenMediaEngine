@@ -1,8 +1,9 @@
 # Table of contents
 
 * [Introduction](README.md)
-* [Quick Start](quick-start.md)
-* [Getting Started](getting-started.md)
+* [Quick Start](quick-start/README.md)
+  * [Online Demo Player and Encoder](quick-start/test-player.md)
+* [Installation](getting-started.md)
 * [Configuration](configuration/README.md)
   * [TLS Encryption](configuration/tls-encryption.md)
   * [IPv6](configuration/ipv6.md)
@@ -41,7 +42,6 @@
       * [Current](rest-api/v1/statistics/current.md)
 * [Performance Tuning](performance-tuning.md)
 * [Logs and Statistics](logs-and-statistics.md)
-* [Test Player](test-player.md)
 * [Troubleshooting](troubleshooting.md)
 * [P2P Delivery (Experiment)](p2p-delivery.md)
 

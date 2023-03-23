@@ -1,8 +1,8 @@
-# Getting Started
+# Installation
 
-## Running with Docker
+## Installing with Docker Image
 
-OvenMediaEngine supports the Docker image from [AirenSoft's Docker Hub](https://hub.docker.com/r/airensoft/ovenmediaengine) (**airensoft/ovenmediaengine)** repository. After installing [Docker](https://www.docker.com), you can simply run the following command:
+OvenMediaEngine provides the Docker image from [AirenSoft's Docker Hub](https://hub.docker.com/r/airensoft/ovenmediaengine) (**airensoft/ovenmediaengine)** repository. After installing [Docker](https://www.docker.com), you can simply run the following command:
 
 ```
 docker run --name ome -d -e OME_HOST_IP=Your.HOST.IP.Address \
@@ -32,9 +32,9 @@ You can set the following environment variables.
 | OME\_WEBRTC\_TCP\_RELAY\_PORT      | 3478            |
 | OME\_WEBRTC\_CANDIDATE\_PORT       | 10000-10004/udp |
 
-## Installation
+## Installing with Source Code
 
-### Install dependencies
+### Installing dependencies
 
 OvenMediaEngine can work with a variety of open-sources and libraries. First, install them on your clean Linux machine as described below. We think that OME can support most Linux packages, but the tested platforms we use are Ubuntu 18+, Fedora 28+, and CentOS 7+.
 
@@ -47,7 +47,7 @@ OvenMediaEngine-master/misc/prerequisites.sh
 If the prerequisites.sh script fails, try to run `sudo apt-get update` and rerun it. If it's not enough proceed with the [manual installation](troubleshooting.md#prerequisites-sh-script-failed).
 {% endhint %}
 
-### **Build & Run**
+### **Building & Running**
 
 You can build the OvenMediaEngine source using the following command:
 

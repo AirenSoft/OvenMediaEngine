@@ -157,13 +157,13 @@ If you use the default configuration, you can stream to the following URL:
 * `ws://[OvenMediaEngine IP]:3333/app/stream`
 * `wss://[OvenMediaEngine IP]:3333/app/stream`
 
-We have prepared a test player to make it easy to check if OvenMediaEngine is working. Please see the [Test Player](../test-player.md) chapter for more information.
+We have prepared a test player to make it easy to check if OvenMediaEngine is working. Please see the [Test Player](../quick-start/test-player.md) chapter for more information.
 
 ## Adaptive Bitrates Streaming (ABR)
 
 OvenMediaEnigne provides adaptive bitrates streaming over WebRTC. OvenPlayer can also play and display OvenMediaEngine's WebRTC ABR URL.
 
-![](<../.gitbook/assets/image (39) (1).png>)
+![](<../.gitbook/assets/image (39).png>)
 
 ### Create Playlist for WebRTC ABR
 
