@@ -374,7 +374,7 @@ If you use Transcoding as Bypass in OvenMediaEngine and set a **long keyframe in
 
 In this case, you can solve this by setting the keyframe interval in the encoder to **1-2 seconds**,
 
-![How to set the keyframe intverval in OBS, which is the most used encoder](broken-reference)
+<figure><img src=".gitbook/assets/keyframe_obs.png" alt=""><figcaption><p>How to set the keyframe intverval in OBS, which is the most used encoder</p></figcaption></figure>
 
 Or by **enabling the encoding options** in OvenMediaEngine.
 
