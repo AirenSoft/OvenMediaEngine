@@ -6,7 +6,7 @@ coverY: 0
 
 ## Summary
 
-| Cateroty | Feature             | Description         | Link                               |
+| Category | Feature             | Description         | Link                               |
 | -------- | ------------------- | ------------------- | ---------------------------------- |
 | API      | Reload Virtual Host | Reload Virtual Host | [rest-api](../rest-api/ "mention") |
 |          | Reload Application  |                     |                                    |

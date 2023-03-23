@@ -694,7 +694,7 @@ Finally, `Server.xml` is configured as follows:
                             <StreamMap>
                                 <!--
                                     Set the stream name of the client connected to the port to "stream_${Port}"
-                                    For example, if a client connets to port 4000, OME creates a "stream_4000" stream
+                                    For example, if a client connects to port 4000, OME creates a "stream_4000" stream
                                     <Stream>
                                         <Name>stream_${Port}</Name>
                                         <Port>4000,4001-4004</Port>
