@@ -77,7 +77,7 @@ You can set the video profile as below:
         <Height>720</Height>
         <Bitrate>2000000</Bitrate>
         <Framerate>30.0</Framerate>
-        <KeyFrameInteral>30</KeyFrameInteral>
+        <KeyFrameInterval>30</KeyFrameInterval>
         <BFrames>0</BFrames>
         <Preset>fast</Preset>
         <ThreadCount>4</ThreadCount>
