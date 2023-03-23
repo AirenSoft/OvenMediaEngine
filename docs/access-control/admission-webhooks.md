@@ -40,7 +40,7 @@ AdmissionWebhooks can be set up on VirtualHost, as shown below.
 AdmissionWebhooks send HTTP/1.1 request message to the configured user's control server when an encoder requests publishing or a player requests playback. The request message format is as follows.
 
 ```http
-POST /configured/tartget/url/ HTTP/1.1
+POST /configured/target/url/ HTTP/1.1
 Content-Length: 325
 Content-Type: application/json
 Accept: application/json
@@ -68,19 +68,19 @@ The message is sent in POST method and the payload is in application/json format
 
 Here is a detailed explanation of each element of Json payload:
 
-| Element | Sub-Element               | Description                                                                                                 |
-| ------- | ------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| client  |                           | Information of the client who requested the connection.                                                     |
-|         | address                   | Client's IP address                                                                                         |
-|         | port                      | Client's Port number                                                                                        |
-|         | user-agent<br/>(optional) | Client's User-Agent                                                                                         |
-| request |                           | Information about the client's request                                                                      |
-|         | direction                 | <p>incoming : A client requests to publish a stream</p><p>outgoing : A client requests to play a stream</p> |
-|         | protocol                  | webrtc, srt, rtmp, llhls, thumbnail                                                                         |
-|         | status                    | <p>opening : A client requests to open a stream</p><p>closing : A client closed the stream</p>              |
-|         | url                       | url requested by the client                                                                                 |
-|         | new_url<br/>(optional)    | url redirected from user's control server (status "closing" only)                                           |
-|         | time                      | time requested by the client (ISO8601 format)                                                               |
+| Element | Sub-Element                     | Description                                                                                                 |
+| ------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| client  |                                 | Information of the client who requested the connection.                                                     |
+|         | address                         | Client's IP address                                                                                         |
+|         | port                            | Client's Port number                                                                                        |
+|         | <p>user-agent<br>(optional)</p> | Client's User-Agent                                                                                         |
+| request |                                 | Information about the client's request                                                                      |
+|         | direction                       | <p>incoming : A client requests to publish a stream</p><p>outgoing : A client requests to play a stream</p> |
+|         | protocol                        | webrtc, srt, rtmp, llhls, thumbnail                                                                         |
+|         | status                          | <p>opening : A client requests to open a stream</p><p>closing : A client closed the stream</p>              |
+|         | url                             | url requested by the client                                                                                 |
+|         | <p>new_url<br>(optional)</p>    | url redirected from user's control server (status "closing" only)                                           |
+|         | time                            | time requested by the client (ISO8601 format)                                                               |
 
 ### Security
 

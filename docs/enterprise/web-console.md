@@ -61,7 +61,7 @@ You can sign in from this login screen. A Username and Password of the initial a
 
 ### Common Layout
 
-![](<../.gitbook/assets/1 (2).png>)
+![](../.gitbook/assets/1.png)
 
 #### ① Home Link (Server page)
 
