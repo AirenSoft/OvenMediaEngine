@@ -22,7 +22,9 @@ With OvenSpace, you can quickly and easily stream content with sub-second latenc
 
 OvenSpace is available online, so you can try it out for yourself at [https://space.ovenplayer.com/](https://space.ovenplayer.com/). You'll get a hands-on experience of how OvenMediaEngine, OvenPlayer, and OvenLiveKit work together seamlessly to deliver top-quality streaming, whether you're a developer looking to build a media service or someone who wants to experience sub-second or low-latency streaming firsthand.
 
-<figure><img src="../.gitbook/assets/image (4).png" alt=""><figcaption><p><a href="https://space.ovenplayer.com/">https://space.ovenplayer.com/</a></p></figcaption></figure>
+OvenSpace is also available on [Github](https://github.com/AirenSoft/OvenSpace) as open source. It will be a good reference when developing media services using OvenMediaEngine, OvenPlayer and OvenLiveKit.
+
+<figure><img src="../.gitbook/assets/image (6).png" alt=""><figcaption><p><a href="https://space.ovenplayer.com/">https://space.ovenplayer.com/</a></p></figcaption></figure>
 
 
 
