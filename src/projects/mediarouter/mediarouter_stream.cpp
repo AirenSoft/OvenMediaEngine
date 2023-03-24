@@ -1077,8 +1077,6 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		return nullptr;
 	}
 
-	media_track->OnFrameAdded(pop_media_packet->GetDataLength());
-
 	switch (GetInoutType())
 	{
 		case MediaRouterStreamType::INBOUND: {
@@ -1121,6 +1119,8 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		default:
 			break;
 	}
+
+	media_track->OnFrameAdded(pop_media_packet);
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Detect abnormal increases in PTS.

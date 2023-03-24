@@ -150,6 +150,12 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 		output_track->SetFrameRateByConfig(profile.GetFramerate());
 	}
 
+	profile.GetKeyFrameInterval(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetKeyFrameIntervalByConfig(profile.GetKeyFrameInterval());
+	}
+
 	output_track->SetMediaType(cmn::MediaType::Video);
 	output_track->SetId(NewTrackId());
 	output_track->SetVariantName(profile.GetName());
@@ -177,7 +183,6 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 		output_track->SetTimeBase(GetDefaultTimebaseByCodecId(output_track->GetCodecId()));
 		output_track->SetPreset(profile.GetPreset());
 		output_track->SetThreadCount(profile.GetThreadCount());
-		output_track->SetKeyFrameInterval(profile.GetKeyFrameInterval());
 		output_track->SetBFrames(profile.GetBFrames());
 		output_track->SetProfile(profile.GetProfile());
 	}

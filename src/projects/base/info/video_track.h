@@ -48,7 +48,7 @@ public:
 	double GetVideoTimestampScale() const;
 
 	void SetHasBframes(bool has_bframe);
-	bool HasBframes();
+	bool HasBframes() const;
 
 	void SetColorspace(int colorspace);
 	int GetColorspace() const;	
@@ -62,8 +62,15 @@ public:
 	void SetThreadCount(int thread_count);
 	int GetThreadCount();
 
-	void SetKeyFrameInterval(int32_t key_frame_interval);
-	int32_t GetKeyFrameInterval();
+	// Return the proper key_frame_interval for this track. 
+	// If there is a key_frame_interval set by the user, it is returned. If not, the automatically measured key_frame_interval is returned
+	int32_t GetKeyFrameInterval() const;
+
+	void SetKeyFrameIntervalByMeasured(int32_t key_frame_interval);
+	int32_t GetKeyFrameIntervalByMeasured() const;
+	
+	void SetKeyFrameIntervalByConfig(int32_t key_frame_interval);
+	int32_t GetKeyFrameIntervalByConfig() const;
 
 	void SetBFrames(int32_t b_frames);
 	int32_t GetBFrames();
@@ -99,8 +106,10 @@ protected:
 	int32_t _width_conf;
 	int32_t _height_conf;
 
-	// Key Frame Interval (set by user)
+	// Key Frame Interval (measurement)
 	int32_t _key_frame_interval;
+	// Key Frame Interval (set by user)
+	int32_t _key_frame_interval_conf;
 	
 	// Number of B-frame (set by user)
 	int32_t _b_frames;

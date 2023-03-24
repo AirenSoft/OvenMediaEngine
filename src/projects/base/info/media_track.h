@@ -99,7 +99,7 @@ public:
 	std::shared_ptr<ov::Data> &GetCodecExtradata();
 
 	// For statistics
-	void OnFrameAdded(uint64_t bytes);
+	void OnFrameAdded(const std::shared_ptr<MediaPacket> &media_packet);
 
 	int64_t GetTotalFrameCount() const;
 	int64_t GetTotalFrameBytes() const;
@@ -159,6 +159,7 @@ protected:
 	// Statistics
 	uint64_t _total_frame_count = 0;
 	uint64_t _total_frame_bytes = 0;
+	int32_t _key_frame_interval_count = 0;
 
 	// Validity
 	bool _is_valid = false;
