@@ -437,12 +437,14 @@ bool MediaTrack::HasQualityMeasured()
 	return _has_quality_measured;
 }
 
-void MediaTrack::OnFrameAdded(uint64_t bytes)
+void MediaTrack::OnFrameAdded(const std::shared_ptr<MediaPacket> &media_packet)
 {
 	if (_clock_from_first_frame_received.IsStart() == false)
 	{
 		_clock_from_first_frame_received.Start();
 	}
+
+	size_t bytes = media_packet->GetDataLength();
 
 	_total_frame_count++;
 	_total_frame_bytes += bytes;
@@ -467,6 +469,19 @@ void MediaTrack::OnFrameAdded(uint64_t bytes)
 		SetFrameRateByMeasured(framerate);
 
 		logtd("Track(%u) FPS(%f)", GetId(), framerate);
+	}
+
+	if (GetMediaType() == cmn::MediaType::Video)
+	{
+		if (media_packet->GetFlag() == MediaPacketFlag::Key)
+		{
+			SetKeyFrameIntervalByMeasured(_key_frame_interval_count);
+			_key_frame_interval_count = 1;
+		}
+		else if (_key_frame_interval_count > 0)
+		{
+			_key_frame_interval_count++;
+		}
 	}
 }
 
@@ -562,6 +577,7 @@ std::shared_ptr<MediaTrack> MediaTrack::Clone()
 	track->_height = _height;
 	track->_height_conf = _height_conf;
 	track->_key_frame_interval = _key_frame_interval;
+	track->_key_frame_interval_conf = _key_frame_interval_conf;
 	track->_b_frames = _b_frames;
 	track->_has_bframe = _has_bframe;
 	track->_preset = _preset;

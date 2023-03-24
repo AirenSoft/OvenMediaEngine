@@ -37,6 +37,8 @@ namespace serdes
 			SetString(object, "bitrate", ov::Converter::ToString(track->GetBitrate()), Optional::False);
 			SetFloat(object, "framerate", track->GetFrameRate());
 			SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
+			SetBool(object, "hasBframes", track->HasBframes());
+			SetInt(object, "keyFrameInterval", track->GetKeyFrameInterval());
 		}
 	}
 

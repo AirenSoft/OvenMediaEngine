@@ -15,7 +15,8 @@ VideoTrack::VideoTrack()
 	  _video_timescale(0),
 	  _width(0),
 	  _height(0),
-	  _key_frame_interval(0),
+		_key_frame_interval(0),
+	  _key_frame_interval_conf(0),
 	  _b_frames(0),
 	  _has_bframe(false),
 	  _preset(""),
@@ -116,7 +117,7 @@ void VideoTrack::SetHasBframes(bool has_bframe)
 	_has_bframe = has_bframe;
 }
 
-bool VideoTrack::HasBframes()
+bool VideoTrack::HasBframes() const
 {
 	return _has_bframe;
 }
@@ -131,14 +132,34 @@ int VideoTrack::GetThreadCount()
 	return _thread_count;
 }
 
-void VideoTrack::SetKeyFrameInterval(int32_t key_frame_interval)
+int32_t VideoTrack::GetKeyFrameInterval() const
+{
+	if(_key_frame_interval_conf > 0)
+	{
+		return _key_frame_interval_conf;
+	}
+
+	return _key_frame_interval;
+}
+
+void VideoTrack::SetKeyFrameIntervalByMeasured(int32_t key_frame_interval)
 {
 	_key_frame_interval = key_frame_interval;
 }
 
-int32_t VideoTrack::GetKeyFrameInterval()
+int32_t VideoTrack::GetKeyFrameIntervalByMeasured() const
 {
 	return _key_frame_interval;
+}
+
+void VideoTrack::SetKeyFrameIntervalByConfig(int32_t key_frame_interval)
+{
+	_key_frame_interval_conf = key_frame_interval;
+}
+
+int32_t VideoTrack::GetKeyFrameIntervalByConfig() const
+{
+	return _key_frame_interval_conf;
 }
 
 void VideoTrack::SetBFrames(int32_t b_frames)

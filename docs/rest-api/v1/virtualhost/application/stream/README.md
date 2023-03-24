@@ -314,6 +314,8 @@ Content-Type: application/json
 					"bypass": false,
 					"codec": "H264",
 					"framerate": 30.0,
+					"hasBframes": false,
+					"keyFrameInterval": 30,
 					"height": 720,
 					"width": 1280
 				}
@@ -375,6 +377,12 @@ Content-Type: application/json
 # response
 	Details of the stream
 ```
+
+{% code title="Note" overflow="wrap" lineNumbers="false" %}
+```
+keyFrameInterval is GOP size
+```
+{% endcode %}
 
 </details>
 
