@@ -17,6 +17,8 @@
 #define IS_MACOS                                0
 #define IS_ANDROID                              0
 #define IS_IOS                                  0
+#define IS_ARM                                  0
+#define IS_64BITS                               0
 
 // Reference
 //   http://nadeausoftware.com/articles/2012/01/c_c_tip_how_use_compiler_predefined_macros_detect_operating_system
@@ -94,6 +96,16 @@
 #   define IS_UNIX                              1
 #else
 #   define PLATFORM_NAME                        "Unknown"
+#endif
+
+#if defined(__arm__) || defined(__aarch64__) || defined(__ARM_ARCH) || defined(__ARM_ARCH__)
+#   undef IS_ARM
+#   define IS_ARM                               1
+#endif
+
+#if defined(__x86_64__) || defined(__ppc64__) || defined(__aarch64__) || defined(__LP64__)
+#   undef IS_64BITS
+#   define IS_64BITS                            1
 #endif
 
 namespace ov

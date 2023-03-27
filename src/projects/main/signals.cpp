@@ -13,6 +13,8 @@
 #include <malloc.h>
 #include <orchestrator/orchestrator.h>
 #include <signal.h>
+#include <sys/ucontext.h>
+#include <sys/utsname.h>
 
 #include <fstream>
 #include <iostream>
@@ -103,9 +105,13 @@ static const char *GetSignalName(int signum)
 	}
 }
 
+// Occasionally, the memory can become corrupted and the version may not be displayed.
+// In such cases, it is stored in a separate variable for later reference.
+static char g_ome_version[1024];
+
 typedef void (*OV_SIG_ACTION)(int signum, siginfo_t *si, void *unused);
 
-static void AbortHandler(int signum, siginfo_t *si, void *unused)
+static void AbortHandler(int signum, siginfo_t *si, void *context)
 {
 	char time_buffer[30]{};
 	char file_name[32]{};
@@ -116,22 +122,60 @@ static void AbortHandler(int signum, siginfo_t *si, void *unused)
 	std::tm local_time{};
 	::localtime_r(&t, &local_time);
 
-	::strftime(time_buffer, sizeof(time_buffer) / sizeof(time_buffer[0]), "%Y-%m-%dT%H:%M:%S%z", &local_time);
-	::strftime(file_name, 32, "crash_%Y%m%d.dump", &local_time);
+	const char *file_prefix = "dumps/";
+
+	if (::mkdir(file_prefix, 0755) != 0)
+	{
+		if (errno != EEXIST)
+		{
+			logtc("Could not create a directory for crash dump: %s", file_prefix);
+			file_prefix = "";
+		}
+	}
+
+	::strcpy(file_name, file_prefix);
+	::strftime(file_name + ::strlen(file_prefix), 32, "crash_%Y%m%d.dump", &local_time);
 
 	std::ofstream ostream(file_name, std::ofstream::app);
 
 	if (ostream.is_open())
 	{
+		::strftime(time_buffer, sizeof(time_buffer) / sizeof(time_buffer[0]), "%Y-%m-%dT%H:%M:%S%z", &local_time);
+
 		auto pid = ov::Platform::GetProcessId();
 		auto tid = ov::Platform::GetThreadId();
+		auto thread_name = ov::Platform::GetThreadName();
+
+		utsname uts{};
+		::uname(&uts);
 
 		ostream << "***** Crash dump *****" << std::endl;
-		ostream << "OvenMediaEngine " << info::OmeVersion::GetInstance()->ToString().CStr() << " received signal " << signum << " (" << GetSignalName(signum) << ")" << std::endl;
-		ostream << "- Time: " << time_buffer << ", pid: " << pid << ", tid: " << tid << std::endl;
+		ostream << "OvenMediaEngine " << g_ome_version << " received signal " << signum << " (" << GetSignalName(signum) << ")" << std::endl;
+		ostream << "- OS: " << uts.sysname << " " << uts.machine << " - " << uts.release << ", " << uts.version << std::endl;
+		ostream << "- Time: " << time_buffer << ", pid: " << pid << ", tid: " << tid << " (" << thread_name << ")" << std::endl;
 		ostream << "- Stack trace" << std::endl;
 
 		ov::StackTrace::WriteStackTrace(ostream);
+
+		const ucontext_t *ucontext = reinterpret_cast<const ucontext_t *>(context);
+
+		// Testing
+#if 0
+		ostream << "- Registers" << std::endl;
+
+#	if !IS_ARM
+		ostream << "  RAX: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RAX] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RAX] << ")" << std::endl;
+		ostream << "  RBX: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RBX] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RBX] << ")" << std::endl;
+		ostream << "  RCX: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RCX] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RCX] << ")" << std::endl;
+		ostream << "  RDX: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RDX] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RDX] << ")" << std::endl;
+		ostream << "  RSP: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RSP] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RSP] << ")" << std::endl;
+		ostream << "  RBP: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RBP] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RBP] << ")" << std::endl;
+		ostream << "  RSI: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RSI] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RSI] << ")" << std::endl;
+		ostream << "  RDI: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RDI] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RDI] << ")" << std::endl;
+		ostream << "  RIP: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RIP] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RIP] << ")" << std::endl;
+		ostream << "  EFL: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_EFL] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_EFL] << ")" << std::endl;
+#	endif	// !IS_ARM
+#endif
 
 		std::ifstream istream("/proc/self/maps", std::ifstream::in);
 
@@ -240,6 +284,9 @@ struct sigaction GetSigAction(OV_SIG_ACTION action)
 //     SIGVTALRM, SIGPROF, SIGALRM
 bool InitializeAbortSignal()
 {
+	::memset(g_ome_version, 0, sizeof(g_ome_version));
+	::strncpy(g_ome_version, info::OmeVersion::GetInstance()->ToString().CStr(), OV_COUNTOF(g_ome_version) - 1);
+
 	bool result = true;
 	auto sa = GetSigAction(AbortHandler);
 
