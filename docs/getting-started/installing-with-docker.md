@@ -7,7 +7,7 @@ OvenMediaEngine provides the Docker image from [AirenSoft's Docker Hub](https://
 ```sh
 docker run --name ome -d -e OME_HOST_IP=Your.HOST.IP.Address \
 -p 1935:1935 -p 9999:9999/udp -p 9000:9000 -p 3333:3333 -p 3478:3478 -p 10000-10009:10000-10009/udp \
-airensoft/ovenmediaengine:0.15.7
+airensoft/ovenmediaengine:latest
 ```
 
 {% hint style="warning" %}
@@ -91,6 +91,8 @@ vi $OME_DOCKER_HOME/conf/Server.xml
 ```
 
 #### Run Docker Container
+
+The command below will make your OvenMediaEngine docker container run with $OME\_DOCKER\_HOME/conf/Server.xml and $OME\_DOCKER\_HOME/conf/Logger.xml files on your host. It will also create $OME\_DOCKER\_HOME/logs/ovenmediaengine.log file.
 
 {% code overflow="wrap" %}
 ```sh
