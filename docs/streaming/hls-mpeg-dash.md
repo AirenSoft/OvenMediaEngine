@@ -10,4 +10,4 @@ LLHLS, released from v0.14.0, is superior to Dash and LLDASH in all aspects of c
 
 #### For legacy HLS, DASH, and LLDASH, refer to the old version manual.
 
-[https://airensoft.gitbook.io/ovenmediaengine/v/0.13.0/streaming/hls-mpeg-dash](https://app.gitbook.com/o/-Lcd-pxbm0NXHVOeV7t1/s/Nq0zrEuErX1n8bxdVnfv/)
+[https://airensoft.gitbook.io/ovenmediaengine/v/0.13.0/streaming/hls-mpeg-dash](http://localhost:5000/o/-Lcd-pxbm0NXHVOeV7t1/s/Nq0zrEuErX1n8bxdVnfv/)
