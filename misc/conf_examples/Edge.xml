@@ -106,13 +106,11 @@
 					-->
 					<Name>*</Name>
 				</Names>
-				<!--
 				<TLS>
-					<CertPath>path/to/file.crt</CertPath>
-					<KeyPath>path/to/file.key</KeyPath>
-					<ChainCertPath>path/to/file.crt</ChainCertPath>
+					<CertPath>./cert.crt</CertPath>
+					<KeyPath>./cert.key</KeyPath>
+					<ChainCertPath>./cert.ca-bundle</ChainCertPath>
 				</TLS>
-				-->
 			</Host>
 
 			<!-- Refer https://airensoft.gitbook.io/ovenmediaengine/signedpolicy
