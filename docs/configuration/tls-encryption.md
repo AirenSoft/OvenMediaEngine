@@ -6,10 +6,27 @@ You can set the port for TLS in `TLSPort`. Currently, LLHLS and WebRTC Signaling
 
 ```markup
 <Bind>
-    ...
-
+    <!-- For API Server -->
+    <Managers>
+	    <API>
+	    <Port>8081</Port>
+	    <TLSPort>8082</TLSPort>
+            <WorkerCount>1</WorkerCount>
+	</API>
+    </Managers>
+    <!-- For Providers -->
+    <Providers>
+        <WebRTC>
+	    <Signalling>
+		<Port>3333</Port>
+		<TLSPort>3334</TLSPort>
+		<WorkerCount>1</WorkerCount>
+	    </Signalling>
+            ...
+        </WebRTC>
+    </Providers>
+    <!- For Publishers -->
     <Publishers>
-    ...
         <LLHLS>
             <Port>80</Port>
             <TLSPort>443</TLSPort>
@@ -27,22 +44,41 @@ You can set the port for TLS in `TLSPort`. Currently, LLHLS and WebRTC Signaling
 
 Add your certificate files to  as follows:
 
-```markup
-<Host>
-    <Names>
-        <Name>*.airensoft.com</Name>
-    </Names>
-    <TLS>
-      <CertPath>/etc/pki/airensoft.com/_airensoft_com.crt</CertPath>
-      <KeyPath>/etc/pki/airensoft.com/_airensoft_com.key</KeyPath>
-      <ChainCertPath>/etc/pki/airensoft.com/_airensoft_com.ca-bundle</ChainCertPath>
-    </TLS>
-</Host>
-```
+<pre class="language-markup"><code class="lang-markup">&#x3C;!-- For API Server -->
+&#x3C;Managers>
+  &#x3C;Host>
+    &#x3C;Names>
+      &#x3C;Name>*&#x3C;/Name>
+    &#x3C;/Names>
+    &#x3C;TLS>
+      &#x3C;CertPath>path/to/file.crt&#x3C;/CertPath>
+      &#x3C;KeyPath>path/to/file.key&#x3C;/KeyPath>
+      &#x3C;ChainCertPath>path/to/file.crt&#x3C;/ChainCertPath>
+    &#x3C;/TLS>
+  &#x3C;/Host>
+  ...
+&#x3C;/Managers>
 
-To configure HTTPs for HLS, and WebRTC Signaling server, the TLS element must be enabled. The `CertPath` has to indicate a server certificate and the `KeyPath` has to indicate a private key file. They can be set to absolute paths or relative paths from the executable. If the server certificate is issued using an intermediate certificate, some browsers may complain about a certificate. In this case, you should set a bundle of chained certificates provided by a Certificate Authority in `ChainCertPath`.
+<strong>&#x3C;VirtualHosts>
+</strong>  &#x3C;VirtualHost>
+    &#x3C;!-- For Vitual Host -->
+    &#x3C;Host>
+        &#x3C;Names>
+            &#x3C;Name>*&#x3C;/Name>
+        &#x3C;/Names>
+        &#x3C;TLS>
+          &#x3C;CertPath>/etc/pki/airensoft.com/_airensoft_com.crt&#x3C;/CertPath>
+          &#x3C;KeyPath>/etc/pki/airensoft.com/_airensoft_com.key&#x3C;/KeyPath>
+          &#x3C;ChainCertPath>/etc/pki/airensoft.com/_airensoft_com.ca-bundle&#x3C;/ChainCertPath>
+        &#x3C;/TLS>
+    &#x3C;/Host>
+</code></pre>
 
-If you set up TLS, you can't set IP or \* into \<Name>. You can only set Domains that the certificate contains. If you have a certificate for `*.host.com`, it means you can set domains such as `aaa.host.com`, `bbb.host.com`, and `*.host.com`.
+To enable HTTP for HLS and WebRTC signaling servers, you must enable the TLS element and install the certificate file in PEM format. This involves indicating a server certificate through the `CertPath`, as well as a private key file through the `KeyPath`. These paths can be specified as either absolute or relative paths from the executable. However, if the server certificate was issued using an intermediate certificate, some browsers may raise concerns about the certificate's authenticity. To address this, a bundle of chained certificates provided by a Certificate Authority can be set in the `ChainCertPath`.
 
-If the certificate settings are completed correctly, WebRTC streaming can be played `wss://url` with HLS and DASH streaming `https://url`.
+Assuming the certificate settings are correctly configured, WebRTC streaming can then be played via the wss://url protocol, while LLHLS streaming can be accessed via [https://url](https://url/).
+
+
+
+
 
