@@ -354,16 +354,6 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 			}			
 		}
 
-		if (stream->WaitUntilStart(100000) == false)
-		{
-			logtw("(%s/%s) stream has not started", vhost_app_name.CStr(), stream_name.CStr());
-			response->AppendString(ov::String::FormatString("stream has not started"));
-			response->SetStatusCode(http::StatusCode::NotFound);
-			response->Response();
-			exchange->Release();							
-			return http::svr::NextHandler::DoNotCall;
-		}
-
 		// Check Extentions
 		auto media_codec_id = cmn::MediaCodecId::None;
 		if (final_url->File().LowerCaseString().IndexOf(".jpg") >= 0)

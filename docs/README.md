@@ -51,7 +51,7 @@ We have tested OvenMediaEngine on platforms, listed below. However, we think it 
 
 ## Getting Started
 
-Please read [Getting Started](getting-started.md) chapter in the tutorials.
+Please read [Getting Started](getting-started/) chapter in the tutorials.
 
 ## How to Contribute
 

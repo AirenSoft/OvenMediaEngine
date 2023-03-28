@@ -2,35 +2,7 @@
 
 ## Installing with Docker Image
 
-OvenMediaEngine provides the Docker image from [AirenSoft's Docker Hub](https://hub.docker.com/r/airensoft/ovenmediaengine) (**airensoft/ovenmediaengine)** repository. After installing [Docker](https://www.docker.com), you can simply run the following command:
-
-```
-docker run --name ome -d -e OME_HOST_IP=Your.HOST.IP.Address \
--p 1935:1935 -p 9999:9999/udp -p 9000:9000 -p 3333:3333 -p 3478:3478 -p 10000-10009:10000-10009/udp \
-airensoft/ovenmediaengine:dev
-```
-
-{% hint style="warning" %}
-To use TLS, you must set up a certificate. See [TLS Encryption](configuration/tls-encryption.md) for more information.
-{% endhint %}
-
-You can set the following environment variables.
-
-### Ports
-
-| Env                                | Default Value   |
-| ---------------------------------- | --------------- |
-| OME\_HOST\_IP                      | \*              |
-| OME\_ORIGIN\_PORT                  | 9000            |
-| OME\_RTMP\_PROV\_PORT              | 1935            |
-| OME\_SRT\_PROV\_PORT               | 9999/udp        |
-| OME\_MPEGTS\_PROV\_PORT            | 4000/udp        |
-| OME\_LLHLS\_STREAM\_PORT           | 3333            |
-| OME\_LLHLS\_STREAM\_TLS\_PORT      | 3334            |
-| OME\_WEBRTC\_SIGNALLING\_PORT      | 3333            |
-| OME\_WEBRTC\_SIGNALLING\_TLS\_PORT | 3334            |
-| OME\_WEBRTC\_TCP\_RELAY\_PORT      | 3478            |
-| OME\_WEBRTC\_CANDIDATE\_PORT       | 10000-10004/udp |
+OvenMediaEngine provides Docker images from AirenSoft's Docker Hub (airensoft/ovenmediaengine) repository. You can easily use OvenMediaEngine server by using Docker image. See [Installing with Docker](./#installing-with-docker-image) for details.
 
 ## Installing with Source Code
 
@@ -44,7 +16,7 @@ OvenMediaEngine-master/misc/prerequisites.sh
 ```
 
 {% hint style="info" %}
-If the prerequisites.sh script fails, try to run `sudo apt-get update` and rerun it. If it's not enough proceed with the [manual installation](troubleshooting.md#prerequisites-sh-script-failed).
+If the prerequisites.sh script fails, try to run `sudo apt-get update` and rerun it. If it's not enough proceed with the [manual installation](../troubleshooting.md#prerequisites-sh-script-failed).
 {% endhint %}
 
 ### **Building & Running**
@@ -97,7 +69,7 @@ $ echo 'source scl_source enable devtoolset-7' >> ~/.bashrc
 {% endtabs %}
 
 {% hint style="info" %}
-if `systemctl start ovenmediaengine` fails in Fedora, SELinux may be the cause. See [Check SELinux section of Troubleshooting](troubleshooting.md#check-selinux).
+if `systemctl start ovenmediaengine` fails in Fedora, SELinux may be the cause. See [Check SELinux section of Troubleshooting](../troubleshooting.md#check-selinux).
 {% endhint %}
 
 ## Ports used by default
@@ -116,7 +88,7 @@ The default configuration uses the following ports, so you need to open it in yo
 | 10000 - 10009/UDP           | WebRTC Ice candidate (both ingest and streaming)                                                                                         |
 
 {% hint style="warning" %}
-To use TLS, you must set up a certificate. See [TLS Encryption](configuration/tls-encryption.md) for more information.
+To use TLS, you must set up a certificate. See [TLS Encryption](../configuration/tls-encryption.md) for more information.
 {% endhint %}
 
 You can open firewall ports as in the following example:
