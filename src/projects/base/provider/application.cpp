@@ -209,8 +209,7 @@ namespace pvd
 
 		NotifyStreamDeleted(stream);
 
-		// If provider is OVT, it is running in Edge mode.
-		if (_provider->GetProviderType() != ProviderType::Ovt)
+		if (stream->IsFromOriginMapStore() == false)
 		{
 			// Unegister stream if OriginMapStore is enabled
 			auto result = ocst::Orchestrator::GetInstance()->UnregisterStreamFromOriginMapStore(GetName(), stream->GetName());
