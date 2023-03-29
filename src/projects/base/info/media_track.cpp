@@ -563,7 +563,7 @@ std::shared_ptr<MediaTrack> MediaTrack::Clone()
 	track->_bypass_conf = _bypass_conf;
 	track->_start_frame_time = _start_frame_time;
 	track->_last_frame_time = _last_frame_time;
-	track->_codec_extradata = _codec_extradata->Clone();
+	track->_codec_extradata = _codec_extradata == nullptr ? nullptr : _codec_extradata->Clone();
 	track->_total_frame_count = _total_frame_count;
 	track->_total_frame_bytes = _total_frame_bytes;
 
@@ -582,9 +582,9 @@ std::shared_ptr<MediaTrack> MediaTrack::Clone()
 	track->_has_bframe = _has_bframe;
 	track->_preset = _preset;
 	track->_use_hwaccel = _use_hwaccel;
-	track->_h264_sps_pps_annexb_data = _h264_sps_pps_annexb_data->Clone();
-	track->_h264_sps_data = _h264_sps_data->Clone();
-	track->_h264_pps_data = _h264_pps_data->Clone();
+	track->_h264_sps_pps_annexb_data = _h264_sps_pps_annexb_data == nullptr ? nullptr : _h264_sps_pps_annexb_data->Clone();
+	track->_h264_sps_data = _h264_sps_data == nullptr ? nullptr : _h264_sps_data->Clone();
+	track->_h264_pps_data = _h264_pps_data == nullptr ? nullptr : _h264_pps_data->Clone();
 	track->_colorspace = _colorspace;
 
 	// Audio Track
