@@ -1,4 +1,4 @@
-# Installing with Docker
+# Getting Started with Docker
 
 ## Getting Started with default settings
 
@@ -11,7 +11,7 @@ airensoft/ovenmediaengine:latest
 ```
 
 {% hint style="warning" %}
-If a certificate is not installed in OvenMediaEngine, some functions (WebRTC Ingest, LLHLS playback) may not work due to the browser's security policy. Please refer to [Configuration ](installing-with-docker.md#configuration)section to install the certificate.
+If a certificate is not installed in OvenMediaEngine, some functions (WebRTC Ingest, LLHLS playback) may not work due to the browser's security policy. Please refer to [Complex Configuration](getting-started-with-docker.md#getting-started-with-complex-configuration) section to install the certificate.
 {% endhint %}
 
 You can set the following environment variables.
@@ -48,6 +48,8 @@ OvenMediaEngine docker container loads configuration files from the following pa
 
 There are many ways to change files inside a Docker container, but this document describes how to change them using Docker's bind mounts.
 
+### Setup
+
 #### Create the directories
 
 {% code overflow="wrap" %}
@@ -61,7 +63,7 @@ sudo chgrp -R docker $OME_DOCKER_HOME
 sudo chmod -R 775 $OME_DOCKER_HOME
 
 # If you want to use OME_HOME permanently, add the following line to the ~/.profile file for bash, for other shells, you can do it accordingly.
-echo "export OME_HOME=/opt/ovenmediaenigne" >> ~/.profile
+echo "export OME_DOCKER_HOME=/opt/ovenmediaenigne" >> ~/.profile
 ```
 {% endcode %}
 
@@ -76,7 +78,7 @@ docker rm -f tmp-ome
 
 #### Copy the certificate files to the directory
 
-Copy your PEM certificate files to the path below. The file names must match. If you want to change the file name, you can do so by editing the Server.xml configuration file.
+Copy your PEM certificate files to the path below  if you need to enable TLS. The destination file names must match if using the default configuration. If you want to change the file name, you can do so by editing the Server.xml configuration file. See [TLS Encryption](../configuration/tls-encryption.md) for details.
 
 ```sh
 cp /your/server_certificate_file.crt $OME_DOCKER_HOME/conf/cert.crt
@@ -89,6 +91,8 @@ cp /your/ca_bundle_file.ca-bundle $OME_DOCKER_HOME/conf/cert.ca-bundle
 ```sh
 vi $OME_DOCKER_HOME/conf/Server.xml
 ```
+
+### Running
 
 #### Run Docker Container
 
