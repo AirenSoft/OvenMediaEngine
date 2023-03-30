@@ -190,7 +190,13 @@
 			-->
 			<Applications>
 				<Application>
-					<Name>app</Name>
+					<!-- 
+					Origins and OriginMapStore can dynamically create an application if no application exists 
+					when creating a stream. They create a new application by copying the Application configuration 
+					where <Name> is *. 
+					In other words, an application with <Name> as * serves as a dynamic application template.
+					-->
+					<Name>*</Name>
 					<Type>live</Type>
 					<OutputProfiles>
 						<OutputProfile>

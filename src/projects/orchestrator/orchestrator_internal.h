@@ -96,12 +96,7 @@ namespace ocst
 		// ordered vhost list
 		std::vector<std::shared_ptr<VirtualHost>> _virtual_host_list;
 
-		bool InsertProviderStream(const std::shared_ptr<pvd::Stream> &stream);
-		void DeleteProviderStream(const std::shared_ptr<pvd::Stream> &stream);
-		void DeleteProviderStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
 		std::shared_ptr<pvd::Stream> GetProviderStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
-		ov::String GetStreamKey(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
-		ov::String GetStreamKey(const std::shared_ptr<pvd::Stream> &stream);
 
 		// stream uri, stream
 		std::map<ov::String, std::shared_ptr<pvd::Stream>> _stream_map;

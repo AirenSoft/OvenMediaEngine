@@ -61,7 +61,8 @@ namespace ocst
 					auto app = app_item.second;
 					auto &app_info = app->app_info;
 
-					if (app->GetStreamCount() == 0 && app_info.IsDynamicApp() == true)
+					if (app->GetProviderStreamCount() == 0 && app->GetPublisherStreamCount() == 0 &&
+						 app_info.IsDynamicApp() == true)
 					{
 						logti("There are no streams in the dynamic application. Delete the application: %s", app_info.GetName().CStr());
 						auto result = OrchestratorInternal::DeleteApplication(app_info);
@@ -842,50 +843,6 @@ namespace ocst
 		if (stream != nullptr)
 		{
 			return true;
-
-			////////////////////////////////
-			// Comment(Getroot): 2022-10-05
-			// The code commented below exists for UpdateVirtualHosts. 
-			// However, since the UpdateVirtualHosts function is currently deprecated, comment out the code below. 
-			// If the UpdateVirtualHosts function is developed again in the future, consider the code below again.
-			////////////////////////////////
-
-			// auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
-
-			// auto stream_id = stream->GetId();
-
-			// auto &origin_stream_map = matched_origin->stream_map;
-			// auto exists_in_origin = (origin_stream_map.find(stream_id) != origin_stream_map.end());
-
-			// auto key_pair = std::pair(host_name, vhost_app_name.GetAppName());
-
-			// auto &host_stream_map = matched_host->stream_map[key_pair];
-			// bool exists_in_domain = (host_stream_map.find(stream_id) != host_stream_map.end());
-
-			// if (exists_in_origin == exists_in_domain)
-			// {
-			// 	if (exists_in_origin == false)
-			// 	{
-			// 		// New stream
-			// 		auto orchestrator_stream = std::make_shared<Stream>(app_info, provider_module, stream, ov::String::FormatString("%s/%s", vhost_app_name.CStr(), stream_name.CStr()));
-
-			// 		origin_stream_map[stream_id] = orchestrator_stream;
-			// 		host_stream_map[stream_id] = orchestrator_stream;
-
-			// 		logti("The stream was pulled successfully: [%s/%s] (%u)", vhost_app_name.CStr(), stream_name.CStr(), stream_id);
-			// 		return true;
-			// 	}
-
-			// 	// The stream exists
-			// 	logti("The stream was pulled successfully (stream exists): [%s/%s] (%u)", vhost_app_name.CStr(), stream_name.CStr(), stream_id);
-			// 	return true;
-			// }
-			// else
-			// {
-			// 	logtc("Out of sync: origin: %d, domain: %d (This is a bug)", exists_in_origin, exists_in_domain);
-			// 	// TODO
-			// 	// OV_ASSERT2(false);
-			// }
 		}
 
 		logte("Could not pull stream [%s/%s] from provider: %s",
@@ -918,27 +875,11 @@ namespace ocst
 		return false;
 	}
 
-	// Orchestrator manages provider streams to control the stream (e.g. stop, start, etc.)
-	bool Orchestrator::RegisterProviderStream(const std::shared_ptr<pvd::Stream> &stream)
-	{
-		logti("Registering provider stream: %s/%s", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr());
-
-		// lock
-		std::lock_guard<std::shared_mutex> lock(_stream_map_mutex);
-		// It will overwrite if the stream already exists
-		if (InsertProviderStream(stream) == false)
-		{
-			return false;
-		}
-
-		return true;
-	}
-
 	/// Delete PullStream
 	CommonErrorCode Orchestrator::TerminateStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
 		// lock
-		std::shared_lock<std::shared_mutex> lock(_stream_map_mutex);
+		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 		auto stream = GetProviderStream(vhost_app_name, stream_name);
 		if (stream == nullptr)
@@ -965,14 +906,6 @@ namespace ocst
 	{
 		logti("%s/%s stream of %s is deleted", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
 
-		// Provider stream was registered by the provider, so it should be deleted
-		if (info->IsInputStream())
-		{
-			// lock
-			std::lock_guard<std::shared_mutex> lock(_stream_map_mutex);
-			DeleteProviderStream(info->GetApplicationInfo().GetName(), info->GetName());
-		}
-
 		return true;
 	}
 
@@ -993,6 +926,9 @@ namespace ocst
 
 	std::shared_ptr<pvd::Provider> Orchestrator::GetProviderFromType(const ProviderType type)
 	{
+		// lock
+		auto scoped_lock = std::scoped_lock(_module_list_mutex);
+
 		// Find the provider
 		for (auto info = _module_list.begin(); info != _module_list.end(); ++info)
 		{
@@ -1020,6 +956,9 @@ namespace ocst
 
 	std::shared_ptr<pub::Publisher> Orchestrator::GetPublisherFromType(const PublisherType type)
 	{
+		// lock
+		auto scoped_lock = std::scoped_lock(_module_list_mutex);
+
 		// Find the publisher
 		for (auto info = _module_list.begin(); info != _module_list.end(); ++info)
 		{
@@ -1047,6 +986,9 @@ namespace ocst
 
 	CommonErrorCode Orchestrator::IsExistStreamInOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name) const
 	{
+		//lock 
+		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
+
 		auto vhost = GetVirtualHost(vhost_app_name);
 		if (vhost == nullptr)
 		{
@@ -1075,6 +1017,9 @@ namespace ocst
 
 	std::shared_ptr<ov::Url> Orchestrator::GetOriginUrlFromOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name) const
 	{
+		//lock 
+		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
+
 		auto vhost = GetVirtualHost(vhost_app_name);
 		if (vhost == nullptr)
 		{
@@ -1108,6 +1053,9 @@ namespace ocst
 
 	CommonErrorCode Orchestrator::RegisterStreamToOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
+		//lock 
+		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
+
 		auto vhost = GetVirtualHost(vhost_app_name);
 		if (vhost == nullptr)
 		{
@@ -1140,6 +1088,9 @@ namespace ocst
 
 	CommonErrorCode Orchestrator::UnregisterStreamFromOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
+		//lock 
+		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
+
 		auto vhost = GetVirtualHost(vhost_app_name);
 		if (vhost == nullptr)
 		{
@@ -1178,6 +1129,9 @@ namespace ocst
 	// - Internally it uses multiple urls from OVT provider/publisher within localhost.
 	CommonErrorCode Orchestrator::CreatePersistentStreamIfNeed(const info::Application &app_info, const std::shared_ptr<info::Stream> &stream_info)
 	{
+		//lock 
+		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
+
 		auto vhost = GetVirtualHost(app_info.GetName());
 		if(!vhost)
 		{

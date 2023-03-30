@@ -9,6 +9,8 @@
 #pragma once
 
 #include <base/info/host.h>
+#include <base/provider/stream.h>
+#include <base/publisher/stream.h>
 #include <base/mediarouter/mediarouter_application_observer.h>
 #include <modules/origin_map_client/origin_map_client.h>
 #include <regex>
@@ -124,12 +126,17 @@ namespace ocst
 
 		ObserverType GetObserverType() override;
 
-		size_t GetStreamCount() const;
+		std::shared_ptr<pvd::Stream> GetProviderStream(const ov::String &stream_name);
+		std::shared_ptr<pub::Stream> GetPublisherStream(const ov::String &stream_name);
+		size_t GetProviderStreamCount() const;
+		size_t GetPublisherStreamCount() const;
 
 		CallbackInterface *callback = nullptr;
 		info::Application app_info;
 
-		std::map<info::stream_id_t, std::shared_ptr<info::Stream>> stream_map;
+		// Stream Name : Stream
+		std::map<ov::String, std::shared_ptr<pvd::Stream>> provider_stream_map;
+		std::map<ov::String, std::shared_ptr<pub::Stream>> publisher_stream_map;
 	};
 
 	struct VirtualHost

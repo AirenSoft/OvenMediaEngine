@@ -161,10 +161,6 @@ namespace ocst
 		{
 			return RequestPullStreamWithOriginMap(request_from, vhost_app_name, stream_name, 0);
 		}
-
-		// Manage pvd::Stream
-		// Provider must call this function when it creates a stream
-		bool RegisterProviderStream(const std::shared_ptr<pvd::Stream> &stream);
 		
 		/// Release Pulled Stream
 		CommonErrorCode TerminateStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
@@ -196,7 +192,6 @@ namespace ocst
 	protected:
 		std::recursive_mutex _module_list_mutex;
 		mutable std::recursive_mutex _virtual_host_map_mutex;
-		std::shared_mutex _stream_map_mutex;
 
 	private:
 		void OnTimer();

@@ -837,6 +837,13 @@ namespace ocst
 			}
 		}
 
+		// TODO: Need to be refactored
+		// Since Orchestrator registers itself as MediaRouter observer last, OnStreamCreated and OnStreamDeleted events are received last.
+		// Orchestrator::OnStreamDeleted and application deletion can proceed simultaneously if the orchestrator does not receive the event at the 
+		// very end, so if stream deletion is still in progress in another module, this may cause a conflict.
+		// Therefore, we need a guaranteed way Orchestrator to receive the event last, 
+		// not the way the orchestrator registers itself with the MediaRouter last and receives the event last. 
+		// (Now, it's working because MediaRouter registers an observer using push_back to the vector.)
 		if (_media_router != nullptr)
 		{
 			_media_router->RegisterObserverApp(app_info, new_app->GetSharedPtrAs<MediaRouteApplicationObserver>());
@@ -986,47 +993,13 @@ namespace ocst
 		return info::Application::GetInvalidApplication();
 	}
 
-	ov::String OrchestratorInternal::GetStreamKey(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
-	{
-		return ov::String::FormatString("%s/%s", vhost_app_name.CStr(), stream_name.CStr());
-	}
-
-	ov::String OrchestratorInternal::GetStreamKey(const std::shared_ptr<pvd::Stream> &stream)
-	{
-		return GetStreamKey(stream->GetApplicationInfo().GetName(), stream->GetName());
-	}
-
-	bool OrchestratorInternal::InsertProviderStream(const std::shared_ptr<pvd::Stream> &stream)
-	{
-		// Check if the stream already exists
-		auto stream_key = GetStreamKey(stream);
-		if (_stream_map.find(stream_key) != _stream_map.end())
-		{
-			logtw("Could not store provider stream %s because it already exists", stream_key.CStr());
-			return false;
-		}
-
-		_stream_map.emplace(stream_key, stream);
-
-		return true;
-	}
-	
-	void OrchestratorInternal::DeleteProviderStream(const std::shared_ptr<pvd::Stream> &stream)
-	{
-		_stream_map.erase(GetStreamKey(stream));
-	}
-
-	void OrchestratorInternal::DeleteProviderStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
-	{
-		_stream_map.erase(GetStreamKey(vhost_app_name, stream_name));
-	}
-
 	std::shared_ptr<pvd::Stream> OrchestratorInternal::GetProviderStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
-		auto item = _stream_map.find(GetStreamKey(vhost_app_name, stream_name));
-		if (item != _stream_map.end())
+		auto app = GetApplication(vhost_app_name);
+
+		if (app != nullptr)
 		{
-			return item->second;
+			return app->GetProviderStream(stream_name);
 		}
 
 		return nullptr;

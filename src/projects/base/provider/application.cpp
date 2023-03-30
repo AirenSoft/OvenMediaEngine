@@ -184,9 +184,6 @@ namespace pvd
 		_streams[stream->GetId()] = stream;
 		streams_lock.unlock();
 
-		// Register stream to Orchestrator
-		ocst::Orchestrator::GetInstance()->RegisterProviderStream(stream);
-
 		NotifyStreamCreated(stream);
 		
 		return true;

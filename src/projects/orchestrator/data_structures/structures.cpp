@@ -119,19 +119,68 @@ namespace ocst
 	// Temporarily used until Orchestrator takes stream management
 	bool Application::OnStreamCreated(const std::shared_ptr<info::Stream> &info)
 	{
-		stream_map[info->GetId()] = info;
+		logd("DEBUG", "%s stream has been created: %s/%s", info->IsInputStream()?"Inbound":"Outbound", app_info.GetName().CStr(), info->GetName().CStr());
+
+		if (info->IsInputStream())
+		{
+			provider_stream_map[info->GetName()] = std::static_pointer_cast<pvd::Stream>(info);
+		}
+		else
+		{
+			publisher_stream_map[info->GetName()] = std::static_pointer_cast<pub::Stream>(info);
+		}
+
 		return callback->OnStreamCreated(app_info, info);
 	}
 
 	bool Application::OnStreamDeleted(const std::shared_ptr<info::Stream> &info)
 	{
-		stream_map.erase(info->GetId());
+		logd("DEBUG", "%s stream has been deleted: %s/%s", info->IsInputStream()?"Inbound":"Outbound", app_info.GetName().CStr(), info->GetName().CStr());
+
+		if (info->IsInputStream())
+		{
+			provider_stream_map.erase(info->GetName());
+		}
+		else
+		{
+			publisher_stream_map.erase(info->GetName());
+		}	
+	
 		return callback->OnStreamDeleted(app_info, info);
 	}
 
-	size_t Application::GetStreamCount() const
+	std::shared_ptr<pvd::Stream> Application::GetProviderStream(const ov::String &stream_name)
 	{
-		return stream_map.size();
+		auto item = provider_stream_map.find(stream_name);
+
+		if (item == provider_stream_map.end())
+		{
+			return nullptr;
+		}
+
+		return item->second;
+	}
+	
+	std::shared_ptr<pub::Stream> Application::GetPublisherStream(const ov::String &stream_name)
+	{
+		auto item = publisher_stream_map.find(stream_name);
+
+		if (item == publisher_stream_map.end())
+		{
+			return nullptr;
+		}
+
+		return item->second;
+	}
+
+	size_t Application::GetProviderStreamCount() const
+	{
+		return provider_stream_map.size();
+	}
+
+	size_t Application::GetPublisherStreamCount() const
+	{
+		return publisher_stream_map.size();
 	}
 
 	bool Application::OnStreamPrepared(const std::shared_ptr<info::Stream> &info)

@@ -141,6 +141,7 @@ namespace pvd
 			}
 			else
 			{
+				logti("The inbound stream already exists: %s/%s", app_info.GetName().CStr(), stream_name.CStr());
 				UnlockPullStreamIfNeeded(app_info, stream_name, PullingItem::PullingItemState::PULLED);
 				return stream;
 			}
