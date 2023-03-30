@@ -233,7 +233,7 @@ namespace http
 				auto sent_header_size = SendHeader();
 				if (sent_header_size <= 0)
 				{
-					return -1;
+					return 0;
 				}
 
 				sent_size += sent_header_size;
@@ -246,7 +246,7 @@ namespace http
 			auto sent_data_size = SendPayload();
 			if (sent_data_size <= 0)
 			{
-				return -1;
+				return 0;
 			}
 
 			sent_size += sent_data_size;
