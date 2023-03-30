@@ -1,12 +1,10 @@
 # Clustering
 
-OvenMediaEngine supports clustering and ensures High Availability (HA) and scalability.
+OvenMediaEngine supports clustering and ensures high availability (HA) and scalability. For this we provide the OriginMap and OriginMapStore features. [OriginMap ](origin-edge-clustering.md#originmap)is a method of configuring Origin server information in each Edge server, and [OriginMapStore ](origin-edge-clustering.md#originmapstore)is a method for Origin servers and Edge servers to dynamically share information through Redis Server.
+
+## OriginMap
 
 ![](<.gitbook/assets/image (7) (1).png>)
-
-OvenMediaEngine supports the Origin-Edge structure for cluster configuration and provides scalability. Also, you can set Origin as `Primary` and `Secondary` in OvenMediaEngine for HA.
-
-## Origin-Edge Configuration
 
 The OvenMediaEngine running as edge pulls a stream from an external server when a user requests it. The external server could be another OvenMediaEngine with OVT enabled or another stream server that supports RTSP.&#x20;
 
@@ -44,11 +42,7 @@ OvenMediaEngine provides OVT protocol for passing streams from the origin to the
 
 The role of the edge is to receive and distribute streams from an origin. You can configure hundreds of Edge to distribute traffic to your players. As a result of testing, a single edge can stream 4-5Gbps traffic by WebRTC based on AWS C5.2XLarge. If you need to stream to thousands of people, you can configure and use multiple edges.
 
-The edge supports OVT and RTSP to pull stream from an origin. In the near future, we will support more protocols. The stream pulled through OVT or RTSP is bypassed without being encoded.&#x20;
-
-{% hint style="warning" %}
-In order to re-encode the stream created by OVT and RTSP, the function to put into an existing application will be supported in the future.
-{% endhint %}
+The edge supports OVT and RTSP to pull stream from an origin. In the near future, we will support more protocols. The stream pulled through OVT is bypassed without being encoded.&#x20;
 
 To run OvenMediaEngine as Edge, you need to add Origins elements to the configuration file as follows:
 
@@ -90,47 +84,6 @@ To run OvenMediaEngine as Edge, you need to add Origins elements to the configur
 The `<Origin>`is a rule about where to pull a stream from for what request.&#x20;
 
 The `<Origin>`has the ability to automatically create an application with that name if the application you set in `<Location>` doesn't exist on the server.  If an application exists in the system, a stream will be created in the application.
-
-The automatically created application by `<Origin>` enables all providers but if you create an application yourself, you must enable the provider that matches the setting as follows.
-
-```markup
-<VirtualHosts>
-    <VirtualHost>
-        <Origins>
-            <Properties>
-                <NoInputFailoverTimeout>3000</NoInputFailoverTimeout>
-                <UnusedStreamDeletionTimeout>60000</UnusedStreamDeletionTimeout>
-            </Properties>
-            <Origin>
-                <Location>/this_application/stream</Location>
-                <Pass>
-                    <Scheme>OVT</Scheme>
-                    <Urls><Url>origin.com:9000/app/stream_720p</Url></Urls>
-                </Pass>
-                <ForwardQueryParams>true</ForwardQueryParams>
-            </Origin>
-            <Origin>
-                <Location>/this_application/rtsp_stream</Location>
-                <Pass>
-                    <Scheme>RTSP</Scheme>
-                    <Urls><Url>rtsp.origin.com/145</Url></Urls>
-                </Pass>
-            </Origin>
-        </Origins>
-        <Applications>
-            <Application>
-                <Name>this_application</Name>
-                <Type>live</Type>
-                <Providers>
-                    <!-- You have to enable the OVT provider 
-                    because you used the ovt scheme for configuring Origin. -->
-                    <OVT />
-                    <!-- If you set RTSP into Scheme, 
-                    you have to enable RTSPPull provider -->
-                    <RTSPPull />
-                </Providers>
-		...
-```
 
 #### \<Properties>
 
@@ -208,6 +161,43 @@ OriginMapStore functionality has been tested with Redis Server 5.0.7. You can en
 </VirtualHost>
 ```
 {% endcode %}
+
+## Dynamic Application
+
+It is either impossible or very cumbersome for edge servers to pre-configure all applications. So OriginMap and OriginMapStore have the ability to dynamically create an application if the application does not exist when creating the stream. They create a new application by copying the application configuration with `<Name>*</Name>`. That is, the special application with the name \* is a dynamic application template.
+
+```xml
+<Applications>
+    <Application>
+        <Name>*</Name>
+        <Type>live</Type>
+        <OutputProfiles>
+            ...
+        </OutputProfiles>
+        <Providers>
+            <OVT />
+        </Providers>
+        <Publishers>
+            <AppWorkerCount>1</AppWorkerCount>
+            <StreamWorkerCount>8</StreamWorkerCount>
+            <WebRTC>
+                <Timeout>30000</Timeout>
+                <Rtx>false</Rtx>
+                <Ulpfec>false</Ulpfec>
+                <JitterBuffer>false</JitterBuffer>
+            </WebRTC>
+            <LLHLS>
+                <ChunkDuration>0.5</ChunkDuration>
+                <SegmentDuration>6</SegmentDuration>
+                <SegmentCount>10</SegmentCount>
+                <CrossDomains>
+                    <Url>*</Url>
+                </CrossDomains>
+            </LLHLS>
+        </Publishers>
+    </Application>
+</Applications>
+```
 
 ## Load Balancer
 
