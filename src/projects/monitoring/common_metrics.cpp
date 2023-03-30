@@ -17,13 +17,13 @@ namespace mon
 
 		_avg_throughtput_in = 0;
 		_max_throughtput_in = 0;		
-		_measure_bytes_in = 0;
-		_last_throughput_in_measure_time = std::chrono::system_clock::now();
-		
+		_last_total_bytes_out = 0;
+
 		_avg_throughtput_out = 0;
 		_max_throughtput_out = 0;
-		_measure_bytes_out = 0;
-		_last_throughput_out_measure_time = std::chrono::system_clock::now();
+		_last_total_bytes_out = 0;
+
+		_last_throughput_measure_time = std::chrono::system_clock::now();
 
         _max_total_connection_time = std::chrono::system_clock::now();
 		_last_recv_time = std::chrono::system_clock::now();
@@ -150,22 +150,9 @@ namespace mon
 		_total_bytes_in += value;
 		_last_recv_time = std::chrono::system_clock::now();
 
-
-		// Measure throughput
-		_measure_bytes_in += value;
-
-		if (_last_recv_time - _last_throughput_in_measure_time > std::chrono::seconds(THROUGHPUT_MEASURE_INTERVAL))
-		{
-			_last_throughput_in_measure_time = _last_recv_time;
-
-			_avg_throughtput_in = _measure_bytes_in * 8 / THROUGHPUT_MEASURE_INTERVAL;
-			if (_avg_throughtput_in.load() > _max_throughtput_in.load())
-			{
-				_max_throughtput_in.store(_avg_throughtput_in);
-			}
-
-			_measure_bytes_in = 0;
-		}
+		// If there are no clients of the publisher, output throughput is not calculated.
+		// So, In/Oout throughput calculations are handled here.
+		UpdateThroughput();
 
 		UpdateDate();
 	}
@@ -180,22 +167,6 @@ namespace mon
 		_publisher_metrics[static_cast<int8_t>(type)]._bytes_out += value;
 		_total_bytes_out += value;
 		_last_sent_time = std::chrono::system_clock::now();
-
-		// Measure throughput
-		_measure_bytes_out += value;
-		
-		if( _last_sent_time - _last_throughput_out_measure_time > std::chrono::seconds(THROUGHPUT_MEASURE_INTERVAL))
-		{
-			_last_throughput_out_measure_time = _last_sent_time;
-
-			_avg_throughtput_out = _measure_bytes_out * 8 / THROUGHPUT_MEASURE_INTERVAL;
-			if(_avg_throughtput_out.load() > _max_throughtput_out.load())
-			{
-				_max_throughtput_out.store(_avg_throughtput_out);
-			}
-
-			_measure_bytes_out = 0;
-		}
 
 		UpdateDate();
 	}
@@ -234,4 +205,29 @@ namespace mon
     {
         _last_updated_time = std::chrono::system_clock::now();
     }
+
+	void CommonMetrics::UpdateThroughput()
+	{
+		auto throughput_measure_time = std::chrono::system_clock::now();
+		if ( (throughput_measure_time - _last_throughput_measure_time) > std::chrono::seconds(THROUGHPUT_MEASURE_INTERVAL))
+		{
+			_last_throughput_measure_time = throughput_measure_time;
+
+			// Calculate average throughput of provider
+			_avg_throughtput_in = (_total_bytes_in.load() - _last_total_bytes_in.load()) * 8 / THROUGHPUT_MEASURE_INTERVAL;
+			if (_avg_throughtput_in.load() > _max_throughtput_in.load())
+			{
+				_max_throughtput_in.store(_avg_throughtput_in);
+			}
+			_last_total_bytes_in.store(_total_bytes_in);
+
+			// Calculate average throughput of publisher
+			_avg_throughtput_out =  (_total_bytes_out.load() - _last_total_bytes_out.load()) * 8 / THROUGHPUT_MEASURE_INTERVAL;
+			if(_avg_throughtput_out.load() > _max_throughtput_out.load())
+			{
+				_max_throughtput_out.store(_avg_throughtput_out);
+			}
+			_last_total_bytes_out.store(_total_bytes_out);
+		}
+	}	
 }
