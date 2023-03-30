@@ -6,7 +6,7 @@
 
 namespace mon
 {
-	#define BITRATE_MEASURE_INTERVAL 3
+	#define THROUGHPUT_MEASURE_INTERVAL 1
 
     CommonMetrics::CommonMetrics()
     {
@@ -15,12 +15,15 @@ namespace mon
         _total_connections = 0;
 		_max_total_connections = 0;
 
-		_avg_bitrate_in = 0;
-		_avg_bitrate_out = 0;
-		_bitrate_measure_bytes_in = 0;
-		_bitrate_measure_bytes_out = 0;
-		_last_bitrate_measure_in_time = std::chrono::system_clock::now();
-		_last_bitrate_measure_out_time = std::chrono::system_clock::now();
+		_avg_throughtput_in = 0;
+		_max_throughtput_in = 0;		
+		_measure_bytes_in = 0;
+		_last_throughput_in_measure_time = std::chrono::system_clock::now();
+		
+		_avg_throughtput_out = 0;
+		_max_throughtput_out = 0;
+		_measure_bytes_out = 0;
+		_last_throughput_out_measure_time = std::chrono::system_clock::now();
 
         _max_total_connection_time = std::chrono::system_clock::now();
 		_last_recv_time = std::chrono::system_clock::now();
@@ -89,13 +92,24 @@ namespace mon
 		return _total_bytes_out;
 	}
 
-    uint64_t CommonMetrics::GetAvgBitrateIn() const
+    uint64_t CommonMetrics::GetAvgThroughputIn() const
 	{
-		return _avg_bitrate_in;
+		return _avg_throughtput_in;
 	}
-	uint64_t CommonMetrics::GetAvgBitrateOut() const
+
+	uint64_t CommonMetrics::GetAvgThroughputOut() const
 	{
-		return _avg_bitrate_out;
+		return _avg_throughtput_out;
+	}
+
+    uint64_t CommonMetrics::GetMaxThroughputIn() const
+	{
+		return _max_throughtput_in;
+	}
+
+	uint64_t CommonMetrics::GetMaxThroughputOut() const
+	{
+		return _max_throughtput_out;
 	}
 
 	uint32_t CommonMetrics::GetTotalConnections() const
@@ -136,14 +150,21 @@ namespace mon
 		_total_bytes_in += value;
 		_last_recv_time = std::chrono::system_clock::now();
 
-		_bitrate_measure_bytes_in += value;
-		if( _last_recv_time - _last_bitrate_measure_in_time > std::chrono::seconds(BITRATE_MEASURE_INTERVAL))
-		{
-			_last_bitrate_measure_in_time = _last_recv_time;
 
-			_avg_bitrate_in = _bitrate_measure_bytes_in * 8 / BITRATE_MEASURE_INTERVAL;
-			
-			_bitrate_measure_bytes_in = 0;
+		// Measure throughput
+		_measure_bytes_in += value;
+
+		if (_last_recv_time - _last_throughput_in_measure_time > std::chrono::seconds(THROUGHPUT_MEASURE_INTERVAL))
+		{
+			_last_throughput_in_measure_time = _last_recv_time;
+
+			_avg_throughtput_in = _measure_bytes_in * 8 / THROUGHPUT_MEASURE_INTERVAL;
+			if (_avg_throughtput_in.load() > _max_throughtput_in.load())
+			{
+				_max_throughtput_in.store(_avg_throughtput_in);
+			}
+
+			_measure_bytes_in = 0;
 		}
 
 		UpdateDate();
@@ -160,16 +181,20 @@ namespace mon
 		_total_bytes_out += value;
 		_last_sent_time = std::chrono::system_clock::now();
 
-		_bitrate_measure_bytes_out += value;
+		// Measure throughput
+		_measure_bytes_out += value;
 		
-		// TODO (soulk): Performance tuning is required. This function is very very called a lot. too much time comparison operation.
-		if( _last_sent_time - _last_bitrate_measure_out_time > std::chrono::seconds(BITRATE_MEASURE_INTERVAL))
+		if( _last_sent_time - _last_throughput_out_measure_time > std::chrono::seconds(THROUGHPUT_MEASURE_INTERVAL))
 		{
-			_last_bitrate_measure_out_time = _last_sent_time;
+			_last_throughput_out_measure_time = _last_sent_time;
 
-			_avg_bitrate_out = _bitrate_measure_bytes_out * 8 / BITRATE_MEASURE_INTERVAL;
-			
-			_bitrate_measure_bytes_out = 0;
+			_avg_throughtput_out = _measure_bytes_out * 8 / THROUGHPUT_MEASURE_INTERVAL;
+			if(_avg_throughtput_out.load() > _max_throughtput_out.load())
+			{
+				_max_throughtput_out.store(_avg_throughtput_out);
+			}
+
+			_measure_bytes_out = 0;
 		}
 
 		UpdateDate();

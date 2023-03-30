@@ -22,8 +22,10 @@ namespace mon
 		
 		virtual uint64_t GetTotalBytesIn() const;
 		virtual uint64_t GetTotalBytesOut() const;
-		virtual uint64_t GetAvgBitrateIn() const;
-		virtual uint64_t GetAvgBitrateOut() const;		
+		virtual uint64_t GetAvgThroughputIn() const;
+		virtual uint64_t GetAvgThroughputOut() const;
+		virtual uint64_t GetMaxThroughputIn() const;
+		virtual uint64_t GetMaxThroughputOut() const;		
 		virtual uint32_t GetTotalConnections() const;
 		virtual uint32_t GetMaxTotalConnections() const;
 		virtual std::chrono::system_clock::time_point GetMaxTotalConnectionsTime() const;
@@ -62,12 +64,17 @@ namespace mon
 		std::chrono::system_clock::time_point	_last_recv_time;
 		std::chrono::system_clock::time_point	_last_sent_time;
 
-		std::atomic<uint64_t> _avg_bitrate_in;
-		std::atomic<uint64_t> _avg_bitrate_out;
-		std::atomic<uint64_t> _bitrate_measure_bytes_in;
-		std::atomic<uint64_t> _bitrate_measure_bytes_out;
-		std::chrono::system_clock::time_point	_last_bitrate_measure_in_time;
-		std::chrono::system_clock::time_point	_last_bitrate_measure_out_time;
+		// Throughput from Provider
+		std::atomic<uint64_t> _avg_throughtput_in;
+		std::atomic<uint64_t> _max_throughtput_in;
+		std::atomic<uint64_t> _measure_bytes_in;
+		std::chrono::system_clock::time_point	_last_throughput_in_measure_time;
+
+		// Throughput from Publishers
+		std::atomic<uint64_t> _avg_throughtput_out;
+		std::atomic<uint64_t> _max_throughtput_out;
+		std::atomic<uint64_t> _measure_bytes_out;
+		std::chrono::system_clock::time_point	_last_throughput_out_measure_time;
 
 		// From Publishers
 		class PublisherMetrics
