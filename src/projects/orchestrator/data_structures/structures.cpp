@@ -119,12 +119,19 @@ namespace ocst
 	// Temporarily used until Orchestrator takes stream management
 	bool Application::OnStreamCreated(const std::shared_ptr<info::Stream> &info)
 	{
+		stream_map[info->GetId()] = info;
 		return callback->OnStreamCreated(app_info, info);
 	}
 
 	bool Application::OnStreamDeleted(const std::shared_ptr<info::Stream> &info)
 	{
+		stream_map.erase(info->GetId());
 		return callback->OnStreamDeleted(app_info, info);
+	}
+
+	size_t Application::GetStreamCount() const
+	{
+		return stream_map.size();
 	}
 
 	bool Application::OnStreamPrepared(const std::shared_ptr<info::Stream> &info)

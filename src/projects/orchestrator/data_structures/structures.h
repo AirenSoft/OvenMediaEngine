@@ -124,8 +124,12 @@ namespace ocst
 
 		ObserverType GetObserverType() override;
 
+		size_t GetStreamCount() const;
+
 		CallbackInterface *callback = nullptr;
 		info::Application app_info;
+
+		std::map<info::stream_id_t, std::shared_ptr<info::Stream>> stream_map;
 	};
 
 	struct VirtualHost
@@ -151,6 +155,9 @@ namespace ocst
 		bool is_origin_map_store_enabled = false;
 		ov::String origin_base_url;
 		std::shared_ptr<OriginMapClient> origin_map_client = nullptr;
+
+		// Template of dynamic application configuration
+		cfg::vhost::app::Application app_cfg_template;
 
 		// Application list
 		std::map<info::application_id_t, std::shared_ptr<Application>> app_map;

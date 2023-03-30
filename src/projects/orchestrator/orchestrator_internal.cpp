@@ -766,10 +766,29 @@ namespace ocst
 		return false;
 	}
 
+	Result OrchestratorInternal::CreateApplicationTemplate(const info::Host &host_info, const cfg::vhost::app::Application &app_config)
+	{
+		if (app_config.GetName() != "*")
+		{
+			logtw("Application template name must be \"*\" : %s", app_config.GetName().CStr());
+			return Result::Failed;
+		}
+
+		auto vhost = GetVirtualHost(host_info.GetName());
+		if (vhost == nullptr)
+		{
+			logtw("Host not found for vhost: %s", host_info.GetName().CStr());
+			return Result::Failed;
+		}
+
+		vhost->app_cfg_template = app_config;
+
+		return Result::Succeeded;
+	}
+
 	ocst::Result OrchestratorInternal::CreateApplication(const ov::String &vhost_name, const info::Application &app_info)
 	{
 		auto vhost = GetVirtualHost(vhost_name);
-
 		if (vhost == nullptr)
 		{
 			logtw("Host not found for vhost: %s", vhost_name.CStr());
@@ -830,23 +849,6 @@ namespace ocst
 
 		logte("Trying to rollback for the application [%s]", app_name.CStr());
 		return DeleteApplication(app_info);
-	}
-
-	ocst::Result OrchestratorInternal::CreateApplication(const info::VHostAppName &vhost_app_name, info::Application *app_info)
-	{
-		OV_ASSERT2(app_info != nullptr);
-
-		if (vhost_app_name.IsValid())
-		{
-			auto &vhost_name = vhost_app_name.GetVHostName();
-			auto vhost = GetVirtualHost(vhost_name);
-
-			*app_info = info::Application(vhost->host_info, GetNextAppId(), vhost_app_name, true);
-
-			return CreateApplication(vhost_name, *app_info);
-		}
-
-		return Result::Failed;
 	}
 
 	ocst::Result OrchestratorInternal::NotifyModulesForDeleteEvent(const std::vector<Module> &modules, const info::Application &app_info)
@@ -923,7 +925,7 @@ namespace ocst
 		return DeleteApplication(vhost_app_name.GetVHostName(), app_info.GetId());
 	}
 
-	const info::Application &OrchestratorInternal::GetApplicationInfo(const info::VHostAppName &vhost_app_name) const
+	std::shared_ptr<Application> OrchestratorInternal::GetApplication(const info::VHostAppName &vhost_app_name) const
 	{
 		if (vhost_app_name.IsValid())
 		{
@@ -936,17 +938,29 @@ namespace ocst
 
 				for (auto app_item : app_map)
 				{
-					auto &app_info = app_item.second->app_info;
+					auto &app = app_item.second;
+					auto &app_info = app->app_info;
 
 					if (app_info.GetName() == vhost_app_name)
 					{
-						return app_info;
+						return app;
 					}
 				}
 			}
 		}
 
-		return info::Application::GetInvalidApplication();
+		return nullptr;
+	}
+
+	const info::Application &OrchestratorInternal::GetApplicationInfo(const info::VHostAppName &vhost_app_name) const
+	{
+		auto app = GetApplication(vhost_app_name);
+		if (app == nullptr)
+		{
+			return info::Application::GetInvalidApplication();
+		}
+
+		return app->app_info;
 	}
 
 	const info::Application &OrchestratorInternal::GetApplicationInfo(const ov::String &vhost_name, const ov::String &app_name) const

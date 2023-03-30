@@ -68,7 +68,7 @@ namespace ocst
 		/// @return Creation result
 		///
 		/// @note Automatically DeleteApplication() when application creation fails
-		Result CreateApplication(const info::Host &vhost_info, const cfg::vhost::app::Application &app_config);
+		Result CreateApplication(const info::Host &vhost_info, const cfg::vhost::app::Application &app_config, bool is_dynamic = false);
 		/// Delete the application and notify the modules
 		///
 		/// @param app_info Application information to delete
@@ -197,5 +197,8 @@ namespace ocst
 		std::recursive_mutex _module_list_mutex;
 		mutable std::recursive_mutex _virtual_host_map_mutex;
 		std::shared_mutex _stream_map_mutex;
+
+	private:
+		void OnTimer();
 	};
 }  // namespace ocst

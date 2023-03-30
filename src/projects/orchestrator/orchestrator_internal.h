@@ -70,12 +70,13 @@ namespace ocst
 		Result ReloadCertificate(const ov::String &vhost_name);
 
 		Result CreateApplication(const ov::String &vhost_name, const info::Application &app_info);
-		Result CreateApplication(const info::VHostAppName &vhost_app_name, info::Application *app_info);
+		Result CreateApplicationTemplate(const info::Host &host_info, const cfg::vhost::app::Application &app_config);
 
 		Result NotifyModulesForDeleteEvent(const std::vector<Module> &modules, const info::Application &app_info);
 		Result DeleteApplication(const ov::String &vhost_name, info::application_id_t app_id);
 		Result DeleteApplication(const info::Application &app_info);
 
+		std::shared_ptr<Application> GetApplication(const info::VHostAppName &vhost_app_name) const;
 		const info::Application &GetApplicationInfo(const info::VHostAppName &vhost_app_name) const;
 		const info::Application &GetApplicationInfo(const ov::String &vhost_name, const ov::String &app_name) const;
 		const info::Application &GetApplicationInfo(const ov::String &vhost_name, info::application_id_t app_id) const;
@@ -104,5 +105,9 @@ namespace ocst
 
 		// stream uri, stream
 		std::map<ov::String, std::shared_ptr<pvd::Stream>> _stream_map;
+
+
+		// Module Timer : It is called periodically by the timer
+		ov::DelayQueue _timer{"Orchestrator"};
 	};
 }  // namespace ocst

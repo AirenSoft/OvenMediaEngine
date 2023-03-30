@@ -56,6 +56,12 @@ namespace cfg
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamWorkerCount, _publishers.GetStreamWorkerCount())
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetPersistentStreams, _persistent_streams)
 
+				// Set Name, it is for dynamic application
+				void SetName(const ov::String &name)
+				{
+					_name = name;
+				}
+
 			protected:
 				void MakeList() override
 				{

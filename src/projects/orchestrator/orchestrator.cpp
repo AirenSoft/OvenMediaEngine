@@ -28,7 +28,52 @@ namespace ocst
 
 		auto &vhost_conf_list = _server_config->GetVirtualHostList();
 
-		return CreateVirtualHosts(vhost_conf_list);
+		if (CreateVirtualHosts(vhost_conf_list) == false)
+		{
+			return false;
+		}
+
+		// Do regular job
+		// This also calls the OnTimer of all registered modules in the future. 
+		// Modules will be able to do light routine work in their functions.
+		_timer.Push(
+		[this](void *paramter) -> ov::DelayQueueAction {
+			OnTimer();
+			return ov::DelayQueueAction::Repeat;
+		},
+		3000);
+		_timer.Start();
+
+		return true;
+	}
+
+	void Orchestrator::OnTimer()
+	{
+		// [Job] Delete dynamic application if there are no streams
+		{
+			auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+			// Delete dynamic application if there are no streams
+			for (auto &vhost_item : _virtual_host_list)
+			{
+				auto app_map = vhost_item->app_map;
+				for (auto &app_item : app_map)
+				{
+					auto app = app_item.second;
+					auto &app_info = app->app_info;
+
+					if (app->GetStreamCount() == 0 && app_info.IsDynamicApp() == true)
+					{
+						logti("There are no streams in the dynamic application. Delete the application: %s", app_info.GetName().CStr());
+						auto result = OrchestratorInternal::DeleteApplication(app_info);
+						if (result != Result::Succeeded)
+						{
+							logte("Could not delete dynamic application: %s", app_info.GetName().CStr());
+							continue;
+						}
+					}
+				}
+			}
+		}
 	}
 
 	ocst::Result Orchestrator::Release()
@@ -110,11 +155,22 @@ namespace ocst
 		// Create Applications
 		for (const auto &app_cfg : vhost_info.GetApplicationList())
 		{
-			if(CreateApplication(vhost_info, app_cfg) != Result::Succeeded)
+			if (app_cfg.GetName() == "*")
 			{
-				// Rollback
-				DeleteVirtualHost(vhost_info);
-				return Result::Failed;
+				// wildcard application is template for dynamic applications
+				if (CreateApplicationTemplate(vhost_info, app_cfg) != Result::Succeeded)
+				{
+					return Result::Failed;
+				}
+			}
+			else
+			{
+				if(CreateApplication(vhost_info, app_cfg) != Result::Succeeded)
+				{
+					// Rollback
+					DeleteVirtualHost(vhost_info);
+					return Result::Failed;
+				}
 			}
 		}
 
@@ -233,14 +289,13 @@ namespace ocst
 		return std::nullopt;
 	}
 
-	ocst::Result Orchestrator::CreateApplication(const info::Host &host_info, const cfg::vhost::app::Application &app_config)
+	ocst::Result Orchestrator::CreateApplication(const info::Host &host_info, const cfg::vhost::app::Application &app_config, bool is_dynamic)
 	{
 		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
 
 		auto vhost_name = host_info.GetName();
 
-		info::Application app_info(host_info, GetNextAppId(), ResolveApplicationName(vhost_name, app_config.GetName()), app_config, false);
-
+		info::Application app_info(host_info, GetNextAppId(), ResolveApplicationName(vhost_name, app_config.GetName()), app_config, is_dynamic);
 		auto result = OrchestratorInternal::CreateApplication(vhost_name, app_info);
 		switch (result)
 		{
@@ -580,23 +635,40 @@ namespace ocst
 
 				// Check if the application does exists
 				app_info = OrchestratorInternal::GetApplicationInfo(vhost_app_name);
-
 				if (app_info.IsValid())
 				{
 					result = Result::Exists;
 				}
 				else
 				{
-					// Create a new application
-					result = OrchestratorInternal::CreateApplication(vhost_app_name, &app_info);
+					// Create a new application using application template if exists
+					
+					// Get vhost info
+					auto vhost = GetVirtualHost(vhost_app_name.GetVHostName());
 
-					if (
-						// Failed to create the application
-						(result == Result::Failed) ||
-						// result always must be Result::Succeeded
-						(result != Result::Succeeded))
+					// Copy application template configuration
+					auto app_cfg = vhost->app_cfg_template;
+					if (app_cfg.IsParsed() == false)
 					{
-						logte("Could not create an application: %s, reason: %d", vhost_app_name.CStr(), static_cast<int>(result));
+						logte("Could not find application template for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
+						return false;
+					}
+
+					app_cfg.SetName(vhost_app_name.GetAppName());
+					
+					logti("Trying to create dynamic application for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
+					result = CreateApplication(vhost->host_info, app_cfg, true);
+					if (result != Result::Succeeded)
+					{
+						logte("Could not create application for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
+						return false;
+					}
+
+					app_info = OrchestratorInternal::GetApplicationInfo(vhost_app_name);
+					if (app_info.IsValid() == false)
+					{
+						// MUST NOT HAPPEN
+						logte("Could not find created application for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 						return false;
 					}
 				}
@@ -711,16 +783,26 @@ namespace ocst
 			}
 			else
 			{
-				// Create a new application
-				result = OrchestratorInternal::CreateApplication(vhost_app_name, &app_info);
+				// Create a new application using application template if exists
+					
+				// Get vhost info
+				auto vhost = GetVirtualHost(vhost_app_name.GetVHostName());
 
-				if (
-					// Failed to create the application
-					(result == Result::Failed) ||
-					// result always must be Result::Succeeded
-					(result != Result::Succeeded))
+				// Copy application template configuration
+				auto app_cfg = vhost->app_cfg_template;
+				if (app_cfg.IsParsed() == false)
 				{
-					logte("Could not create an application: %s, reason: %d", vhost_app_name.CStr(), static_cast<int>(result));
+					logte("Could not find application template for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
+					return false;
+				}
+
+				app_cfg.SetName(vhost_app_name.GetAppName());
+				
+				logti("Trying to create dynamic application for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
+				result = CreateApplication(vhost->host_info, app_cfg, true);
+				if (result != Result::Succeeded)
+				{
+					logte("Could not create application for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 					return false;
 				}
 			}

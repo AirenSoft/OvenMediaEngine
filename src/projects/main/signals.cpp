@@ -157,7 +157,7 @@ static void AbortHandler(int signum, siginfo_t *si, void *context)
 
 		ov::StackTrace::WriteStackTrace(ostream);
 
-		const ucontext_t *ucontext = reinterpret_cast<const ucontext_t *>(context);
+		[[maybe_unused]] const ucontext_t *ucontext = reinterpret_cast<const ucontext_t *>(context);
 
 		// Testing
 #if 0
