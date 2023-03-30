@@ -55,7 +55,7 @@ namespace http
 				return _chunked_transfer;
 			}
 
-			uint32_t Http1Response::SendHeader()
+			int32_t Http1Response::SendHeader()
 			{
 				std::shared_ptr<ov::Data> response = std::make_shared<ov::Data>(65535);
 				ov::ByteStream stream(response.get());
@@ -96,10 +96,11 @@ namespace http
 					return response->GetLength();
 				}
 
-				return 0;
+				logte("Could not send header");
+				return -1;
 			}
 
-			uint32_t Http1Response::SendPayload()
+			int32_t Http1Response::SendPayload()
 			{
 				bool sent = true;
 
@@ -115,6 +116,11 @@ namespace http
 						{
 							sent_bytes += data->GetLength();
 						}
+						else
+						{
+							logte("Could not send chunked data : %d bytes", data->GetLength());
+							return -1;
+						}
 					}
 					else
 					{
@@ -122,6 +128,11 @@ namespace http
 						if (sent == true)
 						{
 							sent_bytes += data->GetLength();
+						}
+						else
+						{
+							logte("Could not send data : %d bytes", data->GetLength());
+							return -1;
 						}
 					}
 				}

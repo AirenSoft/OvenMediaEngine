@@ -221,7 +221,7 @@ namespace http
 			return _sent_size;
 		}
 
-		uint32_t HttpResponse::Response()
+		int32_t HttpResponse::Response()
 		{
 			std::lock_guard<decltype(_response_mutex)> lock(_response_mutex);
 			_response_time = std::chrono::system_clock::now();
@@ -231,9 +231,10 @@ namespace http
 			if (IsHeaderSent() == false)
 			{
 				auto sent_header_size = SendHeader();
+				// Header must be bigger than 0, if header is not sent, it is an error
 				if (sent_header_size <= 0)
 				{
-					return 0;
+					return -1;
 				}
 
 				sent_size += sent_header_size;
@@ -244,9 +245,9 @@ namespace http
 			}
 
 			auto sent_data_size = SendPayload();
-			if (sent_data_size <= 0)
+			if (sent_data_size < 0)
 			{
-				return 0;
+				return -1;
 			}
 
 			sent_size += sent_data_size;
@@ -256,12 +257,12 @@ namespace http
 			return sent_size;
 		}	
 
-		uint32_t HttpResponse::SendHeader()
+		int32_t HttpResponse::SendHeader()
 		{
-			return 0;
+			return -1;
 		}
 
-		uint32_t HttpResponse::SendPayload()
+		int32_t HttpResponse::SendPayload()
 		{
 			return 0;
 		}

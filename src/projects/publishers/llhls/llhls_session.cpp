@@ -761,7 +761,11 @@ void LLHlsSession::ResponseData(const std::shared_ptr<http::svr::HttpExchange> &
 {
 	auto response = exchange->GetResponse();
 	auto sent_size = response->Response();
-	MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::LLHls, sent_size);
+
+	if (sent_size > 0)
+	{
+		MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::LLHls, sent_size);
+	}
 
 	logtd("\n%s", exchange->GetDebugInfo().CStr());
 

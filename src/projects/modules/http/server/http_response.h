@@ -52,7 +52,7 @@ namespace http
 			bool AppendString(const ov::String &string);
 			bool AppendFile(const ov::String &filename);
 
-			uint32_t Response();
+			int32_t Response();
 
 			// Get Created Time
 			std::chrono::system_clock::time_point GetCreatedTime() const;
@@ -86,8 +86,8 @@ namespace http
 			virtual bool Send(const std::shared_ptr<const ov::Data> &data);
 			
 		private:
-			virtual uint32_t SendHeader();
-			virtual uint32_t SendPayload();
+			virtual int32_t SendHeader();
+			virtual int32_t SendPayload();
 
 			std::shared_ptr<ov::ClientSocket> _client_socket;
 			std::shared_ptr<ov::TlsServerData> _tls_data;

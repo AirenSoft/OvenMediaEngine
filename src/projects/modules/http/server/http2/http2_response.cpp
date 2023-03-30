@@ -45,7 +45,7 @@ namespace http
 				return Send(frame);
 			}
 
-			uint32_t Http2Response::SendHeader()
+			int32_t Http2Response::SendHeader()
 			{
 				std::shared_ptr<ov::Data> header_block = std::make_shared<ov::Data>(65535);
 				size_t sent_size = 0;
@@ -98,7 +98,7 @@ namespace http
 
 				if (Send(headers_frame) == false)
 				{
-					return 0;
+					return -1;
 				}
 
 				sent_size += head_block_fragment->GetLength();
@@ -124,7 +124,7 @@ namespace http
 
 						if (Send(continuation_frame) == false)
 						{
-							return 0;
+							return -1;
 						}
 
 						sent_size += fragment_size;
@@ -136,7 +136,7 @@ namespace http
 				return sent_size;
 			}
 
-			uint32_t Http2Response::SendPayload()
+			int32_t Http2Response::SendPayload()
 			{
 				logtd("Trying to send datas...");
 

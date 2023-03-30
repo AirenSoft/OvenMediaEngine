@@ -383,8 +383,11 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 		auto sent_size = response->Response();
 		exchange->Release();
 
-		MonitorInstance->IncreaseBytesOut(*stream, PublisherType::Thumbnail, sent_size);
-
+		if (sent_size > 0)
+		{
+			MonitorInstance->IncreaseBytesOut(*stream, PublisherType::Thumbnail, sent_size);
+		}
+		
 		return http::svr::NextHandler::DoNotCall;
 	});
 
