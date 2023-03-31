@@ -27,6 +27,8 @@ namespace bmff
 
 		FMP4Packager(const std::shared_ptr<FMP4Storage> &storage, const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<const MediaTrack> &data_track, const Config &config);
 
+		~FMP4Packager();
+
 		// Generate Initialization FMP4Segment
 		bool CreateInitializationSegment();
 

@@ -28,8 +28,17 @@ namespace bmff
 
 	FMP4Storage::~FMP4Storage()
 	{
-		// Delete all dvr directory and files
-		ov::DeleteDirectories(GetDVRDirectory());
+		if (_config.dvr_enabled == true)
+		{
+			// Delete all dvr directory and files
+			auto dvr_path = GetDVRDirectory();
+
+			logti("Try to delete directory for LLHLS DVR: %s", dvr_path.CStr());
+			ov::DeleteDirectories(dvr_path);
+			logti("Successfully deleted directory for LLHLS DVR: %s", dvr_path.CStr());
+		}
+
+		logtd("FMP4 Storage has been terminated successfully");
 	}
 
 	std::shared_ptr<ov::Data> FMP4Storage::GetInitializationSection() const
@@ -159,10 +168,14 @@ namespace bmff
 		auto dir = GetDVRDirectory();
 
 		// Create directory
-		if (ov::CreateDirectories(dir) == false)
+		if (ov::IsDirExist(dir) == false)
 		{
-			logte("Could not create directory for DVR: %s", dir.CStr());
-			return false;
+			logti("Try to create directory for LLHLS DVR: %s", dir.CStr());
+			if (ov::CreateDirectories(dir) == false)
+			{
+				logte("Could not create directory for DVR: %s", dir.CStr());
+				return false;
+			}
 		}
 
 		// Save to file

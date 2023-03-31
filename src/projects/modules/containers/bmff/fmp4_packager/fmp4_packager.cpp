@@ -27,6 +27,11 @@ namespace bmff
 		_target_chunk_duration_ms = _config.chunk_duration_ms;
 	}
 
+	FMP4Packager::~FMP4Packager()
+	{
+		logtd("FMP4Packager has been terminated finally");
+	}
+
 	// Generate Initialization FMP4Segment
 	bool FMP4Packager::CreateInitializationSegment()
 	{
