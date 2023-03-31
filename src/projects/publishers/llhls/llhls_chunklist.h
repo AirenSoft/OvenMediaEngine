@@ -210,6 +210,7 @@ private:
 	bool _keep_old_segments = false;
 
 	std::map<int32_t, std::shared_ptr<LLHlsChunklist>> _renditions;
+	mutable std::shared_mutex _renditions_guard;
 
 	ov::String _cached_default_chunklist;
 	mutable std::shared_mutex _cached_default_chunklist_guard;

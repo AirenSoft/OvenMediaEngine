@@ -32,11 +32,15 @@ LLHlsChunklist::~LLHlsChunklist()
 // Set all renditions info for ABR
 void LLHlsChunklist::SetRenditions(const std::map<int32_t, std::shared_ptr<LLHlsChunklist>> &renditions)
 {
+	// lock
+	std::lock_guard<std::shared_mutex> lock(_renditions_guard);
 	_renditions = renditions;
 }
 
 void LLHlsChunklist::Release()
 {
+	// lock
+	std::lock_guard<std::shared_mutex> lock(_renditions_guard);
 	_renditions.clear();
 }
 
@@ -352,6 +356,8 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 	if (vod == false)
 	{
 		// Output #EXT-X-RENDITION-REPORT
+		// lock
+		std::shared_lock<std::shared_mutex> rendition_lock(_renditions_guard);
 		for (const auto &[track_id, rendition] : _renditions)
 		{
 			// Skip mine 
