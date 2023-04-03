@@ -335,7 +335,7 @@ install_base_fedora()
 
 install_base_centos()
 {
-    if [ "${OSVERSION}" == "7" ]; then
+    if [[ "${OSNAME}" == "CentOS" && "${OSVERSION}" == "7" ]]; then
         sudo yum install -y epel-release
 
         # centos-release-scl should be installed before installing devtoolset-7
@@ -343,6 +343,8 @@ install_base_centos()
         sudo yum install -y glibc-static devtoolset-7
 
         source scl_source enable devtoolset-7
+    elif [[ "${OSNAME}" == "Amazon Linux" && "${OSVERSION}" == "2" ]]; then
+        sudo yum install -y make git
     fi
 
     sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
