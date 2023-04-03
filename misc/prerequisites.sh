@@ -344,7 +344,7 @@ install_base_centos()
 
         source scl_source enable devtoolset-7
     elif [[ "${OSNAME}" == "Amazon Linux" && "${OSVERSION}" == "2" ]]; then
-        sudo yum install -y make git
+        sudo yum install -y make git which
     fi
 
     sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
