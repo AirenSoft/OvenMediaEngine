@@ -2,7 +2,7 @@
 
 ## Getting Started with Docker Image
 
-OvenMediaEngine provides Docker images from AirenSoft's Docker Hub (airensoft/ovenmediaengine) repository. You can easily use OvenMediaEngine server by using Docker image. See [Installing with Docker](./#installing-with-docker-image) for details.
+OvenMediaEngine provides Docker images from AirenSoft's Docker Hub (airensoft/ovenmediaengine) repository. You can easily use OvenMediaEngine server by using Docker image. See [Getting Started with Docker](getting-started-with-docker.md) for details.
 
 ## Getting Started with Source Code
 
