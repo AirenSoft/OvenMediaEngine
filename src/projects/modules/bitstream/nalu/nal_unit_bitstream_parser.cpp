@@ -12,19 +12,18 @@ NalUnitBitstreamParser::NalUnitBitstreamParser(const uint8_t *bitstream, size_t 
 		// 00 00 03 01 ==> 00 00 01
 		// 00 00 03 02 ==> 00 00 02
 		// 00 00 03 03 ==> 00 00 03
+		// 00 00 03 00 00 03 00 ==> 00 00 00 00 00
 
         if (original_bitstream_offset + 3 < length && 
 					bitstream[original_bitstream_offset] == 0x00 && 
 					bitstream[original_bitstream_offset + 1] == 0x00 && 
 					bitstream[original_bitstream_offset + 2] == 0x03 &&
-					(bitstream[original_bitstream_offset + 3] & 0xFC) == 0) // 0b00 (0) || 0b01 (1) || 0b10 (2) || 0b11 (3)
+					(bitstream[original_bitstream_offset + 3] | 0b11 == 0b11)) 
         {
             _bitstream.emplace_back(bitstream[original_bitstream_offset]);
 			original_bitstream_offset ++;
             _bitstream.emplace_back(bitstream[original_bitstream_offset]);
 			original_bitstream_offset += 2; // skip the '03'
-			_bitstream.emplace_back(bitstream[original_bitstream_offset]);
-			original_bitstream_offset ++;
         }
         else
         {
@@ -55,6 +54,7 @@ bool NalUnitBitstreamParser::ReadU32(uint32_t &value)
 
 bool NalUnitBitstreamParser::ReadUEV(uint32_t &value)
 {
+	value = 0;
     int zero_bit_count = 0;
     uint8_t bit;
     while (true)
@@ -73,20 +73,13 @@ bool NalUnitBitstreamParser::ReadUEV(uint32_t &value)
             break;
         }
     }
-    value = 1;
-    while (zero_bit_count--)
-    {
-        value <<= 1;
-        if (ReadBit(bit) == false)
-        {
-            return false;
-        }
-        if (bit)
-        {
-            value += 1;
-        }
-    }
-    value -= 1;
+
+    value = (1 << zero_bit_count) - 1;
+	
+	uint32_t rest;
+	ReadBits(zero_bit_count, rest);
+	value += rest;
+
     return true;
 }
 
