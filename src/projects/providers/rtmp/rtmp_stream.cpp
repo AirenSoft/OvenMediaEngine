@@ -97,6 +97,8 @@ namespace pvd
 
 		  _vhost_app_name(info::VHostAppName::InvalidVHostAppName())
 	{
+		logtd("Stream has been created");
+
 		_remote = client_socket;
 		SetMediaSource(_remote->GetRemoteAddressAsUrl());
 
@@ -110,6 +112,7 @@ namespace pvd
 
 	RtmpStream::~RtmpStream()
 	{
+		logtd("Stream has been terminated finally");
 	}
 
 	bool RtmpStream::Start()
@@ -266,17 +269,18 @@ namespace pvd
 				_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(_url->Host(), _app_name);
 				_import_chunk->SetAppName(_vhost_app_name);
 
-				auto app_info = ocst::Orchestrator::GetInstance()->GetApplicationInfo(_vhost_app_name);
-				if (app_info.IsValid())
-				{
-					_app_id = app_info.GetId();
-				}
-				else
-				{
-					logte("%s application does not exist", _vhost_app_name.CStr());
-					Stop();
-					return;
-				}
+				//Since vhost/app/stream can be changed in AdmissionWebhooks, it is not checked here.
+				// auto app_info = ocst::Orchestrator::GetInstance()->GetApplicationInfo(_vhost_app_name);
+				// if (app_info.IsValid())
+				// {
+				// 	_app_id = app_info.GetId();
+				// }
+				// else
+				// {
+				// 	logte("%s application does not exist", _vhost_app_name.CStr());
+				// 	Stop();
+				// 	return;
+				// }
 			}
 			else
 			{
@@ -394,6 +398,39 @@ namespace pvd
 		return false;
 	}
 
+	bool RtmpStream::ValidatePublishUrl()
+	{
+		if (_publish_url == nullptr)
+		{
+			logte("Publish URL is not set");
+			return false;
+		}
+
+		if (_publish_url->Scheme().UpperCaseString() != "RTMP" || 
+			_publish_url->Host().IsEmpty() || 
+			_publish_url->App().IsEmpty() || 
+			_publish_url->Stream().IsEmpty())
+		{
+			logte("Invalid publish URL: %s", _publish_url->ToUrlString().CStr());
+			return false;
+		}
+
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(_publish_url->Host(), _publish_url->App());
+
+		auto app_info = ocst::Orchestrator::GetInstance()->GetApplicationInfo(vhost_app_name);
+		if (app_info.IsValid())
+		{
+			_app_id = app_info.GetId();
+		}
+		else
+		{
+			logte("Could not find application: %s", vhost_app_name.CStr());
+			return false;
+		}
+
+		return true;
+	}
+
 	void RtmpStream::OnAmfFCPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
 		if (_stream_name.IsEmpty() && document.GetProperty(3) != nullptr &&
@@ -409,6 +446,12 @@ namespace pvd
 			_full_url.Format("%s/%s", _tc_url.CStr(), document.GetProperty(3)->GetString());
 			SetFullUrl(_full_url);
 			CheckAccessControl();
+
+			if (ValidatePublishUrl() == false)
+			{
+				Stop();
+				return;
+			}
 		}
 	}
 
@@ -421,6 +464,12 @@ namespace pvd
 				_full_url.Format("%s/%s", _tc_url.CStr(), document.GetProperty(3)->GetString());
 				SetFullUrl(_full_url);
 				CheckAccessControl();
+
+				if (ValidatePublishUrl() == false)
+				{
+					Stop();
+					return;
+				}
 			}
 			else
 			{
@@ -1656,19 +1705,21 @@ namespace pvd
 			return false;
 		}
 
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(_publish_url->Host(), _publish_url->App());
+		_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(_publish_url->Host(), _publish_url->App());
+		_stream_name = _publish_url->Stream();
 
 		// Get application config
 		if (GetProvider() == nullptr)
 		{
-			logte("Could not find provider: stream(%s/%s)", _vhost_app_name.CStr(), _stream_name.CStr());
+			logte("Could not find provider: %s/%s", _vhost_app_name.CStr(), _stream_name.CStr());
 			return false;
 		}
 
-		auto application = GetProvider()->GetApplicationByName(vhost_app_name);
+		auto application = GetProvider()->GetApplicationByName(_vhost_app_name);
 		if (application == nullptr)
 		{
-			logte("Could not find application: stream(%s/%s)", _vhost_app_name.CStr(), _stream_name.CStr());
+			logte("Could not find application: %s/%s", _vhost_app_name.CStr(), _stream_name.CStr());
+			Stop();
 			return false;
 		}
 
@@ -1680,7 +1731,7 @@ namespace pvd
 		SetTrackInfo(_media_info);
 
 		// Publish
-		if (PublishChannel(vhost_app_name) == false)
+		if (PublishChannel(_vhost_app_name) == false)
 		{
 			Stop();
 			return false;

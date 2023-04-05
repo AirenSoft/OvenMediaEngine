@@ -122,6 +122,7 @@ namespace pvd
 
 		bool CheckAccessControl();
 		bool CheckStreamExpired();
+		bool ValidatePublishUrl();
 
 		void AdjustTimestamp(int64_t &pts, int64_t &dts);
 
