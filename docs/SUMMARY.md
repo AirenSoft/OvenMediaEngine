@@ -23,7 +23,7 @@
   * [Low-Latency DASH and Legacy HLS streaming](streaming/hls-mpeg-dash.md)
 * [Access Control](access-control/README.md)
   * [SignedPolicy](access-control/signedpolicy.md)
-  * [AdmissionWebhooks (beta)](access-control/admission-webhooks.md)
+  * [AdmissionWebhooks](access-control/admission-webhooks.md)
 * [Clustering](origin-edge-clustering.md)
 * [Thumbnail](thumbnail-experiment.md)
 * [Recording](recording-experiment.md)
