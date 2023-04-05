@@ -6,31 +6,40 @@ NalUnitBitstreamParser::NalUnitBitstreamParser(const uint8_t *bitstream, size_t 
     // Parse the bitstream and skip emulation_prevention_three_byte
    	_bitstream.reserve(length);
 
-    for (size_t original_bitstream_offset = 0; original_bitstream_offset < length;)
-    {
-		// 00 00 03 00 ==> 00 00 00
-		// 00 00 03 01 ==> 00 00 01
-		// 00 00 03 02 ==> 00 00 02
-		// 00 00 03 03 ==> 00 00 03
-		// 00 00 03 00 00 03 00 ==> 00 00 00 00 00
+	if (length < 4)
+	{
+		// No need to decode EBSP 
+		_bitstream.insert(_bitstream.end(), bitstream, bitstream + length);
+	}
+	else
+	{
+		// EBSP to RBSP
+		for (size_t original_bitstream_offset = 0; original_bitstream_offset < length;)
+		{
+			// 00 00 03 00 ==> 00 00 00
+			// 00 00 03 01 ==> 00 00 01
+			// 00 00 03 02 ==> 00 00 02
+			// 00 00 03 03 ==> 00 00 03
+			// 00 00 03 00 00 03 00 ==> 00 00 00 00 00
 
-        if (original_bitstream_offset + 3 < length && 
-					bitstream[original_bitstream_offset] == 0x00 && 
-					bitstream[original_bitstream_offset + 1] == 0x00 && 
-					bitstream[original_bitstream_offset + 2] == 0x03 &&
-					(bitstream[original_bitstream_offset + 3] | 0b11 == 0b11)) 
-        {
-            _bitstream.emplace_back(bitstream[original_bitstream_offset]);
-			original_bitstream_offset ++;
-            _bitstream.emplace_back(bitstream[original_bitstream_offset]);
-			original_bitstream_offset += 2; // skip the '03'
-        }
-        else
-        {
-            _bitstream.emplace_back(bitstream[original_bitstream_offset]);
-			original_bitstream_offset ++;
-        }
-    }
+			if (original_bitstream_offset + 3 < length && 
+						bitstream[original_bitstream_offset] == 0x00 && 
+						bitstream[original_bitstream_offset + 1] == 0x00 && 
+						bitstream[original_bitstream_offset + 2] == 0x03 &&
+						((bitstream[original_bitstream_offset + 3] | 0b11) == 0b11)) 
+			{
+				_bitstream.emplace_back(bitstream[original_bitstream_offset]);
+				original_bitstream_offset ++;
+				_bitstream.emplace_back(bitstream[original_bitstream_offset]);
+				original_bitstream_offset += 2; // skip the '03'
+			}
+			else
+			{
+				_bitstream.emplace_back(bitstream[original_bitstream_offset]);
+				original_bitstream_offset ++;
+			}
+		}
+	}
     
 	_buffer = _bitstream.data();
 	_capacity = _bitstream.size();

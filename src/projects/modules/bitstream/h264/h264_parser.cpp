@@ -68,12 +68,24 @@ bool H264Parser::ParseNalUnitHeader(const uint8_t *nalu, size_t length, H264NalU
 {
 	if (length < H264_NAL_UNIT_HEADER_SIZE)
 	{
+		logte("Invalid NALU header (length: %d)", length);
 		return false;
 	}
 
-	NalUnitBitstreamParser parser(nalu, H264_NAL_UNIT_HEADER_SIZE);
-	
-	return ParseNalUnitHeader(parser, header);
+	uint8_t forbidden_zero_bit = (nalu[0] & 0x80) >> 7;
+	if (forbidden_zero_bit != 0)
+	{
+		logte("Invalid NALU header (forbidden_zero_bit: %d)", forbidden_zero_bit);
+		return false;
+	}
+
+	uint8_t nal_ref_idc = (nalu[0] & 0x60) >> 5;
+	header._nal_ref_idc = nal_ref_idc;
+
+	uint8_t nal_type = (nalu[0] & 0x1f);
+	header._type = static_cast<H264NalUnitType>(nal_type);
+
+	return true;
 }
 
 bool H264Parser::ParseNalUnitHeader(NalUnitBitstreamParser &parser, H264NalUnitHeader &header)

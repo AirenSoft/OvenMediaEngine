@@ -5,6 +5,8 @@
 #include "h265_parser.h"
 #include "h265_types.h"
 
+#define OV_LOG_TAG "H265Parser"
+
 // returns offset (start point), code_size : 3(001) or 4(0001)
 // returns -1 if there is no start code in the buffer
 int H265Parser::FindAnnexBStartCode(const uint8_t *bitstream, size_t length, size_t &start_code_size)
@@ -83,14 +85,29 @@ bool H265Parser::CheckKeyframe(const uint8_t *bitstream, size_t length)
 
 bool H265Parser::ParseNalUnitHeader(const uint8_t *nalu, size_t length, H265NalUnitHeader &header)
 {
-	NalUnitBitstreamParser parser(nalu, length);
-
 	if(length < H265_NAL_UNIT_HEADER_SIZE)
 	{
+		logte("Invalid NALU header size: %zu", length);
 		return false;
 	}
 
-	return ParseNalUnitHeader(parser, header);
+	uint8_t forbidden_zero_bit = (nalu[0] >> 7) & 0x01;
+	if(forbidden_zero_bit != 0)
+	{
+		logte("Invalid NALU header: forbidden_zero_bit is not 0");
+		return false;
+	}
+
+	uint8_t nal_type = (nalu[0] >> 1) & 0x3F;
+	header._type = static_cast<H265NALUnitType>(nal_type);
+
+	uint8_t layer_id = ((nalu[0] & 0x01) << 5) | ((nalu[1] >> 3) & 0x1F);
+	header._layer_id = layer_id;
+
+	uint8_t temporal_id_plus1 = nalu[1] & 0x07;
+	header._temporal_id_plus1 = temporal_id_plus1;
+
+	return true;
 }
 
 bool H265Parser::ParseNalUnitHeader(NalUnitBitstreamParser &parser, H265NalUnitHeader &header)
