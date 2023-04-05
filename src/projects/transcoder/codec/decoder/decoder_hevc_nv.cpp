@@ -224,7 +224,6 @@ void DecoderHEVCxNV::CodecThread()
 				if (_change_format == false)
 				{
 					ret = ::avcodec_parameters_from_context(_codec_par, _context);
-
 					if (ret == 0)
 					{
 						auto codec_info = ShowCodecParameters(_context, _codec_par);
@@ -262,7 +261,10 @@ void DecoderHEVCxNV::CodecThread()
 				tmp_frame->pts = _frame->pts;
 
 				// If there is no duration, the duration is calculated by framerate and timebase.
-				tmp_frame->pkt_duration = (tmp_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, GetRefTrack()) : tmp_frame->pkt_duration;
+				if(_frame->pkt_duration <= 0LL && _context->framerate.num > 0 && _context->framerate.den > 0)
+				{
+					_frame->pkt_duration = (int64_t)( ((double)_context->framerate.den / (double)_context->framerate.num) / ((double) GetRefTrack()->GetTimeBase().GetNum() / (double) GetRefTrack()->GetTimeBase().GetDen()) );
+				}
 
 				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, tmp_frame);
 				if (decoded_frame == nullptr)
