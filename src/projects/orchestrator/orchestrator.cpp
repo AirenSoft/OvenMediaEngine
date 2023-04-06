@@ -1129,15 +1129,6 @@ namespace ocst
 	// - Internally it uses multiple urls from OVT provider/publisher within localhost.
 	CommonErrorCode Orchestrator::CreatePersistentStreamIfNeed(const info::Application &app_info, const std::shared_ptr<info::Stream> &stream_info)
 	{
-		//lock 
-		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
-
-		auto vhost = GetVirtualHost(app_info.GetName());
-		if(!vhost)
-		{
-			return CommonErrorCode::NOT_FOUND;
-		}
-
 		// Streams created by OVT, FILE or Transcoder Provider are excluded.
 		if(stream_info->GetSourceType() == StreamSourceType::Ovt || stream_info->GetSourceType() == StreamSourceType::File || stream_info->GetSourceType() == StreamSourceType::Transcoder)
 		{
@@ -1166,6 +1157,9 @@ namespace ocst
 			{
 				continue;
 			}
+
+			// TODO(soulk): There is a problem that persistence stream is not supported in case of multiple virtualhosts.
+			// When requested by OVT, virtual host selection must be possible.
 
 			// Set url of main/fallback stream
 			std::vector<ov::String> url_list;
