@@ -61,7 +61,7 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 	_start_frame_time = 0;
 	_last_frame_time = 0;
 
-	_codec_extradata = media_track._codec_extradata;
+	_codec_component_data_map = media_track._codec_component_data_map;
 
 	_origin_bitstream_format = media_track._origin_bitstream_format;
 }
@@ -201,19 +201,53 @@ bool MediaTrack::IsBypass() const
 	return _byass;
 }
 
-void MediaTrack::SetCodecExtradata(const std::shared_ptr<ov::Data> &codec_extradata)
+bool MediaTrack::HasCodecComponentData(const CodecComponentDataType &type) const
 {
-	_codec_extradata = codec_extradata;
+	std::shared_lock<std::shared_mutex> lock(_codec_component_data_map_mutex);
+	auto it = _codec_component_data_map.find(type);
+	if (it == _codec_component_data_map.end())
+	{
+		return false;
+	}
+
+	return true;
 }
 
-const std::shared_ptr<ov::Data> &MediaTrack::GetCodecExtradata() const
+void MediaTrack::SetCodecComponentData(const CodecComponentDataType &type, const std::shared_ptr<ov::Data> &codec_extradata)
 {
-	return _codec_extradata;
+	std::lock_guard<std::shared_mutex> lock(_codec_component_data_map_mutex);
+	// overwrite
+	_codec_component_data_map[type] = codec_extradata;
 }
 
-std::shared_ptr<ov::Data> &MediaTrack::GetCodecExtradata()
+const std::shared_ptr<ov::Data> MediaTrack::GetCodecComponentData(const CodecComponentDataType &type) const
+{	
+	std::shared_lock<std::shared_mutex> lock(_codec_component_data_map_mutex);
+	auto it = _codec_component_data_map.find(type);
+	if (it == _codec_component_data_map.end())
+	{
+		return nullptr;
+	}
+
+	return it->second;
+}
+
+std::shared_ptr<ov::Data> MediaTrack::GetCodecComponentData(const CodecComponentDataType &type)
 {
-	return _codec_extradata;
+	std::lock_guard<std::shared_mutex> lock(_codec_component_data_map_mutex);
+	auto it = _codec_component_data_map.find(type);
+	if (it == _codec_component_data_map.end())
+	{
+		return nullptr;
+	}
+
+	return it->second;
+}
+
+std::map<MediaTrack::CodecComponentDataType, std::shared_ptr<ov::Data>> MediaTrack::GetCodecComponentDataMap() const
+{
+	std::shared_lock<std::shared_mutex> lock(_codec_component_data_map_mutex);
+	return _codec_component_data_map;
 }
 
 ov::String MediaTrack::GetInfoString()
@@ -305,7 +339,7 @@ bool MediaTrack::IsValid()
 				_height > 0 &&
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
-				_codec_extradata != nullptr)
+				HasCodecComponentData(CodecComponentDataType::AVCDecoderConfigurationRecord) == true)
 
 			{
 				_is_valid = true;
@@ -364,7 +398,7 @@ bool MediaTrack::IsValid()
 				_time_base.GetDen() > 0 &&
 				_channel_layout.GetCounts() > 0 &&
 				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown &&
-				_codec_extradata != nullptr)
+				HasCodecComponentData(CodecComponentDataType::AACSpecificConfig) == true)
 			{
 				_is_valid = true;
 				return true;
@@ -563,7 +597,7 @@ std::shared_ptr<MediaTrack> MediaTrack::Clone()
 	track->_bypass_conf = _bypass_conf;
 	track->_start_frame_time = _start_frame_time;
 	track->_last_frame_time = _last_frame_time;
-	track->_codec_extradata = _codec_extradata == nullptr ? nullptr : _codec_extradata->Clone();
+	track->_codec_component_data_map = _codec_component_data_map;
 	track->_total_frame_count = _total_frame_count;
 	track->_total_frame_bytes = _total_frame_bytes;
 
@@ -582,9 +616,6 @@ std::shared_ptr<MediaTrack> MediaTrack::Clone()
 	track->_has_bframe = _has_bframe;
 	track->_preset = _preset;
 	track->_use_hwaccel = _use_hwaccel;
-	track->_h264_sps_pps_annexb_data = _h264_sps_pps_annexb_data == nullptr ? nullptr : _h264_sps_pps_annexb_data->Clone();
-	track->_h264_sps_data = _h264_sps_data == nullptr ? nullptr : _h264_sps_data->Clone();
-	track->_h264_pps_data = _h264_pps_data == nullptr ? nullptr : _h264_pps_data->Clone();
 	track->_colorspace = _colorspace;
 
 	// Audio Track
@@ -592,7 +623,6 @@ std::shared_ptr<MediaTrack> MediaTrack::Clone()
 	track->_sample = _sample;
 	track->_audio_timescale = _audio_timescale;
 	track->_audio_samples_per_frame= _audio_samples_per_frame;
-	track->_aac_config = _aac_config;
-
+	
 	return track;
 }

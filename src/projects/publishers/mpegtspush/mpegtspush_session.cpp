@@ -95,7 +95,20 @@ bool MpegtsPushSession::Start()
 		track_info->SetHeight( track->GetHeight() );
 		track_info->SetSample( track->GetSample() );
 		track_info->SetChannel( track->GetChannel() );
-		track_info->SetExtradata( track->GetCodecExtradata() );
+		// Set DecoderSpecificInfo
+		if (track->GetCodecId() == cmn::MediaCodecId::H264)
+		{
+			track_info->SetExtradata(track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AVCDecoderConfigurationRecord));
+		}
+		else if (track->GetCodecId() == cmn::MediaCodecId::H265)
+		{
+			track_info->SetExtradata(track->GetCodecComponentData(MediaTrack::CodecComponentDataType::HEVCDecoderConfigurationRecord));
+		}
+		else if (track->GetCodecId() == cmn::MediaCodecId::Aac)
+		{
+			track_info->SetExtradata(track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AACSpecificConfig));
+		}
+
 
 		bool ret = _writer->AddTrack(track->GetMediaType(), track->GetId(), track_info);
 		if(ret == false)

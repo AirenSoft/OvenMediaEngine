@@ -3,6 +3,7 @@
 //
 
 #include "ovt_stream.h"
+#include <modules/ovt_packetizer/ovt_signaling.h>
 
 #include <modules/bitstream/aac/aac_specific_config.h>
 #include <modules/bitstream/h264/h264_decoder_configuration_record.h>
@@ -303,11 +304,23 @@ namespace pvd
 		}
 
 		// Parse stream and add track
+		auto json_version = json_contents["version"];
 		auto json_stream = json_contents["stream"];
 		auto json_tracks = json_stream["tracks"];
 		auto json_playlists = json_stream["playlists"];
 
 		// Validation
+		if (json_version.isNull() || json_version.isUInt() == false)
+		{
+			uint32_t ovt_sig_version = json_version.asUInt();
+			if (ovt_sig_version != OVT_SIGNALING_VERSION)
+			{
+				SetState(State::ERROR);
+				logte("Invalid OVT version : %X, expected %X", ovt_sig_version, OVT_SIGNALING_VERSION);
+				return false;
+			}
+		}
+
 		// renditions is optional
 		if (json_stream["appName"].isNull() || json_stream["streamName"].isNull() || json_stream["tracks"].isNull() ||
 			!json_tracks.isArray())
@@ -393,7 +406,7 @@ namespace pvd
 
 			// Validation
 			if (!json_track["id"].isUInt() || !json_track["name"].isString() || !json_track["codecId"].isUInt() || !json_track["mediaType"].isUInt() ||
-				!json_track["timebase_num"].isUInt() || !json_track["timebase_den"].isUInt() ||
+				!json_track["timebaseNum"].isUInt() || !json_track["timebaseDen"].isUInt() ||
 				!json_track["bitrate"].isUInt() ||
 				!json_track["startFrameTime"].isUInt64() || !json_track["lastFrameTime"].isUInt64())
 			{
@@ -406,52 +419,11 @@ namespace pvd
 			new_track->SetVariantName(json_track["name"].asString().c_str());
 			new_track->SetCodecId(static_cast<cmn::MediaCodecId>(json_track["codecId"].asUInt()));
 			new_track->SetMediaType(static_cast<cmn::MediaType>(json_track["mediaType"].asUInt()));
-			new_track->SetTimeBase(json_track["timebase_num"].asUInt(), json_track["timebase_den"].asUInt());
+			new_track->SetTimeBase(json_track["timebaseNum"].asUInt(), json_track["timebaseDen"].asUInt());
 			new_track->SetBitrateByConfig(json_track["bitrate"].asUInt());
 			new_track->SetStartFrameTime(json_track["startFrameTime"].asUInt64());
 			new_track->SetLastFrameTime(json_track["lastFrameTime"].asUInt64());
-
-			auto json_extra_data = json_track["extra_data"];
-			if (!json_extra_data.isNull())
-			{
-				ov::String extra_data_base64 = json_track["extra_data"].asString().c_str();
-				auto extra_data = ov::Base64::Decode(extra_data_base64);
-				new_track->SetCodecExtradata(extra_data);
-
-				if (new_track->GetCodecId() == cmn::MediaCodecId::H264)
-				{
-					AVCDecoderConfigurationRecord config;
-					if (!AVCDecoderConfigurationRecord::Parse(extra_data->GetDataAs<uint8_t>(), extra_data->GetLength(), config))
-					{
-						logte("Could not parse AVCDecoderConfigurationRecord");
-						return false;
-					}
-
-					if (config.NumOfSPS() <= 0 || config.NumOfPPS() <= 0)
-					{
-						logte("There is no SPS/PPS in the AVCDecoderConfigurationRecord");
-						return false;
-					}
-
-					new_track->SetH264SpsData(config.GetSPS(0));
-					new_track->SetH264PpsData(config.GetPPS(0));
-
-					auto [sps_pps_data, frag_header] = config.GetSpsPpsAsAnnexB(4);
-					new_track->SetH264SpsPpsAnnexBFormat(sps_pps_data, frag_header);
-				}
-				else if (new_track->GetCodecId() == cmn::MediaCodecId::Aac)
-				{
-					AACSpecificConfig config;
-					if (!AACSpecificConfig::Parse(extra_data->GetDataAs<uint8_t>(), extra_data->GetLength(), config))
-					{
-						logte("Could not parse AACSpecificConfig");
-						return false;
-					}
-
-					new_track->SetAacConfig(std::make_shared<AACSpecificConfig>(config));
-				}
-			}
-
+			
 			// video or audio
 			if (new_track->GetMediaType() == cmn::MediaType::Video)
 			{
@@ -480,6 +452,28 @@ namespace pvd
 				new_track->SetSampleRate(json_audio_track["samplerate"].asUInt());
 				new_track->GetSample().SetFormat(static_cast<cmn::AudioSample::Format>(json_audio_track["sampleFormat"].asInt()));
 				new_track->GetChannel().SetLayout(static_cast<cmn::AudioChannel::Layout>(json_audio_track["layout"].asUInt()));
+			}
+
+			auto codec_component_data = json_track["codecComponentData"];
+			if (codec_component_data.isNull() == false && codec_component_data.isArray())
+			{
+				for (size_t j = 0; j < codec_component_data.size(); j++)
+				{
+					auto codec_component = codec_component_data[static_cast<int>(j)];
+
+					if (codec_component["type"].isUInt() && codec_component["data"].isString())
+					{
+						MediaTrack::CodecComponentDataType codec_component_type = static_cast<MediaTrack::CodecComponentDataType>(codec_component["type"].asUInt());
+						ov::String codec_component_data = codec_component["data"].asString().c_str();
+
+						auto decoded_data = ov::Base64::Decode(codec_component_data);
+						if (decoded_data != nullptr)
+						{
+							logtc("CodecId(%u) CodecComponentType(%u) Data(%s)", new_track->GetCodecId(), codec_component_type, codec_component_data.CStr());
+							new_track->SetCodecComponentData(codec_component_type, decoded_data);
+						}
+					}
+				}
 			}
 
 			AddTrack(new_track);

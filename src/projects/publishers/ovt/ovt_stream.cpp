@@ -6,6 +6,8 @@
 #include "base/publisher/application.h"
 #include "base/publisher/stream.h"
 
+#include <modules/ovt_packetizer/ovt_signaling.h>
+
 std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pub::Application> application,
 											 const info::Stream &info,
 											 uint32_t worker_count)
@@ -68,76 +70,13 @@ bool OvtStream::Stop()
 
 bool OvtStream::GenerateDescription()
 {
-/*
-	"stream" :
-	{
-		"appName" : "app",
-		"streamName" : "stream_720p",
-		"streamUUID" : "OvenMediaEngine_90b8b53e-3140-4e59-813d-9ace51c0e186/default/#default#app/stream",
-		"playlists":
-		[
-			{
-				"name" : "for llhls",
-				"fileName" : "llhls_abr.oven",
-				"options" :	// Optional
-				{
-					"webrtcAutoAbr" : true // default true
-				},
-				"renditions":
-				[
-					{
-						"name" : "1080p",
-						"videoTrackName" : "1080p",
-						"audioTrackName" : "default",
-					},
-					{
-						"name" : "720",
-						"videoTrackName" : "720p",
-						"audioTrackName" : "default",
-					}
-				],
-				[
-					...
-				]
-			},
-			{
-				...
-			}
-		],
-		"tracks":
-		[
-			{
-				"id" : 3291291,
-				"name" : "1080p",
-				"codecId" : 32198392,
-				"mediaType" : 0 | 1 | 2, # video | audio | data
-				"timebase_num" : 90000,
-				"timebase_den" : 90000,
-				"bitrate" : 5000000,
-				"startFrameTime" : 1293219321,
-				"lastFrameTime" : 1932193921,
-				"videoTrack" :
-				{
-					"framerate" : 29.97,
-					"width" : 1280,
-					"height" : 720
-				},
-				"audioTrack" :
-				{
-					"samplerate" : 44100,
-					"sampleFormat" : "s16",
-					"layout" : "stereo"
-				}
-			}
-		]
-	}
-*/
-
 	Json::Value 	json_root;
 	Json::Value		json_stream;
 	Json::Value		json_tracks;
 	Json::Value		json_playlists;
 
+	json_root["version"] = OVT_SIGNALING_VERSION;
+	
 	json_stream["appName"] = GetApplicationName();
 	json_stream["streamName"] = GetName().CStr();
 
@@ -190,8 +129,8 @@ bool OvtStream::GenerateDescription()
 		json_track["name"] = track->GetVariantName().CStr();
 		json_track["codecId"] = static_cast<int8_t>(track->GetCodecId());
 		json_track["mediaType"] = static_cast<int8_t>(track->GetMediaType());
-		json_track["timebase_num"] = track->GetTimeBase().GetNum();
-		json_track["timebase_den"] = track->GetTimeBase().GetDen();
+		json_track["timebaseNum"] = track->GetTimeBase().GetNum();
+		json_track["timebaseDen"] = track->GetTimeBase().GetDen();
 		json_track["bitrate"] = track->GetBitrate();
 		json_track["startFrameTime"] = track->GetStartFrameTime();
 		json_track["lastFrameTime"] = track->GetLastFrameTime();
@@ -207,11 +146,17 @@ bool OvtStream::GenerateDescription()
 		json_track["videoTrack"] = json_video_track;
 		json_track["audioTrack"] = json_audio_track;
 
-		auto &extra_data = track->GetCodecExtradata();
-		if(extra_data != nullptr)
+		auto data_map = track->GetCodecComponentDataMap();
+		for(auto &data_item : data_map)
 		{
-			auto extra_data_base64 = ov::Base64::Encode(extra_data);
-			json_track["extra_data"] = extra_data_base64.CStr();
+			auto type = data_item.first;
+			auto data = data_item.second;
+		
+			Json::Value json_data;
+			json_data["type"] = static_cast<uint16_t>(type);
+			json_data["data"] = ov::Base64::Encode(data).CStr();
+
+			json_track["codecComponentData"].append(json_data);
 		}
 		
 		json_tracks.append(json_track);

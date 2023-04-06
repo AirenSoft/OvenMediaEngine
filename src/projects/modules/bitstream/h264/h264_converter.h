@@ -19,4 +19,6 @@ public:
 
 	static std::shared_ptr<ov::Data> ConvertAvccToAnnexb(const std::shared_ptr<const ov::Data> &data);
 	static std::shared_ptr<ov::Data> ConvertAnnexbToAvcc(const std::shared_ptr<const ov::Data> &data);
+
+	static std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> ConvertSpsPpsAsAnnexB(uint8_t start_code_size, const std::shared_ptr<const ov::Data> &sps, const std::shared_ptr<const ov::Data> &pps);
 };

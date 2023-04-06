@@ -78,15 +78,6 @@ public:
 	void SetHardwareAccel(bool hwaccel);
 	bool GetHardwareAccel() const;
 
-	// Codec-specific data prepared in advance for performance
-	std::shared_ptr<ov::Data> GetH264SpsPpsAnnexBFormat() const;
-	const FragmentationHeader& GetH264SpsPpsAnnexBFragmentHeader() const;
-	void SetH264SpsPpsAnnexBFormat(const std::shared_ptr<ov::Data>& data, const FragmentationHeader& header);
-	void SetH264SpsData(const std::shared_ptr<ov::Data>& data);
-	void SetH264PpsData(const std::shared_ptr<ov::Data>& data);
-	std::shared_ptr<ov::Data> GetH264SpsData() const;
-	std::shared_ptr<ov::Data> GetH264PpsData() const;
-
 protected:
 
 	// framerate (measurement)
@@ -132,11 +123,4 @@ protected:
 	
 	// Thread count of codec (set by user)
 	int _thread_count;	
-
-	// SPS/PPS data for H264
-	std::shared_ptr<ov::Data> _h264_sps_pps_annexb_data = nullptr;
-	std::shared_ptr<ov::Data> _h264_sps_data = nullptr;
-	std::shared_ptr<ov::Data> _h264_pps_data = nullptr;
-	FragmentationHeader _h264_sps_pps_annexb_fragment_header;
-	H264SPS _h264_sps;	
 };

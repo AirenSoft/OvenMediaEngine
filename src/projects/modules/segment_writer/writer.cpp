@@ -199,16 +199,23 @@ bool Writer::FillCodecParameters(const std::shared_ptr<const Track> &track, AVCo
 			codec_parameters->width = media_track->GetWidth();
 			codec_parameters->height = media_track->GetHeight();
 			codec_parameters->format = media_track->GetColorspace();
+
+			std::shared_ptr<ov::Data> extra_data = nullptr;
 			if (media_track->GetCodecId() == cmn::MediaCodecId::H265)
 			{
 				codec_parameters->codec_tag = MKTAG('h', 'v', 'c', '1');
+				extra_data = media_track->GetCodecComponentData(MediaTrack::CodecComponentDataType::HEVCDecoderConfigurationRecord);
+			}
+			else if (media_track->GetCodecId() == cmn::MediaCodecId::H264)
+			{
+				codec_parameters->codec_tag = MKTAG('a', 'v', 'c', '1');
+				extra_data = media_track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AVCDecoderConfigurationRecord);
 			}
 			else
 			{
 				codec_parameters->codec_tag = 0;
 			}
 
-			auto &extra_data = media_track->GetCodecExtradata();
 			if (extra_data != nullptr)
 			{
 				codec_parameters->extradata_size = extra_data->GetLength();
@@ -233,7 +240,13 @@ bool Writer::FillCodecParameters(const std::shared_ptr<const Track> &track, AVCo
 			codec_parameters->format = static_cast<int>(media_track->GetSample().GetFormat());
 			codec_parameters->codec_tag = 0;
 
-			auto &extra_data = media_track->GetCodecExtradata();
+			std::shared_ptr<ov::Data> extra_data = nullptr;
+			if (media_track->GetCodecId() == cmn::MediaCodecId::Aac)
+			{
+				codec_parameters->codec_tag = MKTAG('a', 'a', 'c', 'p');
+				extra_data = media_track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AACSpecificConfig);
+			}
+
 			if (extra_data != nullptr)
 			{
 				codec_parameters->extradata_size = extra_data->GetLength();

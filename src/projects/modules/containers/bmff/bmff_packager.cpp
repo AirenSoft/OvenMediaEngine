@@ -789,8 +789,8 @@ namespace bmff
 		// configurationVersion int(8)
 		stream.Write8(1);
 
-		auto sps_data = GetMediaTrack()->GetH264SpsData();
-		auto pps_data = GetMediaTrack()->GetH264PpsData();
+		auto sps_data = GetMediaTrack()->GetCodecComponentData(MediaTrack::CodecComponentDataType::AVCSps);
+		auto pps_data = GetMediaTrack()->GetCodecComponentData(MediaTrack::CodecComponentDataType::AVCPps);
 
 		if (sps_data == nullptr || pps_data == nullptr)
 		{
@@ -1114,16 +1114,22 @@ namespace bmff
 		// uint(4) samplingFrequencyIndex; [0] 96000 [1] 88200 [2] 64000 [3] 48000 [4] 44100 [5] 32000 [6] 24000 [7] 22050 [8] 16000 [9] 12000 [10] 11025 [11] 8000 [12] 7350 
 		// uint(4) channelConfiguration; 
 
-		auto aac_config = GetMediaTrack()->GetAacConfig();
-		if (aac_config == nullptr)
+		auto aac_config_data = GetMediaTrack()->GetCodecComponentData(MediaTrack::CodecComponentDataType::AACSpecificConfig);
+		if (aac_config_data == nullptr)
+		{
+			return false;
+		}
+
+		AACSpecificConfig aac_config;
+		if (AACSpecificConfig::Parse(aac_config_data->GetDataAs<uint8_t>(), aac_config_data->GetLength(), aac_config) == false)
 		{
 			return false;
 		}
 		
 		ov::BitWriter bit_writer(2);
-		bit_writer.Write(5, static_cast<uint8_t>(aac_config->ObjectType()));
-		bit_writer.Write(4, static_cast<uint8_t>(aac_config->SamplingFrequency()));
-		bit_writer.Write(4, static_cast<uint8_t>(aac_config->Channel()));
+		bit_writer.Write(5, static_cast<uint8_t>(aac_config.ObjectType()));
+		bit_writer.Write(4, static_cast<uint8_t>(aac_config.SamplingFrequency()));
+		bit_writer.Write(4, static_cast<uint8_t>(aac_config.Channel()));
 
 		return WriteBaseDescriptor(container_stream, 0x05, ov::Data(bit_writer.GetData(), bit_writer.GetDataSize()));
 	}

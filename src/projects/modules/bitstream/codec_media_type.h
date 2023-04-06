@@ -28,7 +28,7 @@ public:
 				break;
 
 			case cmn::MediaCodecId::H264: {
-				auto profile_string = H264Converter::GetProfileString(track->GetCodecExtradata());
+				auto profile_string = H264Converter::GetProfileString(track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AVCDecoderConfigurationRecord));
 				if (profile_string.IsEmpty())
 				{
 					profile_string = H264_CONVERTER_DEFAULT_PROFILE;
@@ -73,7 +73,7 @@ public:
 			}
 
 			case cmn::MediaCodecId::Aac: {
-				auto profile_string = AacConverter::GetProfileString(track->GetAacConfig());
+				auto profile_string = AacConverter::GetProfileString(track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AACSpecificConfig));
 
 				if (profile_string.IsEmpty())
 				{

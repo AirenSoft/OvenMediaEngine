@@ -539,7 +539,7 @@ std::shared_ptr<PayloadAttr> RtcStream::MakePayloadAttr(const std::shared_ptr<co
 			payload->SetRtpmap(PayloadTypeFromCodecId(track->GetCodecId()), "H264", 90000);
 
 			{
-				const auto &codec_extradata = track->GetCodecExtradata();
+				auto avcc = track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AVCDecoderConfigurationRecord);
 
 				//(NOTE) The software decoder of Firefox or Chrome cannot play when 64001f (High, 3.1) stream is input. 
 				// However, when I put the fake information of 42e01f in FMTP, I confirmed that both Firefox and Chrome play well (high profile, but stream without B-Frame). 
@@ -549,7 +549,7 @@ std::shared_ptr<PayloadAttr> RtcStream::MakePayloadAttr(const std::shared_ptr<co
 				ov::String profile_string;
 				if(false)
 				{
-					profile_string = H264Converter::GetProfileString(codec_extradata);
+					profile_string = H264Converter::GetProfileString(avcc);
 				}
 
 				if(profile_string.IsEmpty())

@@ -89,14 +89,25 @@ public:
 	bool IsValid();
 	bool HasQualityMeasured();
 
-	// Define extradata by codec
-	//  H264 : AVCDecoderConfigurationRecord
-	//  H265 : HEVCDecoderConfiguratinRecord(TODO)
-	//  AAC : AACSpecificConfig
-	//  VP8, Opus : Unused
-	void SetCodecExtradata(const std::shared_ptr<ov::Data> &codec_extradata);
-	const std::shared_ptr<ov::Data> &GetCodecExtradata() const;
-	std::shared_ptr<ov::Data> &GetCodecExtradata();
+	enum class CodecComponentDataType : uint16_t
+	{
+		Unknown = 0,
+		AVCDecoderConfigurationRecord,
+		HEVCDecoderConfigurationRecord,
+		AACSpecificConfig,
+		AVCSps,
+		AVCPps,
+		AVCSpsPpsWithStartCode,
+		HEVCVps,
+		HEVCSps,
+		HEVCPps
+	};
+
+	bool HasCodecComponentData(const CodecComponentDataType &type) const;
+	void SetCodecComponentData(const CodecComponentDataType &type, const std::shared_ptr<ov::Data> &data);
+	const std::shared_ptr<ov::Data> GetCodecComponentData(const CodecComponentDataType &type) const;
+	std::shared_ptr<ov::Data> GetCodecComponentData(const CodecComponentDataType &type);
+	std::map<CodecComponentDataType, std::shared_ptr<ov::Data>> GetCodecComponentDataMap() const;
 
 	// For statistics
 	void OnFrameAdded(const std::shared_ptr<MediaPacket> &media_packet);
@@ -150,8 +161,9 @@ protected:
 	// Time of last frame(packet)
 	int64_t _last_frame_time;
 
-	// Extradata
-	std::shared_ptr<ov::Data> _codec_extradata = nullptr;
+	// Component Data
+	std::map<CodecComponentDataType, std::shared_ptr<ov::Data>> _codec_component_data_map;
+	mutable std::shared_mutex _codec_component_data_map_mutex;
 
 	// First frame received time
 	ov::StopWatch _clock_from_first_frame_received;

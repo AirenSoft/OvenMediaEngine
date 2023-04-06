@@ -119,20 +119,23 @@ std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const std::shared_ptr<c
 		return nullptr;
 	}
 	
-	auto adts_data = std::make_shared<ov::Data>(data->GetLength() + 16);
-	int16_t aac_raw_length = data->GetLength();
+	return ConvertRawToAdts(data->GetDataAs<uint8_t>(), data->GetLength(), *aac_config);
+}
 
-	//Get the AACSpecificConfig value from extradata;
-	uint8_t aac_profile = (uint8_t)aac_config->GetAacProfile();
-	uint8_t aac_sample_rate = (uint8_t)aac_config->SamplingFrequency();
-	uint8_t aac_channels = (uint8_t)aac_config->Channel();
+std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const std::shared_ptr<const ov::Data> &data, const std::shared_ptr<ov::Data> &aac_config_data)
+{
+	if(aac_config_data == nullptr)
+	{
+		return nullptr;
+	}
 
-	auto adts_header = MakeAdtsHeader(aac_profile, aac_sample_rate, aac_channels, aac_raw_length);
+	AACSpecificConfig config;
+	if (AACSpecificConfig::Parse(aac_config_data->GetDataAs<uint8_t>(), aac_config_data->GetLength(), config) == false)
+	{
+		return nullptr;
+	}
 
-	adts_data->Append(adts_header);
-	adts_data->Append(data);
-
-	return adts_data;
+	return ConvertRawToAdts(data->GetDataAs<uint8_t>(), data->GetLength(), config);
 }
 
 std::shared_ptr<ov::Data> AacConverter::ConvertAdtsToRaw(const std::shared_ptr<const ov::Data> &data, std::vector<size_t> *length_list)
@@ -235,6 +238,22 @@ ov::String AacConverter::GetProfileString(const std::shared_ptr<AACSpecificConfi
 	}
 
 	return ov::String::FormatString("%d", static_cast<int>(aac_config->ObjectType())); 
+}
+
+ov::String AacConverter::GetProfileString(const std::shared_ptr<ov::Data> &aac_config_data)
+{
+	if (aac_config_data == nullptr)
+	{
+		return "";
+	}
+
+	AACSpecificConfig aac_specific_config;
+	if (AACSpecificConfig::Parse(aac_config_data->GetDataAs<uint8_t>(), aac_config_data->GetLength(), aac_specific_config) == false)
+	{
+		return "";
+	}
+
+	return ov::String::FormatString("%d", static_cast<int>(aac_specific_config.ObjectType()));
 }
 
 ov::String AacConverter::GetProfileString(const std::vector<uint8_t> &codec_extradata)

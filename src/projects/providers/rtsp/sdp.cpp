@@ -181,7 +181,7 @@ bool ParseSdp(const std::vector<uint8_t> &sdp, RtspMediaInfo &rtsp_media_info)
                                                     H264Extradata h264_extradata;
                                                     h264_extradata.AddSps(sps);
                                                     h264_extradata.AddPps(pps);
-                                                    payload.SetCodecExtradata(h264_extradata.Serialize());
+                                                    payload.SetCodecComponentData(h264_extradata.Serialize());
                                                 }
                                                 // Attempt to parse SPS to properly set width/height/frame rate
                                                 H264SPS sps;

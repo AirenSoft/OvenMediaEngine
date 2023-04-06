@@ -143,7 +143,7 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 			logte("There is no SPS/PPS in the sequence header");
 			return false;
 		}
-
+		
 		if (config.NumOfSPS() > 0)
 		{
 			auto sps_data = config.GetSPS(0);
@@ -154,7 +154,7 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 				return false;
 			}
 
-			media_track->SetH264SpsData(sps_data);
+			media_track->SetCodecComponentData(MediaTrack::CodecComponentDataType::AVCSps, sps_data);
 			media_track->SetWidth(sps.GetWidth());
 			media_track->SetHeight(sps.GetHeight());
 		}
@@ -162,12 +162,10 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 		if (config.NumOfPPS() > 0)
 		{
 			auto pps_data = config.GetPPS(0);
-			media_track->SetH264PpsData(pps_data);
+			media_track->SetCodecComponentData(MediaTrack::CodecComponentDataType::AVCPps, pps_data);
 		}
 
-		media_track->SetCodecExtradata(media_packet->GetData());
-		auto [sps_pps_data, frag_header] = config.GetSpsPpsAsAnnexB(4);
-		media_track->SetH264SpsPpsAnnexBFormat(sps_pps_data, frag_header);
+		media_track->SetCodecComponentData(MediaTrack::CodecComponentDataType::AVCDecoderConfigurationRecord, media_packet->GetData());
 
 		return false;
 	}
@@ -251,19 +249,28 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 			nalu_offset += nalu->GetLength();
 		}
 
-		if (has_idr == true && (has_sps == false || has_pps == false) && media_track->GetH264SpsPpsAnnexBFormat() != nullptr)
+		if (has_idr == true && (has_sps == false || has_pps == false) && 
+			media_track->HasCodecComponentData(MediaTrack::CodecComponentDataType::AVCSps) == true &&
+			media_track->HasCodecComponentData(MediaTrack::CodecComponentDataType::AVCPps) == true)
 		{
-			// Insert SPS/PPS nal units so that player can start to play faster
-			auto processed_data = std::make_shared<ov::Data>(65535);
-			auto decode_parameters = media_track->GetH264SpsPpsAnnexBFormat();
+			auto sps_data = media_track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AVCSps);
+			auto pps_data = media_track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AVCPps);
 
+			// convert to AnnexB format
+			auto [decode_parameters, sps_pps_annexb_fragment] = H264Converter::ConvertSpsPpsAsAnnexB(START_CODE_LEN, sps_data, pps_data);
+
+			// new media packet
+			auto processed_data = std::make_shared<ov::Data>(converted_data->GetLength() + 1024);
+
+			// copy sps/pps first
 			processed_data->Append(decode_parameters);
+			// and then copy original data
 			processed_data->Append(converted_data);
 
 			// Update fragment header
 			FragmentationHeader updated_frag_header;
-			updated_frag_header.fragmentation_offset = media_track->GetH264SpsPpsAnnexBFragmentHeader().fragmentation_offset;
-			updated_frag_header.fragmentation_length = media_track->GetH264SpsPpsAnnexBFragmentHeader().fragmentation_length;
+			updated_frag_header.fragmentation_offset = sps_pps_annexb_fragment.fragmentation_offset;
+			updated_frag_header.fragmentation_length = sps_pps_annexb_fragment.fragmentation_length;
 
 			// Existing fragment header offset because SPS/PPS was inserted at front
 			auto offset_offset = updated_frag_header.fragmentation_offset.back() + updated_frag_header.fragmentation_length.back();
@@ -362,7 +369,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 					return false;
 				}
 
-				media_track->SetH264SpsData(nalu);
+				media_track->SetCodecComponentData(MediaTrack::CodecComponentDataType::AVCSps, nalu);
 				media_track->SetWidth(sps.GetWidth());
 				media_track->SetHeight(sps.GetHeight());
 
@@ -382,7 +389,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 			if (media_track->IsValid() == false)
 			{
 				auto nalu = std::make_shared<ov::Data>(bitstream + offset, offset_length);
-				media_track->SetH264PpsData(nalu);
+				media_track->SetCodecComponentData(MediaTrack::CodecComponentDataType::AVCPps, nalu);
 				avc_decoder_configuration_record.AddPPS(nalu);
 			}
 		}
@@ -407,23 +414,31 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 		avc_decoder_configuration_record.SetVersion(1);
 		// Set default nal unit length
 		avc_decoder_configuration_record.SetLengthOfNalUnit(3);
-		media_track->SetCodecExtradata(avc_decoder_configuration_record.Serialize());
-		auto [sps_pps_annexb_data, sps_pps_frag_header] = avc_decoder_configuration_record.GetSpsPpsAsAnnexB(annexb_start_code_size);
-		media_track->SetH264SpsPpsAnnexBFormat(sps_pps_annexb_data, sps_pps_frag_header);
+		media_track->SetCodecComponentData(MediaTrack::CodecComponentDataType::AVCDecoderConfigurationRecord, avc_decoder_configuration_record.Serialize());
 	}
 
-	if (has_idr == true && (has_sps == false || has_pps == false) && media_track->GetH264SpsPpsAnnexBFormat() != nullptr)
+	if (has_idr == true && (has_sps == false || has_pps == false) && 
+		media_track->HasCodecComponentData(MediaTrack::CodecComponentDataType::AVCSps) == true &&
+		media_track->HasCodecComponentData(MediaTrack::CodecComponentDataType::AVCPps) == true)
 	{
-		// Insert SPS/PPS nal units so that player can start to play faster
+		auto sps_data = media_track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AVCSps);
+		auto pps_data = media_track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AVCPps);
+
+		// convert to AnnexB format
+		auto [decode_parameters, sps_pps_annexb_fragment] = H264Converter::ConvertSpsPpsAsAnnexB(annexb_start_code_size, sps_data, pps_data);
+
+		// new media packet
 		auto processed_data = std::make_shared<ov::Data>(media_packet->GetData()->GetLength() + 1024);
-		auto decode_parameters = media_track->GetH264SpsPpsAnnexBFormat();
+
+		// copy sps/pps first
 		processed_data->Append(decode_parameters);
+		// and then copy original data
 		processed_data->Append(media_packet->GetData());
 
 		// Update fragment header
 		FragmentationHeader updated_frag_header;
-		updated_frag_header.fragmentation_offset = media_track->GetH264SpsPpsAnnexBFragmentHeader().fragmentation_offset;
-		updated_frag_header.fragmentation_length = media_track->GetH264SpsPpsAnnexBFragmentHeader().fragmentation_length;
+		updated_frag_header.fragmentation_offset = sps_pps_annexb_fragment.fragmentation_offset;
+		updated_frag_header.fragmentation_length = sps_pps_annexb_fragment.fragmentation_length;
 
 		// Existing fragment header offset because SPS/PPS was inserted at front
 		auto offset_offset = updated_frag_header.fragmentation_offset.back() + updated_frag_header.fragmentation_length.back();
@@ -465,8 +480,7 @@ bool MediaRouteStream::ProcessAACRawStream(std::shared_ptr<MediaTrack> &media_tr
 
 		media_track->SetSampleRate(config.SamplerateNum());
 		media_track->GetChannel().SetLayout(config.Channel() == 1 ? AudioChannel::Layout::LayoutMono : AudioChannel::Layout::LayoutStereo);
-		media_track->SetCodecExtradata(media_packet->GetData());
-		media_track->SetAacConfig(std::make_shared<AACSpecificConfig>(config));
+		media_track->SetCodecComponentData(MediaTrack::CodecComponentDataType::AACSpecificConfig, media_packet->GetData());
 
 		return false;
 	}
@@ -480,7 +494,7 @@ bool MediaRouteStream::ProcessAACRawStream(std::shared_ptr<MediaTrack> &media_tr
 		}
 
 		// Convert to adts (raw aac data should be 1 frame)
-		auto adts_data = AacConverter::ConvertRawToAdts(media_packet->GetData(), media_track->GetAacConfig());
+		auto adts_data = AacConverter::ConvertRawToAdts(media_packet->GetData(), media_track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AACSpecificConfig));
 		if (adts_data == nullptr)
 		{
 			logte("Failed to convert raw aac to adts.");
@@ -524,8 +538,7 @@ bool MediaRouteStream::ProcessAACAdtsStream(std::shared_ptr<MediaTrack> &media_t
 	aac_config->SetSamplingFrequency(adts.Samplerate());
 	aac_config->SetChannel(adts.ChannelConfiguration());
 
-	media_track->SetCodecExtradata(aac_config->Serialize());
-	media_track->SetAacConfig(aac_config);
+	media_track->SetCodecComponentData(MediaTrack::CodecComponentDataType::AACSpecificConfig, aac_config->Serialize());
 
 	return true;
 }

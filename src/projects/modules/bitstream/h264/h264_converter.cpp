@@ -328,10 +328,15 @@ std::shared_ptr<ov::Data> H264Converter::ConvertAnnexbToAvcc(const std::shared_p
 	return avcc_data;
 }
 
-ov::String H264Converter::GetProfileString(const std::shared_ptr<ov::Data> &codec_extradata)
+ov::String H264Converter::GetProfileString(const std::shared_ptr<ov::Data> &avc_decoder_configuration_record)
 {
+	if (avc_decoder_configuration_record == nullptr)
+	{
+		return "";
+	}
+
 	AVCDecoderConfigurationRecord record;
-	if (AVCDecoderConfigurationRecord::Parse(codec_extradata->GetDataAs<uint8_t>(), codec_extradata->GetLength(), record) == false)
+	if (AVCDecoderConfigurationRecord::Parse(avc_decoder_configuration_record->GetDataAs<uint8_t>(), avc_decoder_configuration_record->GetLength(), record) == false)
 	{
 		return "";
 	}
@@ -350,4 +355,49 @@ ov::String H264Converter::GetProfileString(const std::vector<uint8_t> &codec_ext
 
 	// PPCCLL = <profile idc><constraint set flags><level idc>
 	return ov::String::FormatString("%02x%02x%02x",	record.ProfileIndication(), record.Compatibility(), record.LevelIndication());
+}
+
+std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> H264Converter::ConvertSpsPpsAsAnnexB(uint8_t start_code_size, const std::shared_ptr<const ov::Data> &sps, const std::shared_ptr<const ov::Data> &pps)
+{
+	if (sps == nullptr || pps == nullptr)
+	{
+		return std::make_tuple(nullptr, FragmentationHeader());
+	}
+
+	auto data = std::make_shared<ov::Data>(1024);
+	FragmentationHeader frag_header;
+	size_t offset = 0;
+
+	uint8_t START_CODE[4];
+
+	START_CODE[0] = 0x00;
+	START_CODE[1] = 0x00;
+	if (start_code_size == 3)
+	{
+		START_CODE[2] = 0x01;
+	}
+	else  // 4
+	{
+		START_CODE[2] = 0x00;
+		START_CODE[3] = 0x01;
+	}
+
+	data->Append(START_CODE, start_code_size);
+	offset += start_code_size;
+
+	frag_header.fragmentation_offset.push_back(offset);
+	frag_header.fragmentation_length.push_back(sps->GetLength());
+
+	offset += sps->GetLength();
+
+	data->Append(sps);
+
+	data->Append(START_CODE, start_code_size);
+	offset += start_code_size;
+
+	frag_header.fragmentation_offset.push_back(offset);
+	frag_header.fragmentation_length.push_back(pps->GetLength());
+	data->Append(pps);
+
+	return {data, frag_header};
 }
