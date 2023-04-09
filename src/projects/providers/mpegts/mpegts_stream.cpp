@@ -235,7 +235,10 @@ namespace pvd
 		if (_first_frame == true)
 		{
 			_first_frame = false;
-			_pts_offset = pts;
+
+			// PTS value must always be equal to or greater than the DTS value.
+			// Adjust DTS to start from 0.
+			_pts_offset = dts;
 			_dts_offset = dts;
 		}
 
