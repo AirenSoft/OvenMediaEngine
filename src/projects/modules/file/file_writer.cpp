@@ -415,7 +415,9 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	int ret = av_interleaved_write_frame(_format_context, &av_packet);
 	if (ret != 0)
 	{
-		logte("error = %d", ret);
+		char error_message[AV_ERROR_MAX_STRING_SIZE] = {0};
+    	av_make_error_string(error_message, AV_ERROR_MAX_STRING_SIZE, ret);
+		logte("Could not write packet to file. reason(%s[%d]) ", error_message, ret);
 		return false;
 	}
 
