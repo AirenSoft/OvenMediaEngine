@@ -388,6 +388,18 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	{
 		av_packet.size = data->GetLength();
 		av_packet.data = (uint8_t *)data->GetDataAs<uint8_t>();
+
+		switch (format)
+		{
+
+			case cmn::BitstreamFormat::AAC_ADTS:
+				// Skip ADTS header
+				av_packet.size = data->GetLength() - ADTS_HEADER_LENGTH;
+				av_packet.data = (uint8_t *)data->GetDataAs<uint8_t>() + ADTS_HEADER_LENGTH;
+				break;
+			default: 
+				break;
+		}
 	}
 	else if (strcmp(_format_context->oformat->name, "webm") == 0)
 	{
