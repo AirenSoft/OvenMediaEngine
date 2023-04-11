@@ -54,7 +54,7 @@ There are many ways to change files inside a Docker container, but this document
 
 {% code overflow="wrap" %}
 ```sh
-export OME_DOCKER_HOME=/opt/ome
+export OME_DOCKER_HOME=/opt/ovenmediaengine
 sudo mkdir -p $OME_DOCKER_HOME/conf
 sudo mkdir -p $OME_DOCKER_HOME/logs
 
