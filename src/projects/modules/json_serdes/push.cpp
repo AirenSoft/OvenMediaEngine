@@ -111,7 +111,7 @@ namespace serdes
 				}
 
 				// <Optional>
-				auto json_stream_variant_names = json_stream["VariantkNames"];
+				auto json_stream_variant_names = json_stream["variantNames"];
 				if (json_stream_variant_names.empty() == false && json_stream_variant_names.isArray() == true)
 				{
 					for (uint32_t i = 0; i < json_stream_variant_names.size(); i++)

@@ -326,10 +326,14 @@ namespace api
 				throw http::HttpError(http::StatusCode::BadRequest, error->GetMessage());
 			}
 
-			auto url = ov::Url::Parse(client->GetRequest()->GetUri());
-			auto a_name = app->GetName();
-			auto s_name = push->GetStreamName();
-			ocst::Orchestrator::GetInstance()->RequestPullStreamWithOriginMap(url, a_name, s_name);
+			// If the stream does not exist, request a pull stream.
+			if(application->GetStream(push->GetStreamName()) == nullptr)
+			{
+				auto url = ov::Url::Parse(client->GetRequest()->GetUri());
+				auto app_name = app->GetName();
+				auto stream_name = push->GetStreamName();
+				ocst::Orchestrator::GetInstance()->RequestPullStreamWithOriginMap(url, app_name, stream_name);
+			}
 
 			response.append(::serdes::JsonFromPush(push));
 
