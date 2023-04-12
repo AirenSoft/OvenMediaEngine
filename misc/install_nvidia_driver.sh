@@ -23,7 +23,8 @@ else
 fi
     CURRENT=$(pwd)
 
-WITH_DOCKER=false
+ENABLE_DOCKER=false
+NVIDIA_DRIVER_VERSION=
 
 echo "##########################################################################################"
 echo " Install NVIDIA drivers and CUDA Toolkit"
@@ -38,8 +39,10 @@ echo ${CURRENT}
 install_base_ubuntu()
 {
     sudo apt-get -y update
-    sudo apt-get -y install --no-install-recommends apt-utils ubuntu-drivers-common lshw
+    sudo apt-get -y install --no-install-recommends apt-utils lshw
+    sudo apt-get -y install --no-install-recommends ubuntu-drivers-common
     sudo apt-get -y install --no-install-recommends gnupg2 ca-certificates software-properties-common
+
 
     # Uninstalling a previously installed NVIDIA Driver
     sudo apt-get -y remove --purge nvidia-*
@@ -66,10 +69,16 @@ install_base_ubuntu()
 
     # Install nvidia drivers and cuda-toolit
     sudo add-apt-repository ppa:graphics-drivers/ppa
+
     sudo apt -y update
-    if [ ${WITH_DOCKER} == false ]; then
+
+    if [ ${ENABLE_DOCKER} == false ]; then
             sudo apt-get install -y --no-install-recommends $(ubuntu-drivers devices | grep recommended | awk '{print $3}')
+    else
+            echo sudo apt-get install -y --no-install-recommends nvidia-driver-${NVIDIA_DRIVER_VERSION}
+            sudo apt-get install -y --no-install-recommends nvidia-driver-${NVIDIA_DRIVER_VERSION}
     fi
+
     sudo apt-get install -y --no-install-recommends nvidia-cuda-toolkit
 }
 
@@ -148,25 +157,29 @@ proceed_yn()
     fi
 }
 
-for i in "$@"
-do
-case $i in
-    --docker|--with-docker)
-    WITH_DOCKER=true
+# Arguments parser
+while (($#)); do
+    OPT=$1
     shift
-    ;;
-    *)
-            # unknown option
-    ;;
-esac
-done
+    case $OPT in
+        --*) case ${OPT:2} in
+            enable_docker) ENABLE_DOCKER=true ;;
+            nvidia_driver) NVIDIA_DRIVER_VERSION=$1; shift ;;
+        esac;;
 
+        -*) case ${OPT:1} in
+            d) ENABLE_DOCKER=true ;;
+            n) NVIDIA_DRIVER_VERSION=$1; shift;;
+        esac;;
+    esac
+done
 
 if [ "${OSNAME}" == "Ubuntu" ]; then
     check_version
     install_base_ubuntu
 elif  [ "${OSNAME}" == "CentOS" ]; then
     check_version
+
     if [[ "${OSVERSION}" == "7" ]]; then
             install_base_centos7
     elif [[ "${OSVERSION}" == "8" ]]; then
@@ -178,6 +191,8 @@ else
 fi
 
 
-echo "##########################################################################################"
-echo " Reboot is required to use the nvidia video driver"
-echo "##########################################################################################"
+if [ ${ENABLE_DOCKER} == false ]; then
+        echo "##########################################################################################"
+        echo " Reboot is required to use the nvidia video driver"
+        echo "##########################################################################################"
+fi
