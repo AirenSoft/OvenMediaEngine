@@ -54,7 +54,7 @@ There are many ways to change files inside a Docker container, but this document
 
 {% code overflow="wrap" %}
 ```sh
-export OME_DOCKER_HOME=/opt/ome
+export OME_DOCKER_HOME=/opt/ovenmediaengine
 sudo mkdir -p $OME_DOCKER_HOME/conf
 sudo mkdir -p $OME_DOCKER_HOME/logs
 
@@ -63,7 +63,7 @@ sudo chgrp -R docker $OME_DOCKER_HOME
 sudo chmod -R 775 $OME_DOCKER_HOME
 
 # If you want to use OME_HOME permanently, add the following line to the ~/.profile file for bash, for other shells, you can do it accordingly.
-echo "export OME_DOCKER_HOME=/opt/ovenmediaenigne" >> ~/.profile
+echo "export OME_DOCKER_HOME=/opt/ovenmediaengine" >> ~/.profile
 ```
 {% endcode %}
 
