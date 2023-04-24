@@ -1151,8 +1151,6 @@ std::tuple<bool, ov::String> LLHlsStream::StartDump(const std::shared_ptr<info::
 	// Dump Master Playlist
 	if (DumpMasterPlaylist(dump_info) == false)
 	{
-		// lock
-		std::lock_guard<std::shared_mutex> lock(_dumps_lock);
 		StopToSaveOldSegmentsInfo();
 		return {false, "Could not dump master playlist"};
 	}
