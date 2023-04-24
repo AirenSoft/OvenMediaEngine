@@ -195,29 +195,22 @@ bool LLHlsStream::Stop()
 {
 	logtd("LLHlsStream(%u) has been stopped", GetId());
 
+	std::scoped_lock lock{_packager_map_lock, _storage_map_lock, _chunklist_map_lock, _master_playlists_lock, _dumps_lock};
+
 	// clear all packagers
-	{
-		std::lock_guard<std::shared_mutex> lock(_packager_map_lock);
-		_packager_map.clear();
-	}
+	_packager_map.clear();
 
 	// clear all storages
-	{
-		std::lock_guard<std::shared_mutex> lock2(_storage_map_lock);
-		_storage_map.clear();
-	}
+	_storage_map.clear();
 
 	// clear all playlist
+	for (auto &it : _chunklist_map)
 	{
-		std::lock_guard<std::shared_mutex> lock3(_chunklist_map_lock);
-		for (auto &it : _chunklist_map)
-		{
-			auto chunklist_writer = it.second;
-			chunklist_writer->Release();
-		}
-
-		_chunklist_map.clear();
+		auto chunklist_writer = it.second;
+		chunklist_writer->Release();
 	}
+
+	_chunklist_map.clear();
 
 	return Stream::Stop();
 }
@@ -1158,6 +1151,8 @@ std::tuple<bool, ov::String> LLHlsStream::StartDump(const std::shared_ptr<info::
 	// Dump Master Playlist
 	if (DumpMasterPlaylist(dump_info) == false)
 	{
+		// lock
+		std::lock_guard<std::shared_mutex> lock(_dumps_lock);
 		StopToSaveOldSegmentsInfo();
 		return {false, "Could not dump master playlist"};
 	}
