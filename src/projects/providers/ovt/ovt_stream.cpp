@@ -469,7 +469,7 @@ namespace pvd
 						auto decoded_data = ov::Base64::Decode(codec_component_data);
 						if (decoded_data != nullptr)
 						{
-							logtc("CodecId(%u) CodecComponentType(%u) Data(%s)", new_track->GetCodecId(), codec_component_type, codec_component_data.CStr());
+							logtd("CodecId(%u) CodecComponentType(%u) Data(%s)", new_track->GetCodecId(), codec_component_type, codec_component_data.CStr());
 							new_track->SetCodecComponentData(codec_component_type, decoded_data);
 						}
 					}

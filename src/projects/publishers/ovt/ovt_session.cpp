@@ -2,6 +2,7 @@
 #include <base/ovlibrary/byte_io.h>
 #include <base/publisher/stream.h>
 #include <modules/ovt_packetizer/ovt_packet.h>
+#include <monitoring/monitoring.h>
 #include "ovt_session.h"
 #include "ovt_private.h"
 
@@ -27,12 +28,16 @@ OvtSession::OvtSession(const info::Session &session_info,
 {
 	_connector = connector;
 	_sent_ready = false;
+
+	MonitorInstance->OnSessionConnected(*GetStream(), PublisherType::Ovt);
 }
 
 OvtSession::~OvtSession()
 {
 	Stop();
 	logtd("OvtSession(%d) has been terminated finally", GetId());
+
+	MonitorInstance->OnSessionDisconnected(*GetStream(), PublisherType::Ovt);
 }
 
 bool OvtSession::Start()
