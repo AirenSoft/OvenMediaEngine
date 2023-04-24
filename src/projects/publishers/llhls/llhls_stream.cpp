@@ -196,22 +196,28 @@ bool LLHlsStream::Stop()
 	logtd("LLHlsStream(%u) has been stopped", GetId());
 
 	// clear all packagers
-	std::lock_guard<std::shared_mutex> lock(_packager_map_lock);
-	_packager_map.clear();
-
-	// clear all storages
-	std::lock_guard<std::shared_mutex> lock2(_storage_map_lock);
-	_storage_map.clear();
-
-	// clear all playlist
-	std::lock_guard<std::shared_mutex> lock3(_chunklist_map_lock);
-	for (auto &it : _chunklist_map)
 	{
-		auto chunklist_writer = it.second;
-		chunklist_writer->Release();
+		std::lock_guard<std::shared_mutex> lock(_packager_map_lock);
+		_packager_map.clear();
 	}
 
-	_chunklist_map.clear();
+	// clear all storages
+	{
+		std::lock_guard<std::shared_mutex> lock2(_storage_map_lock);
+		_storage_map.clear();
+	}
+
+	// clear all playlist
+	{
+		std::lock_guard<std::shared_mutex> lock3(_chunklist_map_lock);
+		for (auto &it : _chunklist_map)
+		{
+			auto chunklist_writer = it.second;
+			chunklist_writer->Release();
+		}
+
+		_chunklist_map.clear();
+	}
 
 	return Stream::Stop();
 }
