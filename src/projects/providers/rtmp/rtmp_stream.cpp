@@ -406,7 +406,7 @@ namespace pvd
 			return false;
 		}
 
-		if (_publish_url->Scheme().UpperCaseString() != "RTMP" || 
+		if ((_publish_url->Scheme().UpperCaseString() != "RTMP" && _publish_url->Scheme().UpperCaseString() != "RTMPS") || 
 			_publish_url->Host().IsEmpty() || 
 			_publish_url->App().IsEmpty() || 
 			_publish_url->Stream().IsEmpty())
