@@ -193,30 +193,27 @@ bool LLHlsStream::Start()
 
 bool LLHlsStream::Stop()
 {
-	logti("LLHlsStream(%s) has been stopped", GetName().CStr());
+	logtd("LLHlsStream(%s) has been stopped", GetName().CStr());
 
-	std::scoped_lock lock{_packager_map_lock, _storage_map_lock, _chunklist_map_lock, _master_playlists_lock, _dumps_lock};
-
-	// clear all packagers
-	logti("[DEBUG] Try to clear all packagers (%d)", _packager_map.size());
-	_packager_map.clear();
-
-	// clear all storages
-	logti("[DEBUG] Try to clear all storages (%d)", _storage_map.size());
-	_storage_map.clear();
-
-	// clear all playlist
-	logti("[DEBUG] Try to clear all chunklists (%d)", _chunklist_map.size());
-	for (auto &it : _chunklist_map)
 	{
-		auto chunklist_writer = it.second;
-		logti("[DEBUG] Try to release chunklist(%s)", chunklist_writer->GetUrl().CStr());
-		chunklist_writer->Release();
+		std::scoped_lock lock{_packager_map_lock, _storage_map_lock, _chunklist_map_lock, _master_playlists_lock, _dumps_lock};
+
+		// clear all packagers
+		_packager_map.clear();
+
+		// clear all storages
+		_storage_map.clear();
+
+		// clear all playlist
+		for (auto &it : _chunklist_map)
+		{
+			auto chunklist_writer = it.second;
+			chunklist_writer->Release();
+		}
+
+		_chunklist_map.clear();
 	}
 
-	_chunklist_map.clear();
-
-	logti("[DEBUG] All resources have been cleared in LLHlsStream(%s)", GetName().CStr());
 	return Stream::Stop();
 }
 
