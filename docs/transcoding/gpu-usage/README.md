@@ -103,7 +103,7 @@ OvenMediaEngine-master/misc/prerequisites.sh --enable-nvc
 
 Describes how to enable GPU acceleration for users running OvenMediaEngine in the Docker runtime environment. To use GPU acceleration in Docker, the NVIDIA Driver must be installed on the host OS and the NVIDIA Container Toolkit must be installed. This toolkit includes container runtime libraries and utilities to use NVIDIA GPUs in Docker containers.
 
-![Reference : https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/overview.html](<../../.gitbook/assets/image (30).png>)
+![Reference : https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/overview.html](<../../.gitbook/assets/image (29).png>)
 
 ```bash
 OvenMediaEngine-master/misc/install_nvidia_docker_container.sh

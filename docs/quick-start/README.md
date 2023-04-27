@@ -50,7 +50,7 @@ You can access the OvenPlayerDemo docker container with a browser as shown below
 
 http://Your.Docker.Host.IP:8090/
 
-<img src="../.gitbook/assets/image (2) (2).png" alt="" data-size="original">
+<img src="../.gitbook/assets/image (2) (2) (1).png" alt="" data-size="original">
 
 </details>
 
@@ -95,7 +95,7 @@ Open the installed OvenPlayer Demo page in your browser.&#x20;
 
 `http://Your.Docker.Host.IP:8090/`
 
-<figure><img src="../.gitbook/assets/image (2) (2).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (2) (2) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### WebRTC Playback
 
