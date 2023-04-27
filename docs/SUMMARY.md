@@ -41,6 +41,7 @@
           * [HLS Dump](rest-api/v1/virtualhost/application/stream/hls-dump.md)
     * [Statistics](rest-api/v1/statistics/README.md)
       * [Current](rest-api/v1/statistics/current.md)
+* [Alert](alert.md)
 * [Performance Tuning](performance-tuning.md)
 * [Logs and Statistics](logs-and-statistics.md)
 * [Troubleshooting](troubleshooting.md)

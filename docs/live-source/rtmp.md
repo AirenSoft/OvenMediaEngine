@@ -88,4 +88,3 @@ If you use the default configuration, set the OBS as follows:
 
 You can set the Stream Key to any name you like at any time.
 
-**``**
