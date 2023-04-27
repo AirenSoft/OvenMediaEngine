@@ -67,7 +67,7 @@ static ov::String GetSocketPoolName(const ov::SocketType type, const char *name,
 
 PhysicalPort::~PhysicalPort()
 {
-	OV_ASSERT2(_observer_list.empty());
+	OV_ASSERT(_observer_list.empty(), "Observers should be removed before destroying %s physical port", _name.CStr());
 }
 
 bool PhysicalPort::Create(const char *name,
@@ -75,13 +75,16 @@ bool PhysicalPort::Create(const char *name,
 						  const ov::SocketAddress &address,
 						  int worker_count,
 						  int send_buffer_size,
-						  int recv_buffer_size)
+						  int recv_buffer_size,
+						  const OnSocketCreated on_socket_created)
 {
 	if ((_server_socket != nullptr) || (_datagram_socket != nullptr))
 	{
 		logte("Physical port already created");
 		OV_ASSERT2((_server_socket == nullptr) && (_datagram_socket == nullptr));
 	}
+
+	_name = name;
 
 	logtd("Trying to start physical port [%s] on %s/%s (worker: %d, send_buffer_size: %d, recv_buffer_size: %d)...",
 		  name,
@@ -94,11 +97,11 @@ bool PhysicalPort::Create(const char *name,
 	{
 		case ov::SocketType::Srt:
 		case ov::SocketType::Tcp:
-			result = CreateServerSocket(name, type, address, worker_count, send_buffer_size, recv_buffer_size);
+			result = CreateServerSocket(name, type, address, worker_count, send_buffer_size, recv_buffer_size, on_socket_created);
 			break;
 
 		case ov::SocketType::Udp:
-			result = CreateDatagramSocket(name, type, address, worker_count);
+			result = CreateDatagramSocket(name, type, address, worker_count, on_socket_created);
 			break;
 
 		case ov::SocketType::Unknown:
@@ -115,7 +118,8 @@ bool PhysicalPort::CreateServerSocket(
 	const ov::SocketAddress &address,
 	int worker_count,
 	int send_buffer_size,
-	int recv_buffer_size)
+	int recv_buffer_size,
+	const OnSocketCreated on_socket_created)
 {
 	_socket_pool = ov::SocketPool::Create(GetSocketPoolName(type, name, address), type);
 
@@ -127,13 +131,19 @@ bool PhysicalPort::CreateServerSocket(
 
 			if (socket != nullptr)
 			{
-				if (socket->Prepare(
-						address,
-						std::bind(&PhysicalPort::OnClientConnectionStateChanged, this,
-								  std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
-						std::bind(&PhysicalPort::OnClientData, this,
-								  std::placeholders::_1, std::placeholders::_2),
-						send_buffer_size, recv_buffer_size, 4096))
+				const std::shared_ptr<ov::Error> error = (on_socket_created != nullptr) ? on_socket_created(socket) : nullptr;
+
+				if (error != nullptr)
+				{
+					logte("An error occurred while initializing socket: %s", error->What());
+				}
+				else if (socket->Prepare(
+							 address,
+							 std::bind(&PhysicalPort::OnClientConnectionStateChanged, this,
+									   std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+							 std::bind(&PhysicalPort::OnClientData, this,
+									   std::placeholders::_1, std::placeholders::_2),
+							 send_buffer_size, recv_buffer_size, 4096))
 				{
 					_type = type;
 					_server_socket = socket;
@@ -160,7 +170,8 @@ bool PhysicalPort::CreateDatagramSocket(
 	const char *name,
 	ov::SocketType type,
 	const ov::SocketAddress &address,
-	int worker_count)
+	int worker_count,
+	const OnSocketCreated on_socket_created)
 {
 	_socket_pool = ov::SocketPool::Create(GetSocketPoolName(type, name, address), type);
 
@@ -172,10 +183,16 @@ bool PhysicalPort::CreateDatagramSocket(
 
 			if (socket != nullptr)
 			{
-				if (socket->Prepare(
-						address,
-						std::bind(&PhysicalPort::OnDatagram, this,
-								  std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)))
+				const std::shared_ptr<ov::Error> error = (on_socket_created != nullptr) ? on_socket_created(socket) : nullptr;
+
+				if (error != nullptr)
+				{
+					logte("An error occurred while initializing socket: %s", error->What());
+				}
+				else if (socket->Prepare(
+							 address,
+							 std::bind(&PhysicalPort::OnDatagram, this,
+									   std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)))
 				{
 					_type = type;
 					_datagram_socket = socket;

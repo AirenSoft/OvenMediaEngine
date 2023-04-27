@@ -26,6 +26,10 @@ protected:
 	friend class PhysicalPortManager;
 
 public:
+	// Called when a socket is allocated (before the socket is prepared)
+	using OnSocketCreated = std::function<std::shared_ptr<ov::Error>(const std::shared_ptr<ov::Socket> &socket)>;
+
+public:
 	explicit PhysicalPort(PrivateToken token)
 	{
 	}
@@ -37,7 +41,8 @@ public:
 				const ov::SocketAddress &address,
 				int worker_count,
 				int send_buffer_size,
-				int recv_buffer_size);
+				int recv_buffer_size,
+				const OnSocketCreated on_socket_created);
 
 	bool Close();
 
@@ -88,12 +93,14 @@ protected:
 							const ov::SocketAddress &address,
 							int worker_count,
 							int send_buffer_size,
-							int recv_buffer_size);
+							int recv_buffer_size,
+							const OnSocketCreated on_socket_created);
 
 	bool CreateDatagramSocket(const char *name,
 							  ov::SocketType type,
 							  const ov::SocketAddress &address,
-							  int worker_count);
+							  int worker_count,
+							  const OnSocketCreated on_socket_created);
 
 	// For TCP physical port
 	void OnClientConnectionStateChanged(const std::shared_ptr<ov::ClientSocket> &client, ov::SocketConnectionState state, const std::shared_ptr<ov::Error> &error);
@@ -102,6 +109,7 @@ protected:
 	// For UDP physical port
 	void OnDatagram(const std::shared_ptr<ov::DatagramSocket> &client, const ov::SocketAddress &remote_address, const std::shared_ptr<ov::Data> &data);
 
+	ov::String _name;
 	std::shared_ptr<ov::SocketPool> _socket_pool;
 
 	ov::SocketType _type = ov::SocketType::Unknown;

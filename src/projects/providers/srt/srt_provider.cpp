@@ -10,6 +10,7 @@
 #include "srt_provider.h"
 
 #include <modules/physical_port/physical_port_manager.h>
+#include <modules/srt/srt.h>
 #include <orchestrator/orchestrator.h>
 
 #include "providers/mpegts/mpegts_application.h"
@@ -82,7 +83,11 @@ namespace pvd
 
 		for (const auto &address : address_list)
 		{
-			auto physical_port = physical_port_manager->CreatePort("SRT", ov::SocketType::Srt, address, worker_count);
+			auto physical_port = physical_port_manager->CreatePort(
+				"SRT", ov::SocketType::Srt, address, worker_count, 0, 0,
+				[=](const std::shared_ptr<ov::Socket> &socket) -> std::shared_ptr<ov::Error> {
+					return SrtOptionProcessor::SetOptions(socket, srt_bind_config.GetOptions());
+				});
 
 			if (physical_port == nullptr)
 			{
@@ -92,6 +97,7 @@ namespace pvd
 			}
 
 			address_string_list.emplace_back(address.ToString());
+
 			physical_port->AddObserver(this);
 			physical_port_list.push_back(physical_port);
 		}

@@ -50,6 +50,7 @@ LOCAL_STATIC_LIBRARIES := \
 	jsoncpp \
 	file \
 	dump \
+	srt \
 	rtmp \
 	file_provider \
 

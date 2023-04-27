@@ -586,7 +586,7 @@ bool RtcSignallingServer::Stop()
 
 	for (auto &http_server : http_server_list)
 	{
-		if (http_server->Stop() == false)
+		if (http_server->IsRunning() && (http_server->Stop() == false))
 		{
 			logte("Could not stop HTTP Server: %p", http_server.get());
 			result = false;
@@ -595,7 +595,7 @@ bool RtcSignallingServer::Stop()
 
 	for (auto &https_server : https_server_list)
 	{
-		if (https_server->Stop() == false)
+		if (https_server->IsRunning() && (https_server->Stop() == false))
 		{
 			logte("Could not stop HTTPS Server: %p", https_server.get());
 			result = false;

@@ -187,8 +187,15 @@ namespace ov
 			{
 				// In some environments, listening to IPv6 will also listen to IPv4
 				// This setting lets this socket listen to IPv6 only
-				const int flag = 1;
-				::setsockopt(_socket.GetNativeHandle(), IPPROTO_IPV6, IPV6_V6ONLY, &flag, sizeof(flag));
+
+				if (type == SocketType::Srt)
+				{
+					SetSockOpt(SRTO_IPV6ONLY, 1);
+				}
+				else
+				{
+					SetSockOpt(IPPROTO_IPV6, IPV6_V6ONLY, 1);
+				}
 			}
 
 			logad("Socket descriptor is created (%s/%s)",

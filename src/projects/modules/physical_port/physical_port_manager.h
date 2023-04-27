@@ -29,7 +29,8 @@ public:
 											 const ov::SocketAddress &address,
 											 int worker_count = PHYSICAL_PORT_USE_DEFAULT_COUNT,
 											 int send_buffer_size = 0,
-											 int recv_buffer_size = 0);
+											 int recv_buffer_size = 0,
+											 const PhysicalPort::OnSocketCreated on_socket_created = nullptr);
 
 	bool DeletePort(std::shared_ptr<PhysicalPort> &port);
 
