@@ -299,6 +299,9 @@ _setup()
 	logi "• Copying logs directory"
 	run mkdir -p "${LOGS_PATH}" || { loge "• Could not create logs directory"; exit 1; }
 
+	logi "• Copying crash dump directory"
+	run mkdir -p "${CRASH_DUMPS_PATH}" || { loge "• Could not create crash dump directory"; exit 1; }
+
 	HIDE_POST_SETUP_MESSAGE=${HIDE_POST_SETUP_MESSAGE:-false}
 
 	if ! ${HIDE_POST_SETUP_MESSAGE}
