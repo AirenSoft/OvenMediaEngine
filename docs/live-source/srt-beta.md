@@ -54,3 +54,29 @@ OBS Studio 25.0 or later supports SRT. Please refer to the [OBS official documen
 `srt://ip:port?streamid=srt%3A%2F%2F{domain or IP address}[%3APort]%2F{App name}%2F{Stream name}`
 
 ![](<../.gitbook/assets/image (38).png>)
+
+## SRT Socket Options
+
+You can configure SRT's socket options using `<Options>`. This is particularly useful when setting the encryption for SRT, and you can specify a passphrase by configuring as follows:
+
+```xml
+<Server>
+    <Bind>
+        <Providers>
+            <SRT>
+                ...
+                <Options>
+                    <Option>
+                        <Key>SRTO_PBKEYLEN</Key>
+                        <Value>16</Value>
+                    </Option>
+                    <Option>
+                        <Key>SRTO_PASSPHRASE</Key>
+                        <Value>thisismypassphrase</Value>
+                    </Option>
+                </Options>
+            </SRT>
+...
+```
+
+For more information on SRT socket options, please refer to [https://github.com/Haivision/srt/blob/master/docs/API/API-socket-options.md#list-of-options](https://github.com/Haivision/srt/blob/master/docs/API/API-socket-options.md#list-of-options).
