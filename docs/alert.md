@@ -8,7 +8,6 @@ Alert is a module that can detect anomalies and patterns of interest in a stream
 
 Alert can be set up on \<Server>, as shown below.
 
-````xml
 ```xml
 <Server version="8">
 	<Alert>
@@ -34,7 +33,6 @@ Alert can be set up on \<Server>, as shown below.
 	</Alert>
 </Server>
 ```
-````
 
 | Key       | Description                                                                                                                         |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -66,7 +64,7 @@ Alert can be set up on \<Server>, as shown below.
 
 #### Format
 
-```html
+```http
 POST /configured/target/url/ HTTP/1.1
 Content-Length: 1037
 Content-Type: application/json
@@ -159,7 +157,7 @@ The control server may need to validate incoming http requests for security reas
 
 The engine in the closing state does not need any parameter in response. To the query just answer with empty json object.
 
-```html
+```http
 HTTP/1.1 200 OK
 Content-Length: 5
 Content-Type: application/json
