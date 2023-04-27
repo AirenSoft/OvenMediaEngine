@@ -9,6 +9,7 @@
 #include "server_metrics.h"
 #include "event_logger.h"
 #include "event_forwarder.h"
+#include "./alert/alert.h"
 
 #define MonitorInstance				mon::Monitoring::GetInstance()
 #define HostMetrics(info)			mon::Monitoring::GetInstance()->GetHostMetrics(info);
@@ -62,6 +63,7 @@ namespace mon
 		std::shared_ptr<ServerMetrics> _server_metric = nullptr;
 		EventLogger	_logger;
 		EventForwarder _forwarder;
+		alrt::Alert _alert;
 		bool _is_analytics_on = false;
 
 	};

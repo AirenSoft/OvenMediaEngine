@@ -14,6 +14,7 @@
 #include "base/ovlibrary/uuid.h"
 #include "bind/bind.h"
 #include "managers/managers.h"
+#include "alert/alert.h"
 #include "modules/modules.h"
 #include "virtual_hosts/virtual_hosts.h"
 
@@ -47,6 +48,8 @@ namespace cfg
 
 		mgr::Managers _managers;
 
+		alrt::Alert _alert;
+
 		an::Analytics _analytics;
 
 		vhost::VirtualHosts _virtual_hosts;
@@ -69,6 +72,8 @@ namespace cfg
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetModules, _modules)
 
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetManagers, _managers)
+
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetAlert, _alert)
 
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetAnalytics, _analytics)
 
@@ -141,6 +146,7 @@ namespace cfg
 			Register<Optional>("Modules", &_modules);
 
 			Register<Optional>("Managers", &_managers);
+			Register<Optional>("Alert", &_alert);
 			Register<Optional>("Analytics", &_analytics);
 
 			Register<Optional>("VirtualHosts", &_virtual_hosts);
