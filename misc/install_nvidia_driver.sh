@@ -40,6 +40,7 @@ install_base_ubuntu()
 {
     sudo apt-get -y update
     sudo apt-get -y install --no-install-recommends apt-utils lshw
+    sudo apt-get -y install --no-install-recommends keyboard-configuration
     sudo apt-get -y install --no-install-recommends ubuntu-drivers-common
     sudo apt-get -y install --no-install-recommends gnupg2 ca-certificates software-properties-common
 
