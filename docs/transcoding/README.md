@@ -217,13 +217,30 @@ WebRTC doesn't support AAC, so if video bypasses transcoding, audio must be enco
 
 ### **Conditional transcoding**
 
-If the input codec is the same as the option to be transcoded, there is no need to perform re-transcoding while unnecessarily consuming a lot of system resources.
+If the codec or quality of the input stream is the same as the profile to be encoded into the output stream. there is no need to perform re-transcoding while unnecessarily consuming a lot of system resources. If the quality of the input track matches all the conditions of **BypassIfMatch**, it will be Pass-through without encoding
 
-If the quality of the input track matches all the conditions of **BypassIfMatch**, it will be bypassed without encoding
+#### Matching elements in video
 
-* eq: equal to
-* lte: less than or equal to
-* gte: greater than or equal to
+| Elements                                             | Condition    | Description                                  |
+| ---------------------------------------------------- | ------------ | -------------------------------------------- |
+| Codec _<mark style="color:blue;">(Optional)</mark>_  | eq           | Compare video codecs                         |
+| Width _<mark style="color:blue;">(Optional)</mark>_  | eq, lte, gte | Compare horizontal pixel of video resolution |
+| Height _<mark style="color:blue;">(Optional)</mark>_ | eq, lte, gte | Compare vertical pixel of video resolution   |
+| SAR _<mark style="color:blue;">(Optional)</mark>_    | eq           | Compare ratio of video resolution            |
+
+&#x20;  \* **eq**: equal to / **lte**: less than or equal to / **gte**: greater than or equal to
+
+#### Matching elements in audio
+
+| Elements                                                 | Condition    | Description                         |
+| -------------------------------------------------------- | ------------ | ----------------------------------- |
+| Codec _<mark style="color:blue;">(Optional)</mark>_      | eq           | Compare audio codecs                |
+| Samplerate _<mark style="color:blue;">(Optional)</mark>_ | eq, lte, gte | Compare sampling rate of audio      |
+| Channel _<mark style="color:blue;">(Optional)</mark>_    | eq, lte, gte | Compare number of channels in audio |
+
+&#x20;  \* **eq**: equal to / **lte**: less than or equal to / **gte**: greater than or equal to
+
+
 
 To support WebRTC and LLHLS, AAC and Opus codecs must be supported at the same time. Use the settings below to reduce unnecessary audio encoding.
 
@@ -259,11 +276,13 @@ To support WebRTC and LLHLS, AAC and Opus codecs must be supported at the same t
 </Encodes>
 ```
 
-If a video track with a lower quality than the encoding option is input, unnecessary upscaling can be prevented.
+
+
+If a video track with a lower quality than the encoding option is input, unnecessary upscaling can be prevented.   **SAR (Storage Aspect Ratio)** is the ratio of original pixels. In the example below, even if the width and height of the original video are smaller than or equal to the width and height set in the encoding option, if the ratio is different, it means that encoding is performed without bypassing.
 
 ```xml
 <Encodes>
-	<Video>
+	<Video>                                                                                                    
 		<Name>prevent_upscaling_video</Name>
 		<Codec>h264</Codec>
 		<Bitrate>2048000</Bitrate>
@@ -279,6 +298,8 @@ If a video track with a lower quality than the encoding option is input, unneces
 	</Video>
 </Encodes>
 ```
+
+###
 
 ### **Keep the original with transcoding**
 
