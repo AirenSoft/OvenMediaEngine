@@ -183,6 +183,19 @@ namespace ov
 				break;
 			}
 
+			logad("Socket descriptor is created (%s/%s)",
+				  StringFromSocketFamily(family),
+				  StringFromSocketType(type));
+
+			_has_close_command = false;
+			_end_of_stream = false;
+
+			_connection_event_fired = false;
+
+			_family = family;
+
+			SetState(SocketState::Created);
+
 			if (family == SocketFamily::Inet6)
 			{
 				// In some environments, listening to IPv6 will also listen to IPv4
@@ -197,19 +210,6 @@ namespace ov
 					SetSockOpt(IPPROTO_IPV6, IPV6_V6ONLY, 1);
 				}
 			}
-
-			logad("Socket descriptor is created (%s/%s)",
-				  StringFromSocketFamily(family),
-				  StringFromSocketType(type));
-
-			_has_close_command = false;
-			_end_of_stream = false;
-
-			_connection_event_fired = false;
-
-			_family = family;
-
-			SetState(SocketState::Created);
 
 			return true;
 		} while (false);
