@@ -647,6 +647,8 @@ _start()
 			RTMP) PORT=1935; ;;
 			SRT) PORT=9999; PROTOCOL=udp ;;
 			WebRTC) PORT=10000; PROTOCOL=udp ;;
+			RTSPC) continue ;;
+			OVT) continue ;;
 			*) need_to_report "Not supported module: ${NAME}" ;;
 		esac
 		PROTOCOL=${PROTOCOL^^}

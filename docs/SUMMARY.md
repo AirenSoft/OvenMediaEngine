@@ -5,6 +5,7 @@
   * [Online Demo](quick-start/test-player.md)
 * [Getting Started](getting-started/README.md)
   * [Getting Started with Docker](getting-started/getting-started-with-docker.md)
+  * [Getting Started with OME Docker Launcher](getting-started/getting-started-with-ome-docker-launcher.md)
 * [Configuration](configuration/README.md)
   * [TLS Encryption](configuration/tls-encryption.md)
   * [IPv6](configuration/ipv6.md)
