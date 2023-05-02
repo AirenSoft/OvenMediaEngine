@@ -28,11 +28,11 @@ namespace mon
     private:
       void DispatchThreadProc();
       
-      void ValidateIngressRules(const ov::String &source_uri, cfg::alrt::rule::Rules rules, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list);
-      void ValidateVideoIngressRules(const ov::String &source_uri, cfg::alrt::rule::Ingress ingress, const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list);
-      void ValidateAudioIngressRules(const ov::String &source_uri, cfg::alrt::rule::Ingress ingress, const std::shared_ptr<MediaTrack> &audio_track, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list);
+      void VerifyIngressRules(const ov::String &source_uri, cfg::alrt::rule::Rules rules, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list);
+      void VerifyVideoIngressRules(const ov::String &source_uri, cfg::alrt::rule::Ingress ingress, const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list);
+      void VerifyAudioIngressRules(const ov::String &source_uri, cfg::alrt::rule::Ingress ingress, const std::shared_ptr<MediaTrack> &audio_track, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list);
 
-      bool NeedsAlert(const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list);
+      bool IsAlertNeeded(const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list);
 
       void CleanupDeletedSources(const std::vector<ov::String> *exist_source_uri_list);
       bool PutSourceUriMessages(const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list);

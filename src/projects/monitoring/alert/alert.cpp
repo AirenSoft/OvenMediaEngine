@@ -30,6 +30,14 @@ namespace mon
         return false;
       }
 
+      auto alert = server_config->GetAlert();
+
+      if (alert.IsParsed() == false)
+      {
+        // Doesn't use the Alert feature.
+        return false;
+      }
+
       _server_config = server_config;
 
       _timer.Push(
@@ -55,12 +63,6 @@ namespace mon
       auto alert = _server_config->GetAlert();
       auto rules = alert.GetRules();
 
-      if (alert.IsParsed() == false || rules.IsParsed() == false)
-      {
-        // Doesn't use the Alert feature.
-        return;
-      }
-
       ov::String source_uri;
       std::shared_ptr<std::vector<std::shared_ptr<Message>>> message_list;
       std::vector<ov::String> exist_source_uri_list;
@@ -77,9 +79,9 @@ namespace mon
               message_list = std::make_shared<std::vector<std::shared_ptr<Message>>>();
               exist_source_uri_list.push_back(source_uri);
 
-              ValidateIngressRules(source_uri, rules, stream_metric, message_list);
+              VerifyIngressRules(source_uri, rules, stream_metric, message_list);
 
-              if (NeedsAlert(source_uri, message_list))
+              if (IsAlertNeeded(source_uri, message_list))
               {
                 // Notification
                 auto notification_server_url = ov::Url::Parse(alert.GetUrl());
@@ -119,7 +121,7 @@ namespace mon
       }
     }
 
-    void Alert::ValidateIngressRules(const ov::String &source_uri, cfg::alrt::rule::Rules rules, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list)
+    void Alert::VerifyIngressRules(const ov::String &source_uri, cfg::alrt::rule::Rules rules, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list)
     {
       auto ingress = rules.GetIngress();
       if (!ingress.IsParsed())
@@ -134,18 +136,18 @@ namespace mon
         if (track->GetMediaType() == cmn::MediaType::Video)
         {
           totalBitrate += track->GetBitrateByMeasured();
-          ValidateVideoIngressRules(source_uri, ingress, track, message_list);
+          VerifyVideoIngressRules(source_uri, ingress, track, message_list);
         }
         else if (track->GetMediaType() == cmn::MediaType::Audio)
         {
           totalBitrate += track->GetBitrateByMeasured();
-          ValidateAudioIngressRules(source_uri, ingress, track, message_list);
+          VerifyAudioIngressRules(source_uri, ingress, track, message_list);
         }
       }
 
       if (totalBitrate > 0)
       {
-        // Validate MinBitrates
+        // Verify MinBitrates
         if (ingress.GetMinBitrate() > 0)
         {
           if (totalBitrate < ingress.GetMinBitrate())
@@ -154,7 +156,7 @@ namespace mon
           }
         }
 
-        // Validate MaxBitrates
+        // Verify MaxBitrates
         if (ingress.GetMaxBitrate() > 0)
         {
           if (totalBitrate > ingress.GetMaxBitrate())
@@ -165,9 +167,9 @@ namespace mon
       }
     }
 
-    void Alert::ValidateVideoIngressRules(const ov::String &source_uri, cfg::alrt::rule::Ingress ingress, const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list)
+    void Alert::VerifyVideoIngressRules(const ov::String &source_uri, cfg::alrt::rule::Ingress ingress, const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list)
     {
-      // Validate HasBFrame
+      // Verify HasBFrame
       if (ingress.GetHasBFrame())
       {
         if (video_track->HasBframes())
@@ -178,7 +180,7 @@ namespace mon
 
       if (video_track->GetFrameRateByMeasured() > 0)
       {
-        // Validate MinFramerate
+        // Verify MinFramerate
         if (ingress.GetMinFramerate() > 0)
         {
           if (video_track->GetFrameRateByMeasured() < ingress.GetMinFramerate())
@@ -187,7 +189,7 @@ namespace mon
           }
         }
 
-        // Validate MaxFramerate
+        // Verify MaxFramerate
         if (ingress.GetMaxFramerate() > 0)
         {
           if (video_track->GetFrameRateByMeasured() > ingress.GetMaxFramerate())
@@ -196,7 +198,7 @@ namespace mon
           }
         }
 
-        // Validate LongKeyFrameInterval
+        // Verify LongKeyFrameInterval
         if (video_track->GetKeyFrameInterval() > 0 && ingress.IsLongKeyFrameInterval())
         {
           double interval = video_track->GetKeyFrameInterval() / video_track->GetFrameRateByMeasured();
@@ -209,7 +211,7 @@ namespace mon
 
       if (video_track->GetWidth() > 0)
       {
-        // Validate MinWidth
+        // Verify MinWidth
         if (ingress.GetMinWidth() > 0)
         {
           if (video_track->GetWidth() < ingress.GetMinWidth())
@@ -218,7 +220,7 @@ namespace mon
           }
         }
 
-        // Validate MaxWidth
+        // Verify MaxWidth
         if (ingress.GetMaxWidth() > 0)
         {
           if (video_track->GetWidth() > ingress.GetMaxWidth())
@@ -230,7 +232,7 @@ namespace mon
 
       if (video_track->GetHeight() > 0)
       {
-        // Validate MinHeight
+        // Verify MinHeight
         if (ingress.GetMinHeight() > 0)
         {
           if (video_track->GetHeight() < ingress.GetMinHeight())
@@ -239,7 +241,7 @@ namespace mon
           }
         }
 
-        // Validate MaxHeight
+        // Verify MaxHeight
         if (ingress.GetMaxHeight() > 0)
         {
           if (video_track->GetHeight() > ingress.GetMaxHeight())
@@ -250,11 +252,11 @@ namespace mon
       }
     }
 
-    void Alert::ValidateAudioIngressRules(const ov::String &source_uri, cfg::alrt::rule::Ingress ingress, const std::shared_ptr<MediaTrack> &audio_track, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list)
+    void Alert::VerifyAudioIngressRules(const ov::String &source_uri, cfg::alrt::rule::Ingress ingress, const std::shared_ptr<MediaTrack> &audio_track, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list)
     {
       if (audio_track->GetSampleRate() > 0)
       {
-        // Validate MinSamplerate
+        // Verify MinSamplerate
         if (ingress.GetMinSamplerate() > 0)
         {
           if (audio_track->GetSampleRate() < ingress.GetMinSamplerate())
@@ -263,7 +265,7 @@ namespace mon
           }
         }
 
-        // Validate MaxSamplerate
+        // Verify MaxSamplerate
         if (ingress.GetMaxSamplerate() > 0)
         {
           if (audio_track->GetSampleRate() > ingress.GetMaxSamplerate())
@@ -274,7 +276,7 @@ namespace mon
       }
     }
 
-    bool Alert::NeedsAlert(const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list)
+    bool Alert::IsAlertNeeded(const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list)
     {
       auto last_alerted_message_list = GetSourceUriMessages(source_uri);
 
