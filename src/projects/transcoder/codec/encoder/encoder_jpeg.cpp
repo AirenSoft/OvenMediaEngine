@@ -14,10 +14,6 @@
 
 #include "../../transcoder_private.h"
 
-EncoderJPEG::~EncoderJPEG()
-{
-}
-
 bool EncoderJPEG::SetCodecParams()
 {
 	_codec_context->codec_type = AVMEDIA_TYPE_VIDEO;

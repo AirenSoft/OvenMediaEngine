@@ -14,10 +14,6 @@
 
 // sudo usermod -a -G video $USER
 
-EncoderAVCxQSV::~EncoderAVCxQSV()
-{
-}
-
 bool EncoderAVCxQSV::SetCodecParams()
 {
 	_codec_context->bit_rate = GetRefTrack()->GetBitrate();

@@ -4,6 +4,7 @@ include $(DEFAULT_VARIABLES)
 LOCAL_STATIC_LIBRARIES := \
 	application \
 	ovlibrary \
+	managed_queue \
 
 $(call add_pkg_config,libavformat)
 $(call add_pkg_config,libavfilter)

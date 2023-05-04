@@ -9,6 +9,7 @@
 #include "current_controller.h"
 
 #include "vhosts/vhosts_controller.h"
+#include "internals/internals_controller.h"
 
 namespace api
 {
@@ -21,6 +22,7 @@ namespace api
 				RegisterGet(R"()", &CurrentController::OnGetServerMetrics);
 
 				CreateSubController<VHostsController>(R"(\/vhosts)");
+				CreateSubController<InternalsController>(R"(\/internals)");
 			}
 
 			ApiResponse CurrentController::OnGetServerMetrics(const std::shared_ptr<http::svr::HttpExchange> &client)

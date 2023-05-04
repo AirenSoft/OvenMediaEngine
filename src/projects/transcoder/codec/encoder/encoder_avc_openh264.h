@@ -13,7 +13,10 @@
 class EncoderAVCxOpenH264 : public TranscodeEncoder
 {
 public:
-	~EncoderAVCxOpenH264();
+	EncoderAVCxOpenH264(const info::Stream &stream_info)
+		: TranscodeEncoder(stream_info)
+	{
+	}
 
 	AVCodecID GetCodecID() const noexcept override
 	{

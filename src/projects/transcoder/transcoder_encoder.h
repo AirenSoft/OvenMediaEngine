@@ -8,6 +8,7 @@
 //==============================================================================
 #pragma once
 
+#include "base/info/stream.h"
 #include "codec/codec_base.h"
 
 class TranscodeEncoder : public TranscodeBase<MediaFrame, MediaPacket>
@@ -16,10 +17,10 @@ public:
 	typedef std::function<void(int32_t, std::shared_ptr<MediaPacket>)> CompleteHandler;
 
 public:
-	TranscodeEncoder();
+	TranscodeEncoder(info::Stream stream_info);
 	~TranscodeEncoder() override;
 
-	static std::shared_ptr<TranscodeEncoder> Create(int32_t encoder_id, std::shared_ptr<MediaTrack> output_track, CompleteHandler complete_handler);
+	static std::shared_ptr<TranscodeEncoder> Create(int32_t encoder_id, const info::Stream &info, std::shared_ptr<MediaTrack> output_track, CompleteHandler complete_handler);
 	void SetEncoderId(int32_t encoder_id);
 
 	virtual int GetSupportedFormat() const noexcept = 0;
@@ -61,6 +62,8 @@ protected:
 
 	AVPacket *_packet = nullptr;
 	AVFrame *_frame = nullptr;
+
+	info::Stream _stream_info;
 
 	bool _kill_flag = false;
 	std::thread _codec_thread;

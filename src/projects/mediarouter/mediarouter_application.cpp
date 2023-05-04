@@ -13,6 +13,7 @@
 #include "mediarouter_private.h"
 #include "monitoring/monitoring.h"
 
+
 #define MIN_APPLICATION_WORKER_COUNT 1
 #define MAX_APPLICATION_WORKER_COUNT 64
 
@@ -51,13 +52,17 @@ MediaRouteApplication::MediaRouteApplication(const info::Application &applicatio
 
 	for (uint32_t worker_id = 0; worker_id < _max_worker_thread_count; worker_id++)
 	{
-		_inbound_stream_indicator.push_back(std::make_shared<ov::Queue<std::shared_ptr<MediaRouteStream>>>(
-			ov::String::FormatString("%s - Mediarouter inbound indicator (%d/%d)", _application_info.GetName().CStr(), worker_id, _max_worker_thread_count),
-			500));
+		{
+			auto urn = info::ManagedQueue::URN(_application_info.GetName().CStr(), nullptr, "imr", ov::String::FormatString("appworker_%d", worker_id));
+			auto stream_data = std::make_shared<ov::ManagedQueue<std::shared_ptr<MediaRouteStream>>>(urn.CStr(), 500);
+			_inbound_stream_indicator.push_back(stream_data);
+		}
 
-		_outbound_stream_indicator.push_back(std::make_shared<ov::Queue<std::shared_ptr<MediaRouteStream>>>(
-			ov::String::FormatString("%s - Mediarouter outbound indicator (%d/%d)", _application_info.GetName().CStr(), worker_id, _max_worker_thread_count),
-			500));
+		{
+			auto urn = info::ManagedQueue::URN(_application_info.GetName().CStr(), nullptr, "omr", ov::String::FormatString("appworker_%d", worker_id));
+			auto stream_data = std::make_shared<ov::ManagedQueue<std::shared_ptr<MediaRouteStream>>>(urn.CStr(), 500);
+			_outbound_stream_indicator.push_back(stream_data);
+		}
 	}
 }
 

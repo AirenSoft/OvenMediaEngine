@@ -13,9 +13,6 @@
 #include "../../transcoder_private.h"
 
 // sudo usermod -a -G video $USER
-EncoderHEVCxQSV::~EncoderHEVCxQSV()
-{
-}
 
 bool EncoderHEVCxQSV::SetCodecParams()
 {

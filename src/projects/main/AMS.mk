@@ -53,6 +53,8 @@ LOCAL_STATIC_LIBRARIES := \
 	srt \
 	rtmp \
 	file_provider \
+	managed_queue \
+	
 
 # rtsp_provider 
 

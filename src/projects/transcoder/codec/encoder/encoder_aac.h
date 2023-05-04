@@ -13,7 +13,10 @@
 class EncoderAAC : public TranscodeEncoder
 {
 public:
-	~EncoderAAC();
+	EncoderAAC(const info::Stream &stream_info)
+		: TranscodeEncoder(stream_info)
+	{
+	}
 
 	AVCodecID GetCodecID() const noexcept override
 	{

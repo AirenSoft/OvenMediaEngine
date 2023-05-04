@@ -13,10 +13,6 @@
 #include "../../transcoder_gpu.h"
 #include "../../transcoder_private.h"
 
-EncoderAVCxNV::~EncoderAVCxNV()
-{
-}
-
 bool EncoderAVCxNV::SetCodecParams()
 {
 	_codec_context->bit_rate = GetRefTrack()->GetBitrate();

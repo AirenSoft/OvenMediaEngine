@@ -18,6 +18,7 @@
 #include "base/mediarouter/media_buffer.h"
 #include "base/mediarouter/mediarouter_application_connector.h"
 #include "base/mediarouter/media_type.h"
+#include "modules/managed_queue/managed_queue.h"
 
 enum class MediaRouterStreamType : int8_t
 {
@@ -83,7 +84,7 @@ private:
 	std::map<MediaTrackId, std::shared_ptr<MediaPacket>> _media_packet_stash;
 
 	// Packets queue
-	ov::Queue<std::shared_ptr<MediaPacket>> _packets_queue;
+	ov::ManagedQueue<std::shared_ptr<MediaPacket>> _packets_queue;
 
 	// TODO(Soulk) : Modified to use by tying statistical information into a class and creating a map with MediaTrackId as a key
 

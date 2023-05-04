@@ -13,7 +13,10 @@
 class EncoderPNG : public TranscodeEncoder
 {
 public:
-	~EncoderPNG();
+	EncoderPNG(const info::Stream &stream_info)
+		: TranscodeEncoder(stream_info)
+	{
+	}
 
 	AVCodecID GetCodecID() const noexcept override
 	{

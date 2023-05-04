@@ -4,6 +4,7 @@
 #include "base/common_types.h"
 #include "base/info/stream.h"
 #include "base/mediarouter/media_buffer.h"
+#include "modules/managed_queue/managed_queue.h"
 #include "session.h"
 
 #define MAX_STREAM_WORKER_THREAD_COUNT 72
@@ -38,7 +39,7 @@ namespace pub
 		ov::Semaphore _queue_event;
 
 		std::optional<std::any> PopStreamPacket();
-		ov::Queue<std::any> _packet_queue;
+		ov::ManagedQueue<std::any> _packet_queue;
 
 		struct SessionMessage
 		{

@@ -23,10 +23,9 @@ namespace pub
 			return true;
 		}
 
-		ov::String queue_name;
-
-		queue_name.Format("%s/%s/%s StreamWorker Queue", _parent->GetApplicationTypeName(), _parent->GetApplicationName(), _parent->GetName().CStr());
-		_packet_queue.SetAlias(queue_name.CStr());
+		ov::String urn;
+		urn = info::ManagedQueue::URN(_parent->GetApplicationName(), _parent->GetName().CStr(), "pub", ov::String::FormatString("streamworker_%s", _parent->GetApplication()->GetPublisherTypeName()).LowerCaseString().CStr());
+		_packet_queue.SetUrn(urn.CStr());
 		
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&StreamWorker::WorkerThread, this);

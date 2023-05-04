@@ -220,7 +220,9 @@ namespace pvd
 		{
 			// base_timestamp is the last timestamp value of the previous stream. Increase it based on this.
 			// last_timestamp is a value that is updated every time a packet is received.
+			[[maybe_unused]]
 			int64_t prev_base_timestamp = _base_timestamp_map[track_id];
+			
 			_base_timestamp_map[track_id] = last_timestamp;
 
 			logtd("%s/%s(%u) Update base timestamp [%d] %lld => %lld, last_timestamp: %lld",

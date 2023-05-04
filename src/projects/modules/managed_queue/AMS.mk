@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call get_local_path)
 include $(DEFAULT_VARIABLES)
 
-LOCAL_TARGET := jitter_buffer
+LOCAL_TARGET := managed_queue
 
 $(call add_pkg_config,srt)
 

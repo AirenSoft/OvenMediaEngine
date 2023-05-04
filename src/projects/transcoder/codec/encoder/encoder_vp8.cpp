@@ -10,10 +10,6 @@
 
 #include "../../transcoder_private.h"
 
-EncoderVP8::~EncoderVP8()
-{
-}
-
 bool EncoderVP8::SetCodecParams()
 {
 	_codec_context->bit_rate = GetRefTrack()->GetBitrate();

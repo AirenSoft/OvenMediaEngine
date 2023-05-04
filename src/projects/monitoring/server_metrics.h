@@ -6,7 +6,9 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include "base/info/host.h"
+#include "base/info/managed_queue.h"
 #include "host_metrics.h"
+#include "queue_metrics.h"
 
 namespace mon
 {
@@ -31,5 +33,14 @@ namespace mon
 		std::shared_mutex _map_guard;
 		std::map<uint32_t, std::shared_ptr<HostMetrics>> _hosts;
 
+	// Queue metrics
+	public:
+		void OnQueueCreated(const info::ManagedQueue& info);
+		void OnQueueDeleted(const info::ManagedQueue& info);
+		void OnQueueUpdated(const info::ManagedQueue& info, bool with_metadata = false);
+		std::map<uint32_t, std::shared_ptr<QueueMetrics>> GetQueueMetricsList();
+
+	protected:
+		std::map<uint32_t, std::shared_ptr<QueueMetrics>> _queues;
 	};
 }

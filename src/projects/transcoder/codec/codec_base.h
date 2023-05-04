@@ -26,12 +26,14 @@ extern "C"
 #include <base/mediarouter/media_type.h>
 #include <base/ovlibrary/ovlibrary.h>
 #include <modules/ffmpeg/conv.h>
+#include <modules/managed_queue/managed_queue.h>
 
 #include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <thread>
 #include <vector>
+
 
 enum class TranscodeResult : int32_t
 {
@@ -63,5 +65,5 @@ public:
 	virtual void SendBuffer(std::shared_ptr<const InputType> buf) = 0;
 
 protected:
-	ov::Queue<std::shared_ptr<const InputType>> _input_buffer;
+	ov::ManagedQueue<std::shared_ptr<const InputType>> _input_buffer;
 };

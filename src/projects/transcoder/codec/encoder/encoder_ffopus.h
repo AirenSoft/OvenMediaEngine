@@ -13,7 +13,10 @@
 class EncoderFFOPUS : public TranscodeEncoder
 {
 public:
-	~EncoderFFOPUS();
+	EncoderFFOPUS(const info::Stream &stream_info)
+		: TranscodeEncoder(stream_info)
+	{
+	}
 
 	AVCodecID GetCodecID() const noexcept override
 	{

@@ -15,6 +15,11 @@ struct OpusEncoder;
 class EncoderOPUS : public TranscodeEncoder
 {
 public:
+	EncoderOPUS(const info::Stream &stream_info)
+		: TranscodeEncoder(stream_info)
+	{
+	}
+
 	~EncoderOPUS() override;
 
 	AVCodecID GetCodecID() const noexcept override

@@ -13,7 +13,10 @@
 class EncoderHEVCxQSV : public TranscodeEncoder
 {
 public:
-	~EncoderHEVCxQSV();
+	EncoderHEVCxQSV(const info::Stream &stream_info)
+		: TranscodeEncoder(stream_info)
+	{
+	}
 
 	AVCodecID GetCodecID() const noexcept override
 	{

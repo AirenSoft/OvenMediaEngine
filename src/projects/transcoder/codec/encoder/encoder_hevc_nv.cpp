@@ -12,10 +12,6 @@
 
 #include "../../transcoder_private.h"
 
-EncoderHEVCxNV::~EncoderHEVCxNV()
-{
-}
-
 bool EncoderHEVCxNV::SetCodecParams()
 {
 	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRate() > 0) ? GetRefTrack()->GetFrameRate() : GetRefTrack()->GetEstimateFrameRate(), AV_TIME_BASE);
