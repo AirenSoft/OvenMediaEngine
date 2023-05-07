@@ -21,7 +21,8 @@ namespace info
 
 	public:
 		VHostAppName(const ov::String &vhost_name, const ov::String &app_name);
-
+		VHostAppName(const ov::String &vhost_app_name);
+		
 		static VHostAppName InvalidVHostAppName();
 
 		bool IsValid() const;
