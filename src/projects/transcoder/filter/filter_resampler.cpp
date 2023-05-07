@@ -238,7 +238,7 @@ void FilterResampler::FilterThread()
 					continue;
 				}
 
-				if (_complete_handler)
+				if (_complete_handler != nullptr && _kill_flag == false)
 				{
 					_complete_handler(std::move(output_frame));
 				}

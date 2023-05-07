@@ -44,6 +44,7 @@ bool TranscodeFilter::CreateFilter()
 {
 	if (_impl != nullptr)
 	{
+		_impl->Stop();
 		delete _impl;
 	}
 
@@ -62,7 +63,6 @@ bool TranscodeFilter::CreateFilter()
 
 	auto urn = info::ManagedQueue::URN(_input_stream_info->GetApplicationName(), _input_stream_info->GetName().CStr(), "trs", ov::String::FormatString("filter_%s", cmn::GetMediaTypeString(_input_track->GetMediaType()).LowerCaseString().CStr()));
 	_impl->SetQueueUrn(urn.CStr());
-
 	_impl->SetCompleteHandler(bind(&TranscodeFilter::OnComplete, this, std::placeholders::_1));
 
 	bool success = _impl->Configure(_input_track, _output_track);
