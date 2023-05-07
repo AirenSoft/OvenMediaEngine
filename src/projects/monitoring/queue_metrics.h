@@ -91,7 +91,7 @@ namespace mon
 			return _drop_count;
 		}
 
-		const size_t& GetWaitingTime() const
+		const int64_t& GetWaitingTime() const
 		{
 			return _waiting_time;
 		}
@@ -109,6 +109,6 @@ namespace mon
 		size_t _imps;
 		size_t _omps;
 		size_t _drop_count;
-		size_t _waiting_time;
+		int64_t _waiting_time;
 	};
 }  // namespace mon

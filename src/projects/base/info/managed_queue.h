@@ -20,7 +20,7 @@ namespace info
 	{
 	public:
 		explicit ManagedQueue(size_t threshold = 0)
-			: _peak(0), _size(0), _threshold(threshold), _imc(0), _omc(0), _imps(0), _omps(0), _dc(0) { };
+			: _peak(0), _size(0), _threshold(threshold), _threshold_exceeded_time_in_us(0), _imc(0), _omc(0), _imps(0), _omps(0), _dc(0) { };
 
 		void SetId(info::managed_queue_id_t id)
 		{
@@ -79,11 +79,15 @@ namespace info
 			return _dc;
 		}
 
-		size_t GetWaitingTimeInUs() const
+		int64_t GetWaitingTimeInUs() const
 		{
 			return _waiting_time_in_us;
 		}
 
+		int64_t GetThresholdExceededTimeInUs() const
+		{
+			return _threshold_exceeded_time_in_us;
+		}
 		
 		void SetUrn(const char* urn, const char* type_name)
 		{
@@ -121,6 +125,9 @@ namespace info
 		// Threshold of the queue
 		size_t _threshold;
 
+		// threshold_exceeded_time increases from the point the queue is exceeded
+		int64_t _threshold_exceeded_time_in_us;
+
 		// Input Message Count
 		size_t _imc;
 
@@ -134,7 +141,7 @@ namespace info
 		size_t _omps;
 
 		// average waiting time(microseconds)
-		size_t _waiting_time_in_us;
+		int64_t _waiting_time_in_us;
 
 		// Drop Count
 		uint64_t _dc;
@@ -143,7 +150,7 @@ namespace info
 		// Create URN specification for queue
 		/*
 			[URN Pattern]
-				- mngq:{VhostName}#{AppName}[/{StreamName}]:{PART}:{ROLE}
+				- mngq:v={VhostName}#{AppName}[s=/{StreamName}]:p={PART}:r={ROLE}
 
 			[PART]
 				- pvd: provider
@@ -160,44 +167,89 @@ namespace info
 				- stremworker_[{protocol}]_{id}
 
 			examples
-				- mngq:#default#app/stream:trs:decoer_h264_0
-				- mngq:#default#app/stream:trs:filter_video
-				- mngq:#default#app/stream:trs:filter_audio
-				- mngq:#default#app/stream:trs:encoder_opus_0
-				- mngq:#default#app/stream:trs:encoder_h264_1
-				- mngq:#default#app:imr:indicator
-				- mngq:#default#app:omr:appworker
-				- mngq:#default#app:pub:appworker
+				- mngq:v=#default#app:s=stream:p=trs:r=decoer_h264_0
+				- mngq:v=#default#app:s=stream:p=trs:r=filter_video
+				- mngq:v=#default#app:s=stream:p=trs:r=filter_audio
+				- mngq:v=#default#app:s=stream:p=trs:r=encoder_opus_0
+				- mngq:v=#default#app:s=stream:p=trs:r=encoder_h264_1
+				- mngq:v=#default#app:p=imr:r=indicator
+				- mngq:v=#default#app:p=omr:r=appworker
+				- mngq:v=#default#app:p=pub:r=appworker
 		*/
 		static ov::String URN(const char* vhost_app = nullptr, const char* stream = nullptr, const char* part = nullptr, const char* role = nullptr)
 		{
 			
-			ov::String uri = "mngq:";
+			ov::String uri = "mngq";
 
 			if(vhost_app)
 			{
+				uri.Append(":");
+				uri.Append("v=");
 				uri.Append(vhost_app);
 			}
 			if(stream)
 			{
-				uri.Append("/");
+				uri.Append(":");
+				uri.Append("s=");
 				uri.Append(stream);
 			}
 
 			if(part)
 			{
 				uri.Append(":");
+				uri.Append("p=");
 				uri.Append(part);
 			}	
 
 			if(role)
 			{
 				uri.Append(":");
+				uri.Append("r=");
 				uri.Append(role);
 			}
 
 			return uri;
-		}	
+		}
+
+		static ov::String ParseVHostApp(const char* urn)
+		{
+			ov::String tmp(urn);
+
+			auto start_pos = tmp.IndexOf(":v=");
+			if(start_pos == -1L)
+			{
+				return "";
+			}
+
+			auto end_pos = tmp.IndexOf(":", start_pos + 3);
+			if(end_pos == -1L)
+			{
+				return tmp.Substring(start_pos + 3);
+			}
+
+			size_t length = end_pos - start_pos - 3;
+			return tmp.Substring(start_pos + 3, length);
+		}
+
+		static ov::String ParseStream(const char* urn)
+		{
+			ov::String tmp(urn);
+
+			auto start_pos = tmp.IndexOf(":s=");
+			if(start_pos == -1L)
+			{
+				return "";
+			}
+
+			auto end_pos = tmp.IndexOf(":", start_pos + 3);
+			if(end_pos == -1L)
+			{
+				return tmp.Substring(start_pos + 3);
+			}
+
+			size_t length = end_pos - start_pos - 3;
+			return tmp.Substring(start_pos + 3, length);
+		}
 	};
 
 }  // namespace info

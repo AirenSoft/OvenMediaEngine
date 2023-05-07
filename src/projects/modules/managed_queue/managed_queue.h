@@ -293,15 +293,25 @@ namespace ov
 				_omps = _omc;
 				_omc = _imc = 0;
 
-				UpdateMetricsToMonitor();
-
-				_last_logging_time += _stats_metric_interval;
-				if ((_threshold > 0) && (_size >= _threshold) && (_last_logging_time >= _log_interval))
+				if ((_threshold > 0) && (_size >= _threshold))
 				{
-					_last_logging_time = 0;
-					auto shared_lock = std::shared_lock(_name_mutex);
-					logw(LOG_TAG, "[%u] %s size has exceeded the threshold: queue: %zu, threshold: %zu, peak: %zu", GetId(), _urn.CStr(), _size, _threshold, _peak);
+					_threshold_exceeded_time_in_us += _stats_metric_interval;
+
+					// Logging
+					_last_logging_time += _stats_metric_interval;
+					if(_last_logging_time >= _log_interval)
+					{
+						_last_logging_time = 0;
+						auto shared_lock = std::shared_lock(_name_mutex);
+						logw(LOG_TAG, "[%u] %s size has exceeded the threshold: queue: %zu, threshold: %zu, peak: %zu", GetId(), _urn.CStr(), _size, _threshold, _peak);
+					}
 				}
+				else
+				{
+					_threshold_exceeded_time_in_us = 0;
+				}
+
+				UpdateMetricsToMonitor();
 			}
 		}
 
