@@ -154,10 +154,11 @@ namespace mon
 				<Modules>
 					<Recovery>
 						<!--  
-						If the packet/frame queue is exceed for a certain period of time, it will be automatically deleted. 
+						If the packet/frame queue is exceed for a certain period of time(millisecond, ms), it will be automatically deleted. 
 						If this value is set to zero, the stream will not be deleted. 
+						
 						-->
-						<DeleteLazyStreamTimeout>3000</DeleteLazyStreamTimeout>
+						<DeleteLazyStreamTimeout>10000</DeleteLazyStreamTimeout>
 					</Recovery>
 				</Modules>
 		*/
