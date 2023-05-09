@@ -195,7 +195,7 @@
 				<MinSamplerate></MinSamplerate>
 				<MaxSamplerate></MaxSamplerate>
 				<LongKeyFrameInterval />
-				<HasBFrame />
+				<HasBFrames />
 			</Ingress>
 		</Rules>
 	</Alert>

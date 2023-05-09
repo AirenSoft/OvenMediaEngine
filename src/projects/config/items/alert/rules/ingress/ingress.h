@@ -30,7 +30,7 @@ namespace cfg
 				int32_t _min_samplerate = 0;
 				int32_t _max_samplerate = 0;
 				bool _long_key_frame_interval = false;
-				bool _has_b_frame = false;
+				bool _has_b_frames = false;
 
 			public:
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetMinBitrate, _min_bitrate)
@@ -46,7 +46,7 @@ namespace cfg
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetMinSamplerate, _min_samplerate)
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetMaxSamplerate, _max_samplerate)
 				CFG_DECLARE_CONST_REF_GETTER_OF(IsLongKeyFrameInterval, _long_key_frame_interval)
-				CFG_DECLARE_CONST_REF_GETTER_OF(GetHasBFrame, _has_b_frame)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetHasBFrames, _has_b_frames)
 
 			protected:
 				void MakeList() override
@@ -95,8 +95,8 @@ namespace cfg
 							_long_key_frame_interval = true;
 							return nullptr;
 						});
-					Register<Optional>("HasBFrame", &_has_b_frame, nullptr, [=]() -> std::shared_ptr<ConfigError> {
-							_has_b_frame = true;
+					Register<Optional>("HasBFrames", &_has_b_frames, nullptr, [=]() -> std::shared_ptr<ConfigError> {
+							_has_b_frames = true;
 							return nullptr;
 						});
 				}

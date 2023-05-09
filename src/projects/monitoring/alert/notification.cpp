@@ -1,9 +1,9 @@
 //=============================================================================
 //
-//  OvenMediaEngine
+//	OvenMediaEngine
 //
-//  Created by Gilhoon Choi
-//  Copyright (c) 2023 AirenSoft. All rights reserved.
+//	Created by Gilhoon Choi
+//	Copyright (c) 2023 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #include "notification.h"
@@ -13,11 +13,11 @@
 
 namespace mon
 {
-  namespace alrt
-  {
+	namespace alrt
+	{
 		std::shared_ptr<Notification> Notification::Query(const std::shared_ptr<ov::Url> &notification_server_url, uint32_t timeout_msec, const ov::String secret_key,
-																				const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list,
-																				const std::shared_ptr<StreamMetrics> &stream_metric)
+										const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list,
+										const std::shared_ptr<StreamMetrics> &stream_metric)
 		{
 			auto notification = std::make_shared<Notification>();
 
@@ -39,20 +39,20 @@ namespace mon
 			return _status_code;
 		}
 
-		ov::String Notification::GetErrReason() const
+		ov::String Notification::GetErrorReason() const
 		{
-			return _err_reason;
+			return _error_reason;
 		}
 
 		uint64_t Notification::GetElapsedTime() const
 		{
-			return _elapsed_ms;
+			return _elapsed_msec;
 		}
 
 		void Notification::SetStatus(StatusCode code, ov::String reason)
 		{
 			_status_code = code;
-			_err_reason = reason;
+			_error_reason = reason;
 		}
 
 		ov::String Notification::GetMessageBody()
@@ -96,7 +96,7 @@ namespace mon
 			return ov::Converter::ToString(jv_root);
 		}
 
-		void Notification::ParseResponse(const std::shared_ptr<ov::Data> &data)
+		void Notification::ParseResponse(const std::shared_ptr<const ov::Data> &data)
 		{
 			ov::JsonObject object = ov::Json::Parse(data->ToString());
 			if(object.IsNull())
@@ -120,7 +120,7 @@ namespace mon
 			if(md_sha1 == nullptr)
 			{
 				// Error
-				SetStatus(StatusCode::INTERNAL_ERROR, ov::String::FormatString("Signature creation failed.(Method : HMAC(SHA1), Key : %s, Body length : %d", _secret_key.CStr(), body.GetLength()));
+				SetStatus(StatusCode::INTERNAL_ERROR, ov::String::FormatString("Signature creation failed.(Method : HMAC(SHA1), Body length : %d", body.GetLength()));
 				return;
 			}
 
@@ -140,7 +140,7 @@ namespace mon
 
 			client->Request(_notification_server_url->ToUrlString(true), [=](http::StatusCode status_code, const std::shared_ptr<ov::Data> &data, const std::shared_ptr<const ov::Error> &error) 
 			{
-				_elapsed_ms = watch.Elapsed();
+				_elapsed_msec = watch.Elapsed();
 
 				// A response was received from the server.
 				if(error == nullptr) 
