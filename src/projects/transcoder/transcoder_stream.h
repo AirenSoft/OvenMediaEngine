@@ -96,7 +96,12 @@ public:
 
 private:
 	ov::String _log_prefix;
-	mutable std::mutex _mutex;
+	std::shared_mutex _format_change_mutex;
+	std::shared_mutex _decoder_map_mutex;
+	std::shared_mutex _filter_map_mutex;
+	std::shared_mutex _encoder_map_mutex;
+
+	bool _is_stopped = true;
 
 	TranscodeApplication *_parent;
 
