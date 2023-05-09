@@ -10,10 +10,6 @@
 
 #include "../../transcoder_private.h"
 
-EncoderFFOPUS::~EncoderFFOPUS()
-{
-}
-
 bool EncoderFFOPUS::SetCodecParams()
 {
 	_codec_context->bit_rate = GetRefTrack()->GetBitrate();

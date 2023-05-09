@@ -37,6 +37,11 @@ namespace info
 			return "ApplicationInfo";
 		}
 
+		virtual const char *GetPublisherTypeName()
+		{
+			return "PublisherInfo";
+		}
+
 		bool operator==(const Application &app_info) const;
 		bool IsValid() const;
 
@@ -103,6 +108,7 @@ namespace info
 		application_id_t _application_id = InvalidApplicationId;
 		VHostAppName _name;
 		ov::String _app_type_name;
+		ov::String _publisher_type_name;
 
 		cfg::vhost::app::Application _app_config;
 

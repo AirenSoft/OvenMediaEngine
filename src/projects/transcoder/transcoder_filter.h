@@ -5,6 +5,7 @@
 
 #include <cstdint>
 
+#include "base/info/stream.h"
 #include "filter/filter_base.h"
 #include "transcoder_context.h"
 
@@ -24,10 +25,13 @@ public:
 
 public:
 	TranscodeFilter();
-
 	~TranscodeFilter();
 
-	bool Configure(int32_t filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track, CompleteHandler complete_handler);
+	bool Configure(
+		int32_t filter_id,
+		const std::shared_ptr<info::Stream> &input_stream_info, std::shared_ptr<MediaTrack> input_track,
+		const std::shared_ptr<info::Stream> &output_stream_info, std::shared_ptr<MediaTrack> output_track,
+		CompleteHandler complete_handler);
 
 	bool SendBuffer(std::shared_ptr<MediaFrame> buffer);
 
@@ -38,7 +42,9 @@ public:
 	int64_t _last_pts = -1LL;
 	int64_t _threshold_ts_increment = 0LL;
 
+	std::shared_ptr<info::Stream> _input_stream_info;
 	std::shared_ptr<MediaTrack> _input_track;
+	std::shared_ptr<info::Stream> _output_stream_info;
 	std::shared_ptr<MediaTrack> _output_track;
 
 	void SetAlias(ov::String alias);
@@ -57,8 +63,6 @@ private:
 	int32_t _filter_id;
 
 	FilterBase *_impl;
-
-	ov::String _alias;
 
 	CompleteHandler _complete_handler;
 };

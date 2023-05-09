@@ -13,7 +13,10 @@
 class EncoderVP8 : public TranscodeEncoder
 {
 public:
-	~EncoderVP8();
+	EncoderVP8(const info::Stream &stream_info)
+		: TranscodeEncoder(stream_info)
+	{
+	}
 
 	AVCodecID GetCodecID() const noexcept override
 	{

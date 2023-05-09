@@ -20,7 +20,7 @@
 #include "transcoder_gpu.h"
 #include "transcoder_private.h"
 
-#define MAX_QUEUE_SIZE 120
+#define MAX_QUEUE_SIZE 500
 
 std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(int32_t decoder_id, const info::Stream &info, std::shared_ptr<MediaTrack> track, CompleteHandler complete_handler)
 {
@@ -182,8 +182,11 @@ void TranscodeDecoder::SetDecoderId(int32_t decoder_id)
 
 bool TranscodeDecoder::Configure(std::shared_ptr<MediaTrack> track)
 {
-	_input_buffer.SetAlias(ov::String::FormatString("Input queue of Decoder. track(%d) codec(%s/%d)", track->GetId(), ::avcodec_get_name(GetCodecID()), GetCodecID()));
+	auto urn = info::ManagedQueue::URN(_stream_info.GetApplicationName(), _stream_info.GetName(), "trs", ov::String::FormatString("decoder_%s_%d", ::avcodec_get_name(GetCodecID()), track->GetId()));
+
+	_input_buffer.SetUrn(urn.CStr());
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
+	
 
 	_track = track;
 

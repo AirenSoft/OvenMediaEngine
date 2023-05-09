@@ -25,9 +25,10 @@
 #include "transcoder_private.h"
 
 #define USE_LEGACY_LIBOPUS false
-#define MAX_QUEUE_SIZE 120
+#define MAX_QUEUE_SIZE 500
 
-TranscodeEncoder::TranscodeEncoder()
+TranscodeEncoder::TranscodeEncoder(info::Stream stream_info) : 
+	_stream_info(stream_info)
 {
 	_packet = ::av_packet_alloc();
 	_frame = ::av_frame_alloc();
@@ -54,7 +55,7 @@ TranscodeEncoder::~TranscodeEncoder()
 	_input_buffer.Clear();
 }
 
-std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, std::shared_ptr<MediaTrack> output_track, CompleteHandler complete_handler)
+std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, const info::Stream &info, std::shared_ptr<MediaTrack> output_track, CompleteHandler complete_handler)
 {
 	std::shared_ptr<TranscodeEncoder> encoder = nullptr;
 
@@ -70,7 +71,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 
 			if ( (use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedQSV() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::QSV))
 			{
-				encoder = std::make_shared<EncoderAVCxQSV>();
+				encoder = std::make_shared<EncoderAVCxQSV>(info);
 				if (encoder != nullptr && encoder->Configure(output_track) == true)
 				{
 					output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::QSV);
@@ -80,7 +81,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 
 			if ( (use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedNV() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::NVENC))
 			{
-				encoder = std::make_shared<EncoderAVCxNV>();
+				encoder = std::make_shared<EncoderAVCxNV>(info);
 				if (encoder != nullptr && encoder->Configure(output_track) == true)
 				{
 					output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::NVENC);
@@ -90,7 +91,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 
 			if (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::OPENH264)
 			{
-				encoder = std::make_shared<EncoderAVCxOpenH264>();
+				encoder = std::make_shared<EncoderAVCxOpenH264>(info);
 				if (encoder != nullptr && encoder->Configure(output_track) == true)
 				{
 					output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::OPENH264);
@@ -102,7 +103,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 		case cmn::MediaCodecId::H265:
 			if ( (use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedQSV() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::QSV))
 			{
-				encoder = std::make_shared<EncoderHEVCxQSV>();
+				encoder = std::make_shared<EncoderHEVCxQSV>(info);
 				if (encoder != nullptr && encoder->Configure(output_track) == true)
 				{
 					output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::QSV);
@@ -112,7 +113,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 
 			if ( (use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedNV() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::NVENC))
 			{
-				encoder = std::make_shared<EncoderHEVCxNV>();
+				encoder = std::make_shared<EncoderHEVCxNV>(info);
 				if (encoder != nullptr && encoder->Configure(output_track) == true)
 				{
 					output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::NVENC);
@@ -122,7 +123,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 
 			break;
 		case cmn::MediaCodecId::Vp8:
-			encoder = std::make_shared<EncoderVP8>();
+			encoder = std::make_shared<EncoderVP8>(info);
 			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
 				output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::LIBVPX);
@@ -131,7 +132,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 
 			break;
 		case cmn::MediaCodecId::Jpeg:
-			encoder = std::make_shared<EncoderJPEG>();
+			encoder = std::make_shared<EncoderJPEG>(info);
 			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
 				goto done;
@@ -139,7 +140,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 
 			break;
 		case cmn::MediaCodecId::Png:
-			encoder = std::make_shared<EncoderPNG>();
+			encoder = std::make_shared<EncoderPNG>(info);
 			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
 				goto done;
@@ -147,7 +148,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 
 			break;
 		case cmn::MediaCodecId::Aac:
-			encoder = std::make_shared<EncoderAAC>();
+			encoder = std::make_shared<EncoderAAC>(info);
 			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
 				output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::FDKAAC);
@@ -157,13 +158,13 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, s
 			break;
 		case cmn::MediaCodecId::Opus:
 #if USE_LEGACY_LIBOPUS
-			encoder = std::make_shared<EncoderOPUS>();
+			encoder = std::make_shared<EncoderOPUS>(info);
 			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
 				goto done;
 			}
 #else
-			encoder = std::make_shared<EncoderFFOPUS>();
+			encoder = std::make_shared<EncoderFFOPUS>(info);
 			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
 				output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::LIBOPUS);
@@ -200,8 +201,10 @@ bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 {
 	_track = output_track;
 
-	_input_buffer.SetAlias(ov::String::FormatString("Input queue of Encoder. track(%d) codec(%s/%d)", output_track->GetId(), ::avcodec_get_name(GetCodecID()), GetCodecID()));
+	auto urn = info::ManagedQueue::URN(_stream_info.GetApplicationName(), _stream_info.GetName(), "trs", ov::String::FormatString("encoder_%s_%d", ::avcodec_get_name(GetCodecID()), _track->GetId()));
+	_input_buffer.SetUrn(urn);
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
+	
 	_track->SetOriginBitstream(GetBitstreamFormat());
 
 	return (_track != nullptr);

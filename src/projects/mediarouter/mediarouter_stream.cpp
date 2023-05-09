@@ -85,7 +85,8 @@ void MediaRouteStream::SetInoutType(MediaRouterStreamType inout_type)
 {
 	_inout_type = inout_type;
 
-	_packets_queue.SetAlias(ov::String::FormatString("%s/%s-MR-%s", _stream->GetApplicationInfo().GetName().CStr(), _stream->GetName().CStr(), (_inout_type == MediaRouterStreamType::INBOUND) ? "Inbound" : "Outbound"));
+	auto urn = info::ManagedQueue::URN(_stream->GetApplicationInfo().GetName().CStr(), _stream->GetName().CStr(), _inout_type == MediaRouterStreamType::INBOUND ? "imr" : "omr", "streamworker");
+	_packets_queue.SetUrn(urn.CStr());
 }
 
 MediaRouterStreamType MediaRouteStream::GetInoutType()

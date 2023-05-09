@@ -20,6 +20,7 @@
 #include "base/mediarouter/mediarouter_application_observer.h"
 #include "base/mediarouter/mediarouter_interface.h"
 #include "mediarouter_stream.h"
+#include "modules/managed_queue/managed_queue.h"
 
 class ApplicationInfo;
 class Stream;
@@ -148,6 +149,6 @@ private:
 	uint32_t _max_worker_thread_count;
 
 private:
-	std::vector<std::shared_ptr<ov::Queue<std::shared_ptr<MediaRouteStream>>>> _inbound_stream_indicator;
-	std::vector<std::shared_ptr<ov::Queue<std::shared_ptr<MediaRouteStream>>>> _outbound_stream_indicator;
+	std::vector<std::shared_ptr<ov::ManagedQueue<std::shared_ptr<MediaRouteStream>>>> _inbound_stream_indicator;
+	std::vector<std::shared_ptr<ov::ManagedQueue<std::shared_ptr<MediaRouteStream>>>> _outbound_stream_indicator;
 };

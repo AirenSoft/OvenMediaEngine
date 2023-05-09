@@ -7,10 +7,11 @@
 
 namespace pub
 {
-	ApplicationWorker::ApplicationWorker(uint32_t worker_id, ov::String worker_name)
+	ApplicationWorker::ApplicationWorker(uint32_t worker_id, ov::String vhost_app_name, ov::String worker_name)
 		: _stream_data_queue(nullptr, 500)
 	{
 		_worker_id = worker_id;
+		_vhost_app_name = vhost_app_name;
 		_worker_name = worker_name;
 		_stop_thread_flag = false;
 	}
@@ -21,10 +22,9 @@ namespace pub
 		_worker_thread = std::thread(&ApplicationWorker::WorkerThread, this);
 		pthread_setname_np(_worker_thread.native_handle(), ov::String::FormatString("AW-%s%d", _worker_name.CStr(), _worker_id).CStr());
 
-		ov::String queue_name;
-
-		queue_name.Format("%s - Stream Data Queue", _worker_name.CStr());
-		_stream_data_queue.SetAlias(queue_name.CStr());
+		ov::String urn;
+		urn = info::ManagedQueue::URN(_vhost_app_name.CStr(), nullptr, "pub", ov::String::FormatString("appworker_%s_%d", _worker_name.LowerCaseString().CStr(), _worker_id).CStr());
+		_stream_data_queue.SetUrn(urn.CStr());
 
 		logtd("%s ApplicationWorker has been created", _worker_name.CStr());
 
@@ -134,6 +134,16 @@ namespace pub
 		return _app_type_name.CStr();
 	}
 
+	const char * Application::GetPublisherTypeName() {
+
+		if (_publisher_type_name.IsEmpty())
+		{
+			_publisher_type_name = StringFromPublisherType(_publisher->GetPublisherType());
+		}
+
+		return _publisher_type_name.CStr();
+	}
+
 	bool Application::Start()
 	{
 		_application_worker_count = GetConfig().GetAppWorkerCount();
@@ -150,7 +160,7 @@ namespace pub
 
 		for (uint32_t i = 0; i < _application_worker_count; i++)
 		{
-			auto app_worker = std::make_shared<ApplicationWorker>(i, StringFromPublisherType(_publisher->GetPublisherType()).CStr());
+			auto app_worker = std::make_shared<ApplicationWorker>(i, GetName().CStr(), StringFromPublisherType(_publisher->GetPublisherType()));
 			if (app_worker->Start() == false)
 			{
 				logte("Cannot create ApplicationWorker (%s/%s/%d)", GetApplicationTypeName(), GetName().CStr(), i);

@@ -14,6 +14,8 @@
 #include "../transcoder_gpu.h"
 #include "../transcoder_private.h"
 
+#define MAX_QUEUE_SIZE 500
+
 FilterRescaler::FilterRescaler()
 {
 	_frame = ::av_frame_alloc();
@@ -21,8 +23,7 @@ FilterRescaler::FilterRescaler()
 	_outputs = ::avfilter_inout_alloc();
 	_inputs = ::avfilter_inout_alloc();
 
-	_input_buffer.SetAlias("Input queue of media rescaler filter");
-	_input_buffer.SetThreshold(100);
+	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
 	OV_ASSERT2(_frame != nullptr);
 	OV_ASSERT2(_inputs != nullptr);
@@ -47,8 +48,6 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 {
 	_input_track = input_track;
 	_output_track = output_track;
-
-
 
 	const AVFilter *buffersrc = ::avfilter_get_by_name("buffer");
 	const AVFilter *buffersink = ::avfilter_get_by_name("buffersink");
@@ -268,7 +267,7 @@ void FilterRescaler::FilterThread()
 					continue;
 				}
 
-				if (_complete_handler)
+				if (_complete_handler != nullptr && _kill_flag == false)
 				{
 					_complete_handler(std::move(output_frame));
 				}

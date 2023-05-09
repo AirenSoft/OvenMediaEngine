@@ -11,6 +11,7 @@
 #include "http2.h"
 #include "ll_hls.h"
 #include "p2p.h"
+#include "recovery.h"
 
 namespace cfg
 {
@@ -22,11 +23,13 @@ namespace cfg
 			HTTP2 _http2;
 			LLHls _ll_hls;
 			P2P _p2p;
+			Recovery _recovery;
 
 		public:
 			CFG_DECLARE_CONST_REF_GETTER_OF(GetHttp2, _http2)
 			CFG_DECLARE_CONST_REF_GETTER_OF(GetLLHls, _ll_hls)
 			CFG_DECLARE_CONST_REF_GETTER_OF(GetP2P, _p2p)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetRecovery, _recovery)
 
 		protected:
 			void MakeList() override
@@ -34,7 +37,8 @@ namespace cfg
 				Register<Optional>("HTTP2", &_http2);
 				Register<Optional>("LLHLS", &_ll_hls);
 				Register<Optional>({"P2P", "p2p"}, &_p2p);
+				Register<Optional>("Recovery", &_recovery);
 			}
 		};
-	}  // namespace bind
+	}  // namespace modules
 }  // namespace cfg

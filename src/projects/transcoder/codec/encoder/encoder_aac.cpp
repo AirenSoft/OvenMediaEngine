@@ -10,10 +10,6 @@
 
 #include "../../transcoder_private.h"
 
-EncoderAAC::~EncoderAAC()
-{
-}
-
 bool EncoderAAC::SetCodecParams()
 {
 	_codec_context->bit_rate = GetRefTrack()->GetBitrate();

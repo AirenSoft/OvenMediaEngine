@@ -183,21 +183,6 @@ namespace ov
 				break;
 			}
 
-			if (family == SocketFamily::Inet6)
-			{
-				// In some environments, listening to IPv6 will also listen to IPv4
-				// This setting lets this socket listen to IPv6 only
-
-				if (type == SocketType::Srt)
-				{
-					SetSockOpt(SRTO_IPV6ONLY, 1);
-				}
-				else
-				{
-					SetSockOpt(IPPROTO_IPV6, IPV6_V6ONLY, 1);
-				}
-			}
-
 			logad("Socket descriptor is created (%s/%s)",
 				  StringFromSocketFamily(family),
 				  StringFromSocketType(type));
@@ -210,6 +195,17 @@ namespace ov
 			_family = family;
 
 			SetState(SocketState::Created);
+
+			if (type == SocketType::Srt)
+			{
+				SetSockOpt(SRTO_IPV6ONLY, 1);
+			}
+			else if (family == SocketFamily::Inet6)
+			{
+				// In some environments, listening to IPv6 will also listen to IPv4
+				// This setting lets this socket listen to IPv6 only
+				SetSockOpt(IPPROTO_IPV6, IPV6_V6ONLY, 1);
+			}
 
 			return true;
 		} while (false);

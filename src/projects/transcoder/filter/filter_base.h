@@ -31,6 +31,7 @@ extern "C"
 #include <base/info/media_track.h>
 #include <base/mediarouter/media_buffer.h>
 #include <base/mediarouter/media_type.h>
+#include <modules/managed_queue/managed_queue.h>
 
 class FilterBase
 {
@@ -69,8 +70,12 @@ public:
 		_complete_handler = complete_handler;
 	}
 
+	void SetQueueUrn(const ov::String &alias) {
+		_input_buffer.SetUrn(alias.CStr());
+	}
+
 protected:
-	ov::Queue<std::shared_ptr<MediaFrame>> _input_buffer;
+	ov::ManagedQueue<std::shared_ptr<MediaFrame>> _input_buffer;
 
 	AVFrame *_frame = nullptr;
 	AVFilterContext *_buffersink_ctx = nullptr;

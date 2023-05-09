@@ -11,6 +11,7 @@
 #include "base/ovlibrary/string.h"
 #include "config/config.h"
 #include "stream.h"
+#include "modules/managed_queue/managed_queue.h"
 
 #define MIN_APPLICATION_WORKER_COUNT		1
 #define MAX_APPLICATION_WORKER_COUNT		72
@@ -31,7 +32,7 @@ namespace pub
 	class ApplicationWorker
 	{
 	public:
-		ApplicationWorker(uint32_t worker_id, ov::String worker_name);
+		ApplicationWorker(uint32_t worker_id, ov::String vhost_app_name, ov::String worker_name);
 		bool Start();
 		bool Stop();
 		bool PushMediaPacket(const std::shared_ptr<Stream> &stream, const std::shared_ptr<MediaPacket> &media_packet);
@@ -40,6 +41,7 @@ namespace pub
 		void WorkerThread();
 
 		uint32_t	_worker_id = 0;
+		ov::String  _vhost_app_name;
 		ov::String	_worker_name;
 
 		class StreamData
@@ -61,7 +63,7 @@ namespace pub
 		std::thread _worker_thread;
 		ov::Semaphore _queue_event;
 
-		ov::Queue<std::shared_ptr<StreamData>> _stream_data_queue;
+		ov::ManagedQueue<std::shared_ptr<StreamData>> _stream_data_queue;
 
 		int64_t	_last_video_ts_ms = 0;
 		int64_t	_last_audio_ts_ms = 0;
@@ -71,7 +73,8 @@ namespace pub
 	{
 	public:
 		const char* GetApplicationTypeName() final;
-
+		const char* GetPublisherTypeName() final;
+		
 		// MediaRouteApplicationObserver Implementation
 		bool OnStreamCreated(const std::shared_ptr<info::Stream> &info) override;
 		bool OnStreamDeleted(const std::shared_ptr<info::Stream> &info) override;

@@ -26,6 +26,23 @@ namespace info
 		_vhost_app_name.Format("#%s#%s", vhost_name.Replace("#", "_").CStr(), app_name.Replace("#", "_").CStr());
 	}
 
+	VHostAppName::VHostAppName(const ov::String &vhost_app_name)
+		: _vhost_app_name(vhost_app_name)
+	{
+		auto tokens = vhost_app_name.Split("#");
+
+		if (tokens.size() == 3)
+		{
+			_vhost_name = tokens[1];
+			_app_name = tokens[2];
+			_is_valid = true;
+		}
+		else
+		{
+			_is_valid = false;
+		}
+	}
+
 	VHostAppName VHostAppName::InvalidVHostAppName()
 	{
 		static VHostAppName vhost_app_name;

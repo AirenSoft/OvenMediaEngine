@@ -10,8 +10,8 @@ using namespace cmn;
 #define PTS_INCREMENT_LIMIT 15
 
 TranscodeFilter::TranscodeFilter()
-	: _impl(nullptr)
 {
+	_impl = nullptr;
 }
 
 TranscodeFilter::~TranscodeFilter()
@@ -22,12 +22,17 @@ TranscodeFilter::~TranscodeFilter()
 	}
 }
 
-bool TranscodeFilter::Configure(int32_t filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track, CompleteHandler complete_handler)
+bool TranscodeFilter::Configure(int32_t filter_id,
+								const std::shared_ptr<info::Stream> &input_stream_info, std::shared_ptr<MediaTrack> input_track,
+								const std::shared_ptr<info::Stream> &output_stream_info, std::shared_ptr<MediaTrack> output_track,
+								CompleteHandler complete_handler)
 {
-	logtd("Create a transcode filter. ITrack(%d). Type(%s)", input_track->GetId(), (input_track->GetMediaType() == MediaType::Video) ? "Video" : "Audio");
+	logtd("Create a transcode filter. InputTrack(%d). Type(%s)", input_track->GetId(), (input_track->GetMediaType() == MediaType::Video) ? "Video" : "Audio");
 
 	_filter_id = filter_id;
+	_input_stream_info = input_stream_info;
 	_input_track = input_track;
+	_output_stream_info = output_stream_info;
 	_output_track = output_track;
 	_complete_handler = complete_handler;
 	_threshold_ts_increment = (int64_t)_input_track->GetTimeBase().GetTimescale() * PTS_INCREMENT_LIMIT;
@@ -39,6 +44,7 @@ bool TranscodeFilter::CreateFilter()
 {
 	if (_impl != nullptr)
 	{
+		_impl->Stop();
 		delete _impl;
 	}
 
@@ -55,6 +61,8 @@ bool TranscodeFilter::CreateFilter()
 			return false;
 	}
 
+	auto urn = info::ManagedQueue::URN(_input_stream_info->GetApplicationName(), _input_stream_info->GetName().CStr(), "trs", ov::String::FormatString("filter_%s", cmn::GetMediaTypeString(_input_track->GetMediaType()).LowerCaseString().CStr()));
+	_impl->SetQueueUrn(urn.CStr());
 	_impl->SetCompleteHandler(bind(&TranscodeFilter::OnComplete, this, std::placeholders::_1));
 
 	bool success = _impl->Configure(_input_track, _output_track);
@@ -138,7 +146,3 @@ cmn::Timebase TranscodeFilter::GetOutputTimebase() const
 	return _impl->GetOutputTimebase();
 }
 
-void TranscodeFilter::SetAlias(ov::String alias)
-{
-	_alias = alias;
-}
