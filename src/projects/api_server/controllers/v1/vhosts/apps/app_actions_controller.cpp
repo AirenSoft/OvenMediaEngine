@@ -156,7 +156,7 @@ namespace api
 									  error->GetMessage());
 			}
 
-			response.append(::serdes::JsonFromRecord(record));
+			response = ::serdes::JsonFromRecord(record);
 
 			return {http::StatusCode::OK, std::move(response)};
 		}
@@ -210,7 +210,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::NotFound, error->GetMessage());
 			}
 
-			response.append(::serdes::JsonFromRecord(record));
+			response = ::serdes::JsonFromRecord(record);
 
 			return {http::StatusCode::OK, std::move(response)};
 		}
@@ -335,7 +335,7 @@ namespace api
 				ocst::Orchestrator::GetInstance()->RequestPullStreamWithOriginMap(url, app_name, stream_name);
 			}
 
-			response.append(::serdes::JsonFromPush(push));
+			response = ::serdes::JsonFromPush(push);
 
 			return {http::StatusCode::OK, std::move(response)};
 		}
