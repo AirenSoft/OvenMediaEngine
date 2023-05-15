@@ -16,8 +16,8 @@ namespace mon
 	namespace alrt
 	{
 		std::shared_ptr<Notification> Notification::Query(const std::shared_ptr<ov::Url> &notification_server_url, uint32_t timeout_msec, const ov::String secret_key,
-										const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list,
-										const std::shared_ptr<StreamMetrics> &stream_metric)
+															const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list,
+															const std::shared_ptr<StreamMetrics> &stream_metric)
 		{
 			auto notification = std::make_shared<Notification>();
 
@@ -30,7 +30,7 @@ namespace mon
 			notification->_status_code = StatusCode::OK;
 
 			notification->Run();
-			
+
 			return notification;
 		}
 
@@ -65,7 +65,7 @@ namespace mon
 			if (_message_list == nullptr || _message_list->size() <= 0)
 			{
 				// If the message_list is empty, it means that the status of the stream has become normal, so send an OK message.
-				
+
 				Json::Value jv_message;
 
 				jv_message["code"] = Message::StringFromMessageCode(Message::Code::OK).CStr();
@@ -99,7 +99,7 @@ namespace mon
 		void Notification::ParseResponse(const std::shared_ptr<const ov::Data> &data)
 		{
 			ov::JsonObject object = ov::Json::Parse(data->ToString());
-			if(object.IsNull())
+			if (object.IsNull())
 			{
 				SetStatus(StatusCode::INVALID_DATA_FORMAT, ov::String::FormatString("Json parsing error : a response in the wrong format was received."));
 				return;
@@ -109,7 +109,7 @@ namespace mon
 		void Notification::Run()
 		{
 			auto body = GetMessageBody();
-			if(body.IsEmpty())
+			if (body.IsEmpty())
 			{
 				// Error
 				return;
@@ -117,7 +117,7 @@ namespace mon
 
 			// Set X-OME-Signature
 			auto md_sha1 = ov::MessageDigest::ComputeHmac(ov::CryptoAlgorithm::Sha1, _secret_key.ToData(false), body.ToData(false));
-			if(md_sha1 == nullptr)
+			if (md_sha1 == nullptr)
 			{
 				// Error
 				SetStatus(StatusCode::INTERNAL_ERROR, ov::String::FormatString("Signature creation failed.(Method : HMAC(SHA1), Body length : %d", body.GetLength()));
@@ -138,20 +138,19 @@ namespace mon
 			ov::StopWatch watch;
 			watch.Start();
 
-			client->Request(_notification_server_url->ToUrlString(true), [=](http::StatusCode status_code, const std::shared_ptr<ov::Data> &data, const std::shared_ptr<const ov::Error> &error) 
-			{
+			client->Request(_notification_server_url->ToUrlString(true), [=](http::StatusCode status_code, const std::shared_ptr<ov::Data> &data, const std::shared_ptr<const ov::Error> &error) {
 				_elapsed_msec = watch.Elapsed();
 
 				// A response was received from the server.
-				if(error == nullptr) 
-				{	
-					if(status_code == http::StatusCode::OK) 
+				if (error == nullptr)
+				{
+					if (status_code == http::StatusCode::OK)
 					{
 						// Parsing response
 						ParseResponse(data);
 						return;
-					} 
-					else 
+					}
+					else
 					{
 						SetStatus(StatusCode::INVALID_STATUS_CODE, ov::String::FormatString("Control server responded with %d status code.", static_cast<uint16_t>(status_code)));
 						return;
@@ -165,5 +164,5 @@ namespace mon
 				}
 			});
 		}
-	}
-}
+	}  // namespace alrt
+}  // namespace mon

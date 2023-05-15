@@ -8,11 +8,11 @@
 //==============================================================================
 #include "alert.h"
 
+#include "../monitoring_private.h"
 #include "monitoring/monitoring.h"
 #include "notification.h"
-#include "../monitoring_private.h"
 
-#define LONG_KEY_FRAME_INTERVAL_SIZE		4.0
+#define LONG_KEY_FRAME_INTERVAL_SIZE 4.0
 
 namespace mon
 {
@@ -25,7 +25,7 @@ namespace mon
 
 		bool Alert::Start(const std::shared_ptr<const cfg::Server> &server_config)
 		{
-			if(server_config == nullptr)
+			if (server_config == nullptr)
 			{
 				return false;
 			}
@@ -319,7 +319,7 @@ namespace mon
 		void Alert::CleanupDeletedSources(const std::vector<ov::String> *exist_source_uri_list)
 		{
 			// Find and remove the deleted streams that exist in the _source_uri_messages_map
-			
+
 			std::vector<ov::String> source_uri_list_to_remove;
 			for (auto const &x : _source_uri_messages_map)
 			{
@@ -387,5 +387,5 @@ namespace mon
 
 			return item->second;
 		}
-	}
-}
+	}  // namespace alrt
+}  // namespace mon

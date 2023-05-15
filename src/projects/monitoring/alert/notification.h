@@ -17,8 +17,8 @@
 
 namespace mon
 {
-  namespace alrt
-  {
+	namespace alrt
+	{
 		class Notification
 		{
 		public:
@@ -28,19 +28,19 @@ namespace mon
 				// From User's server
 				INVALID_DATA_FORMAT,
 				// From http level error
-				INVALID_STATUS_CODE, // If HTTP status codes is NOT 200 ok
+				INVALID_STATUS_CODE,  // If HTTP status codes is NOT 200 ok
 				// Internal, etc errors
 				INTERNAL_ERROR,
 			};
 
 			static std::shared_ptr<Notification> Query(const std::shared_ptr<ov::Url> &notification_server_url, uint32_t timeout_msec, const ov::String secret_key,
-														const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list,
-														const std::shared_ptr<StreamMetrics> &stream_metric);
+													   const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list,
+													   const std::shared_ptr<StreamMetrics> &stream_metric);
 
 			StatusCode GetStatusCode() const;
 			ov::String GetErrorReason() const;
 			uint64_t GetElapsedTime() const;
-			
+
 		private:
 			void Run();
 			ov::String GetMessageBody();
@@ -62,5 +62,5 @@ namespace mon
 			StatusCode _status_code = StatusCode::OK;
 			ov::String _error_reason;
 		};
-	}
-}
+	}  // namespace alrt
+}  // namespace mon

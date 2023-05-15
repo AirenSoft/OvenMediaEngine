@@ -32,11 +32,11 @@ namespace cfg
 				{
 					Register<Optional>("Ingress", &_ingress);
 					Register<Optional>("InternalQueueCongestion", &_internal_queue_congestion, nullptr, [=]() -> std::shared_ptr<ConfigError> {
-							_internal_queue_congestion = true;
-							return nullptr;
-						});
+						_internal_queue_congestion = true;
+						return nullptr;
+					});
 				}
 			};
-		} // namespace rule
-	}  // namespace alrt
+		}  // namespace rule
+	}	   // namespace alrt
 }  // namespace cfg
