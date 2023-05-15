@@ -176,6 +176,31 @@
 	</Managers>
 	-->
 
+	<!--
+		Refer https://airensoft.gitbook.io/ovenmediaengine/alert
+	<Alert>
+		<Url></Url>
+		<SecretKey></SecretKey>
+		<Timeout>3000</Timeout>
+		<Rules>
+			<Ingress>
+				<MinBitrate></MinBitrate>
+				<MaxBitrate></MaxBitrate>
+				<MinFramerate></MinFramerate>
+				<MaxFramerate></MaxFramerate>
+				<MinWidth></MinWidth>
+				<MinHeight></MinHeight>
+				<MaxWidth></MaxWidth>
+				<MaxHeight></MaxHeight>
+				<MinSamplerate></MinSamplerate>
+				<MaxSamplerate></MaxSamplerate>
+				<LongKeyFrameInterval />
+				<HasBFrames />
+			</Ingress>
+		</Rules>
+	</Alert>
+	-->
+
 	<VirtualHosts>
 		<!-- You can use wildcard like this to include multiple XMLs -->
 		<VirtualHost include="VHost*.xml" />
