@@ -1,6 +1,8 @@
 #include "server_metrics.h"
 
 #include "monitoring_private.h"
+#include <orchestrator/orchestrator.h>
+#include <malloc.h>
 
 namespace mon
 {
@@ -142,10 +144,46 @@ namespace mon
 
 		queue->UpdateMetadata(info);
 
-		// TODO :  When a failure occurs in a specific stream, the stream is forcibly terminated.
-		if(info.GetSize() > info.GetThreshold())
+		/**
+			[Experimental] Delete lazy stream
+
+			If the size of the queue lasts beyond the limit for N seconds, it is determined to be an invalid stream. 
+			For system recovery, the problematic stream is forcibly deleted.
+
+			server.xml:
+				<Modules>
+					<Recovery>
+						<!--  
+						If the packet/frame queue is exceed for a certain period of time(millisecond, ms), it will be automatically deleted. 
+						If this value is set to zero, the stream will not be deleted. 
+						
+						-->
+						<DeleteLazyStreamTimeout>10000</DeleteLazyStreamTimeout>
+					</Recovery>
+				</Modules>
+		*/
+		auto delete_lazy_stream_timeout_conf = _server_config->GetModules().GetRecovery().GetDeleteLazyStreamTimeout();
+		if (delete_lazy_stream_timeout_conf > 0)
 		{
-			// Orchestrator::GetInstance()->TerminateStream(vhost_app, stream);
+			if (info.GetThresholdExceededTimeInUs() > delete_lazy_stream_timeout_conf)
+			{
+				ov::String vhost_app_name = info::ManagedQueue::ParseVHostApp(info.GetUrn().CStr());
+				ov::String stream_name = info::ManagedQueue::ParseStream(info.GetUrn().CStr());
+
+				if( !vhost_app_name.IsEmpty() && !stream_name.IsEmpty())
+				{
+					logtc("The %s queue has been exceeded for %lld ms. stream will be forcibly deleted. VhostApp(%s), Stream(%s)", info.GetUrn().CStr(), info.GetThresholdExceededTimeInUs(), vhost_app_name.CStr(), stream_name.CStr());
+					auto vhost_app = info::VHostAppName(vhost_app_name);
+
+					if(vhost_app.IsValid())
+					{
+						ocst::Orchestrator::GetInstance()->TerminateStream(vhost_app, stream_name);
+					}
+
+					// Clear memory fragmentation
+					malloc_trim(0);
+				}
+			}
 		}
 	}
 

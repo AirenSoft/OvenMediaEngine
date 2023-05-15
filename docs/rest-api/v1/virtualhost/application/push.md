@@ -122,34 +122,32 @@ Please note that `responses` are incorrectly returned in Json array format for v
 {
     "statusCode": 200,
     "message": "OK",
-    "response": [
-        {
-            "id": "{unique_push_id}",
-            "state": "ready",
+    "response": {
+        "id": "{unique_push_id}",
+        "state": "ready",
             
-            "vhost": "default",
-            "app": "app",
-            "stream": {
-                "name": "{output_stream_name}",
-                "trackIds": [],
-                "variantNames": []
-            },
+        "vhost": "default",
+        "app": "app",
+        "stream": {
+            "name": "{output_stream_name}",
+            "trackIds": [],
+            "variantNames": []
+        },
             
-            "protocol": "rtmp",
-            "url": "rtmp://{host}[:port]/{app_name}",
-            "streamKey": "{stream_name}",
+        "protocol": "rtmp",
+        "url": "rtmp://{host}[:port]/{app_name}",
+        "streamKey": "{stream_name}",
             
-            "sentBytes": 0,
-            "sentTime": 0,
-            "sequence": 0,
-            "totalsentBytes": 0,
-            "totalsentTime": 0,
+        "sentBytes": 0,
+        "sentTime": 0,
+        "sequence": 0,
+        "totalsentBytes": 0,
+        "totalsentTime": 0,
             
-            "createdTime": "2023-03-15T23:02:34.371+09:00",
-            "startTime": "1970-01-01T09:00:00.000+09:00",
-            "finishTime": "1970-01-01T09:00:00.000+09:00"
-        }
-    ]
+        "createdTime": "2023-03-15T23:02:34.371+09:00",
+        "startTime": "1970-01-01T09:00:00.000+09:00",
+        "finishTime": "1970-01-01T09:00:00.000+09:00"
+    }
 }
 
 # statusCode

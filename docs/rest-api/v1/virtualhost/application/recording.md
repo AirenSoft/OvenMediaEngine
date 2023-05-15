@@ -141,22 +141,20 @@ Please note that `responses` are incorrectly returned in Json array format for v
 {
     "statusCode": 200,
     "message": "OK",
-    "response": [
-        {
-            "id": "2",
-            "state": "ready",
-            "vhost": "default",
-            "app": "app",
-            "stream": {
-                "name": "stream",
-                "trackIds": [],
-                "variantNames": []
-            },
-            "interval": 60000,
-            "segmentationRule": "discontinuity",
-            "createdTime": "2023-03-15T21:15:20.113+09:00",
-        }
-    ]
+    "response": {
+        "id": "2",
+        "state": "ready",
+        "vhost": "default",
+        "app": "app",
+        "stream": {
+            "name": "stream",
+            "trackIds": [],
+            "variantNames": []
+        },
+        "interval": 60000,
+        "segmentationRule": "discontinuity",
+        "createdTime": "2023-03-15T21:15:20.113+09:00",
+    }
 }
 
 # statusCode
