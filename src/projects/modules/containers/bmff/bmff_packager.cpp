@@ -611,6 +611,14 @@ namespace bmff
 				return false;
 			}
 		}
+		else if (GetMediaTrack()->GetCodecId() == cmn::MediaCodecId::H265)
+		{
+			if (WriteHvc1Box(stream) == false)
+			{
+				logte("Packager::WriteStsdBox() - Failed to write hvc1 box");
+				return false;
+			}
+		}
 		else if (GetMediaTrack()->GetCodecId() == cmn::MediaCodecId::Aac)
 		{
 			if (WriteMp4aBox(stream) == false)
@@ -629,7 +637,7 @@ namespace bmff
 		return WriteFullBox(container_stream, "stsd", *stream.GetData(), 0, 0);
 	}
 
-	bool Packager::WriteAvc1Box(ov::ByteStream &container_stream)
+	bool Packager::WriteSampleEntry(ov::ByteStream &container_stream)
 	{
 		// ISO/IEC 14496-12 8.5.2.2
 		// aligned(8) abstract class SampleEntry(unsigned int(32) format) extends Box(format)
@@ -638,6 +646,19 @@ namespace bmff
 		// 	unsigned int(16) data_reference_index;
 		// }
 
+		// Reserved int(8)[6]
+		for (int i=0; i<6; i++)
+		{
+			container_stream.Write8(0);
+		}
+		// Data reference index
+		container_stream.WriteBE16(1);
+
+		return true;
+	}
+	
+	bool Packager::WriteVisualSampleEntry(ov::ByteStream &container_stream)
+	{
 		// ISO/IEC 14496-12 12.1.3
 		// class VisualSampleEntry(codingname) extends SampleEntry(codingname)
 		// {
@@ -655,6 +676,64 @@ namespace bmff
 		// 	int(16) pre_defined = -1;
 		// }
 
+		if (WriteSampleEntry(container_stream) == false)
+		{
+			return false;
+		}
+
+		// pre_defined int(16)
+		container_stream.WriteBE16(0);
+		// reserved int(16)
+		container_stream.WriteBE16(0);
+		// pre_defined int(32)[3]
+		for (int i=0; i<3; i++)
+		{
+			container_stream.WriteBE32(0);
+		}
+
+		// Width int(16)
+		container_stream.WriteBE16(GetMediaTrack()->GetWidth());
+		// Height int(16)
+		container_stream.WriteBE16(GetMediaTrack()->GetHeight());
+		// Horizontal resolution int(32)
+		container_stream.WriteBE32(0x00480000);
+		// Vertical resolution int(32)
+		container_stream.WriteBE32(0x00480000);
+
+		// Reserved int(32)
+		container_stream.WriteBE32(0);
+
+		// Frame count int(16)
+		// frame_count indicates how many frames of compressed video are stored in each sample. The default is
+		// 1, for one frame per sample; it may be more than 1 for multiple frames per sample 
+		container_stream.WriteBE16(1);
+
+		// Compressorname string[32]
+		// Compressorname is a name, for informative purposes. It is formatted in a fixed 32-byte field, with the
+		// first byte set to the number of bytes to be displayed, followed by that number of bytes of displayable
+		// data, and then padding to complete 32 bytes total (including the size byte). The field may be set to 0.
+		ov::String compressorname = "OvenMediaEngine";
+		container_stream.Write8(compressorname.GetLength()); // Size
+		container_stream.WriteText(compressorname); // Data (max : 31 bytes)
+		for (size_t i=0; i<(31 - compressorname.GetLength()); i++) // Padding
+		{
+			container_stream.Write8(0);
+		}
+
+		// Depth int(16)
+		// depth indicates the number of bits per pixel. The default value is 0x0018, indicating 24 bits per pixel.
+		// 0x0018 – images are in colour with no alpha
+		container_stream.WriteBE16(0x0018);
+
+		// Pre-defined int(16)
+		// pre_defined is a 16-bit integer that must be set to -1.
+		container_stream.WriteBE16(-1);
+
+		return true;
+	}
+
+	bool Packager::WriteAvc1Box(ov::ByteStream &container_stream)
+	{
 		// ISO/IEC 14496-15 5.3.4.1
 		// class AVCSampleEntry() extends VisualSampleEntry(‘avc1’)
 		// {
@@ -671,62 +750,12 @@ namespace bmff
 
 		ov::ByteStream stream(4096);
 
-		// Reserved int(8)[6]
-		for (int i=0; i<6; i++)
+		if (WriteVisualSampleEntry(stream) == false)
 		{
-			stream.Write8(0);
+			logte("Packager::WriteAvc1Box() - Failed to write visual sample entry");
+			return false;
 		}
-
-		// Data reference index
-		stream.WriteBE16(1);
-		// pre_defined int(16)
-		stream.WriteBE16(0);
-		// reserved int(16)
-		stream.WriteBE16(0);
-		// pre_defined int(32)[3]
-		for (int i=0; i<3; i++)
-		{
-			stream.WriteBE32(0);
-		}
-
-		// Width int(16)
-		stream.WriteBE16(GetMediaTrack()->GetWidth());
-		// Height int(16)
-		stream.WriteBE16(GetMediaTrack()->GetHeight());
-		// Horizontal resolution int(32)
-		stream.WriteBE32(0x00480000);
-		// Vertical resolution int(32)
-		stream.WriteBE32(0x00480000);
-
-		// Reserved int(32)
-		stream.WriteBE32(0);
-
-		// Frame count int(16)
-		// frame_count indicates how many frames of compressed video are stored in each sample. The default is
-		// 1, for one frame per sample; it may be more than 1 for multiple frames per sample 
-		stream.WriteBE16(1);
-
-		// Compressorname string[32]
-		// Compressorname is a name, for informative purposes. It is formatted in a fixed 32-byte field, with the
-		// first byte set to the number of bytes to be displayed, followed by that number of bytes of displayable
-		// data, and then padding to complete 32 bytes total (including the size byte). The field may be set to 0.
-		ov::String compressorname = "OvenMediaEngine";
-		stream.Write8(compressorname.GetLength()); // Size
-		stream.WriteText(compressorname); // Data (max : 31 bytes)
-		for (size_t i=0; i<(31 - compressorname.GetLength()); i++) // Padding
-		{
-			stream.Write8(0);
-		}
-
-		// Depth int(16)
-		// depth indicates the number of bits per pixel. The default value is 0x0018, indicating 24 bits per pixel.
-		// 0x0018 – images are in colour with no alpha
-		stream.WriteBE16(0x0018);
-
-		// Pre-defined int(16)
-		// pre_defined is a 16-bit integer that must be set to -1.
-		stream.WriteBE16(-1);
-
+		
 		if (WriteAvccBox(stream) == false)
 		{
 			logte("Packager::WriteAvc1Box() - Failed to write avcc box");
@@ -784,63 +813,96 @@ namespace bmff
 		// 	}
 		// }
 
+		auto avc_config = GetMediaTrack()->GetDecoderConfigurationRecord();
+		if (avc_config == nullptr)
+		{
+			logte("Packager::WriteAvccBox() - Failed to get avc decoder config");
+			return false;
+		}
+
+		return WriteBox(container_stream, "avcC", *avc_config->GetData());
+	}
+
+	bool Packager::WriteHvc1Box(ov::ByteStream &container_stream)
+	{
+		// ISO/IEC 14496-15 8.4.1.1
+		// class HEVCConfigurationBox extends Box(‘hvcC’) {
+		// 	HEVCDecoderConfigurationRecord() HEVCConfig;
+		// }
+		// class HEVCSampleEntry() extends VisualSampleEntry (‘hvc1’ or 'hev1'){
+		// 	HEVCConfigurationBox	config;
+		// 	MPEG4BitRateBox (); 					// optional
+		// 	MPEG4ExtensionDescriptorsBox ();	// optional
+		// 	extra_boxes				boxes;				// optional
+		// }
+
 		ov::ByteStream stream(4096);
-
-		// configurationVersion int(8)
-		stream.Write8(1);
-
-		auto sps_data = GetMediaTrack()->GetCodecComponentData(MediaTrack::CodecComponentDataType::AVCSps);
-		auto pps_data = GetMediaTrack()->GetCodecComponentData(MediaTrack::CodecComponentDataType::AVCPps);
-
-		if (sps_data == nullptr || pps_data == nullptr)
+			
+		if (WriteVisualSampleEntry(stream) == false)
 		{
-			logte("Packager::WriteAvccBox() - Failed to get sps/pps data");
 			return false;
 		}
 
-		// Parse SPS
-		H264SPS sps;
-		if (H264Parser::ParseSPS(sps_data->GetDataAs<uint8_t>(), sps_data->GetLength(), sps) == false)
+		if (WriteHvccBox(stream) == false)
 		{
-			logte("Could not parse H264 SPS unit");
+			logte("Packager::WriteHvccBox() - Failed to write hvcC box");
 			return false;
 		}
 
-		// AVCProfileIndication int(8)
-		stream.Write8(sps.GetProfileIdc());
+		return WriteBox(container_stream, "hev1", *stream.GetData());
+	}
+	
+	bool Packager::WriteHvccBox(ov::ByteStream &container_stream)
+	{
+		// ISO/IEC 14496-15 8.4.1.1
+		// class HEVCConfigurationBox extends Box(‘hvcC’) {
+		// 	HEVCDecoderConfigurationRecord() HEVCConfig;
+		// }
 
-		// profile_compatibility int(8)
-		stream.Write8(sps.GetConstraintFlag());
+		// ISO/IEC 14496-15 8.3.3.1
+		// aligned(8) class HEVCDecoderConfigurationRecord {
+		// 	unsigned int(8) configurationVersion = 1;
+		// 	unsigned int(2) general_profile_space;
+		// 	unsigned int(1) general_tier_flag;
+		// 	unsigned int(5) general_profile_idc;
+		// 	unsigned int(32) general_profile_compatibility_flags;
+		// 	unsigned int(48) general_constraint_indicator_flags;
+		// 	unsigned int(8) general_level_idc;
+		// 	bit(4) reserved = ‘1111’b;
+		// 	unsigned int(12) min_spatial_segmentation_idc;
+		// 	bit(6) reserved = ‘111111’b;
+		// 	unsigned int(2) parallelismType;
+		// 	bit(6) reserved = ‘111111’b;
+		// 	unsigned int(2) chromaFormat;
+		// 	bit(5) reserved = ‘11111’b;
+		// 	unsigned int(3) bitDepthLumaMinus8;
+		// 	bit(5) reserved = ‘11111’b;
+		// 	unsigned int(3) bitDepthChromaMinus8;
+		// 	bit(16) avgFrameRate;
+		// 	bit(2) constantFrameRate;
+		// 	bit(3) numTemporalLayers;
+		// 	bit(1) temporalIdNested;
+		// 	unsigned int(2) lengthSizeMinusOne; 
+		// 	unsigned int(8) numOfArrays;
+		// 	for (j=0; j < numOfArrays; j++) {
+		// 		bit(1) array_completeness;
+		// 		unsigned int(1) reserved = 0;
+		// 		unsigned int(6) NAL_unit_type;
+		// 		unsigned int(16) numNalus;
+		// 		for (i=0; i< numNalus; i++) {
+		// 			unsigned int(16) nalUnitLength;
+		// 			bit(8*nalUnitLength) nalUnit;
+		// 		}
+		// 	}
+		// }
+		auto hevc_config = GetMediaTrack()->GetDecoderConfigurationRecord();
+		if (hevc_config == nullptr)
+		{
+			logte("Packager::WriteHvccBox() - Failed to get hevc decoder config");
+			return false;
+		}
 
-		// AVCLevelIndication int(8)
-		stream.Write8(sps.GetCodecLevelIdc());
-
-		// lengthSizeMinusOne int(2)
-		// lengthSizeMinusOne indicates the length in bytes of the NALUnitLength field in an AVC video
-		// sample or AVC parameter set sample of the associated stream minus one
-		
-		// reserved bit(6) '111111' | lengthSizeMinusOne bit(2) '11'
-		stream.Write8(0xFC | 3);
-
-		// reserved bit(3) '111' | numOfSequenceParameterSets int(5)
-		stream.Write8(0xE0 | 1);
-
-		// sequenceParameterSetLength
-		stream.WriteBE16(sps_data->GetLength());
-
-		// sequenceParameterSetNALUnit
-		stream.Write(sps_data);
-
-		// numOfPictureParameterSets int(8)
-		stream.Write8(1);
-
-		// pictureParameterSetLength
-		stream.WriteBE16(pps_data->GetLength());
-
-		// pictureParameterSetNALUnit
-		stream.Write(pps_data);
-		
-		return WriteBox(container_stream, "avcC", *stream.GetData());
+		return WriteBox(container_stream, "hvcC", *hevc_config->GetData());
 	}
 
 	bool Packager::WriteMp4aBox(ov::ByteStream &container_stream)
@@ -1114,24 +1176,14 @@ namespace bmff
 		// uint(4) samplingFrequencyIndex; [0] 96000 [1] 88200 [2] 64000 [3] 48000 [4] 44100 [5] 32000 [6] 24000 [7] 22050 [8] 16000 [9] 12000 [10] 11025 [11] 8000 [12] 7350 
 		// uint(4) channelConfiguration; 
 
-		auto aac_config_data = GetMediaTrack()->GetCodecComponentData(MediaTrack::CodecComponentDataType::AACSpecificConfig);
-		if (aac_config_data == nullptr)
+		auto aac_config = GetMediaTrack()->GetDecoderConfigurationRecord();
+		if (aac_config == nullptr)
 		{
+			logte("Packager::WriteAudioSpecificInfo() - AudioSpecificConfig is not found.");
 			return false;
 		}
 
-		AACSpecificConfig aac_config;
-		if (AACSpecificConfig::Parse(aac_config_data->GetDataAs<uint8_t>(), aac_config_data->GetLength(), aac_config) == false)
-		{
-			return false;
-		}
-		
-		ov::BitWriter bit_writer(2);
-		bit_writer.Write(5, static_cast<uint8_t>(aac_config.ObjectType()));
-		bit_writer.Write(4, static_cast<uint8_t>(aac_config.SamplingFrequency()));
-		bit_writer.Write(4, static_cast<uint8_t>(aac_config.Channel()));
-
-		return WriteBaseDescriptor(container_stream, 0x05, ov::Data(bit_writer.GetData(), bit_writer.GetDataSize()));
+		return WriteBaseDescriptor(container_stream, 0x05, *aac_config->GetData());
 	}
 
 	bool Packager::WriteSLConfigDescriptor(ov::ByteStream &container_stream)

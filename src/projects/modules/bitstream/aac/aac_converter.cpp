@@ -3,32 +3,11 @@
 
 #include <base/ovlibrary/bit_reader.h>
 #include <base/ovlibrary/ovlibrary.h>
-#include <modules/bitstream/aac/aac_specific_config.h>
+#include <modules/bitstream/aac/audio_specific_config.h>
 
 #include "aac_adts.h"
 
 #define OV_LOG_TAG "AACConverter"
-
-bool AacConverter::GetExtraDataFromASC(const cmn::PacketType type, const std::shared_ptr<ov::Data> &data, std::vector<uint8_t> &extradata)
-{
-	if (type == cmn::PacketType::SEQUENCE_HEADER)
-	{
-		AACSpecificConfig config;
-		if (!AACSpecificConfig::Parse((data->GetDataAs<uint8_t>()), data->GetLength(), config))
-		{
-			logte("aac sequence paring error");
-			return false;
-		}
-
-		logtd("%s", config.GetInfoString().CStr());
-
-		config.Serialize(extradata);
-
-		return true;
-	}
-
-	return false;
-}
 
 std::shared_ptr<ov::Data> AacConverter::MakeAdtsHeader(uint8_t aac_profile, uint8_t aac_sample_rate, uint8_t aac_channels, int16_t data_length)
 {
@@ -95,11 +74,11 @@ std::shared_ptr<ov::Data> AacConverter::MakeAdtsHeader(uint8_t aac_profile, uint
 */
 
 // Raw audio data msut be 1 frame
-std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const uint8_t *data, size_t data_len, const AACSpecificConfig &aac_config)
+std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const uint8_t *data, size_t data_len, const AudioSpecificConfig &aac_config)
 {
 	auto adts_data = std::make_shared<ov::Data>(data_len + 16);
 
-	//Get the AACSpecificConfig value from extradata;
+	//Get the AudioSpecificConfig value from extradata;
 	uint8_t aac_profile = (uint8_t)aac_config.GetAacProfile();
 	uint8_t aac_sample_rate = (uint8_t)aac_config.SamplingFrequency();
 	uint8_t aac_channels = (uint8_t)aac_config.Channel();
@@ -112,7 +91,7 @@ std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const uint8_t *data, si
 	return adts_data;
 }
 
-std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const std::shared_ptr<const ov::Data> &data, const std::shared_ptr<AACSpecificConfig> &aac_config)
+std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const std::shared_ptr<const ov::Data> &data, const std::shared_ptr<AudioSpecificConfig> &aac_config)
 {
 	if(aac_config == nullptr)
 	{
@@ -129,8 +108,8 @@ std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const std::shared_ptr<c
 		return nullptr;
 	}
 
-	AACSpecificConfig config;
-	if (AACSpecificConfig::Parse(aac_config_data->GetDataAs<uint8_t>(), aac_config_data->GetLength(), config) == false)
+	AudioSpecificConfig config;
+	if (config.Parse(aac_config_data) == false)
 	{
 		return nullptr;
 	}
@@ -230,7 +209,7 @@ std::shared_ptr<ov::Data> AacConverter::ConvertAdtsToRaw(const std::shared_ptr<c
 	return raw_data;
 }
 
-ov::String AacConverter::GetProfileString(const std::shared_ptr<AACSpecificConfig> &aac_config)
+ov::String AacConverter::GetProfileString(const std::shared_ptr<AudioSpecificConfig> &aac_config)
 {
 	if(aac_config == nullptr)
 	{
@@ -247,23 +226,11 @@ ov::String AacConverter::GetProfileString(const std::shared_ptr<ov::Data> &aac_c
 		return "";
 	}
 
-	AACSpecificConfig aac_specific_config;
-	if (AACSpecificConfig::Parse(aac_config_data->GetDataAs<uint8_t>(), aac_config_data->GetLength(), aac_specific_config) == false)
+	AudioSpecificConfig audio_config;
+	if (audio_config.Parse(aac_config_data) == false)
 	{
 		return "";
 	}
 
-	return ov::String::FormatString("%d", static_cast<int>(aac_specific_config.ObjectType()));
-}
-
-ov::String AacConverter::GetProfileString(const std::vector<uint8_t> &codec_extradata)
-{
-	AACSpecificConfig aac_specific_config;
-
-	if (AACSpecificConfig::Parse(&codec_extradata.front(), codec_extradata.size(), aac_specific_config))
-	{
-		return ov::String::FormatString("%d", static_cast<int>(aac_specific_config.ObjectType()));
-	}
-
-	return "";
+	return ov::String::FormatString("%d", static_cast<int>(audio_config.ObjectType()));
 }

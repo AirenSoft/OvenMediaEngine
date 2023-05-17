@@ -41,8 +41,7 @@ public:
 
 	// Queue interfaces
 	void Push(std::shared_ptr<MediaPacket> media_packet);
-	bool ProcessInboundStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
-	bool ProcessOutboundStream(std::shared_ptr<MediaTrack> &media_track,std::shared_ptr<MediaPacket> &media_packet);
+	bool NormalizeMediaPacket(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
 
 	std::shared_ptr<MediaPacket> Pop();
 
@@ -56,10 +55,14 @@ public:
 	void Flush();
 	
 private:
+	void InitTrackWithSequenceHeader(std::shared_ptr<MediaTrack> &media_track);
+
 	void DropNonDecodingPackets();
 
 	bool ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
 	bool ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
+	bool InsertH264SPSPPSAnnexB(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
+
 	bool ProcessH265AnnexBStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
 	bool ProcessAACRawStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
 	bool ProcessAACAdtsStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);

@@ -103,6 +103,8 @@ ov::String AACAdts::ProfileString()
 			return "AAC HE";
 		case AacObjectTypeAacHEV2:
 			return "AAC HEv2";			
+		case AacObjectTypeNull:
+			break;
 	}
 
 	return "Unknown";
@@ -143,6 +145,7 @@ uint32_t AACAdts::SamplerateNum()
 			return 8000;
 		case RATES_7350HZ:
 			return 7350;
+		case RATES_RESERVED:
 		case EXPLICIT_RATE:
 			return 0;
 	}

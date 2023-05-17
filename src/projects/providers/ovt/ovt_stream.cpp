@@ -4,9 +4,7 @@
 
 #include "ovt_stream.h"
 #include <modules/ovt_packetizer/ovt_signaling.h>
-
-#include <modules/bitstream/aac/aac_specific_config.h>
-#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
+#include <modules/bitstream/decoder_configuration_record_parser.h>
 
 #include "base/info/application.h"
 #include "ovt_provider.h"
@@ -454,26 +452,12 @@ namespace pvd
 				new_track->GetChannel().SetLayout(static_cast<cmn::AudioChannel::Layout>(json_audio_track["layout"].asUInt()));
 			}
 
-			auto codec_component_data = json_track["codecComponentData"];
-			if (codec_component_data.isNull() == false && codec_component_data.isArray())
+			auto decoder_config = json_track["decoderConfig"];
+			if (decoder_config.isString())
 			{
-				for (size_t j = 0; j < codec_component_data.size(); j++)
-				{
-					auto codec_component = codec_component_data[static_cast<int>(j)];
-
-					if (codec_component["type"].isUInt() && codec_component["data"].isString())
-					{
-						MediaTrack::CodecComponentDataType codec_component_type = static_cast<MediaTrack::CodecComponentDataType>(codec_component["type"].asUInt());
-						ov::String codec_component_data = codec_component["data"].asString().c_str();
-
-						auto decoded_data = ov::Base64::Decode(codec_component_data);
-						if (decoded_data != nullptr)
-						{
-							logtd("CodecId(%u) CodecComponentType(%u) Data(%s)", new_track->GetCodecId(), codec_component_type, codec_component_data.CStr());
-							new_track->SetCodecComponentData(codec_component_type, decoded_data);
-						}
-					}
-				}
+				auto config_data = ov::Base64::Decode(decoder_config.asString().c_str());
+				auto decoder_config = DecoderConfigurationRecordParser::Parse(new_track->GetCodecId(), config_data);
+				new_track->SetDecoderConfigurationRecord(decoder_config);
 			}
 
 			AddTrack(new_track);

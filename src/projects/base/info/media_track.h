@@ -11,6 +11,8 @@
 #include "video_track.h"
 #include "audio_track.h"
 
+#include "decoder_configuration_record.h"
+
 #define VALID_BITRATE_CALCULATION_THRESHOLD_MSEC (1000)
 
 typedef uint32_t MediaTrackId;
@@ -89,25 +91,10 @@ public:
 	bool IsValid();
 	bool HasQualityMeasured();
 
-	enum class CodecComponentDataType : uint16_t
-	{
-		Unknown = 0,
-		AVCDecoderConfigurationRecord,
-		HEVCDecoderConfigurationRecord,
-		AACSpecificConfig,
-		AVCSps,
-		AVCPps,
-		AVCSpsPpsWithStartCode,
-		HEVCVps,
-		HEVCSps,
-		HEVCPps
-	};
-
-	bool HasCodecComponentData(const CodecComponentDataType &type) const;
-	void SetCodecComponentData(const CodecComponentDataType &type, const std::shared_ptr<ov::Data> &data);
-	const std::shared_ptr<ov::Data> GetCodecComponentData(const CodecComponentDataType &type) const;
-	std::shared_ptr<ov::Data> GetCodecComponentData(const CodecComponentDataType &type);
-	std::map<CodecComponentDataType, std::shared_ptr<ov::Data>> GetCodecComponentDataMap() const;
+	std::shared_ptr<DecoderConfigurationRecord> GetDecoderConfigurationRecord() const;
+	void SetDecoderConfigurationRecord(const std::shared_ptr<DecoderConfigurationRecord> &dcr);
+	
+	ov::String GetCodecsParameter() const;
 
 	// For statistics
 	void OnFrameAdded(const std::shared_ptr<MediaPacket> &media_packet);
@@ -161,10 +148,6 @@ protected:
 	// Time of last frame(packet)
 	int64_t _last_frame_time;
 
-	// Component Data
-	std::map<CodecComponentDataType, std::shared_ptr<ov::Data>> _codec_component_data_map;
-	mutable std::shared_mutex _codec_component_data_map_mutex;
-
 	// First frame received time
 	ov::StopWatch _clock_from_first_frame_received;
 
@@ -176,6 +159,9 @@ protected:
 	// Validity
 	bool _is_valid = false;
 
-
 	bool _has_quality_measured = false;
+
+	// Codec specific object
+	// AVCDecoderConfigurationRecord, HEVCDecoderConfigurationRecord, AudioSpecificConfig 
+	std::shared_ptr<DecoderConfigurationRecord> _decoder_configuration_record = nullptr;
 };

@@ -61,7 +61,7 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 	_start_frame_time = 0;
 	_last_frame_time = 0;
 
-	_codec_component_data_map = media_track._codec_component_data_map;
+	_decoder_configuration_record = media_track._decoder_configuration_record;
 
 	_origin_bitstream_format = media_track._origin_bitstream_format;
 }
@@ -201,53 +201,55 @@ bool MediaTrack::IsBypass() const
 	return _byass;
 }
 
-bool MediaTrack::HasCodecComponentData(const CodecComponentDataType &type) const
+std::shared_ptr<DecoderConfigurationRecord> MediaTrack::GetDecoderConfigurationRecord() const
 {
-	std::shared_lock<std::shared_mutex> lock(_codec_component_data_map_mutex);
-	auto it = _codec_component_data_map.find(type);
-	if (it == _codec_component_data_map.end())
+	return _decoder_configuration_record;
+}
+
+void MediaTrack::SetDecoderConfigurationRecord(const std::shared_ptr<DecoderConfigurationRecord> &dcr)
+{
+	_decoder_configuration_record = dcr;
+}
+
+ov::String MediaTrack::GetCodecsParameter() const
+{
+	switch (GetCodecId())
 	{
-		return false;
+		case cmn::MediaCodecId::H264:
+		case cmn::MediaCodecId::H265:
+		case cmn::MediaCodecId::Aac:
+		{
+			auto config = GetDecoderConfigurationRecord();
+			if (config != nullptr)
+			{
+				return config->GetCodecsParameter();
+			}
+			break;
+		}
+		
+		case cmn::MediaCodecId::Opus:
+		{
+			// https://developer.mozilla.org/en-US/docs/Web/Media/Formats/codecs_parameter
+			// In an MP4 container, the codecs parameter for Opus is "mp4a.ad"
+			return "mp4a.ad";
+		}
+
+		case cmn::MediaCodecId::Vp8:
+		{
+			return "vp8";
+		}
+
+		case cmn::MediaCodecId::Vp9:
+		{
+			return "vp9";
+		}
+
+		case cmn::MediaCodecId::None:
+		default:
+			break;
 	}
 
-	return true;
-}
-
-void MediaTrack::SetCodecComponentData(const CodecComponentDataType &type, const std::shared_ptr<ov::Data> &codec_extradata)
-{
-	std::lock_guard<std::shared_mutex> lock(_codec_component_data_map_mutex);
-	// overwrite
-	_codec_component_data_map[type] = codec_extradata;
-}
-
-const std::shared_ptr<ov::Data> MediaTrack::GetCodecComponentData(const CodecComponentDataType &type) const
-{	
-	std::shared_lock<std::shared_mutex> lock(_codec_component_data_map_mutex);
-	auto it = _codec_component_data_map.find(type);
-	if (it == _codec_component_data_map.end())
-	{
-		return nullptr;
-	}
-
-	return it->second;
-}
-
-std::shared_ptr<ov::Data> MediaTrack::GetCodecComponentData(const CodecComponentDataType &type)
-{
-	std::lock_guard<std::shared_mutex> lock(_codec_component_data_map_mutex);
-	auto it = _codec_component_data_map.find(type);
-	if (it == _codec_component_data_map.end())
-	{
-		return nullptr;
-	}
-
-	return it->second;
-}
-
-std::map<MediaTrack::CodecComponentDataType, std::shared_ptr<ov::Data>> MediaTrack::GetCodecComponentDataMap() const
-{
-	std::shared_lock<std::shared_mutex> lock(_codec_component_data_map_mutex);
-	return _codec_component_data_map;
+	return "";
 }
 
 ov::String MediaTrack::GetInfoString()
@@ -338,8 +340,8 @@ bool MediaTrack::IsValid()
 			if (_width > 0 &&
 				_height > 0 &&
 				_time_base.GetNum() > 0 &&
-				_time_base.GetDen() > 0 &&
-				HasCodecComponentData(CodecComponentDataType::AVCDecoderConfigurationRecord) == true)
+				_time_base.GetDen() > 0 && 
+				GetDecoderConfigurationRecord() != nullptr)
 
 			{
 				_is_valid = true;
@@ -351,7 +353,8 @@ bool MediaTrack::IsValid()
 			if (_width > 0 &&
 				_height > 0 &&
 				_time_base.GetNum() > 0 &&
-				_time_base.GetDen() > 0)
+				_time_base.GetDen() > 0 &&
+				GetDecoderConfigurationRecord() != nullptr)
 			{
 				_is_valid = true;
 				return true;
@@ -397,8 +400,8 @@ bool MediaTrack::IsValid()
 			if (_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
 				_channel_layout.GetCounts() > 0 &&
-				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown &&
-				HasCodecComponentData(CodecComponentDataType::AACSpecificConfig) == true)
+				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown && 
+				GetDecoderConfigurationRecord() != nullptr)
 			{
 				_is_valid = true;
 				return true;
@@ -597,7 +600,7 @@ std::shared_ptr<MediaTrack> MediaTrack::Clone()
 	track->_bypass_conf = _bypass_conf;
 	track->_start_frame_time = _start_frame_time;
 	track->_last_frame_time = _last_frame_time;
-	track->_codec_component_data_map = _codec_component_data_map;
+	track->_decoder_configuration_record = _decoder_configuration_record;
 	track->_total_frame_count = _total_frame_count;
 	track->_total_frame_bytes = _total_frame_bytes;
 

@@ -64,8 +64,7 @@ bool LLHlsStream::Start()
 	std::shared_ptr<MediaTrack> first_video_track = nullptr, first_audio_track = nullptr;
 	for (const auto &[id, track] : _tracks)
 	{
-		if ((track->GetCodecId() == cmn::MediaCodecId::H264) ||
-			(track->GetCodecId() == cmn::MediaCodecId::Aac))
+		if (IsSupportedCodec(track->GetCodecId()) == true)
 		{
 			if (AddPackager(track, data_track) == false)
 			{
@@ -217,6 +216,21 @@ bool LLHlsStream::Stop()
 	return Stream::Stop();
 }
 
+bool LLHlsStream::IsSupportedCodec(cmn::MediaCodecId codec_id) const
+{
+	switch (codec_id)
+	{
+	case cmn::MediaCodecId::H264:
+	case cmn::MediaCodecId::H265:
+	case cmn::MediaCodecId::Aac:
+		return true;
+	default:
+		return false;
+	}
+
+	return false;
+}
+
 const ov::String &LLHlsStream::GetStreamKey() const
 {
 	return _stream_key;
@@ -262,8 +276,7 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 			continue;
 		}
 
-		if ((track->GetCodecId() != cmn::MediaCodecId::H264) &&
-			(track->GetCodecId() != cmn::MediaCodecId::Aac))
+		if (IsSupportedCodec(track->GetCodecId()) == false)
 		{
 			continue;
 		}
@@ -279,8 +292,8 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 		auto video_track = GetFirstTrackByVariant(rendition->GetVideoVariantName());
 		auto audio_track = GetFirstTrackByVariant(rendition->GetAudioVariantName());
 
-		if ((video_track != nullptr && video_track->GetCodecId() != cmn::MediaCodecId::H264) ||
-			(audio_track != nullptr && audio_track->GetCodecId() != cmn::MediaCodecId::Aac))
+		if ( (video_track != nullptr && IsSupportedCodec(video_track->GetCodecId()) == false) ||
+			 (audio_track != nullptr && IsSupportedCodec(audio_track->GetCodecId()) == false) )
 		{
 			logtw("LLHlsStream(%s/%s) - Exclude the rendition(%s) from the %s.m3u8 due to unsupported codec", GetApplication()->GetName().CStr(), GetName().CStr(),
 				  rendition->GetName().CStr(), playlist->GetFileName().CStr());
@@ -740,21 +753,22 @@ bool LLHlsStream::AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_pa
 		;
 	}
 
-	if ((track->GetCodecId() == cmn::MediaCodecId::H264) ||
-		(track->GetCodecId() == cmn::MediaCodecId::Aac))
+	if (IsSupportedCodec(track->GetCodecId()) == false)
 	{
-		// Get Packager
-		auto packager = GetPackager(track->GetId());
-		if (packager == nullptr)
-		{
-			logtw("Could not find packager. track id: %d", track->GetId());
-			return false;
-		}
-
-		logtd("AppendSample : track(%d) length(%d)", media_packet->GetTrackId(), media_packet->GetDataLength());
-
-		packager->AppendSample(media_packet);
+		return true;
 	}
+	
+	// Get Packager
+	auto packager = GetPackager(track->GetId());
+	if (packager == nullptr)
+	{
+		logtw("Could not find packager. track id: %d", track->GetId());
+		return false;
+	}
+
+	logtd("AppendSample : track(%d) length(%d)", media_packet->GetTrackId(), media_packet->GetDataLength());
+
+	packager->AppendSample(media_packet);
 
 	return true;
 }

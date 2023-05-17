@@ -143,8 +143,14 @@ namespace bmff
 		virtual bool  WriteUrlBox(ov::ByteStream &container_stream);
 		virtual bool WriteStblBox(ov::ByteStream &container_stream);
 		virtual bool WriteStsdBox(ov::ByteStream &container_stream);
+
+		virtual bool WriteSampleEntry(ov::ByteStream &container_stream);
+		virtual bool WriteVisualSampleEntry(ov::ByteStream &container_stream);
 		virtual bool WriteAvc1Box(ov::ByteStream &container_stream);
 		virtual bool WriteAvccBox(ov::ByteStream &container_stream);
+		virtual bool WriteHvc1Box(ov::ByteStream &container_stream);
+		virtual bool WriteHvccBox(ov::ByteStream &container_stream);
+
 		virtual bool WriteMp4aBox(ov::ByteStream &container_stream);
 		virtual bool WriteEsdsBox(ov::ByteStream &container_stream);
 		

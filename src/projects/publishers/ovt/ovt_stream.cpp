@@ -146,17 +146,10 @@ bool OvtStream::GenerateDescription()
 		json_track["videoTrack"] = json_video_track;
 		json_track["audioTrack"] = json_audio_track;
 
-		auto data_map = track->GetCodecComponentDataMap();
-		for(auto &data_item : data_map)
+		auto decoder_config = track->GetDecoderConfigurationRecord();
+		if (decoder_config != nullptr)
 		{
-			auto type = data_item.first;
-			auto data = data_item.second;
-		
-			Json::Value json_data;
-			json_data["type"] = static_cast<uint16_t>(type);
-			json_data["data"] = ov::Base64::Encode(data).CStr();
-
-			json_track["codecComponentData"].append(json_data);
+			json_track["decoderConfig"] = ov::Base64::Encode(decoder_config->GetData()).CStr();
 		}
 		
 		json_tracks.append(json_track);

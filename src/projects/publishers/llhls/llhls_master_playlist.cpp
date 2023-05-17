@@ -10,7 +10,6 @@
 #include "llhls_private.h"
 
 #include <base/ovlibrary/zip.h>
-#include <modules/bitstream/codec_media_type.h>
 
 void LLHlsMasterPlaylist::SetChunkPath(const ov::String &chunk_path)
 {
@@ -77,7 +76,7 @@ bool LLHlsMasterPlaylist::AddStreamInfo(const ov::String &video_group_id, const 
 		new_stream_info->_width = video_track->GetWidth();
 		new_stream_info->_height = video_track->GetHeight();
 		new_stream_info->_framerate = video_track->GetFrameRate();
-		new_stream_info->_codecs = CodecMediaType::GetCodecsParameter(video_track);
+		new_stream_info->_codecs = video_track->GetCodecsParameter();
 		
 		// Active media group if video group has more than 1 media info
 		if (video_group->_media_infos.size() > 1)
@@ -106,7 +105,7 @@ bool LLHlsMasterPlaylist::AddStreamInfo(const ov::String &video_group_id, const 
 			}
 
 			new_stream_info->_bandwidth += audio_track->GetBitrate();
-			new_stream_info->_codecs += ov::String::FormatString(",%s", CodecMediaType::GetCodecsParameter(audio_track).CStr());
+			new_stream_info->_codecs += ov::String::FormatString(",%s", audio_track->GetCodecsParameter().CStr());
 		}
 	}
 	// Audio Only 
@@ -129,7 +128,7 @@ bool LLHlsMasterPlaylist::AddStreamInfo(const ov::String &video_group_id, const 
 		}
 
 		new_stream_info->_bandwidth += audio_track->GetBitrate();
-		new_stream_info->_codecs = CodecMediaType::GetCodecsParameter(audio_track);
+		new_stream_info->_codecs = audio_track->GetCodecsParameter();
 
 		if (audio_group->_media_infos.size() > 1)
 		{

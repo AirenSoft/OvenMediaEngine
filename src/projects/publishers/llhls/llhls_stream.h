@@ -83,6 +83,8 @@ private:
 	bool Start() override;
 	bool Stop() override;
 
+	bool IsSupportedCodec(cmn::MediaCodecId codec_id) const; 
+
 	void NotifyPlaylistUpdated(const int32_t &track_id, const int64_t &msn, const int64_t &part);
 
 	// bmff::FMp4StorageObserver implementation

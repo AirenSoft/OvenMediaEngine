@@ -14,6 +14,8 @@
 #include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_playout_delay.h>
 #include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_abs_send_time.h>
 
+#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
+
 #include "rtc_application.h"
 #include "rtc_private.h"
 #include "rtc_session.h"
@@ -151,8 +153,14 @@ bool RtcStream::Start()
 	// Create Packetizer
 	for (auto &[track_id, track] : GetTracks())
 	{
+		if (track->GetMediaType() != cmn::MediaType::Video && track->GetMediaType() != cmn::MediaType::Audio)
+		{
+			continue;
+		}
+
 		if (IsSupportedCodec(track->GetCodecId()) == false)
 		{
+			logti("RtcStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
 			continue;
 		}
 
@@ -539,23 +547,20 @@ std::shared_ptr<PayloadAttr> RtcStream::MakePayloadAttr(const std::shared_ptr<co
 			payload->SetRtpmap(PayloadTypeFromCodecId(track->GetCodecId()), "H264", 90000);
 
 			{
-				auto avcc = track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AVCDecoderConfigurationRecord);
-
-				//(NOTE) The software decoder of Firefox or Chrome cannot play when 64001f (High, 3.1) stream is input. 
-				// However, when I put the fake information of 42e01f in FMTP, I confirmed that both Firefox and Chrome play well (high profile, but stream without B-Frame). 
-				// I thought it would be better to put 42e01f (H264_CONVERTER_DEFAULT_PROFILE) in fmtp than put the correct value, so I decided to put fake information.
+				auto config = std::static_pointer_cast<AVCDecoderConfigurationRecord>(track->GetDecoderConfigurationRecord());
 
 				// profile-level-id
 				ov::String profile_string;
-				if(false)
-				{
-					profile_string = H264Converter::GetProfileString(avcc);
-				}
 
-				if(profile_string.IsEmpty())
-				{
-					profile_string = H264_CONVERTER_DEFAULT_PROFILE;
-				}
+				profile_string.Format("%02x%02x%02x",
+					config->ProfileIndication(),
+					config->Compatibility(),
+					config->LevelIndication());
+
+				//(Getroot's Note) The software decoder of Firefox or Chrome cannot play when 64001f (High, 3.1) stream is input. 
+				// However, when I put the fake information of 42e01f in FMTP, I confirmed that both Firefox and Chrome play well (high profile, but stream without B-Frame). 
+				// I thought it would be better to put 42e01f (H264_CONVERTER_DEFAULT_PROFILE) in fmtp than put the correct value, so I decided to put fake information.
+				profile_string = H264_CONVERTER_DEFAULT_PROFILE;
 
 				payload->SetFmtp(ov::String::FormatString(
 						// NonInterleaved => packetization-mode=1

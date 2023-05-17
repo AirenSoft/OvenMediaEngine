@@ -11,7 +11,7 @@
 
 #include <base/info/media_extradata.h>
 #include <base/mediarouter/media_type.h>
-#include <modules/bitstream/aac/aac_specific_config.h>
+#include <modules/bitstream/aac/audio_specific_config.h>
 #include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/containers/flv/flv_parser.h>
 #include <orchestrator/orchestrator.h>
@@ -1468,10 +1468,6 @@ namespace pvd
 			if (flv_video.PacketType() == FlvAvcPacketType::AVC_SEQUENCE_HEADER)
 			{
 				packet_type = cmn::PacketType::SEQUENCE_HEADER;
-
-				// AVCDecoderConfigurationRecord Unit Test
-				AVCDecoderConfigurationRecord record;
-				AVCDecoderConfigurationRecord::Parse(flv_video.Payload(), flv_video.PayloadLength(), record);
 			}
 			else if (flv_video.PacketType() == FlvAvcPacketType::AVC_NALU)
 			{
@@ -1652,9 +1648,6 @@ namespace pvd
 			if (flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
 			{
 				packet_type = cmn::PacketType::SEQUENCE_HEADER;
-				// AACSpecificConfig Unit Test
-				AACSpecificConfig config;
-				AACSpecificConfig::Parse(flv_audio.Payload(), flv_audio.PayloadLength(), config);
 			}
 			else if (flv_audio.PacketType() == FlvAACPacketType::RAW)
 			{

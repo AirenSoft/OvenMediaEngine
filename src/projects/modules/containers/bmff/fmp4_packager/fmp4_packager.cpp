@@ -43,6 +43,7 @@ namespace bmff
 		}
 
 		if (track->GetCodecId() == cmn::MediaCodecId::H264 || 
+			track->GetCodecId() == cmn::MediaCodecId::H265 ||
 			track->GetCodecId() == cmn::MediaCodecId::Aac)
 		{
 			// Supported codecs
@@ -302,6 +303,16 @@ namespace bmff
 
 		}
 		else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::H264_ANNEXB)
+		{
+			auto converted_data = H264Converter::ConvertAnnexbToAvcc(media_packet->GetData());
+			auto new_packet = std::make_shared<MediaPacket>(*media_packet);
+			new_packet->SetData(converted_data);
+			new_packet->SetBitstreamFormat(cmn::BitstreamFormat::H264_AVCC);
+			new_packet->SetPacketType(cmn::PacketType::NALU);
+
+			converted_packet = new_packet;
+		}
+		else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::H265_ANNEXB)
 		{
 			auto converted_data = H264Converter::ConvertAnnexbToAvcc(media_packet->GetData());
 			auto new_packet = std::make_shared<MediaPacket>(*media_packet);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "aac_specific_config.h"
+#include "audio_specific_config.h"
 #include <base/ovlibrary/ovlibrary.h>
 
 #include <cstdint>

@@ -8,25 +8,6 @@
 
 static uint8_t START_CODE[4] = {0x00, 0x00, 0x00, 0x01};
 
-bool H264Converter::GetExtraDataFromAvccSequenceHeader(const cmn::PacketType type, const std::shared_ptr<ov::Data> &data, std::vector<uint8_t> &extradata)
-{
-	if (type == cmn::PacketType::SEQUENCE_HEADER)
-	{
-		AVCDecoderConfigurationRecord config;
-		if (!AVCDecoderConfigurationRecord::Parse(data->GetDataAs<uint8_t>(), data->GetLength(), config))
-		{
-			logte("Could not parse sequence header");
-			return false;
-		}
-		logtd("%s", config.GetInfoString().CStr());
-
-		config.Serialize(extradata);
-		return true;
-	}
-
-	return false;
-}
-
 std::shared_ptr<ov::Data> H264Converter::ConvertAvccToAnnexb(const std::shared_ptr<const ov::Data> &data)
 {
 	auto annexb_data = std::make_shared<ov::Data>(data->GetLength() + (data->GetLength() / 2));
@@ -62,31 +43,15 @@ std::shared_ptr<ov::Data> H264Converter::ConvertAvccToAnnexb(const std::shared_p
 
 bool H264Converter::ConvertAvccToAnnexb(cmn::PacketType type, const std::shared_ptr<ov::Data> &data, const std::shared_ptr<ov::Data> &sps_pps_annexb)
 {
-	auto annexb_data = std::make_shared<ov::Data>(data->GetLength() + (data->GetLength() / 2));
+	std::shared_ptr<ov::Data> annexb_data = nullptr;
 
 	if (type == cmn::PacketType::SEQUENCE_HEADER)
 	{
-		AVCDecoderConfigurationRecord config;
-		if (!AVCDecoderConfigurationRecord::Parse(data->GetDataAs<uint8_t>(), data->GetLength(), config))
-		{
-			logte("Could not parse sequence header");
-			return false;
-		}
-
-		for (int i = 0; i < config.NumOfSPS(); i++)
-		{
-			annexb_data->Append(START_CODE, sizeof(START_CODE));
-			annexb_data->Append(config.GetSPS(i));
-		}
-
-		for (int i = 0; i < config.NumOfPPS(); i++)
-		{
-			annexb_data->Append(START_CODE, sizeof(START_CODE));
-			annexb_data->Append(config.GetPPS(i));
-		}
+		annexb_data = sps_pps_annexb;
 	}
 	else if (type == cmn::PacketType::NALU)
 	{
+		annexb_data = std::make_shared<ov::Data>(data->GetLength() + (data->GetLength() / 2));
 		ov::ByteStream read_stream(data.get());
 
 		bool has_idr_slice = false;
@@ -131,10 +96,9 @@ bool H264Converter::ConvertAvccToAnnexb(cmn::PacketType type, const std::shared_
 		}
 	}
 
-	data->Clear();
-
 	if (annexb_data->GetLength() > 0)
 	{
+		data->Clear();
 		data->Append(annexb_data);
 	}
 
@@ -189,85 +153,6 @@ static inline int GetStartPatternSize(const void *data, size_t length, int first
 
 	return -1;
 }
-
-#if 0
-static bool ExtractSpsPpsOffset(const std::shared_ptr<const ov::Data> &data, const std::vector<size_t> &offset_list, const std::vector<size_t> &pattern_size_list,
-								const std::shared_ptr<ov::Data> &sps, const std::shared_ptr<ov::Data> &pps)
-{
-	auto buffer = data->GetDataAs<uint8_t>();
-	size_t offset_count = offset_list.size();
-
-	// offset_list contains the length of data at the end
-	for (size_t index = 0; index < (offset_count - 1); index++)
-	{
-		size_t nalu_offset = offset_list[index] + pattern_size_list[index];
-		size_t nalu_data_len = offset_list[index + 1] - nalu_offset;
-
-		// NAL unit type codes
-		//
-		// nal_unit_type	Content of NAL unit and RBSP syntax structure		C
-		// ---------------------------------------------------------------------------------
-		// 0				Unspecified
-		// 1				Coded slice of a non-IDR picture					2, 3, 4
-		// 					- slice_layer_without_partitioning_rbsp()
-		// 2				Coded slice data partition A						2
-		// 					- slice_data_partition_a_layer_rbsp()
-		// 3				Coded slice data partition B						3
-		// 					- slice_data_partition_b_layer_rbsp()
-		// 4				Coded slice data partition C						4
-		// 					- slice_data_partition_c_layer_rbsp()
-		// 5				Coded slice of an IDR picture						2, 3
-		// 					- slice_layer_without_partitioning_rbsp()
-		// 6				Supplemental enhancement information (SEI)			5
-		// 					- sei_rbsp()
-		// 7				Sequence parameter set								0
-		// 					- seq_parameter_set_rbsp()
-		// 8				Picture parameter set								1
-		// 					- pic_parameter_set_rbsp()
-		// 9				Access unit delimiter								6
-		// 					- access_unit_delimiter_rbsp()
-		// 10				End of sequence										7
-		// 					- end_of_seq_rbsp()
-		// 11				End of stream										8
-		// 					- end_of_stream_rbsp()
-		// 12				Filler data											9
-		// 					- filler_data_rbsp()
-		// 13				Sequence parameter set extension					10
-		// 					- seq_parameter_set_extension_rbsp()
-		// 14..18			Reserved
-		// 19				Coded slice of an auxiliary coded picture			2, 3, 4
-		// 					without partitioning
-		// 					- slice_layer_without_partitioning_rbsp()
-		// 20..23			Reserved
-		// 24..31			Unspecified
-		uint8_t nalu_header = *(buffer + nalu_offset);
-		uint8_t nal_unit_type = nalu_header & 0x01F;
-
-		switch (nal_unit_type)
-		{
-			case 7:
-				// SPS
-				sps->Clear();
-				sps->Append(buffer + nalu_offset, nalu_data_len);
-				break;
-
-			case 8:
-				// PPS
-				pps->Clear();
-				pps->Append(buffer + nalu_offset, nalu_data_len);
-				break;
-		}
-	}
-
-	if (sps->IsEmpty() || pps->IsEmpty())
-	{
-		logte("Could not parse SPS/PPS (SPS: %zu, PPS: %zu)", sps->GetLength(), pps->GetLength());
-		return false;
-	}
-
-	return true;
-}
-#endif
 
 std::shared_ptr<ov::Data> H264Converter::ConvertAnnexbToAvcc(const std::shared_ptr<const ov::Data> &data)
 {
@@ -336,68 +221,11 @@ ov::String H264Converter::GetProfileString(const std::shared_ptr<ov::Data> &avc_
 	}
 
 	AVCDecoderConfigurationRecord record;
-	if (AVCDecoderConfigurationRecord::Parse(avc_decoder_configuration_record->GetDataAs<uint8_t>(), avc_decoder_configuration_record->GetLength(), record) == false)
+	if (record.Parse(avc_decoder_configuration_record) == false)
 	{
 		return "";
 	}
 
 	// PPCCLL = <profile idc><constraint set flags><level idc>
 	return ov::String::FormatString("%02x%02x%02x",	record.ProfileIndication(), record.Compatibility(), record.LevelIndication());
-}
-
-ov::String H264Converter::GetProfileString(const std::vector<uint8_t> &codec_extradata)
-{
-	AVCDecoderConfigurationRecord record;
-	if (AVCDecoderConfigurationRecord::Parse(codec_extradata, record) == false)
-	{
-		return "";
-	}
-
-	// PPCCLL = <profile idc><constraint set flags><level idc>
-	return ov::String::FormatString("%02x%02x%02x",	record.ProfileIndication(), record.Compatibility(), record.LevelIndication());
-}
-
-std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> H264Converter::ConvertSpsPpsAsAnnexB(uint8_t start_code_size, const std::shared_ptr<const ov::Data> &sps, const std::shared_ptr<const ov::Data> &pps)
-{
-	if (sps == nullptr || pps == nullptr)
-	{
-		return std::make_tuple(nullptr, FragmentationHeader());
-	}
-
-	auto data = std::make_shared<ov::Data>(1024);
-	FragmentationHeader frag_header;
-	size_t offset = 0;
-
-	uint8_t START_CODE[4];
-
-	START_CODE[0] = 0x00;
-	START_CODE[1] = 0x00;
-	if (start_code_size == 3)
-	{
-		START_CODE[2] = 0x01;
-	}
-	else  // 4
-	{
-		START_CODE[2] = 0x00;
-		START_CODE[3] = 0x01;
-	}
-
-	data->Append(START_CODE, start_code_size);
-	offset += start_code_size;
-
-	frag_header.fragmentation_offset.push_back(offset);
-	frag_header.fragmentation_length.push_back(sps->GetLength());
-
-	offset += sps->GetLength();
-
-	data->Append(sps);
-
-	data->Append(START_CODE, start_code_size);
-	offset += start_code_size;
-
-	frag_header.fragmentation_offset.push_back(offset);
-	frag_header.fragmentation_length.push_back(pps->GetLength());
-	data->Append(pps);
-
-	return {data, frag_header};
 }

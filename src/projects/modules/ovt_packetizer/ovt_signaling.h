@@ -1,9 +1,9 @@
 #pragma once
 
-#define OVT_SIGNALING_VERSION 0x11
+#define OVT_SIGNALING_VERSION 0x12
 
 /*
-	"version": 0x11,
+	"version": 0x12,
 	"stream" :
 	{
 		"appName" : "app",
@@ -65,18 +65,8 @@
 					"layout" : "stereo"
 				},
 				
-			### type : static_cast<uint16_t>(MediaTrack::CodecComponentDataType)
-			### data : base64 encoded data
-				"codecComponentData" : [
-					{
-						"type": 1,
-						"data": "Z2Q="
-					},
-					{
-						"type": 2,
-						"data": "Z2Q="
-					}
-				]
+			### decoderConfig : Decoder configuration record (avcc, hvcc, aac, etc...), base64 encoded string
+				"decoderConfig" : "Z2Q="
 			}
 		]
 	}

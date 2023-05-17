@@ -2,6 +2,8 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/common_types.h>
+#include <base/info/decoder_configuration_record.h>
+#include "h264_parser.h"
 
 // ISO 14496-15, 5.2.4.1
 //	aligned(8) class AVCDecoderConfigurationRecord {
@@ -41,48 +43,64 @@
 
 #define MIN_AVCDECODERCONFIGURATIONRECORD_SIZE	7
 
-class AVCDecoderConfigurationRecord
+class AVCDecoderConfigurationRecord : public DecoderConfigurationRecord
 {
 public:
-	static bool Parse(const uint8_t *data, size_t data_length, AVCDecoderConfigurationRecord &record);
-	static bool Parse(const std::vector<uint8_t> &data, AVCDecoderConfigurationRecord &record);
+	bool IsValid() const override;
+	ov::String GetCodecsParameter() const override;
 
-	uint8_t Version();
-	uint8_t	ProfileIndication();
-	uint8_t Compatibility();
-	uint8_t LevelIndication();
-	uint8_t LengthOfNALUnit();
-	uint8_t NumOfSPS();
-	uint8_t NumOfPPS();
-	uint8_t NumOfSPSExt();
-	std::shared_ptr<ov::Data>	GetSPS(int index);
-	std::shared_ptr<ov::Data>	GetPPS(int index);
-	std::shared_ptr<ov::Data>	GetSPSExt(int index);
-	uint8_t ChromaFormat();
-	uint8_t BitDepthLumaMinus8();
-	uint8_t BitDepthChromaMinus8();
-	
-	std::shared_ptr<ov::Data> Serialize();
-	void Serialize(std::vector<uint8_t>& serialize);
+	// Instance can be initialized by putting raw data in AVCDecoderConfigurationRecord.
+	bool Parse(const std::shared_ptr<ov::Data> &data) override;
+
+	// Instance can be initialized by putting SPS/PPS in AVCDecoderConfigurationRecord.
+	bool AddSPS(const std::shared_ptr<ov::Data> &sps);
+	bool AddPPS(const std::shared_ptr<ov::Data> &pps);
+	bool AddSPSExt(const std::shared_ptr<ov::Data> &sps_ext);
+
+	std::shared_ptr<ov::Data> Serialize() override;
+
+	uint8_t Version() const;
+	uint8_t	ProfileIndication() const;
+	uint8_t Compatibility() const;
+	uint8_t LevelIndication() const;
+	uint8_t LengthMinusOne() const;
+	uint8_t NumOfSPS() const;
+	uint8_t NumOfPPS() const;
+	uint8_t NumOfSPSExt() const;
+	std::shared_ptr<ov::Data>	GetSPS(int index) const;
+	std::shared_ptr<ov::Data>	GetPPS(int index) const;
+	std::shared_ptr<ov::Data>	GetSPSExt(int index) const;
+	uint8_t ChromaFormat() const;
+	uint8_t BitDepthLumaMinus8() const;
+	uint8_t BitDepthChromaMinus8() const;
+
+	// Helper functions
+	int32_t GetWidth() const;
+	int32_t GetHeight() const;
+
 	std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> GetSpsPpsAsAnnexB(uint8_t start_code_size);
+	ov::String GetInfoString() const;
 
-	ov::String GetInfoString();
-	
+private:
+	// It only be called by AddSPS and AddPPS
 	void SetVersion(uint8_t version);
 	void SetProfileIndication(uint8_t profile_indication);
 	void SetCompatibility(uint8_t profile_compatibility);
 	void SetLevelIndication(uint8_t level_indication);
-	void SetLengthOfNalUnit(uint8_t lengthMinusOne);
-	void AddSPS(std::shared_ptr<ov::Data> sps);
-	void AddPPS(std::shared_ptr<ov::Data> pps);
-	
-private:
-	uint8_t		_version = 0;
+	void SetLengthMinusOne(uint8_t length_minus_one);
+	void SetChromaFormat(uint8_t chroma_format);
+	void SetBitDepthLumaMinus8(uint8_t bit_depth_luma_minus8);
+	void SetBitDepthChromaMinus8(uint8_t bit_depth_chroma_minus8);
+
+	////////////////////////////////////////
+	// Decoder configuration record
+	////////////////////////////////////////
+	uint8_t		_version = 1;
 	uint8_t		_profile_indication = 0;
 	uint8_t		_profile_compatibility = 0;
 	uint8_t		_level_indication = 0;
 	uint8_t		_reserved1 = 0;			// (6 bits) = 111111b
-	uint8_t		_lengthMinusOne = 0;	// (2 bits)	= length of the NALUnitLength 0, 1, 3 corresponding to 1, 2, 4 (Usually 3)
+	uint8_t		_length_minus_one = 3;	// (2 bits)	= length of the NALUnitLength 0, 1, 3 corresponding to 1, 2, 4 (Usually 3)
 	uint8_t		_reserved2 = 0;			// (3 bits) = 111b
 	
 	// for(int i=0; i<_num_of_sps; i++)
@@ -107,4 +125,12 @@ private:
 		// sps_ext_length(16 bits) + sps_ext
 	uint8_t		_num_of_sps_ext = 0;		// (8 bits)
 	std::vector<std::shared_ptr<ov::Data>>	_sps_ext_list;
+
+
+	//////////////////////////////////////////
+	// Helper
+	//////////////////////////////////////////
+	H264SPS _h264_sps;
+	std::shared_ptr<ov::Data> _sps_pps_annexb_data = nullptr;
+	FragmentationHeader _sps_pps_annexb_frag_header;
 };

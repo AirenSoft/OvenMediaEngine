@@ -28,7 +28,6 @@ private:
 	uint32_t	_size_length = 13; // bits
 	uint32_t	_index_length = 3; // bits
 	uint32_t	_index_delta_length = 3; // bits
-	AACSpecificConfig _aac_config; // AudioSpecificConfig(), as defined in ISO/IEC 14496-3.
-
-	bool _is_valid = false;
+	
+	AudioSpecificConfig _aac_config; // AudioSpecificConfig(), as defined in ISO/IEC 14496-3.
 };

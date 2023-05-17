@@ -289,7 +289,7 @@ namespace pvd
 			}
 			else if (codec_id == cmn::MediaCodecId::Aac)
 			{
-				// @extradata == AACSpecificConfig
+				// @extradata == AudioSpecificConfig
 				auto media_packet = std::make_shared<MediaPacket>(
 					GetMsid(),
 					media_type,

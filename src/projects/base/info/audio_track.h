@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include <modules/bitstream/aac/aac_specific_config.h>
+#include <modules/bitstream/aac/audio_specific_config.h>
 
 #include "base/common_types.h"
 

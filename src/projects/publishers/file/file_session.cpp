@@ -192,19 +192,13 @@ namespace pub
 			track_info->SetChannel(track->GetChannel());
 
 			// Set DecoderSpecificInfo
-			if (track->GetCodecId() == cmn::MediaCodecId::H264)
+			if (track->GetCodecId() == cmn::MediaCodecId::H264 || 
+				track->GetCodecId() == cmn::MediaCodecId::H265 || 
+				track->GetCodecId() == cmn::MediaCodecId::Aac)
 			{
-				track_info->SetExtradata(track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AVCDecoderConfigurationRecord));
+				track_info->SetExtradata(track->GetDecoderConfigurationRecord() != nullptr ? track->GetDecoderConfigurationRecord()->GetData() : nullptr);
 			}
-			else if (track->GetCodecId() == cmn::MediaCodecId::H265)
-			{
-				track_info->SetExtradata(track->GetCodecComponentData(MediaTrack::CodecComponentDataType::HEVCDecoderConfigurationRecord));
-			}
-			else if (track->GetCodecId() == cmn::MediaCodecId::Aac)
-			{
-				track_info->SetExtradata(track->GetCodecComponentData(MediaTrack::CodecComponentDataType::AACSpecificConfig));
-			}
-
+			
 			bool ret = _writer->AddTrack(track->GetMediaType(), track->GetId(), track_info);
 			if (ret == false)
 			{

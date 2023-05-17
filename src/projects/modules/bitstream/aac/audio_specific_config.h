@@ -1,5 +1,6 @@
 #pragma once
 
+// The Audio Specific Config is the global header for MPEG-4 Audio:
 //////////////////////////////////////////////////////////////////////////////////////////
 // Pseudo Code
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -84,11 +85,12 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 
 #include <base/ovlibrary/ovlibrary.h>
-
+#include <base/info/decoder_configuration_record.h>
 
 // MPEG-4 Audio Object Types:
 enum AacObjectType : uint8_t
 {
+	AacObjectTypeNull = 0,
 	// Table 1.1 - Audio Object Type definition
 	// @see @see aac-mp4a-format-ISO_IEC_14496-3+2001.pdf, page 23
 	AacObjectTypeAacMain = 1,
@@ -124,15 +126,20 @@ enum AacSamplingFrequencies : uint8_t
 	RATES_11025HZ = 10,
 	RATES_8000HZ = 11,
 	RATES_7350HZ = 12,
+	RATES_RESERVED = 13,
 	EXPLICIT_RATE = 15
 };
 
 #define MIN_AAC_SPECIFIC_CONFIG_SIZE		2
 
-class AACSpecificConfig
+class AudioSpecificConfig : public DecoderConfigurationRecord
 {
 public:
-	static bool Parse(const uint8_t *data, size_t data_length, AACSpecificConfig &config);
+	bool IsValid() const override;
+	// Instance can be initialized by putting raw data in AudioSpecificConfig.
+	bool Parse(const std::shared_ptr<ov::Data> &data) override;
+
+	std::shared_ptr<ov::Data> Serialize() override;
 
 	AacObjectType				ObjectType() const;
 	AacSamplingFrequencies		SamplingFrequency() const;
@@ -146,12 +153,19 @@ public:
 	void 						SetSamplingFrequency(AacSamplingFrequencies sampling_frequency_index);
 	void 						SetChannel(uint8_t channel);
 
-	// std::vector<uint8_t> 		Serialize() const;
-	std::shared_ptr<ov::Data>	Serialize();
-	void 						Serialize(std::vector<uint8_t>& serialize);
+	// Helpers
+	ov::String GetCodecsParameter() const;
 
 private:
-	AacObjectType				_object_type;					// 5 bits
-	AacSamplingFrequencies		_sampling_frequency_index;		// 4 bits
-	uint8_t						_channel;						// 4 bits
+	AacObjectType				_object_type = AacObjectType::AacObjectTypeNull; // 5 bits
+	AacSamplingFrequencies		_sampling_frequency_index = AacSamplingFrequencies::RATES_RESERVED;	// 4 bits
+
+	// 0 : Defined in AOT Specifc Config
+	// 1 : 1 channel: front-center
+	// 2 : 2 channels: front-left, front-right
+	// 3 : 3 channels: front-center, front-left, front-right
+	// 4 : 4 channels: front-center, front-left, front-right, back-center
+	// ...
+	// 8-15 : Reserved
+	uint8_t						_channel = 15; // 4 bits
 };
