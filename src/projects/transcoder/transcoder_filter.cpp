@@ -9,17 +9,12 @@ using namespace cmn;
 
 #define PTS_INCREMENT_LIMIT 15
 
-TranscodeFilter::TranscodeFilter()
+TranscodeFilter::TranscodeFilter() : _impl(nullptr)
 {
-	_impl = nullptr;
 }
 
 TranscodeFilter::~TranscodeFilter()
 {
-	if (_impl != nullptr)
-	{
-		delete _impl;
-	}
 }
 
 bool TranscodeFilter::Configure(int32_t filter_id,
@@ -42,19 +37,22 @@ bool TranscodeFilter::Configure(int32_t filter_id,
 
 bool TranscodeFilter::CreateFilter()
 {
+	std::lock_guard<std::shared_mutex> lock(_mutex);
+
 	if (_impl != nullptr)
 	{
 		_impl->Stop();
-		delete _impl;
+		_impl.reset();
+		_impl = nullptr;
 	}
 
 	switch (_input_track->GetMediaType())
 	{
 		case MediaType::Audio:
-			_impl = new FilterResampler();
+			_impl = std::make_shared<FilterResampler>();
 			break;
 		case MediaType::Video:
-			_impl = new FilterRescaler();
+			_impl = std::make_shared<FilterRescaler>();
 			break;
 		default:
 			logte("Unsupported media type in filter");
@@ -77,9 +75,14 @@ bool TranscodeFilter::CreateFilter()
 }
 
 void TranscodeFilter::Stop() {
-	if(_impl)
+	
+	std::lock_guard<std::shared_mutex> lock(_mutex);
+	
+	if (_impl != nullptr)
 	{
 		_impl->Stop();
+		_impl.reset();
+		_impl = nullptr;
 	}
 }
 
@@ -93,6 +96,12 @@ bool TranscodeFilter::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 
 			return false;
 		}
+	}
+
+	std::shared_lock<std::shared_mutex> lock(_mutex);
+	if(_impl == nullptr)
+	{
+		return false;
 	}
 
 	return (_impl->SendBuffer(std::move(buffer)) == 0) ? true : false;
@@ -115,6 +124,12 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 	}
 
 	// In case of resolution change
+	std::shared_lock<std::shared_mutex> lock(_mutex);
+	if (_impl == nullptr)
+	{
+		return false;
+	}
+
 	if (_input_track->GetMediaType() == MediaType::Video)
 	{
 		if (buffer->GetWidth() != (int32_t)_impl->GetInputWidth() || buffer->GetHeight() != (int32_t)_impl->GetInputHeight())

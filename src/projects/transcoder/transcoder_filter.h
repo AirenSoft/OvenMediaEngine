@@ -62,7 +62,8 @@ private:
 
 	int32_t _filter_id;
 
-	FilterBase *_impl;
+	std::shared_mutex _mutex;
+	std::shared_ptr<FilterBase> _impl;
 
 	CompleteHandler _complete_handler;
 };
