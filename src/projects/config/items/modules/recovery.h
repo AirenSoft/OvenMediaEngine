@@ -29,6 +29,25 @@ namespace cfg
 				SetEnable(false);
 								
 				ModuleTemplate::MakeList();
+
+				/**
+					[Experimental] Delete lazy stream
+
+					If the size of the queue lasts beyond the limit for N seconds, it is determined to be an invalid stream. 
+					For system recovery, the problematic stream is forcibly deleted.
+
+					server.xml:
+						<Modules>
+							<Recovery>
+								<!--  
+								If the packet/frame queue is exceed for a certain period of time(millisecond, ms), it will be automatically deleted. 
+								If this value is set to zero, the stream will not be deleted. 
+								
+								-->
+								<DeleteLazyStreamTimeout>10000</DeleteLazyStreamTimeout>
+							</Recovery>
+						</Modules>
+				*/				
 				Register<Optional>("DeleteLazyStreamTimeout", &_delete_lazy_stream_timeout);
 			}
 		};
