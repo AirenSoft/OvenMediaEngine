@@ -43,8 +43,6 @@ public:
 	}
 
 protected:
-	static const ov::String ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters);
-
 	int32_t _decoder_id;
 
 	std::shared_ptr<MediaTrack> _track;

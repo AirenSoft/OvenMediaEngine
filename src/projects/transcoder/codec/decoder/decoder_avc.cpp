@@ -205,7 +205,7 @@ void DecoderAVC::CodecThread()
 					ret = ::avcodec_parameters_from_context(_codec_par, _context);
 					if (ret == 0)
 					{
-						auto codec_info = ShowCodecParameters(_context, _codec_par);
+						auto codec_info = ffmpeg::Conv::CodecInfoToString(_context, _codec_par);
 						logti("[%s/%s(%u)] input track information: %s",
 							  _stream_info.GetApplicationInfo().GetName().CStr(),
 							  _stream_info.GetName().CStr(),
