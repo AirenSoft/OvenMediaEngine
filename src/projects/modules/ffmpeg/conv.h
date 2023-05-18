@@ -17,9 +17,11 @@ extern "C"
 {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libavutil/channel_layout.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
 }
+
 #include <base/common_types.h>
 #include <base/info/media_track.h>
 #include <base/ovlibrary/ovlibrary.h>
@@ -155,23 +157,59 @@ namespace ffmpeg
 			return sample_fmt;
 		}
 
-		static cmn::AudioChannel::Layout ToAudioChannelLayout(int channels)
+		static cmn::AudioChannel::Layout ToAudioChannelLayout(int channel_layout)
 		{
-			cmn::AudioChannel::Layout channel_layout;
-			switch (channels)
+			switch (channel_layout)
 			{
-				case 1:
-					channel_layout = cmn::AudioChannel::Layout::LayoutMono;
-					break;
-				case 2:
-					channel_layout = cmn::AudioChannel::Layout::LayoutStereo;
-					break;
-				default:
-					channel_layout = cmn::AudioChannel::Layout::LayoutUnknown;
-					break;
+				case AV_CH_LAYOUT_MONO:
+					return cmn::AudioChannel::Layout::LayoutMono;
+				case AV_CH_LAYOUT_STEREO:
+					return cmn::AudioChannel::Layout::LayoutStereo;
+				case AV_CH_LAYOUT_2_1:
+					return cmn::AudioChannel::Layout::Layout21;
+				case AV_CH_LAYOUT_SURROUND:
+					return cmn::AudioChannel::Layout::LayoutSurround;
+				case AV_CH_LAYOUT_3POINT1:
+					return cmn::AudioChannel::Layout::Layout3Point1;
+				case AV_CH_LAYOUT_4POINT0:
+					return cmn::AudioChannel::Layout::Layout4Point0;
+				case AV_CH_LAYOUT_4POINT1:
+					return cmn::AudioChannel::Layout::Layout4Point1;
+				case AV_CH_LAYOUT_2_2:
+					return cmn::AudioChannel::Layout::Layout22;
+				case AV_CH_LAYOUT_QUAD:
+					return cmn::AudioChannel::Layout::Layout5Point0;
+				case AV_CH_LAYOUT_5POINT1:
+					return cmn::AudioChannel::Layout::Layout5Point1;
+				case AV_CH_LAYOUT_5POINT1_BACK:
+					return cmn::AudioChannel::Layout::Layout5Point1Back;
+				case AV_CH_LAYOUT_6POINT0:
+					return cmn::AudioChannel::Layout::Layout6Point0;
+				case AV_CH_LAYOUT_6POINT0_FRONT:
+					return cmn::AudioChannel::Layout::Layout6Point0Front;
+				case AV_CH_LAYOUT_HEXAGONAL:
+					return cmn::AudioChannel::Layout::LayoutHexagonal;
+				case AV_CH_LAYOUT_6POINT1:
+					return cmn::AudioChannel::Layout::Layout6Point1;
+				case AV_CH_LAYOUT_6POINT1_BACK:
+					return cmn::AudioChannel::Layout::Layout6Point1Back;
+				case AV_CH_LAYOUT_6POINT1_FRONT:
+					return cmn::AudioChannel::Layout::Layout6Point1Front;
+				case AV_CH_LAYOUT_7POINT0:
+					return cmn::AudioChannel::Layout::Layout7Point0;
+				case AV_CH_LAYOUT_7POINT0_FRONT:
+					return cmn::AudioChannel::Layout::Layout7Point0Front;
+				case AV_CH_LAYOUT_7POINT1:
+					return cmn::AudioChannel::Layout::Layout7Point1;
+				case AV_CH_LAYOUT_7POINT1_WIDE:
+					return cmn::AudioChannel::Layout::Layout7Point1Wide;
+				case AV_CH_LAYOUT_7POINT1_WIDE_BACK:
+					return cmn::AudioChannel::Layout::Layout7Point1WideBack;
+				case AV_CH_LAYOUT_OCTAGONAL:
+					return cmn::AudioChannel::Layout::LayoutOctagonal;
 			}
 
-			return channel_layout;
+			return cmn::AudioChannel::Layout::LayoutUnknown;
 		}
 
 		static bool ToMediaTrack(AVStream* stream, std::shared_ptr<MediaTrack> media_track)
@@ -199,7 +237,7 @@ namespace ffmpeg
 				case cmn::MediaType::Audio:
 					media_track->SetSampleRate(stream->codecpar->sample_rate);
 					media_track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(stream->codecpar->format));
-					media_track->GetChannel().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(stream->codecpar->channels));
+					media_track->GetChannel().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(stream->codecpar->channel_layout));
 					break;
 				default:
 					break;
@@ -235,7 +273,7 @@ namespace ffmpeg
 					media_frame->SetMediaType(media_type);
 					media_frame->SetBytesPerSample(::av_get_bytes_per_sample(static_cast<AVSampleFormat>(frame->format)));
 					media_frame->SetNbSamples(frame->nb_samples);
-					media_frame->SetChannelCount(frame->channels);
+					media_frame->GetChannels().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(frame->channel_layout));
 					media_frame->SetSampleRate(frame->sample_rate);
 					media_frame->SetFormat(frame->format);
 					media_frame->SetDuration(frame->pkt_duration);
@@ -369,6 +407,116 @@ namespace ffmpeg
 			return (AVRational){
 				.num = timebase.GetNum(),
 				.den = timebase.GetDen()};
+		}
+
+		static ov::String CodecInfoToString(const AVCodecContext *context, const AVCodecParameters *parameters)
+		{
+			ov::String message;
+
+			message.AppendFormat("[%s] ", ::av_get_media_type_string(parameters->codec_type));
+
+			switch (parameters->codec_type)
+			{
+				case AVMEDIA_TYPE_UNKNOWN:
+					message = "Unknown media type";
+					break;
+
+				case AVMEDIA_TYPE_VIDEO:
+				case AVMEDIA_TYPE_AUDIO:
+					// H.264 (Baseline
+					message.AppendFormat("%s (%s", ::avcodec_get_name(parameters->codec_id), ::avcodec_profile_name(parameters->codec_id, parameters->profile));
+
+					if (parameters->level >= 0)
+					{
+						// lv: 5.2
+						message.AppendFormat(" %.1f", parameters->level / 10.0f);
+					}
+					message.Append(')');
+
+					if (parameters->codec_tag != 0)
+					{
+						char tag[AV_FOURCC_MAX_STRING_SIZE]{};
+						::av_fourcc_make_string(tag, parameters->codec_tag);
+
+						// (avc1 / 0x31637661
+						message.AppendFormat(", (%s / 0x%08X", tag, parameters->codec_tag);
+
+						if (parameters->extradata_size != 0)
+						{
+							// extra: 1234
+							message.AppendFormat(", extra: %d", parameters->extradata_size);
+						}
+
+						message.Append(')');
+					}
+
+					message.Append(", ");
+
+					if (parameters->codec_type == AVMEDIA_TYPE_VIDEO)
+					{
+						int gcd = ::av_gcd(parameters->width, parameters->height);
+
+						if (gcd == 0)
+						{
+							OV_ASSERT2(false);
+							gcd = 1;
+						}
+
+						int digit = 0;
+
+						if (context->framerate.den > 1)
+						{
+							digit = 3;
+						}
+
+						// yuv420p, 1920x1080 [SAR 1:1 DAR 16:9], 24 fps
+						message.AppendFormat("%s, %dx%d [SAR %d:%d DAR %d:%d], %.*f fps, ",
+											::av_get_pix_fmt_name(static_cast<AVPixelFormat>(parameters->format)),
+											parameters->width, parameters->height,
+											parameters->sample_aspect_ratio.num, parameters->sample_aspect_ratio.den,
+											parameters->width / gcd, parameters->height / gcd,
+											digit, ::av_q2d(context->framerate));
+					}
+					else
+					{
+						char channel_layout[16]{};
+						::av_get_channel_layout_string(channel_layout, OV_COUNTOF(channel_layout), parameters->channels, parameters->channel_layout);
+
+						// 48000 Hz, stereo, fltp,
+						message.AppendFormat("%d Hz, %s(%d), %s, ", parameters->sample_rate, channel_layout, parameters->channels, ::av_get_sample_fmt_name(static_cast<AVSampleFormat>(parameters->format)));
+					}
+
+					message.AppendFormat("%d kbps, ", (parameters->bit_rate / 1024));
+					// timebase: 1/48000
+					message.AppendFormat("timebase: %d/%d, ", context->time_base.num, context->time_base.den);
+					// frame_size: 1234
+					message.AppendFormat("frame_size: %d", parameters->frame_size);
+					if (parameters->block_align != 0)
+					{
+						// align: 32
+						message.AppendFormat(", align: %d", parameters->block_align);
+					}
+
+					break;
+
+				case AVMEDIA_TYPE_DATA:
+					message = "Data";
+					break;
+
+				case AVMEDIA_TYPE_SUBTITLE:
+					message = "Subtitle";
+					break;
+
+				case AVMEDIA_TYPE_ATTACHMENT:
+					message = "Attachment";
+					break;
+
+				case AVMEDIA_TYPE_NB:
+					message = "NB";
+					break;
+			}
+
+			return message;
 		}
 	};
 

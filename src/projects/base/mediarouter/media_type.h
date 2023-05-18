@@ -449,7 +449,7 @@ namespace cmn
 	// Audio sample format
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 
-	// Defines values for compatibility with FFMPEG SampleFormat
+	// Defines values for compatibility with FFmpeg SampleFormat
 	class AudioSample
 	{
 	public:
@@ -596,11 +596,62 @@ namespace cmn
 	class AudioChannel
 	{
 	public:
+		// Defines values for compatibility with FFmpeg ChannelName
+		enum class Channel : uint32_t
+		{
+			None 				= 0x00000000U,
+			FrontLeft 			= 0x00000001U,
+			FrontRight 			= 0x00000002U,
+			FrontCenter 		= 0x00000004U,
+			LowFrequency 		= 0x00000008U,
+			BackLeft 			= 0x00000010U,
+			BackRight 			= 0x00000020U,
+			FrontLeftOfCenter 	= 0x00000040U,
+			FrontRightOfCenter 	= 0x00000080U,
+			BackCenter 			= 0x00000100U,
+			SideLeft 			= 0x00000200U,
+			SideRight 			= 0x00000400U,
+			TopCenter 			= 0x00000800U,
+			TopFrontLeft 		= 0x00001000U,
+			TopFrontCenter 		= 0x00002000U,
+			TopFrontRight 		= 0x00004000U,
+			TopBackLeft 		= 0x00008000U,
+			TopBackCenter 		= 0x00010000U,
+			TopBackRight 		= 0x00020000U,
+			StereoLeft 			= 0x20000000U,
+			StereoRight 		= 0x40000000U
+		};
+
+		// Defines values for compatibility with FFmpeg ChannelLayout
 		enum class Layout : uint32_t
 		{
-			LayoutUnknown = 0x00000000U,				// AV_CH_LAYOUT_Unknown
-			LayoutMono = 0x00000004U,					// AV_CH_LAYOUT_MONO
-			LayoutStereo = (0x00000001U | 0x00000002U)	// AV_CH_FRONT_LEFT|AV_CH_FRONT_RIGHT
+			LayoutUnknown 			= (uint32_t)Channel::None,				
+			LayoutMono 				= (uint32_t)Channel::FrontCenter,
+			LayoutStereo 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight,
+			Layout2Point1 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::LowFrequency,
+			Layout21 				= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::BackCenter,
+			LayoutSurround 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter,
+			Layout3Point1  			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::LowFrequency,
+			Layout4Point0  			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::BackCenter,
+			Layout4Point1 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::BackCenter | (uint32_t)Channel::LowFrequency,
+			Layout22 				= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight,
+			LayoutQuad 				= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight,
+			Layout5Point0 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight,
+			Layout5Point1 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::LowFrequency,
+			Layout5Point0Back 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight,
+			Layout5Point1Back 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight | (uint32_t)Channel::LowFrequency,
+			Layout6Point0 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::BackCenter,
+			Layout6Point0Front 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::FrontLeftOfCenter | (uint32_t)Channel::FrontRightOfCenter,
+			LayoutHexagonal 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight | (uint32_t)Channel::BackCenter,
+			Layout6Point1 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::LowFrequency | (uint32_t)Channel::BackCenter,
+			Layout6Point1Back 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight | (uint32_t)Channel::LowFrequency | (uint32_t)Channel::BackCenter,
+			Layout6Point1Front 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::FrontLeftOfCenter | (uint32_t)Channel::FrontRightOfCenter | (uint32_t)Channel::LowFrequency,
+			Layout7Point0 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight,
+			Layout7Point0Front 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::FrontLeftOfCenter | (uint32_t)Channel::FrontRightOfCenter,
+			Layout7Point1 		  	= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::LowFrequency | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight,
+			Layout7Point1Wide 	  	= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::LowFrequency | (uint32_t)Channel::FrontLeftOfCenter | (uint32_t)Channel::FrontRightOfCenter,
+			Layout7Point1WideBack	= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight | (uint32_t)Channel::LowFrequency | (uint32_t)Channel::FrontLeftOfCenter | (uint32_t)Channel::FrontRightOfCenter,
+			LayoutOctagonal 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight | (uint32_t)Channel::BackCenter,
 		};
 
 	public:
@@ -622,12 +673,37 @@ namespace cmn
 
 			switch (_layout)
 			{
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutUnknown, _count = 0, _name = "unknown");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutMono, _count = 1, _name = "mono");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutStereo, _count = 2, _name = "stereo");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutUnknown, 			_count = 0, _name = "unknown");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutMono, 			_count = 1, _name = "mono");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutStereo, 			_count = 2, _name = "stereo");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout2Point1, 			_count = 3, _name = "2.1");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout21, 				_count = 3, _name = "3.0(back)");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutSurround, 		_count = 3, _name = "3.0");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout3Point1, 			_count = 4, _name = "3.1");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout4Point0, 			_count = 4, _name = "4.0");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout4Point1, 			_count = 5, _name = "4.1");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout22, 				_count = 4, _name = "quad(side)");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutQuad, 			_count = 4, _name = "quad");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point0, 			_count = 5, _name = "5.0(side)");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point1, 			_count = 6, _name = "5.1(side)");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point0Back, 		_count = 5, _name = "5.0");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point1Back, 		_count = 6, _name = "5.1");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point0, 			_count = 6, _name = "6.0");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point0Front, 	_count = 6, _name = "6.0(front)");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutHexagonal, 		_count = 6, _name = "hexagonal");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1, 			_count = 7, _name = "6.1");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1Back, 		_count = 7, _name = "6.1(back)");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1Front, 	_count = 7, _name = "6.1(front)");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point0, 			_count = 7, _name = "7.0");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point0Front, 	_count = 7, _name = "7.0(front)");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1, 			_count = 8, _name = "7.1");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1Wide, 		_count = 8, _name = "7.1(wide-side)");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1WideBack, 	_count = 8, _name = "7.1(wide)");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutOctagonal, 		_count = 8, _name = "octagonal");
 			}
 		}
 
+		// If it is set as channel count, it is used as the default layout.
 		void SetCount(uint32_t count)
 		{
 			_count = count;
@@ -636,6 +712,12 @@ namespace cmn
 				OV_MEDIA_TYPE_SET_VALUE(0, _layout = Layout::LayoutUnknown, _name = "unknown");
 				OV_MEDIA_TYPE_SET_VALUE(1, _layout = Layout::LayoutMono, _name = "mono");
 				OV_MEDIA_TYPE_SET_VALUE(2, _layout = Layout::LayoutStereo, _name = "stereo");
+				OV_MEDIA_TYPE_SET_VALUE(3, _layout = Layout::Layout2Point1, _name = "2.1");
+				OV_MEDIA_TYPE_SET_VALUE(4, _layout = Layout::Layout4Point0, _name = "4.0");
+				OV_MEDIA_TYPE_SET_VALUE(5, _layout = Layout::Layout5Point0Back, _name = "5.0");
+				OV_MEDIA_TYPE_SET_VALUE(6, _layout = Layout::Layout5Point1Back, _name = "5.1");
+				OV_MEDIA_TYPE_SET_VALUE(7, _layout = Layout::Layout6Point1, _name = "6.1");
+				OV_MEDIA_TYPE_SET_VALUE(8, _layout = Layout::Layout7Point1, _name = "7.1");
 			}
 		}
 
@@ -654,19 +736,7 @@ namespace cmn
 		// the name of channel layout
 		const char *GetName() const
 		{
-			switch (_layout)
-			{
-				case Layout::LayoutUnknown:
-					[[fallthrough]];
-				default:
-					return "unknown";
-
-				case Layout::LayoutStereo:
-					return "stereo";
-
-				case Layout::LayoutMono:
-					return "mono";
-			}
+			return _name.c_str();
 		}
 
 	private:
