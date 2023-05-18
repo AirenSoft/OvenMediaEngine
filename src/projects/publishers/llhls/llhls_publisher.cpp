@@ -112,6 +112,16 @@ bool LLHlsPublisher::Start()
 
 bool LLHlsPublisher::Stop()
 {
+	_http_server_list_mutex.lock();
+	auto http_server_list = std::move(_http_server_list);
+	auto https_server_list = std::move(_https_server_list);
+	_http_server_list_mutex.unlock();
+
+	auto http_server_manager = http::svr::HttpServerManager::GetInstance();
+
+	http_server_manager->ReleaseServers(&http_server_list);
+	http_server_manager->ReleaseServers(&https_server_list);
+
 	return Publisher::Stop();
 }
 
@@ -268,7 +278,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		logtd("LLHLS requested(connection : %u): %s", connection->GetId(), request->GetUri().CStr());
 
 		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
-		
+
 		auto host_name = final_url->Host();
 		auto stream_name = final_url->Stream();
 
