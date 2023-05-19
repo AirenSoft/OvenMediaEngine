@@ -143,11 +143,6 @@ public:
 		_channels = channels;
 	}
 
-	void SetChannelCount(uint32_t count)
-	{
-		_channels.SetCount(count);
-	}
-
 	uint32_t GetChannelCount() const
 	{
 		return _channels.GetCounts();

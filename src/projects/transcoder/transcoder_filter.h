@@ -32,38 +32,33 @@ public:
 		const std::shared_ptr<info::Stream> &input_stream_info, std::shared_ptr<MediaTrack> input_track,
 		const std::shared_ptr<info::Stream> &output_stream_info, std::shared_ptr<MediaTrack> output_track,
 		CompleteHandler complete_handler);
-
 	bool SendBuffer(std::shared_ptr<MediaFrame> buffer);
-
 	void Stop(); 
+
 	cmn::Timebase GetInputTimebase() const;
 	cmn::Timebase GetOutputTimebase() const;
+	std::shared_ptr<MediaTrack> &GetInputTrack();
+	std::shared_ptr<MediaTrack> &GetOutputTrack(); 
 
-	int64_t _last_pts = -1LL;
-	int64_t _threshold_ts_increment = 0LL;
-
-	std::shared_ptr<info::Stream> _input_stream_info;
-	std::shared_ptr<MediaTrack> _input_track;
-	std::shared_ptr<info::Stream> _output_stream_info;
-	std::shared_ptr<MediaTrack> _output_track;
-
-	void SetAlias(ov::String alias);
-
-	void SetCompleteHandler(CompleteHandler func)
-	{
-		_complete_handler = move(func);
-	}
-
+	void SetCompleteHandler(CompleteHandler complete_handler);
 	void OnComplete(std::shared_ptr<MediaFrame> frame);
 
 private:
 	bool CreateFilter();
 	bool IsNeedUpdate(std::shared_ptr<MediaFrame> buffer);
 
-	int32_t _filter_id;
+	int32_t _id;
 
-	std::shared_mutex _mutex;
-	std::shared_ptr<FilterBase> _impl;
+	int64_t _last_timestamp = -1LL;
+	int64_t _timestamp_jump_threshold = 0LL;
+
+	std::shared_ptr<info::Stream> _input_stream_info;
+	std::shared_ptr<MediaTrack> _input_track;
+	std::shared_ptr<info::Stream> _output_stream_info;
+	std::shared_ptr<MediaTrack> _output_track;
 
 	CompleteHandler _complete_handler;
+
+	std::shared_mutex _mutex;
+	std::shared_ptr<FilterBase> _internal;
 };

@@ -1236,13 +1236,14 @@ std::shared_ptr<MediaTrack> TranscoderStream::GetInputTrackOfFilter(int32_t deco
 
 	std::shared_lock<std::shared_mutex> lock(_filter_map_mutex);
 
-	auto filter_it = _filters.find(filter_ids[0]);
-	if (filter_it == _filters.end())
+	auto it = _filters.find(filter_ids[0]);
+	if (it == _filters.end())
 	{
 		return nullptr;
 	}
-
-	return filter_it->second->_input_track;
+	auto filter = it->second;
+	
+	return filter->GetInputTrack();
 }
 
 TranscodeResult TranscoderStream::FilterFrame(int32_t filter_id, std::shared_ptr<MediaFrame> decoded_frame)
