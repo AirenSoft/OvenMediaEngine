@@ -378,9 +378,15 @@ namespace pvd
 		auto media_desc_list = _sdp.GetMediaList();
 		for (const auto &media_desc : media_desc_list)
 		{
-			if (media_desc->GetMediaType() == MediaDescription::MediaType::Application || media_desc->GetMediaType() == MediaDescription::MediaType::Unknown || (media_desc->GetMediaType() == MediaDescription::MediaType::Audio && GetProperties()->IsAudioDisabled()))
+			if (media_desc->GetMediaType() == MediaDescription::MediaType::Application || media_desc->GetMediaType() == MediaDescription::MediaType::Unknown)
 			{
 				logtw("Ignored not supported media type : %s", media_desc->GetMediaTypeStr().CStr());
+				continue;
+			}
+
+			if (media_desc->GetMediaType() == MediaDescription::MediaType::Audio && GetProperties()->IsAudioDisabled())
+			{
+				logtw("Ignored disabled media type : %s", media_desc->GetMediaTypeStr().CStr());
 				continue;
 			}
 
