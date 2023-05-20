@@ -14,9 +14,9 @@ namespace pvd
 	{
 	public:
 		PullStreamProperties()
-			: _persistent(false), _failback(false), _relay(false), _failback_timeout(-1), _no_input_failover_timeout(-1), _unused_stream_deletion_timeout(-1), _retry_connect_count(2) {};
+			: _persistent(false), _disable_audio(false), _failback(false), _relay(false), _failback_timeout(-1), _no_input_failover_timeout(-1), _unused_stream_deletion_timeout(-1), _retry_connect_count(2) {};
 
-		PullStreamProperties(bool persistent, bool failback, bool relay, int32_t failback_timeout = -1, int32_t no_input_failover_timeout = -1, int32_t unused_stream_deletion_timeout = -1, int32_t retry_connect_count = 2)
+		PullStreamProperties(bool persistent, bool disable_audio, bool failback, bool relay, int32_t failback_timeout = -1, int32_t no_input_failover_timeout = -1, int32_t unused_stream_deletion_timeout = -1, int32_t retry_connect_count = 2)
 		{
 			_persistent = persistent;
 			_failback = failback;
@@ -25,11 +25,17 @@ namespace pvd
 			_no_input_failover_timeout = no_input_failover_timeout;
 			_unused_stream_deletion_timeout = unused_stream_deletion_timeout;
 			_retry_connect_count = retry_connect_count;
+			_disable_audio = disable_audio;
 		};
 
 		bool IsPersistent()
 		{
 			return _persistent;
+		}
+
+		bool IsAudioDisabled()
+		{
+			return _disable_audio;
 		}
 
 		bool IsFailback()
@@ -55,6 +61,11 @@ namespace pvd
 		void EnablePersistent(bool persistent)
 		{
 			_persistent = persistent;
+		}
+
+		void DisableAudio(bool audio)
+		{
+			_disable_audio = audio;
 		}
 
 		void EnableRelay(bool relay)
@@ -128,6 +139,7 @@ namespace pvd
 		bool _failback = false;
 		bool _relay = false;
 		bool _from_origin_map_store = false;
+		bool _disable_audio = false;
 
 		// -1 means that the values in configuration file will be used. (Conf/Origins/Properties)
 		int32_t _failback_timeout = -1;

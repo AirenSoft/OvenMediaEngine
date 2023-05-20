@@ -85,6 +85,11 @@ namespace api
 							properties->EnablePersistent(jv_properties["persistent"].asBool());
 						}
 
+						if (jv_properties["disableAudio"].isNull() == false && jv_properties["disableAudio"].isBool())
+						{
+							properties->DisableAudio(jv_properties["disableAudio"].asBool());
+						}
+
 						if (jv_properties["noInputFailoverTimeoutMs"].isNull() == false && jv_properties["noInputFailoverTimeoutMs"].isInt())
 						{
 							properties->SetNoInputFailoverTimeout(jv_properties["noInputFailoverTimeoutMs"].asInt());
@@ -96,7 +101,7 @@ namespace api
 						}
 					}
 					
-					logti("Request to pull stream: %s/%s - persistent(%s) noInputFailoverTimeoutMs(%d) unusedStreamDeletionTimeoutMs(%d)", app->GetName().CStr(), stream_name.CStr(), properties->IsPersistent() ? "true" : "false", properties->GetNoInputFailoverTimeout(), properties->GetUnusedStreamDeletionTimeout());
+					logti("Request to pull stream: %s/%s - persistent(%s) noInputFailoverTimeoutMs(%d) unusedStreamDeletionTimeoutMs(%d) disableAudio(%s)", app->GetName().CStr(), stream_name.CStr(), properties->IsPersistent() ? "true" : "false", properties->GetNoInputFailoverTimeout(), properties->GetUnusedStreamDeletionTimeout(), properties->IsAudioDisabled() ? "true" : "false");
 					for (auto &url : request_urls)
 					{
 						logti(" - %s", url.CStr());

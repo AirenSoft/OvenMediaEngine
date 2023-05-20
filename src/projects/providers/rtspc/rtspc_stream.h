@@ -25,6 +25,7 @@
 #include <modules/sdp/session_description.h>
 
 #include <modules/rtsp/header_fields/rtsp_header_fields.h>
+#include "base/provider/pull_provider/stream_props.h"
 
 #define RTSP_USER_AGENT_NAME	"OvenMediaEngine"
 namespace pvd

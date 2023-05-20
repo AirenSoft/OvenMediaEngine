@@ -378,7 +378,7 @@ namespace pvd
 		auto media_desc_list = _sdp.GetMediaList();
 		for (const auto &media_desc : media_desc_list)
 		{
-			if (media_desc->GetMediaType() == MediaDescription::MediaType::Application || media_desc->GetMediaType() == MediaDescription::MediaType::Unknown)
+			if (media_desc->GetMediaType() == MediaDescription::MediaType::Application || media_desc->GetMediaType() == MediaDescription::MediaType::Unknown || (media_desc->GetMediaType() == MediaDescription::MediaType::Audio && GetProperties()->IsAudioDisabled()))
 			{
 				logtw("Ignored not supported media type : %s", media_desc->GetMediaTypeStr().CStr());
 				continue;
@@ -1090,7 +1090,11 @@ namespace pvd
 		// Check content_base
 		if (_content_base.IsEmpty() == false)
 		{
-			return ov::String::FormatString("%s%s", _content_base.CStr(), control.CStr());
+			if(_content_base.Right(1) == "/"){
+				return ov::String::FormatString("%s%s", _content_base.CStr(), control.CStr());
+			} else {
+				return ov::String::FormatString("%s/%s", _content_base.CStr(), control.CStr());
+			}
 		}
 
 		ov::String control_url;
