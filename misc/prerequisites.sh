@@ -17,8 +17,10 @@ PCRE2_VERSION=10.39
 OPENH264_VERSION=2.3.0
 HIREDIS_VERSION=1.0.2
 NVCC_HDR_VERSION=11.1.5.2
+
 INTEL_QSV_HWACCELS=false
-NVIDIA_VIDEO_CODEC_HWACCELS=false
+NVIDIA_NV_CODEC_HWACCELS=false
+XILINX_XMA_CODEC_HWACCELS=false
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     NCPU=$(sysctl -n hw.ncpu)
@@ -176,7 +178,7 @@ install_nasm()
 }
 
 install_nvcc_hdr() {
-    if [ "$NVIDIA_VIDEO_CODEC_HWACCELS" = true ] ; then    
+    if [ "$NVIDIA_NV_CODEC_HWACCELS" = true ] ; then    
         (DIR=${TEMP_PATH}/nvcc-hdr && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
@@ -197,15 +199,21 @@ install_ffmpeg()
         return
     fi
 
+    # Default download url of FFmpeg
+    FFMPEG_DOWNLOAD_URL="https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n${FFMPEG_VERSION}.tar.gz"
+
+    # Additional default configure options of FFmpeg
     ADDI_LICENSE=""
     ADDI_LIBS=" --disable-nvdec --disable-nvdec --disable-vaapi --disable-vdpau --disable-cuda-llvm --disable-cuvid --disable-ffnvcodec "
     ADDI_ENCODER=""
     ADDI_DECODER=""
-    ADDI_CFLAGS=""
-    ADDI_LDFLAGS=""
     ADDI_HWACCEL=""
     ADDI_FILTERS=""
+    ADDI_CFLAGS=""
+    ADDI_LDFLAGS=""
+    ADDI_EXTRA_LIBS=""
 
+    # If there is an enable-qsv option, install libmfx
     if [ "$INTEL_QSV_HWACCELS" = true ] ; then
         ADDI_LIBS+=" --enable-libmfx"
         ADDI_ENCODER+=",h264_qsv,hevc_qsv"
@@ -214,32 +222,46 @@ install_ffmpeg()
         ADDI_FILTERS=""
     fi
 
-    if [ "$NVIDIA_VIDEO_CODEC_HWACCELS" = true ] ; then
-        ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
-        ADDI_LIBS+=" --enable-cuda-nvcc --enable-cuda-llvm --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec --enable-cuvid"
-        ADDI_ENCODER+=",h264_nvenc,hevc_nvenc"
-        ADDI_DECODER+=",h264_nvdec,hevc_nvdec,h264_cuvid,hevc_cuvid"
+    # If there is an enable-nvc option, install nvcodec
+    if [ "$NVIDIA_NV_CODEC_HWACCELS" = true ] ; then
         ADDI_CFLAGS+="-I/usr/local/cuda/include"
         ADDI_LDFLAGS="-L/usr/local/cuda/lib64"
+        ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
+        ADDI_LIBS+=" --enable-cuda-nvcc --enable-cuda-llvm --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec --enable-cuvid"
         ADDI_HWACCEL="--enable-hwaccel=cuda,cuvid"
-        ADDI_FILTERS=",scale_cuda,hwdownload,hwupload,hwupload_cuda"
+        ADDI_ENCODER+=",h264_nvenc,hevc_nvenc"
+        ADDI_DECODER+=",h264_nvdec,hevc_nvdec,h264_cuvid,hevc_cuvid"
+        ADDI_FILTERS+=",scale_cuda,hwdownload,hwupload,hwupload_cuda"
+        
         PATH=$PATH:/usr/local/nvidia/bin:/usr/local/cuda/bin
     fi
 
+    # If there is an enable-xma option. install xmapi
+    if [ "$XILINX_XMA_CODEC_HWACCELS" = true ] ; then
+        FFMPEG_DOWNLOAD_URL=https://github.com/Xilinx/app-ffmpeg4-xma/archive/refs/tags/v4.4.1.tar.gz
+        ADDI_ENCODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
+        ADDI_DECODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
+        ADDI_FILTERS+=",multiscale_xma,xvbm_convert"
+        ADDI_LIBS+=" --enable-libxma2api --enable-libxvbm --enable-libxrm"
+        ADDI_CFLAGS+=" -I/opt/xilinx/xrt/include/xma2"
+        ADDI_LDFLAGS=" -L/opt/xilinx/xrt/lib -Wl,-rpath,/opt/xilinx/xrt/lib"
+        ADDI_EXTRA_LIBS=" --extra-libs=-lxma2api --extra-libs=-lxrt_core --extra-libs=-lxrt_coreutil --extra-libs=-lpthread"
+    fi
+
     # Options are added by external scripts.
-    if [[ -n "${EXT_FFMPEG_LICENSE}" ]]; then 
+    if [[ -n "${EXT_FFMPEG_LICENSE}" ]]; then
         ADDI_LICENSE+=${EXT_FFMPEG_LICENSE}
     fi
 
-    if [[ -n "${EXT_FFMPEG_LIBS}" ]] ; then 
+    if [[ -n "${EXT_FFMPEG_LIBS}" ]] ; then
         ADDI_LIBS+=${EXT_FFMPEG_LIBS}
     fi
 
-    if [[ -n "${EXT_FFMPEG_ENCODER}" ]] ; then 
+    if [[ -n "${EXT_FFMPEG_ENCODER}" ]] ; then
         ADDI_ENCODER+=${EXT_FFMPEG_ENCODER}
     fi
 
-    if [[ -n "${EXT_FFMPEG_DECODER}" ]] ; then 
+    if [[ -n "${EXT_FFMPEG_DECODER}" ]] ; then
         ADDI_DECODER+=${EXT_FFMPEG_DECODER}
     fi
 
@@ -249,7 +271,7 @@ install_ffmpeg()
     # Download
     (rm -rf ${DIR}  && mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n${FFMPEG_VERSION}.tar.gz | tar -xz --strip-components=1 ) || fail_exit "ffmpeg"
+    curl -sLf ${FFMPEG_DOWNLOAD_URL} | tar -xz --strip-components=1 ) || fail_exit "ffmpeg"
 
     # Patch for Enterprise
     if [[ "$(type -t install_patch_ffmpeg)"  == 'function' ]];
@@ -257,33 +279,29 @@ install_ffmpeg()
         install_patch_ffmpeg ${DIR}
     fi
 
-    # Build & Install 
+    # Build & Install
     (cd ${DIR} && PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PREFIX}/lib64/pkgconfig:${PREFIX}/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH} ./configure \
     --prefix="${PREFIX}" \
     --extra-cflags="-I${PREFIX}/include -g ${ADDI_CFLAGS}"  \
-    --extra-ldflags="-L${PREFIX}/lib ${ADDI_LDFLAGS} -Wl,-rpath,${PREFIX}/lib" \
-    --extra-libs=-ldl \
+    --extra-ldflags="-L${PREFIX}/lib -Wl,-rpath,${PREFIX}/lib ${ADDI_LDFLAGS}" \
+    --extra-libs=-ldl ${ADDI_EXTRA_LIBS} \
     ${ADDI_LICENSE} \
-    --enable-shared \
-    --disable-static \
-    --disable-debug \
-    --disable-doc \
-    --disable-programs  \
-    --disable-avdevice --disable-dct --disable-dwt --disable-lsp --disable-lzo --disable-rdft --disable-faan --disable-pixelutils \
-    --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libopenh264 --enable-openssl ${ADDI_LIBS} \
-    --disable-everything \
-    --disable-fast-unaligned \
+    --disable-everything --disable-programs --disable-avdevice --disable-dct --disable-dwt --disable-lsp --disable-lzo --disable-rdft --disable-faan --disable-pixelutils \
+    --enable-shared --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libopenh264 --enable-openssl --enable-network ${ADDI_LIBS} \
     ${ADDI_HWACCEL} \
     --enable-encoder=libvpx_vp8,libopus,libfdk_aac,libopenh264,mjpeg,png${ADDI_ENCODER} \
     --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8${ADDI_DECODER} \
     --enable-parser=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
-    --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp,tls,rtmps --enable-demuxer=rtsp,flv,live_flv,mp4 --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
+    --enable-protocol=tcp,udp,rtp,file,rtmp,tls,rtmps \
+    --enable-demuxer=rtsp,flv,live_flv,mp4 \
+    --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
     --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb,format${ADDI_FILTERS} && \
     make -j$(nproc) && \
     sudo make install && \
     sudo rm -rf ${PREFIX}/share && \
     rm -rf ${DIR}) || fail_exit "ffmpeg"
 }
+
 
 install_jemalloc()
 {
@@ -434,9 +452,13 @@ case $i in
     shift
     ;;
     --enable-nvc)
-    NVIDIA_VIDEO_CODEC_HWACCELS=true
+    NVIDIA_NV_CODEC_HWACCELS=true
     shift
     ;;
+    --enable-xma)
+    XILINX_XMA_CODEC_HWACCELS=true
+    shift
+    ;;    
     *)
             # unknown option
     ;;
