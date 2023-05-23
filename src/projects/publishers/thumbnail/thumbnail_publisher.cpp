@@ -221,34 +221,14 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		if (request_url->App().IsEmpty() == true || request_url->Stream().IsEmpty() == true || request_url->File().IsEmpty() == true)
-		{
-			logtw("Invalid request url: %s", request->GetUri().CStr());
-			response->SetStatusCode(http::StatusCode::BadRequest);
-			return http::svr::NextHandler::DoNotCall;
-		}
+		info::VHostAppName vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
+		ov::String host_name = request_url->Host();
+		ov::String stream_name = request_url->Stream();
 
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
-		if (vhost_app_name.IsValid() == false)
-		{
-			logte("Could not resolve application name from domain: %s", request_url->Host().CStr());
-			response->SetStatusCode(http::StatusCode::NotFound);
-			return http::svr::NextHandler::DoNotCall;
-		}
-
-		auto app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(vhost_app_name));
-		if (app_info == nullptr)
-		{
-			logtw("Could not found application");
-			response->SetStatusCode(http::StatusCode::NotFound);
-			return http::svr::NextHandler::DoNotCall;
-		}
-
-		auto host_name = request_url->Host();
-		auto stream_name = request_url->Stream();
+		// Don't validate vhost_app_name here, it can be changed by AdmissionWebhooks
+		// And the application may not exist here, it can be created by PullStream 
 
 		bool access_control_enabled = IsAccessControlEnabled(request_url);
-
 		// Access Control
 		if (access_control_enabled == true)
 		{
@@ -321,24 +301,6 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 			}
 		}
 
-		auto app_config = app_info->GetConfig();
-		auto thumbnail_config = app_config.GetPublishers().GetThumbnailPublisher();
-
-		// Check CORS
-		auto application = std::static_pointer_cast<ThumbnailApplication>(GetApplicationByName(vhost_app_name));
-		if (application == nullptr)
-		{
-			response->AppendString("Could not found application of thumbnail publisher");
-			response->SetStatusCode(http::StatusCode::NotFound);
-			response->Response();
-
-			exchange->Release();
-
-			return http::svr::NextHandler::DoNotCall;
-		}
-
-		application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response);
-
 		// Check Stream
 		auto stream = GetStream(vhost_app_name, request_url->Stream());		
 		if (stream == nullptr)
@@ -365,6 +327,21 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 			exchange->Release();				
 			return http::svr::NextHandler::DoNotCall;
 		}
+
+		// Check CORS
+		auto application = std::static_pointer_cast<ThumbnailApplication>(stream->GetApplication());
+		if (application == nullptr)
+		{
+			response->AppendString("Could not found application of thumbnail publisher");
+			response->SetStatusCode(http::StatusCode::NotFound);
+			response->Response();
+
+			exchange->Release();
+
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response);
 
 		// Check Extentions
 		auto media_codec_id = cmn::MediaCodecId::None;
