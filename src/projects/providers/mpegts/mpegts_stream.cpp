@@ -118,6 +118,14 @@ namespace pvd
 					return false;
 				}
 
+				int64_t origin_pts = es->Pts();
+				int64_t origin_dts = es->Dts();
+
+				auto pts = origin_pts;
+				auto dts = origin_dts;
+
+				AdjustTimestampByBase(track->GetId(), pts, dts, 0x1FFFFFFFFLL);
+
 				if (es->IsVideoStream())
 				{
 					auto bitstream = cmn::BitstreamFormat::Unknown;
@@ -137,9 +145,6 @@ namespace pvd
 							break;
 					}
 
-					auto pts = AdjustTimestampByBase(track->GetId(), es->Pts(), es->Dts(), 0x1FFFFFFFFLL);
-					auto dts = es->Dts() + (pts - es->Pts());
-					
 					auto data = std::make_shared<ov::Data>(es->Payload(), es->PayloadLength());
 					auto media_packet = std::make_shared<MediaPacket>(GetMsid(),
 																	  cmn::MediaType::Video,
@@ -150,19 +155,12 @@ namespace pvd
 																	  bitstream,
 																	  packet_type);
 					SendFrame(media_packet);
-
-					{
-						logtd("Video Frame - PID(%d) AdjustPTS(%lld) AdjustDTS(%lld) PTS(%lld) DTS(%lld) Size(%d)", es->PID(), pts, dts, es->Pts(), es->Dts(), es->PayloadLength());
-					}
 				}
 				else if (es->IsAudioStream())
 				{
 					auto payload = es->Payload();
 					auto payload_length = es->PayloadLength();
-
-					auto pts = AdjustTimestampByBase(track->GetId(), es->Pts(), es->Dts(), 0x1FFFFFFFFLL);
-					auto dts = es->Dts() + (pts - es->Pts());
-					
+				
 					auto data = std::make_shared<ov::Data>(payload, payload_length);
 					auto media_packet = std::make_shared<MediaPacket>(GetMsid(),
 																	  cmn::MediaType::Audio,
@@ -173,11 +171,9 @@ namespace pvd
 																	  cmn::BitstreamFormat::AAC_ADTS,
 																	  cmn::PacketType::RAW);
 					SendFrame(media_packet);
-
-					{
-						logtd("Audio Frame - PID(%d) AdjustPTS(%lld) AdjustDTS(%lld) PTS(%lld) DTS(%lld) Size(%d)", es->PID(), pts, dts, es->Pts(), es->Dts(), es->PayloadLength());
-					}
 				}
+
+				logtd("Frame - PID(%d) AdjustPTS(%lld) AdjustDTS(%lld) PTS(%lld) DTS(%lld) Size(%d)", es->PID(), pts, dts, origin_pts, origin_dts, es->PayloadLength());
 			}
 		}
 

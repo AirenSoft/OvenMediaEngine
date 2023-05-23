@@ -418,7 +418,9 @@ namespace pvd
 			UpdateTimestamp(media_packet);
 
 			// The purpose of updating the global Timestamp value when the URL is changed due to PullStream's failover.
-			AdjustTimestampByBase(media_packet->GetTrackId(), media_packet->GetPts(), media_packet->GetDts(), std::numeric_limits<int64_t>::max());
+			auto pts = media_packet->GetPts();
+			auto dts = media_packet->GetDts();
+			AdjustTimestampByBase(media_packet->GetTrackId(), pts, dts, std::numeric_limits<int64_t>::max());
 
 			// Send to MediaRouter
 			SendFrame(std::move(media_packet));
