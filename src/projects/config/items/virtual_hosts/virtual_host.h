@@ -79,6 +79,9 @@ namespace cfg
 
 				Register<Optional>("Origins", &_origins);
 				Register<Optional>("OriginMapStore", &_origin_map_store);
+
+				Register<Optional>("CrossDomains", &_cross_domains);
+				
 				Register<Optional>("Applications", &_applications);
 			}
 		};
