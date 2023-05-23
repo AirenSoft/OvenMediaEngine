@@ -297,6 +297,11 @@
 			</OriginMapStore>
 			-->
 
+			<!-- Default CORS Settings -->
+			<CrossDomains>
+				<Url>*</Url>
+			</CrossDomains>
+
 			<!-- Settings for applications -->
 			<Applications>
 				<Application>

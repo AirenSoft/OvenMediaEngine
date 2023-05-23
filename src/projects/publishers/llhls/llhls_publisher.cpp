@@ -228,6 +228,14 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
+		auto vhost_name = ocst::Orchestrator::GetInstance()->GetVhostNameFromDomain(request_url->Host());
+		if (vhost_name.IsEmpty())
+		{
+			logte("Could not resolve vhost name from domain: %s", request_url->Host().CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
 		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
 		if (vhost_app_name.IsValid() == false)
 		{
@@ -236,20 +244,24 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		response->SetStatusCode(http::StatusCode::OK);
-		response->SetHeader("Content-Encoding", "gzip");
-		response->SetHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-		response->SetHeader("Access-Control-Allow-Private-Network", "true");
-
 		auto application = std::static_pointer_cast<LLHlsApplication>(GetApplicationByName(vhost_app_name));
-		if (application == nullptr)
+		if (application != nullptr)
 		{
-			logte("Could not found application: %s", vhost_app_name.CStr());
-			response->SetStatusCode(http::StatusCode::NotFound);
-			return http::svr::NextHandler::DoNotCall;
+			application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response, {http::Method::Options, http::Method::Get});
+		}
+		else
+		{
+			// CORS from default cors manager
+			auto cors_manager_ref_opt = ocst::Orchestrator::GetInstance()->GetCorsManager(vhost_name);
+			if (cors_manager_ref_opt.has_value())
+			{
+				const auto &cors_manager = cors_manager_ref_opt.value().get();
+				cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
+			}
 		}
 
-		application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response);
+		response->SetStatusCode(http::StatusCode::OK);
+		response->SetHeader("Access-Control-Allow-Private-Network", "true");
 
 		return http::svr::NextHandler::DoNotCall;
 	});
@@ -362,24 +374,17 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		auto application = std::static_pointer_cast<LLHlsApplication>(GetApplicationByName(vhost_app_name));
-		if (application == nullptr)
-		{
-			logte("Could not found application: %s", vhost_app_name.CStr());
-			response->SetStatusCode(http::StatusCode::NotFound);
-			return http::svr::NextHandler::DoNotCall;
-		}
-
-		auto origin_mode = application->IsOriginMode();
-
-		auto stream = application->GetStream(final_url->Stream());
+		auto stream = std::static_pointer_cast<LLHlsStream>(GetStream(vhost_app_name, stream_name));
 		if (stream == nullptr)
 		{
-			// If the stream does not exists, request to the provider
-			stream = PullStream(final_url, vhost_app_name, host_name, stream_name);
-			if (stream == nullptr)
+			stream = std::dynamic_pointer_cast<LLHlsStream>(PullStream(final_url, vhost_app_name, host_name, stream_name));
+			if (stream != nullptr)
 			{
-				logte("Could not pull the stream : %s", final_url->Stream().CStr());
+				logti("URL %s is requested", stream->GetMediaSource().CStr());
+			}
+			else
+			{
+				logte("Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
 				response->SetStatusCode(http::StatusCode::NotFound);
 				return http::svr::NextHandler::DoNotCall;
 			}
@@ -391,6 +396,15 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			response->SetStatusCode(http::StatusCode::NotFound);
 			return http::svr::NextHandler::DoNotCall;
 		}
+
+		auto application = std::static_pointer_cast<LLHlsApplication>(stream->GetApplication());
+		if (application == nullptr)
+		{
+			logte("Cannot find application (%s)", vhost_app_name.CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+		auto origin_mode = application->IsOriginMode();
 
 		std::shared_ptr<LLHlsSession> session = nullptr;
 

@@ -22,6 +22,14 @@ ThumbnailApplication::ThumbnailApplication(const std::shared_ptr<pub::Publisher>
 	{
 		_cors_manager.SetCrossDomains(application_info.GetName(), cross_domains);
 	}
+	else
+	{
+		const auto &default_cross_domains = application_info.GetHostInfo().GetCrossDomainList(&is_parsed);
+		if (is_parsed)
+		{
+			_cors_manager.SetCrossDomains(application_info.GetName(), default_cross_domains);
+		}
+	}
 }
 
 ThumbnailApplication::~ThumbnailApplication()

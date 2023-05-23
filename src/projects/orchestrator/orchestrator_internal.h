@@ -101,7 +101,6 @@ namespace ocst
 		// stream uri, stream
 		std::map<ov::String, std::shared_ptr<pvd::Stream>> _stream_map;
 
-
 		// Module Timer : It is called periodically by the timer
 		ov::DelayQueue _timer{"Orchestrator"};
 	};

@@ -13,6 +13,7 @@
 #include <base/publisher/stream.h>
 #include <base/mediarouter/mediarouter_application_observer.h>
 #include <modules/origin_map_client/origin_map_client.h>
+#include <modules/http/cors/cors_manager.h>
 #include <regex>
 
 #include "interfaces.h"
@@ -166,6 +167,9 @@ namespace ocst
 		bool is_origin_map_store_enabled = false;
 		ov::String origin_base_url;
 		std::shared_ptr<OriginMapClient> origin_map_client = nullptr;
+
+		// Default CORS manager
+		http::CorsManager default_cors_manager;
 
 		// Template of dynamic application configuration
 		cfg::vhost::app::Application app_cfg_template;

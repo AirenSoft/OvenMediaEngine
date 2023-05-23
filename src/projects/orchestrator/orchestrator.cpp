@@ -8,9 +8,11 @@
 //==============================================================================
 #include "orchestrator.h"
 
+#include <functional>
+
 #include <base/mediarouter/mediarouter_interface.h>
-#include <base/provider/stream.h>
 #include <base/provider/pull_provider/stream_props.h>
+#include <base/provider/stream.h>
 #include <mediarouter/mediarouter.h>
 #include <monitoring/monitoring.h>
 
@@ -34,11 +36,11 @@ namespace ocst
 		}
 
 		_timer.Push(
-		[this](void *paramter) -> ov::DelayQueueAction {
-			DeleteUnusedDynamicApplications();
-			return ov::DelayQueueAction::Repeat;
-		},
-		10000);
+			[this](void *paramter) -> ov::DelayQueueAction {
+				DeleteUnusedDynamicApplications();
+				return ov::DelayQueueAction::Repeat;
+			},
+			10000);
 		_timer.Start();
 
 		return true;
@@ -124,7 +126,6 @@ namespace ocst
 		return true;
 	}
 
-
 	Result Orchestrator::CreateVirtualHost(const cfg::vhost::VirtualHost &vhost_cfg)
 	{
 		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
@@ -165,7 +166,7 @@ namespace ocst
 			}
 			else
 			{
-				if(CreateApplication(vhost_info, app_cfg) != Result::Succeeded)
+				if (CreateApplication(vhost_info, app_cfg) != Result::Succeeded)
 				{
 					// Rollback
 					DeleteVirtualHost(vhost_info);
@@ -183,12 +184,12 @@ namespace ocst
 
 		// Delete Applications
 		auto vhost = GetVirtualHost(vhost_info.GetName());
-		// Copy app list so that 
+		// Copy app list so that
 		auto app_map = vhost->app_map;
-		for(const auto &item : app_map)
+		for (const auto &item : app_map)
 		{
 			auto app = item.second;
-			if(DeleteApplication(app->app_info) != Result::Succeeded)
+			if (DeleteApplication(app->app_info) != Result::Succeeded)
 			{
 				logtc("Failed to delete an application (%s) in virtual host (%s)", app->app_info.GetName().CStr(), vhost_info.GetName().CStr());
 				return Result::Failed;
@@ -281,9 +282,22 @@ namespace ocst
 
 		auto vhost = OrchestratorInternal::GetVirtualHost(vhost_name);
 
-		if(vhost != nullptr)
+		if (vhost != nullptr)
 		{
 			return vhost->host_info;
+		}
+
+		return std::nullopt;
+	}
+
+	std::optional<std::reference_wrapper<const http::CorsManager>> Orchestrator::GetCorsManager(const ov::String &vhost_name)
+	{
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+
+		auto vhost = OrchestratorInternal::GetVirtualHost(vhost_name);
+		if (vhost != nullptr)
+		{
+			return std::ref(vhost->default_cors_manager);
 		}
 
 		return std::nullopt;
@@ -361,7 +375,6 @@ namespace ocst
 
 		return OrchestratorInternal::GetApplicationInfo(vhost_app_name);
 	}
-
 
 	bool Orchestrator::UpdateVirtualHosts(const std::vector<info::Host> &host_list)
 	{
@@ -600,9 +613,9 @@ namespace ocst
 	}
 
 	bool Orchestrator::RequestPullStreamWithUrls(
-			const std::shared_ptr<const ov::Url> &request_from,
-			const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
-			const std::vector<ov::String> &url_list, off_t offset, const std::shared_ptr<pvd::PullStreamProperties> &properties)
+		const std::shared_ptr<const ov::Url> &request_from,
+		const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
+		const std::vector<ov::String> &url_list, off_t offset, const std::shared_ptr<pvd::PullStreamProperties> &properties)
 	{
 		if (url_list.empty() == true)
 		{
@@ -637,7 +650,7 @@ namespace ocst
 				if (app_info.IsValid() == false)
 				{
 					// Create a new application using application template if exists
-					
+
 					// Get vhost info
 					auto vhost = GetVirtualHost(vhost_app_name.GetVHostName());
 
@@ -650,7 +663,7 @@ namespace ocst
 					}
 
 					app_cfg.SetName(vhost_app_name.GetAppName());
-					
+
 					logti("Trying to create dynamic application for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 					if (CreateApplication(vhost->host_info, app_cfg, true) != Result::Succeeded)
 					{
@@ -671,7 +684,7 @@ namespace ocst
 			logti("Trying to pull stream [%s/%s] from provider using URL: %s",
 				  vhost_app_name.CStr(), stream_name.CStr(),
 				  GetModuleTypeName(provider_module->GetModuleType()).CStr());
-			
+
 			auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset, properties);
 
 			if (stream != nullptr)
@@ -748,7 +761,7 @@ namespace ocst
 			if (app_info.IsValid() == false)
 			{
 				// Create a new application using application template if exists
-					
+
 				// Get vhost info
 				auto vhost = GetVirtualHost(vhost_app_name.GetVHostName());
 
@@ -761,7 +774,7 @@ namespace ocst
 				}
 
 				app_cfg.SetName(vhost_app_name.GetAppName());
-				
+
 				logti("Trying to create dynamic application for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 				if (CreateApplication(vhost->host_info, app_cfg, true) != Result::Succeeded)
 				{
@@ -799,7 +812,7 @@ namespace ocst
 		properties->EnableFailback(matched_origin->failback);
 		properties->EnableRelay(matched_origin->relay);
 		properties->EnableFromOriginMapStore(false);
-		
+
 		auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset, properties);
 
 		if (stream != nullptr)
@@ -836,21 +849,21 @@ namespace ocst
 
 	bool Orchestrator::OnStreamCreated(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s/%s stream of %s is created", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
+		logtd("%s/%s stream of %s is created", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream() ? "inbound" : "outbound");
 
 		return true;
 	}
 
 	bool Orchestrator::OnStreamDeleted(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logti("%s/%s stream of %s is deleted", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
+		logti("%s/%s stream of %s is deleted", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream() ? "inbound" : "outbound");
 
 		return true;
 	}
 
 	bool Orchestrator::OnStreamPrepared(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s/%s stream of %s is parsed", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
+		logtd("%s/%s stream of %s is parsed", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream() ? "inbound" : "outbound");
 
 		CreatePersistentStreamIfNeed(app_info, info);
 
@@ -859,7 +872,7 @@ namespace ocst
 
 	bool Orchestrator::OnStreamUpdated(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s/%s stream of %s is updated", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream()?"inbound":"outbound");
+		logtd("%s/%s stream of %s is updated", app_info.GetName().CStr(), info->GetName().CStr(), info->IsInputStream() ? "inbound" : "outbound");
 		return true;
 	}
 
@@ -925,7 +938,7 @@ namespace ocst
 
 	CommonErrorCode Orchestrator::IsExistStreamInOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name) const
 	{
-		//lock 
+		//lock
 		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 		auto vhost = GetVirtualHost(vhost_app_name);
@@ -940,7 +953,7 @@ namespace ocst
 			// disabled by user
 			return CommonErrorCode::DISABLED;
 		}
-		
+
 		auto client = vhost->origin_map_client;
 		if (client == nullptr)
 		{
@@ -956,7 +969,7 @@ namespace ocst
 
 	std::shared_ptr<ov::Url> Orchestrator::GetOriginUrlFromOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name) const
 	{
-		//lock 
+		//lock
 		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 		auto vhost = GetVirtualHost(vhost_app_name);
@@ -971,7 +984,7 @@ namespace ocst
 			// disabled by user
 			return nullptr;
 		}
-		
+
 		auto client = vhost->origin_map_client;
 		if (client == nullptr)
 		{
@@ -992,7 +1005,7 @@ namespace ocst
 
 	CommonErrorCode Orchestrator::RegisterStreamToOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
-		//lock 
+		//lock
 		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 		auto vhost = GetVirtualHost(vhost_app_name);
@@ -1007,7 +1020,7 @@ namespace ocst
 			// disabled by user
 			return CommonErrorCode::DISABLED;
 		}
-		
+
 		auto client = vhost->origin_map_client;
 		if (client == nullptr)
 		{
@@ -1027,7 +1040,7 @@ namespace ocst
 
 	CommonErrorCode Orchestrator::UnregisterStreamFromOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
-		//lock 
+		//lock
 		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 		auto vhost = GetVirtualHost(vhost_app_name);
@@ -1042,7 +1055,7 @@ namespace ocst
 			// disabled by user
 			return CommonErrorCode::DISABLED;
 		}
-		
+
 		auto client = vhost->origin_map_client;
 		if (client == nullptr)
 		{
@@ -1060,7 +1073,7 @@ namespace ocst
 		return CommonErrorCode::ERROR;
 	}
 
-	// This feature is set in Application.PersistentStream. Creates a persistent and non-terminating stream based on the input stream. 
+	// This feature is set in Application.PersistentStream. Creates a persistent and non-terminating stream based on the input stream.
 	// If the input stream is terminated, it is played as a fallback stream.
 	// - Create a persistent stream only for the input stream.
 	// - Main stream will use Input Stream. The fallback stream will use the stream specified in PersistentStreams.Stream.FallbackStreamName. It can only be used within the same application.
@@ -1069,13 +1082,13 @@ namespace ocst
 	CommonErrorCode Orchestrator::CreatePersistentStreamIfNeed(const info::Application &app_info, const std::shared_ptr<info::Stream> &stream_info)
 	{
 		// Streams created by OVT, FILE or Transcoder Provider are excluded.
-		if(stream_info->GetSourceType() == StreamSourceType::Ovt || stream_info->GetSourceType() == StreamSourceType::File || stream_info->GetSourceType() == StreamSourceType::Transcoder)
+		if (stream_info->GetSourceType() == StreamSourceType::Ovt || stream_info->GetSourceType() == StreamSourceType::File || stream_info->GetSourceType() == StreamSourceType::Transcoder)
 		{
 			return CommonErrorCode::DISABLED;
 		}
 
 		auto persist_streams = app_info.GetConfig().GetPersistentStreams();
-		for(auto conf : persist_streams.GetStreams())
+		for (auto conf : persist_streams.GetStreams())
 		{
 			auto ovt_scheme = ov::String("ovt");
 			auto ovt_port = _server_config->GetBind().GetPublishers().GetOvt().GetPort().GetPort();
@@ -1092,7 +1105,7 @@ namespace ocst
 
 			// Check that the created stream matches the SourceStreamMatch value
 			ov::Regex regex(ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(source_stream_match)));
-			if(regex.Matches(source_stream_name.CStr()).IsMatched() == false)
+			if (regex.Matches(source_stream_name.CStr()).IsMatched() == false)
 			{
 				continue;
 			}
@@ -1102,8 +1115,8 @@ namespace ocst
 
 			// Set url of main/fallback stream
 			std::vector<ov::String> url_list;
-			url_list.push_back(ov::String::FormatString("%s://localhost:%d/%s/%s", ovt_scheme.CStr(), ovt_port, app_name.CStr(), source_stream_name.CStr(), vhost_name.CStr())); // Main
-			url_list.push_back(ov::String::FormatString("%s://localhost:%d/%s/%s", ovt_scheme.CStr(), ovt_port, app_name.CStr(), fallback_stream_name.CStr(), vhost_name.CStr())); // Fallback
+			url_list.push_back(ov::String::FormatString("%s://localhost:%d/%s/%s", ovt_scheme.CStr(), ovt_port, app_name.CStr(), source_stream_name.CStr(), vhost_name.CStr()));	// Main
+			url_list.push_back(ov::String::FormatString("%s://localhost:%d/%s/%s", ovt_scheme.CStr(), ovt_port, app_name.CStr(), fallback_stream_name.CStr(), vhost_name.CStr()));	// Fallback
 
 			// Persistent = true
 			// Failback = true
@@ -1114,8 +1127,8 @@ namespace ocst
 			stream_props->EnableRelay(false);
 			stream_props->EnableFromOriginMapStore(false);
 
- 			// Request pull stream
-			if( RequestPullStreamWithUrls(nullptr, app_info.GetName(), new_stream_name, url_list, 0, stream_props) == false)
+			// Request pull stream
+			if (RequestPullStreamWithUrls(nullptr, app_info.GetName(), new_stream_name, url_list, 0, stream_props) == false)
 			{
 				logte("Could not create persistent stream : %s/%s", app_name.CStr(), new_stream_name.CStr());
 				return CommonErrorCode::ERROR;

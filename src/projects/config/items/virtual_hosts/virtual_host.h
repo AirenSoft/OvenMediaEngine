@@ -9,6 +9,7 @@
 #pragma once
 
 #include "../common/host/host.h"
+#include "../common/cross_domain_support.h"
 #include "access_control/admission_webhooks.h"
 #include "access_control/signed_policy.h"
 #include "access_control/signed_token.h"
@@ -20,7 +21,7 @@ namespace cfg
 {
 	namespace vhost
 	{
-		struct VirtualHost : public Item
+		struct VirtualHost : public Item, public cmn::CrossDomainSupport
 		{
 		protected:
 			ov::String _name;

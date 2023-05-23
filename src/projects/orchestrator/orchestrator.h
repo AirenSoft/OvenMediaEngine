@@ -99,6 +99,9 @@ namespace ocst
 		/// @return A new application name corresponding to domain/app
 		info::VHostAppName ResolveApplicationNameFromDomain(const ov::String &domain_name, const ov::String &app_name) const;
 
+		// Get CORS manager for the specified vhost_name
+		std::optional<std::reference_wrapper<const http::CorsManager>> GetCorsManager(const ov::String &vhost_name);
+
 		bool GetUrlListForLocation(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name, std::vector<ov::String> *url_list);
 
 		const info::Application &GetApplicationInfo(const ov::String &vhost_name, const ov::String &app_name) const;

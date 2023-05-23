@@ -304,12 +304,21 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			response->SetStatusCode(http::StatusCode::NotFound);
 			return http::svr::NextHandler::DoNotCall;
 		}
+		
+		if (_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response, {http::Method::Options, http::Method::Post, http::Method::Patch, http::Method::Delete}) == false)
+		{
+			// CORS from default cors manager from virtual host
+			auto vhost_name = ocst::Orchestrator::GetInstance()->GetVhostNameFromDomain(request_url->Host());
+			auto cors_manager_ref_opt = ocst::Orchestrator::GetInstance()->GetCorsManager(vhost_name);
+			if (cors_manager_ref_opt.has_value())
+			{
+				const auto &cors_manager = cors_manager_ref_opt.value().get();
+				cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
+			}
+		}
 
 		response->SetStatusCode(http::StatusCode::OK);
-		response->SetHeader("Access-Control-Allow-Methods", "POST, DELETE, PATCH, OPTIONS");
 		response->SetHeader("Access-Control-Allow-Private-Network", "true");
-
-		_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
 
 		return http::svr::NextHandler::DoNotCall;
 	});
@@ -503,6 +512,8 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 		}
 
 		auto stream_name = request_url->Stream();
+
+		//TODO(way) : If url is changed by Webhooks, we use the changed url in PATCH request like delete request.
 
 		// Set CORS header in response
 		_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
