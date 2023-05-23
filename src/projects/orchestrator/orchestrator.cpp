@@ -22,7 +22,7 @@ namespace ocst
 {
 	bool Orchestrator::StartServer(const std::shared_ptr<const cfg::Server> &server_config)
 	{
-		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex, _application_mutex);
 
 		_server_config = server_config;
 
@@ -66,6 +66,7 @@ namespace ocst
 					if (app_info.IsDynamicApp() == true && app->IsUnusedFor(60) == true)
 					{
 						logti("There are no streams in the dynamic application for 60 seconds. Delete the application: %s", app_info.GetName().CStr());
+						std::lock_guard<std::recursive_mutex> lock(_application_mutex);
 						auto result = OrchestratorInternal::DeleteApplication(app_info);
 						if (result != Result::Succeeded)
 						{
@@ -80,7 +81,7 @@ namespace ocst
 
 	ocst::Result Orchestrator::Release()
 	{
-		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex, _application_mutex);
 
 		// Mark all items as NeedToCheck
 		for (auto &vhost_item : _virtual_host_list)
@@ -128,7 +129,7 @@ namespace ocst
 
 	Result Orchestrator::CreateVirtualHost(const cfg::vhost::VirtualHost &vhost_cfg)
 	{
-		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex, _application_mutex);
 
 		info::Host vhost_info(_server_config->GetName(), _server_config->GetID(), vhost_cfg);
 
@@ -180,7 +181,7 @@ namespace ocst
 
 	Result Orchestrator::DeleteVirtualHost(const info::Host &vhost_info)
 	{
-		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex, _application_mutex);
 
 		// Delete Applications
 		auto vhost = GetVirtualHost(vhost_info.GetName());
@@ -305,7 +306,7 @@ namespace ocst
 
 	ocst::Result Orchestrator::CreateApplication(const info::Host &host_info, const cfg::vhost::app::Application &app_config, bool is_dynamic)
 	{
-		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex, _application_mutex);
 
 		auto vhost_name = host_info.GetName();
 
@@ -336,7 +337,7 @@ namespace ocst
 
 	ocst::Result Orchestrator::DeleteApplication(const info::Application &app_info)
 	{
-		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex, _application_mutex);
 
 		auto result = OrchestratorInternal::DeleteApplication(app_info);
 		switch (result)
@@ -623,8 +624,8 @@ namespace ocst
 			return false;
 		}
 
-		// MUST NOT delete application while this function is running
-		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
+		// Any applications MUST NOT be deleted during this function
+		std::lock_guard<std::recursive_mutex> app_lock(_application_mutex);
 
 		auto url = url_list[0];
 		auto parsed_url = ov::Url::Parse(url);
@@ -634,6 +635,8 @@ namespace ocst
 			std::shared_ptr<PullProviderModuleInterface> provider_module;
 			auto app_info = info::Application::GetInvalidApplication();
 			{
+				// _virtual_host_map_mutex is widly used in Orchestrator so we need to lock it shortly
+				auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 				{
 					auto scoped_lock_for_module_list = std::scoped_lock(_module_list_mutex);
 					provider_module = GetProviderModuleForScheme(parsed_url->Scheme());
@@ -716,8 +719,8 @@ namespace ocst
 		const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
 		off_t offset)
 	{
-		// MUST NOT delete application while this function is running
-		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
+		// Any applications MUST NOT be deleted during this function
+		std::lock_guard<std::recursive_mutex> app_lock(_application_mutex);
 
 		std::shared_ptr<PullProviderModuleInterface> provider_module;
 		auto app_info = info::Application::GetInvalidApplication();
@@ -728,6 +731,8 @@ namespace ocst
 
 		auto &host_name = request_from->Host();
 		{
+			auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
+
 			std::vector<ov::String> url_list_in_map;
 
 			if (OrchestratorInternal::GetUrlListForLocation(vhost_app_name, host_name, stream_name, &url_list_in_map, &matched_origin, &matched_host) == false)

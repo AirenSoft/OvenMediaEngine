@@ -196,6 +196,9 @@ namespace ocst
 		std::recursive_mutex _module_list_mutex;
 		mutable std::recursive_mutex _virtual_host_map_mutex;
 
+		// The application should not be deleted during the pull stream. Since the _virtual_host_map_mutex is widely used, locking the pull stream to this mutex reduces overall system performance. Therefore, a separate mutex is used.
+		std::recursive_mutex _application_mutex;
+
 	private:
 		void DeleteUnusedDynamicApplications();
 	};
