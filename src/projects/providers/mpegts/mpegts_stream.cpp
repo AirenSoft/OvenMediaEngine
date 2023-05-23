@@ -130,51 +130,6 @@ namespace pvd
 							break;
 						case cmn::MediaCodecId::H265: {
 							bitstream = cmn::BitstreamFormat::H265_ANNEXB;
-
-							// Check if bitstream is keyframe
-							bool keyframe_flag = H265Parser::CheckKeyframe(es->Payload(), es->PayloadLength());
-							if (keyframe_flag == true)
-							{
-								logtd("A Keyframe has been arrived");
-							}
-
-							// H265 Bitstream Parser Test
-							auto nal_unit_list = NalUnitSplitter::Parse(es->Payload(), es->PayloadLength());
-							if (nal_unit_list == nullptr)
-							{
-								logte("Could not parse bitstream into nal units");
-							}
-							else
-							{
-								for (uint32_t i = 0; i < nal_unit_list->GetCount(); i++)
-								{
-									auto nalu = nal_unit_list->GetNalUnit(i);
-
-									H265NalUnitHeader header;
-									if (H265Parser::ParseNalUnitHeader(nalu->GetDataAs<uint8_t>(), nalu->GetLength(), header) == false)
-									{
-										logte("Could not parse nal unit header");
-									}
-									else
-									{
-										logtd("H265 Nal Unit Header Parsed : id:%d len:%d", static_cast<int>(header.GetNalUnitType()), nalu->GetLength());
-									}
-
-									if (header.GetNalUnitType() == H265NALUnitType::SPS)
-									{
-										H265SPS sps;
-										if (H265Parser::ParseSPS(nalu->GetDataAs<uint8_t>(), nalu->GetLength(), sps) == false)
-										{
-											logte("Could not parse sps");
-										}
-										else
-										{
-											logtd("SPS Parsed : %s", sps.GetInfoString().CStr());
-										}
-									}
-								}
-							}
-
 							break;
 						}
 						default:
