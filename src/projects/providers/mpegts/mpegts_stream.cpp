@@ -137,11 +137,9 @@ namespace pvd
 							break;
 					}
 
-					int64_t pts = es->Pts();
-					int64_t dts = es->Dts();
-
-					AdjustTimestamp(pts, dts);
-
+					auto pts = AdjustTimestampByBase(track->GetId(), es->Pts(), es->Dts(), 0x1FFFFFFFFLL);
+					auto dts = es->Dts() + (pts - es->Pts());
+					
 					auto data = std::make_shared<ov::Data>(es->Payload(), es->PayloadLength());
 					auto media_packet = std::make_shared<MediaPacket>(GetMsid(),
 																	  cmn::MediaType::Video,
@@ -153,18 +151,18 @@ namespace pvd
 																	  packet_type);
 					SendFrame(media_packet);
 
-					logtd("Video Frame - PID(%d) PTS(%lld) DTS(%lld) Size(%d)", es->PID(), es->Pts(), es->Dts(), es->PayloadLength());
+					{
+						logtd("Video Frame - PID(%d) AdjustPTS(%lld) AdjustDTS(%lld) PTS(%lld) DTS(%lld) Size(%d)", es->PID(), pts, dts, es->Pts(), es->Dts(), es->PayloadLength());
+					}
 				}
 				else if (es->IsAudioStream())
 				{
 					auto payload = es->Payload();
 					auto payload_length = es->PayloadLength();
 
-					int64_t pts = es->Pts();
-					int64_t dts = es->Dts();
-
-					AdjustTimestamp(pts, dts);
-
+					auto pts = AdjustTimestampByBase(track->GetId(), es->Pts(), es->Dts(), 0x1FFFFFFFFLL);
+					auto dts = es->Dts() + (pts - es->Pts());
+					
 					auto data = std::make_shared<ov::Data>(payload, payload_length);
 					auto media_packet = std::make_shared<MediaPacket>(GetMsid(),
 																	  cmn::MediaType::Audio,
@@ -176,29 +174,14 @@ namespace pvd
 																	  cmn::PacketType::RAW);
 					SendFrame(media_packet);
 
-					logtd("Audio Frame - PID(%d) PTS(%lld) DTS(%lld) Size(%d)", es->PID(), es->Pts(), es->Dts(), es->PayloadLength());
+					{
+						logtd("Audio Frame - PID(%d) AdjustPTS(%lld) AdjustDTS(%lld) PTS(%lld) DTS(%lld) Size(%d)", es->PID(), pts, dts, es->Pts(), es->Dts(), es->PayloadLength());
+					}
 				}
 			}
 		}
 
 		return true;
-	}
-
-	// All timestamp is in 90KHz
-	void MpegTsStream::AdjustTimestamp(int64_t &pts, int64_t &dts)
-	{
-		if (_first_frame == true)
-		{
-			_first_frame = false;
-
-			// PTS value must always be equal to or greater than the DTS value.
-			// Adjust DTS to start from 0.
-			_pts_offset = dts;
-			_dts_offset = dts;
-		}
-
-		pts -= _pts_offset;
-		dts -= _dts_offset;
 	}
 
 	bool MpegTsStream::Publish()
