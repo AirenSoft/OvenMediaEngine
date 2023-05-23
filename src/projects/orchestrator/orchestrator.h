@@ -194,6 +194,6 @@ namespace ocst
 		mutable std::recursive_mutex _virtual_host_map_mutex;
 
 	private:
-		void OnTimer();
+		void DeleteUnusedDynamicApplications();
 	};
 }  // namespace ocst

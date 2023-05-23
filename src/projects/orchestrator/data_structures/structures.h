@@ -130,6 +130,7 @@ namespace ocst
 		std::shared_ptr<pub::Stream> GetPublisherStream(const ov::String &stream_name);
 		size_t GetProviderStreamCount() const;
 		size_t GetPublisherStreamCount() const;
+		bool IsUnusedFor(int seconds) const;
 
 		CallbackInterface *callback = nullptr;
 		info::Application app_info;
@@ -137,6 +138,9 @@ namespace ocst
 		// Stream Name : Stream
 		std::map<ov::String, std::shared_ptr<pvd::Stream>> provider_stream_map;
 		std::map<ov::String, std::shared_ptr<pub::Stream>> publisher_stream_map;
+
+		// unused timer 
+		ov::StopWatch idle_timer;
 	};
 
 	struct VirtualHost

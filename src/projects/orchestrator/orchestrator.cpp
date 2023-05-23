@@ -33,25 +33,24 @@ namespace ocst
 			return false;
 		}
 
-		// Do regular job
-		// This also calls the OnTimer of all registered modules in the future. 
-		// Modules will be able to do light routine work in their functions.
 		_timer.Push(
 		[this](void *paramter) -> ov::DelayQueueAction {
-			OnTimer();
+			DeleteUnusedDynamicApplications();
 			return ov::DelayQueueAction::Repeat;
 		},
-		3000);
+		10000);
 		_timer.Start();
 
 		return true;
 	}
 
-	void Orchestrator::OnTimer()
+	void Orchestrator::DeleteUnusedDynamicApplications()
 	{
 		// [Job] Delete dynamic application if there are no streams
 		{
-			auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
+			// scope lock
+			auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex, _module_list_mutex);
+
 			// Delete dynamic application if there are no streams
 			for (auto &vhost_item : _virtual_host_list)
 			{
@@ -61,10 +60,10 @@ namespace ocst
 					auto app = app_item.second;
 					auto &app_info = app->app_info;
 
-					if (app->GetProviderStreamCount() == 0 && app->GetPublisherStreamCount() == 0 &&
-						 app_info.IsDynamicApp() == true)
+					// Delete dynamic application if there are no streams for 60 seconds
+					if (app_info.IsDynamicApp() == true && app->IsUnusedFor(60) == true)
 					{
-						logti("There are no streams in the dynamic application. Delete the application: %s", app_info.GetName().CStr());
+						logti("There are no streams in the dynamic application for 60 seconds. Delete the application: %s", app_info.GetName().CStr());
 						auto result = OrchestratorInternal::DeleteApplication(app_info);
 						if (result != Result::Succeeded)
 						{
@@ -611,6 +610,9 @@ namespace ocst
 			return false;
 		}
 
+		// MUST NOT delete application while this function is running
+		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
+
 		auto url = url_list[0];
 		auto parsed_url = ov::Url::Parse(url);
 
@@ -618,11 +620,7 @@ namespace ocst
 		{
 			std::shared_ptr<PullProviderModuleInterface> provider_module;
 			auto app_info = info::Application::GetInvalidApplication();
-			Result result = Result::Failed;
-
 			{
-				auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
-
 				{
 					auto scoped_lock_for_module_list = std::scoped_lock(_module_list_mutex);
 					provider_module = GetProviderModuleForScheme(parsed_url->Scheme());
@@ -636,11 +634,7 @@ namespace ocst
 
 				// Check if the application does exists
 				app_info = OrchestratorInternal::GetApplicationInfo(vhost_app_name);
-				if (app_info.IsValid())
-				{
-					result = Result::Exists;
-				}
-				else
+				if (app_info.IsValid() == false)
 				{
 					// Create a new application using application template if exists
 					
@@ -658,8 +652,7 @@ namespace ocst
 					app_cfg.SetName(vhost_app_name.GetAppName());
 					
 					logti("Trying to create dynamic application for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
-					result = CreateApplication(vhost->host_info, app_cfg, true);
-					if (result != Result::Succeeded)
+					if (CreateApplication(vhost->host_info, app_cfg, true) != Result::Succeeded)
 					{
 						logte("Could not create application for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 						return false;
@@ -693,29 +686,6 @@ namespace ocst
 				  vhost_app_name.CStr(), stream_name.CStr(),
 				  GetModuleTypeName(provider_module->GetModuleType()).CStr());
 
-			// Rollback if needed
-			switch (result)
-			{
-				case Result::Failed:
-				case Result::NotExists:
-					// This is a bug - Must be handled above
-					logtc("Result is not expected: %d (This is a bug)", result);
-					OV_ASSERT2(false);
-					break;
-
-				case Result::Succeeded: {
-					auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
-
-					// New application is created. Rollback is required
-					OrchestratorInternal::DeleteApplication(app_info);
-					break;
-				}
-
-				case Result::Exists:
-					// Used a previously created application. Do not need to rollback
-					break;
-			}
-
 			return false;
 		}
 		else
@@ -733,20 +703,18 @@ namespace ocst
 		const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
 		off_t offset)
 	{
+		// MUST NOT delete application while this function is running
+		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
+
 		std::shared_ptr<PullProviderModuleInterface> provider_module;
 		auto app_info = info::Application::GetInvalidApplication();
-		Result result = Result::Failed;
-
 		std::vector<ov::String> url_list;
 
 		Origin *matched_origin = nullptr;
 		Host *matched_host = nullptr;
 
 		auto &host_name = request_from->Host();
-
 		{
-			auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
-
 			std::vector<ov::String> url_list_in_map;
 
 			if (OrchestratorInternal::GetUrlListForLocation(vhost_app_name, host_name, stream_name, &url_list_in_map, &matched_origin, &matched_host) == false)
@@ -777,12 +745,7 @@ namespace ocst
 
 			// Check if the application does exists
 			app_info = OrchestratorInternal::GetApplicationInfo(vhost_app_name);
-
-			if (app_info.IsValid())
-			{
-				result = Result::Exists;
-			}
-			else
+			if (app_info.IsValid() == false)
 			{
 				// Create a new application using application template if exists
 					
@@ -800,8 +763,7 @@ namespace ocst
 				app_cfg.SetName(vhost_app_name.GetAppName());
 				
 				logti("Trying to create dynamic application for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
-				result = CreateApplication(vhost->host_info, app_cfg, true);
-				if (result != Result::Succeeded)
+				if (CreateApplication(vhost->host_info, app_cfg, true) != Result::Succeeded)
 				{
 					logte("Could not create application for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 					return false;
@@ -848,29 +810,6 @@ namespace ocst
 		logte("Could not pull stream [%s/%s] from provider: %s",
 			  vhost_app_name.CStr(), stream_name.CStr(),
 			  GetModuleTypeName(provider_module->GetModuleType()).CStr());
-
-		// Rollback if needed
-		switch (result)
-		{
-			case Result::Failed:
-			case Result::NotExists:
-				// This is a bug - Must be handled above
-				logtc("Result is not expected: %d (This is a bug)", result);
-				OV_ASSERT2(false);
-				break;
-
-			case Result::Succeeded: {
-				auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
-
-				// New application is created. Rollback is required
-				OrchestratorInternal::DeleteApplication(app_info);
-				break;
-			}
-
-			case Result::Exists:
-				// Used a previously created application. Do not need to rollback
-				break;
-		}
 
 		return false;
 	}
