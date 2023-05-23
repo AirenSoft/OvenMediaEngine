@@ -39,7 +39,7 @@ namespace mon
 			}
 
 			auto notification_server_url = ov::Url::Parse(alert.GetUrl());
-			if((notification_server_url == nullptr) || (notification_server_url->Scheme() == nullptr) || (notification_server_url->Host() == nullptr))
+			if(notification_server_url == nullptr)
 			{
 				logte("Could not parse notification url: %s", alert.GetUrl().CStr());
 				return false;

@@ -114,7 +114,7 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const Admission
 		auto secret_key = webhooks_config.GetSecretKey();
 		auto timeout_msec = 500; //webhooks_config.GetTimeoutMsec();
 
-		if((control_server_url == nullptr) || (control_server_url->Scheme() == nullptr) || (control_server_url->Host() == nullptr))
+		if(control_server_url == nullptr)
 		{
 			logte("Could not parse control server url: %s", control_server_url_address.CStr());
 			return {AccessController::VerificationResult::Error, nullptr};
@@ -220,7 +220,7 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const Admission
 		auto secret_key = webhooks_config.GetSecretKey();
 		auto timeout_msec = webhooks_config.GetTimeoutMsec();
 
-		if((control_server_url == nullptr) || (control_server_url->Scheme() == nullptr) || (control_server_url->Host() == nullptr))
+		if(control_server_url == nullptr)
 		{
 			logte("Could not parse control server url: %s", control_server_url_address.CStr());
 			return {AccessController::VerificationResult::Error, nullptr};
