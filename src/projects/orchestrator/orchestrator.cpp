@@ -8,13 +8,13 @@
 //==============================================================================
 #include "orchestrator.h"
 
-#include <functional>
-
 #include <base/mediarouter/mediarouter_interface.h>
 #include <base/provider/pull_provider/stream_props.h>
 #include <base/provider/stream.h>
 #include <mediarouter/mediarouter.h>
 #include <monitoring/monitoring.h>
+
+#include <functional>
 
 #include "orchestrator_private.h"
 
@@ -298,7 +298,7 @@ namespace ocst
 		auto vhost = OrchestratorInternal::GetVirtualHost(vhost_name);
 		if (vhost != nullptr)
 		{
-			return std::ref(vhost->default_cors_manager);
+			return std::ref<const http::CorsManager>(vhost->default_cors_manager);
 		}
 
 		return std::nullopt;
