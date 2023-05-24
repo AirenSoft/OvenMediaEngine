@@ -15,8 +15,6 @@
 
 #include "rtspc_provider.h"
 
-#define OV_LOG_TAG "RtspcStream"
-
 namespace pvd
 {
 	std::shared_ptr<RtspcStream> RtspcStream::Create(const std::shared_ptr<pvd::PullApplication> &application,
@@ -175,6 +173,26 @@ namespace pvd
 		return true;
 	}
 
+	bool RtspcStream::CheckSession()
+	{
+		if(_cseq > 5){
+			if (RequestOptions() == false)
+			{
+				Release();
+				return false;
+			}
+		}
+		else {
+			if (RequestParameter() == false)
+			{
+				Release();
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	bool RtspcStream::ConnectTo()
 	{
 		if (GetState() == State::PLAYING || GetState() == State::TERMINATED)
@@ -225,6 +243,129 @@ namespace pvd
 		}
 
 		SetState(State::CONNECTED);
+
+		return true;
+	}
+
+	bool RtspcStream::RequestParameter()
+	{
+		if (GetState() != State::PLAYING)
+		{
+			return false;
+		}
+
+		auto parameter = std::make_shared<RtspMessage>(RtspMethod::GET_PARAMETER, GetNextCSeq(), _curr_url->ToUrlString(true));
+		parameter->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
+
+		if (_rtsp_session_id.IsEmpty() == false)
+		{
+			parameter->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
+		}
+
+		if (_authorized_scheme == RtspHeaderWWWAuthenticateField::Scheme::Basic)
+		{
+			auto _authorization_field = RtspHeaderAuthorizationField::CreateRtspBasicAuthorizationField(_curr_url->Id(), _curr_url->Password());
+			parameter->AddHeaderField(_authorization_field);
+		}
+		else if (_authorized_scheme == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+		{
+			auto _authorization_field = RtspHeaderAuthorizationField::CreateRtspDigestAuthorizationField(_curr_url->Id(), _curr_url->Password(),
+																											parameter->GetMethodStr(), parameter->GetRequestUri(),
+																											_authorized_realm, _authorized_nonce);
+			parameter->AddHeaderField(_authorization_field);
+		}
+
+		logti("Request Get_Paremeter : %s", parameter->DumpHeader().CStr());
+
+		if (SendRequestMessage(parameter) == false)
+		{
+			SetState(State::ERROR);
+			logte("Could not request GET_PARAMETER to RTSP server (%s)", _curr_url->ToUrlString().CStr());
+			return false;
+		}
+
+		return true;
+	}
+
+	bool RtspcStream::RequestOptions()
+	{
+		if (GetState() != State::PLAYING)
+		{
+			return false;
+		}
+
+		_cseq = 1;
+
+		auto options = std::make_shared<RtspMessage>(RtspMethod::OPTIONS, _cseq, _curr_url->ToUrlString(true));
+		options->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
+
+		if (_rtsp_session_id.IsEmpty() == false)
+		{
+			options->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
+		}
+
+		if (_authorized_scheme == RtspHeaderWWWAuthenticateField::Scheme::Basic)
+		{
+			auto _authorization_field = RtspHeaderAuthorizationField::CreateRtspBasicAuthorizationField(_curr_url->Id(), _curr_url->Password());
+			options->AddHeaderField(_authorization_field);
+		}
+		else if (_authorized_scheme == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+		{
+			auto _authorization_field = RtspHeaderAuthorizationField::CreateRtspDigestAuthorizationField(_curr_url->Id(), _curr_url->Password(),
+																											options->GetMethodStr(), options->GetRequestUri(),
+																											_authorized_realm, _authorized_nonce);
+			options->AddHeaderField(_authorization_field);
+		}
+
+		logti("Request Options : %s", options->DumpHeader().CStr());
+
+		if (SendRequestMessage(options) == false)
+		{
+			SetState(State::ERROR);
+			logte("Could not request OPTIONS to RTSP server (%s)", _curr_url->ToUrlString().CStr());
+			return false;
+		}
+
+		return true;
+	}
+
+	bool RtspcStream::RequestDescribeAsync()
+	{
+		if (GetState() != State::PLAYING)
+		{
+			return false;
+		}
+
+		auto describe = std::make_shared<RtspMessage>(RtspMethod::DESCRIBE, GetNextCSeq(), _curr_url->ToUrlString(true));
+		describe->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Accept, "application/sdp"));
+		describe->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
+
+		if (_rtsp_session_id.IsEmpty() == false)
+		{
+			describe->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
+		}
+
+		if (_authorized_scheme == RtspHeaderWWWAuthenticateField::Scheme::Basic)
+		{
+			auto _authorization_field = RtspHeaderAuthorizationField::CreateRtspBasicAuthorizationField(_curr_url->Id(), _curr_url->Password());
+			describe->AddHeaderField(_authorization_field);
+		}
+		else if (_authorized_scheme == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+		{
+			auto _authorization_field = RtspHeaderAuthorizationField::CreateRtspDigestAuthorizationField(_curr_url->Id(), _curr_url->Password(),
+																											describe->GetMethodStr(), describe->GetRequestUri(),
+																											_authorized_realm, _authorized_nonce);
+			describe->AddHeaderField(_authorization_field);
+		}
+
+		logti("Request Describe : %s", describe->DumpHeader().CStr());
+
+		if (SendRequestMessage(describe) == false)
+		{
+			SetState(State::ERROR);
+			logte("Could not request OPTIONS to RTSP server (%s)", _curr_url->ToUrlString().CStr());
+			return false;
+		}
 
 		return true;
 	}
@@ -618,6 +759,9 @@ namespace pvd
 			}
 
 			play->AddHeaderField(_authorization_field);
+			_authorized_scheme = _authorization_field->GetScheme();
+			_authorized_realm = _authorization_field->GetRealm();
+			_authorized_nonce = _authorization_field->GetNonce();
 		}
 
 		if (_rtsp_session_id.IsEmpty() == false)
@@ -652,6 +796,7 @@ namespace pvd
 
 		logti("Response PLAY : %s", reply->DumpHeader().CStr());
 		_play_request_time.Start();
+		_last_check_time = time(nullptr);
 
 		SetState(State::PLAYING);
 
@@ -885,7 +1030,7 @@ namespace pvd
 						continue;
 					}
 
-					subscription->OnResponseReceived(rtsp_message);
+					subscription->OnResponseReceived(rtsp_message, std::dynamic_pointer_cast<RtspcStream>(Stream::GetSharedPtr()));
 				}
 				else if (rtsp_message->GetMessageType() == RtspMessageType::REQUEST)
 				{
@@ -914,6 +1059,10 @@ namespace pvd
 			}
 			else
 			{
+				if(time(nullptr) - _last_check_time >= 30){
+					_last_check_time = time(nullptr);
+					CheckSession();
+				}
 				return ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN;
 			}
 		}

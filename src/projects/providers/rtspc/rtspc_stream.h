@@ -28,6 +28,8 @@
 #include "base/provider/pull_provider/stream_props.h"
 
 #define RTSP_USER_AGENT_NAME	"OvenMediaEngine"
+#define OV_LOG_TAG "RtspcStream"
+
 namespace pvd
 {
 	class RtspcProvider;
@@ -81,10 +83,17 @@ namespace pvd
 				return _response;
 			}
 
-			void OnResponseReceived(const std::shared_ptr<RtspMessage> &message)
+			void OnResponseReceived(const std::shared_ptr<RtspMessage> &message, const std::shared_ptr<RtspcStream> &stream)
 			{
 				_response = message;
 				_round_trip_time_ms = _reqeust_stop_watch.Elapsed();
+
+				if(stream->GetState() == State::PLAYING){
+					logti("Received Message in Playing State: %s",  _response->DumpHeader().CStr());
+					if(_response->GetCSeq() == 1){
+						stream->RequestDescribeAsync();
+					}
+				}
 
 				// Notify
 				_event.Notify();
@@ -103,15 +112,24 @@ namespace pvd
 		bool StartStream(const std::shared_ptr<const ov::Url> &url) override; // Start
 		bool RestartStream(const std::shared_ptr<const ov::Url> &url) override; // Failover
 		bool StopStream() override; // Stop
+		bool CheckSession();
 
 		bool ConnectTo();
 		bool RequestDescribe();
+		bool RequestDescribeAsync();
+		bool RequestOptions();
+		bool RequestParameter();
 		bool RequestSetup();
 		bool RequestPlay();
 		bool RequestStop();
 		void Release();
 
 		int32_t GetNextCSeq();
+
+		time_t _last_check_time = 0;
+		RtspHeaderWWWAuthenticateField::Scheme _authorized_scheme;
+		ov::String _authorized_realm;
+		ov::String _authorized_nonce;
 
 		bool SendRequestMessage(const std::shared_ptr<RtspMessage> &message);
 		std::shared_ptr<RtspMessage> ReceiveResponse(uint32_t cseq, uint64_t timeout_ms);
