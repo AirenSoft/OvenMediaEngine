@@ -228,7 +228,7 @@ namespace pvd
 			AddTrack(data_track);
 		}
 
-		InitPrivBaseTimestamp();
+		InitBaseTimestamp();
 
 		SetState(State::DESCRIBED);
 
@@ -361,19 +361,16 @@ namespace pvd
 				{
 					RequestRewind();
 
-					UpdatePrivBaseTimestamp();
+					UpdateBaseTimestamp();
 					logtd("%s/%s(%u) Reached the end of the file. rewind to the first frame.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 					continue;
-
-					// logtd("%s/%s(%u) Reached the end of the file. go to the next file.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-					// UpdatePrivBaseTimestamp();
-					// SetState(State::STOPPED);
-					// return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 				}
 
 				// If the I/O is broken, terminate the thread.
 				logte("%s/%s(%u) FileStream's I/O has broken.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+
 				SetState(State::ERROR);
+				
 				return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 			}
 
@@ -417,22 +414,27 @@ namespace pvd
 			// Calculate PTS/DTS + Base Timestamp
 			UpdateTimestamp(media_packet);
 
-			// The purpose of updating the global Timestamp value when the URL is changed due to PullStream's failover.
-			auto pts = media_packet->GetPts();
-			auto dts = media_packet->GetDts();
-			AdjustTimestampByBase(media_packet->GetTrackId(), pts, dts, std::numeric_limits<int64_t>::max());
+			UpdateNextTimestamp(media_packet);
 
 			// Send to MediaRouter
 			SendFrame(std::move(media_packet));
 
 			// Real-time processing - It treats the packet the same as the real time.
-			if (_play_request_time.Elapsed() < (static_cast<int64_t>(static_cast<double>(media_packet->GetPts()) * track->GetTimeBase().GetExpr() * 1000)))
+			if (_play_request_time.Elapsed() < (static_cast<int64_t>(static_cast<double>(media_packet->GetDts()) * track->GetTimeBase().GetExpr() * 1000)))
 			{
 				break;
 			}
 		}
 
 		return ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
+	}
+	
+	void FileStream::InitBaseTimestamp()
+	{
+		for (const auto &[track_id, track] : GetTracks())
+		{
+			_base_timestamp[track_id] = GetBaseTimestamp(track_id);
+		}
 	}
 
 	void FileStream::UpdateTimestamp(std::shared_ptr<MediaPacket> &packet)
@@ -445,43 +447,34 @@ namespace pvd
 
 		packet->SetPts(base_timestamp + packet->GetPts());
 		packet->SetDts(base_timestamp + packet->GetDts());
-
-		_last_timestamp[packet->GetTrackId()] = packet->GetPts() + packet->GetDuration();
 	}
 
-	void FileStream::InitPrivBaseTimestamp()
+	void FileStream::UpdateNextTimestamp(std::shared_ptr<MediaPacket> &packet)
 	{
-		for (const auto it : GetTracks())
-		{
-			auto track_id = it.first;
-
-			_base_timestamp[track_id] = GetBaseTimestamp(track_id);
-		}
+		_next_timestamp[packet->GetTrackId()] = packet->GetPts() + packet->GetDuration();
 	}
 
-	void FileStream::UpdatePrivBaseTimestamp()
+	void FileStream::UpdateBaseTimestamp()
 	{
 		// Select the track with the highest timestamp value.
-		int64_t highest_ts_ms = 0;
-		for (const auto &it : _last_timestamp)
+		int64_t highest_timestamp_ms = 0;
+		
+		for (const auto &[track_id, timestamp] : _next_timestamp)
 		{
-			auto track_id = it.first;
-			auto timestamp = it.second;
 			auto track = GetTrack(track_id);
 			if (track == nullptr)
 			{
 				continue;
 			}
 
-			auto cur_ts_ms = (timestamp * 1000) / track->GetTimeBase().GetTimescale();
+			auto timestamp_ms = (timestamp * 1000) / track->GetTimeBase().GetTimescale();
 
-			highest_ts_ms = std::max<int64_t>(cur_ts_ms, highest_ts_ms);
+			highest_timestamp_ms = std::max<int64_t>(timestamp_ms, highest_timestamp_ms);
 		}
 
 		// Change the Base Timestamp of all tracks to the highest timestamp
-		for (const auto &it : _last_timestamp)
+		for (const auto &[track_id, timestamp] : _next_timestamp)
 		{
-			auto track_id = it.first;
 			auto track = GetTrack(track_id);
 			if (track == nullptr)
 			{
@@ -489,10 +482,10 @@ namespace pvd
 			}
 
 			// avoid to non monotonically increasing dts problem
-			auto rescale_ts = highest_ts_ms * track->GetTimeBase().GetTimescale() / 1000;  
+			auto timestamp_tb = highest_timestamp_ms * track->GetTimeBase().GetTimescale() / 1000;  
 
-			_base_timestamp[track_id] = rescale_ts;
-			_last_timestamp[track_id] = rescale_ts;
+			_base_timestamp[track_id] = timestamp_tb;
+			_next_timestamp[track_id] = timestamp_tb;
 		}
 	}
 
