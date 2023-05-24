@@ -324,6 +324,7 @@ install_hiredis()
 
 install_base_ubuntu()
 {
+    sudo apt-get update
     sudo apt install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev
 }
 
