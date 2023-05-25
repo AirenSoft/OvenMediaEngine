@@ -393,8 +393,7 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 
 	if(parsing_error)
 	{
-		loge("SDP", "Sdp parsing error : %c=%s", type, content.c_str());
-		return false;
+		logw("SDP", "Sdp parsing error : %c=%s", type, content.c_str());
 	}
 
 	return true;
