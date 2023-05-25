@@ -191,3 +191,11 @@ define add_pkg_config
 		LOCAL_LDFLAGS += $(shell $(__PKG_CONFIG_PATH) pkg-config --libs $(1))
 	)
 endef
+
+# Check if pkg-config exists
+# $(call chk_pkg_exist,<LIBRARY_NAME>)
+define chk_pkg_exist
+$(strip \
+	$(shell $(__PKG_CONFIG_PATH) pkg-config --exists $(1); echo $$?) \
+)
+endef

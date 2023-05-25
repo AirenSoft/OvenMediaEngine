@@ -213,7 +213,7 @@ install_ffmpeg()
     ADDI_LDFLAGS=""
     ADDI_EXTRA_LIBS=""
 
-    # If there is an enable-qsv option, install libmfx
+    # If there is an enable-qsv option, add libmfx
     if [ "$INTEL_QSV_HWACCELS" = true ] ; then
         ADDI_LIBS+=" --enable-libmfx"
         ADDI_ENCODER+=",h264_qsv,hevc_qsv"
@@ -222,7 +222,7 @@ install_ffmpeg()
         ADDI_FILTERS=""
     fi
 
-    # If there is an enable-nvc option, install nvcodec
+    # If there is an enable-nvc option, add nvcodec
     if [ "$NVIDIA_NV_CODEC_HWACCELS" = true ] ; then
         ADDI_CFLAGS+="-I/usr/local/cuda/include"
         ADDI_LDFLAGS="-L/usr/local/cuda/lib64"
@@ -232,20 +232,19 @@ install_ffmpeg()
         ADDI_ENCODER+=",h264_nvenc,hevc_nvenc"
         ADDI_DECODER+=",h264_nvdec,hevc_nvdec,h264_cuvid,hevc_cuvid"
         ADDI_FILTERS+=",scale_cuda,hwdownload,hwupload,hwupload_cuda"
-        
+
         PATH=$PATH:/usr/local/nvidia/bin:/usr/local/cuda/bin
     fi
 
-    # If there is an enable-xma option. install xmapi
+    # If there is an enable-xma option, add xlinkx sdk
     if [ "$XILINX_XMA_CODEC_HWACCELS" = true ] ; then
-        FFMPEG_DOWNLOAD_URL=https://github.com/Xilinx/app-ffmpeg4-xma/archive/refs/tags/v4.4.1.tar.gz
+        FFMPEG_DOWNLOAD_URL=https://github.com/Xilinx/app-ffmpeg4-xma/archive/refs/tags/v4.4.2.tar.gz
         ADDI_ENCODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
         ADDI_DECODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
         ADDI_FILTERS+=",multiscale_xma,xvbm_convert"
-        ADDI_LIBS+=" --enable-libxma2api --enable-libxvbm --enable-libxrm"
-        ADDI_CFLAGS+=" -I/opt/xilinx/xrt/include/xma2"
-        ADDI_LDFLAGS=" -L/opt/xilinx/xrt/lib -Wl,-rpath,/opt/xilinx/xrt/lib"
-        ADDI_EXTRA_LIBS=" --extra-libs=-lxma2api --extra-libs=-lxrt_core --extra-libs=-lxrt_coreutil --extra-libs=-lpthread"
+        ADDI_LIBS+=" --enable-libxma2api --enable-libxvbm --enable-libxrm "
+        ADDI_CFLAGS+=" $(pkg-config --cflags libxma2api libxma2plugin xvbm libxrm) "
+        ADDI_LDFLAGS+=" $(pkg-config --libs  libxma2api libxma2plugin xvbm libxrm) -Wl,-rpath,/opt/xilinx/xrt/lib -Wl,-rpath,/opt/xilinx/xrm/lib"
     fi
 
     # Options are added by external scripts.
@@ -282,7 +281,7 @@ install_ffmpeg()
     # Build & Install
     (cd ${DIR} && PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PREFIX}/lib64/pkgconfig:${PREFIX}/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH} ./configure \
     --prefix="${PREFIX}" \
-    --extra-cflags="-I${PREFIX}/include -g ${ADDI_CFLAGS}"  \
+    --extra-cflags="-I${PREFIX}/include ${ADDI_CFLAGS}"  \
     --extra-ldflags="-L${PREFIX}/lib -Wl,-rpath,${PREFIX}/lib ${ADDI_LDFLAGS}" \
     --extra-libs=-ldl ${ADDI_EXTRA_LIBS} \
     ${ADDI_LICENSE} \
@@ -301,6 +300,7 @@ install_ffmpeg()
     sudo rm -rf ${PREFIX}/share && \
     rm -rf ${DIR}) || fail_exit "ffmpeg"
 }
+
 
 
 install_jemalloc()
