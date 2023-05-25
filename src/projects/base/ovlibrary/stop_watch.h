@@ -16,6 +16,7 @@ namespace ov
 
 		bool IsStart();
 		void Start();
+		void Stop();
 		bool Update();
 		int64_t Elapsed(bool nano=false) const;
 		bool IsElapsed(int64_t milliseconds) const;

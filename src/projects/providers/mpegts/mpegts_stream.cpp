@@ -118,6 +118,14 @@ namespace pvd
 					return false;
 				}
 
+				int64_t origin_pts = es->Pts();
+				int64_t origin_dts = es->Dts();
+
+				auto pts = origin_pts;
+				auto dts = origin_dts;
+
+				AdjustTimestampByBase(track->GetId(), pts, dts, 0x1FFFFFFFFLL);
+
 				if (es->IsVideoStream())
 				{
 					auto bitstream = cmn::BitstreamFormat::Unknown;
@@ -130,62 +138,12 @@ namespace pvd
 							break;
 						case cmn::MediaCodecId::H265: {
 							bitstream = cmn::BitstreamFormat::H265_ANNEXB;
-
-							// Check if bitstream is keyframe
-							bool keyframe_flag = H265Parser::CheckKeyframe(es->Payload(), es->PayloadLength());
-							if (keyframe_flag == true)
-							{
-								logtd("A Keyframe has been arrived");
-							}
-
-							// H265 Bitstream Parser Test
-							auto nal_unit_list = NalUnitSplitter::Parse(es->Payload(), es->PayloadLength());
-							if (nal_unit_list == nullptr)
-							{
-								logte("Could not parse bitstream into nal units");
-							}
-							else
-							{
-								for (uint32_t i = 0; i < nal_unit_list->GetCount(); i++)
-								{
-									auto nalu = nal_unit_list->GetNalUnit(i);
-
-									H265NalUnitHeader header;
-									if (H265Parser::ParseNalUnitHeader(nalu->GetDataAs<uint8_t>(), nalu->GetLength(), header) == false)
-									{
-										logte("Could not parse nal unit header");
-									}
-									else
-									{
-										logtd("H265 Nal Unit Header Parsed : id:%d len:%d", static_cast<int>(header.GetNalUnitType()), nalu->GetLength());
-									}
-
-									if (header.GetNalUnitType() == H265NALUnitType::SPS)
-									{
-										H265SPS sps;
-										if (H265Parser::ParseSPS(nalu->GetDataAs<uint8_t>(), nalu->GetLength(), sps) == false)
-										{
-											logte("Could not parse sps");
-										}
-										else
-										{
-											logtd("SPS Parsed : %s", sps.GetInfoString().CStr());
-										}
-									}
-								}
-							}
-
 							break;
 						}
 						default:
 							bitstream = cmn::BitstreamFormat::Unknown;
 							break;
 					}
-
-					int64_t pts = es->Pts();
-					int64_t dts = es->Dts();
-
-					AdjustTimestamp(pts, dts);
 
 					auto data = std::make_shared<ov::Data>(es->Payload(), es->PayloadLength());
 					auto media_packet = std::make_shared<MediaPacket>(GetMsid(),
@@ -197,19 +155,12 @@ namespace pvd
 																	  bitstream,
 																	  packet_type);
 					SendFrame(media_packet);
-
-					logtd("Video Frame - PID(%d) PTS(%lld) DTS(%lld) Size(%d)", es->PID(), es->Pts(), es->Dts(), es->PayloadLength());
 				}
 				else if (es->IsAudioStream())
 				{
 					auto payload = es->Payload();
 					auto payload_length = es->PayloadLength();
-
-					int64_t pts = es->Pts();
-					int64_t dts = es->Dts();
-
-					AdjustTimestamp(pts, dts);
-
+				
 					auto data = std::make_shared<ov::Data>(payload, payload_length);
 					auto media_packet = std::make_shared<MediaPacket>(GetMsid(),
 																	  cmn::MediaType::Audio,
@@ -220,30 +171,13 @@ namespace pvd
 																	  cmn::BitstreamFormat::AAC_ADTS,
 																	  cmn::PacketType::RAW);
 					SendFrame(media_packet);
-
-					logtd("Audio Frame - PID(%d) PTS(%lld) DTS(%lld) Size(%d)", es->PID(), es->Pts(), es->Dts(), es->PayloadLength());
 				}
+
+				logtd("Frame - PID(%d) AdjustPTS(%lld) AdjustDTS(%lld) PTS(%lld) DTS(%lld) Size(%d)", es->PID(), pts, dts, origin_pts, origin_dts, es->PayloadLength());
 			}
 		}
 
 		return true;
-	}
-
-	// All timestamp is in 90KHz
-	void MpegTsStream::AdjustTimestamp(int64_t &pts, int64_t &dts)
-	{
-		if (_first_frame == true)
-		{
-			_first_frame = false;
-
-			// PTS value must always be equal to or greater than the DTS value.
-			// Adjust DTS to start from 0.
-			_pts_offset = dts;
-			_dts_offset = dts;
-		}
-
-		pts -= _pts_offset;
-		dts -= _dts_offset;
 	}
 
 	bool MpegTsStream::Publish()

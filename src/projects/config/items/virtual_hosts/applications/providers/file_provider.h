@@ -11,6 +11,20 @@
 #include "provider.h"
 #include "./file/stream_map.h"
 
+/*
+	Server Configuration Example
+
+	<FILE>  
+			<PassthroughOutputProfile>true</PassthroughOutputProfile>
+			<StreamMap>
+					<Stream>
+							<Name>{STREAM_NAME}</Name>
+							<Path>{FILE_PATH}/{FILE_NAME}.{EXT}</Path>
+					</Stream>                               
+			</StreamMap>
+	</FILE>
+*/
+
 namespace cfg
 {
 	namespace vhost

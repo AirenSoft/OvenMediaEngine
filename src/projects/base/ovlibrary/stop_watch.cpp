@@ -23,6 +23,11 @@ namespace ov
 		_last = _start;
 	}
 
+	void StopWatch::Stop()
+	{
+		_is_valid = false;
+	}
+
 	bool StopWatch::Update()
 	{
 		_last = std::chrono::high_resolution_clock::now();

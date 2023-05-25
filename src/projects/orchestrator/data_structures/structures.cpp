@@ -111,6 +111,12 @@ namespace ocst
 		: callback(callback),
 		  app_info(app_info)
 	{
+		idle_timer.Start();
+	}
+
+	bool Application::IsUnusedFor(int seconds) const
+	{
+		return idle_timer.IsElapsed(seconds * 1000);
 	}
 
 	//--------------------------------------------------------------------
@@ -130,6 +136,8 @@ namespace ocst
 			publisher_stream_map[info->GetName()] = std::static_pointer_cast<pub::Stream>(info);
 		}
 
+		idle_timer.Stop();
+
 		return callback->OnStreamCreated(app_info, info);
 	}
 
@@ -144,7 +152,12 @@ namespace ocst
 		else
 		{
 			publisher_stream_map.erase(info->GetName());
-		}	
+		}
+
+		if (provider_stream_map.empty() && publisher_stream_map.empty())
+		{
+			idle_timer.Start();
+		}
 	
 		return callback->OnStreamDeleted(app_info, info);
 	}

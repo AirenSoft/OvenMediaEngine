@@ -237,7 +237,8 @@ namespace pvd
 	}
 
 	// This keeps the pts value of the input track (only the start value<base_timestamp> is different), meaning that this value can be used for A/V sync.
-	int64_t Stream::AdjustTimestampByBase(uint32_t track_id, int64_t pts, int64_t dts, int64_t max_timestamp)
+	// returns adjusted PTS and parameter PTS and DTS are also adjusted.
+	int64_t Stream::AdjustTimestampByBase(uint32_t track_id, int64_t &pts, int64_t &dts, int64_t max_timestamp)
 	{
 		auto track = GetTrack(track_id);
 		if (!track)
@@ -269,9 +270,61 @@ namespace pvd
 		int64_t final_pkt_pts_tb = base_timestamp_tb + (pts - start_timestamp_tb);
 		int64_t final_pkt_dts_tb = base_timestamp_tb + (dts - start_timestamp_tb);
 
+		// 4. Check wrap around and adjust PTS/DTS
 
-		// 4. Update last timestamp ( Managed in microseconds )
+		// For PTS
+
+		// PTS is not sequential. Therefore, the PTS may wrap around and return again.
+		bool reverse_wraparound = false;
+		if (_last_origin_ts_map[0].find(track_id) != _last_origin_ts_map[0].end())
+		{
+			auto last_origin_pts = _last_origin_ts_map[0][track_id];
+			if (last_origin_pts - pts > max_timestamp / 2)
+			{
+				_wraparound_count_map[0][track_id]++;
+				logtc("[PTS] Wrap around detected. track:%d", track_id);
+			}
+			else if (pts - last_origin_pts > max_timestamp / 2)
+			{
+				reverse_wraparound = true;
+				logtc("[PTS] Reverse wrap around detected. track:%d", track_id);
+			}
+		}
+
+		if (_wraparound_count_map[0].find(track_id) != _wraparound_count_map[0].end())
+		{
+			auto wraparound_count = _wraparound_count_map[0][track_id] + (reverse_wraparound ? -1 : 0);
+			final_pkt_pts_tb += wraparound_count * max_timestamp;
+		}
+
+		// For DTS
+		if (_last_origin_ts_map[1].find(track_id) != _last_origin_ts_map[1].end())
+		{
+			auto last_origin_dts = _last_origin_ts_map[1][track_id];
+			if (last_origin_dts - dts > max_timestamp / 2)
+			{
+				_wraparound_count_map[1][track_id]++;
+				logtc("[DTS] Wrap around detected. track:%d", track_id);
+			}
+		}
+
+		if (_wraparound_count_map[1].find(track_id) != _wraparound_count_map[1].end())
+		{
+			auto wraparound_count = _wraparound_count_map[1][track_id];
+			final_pkt_dts_tb += wraparound_count * max_timestamp;
+		}
+		
+		// 5. Update last timestamp ( Managed in microseconds )
 		_last_timestamp_map[track_id] = (int64_t)((double)final_pkt_dts_tb * expr_tb2us);
+
+		if (reverse_wraparound == false)
+		{
+			_last_origin_ts_map[0][track_id] = pts;
+		}
+		_last_origin_ts_map[1][track_id] = dts;
+
+		pts = final_pkt_pts_tb;
+		dts = final_pkt_dts_tb;
 
 #if 0
 		// for debugging
@@ -286,7 +339,7 @@ namespace pvd
 		}
 #endif
 
-		return final_pkt_pts_tb;
+		return pts;
 	}
 
 	int64_t Stream::GetBaseTimestamp(uint32_t track_id)

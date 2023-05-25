@@ -38,6 +38,13 @@ namespace mon
 				return false;
 			}
 
+			auto notification_server_url = ov::Url::Parse(alert.GetUrl());
+			if(notification_server_url == nullptr)
+			{
+				logte("Could not parse notification url: %s", alert.GetUrl().CStr());
+				return false;
+			}
+
 			_server_config = server_config;
 
 			_timer.Push(

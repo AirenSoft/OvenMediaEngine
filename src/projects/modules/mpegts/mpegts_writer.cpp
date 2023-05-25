@@ -87,20 +87,8 @@ bool MpegtsWriter::SetPath(const ov::String path, const ov::String format)
 		_format_context = nullptr;
 	}
 
-	const AVOutputFormat *output_format = nullptr;
 
-	// If the format is nullptr, it is automatically set based on the extension.
-	if (format != nullptr)
-	{
-		output_format = av_guess_format(format.CStr(), nullptr, nullptr);
-		if (output_format == nullptr)
-		{
-			logte("Unknown format. format(%s)", format.CStr());
-			return false;
-		}
-	}
-
-	int error = avformat_alloc_output_context2(&_format_context, output_format, nullptr, path.CStr());
+	int error = avformat_alloc_output_context2(&_format_context, nullptr, (format != nullptr)?format.CStr():nullptr, path.CStr());
 	if (error < 0)
 	{
 		char errbuf[256];

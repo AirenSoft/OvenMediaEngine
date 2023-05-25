@@ -94,13 +94,14 @@ namespace pvd
 		std::shared_ptr<mon::StreamMetrics> _stream_metrics;
 
 	private:
-		void InitPrivBaseTimestamp();
-		void UpdatePrivBaseTimestamp();
+		void InitBaseTimestamp();
 		void UpdateTimestamp(std::shared_ptr<MediaPacket> &packet);
+		void UpdateNextTimestamp(std::shared_ptr<MediaPacket> &packet);
+		void UpdateBaseTimestamp();
 
 		// TrackID, Timestamp
 		std::map<uint8_t, int64_t> _base_timestamp;
-		std::map<uint8_t, int64_t> _last_timestamp;
+		std::map<uint8_t, int64_t> _next_timestamp;
 
 	private:
 		uint8_t GetFixedTrackIdOfMediaType(cmn::MediaType media_type);

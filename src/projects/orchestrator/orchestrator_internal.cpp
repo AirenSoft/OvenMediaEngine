@@ -462,6 +462,16 @@ namespace ocst
 			}
 		}
 
+		bool is_cors_parsed;
+		auto cross_domains = vhost_info.GetCrossDomainList(&is_cors_parsed);
+
+		if (is_cors_parsed)
+		{
+			// VHOST has no VHostAppName so we use InvalidVHostAppName
+			// Each vhost has its own cors manager so there is no problem to use InvalidVHostAppName
+			vhost->default_cors_manager.SetCrossDomains(info::VHostAppName::InvalidVHostAppName(), cross_domains);
+		}
+
 		_virtual_host_map[vhost_info.GetName()] = vhost;
 		_virtual_host_list.push_back(vhost);
 

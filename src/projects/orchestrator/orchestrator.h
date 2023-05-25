@@ -99,6 +99,9 @@ namespace ocst
 		/// @return A new application name corresponding to domain/app
 		info::VHostAppName ResolveApplicationNameFromDomain(const ov::String &domain_name, const ov::String &app_name) const;
 
+		// Get CORS manager for the specified vhost_name
+		std::optional<std::reference_wrapper<const http::CorsManager>> GetCorsManager(const ov::String &vhost_name);
+
 		bool GetUrlListForLocation(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name, std::vector<ov::String> *url_list);
 
 		const info::Application &GetApplicationInfo(const ov::String &vhost_name, const ov::String &app_name) const;
@@ -193,7 +196,10 @@ namespace ocst
 		std::recursive_mutex _module_list_mutex;
 		mutable std::recursive_mutex _virtual_host_map_mutex;
 
+		// The application should not be deleted during the pull stream. Since the _virtual_host_map_mutex is widely used, locking the pull stream to this mutex reduces overall system performance. Therefore, a separate mutex is used.
+		std::recursive_mutex _application_mutex;
+
 	private:
-		void OnTimer();
+		void DeleteUnusedDynamicApplications();
 	};
 }  // namespace ocst

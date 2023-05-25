@@ -169,7 +169,7 @@ bool CommonAttr::ParsingCommonAttrLine(char type, std::string content)
 	}
 	else
 	{
-		return false;
+		logw("SDP", "Unknown attribute type: %c=%s", type, content.c_str());
 	}
 
 	return true;

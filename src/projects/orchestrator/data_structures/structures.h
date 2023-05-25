@@ -13,6 +13,7 @@
 #include <base/publisher/stream.h>
 #include <base/mediarouter/mediarouter_application_observer.h>
 #include <modules/origin_map_client/origin_map_client.h>
+#include <modules/http/cors/cors_manager.h>
 #include <regex>
 
 #include "interfaces.h"
@@ -130,6 +131,7 @@ namespace ocst
 		std::shared_ptr<pub::Stream> GetPublisherStream(const ov::String &stream_name);
 		size_t GetProviderStreamCount() const;
 		size_t GetPublisherStreamCount() const;
+		bool IsUnusedFor(int seconds) const;
 
 		CallbackInterface *callback = nullptr;
 		info::Application app_info;
@@ -137,6 +139,9 @@ namespace ocst
 		// Stream Name : Stream
 		std::map<ov::String, std::shared_ptr<pvd::Stream>> provider_stream_map;
 		std::map<ov::String, std::shared_ptr<pub::Stream>> publisher_stream_map;
+
+		// unused timer 
+		ov::StopWatch idle_timer;
 	};
 
 	struct VirtualHost
@@ -162,6 +167,9 @@ namespace ocst
 		bool is_origin_map_store_enabled = false;
 		ov::String origin_base_url;
 		std::shared_ptr<OriginMapClient> origin_map_client = nullptr;
+
+		// Default CORS manager
+		http::CorsManager default_cors_manager;
 
 		// Template of dynamic application configuration
 		cfg::vhost::app::Application app_cfg_template;

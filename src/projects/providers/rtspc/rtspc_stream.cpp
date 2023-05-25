@@ -1161,11 +1161,11 @@ namespace pvd
 			}
 		}
 
-		uint64_t timestamp = 0;
+		int64_t timestamp = 0;
 		if (_pts_calculation_method == PtsCalculationMethod::WITH_RTCP_SR)
 		{
-			auto pts = _lip_sync_clock.CalcPTS(channel, first_rtp_packet->Timestamp());
-			if (pts.has_value() == false)
+			auto pts_base = _lip_sync_clock.CalcPTS(channel, first_rtp_packet->Timestamp());
+			if (pts_base.has_value() == false)
 			{
 				logtd("not yet received sr packet : %u", first_rtp_packet->Ssrc());
 				// Prevents the stream from being deleted because there is no input data
@@ -1173,7 +1173,8 @@ namespace pvd
 				return;
 			}
 
-			timestamp = AdjustTimestampByBase(channel, pts.value(), pts.value(), std::numeric_limits<uint64_t>::max());
+			int64_t pts = pts_base.value();
+			timestamp = AdjustTimestampByBase(channel, pts, pts, std::numeric_limits<uint64_t>::max());
 		}
 		else if (_pts_calculation_method == PtsCalculationMethod::SINGLE_DELTA)
 		{

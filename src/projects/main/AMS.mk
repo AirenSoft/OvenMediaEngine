@@ -82,6 +82,15 @@ $(call add_pkg_config,libsrtp2)
 $(call add_pkg_config,libpcre2-8)
 $(call add_pkg_config,hiredis)
 
+# Enable Xilinx Media SDK
+ifeq ($(call chk_pkg_exist,libxma2api),0)
+$(info $(ANSI_YELLOW)- Xilinx Media SDK is enabled.$(ANSI_RESET))
+$(call add_pkg_config,libxma2api)
+$(call add_pkg_config,libxma2plugin)
+$(call add_pkg_config,xvbm)
+$(call add_pkg_config,libxrm)
+endif
+
 # Enable jemalloc 
 ifeq ($(MAKECMDGOALS),release)
 $(call add_pkg_config,jemalloc)
