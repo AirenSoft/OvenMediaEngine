@@ -55,16 +55,19 @@ enum class StunAttributeType : uint16_t
 	// 15.8. NONCE
 	Nonce = 0x0015,
 	// 15.9. UNKNOWN-ATTRIBUTES
-	//     0x8029 ICE-CONTROLLED
-	//     0x802A ICE-CONTROLLING
-	//     0xC057 NETWORK COST
-	//     0x0025 USE-CANDIDATE
-	//     0x0024 PRIORITY
 	UnknownAttributes = 0x000A,
 	// 15.10. SOFTWARE
 	Software = 0x8022,
 	// 15.11. ALTERNATE-SERVER
 	AlternateServer = 0x8023,
+
+	/////////////////
+	// ICE : RFC8445 , 20.1.  STUN Attributes
+	/////////////////
+	Priority = 0x0024,
+	UseCandidate = 0x0025,
+	IceControlled = 0x8029,
+	IceControlling = 0x802A,
 
 	//////////////
 	// Turn : https://www.rfc-editor.org/rfc/rfc8656.html#section-18
@@ -110,6 +113,7 @@ enum class StunErrorCode : uint16_t
 	UnsupportedTransportProtocol = 442,
 	PeerAddressFamilyMismatch = 443,
 	AllocationQuotaReached = 486,
+	RoleConflict = 487, // ICE, RFC8445
 	ServerError = 500,
 	InsufficientCapacity = 508
 };

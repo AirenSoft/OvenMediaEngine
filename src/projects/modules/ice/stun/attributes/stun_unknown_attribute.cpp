@@ -33,8 +33,7 @@ bool StunUnknownAttribute::SetData(const void *data, int length)
 
 bool StunUnknownAttribute::Serialize(const StunMessage *stun_message, ov::ByteStream &stream) const noexcept
 {
-	return StunAttribute::Serialize(stun_message, stream) &&
-	       ((_data != nullptr) ? stream.Write(_data) : true);
+	return StunAttribute::Serialize(stun_message, stream) && ((_data != nullptr) ? stream.Write(_data) : true);
 }
 
 ov::String StunUnknownAttribute::ToString() const

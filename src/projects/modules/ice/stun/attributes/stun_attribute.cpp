@@ -161,21 +161,25 @@ std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(const StunMessage 
 		case StunAttributeType::Data:
 			attribute = std::make_shared<StunDataAttribute>(length);
 			break;
+		case StunAttributeType::UseCandidate:
+			attribute = std::make_shared<StunUseCandidateAttribute>();
+			break;
+		case StunAttributeType::Priority:
+			attribute = std::make_shared<StunPriorityAttribute>();
+			break;
+		case StunAttributeType::IceControlled:
+			attribute = std::make_shared<StunIceControlledAttribute>();
+			break;
+		case StunAttributeType::IceControlling:
+			attribute = std::make_shared<StunIceControllingAttribute>();
+			break;
 		case StunAttributeType::AlternateServer:
 		case StunAttributeType::UnknownAttributes:
 		default:
 			switch(static_cast<int>(type))
 			{
-				case 0x8029:
-					// 0x8029 ICE-CONTROLLED
-				case 0x802A:
-					// 0x802A ICE-CONTROLLING
 				case 0xC057:
 					// 0xC057 NETWORK COST
-				case 0x0025:
-					// 0x0025 USE-CANDIDATE
-				case 0x0024:
-					// 0x0024 PRIORITY
 					break;
 
 				default:
@@ -274,6 +278,14 @@ const char *StunAttribute::StringFromType(StunAttributeType type) noexcept
 			return "ADDRESS-ERROR-CODE";
 		case StunAttributeType::ICMP:
 			return "ICMP";
+		case StunAttributeType::UseCandidate:
+			return "USE-CANDIDATE";
+		case StunAttributeType::Priority:
+			return "PRIORITY";
+		case StunAttributeType::IceControlled:
+			return "ICE-CONTROLLED";
+		case StunAttributeType::IceControlling:
+			return "ICE-CONTROLLING";
 	}
 
 	return "<UNKNOWN>";
@@ -311,6 +323,8 @@ const char *StunAttribute::StringFromErrorCode(StunErrorCode code) noexcept
 			return "Server Error";
 		case StunErrorCode::InsufficientCapacity:
 			return "Insufficient Capacity";
+		case StunErrorCode::RoleConflict:
+			return "Role Conflict";
 	}
 
 	return "<UNKNOWN>";

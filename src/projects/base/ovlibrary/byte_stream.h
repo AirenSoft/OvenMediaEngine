@@ -201,6 +201,11 @@ namespace ov
 			value = ReadBE32();
 		}
 
+		void ReadBE(uint64_t &value)
+		{
+			value = ReadBE64();
+		}
+
 		// byte order를 고려하여 읽을 수 있는 유틸리티 함수
 		// 사용 방법)
 		// uint8_t b = stream.Read8();
@@ -363,6 +368,11 @@ namespace ov
 		bool WriteBE(uint32_t value)
 		{
 			return WriteBE32(value);
+		}
+
+		bool WriteBE(uint64_t value)
+		{
+			return WriteBE64(value);
 		}
 
 		/// data를 데이터 끝에 bytes만큼 기록함. 기록 후 현재 위치가 변경되지 않음.

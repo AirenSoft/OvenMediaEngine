@@ -721,7 +721,7 @@ void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, co
 		return;
 	}
 
-	logtd("Received message:\n%s", message.ToString().CStr());
+	logti("Received message:\n%s", message.ToString().CStr());
 
 	if (message.GetClass() == StunClass::ErrorResponse)
 	{
@@ -933,43 +933,28 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 	}
 	message.SetTransactionId(&(transaction_id[0]));
 
-	std::shared_ptr<StunAttribute> attribute;
-
 	// USERNAME attribute
-	attribute = std::make_shared<StunUserNameAttribute>();
-	auto *user_name_attribute = dynamic_cast<StunUserNameAttribute *>(attribute.get());
-	user_name_attribute->SetText(ov::String::FormatString("%s:%s", info->peer_sdp->GetIceUfrag().CStr(), info->local_sdp->GetIceUfrag().CStr()));
-	message.AddAttribute(std::move(attribute));
+	auto user_name_attr = std::make_shared<StunUserNameAttribute>();
+	user_name_attr->SetText(ov::String::FormatString("%s:%s", info->peer_sdp->GetIceUfrag().CStr(), info->local_sdp->GetIceUfrag().CStr()));
+	message.AddAttribute(user_name_attr);
 
 	// ICE-CONTROLLED
-	//attribute = std::make_shared<StunUnknownAttribute>(0x8029, 8);
+	// attribute = std::make_shared<StunUnknownAttribute>(0x8029, 8);
+
 	// ICE-CONTROLLING
-	attribute = std::make_shared<StunUnknownAttribute>(0x802A, 8);
-	auto *tie_break_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
+	auto ice_controlling_attr = std::make_shared<StunIceControllingAttribute>();
+	// There is no chance of a client and ICE role conflict occurring in OME.
+	ice_controlling_attr->SetValue(0x0000000000000001);
+	message.AddAttribute(ice_controlling_attr);
 
-	/*
-	https://datatracker.ietf.org/doc/html/rfc5245#section-7.2.1.1
-	If the agent's tie-breaker is less than the contents of the
-    ICE-CONTROLLING attribute, the agent switches to the controlled role.
-	*/
-	//uint8_t tie_break_value[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-	uint8_t tie_break_value[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
+	// USE-CANDIDATE 
+	auto use_candidate_attr = std::make_shared<StunUseCandidateAttribute>();
+	message.AddAttribute(use_candidate_attr);
 
-	tie_break_attribute->SetData(&(tie_break_value[0]), 8);
-	message.AddAttribute(std::move(attribute));
-
-	// USE-CANDIDATE (for testing hash)
-	StunUnknownAttribute *unknown_attribute = nullptr;
-	attribute = std::make_shared<StunUnknownAttribute>(0x0025, 0);
-	unknown_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
-	message.AddAttribute(std::move(attribute));
-
-	// PRIORITY (for testing hash)
-	attribute = std::make_shared<StunUnknownAttribute>(0x0024, 4);
-	unknown_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
-	uint8_t unknown_data3[] = {0x6E, 0x7F, 0x1E, 0xFF};
-	unknown_attribute->SetData(&(unknown_data3[0]), 4);
-	message.AddAttribute(std::move(attribute));
+	// PRIORITY 
+	auto priority_attr = std::make_shared<StunPriorityAttribute>();
+	priority_attr->SetValue(0x627F1EFF);
+	message.AddAttribute(priority_attr);
 
 	logtd("Send Stun Binding Request : %s", address.ToString(false).CStr());
 
@@ -1037,7 +1022,7 @@ bool IcePort::SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const o
 		source_data = message.Serialize(integrity_key);
 	}
 
-	logtd("Send message:\n%s", message.ToString().CStr());
+	logti("Send message:\n%s", message.ToString().CStr());
 
 	if (gate_info.input_method == IcePort::GateInfo::GateType::DIRECT)
 	{
@@ -1257,7 +1242,6 @@ bool IcePort::ProcessTurnRefreshRequest(const std::shared_ptr<ov::Socket> &remot
 	response_message.AddAttribute(lifetime_attribute);
 
 	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::Refresh, message.GetTransactionId());
-	response_message.AddAttribute(lifetime_attribute);
 	SendStunMessage(remote, address, gate_info, response_message, _hmac_key);
 
 	logtd("Turn Refresh Request : %s", lifetime_attribute->ToString().CStr());
