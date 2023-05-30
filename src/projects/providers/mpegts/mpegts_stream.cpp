@@ -118,8 +118,18 @@ namespace pvd
 					return false;
 				}
 
-				int64_t origin_pts = es->Pts();
-				int64_t origin_dts = es->Dts();
+				int64_t origin_pts = es->Pts() + (0x1FFFFFFFFLL - 900000);
+				int64_t origin_dts = es->Dts() + (0x1FFFFFFFFLL - 900000);
+
+				if (origin_pts > 0x1FFFFFFFFLL)
+				{
+					origin_pts -= 0x1FFFFFFFFLL;
+				}
+
+				if (origin_dts > 0x1FFFFFFFFLL)
+				{
+					origin_dts -= 0x1FFFFFFFFLL;
+				}
 
 				auto pts = origin_pts;
 				auto dts = origin_dts;

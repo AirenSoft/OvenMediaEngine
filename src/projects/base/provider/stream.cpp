@@ -245,6 +245,7 @@ namespace pvd
 		{
 			return -1LL;
 		}
+
 		double expr_tb2us = track->GetTimeBase().GetExpr() * 1000000;
 		double expr_us2tb = track->GetTimeBase().GetTimescale() / 1000000;
 
@@ -272,30 +273,41 @@ namespace pvd
 
 		// 4. Check wrap around and adjust PTS/DTS
 
+		// Initialize wraparound count for PTS
+		if (_wraparound_count_map[0].find(track_id) == _wraparound_count_map[0].end())
+		{
+			_wraparound_count_map[0][track_id] = 0;
+		}
+
+		// Initialize wraparound count for DTS
+		if (_wraparound_count_map[1].find(track_id) == _wraparound_count_map[1].end())
+		{
+			_wraparound_count_map[1][track_id] = 0;
+		}
+
 		// For PTS
 
 		// PTS is not sequential. Therefore, the PTS may wrap around and return again.
-		bool reverse_wraparound = false;
 		if (_last_origin_ts_map[0].find(track_id) != _last_origin_ts_map[0].end())
 		{
+			// Check if wrap arounded or reverse wrap arounded
 			auto last_origin_pts = _last_origin_ts_map[0][track_id];
 			if (last_origin_pts - pts > max_timestamp / 2)
 			{
 				_wraparound_count_map[0][track_id]++;
-				logtc("[PTS] Wrap around detected. track:%d", track_id);
+				logti("[PTS] Wrap around detected. track:%d", track_id);
 			}
 			else if (pts - last_origin_pts > max_timestamp / 2)
 			{
-				reverse_wraparound = true;
-				logtc("[PTS] Reverse wrap around detected. track:%d", track_id);
+				if (_wraparound_count_map[0][track_id] > 0)
+				{
+					_wraparound_count_map[0][track_id]--;
+					logti("[PTS] Reverse wrap around detected. It could be caused by b-frames. track:%d", track_id);
+				}
 			}
 		}
 
-		if (_wraparound_count_map[0].find(track_id) != _wraparound_count_map[0].end())
-		{
-			auto wraparound_count = _wraparound_count_map[0][track_id] + (reverse_wraparound ? -1 : 0);
-			final_pkt_pts_tb += wraparound_count * max_timestamp;
-		}
+		final_pkt_pts_tb += _wraparound_count_map[0][track_id] * max_timestamp;
 
 		// For DTS
 		if (_last_origin_ts_map[1].find(track_id) != _last_origin_ts_map[1].end())
@@ -304,23 +316,16 @@ namespace pvd
 			if (last_origin_dts - dts > max_timestamp / 2)
 			{
 				_wraparound_count_map[1][track_id]++;
-				logtc("[DTS] Wrap around detected. track:%d", track_id);
+				logti("[DTS] Wrap around detected. track:%d", track_id);
 			}
 		}
 
-		if (_wraparound_count_map[1].find(track_id) != _wraparound_count_map[1].end())
-		{
-			auto wraparound_count = _wraparound_count_map[1][track_id];
-			final_pkt_dts_tb += wraparound_count * max_timestamp;
-		}
+		final_pkt_dts_tb += _wraparound_count_map[1][track_id] * max_timestamp;
 		
 		// 5. Update last timestamp ( Managed in microseconds )
 		_last_timestamp_map[track_id] = (int64_t)((double)final_pkt_dts_tb * expr_tb2us);
 
-		if (reverse_wraparound == false)
-		{
-			_last_origin_ts_map[0][track_id] = pts;
-		}
+		_last_origin_ts_map[0][track_id] = pts;
 		_last_origin_ts_map[1][track_id] = dts;
 
 		pts = final_pkt_pts_tb;
@@ -328,15 +333,12 @@ namespace pvd
 
 #if 0
 		// for debugging
-		if(1)
-		{
-			logtd("[%s/%20s(%d)] track:%d, pts:%8lld -> %8lld (%8lldus), dts:%8lld -> %8lld (%8lldus), tb:%d/%d / lasttime:%lld, basetime:%lld",
-				  _application->GetName().CStr(), GetName().CStr(), GetId(), track_id,
-				  pts, final_pkt_pts_tb, (int64_t)((double)final_pkt_pts_tb * expr_tb2us), 
-				  dts, final_pkt_dts_tb, (int64_t)((double)final_pkt_dts_tb * expr_tb2us),
-				  track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(),
-				  _last_timestamp_map[track_id], (int64_t)(base_timestamp_tb * expr_tb2us));
-		}
+		logtd("[%s/%20s(%d)] track:%d, pts:%8lld -> %8lld (%8lldus), dts:%8lld -> %8lld (%8lldus), tb:%d/%d / lasttime:%lld, basetime:%lld",
+				_application->GetName().CStr(), GetName().CStr(), GetId(), track_id,
+				pts, final_pkt_pts_tb, (int64_t)((double)final_pkt_pts_tb * expr_tb2us), 
+				dts, final_pkt_dts_tb, (int64_t)((double)final_pkt_dts_tb * expr_tb2us),
+				track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(),
+				_last_timestamp_map[track_id], (int64_t)(base_timestamp_tb * expr_tb2us));
 #endif
 
 		return pts;
