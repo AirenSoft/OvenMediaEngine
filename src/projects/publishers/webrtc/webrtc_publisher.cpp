@@ -114,7 +114,10 @@ bool WebRtcPublisher::Start()
 
 	logte("An error occurred while initialize %s. Stopping RtcSignallingServer...", GetPublisherName());
 
-	_signalling_server->Stop();
+	if (_signalling_server != nullptr)
+	{
+		_signalling_server->Stop();
+	}
 
 	IcePortManager::GetInstance()->Release(IcePortObserver::GetSharedPtr());
 
@@ -125,7 +128,7 @@ bool WebRtcPublisher::Stop()
 {
 	IcePortManager::GetInstance()->Release(IcePortObserver::GetSharedPtr());
 
-	if (_signalling_server)
+	if (_signalling_server != nullptr)
 	{
 		_signalling_server->RemoveObserver(RtcSignallingObserver::GetSharedPtr());
 		_signalling_server->Stop();
