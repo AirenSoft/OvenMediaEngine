@@ -8,6 +8,8 @@
 //==============================================================================
 #include "srt_option_processor.h"
 
+#include <srt/version.h>
+
 #include "srt_private.h"
 
 std::shared_ptr<ov::Error> SrtOptionProcessor::SetOption(
@@ -111,6 +113,9 @@ std::shared_ptr<ov::Error> SrtOptionProcessor::SetOption(
 		return ov::Error::CreateError(OV_LOG_TAG, "Cannot use an option: %s - " message, name.CStr(), ##__VA_ARGS__); \
 	}
 
+#define IS_SRT_VERSION_EQ_OR_GT(major, minor, patch) \
+	SRT_MAKE_VERSION(major, minor, patch) <= SRT_VERSION_VALUE
+
 std::shared_ptr<ov::Error> SrtOptionProcessor::SetOptions(
 	const std::shared_ptr<ov::Socket> &sock,
 	const cfg::cmn::Options &options)
@@ -119,18 +124,27 @@ std::shared_ptr<ov::Error> SrtOptionProcessor::SetOptions(
 	{
 		const auto name = option.GetKey();
 		const auto value = option.GetValue();
-
+#if ENABLE_AEAD_API_PREVIEW
+#endif
 		SRT_SET_OPTION(SRTO_BINDTODEVICE, ov::String);
 		SRT_SET_OPTION(SRTO_CONGESTION, ov::String);
 		SRT_SET_OPTION(SRTO_CONNTIMEO, int32_t);
-		SRT_NOT_SUPPORTED_OPTION(SRTO_CRYPTOMODE, int32_t, "Not supported in 1.5.1");
+		// SRTO_CRYPTOMODE is only available in SRT 1.5.2 or later with ENABLE_AEAD_API_PREVIEW=true
+		SRT_NOT_SUPPORTED_OPTION(SRTO_CRYPTOMODE, int32_t, "Not supported in " SRT_VERSION_STRING " (This option is available starting from version 1.5.2)");
 		SRT_SET_OPTION(SRTO_DRIFTTRACER, bool);
 		SRT_SET_OPTION(SRTO_ENFORCEDENCRYPTION, bool);
 		SRT_SET_OPTION(SRTO_EVENT, int32_t);
 		SRT_SET_OPTION(SRTO_FC, int32_t);
+#if IS_SRT_VERSION_EQ_OR_GT(1, 5, 1)
+		// SRT version is 1.5.1 or later
 		SRT_SET_OPTION(SRTO_GROUPCONNECT, int32_t);
 		SRT_SET_OPTION(SRTO_GROUPMINSTABLETIMEO, int32_t);
 		SRT_SET_OPTION(SRTO_GROUPTYPE, int32_t);
+#else	// IS_SRT_VERSION_EQ_OR_GT(1, 5, 1)
+		SRT_NOT_SUPPORTED_OPTION(SRTO_GROUPCONNECT, int32_t, "Not supported in " SRT_VERSION_STRING " (This option is available starting from version 1.5.1)");
+		SRT_NOT_SUPPORTED_OPTION(SRTO_GROUPMINSTABLETIMEO, int32_t, "Not supported in " SRT_VERSION_STRING " (This option is available starting from version 1.5.1)");
+		SRT_NOT_SUPPORTED_OPTION(SRTO_GROUPTYPE, int32_t, "Not supported in " SRT_VERSION_STRING " (This option is available starting from version 1.5.1)");
+#endif	// IS_SRT_VERSION_EQ_OR_GT(1, 5, 1)
 		SRT_SET_OPTION(SRTO_INPUTBW, int64_t);
 		SRT_SET_OPTION(SRTO_IPTOS, int32_t);
 		SRT_SET_OPTION(SRTO_IPTTL, int32_t);
