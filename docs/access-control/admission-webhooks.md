@@ -50,7 +50,7 @@ X-OME-Signature: f871jd991jj1929jsjd91pqa0amm1
   {
     "address": "211.233.58.86",
     "port": 29291,
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
   },
   "request":
   {
@@ -73,7 +73,7 @@ Here is a detailed explanation of each element of Json payload:
 | client  |                                 | Information of the client who requested the connection.                                                     |
 |         | address                         | Client's IP address                                                                                         |
 |         | port                            | Client's Port number                                                                                        |
-|         | <p>user-agent<br>(optional)</p> | Client's User-Agent                                                                                         |
+|         | <p>user_agent<br>(optional)</p> | Client's User_Agent                                                                                         |
 | request |                                 | Information about the client's request                                                                      |
 |         | direction                       | <p>incoming : A client requests to publish a stream</p><p>outgoing : A client requests to play a stream</p> |
 |         | protocol                        | webrtc, srt, rtmp, llhls, thumbnail                                                                         |
