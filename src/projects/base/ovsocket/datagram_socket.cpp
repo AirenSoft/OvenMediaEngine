@@ -69,10 +69,12 @@ namespace ov
 
 		auto data = std::make_shared<ov::Data>(UdpBufferSize);
 
+		SocketAddressPair address_pair;
+
 		while (true)
 		{
-			SocketAddress remote;
-			auto error = RecvFrom(data, &remote);
+
+			auto error = RecvFrom(data, &address_pair);
 
 			if (error == nullptr)
 			{
@@ -85,7 +87,7 @@ namespace ov
 				{
 					if (_datagram_callback != nullptr)
 					{
-						_datagram_callback(GetSharedPtrAs<DatagramSocket>(), remote, data->Clone());
+						_datagram_callback(GetSharedPtrAs<DatagramSocket>(), address_pair, data->Clone());
 					}
 				}
 			}

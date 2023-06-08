@@ -196,15 +196,27 @@ namespace ov
 
 			SetState(SocketState::Created);
 
-			if (type == SocketType::Srt)
+			switch (type)
 			{
-				SetSockOpt(SRTO_IPV6ONLY, 1);
-			}
-			else if (family == SocketFamily::Inet6)
-			{
-				// In some environments, listening to IPv6 will also listen to IPv4
-				// This setting lets this socket listen to IPv6 only
-				SetSockOpt(IPPROTO_IPV6, IPV6_V6ONLY, 1);
+				case SocketType::Unknown:
+					break;
+
+				case SocketType::Srt:
+					SetSockOpt(SRTO_IPV6ONLY, 1);
+					break;
+
+				case SocketType::Udp:
+					SetSockOpt(IPPROTO_IP, IP_PKTINFO, 1);
+					[[fallthrough]];
+
+				case SocketType::Tcp:
+					if (family == SocketFamily::Inet6)
+					{
+						// In some environments, listening to IPv6 will also listen to IPv4
+						// This setting lets this socket listen to IPv6 only
+						SetSockOpt(IPPROTO_IPV6, IPV6_V6ONLY, 1);
+					}
+					break;
 			}
 
 			return true;
@@ -1468,7 +1480,17 @@ namespace ov
 		return SendTo(address, (data == nullptr) ? nullptr : std::make_shared<Data>(data, length));
 	}
 
-	std::shared_ptr<const SocketError> Socket::Recv(std::shared_ptr<Data> &data, bool non_block)
+	bool Socket::SendFromTo(const SocketAddressPair &address_pair, const std::shared_ptr<const Data> &data)
+	{
+		return SendTo(address_pair.GetRemoteAddress(), data);
+	}
+
+	bool Socket::SendFromTo(const SocketAddressPair &address_pair, const void *data, size_t length)
+	{
+		return SendTo(address_pair.GetRemoteAddress(), data, length);
+	}
+
+	std::shared_ptr<const SocketError> Socket::Recv(std::shared_ptr<Data> &data, const bool non_block)
 	{
 		OV_ASSERT2(data != nullptr);
 		OV_ASSERT(data->GetCapacity() > 0, "Must specify a data size in advance using Reserve().");
@@ -1489,7 +1511,7 @@ namespace ov
 		return nullptr;
 	}
 
-	std::shared_ptr<const SocketError> Socket::Recv(void *data, size_t length, size_t *received_length, bool non_block)
+	std::shared_ptr<const SocketError> Socket::Recv(void *data, size_t length, size_t *received_length, const bool non_block)
 	{
 		if (GetState() == SocketState::Closed)
 		{
@@ -1637,7 +1659,56 @@ namespace ov
 		return socket_error;
 	}
 
-	std::shared_ptr<const SocketError> Socket::RecvFrom(std::shared_ptr<Data> &data, SocketAddress *address, bool non_block)
+	SocketAddress QueryLocalAddress(
+		const int local_port,
+		const sockaddr_storage &remote,
+		msghdr *msg)
+	{
+		auto cmsg = CMSG_FIRSTHDR(msg);
+
+		while (cmsg != nullptr)
+		{
+			if ((cmsg->cmsg_level == IPPROTO_IP) && (cmsg->cmsg_type == IP_PKTINFO))
+			{
+				sockaddr_storage local{};
+
+				local.ss_family = remote.ss_family;
+
+				switch (remote.ss_family)
+				{
+					case AF_INET: {
+						const auto pktinfo = reinterpret_cast<in_pktinfo *>(CMSG_DATA(cmsg));
+
+						auto sock = ov::ToSockAddrIn4(&local);
+
+						sock->sin_port = local_port;
+						sock->sin_addr = pktinfo->ipi_addr;
+
+						break;
+					}
+
+					case AF_INET6: {
+						const auto pktinfo = reinterpret_cast<in6_pktinfo *>(CMSG_DATA(cmsg));
+
+						auto sock = ov::ToSockAddrIn6(&local);
+
+						sock->sin6_port = local_port;
+						sock->sin6_addr = pktinfo->ipi6_addr;
+
+						break;
+					}
+				}
+
+				return SocketAddress("", local);
+			}
+
+			cmsg = CMSG_NXTHDR(msg, cmsg);
+		}
+
+		return SocketAddress();
+	}
+
+	std::shared_ptr<const SocketError> Socket::RecvFrom(std::shared_ptr<Data> &data, SocketAddressPair *address_pair, const bool non_block)
 	{
 		OV_ASSERT2(_socket.IsValid());
 		OV_ASSERT2(data != nullptr);
@@ -1649,15 +1720,30 @@ namespace ov
 		{
 			case SocketType::Udp:
 			case SocketType::Tcp: {
-				sockaddr_storage remote = {0};
+				sockaddr_storage remote{};
 				socklen_t remote_length = sizeof(remote);
 
 				logad("Trying to read from the socket...");
 				data->SetLength(data->GetCapacity());
 
-				ssize_t read_bytes = ::recvfrom(GetNativeHandle(), data->GetWritableData(), data->GetLength(),
-												((_blocking_mode == BlockingMode::NonBlocking) || non_block) ? MSG_DONTWAIT : 0,
-												reinterpret_cast<sockaddr *>(&remote), &remote_length);
+				iovec iov{};
+				iov.iov_base = data->GetWritableData();
+				iov.iov_len = data->GetLength();
+
+				char control_buf[CMSG_SPACE(36)]{};
+
+				msghdr msg{};
+				msg.msg_name = &remote;
+				msg.msg_namelen = remote_length;
+				msg.msg_control = control_buf;
+				msg.msg_controllen = sizeof(control_buf);
+				msg.msg_iov = &iov;
+				msg.msg_iovlen = 1;
+
+				const ssize_t read_bytes = ::recvmsg(
+					GetNativeHandle(),
+					&msg,
+					((_blocking_mode == BlockingMode::NonBlocking) || non_block) ? MSG_DONTWAIT : 0);
 
 				if (read_bytes < 0L)
 				{
@@ -1681,9 +1767,12 @@ namespace ov
 
 					data->SetLength(read_bytes);
 
-					if (address != nullptr)
+					if (address_pair != nullptr)
 					{
-						*address = SocketAddress("", remote);
+						const auto port = GetLocalAddress()->Port();
+
+						address_pair->SetLocalAddress(QueryLocalAddress(port, remote, &msg));
+						address_pair->SetRemoteAddress(SocketAddress("", remote));
 					}
 
 					UpdateLastRecvTime();

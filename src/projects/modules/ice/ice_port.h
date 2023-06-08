@@ -8,30 +8,29 @@
 //==============================================================================
 #pragma once
 
+#include <config/config.h>
+#include <modules/physical_port/physical_port_manager.h>
+#include <modules/rtp_rtcp/rtcp_packet.h>
+#include <modules/rtp_rtcp/rtp_packet.h>
+
+#include <memory>
+#include <vector>
+
 #include "ice_port_observer.h"
 #include "ice_tcp_demultiplexer.h"
 #include "modules/ice/stun/stun_message.h"
 
-#include <vector>
-#include <memory>
-
-#include <config/config.h>
-#include <modules/rtp_rtcp/rtp_packet.h>
-#include <modules/rtp_rtcp/rtcp_packet.h>
-#include <modules/physical_port/physical_port_manager.h>
-
-
-#define DEFAULT_RELAY_REALM		"airensoft"
-#define DEFAULT_RELAY_USERNAME	"ome"
-#define DEFAULT_RELAY_KEY		"airen"
-#define DEFAULT_LIFETIME		3600
-// This is the player's candidate and eventually passed to OME. 
+#define DEFAULT_RELAY_REALM "airensoft"
+#define DEFAULT_RELAY_USERNAME "ome"
+#define DEFAULT_RELAY_KEY "airen"
+#define DEFAULT_LIFETIME 3600
+// This is the player's candidate and eventually passed to OME.
 // However, OME does not use the player's candidate. So we pass anything by this value.
-#define FAKE_RELAY_IP4			"1.1.1.1"
-#define FAKE_RELAY_IP6			"1::1"
-#define FAKE_RELAY_PORT			14090
+#define FAKE_RELAY_IP4 "1.1.1.1"
+#define FAKE_RELAY_IP6 "1::1"
+#define FAKE_RELAY_PORT 14090
 
-#define OV_ICE_PORT_PUBLIC_IP	"${PublicIP}"
+#define OV_ICE_PORT_PUBLIC_IP "${PublicIP}"
 
 class RtcIceCandidate;
 
@@ -48,8 +47,8 @@ protected:
 		};
 
 		IcePacketIdentifier::PacketType packet_type;
-		GateType	input_method = GateType::DIRECT;
-		// If this packet cames from a send 
+		GateType input_method = GateType::DIRECT;
+		// If this packet cames from a send
 		ov::SocketAddress peer_address;
 		// If this packet is from a turn data channel, store the channel number.
 		uint16_t channel_number = 0;
@@ -117,7 +116,7 @@ protected:
 
 		bool IsExpired() const
 		{
-			if(_lifetime_epoch_ms != 0 && _lifetime_epoch_ms < ov::Clock::NowMSec())
+			if (_lifetime_epoch_ms != 0 && _lifetime_epoch_ms < ov::Clock::NowMSec())
 			{
 				return true;
 			}
@@ -138,7 +137,6 @@ protected:
 	protected:
 		const int _expire_after_ms;
 		const uint64_t _lifetime_epoch_ms;
-		
 	};
 
 	struct BindingRequestInfo
@@ -152,7 +150,7 @@ protected:
 
 		bool IsExpired() const
 		{
-			if(ov::Clock::GetElapsedMiliSecondsFromNow(_requested_time) > 3000)
+			if (ov::Clock::GetElapsedMiliSecondsFromNow(_requested_time) > 3000)
 			{
 				return true;
 			}
@@ -162,7 +160,7 @@ protected:
 
 		ov::String _transaction_id;
 		std::shared_ptr<IcePortInfo> _ice_port;
-		std::chrono::time_point<std::chrono::system_clock>	_requested_time;
+		std::chrono::time_point<std::chrono::system_clock> _requested_time;
 	};
 
 public:
@@ -176,7 +174,7 @@ public:
 	IcePortConnectionState GetState(uint32_t session_id) const
 	{
 		auto item = _session_port_table.find(session_id);
-		if(item == _session_port_table.end())
+		if (item == _session_port_table.end())
 		{
 			OV_ASSERT(false, "Invalid session_id: %d", session_id);
 			return IcePortConnectionState::Failed;
@@ -187,9 +185,9 @@ public:
 
 	ov::String GenerateUfrag();
 
-	void AddSession(const std::shared_ptr<IcePortObserver> &observer, uint32_t session_id, 
-					std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp, 
-					int stun_timeout_ms,  uint64_t life_time_epoch_ms, std::any user_data);
+	void AddSession(const std::shared_ptr<IcePortObserver> &observer, uint32_t session_id,
+					std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp,
+					int stun_timeout_ms, uint64_t life_time_epoch_ms, std::any user_data);
 	bool RemoveSession(uint32_t session_id);
 	bool TerminateSession(uint32_t session_id);
 
@@ -208,7 +206,9 @@ protected:
 	// Implementation of PhysicalPortObserver
 	//--------------------------------------------------------------------
 	void OnConnected(const std::shared_ptr<ov::Socket> &remote) override;
+	// TODO(Getroot): Delete this code after implement OnDatagramReceived()
 	void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
+	void OnDatagramReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddressPair &address_pair, const std::shared_ptr<const ov::Data> &data) override;
 	void OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
 	//--------------------------------------------------------------------
 
@@ -220,20 +220,18 @@ private:
 
 	void CheckTimedoutItem();
 
-	void OnPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
-						GateInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
-	void OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
-						GateInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
-	void OnChannelDataPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
-						GateInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
-	void OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
-						GateInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
-
+	void OnPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address,
+						  GateInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
+	void OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address,
+							  GateInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
+	void OnChannelDataPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address,
+									 GateInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
+	void OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address,
+									 GateInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
 
 	bool SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, StunMessage &message, const std::shared_ptr<const ov::Data> &integrity_key = nullptr);
 	bool SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, const std::shared_ptr<IcePortInfo> &info);
 	bool SendDataIndication(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, std::shared_ptr<ov::Data> &data);
-
 
 	const std::shared_ptr<const ov::Data> CreateDataIndication(ov::SocketAddress peer_address, const std::shared_ptr<const ov::Data> &data);
 	const std::shared_ptr<const ov::Data> CreateChannelDataMessage(uint16_t channel_number, const std::shared_ptr<const ov::Data> &data);
@@ -257,12 +255,12 @@ private:
 	// Related TURN
 	std::shared_ptr<ov::Data> _hmac_key;
 	// Creating an attribute to be used in advance
-	std::shared_ptr<StunAttribute>	_realm_attribute;
-	std::shared_ptr<StunAttribute>	_software_attribute;
-	std::shared_ptr<StunAttribute>	_nonce_attribute;
+	std::shared_ptr<StunAttribute> _realm_attribute;
+	std::shared_ptr<StunAttribute> _software_attribute;
+	std::shared_ptr<StunAttribute> _nonce_attribute;
 
-	std::shared_ptr<StunAttribute>	_xor_relayed_address_attribute_for_ipv4;
-	std::shared_ptr<StunAttribute>	_xor_relayed_address_attribute_for_ipv6;
+	std::shared_ptr<StunAttribute> _xor_relayed_address_attribute_for_ipv4;
+	std::shared_ptr<StunAttribute> _xor_relayed_address_attribute_for_ipv6;
 
 	std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
 	std::recursive_mutex _physical_port_list_mutex;
@@ -273,7 +271,7 @@ private:
 	// value: IcePortInfo
 	std::mutex _user_port_table_lock;
 	std::map<const ov::String, std::shared_ptr<IcePortInfo>> _user_port_table;
-	
+
 	// Find IcePortInfo with peer's ip:port
 	// key: SocketAddress value: IcePortInfo
 	std::mutex _port_table_lock;
@@ -286,12 +284,11 @@ private:
 	// Request Transaction ID : Info
 	std::shared_mutex _binding_request_table_lock;
 	std::map<ov::String, BindingRequestInfo> _binding_request_table;
-	
 
 	// Demultiplexer for data input through TCP
 	// remote's ID : Demultiplexer
 	std::shared_mutex _demultiplexers_lock;
-	std::map<int, std::shared_ptr<IceTcpDemultiplexer>>	_demultiplexers;
+	std::map<int, std::shared_ptr<IceTcpDemultiplexer>> _demultiplexers;
 
 	ov::DelayQueue _timer{"ICETmout"};
 };

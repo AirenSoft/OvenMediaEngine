@@ -23,9 +23,9 @@ namespace ov
 
 		~DatagramSocket() override = default;
 
-		// 특정 port로 bind
+		// Bind to a specific port
 		bool Prepare(int port, DatagramCallback datagram_callback);
-		// address에 해당하는 주소로 bind
+		// Bind to the address specified by address
 		bool Prepare(const SocketAddress &address, DatagramCallback datagram_callback);
 
 		using Socket::Close;

@@ -12,6 +12,7 @@
 
 #include "socket.h"
 #include "socket_address.h"
+#include "socket_address_pair.h"
 #include "socket_datastructure.h"
 
 namespace ov
