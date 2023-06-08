@@ -225,6 +225,9 @@ namespace mon
 		{
 			_last_throughput_measure_time = throughput_measure_time;
 
+			// Calculate last second throughput of provider
+			_last_throughtput_in = (_total_bytes_in.load() - _last_total_bytes_in.load());
+
 			// Calculate average throughput of provider
 			_avg_throughtput_in = (_total_bytes_in.load() - _last_total_bytes_in.load()) * 8 / THROUGHPUT_MEASURE_INTERVAL;
 			if (_avg_throughtput_in.load() > _max_throughtput_in.load())
@@ -233,8 +236,8 @@ namespace mon
 			}
 			_last_total_bytes_in.store(_total_bytes_in);
 
-			// Calculate last second throughput of provider
-			_last_throughtput_in = (_total_bytes_in.load() - _last_total_bytes_in.load());
+			// Calculate last second throughput of publisher
+			_last_throughtput_out = (_total_bytes_out.load() - _last_total_bytes_out.load());
 
 			// Calculate average throughput of publisher
 			_avg_throughtput_out =  (_total_bytes_out.load() - _last_total_bytes_out.load()) * 8 / THROUGHPUT_MEASURE_INTERVAL;
@@ -244,8 +247,6 @@ namespace mon
 			}
 			_last_total_bytes_out.store(_total_bytes_out);
 
-			// Calculate last second throughput of publisher
-			_last_throughtput_out = (_total_bytes_out.load() - _last_total_bytes_out.load());
 		}
 	}	
 }
