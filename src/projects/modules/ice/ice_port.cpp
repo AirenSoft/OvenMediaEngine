@@ -583,39 +583,37 @@ void IcePort::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physical
 void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 {
 	// The only packet input to IcePort/TCP is STUN and TURN DATA CHANNEL.
-	if (remote->GetType() == ov::SocketType::Tcp)
+	std::shared_lock<std::shared_mutex> lock(_demultiplexers_lock);
+	// If remote protocol is tcp, it must be TURN
+	if (_demultiplexers.find(remote->GetNativeHandle()) == _demultiplexers.end())
 	{
-		std::shared_lock<std::shared_mutex> lock(_demultiplexers_lock);
-		// If remote protocol is tcp, it must be TURN
-		if (_demultiplexers.find(remote->GetNativeHandle()) == _demultiplexers.end())
-		{
-			// If the client disconnects at this time, it cannot be found.
-			logtd("TCP packet input but cannot find the demultiplexer of %s.", remote->ToString().CStr());
-			return;
-		}
-
-		auto demultiplexer = _demultiplexers[remote->GetNativeHandle()];
-		lock.unlock();
-
-		// TCP demultiplexer
-		demultiplexer->AppendData(data);
-
-		while (demultiplexer->IsAvailablePacket())
-		{
-			auto packet = demultiplexer->PopPacket();
-
-			GateInfo gate_info;
-			gate_info.packet_type = packet->GetPacketType();
-			OnPacketReceived(remote, address, gate_info, packet->GetData());
-		}
+		// If the client disconnects at this time, it cannot be found.
+		logtd("TCP packet input but cannot find the demultiplexer of %s.", remote->ToString().CStr());
+		return;
 	}
-	else if (remote->GetType() == ov::SocketType::Udp)
+
+	auto demultiplexer = _demultiplexers[remote->GetNativeHandle()];
+	lock.unlock();
+
+	// TCP demultiplexer
+	demultiplexer->AppendData(data);
+
+	while (demultiplexer->IsAvailablePacket())
 	{
+		auto packet = demultiplexer->PopPacket();
+
 		GateInfo gate_info;
-		gate_info.packet_type = IcePacketIdentifier::FindPacketType(data);
-
-		OnPacketReceived(remote, address, gate_info, data);
+		gate_info.packet_type = packet->GetPacketType();
+		OnPacketReceived(remote, address, gate_info, packet->GetData());
 	}
+}
+
+void IcePort::OnDatagramReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddressPair &address_pair, const std::shared_ptr<const ov::Data> &data)
+{
+	GateInfo gate_info;
+	gate_info.packet_type = IcePacketIdentifier::FindPacketType(data);
+
+	OnPacketReceived(remote, address_pair.GetRemoteAddress(), gate_info, data);
 }
 
 void IcePort::OnPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const std::shared_ptr<const ov::Data> &data)

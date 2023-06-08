@@ -147,7 +147,7 @@ namespace pvd
 				  stream_name(std::move(stream_name))
 			{
 			}
-			
+
 			info::VHostAppName vhost_app_name;
 			ov::String stream_name;
 		};
@@ -173,9 +173,9 @@ namespace pvd
 		void OnConnected(const std::shared_ptr<ov::Socket> &remote) override;
 		bool OnConnected(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address);
 
-		void OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
-							const ov::SocketAddress &address,
-							const std::shared_ptr<const ov::Data> &data) override;
+		void OnDatagramReceived(const std::shared_ptr<ov::Socket> &remote,
+								const ov::SocketAddressPair &address_pair,
+								const std::shared_ptr<const ov::Data> &data) override;
 
 		void OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 							PhysicalPortDisconnectReason reason,
