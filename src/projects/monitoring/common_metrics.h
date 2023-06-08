@@ -26,6 +26,8 @@ namespace mon
 		virtual uint64_t GetAvgThroughputOut() const;
 		virtual uint64_t GetMaxThroughputIn() const;
 		virtual uint64_t GetMaxThroughputOut() const;		
+		virtual uint64_t GetLastThroughputIn() const;	
+		virtual uint64_t GetLastThroughputOut() const;	
 		virtual uint32_t GetTotalConnections() const;
 		virtual uint32_t GetMaxTotalConnections() const;
 		virtual std::chrono::system_clock::time_point GetMaxTotalConnectionsTime() const;
@@ -68,11 +70,14 @@ namespace mon
 		// Throughput from Provider
 		std::atomic<uint64_t> _avg_throughtput_in;
 		std::atomic<uint64_t> _max_throughtput_in;
+		std::atomic<uint64_t> _last_throughtput_in;
 		std::atomic<uint64_t> _last_total_bytes_in;
+		
 
 		// Throughput from Publishers
 		std::atomic<uint64_t> _avg_throughtput_out;
 		std::atomic<uint64_t> _max_throughtput_out;
+		std::atomic<uint64_t> _last_throughtput_out;
 		std::atomic<uint64_t> _last_total_bytes_out;
 
 		std::chrono::system_clock::time_point	_last_throughput_measure_time;
