@@ -58,6 +58,8 @@ Content-Type: application/json
         "lastRecvTime": "2023-03-15T19:46:13.728+09:00",
         "lastSentTime": "2023-03-15T19:46:13.728+09:00",
         "lastUpdatedTime": "2023-03-15T19:46:13.728+09:00",
+        "lastThroughputIn": 0,
+        "lastThroughputOut": 0,
         "maxTotalConnectionTime": "2023-03-15T19:46:13.728+09:00",
         "maxTotalConnections": 0,
         "totalBytesIn": 0,
@@ -66,9 +68,7 @@ Content-Type: application/json
         "avgThroughputIn": 0,
         "avgThroughputOut": 0,        
         "maxThroughputIn": 0,
-        "maxThroughputOut": 0,
-        "lastThroughputIn": 0,
-        "lastThroughputOut": 0
+        "maxThroughputOut": 0
     }
 }
 ```
@@ -171,6 +171,8 @@ Content-Type: application/json
         "lastRecvTime": "2023-03-15T19:46:13.728+09:00",
         "lastSentTime": "2023-03-15T19:46:13.728+09:00",
         "lastUpdatedTime": "2023-03-15T19:46:13.728+09:00",
+        "lastThroughputIn": 0,
+        "lastThroughputOut": 0,
         "maxTotalConnectionTime": "2023-03-15T19:46:13.728+09:00",
         "maxTotalConnections": 0,
         "totalBytesIn": 0,
@@ -179,9 +181,7 @@ Content-Type: application/json
         "avgThroughputIn": 0,
         "avgThroughputOut": 0,        
         "maxThroughputIn": 0,
-        "maxThroughputOut": 0,
-        "lastThroughputIn": 0,
-        "lastThroughputOut": 0      
+        "maxThroughputOut": 0   
     }
 }
 ```
@@ -284,6 +284,8 @@ Content-Type: application/json
         "lastRecvTime": "2023-03-15T19:46:13.728+09:00",
         "lastSentTime": "2023-03-15T19:46:13.728+09:00",
         "lastUpdatedTime": "2023-03-15T19:46:13.728+09:00",
+        "lastThroughputIn": 0,
+        "lastThroughputOut": 0,
         "maxTotalConnectionTime": "2023-03-15T19:46:13.728+09:00",
         "maxTotalConnections": 0,
         "totalBytesIn": 0,
@@ -292,9 +294,7 @@ Content-Type: application/json
         "avgThroughputIn": 0,
         "avgThroughputOut": 0,        
         "maxThroughputIn": 0,
-        "maxThroughputOut": 0,
-        "lastThroughputIn": 0,
-        "lastThroughputOut": 0        
+        "maxThroughputOut": 0       
     }
 }
 ```
