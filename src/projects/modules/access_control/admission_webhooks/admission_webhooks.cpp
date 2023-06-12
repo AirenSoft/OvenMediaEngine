@@ -139,7 +139,7 @@ ov::String AdmissionWebhooks::GetMessageBody()
 		{
 			"address": "211.233.58.86",
 			"port": 29291,
-			"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
+			"user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
 		},
 		"request":
 		{
@@ -162,7 +162,7 @@ ov::String AdmissionWebhooks::GetMessageBody()
 		jv_client["port"] = _client_info->GetPort();
 		if(!_client_info->GetUserAgent().IsEmpty())
 		{
-			jv_client["user-agent"] = _client_info->GetUserAgent().CStr();
+			jv_client["user_agent"] = _client_info->GetUserAgent().CStr();
 		}
 		jv_root["client"] = jv_client;
 	}

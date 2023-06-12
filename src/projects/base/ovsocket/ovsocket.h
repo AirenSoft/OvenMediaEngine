@@ -11,6 +11,7 @@
 // Common
 #include "socket.h"
 #include "socket_address.h"
+#include "socket_address_pair.h"
 
 // TCP socket
 #include "client_socket.h"

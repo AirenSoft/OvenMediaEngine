@@ -321,9 +321,9 @@ namespace pvd
 		return true;
 	}
 
-	void MpegTsProvider::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
-										const ov::SocketAddress &address,
-										const std::shared_ptr<const ov::Data> &data)
+	void MpegTsProvider::OnDatagramReceived(const std::shared_ptr<ov::Socket> &remote,
+											const ov::SocketAddressPair &address_pair,
+											const std::shared_ptr<const ov::Data> &data)
 	{
 		auto local_port = remote->GetLocalAddress()->Port();
 		auto channel_id = remote->GetNativeHandle();
@@ -338,7 +338,7 @@ namespace pvd
 		// UDP
 		if (stream_port_item->IsClientConnected() == false)
 		{
-			if (OnConnected(remote, address) == false)
+			if (OnConnected(remote, address_pair.GetRemoteAddress()) == false)
 			{
 				return;
 			}

@@ -107,7 +107,7 @@ protected:
 	void OnClientData(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data);
 
 	// For UDP physical port
-	void OnDatagram(const std::shared_ptr<ov::DatagramSocket> &client, const ov::SocketAddress &remote_address, const std::shared_ptr<ov::Data> &data);
+	void OnDatagram(const std::shared_ptr<ov::DatagramSocket> &client, const ov::SocketAddressPair &address_pair, const std::shared_ptr<ov::Data> &data);
 
 	ov::String _name;
 	std::shared_ptr<ov::SocketPool> _socket_pool;

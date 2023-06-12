@@ -283,12 +283,12 @@ void PhysicalPort::OnClientData(const std::shared_ptr<ov::ClientSocket> &client,
 	}
 }
 
-void PhysicalPort::OnDatagram(const std::shared_ptr<ov::DatagramSocket> &client, const ov::SocketAddress &remote_address, const std::shared_ptr<ov::Data> &data)
+void PhysicalPort::OnDatagram(const std::shared_ptr<ov::DatagramSocket> &client, const ov::SocketAddressPair &address_pair, const std::shared_ptr<ov::Data> &data)
 {
 	// Notify observers
 	for (auto &observer : _observer_list)
 	{
-		observer->OnDataReceived(client, remote_address, data);
+		observer->OnDatagramReceived(client, address_pair, data);
 	}
 }
 

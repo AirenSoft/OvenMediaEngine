@@ -12,6 +12,7 @@
 #include <netinet/tcp.h>
 
 #include "socket_address.h"
+#include "socket_address_pair.h"
 #include "socket_wrapper.h"
 
 #if !IS_MACOS
@@ -176,6 +177,9 @@ namespace ov
 
 		bool SendTo(const SocketAddress &address, const std::shared_ptr<const Data> &data);
 		bool SendTo(const SocketAddress &address, const void *data, size_t length);
+		
+		bool SendFromTo(const SocketAddressPair &address_pair, const std::shared_ptr<const Data> &data);
+		bool SendFromTo(const SocketAddressPair &address_pair, const void *data, size_t length);
 
 		// When Recv is called in non-blocking mode,
 		//
@@ -186,11 +190,11 @@ namespace ov
 		//                          (If not, epoll event will not occur later)
 		//
 		// If MakeNonBlocking() is called, non_block is ignored
-		std::shared_ptr<const SocketError> Recv(std::shared_ptr<Data> &data, bool non_block = false);
-		std::shared_ptr<const SocketError> Recv(void *data, size_t length, size_t *received_length, bool non_block = false);
+		std::shared_ptr<const SocketError> Recv(std::shared_ptr<Data> &data, const bool non_block = false);
+		std::shared_ptr<const SocketError> Recv(void *data, size_t length, size_t *received_length, const bool non_block = false);
 
 		// If MakeNonBlocking() is called, non_block is ignored
-		std::shared_ptr<const SocketError> RecvFrom(std::shared_ptr<Data> &data, SocketAddress *address, bool non_block = false);
+		std::shared_ptr<const SocketError> RecvFrom(std::shared_ptr<Data> &data, SocketAddressPair *address_pair, const bool non_block = false);
 
 		std::chrono::system_clock::time_point GetLastRecvTime() const;
 		std::chrono::system_clock::time_point GetLastSentTime() const;
