@@ -166,7 +166,6 @@ private:
 
 	bool SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddressPair &address_pair, GateInfo &packet_info, StunMessage &message, const std::shared_ptr<const ov::Data> &integrity_key = nullptr);
 	bool SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddressPair &address_pair, GateInfo &packet_info, const std::shared_ptr<IceSession> &info);
-	bool SendDataIndication(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddressPair &address_pair, GateInfo &packet_info, std::shared_ptr<ov::Data> &data);
 
 	const std::shared_ptr<const ov::Data> CreateDataIndication(const ov::SocketAddress &peer_address, const std::shared_ptr<const ov::Data> &data);
 	const std::shared_ptr<const ov::Data> CreateChannelDataMessage(uint16_t channel_number, const std::shared_ptr<const ov::Data> &data);

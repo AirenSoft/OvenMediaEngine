@@ -655,7 +655,7 @@ void IcePort::OnDatagramReceived(const std::shared_ptr<ov::Socket> &remote, cons
 
 void IcePort::OnPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddressPair &address_pair, GateInfo &gate_info, const std::shared_ptr<const ov::Data> &data)
 {
-	logtd("OnPacketReceived %s (%s)", gate_info.ToString().CStr(), remote->GetLocalAddress()->ToString().CStr());
+	logtd("OnPacketReceived %s (%s)", gate_info.ToString().CStr(), address_pair.ToString().CStr());
 
 	switch (gate_info.packet_type)
 	{
@@ -682,7 +682,7 @@ void IcePort::OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &rem
 	auto ice_session = FindIceSession(address_pair);
 	if (ice_session == nullptr)
 	{
-		logtw("Could not find client(%s) information. Dropping...", address_pair.ToString().CStr());
+		logtw("Could not find agent(%s) information. Dropping... [%s]", address_pair.ToString().CStr(), gate_info.ToString().CStr());
 		return;
 	}
 
@@ -719,17 +719,13 @@ void IcePort::OnChannelDataPacketReceived(const std::shared_ptr<ov::Socket> &rem
 
 	// Update GateInfo
 	// If a request comes from a send indication or channel, this is through a turn. When transmitting a packet to the player, it must be sent through a data indication or channel, so it stores related information.
-
 	auto ice_session = FindIceSession(address_pair);
-	if (ice_session == nullptr)
+	if (ice_session != nullptr)
 	{
-		logtw("Could not find client(%s) information. Dropping...", address_pair.ToString().CStr());
-		return;
+		ice_session->SetTurnClient(true);
+		ice_session->SetDataChannelEnabled(true);
+		ice_session->SetDataChannelNumber(application_gate_info.channel_number);
 	}
-
-	ice_session->SetTurnClient(true);
-	ice_session->SetDataChannelEnabled(true);
-	ice_session->SetDataChannelNumber(application_gate_info.channel_number);
 
 	// Decapsulate and process the packet again.
 	OnPacketReceived(remote, address_pair, application_gate_info, message.GetData());
@@ -828,6 +824,8 @@ void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, co
 
 bool IcePort::UseCandidate(const std::shared_ptr<IceSession> &ice_session, const ov::SocketAddressPair &address_pair)
 {
+	logti("Session %u uses candidate: %s", ice_session->GetSessionID(), address_pair.ToString().CStr());
+
 	ice_session->UseCandidate(address_pair);
 	AddIceSession(address_pair, ice_session);
 
@@ -874,8 +872,6 @@ bool IcePort::OnReceivedStunBindingRequest(const std::shared_ptr<ov::Socket> &re
 		return false;
 	}
 
-	//logti("Add the candidate [%s / %s] to session (%u)", address.ToString(false).CStr(), gate_info.ToString().CStr(), ce_session->GetSessionID());
-
 	// Add the candidate to the session
 	auto old_state = ice_session->GetState();
 	ice_session->OnReceivedStunBindingRequest(address_pair, remote);
@@ -921,6 +917,25 @@ bool IcePort::OnReceivedStunBindingRequest(const std::shared_ptr<ov::Socket> &re
 		SendStunMessage(remote, address_pair, gate_info, response_message, ice_session->GetLocalSdp()->GetIcePwd().ToData(false));
 	}
 
+	// Already connected, we don't send stun binding request to another peer address
+	if (ice_session->GetState() == IceConnectionState::Connected)
+	{
+		auto connected_candidate_pair = ice_session->GetConnectedCandidatePair();
+		if (connected_candidate_pair == nullptr)
+		{
+			// This should not happen
+			logte("IceSession(%u) is in connected state, but connected candidate pair is null", ice_session->GetSessionID());
+			return false;
+		}
+
+		if (connected_candidate_pair->GetAddressPair() != address_pair)
+		{
+			logtd("Already connected with another address : Connected(%s) Bind Request(%s)", connected_candidate_pair->GetAddressPair().ToString().CStr(), address_pair.ToString().CStr());
+			// Didn't respond 
+			return true;
+		}
+	}
+
 	// OvenMediaEngine sends Stun Binding Request to peer at this point
 	SendStunBindingRequest(remote, address_pair, gate_info, ice_session);
 
@@ -964,8 +979,6 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 		// but we have to select the best pair among all nominated pairs and connect.
 		if (ice_session->GetState() == IceConnectionState::Checking && ice_session->IsConnectable(address_pair))
 		{
-			logtc("Use candidate [%s / %s] to session (%u)", address_pair.ToString().CStr(), gate_info.ToString().CStr(), ice_session->GetSessionID());
-
 			UseCandidate(ice_session, address_pair);
 		}
 
@@ -975,6 +988,12 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 			// USE-CANDIDATE Attribute
 			auto use_candidate_attr = std::make_shared<StunUseCandidateAttribute>();
 			message.AddAttribute(use_candidate_attr);
+
+			logtd("Use candidate [%s] Gate [%s] State [%s]", address_pair.ToString().CStr(), gate_info.ToString().CStr(), IceConnectionStateToString(ice_session->GetState()));
+		}
+		else
+		{
+			logtd("Not yet use candidate [%s] Gate [%s] State [%s]", address_pair.ToString().CStr(), gate_info.ToString().CStr(), IceConnectionStateToString(ice_session->GetState()));
 		}
 	}
 	else if (ice_session->GetRole() == IceSession::Role::CONTROLLED)
@@ -1067,7 +1086,7 @@ bool IcePort::SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const o
 		source_data = message.Serialize(integrity_key);
 	}
 
-	logtd("Send message: %s\n%s", gate_info.ToString().CStr(), message.ToString().CStr());
+	logtd("Send message: [%s/%s]\n%s", gate_info.ToString().CStr(), address_pair.ToString().CStr(), message.ToString().CStr());
 
 	if (gate_info.input_method == IcePort::GateInfo::GateType::DIRECT)
 	{
