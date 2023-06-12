@@ -27,7 +27,7 @@ IcePort::IcePort()
 {
 	_timer.Push(
 		[this](void *paramter) -> ov::DelayQueueAction {
-			CheckTimedoutItem();
+			CheckTimedOut();
 			return ov::DelayQueueAction::Repeat;
 		},
 		1000);
@@ -239,13 +239,13 @@ bool IcePort::Close()
 
 ov::String IcePort::GenerateUfrag()
 {
-	std::lock_guard<std::mutex> lock_guard(_user_port_table_lock);
+	std::shared_lock<std::shared_mutex> lock(_ice_sessions_with_ufrag_lock);
 
 	while (true)
 	{
 		ov::String ufrag = ov::Random::GenerateString(6);
 
-		if (_user_port_table.find(ufrag) == _user_port_table.end())
+		if (_ice_sessions_with_ufrag.find(ufrag) == _ice_sessions_with_ufrag.end())
 		{
 			logtd("Generated ufrag: %s", ufrag.CStr());
 
@@ -254,154 +254,171 @@ ov::String IcePort::GenerateUfrag()
 	}
 }
 
-std::shared_ptr<IcePort::IcePortInfo> IcePort::FindIcePortInfo(uint32_t session_id)
+bool IcePort::AddIceSession(session_id_t session_id, const std::shared_ptr<IceSession> &ice_session)
 {
+	std::lock_guard<std::shared_mutex> lock_guard(_ice_sessions_with_id_lock);
+	auto item = _ice_seesions_with_id.find(session_id);
+	if (item == _ice_seesions_with_id.end())
 	{
-		std::lock_guard<std::mutex> lock_guard(_port_table_lock);
-		auto item = _session_port_table.find(session_id);
-		if (item != _session_port_table.end())
-		{
-			return item->second;
-		}
+		_ice_seesions_with_id.emplace(session_id, ice_session);
+		return true;
 	}
 
+	return false;
+}
+	
+bool IcePort::AddIceSession(const ov::String &local_ufrag, const std::shared_ptr<IceSession> &ice_session)
+{
+	std::lock_guard<std::shared_mutex> lock_guard(_ice_sessions_with_ufrag_lock);
+	auto item = _ice_sessions_with_ufrag.find(local_ufrag);
+	if (item == _ice_sessions_with_ufrag.end())
 	{
-		std::lock_guard<std::mutex> lock_guard(_user_port_table_lock);
-		for (auto &item : _user_port_table)
-		{
-			auto ice_port_info = item.second;
+		_ice_sessions_with_ufrag.emplace(local_ufrag, ice_session);
+		return true;
+	}
 
-			if (ice_port_info->session_id == session_id)
-			{
-				return ice_port_info;
-			}
-		}
+	return false;
+}
+	
+bool IcePort::AddIceSession(const ov::SocketAddressPair &address_pair, const std::shared_ptr<IceSession> &ice_session)
+{
+	std::lock_guard<std::shared_mutex> lock_guard(_ice_sessions_with_address_pair_lock);
+	auto item = _ice_sessions_with_address_pair.find(address_pair);
+	if (item == _ice_sessions_with_address_pair.end())
+	{
+		_ice_sessions_with_address_pair.emplace(address_pair, ice_session);
+		return true;
+	}
+
+	return false;
+}
+
+std::shared_ptr<IceSession> IcePort::FindIceSession(session_id_t session_id)
+{
+	std::shared_lock<std::shared_mutex> lock_guard(_ice_sessions_with_address_pair_lock);
+	auto item = _ice_seesions_with_id.find(session_id);
+	if (item != _ice_seesions_with_id.end())
+	{
+		return item->second;
 	}
 
 	return nullptr;
 }
 
-void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint32_t session_id,
+std::shared_ptr<IceSession> IcePort::FindIceSession(const ov::String &local_ufrag)
+{
+	std::shared_lock<std::shared_mutex> lock_guard(_ice_sessions_with_ufrag_lock);
+	auto item = _ice_sessions_with_ufrag.find(local_ufrag);
+	if (item != _ice_sessions_with_ufrag.end())
+	{
+		return item->second;
+	}
+
+	return nullptr;
+}
+
+std::shared_ptr<IceSession> IcePort::FindIceSession(const ov::SocketAddressPair &socket_address_pair)
+{
+	std::shared_lock<std::shared_mutex> lock_guard(_ice_sessions_with_address_pair_lock);
+	auto item = _ice_sessions_with_address_pair.find(socket_address_pair);
+	if (item != _ice_sessions_with_address_pair.end())
+	{
+		return item->second;
+	}
+
+	return nullptr;
+}
+
+void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, session_id_t session_id, IceSession::Role role, 
 						 std::shared_ptr<const SessionDescription> local_sdp, std::shared_ptr<const SessionDescription> peer_sdp,
 						 int expired_ms, uint64_t life_time_epoch_ms, std::any user_data)
 {
 	const ov::String &local_ufrag = local_sdp->GetIceUfrag();
-	const ov::String &remote_ufrag = peer_sdp->GetIceUfrag();
+	const ov::String &peer_ufrag = peer_sdp->GetIceUfrag();
 
+	auto old_session = FindIceSession(local_ufrag);
+	if (old_session != nullptr)
 	{
-		std::lock_guard<std::mutex> lock_guard(_user_port_table_lock);
-
-		auto item = _user_port_table.find(local_ufrag);
-		if (item != _user_port_table.end())
-		{
-			OV_ASSERT(false, "Duplicated ufrag: %s:%s, session_id: %d (old session_id: %d)", local_ufrag.CStr(), remote_ufrag.CStr(), session_id, item->second->session_id);
-		}
-
-		logtd("Trying to add session: %d (ufrag: %s:%s)...", session_id, local_ufrag.CStr(), remote_ufrag.CStr());
-
-		std::shared_ptr<IcePortInfo> info = std::make_shared<IcePortInfo>(expired_ms, life_time_epoch_ms);
-
-		info->observer = observer;
-		info->user_data = user_data;
-		info->session_id = session_id;
-		info->local_sdp = local_sdp;
-		info->peer_sdp = peer_sdp;
-		info->remote = nullptr;
-		info->address = ov::SocketAddress();
-		info->state = IcePortConnectionState::Closed;
-
-		info->UpdateBindingTime();
-
-		_user_port_table[local_ufrag] = info;
-
-		logti("Added session: %d (ufrag: %s:%s)", session_id, local_ufrag.CStr(), remote_ufrag.CStr());
+		OV_ASSERT(false, "Duplicated ufrag: %s:%s, session_id: %d (existing session_id: %d)", local_ufrag.CStr(), peer_ufrag.CStr(), session_id, old_session->GetSessionID());
 	}
 
-	SetIceState(_user_port_table[local_ufrag], IcePortConnectionState::New);
+	logtd("Trying to add session: %d (ufrag: %s:%s)...", session_id, local_ufrag.CStr(), peer_ufrag.CStr());
+
+	std::shared_ptr<IceSession> new_session = std::make_shared<IceSession>(session_id, role, local_sdp, peer_sdp, expired_ms, life_time_epoch_ms, user_data, observer);
+
+	if (AddIceSession(session_id, new_session) == false)
+	{
+		OV_ASSERT(false, "Duplicated session_id: %d", session_id);
+		logte("Duplicated session_id: %d", session_id);
+		return;
+	}
+
+	if (AddIceSession(local_ufrag, new_session) == false)
+	{
+		OV_ASSERT(false, "Duplicated ufrag: %s:%s, session_id: %d", local_ufrag.CStr(), peer_ufrag.CStr(), session_id);
+		logte("Duplicated ufrag: %s:%s, session_id: %d", local_ufrag.CStr(), peer_ufrag.CStr(), session_id);
+		return;
+	}
+
+	logti("Added session: %d (ufrag: %s:%s)", session_id, local_ufrag.CStr(), peer_ufrag.CStr());
 }
 
-bool IcePort::TerminateSession(uint32_t session_id)
+bool IcePort::DisconnectSession(session_id_t session_id)
 {
-	auto ice_port_info = FindIcePortInfo(session_id);
-	if (ice_port_info == nullptr)
+	auto ice_session = FindIceSession(session_id);
+	if (ice_session == nullptr)
 	{
 		logtd("Could not find session: %d", session_id);
 		return false;
 	}
 
 	// It will be deleted in the next timer (for thread safety)
-	ice_port_info->Terminate();
+	ice_session->SetState(IceConnectionState::Disconnecting);
 
 	return true;
 }
 
-bool IcePort::RemoveSession(uint32_t session_id)
+bool IcePort::RemoveSession(session_id_t session_id)
 {
-	std::shared_ptr<IcePortInfo> ice_port_info;
+	auto ice_session = FindIceSession(session_id);
+	if (ice_session == nullptr)
+	{
+		logtd("Could not find session: %d", session_id);
+		return false;
+	}
+
+	size_t ice_sessions_with_id_size = 0;
+	size_t ice_sessions_with_ufrag_size = 0;
+	size_t ice_sessions_with_address_pair_size = 0;
+
+	// Remove from _ice_sessions_with_id
+	{
+		std::lock_guard<std::shared_mutex> lock_guard(_ice_sessions_with_id_lock);
+		_ice_seesions_with_id.erase(session_id);
+		ice_sessions_with_id_size = _ice_seesions_with_id.size();
+	}
+
+	// Remove from _ice_sessions_with_ufrag
+	{
+		std::lock_guard<std::shared_mutex> lock_guard(_ice_sessions_with_ufrag_lock);
+		_ice_sessions_with_ufrag.erase(ice_session->GetLocalUfrag());
+		ice_sessions_with_ufrag_size = _ice_sessions_with_ufrag.size();
+	}
+
+	// Remove from _ice_sessions_with_address_pair if it exists
+	{
+		std::lock_guard<std::shared_mutex> lock_guard(_ice_sessions_with_address_pair_lock);
+		auto connected_candidate_pair = ice_session->GetConnectedCandidatePair();
+		if (connected_candidate_pair != nullptr)
+		{
+			_ice_sessions_with_address_pair.erase(connected_candidate_pair->GetAddressPair());
+		}
+		ice_sessions_with_address_pair_size = _ice_sessions_with_address_pair.size();
+	}
 
 	{
-		std::lock_guard<std::mutex> lock_guard(_port_table_lock);
-
-		auto item = _session_port_table.find(session_id);
-		if (item == _session_port_table.end())
-		{
-			/*
-			The case of reaching here is as follows.
-
-			1. Already the session was deleted but WebRTC Signalling server try to delete the session again
-			2. IcePort sent Stun request but player didn't response stun bind response
-
-			*/
-			logtd("Could not find session: %d", session_id);
-
-			{
-				// If it exists only in _user_port_table, find it and remove it.
-				// TODO(Dimiden): In this case, apply a more efficient method of deletion.
-				std::lock_guard<std::mutex> lock_guard(_user_port_table_lock);
-
-				auto it = _user_port_table.begin();
-				while (it != _user_port_table.end())
-				{
-					auto ice_port_info = it->second;
-					if (ice_port_info->session_id == session_id)
-					{
-						_user_port_table.erase(it++);
-						logtd("This is because the stun request was not received from this session.");
-
-						// Close only TCP (TURN)
-						auto remote = ice_port_info->remote;
-
-						if (remote != nullptr)
-						{
-							if (remote->GetSocket().GetType() == ov::SocketType::Tcp)
-							{
-								remote->CloseIfNeeded();
-							}
-						}
-
-						return true;
-					}
-					else
-					{
-						it++;
-					}
-				}
-			}
-
-			return false;
-		}
-
-		ice_port_info = item->second;
-
-		_session_port_table.erase(item);
-		for (const auto &item : ice_port_info->address_map)
-		{
-			_address_port_table.erase(item.first);
-		}
-
 		// Close only TCP (TURN)
-		auto remote = ice_port_info->remote;
-
+		auto remote = ice_session->GetConnectedSocket();
 		if (remote != nullptr)
 		{
 			if (remote->GetSocket().GetType() == ov::SocketType::Tcp)
@@ -411,25 +428,63 @@ bool IcePort::RemoveSession(uint32_t session_id)
 		}
 	}
 
-	{
-		std::lock_guard<std::mutex> lock_guard(_user_port_table_lock);
-		_user_port_table.erase(ice_port_info->local_sdp->GetIceUfrag());
-	}
+	logti("Removed session(%u) from ICEPort | ice_seesions_with_id count(%d) ice_sessions_with_ufrag(%d) ice_sessions_with_address_pair(%d) ", session_id, ice_sessions_with_id_size, ice_sessions_with_ufrag_size, ice_sessions_with_address_pair_size);
 
 	return true;
 }
 
-void IcePort::CheckTimedoutItem()
+bool IcePort::StoreIceSessionWithTransactionId(const std::shared_ptr<IceSession> &ice_session, const ov::String &transaction_id)
+{
+	std::lock_guard<std::shared_mutex> lock_guard(_binding_requests_with_transaction_id_lock);
+	auto item = _binding_requests_with_transaction_id.find(transaction_id);
+	if (item != _binding_requests_with_transaction_id.end())
+	{
+		logte("Duplicated transaction_id: %s", transaction_id.CStr());
+		return false;
+	}
+
+	_binding_requests_with_transaction_id.emplace(transaction_id, BindingRequestInfo(transaction_id, ice_session));
+
+	return true;
+}
+
+std::shared_ptr<IceSession> IcePort::FindIceSessionWithTransactionId(const ov::String &transaction_id)
+{
+	std::shared_lock<std::shared_mutex> lock_guard(_binding_requests_with_transaction_id_lock);
+	auto item = _binding_requests_with_transaction_id.find(transaction_id);
+	if (item == _binding_requests_with_transaction_id.end())
+	{
+		return nullptr;
+	}
+
+	return item->second._ice_session;
+}
+
+bool IcePort::RemoveTransaction(const ov::String &transaction_id)
+{
+	std::lock_guard<std::shared_mutex> lock_guard(_binding_requests_with_transaction_id_lock);
+	auto item = _binding_requests_with_transaction_id.find(transaction_id);
+	if (item == _binding_requests_with_transaction_id.end())
+	{
+		return false;
+	}
+
+	_binding_requests_with_transaction_id.erase(item);
+
+	return true;
+}
+
+void IcePort::CheckTimedOut()
 {
 	// Remove expired transction items
 	{
-		std::lock_guard<std::shared_mutex> brt_lock(_binding_request_table_lock);
+		std::lock_guard<std::shared_mutex> brt_lock(_binding_requests_with_transaction_id_lock);
 
-		for (auto it = _binding_request_table.begin(); it != _binding_request_table.end();)
+		for (auto it = _binding_requests_with_transaction_id.begin(); it != _binding_requests_with_transaction_id.end();)
 		{
 			if (it->second.IsExpired())
 			{
-				it = _binding_request_table.erase(it);
+				it = _binding_requests_with_transaction_id.erase(it);
 			}
 			else
 			{
@@ -438,101 +493,74 @@ void IcePort::CheckTimedoutItem()
 		}
 	}
 
-	std::vector<std::shared_ptr<IcePortInfo>> delete_list;
+	// Collect terminated sessions for thread safety
+	std::vector<std::shared_ptr<IceSession>> terminated_session_list;
 	{
-		std::lock_guard<std::mutex> lock_guard(_user_port_table_lock);
+		std::shared_lock<std::shared_mutex> lock_guard(_ice_sessions_with_id_lock);
 
-		for (auto item = _user_port_table.begin(); item != _user_port_table.end();)
+		for (const auto &item : _ice_seesions_with_id)
 		{
-			if (item->second->IsExpired() || item->second->IsTerminated())
+			auto session = item.second;
+			if (session->IsExpired() || session->GetState() == IceConnectionState::Disconnecting)
 			{
-				delete_list.push_back(item->second);
-				item = _user_port_table.erase(item);
-			}
-			else
-			{
-				++item;
+				terminated_session_list.push_back(session);
 			}
 		}
 	}
 
+	// Remove terminated sessions and notify
+	for (auto &terminated_session : terminated_session_list)
 	{
-		std::lock_guard<std::mutex> lock_guard(_port_table_lock);
+		RemoveSession(terminated_session->GetSessionID());
 
-		for (auto &deleted_ice_port : delete_list)
+		auto connected_candidate_pair = terminated_session->GetConnectedCandidatePair();
+
+		if (terminated_session->IsExpired())
 		{
-			_session_port_table.erase(deleted_ice_port->session_id);
-			for (const auto &item : deleted_ice_port->address_map)
-			{
-				_address_port_table.erase(item.first);
-			}
-		}
-	}
-
-	// Notify to observer
-	for (auto &deleted_ice_port : delete_list)
-	{
-		IcePortConnectionState state;
-		if (deleted_ice_port->IsExpired())
-		{
-			state = IcePortConnectionState::Disconnected;
-
-			logtw("Client %s(session id: %d) has expired", deleted_ice_port->address.ToString(false).CStr(), deleted_ice_port->session_id);
+			terminated_session->SetState(IceConnectionState::Disconnected);
+			
+			logtw("Agent [%s, %u] has expired", connected_candidate_pair != nullptr?connected_candidate_pair->ToString().CStr() : "Unknow", terminated_session->GetSessionID());
 		}
 		else
 		{
-			state = IcePortConnectionState::Closed;
-
-			logti("Client %s(session id: %d) has terminated", deleted_ice_port->address.ToString(false).CStr(), deleted_ice_port->session_id);
+			terminated_session->SetState(IceConnectionState::Closed);
+			logti("Agent [%s, %u] has closed", connected_candidate_pair != nullptr?connected_candidate_pair->ToString().CStr() : "Unknow", terminated_session->GetSessionID());
 		}
 
-		// Close only TCP (TURN)
-		if (deleted_ice_port->remote != nullptr && deleted_ice_port->remote->GetSocket().GetType() == ov::SocketType::Tcp)
-		{
-			deleted_ice_port->remote->CloseIfNeeded();
-		}
-
-		SetIceState(deleted_ice_port, state);
+		NotifyIceSessionStateChanged(terminated_session);
 	}
 }
 
-bool IcePort::Send(uint32_t session_id, std::shared_ptr<RtpPacket> packet)
+bool IcePort::Send(session_id_t session_id, const std::shared_ptr<RtpPacket> &packet)
 {
 	return Send(session_id, packet->GetData());
 }
 
-bool IcePort::Send(uint32_t session_id, std::shared_ptr<RtcpPacket> packet)
+bool IcePort::Send(session_id_t session_id, const std::shared_ptr<RtcpPacket> &packet)
 {
 	return Send(session_id, packet->GetData());
 }
 
-bool IcePort::Send(uint32_t session_id, const std::shared_ptr<const ov::Data> &data)
+bool IcePort::Send(session_id_t session_id, const std::shared_ptr<const ov::Data> &data)
 {
-	std::shared_ptr<IcePortInfo> ice_port_info;
+	std::shared_ptr<IceSession> ice_session = FindIceSession(session_id);
+	if (ice_session == nullptr || ice_session->GetState() != IceConnectionState::Connected)
 	{
-		std::lock_guard<std::mutex> lock_guard(_port_table_lock);
-
-		auto item = _session_port_table.find(session_id);
-		if (item == _session_port_table.end())
-		{
-			logtd("ClientSocket not found for session #%d", session_id);
-			return false;
-		}
-
-		ice_port_info = item->second;
+		logtd("IcePort::Send - Could not find session: %d", session_id);
+		return false;
 	}
 
 	std::shared_ptr<const ov::Data> send_data = nullptr;
 
-	// Send throutgh TURN data channel
-	if (ice_port_info->is_turn_client == true && ice_port_info->is_data_channel_enabled == true)
+	// Send throutgh TURN server Data Channel proxy
+	if (ice_session->IsTurnClient() == true && ice_session->IsDataChannelEnabled() == true)
 	{
-		send_data = CreateChannelDataMessage(ice_port_info->data_channle_number, data);
+		send_data = CreateChannelDataMessage(ice_session->GetDataChannelNumber(), data);
 	}
-	// Send thourgh DATA indication
-	else if (ice_port_info->is_turn_client == true && ice_port_info->is_data_channel_enabled == false)
+	// Send thourgh TURN server Data Indication proxy
+	else if (ice_session->IsTurnClient() == true && ice_session->IsDataChannelEnabled() == false)
 	{
-		send_data = CreateDataIndication(ice_port_info->peer_address, data);
+		send_data = CreateDataIndication(ice_session->GetTurnPeerAddress(), data);
 	}
 	// Send direct
 	else
@@ -545,14 +573,21 @@ bool IcePort::Send(uint32_t session_id, const std::shared_ptr<const ov::Data> &d
 		return false;
 	}
 
-	auto remote = ice_port_info->remote;
-
+	auto remote = ice_session->GetConnectedSocket();
 	if (remote == nullptr)
 	{
 		return false;
 	}
 
-	return remote->SendTo(ice_port_info->address, send_data);
+	// TODO(Getroot) : Change to use Local / Remote address of candidate pair
+	auto connected_candidate_pair = ice_session->GetConnectedCandidatePair();
+	if (connected_candidate_pair == nullptr)
+	{
+		return false;
+	}
+
+	auto remote_addrees = connected_candidate_pair->GetAddressPair().GetRemoteAddress();
+	return remote->SendTo(remote_addrees, send_data);
 }
 
 void IcePort::OnConnected(const std::shared_ptr<ov::Socket> &remote)
@@ -618,7 +653,7 @@ void IcePort::OnDatagramReceived(const std::shared_ptr<ov::Socket> &remote, cons
 
 void IcePort::OnPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const std::shared_ptr<const ov::Data> &data)
 {
-	logtd("OnPacketReceived : %s (%s)", gate_info.ToString().CStr(), remote->GetLocalAddress()->ToString().CStr());
+	logtd("OnPacketReceived %s (%s)", gate_info.ToString().CStr(), remote->GetLocalAddress()->ToString().CStr());
 
 	switch (gate_info.packet_type)
 	{
@@ -641,34 +676,27 @@ void IcePort::OnPacketReceived(const std::shared_ptr<ov::Socket> &remote, const 
 void IcePort::OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address,
 										  GateInfo &gate_info, const std::shared_ptr<const ov::Data> &data)
 {
-	std::shared_ptr<IcePortInfo> ice_port_info;
+	// TODO(Getroot) : After adding the local address parameter to this function, I need to modify the line below
+	auto ice_session = FindIceSession(ov::SocketAddressPair(*remote->GetLocalAddress(), address));
+	if (ice_session == nullptr)
 	{
-		std::lock_guard<std::mutex> lock_guard(_port_table_lock);
-		auto item = _address_port_table.find(address);
-		if (item != _address_port_table.end())
-		{
-			ice_port_info = item->second;
-			// When the candidate pair is determined, the peer starts sending DTLS messages. This can be seen as a true connected.
-			if (ice_port_info->state != IcePortConnectionState::Connected)
-			{
-				SetIceState(ice_port_info, IcePortConnectionState::Connected);
-				// It communicates with the candidate address that sends application data first.
-				ice_port_info->address = address;
-			}
-		}
-	}
-
-	if (ice_port_info == nullptr)
-	{
-		logtd("Could not find client(%s) information. Dropping...", address.ToString(false).CStr());
+		logtw("Could not find client(%s) information. Dropping...", address.ToString(false).CStr());
 		return;
 	}
 
-	if (ice_port_info->observer != nullptr)
+	// When the candidate pair is determined, the peer starts sending DTLS messages. This can be seen as a true connected.
+	if (ice_session->GetState() != IceConnectionState::Connected)
+	{
+		// If the peer is not connected, it is not a valid packet.
+		logtw("Received application packet from invalid peer(%s). Dropping...", address.ToString(false).CStr());
+		return;
+	}
+
+	if (ice_session->GetObserver() != nullptr)
 	{
 		// Some webrtc peer does not send STUN Binding Request repeatedly. So, I determine the peer is alive by receiving application data.
-		ice_port_info->UpdateBindingTime();
-		ice_port_info->observer->OnDataReceived(*this, ice_port_info->session_id, data, ice_port_info->user_data);
+		ice_session->Refresh();
+		ice_session->GetObserver()->OnDataReceived(*this, ice_session->GetSessionID(), data, ice_session->GetUserData());
 	}
 }
 
@@ -689,18 +717,18 @@ void IcePort::OnChannelDataPacketReceived(const std::shared_ptr<ov::Socket> &rem
 
 	// Update GateInfo
 	// If a request comes from a send indication or channel, this is through a turn. When transmitting a packet to the player, it must be sent through a data indication or channel, so it stores related information.
-	std::shared_ptr<IcePortInfo> ice_port_info;
+	ov::SocketAddressPair address_pair(*remote->GetLocalAddress(), address);
+
+	auto ice_session = FindIceSession(address_pair);
+	if (ice_session == nullptr)
 	{
-		std::lock_guard<std::mutex> lock_guard(_port_table_lock);
-		auto item = _address_port_table.find(address);
-		if (item != _address_port_table.end())
-		{
-			ice_port_info = item->second;
-			ice_port_info->is_turn_client = true;
-			ice_port_info->is_data_channel_enabled = true;
-			ice_port_info->data_channle_number = application_gate_info.channel_number;
-		}
+		logtw("Could not find client(%s) information. Dropping...", address.ToString(false).CStr());
+		return;
 	}
+
+	ice_session->SetTurnClient(true);
+	ice_session->SetDataChannelEnabled(true);
+	ice_session->SetDataChannelNumber(application_gate_info.channel_number);
 
 	// Decapsulate and process the packet again.
 	OnPacketReceived(remote, address, application_gate_info, message.GetData());
@@ -719,7 +747,7 @@ void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, co
 		return;
 	}
 
-	logti("Received message:\n%s", message.ToString().CStr());
+	logtd("Received message:\n%s", message.ToString().CStr());
 
 	if (message.GetClass() == StunClass::ErrorResponse)
 	{
@@ -797,90 +825,76 @@ void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, co
 	}
 }
 
+bool IcePort::UseCandidate(const std::shared_ptr<IceSession> &ice_session, const ov::SocketAddressPair &address_pair)
+{
+	ice_session->UseCandidate(address_pair);
+	AddIceSession(address_pair, ice_session);
+
+	return true;
+}
+
 bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const StunMessage &message)
 {
 	// Binding Request
 	ov::String local_ufrag;
-	ov::String remote_ufrag;
+	ov::String peer_ufrag;
 
-	if (message.GetUfrags(&local_ufrag, &remote_ufrag) == false)
+	if (message.GetUfrags(&local_ufrag, &peer_ufrag) == false)
 	{
 		logtw("Could not process user name attribute");
 		return false;
 	}
 
-	logtd("[From %s To %s] Received STUN binding request: %s:%s", address.ToString(false).CStr(), remote->GetLocalAddress()->ToString().CStr(), local_ufrag.CStr(), remote_ufrag.CStr());
+	logtd("[From %s To %s] Received STUN binding request: %s:%s", address.ToString(false).CStr(), remote->GetLocalAddress()->ToString().CStr(), local_ufrag.CStr(), peer_ufrag.CStr());
 
-	std::shared_ptr<IcePortInfo> ice_port_info;
+	auto ice_session = FindIceSession(local_ufrag);
+	if (ice_session == nullptr || ice_session->GetPeerSdp() == nullptr || ice_session->GetLocalSdp() == nullptr)
 	{
-		// WebRTC Publisher registers ufrag with session information
-		// through IcePort::AddSession function after signaling with player
-		std::unique_lock<std::mutex> lock_guard(_user_port_table_lock);
-		auto info = _user_port_table.find(local_ufrag);
-		if (info == _user_port_table.end())
-		{
-			// Stun may arrive first before AddSession, it is not an error
-			logtd("User not found: %s", local_ufrag.CStr());
-			return false;
-		}
-
-		ice_port_info = info->second;
+		// Stun may arrive first before AddSession, it is not an error
+		logtd("User not found: %s", local_ufrag.CStr());
+		return false;
 	}
 
-	if (ice_port_info->peer_sdp->GetIceUfrag() != remote_ufrag)
+	ice_session->Refresh();
+
+	if (ice_session->GetPeerSdp()->GetIceUfrag() != peer_ufrag)
 	{
-		logtw("Mismatched ufrag: %s (ufrag in peer SDP: %s)", remote_ufrag.CStr(), ice_port_info->peer_sdp->GetIceUfrag().CStr());
+		logtw("Mismatched ufrag: %s (ufrag in peer SDP: %s)", peer_ufrag.CStr(), ice_session->GetPeerSdp()->GetIceUfrag().CStr());
 	}
 
-	if (message.CheckIntegrity(ice_port_info->local_sdp->GetIcePwd()) == false)
+	if (message.CheckIntegrity(ice_session->GetLocalSdp()->GetIcePwd()) == false)
 	{
 		logtw("Failed to check integrity");
 
-		SetIceState(ice_port_info, IcePortConnectionState::Failed);
-		{
-			std::lock_guard<std::mutex> lock_guard(_user_port_table_lock);
-
-			_user_port_table.erase(local_ufrag);
-		}
-
-		{
-			std::lock_guard<std::mutex> lock_guard(_port_table_lock);
-
-			for (const auto &item : ice_port_info->address_map)
-			{
-				_address_port_table.erase(item.first);
-			}
-			_session_port_table.erase(ice_port_info->session_id);
-		}
+		ice_session->SetState(IceConnectionState::Failed);
+		NotifyIceSessionStateChanged(ice_session);
+		RemoveSession(ice_session->GetSessionID());
 
 		return false;
 	}
 
-	if (ice_port_info->state == IcePortConnectionState::New ||
-		(ice_port_info->state == IcePortConnectionState::Checking && ice_port_info->address != address))
+	//logti("Add the candidate [%s / %s] to session (%u)", address.ToString(false).CStr(), gate_info.ToString().CStr(), ce_session->GetSessionID());
+
+	// Add the candidate to the session
+	ov::SocketAddressPair address_pair(*remote->GetLocalAddress(), address);
+
+	auto old_state = ice_session->GetState();
+	ice_session->OnReceivedStunBindingRequest(address_pair, remote);
+
+	// Check the USE-CANDIDATE attribute if session role is controlled
+	if (ice_session->GetRole() == IceSession::Role::CONTROLLED)
 	{
-		std::lock_guard<std::mutex> lock_guard(_port_table_lock);
-
-		if (ice_port_info->state == IcePortConnectionState::New)
+		auto use_candidate_attr = message.GetAttribute<StunAttribute>(StunAttributeType::UseCandidate);
+		if (use_candidate_attr != nullptr)
 		{
-			logti("Add the client to the port list: %s / %s", address.ToString(false).CStr(), gate_info.ToString().CStr());
+			UseCandidate(ice_session, address_pair);
 		}
-		else
-		{
-			logti("Update the client to the port list: to %s from %s", address.ToString(false).CStr(), ice_port_info->address.ToString(false).CStr());
-		}
-
-		ice_port_info->remote = remote;
-		ice_port_info->address = address;
-		ice_port_info->address_map[address] = true;
-
-		_address_port_table[address] = ice_port_info;
-		_session_port_table[ice_port_info->session_id] = ice_port_info;
-
-		SetIceState(ice_port_info, IcePortConnectionState::Checking);
 	}
 
-	ice_port_info->UpdateBindingTime();
+	if (old_state != ice_session->GetState())
+	{
+		NotifyIceSessionStateChanged(ice_session);
+	}
 
 	// If the class is Indication it doesn't need to send response
 	if (message.GetClass() == StunClass::Request)
@@ -894,28 +908,31 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 
 		if (gate_info.input_method == GateInfo::GateType::DIRECT)
 		{
-			xor_mapped_attribute->SetParameters(address);
+			xor_mapped_attribute->SetParameters(address_pair.GetRemoteAddress());
 		}
 		else
 		{
-			xor_mapped_attribute->SetParameters(ov::SocketAddress::CreateAndGetFirst(address.IsIPv6() ? FAKE_RELAY_IP6 : FAKE_RELAY_IP4, FAKE_RELAY_PORT));
+			xor_mapped_attribute->SetParameters(ov::SocketAddress::CreateAndGetFirst(address_pair.GetRemoteAddress().IsIPv6() ? FAKE_RELAY_IP6 : FAKE_RELAY_IP4, FAKE_RELAY_PORT));
 		}
 
 		response_message.AddAttribute(std::move(xor_mapped_attribute));
 
 		// Send Stun Binding Response
 		// TODO: apply SASLprep(password)
-		SendStunMessage(remote, address, gate_info, response_message, ice_port_info->local_sdp->GetIcePwd().ToData(false));
-
-		// Immediately, the server also sends a bind request.
-		SendStunBindingRequest(remote, address, gate_info, ice_port_info);
+		SendStunMessage(remote, address_pair.GetRemoteAddress(), gate_info, response_message, ice_session->GetLocalSdp()->GetIcePwd().ToData(false));
 	}
+
+	// OvenMediaEngine sends Stun Binding Request to peer at this point
+	SendStunBindingRequest(remote, address_pair.GetRemoteAddress(), gate_info, ice_session);
 
 	return true;
 }
 
-bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const std::shared_ptr<IcePortInfo> &info)
+bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const std::shared_ptr<IceSession> &ice_session)
 {
+	logtd("IceSession : %s", ice_session->ToString().CStr());
+	ov::SocketAddressPair address_pair(*remote->GetLocalAddress(), address);
+
 	StunMessage message;
 
 	message.SetClass(StunClass::Request);
@@ -929,27 +946,49 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 	{
 		transaction_id[index] = charset[rand() % (OV_COUNTOF(charset) - 1)];
 	}
+
 	message.SetTransactionId(&(transaction_id[0]));
 
 	// USERNAME attribute
 	auto user_name_attr = std::make_shared<StunUserNameAttribute>();
-	user_name_attr->SetText(ov::String::FormatString("%s:%s", info->peer_sdp->GetIceUfrag().CStr(), info->local_sdp->GetIceUfrag().CStr()));
+	user_name_attr->SetText(ov::String::FormatString("%s:%s", ice_session->GetPeerSdp()->GetIceUfrag().CStr(), ice_session->GetLocalSdp()->GetIceUfrag().CStr()));
 	message.AddAttribute(user_name_attr);
 
-	// ICE-CONTROLLED
-	// attribute = std::make_shared<StunUnknownAttribute>(0x8029, 8);
+	if (ice_session->GetRole() == IceSession::Role::CONTROLLING)
+	{
+		// ICE-CONTROLLING
+		auto ice_controlling_attr = std::make_shared<StunIceControllingAttribute>();
+		// There is no chance of a client and ICE role conflict occurring in OME.
+		ice_controlling_attr->SetValue(0x0000000000000001);
+		message.AddAttribute(ice_controlling_attr);
 
-	// ICE-CONTROLLING
-	auto ice_controlling_attr = std::make_shared<StunIceControllingAttribute>();
-	// There is no chance of a client and ICE role conflict occurring in OME.
-	ice_controlling_attr->SetValue(0x0000000000000001);
-	message.AddAttribute(ice_controlling_attr);
+		// TODO(Getroot): For now, it connect to the first connectable candidate pair, 
+		// but we have to select the best pair among all nominated pairs and connect.
+		if (ice_session->GetState() == IceConnectionState::Checking && ice_session->IsConnectable(address_pair))
+		{
+			logtc("Use candidate [%s / %s] to session (%u)", address_pair.ToString().CStr(), gate_info.ToString().CStr(), ice_session->GetSessionID());
 
-	// USE-CANDIDATE 
-	auto use_candidate_attr = std::make_shared<StunUseCandidateAttribute>();
-	message.AddAttribute(use_candidate_attr);
+			UseCandidate(ice_session, address_pair);
+		}
 
-	// PRIORITY 
+		// Ice Session State can be changed upper code, so check it again.
+		if (ice_session->GetState() == IceConnectionState::Connected && ice_session->IsConnected(address_pair))
+		{
+			// USE-CANDIDATE Attribute
+			auto use_candidate_attr = std::make_shared<StunUseCandidateAttribute>();
+			message.AddAttribute(use_candidate_attr);
+		}
+	}
+	else if (ice_session->GetRole() == IceSession::Role::CONTROLLED)
+	{
+		// ICE-CONTROLLED
+		auto ice_controlled_attr = std::make_shared<StunIceControlledAttribute>();
+		// There is no chance of a client and ICE role conflict occurring in OME.
+		ice_controlled_attr->SetValue(0x0000000000000001);
+		message.AddAttribute(ice_controlled_attr);
+	}
+
+	// PRIORITY (Common Attribute)
 	auto priority_attr = std::make_shared<StunPriorityAttribute>();
 	priority_attr->SetValue(0x627F1EFF);
 	message.AddAttribute(priority_attr);
@@ -958,51 +997,63 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 
 	// Store binding request transction
 	{
-		std::lock_guard<std::shared_mutex> brt_lock(_binding_request_table_lock);
+		std::lock_guard<std::shared_mutex> brt_lock(_binding_requests_with_transaction_id_lock);
 
 		ov::String transaction_id_key((char *)(&transaction_id[0]), OV_STUN_TRANSACTION_ID_LENGTH);
-		_binding_request_table.emplace(transaction_id_key, BindingRequestInfo(transaction_id_key, info));
+		_binding_requests_with_transaction_id.emplace(transaction_id_key, BindingRequestInfo(transaction_id_key, ice_session));
 
 		logtd("Send Binding Request to(%s) id(%s)", address.ToString(false).CStr(), transaction_id_key.CStr());
 	}
 
 	// TODO: apply SASLprep(password)
-	SendStunMessage(remote, address, gate_info, message, info->peer_sdp->GetIcePwd().ToData(false));
+	SendStunMessage(remote, address, gate_info, message, ice_session->GetPeerSdp()->GetIcePwd().ToData(false));
 
 	return true;
 }
 
 bool IcePort::ProcessStunBindingResponse(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const StunMessage &message)
 {
-	std::shared_ptr<IcePortInfo> ice_port_info;
+	ov::String transaction_id_key((char *)(&message.GetTransactionId()[0]), OV_STUN_TRANSACTION_ID_LENGTH);
+
+	auto ice_session = FindIceSessionWithTransactionId(transaction_id_key);
+	if (ice_session == nullptr)
 	{
-		// Find reqeusted info in the table
-		std::lock_guard<std::shared_mutex> brt_lock(_binding_request_table_lock);
-
-		ov::String transaction_id_key((char *)(&message.GetTransactionId()[0]), OV_STUN_TRANSACTION_ID_LENGTH);
-
-		auto item = _binding_request_table.find(transaction_id_key);
-		if (item == _binding_request_table.end())
-		{
-			logtw("Could not find binding request info : address(%s) transaction id(%s)", address.ToString(false).CStr(), transaction_id_key.CStr());
-			return false;
-		}
-
-		ice_port_info = item->second._ice_port;
-
-		// Erase ended transction item
-		_binding_request_table.erase(item);
-
-		logtd("Receive stun binding response from %s, table size(%d)", address.ToString(false).CStr(), _binding_request_table.size());
+		logtw("Could not find binding request info : address(%s) transaction id(%s)", address.ToString(false).CStr(), transaction_id_key.CStr());
+		return false;
 	}
 
-	if (message.CheckIntegrity(ice_port_info->local_sdp->GetIcePwd()) == false)
+	ice_session->Refresh();
+
+	// Erase ended transction item
+	RemoveTransaction(transaction_id_key);
+
+	logtd("Receive stun binding response from %s, table size(%d)", address.ToString(false).CStr(), _binding_requests_with_transaction_id.size());
+
+	if (message.CheckIntegrity(ice_session->GetLocalSdp()->GetIcePwd()) == false)
 	{
 		logtw("Failed to check integrity");
 		return false;
 	}
 
 	logtd("Client %s sent STUN binding response", address.ToString(false).CStr());
+
+	ov::SocketAddressPair address_pair(*remote->GetLocalAddress(), address);
+
+	auto old_state = ice_session->GetState();
+	ice_session->OnReceivedStunBindingResponse(address_pair, remote);
+
+	if (ice_session->GetState() == IceConnectionState::Checking && ice_session->IsConnectable(address_pair))
+	{
+		UseCandidate(ice_session, address_pair);
+
+		// Send STUN Binding Request for quickly connect
+		SendStunBindingRequest(remote, address, gate_info, ice_session);
+	}
+
+	if (old_state != ice_session->GetState())
+	{
+		NotifyIceSessionStateChanged(ice_session);
+	}
 
 	return true;
 }
@@ -1020,7 +1071,7 @@ bool IcePort::SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const o
 		source_data = message.Serialize(integrity_key);
 	}
 
-	logti("Send message:\n%s", message.ToString().CStr());
+	logtd("Send message: %s\n%s", gate_info.ToString().CStr(), message.ToString().CStr());
 
 	if (gate_info.input_method == IcePort::GateInfo::GateType::DIRECT)
 	{
@@ -1161,17 +1212,16 @@ bool IcePort::ProcessTurnSendIndication(const std::shared_ptr<ov::Socket> &remot
 	gate_info.input_method = IcePort::GateInfo::GateType::SEND_INDICATION;
 	gate_info.peer_address = xor_peer_attribute->GetAddress();
 
-	std::shared_ptr<IcePortInfo> ice_port_info;
+	ov::SocketAddressPair socket_address_pair(*remote->GetLocalAddress(), address);
+
+	std::shared_ptr<IceSession> ice_session = FindIceSession(socket_address_pair);
+	// Connected Session, 
+	// if agent sends data to TURN server (Send Indication) then ome will respond to agent through TURN server (Send Indication)
+	if (ice_session != nullptr)
 	{
-		std::lock_guard<std::mutex> lock_guard(_port_table_lock);
-		auto item = _address_port_table.find(address);
-		if (item != _address_port_table.end())
-		{
-			ice_port_info = item->second;
-			ice_port_info->is_turn_client = true;
-			ice_port_info->is_data_channel_enabled = false;
-			ice_port_info->peer_address = gate_info.peer_address;
-		}
+		ice_session->SetTurnClient(true);
+		ice_session->SetDataChannelEnabled(false);
+		ice_session->SetTurnPeerAddress(gate_info.peer_address);
 	}
 
 	OnPacketReceived(remote, address, gate_info, data);
@@ -1206,17 +1256,16 @@ bool IcePort::ProcessTurnChannelBindRequest(const std::shared_ptr<ov::Socket> &r
 	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::ChannelBind, message.GetTransactionId());
 	SendStunMessage(remote, address, gate_info, response_message, _hmac_key);
 
-	std::shared_ptr<IcePortInfo> ice_port_info;
+	ov::SocketAddressPair socket_address_pair(*remote->GetLocalAddress(), address);
+
+	std::shared_ptr<IceSession> ice_session = FindIceSession(socket_address_pair);
+	// Connected Session, 
+	// if agent sends data to TURN server (Data Channel) then ome will respond to agent through TURN server (Data Channel)
+	if (ice_session != nullptr)
 	{
-		std::lock_guard<std::mutex> lock_guard(_port_table_lock);
-		auto item = _address_port_table.find(address);
-		if (item != _address_port_table.end())
-		{
-			ice_port_info = item->second;
-			ice_port_info->is_turn_client = true;
-			ice_port_info->is_data_channel_enabled = true;
-			ice_port_info->data_channle_number = channel_number_attribute->GetChannelNumber();
-		}
+		ice_session->SetTurnClient(true);
+		ice_session->SetDataChannelEnabled(true);
+		ice_session->SetDataChannelNumber(channel_number_attribute->GetChannelNumber());
 	}
 
 	return true;
@@ -1247,12 +1296,11 @@ bool IcePort::ProcessTurnRefreshRequest(const std::shared_ptr<ov::Socket> &remot
 	return true;
 }
 
-void IcePort::SetIceState(std::shared_ptr<IcePortInfo> &info, IcePortConnectionState state)
+void IcePort::NotifyIceSessionStateChanged(std::shared_ptr<IceSession> &session)
 {
-	info->state = state;
-	if (info->observer != nullptr)
+	if (session->GetObserver() != nullptr)
 	{
-		info->observer->OnStateChanged(*this, info->session_id, state, info->user_data);
+		session->GetObserver()->OnStateChanged(*this, session->GetSessionID(), session->GetState(), session->GetUserData());
 	}
 }
 

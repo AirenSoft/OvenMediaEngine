@@ -12,7 +12,6 @@
 #include "./rtmp/rtmp_provider.h"
 #include "./mpegts/mpegts_provider.h"
 #include "./srt/srt_provider.h"
-#include "./rtsp/rtsp_provider.h"
 #include "./rtspc/rtspc_provider.h"
 #include "./webrtc/webrtc_provider.h"
 #include "./file/file_provider.h"

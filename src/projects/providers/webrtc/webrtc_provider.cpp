@@ -515,7 +515,7 @@ namespace pvd
 		RegisterStreamToSessionKeyStreamMap(stream);
 
 		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
-		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), offer_sdp, peer_sdp, ice_timeout, session_life_time, stream);
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), IceSession::Role::CONTROLLING, offer_sdp, peer_sdp, ice_timeout, session_life_time, stream);
 
 		return true;
 	}
@@ -585,7 +585,7 @@ namespace pvd
 	// IcePort
 	//------------------------
 
-	void WebRTCProvider::OnStateChanged(IcePort &port, uint32_t session_id, IcePortConnectionState state, std::any user_data)
+	void WebRTCProvider::OnStateChanged(IcePort &port, uint32_t session_id, IceConnectionState state, std::any user_data)
 	{
 		logtd("WebRTCProvider::OnStateChanged : %d", state);
 
@@ -605,15 +605,15 @@ namespace pvd
 
 		switch (state)
 		{
-			case IcePortConnectionState::New:
-			case IcePortConnectionState::Checking:
-			case IcePortConnectionState::Connected:
-			case IcePortConnectionState::Completed:
+			case IceConnectionState::New:
+			case IceConnectionState::Checking:
+			case IceConnectionState::Connected:
+			case IceConnectionState::Completed:
 				// Nothing to do
 				break;
-			case IcePortConnectionState::Failed:
-			case IcePortConnectionState::Disconnected:
-			case IcePortConnectionState::Closed: {
+			case IceConnectionState::Failed:
+			case IceConnectionState::Disconnected:
+			case IceConnectionState::Closed: {
 				logti("IcePort is disconnected. : (%s/%s) reason(%d)", stream->GetApplicationName(), stream->GetName().CStr(), state);
 
 				// Send Close to Admission Webhooks
@@ -802,7 +802,7 @@ namespace pvd
 		RegisterStreamToSessionKeyStreamMap(stream);
 
 		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
-		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), answer_sdp, offer_sdp, ice_timeout, session_life_time, stream);
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), IceSession::Role::CONTROLLED, answer_sdp, offer_sdp, ice_timeout, session_life_time, stream);
 
 		return {stream->GetSessionKey(), ov::Random::GenerateString(8), answer_sdp, final_vhost_app_name.GetVHostName(), final_vhost_app_name.GetAppName(), http::StatusCode::Created};
 	}

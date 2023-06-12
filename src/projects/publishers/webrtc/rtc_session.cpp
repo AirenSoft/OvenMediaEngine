@@ -496,7 +496,7 @@ void RtcSession::SendOutgoingData(const std::any &packet)
 	// Check expired time
 	if(_session_expired_time != 0 && _session_expired_time < ov::Clock::NowMSec())
 	{
-		_ice_port->TerminateSession(GetId());
+		_ice_port->DisconnectSession(GetId());
 		SetState(SessionState::Stopping);
 		return;
 	}

@@ -466,7 +466,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 		MonitorInstance->OnSessionConnected(*stream, PublisherType::Webrtc);
 
 		auto ice_timeout = application->GetConfig().GetPublishers().GetWebrtcPublisher().GetTimeout();
-		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), session->GetId(), offer_sdp, peer_sdp, ice_timeout, session_life_time, session);
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), session->GetId(), IceSession::Role::CONTROLLING, offer_sdp, peer_sdp, ice_timeout, session_life_time, session);
 	}
 	else
 	{
@@ -615,7 +615,7 @@ bool WebRtcPublisher::OnIceCandidate(const std::shared_ptr<http::svr::ws::WebSoc
  * IcePort Implementation
  */
 
-void WebRtcPublisher::OnStateChanged(IcePort &port, uint32_t session_id, IcePortConnectionState state, std::any user_data)
+void WebRtcPublisher::OnStateChanged(IcePort &port, uint32_t session_id, IceConnectionState state, std::any user_data)
 {
 	logtd("IcePort OnStateChanged : %d", state);
 
@@ -636,15 +636,15 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, uint32_t session_id, IcePort
 
 	switch (state)
 	{
-		case IcePortConnectionState::New:
-		case IcePortConnectionState::Checking:
-		case IcePortConnectionState::Connected:
-		case IcePortConnectionState::Completed:
+		case IceConnectionState::New:
+		case IceConnectionState::Checking:
+		case IceConnectionState::Connected:
+		case IceConnectionState::Completed:
 			// Nothing to do
 			break;
-		case IcePortConnectionState::Failed:
-		case IcePortConnectionState::Disconnected:
-		case IcePortConnectionState::Closed: {
+		case IceConnectionState::Failed:
+		case IceConnectionState::Disconnected:
+		case IceConnectionState::Closed: {
 			logti("IcePort is disconnected. : (%s/%s/%u) reason(%d)", stream->GetApplicationName(), stream->GetName().CStr(), session->GetId(), state);
 
 			_signalling_server->Disconnect(session->GetApplication()->GetName(), session->GetStream()->GetName(), session->GetPeerSDP());

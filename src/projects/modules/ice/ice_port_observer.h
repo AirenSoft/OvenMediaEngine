@@ -12,20 +12,9 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <modules/rtc_signalling/rtc_ice_candidate.h>
 #include <modules/sdp/session_description.h>
-
 #include <memory>
 
-enum class IcePortConnectionState : int
-{
-	New,
-	Checking,
-	Connected,
-	Completed,
-	Failed,
-	Disconnected,
-	Closed,
-	Max,
-};
+#include "ice_types.h"
 
 class IcePort;
 
@@ -52,7 +41,7 @@ public:
 		_turn_server_port = port;
 	}
 
-	virtual void OnStateChanged(IcePort &port, uint32_t session_id, IcePortConnectionState state, std::any user_data)
+	virtual void OnStateChanged(IcePort &port, uint32_t session_id, IceConnectionState state, std::any user_data)
 	{
 		// dummy function
 	}

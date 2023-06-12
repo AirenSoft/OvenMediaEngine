@@ -11,7 +11,7 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/ovsocket.h>
 #include <utility>
-// ICE candidate 구조:
+// ICE candidate structure:
 // [{"candidate":"candidate:0 1 UDP 50 192.168.0.183 10000 typ host generation 0","sdpMLineIndex":0,"sdpMid":"video"}]
 
 class IceCandidate

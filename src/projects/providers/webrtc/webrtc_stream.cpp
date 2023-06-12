@@ -307,7 +307,7 @@ namespace pvd
 			_srtp_transport->Stop();
 		}
 
-		_ice_port->TerminateSession(GetId());
+		_ice_port->DisconnectSession(GetId());
 
 		ov::Node::Stop();
 

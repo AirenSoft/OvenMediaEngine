@@ -45,7 +45,7 @@ public:
 	// Called when the packet is received (Only used when TCP/SRT)
 	virtual void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) {}
 
-	// Called when the packet is received (Only used when TCP/SRT)
+	// Called when the packet is received (Only used when UDP)
 	virtual void OnDatagramReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddressPair &address_pair, const std::shared_ptr<const ov::Data> &data) {}
 
 	// Called when the client is disconnected
