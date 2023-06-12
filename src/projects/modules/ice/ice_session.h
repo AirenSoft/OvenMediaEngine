@@ -24,7 +24,7 @@ public:
 	};
 
 	IceSession(session_id_t session_id, IceSession::Role role, 
-				std::shared_ptr<const SessionDescription> local_sdp, std::shared_ptr<const SessionDescription> peer_sdp,
+				const std::shared_ptr<const SessionDescription> &local_sdp, const std::shared_ptr<const SessionDescription> &peer_sdp,
 				int expired_ms, uint64_t life_time_epoch_ms, 
 				std::any user_data, const std::shared_ptr<IcePortObserver> &observer);
 
