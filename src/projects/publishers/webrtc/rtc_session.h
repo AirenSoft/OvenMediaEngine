@@ -45,6 +45,7 @@ public:
 	                                          const std::shared_ptr<const SessionDescription> &offer_sdp,
 	                                          const std::shared_ptr<const SessionDescription> &peer_sdp,
 	                                          const std::shared_ptr<IcePort> &ice_port,
+											  session_id_t ice_session_id,
 											  const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session);
 
 	RtcSession(const info::Session &session_info,
@@ -55,6 +56,7 @@ public:
 	        const std::shared_ptr<const SessionDescription> &offer_sdp,
 	        const std::shared_ptr<const SessionDescription> &peer_sdp,
 	        const std::shared_ptr<IcePort> &ice_port,
+			session_id_t ice_session_id,
 			const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session);
 	~RtcSession() override;
 
@@ -89,6 +91,11 @@ public:
 	// ov::Node Interface
 	bool OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
 	bool OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
+
+	session_id_t GetIceSessionId() const
+	{
+		return _ice_session_id;
+	}
 
 private:
 	bool ProcessReceiverReport(const std::shared_ptr<RtcpInfo> &rtcp_info);
@@ -211,4 +218,6 @@ private:
 
 	// rendition name, SelectedRecord
 	std::map<ov::String, std::shared_ptr<SelectedRecord>> _auto_rendition_selected_records;
+
+	session_id_t _ice_session_id;
 };

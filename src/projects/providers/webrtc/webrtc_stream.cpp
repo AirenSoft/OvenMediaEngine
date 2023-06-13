@@ -21,9 +21,10 @@ namespace pvd
 													   const std::shared_ptr<const SessionDescription> &local_sdp,
 													   const std::shared_ptr<const SessionDescription> &peer_sdp,
 													   const std::shared_ptr<Certificate> &certificate,
-													   const std::shared_ptr<IcePort> &ice_port)
+													   const std::shared_ptr<IcePort> &ice_port,
+													   session_id_t ice_session_id)
 	{
-		auto stream = std::make_shared<WebRTCStream>(source_type, stream_name, provider, local_sdp, peer_sdp, certificate, ice_port);
+		auto stream = std::make_shared<WebRTCStream>(source_type, stream_name, provider, local_sdp, peer_sdp, certificate, ice_port, ice_session_id);
 		if (stream != nullptr)
 		{
 			if (stream->Start() == false)
@@ -39,7 +40,8 @@ namespace pvd
 							   const std::shared_ptr<const SessionDescription> &local_sdp,
 							   const std::shared_ptr<const SessionDescription> &peer_sdp,
 							   const std::shared_ptr<Certificate> &certificate,
-							   const std::shared_ptr<IcePort> &ice_port)
+							   const std::shared_ptr<IcePort> &ice_port,
+							   session_id_t ice_session_id)
 		: PushStream(source_type, stream_name, provider), Node(NodeType::Edge)
 	{
 		_local_sdp = local_sdp;
@@ -47,10 +49,12 @@ namespace pvd
 		_ice_port = ice_port;
 		_certificate = certificate;
 		_session_key = ov::Random::GenerateString(8);
+		_ice_session_id = ice_session_id;
 	}
 
 	WebRTCStream::~WebRTCStream()
 	{
+		logtd("WebRTCStream(%s/%d) is destroyed", GetName().CStr(), GetId());
 	}
 
 	bool WebRTCStream::Start()
@@ -307,7 +311,7 @@ namespace pvd
 			_srtp_transport->Stop();
 		}
 
-		_ice_port->DisconnectSession(GetId());
+		_ice_port->DisconnectSession(_ice_session_id);
 
 		ov::Node::Stop();
 
@@ -468,7 +472,7 @@ namespace pvd
 			return false;
 		}
 
-		return _ice_port->Send(GetId(), data);
+		return _ice_port->Send(_ice_session_id, data);
 	}
 
 	// WebRTCStream Node has not a lower node so it will not be called

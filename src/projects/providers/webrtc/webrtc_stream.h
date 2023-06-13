@@ -29,14 +29,16 @@ namespace pvd
 													const std::shared_ptr<const SessionDescription> &local_sdp,
 													const std::shared_ptr<const SessionDescription> &peer_sdp,
 													const std::shared_ptr<Certificate> &certificate, 
-													const std::shared_ptr<IcePort> &ice_port);
+													const std::shared_ptr<IcePort> &ice_port,
+													session_id_t ice_session_id);
 		
 		explicit WebRTCStream(StreamSourceType source_type, ov::String stream_name, 
 								const std::shared_ptr<PushProvider> &provider,
 								const std::shared_ptr<const SessionDescription> &local_sdp,
 								const std::shared_ptr<const SessionDescription> &peer_sdp,
 								const std::shared_ptr<Certificate> &certificate, 
-								const std::shared_ptr<IcePort> &ice_port);
+								const std::shared_ptr<IcePort> &ice_port,
+								session_id_t ice_session_id);
 		~WebRTCStream() final;
 
 		bool Start() override;
@@ -47,6 +49,11 @@ namespace pvd
 
 		// Get the session key of the stream
 		ov::String GetSessionKey() const;
+
+		session_id_t GetIceSessionId() const
+		{
+			return _ice_session_id;
+		}
 
 		// ------------------------------------------
 		// Implementation of PushStream
@@ -92,5 +99,7 @@ namespace pvd
 
 		std::shared_ptr<ov::Data> _h264_extradata_nalu = nullptr;
 		bool _sent_sequence_header = false;
+
+		session_id_t _ice_session_id = 0;
 	};
 }

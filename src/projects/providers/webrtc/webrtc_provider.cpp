@@ -491,7 +491,8 @@ namespace pvd
 		}
 
 		// Create Stream
-		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, final_stream_name, PushProvider::GetSharedPtrAs<PushProvider>(), offer_sdp, peer_sdp, _certificate, _ice_port);
+		auto ice_session_id = _ice_port->IssueUniqueSessionId();
+		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, final_stream_name, PushProvider::GetSharedPtrAs<PushProvider>(), offer_sdp, peer_sdp, _certificate, _ice_port, ice_session_id);
 		if (stream == nullptr)
 		{
 			logte("Could not create %s stream in %s application", final_stream_name.CStr(), final_vhost_app_name.CStr());
@@ -515,7 +516,7 @@ namespace pvd
 		RegisterStreamToSessionKeyStreamMap(stream);
 
 		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
-		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), IceSession::Role::CONTROLLING, offer_sdp, peer_sdp, ice_timeout, session_life_time, stream);
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), ice_session_id, IceSession::Role::CONTROLLING, offer_sdp, peer_sdp, ice_timeout, session_life_time, stream);
 
 		return true;
 	}
@@ -576,7 +577,7 @@ namespace pvd
 
 		UnRegisterStreamToSessionKeyStreamMap(stream->GetSessionKey());
 
-		_ice_port->RemoveSession(stream->GetId());
+		_ice_port->RemoveSession(stream->GetIceSessionId());
 
 		return OnChannelDeleted(stream);
 	}
@@ -778,7 +779,8 @@ namespace pvd
 			return {http::StatusCode::InternalServerError, "Could not create answer SDP"};
 		}
 
-		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, final_stream_name, PushProvider::GetSharedPtrAs<PushProvider>(), answer_sdp, offer_sdp, _certificate, _ice_port);
+		auto ice_session_id = _ice_port->IssueUniqueSessionId();
+		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, final_stream_name, PushProvider::GetSharedPtrAs<PushProvider>(), answer_sdp, offer_sdp, _certificate, _ice_port, ice_session_id);
 		if (stream == nullptr)
 		{
 			logte("Could not create %s stream in %s application", final_stream_name.CStr(), final_vhost_app_name.CStr());
@@ -802,7 +804,7 @@ namespace pvd
 		RegisterStreamToSessionKeyStreamMap(stream);
 
 		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
-		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), IceSession::Role::CONTROLLED, answer_sdp, offer_sdp, ice_timeout, session_life_time, stream);
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), ice_session_id, IceSession::Role::CONTROLLED, answer_sdp, offer_sdp, ice_timeout, session_life_time, stream);
 
 		return {stream->GetSessionKey(), ov::Random::GenerateString(8), answer_sdp, final_vhost_app_name.GetVHostName(), final_vhost_app_name.GetAppName(), http::StatusCode::Created};
 	}
@@ -848,7 +850,7 @@ namespace pvd
 
 		UnRegisterStreamToSessionKeyStreamMap(stream->GetSessionKey());
 
-		_ice_port->RemoveSession(stream->GetId());
+		_ice_port->RemoveSession(stream->GetIceSessionId());
 		OnChannelDeleted(stream);
 
 		return {http::StatusCode::OK, vhost_name, app_name};

@@ -27,11 +27,12 @@ std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<WebRtcPubli
                                                const std::shared_ptr<const SessionDescription> &offer_sdp,
                                                const std::shared_ptr<const SessionDescription> &peer_sdp,
                                                const std::shared_ptr<IcePort> &ice_port,
+											   session_id_t ice_session_id,
 											   const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session)
 {
 	// Session Id of the offer sdp is unique value
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), offer_sdp->GetSessionId());
-	auto session = std::make_shared<RtcSession>(session_info, publisher, application, stream, file_name, offer_sdp, peer_sdp, ice_port, ws_session);
+	auto session = std::make_shared<RtcSession>(session_info, publisher, application, stream, file_name, offer_sdp, peer_sdp, ice_port, ice_session_id, ws_session);
 	if(!session->Start())
 	{
 		return nullptr;
@@ -47,6 +48,7 @@ RtcSession::RtcSession(const info::Session &session_info,
 					   const std::shared_ptr<const SessionDescription> &offer_sdp,
 					   const std::shared_ptr<const SessionDescription> &peer_sdp,
 					   const std::shared_ptr<IcePort> &ice_port,
+					   session_id_t ice_session_id,
 					   const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session)
 	: Session(session_info, application, stream), Node(NodeType::Edge)
 {
@@ -54,6 +56,7 @@ RtcSession::RtcSession(const info::Session &session_info,
 	_offer_sdp = offer_sdp;
 	_peer_sdp = peer_sdp;
 	_ice_port = ice_port;
+	_ice_session_id = ice_session_id;
 	_ws_session = ws_session;
 	_file_name = file_name;
 }
@@ -496,7 +499,7 @@ void RtcSession::SendOutgoingData(const std::any &packet)
 	// Check expired time
 	if(_session_expired_time != 0 && _session_expired_time < ov::Clock::NowMSec())
 	{
-		_ice_port->DisconnectSession(GetId());
+		_ice_port->DisconnectSession(_ice_session_id);
 		SetState(SessionState::Stopping);
 		return;
 	}
@@ -988,7 +991,7 @@ bool RtcSession::OnDataReceivedFromPrevNode(NodeType from_node, const std::share
 		return false;
 	}
 
-	return _ice_port->Send(GetId(), data);
+	return _ice_port->Send(_ice_session_id, data);
 }
 
 // RtcSession Node has not a lower node so it will not be called

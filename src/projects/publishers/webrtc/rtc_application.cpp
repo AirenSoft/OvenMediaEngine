@@ -65,7 +65,7 @@ bool RtcApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 		auto session = std::static_pointer_cast<RtcSession>(it->second);
 		it++;
 
-		_ice_port->RemoveSession(session->GetId());
+		_ice_port->RemoveSession(session->GetIceSessionId());
 
 		_rtc_signalling->Disconnect(GetName(), stream->GetName(), session->GetPeerSDP());
 	}

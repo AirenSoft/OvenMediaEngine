@@ -48,6 +48,8 @@ public:
 
 	ov::String GenerateUfrag();
 
+	// Issue unique session id
+	session_id_t IssueUniqueSessionId();
 	void AddSession(const std::shared_ptr<IcePortObserver> &observer, session_id_t session_id, IceSession::Role role,
 					const std::shared_ptr<const SessionDescription> &offer_sdp, const std::shared_ptr<const SessionDescription> &peer_sdp, 
 					int stun_timeout_ms,  uint64_t life_time_epoch_ms, std::any user_data);
@@ -138,6 +140,8 @@ private:
 		std::shared_ptr<IceSession> _ice_session;
 		std::chrono::time_point<std::chrono::system_clock>	_requested_time;
 	};
+
+	std::atomic<session_id_t> _session_id_counter;
 
 	// Add IceSession
 	bool AddIceSession(session_id_t session_id, const std::shared_ptr<IceSession> &ice_session);
