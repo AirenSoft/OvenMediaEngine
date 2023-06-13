@@ -205,7 +205,7 @@ bool H264Parser::ParseSPS(const uint8_t *nalu, size_t length, H264SPS &sps)
 		if (scaling_matrix_present_flag)
 		{
 			const size_t matrix_size = chroma_format == 3 ? 12 : 8;
-			for (size_t index = 0; index < matrix_size; index++)
+			for (size_t index = 0; index < matrix_size; ++index)
 			{
 				uint8_t scaling_list_present_flag;
 				if (!parser.ReadBit(scaling_list_present_flag))
@@ -216,13 +216,14 @@ bool H264Parser::ParseSPS(const uint8_t *nalu, size_t length, H264SPS &sps)
 				if (scaling_list_present_flag)
 				{
 					// skip scaling list
-					int32_t delta_scale, last_scale = 8, next_scale = 8;
+					int32_t last_scale = 8, next_scale = 8;
 					size_t size = index < 6 ? 16 : 64;
 
 					for (size_t i = 0; i < size; i++)
 					{
 						if (next_scale != 0)
 						{
+							int32_t delta_scale;
 							if (!parser.ReadSEV(delta_scale))
 							{
 								return false;
@@ -231,7 +232,10 @@ bool H264Parser::ParseSPS(const uint8_t *nalu, size_t length, H264SPS &sps)
 							next_scale = (last_scale + delta_scale + 256) % 256;
 						}
 
-						last_scale = (next_scale == 0) ? last_scale : next_scale;
+						if (next_scale != 0)
+						{
+							last_scale = next_scale;
+						}
 					}
 				}
 			}

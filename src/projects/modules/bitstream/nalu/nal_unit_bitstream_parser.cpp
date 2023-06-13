@@ -83,11 +83,20 @@ bool NalUnitBitstreamParser::ReadUEV(uint32_t &value)
         }
     }
 
-    value = (1 << zero_bit_count) - 1;
-	
-	uint32_t rest;
-	ReadBits(zero_bit_count, rest);
-	value += rest;
+    if (zero_bit_count > 0)
+    {
+        uint32_t rest;
+        if (ReadBits(zero_bit_count, rest) == false)
+        {
+            return false;
+        }
+
+        value = (1 << zero_bit_count) - 1 + rest;
+    }
+    else
+    {
+        value = 0;
+    }
 
     return true;
 }
@@ -99,14 +108,9 @@ bool NalUnitBitstreamParser::ReadSEV(int32_t &value)
     {
         return false;
     }
-    if (uev_value % 2 == 0)
-    {
-        uev_value = (uev_value + 1) / 2;
-    }
-    else
-    {
-        uev_value /= -2;
-    }
+
+	int32_t sign = (uev_value % 2 == 0) ? -1 : 1;
+    value = sign * static_cast<int32_t>((uev_value + 1) / 2);
     return true;
 }
 
