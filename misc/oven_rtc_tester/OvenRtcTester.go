@@ -45,11 +45,12 @@ func main() {
 	clientChan := make(chan *omeClient)
 	quit := make(chan bool)
 	go func() {
+		tf := time.After(time.Millisecond * time.Duration(*connectionInterval))
 		for i := 0; i < *numberOfClient; i++ {
 			select {
 			case <- quit:
 				return
-			case <- time.After(time.Millisecond * time.Duration(*connectionInterval)):
+			case <- tf:
 				client := omeClient{}
 
 				client.name = fmt.Sprintf("client_%d", i)
