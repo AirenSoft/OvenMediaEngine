@@ -581,6 +581,7 @@ bool IcePort::Send(session_id_t session_id, const std::shared_ptr<const ov::Data
 	auto remote = ice_session->GetConnectedSocket();
 	if (remote == nullptr)
 	{
+		logte("IcePort::Send - Could not find connected remote socket: %d", session_id);
 		return false;
 	}
 
@@ -592,6 +593,7 @@ bool IcePort::Send(session_id_t session_id, const std::shared_ptr<const ov::Data
 	}
 
 	auto remote_addrees = connected_candidate_pair->GetAddressPair().GetRemoteAddress();
+	// TODO: Change SendFromtTo
 	return remote->SendTo(remote_addrees, send_data);
 }
 
@@ -1120,7 +1122,8 @@ bool IcePort::SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const o
 		return false;
 	}
 
-	auto sent_bytes = remote->SendFromTo(address_pair, send_data);
+	//TODO : Change SendFromtTo
+	auto sent_bytes = remote->SendTo(address_pair.GetRemoteAddress(), send_data);
 
 	return sent_bytes > 0;
 }

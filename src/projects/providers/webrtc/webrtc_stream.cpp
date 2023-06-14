@@ -455,7 +455,6 @@ namespace pvd
 	// From RtpRtcp node
 	void WebRTCStream::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	{
-		logtc("OnRtcpReceived");
 		// Receive Sender Report
 		if (rtcp_info->GetPacketType() == RtcpPacketType::SR)
 		{
