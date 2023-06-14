@@ -21,6 +21,7 @@
 #include "./list.h"
 
 #define CFG_VERBOSE_STRING 1
+#define CFG_PRINT_MEMORY_ADDRESS 0
 
 #if CFG_VERBOSE_STRING
 #	define CFG_EXTRA_PREFIX "                // <"

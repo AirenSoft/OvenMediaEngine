@@ -55,12 +55,16 @@ namespace cfg
 #if CFG_VERBOSE_STRING
 		extra.Format(
 			CFG_EXTRA_PREFIX
+#	if CFG_PRINT_MEMORY_ADDRESS
 			"%p (%p): "
+#	endif	// CFG_PRINT_MEMORY_ADDRESS
 			"%s%s%s (%s), "
 			"%s"
 			"%s"
 			"%s",
+#	if CFG_PRINT_MEMORY_ADDRESS
 			child->GetMemberPointer(), child.get(),
+#	endif	// CFG_PRINT_MEMORY_ADDRESS
 			(value_type == ValueType::List) ? "std::vector<" : "", child->GetTypeName().CStr(), (value_type == ValueType::List) ? ">" : "", StringFromValueType(child->GetType()),
 			child->IsOptional() ? "Optional, " : "",
 			child->ResolvePath() ? "Path, " : "",
@@ -435,11 +439,17 @@ namespace cfg
 #if CFG_VERBOSE_STRING
 		extra.Format(
 			CFG_EXTRA_PREFIX
-			"%p: %s, "
+#	if CFG_PRINT_MEMORY_ADDRESS
+			"%p: "
+#	endif	// CFG_PRINT_MEMORY_ADDRESS
+			"%s, "
 			"children = %zu, "
 			"%s, "
 			"%s",
-			this, ov::Demangle(typeid(*this).name()).CStr(),
+#	if CFG_PRINT_MEMORY_ADDRESS
+			this,
+#	endif	// CFG_PRINT_MEMORY_ADDRESS
+			ov::Demangle(typeid(*this).name()).CStr(),
 			child_count,
 			_is_parsed ? "Parsed" : "NotParsed",
 			_is_read_only ? "ReadOnly" : "Writable");

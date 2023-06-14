@@ -90,8 +90,8 @@ namespace ov
 			return String::FormatString(
 				"<SocketAddressPair: %p, local: %s, remote: %s>",
 				this,
-				_local_address.ToString().CStr(),
-				_remote_address.ToString().CStr());
+				_local_address.ToString(false).CStr(),
+				_remote_address.ToString(false).CStr());
 		}
 
 	private:
