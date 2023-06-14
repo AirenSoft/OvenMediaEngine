@@ -324,6 +324,12 @@ namespace pvd
 		if (content_base_field != nullptr)
 		{
 			_content_base = content_base_field->GetValue();
+
+			// If surfix of content_base is not '/', then add '/'
+			if (_content_base.IsEmpty() == false && _content_base.Right(1) != "/")
+			{
+				_content_base.Append("/");
+			}
 		}
 
 		// Session
