@@ -464,7 +464,11 @@ namespace pvd
 				// Session  = "Session" ":" session-id [ ";" "timeout" "=" delta-seconds ]
 				_rtsp_session_id = session_field->GetSessionId();
 				// timeout
-				[[maybe_unused]] auto timeout_delta_seconds = session_field->GetTimeoutDeltaSeconds();
+				_rtsp_session_timeout_sec = session_field->GetTimeoutDeltaSeconds();
+				if (_rtsp_session_timeout_sec == 0)
+				{
+					_rtsp_session_timeout_sec = DEFAULT_RTSP_SESSION_TIMEOUT_SEC;
+				}
 			}
 
 			// Transport
@@ -654,6 +658,8 @@ namespace pvd
 
 		SetState(State::PLAYING);
 
+		_ping_timer.Start();
+
 		return true;
 	}
 
@@ -706,6 +712,37 @@ namespace pvd
 		return true;
 	}
 
+	bool RtspcStream::Ping()
+	{
+		// GET_PARAMETER
+		auto get_parameter = std::make_shared<RtspMessage>(RtspMethod::GET_PARAMETER, GetNextCSeq(), _curr_url->ToUrlString(true));
+		if (_authorization_field != nullptr)
+		{
+			// If authorization method is Digest, update the method and uri
+			if (_authorization_field->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+			{
+				_authorization_field->UpdateDigestAuth(get_parameter->GetMethodStr(), get_parameter->GetRequestUri());
+			}
+
+			get_parameter->AddHeaderField(_authorization_field);
+		}
+
+		if (_rtsp_session_id.IsEmpty() == false)
+		{
+			get_parameter->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
+		}
+
+		if (SendRequestMessage(get_parameter, false) == false)
+		{
+			SetState(State::ERROR);
+			logte("Could not request GET_PARAMETER to RTSP server (%s)", _curr_url->ToUrlString().CStr());
+			return false;
+		}
+
+		logti("Request GET_PARAMETER : %s", get_parameter->DumpHeader().CStr());
+
+	}
+
 	int32_t RtspcStream::GetNextCSeq()
 	{
 		return _cseq++;
@@ -736,10 +773,13 @@ namespace pvd
 		return request_response;
 	}
 
-	bool RtspcStream::SendRequestMessage(const std::shared_ptr<RtspMessage> &message)
+	bool RtspcStream::SendRequestMessage(const std::shared_ptr<RtspMessage> &message, bool wait_for_response)
 	{
-		// Add to RequestedMap to receive reply
-		SubscribeResponse(message);
+		if (wait_for_response == true)
+		{
+			// Add to RequestedMap to receive reply
+			SubscribeResponse(message);
+		}
 
 		// Send
 		return _signalling_socket->Send(message->GetMessage());
@@ -859,6 +899,13 @@ namespace pvd
 
 	PullStream::ProcessMediaResult RtspcStream::ProcessMediaPacket()
 	{
+		// Ping
+		if (_ping_timer.IsElapsed((_rtsp_session_timeout_sec / 2) * 1000))
+		{
+			_ping_timer.Update();
+			Ping();
+		}
+
 		// Receive Packet
 		auto result = ReceivePacket(true);
 		if (result == false)
@@ -879,8 +926,8 @@ namespace pvd
 					auto subscription = PopResponseSubscription(rtsp_message->GetCSeq());
 					if (subscription == nullptr)
 					{
-						// Response subscription is probably already timed out
-						// Is Network very slow? or server error?
+						// Non subscription message, ignore
+						logti("Received Message : %s", rtsp_message->DumpHeader().CStr());
 						continue;
 					}
 
