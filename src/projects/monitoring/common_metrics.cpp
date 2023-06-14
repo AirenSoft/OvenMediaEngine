@@ -16,11 +16,13 @@ namespace mon
 		_max_total_connections = 0;
 
 		_avg_throughtput_in = 0;
-		_max_throughtput_in = 0;		
+		_max_throughtput_in = 0;	
+		_last_throughtput_in = 0;	
 		_last_total_bytes_out = 0;
 
 		_avg_throughtput_out = 0;
 		_max_throughtput_out = 0;
+		_last_throughtput_out = 0;
 		_last_total_bytes_out = 0;
 
 		_last_throughput_measure_time = std::chrono::system_clock::now();
@@ -110,6 +112,16 @@ namespace mon
 	uint64_t CommonMetrics::GetMaxThroughputOut() const
 	{
 		return _max_throughtput_out;
+	}
+
+	uint64_t CommonMetrics::GetLastThroughputIn() const
+	{
+		return _last_throughtput_in;
+	}
+
+	uint64_t CommonMetrics::GetLastThroughputOut() const
+	{
+		return _last_throughtput_out;
 	}
 
 	uint32_t CommonMetrics::GetTotalConnections() const
@@ -213,6 +225,9 @@ namespace mon
 		{
 			_last_throughput_measure_time = throughput_measure_time;
 
+			// Calculate last second throughput of provider
+			_last_throughtput_in = (_total_bytes_in.load() - _last_total_bytes_in.load());
+
 			// Calculate average throughput of provider
 			_avg_throughtput_in = (_total_bytes_in.load() - _last_total_bytes_in.load()) * 8 / THROUGHPUT_MEASURE_INTERVAL;
 			if (_avg_throughtput_in.load() > _max_throughtput_in.load())
@@ -221,6 +236,9 @@ namespace mon
 			}
 			_last_total_bytes_in.store(_total_bytes_in);
 
+			// Calculate last second throughput of publisher
+			_last_throughtput_out = (_total_bytes_out.load() - _last_total_bytes_out.load());
+
 			// Calculate average throughput of publisher
 			_avg_throughtput_out =  (_total_bytes_out.load() - _last_total_bytes_out.load()) * 8 / THROUGHPUT_MEASURE_INTERVAL;
 			if(_avg_throughtput_out.load() > _max_throughtput_out.load())
@@ -228,6 +246,7 @@ namespace mon
 				_max_throughtput_out.store(_avg_throughtput_out);
 			}
 			_last_total_bytes_out.store(_total_bytes_out);
+
 		}
 	}	
 }

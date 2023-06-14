@@ -27,6 +27,8 @@ namespace serdes
 		SetInt64(value, "avgThroughputOut", metrics->GetAvgThroughputOut());		
 		SetInt64(value, "maxThroughputIn", metrics->GetMaxThroughputIn());
 		SetInt64(value, "maxThroughputOut", metrics->GetMaxThroughputOut());
+		SetInt64(value, "lastThroughputIn", metrics->GetLastThroughputIn());
+		SetInt64(value, "lastThroughputOut", metrics->GetLastThroughputOut());
 		SetTimestamp(value, "lastRecvTime", metrics->GetLastRecvTime());
 		SetTimestamp(value, "lastSentTime", metrics->GetLastSentTime());
 		SetInt(value, "totalConnections", metrics->GetTotalConnections());
