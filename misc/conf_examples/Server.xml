@@ -316,7 +316,7 @@
 							<OutputStreamName>${OriginStreamName}</OutputStreamName>
 
 							<!-- 
-							You can provide ABR with Playlist. Currently, ABR is only supported in LLHLS.
+							You can provide ABR with Playlist. Currently, ABR is supported in LLHLS and WebRTC.
 							
 							<Playlist>
 								<Name>Paid</Name>
