@@ -172,7 +172,7 @@ namespace pvd
 					}
 				}
 
-				_lip_sync_clock.RegisterClock(ssrc, audio_track->GetTimeBase().GetExpr());
+				RegisterRtpClock(ssrc, audio_track->GetTimeBase().GetExpr());
 			}
 			else
 			{
@@ -230,7 +230,7 @@ namespace pvd
 					}
 				}
 				
-				_lip_sync_clock.RegisterClock(ssrc, video_track->GetTimeBase().GetExpr());
+				RegisterRtpClock(ssrc, video_track->GetTimeBase().GetExpr());
 			}
 		}
 
@@ -401,27 +401,28 @@ namespace pvd
 				return;
 		}
 
-		auto pts = _lip_sync_clock.CalcPTS(first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp());
-		if(pts.has_value() == false)
+		int64_t adjusted_timestamp;
+		if (AdjustRtpTimestamp(first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max(), adjusted_timestamp) == false)
 		{
 			logtd("not yet received sr packet : %u", first_rtp_packet->Ssrc());
+			// Prevents the stream from being deleted because there is no input data
+			MonitorInstance->IncreaseBytesIn(*Stream::GetSharedPtr(), bitstream->GetLength());
 			return;
 		}
-
-		auto timestamp = pts.value();
+		
 		logtp("Payload Type(%d) Timestamp(%u) PTS(%u) Time scale(%f) Adjust Timestamp(%f)",
-			  first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
+			  first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), adjusted_timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(adjusted_timestamp) * track->GetTimeBase().GetExpr());
 
 		auto frame = std::make_shared<MediaPacket>(GetMsid(),
 												   track->GetMediaType(),
 												   track->GetId(),
 												   bitstream,
-												   timestamp,
-												   timestamp,
+												   adjusted_timestamp,
+												   adjusted_timestamp,
 												   bitstream_format,
 												   packet_type);
 
-		logtp("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%u)", track->GetId(), track->GetCodecId(), bitstream_format, packet_type, bitstream->GetLength(), first_rtp_packet->Timestamp());
+		logtd("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%u)", track->GetId(), track->GetCodecId(), bitstream_format, packet_type, bitstream->GetLength(), first_rtp_packet->Timestamp());
 
 		// This may not work since almost WebRTC browser sends SRS/PPS in-band
 		if (_sent_sequence_header == false && track->GetCodecId() == cmn::MediaCodecId::H264 && _h264_extradata_nalu != nullptr)
@@ -430,8 +431,8 @@ namespace pvd
 																track->GetMediaType(), 
 																track->GetId(), 
 																_h264_extradata_nalu,
-																timestamp, 
-																timestamp, 
+																adjusted_timestamp, 
+																adjusted_timestamp, 
 																cmn::BitstreamFormat::H264_ANNEXB, 
 																cmn::PacketType::NALU);
 			SendFrame(media_packet);
@@ -454,11 +455,12 @@ namespace pvd
 	// From RtpRtcp node
 	void WebRTCStream::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	{
+		logtc("OnRtcpReceived");
 		// Receive Sender Report
 		if (rtcp_info->GetPacketType() == RtcpPacketType::SR)
 		{
 			auto sr = std::dynamic_pointer_cast<SenderReport>(rtcp_info);
-			_lip_sync_clock.UpdateSenderReportTime(sr->GetSenderSsrc(), sr->GetMsw(), sr->GetLsw(), sr->GetTimestamp());
+			UpdateSenderReportTimestamp(sr->GetSenderSsrc(), sr->GetMsw(), sr->GetLsw(), sr->GetTimestamp());
 		}
 	}
 

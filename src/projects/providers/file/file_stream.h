@@ -11,9 +11,9 @@
 
 #include <base/common_types.h>
 #include <base/ovlibrary/url.h>
+#include <base/ovlibrary/lip_sync_clock.h>
 #include <base/provider/pull_provider/application.h>
 #include <base/provider/pull_provider/stream.h>
-#include <modules/rtp_rtcp/lip_sync_clock.h>
 #include <modules/rtp_rtcp/rtp_depacketizing_manager.h>
 #include <modules/rtp_rtcp/rtp_rtcp.h>
 #include <modules/rtsp/header_fields/rtsp_header_fields.h>

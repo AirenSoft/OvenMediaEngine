@@ -22,6 +22,14 @@ protected:
 	bool ParsingCommonAttrLine(char type, std::string content);
 
 public:
+	enum class SetupType
+	{
+		Unknown,
+		Active,
+		Passive,
+		ActPass
+	};
+
 	// a=fingerprint:sha-256 D7:81:CF:01:46:FB:2D
 	void SetFingerprint(const ov::String& algorithm, const ov::String& value);
 	virtual ov::String GetFingerprintAlgorithm() const;
@@ -43,6 +51,12 @@ public:
 	void SetControl(const ov::String& control);
 	ov::String GetControl() const;
 
+	// a=setup:actpass
+	void SetSetup(SetupType type);
+	SetupType GetSetup() const;
+	ov::String GetSetupStr() const;
+	bool SetSetup(const ov::String &type);
+
 	// a=candidate:1387637174 1 udp 2122260223 192.0.2.1 61764 typ host generation 0 ufrag EsAw network-id 1
 	std::vector<std::shared_ptr<IceCandidate>> GetIceCandidates() const;
 	void AddIceCandidate(std::shared_ptr<IceCandidate> ice_candidate);
@@ -59,6 +73,9 @@ private:
 	// For RTSP
 	// a=control:
 	ov::String _control;
+
+	SetupType _setup = SetupType::Unknown;
+	ov::String _setup_str = "UNKNOWN";
 
 	std::vector<std::shared_ptr<IceCandidate>> _ice_candidates;
 };

@@ -10,7 +10,7 @@
 class RtpFrame
 {
 public:
-	RtpFrame();
+	RtpFrame(uint32_t timestamp);
 	bool InsertPacket(const std::shared_ptr<RtpPacket> &packet);
 	bool IsCompleted();
 	bool IsMarked();
@@ -24,23 +24,26 @@ public:
 
 private:
 	bool CheckCompleted();
-	uint32_t GetExtendedSequenceNumber(uint16_t sequence_number);
+	uint16_t GetOrderNumber(uint16_t sequence_number);
 
 	ov::StopWatch _stop_watch;
 
 	uint32_t	_timestamp = 0;
 	
-	uint32_t	_curr_sequence_number = 0;
-	uint32_t	_first_sequence_number = 0;
 	uint32_t	_marker_sequence_number = 0;
 	bool		_marked = false;
 	bool		_completed = false;
 
-	uint16_t 	_last_sequence_number = 0;
-	uint32_t	_timestamp_cycle = 0;
+	uint16_t 	_first_sequence_number = 0;
+	bool		_first_packet = true;
+	uint16_t 	_base_order_number = 0;
 
-	// sequence number : RtpPacket
-	std::unordered_map<uint32_t, std::shared_ptr<RtpPacket>> _packets;
+	uint16_t 	_curr_order_number = 0;
+	uint16_t 	_min_order_number = 65535;
+	uint16_t 	_max_order_number = 0;
+
+	// Order Number : RtpPacket
+	std::unordered_map<uint16_t, std::shared_ptr<RtpPacket>> _packets;
 };
 
 // A jitter buffer for a media stream in the form that the frame is fragmented

@@ -580,7 +580,7 @@ namespace pvd
 
 			// Some RTSP servers ignore the ssrc of SETUP, so they use an interleaved channel instead.
 			_rtp_rtcp->AddRtpReceiver(interleaved_channel, track);
-			_lip_sync_clock.RegisterClock(interleaved_channel, track->GetTimeBase().GetExpr());
+			RegisterRtpClock(interleaved_channel, track->GetTimeBase().GetExpr());
 
 			interleaved_channel += 2;
 		}
@@ -645,7 +645,6 @@ namespace pvd
 		}
 
 		logti("Response PLAY : %s", reply->DumpHeader().CStr());
-		_play_request_time.Start();
 
 		SetState(State::PLAYING);
 
@@ -982,66 +981,25 @@ namespace pvd
 				return;
 		}
 
-		if (_pts_calculation_method == PtsCalculationMethod::UNDER_DECISION)
+		int64_t adjusted_timestamp;
+		if (AdjustRtpTimestamp(channel, first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max(), adjusted_timestamp) == false)
 		{
-			if (GetTracks().size() == 1)
-			{
-				logti("Since this stream has a single track, it computes PTS alone without RTCP SR.");
-				_pts_calculation_method = PtsCalculationMethod::SINGLE_DELTA;
-			}
-			else if (_lip_sync_clock.IsEnabled() == true)
-			{
-				logti("Since this stream has received an RTCP SR, it counts the PTS with the SR.");
-				_pts_calculation_method = PtsCalculationMethod::WITH_RTCP_SR;
-			}
-			// If it exceeds 5 seconds, it is calculated independently without RTCP SR.
-			else if (_lip_sync_clock.IsEnabled() == false && _play_request_time.Elapsed() > 5000)
-			{
-				logtw("Since the RTCP SR was not received within 5 seconds, the PTS is calculated for each track without RTCP SR. (Lip-Sync may be out of sync)");
-				_pts_calculation_method = PtsCalculationMethod::SINGLE_DELTA;
-			}
-			else if (_lip_sync_clock.IsEnabled() == false && _play_request_time.Elapsed() <= 5000)
-			{
-				// Wait for RTCP SR for 5 seconds
-			}
-		}
-
-		int64_t timestamp = 0;
-		if (_pts_calculation_method == PtsCalculationMethod::WITH_RTCP_SR)
-		{
-			auto pts_base = _lip_sync_clock.CalcPTS(channel, first_rtp_packet->Timestamp());
-			if (pts_base.has_value() == false)
-			{
-				logtd("not yet received sr packet : %u", first_rtp_packet->Ssrc());
-				// Prevents the stream from being deleted because there is no input data
-				MonitorInstance->IncreaseBytesIn(*Stream::GetSharedPtr(), bitstream->GetLength());
-				return;
-			}
-
-			int64_t pts = pts_base.value();
-			timestamp = AdjustTimestampByBase(channel, pts, pts, std::numeric_limits<uint64_t>::max());
-		}
-		else if (_pts_calculation_method == PtsCalculationMethod::SINGLE_DELTA)
-		{
-			timestamp = AdjustTimestampByDelta(channel, first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max());
-		}
-		else
-		{
-			logtd("Haven't decided how to calculate pts yet.");
+			logtd("not yet received sr packet : %u", first_rtp_packet->Ssrc());
 			// Prevents the stream from being deleted because there is no input data
 			MonitorInstance->IncreaseBytesIn(*Stream::GetSharedPtr(), bitstream->GetLength());
 			return;
 		}
+		
 
 		logtd("Channel(%d) Payload Type(%d) Ssrc(%u) Timestamp(%u) PTS(%lld) Time scale(%f) Adjust Timestamp(%f)",
-			  channel, first_rtp_packet->PayloadType(), first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
+			  channel, first_rtp_packet->PayloadType(), first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp(), adjusted_timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(adjusted_timestamp) * track->GetTimeBase().GetExpr());
 
 		auto frame = std::make_shared<MediaPacket>(GetMsid(),
 												   track->GetMediaType(),
 												   track->GetId(),
 												   bitstream,
-												   timestamp,
-												   timestamp,
+												   adjusted_timestamp,
+												   adjusted_timestamp,
 												   bitstream_format,
 												   packet_type);
 
@@ -1054,8 +1012,8 @@ namespace pvd
 															  track->GetMediaType(),
 															  track->GetId(),
 															  _h264_extradata_nalu,
-															  timestamp,
-															  timestamp,
+															  adjusted_timestamp,
+															  adjusted_timestamp,
 															  cmn::BitstreamFormat::H264_ANNEXB,
 															  cmn::PacketType::NALU);
 			SendFrame(media_packet);
@@ -1074,7 +1032,7 @@ namespace pvd
 		if (rtcp_info->GetPacketType() == RtcpPacketType::SR)
 		{
 			auto sr = std::dynamic_pointer_cast<SenderReport>(rtcp_info);
-			_lip_sync_clock.UpdateSenderReportTime(channel, sr->GetMsw(), sr->GetLsw(), sr->GetTimestamp());
+			UpdateSenderReportTimestamp(channel, sr->GetMsw(), sr->GetLsw(), sr->GetTimestamp());
 		}
 	}
 

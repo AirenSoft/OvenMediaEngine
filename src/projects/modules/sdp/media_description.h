@@ -37,14 +37,6 @@ public:
 		Inactive
 	};
 
-	enum class SetupType
-	{
-		Unknown,
-		Active,
-		Passive,
-		ActPass
-	};
-
 	explicit MediaDescription();
 	virtual ~MediaDescription();
 
@@ -88,11 +80,6 @@ public:
 	void SetMsid(const ov::String &msid, const ov::String &msid_appdata);
 	const ov::String &GetMsid();
 	const ov::String &GetMsidAppdata();
-
-	// a=setup:actpass
-	void SetSetup(SetupType type);
-	SetupType GetSetup() const;
-	bool SetSetup(const ov::String &type);
 
 	// c=IN IP4 0.0.0.0
 	void SetConnection(uint8_t version, const ov::String &ip);
@@ -149,9 +136,7 @@ private:
 
 	ov::String _msid;
 	ov::String _msid_appdata;
-	
-	SetupType _setup = SetupType::Unknown;
-	ov::String _setup_str = "UNKNOWN";
+
 
 	uint8_t _connection_ip_version = 4;
 	ov::String _connection_ip = "0.0.0.0";

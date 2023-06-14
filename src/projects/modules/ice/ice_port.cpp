@@ -829,9 +829,18 @@ void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, co
 
 bool IcePort::UseCandidate(const std::shared_ptr<IceSession> &ice_session, const ov::SocketAddressPair &address_pair)
 {
-	logti("Session %u uses candidate: %s", ice_session->GetSessionID(), address_pair.ToString().CStr());
+	if (ice_session->GetState() == IceConnectionState::Connected && ice_session->GetConnectedCandidatePair()->GetAddressPair() == address_pair)
+	{
+		// Already connected
+		return true;
+	}
+	
+	if (ice_session->UseCandidate(address_pair) == false)
+	{
+		return false;
+	}
 
-	ice_session->UseCandidate(address_pair);
+	logti("Session %u uses candidate: %s", ice_session->GetSessionID(), address_pair.ToString().CStr());
 	AddIceSession(address_pair, ice_session);
 
 	return true;

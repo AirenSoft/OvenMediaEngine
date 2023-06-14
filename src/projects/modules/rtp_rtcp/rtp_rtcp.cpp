@@ -487,7 +487,6 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 
 bool RtpRtcp::OnRtcpReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
-	logtd("Get RTCP Packet - length(%d)", data->GetLength());
 	// Parse RTCP Packet
 	RtcpReceiver receiver;
 	if(receiver.ParseCompoundPacket(data) == false)

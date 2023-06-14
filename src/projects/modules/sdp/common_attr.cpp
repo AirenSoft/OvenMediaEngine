@@ -167,6 +167,34 @@ bool CommonAttr::ParsingCommonAttrLine(char type, std::string content)
 
 		_control = match.GetGroupAt(1).GetValue();
 	}
+	else if (content.compare(0, OV_COUNTOF("set") - 1, "set") == 0)
+	{
+		// a=setup:actpass
+		/*
+		if(std::regex_search(content, matches, std::regex("^setup:(\\w*)")))
+		{
+			if(matches.size() != 1 + 1)
+			{
+				parsing_error = true;
+				break;
+			}
+
+			SetSetup(std::string(matches[1]).c_str());
+		}
+		*/
+		auto match = SDPRegexPattern::GetInstance()->MatchSetup(content.c_str());
+		if (match.GetGroupCount() != 1 + 1)
+		{
+			return false;
+		}
+
+		SetSetup(match.GetGroupAt(1).GetValue());
+	}
+	// a=end-of-candidates
+	else if (content.compare(0, OV_COUNTOF("end-of") - 1, "end-of") == 0)
+	{
+		// Nothing to do
+	}
 	else
 	{
 		logw("SDP", "Unknown attribute type: %c=%s", type, content.c_str());
@@ -235,6 +263,59 @@ void CommonAttr::SetControl(const ov::String &control)
 ov::String CommonAttr::GetControl() const
 {
 	return _control;
+}
+
+// a=setup:actpass
+void CommonAttr::SetSetup(const SetupType type)
+{
+	_setup = type;
+	switch (_setup)
+	{
+		case SetupType::Active:
+			_setup_str = "active";
+			break;
+		case SetupType::Passive:
+			_setup_str = "passive";
+			break;
+		case SetupType::ActPass:
+			_setup_str = "actpass";
+			break;
+		default:
+			_setup_str = "actpass";	 // default value
+	}
+}
+
+CommonAttr::SetupType CommonAttr::GetSetup() const
+{
+	return _setup;
+}
+
+ov::String CommonAttr::GetSetupStr() const
+{
+	return _setup_str;
+}
+
+bool CommonAttr::SetSetup(const ov::String &type)
+{
+	if (type.UpperCaseString() == "ACTIVE")
+	{
+		SetSetup(SetupType::Active);
+	}
+	else if (type.UpperCaseString() == "PASSIVE")
+	{
+		SetSetup(SetupType::Passive);
+	}
+	else if (type.UpperCaseString() == "ACTPASS")
+	{
+		SetSetup(SetupType::ActPass);
+	}
+	else
+	{
+		OV_ASSERT(false, "Invalid setup type: %s", type.CStr());
+		return false;
+	}
+
+	return true;
 }
 
 std::vector<std::shared_ptr<IceCandidate>> CommonAttr::GetIceCandidates() const

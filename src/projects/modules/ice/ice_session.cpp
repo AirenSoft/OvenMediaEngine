@@ -271,6 +271,7 @@ bool IceSession::UseCandidate(const ov::SocketAddressPair& address_pair)
 {
 	std::lock_guard<std::shared_mutex> lock(_connected_candidate_pair_mutex);
 
+	// TODO(Getroot) : Consider the case where the ICE restart occurs
 	if (GetState() != IceConnectionState::Checking)
 	{
 		logte("ICE session : %u | UseCandidate() | Invalid state: %s", GetSessionID(), IceConnectionStateToString(GetState()));

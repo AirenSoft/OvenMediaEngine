@@ -7,7 +7,7 @@ class LipSyncClock
 public:
 	LipSyncClock() = default;
 
-	bool RegisterClock(uint32_t id, double timebase);
+	bool RegisterRtpClock(uint32_t id, double timebase);
 
 	std::optional<uint64_t> CalcPTS(uint32_t id, uint32_t rtp_timestamp);
 	bool UpdateSenderReportTime(uint32_t id, uint32_t ntp_msw, uint32_t ntp_lsw, uint32_t rtcp_timestamp);

@@ -2,7 +2,7 @@
 #include "base/ovlibrary/clock.h"
 #define OV_LOG_TAG "LipSyncClock"
 
-bool LipSyncClock::RegisterClock(uint32_t id, double timebase)
+bool LipSyncClock::RegisterRtpClock(uint32_t id, double timebase)
 {
 	auto clock = std::make_shared<Clock>();
 	clock->_timebase = timebase;

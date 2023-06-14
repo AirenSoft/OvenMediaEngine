@@ -42,6 +42,7 @@ public:
 		RegisterPattern(_session_name_pattern, R"(^(.*))");
 		RegisterPattern(_timing_pattern, R"(^(\d*) (\d*))");
 		RegisterPattern(_group_bundle_pattern, R"(^group:BUNDLE (.*))");
+		
 		RegisterPattern(_msid_semantic_pattern, R"(^msid-semantic:\s?(\w*) (\S*))");
 		RegisterPattern(_sdplang_pattern, R"(^sdplang:(\S*))");
 		RegisterPattern(_range_pattern, R"(^range:(\S*))");

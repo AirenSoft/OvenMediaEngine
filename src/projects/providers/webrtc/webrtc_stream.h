@@ -9,7 +9,8 @@
 
 #pragma once
 
-#include "base/provider/push_provider/stream.h"
+#include <base/provider/push_provider/stream.h>
+
 #include "modules/ice/ice_port.h"
 #include "modules/sdp/session_description.h"
 
@@ -17,7 +18,6 @@
 #include "modules/rtp_rtcp/rtp_packetizer_interface.h"
 #include "modules/dtls_srtp/dtls_transport.h"
 #include "modules/rtp_rtcp/rtp_depacketizing_manager.h"
-#include "modules/rtp_rtcp/lip_sync_clock.h"
 
 namespace pvd
 {
@@ -94,8 +94,6 @@ namespace pvd
 
 		// Payload type, Depacketizer
 		std::map<uint8_t, std::shared_ptr<RtpDepacketizingManager>> _depacketizers;
-
-		LipSyncClock 						_lip_sync_clock;
 
 		std::shared_ptr<ov::Data> _h264_extradata_nalu = nullptr;
 		bool _sent_sequence_header = false;

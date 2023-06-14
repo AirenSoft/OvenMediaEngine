@@ -236,6 +236,72 @@ namespace pvd
 		_source_timestamp_map.clear();
 	}
 
+	void Stream::RegisterRtpClock(uint32_t track_id, double clock_rate)
+	{
+		_rtp_lip_sync_clock.RegisterRtpClock(track_id, clock_rate);
+	}
+
+	void Stream::UpdateSenderReportTimestamp(uint32_t track_id, uint32_t msw, uint32_t lsw, uint32_t timestamp)
+	{
+		_rtp_lip_sync_clock.UpdateSenderReportTime(track_id, msw, lsw, timestamp);
+	}
+
+	bool Stream::AdjustRtpTimestamp(uint32_t track_id, int64_t timestamp, int64_t max_timestamp, int64_t &adjusted_timestamp)
+	{
+		// Make decision timestamp calculation method
+		if (_rtp_timestamp_method == RtpTimestampCalculationMethod::UNDER_DECISION)
+		{
+			if (GetTracks().size() == 1)
+			{
+				logti("Since this stream has a single track, it computes PTS alone without RTCP SR.");
+				_rtp_timestamp_method = RtpTimestampCalculationMethod::SINGLE_DELTA;
+			}
+			else if (_rtp_lip_sync_clock.IsEnabled() == true)
+			{
+				logti("Since this stream has received an RTCP SR, it counts the PTS with the SR.");
+				_rtp_timestamp_method = RtpTimestampCalculationMethod::WITH_RTCP_SR;
+			}
+			// If it exceeds 5 seconds, it is calculated independently without RTCP SR.
+			else if (_rtp_lip_sync_clock.IsEnabled() == false && _first_rtp_received_time.Elapsed() > 5000)
+			{
+				logtw("Since the RTCP SR was not received within 5 seconds, the PTS is calculated for each track without RTCP SR. (Lip-Sync may be out of sync)");
+				_rtp_timestamp_method = RtpTimestampCalculationMethod::SINGLE_DELTA;
+			}
+			else if (_rtp_lip_sync_clock.IsEnabled() == false && _first_rtp_received_time.Elapsed() <= 5000)
+			{
+				// Wait for RTCP SR for 5 seconds
+				if (_first_rtp_received_time.IsStart() == false)
+				{
+					logtw("Wait for RTCP SR for 5 seconds before starting the stream.");
+					_first_rtp_received_time.Start();
+				}
+				return false; 
+			}
+		}
+
+		if (_rtp_timestamp_method == RtpTimestampCalculationMethod::WITH_RTCP_SR)
+		{
+			auto pts_base = _rtp_lip_sync_clock.CalcPTS(track_id, timestamp);
+			if (pts_base.has_value() == false)
+			{
+				return false;
+			}
+
+			int64_t pts = pts_base.value();
+			adjusted_timestamp = AdjustTimestampByBase(track_id, pts, pts, max_timestamp);
+		}
+		else if (_rtp_timestamp_method == RtpTimestampCalculationMethod::SINGLE_DELTA)
+		{
+			adjusted_timestamp = AdjustTimestampByDelta(track_id, timestamp, max_timestamp);
+		}
+		else
+		{
+			return false;
+		}
+
+		return true;
+	}
+
 	// This keeps the pts value of the input track (only the start value<base_timestamp> is different), meaning that this value can be used for A/V sync.
 	// returns adjusted PTS and parameter PTS and DTS are also adjusted.
 	int64_t Stream::AdjustTimestampByBase(uint32_t track_id, int64_t &pts, int64_t &dts, int64_t max_timestamp)

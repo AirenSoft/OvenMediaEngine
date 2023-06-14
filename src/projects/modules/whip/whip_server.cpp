@@ -361,7 +361,7 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		logtd("WHIP SDP Offer: %s", data->ToString().CStr());
+		logti("WHIP SDP Offer: %s", data->ToString().CStr());
 
 		auto offer_sdp = std::make_shared<SessionDescription>();
 		if (offer_sdp->FromString(data->ToString()) == false)
@@ -390,7 +390,7 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			// Set SDP
 			response->SetHeader("Content-Type", "application/sdp");
 			response->SetHeader("ETag", answer._entity_tag);
-			response->SetHeader("Location", ov::String::FormatString("/%s/%s/%s", requested_url->App().CStr(), requested_url->Stream().CStr(), answer._session_id.CStr()));
+			response->SetHeader("Location", ov::String::FormatString("/%s/%s/%s?direction=whip", requested_url->App().CStr(), requested_url->Stream().CStr(), answer._session_id.CStr()));
 
 			// IF TcpForce == true or ?transport=tcp
 			if (_tcp_force == true || requested_url->GetQueryValue("transport").UpperCaseString() == "TCP")

@@ -8,8 +8,9 @@
 //==============================================================================
 #pragma once
 
-#include "base/common_types.h"
-#include "base/info/stream.h"
+#include <base/common_types.h>
+#include <base/info/stream.h>
+#include <base/ovlibrary/lip_sync_clock.h>
 #include "monitoring/monitoring.h"
 
 #include <base/mediarouter/media_buffer.h>
@@ -75,13 +76,19 @@ namespace pvd
 		bool SendFrame(const std::shared_ptr<MediaPacket> &packet);
 
 		void ResetSourceStreamTimestamp();
-		int64_t AdjustTimestampByBase(uint32_t track_id, int64_t &pts,  int64_t &dts, int64_t max_timestamp);
+
+		int64_t AdjustTimestampByBase(uint32_t track_id, int64_t &pts, int64_t &dts, int64_t max_timestamp);
 		int64_t AdjustTimestampByDelta(uint32_t track_id, int64_t timestamp, int64_t max_timestamp);
 		int64_t GetDeltaTimestamp(uint32_t track_id, int64_t timestamp, int64_t max_timestamp);
 		int64_t GetBaseTimestamp(uint32_t track_id);
 		std::shared_ptr<pvd::Application> _application = nullptr;
 		void UpdateReconnectTimeToBasetime();
-	
+
+		// For RTP
+		void RegisterRtpClock(uint32_t track_id, double clock_rate);
+		void UpdateSenderReportTimestamp(uint32_t track_id, uint32_t msw, uint32_t lsw, uint32_t timestamp);
+		bool AdjustRtpTimestamp(uint32_t track_id, int64_t timestamp, int64_t max_timestamp, int64_t &adjusted_timestamp);
+
 	private:
 		// TrackID : Timestamp(us)
 		std::map<uint32_t, int64_t>			_source_timestamp_map;
@@ -99,5 +106,18 @@ namespace pvd
 
 		std::shared_ptr<ov::Url> _requested_url = nullptr;
 		std::shared_ptr<ov::Url> _final_url = nullptr;
+
+		// Special timestamp calculation for RTP
+		enum class RtpTimestampCalculationMethod : uint8_t
+		{
+			UNDER_DECISION,
+			SINGLE_DELTA,
+			WITH_RTCP_SR
+		};
+
+		RtpTimestampCalculationMethod _rtp_timestamp_method = RtpTimestampCalculationMethod::UNDER_DECISION;
+
+		LipSyncClock 						_rtp_lip_sync_clock;
+		ov::StopWatch						_first_rtp_received_time;
 	};
 }

@@ -20,7 +20,6 @@
 
 #include <modules/rtp_rtcp/rtp_depacketizing_manager.h>
 #include <modules/rtp_rtcp/rtp_rtcp.h>
-#include <modules/rtp_rtcp/lip_sync_clock.h>
 
 #include <modules/sdp/session_description.h>
 
@@ -158,18 +157,6 @@ namespace pvd
 		// Payload type : Timestamp
 		std::map<uint8_t, uint32_t>			_last_timestamp_map;
 		std::map<uint8_t, uint32_t>			_timestamp_map;
-
-		LipSyncClock 						_lip_sync_clock;
-		ov::StopWatch						_play_request_time;
-
-		enum class PtsCalculationMethod : uint8_t
-		{
-			UNDER_DECISION,
-			SINGLE_DELTA,
-			WITH_RTCP_SR
-		};
-
-		PtsCalculationMethod				_pts_calculation_method = PtsCalculationMethod::UNDER_DECISION;
 
 		bool _sent_sequence_header = false;
 

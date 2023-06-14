@@ -6,8 +6,9 @@
  * 								RTPFrame
  ***********************************************************************/
 
-RtpFrame::RtpFrame()
+RtpFrame::RtpFrame(uint32_t timestamp)
 {
+	_timestamp = timestamp;
 	_stop_watch.Start();
 }
 
@@ -18,9 +19,9 @@ std::shared_ptr<RtpPacket> RtpFrame::GetFirstRtpPacket()
 		return nullptr;
 	}
 
-	_curr_sequence_number = _first_sequence_number;
+	_curr_order_number = _min_order_number;
 
-	auto it = _packets.find(_curr_sequence_number);
+	auto it = _packets.find(_curr_order_number);
 	if (it == _packets.end())
 	{
 		return nullptr;
@@ -36,9 +37,9 @@ std::shared_ptr<RtpPacket> RtpFrame::GetNextRtpPacket()
 		return nullptr;
 	}
 
-	_curr_sequence_number++;
+	_curr_order_number ++;
 
-	auto it = _packets.find(_curr_sequence_number);
+	auto it = _packets.find(_curr_order_number);
 	if (it == _packets.end())
 	{
 		return nullptr;
@@ -47,46 +48,72 @@ std::shared_ptr<RtpPacket> RtpFrame::GetNextRtpPacket()
 	return it->second;
 }
 
-uint32_t RtpFrame::GetExtendedSequenceNumber(uint16_t sequence_number)
+uint16_t RtpFrame::GetOrderNumber(uint16_t sequence_number)
 {
-	// If the timestamp is less than the previous timestamp, it is assumed that the timestamp has been rolled over.
-	if (sequence_number < _last_sequence_number && _last_sequence_number - sequence_number > 0x8000)
+	if (_first_packet == true)
 	{
-		_timestamp_cycle++;
+		_first_packet = false;
+		_first_sequence_number = sequence_number;
+		_base_order_number = std::numeric_limits<uint16_t>::max() / 2;
+
+		return _base_order_number;
 	}
 
-	_last_sequence_number = sequence_number;
+	if (sequence_number > _first_sequence_number)
+	{
+		if (sequence_number - _first_sequence_number > (std::numeric_limits<uint16_t>::max() / 2))
+		{
+			// out of order : 0 -> 65535 ==> gap : -1 
+			uint16_t gap = std::numeric_limits<uint16_t>::max() - sequence_number + _first_sequence_number + 1;
+			return _base_order_number - gap;
+		}
+		else
+		{
+			// In order : 1 -> 2 ==> gap : +1
+			return _base_order_number + (sequence_number - _first_sequence_number);
+		}
+	}
+	else
+	{
+		if (_first_sequence_number - sequence_number > (std::numeric_limits<uint16_t>::max() / 2))
+		{
+			// Roll over : 65535 -> 0 ==> gpa : +1
+			uint16_t gap = std::numeric_limits<uint16_t>::max() - _first_sequence_number + sequence_number + 1;
+			return _base_order_number + gap;
+		}
+		else
+		{
+			// Out of order : 2 -> 1
+			return _base_order_number - (_first_sequence_number - sequence_number);
+		}
+	}
 
-	// Extended sequence number
-	// [16bit timestamp cycle][16bit sequence number]
-	return (static_cast<uint32_t>(_timestamp_cycle) << 16) | sequence_number;
+	// Should not reach here
+	return 0;
 }
 
 bool RtpFrame::InsertPacket(const std::shared_ptr<RtpPacket> &packet)
 {
-	logtd("Insert packet : %s", packet->Dump().CStr());
-
-	auto sequence_number = GetExtendedSequenceNumber(packet->SequenceNumber());
-
-	auto inserted = _packets.emplace(sequence_number, packet);
-	if (inserted.second == false)
+	if (packet == nullptr || packet->Timestamp() != _timestamp)
 	{
-		// duplicated packet
-		logte("Duplicated packet: %u", sequence_number);
+		logte("Invalid packet : %s (expected ts : %u)", packet->Dump().CStr(), _timestamp);
 		return false;
 	}
 
+	logtd("Insert packet : %s", packet->Dump().CStr());
+
+	auto order_number = GetOrderNumber(packet->SequenceNumber());
+
+	_packets.emplace(order_number, packet);
+
 	// First packet
-	if (_timestamp == 0 || sequence_number < _first_sequence_number)
-	{
-		_timestamp = packet->Timestamp();
-		_first_sequence_number = sequence_number;
-	}
+	_min_order_number = std::min(_min_order_number, order_number);
+	_max_order_number = std::max(_max_order_number, order_number);
 
 	if (packet->Marker())
 	{
 		_marked = true;
-		_marker_sequence_number = sequence_number;
+		_marker_sequence_number = packet->SequenceNumber();
 	}
 
 	// Check if frame is completed
@@ -132,7 +159,7 @@ bool RtpFrame::CheckCompleted()
 	}
 
 	// Check number of packets
-	uint16_t need_number_of_packets = _marker_sequence_number - _first_sequence_number + 1;
+	uint16_t need_number_of_packets = _max_order_number - _min_order_number + 1;
 
 	// Check if frame is valid
 	if (need_number_of_packets == _packets.size())
@@ -181,7 +208,7 @@ bool RtpFrameJitterBuffer::InsertPacket(const std::shared_ptr<RtpPacket> &packet
 	{
 		logtd("Create frame buffer for timestamp %llu", timestamp);
 		// First packet of frame
-		frame = std::make_shared<RtpFrame>();
+		frame = std::make_shared<RtpFrame>(packet->Timestamp());
 		_rtp_frames[timestamp] = frame;
 	}
 	else

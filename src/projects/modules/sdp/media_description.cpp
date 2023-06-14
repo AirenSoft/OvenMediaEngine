@@ -49,7 +49,7 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 		_connection_ip_version, _connection_ip.CStr(),
 		_direction_str.CStr(),
 		_mid.CStr(),
-		_setup_str.CStr());
+		GetSetupStr().CStr());
 
 	// Common Attributes
 	ov::String common_attr_text;
@@ -507,30 +507,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 					match.GetGroupAt(1).GetValue(),
 					match.GetGroupAt(2).GetValue());
 			}
-			else if (content.compare(0, OV_COUNTOF("set") - 1, "set") == 0)
-			{
-				// a=setup:actpass
-				/*
-				if(std::regex_search(content, matches, std::regex("^setup:(\\w*)")))
-				{
-					if(matches.size() != 1 + 1)
-					{
-						parsing_error = true;
-						break;
-					}
-
-					SetSetup(std::string(matches[1]).c_str());
-				}
-				*/
-				auto match = SDPRegexPattern::GetInstance()->MatchSetup(content.c_str());
-				if (match.GetGroupCount() != 1 + 1)
-				{
-					parsing_error = true;
-					break;
-				}
-
-				SetSetup(match.GetGroupAt(1).GetValue());
-			}
 			else if (content.compare(0, OV_COUNTOF("ss") - 1, "ss") == 0)
 			{
 				// a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
@@ -619,9 +595,9 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 				SetFramerate(ov::Converter::ToFloat(match.GetGroupAt(1).GetValue().CStr()));
 			}
 			// a=sendonly
-			else if (content.compare(0, OV_COUNTOF("se") - 1, "se") == 0 ||
-					 content.compare(0, OV_COUNTOF("re") - 1, "re") == 0 ||
-					 content.compare(0, OV_COUNTOF("in") - 1, "in") == 0)
+			else if (content.compare(0, OV_COUNTOF("sen") - 1, "sen") == 0 ||
+					 content.compare(0, OV_COUNTOF("rec") - 1, "rec") == 0 ||
+					 content.compare(0, OV_COUNTOF("ina") - 1, "ina") == 0)
 			{
 				/*
 				if(std::regex_search(content, matches, std::regex("^(sendrecv|recvonly|sendonly|inactive)")))
@@ -918,54 +894,6 @@ const ov::String &MediaDescription::GetMsid()
 const ov::String &MediaDescription::GetMsidAppdata()
 {
 	return _msid_appdata;
-}
-
-// a=setup:actpass
-void MediaDescription::SetSetup(const SetupType type)
-{
-	_setup = type;
-	switch (_setup)
-	{
-		case SetupType::Active:
-			_setup_str = "active";
-			break;
-		case SetupType::Passive:
-			_setup_str = "passive";
-			break;
-		case SetupType::ActPass:
-			_setup_str = "actpass";
-			break;
-		default:
-			_setup_str = "actpass";	 // default value
-	}
-}
-
-MediaDescription::SetupType MediaDescription::GetSetup() const
-{
-	return _setup;
-}
-
-bool MediaDescription::SetSetup(const ov::String &type)
-{
-	if (type.UpperCaseString() == "ACTIVE")
-	{
-		SetSetup(SetupType::Active);
-	}
-	else if (type.UpperCaseString() == "PASSIVE")
-	{
-		SetSetup(SetupType::Passive);
-	}
-	else if (type.UpperCaseString() == "ACTPASS")
-	{
-		SetSetup(SetupType::ActPass);
-	}
-	else
-	{
-		OV_ASSERT(false, "Invalid setup type: %s", type.CStr());
-		return false;
-	}
-
-	return true;
 }
 
 // c=IN IP4 0.0.0.0

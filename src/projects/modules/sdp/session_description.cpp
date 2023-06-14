@@ -47,6 +47,13 @@ bool SessionDescription::UpdateData(ov::String &sdp)
 		sdp.AppendFormat(" %s", media_description->GetMid().CStr());
 	}
 
+	sdp += "\r\n";
+	sdp += "a=group:LS";
+	for(auto &media_description : _media_list)
+	{
+		sdp.AppendFormat(" %s", media_description->GetMid().CStr());
+	}
+
 	/* 
 	Deprecated 
 	
@@ -278,26 +285,8 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 			break;
 		case 'a':
 			// a=group:BUNDLE video audio ...
-			if(content.compare(0, OV_COUNTOF("gr") - 1, "gr") == 0)
+			if(content.compare(0, OV_COUNTOF("group:B") - 1, "group:B") == 0)
 			{
-				/*
-				if(std::regex_search(content, matches, std::regex("^group:BUNDLE (.*)")))
-				{
-					if(matches.size() != 1 + 1)
-					{
-						parsing_error = true;
-						break;
-					}
-
-					std::string bundle;
-					std::stringstream bundles(matches[1]);
-					while(std::getline(bundles, bundle, ' '))
-					{
-						_bundles.emplace_back(bundle.c_str());
-					}
-				}
-				*/
-				
 				auto match = SDPRegexPattern::GetInstance()->MatchGourpBundle(content.c_str());
 				if(match.GetGroupCount() != 1 + 1)
 				{
@@ -311,6 +300,11 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 				{
 					_bundles.emplace_back(item);
 				}
+			}
+			// a=group:LS video audio ...
+			else if (content.compare(0, OV_COUNTOF("group:L") - 1, "group:L") == 0)
+			{
+				// Skip
 			}
 			// a=msid-semantic:WMS *
 			else if(content.compare(0, OV_COUNTOF("ms") - 1, "ms") == 0)
