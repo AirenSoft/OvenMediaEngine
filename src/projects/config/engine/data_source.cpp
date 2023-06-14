@@ -394,17 +394,73 @@ namespace cfg
 		return result;
 	}
 
-#define SET_VALUE_IF_NOT_NULL(condition, child_value, converted_value) \
-	if (original_value != nullptr)                                     \
-	{                                                                  \
-		if (condition)                                                 \
-		{                                                              \
-			*original_value = child_value;                             \
-		}                                                              \
-		else                                                           \
-		{                                                              \
-			*original_value = converted_value;                         \
-		}                                                              \
+#define SET_ORIGINAL_VALUE_IF_NOT_NULL(value) \
+	if (original_value != nullptr)            \
+	{                                         \
+		*original_value = value;              \
+	}
+
+	Variant GetAttribute(
+		const ov::String &current_file_path,
+		const pugi::xml_node &node, const char *name,
+		const bool resolve_path)
+	{
+		const auto &attribute = node.attribute(name);
+		return attribute.empty() ? Variant() : Preprocess(current_file_path, attribute.value(), resolve_path);
+	}
+
+	bool NeedToIgnore(
+		const ov::String &current_file_path,
+		const pugi::xml_node &node,
+		const bool resolve_path)
+	{
+		const auto ignore = GetAttribute(current_file_path, node, "ignore", resolve_path);
+
+		if (ignore.HasValue())
+		{
+			try
+			{
+				// Ignore if the value is exactly "true"
+				if (ignore.TryCast<ov::String>() == "true")
+				{
+					return true;
+				}
+
+				// Otherwise, use the value as-is
+			}
+			catch (const CastException &cast_exception)
+			{
+			}
+		}
+
+		return false;
+	}
+
+	Variant Process(
+		const ov::String &current_file_path,
+		const pugi::xml_node &node,
+		const std::function<Variant(const ov::String &value)> converter,
+		const bool resolve_path,
+		Json::Value *original_value)
+	{
+		if (node.empty())
+		{
+			// Nothing to do
+			*original_value = Json::nullValue;
+			return {};
+		}
+
+		if (NeedToIgnore(current_file_path, node, resolve_path))
+		{
+			return {};
+		}
+
+		const auto &child_value = node.child_value();
+		SET_ORIGINAL_VALUE_IF_NOT_NULL(child_value);
+
+		auto preprocessed = Preprocess(current_file_path, child_value, resolve_path);
+
+		return (converter != nullptr) ? converter(preprocessed) : preprocessed;
 	}
 
 	Variant DataSource::GetValueFromXml(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, Json::Value *original_value) const
@@ -412,97 +468,75 @@ namespace cfg
 		switch (value_type)
 		{
 			case ValueType::Unknown:
-				SET_VALUE_IF_NOT_NULL(false, Json::nullValue, Json::nullValue);
+				SET_ORIGINAL_VALUE_IF_NOT_NULL(Json::nullValue);
 				return {};
 
-			case ValueType::String: {
-				auto &node = is_child ? _node.child(name) : _node;
-				const auto &child_value = node.child_value();
+			case ValueType::String:
+				return Process(
+					_current_file_path, is_child ? _node.child(name) : _node,
+					nullptr,
+					resolve_path, original_value);
 
-				auto preprocessed = Preprocess(_current_file_path, child_value, resolve_path);
-				auto &converted = preprocessed;
+			case ValueType::Integer:
+				return Process(
+					_current_file_path, is_child ? _node.child(name) : _node,
+					[](const ov::String &value) { return ov::Converter::ToInt32(value); },
+					resolve_path, original_value);
 
-				SET_VALUE_IF_NOT_NULL(preprocessed != child_value, child_value, converted.CStr());
+			case ValueType::Long:
+				return Process(
+					_current_file_path, is_child ? _node.child(name) : _node,
+					[](const ov::String &value) { return ov::Converter::ToInt64(value); },
+					resolve_path, original_value);
 
-				return node.empty() ? Variant() : converted;
-			}
+			case ValueType::Boolean:
+				return Process(
+					_current_file_path, is_child ? _node.child(name) : _node,
+					[](const ov::String &value) { return ov::Converter::ToBool(value); },
+					resolve_path, original_value);
 
-			case ValueType::Integer: {
-				auto &node = is_child ? _node.child(name) : _node;
-				const auto &child_value = node.child_value();
-
-				auto preprocessed = Preprocess(_current_file_path, child_value, resolve_path);
-				auto converted = ov::Converter::ToInt32(preprocessed);
-
-				SET_VALUE_IF_NOT_NULL(preprocessed != child_value, child_value, converted);
-
-				return node.empty() ? Variant() : converted;
-			}
-
-			case ValueType::Long: {
-				auto &node = is_child ? _node.child(name) : _node;
-				const auto &child_value = node.child_value();
-
-				auto preprocessed = Preprocess(_current_file_path, child_value, resolve_path);
-				auto converted = ov::Converter::ToInt64(preprocessed);
-
-				SET_VALUE_IF_NOT_NULL(preprocessed != child_value, child_value, converted);
-
-				return node.empty() ? Variant() : converted;
-			}
-
-			case ValueType::Boolean: {
-				auto &node = is_child ? _node.child(name) : _node;
-				const auto &child_value = node.child_value();
-
-				auto preprocessed = Preprocess(_current_file_path, child_value, resolve_path);
-				auto converted = ov::Converter::ToBool(preprocessed);
-
-				SET_VALUE_IF_NOT_NULL(preprocessed != child_value, child_value, converted);
-
-				return node.empty() ? Variant() : converted;
-			}
-
-			case ValueType::Double: {
-				auto &node = is_child ? _node.child(name) : _node;
-				const auto &child_value = node.child_value();
-
-				auto preprocessed = Preprocess(_current_file_path, child_value, resolve_path);
-				auto converted = ov::Converter::ToDouble(preprocessed);
-
-				SET_VALUE_IF_NOT_NULL(preprocessed != child_value, child_value, converted);
-
-				return node.empty() ? Variant() : converted;
-			}
+			case ValueType::Double:
+				return Process(
+					_current_file_path, is_child ? _node.child(name) : _node,
+					[](const ov::String &value) { return ov::Converter::ToDouble(value); },
+					resolve_path, original_value);
 
 			case ValueType::Attribute: {
-				auto attribute = _node.attribute(name);
-				const auto &child_value = attribute.value();
+				if (NeedToIgnore(_current_file_path, _node, resolve_path) == false)
+				{
+					const auto &value = GetAttribute(_current_file_path, _node, name, resolve_path);
 
-				auto preprocessed = Preprocess(_current_file_path, child_value, resolve_path);
-				auto &converted = preprocessed;
+					if (value.HasValue())
+					{
+						SET_ORIGINAL_VALUE_IF_NOT_NULL(value.TryCast<ov::String>().CStr());
+					}
 
-				SET_VALUE_IF_NOT_NULL(preprocessed != child_value, child_value, converted.CStr());
+					return value;
+				}
 
-				return attribute.empty() ? Variant() : converted;
+				SET_ORIGINAL_VALUE_IF_NOT_NULL(Json::nullValue);
+				return {};
 			}
 
-			case ValueType::Text: {
-				auto &node = is_child ? _node.child(name) : _node;
-				const auto &child_value = node.child_value();
-
-				auto preprocessed = Preprocess(_current_file_path, child_value, resolve_path);
-				auto &converted = preprocessed;
-
-				SET_VALUE_IF_NOT_NULL(preprocessed != child_value, child_value, converted.CStr());
-
-				return node.empty() ? Variant() : converted;
-			}
+			case ValueType::Text:
+				return Process(
+					_current_file_path, is_child ? _node.child(name) : _node,
+					nullptr,
+					resolve_path, original_value);
 
 			case ValueType::Item: {
-				auto &node = is_child ? _node.child(name) : _node;
-				SET_VALUE_IF_NOT_NULL(true, Json::objectValue, nullptr);
-				return node.empty() ? Variant() : DataSource(_current_file_path, _file_name, _document, node, _check_unknown_items);
+				const auto &node = is_child ? _node.child(name) : _node;
+
+				if (
+					(node.empty() == false) &&
+					(NeedToIgnore(_current_file_path, node, resolve_path) == false))
+				{
+					SET_ORIGINAL_VALUE_IF_NOT_NULL(Json::objectValue);
+					return DataSource(_current_file_path, _file_name, _document, node, _check_unknown_items);
+				}
+
+				SET_ORIGINAL_VALUE_IF_NOT_NULL(Json::nullValue);
+				return {};
 			}
 
 			case ValueType::List: {
@@ -510,17 +544,20 @@ namespace cfg
 				{
 					std::vector<DataSource> data_sources;
 
-					SET_VALUE_IF_NOT_NULL(true, Json::arrayValue, nullptr);
+					SET_ORIGINAL_VALUE_IF_NOT_NULL(Json::arrayValue);
 
-					auto children = _node.children(name);
+					const auto children = _node.children(name);
 
-					for (auto &node_child : children)
+					for (const auto &node_child : children)
 					{
-						data_sources.emplace_back(_current_file_path, _file_name, _document, node_child, _check_unknown_items);
-
-						if (original_value != nullptr)
+						if (NeedToIgnore(_current_file_path, node_child, resolve_path) == false)
 						{
-							original_value->append(node_child.child_value());
+							data_sources.emplace_back(_current_file_path, _file_name, _document, node_child, _check_unknown_items);
+
+							if (original_value != nullptr)
+							{
+								original_value->append(node_child.child_value());
+							}
 						}
 					}
 
@@ -530,6 +567,7 @@ namespace cfg
 					}
 				}
 
+				SET_ORIGINAL_VALUE_IF_NOT_NULL(Json::nullValue);
 				return {};
 			}
 		}
@@ -683,7 +721,7 @@ namespace cfg
 
 			case ValueType::Item: {
 				auto &json = is_child ? GetJsonValue(_json, name) : _json;
-				SET_VALUE_IF_NOT_NULL(true, json, nullptr);
+				SET_ORIGINAL_VALUE_IF_NOT_NULL(json);
 				return json.isNull() ? Variant() : DataSource(_current_file_path, _file_name, name, json, _check_unknown_items);
 			}
 
