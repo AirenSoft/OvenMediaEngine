@@ -8,7 +8,7 @@
 //==============================================================================
 #include "http_request_parser.h"
 
-#include "../../http_private.h"
+#include "../http_protocol_private.h"
 
 namespace http
 {

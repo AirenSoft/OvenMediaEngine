@@ -157,6 +157,13 @@ namespace ov
 		return ::SSL_get_error(_ssl, code);
 	}
 
+	void Tls::SetTlsHostName(const ov::String &host_name)
+	{
+		OV_ASSERT2(_ssl != nullptr);
+
+		::SSL_set_tlsext_host_name(_ssl, host_name.CStr());
+	}
+
 	int Tls::Accept()
 	{
 		if (_ssl == nullptr)
@@ -358,7 +365,7 @@ namespace ov
 				// The write operation was not successful, because either the connection was closed,
 				// an error occurred or action must be taken by the calling process.
 				// Call SSL_get_error() with the return value ret to find out the reason.
-				
+
 				auto get_error = GetError(result);
 				logtd("Tls::Write()::SSL_write returns %d %d, errno: %d", result, get_error, errno);
 				return get_error;

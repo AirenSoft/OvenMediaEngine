@@ -293,7 +293,7 @@ namespace ov
 			{
 				if (storage1.ss_family != storage2.ss_family)
 				{
-					return storage1.ss_family > storage2.ss_family;
+					return storage1.ss_family < storage2.ss_family;
 				}
 
 				switch (storage1.ss_family)

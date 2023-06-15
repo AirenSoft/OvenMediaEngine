@@ -8,4 +8,6 @@
 //==============================================================================
 #pragma once
 
-#define OV_LOG_TAG_PREFIX                          "HTTP"
+#include "../http_private.h"
+
+#define OV_LOG_TAG OV_LOG_TAG_PREFIX ".Protocol"

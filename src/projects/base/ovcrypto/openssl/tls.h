@@ -22,6 +22,8 @@ namespace ov
 		bool Initialize(const std::shared_ptr<TlsContext> &tls_context, const TlsBioCallback &callback, bool is_nonblocking);
 		bool Uninitialize();
 
+		void SetTlsHostName(const ov::String &host_name);
+
 		// @return Returns SSL_ERROR_NONE on success
 		int Accept();
 

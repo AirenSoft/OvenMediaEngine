@@ -3,9 +3,10 @@
 //  OvenMediaEngine
 //
 //  Created by Hyunjun Jang
-//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//  Copyright (c) 2023 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#pragma once
 
-#define OV_LOG_TAG_PREFIX                          "HTTP"
+#include "../http_private.h"
+
+#define OV_LOG_TAG OV_LOG_TAG_PREFIX ".Client"

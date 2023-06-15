@@ -8,7 +8,7 @@
 //==============================================================================
 #include "http_default_interceptor.h"
 
-#include "../http_private.h"
+#include "./http_server_private.h"
 #include "http_exchange.h"
 
 // Currently, OME does not handle requests larger than 1 MB

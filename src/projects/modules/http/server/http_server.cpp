@@ -10,7 +10,7 @@
 
 #include <modules/physical_port/physical_port_manager.h>
 
-#include "../http_private.h"
+#include "./http_server_private.h"
 #include "http_server_manager.h"
 
 namespace http
