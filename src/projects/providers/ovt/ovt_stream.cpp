@@ -206,7 +206,7 @@ namespace pvd
 		if (error != nullptr)
 		{
 			SetState(State::ERROR);
-			logte("Cannot connect to origin server (%s) : %s:%d (%s)", error->GetMessage().CStr(), socket_address.ToString().CStr());
+			logte("Cannot connect to origin server (%s) : (%s)", error->GetMessage().CStr(), socket_address.ToString().CStr());
 			return false;
 		}
 
