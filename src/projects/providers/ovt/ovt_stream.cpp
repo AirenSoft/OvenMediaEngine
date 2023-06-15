@@ -3,8 +3,9 @@
 //
 
 #include "ovt_stream.h"
-#include <modules/ovt_packetizer/ovt_signaling.h>
+
 #include <modules/bitstream/decoder_configuration_record_parser.h>
+#include <modules/ovt_packetizer/ovt_signaling.h>
 
 #include "base/info/application.h"
 #include "ovt_provider.h"
@@ -205,7 +206,7 @@ namespace pvd
 		if (error != nullptr)
 		{
 			SetState(State::ERROR);
-			logte("Cannot connect to origin server (%s) : %s:%d", error->GetMessage().CStr(), _curr_url->Host().CStr(), _curr_url->Port());
+			logte("Cannot connect to origin server (%s) : %s:%d (%s)", error->GetMessage().CStr(), socket_address.ToString().CStr());
 			return false;
 		}
 
@@ -421,7 +422,7 @@ namespace pvd
 			new_track->SetBitrateByConfig(json_track["bitrate"].asUInt());
 			new_track->SetStartFrameTime(json_track["startFrameTime"].asUInt64());
 			new_track->SetLastFrameTime(json_track["lastFrameTime"].asUInt64());
-			
+
 			// video or audio
 			if (new_track->GetMediaType() == cmn::MediaType::Video)
 			{
