@@ -153,7 +153,7 @@ namespace ov
 		return
 			// Set socket options
 			SetSocketOptions() &&
-			AppendCommand({DispatchCommand::Type::Connected}) &&
+			AppendCommand(DispatchCommand(DispatchCommand::Type::Connected), false) &&
 			SetFirstEpollEventReceived() &&
 			MakeNonBlockingInternal(GetSharedPtrAs<SocketAsyncInterface>(), false);
 	}

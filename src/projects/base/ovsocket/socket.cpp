@@ -239,7 +239,7 @@ namespace ov
 		return true;
 	}
 
-	bool Socket::AppendCommand(DispatchCommand command)
+	bool Socket::AppendCommand(DispatchCommand command, bool dispatch_immediately)
 	{
 		SOCKET_PROFILER_INIT();
 		std::lock_guard lock_guard(_dispatch_queue_lock);
@@ -253,6 +253,22 @@ namespace ov
 		});
 
 		_dispatch_queue.push_back(std::move(command));
+
+		if (dispatch_immediately)
+		{
+			switch (DispatchEvents())
+			{
+				case DispatchResult::Dispatched:
+					return true;
+
+				case DispatchResult::PartialDispatched:
+					_worker->EnqueueToDispatchLater(GetSharedPtr());
+					return true;
+
+				case DispatchResult::Error:
+					break;
+			}
+		}
 
 		return true;
 	}
@@ -1212,11 +1228,7 @@ namespace ov
 			case BlockingMode::NonBlocking:
 				if (IsSendable())
 				{
-					if (AppendCommand({data->Clone()}))
-					{
-						_worker->EnqueueToDispatchLater(GetSharedPtr());
-						return true;
-					}
+					return AppendCommand({data->Clone()}, true);
 				}
 				break;
 		}
@@ -1285,13 +1297,11 @@ namespace ov
 			case BlockingMode::NonBlocking:
 				if (IsSendable())
 				{
-					if ((GetType() == SocketType::Udp)
-							? AppendCommand({address, data->Clone()})
-							: AppendCommand({data->Clone()}))
-					{
-						_worker->EnqueueToDispatchLater(GetSharedPtr());
-						return true;
-					}
+					return AppendCommand(
+						(GetType() == SocketType::Udp)
+							? DispatchCommand(address, data->Clone())
+							: DispatchCommand(data->Clone()),
+						true);
 				}
 				break;
 		}
@@ -1460,13 +1470,11 @@ namespace ov
 			case BlockingMode::NonBlocking:
 				if (IsSendable())
 				{
-					if (
-						(GetType() == SocketType::Udp) &&
-						AppendCommand({address_pair, data->Clone()}))
-					{
-						_worker->EnqueueToDispatchLater(GetSharedPtr());
-						return true;
-					}
+					return AppendCommand(
+						(GetType() == SocketType::Udp)
+							? DispatchCommand(address_pair, data->Clone())
+							: DispatchCommand(data->Clone()),
+						true);
 				}
 		}
 

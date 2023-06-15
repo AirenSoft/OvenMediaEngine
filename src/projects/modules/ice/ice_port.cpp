@@ -266,7 +266,7 @@ bool IcePort::AddIceSession(session_id_t session_id, const std::shared_ptr<IceSe
 
 	return false;
 }
-	
+
 bool IcePort::AddIceSession(const ov::String &local_ufrag, const std::shared_ptr<IceSession> &ice_session)
 {
 	std::lock_guard<std::shared_mutex> lock_guard(_ice_sessions_with_ufrag_lock);
@@ -279,7 +279,7 @@ bool IcePort::AddIceSession(const ov::String &local_ufrag, const std::shared_ptr
 
 	return false;
 }
-	
+
 bool IcePort::AddIceSession(const ov::SocketAddressPair &address_pair, const std::shared_ptr<IceSession> &ice_session)
 {
 	std::lock_guard<std::shared_mutex> lock_guard(_ice_sessions_with_address_pair_lock);
@@ -334,7 +334,7 @@ session_id_t IcePort::IssueUniqueSessionId()
 	return _session_id_counter++;
 }
 
-void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, session_id_t session_id, IceSession::Role role, 
+void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, session_id_t session_id, IceSession::Role role,
 						 const std::shared_ptr<const SessionDescription> &local_sdp, const std::shared_ptr<const SessionDescription> &peer_sdp,
 						 int expired_ms, uint64_t life_time_epoch_ms, std::any user_data)
 {
@@ -523,13 +523,13 @@ void IcePort::CheckTimedOut()
 		if (terminated_session->IsExpired())
 		{
 			terminated_session->SetState(IceConnectionState::Disconnected);
-			
-			logtw("Agent [%s, %u] has expired", connected_candidate_pair != nullptr?connected_candidate_pair->ToString().CStr() : "Unknow", terminated_session->GetSessionID());
+
+			logtw("Agent [%s, %u] has expired", connected_candidate_pair != nullptr ? connected_candidate_pair->ToString().CStr() : "Unknow", terminated_session->GetSessionID());
 		}
 		else
 		{
 			terminated_session->SetState(IceConnectionState::Closed);
-			logti("Agent [%s, %u] has closed", connected_candidate_pair != nullptr?connected_candidate_pair->ToString().CStr() : "Unknow", terminated_session->GetSessionID());
+			logti("Agent [%s, %u] has closed", connected_candidate_pair != nullptr ? connected_candidate_pair->ToString().CStr() : "Unknow", terminated_session->GetSessionID());
 		}
 
 		NotifyIceSessionStateChanged(terminated_session);
@@ -592,9 +592,7 @@ bool IcePort::Send(session_id_t session_id, const std::shared_ptr<const ov::Data
 		return false;
 	}
 
-	auto remote_addrees = connected_candidate_pair->GetAddressPair().GetRemoteAddress();
-	// TODO: Change SendFromtTo
-	return remote->SendTo(remote_addrees, send_data);
+	return remote->SendFromTo(connected_candidate_pair->GetAddressPair(), send_data);
 }
 
 void IcePort::OnConnected(const std::shared_ptr<ov::Socket> &remote)
@@ -836,7 +834,7 @@ bool IcePort::UseCandidate(const std::shared_ptr<IceSession> &ice_session, const
 		// Already connected
 		return true;
 	}
-	
+
 	if (ice_session->UseCandidate(address_pair) == false)
 	{
 		return false;
@@ -947,7 +945,7 @@ bool IcePort::OnReceivedStunBindingRequest(const std::shared_ptr<ov::Socket> &re
 		if (connected_candidate_pair->GetAddressPair() != address_pair)
 		{
 			logtd("Already connected with another address : Connected(%s) Bind Request(%s)", connected_candidate_pair->GetAddressPair().ToString().CStr(), address_pair.ToString().CStr());
-			// Didn't respond 
+			// Didn't respond
 			return true;
 		}
 	}
@@ -991,7 +989,7 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 		ice_controlling_attr->SetValue(0x0000000000000001);
 		message.AddAttribute(ice_controlling_attr);
 
-		// TODO(Getroot): For now, it connect to the first connectable candidate pair, 
+		// TODO(Getroot): For now, it connect to the first connectable candidate pair,
 		// but we have to select the best pair among all nominated pairs and connect.
 		if (ice_session->GetState() == IceConnectionState::Checking && ice_session->IsConnectable(address_pair))
 		{
@@ -1122,8 +1120,7 @@ bool IcePort::SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const o
 		return false;
 	}
 
-	//TODO : Change SendFromtTo
-	auto sent_bytes = remote->SendTo(address_pair.GetRemoteAddress(), send_data);
+	auto sent_bytes = remote->SendFromTo(address_pair, send_data);
 
 	return sent_bytes > 0;
 }
@@ -1245,7 +1242,7 @@ bool IcePort::OnReceivedTurnSendIndication(const std::shared_ptr<ov::Socket> &re
 	gate_info.peer_address = xor_peer_attribute->GetAddress();
 
 	std::shared_ptr<IceSession> ice_session = FindIceSession(address_pair);
-	// Connected Session, 
+	// Connected Session,
 	// if agent sends data to TURN server (Send Indication) then ome will respond to agent through TURN server (Send Indication)
 	if (ice_session != nullptr)
 	{
@@ -1286,7 +1283,7 @@ bool IcePort::OnReceivedTurnChannelBindRequest(const std::shared_ptr<ov::Socket>
 	SendStunMessage(remote, address_pair, gate_info, response_message, _hmac_key);
 
 	std::shared_ptr<IceSession> ice_session = FindIceSession(address_pair);
-	// Connected Session, 
+	// Connected Session,
 	// if agent sends data to TURN server (Data Channel) then ome will respond to agent through TURN server (Data Channel)
 	if (ice_session != nullptr)
 	{

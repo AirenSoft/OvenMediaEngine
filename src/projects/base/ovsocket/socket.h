@@ -419,7 +419,7 @@ namespace ov
 
 		bool SetBlockingInternal(BlockingMode mode);
 
-		bool AppendCommand(DispatchCommand command);
+		bool AppendCommand(DispatchCommand command, bool dispatch_immediately);
 
 		//--------------------------------------------------------------------
 		// Implementation of SocketPoolEventInterface
@@ -433,6 +433,8 @@ namespace ov
 
 		bool IsSendable() const;
 		ssize_t HandleSendError(const ssize_t result, const size_t total_sent);
+
+		bool DispatchEventsAfterAppendCommand();
 
 		ssize_t SendData(const std::shared_ptr<const Data> &data);
 		ssize_t SendSrtData(const std::shared_ptr<const Data> &data);
