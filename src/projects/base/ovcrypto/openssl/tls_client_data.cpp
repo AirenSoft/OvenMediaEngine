@@ -43,6 +43,11 @@ namespace ov
 		_io_callback = callback;
 	}
 
+	void TlsClientData::SetTlsHostName(const ov::String &host_name)
+	{
+		_tls.SetTlsHostName(host_name);
+	}
+
 	std::shared_ptr<const OpensslError> TlsClientData::Connect()
 	{
 		_state = State::Connecting;
