@@ -14,7 +14,7 @@
 #include <memory>
 #include <utility>
 
-#include "../http_private.h"
+#include "./http_server_private.h"
 
 namespace http
 {

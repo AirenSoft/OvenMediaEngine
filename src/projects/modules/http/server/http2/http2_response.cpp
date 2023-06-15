@@ -7,7 +7,7 @@
 //
 //==============================================================================
 #include "http2_response.h"
-#include "../../http_private.h"
+#include "../http_server_private.h"
 
 namespace http
 {

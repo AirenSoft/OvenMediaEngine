@@ -8,7 +8,7 @@
 //==============================================================================
 #include "http_client.h"
 
-#include "../http_private.h"
+#include "./http_client_private.h"
 
 #define HTTP_CLIENT_READ_BUFFER_SIZE (64 * 1024)
 #define HTTP_CLIENT_MAX_CHUNK_HEADER_LENGTH (32)
@@ -24,6 +24,7 @@ namespace http
 		{
 			// Default request headers
 			_request_header["User-Agent"] = "OvenMediaEngine";
+			_request_header["Accept"] = "*/*";
 		}
 
 		HttpClient::HttpClient(const std::shared_ptr<ov::SocketPool> &socket_pool)
@@ -240,7 +241,8 @@ namespace http
 			}
 
 			auto port = parsed_url->Port();
-			if (port == 0)
+			bool use_default_port = (port == 0);
+			if (use_default_port)
 			{
 				port = is_https ? 443 : 80;
 				parsed_url->SetPort(port);
@@ -277,6 +279,13 @@ namespace http
 				}
 
 				_tls_data->SetIoCallback(GetSharedPtrAs<ov::TlsClientDataIoCallback>());
+
+				const auto &hostname = socket_address.GetHostname();
+
+				if (hostname.IsEmpty() == false)
+				{
+					_tls_data->SetTlsHostName(socket_address.GetHostname());
+				}
 			}
 
 			if (address != nullptr)
@@ -287,8 +296,10 @@ namespace http
 			_url = url;
 			_parsed_url = parsed_url;
 
-			_request_header["Host"] = ov::String::FormatString(
-				"%s:%d", _parsed_url->Host().CStr(), _parsed_url->Port());
+			_request_header["Host"] =
+				use_default_port
+					? ov::String::FormatString("%s", _parsed_url->Host().CStr())
+					: ov::String::FormatString("%s:%d", _parsed_url->Host().CStr(), _parsed_url->Port());
 
 			return nullptr;
 		}

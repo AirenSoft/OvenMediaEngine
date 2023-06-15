@@ -8,4 +8,8 @@
 //==============================================================================
 #pragma once
 
-#define OV_LOG_TAG_PREFIX                          "HTTP"
+#include "../http_private.h"
+
+#define OV_LOG_TAG OV_LOG_TAG_PREFIX ".Server"
+
+#define HTTP_CHECK_METHOD(method, flag) OV_CHECK_FLAG((uint16_t)method, (uint16_t)flag)

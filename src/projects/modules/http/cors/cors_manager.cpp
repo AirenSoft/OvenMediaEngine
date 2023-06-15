@@ -10,8 +10,7 @@
 
 #include "../http_private.h"
 
-#undef OV_LOG_TAG
-#define OV_LOG_TAG "HttpServer.CORS"
+#define OV_LOG_TAG OV_LOG_TAG_PREFIX ".CORS"
 
 namespace http
 {

@@ -3,7 +3,7 @@
 #include "http_server.h"
 #include "http_connection.h"
 
-#include "../http_private.h"
+#include "./http_server_private.h"
 
 namespace http
 {

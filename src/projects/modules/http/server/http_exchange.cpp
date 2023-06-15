@@ -8,7 +8,7 @@
 //==============================================================================
 #include "http_exchange.h"
 
-#include "../http_private.h"
+#include "./http_server_private.h"
 #include "http_connection.h"
 
 namespace http
