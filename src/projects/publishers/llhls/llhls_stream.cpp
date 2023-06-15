@@ -300,7 +300,21 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 			continue;
 		}
 
-		master_playlist->AddStreamInfo(rendition->GetVideoVariantName(), rendition->GetAudioVariantName());
+		// If there is no media track, it is not added to the master playlist
+		ov::String video_variant_name = video_track != nullptr ? video_track->GetVariantName() : "";
+		ov::String audio_variant_name = audio_track != nullptr ? audio_track->GetVariantName() : "";
+
+		if (rendition->GetVideoVariantName().IsEmpty() == false && video_track == nullptr)
+		{
+			logtw("LLHlsStream(%s/%s) - %s video is excluded from the %s rendition in %s playlist because there is no video track.", GetApplication()->GetName().CStr(), GetName().CStr(), rendition->GetVideoVariantName().CStr(), rendition->GetName().CStr(), playlist->GetFileName().CStr());
+		}
+
+		if (rendition->GetAudioVariantName().IsEmpty() == false && audio_track == nullptr)
+		{
+			logtw("LLHlsStream(%s/%s) - %s audio is excluded from the %s rendition in %s playlist because there is no audio track.", GetApplication()->GetName().CStr(), GetName().CStr(), rendition->GetAudioVariantName().CStr(), rendition->GetName().CStr(), playlist->GetFileName().CStr());
+		}
+
+		master_playlist->AddStreamInfo(video_variant_name, audio_variant_name);
 	}
 
 	master_playlist->UpdateCacheForDefaultPlaylist();
