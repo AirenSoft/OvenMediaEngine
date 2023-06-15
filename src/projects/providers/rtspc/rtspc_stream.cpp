@@ -741,6 +741,7 @@ namespace pvd
 
 		logti("Request GET_PARAMETER : %s", get_parameter->DumpHeader().CStr());
 
+		return true;
 	}
 
 	int32_t RtspcStream::GetNextCSeq()
