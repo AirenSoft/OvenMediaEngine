@@ -212,6 +212,17 @@ bool H265Parser::ParseSPS(const uint8_t *nalu, size_t length, H265SPS &sps)
 	{
 		return false;
 	}
+	
+	// 0 - 4:0:0
+	// 1 - 4:2:0
+	// 2 - 4:2:2
+	// 3 - 4:4:4
+	if (chroma_format_idc > 3)
+	{
+		logte("Invalid chroma_format_idc parsed: %u", chroma_format_idc);
+		return false;
+	}
+
 	sps._chroma_format_idc = chroma_format_idc;
 
 	uint8_t separate_colour_plane_flag = 0;
@@ -229,21 +240,20 @@ bool H265Parser::ParseSPS(const uint8_t *nalu, size_t length, H265SPS &sps)
 		return false;
 	}
 
-	sps._width = pic_width_in_luma_samples;
-
 	uint32_t pic_height_in_luma_samples;
 	if (parser.ReadUEV(pic_height_in_luma_samples) == false)
 	{
 		return false;
 	}
 
-	sps._height = pic_height_in_luma_samples;
-
 	uint8_t conformance_window_flag;
 	if (parser.ReadBits(1, conformance_window_flag) == false)
 	{
 		return false;
 	}
+
+	sps._width = pic_width_in_luma_samples;
+	sps._height = pic_height_in_luma_samples;
 
 	uint32_t conf_win_left_offset, conf_win_right_offset, conf_win_top_offset, conf_win_bottom_offset;
 	if (conformance_window_flag)
@@ -267,6 +277,25 @@ bool H265Parser::ParseSPS(const uint8_t *nalu, size_t length, H265SPS &sps)
 		{
 			return false;
 		}
+
+		// 0 - 4:0:0
+		// 1 - 4:2:0
+		// 2 - 4:2:2
+		// 3 - 4:4:4
+		int sub_width_c = 1, sub_height_c = 1;
+		if (chroma_format_idc == 1)
+		{
+			sub_width_c = 2;
+			sub_height_c = 2;
+		}
+		else if (chroma_format_idc == 2)
+		{
+			sub_width_c = 2;
+			sub_height_c = 1;
+		}
+
+		sps._width -= (sub_width_c * (conf_win_left_offset + conf_win_right_offset));
+		sps._height -= (sub_height_c * (conf_win_top_offset + conf_win_bottom_offset));
 	}
 
 	uint32_t bit_depth_luma_minus8;
