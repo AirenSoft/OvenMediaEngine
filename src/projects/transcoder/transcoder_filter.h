@@ -3,7 +3,7 @@
 #include <base/mediarouter/media_buffer.h>
 #include <base/mediarouter/media_type.h>
 
-#include <cstdint>
+#include <stdint.h>
 
 #include "base/info/stream.h"
 #include "filter/filter_base.h"

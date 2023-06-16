@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include <cstdint>
+#include <stdint.h>
 #include <memory>
 #include <base/common_types.h>
 #include <base/ovlibrary/ovlibrary.h>

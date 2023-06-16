@@ -39,8 +39,8 @@ namespace mon
 			_applications.clear();
 		}
 
-		ov::String GetInfoString(bool show_children = true);
-		void ShowInfo(bool show_children = true);
+		ov::String GetInfoString(bool show_children = true) override;
+		void ShowInfo(bool show_children = true) override;
 
 		bool OnApplicationCreated(const info::Application &app_info);
 		bool OnApplicationDeleted(const info::Application &app_info);

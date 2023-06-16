@@ -29,7 +29,7 @@ extern "C"
 #include <modules/managed_queue/managed_queue.h>
 
 #include <algorithm>
-#include <cstdint>
+#include <stdint.h>
 #include <memory>
 #include <thread>
 #include <vector>

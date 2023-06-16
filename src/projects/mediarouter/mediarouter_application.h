@@ -11,7 +11,7 @@
 #include <config/items/items.h>
 
 #include <algorithm>
-#include <cstdint>
+#include <stdint.h>
 #include <memory>
 #include <vector>
 

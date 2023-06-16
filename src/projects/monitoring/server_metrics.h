@@ -17,7 +17,8 @@ namespace mon
 	public:
 		ServerMetrics(const std::shared_ptr<const cfg::Server> &server_config);
 		void Release();
-		void ShowInfo();
+
+		void ShowInfo(bool show_children = true) override;
 
 		bool OnHostCreated(const info::Host &host_info);
 		bool OnHostDeleted(const info::Host &host_info);

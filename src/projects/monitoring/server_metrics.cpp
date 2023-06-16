@@ -1,8 +1,9 @@
 #include "server_metrics.h"
 
-#include "monitoring_private.h"
-#include <orchestrator/orchestrator.h>
 #include <malloc.h>
+#include <orchestrator/orchestrator.h>
+
+#include "monitoring_private.h"
 
 namespace mon
 {
@@ -12,7 +13,7 @@ namespace mon
 		_server_started_time = std::chrono::system_clock::now();
 	}
 
-	void ServerMetrics::ShowInfo()
+	void ServerMetrics::ShowInfo([[maybe_unused]] bool show_children)
 	{
 		for (const auto &t : _hosts)
 		{
@@ -128,7 +129,7 @@ namespace mon
 	void ServerMetrics::OnQueueUpdated(const info::ManagedQueue &info, bool with_metadata)
 	{
 		std::shared_lock<std::shared_mutex> lock(_map_guard);
-		
+
 		auto it = _queues.find(info.GetId());
 		if (it == _queues.end())
 		{
@@ -170,12 +171,12 @@ namespace mon
 				ov::String vhost_app_name = info::ManagedQueue::ParseVHostApp(info.GetUrn().CStr());
 				ov::String stream_name = info::ManagedQueue::ParseStream(info.GetUrn().CStr());
 
-				if( !vhost_app_name.IsEmpty() && !stream_name.IsEmpty())
+				if (!vhost_app_name.IsEmpty() && !stream_name.IsEmpty())
 				{
 					logtc("The %s queue has been exceeded for %lld ms. stream will be forcibly deleted. VhostApp(%s), Stream(%s)", info.GetUrn().CStr(), info.GetThresholdExceededTimeInUs(), vhost_app_name.CStr(), stream_name.CStr());
 					auto vhost_app = info::VHostAppName(vhost_app_name);
 
-					if(vhost_app.IsValid())
+					if (vhost_app.IsValid())
 					{
 						ocst::Orchestrator::GetInstance()->TerminateStream(vhost_app, stream_name);
 					}

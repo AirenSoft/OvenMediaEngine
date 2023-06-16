@@ -3,7 +3,7 @@
 #include "audio_specific_config.h"
 #include <base/ovlibrary/ovlibrary.h>
 
-#include <cstdint>
+#include <stdint.h>
 
 
 

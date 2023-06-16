@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
-#include <cstdint>
+#include <stdint.h>
 
 // If this enumeration is updated, also update IsKnownH264NalUnitType
 enum class H264NalUnitType : uint8_t

@@ -34,6 +34,9 @@ namespace http
 				void SetKeepStream(bool keep_stream);
 				bool Send(const std::shared_ptr<prot::h2::Http2DataFrame> &data_frame, bool end_stream);
 
+			protected:
+				using HttpResponse::Send;
+
 			private:
 				int32_t SendHeader() override;
 				int32_t SendPayload() override;

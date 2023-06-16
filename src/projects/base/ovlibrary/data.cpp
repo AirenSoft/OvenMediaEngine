@@ -8,7 +8,7 @@
 //==============================================================================
 #include "data.h"
 
-#include <cstdint>
+#include <stdint.h>
 
 #include "./assert.h"
 #include "./dump_utilities.h"

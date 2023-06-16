@@ -2,7 +2,7 @@
 
 #include <modules/bitstream/nalu/nal_unit_bitstream_parser.h>
 #include <base/ovlibrary/ovlibrary.h>
-#include <cstdint>
+#include <stdint.h>
 
 #include "h264_nal_unit_types.h"
 

@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include <cstdint>
+#include <stdint.h>
 #include <random>
 
 #include "./string.h"

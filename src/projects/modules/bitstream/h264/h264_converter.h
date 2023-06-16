@@ -3,7 +3,7 @@
 #include <base/mediarouter/media_buffer.h>
 #include <base/ovlibrary/ovlibrary.h>
 
-#include <cstdint>
+#include <stdint.h>
 
 // baseline & lvl 3.1 => profile-level-id=42e01f
 #define H264_CONVERTER_DEFAULT_PROFILE "42e01f"

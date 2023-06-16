@@ -2,22 +2,23 @@
 // Created by getroot on 20. 1. 31.
 //
 #include "common_metrics.h"
+
 #include "monitoring_private.h"
 
 namespace mon
 {
-	#define THROUGHPUT_MEASURE_INTERVAL 1
+#define THROUGHPUT_MEASURE_INTERVAL 1
 
-    CommonMetrics::CommonMetrics()
-    {
-        _total_bytes_in = 0;
-        _total_bytes_out = 0;
-        _total_connections = 0;
+	CommonMetrics::CommonMetrics()
+	{
+		_total_bytes_in = 0;
+		_total_bytes_out = 0;
+		_total_connections = 0;
 		_max_total_connections = 0;
 
 		_avg_throughtput_in = 0;
-		_max_throughtput_in = 0;	
-		_last_throughtput_in = 0;	
+		_max_throughtput_in = 0;
+		_last_throughtput_in = 0;
 		_last_total_bytes_out = 0;
 
 		_avg_throughtput_out = 0;
@@ -27,20 +28,20 @@ namespace mon
 
 		_last_throughput_measure_time = std::chrono::system_clock::now();
 
-        _max_total_connection_time = std::chrono::system_clock::now();
+		_max_total_connection_time = std::chrono::system_clock::now();
 		_last_recv_time = std::chrono::system_clock::now();
-        _last_sent_time = std::chrono::system_clock::now();
+		_last_sent_time = std::chrono::system_clock::now();
 
-        for(int i=0; i<static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
-        {
-            _publisher_metrics[i]._bytes_out = 0;
-            _publisher_metrics[i]._connections = 0;
-        }
-        _created_time = std::chrono::system_clock::now();
-        UpdateDate();
-    }
+		for (int i = 0; i < static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
+		{
+			_publisher_metrics[i]._bytes_out = 0;
+			_publisher_metrics[i]._connections = 0;
+		}
+		_created_time = std::chrono::system_clock::now();
+		UpdateDate();
+	}
 
-	ov::String CommonMetrics::GetInfoString()
+	ov::String CommonMetrics::GetInfoString([[maybe_unused]] bool show_children)
 	{
 		ov::String out_str;
 
@@ -49,7 +50,7 @@ namespace mon
 			"\tLast update time : %s, Last sent time : %s\n"
 			"\tBytes in : %s, Bytes out : %s, Concurrent connections : %u, Max connections : %u (%s)\n",
 			ov::Converter::ToString(GetLastUpdatedTime()).CStr(), ov::Converter::ToString(GetLastSentTime()).CStr(),
-			ov::Converter::BytesToString(GetTotalBytesIn()).CStr(), ov::Converter::BytesToString(GetTotalBytesOut()).CStr(), GetTotalConnections(), 
+			ov::Converter::BytesToString(GetTotalBytesIn()).CStr(), ov::Converter::BytesToString(GetTotalBytesOut()).CStr(), GetTotalConnections(),
 			GetMaxTotalConnections(), ov::Converter::ToString(GetMaxTotalConnectionsTime()).CStr());
 
 		out_str.AppendFormat("\n\t\t>>>> By publisher\n");
@@ -64,28 +65,28 @@ namespace mon
 		return out_str;
 	}
 
-	void CommonMetrics::ShowInfo()
+	void CommonMetrics::ShowInfo([[maybe_unused]] bool show_children)
 	{
-        logti("%s", GetInfoString().CStr());
+		logti("%s", GetInfoString().CStr());
 	}
 
-    uint32_t CommonMetrics::GetUnusedTimeSec() const
-    {
-        auto current = std::chrono::high_resolution_clock::now();
-        return std::chrono::duration_cast<std::chrono::seconds>(current - GetLastUpdatedTime()).count();
-    }
+	uint32_t CommonMetrics::GetUnusedTimeSec() const
+	{
+		auto current = std::chrono::high_resolution_clock::now();
+		return std::chrono::duration_cast<std::chrono::seconds>(current - GetLastUpdatedTime()).count();
+	}
 
 	const std::chrono::system_clock::time_point& CommonMetrics::GetCreatedTime() const
 	{
 		return _created_time;
 	}
 
-    const std::chrono::system_clock::time_point& CommonMetrics::GetLastUpdatedTime() const
-    {
-        return _last_updated_time;
-    }
+	const std::chrono::system_clock::time_point& CommonMetrics::GetLastUpdatedTime() const
+	{
+		return _last_updated_time;
+	}
 
-    uint64_t CommonMetrics::GetTotalBytesIn() const
+	uint64_t CommonMetrics::GetTotalBytesIn() const
 	{
 		return _total_bytes_in;
 	}
@@ -94,7 +95,7 @@ namespace mon
 		return _total_bytes_out;
 	}
 
-    uint64_t CommonMetrics::GetAvgThroughputIn() const
+	uint64_t CommonMetrics::GetAvgThroughputIn() const
 	{
 		return _avg_throughtput_in;
 	}
@@ -104,7 +105,7 @@ namespace mon
 		return _avg_throughtput_out;
 	}
 
-    uint64_t CommonMetrics::GetMaxThroughputIn() const
+	uint64_t CommonMetrics::GetMaxThroughputIn() const
 	{
 		return _max_throughtput_in;
 	}
@@ -157,7 +158,7 @@ namespace mon
 		return _publisher_metrics[static_cast<int8_t>(type)]._connections;
 	}
 
-    void CommonMetrics::IncreaseBytesIn(uint64_t value)
+	void CommonMetrics::IncreaseBytesIn(uint64_t value)
 	{
 		_total_bytes_in += value;
 		_last_recv_time = std::chrono::system_clock::now();
@@ -171,11 +172,11 @@ namespace mon
 
 	void CommonMetrics::IncreaseBytesOut(PublisherType type, uint64_t value)
 	{
-		if(value == 0)
+		if (value == 0)
 		{
 			return;
 		}
-		
+
 		_publisher_metrics[static_cast<int8_t>(type)]._bytes_out += value;
 		_total_bytes_out += value;
 		_last_sent_time = std::chrono::system_clock::now();
@@ -212,16 +213,16 @@ namespace mon
 		UpdateDate();
 	}
 
-    // Renew last updated time
-    void CommonMetrics::UpdateDate()
-    {
-        _last_updated_time = std::chrono::system_clock::now();
-    }
+	// Renew last updated time
+	void CommonMetrics::UpdateDate()
+	{
+		_last_updated_time = std::chrono::system_clock::now();
+	}
 
 	void CommonMetrics::UpdateThroughput()
 	{
 		auto throughput_measure_time = std::chrono::system_clock::now();
-		if ( (throughput_measure_time - _last_throughput_measure_time) > std::chrono::seconds(THROUGHPUT_MEASURE_INTERVAL))
+		if ((throughput_measure_time - _last_throughput_measure_time) > std::chrono::seconds(THROUGHPUT_MEASURE_INTERVAL))
 		{
 			_last_throughput_measure_time = throughput_measure_time;
 
@@ -240,13 +241,12 @@ namespace mon
 			_last_throughtput_out = (_total_bytes_out.load() - _last_total_bytes_out.load());
 
 			// Calculate average throughput of publisher
-			_avg_throughtput_out =  (_total_bytes_out.load() - _last_total_bytes_out.load()) * 8 / THROUGHPUT_MEASURE_INTERVAL;
-			if(_avg_throughtput_out.load() > _max_throughtput_out.load())
+			_avg_throughtput_out = (_total_bytes_out.load() - _last_total_bytes_out.load()) * 8 / THROUGHPUT_MEASURE_INTERVAL;
+			if (_avg_throughtput_out.load() > _max_throughtput_out.load())
 			{
 				_max_throughtput_out.store(_avg_throughtput_out);
 			}
 			_last_total_bytes_out.store(_total_bytes_out);
-
 		}
-	}	
-}
+	}
+}  // namespace mon

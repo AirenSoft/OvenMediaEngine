@@ -9,6 +9,7 @@
 #pragma once
 
 #include <string>
+#include <stdint.h>
 
 #define IS_WINDOWS                              0
 #define IS_UNIX                                 0

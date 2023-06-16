@@ -6,8 +6,6 @@
 //  Copyright (c) 2023 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#pragma once
-
 #include "ice_candidate_pair.h"
 
 IceCandidatePair::IceCandidatePair(const ov::SocketAddressPair &pair, std::shared_ptr<ov::Socket> socket)

@@ -8,9 +8,10 @@
 //==============================================================================
 #pragma once
 
+#include <stdint.h>
+
 #include <any>
 #include <condition_variable>
-#include <cstdint>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -20,8 +21,8 @@
 #include <tuple>
 #include <vector>
 
-#include "base/ovlibrary/string.h"
 #include "base/mediarouter/media_type.h"
+#include "base/ovlibrary/string.h"
 
 #define MAX_FRAG_COUNT 20
 
@@ -52,7 +53,7 @@ enum class StreamSourceType : int8_t
 	File,
 };
 
-enum class StreamRepresentationType : int8_t 
+enum class StreamRepresentationType : int8_t
 {
 	Source,
 	Relay
@@ -63,7 +64,6 @@ enum class ProviderStreamDirection : int8_t
 	Pull,
 	Push
 };
-
 
 // Note : If you update ProviderType, you have to update /base/ovlibrary/converter.h:ToString(ProviderType type)
 enum class ProviderType : int8_t
@@ -102,7 +102,6 @@ enum class WebRtcBandwidthEstimationType : uint8_t
 	TransportCc,
 	None,
 };
-
 
 enum class FrameType : int8_t
 {
@@ -289,7 +288,7 @@ static ov::String StringFromStreamSourceType(const StreamSourceType &type)
 		case StreamSourceType::Rtmp:
 			return "Rtmp";
 		case StreamSourceType::RtmpPull:
-			return "RtmpPull";			
+			return "RtmpPull";
 		case StreamSourceType::Rtsp:
 			return "Rtsp";
 		case StreamSourceType::RtspPull:
@@ -301,7 +300,7 @@ static ov::String StringFromStreamSourceType(const StreamSourceType &type)
 		case StreamSourceType::Mpegts:
 			return "MPEGTS";
 		case StreamSourceType::File:
-			return "File";			
+			return "File";
 	}
 
 	return "Unknown";
@@ -314,7 +313,7 @@ static ov::String StringFromStreamRepresentationType(const StreamRepresentationT
 		case StreamRepresentationType::Relay:
 			return "Relay";
 		case StreamRepresentationType::Source:
-			return "Source";			
+			return "Source";
 	}
 
 	return "Unknown";
@@ -341,7 +340,7 @@ static ov::String StringFromProviderType(const ProviderType &type)
 		case ProviderType::Srt:
 			return "SRT";
 		case ProviderType::File:
-			return "File";			
+			return "File";
 	}
 
 	return "Unknown";
@@ -373,7 +372,7 @@ static ov::String StringFromPublisherType(const PublisherType &type)
 		case PublisherType::File:
 			return "File";
 		case PublisherType::Thumbnail:
-			return "Thumbnail";			
+			return "Thumbnail";
 	}
 
 	return "Unknown";
@@ -428,4 +427,3 @@ static ov::String StringFromMediaType(const cmn::MediaType &type)
 			return "Unknown";
 	}
 }
-

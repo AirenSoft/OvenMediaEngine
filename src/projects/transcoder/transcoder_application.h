@@ -12,7 +12,7 @@
 #include <base/ovlibrary/ovlibrary.h>
 
 #include <algorithm>
-#include <cstdint>
+#include <stdint.h>
 #include <memory>
 #include <thread>
 #include <vector>

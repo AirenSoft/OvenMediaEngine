@@ -11,7 +11,7 @@
 
 #include <base/common_types.h>
 
-#include <cstdint>
+#include <stdint.h>
 #include <map>
 
 #include "media_type.h"

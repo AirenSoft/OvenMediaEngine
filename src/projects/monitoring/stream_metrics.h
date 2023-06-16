@@ -36,8 +36,8 @@ namespace mon
 			return _app_metrics;
 		}
 
-		ov::String GetInfoString();
-		void ShowInfo() override;
+		ov::String GetInfoString(bool show_children = true) override;
+		void ShowInfo(bool show_children = true) override;
 
 		void LinkOutputStreamMetrics(const std::shared_ptr<StreamMetrics> &stream);
 		std::vector<std::shared_ptr<StreamMetrics>> GetLinkedOutputStreamMetrics() const;

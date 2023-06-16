@@ -8,7 +8,7 @@
 
 namespace mon
 {
-	ov::String StreamMetrics::GetInfoString()
+	ov::String StreamMetrics::GetInfoString([[maybe_unused]] bool show_children)
 	{
 		ov::String out_str;
 
@@ -26,9 +26,9 @@ namespace mon
 		return out_str;
 	}
 
-	void StreamMetrics::ShowInfo()
+	void StreamMetrics::ShowInfo([[maybe_unused]] bool show_children)
 	{
-		logti("%s", GetInfoString().CStr());
+		logti("%s", GetInfoString(show_children).CStr());
 	}
 
 	void StreamMetrics::LinkOutputStreamMetrics(const std::shared_ptr<StreamMetrics> &stream)

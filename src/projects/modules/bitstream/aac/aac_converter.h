@@ -3,7 +3,7 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include "base/mediarouter/media_buffer.h"
 #include "audio_specific_config.h"
-#include <cstdint>
+#include <stdint.h>
 
 // Default = AacObjectTypeAacLC
 #define AAC_CONVERTER_DEFAULT_PROFILE "2"

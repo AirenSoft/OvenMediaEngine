@@ -13,8 +13,8 @@ namespace mon
 	class CommonMetrics
 	{
 	public:
-		virtual ov::String GetInfoString();
-		virtual void ShowInfo();
+		virtual ov::String GetInfoString(bool show_children = true);
+		virtual void ShowInfo(bool show_children = true);
 
 		uint32_t GetUnusedTimeSec() const;
 		const std::chrono::system_clock::time_point& GetCreatedTime() const;

@@ -6,7 +6,7 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <modules/bitstream/nalu/nal_unit_bitstream_parser.h>
-#include <cstdint>
+#include <stdint.h>
 
 #include "h265_types.h"
 
