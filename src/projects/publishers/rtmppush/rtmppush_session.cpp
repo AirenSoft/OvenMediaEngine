@@ -104,7 +104,7 @@ bool RtmpPushSession::Start()
 		// Set DecoderSpecificInfo
 		if (track->GetCodecId() == cmn::MediaCodecId::H264 ||
 			track->GetCodecId() == cmn::MediaCodecId::H265 ||
-			track->GetCodecId() == cmn::MediaCodecId::H265)
+			track->GetCodecId() == cmn::MediaCodecId::Aac)
 		{
 			track_info->SetExtradata(track->GetDecoderConfigurationRecord() != nullptr ? track->GetDecoderConfigurationRecord()->GetData() : nullptr);
 		}
