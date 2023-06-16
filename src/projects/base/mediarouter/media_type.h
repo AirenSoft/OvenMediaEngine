@@ -43,6 +43,8 @@ namespace cmn
 
 		// For Data Track
 		ID3v2,
+
+		HVCC,
 	};
 
 	enum class PacketType : int8_t
@@ -178,13 +180,15 @@ namespace cmn
 	static ov::String GetBitstreamFormatString(cmn::BitstreamFormat format) {
 		switch (format) {
 			case cmn::BitstreamFormat::H264_AVCC:
-				return "H264_AVCC";
+				return "AVCC";
 			case cmn::BitstreamFormat::H264_ANNEXB:
 				return "H264_ANNEXB";
 			case cmn::BitstreamFormat::H264_RTP_RFC_6184:
 				return "H264_RTP_RFC_6184";
 			case cmn::BitstreamFormat::H265_ANNEXB:
 				return "H265_ANNEXB";
+			case cmn::BitstreamFormat::HVCC:
+				return "HVCC";
 			case cmn::BitstreamFormat::VP8:
 				return "VP8";
 			case cmn::BitstreamFormat::VP8_RTP_RFC_7741:

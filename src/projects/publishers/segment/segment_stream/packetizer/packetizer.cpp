@@ -9,7 +9,7 @@
 #include "packetizer.h"
 
 #include <modules/bitstream/aac/aac_converter.h>
-#include <modules/bitstream/h264/h264_converter.h>
+#include <modules/bitstream/nalu/nal_stream_converter.h>
 
 #include <algorithm>
 #include <sstream>

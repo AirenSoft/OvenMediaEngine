@@ -10,7 +10,7 @@
 #include "fmp4_packager.h"
 #include "fmp4_private.h"
 
-#include <modules/bitstream/h264/h264_converter.h>
+#include <modules/bitstream/nalu/nal_stream_converter.h>
 #include <modules/bitstream/aac/aac_converter.h>
 
 #include <modules/id3v2/id3v2.h>
@@ -302,9 +302,13 @@ namespace bmff
 		{
 
 		}
+		else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::HVCC)
+		{
+
+		}
 		else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::H264_ANNEXB)
 		{
-			auto converted_data = H264Converter::ConvertAnnexbToAvcc(media_packet->GetData());
+			auto converted_data = NalStreamConverter::ConvertAnnexbToXvcc(media_packet->GetData(), media_packet->GetFragHeader());
 			auto new_packet = std::make_shared<MediaPacket>(*media_packet);
 			new_packet->SetData(converted_data);
 			new_packet->SetBitstreamFormat(cmn::BitstreamFormat::H264_AVCC);
@@ -314,10 +318,10 @@ namespace bmff
 		}
 		else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::H265_ANNEXB)
 		{
-			auto converted_data = H264Converter::ConvertAnnexbToAvcc(media_packet->GetData());
+			auto converted_data = NalStreamConverter::ConvertAnnexbToXvcc(media_packet->GetData(), media_packet->GetFragHeader());
 			auto new_packet = std::make_shared<MediaPacket>(*media_packet);
 			new_packet->SetData(converted_data);
-			new_packet->SetBitstreamFormat(cmn::BitstreamFormat::H264_AVCC);
+			new_packet->SetBitstreamFormat(cmn::BitstreamFormat::HVCC);
 			new_packet->SetPacketType(cmn::PacketType::NALU);
 
 			converted_packet = new_packet;

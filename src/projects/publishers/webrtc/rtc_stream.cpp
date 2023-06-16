@@ -9,7 +9,7 @@
 #include "rtc_stream.h"
 
 #include <base/info/media_extradata.h>
-#include <modules/bitstream/h264/h264_converter.h>
+#include <modules/bitstream/nalu/nal_stream_converter.h>
 #include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_framemarking.h>
 #include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_playout_delay.h>
 #include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_abs_send_time.h>
@@ -559,8 +559,8 @@ std::shared_ptr<PayloadAttr> RtcStream::MakePayloadAttr(const std::shared_ptr<co
 
 				//(Getroot's Note) The software decoder of Firefox or Chrome cannot play when 64001f (High, 3.1) stream is input. 
 				// However, when I put the fake information of 42e01f in FMTP, I confirmed that both Firefox and Chrome play well (high profile, but stream without B-Frame). 
-				// I thought it would be better to put 42e01f (H264_CONVERTER_DEFAULT_PROFILE) in fmtp than put the correct value, so I decided to put fake information.
-				profile_string = H264_CONVERTER_DEFAULT_PROFILE;
+				// I thought it would be better to put 42e01f in fmtp than put the correct value, so I decided to put fake information.
+				profile_string = "42e01f";
 
 				payload->SetFmtp(ov::String::FormatString(
 						// NonInterleaved => packetization-mode=1

@@ -1,14 +1,10 @@
+#include "nal_stream_converter.h"
 
-#include "h264_converter.h"
-
-#include "h264_decoder_configuration_record.h"
-#include "h264_parser.h"
-
-#define OV_LOG_TAG "H264Converter"
+#define OV_LOG_TAG "NalStreamConverter"
 
 static uint8_t START_CODE[4] = {0x00, 0x00, 0x00, 0x01};
 
-std::shared_ptr<ov::Data> H264Converter::ConvertAvccToAnnexb(const std::shared_ptr<const ov::Data> &data)
+std::shared_ptr<ov::Data> NalStreamConverter::ConvertXvccToAnnexb(const std::shared_ptr<const ov::Data> &data)
 {
 	auto annexb_data = std::make_shared<ov::Data>(data->GetLength() + (data->GetLength() / 2));
 
@@ -39,70 +35,6 @@ std::shared_ptr<ov::Data> H264Converter::ConvertAvccToAnnexb(const std::shared_p
 	}
 
 	return annexb_data;
-}
-
-bool H264Converter::ConvertAvccToAnnexb(cmn::PacketType type, const std::shared_ptr<ov::Data> &data, const std::shared_ptr<ov::Data> &sps_pps_annexb)
-{
-	std::shared_ptr<ov::Data> annexb_data = nullptr;
-
-	if (type == cmn::PacketType::SEQUENCE_HEADER)
-	{
-		annexb_data = sps_pps_annexb;
-	}
-	else if (type == cmn::PacketType::NALU)
-	{
-		annexb_data = std::make_shared<ov::Data>(data->GetLength() + (data->GetLength() / 2));
-		ov::ByteStream read_stream(data.get());
-
-		bool has_idr_slice = false;
-
-		while (read_stream.Remained() > 0)
-		{
-			if (read_stream.IsRemained(4) == false)
-			{
-				logte("Not enough data to parse NAL");
-				return false;
-			}
-
-			size_t nal_length = read_stream.ReadBE32();
-
-			if (read_stream.IsRemained(nal_length) == false)
-			{
-				logte("NAL length (%d) is greater than buffer length (%d)", nal_length, read_stream.Remained());
-				return false;
-			}
-
-			auto nal_data = read_stream.GetRemainData()->Subdata(0LL, nal_length);
-			[[maybe_unused]] auto skipped = read_stream.Skip(nal_length);
-			OV_ASSERT2(skipped == nal_length);
-
-			H264NalUnitHeader header;
-			if (H264Parser::ParseNalUnitHeader(nal_data->GetDataAs<uint8_t>(), H264_NAL_UNIT_HEADER_SIZE, header) == true)
-			{
-				if (header.GetNalUnitType() == H264NalUnitType::IdrSlice)
-					has_idr_slice = true;
-			}
-
-			annexb_data->Append(START_CODE, sizeof(START_CODE));
-			annexb_data->Append(nal_data);
-		}
-
-		// Deprecated. The same function is performed in Mediarouter.
-
-		// Append SPS/PPS NalU before IdrSlice NalU. not every packet.
-		if (sps_pps_annexb != nullptr && has_idr_slice == true)
-		{
-			annexb_data->Insert(sps_pps_annexb->GetDataAs<uint8_t>(), 0, sps_pps_annexb->GetLength());
-		}
-	}
-
-	if (annexb_data->GetLength() > 0)
-	{
-		data->Clear();
-		data->Append(annexb_data);
-	}
-
-	return true;
 }
 
 static inline int GetStartPatternSize(const void *data, size_t length, int first_pattern_size)
@@ -154,7 +86,7 @@ static inline int GetStartPatternSize(const void *data, size_t length, int first
 	return -1;
 }
 
-std::shared_ptr<ov::Data> H264Converter::ConvertAnnexbToAvcc(const std::shared_ptr<const ov::Data> &data)
+std::shared_ptr<ov::Data> NalStreamConverter::ConvertAnnexbToXvcc(const std::shared_ptr<const ov::Data> &data)
 {
 	// size_t total_pattern_length = 0;
 
@@ -163,7 +95,7 @@ std::shared_ptr<ov::Data> H264Converter::ConvertAnnexbToAvcc(const std::shared_p
 	off_t offset = 0;
 	off_t last_offset = 0;
 
-	auto avcc_data = std::make_shared<ov::Data>(data->GetLength() + 32);
+	auto avcc_data = std::make_shared<ov::Data>(data->GetLength() + 1024);
 	ov::ByteStream byte_stream(avcc_data);
 
 	// This code assumes that (NALULengthSizeMinusOne == 3)
@@ -213,19 +145,24 @@ std::shared_ptr<ov::Data> H264Converter::ConvertAnnexbToAvcc(const std::shared_p
 	return avcc_data;
 }
 
-ov::String H264Converter::GetProfileString(const std::shared_ptr<ov::Data> &avc_decoder_configuration_record)
+std::shared_ptr<ov::Data> NalStreamConverter::ConvertAnnexbToXvcc(const std::shared_ptr<const ov::Data> &data, const FragmentationHeader *frag_header)
 {
-	if (avc_decoder_configuration_record == nullptr)
+	if (frag_header == nullptr)
 	{
-		return "";
+		return ConvertAnnexbToXvcc(data);
 	}
 
-	AVCDecoderConfigurationRecord record;
-	if (record.Parse(avc_decoder_configuration_record) == false)
+	auto avcc_data = std::make_shared<ov::Data>(data->GetLength() + 1024);
+	ov::ByteStream byte_stream(avcc_data);
+
+	for (size_t i = 0; i < frag_header->fragmentation_offset.size(); i++)
 	{
-		return "";
+		auto offset = frag_header->fragmentation_offset[i];
+		auto length = frag_header->fragmentation_length[i];
+
+		byte_stream.WriteBE32(length);
+		byte_stream.Write(data->GetDataAs<uint8_t>() + offset, length);
 	}
 
-	// PPCCLL = <profile idc><constraint set flags><level idc>
-	return ov::String::FormatString("%02x%02x%02x",	record.ProfileIndication(), record.Compatibility(), record.LevelIndication());
+	return avcc_data;
 }

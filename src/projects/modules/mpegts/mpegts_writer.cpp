@@ -1,7 +1,7 @@
 #include "mpegts_writer.h"
 
 #include <modules/bitstream/aac/aac_converter.h>
-#include <modules/bitstream/h264/h264_converter.h>
+#include <modules/bitstream/nalu/nal_stream_converter.h>
 
 #define OV_LOG_TAG	"MPEGTSWriter"
 
@@ -313,7 +313,7 @@ bool MpegtsWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPack
 			break;
 
 		case cmn::BitstreamFormat::H264_ANNEXB:
-			cdata = H264Converter::ConvertAnnexbToAvcc(cdata);
+			cdata = NalStreamConverter::ConvertAnnexbToXvcc(cdata);
 			av_packet.size = cdata->GetLength();
 			av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 			break;

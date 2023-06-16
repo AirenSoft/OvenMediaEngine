@@ -1,6 +1,6 @@
 #include "file_writer.h"
 
-#include <modules/bitstream/h264/h264_converter.h>
+#include <modules/bitstream/nalu/nal_stream_converter.h>
 
 #include "private.h"
 
@@ -350,7 +350,7 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 		switch (format)
 		{
 			case cmn::BitstreamFormat::H264_ANNEXB:
-				cdata = H264Converter::ConvertAnnexbToAvcc(data);
+				cdata = NalStreamConverter::ConvertAnnexbToXvcc(data);
 				av_packet.size = cdata->GetLength();
 				av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 				break;

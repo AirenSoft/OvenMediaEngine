@@ -33,7 +33,7 @@
 #include <modules/bitstream/aac/aac_converter.h>
 #include <modules/bitstream/aac/audio_specific_config.h>
 
-#include <modules/bitstream/h264/h264_converter.h>
+#include <modules/bitstream/nalu/nal_stream_converter.h>
 #include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/bitstream/h264/h264_nal_unit_types.h>
 #include <modules/bitstream/h264/h264_parser.h>
@@ -260,7 +260,6 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 	auto bitstream = media_packet->GetData()->GetDataAs<uint8_t>();
 	auto bitstream_length = media_packet->GetData()->GetLength();
 	bool has_sps = false, has_pps = false, has_idr = false;
-	size_t annexb_start_code_size = 0;
 
 	while (offset < bitstream_length)
 	{
@@ -272,11 +271,6 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 		if (pos == -1)
 		{
 			break;
-		}
-
-		if (annexb_start_code_size == 0)
-		{
-			annexb_start_code_size = start_code_size;
 		}
 
 		offset += pos + start_code_size;
@@ -589,7 +583,16 @@ bool MediaRouteStream::ProcessH265AnnexBStream(std::shared_ptr<MediaTrack> &medi
 				hevc_config->AddNalUnit(header.GetNalUnitType(), nal_unit);
 			}
 		}
+
+		// Last NalU
+		if (pos == -1)
+		{
+			break;
+		}
+
+		offset += pos;
 	}
+	media_packet->SetFragHeader(&fragment_header);
 
 	if (media_track->IsValid() == false && hevc_config != nullptr && hevc_config->IsValid() == true)
 	{
@@ -747,6 +750,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 		case cmn::BitstreamFormat::H264_ANNEXB:
 		case cmn::BitstreamFormat::H264_AVCC:
 		case cmn::BitstreamFormat::H265_ANNEXB:
+		case cmn::BitstreamFormat::HVCC:
 			if (_warning_count_bframe < 10)
 			{
 				if (media_track->GetTotalFrameCount() > 0 && _stat_recv_pkt_lpts[track_id] > media_packet->GetPts())

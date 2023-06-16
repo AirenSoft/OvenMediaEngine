@@ -18,8 +18,7 @@ extern "C"
 }
 
 #include <modules/bitstream/aac/aac_converter.h>
-#include <modules/bitstream/h264/h264_converter.h>
-#include <modules/bitstream/h265/h265_converter.h>
+#include <modules/bitstream/nalu/nal_stream_converter.h>
 
 #define OV_LOG_TAG "Writer"
 
@@ -784,18 +783,20 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 	switch (packet->GetBitstreamFormat())
 	{
 		case cmn::BitstreamFormat::H264_AVCC:
+		case cmn::BitstreamFormat::HVCC:
 			data = packet->GetData();
 			length_list.push_back(data->GetLength());
 			break;
 
 		case cmn::BitstreamFormat::H264_ANNEXB:
 			data = packet->GetData();
-			data = H264Converter::ConvertAnnexbToAvcc(data);
+			data = NalStreamConverter::ConvertAnnexbToXvcc(data, packet->GetFragHeader());
 			length_list.push_back(data->GetLength());
 			break;
 
 		case cmn::BitstreamFormat::H265_ANNEXB:
 			data = packet->GetData();
+			data = NalStreamConverter::ConvertAnnexbToXvcc(data, packet->GetFragHeader());
 			length_list.push_back(data->GetLength());
 			break;
 
