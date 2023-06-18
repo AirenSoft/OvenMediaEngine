@@ -439,6 +439,8 @@ ov::String AVCDecoderConfigurationRecord::GetInfoString() const
 	out_str.AppendFormat("\tCompatibility(%d)\n", Compatibility());
 	out_str.AppendFormat("\tLevelIndication(%d)\n", LevelIndication());
 	out_str.AppendFormat("\tLengthOfNALUnit(%d)\n", LengthMinusOne());
+	out_str.AppendFormat("\tWidth(%d)\n", GetWidth());
+	out_str.AppendFormat("\tHeight(%d)\n", GetHeight());
 	out_str.AppendFormat("\tNumOfSPS(%d)\n", NumOfSPS());
 	out_str.AppendFormat("\tNumOfPPS(%d)\n", NumOfPPS());
 	out_str.AppendFormat("\tNumOfSPSExt(%d)\n", NumOfSPSExt());
