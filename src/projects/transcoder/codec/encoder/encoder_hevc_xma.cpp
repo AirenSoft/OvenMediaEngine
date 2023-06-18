@@ -11,7 +11,6 @@
 #include <unistd.h>
 
 #include "../../transcoder_private.h"
-#include "xma.h"
 
 bool EncoderHEVCxXMA::SetCodecParams()
 {
