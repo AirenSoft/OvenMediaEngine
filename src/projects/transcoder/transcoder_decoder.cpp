@@ -12,9 +12,11 @@
 #include "codec/decoder/decoder_avc.h"
 #include "codec/decoder/decoder_avc_nv.h"
 #include "codec/decoder/decoder_avc_qsv.h"
+#include "codec/decoder/decoder_avc_xma.h"
 #include "codec/decoder/decoder_hevc.h"
 #include "codec/decoder/decoder_hevc_nv.h"
 #include "codec/decoder/decoder_hevc_qsv.h"
+#include "codec/decoder/decoder_hevc_xma.h"
 #include "codec/decoder/decoder_opus.h"
 #include "codec/decoder/decoder_vp8.h"
 #include "transcoder_gpu.h"
@@ -32,78 +34,117 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(int32_t decoder_id, c
 	switch (track->GetCodecId())
 	{
 		case cmn::MediaCodecId::H264:
-			if ((use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
+			if(use_hwaccel == true)
 			{
-				decoder = std::make_shared<DecoderAVCxQSV>(info);
-				if (decoder != nullptr && decoder->Configure(track) == true)
+				if (TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
 				{
-					goto done;
+					decoder = std::make_shared<DecoderAVCxQSV>(info);
+					if (decoder != nullptr && decoder->Configure(track) == true)
+					{
+						track->SetCodecLibraryId(cmn::MediaCodecLibraryId::QSV);
+						goto done;
+					}
 				}
-			}
 
-			if ((use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
-			{
-				decoder = std::make_shared<DecoderAVCxNV>(info);
-				if (decoder != nullptr && decoder->Configure(track) == true)
+				if (TranscodeGPU::GetInstance()->IsSupportedNV() == true)
 				{
-					goto done;
+					decoder = std::make_shared<DecoderAVCxNV>(info);
+					if (decoder != nullptr && decoder->Configure(track) == true)
+					{
+						track->SetCodecLibraryId(cmn::MediaCodecLibraryId::NVENC);
+						goto done;
+					}
+				}
+
+				if (TranscodeGPU::GetInstance()->IsSupportedXMA() == true)
+				{
+					decoder = std::make_shared<DecoderAVCxXMA>(info);
+					if (decoder != nullptr && decoder->Configure(track) == true)
+					{
+						track->SetCodecLibraryId(cmn::MediaCodecLibraryId::XMA);
+						goto done;
+					}
 				}
 			}
 
 			decoder = std::make_shared<DecoderAVC>(info);
 			if (decoder != nullptr && decoder->Configure(track) == true)
 			{
+				track->SetCodecLibraryId(cmn::MediaCodecLibraryId::DEFAULT);
 				goto done;
 			}
 			break;
 
 		case cmn::MediaCodecId::H265:
 
-			if ((use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
+			if(use_hwaccel == true)
 			{
-				decoder = std::make_shared<DecoderHEVCxQSV>(info);
-				if (decoder != nullptr && decoder->Configure(track) == true)
+				if (TranscodeGPU::GetInstance()->IsSupportedQSV() == true)
 				{
-					goto done;
+					decoder = std::make_shared<DecoderHEVCxQSV>(info);
+					if (decoder != nullptr && decoder->Configure(track) == true)
+					{
+						track->SetCodecLibraryId(cmn::MediaCodecLibraryId::QSV);
+						goto done;
+					}
 				}
-			}
 
-			if ((use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedNV() == true)
-			{
-				decoder = std::make_shared<DecoderHEVCxNV>(info);
-				if (decoder != nullptr && decoder->Configure(track) == true)
+				if (TranscodeGPU::GetInstance()->IsSupportedNV() == true)
 				{
-					goto done;
+					decoder = std::make_shared<DecoderHEVCxNV>(info);
+					if (decoder != nullptr && decoder->Configure(track) == true)
+					{
+						track->SetCodecLibraryId(cmn::MediaCodecLibraryId::NVENC);
+						goto done;
+					}
+				}
+
+				if (TranscodeGPU::GetInstance()->IsSupportedXMA() == true)
+				{
+					decoder = std::make_shared<DecoderHEVCxXMA>(info);
+					if (decoder != nullptr && decoder->Configure(track) == true)
+					{
+						track->SetCodecLibraryId(cmn::MediaCodecLibraryId::XMA);
+						goto done;
+					}
 				}
 			}
 
 			decoder = std::make_shared<DecoderHEVC>(info);
 			if (decoder != nullptr && decoder->Configure(track) == true)
 			{
+				track->SetCodecLibraryId(cmn::MediaCodecLibraryId::DEFAULT);
 				goto done;
 			}
 			break;
+
 		case cmn::MediaCodecId::Vp8:
 			decoder = std::make_shared<DecoderVP8>(info);
 			if (decoder != nullptr && decoder->Configure(track) == true)
 			{
+				track->SetCodecLibraryId(cmn::MediaCodecLibraryId::DEFAULT);
 				goto done;
 			}
 			break;
+
 		case cmn::MediaCodecId::Aac:
 			decoder = std::make_shared<DecoderAAC>(info);
 			if (decoder != nullptr && decoder->Configure(track) == true)
 			{
+				track->SetCodecLibraryId(cmn::MediaCodecLibraryId::DEFAULT);
 				goto done;
 			}
 			break;
+
 		case cmn::MediaCodecId::Opus:
 			decoder = std::make_shared<DecoderOPUS>(info);
 			if (decoder != nullptr && decoder->Configure(track) == true)
 			{
+				track->SetCodecLibraryId(cmn::MediaCodecLibraryId::DEFAULT);
 				goto done;
 			}
 			break;
+			
 		default:
 			OV_ASSERT(false, "Not supported codec: %d", track->GetCodecId());
 			break;

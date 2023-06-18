@@ -14,9 +14,11 @@
 #include "codec/encoder/encoder_avc_nv.h"
 #include "codec/encoder/encoder_avc_openh264.h"
 #include "codec/encoder/encoder_avc_qsv.h"
+#include "codec/encoder/encoder_avc_xma.h"
 #include "codec/encoder/encoder_ffopus.h"
 #include "codec/encoder/encoder_hevc_nv.h"
 #include "codec/encoder/encoder_hevc_qsv.h"
+#include "codec/encoder/encoder_hevc_xma.h"
 #include "codec/encoder/encoder_jpeg.h"
 #include "codec/encoder/encoder_opus.h"
 #include "codec/encoder/encoder_png.h"
@@ -47,7 +49,11 @@ TranscodeEncoder::~TranscodeEncoder()
 		}
 	}
 
-	OV_SAFE_FUNC(_codec_context, nullptr, ::avcodec_free_context, &);
+	if(_codec_context != nullptr)
+	{
+		OV_SAFE_FUNC(_codec_context, nullptr, ::avcodec_free_context, &);
+	}
+	
 	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
 	OV_SAFE_FUNC(_packet, nullptr, ::av_packet_free, &);
 	OV_SAFE_FUNC(_codec_par, nullptr, ::avcodec_parameters_free, &);
@@ -66,27 +72,40 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 	logti("[#%d] hardware acceleration of the encoder is %s. The library to be used will be %s", output_track->GetId(),  use_hwaccel ? "enabled" : "disabled", GetStringFromCodecLibraryId(library_id).CStr());
 
 	switch (codec_id)
-	{
+	{	
 		case cmn::MediaCodecId::H264:
 
-			if ( (use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedQSV() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::QSV))
+			if (use_hwaccel == true)
 			{
-				encoder = std::make_shared<EncoderAVCxQSV>(info);
-				if (encoder != nullptr && encoder->Configure(output_track) == true)
+				if ( TranscodeGPU::GetInstance()->IsSupportedQSV() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::QSV))
 				{
-					output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::QSV);
-					goto done;
+					encoder = std::make_shared<EncoderAVCxQSV>(info);
+					if (encoder != nullptr && encoder->Configure(output_track) == true)
+					{
+						output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::QSV);
+						goto done;
+					}
 				}
-			}
 
-			if ( (use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedNV() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::NVENC))
-			{
-				encoder = std::make_shared<EncoderAVCxNV>(info);
-				if (encoder != nullptr && encoder->Configure(output_track) == true)
+				if ( TranscodeGPU::GetInstance()->IsSupportedNV() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::NVENC))
 				{
-					output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::NVENC);
-					goto done;
+					encoder = std::make_shared<EncoderAVCxNV>(info);
+					if (encoder != nullptr && encoder->Configure(output_track) == true)
+					{
+						output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::NVENC);
+						goto done;
+					}
 				}
+
+				if ( TranscodeGPU::GetInstance()->IsSupportedXMA() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::XMA))
+				{
+					encoder = std::make_shared<EncoderAVCxXMA>(info);
+					if (encoder != nullptr && encoder->Configure(output_track) == true)
+					{
+						output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::XMA);
+						goto done;
+					}
+				}				
 			}
 
 			if (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::OPENH264)
@@ -94,6 +113,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 				encoder = std::make_shared<EncoderAVCxOpenH264>(info);
 				if (encoder != nullptr && encoder->Configure(output_track) == true)
 				{
+
 					output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::OPENH264);
 					goto done;
 				}
@@ -101,23 +121,36 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 
 			break;
 		case cmn::MediaCodecId::H265:
-			if ( (use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedQSV() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::QSV))
+			if (use_hwaccel == true)
 			{
-				encoder = std::make_shared<EncoderHEVCxQSV>(info);
-				if (encoder != nullptr && encoder->Configure(output_track) == true)
+				if ( TranscodeGPU::GetInstance()->IsSupportedQSV() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::QSV))
 				{
-					output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::QSV);
-					goto done;
+					encoder = std::make_shared<EncoderHEVCxQSV>(info);
+					if (encoder != nullptr && encoder->Configure(output_track) == true)
+					{
+						output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::QSV);
+						goto done;
+					}
 				}
-			}
 
-			if ( (use_hwaccel == true) && TranscodeGPU::GetInstance()->IsSupportedNV() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::NVENC))
-			{
-				encoder = std::make_shared<EncoderHEVCxNV>(info);
-				if (encoder != nullptr && encoder->Configure(output_track) == true)
+				if ( TranscodeGPU::GetInstance()->IsSupportedNV() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::NVENC))
 				{
-					output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::NVENC);
-					goto done;
+					encoder = std::make_shared<EncoderHEVCxNV>(info);
+					if (encoder != nullptr && encoder->Configure(output_track) == true)
+					{
+						output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::NVENC);
+						goto done;
+					}
+				}
+
+				if ( TranscodeGPU::GetInstance()->IsSupportedXMA() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::XMA))
+				{
+					encoder = std::make_shared<EncoderHEVCxXMA>(info);
+					if (encoder != nullptr && encoder->Configure(output_track) == true)
+					{
+						output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::XMA);
+						goto done;
+					}
 				}
 			}
 
@@ -135,6 +168,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 			encoder = std::make_shared<EncoderJPEG>(info);
 			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
+				output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::DEFAULT);
 				goto done;
 			}
 
@@ -143,6 +177,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 			encoder = std::make_shared<EncoderPNG>(info);
 			if (encoder != nullptr && encoder->Configure(output_track) == true)
 			{
+				output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::DEFAULT);
 				goto done;
 			}
 

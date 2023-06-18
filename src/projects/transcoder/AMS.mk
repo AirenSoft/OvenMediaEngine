@@ -15,6 +15,15 @@ $(call add_pkg_config,libavutil)
 $(call add_pkg_config,vpx)
 $(call add_pkg_config,opus)
 
+# Enable Xilinx Media SDK
+ifeq ($(call chk_pkg_exist,libxma2api),0)
+$(call add_pkg_config,libxma2api)
+$(call add_pkg_config,libxma2plugin)
+$(call add_pkg_config,xvbm)
+$(call add_pkg_config,libxrm)
+PROJECT_CXXFLAGS += -DXMA_ENABLED
+endif
+
 LOCAL_TARGET := transcoder
 
 LOCAL_SOURCE_FILES := $(LOCAL_SOURCE_FILES) $(call get_sub_source_list,codec) $(call get_sub_source_list,codec/decoder) $(call get_sub_source_list,codec/encoder) $(call get_sub_source_list,filter)

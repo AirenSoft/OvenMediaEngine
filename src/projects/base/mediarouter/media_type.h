@@ -95,10 +95,12 @@ namespace cmn
 	enum class MediaCodecLibraryId : uint8_t
 	{
 		AUTO,
+		DEFAULT,
 		OPENH264,
 		BEAMR,
 		NVENC,
 		QSV,
+		XMA,
 		LIBVPX,
 		FDKAAC,
 		LIBOPUS,
@@ -236,6 +238,10 @@ namespace cmn
 		{
 			return cmn::MediaCodecLibraryId::QSV;
 		}
+		else if (name.HasSuffix("_XMA"))
+		{
+			return cmn::MediaCodecLibraryId::XMA;
+		}		
 		else if (name.HasSuffix("_LIBVPX"))
 		{
 			return cmn::MediaCodecLibraryId::LIBVPX;
@@ -252,6 +258,8 @@ namespace cmn
 	{
 		switch (id)
 		{
+			case cmn::MediaCodecLibraryId::DEFAULT:
+				return "Default";
 			case cmn::MediaCodecLibraryId::OPENH264:
 				return "OpenH264";
 			case cmn::MediaCodecLibraryId::BEAMR:
@@ -260,12 +268,14 @@ namespace cmn
 				return "nvenc";
 			case cmn::MediaCodecLibraryId::QSV:
 				return "qsv";
+			case cmn::MediaCodecLibraryId::XMA:
+				return "xma";				
 			case cmn::MediaCodecLibraryId::LIBVPX:
 				return "libvpx";
 			case cmn::MediaCodecLibraryId::FDKAAC:
 				return "fdkaac";
 			case cmn::MediaCodecLibraryId::LIBOPUS:
-				return "libopus";				
+				return "libopus";
 			case cmn::MediaCodecLibraryId::AUTO:
 			default:
 				break;
@@ -306,11 +316,11 @@ namespace cmn
 		name.MakeUpper();
 
 		// Video codecs
-		if (name == "H264" || name == "H264_OPENH264" || name == "H264_BEAMR" || name == "H264_NVENC" || name == "H264_QSV")
+		if (name == "H264" || name == "H264_OPENH264" || name == "H264_BEAMR" || name == "H264_NVENC" || name == "H264_QSV" || name == "H264_XMA")
 		{
 			return cmn::MediaCodecId::H264;
 		}
-		else if (name == "H265" || name == "H265_NVENC" || name == "H265_QSV")
+		else if (name == "H265" || name == "H265_NVENC" || name == "H265_QSV" || name == "H265_XMA")
 		{
 			return cmn::MediaCodecId::H265;
 		}

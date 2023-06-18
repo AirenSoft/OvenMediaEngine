@@ -62,6 +62,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 
 	// Limit the number of filter threads to 4. I think 4 thread is usually enough for video filtering processing.
 	_filter_graph->nb_threads = 4;
+	// _filter_graph->thread_type = AVFILTER_THREAD_SLICE;
 
 	AVRational input_timebase = ffmpeg::Conv::TimebaseToAVRational(input_track->GetTimeBase());
 	AVRational output_timebase = ffmpeg::Conv::TimebaseToAVRational(output_track->GetTimeBase());
@@ -82,7 +83,9 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	// Filter graph:
 	//     [buffer] -> [fps] -> [scale] -> [settb] -> [buffersink]
 
+	//////////////////////////////////////////////////////
 	// Prepare the input parameters
+	//////////////////////////////////////////////////////
 	std::vector<ov::String> src_params = {
 		ov::String::FormatString("video_size=%dx%d", input_track->GetWidth(), input_track->GetHeight()),
 		ov::String::FormatString("pix_fmt=%d", input_track->GetColorspace()),
@@ -90,16 +93,18 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 		ov::String::FormatString("pixel_aspect=%d/%d", 1, 1)};
 
 
-	ov::String src_args = ov::String::Join(src_params, ":");
+	ov::String input_filters = ov::String::Join(src_params, ":");
 
-	ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, buffersrc, "in", src_args, nullptr, _filter_graph);
+	ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, buffersrc, "in", input_filters, nullptr, _filter_graph);
 	if (ret < 0)
 	{
 		logte("Could not create video buffer source filter for rescaling: %d", ret);
 		return false;
 	}
-
+	//////////////////////////////////////////////////////
 	// Prepare output filters
+	//////////////////////////////////////////////////////
+
 	ret = ::avfilter_graph_create_filter(&_buffersink_ctx, buffersink, "out", nullptr, nullptr, _filter_graph);
 	if (ret < 0)
 	{
@@ -107,6 +112,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 		return false;
 	}
 
+	// 1. Colorpsace
 	enum AVPixelFormat pix_fmts[] = {(AVPixelFormat)output_track->GetColorspace(), AV_PIX_FMT_NONE};
 	ret = av_opt_set_int_list(_buffersink_ctx, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
 	if (ret < 0)
@@ -117,28 +123,90 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 
 	std::vector<ov::String> filters;
 
+	// 2. Framerate
 	if (output_track->GetFrameRateByConfig() > 0.0f)
 	{
 		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", output_track->GetFrameRateByConfig()));
 	}
 
-	if (output_track->GetHardwareAccel() == true &&
-		TranscodeGPU::GetInstance()->IsSupportedNV() == true &&
-		input_track->GetColorspace() == AV_PIX_FMT_NV12 &&
-		output_track->GetColorspace() == AV_PIX_FMT_NV12)
+	// 3. Scaler
+	auto source_library_id = input_track->GetCodecLibraryId();
+	switch (source_library_id)
 	{
-		filters.push_back(ov::String::FormatString("hwupload_cuda,scale_cuda=%d:%d,hwdownload",
-												   output_track->GetWidth(), output_track->GetHeight()));
-	}
-	else
-	{
-		filters.push_back(ov::String::FormatString("scale=%dx%d:flags=bilinear",
-												   output_track->GetWidth(), output_track->GetHeight()));
+		case cmn::MediaCodecLibraryId::QSV: {
+			if (output_track->GetCodecLibraryId() == source_library_id)
+			{
+				filters.push_back(ov::String::FormatString(
+					"scale=%dx%d:flags=bilinear",
+					output_track->GetWidth(), output_track->GetHeight()));
+			}
+			else
+			{
+				filters.push_back(ov::String::FormatString(
+					"scale=%dx%d:flags=bilinear",
+					output_track->GetWidth(), output_track->GetHeight()));
+			}
+		}
+		break;
+		case cmn::MediaCodecLibraryId::NVENC: {
+			if (output_track->GetCodecLibraryId() == source_library_id)
+			{
+				filters.push_back(ov::String::FormatString(
+					"scale_cuda=%d:%d",
+					output_track->GetWidth(), output_track->GetHeight()));
+			}
+			else
+			{
+				// Convert Gpu memory to Host memory
+				filters.push_back(ov::String::FormatString(
+					"hwupload_cuda,scale_cuda=%d:%d,hwdownload",
+					output_track->GetWidth(), output_track->GetHeight()));
+			}
+		}
+		break;
+		case cmn::MediaCodecLibraryId::XMA: {
+			if (output_track->GetCodecLibraryId() == source_library_id)
+			{
+				_filter_graph->nb_threads = 1;
+				filters.push_back(ov::String::FormatString(
+					"multiscale_xma=enable_pipeline=0:outputs=1:out_1_width=%d:out_1_height=%d:out_1_rate=full:lxlnx_hwdev=-1",
+					output_track->GetWidth(), output_track->GetHeight()));
+			}
+			else
+			{
+				// Convert Gpu memory to Host memory
+				filters.push_back(ov::String::FormatString("xvbm_convert,scale=%dx%d:flags=bilinear",
+														   output_track->GetWidth(), output_track->GetHeight()));
+			}
+		}
+		break;
+		case cmn::MediaCodecLibraryId::DEFAULT:
+		default: {
+			// S/W Default Decoder -> S/W Openh264 Encoder
+			if (output_track->GetCodecLibraryId() == source_library_id)
+			{
+				filters.push_back(ov::String::FormatString(
+					"scale=%dx%d:flags=bilinear",
+					output_track->GetWidth(), output_track->GetHeight()));
+			}
+			else
+			{
+				filters.push_back(ov::String::FormatString(
+					"scale=%dx%d:flags=bilinear",
+					output_track->GetWidth(), output_track->GetHeight()));
+			}
+		}
+		break;
 	}
 
+	// 4. Timebase
 	filters.push_back(ov::String::FormatString("settb=%s", output_track->GetTimeBase().GetStringExpr().CStr()));
 
 	ov::String output_filters = ov::String::Join(filters, ",");
+
+	//////////////////////////////////////////////////////
+	// Build 
+	//////////////////////////////////////////////////////
 
 	_outputs->name = ::av_strdup("in");
 	_outputs->filter_ctx = _buffersrc_ctx;
@@ -149,6 +217,8 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	_inputs->filter_ctx = _buffersink_ctx;
 	_inputs->pad_idx = 0;
 	_inputs->next = nullptr;
+
+	logti("Rescaler is enabled for track #%u -> #%u using parameters. input: %s / outputs: %s", input_track->GetId(), output_track->GetId(), input_filters.CStr(), output_filters.CStr());
 
 	if ((ret = ::avfilter_graph_parse_ptr(_filter_graph, output_filters, &_inputs, &_outputs, nullptr)) < 0)
 	{
@@ -161,8 +231,6 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 		logte("Could not validate filter graph for rescaling: %d", ret);
 		return false;
 	}
-
-	logti("Rescaler is enabled for track #%u using parameters. input: %s / outputs: %s", input_track->GetId(), src_args.CStr(), output_filters.CStr());
 
 	_input_width = input_track->GetWidth();
 	_input_height = input_track->GetHeight();
@@ -262,6 +330,7 @@ void FilterRescaler::FilterThread()
 				_frame->pict_type = AV_PICTURE_TYPE_NONE;
 				auto output_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				::av_frame_unref(_frame);
+
 				if (output_frame == nullptr)
 				{
 					continue;
