@@ -301,11 +301,22 @@ namespace bmff
 			// avg segment duration 
 			_target_segment_duration_ms -= segment->GetDuration();
 			_target_segment_duration_ms += _config.segment_duration_ms;
-
-			if (_target_segment_duration_ms < static_cast<int64_t>(_config.segment_duration_ms / 2))
+			_target_segment_duration_ms = std::max(_target_segment_duration_ms, static_cast<int64_t>(_config.segment_duration_ms / 2));
+			
+			if (segment->GetDuration() >= _config.segment_duration_ms * 1.2)
 			{
-				logtw("LLHLS stream(%s) is creating segments that are too large(%f ms). It seems that the keyframe interval is longer than the configured segment size.", _stream_tag.CStr(), segment->GetDuration());
+				logtw("LLHLS stream (%s) / track (%d) - a longer-than-expected (%.1lf | expected : %llu) segment has created. This may be due to very long keyframe intervals.", _stream_tag.CStr(), _track->GetId(), segment->GetDuration(), _config.segment_duration_ms);
 			}
+		}
+		else if (segment->GetDuration() > _config.segment_duration_ms * 2)
+		{
+			// Too long segment buffered
+			logte("LLHLS stream (%s) / track (%d) - the duration of the segment being created exceeded twice the target segment duration (%.1lf ms | expected: %llu) because there were no IDR frames for a long time. This segment is forcibly created and may not play normally.", 
+			_stream_tag.CStr(), _track->GetId(), segment->GetDuration(), _config.segment_duration_ms);
+
+			segment->SetCompleted();
+
+			_target_segment_duration_ms = std::max(_target_segment_duration_ms, static_cast<int64_t>(_config.segment_duration_ms / 2));
 		}
 
 		_max_chunk_duration_ms = std::max(_max_chunk_duration_ms, duration_ms);
