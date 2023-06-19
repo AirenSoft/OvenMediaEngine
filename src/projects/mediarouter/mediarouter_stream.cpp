@@ -560,9 +560,14 @@ bool MediaRouteStream::ProcessH265AnnexBStream(std::shared_ptr<MediaTrack> &medi
 		}
 
 		// Key Frame
-		if (header.GetNalUnitType() == H265NALUnitType::IDR_W_RADL ||
+		if (header.GetNalUnitType() == H265NALUnitType::BLA_W_LP ||
+			header.GetNalUnitType() == H265NALUnitType::BLA_W_RADL ||
+			header.GetNalUnitType() == H265NALUnitType::BLA_N_LP ||
+			header.GetNalUnitType() == H265NALUnitType::IDR_W_RADL ||
+			header.GetNalUnitType() == H265NALUnitType::IDR_N_LP ||
 			header.GetNalUnitType() == H265NALUnitType::CRA_NUT ||
-			header.GetNalUnitType() == H265NALUnitType::BLA_W_RADL)
+			header.GetNalUnitType() == H265NALUnitType::IRAP_VCL22 ||
+			header.GetNalUnitType() == H265NALUnitType::IRAP_VCL23)
 		{
 			media_packet->SetFlag(MediaPacketFlag::Key);
 		}

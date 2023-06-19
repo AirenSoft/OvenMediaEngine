@@ -23,6 +23,7 @@ enum class H265NALUnitType : uint8_t
 	IDR_W_RADL = 19,
 	IDR_N_LP   = 20,
 	CRA_NUT    = 21,
+	IRAP_VCL22 = 22,
 	IRAP_VCL23 = 23,
 	VPS        = 32,
 	SPS        = 33,
