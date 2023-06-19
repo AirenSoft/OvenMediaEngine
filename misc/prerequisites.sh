@@ -226,7 +226,7 @@ install_ffmpeg()
     if [ "$NVIDIA_NV_CODEC_HWACCELS" = true ] ; then
         ADDI_CFLAGS+="-I/usr/local/cuda/include"
         ADDI_LDFLAGS="-L/usr/local/cuda/lib64"
-        ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
+        ADDI_LICENSE+=" --enable-nonfree "
         ADDI_LIBS+=" --enable-cuda-nvcc --enable-cuda-llvm --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec --enable-cuvid"
         ADDI_HWACCEL="--enable-hwaccel=cuda,cuvid"
         ADDI_ENCODER+=",h264_nvenc,hevc_nvenc"
