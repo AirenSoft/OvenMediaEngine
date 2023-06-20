@@ -143,7 +143,7 @@ namespace mon
 			queue->UpdateMetadata(info);
 		}
 
-		queue->UpdateMetadata(info);
+		queue->UpdateMetrics(info);
 
 		/**
 			[Experimental] Delete lazy stream
