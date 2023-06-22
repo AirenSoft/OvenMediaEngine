@@ -37,7 +37,10 @@ namespace mon
 				INGRESS_SAMPLERATE_LOW,
 				INGRESS_SAMPLERATE_HIGH,
 				INGRESS_LONG_KEY_FRAME_INTERVAL,
-				INGRESS_HAS_BFRAME
+				INGRESS_HAS_BFRAME,
+
+				// Internal Codes
+				INTERNAL_QUEUE_CONGESTION
 			};
 
 			static std::shared_ptr<Message> CreateMessage(Code code, const ov::String &description)
@@ -78,6 +81,8 @@ namespace mon
 					MESSAGE_CASE_RETURN(Code::INGRESS_SAMPLERATE_HIGH, "INGRESS_SAMPLERATE_HIGH");
 					MESSAGE_CASE_RETURN(Code::INGRESS_LONG_KEY_FRAME_INTERVAL, "INGRESS_LONG_KEY_FRAME_INTERVAL");
 					MESSAGE_CASE_RETURN(Code::INGRESS_HAS_BFRAME, "INGRESS_HAS_BFRAME");
+
+					MESSAGE_CASE_RETURN(Code::INTERNAL_QUEUE_CONGESTION, "INTERNAL_QUEUE_CONGESTION");
 				}
 
 				return "OK";
@@ -114,9 +119,11 @@ namespace mon
 					MESSAGE_CASE_RETURN(Code::INGRESS_SAMPLERATE_HIGH,
 										ov::String::FormatString("The ingress stream's current samplerate (%d) is higher than the configured samplerate (%d)", measured, config));
 					MESSAGE_CASE_RETURN(Code::INGRESS_LONG_KEY_FRAME_INTERVAL,
-										ov::String::FormatString("The ingress stream's current keyframe interval (%.1f seconds) is too long. Please use a keyframe interval of %.1f seconds or less.", measured, config));
+										ov::String::FormatString("The ingress stream's current keyframe interval (%.1f seconds) is too long. Please use a keyframe interval of %.1f seconds or less", measured, config));
 					MESSAGE_CASE_RETURN(Code::INGRESS_HAS_BFRAME,
-										ov::String::FormatString("There are B-Frames in the ingress stream."));
+										ov::String::FormatString("There are B-Frames in the ingress stream"));
+					MESSAGE_CASE_RETURN(Code::INTERNAL_QUEUE_CONGESTION,
+										ov::String::FormatString("Internal queue(s) is currently congested"));
 				}
 
 				return "The current status is good";
