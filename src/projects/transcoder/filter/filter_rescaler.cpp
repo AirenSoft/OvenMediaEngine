@@ -166,15 +166,15 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 			if (output_track->GetCodecLibraryId() == source_library_id)
 			{
 				filters.push_back(ov::String::FormatString(
-					"scale_cuda=%d:%d",
+					"hwupload_cuda,scale_cuda=w=%d:h=%d,hwdownload",
 					output_track->GetWidth(), output_track->GetHeight()));
 			}
 			else
 			{
 				// Convert Gpu memory to Host memory
 				filters.push_back(ov::String::FormatString(
-					"hwupload_cuda,scale_cuda=%d:%d,hwdownload",
-					output_track->GetWidth(), output_track->GetHeight()));
+					"hwupload_cuda,scale_cuda=w=%d:h=%d:format=%d,hwdownload",
+					output_track->GetWidth(), output_track->GetHeight(), output_track->GetColorspace()));
 			}
 		}
 		break;
