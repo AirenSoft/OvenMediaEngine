@@ -45,6 +45,8 @@ FilterResampler::~FilterResampler()
 
 bool FilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_track, const std::shared_ptr<MediaTrack> &output_track)
 {
+	SetState(State::CREATED);
+
 	_input_track = input_track;
 	_output_track = output_track;
 
@@ -57,6 +59,9 @@ bool FilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_track, 
 	if ((_filter_graph == nullptr) || (_inputs == nullptr) || (_outputs == nullptr))
 	{
 		logte("Could not allocate variables for filter graph: %p, %p, %p", _filter_graph, _inputs, _outputs);
+
+		SetState(State::ERROR);
+
 		return false;
 	}
 
@@ -73,6 +78,8 @@ bool FilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_track, 
 		logte("Invalid timebase: input: %d/%d, output: %d/%d",
 			  input_timebase.num, input_timebase.den,
 			  output_timebase.num, output_timebase.den);
+
+		SetState(State::ERROR);
 
 		return false;
 	}
@@ -95,6 +102,9 @@ bool FilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_track, 
 	if (ret < 0)
 	{
 		logte("Could not create audio buffer source filter for resampling: %d", ret);
+
+		SetState(State::ERROR);
+
 		return false;
 	}
 
@@ -112,6 +122,8 @@ bool FilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_track, 
 	if (ret < 0)
 	{
 		logte("Could not create audio buffer sink filter for resampling: %d", ret);
+		SetState(State::ERROR);
+
 		return false;
 	}
 
@@ -127,24 +139,22 @@ bool FilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_track, 
 
 	if ((_outputs->name == nullptr) || (_inputs->name == nullptr))
 	{
+		SetState(State::ERROR);
+
 		return false;
 	}
+
+	logti("Resampler is enabled for track #%u using parameters. input: %s / outputs: %s", input_track->GetId(), src_args.CStr(), output_filters.CStr());
 
 	ret = ::avfilter_graph_parse_ptr(_filter_graph, output_filters, &_inputs, &_outputs, nullptr);
 	if (ret < 0)
 	{
 		logte("Could not parse filter string for resampling: %d (%s)", ret, output_filters.CStr());
+
+		SetState(State::ERROR);
+
 		return false;
 	}
-
-	ret = ::avfilter_graph_config(_filter_graph, nullptr);
-	if (ret < 0)
-	{
-		logte("Could not validate filter graph for resampling: %d", ret);
-		return false;
-	}
-
-	logti("Resampler is enabled for track #%u using parameters. input: %s / outputs: %s", input_track->GetId(), src_args.CStr(), output_filters.CStr());
 
 	return true;
 }
@@ -156,14 +166,16 @@ bool FilterResampler::Start()
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&FilterResampler::FilterThread, this);
+		_thread_work = std::thread(&FilterResampler::WorkerThread, this);
 		pthread_setname_np(_thread_work.native_handle(), "Resampler");
 	}
 	catch (const std::system_error &e)
 	{
 		_kill_flag = true;
 
-		logte("Failed to start transcode resample filter thread.");
+		SetState(State::ERROR);
+
+		logte("Failed to start resample filter thread.");
 
 		return false;
 	}
@@ -180,19 +192,34 @@ void FilterResampler::Stop()
 	if (_thread_work.joinable())
 	{
 		_thread_work.join();
+
 		logtd("resampler filter thread has ended");
 	}
+
+	SetState(State::STOPPED);
 }
 
-void FilterResampler::FilterThread()
+void FilterResampler::WorkerThread()
 {
 	logtd("Start resampler filter thread.");
+
+	int ret;
+	if ((ret = ::avfilter_graph_config(_filter_graph, nullptr)) < 0)
+	{
+		logte("Could not validate filter graph for resampling: %d", ret);
+
+		SetState(State::ERROR);
+
+		return;
+	}
 
 	while (!_kill_flag)
 	{
 		auto obj = _input_buffer.Dequeue();
 		if (obj.has_value() == false)
+		{
 			continue;
+		}
 
 		auto media_frame = std::move(obj.value());
 
@@ -200,17 +227,21 @@ void FilterResampler::FilterThread()
 		if (!av_frame)
 		{
 			logte("Could not allocate the frame data");
+
+			SetState(State::ERROR);
+
 			break;
 		}
 
-		int ret = ::av_buffersrc_add_frame_flags(_buffersrc_ctx, av_frame, AV_BUFFERSRC_FLAG_KEEP_REF);
+		ret = ::av_buffersrc_write_frame(_buffersrc_ctx, av_frame);
 		if (ret < 0)
 		{
 			logte("An error occurred while feeding the audio filtergraph: pts: %lld, linesize: %d, srate: %d, layout: %d, channels: %d, format: %d, rq: %d", _frame->pts, _frame->linesize[0], _frame->sample_rate, _frame->channel_layout, _frame->channels, _frame->format, _input_buffer.Size());
+
 			continue;
 		}
 
-		while (true)
+		while (!_kill_flag)
 		{
 			int ret = ::av_buffersink_get_frame(_buffersink_ctx, _frame);
 
@@ -220,12 +251,18 @@ void FilterResampler::FilterThread()
 			}
 			else if (ret == AVERROR_EOF)
 			{
-				logte("Error receiving a packet for decoding : AVERROR_EOF");
+				logte("Error receiving filtered frame. error(EOF)");
+
+				SetState(State::ERROR);
+
 				break;
 			}
 			else if (ret < 0)
 			{
-				logte("Error receiving a packet for decoding : %d", ret);
+				logte("Error receiving filtered frame. error(%d)", ret);
+
+				SetState(State::ERROR);
+
 				break;
 			}
 			else
@@ -235,6 +272,7 @@ void FilterResampler::FilterThread()
 				if (output_frame == nullptr)
 				{
 					logte("Could not allocate the frame data");
+
 					continue;
 				}
 
@@ -245,11 +283,4 @@ void FilterResampler::FilterThread()
 			}
 		}
 	}
-}
-
-int32_t FilterResampler::SendBuffer(std::shared_ptr<MediaFrame> buffer)
-{
-	_input_buffer.Enqueue(std::move(buffer));
-
-	return 0;
 }

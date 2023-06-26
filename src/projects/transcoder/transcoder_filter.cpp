@@ -23,7 +23,7 @@ bool TranscodeFilter::Configure(int32_t id,
 								const std::shared_ptr<info::Stream>& output_stream_info, std::shared_ptr<MediaTrack> output_track,
 								CompleteHandler complete_handler)
 {
-	logtd("Create a transcode filter. InputTrack(%d). Type(%s)", input_track->GetId(), (input_track->GetMediaType() == MediaType::Video) ? "Video" : "Audio");
+	logtd("Create a transcode filter. Track(%d -> %d). Type(%s)", input_track->GetId(), output_track->GetId(), (input_track->GetMediaType() == MediaType::Video) ? "Video" : "Audio");
 
 	_id = id;
 	_input_stream_info = input_stream_info;
@@ -34,13 +34,14 @@ bool TranscodeFilter::Configure(int32_t id,
 
 	_timestamp_jump_threshold = (int64_t)_input_track->GetTimeBase().GetTimescale() * PTS_INCREMENT_LIMIT;
 
-	return CreateFilter();
+	return Create();
 }
 
-bool TranscodeFilter::CreateFilter()
+bool TranscodeFilter::Create()
 {
 	std::lock_guard<std::shared_mutex> lock(_mutex);
 
+	// If there is a previously created filter, remove it.
 	if (_internal != nullptr)
 	{
 		_internal->Stop();
@@ -92,7 +93,7 @@ bool TranscodeFilter::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 {
 	if (IsNeedUpdate(buffer) == true)
 	{
-		if (CreateFilter() == false)
+		if (Create() == false)
 		{
 			logte("Failed to regenerate filter");
 
@@ -106,7 +107,7 @@ bool TranscodeFilter::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 		return false;
 	}
 
-	return (_internal->SendBuffer(std::move(buffer)) == 0) ? true : false;
+	return _internal->SendBuffer(std::move(buffer));
 }
 
 bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
