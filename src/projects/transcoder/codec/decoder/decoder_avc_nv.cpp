@@ -186,6 +186,7 @@ void DecoderAVCxNV::CodecThread()
 					char err_msg[1024];
 					::av_strerror(ret, err_msg, sizeof(err_msg));
 					logte("An error occurred while sending a packet for decoding: Unhandled error (%d:%s) ", ret, err_msg);
+					break;
 				}
 			}
 
@@ -198,7 +199,7 @@ void DecoderAVCxNV::CodecThread()
 			remained -= parsed_size;
 		}
 
-		while (true)
+		while (!_kill_flag)
 		{
 			// Check the decoded frame is available
 			int ret = ::avcodec_receive_frame(_context, _frame);
