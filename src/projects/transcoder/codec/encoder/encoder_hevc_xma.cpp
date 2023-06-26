@@ -59,7 +59,7 @@ bool EncoderHEVCxXMA::SetCodecParams()
 	auto preset = GetRefTrack()->GetPreset().LowerCaseString();
 	if (preset.IsEmpty() == false)
 	{
-		logtw("Xilinx encoder does not support preset");
+		logtd("Xilinx encoder does not support preset");
 	}	
 	return true;
 }

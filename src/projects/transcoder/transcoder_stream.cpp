@@ -16,6 +16,7 @@
 
 #define MAX_QUEUE_SIZE 100
 #define GENERATE_FILLER_FRAME true
+#define UNUSED_VARIABLE(var) (void)var;
 
 TranscoderStream::TranscoderStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &stream, TranscodeApplication *parent)
 	: _parent(parent), _application_info(application_info), _input_stream(stream)
@@ -257,6 +258,8 @@ bool TranscoderStream::IsAvailableSmoothTransitionStream(const std::shared_ptr<i
 	// Rule 1: The number of tracks per media type should not exceed one.
 	for (const auto &[track_id, track] : stream->GetTracks())
 	{
+		UNUSED_VARIABLE(track_id)
+		
 		if ((++track_count_per_mediatype[(uint32_t)track->GetMediaType()]) > 1)
 		{
 			// Could not support smooth transition. because, number of tracks per media type exceed one.
@@ -296,6 +299,8 @@ int32_t TranscoderStream::CreateOutputStreamDynamic()
 
 	for (auto &[input_track_id, input_track] : _input_stream->GetTracks())
 	{
+		UNUSED_VARIABLE(input_track_id)
+
 		auto output_track = input_track->Clone();
 		if (output_track == nullptr)
 		{
@@ -483,6 +488,8 @@ int32_t TranscoderStream::BuildComposite()
 
 	for (auto &[key, composite] : _composite_map)
 	{
+		UNUSED_VARIABLE(key)
+
 		for (auto &[output_stream, output_track] : composite->GetOutputTracks())
 		{
 			auto input_track = composite->GetInputTrack();
@@ -682,6 +689,8 @@ int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 
 	for (auto &[key, composite] : _composite_map)
 	{
+		UNUSED_VARIABLE(key)
+
 		if ((uint32_t)track_id != composite->GetInputTrack()->GetId())
 		{
 			continue;
@@ -880,17 +889,24 @@ void TranscoderStream::UpdateInputTrack(MediaFrame *buffer)
 		return;
 	}
 
-	if (input_track->GetMediaType() == cmn::MediaType::Video)
+	switch (input_track->GetMediaType())
 	{
-		input_track->SetWidth(buffer->GetWidth());
-		input_track->SetHeight(buffer->GetHeight());
-		input_track->SetColorspace(buffer->GetFormat());  // used AVPixelFormat
-	}
-	else if (input_track->GetMediaType() == cmn::MediaType::Audio)
-	{
-		input_track->SetSampleRate(buffer->GetSampleRate());
-		input_track->SetChannel(buffer->GetChannels());
-		input_track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(buffer->GetFormat()));
+		case cmn::MediaType::Video: {
+			input_track->SetWidth(buffer->GetWidth());
+			input_track->SetHeight(buffer->GetHeight());
+			input_track->SetColorspace(buffer->GetFormat());  // used AVPixelFormat
+		}
+		break;
+		case cmn::MediaType::Audio: {
+			input_track->SetSampleRate(buffer->GetSampleRate());
+			input_track->SetChannel(buffer->GetChannels());
+			input_track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(buffer->GetFormat()));
+		}
+		break;
+		default: {
+			logtd("%s Unsupported media type. InputTrack(%d)", _log_prefix.CStr(), track_id);
+		}
+		break;
 	}
 }
 
@@ -912,6 +928,8 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 
 		for (auto &[output_stream, output_track] : composite->GetOutputTracks())
 		{
+			UNUSED_VARIABLE(output_stream)
+
 			// Case of ByPass
 			if (output_track->IsBypass() == true)
 			{
@@ -1329,6 +1347,8 @@ void TranscoderStream::NotifyCreateStreams()
 {
 	for (auto &[output_stream_name, output_stream] : _output_streams)
 	{
+		UNUSED_VARIABLE(output_stream_name)
+
 		bool ret = _parent->CreateStream(output_stream);
 		if (ret == false)
 		{
@@ -1341,6 +1361,8 @@ void TranscoderStream::NotifyDeleteStreams()
 {
 	for (auto &[output_stream_name, output_stream] : _output_streams)
 	{
+		UNUSED_VARIABLE(output_stream_name)
+
 		logti("%s Output stream has been deleted. %s/%s(%u)",
 			  _log_prefix.CStr(),
 			  _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
@@ -1356,6 +1378,8 @@ void TranscoderStream::UpdateMsidOfOutputStreams(uint32_t msid)
 	// Update info::Stream().msid of all output streams
 	for (auto &[output_stream_name, output_stream] : _output_streams)
 	{
+		UNUSED_VARIABLE(output_stream_name)
+		
 		output_stream->SetMsid(msid);
 	}
 }
@@ -1364,6 +1388,8 @@ void TranscoderStream::NotifyUpdateStreams()
 {
 	for (auto &[output_stream_name, output_stream] : _output_streams)
 	{
+		UNUSED_VARIABLE(output_stream_name)
+
 		logti("%s Output stream has been updated. %s/%s(%u)",
 			  _log_prefix.CStr(),
 			  _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
