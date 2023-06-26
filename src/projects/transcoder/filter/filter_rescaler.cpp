@@ -171,10 +171,11 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 			}
 			else
 			{
-				// Convert Gpu memory to Host memory
+				// Copy GPU memory to Host memory
+				// To be compatible with other types of codecs, it is converted to yuv420p, a representative pixel format
 				filters.push_back(ov::String::FormatString(
-					"hwupload_cuda,scale_cuda=w=%d:h=%d:format=%d,hwdownload",
-					output_track->GetWidth(), output_track->GetHeight(), output_track->GetColorspace()));
+					"hwupload_cuda,scale_cuda=w=%d:h=%d:format=yuv420p,hwdownload,format=yuv420p",
+					output_track->GetWidth(), output_track->GetHeight()));
 			}
 		}
 		break;
@@ -188,7 +189,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 			}
 			else
 			{
-				// Convert Gpu memory to Host memory
+				// Copy GPU memory to Host memory
 				filters.push_back(ov::String::FormatString("xvbm_convert,scale=%dx%d:flags=bilinear",
 														   output_track->GetWidth(), output_track->GetHeight()));
 			}
