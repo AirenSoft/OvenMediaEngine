@@ -43,7 +43,7 @@ Alert can be set up on \<Server>, as shown below.
 
 ### Rules
 
-| Type    | Key                  | Description                                                                        |
+| Key     |                      | Description                                                                        |
 | ------- | -------------------- | ---------------------------------------------------------------------------------- |
 | Ingress | MinBitrate           | Detects when the input stream's bitrate is lower than the set value.               |
 |         | MaxBitrate           | Detects when the input stream's bitrate is greater than the set value.             |
@@ -120,34 +120,36 @@ X-OME-Signature: f871jd991jj1929jsjd91pqa0amm1
 				"type":"Data"
 			}
 		]
-	}
+	},
+	"type":"INGRESS"
 }
 ```
 
-Here is a detailed explanation of each element of Json payload:
+Here is a detailed explanation of each element of JSON payload:
 
-| Element    | Description                                                                                                                                                         |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| sourceUri  | <p>URI information of the detected source.</p><p>It consists of #&#x3C;vhost>#&#x3C;application>/&#x3C;stream>.</p>                                                 |
-| messages   | List of messages detected by the Rules.                                                                                                                             |
-| sourceInfo | Detailed information about the source at the time of detection. It is identical to the response of the REST API's source information query for the detected source. |
+| Element        | Description                                                                                                              |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| sourceUri      | <p>URI information of the detected source.</p><p>It consists of #&#x3C;vhost>#&#x3C;application>/&#x3C;stream>.</p>      |
+| messages       | List of messages detected by the Rules.                                                                                  |
+| sourceInfo     | Detailed information about the source at the time of detection. It is identical to the response of the REST API's source information query for the detected source. |
+| type           | <p>It represents the format of the JSON payload. The information of the JSON elements can vary depending on the value of the type.</p><p>Currently, the value is fixed as `INGRESS`.</p> |
 
 #### Messages
 
-| Code                                 | Description                                                                                                                       |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| INGRESS\_BITRATE\_LOW                | The ingress stream's current bitrate (`%d` bps) is lower than the configured bitrate (`%d` bps)                                   |
-| INGRESS\_BITRATE\_HIGH               | The ingress stream's current bitrate (`%d` bps) is higher than the configured bitrate (`%d` bps)                                  |
-| INGRESS\_FRAMERATE\_LOW              | The ingress stream's current framerate (`%.2f` fps) is lower than the configured framerate (`%.2f` fps)                           |
-| INGRESS\_FRAMERATE\_HIGH             | The ingress stream's current framerate (`%f` fps) is higher than the configured framerate (`%f` fps)                              |
-| INGRESS\_WIDTH\_SMALL                | The ingress stream's width (`%d`) is smaller than the configured width (`%d`)                                                     |
-| INGRESS\_WIDTH\_LARGE                | The ingress stream's width (`%d`) is larger than the configured width (`%d`)                                                      |
-| INGRESS\_HEIGHT\_SMALL               | The ingress stream's height (`%d`) is smaller than the configured height (`%d`)                                                   |
-| INGRESS\_HEIGHT\_LARGE               | The ingress stream's height (`%d`) is larger than the configured height (`%d`)                                                    |
-| INGRESS\_SAMPLERATE\_LOW             | The ingress stream's current samplerate (`%d`) is lower than the configured samplerate (`%d`)                                     |
-| INGRESS\_SAMPLERATE\_HIGH            | The ingress stream's current samplerate (`%d`) is higher than the configured samplerate (`%d`)                                    |
-| INGRESS\_LONG\_KEY\_FRAME\_INTERVAL  | The ingress stream's current keyframe interval (`%.1f` seconds) is too long. Please use a keyframe interval of 4 seconds or less. |
-| INGRESS\_HAS\_BFRAME                 | There are B-Frames in the ingress stream.                                                                                         |
+| Code                                 | Description                                                                                              |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| INGRESS\_BITRATE\_LOW                | The ingress stream's current bitrate (`%d` bps) is lower than the configured bitrate (`%d` bps)          |
+| INGRESS\_BITRATE\_HIGH               | The ingress stream's current bitrate (`%d` bps) is higher than the configured bitrate (`%d` bps)         |
+| INGRESS\_FRAMERATE\_LOW              | The ingress stream's current framerate (`%.2f` fps) is lower than the configured framerate (`%.2f` fps)  |
+| INGRESS\_FRAMERATE\_HIGH             | The ingress stream's current framerate (`%f` fps) is higher than the configured framerate (`%f` fps)     |
+| INGRESS\_WIDTH\_SMALL                | The ingress stream's width (`%d`) is smaller than the configured width (`%d`)                            |
+| INGRESS\_WIDTH\_LARGE                | The ingress stream's width (`%d`) is larger than the configured width (`%d`)                             |
+| INGRESS\_HEIGHT\_SMALL               | The ingress stream's height (`%d`) is smaller than the configured height (`%d`)                          |
+| INGRESS\_HEIGHT\_LARGE               | The ingress stream's height (`%d`) is larger than the configured height (`%d`)                           |
+| INGRESS\_SAMPLERATE\_LOW             | The ingress stream's current samplerate (`%d`) is lower than the configured samplerate (`%d`)            |
+| INGRESS\_SAMPLERATE\_HIGH            | The ingress stream's current samplerate (`%d`) is higher than the configured samplerate (`%d`)           |
+| INGRESS\_LONG\_KEY\_FRAME\_INTERVAL  | The ingress stream's current keyframe interval (`%.1f` seconds) is too long. Please use a keyframe interval of 4 seconds or less |
+| INGRESS\_HAS\_BFRAME                 | There are B-Frames in the ingress stream                                                                 |
 
 #### Security
 
@@ -155,7 +157,7 @@ The control server may need to validate incoming http requests for security reas
 
 ### Response
 
-The engine in the closing state does not need any parameter in response. To the query just answer with empty json object.
+The engine in the closing state does not need any parameter in response. To the query just answer with empty JSON object.
 
 ```http
 HTTP/1.1 200 OK

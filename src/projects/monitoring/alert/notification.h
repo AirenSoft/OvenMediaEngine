@@ -12,6 +12,7 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/socket_address.h>
 
+#include "../queue_metrics.h"
 #include "../stream_metrics.h"
 #include "message.h"
 
@@ -33,9 +34,7 @@ namespace mon
 				INTERNAL_ERROR,
 			};
 
-			static std::shared_ptr<Notification> Query(const std::shared_ptr<ov::Url> &notification_server_url, uint32_t timeout_msec, const ov::String secret_key,
-													   const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list,
-													   const std::shared_ptr<StreamMetrics> &stream_metric);
+			static std::shared_ptr<Notification> Query(const std::shared_ptr<ov::Url> &notification_server_url, uint32_t timeout_msec, const ov::String secret_key, const ov::String message_body);
 
 			StatusCode GetStatusCode() const;
 			ov::String GetErrorReason() const;
@@ -54,9 +53,7 @@ namespace mon
 			std::shared_ptr<ov::Url> _notification_server_url = nullptr;
 			uint64_t _timeout_msec = 0;
 			ov::String _secret_key;
-			ov::String _source_uri;
-			std::shared_ptr<std::vector<std::shared_ptr<Message>>> _message_list = nullptr;
-			std::shared_ptr<StreamMetrics> _stream_metric = nullptr;
+			ov::String _message_body;
 
 			// Response
 			StatusCode _status_code = StatusCode::OK;

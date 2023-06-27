@@ -70,65 +70,101 @@ namespace mon
 			auto alert = _server_config->GetAlert();
 			auto rules = alert.GetRules();
 
-			ov::String source_uri;
-			std::shared_ptr<std::vector<std::shared_ptr<Message>>> message_list;
-			std::vector<ov::String> exist_source_uri_list;
+			NotificationData::Type type;
+			ov::String messages_key;
+			std::vector<std::shared_ptr<Message>> message_list;
+			std::vector<ov::String> new_messages_keys;
 
-			for (const auto &[host_key, host_metric] : MonitorInstance->GetHostMetricsList())
 			{
-				for (const auto &[app_key, app_metric] : host_metric->GetApplicationMetricsList())
+				// Check Internal queues
+				
+				type = NotificationData::Type::INTERNAL_QUEUE;
+
+				messages_key = NotificationData::StringFromType(type);
+				new_messages_keys.push_back(messages_key);
+
+				const auto &queue_metric_list = MonitorInstance->GetServerMetrics()->GetQueueMetricsList();
+				for (const auto &[queue_key, queue_metric] : queue_metric_list)
 				{
-					for (const auto &[stream_key, stream_metric] : app_metric->GetStreamMetricsMap())
+					if (!VerifyQueueCongestionRules(rules, queue_metric, message_list))
 					{
-						if (stream_metric->IsInputStream())
+						break;
+					}
+				}
+
+				if (IsAlertNeeded(messages_key, message_list))
+				{
+					SendNotification(type, message_list, queue_metric_list);
+				}
+
+				PutVerifiedMessages(messages_key, message_list);
+			}
+
+			{
+				// Check streams
+
+				for (const auto &[host_key, host_metric] : MonitorInstance->GetHostMetricsList())
+				{
+					for (const auto &[app_key, app_metric] : host_metric->GetApplicationMetricsList())
+					{
+						for (const auto &[stream_key, stream_metric] : app_metric->GetStreamMetricsMap())
 						{
-							source_uri = stream_metric->GetUri();
-							message_list = std::make_shared<std::vector<std::shared_ptr<Message>>>();
-							exist_source_uri_list.push_back(source_uri);
+							message_list.clear();
 
-							VerifyIngressRules(source_uri, rules, stream_metric, message_list);
-
-							if (IsAlertNeeded(source_uri, message_list))
+							if (stream_metric->IsInputStream())
 							{
-								// Notification
-								auto notification_server_url = ov::Url::Parse(alert.GetUrl());
-								std::shared_ptr<Notification> notification_response = Notification::Query(notification_server_url, alert.GetTimeoutMsec(), alert.GetSecretKey(), source_uri, message_list, stream_metric);
-								if (notification_response == nullptr)
+								type = NotificationData::Type::INGRESS;
+
+								messages_key = stream_metric->GetUri();
+								new_messages_keys.push_back(messages_key);
+
+								VerifyIngressRules(rules, stream_metric, message_list);
+
+								if (IsAlertNeeded(messages_key, message_list))
 								{
-									// Probably this doesn't happen
-									logte("Could not load Notification");
+									SendNotification(type, message_list, stream_metric->GetUri(), stream_metric);
 								}
 
-								if (notification_response->GetStatusCode() != Notification::StatusCode::OK)
-								{
-									logtc("%s", notification_response->GetErrorReason().CStr());
-								}
+								PutVerifiedMessages(messages_key, message_list);
 							}
-
-							PutSourceUriMessages(source_uri, message_list);
 						}
 					}
 				}
 			}
 
-			CleanupDeletedSources(&exist_source_uri_list);
+			CleanupReleasedMessages(new_messages_keys);
 		}
 
 		template <typename T>
-		void AddNonOkMessage(const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list, Message::Code code, T config_value, T measured_value)
+		void AddNonOkMessage(std::vector<std::shared_ptr<Message>> &message_list, Message::Code code, T config_value, T measured_value)
 		{
 			if (code != Message::Code::OK)
 			{
 				ov::String description = Message::DescriptionFromMessageCode(code, config_value, measured_value);
 				auto message = Message::CreateMessage(code, description);
 
-				message_list->push_back(message);
-
-				logtd("[%s] %s", source_uri.CStr(), description.CStr());
+				message_list.push_back(message);
 			}
 		}
 
-		void Alert::VerifyIngressRules(const ov::String &source_uri, cfg::alrt::rule::Rules rules, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list)
+		bool Alert::VerifyQueueCongestionRules(const cfg::alrt::rule::Rules &rules, const std::shared_ptr<QueueMetrics> &queue_metric, std::vector<std::shared_ptr<Message>> &message_list)
+		{
+			if (!rules.IsInternalQueueCongestion())
+			{
+				return true;
+			}
+
+			if ((queue_metric->GetThreshold()) > 0 && (queue_metric->GetSize() > queue_metric->GetThreshold()))
+			{
+				AddNonOkMessage<size_t>(message_list, Message::Code::INTERNAL_QUEUE_CONGESTION, queue_metric->GetThreshold(), queue_metric->GetSize());
+
+				return false;
+			}
+
+			return true;
+		}
+
+		void Alert::VerifyIngressRules(const cfg::alrt::rule::Rules &rules, const std::shared_ptr<StreamMetrics> &stream_metric, std::vector<std::shared_ptr<Message>> &message_list)
 		{
 			auto ingress = rules.GetIngress();
 			if (!ingress.IsParsed())
@@ -143,12 +179,12 @@ namespace mon
 				if (track->GetMediaType() == cmn::MediaType::Video)
 				{
 					totalBitrate += track->GetBitrateByMeasured();
-					VerifyVideoIngressRules(source_uri, ingress, track, message_list);
+					VerifyVideoIngressRules(ingress, track, message_list);
 				}
 				else if (track->GetMediaType() == cmn::MediaType::Audio)
 				{
 					totalBitrate += track->GetBitrateByMeasured();
-					VerifyAudioIngressRules(source_uri, ingress, track, message_list);
+					VerifyAudioIngressRules(ingress, track, message_list);
 				}
 			}
 
@@ -159,7 +195,7 @@ namespace mon
 				{
 					if (totalBitrate < ingress.GetMinBitrate())
 					{
-						AddNonOkMessage<int32_t>(source_uri, message_list, Message::Code::INGRESS_BITRATE_LOW, ingress.GetMinBitrate(), totalBitrate);
+						AddNonOkMessage<int32_t>(message_list, Message::Code::INGRESS_BITRATE_LOW, ingress.GetMinBitrate(), totalBitrate);
 					}
 				}
 
@@ -168,20 +204,20 @@ namespace mon
 				{
 					if (totalBitrate > ingress.GetMaxBitrate())
 					{
-						AddNonOkMessage<int32_t>(source_uri, message_list, Message::Code::INGRESS_BITRATE_HIGH, ingress.GetMaxBitrate(), totalBitrate);
+						AddNonOkMessage<int32_t>(message_list, Message::Code::INGRESS_BITRATE_HIGH, ingress.GetMaxBitrate(), totalBitrate);
 					}
 				}
 			}
 		}
 
-		void Alert::VerifyVideoIngressRules(const ov::String &source_uri, cfg::alrt::rule::Ingress ingress, const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list)
+		void Alert::VerifyVideoIngressRules(const cfg::alrt::rule::Ingress &ingress, const std::shared_ptr<MediaTrack> &video_track, std::vector<std::shared_ptr<Message>> &message_list)
 		{
 			// Verify HasBFrame
 			if (ingress.GetHasBFrames())
 			{
 				if (video_track->HasBframes())
 				{
-					AddNonOkMessage<bool>(source_uri, message_list, Message::Code::INGRESS_HAS_BFRAME, true, true);
+					AddNonOkMessage<bool>(message_list, Message::Code::INGRESS_HAS_BFRAME, true, true);
 				}
 			}
 
@@ -192,7 +228,7 @@ namespace mon
 				{
 					if (video_track->GetFrameRateByMeasured() < ingress.GetMinFramerate())
 					{
-						AddNonOkMessage<double>(source_uri, message_list, Message::Code::INGRESS_FRAMERATE_LOW, ingress.GetMinFramerate(), video_track->GetFrameRateByMeasured());
+						AddNonOkMessage<double>(message_list, Message::Code::INGRESS_FRAMERATE_LOW, ingress.GetMinFramerate(), video_track->GetFrameRateByMeasured());
 					}
 				}
 
@@ -201,7 +237,7 @@ namespace mon
 				{
 					if (video_track->GetFrameRateByMeasured() > ingress.GetMaxFramerate())
 					{
-						AddNonOkMessage<double>(source_uri, message_list, Message::Code::INGRESS_FRAMERATE_HIGH, ingress.GetMaxFramerate(), video_track->GetFrameRateByMeasured());
+						AddNonOkMessage<double>(message_list, Message::Code::INGRESS_FRAMERATE_HIGH, ingress.GetMaxFramerate(), video_track->GetFrameRateByMeasured());
 					}
 				}
 
@@ -211,7 +247,7 @@ namespace mon
 					double interval = video_track->GetKeyFrameInterval() / video_track->GetFrameRateByMeasured();
 					if (interval > LONG_KEY_FRAME_INTERVAL_SIZE)
 					{
-						AddNonOkMessage<double>(source_uri, message_list, Message::Code::INGRESS_LONG_KEY_FRAME_INTERVAL, LONG_KEY_FRAME_INTERVAL_SIZE, interval);
+						AddNonOkMessage<double>(message_list, Message::Code::INGRESS_LONG_KEY_FRAME_INTERVAL, LONG_KEY_FRAME_INTERVAL_SIZE, interval);
 					}
 				}
 			}
@@ -223,7 +259,7 @@ namespace mon
 				{
 					if (video_track->GetWidth() < ingress.GetMinWidth())
 					{
-						AddNonOkMessage<int32_t>(source_uri, message_list, Message::Code::INGRESS_WIDTH_SMALL, ingress.GetMinWidth(), video_track->GetWidth());
+						AddNonOkMessage<int32_t>(message_list, Message::Code::INGRESS_WIDTH_SMALL, ingress.GetMinWidth(), video_track->GetWidth());
 					}
 				}
 
@@ -232,7 +268,7 @@ namespace mon
 				{
 					if (video_track->GetWidth() > ingress.GetMaxWidth())
 					{
-						AddNonOkMessage<int32_t>(source_uri, message_list, Message::Code::INGRESS_WIDTH_LARGE, ingress.GetMaxWidth(), video_track->GetWidth());
+						AddNonOkMessage<int32_t>(message_list, Message::Code::INGRESS_WIDTH_LARGE, ingress.GetMaxWidth(), video_track->GetWidth());
 					}
 				}
 			}
@@ -244,7 +280,7 @@ namespace mon
 				{
 					if (video_track->GetHeight() < ingress.GetMinHeight())
 					{
-						AddNonOkMessage<int32_t>(source_uri, message_list, Message::Code::INGRESS_HEIGHT_SMALL, ingress.GetMinHeight(), video_track->GetHeight());
+						AddNonOkMessage<int32_t>(message_list, Message::Code::INGRESS_HEIGHT_SMALL, ingress.GetMinHeight(), video_track->GetHeight());
 					}
 				}
 
@@ -253,13 +289,13 @@ namespace mon
 				{
 					if (video_track->GetHeight() > ingress.GetMaxHeight())
 					{
-						AddNonOkMessage<int32_t>(source_uri, message_list, Message::Code::INGRESS_HEIGHT_LARGE, ingress.GetMaxHeight(), video_track->GetHeight());
+						AddNonOkMessage<int32_t>(message_list, Message::Code::INGRESS_HEIGHT_LARGE, ingress.GetMaxHeight(), video_track->GetHeight());
 					}
 				}
 			}
 		}
 
-		void Alert::VerifyAudioIngressRules(const ov::String &source_uri, cfg::alrt::rule::Ingress ingress, const std::shared_ptr<MediaTrack> &audio_track, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list)
+		void Alert::VerifyAudioIngressRules(const cfg::alrt::rule::Ingress &ingress, const std::shared_ptr<MediaTrack> &audio_track, std::vector<std::shared_ptr<Message>> &message_list)
 		{
 			if (audio_track->GetSampleRate() > 0)
 			{
@@ -268,7 +304,7 @@ namespace mon
 				{
 					if (audio_track->GetSampleRate() < ingress.GetMinSamplerate())
 					{
-						AddNonOkMessage<int32_t>(source_uri, message_list, Message::Code::INGRESS_SAMPLERATE_LOW, ingress.GetMinSamplerate(), audio_track->GetSampleRate());
+						AddNonOkMessage<int32_t>(message_list, Message::Code::INGRESS_SAMPLERATE_LOW, ingress.GetMinSamplerate(), audio_track->GetSampleRate());
 					}
 				}
 
@@ -277,40 +313,40 @@ namespace mon
 				{
 					if (audio_track->GetSampleRate() > ingress.GetMaxSamplerate())
 					{
-						AddNonOkMessage<int32_t>(source_uri, message_list, Message::Code::INGRESS_SAMPLERATE_HIGH, ingress.GetMinSamplerate(), audio_track->GetSampleRate());
+						AddNonOkMessage<int32_t>(message_list, Message::Code::INGRESS_SAMPLERATE_HIGH, ingress.GetMinSamplerate(), audio_track->GetSampleRate());
 					}
 				}
 			}
 		}
 
-		bool Alert::IsAlertNeeded(const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list)
+		bool Alert::IsAlertNeeded(const ov::String &messages_key, const std::vector<std::shared_ptr<Message>> &message_list)
 		{
-			auto last_alerted_message_list = GetSourceUriMessages(source_uri);
+			auto last_verified_message_list = GetVerifiedMessages(messages_key);
 
-			if (last_alerted_message_list == nullptr)
+			if (last_verified_message_list.size() == 0)
 			{
-				// Created Stream
+				// New messages
 
-				if (message_list->size() > 0)
+				if (message_list.size() > 0)
 				{
 					return true;
 				}
 			}
 			else
 			{
-				// Exist Stream
+				// Changed messages
 
 				// Compare the previously sent Alert Messages with the new Alert Messages to check if there are any changes.
-				if (last_alerted_message_list->size() != message_list->size())
+				if (last_verified_message_list.size() != message_list.size())
 				{
 					return true;
 				}
 				else
 				{
-					for (size_t i = 0; i < last_alerted_message_list->size(); ++i)
+					for (size_t i = 0; i < last_verified_message_list.size(); ++i)
 					{
-						auto alerted_message = (*last_alerted_message_list)[i];
-						auto new_message = (*message_list)[i];
+						auto alerted_message = last_verified_message_list[i];
+						auto new_message = message_list[i];
 
 						if (alerted_message->GetCode() != new_message->GetCode())
 						{
@@ -323,73 +359,116 @@ namespace mon
 			return false;
 		}
 
-		void Alert::CleanupDeletedSources(const std::vector<ov::String> *exist_source_uri_list)
+		void Alert::SendNotification(const NotificationData &notificationData)
 		{
-			// Find and remove the deleted streams that exist in the _source_uri_messages_map
+			auto alert = _server_config->GetAlert();
 
-			std::vector<ov::String> source_uri_list_to_remove;
-			for (auto const &x : _source_uri_messages_map)
+			auto message_body = notificationData.ToJsonString();
+			if (message_body.IsEmpty())
+			{
+				logte("Message body is empty");
+				return;
+			}
+
+			// Notification
+			auto notification_server_url = ov::Url::Parse(alert.GetUrl());
+			std::shared_ptr<Notification> notification_response = Notification::Query(notification_server_url, alert.GetTimeoutMsec(), alert.GetSecretKey(), message_body);
+			if (notification_response == nullptr)
+			{
+				// Probably this doesn't happen
+				logte("Could not load Notification");
+			}
+
+			if (notification_response->GetStatusCode() != Notification::StatusCode::OK)
+			{
+				logte("%s", notification_response->GetErrorReason().CStr());
+			}
+		}
+
+		void Alert::SendNotification(const NotificationData::Type &type, const std::vector<std::shared_ptr<Message>> &message_list, const ov::String &source_uri, const std::shared_ptr<StreamMetrics> &stream_metric)
+		{
+			NotificationData data(type, message_list, source_uri, stream_metric);
+
+			SendNotification(data);
+		}
+
+		void Alert::SendNotification(const NotificationData::Type &type, const std::vector<std::shared_ptr<Message>> &message_list, const std::map<uint32_t, std::shared_ptr<QueueMetrics>> &queue_metric_list)
+		{
+			NotificationData data(type, message_list, queue_metric_list);
+
+			SendNotification(data);
+		}
+
+		void Alert::CleanupReleasedMessages(const std::vector<ov::String> &new_messages_keys)
+		{
+			// Find and cleanup the messages that have already been released among the alerts that were sent.
+
+			std::vector<ov::String> messages_keys_to_cleanup;
+			for (const auto &[messages_key, verified_messages] : _last_verified_messages_map)
 			{
 				bool exist = false;
-				for (auto const &exist_source_uri : *exist_source_uri_list)
+				for (const auto &new_messages_key : new_messages_keys)
 				{
-					exist = (x.first == exist_source_uri) ? true : false;
-					break;
+					if (messages_key == new_messages_key)
+					{
+						exist = true;
+						break;
+					}
 				}
 
 				if (!exist)
 				{
-					source_uri_list_to_remove.push_back(x.first);
+					messages_keys_to_cleanup.push_back(messages_key);
 				}
 			}
 
-			for (auto const &source_uri_to_remove : source_uri_list_to_remove)
+			for (auto const &messages_key : messages_keys_to_cleanup)
 			{
-				RemoveSourceUriMessages(source_uri_to_remove);
+				RemoveVerifiedMessages(messages_key);
 			}
 		}
 
-		bool Alert::PutSourceUriMessages(const ov::String &source_uri, const std::shared_ptr<std::vector<std::shared_ptr<Message>>> &message_list)
+		bool Alert::PutVerifiedMessages(const ov::String &messages_key, std::vector<std::shared_ptr<Message>> &message_list)
 		{
-			if (source_uri == nullptr)
+			if (messages_key.IsEmpty())
 			{
 				return false;
 			}
 
-			RemoveSourceUriMessages(source_uri);
+			RemoveVerifiedMessages(messages_key);
 
-			_source_uri_messages_map.emplace(source_uri, message_list);
+			_last_verified_messages_map.emplace(messages_key, std::move(message_list));
 
 			return true;
 		}
 
-		bool Alert::RemoveSourceUriMessages(const ov::String &source_uri)
+		bool Alert::RemoveVerifiedMessages(const ov::String &messages_key)
 		{
-			if (source_uri == nullptr)
+			if (messages_key.IsEmpty())
 			{
 				return false;
 			}
 
-			auto item = _source_uri_messages_map.find(source_uri);
-			if (item != _source_uri_messages_map.end())
+			auto messages = _last_verified_messages_map.find(messages_key);
+			if (messages != _last_verified_messages_map.end())
 			{
-				_source_uri_messages_map.erase(item);
+				_last_verified_messages_map.erase(messages);
 			}
 
 			return true;
 		}
 
-		std::shared_ptr<std::vector<std::shared_ptr<Message>>> Alert::GetSourceUriMessages(const ov::String &source_uri)
+		std::vector<std::shared_ptr<Message>> Alert::GetVerifiedMessages(const ov::String &messages_key)
 		{
-			if (source_uri == nullptr)
+			if (messages_key.IsEmpty())
 			{
-				return nullptr;
+				return {};
 			}
 
-			auto item = _source_uri_messages_map.find(source_uri);
-			if (item == _source_uri_messages_map.end())
+			auto item = _last_verified_messages_map.find(messages_key);
+			if (item == _last_verified_messages_map.end())
 			{
-				return nullptr;
+				return {};
 			}
 
 			return item->second;
