@@ -39,8 +39,11 @@ namespace http
 
 			std::shared_ptr<const ov::Error> error;
 			auto tls_context = ov::TlsContext::CreateServerContext(
-				ov::TlsMethod::Tls, certificate->GetCertificatePair(),
-				HTTP_FAST_NOT_VERY_SECURE, IsHttp2Enabled(), &tls_context_callback,
+				ov::TlsMethod::Tls, certificate->GetCertificate(),
+				HTTP_FAST_NOT_VERY_SECURE,
+				IsHttp2Enabled(),
+				true,
+				&tls_context_callback,
 				&error);
 
 			if (tls_context == nullptr)
@@ -141,7 +144,7 @@ namespace http
 
 				if (tls_data->Decrypt(data, &plain_data))
 				{
-					if (prev_tls_state == ov::TlsServerData::State::WaitingForAccept && 
+					if (prev_tls_state == ov::TlsServerData::State::WaitingForAccept &&
 						tls_data->GetState() == ov::TlsServerData::State::Accepted)
 					{
 						// The client has accepted the connection

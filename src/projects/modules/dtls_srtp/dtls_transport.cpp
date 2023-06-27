@@ -26,9 +26,9 @@ bool DtlsTransport::Stop()
 }
 
 // Set Local Certificate
-void DtlsTransport::SetLocalCertificate(const std::shared_ptr<Certificate> &certificate)
+void DtlsTransport::SetLocalCertificate(const std::shared_ptr<::Certificate> &certificate)
 {
-	_local_certificate_pair = CertificatePair::CreateCertificatePair(certificate);
+	_local_certificate = certificate;
 
 	ov::TlsContextCallback tls_context_callback = {
 		.create_callback = [](ov::TlsContext *tls_context, SSL_CTX *context) -> bool {
@@ -51,8 +51,9 @@ void DtlsTransport::SetLocalCertificate(const std::shared_ptr<Certificate> &cert
 	std::shared_ptr<const ov::Error> error;
 	_tls_context = ov::TlsContext::CreateServerContext(
 		ov::TlsMethod::DTls,
-		_local_certificate_pair,
+		_local_certificate,
 		"DEFAULT:!NULL:!aNULL:!SHA256:!SHA384:!aECDH:!AESGCM+AES256:!aPSK",
+		false,
 		false,
 		&tls_context_callback,
 		&error);

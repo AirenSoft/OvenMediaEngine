@@ -253,7 +253,7 @@ namespace ov
 		return {};
 	}
 
-	SocketAddress::AddrInfoPtr SocketAddress::GetAddrInfo(const ov::String &host)
+	RaiiPtr<addrinfo> SocketAddress::GetAddrInfo(const ov::String &host)
 	{
 		addrinfo *info = nullptr;
 
@@ -278,9 +278,7 @@ namespace ov
 
 		if (info != nullptr)
 		{
-			return AddrInfoPtr(info, [](addrinfo *info) {
-				OV_SAFE_FUNC(info, nullptr, ::freeaddrinfo, );
-			});
+			return {info, ::freeaddrinfo};
 		}
 
 		OV_ASSERT2(info != nullptr);
@@ -351,7 +349,7 @@ namespace ov
 		}
 
 		sockaddr_storage storage;
-		const addrinfo *item = addr_info.get();
+		const addrinfo *item = addr_info;
 		ov::String description;
 
 		while (item != nullptr)

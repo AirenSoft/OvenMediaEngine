@@ -84,35 +84,15 @@ namespace info
 		}
 
 		auto certificate = std::make_shared<::Certificate>();
-
-		auto error = certificate->GenerateFromPem(cert_path, key_path);
+		auto error = certificate->GenerateFromPem(key_path, cert_path, chain_cert_path);
 
 		if (error != nullptr)
 		{
 			return ov::Error::CreateError(OV_LOG_TAG, "[%s] Could not create a certificate from file - %s", certificate_name.CStr(), error->What());
 		}
 
-		std::shared_ptr<::Certificate> chain_certificate;
-
-		if (chain_cert_path.IsEmpty() == false)
-		{
-			chain_certificate = std::make_shared<::Certificate>();
-
-			error = chain_certificate->GenerateFromPem(chain_cert_path, true);
-
-			if (error != nullptr)
-			{
-				return ov::Error::CreateError(OV_LOG_TAG, "[%s] Could not create a chain certificate from file - %s", certificate_name.CStr(), error->What());
-			}
-		}
-		else
-		{
-			// Chain certificate is optional, and it's not available
-		}
-
 		_certificate_name = certificate_name;
-
-		_certificate_pair = CertificatePair::CreateCertificatePair(certificate, chain_certificate);
+		_certificate = certificate;
 
 		for (auto &host_name : host_name_list)
 		{
