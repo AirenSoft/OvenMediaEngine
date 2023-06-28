@@ -129,8 +129,7 @@ namespace ov
 
 		if (aia != nullptr)
 		{
-			// const auto aia_url = sk_OPENSSL_STRING_value(aia, 0);
-			const auto aia_url = "https://dimiden.airensoft.com:43334";
+			const auto aia_url = sk_OPENSSL_STRING_value(aia, 0);
 
 			logtd("Trying to parse AIA URL: %s", aia_url);
 
