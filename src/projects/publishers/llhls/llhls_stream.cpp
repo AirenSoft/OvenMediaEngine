@@ -684,6 +684,11 @@ bool LLHlsStream::SendBufferedPackets()
 
 void LLHlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	if (media_packet == nullptr || media_packet->GetData() == nullptr)
+	{
+		return;
+	}
+
 	if (GetState() == State::CREATED)
 	{
 		BufferMediaPacketUntilReadyToPlay(media_packet);
@@ -700,6 +705,11 @@ void LLHlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packe
 
 void LLHlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	if (media_packet == nullptr || media_packet->GetData() == nullptr)
+	{
+		return;
+	}
+	
 	if (GetState() == State::CREATED)
 	{
 		BufferMediaPacketUntilReadyToPlay(media_packet);
