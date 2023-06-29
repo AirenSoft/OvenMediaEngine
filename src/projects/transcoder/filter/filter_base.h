@@ -36,13 +36,18 @@ extern "C"
 class FilterBase
 {
 public:
+	enum class State : uint8_t {
+		CREATED,
+		STARTED,
+		STOPPED,
+		ERROR
+	};
+
 	typedef std::function<void(std::shared_ptr<MediaFrame>)> CompleteHandler;
 	FilterBase() = default;
 	virtual ~FilterBase() = default;
 
 	virtual bool Configure(const std::shared_ptr<MediaTrack> &input_track, const std::shared_ptr<MediaTrack> &output_track) = 0;
-
-	virtual int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer) = 0;
 	virtual bool Start() = 0;
 	virtual void Stop() = 0;
 	
@@ -74,7 +79,32 @@ public:
 		_input_buffer.SetUrn(alias.CStr());
 	}
 
+	void SetState(State state)
+	{
+		_state = state;
+	}
+
+	State GetState() const
+	{
+		return _state;
+	}
+
+	int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer)
+	{
+		if(GetState() == State::CREATED || GetState() == State::STARTED)
+		{
+			_input_buffer.Enqueue(std::move(buffer));
+
+			return true;
+		}
+
+		return false;
+	}
+
 protected:
+
+	std::atomic<State> _state = State::CREATED;
+
 	ov::ManagedQueue<std::shared_ptr<MediaFrame>> _input_buffer;
 
 	AVFrame *_frame = nullptr;

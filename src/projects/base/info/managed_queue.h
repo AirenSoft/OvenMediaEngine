@@ -16,11 +16,21 @@ namespace info
 {
 	typedef uint32_t managed_queue_id_t;
 
+
 	class ManagedQueue
 	{
 	public:
 		explicit ManagedQueue(size_t threshold = 0)
-			: _peak(0), _size(0), _threshold(threshold), _threshold_exceeded_time_in_us(0), _imc(0), _omc(0), _imps(0), _omps(0), _dc(0) { };
+			: _peak(0),
+			  _size(0),
+			  _threshold(threshold),
+			  _threshold_exceeded_time_in_us(0),
+			  _imc(0),
+			  _omc(0),
+			  _imps(0),
+			  _omps(0),
+			  _waiting_time_in_us(0),
+			  _dc(0){};
 
 		void SetId(info::managed_queue_id_t id)
 		{
@@ -140,7 +150,7 @@ namespace info
 		// Output Message Per Second
 		size_t _omps;
 
-		// average waiting time(microseconds)
+		// Average Waiting Time(microseconds)
 		int64_t _waiting_time_in_us;
 
 		// Drop Count

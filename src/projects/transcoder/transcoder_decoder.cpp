@@ -225,8 +225,9 @@ bool TranscodeDecoder::Configure(std::shared_ptr<MediaTrack> track)
 {
 	auto urn = info::ManagedQueue::URN(_stream_info.GetApplicationName(), _stream_info.GetName(), "trs", ov::String::FormatString("decoder_%s_%d", ::avcodec_get_name(GetCodecID()), track->GetId()));
 
-	_input_buffer.SetUrn(urn.CStr());
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
+	_input_buffer.SetUrn(urn.CStr());
+	
 	
 
 	_track = track;

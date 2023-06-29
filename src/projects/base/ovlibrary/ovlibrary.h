@@ -9,8 +9,8 @@
 #pragma once
 
 #include "./assert.h"
-#include "./bit_writer.h"
 #include "./bit_reader.h"
+#include "./bit_writer.h"
 #include "./bps_calculator.h"
 #include "./byte_ordering.h"
 #include "./byte_stream.h"
@@ -29,6 +29,7 @@
 #include "./pcm_utilities.h"
 #include "./platform.h"
 #include "./queue.h"
+#include "./raii_ptr.h"
 #include "./random.h"
 #include "./regex.h"
 #include "./semaphore.h"

@@ -44,7 +44,7 @@ public:
 	void OnComplete(std::shared_ptr<MediaFrame> frame);
 
 private:
-	bool CreateFilter();
+	bool Create();
 	bool IsNeedUpdate(std::shared_ptr<MediaFrame> buffer);
 
 	int32_t _id;

@@ -46,6 +46,8 @@ FilterRescaler::~FilterRescaler()
 
 bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, const std::shared_ptr<MediaTrack> &output_track)
 {
+	SetState(State::CREATED);
+
 	_input_track = input_track;
 	_output_track = output_track;
 
@@ -57,12 +59,14 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	if ((_filter_graph == nullptr) || (_inputs == nullptr) || (_outputs == nullptr))
 	{
 		logte("Could not allocate variables for filter graph: %p, %p, %p", _filter_graph, _inputs, _outputs);
+
+		SetState(State::ERROR);
+
 		return false;
 	}
 
 	// Limit the number of filter threads to 4. I think 4 thread is usually enough for video filtering processing.
 	_filter_graph->nb_threads = 4;
-	// _filter_graph->thread_type = AVFILTER_THREAD_SLICE;
 
 	AVRational input_timebase = ffmpeg::Conv::TimebaseToAVRational(input_track->GetTimeBase());
 	AVRational output_timebase = ffmpeg::Conv::TimebaseToAVRational(output_track->GetTimeBase());
@@ -74,6 +78,8 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 		logte("Invalid timebase: input: %d/%d, output: %d/%d",
 			  input_timebase.num, input_timebase.den,
 			  output_timebase.num, output_timebase.den);
+
+		SetState(State::ERROR);
 
 		return false;
 	}
@@ -92,13 +98,15 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 		ov::String::FormatString("time_base=%s", input_track->GetTimeBase().GetStringExpr().CStr()),
 		ov::String::FormatString("pixel_aspect=%d/%d", 1, 1)};
 
-
 	ov::String input_filters = ov::String::Join(src_params, ":");
 
 	ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, buffersrc, "in", input_filters, nullptr, _filter_graph);
 	if (ret < 0)
 	{
 		logte("Could not create video buffer source filter for rescaling: %d", ret);
+
+		SetState(State::ERROR);
+
 		return false;
 	}
 	//////////////////////////////////////////////////////
@@ -109,6 +117,9 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	if (ret < 0)
 	{
 		logte("Could not create video buffer sink filter for rescaling: %d", ret);
+
+		SetState(State::ERROR);
+
 		return false;
 	}
 
@@ -118,6 +129,9 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	if (ret < 0)
 	{
 		logte("Could not set output pixel format for rescaling: %d", ret);
+
+		SetState(State::ERROR);
+
 		return false;
 	}
 
@@ -152,14 +166,15 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 			if (output_track->GetCodecLibraryId() == source_library_id)
 			{
 				filters.push_back(ov::String::FormatString(
-					"scale_cuda=%d:%d",
+					"hwupload_cuda,scale_cuda=w=%d:h=%d,hwdownload",
 					output_track->GetWidth(), output_track->GetHeight()));
 			}
 			else
 			{
-				// Convert Gpu memory to Host memory
+				// Copy GPU memory to Host memory
+				// To be compatible with other types of codecs, it is converted to yuv420p, a representative pixel format
 				filters.push_back(ov::String::FormatString(
-					"hwupload_cuda,scale_cuda=%d:%d,hwdownload",
+					"hwupload_cuda,scale_cuda=w=%d:h=%d:format=yuv420p,hwdownload,format=yuv420p",
 					output_track->GetWidth(), output_track->GetHeight()));
 			}
 		}
@@ -169,12 +184,12 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 			{
 				_filter_graph->nb_threads = 1;
 				filters.push_back(ov::String::FormatString(
-					"multiscale_xma=enable_pipeline=0:outputs=1:out_1_width=%d:out_1_height=%d:out_1_rate=full:lxlnx_hwdev=-1",
+					"multiscale_xma=outputs=1:out_1_width=%d:out_1_height=%d:out_1_rate=full",
 					output_track->GetWidth(), output_track->GetHeight()));
 			}
 			else
 			{
-				// Convert Gpu memory to Host memory
+				// Copy GPU memory to Host memory
 				filters.push_back(ov::String::FormatString("xvbm_convert,scale=%dx%d:flags=bilinear",
 														   output_track->GetWidth(), output_track->GetHeight()));
 			}
@@ -205,7 +220,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	ov::String output_filters = ov::String::Join(filters, ",");
 
 	//////////////////////////////////////////////////////
-	// Build 
+	// Build
 	//////////////////////////////////////////////////////
 
 	_outputs->name = ::av_strdup("in");
@@ -223,27 +238,16 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	if ((ret = ::avfilter_graph_parse_ptr(_filter_graph, output_filters, &_inputs, &_outputs, nullptr)) < 0)
 	{
 		logte("Could not parse filter string for rescaling: %d (%s)", ret, output_filters.CStr());
-		return false;
-	}
 
-	if ((ret = ::avfilter_graph_config(_filter_graph, nullptr)) < 0)
-	{
-		logte("Could not validate filter graph for rescaling: %d", ret);
+		SetState(State::ERROR);
+
 		return false;
 	}
 
 	_input_width = input_track->GetWidth();
 	_input_height = input_track->GetHeight();
 
-
 	return true;
-}
-
-int32_t FilterRescaler::SendBuffer(std::shared_ptr<MediaFrame> buffer)
-{
-	_input_buffer.Enqueue(std::move(buffer));
-
-	return 0;
 }
 
 bool FilterRescaler::Start()
@@ -253,14 +257,16 @@ bool FilterRescaler::Start()
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&FilterRescaler::FilterThread, this);
+		_thread_work = std::thread(&FilterRescaler::WorkerThread, this);
 		pthread_setname_np(_thread_work.native_handle(), "Rescaler");
 	}
 	catch (const std::system_error &e)
 	{
 		_kill_flag = true;
+		SetState(State::ERROR);
 
 		logte("Failed to start rescaling filter thread");
+
 		return false;
 	}
 
@@ -276,19 +282,36 @@ void FilterRescaler::Stop()
 	if (_thread_work.joinable())
 	{
 		_thread_work.join();
-		logtd("rescaling filter thread has ended");
 	}
+
+	SetState(State::STOPPED);
 }
 
-void FilterRescaler::FilterThread()
+void FilterRescaler::WorkerThread()
 {
 	logtd("Start rescaling filter thread");
+
+	// Create Filter
+	// Caution: Filters must be created in the same thread to avoid XMA resource allocation and expansion failures.
+	int ret;
+	if ((ret = ::avfilter_graph_config(_filter_graph, nullptr)) < 0)
+	{
+		logte("Could not validate filter graph for rescaling: %d", ret);
+
+		SetState(State::ERROR);
+
+		return;
+	}
+
+	SetState(State::STARTED);
 
 	while (!_kill_flag)
 	{
 		auto obj = _input_buffer.Dequeue();
 		if (obj.has_value() == false)
+		{
 			continue;
+		}
 
 		auto media_frame = std::move(obj.value());
 
@@ -296,33 +319,41 @@ void FilterRescaler::FilterThread()
 		if (!av_frame)
 		{
 			logte("Could not allocate the video frame data");
+
+			SetState(State::ERROR);
+
 			break;
 		}
 
-		int ret = ::av_buffersrc_add_frame_flags(_buffersrc_ctx, av_frame, AV_BUFFERSRC_FLAG_KEEP_REF);
+		ret = ::av_buffersrc_write_frame(_buffersrc_ctx, av_frame);
 		if (ret < 0)
 		{
-			logte("An error occurred while feeding the audio filtergraph: format: %d, pts: %lld, linesize: %d, size: %d", _frame->format, _frame->pts, _frame->linesize[0], _input_buffer.Size());
+			logte("An error occurred while feeding to filtergraph: format: %d, pts: %lld, linesize: %d, queue.size: %d", av_frame->format, av_frame->pts, av_frame->linesize[0], _input_buffer.Size());
 
 			continue;
 		}
 
-		while (true)
+		while (!_kill_flag)
 		{
-			int ret = ::av_buffersink_get_frame(_buffersink_ctx, _frame);
+			ret = ::av_buffersink_get_frame(_buffersink_ctx, _frame);
 			if (ret == AVERROR(EAGAIN))
 			{
-				// Need more data
 				break;
 			}
 			else if (ret == AVERROR_EOF)
 			{
-				logte("End of file error(%d)", ret);
+				logte("Error receiving filtered frame. error(EOF)");
+
+				SetState(State::ERROR);
+
 				break;
 			}
 			else if (ret < 0)
 			{
-				logte("Unknown error is occurred while get frame. error(%d)", ret);
+				logte("Error receiving filtered frame. error(%d)", ret);
+
+				SetState(State::ERROR);
+
 				break;
 			}
 			else
@@ -330,7 +361,6 @@ void FilterRescaler::FilterThread()
 				_frame->pict_type = AV_PICTURE_TYPE_NONE;
 				auto output_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				::av_frame_unref(_frame);
-
 				if (output_frame == nullptr)
 				{
 					continue;

@@ -327,11 +327,7 @@ namespace ov
 		}
 
 	protected:
-		MAY_THROWS(ov::SocketAddressError)
-		using AddrInfoPtr = std::unique_ptr<addrinfo, std::function<void(addrinfo *info)>>;
-
-	protected:
-		static AddrInfoPtr GetAddrInfo(const ov::String &host);
+		static RaiiPtr<addrinfo> GetAddrInfo(const ov::String &host);
 
 		// Returns true if the host is resolved successfully
 		// Returns false if the DNS doesn't work

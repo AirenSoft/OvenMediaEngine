@@ -525,14 +525,22 @@ namespace cfg
 					resolve_path, original_value);
 
 			case ValueType::Item: {
-				const auto &node = is_child ? _node.child(name) : _node;
-
 				if (
-					(node.empty() == false) &&
-					(NeedToIgnore(_current_file_path, node, resolve_path) == false))
+					(is_child == false) &&
+					(_node.empty() == false) &&
+					(NeedToIgnore(_current_file_path, _node, resolve_path) == false))
 				{
 					SET_ORIGINAL_VALUE_IF_NOT_NULL(Json::objectValue);
-					return DataSource(_current_file_path, _file_name, _document, node, _check_unknown_items);
+					return DataSource(_current_file_path, _file_name, _document, _node, _check_unknown_items);
+				}
+
+				for (auto &child_node : _node.children(name))
+				{
+					if ((child_node.empty() == false) && (NeedToIgnore(_current_file_path, child_node, resolve_path) == false))
+					{
+						SET_ORIGINAL_VALUE_IF_NOT_NULL(Json::objectValue);
+						return DataSource(_current_file_path, _file_name, _document, child_node, _check_unknown_items);
+					}
 				}
 
 				SET_ORIGINAL_VALUE_IF_NOT_NULL(Json::nullValue);

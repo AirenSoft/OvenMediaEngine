@@ -27,12 +27,14 @@ public:
 	bool IsSupportedXMA();
 
 protected:
+	bool CheckSupportedQSV();
+	bool CheckSupportedNV();
+	bool CheckSupportedXMA();
+
 	bool _initialized = false;
 	bool _supported_qsv;
 	bool _supported_cuda;
 	bool _supported_xma;
 	
-
 	AVBufferRef *_device_context;
-
 };
