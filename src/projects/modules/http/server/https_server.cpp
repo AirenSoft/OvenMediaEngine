@@ -167,6 +167,7 @@ namespace http
 
 				// Error
 				logtd("Could not decrypt data");
+				remote->Close();
 			}
 			else
 			{
