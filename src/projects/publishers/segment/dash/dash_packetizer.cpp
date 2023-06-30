@@ -447,6 +447,11 @@ bool DashPacketizer::AppendAudioPacket(const std::shared_ptr<const MediaPacket> 
 	if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::AAC_ADTS)
 	{
 		data = AacConverter::ConvertAdtsToRaw(data, &length_list);
+		if (data == nullptr)
+		{
+			logae("Could not convert adts to raw");
+			return false;
+		}
 	}
 	else
 	{

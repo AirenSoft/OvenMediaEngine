@@ -351,6 +351,11 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 		{
 			case cmn::BitstreamFormat::H264_ANNEXB:
 				cdata = NalStreamConverter::ConvertAnnexbToXvcc(data);
+				if (cdata == nullptr)
+				{
+					logte("Could not convert annexb to avcc");
+					return false;
+				}
 				av_packet.size = cdata->GetLength();
 				av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 				break;

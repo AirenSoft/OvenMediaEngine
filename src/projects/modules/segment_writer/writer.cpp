@@ -791,12 +791,28 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 		case cmn::BitstreamFormat::H264_ANNEXB:
 			data = packet->GetData();
 			data = NalStreamConverter::ConvertAnnexbToXvcc(data, packet->GetFragHeader());
+			if (data == nullptr)
+			{
+				logte("Could not convert packet: %d (writer type: %d)",
+					  static_cast<int>(packet->GetBitstreamFormat()),
+					  static_cast<int>(_type));
+
+				return false;
+			}
 			length_list.push_back(data->GetLength());
 			break;
 
 		case cmn::BitstreamFormat::H265_ANNEXB:
 			data = packet->GetData();
 			data = NalStreamConverter::ConvertAnnexbToXvcc(data, packet->GetFragHeader());
+			if (data == nullptr)
+			{
+				logte("Could not convert packet: %d (writer type: %d)",
+					  static_cast<int>(packet->GetBitstreamFormat()),
+					  static_cast<int>(_type));
+
+				return false;
+			}
 			length_list.push_back(data->GetLength());
 			break;
 
@@ -814,6 +830,14 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 			else
 			{
 				data = AacConverter::ConvertAdtsToRaw(packet->GetData(), &length_list);
+				if (data == nullptr)
+				{
+					logte("Could not convert packet: %d (writer type: %d)",
+						  static_cast<int>(packet->GetBitstreamFormat()),
+						  static_cast<int>(_type));
+
+					return false;
+				}
 			}
 			break;
 		case cmn::BitstreamFormat::AAC_LATM:

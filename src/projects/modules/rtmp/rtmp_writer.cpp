@@ -320,6 +320,11 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 
 			case cmn::BitstreamFormat::H264_ANNEXB:
 				cdata = NalStreamConverter::ConvertAnnexbToXvcc(cdata);
+				if (cdata == nullptr)
+				{
+					logtw("Failed to convert annexb to avcc");
+					return false;
+				}
 				av_packet.size = cdata->GetLength();
 				av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 				break;
@@ -331,6 +336,11 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 
 			case cmn::BitstreamFormat::AAC_ADTS:
 				cdata = AacConverter::ConvertAdtsToRaw(cdata, &length_list);
+				if (cdata == nullptr)
+				{
+					logtw("Failed to convert adts to raw");
+					return false;
+				}
 				av_packet.size = cdata->GetLength();
 				av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 				break;
@@ -351,6 +361,11 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 
 			case cmn::BitstreamFormat::AAC_ADTS:
 				cdata = AacConverter::ConvertAdtsToRaw(cdata, &length_list);
+				if (cdata == nullptr)
+				{
+					logtw("Failed to convert adts to raw");
+					return false;
+				}
 				av_packet.size = cdata->GetLength();
 				av_packet.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
 				break;

@@ -146,6 +146,11 @@ void DecoderAVCxXMA::CodecThread()
 		auto buffer = std::move(obj.value());
 
 		auto packet_data = NalStreamConverter::ConvertAnnexbToXvcc(buffer->GetData(), buffer->GetFragHeader());
+		if (packet_data == nullptr)
+		{
+			logtw("An error occurred while converting annexb to xvcc");
+			continue;
+		}
 	
 		off_t offset = 0LL;
 		int64_t remained = packet_data->GetLength();

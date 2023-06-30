@@ -147,10 +147,9 @@ namespace bmff
 	{
 		// Convert bitstream format
 		auto next_frame = ConvertBitstreamFormat(media_packet);
-		if (next_frame == nullptr)
+		if (next_frame == nullptr || next_frame->GetData() == nullptr)
 		{
-			// Never reached
-			logtc("Failed to convert bitstream format");
+			logtw("Failed to convert bitstream format for track(%d)", GetMediaTrack()->GetId());
 			return false;
 		}
 
@@ -309,6 +308,12 @@ namespace bmff
 		else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::H264_ANNEXB)
 		{
 			auto converted_data = NalStreamConverter::ConvertAnnexbToXvcc(media_packet->GetData(), media_packet->GetFragHeader());
+			if (converted_data == nullptr)
+			{
+				logtw("FMP4Packager::ConvertBitstreamFormat() - Failed to convert annexb to avcc");
+				return nullptr;
+			}
+
 			auto new_packet = std::make_shared<MediaPacket>(*media_packet);
 			new_packet->SetData(converted_data);
 			new_packet->SetBitstreamFormat(cmn::BitstreamFormat::H264_AVCC);
@@ -319,6 +324,12 @@ namespace bmff
 		else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::H265_ANNEXB)
 		{
 			auto converted_data = NalStreamConverter::ConvertAnnexbToXvcc(media_packet->GetData(), media_packet->GetFragHeader());
+			if (converted_data == nullptr)
+			{
+				logtw("FMP4Packager::ConvertBitstreamFormat() - Failed to convert annexb to hvcc");
+				return nullptr;
+			}
+
 			auto new_packet = std::make_shared<MediaPacket>(*media_packet);
 			new_packet->SetData(converted_data);
 			new_packet->SetBitstreamFormat(cmn::BitstreamFormat::HVCC);
@@ -329,6 +340,12 @@ namespace bmff
 		else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::AAC_ADTS)
 		{
 			auto raw_data = AacConverter::ConvertAdtsToRaw(media_packet->GetData(), nullptr);
+			if (raw_data == nullptr)
+			{
+				logtw("FMP4Packager::ConvertBitstreamFormat() - Failed to convert adts to raw");
+				return nullptr;
+			}
+
 			auto new_packet = std::make_shared<MediaPacket>(*media_packet);
 			new_packet->SetData(raw_data);
 			new_packet->SetBitstreamFormat(cmn::BitstreamFormat::AAC_RAW);
