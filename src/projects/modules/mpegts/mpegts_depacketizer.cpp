@@ -55,9 +55,16 @@ namespace mpegts
 	{
 		auto packet_type = GetPacketType(packet);
 
+		if(packet_type == PacketType::UNSUPPORTED_SECTION || packet_type == PacketType::UNKNOWN)
+		{
+			// FFMPEG ususally sends PID 17 (DVB - SDT), but we don't use this table now
+			logtd("Ignored unsupported or unknown MPEG-TS packets.(PID: %d)", packet->PacketIdentifier());
+			return false;
+		}
+
 		// Check continuity counter
 		// TODO(Getroot): Later, it can be used for jitter buffer to correct the UDP packet order
-		if(packet->HasPayload())
+		if (packet->HasPayload())
 		{	
 			auto it = _last_continuity_counter_map.find(packet->PacketIdentifier());
 			if(it == _last_continuity_counter_map.end())
@@ -99,12 +106,6 @@ namespace mpegts
 		else if(packet_type == PacketType::PES)
 		{
 			return ParsePes(packet);
-		}
-		else if(packet_type == PacketType::UNSUPPORTED_SECTION)
-		{
-			// FFMPEG ususally sends PID 17 (DVB - SDT), but we don't use this table now
-			logtd("Ignored unsupported or unknown MPEG-TS packets.(PID: %d)", packet->PacketIdentifier());
-			return false;
 		}
 		
 		return true;
@@ -193,6 +194,7 @@ namespace mpegts
 			case static_cast<uint16_t>(WellKnownPacketId::TSDT):
 			case static_cast<uint16_t>(WellKnownPacketId::NIT):
 			case static_cast<uint16_t>(WellKnownPacketId::SDT):
+			case static_cast<uint16_t>(WellKnownPacketId::NULL_PACKET):
 				return PacketType::UNSUPPORTED_SECTION;
 		}
 
