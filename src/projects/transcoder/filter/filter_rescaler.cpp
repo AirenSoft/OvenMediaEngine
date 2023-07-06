@@ -166,7 +166,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 			if (output_track->GetCodecLibraryId() == source_library_id)
 			{
 				filters.push_back(ov::String::FormatString(
-					"hwupload_cuda,scale_cuda=w=%d:h=%d,hwdownload",
+					"hwupload_cuda,scale_npp=w=%d:h=%d,hwdownload",
 					output_track->GetWidth(), output_track->GetHeight()));
 			}
 			else
