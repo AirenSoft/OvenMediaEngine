@@ -288,7 +288,9 @@ namespace api
 			}
 
 			auto push_protocol{push->GetProtocol().LowerCaseString()};
-			auto publisher_type{(push_protocol == "rtmp") ? PublisherType::RtmpPush : (push_protocol == "mpegts") ? PublisherType::MpegtsPush : PublisherType::Unknown};
+			auto publisher_type{(push_protocol == "rtmp") ? PublisherType::RtmpPush
+														: (push_protocol == "mpegts") ? PublisherType::MpegtsPush
+														: (push_protocol == "srt") ? PublisherType::SrtPush : PublisherType::Unknown};
 
 			if (publisher_type == PublisherType::Unknown)
 			{
@@ -357,7 +359,7 @@ namespace api
 			push->SetVhost(vhost->GetName().CStr());
 			push->SetApplication(app->GetName().GetAppName());
 
-			std::vector<PublisherType> publisher_types{PublisherType::RtmpPush, PublisherType::MpegtsPush};
+			std::vector<PublisherType> publisher_types{PublisherType::RtmpPush, PublisherType::MpegtsPush, PublisherType::SrtPush};
 			for (auto publisher_type : publisher_types)
 			{
 				auto publisher{
