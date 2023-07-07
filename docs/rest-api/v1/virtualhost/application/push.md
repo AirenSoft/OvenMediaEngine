@@ -2,7 +2,7 @@
 
 ## Start Push Publishing
 
-Start  push publishing the stream with RTMP or MPEG2-TS. If the requested stream does not exist on the server, this task is reserved. And when the stream is created, it automatically starts push publishing.
+Start  push publishing the stream with SRT, RTMP or MPEG2-TS. If the requested stream does not exist on the server, this task is reserved. And when the stream is created, it automatically starts push publishing.
 
 > ### Request
 
@@ -18,6 +18,48 @@ Authorization: Basic {credentials}
 # Authorization
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
+
+#### Body : SRT
+
+```json
+{
+  "id": "{unique_push_id}",
+  "stream": {
+    "name": "{output_stream_name}",
+    "variantNames": []
+  },
+  "protocol": "srt",
+  "url": "srt://{host}[:port]?mode=caller&latency=120000&timeout=500000",
+  "streamKey": ""
+}
+
+# id (required)
+    unique ID to identify the task
+    
+# stream (required)
+    ## name (required)
+        output stream name
+        
+    ## variantNames (optional)
+        Array of track names to publsh. 
+        This value is Encodes.[Video|Audio|Data].Name in the OutputProfile
+        setting.
+        
+        If empty, all tracks will be sent.
+
+# protocol (required)
+    srt
+    
+# url (required) 
+    address of destination.
+    options can be set in query-string format.
+    
+# streamKey (optional)
+    not used with mpegts
+```
+{% hint style="info" %}
+In SRT Push Publisher, only the `caller` connection mode is supported.
+{% endhint %}
 
 #### Body : RTMP
 

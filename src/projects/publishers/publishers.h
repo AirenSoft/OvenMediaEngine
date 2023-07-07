@@ -15,4 +15,5 @@
 #include "./file/file_publisher.h"
 #include "./mpegtspush/mpegtspush_publisher.h"
 #include "./rtmppush/rtmppush_publisher.h"
+#include "./srtpush/srtpush_publisher.h"
 #include "./thumbnail/thumbnail_publisher.h"

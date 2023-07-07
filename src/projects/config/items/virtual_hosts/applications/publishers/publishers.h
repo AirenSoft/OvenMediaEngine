@@ -15,6 +15,7 @@
 #include "ovt_publisher.h"
 #include "mpegtspush_publisher.h"
 #include "rtmppush_publisher.h"
+#include "srtpush_publisher.h"
 #include "thumbnail_publisher.h"
 #include "webrtc_publisher.h"
 #include "ll_hls_publisher.h"
@@ -42,7 +43,8 @@ namespace cfg
 							&_ovt_publisher,
 							&_file_publisher,
 							&_rtmppush_publisher,
-							&_thumbnail_publisher
+							&_thumbnail_publisher,
+							&_srtpush_publisher,
 						};
 					}
 
@@ -58,6 +60,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFilePublisher, _file_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetRtmpPushPublisher, _rtmppush_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetThumbnailPublisher, _thumbnail_publisher)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetSrtPushPublisher, _srtpush_publisher)
 
 				protected:
 					void MakeList() override
@@ -75,6 +78,7 @@ namespace cfg
 						Register<Optional>({"FILE", "file"}, &_file_publisher);
 						Register<Optional>({"RTMPPush", "rtmpPush"}, &_rtmppush_publisher);
 						Register<Optional>({"Thumbnail", "thumbnail"}, &_thumbnail_publisher);
+						Register<Optional>({"SRTPush", "srtPush"}, &_srtpush_publisher);
 					}
 
 					int _app_worker_count = 1;
@@ -90,6 +94,7 @@ namespace cfg
 					OvtPublisher _ovt_publisher;
 					FilePublisher _file_publisher;
 					ThumbnailPublisher _thumbnail_publisher;
+					SrtPushPublisher _srtpush_publisher;
 				};
 			}  // namespace pub
 		}	   // namespace app

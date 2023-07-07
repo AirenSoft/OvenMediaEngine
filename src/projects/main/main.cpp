@@ -135,6 +135,7 @@ int main(int argc, char *argv[])
 	INIT_MODULE(file_publisher, "File Publisher", pub::FilePublisher::Create(*server_config, media_router));
 	INIT_MODULE(mpegtspush_publisher, "MpegtsPush Publisher", MpegtsPushPublisher::Create(*server_config, media_router));
 	INIT_MODULE(rtmppush_publisher, "RtmpPush Publisher", RtmpPushPublisher::Create(*server_config, media_router));
+	INIT_MODULE(srtpush_publisher, "SrtPush Publisher", SrtPushPublisher::Create(*server_config, media_router));
 	INIT_MODULE(thumbnail_publisher, "Thumbnail Publisher", ThumbnailPublisher::Create(*server_config, media_router));
 
 	// Initialize Transcoder
@@ -197,6 +198,7 @@ int main(int argc, char *argv[])
 	RELEASE_MODULE(file_publisher, "File Publisher");
 	RELEASE_MODULE(mpegtspush_publisher, "MpegtsPush Publisher");
 	RELEASE_MODULE(rtmppush_publisher, "RtmpPush Publisher");
+	RELEASE_MODULE(srtpush_publisher, "SrtPush Publisher");
 	RELEASE_MODULE(thumbnail_publisher, "Thumbnail Publisher");
 
 	RELEASE_MODULE(media_router, "MediaRouter");

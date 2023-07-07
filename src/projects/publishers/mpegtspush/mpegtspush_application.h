@@ -12,10 +12,10 @@ class MpegtsPushApplication : public pub::PushApplication
 public:
 	static std::shared_ptr<MpegtsPushApplication> Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info);
 	MpegtsPushApplication(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info);
-	~MpegtsPushApplication() final;
+	~MpegtsPushApplication();
+	bool Start() override;
 
 private:
-	bool Start() override;
 	bool Stop() override;
 
 	// Application Implementation
@@ -33,6 +33,6 @@ public:
 	virtual std::shared_ptr<ov::Error> PushStop(const std::shared_ptr<info::Push> &push) override;
 	virtual std::shared_ptr<ov::Error> GetPushes(const std::shared_ptr<info::Push> push, std::vector<std::shared_ptr<info::Push>> &results) override;
 
-private:
+protected:
 	MpegtsPushUserdataSets _userdata_sets;
 };
