@@ -241,7 +241,7 @@ namespace api
 									  app->GetName().GetAppName().CStr());
 			}
 
-			std::vector<PublisherType> publisher_types{PublisherType::RtmpPush, PublisherType::MpegtsPush};
+			std::vector<PublisherType> publisher_types{PublisherType::RtmpPush, PublisherType::MpegtsPush, PublisherType::SrtPush};
 			for (auto publisher_type : publisher_types)
 			{
 				auto publisher{
