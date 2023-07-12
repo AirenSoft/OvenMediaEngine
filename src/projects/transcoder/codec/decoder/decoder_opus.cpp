@@ -101,8 +101,10 @@ void DecoderOPUS::CodecThread()
 
 		if (_cur_data != nullptr)
 		{
-			while (_cur_data->GetLength() > _pkt_offset)
+			if (_pkt_offset < _cur_data->GetLength())
 			{
+				_pkt->size = 0;
+				
 				int32_t parsed_size = ::av_parser_parse2(
 					_parser,
 					_context,
@@ -116,10 +118,12 @@ void DecoderOPUS::CodecThread()
 				if (parsed_size <= 0)
 				{
 					logte("Error while parsing\n");
-					_cur_pkt = nullptr;
 					_cur_data = nullptr;
-					_pkt_offset = 0;
-					break;
+				}
+				else
+				{
+					OV_ASSERT(_cur_data->GetLength() >= (size_t)parsed_size, "Current data size MUST greater than parsed_size, but data size: %ld, parsed_size: %ld", _cur_data->GetLength(), parsed_size);
+					_pkt_offset += parsed_size;
 				}
 
 				if (_pkt->size > 0)
@@ -137,47 +141,25 @@ void DecoderOPUS::CodecThread()
 					}
 
 					int ret = ::avcodec_send_packet(_context, _pkt);
-
 					if (ret == AVERROR(EAGAIN))
 					{
-						// Need more data
-						// *result = TranscodeResult::Again;
-						break;
+
 					}
 					else if (ret == AVERROR_EOF)
 					{
 						logte("Error sending a packet for decoding : AVERROR_EOF");
-						break;
-					}
-					else if (ret == AVERROR(EINVAL))
-					{
-						logte("Error sending a packet for decoding : AVERROR(EINVAL)");
-						break;
-					}
-					else if (ret == AVERROR(ENOMEM))
-					{
-						logte("Error sending a packet for decoding : AVERROR(ENOMEM)");
-						break;
 					}
 					else if (ret < 0)
 					{
+						_cur_data = nullptr;
 						char err_msg[1024];
 						av_strerror(ret, err_msg, sizeof(err_msg));
-						logte("An error occurred while sending a packet for decoding: Unhandled error (%d:%s) ", ret, err_msg);
+						logte("An error occurred while sending a packet for decoding. %s ", err_msg);
 					}
 				}
-
-				if (parsed_size > 0)
-				{
-					OV_ASSERT(_cur_data->GetLength() >= (size_t)parsed_size, "Current data size MUST greater than parsed_size, but data size: %ld, parsed_size: %ld", _cur_data->GetLength(), parsed_size);
-
-					_pkt_offset += parsed_size;
-				}
-
-				break;
 			}
 
-			if (_cur_data->GetLength() <= _pkt_offset)
+			if (_cur_data == nullptr || _cur_data->GetLength() <= _pkt_offset)
 			{
 				_cur_pkt = nullptr;
 				_cur_data = nullptr;
@@ -218,7 +200,7 @@ void DecoderOPUS::CodecThread()
 				{
 					auto codec_info = ffmpeg::Conv::CodecInfoToString(_context, _codec_par);
 
-					logti("[%s/%s(%u)] input stream information: %s",
+					logti("[%s/%s(%u)] input track information: %s",
 						  _stream_info.GetApplicationInfo().GetName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
 
 					_change_format = true;
@@ -233,15 +215,24 @@ void DecoderOPUS::CodecThread()
 			}
 
 			// If there is no duration, the duration is calculated by timebase.
-			_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Audio, GetRefTrack(), _frame) : _frame->pkt_duration;
+			if (_frame->pkt_duration <= 0LL)
+			{
+				_frame->pkt_duration = ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Audio, GetRefTrack(), _frame);
+			}
+
 
 			// If the decoded audio frame does not have a PTS, Increase frame duration time in PTS of previous frame
-			_frame->pts = (_frame->pts == AV_NOPTS_VALUE) ? (_last_pkt_pts + _frame->pkt_duration) : _frame->pts;
+			if(_frame->pts == AV_NOPTS_VALUE)
+			{
+				_frame->pts = _last_pkt_pts + _frame->pkt_duration;
+			}
 
 			auto output_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Audio, _frame);
 			::av_frame_unref(_frame);
 			if (output_frame == nullptr)
+			{
 				continue;
+			}
 
 			_last_pkt_pts = output_frame->GetPts();
 

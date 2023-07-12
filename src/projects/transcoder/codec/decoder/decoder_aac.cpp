@@ -101,8 +101,10 @@ void DecoderAAC::CodecThread()
 
 		if (_cur_data != nullptr)
 		{
-			while (_cur_data->GetLength() > _pkt_offset)
+			if (_pkt_offset < _cur_data->GetLength())
 			{
+				_pkt->size = 0;
+				
 				int32_t parsed_size = ::av_parser_parse2(
 					_parser,
 					_context,
@@ -116,10 +118,12 @@ void DecoderAAC::CodecThread()
 				if (parsed_size <= 0)
 				{
 					logte("Error while parsing\n");
-					_cur_pkt = nullptr;
 					_cur_data = nullptr;
-					_pkt_offset = 0;
-					break;
+				}
+				else
+				{
+					OV_ASSERT(_cur_data->GetLength() >= (size_t)parsed_size, "Current data size MUST greater than parsed_size, but data size: %ld, parsed_size: %ld", _cur_data->GetLength(), parsed_size);
+					_pkt_offset += parsed_size;
 				}
 
 				if (_pkt->size > 0)
@@ -137,44 +141,22 @@ void DecoderAAC::CodecThread()
 					}
 
 					int ret = ::avcodec_send_packet(_context, _pkt);
-
 					if (ret == AVERROR(EAGAIN))
 					{
-						// Need more data
-						// *result = TranscodeResult::Again;
-						break;
+
 					}
 					else if (ret == AVERROR_EOF)
 					{
 						logte("Error sending a packet for decoding : AVERROR_EOF");
-						break;
-					}
-					else if (ret == AVERROR(EINVAL))
-					{
-						logte("Error sending a packet for decoding : AVERROR(EINVAL)");
-						break;
-					}
-					else if (ret == AVERROR(ENOMEM))
-					{
-						logte("Error sending a packet for decoding : AVERROR(ENOMEM)");
-						break;
 					}
 					else if (ret < 0)
 					{
+						_cur_data = nullptr;
 						char err_msg[1024];
 						av_strerror(ret, err_msg, sizeof(err_msg));
-						logte("An error occurred while sending a packet for decoding: Unhandled error (%d:%s) ", ret, err_msg);
+						logte("An error occurred while sending a packet for decoding. %s ", err_msg);
 					}
 				}
-
-				if (parsed_size > 0)
-				{
-					OV_ASSERT(_cur_data->GetLength() >= (size_t)parsed_size, "Current data size MUST greater than parsed_size, but data size: %ld, parsed_size: %ld", _cur_data->GetLength(), parsed_size);
-
-					_pkt_offset += parsed_size;
-				}
-
-				break;
 			}
 
 			if (_cur_data == nullptr || _cur_data->GetLength() <= _pkt_offset)
