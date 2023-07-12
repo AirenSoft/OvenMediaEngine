@@ -134,6 +134,7 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 
 	// Check #2 - Resolution change
 	std::shared_lock<std::shared_mutex> lock(_mutex);
+	
 	if (_internal == nullptr)
 	{
 		return false;
@@ -141,13 +142,24 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 
 	if (_input_track->GetMediaType() == MediaType::Video)
 	{
-		if (buffer->GetWidth() != (int32_t)_internal->GetInputWidth() || buffer->GetHeight() != (int32_t)_internal->GetInputHeight())
+		if (buffer->GetWidth() != (int32_t)_internal->GetInputWidth() ||
+			buffer->GetHeight() != (int32_t)_internal->GetInputHeight())
 		{
 			logti("Changed input resolution of %u track. (%dx%d -> %dx%d)", _input_track->GetId(), _internal->GetInputWidth(), _internal->GetInputHeight(), buffer->GetWidth(), buffer->GetHeight());
 			_input_track->SetWidth(buffer->GetWidth());
 			_input_track->SetHeight(buffer->GetHeight());
 			return true;
 		}
+	}
+
+	// When using an XMA scaler, resource allocation failures may occur intermittently.
+	// Avoid problems in this way until the underlying problem is resolved.
+	if (_internal->GetState() == FilterBase::State::ERROR &&
+		_input_track->GetCodecLibraryId() == cmn::MediaCodecLibraryId::XMA &&
+		_output_track->GetCodecLibraryId() == cmn::MediaCodecLibraryId::XMA)
+	{
+		logtw("It is assumed that the XMA resource allocation failed. So, recreate the filter.");
+		return true;
 	}
 
 	return false;

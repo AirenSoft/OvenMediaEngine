@@ -156,6 +156,15 @@ bool FilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_track, 
 		return false;
 	}
 
+	if ((ret = ::avfilter_graph_config(_filter_graph, nullptr)) < 0)
+	{
+		logte("Could not validate filter graph for resampling: %d", ret);
+
+		SetState(State::ERROR);
+
+		return false;
+	}
+
 	return true;
 }
 
@@ -204,14 +213,6 @@ void FilterResampler::WorkerThread()
 	logtd("Start resampler filter thread.");
 
 	int ret;
-	if ((ret = ::avfilter_graph_config(_filter_graph, nullptr)) < 0)
-	{
-		logte("Could not validate filter graph for resampling: %d", ret);
-
-		SetState(State::ERROR);
-
-		return;
-	}
 
 	while (!_kill_flag)
 	{

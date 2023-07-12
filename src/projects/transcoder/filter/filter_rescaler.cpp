@@ -247,6 +247,15 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	_input_width = input_track->GetWidth();
 	_input_height = input_track->GetHeight();
 
+	if ((ret = ::avfilter_graph_config(_filter_graph, nullptr)) < 0)
+	{
+		logte("Could not validate filter graph for rescaling: %d", ret);
+
+		SetState(State::ERROR);
+
+		return false;
+	}
+
 	return true;
 }
 
@@ -290,18 +299,8 @@ void FilterRescaler::Stop()
 void FilterRescaler::WorkerThread()
 {
 	logtd("Start rescaling filter thread");
-
-	// Create Filter
-	// Caution: Filters must be created in the same thread to avoid XMA resource allocation and expansion failures.
 	int ret;
-	if ((ret = ::avfilter_graph_config(_filter_graph, nullptr)) < 0)
-	{
-		logte("Could not validate filter graph for rescaling: %d", ret);
 
-		SetState(State::ERROR);
-
-		return;
-	}
 
 	SetState(State::STARTED);
 
