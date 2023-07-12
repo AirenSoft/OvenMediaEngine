@@ -97,25 +97,25 @@ namespace mon
 		return _hosts[host_info.GetId()];
 	}
 
-	void ServerMetrics::OnQueueCreated(const info::ManagedQueue &info)
+	void ServerMetrics::OnQueueCreated(const info::ManagedQueue &queue_info)
 	{
 		std::shared_lock<std::shared_mutex> lock(_map_guard);
 
-		auto queue_metrics = std::make_shared<QueueMetrics>(info);
+		auto queue_metrics = std::make_shared<QueueMetrics>(queue_info);
 		if (queue_metrics == nullptr)
 		{
-			logte("Cannot create QueueMetrics (%u/%s)", info.GetId(), info.GetUrn().CStr());
+			logte("Cannot create QueueMetrics (%u/%s)", queue_info.GetId(), queue_info.GetUrn()->ToString().CStr());
 			return;
 		}
 
-		_queues[info.GetId()] = queue_metrics;
+		_queues[queue_info.GetId()] = queue_metrics;
 	}
 
-	void ServerMetrics::OnQueueDeleted(const info::ManagedQueue &info)
+	void ServerMetrics::OnQueueDeleted(const info::ManagedQueue &queue_info)
 	{
 		std::shared_lock<std::shared_mutex> lock(_map_guard);
 
-		auto it = _queues.find(info.GetId());
+		auto it = _queues.find(queue_info.GetId());
 		if (it == _queues.end())
 		{
 			return;
@@ -126,11 +126,11 @@ namespace mon
 		_queues.erase(it);
 	}
 
-	void ServerMetrics::OnQueueUpdated(const info::ManagedQueue &info, bool with_metadata)
+	void ServerMetrics::OnQueueUpdated(const info::ManagedQueue &queue_info, bool with_metadata)
 	{
 		std::shared_lock<std::shared_mutex> lock(_map_guard);
 
-		auto it = _queues.find(info.GetId());
+		auto it = _queues.find(queue_info.GetId());
 		if (it == _queues.end())
 		{
 			return;
@@ -140,10 +140,10 @@ namespace mon
 
 		if (with_metadata == true)
 		{
-			queue->UpdateMetadata(info);
+			queue->UpdateMetadata(queue_info);
 		}
 
-		queue->UpdateMetrics(info);
+		queue->UpdateMetrics(queue_info);
 
 		/**
 			[Experimental] Delete lazy stream
@@ -166,24 +166,21 @@ namespace mon
 		auto delete_lazy_stream_timeout_conf = _server_config->GetModules().GetRecovery().GetDeleteLazyStreamTimeout();
 		if (delete_lazy_stream_timeout_conf > 0)
 		{
-			if (info.GetThresholdExceededTimeInUs() > delete_lazy_stream_timeout_conf)
+			if ((queue_info.GetThresholdExceededTimeInUs() > delete_lazy_stream_timeout_conf) && (!queue_info.GetUrn()->GetStreamName().IsEmpty()))
 			{
-				ov::String vhost_app_name = info::ManagedQueue::ParseVHostApp(info.GetUrn().CStr());
-				ov::String stream_name = info::ManagedQueue::ParseStream(info.GetUrn().CStr());
+				auto vhost_app = queue_info.GetUrn()->GetVHostAppName();
+				auto stream_name = queue_info.GetUrn()->GetStreamName();
 
-				if (!vhost_app_name.IsEmpty() && !stream_name.IsEmpty())
+				logtc("The %s queue has been exceeded for %lld ms. stream will be forcibly deleted. VhostApp(%s), Stream(%s)",
+					  queue_info.GetUrn()->ToString().CStr(), queue_info.GetThresholdExceededTimeInUs(), vhost_app.CStr(), stream_name.CStr());
+
+				if (vhost_app.IsValid())
 				{
-					logtc("The %s queue has been exceeded for %lld ms. stream will be forcibly deleted. VhostApp(%s), Stream(%s)", info.GetUrn().CStr(), info.GetThresholdExceededTimeInUs(), vhost_app_name.CStr(), stream_name.CStr());
-					auto vhost_app = info::VHostAppName(vhost_app_name);
-
-					if (vhost_app.IsValid())
-					{
-						ocst::Orchestrator::GetInstance()->TerminateStream(vhost_app, stream_name);
-					}
-
-					// Clear memory fragmentation
-					malloc_trim(0);
+					ocst::Orchestrator::GetInstance()->TerminateStream(vhost_app, stream_name);
 				}
+
+				// Clear memory fragmentation
+				malloc_trim(0);
 			}
 		}
 	}

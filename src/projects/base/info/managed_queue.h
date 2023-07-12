@@ -8,6 +8,8 @@
 //==============================================================================
 #pragma once
 
+#include <base/info/vhost_app_name.h>
+
 #include <shared_mutex>
 
 #include "base/ovlibrary/ovlibrary.h"
@@ -16,9 +18,116 @@ namespace info
 {
 	typedef uint32_t managed_queue_id_t;
 
-
 	class ManagedQueue
 	{
+		// Create URN specification for queue
+		/*
+			[URN Pattern]
+				- mngq:v={VhostName}#{AppName}[s=/{StreamName}]:p={PART}:n={NAME}
+
+			[PART]
+				- pvd: Provider
+				- imr: Inbound Mediarouter
+				- trs: Transcoder
+				- omr: Outbound Mediarouter
+				- pub: Publisher
+				- och: Ochestrator
+
+			[NAME]
+				- filter_{video|audio}
+				- encoder_{codec_name}_{trackid}
+				- decoder_{codec_name}_{trackid}
+				- appworker_[{protocol}]_{id}
+				- stremworker_[{protocol}]_{id}
+
+			examples
+				- mngq:v=#default#app:s=stream:p=trs:n=decoer_h264_0
+				- mngq:v=#default#app:s=stream:p=trs:n=filter_video
+				- mngq:v=#default#app:s=stream:p=trs:n=filter_audio
+				- mngq:v=#default#app:s=stream:p=trs:n=encoder_opus_0
+				- mngq:v=#default#app:s=stream:p=trs:n=encoder_h264_1
+				- mngq:v=#default#app:p=imr:n=indicator
+				- mngq:v=#default#app:p=omr:n=appworker
+				- mngq:v=#default#app:p=pub:n=appworker
+		*/
+	public:
+		class URN
+		{
+		public:
+			URN(info::VHostAppName vhost_app_name, ov::String stream_name = nullptr, ov::String part = nullptr, ov::String name = nullptr)
+				: _vhost_app_name(vhost_app_name),
+				  _stream_name(stream_name),
+				  _part(part),
+				  _name(name)
+			{
+			}
+
+			URN(ov::String vhost_app_name, ov::String stream_name = nullptr, ov::String part = nullptr, ov::String name = nullptr)
+				: _vhost_app_name(vhost_app_name),
+				  _stream_name(stream_name),
+				  _part(part),
+				  _name(name)
+			{
+			}
+
+			info::VHostAppName& GetVHostAppName()
+			{
+				return _vhost_app_name;
+			}
+			ov::String& GetStreamName()
+			{
+				return _stream_name;
+			}
+			ov::String& GetPart()
+			{
+				return _part;
+			}
+			ov::String& GetName()
+			{
+				return _name;
+			}
+
+			ov::String ToString()
+			{
+				ov::String str = "mngq";
+
+				if (_vhost_app_name.IsValid())
+				{
+					str.Append(":");
+					str.Append("v=");
+					str.Append(_vhost_app_name.ToString());
+				}
+				if (!_stream_name.IsEmpty())
+				{
+					str.Append(":");
+					str.Append("s=");
+					str.Append(_stream_name);
+				}
+
+				if (!_part.IsEmpty())
+				{
+					str.Append(":");
+					str.Append("p=");
+					str.Append(_part);
+				}
+
+				if (!_name.IsEmpty())
+				{
+					str.Append(":");
+					str.Append("n=");
+					str.Append(_name);
+				}
+
+				return str;
+			}
+
+		protected:
+			info::VHostAppName _vhost_app_name;
+			ov::String _stream_name;
+			ov::String _part;
+			ov::String _name;
+		};
+
 	public:
 		explicit ManagedQueue(size_t threshold = 0)
 			: _peak(0),
@@ -40,11 +149,6 @@ namespace info
 		info::managed_queue_id_t GetId() const
 		{
 			return _id;
-		}
-
-		ov::String GetUrn() const
-		{
-			return _urn;
 		}
 
 		ov::String GetTypeName() const
@@ -98,21 +202,18 @@ namespace info
 		{
 			return _threshold_exceeded_time_in_us;
 		}
-		
-		void SetUrn(const char* urn, const char* type_name)
+
+		void SetUrn(std::shared_ptr<URN> urn, const char* type_name)
 		{
 			auto lock_guard = std::lock_guard(_name_mutex);
 
 			_type_name = type_name;
+			_urn = urn;
+		}
 
-			if ((urn != nullptr) && (urn[0] != '\0'))
-			{
-				_urn = urn;
-			}
-			else
-			{
-				_urn.Format("Queue<%s>", type_name);
-			}
+		std::shared_ptr<URN> GetUrn() const
+		{
+			return _urn;
 		}
 
 	protected:
@@ -121,7 +222,7 @@ namespace info
 
 		// Name of the queue
 		std::shared_mutex _name_mutex;
-		ov::String _urn;
+		std::shared_ptr<URN> _urn;
 
 		// Type of template
 		ov::String _type_name;
@@ -155,111 +256,6 @@ namespace info
 
 		// Drop Count
 		uint64_t _drop_message_count;
-
-	public:		
-		// Create URN specification for queue
-		/*
-			[URN Pattern]
-				- mngq:v={VhostName}#{AppName}[s=/{StreamName}]:p={PART}:r={ROLE}
-
-			[PART]
-				- pvd: provider
-				- imr: mediarouter(inbound)
-				- trs: transcoder
-				- omr: mediarouter(outbound)
-				- pub: publisher
-
-			[ROLE]
-				- filter_{video|audio}
-				- encoder_{codec_name}_{trackid}
-				- decoder_{codec_name}_{trackid}
-				- appworker_[{protocol}]_{id}
-				- stremworker_[{protocol}]_{id}
-
-			examples
-				- mngq:v=#default#app:s=stream:p=trs:r=decoer_h264_0
-				- mngq:v=#default#app:s=stream:p=trs:r=filter_video
-				- mngq:v=#default#app:s=stream:p=trs:r=filter_audio
-				- mngq:v=#default#app:s=stream:p=trs:r=encoder_opus_0
-				- mngq:v=#default#app:s=stream:p=trs:r=encoder_h264_1
-				- mngq:v=#default#app:p=imr:r=indicator
-				- mngq:v=#default#app:p=omr:r=appworker
-				- mngq:v=#default#app:p=pub:r=appworker
-		*/
-		static ov::String URN(const char* vhost_app = nullptr, const char* stream = nullptr, const char* part = nullptr, const char* role = nullptr)
-		{
-			
-			ov::String uri = "mngq";
-
-			if(vhost_app)
-			{
-				uri.Append(":");
-				uri.Append("v=");
-				uri.Append(vhost_app);
-			}
-			if(stream)
-			{
-				uri.Append(":");
-				uri.Append("s=");
-				uri.Append(stream);
-			}
-
-			if(part)
-			{
-				uri.Append(":");
-				uri.Append("p=");
-				uri.Append(part);
-			}	
-
-			if(role)
-			{
-				uri.Append(":");
-				uri.Append("r=");
-				uri.Append(role);
-			}
-
-			return uri;
-		}
-
-		static ov::String ParseVHostApp(const char* urn)
-		{
-			ov::String tmp(urn);
-
-			auto start_pos = tmp.IndexOf(":v=");
-			if(start_pos == -1L)
-			{
-				return "";
-			}
-
-			auto end_pos = tmp.IndexOf(":", start_pos + 3);
-			if(end_pos == -1L)
-			{
-				return tmp.Substring(start_pos + 3);
-			}
-
-			size_t length = end_pos - start_pos - 3;
-			return tmp.Substring(start_pos + 3, length);
-		}
-
-		static ov::String ParseStream(const char* urn)
-		{
-			ov::String tmp(urn);
-
-			auto start_pos = tmp.IndexOf(":s=");
-			if(start_pos == -1L)
-			{
-				return "";
-			}
-
-			auto end_pos = tmp.IndexOf(":", start_pos + 3);
-			if(end_pos == -1L)
-			{
-				return tmp.Substring(start_pos + 3);
-			}
-
-			size_t length = end_pos - start_pos - 3;
-			return tmp.Substring(start_pos + 3, length);
-		}
 	};
 
 }  // namespace info

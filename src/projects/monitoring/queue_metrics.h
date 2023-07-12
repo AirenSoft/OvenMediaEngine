@@ -34,7 +34,7 @@ namespace mon
 			return _id;
 		}
 
-		const ov::String& GetUrn() const
+		const std::shared_ptr<info::ManagedQueue::URN>& GetUrn() const
 		{
 			return _urn;
 		}
@@ -99,7 +99,7 @@ namespace mon
 	private:
 		// metadata
 		uint32_t _id;
-		ov::String _urn;
+		std::shared_ptr<info::ManagedQueue::URN> _urn;
 		ov::String _type_name;
 
 		// metrics

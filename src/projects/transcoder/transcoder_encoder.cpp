@@ -234,14 +234,17 @@ void TranscodeEncoder::SetEncoderId(int32_t encoder_id)
 
 bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 {
-	_track = output_track;
-
-	auto urn = info::ManagedQueue::URN(_stream_info.GetApplicationName(), _stream_info.GetName(), "trs", ov::String::FormatString("encoder_%s_%d", ::avcodec_get_name(GetCodecID()), _track->GetId()));
-	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
-	_input_buffer.SetUrn(urn);
-	
-	
+	_track = output_track;	
 	_track->SetOriginBitstream(GetBitstreamFormat());
+
+	auto name = ov::String::FormatString("encoder_%s_%d", ::avcodec_get_name(GetCodecID()), _track->GetId());
+	auto urn = std::make_shared<info::ManagedQueue::URN>(
+		_stream_info.GetApplicationInfo().GetName(),
+		_stream_info.GetName(),
+		"trs",
+		name);
+	_input_buffer.SetUrn(urn);
+	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
 	return (_track != nullptr);
 }

@@ -88,8 +88,12 @@ void MediaRouteStream::SetInoutType(MediaRouterStreamType inout_type)
 {
 	_inout_type = inout_type;
 
-	auto urn = info::ManagedQueue::URN(_stream->GetApplicationInfo().GetName().CStr(), _stream->GetName().CStr(), _inout_type == MediaRouterStreamType::INBOUND ? "imr" : "omr", "streamworker");
-	_packets_queue.SetUrn(urn.CStr());
+	auto urn = std::make_shared<info::ManagedQueue::URN>(
+		_stream->GetApplicationInfo().GetName(),
+		_stream->GetName(),
+		(_inout_type == MediaRouterStreamType::INBOUND) ? "imr" : "omr",
+		"streamworker");
+	_packets_queue.SetUrn(urn);
 }
 
 MediaRouterStreamType MediaRouteStream::GetInoutType()

@@ -75,14 +75,14 @@ namespace serdes
 		Json::Value value;
 
 		SetInt64(value, "id", metrics->GetId());
-		SetString(value, "urn", metrics->GetUrn(), Optional::False);
+		SetString(value, "urn", metrics->GetUrn()->ToString(), Optional::False);
 		SetString(value, "type", metrics->GetTypeName(), Optional::False);
 		SetInt(value, "size", metrics->GetSize());
 		SetInt(value, "peak", metrics->GetPeak());
-		SetInt(value, "thld", metrics->GetThreshold());
-		SetInt(value, "watm", metrics->GetWaitingTime());
-		SetInt(value, "imps", metrics->GetInputMessagePerSecond());
-		SetInt(value, "omps", metrics->GetOutputMessagePerSecond());
+		SetInt(value, "threshold", metrics->GetThreshold());
+		SetInt(value, "avgWaitingTime", metrics->GetWaitingTime());
+		SetInt(value, "inputPerSecond", metrics->GetInputMessagePerSecond());
+		SetInt(value, "outputPerSecond", metrics->GetOutputMessagePerSecond());
 		SetInt(value, "drop", metrics->GetDropCount());
 
 		return value;

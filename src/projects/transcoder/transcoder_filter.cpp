@@ -62,8 +62,13 @@ bool TranscodeFilter::Create()
 			return false;
 	}
 
-	auto urn = info::ManagedQueue::URN(_input_stream_info->GetApplicationName(), _input_stream_info->GetName().CStr(), "trs", ov::String::FormatString("filter_%s", cmn::GetMediaTypeString(_input_track->GetMediaType()).LowerCaseString().CStr()));
-	_internal->SetQueueUrn(urn.CStr());
+	auto name = ov::String::FormatString("filter_%s", cmn::GetMediaTypeString(_input_track->GetMediaType()).CStr());
+	auto urn = std::make_shared<info::ManagedQueue::URN>(
+		_input_stream_info->GetApplicationName(),
+		_input_stream_info->GetName(),
+		"trs",
+		name.LowerCaseString());
+	_internal->SetQueueUrn(urn);
 	_internal->SetCompleteHandler(bind(&TranscodeFilter::OnComplete, this, std::placeholders::_1));
 
 	bool success = _internal->Configure(_input_track, _output_track);

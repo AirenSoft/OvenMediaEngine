@@ -36,9 +36,9 @@ namespace mon
 
 	// Queue metrics
 	public:
-		void OnQueueCreated(const info::ManagedQueue& info);
-		void OnQueueDeleted(const info::ManagedQueue& info);
-		void OnQueueUpdated(const info::ManagedQueue& info, bool with_metadata = false);
+		void OnQueueCreated(const info::ManagedQueue &queue_info);
+		void OnQueueDeleted(const info::ManagedQueue &queue_info);
+		void OnQueueUpdated(const info::ManagedQueue &queue_info, bool with_metadata = false);
 		std::map<uint32_t, std::shared_ptr<QueueMetrics>> GetQueueMetricsList();
 
 	protected:

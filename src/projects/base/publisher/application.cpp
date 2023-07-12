@@ -20,11 +20,17 @@ namespace pub
 	{
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&ApplicationWorker::WorkerThread, this);
-		pthread_setname_np(_worker_thread.native_handle(), ov::String::FormatString("AW-%s%d", _worker_name.CStr(), _worker_id).CStr());
 
-		ov::String urn;
-		urn = info::ManagedQueue::URN(_vhost_app_name.CStr(), nullptr, "pub", ov::String::FormatString("appworker_%s_%d", _worker_name.LowerCaseString().CStr(), _worker_id).CStr());
-		_stream_data_queue.SetUrn(urn.CStr());
+		auto name = ov::String::FormatString("AW-%s%d", _worker_name.CStr(), _worker_id);
+		pthread_setname_np(_worker_thread.native_handle(), name.CStr());
+
+		auto urn = std::make_shared<info::ManagedQueue::URN>(
+			_vhost_app_name,
+			nullptr,
+			"pub",
+			name.LowerCaseString());
+			
+		_stream_data_queue.SetUrn(urn);
 
 		logtd("%s ApplicationWorker has been created", _worker_name.CStr());
 

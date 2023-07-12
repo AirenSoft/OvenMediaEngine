@@ -53,14 +53,14 @@ MediaRouteApplication::MediaRouteApplication(const info::Application &applicatio
 	for (uint32_t worker_id = 0; worker_id < _max_worker_thread_count; worker_id++)
 	{
 		{
-			auto urn = info::ManagedQueue::URN(_application_info.GetName().CStr(), nullptr, "imr", ov::String::FormatString("appworker_%d", worker_id));
-			auto stream_data = std::make_shared<ov::ManagedQueue<std::shared_ptr<MediaRouteStream>>>(urn.CStr(), 500);
+			auto urn = std::make_shared<info::ManagedQueue::URN>(_application_info.GetName(), nullptr, "imr", ov::String::FormatString("aw_%d", worker_id));
+			auto stream_data = std::make_shared<ov::ManagedQueue<std::shared_ptr<MediaRouteStream>>>(urn, 500);
 			_inbound_stream_indicator.push_back(stream_data);
 		}
 
 		{
-			auto urn = info::ManagedQueue::URN(_application_info.GetName().CStr(), nullptr, "omr", ov::String::FormatString("appworker_%d", worker_id));
-			auto stream_data = std::make_shared<ov::ManagedQueue<std::shared_ptr<MediaRouteStream>>>(urn.CStr(), 500);
+			auto urn = std::make_shared<info::ManagedQueue::URN>(_application_info.GetName(), nullptr, "omr", ov::String::FormatString("aw_%d", worker_id));
+			auto stream_data = std::make_shared<ov::ManagedQueue<std::shared_ptr<MediaRouteStream>>>(urn, 500);
 			_outbound_stream_indicator.push_back(stream_data);
 		}
 	}

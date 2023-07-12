@@ -49,7 +49,7 @@ namespace ov
 		ManagedQueue()
 			: ManagedQueue(nullptr) {}
 
-		ManagedQueue(const char* urn, size_t threshold = 0, int log_interval_in_msec = MANAGED_QUEUE_LOG_INTERVAL_IN_MSEC)
+		ManagedQueue(std::shared_ptr<info::ManagedQueue::URN> urn, size_t threshold = 0, int log_interval_in_msec = MANAGED_QUEUE_LOG_INTERVAL_IN_MSEC)
 			: info::ManagedQueue(threshold),
 			  _stats_metric_interval(MANAGED_QUEUE_METRICS_UPDATE_INTERVAL_IN_MSEC),
 			  _log_interval(log_interval_in_msec),
@@ -74,7 +74,7 @@ namespace ov
 			MonitorInstance->GetServerMetrics()->OnQueueDeleted(*this);
 		}
 
-		void SetUrn(const char* urn)
+		void SetUrn(std::shared_ptr<info::ManagedQueue::URN> urn)
 		{
 			info::ManagedQueue::SetUrn(urn, Demangle(typeid(T).name()).CStr());
 
@@ -292,7 +292,7 @@ namespace ov
 					{
 						_last_logging_time = 0;
 						auto shared_lock = std::shared_lock(_name_mutex);
-						logw(LOG_TAG, "[%u] %s size has exceeded the threshold: queue: %zu, threshold: %zu, peak: %zu", GetId(), _urn.CStr(), _size, _threshold, _peak);
+						logw(LOG_TAG, "[%u] %s size has exceeded the threshold: queue: %zu, threshold: %zu, peak: %zu", GetId(), _urn->ToString().CStr(), _size, _threshold, _peak);
 					}
 				}
 				else

@@ -75,8 +75,8 @@ public:
 		_complete_handler = complete_handler;
 	}
 
-	void SetQueueUrn(const ov::String &alias) {
-		_input_buffer.SetUrn(alias.CStr());
+	void SetQueueUrn(std::shared_ptr<info::ManagedQueue::URN> &urn) {
+		_input_buffer.SetUrn(urn);
 	}
 
 	void SetState(State state)
