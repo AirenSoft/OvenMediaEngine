@@ -18,8 +18,8 @@ namespace mon
 			  _threshold(info.GetThreshold()),
 			  _peak(0),
 			  _size(0),
-			  _imps(0),
-			  _omps(0),
+			  _input_message_per_second(0),
+			  _output_message_per_second(0),
 			  _drop_count(0),
 			  _waiting_time(0)
 		{
@@ -55,8 +55,8 @@ namespace mon
 		{
 			_peak = info.GetPeak();
 			_size = info.GetSize();
-			_imps = info.GetIMPS();
-			_omps = info.GetOMPS();
+			_input_message_per_second = info.GetInputMessagePerSecond();
+			_output_message_per_second = info.GetOutputMessagePerSecond();
 			_drop_count = info.GetDropCount();
 			_waiting_time = info.GetWaitingTimeInUs();
 		}
@@ -78,12 +78,12 @@ namespace mon
 
 		const size_t& GetInputMessagePerSecond() const
 		{
-			return _imps;
+			return _input_message_per_second;
 		}
 
 		const size_t& GetOutputMessagePerSecond() const
 		{
-			return _omps;
+			return _output_message_per_second;
 		}
 
 		const size_t& GetDropCount() const
@@ -106,8 +106,8 @@ namespace mon
 		size_t _threshold;
 		size_t _peak;
 		size_t _size;
-		size_t _imps;
-		size_t _omps;
+		size_t _input_message_per_second;
+		size_t _output_message_per_second;
 		size_t _drop_count;
 		int64_t _waiting_time;
 	};

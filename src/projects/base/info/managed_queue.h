@@ -25,12 +25,12 @@ namespace info
 			  _size(0),
 			  _threshold(threshold),
 			  _threshold_exceeded_time_in_us(0),
-			  _imc(0),
-			  _omc(0),
-			  _imps(0),
-			  _omps(0),
+			  _input_message_count(0),
+			  _output_message_count(0),
+			  _input_message_per_second(0),
+			  _output_message_per_second(0),
 			  _waiting_time_in_us(0),
-			  _dc(0){};
+			  _drop_message_count(0){};
 
 		void SetId(info::managed_queue_id_t id)
 		{
@@ -74,19 +74,19 @@ namespace info
 			return _size;
 		}
 
-		size_t GetIMPS() const
+		size_t GetInputMessagePerSecond() const
 		{
-			return _imps;
+			return _input_message_per_second;
 		}
 
-		size_t GetOMPS() const
+		size_t GetOutputMessagePerSecond() const
 		{
-			return _omps;
+			return _output_message_per_second;
 		}
 
 		uint64_t GetDropCount() const
 		{
-			return _dc;
+			return _drop_message_count;
 		}
 
 		int64_t GetWaitingTimeInUs() const
@@ -139,22 +139,22 @@ namespace info
 		int64_t _threshold_exceeded_time_in_us;
 
 		// Input Message Count
-		size_t _imc;
+		size_t _input_message_count;
 
 		// Output Message Count
-		size_t _omc;
+		size_t _output_message_count;
 
 		// Input Message Per Second
-		size_t _imps;
+		size_t _input_message_per_second;
 
 		// Output Message Per Second
-		size_t _omps;
+		size_t _output_message_per_second;
 
 		// Average Waiting Time(microseconds)
 		int64_t _waiting_time_in_us;
 
 		// Drop Count
-		uint64_t _dc;
+		uint64_t _drop_message_count;
 
 	public:		
 		// Create URN specification for queue

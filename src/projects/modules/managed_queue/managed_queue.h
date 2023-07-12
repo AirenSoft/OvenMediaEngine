@@ -19,8 +19,8 @@
 #include "base/info/managed_queue.h"
 #include "base/ovlibrary/ovlibrary.h"
 
-#define MANAGED_QUEUE_METRICS_UPDATE_INTERVAL_IN_MSEC		1000
-#define MANAGED_QUEUE_LOG_INTERVAL_IN_MSEC					5000
+#define MANAGED_QUEUE_METRICS_UPDATE_INTERVAL_IN_MSEC 1000
+#define MANAGED_QUEUE_LOG_INTERVAL_IN_MSEC 5000
 
 namespace ov
 {
@@ -37,7 +37,7 @@ namespace ov
 			ManagedQueueNode* next;
 
 			std::chrono::high_resolution_clock::time_point _start;
-			
+
 			ManagedQueueNode(const T& value, ManagedQueueNode* next_node = nullptr)
 				: data(value), next(next_node), _start(std::chrono::high_resolution_clock::time_point::min())
 			{
@@ -74,12 +74,11 @@ namespace ov
 			MonitorInstance->GetServerMetrics()->OnQueueDeleted(*this);
 		}
 
-		
 		void SetUrn(const char* urn)
 		{
 			info::ManagedQueue::SetUrn(urn, Demangle(typeid(T).name()).CStr());
 
-			UpdateMetadataToMonitor();
+			MonitorInstance->GetServerMetrics()->OnQueueUpdated(*this, true);
 		}
 
 		void Enqueue(const T& item)
@@ -118,7 +117,7 @@ namespace ov
 			_size++;
 
 			// Update statistics of input message count
-			_imc++;
+			_input_message_count++;
 
 			UpdateMetrics();
 
@@ -203,7 +202,7 @@ namespace ov
 			_size--;
 
 			// Update statistics of output message count
-			_omc++;
+			_output_message_count++;
 
 			// Update statistics of waiting time (microseconds)
 			if (node->_start != std::chrono::system_clock::time_point::max())
@@ -213,6 +212,8 @@ namespace ov
 			}
 
 			delete node;
+
+			UpdateMetrics();
 
 			return value;
 		}
@@ -265,18 +266,6 @@ namespace ov
 		}
 
 	protected:
-		// Update the metadata to the monitor
-		void UpdateMetadataToMonitor()
-		{
-			MonitorInstance->GetServerMetrics()->OnQueueUpdated(*this, true);
-		}
-
-		// Update the metrics to the monitor
-		void UpdateMetricsToMonitor()
-		{
-			MonitorInstance->GetServerMetrics()->OnQueueUpdated(*this);
-		}
-
 		// Update statistical metrics and send data to monitoring module.
 		void UpdateMetrics()
 		{
@@ -286,12 +275,12 @@ namespace ov
 				_peak = _size;
 			}
 
-			if (_timer.IsElapsed(_stats_metric_interval) && _timer.Update())
+			if ((_timer.IsElapsed(_stats_metric_interval) && _timer.Update()) || (_size == 0))
 			{
-				// Update statistics of message per second 
-				_imps = _imc;
-				_omps = _omc;
-				_omc = _imc = 0;
+				// Update statistics of message per second
+				_input_message_per_second = _input_message_count;
+				_output_message_per_second = _output_message_count;
+				_output_message_count = _input_message_count = 0;
 
 				if ((_threshold > 0) && (_size >= _threshold))
 				{
@@ -299,7 +288,7 @@ namespace ov
 
 					// Logging
 					_last_logging_time += _stats_metric_interval;
-					if(_last_logging_time >= _log_interval)
+					if (_last_logging_time >= _log_interval)
 					{
 						_last_logging_time = 0;
 						auto shared_lock = std::shared_lock(_name_mutex);
@@ -311,7 +300,7 @@ namespace ov
 					_threshold_exceeded_time_in_us = 0;
 				}
 
-				UpdateMetricsToMonitor();
+				MonitorInstance->GetServerMetrics()->OnQueueUpdated(*this);
 			}
 		}
 
