@@ -455,7 +455,12 @@ _start()
 
 							CURRENT_PARENT = PARENTS[PARENT_INDEX]
 
-							if( ( CURRENT_PARENT == "Providers" ) || ( CURRENT_PARENT == "Publishers" ) || ( TAG_NAME == "Providers" ) || ( TAG_NAME == "Publishers" ) ) {
+							if( ( CURRENT_PARENT == "Providers" ) ||
+								( CURRENT_PARENT == "Publishers" ) ||
+								( CURRENT_PARENT == "Managers" ) ||
+								( TAG_NAME == "Providers" ) ||
+								( TAG_NAME == "Publishers" ) ||
+								( TAG_NAME == "Managers" ) ) {
 								MODULE_INDEX--
 							}
 							
@@ -483,12 +488,19 @@ _start()
 								logd(COLOR_BLUE "<" TAG_NAME ">" COLOR_GREEN " // Open, Parent: " PARENTS[PARENT_INDEX - 1] ", Module: " MODULES[MODULE_INDEX] "\n" )
 								INDENT = INDENT "  "
 
-								if( ( CURRENT_PARENT == "Providers" ) || ( CURRENT_PARENT == "Publishers" ) || ( TAG_NAME == "Providers" ) || ( TAG_NAME == "Publishers" ) ) {
+								if( ( CURRENT_PARENT == "Providers" ) ||
+									( CURRENT_PARENT == "Publishers" ) ||
+									( CURRENT_PARENT == "Managers" ) ||
+									( TAG_NAME == "Providers" ) ||
+									( TAG_NAME == "Publishers" ) ||
+									( TAG_NAME == "Managers" ) ) {
 									MODULES[++MODULE_INDEX] = TAG_NAME
 								}
 							}
 
-							if(( CURRENT_PARENT == "Providers" ) || ( CURRENT_PARENT == "Publishers" )) {
+							if( ( CURRENT_PARENT == "Providers" ) ||
+								( CURRENT_PARENT == "Publishers" ) ||
+								( CURRENT_PARENT == "Managers" ) ) {
 								print "MODULE|" CURRENT_PARENT "|" TAG_NAME "\n"
 							}
 						}
@@ -503,6 +515,12 @@ _start()
 				}
 			}
 		')
+
+	if [ "${BIND_LIST[@]}" = '' ]
+	then
+		loge "• There is no Bind list. Please check the settings."
+		exit 1
+	fi
 
 	# Above code is to parse the XML file and extract the port information, such as:
 	#
@@ -586,6 +604,7 @@ _start()
 		case "${TYPE}" in
 			Providers) DESCRIPTION="${NAME} Provider" ;;
 			Publishers) DESCRIPTION="${NAME} Publisher" ;;
+			Managers) DESCRIPTION="${NAME} (Manager)" ;;
 			*)
 				# Above awk command should not generate this case
 				need_to_report "Not supported type: ${TYPE}"
