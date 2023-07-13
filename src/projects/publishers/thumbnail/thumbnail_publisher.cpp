@@ -206,9 +206,12 @@ bool ThumbnailPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub:
 
 std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 {
+	ov::String thumbnail_url_pattern = R"(.+thumb\.(jpg|png)$)";
+
 	auto http_interceptor = std::make_shared<ThumbnailInterceptor>();
 
-	http_interceptor->Register(http::Method::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
+	// Register Thumbnail interceptor
+	http_interceptor->Register(http::Method::Get, thumbnail_url_pattern, [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
 		auto request = exchange->GetRequest();
 		auto response = exchange->GetResponse();
 		auto remote_address = request->GetRemote()->GetRemoteAddress();
@@ -386,6 +389,16 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 			MonitorInstance->IncreaseBytesOut(*stream, PublisherType::Thumbnail, sent_size);
 		}
 		
+		return http::svr::NextHandler::DoNotCall;
+	});
+
+	// Register Preflight interceptor
+	http_interceptor->Register(http::Method::Options, thumbnail_url_pattern, [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
+		
+		// Respond 204 No Content for preflight request
+		exchange->GetResponse()->SetStatusCode(http::StatusCode::NoContent);
+		
+		// Do not call the next handler to prevent 404 Not Found
 		return http::svr::NextHandler::DoNotCall;
 	});
 
