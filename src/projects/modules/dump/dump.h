@@ -20,6 +20,7 @@ namespace mdl
 		Dump(const info::Dump &info);
 		Dump(const std::shared_ptr<info::Dump> &info);
 		bool DumpData(const ov::String &file_name, const std::shared_ptr<const ov::Data> &data);
+		bool CompleteDump();
 
 		bool HasExtraData(const int32_t &id)
 		{

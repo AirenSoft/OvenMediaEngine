@@ -211,6 +211,14 @@ bool LLHlsStream::Stop()
 		}
 
 		_chunklist_map.clear();
+
+		// complete all dumps
+		for (auto &it : _dumps)
+		{
+			auto dump = it.second;
+			dump->SetEnabled(false);
+			dump->CompleteDump();
+		}
 	}
 
 	return Stream::Stop();
@@ -1213,6 +1221,7 @@ std::tuple<bool, ov::String> LLHlsStream::StopDump(const std::shared_ptr<info::D
 		}
 		auto dump_item = it->second;
 		dump_item->SetEnabled(false);
+		dump_item->CompleteDump();
 	}
 	// All stop
 	else
@@ -1221,6 +1230,7 @@ std::tuple<bool, ov::String> LLHlsStream::StopDump(const std::shared_ptr<info::D
 		{
 			auto dump_item = it.second;
 			dump_item->SetEnabled(false);
+			dump_item->CompleteDump();
 		}
 	}
 

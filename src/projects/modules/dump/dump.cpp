@@ -62,6 +62,30 @@ namespace mdl
 		return true;
 	}
 
+	bool Dump::CompleteDump()
+	{
+		SetEnabled(false);
+
+		// Write DumpInfo
+		if (GetInfoFileUrl().IsEmpty() == false)
+		{
+			ov::String dump_history;
+			if (MakeDumpInfo(dump_history) == false)
+			{
+				logw("DEBUG", "Could not make dump info");
+				return false;
+			}
+
+			if (DumpToFile(GetInfoFilePath(), GetInfoFileName(), dump_history.ToData(false), false) == false)
+			{
+				logw("DEBUG", "Could not dump data to file: %s/%s", GetInfoFilePath().CStr(), GetInfoFileName().CStr());
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	bool Dump::MakeDumpInfo(ov::String &dump_history)
 	{
 		/*
