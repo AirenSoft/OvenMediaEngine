@@ -29,6 +29,8 @@ namespace info
 		_Push_total_bytes = 0;
 		_Push_total_time = 0;
 		_sequence = 0;
+		
+		_session_id = 0;
 
 		_state = PushState::Ready;
 	}
@@ -247,21 +249,9 @@ namespace info
 
 	const ov::String Push::GetInfoString()
 	{
-		ov::String info = "\n";
+		ov::String info = "";
 
-		info.AppendFormat(" id=%s\n", _id.CStr());
-		info.AppendFormat(" stream=%s\n", _stream_name.CStr());
-		info.AppendFormat(" protocol=%s\n", _protocol.CStr());
-		info.AppendFormat(" url=%s\n", _url.CStr());
-		info.AppendFormat(" stream_key=%s\n", _stream_key.CStr());
-		info.AppendFormat(" push_bytes=%lld\n", _Push_bytes);
-		info.AppendFormat(" push_bytes=%lld\n", _Push_bytes);
-		info.AppendFormat(" push_total_bytes=%lld\n", _Push_total_bytes);
-		info.AppendFormat(" push_total_time=%lld\n", _Push_total_time);
-		info.AppendFormat(" sequence=%d\n", _sequence);
-		info.AppendFormat(" created_time=%s\n", ov::Converter::ToString(_created_time).CStr());
-		info.AppendFormat(" Push_start_time=%s\n", ov::Converter::ToString(_Push_start_time).CStr());
-		info.AppendFormat(" Push_stop_time=%s", ov::Converter::ToString(_Push_stop_time).CStr());
+		info.AppendFormat("uid(%s) vhost(%s) app(%s) stream(%s) -> protocol(%s) url(%s) streamKey(%s)", _id.CStr(), GetVhost().CStr(), GetApplication().CStr(), GetStreamName().CStr(), GetProtocol().CStr(), GetUrl().CStr(), GetStreamKey().CStr());
 
 		return info;
 	}

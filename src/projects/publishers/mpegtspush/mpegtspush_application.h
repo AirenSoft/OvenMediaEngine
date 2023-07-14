@@ -4,7 +4,7 @@
 #include <base/publisher/application.h>
 #include <base/info/session.h>
 
-#include "mpegtspush_userdata.h"
+// #include "mpegtspush_userdata.h"
 #include "mpegtspush_stream.h"
 
 class MpegtsPushApplication : public pub::PushApplication
@@ -23,16 +23,6 @@ private:
 	bool DeleteStream(const std::shared_ptr<info::Stream> &info) override;
 
 public:
-	void SessionUpdateByUser();
-	void SessionUpdateByStream(std::shared_ptr<MpegtsPushStream> stream, bool stopped);
-	void SessionUpdate(std::shared_ptr<MpegtsPushStream> stream, std::shared_ptr<info::Push> userdata);
-	void SessionStart(std::shared_ptr<MpegtsPushSession> session);
-	void SessionStop(std::shared_ptr<MpegtsPushSession> session);
+	virtual std::shared_ptr<ov::Error> StartPush(const std::shared_ptr<info::Push> &push) override;
 
-	virtual std::shared_ptr<ov::Error> PushStart(const std::shared_ptr<info::Push> &push) override;
-	virtual std::shared_ptr<ov::Error> PushStop(const std::shared_ptr<info::Push> &push) override;
-	virtual std::shared_ptr<ov::Error> GetPushes(const std::shared_ptr<info::Push> push, std::vector<std::shared_ptr<info::Push>> &results) override;
-
-protected:
-	MpegtsPushUserdataSets _userdata_sets;
 };

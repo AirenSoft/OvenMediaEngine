@@ -22,13 +22,11 @@ public:
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet) override {} // Not supported
 
-	std::shared_ptr<MpegtsPushSession> CreateSession();
-	bool DeleteSession(uint32_t session_id);
+	std::shared_ptr<pub::Session> CreatePushSession(std::shared_ptr<info::Push> &push) override;
 
 private:
 	bool Start() override;
 	bool Stop() override;
 
-	ov::StopWatch _stop_watch;
 	std::shared_ptr<mon::StreamMetrics> _stream_metrics;
 };

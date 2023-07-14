@@ -10,11 +10,13 @@ class MpegtsPushSession : public pub::Session
 public:
 	static std::shared_ptr<MpegtsPushSession> Create(const std::shared_ptr<pub::Application> &application,
 											  const std::shared_ptr<pub::Stream> &stream,
-											  uint32_t ovt_session_id);
+											  uint32_t ovt_session_id,
+											  std::shared_ptr<info::Push> &push);
 
 	MpegtsPushSession(const info::Session &session_info,
 			const std::shared_ptr<pub::Application> &application,
-			const std::shared_ptr<pub::Stream> &stream);
+			const std::shared_ptr<pub::Stream> &stream,
+			const std::shared_ptr<info::Push> &push);
 	~MpegtsPushSession() override;
 
 	bool Start() override;

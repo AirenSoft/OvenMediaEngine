@@ -7,7 +7,6 @@
 //
 //==============================================================================
 #include "srtpush_publisher.h"
-
 #include "srtpush_application.h"
 #include "srtpush_private.h"
 
@@ -73,10 +72,10 @@ std::shared_ptr<pub::Application> SrtPushPublisher::OnCreatePublisherApplication
 
 bool SrtPushPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
 {
-	auto srtpush_application = std::static_pointer_cast<SrtPushApplication>(application);
-	if (srtpush_application == nullptr)
+	auto push_application = std::static_pointer_cast<SrtPushApplication>(application);
+	if (push_application == nullptr)
 	{
-		logte("Could not found file application. app:%s", srtpush_application->GetName().CStr());
+		logte("Could not found file application. app:%s", push_application->GetName().CStr());
 		return false;
 	}
 

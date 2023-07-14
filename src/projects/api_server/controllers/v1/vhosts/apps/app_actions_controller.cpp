@@ -85,7 +85,7 @@ namespace api
 			}
 			else
 			{
-				record->SetVhost(vhost->GetName().CStr());
+				record->SetVhost(vhost->GetName());
 				record->SetApplication(app->GetName().GetAppName());
 			}
 
@@ -140,7 +140,7 @@ namespace api
 			}
 			else
 			{
-				record->SetVhost(vhost->GetName().CStr());
+				record->SetVhost(vhost->GetName());
 				record->SetApplication(app->GetName().GetAppName());
 			}
 
@@ -196,7 +196,7 @@ namespace api
 			}
 			else
 			{
-				record->SetVhost(vhost->GetName().CStr());
+				record->SetVhost(vhost->GetName());
 				record->SetApplication(app->GetName().GetAppName());
 			}
 
@@ -319,10 +319,10 @@ namespace api
 									  app->GetName().GetAppName().CStr());
 			}
 
-			push->SetVhost(vhost->GetName().CStr());
+			push->SetVhost(vhost->GetName());
 			push->SetApplication(app->GetName().GetAppName());
 
-			auto error{application->PushStart(push)};
+			auto error{application->StartPush(push)};
 			if (error->GetCode() != pub::PushApplication::ErrorCode::Success)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest, error->GetMessage());
@@ -356,7 +356,7 @@ namespace api
 									  app->GetName().GetAppName().CStr());
 			}
 
-			push->SetVhost(vhost->GetName().CStr());
+			push->SetVhost(vhost->GetName());
 			push->SetApplication(app->GetName().GetAppName());
 
 			std::vector<PublisherType> publisher_types{PublisherType::RtmpPush, PublisherType::MpegtsPush, PublisherType::SrtPush};
@@ -376,7 +376,7 @@ namespace api
 					std::static_pointer_cast<pub::PushApplication>(publisher->GetApplicationByName(app->GetName()))};
 				if (application != nullptr)
 				{
-					auto error{application->PushStop(push)};
+					auto error{application->StopPush(push)};
 					switch (error->GetCode())
 					{
 						case pub::PushApplication::ErrorCode::FailureInvalidParameter: {
@@ -400,7 +400,7 @@ namespace api
 														   const std::shared_ptr<mon::HostMetrics> &vhost,
 														   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			logte("Called OnGetDummyAction. invoke [%s/%s]", vhost->GetName().CStr(), app->GetName().GetAppName());
+			logte("Called OnGetDummyAction. invoke [%s/%s]", vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 
 			return app->GetConfig().ToJson();
 		}

@@ -40,18 +40,12 @@ bool RtmpPushStream::Start()
 
 	logtd("RtmpPushStream(%ld) has been started", GetId());
 
-	std::static_pointer_cast<RtmpPushApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<RtmpPushStream>(GetSharedPtr()), false);
-
-	_stop_watch.Start();
-
 	return Stream::Start();
 }
 
 bool RtmpPushStream::Stop()
 {
 	logtd("RtmpPushStream(%u) has been stopped", GetId());
-	
-	std::static_pointer_cast<RtmpPushApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<RtmpPushStream>(GetSharedPtr()), true);
 	
 	if (GetState() != Stream::State::STARTED)
 	{
@@ -63,12 +57,6 @@ bool RtmpPushStream::Stop()
 
 void RtmpPushStream::SendFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	// Periodically check the session. Retry the session in which the error occurred.
-	if (_stop_watch.IsElapsed(5000) && _stop_watch.Update())
-	{
-		std::static_pointer_cast<RtmpPushApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<RtmpPushStream>(GetSharedPtr()), false);
-	}
-
 	auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
 
 	BroadcastPacket(stream_packet);
@@ -96,9 +84,9 @@ void RtmpPushStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_pa
 	SendFrame(media_packet);
 }
 
-std::shared_ptr<RtmpPushSession> RtmpPushStream::CreateSession()
+std::shared_ptr<pub::Session> RtmpPushStream::CreatePushSession(std::shared_ptr<info::Push> &push)
 {
-	auto session = RtmpPushSession::Create(GetApplication(), GetSharedPtrAs<pub::Stream>(), this->IssueUniqueSessionId());
+	auto session = std::static_pointer_cast<pub::Session>(RtmpPushSession::Create(GetApplication(), GetSharedPtrAs<pub::Stream>(), this->IssueUniqueSessionId(), push));
 	if (session == nullptr)
 	{
 		logte("Internal Error : Cannot create session");
@@ -107,10 +95,6 @@ std::shared_ptr<RtmpPushSession> RtmpPushStream::CreateSession()
 
 	AddSession(session);
 
-	return session;
+	return session; 
 }
 
-bool RtmpPushStream::DeleteSession(uint32_t session_id)
-{
-	return RemoveSession(session_id);
-}

@@ -296,6 +296,12 @@ namespace pub
 		return true;
 	}
 
+	std::shared_ptr<pub::Session> Stream::CreatePushSession(std::shared_ptr<info::Push> &push)
+	{
+		logtw("The function was not implemented in the child class");
+		return nullptr;
+	}
+
 	const std::chrono::system_clock::time_point &Stream::GetStartedTime() const
 	{
 		return _started_time;

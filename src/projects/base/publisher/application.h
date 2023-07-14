@@ -113,6 +113,9 @@ namespace pub
 		std::shared_ptr<Publisher>		_publisher;
 	};
 
+
+	#define PUSH_PUBLISHER_ERROR_DOMAIN "PublisherPushApplication"
+
 	class PushApplication : public Application
 	{
 	public:
@@ -127,8 +130,23 @@ namespace pub
 
 		explicit PushApplication(const std::shared_ptr<Publisher> &publisher, const info::Application &application_info);
 
-		virtual std::shared_ptr<ov::Error> PushStart(const std::shared_ptr<info::Push> &push) = 0;
-		virtual std::shared_ptr<ov::Error> PushStop(const std::shared_ptr<info::Push> &push) = 0;
-		virtual std::shared_ptr<ov::Error> GetPushes(const std::shared_ptr<info::Push> push, std::vector<std::shared_ptr<info::Push>> &results) = 0;
+		virtual bool Start();
+		virtual bool Stop();
+
+		virtual std::shared_ptr<ov::Error> StartPush(const std::shared_ptr<info::Push> &push);
+		virtual std::shared_ptr<ov::Error> StopPush(const std::shared_ptr<info::Push> &push);
+		virtual std::shared_ptr<ov::Error> GetPushes(const std::shared_ptr<info::Push> push, std::vector<std::shared_ptr<info::Push>> &results);
+
+		std::shared_ptr<info::Push> GetPushInfoById(ov::String id);
+		void StartPushInternal(const std::shared_ptr<info::Push> &push, std::shared_ptr<pub::Session> session);
+		void StopPushInternal(const std::shared_ptr<info::Push> &push, std::shared_ptr<pub::Session> session);
+		void SessionControlThread();
+
+		bool _session_control_stop_thread_flag = false;
+		std::thread _session_contol_thread;
+
+		// <uniqueId, pushInfo>
+		std::map<ov::String, std::shared_ptr<info::Push>> _pushes;
+		std::shared_mutex _push_map_mutex;
 	};
 }  // namespace pub

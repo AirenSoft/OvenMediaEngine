@@ -1,12 +1,6 @@
 #include "rtmppush_publisher.h"
-
+#include "rtmppush_application.h"
 #include "rtmppush_private.h"
-
-#define UNUSED(expr)  \
-	do                \
-	{                 \
-		(void)(expr); \
-	} while (0)
 
 std::shared_ptr<RtmpPushPublisher> RtmpPushPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
@@ -64,10 +58,10 @@ std::shared_ptr<pub::Application> RtmpPushPublisher::OnCreatePublisherApplicatio
 
 bool RtmpPushPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
 {
-	auto rtmppush_application = std::static_pointer_cast<RtmpPushApplication>(application);
-	if (rtmppush_application == nullptr)
+	auto push_application = std::static_pointer_cast<RtmpPushApplication>(application);
+	if (push_application == nullptr)
 	{
-		logte("Could not found file application. app:%s", rtmppush_application->GetName().CStr());
+		logte("Could not found application. app:%s", push_application->GetName().CStr());
 		return false;
 	}
 

@@ -10,11 +10,13 @@ class RtmpPushSession : public pub::Session
 public:
 	static std::shared_ptr<RtmpPushSession> Create(const std::shared_ptr<pub::Application> &application,
 											  const std::shared_ptr<pub::Stream> &stream,
-											  uint32_t ovt_session_id);
+											  uint32_t ovt_session_id,
+											  std::shared_ptr<info::Push>& push);
 
 	RtmpPushSession(const info::Session &session_info,
 			const std::shared_ptr<pub::Application> &application,
-			const std::shared_ptr<pub::Stream> &stream);
+			const std::shared_ptr<pub::Stream> &stream,
+			const std::shared_ptr<info::Push> &push);
 	~RtmpPushSession() override;
 
 	bool Start() override;
@@ -22,7 +24,7 @@ public:
 
 	void SendOutgoingData(const std::any &packet) override;
 	
-	void SetPush(std::shared_ptr<info::Push> &record);
+	// void SetPush(std::shared_ptr<info::Push> &record);
 	std::shared_ptr<info::Push>& GetPush();
 	
 private:

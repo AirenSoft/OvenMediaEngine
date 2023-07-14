@@ -18,5 +18,5 @@ public:
 	~SrtPushApplication() override;
 
 public:
-	virtual std::shared_ptr<ov::Error> PushStart(const std::shared_ptr<info::Push> &push) override;
+	virtual std::shared_ptr<ov::Error> StartPush(const std::shared_ptr<info::Push> &push) override;
 };

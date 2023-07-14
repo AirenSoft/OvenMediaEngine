@@ -1,5 +1,5 @@
 #include "mpegtspush_publisher.h"
-
+#include "mpegtspush_application.h"
 #include "mpegtspush_private.h"
 
 #define UNUSED(expr)  \
@@ -64,10 +64,10 @@ std::shared_ptr<pub::Application> MpegtsPushPublisher::OnCreatePublisherApplicat
 
 bool MpegtsPushPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
 {
-	auto mpegtspush_application = std::static_pointer_cast<MpegtsPushApplication>(application);
-	if (mpegtspush_application == nullptr)
+	auto push_application = std::static_pointer_cast<MpegtsPushApplication>(application);
+	if (push_application == nullptr)
 	{
-		logte("Could not found file application. app:%s", mpegtspush_application->GetName().CStr());
+		logte("Could not found application. app:%s", push_application->GetName().CStr());
 		return false;
 	}
 

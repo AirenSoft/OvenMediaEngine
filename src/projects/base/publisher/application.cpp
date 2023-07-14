@@ -29,7 +29,7 @@ namespace pub
 			nullptr,
 			"pub",
 			name.LowerCaseString());
-			
+
 		_stream_data_queue.SetUrn(urn);
 
 		logtd("%s ApplicationWorker has been created", _worker_name.CStr());
@@ -140,8 +140,8 @@ namespace pub
 		return _app_type_name.CStr();
 	}
 
-	const char * Application::GetPublisherTypeName() {
-
+	const char *Application::GetPublisherTypeName()
+	{
 		if (_publisher_type_name.IsEmpty())
 		{
 			_publisher_type_name = StringFromPublisherType(_publisher->GetPublisherType());
@@ -365,8 +365,246 @@ namespace pub
 		return nullptr;
 	}
 
-	PushApplication::PushApplication(const std::shared_ptr<Publisher> &publisher, const info::Application &application_info) :
-		Application(publisher, application_info)
+	PushApplication::PushApplication(const std::shared_ptr<Publisher> &publisher, const info::Application &application_info)
+		: Application(publisher, application_info),
+		  _session_control_stop_thread_flag(true)
 	{
+	}
+
+	bool PushApplication::Start()
+	{
+		_session_control_stop_thread_flag = false;
+		_session_contol_thread = std::thread(&PushApplication::SessionControlThread, this);
+
+		return Application::Start();
+	}
+
+	bool PushApplication::Stop()
+	{
+		if (_session_control_stop_thread_flag == false)
+		{
+			_session_control_stop_thread_flag = true;
+			if (_session_contol_thread.joinable())
+			{
+				_session_contol_thread.join();
+			}
+		}
+
+		return Application::Stop();
+	}
+
+	std::shared_ptr<info::Push> PushApplication::GetPushInfoById(ov::String id)
+	{
+		std::lock_guard<std::shared_mutex> lock(_push_map_mutex);
+		auto it = _pushes.find(id);
+		if (it == _pushes.end())
+		{
+			return nullptr;
+		}
+
+		return it->second;
+	}
+
+	std::shared_ptr<ov::Error> PushApplication::StartPush(const std::shared_ptr<info::Push> &push)
+	{
+		// Validation check for duplicate id
+		if (GetPushInfoById(push->GetId()) != nullptr)
+		{
+			ov::String error_message = "Duplicate ID";
+			return ov::Error::CreateError(PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::FailureDuplicateKey, error_message);
+		}
+
+		// 녹화 활성화
+		push->SetEnable(true);
+		push->SetRemove(false);
+
+		std::unique_lock<std::shared_mutex> lock(_push_map_mutex);
+		_pushes[push->GetId()] = push;
+
+		return ov::Error::CreateError(PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::Success, "Success");
+	}
+
+	std::shared_ptr<ov::Error> PushApplication::StopPush(const std::shared_ptr<info::Push> &push)
+	{
+		if (push->GetId().IsEmpty() == true)
+		{
+			ov::String error_message = "There is no required parameter [";
+
+			if (push->GetId().IsEmpty() == true)
+			{
+				error_message += " id";
+			}
+
+			error_message += "]";
+
+			return ov::Error::CreateError(PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::FailureInvalidParameter, error_message);
+		}
+
+		auto push_info = GetPushInfoById(push->GetId());
+		if (push_info == nullptr)
+		{
+			ov::String error_message = ov::String::FormatString("There is no push information related to the ID [%s]", push->GetId().CStr());
+
+			return ov::Error::CreateError(PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::FailureNotExist, error_message);
+		}
+
+		push_info->SetEnable(false);
+		push_info->SetRemove(true);
+
+		return ov::Error::CreateError(PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::Success, "Success");
+	}
+
+	std::shared_ptr<ov::Error> PushApplication::GetPushes(const std::shared_ptr<info::Push> push, std::vector<std::shared_ptr<info::Push>> &results)
+	{
+		std::lock_guard<std::shared_mutex> lock(_push_map_mutex);
+
+		for (auto &[id, push] : _pushes)
+		{
+			if (!push->GetId().IsEmpty() && push->GetId() != id)
+				continue;
+
+			results.push_back(push);
+		}
+
+		return ov::Error::CreateError(PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::Success, "Success");
+	}
+
+	void PushApplication::StartPushInternal(const std::shared_ptr<info::Push> &push, std::shared_ptr<pub::Session> session)
+	{
+		// Check the status of the session.
+		auto prev_session_state = session->GetState();
+
+		switch (prev_session_state)
+		{
+			// State of disconnected and ready to connect
+			case pub::Session::SessionState::Ready:
+				[[fallthrough]];
+			// State of stopped
+			case pub::Session::SessionState::Stopped:
+				[[fallthrough]];
+			// State of failed (connection refused, disconnected)
+			case pub::Session::SessionState::Error:
+				logti("Push started. %s", push->GetInfoString().CStr());
+				session->Start();
+				break;
+			// State of Started
+			case pub::Session::SessionState::Started:
+				[[fallthrough]];
+			// State of Stopping
+			case pub::Session::SessionState::Stopping:
+				break;
+		}
+
+		auto session_state = session->GetState();
+		if (prev_session_state != session_state)
+		{
+			logtd("Changed push state. (%d - %d)", prev_session_state, session_state);
+		}
+	}
+
+	void PushApplication::StopPushInternal(const std::shared_ptr<info::Push> &push, std::shared_ptr<pub::Session> session)
+	{
+		auto prev_session_state = session->GetState();
+
+		switch (prev_session_state)
+		{
+			case pub::Session::SessionState::Started:
+				session->Stop();
+				logti("Push ended. %s", push->GetInfoString().CStr());
+				break;
+			case pub::Session::SessionState::Ready:
+				[[fallthrough]];
+			case pub::Session::SessionState::Stopping:
+				[[fallthrough]];
+			case pub::Session::SessionState::Stopped:
+				[[fallthrough]];
+			case pub::Session::SessionState::Error:
+				break;
+		}
+
+		auto session_state = session->GetState();
+		if (prev_session_state != session_state)
+		{
+			logtd("Changed push state. (%d - %d)", prev_session_state, session_state);
+		}
+	}
+
+	void PushApplication::SessionControlThread()
+	{
+		ov::StopWatch	timer;
+		int64_t timer_interval = 1000;
+		timer.Start();
+
+		while (!_session_control_stop_thread_flag)
+		{
+			if (timer.IsElapsed(timer_interval) && timer.Update())
+			{
+				// list of Push to be deleted
+				std::vector<std::shared_ptr<info::Push>> remove_pushes;
+
+				if (true)
+				{
+					std::lock_guard<std::shared_mutex> lock(_push_map_mutex);
+					for (auto &[id, push] : _pushes)
+					{
+						// Find a stream by stream name
+						auto stream = GetStream(push->GetStreamName());
+						if (stream == nullptr || stream->GetState() != pub::Stream::State::STARTED)
+						{
+							logtd("There is no stream for Push or it has not started. %s", push->GetInfoString().CStr());
+							push->SetState(info::Push::PushState::Ready);
+							continue;
+						}
+
+						// Find a session by session ID
+						auto session = stream->GetSession(push->GetSessionId());
+						if (session == nullptr)
+						{
+							session = stream->CreatePushSession(push);
+							if (session == nullptr)
+							{
+								logte("Could not create session");
+								continue;
+							}
+
+							push->SetSessionId(session->GetId());
+						}
+
+						// Starts only in the enabled state and stops otherwise
+						if (push->GetEnable() == true)
+						{
+							StartPushInternal(push, session);
+						}
+						else
+						{
+							StopPushInternal(push, session);
+						}
+
+						// Add to list when delete is enabled
+						if (push->GetRemove() == true)
+						{
+							remove_pushes.push_back(push);
+						}
+					}
+				}
+
+				if (true)
+				{
+					std::unique_lock<std::shared_mutex> lock(_push_map_mutex);
+					for (auto &push : remove_pushes)
+					{
+						auto stream = GetStream(push->GetStreamName());
+						if (stream != nullptr)
+						{
+							stream->RemoveSession(push->GetSessionId());
+						}
+
+						_pushes.erase(push->GetId());
+					}
+				}
+			}
+
+			usleep(100 * 1000);	 // 100ms
+		}
 	}
 }  // namespace pub

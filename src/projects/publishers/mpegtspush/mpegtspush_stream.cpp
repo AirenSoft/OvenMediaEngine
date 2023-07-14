@@ -40,18 +40,12 @@ bool MpegtsPushStream::Start()
 
 	logtd("MpegtsPushStream(%ld) has been started", GetId());
 
-	std::static_pointer_cast<MpegtsPushApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<MpegtsPushStream>(GetSharedPtr()), false);
-
-	_stop_watch.Start();
-
 	return Stream::Start();
 }
 
 bool MpegtsPushStream::Stop()
 {
 	logtd("MpegtsPushStream(%u) has been stopped", GetId());
-	
-	std::static_pointer_cast<MpegtsPushApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<MpegtsPushStream>(GetSharedPtr()), true);
 	
 	if (GetState() != Stream::State::STARTED)
 	{
@@ -63,12 +57,6 @@ bool MpegtsPushStream::Stop()
 
 void MpegtsPushStream::SendFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	// Periodically check the session. Retry the session in which the error occurred.
-	if (_stop_watch.IsElapsed(5000) && _stop_watch.Update())
-	{
-		std::static_pointer_cast<MpegtsPushApplication>(GetApplication())->SessionUpdateByStream(std::static_pointer_cast<MpegtsPushStream>(GetSharedPtr()), false);
-	}
-
 	auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
 
 	BroadcastPacket(stream_packet);
@@ -96,9 +84,9 @@ void MpegtsPushStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_
 	SendFrame(media_packet);
 }
 
-std::shared_ptr<MpegtsPushSession> MpegtsPushStream::CreateSession()
+std::shared_ptr<pub::Session> MpegtsPushStream::CreatePushSession(std::shared_ptr<info::Push> &push)
 {
-	auto session = MpegtsPushSession::Create(GetApplication(), GetSharedPtrAs<pub::Stream>(), this->IssueUniqueSessionId());
+	auto session = std::static_pointer_cast<pub::Session>(MpegtsPushSession::Create(GetApplication(), GetSharedPtrAs<pub::Stream>(), this->IssueUniqueSessionId(), push));
 	if (session == nullptr)
 	{
 		logte("Internal Error : Cannot create session");
@@ -107,10 +95,6 @@ std::shared_ptr<MpegtsPushSession> MpegtsPushStream::CreateSession()
 
 	AddSession(session);
 
-	return session;
+	return session; 
 }
 
-bool MpegtsPushStream::DeleteSession(uint32_t session_id)
-{
-	return RemoveSession(session_id);
-}

@@ -3,6 +3,7 @@
 #include <shared_mutex>
 #include "base/common_types.h"
 #include "base/info/stream.h"
+#include "base/info/push.h"
 #include "base/mediarouter/media_buffer.h"
 #include "modules/managed_queue/managed_queue.h"
 #include "session.h"
@@ -82,6 +83,9 @@ namespace pub
 		std::shared_ptr<Session> GetSession(session_id_t id);
 		const std::map<session_id_t, std::shared_ptr<Session>> GetAllSessions();
 		uint32_t GetSessionCount();
+
+		// This function is only called by Push Publisher
+		virtual	std::shared_ptr<pub::Session> CreatePushSession(std::shared_ptr<info::Push> &push);
 
 		// A child call this function to delivery packet to all sessions
 		bool BroadcastPacket(const std::any &packet);

@@ -6,18 +6,20 @@
 
 std::shared_ptr<RtmpPushSession> RtmpPushSession::Create(const std::shared_ptr<pub::Application> &application,
 										  	   const std::shared_ptr<pub::Stream> &stream,
-										  	   uint32_t session_id)
+										  	   uint32_t session_id, 
+											   std::shared_ptr<info::Push> &push)
 {
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), session_id);
-	auto session = std::make_shared<RtmpPushSession>(session_info, application, stream);
-	
+	auto session = std::make_shared<RtmpPushSession>(session_info, application, stream, push);
 	return session;
 }
 
 RtmpPushSession::RtmpPushSession(const info::Session &session_info,
 		   const std::shared_ptr<pub::Application> &application,
-		   const std::shared_ptr<pub::Stream> &stream)
+		   const std::shared_ptr<pub::Stream> &stream,
+		   const std::shared_ptr<info::Push> &push)
    : pub::Session(session_info, application, stream),
+   _push(push),
    _writer(nullptr)
 {
 
@@ -197,11 +199,6 @@ void RtmpPushSession::SendOutgoingData(const std::any &packet)
 		GetPush()->UpdatePushTime();
 		GetPush()->IncreasePushBytes(session_packet->GetData()->GetLength());		
     } 
-}
-
-void RtmpPushSession::SetPush(std::shared_ptr<info::Push> &push)
-{
-	_push = push;
 }
 
 std::shared_ptr<info::Push>& RtmpPushSession::GetPush()
