@@ -93,10 +93,16 @@ std::shared_ptr<ov::OpensslError> Certificate::GenerateFromPem(
 		return std::make_shared<ov::OpensslError>();
 	}
 
-	auto chain_certificate = LoadChainCertificate(chain_certificate_filename);
-	if ((chain_certificate_filename != nullptr) && (chain_certificate == nullptr))
+	if ((chain_certificate_filename != nullptr) && (chain_certificate_filename[0] != '\0'))
 	{
-		return std::make_shared<ov::OpensslError>();
+		auto chain_certificate = LoadChainCertificate(chain_certificate_filename);
+		if (chain_certificate == nullptr)
+		{
+			return std::make_shared<ov::OpensslError>();
+		}
+
+		_chain_certificate = std::move(chain_certificate);
+		_chain_certificate_filename = chain_certificate_filename;
 	}
 
 	_private_key = std::move(private_key);
@@ -104,9 +110,6 @@ std::shared_ptr<ov::OpensslError> Certificate::GenerateFromPem(
 
 	_certificate = std::move(certificate);
 	_certificate_filename = certificate_filename;
-
-	_chain_certificate = std::move(chain_certificate);
-	_chain_certificate_filename = chain_certificate_filename;
 
 	return nullptr;
 }
