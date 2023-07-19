@@ -66,8 +66,8 @@ Pulling type providers are activated by streaming requests from publishers. And 
 
 When a playback request comes in from the following URL, RTSP pull starts working according to Origins settings.
 
-| Protocol | URL                                                                    |
-| -------- | ---------------------------------------------------------------------- |
-| WebRTC   | ws\[s]:://host.com\[:port]/app\_name/rtsp\_stream\_name                |
-| LLHLS    | http\[s]://host.com\[:port]/app\_name/rtsp\_stream\_name/playlist.m3u8 |
+| Protocol | URL                                                                 |
+| -------- | ------------------------------------------------------------------- |
+| WebRTC   | ws\[s]:://host.com\[:port]/app\_name/rtsp\_stream\_name             |
+| LLHLS    | http\[s]://host.com\[:port]/app\_name/rtsp\_stream\_name/llhls.m3u8 |
 
