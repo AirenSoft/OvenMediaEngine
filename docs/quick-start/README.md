@@ -66,7 +66,7 @@ Publish your live stream to OvenMediaEngine using a live encoder like [OBS](http
 
 **SRT** - srt://Your.Docker.Host.IP:9999?streamid=srt%3A%2F%2FYour.Docker.Host.IP%3A9999%2Fapp%2Fstream
 
-**WHIP** - ws://Your.Docker.Host.IP:3333/app/stream?direction=whip
+**WHIP** - http://Your.Docker.Host.IP:3333/app/stream?direction=whip
 
 </details>
 
