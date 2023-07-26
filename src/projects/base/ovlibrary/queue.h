@@ -107,13 +107,17 @@ namespace ov
 
 			if (_stop == false)
 			{
-				std::chrono::system_clock::time_point expire =
-					(timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
+				// If there is data in the queue, return immediately without condition wait
+				auto result = (_queue.empty() == false) ? true : false;
+				if (!result)
+				{
+					std::chrono::system_clock::time_point expire =
+						(timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
 
-				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
-					return ((_queue.empty() == false) || _stop);
-				});
-
+					result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
+						return ((_queue.empty() == false) || _stop);
+					});
+				}
 				if (result)
 				{
 					if (_stop == false)
@@ -145,12 +149,17 @@ namespace ov
 
 			if (_stop == false)
 			{
-				std::chrono::system_clock::time_point expire =
+				// If there is data in the queue, return immediately without condition wait
+				auto result = (_queue.empty() == false)?true:false;
+				if (!result)
+				{
+					std::chrono::system_clock::time_point expire =
 					(timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
 
-				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
-					return ((_queue.empty() == false) || _stop);
-				});
+					result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
+						return ((_queue.empty() == false) || _stop);
+					});
+				}
 
 				if (result)
 				{
@@ -183,12 +192,17 @@ namespace ov
 
 			if (_stop == false)
 			{
-				std::chrono::system_clock::time_point expire =
+				// If there is data in the queue, return immediately without condition wait
+				auto result = (_queue.empty() == false)?true:false;
+				if (!result)
+				{
+					std::chrono::system_clock::time_point expire =
 					(timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
 
-				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
-					return ((_queue.empty() == false) || _stop);
-				});
+					result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
+						return ((_queue.empty() == false) || _stop);
+					});
+				}
 
 				if (result)
 				{
