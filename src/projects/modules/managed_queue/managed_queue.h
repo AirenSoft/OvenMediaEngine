@@ -133,15 +133,18 @@ namespace ov
 				return {};	// Stop is requested
 			}
 
-			std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
-
-			auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
-				return (((_size == 0) == false) || _stop);
-			});
-
-			if (!result || _stop)
+			if (_size == 0)
 			{
-				return {};	// timed out / Stop is requested
+				std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
+
+				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
+					return (((_size == 0) == false) || _stop);
+				});
+
+				if (!result || _stop)
+				{
+					return {};	// timed out / Stop is requested
+				}
 			}
 
 			return _front_node->data;
@@ -156,15 +159,18 @@ namespace ov
 				return {};	// Stop is requested
 			}
 
-			std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
-
-			auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
-				return (((_size == 0) == false) || _stop);
-			});
-
-			if (!result || _stop)
+			if (_size == 0)
 			{
-				return {};	// timed out / Stop is requested
+				std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
+
+				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
+					return (((_size == 0) == false) || _stop);
+				});
+
+				if (!result || _stop)
+				{
+					return {};	// timed out / Stop is requested
+				}
 			}
 
 			return _rear_node->data;
@@ -179,15 +185,18 @@ namespace ov
 				return {};	// Stop is requested
 			}
 
-			std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
-
-			auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
-				return (((_size == 0) == false) || _stop);
-			});
-
-			if (!result || _stop)
+			if (_size == 0)
 			{
-				return {};	// timed out / Stop is requested
+				std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
+			
+				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
+					return (((_size == 0) == false) || _stop);
+				});
+
+				if (!result || _stop)
+				{
+					return {};	// timed out / Stop is requested
+				}
 			}
 
 			ManagedQueueNode* node = _front_node;
