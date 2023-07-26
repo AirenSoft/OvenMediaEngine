@@ -57,7 +57,7 @@ namespace pub
 		std::shared_ptr<SessionMessage> PopSessionMessage();
 		ov::Queue<std::shared_ptr<SessionMessage>> _session_message_queue;
 
-		bool _stop_thread_flag;
+		std::atomic<bool> _stop_thread_flag;
 		std::thread _worker_thread;
 
 		std::shared_ptr<Stream> _parent;

@@ -13,7 +13,6 @@ namespace pub
 
 	StreamWorker::~StreamWorker()
 	{
-		Stop();
 	}
 
 	bool StreamWorker::Start()
@@ -44,6 +43,9 @@ namespace pub
 			return true;
 		}
 
+		ov::String worker_name = ov::String::FormatString("%s/%s/%s", _parent->GetApplicationTypeName(), _parent->GetApplicationName(), _parent->GetName().CStr());
+		logti("Try to stop StreamWorker thread of %s", worker_name.CStr());
+
 		_stop_thread_flag = true;
 		// Generate Event
 		_packet_queue.Stop();
@@ -55,13 +57,18 @@ namespace pub
 			_worker_thread.join();
 		}
 
+		logti("StreamWorker thread of %s has been stopped successfully", worker_name.CStr());
+
 		std::lock_guard<std::shared_mutex> lock(_session_map_mutex);
+
+		logti("Try to stop all sessions of %s", worker_name.CStr());
 		for (auto const &x : _sessions)
 		{
 			auto session = std::static_pointer_cast<Session>(x.second);
 			session->Stop();
 		}
 		_sessions.clear();
+		logti("All sessions(%d) of %s has been stopped successfully", _sessions.size(), worker_name.CStr());
 
 		return true;
 	}
@@ -193,7 +200,6 @@ namespace pub
 
 	Stream::~Stream()
 	{
-		Stop();
 	}
 
 	bool Stream::Start()
@@ -257,6 +263,8 @@ namespace pub
 
 	bool Stream::Stop()
 	{
+		logti("Try to stop %s stream [%s(%u)]", GetApplicationTypeName(), GetName().CStr(), GetId());
+
 		std::unique_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
 
 		if (_state != State::STARTED)
@@ -271,11 +279,16 @@ namespace pub
 			worker->Stop();
 		}
 
+		logti("[%s(%u)] %s - All StreamWorker has been stopped", GetName().CStr(), GetId(), GetApplicationTypeName());
+
 		_stream_workers.clear();
 
 		worker_lock.unlock();
 
 		std::lock_guard<std::shared_mutex> session_lock(_session_map_mutex);
+
+		logti("[%s(%u)] %s - Try to stop all sessions (%d)", GetName().CStr(), GetId(), GetApplicationTypeName(), _sessions.size());
+
 		for(const auto &x : _sessions)
 		{
 			auto session = x.second;

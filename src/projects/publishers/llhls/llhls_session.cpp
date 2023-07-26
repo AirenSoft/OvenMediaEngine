@@ -382,7 +382,7 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 	return true;
 }
 
-void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, bool legacy)
+void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, bool legacy, bool holdIfAccepted /*= true*/)
 {
 	auto llhls_stream = std::static_pointer_cast<LLHlsStream>(GetStream());
 	if (llhls_stream == nullptr)
@@ -460,7 +460,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 		MonitorInstance->OnSessionConnected(*GetStream(), PublisherType::LLHls);
 		_number_of_players += 1;
 	}
-	else if (result == LLHlsStream::RequestResult::Accepted)
+	else if (result == LLHlsStream::RequestResult::Accepted && holdIfAccepted == true)
 	{
 		// llhls.m3u8 is transmitted when more than one segment (any track) is created.
 		AddPendingRequest(exchange, RequestType::Playlist, file_name, 0, 1, 0, false, legacy);
@@ -468,6 +468,11 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 	}
 	else
 	{
+		if (holdIfAccepted == false)
+		{
+			logtw("%s/%s/%s Failed to respond to pending request.", GetApplication()->GetName().CStr(), GetStream()->GetName().CStr(), file_name.CStr());
+		}
+
 		// Send error response
 		response->SetStatusCode(http::StatusCode::NotFound);
 	}
@@ -475,7 +480,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 	ResponseData(exchange);
 }
 
-void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, int64_t msn, int64_t part, bool skip, bool legacy)
+void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, int64_t msn, int64_t part, bool skip, bool legacy, bool holdIfAccepted /*= true*/)
 {
 	auto llhls_stream = std::static_pointer_cast<LLHlsStream>(GetStream());
 	if (llhls_stream == nullptr)
@@ -580,16 +585,22 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 			_number_of_players += 1;
 		}
 	}
-	else if (result == LLHlsStream::RequestResult::Accepted)
+	else if (result == LLHlsStream::RequestResult::Accepted && holdIfAccepted == true)
 	{
 		// Hold
 		//TODO(Getroot): EXT-X-SKIP is under debugging
+
 		skip = false;
 		AddPendingRequest(exchange, RequestType::Chunklist, file_name, track_id, msn, part, skip, legacy);
 		return ;
 	}
 	else
 	{
+		if (holdIfAccepted == false)
+		{
+			logtw("%s/%s/%s Failed to respond to pending request.", GetApplication()->GetName().CStr(), GetStream()->GetName().CStr(), file_name.CStr());
+		}
+
 		// Send error response
 		response->SetStatusCode(http::StatusCode::NotFound);
 	}
@@ -700,7 +711,7 @@ void LLHlsSession::ResponseSegment(const std::shared_ptr<http::svr::HttpExchange
 	ResponseData(exchange);
 }
 
-void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number)
+void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number, bool holdIfAccepted /*= true*/)
 {
 	auto llhls_stream = std::static_pointer_cast<LLHlsStream>(GetStream());
 	if (llhls_stream == nullptr)
@@ -742,7 +753,7 @@ void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpE
 
 		response->AppendData(partial_segment);
 	}
-	else if (result == LLHlsStream::RequestResult::Accepted)
+	else if (result == LLHlsStream::RequestResult::Accepted && holdIfAccepted == true)
 	{
 		// Hold
 		AddPendingRequest(exchange, RequestType::PartialSegment, file_name, track_id, segment_number, partial_number, false, false);
@@ -750,6 +761,11 @@ void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpE
 	}
 	else
 	{
+		if (holdIfAccepted == false)
+		{
+			logtw("%s/%s/%s Failed to respond to pending request.", GetApplication()->GetName().CStr(), GetStream()->GetName().CStr(), file_name.CStr());
+		}
+
 		// Send error response
 		response->SetStatusCode(http::StatusCode::NotFound);
 	}
@@ -785,7 +801,7 @@ void LLHlsSession::OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn
 		{
 			// Send the playlist
 			auto exchange = it->exchange;
-			ResponsePlaylist(exchange, it->file_name, it->legacy);
+			ResponsePlaylist(exchange, it->file_name, it->legacy, false);
 			it = _pending_requests.erase(it);
 		}
 		else if ( (it->track_id == track_id) && 
@@ -795,10 +811,10 @@ void LLHlsSession::OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn
 			switch (it->type)
 			{
 			case RequestType::Chunklist:
-				ResponseChunklist(it->exchange, it->file_name, it->track_id, it->segment_number, it->partial_number, it->skip, it->legacy);
+				ResponseChunklist(it->exchange, it->file_name, it->track_id, it->segment_number, it->partial_number, it->skip, it->legacy, false);
 				break;
 			case RequestType::PartialSegment:
-				ResponsePartialSegment(it->exchange, it->file_name, it->track_id, it->segment_number, it->partial_number);
+				ResponsePartialSegment(it->exchange, it->file_name, it->track_id, it->segment_number, it->partial_number, false);
 				break;
 			case RequestType::Segment:
 				ResponseSegment(it->exchange, it->file_name, it->track_id, it->segment_number);
