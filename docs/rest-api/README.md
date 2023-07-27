@@ -123,7 +123,7 @@ In this API reference document, the API endpoint is described as follows. Note t
 Describe the required header values.
 
 ```http
-Haeder-Key: Value
+Header-Key: Value
 
 # Header-Key
     Description
