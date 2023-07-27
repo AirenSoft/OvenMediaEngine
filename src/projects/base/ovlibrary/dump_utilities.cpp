@@ -219,15 +219,29 @@ namespace ov
 	std::shared_ptr<Data> LoadFromFile(const char *file_name) noexcept
 	{
 		FILE *file = ::fopen(file_name, "rb");
-
 		if (file == nullptr)
 		{
 			return nullptr;
 		}
 
-		::fseek(file, 0L, SEEK_END);
-		auto length = ::ftell(file);
-		::fseek(file, 0L, SEEK_SET);
+		if (::fseeko(file, 0L, SEEK_END) != 0)
+		{
+			::fclose(file);
+			return nullptr;
+		}
+
+		auto length = ::ftello(file);
+		if (length <= 0L)
+		{
+			::fclose(file);
+			return nullptr;
+		}
+		
+		if (::fseeko(file, 0L, SEEK_SET) != 0)
+		{
+			::fclose(file);
+			return nullptr;
+		}
 
 		auto data = std::make_shared<Data>(length);
 		data->SetLength(length);

@@ -204,6 +204,8 @@ private:
 
 	// Segment number -> SegmentInfo
 	std::deque<std::shared_ptr<SegmentInfo>> _segments;
+
+	// old_segments is for only HLS dump
 	std::deque<std::shared_ptr<SegmentInfo>> _old_segments;
 	mutable std::shared_mutex _segments_guard;
 	uint64_t _deleted_segments = 0;

@@ -50,6 +50,7 @@ void LLHlsChunklist::SaveOldSegmentInfo(bool enable)
 
 	if (_keep_old_segments == false)
 	{
+		std::lock_guard<std::shared_mutex> lock(_segments_guard);
 		_old_segments.clear();
 		_old_segments.shrink_to_fit();
 	}
@@ -187,6 +188,7 @@ bool LLHlsChunklist::SaveOldSegmentInfo(std::shared_ptr<SegmentInfo> &segment_in
 	segment_info->ClearPartialSegments();
 
 	logtd("Save old segment info: %d / %s", segment_info->GetSequence(), segment_info->GetUrl().CStr());
+
 	_old_segments.push_back(segment_info);
 
 	//TODD[CRITICAL](Getroot): _old_segments must be saved to file because memory should be exhausted
