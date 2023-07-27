@@ -44,7 +44,7 @@ namespace ov
 		bool Stop()
 		{
 			_run_thread = false;
-			_event.Notify();
+			_event.Stop();
 			if(_thread.joinable())
 			{
 				_thread.join();

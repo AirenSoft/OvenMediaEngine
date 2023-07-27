@@ -59,7 +59,7 @@ namespace pub
 		};
 		std::shared_ptr<ApplicationWorker::StreamData> PopStreamData();
 
-		bool _stop_thread_flag;
+		std::atomic<bool> _stop_thread_flag;
 		std::thread _worker_thread;
 		ov::Semaphore _queue_event;
 
@@ -142,7 +142,7 @@ namespace pub
 		void StopPushInternal(const std::shared_ptr<info::Push> &push, std::shared_ptr<pub::Session> session);
 		void SessionControlThread();
 
-		bool _session_control_stop_thread_flag = false;
+		std::atomic<bool> _session_control_stop_thread_flag = false;
 		std::thread _session_contol_thread;
 
 		// <uniqueId, pushInfo>

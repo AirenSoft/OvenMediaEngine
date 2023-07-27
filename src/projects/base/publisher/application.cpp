@@ -48,7 +48,7 @@ namespace pub
 
 		_stop_thread_flag = true;
 
-		_queue_event.Notify();
+		_queue_event.Stop();
 
 		if (_worker_thread.joinable())
 		{

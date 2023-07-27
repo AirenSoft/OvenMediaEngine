@@ -48,7 +48,7 @@ namespace pvd
 
 		int _epoll_fd;
 
-		bool _stop_thread_flag;
+		std::atomic<bool> _stop_thread_flag;
 		std::thread _thread;
 		std::shared_mutex _streams_map_guard;
 		std::map<uint32_t, std::shared_ptr<PullStream>> _streams;
