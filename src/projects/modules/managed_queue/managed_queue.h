@@ -57,13 +57,22 @@ namespace ov
 			  _rear_node(nullptr),
 			  _stop(false)
 		{
-			SetId(ov::Random::GenerateUInt32() - 1);
 			info::ManagedQueue::SetUrn(urn, Demangle(typeid(T).name()).CStr());
 
 			_timer.Start();
 
 			// Register to the server metrics
-			MonitorInstance->GetServerMetrics()->OnQueueCreated(*this);
+			// If the Unique id is duplicated or memory allocation failed, retry
+			while(true)
+			{
+				SetId(IssueUniqueQueueId());
+
+				if(MonitorInstance->GetServerMetrics()->OnQueueCreated(*this) == true)
+				{
+					break;
+				}
+			}
+			
 		}
 
 		~ManagedQueue()

@@ -216,6 +216,23 @@ namespace info
 			return _urn;
 		}
 
+		ov::String ToString() const
+		{
+			if(_urn == nullptr)
+			{
+				return "No Urn";
+			}
+
+			return _urn->ToString();
+		}
+
+		info::managed_queue_id_t IssueUniqueQueueId()
+		{
+			static std::atomic<info::managed_queue_id_t> last_issued_queue_id(100);
+
+			return last_issued_queue_id++;
+		}
+
 	protected:
 		// ID of the queue
 		managed_queue_id_t _id = 0;
