@@ -99,7 +99,7 @@ namespace mon
 
 	void ServerMetrics::OnQueueCreated(const info::ManagedQueue &queue_info)
 	{
-		std::shared_lock<std::shared_mutex> lock(_map_guard);
+		std::unique_lock<std::shared_mutex> lock(_map_guard);
 
 		auto queue_metrics = std::make_shared<QueueMetrics>(queue_info);
 		if (queue_metrics == nullptr)
@@ -113,7 +113,7 @@ namespace mon
 
 	void ServerMetrics::OnQueueDeleted(const info::ManagedQueue &queue_info)
 	{
-		std::shared_lock<std::shared_mutex> lock(_map_guard);
+		std::unique_lock<std::shared_mutex> lock(_map_guard);
 
 		auto it = _queues.find(queue_info.GetId());
 		if (it == _queues.end())
@@ -128,7 +128,7 @@ namespace mon
 
 	void ServerMetrics::OnQueueUpdated(const info::ManagedQueue &queue_info, bool with_metadata)
 	{
-		std::shared_lock<std::shared_mutex> lock(_map_guard);
+		std::unique_lock<std::shared_mutex> lock(_map_guard);
 
 		auto it = _queues.find(queue_info.GetId());
 		if (it == _queues.end())
