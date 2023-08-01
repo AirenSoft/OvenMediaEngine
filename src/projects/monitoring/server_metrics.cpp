@@ -97,53 +97,59 @@ namespace mon
 		return _hosts[host_info.GetId()];
 	}
 
-	void ServerMetrics::OnQueueCreated(const info::ManagedQueue &queue_info)
+
+	bool ServerMetrics::OnQueueCreated(const info::ManagedQueue &queue_info)
 	{
-		std::unique_lock<std::shared_mutex> lock(_map_guard);
+		if(GetQueueMetrics(queue_info) != nullptr)
+		{
+			logtw("Dupulicate QueueMetrics(%u/%s) is created", queue_info.GetId(), queue_info.ToString().CStr());
+			return false;
+		}
 
 		auto queue_metrics = std::make_shared<QueueMetrics>(queue_info);
 		if (queue_metrics == nullptr)
 		{
-			logte("Cannot create QueueMetrics (%u/%s)", queue_info.GetId(), queue_info.GetUrn()->ToString().CStr());
-			return;
+			logte("Cannot create QueueMetrics (%u/%s)", queue_info.GetId(), queue_info.ToString().CStr());
+			return false;
 		}
-
+		
+		std::unique_lock<std::shared_mutex> lock(_queue_map_guard);
 		_queues[queue_info.GetId()] = queue_metrics;
+
+		return true;
 	}
 
-	void ServerMetrics::OnQueueDeleted(const info::ManagedQueue &queue_info)
+	bool ServerMetrics::OnQueueDeleted(const info::ManagedQueue &queue_info)
 	{
-		std::unique_lock<std::shared_mutex> lock(_map_guard);
+		std::unique_lock<std::shared_mutex> lock(_queue_map_guard);
 
 		auto it = _queues.find(queue_info.GetId());
 		if (it == _queues.end())
 		{
-			return;
+			logtw("Cannot find QueueMetrics(%u/%s) for deleting", queue_info.GetId(), queue_info.ToString().CStr());
+			return false;
 		}
-
-		[[maybe_unused]] auto queue = it->second;
 
 		_queues.erase(it);
+		
+		return true;
 	}
 
-	void ServerMetrics::OnQueueUpdated(const info::ManagedQueue &queue_info, bool with_metadata)
+	bool ServerMetrics::OnQueueUpdated(const info::ManagedQueue &queue_info, bool with_metadata)
 	{
-		std::unique_lock<std::shared_mutex> lock(_map_guard);
-
-		auto it = _queues.find(queue_info.GetId());
-		if (it == _queues.end())
+		auto queue = GetQueueMetrics(queue_info);
+		if(queue == nullptr)
 		{
-			return;
+			logtw("Cannot find QueueMetrics(%u/%s) for updating", queue_info.GetId(), queue_info.ToString().CStr());
+			return false;
 		}
-
-		auto queue = it->second;
 
 		if (with_metadata == true)
 		{
 			queue->UpdateMetadata(queue_info);
 		}
-
 		queue->UpdateMetrics(queue_info);
+
 
 		/**
 			[Experimental] Delete lazy stream
@@ -183,12 +189,26 @@ namespace mon
 				malloc_trim(0);
 			}
 		}
+
+		return true;
 	}
 
 	std::map<uint32_t, std::shared_ptr<QueueMetrics>> ServerMetrics::GetQueueMetricsList()
 	{
-		std::shared_lock<std::shared_mutex> lock(_map_guard);
+		std::shared_lock<std::shared_mutex> lock(_queue_map_guard);
 
 		return _queues;
+	}
+
+	std::shared_ptr<QueueMetrics> ServerMetrics::GetQueueMetrics(const info::ManagedQueue &queue_info)
+	{
+		std::shared_lock<std::shared_mutex> lock(_queue_map_guard);
+
+		if (_queues.find(queue_info.GetId()) == _queues.end())
+		{
+			return nullptr;
+		}
+
+		return _queues[queue_info.GetId()];
 	}
 }  // namespace mon
