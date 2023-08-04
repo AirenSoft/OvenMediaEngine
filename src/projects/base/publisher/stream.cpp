@@ -44,7 +44,7 @@ namespace pub
 		}
 
 		ov::String worker_name = ov::String::FormatString("%s/%s/%s", _parent->GetApplicationTypeName(), _parent->GetApplicationName(), _parent->GetName().CStr());
-		logti("Try to stop StreamWorker thread of %s", worker_name.CStr());
+		logtd("Try to stop StreamWorker thread of %s", worker_name.CStr());
 
 		_stop_thread_flag = true;
 		// Generate Event
@@ -57,18 +57,18 @@ namespace pub
 			_worker_thread.join();
 		}
 
-		logti("StreamWorker thread of %s has been stopped successfully", worker_name.CStr());
+		logtd("StreamWorker thread of %s has been stopped successfully", worker_name.CStr());
 
 		std::lock_guard<std::shared_mutex> lock(_session_map_mutex);
 
-		logti("Try to stop all sessions of %s", worker_name.CStr());
+		logtd("Try to stop all sessions of %s", worker_name.CStr());
 		for (auto const &x : _sessions)
 		{
 			auto session = std::static_pointer_cast<Session>(x.second);
 			session->Stop();
 		}
 		_sessions.clear();
-		logti("All sessions(%d) of %s has been stopped successfully", _sessions.size(), worker_name.CStr());
+		logtd("All sessions(%d) of %s has been stopped successfully", _sessions.size(), worker_name.CStr());
 
 		return true;
 	}
