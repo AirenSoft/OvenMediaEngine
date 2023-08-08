@@ -375,6 +375,7 @@ namespace pub
 	{
 		_session_control_stop_thread_flag = false;
 		_session_contol_thread = std::thread(&PushApplication::SessionControlThread, this);
+		pthread_setname_np(_session_contol_thread.native_handle(), "PushSessionCtrl");
 
 		return Application::Start();
 	}
