@@ -18,19 +18,11 @@
 #include "../codec/codec_base.h"
 #include "../transcoder_context.h"
 
-extern "C"
-{
-#include <libavcodec/avcodec.h>
-#include <libavfilter/buffersink.h>
-#include <libavfilter/buffersrc.h>
-#include <libavformat/avformat.h>
-#include <libavutil/opt.h>
-}
-
 #include <base/info/application.h>
 #include <base/info/media_track.h>
 #include <base/mediarouter/media_buffer.h>
 #include <base/mediarouter/media_type.h>
+#include <modules/ffmpeg/ffmpeg_conv.h>
 #include <modules/managed_queue/managed_queue.h>
 
 class FilterBase

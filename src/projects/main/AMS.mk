@@ -49,12 +49,11 @@ LOCAL_STATIC_LIBRARIES := \
 	ovlibrary \
 	monitoring \
 	jsoncpp \
-	file \
 	dump \
 	srt \
-	rtmp \
 	file_provider \
 	managed_queue \
+	ffmpeg_wrapper \
 	
 
 # rtsp_provider 

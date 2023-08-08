@@ -7,6 +7,8 @@
 #include <base/publisher/application.h>
 #include <base/publisher/stream.h>
 #include <config/config.h>
+#include <modules/ffmpeg/ffmpeg_conv.h>
+#include <modules/ffmpeg/ffmpeg_writer.h>
 
 #include <regex>
 
@@ -96,16 +98,8 @@ namespace pub
 		GetRecord()->SetState(info::Record::RecordState::Recording);
 
 		// Get extension and container format
-		ov::String output_extention = ov::PathManager::ExtractExtension(GetRecord()->GetOutputFilePath());
-		ov::String output_format = FileWriter::GetFormatByExtension(output_extention, "mpegts");
-
-		logtd("Recording file information. seq(%d), extention(%s), format(%s), filePath(%s), tmpPath(%s), infoPath(%s)",
-			  GetRecord()->GetSequence(),
-			  output_extention.CStr(),
-			  output_format.CStr(),
-			  GetRecord()->GetOutputFilePath().CStr(),
-			  GetRecord()->GetTmpPath().CStr(),
-			  GetRecord()->GetOutputInfoPath().CStr());
+		ov::String output_extension = ov::PathManager::ExtractExtension(GetRecord()->GetOutputFilePath());
+		ov::String output_format = ffmpeg::Conv::GetFormatByExtension(output_extension, "mpegts");
 
 		// Create directory for temporary file
 		ov::String tmp_directory = ov::PathManager::ExtractPath(GetRecord()->GetTmpPath());
@@ -121,9 +115,7 @@ namespace pub
 			return false;
 		}
 
-		// logtd("The temporary directory was created successfully. (%s)", tmp_real_directory.CStr());
-
-		_writer = FileWriter::Create();
+		_writer = ffmpeg::Writer::Create();
 		if (_writer == nullptr)
 		{
 			SetState(SessionState::Error);
@@ -132,7 +124,7 @@ namespace pub
 			return false;
 		}
 
-		if (_writer->SetPath(ov::PathManager::Combine(GetRootPath(), GetRecord()->GetTmpPath()), output_format) == false)
+		if (_writer->SetUrl(ov::PathManager::Combine(GetRootPath(), GetRecord()->GetTmpPath()), output_format) == false)
 		{
 			SetState(SessionState::Error);
 			GetRecord()->SetState(info::Record::RecordState::Error);
@@ -146,67 +138,37 @@ namespace pub
 		// or keep it at the same value as the source timestamp
 		if (GetRecord()->GetSegmentationRule() == "continuity")
 		{
-			_writer->SetTimestampRecalcMode(FileWriter::TIMESTAMP_PASSTHROUGH_MODE);
+			_writer->SetTimestampMode(ffmpeg::Writer::TIMESTAMP_PASSTHROUGH_MODE);
 		}
 		else if (GetRecord()->GetSegmentationRule() == "discontinuity")
 		{
-			_writer->SetTimestampRecalcMode(FileWriter::TIMESTAMP_STARTZERO_MODE);
+			_writer->SetTimestampMode(ffmpeg::Writer::TIMESTAMP_STARTZERO_MODE);
 		}
 
-		logtd("Create temporary file(%s)", _writer->GetPath().CStr());
-
-		for (auto &track_item : GetStream()->GetTracks())
+		for (auto &[track_id, track] : GetStream()->GetTracks())
 		{
-			auto &track = track_item.second;
-
-			// If the selected track list exists. if the current trackid does not exist on the list, ignore it.
-			// If no track list is selected, save all tracks.
-			auto selected_track_ids = GetRecord()->GetTrackIds();
-			auto selected_track_names = GetRecord()->GetVariantNames();
-			if (selected_track_ids.size() > 0 || selected_track_names.size() > 0)
+			if(IsSelectedTrack(track) == false)
 			{
-				if ((find(selected_track_ids.begin(), selected_track_ids.end(), track->GetId()) == selected_track_ids.end()) &&
-					(find(selected_track_names.begin(), selected_track_names.end(), track->GetVariantName()) == selected_track_names.end()))
-				{
-					continue;
-				}
+				continue;
 			}
 
-			if (FileWriter::IsSupportCodec(output_format, track->GetCodecId()) == false)
+			if (ffmpeg::Conv::IsSupportCodec(output_format, track->GetCodecId()) == false)
 			{
-				logtw("%s format does not support the codec(%d)", output_format.CStr(), track->GetCodecId());
+				logtw("%s format does not support the codec(%s)", output_format.CStr(), cmn::GetStringFromCodecId(track->GetCodecId()).CStr());
 				continue;
 			}
 
 			// Choose default track of recording stream
-			UpdateDefaultTrack(track);
+			SelectDefaultTrack(track);
 
-			auto track_info = FileTrackInfo::Create();
-
-			track_info->SetCodecId(track->GetCodecId());
-			track_info->SetBitrate(track->GetBitrate());
-			track_info->SetTimeBase(track->GetTimeBase());
-			track_info->SetWidth(track->GetWidth());
-			track_info->SetHeight(track->GetHeight());
-			track_info->SetSample(track->GetSample());
-			track_info->SetChannel(track->GetChannel());
-
-			// Set DecoderSpecificInfo
-			if (track->GetCodecId() == cmn::MediaCodecId::H264 || 
-				track->GetCodecId() == cmn::MediaCodecId::H265 || 
-				track->GetCodecId() == cmn::MediaCodecId::Aac)
-			{
-				track_info->SetExtradata(track->GetDecoderConfigurationRecord() != nullptr ? track->GetDecoderConfigurationRecord()->GetData() : nullptr);
-			}
-			
-			bool ret = _writer->AddTrack(track->GetMediaType(), track->GetId(), track_info);
+			bool ret = _writer->AddTrack(track);
 			if (ret == false)
 			{
-				logtw("Failed to add media track");
+				logtw("Failed to add new track");
 			}
 		}
 
-		logtd("default track id is %d", _default_track);
+		logtd("Create temporary file(%s) and default track id(%d)", _writer->GetUrl().CStr(), _default_track);
 
 		if (_writer->Start() == false)
 		{
@@ -217,14 +179,14 @@ namespace pub
 			return false;
 		}
 
-		logtd("Recording started. id: %d", GetId());
+		logti("Start recording.%s", GetRecord()->GetInfoString().CStr());
 
 		return true;
 	}
 
 	// Select the first video track as the default track.
 	// If there is no video track, the first track of the audio is selected as the default track.
-	void FileSession::UpdateDefaultTrack(const std::shared_ptr<MediaTrack> &track)
+	void FileSession::SelectDefaultTrack(const std::shared_ptr<MediaTrack> &track)
 	{
 		if (_default_track_by_type.find(track->GetMediaType()) == _default_track_by_type.end())
 		{
@@ -239,6 +201,23 @@ namespace pub
 				_default_track = _default_track_by_type[cmn::MediaType::Audio];
 			}
 		}
+	}
+
+	// Check if the track is selected for recording.
+	bool FileSession::IsSelectedTrack(const std::shared_ptr<MediaTrack> &track)
+	{
+		auto selected_track_ids = GetRecord()->GetTrackIds();
+		auto selected_track_names = GetRecord()->GetVariantNames();
+		if (selected_track_ids.size() > 0 || selected_track_names.size() > 0)
+		{
+			if ((find(selected_track_ids.begin(), selected_track_ids.end(), track->GetId()) == selected_track_ids.end()) &&
+				(find(selected_track_names.begin(), selected_track_names.end(), track->GetVariantName()) == selected_track_names.end()))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	bool FileSession::StopRecord()
@@ -286,7 +265,7 @@ namespace pub
 			}
 
 			// Moves temporary files to a user-defined path.
-			ov::String tmp_output_path = _writer->GetPath();
+			ov::String tmp_output_path = _writer->GetUrl();
 
 			if (rename(tmp_output_path.CStr(), output_path.CStr()) != 0)
 			{
@@ -309,11 +288,12 @@ namespace pub
 			logtd("Appends the recording result to the information file. path: %s", info_path.CStr());
 
 			GetRecord()->SetState(info::Record::RecordState::Stopped);
-			GetRecord()->IncreaseSequence();
-
+			
 			_writer = nullptr;
 
-			logtd("Recording finished. id: %d", GetId());
+			logti("Recording finished.%s", GetRecord()->GetInfoString().CStr());
+
+			GetRecord()->IncreaseSequence();
 		}
 
 		return true;
@@ -390,13 +370,7 @@ namespace pub
 
 		if (_writer != nullptr)
 		{
-			bool ret = _writer->PutData(
-				session_packet->GetTrackId(),
-				session_packet->GetPts(),
-				session_packet->GetDts(),
-				session_packet->GetFlag(),
-				session_packet->GetBitstreamFormat(),
-				session_packet->GetData());
+			bool ret = _writer->SendPacket(session_packet);
 
 			if (ret == false)
 			{
@@ -416,6 +390,8 @@ namespace pub
 
 	void FileSession::SetRecord(std::shared_ptr<info::Record> &record)
 	{
+		std::lock_guard<std::shared_mutex> mlock(_lock);
+
 		_record = record;
 	}
 
@@ -505,21 +481,15 @@ namespace pub
 
 		if (s[s.size() - 1] != '/')
 		{
-			// force trailing / so we can handle everything in loop
 			s += '/';
 		}
 
 		while ((pos = s.find_first_of('/', pos)) != std::string::npos)
 		{
 			dir = s.substr(0, pos++);
-
-			logtd("* %s", dir.c_str());
-
 			if (dir.size() == 0)
-				continue;  // if leading / first time is 0 length
-
-			// If you want to change the directory permission,
-			// change the mask parameter of the MakeDirectory function.
+				continue;  
+				
 			if (ov::PathManager::MakeDirectory(dir.c_str()) == false)
 			{
 				return false;

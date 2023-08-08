@@ -2,8 +2,6 @@
 
 #include <base/common_types.h>
 #include <base/publisher/stream.h>
-#include <modules/rtmp/rtmp_writer.h>
-
 #include "monitoring/monitoring.h"
 #include "rtmppush_session.h"
 
@@ -20,10 +18,10 @@ public:
 	void SendFrame(const std::shared_ptr<MediaPacket> &media_packet);
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
-	void SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet) override {} // Not supported
+	void SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet) override {}  // Not supported
 
 	std::shared_ptr<pub::Session> CreatePushSession(std::shared_ptr<info::Push> &push) override;
-	
+
 private:
 	bool Start() override;
 	bool Stop() override;

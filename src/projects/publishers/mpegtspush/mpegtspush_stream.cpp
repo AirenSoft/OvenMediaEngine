@@ -8,14 +8,14 @@
 #include "mpegtspush_private.h"
 
 std::shared_ptr<MpegtsPushStream> MpegtsPushStream::Create(const std::shared_ptr<pub::Application> application,
-													   const info::Stream &info)
+														   const info::Stream &info)
 {
 	auto stream = std::make_shared<MpegtsPushStream>(application, info);
 	return stream;
 }
 
 MpegtsPushStream::MpegtsPushStream(const std::shared_ptr<pub::Application> application,
-							   const info::Stream &info)
+								   const info::Stream &info)
 	: Stream(application, info)
 {
 }
@@ -46,7 +46,7 @@ bool MpegtsPushStream::Start()
 bool MpegtsPushStream::Stop()
 {
 	logtd("MpegtsPushStream(%u) has been stopped", GetId());
-	
+
 	if (GetState() != Stream::State::STARTED)
 	{
 		return false;
@@ -57,6 +57,11 @@ bool MpegtsPushStream::Stop()
 
 void MpegtsPushStream::SendFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	if (GetState() != Stream::State::STARTED)
+	{
+		return;
+	}
+
 	auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
 
 	BroadcastPacket(stream_packet);
@@ -66,21 +71,11 @@ void MpegtsPushStream::SendFrame(const std::shared_ptr<MediaPacket> &media_packe
 
 void MpegtsPushStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (GetState() != Stream::State::STARTED)
-	{
-		return;
-	}
-
 	SendFrame(media_packet);
 }
 
 void MpegtsPushStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (GetState() != Stream::State::STARTED)
-	{
-		return;
-	}
-
 	SendFrame(media_packet);
 }
 
@@ -95,6 +90,5 @@ std::shared_ptr<pub::Session> MpegtsPushStream::CreatePushSession(std::shared_pt
 
 	AddSession(session);
 
-	return session; 
+	return session;
 }
-

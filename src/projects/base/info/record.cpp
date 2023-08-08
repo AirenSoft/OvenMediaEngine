@@ -411,23 +411,23 @@ namespace info
 
 	const ov::String Record::GetInfoString()
 	{
-		ov::String info = "\n";
+		ov::String info = "";
 
-		info.AppendFormat(" id=%s\n", _id.CStr());
-		info.AppendFormat(" stream=%s\n", _stream_name.CStr());
-		info.AppendFormat(" file_path=%s\n", _file_path.CStr());
-		info.AppendFormat(" tmp_path=%s\n", _tmp_path.CStr());
-		info.AppendFormat(" info_path=%s\n", _info_path.CStr());
-		info.AppendFormat(" record_bytes=%lld\n", _record_bytes);
-		info.AppendFormat(" record_bytes=%lld\n", _record_bytes);
-		info.AppendFormat(" record_total_bytes=%lld\n", _record_total_bytes);
-		info.AppendFormat(" record_total_time=%lld\n", _record_total_time);
-		info.AppendFormat(" sequence=%d\n", _sequence);
-		info.AppendFormat(" created_time=%s\n", ov::Converter::ToString(_created_time).CStr());
-		info.AppendFormat(" record_start_time=%s\n", ov::Converter::ToString(_record_start_time).CStr());
-		info.AppendFormat(" record_stop_time=%s", ov::Converter::ToString(_record_stop_time).CStr());
-		info.AppendFormat(" interval=%d", _interval);
-		info.AppendFormat(" schedule=%s", _schedule.CStr());
+		info.AppendFormat(" id(%s)", _id.CStr());
+		info.AppendFormat(" stream(%s)", _stream_name.CStr());
+		info.AppendFormat(" sequence(%d)", _sequence);
+		info.AppendFormat(" tmp_path(%s)", _tmp_path.CStr());
+		info.AppendFormat(" file_path(%s)", _output_file_path.CStr());
+		info.AppendFormat(" info_path(%s)", _output_file_path.CStr());
+		info.AppendFormat(" bytes(%lld)", _record_bytes);
+		info.AppendFormat(" total_bytes(%lld)", _record_total_bytes);
+		info.AppendFormat(" total_time(%lld)", _record_total_time);
+		info.AppendFormat(" created_time(%s)", ov::Converter::ToString(_created_time).CStr());
+		info.AppendFormat(" start_time(%s)", ov::Converter::ToString(_record_start_time).CStr());
+		info.AppendFormat(" stop_time(%s)", ov::Converter::ToString(_record_stop_time).CStr());
+		info.AppendFormat(" interval(%d)", _interval);
+		info.AppendFormat(" schedule(%s)", _schedule.CStr());
+		info.AppendFormat(" segmentation(%s)", _segmentation_rule.CStr());
 
 		return info;
 	}

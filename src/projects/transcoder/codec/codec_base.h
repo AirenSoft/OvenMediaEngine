@@ -10,22 +10,11 @@
 
 #include "../transcoder_context.h"
 
-extern "C"
-{
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavutil/opt.h>
-#include <libavutil/pixdesc.h>
-#include <libswscale/swscale.h>
-#include <libavutil/samplefmt.h>
-#include <libavutil/channel_layout.h>
-#include <libavutil/cpu.h>
-}
 
 #include <base/mediarouter/media_buffer.h>
 #include <base/mediarouter/media_type.h>
 #include <base/ovlibrary/ovlibrary.h>
-#include <modules/ffmpeg/conv.h>
+#include <modules/ffmpeg/ffmpeg_conv.h>
 #include <modules/managed_queue/managed_queue.h>
 
 #include <algorithm>

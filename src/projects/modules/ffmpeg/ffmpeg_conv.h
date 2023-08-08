@@ -17,9 +17,16 @@ extern "C"
 {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
-#include <libavutil/channel_layout.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
+#include <libswscale/swscale.h>
+#include <libavutil/samplefmt.h>
+#include <libavutil/channel_layout.h>
+#include <libavutil/cpu.h>
+#include <libavfilter/buffersink.h>
+#include <libavfilter/buffersrc.h>
+#include <libavformat/avio.h>
+#include <libavutil/file.h>
 }
 
 #include <base/common_types.h>
@@ -48,14 +55,34 @@ namespace ffmpeg
 			return cmn::MediaType::Unknown;
 		};
 
+		static enum AVMediaType ToAVMediaType(cmn::MediaType media_type)
+		{
+			switch (media_type)
+			{
+				case cmn::MediaType::Video:
+					return AVMEDIA_TYPE_VIDEO;
+				case cmn::MediaType::Audio:
+					return AVMEDIA_TYPE_AUDIO;
+				case cmn::MediaType::Data:
+					return AVMEDIA_TYPE_DATA;
+				default:
+					break;
+			}
+			return AVMEDIA_TYPE_UNKNOWN;
+		};
+
 		static cmn::MediaCodecId ToCodecId(enum AVCodecID codec_id)
 		{
 			switch (codec_id)
 			{
+				case AV_CODEC_ID_H265:
+					return cmn::MediaCodecId::H265;
 				case AV_CODEC_ID_H264:
 					return cmn::MediaCodecId::H264;
 				case AV_CODEC_ID_VP8:
 					return cmn::MediaCodecId::Vp8;
+				case AV_CODEC_ID_VP9:
+					return cmn::MediaCodecId::Vp9;
 				case AV_CODEC_ID_FLV1:
 					return cmn::MediaCodecId::Flv;
 				case AV_CODEC_ID_AAC:
@@ -64,11 +91,46 @@ namespace ffmpeg
 					return cmn::MediaCodecId::Mp3;
 				case AV_CODEC_ID_OPUS:
 					return cmn::MediaCodecId::Opus;
+				case AV_CODEC_ID_MJPEG:
+					return cmn::MediaCodecId::Jpeg;
+				case AV_CODEC_ID_PNG:
+					return cmn::MediaCodecId::Png;
 				default:
 					break;
 			}
 
 			return cmn::MediaCodecId::None;
+		}
+
+		static AVCodecID ToAVCodecId(cmn::MediaCodecId codec_id)
+		{
+			switch (codec_id)
+			{
+				case cmn::MediaCodecId::H265:
+					return AV_CODEC_ID_H265;
+				case cmn::MediaCodecId::H264:
+					return AV_CODEC_ID_H264;
+				case cmn::MediaCodecId::Vp8:
+					return AV_CODEC_ID_VP8;
+				case cmn::MediaCodecId::Vp9:
+					return AV_CODEC_ID_VP9;
+				case cmn::MediaCodecId::Flv:
+					return AV_CODEC_ID_FLV1;
+				case cmn::MediaCodecId::Aac:
+					return AV_CODEC_ID_AAC;
+				case cmn::MediaCodecId::Mp3:
+					return AV_CODEC_ID_MP3;
+				case cmn::MediaCodecId::Opus:
+					return AV_CODEC_ID_OPUS;
+				case cmn::MediaCodecId::Jpeg:
+					return AV_CODEC_ID_MJPEG;
+				case cmn::MediaCodecId::Png:
+					return AV_CODEC_ID_PNG;
+				default:
+					break;
+			}
+
+			return AV_CODEC_ID_NONE;
 		}
 
 		static cmn::AudioSample::Format ToAudioSampleFormat(int format)
@@ -155,6 +217,63 @@ namespace ffmpeg
 			}
 
 			return sample_fmt;
+		}
+
+		static int ToAVChannelLayout(cmn::AudioChannel::Layout channel_layout)
+		{
+			switch (channel_layout)
+			{
+				case cmn::AudioChannel::Layout::LayoutMono:
+					return AV_CH_LAYOUT_MONO;
+				case cmn::AudioChannel::Layout::LayoutStereo:
+					return AV_CH_LAYOUT_STEREO;
+				case cmn::AudioChannel::Layout::Layout21:
+					return AV_CH_LAYOUT_2_1;
+				case cmn::AudioChannel::Layout::LayoutSurround:
+					return AV_CH_LAYOUT_SURROUND;
+				case cmn::AudioChannel::Layout::Layout3Point1:
+					return AV_CH_LAYOUT_3POINT1;
+				case cmn::AudioChannel::Layout::Layout4Point0:
+					return AV_CH_LAYOUT_4POINT0;
+				case cmn::AudioChannel::Layout::Layout4Point1:
+					return AV_CH_LAYOUT_4POINT1;
+				case cmn::AudioChannel::Layout::Layout22:
+					return AV_CH_LAYOUT_2_2;
+				case cmn::AudioChannel::Layout::Layout5Point0:
+					return AV_CH_LAYOUT_QUAD;
+				case cmn::AudioChannel::Layout::Layout5Point1:
+					return AV_CH_LAYOUT_5POINT1;
+				case cmn::AudioChannel::Layout::Layout5Point1Back:
+					return AV_CH_LAYOUT_5POINT1_BACK;
+				case cmn::AudioChannel::Layout::Layout6Point0:
+					return AV_CH_LAYOUT_6POINT0;
+				case cmn::AudioChannel::Layout::Layout6Point0Front:
+					return AV_CH_LAYOUT_6POINT0_FRONT;
+				case cmn::AudioChannel::Layout::LayoutHexagonal:
+					return AV_CH_LAYOUT_HEXAGONAL;
+				case cmn::AudioChannel::Layout::Layout6Point1:
+					return AV_CH_LAYOUT_6POINT1;
+				case cmn::AudioChannel::Layout::Layout6Point1Back:
+					return AV_CH_LAYOUT_6POINT1_BACK;
+				case cmn::AudioChannel::Layout::Layout6Point1Front:
+					return AV_CH_LAYOUT_6POINT1_FRONT;
+				case cmn::AudioChannel::Layout::Layout7Point0:
+					return AV_CH_LAYOUT_7POINT0;
+				case cmn::AudioChannel::Layout::Layout7Point0Front:
+					return AV_CH_LAYOUT_7POINT0_FRONT;
+				case cmn::AudioChannel::Layout::Layout7Point1:
+					return AV_CH_LAYOUT_7POINT1;
+				case cmn::AudioChannel::Layout::Layout7Point1Wide:
+					return AV_CH_LAYOUT_7POINT1_WIDE;
+				case cmn::AudioChannel::Layout::Layout7Point1WideBack:
+					return AV_CH_LAYOUT_7POINT1_WIDE_BACK;
+				case cmn::AudioChannel::Layout::LayoutOctagonal:
+					return AV_CH_LAYOUT_OCTAGONAL;
+				default:
+					break;
+			}
+
+			return AV_CH_LAYOUT_MONO;
 		}
 
 		static cmn::AudioChannel::Layout ToAudioChannelLayout(int channel_layout)
@@ -409,7 +528,7 @@ namespace ffmpeg
 				.den = timebase.GetDen()};
 		}
 
-		static ov::String CodecInfoToString(const AVCodecContext *context, const AVCodecParameters *parameters)
+		static ov::String CodecInfoToString(const AVCodecContext* context, const AVCodecParameters* parameters)
 		{
 			ov::String message;
 
@@ -446,6 +565,8 @@ namespace ffmpeg
 							// extra: 1234
 							message.AppendFormat(", extra: %d", parameters->extradata_size);
 						}
+						// frame_size: 1234
+						message.AppendFormat(", frame_size: %d", parameters->frame_size);
 
 						message.Append(')');
 					}
@@ -471,11 +592,11 @@ namespace ffmpeg
 
 						// yuv420p, 1920x1080 [SAR 1:1 DAR 16:9], 24 fps
 						message.AppendFormat("%s, %dx%d [SAR %d:%d DAR %d:%d], %.*f fps, ",
-											::av_get_pix_fmt_name(static_cast<AVPixelFormat>(parameters->format)),
-											parameters->width, parameters->height,
-											parameters->sample_aspect_ratio.num, parameters->sample_aspect_ratio.den,
-											parameters->width / gcd, parameters->height / gcd,
-											digit, ::av_q2d(context->framerate));
+											 ::av_get_pix_fmt_name(static_cast<AVPixelFormat>(parameters->format)),
+											 parameters->width, parameters->height,
+											 parameters->sample_aspect_ratio.num, parameters->sample_aspect_ratio.den,
+											 parameters->width / gcd, parameters->height / gcd,
+											 digit, ::av_q2d(context->framerate));
 					}
 					else
 					{
@@ -489,8 +610,7 @@ namespace ffmpeg
 					message.AppendFormat("%d kbps, ", (parameters->bit_rate / 1024));
 					// timebase: 1/48000
 					message.AppendFormat("timebase: %d/%d, ", context->time_base.num, context->time_base.den);
-					// frame_size: 1234
-					message.AppendFormat("frame_size: %d", parameters->frame_size);
+
 					if (parameters->block_align != 0)
 					{
 						// align: 32
@@ -517,6 +637,126 @@ namespace ffmpeg
 			}
 
 			return message;
+		}
+
+		static ov::String AVErrorToString(int32_t error)
+		{
+			char error_buffer[AV_ERROR_MAX_STRING_SIZE]{};
+			::av_strerror(error, error_buffer, OV_COUNTOF(error_buffer));
+
+			ov::String message = error_buffer;
+
+			return error_buffer;
+		}
+
+		static bool ToAVStream(std::shared_ptr<MediaTrack> media_track, AVStream* av_stream)
+		{
+			if (media_track == nullptr || av_stream == nullptr)
+			{
+				return false;
+			}
+
+			av_stream->time_base = AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()};
+
+			AVCodecParameters* codecpar = av_stream->codecpar;
+			codecpar->codec_type 		= ToAVMediaType(media_track->GetMediaType());
+			codecpar->codec_id 			= ToAVCodecId(media_track->GetCodecId());
+			codecpar->codec_tag 		= 0;
+			codecpar->bit_rate 			= media_track->GetBitrate();
+
+			// Set Decoder Configuration Record to extradata
+			if (media_track->GetDecoderConfigurationRecord() != nullptr && 
+				media_track->GetDecoderConfigurationRecord()->GetData() != nullptr && 
+				media_track->GetDecoderConfigurationRecord()->GetData()->GetLength() > 0)
+			{
+				codecpar->extradata_size 	= media_track->GetDecoderConfigurationRecord()->GetData()->GetLength();
+				codecpar->extradata 		= (uint8_t*)av_malloc(codecpar->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
+				memset(codecpar->extradata, 0, codecpar->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
+				memcpy(codecpar->extradata, media_track->GetDecoderConfigurationRecord()->GetData()->GetDataAs<uint8_t>(), codecpar->extradata_size);
+			}
+
+			switch (media_track->GetMediaType())
+			{
+				case cmn::MediaType::Video: {
+					av_stream->r_frame_rate 		= AVRational{ (int)round(media_track->GetFrameRate() * 1000), 1000};
+					av_stream->avg_frame_rate 		= AVRational{ (int)round(media_track->GetFrameRate() * 1000), 1000};
+					av_stream->sample_aspect_ratio 	= AVRational{1, 1};
+					codecpar->width 				= media_track->GetWidth();
+					codecpar->height 				= media_track->GetHeight();
+					codecpar->sample_aspect_ratio 	= AVRational{1, 1};
+				}
+				break;
+
+				case cmn::MediaType::Audio: {
+					codecpar->channels 				= static_cast<int>(media_track->GetChannel().GetCounts());
+					codecpar->channel_layout 		= ToAVChannelLayout(media_track->GetChannel().GetLayout());
+					codecpar->sample_rate 			= media_track->GetSample().GetRateNum();
+					codecpar->frame_size 			= (media_track->GetAudioSamplesPerFrame()!=0)?media_track->GetAudioSamplesPerFrame():1024;
+				}
+				break;
+
+				default:
+					return false;
+			}
+
+			return true;
+		}
+
+		static ov::String GetFormatByExtension(ov::String extension, ov::String default_format)
+		{
+			if (extension == "mp4")
+			{
+				return "mp4";
+			}
+			else if (extension == "ts")
+			{
+				return "mpegts";
+			}
+			else if (extension == "webm")
+			{
+				return "webm";
+			}
+
+			return default_format;
+		}
+
+		static bool IsSupportCodec(ov::String format, cmn::MediaCodecId codec_id)
+		{
+			if (format == "mp4")
+			{
+				if (codec_id == cmn::MediaCodecId::H264 ||
+					codec_id == cmn::MediaCodecId::H265 ||
+					codec_id == cmn::MediaCodecId::Aac ||
+					codec_id == cmn::MediaCodecId::Mp3)
+				{
+					return true;
+				}
+			}
+			else if (format == "mpegts")
+			{
+				if (codec_id == cmn::MediaCodecId::H264 ||
+					codec_id == cmn::MediaCodecId::H265 ||
+					codec_id == cmn::MediaCodecId::Vp8 ||
+					codec_id == cmn::MediaCodecId::Vp9 ||
+					codec_id == cmn::MediaCodecId::Aac ||
+					codec_id == cmn::MediaCodecId::Mp3 ||
+					codec_id == cmn::MediaCodecId::Opus)
+				{
+					return true;
+				}
+			}
+			else if (format == "webm")
+			{
+				if (
+					codec_id == cmn::MediaCodecId::Vp8 ||
+					codec_id == cmn::MediaCodecId::Vp9 ||
+					codec_id == cmn::MediaCodecId::Opus)
+				{
+					return true;
+				}
+			}
+
+			return false;
 		}
 	};
 

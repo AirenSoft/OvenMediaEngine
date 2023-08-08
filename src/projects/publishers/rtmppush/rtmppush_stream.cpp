@@ -57,6 +57,11 @@ bool RtmpPushStream::Stop()
 
 void RtmpPushStream::SendFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	if (GetState() != Stream::State::STARTED)
+	{
+		return;
+	}
+
 	auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
 
 	BroadcastPacket(stream_packet);
@@ -66,21 +71,11 @@ void RtmpPushStream::SendFrame(const std::shared_ptr<MediaPacket> &media_packet)
 
 void RtmpPushStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (GetState() != Stream::State::STARTED)
-	{
-		return;
-	}
-
 	SendFrame(media_packet);
 }
 
 void RtmpPushStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (GetState() != Stream::State::STARTED)
-	{
-		return;
-	}
-
 	SendFrame(media_packet);
 }
 

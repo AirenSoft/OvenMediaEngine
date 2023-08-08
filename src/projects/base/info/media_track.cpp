@@ -156,7 +156,7 @@ cmn::BitstreamFormat MediaTrack::GetOriginBitstream() const
 	return _origin_bitstream_format;
 }
 
-const Timebase &MediaTrack::GetTimeBase() const
+const cmn::Timebase &MediaTrack::GetTimeBase() const
 {
 	return _time_base;
 }

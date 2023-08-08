@@ -1,13 +1,14 @@
+#include "rtmppush_session.h"
+
 #include <base/info/stream.h>
 #include <base/publisher/stream.h>
 
-#include "rtmppush_session.h"
 #include "rtmppush_private.h"
 
 std::shared_ptr<RtmpPushSession> RtmpPushSession::Create(const std::shared_ptr<pub::Application> &application,
-										  	   const std::shared_ptr<pub::Stream> &stream,
-										  	   uint32_t session_id, 
-											   std::shared_ptr<info::Push> &push)
+														 const std::shared_ptr<pub::Stream> &stream,
+														 uint32_t session_id,
+														 std::shared_ptr<info::Push> &push)
 {
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), session_id);
 	auto session = std::make_shared<RtmpPushSession>(session_info, application, stream, push);
@@ -15,14 +16,13 @@ std::shared_ptr<RtmpPushSession> RtmpPushSession::Create(const std::shared_ptr<p
 }
 
 RtmpPushSession::RtmpPushSession(const info::Session &session_info,
-		   const std::shared_ptr<pub::Application> &application,
-		   const std::shared_ptr<pub::Stream> &stream,
-		   const std::shared_ptr<info::Push> &push)
-   : pub::Session(session_info, application, stream),
-   _push(push),
-   _writer(nullptr)
+								 const std::shared_ptr<pub::Application> &application,
+								 const std::shared_ptr<pub::Stream> &stream,
+								 const std::shared_ptr<info::Push> &push)
+	: pub::Session(session_info, application, stream),
+	  _push(push),
+	  _writer(nullptr)
 {
-
 }
 
 RtmpPushSession::~RtmpPushSession()
@@ -31,12 +31,8 @@ RtmpPushSession::~RtmpPushSession()
 	logtd("RtmpPushSession(%d) has been terminated finally", GetId());
 }
 
-
 bool RtmpPushSession::Start()
 {
-
-	logtd("RtmpPushSession(%d) has started.", GetId());
-
 	GetPush()->UpdatePushStartTime();
 	GetPush()->SetState(info::Push::PushState::Pushing);
 
@@ -52,90 +48,90 @@ bool RtmpPushSession::Start()
 
 	std::lock_guard<std::shared_mutex> lock(_mutex);
 
-	_writer = RtmpWriter::Create();
-	if(_writer == nullptr)
+	_writer = ffmpeg::Writer::Create();
+	if (_writer == nullptr)
 	{
-		SetState(SessionState::Error);	
-		GetPush()->SetState(info::Push::PushState::Error);		
+		SetState(SessionState::Error);
+		GetPush()->SetState(info::Push::PushState::Error);
 
 		return false;
 	}
 
-	if(_writer->SetPath(rtmp_url, "flv") == false)
+	if (_writer->SetUrl(rtmp_url, "flv") == false)
 	{
 		SetState(SessionState::Error);
-		GetPush()->SetState(info::Push::PushState::Error);		
+		GetPush()->SetState(info::Push::PushState::Error);
 
 		_writer = nullptr;
 
 		return false;
 	}
 
-	for(auto &track_item : GetStream()->GetTracks())
+	for (auto &[track_id, track] : GetStream()->GetTracks())
 	{
-		auto &track = track_item.second;
+		if (track->GetMediaType() != cmn::MediaType::Video && track->GetMediaType() != cmn::MediaType::Audio)
+		{
+			continue;
+		}
 
 		// If the selected track list exists. if the current trackid does not exist on the list, ignore it.
 		// If no track list is selected, save all tracks.
-		auto selected_track_ids = GetPush()->GetTrackIds();
-		auto selected_track_names = GetPush()->GetVariantNames();
-		if (selected_track_ids.size() > 0 || selected_track_names.size() > 0)
+		if (IsSelectedTrack(track) == false)
 		{
-			if ((find(selected_track_ids.begin(), selected_track_ids.end(), track->GetId()) == selected_track_ids.end()) &&
-				(find(selected_track_names.begin(), selected_track_names.end(), track->GetVariantName()) == selected_track_names.end()))
-			{
-				continue;
-			}
+			continue;
 		}
 
 		// Rtmp does not supported except for H264 and AAC codec.
-		if ( !(track->GetCodecId() == cmn::MediaCodecId::H264 || track->GetCodecId() == cmn::MediaCodecId::Aac))
+		if (!(track->GetCodecId() == cmn::MediaCodecId::H264 || track->GetCodecId() == cmn::MediaCodecId::Aac))
 		{
 			logtw("Could not supported codec. track_id:%d, codec_id: %d", track->GetId(), track->GetCodecId());
 			continue;
 		}
 
-		auto track_info = RtmpTrackInfo::Create();
-		track_info->SetCodecId( track->GetCodecId() );
-		track_info->SetBitrate( track->GetBitrate() );
-		track_info->SetTimeBase( track->GetTimeBase() );
-		track_info->SetWidth( track->GetWidth() );
-		track_info->SetHeight( track->GetHeight() );
-		track_info->SetSample( track->GetSample() );
-		track_info->SetChannel( track->GetChannel() );
-		// Set DecoderSpecificInfo
-		if (track->GetCodecId() == cmn::MediaCodecId::H264 ||
-			track->GetCodecId() == cmn::MediaCodecId::H265 ||
-			track->GetCodecId() == cmn::MediaCodecId::Aac)
-		{
-			track_info->SetExtradata(track->GetDecoderConfigurationRecord() != nullptr ? track->GetDecoderConfigurationRecord()->GetData() : nullptr);
-		}
-
-		bool ret = _writer->AddTrack(track->GetMediaType(), track->GetId(), track_info);
-		if(ret == false)
+		bool ret = _writer->AddTrack(track);
+		if (ret == false)
 		{
 			logtw("Failed to add new track");
 		}
 	}
 
 	// Notice: If there are more than one video track, RTMP Push is not created and returns an error. You must use 1 video track.
-	if(_writer->Start() == false)
+	if (_writer->Start() == false)
 	{
 		_writer = nullptr;
 		SetState(SessionState::Error);
-		GetPush()->SetState(info::Push::PushState::Error);		
+		GetPush()->SetState(info::Push::PushState::Error);
 
 		return false;
 	}
 
+	logtd("RtmpPushSession(%d) has started.", GetId());
+
 	return Session::Start();
+}
+
+bool RtmpPushSession::IsSelectedTrack(const std::shared_ptr<MediaTrack> &track)
+{
+	auto selected_track_ids = GetPush()->GetTrackIds();
+	auto selected_track_names = GetPush()->GetVariantNames();
+	
+	if (selected_track_ids.size() > 0 || selected_track_names.size() > 0)
+	{
+		if ((find(selected_track_ids.begin(), selected_track_ids.end(), track->GetId()) == selected_track_ids.end()) &&
+			(find(selected_track_names.begin(), selected_track_names.end(), track->GetVariantName()) == selected_track_names.end()))
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
 bool RtmpPushSession::Stop()
 {
 	std::lock_guard<std::shared_mutex> lock(_mutex);
 
-	if(_writer != nullptr)
+	if (_writer != nullptr)
 	{
 		GetPush()->SetState(info::Push::PushState::Stopping);
 		GetPush()->UpdatePushStartTime();
@@ -144,8 +140,8 @@ bool RtmpPushSession::Stop()
 		_writer = nullptr;
 
 		GetPush()->SetState(info::Push::PushState::Stopped);
-		GetPush()->IncreaseSequence();	
-		
+		GetPush()->IncreaseSequence();
+
 		logtd("RtmpPushSession(%d) has stopped", GetId());
 	}
 
@@ -156,52 +152,47 @@ void RtmpPushSession::SendOutgoingData(const std::any &packet)
 {
 	std::shared_ptr<MediaPacket> session_packet;
 
-	try 
+	try
 	{
-        session_packet = std::any_cast<std::shared_ptr<MediaPacket>>(packet);
-		if(session_packet == nullptr)
+		session_packet = std::any_cast<std::shared_ptr<MediaPacket>>(packet);
+		if (session_packet == nullptr)
 		{
 			return;
 		}
-    }
-    catch(const std::bad_any_cast& e) 
+	}
+	catch (const std::bad_any_cast &e)
 	{
-        logtd("An incorrect type of packet was input from the stream. (%s)", e.what());
+		logtd("An incorrect type of packet was input from the stream. (%s)", e.what());
 
 		return;
-    }
+	}
 
 	std::lock_guard<std::shared_mutex> lock(_mutex);
 
-	if(_writer != nullptr)
-    {
-	  	bool ret = _writer->PutData(
-			session_packet->GetTrackId(), 
-			session_packet->GetPts(),
-			session_packet->GetDts(), 
-			session_packet->GetFlag(), 
-			session_packet->GetBitstreamFormat(),
-			session_packet->GetData());
+	if (_writer == nullptr)
+	{
+		return;
+	}
 
-		if(ret == false)
-		{
-			logte("Failed to send packet");
+	bool ret = _writer->SendPacket(session_packet);
+	if (ret == false)
+	{
+		logte("Failed to send packet");
 
-			SetState(SessionState::Error);
-			GetPush()->SetState(info::Push::PushState::Error);
-			
-			_writer->Stop();
-			_writer = nullptr;
+		_writer->Stop();
+		_writer = nullptr;
 
-			return;
-		} 
+		SetState(SessionState::Error);
+		GetPush()->SetState(info::Push::PushState::Error);
 
-		GetPush()->UpdatePushTime();
-		GetPush()->IncreasePushBytes(session_packet->GetData()->GetLength());		
-    } 
+		return;
+	}
+
+	GetPush()->UpdatePushTime();
+	GetPush()->IncreasePushBytes(session_packet->GetData()->GetLength());
 }
 
-std::shared_ptr<info::Push>& RtmpPushSession::GetPush()
+std::shared_ptr<info::Push> &RtmpPushSession::GetPush()
 {
 	return _push;
 }

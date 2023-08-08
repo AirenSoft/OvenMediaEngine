@@ -11,7 +11,7 @@
 
 #include <base/info/application.h>
 #include <base/ovlibrary/byte_io.h>
-#include <modules/ffmpeg/conv.h>
+#include <modules/ffmpeg/ffmpeg_conv.h>
 #include <modules/rtp_rtcp/rtp_depacketizer_mpeg4_generic_audio.h>
 
 #include "file_private.h"

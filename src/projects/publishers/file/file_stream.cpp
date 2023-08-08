@@ -63,6 +63,11 @@ namespace pub
 
 	void FileStream::SendFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	{
+		if (GetState() != Stream::State::STARTED)
+		{
+			return;
+		}
+
 		// Periodically check the session. Retry the session in which the error occurred.
 		if (_stop_watch.IsElapsed(5000) && _stop_watch.Update())
 		{
@@ -76,21 +81,11 @@ namespace pub
 
 	void FileStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	{
-		if (GetState() != Stream::State::STARTED)
-		{
-			return;
-		}
-
 		SendFrame(media_packet);
 	}
 
 	void FileStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	{
-		if (GetState() != Stream::State::STARTED)
-		{
-			return;
-		}
-
 		SendFrame(media_packet);
 	}
 

@@ -109,7 +109,11 @@ namespace cmn
 
 	static bool IsVideoCodec(cmn::MediaCodecId codec_id)
 	{
-		if (codec_id == cmn::MediaCodecId::H264 || codec_id == cmn::MediaCodecId::H265 || codec_id == cmn::MediaCodecId::Vp8 || codec_id == cmn::MediaCodecId::Flv || codec_id == cmn::MediaCodecId::Vp9)
+		if (codec_id == cmn::MediaCodecId::H264 ||
+			codec_id == cmn::MediaCodecId::H265 ||
+			codec_id == cmn::MediaCodecId::Vp8 ||
+			codec_id == cmn::MediaCodecId::Flv ||
+			codec_id == cmn::MediaCodecId::Vp9)
 		{
 			return true;
 		}
@@ -316,11 +320,19 @@ namespace cmn
 		name.MakeUpper();
 
 		// Video codecs
-		if (name == "H264" || name == "H264_OPENH264" || name == "H264_BEAMR" || name == "H264_NVENC" || name == "H264_QSV" || name == "H264_XMA")
+		if (name == "H264" ||
+			name == "H264_OPENH264" ||
+			name == "H264_BEAMR" ||
+			name == "H264_NVENC" ||
+			name == "H264_QSV" ||
+			name == "H264_XMA")
 		{
 			return cmn::MediaCodecId::H264;
 		}
-		else if (name == "H265" || name == "H265_NVENC" || name == "H265_QSV" || name == "H265_XMA")
+		else if (name == "H265" || 
+				 name == "H265_NVENC" || 
+				 name == "H265_QSV" ||
+		 		 name == "H265_XMA")
 		{
 			return cmn::MediaCodecId::H265;
 		}

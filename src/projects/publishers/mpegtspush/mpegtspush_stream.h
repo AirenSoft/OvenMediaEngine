@@ -2,8 +2,6 @@
 
 #include <base/common_types.h>
 #include <base/publisher/stream.h>
-#include <modules/mpegts/mpegts_writer.h>
-
 #include "monitoring/monitoring.h"
 #include "mpegtspush_session.h"
 

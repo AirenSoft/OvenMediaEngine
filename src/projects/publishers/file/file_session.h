@@ -2,7 +2,7 @@
 
 #include <base/info/media_track.h>
 #include <base/publisher/session.h>
-#include <modules/file/file_writer.h>
+#include <modules/ffmpeg/ffmpeg_writer.h>
 
 #include "base/info/record.h"
 
@@ -38,12 +38,14 @@ namespace pub
 		ov::String GetOutputFilePath();
 		ov::String GetOutputFileInfoPath();
 		ov::String ConvertMacro(ov::String src);
+
+		bool IsSelectedTrack(const std::shared_ptr<MediaTrack> &track);
+		void SelectDefaultTrack(const std::shared_ptr<MediaTrack> &track);
+
 		bool MakeDirectoryRecursive(std::string s);
 
-		void UpdateDefaultTrack(const std::shared_ptr<MediaTrack> &track);
-
 	private:
-		std::shared_ptr<FileWriter> _writer;
+		std::shared_ptr<ffmpeg::Writer> _writer;
 
 		std::shared_ptr<info::Record> _record;
 
