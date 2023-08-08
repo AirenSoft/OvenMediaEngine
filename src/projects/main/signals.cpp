@@ -107,6 +107,8 @@ static const char *GetSignalName(int signum)
 
 // Occasionally, the memory can become corrupted and the version may not be displayed.
 // In such cases, it is stored in a separate variable for later reference.
+//
+// This variable contains strings in the format of "v0.1.2 (v0.1.2-xxx-yyyy) [debug]".
 static char g_ome_version[1024];
 
 typedef void (*OV_SIG_ACTION)(int signum, siginfo_t *si, void *unused);
@@ -117,7 +119,9 @@ static void AbortHandler(int signum, siginfo_t *si, void *context)
 	char file_name[32]{};
 	time_t t = ::time(nullptr);
 
-	logtc("OME received signal %d (%s), interrupt.", signum, GetSignalName(signum));
+	// Ensure that the version string is not corrupted.
+	g_ome_version[OV_COUNTOF(g_ome_version) - 1] = '\0';
+	logtc("OME %s received signal %d (%s), interrupt.", g_ome_version, signum, GetSignalName(signum));
 
 	std::tm local_time{};
 	::localtime_r(&t, &local_time);
