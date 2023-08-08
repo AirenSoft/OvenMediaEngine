@@ -1,0 +1,36 @@
+import telegram
+from telegram.ext import CommandHandler, Updater
+
+# Replace ''5945429183:AAELIsjDLbAZjV_QPdr5S4RPdCQr8wV1GRo with your actual bot token
+BOT_TOKEN = '5945429183:AAELIsjDLbAZjV_QPdr5S4RPdCQr8wV1GRo'
+
+def start(update, context):
+    update.message.reply_text("Hello! I'm a link bot. Send me a URL and I'll provide a shortened link.")
+
+def shorten_link(update, context):
+    if len(context.args) == 0:
+        update.message.reply_text("Please provide a URL.")
+        return
+    
+    original_url = context.args[0]
+    # Replace with your logic to shorten the link (using a service or library)
+    shortened_url = "https://short.url/abc123"
+    
+    update.message.reply_text(f"Shortened link: {shortened_url}")
+
+def main():
+    updater = Updater(token=BOT_TOKEN, use_context=True)
+    dispatcher = updater.dispatcher
+    
+    start_handler = CommandHandler('start', start)
+    dispatcher.add_handler(start_handler)
+    
+    shorten_handler = CommandHandler('shorten', shorten_link)
+    dispatcher.add_handler(shorten_handler)
+    
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == "__main__":
+    main()
+￼Enter
