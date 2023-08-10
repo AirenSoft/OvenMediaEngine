@@ -24,6 +24,13 @@ namespace bmff
 		// Keep one more to prevent download failure due to timing issue
 		_target_segment_duration_ms = static_cast<int64_t>(_config.segment_duration_ms);
 		_stream_tag = stream_tag;
+
+		_initial_segment_number = 0;
+		if (_config.server_time_based_segment_numbering == true)
+		{
+			// last segment number = current epoch time / segment duration
+			_initial_segment_number = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() / _target_segment_duration_ms;
+		}
 	}
 
 	FMP4Storage::~FMP4Storage()
@@ -49,15 +56,26 @@ namespace bmff
 	std::shared_ptr<FMP4Segment> FMP4Storage::GetMediaSegment(uint32_t segment_number) const
 	{
 		std::shared_lock<std::shared_mutex> lock(_segments_lock);
-		auto index = segment_number - _number_of_deleted_segments;
+		
+		if (_segments.empty())
+		{
+			return nullptr;
+		}
 
-		if (index >= _segments.size())
+		auto it = _segments.find(segment_number);
+		if (it != _segments.end())
+		{
+			return it->second;
+		}
+		
+		auto min_number = _segments.begin()->first;
+		if (segment_number < min_number)
 		{
 			// If the segment is not in the list, try to load it from the file
 			return LoadMediaSegmentFromFile(segment_number);
 		}
 
-		return _segments[index];
+		return nullptr;
 	}
 
 	std::shared_ptr<FMP4Segment> FMP4Storage::GetLastSegment() const
@@ -68,7 +86,8 @@ namespace bmff
 			return nullptr;
 		}
 
-		return _segments.back();
+		// get last segment
+		return _segments.rbegin()->second;
 	}
 
 	std::shared_ptr<FMP4Chunk> FMP4Storage::GetMediaChunk(uint32_t segment_number, uint32_t chunk_number) const
@@ -104,21 +123,24 @@ namespace bmff
 
 	std::tuple<int64_t, int64_t> FMP4Storage::GetLastChunkNumber() const
 	{
-		std::shared_lock<std::shared_mutex> lock(_segments_lock);
-		if (_segments.empty())
+		auto last_segment = GetLastSegment();
+		if (last_segment == nullptr)
 		{
 			return { -1, -1 };
 		}
-
-		auto last_segment = _segments.back();
 
 		return { last_segment->GetNumber(), last_segment->GetLastChunkNumber() };
 	}
 
 	int64_t FMP4Storage::GetLastSegmentNumber() const
 	{
-		std::shared_lock<std::shared_mutex> lock(_segments_lock);
-		return _last_segment_number;
+		auto last_segment = GetLastSegment();
+		if (last_segment == nullptr)
+		{
+			return _initial_segment_number - 1;
+		}
+
+		return last_segment->GetNumber();
 	}
 
 	uint64_t FMP4Storage::GetMaxChunkDurationMs() const
@@ -256,19 +278,25 @@ namespace bmff
 				_observer->OnMediaSegmentUpdated(_track->GetId(), segment->GetNumber());
 			}
 
-			// Create new segment
+			// Create next segment
 			segment = std::make_shared<FMP4Segment>(GetLastSegmentNumber() + 1, _config.segment_duration_ms);
 			{
 				std::lock_guard<std::shared_mutex> lock(_segments_lock);
-				_segments.push_back(segment);
-				_last_segment_number = segment->GetNumber();
+				_segments.emplace(segment->GetNumber(), segment);
 
 				// Delete old segments
 				if (_segments.size() > _config.max_segments)
 				{
-					_number_of_deleted_segments++;
-					auto old_segment = _segments.front();
-					_segments.pop_front();
+					auto old_it = _segments.begin();
+					std::advance(old_it, (_segments.size() - _config.max_segments) - 1);
+
+					auto old_segment = old_it->second;
+
+					// Since the chunklist is updated late, the player may request deleted segments in the meantime, so it actually deletes them a bit late.
+					if (_segments.size() > _config.max_segments + 3)
+					{
+						_segments.erase(_segments.begin());
+					}
 
 					// DVR
 					if (_config.dvr_enabled)

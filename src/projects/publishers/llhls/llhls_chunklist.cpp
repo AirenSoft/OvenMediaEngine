@@ -52,7 +52,6 @@ void LLHlsChunklist::SaveOldSegmentInfo(bool enable)
 	{
 		std::lock_guard<std::shared_mutex> lock(_segments_guard);
 		_old_segments.clear();
-		_old_segments.shrink_to_fit();
 	}
 }
 
@@ -96,7 +95,7 @@ bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
 		std::unique_lock<std::shared_mutex> lock(_segments_guard);
 		// Create segment
 		segment = std::make_shared<SegmentInfo>(info);
-		_segments.push_back(segment);
+		_segments.emplace(segment->GetSequence(), segment);
 		is_new_segment = true;
 	}
 	else
@@ -112,6 +111,8 @@ bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
 	{
 		_last_segment_sequence = info.GetSequence();
 	}
+
+	_first_segment = false;
 
 	return true;
 }
@@ -131,13 +132,12 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 
 		// Create segment
 		segment = std::make_shared<SegmentInfo>(segment_sequence);
-		_segments.push_back(segment);
-
+		_segments.emplace(segment_sequence, segment);
 		_last_segment_sequence = segment_sequence;
 	}
 
 	// part duration is calculated on first segment
-	if (segment_sequence == 0)
+	if (_first_segment == true)
 	{
 		_max_part_duration = std::max(_max_part_duration, info.GetDuration());
 	}
@@ -153,11 +153,25 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 bool LLHlsChunklist::RemoveSegmentInfo(uint32_t segment_sequence)
 {
 	std::unique_lock<std::shared_mutex> lock(_segments_guard);
-	auto old_segment = _segments.front();
+
+	logtd("RemoveSegmentInfo[Track : %s/%s]: %lld", _track->GetPublicName().CStr(), _track->GetVariantName().CStr(), segment_sequence);
+
+	if (_segments.empty())
+	{
+		return false;
+	}
+
+	auto old_segment = _segments.begin()->second;
+	if (old_segment->GetSequence() != segment_sequence)
+	{
+		logtc("The sequence number of the segment to be deleted is not the first segment. segment(%lld) first(%lld)", segment_sequence, old_segment->GetSequence());
+		return false;
+	}
+
 	SaveOldSegmentInfo(old_segment);
 
-	_segments.pop_front();
-	_deleted_segments += 1;
+	_segments.erase(segment_sequence);
+
 	return true;
 }
 
@@ -189,37 +203,25 @@ bool LLHlsChunklist::SaveOldSegmentInfo(std::shared_ptr<SegmentInfo> &segment_in
 
 	logtd("Save old segment info: %d / %s", segment_info->GetSequence(), segment_info->GetUrl().CStr());
 
-	_old_segments.push_back(segment_info);
+	_old_segments.emplace(segment_info->GetSequence(), segment_info);
 
 	//TODD[CRITICAL](Getroot): _old_segments must be saved to file because memory should be exhausted
 
 	return true;
 }
 
-int64_t LLHlsChunklist::GetSegmentIndex(uint32_t segment_sequence) const
-{
-	return segment_sequence - _deleted_segments;
-}
-
 std::shared_ptr<LLHlsChunklist::SegmentInfo> LLHlsChunklist::GetSegmentInfo(uint32_t segment_sequence) const
 {
 	// lock
-	std::unique_lock<std::shared_mutex> lock(_segments_guard);
+	std::shared_lock<std::shared_mutex> lock(_segments_guard);
 
-	auto index = GetSegmentIndex(segment_sequence);
-	if (index < 0)
-	{
-		// This cannot be happened
-		OV_ASSERT2(false);
-		return nullptr;
-	}
-
-	if (_segments.size() < static_cast<size_t>(index + 1))
+	auto it = _segments.find(segment_sequence);
+	if (it == _segments.end())
 	{
 		return nullptr;
 	}
 
-	return _segments[index];
+	return it->second;
 }
 
 bool LLHlsChunklist::GetLastSequenceNumber(int64_t &msn, int64_t &psn) const
@@ -232,6 +234,8 @@ bool LLHlsChunklist::GetLastSequenceNumber(int64_t &msn, int64_t &psn) const
 
 ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool skip, bool legacy, bool vod, uint32_t vod_start_segment_number) const
 {
+	std::shared_lock<std::shared_mutex> segment_lock(_segments_guard);
+
 	if (_segments.size() == 0)
 	{
 		return "";
@@ -265,7 +269,9 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 		playlist.AppendFormat("#EXT-X-PART-INF:PART-TARGET=%lf\n", _max_part_duration);
 	}
 
-	playlist.AppendFormat("#EXT-X-MEDIA-SEQUENCE:%u\n", vod == false ? _segments[0]->GetSequence() : 0);
+	auto first_segment = _segments.begin()->second;
+
+	playlist.AppendFormat("#EXT-X-MEDIA-SEQUENCE:%u\n", vod == false ? first_segment->GetSequence() : 0);
 	playlist.AppendFormat("#EXT-X-MAP:URI=\"%s", _map_uri.CStr());
 	if (query_string.IsEmpty() == false)
 	{
@@ -273,12 +279,11 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 	}
 	playlist.AppendFormat("\"\n");
 
-	std::shared_lock<std::shared_mutex> segment_lock(_segments_guard);
 	if (vod == true)
 	{
-		for (auto &segment : _old_segments)
+		for (auto &[number, segment] : _old_segments)
 		{
-			if (segment->GetSequence() < vod_start_segment_number)
+			if (number < vod_start_segment_number)
 			{
 				continue;
 			}
@@ -295,9 +300,11 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 		}
 	}
 
-	for (auto &segment : _segments)
+	auto last_segment = _segments.rbegin()->second;
+
+	for (auto &[number, segment] : _segments)
 	{
-		if (vod == true && segment->GetSequence() < vod_start_segment_number)
+		if (vod == true && number < vod_start_segment_number)
 		{
 			continue;
 		}
@@ -310,7 +317,7 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 		{
 			// Output partial segments info
 			// Only output partial segments for the last 4 segments.
-			if (int(segment->GetSequence()) > int(_segments.back()->GetSequence()) - 3)
+			if (segment->GetSequence() > last_segment->GetSequence() - 3)
 			{
 				for (auto &partial_segment : segment->GetPartialSegments())
 				{
@@ -328,7 +335,7 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 					playlist.Append("\n");
 
 					// If it is the last one, output PRELOAD-HINT
-					if (segment == _segments.back() &&
+					if (segment->GetSequence() == last_segment->GetSequence() &&
 						partial_segment == segment->GetPartialSegments().back())
 					{
 						playlist.AppendFormat("#EXT-X-PRELOAD-HINT:TYPE=PART,URI=\"%s", partial_segment->GetNextUrl().CStr());

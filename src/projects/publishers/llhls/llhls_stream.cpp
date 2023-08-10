@@ -55,6 +55,7 @@ bool LLHlsStream::Start()
 	_storage_config.dvr_enabled = dvr_config.IsEnabled();
 	_storage_config.dvr_storage_path = dvr_config.GetTempStoragePath();
 	_storage_config.dvr_duration_sec = dvr_config.GetMaxDuration();
+	_storage_config.server_time_based_segment_numbering = llhls_config.IsServerTimeBasedSegmentNumbering();
 
 	_configured_part_hold_back = llhls_config.GetPartHoldBack();
 

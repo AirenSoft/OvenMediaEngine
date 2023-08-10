@@ -34,6 +34,7 @@ namespace cfg
 					Dumps _dumps;
 					LLHlsCacheControl _cache_control;
 					LLHlsDvr _dvr;
+					bool _server_time_based_segment_numbering = false;
 
 				public:
 					PublisherType GetType() const override
@@ -42,6 +43,7 @@ namespace cfg
 					}
 
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsOriginMode, _origin_mode)
+					CFG_DECLARE_CONST_REF_GETTER_OF(IsServerTimeBasedSegmentNumbering, _server_time_based_segment_numbering)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetSegmentDuration, _segment_duration)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetChunkDuration, _chunk_duration)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetPartHoldBack, _part_hold_back)
@@ -56,6 +58,7 @@ namespace cfg
 						Publisher::MakeList();
 
 						Register<Optional>("OriginMode", &_origin_mode);
+						Register<Optional>("ServerTimeBasedSegmentNumbering", &_server_time_based_segment_numbering);
 						Register<Optional>("ChunkDuration", &_chunk_duration);
 						Register<Optional>("PartHoldBack", &_part_hold_back);
 						Register<Optional>("SegmentDuration", &_segment_duration);

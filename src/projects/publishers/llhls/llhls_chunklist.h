@@ -184,7 +184,6 @@ public:
 	bool GetLastSequenceNumber(int64_t &msn, int64_t &psn) const;
 
 private:
-	int64_t GetSegmentIndex(uint32_t segment_sequence) const;
 	bool SaveOldSegmentInfo(std::shared_ptr<SegmentInfo> &segment_info);
 
 	ov::String MakeChunklist(const ov::String &query_string, bool skip, bool legacy, bool vod = false, uint32_t vod_start_segment_number = 0) const;
@@ -202,14 +201,16 @@ private:
 	std::atomic<int64_t> _last_segment_sequence = -1;
 	std::atomic<int64_t> _last_partial_segment_sequence = -1;
 
-	// Segment number -> SegmentInfo
-	std::deque<std::shared_ptr<SegmentInfo>> _segments;
+	// Segment number, SegmentInfo
+	std::map<int64_t, std::shared_ptr<SegmentInfo>> _segments;
 
 	// old_segments is for only HLS dump
-	std::deque<std::shared_ptr<SegmentInfo>> _old_segments;
+	std::map<int64_t, std::shared_ptr<SegmentInfo>> _old_segments;
 	mutable std::shared_mutex _segments_guard;
-	uint64_t _deleted_segments = 0;
+
 	bool _keep_old_segments = false;
+
+	bool _first_segment = true;
 
 	std::map<int32_t, std::shared_ptr<LLHlsChunklist>> _renditions;
 	mutable std::shared_mutex _renditions_guard;

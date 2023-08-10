@@ -31,6 +31,7 @@ namespace bmff
 			bool dvr_enabled = false;
 			ov::String dvr_storage_path;
 			uint64_t dvr_duration_sec = 0;
+			bool server_time_based_segment_numbering = false;
 		};
 
 		FMP4Storage(const std::shared_ptr<FMp4StorageObserver> &observer, const std::shared_ptr<const MediaTrack> &track, const Config &config, const ov::String &stream_tag);
@@ -165,14 +166,12 @@ namespace bmff
 		std::shared_ptr<const MediaTrack> _track;
 
 		std::shared_ptr<ov::Data> _initialization_section = nullptr;
-		// 0 -> 1 -> 2 -> push_back(new segemnt)
-		std::deque<std::shared_ptr<FMP4Segment>> _segments;
+		
+		// segment number : segment
+		std::map<int64_t, std::shared_ptr<FMP4Segment>> _segments;
 		mutable std::shared_mutex _segments_lock;
 
-		size_t _number_of_deleted_segments = 0; // For indexing of _segments
-
-		int64_t _last_segment_number = -1;
-
+		int64_t _initial_segment_number = 0;
 		int64_t _start_timestamp_delta = -1;
 
 		double _max_chunk_duration_ms = 0;
