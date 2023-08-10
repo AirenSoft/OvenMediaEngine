@@ -24,7 +24,7 @@ services:
     restart: always
     # Uncomment the following line to use your own configuration file (./origin_conf/Server.xml)
     #volumes:
-    #- ./origin_conf:/opt/ovenmediaengine/origin_conf
+    #- ./origin_conf:/opt/ovenmediaengine/bin/origin_conf
     command: /opt/ovenmediaengine/bin/OvenMediaEngine -c origin_conf
 
   edge:
@@ -46,5 +46,5 @@ services:
     restart: always
     # Uncomment the following line to use your own configuration file (./edge_conf/Server.xml)
     #volumes:
-    #- ./edge_conf:/opt/ovenmediaengine/edge_conf
+    #- ./edge_conf:/opt/ovenmediaengine/bin/edge_conf
     command: /opt/ovenmediaengine/bin/OvenMediaEngine -c edge_conf
