@@ -135,6 +135,10 @@ namespace ov
 		static std::vector<SocketAddress> Create(const std::vector<ov::String> &host_list, uint16_t port);
 		MAY_THROWS(ov::SocketAddressError)
 		static std::vector<SocketAddress> Create(const ov::String &host, uint16_t port);
+		MAY_THROWS(ov::SocketAddressError)
+		static std::vector<SocketAddress> Create(const ov::String &host, const std::vector<int> &port_list);
+		MAY_THROWS(ov::SocketAddressError)
+		static std::vector<SocketAddress> Create(const std::vector<ov::String> &host_list, const std::vector<int> &port_list);
 
 		// Temporary APIs for compatibility
 		MAY_THROWS(ov::SocketAddressError)

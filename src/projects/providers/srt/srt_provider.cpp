@@ -67,7 +67,7 @@ namespace pvd
 		std::vector<ov::SocketAddress> address_list;
 		try
 		{
-			address_list = ov::SocketAddress::Create(server_config.GetIPList(), static_cast<uint16_t>(port_config.GetPort()));
+			address_list = ov::SocketAddress::Create(server_config.GetIPList(), port_config.GetPortList());
 		}
 		catch (const ov::Error &e)
 		{

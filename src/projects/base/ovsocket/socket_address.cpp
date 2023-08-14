@@ -215,6 +215,30 @@ namespace ov
 		return address_list;
 	}
 
+	std::vector<SocketAddress> SocketAddress::Create(const ov::String &host, const std::vector<int> &port_list)
+	{
+		std::vector<SocketAddress> address_list;
+
+		for (const auto &port : port_list)
+		{
+			CreateInternal(host, static_cast<uint16_t>(port), &address_list);
+		}
+
+		return address_list;
+	}
+
+	std::vector<SocketAddress> SocketAddress::Create(const std::vector<ov::String> &host_list, const std::vector<int> &port_list)
+	{
+		std::vector<SocketAddress> address_list;
+
+		for (const auto &port : port_list)
+		{
+			CreateInternal(host_list, static_cast<uint16_t>(port), &address_list);
+		}
+
+		return address_list;
+	}
+
 	SocketAddress SocketAddress::CreateAndGetFirst(const ov::String &string)
 	{
 		try
