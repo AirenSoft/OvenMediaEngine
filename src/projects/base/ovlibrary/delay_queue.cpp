@@ -114,11 +114,14 @@ namespace ov
 
 	void DelayQueue::DispatchThreadProc()
 	{
+		std::unique_lock<std::mutex> lock(_mutex, std::defer_lock);
 		while (_stop == false)
 		{
+			lock.lock();
 			if (_queue.empty())
 			{
 				logtd("Queue is empty. Waiting for new item...");
+				lock.unlock();
 
 				_event.Wait();
 
@@ -128,13 +131,14 @@ namespace ov
 			{
 				// Handle the first enqueued item
 				auto first_item = _queue.top();
+				lock.unlock();
 
 				if (_event.Wait(first_item.time_point) == false)
 				{
 					// No other items pushed until waiting for first_item.time_point
 					DelayQueueAction action = first_item.function(first_item.parameter);
 
-					std::lock_guard<std::mutex> lock(_mutex);
+					lock.lock();
 					// If we enter this step immediately after Clear(), there will be a problem
 					if (_queue.empty() == false)
 					{
@@ -146,6 +150,7 @@ namespace ov
 							_queue.push(first_item);
 						}
 					}
+					lock.unlock();
 				}
 				else
 				{
