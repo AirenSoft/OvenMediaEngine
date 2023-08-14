@@ -46,7 +46,14 @@ bool LLHlsStream::Start()
 	auto dump_config = llhls_config.GetDumps();
 	auto dvr_config = llhls_config.GetDvr();
 
-	_stream_key = ov::Random::GenerateString(8);
+	if (llhls_config.IsOriginMode())
+	{
+		_stream_key = GetName();
+	}
+	else 
+	{
+		_stream_key = ov::Random::GenerateString(8);
+	}
 
 	_packager_config.chunk_duration_ms = llhls_config.GetChunkDuration() * 1000.0;
 	_packager_config.segment_duration_ms = llhls_config.GetSegmentDuration() * 1000.0;
