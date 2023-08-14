@@ -51,6 +51,15 @@ namespace pvd
 			return true;
 		}
 
+		// Init StreamMap if exist
+		std::unique_lock<std::shared_mutex> lock{_stream_map_mutex};
+		auto stream_map = srt_bind_config.GetStreamMap();
+		for (const auto &stream : stream_map.GetStreamList())
+		{
+			_stream_map.emplace(stream.GetPort(), std::make_shared<StreamMap>(stream.GetPort(), stream.GetUrl()));
+		}
+		lock.unlock();
+
 		bool is_configured;
 		auto worker_count = srt_bind_config.GetWorkerCount(&is_configured);
 		worker_count = is_configured ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
@@ -177,16 +186,44 @@ namespace pvd
 		return PushProvider::OnDeleteProviderApplication(application);
 	}
 
+	std::shared_ptr<SrtProvider::StreamMap> SrtProvider::GetStreamMap(int port)
+	{
+		std::shared_lock<std::shared_mutex> lock{_stream_map_mutex};
+		auto it = _stream_map.find(port);
+		if (it == _stream_map.end())
+		{
+			return nullptr;
+		}
+
+		return it->second;
+	}
+
 	void SrtProvider::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	{
-		logti("The SRT client has connected : %s [%s]", remote->ToString().CStr(), remote->GetStreamId().CStr());
+		logti("The SRT client has connected : %s [%d] [%s]", remote->ToString().CStr(), remote->GetNativeHandle(), remote->GetStreamId().CStr());
 
 		// Get app/stream name from streamid
 		auto streamid = remote->GetStreamId();
+		ov::String decoded_url;
 
-		// streamid format is below
-		// urlencode(srt://host[:port]/app/stream?query=value)
-		auto decoded_url = ov::Url::Decode(streamid);
+		if (streamid.IsEmpty())
+		{
+			auto stream_map = GetStreamMap(remote->GetLocalAddress()->Port());
+			if (stream_map == nullptr)
+			{
+				logte("There is no stream information in the streamid and stream map. : %s", remote->ToString().CStr());
+				remote->Close();
+				return;
+			}
+
+			decoded_url = stream_map->_listen_url;
+		}
+		else
+		{
+			// urlencode(srt://host[:port]/app/stream?query=value)
+			decoded_url = ov::Url::Decode(streamid);
+		}
+
 		auto final_url = ov::Url::Parse(decoded_url);
 		if (final_url == nullptr)
 		{

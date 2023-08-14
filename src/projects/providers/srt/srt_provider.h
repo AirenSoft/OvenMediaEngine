@@ -82,5 +82,23 @@ namespace pvd
 	private:
 		std::mutex _physical_port_list_mutex;
 		std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
+
+		struct StreamMap
+		{
+			StreamMap(int port, const ov::String &listen_url)
+				: _port(port)
+				, _listen_url(listen_url)
+			{
+			}
+
+			int _port;
+			ov::String _listen_url;
+		};
+
+		std::shared_ptr<StreamMap> GetStreamMap(int port);
+
+		// Port : StreamMap
+		std::map<int, std::shared_ptr<StreamMap>> _stream_map;
+		std::shared_mutex _stream_map_mutex;
 	};
 }  // namespace pvd

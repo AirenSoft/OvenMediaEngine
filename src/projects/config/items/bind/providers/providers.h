@@ -10,6 +10,7 @@
 
 #include "./provider.h"
 #include "./provider_with_options.h"
+#include "./srt.h"
 #include "../common/webrtc/webrtc.h"
 
 namespace cfg
@@ -28,9 +29,9 @@ namespace cfg
 				// PUSH Providers (Server)
 				Provider<cmn::SingularPort> _rtmp{"1935/tcp"};
 				Provider<cmn::SingularPort> _rtsp{"554/tcp"};
-				ProviderWithOptions<cmn::RangedPort> _srt{"9999/srt"};
 				Provider<cmn::RangedPort> _mpegts{"4000/udp"};
 
+				SRT _srt{"9999/srt"};
 				cmm::Webrtc _webrtc{"3333/tcp", "3334/tcp"};
 
 			public:
