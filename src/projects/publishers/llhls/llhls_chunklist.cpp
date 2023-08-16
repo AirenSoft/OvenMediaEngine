@@ -253,7 +253,7 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 
 	playlist.AppendFormat("#EXTM3U\n");
 
-	playlist.AppendFormat("#EXT-X-VERSION:%d\n", 6);
+	playlist.AppendFormat("#EXT-X-VERSION:%d\n", 10);
 	// Note that in protocol version 6, the semantics of the EXT-
 	// X-TARGETDURATION tag changed slightly.  In protocol version 5 and
 	// earlier it indicated the maximum segment duration; in protocol
