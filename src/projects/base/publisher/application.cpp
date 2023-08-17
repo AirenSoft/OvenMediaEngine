@@ -548,6 +548,12 @@ namespace pub
 					std::lock_guard<std::shared_mutex> lock(_push_map_mutex);
 					for (auto &[id, push] : _pushes)
 					{
+						// If it is a removed push job, add to the remove waiting list
+						if (push->GetRemove() == true)
+						{
+							remove_pushes.push_back(push);
+						}
+
 						// Find a stream by stream name
 						auto stream = GetStream(push->GetStreamName());
 						if (stream == nullptr || stream->GetState() != pub::Stream::State::STARTED)
@@ -572,19 +578,13 @@ namespace pub
 						}
 
 						// Starts only in the enabled state and stops otherwise
-						if (push->GetEnable() == true)
+						if (push->GetEnable() == true && push->GetRemove() == false)
 						{
 							StartPushInternal(push, session);
 						}
 						else
 						{
 							StopPushInternal(push, session);
-						}
-
-						// Add to list when delete is enabled
-						if (push->GetRemove() == true)
-						{
-							remove_pushes.push_back(push);
 						}
 					}
 				}
