@@ -7,7 +7,7 @@
 #  Copyright (c) 2023 AirenSoft. All rights reserved.
 #
 #==============================================================================
-VERSION="v0.1"
+VERSION="v0.2"
 
 # Configurations
 IMAGE_NAME=airensoft/ovenmediaengine:latest
@@ -612,20 +612,44 @@ _start()
 		esac
 
 		# Parse [<IP>:]<START>[-<END>][/<PROTOCOL>] format
-		[[ ! "${VALUE}" =~ ^(\[?([^\]]+)\]?:)?([0-9]+)(-([0-9]+))?(/(.+))?$ ]] && die "• ERROR: Invalid setting found: '${VALUE}' in ${TYPE}/${NAME}"
+		{
+			[[ ! "${VALUE}" =~ ^(\[?([^\]]+)\]?:)?((([0-9]+)(-([0-9]+))?)(,(([0-9]+)(-([0-9]+))?))*)(\/(.+))?$ ]] &&
+			die "• ERROR: Invalid setting found: '${VALUE}' in ${TYPE}/${NAME}" ;
+		}
 
 		local IP="${BASH_REMATCH[2]}"
-		local START_PORT="${BASH_REMATCH[3]}"
-		local END_PORT="${BASH_REMATCH[5]}"
-		local PROTOCOL="${BASH_REMATCH[7]}"
+		local PORT_RANGE="${BASH_REMATCH[3]}"
+		local PROTOCOL="${BASH_REMATCH[14]}"
 		PROTOCOL=${PROTOCOL^^}
 
-		[ ! -z "${END_PORT}" ] && END_PORT="-${END_PORT}"
+		# Some protocol uses UDP by default (#1339)
+		case "${NAME}" in
+			SRT) PROTOCOL=${PROTOCOL:-SRT} ;;
+		esac
+
+		# SRT actually uses UDP, so bind UDP port if SRT is specified
+		[ "${PROTOCOL}" = "SRT" ] && PROTOCOL="UDP"
 		[ ! -z "${PROTOCOL}" ] && PROTOCOL="/${PROTOCOL}"
 
-		PORT_LIST+=("-p ${START_PORT}${END_PORT}:${START_PORT}${END_PORT}${PROTOCOL}")
+		# Support multiple port ranges (e.g. 1935,1937-1940)
+		local PORT_RANGE_LIST=()
+		IFS=',' read -r -a PORT_RANGE_LIST <<< "${PORT_RANGE}"
+		local USED_PORT_LIST=
+		for PORT_RANGE in "${PORT_RANGE_LIST[@]}"
+		do
+			local START_PORT=${PORT_RANGE%%-*}
+			local END_PORT=
 
-		logi "  - ${COLOR_GREEN}${DESCRIPTION}${COLOR_RESET} is configured to use ${COLOR_MAGENTA}${START_PORT}${END_PORT}${PROTOCOL}${COLOR_RESET} (${PORT_TYPE})"
+			[[ "$PORT_RANGE" == *"-"* ]] && END_PORT=${PORT_RANGE##*-}
+			[ ! -z "${END_PORT}" ] && END_PORT="-${END_PORT}"
+
+			PORT_LIST+=("-p ${START_PORT}${END_PORT}:${START_PORT}${END_PORT}${PROTOCOL}")
+			
+			[ ! -z "${USED_PORT_LIST}" ] && USED_PORT_LIST="${USED_PORT_LIST}, "
+			USED_PORT_LIST="${USED_PORT_LIST}${START_PORT}${END_PORT}${PROTOCOL}"
+		done
+
+		logi "  - ${COLOR_GREEN}${DESCRIPTION}${COLOR_RESET} is configured to use ${COLOR_MAGENTA}${USED_PORT_LIST}${COLOR_RESET} (${PORT_TYPE})"
 
 		for INDEX in "${!MODULE_LIST[@]}"
 		do
