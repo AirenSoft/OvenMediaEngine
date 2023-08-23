@@ -164,7 +164,7 @@ namespace ffmpeg
 			return false;
 		}
 
-		// Find index of AVStream 
+		// Find index of AVStream
 		auto it = _id_map.find(packet->GetTrackId());
 		if (it == _id_map.end())
 		{
@@ -184,7 +184,7 @@ namespace ffmpeg
 
 		// Find MediaTrack
 		auto media_track = _track_map[av_stream_index];
-		if(!media_track)
+		if (!media_track)
 		{
 			logtw("Cloud not find track. track_id(%d)", av_stream_index);
 
@@ -207,7 +207,6 @@ namespace ffmpeg
 		// Convert 1/AV_TIME_BASE -> 1/TimeBase of MediaTrack
 		int64_t start_time = av_rescale_q(_start_time, AV_TIME_BASE_Q, AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()});
 
-
 		// Convert MediaPacket to AVPacket
 		AVPacket av_packet = {0};
 
@@ -215,21 +214,21 @@ namespace ffmpeg
 		av_packet.flags = (packet->GetFlag() == MediaPacketFlag::Key) ? AV_PKT_FLAG_KEY : 0;
 		av_packet.pts = av_rescale_q(packet->GetPts() - start_time, AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
 		av_packet.dts = av_rescale_q(packet->GetDts() - start_time, AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
+		av_packet.size = packet->GetData()->GetLength();
+		av_packet.data = (uint8_t *)packet->GetData()->GetDataAs<uint8_t>();
 
-		std::shared_ptr<const ov::Data> new_data = packet->GetData();
-		std::vector<size_t> length_list;
+		std::shared_ptr<const ov::Data> new_data = nullptr;
 
 		if (strcmp(_av_format->oformat->name, "flv") == 0)
 		{
+			// ANNEXB -> AVCC
+			// ADTS -> RAW
 			switch (packet->GetBitstreamFormat())
 			{
 				case cmn::BitstreamFormat::H264_AVCC:
-					av_packet.size = new_data->GetLength();
-					av_packet.data = (uint8_t *)new_data->GetDataAs<uint8_t>();
 					break;
-
-				case cmn::BitstreamFormat::H264_ANNEXB:
-					new_data = NalStreamConverter::ConvertAnnexbToXvcc(new_data);
+				case cmn::BitstreamFormat::H264_ANNEXB: {
+					new_data = NalStreamConverter::ConvertAnnexbToXvcc(packet->GetData(), packet->GetFragHeader());
 					if (new_data == nullptr)
 					{
 						logtw("Failed to convert annexb to avcc");
@@ -237,15 +236,12 @@ namespace ffmpeg
 					}
 					av_packet.size = new_data->GetLength();
 					av_packet.data = (uint8_t *)new_data->GetDataAs<uint8_t>();
-					break;
-
+				}
+				break;
 				case cmn::BitstreamFormat::AAC_RAW:
-					av_packet.size = new_data->GetLength();
-					av_packet.data = (uint8_t *)new_data->GetDataAs<uint8_t>();
 					break;
-
-				case cmn::BitstreamFormat::AAC_ADTS:
-					new_data = AacConverter::ConvertAdtsToRaw(new_data, &length_list);
+				case cmn::BitstreamFormat::AAC_ADTS: {
+					new_data = AacConverter::ConvertAdtsToRaw(packet->GetData(), nullptr);
 					if (new_data == nullptr)
 					{
 						logtw("Failed to convert adts to raw");
@@ -253,8 +249,8 @@ namespace ffmpeg
 					}
 					av_packet.size = new_data->GetLength();
 					av_packet.data = (uint8_t *)new_data->GetDataAs<uint8_t>();
-					break;
-
+				}
+				break;
 				default:
 					// Unsupported bitstream foramt
 					return false;
@@ -264,13 +260,36 @@ namespace ffmpeg
 		{
 			switch (packet->GetBitstreamFormat())
 			{
-				case cmn::BitstreamFormat::AAC_RAW:
+				case cmn::BitstreamFormat::HVCC:
+					break;
+				case cmn::BitstreamFormat::H265_ANNEXB: {
+					new_data = NalStreamConverter::ConvertAnnexbToXvcc(packet->GetData(), packet->GetFragHeader());
+					if (new_data == nullptr)
+					{
+						logtw("Failed to convert annexb to avcc");
+						return false;
+					}
 					av_packet.size = new_data->GetLength();
 					av_packet.data = (uint8_t *)new_data->GetDataAs<uint8_t>();
+				}
+				break;
+				case cmn::BitstreamFormat::H264_AVCC:
 					break;
-
-				case cmn::BitstreamFormat::AAC_ADTS:
-					new_data = AacConverter::ConvertAdtsToRaw(new_data, &length_list);
+				case cmn::BitstreamFormat::H264_ANNEXB: {
+					new_data = NalStreamConverter::ConvertAnnexbToXvcc(packet->GetData(), packet->GetFragHeader());
+					if (new_data == nullptr)
+					{
+						logtw("Failed to convert annexb to avcc");
+						return false;
+					}
+					av_packet.size = new_data->GetLength();
+					av_packet.data = (uint8_t *)new_data->GetDataAs<uint8_t>();
+				}
+				break;
+				case cmn::BitstreamFormat::AAC_RAW:
+					break;
+				case cmn::BitstreamFormat::AAC_ADTS: {
+					new_data = AacConverter::ConvertAdtsToRaw(packet->GetData(), nullptr);
 					if (new_data == nullptr)
 					{
 						logtw("Failed to convert adts to raw");
@@ -278,14 +297,8 @@ namespace ffmpeg
 					}
 					av_packet.size = new_data->GetLength();
 					av_packet.data = (uint8_t *)new_data->GetDataAs<uint8_t>();
-					break;
-
-				case cmn::BitstreamFormat::H264_ANNEXB:
-					[[fallthrough]];
-				case cmn::BitstreamFormat::H264_AVCC:
-					av_packet.size = new_data->GetLength();
-					av_packet.data = (uint8_t *)new_data->GetDataAs<uint8_t>();
-					break;
+				}
+				break;
 
 				default:
 					// Unsupported bitstream foramt
@@ -294,11 +307,9 @@ namespace ffmpeg
 		}
 		else if (strcmp(_av_format->oformat->name, "mpegts") == 0)
 		{
-			av_packet.size = new_data->GetLength();
-			av_packet.data = (uint8_t *)new_data->GetDataAs<uint8_t>();
+			// Passthrough
 		}
 
-		// Send AVPacket
 		int error = av_interleaved_write_frame(_av_format, &av_packet);
 		if (error != 0)
 		{
