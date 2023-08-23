@@ -881,7 +881,7 @@ namespace ocst
 
 			if (module_interface->OnDeleteApplication(app_info) == false)
 			{
-				logte("The module %p (%s) returns error while deleting the application %s",
+				logte("The module %p (%s) returns error while deleting the application [%s]",
 					  module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr(), app_info.GetName().CStr());
 
 				// Ignore this error - some providers may not have generated the app
