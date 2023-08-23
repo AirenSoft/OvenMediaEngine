@@ -41,9 +41,9 @@ info::stream_id_t TranscoderStream::GetStreamId()
 
 bool TranscoderStream::Start()
 {
-	logti("%s Transcoder stream has been started", _log_prefix.CStr());
-
 	_is_stopped = false;
+
+	logti("%s Transcoder stream has been started", _log_prefix.CStr());
 
 	return true;
 }

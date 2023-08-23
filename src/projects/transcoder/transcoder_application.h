@@ -10,9 +10,9 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <stdint.h>
 
 #include <algorithm>
-#include <stdint.h>
 #include <memory>
 #include <thread>
 #include <vector>
@@ -55,9 +55,10 @@ public:
 	bool OnSendFrame(const std::shared_ptr<info::Stream> &stream, const std::shared_ptr<MediaPacket> &packet) override;
 
 private:
-	const info::Application _application_info;
+	bool ValidateAppConfiguration();
 
 private:
+	const info::Application _application_info;
 	std::map<int32_t, std::shared_ptr<TranscoderStream>> _streams;
 	std::mutex _mutex;
 };

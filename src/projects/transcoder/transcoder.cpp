@@ -64,13 +64,18 @@ bool Transcoder::OnCreateApplication(const info::Application &app_info)
 	auto application_id = app_info.GetId();
 
 	auto application = TranscodeApplication::Create(app_info);
+	if(application == nullptr)
+	{
+		logte("Could not create the transcoder application. [%s]", app_info.GetName().CStr());
+		return false;
+	}
 
 	_transcode_apps[application_id] = application;
 
 	// Register to MediaRouter
 	if (_router->RegisterObserverApp(app_info, application) == false)
 	{
-		logte("Could not register the application: %p", application.get());
+		logte("Could not register transcoder application to mediarouter. [%s]", app_info.GetName().CStr());
 
 		return false;
 	}
@@ -78,7 +83,7 @@ bool Transcoder::OnCreateApplication(const info::Application &app_info)
 	// Register to MediaRouter
 	if (_router->RegisterConnectorApp(app_info, application) == false)
 	{
-		logte("Could not register the application: %p", application.get());
+		logte("Could not register transcoder application to mediarouter. [%s]", app_info.GetName().CStr());
 
 		return false;
 	}
@@ -99,7 +104,11 @@ bool Transcoder::OnDeleteApplication(const info::Application &app_info)
 	}
 
 	auto application = it->second;
-	application->Stop();
+	if(application == nullptr)
+	{
+		_transcode_apps.erase(it);
+		return true;
+	}
 
 	// Unregister to MediaRouter
 	if (_router->UnregisterObserverApp(app_info, application) == false)
@@ -124,7 +133,6 @@ bool Transcoder::OnDeleteApplication(const info::Application &app_info)
 std::shared_ptr<TranscodeApplication> Transcoder::GetApplicationById(info::application_id_t application_id)
 {
 	auto obj = _transcode_apps.find(application_id);
-
 	if (obj == _transcode_apps.end())
 	{
 		return nullptr;
