@@ -98,6 +98,7 @@ namespace cmn
 		DEFAULT,
 		OPENH264,
 		BEAMR,
+		X264,
 		NVENC,
 		QSV,
 		XMA,
@@ -234,6 +235,10 @@ namespace cmn
 		{
 			return cmn::MediaCodecLibraryId::BEAMR;
 		}
+		else if (name.HasSuffix("_X264"))
+		{
+			return cmn::MediaCodecLibraryId::X264;
+		}
 		else if (name.HasSuffix("_NVENC"))
 		{
 			return cmn::MediaCodecLibraryId::NVENC;
@@ -268,6 +273,8 @@ namespace cmn
 				return "OpenH264";
 			case cmn::MediaCodecLibraryId::BEAMR:
 				return "Beamr";
+			case cmn::MediaCodecLibraryId::X264:
+				return "x264";
 			case cmn::MediaCodecLibraryId::NVENC:
 				return "nvenc";
 			case cmn::MediaCodecLibraryId::QSV:
@@ -323,6 +330,7 @@ namespace cmn
 		if (name == "H264" ||
 			name == "H264_OPENH264" ||
 			name == "H264_BEAMR" ||
+			name == "H264_X264" ||
 			name == "H264_NVENC" ||
 			name == "H264_QSV" ||
 			name == "H264_XMA")

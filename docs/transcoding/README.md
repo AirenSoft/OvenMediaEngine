@@ -21,6 +21,7 @@ OvenMediaEngine has a built-in live transcoder. The live transcoder can decode t
 |       |       | h264\_nvenc                                                          |
 |       |       | h264\_qsv                                                            |
 |       |       | h264\_beamr _<mark style="color:blue;">(Enterprise Only)</mark>_     |
+|       |       | h264\_x264 _<mark style="color:blue;">(Louper specific)</mark>_      |
 | Audio | AAC   | aac                                                                  |
 |       | Opus  | opus                                                                 |
 | Image | JPEG  | jpeg                                                                 |
