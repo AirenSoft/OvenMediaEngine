@@ -8,6 +8,7 @@ OPENSSL_VERSION=3.0.7
 SRTP_VERSION=2.4.2
 SRT_VERSION=1.5.2
 OPUS_VERSION=1.3.1
+X264_VERSION=20190513-2245-stable
 VPX_VERSION=1.11.0
 FDKAAC_VERSION=2.0.2
 NASM_VERSION=2.15.05
@@ -94,6 +95,19 @@ install_libopus()
     sudo rm -rf ${PREFIX}/share && \
     rm -rf ${DIR}) || fail_exit "opus"
 }
+
+install_libx264()
+{
+    (DIR=${TEMP_PATH}/x264 && \
+    mkdir -p ${DIR} && \
+    cd ${DIR} && \
+    curl -sLf https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-${X264_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
+    ./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli && \
+    make -j$(nproc) && \
+    sudo make install && \
+    rm -rf ${DIR}) || fail_exit "x264"
+}
+
 
 install_libopenh264()
 {
@@ -281,14 +295,16 @@ install_ffmpeg()
     # Build & Install
     (cd ${DIR} && PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PREFIX}/lib64/pkgconfig:${PREFIX}/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH} ./configure \
     --prefix="${PREFIX}" \
+    --enable-gpl \
+    --enable-nonfree \
     --extra-cflags="-I${PREFIX}/include ${ADDI_CFLAGS}"  \
     --extra-ldflags="-L${PREFIX}/lib -Wl,-rpath,${PREFIX}/lib ${ADDI_LDFLAGS}" \
     --extra-libs=-ldl ${ADDI_EXTRA_LIBS} \
     ${ADDI_LICENSE} \
     --disable-everything --disable-programs --disable-avdevice --disable-dct --disable-dwt --disable-lsp --disable-lzo --disable-rdft --disable-faan --disable-pixelutils \
-    --enable-shared --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libopenh264 --enable-openssl --enable-network --enable-libsrt ${ADDI_LIBS} \
+    --enable-shared --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-libopenh264 --enable-openssl --enable-network --enable-libsrt ${ADDI_LIBS} \
     ${ADDI_HWACCEL} \
-    --enable-encoder=libvpx_vp8,libopus,libfdk_aac,libopenh264,mjpeg,png${ADDI_ENCODER} \
+    --enable-encoder=libx266,libvpx_vp8,libopus,libfdk_aac,libopenh264,mjpeg,png${ADDI_ENCODER} \
     --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8${ADDI_DECODER} \
     --enable-parser=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
     --enable-protocol=tcp,udp,rtp,file,rtmp,tls,rtmps,libsrt \
@@ -492,6 +508,7 @@ install_openssl
 install_libsrtp
 install_libsrt
 install_libopus
+install_libx264
 install_libopenh264
 install_libvpx
 install_fdk_aac
