@@ -21,6 +21,8 @@ bool EncoderAVC::SetCodecParams()
 {
 	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRate() > 0) ? GetRefTrack()->GetFrameRate() : GetRefTrack()->GetEstimateFrameRate(), AV_TIME_BASE);
 	_codec_context->bit_rate = _codec_context->rc_min_rate = _codec_context->rc_max_rate = GetRefTrack()->GetBitrate();
+	// testing line
+	// cam _codec_context->bit_rate = _codec_context->rc_min_rate = _codec_context->rc_max_rate = 100000;
 	_codec_context->rc_buffer_size = static_cast<int>(_codec_context->bit_rate / 2);
 	_codec_context->sample_aspect_ratio = ::av_make_q(1, 1);
 
