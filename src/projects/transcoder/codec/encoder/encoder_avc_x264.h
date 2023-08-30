@@ -25,7 +25,7 @@ public:
 
 	int GetSupportedFormat() const noexcept override
 	{
-		return AV_PIX_FMT_YUV420P;
+		return AV_PIX_FMT_YUV422P10LE;
 	}
 
 	cmn::BitstreamFormat GetBitstreamFormat() const noexcept override
