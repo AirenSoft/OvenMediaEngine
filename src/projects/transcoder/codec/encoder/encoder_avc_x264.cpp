@@ -83,7 +83,8 @@ bool EncoderAVC::SetCodecParams()
 	}
 
 	// Profile
-	::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+	//::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+	::av_opt_set(_codec_context->priv_data, "profile", "high422", 0);
 
 	// Tune
 	::av_opt_set(_codec_context->priv_data, "tune", "zerolatency", 0);
