@@ -15,6 +15,7 @@
 #include "codec/encoder/encoder_avc_openh264.h"
 #include "codec/encoder/encoder_avc_qsv.h"
 #include "codec/encoder/encoder_avc_xma.h"
+#include "codec/encoder/encoder_avc_x264.h"
 #include "codec/encoder/encoder_ffopus.h"
 #include "codec/encoder/encoder_hevc_nv.h"
 #include "codec/encoder/encoder_hevc_qsv.h"
@@ -106,6 +107,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 						goto done;
 					}
 				}				
+				
 			}
 
 			if (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::OPENH264)
@@ -115,6 +117,17 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 				{
 
 					output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::OPENH264);
+					goto done;
+				}
+			}
+
+			if (library_id == cmn::MediaCodecLibraryId::X264)
+			{
+				encoder = std::make_shared<EncoderAVC>(info);
+				if (encoder != nullptr && encoder->Configure(output_track) == true)
+				{
+
+					output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::X264);
 					goto done;
 				}
 			}
