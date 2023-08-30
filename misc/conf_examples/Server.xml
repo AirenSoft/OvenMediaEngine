@@ -309,144 +309,30 @@
 					<!-- Application type (live/vod) -->
 					<Type>live</Type>
 					<OutputProfiles>
-						<!-- Enable this configuration if you want to hardware acceleration using GPU -->
-						<HardwareAcceleration>false</HardwareAcceleration>
 						<OutputProfile>
 							<Name>bypass_stream</Name>
-							<OutputStreamName>${OriginStreamName}</OutputStreamName>
-
-							<!-- 
-							You can provide ABR with Playlist. Currently, ABR is supported in LLHLS and WebRTC.
-							
-							<Playlist>
-								<Name>Paid</Name>
-								You can play this playlist with 
-								LLHLS : http[s]://<domain>[:port]/<app>/<stream>/<FileName>.m3u8 
-								WebRTC : ws[s]://<domain>[:port]/<app>/<stream>/<FileName>
-								Note that the keywords "playlist" and "chunklist" MUST NOT be included in FileName.
-								<FileName>premium</FileName>
-
-								Options is optional. 
-								<Options>
-									WebRtcAutoAbr : Default value is true
-									<WebRtcAutoAbr>true</WebRtcAutoAbr> 
-								</Options>
-								
-								<Rendition>
-									<Name>bypass</Name>
-									<Video>bypass_video</Video>
-									<Audio>bypass_audio</Audio>
-								</Rendition>
-								<Rendition>
-									<Name>480p</Name>
-									<Video>480p</Video>
-									<Audio>bypass_audio</Audio>
-								</Rendition>
-								<Rendition>
-									<Name>720p</Name>
-									<Video>720p</Video>
-									<Audio>bypass_audio</Audio>
-								</Rendition>
-							</Playlist>
-							<Playlist>
-								<Name>free</Name>
-								<FileName>free</FileName>
-								<Rendition>
-									<Name>720p</Name>
-									<Video>720p</Video>
-									<Audio>bypass_audio</Audio>
-								</Rendition>
-							</Playlist>
-							-->
-
+							<OutputStreamName>x_${OriginStreamName}</OutputStreamName>
 							<Encodes>
-								<Video>
-									<Name>bypass_video</Name>
+								<Audio>
 									<Bypass>true</Bypass>
+								</Audio>
+								<!-- <Video>
+									<Bypass>true</Bypass>
+								</Video> -->
+								<Video>
+									<!-- vp8, h264 -->
+									<Codec>h264_x264</Codec>
+									<Width>640</Width>
+									<Height>480</Height>
+									<Bitrate>1000000</Bitrate>
+									<Framerate>30.0</Framerate>
 								</Video>
 								<Audio>
-									<Name>aac_audio</Name>
-									<Codec>aac</Codec>
-									<Bitrate>128000</Bitrate>
-									<Samplerate>48000</Samplerate>
-									<Channel>2</Channel>
-									<BypassIfMatch>
-										<Codec>eq</Codec>
-									</BypassIfMatch>
-								</Audio>
-								<Audio>
-									<Name>opus_audio</Name>
 									<Codec>opus</Codec>
 									<Bitrate>128000</Bitrate>
 									<Samplerate>48000</Samplerate>
 									<Channel>2</Channel>
-									<BypassIfMatch>
-										<Codec>eq</Codec>
-									</BypassIfMatch>
 								</Audio>
-								<!--
-								<Video>
-									<Name>video_1280</Name>
-									<Codec>h264</Codec>
-									<Bitrate>5024000</Bitrate>
-									<Width>1920</Width>
-									<Height>1280</Height>
-									<Framerate>30</Framerate>
-									<KeyFrameInterval>30</KeyFrameInterval>
-									<BFrames>0</BFrames>
-									<Preset>faster</Preset>
-								</Video>
-								<Video>
-									<Name>video_720</Name>
-									<Codec>h264</Codec>
-									<Bitrate>2024000</Bitrate>
-									<Width>1280</Width>
-									<Height>720</Height>
-									<Framerate>30</Framerate>
-									<KeyFrameInterval>30</KeyFrameInterval>
-									<BFrames>0</BFrames>									
-									<Preset>faster</Preset>
-								</Video>	
-								<Audio>
-									<Name>bypass_audio</Name>
-									<Bypass>true</Bypass>
-								</Audio>																
-								-->
-								<!-- 
-									 If all conditions of BypassIfMatch are matched, bypass is used without encoding.
-									 [Options] 
-									   eq: euqal to
-									   lte: less than or equal to
-									   gte: greater than or equal to
-
-								<Video>
-									<Name>conditional_video_encoding</Name>
-									<Codec>h264</Codec>
-									<Bitrate>2024000</Bitrate>
-									<Width>1280</Width>
-									<Height>720</Height>
-									<Framerate>30</Framerate>
-									<BypassIfMatch>
-										<Codec>eq</Codec>
-										<Framerate>lte</Framerate>
-										<Width>lte</Width>
-										<Height>lte</Height>
-										<SAR>eq</SAR>
-									</BypassIfMatch>									
-								</Video>
-								<Audio>
-									<Name>conditional_audio_encoding</Name>
-									<Codec>aac</Codec>
-									<Bitrate>128000</Bitrate>
-									<Samplerate>48000</Samplerate>
-									<Channel>2</Channel>
-									<BypassIfMatch>
-										<Codec>eq</Codec>
-										<Samplerate>lte</Samplerate>
-										<Channel>eq</Channel>
-									</BypassIfMatch>
-								</Audio>																			
-								-->
 							</Encodes>
 						</OutputProfile>
 					</OutputProfiles>
