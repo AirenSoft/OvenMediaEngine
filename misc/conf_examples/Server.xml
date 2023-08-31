@@ -86,7 +86,7 @@
 				<IceCandidates>
 					<!-- Uncomment the line below to use IPv6 ICE Candidate -->
 					<!-- <IceCandidate>[::]:10000-10004/udp</IceCandidate> -->
-					<IceCandidate>*:10000-10004/udp</IceCandidate>
+					<IceCandidate>*:10000-10200/udp</IceCandidate>
 
 					<!-- Uncomment the line below to use a link local address when specifying an address with IPv6 wildcard (::) -->
 					<!-- <EnableLinkLocalAddress>true</EnableLinkLocalAddress> -->
@@ -128,7 +128,7 @@
 				<IceCandidates>
 					<!-- Uncomment the line below to use IPv6 ICE Candidate -->
 					<!-- <IceCandidate>[::]:10000-10004/udp</IceCandidate> -->
-					<IceCandidate>*:10000-10004/udp</IceCandidate>
+					<IceCandidate>*:10000-10200/udp</IceCandidate>
 					
 					<!-- Uncomment the line below to use a link local address when specifying an address with IPv6 wildcard (::) -->
 					<!-- <EnableLinkLocalAddress>true</EnableLinkLocalAddress> -->
