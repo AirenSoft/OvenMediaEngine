@@ -96,7 +96,7 @@ public:
 	bool EnableRtcpFb(uint8_t id, const ov::String &type, bool on);
 	void EnableRtcpFb(uint8_t id, const PayloadAttr::RtcpFbType &type, bool on);
 
-	// a=fmtp:96 packetization-mode=1;profile-level-id=42e01f;level-asymmetry-allowed=1
+	// a=fmtp:96 packetization-mode=1;profile-level-id=f4001f;level-asymmetry-allowed=1
 	// a=fmtp:96 profile-level-id=1;moe=AAC-hbr;sizelength=13
 	void SetFmtp(uint8_t id, const ov::String &fmtp);
 

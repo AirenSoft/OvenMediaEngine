@@ -101,7 +101,7 @@ namespace pvd
 		// H264
 		payload = std::make_shared<PayloadAttr>();
 		payload->SetRtpmap(payload_type_num++, "H264", 90000);
-		payload->SetFmtp(ov::String::FormatString("packetization-mode=1;profile-level-id=%x;level-asymmetry-allowed=1",	0x42e01f));
+		payload->SetFmtp(ov::String::FormatString("packetization-mode=1;profile-level-id=%x;level-asymmetry-allowed=1",	0xf4001f));
 		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::CcmFir, true);
 		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::NackPli, true);
 		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::TransportCc, true);

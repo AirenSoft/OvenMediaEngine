@@ -560,7 +560,7 @@ std::shared_ptr<PayloadAttr> RtcStream::MakePayloadAttr(const std::shared_ptr<co
 				//(Getroot's Note) The software decoder of Firefox or Chrome cannot play when 64001f (High, 3.1) stream is input. 
 				// However, when I put the fake information of 42e01f in FMTP, I confirmed that both Firefox and Chrome play well (high profile, but stream without B-Frame). 
 				// I thought it would be better to put 42e01f in fmtp than put the correct value, so I decided to put fake information.
-				profile_string = "42e01f";
+				profile_string = "f4001f";
 
 				payload->SetFmtp(ov::String::FormatString(
 						// NonInterleaved => packetization-mode=1
