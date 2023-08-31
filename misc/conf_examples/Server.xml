@@ -15,7 +15,7 @@
 	This is useful when OME cannot obtain a public IP from an interface, such as AWS or docker environment. 
 	If this is successful, you can use ${PublicIP} in your settings.
 	-->
-	<StunServer>stun.ovenmediaengine.com:13478</StunServer>
+	<StunServer>stun.l.google.com:19302</StunServer>
 
 	<Modules>
 		<!-- 
