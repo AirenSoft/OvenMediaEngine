@@ -383,7 +383,7 @@ namespace api
 							throw http::HttpError(http::StatusCode::BadRequest, error->GetMessage());
 						}
 						case pub::PushApplication::ErrorCode::Success: {
-							throw http::HttpError(http::StatusCode::OK, error->GetMessage());
+							return {http::StatusCode::OK};
 						}
 					}
 				}
