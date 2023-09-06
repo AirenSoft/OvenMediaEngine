@@ -408,6 +408,6 @@ namespace ov
 
 	String Data::ToHexString() const
 	{
-		return ov::ToHexString(static_cast<const uint8_t *>(GetData()) + _offset, GetLength());
+		return ov::ToHexString(GetDataAs<const uint8_t>(), GetLength());
 	}
 }  // namespace ov
