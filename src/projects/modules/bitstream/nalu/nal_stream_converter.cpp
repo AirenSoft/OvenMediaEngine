@@ -160,6 +160,7 @@ std::shared_ptr<ov::Data> NalStreamConverter::ConvertAnnexbToXvcc(const std::sha
 		auto offset = frag_header->fragmentation_offset[i];
 		auto length = frag_header->fragmentation_length[i];
 
+		// Use 4 bytes for NALU length
 		byte_stream.WriteBE32(length);
 		byte_stream.Write(data->GetDataAs<uint8_t>() + offset, length);
 	}

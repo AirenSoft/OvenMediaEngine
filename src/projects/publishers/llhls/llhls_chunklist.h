@@ -12,6 +12,8 @@
 #include <base/info/media_track.h>
 #include <base/mediarouter/media_buffer.h>
 
+#include "modules/containers/bmff/cenc.h"
+
 class LLHlsChunklist
 {
 public:
@@ -157,6 +159,8 @@ public:
 
 	~LLHlsChunklist();
 
+	void EnableCenc(const bmff::CencProperty &cenc_property);
+
 	// A LLHlsChunklist has circular dependency issues because it holds its own pointer and pointers to all other chunklists. 
 	// Therefore, you must call the Release function.
 	void Release();
@@ -187,6 +191,8 @@ private:
 	bool SaveOldSegmentInfo(std::shared_ptr<SegmentInfo> &segment_info);
 
 	ov::String MakeChunklist(const ov::String &query_string, bool skip, bool legacy, bool vod = false, uint32_t vod_start_segment_number = 0) const;
+
+	ov::String MakeExtXKey() const;
 
 	std::shared_ptr<const MediaTrack> _track;
 
@@ -220,6 +226,8 @@ private:
 
 	std::shared_ptr<ov::Data> _cached_default_chunklist_gzip;
 	mutable std::shared_mutex _cached_default_chunklist_gzip_guard;
+
+	bmff::CencProperty _cenc_property;
 
 	void UpdateCacheForDefaultChunklist();
 };

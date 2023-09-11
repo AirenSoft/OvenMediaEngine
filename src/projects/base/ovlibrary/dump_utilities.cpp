@@ -82,6 +82,33 @@ namespace ov
 		return dump;
 	}
 
+	String ToUUIDString(const void *data, size_t length)
+	{
+		if (length != 16)
+		{
+			// Invalid UUID
+			return "";
+		}
+
+		String dump;
+
+		const auto *buffer = static_cast<const uint8_t *>(data);
+
+		for (size_t index = 0; index < length; index++)
+		{
+			dump.AppendFormat("%02X", *buffer);
+
+			if (index == 3 || index == 5 || index == 7 || index == 9)
+			{
+				dump.Append("-");
+			}
+
+			buffer++;
+		}
+
+		return dump;
+	}
+
 	String Dump(const void *data, size_t length, const char *title, off_t offset, size_t max_bytes, const char *line_prefix) noexcept
 	{
 		if (offset > static_cast<off_t>(length))

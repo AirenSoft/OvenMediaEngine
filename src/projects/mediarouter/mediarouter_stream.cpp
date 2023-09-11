@@ -220,6 +220,11 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 					// logtd("[PPS] %s ", ov::Base64::Encode(nalu).CStr());
 					has_pps = true;
 				}
+				else if (nal_header.GetNalUnitType() == H264NalUnitType::FillerData)
+				{
+					// no need to maintain filler data
+					continue;
+				}
 			}
 
 			converted_data->Append(START_CODE, sizeof(START_CODE));
@@ -323,6 +328,10 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 		{
 			has_idr = true;
 			media_packet->SetFlag(MediaPacketFlag::Key);
+		}
+		else if (nal_header.GetNalUnitType() == H264NalUnitType::FillerData)
+		{
+			//TODO(Getroot): It is better to remove filler data.
 		}
 
 		// Last NalU

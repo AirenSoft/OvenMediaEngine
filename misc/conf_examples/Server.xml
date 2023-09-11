@@ -504,6 +504,10 @@
 								<TempStoragePath>/tmp/ome_dvr/</TempStoragePath>
 								<MaxDuration>3600</MaxDuration>
 							</DVR>
+							<DRM>
+								<Enable>false</Enable>
+								<InfoFile>path/to/file.xml</InfoFile>
+							</DRM>
 							<CrossDomains>
 								<Url>*</Url>
 							</CrossDomains>

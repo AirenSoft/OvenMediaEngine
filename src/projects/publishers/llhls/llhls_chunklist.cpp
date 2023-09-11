@@ -9,7 +9,7 @@
 
 #include "llhls_chunklist.h"
 #include "llhls_private.h"
-
+#include <base/ovcrypto/base_64.h>
 #include <base/ovlibrary/zip.h>
 
 LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, uint32_t target_duration, double part_target_duration, const ov::String &map_uri)
@@ -35,6 +35,11 @@ void LLHlsChunklist::SetRenditions(const std::map<int32_t, std::shared_ptr<LLHls
 	// lock
 	std::lock_guard<std::shared_mutex> lock(_renditions_guard);
 	_renditions = renditions;
+}
+
+void LLHlsChunklist::EnableCenc(const bmff::CencProperty &cenc_property)
+{
+	_cenc_property = cenc_property;
 }
 
 void LLHlsChunklist::Release()
@@ -232,6 +237,45 @@ bool LLHlsChunklist::GetLastSequenceNumber(int64_t &msn, int64_t &psn) const
 	return true;
 }
 
+ov::String LLHlsChunklist::MakeExtXKey() const
+{
+	ov::String xkey;
+
+	for (const auto &pssh : _cenc_property.pssh_box_list)
+	{
+		if (pssh.drm_system == bmff::DRMSystem::Widevine)
+		{
+			xkey.AppendFormat("#EXT-X-KEY:");
+
+			if (_cenc_property.scheme == bmff::CencProtectScheme::Cbcs)
+			{
+				xkey.AppendFormat("METHOD=SAMPLE-AES");
+			}
+			else if (_cenc_property.scheme == bmff::CencProtectScheme::Cenc)
+			{
+				// NOT Support yet
+				xkey.AppendFormat("METHOD=SAMPLE-AES-CTR");
+				return "";
+			}
+
+			xkey.AppendFormat(",URI=\"data:text/plain;base64,%s\"", ov::Base64::Encode(pssh.pssh_box_data, false).CStr());
+
+			xkey.AppendFormat(",KEYID=0x%s", _cenc_property.key_id->ToHexString().CStr());
+			xkey.AppendFormat(",KEYFORMAT=\"urn:uuid:%s\"", ov::ToUUIDString(pssh.system_id->GetData(), pssh.system_id->GetLength()).LowerCaseString().CStr());
+			xkey.AppendFormat(",KEYFORMATVERSIONS=\"1\"");
+		}
+		else if (pssh.drm_system == bmff::DRMSystem::FairPlay)
+		{
+			xkey.AppendFormat("#EXT-X-KEY:METHOD=SAMPLE-AES");
+			xkey.AppendFormat(",URI=\"%s\"", _cenc_property.fairplay_key_uri.CStr());
+			xkey.AppendFormat(",KEYFORMAT=\"com.apple.streamingkeydelivery\"");
+			xkey.AppendFormat(",KEYFORMATVERSIONS=\"1\"");
+		}
+	}
+
+	return xkey;
+}
+
 ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool skip, bool legacy, bool vod, uint32_t vod_start_segment_number) const
 {
 	std::shared_lock<std::shared_mutex> segment_lock(_segments_guard);
@@ -278,6 +322,12 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 		playlist.AppendFormat("?%s", query_string.CStr());
 	}
 	playlist.AppendFormat("\"\n");
+
+	// CENC
+	if (_cenc_property.scheme != bmff::CencProtectScheme::None)
+	{
+		playlist.AppendFormat("%s\n", MakeExtXKey().CStr());
+	}
 
 	if (vod == true)
 	{

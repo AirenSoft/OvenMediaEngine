@@ -40,7 +40,7 @@ NalUnitBitstreamParser::NalUnitBitstreamParser(const uint8_t *bitstream, size_t 
 			}
 		}
 	}
-    
+
 	_buffer = _bitstream.data();
 	_capacity = _bitstream.size();
 	_position = _buffer;

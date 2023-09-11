@@ -19,7 +19,7 @@
 namespace bmff
 {
 	FMP4Packager::FMP4Packager(const std::shared_ptr<FMP4Storage> &storage, const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<const MediaTrack> &data_track, const Config &config)
-		: Packager(media_track, data_track)
+		: Packager(media_track, data_track, config.cenc_property)
 	{
 		_storage = storage;
 		_config = config;
@@ -83,7 +83,7 @@ namespace bmff
 		return true;
 	}
 
-	std::shared_ptr<bmff::Packager::Samples> FMP4Packager::GetDataSamples(int64_t start_timestamp, int64_t end_timestamp)
+	std::shared_ptr<bmff::Samples> FMP4Packager::GetDataSamples(int64_t start_timestamp, int64_t end_timestamp)
 	{
 		if (GetDataTrack() == nullptr)
 		{
@@ -116,7 +116,7 @@ namespace bmff
 				copy_data_packet->SetPts(rescaled_start_timestamp);
 				copy_data_packet->SetDts(rescaled_start_timestamp);
 				
-				samples->AppendSample(copy_data_packet);
+				samples->AppendSample(Sample(copy_data_packet));
 
 				_reserved_data_packets.pop();
 			}
@@ -153,7 +153,9 @@ namespace bmff
 			return false;
 		}
 
-		if (_samples_buffer != nullptr && _samples_buffer->GetTotalCount() > 0)
+		std::shared_ptr<Samples> samples = _sample_buffer.GetSamples();
+
+		if (samples != nullptr && samples->GetTotalCount() > 0)
 		{
 			// https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-4.4.3.8
 			// The duration of a Partial Segment MUST be less than or equal to the Part Target Duration.  
@@ -181,7 +183,7 @@ namespace bmff
 			bool next_frame_is_idr = (next_frame->GetFlag() == MediaPacketFlag::Key) || (GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio);
 
 			// Calculate duration as milliseconds
-			double total_duration = _samples_buffer->GetTotalDuration();
+			double total_duration = samples->GetTotalDuration();
 			double expected_duration = total_duration + next_frame->GetDuration();
 
 			double total_duration_ms = (static_cast<double>(total_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
@@ -217,7 +219,7 @@ namespace bmff
 
 				ov::ByteStream chunk_stream(reserve_buffer_size);
 				
-				auto data_samples = GetDataSamples(_samples_buffer->GetStartTimestamp(), _samples_buffer->GetEndTimestamp());
+				auto data_samples = GetDataSamples(samples->GetStartTimestamp(), samples->GetEndTimestamp());
 				if (data_samples != nullptr)
 				{
 					if (WriteEmsgBox(chunk_stream, data_samples) == false)
@@ -226,13 +228,13 @@ namespace bmff
 					}
 				}
 
-				if (WriteMoofBox(chunk_stream, _samples_buffer) == false)
+				if (WriteMoofBox(chunk_stream, samples) == false)
 				{
 					logte("FMP4Packager::AppendSample() - Failed to write moof box");
 					return false;
 				}
 
-				if (WriteMdatBox(chunk_stream, _samples_buffer) == false)
+				if (WriteMdatBox(chunk_stream, samples) == false)
 				{
 					logte("FMP4Packager::AppendSample() - Failed to write mdat box");
 					return false;
@@ -241,15 +243,15 @@ namespace bmff
 				auto chunk = chunk_stream.GetDataPointer();
 
 				if (_storage != nullptr && _storage->AppendMediaChunk(chunk, 
-												_samples_buffer->GetStartTimestamp(), 
+												samples->GetStartTimestamp(), 
 												total_duration_ms, 
-												_samples_buffer->IsIndependent(), (last_partial_segment && next_frame_is_idr)) == false)
+												samples->IsIndependent(), (last_partial_segment && next_frame_is_idr)) == false)
 				{
 					logte("FMP4Packager::AppendSample() - Failed to store media chunk");
 					return false;
 				}
 
-				_samples_buffer.reset();
+				_sample_buffer.Reset();
 
 				// Set the average chunk duration to config.chunk_duration_ms
 				// _target_chunk_duration_ms -= total_duration_ms;
@@ -257,12 +259,7 @@ namespace bmff
 			}
 		}
 
-		if (_samples_buffer == nullptr)
-		{
-			_samples_buffer = std::make_shared<Samples>();
-		}
-
-		if (_samples_buffer->AppendSample(next_frame) == false)
+		if (_sample_buffer.AppendSample(next_frame) == false)
 		{
 			logte("FMP4Packager::AppendSample() - Failed to append sample");
 			return false;
@@ -291,6 +288,8 @@ namespace bmff
 
 		return true;
 	}
+
+	
 
 	std::shared_ptr<const MediaPacket> FMP4Packager::ConvertBitstreamFormat(const std::shared_ptr<const MediaPacket> &media_packet)
 	{

@@ -67,9 +67,14 @@ public:
 	uint8_t NumOfSPS() const;
 	uint8_t NumOfPPS() const;
 	uint8_t NumOfSPSExt() const;
-	std::shared_ptr<ov::Data>	GetSPS(int index) const;
-	std::shared_ptr<ov::Data>	GetPPS(int index) const;
-	std::shared_ptr<ov::Data>	GetSPSExt(int index) const;
+	std::shared_ptr<ov::Data>	GetSPSData(int index) const;
+	std::shared_ptr<ov::Data>	GetPPSData(int index) const;
+	std::shared_ptr<ov::Data>	GetSPSExtData(int index) const;
+
+	// Get SPS
+	bool GetSPS(int sps_id, H264SPS &sps) const;
+	bool GetPPS(int pps_id, H264PPS &pps) const;
+
 	uint8_t ChromaFormat() const;
 	uint8_t BitDepthLumaMinus8() const;
 	uint8_t BitDepthChromaMinus8() const;
@@ -106,12 +111,16 @@ private:
 	// for(int i=0; i<_num_of_sps; i++)
 		// sps_length(16 bits) + sps
 	uint8_t		_num_of_sps = 0;		// (5 bits)
-	std::vector<std::shared_ptr<ov::Data>>	_sps_list;
+	std::vector<std::shared_ptr<ov::Data>>	_sps_data_list;
+	// sps_id, sps
+	std::map<uint8_t, H264SPS> _sps_map;
 
 	// for(int i=0; i<_num_of_pps; i++)
 		// pps_length(16 bits) + sps
 	uint8_t		_num_of_pps = 0;		// (8 bits)
-	std::vector<std::shared_ptr<ov::Data>>	_pps_list;
+	std::vector<std::shared_ptr<ov::Data>>	_pps_data_list;
+	// pps_id, pps
+	std::map<uint8_t, H264PPS> _pps_map;
 
 	// if _profile_indication == 100 or 110 or 122 or 144
 	uint8_t		_reserved3 = 0;			// (6 bits) = 111111b
@@ -124,7 +133,7 @@ private:
 	// for(int i=0; i<_num_of_sps_ext; i++)
 		// sps_ext_length(16 bits) + sps_ext
 	uint8_t		_num_of_sps_ext = 0;		// (8 bits)
-	std::vector<std::shared_ptr<ov::Data>>	_sps_ext_list;
+	std::vector<std::shared_ptr<ov::Data>>	_sps_ext_data_list;
 
 
 	//////////////////////////////////////////

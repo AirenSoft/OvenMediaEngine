@@ -54,7 +54,7 @@ public:
 			decoder_configuration_record = std::make_shared<AVCDecoderConfigurationRecord>();
 			break;
 		case DecoderConfigurationRecordType::HEVCConfigurationRecord:
-			//decoder_configuration_record = std::make_shared<HEVCDecoderConfigurationRecord>();
+			decoder_configuration_record = std::make_shared<HEVCDecoderConfigurationRecord>();
 			break;
 		case DecoderConfigurationRecordType::AudioSpecificConfig:
 			decoder_configuration_record = std::make_shared<AudioSpecificConfig>();

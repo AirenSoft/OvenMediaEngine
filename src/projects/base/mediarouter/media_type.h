@@ -44,7 +44,7 @@ namespace cmn
 		// For Data Track
 		ID3v2,
 
-		HVCC,
+		HVCC, // H.265 HVCC
 	};
 
 	enum class PacketType : int8_t

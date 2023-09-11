@@ -23,6 +23,8 @@ namespace bmff
 		{
 			double chunk_duration_ms = 500.0;
 			double segment_duration_ms = 6000.0;
+			
+			CencProperty cenc_property;
 		};
 
 		FMP4Packager(const std::shared_ptr<FMP4Storage> &storage, const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<const MediaTrack> &data_track, const Config &config);
@@ -42,7 +44,7 @@ namespace bmff
 	private:
 		const Config &GetConfig() const;
 
-		std::shared_ptr<bmff::Packager::Samples> GetDataSamples(int64_t start_timestamp, int64_t end_timestamp);
+		std::shared_ptr<bmff::Samples> GetDataSamples(int64_t start_timestamp, int64_t end_timestamp);
 
 		bool StoreInitializationSection(const std::shared_ptr<ov::Data> &segment);
 
@@ -52,7 +54,6 @@ namespace bmff
 
 		Config _config;
 		std::shared_ptr<FMP4Storage> _storage = nullptr;
-		std::shared_ptr<Samples> _samples_buffer = nullptr;
 
 		double _target_chunk_duration_ms = 0.0;
 

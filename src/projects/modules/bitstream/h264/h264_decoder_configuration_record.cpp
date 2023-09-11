@@ -144,7 +144,7 @@ std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::Serialize()
 	bits.Write(5, NumOfSPS());	// num of SPS
 	for (auto i = 0; i < NumOfSPS(); i++)
 	{
-		auto sps = GetSPS(i);
+		auto sps = GetSPSData(i);
 		bits.Write(16, sps->GetLength());  // sps length
 		bits.Write(sps->GetDataAs<uint8_t>(), sps->GetLength());
 	}
@@ -152,7 +152,7 @@ std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::Serialize()
 	bits.Write(8, NumOfPPS());	// num of PPS
 	for (auto i = 0; i < NumOfPPS(); i++)
 	{
-		auto pps = GetPPS(i);
+		auto pps = GetPPSData(i);
 		bits.Write(16, pps->GetLength());  // pps length
 		bits.Write(pps->GetDataAs<uint8_t>(), pps->GetLength());
 	}
@@ -200,34 +200,61 @@ uint8_t AVCDecoderConfigurationRecord::NumOfSPSExt() const
 	return _num_of_sps_ext;
 }
 
-std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::GetSPS(int index) const
+std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::GetSPSData(int index) const
 {
-	if (static_cast<int>(_sps_list.size()) - 1 < index)
+	if (static_cast<int>(_sps_data_list.size()) - 1 < index)
 	{
 		return nullptr;
 	}
 
-	return _sps_list[index];
+	return _sps_data_list[index];
 }
 
-std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::GetPPS(int index) const
+std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::GetPPSData(int index) const
 {
-	if (static_cast<int>(_pps_list.size()) - 1 < index)
+	if (static_cast<int>(_pps_data_list.size()) - 1 < index)
 	{
 		return nullptr;
 	}
 
-	return _pps_list[index];
+	return _pps_data_list[index];
 }
 
-std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::GetSPSExt(int index) const
+std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::GetSPSExtData(int index) const
 {
-	if (static_cast<int>(_sps_ext_list.size()) - 1 < index)
+	if (static_cast<int>(_sps_ext_data_list.size()) - 1 < index)
 	{
 		return nullptr;
 	}
 
-	return _sps_ext_list[index];
+	return _sps_ext_data_list[index];
+}
+
+// Get SPS
+bool AVCDecoderConfigurationRecord::GetSPS(int sps_id, H264SPS &sps) const
+{
+	auto it = _sps_map.find(sps_id);
+    if (it == _sps_map.end())
+    {
+        return false;
+    }
+
+    sps = it->second;
+
+    return true;
+}
+
+bool AVCDecoderConfigurationRecord::GetPPS(int pps_id, H264PPS &pps) const
+{
+	auto it = _pps_map.find(pps_id);
+	if (it == _pps_map.end())
+	{
+		return false;
+	}
+
+	pps = it->second;
+
+	return true;
 }
 
 uint8_t AVCDecoderConfigurationRecord::ChromaFormat() const
@@ -315,7 +342,7 @@ std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> AVCDecoderConfigurati
 		data->Append(START_CODE, start_code_size);
 		offset += start_code_size;
 
-		auto sps = GetSPS(i);
+		auto sps = GetSPSData(i);
 		frag_header.fragmentation_offset.push_back(offset);
 		frag_header.fragmentation_length.push_back(sps->GetLength());
 
@@ -329,7 +356,7 @@ std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> AVCDecoderConfigurati
 		data->Append(START_CODE, start_code_size);
 		offset += start_code_size;
 
-		auto pps = GetPPS(i);
+		auto pps = GetPPSData(i);
 		frag_header.fragmentation_offset.push_back(offset);
 		frag_header.fragmentation_length.push_back(pps->GetLength());
 		data->Append(pps);
@@ -383,30 +410,47 @@ void AVCDecoderConfigurationRecord::SetBitDepthChromaMinus8(uint8_t bit_depth_ch
 
 bool AVCDecoderConfigurationRecord::AddSPS(const std::shared_ptr<ov::Data> &nalu)
 {
-	// first sps
-	if (_num_of_sps == 0)
+	H264SPS sps;
+	if (H264Parser::ParseSPS(nalu->GetDataAs<uint8_t>(), nalu->GetLength(), sps) == false)
 	{
-		// Parse SPS
-		if (H264Parser::ParseSPS(nalu->GetDataAs<uint8_t>(), nalu->GetLength(), _h264_sps) == false)
-		{
-			logte("Could not parse H264 SPS unit");
-			return false;
-		}
-
-		SetProfileIndication(_h264_sps.GetProfileIdc());
-		SetCompatibility(_h264_sps.GetConstraintFlag());
-		SetLevelIndication(_h264_sps.GetCodecLevelIdc());
+		logte("Could not parse H264 SPS unit");
+		return false;
 	}
 
-	_sps_list.push_back(nalu);
+	if (_sps_map.find(sps.GetId()) != _sps_map.end())
+	{
+		return false;
+	}
+
+	_h264_sps = sps; // last sps
+	SetProfileIndication(sps.GetProfileIdc());
+	SetCompatibility(sps.GetConstraintFlag());
+	SetLevelIndication(sps.GetCodecLevelIdc());
+
+	_sps_data_list.push_back(nalu);
+	_sps_map.emplace(sps.GetId(), sps);
+
 	_num_of_sps++;
 
 	return true;
 }
 
-bool AVCDecoderConfigurationRecord::AddPPS(const std::shared_ptr<ov::Data> &pps)
+bool AVCDecoderConfigurationRecord::AddPPS(const std::shared_ptr<ov::Data> &nalu)
 {
-	_pps_list.push_back(pps);
+	H264PPS pps;
+	if (H264Parser::ParsePPS(nalu->GetDataAs<uint8_t>(), nalu->GetLength(), pps) == false)
+	{
+		logte("Could not parse H264 PPS unit");
+		return false;
+	}
+
+	if (_pps_map.find(pps.GetId()) != _pps_map.end())
+	{
+		return false;
+	}
+
+	_pps_map.emplace(pps.GetId(), pps);
+	_pps_data_list.push_back(nalu);
 	_num_of_pps++;
 
 	return true;
@@ -414,7 +458,7 @@ bool AVCDecoderConfigurationRecord::AddPPS(const std::shared_ptr<ov::Data> &pps)
 
 bool AVCDecoderConfigurationRecord::AddSPSExt(const std::shared_ptr<ov::Data> &sps_ext)
 {
-	_sps_ext_list.push_back(sps_ext);
+	_sps_ext_data_list.push_back(sps_ext);
 	_num_of_sps_ext++;
 
 	return true;

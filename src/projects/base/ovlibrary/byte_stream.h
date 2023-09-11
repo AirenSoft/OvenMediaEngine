@@ -614,9 +614,6 @@ namespace ov
 		/// @see SetOffset()
 		bool PopOffset() noexcept;
 
-	protected:
-		ByteStream(Data *data, const Data *read_only_data, std::shared_ptr<const Data> data_pointer, off_t offset);
-
 		/// 현재 버퍼 위치를 T 타입으로 얻어옴
 		///
 		/// @tparam T 데이터 타입
@@ -627,6 +624,9 @@ namespace ov
 		{
 			return reinterpret_cast<const T *>((_read_only_data->GetDataAs<const uint8_t>()) + _offset);
 		}
+
+	protected:
+		ByteStream(Data *data, const Data *read_only_data, std::shared_ptr<const Data> data_pointer, off_t offset);
 
 		/// T 타입의 데이터 1개를 현재 위치(offset)에 기록함. 기록 후 현재 위치가 변경됨.
 		///

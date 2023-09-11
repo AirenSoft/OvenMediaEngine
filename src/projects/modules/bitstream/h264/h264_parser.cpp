@@ -1,4 +1,5 @@
 #include "h264_parser.h"
+#include "h264_decoder_configuration_record.h"
 
 #define OV_LOG_TAG "H264Parser"
 
@@ -162,14 +163,14 @@ bool H264Parser::ParseSPS(const uint8_t *nalu, size_t length, H264SPS &sps)
 	if (sps._profile == 44 || sps._profile == 83 || sps._profile == 86 || sps._profile == 100 ||
 		sps._profile == 110 || sps._profile == 118 || sps._profile == 122 || sps._profile == 244)
 	{
-		uint32_t chroma_format;
-		if (!parser.ReadUEV(chroma_format))
+		if (!parser.ReadUEV(sps._chroma_format_idc))
 		{
 			return false;
 		}
 
-		if (chroma_format == 3)
+		if (sps._chroma_format_idc == 3)
 		{
+			// separate_colour_plane_flag
 			if (!parser.Skip(1))
 			{
 				return false;
@@ -204,7 +205,7 @@ bool H264Parser::ParseSPS(const uint8_t *nalu, size_t length, H264SPS &sps)
 
 		if (scaling_matrix_present_flag)
 		{
-			const size_t matrix_size = chroma_format == 3 ? 12 : 8;
+			const size_t matrix_size = sps._chroma_format_idc == 3 ? 12 : 8;
 			for (size_t index = 0; index < matrix_size; ++index)
 			{
 				uint8_t scaling_list_present_flag;
@@ -242,28 +243,26 @@ bool H264Parser::ParseSPS(const uint8_t *nalu, size_t length, H264SPS &sps)
 		}
 	}
 
-	if (uint32_t log2_max_frame_num_minus4; !parser.ReadUEV(log2_max_frame_num_minus4))
+	if (!parser.ReadUEV(sps._log2_max_frame_num_minus4))
 	{
 		return false;
 	}
 
-	uint32_t order_type;
-	if (!parser.ReadUEV(order_type))
+	if (!parser.ReadUEV(sps._pic_order_cnt_type))
 	{
 		return false;
 	}
 
-	if (order_type == 0)
+	if (sps._pic_order_cnt_type == 0)
 	{
-		if (uint32_t log2_max_pic_order_cnt_lsb_minus4; !parser.ReadUEV(log2_max_pic_order_cnt_lsb_minus4))
+		if (!parser.ReadUEV(sps._log2_max_pic_order_cnt_lsb_minus4))
 		{
 			return false;
 		}
 	}
-	else if (order_type == 1)
+	else if (sps._pic_order_cnt_type == 1)
 	{
-		uint8_t delta_pic_order_always_zero_flag;
-		if (!parser.ReadBit(delta_pic_order_always_zero_flag))
+		if (!parser.ReadBit(sps._delta_pic_order_always_zero_flag))
 		{
 			return false;
 		}
@@ -321,13 +320,13 @@ bool H264Parser::ParseSPS(const uint8_t *nalu, size_t length, H264SPS &sps)
 			return false;
 		}
 
-		uint8_t frame_mbs_only_flag;
-		if (!parser.ReadBit(frame_mbs_only_flag))
+		
+		if (!parser.ReadBit(sps._frame_mbs_only_flag))
 		{
 			return false;
 		}
 
-		if (!frame_mbs_only_flag)
+		if (!sps._frame_mbs_only_flag)
 		{
 			uint8_t mb_adaptive_frame_field_flag;
 			if (!parser.ReadBit(mb_adaptive_frame_field_flag))
@@ -373,7 +372,7 @@ bool H264Parser::ParseSPS(const uint8_t *nalu, size_t length, H264SPS &sps)
 		}
 
 		sps._width = (pic_width_in_mbs_minus1 + 1) * 16 - 2 * crop_left - 2 * crop_right;
-		sps._height = ((2 - frame_mbs_only_flag) * (pic_height_in_map_units_minus1 + 1) * 16) - 2 * crop_top - 2 * crop_bottom;
+		sps._height = ((2 - sps._frame_mbs_only_flag) * (pic_height_in_map_units_minus1 + 1) * 16) - 2 * crop_top - 2 * crop_bottom;
 	}
 
 	// [ VUI ] 
@@ -552,6 +551,620 @@ bool H264Parser::ParseVUI(NalUnitBitstreamParser &parser, H264SPS &sps)
 			}
 		}
 		// Currently skip the remaining part of VUI parameters
+	}
+
+	return true;
+}
+
+bool H264Parser::ParsePPS(const uint8_t *nalu, size_t length, H264PPS &pps)
+{
+	NalUnitBitstreamParser parser(nalu, length);
+
+	H264NalUnitHeader nal_header;
+	if (ParseNalUnitHeader(parser, nal_header) == false)
+	{
+		return false;
+	}
+
+	if (nal_header.GetNalUnitType() != H264NalUnitType::Pps)
+	{
+		return false;
+	}
+
+	// pps id
+	if (!parser.ReadUEV(pps._pps_id))
+	{
+		return false;
+	}
+
+	// sps id
+	if (!parser.ReadUEV(pps._sps_id))
+	{
+		return false;
+	}
+
+	// entropy_coding_mode_flag
+	
+	if (!parser.ReadBit(pps._entropy_coding_mode_flag))
+	{
+		return false;
+	}
+
+	if (!parser.ReadBit(pps._bottom_field_pic_order_in_frame_present_flag))
+	{
+		return false;
+	}
+
+	// num_slice_groups_minus1
+	
+	if (!parser.ReadUEV(pps._num_slice_groups_minus1))
+	{
+		return false;
+	}
+
+	if (pps._num_slice_groups_minus1 > 1)
+	{
+		// not support 
+		return false;
+	}
+
+	if (!parser.ReadUEV(pps._num_ref_idx_l0_default_active_minus1))
+	{
+		return false;
+	}
+
+	
+	if (!parser.ReadUEV(pps._num_ref_idx_l1_default_active_minus1))
+	{
+		return false;
+	}
+
+	if (!parser.ReadBit(pps._weighted_pred_flag))
+	{
+		return false;
+	}
+
+	if (!parser.ReadBits(2, pps._weighted_bipred_idc))
+	{
+		return false;
+	}
+
+	int32_t pic_init_qp_minus26;
+	if (!parser.ReadSEV(pic_init_qp_minus26))
+	{
+		return false;
+	}
+
+	int32_t pic_init_qs_minus26;
+	if (!parser.ReadSEV(pic_init_qs_minus26))
+	{
+		return false;
+	}
+
+	int32_t chroma_qp_index_offset;
+	if (!parser.ReadSEV(chroma_qp_index_offset))
+	{
+		return false;
+	}
+
+	
+	if (!parser.ReadBit(pps._deblocking_filter_control_present_flag))
+	{
+		return false;
+	}
+
+	uint8_t constrained_intra_pred_flag;
+	if (!parser.ReadBit(constrained_intra_pred_flag))
+	{
+		return false;
+	}
+
+	if (!parser.ReadBit(pps._redundant_pic_cnt_present_flag))
+	{
+		return false;
+	}
+
+	// skip the rest of the PPS, we don't need it
+
+	return true;
+}
+
+// 
+bool H264Parser::ParseSliceHeader(const uint8_t *nalu, size_t length, H264SliceHeader &shd, std::shared_ptr<AVCDecoderConfigurationRecord> &avcc)
+{
+	NalUnitBitstreamParser parser(nalu, length);
+
+	H264NalUnitHeader nal_header;
+	if (ParseNalUnitHeader(parser, nal_header) == false)
+	{
+		return false;
+	}
+
+	if (nal_header.IsVideoSlice() == false)
+	{
+		return false;
+	}
+
+	uint32_t first_mb_in_slice;
+	if (!parser.ReadUEV(first_mb_in_slice))
+	{
+		return false;
+	}
+
+	
+	if (!parser.ReadUEV(shd._slice_type))
+	{
+		return false;
+	}
+	if (shd._slice_type > 9)
+	{
+		return false;
+	}
+
+	uint32_t pic_parameter_set_id;
+	if (!parser.ReadUEV(pic_parameter_set_id))
+	{
+		return false;
+	}
+
+	H264PPS pps;
+	if (avcc->GetPPS(pic_parameter_set_id, pps) == false)
+	{
+		return false;
+	}
+
+	H264SPS sps;
+	if (avcc->GetSPS(pps._sps_id, sps) == false)
+	{
+		return false;
+	}
+
+	uint32_t frame_num;
+	if (!parser.ReadBits(sps._log2_max_frame_num_minus4 + 4, frame_num))
+	{
+		return false;
+	}
+
+	bool field_pic_flag;
+	if (sps._frame_mbs_only_flag == 0)
+	{
+		if (!parser.ReadBit(field_pic_flag))
+		{
+			return false;
+		}
+
+		if (field_pic_flag)
+		{
+			uint8_t bottom_field_flag;
+			if (!parser.ReadBit(bottom_field_flag))
+			{
+				return false;
+			}
+		}
+	}
+
+	if (nal_header.GetNalUnitType() == H264NalUnitType::IdrSlice)
+	{
+		uint32_t idr_pic_id;
+		if (!parser.ReadUEV(idr_pic_id))
+		{
+			return false;
+		}
+	}
+
+	if (sps._pic_order_cnt_type == 0)
+	{
+		uint32_t pic_order_cnt_lsb;
+		if (!parser.ReadBits(sps._log2_max_pic_order_cnt_lsb_minus4 + 4, pic_order_cnt_lsb))
+		{
+			return false;
+		}
+
+		if (pps._bottom_field_pic_order_in_frame_present_flag && !field_pic_flag)
+		{
+			int32_t delta_pic_order_cnt_bottom;
+			if (!parser.ReadSEV(delta_pic_order_cnt_bottom))
+			{
+				return false;
+			}
+		}
+	}
+
+	if (sps._pic_order_cnt_type == 1 && !sps._delta_pic_order_always_zero_flag)
+	{
+		int32_t delta_pic_order_cnt[2];
+		if (!parser.ReadSEV(delta_pic_order_cnt[0]))
+		{
+			return false;
+		}
+
+		if (pps._bottom_field_pic_order_in_frame_present_flag && !field_pic_flag)
+		{
+			if (!parser.ReadSEV(delta_pic_order_cnt[1]))
+			{
+				return false;
+			}
+		}
+	}
+
+	if (pps._redundant_pic_cnt_present_flag)
+	{
+		uint32_t redundant_pic_cnt;
+		if (!parser.ReadUEV(redundant_pic_cnt))
+		{
+			return false;
+		}
+	}
+
+	if (shd.GetSliceType() == H264SliceHeader::SliceType::BSlice)
+	{
+		uint8_t direct_spatial_mv_pred_flag;
+		if (!parser.ReadBit(direct_spatial_mv_pred_flag))
+		{
+			return false;
+		}
+	}
+
+	if (shd.GetSliceType() == H264SliceHeader::SliceType::PSlice || 
+		shd.GetSliceType() == H264SliceHeader::SliceType::BSlice ||
+		shd.GetSliceType() == H264SliceHeader::SliceType::SPSlice)
+	{
+		bool num_ref_idx_active_override_flag;
+		if (!parser.ReadBit(num_ref_idx_active_override_flag))
+		{
+			return false;
+		}
+
+		if (num_ref_idx_active_override_flag)
+		{
+			if (!parser.ReadUEV(shd._num_ref_idx_l0_active_minus1))
+			{
+				return false;
+			}
+
+			if (shd.GetSliceType() == H264SliceHeader::SliceType::BSlice)
+			{
+				if (!parser.ReadUEV(shd._num_ref_idx_l1_active_minus1))
+				{
+					return false;
+				}
+			}
+		}
+		else
+		{
+			shd._num_ref_idx_l0_active_minus1 = pps._num_ref_idx_l0_default_active_minus1;
+			
+			if (shd.GetSliceType() == H264SliceHeader::SliceType::BSlice)
+			{
+				shd._num_ref_idx_l1_active_minus1 = pps._num_ref_idx_l1_default_active_minus1;
+			}
+		}
+	}
+
+	if (!ParseRefPicListReordering(parser, shd))
+	{
+		return false;
+	}
+
+	if ((pps._weighted_pred_flag &&  (shd.GetSliceType() == H264SliceHeader::SliceType::PSlice || shd.GetSliceType() == H264SliceHeader::SliceType::SPSlice)) ||
+
+		(pps._weighted_bipred_idc == 1 && shd.GetSliceType() == H264SliceHeader::SliceType::BSlice))
+	{
+		if (!ParsePredWeightTable(parser, sps, shd))
+		{
+			return false;
+		}
+	}
+
+	if (nal_header._nal_ref_idc != 0)
+	{
+		ParseDecRefPicMarking(parser, nal_header.GetNalUnitType() == H264NalUnitType::IdrSlice, shd); 
+	}
+
+	if (pps._entropy_coding_mode_flag && shd.GetSliceType() != H264SliceHeader::SliceType::ISlice && shd.GetSliceType() != H264SliceHeader::SliceType::SISlice)
+	{
+		uint32_t cabac_init_idc;
+		if (!parser.ReadUEV(cabac_init_idc))
+		{
+			return false;
+		}
+	}
+
+	int32_t slice_qp_delta;
+	if (!parser.ReadSEV(slice_qp_delta))
+	{
+		return false;
+	}
+
+	if (shd.GetSliceType() == H264SliceHeader::SliceType::SPSlice || shd.GetSliceType() == H264SliceHeader::SliceType::SISlice)
+	{
+		if (shd.GetSliceType() == H264SliceHeader::SliceType::SPSlice)
+		{
+			uint8_t sp_for_switch_flag;
+			if (!parser.ReadBit(sp_for_switch_flag))
+			{
+				return false;
+			}
+		}
+
+		int32_t slice_qs_delta;
+		if (!parser.ReadSEV(slice_qs_delta))
+		{
+			return false;
+		}
+	}
+
+	if (pps._deblocking_filter_control_present_flag)
+	{
+		uint32_t disable_deblocking_filter_idc;
+		if (!parser.ReadUEV(disable_deblocking_filter_idc))
+		{
+			return false;
+		}
+
+		if (disable_deblocking_filter_idc != 1)
+		{
+			int32_t slice_alpha_c0_offset_div2;
+			if (!parser.ReadSEV(slice_alpha_c0_offset_div2))
+			{
+				return false;
+			}
+
+			int32_t slice_beta_offset_div2;
+			if (!parser.ReadSEV(slice_beta_offset_div2))
+			{
+				return false;
+			}
+		}
+	}
+
+	if (pps._num_slice_groups_minus1 > 0)
+	{
+		// not support
+		return false;
+	}
+
+	shd._header_size_in_bits = parser.BitsConsumed() - (H264_NAL_UNIT_HEADER_SIZE * 8);
+		
+	return true;
+}
+
+bool H264Parser::ParseRefPicListReordering(NalUnitBitstreamParser &parser, H264SliceHeader &header)
+{
+	if (header.GetSliceType() != H264SliceHeader::SliceType::ISlice &&
+		header.GetSliceType() != H264SliceHeader::SliceType::SISlice)
+	{
+		uint8_t ref_pic_list_reordering_flag_l0;
+		if (!parser.ReadBit(ref_pic_list_reordering_flag_l0))
+		{
+			return false;
+		}
+
+		if (ref_pic_list_reordering_flag_l0)
+		{
+			uint32_t reordering_of_pic_nums_idc;
+			do
+			{
+				if (!parser.ReadUEV(reordering_of_pic_nums_idc))
+				{
+					return false;
+				}
+
+				if (reordering_of_pic_nums_idc == 0 || reordering_of_pic_nums_idc == 1)
+				{
+					uint32_t abs_diff_pic_num_minus1;
+					if (!parser.ReadUEV(abs_diff_pic_num_minus1))
+					{
+						return false;
+					}
+				}
+				else if (reordering_of_pic_nums_idc == 2)
+				{
+					uint32_t long_term_pic_num;
+					if (!parser.ReadUEV(long_term_pic_num))
+					{
+						return false;
+					}
+				}
+			} while (reordering_of_pic_nums_idc != 3);
+		}
+	}
+
+	if (header.GetSliceType() == H264SliceHeader::SliceType::BSlice)
+	{
+		uint8_t ref_pic_list_reordering_flag_l1;
+		if (!parser.ReadBit(ref_pic_list_reordering_flag_l1))
+		{
+			return false;
+		}
+
+		if (ref_pic_list_reordering_flag_l1)
+		{
+			uint32_t reordering_of_pic_nums_idc;
+			do
+			{
+				if (!parser.ReadUEV(reordering_of_pic_nums_idc))
+				{
+					return false;
+				}
+
+				if (reordering_of_pic_nums_idc == 0 || reordering_of_pic_nums_idc == 1)
+				{
+					uint32_t abs_diff_pic_num_minus1;
+					if (!parser.ReadUEV(abs_diff_pic_num_minus1))
+					{
+						return false;
+					}
+				}
+				else if (reordering_of_pic_nums_idc == 2)
+				{
+					uint32_t long_term_pic_num;
+					if (!parser.ReadUEV(long_term_pic_num))
+					{
+						return false;
+					}
+				}
+			} while (reordering_of_pic_nums_idc != 3);
+		}
+	}
+
+	return true;
+}
+
+bool H264Parser::ParsePredWeightTable(NalUnitBitstreamParser &parser, const H264SPS &sps, H264SliceHeader &header)
+{
+	uint32_t luma_log2_weight_denom;
+	parser.ReadUEV(luma_log2_weight_denom);
+
+	if (sps._chroma_format_idc != 0)
+	{
+		uint32_t chroma_log2_weight_denom;
+		parser.ReadUEV(chroma_log2_weight_denom);
+	}
+
+	for (uint32_t index = 0; index <= header._num_ref_idx_l0_active_minus1; index++)
+	{
+		uint8_t luma_weight_l0_flag;
+		parser.ReadBit(luma_weight_l0_flag);
+
+		if (luma_weight_l0_flag)
+		{
+			int32_t luma_weight_l0;
+			parser.ReadSEV(luma_weight_l0);
+
+			int32_t luma_offset_l0;
+			parser.ReadSEV(luma_offset_l0);
+		}
+
+		if (sps._chroma_format_idc != 0)
+		{
+			uint8_t chroma_weight_l0_flag;
+			parser.ReadBit(chroma_weight_l0_flag);
+
+			if (chroma_weight_l0_flag)
+			{
+				for (uint32_t index = 0; index < 2; index++)
+				{
+					int32_t chroma_weight_l0;
+					parser.ReadSEV(chroma_weight_l0);
+
+					int32_t chroma_offset_l0;
+					parser.ReadSEV(chroma_offset_l0);
+				}
+			}
+		}
+	}
+
+	if (header.GetSliceType() == H264SliceHeader::SliceType::BSlice)
+	{
+		for (uint32_t index = 0; index <= header._num_ref_idx_l1_active_minus1; index++)
+		{
+			uint8_t luma_weight_l1_flag;
+			parser.ReadBit(luma_weight_l1_flag);
+
+			if (luma_weight_l1_flag)
+			{
+				int32_t luma_weight_l1;
+				parser.ReadSEV(luma_weight_l1);
+
+				int32_t luma_offset_l1;
+				parser.ReadSEV(luma_offset_l1);
+			}
+
+			if (sps._chroma_format_idc != 0)
+			{
+				uint8_t chroma_weight_l1_flag;
+				parser.ReadBit(chroma_weight_l1_flag);
+
+				if (chroma_weight_l1_flag)
+				{
+					for (uint32_t index = 0; index < 2; index++)
+					{
+						int32_t chroma_weight_l1;
+						parser.ReadSEV(chroma_weight_l1);
+
+						int32_t chroma_offset_l1;
+						parser.ReadSEV(chroma_offset_l1);
+					}
+				}
+			}
+		}
+	}
+
+	return true;
+}
+
+bool H264Parser::ParseDecRefPicMarking(NalUnitBitstreamParser &parser, bool idr, H264SliceHeader &header)
+{
+	if (idr)
+	{
+		uint8_t no_output_of_prior_pics_flag;
+		if (!parser.ReadBit(no_output_of_prior_pics_flag))
+		{
+			return false;
+		}
+
+		uint8_t long_term_reference_flag;
+		if (!parser.ReadBit(long_term_reference_flag))
+		{
+			return false;
+		}
+	}
+	else 
+	{
+		uint8_t adaptive_ref_pic_marking_mode_flag;
+		if (!parser.ReadBit(adaptive_ref_pic_marking_mode_flag))
+		{
+			return false;
+		}
+
+		if (adaptive_ref_pic_marking_mode_flag)
+		{
+			uint32_t memory_management_control_operation;
+			do
+			{
+				if (!parser.ReadUEV(memory_management_control_operation))
+				{
+					return false;
+				}
+
+				if (memory_management_control_operation == 1 || memory_management_control_operation == 3)
+				{
+					uint32_t difference_of_pic_nums_minus1;
+					if (!parser.ReadUEV(difference_of_pic_nums_minus1))
+					{
+						return false;
+					}
+				}
+
+				if (memory_management_control_operation == 2)
+				{
+					uint32_t long_term_pic_num;
+					if (!parser.ReadUEV(long_term_pic_num))
+					{
+						return false;
+					}
+				}
+
+				if (memory_management_control_operation == 3 || memory_management_control_operation == 6)
+				{
+					uint32_t long_term_frame_idx;
+					if (!parser.ReadUEV(long_term_frame_idx))
+					{
+						return false;
+					}
+				}
+
+				if (memory_management_control_operation == 4)
+				{
+					uint32_t max_long_term_frame_idx_plus1;
+					if (!parser.ReadUEV(max_long_term_frame_idx_plus1))
+					{
+						return false;
+					}
+				}
+			} while (memory_management_control_operation != 0);
+		}
 	}
 
 	return true;

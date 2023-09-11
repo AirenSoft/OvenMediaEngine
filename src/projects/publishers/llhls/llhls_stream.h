@@ -83,6 +83,8 @@ private:
 	bool Start() override;
 	bool Stop() override;
 
+	bool GetDrmInfo(const ov::String &file_path, bmff::CencProperty &cenc_property);
+
 	bool IsSupportedCodec(cmn::MediaCodecId codec_id) const; 
 
 	void NotifyPlaylistUpdated(const int32_t &track_id, const int64_t &msn, const int64_t &part);
@@ -163,4 +165,13 @@ private:
 
 	std::map<ov::String, std::shared_ptr<mdl::Dump>> _dumps;
 	std::shared_mutex _dumps_lock;
+
+	// DRM
+	bool _indentity_enabled = false; // for custom license server and player purposes
+	bool _widevine_enabled = false;
+	bool _playready_enabled = false;
+	bool _fairplay_enabled = false;
+
+	bmff::CencProperty _cenc_property;
+	ov::String _key_uri; // string, only for FairPlay
 };
