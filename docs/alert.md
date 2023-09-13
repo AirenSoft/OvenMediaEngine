@@ -27,7 +27,7 @@ Alert can be set up on \<Server>, as shown below.
 				<MinSamplerate>16000</MinSamplerate>
 				<MaxSamplerate>50400</MaxSamplerate>
 				<LongKeyFrameInterval />
-				<HasBFrame />
+				<HasBFrames />
 			</Ingress>
 		</Rules>
 	</Alert>
