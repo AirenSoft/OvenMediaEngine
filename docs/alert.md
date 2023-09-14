@@ -27,7 +27,7 @@ Alert can be set up on \<Server>, as shown below.
 				<MinSamplerate>16000</MinSamplerate>
 				<MaxSamplerate>50400</MaxSamplerate>
 				<LongKeyFrameInterval />
-				<HasBFrame />
+				<HasBFrames />
 			</Ingress>
 		</Rules>
 	</Alert>
@@ -56,7 +56,7 @@ Alert can be set up on \<Server>, as shown below.
 |         | MinSamplerate        | Detects when the input stream's samplerate is lower than the set value.            |
 |         | MaxSamplerate        | Detects when the input stream's samplerate is greater than the set value.          |
 |         | LongKeyFrameInterval | Detects when the input stream's keyframe interval is too long (exceeds 4 seconds). |
-|         | HasBFrame            | Detects when there are B-frames in the input stream.                               |
+|         | HasBFrames            | Detects when there are B-frames in the input stream.                               |
 
 ## Notification
 
