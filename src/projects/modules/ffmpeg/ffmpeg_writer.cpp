@@ -183,10 +183,10 @@ namespace ffmpeg
 		}
 
 		// Find MediaTrack
-		auto media_track = _track_map[av_stream_index];
+		auto media_track = _track_map[packet->GetTrackId()];
 		if (!media_track)
 		{
-			logtw("Cloud not find track. track_id(%d)", av_stream_index);
+			logtw("Cloud not find track. track_id(%d)", packet->GetTrackId());
 
 			return false;
 		}
