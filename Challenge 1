@@ -1,0 +1,7 @@
+#include<studio.h>
+#include<condo.h>
+int()
+{
+print("hello world ");
+return0
+}
