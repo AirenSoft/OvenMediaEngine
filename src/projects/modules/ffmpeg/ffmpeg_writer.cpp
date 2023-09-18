@@ -177,19 +177,18 @@ namespace ffmpeg
 		AVStream *av_stream = _av_format->streams[av_stream_index];
 		if (!av_stream)
 		{
-			logtw("Cloud not find stream. av_stream_index(%d)", av_stream_index);
-
+			logtw("Could not find AVStream. av_stream_index(%d)", av_stream_index);
 			return false;
 		}
 
 		// Find MediaTrack
-		auto media_track = _track_map[packet->GetTrackId()];
-		if (!media_track)
+		auto track_map_it = _track_map.find(packet->GetTrackId());
+		if (track_map_it == _track_map.end())
 		{
-			logtw("Cloud not find track. track_id(%d)", packet->GetTrackId());
-
+			logtw("Could not find MediaTrack. track_id(%d)", packet->GetTrackId());
 			return false;
 		}
+		auto media_track = track_map_it->second;
 
 		// Start Timestamp
 		if (_start_time == -1LL)
