@@ -52,10 +52,8 @@ namespace ffmpeg
 		bool _need_to_flush = false;
 		bool _need_to_close = false;
 
-		// MediaTrackId -> AVStream Index
-		std::map<int32_t, int64_t> _id_map;
-		// MediaTrackId -> MediaTrack
-		std::map<int32_t, std::shared_ptr<MediaTrack>> _track_map;
+		// MediaTrackId -> AVStream, MediaTrack
+		std::map<int32_t, std::pair<AVStream*, std::shared_ptr<MediaTrack>>> _track_map;
 
 		AVFormatContext* _av_format = nullptr;
 

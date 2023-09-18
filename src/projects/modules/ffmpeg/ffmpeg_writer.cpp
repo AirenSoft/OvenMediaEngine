@@ -70,8 +70,8 @@ namespace ffmpeg
 	{
 		std::unique_lock<std::mutex> mlock(_lock);
 
-		AVStream *stream = avformat_new_stream(_av_format, nullptr);
-		if (!stream)
+		AVStream *av_stream = avformat_new_stream(_av_format, nullptr);
+		if (!av_stream)
 		{
 			logte("Could not allocate stream");
 
@@ -79,15 +79,15 @@ namespace ffmpeg
 		}
 
 		// Convert MediaTrack to AVStream
-		if (ffmpeg::Conv::ToAVStream(media_track, stream) == false)
+		if (ffmpeg::Conv::ToAVStream(media_track, av_stream) == false)
 		{
 			logte("Could not convert track info to AVStream");
 
 			return false;
 		}
 
-		_id_map[media_track->GetId()] = stream->index;
-		_track_map[media_track->GetId()] = media_track;
+		// MediaTrackID -> AVStream, MediaTrack
+		_track_map[media_track->GetId()] = std::make_pair(av_stream, media_track);
 
 		return true;
 	}
@@ -164,31 +164,15 @@ namespace ffmpeg
 			return false;
 		}
 
-		// Find index of AVStream
-		auto it = _id_map.find(packet->GetTrackId());
-		if (it == _id_map.end())
+		// Find MediaTrack and AVSTream from MediaTrackID
+		auto it = _track_map.find(packet->GetTrackId());
+		if (it == _track_map.end())
 		{
-			// There is no track. Ignore packet
+			// If there is no track in the map, the packet is dropped. this is not an error.
 			return true;
 		}
-		auto av_stream_index = it->second;
-
-		// Find AVStream
-		AVStream *av_stream = _av_format->streams[av_stream_index];
-		if (!av_stream)
-		{
-			logtw("Could not find AVStream. av_stream_index(%d)", av_stream_index);
-			return false;
-		}
-
-		// Find MediaTrack
-		auto track_map_it = _track_map.find(packet->GetTrackId());
-		if (track_map_it == _track_map.end())
-		{
-			logtw("Could not find MediaTrack. track_id(%d)", packet->GetTrackId());
-			return false;
-		}
-		auto media_track = track_map_it->second;
+		auto av_stream = it->second.first;
+		auto media_track = it->second.second;
 
 		// Start Timestamp
 		if (_start_time == -1LL)
@@ -209,7 +193,7 @@ namespace ffmpeg
 		// Convert MediaPacket to AVPacket
 		AVPacket av_packet = {0};
 
-		av_packet.stream_index = av_stream_index;
+		av_packet.stream_index = av_stream->index;
 		av_packet.flags = (packet->GetFlag() == MediaPacketFlag::Key) ? AV_PKT_FLAG_KEY : 0;
 		av_packet.pts = av_rescale_q(packet->GetPts() - start_time, AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
 		av_packet.dts = av_rescale_q(packet->GetDts() - start_time, AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
