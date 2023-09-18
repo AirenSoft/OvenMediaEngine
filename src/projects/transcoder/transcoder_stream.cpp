@@ -339,7 +339,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 		auto output_stream = CreateOutputStream(cfg_output_profile);
 		if (output_stream == nullptr)
 		{
-			logte("Cloud not create output stream");
+			logte("Could not create output stream");
 			continue;
 		}
 
