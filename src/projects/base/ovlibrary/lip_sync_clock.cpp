@@ -77,7 +77,7 @@ std::optional<uint64_t> LipSyncClock::CalcPTS(uint32_t id, uint32_t rtp_timestam
 
 	std::shared_lock<std::shared_mutex> lock(clock->_clock_lock);
 	// The timestamp difference can be negative.
-	auto pts = clock->_pts + ((int64_t)clock->_extended_rtp_timestamp - (int64_t)clock->_rtcp_timestamp);
+	auto pts = clock->_pts + ((int64_t)clock->_extended_rtp_timestamp - (int64_t)clock->_extended_rtcp_timestamp);
 
 	// This is to make pts start at zero.
 	if (_first_pts == true)
@@ -112,10 +112,44 @@ bool LipSyncClock::UpdateSenderReportTime(uint32_t id, uint32_t ntp_msw, uint32_
 
 	std::lock_guard<std::shared_mutex> lock(clock->_clock_lock);
 	clock->_updated = true;
-	clock->_rtcp_timestamp = rtcp_timestamp;
+
+	if (_first_sr == true)
+	{
+		clock->_extended_rtcp_timestamp = rtcp_timestamp;
+		_first_sr = false;
+	}
+	else
+	{
+		uint32_t delta = 0;
+		if (rtcp_timestamp > clock->_last_rtcp_timestamp)
+		{
+			delta = rtcp_timestamp - clock->_last_rtcp_timestamp;
+		}
+		else
+		{
+			delta = clock->_last_rtcp_timestamp - rtcp_timestamp;
+
+			if (delta > 0x80000000)
+			{
+				// wrap around
+				delta = 0xFFFFFFFF - clock->_last_rtcp_timestamp + rtcp_timestamp + 1;
+			}
+			else
+			{
+				// reordering or duplicate or error
+				delta = 0;
+				logtw("RTCP timestamp is not monotonic: %u -> %u", clock->_last_rtcp_timestamp, rtcp_timestamp);
+			}
+		}
+
+		clock->_extended_rtcp_timestamp += delta;
+	}
+
+	clock->_last_rtcp_timestamp = rtcp_timestamp;
 	clock->_pts = ov::Converter::NtpTsToSeconds(ntp_msw, ntp_lsw) / clock->_timebase;
 
-	logtd("Update SR : id(%u) NTP(%u/%u) pts(%lld) timestamp(%u)", id, ntp_msw, ntp_lsw, clock->_pts, clock->_rtcp_timestamp);
+	logtd("Update SR : id(%u) NTP(%u/%u) pts(%lld) rtp timestamp(%u) extended timestamp (%llu)", 
+			id, ntp_msw, ntp_lsw, clock->_pts, clock->_last_rtcp_timestamp, clock->_extended_rtcp_timestamp);
 
 	return true;
 }
