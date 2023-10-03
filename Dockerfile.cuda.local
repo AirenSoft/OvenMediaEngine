@@ -1,0 +1,49 @@
+FROM    nvidia/cuda:12.2.0-devel-ubuntu20.04 AS build
+
+WORKDIR /tmp
+
+ENV     DEBIAN_FRONTEND=noninteractive
+RUN     apt-get update && apt-get install -y --no-install-recommends tzdata sudo curl git
+
+# Where all libs will be installed
+ENV     PREFIX=/opt/ovenmediaengine
+
+## Install dependencies
+COPY    ./misc/prerequisites.sh /tmp/ome/misc/prerequisites.sh
+RUN     apt-get update && /tmp/ome/misc/prerequisites.sh --enable-nvc
+
+## Build OvenMediaEngine
+COPY    ./src/ /tmp/ome/src/
+ARG 	STRIP=TRUE
+ARG     OME_VERSION=local
+RUN \
+        cd /tmp/ome/src && \
+        make release -j$(nproc) && \
+        if [ "$STRIP" = "TRUE" ] ; then strip /tmp/ome/src/bin/RELEASE/OvenMediaEngine ; fi
+
+## Export release files
+COPY    ./misc/conf_examples/ /tmp/ome/misc/conf_examples/
+RUN \
+        cd /tmp/ome/src && \
+        mkdir -p ${PREFIX}/bin/origin_conf && \
+        mkdir -p ${PREFIX}/bin/edge_conf && \
+        cp /tmp/ome/src/bin/RELEASE/OvenMediaEngine ${PREFIX}/bin/ && \
+        cp /tmp/ome/misc/conf_examples/Origin.xml ${PREFIX}/bin/origin_conf/Server.xml && \
+        cp /tmp/ome/misc/conf_examples/Logger.xml ${PREFIX}/bin/origin_conf/Logger.xml && \
+        cp /tmp/ome/misc/conf_examples/Edge.xml ${PREFIX}/bin/edge_conf/Server.xml && \
+        cp /tmp/ome/misc/conf_examples/Logger.xml ${PREFIX}/bin/edge_conf/Logger.xml
+
+
+FROM    ubuntu:20.04 AS release
+
+COPY    --from=build /opt/ovenmediaengine /opt/ovenmediaengine
+WORKDIR /opt/ovenmediaengine/bin
+EXPOSE  80/tcp 8080/tcp 8090/tcp 1935/tcp 3333/tcp 3334/tcp 4000-4005/udp 10000-10010/udp 9000/tcp
+
+# checked by nvidia container runtime
+ENV     NVIDIA_REQUIRE_CUDA=cuda>=12.2
+# tell nvidia container runtime to mount libnvcuvid into the container
+ENV     NVIDIA_DRIVER_CAPABILITIES=video
+
+# Default run as Origin mode
+CMD     ["/opt/ovenmediaengine/bin/OvenMediaEngine", "-c", "origin_conf"]
