@@ -17,6 +17,10 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
   * Pull: RTSP
 * **Adaptive Bitrate Streaming (ABR) for LLHLS and WebRTC**
 * **Low-Latency Streaming using LLHLS**
+  * DVR (Live Rewind)
+  * Dump for VoD
+  * ID3v2 timed metadata
+  * DRM (Widevine, Fairplay)
 * **Sub-Second Latency Streaming using WebRTC**
   * WebRTC over TCP (with embedded TURN server)
   * Embedded WebRTC Signaling Server (WebSocket based)
