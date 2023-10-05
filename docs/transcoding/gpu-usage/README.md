@@ -103,7 +103,7 @@ OvenMediaEngine-master/misc/prerequisites.sh --enable-nvc
 
 Describes how to enable GPU acceleration for users running OvenMediaEngine in the Docker runtime environment. To use GPU acceleration in Docker, the NVIDIA Driver must be installed on the host OS and the NVIDIA Container Toolkit must be installed. This toolkit includes container runtime libraries and utilities to use NVIDIA GPUs in Docker containers.
 
-![Reference : https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/overview.html](<../../.gitbook/assets/image (29).png>)
+![Reference : https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/overview.html](<../../.gitbook/assets/image (30) (1).png>)
 
 ```bash
 OvenMediaEngine-master/misc/install_nvidia_docker_container.sh
@@ -252,11 +252,7 @@ docker run -d -p 1935:1935 -p 4000-4005:4000-4005/udp -p 3333:3333 -p 3478:3478 
 
 The codecs available using hardware accelerators in OvenMediaEngine are as shown in the table below. Different GPUs support different codecs. If the hardware codec is not available, you should check if your GPU device supports the codec.
 
-| Device                             |  H264 |  H265 | VP8 | VP9 |
-| ---------------------------------- | :---: | :---: | :-: | :-: |
-| QuickSync                          | D / E | D / E |  -  |  -  |
-| NVIDIA                             | D / E | D / E |  -  |  -  |
-| Docker on NVIDIA Container Toolkit | D / E | D / E |  -  |  -  |
+<table><thead><tr><th>Device</th><th width="199" align="center">H264</th><th align="center">H265</th><th align="center">VP8</th><th align="center">VP9</th></tr></thead><tbody><tr><td>QuickSync</td><td align="center">D / E</td><td align="center">D / E</td><td align="center">-</td><td align="center">-</td></tr><tr><td>NVIDIA</td><td align="center">D / E</td><td align="center">D / E</td><td align="center">-</td><td align="center">-</td></tr><tr><td>Docker on NVIDIA Container Toolkit</td><td align="center">D / E</td><td align="center">D / E</td><td align="center">-</td><td align="center">-</td></tr></tbody></table>
 
 D : Decoding, E : Encoding
 

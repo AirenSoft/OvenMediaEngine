@@ -2,15 +2,15 @@
 
 ## Start Push Publishing
 
-Start  push publishing the stream with SRT, RTMP or MPEG2-TS. If the requested stream does not exist on the server, this task is reserved. And when the stream is created, it automatically starts push publishing.
+Start push publishing the stream with SRT, RTMP or MPEG2-TS. If the requested stream does not exist on the server, this task is reserved. And when the stream is created, it automatically starts push publishing.
 
-> ### Request
+> #### Request
 
 <details>
 
 <summary><mark style="color:blue;">POST</mark> /v1/vhosts/{vhost}/apps/{app}:startPush</summary>
 
-#### **Header**
+**Header**
 
 ```http
 Authorization: Basic {credentials}
@@ -19,7 +19,7 @@ Authorization: Basic {credentials}
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-#### Body : SRT
+**Body : SRT**
 
 ```json
 {
@@ -57,11 +57,10 @@ Authorization: Basic {credentials}
 # streamKey (optional)
     not used with mpegts
 ```
-{% hint style="info" %}
-In SRT Push Publisher, only the `caller` connection mode is supported.
-{% endhint %}
 
-#### Body : RTMP
+In SRT Push Publisher, only the `caller` connection mode is supported.
+
+**Body : RTMP**
 
 {% code overflow="wrap" %}
 ```json
@@ -102,7 +101,7 @@ In SRT Push Publisher, only the `caller` connection mode is supported.
 ```
 {% endcode %}
 
-#### Body : MPEG2-TS
+**Body : MPEG2-TS**
 
 ```json
 {
@@ -142,7 +141,7 @@ In SRT Push Publisher, only the `caller` connection mode is supported.
 
 </details>
 
-> ### Responses
+> #### Responses
 
 <details>
 
@@ -150,13 +149,13 @@ In SRT Push Publisher, only the `caller` connection mode is supported.
 
 The request has succeeded
 
-#### **Header**
+**Header**
 
 ```
 Content-Type: application/json
 ```
 
-#### **Body**
+**Body**
 
 Please note that `responses` are incorrectly returned in Json array format for version 0.15.3 and earlier.
 
@@ -216,13 +215,13 @@ Invalid request.
 
 Authentication required
 
-#### **Header**
+**Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -239,7 +238,7 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost or application name could not be found.
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -260,13 +259,13 @@ duplicate ID
 
 ## Stop Push Publishing
 
-> ### Request
+> #### Request
 
 <details>
 
 <summary><mark style="color:blue;">POST</mark> /v1/vhosts/{vhost}/apps/{app}:stopPush</summary>
 
-#### **Header**
+**Header**
 
 ```http
 Authorization: Basic {credentials}
@@ -275,7 +274,7 @@ Authorization: Basic {credentials}
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-#### Body&#x20;
+**Body**
 
 {% code overflow="wrap" %}
 ```json
@@ -290,7 +289,7 @@ Authorization: Basic {credentials}
 
 </details>
 
-> ### Responses
+> #### Responses
 
 <details>
 
@@ -298,13 +297,13 @@ Authorization: Basic {credentials}
 
 The request has succeeded
 
-#### **Header**
+**Header**
 
 ```
 Content-Type: application/json
 ```
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -334,13 +333,13 @@ Invalid request.
 
 Authentication required
 
-#### **Header**
+**Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -357,7 +356,7 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost/application name or id of recording task could not be found.
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -370,13 +369,13 @@ The given vhost/application name or id of recording task could not be found.
 
 ## Get Push Publishing State
 
-> ### Request
+> #### Request
 
 <details>
 
 <summary><mark style="color:blue;">POST</mark> /v1/vhosts/{vhost}/apps/{app}:pushes</summary>
 
-#### **Header**
+**Header**
 
 ```http
 Authorization: Basic {credentials}
@@ -385,7 +384,7 @@ Authorization: Basic {credentials}
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-#### Body&#x20;
+**Body**
 
 {% code overflow="wrap" %}
 ```json
@@ -400,7 +399,7 @@ Authorization: Basic {credentials}
 
 </details>
 
-> ### Responses
+> #### Responses
 
 <details>
 
@@ -408,13 +407,13 @@ Authorization: Basic {credentials}
 
 The request has succeeded
 
-#### **Header**
+**Header**
 
 ```
 Content-Type: application/json
 ```
 
-#### **Body**
+**Body**
 
 The `response` is <mark style="color:green;">Json array</mark> format.
 
@@ -473,13 +472,13 @@ The `response` is <mark style="color:green;">Json array</mark> format.
 
 Authentication required
 
-#### **Header**
+**Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -496,7 +495,7 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost or application name could not be found.
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -517,4 +516,3 @@ The Push Publishing task has the state shown in the table below. You can get the
 | Stopping | Is stopping                                                 |
 | Stopped  | Stopped                                                     |
 | Error    | Error                                                       |
-

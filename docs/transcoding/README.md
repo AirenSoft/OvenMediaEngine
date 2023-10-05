@@ -6,25 +6,11 @@ OvenMediaEngine has a built-in live transcoder. The live transcoder can decode t
 
 ### Decoders
 
-| Type  | Codec      |
-| ----- | ---------- |
-| Video | VP8, H.264 |
-| Audio | AAC, Opus  |
+<table><thead><tr><th width="179.33333333333331">Type</th><th width="544">Codec</th></tr></thead><tbody><tr><td>Video</td><td>VP8, H.264</td></tr><tr><td>Audio</td><td>AAC, Opus</td></tr></tbody></table>
 
 ### Encoders
 
-| Type  | Codec | Codec of Configuration                                               |
-| ----- | ----- | -------------------------------------------------------------------- |
-| Video | VP8   | vp8                                                                  |
-|       | H.264 | h264  _<mark style="color:blue;">(Automatic Codec Selection)</mark>_ |
-|       |       | h264\_openh264                                                       |
-|       |       | h264\_nvenc                                                          |
-|       |       | h264\_qsv                                                            |
-|       |       | h264\_beamr _<mark style="color:blue;">(Enterprise Only)</mark>_     |
-| Audio | AAC   | aac                                                                  |
-|       | Opus  | opus                                                                 |
-| Image | JPEG  | jpeg                                                                 |
-|       | PNG   | png                                                                  |
+<table><thead><tr><th width="184">Type</th><th width="177.33333333333331">Codec</th><th>Codec of Configuration</th></tr></thead><tbody><tr><td>Video</td><td>VP8</td><td>vp8</td></tr><tr><td></td><td>H.264</td><td>h264  <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td></td><td>h264_openh264</td></tr><tr><td></td><td></td><td>h264_nvenc</td></tr><tr><td></td><td></td><td>h264_qsv</td></tr><tr><td></td><td></td><td>h264_beamr <em><mark style="color:blue;">(Enterprise Only)</mark></em></td></tr><tr><td>Audio</td><td>AAC</td><td>aac</td></tr><tr><td></td><td>Opus</td><td>opus</td></tr><tr><td>Image</td><td>JPEG</td><td>jpeg</td></tr><tr><td></td><td>PNG</td><td>png</td></tr></tbody></table>
 
 
 
@@ -87,19 +73,7 @@ You can set the video profile as below:
 
 The meaning of each property is as follows:
 
-| Property                                  | Description                                                                                                                    |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Codec<mark style="color:red;">\*</mark>   | Specifies the `vp8` or `h264` codec to use                                                                                     |
-| Bitrate<mark style="color:red;">\*</mark> | Bit per second                                                                                                                 |
-| Name                                      | Encode name for Renditions                                                                                                     |
-| Width                                     | Width of resolution                                                                                                            |
-| Height                                    | Height of resolution                                                                                                           |
-| Framerate                                 | Frames per second                                                                                                              |
-| KeyFrameInterval                          | <p>Number of frames between two keyframes (0~600)<br><mark style="color:blue;">default is framerate (i.e. 1 second)</mark></p> |
-| BFrames                                   | <p>Number of B-frame (0~16)<br><mark style="color:blue;">default is 0</mark></p>                                               |
-| Profile                                   | H264 only encoding profile (baseline, main, high)                                                                              |
-| Preset                                    | Presets of encoding quality and performance                                                                                    |
-| ThreadCount                               | Number of threads in encoding                                                                                                  |
+<table><thead><tr><th width="238">Property</th><th>Description</th></tr></thead><tbody><tr><td>Codec<mark style="color:red;">*</mark></td><td>Specifies the <code>vp8</code> or <code>h264</code> codec to use</td></tr><tr><td>Bitrate<mark style="color:red;">*</mark></td><td>Bit per second</td></tr><tr><td>Name</td><td>Encode name for Renditions</td></tr><tr><td>Width</td><td>Width of resolution</td></tr><tr><td>Height</td><td>Height of resolution</td></tr><tr><td>Framerate</td><td>Frames per second</td></tr><tr><td>KeyFrameInterval</td><td>Number of frames between two keyframes (0~600)<br><mark style="color:blue;">default is framerate (i.e. 1 second)</mark></td></tr><tr><td>BFrames</td><td>Number of B-frame (0~16)<br><mark style="color:blue;">default is 0</mark></td></tr><tr><td>Profile</td><td>H264 only encoding profile (baseline, main, high)</td></tr><tr><td>Preset</td><td>Presets of encoding quality and performance</td></tr><tr><td>ThreadCount</td><td>Number of threads in encoding</td></tr></tbody></table>
 
 &#x20;<mark style="color:red;">\*</mark> required
 
@@ -109,13 +83,7 @@ The meaning of each property is as follows:
 
 A table in which presets provided for each codec library are mapped to OvenMediaEngine presets. Slow presets are of good quality and use a lot of resources, whereas Fast presets have lower quality and better performance. It can be set according to your own system environment and service purpose.
 
-| Presets    | openh264   | h264\_nvenc | h264\_qsv  | vp8      |
-| ---------- | ---------- | ----------- | ---------- | -------- |
-| **slower** | QP( 10-39) | p7          | No Support | best     |
-| **slow**   | QP (16-45) | p6          | No Support | best     |
-| **medium** | QP (24-51) | p5          | No Support | good     |
-| **fast**   | QP (32-51) | p4          | No Support | realtime |
-| **faster** | QP (40-51) | p3          | No Support | realtime |
+<table><thead><tr><th width="133">Presets</th><th width="138">openh264</th><th width="173">h264_nvenc</th><th width="151">h264_qsv</th><th width="122">vp8</th></tr></thead><tbody><tr><td><strong>slower</strong></td><td>QP( 10-39)</td><td>p7</td><td>No Support</td><td>best</td></tr><tr><td><strong>slow</strong></td><td>QP (16-45)</td><td>p6</td><td>No Support</td><td>best</td></tr><tr><td><strong>medium</strong></td><td>QP (24-51)</td><td>p5</td><td>No Support</td><td>good</td></tr><tr><td><strong>fast</strong></td><td>QP (32-51)</td><td>p4</td><td>No Support</td><td>realtime</td></tr><tr><td><strong>faster</strong></td><td>QP (40-51)</td><td>p3</td><td>No Support</td><td>realtime</td></tr></tbody></table>
 
 _References_
 
@@ -221,22 +189,13 @@ If the codec or quality of the input stream is the same as the profile to be enc
 
 #### Matching elements in video
 
-| Elements                                             | Condition    | Description                                  |
-| ---------------------------------------------------- | ------------ | -------------------------------------------- |
-| Codec _<mark style="color:blue;">(Optional)</mark>_  | eq           | Compare video codecs                         |
-| Width _<mark style="color:blue;">(Optional)</mark>_  | eq, lte, gte | Compare horizontal pixel of video resolution |
-| Height _<mark style="color:blue;">(Optional)</mark>_ | eq, lte, gte | Compare vertical pixel of video resolution   |
-| SAR _<mark style="color:blue;">(Optional)</mark>_    | eq           | Compare ratio of video resolution            |
+<table><thead><tr><th width="206">Elements</th><th width="166">Condition</th><th>Description</th></tr></thead><tbody><tr><td>Codec <em><mark style="color:blue;">(Optional)</mark></em></td><td>eq</td><td>Compare video codecs</td></tr><tr><td>Width <em><mark style="color:blue;">(Optional)</mark></em></td><td>eq, lte, gte</td><td>Compare horizontal pixel of video resolution</td></tr><tr><td>Height <em><mark style="color:blue;">(Optional)</mark></em></td><td>eq, lte, gte</td><td>Compare vertical pixel of video resolution</td></tr><tr><td>SAR <em><mark style="color:blue;">(Optional)</mark></em></td><td>eq</td><td>Compare ratio of video resolution</td></tr></tbody></table>
 
 &#x20;  \* **eq**: equal to / **lte**: less than or equal to / **gte**: greater than or equal to
 
 #### Matching elements in audio
 
-| Elements                                                 | Condition    | Description                         |
-| -------------------------------------------------------- | ------------ | ----------------------------------- |
-| Codec _<mark style="color:blue;">(Optional)</mark>_      | eq           | Compare audio codecs                |
-| Samplerate _<mark style="color:blue;">(Optional)</mark>_ | eq, lte, gte | Compare sampling rate of audio      |
-| Channel _<mark style="color:blue;">(Optional)</mark>_    | eq, lte, gte | Compare number of channels in audio |
+<table><thead><tr><th width="214">Elements</th><th width="162">Condition</th><th>Description</th></tr></thead><tbody><tr><td>Codec <em><mark style="color:blue;">(Optional)</mark></em></td><td>eq</td><td>Compare audio codecs</td></tr><tr><td>Samplerate <em><mark style="color:blue;">(Optional)</mark></em></td><td>eq, lte, gte</td><td>Compare sampling rate of audio</td></tr><tr><td>Channel <em><mark style="color:blue;">(Optional)</mark></em></td><td>eq, lte, gte</td><td>Compare number of channels in audio</td></tr></tbody></table>
 
 &#x20;  \* **eq**: equal to / **lte**: less than or equal to / **gte**: greater than or equal to
 

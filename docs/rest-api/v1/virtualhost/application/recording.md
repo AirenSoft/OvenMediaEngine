@@ -464,9 +464,4 @@ The given vhost or application name could not be found.
 
 The Recording task has the state shown in the table below. You can get the `state` in the Start Recording and Get Recording State API response.
 
-| Ready    | Preparing to start or waiting for the stream to be created. |
-| -------- | ----------------------------------------------------------- |
-| Started  | In Progress                                                 |
-| Stopping | Is stopping                                                 |
-| Stopped  | Stopped                                                     |
-| Error    | Error                                                       |
+<table data-header-hidden><thead><tr><th width="157"></th><th></th></tr></thead><tbody><tr><td>Ready</td><td>Preparing to start or waiting for the stream to be created.</td></tr><tr><td>Started</td><td>In Progress</td></tr><tr><td>Stopping</td><td>Is stopping</td></tr><tr><td>Stopped</td><td>Stopped</td></tr><tr><td>Error</td><td>Error</td></tr></tbody></table>

@@ -4,13 +4,13 @@ Provides statistics of virtual host, application, and stream.
 
 ## Get Statistics of Virtual Host
 
-> ### Request
+> #### Request
 
 <details>
 
 <summary><mark style="color:blue;">GET</mark> /v1/stats/current/vhosts/{vhost}</summary>
 
-#### **Header**
+**Header**
 
 ```http
 Authorization: Basic {credentials}
@@ -21,7 +21,7 @@ Authorization: Basic {credentials}
 
 </details>
 
-> ### Responses
+> #### Responses
 
 <details>
 
@@ -29,13 +29,13 @@ Authorization: Basic {credentials}
 
 The request has succeeded
 
-#### **Header**
+**Header**
 
 ```
 Content-Type: application/json
 ```
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -81,13 +81,13 @@ Content-Type: application/json
 
 Authentication required
 
-#### **Header**
+**Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -104,7 +104,7 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost name could not be found.
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -117,13 +117,13 @@ The given vhost name could not be found.
 
 ## Get Statistics of Application
 
-> ### Request
+> #### Request
 
 <details>
 
 <summary><mark style="color:blue;">GET</mark> /v1/stats/current/vhosts/{vhost}/apps/{app}</summary>
 
-#### **Header**
+**Header**
 
 ```http
 Authorization: Basic {credentials}
@@ -134,7 +134,7 @@ Authorization: Basic {credentials}
 
 </details>
 
-> ### Responses
+> #### Responses
 
 <details>
 
@@ -142,13 +142,13 @@ Authorization: Basic {credentials}
 
 The request has succeeded
 
-#### **Header**
+**Header**
 
 ```
 Content-Type: application/json
 ```
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -194,13 +194,13 @@ Content-Type: application/json
 
 Authentication required
 
-#### **Header**
+**Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -217,7 +217,7 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost or application name could not be found.
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -230,13 +230,13 @@ The given vhost or application name could not be found.
 
 ## Get Statistics of Stream
 
-> ### Request
+> #### Request
 
 <details>
 
 <summary><mark style="color:blue;">GET</mark> /v1/stats/current/vhosts/{vhost}/apps/{app}/streams/{stream}</summary>
 
-#### **Header**
+**Header**
 
 ```http
 Authorization: Basic {credentials}
@@ -247,7 +247,7 @@ Authorization: Basic {credentials}
 
 </details>
 
-> ### Responses
+> #### Responses
 
 <details>
 
@@ -255,13 +255,13 @@ Authorization: Basic {credentials}
 
 The request has succeeded
 
-#### **Header**
+**Header**
 
 ```
 Content-Type: application/json
 ```
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -307,13 +307,13 @@ Content-Type: application/json
 
 Authentication required
 
-#### **Header**
+**Header**
 
 ```http
 WWW-Authenticate: Basic realm=”OvenMediaEngine”
 ```
 
-#### **Body**
+**Body**
 
 ```json
 {
@@ -330,7 +330,7 @@ WWW-Authenticate: Basic realm=”OvenMediaEngine”
 
 The given vhost or application or stream name could not be found.
 
-#### **Body**
+**Body**
 
 ```json
 {
