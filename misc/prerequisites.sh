@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 PREFIX=/opt/ovenmediaengine
 TEMP_PATH=/tmp
 
@@ -50,7 +52,7 @@ install_openssl()
     (DIR=${TEMP_PATH}/openssl && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/openssl/openssl/archive/openssl-${OPENSSL_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sSLf https://github.com/openssl/openssl/archive/openssl-${OPENSSL_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     ./config --prefix="${PREFIX}" --openssldir="${PREFIX}" --libdir=lib -Wl,-rpath,"${PREFIX}/lib" shared no-idea no-mdc2 no-rc5 no-ec2m no-ecdh no-ecdsa no-async && \
     make -j$(nproc) && \
     sudo make install_sw && \
@@ -62,7 +64,7 @@ install_libsrtp()
     (DIR=${TEMP_PATH}/srtp && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/cisco/libsrtp/archive/v${SRTP_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sSLf https://github.com/cisco/libsrtp/archive/v${SRTP_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     ./configure --prefix="${PREFIX}" --enable-openssl --with-openssl-dir="${PREFIX}" && \
     make -j$(nproc) shared_library&& \
     sudo make install && \
@@ -74,7 +76,7 @@ install_libsrt()
     (DIR=${TEMP_PATH}/srt && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/Haivision/srt/archive/v${SRT_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sSLf https://github.com/Haivision/srt/archive/v${SRT_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH} ./configure --prefix="${PREFIX}" --enable-shared --disable-static && \
     make -j$(nproc) && \
     sudo make install && \
@@ -86,7 +88,7 @@ install_libopus()
     (DIR=${TEMP_PATH}/opus && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://archive.mozilla.org/pub/opus/opus-${OPUS_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sSLf https://archive.mozilla.org/pub/opus/opus-${OPUS_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     autoreconf -fiv && \
     ./configure --prefix="${PREFIX}" --enable-shared --disable-static && \
     make -j$(nproc) && \
@@ -100,7 +102,7 @@ install_libopenh264()
     (DIR=${TEMP_PATH}/openh264 && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/cisco/openh264/archive/refs/tags/v${OPENH264_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sSLf https://github.com/cisco/openh264/archive/refs/tags/v${OPENH264_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     sed -i -e "s|PREFIX=/usr/local|PREFIX=${PREFIX}|" Makefile && \
     make OS=linux && \
     sudo make install && \
@@ -141,7 +143,7 @@ install_libvpx()
     (DIR=${TEMP_PATH}/vpx && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://codeload.github.com/webmproject/libvpx/tar.gz/v${VPX_VERSION} | tar -xz --strip-components=1 && \
+    curl -sSLf https://codeload.github.com/webmproject/libvpx/tar.gz/v${VPX_VERSION} | tar -xz --strip-components=1 && \
     ./configure --prefix="${PREFIX}" --enable-vp8 --enable-pic --enable-shared --disable-static --disable-vp9 --disable-debug --disable-examples --disable-docs --disable-install-bins ${ADDITIONAL_FLAGS} && \
     make -j$(nproc) && \
     sudo make install && \
@@ -153,7 +155,7 @@ install_fdk_aac()
     (DIR=${TEMP_PATH}/aac && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/mstorsjo/fdk-aac/archive/v${FDKAAC_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sSLf https://github.com/mstorsjo/fdk-aac/archive/v${FDKAAC_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     autoreconf -fiv && \
     ./configure --prefix="${PREFIX}" --enable-shared --disable-static --datadir=/tmp/aac && \
     make -j$(nproc) && \
@@ -167,7 +169,7 @@ install_nasm()
     (DIR=${TEMP_PATH}/nasm && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/netwide-assembler/nasm/archive/refs/tags/nasm-${NASM_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sSLf https://github.com/netwide-assembler/nasm/archive/refs/tags/nasm-${NASM_VERSION}.tar.gz | tar -xz --strip-components=1 && \
 	./autogen.sh && \
     ./configure --prefix="${PREFIX}" && \
     make -j$(nproc) && \
@@ -183,7 +185,7 @@ install_nvcc_hdr() {
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         export DESTDIR=${PREFIX} && \
-        curl -sLf https://github.com/FFmpeg/nv-codec-headers/releases/download/n${NVCC_HDR_VERSION}/nv-codec-headers-${NVCC_HDR_VERSION}.tar.gz | tar -xz --strip-components=1 && sed -i 's|PREFIX.*=\(.*\)|PREFIX =|g' Makefile && \
+        curl -sSLf https://github.com/FFmpeg/nv-codec-headers/releases/download/n${NVCC_HDR_VERSION}/nv-codec-headers-${NVCC_HDR_VERSION}.tar.gz | tar -xz --strip-components=1 && sed -i 's|PREFIX.*=\(.*\)|PREFIX =|g' Makefile && \
         sudo make install ) || fail_exit "nvcc_headers"
     fi
 }
@@ -270,7 +272,7 @@ install_ffmpeg()
     # Download
     (rm -rf ${DIR}  && mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf ${FFMPEG_DOWNLOAD_URL} | tar -xz --strip-components=1 ) || fail_exit "ffmpeg"
+    curl -sSLf ${FFMPEG_DOWNLOAD_URL} | tar -xz --strip-components=1 ) || fail_exit "ffmpeg"
 
     # Patch for Enterprise
     if [[ "$(type -t install_patch_ffmpeg)"  == 'function' ]];
@@ -308,7 +310,7 @@ install_jemalloc()
     (DIR=${TEMP_PATH}/jemalloc && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/jemalloc/jemalloc/releases/download/${JEMALLOC_VERSION}/jemalloc-${JEMALLOC_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
+    curl -sSLf https://github.com/jemalloc/jemalloc/releases/download/${JEMALLOC_VERSION}/jemalloc-${JEMALLOC_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
     ./configure --prefix="${PREFIX}" && \
     make -j$(nproc) && \
     sudo make install_include install_lib && \
@@ -320,7 +322,7 @@ install_libpcre2()
     (DIR=${TEMP_PATH}/libpcre2 && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/PhilipHazel/pcre2/releases/download/pcre2-${PCRE2_VERSION}/pcre2-${PCRE2_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sSLf https://github.com/PhilipHazel/pcre2/releases/download/pcre2-${PCRE2_VERSION}/pcre2-${PCRE2_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     ./configure --prefix="${PREFIX}" \
     --disable-static \
         --enable-jit=auto && \
@@ -334,7 +336,7 @@ install_hiredis()
 	(DIR=${TEMP_PATH}/hiredis && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/redis/hiredis/archive/refs/tags/v${HIREDIS_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sSLf https://github.com/redis/hiredis/archive/refs/tags/v${HIREDIS_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     make -j$(nproc) && \
     sudo make install PREFIX="${PREFIX}" && \
     rm -rf ${DIR} ) || fail_exit "hiredis"
@@ -342,7 +344,7 @@ install_hiredis()
 
 install_base_ubuntu()
 {
-    sudo apt install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev
+    sudo apt-get install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev
 }
 
 install_base_fedora()
@@ -388,7 +390,7 @@ install_ovenmediaengine()
     (DIR=${TEMP_PATH}/ome && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sSLf https://github.com/AirenSoft/OvenMediaEngine/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     cd src && \
     make release && \
     sudo make install && \
