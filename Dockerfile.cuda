@@ -1,53 +1,70 @@
-FROM    nvidia/cuda:12.2.0-devel-ubuntu20.04 AS build
+# Instruction: Build OvenMediaEngine with CUDA support
+# Usage:
+# $ docker build -t airensoft/ovenmediaengine_nv:dev -f Dockerfile.cuda .
+# $ docker run -it --gpus all airensoft/ovenmediaengine_nv:dev
+
+FROM    nvidia/cuda:12.2.0-devel-ubuntu20.04 AS base
+
+## Install libraries by package
+ENV     DEBIAN_FRONTEND=noninteractive
+RUN     apt-get update && apt-get install -y tzdata sudo curl
+
+FROM    base AS build
 
 WORKDIR /tmp
 
-ENV     DEBIAN_FRONTEND=noninteractive
-RUN     apt-get update && apt-get install -y --no-install-recommends tzdata sudo curl git
-
-# Where all libs will be installed
-ENV     PREFIX=/opt/ovenmediaengine
-
-## Download sources
-ARG     OME_REPO=github.com/AirenSoft/OvenMediaEngine
 ARG     OME_VERSION=master
+ARG 	STRIP=TRUE
+
+ENV     PREFIX=/opt/ovenmediaengine
+ENV     TEMP_DIR=/tmp/ome
+
+## Download OvenMediaEngine
 RUN \
-        mkdir -p /tmp/ome && \
-        cd /tmp/ome && \
-        curl -sLf https://${OME_REPO}/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1
+        mkdir -p ${TEMP_DIR} && \
+        cd ${TEMP_DIR} && \
+        curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1
 
 ## Install dependencies
-RUN     apt-get update && /tmp/ome/misc/prerequisites.sh --enable-nvc
+RUN \
+        ${TEMP_DIR}/misc/prerequisites.sh  --enable-nvc
 
 ## Build OvenMediaEngine
-ARG 	STRIP=TRUE
 RUN \
-        cd /tmp/ome/src && \
-        make release -j$(nproc) && \
-        if [ "$STRIP" = "TRUE" ] ; then strip /tmp/ome/src/bin/RELEASE/OvenMediaEngine ; fi
+        cd ${TEMP_DIR}/src && \
+        make release -j$(nproc)
 
-## Export release files
 RUN \
-        cd /tmp/ome/src && \
+        if [ "$STRIP" = "TRUE" ] ; then strip ${TEMP_DIR}/src/bin/RELEASE/OvenMediaEngine ; fi
+
+## Make running environment
+RUN \
+        cd ${TEMP_DIR}/src && \
         mkdir -p ${PREFIX}/bin/origin_conf && \
         mkdir -p ${PREFIX}/bin/edge_conf && \
-        cp /tmp/ome/src/bin/RELEASE/OvenMediaEngine ${PREFIX}/bin/ && \
-        cp /tmp/ome/misc/conf_examples/Origin.xml ${PREFIX}/bin/origin_conf/Server.xml && \
-        cp /tmp/ome/misc/conf_examples/Logger.xml ${PREFIX}/bin/origin_conf/Logger.xml && \
-        cp /tmp/ome/misc/conf_examples/Edge.xml ${PREFIX}/bin/edge_conf/Server.xml && \
-        cp /tmp/ome/misc/conf_examples/Logger.xml ${PREFIX}/bin/edge_conf/Logger.xml
+        cp ./bin/RELEASE/OvenMediaEngine ${PREFIX}/bin/ && \
+        cp ../misc/conf_examples/Origin.xml ${PREFIX}/bin/origin_conf/Server.xml && \
+        cp ../misc/conf_examples/Logger.xml ${PREFIX}/bin/origin_conf/Logger.xml && \
+        cp ../misc/conf_examples/Edge.xml ${PREFIX}/bin/edge_conf/Server.xml && \
+        cp ../misc/conf_examples/Logger.xml ${PREFIX}/bin/edge_conf/Logger.xml && \
+        rm -rf ${TEMP_DIR}
 
-
+## Make Release Image
 FROM    ubuntu:20.04 AS release
 
-COPY    --from=build /opt/ovenmediaengine /opt/ovenmediaengine
-WORKDIR /opt/ovenmediaengine/bin
-EXPOSE  80/tcp 8080/tcp 8090/tcp 1935/tcp 3333/tcp 3334/tcp 4000-4005/udp 10000-10010/udp 9000/tcp
+## Install libraries by package
+ENV     DEBIAN_FRONTEND=noninteractive
+RUN     apt-get update && apt-get install -y tzdata sudo
 
-# checked by nvidia container runtime
-ENV     NVIDIA_REQUIRE_CUDA=cuda>=12.2
-# tell nvidia container runtime to mount libnvcuvid into the container
+WORKDIR         /opt/ovenmediaengine/bin
+EXPOSE          80/tcp 8080/tcp 8090/tcp 1935/tcp 3333/tcp 3334/tcp 4000-4005/udp 10000-10010/udp 9000/tcp
+COPY            --from=build /opt/ovenmediaengine /opt/ovenmediaengine
+
+ENV     NVIDIA_VISIBLE_DEVICES=all
+# If it is lower than the GPU Driver version installed on the Host OS, The driver must be reinstalled.
+ENV     NVIDIA_REQUIRE_CUDA=cuda>=11.4
 ENV     NVIDIA_DRIVER_CAPABILITIES=video
 
 # Default run as Origin mode
-CMD     ["/opt/ovenmediaengine/bin/OvenMediaEngine", "-c", "origin_conf"]
+CMD             ["/opt/ovenmediaengine/bin/OvenMediaEngine", "-c", "origin_conf"]
+

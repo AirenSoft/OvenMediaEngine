@@ -1,5 +1,7 @@
 #!/bin/bash
 
+NVIDIA_DRIVER_VERSION=
+
 ##########################################################################################
 # Environment Variables
 ##########################################################################################
@@ -23,8 +25,7 @@ else
 fi
     CURRENT=$(pwd)
 
-ENABLE_DOCKER=false
-NVIDIA_DRIVER_VERSION=
+
 
 echo "##########################################################################################"
 echo " Install NVIDIA drivers and CUDA Toolkit"
@@ -72,39 +73,15 @@ install_base_ubuntu()
     sudo add-apt-repository ppa:graphics-drivers/ppa
 
     sudo apt -y update
-
-    if [ ${ENABLE_DOCKER} == false ]; then
-            sudo apt-get install -y --no-install-recommends $(ubuntu-drivers devices | grep recommended | awk '{print $3}')
+    if [ -z "$NVIDIA_DRIVER_VERSION" ]
+    then 
+        # installation with recommended version
+        sudo ubuntu-drivers autoinstall
     else
-            echo sudo apt-get install -y --no-install-recommends nvidia-driver-${NVIDIA_DRIVER_VERSION}
-            sudo apt-get install -y --no-install-recommends nvidia-driver-${NVIDIA_DRIVER_VERSION}
-    fi
-
+        # installation with specific version
+        sudo apt-get install -y --no-install-recommends nvidia-driver-${NVIDIA_DRIVER_VERSION}
+    fi     
     sudo apt-get install -y --no-install-recommends nvidia-cuda-toolkit
-	
-	if [ ${ENABLE_DOCKER} == true ] && ! command -v nvidia-xconfig &> /dev/null; then
-		# Driver version is provided by the kernel through the container toolkit
-		export DRIVER_VERSION=$(head -n1 </proc/driver/nvidia/version | awk '{print $8}')
-		cd /tmp
-		# If version is different, new installer will overwrite the existing components
-		if [ ! -f "/tmp/NVIDIA-Linux-x86_64-$DRIVER_VERSION.run" ]; then
-			# Check multiple sources in order to probe both consumer and datacenter driver versions
-			curl -fsL -O "https://us.download.nvidia.com/XFree86/Linux-x86_64/$DRIVER_VERSION/NVIDIA-Linux-x86_64-$DRIVER_VERSION.run" || curl -fsL -O "https://us.download.nvidia.com/tesla/$DRIVER_VERSION/NVIDIA-Linux-x86_64-$DRIVER_VERSION.run" || { echo "Failed NVIDIA GPU driver download. Exiting."; exit 1; }
-		fi
-		# Extract installer before installing
-		sudo sh "NVIDIA-Linux-x86_64-$DRIVER_VERSION.run" -x
-		cd "NVIDIA-Linux-x86_64-$DRIVER_VERSION"
-		# Run installation without the kernel modules and host components
-		sudo ./nvidia-installer --silent \
-							--no-kernel-module \
-							--install-compat32-libs \
-							--no-nouveau-check \
-							--no-nvidia-modprobe \
-							--no-rpms \
-							--no-backup \
-							--no-check-for-alternate-installs
-		sudo rm -rf /tmp/NVIDIA* && cd ~
-	fi
 }
 
 ##########################################################################################
@@ -188,12 +165,10 @@ while (($#)); do
     shift
     case $OPT in
         --*) case ${OPT:2} in
-            enable_docker) ENABLE_DOCKER=true ;;
             nvidia_driver) NVIDIA_DRIVER_VERSION=$1; shift ;;
         esac;;
 
         -*) case ${OPT:1} in
-            d) ENABLE_DOCKER=true ;;
             n) NVIDIA_DRIVER_VERSION=$1; shift;;
         esac;;
     esac
@@ -201,7 +176,7 @@ done
 
 if [ "${OSNAME}" == "Ubuntu" ]; then
     check_version
-    install_base_ubuntu
+    # install_base_ubuntu
 elif  [ "${OSNAME}" == "CentOS" ]; then
     check_version
 
@@ -215,9 +190,9 @@ else
     echo "Please refer to manual installation page"
 fi
 
+  
+ 
 
-if [ ${ENABLE_DOCKER} == false ]; then
-        echo "##########################################################################################"
-        echo " Reboot is required to use the nvidia video driver"
-        echo "##########################################################################################"
-fi
+echo "##########################################################################################"
+echo " Reboot is required to use the nvidia video driver"
+echo "##########################################################################################"
