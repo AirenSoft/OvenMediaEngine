@@ -15,6 +15,7 @@
 #include "publishers/publishers.h"
 #include "web_console/web_console.h"
 #include "persistent_streams/persistent_streams.h"
+#include "transcode_webhook/transcode_webhook.h"
 
 namespace cfg
 {
@@ -41,6 +42,7 @@ namespace cfg
 				pvd::Providers _providers;
 				pub::Publishers _publishers;
 				prst::PersistentStreams _persistent_streams;
+				trwh::TranscodeWebhook _transcode_webhook;
 
 			public:
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
@@ -55,6 +57,7 @@ namespace cfg
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetAppWorkerCount, _publishers.GetAppWorkerCount())
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamWorkerCount, _publishers.GetStreamWorkerCount())
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetPersistentStreams, _persistent_streams)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetTranscodeWebhook, _transcode_webhook)
 
 				// Set Name, it is for dynamic application
 				void SetName(const ov::String &name)
@@ -86,6 +89,7 @@ namespace cfg
 					Register<Optional>("Providers", &_providers);
 					Register<Optional>("Publishers", &_publishers);
 					Register<Optional>("PersistentStreams", &_persistent_streams);
+					Register<Optional>("TranscodeWebhook", &_transcode_webhook);
 				}
 			};
 		}  // namespace app
