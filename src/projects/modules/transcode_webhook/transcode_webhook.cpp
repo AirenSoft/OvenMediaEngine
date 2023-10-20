@@ -24,6 +24,11 @@ TranscodeWebhook::TranscodeWebhook(const info::Application &application_info)
 
 TranscodeWebhook::Policy TranscodeWebhook::RequestOutputProfiles(const info::Stream &input_stream_info, cfg::vhost::app::oprf::OutputProfiles &output_profiles)
 {
+    if (_config.IsEnabled() == false)
+    {
+        return Policy::UseLocalProfiles;
+    }
+
     ov::String body;
    
     if (MakeRequestBody(input_stream_info, body) == false)
