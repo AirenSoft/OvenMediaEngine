@@ -30,7 +30,7 @@ std::shared_ptr<TranscodeApplication> TranscodeApplication::Create(const info::A
 }
 
 TranscodeApplication::TranscodeApplication(const info::Application &application_info)
-	: _application_info(application_info)
+	: _application_info(application_info), _transcode_webhook(application_info)
 {
 	logti("Created transcoder application. [%s]", application_info.GetName().CStr());
 }
@@ -123,6 +123,26 @@ bool TranscodeApplication::OnStreamPrepared(const std::shared_ptr<info::Stream> 
 	}
 
 	auto stream = stream_bucket->second;
+
+// Test codes for TranscodeWebhook
+#if 0
+	cfg::vhost::app::oprf::OutputProfiles output_profiles;
+	auto policy = _transcode_webhook.RequestOutputProfiles(*stream_info, output_profiles);
+	if (policy == TranscodeWebhook::Policy::CreateStream)
+	{
+		logtw("TranscodeWebhook allowed creation of output profiles for stream: %s/%s", _application_info.GetName().CStr(), stream_info->GetName().CStr());
+		logti("Remote OutputProfiles : %s", output_profiles.ToString().CStr());
+	}
+	else if (policy == TranscodeWebhook::Policy::DeleteStream)
+	{
+		logtw("TranscodeWebhook responses to delete stream: %s/%s", _application_info.GetName().CStr(), stream_info->GetName().CStr());
+	}
+	else if (policy == TranscodeWebhook::Policy::UseLocalProfiles)
+	{
+		logtw("TranscodeWebhook responses to use local profiles for stream: %s/%s", _application_info.GetName().CStr(), stream_info->GetName().CStr());
+	}
+#endif
+
 	if (stream->Prepare(stream_info) == false)
 	{
 		return false;

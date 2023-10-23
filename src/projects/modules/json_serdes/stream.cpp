@@ -159,6 +159,7 @@ namespace serdes
 	Json::Value JsonFromStream(const std::shared_ptr<const mon::StreamMetrics> &stream)
 	{
 		Json::Value response(Json::ValueType::objectValue);
+		SetString(response, "name", stream->GetName(), Optional::False);
 		SetInputStream(response, nullptr, stream, Optional::False);
 		return response;
 	}

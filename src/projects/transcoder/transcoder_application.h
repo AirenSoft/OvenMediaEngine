@@ -21,6 +21,7 @@
 #include "base/mediarouter/media_buffer.h"
 #include "base/mediarouter/mediarouter_application_connector.h"
 #include "base/mediarouter/mediarouter_application_observer.h"
+#include "modules/transcode_webhook/transcode_webhook.h"
 #include "transcoder_stream.h"
 
 class TranscodeApplication : public MediaRouteApplicationConnector, public MediaRouteApplicationObserver
@@ -61,4 +62,5 @@ private:
 	const info::Application _application_info;
 	std::map<int32_t, std::shared_ptr<TranscoderStream>> _streams;
 	std::mutex _mutex;
+	TranscodeWebhook _transcode_webhook;
 };

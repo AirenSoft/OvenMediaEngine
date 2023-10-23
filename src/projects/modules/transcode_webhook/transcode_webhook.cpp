@@ -43,7 +43,7 @@ TranscodeWebhook::Policy TranscodeWebhook::RequestOutputProfiles(const info::Str
 	{
 		// Error
 		logte("Internal Error: Signature creation failed.(Method : HMAC(SHA1), Key : %s, Body length : %d", secret_key.CStr(), body.GetLength());
-		return;
+		return Policy::DeleteStream;
 	}
 
 	auto signature_sha1_base64 = ov::Base64::Encode(md_sha1, true);
@@ -87,7 +87,7 @@ TranscodeWebhook::Policy TranscodeWebhook::RequestOutputProfiles(const info::Str
 			{
                 policy = _config.GetUseLocalProfilesOnErrorResponse() ? Policy::UseLocalProfiles : Policy::DeleteStream;
                 
-                logti("Control Server responded error status. code(%d) message(%s) use local profiles(%s)", static_cast<uint16_t>(status_code), error->GetMessage().CStr(), policy == Policy::UseLocalProfiles ? "true" : "false");
+                logti("Control Server responded error status. HTTP code(%d) use local profiles(%s)", static_cast<uint16_t>(status_code), policy == Policy::UseLocalProfiles ? "true" : "false");
                 return;
 			}
 		}
@@ -100,7 +100,7 @@ TranscodeWebhook::Policy TranscodeWebhook::RequestOutputProfiles(const info::Str
 		}
 	});
 
-    return Policy::DeleteStream;
+    return policy;
 }
 
 bool TranscodeWebhook::MakeRequestBody(const info::Stream &input_stream_info, ov::String &body) const

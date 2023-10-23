@@ -5,6 +5,7 @@ LOCAL_STATIC_LIBRARIES := \
 	application \
 	ovlibrary \
 	managed_queue \
+	transcode_webhook
 
 $(call add_pkg_config,libavformat)
 $(call add_pkg_config,libavfilter)
