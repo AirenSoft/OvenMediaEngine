@@ -20,7 +20,8 @@ public:
 	bool Initialize();
 	bool Uninitialize();
 
-	AVBufferRef *GetDeviceContext();
+	AVBufferRef *GetDeviceContextQSV();
+	AVBufferRef *GetDeviceContextNV();
 
 	bool IsSupportedQSV();
 	bool IsSupportedNV();
@@ -36,5 +37,6 @@ protected:
 	bool _supported_cuda;
 	bool _supported_xma;
 	
-	AVBufferRef *_device_context;
+	AVBufferRef *_device_context_qsv;
+	AVBufferRef *_device_context_nv;
 };

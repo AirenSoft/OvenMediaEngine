@@ -8,7 +8,6 @@
 //==============================================================================
 
 #include "transcoder_application.h"
-#include "transcoder_gpu.h"
 #include "transcoder_private.h"
 
 #include <unistd.h>
@@ -45,14 +44,6 @@ bool TranscodeApplication::Start()
 	if(ValidateAppConfiguration() == false)
 	{
 		return false;
-	}
-	
-	if(_application_info.GetConfig().GetOutputProfiles().IsHardwareAcceleration() == true)
-	{
-		if (TranscodeGPU::GetInstance()->Initialize() == false)
-		{
-			logtw("There is no supported hardware accelerator");
-		}
 	}
 
 	return true;

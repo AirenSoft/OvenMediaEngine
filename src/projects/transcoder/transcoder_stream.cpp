@@ -76,10 +76,7 @@ bool TranscoderStream::Stop()
 
 	RemoveAllComponents();
 
-	// Notify to delete the stream created on the MediaRouter
-	NotifyDeleteStreams();
-
-	// Delete all composite of componetns
+	// Delete all composite of components
 	_link_input_to_outputs.clear();
 	_link_input_to_decoder.clear();
 	_link_decoder_to_filters.clear();
@@ -89,6 +86,9 @@ bool TranscoderStream::Stop()
 	// Delete all last decoded frame information
 	_last_decoded_frame_pts.clear();
 	_last_decoded_frames.clear();
+
+	// Notify to delete the stream created on the MediaRouter
+	NotifyDeleteStreams();
 
 	// Delete all output streams information
 	_output_streams.clear();
@@ -387,7 +387,9 @@ int32_t TranscoderStream::CreateOutputStreams()
 	int32_t created_count = 0;
 
 	// Get the output  to make the output stream
-	for (const auto &cfg_output_profile : GetOutputProfilesCfg()->GetOutputProfileList())
+	auto cfg_output_profile_list = GetOutputProfilesCfg()->GetOutputProfileList();
+
+	for (const auto &cfg_output_profile :cfg_output_profile_list)
 	{
 		auto output_stream = CreateOutputStream(cfg_output_profile);
 		if (output_stream == nullptr)
