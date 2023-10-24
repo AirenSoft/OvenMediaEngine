@@ -9,7 +9,9 @@
 
 #include "transcoder_stream.h"
 
-#include <config/config_manager.h>
+#include "config/config_manager.h"
+#include "modules/transcode_webhook/transcode_webhook.h"
+#include "orchestrator/orchestrator.h"
 
 #include "transcoder_application.h"
 #include "transcoder_private.h"
@@ -18,10 +20,25 @@
 #define GENERATE_FILLER_FRAME true
 #define UNUSED_VARIABLE(var) (void)var;
 
+
+std::shared_ptr<TranscoderStream> TranscoderStream::Create(const info::Application &application_info, const std::shared_ptr<info::Stream> &org_stream_info, TranscodeApplication *parent)
+{
+	auto stream = std::make_shared<TranscoderStream>(application_info, org_stream_info, parent);
+	if (stream == nullptr)
+	{
+		return nullptr;
+	}
+
+	return stream;
+}
+
 TranscoderStream::TranscoderStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &stream, TranscodeApplication *parent)
 	: _parent(parent), _application_info(application_info), _input_stream(stream)
 {
 	_log_prefix = ov::String::FormatString("[%s/%s(%u)]", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId());
+
+	// default output profiles configuration
+	_output_profiles_cfg = &(_application_info.GetConfig().GetOutputProfiles());
 
 	logtd("%s Trying to create transcode stream", _log_prefix.CStr());
 }
@@ -83,9 +100,48 @@ bool TranscoderStream::Stop()
 	return true;
 }
 
+void TranscoderStream::RequestWebhoook()
+{
+	TranscodeWebhook webhook(_application_info);
+	
+	auto policy = webhook.RequestOutputProfiles(*_input_stream, _remote_output_profiles);
+
+	if (policy == TranscodeWebhook::Policy::DeleteStream)
+	{
+		_output_profiles_cfg = nullptr;
+
+		logtw("%s Delete a stream by webhook", _log_prefix.CStr());
+
+		ocst::Orchestrator::GetInstance()->TerminateStream(_application_info.GetName(), _input_stream->GetName());
+	}		
+	else if (policy == TranscodeWebhook::Policy::CreateStream)
+	{
+		_output_profiles_cfg = &_remote_output_profiles;
+
+		logti("%s Using external output profiles by webhook", _log_prefix.CStr());		
+		logtd("%s OutputProfile\n%s", _log_prefix.CStr(), _output_profiles_cfg->ToString().CStr());		
+	}
+	else if (policy == TranscodeWebhook::Policy::UseLocalProfiles)
+	{
+		_output_profiles_cfg = &(_application_info.GetConfig().GetOutputProfiles());
+
+		logti("%s Using local output profiles by webhook", _log_prefix.CStr());		
+		logti("%s OutputProfile \n%s", _log_prefix.CStr(), _output_profiles_cfg->ToString().CStr());		
+	}
+}
 
 bool TranscoderStream::Prepare(const std::shared_ptr<info::Stream> &stream)
 {
+	// Request to webhook to get output profiles
+	RequestWebhoook();
+
+	if(GetOutputProfilesCfg() == nullptr)
+	{
+		// If there is no output profile, the transcoder is not initialized
+		// But, returns success for stream management of the transcode application.
+		return true;
+	}
+
 	if(StartInternal() == false)
 	{
 		return false;
@@ -100,7 +156,7 @@ bool TranscoderStream::StartInternal()
 {
 	if (_link_input_to_outputs.size() > 0 || _link_encoder_to_outputs.size() > 0)
 	{
-		logtd("%s This stream has already been created", _log_prefix.CStr());
+		logtd("%s Stream has already been created", _log_prefix.CStr());
 		return true;
 	}
 
@@ -330,11 +386,8 @@ int32_t TranscoderStream::CreateOutputStreams()
 {
 	int32_t created_count = 0;
 
-	// Get [application->Streams] list of application configuration.
-	auto &cfg_output_profile_list = _application_info.GetConfig().GetOutputProfileList();
-
 	// Get the output  to make the output stream
-	for (const auto &cfg_output_profile : cfg_output_profile_list)
+	for (const auto &cfg_output_profile : GetOutputProfilesCfg()->GetOutputProfileList())
 	{
 		auto output_stream = CreateOutputStream(cfg_output_profile);
 		if (output_stream == nullptr)
@@ -628,25 +681,23 @@ int32_t TranscoderStream::CreateDecoders()
 
 	for (auto &[input_track_id, decoder_id] : _link_input_to_decoder)
 	{
-		auto track_item = _input_stream->GetTracks().find(input_track_id);
-		if (track_item == _input_stream->GetTracks().end())
+		auto it = _input_stream->GetTracks().find(input_track_id);
+		if (it == _input_stream->GetTracks().end())
 		{
 			continue;
 		}
+		auto &input_track = it->second;
 
-		auto &track = track_item->second;
-
-		// Get hardware acceleration is enabled
-		auto use_hwaccel = _application_info.GetConfig().GetOutputProfiles().IsHardwareAcceleration();
-		track->SetHardwareAccel(use_hwaccel);
+		// Enabled for hardware accelerators
+		input_track->SetHardwareAccel(GetOutputProfilesCfg()->IsHardwareAcceleration());
 
 		// Deprecated
 		// Set the number of b frames for compatibility with specific encoders.
 		// Default is 16. refer to .../config/.../applications/decodes.h
-		[[maybe_unused]] auto h264_has_bframes = _application_info.GetConfig().GetDecodes().GetH264hasBFrames();
+		// [[maybe_unused]] auto h264_has_bframes = _application_info.GetConfig().GetDecodes().GetH264hasBFrames();
 		// transcode_context->SetH264hasBframes(h264_has_bframes);
 
-		if (CreateDecoder(decoder_id, track) == false)
+		if (CreateDecoder(decoder_id, input_track) == false)
 		{
 			continue;
 		}
@@ -666,7 +717,7 @@ bool TranscoderStream::CreateDecoder(int32_t decoder_id, std::shared_ptr<MediaTr
 
 	if(_decoders.find(decoder_id) != _decoders.end())
 	{
-		logte("[%s/%s(%u)] Decoder already exists. InputTrack(%d) > Decoder(%d)", _input_stream->GetApplicationName(), _input_stream->GetName().CStr(), _input_stream->GetId(), input_track->GetId(), decoder_id);
+		logtw("[%s/%s(%u)] Decoder already exists. InputTrack(%d) > Decoder(%d)", _input_stream->GetApplicationName(), _input_stream->GetName().CStr(), _input_stream->GetId(), input_track->GetId(), decoder_id);
 		return true;
 	}
 
@@ -716,8 +767,7 @@ int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 			logtd("[%s/%s(%u)] InputTrack(%d) > Encoder(%d) > StreamName(%s) > OutputTrack(%d)", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId(),
 				  track_id, encoder_id, output_stream->GetName().CStr(), output_track->GetId());
 
-			auto use_hwaccel = _application_info.GetConfig().GetOutputProfiles().IsHardwareAcceleration();
-			output_track->SetHardwareAccel(use_hwaccel);
+			output_track->SetHardwareAccel(GetOutputProfilesCfg()->IsHardwareAcceleration());
 
 			if (CreateEncoder(encoder_id, output_stream, output_track) == false)
 			{

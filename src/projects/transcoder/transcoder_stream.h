@@ -8,13 +8,13 @@
 //==============================================================================
 #pragma once
 
-#include <base/info/application.h>
-
 #include <stdint.h>
+
 #include <memory>
 #include <queue>
 #include <vector>
 
+#include "base/info/application.h"
 #include "base/info/stream.h"
 #include "base/mediarouter/media_buffer.h"
 #include "base/mediarouter/media_type.h"
@@ -78,6 +78,8 @@ public:
 	};
 
 public:
+	static std::shared_ptr<TranscoderStream> Create(const info::Application &application_info, const std::shared_ptr<info::Stream> &stream, TranscodeApplication *parent);
+	
 	TranscoderStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &orig_stream, TranscodeApplication *parent);
 	~TranscoderStream();
 
@@ -106,6 +108,14 @@ private:
 	TranscodeApplication *_parent;
 
 	const info::Application _application_info;
+
+	// Output profile settings. It is used as an external profile or local profile depending on the webhook result.
+	const cfg::vhost::app::oprf::OutputProfiles* GetOutputProfilesCfg() {
+		return _output_profiles_cfg;
+	}
+	const cfg::vhost::app::oprf::OutputProfiles* _output_profiles_cfg;
+	// Output profile set from webhook
+	cfg::vhost::app::oprf::OutputProfiles _remote_output_profiles;
 
 	// Input Stream Info
 	std::shared_ptr<info::Stream> _input_stream;
@@ -162,6 +172,7 @@ private:
 	std::shared_ptr<info::Stream> GetInputStream();
 	std::shared_ptr<info::Stream> GetOutputStreamByTrackId(MediaTrackId output_track_id);
 
+	void RequestWebhoook();
 	bool StartInternal();
 
 	int32_t CreateOutputStreamDynamic();
@@ -177,6 +188,8 @@ private:
 						 std::shared_ptr<MediaTrack> output_track);
 
 	ov::String GetInfoStringComposite();
+
+
 
 	int32_t CreateDecoders();
 	bool CreateDecoder(int32_t decoder_id, std::shared_ptr<MediaTrack> input_track);
