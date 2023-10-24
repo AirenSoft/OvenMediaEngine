@@ -126,7 +126,7 @@ void TranscoderStream::RequestWebhoook()
 		_output_profiles_cfg = &(_application_info.GetConfig().GetOutputProfiles());
 
 		logti("%s Using local output profiles by webhook", _log_prefix.CStr());		
-		logti("%s OutputProfile \n%s", _log_prefix.CStr(), _output_profiles_cfg->ToString().CStr());		
+		logtd("%s OutputProfile \n%s", _log_prefix.CStr(), _output_profiles_cfg->ToString().CStr());		
 	}
 }
 
@@ -809,7 +809,6 @@ bool TranscoderStream::CreateEncoder(int32_t encoder_id, std::shared_ptr<info::S
 	auto encoder = TranscodeEncoder::Create(encoder_id, *output_stream, output_track, bind(&TranscoderStream::OnEncodedPacket, this, std::placeholders::_1, std::placeholders::_2));
 	if (encoder == nullptr)
 	{
-		logte("%d track encoder allocation failed", encoder_id);
 		return false;
 	}
 
@@ -842,7 +841,7 @@ int32_t TranscoderStream::CreateFilters(MediaFrame *buffer)
 		MediaTrackId encoder_id = _link_filter_to_encoder[filter_id];
 		if (_encoders.find(encoder_id) == _encoders.end())
 		{
-			logte("%s encoder is not allocated, Encoder(%d)", _log_prefix.CStr(), encoder_id);
+			logte("%s Filter creation failed because the encoder could not be found. Encoder(%d), Filter(%d)", _log_prefix.CStr(), encoder_id, filter_id);
 			continue;
 		}
 

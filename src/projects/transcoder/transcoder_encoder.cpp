@@ -29,6 +29,8 @@
 #define USE_LEGACY_LIBOPUS false
 #define MAX_QUEUE_SIZE 500
 
+#define OV_SAFE_FREE_ENCODER(encoder) if (encoder != nullptr) { encoder->Stop(); encoder = nullptr; }
+
 TranscodeEncoder::TranscodeEncoder(info::Stream stream_info) : 
 	_stream_info(stream_info)
 {
@@ -87,6 +89,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 						output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::QSV);
 						goto done;
 					}
+					OV_SAFE_FREE_ENCODER(encoder);
 				}
 
 				if ( TranscodeGPU::GetInstance()->IsSupportedNV() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::NVENC))
@@ -97,6 +100,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 						output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::NVENC);
 						goto done;
 					}
+					OV_SAFE_FREE_ENCODER(encoder);
 				}
 
 				if ( TranscodeGPU::GetInstance()->IsSupportedXMA() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::XMA))
@@ -107,6 +111,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 						output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::XMA);
 						goto done;
 					}
+					OV_SAFE_FREE_ENCODER(encoder);
 				}				
 			}
 
@@ -115,10 +120,10 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 				encoder = std::make_shared<EncoderAVCxOpenH264>(info);
 				if (encoder != nullptr && encoder->Configure(output_track) == true)
 				{
-
 					output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::OPENH264);
 					goto done;
 				}
+				OV_SAFE_FREE_ENCODER(encoder);
 			}
 
 			break;
@@ -133,6 +138,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 						output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::QSV);
 						goto done;
 					}
+					OV_SAFE_FREE_ENCODER(encoder);
 				}
 
 				if ( TranscodeGPU::GetInstance()->IsSupportedNV() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::NVENC))
@@ -143,6 +149,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 						output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::NVENC);
 						goto done;
 					}
+					OV_SAFE_FREE_ENCODER(encoder);
 				}
 
 				if ( TranscodeGPU::GetInstance()->IsSupportedXMA() == true && (library_id == cmn::MediaCodecLibraryId::AUTO || library_id == cmn::MediaCodecLibraryId::XMA))
@@ -153,6 +160,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 						output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::XMA);
 						goto done;
 					}
+					OV_SAFE_FREE_ENCODER(encoder);
 				}
 			}
 
@@ -164,6 +172,8 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 				output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::LIBVPX);
 				goto done;
 			}
+			OV_SAFE_FREE_ENCODER(encoder);
+
 
 			break;
 		case cmn::MediaCodecId::Jpeg:
@@ -173,6 +183,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 				output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::DEFAULT);
 				goto done;
 			}
+			OV_SAFE_FREE_ENCODER(encoder);
 
 			break;
 		case cmn::MediaCodecId::Png:
@@ -182,6 +193,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 				output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::DEFAULT);
 				goto done;
 			}
+			OV_SAFE_FREE_ENCODER(encoder);
 
 			break;
 		case cmn::MediaCodecId::Aac:
@@ -191,6 +203,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 				output_track->SetCodecLibraryId(cmn::MediaCodecLibraryId::FDKAAC);
 				goto done;
 			}
+			OV_SAFE_FREE_ENCODER(encoder);
 
 			break;
 		case cmn::MediaCodecId::Opus:
@@ -208,6 +221,8 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(int32_t encoder_id, c
 				goto done;
 			}
 #endif
+			OV_SAFE_FREE_ENCODER(encoder);
+
 			break;
 		default:
 			OV_ASSERT(false, "Not supported codec: %d", codec_id);
