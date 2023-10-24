@@ -8,16 +8,19 @@
 //==============================================================================
 #pragma once
 
+#include "../../ovlibrary/string.h"
+
 namespace pvd
 {
 	class PullStreamProperties
 	{
 	public:
 		PullStreamProperties()
-			: _persistent(false), _failback(false), _relay(false), _failback_timeout(-1), _no_input_failover_timeout(-1), _unused_stream_deletion_timeout(-1), _retry_connect_count(2) {};
+			: _defaultMethod("auto"), _persistent(false), _failback(false), _relay(false), _failback_timeout(-1), _no_input_failover_timeout(-1), _unused_stream_deletion_timeout(-1), _retry_connect_count(2) {};
 
-		PullStreamProperties(bool persistent, bool failback, bool relay, int32_t failback_timeout = -1, int32_t no_input_failover_timeout = -1, int32_t unused_stream_deletion_timeout = -1, int32_t retry_connect_count = 2)
+		PullStreamProperties(ov::String default_method, bool persistent, bool failback, bool relay, int32_t failback_timeout = -1, int32_t no_input_failover_timeout = -1, int32_t unused_stream_deletion_timeout = -1, int32_t retry_connect_count = 2)
 		{
+			_defaultMethod = default_method;
 			_persistent = persistent;
 			_failback = failback;
 			_relay = relay;
@@ -107,6 +110,11 @@ namespace pvd
 			return _failback_timeout;
 		}
 
+		ov::String GetdefaultRtpCalculationMethod()
+		{
+			return _defaultMethod;
+		}
+
 		// Setter
 		void SetNoInputFailoverTimeout(int32_t milliseconds)
 		{
@@ -123,11 +131,21 @@ namespace pvd
 			_failback_timeout = milliseconds;
 		}
 
+		void SetdefaultRtpCalculationMethod (int32_t method){
+			if(method == 1){
+				_defaultMethod = "single_delta";
+			} else if(method == 2){
+				_defaultMethod = "with_rtcp_sr";
+			}
+		}
+	
 	private:
 		bool _persistent = false;
 		bool _failback = false;
 		bool _relay = false;
 		bool _from_origin_map_store = false;
+
+		ov::String _defaultMethod;
 
 		// -1 means that the values in configuration file will be used. (Conf/Origins/Properties)
 		int32_t _failback_timeout = -1;

@@ -94,9 +94,14 @@ namespace api
 						{
 							properties->SetUnusedStreamDeletionTimeout(jv_properties["unusedStreamDeletionTimeoutMs"].asInt());
 						}
+
+						if (jv_properties["defaultRtpCalculationMethod"].isNull() == false && jv_properties["defaultRtpCalculationMethod"].isInt())
+						{
+							properties->SetdefaultRtpCalculationMethod(jv_properties["defaultRtpCalculationMethod"].asInt());
+						}
 					}
 					
-					logti("Request to pull stream: %s/%s - persistent(%s) noInputFailoverTimeoutMs(%d) unusedStreamDeletionTimeoutMs(%d)", app->GetName().CStr(), stream_name.CStr(), properties->IsPersistent() ? "true" : "false", properties->GetNoInputFailoverTimeout(), properties->GetUnusedStreamDeletionTimeout());
+					logti("Request to pull stream: %s/%s - persistent(%s) noInputFailoverTimeoutMs(%d) unusedStreamDeletionTimeoutMs(%d) defaultRtpCalculationMethod(%s)", app->GetName().CStr(), stream_name.CStr(), properties->IsPersistent() ? "true" : "false", properties->GetNoInputFailoverTimeout(), properties->GetUnusedStreamDeletionTimeout(), properties->GetdefaultRtpCalculationMethod().CStr());
 					for (auto &url : request_urls)
 					{
 						logti(" - %s", url.CStr());
