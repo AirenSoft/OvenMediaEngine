@@ -95,13 +95,13 @@ namespace api
 							properties->SetUnusedStreamDeletionTimeout(jv_properties["unusedStreamDeletionTimeoutMs"].asInt());
 						}
 
-						if (jv_properties["defaultRtpCalculationMethod"].isNull() == false && jv_properties["defaultRtpCalculationMethod"].isInt())
+						if (jv_properties["IgnoreRtcpSRTimestamp"].isNull() == false && jv_properties["IgnoreRtcpSRTimestamp"].isBool())
 						{
-							properties->SetdefaultRtpCalculationMethod(jv_properties["defaultRtpCalculationMethod"].asInt());
+							properties->EnableIgnoreRtcpSRTimestamp(jv_properties["IgnoreRtcpSRTimestamp"].asBool());
 						}
 					}
 					
-					logti("Request to pull stream: %s/%s - persistent(%s) noInputFailoverTimeoutMs(%d) unusedStreamDeletionTimeoutMs(%d) defaultRtpCalculationMethod(%s)", app->GetName().CStr(), stream_name.CStr(), properties->IsPersistent() ? "true" : "false", properties->GetNoInputFailoverTimeout(), properties->GetUnusedStreamDeletionTimeout(), properties->GetdefaultRtpCalculationMethod().CStr());
+					logti("Request to pull stream: %s/%s - persistent(%s) noInputFailoverTimeoutMs(%d) unusedStreamDeletionTimeoutMs(%d) IgnoreRtcpSRTimestamp(%s)", app->GetName().CStr(), stream_name.CStr(), properties->IsPersistent() ? "true" : "false", properties->GetNoInputFailoverTimeout(), properties->GetUnusedStreamDeletionTimeout(), properties->IsRtcpIgnoreEnable() ? "true" : "false");
 					for (auto &url : request_urls)
 					{
 						logti(" - %s", url.CStr());

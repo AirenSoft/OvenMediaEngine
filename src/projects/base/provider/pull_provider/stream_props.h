@@ -7,7 +7,6 @@
 //
 //==============================================================================
 #pragma once
-
 #include "../../ovlibrary/string.h"
 
 namespace pvd
@@ -16,11 +15,11 @@ namespace pvd
 	{
 	public:
 		PullStreamProperties()
-			: _defaultMethod("auto"), _persistent(false), _failback(false), _relay(false), _failback_timeout(-1), _no_input_failover_timeout(-1), _unused_stream_deletion_timeout(-1), _retry_connect_count(2) {};
+			: _ignore_rtcp(false), _persistent(false), _failback(false), _relay(false), _failback_timeout(-1), _no_input_failover_timeout(-1), _unused_stream_deletion_timeout(-1), _retry_connect_count(2) {};
 
-		PullStreamProperties(ov::String default_method, bool persistent, bool failback, bool relay, int32_t failback_timeout = -1, int32_t no_input_failover_timeout = -1, int32_t unused_stream_deletion_timeout = -1, int32_t retry_connect_count = 2)
+		PullStreamProperties(bool ignore_rtcp, bool persistent, bool failback, bool relay, int32_t failback_timeout = -1, int32_t no_input_failover_timeout = -1, int32_t unused_stream_deletion_timeout = -1, int32_t retry_connect_count = 2)
 		{
-			_defaultMethod = default_method;
+			_ignore_rtcp = ignore_rtcp;
 			_persistent = persistent;
 			_failback = failback;
 			_relay = relay;
@@ -50,6 +49,11 @@ namespace pvd
 			return _from_origin_map_store;
 		}
 
+		bool IsRtcpIgnoreEnable()
+		{
+			return _ignore_rtcp;
+		}
+
 		void EnableFailback(bool failback)
 		{
 			_failback = failback;
@@ -68,6 +72,11 @@ namespace pvd
 		void EnableFromOriginMapStore(bool from_origin_map_store)
 		{
 			_from_origin_map_store = from_origin_map_store;
+		}
+
+		void EnableIgnoreRtcpSRTimestamp (bool ignore_flag)
+		{
+			_ignore_rtcp = ignore_flag;
 		}
 
 		int32_t GetFailbackTimeout()
@@ -110,11 +119,6 @@ namespace pvd
 			return _failback_timeout;
 		}
 
-		ov::String GetdefaultRtpCalculationMethod()
-		{
-			return _defaultMethod;
-		}
-
 		// Setter
 		void SetNoInputFailoverTimeout(int32_t milliseconds)
 		{
@@ -130,14 +134,6 @@ namespace pvd
 		{
 			_failback_timeout = milliseconds;
 		}
-
-		void SetdefaultRtpCalculationMethod (int32_t method){
-			if(method == 1){
-				_defaultMethod = "single_delta";
-			} else if(method == 2){
-				_defaultMethod = "with_rtcp_sr";
-			}
-		}
 	
 	private:
 		bool _persistent = false;
@@ -145,7 +141,7 @@ namespace pvd
 		bool _relay = false;
 		bool _from_origin_map_store = false;
 
-		ov::String _defaultMethod;
+		bool _ignore_rtcp = false;
 
 		// -1 means that the values in configuration file will be used. (Conf/Origins/Properties)
 		int32_t _failback_timeout = -1;

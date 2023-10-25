@@ -250,23 +250,20 @@ namespace pvd
 
 	bool Stream::AdjustRtpTimestamp(uint32_t track_id, int64_t timestamp, int64_t max_timestamp, int64_t &adjusted_timestamp)
 	{
-		auto stream = std::dynamic_pointer_cast<pvd::PullStream>(GetSharedPtr());
-		if(stream != nullptr){
-			auto props = stream->GetProperties();
-			if(props != nullptr){
-				auto method = props->GetdefaultRtpCalculationMethod();
-				if(method == "single_delta"){
-					_rtp_timestamp_method = RtpTimestampCalculationMethod::SINGLE_DELTA;
-				} else if(method == "with_rtcp_sr"){
-					_rtp_timestamp_method = RtpTimestampCalculationMethod::WITH_RTCP_SR;
-				}
-			}
-		}
-
-		// Make decision timestamp calculation method
-		
+		// Make decision timestamp calculation method	
 		if (_rtp_timestamp_method == RtpTimestampCalculationMethod::UNDER_DECISION)
 		{
+			auto stream = std::dynamic_pointer_cast<pvd::PullStream>(GetSharedPtr());
+			if(stream != nullptr){
+				auto props = stream->GetProperties();
+				if(props != nullptr){
+					if(props->IsRtcpIgnoreEnable()){
+						_rtp_timestamp_method = RtpTimestampCalculationMethod::SINGLE_DELTA;
+						return true;
+					}
+				}
+			}
+
 			if (GetTracks().size() == 1)
 			{
 				logti("Since this stream has a single track, it computes PTS alone without RTCP SR.");
