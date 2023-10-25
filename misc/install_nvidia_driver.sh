@@ -176,7 +176,7 @@ done
 
 if [ "${OSNAME}" == "Ubuntu" ]; then
     check_version
-    # install_base_ubuntu
+    install_base_ubuntu
 elif  [ "${OSNAME}" == "CentOS" ]; then
     check_version
 

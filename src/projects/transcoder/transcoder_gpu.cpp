@@ -23,7 +23,8 @@ TranscodeGPU::TranscodeGPU()
 	_supported_qsv = false;
 	_supported_cuda = false;
 	_supported_xma = false;
-	_device_context = nullptr;
+	_device_context_qsv = nullptr;
+	_device_context_nv = nullptr;
 }
 
 bool TranscodeGPU::Initialize()
@@ -33,42 +34,40 @@ bool TranscodeGPU::Initialize()
 		
 	Uninitialize();
 
-	logtd("Trying to initialize a hardware accelerator");
+	logti("Trying to check the hardware accelerator");
 
 	// QSV
-	if(CheckSupportedQSV() == true)
-		return true;
-
+	CheckSupportedQSV();
 	// CUDA
-	if(CheckSupportedNV() == true)
-		return true;
-	
+	CheckSupportedNV();
 	// XMA
-	if(CheckSupportedXMA() == true)
-		return true;	
+	CheckSupportedXMA();
+
+	_initialized = true;
 
 	return false;
 }
 
 bool TranscodeGPU::CheckSupportedQSV()
 {
-	int ret = ::av_hwdevice_ctx_create(&_device_context, AV_HWDEVICE_TYPE_QSV, "/dev/dri/render128", NULL, 0);
+	int ret = ::av_hwdevice_ctx_create(&_device_context_qsv, AV_HWDEVICE_TYPE_QSV, nullptr, nullptr, 0);
 	if (ret < 0)
 	{
-		av_buffer_unref(&_device_context);
-		_device_context = nullptr;
+		av_buffer_unref(&_device_context_qsv);
+		_device_context_qsv = nullptr;
 		_supported_qsv = false;
+
+		logtw("There are no supported Intel QuickSync Accelerator");
 	}
 	else
 	{
 		_supported_qsv = true;
 		_initialized = true;
-		auto constraints = av_hwdevice_get_hwframe_constraints(_device_context, nullptr);
-		logti("Supported Intel QuickSync hardware accelerator. hw.pixfmt: %d, sw.pixfmt : %d",
+		auto constraints = av_hwdevice_get_hwframe_constraints(_device_context_qsv, nullptr);
+		logti("Supported Intel QuickSync Accelerator");
+		logtd("constraints. hw.fmt(%d), sw.fmt(%d)",
 			  *constraints->valid_hw_formats,
 			  *constraints->valid_sw_formats);
-
-
 		return true;
 	}
 
@@ -77,20 +76,23 @@ bool TranscodeGPU::CheckSupportedQSV()
 
 bool TranscodeGPU::CheckSupportedNV()
 {
-	int ret = ::av_hwdevice_ctx_create(&_device_context, AV_HWDEVICE_TYPE_CUDA, "/dev/dri/render128", NULL, 0);
+	int ret = ::av_hwdevice_ctx_create(&_device_context_nv, AV_HWDEVICE_TYPE_CUDA, nullptr, nullptr, 0);
 	if (ret < 0)
 	{
-		av_buffer_unref(&_device_context);
-		_device_context = nullptr;
+		av_buffer_unref(&_device_context_nv);
+		_device_context_nv = nullptr;
+
+		logtw("There are no supported NVIDIA Accelerator");
 	}
 	else
 	{
 		_initialized = true;
 		_supported_cuda = true;
-		auto constraints = av_hwdevice_get_hwframe_constraints(_device_context, nullptr);
-		logti("Supported NVIDIA CUDA hardware accelerator. hw.pixfmt: %d, sw.pixfmt : %d",
+		auto constraints = av_hwdevice_get_hwframe_constraints(_device_context_nv, nullptr);
+		logti("Supported NVIDIA Accelerator");
+		logtd("constraints. hw.fmt(%d), sw.fmt(%d)",
 			  *constraints->valid_hw_formats,
-			  *constraints->valid_sw_formats);
+			  *constraints->valid_sw_formats);			  
 
 		return true;
 	}
@@ -214,11 +216,19 @@ bool TranscodeGPU::CheckSupportedXMA()
 	// Initialize all devices
 	if (xma_initialize(xclbin_nparam, xlnx_num_devs) == 0)
 	{
-		logti("Supported xilinx media accelerator. Devices(%d)", xlnx_num_devs);
+		logti("Supported Xilinx Media Accelerator");
+		logtd("constraints. Devices(%d)",
+			xlnx_num_devs);	
+
 		_initialized = true;
 		_supported_xma = true;
 		return true;
 	}
+	else {
+		logtw("There are no supported Xilinx Media Accelerator");
+	}
+#else
+	logtw("There are no supported Xilinx Media Accelerator");
 #endif
 
 	return false;
@@ -227,18 +237,29 @@ bool TranscodeGPU::CheckSupportedXMA()
 bool TranscodeGPU::Uninitialize()
 {
 	// Uninitialize device context of Intel Quicksync & NVCODEC
-	if (_device_context != nullptr)
+	if (_device_context_qsv != nullptr)
 	{
-		av_buffer_unref(&_device_context);
-		_device_context = nullptr;
+		av_buffer_unref(&_device_context_qsv);
+		_device_context_qsv = nullptr;
+	}
+
+	if (_device_context_qsv != nullptr)
+	{
+		av_buffer_unref(&_device_context_qsv);
+		_device_context_qsv = nullptr;
 	}
 
 	return true;
 }
 
-AVBufferRef* TranscodeGPU::GetDeviceContext()
+AVBufferRef* TranscodeGPU::GetDeviceContextQSV()
 {
-	return _device_context;
+	return _device_context_qsv;
+}
+
+AVBufferRef* TranscodeGPU::GetDeviceContextNV()
+{
+	return _device_context_nv;
 }
 
 bool TranscodeGPU::IsSupportedQSV()
