@@ -291,7 +291,7 @@ namespace pvd
 				return false; 
 			}
 		}
-		
+
 		if (_rtp_timestamp_method == RtpTimestampCalculationMethod::WITH_RTCP_SR)
 		{
 			auto pts_base = _rtp_lip_sync_clock.CalcPTS(track_id, timestamp);

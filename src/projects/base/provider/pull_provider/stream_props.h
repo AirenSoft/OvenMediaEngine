@@ -134,13 +134,12 @@ namespace pvd
 		{
 			_failback_timeout = milliseconds;
 		}
-	
+
 	private:
 		bool _persistent = false;
 		bool _failback = false;
 		bool _relay = false;
 		bool _from_origin_map_store = false;
-
 		bool _ignore_rtcp = false;
 
 		// -1 means that the values in configuration file will be used. (Conf/Origins/Properties)
