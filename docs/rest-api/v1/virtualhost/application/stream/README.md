@@ -137,6 +137,7 @@ Content-Type: application/json
 		"persistent": false,
 		"noInputFailoverTimeoutMs": 3000,
 		"unusedStreamDeletionTimeoutMs": 60000,
+		"ignoreRtcpSRTimestamp": false
   	}
 }
 
@@ -153,7 +154,9 @@ Content-Type: application/json
 		but ignored if persistent is true
 	## unusedStreamDeletionTimeoutMs
 		If no data is output during this period (if there is no viewer), 
-		the stream is deleted, but ignored if persistent is true 
+		the stream is deleted, but ignored if persistent is true
+	## ignoreRtcpSRTimestamp
+		No waits RTCP SR and start stream immediately
 ```
 
 </details>
