@@ -66,6 +66,11 @@ namespace pvd
 			return _provider;
 		}
 
+		DirectionType GetDirectionType() override
+		{
+			return DirectionType::PUSH;
+		}
+
 	private:
 		uint32_t 		_channel_id = 0;
 		// If it's type is DATA, related channel is Signalling, or vice versa. 

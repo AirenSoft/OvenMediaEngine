@@ -33,6 +33,13 @@ namespace pvd
 			TERMINATED	// will be deleted, Set super class
 		};
 
+		enum class DirectionType : uint8_t
+		{
+			UNSPECIFIED,
+			PULL,
+			PUSH
+		};
+
 		State GetState(){return _state;};
 
 		void SetApplication(const std::shared_ptr<pvd::Application> &application)
@@ -71,6 +78,11 @@ namespace pvd
 		Stream(StreamSourceType source_type);
 
 		virtual ~Stream();
+
+		virtual DirectionType GetDirectionType()
+		{
+			return DirectionType::UNSPECIFIED;
+		}
 
 		bool SetState(State state);
 		bool SendFrame(const std::shared_ptr<MediaPacket> &packet);

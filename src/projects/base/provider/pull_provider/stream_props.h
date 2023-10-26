@@ -15,11 +15,11 @@ namespace pvd
 	{
 	public:
 		PullStreamProperties()
-			: _ignore_rtcp(false), _persistent(false), _failback(false), _relay(false), _failback_timeout(-1), _no_input_failover_timeout(-1), _unused_stream_deletion_timeout(-1), _retry_connect_count(2) {};
+			: _persistent(false), _failback(false), _relay(false), _ignore_rtcp_sr_timestamp(false), _failback_timeout(-1), _no_input_failover_timeout(-1), _unused_stream_deletion_timeout(-1), _retry_connect_count(2) {};
 
-		PullStreamProperties(bool ignore_rtcp, bool persistent, bool failback, bool relay, int32_t failback_timeout = -1, int32_t no_input_failover_timeout = -1, int32_t unused_stream_deletion_timeout = -1, int32_t retry_connect_count = 2)
+		PullStreamProperties(bool ignore_rtcp_sr_timestamp, bool persistent, bool failback, bool relay, int32_t failback_timeout = -1, int32_t no_input_failover_timeout = -1, int32_t unused_stream_deletion_timeout = -1, int32_t retry_connect_count = 2)
 		{
-			_ignore_rtcp = ignore_rtcp;
+			_ignore_rtcp_sr_timestamp = ignore_rtcp_sr_timestamp;
 			_persistent = persistent;
 			_failback = failback;
 			_relay = relay;
@@ -49,9 +49,9 @@ namespace pvd
 			return _from_origin_map_store;
 		}
 
-		bool IsRtcpIgnoreEnable()
+		bool IsRtcpSRTimestampIgnored()
 		{
-			return _ignore_rtcp;
+			return _ignore_rtcp_sr_timestamp;
 		}
 
 		void EnableFailback(bool failback)
@@ -76,7 +76,7 @@ namespace pvd
 
 		void EnableIgnoreRtcpSRTimestamp (bool ignore_flag)
 		{
-			_ignore_rtcp = ignore_flag;
+			_ignore_rtcp_sr_timestamp = ignore_flag;
 		}
 
 		int32_t GetFailbackTimeout()
@@ -140,7 +140,7 @@ namespace pvd
 		bool _failback = false;
 		bool _relay = false;
 		bool _from_origin_map_store = false;
-		bool _ignore_rtcp = false;
+		bool _ignore_rtcp_sr_timestamp = false;
 
 		// -1 means that the values in configuration file will be used. (Conf/Origins/Properties)
 		int32_t _failback_timeout = -1;

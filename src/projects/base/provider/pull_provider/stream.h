@@ -58,6 +58,11 @@ namespace pvd
 		virtual bool RestartStream(const std::shared_ptr<const ov::Url> &url) = 0; // Failover
 		virtual bool StopStream() = 0; // Stop
 
+		DirectionType GetDirectionType() override
+		{
+			return DirectionType::PULL;
+		}
+
 	private:
 		uint32_t	_restart_count = 0;
 		std::vector<std::shared_ptr<const ov::Url>> _url_list;

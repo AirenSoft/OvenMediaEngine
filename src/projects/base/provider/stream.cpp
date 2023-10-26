@@ -253,17 +253,6 @@ namespace pvd
 		// Make decision timestamp calculation method	
 		if (_rtp_timestamp_method == RtpTimestampCalculationMethod::UNDER_DECISION)
 		{
-			auto stream = std::dynamic_pointer_cast<pvd::PullStream>(GetSharedPtr());
-			if(stream != nullptr){
-				auto props = stream->GetProperties();
-				if(props != nullptr){
-					if(props->IsRtcpIgnoreEnable()){
-						_rtp_timestamp_method = RtpTimestampCalculationMethod::SINGLE_DELTA;
-						return true;
-					}
-				}
-			}
-
 			if (GetTracks().size() == 1)
 			{
 				logti("Since this stream has a single track, it computes PTS alone without RTCP SR.");
@@ -273,6 +262,22 @@ namespace pvd
 			{
 				logti("Since this stream has received an RTCP SR, it counts the PTS with the SR.");
 				_rtp_timestamp_method = RtpTimestampCalculationMethod::WITH_RTCP_SR;
+			}
+			else if (GetDirectionType() == DirectionType::PULL)
+			{
+				// If this stream is type of PullStream, check the property of IgnoreRtcpSRTimestamp.
+				auto stream = std::static_pointer_cast<pvd::PullStream>(GetSharedPtr());
+				if(stream != nullptr)
+				{
+					auto props = stream->GetProperties();
+					if(props != nullptr)
+					{
+						if(props->IsRtcpSRTimestampIgnored())
+						{
+							_rtp_timestamp_method = RtpTimestampCalculationMethod::SINGLE_DELTA;
+						}
+					}
+				}
 			}
 			// If it exceeds 5 seconds, it is calculated independently without RTCP SR.
 			else if (_rtp_lip_sync_clock.IsEnabled() == false && _first_rtp_received_time.Elapsed() > 5000)
