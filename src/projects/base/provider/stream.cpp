@@ -12,6 +12,8 @@
 #include "application.h"
 #include "base/info/application.h"
 #include "provider_private.h"
+#include "base/provider/pull_provider/stream_props.h"
+#include "base/provider/pull_provider/stream.h"
 
 
 namespace pvd
@@ -248,9 +250,20 @@ namespace pvd
 
 	bool Stream::AdjustRtpTimestamp(uint32_t track_id, int64_t timestamp, int64_t max_timestamp, int64_t &adjusted_timestamp)
 	{
-		// Make decision timestamp calculation method
+		// Make decision timestamp calculation method	
 		if (_rtp_timestamp_method == RtpTimestampCalculationMethod::UNDER_DECISION)
 		{
+			auto stream = std::dynamic_pointer_cast<pvd::PullStream>(GetSharedPtr());
+			if(stream != nullptr){
+				auto props = stream->GetProperties();
+				if(props != nullptr){
+					if(props->IsRtcpIgnoreEnable()){
+						_rtp_timestamp_method = RtpTimestampCalculationMethod::SINGLE_DELTA;
+						return true;
+					}
+				}
+			}
+
 			if (GetTracks().size() == 1)
 			{
 				logti("Since this stream has a single track, it computes PTS alone without RTCP SR.");
