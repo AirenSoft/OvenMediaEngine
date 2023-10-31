@@ -199,3 +199,11 @@ $(strip \
 	$(shell $(__PKG_CONFIG_PATH) pkg-config --exists $(1); echo $$?) \
 )
 endef
+
+# Check if file exists
+# $(call chk_file_exist,<FILE_PATH>)
+define chk_file_exist
+$(strip \
+	$(shell if [ -e $(1) ] ; then echo 0; else echo 1; fi) \
+)
+endef
