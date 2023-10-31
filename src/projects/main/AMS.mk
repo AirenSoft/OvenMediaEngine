@@ -63,10 +63,7 @@ LOCAL_PREBUILT_LIBRARIES := \
 
 LOCAL_LDFLAGS := -lpthread -luuid
 
-ifeq ($(shell echo $${OSTYPE}),linux-musl) 
-# For alpine linux
-LOCAL_LDFLAGS += -lexecinfo
-endif
+
 
 $(call add_pkg_config,srt)
 $(call add_pkg_config,libavformat)
@@ -81,15 +78,32 @@ $(call add_pkg_config,opus)
 $(call add_pkg_config,libsrtp2)
 $(call add_pkg_config,libpcre2-8)
 $(call add_pkg_config,hiredis)
+$(call add_pkg_config,ffnvcodec)
 
 # Enable Xilinx Media SDK
 ifeq ($(call chk_pkg_exist,libxma2api),0)
-$(info $(ANSI_YELLOW)- Xilinx Media SDK is enabled.$(ANSI_RESET))
+$(info $(ANSI_YELLOW)- Xilinx Media Accelerator is enabled$(ANSI_RESET))
 $(call add_pkg_config,libxma2api)
 $(call add_pkg_config,libxma2plugin)
 $(call add_pkg_config,xvbm)
 $(call add_pkg_config,libxrm)
+PROJECT_CXXFLAGS += -DXMA_ENABLED
 endif
+
+# Enable NVidia Accelerator
+ifeq ($(call chk_file_exist,/lib/x86_64-linux-gnu/libcuda.so), 0) 
+ifeq ($(call chk_file_exist,/lib/x86_64-linux-gnu/libnvidia-ml.so), 0)
+$(info $(ANSI_YELLOW)- Nvidia Accelerator is enabled$(ANSI_RESET))
+LOCAL_LDFLAGS += -lcuda -lnvidia-ml
+PROJECT_CXXFLAGS += -DHWACCELS_NVIDIA_ENABLED
+endif
+endif
+
+ifeq ($(shell echo $${OSTYPE}),linux-musl) 
+# For alpine linux
+LOCAL_LDFLAGS += -lexecinfo
+endif
+
 
 # Enable jemalloc 
 ifeq ($(MAKECMDGOALS),release)
