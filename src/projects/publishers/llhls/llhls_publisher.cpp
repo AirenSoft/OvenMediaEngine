@@ -390,10 +390,10 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			}
 		}
 
-		if (stream->WaitUntilStart(10000) == false)
+		if (stream->WaitUntilStart(0) == false)
 		{
-			logtw("(%s/%s) stream has not started.", vhost_app_name.CStr(), stream_name.CStr());
-			response->SetStatusCode(http::StatusCode::NotFound);
+			logtw("(%s/%s) stream has created but not started yet", vhost_app_name.CStr(), stream_name.CStr());
+			response->SetStatusCode(http::StatusCode::Created);
 			return http::svr::NextHandler::DoNotCall;
 		}
 
