@@ -90,7 +90,7 @@ $(call add_pkg_config,libxma2api)
 $(call add_pkg_config,libxma2plugin)
 $(call add_pkg_config,xvbm)
 $(call add_pkg_config,libxrm)
-PROJECT_CXXFLAGS += -DXMA_ENABLED
+PROJECT_CXXFLAGS += -DHWACCELS_XMA_ENABLED
 endif
 
 # Enable NVidia Accelerator

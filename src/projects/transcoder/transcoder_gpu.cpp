@@ -10,7 +10,7 @@
 
 #include "transcoder_private.h"
 
-#ifdef XMA_ENABLED
+#ifdef HWACCELS_XMA_ENABLED
 #include "xma.h"
 #include "xrm.h"
 #define MAX_XLNX_DEVS 128
@@ -44,7 +44,7 @@ bool TranscodeGPU::Initialize()
 	// CUDA
 	if(CheckSupportedNV() == true)
 	{
-		logti("Supported NVIDIA Accelerator");
+		logti("Supported NVIDIA Accelerator. Number of devices(%d)", GetDeviceCount(cmn::MediaCodecModuleId::NVENC));
 	}
 	else
 	{
@@ -54,7 +54,7 @@ bool TranscodeGPU::Initialize()
 	// XMA
 	if(CheckSupportedXMA() == true)
 	{
-		logti("Supported Xilinx Media Accelerator");
+		logti("Supported Xilinx Media Accelerator. Number of devices(%d)", GetDeviceCount(cmn::MediaCodecModuleId::XMA));
 	}
 	else
 	{
@@ -64,7 +64,7 @@ bool TranscodeGPU::Initialize()
 	// QSV
 	if(CheckSupportedQSV() == true)
 	{
-		logti("Supported Intel QuickSync Accelerator");
+		logti("Supported Intel QuickSync Accelerator. Number of devices(%d)", GetDeviceCount(cmn::MediaCodecModuleId::QSV));
 	}
 	else
 	{
@@ -247,7 +247,7 @@ bool TranscodeGPU::CheckSupportedNV()
 		}
 		else
 		{
-			logti("NVIDIA. DeviceId(%d), Name(%40s), BusId(%d), CudaId(%d)", gpu_id, device_name, pci_info.bus, cuda_index);			
+			logti("NVIDIA. DeviceId(%d), Name(%s), BusId(%d), CudaId(%d)", gpu_id, device_name, pci_info.bus, cuda_index);			
 
 			// auto constraints = av_hwdevice_get_hwframe_constraints(_device_context_nv[gpu_id], nullptr);			
 			// logtd("constraints. hw.fmt(%d), sw.fmt(%d)", *constraints->valid_hw_formats,*constraints->valid_sw_formats);
@@ -273,7 +273,7 @@ bool TranscodeGPU::CheckSupportedNV()
 
 bool TranscodeGPU::CheckSupportedXMA()
 {
-#ifdef XMA_ENABLED	
+#ifdef HWACCELS_XMA_ENABLED	
 	xrmContext *xrm_ctx = (xrmContext *)xrmCreateContext(XRM_API_VERSION_1);
 	if (xrm_ctx == NULL)
 	{
@@ -304,6 +304,8 @@ bool TranscodeGPU::CheckSupportedXMA()
 		xclbin_nparam[dev_id].device_id = dev_id;
 		xclbin_nparam[dev_id].xclbin_name = XLNX_XCLBIN_PATH;
 		_device_count_xma++;
+
+		logti("XMA. DeviceId(%d), xclbin(%s)", xclbin_nparam[dev_id].device_id, xclbin_nparam[dev_id].xclbin_name);			
 	}
 
 	// Initialize all devices
@@ -392,6 +394,7 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, i
 	switch (id)
 	{
 		case cmn::MediaCodecModuleId::XMA: {
+#ifdef HWACCELS_XMA_ENABLED				
 			if (type == IPType::ENCODER)
 			{
 				return 0;
@@ -404,6 +407,7 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, i
 			{
 				return 0;
 			}			
+#endif			
 		}
 		break;
 		case cmn::MediaCodecModuleId::NVENC: {
@@ -467,237 +471,22 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, i
 
 void TranscodeGPU::CodecThread()
 {
-#ifdef HWACCELS_NVIDIA_ENABLED	
-	while(false)
+	std::vector<cmn::MediaCodecModuleId> modules;
+
+	modules.push_back(cmn::MediaCodecModuleId::NVENC);
+	modules.push_back(cmn::MediaCodecModuleId::XMA);
+	modules.push_back(cmn::MediaCodecModuleId::QSV);	
+
+	for(auto module : modules)
 	{
-		for (int gpu_id = 0; gpu_id < GetDeviceCount(cmn::MediaCodecModuleId::NVENC); gpu_id++)
+		for (int gpu_id = 0; gpu_id < GetDeviceCount(module); gpu_id++)
 		{
-			logti("[%d] %d%%, %d%%, %d%%",
+			logti("[%s:%d] %d%%, %d%%, %d%%",
+				  cmn::GetStringFromCodecModuleId(module).CStr(),
 				  gpu_id,
-				  GetUtilization(IPType::DECODER, cmn::MediaCodecModuleId::NVENC, gpu_id),
-				  GetUtilization(IPType::ENCODER, cmn::MediaCodecModuleId::NVENC, gpu_id),
-				  GetUtilization(IPType::SCALER, cmn::MediaCodecModuleId::NVENC, gpu_id));
+				  GetUtilization(IPType::DECODER, module, gpu_id),
+				  GetUtilization(IPType::ENCODER, module, gpu_id),
+				  GetUtilization(IPType::SCALER, module, gpu_id));
 		}
-		std::this_thread::sleep_for(std::chrono::seconds(5));
 	}
-#endif
 }
-
-#if 0 // Example code for XMA
-	logte("================================================================");
-	logte(" Compute Unit Reserve & Release");
-	logte("================================================================");
-	logte("Devices Count: %d", xma_num_devices());
-
-	xrmContext *xrm_ctx = (xrmContext *)xrmCreateCoentxt(XRM_API_VERSION_1);
-	if (xrm_ctx == NULL)
-	{
-		logte("xrmCreateContext: Failed");
-	}			
-
-	if (xrmIsDaemonRunning(xrm_ctx) == true)
-		logte("XRM daemon : running");
-	else
-	{
-		logte("XRM daemon : NOT running");
-		return;
-	}
-
-	xrmCuPoolPropertyV2 cu_pool_prop;
-	int32_t ret = xrmCheckCuPoolAvailableNumV2(xrm_ctx, &cu_pool_prop);
-	if ( ret < 0)
-	{
-		logte("xrmCheckCuPoolAvailableNum: %d", ret);
-		return;
-	}
-
-	std::vector<std::string> cu_kernel_names;
-	// cu_kernel_names.push_back("scaler");
-	// cu_kernel_names.push_back("lookahead");
-	cu_kernel_names.push_back("decoder");
-	// cu_kernel_names.push_back("encoder");
-	// cu_kernel_names.push_back("kernel_vcu_decoder");
-	// cu_kernel_names.push_back("kernel_vcu_decoder");
-	// cu_kernel_names.push_back("VCU");
-
-	
-	// for (dev_id = 0; dev_id < xma_num_devices(); dev_id++)
-	// {
-
-	// 	for (const auto &kernel_name : cu_kernel_names)
-	// 	{
-	// 		xrmCuPoolProperty
-	// 		xrmCuProperty cu_prop;
-	// 		xrmCuResource cu_res;
-	// 		xrmCuStat cu_stat;
-
-	// 		uint32_t available_num  =0;
-
-	// 		strcpy(cu_prop.kernelName, kernel_name.c_str());
-	// 		strcpy(cu_prop.kernelAlias, "");
-	// 		cu_prop.devExcl = false;
-	// 		cu_prop.requestLoad = 100; // 0~100%
-	// 		cu_prop.poolId = 0;
-
-
-							
-	// 		logti("deviceId:%d, name:%s, available_num:%d", dev_id, kernel_name.c_str(), available_num);
-
-
-	// 	}
-	// }
-
-
-	for (const auto &kernel_name : cu_kernel_names)
-	{
-		logte("----------------------------------------------------------------");
-
-		xrmCuProperty cu_prop;
-		xrmCuResource cu_res;
-		xrmCuStat cu_stat;
-
-		strcpy(cu_prop.kernelName, kernel_name.c_str());
-		strcpy(cu_prop.kernelAlias, "");
-		cu_prop.devExcl = false;
-		cu_prop.requestLoad = 0; // 0~100%
-		cu_prop.poolId = 0;
-
-		int32_t ret = xrmCheckCuAvailableNum(xrm_ctx, &cu_prop);
-		if (ret < 0) {
-			logte("xrmCheckCuAvailableNum: Failed");
-		} else {
-			logte("AvailableNum: %d", ret);
-		}
-		uint32_t available_num = ret;
-
-		ret = xrmCuAlloc(xrm_ctx, &cu_prop, &cu_res);
-		if (ret != 0) {
-			logte("xrmCuAlloc: Failed \n");
-		} else {
-			logte("cuId: %d", cu_res.cuId);
-			// logte("xclbinFileName: %s", cu_res.xclbinFileName);
-			logte("PluginFileName: %s", cu_res.kernelPluginFileName);
-			logte("kernelName: %s", cu_res.kernelName);
-			logte("instanceName: %s", cu_res.instanceName);
-			logte("cuName: %s", cu_res.cuName);
-			logte("kernelAlias: %s", cu_res.kernelAlias);
-			logte("deviceId: %d", cu_res.deviceId);
-			
-			logte("channelId: %d", cu_res.channelId);
-			logte("cuType: %d", cu_res.cuType);
-			logte("baseAddr: 0x%lx", cu_res.baseAddr);
-			// logte("membankId: %d", cu_res.membankId);
-			// logte("membankType: %d", cu_res.membankType);
-			// logte("membankSize: 0x%lx", cu_res.membankSize);
-			// logte("membankBaseAddr: 0x%lx", cu_res.membankBaseAddr);
-			logte("allocServiceId: %lu", cu_res.allocServiceId);
-			logte("poolId: %lu", cu_res.poolId);
-			logte("channelLoad: %d", cu_res.channelLoad);
-		}
-
-		if (!xrmCuRelease(xrm_ctx, &cu_res))
-		{
-			logte("xrmCuRelease: Failed");
-		}
-
-		uint64_t max_capacity = xrmCuGetMaxCapacity(xrm_ctx, &cu_prop);
-    	logte("Max Capacity: %lu", max_capacity);
-
-		ret = xrmCuCheckStatus(xrm_ctx, &cu_res, &cu_stat);
-		if (ret != 0)
-		{
-			logte("xrmCuCheckStatus: Failed");
-			// continue;
-		}
-		
-		logte("IsBusy: %s", cu_stat.isBusy?"true":"false");
-		logte("UsedLoad:  %d", cu_stat.usedLoad);
-
-		logte("[%s] AvailableNum(%d)", kernel_name.c_str(), available_num);
-	
-	}
-
-	if (xrmDestroyContext(xrm_ctx) != XRM_SUCCESS)
-	{
-		logte("xrmDestroyContext: Failed");
-	}
-#endif	
-
-#if 0 // Example code for NVML
-	while (false)
-	{
-		nvmlReturn_t result;
-
-		result = nvmlInit();
-		if (result != NVML_SUCCESS)
-		{
-			std::cerr << "Failed to initialize NVML: " << nvmlErrorString(result) << std::endl;
-			return;
-		}
-
-		unsigned int device_count;
-		result = nvmlDeviceGetCount(&device_count);
-		if (result != NVML_SUCCESS)
-		{
-			std::cerr << "Failed to get device count: " << nvmlErrorString(result) << std::endl;
-			nvmlShutdown();
-			return;
-		}
-
-		for (unsigned int i = 0; i < device_count; i++)
-		{
-			nvmlDevice_t device;
-			result = nvmlDeviceGetHandleByIndex(i, &device);
-			if (result != NVML_SUCCESS)
-			{
-				std::cerr << "Failed to get device handle: " << nvmlErrorString(result) << std::endl;
-				continue;
-			}
-
-			// GPU 이름 조회
-			char name[NVML_DEVICE_NAME_BUFFER_SIZE];
-			nvmlDeviceGetName(device, name, sizeof(name));
-
-			// NVENC 사용량 조회
-			nvmlEncoderType_t encoderQueryType = NVML_ENCODER_QUERY_H264;
-			unsigned int encCapacity;
-			result = nvmlDeviceGetEncoderCapacity(device, encoderQueryType, &encCapacity);
-			if (result != NVML_SUCCESS)
-			{
-				std::cerr << "Failed to get encoder counts: " << nvmlErrorString(result) << std::endl;
-				continue;
-			}
-			unsigned int encSessionCnt;
-			unsigned int encAvrgFps;
-			unsigned int encAvrgLatency;
-			nvmlDeviceGetEncoderStats(device, &encSessionCnt, &encAvrgFps, &encAvrgLatency);
-
-
-			unsigned int encUtilization;
-			unsigned int encSamplingPeriod;
-			nvmlDeviceGetEncoderUtilization(device, &encUtilization, &encSamplingPeriod);
-
-			unsigned int decUtilization;
-			unsigned int decSamplingPeriod;
-			nvmlDeviceGetDecoderUtilization(device, &decUtilization, &decSamplingPeriod);
-
-			unsigned int pciTxBytes, pciRxBytes;
-			nvmlDeviceGetPcieThroughput(device, NVML_PCIE_UTIL_TX_BYTES, &pciTxBytes);
-			nvmlDeviceGetPcieThroughput(device, NVML_PCIE_UTIL_RX_BYTES, &pciRxBytes);
-
-			// nvmlReturn_t DECLDIR nvmlDeviceGetDecoderUtilization(nvmlDevice_t device, unsigned int *utilization, unsigned int *encSamplingPeriod);
-
-			nvmlPciInfo_t pciInfo;
-			nvmlDeviceGetPciInfo(device, &pciInfo);
-
-			fprintf(stdout, "nvml[%d][%-40s][BudID:%d] dec.utilization:%d%%, enc.session:%d enc.avgfps:%d enc.latency:%d enc.utilization:%d%%, enc.capcity:%d, PCI Tx:%.2fMB/Rx:%.2fMB \n",
-				  i, name, pciInfo.bus, decUtilization, encSessionCnt, encAvrgFps, encAvrgLatency, encUtilization, encCapacity, (double)pciTxBytes/1000000*50, (double)pciRxBytes/1000000*50);
-		}
-
-		// NVML 종료
-		nvmlShutdown();
-
-		// 1초간 슬립
-		std::this_thread::sleep_for(std::chrono::seconds(10));
-	}
-#endif
