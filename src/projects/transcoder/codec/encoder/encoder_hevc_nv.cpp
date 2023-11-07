@@ -10,6 +10,7 @@
 
 #include <unistd.h>
 
+#include "../../transcoder_gpu.h"
 #include "../../transcoder_private.h"
 
 bool EncoderHEVCxNV::SetCodecParams()
@@ -82,6 +83,13 @@ bool EncoderHEVCxNV::Configure(std::shared_ptr<MediaTrack> context)
 	if (_codec_context == nullptr)
 	{
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		return false;
+	}
+
+	_codec_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, context->GetCodecDeviceId()));
+	if(_codec_context->hw_device_ctx == nullptr)
+	{
+		logte("Could not allocate hw device context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
 

@@ -75,9 +75,6 @@ public:
 	void SetBFrames(int32_t b_frames);
 	int32_t GetBFrames();
 
-	void SetHardwareAccel(bool hwaccel);
-	bool GetHardwareAccel() const;
-
 protected:
 
 	// framerate (measurement)
@@ -111,9 +108,6 @@ protected:
 	// Colorspace of video
 	// This variable is temporarily used in the Pixel Format defined by FFMPEG.
 	int _colorspace;	
-
-	// Enable hardware acceleration
-	bool _use_hwaccel;
 
 	// Preset for encoder (set by user)
 	ov::String _preset;

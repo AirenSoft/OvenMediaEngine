@@ -22,8 +22,8 @@ namespace cfg
 				{
 				protected:
 					ov::String _name;
-					bool _active = true;
 					ov::String _codec;
+					ov::String _modules;
 					int _width = 0;
 					int _height = 0;
 					double _framerate = 0.0;
@@ -31,8 +31,8 @@ namespace cfg
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
-					CFG_DECLARE_CONST_REF_GETTER_OF(IsActive, _active)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetCodec, _codec)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetModules, _modules);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetWidth, _width)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetHeight, _height)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFramerate, _framerate)
@@ -44,8 +44,8 @@ namespace cfg
 					void MakeList() override
 					{
 						Register<Optional>("Name", &_name);
-						Register<Optional>("Active", &_active);
 						Register<Optional>("Codec", &_codec);
+						Register<Optional>("Modules", &_modules);
 						Register<Optional>("Width", &_width);
 						Register<Optional>("Height", &_height);
 						Register<Optional>("Framerate", &_framerate);

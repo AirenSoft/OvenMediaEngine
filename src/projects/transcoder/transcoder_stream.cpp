@@ -386,10 +386,10 @@ int32_t TranscoderStream::CreateOutputStreams()
 {
 	int32_t created_count = 0;
 
-	// Get the output  to make the output stream
+	// Get the output profile to make the output stream
 	auto cfg_output_profile_list = GetOutputProfilesCfg()->GetOutputProfileList();
-
-	for (const auto &cfg_output_profile :cfg_output_profile_list)
+	
+	for (const auto &cfg_output_profile : cfg_output_profile_list)
 	{
 		auto output_stream = CreateOutputStream(cfg_output_profile);
 		if (output_stream == nullptr)
@@ -415,23 +415,23 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 		return nullptr;
 	}
 
-	auto stream = std::make_shared<info::Stream>(_application_info, StreamSourceType::Transcoder);
-	if (stream == nullptr)
+	auto output_stream = std::make_shared<info::Stream>(_application_info, StreamSourceType::Transcoder);
+	if (output_stream == nullptr)
 	{
 		return nullptr;
 	}
 
 	// It helps modules to recognize origin stream from provider
-	stream->LinkInputStream(_input_stream);
-	stream->SetMediaSource(_input_stream->GetUUID());
+	output_stream->LinkInputStream(_input_stream);
+	output_stream->SetMediaSource(_input_stream->GetUUID());
 
-	// Create a new stream name.
+	// Create a output stream name.
 	auto name = cfg_output_profile.GetOutputStreamName();
 	if (::strstr(name.CStr(), "${OriginStreamName}") != nullptr)
 	{
 		name = name.Replace("${OriginStreamName}", _input_stream->GetName());
 	}
-	stream->SetName(name);
+	output_stream->SetName(name);
 
 	// Playlist
 	bool is_parsed = false;
@@ -449,11 +449,11 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 				playlist->AddRendition(std::make_shared<info::Rendition>(cfg_rendition.GetName(), cfg_rendition.GetVideoName(), cfg_rendition.GetAudioName()));
 			}
 
-			stream->AddPlaylist(playlist);
+			output_stream->AddPlaylist(playlist);
 		}
 	}
 
-	// Output Track
+	// Create a Output Track
 	for (auto &[input_track_id, input_track] : _input_stream->GetTracks())
 	{
 		switch (input_track->GetMediaType())
@@ -469,10 +469,9 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 						continue;
 					}
 
-					stream->AddTrack(output_track);
+					output_stream->AddTrack(output_track);
 
-					auto profile_sign = GetIdentifiedForVideoProfile(input_track_id, profile);
-					AddComposite(profile_sign, _input_stream, input_track, stream, output_track);
+					AddComposite(GetIdentifiedForVideoProfile(input_track_id, profile), _input_stream, input_track, output_stream, output_track);
 				}
 
 				// Image Profile
@@ -485,10 +484,9 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 						continue;
 					}
 
-					stream->AddTrack(output_track);
+					output_stream->AddTrack(output_track);
 
-					auto profile_sign = GetIdentifiedForImageProfile(input_track_id, profile);
-					AddComposite(profile_sign, _input_stream, input_track, stream, output_track);
+					AddComposite(GetIdentifiedForImageProfile(input_track_id, profile), _input_stream, input_track, output_stream, output_track);
 				}
 			}
 			break;
@@ -503,10 +501,9 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 						continue;
 					}
 
-					stream->AddTrack(output_track);
+					output_stream->AddTrack(output_track);
 
-					auto profile_sign = GetIdentifiedForAudioProfile(input_track_id, profile);
-					AddComposite(profile_sign, _input_stream, input_track, stream, output_track);
+					AddComposite(GetIdentifiedForAudioProfile(input_track_id, profile), _input_stream, input_track, output_stream, output_track);
 				}
 			}
 			break;
@@ -520,10 +517,9 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 						continue;
 					}
 
-					stream->AddTrack(output_track);
+					output_stream->AddTrack(output_track);
 
-					auto profile_sign = GetIdentifiedForDataProfile(input_track_id);
-					AddComposite(profile_sign, _input_stream, input_track, stream, output_track);
+					AddComposite(GetIdentifiedForDataProfile(input_track_id), _input_stream, input_track, output_stream, output_track);
 			}
 			break;
 			default: {
@@ -533,7 +529,7 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 		}
 	}	
 
-	return stream;
+	return output_stream;
 }
 
 int32_t TranscoderStream::BuildComposite()
@@ -679,59 +675,69 @@ void TranscoderStream::AddComposite(
 
 int32_t TranscoderStream::CreateDecoders()
 {
-	int32_t created_decoder_count = 0;
+	int32_t created_ount = 0;
 
 	for (auto &[input_track_id, decoder_id] : _link_input_to_decoder)
 	{
-		auto it = _input_stream->GetTracks().find(input_track_id);
-		if (it == _input_stream->GetTracks().end())
+		// Get Input Track
+		auto it = GetInputStream()->GetTracks().find(input_track_id);
+		if (it == GetInputStream()->GetTracks().end())
 		{
 			continue;
 		}
 		auto &input_track = it->second;
 
-		// Enabled for hardware accelerators
-		input_track->SetHardwareAccel(GetOutputProfilesCfg()->IsHardwareAcceleration());
-
-		// Deprecated
-		// Set the number of b frames for compatibility with specific encoders.
-		// Default is 16. refer to .../config/.../applications/decodes.h
-		// [[maybe_unused]] auto h264_has_bframes = _application_info.GetConfig().GetDecodes().GetH264hasBFrames();
-		// transcode_context->SetH264hasBframes(h264_has_bframes);
-
-		if (CreateDecoder(decoder_id, input_track) == false)
+		// Create Decoder
+		if (CreateDecoder(decoder_id, GetInputStream(), input_track) == false)
 		{
 			continue;
 		}
 
-		created_decoder_count++;
+		created_ount++;
 	}
 
-	return created_decoder_count;
+	return created_ount;
 }
 
-
-bool TranscoderStream::CreateDecoder(int32_t decoder_id, std::shared_ptr<MediaTrack> input_track)
+bool TranscoderStream::CreateDecoder(int32_t decoder_id, std::shared_ptr<info::Stream> input_stream, std::shared_ptr<MediaTrack> input_track)
 {
 	std::lock_guard<std::shared_mutex> decoder_lock(_decoder_map_mutex);
 
-	logtd("[%s/%s(%u)] Create Decoder. InputTrack(%d) > Decoder(%d)", _input_stream->GetApplicationName(), _input_stream->GetName().CStr(), _input_stream->GetId(), input_track->GetId(), decoder_id);
-
-	if(_decoders.find(decoder_id) != _decoders.end())
+	// If there is an existing decoder, do not create decoder
+	if (_decoders.find(decoder_id) != _decoders.end())
 	{
-		logtw("[%s/%s(%u)] Decoder already exists. InputTrack(%d) > Decoder(%d)", _input_stream->GetApplicationName(), _input_stream->GetName().CStr(), _input_stream->GetId(), input_track->GetId(), decoder_id);
+		logtw("%s Decoder already exists. InputTrack(%d) > Decoder(%d)", _log_prefix.CStr(), input_track->GetId(), decoder_id);
+
 		return true;
 	}
 
-	auto decoder = TranscodeDecoder::Create(decoder_id, *_input_stream, input_track, bind(&TranscoderStream::OnDecodedFrame, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	// Get HWAccels configuration
+	auto cfg_hwaccels = GetOutputProfilesCfg()->GetHWAccels();
+
+	// Get a list of available decoder candidates.
+	auto candidates = TranscodeDecoder::GetCandidates(cfg_hwaccels.GetDecoder().IsEnable(), cfg_hwaccels.GetDecoder().GetModules(), input_track);
+	if(candidates == nullptr)
+	{
+		logte("%s Decoder candidates are not found. InputTrack(%d)", _log_prefix.CStr(), input_track->GetId());
+		return false;
+	}
+
+	// Create a decoder
+	auto decoder = TranscodeDecoder::Create(
+		decoder_id,
+		*(input_stream),
+		input_track,
+		candidates,
+		bind(&TranscoderStream::OnDecodedFrame, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	if (decoder == nullptr)
 	{
-		logte("[%s/%s(%u)] Decoder allocation failed", _input_stream->GetApplicationName(), _input_stream->GetName().CStr(), _input_stream->GetId());
-
+		logte("%s Decoder allocation failed", _log_prefix.CStr());
 		return false;
 	}
 
 	_decoders[decoder_id] = std::move(decoder);
+
+	logtd("%s Create Decoder. InputTrack(%d) > Decoder(%d)", _log_prefix.CStr(), input_track->GetId(), decoder_id);
 
 	return true;
 }
@@ -769,8 +775,6 @@ int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 			logtd("[%s/%s(%u)] InputTrack(%d) > Encoder(%d) > StreamName(%s) > OutputTrack(%d)", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId(),
 				  track_id, encoder_id, output_stream->GetName().CStr(), output_track->GetId());
 
-			output_track->SetHardwareAccel(GetOutputProfilesCfg()->IsHardwareAcceleration());
-
 			if (CreateEncoder(encoder_id, output_stream, output_track) == false)
 			{
 				logte("[%s/%s(%u)] Could not create encoder. Encoder(%d), OutputTrack(%d)", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId(), encoder_id, output_track->GetId());
@@ -797,7 +801,7 @@ int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 	return 0;
 }
 
-bool TranscoderStream::CreateEncoder(int32_t encoder_id, std::shared_ptr<info::Stream> &output_stream, std::shared_ptr<MediaTrack> &output_track)
+bool TranscoderStream::CreateEncoder(int32_t encoder_id, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track)
 {
 	std::lock_guard<std::shared_mutex> encoder_lock(_encoder_map_mutex);
 
@@ -808,7 +812,18 @@ bool TranscoderStream::CreateEncoder(int32_t encoder_id, std::shared_ptr<info::S
 		return true;
 	}
 
-	auto encoder = TranscodeEncoder::Create(encoder_id, *output_stream, output_track, bind(&TranscoderStream::OnEncodedPacket, this, std::placeholders::_1, std::placeholders::_2));
+	// Get HWAccels configuration
+	auto cfg_hwaccels = GetOutputProfilesCfg()->GetHWAccels();
+
+	// Get a list of available encoder candidates.
+	auto candidates = TranscodeEncoder::GetCandidates(cfg_hwaccels.GetEncoder().IsEnable(), cfg_hwaccels.GetEncoder().GetModules(), output_track);
+	if(candidates == nullptr)
+	{
+		logte("%s Decoder candidates are not found. InputTrack(%d)", _log_prefix.CStr(), output_track->GetId());
+		return false;
+	}
+
+	auto encoder = TranscodeEncoder::Create(encoder_id, *output_stream, output_track, candidates, bind(&TranscoderStream::OnEncodedPacket, this, std::placeholders::_1, std::placeholders::_2));
 	if (encoder == nullptr)
 	{
 		return false;

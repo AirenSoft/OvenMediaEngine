@@ -23,8 +23,9 @@ namespace cfg
 				protected:
 					ov::String _name;
 					bool _bypass = false;
-					bool _active = true;
 					ov::String _codec;
+					ov::String _modules;
+					
 					int _width = 0;
 					int _height = 0;
 					int _bitrate = 0;
@@ -36,11 +37,12 @@ namespace cfg
 					int _b_frames = 0;
 					BypassIfMatch _bypass_if_match;
 					ov::String _profile;
+					
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsBypass, _bypass)
-					CFG_DECLARE_CONST_REF_GETTER_OF(IsActive, _active)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetModules, _modules);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetCodec, _codec)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetWidth, _width)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetHeight, _height)
@@ -56,7 +58,6 @@ namespace cfg
 
 					void SetName(const ov::String &name){_name = name;}
 					void SetBypass(bool bypass){_bypass = bypass;}
-					void SetActive(bool active){_active = active;}
 					void SetCodec(const ov::String &codec){_codec = codec;}
 					void SetWidth(int width){_width = width;}
 					void SetHeight(int height){_height = height;}
@@ -73,11 +74,12 @@ namespace cfg
 					{
 						Register<Optional>("Name", &_name);
 						Register<Optional>("Bypass", &_bypass);
-						Register<Optional>("Active", &_active);
-						Register<Optional>("Codec", &_codec, [=]() -> std::shared_ptr<ConfigError> {
-							// <Codec> is an option when _bypass is true
-							return (_bypass) ? nullptr : CreateConfigErrorPtr("Codec must be specified when bypass is false");
-						});
+						Register<Optional>("Codec", &_codec, 
+							[=]() -> std::shared_ptr<ConfigError> {
+								// <Codec> is an option when _bypass is true
+								return (_bypass) ? nullptr : CreateConfigErrorPtr("Codec must be specified when bypass is false");
+							});
+						Register<Optional>("Modules", &_modules);
 						Register<Optional>("Bitrate", &_bitrate_string,	
 							[=]() -> std::shared_ptr<ConfigError> {
 								// <Bitrate> is an option when _bypass is true
@@ -102,24 +104,27 @@ namespace cfg
 						Register<Optional>("Width", &_width);
 						Register<Optional>("Height", &_height);
 						Register<Optional>("Framerate", &_framerate);
-
-						Register<Optional>("Preset", &_preset, nullptr, [=]() -> std::shared_ptr<ConfigError> {
-							auto preset = _preset.LowerCaseString();
-							if(preset == "slower" || preset == "slow" || preset == "medium" || preset == "fast" || preset == "faster")
-							{
-								return nullptr;
-							}
-							return CreateConfigErrorPtr("Preset must be slower, slow, medium, fast, or faster");
-						});
+						Register<Optional>("Preset", &_preset, nullptr, 
+							[=]() -> std::shared_ptr<ConfigError> {
+								auto preset = _preset.LowerCaseString();
+								if(preset == "slower" || preset == "slow" || preset == "medium" || preset == "fast" || preset == "faster")
+								{
+									return nullptr;
+								}
+								return CreateConfigErrorPtr("Preset must be slower, slow, medium, fast, or faster");
+							});
 						Register<Optional>("ThreadCount", &_thread_count);
-						Register<Optional>("KeyFrameInterval", &_key_frame_interval, nullptr, [=]() -> std::shared_ptr<ConfigError> {
+						Register<Optional>("KeyFrameInterval", &_key_frame_interval, nullptr, 
+							[=]() -> std::shared_ptr<ConfigError> {
 								return (_key_frame_interval >= 0 && _key_frame_interval <= 600) ? nullptr : CreateConfigErrorPtr("KeyFrameInterval must be between 0 and 600");
 							});
-						Register<Optional>("BFrames", &_b_frames, nullptr, [=]() -> std::shared_ptr<ConfigError> {
+						Register<Optional>("BFrames", &_b_frames, nullptr, 
+							[=]() -> std::shared_ptr<ConfigError> {
 								return (_b_frames >= 0 && _b_frames <= 16) ? nullptr : CreateConfigErrorPtr("BFrames must be between 0 and 16");
 							});
 						Register<Optional>("BypassIfMatch", &_bypass_if_match);
-						Register<Optional>("Profile", &_profile, nullptr, [=]() -> std::shared_ptr<ConfigError> {
+						Register<Optional>("Profile", &_profile, nullptr, 
+							[=]() -> std::shared_ptr<ConfigError> {
 							auto profile = _profile.LowerCaseString();
 							if(profile == "baseline" || profile == "main" || profile == "high")
 							{

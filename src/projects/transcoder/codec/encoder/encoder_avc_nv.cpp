@@ -116,8 +116,13 @@ bool EncoderAVCxNV::Configure(std::shared_ptr<MediaTrack> context)
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
-	_codec_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContextNV());
-
+	_codec_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, context->GetCodecDeviceId()));
+	if(_codec_context->hw_device_ctx == nullptr)
+	{
+		logte("Could not allocate hw device context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		return false;
+	}
+	
 	if (SetCodecParams() == false)
 	{
 		logte("Could not set codec parameters for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
@@ -145,6 +150,7 @@ bool EncoderAVCxNV::Configure(std::shared_ptr<MediaTrack> context)
 
 		return false;
 	}
+
 
 	return true;
 }

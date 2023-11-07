@@ -20,10 +20,11 @@ public:
 	TranscodeDecoder(info::Stream stream_info);
 	~TranscodeDecoder() override;
 
-	static std::shared_ptr<TranscodeDecoder> Create(int32_t decoder_id, const info::Stream &info, std::shared_ptr<MediaTrack> track,  CompleteHandler complete_handler);
+	static std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> GetCandidates(bool hwaccels_enable, ov::String hwaccles_moduels, std::shared_ptr<MediaTrack> track);
+	static std::shared_ptr<TranscodeDecoder> Create(int32_t decoder_id, const info::Stream &info, std::shared_ptr<MediaTrack> track, std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidates, CompleteHandler complete_handler);
 
 	void SetDecoderId(int32_t decoder_id);
-
+	
 	bool Configure(std::shared_ptr<MediaTrack> track) override;
 
 	void SendBuffer(std::shared_ptr<const MediaPacket> packet) override;
@@ -44,6 +45,7 @@ public:
 
 protected:
 	int32_t _decoder_id;
+	int32_t _gpu_id = -1;
 
 	std::shared_ptr<MediaTrack> _track;
 

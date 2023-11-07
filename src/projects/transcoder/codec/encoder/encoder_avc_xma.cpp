@@ -65,6 +65,8 @@ bool EncoderAVCxXMA::SetCodecParams()
 	::av_opt_set(_codec_context->priv_data, "avc-lowlat", "enable", 0);
 	::av_opt_set(_codec_context->priv_data, "disable-pipeline", "enable", 0);
 	
+	::av_opt_set_int(_codec_context->priv_data, "lxlnx_hwdev", GetRefTrack()->GetCodecDeviceId(), 0);
+
 	auto preset = GetRefTrack()->GetPreset().LowerCaseString();
 	if (preset.IsEmpty() == false)
 	{

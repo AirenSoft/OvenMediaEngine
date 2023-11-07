@@ -9,6 +9,7 @@
 #pragma once
 
 #include "./output_profile.h"
+#include "./hwaccels/hwaccels.h"
 
 namespace cfg
 {
@@ -22,16 +23,25 @@ namespace cfg
 				{
 				protected:
 					bool _hwaccel = false;
+					HWAccels _hwaccels;
 					std::vector<OutputProfile> _output_profiles;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsHardwareAcceleration, _hwaccel);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetHWAccels, _hwaccels);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetOutputProfileList, _output_profiles);
 
 				protected:
 					void MakeList() override
 					{
-						Register<Optional>("HardwareAcceleration", &_hwaccel);
+						// Deprecated
+						// Changed to <HWAccels> option.
+						Register<Optional>("HardwareAcceleration", &_hwaccel,
+							[=]() -> std::shared_ptr<ConfigError> {
+								return CreateConfigErrorPtr("The 'HardwareAcceleration' option is deprecated. Please use the 'HWAccels' option.");
+							}
+						);
+						Register<Optional>({"HWAccels", "hwaccels"}, &_hwaccels);
 						Register<Optional>("OutputProfile", &_output_profiles);
 					}
 				};

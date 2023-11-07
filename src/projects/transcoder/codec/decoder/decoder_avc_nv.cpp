@@ -67,10 +67,15 @@ bool DecoderAVCxNV::InitCodec()
 		return false;
 	}
 
+	_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, _track->GetCodecDeviceId()));
+	if(_context->hw_device_ctx == nullptr)
+	{
+		logte("Could not allocate hw device context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		return false;
+	}
+
 	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 	_context->pkt_timebase = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
-
-	_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContextNV());
 	_context->flags |= AV_CODEC_FLAG_LOW_DELAY;
 
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)

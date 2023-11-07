@@ -209,11 +209,3 @@ int32_t VideoTrack::GetHeightByConfig() const
 	return _height_conf;
 }
 
-void VideoTrack::SetHardwareAccel(bool hwaccel)
-{
-	_use_hwaccel = hwaccel;
-}
-bool VideoTrack::GetHardwareAccel() const
-{
-	return _use_hwaccel;
-}

@@ -96,6 +96,8 @@ bool DecoderHEVCxXMA::InitCodec()
 		::memcpy(_context->extradata,  reinterpret_cast<const uint8_t *>(extra_data->GetData()), _context->extradata_size);
 	}
 
+	::av_opt_set_int(_context->priv_data, "lxlnx_hwdev", _track->GetCodecDeviceId(), 0);
+
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());

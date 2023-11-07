@@ -155,8 +155,8 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 	// When using an XMA scaler, resource allocation failures may occur intermittently.
 	// Avoid problems in this way until the underlying problem is resolved.
 	if (_internal->GetState() == FilterBase::State::ERROR &&
-		_input_track->GetCodecLibraryId() == cmn::MediaCodecLibraryId::XMA &&
-		_output_track->GetCodecLibraryId() == cmn::MediaCodecLibraryId::XMA)
+		_input_track->GetCodecModuleId() == cmn::MediaCodecModuleId::XMA &&
+		_output_track->GetCodecModuleId() == cmn::MediaCodecModuleId::XMA)
 	{
 		logtw("It is assumed that the XMA resource allocation failed. So, recreate the filter.");
 		return true;

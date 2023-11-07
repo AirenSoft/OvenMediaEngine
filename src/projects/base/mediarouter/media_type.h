@@ -92,18 +92,18 @@ namespace cmn
 		Png,
 	};
 
-	enum class MediaCodecLibraryId : uint8_t
+	enum class MediaCodecModuleId : uint8_t
 	{
-		AUTO,
-		DEFAULT,
-		OPENH264,
-		BEAMR,
-		NVENC,
-		QSV,
-		XMA,
-		LIBVPX,
-		FDKAAC,
-		LIBOPUS,
+		None = 0,
+		DEFAULT,	// SW
+		OPENH264,	// SW
+		BEAMR,		// SW
+		NVENC,		// HW
+		QSV,		// HW
+		XMA,		// HW
+		LIBVPX,		// SW
+		FDKAAC,		// SW
+		LIBOPUS,	// SW
 		NB
 	};
 
@@ -222,70 +222,89 @@ namespace cmn
 		}
 	}
 
-	static cmn::MediaCodecLibraryId GetCodecLibraryIdByName(ov::String name)
+	static cmn::MediaCodecModuleId GetCodecModuleIdByName(ov::String name)
 	{
 		name.MakeUpper();
 
-		if (name.HasSuffix("_OPENH264"))
+		if (name.HasSuffix("_OPENH264") || name.HasSuffix("OPENH264"))
 		{
-			return cmn::MediaCodecLibraryId::OPENH264;
+			return cmn::MediaCodecModuleId::OPENH264;
 		}
-		else if (name.HasSuffix("_BEAMR"))
+		else if (name.HasSuffix("_BEAMR") || name.HasSuffix("BEAMR"))
 		{
-			return cmn::MediaCodecLibraryId::BEAMR;
+			return cmn::MediaCodecModuleId::BEAMR;
 		}
-		else if (name.HasSuffix("_NVENC"))
+		else if (name.HasSuffix("_NVENC") || name.HasSuffix("NV") || name.HasSuffix("NVENC"))
 		{
-			return cmn::MediaCodecLibraryId::NVENC;
+			return cmn::MediaCodecModuleId::NVENC;
 		}
-		else if (name.HasSuffix("_QSV"))
+		else if (name.HasSuffix("_QSV") || name.HasSuffix("QSV"))
 		{
-			return cmn::MediaCodecLibraryId::QSV;
+			return cmn::MediaCodecModuleId::QSV;
 		}
-		else if (name.HasSuffix("_XMA"))
+		else if (name.HasSuffix("_XMA") || name.HasSuffix("XMA"))
 		{
-			return cmn::MediaCodecLibraryId::XMA;
+			return cmn::MediaCodecModuleId::XMA;
 		}		
-		else if (name.HasSuffix("_LIBVPX"))
+		else if (name.HasSuffix("_LIBVPX") || name.HasSuffix("LIBVPX"))
 		{
-			return cmn::MediaCodecLibraryId::LIBVPX;
+			return cmn::MediaCodecModuleId::LIBVPX;
 		}
-		else if (name.HasSuffix("_FDKAAC"))
+		else if (name.HasSuffix("_FDKAAC") || name.HasSuffix("FDKAAC"))
 		{
-			return cmn::MediaCodecLibraryId::FDKAAC;
+			return cmn::MediaCodecModuleId::FDKAAC;
+		}
+		else if (name.HasSuffix("_DEFAULT") || name.HasSuffix("DEFAULT"))
+		{
+			return cmn::MediaCodecModuleId::DEFAULT;
 		}
 
-		return cmn::MediaCodecLibraryId::AUTO;
+		return cmn::MediaCodecModuleId::None;
 	}
 
-	static ov::String GetStringFromCodecLibraryId(cmn::MediaCodecLibraryId id)
+	static ov::String GetStringFromCodecModuleId(cmn::MediaCodecModuleId id)
 	{
 		switch (id)
 		{
-			case cmn::MediaCodecLibraryId::DEFAULT:
-				return "Default";
-			case cmn::MediaCodecLibraryId::OPENH264:
-				return "OpenH264";
-			case cmn::MediaCodecLibraryId::BEAMR:
-				return "Beamr";
-			case cmn::MediaCodecLibraryId::NVENC:
+			case cmn::MediaCodecModuleId::DEFAULT:
+				return "default";
+			case cmn::MediaCodecModuleId::OPENH264:
+				return "openh264";
+			case cmn::MediaCodecModuleId::BEAMR:
+				return "beamr";
+			case cmn::MediaCodecModuleId::NVENC:
 				return "nvenc";
-			case cmn::MediaCodecLibraryId::QSV:
+			case cmn::MediaCodecModuleId::QSV:
 				return "qsv";
-			case cmn::MediaCodecLibraryId::XMA:
+			case cmn::MediaCodecModuleId::XMA:
 				return "xma";				
-			case cmn::MediaCodecLibraryId::LIBVPX:
+			case cmn::MediaCodecModuleId::LIBVPX:
 				return "libvpx";
-			case cmn::MediaCodecLibraryId::FDKAAC:
+			case cmn::MediaCodecModuleId::FDKAAC:
 				return "fdkaac";
-			case cmn::MediaCodecLibraryId::LIBOPUS:
+			case cmn::MediaCodecModuleId::LIBOPUS:
 				return "libopus";
-			case cmn::MediaCodecLibraryId::AUTO:
+			case cmn::MediaCodecModuleId::None:
 			default:
 				break;
 		}
 
-		return "Auto";
+		return "none";
+	}
+
+	static bool IsSupportHWAccels(cmn::MediaCodecModuleId id)
+	{
+		switch(id)
+		{
+			case cmn::MediaCodecModuleId::NVENC:
+			case cmn::MediaCodecModuleId::QSV:
+			case cmn::MediaCodecModuleId::XMA:
+				return true;
+			default:
+				break;
+		}
+
+		return false;
 	}
 
 	static ov::String GetStringFromCodecId(cmn::MediaCodecId id)

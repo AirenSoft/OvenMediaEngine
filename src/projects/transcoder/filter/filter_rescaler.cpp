@@ -123,89 +123,114 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 		return false;
 	}
 
-	// 1. Colorpsace
-	enum AVPixelFormat pix_fmts[] = {(AVPixelFormat)output_track->GetColorspace(), AV_PIX_FMT_NONE};
-	ret = av_opt_set_int_list(_buffersink_ctx, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
-	if (ret < 0)
-	{
-		logte("Could not set output pixel format for rescaling: %d", ret);
-
-		SetState(State::ERROR);
-
-		return false;
-	}
-
 	std::vector<ov::String> filters;
 
-	// 2. Framerate
+	// 1. Framerate
+	// The frame rate value is always lower than the original, so it is advantageous to do it first.
 	if (output_track->GetFrameRateByConfig() > 0.0f)
 	{
 		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", output_track->GetFrameRateByConfig()));
 	}
 
-	// 3. Scaler
-	auto source_library_id = input_track->GetCodecLibraryId();
-	switch (source_library_id)
+	// 2. Scaler
+	auto input_module_id = input_track->GetCodecModuleId();
+	auto output_module_id = output_track->GetCodecModuleId();
+
+	switch (input_module_id)
 	{
-		case cmn::MediaCodecLibraryId::QSV: {
-			if (output_track->GetCodecLibraryId() == source_library_id)
+		case cmn::MediaCodecModuleId::NVENC: {
+			if (output_module_id == cmn::MediaCodecModuleId::NVENC)
 			{
 				filters.push_back(ov::String::FormatString(
-					"scale=%dx%d:flags=bilinear",
-					output_track->GetWidth(), output_track->GetHeight()));
+					"hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d,hwdownload",
+					output_track->GetCodecDeviceId(),
+					output_track->GetWidth(), 
+					output_track->GetHeight()));
 			}
-			else
+			else if (output_module_id == cmn::MediaCodecModuleId::XMA)
 			{
-				filters.push_back(ov::String::FormatString(
-					"scale=%dx%d:flags=bilinear",
-					output_track->GetWidth(), output_track->GetHeight()));
-			}
-		}
-		break;
-		case cmn::MediaCodecLibraryId::NVENC: {
-			if (output_track->GetCodecLibraryId() == source_library_id)
-			{
-				filters.push_back(ov::String::FormatString(
-					"hwupload_cuda,scale_cuda=w=%d:h=%d,hwdownload",
-					output_track->GetWidth(), output_track->GetHeight()));
-			}
-			else
-			{
+				// TODO:
 				// Copy GPU memory to Host memory
 				// To be compatible with other types of codecs, it is converted to yuv420p, a representative pixel format
 				filters.push_back(ov::String::FormatString(
-					"hwupload_cuda,scale_cuda=w=%d:h=%d:format=yuv420p,hwdownload,format=yuv420p",
-					output_track->GetWidth(), output_track->GetHeight()));
+					"hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d:format=yuv420p,hwdownload",
+					input_track->GetCodecDeviceId(),
+					output_track->GetWidth(), 
+					output_track->GetHeight()));
+			}
+			else {
+				// cmn::MediaCodecModuleId::DEFAULT 
+				// cmn::MediaCodecModuleId::QSV
+				// cmn::MediaCodecModuleId::ETC
+								
+				// Copy GPU memory to Host memory
+				// To be compatible with other types of codecs, it is converted to yuv420p, a representative pixel format
+				filters.push_back(ov::String::FormatString(
+					"hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d:format=yuv420p,hwdownload",
+					input_track->GetCodecDeviceId(),
+					output_track->GetWidth(),
+					output_track->GetHeight()));
 			}
 		}
 		break;
-		case cmn::MediaCodecLibraryId::XMA: {
-			if (output_track->GetCodecLibraryId() == source_library_id)
+		case cmn::MediaCodecModuleId::XMA: {
+			if (output_module_id == cmn::MediaCodecModuleId::NVENC)
+			{
+				// TODO
+				filters.push_back(ov::String::FormatString(
+					"xvbm_convert,scale=%dx%d:flags=bilinear",
+					output_track->GetWidth(), output_track->GetHeight()));
+			}
+			else if (output_module_id == cmn::MediaCodecModuleId::XMA)
 			{
 				_filter_graph->nb_threads = 1;
 				filters.push_back(ov::String::FormatString(
-					"multiscale_xma=outputs=1:out_1_width=%d:out_1_height=%d:out_1_rate=full",
-					output_track->GetWidth(), output_track->GetHeight()));
+					"multiscale_xma=lxlnx_hwdev=%d:outputs=1:out_1_width=%d:out_1_height=%d:out_1_rate=full",
+					output_track->GetCodecDeviceId(),
+					output_track->GetWidth(), 
+					output_track->GetHeight()));
 			}
 			else
 			{
+				// cmn::MediaCodecModuleId::DEFAULT 
+				// cmn::MediaCodecModuleId::QSV
+				// cmn::MediaCodecModuleId::ETC
+
 				// Copy GPU memory to Host memory
-				filters.push_back(ov::String::FormatString("xvbm_convert,scale=%dx%d:flags=bilinear",
-														   output_track->GetWidth(), output_track->GetHeight()));
+				filters.push_back(ov::String::FormatString(
+					"xvbm_convert,scale=%dx%d:flags=bilinear",
+					output_track->GetWidth(), output_track->GetHeight()));
 			}
 		}
 		break;
-		case cmn::MediaCodecLibraryId::DEFAULT:
+		case cmn::MediaCodecModuleId::QSV: {
+			filters.push_back(ov::String::FormatString(
+				"scale=%dx%d:flags=bilinear",
+				output_track->GetWidth(), output_track->GetHeight()));
+		}
+		break;		
+		case cmn::MediaCodecModuleId::DEFAULT:
 		default: {
-			// S/W Default Decoder -> S/W Openh264 Encoder
-			if (output_track->GetCodecLibraryId() == source_library_id)
+			if (output_module_id == cmn::MediaCodecModuleId::NVENC)
 			{
 				filters.push_back(ov::String::FormatString(
-					"scale=%dx%d:flags=bilinear",
+					"format=nv12,hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d:,hwdownload",
+					output_track->GetCodecDeviceId(),
 					output_track->GetWidth(), output_track->GetHeight()));
 			}
+			else if (output_module_id == cmn::MediaCodecModuleId::XMA)
+			{
+				// TODO
+				filters.push_back(ov::String::FormatString(
+					"format=nv12,hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d:,hwdownload",
+					output_track->GetCodecDeviceId(),
+					output_track->GetWidth(), output_track->GetHeight()));
+			}			
 			else
 			{
+				// cmn::MediaCodecModuleId::DEFAULT 
+				// cmn::MediaCodecModuleId::QSV
+				// cmn::MediaCodecModuleId::ETC
 				filters.push_back(ov::String::FormatString(
 					"scale=%dx%d:flags=bilinear",
 					output_track->GetWidth(), output_track->GetHeight()));
@@ -214,8 +239,19 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 		break;
 	}
 
-	// 4. Timebase
+	// 3. Timebase
 	filters.push_back(ov::String::FormatString("settb=%s", output_track->GetTimeBase().GetStringExpr().CStr()));
+
+	// 5. Pixel Format
+	// if(input_track->GetColorspace() != output_track->GetColorspace())
+	{
+		filters.push_back(ov::String::FormatString("format=%s", ::av_get_pix_fmt_name((AVPixelFormat)output_track->GetColorspace())));
+	}
+
+	if(filters.size() == 0)
+	{
+		filters.push_back("null");
+	}
 
 	ov::String output_filters = ov::String::Join(filters, ",");
 
@@ -233,7 +269,13 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	_inputs->pad_idx = 0;
 	_inputs->next = nullptr;
 
-	logti("Rescaler is enabled for track #%u -> #%u using parameters. input: %s / outputs: %s", input_track->GetId(), output_track->GetId(), input_filters.CStr(), output_filters.CStr());
+	logti("Rescaler parameters [#%u -> #%u][%s -> %s]. input: %s -> outputs: %s",
+		  input_track->GetId(),
+		  output_track->GetId(),
+		  GetStringFromCodecModuleId(input_track->GetCodecModuleId()).CStr(),
+		  GetStringFromCodecModuleId(output_track->GetCodecModuleId()).CStr(),
+		  input_filters.CStr(),
+		  output_filters.CStr());
 
 	if ((ret = ::avfilter_graph_parse_ptr(_filter_graph, output_filters, &_inputs, &_outputs, nullptr)) < 0)
 	{

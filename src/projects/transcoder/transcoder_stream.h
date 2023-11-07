@@ -154,6 +154,9 @@ private:
 	// DECODER_ID, DECODER
 	std::map<MediaTrackId, std::shared_ptr<TranscodeDecoder>> _decoders;
 	std::map<MediaTrackId, std::shared_ptr<MediaFrame>> _last_decoded_frames;
+	// Last timestamp decoded frame. 
+	// DECODER_ID, Timestamp(microseconds)
+	std::map<MediaTrackId, int64_t> _last_decoded_frame_pts;
 
 	// Filter Component
 	// FILTER_ID, FILTER
@@ -163,9 +166,6 @@ private:
 	// ENCODER_ID, ENCODER
 	std::map<MediaTrackId, std::shared_ptr<TranscodeEncoder>> _encoders;
 
-	// Last timestamp decoded frame. 
-	// DECODER_ID, Timestamp(microseconds)
-	std::map<MediaTrackId, int64_t> _last_decoded_frame_pts;
 
 
 	std::shared_ptr<MediaTrack> GetInputTrack(MediaTrackId track_id);
@@ -192,14 +192,14 @@ private:
 
 
 	int32_t CreateDecoders();
-	bool CreateDecoder(int32_t decoder_id, std::shared_ptr<MediaTrack> input_track);
+	bool CreateDecoder(int32_t decoder_id, std::shared_ptr<info::Stream> input_stream, std::shared_ptr<MediaTrack> input_track);
 
 	int32_t CreateFilters(MediaFrame *buffer);
 	bool CreateFilter(int32_t filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track);
 	std::shared_ptr<MediaTrack> GetInputTrackOfFilter(int32_t decoder_id);
 
 	int32_t CreateEncoders(MediaFrame *buffer);
-	bool CreateEncoder(int32_t encoder_id, std::shared_ptr<info::Stream> &output_stream, std::shared_ptr<MediaTrack> &output_track);
+	bool CreateEncoder(int32_t encoder_id, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
 
 
 	// Step 1: Decode (Decode a frame from given packets)

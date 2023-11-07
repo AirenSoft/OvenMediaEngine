@@ -23,8 +23,8 @@ namespace cfg
 				protected:
 					ov::String _name;
 					bool _bypass = false;
-					bool _active = true;
 					ov::String _codec;
+					ov::String _modules;
 					int _bitrate = 0;
 					ov::String _bitrate_string;
 					int _samplerate = 0;
@@ -34,8 +34,8 @@ namespace cfg
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsBypass, _bypass)
-					CFG_DECLARE_CONST_REF_GETTER_OF(IsActive, _active)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetCodec, _codec)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetModules, _modules);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBitrate, _bitrate)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBitrateString, _bitrate_string)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetSamplerate, _samplerate)
@@ -44,7 +44,6 @@ namespace cfg
 
 					void SetName(const ov::String &name){_name = name;}
 					void SetBypass(bool bypass){_bypass = bypass;}
-					void SetActive(bool active){_active = active;}
 					void SetCodec(const ov::String &codec){_codec = codec;}
 					void SetBitrate(int bitrate){_bitrate = bitrate;}
 					void SetBitrateString(const ov::String &bitrate_string){_bitrate_string = bitrate_string;}
@@ -56,11 +55,11 @@ namespace cfg
 					{
 						Register<Optional>("Name", &_name);
 						Register<Optional>("Bypass", &_bypass);
-						Register<Optional>("Active", &_active);
 						Register<Optional>("Codec", &_codec, [=]() -> std::shared_ptr<ConfigError> {
 							// <Codec> is an option when _bypass is true
 							return (_bypass) ? nullptr : CreateConfigErrorPtr("Codec must be specified when bypass is false");
 						});
+						Register<Optional>("Modules", &_modules);
 						Register<Optional>(
 							"Bitrate", &_bitrate_string,
 							[=]() -> std::shared_ptr<ConfigError> {

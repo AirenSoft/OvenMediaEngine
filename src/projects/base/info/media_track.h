@@ -28,13 +28,26 @@ public:
 	void SetId(uint32_t id);
 	uint32_t GetId() const;
 	
-	// Codec 
+	// Codec ID
 	void SetCodecId(cmn::MediaCodecId id);
 	cmn::MediaCodecId GetCodecId() const;
 
-	// Specific Codec Library ID
-	void SetCodecLibraryId(cmn::MediaCodecLibraryId id);
-	cmn::MediaCodecLibraryId GetCodecLibraryId() const;
+	// Codec Module ID (Used for transcoder)
+	void SetCodecModuleId(cmn::MediaCodecModuleId id);
+	cmn::MediaCodecModuleId GetCodecModuleId() const;
+
+	// When using multiple hardware acceleration devices, 
+	// this is the value to determine the device. (Used for transcoder)
+	void SetCodecDeviceId(int32_t id);
+	int32_t GetCodecDeviceId() const;
+
+	// This is a candidate list of decoder/encoder modules. (Used for transcoder)
+	// It is set from 
+	// 	- OutputProfiles.HWAccels.Encoder.Modules
+	//	- OutputProfiles.HWAccels.Decoder.Modules
+	// 	- OutputProfiles.OutputProfile.Encodes.Video.Modules
+	void SetCodecModules(const ov::String modules);
+	ov::String GetCodecModules() const;
 
 	// Variant Name (used for rendition of playlist)
 	void SetVariantName(const ov::String &name);
@@ -116,7 +129,9 @@ protected:
 
 	// Codec
 	cmn::MediaCodecId _codec_id;
-	cmn::MediaCodecLibraryId _codec_library_id;
+	cmn::MediaCodecModuleId _codec_module_id;
+	int32_t _codec_device_id;
+	ov::String _codec_modules;
 
 	// Variant Name : Original encoder profile that made this track 
 	// from <OutputProfile><Encodes>(<Video> || <Audio> || <Image>)<Name>

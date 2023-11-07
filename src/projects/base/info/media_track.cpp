@@ -19,7 +19,7 @@ MediaTrack::MediaTrack()
 	: _id(0),
 	  _media_type(MediaType::Unknown),
 	  _codec_id(MediaCodecId::None),
-	  _codec_library_id(cmn::MediaCodecLibraryId::AUTO),
+	  _codec_module_id(cmn::MediaCodecModuleId::None),
 	  _bitrate(0),
 	  _bitrate_conf(0),
 	  _byass(false),
@@ -33,8 +33,9 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 {
 	_id = media_track._id;
 	_media_type = media_track._media_type;
+
 	_codec_id = media_track._codec_id;
-	_codec_library_id = media_track._codec_library_id;
+	_codec_module_id = media_track._codec_module_id;
 
 	// Video
 	_framerate = media_track._framerate;
@@ -137,13 +138,34 @@ MediaCodecId MediaTrack::GetCodecId() const
 	return _codec_id;
 }
 
-void MediaTrack::SetCodecLibraryId(cmn::MediaCodecLibraryId id)
+void MediaTrack::SetCodecModuleId(cmn::MediaCodecModuleId id)
 {
-	_codec_library_id = id;
+	_codec_module_id = id;
 }
-cmn::MediaCodecLibraryId MediaTrack::GetCodecLibraryId() const
+
+cmn::MediaCodecModuleId MediaTrack::GetCodecModuleId() const
 {
-	return _codec_library_id;
+	return _codec_module_id;
+}
+
+void MediaTrack::SetCodecDeviceId(int32_t id)
+{
+	_codec_device_id = id;
+}
+
+int32_t MediaTrack::GetCodecDeviceId() const
+{
+	return _codec_device_id;
+}
+
+void MediaTrack::SetCodecModules(ov::String modules)
+{
+	_codec_modules = modules;
+}
+
+ov::String MediaTrack::GetCodecModules() const
+{
+	return _codec_modules;
 }
 
 void MediaTrack::SetOriginBitstream(cmn::BitstreamFormat format)
@@ -264,7 +286,7 @@ ov::String MediaTrack::GetInfoString()
 				"Public Name(%s) "
 				"Variant Name(%s) "
 				"Bitrate(%s) "
-				"Codec(%d,%s,%s) "
+				"Codec(%d,%s,%s:%d) "
 				"BSF(%s) "
 				"Resolution(%dx%d) "
 				"Framerate(%.2ffps) "
@@ -272,7 +294,7 @@ ov::String MediaTrack::GetInfoString()
 				"BFrames(%d) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
-				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecLibraryId(GetCodecLibraryId()).CStr(),
+				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecModuleId(GetCodecModuleId()).CStr(), GetCodecDeviceId(),
 				GetBitstreamFormatString(GetOriginBitstream()).CStr(),
 				GetWidth(), GetHeight(),
 				GetFrameRate(),
@@ -293,7 +315,7 @@ ov::String MediaTrack::GetInfoString()
 				"Channel(%s, %d) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
-				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecLibraryId(GetCodecLibraryId()).CStr(),
+				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecModuleId(GetCodecModuleId()).CStr(),
 				GetBitstreamFormatString(GetOriginBitstream()).CStr(),
 				ov::Converter::ToSiString(GetSampleRate(), 1).CStr(),
 				GetSample().GetName(), GetSample().GetSampleSize() * 8,
@@ -307,7 +329,7 @@ ov::String MediaTrack::GetInfoString()
 				"Codec(%d,%s,%s) "
 				"BSF(%s) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
-				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecLibraryId(GetCodecLibraryId()).CStr(),
+				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecModuleId(GetCodecModuleId()).CStr(),
 				GetBitstreamFormatString(GetOriginBitstream()).CStr());
 			break;
 
@@ -590,7 +612,7 @@ std::shared_ptr<MediaTrack> MediaTrack::Clone()
 	track->_public_name = _public_name;
 	track->_language = _language;
 	track->_codec_id = _codec_id;
-	track->_codec_library_id = _codec_library_id;
+	track->_codec_module_id = _codec_module_id;
 	track->_origin_bitstream_format = _origin_bitstream_format;	
 	track->_media_type = _media_type;
 	track->_time_base = _time_base;
@@ -618,7 +640,6 @@ std::shared_ptr<MediaTrack> MediaTrack::Clone()
 	track->_b_frames = _b_frames;
 	track->_has_bframe = _has_bframe;
 	track->_preset = _preset;
-	track->_use_hwaccel = _use_hwaccel;
 	track->_colorspace = _colorspace;
 
 	// Audio Track

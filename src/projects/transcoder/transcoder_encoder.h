@@ -20,9 +20,11 @@ public:
 	TranscodeEncoder(info::Stream stream_info);
 	~TranscodeEncoder() override;
 
-	static std::shared_ptr<TranscodeEncoder> Create(int32_t encoder_id, const info::Stream &info, std::shared_ptr<MediaTrack> output_track, CompleteHandler complete_handler);
-	void SetEncoderId(int32_t encoder_id);
+	static std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> GetCandidates(bool hwaccels_enable, ov::String hwaccles_modules, std::shared_ptr<MediaTrack> track);
+	static std::shared_ptr<TranscodeEncoder> Create(int32_t encoder_id, const info::Stream &info, std::shared_ptr<MediaTrack> output_track, std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidates, CompleteHandler complete_handler);
 
+	void SetEncoderId(int32_t encoder_id);
+	
 	virtual int GetSupportedFormat() const noexcept = 0;
 	virtual cmn::BitstreamFormat GetBitstreamFormat() const noexcept = 0;
 	bool Configure(std::shared_ptr<MediaTrack> output_track) override;

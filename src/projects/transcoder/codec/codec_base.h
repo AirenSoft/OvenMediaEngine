@@ -41,6 +41,38 @@ enum class TranscodeResult : int32_t
 	FormatChanged = 1,
 };
 
+class CodecCandidate
+{
+public:
+	CodecCandidate(cmn::MediaCodecId codec_id, cmn::MediaCodecModuleId module_id, int32_t device_id)
+		: _codec_id(codec_id),
+		  _module_id(module_id),
+		  _device_id(device_id)
+	{
+	}
+
+	cmn::MediaCodecModuleId GetModuleId() const
+	{
+		return _module_id;
+	}
+
+	int32_t GetDeviceId() const
+	{
+		return _device_id;
+	}
+
+	cmn::MediaCodecId GetCodecId() const
+	{
+		return _codec_id;
+	}
+
+private:
+	cmn::MediaCodecId _codec_id;
+	cmn::MediaCodecModuleId _module_id;
+	int32_t _device_id;
+};
+
+
 template <typename InputType, typename OutputType>
 class TranscodeBase
 {
