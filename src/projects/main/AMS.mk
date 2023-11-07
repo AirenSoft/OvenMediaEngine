@@ -78,7 +78,10 @@ $(call add_pkg_config,opus)
 $(call add_pkg_config,libsrtp2)
 $(call add_pkg_config,libpcre2-8)
 $(call add_pkg_config,hiredis)
+
+ifeq ($(call chk_pkg_exist,ffnvcodec),0)
 $(call add_pkg_config,ffnvcodec)
+endif
 
 # Enable Xilinx Media SDK
 ifeq ($(call chk_pkg_exist,libxma2api),0)
