@@ -72,4 +72,5 @@ private:
 	std::map<int, std::shared_ptr<OvtDepacketizer>> _depacketizers;
 	// When a client is disconnected ungracefully, this map helps to find stream and delete the session quickly
 	std::multimap<int, std::shared_ptr<OvtStream>> _remote_stream_map;
+	std::shared_mutex _remote_stream_map_lock;
 };
