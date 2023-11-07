@@ -407,6 +407,7 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, i
 		}
 		break;
 		case cmn::MediaCodecModuleId::NVENC: {
+#ifdef HWACCELS_NVIDIA_ENABLED				
 			nvmlDevice_t device;
 			nvmlReturn_t result = nvmlDeviceGetHandleByIndex(gpu_id, &device);
 			if (result != NVML_SUCCESS)
@@ -438,6 +439,7 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, i
 
 				return device_utilization.gpu;
 			}			
+#endif			
 			// logti("GpuId(%d), Name(%40s), dec.utilization(%d%%), enc.utilization(%d%%)", gpu_id, name, decUtilization, encUtilization);
 		}
 		break;
@@ -465,7 +467,23 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, i
 
 void TranscodeGPU::CodecThread()
 {
-#if 0	
+#ifdef HWACCELS_NVIDIA_ENABLED	
+	while(false)
+	{
+		for (int gpu_id = 0; gpu_id < GetDeviceCount(cmn::MediaCodecModuleId::NVENC); gpu_id++)
+		{
+			logti("[%d] %d%%, %d%%, %d%%",
+				  gpu_id,
+				  GetUtilization(IPType::DECODER, cmn::MediaCodecModuleId::NVENC, gpu_id),
+				  GetUtilization(IPType::ENCODER, cmn::MediaCodecModuleId::NVENC, gpu_id),
+				  GetUtilization(IPType::SCALER, cmn::MediaCodecModuleId::NVENC, gpu_id));
+		}
+		std::this_thread::sleep_for(std::chrono::seconds(5));
+	}
+#endif
+}
+
+#if 0 // Example code for XMA
 	logte("================================================================");
 	logte(" Compute Unit Reserve & Release");
 	logte("================================================================");
@@ -604,24 +622,6 @@ void TranscodeGPU::CodecThread()
 		logte("xrmDestroyContext: Failed");
 	}
 #endif	
-
-/////================================================================================================
-#ifdef HWACCELS_NVIDIA_ENABLED	
-	while(false)
-	{
-		for (int gpu_id = 0; gpu_id < GetDeviceCount(cmn::MediaCodecModuleId::NVENC); gpu_id++)
-		{
-			logti("[%d] %d%%, %d%%, %d%%",
-				  gpu_id,
-				  GetUtilization(IPType::DECODER, cmn::MediaCodecModuleId::NVENC, gpu_id),
-				  GetUtilization(IPType::ENCODER, cmn::MediaCodecModuleId::NVENC, gpu_id),
-				  GetUtilization(IPType::SCALER, cmn::MediaCodecModuleId::NVENC, gpu_id));
-		}
-		std::this_thread::sleep_for(std::chrono::seconds(5));
-	}
-#endif
-}
-
 
 #if 0 // Example code for NVML
 	while (false)
