@@ -22,6 +22,7 @@ namespace mon
 
 		if (show_children)
 		{
+			std::shared_lock<std::shared_mutex> lock(_map_guard);
 			for (auto const &t : _applications)
 			{
 				auto &app = t.second;

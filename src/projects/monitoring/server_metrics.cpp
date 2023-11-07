@@ -15,6 +15,7 @@ namespace mon
 
 	void ServerMetrics::ShowInfo([[maybe_unused]] bool show_children)
 	{
+		std::shared_lock<std::shared_mutex> lock(_map_guard);
 		for (const auto &t : _hosts)
 		{
 			auto &host = t.second;
@@ -24,6 +25,7 @@ namespace mon
 
 	void ServerMetrics::Release()
 	{
+		std::shared_lock<std::shared_mutex> lock(_map_guard);
 		for (const auto &host : _hosts)
 		{
 			host.second->Release();

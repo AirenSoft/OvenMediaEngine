@@ -20,6 +20,7 @@ namespace mon
 
         if(show_children)
         {
+            std::shared_lock<std::shared_mutex> lock(_streams_guard);
             for(auto &t : _streams)
             {
                 auto stream = t.second;
