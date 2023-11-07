@@ -715,7 +715,8 @@ bool TranscoderStream::CreateDecoder(int32_t decoder_id, std::shared_ptr<info::S
 	auto cfg_hwaccels = GetOutputProfilesCfg()->GetHWAccels();
 
 	// Get a list of available decoder candidates.
-	auto candidates = TranscodeDecoder::GetCandidates(cfg_hwaccels.GetDecoder().IsEnable(), cfg_hwaccels.GetDecoder().GetModules(), input_track);
+	// TODO: GetOutputProfilesCfg()->IsHardwareAcceleration() is deprecated. It will be deleted soon.
+	auto candidates = TranscodeDecoder::GetCandidates(cfg_hwaccels.GetDecoder().IsEnable() || GetOutputProfilesCfg()->IsHardwareAcceleration(), cfg_hwaccels.GetDecoder().GetModules(), input_track);
 	if(candidates == nullptr)
 	{
 		logte("%s Decoder candidates are not found. InputTrack(%d)", _log_prefix.CStr(), input_track->GetId());
@@ -816,7 +817,8 @@ bool TranscoderStream::CreateEncoder(int32_t encoder_id, std::shared_ptr<info::S
 	auto cfg_hwaccels = GetOutputProfilesCfg()->GetHWAccels();
 
 	// Get a list of available encoder candidates.
-	auto candidates = TranscodeEncoder::GetCandidates(cfg_hwaccels.GetEncoder().IsEnable(), cfg_hwaccels.GetEncoder().GetModules(), output_track);
+	// TODO: GetOutputProfilesCfg()->IsHardwareAcceleration() is deprecated. It will be deleted soon.
+	auto candidates = TranscodeEncoder::GetCandidates(cfg_hwaccels.GetEncoder().IsEnable() || GetOutputProfilesCfg()->IsHardwareAcceleration(), cfg_hwaccels.GetEncoder().GetModules(), output_track);
 	if(candidates == nullptr)
 	{
 		logte("%s Decoder candidates are not found. InputTrack(%d)", _log_prefix.CStr(), output_track->GetId());
