@@ -177,8 +177,9 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(
 		{
 			switch (candidate->GetModuleId())
 			{
-				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderVP8)
 				default:
+				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderVP8)
+
 					break;					
 			}
 		}
@@ -186,8 +187,8 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(
 		{
 			switch (candidate->GetModuleId())
 			{
-				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderAAC)
 				default:
+				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderAAC)
 					break;
 			}
 		}
@@ -195,8 +196,8 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(
 		{
 			switch (candidate->GetModuleId())
 			{
-				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderOPUS)
 				default:
+				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderOPUS)
 					break;					
 			}
 		}
