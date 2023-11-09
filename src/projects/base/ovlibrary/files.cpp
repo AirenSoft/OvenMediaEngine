@@ -11,6 +11,10 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <ftw.h>
+#include <dirent.h>
+#include <libgen.h>
+#include <unistd.h>
+#include <linux/limits.h>
 
 namespace ov
 {
@@ -89,5 +93,39 @@ namespace ov
 		}
 
 		return true;
+	}
+	
+	std::tuple<bool, std::vector<ov::String>> GetFileList(const ov::String &directory_path)
+	{
+		std::vector<ov::String> file_list;
+		DIR *dir = opendir(directory_path.CStr());
+		struct dirent *entry;
+
+		if(dir == nullptr)
+		{
+			return {false, file_list};
+		}
+
+		while((entry = readdir(dir)) != nullptr)
+		{
+			auto file_path = ov::String::FormatString("%s/%s", directory_path.CStr(), entry->d_name);
+			file_list.push_back(file_path);
+		}
+
+		closedir(dir);
+
+		return {true, file_list};
+	}
+
+	ov::String GetBinaryPath()
+	{
+		char path[1024];
+		ssize_t len = ::readlink("/proc/self/exe", path, sizeof(path) - 1);
+		if (len == -1)
+		{
+			return "";
+		}
+		
+		return dirname(path);
 	}
 }

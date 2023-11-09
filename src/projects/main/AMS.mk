@@ -17,6 +17,7 @@ LOCAL_STATIC_LIBRARIES := \
 	mpegts_provider \
 	rtspc_provider \
 	webrtc_provider \
+	scheduled_provider \
 	transcoder \
 	rtc_signalling \
 	whip \

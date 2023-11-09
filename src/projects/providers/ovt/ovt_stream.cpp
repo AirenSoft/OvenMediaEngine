@@ -150,7 +150,7 @@ namespace pvd
 
 	std::shared_ptr<pvd::OvtProvider> OvtStream::GetOvtProvider()
 	{
-		return std::static_pointer_cast<OvtProvider>(_application->GetParentProvider());
+		return std::static_pointer_cast<OvtProvider>(GetApplication()->GetParentProvider());
 	}
 
 	bool OvtStream::ConnectOrigin()

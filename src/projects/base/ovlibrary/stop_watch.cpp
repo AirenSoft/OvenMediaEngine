@@ -53,6 +53,18 @@ namespace ov
 		return -1LL;
 	}
 
+	int64_t StopWatch::ElapsedUs() const
+	{
+		if (_is_valid)
+		{
+			auto current = std::chrono::high_resolution_clock::now();
+
+			return std::chrono::duration_cast<std::chrono::microseconds>(current - _last).count();
+		}
+
+		return -1LL;
+	}
+
 	bool StopWatch::IsElapsed(int64_t milliseconds) const
 	{
 		return (Elapsed() >= milliseconds);

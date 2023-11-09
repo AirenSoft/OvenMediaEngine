@@ -45,6 +45,8 @@ namespace cmn
 		ID3v2,
 
 		HVCC, // H.265 HVCC
+
+		MP3
 	};
 
 	enum class PacketType : int8_t

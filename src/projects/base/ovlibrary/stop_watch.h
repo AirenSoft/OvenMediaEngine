@@ -19,6 +19,7 @@ namespace ov
 		void Stop();
 		bool Update();
 		int64_t Elapsed(bool nano=false) const;
+		int64_t ElapsedUs() const;
 		bool IsElapsed(int64_t milliseconds) const;
 		int64_t TotalElapsed() const;
 

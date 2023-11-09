@@ -31,8 +31,13 @@ extern "C"
 
 #include <base/common_types.h>
 #include <base/info/media_track.h>
+#include <base/mediarouter/media_type.h>
 #include <base/ovlibrary/ovlibrary.h>
 #include <transcoder/transcoder_context.h>
+
+#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
+#include <modules/bitstream/h265/h265_decoder_configuration_record.h>
+#include <modules/bitstream/aac/audio_specific_config.h>
 
 namespace ffmpeg
 {
@@ -331,6 +336,17 @@ namespace ffmpeg
 			return cmn::AudioChannel::Layout::LayoutUnknown;
 		}
 
+		static std::shared_ptr<MediaTrack> CreateMediaTrack(AVStream *stream)
+		{
+			auto media_track = std::make_shared<MediaTrack>();
+			if (ToMediaTrack(stream, media_track) == false)
+			{
+				return nullptr;
+			}
+
+			return media_track;
+		}
+
 		static bool ToMediaTrack(AVStream* stream, std::shared_ptr<MediaTrack> media_track)
 		{
 			media_track->SetId(stream->index);
@@ -358,6 +374,64 @@ namespace ffmpeg
 					media_track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(stream->codecpar->format));
 					media_track->GetChannel().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(stream->codecpar->channel_layout));
 					break;
+				default:
+					break;
+			}
+
+			switch (media_track->GetCodecId())
+			{
+				case cmn::MediaCodecId::H264:
+				{
+					// AVCC format
+					auto avc_config = std::make_shared<AVCDecoderConfigurationRecord>();
+					auto extra_data = std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size, true);
+
+					if (avc_config->Parse(extra_data) == false)
+					{
+						return false;
+					}
+
+					media_track->SetDecoderConfigurationRecord(avc_config);
+					
+					break;
+				}
+				case cmn::MediaCodecId::H265:
+				{
+					// HVCC format
+					auto hevc_config = std::make_shared<HEVCDecoderConfigurationRecord>();
+					auto extra_data = std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size, true);
+
+					if (hevc_config->Parse(extra_data) == false)
+					{
+						return false;
+					}
+
+					media_track->SetDecoderConfigurationRecord(hevc_config);
+
+					break;
+				}
+				case cmn::MediaCodecId::Aac:
+				{
+					// ASC format
+					auto asc = std::make_shared<AudioSpecificConfig>();
+					auto extra_data = std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size, true);
+
+					if (asc->Parse(extra_data) == false)
+					{
+						return false;
+					}
+					
+					media_track->SetDecoderConfigurationRecord(asc);
+
+					break;
+				}
+				case cmn::MediaCodecId::Vp8:
+				case cmn::MediaCodecId::Vp9:
+				case cmn::MediaCodecId::Flv:
+				case cmn::MediaCodecId::Mp3:
+				case cmn::MediaCodecId::Opus:
+				case cmn::MediaCodecId::Jpeg:
+				case cmn::MediaCodecId::Png:
 				default:
 					break;
 			}

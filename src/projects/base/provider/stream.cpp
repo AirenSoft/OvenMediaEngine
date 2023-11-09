@@ -322,7 +322,7 @@ namespace pvd
 
 	// This keeps the pts value of the input track (only the start value<base_timestamp> is different), meaning that this value can be used for A/V sync.
 	// returns adjusted PTS and parameter PTS and DTS are also adjusted.
-	int64_t Stream::AdjustTimestampByBase(uint32_t track_id, int64_t &pts, int64_t &dts, int64_t max_timestamp)
+	int64_t Stream::AdjustTimestampByBase(uint32_t track_id, int64_t &pts, int64_t &dts, int64_t max_timestamp, int64_t duration)
 	{
 		auto track = GetTrack(track_id);
 		if (!track)
@@ -337,6 +337,12 @@ namespace pvd
 		if (_start_timestamp == -1LL)
 		{
 			_start_timestamp = (int64_t)((double)dts * expr_tb2us);
+
+			// Updated stream's first timestamp should be next timestamp of last timestamp + duration of previous stream.
+			if (_last_duration_map.find(track_id) != _last_duration_map.end())
+			{
+				_start_timestamp -= (_last_duration_map[track_id] * expr_tb2us);
+			}
 
 			// for debugging
 			logtd("[%s/%s(%d)] Get start timestamp of stream. track:%d, ts:%lld (%d/%d) (%lldus)", _application->GetName().CStr(), GetName().CStr(), GetId(), track_id, dts, track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(), _start_timestamp);
@@ -412,12 +418,14 @@ namespace pvd
 		_last_origin_ts_map[0][track_id] = pts;
 		_last_origin_ts_map[1][track_id] = dts;
 
+		_last_duration_map[track_id] = duration;
+
 		pts = final_pkt_pts_tb;
 		dts = final_pkt_dts_tb;
 
 #if 0
 		// for debugging
-		logtd("[%s/%20s(%d)] track:%d, pts:%8lld -> %8lld (%8lldus), dts:%8lld -> %8lld (%8lldus), tb:%d/%d / lasttime:%lld, basetime:%lld",
+		logti("[%s/%20s(%d)] track:%d, pts:%8lld -> %8lld (%8lldus), dts:%8lld -> %8lld (%8lldus), tb:%d/%d / lasttime:%lld, basetime:%lld",
 				_application->GetName().CStr(), GetName().CStr(), GetId(), track_id,
 				pts, final_pkt_pts_tb, (int64_t)((double)final_pkt_pts_tb * expr_tb2us), 
 				dts, final_pkt_dts_tb, (int64_t)((double)final_pkt_dts_tb * expr_tb2us),
@@ -508,5 +516,27 @@ namespace pvd
 
 		_source_timestamp_map[track_id] = timestamp;
 		return delta;
+	}
+
+	// Increase MSID and notify the application of the stream update
+	bool Stream::UpdateStream()
+	{
+		if (_application == nullptr)
+		{
+			return false;
+		}
+
+		if (_application->UpdateStream(GetSharedPtr()) == false)
+		{
+			return false;
+		}
+
+		ResetSourceStreamTimestamp();
+		SetMsid(GetMsid() + 1);
+
+		logti("%s/%s(%u) has been updated stream", GetApplicationName(), GetName().CStr(), GetId());
+		logti("%s", GetInfoString().CStr());
+
+		return true;
 	}
 }  // namespace pvd

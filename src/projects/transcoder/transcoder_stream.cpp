@@ -119,7 +119,7 @@ void TranscoderStream::RequestWebhoook()
 		_output_profiles_cfg = &_remote_output_profiles;
 
 		logti("%s Using external output profiles by webhook", _log_prefix.CStr());		
-		logtd("%s OutputProfile\n%s", _log_prefix.CStr(), _output_profiles_cfg->ToString().CStr());		
+		logti("%s OutputProfile\n%s", _log_prefix.CStr(), _output_profiles_cfg->ToString().CStr());		
 	}
 	else if (policy == TranscodeWebhook::Policy::UseLocalProfiles)
 	{

@@ -445,7 +445,7 @@ bool MediaRouteApplication::OnStreamUpdated(const std::shared_ptr<MediaRouteAppl
 		auto stream = GetInboundStream(stream_info->GetId());
 		if (stream)
 		{
-			stream->Flush();
+			//stream->Flush();
 		}
 	}
 	// Provider(relay), Transcoder => Outbound Stream
@@ -455,7 +455,7 @@ bool MediaRouteApplication::OnStreamUpdated(const std::shared_ptr<MediaRouteAppl
 		auto stream = GetOutboundStream(stream_info->GetId());
 		if (stream)
 		{
-			stream->Flush();
+			//stream->Flush();
 		}
 	}
 	else

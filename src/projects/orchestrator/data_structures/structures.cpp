@@ -203,7 +203,7 @@ namespace ocst
 
 	bool Application::OnStreamUpdated(const std::shared_ptr<info::Stream> &info)
 	{
-		return callback->OnStreamPrepared(app_info, info);
+		return callback->OnStreamUpdated(app_info, info);
 	}
 
 	bool Application::OnSendFrame(const std::shared_ptr<info::Stream> &info, const std::shared_ptr<MediaPacket> &packet)
