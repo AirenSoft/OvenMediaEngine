@@ -134,6 +134,7 @@ namespace pvd
                 continue;
             }
 
+            int err_count = 0;
             while (_worker_thread_running)
             {
                 if (CheckCurrentProgramChanged() == true)
@@ -161,6 +162,7 @@ namespace pvd
 
                 if (result == PlaybackResult::PLAY_NEXT_PROGRAM)
                 {
+                    err_count = 0;
                     break;
                 }
                 else if (result == PlaybackResult::PLAY_FALLBACK)
@@ -173,9 +175,20 @@ namespace pvd
                     _worker_thread_running = false;
                     break;
                 }
+                else if (result == PlaybackResult::ERROR)
+                {
+                    err_count ++;
+                    if (err_count > 3)
+                    {
+                        auto sleep_ms = std::min(_current_item->duration_ms>0?_current_item->duration_ms:1000, (int64_t)1000);
+                        logte("Scheduled Channel %s/%s: Too many errors. Sleep for %lld milliseconds", GetApplicationName(), GetName().CStr(), sleep_ms);
+                        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
+                    }
+                }
                 else
                 {
                     // PLAY_NEXT_ITEM
+                    err_count = 0;
                 }
             }
         }
@@ -191,7 +204,7 @@ namespace pvd
         if (context == nullptr)
         {
             logte("Scheduled Channel : %s/%s: Failed to prepare file playback. Try to play next item", GetApplicationName(), GetName().CStr());
-            return PlaybackResult::PLAY_NEXT_ITEM;
+            return PlaybackResult::ERROR;
         }
 
         if (_realtime_clock.IsStart() == false)
@@ -394,7 +407,7 @@ namespace pvd
 
             ::av_strerror(err, errbuf, sizeof(errbuf));
 
-            logte("%s/%s: Failed to open item. Error (%d, %s)", GetApplicationName(), GetName().CStr(), item->url.CStr(), err, errbuf);
+            logte("%s/%s: Failed to open %s item. error (%d, %s)", GetApplicationName(), GetName().CStr(), item->url.CStr(), err, errbuf);
             return nullptr;
         }
 

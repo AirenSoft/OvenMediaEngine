@@ -42,6 +42,7 @@ namespace pvd
             PLAY_NEXT_ITEM,
             PLAY_NEXT_PROGRAM,
             PLAY_FALLBACK,
+            ERROR,
             STOP
         };
 
