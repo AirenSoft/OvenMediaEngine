@@ -702,6 +702,10 @@ bool MediaRouteStream::NormalizeMediaPacket(std::shared_ptr<MediaTrack> &media_t
 		case cmn::BitstreamFormat::OPUS:
 			result = ProcessOPUSStream(media_track, media_packet);
 			break;
+		case cmn::BitstreamFormat::MP3:
+			//  TODO
+			result = false; 
+			break;
 		case cmn::BitstreamFormat::ID3v2:
 			result = true;
 			break;
