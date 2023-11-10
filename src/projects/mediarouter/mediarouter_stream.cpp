@@ -43,6 +43,7 @@
 #include <modules/bitstream/nalu/nal_unit_fragment_header.h>
 #include <modules/bitstream/opus/opus.h>
 #include <modules/bitstream/vp8/vp8.h>
+#include <modules/bitstream/mp3/mp3_parser.h>
 
 #include "mediarouter_private.h"
 
@@ -672,6 +673,30 @@ bool MediaRouteStream::ProcessOPUSStream(std::shared_ptr<MediaTrack> &media_trac
 	return true;
 }
 
+bool MediaRouteStream::ProcessMP3Stream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
+{
+	// One time : parse samplerate, channel
+	if (media_track->IsValid() == true)
+	{
+		return true;
+	}
+
+	MP3Parser parser;
+	if (MP3Parser::Parse(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetDataLength(), parser) == false)
+	{
+		logte("Could not parse MP3 header");
+		return false;
+	}
+
+	logti("MP3Parser : %s", parser.GetInfoString().CStr());
+
+	media_track->SetSampleRate(parser.GetSampleRate());
+	media_track->SetBitrateByMeasured(parser.GetBitrate());
+	media_track->GetChannel().SetLayout((parser.GetChannelCount() == 1) ? (AudioChannel::Layout::LayoutMono) : (AudioChannel::Layout::LayoutStereo));
+
+	return true;
+}
+
 // H264 : AVCC -> AnnexB, Add SPS/PPS in front of IDR frame
 // H265 : 
 // AAC : Raw -> ADTS
@@ -703,8 +728,7 @@ bool MediaRouteStream::NormalizeMediaPacket(std::shared_ptr<MediaTrack> &media_t
 			result = ProcessOPUSStream(media_track, media_packet);
 			break;
 		case cmn::BitstreamFormat::MP3:
-			//  TODO
-			result = false; 
+			result = ProcessMP3Stream(media_track, media_packet); 
 			break;
 		case cmn::BitstreamFormat::ID3v2:
 			result = true;
