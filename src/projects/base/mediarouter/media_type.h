@@ -209,6 +209,8 @@ namespace cmn
 				return "AAC_ADTS";
 			case cmn::BitstreamFormat::AAC_LATM:
 				return "AAC_LATM";
+			case cmn::BitstreamFormat::MP3:
+				return "MP3";
 			case cmn::BitstreamFormat::OPUS:
 				return "OPUS";
 			case cmn::BitstreamFormat::OPUS_RTP_RFC_7587:
@@ -323,6 +325,8 @@ namespace cmn
 				return "VP9";
 			case cmn::MediaCodecId::Aac:
 				return "AAC";
+			case cmn::MediaCodecId::Mp3:
+				return "MP3";				
 			case cmn::MediaCodecId::Opus:
 				return "OPUS";
 			case cmn::MediaCodecId::Jpeg:
