@@ -5,8 +5,7 @@ After=network-online.target
 [Service]
 Type=forking
 PIDFile=/var/run/ovenmediaengine.pid
-WorkingDirectory=/usr/share/ovenmediaengine
-ExecStart=/usr/bin/OvenMediaEngine -d
+ExecStart=/usr/bin/OvenMediaEngine -d -c /etc/ovenmediaengine
 Restart=always
 RestartSec=2
 RestartPreventExitStatus=1

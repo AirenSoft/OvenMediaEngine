@@ -6,11 +6,11 @@ BUILD_ROOT := .
 BUILD_SYSTEM_DIRECTORY := core
 OME := OvenMediaEngine
 OME_SERVICE := ovenmediaengine.service
-INSTALL_DIRECTORY := /usr/share/ovenmediaengine
-INSTALL_CONF_DIRECTORY := $(INSTALL_DIRECTORY)/conf
-LINK_BIN_DIRECTORY := /usr/bin
-INSTALL_SERVICE_DIRECTORY := /lib/systemd/system
-LINK_SERVICE_DIRECTORY := /etc/systemd/system
+DESTDIR := /
+PREFIX := /usr
+BINDIR := /bin
+SYSCONFDIR := /etc
+SYSTEMDUNITDIR := $(shell pkg-config systemd --variable=systemdsystemunitdir)
 
 #===============================================================================
 # Include makefiles
@@ -116,34 +116,28 @@ install:
 	    exit 1; \
 	fi
 
-	@echo "$(ANSI_GREEN)Installing directory$(ANSI_RESET) $(INSTALL_DIRECTORY)"
-	@mkdir -p $(INSTALL_CONF_DIRECTORY)
-	@install -m 755 -s bin/$(BUILD_METHOD)/$(OME) $(INSTALL_DIRECTORY)
+	@echo "$(ANSI_GREEN)Installing binary$(ANSI_RESET) $(DESTDIR)$(PREFIX)$(BINDIR)/$(OME)"
+	@mkdir -p $(DESTDIR)$(PREFIX)$(BINDIR)
+	@install -m 755 -s bin/$(BUILD_METHOD)/$(OME) $(DESTDIR)$(PREFIX)$(BINDIR)
 
-	@if test ! -f $(INSTALL_CONF_DIRECTORY)/Server.xml; then \
-	    install -m 644 ../misc/conf_examples/Server.xml $(INSTALL_CONF_DIRECTORY); \
+	@mkdir -p $(DESTDIR)$(SYSCONFDIR)/ovenmediaengine/
+	@if test ! -f $(DESTDIR)$(SYSCONFDIR)/ovenmediaengine/Server.xml; then \
+			echo "$(ANSI_GREEN)Installing config file$(ANSI_RESET) $(DESTDIR)$(SYSCONFDIR)/ovenmediaengine/Server.xml"; \
+	    install -m 644 ../misc/conf_examples/Server.xml $(DESTDIR)$(SYSCONFDIR)/ovenmediaengine/; \
 	fi
 
-	@if test ! -f $(INSTALL_CONF_DIRECTORY)/Logger.xml; then \
-	    install -m 644 ../misc/conf_examples/Logger.xml $(INSTALL_CONF_DIRECTORY); \
+	@if test ! -f $(DESTDIR)$(SYSCONFDIR)/ovenmediaengine/Logger.xml; then \
+			echo "$(ANSI_GREEN)Installing config file$(ANSI_RESET) $(DESTDIR)$(SYSCONFDIR)/ovenmediaengine/Logger.xml"; \
+	    install -m 644 ../misc/conf_examples/Logger.xml $(DESTDIR)$(SYSCONFDIR)/ovenmediaengine/; \
 	fi
 
-	@echo "$(ANSI_GREEN)Creating link file$(ANSI_RESET) $(LINK_BIN_DIRECTORY)/$(OME) => \
-	$(ANSI_BLUE)$(INSTALL_DIRECTORY)/$(OME)$(ANSI_RESET)"
-	@ln -sf $(INSTALL_DIRECTORY)/$(OME) $(LINK_BIN_DIRECTORY)/$(OME)
-	@echo "$(ANSI_GREEN)Installing service$(ANSI_RESET) $(INSTALL_SERVICE_DIRECTORY)/$(OME_SERVICE)"
-	@install -m 644 ../misc/$(OME_SERVICE) $(INSTALL_SERVICE_DIRECTORY)
-	@echo "$(ANSI_GREEN)Creating link file$(ANSI_RESET) $(LINK_SERVICE_DIRECTORY)/$(OME_SERVICE) => \
-	$(ANSI_BLUE)$(INSTALL_SERVICE_DIRECTORY)/$(OME_SERVICE)$(ANSI_RESET)"
-	@ln -sf $(INSTALL_SERVICE_DIRECTORY)/$(OME_SERVICE) $(LINK_SERVICE_DIRECTORY)/$(OME_SERVICE)
+	@echo "$(ANSI_GREEN)Installing service$(ANSI_RESET) $(DESTDIR)$(SYSCONFDIR)/systemd/system/$(OME_SERVICE)"
+	@mkdir -p $(DESTDIR)$(SYSTEMDUNITDIR)
+	@install -m 644 ../misc/$(OME_SERVICE) $(DESTDIR)$(SYSTEMDUNITDIR)
 
 .PHONY: uninstall
 uninstall:
-	@echo "$(CONFIG_CLEAN_COLOR)Deleting directory$(ANSI_RESET) $(INSTALL_DIRECTORY)"
-	@rm -rf $(INSTALL_DIRECTORY)
-	@echo "$(CONFIG_CLEAN_COLOR)Deleting link file$(ANSI_RESET) $(LINK_BIN_DIRECTORY)/$(OME)"
-	@rm -rf $(LINK_BIN_DIRECTORY)/$(OME)
-	@echo "$(CONFIG_CLEAN_COLOR)Deleting service file$(ANSI_RESET) $(INSTALL_SERVICE_DIRECTORY)/$(OME_SERVICE)"
-	@rm -rf $(INSTALL_SERVICE_DIRECTORY)/$(OME_SERVICE)
-	@echo "$(CONFIG_CLEAN_COLOR)Deleting link file$(ANSI_RESET) $(LINK_SERVICE_DIRECTORY)/$(OME_SERVICE)"
-	@rm -rf $(LINK_SERVICE_DIRECTORY)/$(OME_SERVICE)
+	@echo "$(CONFIG_CLEAN_COLOR)Deleting binary$(ANSI_RESET) $(DESTDIR)$(PREFIX)$(BINDIR)/$(OME)"
+	@rm -f $(DESTDIR)$(PREFIX)$(BINDIR)/$(OME)
+	@echo "$(CONFIG_CLEAN_COLOR)Deleting service file$(ANSI_RESET) $(DESTDIR)$(PREFIX)/lib/systemd/system/$(OME_SERVICE)"
+	@rm -f $(DESTDIR)$(SYSTEMDUNITDIR)/$(OME_SERVICE)

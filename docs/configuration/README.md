@@ -3,7 +3,7 @@
 OvenMediaEngine has an XML configuration file. If you start OvenMediaEngine with `systemctl start ovenmediaengine`, the config file is loaded from the following path.
 
 ```bash
-/usr/share/ovenmediaengine/conf/Server.xml
+/etc/ovenmediaengine/Server.xml
 ```
 
 If you run it directly from the command line, it loads the configuration file from:
@@ -110,9 +110,9 @@ The `Bind` is the configuration for the server port that will be used. Bind cons
 
             <IceCandidates>
                 <IceCandidate>*:10000/udp</IceCandidate>
-                <!-- 
+                <!--
                     If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
-                    This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
+                    This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP.
                     For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/streaming/webrtc-publishing#webrtc-over-tcp
                 -->
                 <TcpRelay>*:3478</TcpRelay>
@@ -129,9 +129,9 @@ The `Bind` is the configuration for the server port that will be used. Bind cons
             <WorkerCount>1</WorkerCount>
         </OVT>
         <LLHLS>
-            <!-- 
-            OME only supports h2, so LLHLS works over HTTP/1.1 on non-TLS ports. 
-            LLHLS works with higher performance over HTTP/2, 
+            <!--
+            OME only supports h2, so LLHLS works over HTTP/1.1 on non-TLS ports.
+            LLHLS works with higher performance over HTTP/2,
             so it is recommended to use a TLS port.
             -->
             <Port>3333</Port>
@@ -147,9 +147,9 @@ The `Bind` is the configuration for the server port that will be used. Bind cons
             </Signalling>
             <IceCandidates>
                 <IceCandidate>*:10000-10005/udp</IceCandidate>
-                <!-- 
+                <!--
                     If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
-                    This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
+                    This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP.
                     For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/streaming/webrtc-publishing#webrtc-over-tcp
                 -->
                 <TcpRelay>*:3478</TcpRelay>
@@ -331,14 +331,14 @@ To run the Edge server, Origin creates application and stream if there isn't tho
                         <Samplerate>48000</Samplerate>
                         <Channel>2</Channel>
                     </Audio>
-                    <!--                             
+                    <!--
                     <Video>
                         <Codec>vp8</Codec>
                         <Bitrate>1024000</Bitrate>
                         <Framerate>30</Framerate>
                         <Width>1280</Width>
                         <Height>720</Height>
-                    </Video>                                
+                    </Video>
                     -->
                 </Encodes>
             </OutputProfile>
@@ -410,16 +410,16 @@ Finally, `Server.xml` is configured as follows:
     <IP>*</IP>
     <PrivacyProtection>false</PrivacyProtection>
 
-    <!-- 
-    To get the public IP address(mapped address of stun) of the local server. 
-    This is useful when OME cannot obtain a public IP from an interface, such as AWS or docker environment. 
+    <!--
+    To get the public IP address(mapped address of stun) of the local server.
+    This is useful when OME cannot obtain a public IP from an interface, such as AWS or docker environment.
     If this is successful, you can use ${PublicIP} in your settings.
     -->
     <StunServer>stun.l.google.com:19302</StunServer>
 
     <Modules>
-        <!-- 
-        Currently OME only supports h2 like all browsers do. Therefore, HTTP/2 only works on TLS ports.			
+        <!--
+        Currently OME only supports h2 like all browsers do. Therefore, HTTP/2 only works on TLS ports.
         -->
         <HTTP2>
             <Enable>true</Enable>
@@ -483,9 +483,9 @@ Finally, `Server.xml` is configured as follows:
 
             <IceCandidates>
                 <IceCandidate>*:10000/udp</IceCandidate>
-                <!-- 
+                <!--
                     If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
-                    This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
+                    This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP.
                     For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/streaming/webrtc-publishing#webrtc-over-tcp
                 -->
                 <TcpRelay>*:3478</TcpRelay>
@@ -502,9 +502,9 @@ Finally, `Server.xml` is configured as follows:
             <WorkerCount>1</WorkerCount>
         </OVT>
         <LLHLS>
-            <!-- 
-            OME only supports h2, so LLHLS works over HTTP/1.1 on non-TLS ports. 
-            LLHLS works with higher performance over HTTP/2, 
+            <!--
+            OME only supports h2, so LLHLS works over HTTP/1.1 on non-TLS ports.
+            LLHLS works with higher performance over HTTP/2,
             so it is recommended to use a TLS port.
             -->
             <Port>3333</Port>
@@ -520,9 +520,9 @@ Finally, `Server.xml` is configured as follows:
             </Signalling>
             <IceCandidates>
                 <IceCandidate>*:10000-10005/udp</IceCandidate>
-                <!-- 
+                <!--
                     If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
-                    This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
+                    This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP.
                     For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/streaming/webrtc-publishing#webrtc-over-tcp
                 -->
                 <TcpRelay>*:3478</TcpRelay>
@@ -536,7 +536,7 @@ Finally, `Server.xml` is configured as follows:
 
     <!--
         Enable this configuration if you want to use API Server
-        
+
         <AccessToken> is a token for authentication, and when you invoke the API, you must put "Basic base64encode(<AccessToken>)" in the "Authorization" header of HTTP request.
         For example, if you set <AccessToken> to "ome-access-token", you must set "Basic b21lLWFjY2Vzcy10b2tlbg==" in the "Authorization" header.
     -->
@@ -592,7 +592,7 @@ Finally, `Server.xml` is configured as follows:
                 -->
             </Host>
 
-            <!-- 	
+            <!--
             Refer https://airensoft.gitbook.io/ovenmediaengine/signedpolicy
             <SignedPolicy>
                 <PolicyQueryKeyName>policy</PolicyQueryKeyName>
@@ -646,7 +646,7 @@ Finally, `Server.xml` is configured as follows:
                     </Pass>
                 </Origin>
             </Origins> -->
-            
+
             <!-- Settings for applications -->
             <Applications>
                 <Application>
@@ -672,7 +672,7 @@ Finally, `Server.xml` is configured as follows:
                                     <Samplerate>48000</Samplerate>
                                     <Channel>2</Channel>
                                 </Audio>
-                                <!-- 							
+                                <!--
                                 <Video>
                                     <Codec>vp8</Codec>
                                     <Bitrate>1024000</Bitrate>
