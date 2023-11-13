@@ -49,7 +49,7 @@ namespace pvd
         }
 
         _worker_thread_running = false;
-        _schedule_updated.Notify();
+        _schedule_updated.SetEvent();
 
         if (_worker_thread.joinable())
         {
@@ -67,6 +67,7 @@ namespace pvd
     std::shared_ptr<Schedule> ScheduledStream::GetSchedule() const
     {
         std::shared_lock<std::shared_mutex> lock(_schedule_mutex);
+        _schedule_updated.Reset();
         return _schedule;
     }
 
@@ -75,7 +76,7 @@ namespace pvd
         std::lock_guard<std::shared_mutex> lock(_schedule_mutex);
         _schedule = schedule;
 
-        _schedule_updated.Notify();
+        _schedule_updated.SetEvent();
         return true;
     }
 
@@ -85,6 +86,15 @@ namespace pvd
         if (_current_program == GetSchedule()->GetCurrentProgram())
         {
             return false;
+        }
+
+        if (_current_program == nullptr && GetSchedule()->GetCurrentProgram() != nullptr)
+        {
+            return true;
+        }
+        else if (_current_program != nullptr && GetSchedule()->GetCurrentProgram() == nullptr)
+        {
+            return true;
         }
 
         // even if the pointer is changed, but the program is the same, it is not changed
@@ -100,14 +110,17 @@ namespace pvd
     {
         while (_worker_thread_running)
         {
+            // Schedule
             _current_schedule = GetSchedule();
             if (_current_schedule == nullptr)
             {
+                _realtime_clock.Pause();
                 // Wait for schedule update
                 _schedule_updated.Wait();
                 continue;
             }
 
+            // Programs
             _current_program = _current_schedule->GetCurrentProgram();
             if (_current_program == nullptr)
             {
@@ -117,6 +130,8 @@ namespace pvd
                     //TODO: Play fallback item (if exists)
 
                     // Wait for schedule update
+                    logti("Scheduled Channel %s/%s: No program and no next program. Wait for schedule update", GetApplicationName(), GetName().CStr());
+                    _realtime_clock.Pause();
                     _schedule_updated.Wait();
                     continue;
                 }
@@ -127,13 +142,16 @@ namespace pvd
                 if (wait_time > 0)
                 {
                     // TODO: Play fallback item (if exists)
+                    logti("Scheduled Channel %s/%s: No program. Wait for next program(%s : local : %s) %lld milliseconds", GetApplicationName(), GetName().CStr(), next_program->scheduled.CStr(), ov::Converter::ToISO8601String(next_program->scheduled_time).CStr(), wait_time);
+                    _realtime_clock.Pause();
 
-                    _schedule_updated.WaitFor(wait_time);
+                    _schedule_updated.Wait(wait_time);
                 }
 
                 continue;
             }
 
+            // Items
             int err_count = 0;
             while (_worker_thread_running)
             {
@@ -210,6 +228,11 @@ namespace pvd
         if (_realtime_clock.IsStart() == false)
         {
             _realtime_clock.Start();
+        }
+
+        if (_realtime_clock.IsPaused() == true)
+        {
+            _realtime_clock.Resume();
         }
 
         // Play

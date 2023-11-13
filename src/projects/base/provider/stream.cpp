@@ -192,7 +192,7 @@ namespace pvd
 	{
 		// Get the last timestamp of the highest value of all tracks
 #if 1		
-		int64_t last_timestamp = std::numeric_limits<int64_t>::max();
+		int64_t last_timestamp = std::numeric_limits<int64_t>::min();
 		for (const auto &[track_id, timestamp] : _last_timestamp_map)
 		{
 			auto track = GetTrack(track_id);
@@ -201,7 +201,7 @@ namespace pvd
 				continue;
 			}
 
-			last_timestamp = std::min<int64_t>(timestamp, last_timestamp);
+			last_timestamp = std::max<int64_t>(timestamp, last_timestamp);
 		}
 #else	
 		int64_t last_timestamp = std::numeric_limits<int64_t>::min();

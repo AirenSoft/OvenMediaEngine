@@ -16,6 +16,11 @@ namespace ov
 		return _is_valid;
 	}
 
+	bool StopWatch::IsPaused()
+	{
+		return _is_paused;
+	}
+
 	void StopWatch::Start()
 	{
 		_is_valid = true;
@@ -26,6 +31,28 @@ namespace ov
 	void StopWatch::Stop()
 	{
 		_is_valid = false;
+	}
+
+	void StopWatch::Pause()
+	{
+		if (IsStart() == false)
+		{
+			return;
+		}
+
+		_pause_time = std::chrono::high_resolution_clock::now();
+		_is_paused = true;
+	}
+
+	void StopWatch::Resume()
+	{
+		if (_is_paused == false)
+		{
+			return;
+		}
+
+		_paused_duration += std::chrono::high_resolution_clock::now() - _pause_time;
+		_is_paused = false;
 	}
 
 	bool StopWatch::Update()
@@ -39,14 +66,15 @@ namespace ov
 		if (_is_valid)
 		{
 			auto current = std::chrono::high_resolution_clock::now();
+			auto elapsed = current - _last - _paused_duration;
 
 			if(nano == false)
 			{
-				return std::chrono::duration_cast<std::chrono::milliseconds>(current - _last).count();
+				return std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
 			}
 			else
 			{
-				return std::chrono::duration_cast<std::chrono::nanoseconds>(current - _last).count();
+				return std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count();
 			}
 		}
 

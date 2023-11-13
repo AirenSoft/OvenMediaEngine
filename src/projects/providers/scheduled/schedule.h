@@ -116,8 +116,8 @@ namespace pvd
             bool operator==(const Program &rhs) const
             {
                 if (scheduled_time != rhs.scheduled_time ||
-                    duration_ms != rhs.duration_ms ||
-                    repeat != rhs.repeat ||
+                    //duration_ms != rhs.duration_ms || // duration_ms is changed by next program
+                    repeat != rhs.repeat || 
                     items.size() != rhs.items.size())
                 {
                     return false;

@@ -190,24 +190,39 @@ namespace ov
 		if (iss.peek() == 'Z')
 		{
 			iss.ignore();  // UTC (Zulu time)
+			tm.tm_gmtoff = 0;
 		}
 		else if (iss.peek() == '+' || iss.peek() == '-')
 		{
 			char sign;
-			int hours, minutes;
-			iss >> sign >> hours;
+			int hours=0, minutes=0;
+			iss >> sign;
+			
+			// Read hours
+			for (int i = 0; i < 2 && std::isdigit(iss.peek()); ++i)
+			{
+				hours = hours * 10 + (iss.get() - '0');
+			}
+
+			// Check if there are minutes
 			if (iss.peek() == ':')
 			{
 				iss.ignore();
-				iss >> minutes;
+				if (std::isdigit(iss.peek()))
+				{
+					iss >> minutes;
+				}
 			}
-
-			if (iss.fail())
+			else if (!iss.eof())
 			{
-				throw std::invalid_argument("Invalid ISO 8601 string");
+				// Read minutes
+				for (int i = 0; i < 2 && std::isdigit(iss.peek()); ++i)
+				{
+					minutes = minutes * 10 + (iss.get() - '0');
+				}
 			}
 
-			if (sign == '-') 
+			if (sign == '-')
 			{
 				hours = -hours;
 				minutes = -minutes;
@@ -218,7 +233,7 @@ namespace ov
 		}
 
 		// Convert to time_point
-		auto time = std::chrono::system_clock::from_time_t(std::mktime(&tm));
+		auto time = std::chrono::system_clock::from_time_t(timegm(&tm));
 		time += std::chrono::milliseconds(milliseconds);
 
 		return time;

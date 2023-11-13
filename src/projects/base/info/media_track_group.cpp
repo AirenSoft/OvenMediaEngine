@@ -34,7 +34,7 @@ bool MediaTrackGroup::AddTrack(const std::shared_ptr<MediaTrack> &track)
 	return true;
 }
 
-bool MediaTrackGroup::RemoveTrack(int32_t id)
+bool MediaTrackGroup::RemoveTrack(uint32_t id)
 {
 	auto it = std::find_if(_tracks.begin(), _tracks.end(), [id](const std::shared_ptr<MediaTrack> &t) {
 		return t->GetId() == id;

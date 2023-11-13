@@ -110,25 +110,32 @@ namespace pvd
     void ScheduledApplication::OnScheduleWatcherTick()
     {
         // List all files in schedule file root
-        auto schedule_file_info_list = SearchScheduleFileInfoFromDir(_schedule_files_path, _schedule_files_regex);
+        auto schedule_file_info_list_from_dir = SearchScheduleFileInfoFromDir(_schedule_files_path, _schedule_files_regex);
 
         // Check if file is added or updated
-        for (auto &schedule_file_info : schedule_file_info_list)
+        for (auto &schedule_file_info_from_dir : schedule_file_info_list_from_dir)
         {
-            ScheduleFileInfo db_schedule_file_info;
-            if (GetScheduleFileInfoFromDB(schedule_file_info._file_path.Hash(), db_schedule_file_info) == false)
+            ScheduleFileInfo schedule_file_info_from_db;
+            if (GetScheduleFileInfoFromDB(schedule_file_info_from_dir._file_path.Hash(), schedule_file_info_from_db) == false)
             {
                 // New file
-                AddSchedule(schedule_file_info);
-                _schedule_file_info_db.emplace(schedule_file_info._file_path.Hash(), schedule_file_info);
+                if (AddSchedule(schedule_file_info_from_dir) == true)
+                {
+                    _schedule_file_info_db.emplace(schedule_file_info_from_dir._file_path.Hash(), schedule_file_info_from_dir);
+                    logti("Added schedule channel : %s/%s (%s)", GetName().CStr(), schedule_file_info_from_dir._schedule->GetStream().name.CStr(), schedule_file_info_from_dir._file_path.CStr());
+                }
             }
             else
             {
+                schedule_file_info_from_dir._deleted_checked_count = 0;
                 // Updated?
-                if (schedule_file_info._file_stat.st_mtime != db_schedule_file_info._file_stat.st_mtime)
+                if (schedule_file_info_from_dir._file_stat.st_mtime != schedule_file_info_from_db._file_stat.st_mtime)
                 {
-                    UpdateSchedule(db_schedule_file_info);
-                    _schedule_file_info_db[schedule_file_info._file_path.Hash()] = schedule_file_info;
+                    if (UpdateSchedule(schedule_file_info_from_db, schedule_file_info_from_dir) == true)
+                    {
+                        _schedule_file_info_db[schedule_file_info_from_dir._file_path.Hash()] = schedule_file_info_from_dir;
+                        logti("Updated schedule channel : %s/%s (%s)", GetName().CStr(), schedule_file_info_from_dir._schedule->GetStream().name.CStr(), schedule_file_info_from_dir._file_path.CStr());
+                    }
                 }
             }
         }
@@ -137,10 +144,22 @@ namespace pvd
         for (auto it = _schedule_file_info_db.begin(); it != _schedule_file_info_db.end();)
         {
             auto &schedule_file_info = it->second;
-            if (stat(schedule_file_info._file_path.CStr(), &schedule_file_info._file_stat) != 0)
+            struct stat file_stat = {0};
+            auto result = stat(schedule_file_info._file_path.CStr(), &file_stat);
+            if (result != 0 && errno == ENOENT)
             {
-                // File is deleted
+                // VI Editor ":wq" will delete file and create new file, 
+                // so we need to check if file is really deleted by checking ENOENT 3 times
+                schedule_file_info._deleted_checked_count++;
+                if (schedule_file_info._deleted_checked_count < 3)
+                {
+                    ++it;
+                    continue;
+                }
+
                 RemoveSchedule(schedule_file_info);
+                logti("Removed schedule channel : %s/%s (%s)", GetName().CStr(), schedule_file_info._schedule->GetStream().name.CStr(), schedule_file_info._file_path.CStr());
+
                 it = _schedule_file_info_db.erase(it);
             }
             else
@@ -270,7 +289,7 @@ namespace pvd
         return true;
     }
 
-    bool ScheduledApplication::UpdateSchedule(ScheduleFileInfo &schedule_file_info)
+    bool ScheduledApplication::UpdateSchedule(ScheduleFileInfo &schedule_file_info, ScheduleFileInfo &new_schedule_file_info)
     {
         std::shared_ptr<Schedule> schedule = Schedule::Create(schedule_file_info._file_path, _root_dir);
         if (schedule == nullptr)
@@ -300,7 +319,7 @@ namespace pvd
         }
 
         // Update file info to DB
-        schedule_file_info._schedule = schedule;
+        new_schedule_file_info._schedule = schedule;
 
         return true;
     }

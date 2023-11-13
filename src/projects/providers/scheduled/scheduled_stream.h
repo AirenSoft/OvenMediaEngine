@@ -63,7 +63,7 @@ namespace pvd
         std::thread _worker_thread;
         bool _worker_thread_running = false;
 
-        ov::Semaphore _schedule_updated;
+        mutable ov::Event _schedule_updated;
 
         // Current
         const Schedule::Stream _channel_info;

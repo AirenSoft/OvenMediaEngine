@@ -15,9 +15,14 @@ namespace ov
 		explicit StopWatch(String tag);
 
 		bool IsStart();
+		bool IsPaused();
 		void Start();
 		void Stop();
 		bool Update();
+
+		void Pause();
+		void Resume();
+
 		int64_t Elapsed(bool nano=false) const;
 		int64_t ElapsedUs() const;
 		bool IsElapsed(int64_t milliseconds) const;
@@ -31,6 +36,9 @@ namespace ov
 		bool _is_valid { false };
 		std::chrono::high_resolution_clock::time_point _start;
 		std::chrono::high_resolution_clock::time_point _last;
-		std::chrono::high_resolution_clock::time_point _stop;
+
+		bool _is_paused { false };
+		std::chrono::high_resolution_clock::time_point _pause_time;
+		std::chrono::high_resolution_clock::duration _paused_duration = std::chrono::high_resolution_clock::duration::zero();
 	};
 }

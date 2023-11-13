@@ -40,13 +40,15 @@ namespace pvd
             ov::String _file_path;
             struct stat _file_stat;
             std::shared_ptr<Schedule> _schedule;
+
+            uint32_t _deleted_checked_count = 0;
         };
 
         std::vector<ScheduleFileInfo> SearchScheduleFileInfoFromDir(const ov::String &schedule_file_root, ov::Regex &schedule_file_name_regex) const;
 
         bool GetScheduleFileInfoFromDB(const size_t &hash, ScheduleFileInfo &schedule_file_info);
         bool AddSchedule(ScheduleFileInfo &schedule_file_info);
-        bool UpdateSchedule(ScheduleFileInfo &schedule_file_info);
+        bool UpdateSchedule(ScheduleFileInfo &schedule_file_info, ScheduleFileInfo &new_schedule_file_info);
         bool RemoveSchedule(ScheduleFileInfo &schedule_file_info);
 
         ov::String _root_dir;
