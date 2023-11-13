@@ -264,6 +264,12 @@ namespace pvd
 
 			item->duration_ms = duration_attribute.as_llong();
 
+			if (item->duration_ms <= 1000)
+			{
+				logtw("Item duration is too short, duration must be greater than 1000ms. url: %s, duration: %lld, it will be changed to 1000ms", item->url.CStr(), item->duration_ms);
+				item->duration_ms = 1000;
+			}
+
 			items.push_back(item);
 		}
 
