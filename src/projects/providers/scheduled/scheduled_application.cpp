@@ -291,35 +291,42 @@ namespace pvd
 
     bool ScheduledApplication::UpdateSchedule(ScheduleFileInfo &schedule_file_info, ScheduleFileInfo &new_schedule_file_info)
     {
-        std::shared_ptr<Schedule> schedule = Schedule::Create(schedule_file_info._file_path, _root_dir);
-        if (schedule == nullptr)
+        std::shared_ptr<Schedule> old_schedule = schedule_file_info._schedule;
+        if (old_schedule == nullptr)
         {
-            logtw("Failed to update schedule (Could not create schedule): %s", schedule_file_info._file_path.CStr());
+            logte("Failed to update schedule (Could not find schedule): %s", schedule_file_info._file_path.CStr());
             return false;
         }
 
-        // Check stream name
-        if (schedule_file_info._schedule->GetStream().name != schedule->GetStream().name)
+        std::shared_ptr<Schedule> new_schedule = Schedule::Create(new_schedule_file_info._file_path, _root_dir);
+        if (new_schedule == nullptr)
         {
-            logtw("Failed to update schedule (%s stream name could not be changed) : %s", schedule_file_info._file_path.CStr(), schedule->GetStream().name.CStr());
+            logtw("Failed to update schedule (Could not create schedule): %s", new_schedule_file_info._file_path.CStr());
             return false;
         }
 
-        auto stream = std::static_pointer_cast<ScheduledStream>(GetStreamByName(schedule->GetStream().name));
+        // Check Stream Changed
+        if (old_schedule->GetStream() != new_schedule->GetStream())
+        {
+            logtw("%s <Stream> cannot be changed while running. (%s -> %s)", new_schedule_file_info._file_path.CStr(), new_schedule_file_info._schedule->GetStream().name.CStr(), new_schedule->GetStream().name.CStr());
+
+            return false;
+        }
+
+        auto stream = std::static_pointer_cast<ScheduledStream>(GetStreamByName(new_schedule->GetStream().name));
         if (stream == nullptr)
         {
-            logtw("Failed to update schedule (%s stream not found ) : %s", schedule_file_info._file_path.CStr(), schedule->GetStream().name.CStr());
-            return false;
+            logtw("Failed to update schedule (%s stream not found ) : %s", new_schedule_file_info._file_path.CStr(), new_schedule->GetStream().name.CStr());
         }
 
-        if (stream->UpdateSchedule(schedule) == false)
+        if (stream->UpdateSchedule(new_schedule) == false)
         {
-            logtw("Failed to update schedule (%s stream failed to update schedule) : %s", schedule_file_info._file_path.CStr(), schedule->GetStream().name.CStr());
+            logtw("Failed to update schedule (%s stream failed to update schedule) : %s", new_schedule_file_info._file_path.CStr(), new_schedule->GetStream().name.CStr());
             return false;
         }
 
         // Update file info to DB
-        new_schedule_file_info._schedule = schedule;
+        new_schedule_file_info._schedule = new_schedule;
 
         return true;
     }

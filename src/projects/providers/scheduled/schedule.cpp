@@ -112,14 +112,31 @@ namespace pvd
 			_stream.audio_track = audio_track_node.text().as_bool();
 		}
 
-		auto fallback_content_node = stream_node.child("FallbackContent");
-		if (fallback_content_node)
+		return true;
+	}
+
+	bool Schedule::ReadDefaultProgramNode(const pugi::xml_node &schedule_node)
+	{
+		auto default_program_node = schedule_node.child("DefaultProgram");
+		if (!default_program_node)
 		{
-			if (ReadItemNodes(fallback_content_node, _stream.fallback_contents) == false)
-			{
-				return false;
-			}
+			return false;
 		}
+
+		auto default_program = std::make_shared<Schedule::Program>();
+		default_program->name = "default";
+		default_program->scheduled = "1970-01-01T00:00:00Z";
+		default_program->scheduled_time = std::chrono::system_clock::time_point::min();
+		default_program->duration_ms = -1;
+		default_program->end_time = std::chrono::system_clock::time_point::max();
+		default_program->repeat = true;
+		
+		if (ReadItemNodes(default_program_node, default_program->items) == false)
+		{
+			return false;
+		}
+
+		_default_program = default_program;
 
 		return true;
 	}
@@ -130,6 +147,16 @@ namespace pvd
 		{
 			auto program = std::make_shared<Schedule::Program>();
 			auto next_program = program_node.next_sibling("Program");
+
+			auto name_attribute = program_node.attribute("name");
+			if (!name_attribute)
+			{
+				program->name = ov::Random::GenerateString(8);
+			}
+			else
+			{
+				program->name = name_attribute.as_string();
+			}
 
 			auto scheduled_attribute = program_node.attribute("scheduled");
 			if (!scheduled_attribute)

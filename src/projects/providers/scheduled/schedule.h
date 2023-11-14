@@ -19,11 +19,12 @@
         <BypassTranscoder>false</BypassTranscoder> <!-- optional, default : false -->
         <VideoTrack>true</VideoTrack> <!-- optional, default : true -->
         <AudioTrack>true</AudioTrack> <!-- optional, default : true -->
-        <FallbackContent> <!-- optional -->
-            <Item url="file://sample.mp4" start="0" duration="60000"/>
-            <Item url="stream://default/app/stream1" duration="60000"/>
-        </FallbackContent>
     </Stream>
+
+    <DefaultProgram>
+        <Item url="file://sample.mp4" start="0" duration="60000"/> <!-- Milliseconds -->
+        <Item url="stream://default/app/stream1" duration="60000"/>
+    </DefaultProgram>
 
     <Program scheduled="2023-09-27T00:00:00.000Z" repeat="true"> <!-- optional -->
         <Item url="file://sample.mp4" start="0" duration="60000"/> <!-- Milliseconds -->
@@ -72,11 +73,28 @@ namespace pvd
 
         struct Stream
         {
+            bool operator==(const Stream &rhs) const
+            {
+                if (name != rhs.name ||
+                    bypass_transcoder != rhs.bypass_transcoder ||
+                    video_track != rhs.video_track ||
+                    audio_track != rhs.audio_track)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            bool operator!=(const Stream &rhs) const
+            {
+                return !(*this == rhs);
+            }
+
             ov::String name;
             bool bypass_transcoder;
             bool video_track;
             bool audio_track;
-            std::vector<std::shared_ptr<Item>> fallback_contents;
         };
             
         struct Program
@@ -139,7 +157,8 @@ namespace pvd
             {
                 return !(*this == rhs);
             }
-
+            
+            ov::String name;
             ov::String scheduled;
             std::chrono::system_clock::time_point scheduled_time;
             int64_t duration_ms;
@@ -161,6 +180,7 @@ namespace pvd
         std::chrono::system_clock::time_point GetCreatedTime() const;
 
         const Stream &GetStream() const;
+        const std::shared_ptr<Program> GetDefaultProgram() const;
         const std::vector<std::shared_ptr<Program>> &GetPrograms() const;
 
         const std::shared_ptr<Program> GetCurrentProgram() const;
@@ -168,10 +188,12 @@ namespace pvd
 
     private:
         bool ReadStreamNode(const pugi::xml_node &schedule_node);
+        bool ReadDefaultProgramNode(const pugi::xml_node &schedule_node);
         bool ReadProgramNodes(const pugi::xml_node &schedule_node);
         bool ReadItemNodes(const pugi::xml_node &item_parent_node, std::vector<std::shared_ptr<Item>> &items);
 
         Stream _stream;
+        std::shared_ptr<Program> _default_program;
         std::vector<std::shared_ptr<Program>> _programs;
 
         ov::String _file_path;

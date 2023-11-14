@@ -151,6 +151,8 @@ namespace pvd
                 continue;
             }
 
+            logti("Scheduled Channel %s/%s: Start %s program", GetApplicationName(), GetName().CStr(), _current_program->name.CStr());
+
             // Items
             int err_count = 0;
             while (_worker_thread_running)
