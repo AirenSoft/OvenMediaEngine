@@ -197,6 +197,7 @@ namespace pvd
         std::vector<std::shared_ptr<Program>> _programs;
 
         ov::String _file_path;
+        ov::String _file_name_without_ext;
         ov::String _media_root_dir;
 
         // Created time

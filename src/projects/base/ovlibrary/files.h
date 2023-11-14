@@ -26,4 +26,7 @@ namespace ov
 	// If path is relative path, return absolute path from binary path.
 	// If path is absolute path, return path.
 	ov::String GetAbsolutePath(const ov::String &path);
+
+	ov::String GetFileName(const ov::String &path);
+	ov::String GetFileNameWithoutExt(const ov::String &path);
 }

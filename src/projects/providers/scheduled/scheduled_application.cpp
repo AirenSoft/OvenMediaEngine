@@ -180,12 +180,6 @@ namespace pvd
             logte("Failed to add schedule (Could not create schedule): %s", schedule_file_info._file_path.CStr());
             return false;
         }
-        
-        if (schedule->GetStream().name != schedule_file_info.GetFileNameWithoutExt())
-        {
-            logte("Failed to add schedule (Stream name must be same as file name): %s", schedule_file_info._file_path.CStr());
-            return false;
-        }
 
         // Create Stream
         auto stream_info = info::Stream(*this, IssueUniqueStreamId(), StreamSourceType::Scheduled);

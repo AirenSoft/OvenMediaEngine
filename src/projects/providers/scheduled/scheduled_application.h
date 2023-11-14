@@ -38,38 +38,6 @@ namespace pvd
     private:
         struct ScheduleFileInfo
         {
-            ov::String GetFileName()
-            {
-                // split by '/'
-                auto items = _file_path.Split("/");
-                if (items.empty())
-                {
-                    return "";
-                }
-
-                // get last item
-                return items.back();
-            }
-
-            ov::String GetFileNameWithoutExt()
-            {
-                auto file_name = GetFileName();
-                if (file_name.IsEmpty())
-                {
-                    return "";
-                }
-
-                // split by '.'
-                auto items = file_name.Split(".");
-                if (items.empty())
-                {
-                    return "";
-                }
-
-                // get first item
-                return items.front();
-            }
-
             ov::String _file_path;
             struct stat _file_stat;
             std::shared_ptr<Schedule> _schedule;

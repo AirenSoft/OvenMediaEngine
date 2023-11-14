@@ -9,7 +9,7 @@
 
 #include "schedule.h"
 #include "schedule_private.h"
-
+#include <base/ovlibrary/files.h>
 
 namespace pvd
 {
@@ -35,6 +35,7 @@ namespace pvd
 		}
 
 		_file_path = file_path;
+		_file_name_without_ext = ov::GetFileNameWithoutExt(file_path);
 		_media_root_dir = media_root_dir;
 
 		auto schedule_node = xml_doc.child("Schedule");
@@ -73,14 +74,19 @@ namespace pvd
 			return false;
 		}
 
-		auto stream_name_node = stream_node.child("StreamName");
+		auto stream_name_node = stream_node.child("Name");
 		if (!stream_name_node)
 		{
-			logte("Failed to find StreamName node, StreamName is required");
-			return false;
+			_stream.name = _file_name_without_ext;
 		}
 
 		_stream.name = stream_name_node.text().as_string();
+
+		if (_stream.name != _file_name_without_ext)
+		{
+			logtw("Use the file name (%s) as the stream name. It is recommended that <Stream><Name>%s be set the same as the file name.", _file_name_without_ext.CStr(), _stream.name.CStr());
+			_stream.name = _file_name_without_ext;
+		}
 
 		auto bypass_transcoder_node = stream_node.child("BypassTranscoder");
 		if (!bypass_transcoder_node)

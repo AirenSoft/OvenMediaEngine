@@ -160,4 +160,34 @@ namespace ov
 
 		return absolute_path;
 	}
+
+	ov::String GetFileName(const ov::String &path)
+	{
+		auto index_of_slash = path.IndexOfRev('/');
+		if (index_of_slash == -1)
+		{
+			return path;
+		}
+		
+		return path.Substring(index_of_slash + 1);
+	}
+
+	ov::String GetFileNameWithoutExt(const ov::String &path)
+	{
+		auto file_name = GetFileName(path);
+		if (file_name.IsEmpty())
+		{
+			return "";
+		}
+
+		// split by '.'
+		auto items = file_name.Split(".");
+		if (items.empty())
+		{
+			return "";
+		}
+
+		// get first item
+		return items.front();
+	}
 }
