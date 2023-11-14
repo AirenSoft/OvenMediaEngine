@@ -39,65 +39,18 @@ namespace pvd
         auto config = GetConfig().GetProviders().GetScheduledProvider(&parsed);
 
         if (parsed == false ||
-            config.GetRootDir().IsEmpty() || 
-            config.GetScheduleFiles().IsEmpty())
+            config.GetMediaRootDir().IsEmpty() || 
+            config.GetScheduleFilesDir().IsEmpty())
         {
             logte("Could not create %s application for ScheduleProvider since invalid configuration", GetName().CStr());
             return false;
         }
 
-        auto root_dir = config.GetRootDir();
-        // Add trailing slash
-        if (root_dir.HasSuffix('/') == false)
-        {
-            root_dir.Append('/');
-        }
+        _media_root_dir = ov::GetAbsolutePath(config.GetMediaRootDir());
+        _schedule_files_path = ov::GetAbsolutePath(config.GetScheduleFilesDir());
 
-        // Absolute path
-        if (root_dir.Get(0) == '/' || root_dir.Get(0) == '\\')
-        {
-            _root_dir = root_dir;
-        }
-        // Relative path
-        else
-        {
-            // Get binary path
-            auto binary_path = ov::GetBinaryPath();
-            if (binary_path.HasSuffix('/') == false)
-            {
-                binary_path.Append('/');
-            }
-
-            _root_dir = binary_path + root_dir;
-        }
-
+        _schedule_file_name_regex = ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(ov::String::FormatString("*.%s", ScheduleFileExtension)));
         
-        auto schedule_files = config.GetScheduleFiles();
-
-        ov::String schedule_files_path;
-        ov::String schedule_files_name;
-
-        // split dir and file name from schedule_files
-        auto index = schedule_files.IndexOfRev('/');
-        if (index == -1)
-        {
-            schedule_files_name = schedule_files;
-        }
-        else
-        {
-            schedule_files_path = schedule_files.Substring(0, index);
-            // Remove slash from the beginning
-            if (schedule_files_path.HasPrefix('/'))
-            {
-                schedule_files_path = schedule_files_path.Substring(1);
-            }
-
-            schedule_files_name = schedule_files.Substring(index + 1);
-        }
-
-        _schedule_files_path = _root_dir + schedule_files_path;
-        _schedule_files_regex = ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(schedule_files_name));
-
         return Application::Start();
     }
 
@@ -110,7 +63,7 @@ namespace pvd
     void ScheduledApplication::OnScheduleWatcherTick()
     {
         // List all files in schedule file root
-        auto schedule_file_info_list_from_dir = SearchScheduleFileInfoFromDir(_schedule_files_path, _schedule_files_regex);
+        auto schedule_file_info_list_from_dir = SearchScheduleFileInfoFromDir(_schedule_files_path);
 
         // Check if file is added or updated
         for (auto &schedule_file_info_from_dir : schedule_file_info_list_from_dir)
@@ -169,7 +122,7 @@ namespace pvd
         }
     }
 
-    std::vector<ScheduledApplication::ScheduleFileInfo> ScheduledApplication::SearchScheduleFileInfoFromDir(const ov::String &schedule_file_root, ov::Regex &schedule_file_name_regex) const
+    std::vector<ScheduledApplication::ScheduleFileInfo> ScheduledApplication::SearchScheduleFileInfoFromDir(const ov::String &schedule_file_root) const
     {
         std::vector<ScheduleFileInfo> schedule_files;
 
@@ -181,7 +134,7 @@ namespace pvd
 
         for (auto &file_path : file_list)
         {
-            if (schedule_file_name_regex.Matches(file_path).IsMatched() == false)
+            if (_schedule_file_name_regex.Matches(file_path).IsMatched() == false)
             {
                 continue;
             }
@@ -221,10 +174,16 @@ namespace pvd
 
     bool ScheduledApplication::AddSchedule(ScheduleFileInfo &schedule_file_info)
     {
-        std::shared_ptr<Schedule> schedule = Schedule::Create(schedule_file_info._file_path, _root_dir);
+        std::shared_ptr<Schedule> schedule = Schedule::Create(schedule_file_info._file_path, _media_root_dir);
         if (schedule == nullptr)
         {
             logte("Failed to add schedule (Could not create schedule): %s", schedule_file_info._file_path.CStr());
+            return false;
+        }
+        
+        if (schedule->GetStream().name != schedule_file_info.GetFileNameWithoutExt())
+        {
+            logte("Failed to add schedule (Stream name must be same as file name): %s", schedule_file_info._file_path.CStr());
             return false;
         }
 
@@ -298,7 +257,7 @@ namespace pvd
             return false;
         }
 
-        std::shared_ptr<Schedule> new_schedule = Schedule::Create(new_schedule_file_info._file_path, _root_dir);
+        std::shared_ptr<Schedule> new_schedule = Schedule::Create(new_schedule_file_info._file_path, _media_root_dir);
         if (new_schedule == nullptr)
         {
             logtw("Failed to update schedule (Could not create schedule): %s", new_schedule_file_info._file_path.CStr());
@@ -308,7 +267,7 @@ namespace pvd
         // Check Stream Changed
         if (old_schedule->GetStream() != new_schedule->GetStream())
         {
-            logtw("%s <Stream> cannot be changed while running. (%s -> %s)", new_schedule_file_info._file_path.CStr(), new_schedule_file_info._schedule->GetStream().name.CStr(), new_schedule->GetStream().name.CStr());
+            logtw("%s <Stream> cannot be changed while running. (%s -> %s)", new_schedule_file_info._file_path.CStr(), old_schedule->GetStream().name.CStr(), new_schedule->GetStream().name.CStr());
 
             return false;
         }

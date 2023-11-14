@@ -128,4 +128,36 @@ namespace ov
 		
 		return dirname(path);
 	}
+
+	ov::String GetAbsolutePath(const ov::String &path)
+	{
+		ov::String temp = path;
+		ov::String absolute_path;
+
+		 // Add trailing slash
+        if (temp.HasSuffix('/') == false)
+        {
+            temp.Append('/');
+        }
+
+        // Absolute path
+        if (temp.Get(0) == '/' || temp.Get(0) == '\\')
+        {
+            absolute_path = temp;
+        }
+        // Relative path
+        else
+        {
+            // Get binary path
+            auto binary_path = ov::GetBinaryPath();
+            if (binary_path.HasSuffix('/') == false)
+            {
+                binary_path.Append('/');
+            }
+
+            absolute_path = binary_path + temp;
+        }
+
+		return absolute_path;
+	}
 }

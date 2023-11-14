@@ -22,4 +22,8 @@ namespace ov
 	bool DeleteDirectories(const ov::String &path);
 	std::tuple<bool, std::vector<ov::String>> GetFileList(const ov::String &directory_path);
 	ov::String GetBinaryPath();
+
+	// If path is relative path, return absolute path from binary path.
+	// If path is absolute path, return path.
+	ov::String GetAbsolutePath(const ov::String &path);
 }

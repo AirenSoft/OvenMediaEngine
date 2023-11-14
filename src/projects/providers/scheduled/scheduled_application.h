@@ -14,6 +14,7 @@
 
 #include "schedule.h"
 
+constexpr const char* ScheduleFileExtension = "sch";
 namespace pvd
 {
     class ScheduledApplication : public Application
@@ -31,12 +32,44 @@ namespace pvd
 
         ov::String GetRootDir() const
         {
-            return _root_dir;
+            return _media_root_dir;
         }
 
     private:
         struct ScheduleFileInfo
         {
+            ov::String GetFileName()
+            {
+                // split by '/'
+                auto items = _file_path.Split("/");
+                if (items.empty())
+                {
+                    return "";
+                }
+
+                // get last item
+                return items.back();
+            }
+
+            ov::String GetFileNameWithoutExt()
+            {
+                auto file_name = GetFileName();
+                if (file_name.IsEmpty())
+                {
+                    return "";
+                }
+
+                // split by '.'
+                auto items = file_name.Split(".");
+                if (items.empty())
+                {
+                    return "";
+                }
+
+                // get first item
+                return items.front();
+            }
+
             ov::String _file_path;
             struct stat _file_stat;
             std::shared_ptr<Schedule> _schedule;
@@ -44,16 +77,16 @@ namespace pvd
             uint32_t _deleted_checked_count = 0;
         };
 
-        std::vector<ScheduleFileInfo> SearchScheduleFileInfoFromDir(const ov::String &schedule_file_root, ov::Regex &schedule_file_name_regex) const;
+        std::vector<ScheduleFileInfo> SearchScheduleFileInfoFromDir(const ov::String &schedule_file_root) const;
 
         bool GetScheduleFileInfoFromDB(const size_t &hash, ScheduleFileInfo &schedule_file_info);
         bool AddSchedule(ScheduleFileInfo &schedule_file_info);
         bool UpdateSchedule(ScheduleFileInfo &schedule_file_info, ScheduleFileInfo &new_schedule_file_info);
         bool RemoveSchedule(ScheduleFileInfo &schedule_file_info);
 
-        ov::String _root_dir;
+        ov::String _media_root_dir;
         ov::String _schedule_files_path;
-        ov::Regex _schedule_files_regex;
+        ov::Regex _schedule_file_name_regex;
 
         // File name hash -> ScheduleFileInfo
         std::map<size_t, ScheduleFileInfo> _schedule_file_info_db;

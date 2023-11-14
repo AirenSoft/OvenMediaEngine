@@ -21,8 +21,8 @@ namespace cfg
 				struct ScheduledProvider : public Provider
 				{
 				protected:
-                    ov::String _root_dir;
-                    ov::String _schedule_files;
+                    ov::String _media_root_dir;
+                    ov::String _schedule_files_dir;
 
 				public:
 					ProviderType GetType() const override
@@ -30,16 +30,16 @@ namespace cfg
 						return ProviderType::Scheduled;
 					}
 
-                    CFG_DECLARE_CONST_REF_GETTER_OF(GetRootDir, _root_dir)
-                    CFG_DECLARE_CONST_REF_GETTER_OF(GetScheduleFiles, _schedule_files)
+                    CFG_DECLARE_CONST_REF_GETTER_OF(GetMediaRootDir, _media_root_dir)
+                    CFG_DECLARE_CONST_REF_GETTER_OF(GetScheduleFilesDir, _schedule_files_dir)
 					
 				protected:
 					void MakeList() override
 					{
 						Provider::MakeList();
 
-                        Register("RootDir", &_root_dir);
-                        Register("ScheduleFiles", &_schedule_files);
+                        Register("MediaRootDir", &_media_root_dir);
+                        Register("ScheduleFilesDir", &_schedule_files_dir);
 					}
 				};
 			}  // namespace pvd
