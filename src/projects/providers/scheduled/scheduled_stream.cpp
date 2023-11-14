@@ -375,7 +375,7 @@ namespace pvd
             auto single_file_dts_ms = single_file_dts * track->GetTimeBase().GetExpr() * 1000;
 
              // Get current play time
-            if (item->duration_ms != -1)
+            if (item->duration_ms >= 0)
             {
                 if (single_file_dts_ms > item->duration_ms)
                 {
