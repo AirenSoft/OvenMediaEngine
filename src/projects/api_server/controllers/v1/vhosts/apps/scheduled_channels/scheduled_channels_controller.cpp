@@ -23,7 +23,7 @@ namespace api
 			RegisterGet(R"()", &ScheduledChannelsController::OnGetChannelList);
 			RegisterPost(R"()", &ScheduledChannelsController::OnCreateChannel);
 			RegisterGet(R"(\/(?<stream_name>[^\/]*))", &ScheduledChannelsController::OnGetChannel);
-			RegisterPut(R"(\/(?<stream_name>[^\/]*))", &ScheduledChannelsController::OnPutChannel);
+			RegisterPatch(R"(\/(?<stream_name>[^\/]*))", &ScheduledChannelsController::OnPatchChannel);
 			RegisterDelete(R"(\/(?<stream_name>[^\/]*))", &ScheduledChannelsController::OnDeleteChannel);
 		};
 
@@ -101,7 +101,7 @@ namespace api
 		}
 
 		// PUT /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>
-		ApiResponse ScheduledChannelsController::OnPutChannel(const std::shared_ptr<http::svr::HttpExchange> &client,
+		ApiResponse ScheduledChannelsController::OnPatchChannel(const std::shared_ptr<http::svr::HttpExchange> &client,
 									const Json::Value &request_body,
 									const std::shared_ptr<mon::HostMetrics> &vhost,
 									const std::shared_ptr<mon::ApplicationMetrics> &app,
@@ -117,6 +117,12 @@ namespace api
 			if (stream->GetSourceType() != StreamSourceType::Scheduled)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest, "Stream is not a scheduled stream");
+			}
+
+			// stream object could not be patched
+			if (request_body.isMember("stream"))
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "Stream object could not be patched");
 			}
 
 			// Get Real ScheduledStream 
@@ -139,23 +145,29 @@ namespace api
 				return {http::StatusCode::Forbidden}; // Not enabled
 			}
 
-			auto media_root_dir = ov::GetAbsolutePath(schedule_config.GetMediaRootDir());
 			auto schedule_files_dir = ov::GetAbsolutePath(schedule_config.GetScheduleFilesDir());
 
-			auto [schedule, error] = pvd::Schedule::CreateFromJsonObject(request_body, media_root_dir);
-			if (schedule == nullptr)
+			auto old_schedule = scheduled_stream->PeekSchedule();
+			if (old_schedule == nullptr)
 			{
-				throw http::HttpError(http::StatusCode::BadRequest, error);
+				throw http::HttpError(http::StatusCode::NotFound, "Could not get the schedule");
 			}
 
-			if (stream->GetName() != schedule->GetStream().name)
+			auto new_schedule = old_schedule->Clone();
+
+			if (new_schedule->PatchFromJsonObject(request_body) == false)
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "Could not patch the schedule");
+			}
+
+			if (stream->GetName() != new_schedule->GetStream().name)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest, "Stream name is not matched with the request body");
 			}
 
-			auto schedule_file_path = ov::String::FormatString("%s/%s.%s", schedule_files_dir.CStr(), schedule->GetStream().name.CStr(), pvd::ScheduleFileExtension);
+			auto schedule_file_path = ov::String::FormatString("%s/%s.%s", schedule_files_dir.CStr(), new_schedule->GetStream().name.CStr(), pvd::ScheduleFileExtension);
 
-			auto error_code = schedule->SaveToXMLFile(schedule_file_path);
+			auto error_code = new_schedule->SaveToXMLFile(schedule_file_path);
 			if (error_code != CommonErrorCode::SUCCESS)
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not save the schedule file");
@@ -182,7 +194,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get the scheduled stream");
 			}
 
-			auto schedule = scheduled_stream->CopySchedule();
+			auto schedule = scheduled_stream->PeekSchedule();
 			if (schedule == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound, "Could not get the schedule");

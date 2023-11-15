@@ -35,6 +35,21 @@ namespace pvd
 		return {schedule, "success"};
 	}
 
+	std::shared_ptr<Schedule> Schedule::Clone() const
+	{
+		auto schedule = std::make_shared<Schedule>();
+
+		Json::Value root_object;
+		if (ToJsonObject(root_object) != CommonErrorCode::SUCCESS)
+		{
+			return nullptr;
+		}
+
+		schedule->LoadFromJsonObject(root_object, _media_root_dir);
+
+		return schedule;
+	}
+
 	bool Schedule::LoadFromJsonObject(const Json::Value &object, const ov::String &media_file_root_dir)
 	{
 		_media_root_dir = media_file_root_dir;
@@ -55,6 +70,29 @@ namespace pvd
 		}
 
 		_created_time = std::chrono::system_clock::now();
+
+		return true;
+	}
+
+	bool Schedule::PatchFromJsonObject(const Json::Value &object)
+	{
+		if (object.isMember("defaultProgram"))
+		{
+			_default_program = nullptr;
+			if (ReadDefaultProgramObject(object) == false)
+			{
+				return false;
+			}
+		}
+
+		if (object.isMember("programs"))
+		{
+			_programs.clear();
+			if (ReadProgramObjects(object) == false)
+			{
+				return false;
+			}
+		}
 
 		return true;
 	}

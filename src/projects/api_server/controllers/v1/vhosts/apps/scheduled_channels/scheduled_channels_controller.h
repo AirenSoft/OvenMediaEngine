@@ -31,8 +31,8 @@ namespace api
 									const std::shared_ptr<mon::HostMetrics> &vhost,
 									const std::shared_ptr<mon::ApplicationMetrics> &app);
 
-			// PUT /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>
-			ApiResponse OnPutChannel(const std::shared_ptr<http::svr::HttpExchange> &client,
+			// PATCH /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>
+			ApiResponse OnPatchChannel(const std::shared_ptr<http::svr::HttpExchange> &client,
 									const Json::Value &request_body,
 									const std::shared_ptr<mon::HostMetrics> &vhost,
 									const std::shared_ptr<mon::ApplicationMetrics> &app,

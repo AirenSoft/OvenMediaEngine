@@ -33,7 +33,7 @@ namespace pvd
         bool Terminate() override;
 
         bool UpdateSchedule(const std::shared_ptr<Schedule> &schedule);
-        std::shared_ptr<Schedule> CopySchedule() const;
+        std::shared_ptr<const Schedule> PeekSchedule() const;
 
         // Get current program
         bool GetCurrentProgram(std::shared_ptr<Schedule::Program> &curr_program, std::shared_ptr<Schedule::Item> &curr_item, int64_t &curr_item_pos) const;
