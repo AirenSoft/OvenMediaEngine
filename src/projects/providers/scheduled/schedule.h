@@ -9,6 +9,7 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <base/common_types.h>
 #include <pugixml-1.9/src/pugixml.hpp>
 
 /*
@@ -37,9 +38,11 @@
     </Program>
 </Schedule>
 */
- 
+
 namespace pvd
 {
+    constexpr const char* ScheduleFileExtension = "sch";
+    
     class Schedule
     {
     public:
@@ -65,6 +68,7 @@ namespace pvd
             }
 
             ov::String url;
+            ov::String file_path;
             int64_t start_time_ms;
             int64_t duration_ms;
 
@@ -92,9 +96,9 @@ namespace pvd
             }
 
             ov::String name;
-            bool bypass_transcoder;
-            bool video_track;
-            bool audio_track;
+            bool bypass_transcoder = false;
+            bool video_track = true;
+            bool audio_track = true;
         };
             
         struct Program
@@ -171,12 +175,17 @@ namespace pvd
             bool off_air = false;
         };
 
-        static std::shared_ptr<Schedule> Create(const ov::String &file_path, const ov::String &media_root_dir);
+        static std::tuple<std::shared_ptr<Schedule>, ov::String> CreateFromXMLFile(const ov::String &file_path, const ov::String &media_root_dir);
+        static std::tuple<std::shared_ptr<Schedule>, ov::String> CreateFromJsonObject(const Json::Value &object, const ov::String &media_root_dir);
 
         Schedule() = default;
         ~Schedule() = default;
 
         bool LoadFromXMLFile(const ov::String &file_path, const ov::String &media_file_root_dir);
+        bool LoadFromJsonObject(const Json::Value &object, const ov::String &media_file_root_dir);
+
+        ov::String GetLastError() const;
+        
         std::chrono::system_clock::time_point GetCreatedTime() const;
 
         const Stream &GetStream() const;
@@ -186,11 +195,27 @@ namespace pvd
         const std::shared_ptr<Program> GetCurrentProgram() const;
         const std::shared_ptr<Program> GetNextProgram() const;
 
+        CommonErrorCode SaveToXMLFile(const ov::String &file_path) const;
+        CommonErrorCode ToJsonObject(Json::Value &root_object) const;
+
     private:
         bool ReadStreamNode(const pugi::xml_node &schedule_node);
         bool ReadDefaultProgramNode(const pugi::xml_node &schedule_node);
         bool ReadProgramNodes(const pugi::xml_node &schedule_node);
         bool ReadItemNodes(const pugi::xml_node &item_parent_node, std::vector<std::shared_ptr<Item>> &items);
+
+        bool WriteItemNodes(const std::vector<std::shared_ptr<Item>> &items, pugi::xml_node &item_parent_node) const;
+        bool WriteItemObjects(const std::vector<std::shared_ptr<Item>> &items, Json::Value &item_parent_object) const;
+
+        bool ReadStreamObject(const Json::Value &root_object);
+        bool ReadDefaultProgramObject(const Json::Value &root_object);
+        bool ReadProgramObjects(const Json::Value &root_object);
+        bool ReadItemObjects(const Json::Value &item_parent_object, std::vector<std::shared_ptr<Item>> &items);
+
+        Stream MakeStream(const ov::String &name, bool bypass_transcoder, bool video_track, bool audio_track) const;
+        std::shared_ptr<Program> MakeDefaultProgram() const;
+        std::shared_ptr<Program> MakeProgram(const ov::String &name, const ov::String &scheduled_time, const ov::String &next_scheduled_time, bool repeat, bool last) const;
+        std::shared_ptr<Item> MakeItem(const ov::String &url, int64_t start_time_ms, int64_t duration_ms) const;
 
         Stream _stream;
         std::shared_ptr<Program> _default_program;
@@ -202,5 +227,7 @@ namespace pvd
 
         // Created time
         std::chrono::system_clock::time_point _created_time;
+
+        mutable ov::String _last_error;
     };
 }

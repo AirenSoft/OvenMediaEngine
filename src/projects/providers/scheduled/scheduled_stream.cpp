@@ -64,11 +64,23 @@ namespace pvd
         return Stream::Terminate();
     }
 
+    std::shared_ptr<Schedule> ScheduledStream::CopySchedule() const
+    {
+        std::shared_lock<std::shared_mutex> lock(_schedule_mutex);
+        return _schedule;
+    }
+
     std::shared_ptr<Schedule> ScheduledStream::GetSchedule() const
     {
         std::shared_lock<std::shared_mutex> lock(_schedule_mutex);
         _schedule_updated.Reset();
         return _schedule;
+    }
+
+    std::tuple<std::shared_ptr<Schedule::Program>, std::shared_ptr<Schedule::Item>> ScheduledStream::GetCurrentProgram() const
+    {
+        std::shared_lock<std::shared_mutex> lock(_current_mutex);
+        return {_current_program, _current_item};
     }
 
     bool ScheduledStream::UpdateSchedule(const std::shared_ptr<Schedule> &schedule)
@@ -83,6 +95,7 @@ namespace pvd
     bool ScheduledStream::CheckCurrentProgramChanged()
     {
         // Check if pointer is same
+        std::shared_lock<std::shared_mutex> lock(_current_mutex);
         if (_current_program == GetSchedule()->GetCurrentProgram())
         {
             return false;
@@ -111,7 +124,9 @@ namespace pvd
         while (_worker_thread_running)
         {
             // Schedule
+            std::unique_lock<std::shared_mutex> guard(_current_mutex);
             _current_schedule = GetSchedule();
+            guard.unlock();
             if (_current_schedule == nullptr)
             {
                 _realtime_clock.Pause();
@@ -121,7 +136,9 @@ namespace pvd
             }
 
             // Programs
+            guard.lock();
             _current_program = _current_schedule->GetCurrentProgram();
+            guard.unlock();
             if (_current_program == nullptr)
             {
                 auto next_program = _current_schedule->GetNextProgram();
@@ -163,7 +180,9 @@ namespace pvd
                     break;
                 }
 
+                guard.lock();
                 _current_item = _current_program->GetNextItem();
+                guard.unlock();
                 if (_current_item == nullptr)
                 {
                     logti("Scheduled Channel %s/%s: Program ended", GetApplicationName(), GetName().CStr());
@@ -216,7 +235,7 @@ namespace pvd
 
     ScheduledStream::PlaybackResult ScheduledStream::PlayFile(const std::shared_ptr<Schedule::Item> &item)
     {
-        logti("Scheduled Channel : %s/%s: Play file %s", GetApplicationName(), GetName().CStr(), item->url.CStr());
+        logti("Scheduled Channel : %s/%s: Play file %s", GetApplicationName(), GetName().CStr(), item->file_path.CStr());
 
         ScheduledStream::PlaybackResult result = PlaybackResult::PLAY_NEXT_ITEM;
 
@@ -425,14 +444,14 @@ namespace pvd
         AVFormatContext *format_context = nullptr;
 
         int err = 0;
-        err = ::avformat_open_input(&format_context, item->url.CStr(), nullptr, nullptr);
+        err = ::avformat_open_input(&format_context, item->file_path.CStr(), nullptr, nullptr);
         if (err < 0)
         {
             char errbuf[AV_ERROR_MAX_STRING_SIZE] = { 0 };
 
             ::av_strerror(err, errbuf, sizeof(errbuf));
 
-            logte("%s/%s: Failed to open %s item. error (%d, %s)", GetApplicationName(), GetName().CStr(), item->url.CStr(), err, errbuf);
+            logte("%s/%s: Failed to open %s item. error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), err, errbuf);
             return nullptr;
         }
 
@@ -443,7 +462,7 @@ namespace pvd
 
             ::av_strerror(err, errbuf, sizeof(errbuf));
 
-            logte("%s/%s: Failed to find stream info. Error (%d, %s)", GetApplicationName(), GetName().CStr(), item->url.CStr(), err, errbuf);
+            logte("%s/%s: Failed to find stream info. Error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), err, errbuf);
             ::avformat_close_input(&format_context);
             return nullptr;
         }
@@ -526,7 +545,7 @@ namespace pvd
         {
             logte("%s/%s: Failed to find %s track(s) from file %s", GetApplicationName(), GetName().CStr(), 
                 video_track_needed&& audio_track_needed == true ? "video and audio" :
-                video_track_needed == true ? "video" : "audio", item->url.CStr());
+                video_track_needed == true ? "video" : "audio", item->file_path.CStr());
             ::avformat_close_input(&format_context);
             return nullptr;
         }

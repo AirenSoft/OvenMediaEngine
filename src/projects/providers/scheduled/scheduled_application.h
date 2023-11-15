@@ -14,7 +14,6 @@
 
 #include "schedule.h"
 
-constexpr const char* ScheduleFileExtension = "sch";
 namespace pvd
 {
     class ScheduledApplication : public Application

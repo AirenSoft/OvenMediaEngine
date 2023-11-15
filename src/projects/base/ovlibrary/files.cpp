@@ -190,4 +190,14 @@ namespace ov
 		// get first item
 		return items.front();
 	}
+
+	bool DeleteFile(const ov::String &path)
+	{
+		if (remove(path.CStr()) != 0)
+		{
+			return false;
+		}
+
+		return true;
+	}
 }

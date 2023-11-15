@@ -33,6 +33,10 @@ namespace pvd
         bool Terminate() override;
 
         bool UpdateSchedule(const std::shared_ptr<Schedule> &schedule);
+        std::shared_ptr<Schedule> CopySchedule() const;
+
+        // Get current program
+        std::tuple<std::shared_ptr<Schedule::Program>, std::shared_ptr<Schedule::Item>> GetCurrentProgram() const;
 
     private:
         void WorkerThread();
@@ -67,6 +71,8 @@ namespace pvd
 
         // Current
         const Schedule::Stream _channel_info;
+
+        mutable std::shared_mutex _current_mutex;
         std::shared_ptr<Schedule> _current_schedule;
         std::shared_ptr<Schedule::Program> _current_program;
         std::shared_ptr<Schedule::Item> _current_item;

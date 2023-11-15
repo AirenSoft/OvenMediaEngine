@@ -174,10 +174,10 @@ namespace pvd
 
     bool ScheduledApplication::AddSchedule(ScheduleFileInfo &schedule_file_info)
     {
-        std::shared_ptr<Schedule> schedule = Schedule::Create(schedule_file_info._file_path, _media_root_dir);
+        auto [schedule, msg] = Schedule::CreateFromXMLFile(schedule_file_info._file_path, _media_root_dir);
         if (schedule == nullptr)
         {
-            logte("Failed to add schedule (Could not create schedule): %s", schedule_file_info._file_path.CStr());
+            logte("Failed to add schedule (Could not create schedule): %s - %s", schedule_file_info._file_path.CStr(), msg.CStr());
             return false;
         }
 
@@ -251,10 +251,10 @@ namespace pvd
             return false;
         }
 
-        std::shared_ptr<Schedule> new_schedule = Schedule::Create(new_schedule_file_info._file_path, _media_root_dir);
+        auto [new_schedule, err] = Schedule::CreateFromXMLFile(new_schedule_file_info._file_path, _media_root_dir);
         if (new_schedule == nullptr)
         {
-            logtw("Failed to update schedule (Could not create schedule): %s", new_schedule_file_info._file_path.CStr());
+            logtw("Failed to update schedule (Could not create schedule): %s - %s", new_schedule_file_info._file_path.CStr(), err.CStr());
             return false;
         }
 

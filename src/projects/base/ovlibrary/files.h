@@ -29,4 +29,6 @@ namespace ov
 
 	ov::String GetFileName(const ov::String &path);
 	ov::String GetFileNameWithoutExt(const ov::String &path);
+
+	bool DeleteFile(const ov::String &path);
 }
