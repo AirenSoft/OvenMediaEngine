@@ -118,6 +118,14 @@ If you want to start OvenMediaEngine, please run ./ome_docker_launcher.sh start
 
 If you want to change the configuration of OME, you can edit the `/usr/share/ovenmediaengine/conf/Server.xml` file. This file contains the server configuration settings for OME, such as the server's IP address, port, and SSL settings. Once you have made changes to this file, you will need to restart the OME Docker container for the changes to take effect. You can do this by running the `restart` command provided by the OME Docker Launcher.
 
+#### Certificate Installation
+
+To install a certificate in OvenMediaEngine, copy the certificate files to /usr/share/ovenmediaengine/conf with the following names:
+
+<table><thead><tr><th width="219">Type</th><th>File name</th></tr></thead><tbody><tr><td>Certificate</td><td>cert.crt</td></tr><tr><td>Private Key</td><td>cert.key</td></tr><tr><td>CA Bundle</td><td>cert.ca-bundle</td></tr></tbody></table>
+
+If you want to change the file names, you can modify Server.xml.
+
 ### `start`
 
 Once the `setup` phase is complete, you can use the `start` command to run the OME Docker container. The `start` command creates and starts the Docker container, enabling the OME application to receive stream packets using protocols such as RTMP and SRT. Before running the `start` command, ensure that the necessary configuration files have been copied to the host's `/usr/share/ovenmediaengine` directory by running the `setup` command.
