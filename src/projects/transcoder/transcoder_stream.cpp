@@ -119,7 +119,7 @@ void TranscoderStream::RequestWebhoook()
 		_output_profiles_cfg = &_remote_output_profiles;
 
 		logti("%s Using external output profiles by webhook", _log_prefix.CStr());		
-		logtd("%s OutputProfile\n%s", _log_prefix.CStr(), _output_profiles_cfg->ToString().CStr());		
+		logti("%s OutputProfile\n%s", _log_prefix.CStr(), _output_profiles_cfg->ToString().CStr());		
 	}
 	else if (policy == TranscodeWebhook::Policy::UseLocalProfiles)
 	{
@@ -732,7 +732,7 @@ bool TranscoderStream::CreateDecoder(int32_t decoder_id, std::shared_ptr<info::S
 		bind(&TranscoderStream::OnDecodedFrame, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	if (decoder == nullptr)
 	{
-		logte("%s Decoder allocation failed", _log_prefix.CStr());
+		logte("%s Decoder allocation failed.  InputTrack(%d) > Decoder(%d)", _log_prefix.CStr(), input_track->GetId(), decoder_id);
 		return false;
 	}
 

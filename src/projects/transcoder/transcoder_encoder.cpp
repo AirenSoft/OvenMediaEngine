@@ -199,9 +199,10 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 		{
 			switch (candidate->GetModuleId())
 			{
+				default:
 				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderVP8);
 				CASE_CREATE_CODEC_IFNEED(LIBVPX, EncoderVP8);
-				default:
+
 					break;
 			}
 		}
@@ -209,9 +210,9 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 		{
 			switch (candidate->GetModuleId())
 			{
+				default:
 				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderAAC);
 				CASE_CREATE_CODEC_IFNEED(FDKAAC, EncoderAAC);
-				default:
 					break;
 			}
 		}
@@ -222,10 +223,11 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 #if USE_LEGACY_LIBOPUS
 				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderOPUS);
 #else
+				default:
 				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderFFOPUS);
 				CASE_CREATE_CODEC_IFNEED(LIBOPUS, EncoderFFOPUS);
 #endif
-				default:
+
 					break;
 			}
 		}
@@ -233,8 +235,9 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 		{
 			switch (candidate->GetModuleId())
 			{
-				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderJPEG);
 				default:
+				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderJPEG);
+
 					break;
 			}
 			break;
@@ -243,8 +246,8 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 		{
 			switch (candidate->GetModuleId())
 			{
-				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderPNG);
 				default:
+				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderPNG);
 					break;
 			}
 			break;

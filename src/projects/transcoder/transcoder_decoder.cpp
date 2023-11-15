@@ -9,6 +9,7 @@
 #include "transcoder_decoder.h"
 
 #include "codec/decoder/decoder_aac.h"
+#include "codec/decoder/decoder_mp3.h"
 #include "codec/decoder/decoder_avc.h"
 #include "codec/decoder/decoder_avc_nv.h"
 #include "codec/decoder/decoder_avc_qsv.h"
@@ -182,8 +183,9 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(
 		{
 			switch (candidate->GetModuleId())
 			{
-				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderVP8)
 				default:
+				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderVP8)
+
 					break;					
 			}
 		}
@@ -191,8 +193,8 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(
 		{
 			switch (candidate->GetModuleId())
 			{
-				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderAAC)
 				default:
+				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderAAC)
 					break;
 			}
 		}
@@ -200,11 +202,20 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(
 		{
 			switch (candidate->GetModuleId())
 			{
-				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderOPUS)
 				default:
+				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderOPUS)
 					break;					
 			}
 		}
+		else if (candidate->GetCodecId() == cmn::MediaCodecId::Mp3)
+		{
+			switch (candidate->GetModuleId())
+			{
+				default:
+				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderMP3)
+					break;					
+			}
+		}		
 		else
 		{
 			OV_ASSERT(false, "Not supported codec: %d", track->GetCodecId());

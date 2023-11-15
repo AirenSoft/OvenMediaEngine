@@ -3,7 +3,7 @@
 #include "monitoring_private.h"
 
 #include <base/ovlibrary/path_manager.h>
-#include <base/ovlibrary/file.h>
+#include <base/ovlibrary/files.h>
 #include <modules/http/client/http_client.h>
 
 namespace mon
@@ -170,7 +170,7 @@ namespace mon
 		std::time_t next_file_time = 0;
 		ov::String next_file_path;
 
-		auto [result, file_list] = ov::File::GetFileList(_log_dir_path.CStr());
+		auto [result, file_list] = ov::GetFileList(_log_dir_path.CStr());
 
 		if(result == false)
 		{

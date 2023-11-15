@@ -54,7 +54,7 @@ namespace pvd
 
 	std::shared_ptr<pvd::RtspcProvider> RtspcStream::GetRtspcProvider()
 	{
-		return std::static_pointer_cast<RtspcProvider>(_application->GetParentProvider());
+		return std::static_pointer_cast<RtspcProvider>(GetApplication()->GetParentProvider());
 	}
 
 	bool RtspcStream::AddDepacketizer(uint8_t payload_type, RtpDepacketizingManager::SupportedDepacketizerType codec_id)

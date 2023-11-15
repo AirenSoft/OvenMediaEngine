@@ -46,6 +46,8 @@ namespace ov
 		static ov::String ToString(const std::chrono::system_clock::time_point &tp);
 
 		static ov::String ToISO8601String(const std::chrono::system_clock::time_point &tp);
+		// From ISO8601 string to time_point
+		static std::chrono::system_clock::time_point FromISO8601(const ov::String &iso8601_string);
 
 		static ov::String ToSiString(int64_t number, int precision);
 

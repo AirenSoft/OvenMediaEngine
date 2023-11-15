@@ -64,6 +64,8 @@ namespace info
 
 		int32_t IssueUniqueTrackId();
 		bool AddTrack(const std::shared_ptr<MediaTrack> &track);
+		bool UpdateTrack(const std::shared_ptr<MediaTrack> &track);
+		bool RemoveTrack(uint32_t id);
 		
 		const std::shared_ptr<MediaTrack> GetTrack(int32_t id) const;
 		const std::map<int32_t, std::shared_ptr<MediaTrack>> &GetTracks() const;

@@ -8,6 +8,8 @@
 //==============================================================================
 #include "./converter.h"
 
+#include <regex>
+
 namespace ov
 {
 	String Converter::ToString(bool flag)
@@ -138,6 +140,103 @@ namespace ov
 		oss << sign << std::setfill('0') << std::setw(2) << hour_part << ":" << std::setfill('0') << std::setw(2) << min_part;
 
 		return oss.str().c_str();
+	}
+
+	// From ISO8601 string to time_point
+	std::chrono::system_clock::time_point Converter::FromISO8601(const String &iso8601)
+	{
+		// Only support these formats
+		// 2023-09-27T00:00:00.000Z or 2023-09-27T00:00:00.000+09:00
+		std::string iso8601_string = iso8601.CStr();
+		std::tm tm{};
+		std::istringstream iss(iso8601_string);
+		iss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%S");
+
+		if (iss.fail())
+		{
+			throw std::invalid_argument("Invalid ISO 8601 string");
+		}
+
+		int milliseconds = 0;
+
+		// Extract milliseconds using regex - Deprecated because of performance
+		// std::regex milliseconds_regex("\\.([0-9]+)");
+		// std::smatch milliseconds_match;
+		// if (std::regex_search(iso8601_string, milliseconds_match, milliseconds_regex))
+		// {
+		// 	milliseconds = std::stoi(milliseconds_match[1]);
+		// }
+		if (iss.peek() == '.')
+		{
+			iss.ignore();  // Skip the period
+			iss >> milliseconds;
+			if (iss.fail())
+			{
+				throw std::invalid_argument("Invalid ISO 8601 string");
+			}
+		}
+
+		// Extract timezone offset using regex - Deprecated because of performance
+		// std::regex timezone_regex("([+-]\\d{2})(:?\\d{2})?");
+		// std::smatch timezone_match;
+		// if (std::regex_search(iso8601_string, timezone_match, timezone_regex))
+		// {
+		// 	int hours = std::stoi(timezone_match[1]);
+		// 	int minutes = (timezone_match.size() > 2) ? std::stoi(timezone_match[2]) : 0;
+		// 	tm.tm_hour -= hours;
+		// 	tm.tm_min -= minutes;
+		// }
+
+		if (iss.peek() == 'Z')
+		{
+			iss.ignore();  // UTC (Zulu time)
+			tm.tm_gmtoff = 0;
+		}
+		else if (iss.peek() == '+' || iss.peek() == '-')
+		{
+			char sign;
+			int hours=0, minutes=0;
+			iss >> sign;
+			
+			// Read hours
+			for (int i = 0; i < 2 && std::isdigit(iss.peek()); ++i)
+			{
+				hours = hours * 10 + (iss.get() - '0');
+			}
+
+			// Check if there are minutes
+			if (iss.peek() == ':')
+			{
+				iss.ignore();
+				if (std::isdigit(iss.peek()))
+				{
+					iss >> minutes;
+				}
+			}
+			else if (!iss.eof())
+			{
+				// Read minutes
+				for (int i = 0; i < 2 && std::isdigit(iss.peek()); ++i)
+				{
+					minutes = minutes * 10 + (iss.get() - '0');
+				}
+			}
+
+			if (sign == '-')
+			{
+				hours = -hours;
+				minutes = -minutes;
+			}
+
+			tm.tm_hour -= hours;
+			tm.tm_min -= minutes;
+		}
+
+		// Convert to time_point
+		auto time = std::chrono::system_clock::from_time_t(timegm(&tm));
+		time += std::chrono::milliseconds(milliseconds);
+
+		return time;
 	}
 
 	String Converter::ToSiString(int64_t number, int precision)

@@ -18,6 +18,7 @@
 #include "app_actions_controller.h"
 #include "output_profiles/output_profiles_controller.h"
 #include "streams/streams_controller.h"
+#include "scheduled_channels/scheduled_channels_controller.h"
 
 namespace api
 {
@@ -36,6 +37,8 @@ namespace api
 
 			// Branch into stream controller
 			CreateSubController<StreamsController>(R"(\/(?<app_name>[^\/:]*)\/streams)");
+
+			CreateSubController<ScheduledChannelsController>(R"(\/(?<app_name>[^\/:]*)\/scheduledChannels)");
 
 			// Branch into output profile controller
 			CreateSubController<OutputProfilesController>(R"(\/(?<app_name>[^\/:]*)\/outputProfiles)");

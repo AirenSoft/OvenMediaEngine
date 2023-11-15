@@ -234,6 +234,12 @@ namespace pvd
 		return nullptr;
 	}
 
+	std::map<info::application_id_t, std::shared_ptr<Application>> Provider::GetApplications()
+	{
+		std::shared_lock<std::shared_mutex> lock(_application_map_mutex);
+		return _applications;
+	}
+
 	std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPolicy>> Provider::VerifyBySignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address)
 	{
 		if(_access_controller == nullptr)

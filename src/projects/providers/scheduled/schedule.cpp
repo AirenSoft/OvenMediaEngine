@@ -1,0 +1,807 @@
+//==============================================================================
+//
+//  Schedule
+//
+//  Created by Getroot
+//  Copyright (c) 2023 AirenSoft. All rights reserved.
+//
+//==============================================================================
+
+#include "schedule.h"
+#include "schedule_private.h"
+#include <base/ovlibrary/files.h>
+
+namespace pvd
+{
+	std::tuple<std::shared_ptr<Schedule>, ov::String> Schedule::CreateFromXMLFile(const ov::String &file_path, const ov::String &media_root_dir)
+	{
+		auto schedule = std::make_shared<Schedule>();
+		if (schedule->LoadFromXMLFile(file_path, media_root_dir) == false)
+		{
+			return {nullptr, schedule->GetLastError()};
+		}
+
+		return {schedule, "success"};
+	}
+
+	std::tuple<std::shared_ptr<Schedule>, ov::String> Schedule::CreateFromJsonObject(const Json::Value &object, const ov::String &media_root_dir)
+	{
+		auto schedule = std::make_shared<Schedule>();
+		if (schedule->LoadFromJsonObject(object, media_root_dir) == false)
+		{
+			return {nullptr, schedule->GetLastError()};
+		}
+
+		return {schedule, "success"};
+	}
+
+	bool Schedule::LoadFromJsonObject(const Json::Value &object, const ov::String &media_file_root_dir)
+	{
+		_media_root_dir = media_file_root_dir;
+
+		if (ReadStreamObject(object) == false)
+		{
+			return false;
+		}
+
+		if (ReadDefaultProgramObject(object) == false)
+		{
+			return false;
+		}
+
+		if (ReadProgramObjects(object) == false)
+		{
+			return false;
+		}
+
+		_created_time = std::chrono::system_clock::now();
+
+		return true;
+	}
+
+	bool Schedule::ReadStreamObject(const Json::Value &root_object)
+	{
+		ov::String name;
+		bool bypass_transcoder = false;
+		bool video_track = true;
+		bool audio_track = true;
+
+		auto stream_object = root_object["stream"];
+		if (stream_object.isNull() || stream_object.isObject() == false)
+		{
+			_last_error = "Failed to find Stream object";
+			return false;
+		}
+
+		// Required in Json
+		auto name_object = stream_object["name"];
+		if (name_object.isNull() || name_object.isString() == false)
+		{
+			_last_error = "Failed to find Stream.Name object";
+			return false;
+		}
+
+		name = name_object.asString().c_str();
+
+		auto bypass_transcoder_object = stream_object["bypassTranscoder"];
+		if (bypass_transcoder_object.isBool() == true)
+		{
+			bypass_transcoder = bypass_transcoder_object.asBool();
+		}
+
+		auto video_track_object = stream_object["videoTrack"];
+		if (video_track_object.isBool() == true)
+		{
+			video_track = video_track_object.asBool();
+		}
+
+		auto audio_track_object = stream_object["audioTrack"];
+		if (audio_track_object.isBool() == true)
+		{
+			audio_track = audio_track_object.asBool();
+		}
+
+		_stream = MakeStream(name, bypass_transcoder, video_track, audio_track);
+
+		return true;
+	}
+
+	bool Schedule::ReadDefaultProgramObject(const Json::Value &root_object)
+	{
+		auto default_program_object = root_object["defaultProgram"];
+		if (default_program_object.isNull())
+		{
+			// optional
+			return true;
+		}
+
+		if (default_program_object.isObject() == false)
+		{
+			_last_error = "DefaultProgram must be an object";
+			return false;
+		}
+
+		auto default_program = MakeDefaultProgram();
+		if (default_program == nullptr)
+		{
+			return false;
+		}
+
+		if (ReadItemObjects(default_program_object, default_program->items) == false)
+		{
+			return false;
+		}
+
+		_default_program = default_program;
+
+		return true;
+	}
+
+	bool Schedule::ReadProgramObjects(const Json::Value &root_object)
+	{
+		ov::String name;
+		bool repeat = false;
+		ov::String scheduled;
+		ov::String next_scheduled;
+		bool last = false;
+
+		auto programs_object = root_object["programs"];
+		if (programs_object.isNull())
+		{
+			// optional
+			return true;
+		}
+
+		if (programs_object.isArray() == false)
+		{
+			_last_error = "programs must be an array";
+			return false;
+		}
+
+		for (uint32_t i=0; i<programs_object.size(); i++)
+		{
+			auto program_object = programs_object[i];
+			Json::Value next_program_object = Json::nullValue;
+
+			if (i + 1 < programs_object.size())
+			{
+				next_program_object = programs_object[i + 1];
+			}
+			else
+			{
+				last = true;
+			}
+
+			auto name_object = program_object["name"];
+			if (name_object.isNull() == false && name_object.isString() == true)
+			{
+				name = name_object.asString().c_str();
+			}
+
+			auto repeat_object = program_object["repeat"];
+			if (repeat_object.isNull() == false || repeat_object.isBool() == true)
+			{
+				repeat = repeat_object.asBool();
+			}
+
+			auto scheduled_object = program_object["scheduled"];
+			if (scheduled_object.isNull() || scheduled_object.isString() == false)
+			{
+				_last_error = "Failed to find scheduled object, scheduled is required";
+				return false;
+			}
+
+			scheduled = scheduled_object.asString().c_str();
+
+			if (last == false)
+			{
+				auto next_scheduled_object = next_program_object["scheduled"];
+				if (next_scheduled_object.isNull() || next_scheduled_object.isString() == false)
+				{
+					_last_error = "Failed to find scheduled object, scheduled is required";
+					return false;
+				}
+
+				next_scheduled = next_scheduled_object.asString().c_str();
+			}
+
+			auto program = MakeProgram(name, scheduled, next_scheduled, repeat, last);
+			if (program == nullptr)
+			{
+				return false;
+			}
+
+			// If the program has already passed, it is ignored.
+			if (program->end_time < std::chrono::system_clock::now())
+			{
+				logti("The program has already passed, it is ignored. name: %s, scheduled: %s", program->name.CStr(), program->scheduled.CStr());
+				continue;
+			}
+
+			if (ReadItemObjects(program_object, program->items) == false)
+			{
+				return false;
+			}
+
+			_programs.push_back(program);
+		}
+
+		return true;
+	}
+
+	bool Schedule::ReadItemObjects(const Json::Value &item_parent_object, std::vector<std::shared_ptr<Schedule::Item>> &items)
+	{
+		auto items_object = item_parent_object["items"];
+		if (items_object.isNull())
+		{
+			// it is optional
+			return true;
+		}
+
+		if (items_object.isArray() == false)
+		{
+			_last_error = "items must be an array";
+			return false;
+		}
+
+		for (uint32_t i=0; i<items_object.size(); i++)
+		{
+			ov::String url;
+			int64_t start_time_ms = 0;
+			int64_t duration_ms = -1;
+
+			auto item_object = items_object[i];
+
+			// url
+			auto url_object = item_object["url"];
+			if (url_object.isNull() || url_object.isString() == false)
+			{
+				_last_error = "Failed to find url object, url is required";
+				return false;
+			}
+
+			url = url_object.asString().c_str();
+
+			// start
+			auto start_object = item_object["start"];
+			if (start_object.isNull() == false || start_object.isInt() == true)
+			{
+				start_time_ms = start_object.asInt();
+			}
+
+			// duration
+			auto duration_object = item_object["duration"];
+			if (duration_object.isNull() == false || duration_object.isInt() == true)
+			{
+				duration_ms = duration_object.asInt();
+			}
+
+			duration_ms = duration_object.asInt();
+
+			auto item = MakeItem(url, start_time_ms, duration_ms);
+			if (item == nullptr)
+			{
+				return false;
+			}
+
+			items.push_back(item);
+		}
+
+		return true;
+	}
+
+	bool Schedule::LoadFromXMLFile(const ov::String &file_path, const ov::String &media_root_dir)
+	{
+		pugi::xml_document xml_doc;
+		auto load_result = xml_doc.load_file(file_path.CStr());
+		if (!load_result)
+		{
+			_last_error = ov::String::FormatString("Failed to load schedule file: %s", load_result.description());
+			return false;
+		}
+
+		_file_path = file_path;
+		_file_name_without_ext = ov::GetFileNameWithoutExt(file_path);
+		_media_root_dir = media_root_dir;
+
+		auto schedule_node = xml_doc.child("Schedule");
+		if (!schedule_node)
+		{
+			_last_error = "Failed to find Schedule node";
+			return false;
+		}
+
+		if (ReadStreamNode(schedule_node) == false)
+		{
+			return false;
+		}
+
+		if (_stream.name != _file_name_without_ext)
+		{
+			logtw("Use the file name (%s) as the stream name. It is recommended that <Stream><Name>%s be set the same as the file name.", _file_name_without_ext.CStr(), _stream.name.CStr());
+			_stream.name = _file_name_without_ext;
+		}
+
+		if (ReadProgramNodes(schedule_node) == false)
+		{
+			return false;
+		}
+
+		_created_time = std::chrono::system_clock::now();
+
+		return true;
+	}
+
+	bool Schedule::ReadStreamNode(const pugi::xml_node &schedule_node)
+	{
+		ov::String name;
+		bool bypass_transcoder = false;
+		bool video_track = true;
+		bool audio_track = true;
+
+		auto stream_node = schedule_node.child("Stream");
+		if (!stream_node)
+		{
+			_last_error = "Failed to find Stream node";
+			return false;
+		}
+
+		auto stream_name_node = stream_node.child("Name");
+		if (stream_name_node)
+		{
+			name = stream_name_node.text().as_string();
+		}
+
+		auto bypass_transcoder_node = stream_node.child("BypassTranscoder");
+		if (bypass_transcoder_node)
+		{
+			_stream.bypass_transcoder = bypass_transcoder_node.text().as_bool();
+		}
+
+		auto video_track_node = stream_node.child("VideoTrack");
+		if (video_track_node)
+		{
+			_stream.video_track = video_track_node.text().as_bool();
+		}
+
+		auto audio_track_node = stream_node.child("AudioTrack");
+		if (audio_track_node)
+		{
+			_stream.audio_track = audio_track_node.text().as_bool();
+		}
+
+		_stream = MakeStream(name, bypass_transcoder, video_track, audio_track);
+
+		return true;
+	}
+
+	bool Schedule::ReadDefaultProgramNode(const pugi::xml_node &schedule_node)
+	{
+		auto default_program_node = schedule_node.child("DefaultProgram");
+		if (!default_program_node)
+		{
+			// optional
+			return true;
+		}
+
+		auto default_program = MakeDefaultProgram();
+		if (default_program == nullptr)
+		{
+			return false;
+		}
+		
+		if (ReadItemNodes(default_program_node, default_program->items) == false)
+		{
+			return false;
+		}
+
+		_default_program = default_program;
+
+		return true;
+	}
+
+	bool Schedule::ReadProgramNodes(const pugi::xml_node &schedule_node)
+	{		
+		for (auto program_node = schedule_node.child("Program"); program_node; program_node = program_node.next_sibling("Program"))
+		{
+			auto next_program = program_node.next_sibling("Program");
+
+			ov::String name;
+			ov::String scheduled;
+			ov::String next_scheduled;
+			bool repeat = false;
+			bool last = false;
+
+			auto name_attribute = program_node.attribute("name");
+			if (name_attribute)
+			{
+				name = name_attribute.as_string();
+			}
+
+			auto scheduled_attribute = program_node.attribute("scheduled");
+			if (!scheduled_attribute)
+			{
+				_last_error = "Failed to find scheduled attribute, scheduled is required";
+				return false;
+			}
+
+			scheduled = scheduled_attribute.as_string();
+
+			if (next_program)
+			{
+				auto next_scheduled_attribute = next_program.attribute("scheduled");
+				if (!next_scheduled_attribute)
+				{
+					_last_error = ov::String::FormatString("Failed to find scheduled attribute, scheduled is required");
+					return false;
+				}
+
+				next_scheduled = next_scheduled_attribute.as_string();
+			}
+			else // last program
+			{
+				last = true;
+			}
+
+			auto repeat_attribute = program_node.attribute("repeat");
+			if (repeat_attribute)
+			{
+				repeat = repeat_attribute.as_bool();
+			}
+
+			auto program = MakeProgram(name, scheduled, next_scheduled, repeat, last);
+			if (program == nullptr)
+			{
+				return false;
+			}
+
+			if (ReadItemNodes(program_node, program->items) == false)
+			{
+				return false;
+			}
+
+			_programs.push_back(program);
+		}
+
+		return true;
+	}
+
+	bool Schedule::ReadItemNodes(const pugi::xml_node &item_parent_node, std::vector<std::shared_ptr<Schedule::Item>> &items)
+	{
+		for (auto item_node = item_parent_node.child("Item"); item_node; item_node = item_node.next_sibling("Item"))
+		{
+			ov::String url;
+			int64_t start_time_ms = 0;
+			int64_t duration_ms = 0;
+
+			auto url_attribute = item_node.attribute("url");
+			if (!url_attribute)
+			{
+				_last_error = "Failed to find url attribute, url is required";
+				return false;
+			}
+
+			url = url_attribute.as_string();
+
+			auto start_attribute = item_node.attribute("start");
+			if (!start_attribute)
+			{
+				start_time_ms = 0;
+			}
+			else
+			{
+				start_time_ms = start_attribute.as_llong();
+			}
+
+			auto duration_attribute = item_node.attribute("duration");
+			if (!duration_attribute)
+			{
+				_last_error = "Failed to find duration attribute, duration is required";
+				return false;
+			}
+
+			duration_ms = duration_attribute.as_llong();
+
+			auto item = MakeItem(url, start_time_ms, duration_ms);
+			if (item == nullptr)
+			{
+				return false;
+			}
+
+			items.push_back(item);
+		}
+
+		return true;
+	}
+
+	Schedule::Stream Schedule::MakeStream(const ov::String &name, bool bypass_transcoder, bool video_track, bool audio_track) const
+	{
+		Schedule::Stream stream;
+		
+		stream.name = name;
+		stream.bypass_transcoder = bypass_transcoder;
+		stream.video_track = video_track;
+		stream.audio_track = audio_track;
+
+		return stream;
+	}
+
+	std::shared_ptr<Schedule::Program> Schedule::MakeDefaultProgram() const
+	{
+		auto program = std::make_shared<Schedule::Program>();
+		program->name = "default";
+		program->scheduled = "1970-01-01T00:00:00Z";
+		program->scheduled_time = std::chrono::system_clock::time_point::min();
+		program->duration_ms = -1;
+		program->end_time = std::chrono::system_clock::time_point::max();
+		program->repeat = true;
+
+		return program;
+	}
+
+	std::shared_ptr<Schedule::Program> Schedule::MakeProgram(const ov::String &name, const ov::String &scheduled_time, const ov::String &next_scheduled_time, bool repeat, bool last) const
+	{
+		auto program = std::make_shared<Schedule::Program>();
+
+		program->name = name;
+		program->scheduled = scheduled_time;
+		program->repeat = repeat;
+
+		try 
+		{
+			program->scheduled_time = ov::Converter::FromISO8601(program->scheduled);
+		}
+		catch (std::exception &e)
+		{
+			_last_error = ov::String::FormatString("Failed to parse scheduled attribute: %s", e.what());
+			return nullptr;
+		}
+
+		if (last == false)
+		{
+			try
+			{
+				program->end_time = ov::Converter::FromISO8601(next_scheduled_time);
+			}
+			catch (std::exception &e)
+			{
+				_last_error = ov::String::FormatString("Failed to parse scheduled attribute: %s", e.what());
+				return nullptr;
+			}
+
+			program->duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(program->end_time - program->scheduled_time).count();
+		}
+		else
+		{
+			program->duration_ms = -1; // -1 means unknown duration
+			program->end_time = std::chrono::system_clock::time_point::max();
+		}
+
+		return program;
+	}
+
+	std::shared_ptr<Schedule::Item> Schedule::MakeItem(const ov::String &url, int64_t start_time_ms, int64_t duration_ms) const
+	{
+		auto item = std::make_shared<Schedule::Item>();
+
+		item->url = url;
+		item->start_time_ms = start_time_ms;
+		item->duration_ms = duration_ms;
+
+		// file_path
+		if (url.LowerCaseString().HasPrefix("file://"))
+		{
+			item->file_path = url.Substring(7);
+			item->file_path = _media_root_dir + item->file_path;
+			item->file = true;
+		}
+		else if (url.LowerCaseString().HasPrefix("stream://"))
+		{
+			item->file_path = url.Substring(9);
+			item->file = false;
+		}
+		else
+		{
+			_last_error = "Failed to parse url attribute, url must be file:// or stream://";
+			return nullptr;
+		}
+
+		// minimum duration is 1000ms
+		if (item->duration_ms >= 0 && item->duration_ms <= 1000)
+		{
+			logtw("Item duration is too short, duration must be greater than 1000ms. url: %s, duration: %lld, it will be changed to 1000ms", item->url.CStr(), item->duration_ms);
+			item->duration_ms = 1000;
+		}
+
+		return item;
+	}
+
+	const Schedule::Stream &Schedule::GetStream() const
+	{
+		return _stream;
+	}
+
+	const std::vector<std::shared_ptr<Schedule::Program>> &Schedule::GetPrograms() const
+	{
+		return _programs;
+	}
+
+	const std::shared_ptr<Schedule::Program> Schedule::GetCurrentProgram() const
+	{
+		// Get current time
+		auto now = std::chrono::system_clock::now();
+
+		// Find program which between scheduled time and finished time
+		for (auto program : _programs)
+		{
+			if (program->scheduled_time <= now && now < program->end_time)
+			{
+				if (program->IsOffAir() == true)
+				{
+					return nullptr;
+				}
+
+				return program;
+			}
+
+			// scheduled time is future, there is no current program yet
+			if (program->scheduled_time > now)
+			{
+				break;
+			}
+		}
+
+		return nullptr;
+	}
+
+	const std::shared_ptr<Schedule::Program> Schedule::GetNextProgram() const
+	{
+		// Get current time
+		auto now = std::chrono::system_clock::now();
+
+		// Find program which between scheduled time and finished time
+		for (auto program : _programs)
+		{
+			if (program->scheduled_time > now)
+			{
+				return program;
+			}
+		}
+
+		return nullptr;
+	}
+
+	ov::String Schedule::GetLastError() const
+	{
+		return _last_error;
+	}
+
+	std::chrono::system_clock::time_point Schedule::GetCreatedTime() const
+	{
+		return _created_time;
+	}
+
+	CommonErrorCode Schedule::SaveToXMLFile(const ov::String &file_path) const
+	{
+		pugi::xml_document xml_doc;
+		auto schedule_node = xml_doc.append_child("Schedule");
+
+		// Stream
+		auto stream_node = schedule_node.append_child("Stream");
+		stream_node.append_child("Name").text().set(_stream.name.CStr());
+		stream_node.append_child("BypassTranscoder").text().set(_stream.bypass_transcoder);
+		stream_node.append_child("VideoTrack").text().set(_stream.video_track);
+		stream_node.append_child("AudioTrack").text().set(_stream.audio_track);
+
+		// DefaultProgram
+		if (_default_program != nullptr)
+		{
+			auto default_program_node = schedule_node.append_child("DefaultProgram");
+
+			if (WriteItemNodes(_default_program->items, default_program_node) == false)
+			{
+				return CommonErrorCode::ERROR;
+			}
+		}
+
+		// Programs
+		for (auto program : _programs)
+		{
+			auto program_node = schedule_node.append_child("Program");
+			program_node.append_attribute("name").set_value(program->name.CStr());
+			program_node.append_attribute("scheduled").set_value(program->scheduled.CStr());
+			program_node.append_attribute("repeat").set_value(program->repeat);
+
+			if (WriteItemNodes(program->items, program_node) == false)
+			{
+				return CommonErrorCode::ERROR;
+			}
+		}
+
+		// Save
+		auto save_result = xml_doc.save_file(file_path.CStr());
+		if (!save_result)
+		{
+			return CommonErrorCode::ERROR;
+		}
+
+		return CommonErrorCode::SUCCESS;
+	}
+
+	bool Schedule::WriteItemNodes(const std::vector<std::shared_ptr<Schedule::Item>> &items, pugi::xml_node &item_parent_node) const
+	{
+		for (const auto &item : items)
+		{
+			auto item_node = item_parent_node.append_child("Item");
+			item_node.append_attribute("url").set_value(item->url.CStr());
+			item_node.append_attribute("start").set_value(item->start_time_ms);
+			item_node.append_attribute("duration").set_value(item->duration_ms);
+		}
+
+		return true;
+	}
+
+	CommonErrorCode Schedule::ToJsonObject(Json::Value &root_object) const
+	{
+		Json::Value stream_object;
+		stream_object["name"] = _stream.name.CStr();
+		stream_object["bypassTranscoder"] = _stream.bypass_transcoder;
+		stream_object["videoTrack"] = _stream.video_track;
+		stream_object["audioTrack"] = _stream.audio_track;
+
+		root_object["stream"] = stream_object;
+
+		if (_default_program != nullptr)
+		{
+			Json::Value default_program_object;
+			default_program_object["name"] = _default_program->name.CStr();
+			default_program_object["scheduled"] = _default_program->scheduled.CStr();
+			default_program_object["repeat"] = _default_program->repeat;
+
+			// items
+			Json::Value items_object;
+			if (WriteItemObjects(_default_program->items, items_object) == false)
+			{
+				return CommonErrorCode::ERROR;
+			}
+
+			default_program_object["items"] = items_object;
+			
+			root_object["defaultProgram"] = default_program_object;
+		}
+
+		for (auto program : _programs)
+		{
+			Json::Value program_object;
+			program_object["name"] = program->name.CStr();
+			program_object["scheduled"] = program->scheduled.CStr();
+			program_object["repeat"] = program->repeat;
+
+			Json::Value items_object;
+			if (WriteItemObjects(program->items, items_object) == false)
+			{
+				return CommonErrorCode::ERROR;
+			}
+
+			root_object["programs"].append(program_object);
+		}
+
+		return CommonErrorCode::SUCCESS;
+	}
+
+	bool Schedule::WriteItemObjects(const std::vector<std::shared_ptr<Schedule::Item>> &items, Json::Value &item_parent_object) const
+	{
+		for (const auto &item : items)
+		{
+			Json::Value item_object;
+
+			item_object["url"] = item->url.CStr();
+			item_object["start"] = item->start_time_ms;
+			item_object["duration"] = item->duration_ms;
+
+			item_parent_object.append(item_object);
+		}
+
+		return true;
+	}
+}

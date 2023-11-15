@@ -222,14 +222,13 @@ namespace info
 
 	bool Stream::AddTrack(const std::shared_ptr<MediaTrack> &track)
 	{
-		// If there is an existing track with the same track id, it will be deleted.
 		auto item = _tracks.find(track->GetId());
 		if (item != _tracks.end())
 		{
-			_tracks.erase(item);
+			return false;
 		}
 
-		auto result = _tracks.insert(std::make_pair(track->GetId(), track)).second;
+		_tracks.emplace(track->GetId(), track);
 
 		if (track->GetMediaType() == cmn::MediaType::Video)
 		{
@@ -254,7 +253,64 @@ namespace info
 			group->AddTrack(track);
 		}
 
-		return result;
+		return true;
+	}
+
+	// If track is not exist, add track or update track
+	bool Stream::UpdateTrack(const std::shared_ptr<MediaTrack> &track)
+	{
+		auto ex_track = GetTrack(track->GetId());
+		if (ex_track == nullptr)
+		{
+			return AddTrack(track);
+		}
+
+		return ex_track->Update(*track);
+	}
+
+	bool Stream::RemoveTrack(uint32_t id)
+	{
+		auto track = GetTrack(id);
+		if (track == nullptr)
+		{
+			return true;
+		}
+
+		_tracks.erase(id);
+
+		// Remove from vectors
+		if (track->GetMediaType() == cmn::MediaType::Video)
+		{
+			for (auto it = _video_tracks.begin(); it != _video_tracks.end(); ++it)
+			{
+				if ((*it)->GetId() == id)
+				{
+					_video_tracks.erase(it);
+					break;
+				}
+			}
+		}
+		else if (track->GetMediaType() == cmn::MediaType::Audio)
+		{
+			for (auto it = _audio_tracks.begin(); it != _audio_tracks.end(); ++it)
+			{
+				if ((*it)->GetId() == id)
+				{
+					_audio_tracks.erase(it);
+					break;
+				}
+			}
+		}
+
+		// Remove from group
+		auto group_it = _track_group_map.find(track->GetVariantName());
+		if (group_it != _track_group_map.end())
+		{
+			auto group = group_it->second;
+			group->RemoveTrack(id);
+		}
+
+		return true;
 	}
 
 	const std::shared_ptr<MediaTrack> Stream::GetTrack(int32_t id) const

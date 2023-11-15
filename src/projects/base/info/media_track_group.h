@@ -19,6 +19,7 @@ public:
 	ov::String GetName() const;
 
 	bool AddTrack(const std::shared_ptr<MediaTrack> &track);
+	bool RemoveTrack(uint32_t id);
 
 	size_t GetTrackCount() const;
 	std::shared_ptr<MediaTrack> GetFirstTrack() const;

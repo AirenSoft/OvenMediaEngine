@@ -24,6 +24,8 @@ public:
 	MediaTrack(const MediaTrack &media_track);
 	~MediaTrack();
 
+	bool Update(const MediaTrack &media_track);
+
 	// Track ID
 	void SetId(uint32_t id);
 	uint32_t GetId() const;

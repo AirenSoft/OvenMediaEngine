@@ -55,7 +55,7 @@ namespace pvd
 
 	std::shared_ptr<pvd::FileProvider> FileStream::GetFileProvider()
 	{
-		return std::static_pointer_cast<FileProvider>(_application->GetParentProvider());
+		return std::static_pointer_cast<FileProvider>(GetApplication()->GetParentProvider());
 	}
 
 	void FileStream::Release()

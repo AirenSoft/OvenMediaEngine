@@ -32,6 +32,21 @@ MediaTrack::MediaTrack()
 MediaTrack::MediaTrack(const MediaTrack &media_track)
 {
 	_id = media_track._id;
+	Update(media_track);	
+}
+
+MediaTrack::~MediaTrack()
+{
+}
+
+// Same ID required
+bool MediaTrack::Update(const MediaTrack &media_track)
+{
+	if (_id != media_track.GetId())
+	{
+		return false;
+	}
+
 	_media_type = media_track._media_type;
 
 	_codec_id = media_track._codec_id;
@@ -65,10 +80,8 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 	_decoder_configuration_record = media_track._decoder_configuration_record;
 
 	_origin_bitstream_format = media_track._origin_bitstream_format;
-}
 
-MediaTrack::~MediaTrack()
-{
+	return true;
 }
 
 void MediaTrack::SetId(uint32_t id)

@@ -36,6 +36,9 @@ namespace pvd
 		std::shared_ptr<Application> GetApplicationById(info::application_id_t app_id);
 		std::shared_ptr<Stream> GetStreamById(info::application_id_t app_id, uint32_t stream_id);
 
+		// Get all applications
+		std::map<info::application_id_t, std::shared_ptr<Application>> GetApplications();
+
 		std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPolicy>> VerifyBySignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address);
 
 		std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> SendCloseAdmissionWebhooks(const std::shared_ptr<const AccessController::RequestInfo> &request_info);
