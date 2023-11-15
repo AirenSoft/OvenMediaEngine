@@ -12,10 +12,12 @@
 #include "codec/decoder/decoder_avc.h"
 #include "codec/decoder/decoder_avc_nv.h"
 #include "codec/decoder/decoder_avc_qsv.h"
+#include "codec/decoder/decoder_avc_nilogan.h"
 #include "codec/decoder/decoder_avc_xma.h"
 #include "codec/decoder/decoder_hevc.h"
 #include "codec/decoder/decoder_hevc_nv.h"
 #include "codec/decoder/decoder_hevc_qsv.h"
+#include "codec/decoder/decoder_hevc_nilogan.h"
 #include "codec/decoder/decoder_hevc_xma.h"
 #include "codec/decoder/decoder_opus.h"
 #include "codec/decoder/decoder_vp8.h"
@@ -56,6 +58,7 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeDecoder::
 			desire_modules.push_back(ov::String::FormatString("%s:%d", "XMA", ALL_GPU_ID));
 			desire_modules.push_back(ov::String::FormatString("%s:%d", "NV", ALL_GPU_ID));
 			desire_modules.push_back(ov::String::FormatString("%s:%d", "QSV", ALL_GPU_ID));
+			desire_modules.push_back(ov::String::FormatString("%s:%d", "NILOGAN", ALL_GPU_ID));
 		}
 
 		desire_modules.push_back(ov::String::FormatString("%s:%d", DEFAULT_MODULE_NAME, ALL_GPU_ID));
@@ -154,6 +157,7 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(
 			{
 				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderAVC)
 				CASE_CREATE_CODEC_IFNEED(QSV, DecoderAVCxQSV)
+				CASE_CREATE_CODEC_IFNEED(NILOGAN, DecoderAVCxNILOGAN)
 				CASE_CREATE_CODEC_IFNEED(NVENC, DecoderAVCxNV)
 				CASE_CREATE_CODEC_IFNEED(XMA, DecoderAVCxXMA)
 				default:
@@ -167,6 +171,7 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(
 			{
 				CASE_CREATE_CODEC_IFNEED(DEFAULT, DecoderHEVC)
 				CASE_CREATE_CODEC_IFNEED(QSV, DecoderHEVCxQSV)
+				CASE_CREATE_CODEC_IFNEED(NILOGAN, DecoderHEVCxNILOGAN)
 				CASE_CREATE_CODEC_IFNEED(NVENC, DecoderHEVCxNV)
 				CASE_CREATE_CODEC_IFNEED(XMA, DecoderHEVCxXMA)
 				default:

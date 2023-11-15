@@ -161,6 +161,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 			else {
 				// cmn::MediaCodecModuleId::DEFAULT 
 				// cmn::MediaCodecModuleId::QSV
+				// cmn::MediaCodecModuleId::NILOGAN
 				// cmn::MediaCodecModuleId::ETC
 								
 				// Copy GPU memory to Host memory
@@ -194,6 +195,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 			{
 				// cmn::MediaCodecModuleId::DEFAULT 
 				// cmn::MediaCodecModuleId::QSV
+				// cmn::MediaCodecModuleId::NILOGAN
 				// cmn::MediaCodecModuleId::ETC
 
 				// Copy GPU memory to Host memory
@@ -208,7 +210,13 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 				"scale=%dx%d:flags=bilinear",
 				output_track->GetWidth(), output_track->GetHeight()));
 		}
-		break;		
+		break;	
+		case cmn::MediaCodecModuleId::NILOGAN: {
+			filters.push_back(ov::String::FormatString(
+				"scale=%dx%d:flags=bilinear",
+				output_track->GetWidth(), output_track->GetHeight()));
+		}
+		break;	
 		case cmn::MediaCodecModuleId::DEFAULT:
 		default: {
 			if (output_module_id == cmn::MediaCodecModuleId::NVENC)
@@ -230,6 +238,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 			{
 				// cmn::MediaCodecModuleId::DEFAULT 
 				// cmn::MediaCodecModuleId::QSV
+				// cmn::MediaCodecModuleId::NILOGAN
 				// cmn::MediaCodecModuleId::ETC
 				filters.push_back(ov::String::FormatString(
 					"scale=%dx%d:flags=bilinear",

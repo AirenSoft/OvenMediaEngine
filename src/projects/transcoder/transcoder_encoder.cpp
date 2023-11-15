@@ -14,10 +14,12 @@
 #include "codec/encoder/encoder_avc_nv.h"
 #include "codec/encoder/encoder_avc_openh264.h"
 #include "codec/encoder/encoder_avc_qsv.h"
+#include "codec/encoder/encoder_avc_nilogan.h"
 #include "codec/encoder/encoder_avc_xma.h"
 #include "codec/encoder/encoder_ffopus.h"
 #include "codec/encoder/encoder_hevc_nv.h"
 #include "codec/encoder/encoder_hevc_qsv.h"
+#include "codec/encoder/encoder_hevc_nilogan.h"
 #include "codec/encoder/encoder_hevc_xma.h"
 #include "codec/encoder/encoder_jpeg.h"
 #include "codec/encoder/encoder_opus.h"
@@ -34,7 +36,7 @@
 
 std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::GetCandidates(bool hwaccels_enable, ov::String hwaccles_modules, std::shared_ptr<MediaTrack> track)
 {
-	logtd("Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s), Video.Modules(%s), ", GetStringFromCodecId(track->GetCodecId()).CStr(), hwaccels_enable?"true":"falase", hwaccles_modules.CStr(), track->GetCodecModules().CStr());
+	logtd("Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s), Video.Modules(%s), ", GetStringFromCodecId(track->GetCodecId()).CStr(), hwaccels_enable?"true":"false", hwaccles_modules.CStr(), track->GetCodecModules().CStr());
 
 	ov::String configuration = ""; 
 
@@ -71,6 +73,7 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 			desire_modules.push_back(ov::String::FormatString("%s:%d", "XMA", ALL_GPU_ID));
 			desire_modules.push_back(ov::String::FormatString("%s:%d", "NV", ALL_GPU_ID));
 			desire_modules.push_back(ov::String::FormatString("%s:%d", "QSV", ALL_GPU_ID));
+			desire_modules.push_back(ov::String::FormatString("%s:%d", "NILOGAN", ALL_GPU_ID));
 		}
 
 		desire_modules.push_back(ov::String::FormatString("%s:%d", DEFAULT_MODULE_NAME, ALL_GPU_ID));
@@ -172,6 +175,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderAVCxOpenH264);
 				CASE_CREATE_CODEC_IFNEED(OPENH264, EncoderAVCxOpenH264);
 				CASE_CREATE_CODEC_IFNEED(QSV, EncoderAVCxQSV);
+				CASE_CREATE_CODEC_IFNEED(NILOGAN, EncoderAVCxNILOGAN);
 				CASE_CREATE_CODEC_IFNEED(XMA, EncoderAVCxXMA);
 				CASE_CREATE_CODEC_IFNEED(NVENC, EncoderAVCxNV);
 				default:
@@ -184,6 +188,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 			switch (candidate->GetModuleId())
 			{
 				CASE_CREATE_CODEC_IFNEED(QSV, EncoderHEVCxQSV);
+				CASE_CREATE_CODEC_IFNEED(NILOGAN, EncoderHEVCxNILOGAN);
 				CASE_CREATE_CODEC_IFNEED(XMA, EncoderHEVCxXMA);
 				CASE_CREATE_CODEC_IFNEED(NVENC, EncoderHEVCxNV);
 				default:
