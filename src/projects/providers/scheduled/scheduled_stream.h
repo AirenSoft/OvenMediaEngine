@@ -36,7 +36,7 @@ namespace pvd
         std::shared_ptr<Schedule> CopySchedule() const;
 
         // Get current program
-        std::tuple<std::shared_ptr<Schedule::Program>, std::shared_ptr<Schedule::Item>> GetCurrentProgram() const;
+        bool GetCurrentProgram(std::shared_ptr<Schedule::Program> &curr_program, std::shared_ptr<Schedule::Item> &curr_item, int64_t &curr_item_pos) const;
 
     private:
         void WorkerThread();
@@ -76,6 +76,7 @@ namespace pvd
         std::shared_ptr<Schedule> _current_schedule;
         std::shared_ptr<Schedule::Program> _current_program;
         std::shared_ptr<Schedule::Item> _current_item;
+        int64_t _current_item_position_ms = 0;
 
         std::map<int, int> _avstream_id_track_id_map;
 

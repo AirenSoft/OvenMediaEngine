@@ -77,10 +77,14 @@ namespace pvd
         return _schedule;
     }
 
-    std::tuple<std::shared_ptr<Schedule::Program>, std::shared_ptr<Schedule::Item>> ScheduledStream::GetCurrentProgram() const
+    bool ScheduledStream::GetCurrentProgram(std::shared_ptr<Schedule::Program> &curr_program, std::shared_ptr<Schedule::Item> &curr_item, int64_t &curr_item_pos) const
     {
         std::shared_lock<std::shared_mutex> lock(_current_mutex);
-        return {_current_program, _current_item};
+        curr_program = _current_program;
+        curr_item = _current_item;
+        curr_item_pos = _current_item_position_ms;
+
+        return true;
     }
 
     bool ScheduledStream::UpdateSchedule(const std::shared_ptr<Schedule> &schedule)
@@ -126,7 +130,11 @@ namespace pvd
             // Schedule
             std::unique_lock<std::shared_mutex> guard(_current_mutex);
             _current_schedule = GetSchedule();
+            _current_program = nullptr;
+            _current_item = nullptr;
+            _current_item_position_ms = 0;
             guard.unlock();
+
             if (_current_schedule == nullptr)
             {
                 _realtime_clock.Pause();
@@ -174,6 +182,10 @@ namespace pvd
             int err_count = 0;
             while (_worker_thread_running)
             {
+                guard.lock();
+                _current_item = nullptr;
+                guard.unlock();
+                
                 if (CheckCurrentProgramChanged() == true)
                 {
                     logti("Scheduled Channel %s/%s: Program changed", GetApplicationName(), GetName().CStr());
@@ -393,6 +405,10 @@ namespace pvd
             // dts to real time (ms)
             auto single_file_dts_ms = single_file_dts * track->GetTimeBase().GetExpr() * 1000;
 
+            std::unique_lock<std::shared_mutex> lock(_current_mutex);
+            _current_item_position_ms = single_file_dts_ms;
+            lock.unlock();
+
              // Get current play time
             if (item->duration_ms >= 0)
             {
@@ -431,6 +447,7 @@ namespace pvd
             }
         }
 
+        _current_item_position_ms = 0;
         ::avformat_close_input(&context);
         logti("Scheduled Channel : %s/%s: Playback stopped", GetApplicationName(), GetName().CStr());
 

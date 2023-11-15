@@ -194,29 +194,40 @@ namespace api
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not convert the schedule to json");
 			}
 
-			auto [program, item] = scheduled_stream->GetCurrentProgram();
-			if (program != nullptr)
+			std::shared_ptr<pvd::Schedule::Program> curr_program;
+			std::shared_ptr<pvd::Schedule::Item> curr_item;
+			int64_t curr_item_pos;
+
+			Json::Value curr_program_json;
+
+			curr_program_json["state"] = "offair";
+			if (scheduled_stream->GetCurrentProgram(curr_program, curr_item, curr_item_pos) == true)
 			{
-				Json::Value curr_program_json;
-
-				curr_program_json["name"] = program->name.CStr();
-				curr_program_json["scheduled"] = ov::Converter::ToISO8601String(program->scheduled_time).CStr();
-				curr_program_json["end"] = ov::Converter::ToISO8601String(program->end_time).CStr();
-				curr_program_json["duration"] = program->duration_ms;
-				curr_program_json["repeat"] = program->repeat;
-
-				if (item != nullptr)
+				if (curr_program != nullptr)
 				{
-					Json::Value item_json;
-					item_json["url"] = item->url.CStr();
-					item_json["duration"] = item->duration_ms;
-					item_json["start"] = item->start_time_ms;
+					curr_program_json["name"] = curr_program->name.CStr();
+					curr_program_json["scheduled"] = ov::Converter::ToISO8601String(curr_program->scheduled_time).CStr();
+					curr_program_json["end"] = ov::Converter::ToISO8601String(curr_program->end_time).CStr();
+					curr_program_json["duration"] = curr_program->duration_ms;
+					curr_program_json["repeat"] = curr_program->repeat;
 
-					curr_program_json["currentItem"] = item_json;
+					if (curr_item != nullptr)
+					{
+						curr_program_json["state"] = "onair";
+
+						Json::Value item_json;
+						item_json["url"] = curr_item->url.CStr();
+						item_json["duration"] = curr_item->duration_ms;
+						item_json["start"] = curr_item->start_time_ms;
+
+						item_json["currentPosition"] = curr_item_pos;
+
+						curr_program_json["currentItem"] = item_json;
+					}
 				}
-
-				response["currentProgram"] = curr_program_json;
 			}
+			
+			response["currentProgram"] = curr_program_json;
 
 			return response;
 		}
