@@ -7,7 +7,7 @@
 #  Copyright (c) 2023 AirenSoft. All rights reserved.
 #
 #==============================================================================
-VERSION="v0.2"
+VERSION="v0.3"
 
 # Configurations
 IMAGE_NAME=airensoft/ovenmediaengine:latest
@@ -238,6 +238,21 @@ _setup()
 {
 	prepare_dir_if_needed()
 	{
+		if [ ! -d "${CONF_PATH}" ]
+		then
+			logi "• Creating configuration directory ${PRESET_HIGHLIGHT}${CONF_PATH}"
+			run mkdir -p "${CONF_PATH}"
+		fi
+	}
+
+	pull_image()
+	{
+		logi "• Pulling ${PRESET_HIGHLIGHT}${IMAGE_NAME}"
+		run "${DOCKER}" pull "${IMAGE_NAME}" || die "• ERROR: Could not pull the latest image"
+	}
+
+	copy_config_files()
+	{
 		# Check if the configuration file exists
 		if check_already_setup
 		then
@@ -262,46 +277,43 @@ _setup()
 				esac
 			done
 
-			[ "${ANSWER}" != "y" ] && die "• ERROR: Aborted"
-
-			local BAK_CONF_PATH="${CONF_PATH}_$(date +%Y%m%d%H%M%S)"
-			logi "• Backing up configuration files to ${PRESET_HIGHLIGHT}${BAK_CONF_PATH}"
-			{
-				run mkdir -p "${BAK_CONF_PATH}" &&
-				run mv "${CONF_PATH}"/* "${BAK_CONF_PATH}"
-			} || die "• ERROR: Could not create backup"
+			if [ "${ANSWER}" == "y" ]
+			then
+				local BAK_CONF_PATH="${CONF_PATH}_$(date +%Y%m%d%H%M%S)"
+				logi "• Backing up configuration files to ${PRESET_HIGHLIGHT}${BAK_CONF_PATH}"
+				{
+					run mkdir -p "${BAK_CONF_PATH}" &&
+					run mv "${CONF_PATH}"/* "${BAK_CONF_PATH}"
+				} || die "• ERROR: Could not create backup"
+			else
+				logi "• OvenMediaEngine will use the existing configuration files"
+			fi
+		else
+			logi "• Copying configuration to ${PRESET_HIGHLIGHT}${CONF_PATH}" &&
+			run "${DOCKER}" run \
+				--rm \
+				--mount=type=bind,source="${CONF_PATH}",target=/tmp/conf \
+				"${IMAGE_NAME}" \
+				/bin/bash -c 'cp /opt/ovenmediaengine/bin/origin_conf/* /tmp/conf/'
 		fi
-
-		logi "• Creating configuration directory ${PRESET_HIGHLIGHT}${CONF_PATH}"
-		run mkdir -p "${CONF_PATH}"
-	}
-
-	pull_image()
-	{
-		logi "• Pulling ${PRESET_HIGHLIGHT}${IMAGE_NAME}"
-		run "${DOCKER}" pull "${IMAGE_NAME}" || die "• ERROR: Could not pull the latest image"
-	}
-
-	copy_config_files()
-	{
-		run "${DOCKER}" run \
-			--rm \
-			--mount=type=bind,source="${CONF_PATH}",target=/tmp/conf \
-			"${IMAGE_NAME}" \
-			/bin/bash -c 'cp /opt/ovenmediaengine/bin/origin_conf/* /tmp/conf/'
 	}
 
 	{
 		prepare_dir_if_needed &&
-		logi "• Copying configuration to ${PRESET_HIGHLIGHT}${CONF_PATH}" &&
 		copy_config_files
 	} || die "• ERROR: Could not copy configuration file"
 	
-	logi "• Copying logs directory"
-	run mkdir -p "${LOGS_PATH}" || { loge "• Could not create logs directory"; exit 1; }
+	if [ ! -d "${LOGS_PATH}" ]
+	then
+		logi "• Creating logs directory"
+		run mkdir -p "${LOGS_PATH}" || { loge "• Could not create logs directory"; exit 1; }
+	fi
 
-	logi "• Copying crash dump directory"
-	run mkdir -p "${CRASH_DUMPS_PATH}" || { loge "• Could not create crash dump directory"; exit 1; }
+	if [ ! -d "${CRASH_DUMPS_PATH}" ]
+	then
+		logi "• Creating crash dump directory"
+		run mkdir -p "${CRASH_DUMPS_PATH}" || { loge "• Could not create crash dump directory"; exit 1; }
+	fi
 
 	logi "• Copying media directory"
 	run mkdir -p "${MEDIA_PATH}" || { loge "• Could not create media directory"; exit 1; }
