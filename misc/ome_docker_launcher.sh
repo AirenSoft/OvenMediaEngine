@@ -10,7 +10,7 @@
 VERSION="v0.3"
 
 # Configurations
-IMAGE_NAME=airensoft/ovenmediaengine:dev
+IMAGE_NAME=airensoft/ovenmediaengine:latest
 CONTAINER_NAME=${CONTAINER_NAME:-ovenemediaengine}
 PREFIX=${PREFIX:-/usr/share/ovenmediaengine/}
 PREFIX=$(realpath "${PREFIX}")/
