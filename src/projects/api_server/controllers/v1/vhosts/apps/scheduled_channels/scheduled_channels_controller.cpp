@@ -86,7 +86,7 @@ namespace api
 			auto stream = GetStream(app, stream_name, nullptr);
 			if (stream != nullptr)
 			{
-				throw http::HttpError(http::StatusCode::Conflict, "Stream already exists");
+				throw http::HttpError(http::StatusCode::Conflict, "Stream '%s' already exists", stream_name.CStr());
 			}
 
 			auto schedule_file_path = ov::String::FormatString("%s/%s.%s", schedule_files_dir.CStr(), schedule->GetStream().name.CStr(), pvd::ScheduleFileExtension);
@@ -94,7 +94,7 @@ namespace api
 			auto error_code = schedule->SaveToXMLFile(schedule_file_path);
 			if (error_code != CommonErrorCode::SUCCESS)
 			{
-				throw http::HttpError(http::StatusCode::InternalServerError, "Could not save the schedule file");
+				throw http::HttpError(http::StatusCode::InternalServerError, "Could not save the schedule file %s", schedule_file_path.CStr());
 			}
 			
 			return {http::StatusCode::Created};
@@ -162,7 +162,7 @@ namespace api
 
 			if (stream->GetName() != new_schedule->GetStream().name)
 			{
-				throw http::HttpError(http::StatusCode::BadRequest, "Stream name is not matched with the request body");
+				throw http::HttpError(http::StatusCode::BadRequest, "Stream name %s is not matched with the request body %s", stream->GetName().CStr(), new_schedule->GetStream().name.CStr());
 			}
 
 			auto schedule_file_path = ov::String::FormatString("%s/%s.%s", schedule_files_dir.CStr(), new_schedule->GetStream().name.CStr(), pvd::ScheduleFileExtension);
@@ -170,7 +170,7 @@ namespace api
 			auto error_code = new_schedule->SaveToXMLFile(schedule_file_path);
 			if (error_code != CommonErrorCode::SUCCESS)
 			{
-				throw http::HttpError(http::StatusCode::InternalServerError, "Could not save the schedule file");
+				throw http::HttpError(http::StatusCode::InternalServerError, "Could not save the schedule file %s", schedule_file_path.CStr());
 			}
 			
 			return {http::StatusCode::Created};
@@ -269,7 +269,7 @@ namespace api
 			// Delete schedule file
 			if (ov::DeleteFile(schedule_file_path) == false)
 			{
-				throw http::HttpError(http::StatusCode::InternalServerError, "Could not delete the schedule file");
+				throw http::HttpError(http::StatusCode::InternalServerError, "Could not delete the schedule file %s", schedule_file_path.CStr());
 			}
 
 			return {http::StatusCode::OK};
