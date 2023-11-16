@@ -10,7 +10,7 @@
 VERSION="v0.3"
 
 # Configurations
-IMAGE_NAME=airensoft/ovenmediaengine:latest
+IMAGE_NAME=airensoft/ovenmediaengine:dev
 CONTAINER_NAME=${CONTAINER_NAME:-ovenemediaengine}
 PREFIX=${PREFIX:-/usr/share/ovenmediaengine/}
 PREFIX=$(realpath "${PREFIX}")/
@@ -18,7 +18,7 @@ PREFIX=$(realpath "${PREFIX}")/
 CONF_PATH=${PREFIX}conf
 LOGS_PATH=${PREFIX}logs
 CRASH_DUMPS_PATH=${PREFIX}dumps
-MEDIA_PATH=${PREFIX}media
+OME_MEDIA_ROOT=${OME_MEDIA_ROOT:-/dev/null}
 
 SERVER_XML_PATH="${CONF_PATH}/Server.xml"
 LOGGER_XML_PATH="${CONF_PATH}/Logger.xml"
@@ -314,9 +314,6 @@ _setup()
 		logi "• Creating crash dump directory"
 		run mkdir -p "${CRASH_DUMPS_PATH}" || { loge "• Could not create crash dump directory"; exit 1; }
 	fi
-
-	logi "• Copying media directory"
-	run mkdir -p "${MEDIA_PATH}" || { loge "• Could not create media directory"; exit 1; }
 
 	HIDE_POST_SETUP_MESSAGE=${HIDE_POST_SETUP_MESSAGE:-false}
 
@@ -747,7 +744,7 @@ _start()
 		--mount=type=bind,source="${CONF_PATH}",target=/opt/ovenmediaengine/bin/origin_conf \
 		--mount=type=bind,source="${LOGS_PATH}",target=/var/log/ovenmediaengine \
 		--mount=type=bind,source="${CRASH_DUMPS_PATH}",target=/opt/ovenmediaengine/bin/dumps \
-		--mount=type=bind,source="${MEDIA_PATH}",target=/opt/ovenmediaengine/media \
+		--mount=type=bind,source="${OME_MEDIA_ROOT}",target=/opt/ovenmediaengine/media \
 		--name "${CONTAINER_NAME}" "${IMAGE_NAME}" ||
 	{
 		loge "• ERROR: An error occurred while starting a container, stopping..."
