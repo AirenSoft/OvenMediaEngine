@@ -19,6 +19,11 @@ std::shared_ptr<ov::Data> RtpDepacketizerH264::ParseAndAssembleFrame(std::vector
 	bool start_payload = true;
 	for(const auto &payload : payload_list)
 	{
+		if (payload->GetLength() < NAL_HEADER_SIZE)
+		{
+			continue;
+		}
+
 		uint8_t nal_type = (payload->GetDataAs<uint8_t>()[0]) & NAL_TYPE_MASK;
 		std::shared_ptr<ov::Data> result;
 
