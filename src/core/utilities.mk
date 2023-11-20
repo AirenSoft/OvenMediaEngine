@@ -200,10 +200,10 @@ $(strip \
 )
 endef
 
-# Check if file exists
-# $(call chk_file_exist,<FILE_PATH>)
-define chk_file_exist
+# Check if ldconfig exists
+# $(call chk_lib_exist,<LIBRARY_NAME>)
+define chk_lib_exist
 $(strip \
-	$(shell if [ -e $(1) ] ; then echo 0; else echo 1; fi) \
+	$(shell ldconfig -p | grep $(1) >/dev/null 2>&1; echo $$?) \
 )
 endef
