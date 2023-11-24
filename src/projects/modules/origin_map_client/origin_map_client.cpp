@@ -35,8 +35,11 @@ OriginMapClient::OriginMapClient(const ov::String &redis_host, const ov::String 
 
 bool OriginMapClient::NofifyStreamsAlive()
 {
-	std::lock_guard<std::mutex> lock(_origin_map_mutex);
-	for (auto &[key, value] : _origin_map)
+	std::unique_lock<std::mutex> lock(_origin_map_mutex);
+	auto origin_map = _origin_map;
+	lock.unlock();
+
+	for (auto &[key, value] : origin_map)
 	{
 		Update(key, value);
 	}
@@ -52,7 +55,7 @@ bool OriginMapClient::Register(const ov::String &app_stream_name, const ov::Stri
 		return false;
 	}
 
-	std::lock_guard<std::mutex> lock(_redis_context_mutex);
+	std::unique_lock<std::mutex> lock(_redis_context_mutex);
 
 	// Set origin host to redis
 	// The EXPIRE option is to prevent locking the app/stream when OvenMediaEngine unexpectedly stops.
@@ -70,6 +73,8 @@ bool OriginMapClient::Register(const ov::String &app_stream_name, const ov::Stri
 	}
 
 	freeReplyObject(reply);
+
+	lock.unlock();
 
 	std::lock_guard<std::mutex> origin_map_lock(_origin_map_mutex);
 	_origin_map[app_stream_name] = origin_host;
@@ -114,10 +119,12 @@ bool OriginMapClient::Unregister(const ov::String &app_stream_name)
 		return false;
 	}
 
-	std::lock_guard<std::mutex> lock(_redis_context_mutex);
+	std::unique_lock<std::mutex> lock(_redis_context_mutex);
 
 	redisReply *reply = (redisReply *)redisCommand(_redis_context, "DEL %s", app_stream_name.CStr());
 	freeReplyObject(reply);
+
+	lock.unlock();
 
 	std::lock_guard<std::mutex> origin_map_lock(_origin_map_mutex);
 	_origin_map.erase(app_stream_name);

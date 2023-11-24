@@ -183,6 +183,9 @@ namespace pvd
 
         bool LoadFromXMLFile(const ov::String &file_path, const ov::String &media_file_root_dir);
         bool LoadFromJsonObject(const Json::Value &object, const ov::String &media_file_root_dir);
+        bool PatchFromJsonObject(const Json::Value &object);
+
+        std::shared_ptr<Schedule> Clone() const;
 
         ov::String GetLastError() const;
         

@@ -3,7 +3,8 @@
 # $ docker build -t airensoft/ovenmediaengine_nv:dev -f Dockerfile.cuda.local .
 # $ docker run -it --gpus all airensoft/ovenmediaengine_nv:dev
 
-FROM    nvidia/cuda:12.2.0-devel-ubuntu20.04 AS base
+FROM    nvidia/cuda:11.4.3-devel-ubuntu20.04 AS base
+# FROM    nvidia/cuda:12.2.0-devel-ubuntu20.04 AS base
 
 ## Install libraries by package
 ENV     DEBIAN_FRONTEND=noninteractive
@@ -13,11 +14,18 @@ FROM    base AS build
 
 WORKDIR /tmp
 
+ARG     OME_VERSION=local
+ARG 	STRIP=TRUE
+
 ENV     PREFIX=/opt/ovenmediaengine
 ENV     TEMP_DIR=/tmp/ome
 
-ARG     OME_VERSION=local
-ARG 	STRIP=TRUE
+ENV     NVIDIA_VISIBLE_DEVICES=all
+ENV     NVIDIA_REQUIRE_CUDA=cuda>=11.4
+ENV     NVIDIA_DRIVER_CAPABILITIES=compute,utility,video,compat32
+# TConfigure ldconfig to find the cuda and nvml libraries
+RUN     echo "/usr/local/cuda-11.4/targets/x86_64-linux/lib/stubs" > /etc/ld.so.conf.d/000_cuda.conf | ldconfig
+# RUN     echo "/usr/local/cuda-12.2/targets/x86_64-linux/lib/stubs" > /etc/ld.so.conf.d/000_cuda.conf | ldconfig
 
 ## Copy code to image
 COPY    ./ ${TEMP_DIR}/
@@ -47,7 +55,8 @@ RUN \
         rm -rf ${TEMP_DIR}
 
 ## Make Release Image
-FROM    ubuntu:20.04 AS release
+FROM    nvidia/cuda:11.4.3-base-ubuntu20.04 AS release
+# FROM    nvidia/cuda:12.2.0-base-ubuntu20.04 AS release
 
 ## Install libraries by package
 ENV     DEBIAN_FRONTEND=noninteractive
@@ -58,9 +67,8 @@ EXPOSE          80/tcp 8080/tcp 8090/tcp 1935/tcp 3333/tcp 3334/tcp 4000-4005/ud
 COPY            --from=build /opt/ovenmediaengine /opt/ovenmediaengine
 
 ENV     NVIDIA_VISIBLE_DEVICES=all
-# If it is lower than the GPU Driver version installed on the Host OS, The driver must be reinstalled.
 ENV     NVIDIA_REQUIRE_CUDA=cuda>=11.4
-ENV     NVIDIA_DRIVER_CAPABILITIES=video
+ENV     NVIDIA_DRIVER_CAPABILITIES=compute,utility,video,compat32
 
 # Default run as Origin mode
 CMD             ["/opt/ovenmediaengine/bin/OvenMediaEngine", "-c", "origin_conf"]

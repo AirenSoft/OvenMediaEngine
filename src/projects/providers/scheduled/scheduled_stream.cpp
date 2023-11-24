@@ -64,7 +64,7 @@ namespace pvd
         return Stream::Terminate();
     }
 
-    std::shared_ptr<Schedule> ScheduledStream::CopySchedule() const
+    std::shared_ptr<const Schedule> ScheduledStream::PeekSchedule() const
     {
         std::shared_lock<std::shared_mutex> lock(_schedule_mutex);
         return _schedule;

@@ -510,6 +510,11 @@
 								<Url>*</Url>
 							</CrossDomains>
 						</WebRTC>
+
+						<Schedule>
+							<MediaRootDir>/opt/ovenmediaengine/media</MediaRootDir>
+							<ScheduleFilesDir>/opt/ovenmediaengine/media</ScheduleFilesDir>
+						</Schedule>
 					</Providers>
 					<Publishers>
 						<AppWorkerCount>1</AppWorkerCount>

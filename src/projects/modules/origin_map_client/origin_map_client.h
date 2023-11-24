@@ -40,7 +40,7 @@ private:
 	uint16_t _redis_port;
 	ov::String _redis_password;
 
-	ov::DelayQueue _update_timer{"OriginMapClient"};
+	ov::DelayQueue _update_timer{"OMapC"};
 
 	std::map<ov::String, ov::String> _origin_map;
 	std::mutex _origin_map_mutex;

@@ -95,11 +95,11 @@ PROJECT_CXXFLAGS += -DHWACCELS_XMA_ENABLED
 endif
 
 # Enable NVidia Accelerator
-ifeq ($(call chk_file_exist,/lib/x86_64-linux-gnu/libcuda.so), 0) 
-ifeq ($(call chk_file_exist,/lib/x86_64-linux-gnu/libnvidia-ml.so), 0)
-$(info $(ANSI_YELLOW)- Nvidia Accelerator is enabled$(ANSI_RESET))
-LOCAL_LDFLAGS += -lcuda -lnvidia-ml
-PROJECT_CXXFLAGS += -DHWACCELS_NVIDIA_ENABLED
+ifeq ($(call chk_lib_exist,libcuda.so), 0) 
+ifeq ($(call chk_lib_exist,libnvidia-ml.so), 0)
+$(info $(ANSI_YELLOW)- NVIDIA Accelerator is enabled$(ANSI_RESET))
+LOCAL_LDFLAGS += -L/usr/local/cuda/lib64 -lcuda -lnvidia-ml
+PROJECT_CXXFLAGS += -I/usr/local/cuda/include -DHWACCELS_NVIDIA_ENABLED 
 endif
 endif
 

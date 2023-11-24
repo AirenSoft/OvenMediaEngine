@@ -320,6 +320,10 @@
 						<RTMP />
 						<SRT />
 						<RTSPPull />
+						<Schedule>
+							<MediaRootDir>/opt/ovenmediaengine/media</MediaRootDir>
+							<ScheduleFilesDir>/opt/ovenmediaengine/media</ScheduleFilesDir>
+						</Schedule>
 						<!-- <MPEGTS>
 							<StreamMap>
 									<- Set the stream name of the client connected to the port to "stream_${Port}"
