@@ -16,8 +16,8 @@ namespace bmff
 	{
 	public:
 		virtual void OnFMp4StorageInitialized(const int32_t &track_id) = 0;
-		virtual void OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t &segment_number) = 0;
-		virtual void OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number) = 0;
+		virtual void OnMediaSegmentCreated(const int32_t &track_id, const uint32_t &segment_number) = 0;
+		virtual void OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number, bool last_chunk) = 0;
 		virtual void OnMediaSegmentDeleted(const int32_t &track_id, const uint32_t &segment_number) = 0;
 	};
 
@@ -160,6 +160,8 @@ namespace bmff
 		ov::String GetSegmentFilePath(uint32_t segment_number) const;
 		bool SaveMediaSegmentToFile(const std::shared_ptr<FMP4Segment> &segment);
 		std::shared_ptr<FMP4Segment> LoadMediaSegmentFromFile(uint32_t segment_number) const;
+
+		std::shared_ptr<FMP4Segment> CreateNextSegment();
 
 		Config	_config;
 

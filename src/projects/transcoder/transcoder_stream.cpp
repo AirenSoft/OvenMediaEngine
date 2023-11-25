@@ -1356,6 +1356,39 @@ void TranscoderStream::OnFilteredFrame(int32_t filter_id, std::shared_ptr<MediaF
 {
 	filtered_frame->SetTrackId(filter_id);
 
+#if 0 // For debugging
+	if(filtered_frame != nullptr && filtered_frame->GetMediaType() == cmn::MediaType::Video)
+	{
+		auto av_frame = (AVFrame*)filtered_frame->GetPrivData();
+		if(av_frame == nullptr)
+		{
+			logte("%s Invalid pointer", _log_prefix.CStr());
+			return;
+		}
+
+		int l = 0, t = 0, w = 100, h = 100;
+
+		if (filtered_frame->GetHeight() == 1080)
+		{
+			l = 0; t = 0;
+		}
+		else if (filtered_frame->GetHeight() == 720)
+		{
+			l = 100; t = 100;
+		}
+		else if (filtered_frame->GetHeight() == 360)
+		{
+			l = 200; t = 200;
+		}
+
+		for(int y = t ; y < t+h ; y++)
+		{
+			uint8_t *ptr = av_frame->data[0] + y * av_frame->linesize[0] + l;
+
+			memset(ptr, 125, w);
+		}
+	}
+#endif
 	EncodeFrame(std::move(filtered_frame));
 }
 

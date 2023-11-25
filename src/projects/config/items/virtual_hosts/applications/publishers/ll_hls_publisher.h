@@ -37,6 +37,7 @@ namespace cfg
 					LLHlsDvr _dvr;
 					LLHlsDrm _drm;
 					bool _server_time_based_segment_numbering = false;
+					bool _enable_preload_hint = true;
 
 				public:
 					PublisherType GetType() const override
@@ -54,6 +55,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetCacheControl, _cache_control)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetDvr, _dvr)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetDrm, _drm)
+					CFG_DECLARE_CONST_REF_GETTER_OF(IsPreloadHintEnabled, _enable_preload_hint)
 
 				protected:
 					void MakeList() override
@@ -71,6 +73,7 @@ namespace cfg
 						Register<Optional>("CacheControl", &_cache_control);
 						Register<Optional>("DVR", &_dvr);
 						Register<Optional>("DRM", &_drm);
+						Register<Optional>("EnablePreloadHint", &_enable_preload_hint);
 					}
 				};
 			}  // namespace pub

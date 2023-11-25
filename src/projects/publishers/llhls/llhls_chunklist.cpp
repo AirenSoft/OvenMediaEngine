@@ -12,7 +12,9 @@
 #include <base/ovcrypto/base_64.h>
 #include <base/ovlibrary/zip.h>
 
-LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, uint32_t target_duration, double part_target_duration, const ov::String &map_uri)
+LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, 
+							uint32_t target_duration, double part_target_duration, 
+							const ov::String &map_uri, bool preload_hint_enabled)
 {
 	_url = url;
 	_track = track;
@@ -20,6 +22,7 @@ LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<cons
 	_max_part_duration = 0;
 	_part_target_duration = part_target_duration;
 	_map_uri = map_uri;
+	_preload_hint_enabled = preload_hint_enabled;
 
 	logtd("LLHLS Chunklist has been created. track(%s)", _track->GetVariantName().CStr());
 }
@@ -75,70 +78,40 @@ void LLHlsChunklist::SetPartHoldBack(const float &part_hold_back)
 	_part_hold_back = part_hold_back;
 }
 
-bool LLHlsChunklist::AppendSegmentInfo(const SegmentInfo &info)
+bool LLHlsChunklist::CreateSegmentInfo(const SegmentInfo &info)
 {
-	logtd("AppendSegmentInfo[Track : %s/%s]: %s", _track->GetPublicName().CStr(), _track->GetVariantName().CStr(), info.ToString().CStr());
-
-	if (info.GetSequence() < _last_segment_sequence)
-	{
-		logtc("The sequence number of the segment to be added is less than the last segment. segment(%lld) last(%lld)", info.GetSequence(), _last_segment_sequence.load());
-		return false;
-	}
+	logtd("UpdateSegmentInfo[Track : %s/%s]: %s", _track->GetPublicName().CStr(), _track->GetVariantName().CStr(), info.ToString().CStr());
 
 	std::shared_ptr<SegmentInfo> segment = GetSegmentInfo(info.GetSequence());
-	bool is_new_segment = false;
 	if (segment == nullptr)
 	{
-		// Sequence must be sequential
-		if (_last_segment_sequence + 1 != info.GetSequence())
-		{
-			logtc("Sequence is not sequential. last_sequence(%lld) current_sequence(%lld)", _last_segment_sequence.load(), info.GetSequence());
-			return false;
-		}
-
 		// Lock
 		std::unique_lock<std::shared_mutex> lock(_segments_guard);
 		// Create segment
 		segment = std::make_shared<SegmentInfo>(info);
 		_segments.emplace(segment->GetSequence(), segment);
-		is_new_segment = true;
+		_last_segment_sequence = segment->GetSequence();
+		_last_partial_segment_sequence = -1;
 	}
 	else
 	{
-		// Update segment
-		segment->UpdateInfo(info.GetStartTime(), info.GetDuration(), info.GetSize(), info.GetUrl(), info.IsIndependent());
+		logte("CreateSegmentInfo[Track : %s/%s]: segment(%lld) is already exist", 
+					_track->GetPublicName().CStr(), _track->GetVariantName().CStr(), info.GetSequence());
 	}
-
-	segment->SetCompleted();
 
 	UpdateCacheForDefaultChunklist();
-	if (is_new_segment)
-	{
-		_last_segment_sequence = info.GetSequence();
-	}
-
-	_first_segment = false;
 
 	return true;
 }
 
 bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const SegmentInfo &info)
 {
-	if (segment_sequence < _last_segment_sequence)
-	{
-		return false;
-	}
-	
 	std::shared_ptr<SegmentInfo> segment = GetSegmentInfo(segment_sequence);
 	if (segment == nullptr)
 	{
-		// Lock
-		std::unique_lock<std::shared_mutex> lock(_segments_guard);
-
-		// Create segment
-		segment = std::make_shared<SegmentInfo>(segment_sequence);
-		_segments.emplace(segment_sequence, segment);
-		_last_segment_sequence = segment_sequence;
+		logte("AppendPartialSegmentInfo[Track : %s/%s]: segment(%lld) is not found", 
+					_track->GetPublicName().CStr(), _track->GetVariantName().CStr(), segment_sequence);
+		return false;
 	}
 
 	// part duration is calculated on first segment
@@ -147,10 +120,17 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 		_max_part_duration = std::max(_max_part_duration, info.GetDuration());
 	}
 
-	segment->InsertPartialSegmentInfo(std::make_shared<SegmentInfo>(info));
-	
-	UpdateCacheForDefaultChunklist();
+	if (info.IsCompleted() == true)
+	{
+		segment->SetCompleted();
+		_first_segment = false;
+	}
+
 	_last_partial_segment_sequence = info.GetSequence();
+
+	segment->InsertPartialSegmentInfo(std::make_shared<SegmentInfo>(info));
+
+	UpdateCacheForDefaultChunklist();
 
 	return true;
 }
@@ -213,6 +193,19 @@ bool LLHlsChunklist::SaveOldSegmentInfo(std::shared_ptr<SegmentInfo> &segment_in
 	//TODD[CRITICAL](Getroot): _old_segments must be saved to file because memory should be exhausted
 
 	return true;
+}
+
+std::shared_ptr<LLHlsChunklist::SegmentInfo> LLHlsChunklist::GetLastSegmentInfo() const
+{
+	// lock
+	std::shared_lock<std::shared_mutex> lock(_segments_guard);
+
+	if (_segments.empty())
+	{
+		return nullptr;
+	}
+
+	return _segments.rbegin()->second;
 }
 
 std::shared_ptr<LLHlsChunklist::SegmentInfo> LLHlsChunklist::GetSegmentInfo(uint32_t segment_sequence) const
@@ -297,7 +290,7 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 
 	playlist.AppendFormat("#EXTM3U\n");
 
-	playlist.AppendFormat("#EXT-X-VERSION:%d\n", 10);
+	playlist.AppendFormat("#EXT-X-VERSION:%d\n", 9);
 	// Note that in protocol version 6, the semantics of the EXT-
 	// X-TARGETDURATION tag changed slightly.  In protocol version 5 and
 	// earlier it indicated the maximum segment duration; in protocol
@@ -310,7 +303,7 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 	{
 		// X-SERVER-CONTROL
 		playlist.AppendFormat("#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=%f\n", _part_hold_back);
-		playlist.AppendFormat("#EXT-X-PART-INF:PART-TARGET=%lf\n", _max_part_duration);
+		playlist.AppendFormat("#EXT-X-PART-INF:PART-TARGET=%lf\n", _part_target_duration);
 	}
 
 	auto first_segment = _segments.begin()->second;
@@ -359,6 +352,11 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 			continue;
 		}
 
+		if (segment->GetPartialSegmentsCount() == 0)
+		{
+			continue;
+		}
+
 		std::chrono::system_clock::time_point tp{std::chrono::milliseconds{segment->GetStartTime()}};
 		playlist.AppendFormat("#EXT-X-PROGRAM-DATE-TIME:%s\n", ov::Converter::ToISO8601String(tp).CStr());
 
@@ -378,14 +376,16 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 						playlist.AppendFormat("?%s", query_string.CStr());
 					}
 					playlist.AppendFormat("\"");
-					if (_track->GetMediaType() == cmn::MediaType::Video && partial_segment->IsIndependent() == true)
+					if (_track->GetMediaType() == cmn::MediaType::Audio || (_track->GetMediaType() == cmn::MediaType::Video && partial_segment->IsIndependent() == true))
 					{
 						playlist.AppendFormat(",INDEPENDENT=YES");
 					}
+
 					playlist.Append("\n");
 
-					// If it is the last one, output PRELOAD-HINT
-					if (segment->GetSequence() == last_segment->GetSequence() &&
+					//If it is the last one, output PRELOAD-HINT
+					if (_preload_hint_enabled == true &&
+						segment->GetSequence() == last_segment->GetSequence() &&
 						partial_segment == segment->GetPartialSegments().back())
 					{
 						playlist.AppendFormat("#EXT-X-PRELOAD-HINT:TYPE=PART,URI=\"%s", partial_segment->GetNextUrl().CStr());
@@ -399,7 +399,9 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 			}
 		}
 
-		if (segment->IsCompleted())
+		// Don't print Completed segment info if it is the last segment
+		// It will be printed when the next segment is created.
+		if (segment->IsCompleted() && segment->GetSequence() != last_segment->GetSequence())
 		{
 			playlist.AppendFormat("#EXTINF:%lf,\n", segment->GetDuration());
 			playlist.AppendFormat("%s", segment->GetUrl().CStr());
@@ -412,6 +414,21 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 	}
 	segment_lock.unlock();
 
+	if (last_segment->GetPartialSegmentsCount() == 0)
+	{
+		// preload hints
+		if (vod == false && legacy == false)
+		{
+			playlist.AppendFormat("#EXT-X-PRELOAD-HINT:TYPE=PART,URI=\"%s", last_segment->GetNextUrl().CStr());
+			if (query_string.IsEmpty() == false)
+			{
+				playlist.AppendFormat("?%s", query_string.CStr());
+			}
+			playlist.AppendFormat("\"\n");
+		}
+	}
+
+#if 1
 	if (vod == false)
 	{
 		// Output #EXT-X-RENDITION-REPORT
@@ -421,6 +438,11 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 		{
 			// Skip mine 
 			if (track_id == static_cast<int32_t>(_track->GetId()))
+			{
+				continue;
+			}
+			// Skip another media type
+			if (rendition->GetTrack()->GetMediaType() != _track->GetMediaType())
 			{
 				continue;
 			}
@@ -439,8 +461,7 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 			if (legacy == true && last_msn > 0)
 			{
 				// https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-4.4.5.4
-				// If the Rendition contains Partial Segments then this value 
-				// is the Media Sequence Number of the last Partial Segment. 
+				// If the Rendition contains Partial Segments then this value is the Media Sequence Number of the last Partial Segment. 
 
 				// In legacy, the completed msn is reported.
 				last_msn -= 1;
@@ -456,6 +477,7 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 			playlist.AppendFormat("\n");
 		}
 	}
+#endif
 
 	if (vod == true)
 	{
