@@ -82,24 +82,11 @@ bool LLHlsChunklist::CreateSegmentInfo(const SegmentInfo &info)
 {
 	logtd("UpdateSegmentInfo[Track : %s/%s]: %s", _track->GetPublicName().CStr(), _track->GetVariantName().CStr(), info.ToString().CStr());
 
-	std::shared_ptr<SegmentInfo> segment = GetSegmentInfo(info.GetSequence());
-	if (segment == nullptr)
-	{
-		// Lock
-		std::unique_lock<std::shared_mutex> lock(_segments_guard);
-		// Create segment
-		segment = std::make_shared<SegmentInfo>(info);
-		_segments.emplace(segment->GetSequence(), segment);
-		_last_segment_sequence = segment->GetSequence();
-		_last_partial_segment_sequence = -1;
-	}
-	else
-	{
-		logte("CreateSegmentInfo[Track : %s/%s]: segment(%lld) is already exist", 
-					_track->GetPublicName().CStr(), _track->GetVariantName().CStr(), info.GetSequence());
-	}
-
-	UpdateCacheForDefaultChunklist();
+	// Lock
+	std::unique_lock<std::shared_mutex> lock(_segments_guard);
+	// Create segment
+	auto segment = std::make_shared<SegmentInfo>(info);
+	_segments.emplace(segment->GetSequence(), segment);
 
 	return true;
 }
@@ -109,8 +96,7 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 	std::shared_ptr<SegmentInfo> segment = GetSegmentInfo(segment_sequence);
 	if (segment == nullptr)
 	{
-		logte("AppendPartialSegmentInfo[Track : %s/%s]: segment(%lld) is not found", 
-					_track->GetPublicName().CStr(), _track->GetVariantName().CStr(), segment_sequence);
+		logte("Could not find segment info. segment(%d)", segment_sequence);
 		return false;
 	}
 
@@ -126,6 +112,7 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 		_first_segment = false;
 	}
 
+	_last_segment_sequence = segment_sequence;
 	_last_partial_segment_sequence = info.GetSequence();
 
 	segment->InsertPartialSegmentInfo(std::make_shared<SegmentInfo>(info));
@@ -413,20 +400,6 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 		}
 	}
 	segment_lock.unlock();
-
-	if (last_segment->GetPartialSegmentsCount() == 0)
-	{
-		// preload hints
-		if (vod == false && legacy == false)
-		{
-			playlist.AppendFormat("#EXT-X-PRELOAD-HINT:TYPE=PART,URI=\"%s", last_segment->GetNextUrl().CStr());
-			if (query_string.IsEmpty() == false)
-			{
-				playlist.AppendFormat("?%s", query_string.CStr());
-			}
-			playlist.AppendFormat("\"\n");
-		}
-	}
 
 #if 1
 	if (vod == false)
