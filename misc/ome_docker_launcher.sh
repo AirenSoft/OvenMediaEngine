@@ -253,6 +253,8 @@ _setup()
 
 	copy_config_files()
 	{
+		local DO_COPY=false
+
 		# Check if the configuration file exists
 		if check_already_setup
 		then
@@ -280,6 +282,7 @@ _setup()
 			if [ "${ANSWER}" == "y" ]
 			then
 				local BAK_CONF_PATH="${CONF_PATH}_$(date +%Y%m%d%H%M%S)"
+				DO_COPY=true
 				logi "• Backing up configuration files to ${PRESET_HIGHLIGHT}${BAK_CONF_PATH}"
 				{
 					run mkdir -p "${BAK_CONF_PATH}" &&
@@ -289,6 +292,11 @@ _setup()
 				logi "• OvenMediaEngine will use the existing configuration files"
 			fi
 		else
+			DO_COPY=true
+		fi
+
+		if ${DO_COPY}
+		then
 			logi "• Copying configuration to ${PRESET_HIGHLIGHT}${CONF_PATH}" &&
 			run "${DOCKER}" run \
 				--rm \
