@@ -53,7 +53,7 @@ bool LLHlsStream::Start()
 
 	if (llhls_config.IsOriginMode())
 	{
-		_stream_key = GetName();
+		_stream_key = ov::String::FormatString("%zu", GetName().Hash());
 	}
 	else 
 	{
