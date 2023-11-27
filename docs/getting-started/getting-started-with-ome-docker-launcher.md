@@ -31,6 +31,12 @@ OME Docker Launcher has not been tested in various environments yet. Therefore, 
 
 Run the following command in your Linux shell.
 
+```
+curl -OL 'https://raw.githubusercontent.com/AirenSoft/OvenMediaEngine/master/misc/ome_docker_launcher.sh' && chmod +x ome_docker_launcher.sh
+```
+
+Below is an example of execution:
+
 ```bash
 $ curl -OL 'https://raw.githubusercontent.com/AirenSoft/OvenMediaEngine/master/misc/ome_docker_launcher.sh' && chmod +x ome_docker_launcher.sh
 $ ./ome_docker_launcher.sh -h
@@ -158,6 +164,23 @@ $ ./ome_docker_launcher.sh start
   docker> 7235ff9f80762b6e7b27ba3a9773f5584033d55c113340dabf0779e8f5cf53bb
 • OvenMediaEngine is started successfully!
 ```
+
+{% hint style="info" %}
+When running the OME Docker Launcher, you can specify the IP to be used as an ICE Candidate by using the `OME_HOST_IP` environment variable. For instance, specifying the `OME_HOST_IP` as shown below will propagate the ICE Candidate to that particular address.
+
+
+
+```sh
+$ OME_HOST_IP=1.2.3.4 ./ome_docker_launcher.sh start
+...
+• OvenMediaEngine is started successfully!
+
+$ tail -f /usr/share/ovenmediaengine/logs/ovenmediaengine.log
+...
+[2023-11-01 00:00:00.000] I [OvenMediaEngine:1] ICE | ice_port_manager.cpp:305  | ICE candidate found: 1.2.3.4:40000
+...
+```
+{% endhint %}
 
 {% hint style="info" %}
 The OME Docker Launcher automatically detects a list of port numbers specified in the `Server.xml` file and passes them to the Docker `-p` option. However, if you use the `include` attribute inside the `<Providers>` or `<Publishers>` element, the launcher may not detect them correctly.
