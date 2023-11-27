@@ -187,7 +187,17 @@ The OME Docker Launcher automatically detects a list of port numbers specified i
 {% endhint %}
 
 {% hint style="info" %}
-If you have used an environment variable form like `${env:<ENV_NAME>}`, the OME Docker Launcher resolves the value of the `<ENV_NAME>` environment variable in the current shell. This enables you to dynamically set configuration values using environment variables.
+If you have declared the following environment variable in the shell where you run the OME Docker Launcher, this value will be used to bind the port and passed into the Docker container. This enables you to dynamically set configuration values using environment variables.
+
+```
+OME_HOST_IP
+OME_RTMP_PROV_PORT
+OME_WEBRTC_CANDIDATE_IP
+OME_WEBRTC_CANDIDATE_PORT
+OME_WEBRTC_SIGNALLING_PORT
+OME_WEBRTC_SIGNALLING_TLS_PORT
+OME_WEBRTC_TCP_RELAY_PORT
+```
 {% endhint %}
 
 ### `sh`
