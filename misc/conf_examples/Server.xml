@@ -324,6 +324,7 @@
 										 - xma :Xilinx Media Accelerator
 										 - qsv :Intel Quick Sync Video
 										 - nv : Nvidia Video Codec SDK
+										 - nilogan: Netint VPU
 
 										You can use multiple modules by separating them with commas.
 										For example, if you want to use xma and nv, you can set it as follows.

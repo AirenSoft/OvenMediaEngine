@@ -211,11 +211,21 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 				output_track->GetWidth(), output_track->GetHeight()));
 		}
 		break;	
-		case cmn::MediaCodecModuleId::NILOGAN: {
-			filters.push_back(ov::String::FormatString(
-				"scale=%dx%d:flags=bilinear",
-				output_track->GetWidth(), output_track->GetHeight()));
-		}
+		case cmn::MediaCodecModuleId::NILOGAN:
+			if (output_module_id == cmn::MediaCodecModuleId::NILOGAN)
+			{
+				filters.push_back(ov::String::FormatString(					 
+					//"hwupload=derive_device=%d,scale=%dx%d,hwdownload",
+					//output_track->GetCodecDeviceId(),
+					"scale=%dx%d:flags=bilinear",
+					output_track->GetWidth(), output_track->GetHeight()));
+			}
+			else 
+			{
+				filters.push_back(ov::String::FormatString(
+					"scale=%dx%d:flags=bilinear",
+					output_track->GetWidth(), output_track->GetHeight()));
+			}		
 		break;	
 		case cmn::MediaCodecModuleId::DEFAULT:
 		default: {

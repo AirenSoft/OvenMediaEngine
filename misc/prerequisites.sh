@@ -282,13 +282,14 @@ install_ffmpeg()
 		patch_name=$(basename $NETINT_LOGAN_PATCH_PATH)
 		cp $NETINT_LOGAN_PATCH_PATH ${DIR}		
 		cd ${DIR} && patch -t -p 1 < $patch_name
-		#cd /root/T4xx/libxcoder_logan && bash build.sh && ldconfig //the compilation of libxcoder_logan is done before
+		cd /root/T4xx/libxcoder_logan && bash build.sh && ldconfig #the compilation of libxcoder_logan is done before
 		#./prerequisites.sh --enable-nilogan --nilogan-path=/root/T4xx/release/FFmpeg-n5.0_t4xx_patch
 		ADDI_LIBS+=" --enable-libxcoder_logan --enable-ni_logan --enable-avfilter  --enable-pthreads "
 		ADDI_ENCODER+=",h264_ni_logan,h265_ni_logan"
         ADDI_DECODER+=",h264_ni_logan,h265_ni_logan"
 		ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
 		ADDI_LDFLAGS=" -lm -ldl"
+		ADDI_FILTERS+=",hwdownload,hwupload,hwupload_ni_logan"
 		#ADDI_EXTRA_LIBS="-lpthread"
 	fi
 
@@ -525,19 +526,19 @@ else
     echo "Please refer to manual installation page"
 fi
 
-install_nasm
-install_openssl
-install_libsrtp
-install_libsrt
-install_libopus
-install_libopenh264
-install_libvpx
-install_fdk_aac
-install_nvcc_hdr
+#install_nasm
+#install_openssl
+#install_libsrtp
+#install_libsrt
+#install_libopus
+#install_libopenh264
+#install_libvpx
+#install_fdk_aac
+#install_nvcc_hdr
 install_ffmpeg
-install_jemalloc
-install_libpcre2
-install_hiredis
+#install_jemalloc
+#install_libpcre2
+#install_hiredis
 
 if [ "${WITH_OME}" == "true" ]; then
     install_ovenmediaengine

@@ -33,9 +33,31 @@ bool DecoderAVCxNILOGAN::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
-	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
+	_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NILOGAN, _track->GetCodecDeviceId()));
+	if(_context->hw_device_ctx == nullptr)
+	{
+		logte("Could not allocate hw device context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		return false;
+	}
+	
+	// Create packet parser
+	_parser = ::av_parser_init(GetCodecID());
+	if (_parser == nullptr)
+	{
+		logte("Parser not found");
+		return false;
+	}
+	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
 
-	::av_opt_set(_context->priv_data, "gpu_copy", "on", 0);
+	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
+	_context->pkt_timebase = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
+	_context->flags |= AV_CODEC_FLAG_LOW_DELAY;
+	_context->width = 1920;
+	_context->height = 1080;
+	_context->pix_fmt = AV_PIX_FMT_YUV420P;
+
+	::av_opt_set(_context->priv_data, "out", "hw", 0);
+	::av_opt_set(_context->priv_data, "xcoder-params", "lowDelayMode=1:lowDelay=100", 0);
 
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
@@ -43,14 +65,7 @@ bool DecoderAVCxNILOGAN::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
-	// Create packet parser
-	_parser = ::av_parser_init(_codec->id);
-	if (_parser == nullptr)
-	{
-		logte("Parser not found");
-		return false;
-	}
-	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
+	
 
 	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
 	try

@@ -374,7 +374,7 @@ bool TranscodeGPU::CheckSupportedNILOGAN()
 {
 	_device_count_nilogan = 0;
 
-	int ret = ::av_hwdevice_ctx_create(&_device_context_nilogan[0], AV_HWDEVICE_TYPE_NILOGAN, nullptr, nullptr, 0);
+	int ret = ::av_hwdevice_ctx_create(&_device_context_nilogan[0], AV_HWDEVICE_TYPE_NI_LOGAN, nullptr, nullptr, 0);
 	if (ret < 0)
 	{
 		av_buffer_unref(&_device_context_nilogan[0]);
