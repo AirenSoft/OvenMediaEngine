@@ -55,7 +55,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	const AVFilter *buffersink = ::avfilter_get_by_name("buffersink");
 	int ret;
 	_filter_graph = ::avfilter_graph_alloc();
-
+	
 	if ((_filter_graph == nullptr) || (_inputs == nullptr) || (_outputs == nullptr))
 	{
 		logte("Could not allocate variables for filter graph: %p, %p, %p", _filter_graph, _inputs, _outputs);
