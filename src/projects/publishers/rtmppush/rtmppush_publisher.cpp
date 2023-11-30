@@ -2,7 +2,7 @@
 #include "rtmppush_application.h"
 #include "rtmppush_private.h"
 
-std::shared_ptr<RtmpPushPublisher> RtmpPushPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<RtmpPushPublisher> RtmpPushPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 {
 	auto obj = std::make_shared<RtmpPushPublisher>(server_config, router);
 
@@ -15,7 +15,7 @@ std::shared_ptr<RtmpPushPublisher> RtmpPushPublisher::Create(const cfg::Server &
 	return obj;
 }
 
-RtmpPushPublisher::RtmpPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+RtmpPushPublisher::RtmpPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	: Publisher(server_config, router)
 {
 	logtd("RtmpPushPublisher has been create");

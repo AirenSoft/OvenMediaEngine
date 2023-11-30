@@ -15,14 +15,14 @@
 #include "cmaf_stream_server.h"
 
 std::shared_ptr<CmafPublisher> CmafPublisher::Create(const cfg::Server &server_config,
-													 const std::shared_ptr<MediaRouteInterface> &router)
+													 const std::shared_ptr<MediaRouterInterface> &router)
 {
 	return SegmentPublisher::Create<CmafPublisher>(server_config, router);
 }
 
 CmafPublisher::CmafPublisher(PrivateToken token,
 							 const cfg::Server &server_config,
-							 const std::shared_ptr<MediaRouteInterface> &router)
+							 const std::shared_ptr<MediaRouterInterface> &router)
 	: DashPublisher(token, server_config, router)
 {
 }

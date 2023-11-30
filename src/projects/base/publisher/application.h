@@ -69,13 +69,13 @@ namespace pub
 		int64_t	_last_audio_ts_ms = 0;
 	};
 
-	class Application : public info::Application, public MediaRouteApplicationObserver
+	class Application : public info::Application, public MediaRouterApplicationObserver
 	{
 	public:
 		const char* GetApplicationTypeName() final;
 		const char* GetPublisherTypeName() final;
 		
-		// MediaRouteApplicationObserver Implementation
+		// MediaRouterApplicationObserver Implementation
 		bool OnStreamCreated(const std::shared_ptr<info::Stream> &info) override;
 		bool OnStreamDeleted(const std::shared_ptr<info::Stream> &info) override;
 		bool OnStreamPrepared(const std::shared_ptr<info::Stream> &info) override;

@@ -15,7 +15,7 @@
 
 #include "publisher_private.h"
 
-SegmentPublisher::SegmentPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+SegmentPublisher::SegmentPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	: Publisher(server_config, router)
 {
 }

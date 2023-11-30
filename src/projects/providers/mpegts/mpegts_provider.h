@@ -113,9 +113,9 @@ namespace pvd
 	class MpegTsProvider : public pvd::PushProvider, protected PhysicalPortObserver
 	{
 	public:
-		static std::shared_ptr<MpegTsProvider> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+		static std::shared_ptr<MpegTsProvider> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 
-		explicit MpegTsProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+		explicit MpegTsProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 		~MpegTsProvider() override;
 
 		bool Start() override;

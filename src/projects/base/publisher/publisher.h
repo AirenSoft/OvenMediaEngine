@@ -129,7 +129,7 @@ namespace pub
 		virtual const char *GetPublisherName() const = 0;
 
 	protected:
-		explicit Publisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+		explicit Publisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 		virtual ~Publisher();
 
 		const cfg::Server &GetServerConfig() const;
@@ -152,7 +152,7 @@ namespace pub
 		std::shared_mutex 		_application_map_mutex;
 
 		const cfg::Server _server_config;
-		std::shared_ptr<MediaRouteInterface> _router;
+		std::shared_ptr<MediaRouterInterface> _router;
 
 	private:
 		std::shared_ptr<AccessController> _access_controller = nullptr;

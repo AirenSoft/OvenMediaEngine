@@ -15,7 +15,7 @@
 
 namespace pvd
 {
-	std::shared_ptr<WebRTCProvider> WebRTCProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	std::shared_ptr<WebRTCProvider> WebRTCProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	{
 		auto webrtc = std::make_shared<WebRTCProvider>(server_config, router);
 		if (!webrtc->Start())
@@ -25,7 +25,7 @@ namespace pvd
 		return webrtc;
 	}
 
-	WebRTCProvider::WebRTCProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	WebRTCProvider::WebRTCProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 		: pvd::PushProvider(server_config, router)
 	{
 	}

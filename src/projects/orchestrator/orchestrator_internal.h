@@ -84,7 +84,7 @@ namespace ocst
 		// Server Info
 		std::shared_ptr<const cfg::Server> 	_server_config;
 
-		std::shared_ptr<MediaRouteInterface> _media_router;
+		std::shared_ptr<MediaRouterInterface> _media_router;
 
 		std::atomic<info::application_id_t> _last_application_id{info::MinApplicationId};
 

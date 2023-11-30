@@ -120,7 +120,7 @@ namespace ocst
 	}
 
 	//--------------------------------------------------------------------
-	// Implementation of MediaRouteApplicationObserver
+	// Implementation of MediaRouterApplicationObserver
 	//--------------------------------------------------------------------
 	// Temporarily used until Orchestrator takes stream management
 	bool Application::OnStreamCreated(const std::shared_ptr<info::Stream> &info)
@@ -212,7 +212,7 @@ namespace ocst
 		return true;
 	}
 
-	MediaRouteApplicationObserver::ObserverType Application::GetObserverType()
+	MediaRouterApplicationObserver::ObserverType Application::GetObserverType()
 	{
 		return ObserverType::Orchestrator;
 	}

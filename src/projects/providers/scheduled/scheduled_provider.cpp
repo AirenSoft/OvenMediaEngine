@@ -12,7 +12,7 @@
 
 namespace pvd
 {
-	std::shared_ptr<ScheduledProvider> ScheduledProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	std::shared_ptr<ScheduledProvider> ScheduledProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	{
 		auto provider = std::make_shared<ScheduledProvider>(server_config, router);
 		if (!provider->Start())
@@ -23,7 +23,7 @@ namespace pvd
 		return provider;
 	}
 
-	ScheduledProvider::ScheduledProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	ScheduledProvider::ScheduledProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 		: Provider(server_config, router)
 	{
 	}

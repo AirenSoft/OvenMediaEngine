@@ -5,7 +5,7 @@
 #include "ovt_private.h"
 #include "ovt_session.h"
 
-std::shared_ptr<OvtPublisher> OvtPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<OvtPublisher> OvtPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 {
 	auto obj = std::make_shared<OvtPublisher>(server_config, router);
 
@@ -17,7 +17,7 @@ std::shared_ptr<OvtPublisher> OvtPublisher::Create(const cfg::Server &server_con
 	return obj;
 }
 
-OvtPublisher::OvtPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+OvtPublisher::OvtPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	: Publisher(server_config, router)
 {
 }

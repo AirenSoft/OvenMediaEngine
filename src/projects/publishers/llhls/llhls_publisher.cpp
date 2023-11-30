@@ -14,14 +14,14 @@
 #include "llhls_private.h"
 #include "llhls_session.h"
 
-std::shared_ptr<LLHlsPublisher> LLHlsPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<LLHlsPublisher> LLHlsPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 {
 	auto llhls = std::make_shared<LLHlsPublisher>(server_config, router);
 
 	return llhls->Start() ? llhls : nullptr;
 }
 
-LLHlsPublisher::LLHlsPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+LLHlsPublisher::LLHlsPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	: Publisher(server_config, router)
 {
 	logtd("LLHlsPublisher has been create");

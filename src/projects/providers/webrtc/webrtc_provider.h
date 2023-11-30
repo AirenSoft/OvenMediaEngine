@@ -24,9 +24,9 @@ namespace pvd
 						   public WhipObserver
 	{
 	public:
-		static std::shared_ptr<WebRTCProvider> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+		static std::shared_ptr<WebRTCProvider> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 
-		explicit WebRTCProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+		explicit WebRTCProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 		~WebRTCProvider() override;
 
 		bool Start() override;

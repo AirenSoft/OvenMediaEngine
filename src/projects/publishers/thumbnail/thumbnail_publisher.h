@@ -14,9 +14,9 @@
 class ThumbnailPublisher : public pub::Publisher
 {
 public:
-	static std::shared_ptr<ThumbnailPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	static std::shared_ptr<ThumbnailPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 
-	ThumbnailPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	ThumbnailPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 	~ThumbnailPublisher() override;
 	bool Stop() override;
 

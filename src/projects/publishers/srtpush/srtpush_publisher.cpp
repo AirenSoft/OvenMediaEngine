@@ -16,7 +16,7 @@
 		(void)(expr); \
 	} while (0)
 
-std::shared_ptr<SrtPushPublisher> SrtPushPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<SrtPushPublisher> SrtPushPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 {
 	auto obj = std::make_shared<SrtPushPublisher>(server_config, router);
 
@@ -29,7 +29,7 @@ std::shared_ptr<SrtPushPublisher> SrtPushPublisher::Create(const cfg::Server &se
 	return obj;
 }
 
-SrtPushPublisher::SrtPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+SrtPushPublisher::SrtPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	: Publisher(server_config, router)
 {
 	logtd("SrtPushPublisher has been create");

@@ -5,7 +5,7 @@
 
 namespace pub
 {
-	Publisher::Publisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	Publisher::Publisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 		: _server_config(server_config), _router(router)
 	{
 	}

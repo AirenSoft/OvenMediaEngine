@@ -17,9 +17,9 @@ namespace pvd
     class ScheduledProvider : public Provider
     {
     public:
-        static std::shared_ptr<ScheduledProvider> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+        static std::shared_ptr<ScheduledProvider> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 
-        explicit ScheduledProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+        explicit ScheduledProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
         ~ScheduledProvider() override;
 
         bool Start() override;

@@ -18,7 +18,7 @@
 
 namespace pvd
 {
-	std::shared_ptr<MpegTsProvider> MpegTsProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	std::shared_ptr<MpegTsProvider> MpegTsProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	{
 		auto provider = std::make_shared<MpegTsProvider>(server_config, router);
 		if (!provider->Start())
@@ -28,7 +28,7 @@ namespace pvd
 		return provider;
 	}
 
-	MpegTsProvider::MpegTsProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	MpegTsProvider::MpegTsProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 		: PushProvider(server_config, router)
 	{
 		logtd("Created Mpegts Provider module.");

@@ -77,7 +77,7 @@ private:
 	MediaRouterStreamType _inout_type;
 
 	// Connector Type
-	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
+	MediaRouterApplicationConnector::ConnectorType _application_connector_type;
 
 	// Stream Information
 	std::shared_ptr<info::Stream> _stream = nullptr;

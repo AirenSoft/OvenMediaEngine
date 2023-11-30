@@ -217,7 +217,7 @@ namespace pub
 		return true;
 	}
 
-	// Called by MediaRouteApplicationObserver
+	// Called by MediaRouterApplicationObserver
 	bool Application::OnStreamCreated(const std::shared_ptr<info::Stream> &info)
 	{
 		auto stream_worker_count = GetConfig().GetStreamWorkerCount();

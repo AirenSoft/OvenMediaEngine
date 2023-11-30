@@ -227,7 +227,7 @@ protected:
 public:
 	template <typename Tpublisher>
 	static std::shared_ptr<Tpublisher> Create(const cfg::Server &server_config,
-											  const std::shared_ptr<MediaRouteInterface> &router)
+											  const std::shared_ptr<MediaRouterInterface> &router)
 	{
 		auto publisher = std::make_shared<Tpublisher>((PrivateToken){}, server_config, router);
 
@@ -253,7 +253,7 @@ public:
 	void		UpdateSegmentRequestInfo(SegmentRequestInfo &info);
 
 protected:
-	SegmentPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	SegmentPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 	~SegmentPublisher() override;
 
 	bool Start(const cfg::cmn::SingularPort &port_config, const cfg::cmn::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server, bool disable_http2_force, int worker_count);

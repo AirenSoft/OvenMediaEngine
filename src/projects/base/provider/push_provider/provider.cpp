@@ -4,7 +4,7 @@
 
 namespace pvd
 {
-	PushProvider::PushProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	PushProvider::PushProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 		: Provider(server_config, router)
 	{
 	}

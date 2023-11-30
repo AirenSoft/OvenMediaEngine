@@ -41,7 +41,7 @@ namespace pvd
 	}
 #endif	// DEBUG
 
-	std::shared_ptr<RtmpProvider> RtmpProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	std::shared_ptr<RtmpProvider> RtmpProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	{
 #if DEBUG
 		dump_packet = ov::Converter::ToBool(std::getenv("OME_DUMP_RTMP"));
@@ -55,7 +55,7 @@ namespace pvd
 		return provider;
 	}
 
-	RtmpProvider::RtmpProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	RtmpProvider::RtmpProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 		: PushProvider(server_config, router)
 	{
 		logtd("Created Rtmp Provider module.");

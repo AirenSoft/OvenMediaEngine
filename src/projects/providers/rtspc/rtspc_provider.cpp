@@ -13,7 +13,7 @@ using namespace cmn;
 
 namespace pvd
 {
-	std::shared_ptr<RtspcProvider> RtspcProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	std::shared_ptr<RtspcProvider> RtspcProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	{
 		auto provider = std::make_shared<RtspcProvider>(server_config, router);
 		if (!provider->Start())
@@ -24,7 +24,7 @@ namespace pvd
 		return provider;
 	}
 
-	RtspcProvider::RtspcProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	RtspcProvider::RtspcProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 			: PullProvider(server_config, router)
 	{
 		auto &rtspc_provider_config = server_config.GetBind().GetProviders().GetRtspc();

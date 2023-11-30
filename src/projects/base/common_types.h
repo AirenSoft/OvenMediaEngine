@@ -36,7 +36,8 @@ enum class CommonErrorCode : int16_t
 	NOT_FOUND = -2,
 	ALREADY_EXISTS = -3,
 	INVALID_REQUEST = -4,
-	UNAUTHORIZED = -5
+	UNAUTHORIZED = -5,
+	INVALID_PARAMETER = -6
 };
 
 enum class StreamSourceType : int8_t

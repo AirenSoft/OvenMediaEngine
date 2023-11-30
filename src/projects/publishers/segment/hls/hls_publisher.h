@@ -14,9 +14,9 @@ class HlsPublisher : public SegmentPublisher
 {
 public:
 	static std::shared_ptr<HlsPublisher> Create(const cfg::Server &server_config,
-												const std::shared_ptr<MediaRouteInterface> &router);
+												const std::shared_ptr<MediaRouterInterface> &router);
 
-	HlsPublisher(PrivateToken token, const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	HlsPublisher(PrivateToken token, const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 
 protected:
 	//--------------------------------------------------------------------

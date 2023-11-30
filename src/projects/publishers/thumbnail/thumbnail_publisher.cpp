@@ -10,7 +10,7 @@
 		(void)(expr); \
 	} while (0)
 
-std::shared_ptr<ThumbnailPublisher> ThumbnailPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<ThumbnailPublisher> ThumbnailPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 {
 	auto file = std::make_shared<ThumbnailPublisher>(server_config, router);
 
@@ -22,7 +22,7 @@ std::shared_ptr<ThumbnailPublisher> ThumbnailPublisher::Create(const cfg::Server
 	return file;
 }
 
-ThumbnailPublisher::ThumbnailPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+ThumbnailPublisher::ThumbnailPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	: Publisher(server_config, router)
 {
 	logtd("ThumbnailPublisher has been create");

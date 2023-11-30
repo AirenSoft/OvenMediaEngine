@@ -45,7 +45,7 @@ namespace pvd
 		std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> VerifyByAdmissionWebhooks(const std::shared_ptr<const AccessController::RequestInfo> &request_info);
 
 	protected:
-		Provider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+		Provider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 		virtual ~Provider();
 
 		const cfg::Server &GetServerConfig() const;
@@ -65,7 +65,7 @@ namespace pvd
 		
 		std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
 		std::shared_mutex  _application_map_mutex;
-		std::shared_ptr<MediaRouteInterface> _router;
+		std::shared_ptr<MediaRouterInterface> _router;
 		std::shared_ptr<AccessController> _access_controller = nullptr;
 	};
 
