@@ -1216,8 +1216,6 @@ void LLHlsStream::OnMediaSegmentCreated(const int32_t &track_id, const uint32_t 
 	playlist->CreateSegmentInfo(segment_info);
 
 	logtd("Media segment updated : track_id = %d, segment_number = %d", track_id, segment_number);
-
-	DumpSegmentOfAllItems(track_id, segment_number);
 }
 
 void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number, bool last_chunk)
@@ -1261,6 +1259,11 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 
 	// Notify
 	NotifyPlaylistUpdated(track_id, segment_number, chunk_number);
+
+	if (last_chunk == true)
+	{
+		DumpSegmentOfAllItems(track_id, segment_number);
+	}
 }
 
 void LLHlsStream::OnMediaSegmentDeleted(const int32_t &track_id, const uint32_t &segment_number)
