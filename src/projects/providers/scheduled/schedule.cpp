@@ -532,13 +532,14 @@ namespace pvd
 			}
 
 			auto duration_attribute = item_node.attribute("duration");
-			if (!duration_attribute)
+			if (duration_attribute)
 			{
-				_last_error = "Failed to find duration attribute, duration is required";
-				return false;
+				duration_ms = duration_attribute.as_llong();
 			}
-
-			duration_ms = duration_attribute.as_llong();
+			else
+			{
+				duration_ms = -1;
+			}
 
 			auto item = MakeItem(url, start_time_ms, duration_ms);
 			if (item == nullptr)
