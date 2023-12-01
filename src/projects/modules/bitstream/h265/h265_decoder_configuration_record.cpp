@@ -155,6 +155,9 @@ bool HEVCDecoderConfigurationRecord::Parse(const std::shared_ptr<ov::Data> &data
 	// parallelismType
 	_parallelism_type = parser.ReadBits<uint8_t>(2);
 
+	// reserved
+	parser.ReadBits<uint8_t>(6);
+
 	// chromaFormat
 	_chroma_format = parser.ReadBits<uint8_t>(2);
 
@@ -189,10 +192,10 @@ bool HEVCDecoderConfigurationRecord::Parse(const std::shared_ptr<ov::Data> &data
 	auto num_of_arrays = parser.ReadBits<uint8_t>(8);
 
 	// check length
-	if (parser.BytesRemained() < num_of_arrays * 3)
-	{
-		return false;
-	}
+	// if (parser.BytesRemained() < num_of_arrays * 3)
+	// {
+	// 	return false;
+	// }
 
 	for (size_t i = 0; i < num_of_arrays; ++i)
 	{
@@ -231,6 +234,9 @@ bool HEVCDecoderConfigurationRecord::Parse(const std::shared_ptr<ov::Data> &data
 			// add nalUnit to _nal_units
 			auto &v = _nal_units[nal_unit_type];
 			v.push_back(nal_unit);
+
+			// skip nalUnit
+			parser.SkipBytes(nal_unit_length);
 		}
 	}
 
