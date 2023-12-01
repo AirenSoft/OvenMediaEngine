@@ -228,6 +228,11 @@ namespace pvd
                 }
                 else if (result == PlaybackResult::ERROR)
                 {
+                    if (_realtime_clock.IsPaused() == false)
+                    {
+                        _realtime_clock.Pause();
+                    }
+                    
                     err_count ++;
                     if (err_count > 3)
                     {
@@ -627,6 +632,8 @@ namespace pvd
         std::map<int, int64_t> track_single_file_dts_offset_map;
         std::map<int, bool> end_of_track_map;
 
+        bool sent_keyframe = false;
+
         // Play
         while (_worker_thread_running)
         {
@@ -662,6 +669,19 @@ namespace pvd
             else
             {
                 end_of_track_map[track_id] = false;
+            }
+
+            if (sent_keyframe == false && media_packet->GetMediaType() == cmn::MediaType::Video)
+            {
+                if (media_packet->GetFlag() != MediaPacketFlag::Key)
+                {
+                    // Skip until key frame
+                    continue;
+                }
+                else
+                {
+                    sent_keyframe = true;
+                }
             }
 
             auto track = GetTrack(track_id);
@@ -807,7 +827,7 @@ namespace pvd
 
                 new_track->SetId(kScheduledAudioTrackId);
                 new_track->SetTimeBase(1, kScheduledTimebase); // We fixed time base in scheduled stream
-                _origin_id_track_id_map.emplace(track_id, kScheduledVideoTrackId);
+                _origin_id_track_id_map.emplace(track_id, kScheduledAudioTrackId);
                 UpdateTrack(new_track);
 
                 audio_track_needed = false;
