@@ -108,18 +108,6 @@ namespace pvd
 			return false;
 		}
 
-		// DO NOT register again if the stream is already from OriginMapStore
-		if (stream->IsFromOriginMapStore() == false)
-		{
-			// Register stream if OriginMapStore is enabled
-			auto result = ocst::Orchestrator::GetInstance()->RegisterStreamToOriginMapStore(GetName(), stream->GetName());
-			if (result == CommonErrorCode::ERROR)
-			{
-				logtw("Reject to add stream : failed to register stream to origin map store");
-				return false;
-			}
-		}
-
 		// If there is no data track, add data track
 		if (stream->GetFirstTrackByType(cmn::MediaType::Data) == nullptr)
 		{
@@ -224,33 +212,22 @@ namespace pvd
 
 		NotifyStreamDeleted(stream);
 
-		if (stream->IsFromOriginMapStore() == false)
-		{
-			// Unegister stream if OriginMapStore is enabled
-			auto result = ocst::Orchestrator::GetInstance()->UnregisterStreamFromOriginMapStore(GetName(), stream->GetName());
-			if (result == CommonErrorCode::ERROR)
-			{
-				logtw("Reject to add stream : failed to register stream to origin map store");
-				return false;
-			}
-		}
-
 		return true;
 	}
 
 	bool Application::NotifyStreamCreated(const std::shared_ptr<Stream> &stream)
 	{
-		return MediaRouteApplicationConnector::CreateStream(stream);
+		return MediaRouterApplicationConnector::CreateStream(stream);
 	}
 
 	bool Application::NotifyStreamUpdated(const std::shared_ptr<info::Stream> &stream)
 	{
-		return MediaRouteApplicationConnector::UpdateStream(stream);
+		return MediaRouterApplicationConnector::UpdateStream(stream);
 	}
 
 	bool Application::NotifyStreamDeleted(const std::shared_ptr<Stream> &stream)
 	{
-		return MediaRouteApplicationConnector::DeleteStream(stream);
+		return MediaRouterApplicationConnector::DeleteStream(stream);
 	}
 
 	bool Application::DeleteAllStreams()

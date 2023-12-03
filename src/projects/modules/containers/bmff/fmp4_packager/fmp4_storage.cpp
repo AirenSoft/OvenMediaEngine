@@ -266,52 +266,57 @@ namespace bmff
 		return segment;
 	}
 
-	bool FMP4Storage::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent, bool last_chunk)
+	std::shared_ptr<FMP4Segment> FMP4Storage::CreateNextSegment()
 	{
-		auto segment = GetLastSegment();
-
-		if (segment == nullptr || segment->IsCompleted())
+		// Create next segment
+		auto segment = std::make_shared<FMP4Segment>(GetLastSegmentNumber() + 1, _config.segment_duration_ms);
 		{
-			// Notify observer
-			if (segment != nullptr && _observer != nullptr)
-			{
-				_observer->OnMediaSegmentUpdated(_track->GetId(), segment->GetNumber());
-			}
+			std::lock_guard<std::shared_mutex> lock(_segments_lock);
+			_segments.emplace(segment->GetNumber(), segment);
 
-			// Create next segment
-			segment = std::make_shared<FMP4Segment>(GetLastSegmentNumber() + 1, _config.segment_duration_ms);
+			// Delete old segments
+			if (_segments.size() > _config.max_segments)
 			{
-				std::lock_guard<std::shared_mutex> lock(_segments_lock);
-				_segments.emplace(segment->GetNumber(), segment);
+				auto old_it = _segments.begin();
+				std::advance(old_it, (_segments.size() - _config.max_segments) - 1);
 
-				// Delete old segments
-				if (_segments.size() > _config.max_segments)
+				auto old_segment = old_it->second;
+
+				// Since the chunklist is updated late, the player may request deleted segments in the meantime, so it actually deletes them a bit late.
+				if (_segments.size() > _config.max_segments + 3)
 				{
-					auto old_it = _segments.begin();
-					std::advance(old_it, (_segments.size() - _config.max_segments) - 1);
+					_segments.erase(_segments.begin());
+				}
 
-					auto old_segment = old_it->second;
-
-					// Since the chunklist is updated late, the player may request deleted segments in the meantime, so it actually deletes them a bit late.
-					if (_segments.size() > _config.max_segments + 3)
+				// DVR
+				if (_config.dvr_enabled)
+				{
+					SaveMediaSegmentToFile(old_segment);
+				}
+				else
+				{
+					if (_observer != nullptr)
 					{
-						_segments.erase(_segments.begin());
-					}
-
-					// DVR
-					if (_config.dvr_enabled)
-					{
-						SaveMediaSegmentToFile(old_segment);
-					}
-					else
-					{
-						if (_observer != nullptr)
-						{
-							_observer->OnMediaSegmentDeleted(_track->GetId(), old_segment->GetNumber());
-						}
+						_observer->OnMediaSegmentDeleted(_track->GetId(), old_segment->GetNumber());
 					}
 				}
 			}
+		}
+
+		if (_observer != nullptr)
+		{
+			_observer->OnMediaSegmentCreated(_track->GetId(), segment->GetNumber());
+		}
+
+		return segment;
+	}
+
+	bool FMP4Storage::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent, bool last_chunk)
+	{
+		auto segment = GetLastSegment();
+		if (segment == nullptr || segment->IsCompleted() == true)
+		{
+			segment = CreateNextSegment();
 		}
 
 		if (segment->AppendChunkData(chunk, start_timestamp, duration_ms, independent) == false)
@@ -353,7 +358,8 @@ namespace bmff
 		// Notify observer
 		if (_observer != nullptr)
 		{
-			_observer->OnMediaChunkUpdated(_track->GetId(), segment->GetNumber(), segment->GetLastChunkNumber());
+			bool last_chunk = segment->IsCompleted() == true;
+			_observer->OnMediaChunkUpdated(_track->GetId(), segment->GetNumber(), segment->GetLastChunkNumber(), last_chunk);
 		}
 
 		return true;

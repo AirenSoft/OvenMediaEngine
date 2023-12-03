@@ -26,9 +26,9 @@ namespace pvd
 	class SrtProvider : public pvd::PushProvider, protected PhysicalPortObserver
 	{
 	public:
-		static std::shared_ptr<SrtProvider> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+		static std::shared_ptr<SrtProvider> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 
-		explicit SrtProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+		explicit SrtProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 		~SrtProvider() override;
 
 		bool Start() override;

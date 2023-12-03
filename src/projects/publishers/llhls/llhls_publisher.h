@@ -18,9 +18,9 @@
 class LLHlsPublisher : public pub::Publisher
 {
 public:
-	static std::shared_ptr<LLHlsPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	static std::shared_ptr<LLHlsPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 
-	LLHlsPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	LLHlsPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 	~LLHlsPublisher() override;
 	bool Stop() override;
 

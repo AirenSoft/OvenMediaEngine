@@ -9,7 +9,7 @@ using namespace cmn;
 
 namespace pvd
 {
-    RtspProvider::RtspProvider(const cfg::Server &server_config, std::shared_ptr<MediaRouteInterface> router) : Provider(server_config, router)
+    RtspProvider::RtspProvider(const cfg::Server &server_config, std::shared_ptr<MediaRouterInterface> router) : Provider(server_config, router)
     {
     }
 
@@ -55,7 +55,7 @@ namespace pvd
         return Provider::Start();
     }
 
-    std::shared_ptr<RtspProvider> RtspProvider::Create(const cfg::Server &server_config, std::shared_ptr<MediaRouteInterface> router)
+    std::shared_ptr<RtspProvider> RtspProvider::Create(const cfg::Server &server_config, std::shared_ptr<MediaRouterInterface> router)
     {
         auto provider = std::make_shared<RtspProvider>(server_config, router);
         provider->Start();

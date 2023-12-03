@@ -8,7 +8,7 @@
 		(void)(expr); \
 	} while (0)
 
-std::shared_ptr<MpegtsPushPublisher> MpegtsPushPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<MpegtsPushPublisher> MpegtsPushPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 {
 	auto obj = std::make_shared<MpegtsPushPublisher>(server_config, router);
 
@@ -21,7 +21,7 @@ std::shared_ptr<MpegtsPushPublisher> MpegtsPushPublisher::Create(const cfg::Serv
 	return obj;
 }
 
-MpegtsPushPublisher::MpegtsPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+MpegtsPushPublisher::MpegtsPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	: Publisher(server_config, router)
 {
 	logtd("MpegtsPushPublisher has been create");

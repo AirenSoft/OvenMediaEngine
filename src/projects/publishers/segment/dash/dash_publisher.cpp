@@ -15,14 +15,14 @@
 #include "dash_stream_server.h"
 
 std::shared_ptr<DashPublisher> DashPublisher::Create(const cfg::Server &server_config,
-													 const std::shared_ptr<MediaRouteInterface> &router)
+													 const std::shared_ptr<MediaRouterInterface> &router)
 {
 	return SegmentPublisher::Create<DashPublisher>(server_config, router);
 }
 
 DashPublisher::DashPublisher(PrivateToken token,
 							 const cfg::Server &server_config,
-							 const std::shared_ptr<MediaRouteInterface> &router)
+							 const std::shared_ptr<MediaRouterInterface> &router)
 	: SegmentPublisher(server_config, router)
 {
 }

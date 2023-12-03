@@ -9,7 +9,10 @@
 #pragma once
 
 #include <modules/ffmpeg/ffmpeg_conv.h>
+#include <orchestrator/orchestrator.h>
+#include <mediarouter/mediarouter_stream_tap.h>
 #include <base/provider/stream.h>
+
 #include "schedule.h"
 
 namespace pvd
@@ -54,12 +57,14 @@ namespace pvd
         AVFormatContext *PrepareFilePlayback(const std::shared_ptr<Schedule::Item> &item);
 
         PlaybackResult PlayStream(const std::shared_ptr<Schedule::Item> &item);
+        std::shared_ptr<MediaRouterStreamTap> PrepareStreamPlayback(const std::shared_ptr<Schedule::Item> &item);
+
         PlaybackResult PlayFallback();
 
         std::shared_ptr<Schedule> GetSchedule() const;
         bool CheckCurrentProgramChanged();
         
-        int FindTrackIdByAvstreamId(int avstream_id) const;
+        int FindTrackIdByOriginId(int origin_id) const;
 
         std::shared_ptr<Schedule> _schedule;
         mutable std::shared_mutex _schedule_mutex;
@@ -78,9 +83,7 @@ namespace pvd
         std::shared_ptr<Schedule::Item> _current_item;
         int64_t _current_item_position_ms = 0;
 
-        std::map<int, int> _avstream_id_track_id_map;
-
-        std::map<int, int64_t> _last_track_duration_map;
+        std::map<int, int> _origin_id_track_id_map;
 
         ov::StopWatch _realtime_clock;
     };

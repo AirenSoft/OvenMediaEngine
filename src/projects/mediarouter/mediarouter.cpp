@@ -116,10 +116,23 @@ std::shared_ptr<MediaRouteApplication> MediaRouter::GetRouteApplicationById(info
 	return obj->second;
 }
 
+std::shared_ptr<MediaRouteApplication> MediaRouter::GetRouteApplicationByName(const info::VHostAppName &vhost_app_name)
+{
+	for (auto const &_route_app : _route_apps)
+	{
+		if (_route_app.second->GetApplicationInfo().GetName() == vhost_app_name)
+		{
+			return _route_app.second;
+		}
+	}
+
+	return nullptr;
+}
+
 // Registers the requested Connector application
 bool MediaRouter::RegisterConnectorApp(
 	const info::Application &application_info,
-	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn)
+	const std::shared_ptr<MediaRouterApplicationConnector> &app_conn)
 {
 	auto media_route_app = GetRouteApplicationById(application_info.GetId());
 	if (media_route_app == nullptr)
@@ -133,7 +146,7 @@ bool MediaRouter::RegisterConnectorApp(
 // Unregisters the requested Connector application
 bool MediaRouter::UnregisterConnectorApp(
 	const info::Application &application_info,
-	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn)
+	const std::shared_ptr<MediaRouterApplicationConnector> &app_conn)
 {
 	auto media_route_app = GetRouteApplicationById(application_info.GetId());
 	if (media_route_app == nullptr)
@@ -146,7 +159,7 @@ bool MediaRouter::UnregisterConnectorApp(
 
 // Register requested Observer application
 bool MediaRouter::RegisterObserverApp(
-	const info::Application &application_info, const std::shared_ptr<MediaRouteApplicationObserver> &application_observer)
+	const info::Application &application_info, const std::shared_ptr<MediaRouterApplicationObserver> &application_observer)
 {
 	if (application_observer == nullptr)
 	{
@@ -165,7 +178,7 @@ bool MediaRouter::RegisterObserverApp(
 
 // Unregister requested Observer application
 bool MediaRouter::UnregisterObserverApp(
-	const info::Application &application_info, const std::shared_ptr<MediaRouteApplicationObserver> &application_observer)
+	const info::Application &application_info, const std::shared_ptr<MediaRouterApplicationObserver> &application_observer)
 {
 	if (application_observer == nullptr)
 	{
@@ -182,4 +195,40 @@ bool MediaRouter::UnregisterObserverApp(
 	}
 
 	return media_route_app->UnregisterObserverApp(application_observer);
+}
+
+// Mirror the requested stream
+CommonErrorCode MediaRouter::MirrorStream(std::shared_ptr<MediaRouterStreamTap> &stream_tap, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, MirrorPosition posision)
+{
+	if (stream_tap == nullptr)
+	{
+		return CommonErrorCode::INVALID_PARAMETER;
+	}
+
+	auto route_app = GetRouteApplicationByName(vhost_app_name);
+	if (route_app == nullptr)
+	{
+		logtw("Could not found application. app(%s)", vhost_app_name.CStr());
+		return CommonErrorCode::NOT_FOUND;
+	}
+
+	return route_app->MirrorStream(stream_tap, stream_name, posision);
+}
+
+// Unmirror the requested stream
+CommonErrorCode MediaRouter::UnmirrorStream(const std::shared_ptr<MediaRouterStreamTap> &stream_tap)
+{
+	if (stream_tap == nullptr)
+	{
+		return CommonErrorCode::INVALID_PARAMETER;
+	}
+
+	auto route_app = GetRouteApplicationByName(stream_tap->GetStreamInfo()->GetApplicationInfo().GetName());
+	if (route_app == nullptr)
+	{
+		logtw("Could not found application. app(%s)", stream_tap->GetStreamInfo()->GetApplicationInfo().GetName().CStr());
+		return CommonErrorCode::NOT_FOUND;
+	}
+
+	return route_app->UnmirrorStream(stream_tap);	
 }

@@ -461,8 +461,11 @@ namespace pvd
 				new_track->SetDecoderConfigurationRecord(decoder_config);
 			}
 
-			AddTrack(new_track);
+			// If there is an existing track with the same ID, just update the value
+			UpdateTrack(new_track);
 		}
+
+		// logti("[%s/%s(%u)] stream has been described . %s", GetApplicationTypeName(), GetName().CStr(), GetId(), payload.CStr());
 
 		SetState(State::DESCRIBED);
 		return true;

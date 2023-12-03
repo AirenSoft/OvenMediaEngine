@@ -31,6 +31,12 @@ OME Docker Launcher has not been tested in various environments yet. Therefore, 
 
 Run the following command in your Linux shell.
 
+```
+curl -OL 'https://raw.githubusercontent.com/AirenSoft/OvenMediaEngine/master/misc/ome_docker_launcher.sh' && chmod +x ome_docker_launcher.sh
+```
+
+Below is an example of execution:
+
 ```bash
 $ curl -OL 'https://raw.githubusercontent.com/AirenSoft/OvenMediaEngine/master/misc/ome_docker_launcher.sh' && chmod +x ome_docker_launcher.sh
 $ ./ome_docker_launcher.sh -h
@@ -160,11 +166,38 @@ $ ./ome_docker_launcher.sh start
 ```
 
 {% hint style="info" %}
+When running the OME Docker Launcher, you can specify the IP to be used as an ICE Candidate by using the `OME_HOST_IP` environment variable. For instance, specifying the `OME_HOST_IP` as shown below will propagate the ICE Candidate to that particular address.
+
+
+
+```sh
+$ OME_HOST_IP=1.2.3.4 ./ome_docker_launcher.sh start
+...
+• OvenMediaEngine is started successfully!
+
+$ tail -f /usr/share/ovenmediaengine/logs/ovenmediaengine.log
+...
+[2023-11-01 00:00:00.000] I [OvenMediaEngine:1] ICE | ice_port_manager.cpp:305  | ICE candidate found: 1.2.3.4:40000
+...
+```
+{% endhint %}
+
+{% hint style="info" %}
 The OME Docker Launcher automatically detects a list of port numbers specified in the `Server.xml` file and passes them to the Docker `-p` option. However, if you use the `include` attribute inside the `<Providers>` or `<Publishers>` element, the launcher may not detect them correctly.
 {% endhint %}
 
 {% hint style="info" %}
-If you have used an environment variable form like `${env:<ENV_NAME>}`, the OME Docker Launcher resolves the value of the `<ENV_NAME>` environment variable in the current shell. This enables you to dynamically set configuration values using environment variables.
+If you have declared the following environment variable in the shell where you run the OME Docker Launcher, this value will be used to bind the port and passed into the Docker container. This enables you to dynamically set configuration values using environment variables.
+
+```
+OME_HOST_IP
+OME_RTMP_PROV_PORT
+OME_WEBRTC_CANDIDATE_IP
+OME_WEBRTC_CANDIDATE_PORT
+OME_WEBRTC_SIGNALLING_PORT
+OME_WEBRTC_SIGNALLING_TLS_PORT
+OME_WEBRTC_TCP_RELAY_PORT
+```
 {% endhint %}
 
 ### `sh`

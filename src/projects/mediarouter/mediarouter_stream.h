@@ -62,6 +62,7 @@ private:
 	bool InsertH264SPSPPSAnnexB(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
 
 	bool ProcessH265AnnexBStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
+	bool ProcessH265HVCCStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
 	bool ProcessAACRawStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
 	bool ProcessAACAdtsStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
 	bool ProcessVP8Stream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
@@ -77,7 +78,7 @@ private:
 	MediaRouterStreamType _inout_type;
 
 	// Connector Type
-	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
+	MediaRouterApplicationConnector::ConnectorType _application_connector_type;
 
 	// Stream Information
 	std::shared_ptr<info::Stream> _stream = nullptr;

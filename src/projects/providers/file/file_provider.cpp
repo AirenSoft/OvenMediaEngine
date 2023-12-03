@@ -21,7 +21,7 @@ using namespace cmn;
 
 namespace pvd
 {
-	std::shared_ptr<FileProvider> FileProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	std::shared_ptr<FileProvider> FileProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	{
 		auto provider = std::make_shared<FileProvider>(server_config, router);
 		if (!provider->Start())
@@ -32,7 +32,7 @@ namespace pvd
 		return provider;
 	}
 
-	FileProvider::FileProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	FileProvider::FileProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 		: PullProvider(server_config, router)
 	{
 		logtd("Created File Provider module.");

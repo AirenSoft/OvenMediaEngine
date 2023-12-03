@@ -856,7 +856,7 @@ namespace ocst
 		// (Now, it's working because MediaRouter registers an observer using push_back to the vector.)
 		if (_media_router != nullptr)
 		{
-			_media_router->RegisterObserverApp(app_info, new_app->GetSharedPtrAs<MediaRouteApplicationObserver>());
+			_media_router->RegisterObserverApp(app_info, new_app->GetSharedPtrAs<MediaRouterApplicationObserver>());
 		}
 
 		if (succeeded)
@@ -923,7 +923,7 @@ namespace ocst
 
 		if (_media_router != nullptr)
 		{
-			_media_router->UnregisterObserverApp(app_info, app->GetSharedPtrAs<MediaRouteApplicationObserver>());
+			_media_router->UnregisterObserverApp(app_info, app->GetSharedPtrAs<MediaRouterApplicationObserver>());
 		}
 
 		logtd("Notifying modules for the delete event...");

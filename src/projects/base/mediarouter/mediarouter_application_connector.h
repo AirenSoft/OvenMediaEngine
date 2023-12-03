@@ -13,7 +13,7 @@
 #include "mediarouter_application_interface.h"
 #include "mediarouter_interface.h"
 
-class MediaRouteApplicationConnector : public ov::EnableSharedFromThis<MediaRouteApplicationConnector>
+class MediaRouterApplicationConnector : public ov::EnableSharedFromThis<MediaRouterApplicationConnector>
 {
 public:
 	enum class ConnectorType : int8_t

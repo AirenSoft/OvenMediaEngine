@@ -91,8 +91,8 @@ private:
 
 	// bmff::FMp4StorageObserver implementation
 	void OnFMp4StorageInitialized(const int32_t &track_id) override;
-	void OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t &segment_number) override;
-	void OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number) override;
+	void OnMediaSegmentCreated(const int32_t &track_id, const uint32_t &segment_number) override;
+	void OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number, bool last_chunk) override;
 	void OnMediaSegmentDeleted(const int32_t &track_id, const uint32_t &segment_number) override;
 
 	// Create and Get fMP4 packager and storage with track info, storage and packager_config
@@ -111,7 +111,7 @@ private:
 	ov::String GetInitializationSegmentName(const int32_t &track_id) const;
 	ov::String GetSegmentName(const int32_t &track_id, const int64_t &segment_number) const;
 	ov::String GetPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number) const;
-	ov::String GetNextPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number) const;
+	ov::String GetNextPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number, bool last_chunk) const;
 
 	bool AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_packet);
 
@@ -146,6 +146,7 @@ private:
 	uint64_t _min_chunk_duration_ms = std::numeric_limits<uint64_t>::max();
 
 	double _configured_part_hold_back = 0;
+	bool _preload_hint_enabled = true;
 
 	std::map<ov::String, std::shared_ptr<LLHlsMasterPlaylist>> _master_playlists;
 	std::mutex _master_playlists_lock;

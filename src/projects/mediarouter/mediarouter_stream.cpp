@@ -623,6 +623,51 @@ bool MediaRouteStream::ProcessH265AnnexBStream(std::shared_ptr<MediaTrack> &medi
 	return true;
 }
 
+bool MediaRouteStream::ProcessH265HVCCStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
+{
+	if (media_packet->GetBitstreamFormat() != cmn::BitstreamFormat::HVCC)
+	{
+		return false;
+	}
+
+	if (media_packet->GetPacketType() == cmn::PacketType::SEQUENCE_HEADER)
+	{
+		// Validation
+		auto hevc_config = std::make_shared<HEVCDecoderConfigurationRecord>();
+
+		if (hevc_config->Parse(media_packet->GetData()) == false)
+		{
+			logte("Could not parse sequence header");
+			return false;
+		}
+
+		media_track->SetWidth(hevc_config->GetWidth());
+		media_track->SetHeight(hevc_config->GetHeight());
+
+		media_track->SetDecoderConfigurationRecord(hevc_config);
+
+		return false;
+	}
+	else if (media_packet->GetPacketType() == cmn::PacketType::NALU)
+	{
+		auto converted_data = NalStreamConverter::ConvertXvccToAnnexb(media_packet->GetData());
+
+		if (converted_data == nullptr)
+		{
+			logte("Failed to convert HVCC to AnnexB");
+			return false;
+		}
+
+		media_packet->SetData(converted_data);
+		media_packet->SetBitstreamFormat(cmn::BitstreamFormat::H265_ANNEXB);
+		media_packet->SetPacketType(cmn::PacketType::NALU);
+
+		// Because AVC is used in webrtc, there is a function to insert it if sps/pps is not present in the keyframe NAL, but HEVC is omitted because it is not used in webrtc. It will be added in the future if needed.
+	}
+
+	return true;
+}
+
 bool MediaRouteStream::ProcessVP8Stream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
 {
 	// One time : parse width, height
@@ -714,6 +759,9 @@ bool MediaRouteStream::NormalizeMediaPacket(std::shared_ptr<MediaTrack> &media_t
 			break;
 		case cmn::BitstreamFormat::H265_ANNEXB:
 			result = ProcessH265AnnexBStream(media_track, media_packet);
+			break;
+		case cmn::BitstreamFormat::HVCC:
+			result = ProcessH265HVCCStream(media_track, media_packet);
 			break;
 		case cmn::BitstreamFormat::VP8:
 			result = ProcessVP8Stream(media_track, media_packet);

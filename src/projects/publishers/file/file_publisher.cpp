@@ -6,7 +6,7 @@
 
 namespace pub
 {
-	std::shared_ptr<FilePublisher> FilePublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	std::shared_ptr<FilePublisher> FilePublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	{
 		auto file = std::make_shared<FilePublisher>(server_config, router);
 
@@ -19,7 +19,7 @@ namespace pub
 		return file;
 	}
 
-	FilePublisher::FilePublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	FilePublisher::FilePublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 		: Publisher(server_config, router)
 	{
 		logtd("FilePublisher has been create");

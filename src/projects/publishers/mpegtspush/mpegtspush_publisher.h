@@ -7,9 +7,9 @@
 class MpegtsPushPublisher : public pub::Publisher
 {
 public:
-	static std::shared_ptr<MpegtsPushPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	static std::shared_ptr<MpegtsPushPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 
-	MpegtsPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	MpegtsPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 	~MpegtsPushPublisher() override;
 	bool Stop() override;
 

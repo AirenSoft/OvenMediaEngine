@@ -17,14 +17,14 @@
 #include "hls_stream_server.h"
 
 std::shared_ptr<HlsPublisher> HlsPublisher::Create(const cfg::Server &server_config,
-												   const std::shared_ptr<MediaRouteInterface> &router)
+												   const std::shared_ptr<MediaRouterInterface> &router)
 {
 	return SegmentPublisher::Create<HlsPublisher>(server_config, router);
 }
 
 HlsPublisher::HlsPublisher(PrivateToken token,
 						   const cfg::Server &server_config,
-						   const std::shared_ptr<MediaRouteInterface> &router)
+						   const std::shared_ptr<MediaRouterInterface> &router)
 	: SegmentPublisher(server_config, router)
 {
 }

@@ -14,9 +14,9 @@
 class SrtPushPublisher : public pub::Publisher
 {
 public:
-	static std::shared_ptr<SrtPushPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	static std::shared_ptr<SrtPushPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 
-	SrtPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	SrtPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 	~SrtPushPublisher() override;
 	bool Stop() override;
 

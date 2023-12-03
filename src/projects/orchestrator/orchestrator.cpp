@@ -1142,4 +1142,26 @@ namespace ocst
 
 		return CommonErrorCode::SUCCESS;
 	}
+
+	// Mirror Stream
+	CommonErrorCode Orchestrator::MirrorStream(std::shared_ptr<MediaRouterStreamTap> &stream_tap, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, MediaRouterInterface::MirrorPosition posision)
+	{
+		if (_media_router == nullptr)
+		{
+			return CommonErrorCode::INVALID_STATE;
+		}
+
+		return _media_router->MirrorStream(stream_tap, vhost_app_name, stream_name, posision);
+	}
+
+	CommonErrorCode Orchestrator::UnmirrorStream(const std::shared_ptr<MediaRouterStreamTap> &stream_tap)
+	{
+		if (_media_router == nullptr)
+		{
+			return CommonErrorCode::INVALID_STATE;
+		}
+
+		return _media_router->UnmirrorStream(stream_tap);
+	}
+
 }  // namespace ocst

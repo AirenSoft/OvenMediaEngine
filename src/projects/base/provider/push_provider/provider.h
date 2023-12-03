@@ -38,7 +38,7 @@ namespace pvd
 		virtual bool PublishChannel(uint32_t channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &channel);
 
     protected:
-		PushProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+		PushProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 		virtual ~PushProvider();
 
 		virtual bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;

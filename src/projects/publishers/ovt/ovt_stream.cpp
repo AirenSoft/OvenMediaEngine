@@ -7,6 +7,7 @@
 #include "base/publisher/stream.h"
 
 #include <modules/ovt_packetizer/ovt_signaling.h>
+#include <orchestrator/orchestrator.h>
 
 std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pub::Application> application,
 											 const info::Stream &info,
@@ -37,6 +38,16 @@ bool OvtStream::Start()
 		return false;
 	}
 
+	if (GetLinkedInputStream() != nullptr && GetLinkedInputStream()->IsFromOriginMapStore() == false)
+	{
+		auto result = ocst::Orchestrator::GetInstance()->RegisterStreamToOriginMapStore(GetApplicationInfo().GetName(), GetName());
+		if (result == CommonErrorCode::ERROR)
+		{
+			logtw("Failed to register stream to origin map store : %s/%s", GetApplicationName(), GetName().CStr());
+			return false;
+		}
+	}
+
 	if(!CreateStreamWorker(_worker_count))
 	{
 		return false;
@@ -56,6 +67,17 @@ bool OvtStream::Stop()
 	}
 
 	logtd("OvtStream(%u) has been stopped", GetId());
+
+	if (GetLinkedInputStream() != nullptr && GetLinkedInputStream()->IsFromOriginMapStore() == false)
+	{
+		// Unegister stream if OriginMapStore is enabled
+		auto result = ocst::Orchestrator::GetInstance()->UnregisterStreamFromOriginMapStore(GetApplicationInfo().GetName(), GetName());
+		if (result == CommonErrorCode::ERROR)
+		{
+			logtw("Failed to unregister stream from origin map store : %s/%s", GetApplicationName(), GetName().CStr());
+			return false;
+		}
+	}
 
 	std::unique_lock<std::shared_mutex> mlock(_packetizer_lock);
 	if(_packetizer != nullptr)

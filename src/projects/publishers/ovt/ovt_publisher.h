@@ -13,9 +13,9 @@
 class OvtPublisher : public pub::Publisher, public PhysicalPortObserver
 {
 public:
-	static std::shared_ptr<OvtPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	static std::shared_ptr<OvtPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 
-	OvtPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	OvtPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 	~OvtPublisher() override;
 	bool Stop() override;
 

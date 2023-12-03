@@ -25,7 +25,21 @@ public:
 		{
 		}
 
-		SegmentInfo(uint32_t sequence, int64_t start_time, double duration, uint64_t size, ov::String url, ov::String next_url, bool is_independent)
+		// For Segment
+		SegmentInfo(uint32_t sequence, ov::String url)
+			: _sequence(sequence)
+			, _start_time(0)
+			, _duration(0)
+			, _size(0)
+			, _url(url)
+			, _next_url("")
+			, _is_independent(true)
+			, _completed(false)
+		{
+		}
+
+		// For Partial Segment
+		SegmentInfo(uint32_t sequence, int64_t start_time, double duration, uint64_t size, ov::String url, ov::String next_url, bool is_independent, bool completed)
 			: _sequence(sequence)
 			, _start_time(start_time)
 			, _duration(duration)
@@ -33,6 +47,7 @@ public:
 			, _url(url)
 			, _next_url(next_url)
 			, _is_independent(is_independent)
+			, _completed(completed)
 		{
 		}
 
@@ -93,6 +108,14 @@ public:
 				return false;
 			}
 
+			if (_partial_segments.empty() == true)
+			{
+				// first partial segment
+				_start_time = partial_segment->GetStartTime();
+			}
+
+			_duration += partial_segment->GetDuration();
+
 			_partial_segments.push_back(partial_segment);
 
 			return true;
@@ -102,6 +125,12 @@ public:
 		const std::deque<std::shared_ptr<SegmentInfo>> &GetPartialSegments() const
 		{
 			return _partial_segments;
+		}
+
+		// Get Partial segments count
+		uint32_t GetPartialSegmentsCount() const
+		{
+			return _partial_segments.size();
 		}
 
 		// Clear partial segments
@@ -155,7 +184,9 @@ public:
 		std::deque<std::shared_ptr<SegmentInfo>> _partial_segments;
 	}; // class SegmentInfo
 
-	LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, uint32_t target_duration, double part_target_duration, const ov::String &map_uri);
+	LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, 
+					uint32_t target_duration, double part_target_duration, 
+					const ov::String &map_uri, bool preload_hint_enabled);
 
 	~LLHlsChunklist();
 
@@ -177,7 +208,7 @@ public:
 
 	void SetPartHoldBack(const float &part_hold_back);
 
-	bool AppendSegmentInfo(const SegmentInfo &info);
+	bool CreateSegmentInfo(const SegmentInfo &info);
 	bool AppendPartialSegmentInfo(uint32_t segment_sequence, const SegmentInfo &info);
 	bool RemoveSegmentInfo(uint32_t segment_sequence);
 
@@ -188,6 +219,8 @@ public:
 	bool GetLastSequenceNumber(int64_t &msn, int64_t &psn) const;
 
 private:
+	std::shared_ptr<SegmentInfo> GetLastSegmentInfo() const;
+
 	bool SaveOldSegmentInfo(std::shared_ptr<SegmentInfo> &segment_info);
 
 	ov::String MakeChunklist(const ov::String &query_string, bool skip, bool legacy, bool vod = false, uint32_t vod_start_segment_number = 0) const;
@@ -203,6 +236,7 @@ private:
 	double _max_part_duration = 0;
 	double _part_hold_back = 0;
 	ov::String _map_uri;
+	bool _preload_hint_enabled = true;
 
 	std::atomic<int64_t> _last_segment_sequence = -1;
 	std::atomic<int64_t> _last_partial_segment_sequence = -1;

@@ -7,9 +7,9 @@
 class RtmpPushPublisher : public pub::Publisher
 {
 public:
-	static std::shared_ptr<RtmpPushPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	static std::shared_ptr<RtmpPushPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 
-	RtmpPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+	RtmpPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 	~RtmpPushPublisher() override;
 	bool Stop() override;
 

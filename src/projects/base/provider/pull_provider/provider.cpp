@@ -16,7 +16,7 @@
 
 namespace pvd
 {
-	PullProvider::PullProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	PullProvider::PullProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 		: Provider(server_config, router)
 	{
 

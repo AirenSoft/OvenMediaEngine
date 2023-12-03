@@ -81,7 +81,7 @@ namespace pvd
 		}
 
 	protected:
-		PullProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
+		PullProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
 		virtual ~PullProvider() override;
 
 		bool LockPullStreamIfNeeded(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset);

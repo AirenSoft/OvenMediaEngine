@@ -22,7 +22,7 @@ namespace pvd
 {
 	class Provider;
 	
-	class Application : public info::Application, public MediaRouteApplicationConnector
+	class Application : public info::Application, public MediaRouterApplicationConnector
 	{
 	public:
 		enum class ApplicationState : int8_t

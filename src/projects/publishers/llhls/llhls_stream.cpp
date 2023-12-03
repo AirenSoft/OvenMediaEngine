@@ -53,7 +53,7 @@ bool LLHlsStream::Start()
 
 	if (llhls_config.IsOriginMode())
 	{
-		_stream_key = GetName();
+		_stream_key = ov::String::FormatString("%zu", GetName().Hash());
 	}
 	else 
 	{
@@ -78,6 +78,7 @@ bool LLHlsStream::Start()
 	_storage_config.server_time_based_segment_numbering = llhls_config.IsServerTimeBasedSegmentNumbering();
 
 	_configured_part_hold_back = llhls_config.GetPartHoldBack();
+	_preload_hint_enabled = llhls_config.IsPreloadHintEnabled();
 
 	// Find data track
 	auto data_track = GetFirstTrackByType(cmn::MediaType::Data);
@@ -717,7 +718,12 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 		if (msn > last_msn || (msn >= last_msn && psn > last_psn))
 		{
 			// Hold the request until a Playlist contains a Segment with the requested Sequence Number
+			logtd("Accepted chunklist for track_id = %d, msn = %ld, psn = %ld (last_msn = %ld, last_psn = %ld)", track_id, msn, psn, last_msn, last_psn);
 			return {RequestResult::Accepted, nullptr};
+		}
+		else
+		{
+			logtd("Get chunklist for track_id = %d, msn = %ld, psn = %ld (last_msn = %ld, last_psn = %ld)", track_id, msn, psn, last_msn, last_psn);
 		}
 	}
 
@@ -773,16 +779,15 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::G
 
 	auto [last_segment_number, last_chunk_number] = storage->GetLastChunkNumber();
 
-	if (segment_number == last_segment_number && chunk_number > last_chunk_number)
+	if ((segment_number > last_segment_number) || (segment_number == last_segment_number && chunk_number > last_chunk_number))
 	{
+		logtd("Accepted chunk for track_id = %d, segment = %ld, chunk = %ld (last_segment = %ld, last_chunk = %ld)", track_id, segment_number, chunk_number, last_segment_number, last_chunk_number);
 		// Hold the request until a Playlist contains a Segment with the requested Sequence Number
 		return {RequestResult::Accepted, nullptr};
 	}
-	else if (segment_number > last_segment_number)
+	else
 	{
-		// Not Found
-		logtw("Could not find segment for track_id = %d, segment = %ld (last_segment = %ld)", track_id, segment_number, last_segment_number);
-		return {RequestResult::NotFound, nullptr};
+		logtd("Get chunk for track_id = %d, segment = %ld, chunk = %ld (last_segment = %ld, last_chunk = %ld)", track_id, segment_number, chunk_number, last_segment_number, last_chunk_number);
 	}
 
 	auto chunk = storage->GetMediaChunk(segment_number, chunk_number);
@@ -995,7 +1000,8 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 													  GetTrack(track_id),
 													  segment_duration,
 													  chunk_duration,
-													  GetInitializationSegmentName(track_id));
+													  GetInitializationSegmentName(track_id), 
+													  _preload_hint_enabled);
 	
 	if (cenc_property.scheme != bmff::CencProtectScheme::None)
 	{
@@ -1097,13 +1103,27 @@ ov::String LLHlsStream::GetPartialSegmentName(const int32_t &track_id, const int
 									_stream_key.CStr());
 }
 
-ov::String LLHlsStream::GetNextPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number) const
+ov::String LLHlsStream::GetNextPartialSegmentName(const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number, bool last_chunk) const
 {
+	auto next_segment_number = 0;
+	auto next_partial_number = 0;
+
+	if (last_chunk == true)
+	{
+		next_segment_number = segment_number + 1;
+		next_partial_number = 0;
+	}
+	else
+	{
+		next_segment_number = segment_number;
+		next_partial_number = partial_number + 1;
+	}
+
 	// part_<track id>_<segment number>_<partial number>_<media type>_<random str>_llhls.m4s
 	return ov::String::FormatString("part_%d_%lld_%lld_%s_%s_llhls.m4s",
 									track_id,
-									segment_number,
-									partial_number + 1,
+									next_segment_number,
+									next_partial_number,
 									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
 									_stream_key.CStr());
 }
@@ -1164,7 +1184,7 @@ bool LLHlsStream::CheckPlaylistReady()
 	return true;
 }
 
-void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t &segment_number)
+void LLHlsStream::OnMediaSegmentCreated(const int32_t &track_id, const uint32_t &segment_number)
 {
 	// Check whether at least one segment of every track has been created.
 	CheckPlaylistReady();
@@ -1190,23 +1210,15 @@ void LLHlsStream::OnMediaSegmentUpdated(const int32_t &track_id, const uint32_t 
 		return;
 	}
 
-	// Timescale to seconds(decimal)
-	auto segment_duration = static_cast<double>(segment->GetDuration()) / static_cast<double>(1000.0);
+	// Empty segment
+	auto segment_info = LLHlsChunklist::SegmentInfo(segment->GetNumber(), GetSegmentName(track_id, segment->GetNumber()));
 
-	auto start_timestamp_ms = (static_cast<double>(segment->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
-	auto start_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(GetInputStreamCreatedTime().time_since_epoch()).count() + start_timestamp_ms;
+	playlist->CreateSegmentInfo(segment_info);
 
-	auto segment_info = LLHlsChunklist::SegmentInfo(segment->GetNumber(), start_timestamp, segment_duration,
-													segment->GetSize(), GetSegmentName(track_id, segment->GetNumber()), "", true);
-
-	playlist->AppendSegmentInfo(segment_info);
-
-	logtd("Media segment updated : track_id = %d, segment_number = %d, start_timestamp = %llu, segment_duration = %f", track_id, segment_number, segment->GetStartTimestamp(), segment_duration);
-
-	DumpSegmentOfAllItems(track_id, segment_number);
+	logtd("Media segment updated : track_id = %d, segment_number = %d", track_id, segment_number);
 }
 
-void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number)
+void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &segment_number, const uint32_t &chunk_number, bool last_chunk)
 {
 	auto playlist = GetChunklistWriter(track_id);
 	if (playlist == nullptr)
@@ -1238,7 +1250,8 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 
 	auto chunk_info = LLHlsChunklist::SegmentInfo(chunk->GetNumber(), start_timestamp, chunk_duration, chunk->GetSize(),
 												  GetPartialSegmentName(track_id, segment_number, chunk->GetNumber()),
-												  GetNextPartialSegmentName(track_id, segment_number, chunk->GetNumber()), chunk->IsIndependent());
+												  GetNextPartialSegmentName(track_id, segment_number, chunk->GetNumber(), last_chunk), 
+												  chunk->IsIndependent(), last_chunk);
 
 	playlist->AppendPartialSegmentInfo(segment_number, chunk_info);
 
@@ -1246,6 +1259,11 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 
 	// Notify
 	NotifyPlaylistUpdated(track_id, segment_number, chunk_number);
+
+	if (last_chunk == true)
+	{
+		DumpSegmentOfAllItems(track_id, segment_number);
+	}
 }
 
 void LLHlsStream::OnMediaSegmentDeleted(const int32_t &track_id, const uint32_t &segment_number)

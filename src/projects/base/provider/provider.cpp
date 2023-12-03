@@ -18,7 +18,7 @@
 
 namespace pvd
 {
-	Provider::Provider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	Provider::Provider(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 		: _server_config(server_config), _router(router)
 	{
 	}

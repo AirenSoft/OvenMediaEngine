@@ -18,7 +18,7 @@
 #include "rtc_stream.h"
 #include "webrtc_publisher_signalling_interceptor.h"
 
-std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 {
 	auto webrtc = std::make_shared<WebRtcPublisher>(server_config, router);
 
@@ -29,7 +29,7 @@ std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const cfg::Server &serv
 	return webrtc;
 }
 
-WebRtcPublisher::WebRtcPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+WebRtcPublisher::WebRtcPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router)
 	: Publisher(server_config, router)
 {
 }
