@@ -85,10 +85,15 @@ bool DecoderAVCxNILOGAN::InitCodec()
 	_context->flags |= AV_CODEC_FLAG_LOW_DELAY;
 	
 	auto decoder_config = std::static_pointer_cast<AVCDecoderConfigurationRecord>(GetRefTrack()->GetDecoderConfigurationRecord());
+	
+	if(decoder_config->ChromaFormat() != 1) {			
+		logte("Could not initialize codec because nilogan decoder support only AV_PIX_FMT_YUV420P pixel format");
+		return false;
+	}
 
 	if (decoder_config != nullptr)
 	{		
-		_context->pix_fmt = AV_PIX_FMT_YUV420P; //Forced here :( //(AVPixelFormat)GetRefTrack()->GetColorspace();
+		_context->pix_fmt = AV_PIX_FMT_YUV420P; //Forced here nilogan decoder support only AV_PIX_FMT_YUV420P pixel format
 		_context->width = decoder_config->GetWidth();
 		_context->height = decoder_config->GetHeight();
 	}
@@ -105,6 +110,8 @@ bool DecoderAVCxNILOGAN::InitCodec()
 	return true;
 }
 
+/*
+it seems that dynamic resolution is supported
 void DecoderAVCxNILOGAN::UninitCodec()
 {
 	::avcodec_close(_context);
@@ -131,6 +138,7 @@ bool DecoderAVCxNILOGAN::ReinitCodecIfNeed()
 
 	return true;
 }
+*/
 
 void DecoderAVCxNILOGAN::CodecThread()
 {
@@ -169,7 +177,7 @@ void DecoderAVCxNILOGAN::CodecThread()
 			
 			// if activated, I got Warning: time out on receiving a decoded framefrom the decoder, assume dropped, received frame_num: 0, sent pkt_num: 1, pkt_num-frame_num: 1, sending another packet.
 			// ReinitCodecIfNeed();			
-
+ 
 			if (_pkt->size > 0)
 			{
 				_pkt->pts = _parser->pts;

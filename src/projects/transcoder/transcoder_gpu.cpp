@@ -373,7 +373,7 @@ bool TranscodeGPU::CheckSupportedQSV()
 bool TranscodeGPU::CheckSupportedNILOGAN()
 {
 	_device_count_nilogan = 0;
-
+#ifdef HWACCELS_NILOGAN_ENABLED		
 	int ret = ::av_hwdevice_ctx_create(&_device_context_nilogan[0], AV_HWDEVICE_TYPE_NI_LOGAN, nullptr, nullptr, 0);
 	if (ret < 0)
 	{
@@ -388,6 +388,9 @@ bool TranscodeGPU::CheckSupportedNILOGAN()
 	logtd("constraints. hw.fmt(%d), sw.fmt(%d)", *constraints->valid_hw_formats, *constraints->valid_sw_formats);
 
 	return true;
+#else
+	return false;
+#endif
 }
 
 
@@ -529,6 +532,7 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, i
 		}
 		break;
 		case cmn::MediaCodecModuleId::NILOGAN: {
+#ifdef HWACCELS_NILOGAN_ENABLED				
 			if (type == IPType::ENCODER)
 			{
 				return 0;
@@ -540,7 +544,8 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, i
 			else if (type == IPType::SCALER)
 			{
 				return 0;
-			}			
+			}	
+#endif				
 		}
 		break;
 		default:

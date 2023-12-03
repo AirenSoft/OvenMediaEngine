@@ -526,19 +526,19 @@ else
     echo "Please refer to manual installation page"
 fi
 
-#install_nasm
-#install_openssl
-#install_libsrtp
-#install_libsrt
-#install_libopus
-#install_libopenh264
-#install_libvpx
-#install_fdk_aac
-#install_nvcc_hdr
+install_nasm
+install_openssl
+install_libsrtp
+install_libsrt
+install_libopus
+install_libopenh264
+install_libvpx
+install_fdk_aac
+install_nvcc_hdr
 install_ffmpeg
-#install_jemalloc
-#install_libpcre2
-#install_hiredis
+install_jemalloc
+install_libpcre2
+install_hiredis
 
 if [ "${WITH_OME}" == "true" ]; then
     install_ovenmediaengine

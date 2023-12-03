@@ -103,6 +103,12 @@ PROJECT_CXXFLAGS += -I/usr/local/cuda/include -DHWACCELS_NVIDIA_ENABLED
 endif
 endif
 
+# Enable Netint Accelerator
+ifeq ($(call chk_lib_exist,libxcoder.so), 0)
+$(info $(ANSI_YELLOW)- Netint Accelerator is enabled$(ANSI_RESET))
+PROJECT_CXXFLAGS += -DHWACCELS_NILOGAN_ENABLED
+endif
+
 ifeq ($(shell echo $${OSTYPE}),linux-musl) 
 # For alpine linux
 LOCAL_LDFLAGS += -lexecinfo
