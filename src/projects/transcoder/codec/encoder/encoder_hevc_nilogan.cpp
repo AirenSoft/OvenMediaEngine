@@ -10,9 +10,8 @@
 
 #include <unistd.h>
 
+#include "../../transcoder_gpu.h"
 #include "../../transcoder_private.h"
-
-// sudo usermod -a -G video $USER
 
 bool EncoderHEVCxNILOGAN::SetCodecParams()
 {
@@ -28,6 +27,20 @@ bool EncoderHEVCxNILOGAN::SetCodecParams()
 	_codec_context->width = GetRefTrack()->GetWidth();
 	_codec_context->height = GetRefTrack()->GetHeight();
 	_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
+	
+	//disable b-frames
+	/*
+	1 : I-I-I-I,..I (all intra, gop_size=1)
+	2 : I-P-P-P,… P (consecutive P, gop_size=1)
+	3 : I-B-B-B,…B (consecutive B, gop_size=1)
+	4 : I-B-P-B-P,… (gop_size=2)
+	5 : I-B-B-B-P,… (gop_size=4)
+	6 : I-P-P-P-P,… (consecutive P, gop_size=4)
+	7 : I-B-B-B-B,… (consecutive B, gop_size=4)
+	8 : I-B-B-B-B-B-B-B-B,… (random access, gop_size=8)
+	9 : I-P-P-P,… P
+	*/
+	::av_opt_set(_codec_context->priv_data, "xcoder-params", "gopPresetIdx=1:lowDelay=1", 0);
 
 	return true;
 }
@@ -56,6 +69,13 @@ bool EncoderHEVCxNILOGAN::Configure(std::shared_ptr<MediaTrack> context)
 	if (_codec_context == nullptr)
 	{
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		return false;
+	}
+	
+	_codec_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NILOGAN, context->GetCodecDeviceId()));
+	if(_codec_context->hw_device_ctx == nullptr)
+	{
+		logte("Could not allocate hw device context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
 

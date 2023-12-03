@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  Transcoder
+//  Transcode
 //
 //  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
@@ -8,8 +8,12 @@
 //==============================================================================
 #include "decoder_hevc_nilogan.h"
 
+#include "../../transcoder_gpu.h"
 #include "../../transcoder_private.h"
 #include "base/info/application.h"
+
+#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
+#include <modules/bitstream/nalu/nal_stream_converter.h>
 
 bool DecoderHEVCxNILOGAN::Configure(std::shared_ptr<MediaTrack> context)
 {
@@ -18,6 +22,41 @@ bool DecoderHEVCxNILOGAN::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
+	
+	// Create packet parser
+	_parser = ::av_parser_init(GetCodecID());
+	if (_parser == nullptr)
+	{
+		logte("Parser not found");
+		return false;
+	}
+	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
+	
+	if (InitCodec() == false)
+	{
+		return false;
+	}
+	
+	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
+	try
+	{
+		_kill_flag = false;
+
+		_codec_thread = std::thread(&TranscodeDecoder::CodecThread, this);
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%sNilogan", avcodec_get_name(GetCodecID())).CStr());
+	}
+	catch (const std::system_error &e)
+	{
+		logte("Failed to start decoder thread");
+		_kill_flag = true;
+		return false;
+	}
+
+	return true;
+}
+
+bool DecoderHEVCxNILOGAN::InitCodec()
+{
 	const AVCodec *_codec = ::avcodec_find_decoder_by_name("h265_ni_logan_dec");
 	if (_codec == nullptr)
 	{
@@ -32,39 +71,42 @@ bool DecoderHEVCxNILOGAN::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
+	_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NILOGAN, _track->GetCodecDeviceId()));
+	if(_context->hw_device_ctx == nullptr)
+	{
+		logte("Could not allocate hw device context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		return false;
+	}
+	
+	
+
 	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
+	_context->pkt_timebase = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
+	_context->flags |= AV_CODEC_FLAG_LOW_DELAY;
+	
+	auto decoder_config = std::static_pointer_cast<AVCDecoderConfigurationRecord>(GetRefTrack()->GetDecoderConfigurationRecord());
+	
+	if(decoder_config->ChromaFormat() != 1) {			
+		logte("Could not initialize codec because nilogan decoder support only AV_PIX_FMT_YUV420P pixel format");
+		return false;
+	}
+
+	if (decoder_config != nullptr)
+	{		
+		_context->pix_fmt = AV_PIX_FMT_YUV420P; //Forced here nilogan decoder support only AV_PIX_FMT_YUV420P pixel format
+		_context->width = decoder_config->GetWidth();
+		_context->height = decoder_config->GetHeight();
+	}
+
+	::av_opt_set(_context->priv_data, "out", "hw", 0);
+	::av_opt_set(_context->priv_data, "xcoder-params", "lowDelayMode=1:lowDelay=100", 0);
 
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
 		return false;
 	}
-
-	// Create packet parser
-	_parser = ::av_parser_init(_codec->id);
-	if (_parser == nullptr)
-	{
-		logte("Parser not found");
-		return false;
-	}
-
-	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
-
-	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
-	try
-	{
-		_kill_flag = false;
-
-		_codec_thread = std::thread(&TranscodeDecoder::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%sQsv", avcodec_get_name(GetCodecID())).CStr());
-	}
-	catch (const std::system_error &e)
-	{
-		logte("Failed to start decoder thread");
-		_kill_flag = true;
-		return false;
-	}
-
+	
 	return true;
 }
 
@@ -102,7 +144,10 @@ void DecoderHEVCxNILOGAN::CodecThread()
 				logte("An error occurred while parsing: %d", parsed_size);
 				break;
 			}
-
+			
+			// if activated, I got Warning: time out on receiving a decoded framefrom the decoder, assume dropped, received frame_num: 0, sent pkt_num: 1, pkt_num-frame_num: 1, sending another packet.
+			// ReinitCodecIfNeed();			
+ 
 			if (_pkt->size > 0)
 			{
 				_pkt->pts = _parser->pts;
@@ -194,7 +239,10 @@ void DecoderHEVCxNILOGAN::CodecThread()
 					{
 						auto codec_info = ffmpeg::Conv::CodecInfoToString(_context, _codec_par);
 						logti("[%s/%s(%u)] input stream information: %s",
-							  _stream_info.GetApplicationInfo().GetName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
+							  _stream_info.GetApplicationInfo().GetName().CStr(),
+							  _stream_info.GetName().CStr(),
+							  _stream_info.GetId(),
+							  codec_info.CStr());
 
 						_change_format = true;
 
@@ -212,13 +260,16 @@ void DecoderHEVCxNILOGAN::CodecThread()
 				{
 					_frame->pkt_duration = (int64_t)( ((double)_context->framerate.den / (double)_context->framerate.num) / ((double) GetRefTrack()->GetTimeBase().GetNum() / (double) GetRefTrack()->GetTimeBase().GetDen()) );
 				}
-				
+
 				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
-				::av_frame_unref(_frame);
 				if (decoded_frame == nullptr)
 				{
 					continue;
 				}
+
+				// logtd("%d / %d / fmt(%d)", decoded_frame->GetWidth(), decoded_frame->GetHeight(), decoded_frame->GetFormat());
+
+				::av_frame_unref(_frame);
 
 				SendOutputBuffer(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
 			}
