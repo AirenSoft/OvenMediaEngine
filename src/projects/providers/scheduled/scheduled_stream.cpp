@@ -589,6 +589,13 @@ namespace pvd
 
     bool ScheduledStream::CheckFileItemAvailable(const std::shared_ptr<Schedule::Item> &item)
     {
+        // check file exists
+        if (stat(item->file_path.CStr(), nullptr) != 0)
+        {
+            logte("%s/%s: Failed to find %s item. error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), errno, strerror(errno));
+            return false;
+        }
+
         AVFormatContext *format_context = nullptr;
 
         int err = 0;
@@ -859,7 +866,7 @@ namespace pvd
                 }
             }
 
-            auto media_packet = stream_tap->Pop(3000);
+            auto media_packet = stream_tap->Pop(500);
             if (media_packet == nullptr)
             {
                 if (CheckCurrentProgramChanged() == true)
@@ -895,18 +902,19 @@ namespace pvd
                 end_of_track_map[track_id] = false;
             }
 
-            if (sent_keyframe == false && media_packet->GetMediaType() == cmn::MediaType::Video)
-            {
-                if (media_packet->GetFlag() != MediaPacketFlag::Key)
-                {
-                    // Skip until key frame
-                    continue;
-                }
-                else
-                {
-                    sent_keyframe = true;
-                }
-            }
+            // Transcoder will make bogus frame if it can't be decoded
+            // if (sent_keyframe == false && media_packet->GetMediaType() == cmn::MediaType::Video)
+            // {
+            //     if (media_packet->GetFlag() != MediaPacketFlag::Key)
+            //     {
+            //         // Skip until key frame
+            //         continue;
+            //     }
+            //     else
+            //     {
+            //         sent_keyframe = true;
+            //     }
+            // }
 
             auto track = GetTrack(track_id);
             if (track == nullptr)
@@ -992,8 +1000,6 @@ namespace pvd
 
     bool ScheduledStream::CheckStreamItemAvailable(const std::shared_ptr<Schedule::Item> &item)
     {
-        auto stream_tap = MediaRouterStreamTap::Create();
-
         auto stream_url = ov::Url::Parse(item->url);
         if (stream_url == nullptr)
         {
@@ -1002,6 +1008,13 @@ namespace pvd
         }
 
         auto vhost_app_name = info::VHostAppName(stream_url->Host(), stream_url->App());
+        if (ocst::Orchestrator::GetInstance()->CheckIfStreamExist(vhost_app_name, stream_url->Stream()) == false)
+        {
+            logte("Scheduled Channel : %s/%s: Failed to find stream %s", GetApplicationName(), GetName().CStr(), item->url.CStr());
+            return false;
+        }
+
+        auto stream_tap = MediaRouterStreamTap::Create();
 
         auto result = ocst::Orchestrator::GetInstance()->MirrorStream(stream_tap, vhost_app_name, stream_url->Stream(), MediaRouterInterface::MirrorPosition::Inbound);
         if (result != CommonErrorCode::SUCCESS)
