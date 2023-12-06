@@ -42,7 +42,8 @@ bool EncoderAVCxNILOGAN::SetCodecParams()
 	8 : I-B-B-B-B-B-B-B-B,… (random access, gop_size=8)
 	9 : I-P-P-P,… P
 	*/
-	::av_opt_set(_codec_context->priv_data, "xcoder-params", "gopPresetIdx=1:lowDelay=1", 0);
+	::av_opt_set(_codec_context->priv_data, "xcoder-params", "gopPresetIdx=2:lowDelay=1", 0);
+	//::av_opt_set(_codec_context->priv_data, "enc", 0, 0);	
 	
 	// Bframes
 	_codec_context->max_b_frames = GetRefTrack()->GetBFrames();

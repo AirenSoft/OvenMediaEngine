@@ -214,11 +214,10 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 		case cmn::MediaCodecModuleId::NILOGAN:
 			if (output_module_id == cmn::MediaCodecModuleId::NILOGAN)
 			{
-				filters.push_back(ov::String::FormatString(					 
-					//"hwupload=derive_device=%d,scale=%dx%d,hwdownload",
-					//output_track->GetCodecDeviceId(),
+				filters.push_back(ov::String::FormatString(
 					"scale=%dx%d:flags=bilinear",
 					output_track->GetWidth(), output_track->GetHeight()));
+					//ni_logan_hwupload => failed because autoscale is automatically insert a scale filter at the end of the filter graph and seems to be not compatible with ni_logan_hwupload :(
 			}
 			else 
 			{

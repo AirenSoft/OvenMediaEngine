@@ -41,7 +41,8 @@ bool EncoderHEVCxNILOGAN::SetCodecParams()
 	9 : I-P-P-P,… P
 	*/
 	::av_opt_set(_codec_context->priv_data, "xcoder-params", "gopPresetIdx=1:lowDelay=1", 0);
-
+	//::av_opt_set(_codec_context->priv_data, "enc", 0, 0);	
+	
 	return true;
 }
 

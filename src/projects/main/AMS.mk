@@ -104,7 +104,7 @@ endif
 endif
 
 # Enable Netint Accelerator
-ifeq ($(call chk_lib_exist,libxcoder.so), 0)
+ifeq ($(call chk_lib_exist,libxcoder_logan.so), 0)
 $(info $(ANSI_YELLOW)- Netint Accelerator is enabled$(ANSI_RESET))
 PROJECT_CXXFLAGS += -DHWACCELS_NILOGAN_ENABLED
 endif

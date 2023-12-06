@@ -84,10 +84,10 @@ bool DecoderHEVCxNILOGAN::InitCodec()
 	_context->pkt_timebase = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 	_context->flags |= AV_CODEC_FLAG_LOW_DELAY;
 	
-	auto decoder_config = std::static_pointer_cast<AVCDecoderConfigurationRecord>(GetRefTrack()->GetDecoderConfigurationRecord());
+	auto decoder_config = std::static_pointer_cast<HEVCDecoderConfigurationRecord>(GetRefTrack()->GetDecoderConfigurationRecord());
 	
-	if(decoder_config->ChromaFormat() != 1) {			
-		logte("Could not initialize codec because nilogan decoder support only AV_PIX_FMT_YUV420P pixel format");
+	if(decoder_config->ChromaFormat() > 1) {			
+		logte("Could not initialize codec because nilogan decoder support only AV_PIX_FMT_YUV420P pixel format: %d", decoder_config->ChromaFormat());
 		return false;
 	}
 
@@ -98,9 +98,10 @@ bool DecoderHEVCxNILOGAN::InitCodec()
 		_context->height = decoder_config->GetHeight();
 	}
 
-	::av_opt_set(_context->priv_data, "out", "hw", 0);
-	::av_opt_set(_context->priv_data, "xcoder-params", "lowDelayMode=1:lowDelay=100", 0);
-
+	//dec_options
+	::av_opt_set(_context->priv_data, "xcoder-params", "out=sw:lowDelayMode=1:lowDelay=100", 0);
+	//::av_opt_set(_context->priv_data, "dec", 0, 0);
+	
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());

@@ -382,9 +382,10 @@ bool TranscodeGPU::CheckSupportedNILOGAN()
 		return false;
 	}
 	
-	_device_count_nilogan++;
+	_device_count_nilogan++;		
 
 	auto constraints = av_hwdevice_get_hwframe_constraints(_device_context_nilogan[0], nullptr);
+	
 	logtd("constraints. hw.fmt(%d), sw.fmt(%d)", *constraints->valid_hw_formats, *constraints->valid_sw_formats);
 
 	return true;

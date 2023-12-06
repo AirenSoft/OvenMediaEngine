@@ -20,7 +20,7 @@ public:
 
 	AVCodecID GetCodecID() const noexcept override
 	{
-		return AV_CODEC_ID_H265;
+		return AV_CODEC_ID_HEVC;
 	}
 
 	bool Configure(std::shared_ptr<MediaTrack> context) override;

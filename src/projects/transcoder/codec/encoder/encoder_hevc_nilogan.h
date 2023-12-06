@@ -20,12 +20,12 @@ public:
 
 	AVCodecID GetCodecID() const noexcept override
 	{
-		return AV_CODEC_ID_H265;
+		return AV_CODEC_ID_HEVC;
 	}
 
 	int GetSupportedFormat() const noexcept override 
 	{
-		return AV_PIX_FMT_NV12;
+		return AV_PIX_FMT_YUV420P;
 	}
 
 	cmn::BitstreamFormat GetBitstreamFormat() const noexcept override
