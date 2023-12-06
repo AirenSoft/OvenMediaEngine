@@ -57,7 +57,7 @@ install_base_amazonlinux()
 {
     # Added resositroty
     # https://xilinx.github.io/video-sdk/v3.0/package_feed.html#package-feed-configuration
-    cp xilinx.repo /etc/yum.repos.d/
+    sudo cp xilinx.repo /etc/yum.repos.d/
 
     # Install Required packages
     sudo amazon-linux-extras install epel -y
@@ -123,5 +123,8 @@ echo " $ sudo /opt/xilinx/xrt/bin/xball --device-filter u30 xbmgmt program --bas
 echo " "
 echo " Setup the runtime environment"
 echo " $ source /opt/xilinx/xcdr/setup.sh"
+echo " "
+echo " verify that the cards are correctly detected"
+echo " $ xbutil examine"
 echo "##########################################################################################"
 
