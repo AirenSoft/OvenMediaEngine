@@ -1143,6 +1143,19 @@ namespace ocst
 		return CommonErrorCode::SUCCESS;
 	}
 
+	bool Orchestrator::CheckIfStreamExist(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+	{
+		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
+		auto stream = GetProviderStream(vhost_app_name, stream_name);
+		if (stream == nullptr)
+		{
+			// Error
+			return false;
+		}
+
+		return true;
+	}
+
 	// Mirror Stream
 	CommonErrorCode Orchestrator::MirrorStream(std::shared_ptr<MediaRouterStreamTap> &stream_tap, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, MediaRouterInterface::MirrorPosition posision)
 	{

@@ -29,6 +29,16 @@ MediaRouterStreamTap::State MediaRouterStreamTap::GetState() const
     return _state;
 }
 
+void MediaRouterStreamTap::Start()
+{
+    _is_started = true;
+}
+
+void MediaRouterStreamTap::Stop()
+{
+    _is_started = false;
+}
+
 std::shared_ptr<MediaPacket> MediaRouterStreamTap::Pop(int timeout_in_msec)
 {
     if (_state != State::Tapped && _buffer.IsEmpty())
@@ -67,7 +77,12 @@ bool MediaRouterStreamTap::Push(const std::shared_ptr<MediaPacket> &media_packet
         return false;
     }
 
-    _buffer.Enqueue(media_packet);
+    if (_is_started == false)
+    {
+        return false;
+    }
+
+    _buffer.Enqueue(media_packet->ClonePacket());
 
     return true;
 }
