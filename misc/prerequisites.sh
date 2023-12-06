@@ -23,6 +23,7 @@ NVCC_HDR_VERSION=11.1.5.2
 INTEL_QSV_HWACCELS=false
 NETINT_LOGAN_HWACCELS=false
 NETINT_LOGAN_PATCH_PATH=""
+NETINT_LOGAN_XCODER_COMPILE_PATH=""
 NVIDIA_NV_CODEC_HWACCELS=false
 XILINX_XMA_CODEC_HWACCELS=false
 
@@ -276,14 +277,15 @@ install_ffmpeg()
     cd ${DIR} && \
     curl -sSLf ${FFMPEG_DOWNLOAD_URL} | tar -xz --strip-components=1 ) || fail_exit "ffmpeg"
 	
-	# If there is an enable-nilogan option, add patch from libxcoder_logan-path
-    if [ "$NETINT_LOGAN_HWACCELS" = true ] ; then
+	# If there is an enable-nilogan option, add patch from libxcoder_logan-path 
+    if [ "$NETINT_LOGAN_HWACCELS" = true ] ; then		
 		echo "we are applying the patch founded in $NETINT_LOGAN_PATCH_PATH"
 		patch_name=$(basename $NETINT_LOGAN_PATCH_PATH)
 		cp $NETINT_LOGAN_PATCH_PATH ${DIR}		
 		cd ${DIR} && patch -t -p 1 < $patch_name
-		cd /root/T4xx/libxcoder_logan && bash build.sh && ldconfig #the compilation of libxcoder_logan is done before
-		#./prerequisites.sh --enable-nilogan --nilogan-path=/root/T4xx/release/FFmpeg-n5.0_t4xx_patch
+		if [ "$NETINT_LOGAN_XCODER_COMPILE_PATH" != "" ] ; then
+			cd $NETINT_LOGAN_XCODER_COMPILE_PATH && bash build.sh && ldconfig #the compilation of libxcoder_logan can be done before
+		fi		
 		ADDI_LIBS+=" --enable-libxcoder_logan --enable-ni_logan --enable-avfilter  --enable-pthreads "
 		ADDI_ENCODER+=",h264_ni_logan,h265_ni_logan"
         ADDI_DECODER+=",h264_ni_logan,h265_ni_logan"
@@ -479,6 +481,10 @@ case $i in
     ;;	
 	--nilogan-path=*)
     NETINT_LOGAN_PATCH_PATH="${i#*=}" 
+    shift
+    ;;
+	--nilogan-xocder-compile-path=*)
+    NETINT_LOGAN_XCODER_COMPILE_PATH="${i#*=}" 
     shift
     ;;
     --enable-nvc)

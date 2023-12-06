@@ -108,6 +108,31 @@ If you have finished installing the driver to use the GPU, you need to reinstall
 OvenMediaEngine-master/misc/prerequisites.sh --enable-qsv
 ```
 {% endtab %}
+
+{% tab title="Netint VPU Ni Logan" %}
+### 1. Install XCODER
+
+Please refer to the Netint documentation to install XCODER.
+
+**How to check driver installation**
+
+After the driver installation is complete, check if the libxcoder exist: the CLI must return something like ```libxcoder_logan.so (libc6,x86-64) => /usr/local/lib/libxcoder_logan.so```
+
+```bash
+ldconfig -p | grep libxcoder_logan.so
+```
+
+### 2. Prerequisites&#x20;
+
+If you have finished installing the driver to use the VPU, you need to reinstall the open source library using Prerequisites.sh . The purpose is to allow external libraries to use the installed graphics driver.
+You also have to unzip the ffmpeg patch provide by netint in a specfic path
+
+### Using Netint VPU
+
+```bash
+./prerequisites.sh --enable-nilogan --nilogan-path=/root/T4xx/release/FFmpeg-n5.0_t4xx_patch
+```
+{% endtab %}
 {% endtabs %}
 
 
