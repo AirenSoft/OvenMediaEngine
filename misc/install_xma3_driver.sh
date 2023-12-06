@@ -37,8 +37,10 @@ echo ${CURRENT}
 
 install_base_ubuntu()
 {
-    sudo apt update
-    
+    # Added resositroty
+    # https://xilinx.github.io/video-sdk/v3.0/package_feed.html    
+    sudo cp xilinx.plist /etc/apt/sources.list.d/
+
     # Remove older versions of the Xilinx Video SDK
     sudo apt-get remove xvbm xilinx-u30-xvbm xrmu30decoder xrmu30scaler xrmu30encoder xmpsoccodecs xmultiscaler xlookahead xmaapps xmapropstojson xffmpeg launcher jobslotreservation xcdr
     sudo apt-get remove xrm xilinx-container-runtime xilinx-xvbm xilinx-u30-xrm-decoder xilinx-u30-xrm-encoder xilinx-u30-xrm-multiscaler xilinx-u30-xma-multiscaler xilinx-u30-xlookahead xilinx-u30-xmpsoccodecs xilinx-u30-xma-apps xilinx-u30-xmapropstojson xilinx-u30-xffmpeg xilinx-u30-launcher xilinx-u30-jobslotreservation xilinx-u30-xcdr xilinx-u30-gstreamer-1.16.2 xilinx-u30-vvas xilinx-sc-fw-u30 xilinx-u30-gen3x4-base xilinx-u30-gen3x4-validate
@@ -56,7 +58,7 @@ install_base_ubuntu()
 install_base_amazonlinux()
 {
     # Added resositroty
-    # https://xilinx.github.io/video-sdk/v3.0/package_feed.html#package-feed-configuration
+    # https://xilinx.github.io/video-sdk/v3.0/package_feed.html
     sudo cp xilinx.repo /etc/yum.repos.d/
 
     # Install Required packages

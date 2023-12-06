@@ -1,0 +1,5 @@
+#
+# deb [trusted=yes] https://packages.xilinx.com/artifactory/debian-packages <distro name> main
+# <distro name> can be either bionic, focal or jammy. If needed, the distro name can be found using the lsb_release -c command.
+#
+deb [trusted=yes] https://packages.xilinx.com/artifactory/debian-packages focal main
