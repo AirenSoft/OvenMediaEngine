@@ -34,6 +34,9 @@ public:
 
     State GetState() const;
 
+    void Start();
+    void Stop();
+
     // If the stream is Tapped, MediaPacket will be popped from the buffer.
     // If the stream is not Tapped and the buffer is empty, nullptr will be returned immediately without waiting.
     std::shared_ptr<MediaPacket> Pop(int timeout_in_msec = 0);
@@ -53,4 +56,6 @@ private:
     State _state = State::Idle;
 
     bool _is_destroy_requested = false;
+
+    bool _is_started = false;
 };

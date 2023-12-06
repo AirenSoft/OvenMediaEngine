@@ -22,17 +22,17 @@
         <AudioTrack>true</AudioTrack> <!-- optional, default : true -->
     </Stream>
 
-    <DefaultProgram>
-        <Item url="file://sample.mp4" start="0" duration="60000"/> <!-- Milliseconds -->
-        <Item url="stream://default/app/stream1" duration="60000"/>
-    </DefaultProgram>
+    <FallbackProgram>
+        <Item url="file://sample.mp4" start="0" duration="60000" fallbackOnErr="true"/> <!-- Milliseconds -->
+        <Item url="stream://default/app/stream1" duration="60000" fallbackOnErr="true"/>
+    </FallbackProgram>
 
     <Program scheduled="2023-09-27T00:00:00.000Z" repeat="true"> <!-- optional -->
-        <Item url="file://sample.mp4" start="0" duration="60000"/> <!-- Milliseconds -->
+        <Item url="file://sample.mp4" start="0" duration="60000" fallbackOnErr="true"/> <!-- Milliseconds -->
         <Item url="stream://default/app/stream1" duration="60000"/>
     </Program>
     <Program scheduled="2023-09-27 03:11:22.000Z" repeat="true">
-        <Item url="file://sample.mp4" start="0" duration="60000"/>
+        <Item url="file://sample.mp4" start="0" duration="60000" fallbackOnErr="true"/>
         <Item url="stream://default/app/stream1" duration="60000"/>
         <Item url="file://sample.mp4" start="60000" duration="120000"/>
     </Program>
@@ -71,8 +71,9 @@ namespace pvd
             ov::String file_path;
             int64_t start_time_ms;
             int64_t duration_ms;
-
+            bool fallback_on_err = true; // default true
             bool file = true;
+            bool fallback = false;
         };
 
         struct Stream
@@ -192,7 +193,7 @@ namespace pvd
         std::chrono::system_clock::time_point GetCreatedTime() const;
 
         const Stream &GetStream() const;
-        const std::shared_ptr<Program> GetDefaultProgram() const;
+        const std::shared_ptr<Program> GetFallbackProgram() const;
         const std::vector<std::shared_ptr<Program>> &GetPrograms() const;
 
         const std::shared_ptr<Program> GetCurrentProgram() const;
@@ -203,7 +204,7 @@ namespace pvd
 
     private:
         bool ReadStreamNode(const pugi::xml_node &schedule_node);
-        bool ReadDefaultProgramNode(const pugi::xml_node &schedule_node);
+        bool ReadFallbackProgramNode(const pugi::xml_node &schedule_node);
         bool ReadProgramNodes(const pugi::xml_node &schedule_node);
         bool ReadItemNodes(const pugi::xml_node &item_parent_node, std::vector<std::shared_ptr<Item>> &items);
 
@@ -211,17 +212,17 @@ namespace pvd
         bool WriteItemObjects(const std::vector<std::shared_ptr<Item>> &items, Json::Value &item_parent_object) const;
 
         bool ReadStreamObject(const Json::Value &root_object);
-        bool ReadDefaultProgramObject(const Json::Value &root_object);
+        bool ReadFallbackProgramObject(const Json::Value &root_object);
         bool ReadProgramObjects(const Json::Value &root_object);
         bool ReadItemObjects(const Json::Value &item_parent_object, std::vector<std::shared_ptr<Item>> &items);
 
         Stream MakeStream(const ov::String &name, bool bypass_transcoder, bool video_track, bool audio_track) const;
-        std::shared_ptr<Program> MakeDefaultProgram() const;
+        std::shared_ptr<Program> MakeFallbackProgram() const;
         std::shared_ptr<Program> MakeProgram(const ov::String &name, const ov::String &scheduled_time, const ov::String &next_scheduled_time, bool repeat, bool last) const;
-        std::shared_ptr<Item> MakeItem(const ov::String &url, int64_t start_time_ms, int64_t duration_ms) const;
+        std::shared_ptr<Item> MakeItem(const ov::String &url, int64_t start_time_ms, int64_t duration_ms, bool fallback_on_err) const;
 
         Stream _stream;
-        std::shared_ptr<Program> _default_program;
+        std::shared_ptr<Program> _fallback_program;
         std::vector<std::shared_ptr<Program>> _programs;
 
         ov::String _file_path;

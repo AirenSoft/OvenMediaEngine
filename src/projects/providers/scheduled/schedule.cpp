@@ -59,7 +59,7 @@ namespace pvd
 			return false;
 		}
 
-		if (ReadDefaultProgramObject(object) == false)
+		if (ReadFallbackProgramObject(object) == false)
 		{
 			return false;
 		}
@@ -76,10 +76,10 @@ namespace pvd
 
 	bool Schedule::PatchFromJsonObject(const Json::Value &object)
 	{
-		if (object.isMember("defaultProgram"))
+		if (object.isMember("fallbackProgram"))
 		{
-			_default_program = nullptr;
-			if (ReadDefaultProgramObject(object) == false)
+			_fallback_program = nullptr;
+			if (ReadFallbackProgramObject(object) == false)
 			{
 				return false;
 			}
@@ -144,33 +144,33 @@ namespace pvd
 		return true;
 	}
 
-	bool Schedule::ReadDefaultProgramObject(const Json::Value &root_object)
+	bool Schedule::ReadFallbackProgramObject(const Json::Value &root_object)
 	{
-		auto default_program_object = root_object["defaultProgram"];
-		if (default_program_object.isNull())
+		auto fallback_program_object = root_object["fallbackProgram"];
+		if (fallback_program_object.isNull())
 		{
 			// optional
 			return true;
 		}
 
-		if (default_program_object.isObject() == false)
+		if (fallback_program_object.isObject() == false)
 		{
-			_last_error = "DefaultProgram must be an object";
+			_last_error = "FallbackProgram must be an object";
 			return false;
 		}
 
-		auto default_program = MakeDefaultProgram();
-		if (default_program == nullptr)
-		{
-			return false;
-		}
-
-		if (ReadItemObjects(default_program_object, default_program->items) == false)
+		auto fallback_program = MakeFallbackProgram();
+		if (fallback_program == nullptr)
 		{
 			return false;
 		}
 
-		_default_program = default_program;
+		if (ReadItemObjects(fallback_program_object, fallback_program->items) == false)
+		{
+			return false;
+		}
+
+		_fallback_program = fallback_program;
 
 		return true;
 	}
@@ -287,6 +287,7 @@ namespace pvd
 			ov::String url;
 			int64_t start_time_ms = 0;
 			int64_t duration_ms = -1;
+			bool fallback_on_err = true;
 
 			auto item_object = items_object[i];
 
@@ -314,9 +315,14 @@ namespace pvd
 				duration_ms = duration_object.asInt();
 			}
 
-			duration_ms = duration_object.asInt();
+			// fallbackOnErr
+			auto fallback_on_err_object = item_object["fallbackOnErr"];
+			if (fallback_on_err_object.isNull() == false || fallback_on_err_object.isBool() == true)
+			{
+				fallback_on_err = fallback_on_err_object.asBool();
+			}
 
-			auto item = MakeItem(url, start_time_ms, duration_ms);
+			auto item = MakeItem(url, start_time_ms, duration_ms, fallback_on_err);
 			if (item == nullptr)
 			{
 				return false;
@@ -351,6 +357,7 @@ namespace pvd
 
 		if (ReadStreamNode(schedule_node) == false)
 		{
+			_last_error = "Failed to read Stream node";
 			return false;
 		}
 
@@ -358,6 +365,11 @@ namespace pvd
 		{
 			logtw("Use the file name (%s) as the stream name. It is recommended that <Stream><Name>%s be set the same as the file name.", _file_name_without_ext.CStr(), _stream.name.CStr());
 			_stream.name = _file_name_without_ext;
+		}
+
+		if (ReadFallbackProgramNode(schedule_node) == false)
+		{
+			return false;
 		}
 
 		if (ReadProgramNodes(schedule_node) == false)
@@ -413,27 +425,27 @@ namespace pvd
 		return true;
 	}
 
-	bool Schedule::ReadDefaultProgramNode(const pugi::xml_node &schedule_node)
+	bool Schedule::ReadFallbackProgramNode(const pugi::xml_node &schedule_node)
 	{
-		auto default_program_node = schedule_node.child("DefaultProgram");
-		if (!default_program_node)
+		auto fallback_program_node = schedule_node.child("FallbackProgram");
+		if (!fallback_program_node)
 		{
 			// optional
 			return true;
 		}
 
-		auto default_program = MakeDefaultProgram();
-		if (default_program == nullptr)
+		auto fallback_program = MakeFallbackProgram();
+		if (fallback_program == nullptr)
 		{
 			return false;
 		}
 		
-		if (ReadItemNodes(default_program_node, default_program->items) == false)
+		if (ReadItemNodes(fallback_program_node, fallback_program->items) == false)
 		{
 			return false;
 		}
 
-		_default_program = default_program;
+		_fallback_program = fallback_program;
 
 		return true;
 	}
@@ -510,7 +522,8 @@ namespace pvd
 		{
 			ov::String url;
 			int64_t start_time_ms = 0;
-			int64_t duration_ms = 0;
+			int64_t duration_ms = -1;
+			bool fallback_on_err = true;
 
 			auto url_attribute = item_node.attribute("url");
 			if (!url_attribute)
@@ -522,11 +535,7 @@ namespace pvd
 			url = url_attribute.as_string();
 
 			auto start_attribute = item_node.attribute("start");
-			if (!start_attribute)
-			{
-				start_time_ms = 0;
-			}
-			else
+			if (start_attribute)
 			{
 				start_time_ms = start_attribute.as_llong();
 			}
@@ -536,12 +545,14 @@ namespace pvd
 			{
 				duration_ms = duration_attribute.as_llong();
 			}
-			else
+
+			auto fallback_on_err_attribute = item_node.attribute("fallbackOnErr");
+			if (fallback_on_err_attribute)
 			{
-				duration_ms = -1;
+				fallback_on_err = fallback_on_err_attribute.as_bool();
 			}
 
-			auto item = MakeItem(url, start_time_ms, duration_ms);
+			auto item = MakeItem(url, start_time_ms, duration_ms, fallback_on_err);
 			if (item == nullptr)
 			{
 				return false;
@@ -565,10 +576,10 @@ namespace pvd
 		return stream;
 	}
 
-	std::shared_ptr<Schedule::Program> Schedule::MakeDefaultProgram() const
+	std::shared_ptr<Schedule::Program> Schedule::MakeFallbackProgram() const
 	{
 		auto program = std::make_shared<Schedule::Program>();
-		program->name = "default";
+		program->name = "fallback";
 		program->scheduled = "1970-01-01T00:00:00Z";
 		program->scheduled_time = std::chrono::system_clock::time_point::min();
 		program->duration_ms = -1;
@@ -619,13 +630,14 @@ namespace pvd
 		return program;
 	}
 
-	std::shared_ptr<Schedule::Item> Schedule::MakeItem(const ov::String &url, int64_t start_time_ms, int64_t duration_ms) const
+	std::shared_ptr<Schedule::Item> Schedule::MakeItem(const ov::String &url, int64_t start_time_ms, int64_t duration_ms, bool fallback_on_err) const
 	{
 		auto item = std::make_shared<Schedule::Item>();
 
 		item->url = url;
 		item->start_time_ms = start_time_ms;
 		item->duration_ms = duration_ms;
+		item->fallback_on_err = fallback_on_err;
 
 		// file_path
 		if (url.LowerCaseString().HasPrefix("file://"))
@@ -658,6 +670,11 @@ namespace pvd
 	const Schedule::Stream &Schedule::GetStream() const
 	{
 		return _stream;
+	}
+
+	const std::shared_ptr<Schedule::Program> Schedule::GetFallbackProgram() const
+	{
+		return _fallback_program;
 	}
 
 	const std::vector<std::shared_ptr<Schedule::Program>> &Schedule::GetPrograms() const
@@ -732,12 +749,12 @@ namespace pvd
 		stream_node.append_child("VideoTrack").text().set(_stream.video_track);
 		stream_node.append_child("AudioTrack").text().set(_stream.audio_track);
 
-		// DefaultProgram
-		if (_default_program != nullptr)
+		// FallbackProgram
+		if (_fallback_program != nullptr)
 		{
-			auto default_program_node = schedule_node.append_child("DefaultProgram");
+			auto fallback_program_node = schedule_node.append_child("FallbackProgram");
 
-			if (WriteItemNodes(_default_program->items, default_program_node) == false)
+			if (WriteItemNodes(_fallback_program->items, fallback_program_node) == false)
 			{
 				return CommonErrorCode::ERROR;
 			}
@@ -790,23 +807,23 @@ namespace pvd
 
 		root_object["stream"] = stream_object;
 
-		if (_default_program != nullptr)
+		if (_fallback_program != nullptr)
 		{
-			Json::Value default_program_object;
-			default_program_object["name"] = _default_program->name.CStr();
-			default_program_object["scheduled"] = _default_program->scheduled.CStr();
-			default_program_object["repeat"] = _default_program->repeat;
+			Json::Value fallback_program_object;
+			fallback_program_object["name"] = _fallback_program->name.CStr();
+			fallback_program_object["scheduled"] = _fallback_program->scheduled.CStr();
+			fallback_program_object["repeat"] = _fallback_program->repeat;
 
 			// items
 			Json::Value items_object;
-			if (WriteItemObjects(_default_program->items, items_object) == false)
+			if (WriteItemObjects(_fallback_program->items, items_object) == false)
 			{
 				return CommonErrorCode::ERROR;
 			}
 
-			default_program_object["items"] = items_object;
+			fallback_program_object["items"] = items_object;
 			
-			root_object["defaultProgram"] = default_program_object;
+			root_object["fallbackProgram"] = fallback_program_object;
 		}
 
 		for (auto program : _programs)
