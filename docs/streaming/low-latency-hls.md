@@ -268,3 +268,30 @@ OvenPlayer now includes DRM-related options. Enable DRM and input the License UR
 
 <figure><img src="../.gitbook/assets/image (30).png" alt=""><figcaption></figcaption></figure>
 
+### Pallycon DRM
+
+OvenMediaEngine integrates with [Pallycon](https://pallycon.com/), allowing you to more easily apply DRM to LLHLS streams.
+
+To integrate Pallycon, configure the DRMInfo.xml file as follows.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+
+<DRMInfo>
+    <DRM>
+        <Name>Pallycon</Name>
+        <VirtualHostName>default</VirtualHostName>
+        <ApplicationName>app</ApplicationName>
+        <StreamName>stream*</StreamName> <!-- Can be wildcard regular expression -->
+
+        <DRMProvider>Pallycon</DRMProvider> <!-- Manual(default), Pallycon -->
+        <DRMSystem>Widevine,Fairplay</DRMSystem> <!-- Widevine, Fairplay -->
+        <CencProtectScheme>cbcs</CencProtectScheme> <!-- cbcs -->
+        <ContentId>${VHostName}_${AppName}_${StreamName}</ContentId>
+        <KMSUrl>https://kms.pallycon.com/v2/cpix/pallycon/getKey/</KMSUrl>
+        <KMSToken>xxxx</KMSToken>
+    </DRM>
+</DRMInfo>
+```
+
+Set `DRMProvider`to Pallycon. Then, set the necessary information as shown in the example. `KMSUrl` and `KMSToken` are values provided by the Pallycon console. `ContentId` can be created using VHostName, AppName, and StreamName macros.
