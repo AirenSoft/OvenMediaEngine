@@ -37,7 +37,8 @@ namespace bmff
     {
         None,
         Widevine,
-        FairPlay
+        FairPlay,
+        All = Widevine | FairPlay
     };
 
     static const char* CencProtectSchemeToString(CencProtectScheme scheme)
@@ -92,7 +93,7 @@ namespace bmff
             {
                 drm_system = DRMSystem::Widevine;
             }
-            else if (system_id->ToString().LowerCaseString() == "com.apple.streamingkeydelivery")
+            else if (system_id->ToHexString().LowerCaseString() == "94ce86fb07ff4f43adb893d2fa968ca2")
             {
                 drm_system = DRMSystem::FairPlay;
             }
