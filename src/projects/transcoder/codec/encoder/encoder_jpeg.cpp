@@ -25,6 +25,9 @@ bool EncoderJPEG::SetCodecParams()
 	_codec_context->flags = AV_CODEC_FLAG_QSCALE;
 	_codec_context->global_quality = _codec_context->qmin * FF_QP2LAMBDA;
 
+	// Set color range to JPEG
+	_codec_context->color_range = AVCOL_RANGE_JPEG;
+	_codec_context->strict_std_compliance = FF_COMPLIANCE_STRICT;
 	return true;
 }
 
