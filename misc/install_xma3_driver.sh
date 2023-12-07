@@ -29,13 +29,28 @@ TEMP_PATH=/tmp
 XMA_VERSION=3.0
 
 echo "##########################################################################################"
-echo " Install Xilinx Video SDK on AWS"
+echo " Install Xilinx Video SDK ${XMA_VERSION} "
 echo "##########################################################################################"
 echo ${OSTYPE} / ${OSNAME} / ${OSVERSION}.${OSMINORVERSION}
 echo ${CURRENT}
 
+install_xma_props_to_json_xrm()
+{
+    # https://github.com/Xilinx/app-xma-props-to-json-xrm/tree/U30_GA_3
 
-install_base_ubuntu()
+    (DIR=${TEMP_PATH}/xmaPropsTojson && \
+    mkdir -p ${DIR} && \
+    cd ${DIR} && \
+    curl -sSLf https://github.com/Xilinx/app-xma-props-to-json-xrm/archive/refs/tags/U30_GA_3.tar.gz | tar -xz --strip-components=1 && \
+    mkdir -p Release && \
+    cd Release && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="-O3" -DCMAKE_INSTALL_PREFIX=/opt/xilinx/xrm .. && \
+    make && \
+    sudo make install && \
+    rm -rf ${DIR} ) || fail_exit "xmaPropsTojson"    
+}
+
+install_ubuntu()
 {
     # Added resositroty
     # https://xilinx.github.io/video-sdk/v3.0/package_feed.html    
@@ -55,7 +70,7 @@ install_base_ubuntu()
 }
 
 
-install_base_amazonlinux()
+install_amazonlinux()
 {
     # Added resositroty
     # https://xilinx.github.io/video-sdk/v3.0/package_feed.html
@@ -107,10 +122,12 @@ proceed_yn()
 
 if [ "${OSNAME}" == "Ubuntu" ]; then
     check_version
-    install_base_ubuntu
+    install_ubuntu
+    install_xma_props_to_json_xrm
 elif  [ "${OSNAME}" == "Amazon Linux" ]; then
     check_version
-    install_base_amazonlinux
+    install_amazonlinux
+    install_xma_props_to_json_xrm
 else
     echo "This program [$0] does not support your operating system [${OSNAME}]"
 fi
