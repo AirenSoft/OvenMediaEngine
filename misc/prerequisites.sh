@@ -238,13 +238,13 @@ install_ffmpeg()
         PATH=$PATH:/usr/local/nvidia/bin:/usr/local/cuda/bin
     fi
 
-    # If there is an enable-xma option, add xlinkx sdk
+    # If there is an enable-xma option, add xilinx video sdk 3.0
     if [ "$XILINX_XMA_CODEC_HWACCELS" = true ] ; then
-        FFMPEG_DOWNLOAD_URL=https://github.com/Xilinx/app-ffmpeg4-xma/archive/refs/tags/v4.4.2.tar.gz
+        FFMPEG_DOWNLOAD_URL=https://github.com/Xilinx/app-ffmpeg4-xma.git
         ADDI_ENCODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
         ADDI_DECODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
         ADDI_FILTERS+=",multiscale_xma,xvbm_convert"
-        ADDI_LIBS+=" --enable-libxma2api --enable-libxvbm --enable-libxrm "
+        ADDI_LIBS+=" --enable-libxma2api --enable-libxvbm --enable-libxrm --enable-cross-compile --enable-x86asm "
         ADDI_CFLAGS+=" $(pkg-config --cflags libxma2api libxma2plugin xvbm libxrm) "
         ADDI_LDFLAGS+=" $(pkg-config --libs  libxma2api libxma2plugin xvbm libxrm) -Wl,-rpath,/opt/xilinx/xrt/lib -Wl,-rpath,/opt/xilinx/xrm/lib"
     fi
@@ -270,9 +270,15 @@ install_ffmpeg()
     DIR=${TEMP_PATH}/ffmpeg
 
     # Download
-    (rm -rf ${DIR}  && mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sSLf ${FFMPEG_DOWNLOAD_URL} | tar -xz --strip-components=1 ) || fail_exit "ffmpeg"
+    if [ "$XILINX_XMA_CODEC_HWACCELS" = false ] ; then
+	    (rm -rf ${DIR}  && mkdir -p ${DIR} && \
+	    cd ${DIR} && \
+	    curl -sSLf ${FFMPEG_DOWNLOAD_URL} | tar -xz --strip-components=1 ) || fail_exit "ffmpeg"
+    else
+        # Download FFmpeg for xilinx video sdk
+	    (rm -rf ${DIR}  && mkdir -p ${DIR} && \
+	    git clone --depth=1 --branch U30_GA_3 https://github.com/Xilinx/app-ffmpeg4-xma.git ${DIR}) || fail_exit "ffmpeg"	
+    fi
 
     # Patch for Enterprise
     if [[ "$(type -t install_patch_ffmpeg)"  == 'function' ]];
