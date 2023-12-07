@@ -8,14 +8,17 @@
 //==============================================================================
 #include "llhls_stream.h"
 
-#include "base/publisher/application.h"
-#include "base/publisher/stream.h"
-#include "llhls_application.h"
-#include "llhls_private.h"
-
 #include <base/ovlibrary/hex.h>
 #include <config/config_manager.h>
+
 #include <pugixml-1.9/src/pugixml.hpp>
+
+#include <base/publisher/application.h>
+#include <base/publisher/stream.h>
+#include <modules/cpix_client/pallycon.h>
+
+#include "llhls_application.h"
+#include "llhls_private.h"
 
 std::shared_ptr<LLHlsStream> LLHlsStream::Create(const std::shared_ptr<pub::Application> application, const info::Stream &info, uint32_t worker_count)
 {
@@ -55,7 +58,7 @@ bool LLHlsStream::Start()
 	{
 		_stream_key = ov::String::FormatString("%zu", GetName().Hash());
 	}
-	else 
+	else
 	{
 		_stream_key = ov::Random::GenerateString(8);
 	}
@@ -65,11 +68,11 @@ bool LLHlsStream::Start()
 	{
 		GetDrmInfo(drm_config.GetDrmInfoPath(), _cenc_property);
 	}
-	
+
 	_packager_config.chunk_duration_ms = llhls_config.GetChunkDuration() * 1000.0;
 	_packager_config.segment_duration_ms = llhls_config.GetSegmentDuration() * 1000.0;
 	// cenc property will be set in AddPackager
-	
+
 	_storage_config.max_segments = llhls_config.GetSegmentCount();
 	_storage_config.segment_duration_ms = llhls_config.GetSegmentDuration() * 1000;
 	_storage_config.dvr_enabled = dvr_config.IsEnabled();
@@ -277,7 +280,7 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 		return false;
 	}
 
-	for (pugi::xml_node drm_node = root_node.child("DRM"); drm_node; drm_node = drm_node.next_sibling("DRM")) 
+	for (pugi::xml_node drm_node = root_node.child("DRM"); drm_node; drm_node = drm_node.next_sibling("DRM"))
 	{
 		ov::String name = drm_node.child_value("Name");
 		ov::String virtual_host_name = drm_node.child_value("VirtualHostName");
@@ -288,75 +291,189 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 		ov::Regex _target_stream_name_regex = ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(stream_name));
 		auto match_result = _target_stream_name_regex.Matches(GetName().CStr());
 
-		if (virtual_host_name != GetApplication()->GetName().GetVHostName() || 
-			app_name != GetApplication()->GetName().GetAppName() || 
+		if (virtual_host_name != GetApplication()->GetName().GetVHostName() ||
+			app_name != GetApplication()->GetName().GetAppName() ||
 			match_result.IsMatched())
 		{
-			ov::String cenc_protect_scheme = drm_node.child_value("CencProtectScheme");
-			ov::String key_id = drm_node.child_value("KeyId");
-			ov::String key = drm_node.child_value("Key");
-			ov::String iv = drm_node.child_value("Iv");
+			ov::String drm_provider = drm_node.child_value("DRMProvider");
 
-			// required
-			if (cenc_protect_scheme.IsEmpty() || key_id.IsEmpty() || key.IsEmpty() || iv.IsEmpty())
+			if (drm_provider.IsEmpty() || drm_provider.LowerCaseString() == "manual")
 			{
-				logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because required field is empty", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
-				return false;
-			}
+				ov::String cenc_protect_scheme = drm_node.child_value("CencProtectScheme");
+				ov::String key_id = drm_node.child_value("KeyId");
+				ov::String key = drm_node.child_value("Key");
+				ov::String iv = drm_node.child_value("Iv");
 
-			if (cenc_protect_scheme == "cbcs")
-			{
-				cenc_property.scheme = bmff::CencProtectScheme::Cbcs;
-			}
-			else
-			{
-				logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because CencProtectScheme(%s) is not supported", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), cenc_protect_scheme.CStr());
-			}
-
-			cenc_property.key_id = ov::Hex::Decode(key_id);
-			if (cenc_property.key_id == nullptr || cenc_property.key_id->GetLength() != 16)
-			{
-				logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because KeyId(%s) is invalid (must be 16 bytes HEX foramt)", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), key_id.CStr());
-				cenc_property.scheme = bmff::CencProtectScheme::None;
-				return false;
-			}
-
-			cenc_property.key = ov::Hex::Decode(key);
-			if (cenc_property.key == nullptr || cenc_property.key->GetLength() != 16)
-			{
-				logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because Key(%s) is invalid (must be 16 bytes HEX format)", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), key.CStr());
-				cenc_property.scheme = bmff::CencProtectScheme::None;
-				return false;
-			}
-
-			cenc_property.iv = ov::Hex::Decode(iv);
-			if (cenc_property.iv == nullptr || cenc_property.iv->GetLength() != 16)
-			{
-				logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because Iv(%s) is invalid (must be 16 bytes HEX format)", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), iv.CStr());
-				cenc_property.scheme = bmff::CencProtectScheme::None;
-				return false;
-			}
-
-			pugi::xml_node pssh_node = drm_node.child("Pssh");
-			while (pssh_node) 
-			{
-				auto pssh_box = ov::Hex::Decode(pssh_node.child_value());
-				if (pssh_box == nullptr)
+				// required
+				if (cenc_protect_scheme.IsEmpty() || key_id.IsEmpty() || key.IsEmpty() || iv.IsEmpty())
 				{
-					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because Pssh(%s) is invalid (must be HEX format)", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), pssh_node.child_value());
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because required field is empty", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
+					return false;
+				}
+
+				if (cenc_protect_scheme == "cbcs")
+				{
+					cenc_property.scheme = bmff::CencProtectScheme::Cbcs;
+				}
+				else
+				{
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because CencProtectScheme(%s) is not supported", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), cenc_protect_scheme.CStr());
+				}
+
+				cenc_property.key_id = ov::Hex::Decode(key_id);
+				if (cenc_property.key_id == nullptr || cenc_property.key_id->GetLength() != 16)
+				{
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because KeyId(%s) is invalid (must be 16 bytes HEX foramt)", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), key_id.CStr());
 					cenc_property.scheme = bmff::CencProtectScheme::None;
 					return false;
 				}
-				
-				cenc_property.pssh_box_list.push_back(bmff::PsshBox(pssh_box));
 
-				pssh_node = pssh_node.next_sibling("Pssh");
+				cenc_property.key = ov::Hex::Decode(key);
+				if (cenc_property.key == nullptr || cenc_property.key->GetLength() != 16)
+				{
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because Key(%s) is invalid (must be 16 bytes HEX format)", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), key.CStr());
+					cenc_property.scheme = bmff::CencProtectScheme::None;
+					return false;
+				}
+
+				cenc_property.iv = ov::Hex::Decode(iv);
+				if (cenc_property.iv == nullptr || cenc_property.iv->GetLength() != 16)
+				{
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because Iv(%s) is invalid (must be 16 bytes HEX format)", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), iv.CStr());
+					cenc_property.scheme = bmff::CencProtectScheme::None;
+					return false;
+				}
+
+				pugi::xml_node pssh_node = drm_node.child("Pssh");
+				while (pssh_node)
+				{
+					auto pssh_box = ov::Hex::Decode(pssh_node.child_value());
+					if (pssh_box == nullptr)
+					{
+						logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because Pssh(%s) is invalid (must be HEX format)", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), pssh_node.child_value());
+						cenc_property.scheme = bmff::CencProtectScheme::None;
+						return false;
+					}
+
+					cenc_property.pssh_box_list.push_back(bmff::PsshBox(pssh_box));
+
+					pssh_node = pssh_node.next_sibling("Pssh");
+				}
+
+				ov::String fairplay_key_url = drm_node.child_value("FairPlayKeyUrl");
+				if (fairplay_key_url.IsEmpty() == false)
+				{
+					cenc_property.fairplay_key_uri = fairplay_key_url;
+				}
 			}
-			
-			ov::String fairplay_key_url = drm_node.child_value("FairPlayKeyUrl");
-			if (fairplay_key_url.IsEmpty() == false)
+			else if (drm_provider.LowerCaseString() == "pallycon")
 			{
-				cenc_property.fairplay_key_uri = fairplay_key_url;
+				ov::String cenc_protect_scheme = drm_node.child_value("CencProtectScheme");
+				if (cenc_protect_scheme.IsEmpty())
+				{
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because CencProtectScheme is empty", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
+					return false;
+				}
+
+				cenc_protect_scheme = cenc_protect_scheme.Trim();
+
+				bmff::CencProtectScheme scheme_enum = bmff::CencProtectScheme::None;
+				if (cenc_protect_scheme.LowerCaseString() == "cbcs")
+				{
+					scheme_enum = bmff::CencProtectScheme::Cbcs;
+				}
+				else
+				{
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because CencProtectScheme(%s) is not supported", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), cenc_protect_scheme.CStr());
+					return false;
+				}
+
+				ov::String content_id = drm_node.child_value("ContentId");
+				if (content_id.IsEmpty())
+				{
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because ContentId is empty", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
+					return false;
+				}
+
+				content_id = content_id.Trim();
+
+				content_id = content_id.Replace("${VHostName}", GetApplication()->GetName().GetVHostName().CStr());
+				content_id = content_id.Replace("${AppName}", GetApplication()->GetName().GetAppName().CStr());
+				content_id = content_id.Replace("${StreamName}", GetName().CStr());
+
+				ov::String url = drm_node.child_value("KMSUrl");
+				if (url.IsEmpty())
+				{
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because KMSUrl is empty", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
+					return false;
+				}
+
+				url = url.Trim();
+
+				ov::String token = drm_node.child_value("KMSToken");
+				if (token.IsEmpty())
+				{
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because KMSToken is empty", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
+					return false;
+				}
+
+				token = token.Trim();
+
+				ov::String drm_system = drm_node.child_value("DRMSystem");
+				if (drm_system.IsEmpty())
+				{
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because DRMSystem is empty", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
+					return false;
+				}
+
+				drm_system = drm_system.Trim();
+
+				bool widevine_enabled = false;
+				bool fairplay_enabled = false;
+				auto drm_system_items = drm_system.Split(",");
+				for (auto &drm_system_item : drm_system_items)
+				{
+					if (drm_system_item.LowerCaseString() == "widevine")
+					{
+						widevine_enabled = true;
+					}
+					else if (drm_system_item.LowerCaseString() == "fairplay")
+					{
+						fairplay_enabled = true;
+					}
+				}
+
+				bmff::DRMSystem drm_system_enum = bmff::DRMSystem::None;
+				if (widevine_enabled == true && fairplay_enabled == true)
+				{
+					drm_system_enum = bmff::DRMSystem::All; 
+				}
+				else if (widevine_enabled == true)
+				{
+					drm_system_enum = bmff::DRMSystem::Widevine;
+				}
+				else if (fairplay_enabled == true)
+				{
+					drm_system_enum = bmff::DRMSystem::FairPlay;
+				}
+				else
+				{
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because DRMSystem(%s) is not supported", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), drm_system.CStr());
+					return false;
+				}
+
+				// Get DRM info from Pallycon
+				cpix::Pallycon pallycon;
+				if (pallycon.GetKeyInfo(url, token, content_id, drm_system_enum, scheme_enum, cenc_property) == false)
+				{
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because failed to get DRM info from Pallycon", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
+					return false;
+				}
+			}
+			else
+			{
+				logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because DRMProvider(%s) is not supported", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), drm_provider.CStr());
+				return false;
 			}
 
 			break;
@@ -370,12 +487,12 @@ bool LLHlsStream::IsSupportedCodec(cmn::MediaCodecId codec_id) const
 {
 	switch (codec_id)
 	{
-	case cmn::MediaCodecId::H264:
-	case cmn::MediaCodecId::H265:
-	case cmn::MediaCodecId::Aac:
-		return true;
-	default:
-		return false;
+		case cmn::MediaCodecId::H264:
+		case cmn::MediaCodecId::H265:
+		case cmn::MediaCodecId::Aac:
+			return true;
+		default:
+			return false;
 	}
 
 	return false;
@@ -442,8 +559,8 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 		auto video_track = GetFirstTrackByVariant(rendition->GetVideoVariantName());
 		auto audio_track = GetFirstTrackByVariant(rendition->GetAudioVariantName());
 
-		if ( (video_track != nullptr && IsSupportedCodec(video_track->GetCodecId()) == false) ||
-			 (audio_track != nullptr && IsSupportedCodec(audio_track->GetCodecId()) == false) )
+		if ((video_track != nullptr && IsSupportedCodec(video_track->GetCodecId()) == false) ||
+			(audio_track != nullptr && IsSupportedCodec(audio_track->GetCodecId()) == false))
 		{
 			logtw("LLHlsStream(%s/%s) - Exclude the rendition(%s) from the %s.m3u8 due to unsupported codec", GetApplication()->GetName().CStr(), GetName().CStr(),
 				  rendition->GetName().CStr(), playlist->GetFileName().CStr());
@@ -863,7 +980,7 @@ void LLHlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packe
 	{
 		return;
 	}
-	
+
 	if (GetState() == State::CREATED)
 	{
 		BufferMediaPacketUntilReadyToPlay(media_packet);
@@ -935,7 +1052,7 @@ bool LLHlsStream::AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_pa
 	{
 		return true;
 	}
-	
+
 	// Get Packager
 	auto packager = GetPackager(track->GetId());
 	if (packager == nullptr)
@@ -1000,9 +1117,9 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 													  GetTrack(track_id),
 													  segment_duration,
 													  chunk_duration,
-													  GetInitializationSegmentName(track_id), 
+													  GetInitializationSegmentName(track_id),
 													  _preload_hint_enabled);
-	
+
 	if (cenc_property.scheme != bmff::CencProtectScheme::None)
 	{
 		chunklist->EnableCenc(cenc_property);
@@ -1250,7 +1367,7 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 
 	auto chunk_info = LLHlsChunklist::SegmentInfo(chunk->GetNumber(), start_timestamp, chunk_duration, chunk->GetSize(),
 												  GetPartialSegmentName(track_id, segment_number, chunk->GetNumber()),
-												  GetNextPartialSegmentName(track_id, segment_number, chunk->GetNumber(), last_chunk), 
+												  GetNextPartialSegmentName(track_id, segment_number, chunk->GetNumber(), last_chunk),
 												  chunk->IsIndependent(), last_chunk);
 
 	playlist->AppendPartialSegmentInfo(segment_number, chunk_info);
