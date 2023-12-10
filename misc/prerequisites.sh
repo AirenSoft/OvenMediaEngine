@@ -244,10 +244,12 @@ install_ffmpeg()
         ADDI_ENCODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
         ADDI_DECODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
         ADDI_FILTERS+=",multiscale_xma,xvbm_convert"
-        ADDI_LIBS+=" --enable-libxma2api --enable-libxvbm --enable-libxrm --enable-cross-compile --enable-x86asm "
-        ADDI_CFLAGS+=" $(pkg-config --cflags libxma2api libxma2plugin xvbm libxrm) "
-        ADDI_LDFLAGS+=" $(pkg-config --libs  libxma2api libxma2plugin xvbm libxrm) -Wl,-rpath,/opt/xilinx/xrt/lib -Wl,-rpath,/opt/xilinx/xrm/lib"
+        ADDI_LIBS+=" --enable-x86asm --enable-libxma2api --enable-libxvbm --enable-libxrm --enable-cross-compile  "
+        ADDI_CFLAGS+=" -I/opt/xilinx/xrt/include/xma2"
+        ADDI_LDFLAGS+="-L/opt/xilinx/xrt/lib  -Wl,-rpath,/opt/xilinx/xrt/lib -Wl,-rpath,/opt/xilinx/xrm/lib"
+        ADDI_EXTRA_LIBS+="--extra-libs=-lxma2api --extra-libs=-lxrt_core --extra-libs=-lxrt_coreutil --extra-libs=-lpthread --extra-libs=-ldl "
     fi
+
 
     # Options are added by external scripts.
     if [[ -n "${EXT_FFMPEG_LICENSE}" ]]; then
@@ -275,7 +277,7 @@ install_ffmpeg()
 	    cd ${DIR} && \
 	    curl -sSLf ${FFMPEG_DOWNLOAD_URL} | tar -xz --strip-components=1 ) || fail_exit "ffmpeg"
     else
-        # Download FFmpeg for xilinx video sdk
+        # Download FFmpeg for xilinx video sdk 3.0
 	    (rm -rf ${DIR}  && mkdir -p ${DIR} && \
 	    git clone --depth=1 --branch U30_GA_3 https://github.com/Xilinx/app-ffmpeg4-xma.git ${DIR}) || fail_exit "ffmpeg"	
     fi

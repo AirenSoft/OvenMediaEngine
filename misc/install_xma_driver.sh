@@ -1,6 +1,12 @@
 #!/bin/bash
 
-# ** This script is only available for Ubuntu and Amazon Linux OS on AWS VT1 instance.
+# ** This script is only available for Ubuntu and Amazon Linux OS
+#
+# U30 supports 
+#   Amazon Linux 2 kernel 5.10, Amazon Linux 2 kernel 4.14
+#   Red Hat 7.8 kernel 4.9.184
+#   Ubuntu 22.04 kernel 5.15, Ubuntu 20.04 kernel 5.13, Ubuntu 20.04 kernel 5.4, Ubuntu 20.04 kernel 5.11, Ubuntu 18.04 kernel 5.4
+#
 
 ##########################################################################################
 # Environment Variables
@@ -26,54 +32,75 @@ fi
 
 CURRENT=$(pwd)
 TEMP_PATH=/tmp
-XMA_VERSION=2.0
+XMA_VERSION=3.0
 
 echo "##########################################################################################"
-echo " Install Xilinx Video SDK on AWS"
+echo " Install Xilinx Video SDK ${XMA_VERSION} "
 echo "##########################################################################################"
 echo ${OSTYPE} / ${OSNAME} / ${OSVERSION}.${OSMINORVERSION}
 echo ${CURRENT}
 
-
-install_xilinx_video_sdk()
+install_xma_props_to_json_xrm()
 {
-    RELEASE_DIR=
+    # https://github.com/Xilinx/app-xma-props-to-json-xrm/tree/U30_GA_3
 
-    if [[ "${OSNAME}" == "Ubuntu" && "${OSVERSION}" == "18" ]]; then
-        RELEASE_DIR=U30_Ubuntu_18.04_v2.0.1
-    elif [[ "${OSNAME}" == "Ubuntu" && "${OSVERSION}" == "20" ]]; then
-        RELEASE_DIR=U30_Ubuntu_20.04_v2.0.1
-    elif [[ "${OSNAME}" == "Amazon Linux" && "${OSVERSION}" == "2" ]]; then
-        RELEASE_DIR=U30_AmazonLinux_2_v2.0.1
-    else 
-        echo "This video sdk does not support your operating system [${OSNAME} ${OSVERSION}.${OSMINORVERSION}]"
-        fail_exit "xilinx_video_sdk"    
-    fi  
 
-    (DIR=${TEMP_PATH}/xma && \
+    (DIR=${TEMP_PATH}/xmaPropsTojson && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    git clone https://github.com/Xilinx/video-sdk -b v2.0 --depth 1 && \
-    cd ./video-sdk/release/${RELEASE_DIR} && \
-    sudo ./install -sw && \
-    rm -rf ${DIR}) || fail_exit "xilinx_video_sdk"    
+    curl -sSLf https://github.com/Xilinx/app-xma-props-to-json-xrm/archive/refs/tags/U30_GA_3.tar.gz | tar -xz --strip-components=1 && \
+    mkdir -p Release && \
+    cd Release && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="-O3" -DCMAKE_INSTALL_PREFIX=/opt/xilinx/xrm .. && \
+    make && \
+    sudo make install && \
+    rm -rf ${DIR} ) || fail_exit "xmaPropsTojson"
 }
 
-install_base_ubuntu()
+install_videosdk_ubuntu()
 {
-    sudo apt update
-    sudo apt install -y linux-modules-extra-$(uname -r)
-    sudo apt install -y python
-    sudo apt install -y libsdl2-dev
-    sudo apt install -y git
+    # Added resositroty
+    # https://xilinx.github.io/video-sdk/v3.0/package_feed.html
+    CODE_NAME=$(lsb_release -c -s)
+    echo deb [trusted=yes] https://packages.xilinx.com/artifactory/debian-packages ${CODE_NAME} main > xilinx.list
+    sudo cp xilinx.list /etc/apt/sources.list.d/
+
+    # Remove older versions of the Xilinx Video SDK
+    sudo apt-get remove xvbm xilinx-u30-xvbm xrmu30decoder xrmu30scaler xrmu30encoder xmpsoccodecs xmultiscaler xlookahead xmaapps xmapropstojson xffmpeg launcher jobslotreservation xcdr
+    sudo apt-get remove xrm xilinx-container-runtime xilinx-xvbm xilinx-u30-xrm-decoder xilinx-u30-xrm-encoder xilinx-u30-xrm-multiscaler xilinx-u30-xma-multiscaler xilinx-u30-xlookahead xilinx-u30-xmpsoccodecs xilinx-u30-xma-apps xilinx-u30-xmapropstojson xilinx-u30-xffmpeg xilinx-u30-launcher xilinx-u30-jobslotreservation xilinx-u30-xcdr xilinx-u30-gstreamer-1.16.2 xilinx-u30-vvas xilinx-sc-fw-u30 xilinx-u30-gen3x4-base xilinx-u30-gen3x4-validate
+
+    sudo apt-get -y update
+    sudo apt-get -y install cmake pkg-config
+    sudo apt-get -y --allow-change-held-packages install xrt=2.11.722
+    sudo apt-mark hold xrt
+    sudo apt-get -y install xilinx-alveo-u30-core
+
+    sudo cp /opt/xilinx/xcdr/xclbins/transcode.xclbin /opt/xilinx/xcdr/xclbins/transcode_lite.xclbin
+    sudo cp /opt/xilinx/xcdr/xclbins/on_prem/transcode.xclbin /opt/xilinx/xcdr/xclbins/transcode.xclbin
 }
 
-
-install_base_amazonlinux()
+install_videosdk_amazonlinux()
 {
+    # Added resositroty
+    # https://xilinx.github.io/video-sdk/v3.0/package_feed.html
+    sudo cp xilinx.repo /etc/yum.repos.d/
+
+    # Install Required packages
     sudo amazon-linux-extras install epel -y
-    sudo yum install -y kernel-devel-$(uname -r) kernel-headers-$(uname -r) boost-devel gcc-c++  
-    sudo yum install -y git 
+
+    # Remove older versions of the Xilinx Video SDK
+    sudo yum -y remove xvbm xilinx-u30-xvbm xrmu30decoder xrmu30scaler xrmu30encoder xmpsoccodecs xmultiscaler xlookahead xmaapps xmapropstojson xffmpeg launcher jobslotreservation xcdr
+    sudo yum -y remove xrm xilinx-container-runtime xilinx-xvbm xilinx-u30-xrm-decoder xilinx-u30-xrm-encoder xilinx-u30-xrm-multiscaler xilinx-u30-xma-multiscaler xilinx-u30-xlookahead xilinx-u30-xmpsoccodecs xilinx-u30-xma-apps xilinx-u30-xmapropstojson xilinx-u30-xffmpeg xilinx-u30-launcher xilinx-u30-jobslotreservation xilinx-u30-xcdr xilinx-u30-gstreamer-1.16.2 xilinx-u30-vvas xilinx-sc-fw-u30 xilinx-u30-gen3x4-base xilinx-u30-gen3x4-validate
+
+    sudo yum -y update
+    sudo yum -y cmake boost-devel gcc-g++
+    sudo yum -y install yum-plugin-versionlock
+    sudo yum -y install xrt-2.11.722-1.x86_64
+    sudo yum -y versionlock xrt-2.11.722
+    sudo yum -y install xilinx-alveo-u30-core
+
+    sudo cp /opt/xilinx/xcdr/xclbins/transcode.xclbin /opt/xilinx/xcdr/xclbins/transcode_lite.xclbin
+    sudo cp /opt/xilinx/xcdr/xclbins/on_prem/transcode.xclbin /opt/xilinx/xcdr/xclbins/transcode.xclbin
 }
 
 fail_exit()
@@ -85,13 +112,13 @@ fail_exit()
 
 check_version()
 {
-    if [[ "${OSNAME}" == "Ubuntu" && "${OSVERSION}" != "18" && "${OSVERSION}" != "20" ]]; then
+    if [[ "${OSNAME}" == "Ubuntu" && "${OSVERSION}" != "18" && "${OSVERSION}" != "20"  && "${OSVERSION}" != "22" ]]; then
         proceed_yn
     fi
 
     if [[ "${OSNAME}" == "Amazon Linux" && "${OSVERSION}" != "2" ]]; then
         proceed_yn
-    fi    
+    fi
 }
 
 proceed_yn()
@@ -105,20 +132,30 @@ proceed_yn()
 
 if [ "${OSNAME}" == "Ubuntu" ]; then
     check_version
-    install_base_ubuntu
+    install_videosdk_ubuntu
+    install_xma_props_to_json_xrm
 elif  [ "${OSNAME}" == "Amazon Linux" ]; then
     check_version
-    install_base_amazonlinux
+    install_videosdk_amazonlinux
+    install_xma_props_to_json_xrm
 else
     echo "This program [$0] does not support your operating system [${OSNAME}]"
 fi
 
-install_xilinx_video_sdk
-
 echo "##########################################################################################"
-echo " Reboot is required to use the xilinx video driver. "
-echo " To activate the driver, enter the cli command below. "
 echo " "
-echo " $ source /opt/xilinx/xcdr/setup.sh "
+echo " 1) Reboot is required to use the xilinx video driver"
+echo " $ sudo reboot"
+echo " "
+echo " 2) The firmware of the U30 device must be updated. Once the update is complete, you must *cold boot.*"
+echo "    If an error occurs, you must factory reset the device (https://xilinx.github.io/video-sdk/v3.0/card_management.html#recovering-a-card)"
+echo " $ source /opt/xilinx/xrt/setup.sh"
+echo " $ sudo /opt/xilinx/xrt/bin/xball --device-filter u30 xbmgmt program --base"
+echo " $ sudo shutdown now"
+echo " "
+echo " 3) Rebooting is complete, configure the runtime environment and verify that the card has been detected."
+echo "   i You must always run this when using a new terminal."
+echo " $ source /opt/xilinx/xcdr/setup.sh"
+echo " $ xbutil examine"
+echo " "
 echo "##########################################################################################"
-
