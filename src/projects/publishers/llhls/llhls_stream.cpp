@@ -303,6 +303,8 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 				ov::String key_id = drm_node.child_value("KeyId");
 				ov::String key = drm_node.child_value("Key");
 				ov::String iv = drm_node.child_value("Iv");
+				ov::String fairplay_key_url = drm_node.child_value("FairPlayKeyUrl");
+				ov::String keyformat = drm_node.child_value("Keyformat");
 
 				// required
 				if (cenc_protect_scheme.IsEmpty() || key_id.IsEmpty() || key.IsEmpty() || iv.IsEmpty())
@@ -360,11 +362,8 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 					pssh_node = pssh_node.next_sibling("Pssh");
 				}
 
-				ov::String fairplay_key_url = drm_node.child_value("FairPlayKeyUrl");
-				if (fairplay_key_url.IsEmpty() == false)
-				{
-					cenc_property.fairplay_key_uri = fairplay_key_url;
-				}
+				cenc_property.fairplay_key_uri = fairplay_key_url;
+				cenc_property.keyformat = keyformat;
 			}
 			else if (drm_provider.LowerCaseString() == "pallycon")
 			{
@@ -478,6 +477,13 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 
 			break;
 		}
+	}
+
+	// If cenc_property has fairplay_key_uri, but there is no pssh box for fairplay, add it.
+	// default pssh box 
+	if (cenc_property.fairplay_key_uri.IsEmpty() == false)
+	{
+    	cenc_property.pssh_box_list.push_back(bmff::PsshBox("94ce86fb-07ff-4f43-adb8-93d2fa968ca2", {cenc_property.key_id}, nullptr));
 	}
 
 	return true;

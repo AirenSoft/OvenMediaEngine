@@ -206,13 +206,13 @@ namespace cpix
             {
                 cenc_property.scheme = bmff::CencProtectScheme::Cbcs;
             }
-            else if (common_encryption_scheme_value == "cenc")
-            {
-                cenc_property.scheme = bmff::CencProtectScheme::Cenc;
-            }
+            // else if (common_encryption_scheme_value == "cenc")
+            // {
+            //     cenc_property.scheme = bmff::CencProtectScheme::Cenc;
+            // }
             else
             {
-                logte("Invalid commonEncryptionScheme value: %s", common_encryption_scheme_value.CStr());
+                logte("Invalid or not support commonEncryptionScheme value: %s", common_encryption_scheme_value.CStr());
                 return false;
             }
 
@@ -305,7 +305,7 @@ namespace cpix
                 }
 
                 cenc_property.fairplay_key_uri = uri_extxkey_value;
-                
+
                 // PSSH (Now Pallycon CPIX Server does not return PSSH for Fairplay)
                 /*
                 auto pssh_node = drm_system_node.child("cpix:PSSH");

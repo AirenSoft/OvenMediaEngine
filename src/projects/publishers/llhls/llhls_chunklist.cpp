@@ -246,11 +246,23 @@ ov::String LLHlsChunklist::MakeExtXKey() const
 		}
 		else if (pssh.drm_system == bmff::DRMSystem::FairPlay)
 		{
-			xkey.AppendFormat("#EXT-X-KEY:METHOD=SAMPLE-AES");
-			xkey.AppendFormat(",URI=\"%s\"", _cenc_property.fairplay_key_uri.CStr());
-			xkey.AppendFormat(",KEYFORMAT=\"com.apple.streamingkeydelivery\"");
-			xkey.AppendFormat(",KEYFORMATVERSIONS=\"1\"");
+			if (_cenc_property.keyformat.LowerCaseString() == "identity")
+			{
+				xkey.AppendFormat("#EXT-X-KEY:METHOD=SAMPLE-AES");
+				xkey.AppendFormat(",URI=\"%s\"", _cenc_property.fairplay_key_uri.CStr());
+				xkey.AppendFormat(",KEYFORMAT=\"identity\"");
+				xkey.AppendFormat(",IV=0x%s", _cenc_property.iv->ToHexString().CStr());
+			}
+			else
+			{
+				xkey.AppendFormat("#EXT-X-KEY:METHOD=SAMPLE-AES");
+				xkey.AppendFormat(",URI=\"%s\"", _cenc_property.fairplay_key_uri.CStr());
+				xkey.AppendFormat(",KEYFORMAT=\"com.apple.streamingkeydelivery\"");
+				xkey.AppendFormat(",KEYFORMATVERSIONS=\"1\"");
+			}
 		}
+
+		xkey.Append("\n");
 	}
 
 	return xkey;
