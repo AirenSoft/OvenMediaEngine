@@ -304,26 +304,9 @@ namespace cpix
                     return false;
                 }
 
-                cenc_property.fairplay_key_uri = uri_extxkey_value;
+                cenc_property.fairplay_key_uri = ov::Base64::Decode(uri_extxkey_value)->ToString();
 
                 // PSSH (Now Pallycon CPIX Server does not return PSSH for Fairplay)
-                /*
-                auto pssh_node = drm_system_node.child("cpix:PSSH");
-                if (pssh_node == nullptr)
-                {
-                    logte("cpix:PSSH node not found.");
-                    return false;
-                }
-
-                ov::String pssh_value = pssh_node.child_value();
-                if (pssh_value == nullptr)
-                {
-                    logte("cpix:PSSH value not found.");
-                    return false;
-                }
-
-                cenc_property.pssh_box_list.push_back(bmff::PsshBox(ov::Base64::Decode(pssh_value)));
-                */
             }
         }
 

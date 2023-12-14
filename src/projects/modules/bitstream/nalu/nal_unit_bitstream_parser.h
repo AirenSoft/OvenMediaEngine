@@ -18,5 +18,5 @@ public:
 	bool Skip(uint32_t count);
 
 private:
-	std::vector<uint8_t> _bitstream;
+	void NextPosition() override;
 };

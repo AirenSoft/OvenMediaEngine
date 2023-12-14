@@ -95,16 +95,16 @@ private:
 	unsigned int _height = 0;
 	unsigned int _fps = 0;
 	unsigned int _id = 0;
-    uint32_t _chroma_format_idc = 0;
+    uint32_t _chroma_format_idc = 1;
 	unsigned int _max_nr_of_reference_frames = 0;
 	uint8_t _aspect_ratio_idc = 0;
 	ASPECT_RATIO _aspect_ratio = {0, 0};
 
-	uint32_t _log2_max_frame_num_minus4;
-	uint8_t _frame_mbs_only_flag;
-	uint32_t _pic_order_cnt_type;
-	uint32_t _log2_max_pic_order_cnt_lsb_minus4;
-	uint8_t _delta_pic_order_always_zero_flag;
+	uint32_t _log2_max_frame_num_minus4 = 0;
+	uint8_t _frame_mbs_only_flag = 0;
+	uint32_t _pic_order_cnt_type = 0;
+	uint32_t _log2_max_pic_order_cnt_lsb_minus4 = 0;
+	uint8_t _delta_pic_order_always_zero_flag = 0;
 
 	friend class H264Parser;
 };
@@ -127,16 +127,16 @@ private:
 	uint32_t _pps_id = 0;
 	uint32_t _sps_id = 0;
 
-    uint32_t _num_slice_groups_minus1;
-    uint8_t _deblocking_filter_control_present_flag;
-    bool _entropy_coding_mode_flag;
-	bool _bottom_field_pic_order_in_frame_present_flag;
-	uint8_t _redundant_pic_cnt_present_flag;
-    uint32_t _num_ref_idx_l0_default_active_minus1;
-    uint32_t _num_ref_idx_l1_default_active_minus1;
+    uint32_t _num_slice_groups_minus1 = 0;
+    uint8_t _deblocking_filter_control_present_flag = 0;
+    bool _entropy_coding_mode_flag = false;
+	bool _bottom_field_pic_order_in_frame_present_flag = false;
+	uint8_t _redundant_pic_cnt_present_flag = 0;
+    uint32_t _num_ref_idx_l0_default_active_minus1 = 0;
+    uint32_t _num_ref_idx_l1_default_active_minus1 = 0;
 
-    uint8_t _weighted_pred_flag;
-    uint8_t _weighted_bipred_idc;
+    uint8_t _weighted_pred_flag = 0;
+    uint8_t _weighted_bipred_idc = 0;
 
 	friend class H264Parser;
 };
@@ -166,14 +166,14 @@ public:
 
     size_t GetHeaderSizeInBytes() const
     {
-        return (_header_size_in_bits + 7) / 8;
+        return ((_header_size_in_bits + 7) / 8);
     }
 
 private:
 	uint32_t _slice_type;
 
-    uint32_t _num_ref_idx_l0_active_minus1;
-    uint32_t _num_ref_idx_l1_active_minus1;
+    uint32_t _num_ref_idx_l0_active_minus1 = 0;
+    uint32_t _num_ref_idx_l1_active_minus1 = 0;
 
     size_t _header_size_in_bits = 0;
 
