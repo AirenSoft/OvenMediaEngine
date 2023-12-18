@@ -12,7 +12,6 @@
 
 #include <base/info/media_extradata.h>
 #include <base/mediarouter/media_type.h>
-#include <modules/mpegts/mpegts_packet.h>
 #include <orchestrator/orchestrator.h>
 
 #include "base/info/application.h"
@@ -20,7 +19,7 @@
 #include "modules/bitstream/aac/aac_adts.h"
 #include "modules/bitstream/h265/h265_parser.h"
 #include "modules/bitstream/nalu/nal_unit_splitter.h"
-#include "modules/mpegts/mpegts_packet.h"
+#include "modules/containers/mpegts/mpegts_packet.h"
 #include "mpegts_provider_private.h"
 
 namespace pvd

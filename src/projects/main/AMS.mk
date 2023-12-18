@@ -26,7 +26,6 @@ LOCAL_STATIC_LIBRARIES := \
 	api_server \
 	json_serdes \
 	bitstream \
-	containers \
 	http \
 	dtls_srtp \
 	rtp_rtcp \
