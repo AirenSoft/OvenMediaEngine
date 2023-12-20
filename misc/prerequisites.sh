@@ -220,7 +220,7 @@ install_ffmpeg()
 
     # If there is an enable-qsv option, add libmfx
     if [ "$INTEL_QSV_HWACCELS" = true ] ; then
-        ADDI_LIBS+=" --enable-libmfx"
+        ADDI_LIBS+=" --enable-libmfx "
         ADDI_ENCODER+=",h264_qsv,hevc_qsv"
         ADDI_DECODER+=",vp8_qsv,h264_qsv,hevc_qsv"
         ADDI_HWACCEL=""
@@ -229,11 +229,11 @@ install_ffmpeg()
 
     # If there is an enable-nvc option, add nvcodec
     if [ "$NVIDIA_NV_CODEC_HWACCELS" = true ] ; then
-        ADDI_CFLAGS+="-I/usr/local/cuda/include"
-        ADDI_LDFLAGS="-L/usr/local/cuda/lib64"
+        ADDI_CFLAGS+="-I/usr/local/cuda/include "
+        ADDI_LDFLAGS="-L/usr/local/cuda/lib64 "
         ADDI_LICENSE+=" --enable-nonfree "
-        ADDI_LIBS+=" --enable-cuda-nvcc --enable-cuda-llvm --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec --enable-cuvid"
-        ADDI_HWACCEL="--enable-hwaccel=cuda,cuvid"
+        ADDI_LIBS+=" --enable-cuda-nvcc --enable-cuda-llvm --enable-libnpp --enable-nvenc --enable-nvdec --enable-ffnvcodec --enable-cuvid "
+        ADDI_HWACCEL="--enable-hwaccel=cuda,cuvid "
         ADDI_ENCODER+=",h264_nvenc,hevc_nvenc"
         ADDI_DECODER+=",h264_nvdec,hevc_nvdec,h264_cuvid,hevc_cuvid"
         ADDI_FILTERS+=",scale_cuda,hwdownload,hwupload,hwupload_cuda"
@@ -247,9 +247,9 @@ install_ffmpeg()
         ADDI_ENCODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
         ADDI_DECODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
         ADDI_FILTERS+=",multiscale_xma,xvbm_convert"
-        ADDI_LIBS+=" --enable-x86asm --enable-libxma2api --enable-libxvbm --enable-libxrm --enable-cross-compile  "
-        ADDI_CFLAGS+=" -I/opt/xilinx/xrt/include/xma2"
-        ADDI_LDFLAGS+="-L/opt/xilinx/xrt/lib  -Wl,-rpath,/opt/xilinx/xrt/lib -Wl,-rpath,/opt/xilinx/xrm/lib"
+        ADDI_LIBS+=" --enable-x86asm --enable-libxma2api --enable-libxvbm --enable-libxrm --enable-cross-compile "
+        ADDI_CFLAGS+=" -I/opt/xilinx/xrt/include/xma2 "
+        ADDI_LDFLAGS+="-L/opt/xilinx/xrt/lib  -Wl,-rpath,/opt/xilinx/xrt/lib -Wl,-rpath,/opt/xilinx/xrm/lib "
         ADDI_EXTRA_LIBS+="--extra-libs=-lxma2api --extra-libs=-lxrt_core --extra-libs=-lxrt_coreutil --extra-libs=-lpthread --extra-libs=-ldl "
     fi
 
