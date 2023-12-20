@@ -786,6 +786,14 @@ namespace ocst
 					logte("Could not create application for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 					return false;
 				}
+
+				app_info = OrchestratorInternal::GetApplicationInfo(vhost_app_name);
+				if (app_info.IsValid() == false)
+				{
+					// MUST NOT HAPPEN
+					logte("Could not find created application for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
+					return false;
+				}
 			}
 
 			if (matched_origin->forward_query_params && request_from->HasQueryString())

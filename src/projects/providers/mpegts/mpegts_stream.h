@@ -10,7 +10,7 @@
 
 #include "base/common_types.h"
 #include "base/provider/push_provider/stream.h"
-#include "modules/mpegts/mpegts_depacketizer.h"
+#include "modules/containers/mpegts/mpegts_depacketizer.h"
 
 namespace pvd
 {

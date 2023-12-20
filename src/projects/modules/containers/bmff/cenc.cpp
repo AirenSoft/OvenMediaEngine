@@ -173,10 +173,10 @@ namespace bmff
                     
 					sub_samples.emplace_back(clear_bytes, cipher_bytes);
 
+                    logtd("VCL NAL Unit Type : %d, Clear Bytes : %u, Protected Bytes : %u", nal_header.GetNalUnitType(), clear_bytes, cipher_bytes);
+
                     clear_bytes = 0;
                     cipher_bytes = 0;
-
-					logtd("VCL NAL Unit Type : %d, Clear Bytes : %u, Protected Bytes : %u", nal_header.GetNalUnitType(), clear_bytes, cipher_bytes);
 				}
 				else
 				{
@@ -195,7 +195,7 @@ namespace bmff
 
         if (clear_bytes > 0)
         {
-            logti("Last NAL Unit is not a video slice, clear bytes : %u", clear_bytes);
+            logtd("Last NAL Unit is not a video slice, clear bytes : %u", clear_bytes);
             sub_samples.emplace_back(clear_bytes, cipher_bytes);
             total_bytes += clear_bytes;
         }

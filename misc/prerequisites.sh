@@ -16,7 +16,7 @@ NASM_VERSION=2.15.05
 FFMPEG_VERSION=5.0.1
 JEMALLOC_VERSION=5.3.0
 PCRE2_VERSION=10.39
-OPENH264_VERSION=2.3.0
+OPENH264_VERSION=2.4.0
 HIREDIS_VERSION=1.0.2
 NVCC_HDR_VERSION=11.1.5.2
 
@@ -241,16 +241,17 @@ install_ffmpeg()
         PATH=$PATH:/usr/local/nvidia/bin:/usr/local/cuda/bin
     fi
 
-    # If there is an enable-xma option, add xlinkx sdk
+    # If there is an enable-xma option, add xilinx video sdk 3.0
     if [ "$XILINX_XMA_CODEC_HWACCELS" = true ] ; then
-        FFMPEG_DOWNLOAD_URL=https://github.com/Xilinx/app-ffmpeg4-xma/archive/refs/tags/v4.4.2.tar.gz
+        FFMPEG_DOWNLOAD_URL=https://github.com/Xilinx/app-ffmpeg4-xma.git
         ADDI_ENCODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
         ADDI_DECODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
         ADDI_FILTERS+=",multiscale_xma,xvbm_convert"
-        ADDI_LIBS+=" --enable-libxma2api --enable-libxvbm --enable-libxrm "
-        ADDI_CFLAGS+=" $(pkg-config --cflags libxma2api libxma2plugin xvbm libxrm) "
-        ADDI_LDFLAGS+=" $(pkg-config --libs  libxma2api libxma2plugin xvbm libxrm) -Wl,-rpath,/opt/xilinx/xrt/lib -Wl,-rpath,/opt/xilinx/xrm/lib"
-    fi	
+        ADDI_LIBS+=" --enable-x86asm --enable-libxma2api --enable-libxvbm --enable-libxrm --enable-cross-compile  "
+        ADDI_CFLAGS+=" -I/opt/xilinx/xrt/include/xma2"
+        ADDI_LDFLAGS+="-L/opt/xilinx/xrt/lib  -Wl,-rpath,/opt/xilinx/xrt/lib -Wl,-rpath,/opt/xilinx/xrm/lib"
+        ADDI_EXTRA_LIBS+="--extra-libs=-lxma2api --extra-libs=-lxrt_core --extra-libs=-lxrt_coreutil --extra-libs=-lpthread --extra-libs=-ldl "
+    fi
 
     # Options are added by external scripts.
     if [[ -n "${EXT_FFMPEG_LICENSE}" ]]; then
@@ -273,28 +274,34 @@ install_ffmpeg()
     DIR=${TEMP_PATH}/ffmpeg
 
     # Download
-    (rm -rf ${DIR}  && mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sSLf ${FFMPEG_DOWNLOAD_URL} | tar -xz --strip-components=1 ) || fail_exit "ffmpeg"
+    if [ "$XILINX_XMA_CODEC_HWACCELS" = false ] ; then
+	    (rm -rf ${DIR}  && mkdir -p ${DIR} && \
+	    cd ${DIR} && \
+	    curl -sSLf ${FFMPEG_DOWNLOAD_URL} | tar -xz --strip-components=1 ) || fail_exit "ffmpeg"
+    else
+        # Download FFmpeg for xilinx video sdk 3.0
+	    (rm -rf ${DIR}  && mkdir -p ${DIR} && \
+	    git clone --depth=1 --branch U30_GA_3 https://github.com/Xilinx/app-ffmpeg4-xma.git ${DIR}) || fail_exit "ffmpeg"	
+    fi
 	
-	# If there is an enable-nilogan option, add patch from libxcoder_logan-path 
+    # If there is an enable-nilogan option, add patch from libxcoder_logan-path 
     if [ "$NETINT_LOGAN_HWACCELS" = true ] ; then		
-		echo "we are applying the patch founded in $NETINT_LOGAN_PATCH_PATH"
-		patch_name=$(basename $NETINT_LOGAN_PATCH_PATH)
-		cp $NETINT_LOGAN_PATCH_PATH ${DIR}		
-		cd ${DIR} && patch -t -p 1 < $patch_name
-		if [ "$NETINT_LOGAN_XCODER_COMPILE_PATH" != "" ] ; then
-			cd $NETINT_LOGAN_XCODER_COMPILE_PATH && bash build.sh && ldconfig #the compilation of libxcoder_logan can be done before
-		fi		
-		ADDI_LIBS+=" --enable-libxcoder_logan --enable-ni_logan --enable-avfilter  --enable-pthreads "
-		ADDI_ENCODER+=",h264_ni_logan,h265_ni_logan"
-        ADDI_DECODER+=",h264_ni_logan,h265_ni_logan"
-		ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
-		ADDI_LDFLAGS=" -lm -ldl"
-		ADDI_FILTERS+=",hwdownload,hwupload,hwupload_ni_logan"
-		#ADDI_EXTRA_LIBS="-lpthread"
-	fi
-
+      echo "we are applying the patch founded in $NETINT_LOGAN_PATCH_PATH"
+      patch_name=$(basename $NETINT_LOGAN_PATCH_PATH)
+      cp $NETINT_LOGAN_PATCH_PATH ${DIR}		
+      cd ${DIR} && patch -t -p 1 < $patch_name
+      if [ "$NETINT_LOGAN_XCODER_COMPILE_PATH" != "" ] ; then
+        cd $NETINT_LOGAN_XCODER_COMPILE_PATH && bash build.sh && ldconfig #the compilation of libxcoder_logan can be done before
+      fi		
+      ADDI_LIBS+=" --enable-libxcoder_logan --enable-ni_logan --enable-avfilter  --enable-pthreads "
+      ADDI_ENCODER+=",h264_ni_logan,h265_ni_logan"
+          ADDI_DECODER+=",h264_ni_logan,h265_ni_logan"
+      ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
+      ADDI_LDFLAGS=" -lm -ldl"
+      ADDI_FILTERS+=",hwdownload,hwupload,hwupload_ni_logan"
+      #ADDI_EXTRA_LIBS="-lpthread"
+    fi
+    
     # Patch for Enterprise
     if [[ "$(type -t install_patch_ffmpeg)"  == 'function' ]];
     then

@@ -126,11 +126,16 @@ public:
             _bit_offset += bits_from_this_byte;
             if (_bit_offset == 8)
             {
-                ++_position;
+                NextPosition();
                 _bit_offset = 0;
             }
         }
         return true;
+    }
+
+	bool ReadBit(uint8_t &value)
+    {
+        return ReadBits<uint8_t>(1, value);
     }
 
     bool ReadBoolBit()
@@ -167,22 +172,6 @@ public:
 
 		return value;
 	}
-
-    bool ReadBit(uint8_t &value)
-    {
-        if (static_cast<size_t>(_position - _buffer) == _capacity) return false;
-        value = *_position & (1  << (7 - _bit_offset)) ? 1 : 0;
-        if (_bit_offset == 7)
-        {
-            ++_position;
-            _bit_offset = 0;
-        }
-        else
-        {
-            ++_bit_offset;
-        }
-        return true;
-    }
 
 	void StartSection()
 	{
@@ -226,6 +215,11 @@ public:
     }
 
 protected:
+	virtual void NextPosition()
+	{
+		_position ++;
+	}
+
     const uint8_t* _buffer;
     const uint8_t* _position;
 	const uint8_t* _lap_position;

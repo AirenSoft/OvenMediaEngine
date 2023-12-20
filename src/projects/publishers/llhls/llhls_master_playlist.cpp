@@ -10,10 +10,16 @@
 #include "llhls_private.h"
 
 #include <base/ovlibrary/zip.h>
+#include <base/ovcrypto/base_64.h>
 
 void LLHlsMasterPlaylist::SetChunkPath(const ov::String &chunk_path)
 {
 	_chunk_path = chunk_path;
+}
+
+void LLHlsMasterPlaylist::SetCencProperty(const bmff::CencProperty &cenc_property)
+{
+	_cenc_property = cenc_property;
 }
 
 bool LLHlsMasterPlaylist::AddMediaCandidateGroup(const std::shared_ptr<const MediaTrackGroup> &track_group, std::function<ov::String(const std::shared_ptr<const MediaTrack> &track)> chunk_uri_generator)
@@ -177,6 +183,57 @@ void LLHlsMasterPlaylist::UpdateCacheForDefaultPlaylist()
 	}
 }
 
+ov::String LLHlsMasterPlaylist::MakeSessionKey() const
+{
+	ov::String xkey;
+
+	for (const auto &pssh : _cenc_property.pssh_box_list)
+	{
+		if (pssh.drm_system == bmff::DRMSystem::Widevine)
+		{
+			xkey.AppendFormat("#EXT-X-SESSION-KEY:");
+
+			if (_cenc_property.scheme == bmff::CencProtectScheme::Cbcs)
+			{
+				xkey.AppendFormat("METHOD=SAMPLE-AES");
+			}
+			else if (_cenc_property.scheme == bmff::CencProtectScheme::Cenc)
+			{
+				// NOT Support yet
+				xkey.AppendFormat("METHOD=SAMPLE-AES-CTR");
+				return "";
+			}
+
+			xkey.AppendFormat(",URI=\"data:text/plain;base64,%s\"", ov::Base64::Encode(pssh.pssh_box_data, false).CStr());
+
+			xkey.AppendFormat(",KEYID=0x%s", _cenc_property.key_id->ToHexString().CStr());
+			xkey.AppendFormat(",KEYFORMAT=\"urn:uuid:%s\"", ov::ToUUIDString(pssh.system_id->GetData(), pssh.system_id->GetLength()).LowerCaseString().CStr());
+			xkey.AppendFormat(",KEYFORMATVERSIONS=\"1\"");
+		}
+		else if (pssh.drm_system == bmff::DRMSystem::FairPlay)
+		{
+			if (_cenc_property.keyformat.LowerCaseString() == "identity")
+			{
+				xkey.AppendFormat("#EXT-X-SESSION-KEY:METHOD=SAMPLE-AES");
+				xkey.AppendFormat(",URI=\"%s\"", _cenc_property.fairplay_key_uri.CStr());
+				xkey.AppendFormat(",KEYFORMAT=\"identity\"");
+				xkey.AppendFormat(",IV=0x%s", _cenc_property.iv->ToHexString().CStr());
+			}
+			else
+			{
+				xkey.AppendFormat("#EXT-X-SESSION-KEY:METHOD=SAMPLE-AES");
+				xkey.AppendFormat(",URI=\"%s\"", _cenc_property.fairplay_key_uri.CStr());
+				xkey.AppendFormat(",KEYFORMAT=\"com.apple.streamingkeydelivery\"");
+				xkey.AppendFormat(",KEYFORMATVERSIONS=\"1\"");
+			}
+		}
+
+		xkey.Append("\n");
+	}
+
+	return xkey;
+}
+
 ov::String LLHlsMasterPlaylist::MakePlaylist(const ov::String &chunk_query_string, bool legacy, bool include_path) const
 {
 	ov::String playlist(10240);
@@ -250,6 +307,11 @@ ov::String LLHlsMasterPlaylist::MakePlaylist(const ov::String &chunk_query_strin
 		}
 	}
 	media_infos_lock.unlock();
+
+	playlist.AppendFormat("\n");
+
+	// Write EXT-X-SESSION-KEY
+	playlist.Append(MakeSessionKey());
 
 	playlist.AppendFormat("\n");
 

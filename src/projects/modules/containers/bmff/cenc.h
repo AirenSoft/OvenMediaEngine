@@ -12,6 +12,7 @@
 #include <base/info/media_track.h>
 #include <base/mediarouter/media_buffer.h>
 #include <base/ovcrypto/aes.h>
+#include <base/ovlibrary/hex.h>
 
 #include "sample.h"
 
@@ -99,6 +100,92 @@ namespace bmff
             }
         }
 
+        PsshBox(ov::String system_id_hex, std::vector<std::shared_ptr<ov::Data>> kid_hex_list, const std::shared_ptr<ov::Data> &user_data)
+        {
+            // ISO/IEC 23001-7 8.1
+			// aligned(8) class ProtectionSystemSpecificHeaderBox extends FullBox('pssh', version, flags = 0)
+			// {
+			// 	unsigned int(8)[16] SystemID;
+			// 	if (version > 0)
+			// 	{
+			// 		unsigned int(32) KID_count;
+			// 		{
+			// 			unsigned int(8)[16] KID;
+			// 		}
+			// 		[KID_count];
+			// 	}
+			// 	unsigned int(32) DataSize;
+			// 	unsigned int(8)[DataSize] Data;
+			// }
+
+            // remove dashes from system id hex string
+            system_id_hex = system_id_hex.Replace("-", "");
+
+            if (system_id_hex.GetLength() != 32)
+            {
+                loge("ERROR", "Invalid system id hex string : %s", system_id_hex.CStr());
+                return;
+            }
+
+            if (system_id_hex.LowerCaseString() == "edef8ba979d64acea3c827dcd51d21ed")
+            {
+                drm_system = DRMSystem::Widevine;
+            }
+            else if (system_id_hex.LowerCaseString() == "94ce86fb07ff4f43adb893d2fa968ca2")
+            {
+                drm_system = DRMSystem::FairPlay;
+            }
+            else
+            {
+                loge("ERROR", "Invalid system id hex string : %s", system_id_hex.CStr());
+                return;
+            }
+
+            system_id = ov::Hex::Decode(system_id_hex);
+
+            // Create pssh box
+            ov::ByteStream stream(512);
+
+            // FullBox header size : 12 bytes
+            // System ID : 16 bytes
+            // KID count : 4 bytes
+            // KID : 16 bytes * kid count
+            // Data size : 4 bytes
+            // Data : data size bytes
+            uint32_t box_size = 12 + 16 + 4 + (16 * kid_hex_list.size()) + 4;
+            box_size += user_data ? user_data->GetLength() : 0;
+
+            // Header
+            stream.WriteBE32(box_size); // box size
+            stream.WriteText("pssh"); // box name
+            stream.Write8(1); // version
+            stream.WriteBE24(0); // flags
+
+            stream.Write(system_id); // system id
+
+            if (kid_hex_list.size() > 0)
+            {
+                stream.WriteBE32(kid_hex_list.size()); // kid count
+
+                for (const auto &kid_hex : kid_hex_list)
+                {
+                    stream.Write(kid_hex); // kid
+                }
+            }
+
+            if (user_data != nullptr)
+            {
+                stream.WriteBE32(user_data->GetLength()); // data size
+                stream.Write(user_data); // data
+            }
+            else
+            {
+                stream.WriteBE32(0); // data size
+            }
+
+            pssh_box_data = stream.GetDataPointer();
+        }
+
         DRMSystem drm_system = DRMSystem::None;
         std::shared_ptr<ov::Data> system_id = nullptr;
         std::shared_ptr<ov::Data> pssh_box_data = nullptr;
@@ -116,6 +203,7 @@ namespace bmff
         std::shared_ptr<ov::Data> iv = nullptr; // 16 bytes
 
         ov::String fairplay_key_uri; // fairplay only
+        ov::String keyformat;
         
         std::vector<PsshBox> pssh_box_list;
     };

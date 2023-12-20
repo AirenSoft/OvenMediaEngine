@@ -280,6 +280,8 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 		return false;
 	}
 
+	bool has_fairplay_pssh_box = false;
+
 	for (pugi::xml_node drm_node = root_node.child("DRM"); drm_node; drm_node = drm_node.next_sibling("DRM"))
 	{
 		ov::String name = drm_node.child_value("Name");
@@ -303,6 +305,8 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 				ov::String key_id = drm_node.child_value("KeyId");
 				ov::String key = drm_node.child_value("Key");
 				ov::String iv = drm_node.child_value("Iv");
+				ov::String fairplay_key_url = drm_node.child_value("FairPlayKeyUrl");
+				ov::String keyformat = drm_node.child_value("Keyformat");
 
 				// required
 				if (cenc_protect_scheme.IsEmpty() || key_id.IsEmpty() || key.IsEmpty() || iv.IsEmpty())
@@ -347,24 +351,27 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 				pugi::xml_node pssh_node = drm_node.child("Pssh");
 				while (pssh_node)
 				{
-					auto pssh_box = ov::Hex::Decode(pssh_node.child_value());
-					if (pssh_box == nullptr)
+					auto pssh_box_data = ov::Hex::Decode(pssh_node.child_value());
+					if (pssh_box_data == nullptr)
 					{
 						logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because Pssh(%s) is invalid (must be HEX format)", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), pssh_node.child_value());
 						cenc_property.scheme = bmff::CencProtectScheme::None;
 						return false;
 					}
 
-					cenc_property.pssh_box_list.push_back(bmff::PsshBox(pssh_box));
+					auto pssh_box = bmff::PsshBox(pssh_box_data);
+					cenc_property.pssh_box_list.push_back(pssh_box);
+
+					if (pssh_box.drm_system == bmff::DRMSystem::FairPlay)
+					{
+						has_fairplay_pssh_box = true;
+					}
 
 					pssh_node = pssh_node.next_sibling("Pssh");
 				}
 
-				ov::String fairplay_key_url = drm_node.child_value("FairPlayKeyUrl");
-				if (fairplay_key_url.IsEmpty() == false)
-				{
-					cenc_property.fairplay_key_uri = fairplay_key_url;
-				}
+				cenc_property.fairplay_key_uri = fairplay_key_url;
+				cenc_property.keyformat = keyformat;
 			}
 			else if (drm_provider.LowerCaseString() == "pallycon")
 			{
@@ -480,6 +487,13 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 		}
 	}
 
+	// If cenc_property has fairplay_key_uri, but there is no pssh box for fairplay, add it.
+	// default pssh box 
+	if (cenc_property.fairplay_key_uri.IsEmpty() == false && has_fairplay_pssh_box == false)
+	{
+    	cenc_property.pssh_box_list.push_back(bmff::PsshBox("94ce86fb-07ff-4f43-adb8-93d2fa968ca2", {cenc_property.key_id}, nullptr));
+	}
+
 	return true;
 }
 
@@ -533,6 +547,7 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 	}
 
 	master_playlist->SetChunkPath(chunk_path);
+	master_playlist->SetCencProperty(_cenc_property);
 
 	// Add all media candidates to master playlist
 	for (const auto &[track_id, track_group] : GetMediaTrackGroups())

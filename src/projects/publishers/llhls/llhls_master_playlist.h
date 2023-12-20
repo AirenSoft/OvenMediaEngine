@@ -11,11 +11,13 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/info/media_track_group.h>
 #include <base/mediarouter/media_buffer.h>
+#include <modules/containers/bmff/cenc.h>
 
 class LLHlsMasterPlaylist
 {
 public:
 	void SetChunkPath(const ov::String &chunk_path);
+	void SetCencProperty(const bmff::CencProperty &cenc_property);
 
 	bool AddMediaCandidateGroup(const std::shared_ptr<const MediaTrackGroup> &track_group, std::function<ov::String(const std::shared_ptr<const MediaTrack> &track)> chunk_uri_generator);
 	bool AddStreamInfo(const ov::String &video_group_id, const ov::String &audio_group_id);
@@ -107,5 +109,8 @@ private:
 	std::shared_ptr<ov::Data> _cached_default_playlist_gzip = nullptr;
 	mutable std::shared_mutex _cached_default_playlist_gzip_guard;
 
+	bmff::CencProperty _cenc_property;
+
 	ov::String MakePlaylist(const ov::String &chunk_query_string, bool legacy, bool include_path=true) const;
+	ov::String MakeSessionKey() const;
 };

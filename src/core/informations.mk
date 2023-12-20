@@ -16,5 +16,11 @@ $(info $()   - $(ANSI_YELLOW)Paths for pkg-config$(ANSI_RESET)    : $(CONFIG_PKG
 ifneq ($(MAKECMDGOALS),clean)
 $(info $()   - $(ANSI_YELLOW)Total Projects count$(ANSI_RESET)    : $(words $(BUILD_TARGET_LIST)))
 endif
+ifeq ($(HWACCELS_NVIDIA_ENABLED),true)
+$(info $()   - $(ANSI_YELLOW)NVIDIA GPU HWAccels$(ANSI_RESET)     : Support)
+endif
+ifeq ($(HWACCELS_XMA_ENABLED),true)
+$(info $()   - $(ANSI_YELLOW)Xilinx Alveo HWAccels$(ANSI_RESET)   : Support)
+endif
 $(info $())
 endif

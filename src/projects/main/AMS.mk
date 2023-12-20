@@ -26,7 +26,6 @@ LOCAL_STATIC_LIBRARIES := \
 	api_server \
 	json_serdes \
 	bitstream \
-	containers \
 	http \
 	dtls_srtp \
 	rtp_rtcp \
@@ -86,18 +85,18 @@ endif
 
 # Enable Xilinx Media SDK
 ifeq ($(call chk_pkg_exist,libxma2api),0)
-$(info $(ANSI_YELLOW)- Xilinx Media Accelerator is enabled$(ANSI_RESET))
 $(call add_pkg_config,libxma2api)
 $(call add_pkg_config,libxma2plugin)
 $(call add_pkg_config,xvbm)
 $(call add_pkg_config,libxrm)
+HWACCELS_XMA_ENABLED := true
 PROJECT_CXXFLAGS += -DHWACCELS_XMA_ENABLED
 endif
 
 # Enable NVidia Accelerator
 ifeq ($(call chk_lib_exist,libcuda.so), 0) 
 ifeq ($(call chk_lib_exist,libnvidia-ml.so), 0)
-$(info $(ANSI_YELLOW)- NVIDIA Accelerator is enabled$(ANSI_RESET))
+HWACCELS_NVIDIA_ENABLED := true
 LOCAL_LDFLAGS += -L/usr/local/cuda/lib64 -lcuda -lnvidia-ml
 PROJECT_CXXFLAGS += -I/usr/local/cuda/include -DHWACCELS_NVIDIA_ENABLED 
 endif

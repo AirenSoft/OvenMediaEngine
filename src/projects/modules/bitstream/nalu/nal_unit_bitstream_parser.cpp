@@ -1,49 +1,8 @@
 #include "nal_unit_bitstream_parser.h"
 
 NalUnitBitstreamParser::NalUnitBitstreamParser(const uint8_t *bitstream, size_t length)
-	: BitReader(nullptr, 0)
+	: BitReader(bitstream, length)
 {
-    // Parse the bitstream and skip emulation_prevention_three_byte
-   	_bitstream.reserve(length);
-
-	if (length < 4)
-	{
-		// No need to decode EBSP 
-		_bitstream.insert(_bitstream.end(), bitstream, bitstream + length);
-	}
-	else
-	{
-		// EBSP to RBSP
-		for (size_t original_bitstream_offset = 0; original_bitstream_offset < length;)
-		{
-			// 00 00 03 00 ==> 00 00 00
-			// 00 00 03 01 ==> 00 00 01
-			// 00 00 03 02 ==> 00 00 02
-			// 00 00 03 03 ==> 00 00 03
-			// 00 00 03 00 00 03 00 ==> 00 00 00 00 00
-
-			if (original_bitstream_offset + 3 < length && 
-						bitstream[original_bitstream_offset] == 0x00 && 
-						bitstream[original_bitstream_offset + 1] == 0x00 && 
-						bitstream[original_bitstream_offset + 2] == 0x03 &&
-						((bitstream[original_bitstream_offset + 3] | 0b11) == 0b11)) 
-			{
-				_bitstream.emplace_back(bitstream[original_bitstream_offset]);
-				original_bitstream_offset ++;
-				_bitstream.emplace_back(bitstream[original_bitstream_offset]);
-				original_bitstream_offset += 2; // skip the '03'
-			}
-			else
-			{
-				_bitstream.emplace_back(bitstream[original_bitstream_offset]);
-				original_bitstream_offset ++;
-			}
-		}
-	}
-
-	_buffer = _bitstream.data();
-	_capacity = _bitstream.size();
-	_position = _buffer;
 }
 
 bool NalUnitBitstreamParser::ReadU8(uint8_t &value)
@@ -118,4 +77,20 @@ bool NalUnitBitstreamParser::Skip(uint32_t count)
 {
     uint64_t dummy;
 	return ReadBits(count, dummy);
+}
+
+void NalUnitBitstreamParser::NextPosition()
+{
+    _position ++;
+
+    // skip emulation_prevention_three_byte
+    if (*_position == 0x03 &&
+        BytesConsumed() >= 3 && 
+        BytesRemained() >= 1 &&
+                *(_position - 2) == 0x00 && 
+                *(_position - 1) == 0x00 && 
+                (*(_position + 1) | 0b11) == 0b11)
+    {
+        _position ++;
+    }
 }
