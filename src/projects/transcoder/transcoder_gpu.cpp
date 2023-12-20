@@ -28,6 +28,7 @@ TranscodeGPU::TranscodeGPU()
 	for (int i = 0; i < MAX_DEVICE_COUNT; i++)
 	{
 		_device_context_qsv[i] = nullptr;
+		_device_context_nilogan[i] = nullptr;
 		_device_context_nv[i] = nullptr;
 	}
 }
@@ -71,6 +72,16 @@ bool TranscodeGPU::Initialize()
 		logtw("No supported Intel QuickSync Accelerator");
 	}
 
+	// NILOGAN
+	if(CheckSupportedNILOGAN() == true)
+	{
+		logti("Supported Netint VPU Accelerator. Number of devices(%d)", GetDeviceCount(cmn::MediaCodecModuleId::NILOGAN));
+	}
+	else
+	{
+		logtw("No supported Netint VPU Accelerator");
+	}
+
 	_initialized = true;
 
 	// Resource Monitoring Thread
@@ -95,6 +106,12 @@ bool TranscodeGPU::Uninitialize()
 			av_buffer_unref(&_device_context_qsv[i]);
 			_device_context_qsv[i] = nullptr;
 		}
+
+		if (_device_context_nilogan[i] != nullptr)
+		{
+			av_buffer_unref(&_device_context_nilogan[i]);
+			_device_context_nilogan[i] = nullptr;
+		}
 	}
 
 #ifdef HWACCELS_NVIDIA_ENABLED	
@@ -109,6 +126,8 @@ bool TranscodeGPU::IsSupported(cmn::MediaCodecModuleId id, int32_t gpu_id)
 	{
 		case cmn::MediaCodecModuleId::QSV:
 			return IsSupportedQSV(gpu_id);
+		case cmn::MediaCodecModuleId::NILOGAN:
+			return IsSupportedNILOGAN(gpu_id);
 		case cmn::MediaCodecModuleId::NVENC:
 			return IsSupportedNV(gpu_id);
 		case cmn::MediaCodecModuleId::XMA:
@@ -126,6 +145,8 @@ int32_t TranscodeGPU::GetDeviceCount(cmn::MediaCodecModuleId id)
 	{
 		case cmn::MediaCodecModuleId::QSV:
 			return GetDeviceCountQSV();
+		case cmn::MediaCodecModuleId::NILOGAN:
+			return GetDeviceCountNILOGAN();
 		case cmn::MediaCodecModuleId::NVENC:
 			return GetDeviceCountNV();
 		case cmn::MediaCodecModuleId::XMA:
@@ -143,6 +164,8 @@ AVBufferRef *TranscodeGPU::GetDeviceContext(cmn::MediaCodecModuleId id, int32_t 
 	{
 		case cmn::MediaCodecModuleId::QSV:
 			return GetDeviceContextQSV(gpu_id);
+		case cmn::MediaCodecModuleId::NILOGAN:
+			return GetDeviceContextNILOGAN(gpu_id);
 		case cmn::MediaCodecModuleId::NVENC:
 			return GetDeviceContextNV(gpu_id);
 		case cmn::MediaCodecModuleId::XMA:
@@ -156,6 +179,11 @@ AVBufferRef *TranscodeGPU::GetDeviceContext(cmn::MediaCodecModuleId id, int32_t 
 int32_t TranscodeGPU::GetDeviceCountQSV()
 {
 	return _device_count_qsv;
+}
+
+int32_t TranscodeGPU::GetDeviceCountNILOGAN()
+{
+	return _device_count_nilogan;
 }
 
 int32_t TranscodeGPU::GetDeviceCountNV()
@@ -342,6 +370,30 @@ bool TranscodeGPU::CheckSupportedQSV()
 	return true;
 }
 
+bool TranscodeGPU::CheckSupportedNILOGAN()
+{
+	_device_count_nilogan = 0;
+#ifdef HWACCELS_NILOGAN_ENABLED		
+	int ret = ::av_hwdevice_ctx_create(&_device_context_nilogan[0], AV_HWDEVICE_TYPE_NI_LOGAN, nullptr, nullptr, 0);
+	if (ret < 0)
+	{
+		av_buffer_unref(&_device_context_nilogan[0]);
+		_device_context_nilogan[0] = nullptr;
+		return false;
+	}
+	
+	_device_count_nilogan++;		
+
+	auto constraints = av_hwdevice_get_hwframe_constraints(_device_context_nilogan[0], nullptr);
+	
+	logtd("constraints. hw.fmt(%d), sw.fmt(%d)", *constraints->valid_hw_formats, *constraints->valid_sw_formats);
+
+	return true;
+#else
+	return false;
+#endif
+}
+
 
 AVBufferRef* TranscodeGPU::GetDeviceContextQSV(int32_t gpu_id)
 {
@@ -349,6 +401,14 @@ AVBufferRef* TranscodeGPU::GetDeviceContextQSV(int32_t gpu_id)
 		return nullptr;
 
 	return _device_context_qsv[gpu_id];
+}
+
+AVBufferRef* TranscodeGPU::GetDeviceContextNILOGAN(int32_t gpu_id)
+{
+	if (gpu_id >= MAX_DEVICE_COUNT)
+		return nullptr;
+
+	return _device_context_nilogan[gpu_id];
 }
 
 AVBufferRef* TranscodeGPU::GetDeviceContextNV(int32_t gpu_id)
@@ -362,6 +422,16 @@ AVBufferRef* TranscodeGPU::GetDeviceContextNV(int32_t gpu_id)
 bool TranscodeGPU::IsSupportedQSV(int32_t gpu_id)
 {
 	if(_device_count_qsv == 0 || gpu_id >= _device_count_qsv)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool TranscodeGPU::IsSupportedNILOGAN(int32_t gpu_id)
+{
+	if(_device_count_nilogan == 0 || gpu_id >= _device_count_nilogan)
 	{
 		return false;
 	}
@@ -462,6 +532,23 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, i
 			}			
 		}
 		break;
+		case cmn::MediaCodecModuleId::NILOGAN: {
+#ifdef HWACCELS_NILOGAN_ENABLED				
+			if (type == IPType::ENCODER)
+			{
+				return 0;
+			}
+			else if (type == IPType::DECODER)
+			{
+				return 0;
+			}
+			else if (type == IPType::SCALER)
+			{
+				return 0;
+			}	
+#endif				
+		}
+		break;
 		default:
 			break;
 	}
@@ -476,6 +563,7 @@ void TranscodeGPU::CodecThread()
 	modules.push_back(cmn::MediaCodecModuleId::NVENC);
 	modules.push_back(cmn::MediaCodecModuleId::XMA);
 	modules.push_back(cmn::MediaCodecModuleId::QSV);	
+	modules.push_back(cmn::MediaCodecModuleId::NILOGAN);	
 
 	for(auto module : modules)
 	{

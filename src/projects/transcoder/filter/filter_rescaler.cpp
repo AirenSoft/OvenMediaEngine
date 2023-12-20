@@ -55,7 +55,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	const AVFilter *buffersink = ::avfilter_get_by_name("buffersink");
 	int ret;
 	_filter_graph = ::avfilter_graph_alloc();
-
+	
 	if ((_filter_graph == nullptr) || (_inputs == nullptr) || (_outputs == nullptr))
 	{
 		logte("Could not allocate variables for filter graph: %p, %p, %p", _filter_graph, _inputs, _outputs);
@@ -161,6 +161,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 			else {
 				// cmn::MediaCodecModuleId::DEFAULT 
 				// cmn::MediaCodecModuleId::QSV
+				// cmn::MediaCodecModuleId::NILOGAN
 				// cmn::MediaCodecModuleId::ETC
 								
 				// Copy GPU memory to Host memory
@@ -194,6 +195,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 			{
 				// cmn::MediaCodecModuleId::DEFAULT 
 				// cmn::MediaCodecModuleId::QSV
+				// cmn::MediaCodecModuleId::NILOGAN
 				// cmn::MediaCodecModuleId::ETC
 
 				// Copy GPU memory to Host memory
@@ -208,7 +210,22 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 				"scale=%dx%d:flags=bilinear",
 				output_track->GetWidth(), output_track->GetHeight()));
 		}
-		break;		
+		break;	
+		case cmn::MediaCodecModuleId::NILOGAN:
+			if (output_module_id == cmn::MediaCodecModuleId::NILOGAN)
+			{
+				filters.push_back(ov::String::FormatString(
+					"scale=%dx%d:flags=bilinear",
+					output_track->GetWidth(), output_track->GetHeight()));
+					//ni_logan_hwupload => failed because autoscale is automatically insert a scale filter at the end of the filter graph and seems to be not compatible with ni_logan_hwupload :(
+			}
+			else 
+			{
+				filters.push_back(ov::String::FormatString(
+					"scale=%dx%d:flags=bilinear",
+					output_track->GetWidth(), output_track->GetHeight()));
+			}		
+		break;	
 		case cmn::MediaCodecModuleId::DEFAULT:
 		default: {
 			if (output_module_id == cmn::MediaCodecModuleId::NVENC)
@@ -230,6 +247,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 			{
 				// cmn::MediaCodecModuleId::DEFAULT 
 				// cmn::MediaCodecModuleId::QSV
+				// cmn::MediaCodecModuleId::NILOGAN
 				// cmn::MediaCodecModuleId::ETC
 				filters.push_back(ov::String::FormatString(
 					"scale=%dx%d:flags=bilinear",
