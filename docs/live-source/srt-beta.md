@@ -49,15 +49,56 @@ The **streamid** contains the URL format, so it must be [**percent encoded**](ht
 
 ### OBS Studio
 
-OBS Studio 25.0 or later supports SRT. Please refer to the [OBS official documentation](https://obsproject.com/wiki/Streaming-With-SRT-Protocol) for more information. Enter the address of OvenMediaEngine in OBS Studio's Server as follows: When using SRT in OBS, you can leave the Stream Key blank.
+OBS Studio 25.0 or later supports SRT. Please refer to the [OBS official documentation](https://obsproject.com/wiki/Streaming-With-SRT-Protocol) for more information. Enter the address of OvenMediaEngine in OBS Studio's Server as follows: When using SRT in OBS, leave the Stream Key blank.
 
-`srt://ip:port?streamid=srt%3A%2F%2F{domain or IP address}[%3APort]%2F{App name}%2F{Stream name}`
+`srt://{full domain or IP address}:port?streamid=srt%3A%2F%2F{full domain or IP address}[%3APort]%2F{App name}%2F{Stream name}&latency=2000000`
+
+The `streamid` has to be the urlencoded address of the server name as specified in the ome server configuration plus the app name and the stream name, each separated by `/`. The `latency` configures the size of the server-side recive buffer and the time limit for SRT in nanoseconds. Typical value for latency are 150000 (150ms) for stremaing to a server in the local network, 600000 (600ms) for streaming to a server over the internet in the local region, and 2000000 (2 seconds) when stremaing over long distance.
 
 ![](<../.gitbook/assets/image (38).png>)
 
+### Blackmagic Web Presenter
+
+For configuring a Blackmagic Web Presenter or similar device to stream to OvenMediaEngine over SRT, export the streaming xml configuration and set the `<streaming>` section to something like this:
+
+```markup
+<streaming>
+    <service>
+        <name>SRT-Sample-Service</name>
+        <servers>
+            <server group="Primary">
+                <name>Some-server-name</name>
+                <url>srt://your-server-domain.com:9999</url>
+                <srt-extensions>
+                    <stream-id>
+                        <item key="streamid" value="srt://your-server-domain.com:9999/appname/streamname123"/>
+                    </stream-id>
+                    <stream-latency>
+                        <item key="latency" value="2000"/>
+                    </stream-latency>
+                </srt-extensions>
+            </server>
+        </servers>
+        <profiles default="Streaming Sample">
+            <profile>
+                <name>Streaming Sample</name>
+                <low-latency/>
+                <config resolution="1080p" fps="60">
+                    <bitrate>6000000</bitrate>
+                    <audio-bitrate>128000</audio-bitrate>
+                    <keyframe-interval>2</keyframe-interval>
+                </config>
+            </profile>
+        </profiles>
+    </service>
+</streaming>
+```
+
+The Web Presenter requires the latency value to be provided in milliseconds and the streamid should be the not-encoded URL.
+
 ## SRT Socket Options
 
-You can configure SRT's socket options using `<Options>`. This is particularly useful when setting the encryption for SRT, and you can specify a passphrase by configuring as follows:
+You can configure SRT's socket options of the OvenMediaEngine server using `<Options>`. This is particularly useful when setting the encryption for SRT, and you can specify a passphrase by configuring as follows:
 
 ```xml
 <Server>
