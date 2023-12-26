@@ -50,22 +50,25 @@ namespace ov
 		auto cert = ::SSL_get_certificate(ssl);
 		auto ocsp_context = _ocsp_cache.ContextForCert(_ssl_ctx, cert);
 
-		if (ocsp_context->IsStatusRequestEnabled())
+		if (ocsp_context != nullptr)
 		{
-			if (ocsp_context->HasResponse())
+			if (ocsp_context->IsStatusRequestEnabled())
 			{
-				unsigned char *responder = nullptr;
-				auto responder_length = ::i2d_OCSP_RESPONSE(ocsp_context->GetResponse(), &responder);
-
-				if (responder_length > 0)
+				if (ocsp_context->HasResponse())
 				{
-					::SSL_set_tlsext_status_ocsp_resp(ssl, responder, responder_length);
+					unsigned char *responder = nullptr;
+					auto responder_length = ::i2d_OCSP_RESPONSE(ocsp_context->GetResponse(), &responder);
 
-					return SSL_TLSEXT_ERR_OK;
+					if (responder_length > 0)
+					{
+						::SSL_set_tlsext_status_ocsp_resp(ssl, responder, responder_length);
+
+						return SSL_TLSEXT_ERR_OK;
+					}
 				}
-			}
 
-			return ocsp_context->GetResponseCode();
+				return ocsp_context->GetResponseCode();
+			}
 		}
 
 		return SSL_TLSEXT_ERR_OK;

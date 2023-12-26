@@ -28,6 +28,7 @@ namespace ov
 
 			if (ocsp_context->IsExpired())
 			{
+				// Need to issue new OCSP request
 				logti("Trying to renew OCSP response: %p", cert);
 				auto x509 = item->first;
 				_cache_map.erase(item);
@@ -63,10 +64,6 @@ namespace ov
 			{
 				logtd("Use cached OCSP response: %p", cert);
 			}
-		}
-		else
-		{
-			logtd("OCSP stapling is disabled: %p", cert);
 		}
 
 		return ocsp_context;

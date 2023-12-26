@@ -44,6 +44,12 @@ namespace ov
 
 		bool IsExpired(int millisecond_time = (4 * 60 * 60 * 1000)) const
 		{
+			if (IsStatusRequestEnabled() == false)
+			{
+				// Never expire if OCSP stapling is disabled
+				return false;
+			}
+
 			auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - _received_time);
 
 			return (delta.count() >= millisecond_time);
