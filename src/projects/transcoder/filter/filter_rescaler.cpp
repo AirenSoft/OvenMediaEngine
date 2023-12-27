@@ -231,7 +231,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 			if (output_module_id == cmn::MediaCodecModuleId::NVENC)
 			{
 				filters.push_back(ov::String::FormatString(
-					"format=nv12,hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d:,hwdownload",
+					"format=nv12,hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d,hwdownload",
 					output_track->GetCodecDeviceId(),
 					output_track->GetWidth(), output_track->GetHeight()));
 			}
@@ -239,7 +239,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 			{
 				// TODO
 				filters.push_back(ov::String::FormatString(
-					"format=nv12,hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d:,hwdownload",
+					"format=nv12,hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d,hwdownload",
 					output_track->GetCodecDeviceId(),
 					output_track->GetWidth(), output_track->GetHeight()));
 			}			
