@@ -396,7 +396,7 @@ namespace pub
 
 	std::shared_ptr<info::Push> PushApplication::GetPushInfoById(ov::String id)
 	{
-		std::lock_guard<std::shared_mutex> lock(_push_map_mutex);
+		std::shared_lock<std::shared_mutex> lock(_push_map_mutex);
 		auto it = _pushes.find(id);
 		if (it == _pushes.end())
 		{
@@ -457,7 +457,7 @@ namespace pub
 
 	std::shared_ptr<ov::Error> PushApplication::GetPushes(const std::shared_ptr<info::Push> push, std::vector<std::shared_ptr<info::Push>> &results)
 	{
-		std::lock_guard<std::shared_mutex> lock(_push_map_mutex);
+		std::shared_lock<std::shared_mutex> lock(_push_map_mutex);
 
 		for (auto &[id, push] : _pushes)
 		{
@@ -542,50 +542,56 @@ namespace pub
 			{
 				// list of Push to be deleted
 				std::vector<std::shared_ptr<info::Push>> remove_pushes;
+				// Replication of pushes
+				std::map<ov::String, std::shared_ptr<info::Push>> replication_pushes;
 
 				if (true)
 				{
+					// Copy the push list to the replication list. 
+					// Avoid locking while starting/ending multiple pushes.
 					std::lock_guard<std::shared_mutex> lock(_push_map_mutex);
-					for (auto &[id, push] : _pushes)
-					{
-						// If it is a removed push job, add to the remove waiting list
-						if (push->GetRemove() == true)
-						{
-							remove_pushes.push_back(push);
-						}
+					std::copy(_pushes.begin(), _pushes.end(), std::inserter(replication_pushes, replication_pushes.begin()));
+				}
 
-						// Find a stream by stream name
-						auto stream = GetStream(push->GetStreamName());
-						if (stream == nullptr || stream->GetState() != pub::Stream::State::STARTED)
+				for (auto &[id, push] : replication_pushes)
+				{
+					// If it is a removed push job, add to the remove waiting list
+					if (push->GetRemove() == true)
+					{
+						remove_pushes.push_back(push);
+					}
+
+					// Find a stream by stream name
+					auto stream = GetStream(push->GetStreamName());
+					if (stream == nullptr || stream->GetState() != pub::Stream::State::STARTED)
+					{
+						logtd("There is no stream for Push or it has not started. %s", push->GetInfoString().CStr());
+						push->SetState(info::Push::PushState::Ready);
+						continue;
+					}
+
+					// Find a session by session ID
+					auto session = stream->GetSession(push->GetSessionId());
+					if (session == nullptr)
+					{
+						session = stream->CreatePushSession(push);
+						if (session == nullptr)
 						{
-							logtd("There is no stream for Push or it has not started. %s", push->GetInfoString().CStr());
-							push->SetState(info::Push::PushState::Ready);
+							logte("Could not create session");
 							continue;
 						}
 
-						// Find a session by session ID
-						auto session = stream->GetSession(push->GetSessionId());
-						if (session == nullptr)
-						{
-							session = stream->CreatePushSession(push);
-							if (session == nullptr)
-							{
-								logte("Could not create session");
-								continue;
-							}
+						push->SetSessionId(session->GetId());
+					}
 
-							push->SetSessionId(session->GetId());
-						}
-
-						// Starts only in the enabled state and stops otherwise
-						if (push->GetEnable() == true && push->GetRemove() == false)
-						{
-							StartPushInternal(push, session);
-						}
-						else
-						{
-							StopPushInternal(push, session);
-						}
+					// Starts only in the enabled state and stops otherwise
+					if (push->GetEnable() == true && push->GetRemove() == false)
+					{
+						StartPushInternal(push, session);
+					}
+					else
+					{
+						StopPushInternal(push, session);
 					}
 				}
 
