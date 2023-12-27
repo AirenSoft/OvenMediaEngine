@@ -405,19 +405,19 @@ namespace pvd
 		auto bypass_transcoder_node = stream_node.child("BypassTranscoder");
 		if (bypass_transcoder_node)
 		{
-			_stream.bypass_transcoder = bypass_transcoder_node.text().as_bool();
+			bypass_transcoder = bypass_transcoder_node.text().as_bool();
 		}
 
 		auto video_track_node = stream_node.child("VideoTrack");
 		if (video_track_node)
 		{
-			_stream.video_track = video_track_node.text().as_bool();
+			video_track = video_track_node.text().as_bool();
 		}
 
 		auto audio_track_node = stream_node.child("AudioTrack");
 		if (audio_track_node)
 		{
-			_stream.audio_track = audio_track_node.text().as_bool();
+			audio_track = audio_track_node.text().as_bool();
 		}
 
 		_stream = MakeStream(name, bypass_transcoder, video_track, audio_track);
