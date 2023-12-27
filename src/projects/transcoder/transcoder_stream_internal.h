@@ -17,6 +17,7 @@
 
 #include "base/info/stream.h"
 #include "base/mediarouter/media_type.h"
+#include "transcoder_context.h"
 
 class TranscoderStreamInternal
 {
@@ -41,4 +42,9 @@ public:
 
 	bool IsMatchesBypassCondition(const std::shared_ptr<MediaTrack> &input_track, const cfg::vhost::app::oprf::VideoProfile &profile);
 	bool IsMatchesBypassCondition(const std::shared_ptr<MediaTrack> &input_track, const cfg::vhost::app::oprf::AudioProfile &profile);
+
+	double GetEstimateFrameRate(const std::shared_ptr<MediaTrack> &input_track, MediaFrame *buffer);
+
+	void UpdateOutputTrackPassthrough(const std::shared_ptr<MediaTrack> &output_track, MediaFrame *buffer);
+	void UpdateOutputTrackTranscode(const std::shared_ptr<MediaTrack> &output_track, const std::shared_ptr<MediaTrack> &input_track, MediaFrame *buffer);
 };
