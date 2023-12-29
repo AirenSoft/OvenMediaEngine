@@ -62,7 +62,7 @@ namespace info
 		StreamRepresentationType GetRepresentationType() const;
 		void SetRepresentationType(const StreamRepresentationType &type);
 
-		int32_t IssueUniqueTrackId();
+		uint32_t IssueUniqueTrackId();
 		bool AddTrack(const std::shared_ptr<MediaTrack> &track);
 		bool UpdateTrack(const std::shared_ptr<MediaTrack> &track);
 		bool RemoveTrack(uint32_t id);

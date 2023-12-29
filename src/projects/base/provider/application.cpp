@@ -185,10 +185,15 @@ namespace pvd
 		if(_streams.find(stream->GetId()) == _streams.end())
 		{
 			// If stream is not exist, add stream
+			streams_lock.unlock();
 			AddStream(stream);
 		}
-
-		streams_lock.unlock();
+		else
+		{
+			// If stream is exist, update stream
+			_streams[stream->GetId()] = stream;
+			streams_lock.unlock();
+		}
 
 		NotifyStreamUpdated(stream);
 

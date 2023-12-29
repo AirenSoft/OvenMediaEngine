@@ -687,6 +687,11 @@ void RtcStream::PushToJitterBuffer(const std::shared_ptr<MediaPacket> &media_pac
 void RtcStream::PacketizeVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
 	auto media_track = GetTrack(media_packet->GetTrackId());
+	if (media_track == nullptr)
+	{
+		logtw("RtcStream(%s/%s) - MediaTrack(%u) is not found", GetApplication()->GetName().CStr(), GetName().CStr(), media_packet->GetTrackId());
+		return;
+	}
 
 	// Create RTP Video Header
 	CodecSpecificInfo codec_info;
@@ -736,6 +741,11 @@ void RtcStream::PacketizeVideoFrame(const std::shared_ptr<MediaPacket> &media_pa
 void RtcStream::PacketizeAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
 	auto media_track = GetTrack(media_packet->GetTrackId());
+	if (media_track == nullptr)
+	{
+		logtw("RtcStream(%s/%s) - MediaTrack(%u) is not found", GetApplication()->GetName().CStr(), GetName().CStr(), media_packet->GetTrackId());
+		return;
+	}
 
 	// RTP Packetizing
 	auto packetizer = GetPacketizer(media_track->GetId());

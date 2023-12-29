@@ -32,6 +32,8 @@ public:
         Error
     };
 
+    uint32_t GetId() const;
+
     State GetState() const;
 
     void Start();
@@ -51,6 +53,8 @@ private:
     void SetStreamInfo(const std::shared_ptr<info::Stream> &stream_info);
     void SetState(State state);
 
+    uint32_t IssueUniqueId();
+
     std::shared_ptr<info::Stream> _tapped_stream_info;
     ov::Queue<std::shared_ptr<MediaPacket>> _buffer;
     State _state = State::Idle;
@@ -58,4 +62,6 @@ private:
     bool _is_destroy_requested = false;
 
     bool _is_started = false;
+
+    uint32_t _id = 0;
 };

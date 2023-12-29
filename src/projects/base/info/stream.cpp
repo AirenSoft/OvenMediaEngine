@@ -202,22 +202,10 @@ namespace info
 		_representation_type = type;
 	}
 
-	int32_t Stream::IssueUniqueTrackId()
+	uint32_t Stream::IssueUniqueTrackId()
 	{
-		int32_t track_id = ov::Random::GenerateInt32(100, 0x7FFFFFFF);
-
-		while (true)
-		{
-			auto item = _tracks.find(track_id);
-			if (item == _tracks.end())
-			{
-				break;
-			}
-
-			track_id = ov::Random::GenerateInt32(100, 0x7FFFFFFF);
-		}
-
-		return track_id;
+		static std::atomic<uint32_t> last_issued_track_id(1);
+		return last_issued_track_id++;
 	}
 
 	bool Stream::AddTrack(const std::shared_ptr<MediaTrack> &track)
@@ -411,8 +399,8 @@ namespace info
 
 	bool Stream::AddPlaylist(const std::shared_ptr<Playlist> &playlist)
 	{
-		_playlists.emplace(playlist->GetFileName(), playlist);
-		return true;
+		auto result = _playlists.emplace(playlist->GetFileName(), playlist);
+		return result.second;
 	}
 
 	std::shared_ptr<const Playlist> Stream::GetPlaylist(const ov::String &file_name) const

@@ -17,11 +17,23 @@ std::shared_ptr<MediaRouterStreamTap> MediaRouterStreamTap::Create(size_t buffer
 MediaRouterStreamTap::MediaRouterStreamTap(size_t buffer_size)
     : _buffer("MediaRouterStreamTap", buffer_size)
 {
+    _id = IssueUniqueId();
 }
 
 MediaRouterStreamTap::~MediaRouterStreamTap()
 {
     Destroy();
+}
+
+uint32_t MediaRouterStreamTap::GetId() const
+{
+    return _id;
+}
+
+uint32_t MediaRouterStreamTap::IssueUniqueId()
+{
+    static std::atomic<uint32_t> last_issued(100);
+	return last_issued ++;
 }
 
 MediaRouterStreamTap::State MediaRouterStreamTap::GetState() const

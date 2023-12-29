@@ -17,6 +17,7 @@
 #include "srt_provider.h"
 #include "file_provider.h"
 #include "scheduled_provider.h"
+#include "multiplex_provider.h"
 
 namespace cfg
 {
@@ -38,7 +39,8 @@ namespace cfg
 							&_srt_provider,
 							&_mpegts_provider,
 							&_webrtc_provider,
-							&_scheduled_provider};
+							&_scheduled_provider,
+							&_multiplex_provider};
 					}
 
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetRtmpProvider, _rtmp_provider)
@@ -50,6 +52,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetWebrtcProvider, _webrtc_provider)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFileProvider, _file_provider)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetScheduledProvider, _scheduled_provider)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetMultiplexProvider, _multiplex_provider)
 
 				protected:
 					void MakeList() override
@@ -63,6 +66,7 @@ namespace cfg
 						Register<Optional>({"WebRTC", "webrtc"}, &_webrtc_provider);
 						Register<Optional>({"FILE", "file"}, &_file_provider);
 						Register<Optional>({"Schedule", "schedule"}, &_scheduled_provider);
+						Register<Optional>({"Multiplex", "multiplex"}, &_multiplex_provider);
 					};
 
 					RtmpProvider _rtmp_provider;
@@ -74,6 +78,8 @@ namespace cfg
 					WebrtcProvider _webrtc_provider;
 					FileProvider _file_provider;
 					ScheduledProvider _scheduled_provider;
+					MultiplexProvider _multiplex_provider;
+
 				};
 			}  // namespace pvd
 		}	   // namespace app

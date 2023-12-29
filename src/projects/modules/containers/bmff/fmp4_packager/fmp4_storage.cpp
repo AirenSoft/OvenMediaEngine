@@ -338,7 +338,7 @@ namespace bmff
 			
 			if (segment->GetDuration() >= _config.segment_duration_ms * 1.2)
 			{
-				logtw("LLHLS stream (%s) / track (%d) - a longer-than-expected (%.1lf | expected : %llu) segment has created. This may be due to very long keyframe intervals.", _stream_tag.CStr(), _track->GetId(), segment->GetDuration(), _config.segment_duration_ms);
+				logtw("LLHLS stream (%s) / track (%d) - a longer-than-expected (%.1lf | expected : %llu) segment has created. Long or irregular intervals between keyframes might be the cause.", _stream_tag.CStr(), _track->GetId(), segment->GetDuration(), _config.segment_duration_ms);
 			}
 		}
 		else if (segment->GetDuration() > _config.segment_duration_ms * 2)

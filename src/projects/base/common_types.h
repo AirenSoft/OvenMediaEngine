@@ -53,7 +53,8 @@ enum class StreamSourceType : int8_t
 	Srt,
 	Transcoder,
 	File,
-	Scheduled
+	Scheduled,
+	Multiplex
 };
 
 enum class StreamRepresentationType : int8_t
@@ -80,7 +81,8 @@ enum class ProviderType : int8_t
 	WebRTC,
 	Srt,
 	File,
-	Scheduled
+	Scheduled,
+	Multiplex
 };
 
 // Note : If you update PublisherType, you have to update /base/ovlibrary/converter.h:ToString(PublisherType type)
@@ -308,6 +310,8 @@ static ov::String StringFromStreamSourceType(const StreamSourceType &type)
 			return "File";
 		case StreamSourceType::Scheduled:
 			return "Scheduled";
+		case StreamSourceType::Multiplex:
+			return "Multiplex";
 	}
 
 	return "Unknown";
@@ -350,6 +354,8 @@ static ov::String StringFromProviderType(const ProviderType &type)
 			return "File";
 		case ProviderType::Scheduled:
 			return "Scheduled";
+		case ProviderType::Multiplex:
+			return "Multiplex";
 	}
 
 	return "Unknown";
