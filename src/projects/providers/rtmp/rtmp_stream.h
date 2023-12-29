@@ -199,5 +199,7 @@ namespace pvd
 
 		cfg::vhost::app::pvd::EventGenerator _event_generator;
 		ov::DelayQueue _event_test_timer{"RtmpEventTestTimer"};
+
+		bool _is_incoming_timestamp_used = false;
 	};
 }

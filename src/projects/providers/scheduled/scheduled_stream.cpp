@@ -590,7 +590,8 @@ namespace pvd
     bool ScheduledStream::CheckFileItemAvailable(const std::shared_ptr<Schedule::Item> &item)
     {
         // check file exists
-        if (stat(item->file_path.CStr(), nullptr) != 0)
+        struct stat statbuf;
+        if (stat(item->file_path.CStr(), &statbuf) != 0)
         {
             logte("%s/%s: Failed to find %s item. error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), errno, strerror(errno));
             return false;
@@ -845,8 +846,6 @@ namespace pvd
         std::map<int, bool> track_first_packet_map;
         std::map<int, int64_t> track_single_file_dts_offset_map;
         std::map<int, bool> end_of_track_map;
-
-        bool sent_keyframe = false;
 
         // Play
         while (_worker_thread_running)

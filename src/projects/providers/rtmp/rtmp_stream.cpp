@@ -1462,7 +1462,10 @@ namespace pvd
 			dts *= video_track->GetVideoTimestampScale();
 			pts *= video_track->GetVideoTimestampScale();
 
-			AdjustTimestamp(pts, dts);
+			if (_is_incoming_timestamp_used == false)
+			{
+				AdjustTimestamp(pts, dts);
+			}
 
 			cmn::PacketType packet_type = cmn::PacketType::Unknown;
 			if (flv_video.PacketType() == FlvAvcPacketType::AVC_SEQUENCE_HEADER)
@@ -1642,7 +1645,10 @@ namespace pvd
 			pts *= audio_track->GetAudioTimestampScale();
 			dts *= audio_track->GetAudioTimestampScale();
 
-			AdjustTimestamp(pts, dts);
+			if (_is_incoming_timestamp_used == false)
+			{
+				AdjustTimestamp(pts, dts);
+			}
 	 
 			cmn::PacketType packet_type = cmn::PacketType::Unknown;
 			if (flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
@@ -1717,6 +1723,7 @@ namespace pvd
 		}
 
 		_event_generator = application->GetConfig().GetProviders().GetRtmpProvider().GetEventGenerator();
+		_is_incoming_timestamp_used = application->GetConfig().GetProviders().GetRtmpProvider().IsIncomingTimestampUsed();
 
 		SetName(_publish_url->Stream());
 

@@ -860,6 +860,8 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 			[[fallthrough]];
 		case cmn::BitstreamFormat::ID3v2:
 			[[fallthrough]];
+		case cmn::BitstreamFormat::MP3:
+			[[fallthrough]];
 		case cmn::BitstreamFormat::PNG:
 			break;
 	}
