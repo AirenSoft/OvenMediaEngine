@@ -40,6 +40,8 @@ public:
 			return false;
 		}
 
+		stream->SetPublishedTimeNow();
+
 		return GetMediaRouteApplication()->OnStreamCreated(this->GetSharedPtr(), stream);
 	}
 

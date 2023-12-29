@@ -175,4 +175,8 @@ private:
 
 	bmff::CencProperty _cenc_property;
 	ov::String _key_uri; // string, only for FairPlay
+
+	// PROGRAM-DATE-TIME
+	bool _first_chunk = true;
+	int64_t _wallclock_offset_ms = 0;
 };

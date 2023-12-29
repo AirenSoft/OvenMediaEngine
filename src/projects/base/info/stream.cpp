@@ -45,6 +45,7 @@ namespace info
 		_source_type = stream._source_type;
 		_source_url = stream._source_url;
 		_created_time = stream._created_time;
+		_published_time = stream._published_time;
 		_app_info = stream._app_info;
 		_origin_stream = stream._origin_stream;
 
@@ -179,6 +180,26 @@ namespace info
 	const std::chrono::system_clock::time_point &Stream::GetCreatedTime() const
 	{
 		return _created_time;
+	}
+
+	void Stream::SetPublishedTimeNow()
+	{
+		_published_time = std::chrono::system_clock::now();
+	}
+
+	const std::chrono::system_clock::time_point &Stream::GetPublishedTime() const
+	{
+		return _published_time;
+	}
+
+	const std::chrono::system_clock::time_point &Stream::GetInputStreamPublishedTime() const
+	{
+		if (GetLinkedInputStream() != nullptr)
+		{
+			return GetLinkedInputStream()->GetPublishedTime();
+		}
+
+		return GetPublishedTime();
 	}
 
 	uint32_t Stream::GetUptimeSec()

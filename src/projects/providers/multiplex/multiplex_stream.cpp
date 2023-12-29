@@ -143,7 +143,7 @@ namespace pvd
 
                 if (ocst::Orchestrator::GetInstance()->CheckIfStreamExist(vhost_app_name, stream_url->Stream()) == false)
                 {
-                    logti("Scheduled Channel : %s/%s: Wait for stream %s", GetApplicationName(), GetName().CStr(), stream_url->Stream().CStr());
+                    logti("Multiplex Channel : %s/%s: Wait for stream %s", GetApplicationName(), GetName().CStr(), stream_url->Stream().CStr());
                     return false;
                 }
 
@@ -151,7 +151,7 @@ namespace pvd
 
                 if (result != CommonErrorCode::SUCCESS)
                 {
-                    logte("Scheduled Channel : %s/%s: Failed to mirror stream %s (err : %d)", GetApplicationName(), GetName().CStr(), source_stream->GetUrlStr().CStr(), static_cast<int>(result));
+                    logte("Multiplex Channel : %s/%s: Failed to mirror stream %s (err : %d)", GetApplicationName(), GetName().CStr(), source_stream->GetUrlStr().CStr(), static_cast<int>(result));
                     return false;
                 }
             }

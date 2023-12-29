@@ -54,8 +54,12 @@ namespace info
 		ov::String GetOriginStreamUUID() const;
 
 		const std::chrono::system_clock::time_point &GetInputStreamCreatedTime() const;
-
 		const std::chrono::system_clock::time_point &GetCreatedTime() const;
+
+		void SetPublishedTimeNow();
+		const std::chrono::system_clock::time_point &GetInputStreamPublishedTime() const;
+		const std::chrono::system_clock::time_point &GetPublishedTime() const;
+
 		uint32_t GetUptimeSec();
 		StreamSourceType GetSourceType() const;
 
@@ -137,6 +141,7 @@ namespace info
 
 	private:
 		std::chrono::system_clock::time_point _created_time;
+		std::chrono::system_clock::time_point _published_time;
 
 		// Where does the stream come from?
 		StreamSourceType _source_type;
