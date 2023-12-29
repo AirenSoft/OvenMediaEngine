@@ -181,6 +181,47 @@ namespace pvd
                 _track_map.emplace(source_track_name, new_track_name);
             }
 
+            // equal operator
+            bool operator==(const SourceStream &other) const
+            {
+                if (_name != other._name)
+                {
+                    return false;
+                }
+
+                if (_url_str != other._url_str)
+                {
+                    return false;
+                }
+
+                if (_track_map.size() != other._track_map.size())
+                {
+                    return false;
+                }
+
+                for (auto &track_map : _track_map)
+                {
+                    auto it = other._track_map.find(track_map.first);
+                    if (it == other._track_map.end())
+                    {
+                        return false;
+                    }
+
+                    if (it->second != track_map.second)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            // not equals operator
+            bool operator!=(const SourceStream &other) const
+            {
+                return !(*this == other);
+            }
+
         private:
             ov::String _name;
             ov::String _url_str;
@@ -212,6 +253,9 @@ namespace pvd
 
         CommonErrorCode SaveToXMLFile(const ov::String &file_path) const;
         CommonErrorCode ToJsonObject(Json::Value &root_object) const;
+
+        // equal operator
+        bool operator==(const MultiplexProfile &other) const;
 
     private:
         bool ReadOutputStreamNode(const pugi::xml_node &root_node);

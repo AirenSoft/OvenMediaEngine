@@ -50,6 +50,42 @@ namespace pvd
 		return multiplex;
 	}
 
+	bool MultiplexProfile::operator==(const MultiplexProfile &other) const
+	{
+		if (_output_stream_name != other._output_stream_name)
+		{
+			return false;
+		}
+
+		if (_source_streams.size() != other._source_streams.size())
+		{
+			return false;
+		}
+
+		if (_playlists.size() != other._playlists.size())
+		{
+			return false;
+		}
+
+		for (size_t i = 0; i < _playlists.size(); i++)
+		{
+			if (*_playlists[i] != *other._playlists[i])
+			{
+				return false;
+			}
+		}
+
+		for (size_t i = 0; i < _source_streams.size(); i++)
+		{
+			if (*_source_streams[i] != *other._source_streams[i])
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	bool MultiplexProfile::LoadFromJsonObject(const Json::Value &object)
 	{
 		return true;

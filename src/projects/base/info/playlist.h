@@ -38,6 +38,33 @@ namespace info
 			return _audio_variant_name;
 		}
 
+		// equals operator
+		bool operator==(const Rendition &rhs) const
+		{
+			if (_name != rhs._name)
+			{
+				return false;
+			}
+
+			if (_video_variant_name != rhs._video_variant_name)
+			{
+				return false;
+			}
+
+			if (_audio_variant_name != rhs._audio_variant_name)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		// not equals operator
+		bool operator!=(const Rendition &rhs) const
+		{
+			return !(*this == rhs);
+		}
+
 	private:
 		ov::String _name;
 		ov::String _video_variant_name;
@@ -95,6 +122,51 @@ namespace info
 		const std::vector<std::shared_ptr<Rendition>> &GetRenditionList() const
 		{
 			return _renditions;
+		}
+
+		// equals operator
+		bool operator==(const Playlist &rhs) const
+		{
+			if (_name != rhs._name)
+			{
+				return false;
+			}
+
+			if (_file_name != rhs._file_name)
+			{
+				return false;
+			}
+
+			if (_webrtc_auto_abr != rhs._webrtc_auto_abr)
+			{
+				return false;
+			}
+
+			if (_hls_chunklist_path_depth != rhs._hls_chunklist_path_depth)
+			{
+				return false;
+			}
+
+			if (_renditions.size() != rhs._renditions.size())
+			{
+				return false;
+			}
+
+			for (size_t i = 0; i < _renditions.size(); i++)
+			{
+				if (*_renditions[i] != *rhs._renditions[i])
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		// not equals operator
+		bool operator!=(const Playlist &rhs) const
+		{
+			return !(*this == rhs);
 		}
 
 	private:
