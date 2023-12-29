@@ -17,7 +17,7 @@
 #include "transcoder_private.h"
 
 #define MAX_QUEUE_SIZE 100
-#define GENERATE_FILLER_FRAME true
+#define FILLER_ENABLED true
 #define UNUSED_VARIABLE(var) (void)var;
 
 
@@ -985,12 +985,15 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 
 	for (auto &[key, composite] : _composite_map)
 	{
-		(void)(key);
+		UNUSED_VARIABLE(key);
 
+		// Get Related Composite
 		if (input_track_id != composite->GetInputTrack()->GetId())
 		{
 			continue;
 		}
+
+		auto &input_track = _input_stream->GetTrack(input_track_id);
 
 		logtd("%s Updated output track. InputTrack(%d), Signature(%s)", _log_prefix.CStr(), input_track_id, key.first.CStr());
 
@@ -998,86 +1001,15 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 		{
 			UNUSED_VARIABLE(output_stream)
 
-			// Case of ByPass
+			// Case of Passthrough
 			if (output_track->IsBypass() == true)
 			{
-				if (output_track->GetMediaType() == cmn::MediaType::Video)
-				{
-					output_track->SetWidth(buffer->GetWidth());
-					output_track->SetHeight(buffer->GetHeight());
-					output_track->SetColorspace(buffer->GetFormat());
-				}
-				else if (output_track->GetMediaType() == cmn::MediaType::Audio)
-				{
-					output_track->SetSampleRate(buffer->GetSampleRate());
-					output_track->GetSample().SetFormat(buffer->GetFormat<cmn::AudioSample::Format>());
-					output_track->SetChannel(buffer->GetChannels());
-				}
+				UpdateOutputTrackPassthrough(output_track, buffer);
 			}
+			// Case Of Transcode
 			else
 			{
-				if (output_track->GetMediaType() == cmn::MediaType::Video)
-				{
-
-					// Keep the original video resolution
-					if (output_track->GetWidth() == 0 && output_track->GetHeight() == 0)
-					{
-						output_track->SetWidth(buffer->GetWidth());
-						output_track->SetHeight(buffer->GetHeight());
-					}
-					// Width is automatically calculated as the original video ratio					
-					else if (output_track->GetWidth() == 0 && output_track->GetHeight() != 0)
-					{
-						float aspect_ratio = (float)buffer->GetWidth() / (float)buffer->GetHeight();
-						int32_t width = (int32_t)((float)output_track->GetHeight() * aspect_ratio);
-						width = (width % 2 == 0) ? width : width + 1;
-						output_track->SetWidth(width);
-					}
-						// Heigh is automatically calculated as the original video ratio
-					else if (output_track->GetWidth() != 0 && output_track->GetHeight() == 0)
-					{
-						float aspect_ratio = (float)buffer->GetWidth() / (float)buffer->GetHeight();
-						int32_t height = (int32_t)((float)output_track->GetWidth() / aspect_ratio);
-						height = (height % 2 == 0) ? height : height + 1;
-						output_track->SetHeight(height);
-					}
-
-					// Set framerate of the output track
-					if (output_track->GetFrameRate() == 0.0f)
-					{
-						auto &input_track = _input_stream->GetTrack(input_track_id);
-
-						if (input_track->GetFrameRate() != 0.0f)
-						{
-							output_track->SetEstimateFrameRate(input_track->GetFrameRate());
-							logti("Framerate of the output stream is not set. set the estimated framerate from framerate of input track. %.2ffps", output_track->GetEstimateFrameRate());
-						}
-						else if (input_track->GetEstimateFrameRate() != 0.0f)
-						{
-							output_track->SetEstimateFrameRate(input_track->GetEstimateFrameRate());
-							logti("Framerate of the output stream is not set. set the estimated framerate from estimated framerate of input track. %.2ffps", output_track->GetEstimateFrameRate());
-						}
-						else
-						{
-							float estimated_framerate = 1 / ((double)buffer->GetDuration() * input_track->GetTimeBase().GetExpr());
-							output_track->SetEstimateFrameRate(estimated_framerate);
-							logti("Framerate of the output stream is not set. set the estimated framerate from decoded frame duration. %.2ffps, duration(%lld) tb.expr(%f)", output_track->GetEstimateFrameRate(), buffer->GetDuration(), input_track->GetTimeBase().GetExpr());
-						}
-					}
-				}
-				else if (output_track->GetMediaType() == cmn::MediaType::Audio)
-				{
-					if (output_track->GetSampleRate() == 0)
-					{
-						output_track->SetSampleRate(buffer->GetSampleRate());
-						output_track->SetTimeBase(1, buffer->GetSampleRate());
-					}
-
-					if (output_track->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutUnknown)
-					{
-						output_track->SetChannel(buffer->GetChannels());
-					}
-				}
+				UpdateOutputTrackTranscode(output_track, input_track, buffer);
 			}
 		}
 	}
@@ -1106,7 +1038,7 @@ void TranscoderStream::DecodePacket(std::shared_ptr<MediaPacket> packet)
 			auto output_track = output_stream->GetTrack(output_track_id);
 			if (output_track == nullptr)
 			{
-				logte("%s Could not found output track. InputTrack(%d)", _log_prefix.CStr(), output_track_id);
+				logte("%s Could not found output track. OutputTrack(%d)", _log_prefix.CStr(), output_track_id);
 				continue;
 			}
 
@@ -1152,7 +1084,7 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, int32_t decoder_id
 	switch (result)
 	{
 		case TranscodeResult::NoData: {
- #if GENERATE_FILLER_FRAME
+ #if FILLER_ENABLED
 			///////////////////////////////////////////////////////////////////
 			// Generate a filler frame (Part 1). * Using previously decoded frame
 			///////////////////////////////////////////////////////////////////
@@ -1199,7 +1131,7 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, int32_t decoder_id
 			// Re-create filter and encoder using the format of decoded frame
 			ChangeOutputFormat(decoded_frame.get());
 
- #if GENERATE_FILLER_FRAME
+ #if FILLER_ENABLED
 			///////////////////////////////////////////////////////////////////
 			// Generate a filler frame (Part 2). * Using latest decoded frame
 			///////////////////////////////////////////////////////////////////
@@ -1343,52 +1275,18 @@ TranscodeResult TranscoderStream::FilterFrame(int32_t filter_id, std::shared_ptr
 	}
 
 	auto filter = filter_it->second.get();
-
 	if (filter->SendBuffer(std::move(decoded_frame)) == false)
 	{
 		return TranscodeResult::DataError;
 	}
 
-	return TranscodeResult::NoData;
+	return TranscodeResult::DataReady;
 }
 
 void TranscoderStream::OnFilteredFrame(int32_t filter_id, std::shared_ptr<MediaFrame> filtered_frame)
 {
 	filtered_frame->SetTrackId(filter_id);
 
-#if 0 // For debugging
-	if(filtered_frame != nullptr && filtered_frame->GetMediaType() == cmn::MediaType::Video)
-	{
-		auto av_frame = (AVFrame*)filtered_frame->GetPrivData();
-		if(av_frame == nullptr)
-		{
-			logte("%s Invalid pointer", _log_prefix.CStr());
-			return;
-		}
-
-		int l = 0, t = 0, w = 100, h = 100;
-
-		if (filtered_frame->GetHeight() == 1080)
-		{
-			l = 0; t = 0;
-		}
-		else if (filtered_frame->GetHeight() == 720)
-		{
-			l = 100; t = 100;
-		}
-		else if (filtered_frame->GetHeight() == 360)
-		{
-			l = 200; t = 200;
-		}
-
-		for(int y = t ; y < t+h ; y++)
-		{
-			uint8_t *ptr = av_frame->data[0] + y * av_frame->linesize[0] + l;
-
-			memset(ptr, 125, w);
-		}
-	}
-#endif
 	EncodeFrame(std::move(filtered_frame));
 }
 
@@ -1414,7 +1312,7 @@ TranscodeResult TranscoderStream::EncodeFrame(std::shared_ptr<const MediaFrame> 
 
 	encoder->SendBuffer(std::move(frame));
 
-	return TranscodeResult::NoData;
+	return TranscodeResult::DataReady;
 }
 
 // Callback is called from the encoder for packets that have been encoded.
@@ -1444,35 +1342,6 @@ void TranscoderStream::OnEncodedPacket(int32_t encoder_id, std::shared_ptr<Media
 	}
 }
 
-void TranscoderStream::NotifyCreateStreams()
-{
-	for (auto &[output_stream_name, output_stream] : _output_streams)
-	{
-		UNUSED_VARIABLE(output_stream_name)
-
-		bool ret = _parent->CreateStream(output_stream);
-		if (ret == false)
-		{
-			logtw("%s Could not create stream. [%s/%s(%u)]", _log_prefix.CStr(), _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
-		}
-	}
-}
-
-void TranscoderStream::NotifyDeleteStreams()
-{
-	for (auto &[output_stream_name, output_stream] : _output_streams)
-	{
-		UNUSED_VARIABLE(output_stream_name)
-
-		logti("%s Output stream has been deleted. %s/%s(%u)",
-			  _log_prefix.CStr(),
-			  _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
-
-		_parent->DeleteStream(output_stream);
-	}
-
-	_output_streams.clear();
-}
 
 void TranscoderStream::UpdateMsidOfOutputStreams(uint32_t msid)
 {
@@ -1482,20 +1351,6 @@ void TranscoderStream::UpdateMsidOfOutputStreams(uint32_t msid)
 		UNUSED_VARIABLE(output_stream_name)
 		
 		output_stream->SetMsid(msid);
-	}
-}
-
-void TranscoderStream::NotifyUpdateStreams()
-{
-	for (auto &[output_stream_name, output_stream] : _output_streams)
-	{
-		UNUSED_VARIABLE(output_stream_name)
-
-		logti("%s Output stream has been updated. %s/%s(%u)",
-			  _log_prefix.CStr(),
-			  _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
-
-		_parent->UpdateStream(output_stream);
 	}
 }
 
@@ -1519,6 +1374,7 @@ void TranscoderStream::SpreadToFilters(int32_t decoder_id, std::shared_ptr<Media
 
 		return;
 	}
+	
 	auto filter_ids = filters->second;
 
 	for (auto &filter_id : filter_ids)
@@ -1532,5 +1388,48 @@ void TranscoderStream::SpreadToFilters(int32_t decoder_id, std::shared_ptr<Media
 		}
 
 		FilterFrame(filter_id, std::move(frame_clone));
+	}
+}
+
+
+void TranscoderStream::NotifyCreateStreams()
+{
+	for (auto &[output_stream_name, output_stream] : _output_streams)
+	{
+		UNUSED_VARIABLE(output_stream_name)
+
+		bool ret = _parent->CreateStream(output_stream);
+		if (ret == false)
+		{
+			logtw("%s Could not create stream. [%s/%s(%u)]", _log_prefix.CStr(), _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
+		}
+	}
+}
+
+void TranscoderStream::NotifyDeleteStreams()
+{
+	for (auto &[output_stream_name, output_stream] : _output_streams)
+	{
+		UNUSED_VARIABLE(output_stream_name)
+
+		logti("%s Output stream has been deleted. %s/%s(%u)", _log_prefix.CStr(), _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
+
+		_parent->DeleteStream(output_stream);
+	}
+
+	_output_streams.clear();
+}
+
+void TranscoderStream::NotifyUpdateStreams()
+{
+	for (auto &[output_stream_name, output_stream] : _output_streams)
+	{
+		UNUSED_VARIABLE(output_stream_name)
+
+		logti("%s Output stream has been updated. %s/%s(%u)",
+			  _log_prefix.CStr(),
+			  _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
+
+		_parent->UpdateStream(output_stream);
 	}
 }

@@ -135,37 +135,40 @@ private:
 	std::map<std::pair<ov::String, cmn::MediaType>, std::shared_ptr<CompositeContext>> _composite_map;
 	std::atomic<MediaTrackId> _last_composite_id = 0;
 
-	// [INPUT_TRACK, Output Stream + Track Id]
+	// This map is used only when the Passthrough options is enabled.
+	// [INPUT_TRACK_ID,  OUTPUT_TRACK_IDS of OutputStream]
 	std::map<MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>>> _link_input_to_outputs;
 
-	// [INPUT_TRACK, DECODER_ID]
+
+	// [INPUT_TRACK_ID, DECODER_ID]
 	std::map<MediaTrackId, MediaTrackId> _link_input_to_decoder;
 
-	// [DECODER_ID, FILTER_ID]
+	// [DECODER_ID, FILTER_IDS]
 	std::map<MediaTrackId, std::vector<MediaTrackId>> _link_decoder_to_filters;
 
 	// [FILTER_ID, ENCODER_ID]
 	std::map<MediaTrackId, MediaTrackId> _link_filter_to_encoder;
 
-	// [ENCODER_ID, OUTPUT_TRACKS]
+	// [ENCODER_ID, OUTPUT_TRACK_IDS Of OutputStream]
 	std::map<MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>>> _link_encoder_to_outputs;
 
 	// Decoder Component
-	// DECODER_ID, DECODER
+	// [DECODER_ID, DECODER]
 	std::map<MediaTrackId, std::shared_ptr<TranscodeDecoder>> _decoders;
+	
+	// Last decoded frame and timestamp
+	// [DECODER_ID, MediaFrame]
 	std::map<MediaTrackId, std::shared_ptr<MediaFrame>> _last_decoded_frames;
-	// Last timestamp decoded frame. 
-	// DECODER_ID, Timestamp(microseconds)
+	// [DECODER_ID, Timestamp(microseconds)]
 	std::map<MediaTrackId, int64_t> _last_decoded_frame_pts;
 
 	// Filter Component
-	// FILTER_ID, FILTER
+	// [FILTER_ID, FILTER]
 	std::map<MediaTrackId, std::shared_ptr<TranscodeFilter>> _filters;
 
 	// Encoder Component
-	// ENCODER_ID, ENCODER
+	// [ENCODER_ID, ENCODER]
 	std::map<MediaTrackId, std::shared_ptr<TranscodeEncoder>> _encoders;
-
 
 
 	std::shared_ptr<MediaTrack> GetInputTrack(MediaTrackId track_id);
@@ -182,11 +185,8 @@ private:
 	int32_t BuildComposite();
 	// Store information for track mapping by stage
 	void AddComposite(ov::String unique_id,
-						 std::shared_ptr<info::Stream> input_stream,
-						 std::shared_ptr<MediaTrack> input_track,
-						 std::shared_ptr<info::Stream> output_stream,
-						 std::shared_ptr<MediaTrack> output_track);
-
+						 std::shared_ptr<info::Stream> input_stream, std::shared_ptr<MediaTrack> input_track,
+						 std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
 	ov::String GetInfoStringComposite();
 
 

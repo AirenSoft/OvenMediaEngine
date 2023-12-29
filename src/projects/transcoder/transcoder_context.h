@@ -240,6 +240,17 @@ public:
 		return _priv_data;
 	}
 
+	ov::String GetInfoString() {
+		ov::String info;
+
+		info.AppendFormat("TrackID(%d) ", GetTrackId());
+		info.AppendFormat("Type(%s) ", cmn::GetMediaTypeString(GetMediaType()).CStr());
+		info.AppendFormat("PTS(%" PRId64 ") ", GetPts());
+		info.AppendFormat("Duration(%" PRId64 ") ", GetDuration());
+
+		return info;
+	}
+
 private:
 	AVFrame *_priv_data = nullptr;
 
