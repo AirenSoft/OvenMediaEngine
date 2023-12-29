@@ -69,7 +69,6 @@ namespace pvd
         {
             if (PullSourceStreams() == false)
             {
-                logte("Scheduled Channel : %s/%s: Failed to pull source streams", GetApplicationName(), GetName().CStr());
                 // sleep and retry
                 std::this_thread::sleep_for(std::chrono::seconds(1));
                 continue;
@@ -144,7 +143,7 @@ namespace pvd
 
                 if (ocst::Orchestrator::GetInstance()->CheckIfStreamExist(vhost_app_name, stream_url->Stream()) == false)
                 {
-                    logtw("Scheduled Channel : %s/%s: Failed to find stream %s", GetApplicationName(), GetName().CStr(), stream_url->Stream().CStr());
+                    logti("Scheduled Channel : %s/%s: Wait for stream %s", GetApplicationName(), GetName().CStr(), stream_url->Stream().CStr());
                     return false;
                 }
 
