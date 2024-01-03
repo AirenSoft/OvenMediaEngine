@@ -62,8 +62,6 @@ namespace cfg
 					{	
 						Register<Optional>({"Query", "queries"}, &_items, nullptr,
 							[=]() -> std::shared_ptr<ConfigError> {
-
-								logc("DEBUG", "DefaultQueryString::MakeList() - _items.size() = %d", _items.size());
 								for (auto &item : _items)
 								{
 									auto key = item.GetKey();
