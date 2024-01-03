@@ -18,6 +18,7 @@
 #include <modules/cpix_client/pallycon.h>
 
 #include "llhls_application.h"
+#include "llhls_session.h"
 #include "llhls_private.h"
 
 std::shared_ptr<LLHlsStream> LLHlsStream::Create(const std::shared_ptr<pub::Application> application, const info::Stream &info, uint32_t worker_count)
@@ -546,6 +547,12 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 			break;
 	}
 
+	// default options
+	auto llhls_conf = GetApplication()->GetConfig().GetPublishers().GetLLHlsPublisher();
+	auto default_query_value_hls_legacy = llhls_conf.GetDefaultQueryString().GetBoolValue("_HLS_legacy", kDefaultHlsLegacy);
+	auto default_query_value_hls_rewind = llhls_conf.GetDefaultQueryString().GetBoolValue("_HLS_rewind", kDefaultHlsRewind);
+
+	master_playlist->SetDefaultOptions(default_query_value_hls_legacy, default_query_value_hls_rewind);
 	master_playlist->SetChunkPath(chunk_path);
 	master_playlist->SetCencProperty(_cenc_property);
 
@@ -633,7 +640,7 @@ bool LLHlsStream::DumpMasterPlaylist(const std::shared_ptr<mdl::Dump> &item)
 
 	for (auto &playlist : item->GetPlaylists())
 	{
-		auto [result, data] = GetMasterPlaylist(playlist, "", false, false, false);
+		auto [result, data] = GetMasterPlaylist(playlist, "", false, false, true, false);
 		if (result != RequestResult::Success)
 		{
 			logtw("Could not get master playlist(%s) for dump", playlist.CStr());
@@ -772,7 +779,7 @@ bool LLHlsStream::DumpData(const std::shared_ptr<mdl::Dump> &item, const ov::Str
 	return item->DumpData(file_name, data);
 }
 
-std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetMasterPlaylist(const ov::String &file_name, const ov::String &chunk_query_string, bool gzip, bool legacy, bool include_path)
+std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetMasterPlaylist(const ov::String &file_name, const ov::String &chunk_query_string, bool gzip, bool legacy, bool rewind, bool include_path)
 {
 	if (GetState() != State::STARTED)
 	{
@@ -818,13 +825,13 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 
 	if (gzip == true)
 	{
-		return {RequestResult::Success, master_playlist->ToGzipData(chunk_query_string, legacy)};
+		return {RequestResult::Success, master_playlist->ToGzipData(chunk_query_string, legacy, rewind)};
 	}
 
-	return {RequestResult::Success, master_playlist->ToString(chunk_query_string, legacy, include_path).ToData(false)};
+	return {RequestResult::Success, master_playlist->ToString(chunk_query_string, legacy, rewind, include_path).ToData(false)};
 }
 
-std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetChunklist(const ov::String &query_string, const int32_t &track_id, int64_t msn, int64_t psn, bool skip, bool gzip, bool legacy) const
+std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStream::GetChunklist(const ov::String &query_string, const int32_t &track_id, int64_t msn, int64_t psn, bool skip, bool gzip, bool legacy, bool rewind) const
 {
 	auto chunklist = GetChunklistWriter(track_id);
 	if (chunklist == nullptr)
@@ -861,10 +868,10 @@ std::tuple<LLHlsStream::RequestResult, std::shared_ptr<const ov::Data>> LLHlsStr
 
 	if (gzip == true)
 	{
-		return {RequestResult::Success, chunklist->ToGzipData(query_string, skip, legacy)};
+		return {RequestResult::Success, chunklist->ToGzipData(query_string, skip, legacy, rewind)};
 	}
 
-	return {RequestResult::Success, chunklist->ToString(query_string, skip, legacy).ToData(false)};
+	return {RequestResult::Success, chunklist->ToString(query_string, skip, legacy, rewind).ToData(false)};
 }
 
 std::tuple<LLHlsStream::RequestResult, std::shared_ptr<ov::Data>> LLHlsStream::GetInitializationSegment(const int32_t &track_id) const
@@ -1124,12 +1131,14 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 	}
 
 	// milliseconds to seconds
+	auto segment_count = _storage_config.max_segments;
 	auto segment_duration = static_cast<float_t>(_storage_config.segment_duration_ms) / 1000.0;
 	auto chunk_duration = static_cast<float_t>(_packager_config.chunk_duration_ms) / 1000.0;
 	auto track_id = media_track->GetId();
 
 	auto chunklist = std::make_shared<LLHlsChunklist>(GetChunklistName(track_id),
 													  GetTrack(track_id),
+													  segment_count,
 													  segment_duration,
 													  chunk_duration,
 													  GetInitializationSegmentName(track_id),

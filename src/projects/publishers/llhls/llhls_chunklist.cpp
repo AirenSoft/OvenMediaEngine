@@ -13,12 +13,13 @@
 #include <base/ovlibrary/zip.h>
 
 LLHlsChunklist::LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, 
-							uint32_t target_duration, double part_target_duration, 
+							uint32_t segment_count, uint32_t target_duration, double part_target_duration, 
 							const ov::String &map_uri, bool preload_hint_enabled)
 {
 	_url = url;
 	_track = track;
 	_target_duration = target_duration;
+	_max_segment_count = segment_count;
 	_max_part_duration = 0;
 	_part_target_duration = part_target_duration;
 	_map_uri = map_uri;
@@ -109,6 +110,7 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 	if (info.IsCompleted() == true)
 	{
 		segment->SetCompleted();
+		_last_completed_segment_sequence = segment_sequence;
 		_first_segment = false;
 	}
 
@@ -149,7 +151,8 @@ bool LLHlsChunklist::RemoveSegmentInfo(uint32_t segment_sequence)
 
 void LLHlsChunklist::UpdateCacheForDefaultChunklist()
 {
-	ov::String chunklist = MakeChunklist("", false, false);
+	// no query string, no skip, no legacy, all segments
+	ov::String chunklist = MakeChunklist("", false, false, true);
 	{
 		// lock 
 		std::lock_guard<std::shared_mutex> lock(_cached_default_chunklist_guard);
@@ -268,7 +271,7 @@ ov::String LLHlsChunklist::MakeExtXKey() const
 	return xkey;
 }
 
-ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool skip, bool legacy, bool vod, uint32_t vod_start_segment_number) const
+ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool skip, bool legacy, bool rewind, bool vod, uint32_t vod_start_segment_number) const
 {
 	std::shared_lock<std::shared_mutex> segment_lock(_segments_guard);
 
@@ -295,7 +298,8 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 	// earlier it indicated the maximum segment duration; in protocol
 	// version 6 and later it indicates the the maximum segment duration
 	// rounded to the nearest integer number of seconds.
-	playlist.AppendFormat("#EXT-X-TARGETDURATION:%u\n", static_cast<uint32_t>(std::round(_target_duration)));
+	auto target_duration = static_cast<uint32_t>(std::round(_target_duration));
+	playlist.AppendFormat("#EXT-X-TARGETDURATION:%u\n", target_duration);
 
 	// Low Latency Mode
 	if (legacy == false)
@@ -304,8 +308,43 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 		playlist.AppendFormat("#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=%f\n", _part_hold_back);
 		playlist.AppendFormat("#EXT-X-PART-INF:PART-TARGET=%lf\n", _part_target_duration);
 	}
+	else
+	{
+		// X-PLAYLIST-TYPE
+		playlist.AppendFormat("#EXT-X-SERVER-CONTROL:HOLD-BACK=%u\n", target_duration * 3);
+	}
 
-	auto first_segment = _segments.begin()->second;
+	std::shared_ptr<LLHlsChunklist::SegmentInfo> first_segment = nullptr;
+	auto last_segment = _segments.rbegin()->second;
+
+	if (rewind == true)
+	{
+		first_segment = _segments.begin()->second;
+	}
+	else
+	{
+		// max segment count is _segment_count
+		uint32_t segment_size = _segments.size();
+		if (last_segment->IsCompleted() == false)
+		{
+			segment_size -= 1;
+		}
+
+		uint32_t shift_count = segment_size > _max_segment_count ? _max_segment_count : segment_size - 1;
+		auto it = _segments.find(_last_completed_segment_sequence - shift_count);
+		if (it == _segments.end())
+		{
+			logte("Could not find segment info. last_completed_segment_sequence(%lld) segment_count(%d)", _last_completed_segment_sequence.load(), _max_segment_count);
+			return "";
+		}
+
+		first_segment = it->second;
+	}
+
+	if (rewind == false)
+	{
+		logti("track(%d) lagacy(%s) rewind(%s) first_segment(%lld) last_segment(%lld)", _track->GetId(), legacy == true ? "true" : "false", rewind == true ? "true" : "false", first_segment->GetSequence(), last_segment->GetSequence());
+	}
 
 	playlist.AppendFormat("#EXT-X-MEDIA-SEQUENCE:%u\n", vod == false ? first_segment->GetSequence() : 0);
 	playlist.AppendFormat("#EXT-X-MAP:URI=\"%s", _map_uri.CStr());
@@ -342,16 +381,23 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 		}
 	}
 
-	auto last_segment = _segments.rbegin()->second;
-
-	for (auto &[number, segment] : _segments)
+	// from first_segment to last_segment
+	for (auto it = _segments.find(first_segment->GetSequence()) ; it != _segments.end(); it ++)
 	{
+		auto number = it->first;
+		auto segment = it->second;
+
 		if (vod == true && number < vod_start_segment_number)
 		{
 			continue;
 		}
 
 		if (segment->GetPartialSegmentsCount() == 0)
+		{
+			continue;
+		}
+
+		if (legacy == true && segment->IsCompleted() == false)
 		{
 			continue;
 		}
@@ -400,7 +446,8 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 
 		// Don't print Completed segment info if it is the last segment
 		// It will be printed when the next segment is created.
-		if (segment->IsCompleted() && segment->GetSequence() != last_segment->GetSequence())
+		if ((legacy == true && segment->IsCompleted()) || 
+			(legacy == false && segment->IsCompleted() && segment->GetSequence() != last_segment->GetSequence()))
 		{
 			playlist.AppendFormat("#EXTINF:%lf,\n", segment->GetDuration());
 			playlist.AppendFormat("%s", segment->GetUrl().CStr());
@@ -472,30 +519,30 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 	return playlist;
 }
 
-ov::String LLHlsChunklist::ToString(const ov::String &query_string, bool skip, bool legacy, bool vod, uint32_t vod_start_segment_number) const
+ov::String LLHlsChunklist::ToString(const ov::String &query_string, bool skip, bool legacy, bool rewind, bool vod, uint32_t vod_start_segment_number) const
 {
 	if (_segments.size() == 0)
 	{
 		return "";
 	}
 
-	if (query_string.IsEmpty() && skip == false && legacy == false && vod == false && vod_start_segment_number == 0 && !_cached_default_chunklist.IsEmpty())
+	if (query_string.IsEmpty() && skip == false && legacy == false && rewind == true && vod == false && vod_start_segment_number == 0 && !_cached_default_chunklist.IsEmpty())
 	{
 		// return cached chunklist for default chunklist
 		std::shared_lock<std::shared_mutex> lock(_cached_default_chunklist_guard);
 		return _cached_default_chunklist;
 	}
 
-	return MakeChunklist(query_string, skip, legacy, vod, vod_start_segment_number);
+	return MakeChunklist(query_string, skip, legacy, rewind, vod, vod_start_segment_number);
 }
 
-std::shared_ptr<const ov::Data> LLHlsChunklist::ToGzipData(const ov::String &query_string, bool skip, bool legacy) const
+std::shared_ptr<const ov::Data> LLHlsChunklist::ToGzipData(const ov::String &query_string, bool skip, bool legacy, bool rewind) const
 {
-	if (query_string.IsEmpty() && skip == false && legacy == false && _cached_default_chunklist_gzip != nullptr)
+	if (query_string.IsEmpty() && skip == false && legacy == false && _cached_default_chunklist_gzip != nullptr && rewind == true)
 	{
 		std::shared_lock<std::shared_mutex> lock(_cached_default_chunklist_gzip_guard);
 		return _cached_default_chunklist_gzip;
 	}
 
-	return ov::Zip::CompressGzip(ToString(query_string, skip, legacy).ToData(false));
+	return ov::Zip::CompressGzip(ToString(query_string, skip, legacy, rewind).ToData(false));
 }

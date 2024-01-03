@@ -10,6 +10,7 @@
 
 #include "../../../common/cross_domain_support.h"
 #include "dumps/dumps.h"
+#include "default_query_string/default_query_string.h"
 #include "ll_hls_cache_control.h"
 #include "ll_hls_dvr.h"
 #include "ll_hls_drm.h"
@@ -38,6 +39,7 @@ namespace cfg
 					LLHlsDrm _drm;
 					bool _server_time_based_segment_numbering = false;
 					bool _enable_preload_hint = true;
+					DefaultQueryString _default_query_string;
 
 				public:
 					PublisherType GetType() const override
@@ -56,6 +58,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetDvr, _dvr)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetDrm, _drm)
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsPreloadHintEnabled, _enable_preload_hint)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetDefaultQueryString, _default_query_string)
 
 				protected:
 					void MakeList() override
@@ -74,6 +77,7 @@ namespace cfg
 						Register<Optional>("DVR", &_dvr);
 						Register<Optional>("DRM", &_drm);
 						Register<Optional>("EnablePreloadHint", &_enable_preload_hint);
+						Register<Optional>("DefaultQueryString", &_default_query_string);
 					}
 				};
 			}  // namespace pub

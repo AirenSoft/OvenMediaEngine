@@ -16,6 +16,8 @@
 class LLHlsMasterPlaylist
 {
 public:
+	void SetDefaultOptions(bool legacy, bool rewind);
+
 	void SetChunkPath(const ov::String &chunk_path);
 	void SetCencProperty(const bmff::CencProperty &cenc_property);
 
@@ -24,8 +26,8 @@ public:
 
 	void UpdateCacheForDefaultPlaylist();
 
-	ov::String ToString(const ov::String &chunk_query_string, bool legacy, bool include_path=true) const;
-	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &chunk_query_string, bool legacy) const;
+	ov::String ToString(const ov::String &chunk_query_string, bool legacy, bool rewind, bool include_path=true) const;
+	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &chunk_query_string, bool legacy, bool rewind) const;
 
 private:
 	struct MediaInfo
@@ -111,6 +113,9 @@ private:
 
 	bmff::CencProperty _cenc_property;
 
-	ov::String MakePlaylist(const ov::String &chunk_query_string, bool legacy, bool include_path=true) const;
+	bool _default_legacy = false;
+	bool _default_rewind = true;
+
+	ov::String MakePlaylist(const ov::String &chunk_query_string, bool legacy, bool rewind, bool include_path=true) const;
 	ov::String MakeSessionKey() const;
 };

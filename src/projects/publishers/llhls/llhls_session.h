@@ -76,8 +76,8 @@ private:
 
 	bool ParseFileName(const ov::String &file_name, RequestType &type, int32_t &track_id, int64_t &segment_number, int64_t &partial_number, ov::String &stream_key) const;
 
-	void ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, bool legacy, bool holdIfAccepted = true);
-	void ResponseChunklist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, int64_t msn, int64_t part, bool skip, bool legacy, bool holdIfAccepted = true);
+	void ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, bool legacy, bool rewind, bool holdIfAccepted = true);
+	void ResponseChunklist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, int64_t msn, int64_t part, bool skip, bool legacy, bool rewind, bool holdIfAccepted = true);
 	void ResponseInitializationSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id);
 	void ResponseSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, const int64_t &segment_number);
 	void ResponsePartialSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number, bool holdIfAccepted = true);
@@ -96,11 +96,12 @@ private:
 		int64_t partial_number = -1;
 		bool skip = false;
 		bool legacy = false;
+		bool rewind = false;
 
 		std::shared_ptr<http::svr::HttpExchange> exchange;
 	};
 
-	bool AddPendingRequest(const std::shared_ptr<http::svr::HttpExchange> &exchange, const RequestType &type, const ov::String &file_name, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number, const bool &skip, const bool &legacy);
+	bool AddPendingRequest(const std::shared_ptr<http::svr::HttpExchange> &exchange, const RequestType &type, const ov::String &file_name, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number, const bool &skip, const bool &legacy, const bool &rewind);
 
 	// Session runs on a single thread, so it doesn't need mutex
 	std::list<PendingRequest> _pending_requests;
@@ -125,4 +126,8 @@ private:
 	bool _origin_mode = false;
 
 	ov::String _user_agent;
+
+	// default querystring value
+	bool _hls_legacy = false;
+	bool _hls_rewind = false;
 };
