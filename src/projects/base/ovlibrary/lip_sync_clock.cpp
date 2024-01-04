@@ -43,7 +43,7 @@ std::optional<uint64_t> LipSyncClock::CalcPTS(uint32_t id, uint32_t rtp_timestam
 		// UpdateSenderReportTime(id, msw, lsw, rtp_timestamp);
 	}
 
-	uint32_t delta = 0;
+	int64_t delta = 0;
 	if (clock->_last_rtp_timestamp == 0)
 	{
 		clock->_extended_rtp_timestamp = rtp_timestamp;
@@ -65,8 +65,10 @@ std::optional<uint64_t> LipSyncClock::CalcPTS(uint32_t id, uint32_t rtp_timestam
 			else
 			{
 				// reordering or duplicate or error
-				delta = 0;
-				logtw("RTP timestamp is not monotonic: %u -> %u", clock->_last_rtp_timestamp, rtp_timestamp);
+				// delta = 0; /!\ Setting the delta to 0 generates an offset on the next timestamps. This can cause drift and loss of synchronization
+				// delta cannot be greater clock->_extended_rtp_timestamp
+        delta *= -1;
+				logtw("RTP timestamp is not monotonic: %u -> %u delta: %u", clock->_last_rtp_timestamp, rtp_timestamp, delta);
 			}
 		}
 
@@ -120,7 +122,7 @@ bool LipSyncClock::UpdateSenderReportTime(uint32_t id, uint32_t ntp_msw, uint32_
 	}
 	else
 	{
-		uint32_t delta = 0;
+		int64_t delta = 0;
 		if (rtcp_timestamp > clock->_last_rtcp_timestamp)
 		{
 			delta = rtcp_timestamp - clock->_last_rtcp_timestamp;
@@ -137,8 +139,10 @@ bool LipSyncClock::UpdateSenderReportTime(uint32_t id, uint32_t ntp_msw, uint32_
 			else
 			{
 				// reordering or duplicate or error
-				delta = 0;
-				logtw("RTCP timestamp is not monotonic: %u -> %u", clock->_last_rtcp_timestamp, rtcp_timestamp);
+				// delta = 0; /!\ Setting the delta to 0 generates an offset on the next timestamps. This can cause drift and loss of synchronization
+				// delta cannot be greater clock->_extended_rtcp_timestamp
+        delta *= -1;
+				logtw("RTCP timestamp is not monotonic: %u -> %u delta: %u", clock->_last_rtcp_timestamp, rtcp_timestamp, delta);
 			}
 		}
 
