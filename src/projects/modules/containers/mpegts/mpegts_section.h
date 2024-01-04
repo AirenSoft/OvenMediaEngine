@@ -46,7 +46,8 @@ namespace mpegts
 		H264 = 0x1B,
 		H265 = 0x24,
 		AAC = 0x0F, // AAC ADTS
-		AAC_LATM = 0x11 // AAC LATM
+		AAC_LATM = 0x11, // AAC LATM
+		KLV = 0x6
 	};
 
 	struct ESInfo

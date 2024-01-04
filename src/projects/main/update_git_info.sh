@@ -58,7 +58,7 @@ then
 
 	[ $? -ne 0 ] && echo "Could not create ${GIT_INFO_FILE}" && exit 1
 
-	sed -i "s/__SCRIPT_NAME__/${SCRIPT_NAME}/" "${GIT_INFO_FILE}"
-	sed -i "s/__GIT_VERSION__/\"${GIT_VERSION}\"/" "${GIT_INFO_FILE}"
-	sed -i "s/__GIT_VERSION_EXTRA__/\"${GIT_VERSION_EXTRA}\"/" "${GIT_INFO_FILE}"
+	sed -i bak "s/__SCRIPT_NAME__/${SCRIPT_NAME}/g" "${GIT_INFO_FILE}"
+	sed -i bak "s/__GIT_VERSION__/\"${GIT_VERSION}\"/g" "${GIT_INFO_FILE}"
+	sed -i bak "s/__GIT_VERSION_EXTRA__/\"${GIT_VERSION_EXTRA}\"/g" "${GIT_INFO_FILE}"
 fi

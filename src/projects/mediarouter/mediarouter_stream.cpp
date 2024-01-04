@@ -781,6 +781,9 @@ bool MediaRouteStream::NormalizeMediaPacket(std::shared_ptr<MediaTrack> &media_t
 		case cmn::BitstreamFormat::ID3v2:
 			result = true;
 			break;
+		case cmn::BitstreamFormat::KLV:
+			result = true;
+			break;
 		case cmn::BitstreamFormat::JPEG:
 		case cmn::BitstreamFormat::PNG:
 		{

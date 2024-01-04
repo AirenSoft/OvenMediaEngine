@@ -77,14 +77,20 @@ namespace mpegts
 
 		inline bool IsAudioStream() const
 		{
-			// Audio stream: 0b110xxxxx
+			// Audio stream: 0b110xxxxx 0b11000000
 			return (_stream_id & 0b11100000) == 0b11000000;
 		}
 
 		inline bool IsVideoStream() const
 		{
-			// Video stream: 0b1110xxxx
+			// Video stream: 0b1110xxxx 0b11100000
 			return (_stream_id & 0b11110000) == 0b11100000;
+		}
+
+		inline bool IsDataStream() const
+		{
+			// Data stream: 0b11111xxx 0b11111100
+			return (_stream_id & 0b11111000) == 0b11111000; // FIXME check of that stream id is correct
 		}
 
 	private:

@@ -46,7 +46,9 @@ namespace cmn
 
 		HVCC, // H.265 HVCC
 
-		MP3
+		MP3,
+
+		KLV
 	};
 
 	enum class PacketType : int8_t
@@ -92,6 +94,7 @@ namespace cmn
 		Opus,
 		Jpeg,
 		Png,
+		KLV
 	};
 
 	enum class MediaCodecModuleId : uint8_t
@@ -139,6 +142,16 @@ namespace cmn
 		if (codec_id == cmn::MediaCodecId::Aac ||
 			codec_id == cmn::MediaCodecId::Mp3 ||
 			codec_id == cmn::MediaCodecId::Opus)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	static bool IsDataCodec(cmn::MediaCodecId codec_id)
+	{
+		if (codec_id == cmn::MediaCodecId::KLV)
 		{
 			return true;
 		}

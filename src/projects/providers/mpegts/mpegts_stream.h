@@ -53,5 +53,6 @@ namespace pvd
 		int64_t _dts_offset = 0;
 		int64_t _prev_dts = -1;
 		uint32_t _wrap_count = 0;
+		std::string parseKlvValue(const uint8_t *payload, uint32_t length);
 	};
 }

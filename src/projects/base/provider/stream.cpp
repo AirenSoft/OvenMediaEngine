@@ -119,7 +119,7 @@ namespace pvd
 		auto event_message = std::make_shared<MediaPacket>(GetMsid(),
 															cmn::MediaType::Data,
 															data_track->GetId(),
-															frame, 
+															frame,
 															timestamp,
 															timestamp,
 															format,

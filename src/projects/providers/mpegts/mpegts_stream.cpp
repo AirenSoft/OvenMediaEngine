@@ -14,6 +14,9 @@
 #include <base/mediarouter/media_type.h>
 #include <orchestrator/orchestrator.h>
 
+#include <modules/id3v2/id3v2.h>
+#include <modules/id3v2/frames/id3v2_frames.h>
+
 #include "base/info/application.h"
 #include "base/provider/push_provider/application.h"
 #include "modules/bitstream/aac/aac_adts.h"
@@ -158,7 +161,7 @@ namespace pvd
 				{
 					auto payload = es->Payload();
 					auto payload_length = es->PayloadLength();
-				
+
 					auto data = std::make_shared<ov::Data>(payload, payload_length);
 					auto media_packet = std::make_shared<MediaPacket>(GetMsid(),
 																	  cmn::MediaType::Audio,
@@ -170,8 +173,22 @@ namespace pvd
 																	  cmn::PacketType::RAW);
 					SendFrame(media_packet);
 				}
+				//TODO COMPLETE THIS FUNCTION BASED ON RtmpStream::GenerateEvent
+				else if (es->IsDataStream())
+				{
+					ID3v2 tag;
+					tag.SetVersion(4, 0);
+					std::string klv = parseKlvValue(es->Payload(), es->PayloadLength());
 
-				logtd("Frame - PID(%d) AdjustPTS(%lld) AdjustDTS(%lld) PTS(%lld) DTS(%lld) Size(%d)", es->PID(), pts, dts, origin_pts, origin_dts, es->PayloadLength());
+					auto info = "TIT2";
+					auto data = klv.c_str();
+
+					tag.AddFrame(std::make_shared<ID3v2TextFrame>(info, data));
+					SendDataFrame(-1, cmn::BitstreamFormat::ID3v2, cmn::PacketType::AUDIO_EVENT, tag.Serialize());
+					logtd("Data frame detected in PID: %d", es->PID());
+				}
+
+				logtd("Frame - PID(%d) AdjustPTS(%lld) AdjustDTS(%lld) PTS(%lld) DTS(%lld) Size(%d) SteamID(%d)", es->PID(), pts, dts, origin_pts, origin_dts, es->PayloadLength(), es->StreamId());
 			}
 		}
 
@@ -201,5 +218,21 @@ namespace pvd
 		}
 
 		return true;
+	}
+
+	std::string MpegTsStream::parseKlvValue(const uint8_t *payload, uint32_t length)
+	{
+		char * start_ptr = (char *)(payload + 8);
+		char * end_ptr =start_ptr + (length - 9);
+		std::string value(start_ptr, end_ptr);
+		std::string result;
+		for (auto c : value) { // TODO fix this!
+			if (c == '\0') {
+				result += "0x0";
+			} else {
+				result += c;
+			}
+		}
+		return result;
 	}
 }  // namespace pvd

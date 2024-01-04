@@ -552,6 +552,14 @@ namespace mpegts
 				track->SetAudioTimestampScale(90000/1000);
 				break;
 
+			case static_cast<uint8_t>(WellKnownStreamTypes::KLV):
+				track->SetId(pes->PID());
+				track->SetMediaType(cmn::MediaType::Data);
+				track->SetCodecId(cmn::MediaCodecId::KLV);
+				track->SetOriginBitstream(cmn::BitstreamFormat::KLV);
+				track->SetTimeBase(1, 90000);
+				break;
+
 			default:
 				// Doesn't support
 				logte("Unsupported codec has been received. (pid : %d stream_type : %d)", pes->PID(), es_info->_stream_type);

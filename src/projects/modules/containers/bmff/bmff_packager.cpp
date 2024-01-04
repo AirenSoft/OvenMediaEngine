@@ -1485,13 +1485,15 @@ namespace bmff
 			// version == 1
 
 			// timescale of data packet is always 1000
-			stream.WriteBE32(GetDataTrack()->GetTimeBase().GetTimescale());
+			double timescale = GetDataTrack()->GetTimeBase().GetTimescale();
+			stream.WriteBE32(timescale);
 
 			// presentation_time
-			stream.WriteBE64(sample._media_packet->GetPts());
+			int64_t pts = sample._media_packet->GetPts();
+			stream.WriteBE64(pts);
 
 			// event_duration
-			stream.WriteBE32(0xFFFFFFFF);
+				stream.WriteBE32(0xFFFFFFFF);
 
 			// id
 			stream.WriteBE32(seq++);
@@ -1504,7 +1506,12 @@ namespace bmff
 			stream.WriteText("OvenMediaEngine", true);
 
 			// message_data
-			stream.Write(sample._media_packet->GetData());
+			const std::shared_ptr<const ov::Data> &data = sample._media_packet->GetData();
+			stream.Write(data);
+
+
+			logtd("The metadata was send to the fragment timescale: %d, pts: %d, %s",timescale, pts,  sample._media_packet->GetData()->GetData());
+
 
 			// One or more Event Message boxes (‘emsg’) [CMAF] can be included per segment. Version 1 of the Event Message box [DASH] must be used.
 			if (WriteFullBox(container_stream, "emsg", *stream.GetData(), 1, 0) == false)
