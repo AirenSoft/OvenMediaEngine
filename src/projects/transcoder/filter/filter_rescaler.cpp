@@ -192,7 +192,6 @@ bool FilterRescaler::InitializeFilterDescription()
 			}
 		}
 		desc += ov::String::FormatString("scale_npp=%d:%d", _output_track->GetWidth(), _output_track->GetHeight());
-		// TODO: scale_npp filter requires hardware device/frames context 
 	}
 	else if (output_module_id == cmn::MediaCodecModuleId::XMA)
 	{
@@ -201,8 +200,14 @@ bool FilterRescaler::InitializeFilterDescription()
 		switch (input_module_id)
 		{
 			case cmn::MediaCodecModuleId::XMA: {  // Zero Copy
-				//TODO: Exception handling required if Device ID is different. Find out if memory copy between GPUs is possible
-				desc = ov::String::FormatString("");
+				if (input_device_id != output_device_id)
+				{
+					desc = ov::String::FormatString("xvbm_convert,");
+				}
+				else
+				{
+					desc = ov::String::FormatString("");
+				}
 			}
 			break;
 			case cmn::MediaCodecModuleId::NVENC: {
@@ -218,7 +223,8 @@ bool FilterRescaler::InitializeFilterDescription()
 				}
 				auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
 				_src_pixfmt = *(constraints->valid_sw_formats);
-				desc = ov::String::FormatString("xvbm_convert,");
+				// desc = ov::String::FormatString("xvbm_convert,");
+				desc = ov::String::FormatString("");
 			}
 			break;
 			default:
@@ -227,7 +233,9 @@ bool FilterRescaler::InitializeFilterDescription()
 			case cmn::MediaCodecModuleId::NILOGAN:	// CPU memory using 'out=sw'
 			case cmn::MediaCodecModuleId::DEFAULT:	// CPU memory
 			{
-				desc = ov::String::FormatString("xvbm_convert,");
+				// xvbm_convert is xvbm frame to av frame converter filter
+				// desc = ov::String::FormatString("xvbm_convert,");
+				desc = ov::String::FormatString("");
 			}
 		}
 
@@ -286,7 +294,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 		return false;
 	}
 
-	logti("Rescaler parameters. track(#%u -> #%u), module(%s:%d -> %s:%d). desc:(src:%s -> output:%s)",
+	logti("Rescaler parameters. track(#%u -> #%u), module(%s:%d -> %s:%d). desc(src:%s -> output:%s)",
 		  _input_track->GetId(),
 		  _output_track->GetId(),
 		  GetStringFromCodecModuleId(_input_track->GetCodecModuleId()).CStr(),
