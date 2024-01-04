@@ -905,8 +905,7 @@ namespace ffmpeg
 
 			if (!(hw_frames_ref = av_hwframe_ctx_alloc(hw_device_ctx)))
 			{
-				fprintf(stderr, "Failed to create CUDA frame context.\n");
-				return -1;
+				return false;
 			}
 
 			auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
