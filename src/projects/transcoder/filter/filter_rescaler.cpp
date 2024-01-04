@@ -475,7 +475,7 @@ bool FilterRescaler::SetHWContextToFilterIfNeed()
 		}
 
 		bool matched = false;
-		if( strstr(filter->name, "scale_cuda") > 0 || strstr(filter->name, "scale_npp") > 0)
+		if( strstr(filter->name, "scale_cuda") != nullptr || strstr(filter->name, "scale_npp") != nullptr)
 		{
 			matched = true;
 		}
