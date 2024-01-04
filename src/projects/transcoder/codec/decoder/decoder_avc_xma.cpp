@@ -308,7 +308,5 @@ void DecoderAVCxXMA::CodecThread()
 			}
 
 		}
-
-
 	}
 }

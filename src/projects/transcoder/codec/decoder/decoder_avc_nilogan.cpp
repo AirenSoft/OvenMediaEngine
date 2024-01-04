@@ -22,7 +22,6 @@ bool DecoderAVCxNILOGAN::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
-	
 	// Create packet parser
 	_parser = ::av_parser_init(GetCodecID());
 	if (_parser == nullptr)

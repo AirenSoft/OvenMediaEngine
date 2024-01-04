@@ -99,6 +99,28 @@ bool EncoderHEVCxNV::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
+	auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, GetRefTrack()->GetCodecDeviceId());
+	if(hw_device_ctx == nullptr)
+	{
+		logte("Could not get hw device context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		return false;
+	}
+
+	// Assign HW device context to encoder
+	if(ffmpeg::Conv::SetHwDeviceCtxOfAVCodecContext(_codec_context, hw_device_ctx) == false)
+	{
+		logte("Could not set hw device context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		return false;
+	}
+
+
+	// Assign HW frames context to encoder
+	if(ffmpeg::Conv::SetHWFramesCtxOfAVCodecContext(_codec_context) == false)
+	{
+		logte("Could not set hw frames context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		return false;
+	}
+
 	if (::avcodec_open2(_codec_context, codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", codec->name, codec->id);

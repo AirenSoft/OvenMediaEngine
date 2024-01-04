@@ -58,7 +58,13 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 
 	std::vector<ov::String> desire_modules;
 	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidate_modules = std::make_shared<std::vector<std::shared_ptr<CodecCandidate>>>();
-	
+
+	// If the track is not video, the default module is the only candidate.
+	if (track->GetMediaType() != cmn::MediaType::Video)
+	{
+		candidate_modules->push_back(std::make_shared<CodecCandidate>(track->GetCodecId(), cmn::MediaCodecModuleId::DEFAULT, 0));
+		return candidate_modules;
+	}	
 
 	// ex) hwaccels_modules = "XMA:0,NV:0,QSV:0"
 	desire_modules = configuration.Split(",");

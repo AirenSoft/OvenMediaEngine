@@ -38,7 +38,7 @@ bool DecoderAVCxNV::Configure(std::shared_ptr<MediaTrack> context)
 		_kill_flag = false;
 
 		_codec_thread = std::thread(&TranscodeDecoder::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%sNV", avcodec_get_name(GetCodecID())).CStr());
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%sNV", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr()).CStr());
 	}
 	catch (const std::system_error &e)
 	{
@@ -56,21 +56,14 @@ bool DecoderAVCxNV::InitCodec()
 	const AVCodec *_codec = ::avcodec_find_decoder_by_name("h264_cuvid");
 	if (_codec == nullptr)
 	{
-		logte("Codec not found: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		logte("Codec not found: %s", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr());
 		return false;
 	}
 
 	_context = ::avcodec_alloc_context3(_codec);
 	if (_context == nullptr)
 	{
-		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
-		return false;
-	}
-
-	_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, _track->GetCodecDeviceId()));
-	if(_context->hw_device_ctx == nullptr)
-	{
-		logte("Could not allocate hw device context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		logte("Could not allocate codec context for %s", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr());
 		return false;
 	}
 
@@ -78,9 +71,24 @@ bool DecoderAVCxNV::InitCodec()
 	_context->pkt_timebase = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 	_context->flags |= AV_CODEC_FLAG_LOW_DELAY;
 
+	// Get hardware device context
+	auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, GetRefTrack()->GetCodecDeviceId());
+	if(hw_device_ctx == nullptr)
+	{
+		logte("Could not get hw device context for %s", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr());
+		return false;
+	}
+
+	// Assign HW device context to decoder
+	if(ffmpeg::Conv::SetHwDeviceCtxOfAVCodecContext(_context, hw_device_ctx) == false)
+	{
+		logte("Could not set hw device context for %s", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr());
+		return false;
+	}
+	
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
-		logte("Could not open codec: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		logte("Could not open codec: %s", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr());
 		return false;
 	}
 
@@ -235,11 +243,9 @@ void DecoderAVCxNV::CodecThread()
 					if (ret == 0)
 					{
 						auto codec_info = ffmpeg::Conv::CodecInfoToString(_context, _codec_par);
+
 						logti("[%s/%s(%u)] input stream information: %s",
-							  _stream_info.GetApplicationInfo().GetName().CStr(),
-							  _stream_info.GetName().CStr(),
-							  _stream_info.GetId(),
-							  codec_info.CStr());
+							  _stream_info.GetApplicationInfo().GetName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
 
 						_change_format = true;
 
@@ -252,38 +258,19 @@ void DecoderAVCxNV::CodecThread()
 					}
 				}
 
-				AVFrame *sw_frame = ::av_frame_alloc();
-				AVFrame *tmp_frame = NULL;
-				if (_frame->format == AV_PIX_FMT_CUDA)
-				{
-					// retrieve data from GPU to CPU ( CUDA -> NV12 )
-					if ((ret = ::av_hwframe_transfer_data(sw_frame, _frame, 0)) < 0)
-					{
-						logte("Error transferring the data to system memory\n");
-						continue;
-					}
-					tmp_frame = sw_frame;
-				}
-				else
-				{
-					tmp_frame = _frame;
-				}
-				tmp_frame->pts = _frame->pts;
-
 				// If there is no duration, the duration is calculated by framerate and timebase.
 				if(_frame->pkt_duration <= 0LL && _context->framerate.num > 0 && _context->framerate.den > 0)
 				{
-					_frame->pkt_duration = (int64_t)( ((double)_context->framerate.den / (double)_context->framerate.num) / ((double) GetRefTrack()->GetTimeBase().GetNum() / (double) GetRefTrack()->GetTimeBase().GetDen()) );
+					_frame->pkt_duration = (int64_t)( ((double)_context->framerate.den / (double)_context->framerate.num) / (double) GetRefTrack()->GetTimeBase().GetExpr() );
 				}
 
-				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, tmp_frame);
+				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				if (decoded_frame == nullptr)
 				{
 					continue;
 				}
 
 				::av_frame_unref(_frame);
-				::av_frame_free(&sw_frame);
 
 				SendOutputBuffer(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
 			}

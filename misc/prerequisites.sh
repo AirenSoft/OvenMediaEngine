@@ -236,7 +236,7 @@ install_ffmpeg()
         ADDI_HWACCEL="--enable-hwaccel=cuda,cuvid "
         ADDI_ENCODER+=",h264_nvenc,hevc_nvenc"
         ADDI_DECODER+=",h264_nvdec,hevc_nvdec,h264_cuvid,hevc_cuvid"
-        ADDI_FILTERS+=",scale_cuda,hwdownload,hwupload,hwupload_cuda"
+        ADDI_FILTERS+=",scale_cuda,scale_npp,hwdownload,hwupload,hwupload_cuda"
 
         PATH=$PATH:/usr/local/nvidia/bin:/usr/local/cuda/bin
     fi
@@ -286,20 +286,20 @@ install_ffmpeg()
 	
     # If there is an enable-nilogan option, add patch from libxcoder_logan-path 
     if [ "$NETINT_LOGAN_HWACCELS" = true ] ; then		
-      echo "we are applying the patch founded in $NETINT_LOGAN_PATCH_PATH"
-      patch_name=$(basename $NETINT_LOGAN_PATCH_PATH)
-      cp $NETINT_LOGAN_PATCH_PATH ${DIR}		
-      cd ${DIR} && patch -t -p 1 < $patch_name
-      if [ "$NETINT_LOGAN_XCODER_COMPILE_PATH" != "" ] ; then
-        cd $NETINT_LOGAN_XCODER_COMPILE_PATH && bash build.sh && ldconfig #the compilation of libxcoder_logan can be done before
-      fi		
-      ADDI_LIBS+=" --enable-libxcoder_logan --enable-ni_logan --enable-avfilter  --enable-pthreads "
-      ADDI_ENCODER+=",h264_ni_logan,h265_ni_logan"
-          ADDI_DECODER+=",h264_ni_logan,h265_ni_logan"
-      ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
-      ADDI_LDFLAGS=" -lm -ldl"
-      ADDI_FILTERS+=",hwdownload,hwupload,hwupload_ni_logan"
-      #ADDI_EXTRA_LIBS="-lpthread"
+        echo "we are applying the patch founded in $NETINT_LOGAN_PATCH_PATH"
+        patch_name=$(basename $NETINT_LOGAN_PATCH_PATH)
+        cp $NETINT_LOGAN_PATCH_PATH ${DIR}		
+        cd ${DIR} && patch -t -p 1 < $patch_name
+        if [ "$NETINT_LOGAN_XCODER_COMPILE_PATH" != "" ] ; then
+            cd $NETINT_LOGAN_XCODER_COMPILE_PATH && bash build.sh && ldconfig #the compilation of libxcoder_logan can be done before
+        fi		
+        ADDI_LIBS+=" --enable-libxcoder_logan --enable-ni_logan --enable-avfilter  --enable-pthreads "
+        ADDI_ENCODER+=",h264_ni_logan,h265_ni_logan"
+        ADDI_DECODER+=",h264_ni_logan,h265_ni_logan"
+        ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
+        ADDI_LDFLAGS=" -lm -ldl"
+        ADDI_FILTERS+=",hwdownload,hwupload,hwupload_ni_logan"
+        #ADDI_EXTRA_LIBS="-lpthread"
     fi
     
     # Patch for Enterprise

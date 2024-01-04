@@ -20,6 +20,8 @@ MediaTrack::MediaTrack()
 	  _media_type(MediaType::Unknown),
 	  _codec_id(MediaCodecId::None),
 	  _codec_module_id(cmn::MediaCodecModuleId::None),
+	  _codec_device_id(0),
+	  _codec_modules(""),
 	  _bitrate(0),
 	  _bitrate_conf(0),
 	  _byass(false),

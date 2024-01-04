@@ -116,16 +116,32 @@ bool EncoderAVCxNV::Configure(std::shared_ptr<MediaTrack> context)
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
-	_codec_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, context->GetCodecDeviceId()));
-	if(_codec_context->hw_device_ctx == nullptr)
-	{
-		logte("Could not allocate hw device context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
-		return false;
-	}
-	
+
 	if (SetCodecParams() == false)
 	{
 		logte("Could not set codec parameters for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		return false;
+	}
+
+	auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, GetRefTrack()->GetCodecDeviceId());
+	if(hw_device_ctx == nullptr)
+	{
+		logte("Could not get hw device context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		return false;
+	}
+
+	// Assign HW device context to encoder
+	if(ffmpeg::Conv::SetHwDeviceCtxOfAVCodecContext(_codec_context, hw_device_ctx) == false)
+	{
+		logte("Could not set hw device context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		return false;
+	}
+
+
+	// Assign HW frames context to encoder
+	if(ffmpeg::Conv::SetHWFramesCtxOfAVCodecContext(_codec_context) == false)
+	{
+		logte("Could not set hw frames context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
 		return false;
 	}
 

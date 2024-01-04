@@ -14,20 +14,32 @@
 #include "../transcoder_gpu.h"
 #include "../transcoder_private.h"
 
-#define MAX_QUEUE_SIZE 500
+#define MAX_QUEUE_SIZE 300
+#define FILTER_FLAG_HWFRAME_AWARE  (1 << 0)
 
 FilterRescaler::FilterRescaler()
 {
 	_frame = ::av_frame_alloc();
 
-	_outputs = ::avfilter_inout_alloc();
 	_inputs = ::avfilter_inout_alloc();
+	_outputs = ::avfilter_inout_alloc();
+	
+	_buffersrc = ::avfilter_get_by_name("buffer");
+	_buffersink = ::avfilter_get_by_name("buffersink");
+
+	_filter_graph = ::avfilter_graph_alloc();
 
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
 	OV_ASSERT2(_frame != nullptr);
 	OV_ASSERT2(_inputs != nullptr);
 	OV_ASSERT2(_outputs != nullptr);
+	OV_ASSERT2(_buffersrc != nullptr);
+	OV_ASSERT2(_buffersink != nullptr);
+	OV_ASSERT2(_filter_graph != nullptr);
+
+	// Limit the number of filter threads to 4. I think 4 thread is usually enough for video filtering processing.
+	_filter_graph->nb_threads = 4;
 }
 
 FilterRescaler::~FilterRescaler()
@@ -35,13 +47,212 @@ FilterRescaler::~FilterRescaler()
 	Stop();
 
 	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
-
 	OV_SAFE_FUNC(_inputs, nullptr, ::avfilter_inout_free, &);
 	OV_SAFE_FUNC(_outputs, nullptr, ::avfilter_inout_free, &);
-
 	OV_SAFE_FUNC(_filter_graph, nullptr, ::avfilter_graph_free, &);
 
+	_buffersrc= nullptr;
+	_buffersink = nullptr;
+	
 	_input_buffer.Clear();
+}
+
+bool FilterRescaler::InitializeSourceFilter()
+{
+	std::vector<ov::String> src_params;
+
+	src_params.push_back(ov::String::FormatString("video_size=%dx%d", _input_track->GetWidth(), _input_track->GetHeight()));
+	src_params.push_back(ov::String::FormatString("pix_fmt=%s", ::av_get_pix_fmt_name((AVPixelFormat)_src_pixfmt)));
+	src_params.push_back(ov::String::FormatString("time_base=%s", _input_track->GetTimeBase().GetStringExpr().CStr()));
+	src_params.push_back(ov::String::FormatString("pixel_aspect=%d/%d", 1, 1));
+	src_params.push_back(ov::String::FormatString("frame_rate=%d/%d", 30, 1));
+
+	_src_args = ov::String::Join(src_params, ":");
+
+
+	int ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, _buffersrc, "in", _src_args, nullptr, _filter_graph);
+	if (ret < 0)
+	{
+		logte("Could not create video buffer source filter for rescaling: %d", ret);
+		return false;
+	}
+
+	_outputs->name = ::av_strdup("in");
+	_outputs->filter_ctx = _buffersrc_ctx;
+	_outputs->pad_idx = 0;
+	_outputs->next = nullptr;
+
+	return true;
+}
+
+bool FilterRescaler::InitializeSinkFilter()
+{
+	int ret = ::avfilter_graph_create_filter(&_buffersink_ctx, _buffersink, "out", nullptr, nullptr, _filter_graph);
+	if (ret < 0)
+	{
+		logte("Could not create video buffer sink filter for rescaling: %d", ret);
+		return false;
+	}
+
+	_inputs->name = ::av_strdup("out");
+	_inputs->filter_ctx = _buffersink_ctx;
+	_inputs->pad_idx = 0;
+	_inputs->next = nullptr;
+
+	return true;
+}
+
+bool FilterRescaler::InitializeFilterDescription()
+{
+	std::vector<ov::String> filters;
+
+	// 1. Framerate
+	if (_output_track->GetFrameRateByConfig() > 0.0f)
+	{
+		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", _output_track->GetFrameRateByConfig()));
+	}
+
+	// 2. Timebase
+	filters.push_back(ov::String::FormatString("settb=%s", _output_track->GetTimeBase().GetStringExpr().CStr()));
+
+	// 3. Scaler
+	auto input_module_id = _input_track->GetCodecModuleId();
+	auto input_device_id = _input_track->GetCodecDeviceId();
+	auto output_module_id = _output_track->GetCodecModuleId();
+	auto output_device_id = _output_track->GetCodecDeviceId();
+	
+	// Scaler is performed on the same device as the encoder(output module)
+	ov::String desc = "";
+
+	if (output_module_id == cmn::MediaCodecModuleId::DEFAULT ||
+		output_module_id == cmn::MediaCodecModuleId::BEAMR ||
+		output_module_id == cmn::MediaCodecModuleId::QSV ||
+		output_module_id == cmn::MediaCodecModuleId::LIBVPX ||
+		// Until now, Logan VPU processes in CPU memory like SW-based modules. Performance needs to be improved in the future
+		output_module_id == cmn::MediaCodecModuleId::NILOGAN  
+		/* || output_module_id == cmn::MediaCodecModuleId::libx26x */)
+	{
+		switch (input_module_id)
+		{
+			case cmn::MediaCodecModuleId::NVENC:  
+			{
+				// Use the av_hwframe_transfer_data function to enable copying from GPU memory to CPU memory.
+				_use_hwframe_transfer = true;
+
+				// Change the pixel format of the source filter to the SW pixel format supported by the hardware.
+				auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(input_module_id, input_device_id);
+				if (hw_device_ctx == nullptr)
+				{
+					logte("Could not get hw device context for %s(%d)", cmn::GetStringFromCodecModuleId(input_module_id).CStr(), input_device_id);
+					return false;
+				}
+				auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
+				_src_pixfmt = *(constraints->valid_sw_formats);
+				desc = ov::String::FormatString("");
+			}
+			break;
+			case cmn::MediaCodecModuleId::XMA: 
+			{
+				// Copy the frames in Xilinx Device memory to the CPU memory using the xvbm_convert filter.
+				desc = ov::String::FormatString("xvbm_convert,");
+			}
+			break;
+			default: 
+				logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id).CStr());
+			case cmn::MediaCodecModuleId::QSV:  	// CPU memory using 'gpu_copy=on'
+			case cmn::MediaCodecModuleId::NILOGAN: 	// CPU memory using 'out=sw'
+			case cmn::MediaCodecModuleId::DEFAULT:  // CPU memory 
+			{
+				desc = ov::String::FormatString("");
+			}
+		}
+		// Scaler description of defulat module
+		desc += ov::String::FormatString("scale=%dx%d:flags=bilinear", _output_track->GetWidth(), _output_track->GetHeight());
+	}
+	else if (output_module_id == cmn::MediaCodecModuleId::NVENC)
+	{
+		switch (input_module_id)
+		{
+			case cmn::MediaCodecModuleId::NVENC: { 	// Zero Copy
+				//TODO: Exception handling required if Device ID is different. Find out if memory copy between GPUs is possible
+				desc = ov::String::FormatString("");
+			}
+			break;
+			case cmn::MediaCodecModuleId::XMA: {
+				desc = ov::String::FormatString("xvbm_convert,hwupload_cuda=device=%d,",output_device_id);
+			}
+			break;
+			default: 
+				logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id).CStr());
+			case cmn::MediaCodecModuleId::QSV: 		// CPU memory using 'gpu_copy=on'
+			case cmn::MediaCodecModuleId::NILOGAN: 	// CPU memory using 'out=sw'
+			case cmn::MediaCodecModuleId::DEFAULT: 	// CPU memory 
+			{
+				desc = ov::String::FormatString("hwupload_cuda=device=%d,", output_device_id);
+			}
+		}
+		desc += ov::String::FormatString("scale_npp=%d:%d", _output_track->GetWidth(), _output_track->GetHeight());
+		// TODO: scale_npp filter requires hardware device/frames context 
+	}
+	else if (output_module_id == cmn::MediaCodecModuleId::XMA)
+	{
+		ov::String scaler = "";
+
+		switch (input_module_id)
+		{
+			case cmn::MediaCodecModuleId::XMA: {  // Zero Copy
+				//TODO: Exception handling required if Device ID is different. Find out if memory copy between GPUs is possible
+				desc = ov::String::FormatString("");
+			}
+			break;
+			case cmn::MediaCodecModuleId::NVENC: {
+				// Use the av_hwframe_transfer_data function to enable copying from GPU memory to CPU memory.
+				_use_hwframe_transfer = true;
+
+				// Change the pixel format of the source filter to the SW pixel format supported by the hardware.
+				auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(input_module_id, input_device_id);
+				if (hw_device_ctx == nullptr)
+				{
+					logte("Could not get hw device context for %s(%d)", cmn::GetStringFromCodecModuleId(input_module_id).CStr(), input_device_id);
+					return false;
+				}
+				auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
+				_src_pixfmt = *(constraints->valid_sw_formats);
+				desc = ov::String::FormatString("xvbm_convert,");
+			}
+			break;
+			default:
+				logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id).CStr());
+			case cmn::MediaCodecModuleId::QSV:		// CPU memory using 'gpu_copy=on'
+			case cmn::MediaCodecModuleId::NILOGAN:	// CPU memory using 'out=sw'
+			case cmn::MediaCodecModuleId::DEFAULT:	// CPU memory
+			{
+				desc = ov::String::FormatString("xvbm_convert,");
+			}
+		}
+
+		desc += ov::String::FormatString("multiscale_xma=lxlnx_hwdev=%d:outputs=1:out_1_width=%d:out_1_height=%d:out_1_rate=full",
+			_output_track->GetCodecDeviceId(), _output_track->GetWidth(), _output_track->GetHeight());
+	}
+	else
+	{
+		logtw("Unsupported output module id: %d", output_module_id);
+		return false;
+	}
+
+	filters.push_back(desc);
+
+	// 4. Pixel Format
+	filters.push_back(ov::String::FormatString("format=%s", ::av_get_pix_fmt_name((AVPixelFormat)_output_track->GetColorspace())));
+
+	if(filters.size() == 0)
+	{
+		filters.push_back("null");
+	}
+
+	_filter_desc = ov::String::Join(filters, ",");
+
+	return true;
 }
 
 bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, const std::shared_ptr<MediaTrack> &output_track)
@@ -50,267 +261,61 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 
 	_input_track = input_track;
 	_output_track = output_track;
+	_src_width = _input_track->GetWidth();
+	_src_height = _input_track->GetHeight();
+	_src_pixfmt = _input_track->GetColorspace();
 
-	const AVFilter *buffersrc = ::avfilter_get_by_name("buffer");
-	const AVFilter *buffersink = ::avfilter_get_by_name("buffersink");
-	int ret;
-	_filter_graph = ::avfilter_graph_alloc();
-	
-	if ((_filter_graph == nullptr) || (_inputs == nullptr) || (_outputs == nullptr))
+	if (InitializeFilterDescription() == false)
 	{
-		logte("Could not allocate variables for filter graph: %p, %p, %p", _filter_graph, _inputs, _outputs);
+		SetState(State::ERROR);
+		
+		return false;
+	}
 
+	if (InitializeSourceFilter() == false)
+	{
+		SetState(State::ERROR);
+		
+		return false;
+	}
+
+	if (InitializeSinkFilter() == false)
+	{
 		SetState(State::ERROR);
 
 		return false;
 	}
 
-	// Limit the number of filter threads to 4. I think 4 thread is usually enough for video filtering processing.
-	_filter_graph->nb_threads = 4;
+	logti("Rescaler parameters. track(#%u -> #%u), module(%s:%d -> %s:%d). desc:(src:%s -> output:%s)",
+		  _input_track->GetId(),
+		  _output_track->GetId(),
+		  GetStringFromCodecModuleId(_input_track->GetCodecModuleId()).CStr(),
+		  _input_track->GetCodecDeviceId(),
+		  GetStringFromCodecModuleId(_output_track->GetCodecModuleId()).CStr(),
+		  _output_track->GetCodecDeviceId(),
+		  _src_args.CStr(),
+		  _filter_desc.CStr());
 
-	AVRational input_timebase = ffmpeg::Conv::TimebaseToAVRational(input_track->GetTimeBase());
-	AVRational output_timebase = ffmpeg::Conv::TimebaseToAVRational(output_track->GetTimeBase());
 
-	_scale = ::av_q2d(::av_div_q(input_timebase, output_timebase));
-
-	if (::isnan(_scale))
+	if ((::avfilter_graph_parse_ptr(_filter_graph, _filter_desc, &_inputs, &_outputs, nullptr)) < 0)
 	{
-		logte("Invalid timebase: input: %d/%d, output: %d/%d",
-			  input_timebase.num, input_timebase.den,
-			  output_timebase.num, output_timebase.den);
+		logte("Could not parse filter string for rescaling: %s", _filter_desc.CStr());
+		SetState(State::ERROR);
+		
+		return false;
+	}
 
+	if (SetHWContextToFilterIfNeed() == false)
+	{
+		logte("Could not set hw context to filters");
 		SetState(State::ERROR);
 
 		return false;
 	}
 
-	// Prepare filters
-	//
-	// Filter graph:
-	//     [buffer] -> [fps] -> [scale] -> [settb] -> [buffersink]
-
-	//////////////////////////////////////////////////////
-	// Prepare the input parameters
-	//////////////////////////////////////////////////////
-	std::vector<ov::String> src_params = {
-		ov::String::FormatString("video_size=%dx%d", input_track->GetWidth(), input_track->GetHeight()),
-		ov::String::FormatString("pix_fmt=%d", input_track->GetColorspace()),
-		ov::String::FormatString("time_base=%s", input_track->GetTimeBase().GetStringExpr().CStr()),
-		ov::String::FormatString("pixel_aspect=%d/%d", 1, 1)};
-
-	ov::String input_filters = ov::String::Join(src_params, ":");
-
-	ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, buffersrc, "in", input_filters, nullptr, _filter_graph);
-	if (ret < 0)
+	if (::avfilter_graph_config(_filter_graph, nullptr) < 0)
 	{
-		logte("Could not create video buffer source filter for rescaling: %d", ret);
-
-		SetState(State::ERROR);
-
-		return false;
-	}
-	//////////////////////////////////////////////////////
-	// Prepare output filters
-	//////////////////////////////////////////////////////
-
-	ret = ::avfilter_graph_create_filter(&_buffersink_ctx, buffersink, "out", nullptr, nullptr, _filter_graph);
-	if (ret < 0)
-	{
-		logte("Could not create video buffer sink filter for rescaling: %d", ret);
-
-		SetState(State::ERROR);
-
-		return false;
-	}
-
-	std::vector<ov::String> filters;
-
-	// 1. Framerate
-	// The frame rate value is always lower than the original, so it is advantageous to do it first.
-	if (output_track->GetFrameRateByConfig() > 0.0f)
-	{
-		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", output_track->GetFrameRateByConfig()));
-	}
-
-	// 2. Scaler
-	auto input_module_id = input_track->GetCodecModuleId();
-	auto output_module_id = output_track->GetCodecModuleId();
-
-	switch (input_module_id)
-	{
-		case cmn::MediaCodecModuleId::NVENC: {
-			if (output_module_id == cmn::MediaCodecModuleId::NVENC)
-			{
-				filters.push_back(ov::String::FormatString(
-					"hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d,hwdownload",
-					output_track->GetCodecDeviceId(),
-					output_track->GetWidth(), 
-					output_track->GetHeight()));
-			}
-			else if (output_module_id == cmn::MediaCodecModuleId::XMA)
-			{
-				// TODO:
-				// Copy GPU memory to Host memory
-				// To be compatible with other types of codecs, it is converted to yuv420p, a representative pixel format
-				filters.push_back(ov::String::FormatString(
-					"hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d:format=yuv420p,hwdownload",
-					input_track->GetCodecDeviceId(),
-					output_track->GetWidth(), 
-					output_track->GetHeight()));
-			}
-			else {
-				// cmn::MediaCodecModuleId::DEFAULT 
-				// cmn::MediaCodecModuleId::QSV
-				// cmn::MediaCodecModuleId::NILOGAN
-				// cmn::MediaCodecModuleId::ETC
-								
-				// Copy GPU memory to Host memory
-				// To be compatible with other types of codecs, it is converted to yuv420p, a representative pixel format
-				filters.push_back(ov::String::FormatString(
-					"hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d:format=yuv420p,hwdownload",
-					input_track->GetCodecDeviceId(),
-					output_track->GetWidth(),
-					output_track->GetHeight()));
-			}
-		}
-		break;
-		case cmn::MediaCodecModuleId::XMA: {
-			if (output_module_id == cmn::MediaCodecModuleId::NVENC)
-			{
-				// TODO
-				filters.push_back(ov::String::FormatString(
-					"xvbm_convert,scale=%dx%d:flags=bilinear",
-					output_track->GetWidth(), output_track->GetHeight()));
-			}
-			else if (output_module_id == cmn::MediaCodecModuleId::XMA)
-			{
-				_filter_graph->nb_threads = 1;
-				filters.push_back(ov::String::FormatString(
-					"multiscale_xma=lxlnx_hwdev=%d:outputs=1:out_1_width=%d:out_1_height=%d:out_1_rate=full",
-					output_track->GetCodecDeviceId(),
-					output_track->GetWidth(), 
-					output_track->GetHeight()));
-			}
-			else
-			{
-				// cmn::MediaCodecModuleId::DEFAULT 
-				// cmn::MediaCodecModuleId::QSV
-				// cmn::MediaCodecModuleId::NILOGAN
-				// cmn::MediaCodecModuleId::ETC
-
-				// Copy GPU memory to Host memory
-				filters.push_back(ov::String::FormatString(
-					"xvbm_convert,scale=%dx%d:flags=bilinear",
-					output_track->GetWidth(), output_track->GetHeight()));
-			}
-		}
-		break;
-		case cmn::MediaCodecModuleId::QSV: {
-			filters.push_back(ov::String::FormatString(
-				"scale=%dx%d:flags=bilinear",
-				output_track->GetWidth(), output_track->GetHeight()));
-		}
-		break;	
-		case cmn::MediaCodecModuleId::NILOGAN:
-			if (output_module_id == cmn::MediaCodecModuleId::NILOGAN)
-			{
-				filters.push_back(ov::String::FormatString(
-					"scale=%dx%d:flags=bilinear",
-					output_track->GetWidth(), output_track->GetHeight()));
-					//ni_logan_hwupload => failed because autoscale is automatically insert a scale filter at the end of the filter graph and seems to be not compatible with ni_logan_hwupload :(
-			}
-			else 
-			{
-				filters.push_back(ov::String::FormatString(
-					"scale=%dx%d:flags=bilinear",
-					output_track->GetWidth(), output_track->GetHeight()));
-			}		
-		break;	
-		case cmn::MediaCodecModuleId::DEFAULT:
-		default: {
-			if (output_module_id == cmn::MediaCodecModuleId::NVENC)
-			{
-				filters.push_back(ov::String::FormatString(
-					"format=nv12,hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d,hwdownload",
-					output_track->GetCodecDeviceId(),
-					output_track->GetWidth(), output_track->GetHeight()));
-			}
-			else if (output_module_id == cmn::MediaCodecModuleId::XMA)
-			{
-				// TODO
-				filters.push_back(ov::String::FormatString(
-					"format=nv12,hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d,hwdownload",
-					output_track->GetCodecDeviceId(),
-					output_track->GetWidth(), output_track->GetHeight()));
-			}			
-			else
-			{
-				// cmn::MediaCodecModuleId::DEFAULT 
-				// cmn::MediaCodecModuleId::QSV
-				// cmn::MediaCodecModuleId::NILOGAN
-				// cmn::MediaCodecModuleId::ETC
-				filters.push_back(ov::String::FormatString(
-					"scale=%dx%d:flags=bilinear",
-					output_track->GetWidth(), output_track->GetHeight()));
-			}
-		}
-		break;
-	}
-
-	// 3. Timebase
-	filters.push_back(ov::String::FormatString("settb=%s", output_track->GetTimeBase().GetStringExpr().CStr()));
-
-	// 5. Pixel Format
-	// if(input_track->GetColorspace() != output_track->GetColorspace())
-	{
-		filters.push_back(ov::String::FormatString("format=%s", ::av_get_pix_fmt_name((AVPixelFormat)output_track->GetColorspace())));
-	}
-
-	if(filters.size() == 0)
-	{
-		filters.push_back("null");
-	}
-
-	ov::String output_filters = ov::String::Join(filters, ",");
-
-	//////////////////////////////////////////////////////
-	// Build
-	//////////////////////////////////////////////////////
-
-	_outputs->name = ::av_strdup("in");
-	_outputs->filter_ctx = _buffersrc_ctx;
-	_outputs->pad_idx = 0;
-	_outputs->next = nullptr;
-
-	_inputs->name = ::av_strdup("out");
-	_inputs->filter_ctx = _buffersink_ctx;
-	_inputs->pad_idx = 0;
-	_inputs->next = nullptr;
-
-	logti("Rescaler parameters [#%u -> #%u][%s -> %s]. input: %s -> outputs: %s",
-		  input_track->GetId(),
-		  output_track->GetId(),
-		  GetStringFromCodecModuleId(input_track->GetCodecModuleId()).CStr(),
-		  GetStringFromCodecModuleId(output_track->GetCodecModuleId()).CStr(),
-		  input_filters.CStr(),
-		  output_filters.CStr());
-
-	if ((ret = ::avfilter_graph_parse_ptr(_filter_graph, output_filters, &_inputs, &_outputs, nullptr)) < 0)
-	{
-		logte("Could not parse filter string for rescaling: %d (%s)", ret, output_filters.CStr());
-
-		SetState(State::ERROR);
-
-		return false;
-	}
-
-	_input_width = input_track->GetWidth();
-	_input_height = input_track->GetHeight();
-
-	if ((ret = ::avfilter_graph_config(_filter_graph, nullptr)) < 0)
-	{
-		logte("Could not validate filter graph for rescaling: %d", ret);
-
+		logte("Could not validate filter graph for rescaling");
 		SetState(State::ERROR);
 
 		return false;
@@ -384,7 +389,22 @@ void FilterRescaler::WorkerThread()
 			break;
 		}
 
-		ret = ::av_buffersrc_write_frame(_buffersrc_ctx, av_frame);
+		AVFrame *alter_av_frame = nullptr;
+
+		if (_use_hwframe_transfer == true && av_frame->hw_frames_ctx != nullptr)
+		{
+			// GPU Memory -> Host Memory
+			alter_av_frame = ::av_frame_alloc();
+			if ((ret = ::av_hwframe_transfer_data(alter_av_frame, av_frame, 0)) < 0)
+			{
+				logte("Error transferring the data to system memory\n");
+				continue;
+			}
+			alter_av_frame->pts = av_frame->pts;
+		}
+
+		// Send to filtergraph
+		ret = ::av_buffersrc_write_frame(_buffersrc_ctx, alter_av_frame != nullptr ? alter_av_frame : av_frame);
 		if (ret < 0)
 		{
 			logte("An error occurred while feeding to filtergraph: format: %d, pts: %lld, linesize: %d, queue.size: %d", av_frame->format, av_frame->pts, av_frame->linesize[0], _input_buffer.Size());
@@ -392,8 +412,14 @@ void FilterRescaler::WorkerThread()
 			continue;
 		}
 
+		if(alter_av_frame != nullptr)
+		{
+			av_frame_free(&alter_av_frame);
+		}
+
 		while (!_kill_flag)
 		{
+			// Receive from filtergraph
 			ret = ::av_buffersink_get_frame(_buffersink_ctx, _frame);
 			if (ret == AVERROR(EAGAIN))
 			{
@@ -432,4 +458,54 @@ void FilterRescaler::WorkerThread()
 			}
 		}
 	}
+}
+
+bool FilterRescaler::SetHWContextToFilterIfNeed()
+{
+	auto hw_device_ctx =  TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, _output_track->GetCodecDeviceId());
+
+	// Assign the hw device context and hw frames context to the filter graph
+	for (uint32_t i = 0 ; i < _filter_graph->nb_filters ; i++)
+	{
+		auto filter = _filter_graph->filters[i];
+
+		if( (filter->filter->flags_internal & FILTER_FLAG_HWFRAME_AWARE) == 0 || (filter->inputs == nullptr))
+		{
+			continue;
+		}
+
+		bool matched = false;
+		if( strstr(filter->name, "scale_cuda") > 0 || strstr(filter->name, "scale_npp") > 0)
+		{
+			matched = true;
+		}
+
+		if (matched == true)
+		{
+			logtd("set hardware device/frames context to filter. name(%s)", filter->name);
+
+			if (ffmpeg::Conv::SetHwDeviceCtxOfAVFilterContext(filter, hw_device_ctx) == false)
+			{
+				logte("Could not set hw device context for %s", filter->name);
+				return false;
+			}
+
+			for (uint32_t j = 0; j < filter->nb_inputs; j++)
+			{
+				auto input = filter->inputs[j];
+				if (input == nullptr)
+				{
+					continue;
+				}
+
+				if (ffmpeg::Conv::SetHWFramesCtxOfAVFilterLink(input, hw_device_ctx, _output_track->GetWidth(), _output_track->GetHeight()) == false)
+				{
+					logte("Could not set hw frames context for %s", filter->name);
+					return false;
+				}
+			}
+		}
+	}
+
+	return true;
 }

@@ -154,6 +154,8 @@ bool TranscoderStream::Prepare(const std::shared_ptr<info::Stream> &stream)
 
 bool TranscoderStream::StartInternal()
 {
+	_create_success	= true;
+
 	if (_link_input_to_outputs.size() > 0 || _link_encoder_to_outputs.size() > 0)
 	{
 		logtd("%s Stream has already been created", _log_prefix.CStr());
@@ -332,6 +334,11 @@ bool TranscoderStream::IsAvailableSmoothTransitionStream(const std::shared_ptr<i
 
 bool TranscoderStream::Push(std::shared_ptr<MediaPacket> packet)
 {
+	if(_create_success == false)
+	{
+		return false;
+	}
+
 	DecodePacket(std::move(packet));
 
 	return true;
@@ -745,6 +752,7 @@ bool TranscoderStream::CreateDecoder(int32_t decoder_id, std::shared_ptr<info::S
 
 int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 {
+	int32_t created = 0;
 	MediaTrackId track_id = buffer->GetTrackId();
 
 	for (auto &[key, composite] : _composite_map)
@@ -796,10 +804,12 @@ int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 
 				output_track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(encoder->GetSupportedFormat()));
 			}
+
+			created++;
 		}
 	}
 
-	return 0;
+	return created;
 }
 
 bool TranscoderStream::CreateEncoder(int32_t encoder_id, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track)
@@ -839,7 +849,7 @@ bool TranscoderStream::CreateEncoder(int32_t encoder_id, std::shared_ptr<info::S
 
 int32_t TranscoderStream::CreateFilters(MediaFrame *buffer)
 {
-	int32_t created_count = 0;
+	int32_t created = 0;
 
 	MediaTrackId decoder_id = buffer->GetTrackId();
 
@@ -850,7 +860,8 @@ int32_t TranscoderStream::CreateFilters(MediaFrame *buffer)
 	if (decoder_to_filters_it == _link_decoder_to_filters.end())
 	{
 		logtw("%s Could not found filter list related to decoder", _log_prefix.CStr());
-		return created_count;
+
+		return created;
 	}
 	auto filter_ids = decoder_to_filters_it->second;
 
@@ -872,10 +883,10 @@ int32_t TranscoderStream::CreateFilters(MediaFrame *buffer)
 			continue;
 		}
 
-		created_count++;
+		created++;
 	}
 
-	return created_count;
+	return created;
 }
 
 bool TranscoderStream::CreateFilter(int32_t filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track)
@@ -936,11 +947,25 @@ void TranscoderStream::ChangeOutputFormat(MediaFrame *buffer)
 	// Update Track of Output Stream
 	UpdateOutputTrack(buffer);
 
-	// Create Encoder
-	CreateEncoders(buffer);
+	// Create Encoders
+	if(CreateEncoders(buffer) == 0)
+	{
+		logtw("%s No encoders have been created. InputTrack(%d)", _log_prefix.CStr(), buffer->GetTrackId());
 
-	// Create Filter
-	CreateFilters(buffer);
+		_create_success = false;		
+		
+		return;
+	}
+
+	// Create FilterBase
+	if(CreateFilters(buffer) == 0)
+	{
+		logtw("%s No filters have been created. InputTrack(%d)", _log_prefix.CStr(), buffer->GetTrackId());
+		
+		_create_success = false;
+
+		return;
+	}
 }
 
 // Information of the input track is updated by the decoded frame
@@ -1294,6 +1319,7 @@ TranscodeResult TranscoderStream::EncodeFrame(std::shared_ptr<const MediaFrame> 
 {
 	auto filter_id = frame->GetTrackId();
 
+	// Get Encoder ID
 	auto filter_to_encoder_it = _link_filter_to_encoder.find(filter_id);
 	if(filter_to_encoder_it == _link_filter_to_encoder.end())
 	{
@@ -1301,6 +1327,7 @@ TranscodeResult TranscoderStream::EncodeFrame(std::shared_ptr<const MediaFrame> 
 	}
 	auto encoder_id = filter_to_encoder_it->second;
 
+	// Get Encoder 
 	std::shared_lock<std::shared_mutex> lock(_encoder_map_mutex);
 	
 	auto encoder_map_it = _encoders.find(encoder_id);

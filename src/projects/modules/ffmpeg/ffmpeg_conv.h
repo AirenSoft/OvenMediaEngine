@@ -776,6 +776,11 @@ namespace ffmpeg
 			return true;
 		}
 
+		static ov::String GetCodecName(AVCodecID codec_id)
+		{
+			return ov::String::FormatString("%s", ::avcodec_get_name(codec_id));
+		}
+
 		static ov::String GetFormatByExtension(ov::String extension, ov::String default_format)
 		{
 			if (extension == "mp4")
@@ -831,6 +836,99 @@ namespace ffmpeg
 			}
 
 			return false;
+		}
+
+		static bool SetHwDeviceCtxOfAVCodecContext(AVCodecContext* context, AVBufferRef* hw_device_ctx)
+		{
+			context->hw_device_ctx = ::av_buffer_ref(hw_device_ctx);
+			if (context->hw_device_ctx == nullptr)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		static bool SetHWFramesCtxOfAVCodecContext(AVCodecContext* context)
+		{
+			AVBufferRef* hw_frames_ref;
+			int err = 0;
+			if (!(hw_frames_ref = ::av_hwframe_ctx_alloc(context->hw_device_ctx)))
+			{
+				return false;
+			}
+
+			auto constraints = ::av_hwdevice_get_hwframe_constraints(context->hw_device_ctx, nullptr);
+			if(constraints == nullptr)
+			{
+				return false;
+			}
+
+			AVHWFramesContext* frames_ctx = nullptr;
+			frames_ctx = (AVHWFramesContext*)(hw_frames_ref->data);
+			frames_ctx->format = *(constraints->valid_hw_formats);
+			frames_ctx->sw_format = *(constraints->valid_sw_formats);;
+			frames_ctx->width = context->width;
+			frames_ctx->height = context->height;
+			frames_ctx->initial_pool_size = 10;
+			
+			if ((err = ::av_hwframe_ctx_init(hw_frames_ref)) < 0)
+			{
+				::av_buffer_unref(&hw_frames_ref);
+				return false;
+			}
+
+			context->hw_frames_ctx = ::av_buffer_ref(hw_frames_ref);
+			
+			if (!context->hw_frames_ctx)
+				err = AVERROR(ENOMEM);
+			
+			::av_buffer_unref(&hw_frames_ref);
+
+			return true;
+		}
+
+		static bool SetHwDeviceCtxOfAVFilterContext(AVFilterContext* context, AVBufferRef* hw_device_ctx)
+		{
+			context->hw_device_ctx = ::av_buffer_ref(hw_device_ctx);
+			if (context->hw_device_ctx == nullptr)
+			{
+				return false;
+			}
+
+			return true;
+		}
+		static bool SetHWFramesCtxOfAVFilterLink(AVFilterLink* context, AVBufferRef* hw_device_ctx, int32_t width, int32_t height)
+		{
+			AVBufferRef* hw_frames_ref;
+			AVHWFramesContext* frames_ctx = NULL;
+
+			if (!(hw_frames_ref = av_hwframe_ctx_alloc(hw_device_ctx)))
+			{
+				fprintf(stderr, "Failed to create CUDA frame context.\n");
+				return -1;
+			}
+
+			auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
+
+			frames_ctx = (AVHWFramesContext*)(hw_frames_ref->data);
+			frames_ctx->format = *(constraints->valid_hw_formats);
+			frames_ctx->sw_format = *(constraints->valid_sw_formats);
+			frames_ctx->width = width;
+			frames_ctx->height = height;
+			frames_ctx->initial_pool_size = 10;
+
+			if (av_hwframe_ctx_init(hw_frames_ref) < 0)
+			{
+				av_buffer_unref(&hw_frames_ref);
+				return false;
+			}
+
+			context->hw_frames_ctx = av_buffer_ref(hw_frames_ref);
+
+			av_buffer_unref(&hw_frames_ref);
+
+			return true;
 		}
 	};
 
