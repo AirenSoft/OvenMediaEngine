@@ -93,7 +93,7 @@ install_videosdk_amazonlinux()
     sudo yum -y remove xrm xilinx-container-runtime xilinx-xvbm xilinx-u30-xrm-decoder xilinx-u30-xrm-encoder xilinx-u30-xrm-multiscaler xilinx-u30-xma-multiscaler xilinx-u30-xlookahead xilinx-u30-xmpsoccodecs xilinx-u30-xma-apps xilinx-u30-xmapropstojson xilinx-u30-xffmpeg xilinx-u30-launcher xilinx-u30-jobslotreservation xilinx-u30-xcdr xilinx-u30-gstreamer-1.16.2 xilinx-u30-vvas xilinx-sc-fw-u30 xilinx-u30-gen3x4-base xilinx-u30-gen3x4-validate
 
     sudo yum -y update
-    sudo yum -y cmake boost-devel gcc-g++
+    sudo yum -y install cmake boost-devel gcc-g++
     sudo yum -y install yum-plugin-versionlock
     sudo yum -y install xrt-2.11.722-1.x86_64
     sudo yum -y versionlock xrt-2.11.722
