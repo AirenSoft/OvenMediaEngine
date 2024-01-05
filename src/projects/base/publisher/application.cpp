@@ -459,12 +459,12 @@ namespace pub
 	{
 		std::shared_lock<std::shared_mutex> lock(_push_map_mutex);
 
-		for (auto &[id, push] : _pushes)
+		for (auto &[id, push_info] : _pushes)
 		{
 			if (!push->GetId().IsEmpty() && push->GetId() != id)
 				continue;
 
-			results.push_back(push);
+			results.push_back(push_info);
 		}
 
 		return ov::Error::CreateError(PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::Success, "Success");
