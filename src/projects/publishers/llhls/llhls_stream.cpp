@@ -294,8 +294,8 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 		ov::Regex _target_stream_name_regex = ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(stream_name));
 		auto match_result = _target_stream_name_regex.Matches(GetName().CStr());
 
-		if (virtual_host_name != GetApplication()->GetName().GetVHostName() ||
-			app_name != GetApplication()->GetName().GetAppName() ||
+		if (virtual_host_name == GetApplication()->GetName().GetVHostName() &&
+			app_name == GetApplication()->GetName().GetAppName() &&
 			match_result.IsMatched())
 		{
 			ov::String drm_provider = drm_node.child_value("DRMProvider");
@@ -484,6 +484,7 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 				return false;
 			}
 
+			// Just first DRM info matched is enough for one stream
 			break;
 		}
 	}
