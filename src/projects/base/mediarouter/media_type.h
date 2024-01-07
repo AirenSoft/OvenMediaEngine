@@ -115,6 +115,7 @@ namespace cmn
 		if (codec_id == cmn::MediaCodecId::H264 ||
 			codec_id == cmn::MediaCodecId::H265 ||
 			codec_id == cmn::MediaCodecId::Vp8 ||
+			codec_id == cmn::MediaCodecId::Vp9 ||
 			codec_id == cmn::MediaCodecId::Flv ||
 			codec_id == cmn::MediaCodecId::Vp9)
 		{

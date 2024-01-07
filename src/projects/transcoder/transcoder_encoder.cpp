@@ -39,6 +39,14 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 	logtd("Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s), Video.Modules(%s), ", GetStringFromCodecId(track->GetCodecId()).CStr(), hwaccels_enable?"true":"false", hwaccles_modules.CStr(), track->GetCodecModules().CStr());
 
 	ov::String configuration = ""; 
+	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidate_modules = std::make_shared<std::vector<std::shared_ptr<CodecCandidate>>>();
+
+	// If the track is not video, the default module is the only candidate.
+	if (cmn::IsVideoCodec(track->GetCodecId()) == false)
+	{
+		candidate_modules->push_back(std::make_shared<CodecCandidate>(track->GetCodecId(), cmn::MediaCodecModuleId::DEFAULT, 0));
+		return candidate_modules;
+	}
 
 	if(hwaccels_enable == true)
 	{
@@ -56,18 +64,8 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 		configuration = track->GetCodecModules().Trim();
 	}
 
-	std::vector<ov::String> desire_modules;
-	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidate_modules = std::make_shared<std::vector<std::shared_ptr<CodecCandidate>>>();
-
-	// If the track is not video, the default module is the only candidate.
-	if (track->GetMediaType() != cmn::MediaType::Video)
-	{
-		candidate_modules->push_back(std::make_shared<CodecCandidate>(track->GetCodecId(), cmn::MediaCodecModuleId::DEFAULT, 0));
-		return candidate_modules;
-	}	
-
 	// ex) hwaccels_modules = "XMA:0,NV:0,QSV:0"
-	desire_modules = configuration.Split(",");
+	std::vector<ov::String> desire_modules = configuration.Split(",");
 
 	// If no modules are configured, all modules are designated as candidates.
 	if (desire_modules.size() == 0 || configuration.IsEmpty() == true)
