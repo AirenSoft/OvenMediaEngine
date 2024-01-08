@@ -364,6 +364,7 @@ bool TranscodeGPU::CheckSupportedQSV()
 	
 	_device_count_qsv++;
 
+	[[maybe_unused]]
 	auto constraints = av_hwdevice_get_hwframe_constraints(_device_context_qsv[0], nullptr);
 	logtd("constraints. hw.fmt(%d), sw.fmt(%d)", *constraints->valid_hw_formats, *constraints->valid_sw_formats);
 

@@ -555,6 +555,8 @@ namespace pub
 
 				for (auto &[id, push] : replication_pushes)
 				{
+					(void)(id); 	
+					
 					// If it is a removed push job, add to the remove waiting list
 					if (push->GetRemove() == true)
 					{

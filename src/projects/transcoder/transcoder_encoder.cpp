@@ -132,6 +132,8 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 
 	for (auto &candidate : *candidate_modules)
 	{
+		(void)(candidate);
+		
 		logtd("Candidate module: %s(%d), %s(%d):%d",
 			  cmn::GetStringFromCodecId(candidate->GetCodecId()).CStr(),
 			  candidate->GetCodecId(),
