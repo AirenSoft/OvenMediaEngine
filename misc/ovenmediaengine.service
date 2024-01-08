@@ -7,6 +7,8 @@ Type=forking
 PIDFile=/var/run/ovenmediaengine.pid
 WorkingDirectory=/usr/share/ovenmediaengine
 ExecStart=/usr/bin/OvenMediaEngine -d
+# Configuring the runtime environment for enabling the Xilinx Media Accelerator
+# ExecStart=/bin/bash -c 'source /opt/xilinx/xcdr/setup.sh -f; /usr/bin/OvenMediaEngine -d'
 Restart=always
 RestartSec=2
 RestartPreventExitStatus=1
