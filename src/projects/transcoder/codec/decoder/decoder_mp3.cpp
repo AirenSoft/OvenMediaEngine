@@ -236,7 +236,7 @@ void DecoderMP3::CodecThread()
 
 			_last_pkt_pts = output_frame->GetPts();
 
-			SendOutputBuffer(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(output_frame));
+			Complete(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(output_frame));
 		}
 	}
 }

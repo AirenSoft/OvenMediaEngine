@@ -272,7 +272,7 @@ void DecoderHEVCxNILOGAN::CodecThread()
 
 				::av_frame_unref(_frame);
 
-				SendOutputBuffer(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
+				Complete(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
 			}
 		}
 	}

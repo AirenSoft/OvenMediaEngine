@@ -333,7 +333,7 @@ void TranscodeDecoder::SendBuffer(std::shared_ptr<const MediaPacket> packet)
 	_input_buffer.Enqueue(std::move(packet));
 }
 
-void TranscodeDecoder::SendOutputBuffer(TranscodeResult result, std::shared_ptr<MediaFrame> frame)
+void TranscodeDecoder::Complete(TranscodeResult result, std::shared_ptr<MediaFrame> frame)
 {
 	// Invoke callback function when encoding/decoding is completed.
 	if (_complete_handler)

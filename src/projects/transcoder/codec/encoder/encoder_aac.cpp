@@ -136,7 +136,7 @@ void EncoderAAC::CodecThread()
 					continue;
 				}
 
-				SendOutputBuffer(std::move(media_packet));
+				Complete(std::move(media_packet));
 			}
 		}
 	}

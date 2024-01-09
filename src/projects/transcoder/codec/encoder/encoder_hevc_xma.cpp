@@ -173,7 +173,7 @@ void EncoderHEVCxXMA::CodecThread()
 
 				::av_packet_unref(_packet);
 
-				SendOutputBuffer(std::move(media_packet));
+				Complete(std::move(media_packet));
 			}
 		}
 	}

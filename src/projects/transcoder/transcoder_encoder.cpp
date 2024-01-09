@@ -354,7 +354,7 @@ void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 	_input_buffer.Enqueue(std::move(frame));
 }
 
-void TranscodeEncoder::SendOutputBuffer(std::shared_ptr<MediaPacket> packet)
+void TranscodeEncoder::Complete(std::shared_ptr<MediaPacket> packet)
 {
 	if (_complete_handler)
 	{

@@ -28,7 +28,7 @@ public:
 	bool Configure(std::shared_ptr<MediaTrack> track) override;
 
 	void SendBuffer(std::shared_ptr<const MediaPacket> packet) override;
-	void SendOutputBuffer(TranscodeResult result, std::shared_ptr<MediaFrame> frame);
+	void Complete(TranscodeResult result, std::shared_ptr<MediaFrame> frame);
 	
 	std::shared_ptr<MediaTrack> &GetRefTrack();
 

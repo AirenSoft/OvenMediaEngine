@@ -274,6 +274,6 @@ void EncoderOPUS::CodecThread()
 
 		_current_pts += duration;
 
-		SendOutputBuffer(std::move(packet_buffer));
+		Complete(std::move(packet_buffer));
 	}
 }
