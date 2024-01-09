@@ -1148,8 +1148,9 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		pop_media_packet->GetDuration() < 0)
 	{
 		logtw("[%s/%s] found invalid duration of packet. We need to find the cause of the incorrect Duration.", _stream->GetApplicationName(), _stream->GetName().CStr());
-				DumpPacket(pop_media_packet, false);
-				return nullptr;
+		DumpPacket(pop_media_packet, false);
+
+		return nullptr;
 	}
 
 	media_track->OnFrameAdded(pop_media_packet);

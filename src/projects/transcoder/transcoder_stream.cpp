@@ -600,8 +600,8 @@ ov::String TranscoderStream::GetInfoStringComposite()
 
 	for (auto &[input_track_id, input_track] : _input_stream->GetTracks())
 	{
-		debug_log.AppendFormat(" \n");
-		debug_log.AppendFormat("* InputTrack(%s/%d) : %s\n",
+		bool matched = false;
+		debug_log.AppendFormat("* Input(%s/%d) : %s\n",
 							   _input_stream->GetName().CStr(),
 							   input_track_id,
 							   input_track->GetInfoString().CStr());
@@ -609,12 +609,13 @@ ov::String TranscoderStream::GetInfoStringComposite()
 		// Bypass Stream
 		if (_link_input_to_outputs.find(input_track_id) != _link_input_to_outputs.end())
 		{
+			matched = true;
 			auto &output_tracks = _link_input_to_outputs[input_track_id];
 			for (auto &[stream, track_id] : output_tracks)
 			{
 				auto output_track = stream->GetTrack(track_id);
 
-				debug_log.AppendFormat("    + (Passthrough) OutputTrack(%s/%d) : %s\n",
+				debug_log.AppendFormat("  + Output(%s/%d) : Passthrough, %s\n",
 									   stream->GetName().CStr(),
 									   track_id,
 									   output_track->GetInfoString().CStr());
@@ -624,20 +625,22 @@ ov::String TranscoderStream::GetInfoStringComposite()
 		// Transcoding Stream
 		if (_link_input_to_decoder.find(input_track_id) != _link_input_to_decoder.end())
 		{
+			matched = true;
+
 			auto decoder_id = _link_input_to_decoder[input_track_id];
-			debug_log.AppendFormat("    + Decoder(%d)\n", decoder_id);
+			debug_log.AppendFormat("  + Decoder(%d)\n", decoder_id);
 
 			if (_link_decoder_to_filters.find(decoder_id) != _link_decoder_to_filters.end())
 			{
 				auto &filter_ids = _link_decoder_to_filters[decoder_id];
 				for (auto &filter_id : filter_ids)
 				{
-					debug_log.AppendFormat("        + Filter(%d)\n", filter_id);
+					debug_log.AppendFormat("    + Filter(%d)\n", filter_id);
 
 					if (_link_filter_to_encoder.find(filter_id) != _link_filter_to_encoder.end())
 					{
 						auto encoder_id = _link_filter_to_encoder[filter_id];
-						debug_log.AppendFormat("            + Encoder(%d)\n", encoder_id);
+						debug_log.AppendFormat("      + Encoder(%d)\n", encoder_id);
 
 						if (_link_encoder_to_outputs.find(encoder_id) != _link_encoder_to_outputs.end())
 						{
@@ -646,7 +649,7 @@ ov::String TranscoderStream::GetInfoStringComposite()
 							{
 								auto output_track = stream->GetTrack(track_id);
 
-								debug_log.AppendFormat("                  + OutputTrack(%s/%d) : %s\n",
+								debug_log.AppendFormat("        + Output(%s/%d) : %s\n",
 													   stream->GetName().CStr(),
 													   track_id,
 													   output_track->GetInfoString().CStr());
@@ -655,6 +658,11 @@ ov::String TranscoderStream::GetInfoStringComposite()
 					}
 				}
 			}
+		}
+
+		if(matched == false)
+		{
+			debug_log.AppendFormat("  + (No output)\n");
 		}
 	}
 

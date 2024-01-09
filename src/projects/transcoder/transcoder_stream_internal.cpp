@@ -23,25 +23,26 @@ ov::String TranscoderStreamInternal::GetIdentifiedForVideoProfile(const uint32_t
 {
 	if (profile.IsBypass() == true)
 	{
-		return ov::String::FormatString("In_T%d_Out_Pbypass", track_id);
+		return ov::String::FormatString("I=T%d,O=bypass", track_id);
 	}
 
-	auto unique_profile_name = ov::String::FormatString("In_T%d_Out_C%s-%d-%.02f-%d-%d",
+	auto unique_profile_name = ov::String::FormatString("I=%d,O=%s:%d:%.02f:%d:%d:%d",
 									track_id,
 									profile.GetCodec().CStr(),
 									profile.GetBitrate(),
 									profile.GetFramerate(),
+									profile.GetSkipFrames(),
 									profile.GetWidth(),
 									profile.GetHeight());
 
 	if(profile.GetPreset().IsEmpty() == false)
 	{
-		unique_profile_name +=  ov::String::FormatString("-Pr%s", profile.GetPreset().CStr());
+		unique_profile_name +=  ov::String::FormatString(":%s", profile.GetPreset().CStr());
 	}
 
 	if(profile.GetProfile().IsEmpty() == false)
 	{
-		unique_profile_name +=  ov::String::FormatString("-Pf%s", profile.GetProfile().CStr());
+		unique_profile_name +=  ov::String::FormatString(":%s", profile.GetProfile().CStr());
 	}
 
 	return unique_profile_name;
@@ -49,10 +50,11 @@ ov::String TranscoderStreamInternal::GetIdentifiedForVideoProfile(const uint32_t
 
 ov::String TranscoderStreamInternal::GetIdentifiedForImageProfile(const uint32_t track_id, const cfg::vhost::app::oprf::ImageProfile &profile)
 {
-	return ov::String::FormatString("In_T%d_Out_C%s-%.02f-%d-%d",
+	return ov::String::FormatString("I=%d,O=%s:%.02f:%d:%d:%d",
 									track_id,
 									profile.GetCodec().CStr(),
 									profile.GetFramerate(),
+									profile.GetSkipFrames(),
 									profile.GetWidth(),
 									profile.GetHeight());
 }
@@ -61,10 +63,10 @@ ov::String TranscoderStreamInternal::GetIdentifiedForAudioProfile(const uint32_t
 {
 	if (profile.IsBypass() == true)
 	{
-		return ov::String::FormatString("In_T%d_Out_Pbypass", track_id);
+		return ov::String::FormatString("I=%d,O=bypass", track_id);
 	}
 
-	return ov::String::FormatString("In_T%d_Out_C%s-%d-%d-%d",
+	return ov::String::FormatString("I=%d,O=%s:%d:%d:%d",
 									track_id,
 									profile.GetCodec().CStr(),
 									profile.GetBitrate(),
@@ -74,7 +76,7 @@ ov::String TranscoderStreamInternal::GetIdentifiedForAudioProfile(const uint32_t
 
 ov::String TranscoderStreamInternal::GetIdentifiedForDataProfile(const uint32_t track_id)
 {
-	return ov::String::FormatString("In_T%d_Out_Cbypass", track_id);
+	return ov::String::FormatString("I=%d,O=bypass", track_id);
 }
 
 cmn::Timebase TranscoderStreamInternal::GetDefaultTimebaseByCodecId(cmn::MediaCodecId codec_id)
@@ -159,6 +161,12 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(
 		output_track->SetKeyFrameIntervalByConfig(profile.GetKeyFrameInterval());
 	}
 
+	profile.GetSkipFrames(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetSkipFramesByConfig(profile.GetSkipFrames());
+	}
+
 	output_track->SetMediaType(cmn::MediaType::Video);
 	output_track->SetId(NewTrackId());
 	output_track->SetVariantName(profile.GetName());
@@ -191,11 +199,13 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(
 		output_track->SetProfile(profile.GetProfile());
 	}
 
+	//  If the framerate is not set, it is set to the same value as the input.
 	if(output_track->GetFrameRateByConfig() == 0)
 	{
 		output_track->SetFrameRateByMeasured(input_track->GetFrameRate());
 	}
 
+	//  If the bitrate is not set, it is set to the same value as the input.
 	if(output_track->GetBitrateByConfig() == 0)
 	{
 		output_track->SetBitrateByMeasured(input_track->GetBitrate());
@@ -279,7 +289,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 		}
 	}
 
-	// Bitrate
+	//  If the bitrate is not set, it is set to the same value as the input.
 	if(output_track->GetBitrateByConfig() == 0)
 	{
 		output_track->SetBitrateByMeasured(input_track->GetBitrate());
@@ -321,6 +331,12 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 		output_track->SetFrameRateByConfig(profile.GetFramerate());
 	}
 
+	profile.GetSkipFrames(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetSkipFramesByConfig(profile.GetSkipFrames());
+	}
+
 	output_track->SetPublicName(input_track->GetPublicName());
 	output_track->SetLanguage(input_track->GetLanguage());
 	output_track->SetVariantName(profile.GetName());
@@ -342,7 +358,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 	output_track->SetBitrateByConfig(0);
 	output_track->SetBitrateByMeasured(1000000);
 	
-	// Set framerate of the output track
+	//  If the framerate is not set, it is set to the same value as the input.
 	if(output_track->GetFrameRateByConfig() == 0)
 	{
 		output_track->SetFrameRateByMeasured(input_track->GetFrameRate());

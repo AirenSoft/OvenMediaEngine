@@ -93,6 +93,14 @@ public:
 		return false;
 	}
 
+	void Complete(std::shared_ptr<MediaFrame> buffer)
+	{
+		if (_complete_handler != nullptr && _kill_flag == false)
+		{
+			_complete_handler(std::move(buffer));
+		}
+	}
+
 protected:
 
 	std::atomic<State> _state = State::CREATED;
@@ -121,8 +129,6 @@ protected:
 	// double _scale = 0.0;
 
 	// resolution of the input video frame
-
-
 	std::shared_ptr<MediaTrack> _input_track;
 	std::shared_ptr<MediaTrack> _output_track;
 

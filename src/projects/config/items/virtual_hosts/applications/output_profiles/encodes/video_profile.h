@@ -37,7 +37,7 @@ namespace cfg
 					int _b_frames = 0;
 					BypassIfMatch _bypass_if_match;
 					ov::String _profile;
-					
+					int _skip_frames = 0;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
@@ -55,6 +55,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBFrames, _b_frames)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBypassIfMatch, _bypass_if_match)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetProfile, _profile)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetSkipFrames, _skip_frames)
 
 					void SetName(const ov::String &name){_name = name;}
 					void SetBypass(bool bypass){_bypass = bypass;}
@@ -104,6 +105,15 @@ namespace cfg
 						Register<Optional>("Width", &_width);
 						Register<Optional>("Height", &_height);
 						Register<Optional>("Framerate", &_framerate);
+						Register<Optional>("SkipFrames", &_skip_frames, nullptr, 
+							[=]() -> std::shared_ptr<ConfigError> {
+
+								if(_framerate > 0 && _skip_frames > 0) {
+									logw("Config", "Use SkipFrames in the settings, the Framerate is ignored.");
+								}
+
+								return (_skip_frames >= 0 && _skip_frames <= 120) ? nullptr : CreateConfigErrorPtr("SkipFrames must be between 0 and 120");
+							});
 						Register<Optional>("Preset", &_preset, nullptr, 
 							[=]() -> std::shared_ptr<ConfigError> {
 								auto preset = _preset.LowerCaseString();
@@ -132,6 +142,7 @@ namespace cfg
 							}
 							return CreateConfigErrorPtr("Profile must be baseline, main or high");
 						});
+
 					}
 				};
 			}  // namespace oprf

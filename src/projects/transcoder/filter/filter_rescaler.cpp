@@ -106,8 +106,9 @@ bool FilterRescaler::InitializeFilterDescription()
 {
 	std::vector<ov::String> filters;
 
-	// 1. Framerate
-	if (_output_track->GetFrameRateByConfig() > 0.0f)
+	// 1. Framerate. 
+	// if SkipFrames is set, the fps filter is ignored.
+	if (_output_track->GetFrameRateByConfig() > 0.0f && _output_track->GetSkipFramesByConfig() == 0)
 	{
 		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", _output_track->GetFrameRateByConfig()));
 	}
@@ -374,6 +375,7 @@ void FilterRescaler::WorkerThread()
 	logtd("Start rescaling filter thread");
 	int ret;
 
+	int64_t frame_count_in = 0;
 
 	SetState(State::STARTED);
 
@@ -385,8 +387,17 @@ void FilterRescaler::WorkerThread()
 			continue;
 		}
 
-		auto media_frame = std::move(obj.value());
+		// Skip Frames
+		frame_count_in++;
+		int32_t skip_frames = _output_track->GetSkipFramesByConfig();
+		if(skip_frames > 0 && frame_count_in % (skip_frames + 1) != 0)
+		{
+			// Drop Frame
+			continue;
+		}
 
+		auto media_frame = std::move(obj.value());
+		
 		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
 		if (!av_frame)
 		{
@@ -459,10 +470,7 @@ void FilterRescaler::WorkerThread()
 					continue;
 				}
 
-				if (_complete_handler != nullptr && _kill_flag == false)
-				{
-					_complete_handler(std::move(output_frame));
-				}
+				Complete(std::move(output_frame));
 			}
 		}
 	}

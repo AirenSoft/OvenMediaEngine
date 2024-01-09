@@ -289,10 +289,7 @@ void FilterResampler::WorkerThread()
 					continue;
 				}
 
-				if (_complete_handler != nullptr && _kill_flag == false)
-				{
-					_complete_handler(std::move(output_frame));
-				}
+				Complete(std::move(output_frame));
 			}
 		}
 	}

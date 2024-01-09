@@ -209,3 +209,12 @@ int32_t VideoTrack::GetHeightByConfig() const
 	return _height_conf;
 }
 
+void VideoTrack::SetSkipFramesByConfig(int32_t skip_frames)
+{
+	_skip_frames_conf = skip_frames;
+}
+
+int32_t VideoTrack::GetSkipFramesByConfig() const
+{
+	return _skip_frames_conf;
+}

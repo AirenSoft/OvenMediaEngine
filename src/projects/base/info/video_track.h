@@ -75,6 +75,9 @@ public:
 	void SetBFrames(int32_t b_frames);
 	int32_t GetBFrames();
 
+	void SetSkipFramesByConfig(int32_t skip_frames);
+	int32_t GetSkipFramesByConfig() const;
+
 protected:
 
 	// framerate (measurement)
@@ -117,4 +120,7 @@ protected:
 	
 	// Thread count of codec (set by user)
 	int _thread_count;	
+
+	// Skip frames (set by user)
+	int32_t _skip_frames_conf;
 };
