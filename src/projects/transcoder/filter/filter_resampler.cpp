@@ -104,6 +104,7 @@ bool FilterResampler::InitializeFilterDescription()
 	std::vector<ov::String> filters;
 
 	filters.push_back(ov::String::FormatString("asettb=%s", _output_track->GetTimeBase().GetStringExpr().CStr()));
+	filters.push_back(ov::String::FormatString("aresample=async=1000"));
 	filters.push_back(ov::String::FormatString("aresample=%d", _output_track->GetSampleRate()));
 	filters.push_back(ov::String::FormatString("aformat=sample_fmts=%s:channel_layouts=%s", _output_track->GetSample().GetName(), _output_track->GetChannel().GetName()));
 	filters.push_back(ov::String::FormatString("asetnsamples=n=%d", _output_track->GetAudioSamplesPerFrame()));
