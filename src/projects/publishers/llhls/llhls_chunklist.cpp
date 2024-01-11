@@ -341,11 +341,6 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 		first_segment = it->second;
 	}
 
-	if (rewind == false)
-	{
-		logti("track(%d) lagacy(%s) rewind(%s) first_segment(%lld) last_segment(%lld)", _track->GetId(), legacy == true ? "true" : "false", rewind == true ? "true" : "false", first_segment->GetSequence(), last_segment->GetSequence());
-	}
-
 	playlist.AppendFormat("#EXT-X-MEDIA-SEQUENCE:%u\n", vod == false ? first_segment->GetSequence() : 0);
 	playlist.AppendFormat("#EXT-X-MAP:URI=\"%s", _map_uri.CStr());
 	if (query_string.IsEmpty() == false)
