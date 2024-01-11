@@ -20,7 +20,8 @@ VideoTrack::VideoTrack()
 	  _b_frames(0),
 	  _has_bframe(false),
 	  _preset(""),
-	  _thread_count(0)
+	  _thread_count(0),
+	  _skip_frames_conf(0)
 {
 }
 
