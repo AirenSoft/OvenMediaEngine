@@ -161,6 +161,12 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(
 		output_track->SetKeyFrameIntervalByConfig(profile.GetKeyFrameInterval());
 	}
 
+	profile.GetKeyFrameIntervalType(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetKeyFrameIntervalTypeByConfig(cmn::GetKeyFrameIntervalTypeByName(profile.GetKeyFrameIntervalType()));
+	}
+
 	profile.GetSkipFrames(&is_parsed);
 	if (is_parsed == true)
 	{

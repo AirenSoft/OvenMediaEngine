@@ -15,8 +15,9 @@ VideoTrack::VideoTrack()
 	  _video_timescale(0),
 	  _width(0),
 	  _height(0),
-		_key_frame_interval(0),
+	  _key_frame_interval(0),
 	  _key_frame_interval_conf(0),
+	  _key_frame_interval_type_conf(cmn::KeyFrameIntervalType::FRAME),
 	  _b_frames(0),
 	  _has_bframe(false),
 	  _preset(""),
@@ -125,6 +126,16 @@ void VideoTrack::SetKeyFrameIntervalByConfig(int32_t key_frame_interval)
 int32_t VideoTrack::GetKeyFrameIntervalByConfig() const
 {
 	return _key_frame_interval_conf;
+}
+
+void VideoTrack::SetKeyFrameIntervalTypeByConfig(cmn::KeyFrameIntervalType key_frame_interval_type)
+{
+	_key_frame_interval_type_conf = key_frame_interval_type;
+}
+
+cmn::KeyFrameIntervalType VideoTrack::GetKeyFrameIntervalTypeByConfig() const
+{
+	return _key_frame_interval_type_conf;
 }
 
 void VideoTrack::SetBFrames(int32_t b_frames)

@@ -36,7 +36,7 @@
 
 std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::GetCandidates(bool hwaccels_enable, ov::String hwaccles_modules, std::shared_ptr<MediaTrack> track)
 {
-	logtd("Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s), Video.Modules(%s), ", GetStringFromCodecId(track->GetCodecId()).CStr(), hwaccels_enable?"true":"false", hwaccles_modules.CStr(), track->GetCodecModules().CStr());
+	logtd("Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s), Video.Modules(%s), ", GetCodecIdToString(track->GetCodecId()).CStr(), hwaccels_enable?"true":"false", hwaccles_modules.CStr(), track->GetCodecModules().CStr());
 
 	ov::String configuration = ""; 
 	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidate_modules = std::make_shared<std::vector<std::shared_ptr<CodecCandidate>>>();
@@ -135,7 +135,7 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 		(void)(candidate);
 		
 		logtd("Candidate module: %s(%d), %s(%d):%d",
-			  cmn::GetStringFromCodecId(candidate->GetCodecId()).CStr(),
+			  cmn::GetCodecIdToString(candidate->GetCodecId()).CStr(),
 			  candidate->GetCodecId(),
 			  cmn::GetStringFromCodecModuleId(candidate->GetModuleId()).CStr(),
 			  candidate->GetModuleId(),
@@ -276,7 +276,7 @@ done:
 
 		logti("The encoder has been created successfully. track(#%d), codec(%s), module(%s:%d)",
 			track->GetId(),
-			cmn::GetStringFromCodecId(track->GetCodecId()).CStr(),
+			cmn::GetCodecIdToString(track->GetCodecId()).CStr(),
 			cmn::GetStringFromCodecModuleId(track->GetCodecModuleId()).CStr(),
 			track->GetCodecDeviceId());		
 	}
@@ -372,5 +372,65 @@ void TranscodeEncoder::Stop()
 	{
 		_codec_thread.join();
 		logtd(ov::String::FormatString("encoder %s thread has ended", avcodec_get_name(GetCodecID())).CStr());
+	}
+}
+
+#include "modules/bitstream/h264/h264_parser.h"
+#include "modules/bitstream/h265/h265_parser.h"
+
+void TranscodeEncoder::DumpNalUnit(cmn::BitstreamFormat format, int32_t nal_type, const uint8_t *bitstream, size_t length)
+{
+	ov::String dump = "";
+
+	size_t offset = 0;
+	while (offset < length)
+	{
+		size_t start_code_size = 0;
+
+		if (format == cmn::BitstreamFormat::H264_ANNEXB)
+		{
+			auto pos = H264Parser::FindAnnexBStartCode(bitstream + offset, length - offset, start_code_size);
+			if (pos == -1)
+			{
+				break;
+			}
+
+			offset = offset + pos + start_code_size;
+			if (length - offset > H264_NAL_UNIT_HEADER_SIZE)
+			{
+				H264NalUnitHeader header;
+				H264Parser::ParseNalUnitHeader(bitstream + offset, H264_NAL_UNIT_HEADER_SIZE, header);
+
+				if (header.GetNalUnitType() == (H264NalUnitType)nal_type || (H264NalUnitType)nal_type == H264NalUnitType::Unspecified)
+				{
+					dump += ov::String::FormatString("[%d-%d]%s ", offset, length - offset, NalUnitTypeToStr((uint8_t)header.GetNalUnitType()).CStr());
+				}
+			}
+		}
+		else if(format == cmn::BitstreamFormat::H265_ANNEXB)
+		{
+			auto pos = H265Parser::FindAnnexBStartCode(bitstream + offset, length - offset, start_code_size);
+			if (pos == -1)
+			{
+				break;
+			}
+
+			offset = offset + pos + start_code_size;
+			if (length - offset > H264_NAL_UNIT_HEADER_SIZE)
+			{
+				H265NalUnitHeader header;
+				H265Parser::ParseNalUnitHeader(bitstream + offset, H264_NAL_UNIT_HEADER_SIZE, header);
+
+				if (header.GetNalUnitType() ==(H265NALUnitType) nal_type || (H265NALUnitType)nal_type == H265NALUnitType::TRAIL_N)
+				{
+					dump += ov::String::FormatString("[%d-%d]%s ", offset, length - offset, NalUnitTypeToStr((uint8_t)header.GetNalUnitType()).CStr());
+				}
+			}
+		}
+	}
+
+	if (dump.IsEmpty() == false)
+	{
+		logti("ParseNalUnit: %s", dump.CStr());
 	}
 }

@@ -908,9 +908,14 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 				continue;
 			}
 
-			if(track->GetMediaType() == MediaType::Video)
+			if (track->GetMediaType() == MediaType::Video)
 			{
-				stat_track_str.AppendFormat(", fps: %.2f", track->GetFrameRate());
+				stat_track_str.AppendFormat(", fps: %.2f/%.2f",
+											track->GetFrameRateByMeasured(), track->GetFrameRate());
+				stat_track_str.AppendFormat(", kint: %d/%d/%s",
+											track->GetKeyFrameIntervalByMeasured(),
+											track->GetKeyFrameInterval(),
+											cmn::GetKeyFrameIntervalTypeToString(track->GetKeyFrameIntervalTypeByConfig()).CStr());
 			}
 
 			// calc min/max pts

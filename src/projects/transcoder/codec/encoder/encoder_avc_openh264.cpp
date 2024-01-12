@@ -23,8 +23,18 @@ bool EncoderAVCxOpenH264::SetCodecParams()
 	_codec_context->width = GetRefTrack()->GetWidth();
 	_codec_context->height = GetRefTrack()->GetHeight();
 
-	// Set KeyFrame Interval
-	_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
+	// KeyFrame Interval By Time
+	if(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::TIME)
+	{
+		// When inserting a keyframe based on time, set the GOP value to 10 seconds.
+		_codec_context->gop_size = (int32_t)(GetRefTrack()->GetFrameRate() * 10);
+		_force_keyframe_timer.Start(GetRefTrack()->GetKeyFrameInterval());
+	}
+	// KeyFrame Interval By Frame
+	if(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::FRAME)
+	{
+		_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
+	}
 
 	// -1(Default) => FFMIN(FFMAX(4, av_cpu_count() / 3), 8) 
 	// 0 => Auto
@@ -168,6 +178,8 @@ bool EncoderAVCxOpenH264::Configure(std::shared_ptr<MediaTrack> context)
 
 void EncoderAVCxOpenH264::CodecThread()
 {
+	_force_keyframe_timer.Start(1000);
+
 	while (!_kill_flag)
 	{
 		auto obj = _input_buffer.Dequeue();
@@ -186,9 +198,12 @@ void EncoderAVCxOpenH264::CodecThread()
 			break;
 		}
 
-		// AV_Frame.pict_type must be set to AV_PICTURE_TYPE_NONE. This will ensure that the keyframe interval option is applied correctly.
-		av_frame->pict_type = AV_PICTURE_TYPE_NONE;
-
+		// If force_keyframe_timer is started, keyframes are inserted based on time.
+		if(_force_keyframe_timer.IsStart() == true && _force_keyframe_timer.IsTimeout() == true && _force_keyframe_timer.Update())
+		{
+			av_frame->pict_type = AV_PICTURE_TYPE_I;
+		}
+		
 		int ret = ::avcodec_send_frame(_codec_context, av_frame);
 		if (ret < 0)
 		{
@@ -214,6 +229,8 @@ void EncoderAVCxOpenH264::CodecThread()
 			}
 			else
 			{
+				DumpNalUnit(cmn::BitstreamFormat::H264_ANNEXB, (int32_t)H264NalUnitType::IdrSlice, _packet->data, _packet->size);
+
 				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::H264_ANNEXB, cmn::PacketType::NALU);
 				if (media_packet == nullptr)
 				{

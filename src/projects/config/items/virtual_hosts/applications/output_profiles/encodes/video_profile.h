@@ -34,6 +34,7 @@ namespace cfg
 					ov::String _preset;
 					int _thread_count = -1;
 					int _key_frame_interval = 0;
+					ov::String _key_frame_interval_type = "frame";
 					int _b_frames = 0;
 					BypassIfMatch _bypass_if_match;
 					ov::String _profile;
@@ -52,6 +53,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetPreset, _preset)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetThreadCount, _thread_count)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetKeyFrameInterval, _key_frame_interval)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetKeyFrameIntervalType, _key_frame_interval_type)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBFrames, _b_frames)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBypassIfMatch, _bypass_if_match)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetProfile, _profile)
@@ -124,10 +126,26 @@ namespace cfg
 								return CreateConfigErrorPtr("Preset must be slower, slow, medium, fast, or faster");
 							});
 						Register<Optional>("ThreadCount", &_thread_count);
+						Register<Optional>("KeyFrameIntervalType", &_key_frame_interval_type, nullptr, 
+							[=]() -> std::shared_ptr<ConfigError> {
+								auto key_frame_interval_type = _key_frame_interval_type.LowerCaseString();
+								if(key_frame_interval_type == "frame" || key_frame_interval_type == "time")
+								{
+									return nullptr;
+								}
+
+								return CreateConfigErrorPtr("KeyFrameIntervalType must be frame or time");
+							});						
 						Register<Optional>("KeyFrameInterval", &_key_frame_interval, nullptr, 
 							[=]() -> std::shared_ptr<ConfigError> {
+								if(_key_frame_interval_type == "time")
+								{
+									return (_key_frame_interval > 0 && _key_frame_interval <= 10000) ? nullptr : CreateConfigErrorPtr("KeyFrameInterval must be between 0 and 10000");
+								}
+
 								return (_key_frame_interval >= 0 && _key_frame_interval <= 600) ? nullptr : CreateConfigErrorPtr("KeyFrameInterval must be between 0 and 600");
 							});
+
 						Register<Optional>("BFrames", &_b_frames, nullptr, 
 							[=]() -> std::shared_ptr<ConfigError> {
 								return (_b_frames >= 0 && _b_frames <= 16) ? nullptr : CreateConfigErrorPtr("BFrames must be between 0 and 16");

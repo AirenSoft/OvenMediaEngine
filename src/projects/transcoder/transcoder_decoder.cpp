@@ -31,7 +31,7 @@
 
 std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeDecoder::GetCandidates(bool hwaccels_enable, ov::String hwaccles_modules, std::shared_ptr<MediaTrack> track)
 {
-	logtd("Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s)", GetStringFromCodecId(track->GetCodecId()).CStr(), hwaccels_enable?"true":"falase", hwaccles_modules.CStr());
+	logtd("Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s)", GetCodecIdToString(track->GetCodecId()).CStr(), hwaccels_enable?"true":"falase", hwaccles_modules.CStr());
 
 	ov::String configuration = "";
 	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidate_modules = std::make_shared<std::vector<std::shared_ptr<CodecCandidate>>>();
@@ -119,7 +119,7 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeDecoder::
 		(void)(candidate);
 				
 		logtd("Candidate module: %s(%d), %s(%d):%d",
-			  cmn::GetStringFromCodecId(candidate->GetCodecId()).CStr(),
+			  cmn::GetCodecIdToString(candidate->GetCodecId()).CStr(),
 			  candidate->GetCodecId(),
 			  cmn::GetStringFromCodecModuleId(candidate->GetModuleId()).CStr(),
 			  candidate->GetModuleId(),
@@ -241,7 +241,7 @@ done:
 
 		logti("The decoder has been created successfully. track(#%d) codec(%s), module(%s:%d)",
 			track->GetId(),
-			cmn::GetStringFromCodecId(track->GetCodecId()).CStr(),
+			cmn::GetCodecIdToString(track->GetCodecId()).CStr(),
 			cmn::GetStringFromCodecModuleId(track->GetCodecModuleId()).CStr(),
 			track->GetCodecDeviceId());		
 	}

@@ -32,7 +32,7 @@ namespace ov
 	{
 		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - _start).count();
 
-		while (_end_time < elapsed)
+		while (_end_time <= elapsed)
 		{
 			_end_time += _interval;
 		}

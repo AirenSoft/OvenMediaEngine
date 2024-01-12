@@ -72,6 +72,9 @@ public:
 	void SetKeyFrameIntervalByConfig(int32_t key_frame_interval);
 	int32_t GetKeyFrameIntervalByConfig() const;
 
+	void SetKeyFrameIntervalTypeByConfig(cmn::KeyFrameIntervalType key_frame_interval_type);
+	cmn::KeyFrameIntervalType GetKeyFrameIntervalTypeByConfig() const;
+
 	void SetBFrames(int32_t b_frames);
 	int32_t GetBFrames();
 
@@ -101,7 +104,9 @@ protected:
 	int32_t _key_frame_interval;
 	// Key Frame Interval (set by user)
 	int32_t _key_frame_interval_conf;
-	
+	// Key Frame Interval Type (set by user)
+	cmn::KeyFrameIntervalType _key_frame_interval_type_conf;
+
 	// Number of B-frame (set by user)
 	int32_t _b_frames;
 	

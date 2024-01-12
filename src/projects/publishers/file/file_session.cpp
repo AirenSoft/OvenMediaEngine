@@ -154,7 +154,7 @@ namespace pub
 
 			if (ffmpeg::Conv::IsSupportCodec(output_format, track->GetCodecId()) == false)
 			{
-				logtw("%s format does not support the codec(%s)", output_format.CStr(), cmn::GetStringFromCodecId(track->GetCodecId()).CStr());
+				logtw("%s format does not support the codec(%s)", output_format.CStr(), cmn::GetCodecIdToString(track->GetCodecId()).CStr());
 				continue;
 			}
 

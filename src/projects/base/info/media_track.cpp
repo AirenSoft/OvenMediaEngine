@@ -305,7 +305,7 @@ ov::String MediaTrack::GetInfoString()
 				"BSF(%s) "
 				"Resolution(%dx%d) "
 				"Framerate(%.2f) "
-				"KeyInterval(%d) "
+				"KeyInterval(%d/%s) "
 				"SkipFrames(%d) "
 				"BFrames(%d) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
@@ -315,6 +315,7 @@ ov::String MediaTrack::GetInfoString()
 				GetWidth(), GetHeight(),
 				GetFrameRate(),
 				GetKeyFrameInterval(),
+				cmn::GetKeyFrameIntervalTypeToString(GetKeyFrameIntervalTypeByConfig()).LowerCaseString().CStr(),
 				GetSkipFramesByConfig(),
 				GetBFrames());
 			break;

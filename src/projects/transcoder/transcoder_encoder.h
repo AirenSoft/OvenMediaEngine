@@ -72,4 +72,7 @@ protected:
 
 	CompleteHandler _complete_handler;
 
+	ov::PreciseTimer _force_keyframe_timer;
+public:
+	void DumpNalUnit(cmn::BitstreamFormat format, int32_t nal_type, const uint8_t *bitstream, size_t length);
 };

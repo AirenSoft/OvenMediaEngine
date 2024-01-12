@@ -21,6 +21,7 @@ namespace ov
 		bool IsTimeout() const;
 		int64_t GetElapsed() const;
 		int64_t GetEndtime() const;
+		
 	protected:
 
 		int64_t _interval { 0 }; 	// milliseconds

@@ -110,6 +110,12 @@ namespace cmn
 		NB
 	};
 
+	enum class KeyFrameIntervalType : uint8_t
+	{
+		FRAME = 0,
+		TIME
+	};
+
 	static bool IsVideoCodec(cmn::MediaCodecId codec_id)
 	{
 		if (codec_id == cmn::MediaCodecId::H264 ||
@@ -320,7 +326,7 @@ namespace cmn
 		return false;
 	}
 
-	static ov::String GetStringFromCodecId(cmn::MediaCodecId id)
+	static ov::String GetCodecIdToString(cmn::MediaCodecId id)
 	{
 		switch (id)
 		{
@@ -408,6 +414,35 @@ namespace cmn
 		}
 
 		return cmn::MediaCodecId::None;
+	}
+
+	static ov::String GetKeyFrameIntervalTypeToString(cmn::KeyFrameIntervalType type)
+	{
+		switch (type)
+		{
+			case cmn::KeyFrameIntervalType::FRAME:
+				return "frame";
+			case cmn::KeyFrameIntervalType::TIME:
+				return "time";
+			default:
+				return "unknown";
+		}
+	}
+
+	static cmn::KeyFrameIntervalType GetKeyFrameIntervalTypeByName(ov::String type)
+	{
+		type.MakeLower();
+
+		if (type == "frame")
+		{
+			return cmn::KeyFrameIntervalType::FRAME;
+		}
+		else if (type == "time")
+		{
+			return cmn::KeyFrameIntervalType::TIME;
+		}
+
+		return cmn::KeyFrameIntervalType::FRAME;
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////

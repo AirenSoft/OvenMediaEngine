@@ -26,8 +26,20 @@ bool EncoderHEVCxNILOGAN::SetCodecParams()
 	_codec_context->pix_fmt = (AVPixelFormat)GetSupportedFormat();
 	_codec_context->width = GetRefTrack()->GetWidth();
 	_codec_context->height = GetRefTrack()->GetHeight();
-	_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
-	
+
+	// KeyFrame Interval By Time
+	if(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::TIME)
+	{
+		// When inserting a keyframe based on time, set the GOP value to 10 seconds.
+		_codec_context->gop_size = (int32_t)(GetRefTrack()->GetFrameRate() * 10);
+		_force_keyframe_timer.Start(GetRefTrack()->GetKeyFrameInterval());
+	}
+	// KeyFrame Interval By Frame
+	if(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::FRAME)
+	{
+		_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
+	}
+
 	//disable b-frames
 	/*
 	1 : I-I-I-I,..I (all intra, gop_size=1)
@@ -128,6 +140,12 @@ void EncoderHEVCxNILOGAN::CodecThread()
 		{
 			logte("Could not allocate the video frame data");
 			break;
+		}
+
+		// If force_keyframe_timer is started, keyframes are inserted based on time.
+		if(_force_keyframe_timer.IsStart() == true && _force_keyframe_timer.IsTimeout() == true && _force_keyframe_timer.Update())
+		{
+			av_frame->pict_type = AV_PICTURE_TYPE_I;
 		}
 
 		int ret = ::avcodec_send_frame(_codec_context, av_frame);
