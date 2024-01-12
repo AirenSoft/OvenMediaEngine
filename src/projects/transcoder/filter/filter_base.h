@@ -81,7 +81,7 @@ public:
 		return _state;
 	}
 
-	int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer)
+	bool SendBuffer(std::shared_ptr<MediaFrame> buffer)
 	{
 		if(GetState() == State::CREATED || GetState() == State::STARTED)
 		{
