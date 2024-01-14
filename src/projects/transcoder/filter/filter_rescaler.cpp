@@ -372,7 +372,6 @@ void FilterRescaler::Stop()
 
 void FilterRescaler::WorkerThread()
 {
-	logtd("Start rescaling filter thread");
 	int ret;
 
 	int64_t frame_count_in = 0;

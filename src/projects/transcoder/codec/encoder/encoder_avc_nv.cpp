@@ -102,7 +102,9 @@ bool EncoderAVCxNV::SetCodecParams()
 	::av_opt_set(_codec_context->priv_data, "tune", "ull", 0);
 	::av_opt_set(_codec_context->priv_data, "rc", "cbr", 0);
 
-
+	_bitstream_format = cmn::BitstreamFormat::H264_ANNEXB;
+	
+	_packet_type = cmn::PacketType::NALU;
 
 	return true;
 }
@@ -185,72 +187,3 @@ bool EncoderAVCxNV::Configure(std::shared_ptr<MediaTrack> context)
 	return true;
 }
 
-void EncoderAVCxNV::CodecThread()
-{
-	while (!_kill_flag)
-	{
-		auto obj = _input_buffer.Dequeue();
-		if (obj.has_value() == false)
-			continue;
-
-		auto media_frame = std::move(obj.value());
-
-		///////////////////////////////////////////////////
-		// Request frame encoding to codec
-		///////////////////////////////////////////////////
-		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
-		if(!av_frame)
-		{
-			logte("Could not allocate the video frame data");
-			break;
-		}
-
-		// If force_keyframe_timer is started, keyframes are inserted based on time.
-		if(_force_keyframe_timer.IsStart() == true && _force_keyframe_timer.IsTimeout() == true && _force_keyframe_timer.Update())
-		{
-			av_frame->pict_type = AV_PICTURE_TYPE_I;
-		}
-
-		int ret = ::avcodec_send_frame(_codec_context, av_frame);
-		if (ret < 0)
-		{
-			logte("Error sending a frame for encoding : %d", ret);
-		}
-
-		///////////////////////////////////////////////////
-		// The encoded packet is taken from the codec.
-		///////////////////////////////////////////////////
-		while (true)
-		{
-
-			// Check frame is available
-			int ret = ::avcodec_receive_packet(_codec_context, _packet);
-			if (ret == AVERROR(EAGAIN))
-			{
-				// More packets are needed for encoding.
-				break;
-			}
-			else if (ret == AVERROR_EOF && ret < 0)
-			{
-				logte("Error receiving a packet for decoding : %d", ret);
-				break;
-			}
-			else
-			{
-				// logti("pict_type : %d, flags : %d", _packet->pict_type, _packet->flags);
-				DumpNalUnit(cmn::BitstreamFormat::H264_ANNEXB, (int32_t)H264NalUnitType::IdrSlice, _packet->data, _packet->size);
-				
-				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::H264_ANNEXB, cmn::PacketType::NALU);
-				if (media_packet == nullptr)
-				{
-					logte("Could not allocate the media packet");
-					break;
-				}
-
-				::av_packet_unref(_packet);
-
-				Complete(std::move(media_packet));
-			}
-		}
-	}
-}

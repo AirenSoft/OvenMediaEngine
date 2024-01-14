@@ -271,6 +271,7 @@ done:
 	if (encoder)
 	{
 		track->SetCodecModuleId(cur_candidate->GetModuleId());
+		
 		encoder->SetEncoderId(encoder_id);
 		encoder->SetCompleteHandler(complete_handler);
 
@@ -354,6 +355,11 @@ void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 	_input_buffer.Enqueue(std::move(frame));
 }
 
+void TranscodeEncoder::SetCompleteHandler(CompleteHandler complete_handler)
+{
+	_complete_handler = move(complete_handler);
+}
+
 void TranscodeEncoder::Complete(std::shared_ptr<MediaPacket> packet)
 {
 	if (_complete_handler)
@@ -375,62 +381,83 @@ void TranscodeEncoder::Stop()
 	}
 }
 
-#include "modules/bitstream/h264/h264_parser.h"
-#include "modules/bitstream/h265/h265_parser.h"
-
-void TranscodeEncoder::DumpNalUnit(cmn::BitstreamFormat format, int32_t nal_type, const uint8_t *bitstream, size_t length)
+void TranscodeEncoder::CodecThread()
 {
-	ov::String dump = "";
-
-	size_t offset = 0;
-	while (offset < length)
+	while (!_kill_flag)
 	{
-		size_t start_code_size = 0;
+		auto obj = _input_buffer.Dequeue();
+		if (obj.has_value() == false)
+			continue;
 
-		if (format == cmn::BitstreamFormat::H264_ANNEXB)
+		auto media_frame = std::move(obj.value());
+
+		///////////////////////////////////////////////////
+		// Request frame encoding to codec
+		///////////////////////////////////////////////////
+		auto av_frame = ffmpeg::Conv::ToAVFrame(GetRefTrack()->GetMediaType(), media_frame);
+		if (!av_frame)
 		{
-			auto pos = H264Parser::FindAnnexBStartCode(bitstream + offset, length - offset, start_code_size);
-			if (pos == -1)
-			{
-				break;
-			}
+			logte("Could not allocate the video frame data");
+			break;
+		}
 
-			offset = offset + pos + start_code_size;
-			if (length - offset > H264_NAL_UNIT_HEADER_SIZE)
+		// If force_keyframe_timer is started, keyframes are inserted based on time.
+		if (GetRefTrack()->GetMediaType() == cmn::MediaType::Video)
+		{
+			if (_force_keyframe_timer.IsStart() == true &&
+				_force_keyframe_timer.IsTimeout() == true &&
+				_force_keyframe_timer.Update())
 			{
-				H264NalUnitHeader header;
-				H264Parser::ParseNalUnitHeader(bitstream + offset, H264_NAL_UNIT_HEADER_SIZE, header);
-
-				if (header.GetNalUnitType() == (H264NalUnitType)nal_type || (H264NalUnitType)nal_type == H264NalUnitType::Unspecified)
-				{
-					dump += ov::String::FormatString("[%d-%d]%s ", offset, length - offset, NalUnitTypeToStr((uint8_t)header.GetNalUnitType()).CStr());
-				}
+				av_frame->pict_type = AV_PICTURE_TYPE_I;
 			}
 		}
-		else if(format == cmn::BitstreamFormat::H265_ANNEXB)
+
+		int ret = ::avcodec_send_frame(_codec_context, av_frame);
+		if (ret < 0)
 		{
-			auto pos = H265Parser::FindAnnexBStartCode(bitstream + offset, length - offset, start_code_size);
-			if (pos == -1)
+			logte("Error sending a frame for encoding : %d", ret);
+		}
+
+		///////////////////////////////////////////////////
+		// The encoded packet is taken from the codec.
+		///////////////////////////////////////////////////
+		while (true)
+		{
+			// Check frame is available
+			int ret = ::avcodec_receive_packet(_codec_context, _packet);
+			if (ret == AVERROR(EAGAIN))
 			{
+				// More packets are needed for encoding.
 				break;
 			}
-
-			offset = offset + pos + start_code_size;
-			if (length - offset > H264_NAL_UNIT_HEADER_SIZE)
+			else if (ret == AVERROR_EOF && ret < 0)
 			{
-				H265NalUnitHeader header;
-				H265Parser::ParseNalUnitHeader(bitstream + offset, H264_NAL_UNIT_HEADER_SIZE, header);
-
-				if (header.GetNalUnitType() ==(H265NALUnitType) nal_type || (H265NALUnitType)nal_type == H265NALUnitType::TRAIL_N)
+				logte("Error receiving a packet for decoding : %d", ret);
+				break;
+			}
+			else
+			{
+				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, GetRefTrack()->GetMediaType(), _bitstream_format, _packet_type);
+				if (media_packet == nullptr)
 				{
-					dump += ov::String::FormatString("[%d-%d]%s ", offset, length - offset, NalUnitTypeToStr((uint8_t)header.GetNalUnitType()).CStr());
+					logte("Could not allocate the media packet");
+					break;
 				}
+
+				if(GetRefTrack()->GetMediaType() == cmn::MediaType::Audio)
+				{
+					// TODO : If the pts value are under zero, the dash packetizer does not work.
+					if (media_packet->GetPts() < 0)
+					{
+						continue;
+					}
+				}
+
+				::av_packet_unref(_packet);
+
+				Complete(std::move(media_packet));
 			}
 		}
-	}
-
-	if (dump.IsEmpty() == false)
-	{
-		logti("ParseNalUnit: %s", dump.CStr());
 	}
 }
+

@@ -222,8 +222,6 @@ void FilterResampler::Stop()
 
 void FilterResampler::WorkerThread()
 {
-	logtd("Start resampler filter thread.");
-
 	int ret;
 
 	while (!_kill_flag)
