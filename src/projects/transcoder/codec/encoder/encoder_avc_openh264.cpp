@@ -178,8 +178,6 @@ bool EncoderAVCxOpenH264::Configure(std::shared_ptr<MediaTrack> context)
 
 void EncoderAVCxOpenH264::CodecThread()
 {
-	_force_keyframe_timer.Start(1000);
-
 	while (!_kill_flag)
 	{
 		auto obj = _input_buffer.Dequeue();
@@ -191,7 +189,7 @@ void EncoderAVCxOpenH264::CodecThread()
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
+		auto av_frame = ffmpeg::Conv::ToAVFrame(GetRefTrack()->GetMediaType(), media_frame);
 		if (!av_frame)
 		{
 			logte("Could not allocate the video frame data");
@@ -199,9 +197,12 @@ void EncoderAVCxOpenH264::CodecThread()
 		}
 
 		// If force_keyframe_timer is started, keyframes are inserted based on time.
-		if(_force_keyframe_timer.IsStart() == true && _force_keyframe_timer.IsTimeout() == true && _force_keyframe_timer.Update())
+		if(GetRefTrack()->GetMediaType() == cmn::MediaType::Video)
 		{
-			av_frame->pict_type = AV_PICTURE_TYPE_I;
+			if(_force_keyframe_timer.IsStart() == true && _force_keyframe_timer.IsTimeout() == true && _force_keyframe_timer.Update())
+			{
+				av_frame->pict_type = AV_PICTURE_TYPE_I;
+			}
 		}
 		
 		int ret = ::avcodec_send_frame(_codec_context, av_frame);
@@ -229,9 +230,7 @@ void EncoderAVCxOpenH264::CodecThread()
 			}
 			else
 			{
-				DumpNalUnit(cmn::BitstreamFormat::H264_ANNEXB, (int32_t)H264NalUnitType::IdrSlice, _packet->data, _packet->size);
-
-				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::H264_ANNEXB, cmn::PacketType::NALU);
+				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, GetRefTrack()->GetMediaType(), cmn::BitstreamFormat::H264_ANNEXB, cmn::PacketType::NALU);
 				if (media_packet == nullptr)
 				{
 					logte("Could not allocate the media packet");
