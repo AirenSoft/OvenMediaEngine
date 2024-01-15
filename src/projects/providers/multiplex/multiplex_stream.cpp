@@ -192,21 +192,29 @@ namespace pvd
             for (auto &[source_track_id, source_track] : tracks)
             {
                 auto source_track_name = source_track->GetVariantName();
-                ov::String new_track_name;
+                MultiplexProfile::NewTrackInfo new_track_info;
 
-                if (source_stream->GetNewTrackName(source_track_name, new_track_name) == false)
+                if (source_stream->GetNewTrackInfo(source_track_name, new_track_info) == false)
                 {
                     continue;
                 }
 
                 auto new_track = source_track->Clone();
                 new_track->SetId(IssueUniqueTrackId());
-                new_track->SetVariantName(new_track_name);
+                new_track->SetVariantName(new_track_info.new_track_name);
+                if (new_track_info.bitrate_conf > 0)
+                {
+                    new_track->SetBitrateByConfig(new_track_info.bitrate_conf);
+                }
+                if (new_track_info.framerate_conf > 0)
+                {
+                    new_track->SetFrameRateByConfig(new_track_info.framerate_conf);
+                }
 
                 AddTrack(new_track);
                 _source_track_id_to_new_id_map.emplace(MakeSourceTrackIdUnique(stream_tap->GetId(), source_track_id), new_track->GetId());
 
-                logti("Multiplex Stream : %s/%s: Added track %s from %s/%s (%d)", GetApplicationName(), GetName().CStr(), new_track_name.CStr(), source_stream->GetUrlStr().CStr(), source_track_name.CStr(), source_track_id);
+                logti("Multiplex Stream : %s/%s: Added track %s from %s/%s (%d)", GetApplicationName(), GetName().CStr(), new_track->GetVariantName().CStr(), source_stream->GetUrlStr().CStr(), source_track_name.CStr(), source_track_id);
             }
         }
 

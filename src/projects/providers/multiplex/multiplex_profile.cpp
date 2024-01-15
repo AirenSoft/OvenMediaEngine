@@ -293,9 +293,26 @@ namespace pvd
 					_last_error = "Failed to find SourceStreams/SourceStream/TrackMap/NewTrackName node";
 					return false;
 				}
+
+				auto bitrate_conf_node = track_node.child("BitrateConf");
+				int32_t bitrate_conf = 0;
+
+				if (bitrate_conf_node)
+				{
+					bitrate_conf = bitrate_conf_node.text().as_int();
+				}
+
+				auto framerate_conf_node = track_node.child("FramerateConf");
+				int32_t framerate_conf = 0;
+
+				if (framerate_conf_node)
+				{
+					framerate_conf = framerate_conf_node.text().as_int();
+				}
 				
+				ov::String source_track_name = source_track_name_node.text().as_string();
 				ov::String new_track_name = new_track_name_node.text().as_string();
-				source_stream->AddTrackMap(source_track_name_node.text().as_string(), new_track_name);
+				source_stream->AddTrackMap(source_track_name, NewTrackInfo(source_track_name, new_track_name, bitrate_conf, framerate_conf));
 				_new_track_names.emplace(new_track_name, true);
 			}
 
@@ -352,9 +369,9 @@ namespace pvd
 			info_str += ov::String::FormatString("\tSourceStream : %s\n", source->GetName().CStr());
 			info_str += ov::String::FormatString("\tUrl : %s\n", source->GetUrlStr().CStr());
 
-			for (const auto &[source_track_name, new_track_name] : source->GetTrackMap())
+			for (const auto &[source_track_name, new_track_info] : source->GetTrackMap())
 			{
-				info_str += ov::String::FormatString("\t\tTrackMap : %s -> %s\n", source_track_name.CStr(), new_track_name.CStr());
+				info_str += ov::String::FormatString("\t\tTrackMap : %s -> %s\n", source_track_name.CStr(), new_track_info.new_track_name.CStr());
 			}
 		}
 
