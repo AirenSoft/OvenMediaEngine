@@ -245,18 +245,32 @@ namespace pvd
         }
 
         // Multiplex Provider will delete old stream and create new stream
-        auto stream = std::static_pointer_cast<MultiplexStream>(GetStreamByName(old_profile->GetOutputStreamName()));
-        if (stream == nullptr)
+
+        auto stream_it = _multiplex_streams.find(old_profile->GetOutputStreamName());
+        if (stream_it == _multiplex_streams.end())
         {
             logte("Failed to update multiplex (Could not find %s stream): %s", old_profile->GetOutputStreamName().CStr(), multiplex_file_info._file_path.CStr());
             return false;
         }
 
+        auto stream = stream_it->second;
+
+        // Remove from stream list
         _multiplex_streams.erase(old_profile->GetOutputStreamName());
-        if (DeleteStream(stream) == false)
+
+        // Remove from application
+        if (GetStreamByName(old_profile->GetOutputStreamName()) != nullptr)
         {
-            logte("Failed to update multiplex (Could not delete %s stream): %s", old_profile->GetOutputStreamName().CStr(), multiplex_file_info._file_path.CStr());
-            return false;
+            if (DeleteStream(stream) == false)
+            {
+                logte("Failed to update multiplex (Could not delete %s stream): %s", old_profile->GetOutputStreamName().CStr(), multiplex_file_info._file_path.CStr());
+                return false;
+            }
+        }
+        else
+        {
+            // just stop since stream has not been added to application
+            stream->Stop();
         }
 
         // Create new stream

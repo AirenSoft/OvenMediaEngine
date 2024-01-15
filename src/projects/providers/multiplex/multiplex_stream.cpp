@@ -43,6 +43,8 @@ namespace pvd
 
     bool MultiplexStream::Stop()
     {
+        ReleaseSourceStreams();
+
         if (_worker_thread_running == false)
         {
             return true;
@@ -60,6 +62,9 @@ namespace pvd
 
     bool MultiplexStream::Terminate()
     {
+        logti("Multiplex Channel : %s/%s: Terminated, it will be deleted by application", GetApplicationName(), GetName().CStr());
+        ReleaseSourceStreams();
+
         return Stream::Terminate();
     }
 
@@ -93,7 +98,7 @@ namespace pvd
                 if (stream_tap == nullptr || stream_tap->GetState() != MediaRouterStreamTap::State::Tapped)
                 {
                     logte("Multiplex Channel : %s/%s: Stream [%s] is untapped", GetApplicationName(), GetName().CStr(), source_stream->GetUrlStr().CStr());
-                    ReleaseSourceStreams();
+                    Terminate();
                     break_loop = true;
                     break;
                 }
@@ -229,7 +234,7 @@ namespace pvd
         if (GetApplication()->AddStream(GetSharedPtr()) == false)
         {
             logte("Multiplex Channel : %s/%s: Failed to publish stream", GetApplicationName(), GetName().CStr());
-            ReleaseSourceStreams();
+            Terminate();
             return false;
         }
 
@@ -261,6 +266,11 @@ namespace pvd
                 continue;
             }
 
+            if (stream_tap->GetState() != MediaRouterStreamTap::State::Tapped)
+            {
+                continue;
+            }
+
             stream_tap->Stop();
 
             auto result = ocst::Orchestrator::GetInstance()->UnmirrorStream(stream_tap);
@@ -270,11 +280,6 @@ namespace pvd
                 return false;
             }
         }
-
-        // multiplex application will delete this stream
-        Terminate();
-
-        logti("Multiplex Channel : %s/%s: Stopped", GetApplicationName(), GetName().CStr());
 
         return true;
     }
