@@ -13,6 +13,7 @@
 #include <base/provider/stream.h>
 
 #include "multiplex_profile.h"
+#include "multiplex_stream.h"
 
 namespace pvd
 {
@@ -52,6 +53,6 @@ namespace pvd
         // File name hash -> MultiplexFileInfo
         std::map<size_t, MultiplexFileInfo> _multiplex_file_info_db;
 
-        std::map<ov::String, std::shared_ptr<pvd::Stream>> _multiplex_streams;
+        std::map<ov::String, std::shared_ptr<MultiplexStream>> _multiplex_streams;
     };
 }

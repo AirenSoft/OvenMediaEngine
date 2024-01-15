@@ -63,6 +63,11 @@ namespace pvd
         return Stream::Terminate();
     }
 
+    std::shared_ptr<MultiplexProfile> MultiplexStream::GetProfile() const
+    {
+        return _multiplex_profile;
+    }
+
     void MultiplexStream::WorkerThread()
     {
         while (_worker_thread_running)
@@ -79,14 +84,18 @@ namespace pvd
 
         while (_worker_thread_running)
         {
+            bool break_loop = false;
             // Get Streams and Push
             auto source_streams = _multiplex_profile->GetSourceStreams();
             for (auto &source_stream : source_streams)
             {
                 auto stream_tap = source_stream->GetStreamTap();
-                if (stream_tap == nullptr)
+                if (stream_tap == nullptr || stream_tap->GetState() != MediaRouterStreamTap::State::Tapped)
                 {
-                    continue;
+                    logte("Multiplex Channel : %s/%s: Stream [%s] is untapped", GetApplicationName(), GetName().CStr(), source_stream->GetUrlStr().CStr());
+                    ReleaseSourceStreams();
+                    break_loop = true;
+                    break;
                 }
 
                 auto media_packet = stream_tap->Pop(0);
@@ -106,7 +115,14 @@ namespace pvd
 
                 SendFrame(media_packet);
             }
+
+            if (break_loop)
+            {
+                break;
+            }
         }
+
+        logti("Multiplex Channel : %s/%s: Worker thread stopped", GetApplicationName(), GetName().CStr());
     }
 
     uint64_t MultiplexStream::MakeSourceTrackIdUnique(uint32_t tap_id, uint32_t track_id) const
@@ -205,6 +221,7 @@ namespace pvd
         if (GetApplication()->AddStream(GetSharedPtr()) == false)
         {
             logte("Multiplex Channel : %s/%s: Failed to publish stream", GetApplicationName(), GetName().CStr());
+            ReleaseSourceStreams();
             return false;
         }
 
@@ -219,6 +236,37 @@ namespace pvd
 
             stream_tap->Start();
         }
+
+        logti("Multiplex Channel : %s/%s: Started\n%s", GetApplicationName(), GetName().CStr(), _multiplex_profile->InfoStr().CStr());
+
+        return true;
+    }
+
+    bool MultiplexStream::ReleaseSourceStreams()
+    {
+        auto source_streams = _multiplex_profile->GetSourceStreams();
+        for (auto &source_stream : source_streams)
+        {
+            auto stream_tap = source_stream->GetStreamTap();
+            if (stream_tap == nullptr)
+            {
+                continue;
+            }
+
+            stream_tap->Stop();
+
+            auto result = ocst::Orchestrator::GetInstance()->UnmirrorStream(stream_tap);
+            if (result != CommonErrorCode::SUCCESS)
+            {
+                logte("Multiplex Channel : %s/%s: Failed to unmirror stream %s (err : %d)", GetApplicationName(), GetName().CStr(), source_stream->GetUrlStr().CStr(), static_cast<int>(result));
+                return false;
+            }
+        }
+
+        // multiplex application will delete this stream
+        Terminate();
+
+        logti("Multiplex Channel : %s/%s: Stopped", GetApplicationName(), GetName().CStr());
 
         return true;
     }

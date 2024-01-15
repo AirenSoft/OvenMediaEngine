@@ -35,6 +35,11 @@ namespace pvd
 		return {multiplex, "success"};
 	}
 
+	ov::String MultiplexProfile::GetFilePath() const
+	{
+		return _file_path;
+	}
+
 	std::shared_ptr<MultiplexProfile> MultiplexProfile::Clone() const
 	{
 		auto multiplex = std::make_shared<MultiplexProfile>();
@@ -93,6 +98,8 @@ namespace pvd
 
 	bool MultiplexProfile::LoadFromXMLFile(const ov::String &file_path)
 	{
+		_file_path = file_path;
+
 		pugi::xml_document xml_doc;
 		auto load_result = xml_doc.load_file(file_path.CStr());
 		if (!load_result)
@@ -331,5 +338,26 @@ namespace pvd
 	const std::vector<std::shared_ptr<MultiplexProfile::SourceStream>> &MultiplexProfile::GetSourceStreams() const
 	{
 		return _source_streams;
+	}
+
+	ov::String MultiplexProfile::InfoStr() const
+	{
+		ov::String info_str;
+
+		info_str += ov::String::FormatString("OutputStreamName : %s\n", _output_stream_name.CStr());
+		info_str += ov::String::FormatString("SourceStreams : %d\n", _source_streams.size());
+		
+		for (const auto &source : GetSourceStreams())
+		{
+			info_str += ov::String::FormatString("\tSourceStream : %s\n", source->GetName().CStr());
+			info_str += ov::String::FormatString("\tUrl : %s\n", source->GetUrlStr().CStr());
+
+			for (const auto &[source_track_name, new_track_name] : source->GetTrackMap())
+			{
+				info_str += ov::String::FormatString("\t\tTrackMap : %s -> %s\n", source_track_name.CStr(), new_track_name.CStr());
+			}
+		}
+
+		return info_str;
 	}
 }

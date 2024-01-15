@@ -246,6 +246,7 @@ namespace pvd
 
         ov::String GetLastError() const;
         
+        ov::String GetFilePath() const;
         std::chrono::system_clock::time_point GetCreatedTime() const;
         ov::String GetOutputStreamName() const;
         const std::vector<std::shared_ptr<info::Playlist>> &GetPlaylists() const;
@@ -257,6 +258,8 @@ namespace pvd
         // equal operator
         bool operator==(const MultiplexProfile &other) const;
 
+        ov::String InfoStr() const;
+
     private:
         bool ReadOutputStreamNode(const pugi::xml_node &root_node);
         bool ReadPlaylistsNode(const pugi::xml_node &root_node);
@@ -264,6 +267,8 @@ namespace pvd
         
         std::chrono::system_clock::time_point _created_time;
         
+        ov::String _file_path; // when loaded from file
+
         ov::String _output_stream_name;
         std::vector<std::shared_ptr<info::Playlist>> _playlists;
         std::vector<std::shared_ptr<SourceStream>> _source_streams;

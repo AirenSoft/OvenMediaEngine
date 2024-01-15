@@ -29,10 +29,13 @@ namespace pvd
         bool Stop() override;
         bool Terminate() override;
 
+        std::shared_ptr<MultiplexProfile> GetProfile() const;
+
     private:
         void WorkerThread();
 
         bool PullSourceStreams();
+        bool ReleaseSourceStreams();
 
         uint64_t MakeSourceTrackIdUnique(uint32_t tap_id, uint32_t track_id) const;
         uint32_t GetNewTrackId(uint64_t source_track_id) const;

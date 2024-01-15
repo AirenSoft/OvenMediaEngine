@@ -91,13 +91,28 @@ namespace pvd
             }
         }
 
-        // Check if file is deleted
+        // Check if file is deleted or stream is terminated
         for (auto it = _multiplex_file_info_db.begin(); it != _multiplex_file_info_db.end();)
         {
+            bool found = false;
             auto &multiplex_file_info = it->second;
+
+            // Get file stat
             struct stat file_stat = {0};
             auto result = stat(multiplex_file_info._file_path.CStr(), &file_stat);
             if (result != 0 && errno == ENOENT)
+            {
+                found = true;
+            }
+
+            // Check if stream is terminated
+            auto stream = std::static_pointer_cast<MultiplexStream>(GetStreamByName(multiplex_file_info._multiplex_profile->GetOutputStreamName()));
+            if (stream != nullptr && stream->GetState() == Stream::State::TERMINATED)
+            {
+                found = true;
+            }
+
+            if (found == true)
             {
                 // VI Editor ":wq" will delete file and create new file, 
                 // so we need to check if file is really deleted by checking ENOENT 3 times
