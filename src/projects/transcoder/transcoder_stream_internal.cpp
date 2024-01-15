@@ -208,13 +208,15 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(
 	//  If the framerate is not set, it is set to the same value as the input.
 	if(output_track->GetFrameRateByConfig() == 0)
 	{
-		output_track->SetFrameRateByMeasured(input_track->GetFrameRate());
+		output_track->SetFrameRateByConfig(input_track->GetFrameRateByConfig());
+		output_track->SetFrameRateByMeasured(input_track->GetFrameRateByMeasured());
 	}
 
 	//  If the bitrate is not set, it is set to the same value as the input.
 	if(output_track->GetBitrateByConfig() == 0)
 	{
-		output_track->SetBitrateByMeasured(input_track->GetBitrate());
+		output_track->SetBitrateByConfig(input_track->GetBitrateByConfig());
+		output_track->SetBitrateByMeasured(input_track->GetBitrateByMeasured());
 	}
 
 	if (cmn::IsVideoCodec(output_track->GetCodecId()) == false)
@@ -298,7 +300,8 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 	//  If the bitrate is not set, it is set to the same value as the input.
 	if(output_track->GetBitrateByConfig() == 0)
 	{
-		output_track->SetBitrateByMeasured(input_track->GetBitrate());
+		output_track->SetBitrateByConfig(input_track->GetBitrateByConfig());
+		output_track->SetBitrateByMeasured(input_track->GetBitrateByMeasured());
 	}
 
 	if (cmn::IsAudioCodec(output_track->GetCodecId()) == false)
