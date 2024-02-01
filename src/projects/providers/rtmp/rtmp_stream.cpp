@@ -1286,6 +1286,23 @@ namespace pvd
 
 				tag.AddFrame(std::make_shared<ID3v2TextFrame>(id3v2_event.GetFrameType(), data));
 			}
+			// PRIV
+			else if (id3v2_event.GetFrameType() == "PRIV")
+			{
+				auto owner = id3v2_event.GetInfo();
+				auto data = id3v2_event.GetData();
+
+				if (owner == "${TriggerValue}")
+				{
+					owner = value;
+				}
+				else if (data == "${TriggerValue}")
+				{
+					data = value;
+				}
+
+				tag.AddFrame(std::make_shared<ID3v2PrivFrame>(owner, data));
+			}
 			else
 			{
 				logtw("Unsupported ID3v2 frame type: %s", id3v2_event.GetFrameType().CStr());

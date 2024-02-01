@@ -20,7 +20,7 @@ namespace cfg
 				{
 				protected:
 					ov::String _event_type; // video, audio, both
-					ov::String _frame_type; // TXXX, T???
+					ov::String _frame_type; // TXXX, T???, PRIV
 					ov::String _info;
 					ov::String _data;
 
