@@ -1210,26 +1210,34 @@ namespace pvd
 					// if last item is must be object or array
 					if (i == trigger_list.size()-1)
 					{
-						if (property->GetType() != AmfDataType::Object && property->GetType() != AmfDataType::Array)
+						if (property->GetType() == AmfDataType::Object || property->GetType() == AmfDataType::Array)
 						{
-							logtd("Property type is not object or array: %s / %d", property->GetString(), static_cast<int32_t>(property->GetType()));
-							break;
-						}
+							auto object = property->GetObject();
+							if (object == nullptr)
+							{
+								logtd("Property is not object: %s", property->GetString());
+								break;
+							}
 
-						auto object = property->GetObject();
-						if (object == nullptr)
-						{
-							logtd("Property is not object: %s", property->GetString());
-							break;
+							auto key = trigger_list.at(i);
+							int32_t index = 0;
+							if ((index = object->FindName(key.CStr())) >= 0 && object->GetType(index) == AmfDataType::String)
+							{
+								found = true;
+								auto value = object->GetString(index);
+								GenerateEvent(event, value);
+							}
 						}
-
-						auto key = trigger_list.at(i);
-						int32_t index = 0;
-						if ((index = object->FindName(key.CStr())) >= 0 && object->GetType(index) == AmfDataType::String)
+						else if (property->GetType() == AmfDataType::String)
 						{
 							found = true;
-							auto value = object->GetString(index);
+							auto value = property->GetString();
 							GenerateEvent(event, value);
+						}
+						else
+						{
+							logtd("Document property type mismatch at %d: %s", i-1, property->GetString());
+							break;
 						}
 					}
 					else
