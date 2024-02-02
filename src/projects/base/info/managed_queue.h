@@ -168,6 +168,11 @@ namespace info
 			return _threshold;
 		}
 
+		bool IsThresholdExceeded() const
+		{
+			return _size > _threshold;
+		}
+
 		size_t GetPeak() const
 		{
 			return _peak;
@@ -257,10 +262,11 @@ namespace info
 		int64_t _threshold_exceeded_time_in_us;
 
 		// Input Message Count
-		size_t _input_message_count;
-
+		int64_t _input_message_count;
+		int64_t _last_input_message_count;
 		// Output Message Count
-		size_t _output_message_count;
+		int64_t _output_message_count;
+		int64_t _last_output_message_count;
 
 		// Input Message Per Second
 		size_t _input_message_per_second;

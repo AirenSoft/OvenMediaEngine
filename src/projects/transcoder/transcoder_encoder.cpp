@@ -342,6 +342,14 @@ bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 	_input_buffer.SetUrn(urn);
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
+	// SkipMessage is enabled due to the high possibility of queue overflow due to insufficient video encoding performance.
+	// Users will not experience any inconvenience even if the video is intermittently missing.
+	// However, it is sensitive when the audio cuts out.
+	if(_track->GetMediaType() == cmn::MediaType::Video)
+	{
+		_input_buffer.SetSkipMessageEnable(true);
+	}
+
 	return (_track != nullptr);
 }
 

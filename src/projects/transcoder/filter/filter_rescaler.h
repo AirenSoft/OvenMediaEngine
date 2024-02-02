@@ -13,6 +13,7 @@
 #include "base/mediarouter/media_buffer.h"
 #include "base/mediarouter/media_type.h"
 #include "filter_base.h"
+#include "filter_fps.h"
 
 class FilterRescaler : public FilterBase
 {
@@ -31,5 +32,11 @@ private:
 	bool InitializeFilterDescription();
 	bool InitializeSinkFilter();	
 
+	bool PushProcess(std::shared_ptr<MediaFrame> media_frame);
+	bool PopProcess();
+
 	bool SetHWContextToFilterIfNeed();	
+
+	// Constant FrameRate & SkipFrame Filter
+	FilterFps _fps_filter;
 };
