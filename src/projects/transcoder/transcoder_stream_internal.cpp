@@ -665,6 +665,26 @@ void TranscoderStreamInternal::UpdateOutputTrackTranscode(const std::shared_ptr<
 			auto estimated_framerate = GetEstimateFrameRate(input_track, buffer);
 			output_track->SetEstimateFrameRate(estimated_framerate);
 		}
+
+		// To be compatible with all hardware. The encoding resolution must be a multiple of 4
+		// In particular, Xilinx Media Accelerator must have a resolution specified in multiples of 4.
+		if (output_track->GetWidth() % 4 != 0)
+		{
+			int32_t new_width = (output_track->GetWidth() / 4 + 1) * 4;
+
+			logtd("The width of the output track is not a multiple of 4. change the width to %d -> %d", output_track->GetWidth(), new_width);
+
+			output_track->SetWidth(new_width);
+		}
+
+		if (output_track->GetHeight() % 4 != 0)
+		{
+			int32_t new_height = (output_track->GetHeight() / 4 + 1) * 4;
+
+			logtd("The height of the output track is not a multiple of 4. change the height to %d -> %d", output_track->GetHeight(), new_height);
+
+			output_track->SetHeight(new_height);
+		}
 	}
 	else if (output_track->GetMediaType() == cmn::MediaType::Audio)
 	{
