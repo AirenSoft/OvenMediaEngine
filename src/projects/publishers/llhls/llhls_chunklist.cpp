@@ -236,9 +236,7 @@ ov::String LLHlsChunklist::MakeExtXKey() const
 			}
 			else if (_cenc_property.scheme == bmff::CencProtectScheme::Cenc)
 			{
-				// NOT Support yet
 				xkey.AppendFormat("METHOD=SAMPLE-AES-CTR");
-				return "";
 			}
 
 			xkey.AppendFormat(",URI=\"data:text/plain;base64,%s\"", ov::Base64::Encode(pssh.pssh_box_data, false).CStr());

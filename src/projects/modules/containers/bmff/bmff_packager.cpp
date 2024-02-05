@@ -22,7 +22,7 @@ namespace bmff
 		{
 			_cenc_property.crypt_bytes_block = 0;
 			_cenc_property.skip_bytes_block = 0;
-		}		
+		}
 	}
 
 	// Get track 
@@ -1622,7 +1622,7 @@ namespace bmff
 			return false;
 		}
 
-		if (_cenc_property.scheme == CencProtectScheme::Cbcs)
+		if (_cenc_property.scheme != CencProtectScheme::None)
 		{
 			if (WriteSaizBox(stream, samples) == false)
 			{
@@ -2024,8 +2024,7 @@ namespace bmff
 		stream.Write8(1);
 
 		// unsigned int(8) default_Per_Sample_IV_Size;
-		// We don't support default_Per_Sample_IV_Size yet
-		stream.Write8(0);
+		stream.Write8(_cenc_property.per_sample_iv_size);
 
 		// unsigned int(8)[16] default_KID;
 		if (_cenc_property.key_id->GetLength() != 16)
@@ -2036,17 +2035,20 @@ namespace bmff
 		}
 		stream.Write(_cenc_property.key_id->GetData(), _cenc_property.key_id->GetLength());
 
-		// unsigned int(8) default_constant_IV_size;
-		stream.Write8(16);
-		if (_cenc_property.iv->GetLength() != 16)
+		if (_cenc_property.per_sample_iv_size == 0)
 		{
-			// Assert
-			OV_ASSERT2(false);
-			return false;
-		}
+			// unsigned int(8) default_constant_IV_size;
+			stream.Write8(16);
+			if (_cenc_property.iv->GetLength() != 16)
+			{
+				// Assert
+				OV_ASSERT2(false);
+				return false;
+			}
 
-		// unsigned int(8)[default_constant_IV_size] default_constant_IV;
-		stream.Write(_cenc_property.iv->GetData(), _cenc_property.iv->GetLength());
+			// unsigned int(8)[default_constant_IV_size] default_constant_IV;
+			stream.Write(_cenc_property.iv->GetData(), _cenc_property.iv->GetLength());
+		}
 
 		return WriteFullBox(container_stream, "tenc", *stream.GetData(), version, 0);
 	}
@@ -2176,9 +2178,6 @@ namespace bmff
 		stream.WriteBE32(samples->GetTotalCount());
 
 		_senc_data_offset_in_senc = stream.GetLength() + BMFF_FULL_BOX_HEADER_SIZE;
-		// version : 0
-		// unsigned int(Per_Sample_IV_Size * 8) InitializationVector;
-		// We don't support Per_Sample_IV_Size
 
 		uint32_t flag = 0x000000;
 
@@ -2189,6 +2188,17 @@ namespace bmff
 
 		for (const auto &sample : samples->GetList())
 		{
+			// InitializationVector
+			if (sample._sai.per_sample_iv != nullptr)
+			{
+				stream.Write(sample._sai.per_sample_iv->GetData(), sample._sai.per_sample_iv->GetLength());
+			}
+
+			if (sample._sai._sub_samples.size() == 0)
+			{
+				continue;
+			}
+
 			// unsigned int(16) subsample_count;
 			stream.WriteBE16(sample._sai._sub_samples.size());
 

@@ -320,6 +320,10 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 				{
 					cenc_property.scheme = bmff::CencProtectScheme::Cbcs;
 				}
+				else if (cenc_protect_scheme == "cenc")
+				{
+					cenc_property.scheme = bmff::CencProtectScheme::Cenc;
+				}
 				else
 				{
 					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because CencProtectScheme(%s) is not supported", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), cenc_protect_scheme.CStr());
@@ -390,6 +394,10 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 				{
 					scheme_enum = bmff::CencProtectScheme::Cbcs;
 				}
+				else if (cenc_protect_scheme.LowerCaseString() == "cenc")
+				{
+					scheme_enum = bmff::CencProtectScheme::Cenc;
+				}
 				else
 				{
 					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because CencProtectScheme(%s) is not supported", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), cenc_protect_scheme.CStr());
@@ -448,6 +456,11 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 					else if (drm_system_item.LowerCaseString() == "fairplay")
 					{
 						fairplay_enabled = true;
+						if (scheme_enum != bmff::CencProtectScheme::Cbcs)
+						{
+							logtw("LLHlsStream(%s/%s) - FairPlay only supports Cbcs scheme. But CencProtectScheme is %s", GetApplication()->GetName().CStr(), GetName().CStr(), cenc_protect_scheme.CStr());
+							fairplay_enabled = false;
+						}
 					}
 				}
 
@@ -494,6 +507,20 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 	if (cenc_property.fairplay_key_uri.IsEmpty() == false && has_fairplay_pssh_box == false)
 	{
     	cenc_property.pssh_box_list.push_back(bmff::PsshBox("94ce86fb-07ff-4f43-adb8-93d2fa968ca2", {cenc_property.key_id}, nullptr));
+	}
+
+	// Set profiles
+	if (cenc_property.scheme == bmff::CencProtectScheme::Cenc)
+	{
+		cenc_property.crypt_bytes_block = 0;
+		cenc_property.skip_bytes_block = 0;
+		cenc_property.per_sample_iv_size = 16;
+	}
+	else if (cenc_property.scheme == bmff::CencProtectScheme::Cbcs)
+	{
+		cenc_property.crypt_bytes_block = 1;
+		cenc_property.skip_bytes_block = 9;
+		cenc_property.per_sample_iv_size = 0;
 	}
 
 	return true;
