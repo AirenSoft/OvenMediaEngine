@@ -35,18 +35,9 @@ namespace pvd
 
     bool MultiplexApplication::Start()
     {
-        bool parsed = false;
-        auto config = GetConfig().GetProviders().GetMultiplexProvider(&parsed);
+        auto config = GetConfig().GetProviders().GetMultiplexProvider();
 
-        if (parsed == false ||
-            config.GetMuxFilesDir().IsEmpty())
-        {
-            logte("Could not create %s application for MultiplexProvider since invalid configuration", GetName().CStr());
-            return false;
-        }
-
-        _multiplex_files_path = ov::GetAbsolutePath(config.GetMuxFilesDir());
-
+        _multiplex_files_path = ov::GetDirPath(config.GetMuxFilesDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
         _multiplex_file_name_regex = ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(ov::String::FormatString("*.%s", MultiplexFileExtension)));
         
         return Application::Start();

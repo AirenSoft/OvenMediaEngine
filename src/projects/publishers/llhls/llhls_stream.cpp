@@ -252,19 +252,7 @@ bool LLHlsStream::Stop()
 
 bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &cenc_property)
 {
-	ov::String final_path;
-
-	// file_path is absolute?
-	if (file_path.Get(0) == '/' || file_path.Get(0) == '\\')
-	{
-		final_path = file_path;
-	}
-	else
-	{
-		// file_path is in config path
-		auto conf_path = cfg::ConfigManager::GetInstance()->GetConfigPath();
-		final_path = ov::String::FormatString("%s/%s", conf_path.CStr(), file_path.CStr());
-	}
+	ov::String final_path = ov::GetFilePath(file_path, cfg::ConfigManager::GetInstance()->GetConfigPath());
 
 	pugi::xml_document xml_doc;
 	auto load_result = xml_doc.load_file(final_path.CStr());

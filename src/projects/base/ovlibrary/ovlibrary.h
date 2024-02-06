@@ -42,3 +42,4 @@
 #include "./unique.h"
 #include "./url.h"
 #include "./precise_timer.h"
+#include "./files.h"

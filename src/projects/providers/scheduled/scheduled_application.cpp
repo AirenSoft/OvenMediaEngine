@@ -35,19 +35,9 @@ namespace pvd
 
     bool ScheduledApplication::Start()
     {
-        bool parsed = false;
-        auto config = GetConfig().GetProviders().GetScheduledProvider(&parsed);
-
-        if (parsed == false ||
-            config.GetMediaRootDir().IsEmpty() || 
-            config.GetScheduleFilesDir().IsEmpty())
-        {
-            logte("Could not create %s application for ScheduleProvider since invalid configuration", GetName().CStr());
-            return false;
-        }
-
-        _media_root_dir = ov::GetAbsolutePath(config.GetMediaRootDir());
-        _schedule_files_path = ov::GetAbsolutePath(config.GetScheduleFilesDir());
+        auto config = GetConfig().GetProviders().GetScheduledProvider();
+        _media_root_dir = ov::GetDirPath(config.GetMediaRootDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
+        _schedule_files_path = ov::GetDirPath(config.GetScheduleFilesDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
 
         _schedule_file_name_regex = ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(ov::String::FormatString("*.%s", ScheduleFileExtension)));
         
