@@ -29,7 +29,7 @@
 #include "transcoder_private.h"
 
 #define USE_LEGACY_LIBOPUS false
-#define MAX_QUEUE_SIZE 500
+#define MAX_QUEUE_SIZE 5
 #define ALL_GPU_ID -1
 #define DEFAULT_MODULE_NAME "DEFAULT"
 
@@ -342,13 +342,19 @@ bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 	_input_buffer.SetUrn(urn);
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
+	// Limit the queue so that it does not exceed the threshold.
+	// If the encoder performance is poor. I expect the frame to be dropped from the scaler.
+	// The 'SetSkipMessageEnable' function was painstakingly created, but unfortunately it is not used here.
+	_input_buffer.SetPreventExceedThreshold(true);
+
+
 	// SkipMessage is enabled due to the high possibility of queue overflow due to insufficient video encoding performance.
 	// Users will not experience any inconvenience even if the video is intermittently missing.
 	// However, it is sensitive when the audio cuts out.
-	if(_track->GetMediaType() == cmn::MediaType::Video)
-	{
-		_input_buffer.SetSkipMessageEnable(true);
-	}
+	// if(_track->GetMediaType() == cmn::MediaType::Video)
+	// {
+	// 	_input_buffer.SetSkipMessageEnable(true);
+	// }
 
 	return (_track != nullptr);
 }

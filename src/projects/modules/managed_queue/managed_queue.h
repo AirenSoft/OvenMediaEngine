@@ -97,20 +97,18 @@ namespace ov
 
 		void Enqueue(const T& item)
 		{
-			auto lock_guard = std::lock_guard(_mutex);
-
 			EnqueueInternal(new ManagedQueueNode(item));
 		}
 
 		void Enqueue(T&& item)
 		{
-			auto lock_guard = std::lock_guard(_mutex);
-
 			EnqueueInternal(new ManagedQueueNode(std::move(item)));
 		}
 
-		void EnqueueInternal(ManagedQueueNode* node)
+		void EnqueueInternal(ManagedQueueNode* node, int timeout = Infinite)
 		{
+			auto unique_lock = std::unique_lock(_mutex);			
+
 			if (!node)
 			{
 				logc(LOG_TAG, "Failed to allocate memory. id:%u", GetId());
@@ -209,6 +207,22 @@ namespace ov
 				// logi(LOG_TAG, "q.size(%d), q.imps(%d), q.omps(%d), skip(%d), stable(%d)", _size,  _skip_message_count, elapsed_stable_time);
 			}
 #endif
+
+			if(_prevent_exceed_threshold_and_wait_enabled == true)
+			{
+				// Wait until the queue size is less than threshold
+				std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
+				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
+					return (_size  < _threshold);
+				});
+				if (!result || _stop)
+				{
+					loge(LOG_TAG, "[%s] queue is full. q.size(%d), q.threshold(%d)", _urn->ToString().CStr(), _size, _threshold);
+					delete node;
+					return;
+				}
+			}
+
 			if (_size == 0)
 			{
 				_front_node = node;
@@ -327,6 +341,11 @@ namespace ov
 
 			UpdateMetrics();
 
+			if(_prevent_exceed_threshold_and_wait_enabled == true)
+			{
+				_condition.notify_all();
+			}
+
 			return value;
 		}
 
@@ -384,9 +403,14 @@ namespace ov
 		// Skip message for performance failure recovery
 		// If the queue size increases due to insufficient performance, the problem is avoided by dropping the message.
 		// * Warning: This should only be used where dropping a message will not affect the operation. example) video encoder, video scaler
-		void SetSkipMessageEnable(bool recovery_of_disability)
+		void SetSkipMessageEnable(bool enable)
 		{
-			_skip_message_enabled = recovery_of_disability;
+			_skip_message_enabled = enable;
+		}
+
+		void SetPreventExceedThreshold(bool enable)
+		{
+			_prevent_exceed_threshold_and_wait_enabled = enable;
 		}
 
 	protected:
@@ -467,6 +491,10 @@ namespace ov
 		int64_t _skip_messages_last_log_time = 0;
 		int32_t _skip_message_count = 0;
 		size_t _skip_message_previous_queue_size = 0;
+
+		// Prevent exceed threshold. If true, the queue will not exceed the threshold
+		// Wait until the queue falls below the threshold
+		bool _prevent_exceed_threshold_and_wait_enabled = false;
 	};
 
 }  // namespace ov
