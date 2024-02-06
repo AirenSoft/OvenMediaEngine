@@ -18,10 +18,10 @@ To use this feature, activate Schedule Provider as follows.
 ```
 
 `MediaRootDir`\
-Root path where media files are located
+Root path where media files are located. If you specify a relative path, the directory where the config file is located is root.
 
 `ScheduleFileDir`\
-Root path where the schedule file is located
+Root path where the schedule file is located. If you specify a relative path, the directory where the config file is located is root.
 
 ### Schedule Files
 
