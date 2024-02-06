@@ -70,7 +70,7 @@ bool FilterFps::Push(std::shared_ptr<MediaFrame> media_frame)
 
 	if (_next_pts == AV_NOPTS_VALUE)
 	{
-		logti("set first pts(%lld), rescale_pts(%lld)", pts, media_frame->GetPts());
+		logtd("Set first pts(%lld), rescale_pts(%lld)", pts, media_frame->GetPts());
 		_next_pts = media_frame->GetPts();
 	}
 

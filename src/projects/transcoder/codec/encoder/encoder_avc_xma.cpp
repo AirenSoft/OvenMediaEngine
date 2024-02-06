@@ -71,7 +71,7 @@ bool EncoderAVCxXMA::SetCodecParams()
 	::av_opt_set(_codec_context->priv_data, "level", "4.2", 0);
 	::av_opt_set(_codec_context->priv_data, "scaling-list", "flat", 0);
 	
-// @Deprecated : VCU_INIT failed : device error: Channel creation failed, processing power of the available cores insufficien	
+// @Deprecated : VCU_INIT failed : device error: Channel creation failed, processing power of the available cores insufficient
 #if 0	
 	// Enable AVC low latency flag for H264 to run on multiple cores incase of pipeline disabled
 	::av_opt_set(_codec_context->priv_data, "avc-lowlat", "enable", 0);
