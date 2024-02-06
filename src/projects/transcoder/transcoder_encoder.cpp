@@ -435,7 +435,7 @@ void TranscodeEncoder::CodecThread()
 		///////////////////////////////////////////////////
 		// The encoded packet is taken from the codec.
 		///////////////////////////////////////////////////
-		while (true)
+		while (!_kill_flag)
 		{
 			// Check frame is available
 			int ret = ::avcodec_receive_packet(_codec_context, _packet);

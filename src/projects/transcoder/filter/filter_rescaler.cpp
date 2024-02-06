@@ -49,17 +49,7 @@ FilterRescaler::FilterRescaler()
 
 FilterRescaler::~FilterRescaler()
 {
-	Stop();
 
-	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
-	OV_SAFE_FUNC(_inputs, nullptr, ::avfilter_inout_free, &);
-	OV_SAFE_FUNC(_outputs, nullptr, ::avfilter_inout_free, &);
-	OV_SAFE_FUNC(_filter_graph, nullptr, ::avfilter_graph_free, &);
-
-	_buffersrc= nullptr;
-	_buffersink = nullptr;
-	
-	_input_buffer.Clear();
 }
 
 bool FilterRescaler::InitializeSourceFilter()
@@ -365,6 +355,9 @@ bool FilterRescaler::Start()
 
 void FilterRescaler::Stop()
 {
+	if(GetState() == State::STOPPED)
+		return;
+
 	_kill_flag = true;
 
 	_input_buffer.Stop();
@@ -373,6 +366,16 @@ void FilterRescaler::Stop()
 	{
 		_thread_work.join();
 	}
+
+	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
+	OV_SAFE_FUNC(_inputs, nullptr, ::avfilter_inout_free, &);
+	OV_SAFE_FUNC(_outputs, nullptr, ::avfilter_inout_free, &);
+	OV_SAFE_FUNC(_filter_graph, nullptr, ::avfilter_graph_free, &);
+
+	_buffersrc= nullptr;
+	_buffersink = nullptr;
+	
+	_input_buffer.Clear();
 
 	SetState(State::STOPPED);
 }
@@ -443,7 +446,7 @@ bool FilterRescaler::PopProcess()
 
 			SetState(State::ERROR);
 
-			break;
+			return false;
 		}
 		else if (ret < 0)
 		{
@@ -451,7 +454,7 @@ bool FilterRescaler::PopProcess()
 
 			SetState(State::ERROR);
 
-			break;
+			return false;
 		}
 		else
 		{
@@ -556,9 +559,15 @@ void FilterRescaler::WorkerThread()
 
 		while (auto frame = _fps_filter.Pop())
 		{
-			PushProcess(frame);
+			if(PushProcess(frame) == false)
+			{
+				break;
+			}
 
-			PopProcess();
+			if(PopProcess() == false)
+			{
+				break;
+			}
 		}
 #else
 		PushProcess(media_frame);
