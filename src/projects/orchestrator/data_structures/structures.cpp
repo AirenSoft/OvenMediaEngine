@@ -45,6 +45,7 @@ namespace ocst
 		persistent = origin_config.IsPersistent();
 		failback = origin_config.IsFailback();
 		strict_location = origin_config.IsStrictLocation();
+		ignore_rtcp_sr_timestamp = origin_config.IsRtcpSrTimestampIgnored();
 		relay = origin_config.IsRelay(&parsed);
 		if (parsed == false && scheme.UpperCaseString() == "OVT")
 		{
