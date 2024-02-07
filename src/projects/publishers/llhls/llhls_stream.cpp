@@ -768,7 +768,7 @@ bool LLHlsStream::DumpSegment(const std::shared_ptr<mdl::Dump> &item, const int3
 		return false;
 	}
 
-	auto chunklist_data = chunklist->ToString("", false, true, true, item->GetFirstSegmentNumber(track_id)).ToData(false);
+	auto chunklist_data = chunklist->ToString("", false, true, false, true, item->GetFirstSegmentNumber(track_id)).ToData(false);
 
 	auto segment_file_name = GetSegmentName(track_id, segment_number);
 	auto chunklist_file_name = GetChunklistName(track_id);
