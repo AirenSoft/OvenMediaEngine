@@ -473,6 +473,10 @@ bool FilterRescaler::PopProcess()
 	return true;
 }
 
+#define DO_FILTER_ONCE(frame) \
+		if (!PushProcess(frame)) { break; } \
+		if (!PopProcess()) { break; } 
+
 void FilterRescaler::WorkerThread()
 {
 	SetState(State::STARTED);
@@ -483,6 +487,11 @@ void FilterRescaler::WorkerThread()
 	int32_t skip_frames = _output_track->GetSkipFramesByConfig();
 	size_t  skip_frames_previous_queue_size = 0;
 #endif
+
+	// XMA devices expand the memory pool when processing the first frame filtering. 
+	// At this time, memory allocation failure occurs because it is not 'Thread safe'. 
+	// It is used for the purpose of preventing this.
+	bool start_frame_syncronization = true;
 
 	while (!_kill_flag)
 	{
@@ -559,20 +568,32 @@ void FilterRescaler::WorkerThread()
 
 		while (auto frame = _fps_filter.Pop())
 		{
-			if(PushProcess(frame) == false)
+			if (start_frame_syncronization)
 			{
-				break;
-			}
+				std::lock_guard<std::mutex> lock(TranscodeGPU::GetInstance()->GetDeviceMutex());
 
-			if(PopProcess() == false)
+				DO_FILTER_ONCE(frame);
+
+				start_frame_syncronization = false;
+			}
+			else
 			{
-				break;
+				DO_FILTER_ONCE(frame);
 			}
 		}
 #else
-		PushProcess(media_frame);
+		if (start_frame_syncronization)
+		{
+			std::lock_guard<std::mutex> lock(TranscodeGPU::GetInstance()->GetDeviceMutex());
 
-		PopProcess();
+			DO_FILTER_ONCE(media_frame);
+
+			start_frame_syncronization = false;
+		}
+		else
+		{
+			DO_FILTER_ONCE(media_frame);
+		}
 #endif
 
 	}
