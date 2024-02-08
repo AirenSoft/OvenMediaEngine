@@ -100,6 +100,34 @@ bool EncoderAVCxXMA::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 	
+	ov::String codec_name = "mpsoc_vcu_h264";
+	
+	const AVCodec *codec = ::avcodec_find_encoder_by_name(codec_name.CStr());
+	if (codec == nullptr)
+	{
+		logte("Could not find encoder: %s", codec_name.CStr());
+		return false;
+	}
+
+	_codec_context = ::avcodec_alloc_context3(codec);
+	if (_codec_context == nullptr)
+	{
+		logte("Could not allocate codec context for %s", codec_name.CStr());
+		return false;
+	}
+
+	if (SetCodecParams() == false)
+	{
+		logte("Could not set codec parameters for %s", codec_name.CStr());
+		return false;
+	}
+
+	if (::avcodec_open2(_codec_context, codec, nullptr) < 0)
+	{
+		logte("Could not open codec: %s", codec_name.CStr());
+		return false;
+	}
+
 	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
 	try
 	{
@@ -117,37 +145,4 @@ bool EncoderAVCxXMA::Configure(std::shared_ptr<MediaTrack> context)
 	}
 
 	return true;
-}
-
-void EncoderAVCxXMA::CodecThread()
-{
-	ov::String codec_name = "mpsoc_vcu_h264";
-	
-	const AVCodec *codec = ::avcodec_find_encoder_by_name(codec_name.CStr());
-	if (codec == nullptr)
-	{
-		logte("Could not find encoder: %s", codec_name.CStr());
-		return ;
-	}
-
-	_codec_context = ::avcodec_alloc_context3(codec);
-	if (_codec_context == nullptr)
-	{
-		logte("Could not allocate codec context for %s", codec_name.CStr());
-		return ;
-	}
-
-	if (SetCodecParams() == false)
-	{
-		logte("Could not set codec parameters for %s", codec_name.CStr());
-		return ;
-	}
-
-	if (::avcodec_open2(_codec_context, codec, nullptr) < 0)
-	{
-		logte("Could not open codec: %s", codec_name.CStr());
-		return ;
-	}
-
-	TranscodeEncoder::CodecThread();
 }
