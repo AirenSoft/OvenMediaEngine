@@ -269,7 +269,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	_fps_filter.SetSkipFrames(_output_track->GetSkipFramesByConfig());
 
 	// Set the threshold of the input buffer to 2 seconds.
-	_input_buffer.SetThreshold(_input_track->GetFrameRateByConfig() * 2);
+	_input_buffer.SetThreshold(_input_track->GetFrameRate() * 2);
 
 	// Initialize the av filter graph
 	if (InitializeFilterDescription() == false)
@@ -519,7 +519,7 @@ void FilterRescaler::WorkerThread()
 
 			// The frame skip should not be more than 1 second.
 			if ((skip_frames < _output_track->GetFrameRateByConfig()) &&
-				(_input_buffer.GetSize() > (_input_buffer.GetThreshold() / 10) ) &&  // 10% of the threshold
+				(_input_buffer.GetSize() > (_input_buffer.GetThreshold() / 4) ) &&  // 25% of the threshold == 0.5s
 				(_input_buffer.GetSize() >= skip_frames_previous_queue_size)
 				)
 			{
