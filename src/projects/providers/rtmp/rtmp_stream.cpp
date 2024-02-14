@@ -1528,7 +1528,15 @@ namespace pvd
 			// 	  dts);
 
 			_last_video_pts = dts;
-			_last_video_pts_clock.Start();
+			
+			if (_last_video_pts_clock.IsStart() == false)
+			{
+				_last_video_pts_clock.Start();
+			} 
+			else 
+			{
+				_last_video_pts_clock.Update();
+			}
 			
 			// Statistics for debugging
 			if (flv_video.FrameType() == FlvVideoFrameTypes::KEY_FRAME)
@@ -1698,8 +1706,16 @@ namespace pvd
 			SendFrame(frame);
 
 			_last_audio_pts = dts;
-			_last_audio_pts_clock.Start();
 
+			if (_last_audio_pts_clock.IsStart() == false)
+			{
+				_last_audio_pts_clock.Start();
+			}
+			else
+			{
+				_last_audio_pts_clock.Update();
+			}
+			
 			_last_audio_timestamp = message->header->completed.timestamp;
 			_audio_frame_count++;
 		}
