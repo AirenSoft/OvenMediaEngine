@@ -127,5 +127,9 @@ protected:
 	int _thread_count;	
 
 	// Skip frames (set by user)
+	// If the set value is greater than or equal to 0, the skip frame is automatically calculated. 
+	// The skip frame is not less than the value set by the user.
+	// -1 : No SkipFrame
+	// 0 ~ 120 : minimum value of SkipFrames. it is automatically calculated and the SkipFrames value is changed.
 	int32_t _skip_frames_conf;
 };

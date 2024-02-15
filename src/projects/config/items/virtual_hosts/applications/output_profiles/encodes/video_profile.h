@@ -38,7 +38,13 @@ namespace cfg
 					int _b_frames = 0;
 					BypassIfMatch _bypass_if_match;
 					ov::String _profile;
-					int _skip_frames = 0;
+
+					// SkipFrames 
+					// If the set value is greater than or equal to 0, the skip frame is automatically calculated. 
+					// The skip frame is not less than the value set by the user.
+					// -1 : No SkipFrame
+					// 0 ~ 120 : minimum value of SkipFrames. it is automatically calculated and the SkipFrames value is changed.
+					int _skip_frames = -1;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)

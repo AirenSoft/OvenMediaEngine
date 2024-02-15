@@ -266,7 +266,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	_fps_filter.SetInputTimebase(_input_track->GetTimeBase());
 	_fps_filter.SetInputFrameRate(_input_track->GetFrameRate());
 	_fps_filter.SetOutputFrameRate(_output_track->GetFrameRateByConfig());
-	_fps_filter.SetSkipFrames(_output_track->GetSkipFramesByConfig());
+	_fps_filter.SetSkipFrames(_output_track->GetSkipFramesByConfig() >= 0 ? _output_track->GetSkipFramesByConfig() : 0);
 
 	// Set the threshold of the input buffer to 2 seconds.
 	_input_buffer.SetThreshold(_input_track->GetFrameRate() * 2);
@@ -484,6 +484,9 @@ void FilterRescaler::WorkerThread()
 #if _SKIP_FRAMES_ENABLED
 	auto skip_frames_last_check_time = ov::Time::GetTimestampInMs();
 	auto skip_frames_last_changed_time = ov::Time::GetTimestampInMs();
+	
+
+	// Set initial Skip Frames
 	int32_t skip_frames = _output_track->GetSkipFramesByConfig();
 	size_t  skip_frames_previous_queue_size = 0;
 #endif
@@ -504,48 +507,52 @@ void FilterRescaler::WorkerThread()
 		auto media_frame = std::move(obj.value());
 
 #if _SKIP_FRAMES_ENABLED 
-		auto curr_time = ov::Time::GetTimestampInMs();
-
-		// Periodically check the status of the queue
-		// If the queue exceeds an arbitrary threshold, increase the number of skip frames quickly
-		// If the queue is stable, slowly decrease the number of skip frames.
-		// If the queue exceeds the threshold, drop the frame.
-		auto elapsed_check_time = curr_time - skip_frames_last_check_time;
-		auto elapsed_stable_time = curr_time - skip_frames_last_changed_time;
-
-		if (elapsed_check_time > _SKIP_FRAMES_CHECK_INTERVAL)
+		// If the set value is greater than or equal to 0, the skip frame is automatically calculated.
+		// The skip frame is not less than the value set by the user.
+		if(_output_track->GetSkipFramesByConfig() >= 0)
 		{
-			skip_frames_last_check_time = curr_time;
+			auto curr_time = ov::Time::GetTimestampInMs();
 
-			// The frame skip should not be more than 1 second.
-			if ((skip_frames < _output_track->GetFrameRateByConfig()) &&
-				(_input_buffer.GetSize() > (_input_buffer.GetThreshold() / 4) ) &&  // 25% of the threshold == 0.5s
-				(_input_buffer.GetSize() >= skip_frames_previous_queue_size)
-				)
-			{
-				skip_frames++;
-				skip_frames_previous_queue_size = _input_buffer.GetSize();
-				skip_frames_last_changed_time = curr_time;
-
-				logtw("Scaler is unstable. changing skip frames to %d", skip_frames);
-			}
+			// Periodically check the status of the queue
+			// If the queue exceeds an arbitrary threshold, increase the number of skip frames quickly
 			// If the queue is stable, slowly decrease the number of skip frames.
-			else if ((skip_frames > _output_track->GetSkipFramesByConfig()) &&
-					 (elapsed_stable_time > _SKIP_FRAMES_STABLE_FOR_RETRIEVE_INTERVAL) && 
-					 _input_buffer.GetSize() <= 1)
+			// If the queue exceeds the threshold, drop the frame.
+			auto elapsed_check_time = curr_time - skip_frames_last_check_time;
+			auto elapsed_stable_time = curr_time - skip_frames_last_changed_time;
+
+			if (elapsed_check_time > _SKIP_FRAMES_CHECK_INTERVAL)
 			{
-				if (--skip_frames < 0)
+				skip_frames_last_check_time = curr_time;
+
+				// The frame skip should not be more than 1 second.
+				if ((skip_frames < _output_track->GetFrameRateByConfig()) &&		   // Maximum 1 second
+					(_input_buffer.GetSize() > (_input_buffer.GetThreshold() / 4)) &&  // 25% of the threshold == 0.5s
+					(_input_buffer.GetSize() >= skip_frames_previous_queue_size))	   // The queue is growing
 				{
-					skip_frames = 0;
+					skip_frames++;
+					skip_frames_previous_queue_size = _input_buffer.GetSize();
+					skip_frames_last_changed_time = curr_time;
+
+					logtw("Scaler is unstable. changing skip frames %d to %d", skip_frames-1, skip_frames);
+				}
+				// If the queue is stable, slowly decrease the number of skip frames.
+				else if ((skip_frames > _output_track->GetSkipFramesByConfig()) &&
+						 (elapsed_stable_time > _SKIP_FRAMES_STABLE_FOR_RETRIEVE_INTERVAL) &&
+						 _input_buffer.GetSize() <= 1)
+				{
+					if (--skip_frames < 0)
+					{
+						skip_frames = 0;
+					}
+
+					skip_frames_previous_queue_size = _input_buffer.GetSize();
+					skip_frames_last_changed_time = curr_time;
+
+					logti("Scaler is stable. changing skip frames %d to %d", skip_frames+1, skip_frames);
 				}
 
-				skip_frames_previous_queue_size = _input_buffer.GetSize();
-				skip_frames_last_changed_time = curr_time;
-
-				logti("Scaler is stable. changing skip frames to %d", skip_frames);
+				_fps_filter.SetSkipFrames(skip_frames);
 			}
-
-			_fps_filter.SetSkipFrames(skip_frames);
 		}
 
 		// If the queue exceeds the threshold, drop the frame.

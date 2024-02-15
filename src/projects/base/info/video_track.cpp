@@ -22,7 +22,7 @@ VideoTrack::VideoTrack()
 	  _has_bframe(false),
 	  _preset(""),
 	  _thread_count(0),
-	  _skip_frames_conf(0)
+	  _skip_frames_conf(-1) // Default value is -1
 {
 }
 
