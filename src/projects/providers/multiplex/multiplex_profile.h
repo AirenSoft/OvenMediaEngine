@@ -327,6 +327,10 @@ namespace pvd
         bool ReadOutputStreamNode(const pugi::xml_node &root_node);
         bool ReadPlaylistsNode(const pugi::xml_node &root_node);
         bool ReadSourceStreamsNode(const pugi::xml_node &root_node);
+
+        bool ReadOutputStreamObject(const Json::Value &object);
+        bool ReadPlaylistsObject(const Json::Value &object);
+        bool ReadSourceStreamsObject(const Json::Value &object);
         
         std::chrono::system_clock::time_point _created_time;
         

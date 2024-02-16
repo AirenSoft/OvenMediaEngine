@@ -31,6 +31,18 @@ namespace pvd
 
         std::shared_ptr<MultiplexProfile> GetProfile() const;
 
+        enum class MuxState
+        {
+            None,
+            Pulling,
+            Playing,
+            Stopped,
+        };
+
+        MuxState GetMuxState() const;
+        ov::String GetMuxStateStr() const;
+        ov::String GetPullingStateMsg() const;
+
     private:
         void WorkerThread();
 
@@ -46,5 +58,8 @@ namespace pvd
 
         std::thread _worker_thread;
         bool _worker_thread_running = false;
+
+        MuxState _mux_state = MuxState::None;
+        ov::String _pulling_state_msg;
     };
 }

@@ -68,6 +68,33 @@ namespace pvd
         return Stream::Terminate();
     }
 
+    MultiplexStream::MuxState MultiplexStream::GetMuxState() const
+    {
+        return _mux_state;
+    }
+
+    ov::String MultiplexStream::GetMuxStateStr() const
+    {
+        switch (_mux_state)
+        {
+        case MuxState::None:
+            return "None";
+        case MuxState::Pulling:
+            return "Pulling";
+        case MuxState::Playing:
+            return "Playing";
+        case MuxState::Stopped:
+            return "Stopped";
+        }
+
+        return "Unknown";
+    }
+
+    ov::String MultiplexStream::GetPullingStateMsg() const
+    {
+        return _pulling_state_msg;
+    }
+
     std::shared_ptr<MultiplexProfile> MultiplexStream::GetProfile() const
     {
         return _multiplex_profile;
@@ -77,6 +104,7 @@ namespace pvd
     {
         while (_worker_thread_running)
         {
+            _mux_state = MuxState::Pulling;
             if (PullSourceStreams() == false)
             {
                 // sleep and retry
@@ -89,6 +117,7 @@ namespace pvd
 
         while (_worker_thread_running)
         {
+            _mux_state = MuxState::Playing;
             bool break_loop = false;
             // Get Streams and Push
             auto source_streams = _multiplex_profile->GetSourceStreams();
@@ -164,7 +193,9 @@ namespace pvd
 
                 if (ocst::Orchestrator::GetInstance()->CheckIfStreamExist(vhost_app_name, stream_url->Stream()) == false)
                 {
-                    logti("Multiplex Channel : %s/%s: Wait for stream %s", GetApplicationName(), GetName().CStr(), stream_url->Stream().CStr());
+                    _pulling_state_msg = ov::String::FormatString("Multiplex Channel : %s/%s: Wait for stream %s", GetApplicationName(), GetName().CStr(), stream_url->Stream().CStr());
+                    logti("%s", _pulling_state_msg.CStr());
+
                     return false;
                 }
 
@@ -172,7 +203,8 @@ namespace pvd
 
                 if (result != CommonErrorCode::SUCCESS)
                 {
-                    logte("Multiplex Channel : %s/%s: Failed to mirror stream %s (err : %d)", GetApplicationName(), GetName().CStr(), source_stream->GetUrlStr().CStr(), static_cast<int>(result));
+                    _pulling_state_msg = ov::String::FormatString("Multiplex Channel : %s/%s: Failed to mirror stream %s (err : %d)", GetApplicationName(), GetName().CStr(), source_stream->GetUrlStr().CStr(), static_cast<int>(result));
+                    logte("%s", _pulling_state_msg.CStr());
                     return false;
                 }
             }
