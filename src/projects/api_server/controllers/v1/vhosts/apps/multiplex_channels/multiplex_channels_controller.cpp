@@ -10,7 +10,7 @@
 
 #include <orchestrator/orchestrator.h>
 #include "../../../../../api_private.h"
-#include <providers/multiplex/multiplex_stream.h>
+#include <providers/multiplex/multiplex_application.h>
 #include <providers/multiplex/multiplex_profile.h>
 #include <base/ovlibrary/files.h>
 
@@ -32,9 +32,20 @@ namespace api
 		{
 			Json::Value response = Json::arrayValue;
 
-			auto stream_list = app->GetStreamMetricsMap();
+			// Get Real MultiplexStream
+			auto provider = std::dynamic_pointer_cast<pvd::Provider>(ocst::Orchestrator::GetInstance()->GetProviderFromType(ProviderType::Multiplex));
+			if (provider == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get the multiplex provider");
+			}
 
-			for (auto &item : stream_list)
+			auto multiplex_application = std::static_pointer_cast<pvd::MultiplexApplication>(provider->GetApplicationByName(app->GetName()));
+			if (multiplex_application == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::NotFound, "Could not get the multiplex application");
+			}
+
+			for (auto &item : multiplex_application->GetMultiplexStreams())
 			{
 				auto &stream = item.second;
 
@@ -99,9 +110,16 @@ namespace api
 
 		ApiResponse MultiplexChannelsController::OnGetChannel(const std::shared_ptr<http::svr::HttpExchange> &client,
 												   const std::shared_ptr<mon::HostMetrics> &vhost,
-												   const std::shared_ptr<mon::ApplicationMetrics> &app,
-												   const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+												   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			const auto &match_result = client->GetRequest()->GetMatchResult();
+			const auto stream_name = match_result.GetNamedGroup("stream_name").GetValue();
+
+			if (stream_name.IsEmpty())
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "Invalid stream name");
+			}
+
 			// Get Real MultiplexStream
 			auto provider = std::dynamic_pointer_cast<pvd::Provider>(ocst::Orchestrator::GetInstance()->GetProviderFromType(ProviderType::Multiplex));
 			if (provider == nullptr)
@@ -109,10 +127,16 @@ namespace api
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get the multiplex provider");
 			}
 
-			auto multiplex_stream = std::static_pointer_cast<pvd::MultiplexStream>(provider->GetStreamByName(app->GetName(), stream->GetName()));
+			auto multiplex_application = std::static_pointer_cast<pvd::MultiplexApplication>(provider->GetApplicationByName(app->GetName()));
+			if (multiplex_application == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::NotFound, "Could not get the multiplex application");
+			}
+
+			auto multiplex_stream = multiplex_application->GetMultiplexStream(stream_name);
 			if (multiplex_stream == nullptr)
 			{
-				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get the multiplex stream");
+				throw http::HttpError(http::StatusCode::NotFound, "Could not get the multiplex stream <%s>", stream_name.CStr());
 			}
 
 			auto multiplex = multiplex_stream->GetProfile();
@@ -138,12 +162,33 @@ namespace api
 
 		ApiResponse MultiplexChannelsController::OnDeleteChannel(const std::shared_ptr<http::svr::HttpExchange> &client,
 													  const std::shared_ptr<mon::HostMetrics> &vhost,
-													  const std::shared_ptr<mon::ApplicationMetrics> &app,
-													  const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+													  const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			if (stream->GetSourceType() != StreamSourceType::Multiplex)
+			const auto &match_result = client->GetRequest()->GetMatchResult();
+			const auto stream_name = match_result.GetNamedGroup("stream_name").GetValue();
+
+			if (stream_name.IsEmpty())
 			{
-				throw http::HttpError(http::StatusCode::BadRequest, "Stream is not a multiplex stream");
+				throw http::HttpError(http::StatusCode::BadRequest, "Invalid stream name");
+			}
+
+			// Get Real MultiplexStream
+			auto provider = std::dynamic_pointer_cast<pvd::Provider>(ocst::Orchestrator::GetInstance()->GetProviderFromType(ProviderType::Multiplex));
+			if (provider == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get the multiplex provider");
+			}
+
+			auto multiplex_application = std::static_pointer_cast<pvd::MultiplexApplication>(provider->GetApplicationByName(app->GetName()));
+			if (multiplex_application == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::NotFound, "Could not get the multiplex application");
+			}
+
+			auto multiplex_stream = multiplex_application->GetMultiplexStream(stream_name);
+			if (multiplex_stream == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::NotFound, "Could not get the multiplex stream <%s>", stream_name.CStr());
 			}
 
 			// Get Config
@@ -154,7 +199,7 @@ namespace api
 			}
 
 			auto multiplex_files_dir = ov::GetDirPath(multiplex_config.GetMuxFilesDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
-			auto multiplex_file_path = ov::String::FormatString("%s/%s.%s", multiplex_files_dir.CStr(), stream->GetName().CStr(), pvd::MultiplexFileExtension);
+			auto multiplex_file_path = ov::String::FormatString("%s/%s.%s", multiplex_files_dir.CStr(), stream_name.CStr(), pvd::MultiplexFileExtension);
 
 			// Delete multiplex file
 			if (ov::DeleteFile(multiplex_file_path) == false)

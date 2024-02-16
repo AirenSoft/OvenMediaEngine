@@ -611,11 +611,10 @@ namespace pvd
 					options_node.append_child("HlsChunklistPathDepth").text().set(playlist->GetHlsChunklistPathDepth());
 				}
 
-				// Rendition
-				auto renditions_node = playlist_node.append_child("Renditions");
+				// Renditions
 				for (const auto &rendition : playlist->GetRenditionList())
 				{
-					auto rendition_node = renditions_node.append_child("Rendition");
+					auto rendition_node = playlist_node.append_child("Rendition");
 					rendition_node.append_child("Name").text().set(rendition->GetName().CStr());
 
 					if (rendition->GetVideoVariantName().IsEmpty() == false)

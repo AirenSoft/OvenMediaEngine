@@ -34,14 +34,12 @@ namespace api
 			// GET /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>
 			ApiResponse OnGetChannel(const std::shared_ptr<http::svr::HttpExchange> &client,
 									const std::shared_ptr<mon::HostMetrics> &vhost,
-									const std::shared_ptr<mon::ApplicationMetrics> &app,
-									const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
+									const std::shared_ptr<mon::ApplicationMetrics> &app);
 
 			// DELETE /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>
 			ApiResponse OnDeleteChannel(const std::shared_ptr<http::svr::HttpExchange> &client,
 									   const std::shared_ptr<mon::HostMetrics> &vhost,
-									   const std::shared_ptr<mon::ApplicationMetrics> &app,
-									   const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
+									   const std::shared_ptr<mon::ApplicationMetrics> &app);
 		};
 	}  // namespace v1
 }  // namespace api
