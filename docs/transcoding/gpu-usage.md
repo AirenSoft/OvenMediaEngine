@@ -2,13 +2,11 @@
 
 OvenMediaEngine supports GPU-based hardware decoding and encoding. Currently supported GPU acceleration devices are Intel's QuickSync and NVIDIA. This article explains how to install the drivers for OvenMediaEngine and set up the configuration to use your GPU.
 
-
-
 ## 1. Install Drivers
 
 {% tabs %}
 {% tab title="NVIDIA" %}
-### 1. Install NVIDIA GPU Driver
+#### 1. Install NVIDIA GPU Driver
 
 If you are using an NVIDIA graphics card, please refer to the following guide to install the driver. The OS that supports installation with the provided script are **CentOS 7/8** and **Ubuntu 18/20** versions. If you want to install the driver in another OS, please refer to the manual installation guide document.
 
@@ -42,7 +40,7 @@ Thu Jun 17 10:20:23 2021
 +-------------------------------+----------------------+----------------------+
 ```
 
-### 2 . Prerequisites&#x20;
+#### 2 . Prerequisites
 
 If you have finished installing the driver to use the GPU, you need to reinstall the open source library using Prerequisites.sh . The purpose is to allow external libraries to use the installed graphics driver.
 
@@ -52,11 +50,11 @@ OvenMediaEngine-master/misc/prerequisites.sh --enable-nvc
 {% endtab %}
 
 {% tab title="NVIDIA with Docker" %}
-### 1. Install NVIDIA GPU Driver
+#### 1. Install NVIDIA GPU Driver
 
 Please refer to the NVIDIA Driver installation guide written previously.
 
-### 2. Install NVIDIA Container Toolkit
+#### 2. Install NVIDIA Container Toolkit
 
 To use GPU acceleration in Docker, you need to install NVIDIA drivers on your host OS and install the NVIDIA Container Toolkit. This toolkit includes container runtime libraries and utilities for using NVIDIA GPUs in Docker containers.
 
@@ -64,9 +62,9 @@ To use GPU acceleration in Docker, you need to install NVIDIA drivers on your ho
 OvenMediaEngine-master/misc/install_nvidia_docker_container.sh
 ```
 
-### 3 . Build Image
+#### 3 . Build Image
 
-A Docker Image build script that supports NVIDIA GPU is provided separately.  Please refer to the previous guide for how to build
+A Docker Image build script that supports NVIDIA GPU is provided separately. Please refer to the previous guide for how to build
 
 ```
 OvenMediaEngine-master/Dockerfile.cuda
@@ -75,7 +73,7 @@ OvenMediaEngine-master/Dockerfile.cuda.local
 {% endtab %}
 
 {% tab title="Intel Quick Sync" %}
-### 1. Install Intel QuickSync Driver
+#### 1. Install Intel QuickSync Driver
 
 If you are using an Intel CPU that supports QuickSync, please refer to the following guide to install the driver. The OSes that support installation using the provided scripts are **CentOS 7/8** and **Ubuntu 18/20** versions. If you want to install the driver on a different OS, please refer to the Manual Installation Guide document.
 
@@ -98,11 +96,11 @@ After the driver installation is complete, check whether the driver operates nor
 /MediaSDK-intel-mediasdk-21.1.2/build/__bin/release/simple_7_codec
 ```
 
-### 2. Prerequisites&#x20;
+#### 2. Prerequisites
 
 If you have finished installing the driver to use the GPU, you need to reinstall the open source library using Prerequisites.sh . The purpose is to allow external libraries to use the installed graphics driver.
 
-### Using Intel QuickSync GPU
+#### Using Intel QuickSync GPU
 
 ```bash
 OvenMediaEngine-master/misc/prerequisites.sh --enable-qsv
@@ -110,32 +108,29 @@ OvenMediaEngine-master/misc/prerequisites.sh --enable-qsv
 {% endtab %}
 
 {% tab title="Netint VPU Ni Logan" %}
-### 1. Install XCODER
+#### 1. Install XCODER
 
 Please refer to the Netint documentation to install XCODER.
 
 **How to check driver installation**
 
-After the driver installation is complete, check if the libxcoder exist: the CLI must return something like ```libxcoder_logan.so (libc6,x86-64) => /usr/local/lib/libxcoder_logan.so```
+After the driver installation is complete, check if the libxcoder exist: the CLI must return something like `libxcoder_logan.so (libc6,x86-64) => /usr/local/lib/libxcoder_logan.so`
 
 ```bash
 ldconfig -p | grep libxcoder_logan.so
 ```
 
-### 2. Prerequisites&#x20;
+#### 2. Prerequisites
 
-If you have finished installing the driver to use the VPU, you need to reinstall the open source library using Prerequisites.sh . The purpose is to allow external libraries to use the installed graphics driver.
-You also have to unzip the ffmpeg patch provide by netint in a specfic path
+If you have finished installing the driver to use the VPU, you need to reinstall the open source library using Prerequisites.sh . The purpose is to allow external libraries to use the installed graphics driver. You also have to unzip the ffmpeg patch provide by netint in a specfic path
 
-### Using Netint VPU
+#### Using Netint VPU
 
 ```bash
 ./prerequisites.sh --enable-nilogan --nilogan-path=/root/T4xx/release/FFmpeg-n5.0_t4xx_patch
 ```
 {% endtab %}
 {% endtabs %}
-
-
 
 ## 2. Build & Run
 
@@ -146,15 +141,13 @@ Please refer to the link for how to build and run.
 {% endcontent-ref %}
 
 {% hint style="info" %}
-#### Intructions on running Docker
+**Intructions on running Docker**
 
 you must include the **--gpus all** option when running Docker
 
 <pre data-overflow="wrap"><code><strong>docker run -d ... --gpus all airensoft/ovenmediaengine:dev
 </strong></code></pre>
 {% endhint %}
-
-
 
 ## 3. Configuration
 
@@ -195,8 +188,6 @@ To use hardware acceleration, set the **HardwareAcceleration** option to **true*
 {% content-ref url="../configuration/" %}
 [configuration](../configuration/)
 {% endcontent-ref %}
-
-
 
 ## Appendix. Support Format
 

@@ -112,7 +112,7 @@ This channel normally plays `default/app/input`, but when live input is stopped,
 You may experience some buffering when going from file to live. This is unavoidable due to the nature of the function and low latency. If this is inconvenient, buffering issues can disappear if you add a little delay in advance by setting PartHoldBack in LLHLS to 5 or more. It is a choice between delay and buffering.
 {% endhint %}
 
-
+## REST API
 
 ScheduledChannel can also be controlled via API. Please refer to the page below.
 
