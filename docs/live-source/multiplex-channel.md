@@ -23,9 +23,11 @@ To use this feature, enable Multiplex Provider in Server.xml.
 
 Multiplex Channels are created through .mux files or API. MuxFilesDir is the path where the .mux files are located and can be set to an absolute system path or relative to the path where the Server.xml configuration is located.
 
+The Multiplex Provider monitors the MuxFilesDir path, and when a mux file is created, it parses the file and creates a multiplex channel. When the mux file is modified, the channel is deleted and created again, and when the mux file is deleted, the channel is deleted.
+
 ## Mux file format
 
-mux files can be created or deleted while the system is running. This works dynamically. The mux file has the format below.
+mux files can be created or deleted while the system is running. This works dynamically. The mux file has the format below.&#x20;
 
 ```
 <?xml version="1.0" encoding="UTF-8"?>
