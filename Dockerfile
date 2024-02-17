@@ -1,4 +1,4 @@
-FROM    ubuntu:20.04 AS base
+FROM    ubuntu:22.04 AS base
 
 ## Install libraries by package
 ENV     DEBIAN_FRONTEND=noninteractive
