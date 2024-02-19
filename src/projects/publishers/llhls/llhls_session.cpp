@@ -441,7 +441,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 	}
 
 	// Get the playlist
-	auto query_string = MakeQueryString(request_uri);
+	auto query_string = MakeQueryStringToPropagate(request_uri);
 	auto [result, playlist] = llhls_stream->GetMasterPlaylist(file_name, query_string, gzip, legacy, rewind);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
@@ -526,7 +526,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 	}
 
 	// Get the chunklist
-	auto query_string = MakeQueryString(request_uri);
+	auto query_string = MakeQueryStringToPropagate(request_uri);
 
 	auto [result, chunklist] = llhls_stream->GetChunklist(query_string, track_id, msn, part, skip, gzip, legacy, rewind);
 	if (result == LLHlsStream::RequestResult::Success)
@@ -864,7 +864,7 @@ bool LLHlsSession::AddPendingRequest(const std::shared_ptr<http::svr::HttpExchan
 	return true;
 }
 
-ov::String LLHlsSession::MakeQueryString(const std::shared_ptr<ov::Url> &request_uri)
+ov::String LLHlsSession::MakeQueryStringToPropagate(const std::shared_ptr<ov::Url> &request_uri)
 {
 	auto query_string = ov::String::FormatString("session=%u_%s", GetId(), _session_key.CStr());
 	if (_origin_mode == true)
