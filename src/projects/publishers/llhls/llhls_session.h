@@ -86,6 +86,8 @@ private:
 
 	void OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn, const int64_t &part);
 
+	ov::String MakeQueryString(const std::shared_ptr<ov::Url> &request_uri);
+
 	// Pending requests
 	struct PendingRequest
 	{
