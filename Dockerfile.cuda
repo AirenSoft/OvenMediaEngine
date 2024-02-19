@@ -58,7 +58,8 @@ RUN \
         rm -rf ${TEMP_DIR}
 
 ## Make Release Image
-FROM    nvidia/cuda:11.4.3-base-ubuntu20.04 AS release
+FROM    nvidia/cuda:11.4.3-runtime-ubuntu20.04 AS release
+# FROM    nvidia/cuda:12.2.0-runtime-ubuntu20.04 AS release
 
 ## Install libraries by package
 ENV     DEBIAN_FRONTEND=noninteractive
