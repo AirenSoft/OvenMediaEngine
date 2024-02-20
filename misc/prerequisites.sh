@@ -394,12 +394,12 @@ install_hiredis()
 
 install_base_ubuntu()
 {
-    sudo apt-get install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev
+    sudo apt-get install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev git
 }
 
 install_base_fedora()
 {
-    sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc libuuid-devel 
+    sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc libuuid-devel git
     sudo yum install -y perl-IPC-Cmd
 }
 
@@ -417,7 +417,7 @@ install_base_centos()
         sudo yum install -y make git which
     fi
 
-    sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
+    sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel git
     sudo yum install -y perl-IPC-Cmd
 }
 
@@ -429,7 +429,7 @@ install_base_macos()
     fi
 
     # the default make on macOS does not work with these makefiles
-    brew install pkg-config nasm automake libtool xz cmake make
+    brew install pkg-config nasm automake libtool xz cmake make git
 
     # the nasm that comes with macOS does not work with libvpx thus put the path where the homebrew stuff is installed in front of PATH
     export PATH=/usr/local/bin:$PATH

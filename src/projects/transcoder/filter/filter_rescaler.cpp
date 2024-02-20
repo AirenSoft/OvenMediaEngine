@@ -231,6 +231,28 @@ bool FilterRescaler::InitializeFilterDescription()
 		desc += ov::String::FormatString("multiscale_xma=lxlnx_hwdev=%d:outputs=1:out_1_width=%d:out_1_height=%d:out_1_rate=full",
 			_output_track->GetCodecDeviceId(), _output_track->GetWidth(), _output_track->GetHeight());
 	}
+    else if (output_module_id == cmn::MediaCodecModuleId::NIQUADRA)
+    {
+        switch (input_module_id)
+        {
+            case cmn::MediaCodecModuleId::NIQUADRA: { 	// Zero Copy
+                //TODO: Exception handling required if Device ID is different.
+                desc = ov::String::FormatString("");
+            }
+                break;
+            default:
+                logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id).CStr());
+            case cmn::MediaCodecModuleId::NVENC:    // CPU memory
+            case cmn::MediaCodecModuleId::XMA:      // CPU memory
+            case cmn::MediaCodecModuleId::QSV: 		// CPU memory
+            case cmn::MediaCodecModuleId::NILOGAN: 	// CPU memory
+            case cmn::MediaCodecModuleId::DEFAULT: 	// CPU memory
+            {
+                desc = ov::String::FormatString("ni_quadra_hwupload=device=%d,", output_device_id);
+            }
+        }
+        desc += ov::String::FormatString("ni_quadra_scale=%d:%d", _output_track->GetWidth(), _output_track->GetHeight());
+    }
 	else
 	{
 		logtw("Unsupported output module id: %d", output_module_id);
