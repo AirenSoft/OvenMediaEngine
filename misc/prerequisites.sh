@@ -24,6 +24,9 @@ INTEL_QSV_HWACCELS=false
 NETINT_LOGAN_HWACCELS=false
 NETINT_LOGAN_PATCH_PATH=""
 NETINT_LOGAN_XCODER_COMPILE_PATH=""
+NETINT_QUADRA_HWACCELS=false
+NETINT_QUADRA_PATCH_PATH=""
+NETINT_QUADRA_XCODER_COMPILE_PATH=""
 NVIDIA_NV_CODEC_HWACCELS=false
 XILINX_XMA_CODEC_HWACCELS=false
 
@@ -302,6 +305,24 @@ install_ffmpeg()
         #ADDI_EXTRA_LIBS="-lpthread"
     fi
     
+    # If there is an enable-niquadra option, add patch from libxcoder_quadra-path
+    if [ "$NETINT_QUADRA_HWACCELS" = true ] ; then
+        echo "we are applying the patch founded in $NETINT_QUADRA_PATCH_PATH"
+        patch_name=$(basename $NETINT_QUADRA_PATCH_PATH)
+        cp $NETINT_QUADRA_PATCH_PATH ${DIR}
+        cd ${DIR} && patch -t -p 1 < $patch_name
+        if [ "$NETINT_QUADRA_XCODER_COMPILE_PATH" != "" ] ; then
+            cd $NETINT_QUADRA_XCODER_COMPILE_PATH && bash build.sh && ldconfig #the compilation of libxcoder can be done before
+        fi
+        ADDI_LIBS+=" --enable-ni_quadra --enable-avfilter  --enable-pthreads "
+        ADDI_ENCODER+=",h264_ni_quadra,h265_ni_quadra"
+        ADDI_DECODER+=",h264_ni_quadra,h265_ni_quadra"
+        ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
+        ADDI_LDFLAGS=" -lm -ldl"
+        ADDI_FILTERS+=",hwdownload,hwupload,hwupload_ni_quadra"
+        #ADDI_EXTRA_LIBS="-lpthread"
+    fi
+
     # Patch for Enterprise
     if [[ "$(type -t install_patch_ffmpeg)"  == 'function' ]];
     then
@@ -485,13 +506,25 @@ case $i in
 	--enable-nilogan)
     NETINT_LOGAN_HWACCELS=true 	
     shift
-    ;;	
+    ;;
 	--nilogan-path=*)
     NETINT_LOGAN_PATCH_PATH="${i#*=}" 
     shift
     ;;
 	--nilogan-xocder-compile-path=*)
     NETINT_LOGAN_XCODER_COMPILE_PATH="${i#*=}" 
+    shift
+    ;;
+        --enable-niquadra)
+    NETINT_QUADRA_HWACCELS=true
+    shift
+    ;;
+        --niquadra-path=*)
+    NETINT_QUADRA_PATCH_PATH="${i#*=}"
+    shift
+    ;;
+        --niquadra-xocder-compile-path=*)
+    NETINT_QUADRA_XCODER_COMPILE_PATH="${i#*=}"
     shift
     ;;
     --enable-nvc)
@@ -516,6 +549,12 @@ if [ "$NETINT_LOGAN_HWACCELS" = true ] ; then
 	fi	
 fi
 
+if [ "$NETINT_QUADRA_HWACCELS" = true ] ; then
+        if [[ ! -f $NETINT_QUADRA_PATCH_PATH ]]; then
+                echo "You have activated netint quadra encoding but the patch path is not found"
+                exit 1
+        fi
+fi
 
 if [ "${OSNAME}" == "Ubuntu" ]; then
     check_version
