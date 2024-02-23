@@ -32,7 +32,7 @@ namespace cfg
 					int _segment_count = 10;
 					double _chunk_duration = 0.5;
 					double _part_hold_back = 0; // it will be set to 3 * chunk_duration automatically
-					int _segment_duration = 6;
+					double _segment_duration = 6.0;
 					Dumps _dumps;
 					LLHlsCacheControl _cache_control;
 					LLHlsDvr _dvr;

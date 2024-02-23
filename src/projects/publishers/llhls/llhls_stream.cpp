@@ -210,7 +210,7 @@ bool LLHlsStream::Start()
 		}
 	}
 
-	logti("LLHlsStream has been created : %s/%u\nOriginMode(%s) Chunk Duration(%.2f) Segment Duration(%u) Segment Count(%u) DRM(%s)", GetName().CStr(), GetId(),
+	logti("LLHlsStream has been created : %s/%u\nOriginMode(%s) Chunk Duration(%.2f) Segment Duration(%.2f) Segment Count(%u) DRM(%s)", GetName().CStr(), GetId(),
 		  ov::Converter::ToString(llhls_config.IsOriginMode()).CStr(), llhls_config.GetChunkDuration(), llhls_config.GetSegmentDuration(), llhls_config.GetSegmentCount(), bmff::CencProtectSchemeToString(_cenc_property.scheme));
 
 	return Stream::Start();
