@@ -511,7 +511,7 @@ case $i in
     NETINT_LOGAN_PATCH_PATH="${i#*=}" 
     shift
     ;;
-	--nilogan-xocder-compile-path=*)
+	--nilogan-xcoder-compile-path=*)
     NETINT_LOGAN_XCODER_COMPILE_PATH="${i#*=}" 
     shift
     ;;
@@ -523,7 +523,7 @@ case $i in
     NETINT_QUADRA_PATCH_PATH="${i#*=}"
     shift
     ;;
-        --niquadra-xocder-compile-path=*)
+        --niquadra-xcoder-compile-path=*)
     NETINT_QUADRA_XCODER_COMPILE_PATH="${i#*=}"
     shift
     ;;

@@ -25,7 +25,15 @@ public:
 
 	int GetSupportedFormat() const noexcept override 
 	{
-		return AV_PIX_FMT_YUV420P;
+            /*
+             * Options:
+             * AV_PIX_FMT_NI_QUAD - Hardware frame format
+             * AV_PIX_FMT_YUV420P - 8 Bit Software
+             * AV_PIX_FMT_YUV420P10LE - 10 Bit Software
+             * AV_PIX_FMT_NV12 - CUDA Frame
+             * AV_PIX_FMT_P010LE - ?
+             */
+            return AV_PIX_FMT_NI_QUAD;
 	}
 
 	cmn::BitstreamFormat GetBitstreamFormat() const noexcept override

@@ -1,3 +1,7 @@
+# Instruction: Build local OvenMediaEngine Dev Environment. Can be used with CLion dev environment as a toolchain
+# Information on hot to setup: https://www.jetbrains.com/help/clion/clion-toolchains-in-docker.html#sample-dockerfile
+
+
 FROM    ubuntu:20.04 AS base
 
 ## Install libraries by package
