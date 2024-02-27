@@ -319,7 +319,7 @@ install_ffmpeg()
         ADDI_DECODER+=",h264_ni_quadra,h265_ni_quadra"
         ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
         ADDI_LDFLAGS=" -lm -ldl"
-        ADDI_FILTERS+=",hwdownload,hwupload,hwupload_ni_quadra"
+        ADDI_FILTERS+=",scale_ni_quadra,overlay_ni_quadra,split_ni_quadra,crop_ni_quadra,pad_ni_quadra,hwupload_ni_quadra,roi_ni_quadra,xstack_ni_quadra,rotate_ni_quadra,drawbox_ni_quadra,bg_ni_quadra,ai_pre_ni_quadra,delogo_ni_quadra,merge_ni_quadra"
         #ADDI_EXTRA_LIBS="-lpthread"
     fi
 

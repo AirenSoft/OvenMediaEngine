@@ -13,7 +13,8 @@
 #include "../../transcoder_gpu.h"
 #include "../../transcoder_private.h"
 
-// sudo usermod -a -G video $USER
+// sudo usermod -a -G video $USER ???
+// sudo usermod -a -G disk $USER
 
 bool EncoderAVCxNIQUADRA::SetCodecParams()
 {
@@ -34,28 +35,15 @@ bool EncoderAVCxNIQUADRA::SetCodecParams()
 	{
 		// When inserting a keyframe based on time, set the GOP value to 10 seconds.
 		_codec_context->gop_size = (int32_t)(GetRefTrack()->GetFrameRate() * 10);
-		_force_keyframe_timer.Start(GetRefTrack()->GetKeyFrameInterval());
+        ::av_opt_set(_codec_context->priv_data, "forced-idr", "1", 0);
+
+        _force_keyframe_timer.Start(GetRefTrack()->GetKeyFrameInterval());
 	}
 	// KeyFrame Interval By Frame
 	if(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::FRAME)
 	{
 		_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
 	}
-	
-	//disable b-frames
-	/*
-	1 : I-I-I-I,..I (all intra, gop_size=1)
-	2 : I-P-P-P,… P (consecutive P, gop_size=1)
-	3 : I-B-B-B,…B (consecutive B, gop_size=1)
-	4 : I-B-P-B-P,… (gop_size=2)
-	5 : I-B-B-B-P,… (gop_size=4)
-	6 : I-P-P-P-P,… (consecutive P, gop_size=4)
-	7 : I-B-B-B-B,… (consecutive B, gop_size=4)
-	8 : I-B-B-B-B-B-B-B-B,… (random access, gop_size=8)
-	9 : I-P-P-P,… P
-	*/
-	::av_opt_set(_codec_context->priv_data, "xcoder-params", "gopPresetIdx=2:lowDelay=1", 0);
-	//::av_opt_set(_codec_context->priv_data, "enc", 0, 0);	
 	
 	// Bframes
 	_codec_context->max_b_frames = GetRefTrack()->GetBFrames();
@@ -87,6 +75,9 @@ bool EncoderAVCxNIQUADRA::SetCodecParams()
 		}
 	}
 
+    //::av_opt_set(_codec_context->priv_data, "xcoder-params", "gopPresetIdx=2:lowDelay=1", 0);
+    //::av_opt_set(_codec_context->priv_data, "enc", 0, 0);
+
 	_bitstream_format = cmn::BitstreamFormat::H264_ANNEXB;
 	
 	_packet_type = cmn::PacketType::NALU;
@@ -95,9 +86,7 @@ bool EncoderAVCxNIQUADRA::SetCodecParams()
 }
 
 // Notes.
-//
 // - B-frame must be disabled. because, WEBRTC does not support B-Frame.
-//
 bool EncoderAVCxNIQUADRA::Configure(std::shared_ptr<MediaTrack> context)
 {
 	if (TranscodeEncoder::Configure(context) == false)
@@ -120,19 +109,33 @@ bool EncoderAVCxNIQUADRA::Configure(std::shared_ptr<MediaTrack> context)
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
+
+    if (SetCodecParams() == false)
+    {
+        logte("Could not set codec parameters for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+        return false;
+    }
 	
-	_codec_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NIQUADRA, context->GetCodecDeviceId()));
-	if(_codec_context->hw_device_ctx == nullptr)
+    auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NIQUADRA, GetRefTrack()->GetCodecDeviceId());
+    if(hw_device_ctx == nullptr)
 	{
 		logte("Could not allocate hw device context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
 
-	if (SetCodecParams() == false)
-	{
-		logte("Could not set codec parameters for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
-		return false;
-	}
+    // Assign HW device context to encoder
+    if(ffmpeg::Conv::SetHwDeviceCtxOfAVCodecContext(_codec_context, hw_device_ctx) == false)
+    {
+        logte("Could not set hw device context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+        return false;
+    }
+
+    // Assign HW frames context to encoder
+    if(ffmpeg::Conv::SetHWFramesCtxOfAVCodecContext(_codec_context) == false)
+    {
+        logte("Could not set hw frames context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+        return false;
+    }
 
 	if (::avcodec_open2(_codec_context, codec, nullptr) < 0)
 	{

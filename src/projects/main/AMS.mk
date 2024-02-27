@@ -106,13 +106,17 @@ endif
 # Enable Netint Logan Accelerator
 ifeq ($(call chk_lib_exist,libxcoder_logan.so), 0)
 $(info $(ANSI_YELLOW)- Netint Logan Accelerator is enabled$(ANSI_RESET))
-PROJECT_CXXFLAGS += -DHWACCELS_NILOGAN_ENABLED
+HWACCELS_NETINT_LOGAN_ENABLED := true
+LOCAL_LDFLAGS += -L/usr/local/lib -lxcoder_logan
+PROJECT_CXXFLAGS += -I/usr/local/include -DHWACCELS_NILOGAN_ENABLED
 endif
 
 # Enable Netint Quadra Accelerator
 ifeq ($(call chk_lib_exist,libxcoder.so), 0)
 $(info $(ANSI_YELLOW)- Netint Quadra Accelerator is enabled$(ANSI_RESET))
-PROJECT_CXXFLAGS += -DHWACCELS_NIQUADRA_ENABLED
+HWACCELS_NETINT_ENABLED := true
+LOCAL_LDFLAGS += -L/usr/local/lib -lxcoder
+PROJECT_CXXFLAGS += -I/usr/local/include -DHWACCELS_NIQUADRA_ENABLED
 endif
 
 ifeq ($(shell echo $${OSTYPE}),linux-musl) 

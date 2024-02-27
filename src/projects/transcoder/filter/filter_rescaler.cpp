@@ -45,6 +45,7 @@ FilterRescaler::FilterRescaler()
 
 	// Limit the number of filter threads to 4. I think 4 thread is usually enough for video filtering processing.
 	_filter_graph->nb_threads = 4;
+    _filter_graph->disable_auto_convert = true;
 }
 
 FilterRescaler::~FilterRescaler()
@@ -631,50 +632,63 @@ void FilterRescaler::WorkerThread()
 
 bool FilterRescaler::SetHWContextToFilterIfNeed()
 {
-	auto hw_device_ctx =  TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, _output_track->GetCodecDeviceId());
+    auto output_module_id = _output_track->GetCodecModuleId();
+    auto output_device_id = _output_track->GetCodecDeviceId();
 
-	// Assign the hw device context and hw frames context to the filter graph
-	for (uint32_t i = 0 ; i < _filter_graph->nb_filters ; i++)
-	{
-		auto filter = _filter_graph->filters[i];
+	auto hw_device_ctx =  TranscodeGPU::GetInstance()->GetDeviceContext(output_module_id, output_device_id);
 
-		if( (filter->filter->flags_internal & FILTER_FLAG_HWFRAME_AWARE) == 0 || (filter->inputs == nullptr))
-		{
-			continue;
-		}
+    // Assign the hw device context and hw frames context to the filter graph
+    for (uint32_t i = 0 ; i < _filter_graph->nb_filters ; i++)
+    {
+        auto filter = _filter_graph->filters[i];
 
-		bool matched = false;
-		if( strstr(filter->name, "scale_cuda") != nullptr || strstr(filter->name, "scale_npp") != nullptr)
-		{
-			matched = true;
-		}
+        if( (filter->filter->flags_internal & FILTER_FLAG_HWFRAME_AWARE) == 0 || (filter->inputs == nullptr))
+        {
+            continue;
+        }
 
-		if (matched == true)
-		{
-			logtd("set hardware device/frames context to filter. name(%s)", filter->name);
+        bool matched = false;
+        if (output_module_id == cmn::MediaCodecModuleId::NVENC )
+        {
+            if( strstr(filter->name, "scale_cuda") != nullptr || strstr(filter->name, "scale_npp") != nullptr)
+            {
+                matched = true;
+            }
+        }
+        else if (output_module_id == cmn::MediaCodecModuleId::NIQUADRA )
+        {
+            if( strstr(filter->name, "ni_quadra_scale") != nullptr )
+            {
+                matched = true;
+            }
+        }
 
-			if (ffmpeg::Conv::SetHwDeviceCtxOfAVFilterContext(filter, hw_device_ctx) == false)
-			{
-				logte("Could not set hw device context for %s", filter->name);
-				return false;
-			}
+        if (matched == true)
+        {
+            logtd("set hardware device/frames context to filter. name(%s)", filter->name);
 
-			for (uint32_t j = 0; j < filter->nb_inputs; j++)
-			{
-				auto input = filter->inputs[j];
-				if (input == nullptr)
-				{
-					continue;
-				}
+            if (ffmpeg::Conv::SetHwDeviceCtxOfAVFilterContext(filter, hw_device_ctx) == false)
+            {
+                logte("Could not set hw device context for %s", filter->name);
+                return false;
+            }
 
-				if (ffmpeg::Conv::SetHWFramesCtxOfAVFilterLink(input, hw_device_ctx, _output_track->GetWidth(), _output_track->GetHeight()) == false)
-				{
-					logte("Could not set hw frames context for %s", filter->name);
-					return false;
-				}
-			}
-		}
-	}
+            for (uint32_t j = 0; j < filter->nb_inputs; j++)
+            {
+                auto input = filter->inputs[j];
+                if (input == nullptr)
+                {
+                    continue;
+                }
+
+                if (ffmpeg::Conv::SetHWFramesCtxOfAVFilterLink(input, hw_device_ctx, _output_track->GetWidth(), _output_track->GetHeight()) == false)
+                {
+                    logte("Could not set hw frames context for %s", filter->name);
+                    return false;
+                }
+            }
+        }
+    }
 
 	return true;
 }

@@ -426,7 +426,9 @@ bool TranscodeGPU::CheckSupportedNIQUADRA()
 {
     _device_count_niquadra = 0;
 #ifdef HWACCELS_NIQUADRA_ENABLED
-    int ret = ::av_hwdevice_ctx_create(&_device_context_niquadra[0], AV_HWDEVICE_TYPE_NI_QUADRA, nullptr, nullptr, 0);
+    char buf[64] = {0};
+
+    int ret = ::av_hwdevice_ctx_create(&_device_context_niquadra[0], AV_HWDEVICE_TYPE_NI_QUADRA, buf, nullptr, 0);
 	if (ret < 0)
 	{
 		av_buffer_unref(&_device_context_niquadra[0]);

@@ -803,9 +803,13 @@ int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 			if (output_track->GetMediaType() == cmn::MediaType::Video)
 			{
 				auto encoder = _encoders[encoder_id];
+                enum AVPixelFormat format = AV_PIX_FMT_YUV420P;
+                logti("FORMAT: %d", format);
+				//output_track->SetColorspace(format);
 
-				output_track->SetColorspace(encoder->GetSupportedFormat());
-			}
+                output_track->SetColorspace(buffer->GetFormat());  // used AVPixelFormat
+
+            }
 			else if (output_track->GetMediaType() == cmn::MediaType::Audio)
 			{
 				auto encoder = _encoders[encoder_id];

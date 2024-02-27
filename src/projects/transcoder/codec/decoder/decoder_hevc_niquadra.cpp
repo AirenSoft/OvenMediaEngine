@@ -99,7 +99,7 @@ bool DecoderHEVCxNIQUADRA::InitCodec()
 	}
 
 	//dec_options
-	::av_opt_set(_context->priv_data, "xcoder-params", "out=sw:lowDelayMode=1:lowDelay=100", 0);
+	::av_opt_set(_context->priv_data, "xcoder-params", "out=hw", 0);
 	//::av_opt_set(_context->priv_data, "dec", 0, 0);
 	
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)

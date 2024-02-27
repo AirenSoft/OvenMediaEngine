@@ -915,7 +915,7 @@ namespace ffmpeg
 			frames_ctx->sw_format = *(constraints->valid_sw_formats);
 			frames_ctx->width = width;
 			frames_ctx->height = height;
-			frames_ctx->initial_pool_size = 10;
+			frames_ctx->initial_pool_size = -1;
 
 			if (av_hwframe_ctx_init(hw_frames_ref) < 0)
 			{

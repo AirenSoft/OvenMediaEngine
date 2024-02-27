@@ -22,7 +22,7 @@ bool DecoderAVCxNIQUADRA::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
-	// Create packet parser
+    // Initialize H.264 stream parser
 	_parser = ::av_parser_init(GetCodecID());
 	if (_parser == nullptr)
 	{
@@ -70,39 +70,38 @@ bool DecoderAVCxNIQUADRA::InitCodec()
 		return false;
 	}
 
-	_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NIQUADRA, _track->GetCodecDeviceId()));
-	if(_context->hw_device_ctx == nullptr)
+    _context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
+    _context->pkt_timebase = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
+    _context->flags |= AV_CODEC_FLAG_LOW_DELAY;
+
+    // Get hardware device context
+	auto hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NIQUADRA, _track->GetCodecDeviceId()));
+	if(hw_device_ctx == nullptr)
 	{
 		logte("Could not allocate hw device context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
 		return false;
 	}
-	
-	
 
-	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
-	_context->pkt_timebase = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
-	_context->flags |= AV_CODEC_FLAG_LOW_DELAY;
-	
-	auto decoder_config = std::static_pointer_cast<AVCDecoderConfigurationRecord>(GetRefTrack()->GetDecoderConfigurationRecord());
-	
-	if(decoder_config->ChromaFormat() > 1) {			
-		logte("Could not initialize codec because niquadra decoder support only AV_PIX_FMT_YUV420P pixel format: %d", decoder_config->ChromaFormat());
-		return false;
-	}
+    // Assign HW device context to decoder
+    if(ffmpeg::Conv::SetHwDeviceCtxOfAVCodecContext(_context, hw_device_ctx) == false)
+    {
+        logte("Could not set hw device context for %s", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr());
+        return false;
+    }
 
-	if (decoder_config != nullptr)
-	{		
-		_context->pix_fmt = AV_PIX_FMT_YUV420P; //Forced here niquadra decoder support only AV_PIX_FMT_YUV420P pixel format
-		_context->width = decoder_config->GetWidth();
-		_context->height = decoder_config->GetHeight();
-	}
-	
-	//dec_options
-	::av_opt_set(_context->priv_data, "xcoder-params", "out=sw:lowDelayMode=1:lowDelay=100", 0);
-	//::av_opt_set(_context->priv_data, "xcoder-params", "out=hw:lowDelayMode=1:lowDelay=100", 0);
-	//::av_opt_set(_context->priv_data, "dec", 0, 0);
-	
-	if (::avcodec_open2(_context, _codec, nullptr) < 0)
+    auto decoder_config = std::static_pointer_cast<AVCDecoderConfigurationRecord>(GetRefTrack()->GetDecoderConfigurationRecord());
+
+    if (decoder_config != nullptr)
+    {
+        //_context->pix_fmt = (AVPixelFormat)decoder_config->ChromaFormat();
+        _context->width = decoder_config->GetWidth();
+        _context->height = decoder_config->GetHeight();
+    }
+
+
+    ::av_opt_set(_context->priv_data, "xcoder-params", "out=hw", 0);
+
+    if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
 		return false;
@@ -111,8 +110,6 @@ bool DecoderAVCxNIQUADRA::InitCodec()
 	return true;
 }
 
-/*
-it seems that dynamic resolution is supported
 void DecoderAVCxNIQUADRA::UninitCodec()
 {
 	::avcodec_close(_context);
@@ -120,26 +117,6 @@ void DecoderAVCxNIQUADRA::UninitCodec()
 
 	_context = nullptr;
 }
-
-bool DecoderAVCxNIQUADRA::ReinitCodecIfNeed()
-{
-	// Netint H.264 decoder does not support dynamic resolution streams. 
-	// So, when a resolution change is detected, the codec is reset and recreated.
-	if (_context->width != 0 && _context->height != 0 && (_parser->width != _context->width || _parser->height != _context->height))
-	{
-		logti("Changed input resolution of %u track. (%dx%d -> %dx%d)", GetRefTrack()->GetId(), _context->width, _context->height, _parser->width, _parser->height);
-
-		UninitCodec();
-
-		if (InitCodec() == false)
-		{
-			return false;
-		}
-	}
-
-	return true;
-}
-*/
 
 void DecoderAVCxNIQUADRA::CodecThread()
 {
@@ -153,11 +130,11 @@ void DecoderAVCxNIQUADRA::CodecThread()
 		}
 
 		auto buffer = std::move(obj.value());
-
 		auto packet_data = buffer->GetData();
 
+        off_t offset = 0LL;
 		int64_t remained = packet_data->GetLength();
-		off_t offset = 0LL;
+
 		int64_t pts = (buffer->GetPts() == -1LL) ? AV_NOPTS_VALUE : buffer->GetPts();
 		int64_t dts = (buffer->GetDts() == -1LL) ? AV_NOPTS_VALUE : buffer->GetDts();
 		[[maybe_unused]] int64_t duration = (buffer->GetDuration() == -1LL) ? AV_NOPTS_VALUE : buffer->GetDuration();
@@ -175,10 +152,11 @@ void DecoderAVCxNIQUADRA::CodecThread()
 				logte("An error occurred while parsing: %d", parsed_size);
 				break;
 			}
-			
-			// if activated, I got Warning: time out on receiving a decoded framefrom the decoder, assume dropped, received frame_num: 0, sent pkt_num: 1, pkt_num-frame_num: 1, sending another packet.
-			// ReinitCodecIfNeed();			
- 
+
+
+            ///////////////////////////////
+            // Send to decoder
+            ///////////////////////////////
 			if (_pkt->size > 0)
 			{
 				_pkt->pts = _parser->pts;
