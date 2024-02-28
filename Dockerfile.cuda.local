@@ -55,8 +55,8 @@ RUN \
         rm -rf ${TEMP_DIR}
 
 ## Make Release Image
-FROM    nvidia/cuda:11.4.3-base-ubuntu20.04 AS release
-# FROM    nvidia/cuda:12.2.0-base-ubuntu20.04 AS release
+FROM    nvidia/cuda:11.4.3-runtime-ubuntu20.04 AS release
+# FROM    nvidia/cuda:12.2.0-runtime-ubuntu20.04 AS release
 
 ## Install libraries by package
 ENV     DEBIAN_FRONTEND=noninteractive
@@ -69,6 +69,9 @@ COPY            --from=build /opt/ovenmediaengine /opt/ovenmediaengine
 ENV     NVIDIA_VISIBLE_DEVICES=all
 ENV     NVIDIA_REQUIRE_CUDA=cuda>=11.4
 ENV     NVIDIA_DRIVER_CAPABILITIES=compute,utility,video,compat32
+
+# Send SIGKILL to OvenMediaEngine instead of SIGTERM
+STOPSIGNAL      SIGKILL
 
 # Default run as Origin mode
 CMD             ["/opt/ovenmediaengine/bin/OvenMediaEngine", "-c", "origin_conf"]
