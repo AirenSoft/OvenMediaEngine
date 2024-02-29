@@ -103,9 +103,9 @@ RUN     apt-get update && apt-get install -y tzdata sudo
 WORKDIR         /opt/ovenmediaengine/bin
 EXPOSE          80/tcp 8080/tcp 8090/tcp 1935/tcp 3333/tcp 3334/tcp 4000-4005/udp 10000-10010/udp 9000/tcp
 COPY            --from=build /opt/ovenmediaengine /opt/ovenmediaengine
-COPY            --from=build /usr/local/lib/ /usr/local/lib/
+COPY            --from=build /usr/local/ /usr/local/
 RUN             ldconfig
 
 # Default run as Origin mode
-CMD             ["/opt/ovenmediaengine/bin/OvenMediaEngine", "-c", "origin_conf"]
+CMD             init_rsrc; /opt/ovenmediaengine/bin/OvenMediaEngine -c origin_conf
 
