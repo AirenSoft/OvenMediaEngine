@@ -24,6 +24,7 @@ bool EncoderHEVCxNIQUADRA::SetCodecParams()
 	_codec_context->time_base = ::av_inv_q(::av_mul_q(_codec_context->framerate, (AVRational){_codec_context->ticks_per_frame, 1}));
 	_codec_context->max_b_frames = 0;
 	_codec_context->pix_fmt = (AVPixelFormat)GetSupportedFormat();
+    _codec_context->sw_pix_fmt = AV_PIX_FMT_YUV420P;
 	_codec_context->width = GetRefTrack()->GetWidth();
 	_codec_context->height = GetRefTrack()->GetHeight();
 

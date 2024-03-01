@@ -77,8 +77,6 @@ bool DecoderHEVCxNIQUADRA::InitCodec()
 		logte("Could not allocate hw device context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
 		return false;
 	}
-	
-	
 
 	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 	_context->pkt_timebase = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
@@ -268,7 +266,7 @@ void DecoderHEVCxNIQUADRA::CodecThread()
 					continue;
 				}
 
-				// logtd("%d / %d / fmt(%d)", decoded_frame->GetWidth(), decoded_frame->GetHeight(), decoded_frame->GetFormat());
+				logtd("%d / %d / fmt(%d)", decoded_frame->GetWidth(), decoded_frame->GetHeight(), decoded_frame->GetFormat());
 
 				::av_frame_unref(_frame);
 
