@@ -53,7 +53,7 @@ bool EncoderHEVCxNIQUADRA::SetCodecParams()
 	8 : I-B-B-B-B-B-B-B-B,… (random access, gop_size=8)
 	9 : I-P-P-P,… P
 	*/
-	::av_opt_set(_codec_context->priv_data, "xcoder-params", "gopPresetIdx=1:lowDelay=1", 0);
+	::av_opt_set(_codec_context->priv_data, "xcoder-params", "gopPresetIdx=9:lowDelay=1", 0);
 	//::av_opt_set(_codec_context->priv_data, "enc", 0, 0);	
 	
 	_bitstream_format = cmn::BitstreamFormat::H265_ANNEXB;

@@ -75,7 +75,7 @@ bool EncoderAVCxNIQUADRA::SetCodecParams()
 		}
 	}
 
-    ::av_opt_set(_codec_context->priv_data, "xcoder-params", "gopPresetIdx=1:lowDelay=1", 0);
+    ::av_opt_set(_codec_context->priv_data, "xcoder-params", "gopPresetIdx=9:lowDelay=1", 0);
     //::av_opt_set(_codec_context->priv_data, "enc", 0, 0);
 
 	_bitstream_format = cmn::BitstreamFormat::H264_ANNEXB;
