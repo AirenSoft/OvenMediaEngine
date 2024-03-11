@@ -2,13 +2,14 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Hyunjun Jang
+//  Created by Keukhan Kwon
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
 
 #include "publisher.h"
+#include "file_record.h"
 
 namespace cfg
 {
@@ -28,6 +29,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFilePath, _file_path)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetInfoPath, _info_path)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetRootPath, _root_path)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetRecord, 	_record)
 
 				protected:
 					void MakeList() override
@@ -38,13 +40,17 @@ namespace cfg
 						Register<Optional>("FilePath", &_file_path);
 						Register<Optional>("InfoPath", &_info_path);
 
+						Register<Optional>("Record", &_record);
+
 						//@deprecated
-						Register<Optional>("FileInfoPath", &_info_path);
+
 					}
 
 					ov::String _root_path = "";
 					ov::String _file_path = "";
 					ov::String _info_path = "";
+					
+					FileRecord _record;
 				};
 			}  // namespace pub
 		}	   // namespace app

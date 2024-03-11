@@ -179,7 +179,7 @@ namespace pub
 			return false;
 		}
 
-		logti("Start recording.%s", GetRecord()->GetInfoString().CStr());
+		logtd("Recording Started. %s", GetRecord()->GetInfoString().CStr());
 
 		return true;
 	}
@@ -291,7 +291,7 @@ namespace pub
 			
 			_writer = nullptr;
 
-			logti("Recording finished.%s", GetRecord()->GetInfoString().CStr());
+			logtd("Recording Completed. %s", GetRecord()->GetInfoString().CStr());
 
 			GetRecord()->IncreaseSequence();
 		}
