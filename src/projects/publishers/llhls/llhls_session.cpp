@@ -440,6 +440,15 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 		content_encoding = "gzip";
 	}
 
+	// By default, set the Content-Type header as defined by the HLS standard
+	ov::String content_type = "application/vnd.apple.mpegurl";
+	// Allow environment variable to set custom Content-Type header
+	const char* content_type_env = std::getenv("HLS_CONTENT_TYPE_HEADER");
+	if (content_type_env != nullptr) 
+	{
+    	content_type = content_type_env;
+	}
+
 	// Get the playlist
 	auto query_string = ov::String::FormatString("session=%u_%s", GetId(), _session_key.CStr());
 	
@@ -470,7 +479,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 		// Send the playlist
 		response->SetStatusCode(http::StatusCode::OK);
 		// Set Content-Type header
-		response->SetHeader("Content-Type", "application/vnd.apple.mpegurl");
+		response->SetHeader("Content-Type", content_type);
 		// gzip compression
 		response->SetHeader("Content-Encoding", content_encoding);
 
@@ -547,6 +556,15 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		content_encoding = "gzip";
 	}
 
+	// By default, set the Content-Type header as defined by the HLS standard
+	ov::String content_type = "application/vnd.apple.mpegurl";
+	// Allow environment variable to set custom Content-Type header
+	const char* content_type_env = std::getenv("HLS_CONTENT_TYPE_HEADER");
+	if (content_type_env != nullptr) 
+	{
+    	content_type = content_type_env;
+	}
+
 	// Get the chunklist
 	auto query_string = ov::String::FormatString("session=%u_%s", GetId(), _session_key.CStr());
 	if (_origin_mode == true)
@@ -576,7 +594,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		// Send the chunklist
 		response->SetStatusCode(http::StatusCode::OK);
 		// Set Content-Type header
-		response->SetHeader("Content-Type", "application/vnd.apple.mpegurl");
+		response->SetHeader("Content-Type", content_type);
 		// gzip compression
 		response->SetHeader("Content-Encoding", content_encoding);
 
