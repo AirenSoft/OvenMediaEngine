@@ -429,7 +429,7 @@ namespace info
 		info.AppendFormat(" sequence(%d)", _sequence);
 		info.AppendFormat(" tmp_path(%s)", _tmp_path.CStr());
 		info.AppendFormat(" file_path(%s)", _output_file_path.CStr());
-		info.AppendFormat(" info_path(%s)", _output_file_path.CStr());
+		info.AppendFormat(" info_path(%s)", _output_info_path.CStr());
 		info.AppendFormat(" bytes(%lld)", _record_bytes);
 		info.AppendFormat(" total_bytes(%lld)", _record_total_bytes);
 		info.AppendFormat(" total_time(%lld)", _record_total_time);
