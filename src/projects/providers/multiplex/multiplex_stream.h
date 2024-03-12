@@ -29,10 +29,25 @@ namespace pvd
         bool Stop() override;
         bool Terminate() override;
 
+        std::shared_ptr<MultiplexProfile> GetProfile() const;
+
+        enum class MuxState
+        {
+            None,
+            Pulling,
+            Playing,
+            Stopped,
+        };
+
+        MuxState GetMuxState() const;
+        ov::String GetMuxStateStr() const;
+        ov::String GetPullingStateMsg() const;
+
     private:
         void WorkerThread();
 
         bool PullSourceStreams();
+        bool ReleaseSourceStreams();
 
         uint64_t MakeSourceTrackIdUnique(uint32_t tap_id, uint32_t track_id) const;
         uint32_t GetNewTrackId(uint64_t source_track_id) const;
@@ -43,5 +58,8 @@ namespace pvd
 
         std::thread _worker_thread;
         bool _worker_thread_running = false;
+
+        MuxState _mux_state = MuxState::None;
+        ov::String _pulling_state_msg;
     };
 }

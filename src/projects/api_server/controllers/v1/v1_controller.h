@@ -18,6 +18,8 @@ namespace api
 		{
 		public:
 			void PrepareHandlers() override;
+			// GET /v1/version
+			ApiResponse OnGetVersion(const std::shared_ptr<http::svr::HttpExchange> &client);
 		};
 	}  // namespace v1
 }  // namespace api

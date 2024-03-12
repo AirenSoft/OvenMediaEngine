@@ -11,23 +11,103 @@ To enable recording, add the `<FILE>` publisher to the configuration file as sho
 You must specify `.ts` or `.mp4` at the end of the FilePath string to select a container for the recording file. We recommend using .ts unless you have a special case. This is because vp8 and opus codecs are not recorded due to container limitations if you choose .mp4.
 
 ```xml
-<Applications>
-  <Application>
-      ...
-      <Publishers>
-        <FILE>
-          <RootPath>/mnt/shared_volumes</RootPath>
-          <FilePath>/${VirtualHost}/${Application}/${Stream}/
-             ${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.ts</FilePath>
-          <InfoPath>/${VirtualHost}/${Application}/${Stream}.xml</InfoPath>
-        </FILE>
-      </Publishers>
-      ...
+Server.xml
+<Publishers>
+   <FILE>  
+      <!-- [Optional] -->
+      <RootPath>/mnt/shared_volumes</RootPath>
+      
+      <!-- [Must] Recorded file and info path 
+           When recording starts via the API, the following path is used as 
+           the default path. If a path is set via the API, it will not be used.
+      -->
+      <FilePath>/${VirtualHost}/${Application}/${Stream}/
+         ${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.ts</FilePath>
+      <InfoPath>/${VirtualHost}/${Application}/${Stream}.xml</InfoPath>
+      
+      <!-- [Optional] Recording settings for file-based automatic recording -->
+      <Record>
+         <Enable>true</Enable>
+         <RecordInfo>./record_info.xml</RecordInfo>
+      </Record>
+   </FILE>
+</Publishers>
 ```
 
-Various macro values are supported for file paths and names as shown below.
+## Recording via REST API
 
-#### Macro Definition
+For control of recording, use the REST API. Recording can be requested based on the output stream name (specified in the JSON body), and all/some tracks can be selectively recorded. And, it is possible to simultaneously record multiple files for the same stream. When recording is complete, an XML file is created at the path specified in InfoPath. For a sample of the recorded file information XML, refer to Appendix B.
+
+For how to use the API, please refer to the link below.
+
+{% content-ref url="rest-api/v1/virtualhost/application/recording.md" %}
+[recording.md](rest-api/v1/virtualhost/application/recording.md)
+{% endcontent-ref %}
+
+## Automated Recording
+
+Provides a way to automatically start and stop recording upon input stream that matches your file-based settings. In the above settings, the XML file path is specified in **Record.RecordInfo**.  You can create the XML file at the specified path and configure automatic recording as follows.
+
+{% code fullWidth="false" %}
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<RecordInfo>
+  <Record>
+    <!-- [Must] -->
+    <Enable>true</Enable>
+    <!-- [Must] -->
+    <StreamName>stream1*</StreamName>
+    <!-- [Optional] -->
+    <VariantNames>h264_1080p,aac_128k</VariantNames>
+    <!-- [Optional] -->
+    <FilePath>/path/to/${VirtualHost}/${Application}/${Stream}/
+              ${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.mp4</FilePath>
+    <!-- [Optional] -->              
+    <InfoPath>/path/to/${VirtualHost}/${Application}/${Stream}/info.xml</InfoPath>
+    <!-- [Optional] -->
+    <Metadata>access_key_id='000000000000000',secret_access_key='000000000000000'
+    ,endpoint='https://s3.aws.com'</Metadata>
+  </Record>  
+  <Record>
+    <Enable>true</Enable>
+    <StreamName>stream2*</StreamName>
+    <VariantNames>h264_1080p,aac_128k</VariantNames>
+    <FilePath>/path/to/${VirtualHost}/${Application}/${Stream}/
+              ${EndTime:YYYYMMDDhhmmss}_${Sequence}.mp4</FilePath>
+    <InfoPath>/path/to/${VirtualHost}/${Application}/${Stream}/info.xml</InfoPath>
+    <!-- [Optional] -->
+    <SegmentInterval>5000</SegmentInterval> 
+    <!-- [Optional] Default : discontinuity -->    
+    <SegmentRule>continuity</SegmentRule>
+  </Record>
+  <Record>
+    <Enable>true</Enable>
+    <StreamName>stream3*</StreamName>
+    <VariantNames>aac_128k</VariantNames>
+    <FilePath>/path/to/${VirtualHost}/${Application}/${Stream}/
+              ${StartTime:YYYYMMDDhhmmss}_${Sequence}.mp4</FilePath>
+    <InfoPath>/path/to/${VirtualHost}/${Application}/${Stream}/info.xml</InfoPath>
+    <!-- [Optional] -->    
+    <SegmentSchedule>*/30 * *</SegmentSchedule>
+    <!-- [Optional] -->        
+    <SegmentRule>discontinuity</SegmentRule>
+  </Record>
+</RecordInfo>
+```
+{% endcode %}
+
+### Split Recording
+
+Split recording methods provide **SegmentInterval** and **SegmentSchedule**. The interval method splits files based on the accumulated recording time. The Schedule method then splits files according to scheduling options based on system time. The scheduling option is the same as the pattern used in crontab. However, only three options are used: seconds/minutes/hour.\
+You can set the **SegmentRule** parameter to determine whether the start timestamp of the separated recording files will start anew from 0(**discontinuity**)  or continue from where the previous file left off(**continuity**).
+
+{% hint style="info" %}
+**SegmentInterval**  and **SegmentSchedule** methods cannot be used simultaneously.
+{% endhint %}
+
+## Appendix A. Macro definition for the recording path
+
+Various macro values are supported for file paths and names as shown below.
 
 | Macro                       | Description                                                                                                                                                                                                             |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -41,27 +121,7 @@ Various macro values are supported for file paths and names as shown below.
 | ${Stream}                   | Output stream name                                                                                                                                                                                                      |
 | ${Sequence}                 | Sequence value that increases when splitting a file in a single transaction                                                                                                                                             |
 
-####
-
-## Start & Stop Recording
-
-For control of recording, use the REST API. Recording can be requested based on the output stream name (specified in the JSON body), and all/some tracks can be selectively recorded. And, it is possible to simultaneously record multiple files for the same stream. When recording is complete, an XML file is created at the path specified in InfoPath. For a sample of the recorded file information XML, refer to Appendix A.
-
-For how to use the API, please refer to the link below.
-
-{% content-ref url="rest-api/v1/virtualhost/application/recording.md" %}
-[recording.md](rest-api/v1/virtualhost/application/recording.md)
-{% endcontent-ref %}
-
-### Split Recording
-
-Split recording methods provide **interval** and **schedule**. The interval method splits files based on the accumulated recording time. The Schedule method then splits files according to scheduling options based on system time. The scheduling option is the same as the pattern used in crontab. However, only three options are used: seconds/minutes/hour.
-
-{% hint style="info" %}
-**interval** and **schedule** methods cannot be used simultaneously.
-{% endhint %}
-
-## Appendix A. Recorded File Information Specification
+## Appendix B. Recorded File Information Specification
 
 The following is a sample of an XML file that expresses information on a recorded file.
 

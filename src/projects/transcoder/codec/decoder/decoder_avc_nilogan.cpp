@@ -22,7 +22,6 @@ bool DecoderAVCxNILOGAN::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
-	
 	// Create packet parser
 	_parser = ::av_parser_init(GetCodecID());
 	if (_parser == nullptr)
@@ -303,7 +302,7 @@ void DecoderAVCxNILOGAN::CodecThread()
 
 				::av_frame_unref(_frame);
 
-				SendOutputBuffer(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
+				Complete(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
 			}
 		}
 	}

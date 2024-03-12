@@ -93,7 +93,7 @@ install_videosdk_amazonlinux()
     sudo yum -y remove xrm xilinx-container-runtime xilinx-xvbm xilinx-u30-xrm-decoder xilinx-u30-xrm-encoder xilinx-u30-xrm-multiscaler xilinx-u30-xma-multiscaler xilinx-u30-xlookahead xilinx-u30-xmpsoccodecs xilinx-u30-xma-apps xilinx-u30-xmapropstojson xilinx-u30-xffmpeg xilinx-u30-launcher xilinx-u30-jobslotreservation xilinx-u30-xcdr xilinx-u30-gstreamer-1.16.2 xilinx-u30-vvas xilinx-sc-fw-u30 xilinx-u30-gen3x4-base xilinx-u30-gen3x4-validate
 
     sudo yum -y update
-    sudo yum -y cmake boost-devel gcc-g++
+    sudo yum -y install cmake boost-devel gcc-g++
     sudo yum -y install yum-plugin-versionlock
     sudo yum -y install xrt-2.11.722-1.x86_64
     sudo yum -y versionlock xrt-2.11.722
@@ -154,8 +154,14 @@ echo " $ sudo /opt/xilinx/xrt/bin/xball --device-filter u30 xbmgmt program --bas
 echo " $ sudo shutdown now"
 echo " "
 echo " 3) Rebooting is complete, configure the runtime environment and verify that the card has been detected."
-echo "   i You must always run this when using a new terminal."
+echo "    You must always run this when using a new terminal."
 echo " $ source /opt/xilinx/xcdr/setup.sh"
 echo " $ xbutil examine"
+echo " "
+echo " 4) If you want to utilize the Xilinx Media Accelerator by registering OvenMediaEngine as a service, "
+echo "    you'll need to modify the /lib/systemd/system/ovenmediaengine.service file to set up the runtime environment."
+echo " $ sudo vi /lib/systemd/system/ovenmediaengine.service"
+echo " "
+echo "   ExecStart=/bin/bash -c 'source /opt/xilinx/xcdr/setup.sh -f; /usr/bin/OvenMediaEngine -d'"
 echo " "
 echo "##########################################################################################"

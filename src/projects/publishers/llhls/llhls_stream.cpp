@@ -252,19 +252,7 @@ bool LLHlsStream::Stop()
 
 bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &cenc_property)
 {
-	ov::String final_path;
-
-	// file_path is absolute?
-	if (file_path.Get(0) == '/' || file_path.Get(0) == '\\')
-	{
-		final_path = file_path;
-	}
-	else
-	{
-		// file_path is in config path
-		auto conf_path = cfg::ConfigManager::GetInstance()->GetConfigPath();
-		final_path = ov::String::FormatString("%s/%s", conf_path.CStr(), file_path.CStr());
-	}
+	ov::String final_path = ov::GetFilePath(file_path, cfg::ConfigManager::GetInstance()->GetConfigPath());
 
 	pugi::xml_document xml_doc;
 	auto load_result = xml_doc.load_file(final_path.CStr());
@@ -294,8 +282,8 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 		ov::Regex _target_stream_name_regex = ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(stream_name));
 		auto match_result = _target_stream_name_regex.Matches(GetName().CStr());
 
-		if (virtual_host_name != GetApplication()->GetName().GetVHostName() ||
-			app_name != GetApplication()->GetName().GetAppName() ||
+		if (virtual_host_name == GetApplication()->GetName().GetVHostName() &&
+			app_name == GetApplication()->GetName().GetAppName() &&
 			match_result.IsMatched())
 		{
 			ov::String drm_provider = drm_node.child_value("DRMProvider");
@@ -319,6 +307,10 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 				if (cenc_protect_scheme == "cbcs")
 				{
 					cenc_property.scheme = bmff::CencProtectScheme::Cbcs;
+				}
+				else if (cenc_protect_scheme == "cenc")
+				{
+					cenc_property.scheme = bmff::CencProtectScheme::Cenc;
 				}
 				else
 				{
@@ -390,6 +382,10 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 				{
 					scheme_enum = bmff::CencProtectScheme::Cbcs;
 				}
+				else if (cenc_protect_scheme.LowerCaseString() == "cenc")
+				{
+					scheme_enum = bmff::CencProtectScheme::Cenc;
+				}
 				else
 				{
 					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because CencProtectScheme(%s) is not supported", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), cenc_protect_scheme.CStr());
@@ -448,6 +444,11 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 					else if (drm_system_item.LowerCaseString() == "fairplay")
 					{
 						fairplay_enabled = true;
+						if (scheme_enum != bmff::CencProtectScheme::Cbcs)
+						{
+							logtw("LLHlsStream(%s/%s) - FairPlay only supports Cbcs scheme. But CencProtectScheme is %s", GetApplication()->GetName().CStr(), GetName().CStr(), cenc_protect_scheme.CStr());
+							fairplay_enabled = false;
+						}
 					}
 				}
 
@@ -484,6 +485,7 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 				return false;
 			}
 
+			// Just first DRM info matched is enough for one stream
 			break;
 		}
 	}
@@ -493,6 +495,20 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 	if (cenc_property.fairplay_key_uri.IsEmpty() == false && has_fairplay_pssh_box == false)
 	{
     	cenc_property.pssh_box_list.push_back(bmff::PsshBox("94ce86fb-07ff-4f43-adb8-93d2fa968ca2", {cenc_property.key_id}, nullptr));
+	}
+
+	// Set profiles
+	if (cenc_property.scheme == bmff::CencProtectScheme::Cenc)
+	{
+		cenc_property.crypt_bytes_block = 0;
+		cenc_property.skip_bytes_block = 0;
+		cenc_property.per_sample_iv_size = 16;
+	}
+	else if (cenc_property.scheme == bmff::CencProtectScheme::Cbcs)
+	{
+		cenc_property.crypt_bytes_block = 1;
+		cenc_property.skip_bytes_block = 9;
+		cenc_property.per_sample_iv_size = 0;
 	}
 
 	return true;
@@ -752,7 +768,7 @@ bool LLHlsStream::DumpSegment(const std::shared_ptr<mdl::Dump> &item, const int3
 		return false;
 	}
 
-	auto chunklist_data = chunklist->ToString("", false, true, true, item->GetFirstSegmentNumber(track_id)).ToData(false);
+	auto chunklist_data = chunklist->ToString("", false, true, false, true, item->GetFirstSegmentNumber(track_id)).ToData(false);
 
 	auto segment_file_name = GetSegmentName(track_id, segment_number);
 	auto chunklist_file_name = GetChunklistName(track_id);

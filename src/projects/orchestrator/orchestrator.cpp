@@ -824,6 +824,7 @@ namespace ocst
 		properties->EnablePersistent(matched_origin->persistent);
 		properties->EnableFailback(matched_origin->failback);
 		properties->EnableRelay(matched_origin->relay);
+		properties->EnableIgnoreRtcpSRTimestamp(matched_origin->ignore_rtcp_sr_timestamp);
 		properties->EnableFromOriginMapStore(false);
 
 		auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset, properties);

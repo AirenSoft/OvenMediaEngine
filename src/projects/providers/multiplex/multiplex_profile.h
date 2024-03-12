@@ -113,6 +113,54 @@ namespace pvd
     {
     public:
 
+        struct NewTrackInfo
+        {
+            // constructor
+            NewTrackInfo() = default;
+            NewTrackInfo(ov::String source_track_name, ov::String new_track_name, int32_t bitrate_conf = 0, int32_t framerate_conf = 0)
+                : source_track_name(source_track_name), new_track_name(new_track_name), bitrate_conf(bitrate_conf), framerate_conf(framerate_conf)
+            {
+            }
+
+            // == operator
+            bool operator==(const NewTrackInfo &other) const
+            {
+                if (source_track_name != other.source_track_name)
+                {
+                    return false;
+                }
+
+                if (new_track_name != other.new_track_name)
+                {
+                    return false;
+                }
+
+                if (bitrate_conf != other.bitrate_conf)
+                {
+                    return false;
+                }
+
+                if (framerate_conf != other.framerate_conf)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            // != operator
+            bool operator!=(const NewTrackInfo &other) const
+            {
+                return !(*this == other);
+            }
+
+            ov::String source_track_name;
+            ov::String new_track_name;
+
+            int32_t bitrate_conf = 0;
+            int32_t framerate_conf = 0;
+        };
+
         class SourceStream
         {
         public:
@@ -131,20 +179,35 @@ namespace pvd
                 return _url;
             }
 
-            std::map<ov::String, ov::String> GetTrackMap() const
+            std::map<ov::String, NewTrackInfo> GetTrackMap() const
             {
-                return _track_map;
+                return _new_track_infos_map;
             }
 
             bool GetNewTrackName(const ov::String &source_track_name, ov::String &new_track_name) const
             {
-                auto it = _track_map.find(source_track_name);
-                if (it == _track_map.end())
+                auto it = _new_track_infos_map.find(source_track_name);
+                if (it == _new_track_infos_map.end())
                 {
                     return false;
                 }
 
-                new_track_name = it->second;
+                auto &new_track_info = it->second;
+                new_track_name = new_track_info.new_track_name;
+
+                return true;
+            }
+
+            bool GetNewTrackInfo(const ov::String &source_track_name, NewTrackInfo &new_track_info) const
+            {
+                auto it = _new_track_infos_map.find(source_track_name);
+                if (it == _new_track_infos_map.end())
+                {
+                    return false;
+                }
+
+                new_track_info = it->second;
+
                 return true;
             }
 
@@ -176,9 +239,9 @@ namespace pvd
                 return true;
             }
 
-            void AddTrackMap(const ov::String &source_track_name, const ov::String &new_track_name)
+            void AddTrackMap(const ov::String &source_track_name, const NewTrackInfo &new_track_info)
             {
-                _track_map.emplace(source_track_name, new_track_name);
+                _new_track_infos_map.emplace(source_track_name, new_track_info);
             }
 
             // equal operator
@@ -194,15 +257,15 @@ namespace pvd
                     return false;
                 }
 
-                if (_track_map.size() != other._track_map.size())
+                if (_new_track_infos_map.size() != other._new_track_infos_map.size())
                 {
                     return false;
                 }
 
-                for (auto &track_map : _track_map)
+                for (auto &track_map : _new_track_infos_map)
                 {
-                    auto it = other._track_map.find(track_map.first);
-                    if (it == other._track_map.end())
+                    auto it = other._new_track_infos_map.find(track_map.first);
+                    if (it == other._new_track_infos_map.end())
                     {
                         return false;
                     }
@@ -230,7 +293,7 @@ namespace pvd
             std::shared_ptr<MediaRouterStreamTap> _stream_tap = nullptr;
 
             // source track name : new track name
-            std::map<ov::String, ov::String> _track_map;
+            std::map<ov::String, NewTrackInfo> _new_track_infos_map;
         };
 
         static std::tuple<std::shared_ptr<MultiplexProfile>, ov::String> CreateFromXMLFile(const ov::String &file_path);
@@ -246,6 +309,7 @@ namespace pvd
 
         ov::String GetLastError() const;
         
+        ov::String GetFilePath() const;
         std::chrono::system_clock::time_point GetCreatedTime() const;
         ov::String GetOutputStreamName() const;
         const std::vector<std::shared_ptr<info::Playlist>> &GetPlaylists() const;
@@ -257,13 +321,21 @@ namespace pvd
         // equal operator
         bool operator==(const MultiplexProfile &other) const;
 
+        ov::String InfoStr() const;
+
     private:
         bool ReadOutputStreamNode(const pugi::xml_node &root_node);
         bool ReadPlaylistsNode(const pugi::xml_node &root_node);
         bool ReadSourceStreamsNode(const pugi::xml_node &root_node);
+
+        bool ReadOutputStreamObject(const Json::Value &object);
+        bool ReadPlaylistsObject(const Json::Value &object);
+        bool ReadSourceStreamsObject(const Json::Value &object);
         
         std::chrono::system_clock::time_point _created_time;
         
+        ov::String _file_path; // when loaded from file
+
         ov::String _output_stream_name;
         std::vector<std::shared_ptr<info::Playlist>> _playlists;
         std::vector<std::shared_ptr<SourceStream>> _source_streams;

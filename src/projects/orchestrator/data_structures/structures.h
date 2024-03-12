@@ -75,6 +75,8 @@ namespace ocst
 		bool failback = false;
 
 		bool strict_location = false;
+
+		bool ignore_rtcp_sr_timestamp = false;
 		
 		bool relay = true;
 	};

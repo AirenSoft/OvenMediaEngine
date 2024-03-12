@@ -20,6 +20,8 @@ MediaTrack::MediaTrack()
 	  _media_type(MediaType::Unknown),
 	  _codec_id(MediaCodecId::None),
 	  _codec_module_id(cmn::MediaCodecModuleId::None),
+	  _codec_device_id(0),
+	  _codec_modules(""),
 	  _bitrate(0),
 	  _bitrate_conf(0),
 	  _byass(false),
@@ -302,8 +304,9 @@ ov::String MediaTrack::GetInfoString()
 				"Codec(%d,%s,%s:%d) "
 				"BSF(%s) "
 				"Resolution(%dx%d) "
-				"Framerate(%.2ffps) "
-				"KeyInterval(%d) "
+				"Framerate(%.2f) "
+				"KeyInterval(%d/%s) "
+				"SkipFrames(%d) "
 				"BFrames(%d) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
@@ -312,6 +315,8 @@ ov::String MediaTrack::GetInfoString()
 				GetWidth(), GetHeight(),
 				GetFrameRate(),
 				GetKeyFrameInterval(),
+				cmn::GetKeyFrameIntervalTypeToString(GetKeyFrameIntervalTypeByConfig()).LowerCaseString().CStr(),
+				GetSkipFramesByConfig(),
 				GetBFrames());
 			break;
 

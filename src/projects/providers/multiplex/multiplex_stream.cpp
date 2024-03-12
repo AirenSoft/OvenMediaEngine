@@ -43,6 +43,8 @@ namespace pvd
 
     bool MultiplexStream::Stop()
     {
+        ReleaseSourceStreams();
+
         if (_worker_thread_running == false)
         {
             return true;
@@ -60,13 +62,49 @@ namespace pvd
 
     bool MultiplexStream::Terminate()
     {
+        logti("Multiplex Channel : %s/%s: Terminated, it will be deleted by application", GetApplicationName(), GetName().CStr());
+        ReleaseSourceStreams();
+
         return Stream::Terminate();
+    }
+
+    MultiplexStream::MuxState MultiplexStream::GetMuxState() const
+    {
+        return _mux_state;
+    }
+
+    ov::String MultiplexStream::GetMuxStateStr() const
+    {
+        switch (_mux_state)
+        {
+        case MuxState::None:
+            return "None";
+        case MuxState::Pulling:
+            return "Pulling";
+        case MuxState::Playing:
+            return "Playing";
+        case MuxState::Stopped:
+            return "Stopped";
+        }
+
+        return "Unknown";
+    }
+
+    ov::String MultiplexStream::GetPullingStateMsg() const
+    {
+        return _pulling_state_msg;
+    }
+
+    std::shared_ptr<MultiplexProfile> MultiplexStream::GetProfile() const
+    {
+        return _multiplex_profile;
     }
 
     void MultiplexStream::WorkerThread()
     {
         while (_worker_thread_running)
         {
+            _mux_state = MuxState::Pulling;
             if (PullSourceStreams() == false)
             {
                 // sleep and retry
@@ -79,14 +117,19 @@ namespace pvd
 
         while (_worker_thread_running)
         {
+            _mux_state = MuxState::Playing;
+            bool break_loop = false;
             // Get Streams and Push
             auto source_streams = _multiplex_profile->GetSourceStreams();
             for (auto &source_stream : source_streams)
             {
                 auto stream_tap = source_stream->GetStreamTap();
-                if (stream_tap == nullptr)
+                if (stream_tap == nullptr || stream_tap->GetState() != MediaRouterStreamTap::State::Tapped)
                 {
-                    continue;
+                    logte("Multiplex Channel : %s/%s: Stream [%s] is untapped", GetApplicationName(), GetName().CStr(), source_stream->GetUrlStr().CStr());
+                    Terminate();
+                    break_loop = true;
+                    break;
                 }
 
                 auto media_packet = stream_tap->Pop(0);
@@ -106,7 +149,14 @@ namespace pvd
 
                 SendFrame(media_packet);
             }
+
+            if (break_loop)
+            {
+                break;
+            }
         }
+
+        logti("Multiplex Channel : %s/%s: Worker thread stopped", GetApplicationName(), GetName().CStr());
     }
 
     uint64_t MultiplexStream::MakeSourceTrackIdUnique(uint32_t tap_id, uint32_t track_id) const
@@ -143,7 +193,9 @@ namespace pvd
 
                 if (ocst::Orchestrator::GetInstance()->CheckIfStreamExist(vhost_app_name, stream_url->Stream()) == false)
                 {
-                    logti("Multiplex Channel : %s/%s: Wait for stream %s", GetApplicationName(), GetName().CStr(), stream_url->Stream().CStr());
+                    _pulling_state_msg = ov::String::FormatString("Multiplex Channel : %s/%s: Wait for stream %s", GetApplicationName(), GetName().CStr(), stream_url->Stream().CStr());
+                    logti("%s", _pulling_state_msg.CStr());
+
                     return false;
                 }
 
@@ -151,7 +203,8 @@ namespace pvd
 
                 if (result != CommonErrorCode::SUCCESS)
                 {
-                    logte("Multiplex Channel : %s/%s: Failed to mirror stream %s (err : %d)", GetApplicationName(), GetName().CStr(), source_stream->GetUrlStr().CStr(), static_cast<int>(result));
+                    _pulling_state_msg = ov::String::FormatString("Multiplex Channel : %s/%s: Failed to mirror stream %s (err : %d)", GetApplicationName(), GetName().CStr(), source_stream->GetUrlStr().CStr(), static_cast<int>(result));
+                    logte("%s", _pulling_state_msg.CStr());
                     return false;
                 }
             }
@@ -176,21 +229,29 @@ namespace pvd
             for (auto &[source_track_id, source_track] : tracks)
             {
                 auto source_track_name = source_track->GetVariantName();
-                ov::String new_track_name;
+                MultiplexProfile::NewTrackInfo new_track_info;
 
-                if (source_stream->GetNewTrackName(source_track_name, new_track_name) == false)
+                if (source_stream->GetNewTrackInfo(source_track_name, new_track_info) == false)
                 {
                     continue;
                 }
 
                 auto new_track = source_track->Clone();
                 new_track->SetId(IssueUniqueTrackId());
-                new_track->SetVariantName(new_track_name);
+                new_track->SetVariantName(new_track_info.new_track_name);
+                if (new_track_info.bitrate_conf > 0)
+                {
+                    new_track->SetBitrateByConfig(new_track_info.bitrate_conf);
+                }
+                if (new_track_info.framerate_conf > 0)
+                {
+                    new_track->SetFrameRateByConfig(new_track_info.framerate_conf);
+                }
 
                 AddTrack(new_track);
                 _source_track_id_to_new_id_map.emplace(MakeSourceTrackIdUnique(stream_tap->GetId(), source_track_id), new_track->GetId());
 
-                logti("Multiplex Stream : %s/%s: Added track %s from %s/%s (%d)", GetApplicationName(), GetName().CStr(), new_track_name.CStr(), source_stream->GetUrlStr().CStr(), source_track_name.CStr(), source_track_id);
+                logti("Multiplex Stream : %s/%s: Added track %s from %s/%s (%d)", GetApplicationName(), GetName().CStr(), new_track->GetVariantName().CStr(), source_stream->GetUrlStr().CStr(), source_track_name.CStr(), source_track_id);
             }
         }
 
@@ -205,6 +266,7 @@ namespace pvd
         if (GetApplication()->AddStream(GetSharedPtr()) == false)
         {
             logte("Multiplex Channel : %s/%s: Failed to publish stream", GetApplicationName(), GetName().CStr());
+            Terminate();
             return false;
         }
 
@@ -218,6 +280,37 @@ namespace pvd
             }
 
             stream_tap->Start();
+        }
+
+        logti("Multiplex Channel : %s/%s: Started\n%s", GetApplicationName(), GetName().CStr(), _multiplex_profile->InfoStr().CStr());
+
+        return true;
+    }
+
+    bool MultiplexStream::ReleaseSourceStreams()
+    {
+        auto source_streams = _multiplex_profile->GetSourceStreams();
+        for (auto &source_stream : source_streams)
+        {
+            auto stream_tap = source_stream->GetStreamTap();
+            if (stream_tap == nullptr)
+            {
+                continue;
+            }
+
+            if (stream_tap->GetState() != MediaRouterStreamTap::State::Tapped)
+            {
+                continue;
+            }
+
+            stream_tap->Stop();
+
+            auto result = ocst::Orchestrator::GetInstance()->UnmirrorStream(stream_tap);
+            if (result != CommonErrorCode::SUCCESS)
+            {
+                logte("Multiplex Channel : %s/%s: Failed to unmirror stream %s (err : %d)", GetApplicationName(), GetName().CStr(), source_stream->GetUrlStr().CStr(), static_cast<int>(result));
+                return false;
+            }
         }
 
         return true;

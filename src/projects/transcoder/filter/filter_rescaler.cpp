@@ -14,34 +14,242 @@
 #include "../transcoder_gpu.h"
 #include "../transcoder_private.h"
 
-#define MAX_QUEUE_SIZE 500
+#define DEFAULT_QUEUE_SIZE 120
+#define FILTER_FLAG_HWFRAME_AWARE (1 << 0)
+
+#define _SKIP_FRAMES_ENABLED 1
+#define _SKIP_FRAMES_CHECK_INTERVAL 500 					// 500ms
+#define _SKIP_FRAMES_STABLE_FOR_RETRIEVE_INTERVAL 10000 	// 10s
 
 FilterRescaler::FilterRescaler()
 {
 	_frame = ::av_frame_alloc();
 
-	_outputs = ::avfilter_inout_alloc();
 	_inputs = ::avfilter_inout_alloc();
+	_outputs = ::avfilter_inout_alloc();
+	
+	_buffersrc = ::avfilter_get_by_name("buffer");
+	_buffersink = ::avfilter_get_by_name("buffersink");
 
-	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
+	_filter_graph = ::avfilter_graph_alloc();
+
+	// TODO(soulk) : The maximum number of thresholds is 2 seconds (Framerate * 2).
+	_input_buffer.SetThreshold(DEFAULT_QUEUE_SIZE);
 
 	OV_ASSERT2(_frame != nullptr);
 	OV_ASSERT2(_inputs != nullptr);
 	OV_ASSERT2(_outputs != nullptr);
+	OV_ASSERT2(_buffersrc != nullptr);
+	OV_ASSERT2(_buffersink != nullptr);
+	OV_ASSERT2(_filter_graph != nullptr);
+
+	// Limit the number of filter threads to 4. I think 4 thread is usually enough for video filtering processing.
+	_filter_graph->nb_threads = 4;
 }
 
 FilterRescaler::~FilterRescaler()
 {
-	Stop();
 
-	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
+}
 
-	OV_SAFE_FUNC(_inputs, nullptr, ::avfilter_inout_free, &);
-	OV_SAFE_FUNC(_outputs, nullptr, ::avfilter_inout_free, &);
+bool FilterRescaler::InitializeSourceFilter()
+{
+	std::vector<ov::String> src_params;
 
-	OV_SAFE_FUNC(_filter_graph, nullptr, ::avfilter_graph_free, &);
+	src_params.push_back(ov::String::FormatString("video_size=%dx%d", _input_track->GetWidth(), _input_track->GetHeight()));
+	src_params.push_back(ov::String::FormatString("pix_fmt=%s", ::av_get_pix_fmt_name((AVPixelFormat)_src_pixfmt)));
+	src_params.push_back(ov::String::FormatString("time_base=%s", _input_track->GetTimeBase().GetStringExpr().CStr()));
+	src_params.push_back(ov::String::FormatString("pixel_aspect=%d/%d", 1, 1));
+	src_params.push_back(ov::String::FormatString("frame_rate=%d/%d", 30, 1));
 
-	_input_buffer.Clear();
+	_src_args = ov::String::Join(src_params, ":");
+
+
+	int ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, _buffersrc, "in", _src_args, nullptr, _filter_graph);
+	if (ret < 0)
+	{
+		logte("Could not create video buffer source filter for rescaling: %d", ret);
+		return false;
+	}
+
+	_outputs->name = ::av_strdup("in");
+	_outputs->filter_ctx = _buffersrc_ctx;
+	_outputs->pad_idx = 0;
+	_outputs->next = nullptr;
+
+	return true;
+}
+
+bool FilterRescaler::InitializeSinkFilter()
+{
+	int ret = ::avfilter_graph_create_filter(&_buffersink_ctx, _buffersink, "out", nullptr, nullptr, _filter_graph);
+	if (ret < 0)
+	{
+		logte("Could not create video buffer sink filter for rescaling: %d", ret);
+		return false;
+	}
+
+	_inputs->name = ::av_strdup("out");
+	_inputs->filter_ctx = _buffersink_ctx;
+	_inputs->pad_idx = 0;
+	_inputs->next = nullptr;
+
+	return true;
+}
+
+bool FilterRescaler::InitializeFilterDescription()
+{
+	std::vector<ov::String> filters;
+
+	// 2. Timebase
+	filters.push_back(ov::String::FormatString("settb=%s", _output_track->GetTimeBase().GetStringExpr().CStr()));
+
+	// 3. Scaler
+	auto input_module_id = _input_track->GetCodecModuleId();
+	auto input_device_id = _input_track->GetCodecDeviceId();
+	auto output_module_id = _output_track->GetCodecModuleId();
+	auto output_device_id = _output_track->GetCodecDeviceId();
+	
+	// Scaler is performed on the same device as the encoder(output module)
+	ov::String desc = "";
+
+	if (output_module_id == cmn::MediaCodecModuleId::DEFAULT ||
+		output_module_id == cmn::MediaCodecModuleId::BEAMR ||
+		output_module_id == cmn::MediaCodecModuleId::QSV ||
+		output_module_id == cmn::MediaCodecModuleId::LIBVPX ||
+		// Until now, Logan VPU processes in CPU memory like SW-based modules. Performance needs to be improved in the future
+		output_module_id == cmn::MediaCodecModuleId::NILOGAN  
+		/* || output_module_id == cmn::MediaCodecModuleId::libx26x */)
+	{
+		switch (input_module_id)
+		{
+			case cmn::MediaCodecModuleId::NVENC:  
+			{
+				// Use the av_hwframe_transfer_data function to enable copying from GPU memory to CPU memory.
+				_use_hwframe_transfer = true;
+
+				// Change the pixel format of the source filter to the SW pixel format supported by the hardware.
+				auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(input_module_id, input_device_id);
+				if (hw_device_ctx == nullptr)
+				{
+					logte("Could not get hw device context for %s(%d)", cmn::GetStringFromCodecModuleId(input_module_id).CStr(), input_device_id);
+					return false;
+				}
+				auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
+				_src_pixfmt = *(constraints->valid_sw_formats);
+				desc = ov::String::FormatString("");
+			}
+			break;
+			case cmn::MediaCodecModuleId::XMA: 
+			{
+				// Copy the frames in Xilinx Device memory to the CPU memory using the xvbm_convert filter.
+				desc = ov::String::FormatString("xvbm_convert,");
+			}
+			break;
+			default: 
+				logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id).CStr());
+			case cmn::MediaCodecModuleId::QSV:  	// CPU memory using 'gpu_copy=on'
+			case cmn::MediaCodecModuleId::NILOGAN: 	// CPU memory using 'out=sw'
+			case cmn::MediaCodecModuleId::DEFAULT:  // CPU memory 
+			{
+				desc = ov::String::FormatString("");
+			}
+		}
+		// Scaler description of defulat module
+		desc += ov::String::FormatString("scale=%dx%d:flags=bilinear", _output_track->GetWidth(), _output_track->GetHeight());
+	}
+	else if (output_module_id == cmn::MediaCodecModuleId::NVENC)
+	{
+		switch (input_module_id)
+		{
+			case cmn::MediaCodecModuleId::NVENC: { 	// Zero Copy
+				//TODO: Exception handling required if Device ID is different. Find out if memory copy between GPUs is possible
+				desc = ov::String::FormatString("");
+			}
+			break;
+			case cmn::MediaCodecModuleId::XMA: {
+				desc = ov::String::FormatString("xvbm_convert,hwupload_cuda=device=%d,",output_device_id);
+			}
+			break;
+			default: 
+				logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id).CStr());
+			case cmn::MediaCodecModuleId::QSV: 		// CPU memory using 'gpu_copy=on'
+			case cmn::MediaCodecModuleId::NILOGAN: 	// CPU memory using 'out=sw'
+			case cmn::MediaCodecModuleId::DEFAULT: 	// CPU memory 
+			{
+				desc = ov::String::FormatString("hwupload_cuda=device=%d,", output_device_id);
+			}
+		}
+		desc += ov::String::FormatString("scale_npp=%d:%d", _output_track->GetWidth(), _output_track->GetHeight());
+	}
+	else if (output_module_id == cmn::MediaCodecModuleId::XMA)
+	{
+		ov::String scaler = "";
+
+		switch (input_module_id)
+		{
+			case cmn::MediaCodecModuleId::XMA: {  // Zero Copy
+				if (input_device_id != output_device_id)
+				{
+					desc = ov::String::FormatString("xvbm_convert,");
+				}
+				else
+				{
+					desc = ov::String::FormatString("");
+				}
+			}
+			break;
+			case cmn::MediaCodecModuleId::NVENC: {
+				// Use the av_hwframe_transfer_data function to enable copying from GPU memory to CPU memory.
+				_use_hwframe_transfer = true;
+
+				// Change the pixel format of the source filter to the SW pixel format supported by the hardware.
+				auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(input_module_id, input_device_id);
+				if (hw_device_ctx == nullptr)
+				{
+					logte("Could not get hw device context for %s(%d)", cmn::GetStringFromCodecModuleId(input_module_id).CStr(), input_device_id);
+					return false;
+				}
+				auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
+				_src_pixfmt = *(constraints->valid_sw_formats);
+				// desc = ov::String::FormatString("xvbm_convert,");
+				desc = ov::String::FormatString("");
+			}
+			break;
+			default:
+				logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id).CStr());
+			case cmn::MediaCodecModuleId::QSV:		// CPU memory using 'gpu_copy=on'
+			case cmn::MediaCodecModuleId::NILOGAN:	// CPU memory using 'out=sw'
+			case cmn::MediaCodecModuleId::DEFAULT:	// CPU memory
+			{
+				// xvbm_convert is xvbm frame to av frame converter filter
+				// desc = ov::String::FormatString("xvbm_convert,");
+				desc = ov::String::FormatString("");
+			}
+		}
+
+		desc += ov::String::FormatString("multiscale_xma=lxlnx_hwdev=%d:outputs=1:out_1_width=%d:out_1_height=%d:out_1_rate=full",
+			_output_track->GetCodecDeviceId(), _output_track->GetWidth(), _output_track->GetHeight());
+	}
+	else
+	{
+		logtw("Unsupported output module id: %d", output_module_id);
+		return false;
+	}
+
+	filters.push_back(desc);
+
+	// 4. Pixel Format
+	filters.push_back(ov::String::FormatString("format=%s", ::av_get_pix_fmt_name((AVPixelFormat)_output_track->GetColorspace())));
+
+	if(filters.size() == 0)
+	{
+		filters.push_back("null");
+	}
+
+	_filter_desc = ov::String::Join(filters, ",");
+
+	return true;
 }
 
 bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, const std::shared_ptr<MediaTrack> &output_track)
@@ -50,267 +258,70 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 
 	_input_track = input_track;
 	_output_track = output_track;
+	_src_width = _input_track->GetWidth();
+	_src_height = _input_track->GetHeight();
+	_src_pixfmt = _input_track->GetColorspace();
 
-	const AVFilter *buffersrc = ::avfilter_get_by_name("buffer");
-	const AVFilter *buffersink = ::avfilter_get_by_name("buffersink");
-	int ret;
-	_filter_graph = ::avfilter_graph_alloc();
-	
-	if ((_filter_graph == nullptr) || (_inputs == nullptr) || (_outputs == nullptr))
+	// Initialize Constant Framerate & Skip Frames Filter
+	_fps_filter.SetInputTimebase(_input_track->GetTimeBase());
+	_fps_filter.SetInputFrameRate(_input_track->GetFrameRate());
+	_fps_filter.SetOutputFrameRate(_output_track->GetFrameRateByConfig());
+	_fps_filter.SetSkipFrames(_output_track->GetSkipFramesByConfig() >= 0 ? _output_track->GetSkipFramesByConfig() : 0);
+
+	// Set the threshold of the input buffer to 2 seconds.
+	_input_buffer.SetThreshold(_input_track->GetFrameRate() * 2);
+
+	// Initialize the av filter graph
+	if (InitializeFilterDescription() == false)
 	{
-		logte("Could not allocate variables for filter graph: %p, %p, %p", _filter_graph, _inputs, _outputs);
+		SetState(State::ERROR);
+		
+		return false;
+	}
 
+	if (InitializeSourceFilter() == false)
+	{
+		SetState(State::ERROR);
+		
+		return false;
+	}
+
+	if (InitializeSinkFilter() == false)
+	{
 		SetState(State::ERROR);
 
 		return false;
 	}
 
-	// Limit the number of filter threads to 4. I think 4 thread is usually enough for video filtering processing.
-	_filter_graph->nb_threads = 4;
+	logti("Rescaler parameters. track(#%u -> #%u), module(%s:%d -> %s:%d). desc(src:%s -> output:%s)",
+		  _input_track->GetId(),
+		  _output_track->GetId(),
+		  GetStringFromCodecModuleId(_input_track->GetCodecModuleId()).CStr(),
+		  _input_track->GetCodecDeviceId(),
+		  GetStringFromCodecModuleId(_output_track->GetCodecModuleId()).CStr(),
+		  _output_track->GetCodecDeviceId(),
+		  _src_args.CStr(),
+		  _filter_desc.CStr());
 
-	AVRational input_timebase = ffmpeg::Conv::TimebaseToAVRational(input_track->GetTimeBase());
-	AVRational output_timebase = ffmpeg::Conv::TimebaseToAVRational(output_track->GetTimeBase());
-
-	_scale = ::av_q2d(::av_div_q(input_timebase, output_timebase));
-
-	if (::isnan(_scale))
+	if ((::avfilter_graph_parse_ptr(_filter_graph, _filter_desc, &_inputs, &_outputs, nullptr)) < 0)
 	{
-		logte("Invalid timebase: input: %d/%d, output: %d/%d",
-			  input_timebase.num, input_timebase.den,
-			  output_timebase.num, output_timebase.den);
+		logte("Could not parse filter string for rescaling: %s", _filter_desc.CStr());
+		SetState(State::ERROR);
+		
+		return false;
+	}
 
+	if (SetHWContextToFilterIfNeed() == false)
+	{
+		logte("Could not set hw context to filters");
 		SetState(State::ERROR);
 
 		return false;
 	}
 
-	// Prepare filters
-	//
-	// Filter graph:
-	//     [buffer] -> [fps] -> [scale] -> [settb] -> [buffersink]
-
-	//////////////////////////////////////////////////////
-	// Prepare the input parameters
-	//////////////////////////////////////////////////////
-	std::vector<ov::String> src_params = {
-		ov::String::FormatString("video_size=%dx%d", input_track->GetWidth(), input_track->GetHeight()),
-		ov::String::FormatString("pix_fmt=%d", input_track->GetColorspace()),
-		ov::String::FormatString("time_base=%s", input_track->GetTimeBase().GetStringExpr().CStr()),
-		ov::String::FormatString("pixel_aspect=%d/%d", 1, 1)};
-
-	ov::String input_filters = ov::String::Join(src_params, ":");
-
-	ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, buffersrc, "in", input_filters, nullptr, _filter_graph);
-	if (ret < 0)
+	if (::avfilter_graph_config(_filter_graph, nullptr) < 0)
 	{
-		logte("Could not create video buffer source filter for rescaling: %d", ret);
-
-		SetState(State::ERROR);
-
-		return false;
-	}
-	//////////////////////////////////////////////////////
-	// Prepare output filters
-	//////////////////////////////////////////////////////
-
-	ret = ::avfilter_graph_create_filter(&_buffersink_ctx, buffersink, "out", nullptr, nullptr, _filter_graph);
-	if (ret < 0)
-	{
-		logte("Could not create video buffer sink filter for rescaling: %d", ret);
-
-		SetState(State::ERROR);
-
-		return false;
-	}
-
-	std::vector<ov::String> filters;
-
-	// 1. Framerate
-	// The frame rate value is always lower than the original, so it is advantageous to do it first.
-	if (output_track->GetFrameRateByConfig() > 0.0f)
-	{
-		filters.push_back(ov::String::FormatString("fps=fps=%.2f:round=near", output_track->GetFrameRateByConfig()));
-	}
-
-	// 2. Scaler
-	auto input_module_id = input_track->GetCodecModuleId();
-	auto output_module_id = output_track->GetCodecModuleId();
-
-	switch (input_module_id)
-	{
-		case cmn::MediaCodecModuleId::NVENC: {
-			if (output_module_id == cmn::MediaCodecModuleId::NVENC)
-			{
-				filters.push_back(ov::String::FormatString(
-					"hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d,hwdownload",
-					output_track->GetCodecDeviceId(),
-					output_track->GetWidth(), 
-					output_track->GetHeight()));
-			}
-			else if (output_module_id == cmn::MediaCodecModuleId::XMA)
-			{
-				// TODO:
-				// Copy GPU memory to Host memory
-				// To be compatible with other types of codecs, it is converted to yuv420p, a representative pixel format
-				filters.push_back(ov::String::FormatString(
-					"hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d:format=yuv420p,hwdownload",
-					input_track->GetCodecDeviceId(),
-					output_track->GetWidth(), 
-					output_track->GetHeight()));
-			}
-			else {
-				// cmn::MediaCodecModuleId::DEFAULT 
-				// cmn::MediaCodecModuleId::QSV
-				// cmn::MediaCodecModuleId::NILOGAN
-				// cmn::MediaCodecModuleId::ETC
-								
-				// Copy GPU memory to Host memory
-				// To be compatible with other types of codecs, it is converted to yuv420p, a representative pixel format
-				filters.push_back(ov::String::FormatString(
-					"hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d:format=yuv420p,hwdownload",
-					input_track->GetCodecDeviceId(),
-					output_track->GetWidth(),
-					output_track->GetHeight()));
-			}
-		}
-		break;
-		case cmn::MediaCodecModuleId::XMA: {
-			if (output_module_id == cmn::MediaCodecModuleId::NVENC)
-			{
-				// TODO
-				filters.push_back(ov::String::FormatString(
-					"xvbm_convert,scale=%dx%d:flags=bilinear",
-					output_track->GetWidth(), output_track->GetHeight()));
-			}
-			else if (output_module_id == cmn::MediaCodecModuleId::XMA)
-			{
-				_filter_graph->nb_threads = 1;
-				filters.push_back(ov::String::FormatString(
-					"multiscale_xma=lxlnx_hwdev=%d:outputs=1:out_1_width=%d:out_1_height=%d:out_1_rate=full",
-					output_track->GetCodecDeviceId(),
-					output_track->GetWidth(), 
-					output_track->GetHeight()));
-			}
-			else
-			{
-				// cmn::MediaCodecModuleId::DEFAULT 
-				// cmn::MediaCodecModuleId::QSV
-				// cmn::MediaCodecModuleId::NILOGAN
-				// cmn::MediaCodecModuleId::ETC
-
-				// Copy GPU memory to Host memory
-				filters.push_back(ov::String::FormatString(
-					"xvbm_convert,scale=%dx%d:flags=bilinear",
-					output_track->GetWidth(), output_track->GetHeight()));
-			}
-		}
-		break;
-		case cmn::MediaCodecModuleId::QSV: {
-			filters.push_back(ov::String::FormatString(
-				"scale=%dx%d:flags=bilinear",
-				output_track->GetWidth(), output_track->GetHeight()));
-		}
-		break;	
-		case cmn::MediaCodecModuleId::NILOGAN:
-			if (output_module_id == cmn::MediaCodecModuleId::NILOGAN)
-			{
-				filters.push_back(ov::String::FormatString(
-					"scale=%dx%d:flags=bilinear",
-					output_track->GetWidth(), output_track->GetHeight()));
-					//ni_logan_hwupload => failed because autoscale is automatically insert a scale filter at the end of the filter graph and seems to be not compatible with ni_logan_hwupload :(
-			}
-			else 
-			{
-				filters.push_back(ov::String::FormatString(
-					"scale=%dx%d:flags=bilinear",
-					output_track->GetWidth(), output_track->GetHeight()));
-			}		
-		break;	
-		case cmn::MediaCodecModuleId::DEFAULT:
-		default: {
-			if (output_module_id == cmn::MediaCodecModuleId::NVENC)
-			{
-				filters.push_back(ov::String::FormatString(
-					"format=nv12,hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d,hwdownload",
-					output_track->GetCodecDeviceId(),
-					output_track->GetWidth(), output_track->GetHeight()));
-			}
-			else if (output_module_id == cmn::MediaCodecModuleId::XMA)
-			{
-				// TODO
-				filters.push_back(ov::String::FormatString(
-					"format=nv12,hwupload_cuda=device=%d,scale_cuda=w=%d:h=%d,hwdownload",
-					output_track->GetCodecDeviceId(),
-					output_track->GetWidth(), output_track->GetHeight()));
-			}			
-			else
-			{
-				// cmn::MediaCodecModuleId::DEFAULT 
-				// cmn::MediaCodecModuleId::QSV
-				// cmn::MediaCodecModuleId::NILOGAN
-				// cmn::MediaCodecModuleId::ETC
-				filters.push_back(ov::String::FormatString(
-					"scale=%dx%d:flags=bilinear",
-					output_track->GetWidth(), output_track->GetHeight()));
-			}
-		}
-		break;
-	}
-
-	// 3. Timebase
-	filters.push_back(ov::String::FormatString("settb=%s", output_track->GetTimeBase().GetStringExpr().CStr()));
-
-	// 5. Pixel Format
-	// if(input_track->GetColorspace() != output_track->GetColorspace())
-	{
-		filters.push_back(ov::String::FormatString("format=%s", ::av_get_pix_fmt_name((AVPixelFormat)output_track->GetColorspace())));
-	}
-
-	if(filters.size() == 0)
-	{
-		filters.push_back("null");
-	}
-
-	ov::String output_filters = ov::String::Join(filters, ",");
-
-	//////////////////////////////////////////////////////
-	// Build
-	//////////////////////////////////////////////////////
-
-	_outputs->name = ::av_strdup("in");
-	_outputs->filter_ctx = _buffersrc_ctx;
-	_outputs->pad_idx = 0;
-	_outputs->next = nullptr;
-
-	_inputs->name = ::av_strdup("out");
-	_inputs->filter_ctx = _buffersink_ctx;
-	_inputs->pad_idx = 0;
-	_inputs->next = nullptr;
-
-	logti("Rescaler parameters [#%u -> #%u][%s -> %s]. input: %s -> outputs: %s",
-		  input_track->GetId(),
-		  output_track->GetId(),
-		  GetStringFromCodecModuleId(input_track->GetCodecModuleId()).CStr(),
-		  GetStringFromCodecModuleId(output_track->GetCodecModuleId()).CStr(),
-		  input_filters.CStr(),
-		  output_filters.CStr());
-
-	if ((ret = ::avfilter_graph_parse_ptr(_filter_graph, output_filters, &_inputs, &_outputs, nullptr)) < 0)
-	{
-		logte("Could not parse filter string for rescaling: %d (%s)", ret, output_filters.CStr());
-
-		SetState(State::ERROR);
-
-		return false;
-	}
-
-	_input_width = input_track->GetWidth();
-	_input_height = input_track->GetHeight();
-
-	if ((ret = ::avfilter_graph_config(_filter_graph, nullptr)) < 0)
-	{
-		logte("Could not validate filter graph for rescaling: %d", ret);
-
+		logte("Could not validate filter graph for rescaling");
 		SetState(State::ERROR);
 
 		return false;
@@ -344,6 +355,9 @@ bool FilterRescaler::Start()
 
 void FilterRescaler::Stop()
 {
+	if(GetState() == State::STOPPED)
+		return;
+
 	_kill_flag = true;
 
 	_input_buffer.Stop();
@@ -353,16 +367,134 @@ void FilterRescaler::Stop()
 		_thread_work.join();
 	}
 
+	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
+	OV_SAFE_FUNC(_inputs, nullptr, ::avfilter_inout_free, &);
+	OV_SAFE_FUNC(_outputs, nullptr, ::avfilter_inout_free, &);
+	OV_SAFE_FUNC(_filter_graph, nullptr, ::avfilter_graph_free, &);
+
+	_buffersrc= nullptr;
+	_buffersink = nullptr;
+	
+	_input_buffer.Clear();
+
 	SetState(State::STOPPED);
 }
 
+bool FilterRescaler::PushProcess(std::shared_ptr<MediaFrame> media_frame)
+{
+	auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
+	if (!av_frame)
+	{
+		logte("Could not allocate the video frame data");
+
+		SetState(State::ERROR);
+
+		return false;
+	}
+
+	AVFrame *alter_av_frame = nullptr;
+
+	if (_use_hwframe_transfer == true && av_frame->hw_frames_ctx != nullptr)
+	{
+		// GPU Memory -> Host Memory
+		alter_av_frame = ::av_frame_alloc();
+		if (::av_hwframe_transfer_data(alter_av_frame, av_frame, 0) < 0)
+		{
+			logte("Error transferring the data to system memory\n");
+
+			SetState(State::ERROR);
+
+			return false;
+		}
+
+		alter_av_frame->pts = av_frame->pts;
+	}
+
+	AVFrame *av_frame_for_filter = (alter_av_frame != nullptr) ? alter_av_frame : av_frame;
+
+	// Send to filtergraph
+	if (::av_buffersrc_write_frame(_buffersrc_ctx, av_frame_for_filter))
+	{
+		logte("An error occurred while feeding to filtergraph: format: %d, pts: %lld, linesize: %d, queue.size: %d", av_frame->format, av_frame->pts, av_frame->linesize[0], _input_buffer.Size());
+
+		SetState(State::ERROR);
+
+		return false;
+	}
+
+	if (alter_av_frame != nullptr)
+	{
+		av_frame_free(&alter_av_frame);
+	}
+
+	return true;
+}
+
+bool FilterRescaler::PopProcess()
+{
+	while (!_kill_flag)
+	{
+		// Receive from filtergraph
+		int ret = ::av_buffersink_get_frame(_buffersink_ctx, _frame);
+		if (ret == AVERROR(EAGAIN))
+		{
+			break;
+		}
+		else if (ret == AVERROR_EOF)
+		{
+			logte("Error receiving filtered frame. error(EOF)");
+
+			SetState(State::ERROR);
+
+			return false;
+		}
+		else if (ret < 0)
+		{
+			logte("Error receiving filtered frame. error(%d)", ret);
+
+			SetState(State::ERROR);
+
+			return false;
+		}
+		else
+		{
+			_frame->pict_type = AV_PICTURE_TYPE_NONE;
+			auto output_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
+			::av_frame_unref(_frame);
+			if (output_frame == nullptr)
+			{
+				continue;
+			}
+
+			Complete(std::move(output_frame));
+		}
+	}
+
+	return true;
+}
+
+#define DO_FILTER_ONCE(frame) \
+		if (!PushProcess(frame)) { break; } \
+		if (!PopProcess()) { break; } 
+
 void FilterRescaler::WorkerThread()
 {
-	logtd("Start rescaling filter thread");
-	int ret;
-
-
 	SetState(State::STARTED);
+
+#if _SKIP_FRAMES_ENABLED
+	auto skip_frames_last_check_time = ov::Time::GetTimestampInMs();
+	auto skip_frames_last_changed_time = ov::Time::GetTimestampInMs();
+	
+
+	// Set initial Skip Frames
+	int32_t skip_frames = _output_track->GetSkipFramesByConfig();
+	size_t  skip_frames_previous_queue_size = 0;
+#endif
+
+	// XMA devices expand the memory pool when processing the first frame filtering. 
+	// At this time, memory allocation failure occurs because it is not 'Thread safe'. 
+	// It is used for the purpose of preventing this.
+	bool start_frame_syncronization = true;
 
 	while (!_kill_flag)
 	{
@@ -374,62 +506,153 @@ void FilterRescaler::WorkerThread()
 
 		auto media_frame = std::move(obj.value());
 
-		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
-		if (!av_frame)
+#if _SKIP_FRAMES_ENABLED 
+		// If the set value is greater than or equal to 0, the skip frame is automatically calculated.
+		// The skip frame is not less than the value set by the user.
+		if(_output_track->GetSkipFramesByConfig() >= 0)
 		{
-			logte("Could not allocate the video frame data");
+			auto curr_time = ov::Time::GetTimestampInMs();
 
-			SetState(State::ERROR);
+			// Periodically check the status of the queue
+			// If the queue exceeds an arbitrary threshold, increase the number of skip frames quickly
+			// If the queue is stable, slowly decrease the number of skip frames.
+			// If the queue exceeds the threshold, drop the frame.
+			auto elapsed_check_time = curr_time - skip_frames_last_check_time;
+			auto elapsed_stable_time = curr_time - skip_frames_last_changed_time;
 
-			break;
+			if (elapsed_check_time > _SKIP_FRAMES_CHECK_INTERVAL)
+			{
+				skip_frames_last_check_time = curr_time;
+
+				// The frame skip should not be more than 1 second.
+				if ((skip_frames < _output_track->GetFrameRateByConfig()) &&		   // Maximum 1 second
+					(_input_buffer.GetSize() > (_input_buffer.GetThreshold() / 4)) &&  // 25% of the threshold == 0.5s
+					(_input_buffer.GetSize() >= skip_frames_previous_queue_size))	   // The queue is growing
+				{
+					skip_frames++;
+					skip_frames_previous_queue_size = _input_buffer.GetSize();
+					skip_frames_last_changed_time = curr_time;
+
+					logtw("Scaler is unstable. changing skip frames %d to %d", skip_frames-1, skip_frames);
+				}
+				// If the queue is stable, slowly decrease the number of skip frames.
+				else if ((skip_frames > _output_track->GetSkipFramesByConfig()) &&
+						 (elapsed_stable_time > _SKIP_FRAMES_STABLE_FOR_RETRIEVE_INTERVAL) &&
+						 _input_buffer.GetSize() <= 1)
+				{
+					if (--skip_frames < 0)
+					{
+						skip_frames = 0;
+					}
+
+					skip_frames_previous_queue_size = _input_buffer.GetSize();
+					skip_frames_last_changed_time = curr_time;
+
+					logti("Scaler is stable. changing skip frames %d to %d", skip_frames+1, skip_frames);
+				}
+
+				_fps_filter.SetSkipFrames(skip_frames);
+			}
 		}
 
-		ret = ::av_buffersrc_write_frame(_buffersrc_ctx, av_frame);
-		if (ret < 0)
+		// If the queue exceeds the threshold, drop the frame.
+		if (_input_buffer.IsThresholdExceeded())
 		{
-			logte("An error occurred while feeding to filtergraph: format: %d, pts: %lld, linesize: %d, queue.size: %d", av_frame->format, av_frame->pts, av_frame->linesize[0], _input_buffer.Size());
-
-			continue;
+			media_frame = nullptr;;
 		}
 
-		while (!_kill_flag)
+		// logti("buffer.size(%d), i/omps(%d/%d), threshold(%d), skip(%d/%d), stable(%d ms)",
+		// 	  _input_buffer.GetSize(),
+		// 	  _input_buffer.GetInputMessagePerSecond(), _input_buffer.GetOutputMessagePerSecond(), 
+		// 	  _input_buffer.GetThreshold(),
+		// 	  skip_frames, _output_track->GetSkipFramesByConfig(),
+		// 	  elapsed_stable_time);
+
+		if(media_frame != nullptr)
 		{
-			ret = ::av_buffersink_get_frame(_buffersink_ctx, _frame);
-			if (ret == AVERROR(EAGAIN))
+			_fps_filter.Push(media_frame);
+		}
+
+		while (auto frame = _fps_filter.Pop())
+		{
+			if (start_frame_syncronization)
 			{
-				break;
-			}
-			else if (ret == AVERROR_EOF)
-			{
-				logte("Error receiving filtered frame. error(EOF)");
+				std::lock_guard<std::mutex> lock(TranscodeGPU::GetInstance()->GetDeviceMutex());
 
-				SetState(State::ERROR);
+				DO_FILTER_ONCE(frame);
 
-				break;
-			}
-			else if (ret < 0)
-			{
-				logte("Error receiving filtered frame. error(%d)", ret);
-
-				SetState(State::ERROR);
-
-				break;
+				start_frame_syncronization = false;
 			}
 			else
 			{
-				_frame->pict_type = AV_PICTURE_TYPE_NONE;
-				auto output_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
-				::av_frame_unref(_frame);
-				if (output_frame == nullptr)
+				DO_FILTER_ONCE(frame);
+			}
+		}
+#else
+		if (start_frame_syncronization)
+		{
+			std::lock_guard<std::mutex> lock(TranscodeGPU::GetInstance()->GetDeviceMutex());
+
+			DO_FILTER_ONCE(media_frame);
+
+			start_frame_syncronization = false;
+		}
+		else
+		{
+			DO_FILTER_ONCE(media_frame);
+		}
+#endif
+
+	}
+	
+}
+
+bool FilterRescaler::SetHWContextToFilterIfNeed()
+{
+	auto hw_device_ctx =  TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, _output_track->GetCodecDeviceId());
+
+	// Assign the hw device context and hw frames context to the filter graph
+	for (uint32_t i = 0 ; i < _filter_graph->nb_filters ; i++)
+	{
+		auto filter = _filter_graph->filters[i];
+
+		if( (filter->filter->flags_internal & FILTER_FLAG_HWFRAME_AWARE) == 0 || (filter->inputs == nullptr))
+		{
+			continue;
+		}
+
+		bool matched = false;
+		if( strstr(filter->name, "scale_cuda") != nullptr || strstr(filter->name, "scale_npp") != nullptr)
+		{
+			matched = true;
+		}
+
+		if (matched == true)
+		{
+			logtd("set hardware device/frames context to filter. name(%s)", filter->name);
+
+			if (ffmpeg::Conv::SetHwDeviceCtxOfAVFilterContext(filter, hw_device_ctx) == false)
+			{
+				logte("Could not set hw device context for %s", filter->name);
+				return false;
+			}
+
+			for (uint32_t j = 0; j < filter->nb_inputs; j++)
+			{
+				auto input = filter->inputs[j];
+				if (input == nullptr)
 				{
 					continue;
 				}
 
-				if (_complete_handler != nullptr && _kill_flag == false)
+				if (ffmpeg::Conv::SetHWFramesCtxOfAVFilterLink(input, hw_device_ctx, _output_track->GetWidth(), _output_track->GetHeight()) == false)
 				{
-					_complete_handler(std::move(output_frame));
+					logte("Could not set hw frames context for %s", filter->name);
+					return false;
 				}
 			}
 		}
 	}
+
+	return true;
 }

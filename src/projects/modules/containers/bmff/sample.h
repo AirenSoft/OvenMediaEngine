@@ -32,14 +32,27 @@ namespace bmff
         {
             int8_t GetSencAuxInfoSize() const
             {
+                uint8_t per_sample_iv_size = 0;
+                if (per_sample_iv)
+                {
+                    per_sample_iv_size = per_sample_iv->GetLength();
+                }
+                
                 // for SENC
-                // We don't support Per_Sample_IV_Size, so it is always 0.
-                // int(16) subsample_count + (unsigned int(16) clear_bytes + unsigned int(32) cipher_bytes)*subsample_count
-                return 2 + ((2+4) * _sub_samples.size());
+                // int(per_sample_IV_Size*8) + int(16) subsample_count + (unsigned int(16) clear_bytes + unsigned int(32) cipher_bytes)*subsample_count
+                // return byte size
+                uint8_t sub_sample_count_size = 2;
+                if (_sub_samples.size() == 0)
+                {
+                    sub_sample_count_size = 0;
+                }
+            
+                return per_sample_iv_size + sub_sample_count_size + ((2+4) * _sub_samples.size());
             }
 
             // Later, it can have more information, for example Per_Sample_IV_Size, etc.
             std::vector<SubSample> _sub_samples;
+            std::shared_ptr<ov::Data> per_sample_iv;
         };
 
         Sample() = default;

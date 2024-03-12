@@ -18,6 +18,10 @@ bool EncoderAAC::SetCodecParams()
 	_codec_context->channel_layout = static_cast<uint64_t>(GetRefTrack()->GetChannel().GetLayout());
 	_codec_context->channels = GetRefTrack()->GetChannel().GetCounts();
 
+	_bitstream_format = cmn::BitstreamFormat::AAC_ADTS;
+	
+	_packet_type = cmn::PacketType::RAW;
+
 	return true;
 }
 
@@ -76,68 +80,4 @@ bool EncoderAAC::Configure(std::shared_ptr<MediaTrack> context)
 	}
 
 	return true;
-}
-
-void EncoderAAC::CodecThread()
-{
-	while (!_kill_flag)
-	{
-		auto obj = _input_buffer.Dequeue();
-		if (obj.has_value() == false)
-			continue;
-
-		auto media_frame = std::move(obj.value());
-
-		///////////////////////////////////////////////////
-		// Request frame encoding to codec
-		///////////////////////////////////////////////////
-		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Audio, media_frame);
-		if (!av_frame)
-		{
-			logte("Could not allocate the frame data");
-			break;
-		}
-
-		int ret = ::avcodec_send_frame(_codec_context, av_frame);
-		if (ret < 0)
-		{
-			logte("Error sending a frame for encoding : %d", ret);
-		}
-
-		///////////////////////////////////////////////////
-		// The encoded packet is taken from the codec.
-		///////////////////////////////////////////////////
-		while (true)
-		{
-			int ret = ::avcodec_receive_packet(_codec_context, _packet);
-			if (ret == AVERROR(EAGAIN))
-			{
-				break;
-			}
-			else if (ret == AVERROR_EOF && ret < 0)
-			{
-				logte("Error receiving a packet for decoding : %d", ret);
-				break;
-			}
-			else
-			{
-				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, cmn::MediaType::Audio, cmn::BitstreamFormat::AAC_ADTS, cmn::PacketType::RAW);
-				if (media_packet == nullptr)
-				{
-					logte("Could not allocate the media packet");
-					break;
-				}
-
-				::av_packet_unref(_packet);
-
-				// TODO : If the pts value are under zero, the dash packetizer does not work.
-				if (media_packet->GetPts() < 0)
-				{
-					continue;
-				}
-
-				SendOutputBuffer(std::move(media_packet));
-			}
-		}
-	}
 }

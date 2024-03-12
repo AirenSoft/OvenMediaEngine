@@ -154,7 +154,7 @@ namespace pub
 
 			if (ffmpeg::Conv::IsSupportCodec(output_format, track->GetCodecId()) == false)
 			{
-				logtw("%s format does not support the codec(%s)", output_format.CStr(), cmn::GetStringFromCodecId(track->GetCodecId()).CStr());
+				logtw("%s format does not support the codec(%s)", output_format.CStr(), cmn::GetCodecIdToString(track->GetCodecId()).CStr());
 				continue;
 			}
 
@@ -179,7 +179,7 @@ namespace pub
 			return false;
 		}
 
-		logti("Start recording.%s", GetRecord()->GetInfoString().CStr());
+		logtd("Recording Started. %s", GetRecord()->GetInfoString().CStr());
 
 		return true;
 	}
@@ -291,7 +291,7 @@ namespace pub
 			
 			_writer = nullptr;
 
-			logti("Recording finished.%s", GetRecord()->GetInfoString().CStr());
+			logtd("Recording Completed. %s", GetRecord()->GetInfoString().CStr());
 
 			GetRecord()->IncreaseSequence();
 		}

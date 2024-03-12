@@ -29,16 +29,24 @@
 #include "transcoder_private.h"
 
 #define USE_LEGACY_LIBOPUS false
-#define MAX_QUEUE_SIZE 500
+#define MAX_QUEUE_SIZE 5
 #define ALL_GPU_ID -1
 #define DEFAULT_MODULE_NAME "DEFAULT"
 
 
 std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::GetCandidates(bool hwaccels_enable, ov::String hwaccles_modules, std::shared_ptr<MediaTrack> track)
 {
-	logtd("Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s), Video.Modules(%s), ", GetStringFromCodecId(track->GetCodecId()).CStr(), hwaccels_enable?"true":"false", hwaccles_modules.CStr(), track->GetCodecModules().CStr());
+	logtd("Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s), Video.Modules(%s), ", GetCodecIdToString(track->GetCodecId()).CStr(), hwaccels_enable?"true":"false", hwaccles_modules.CStr(), track->GetCodecModules().CStr());
 
 	ov::String configuration = ""; 
+	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidate_modules = std::make_shared<std::vector<std::shared_ptr<CodecCandidate>>>();
+
+	// If the track is not video, the default module is the only candidate.
+	if (cmn::IsVideoCodec(track->GetCodecId()) == false)
+	{
+		candidate_modules->push_back(std::make_shared<CodecCandidate>(track->GetCodecId(), cmn::MediaCodecModuleId::DEFAULT, 0));
+		return candidate_modules;
+	}
 
 	if(hwaccels_enable == true)
 	{
@@ -56,12 +64,8 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 		configuration = track->GetCodecModules().Trim();
 	}
 
-	std::vector<ov::String> desire_modules;
-	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidate_modules = std::make_shared<std::vector<std::shared_ptr<CodecCandidate>>>();
-	
-
 	// ex) hwaccels_modules = "XMA:0,NV:0,QSV:0"
-	desire_modules = configuration.Split(",");
+	std::vector<ov::String> desire_modules = configuration.Split(",");
 
 	// If no modules are configured, all modules are designated as candidates.
 	if (desire_modules.size() == 0 || configuration.IsEmpty() == true)
@@ -128,8 +132,10 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 
 	for (auto &candidate : *candidate_modules)
 	{
+		(void)(candidate);
+		
 		logtd("Candidate module: %s(%d), %s(%d):%d",
-			  cmn::GetStringFromCodecId(candidate->GetCodecId()).CStr(),
+			  cmn::GetCodecIdToString(candidate->GetCodecId()).CStr(),
 			  candidate->GetCodecId(),
 			  cmn::GetStringFromCodecModuleId(candidate->GetModuleId()).CStr(),
 			  candidate->GetModuleId(),
@@ -265,12 +271,13 @@ done:
 	if (encoder)
 	{
 		track->SetCodecModuleId(cur_candidate->GetModuleId());
+		
 		encoder->SetEncoderId(encoder_id);
 		encoder->SetCompleteHandler(complete_handler);
 
 		logti("The encoder has been created successfully. track(#%d), codec(%s), module(%s:%d)",
 			track->GetId(),
-			cmn::GetStringFromCodecId(track->GetCodecId()).CStr(),
+			cmn::GetCodecIdToString(track->GetCodecId()).CStr(),
 			cmn::GetStringFromCodecModuleId(track->GetCodecModuleId()).CStr(),
 			track->GetCodecDeviceId());		
 	}
@@ -335,6 +342,20 @@ bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 	_input_buffer.SetUrn(urn);
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
+	// Limit the queue so that it does not exceed the threshold.
+	// If the encoder performance is poor. I expect the frame to be dropped from the scaler.
+	// The 'SetSkipMessageEnable' function was painstakingly created, but unfortunately it is not used here.
+	_input_buffer.SetPreventExceedThreshold(true);
+
+
+	// SkipMessage is enabled due to the high possibility of queue overflow due to insufficient video encoding performance.
+	// Users will not experience any inconvenience even if the video is intermittently missing.
+	// However, it is sensitive when the audio cuts out.
+	// if(_track->GetMediaType() == cmn::MediaType::Video)
+	// {
+	// 	_input_buffer.SetSkipMessageEnable(true);
+	// }
+
 	return (_track != nullptr);
 }
 
@@ -348,7 +369,12 @@ void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 	_input_buffer.Enqueue(std::move(frame));
 }
 
-void TranscodeEncoder::SendOutputBuffer(std::shared_ptr<MediaPacket> packet)
+void TranscodeEncoder::SetCompleteHandler(CompleteHandler complete_handler)
+{
+	_complete_handler = move(complete_handler);
+}
+
+void TranscodeEncoder::Complete(std::shared_ptr<MediaPacket> packet)
 {
 	if (_complete_handler)
 	{
@@ -368,3 +394,84 @@ void TranscodeEncoder::Stop()
 		logtd(ov::String::FormatString("encoder %s thread has ended", avcodec_get_name(GetCodecID())).CStr());
 	}
 }
+
+void TranscodeEncoder::CodecThread()
+{
+	while (!_kill_flag)
+	{
+		auto obj = _input_buffer.Dequeue();
+		if (obj.has_value() == false)
+			continue;
+
+		auto media_frame = std::move(obj.value());
+
+		///////////////////////////////////////////////////
+		// Request frame encoding to codec
+		///////////////////////////////////////////////////
+		auto av_frame = ffmpeg::Conv::ToAVFrame(GetRefTrack()->GetMediaType(), media_frame);
+		if (!av_frame)
+		{
+			logte("Could not allocate the video frame data");
+			break;
+		}
+
+		// If force_keyframe_timer is started, keyframes are inserted based on time.
+		if (GetRefTrack()->GetMediaType() == cmn::MediaType::Video)
+		{
+			if (_force_keyframe_timer.IsStart() == true &&
+				_force_keyframe_timer.IsTimeout() == true &&
+				_force_keyframe_timer.Update())
+			{
+				av_frame->pict_type = AV_PICTURE_TYPE_I;
+			}
+		}
+
+		int ret = ::avcodec_send_frame(_codec_context, av_frame);
+		if (ret < 0)
+		{
+			logte("Error sending a frame for encoding : %d", ret);
+		}
+
+		///////////////////////////////////////////////////
+		// The encoded packet is taken from the codec.
+		///////////////////////////////////////////////////
+		while (!_kill_flag)
+		{
+			// Check frame is available
+			int ret = ::avcodec_receive_packet(_codec_context, _packet);
+			if (ret == AVERROR(EAGAIN))
+			{
+				// More packets are needed for encoding.
+				break;
+			}
+			else if (ret == AVERROR_EOF && ret < 0)
+			{
+				logte("Error receiving a packet for decoding : %d", ret);
+				break;
+			}
+			else
+			{
+				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, GetRefTrack()->GetMediaType(), _bitstream_format, _packet_type);
+				if (media_packet == nullptr)
+				{
+					logte("Could not allocate the media packet");
+					break;
+				}
+
+				if(GetRefTrack()->GetMediaType() == cmn::MediaType::Audio)
+				{
+					// TODO : If the pts value are under zero, the dash packetizer does not work.
+					if (media_packet->GetPts() < 0)
+					{
+						continue;
+					}
+				}
+
+				::av_packet_unref(_packet);
+
+				Complete(std::move(media_packet));
+			}
+		}
+	}
+}
+

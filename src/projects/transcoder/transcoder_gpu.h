@@ -74,4 +74,12 @@ protected:
 
 	void CodecThread();
 	std::thread _thread;
+
+public:
+	std::mutex& GetDeviceMutex() {
+		return _device_mutex;
+	}
+protected:
+	// Global synchronization for specific hardware (Xilinx U30)
+	std::mutex _device_mutex;
 };

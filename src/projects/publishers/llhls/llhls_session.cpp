@@ -441,29 +441,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 	}
 
 	// Get the playlist
-	auto query_string = ov::String::FormatString("session=%u_%s", GetId(), _session_key.CStr());
-	
-	if (_origin_mode == true)
-	{
-		query_string.Clear();
-	}
-
-	ov::String stream_key;
-	if (request_uri->HasQueryKey("stream_key"))
-	{
-		stream_key = request_uri->GetQueryValue("stream_key");
-	}
-
-	if (stream_key.IsEmpty() == false)
-	{
-		if (query_string.IsEmpty() == false)
-		{
-			query_string += "&";
-		}
-
-		query_string.AppendFormat("stream_key=%s", stream_key.CStr());
-	}
-
+	auto query_string = MakeQueryStringToPropagate(request_uri);
 	auto [result, playlist] = llhls_stream->GetMasterPlaylist(file_name, query_string, gzip, legacy, rewind);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
@@ -548,27 +526,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 	}
 
 	// Get the chunklist
-	auto query_string = ov::String::FormatString("session=%u_%s", GetId(), _session_key.CStr());
-	if (_origin_mode == true)
-	{
-		query_string.Clear();
-	}
-
-	ov::String stream_key;
-	if (request_uri->HasQueryKey("stream_key"))
-	{
-		stream_key = request_uri->GetQueryValue("stream_key");
-	}
-
-	if (stream_key.IsEmpty() == false)
-	{
-		if (query_string.IsEmpty() == false)
-		{
-			query_string += "&";
-		}
-
-		query_string.AppendFormat("stream_key=%s", stream_key.CStr());
-	}
+	auto query_string = MakeQueryStringToPropagate(request_uri);
 
 	auto [result, chunklist] = llhls_stream->GetChunklist(query_string, track_id, msn, part, skip, gzip, legacy, rewind);
 	if (result == LLHlsStream::RequestResult::Success)
@@ -904,4 +862,33 @@ bool LLHlsSession::AddPendingRequest(const std::shared_ptr<http::svr::HttpExchan
 	}
 
 	return true;
+}
+
+ov::String LLHlsSession::MakeQueryStringToPropagate(const std::shared_ptr<ov::Url> &request_uri)
+{
+	auto query_string = ov::String::FormatString("session=%u_%s", GetId(), _session_key.CStr());
+	if (_origin_mode == true)
+	{
+		// Origin mode doesn't need session key
+		query_string.Clear();
+	}
+
+	// stream_key is propagated to the child resources
+	ov::String stream_key;
+	if (request_uri->HasQueryKey("stream_key"))
+	{
+		stream_key = request_uri->GetQueryValue("stream_key");
+	}
+
+	if (stream_key.IsEmpty() == false)
+	{
+		if (query_string.IsEmpty() == false)
+		{
+			query_string += "&";
+		}
+
+		query_string.AppendFormat("stream_key=%s", stream_key.CStr());
+	}
+
+	return query_string;
 }

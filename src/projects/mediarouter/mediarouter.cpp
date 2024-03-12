@@ -223,6 +223,11 @@ CommonErrorCode MediaRouter::UnmirrorStream(const std::shared_ptr<MediaRouterStr
 		return CommonErrorCode::INVALID_PARAMETER;
 	}
 
+	if (stream_tap->GetState() != MediaRouterStreamTap::State::Tapped)
+	{
+		return CommonErrorCode::INVALID_STATE;
+	}
+
 	auto route_app = GetRouteApplicationByName(stream_tap->GetStreamInfo()->GetApplicationInfo().GetName());
 	if (route_app == nullptr)
 	{

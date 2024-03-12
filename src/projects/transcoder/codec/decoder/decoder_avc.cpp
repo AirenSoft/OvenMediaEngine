@@ -48,7 +48,7 @@ bool DecoderAVC::Configure(std::shared_ptr<MediaTrack> context)
 	}
 
 	// Create packet parser
-	_parser = ::av_parser_init(_codec->id);
+	_parser = ::av_parser_init(GetCodecID());
 	if (_parser == nullptr)
 	{
 		logte("Parser not found");
@@ -154,7 +154,7 @@ void DecoderAVC::CodecThread()
 					empty_frame->SetPts(dts);
 					empty_frame->SetMediaType(cmn::MediaType::Video);
 
-					SendOutputBuffer(TranscodeResult::NoData, std::move(empty_frame));
+					Complete(TranscodeResult::NoData, std::move(empty_frame));
 
 					break;
 				}
@@ -238,7 +238,7 @@ void DecoderAVC::CodecThread()
 					continue;
 				}
 
-				SendOutputBuffer(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
+				Complete(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
 			}
 		}
 	}

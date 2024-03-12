@@ -34,10 +34,17 @@ namespace cfg
 					ov::String _preset;
 					int _thread_count = -1;
 					int _key_frame_interval = 0;
+					ov::String _key_frame_interval_type = "frame";
 					int _b_frames = 0;
 					BypassIfMatch _bypass_if_match;
 					ov::String _profile;
-					
+
+					// SkipFrames 
+					// If the set value is greater than or equal to 0, the skip frame is automatically calculated. 
+					// The skip frame is not less than the value set by the user.
+					// -1 : No SkipFrame
+					// 0 ~ 120 : minimum value of SkipFrames. it is automatically calculated and the SkipFrames value is changed.
+					int _skip_frames = -1;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
@@ -52,9 +59,11 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetPreset, _preset)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetThreadCount, _thread_count)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetKeyFrameInterval, _key_frame_interval)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetKeyFrameIntervalType, _key_frame_interval_type)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBFrames, _b_frames)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBypassIfMatch, _bypass_if_match)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetProfile, _profile)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetSkipFrames, _skip_frames)
 
 					void SetName(const ov::String &name){_name = name;}
 					void SetBypass(bool bypass){_bypass = bypass;}
@@ -104,6 +113,15 @@ namespace cfg
 						Register<Optional>("Width", &_width);
 						Register<Optional>("Height", &_height);
 						Register<Optional>("Framerate", &_framerate);
+						Register<Optional>("SkipFrames", &_skip_frames, nullptr, 
+							[=]() -> std::shared_ptr<ConfigError> {
+
+								if(_framerate > 0 && _skip_frames > 0) {
+									logw("Config", "Use SkipFrames in the settings, the Framerate is ignored.");
+								}
+
+								return (_skip_frames >= 0 && _skip_frames <= 120) ? nullptr : CreateConfigErrorPtr("SkipFrames must be between 0 and 120");
+							});
 						Register<Optional>("Preset", &_preset, nullptr, 
 							[=]() -> std::shared_ptr<ConfigError> {
 								auto preset = _preset.LowerCaseString();
@@ -114,10 +132,26 @@ namespace cfg
 								return CreateConfigErrorPtr("Preset must be slower, slow, medium, fast, or faster");
 							});
 						Register<Optional>("ThreadCount", &_thread_count);
+						Register<Optional>("KeyFrameIntervalType", &_key_frame_interval_type, nullptr, 
+							[=]() -> std::shared_ptr<ConfigError> {
+								auto key_frame_interval_type = _key_frame_interval_type.LowerCaseString();
+								if(key_frame_interval_type == "frame" || key_frame_interval_type == "time")
+								{
+									return nullptr;
+								}
+
+								return CreateConfigErrorPtr("KeyFrameIntervalType must be frame or time");
+							});						
 						Register<Optional>("KeyFrameInterval", &_key_frame_interval, nullptr, 
 							[=]() -> std::shared_ptr<ConfigError> {
+								if(_key_frame_interval_type == "time")
+								{
+									return (_key_frame_interval > 0 && _key_frame_interval <= 10000) ? nullptr : CreateConfigErrorPtr("KeyFrameInterval must be between 0 and 10000");
+								}
+
 								return (_key_frame_interval >= 0 && _key_frame_interval <= 600) ? nullptr : CreateConfigErrorPtr("KeyFrameInterval must be between 0 and 600");
 							});
+
 						Register<Optional>("BFrames", &_b_frames, nullptr, 
 							[=]() -> std::shared_ptr<ConfigError> {
 								return (_b_frames >= 0 && _b_frames <= 16) ? nullptr : CreateConfigErrorPtr("BFrames must be between 0 and 16");
@@ -132,6 +166,7 @@ namespace cfg
 							}
 							return CreateConfigErrorPtr("Profile must be baseline, main or high");
 						});
+
 					}
 				};
 			}  // namespace oprf
