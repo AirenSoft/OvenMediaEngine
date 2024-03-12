@@ -36,7 +36,7 @@ namespace cfg
 					{
 						// Deprecated
 						// Changed to <HWAccels> option.
-						Register<Optional>("HardwareAcceleration", &_hwaccel,
+						Register<Optional>("HardwareAcceleration", &_hwaccel, nullptr,
 							[=]() -> std::shared_ptr<ConfigError> {
 								logw("Config", "The 'HardwareAcceleration' option is deprecated. Please use the 'HWAccels' option.");
 								return nullptr;

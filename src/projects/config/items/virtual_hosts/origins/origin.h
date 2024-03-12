@@ -24,6 +24,7 @@ namespace cfg
 				CFG_DECLARE_CONST_REF_GETTER_OF(IsFailback, _failback)
 				CFG_DECLARE_CONST_REF_GETTER_OF(IsStrictLocation, _strict_location)
 				CFG_DECLARE_CONST_REF_GETTER_OF(IsRelay, _relay)
+				CFG_DECLARE_CONST_REF_GETTER_OF(IsRtcpSrTimestampIgnored, _ignore_rtcp_sr_timestamp)
 
 			protected:
 				void MakeList() override
@@ -34,6 +35,7 @@ namespace cfg
 					Register<Optional>("Failback", &_failback);
 					Register<Optional>("StrictLocation", &_strict_location);
 					Register<Optional>("Relay", &_relay);
+					Register<Optional>("IgnoreRtcpSRTimestamp", &_ignore_rtcp_sr_timestamp);
 				}
 				ov::String _location;
 				Pass _pass;
@@ -41,6 +43,7 @@ namespace cfg
 				bool _failback = false;
 				bool _strict_location = false;
 				bool _relay = false;
+				bool _ignore_rtcp_sr_timestamp = false;
 			};
 		}  // namespace orgn
 	}	   // namespace vhost

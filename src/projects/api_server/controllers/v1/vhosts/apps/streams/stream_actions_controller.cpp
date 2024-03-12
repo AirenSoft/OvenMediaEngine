@@ -237,6 +237,11 @@ namespace api
 			//         "frameType": "TXXX",
 			//         "info": "AirenSoft",
 			//         "data": "OvenMediaEngine"
+			//       },
+			//		 {
+			//         "frameType": "PRIV",
+			//         "info": "AirenSoft",
+			//         "data": "OvenMediaEngine"
 			//       }
 			//   ]
 			// }
@@ -294,6 +299,10 @@ namespace api
 				else if (frame_type.UpperCaseString().Get(0) == 'T')
 				{
 					frame = std::make_shared<ID3v2TextFrame>(frame_type, data);
+				}
+				else if (frame_type.UpperCaseString() == "PRIV")
+				{
+					frame = std::make_shared<ID3v2PrivFrame>(info, data);
 				}
 				else
 				{

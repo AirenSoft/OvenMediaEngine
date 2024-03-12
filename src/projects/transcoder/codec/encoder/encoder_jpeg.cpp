@@ -28,6 +28,11 @@ bool EncoderJPEG::SetCodecParams()
 	// Set color range to JPEG
 	_codec_context->color_range = AVCOL_RANGE_JPEG;
 	_codec_context->strict_std_compliance = FF_COMPLIANCE_STRICT;
+
+	_bitstream_format = cmn::BitstreamFormat::JPEG;
+	
+	_packet_type = cmn::PacketType::RAW;
+
 	return true;
 }
 
@@ -83,77 +88,4 @@ bool EncoderJPEG::Configure(std::shared_ptr<MediaTrack> context)
 	}
 
 	return true;
-}
-
-void EncoderJPEG::CodecThread()
-{
-	while (!_kill_flag)
-	{
-		auto obj = _input_buffer.Dequeue();
-		if (obj.has_value() == false)
-			continue;
-
-		auto media_frame = std::move(obj.value());
-
-		///////////////////////////////////////////////////
-		// Request frame encoding to codec
-		///////////////////////////////////////////////////
-		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
-		if(!av_frame)
-		{
-			logte("Could not allocate the frame data");
-			break;
-		}
-
-		int ret = ::avcodec_send_frame(_codec_context, av_frame);
-		if (ret < 0)
-		{
-			logte("Error sending a frame for encoding : %d", ret);
-		}
-
-		///////////////////////////////////////////////////
-		// The encoded packet is taken from the codec.
-		///////////////////////////////////////////////////
-		while (true)
-		{
-			// Check frame is available
-			int ret = ::avcodec_receive_packet(_codec_context, _packet);
-			if (ret == AVERROR(EAGAIN))
-			{
-				// More packets are needed for encoding.
-				break;
-			}
-			else if (ret == AVERROR_EOF && ret < 0)
-			{
-				logte("Error receiving a packet for decoding : %d", ret);
-				break;
-			}
-			else
-			{
-#if 0
-				logte("encoded size(jpeg) : %d", _packet->size);
-
-				std::ofstream writeFile; 
-				writeFile.open("test.jpg");
-
-				if (writeFile.is_open())   
-				{
-					writeFile.write((const char*)_packet->data, _packet->size);    
-				}
-				writeFile.close();
-#endif
-
-				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::JPEG, cmn::PacketType::RAW);
-				if (media_packet == nullptr)
-				{
-					logte("Could not allocate the media packet");
-					break;
-				}
-
-				::av_packet_unref(_packet);
-
-				SendOutputBuffer(std::move(media_packet));
-			}
-		}
-	}
 }

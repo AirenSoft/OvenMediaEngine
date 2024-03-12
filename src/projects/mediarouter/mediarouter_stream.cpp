@@ -890,7 +890,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			// Time difference in pts values relative to uptime
 			int64_t last_delay = uptime - rescaled_last_pts;
 
-			stat_track_str.AppendFormat("\n\ttrack:%11d, type: %4s, codec: %4s(%d,%s), pts: %lldms, dly: %5lldms, tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %s/%s",
+			stat_track_str.AppendFormat("\n\ttrack:%11d, type: %5s, codec: %4s(%d,%s), pts: %lldms, dly: %5lldms, tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %s/%s",
 										track_id,
 										GetMediaTypeString(track->GetMediaType()).CStr(),
 										::StringFromMediaCodecId(track->GetCodecId()).CStr(),
@@ -908,9 +908,14 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 				continue;
 			}
 
-			if(track->GetMediaType() == MediaType::Video)
+			if (track->GetMediaType() == MediaType::Video)
 			{
-				stat_track_str.AppendFormat(", fps: %.2f", track->GetFrameRate());
+				stat_track_str.AppendFormat(", fps: %.2f/%.2f",
+											track->GetFrameRateByMeasured(), track->GetFrameRate());
+				stat_track_str.AppendFormat(", kint: %d/%d/%s",
+											track->GetKeyFrameIntervalByMeasured(),
+											track->GetKeyFrameInterval(),
+											cmn::GetKeyFrameIntervalTypeToString(track->GetKeyFrameIntervalTypeByConfig()).CStr());
 			}
 
 			// calc min/max pts
@@ -930,7 +935,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 
 		ov::String stat_stream_str = "";
 
-		stat_stream_str.AppendFormat("\n - MediaRouter Stream | id: %u, type: %s, name: %s/%s, uptime: %lldms, queue: %d, sync: %lldms",
+		stat_stream_str.AppendFormat("\n - Stream | id: %u, type: %s, name: %s/%s, uptime: %lldms, queue: %d, sync: %lldms",
 									 _stream->GetId(),
 									 _inout_type == MediaRouterStreamType::INBOUND ? "Inbound" : "Outbound",
 									 _stream->GetApplicationInfo().GetName().CStr(),
@@ -1148,8 +1153,9 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		pop_media_packet->GetDuration() < 0)
 	{
 		logtw("[%s/%s] found invalid duration of packet. We need to find the cause of the incorrect Duration.", _stream->GetApplicationName(), _stream->GetName().CStr());
-				DumpPacket(pop_media_packet, false);
-				return nullptr;
+		DumpPacket(pop_media_packet, false);
+
+		return nullptr;
 	}
 
 	media_track->OnFrameAdded(pop_media_packet);

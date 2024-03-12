@@ -170,6 +170,7 @@ private:
 	// [ENCODER_ID, ENCODER]
 	std::map<MediaTrackId, std::shared_ptr<TranscodeEncoder>> _encoders;
 
+	std::atomic<bool> _create_success = false;
 
 	std::shared_ptr<MediaTrack> GetInputTrack(MediaTrackId track_id);
 	std::shared_ptr<info::Stream> GetInputStream();

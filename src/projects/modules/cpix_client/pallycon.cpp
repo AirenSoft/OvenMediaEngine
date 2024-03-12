@@ -206,10 +206,10 @@ namespace cpix
             {
                 cenc_property.scheme = bmff::CencProtectScheme::Cbcs;
             }
-            // else if (common_encryption_scheme_value == "cenc")
-            // {
-            //     cenc_property.scheme = bmff::CencProtectScheme::Cenc;
-            // }
+            else if (common_encryption_scheme_value == "cenc")
+            {
+                cenc_property.scheme = bmff::CencProtectScheme::Cenc;
+            }
             else
             {
                 logte("Invalid or not support commonEncryptionScheme value: %s", common_encryption_scheme_value.CStr());

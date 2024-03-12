@@ -101,9 +101,10 @@ bool TranscodeFilter::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 		if (Create() == false)
 		{
 			logte("Failed to regenerate filter");
-
 			return false;
 		}
+
+		return true;
 	}
 
 	std::shared_lock<std::shared_mutex> lock(_mutex);

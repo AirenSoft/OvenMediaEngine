@@ -49,6 +49,7 @@ void MediaRouterStreamTap::Start()
 void MediaRouterStreamTap::Stop()
 {
     _is_started = false;
+    _buffer.Clear();
 }
 
 std::shared_ptr<MediaPacket> MediaRouterStreamTap::Pop(int timeout_in_msec)

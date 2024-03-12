@@ -28,7 +28,19 @@ bool EncoderAVCxNILOGAN::SetCodecParams()
 	_codec_context->pix_fmt = (AVPixelFormat)GetSupportedFormat();
 	_codec_context->width = GetRefTrack()->GetWidth();
 	_codec_context->height = GetRefTrack()->GetHeight();
-	_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
+
+	// KeyFrame Interval By Time
+	if(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::TIME)
+	{
+		// When inserting a keyframe based on time, set the GOP value to 10 seconds.
+		_codec_context->gop_size = (int32_t)(GetRefTrack()->GetFrameRate() * 10);
+		_force_keyframe_timer.Start(GetRefTrack()->GetKeyFrameInterval());
+	}
+	// KeyFrame Interval By Frame
+	if(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::FRAME)
+	{
+		_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
+	}
 	
 	//disable b-frames
 	/*
@@ -75,6 +87,9 @@ bool EncoderAVCxNILOGAN::SetCodecParams()
 		}
 	}
 
+	_bitstream_format = cmn::BitstreamFormat::H264_ANNEXB;
+	
+	_packet_type = cmn::PacketType::NALU;
 
 	return true;
 }
@@ -142,64 +157,4 @@ bool EncoderAVCxNILOGAN::Configure(std::shared_ptr<MediaTrack> context)
 	}
 
 	return true;
-}
-
-void EncoderAVCxNILOGAN::CodecThread()
-{
-	while (!_kill_flag)
-	{
-		auto obj = _input_buffer.Dequeue();
-		if (obj.has_value() == false)
-			continue;
-
-		auto media_frame = std::move(obj.value());
-
-		///////////////////////////////////////////////////
-		// Request frame encoding to codec
-		///////////////////////////////////////////////////
-		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
-		if (!av_frame)
-		{
-			logte("Could not allocate the video frame data");
-			break;
-		}
-
-		int ret = ::avcodec_send_frame(_codec_context, av_frame);
-		if (ret < 0)
-		{
-			logte("Error sending a frame for encoding : %d", ret);
-		}
-
-		///////////////////////////////////////////////////
-		// The encoded packet is taken from the codec.
-		///////////////////////////////////////////////////
-		while (true)
-		{
-			// Check frame is available
-			int ret = ::avcodec_receive_packet(_codec_context, _packet);
-			if (ret == AVERROR(EAGAIN))
-			{
-				// More packets are needed for encoding.
-				break;
-			}
-			else if (ret == AVERROR_EOF && ret < 0)
-			{
-				logte("Error receiving a packet for decoding : %d", ret);
-				break;
-			}
-			else
-			{
-				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::H264_ANNEXB, cmn::PacketType::NALU);
-				if (media_packet == nullptr)
-				{
-					logte("Could not allocate the media packet");
-					break;
-				}
-
-				::av_packet_unref(_packet);
-
-				SendOutputBuffer(std::move(media_packet));
-			}
-		}
-	}
 }

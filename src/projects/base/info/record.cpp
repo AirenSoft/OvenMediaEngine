@@ -15,6 +15,7 @@ namespace info
 
 		_created_time = std::chrono::system_clock::now();
 		_id = "";
+		_automated = false;
 		_metadata = "";
 		_transaction_id = "";
 
@@ -60,6 +61,16 @@ namespace info
 	ov::String Record::GetId() const
 	{
 		return _id;
+	}
+
+	void Record::SetAutomated(bool automated)
+	{
+		_automated = automated;
+	}
+
+	bool Record::IsAutomated()
+	{
+		return _automated;
 	}
 
 	void Record::SetMetadata(ov::String metadata)
@@ -418,7 +429,7 @@ namespace info
 		info.AppendFormat(" sequence(%d)", _sequence);
 		info.AppendFormat(" tmp_path(%s)", _tmp_path.CStr());
 		info.AppendFormat(" file_path(%s)", _output_file_path.CStr());
-		info.AppendFormat(" info_path(%s)", _output_file_path.CStr());
+		info.AppendFormat(" info_path(%s)", _output_info_path.CStr());
 		info.AppendFormat(" bytes(%lld)", _record_bytes);
 		info.AppendFormat(" total_bytes(%lld)", _record_total_bytes);
 		info.AppendFormat(" total_time(%lld)", _record_total_time);

@@ -36,6 +36,10 @@ bool EncoderFFOPUS::SetCodecParams()
 	::av_opt_set(_codec_context->priv_data, "packet_loss", "10", 0);
 	::av_opt_set(_codec_context->priv_data, "vbr", "off", 0);
 
+	_bitstream_format = cmn::BitstreamFormat::OPUS;
+	
+	_packet_type = cmn::PacketType::RAW;
+
 	return true;
 }
 
@@ -94,67 +98,3 @@ bool EncoderFFOPUS::Configure(std::shared_ptr<MediaTrack> output_context)
 	return true;
 }
 
-void EncoderFFOPUS::CodecThread()
-{
-	while (!_kill_flag)
-	{
-		auto obj = _input_buffer.Dequeue();
-		if (obj.has_value() == false)
-			continue;
-
-		auto media_frame = std::move(obj.value());
-
-		///////////////////////////////////////////////////
-		// Request frame encoding to codec
-		///////////////////////////////////////////////////
-		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Audio, media_frame);
-		if(!av_frame)
-		{
-			logte("Could not allocate the frame data");
-			break;
-		}
-
-		int ret = ::avcodec_send_frame(_codec_context, av_frame);
-		if (ret < 0)
-		{
-			logte("Error sending a frame for encoding : %d", ret);
-		}
-
-
-		///////////////////////////////////////////////////
-		// The encoded packet is taken from the codec.
-		///////////////////////////////////////////////////
-		while (true)
-		{
-			int ret = ::avcodec_receive_packet(_codec_context, _packet);
-			if (ret == AVERROR(EAGAIN))
-			{
-				// Wait for more packet
-				break;
-			}
-			else if (ret == AVERROR_EOF && ret < 0)
-			{
-				logte("Error receiving a packet for decoding : %d", ret);
-				break;
-			}
-			else
-			{
-				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, cmn::MediaType::Audio, cmn::BitstreamFormat::OPUS, cmn::PacketType::RAW);
-				if (media_packet == nullptr)
-				{
-					logte("Could not allocate the media packet");
-					break;
-				}
-
-				::av_packet_unref(_packet);
-
-				// TODO : If the pts value are under zero, the dash packetizer does not work.
-				if (media_packet->GetPts() < 0) {
-					continue;
-				}
-
-				SendOutputBuffer(std::move(media_packet));
-			}
-		}
-	}
-}

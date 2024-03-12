@@ -15,12 +15,14 @@ VideoTrack::VideoTrack()
 	  _video_timescale(0),
 	  _width(0),
 	  _height(0),
-		_key_frame_interval(0),
+	  _key_frame_interval(0),
 	  _key_frame_interval_conf(0),
+	  _key_frame_interval_type_conf(cmn::KeyFrameIntervalType::FRAME),
 	  _b_frames(0),
 	  _has_bframe(false),
 	  _preset(""),
-	  _thread_count(0)
+	  _thread_count(0),
+	  _skip_frames_conf(-1) // Default value is -1
 {
 }
 
@@ -126,6 +128,16 @@ int32_t VideoTrack::GetKeyFrameIntervalByConfig() const
 	return _key_frame_interval_conf;
 }
 
+void VideoTrack::SetKeyFrameIntervalTypeByConfig(cmn::KeyFrameIntervalType key_frame_interval_type)
+{
+	_key_frame_interval_type_conf = key_frame_interval_type;
+}
+
+cmn::KeyFrameIntervalType VideoTrack::GetKeyFrameIntervalTypeByConfig() const
+{
+	return _key_frame_interval_type_conf;
+}
+
 void VideoTrack::SetBFrames(int32_t b_frames)
 {
 	_b_frames = b_frames;
@@ -209,3 +221,12 @@ int32_t VideoTrack::GetHeightByConfig() const
 	return _height_conf;
 }
 
+void VideoTrack::SetSkipFramesByConfig(int32_t skip_frames)
+{
+	_skip_frames_conf = skip_frames;
+}
+
+int32_t VideoTrack::GetSkipFramesByConfig() const
+{
+	return _skip_frames_conf;
+}

@@ -72,8 +72,14 @@ public:
 	void SetKeyFrameIntervalByConfig(int32_t key_frame_interval);
 	int32_t GetKeyFrameIntervalByConfig() const;
 
+	void SetKeyFrameIntervalTypeByConfig(cmn::KeyFrameIntervalType key_frame_interval_type);
+	cmn::KeyFrameIntervalType GetKeyFrameIntervalTypeByConfig() const;
+
 	void SetBFrames(int32_t b_frames);
 	int32_t GetBFrames();
+
+	void SetSkipFramesByConfig(int32_t skip_frames);
+	int32_t GetSkipFramesByConfig() const;
 
 protected:
 
@@ -98,7 +104,9 @@ protected:
 	int32_t _key_frame_interval;
 	// Key Frame Interval (set by user)
 	int32_t _key_frame_interval_conf;
-	
+	// Key Frame Interval Type (set by user)
+	cmn::KeyFrameIntervalType _key_frame_interval_type_conf;
+
 	// Number of B-frame (set by user)
 	int32_t _b_frames;
 	
@@ -117,4 +125,11 @@ protected:
 	
 	// Thread count of codec (set by user)
 	int _thread_count;	
+
+	// Skip frames (set by user)
+	// If the set value is greater than or equal to 0, the skip frame is automatically calculated. 
+	// The skip frame is not less than the value set by the user.
+	// -1 : No SkipFrame
+	// 0 ~ 120 : minimum value of SkipFrames. it is automatically calculated and the SkipFrames value is changed.
+	int32_t _skip_frames_conf;
 };

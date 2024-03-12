@@ -31,9 +31,10 @@
 
 std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeDecoder::GetCandidates(bool hwaccels_enable, ov::String hwaccles_modules, std::shared_ptr<MediaTrack> track)
 {
-	logtd("Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s)", GetStringFromCodecId(track->GetCodecId()).CStr(), hwaccels_enable?"true":"falase", hwaccles_modules.CStr());
+	logtd("Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s)", GetCodecIdToString(track->GetCodecId()).CStr(), hwaccels_enable?"true":"falase", hwaccles_modules.CStr());
 
 	ov::String configuration = "";
+	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidate_modules = std::make_shared<std::vector<std::shared_ptr<CodecCandidate>>>();
 
 	if(hwaccels_enable == true)
 	{
@@ -44,11 +45,15 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeDecoder::
 		configuration = "";
 	}
 
-	std::vector<ov::String> desire_modules;
-	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidate_modules = std::make_shared<std::vector<std::shared_ptr<CodecCandidate>>>();
-	
+	// If the track is not video, the default module is the only candidate.
+	if (cmn::IsVideoCodec(track->GetCodecId()) == false)
+	{
+		candidate_modules->push_back(std::make_shared<CodecCandidate>(track->GetCodecId(), cmn::MediaCodecModuleId::DEFAULT, 0));
+		return candidate_modules;
+	}
+
 	// ex) hwaccels_modules = "XMA:0,NV:0,QSV:0"
-	desire_modules = configuration.Split(",");
+	std::vector<ov::String> desire_modules = configuration.Split(",");
 
 	// If no modules are configured, all modules are designated as candidates.
 	if (desire_modules.size() == 0 || configuration.IsEmpty() == true)
@@ -111,8 +116,10 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeDecoder::
 	
 	for (auto &candidate : *candidate_modules)
 	{
+		(void)(candidate);
+				
 		logtd("Candidate module: %s(%d), %s(%d):%d",
-			  cmn::GetStringFromCodecId(candidate->GetCodecId()).CStr(),
+			  cmn::GetCodecIdToString(candidate->GetCodecId()).CStr(),
 			  candidate->GetCodecId(),
 			  cmn::GetStringFromCodecModuleId(candidate->GetModuleId()).CStr(),
 			  candidate->GetModuleId(),
@@ -234,7 +241,7 @@ done:
 
 		logti("The decoder has been created successfully. track(#%d) codec(%s), module(%s:%d)",
 			track->GetId(),
-			cmn::GetStringFromCodecId(track->GetCodecId()).CStr(),
+			cmn::GetCodecIdToString(track->GetCodecId()).CStr(),
 			cmn::GetStringFromCodecModuleId(track->GetCodecModuleId()).CStr(),
 			track->GetCodecDeviceId());		
 	}
@@ -326,7 +333,7 @@ void TranscodeDecoder::SendBuffer(std::shared_ptr<const MediaPacket> packet)
 	_input_buffer.Enqueue(std::move(packet));
 }
 
-void TranscodeDecoder::SendOutputBuffer(TranscodeResult result, std::shared_ptr<MediaFrame> frame)
+void TranscodeDecoder::Complete(TranscodeResult result, std::shared_ptr<MediaFrame> frame)
 {
 	// Invoke callback function when encoding/decoding is completed.
 	if (_complete_handler)

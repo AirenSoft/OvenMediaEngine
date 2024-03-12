@@ -390,6 +390,30 @@ namespace pvd
 				continue;
 			}
 
+			{
+				// Reject unsupported codec
+				//TODO: I have no idea if rtsp server returns multiple payload types
+				auto first_payload = media_desc->GetFirstPayload();
+				if (first_payload == nullptr)
+				{
+					logte("Failed to get the first Payload type of peer sdp");
+					return false;
+				}
+
+				switch (first_payload->GetCodec())
+				{
+					case PayloadAttr::SupportCodec::H264:
+					case PayloadAttr::SupportCodec::VP8:
+					case PayloadAttr::SupportCodec::MPEG4_GENERIC:
+					case PayloadAttr::SupportCodec::OPUS:
+						break;
+
+					default:
+						logte("%s - Unsupported codec  : %s, it will be ignored", GetName().CStr(), first_payload->GetCodecStr().CStr());
+						continue;
+				}
+			}
+
 			auto control = media_desc->GetControl();
 			if (control.IsEmpty())
 			{

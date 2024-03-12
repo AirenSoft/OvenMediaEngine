@@ -1210,26 +1210,34 @@ namespace pvd
 					// if last item is must be object or array
 					if (i == trigger_list.size()-1)
 					{
-						if (property->GetType() != AmfDataType::Object && property->GetType() != AmfDataType::Array)
+						if (property->GetType() == AmfDataType::Object || property->GetType() == AmfDataType::Array)
 						{
-							logtd("Property type is not object or array: %s / %d", property->GetString(), static_cast<int32_t>(property->GetType()));
-							break;
-						}
+							auto object = property->GetObject();
+							if (object == nullptr)
+							{
+								logtd("Property is not object: %s", property->GetString());
+								break;
+							}
 
-						auto object = property->GetObject();
-						if (object == nullptr)
-						{
-							logtd("Property is not object: %s", property->GetString());
-							break;
+							auto key = trigger_list.at(i);
+							int32_t index = 0;
+							if ((index = object->FindName(key.CStr())) >= 0 && object->GetType(index) == AmfDataType::String)
+							{
+								found = true;
+								auto value = object->GetString(index);
+								GenerateEvent(event, value);
+							}
 						}
-
-						auto key = trigger_list.at(i);
-						int32_t index = 0;
-						if ((index = object->FindName(key.CStr())) >= 0 && object->GetType(index) == AmfDataType::String)
+						else if (property->GetType() == AmfDataType::String)
 						{
 							found = true;
-							auto value = object->GetString(index);
+							auto value = property->GetString();
 							GenerateEvent(event, value);
+						}
+						else
+						{
+							logtd("Document property type mismatch at %d: %s", i-1, property->GetString());
+							break;
 						}
 					}
 					else
@@ -1285,6 +1293,23 @@ namespace pvd
 				}
 
 				tag.AddFrame(std::make_shared<ID3v2TextFrame>(id3v2_event.GetFrameType(), data));
+			}
+			// PRIV
+			else if (id3v2_event.GetFrameType() == "PRIV")
+			{
+				auto owner = id3v2_event.GetInfo();
+				auto data = id3v2_event.GetData();
+
+				if (owner == "${TriggerValue}")
+				{
+					owner = value;
+				}
+				else if (data == "${TriggerValue}")
+				{
+					data = value;
+				}
+
+				tag.AddFrame(std::make_shared<ID3v2PrivFrame>(owner, data));
 			}
 			else
 			{
@@ -1503,7 +1528,15 @@ namespace pvd
 			// 	  dts);
 
 			_last_video_pts = dts;
-			_last_video_pts_clock.Start();
+			
+			if (_last_video_pts_clock.IsStart() == false)
+			{
+				_last_video_pts_clock.Start();
+			} 
+			else 
+			{
+				_last_video_pts_clock.Update();
+			}
 			
 			// Statistics for debugging
 			if (flv_video.FrameType() == FlvVideoFrameTypes::KEY_FRAME)
@@ -1673,8 +1706,16 @@ namespace pvd
 			SendFrame(frame);
 
 			_last_audio_pts = dts;
-			_last_audio_pts_clock.Start();
 
+			if (_last_audio_pts_clock.IsStart() == false)
+			{
+				_last_audio_pts_clock.Start();
+			}
+			else
+			{
+				_last_audio_pts_clock.Update();
+			}
+			
 			_last_audio_timestamp = message->header->completed.timestamp;
 			_audio_frame_count++;
 		}

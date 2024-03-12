@@ -23,7 +23,7 @@ namespace bmff
     enum class CencProtectScheme : uint8_t
     {
         None,
-        Cenc, // Not supported yet
+        Cenc,
         Cbcs
     };
 
@@ -88,7 +88,7 @@ namespace bmff
 
             system_id = stream.GetRemainData(16)->Clone();
 
-            logi("DEBUG", "System ID : %s", system_id->ToHexString().LowerCaseString().CStr());
+            logd("DEBUG", "System ID : %s", system_id->ToHexString().LowerCaseString().CStr());
 
             if (system_id->ToHexString().LowerCaseString() == "edef8ba979d64acea3c827dcd51d21ed")
             {
@@ -193,10 +193,27 @@ namespace bmff
 
     struct CencProperty
     {
-        CencProtectScheme scheme = CencProtectScheme::None;
+        // = operator
+        CencProperty& operator=(const CencProperty &other)
+        {
+            if (this != &other)
+            {
+                scheme = other.scheme;
+                key_id = other.key_id!=nullptr?other.key_id->Clone():nullptr;
+                key = other.key!=nullptr?other.key->Clone():nullptr;
+                iv = other.iv!=nullptr?other.iv->Clone():nullptr;
+                fairplay_key_uri = other.fairplay_key_uri;
+                keyformat = other.keyformat;
+                pssh_box_list = other.pssh_box_list;
+                crypt_bytes_block = other.crypt_bytes_block;
+                skip_bytes_block = other.skip_bytes_block;
+                per_sample_iv_size = other.per_sample_iv_size;
+            }
+            return *this;
+        }
 
-        uint8_t crypt_bytes_block = 1; // number of encrypted blocks in pattern based encryption
-        uint8_t skip_bytes_block = 9; // number of unencrypted blocks in pattern based encryption
+        // set by user or drm provider
+        CencProtectScheme scheme = CencProtectScheme::None;
 
         std::shared_ptr<ov::Data> key_id = nullptr; // 16 bytes 
         std::shared_ptr<ov::Data> key = nullptr; // 16 bytes
@@ -206,6 +223,11 @@ namespace bmff
         ov::String keyformat;
         
         std::vector<PsshBox> pssh_box_list;
+
+        // will be set by stream
+        uint8_t crypt_bytes_block = 1; // number of encrypted blocks in pattern based encryption
+        uint8_t skip_bytes_block = 9; // number of unencrypted blocks in pattern based encryption
+        uint8_t per_sample_iv_size = 0; // 0 or 16
     };
 
     class Encryptor
@@ -226,11 +248,21 @@ namespace bmff
         bool EncryptCbc(const uint8_t *source, size_t source_size, uint8_t *dest, bool last_block);
         bool EncryptCtr(const uint8_t *source, size_t source_size, uint8_t *dest, bool last_block);
 
+        bool UpdateIv();
+        bool SetCounter();
+        bool IncrementCounter();
+
         CencProperty _cenc_property;
         std::shared_ptr<const MediaTrack> _media_track = nullptr;
 
         std::function<bool(const uint8_t*, size_t, uint8_t*, bool)> _encrypt_func = nullptr;
 
         ov::AES _aes;
+
+        // For CTR mode
+        uint32_t _block_offset = 0;
+        uint32_t _sample_cipher_block_count = 0;
+        uint8_t _counter[AES_BLOCK_SIZE] = { 0, };
+        uint8_t _encrypted_counter[AES_BLOCK_SIZE] = { 0, };
     };
 }

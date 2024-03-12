@@ -25,4 +25,10 @@ public:
 	void Stop() override;
 
 	void WorkerThread();
+
+private:
+	bool InitializeSourceFilter();
+	bool InitializeFilterDescription();
+	bool InitializeSinkFilter();
+	
 };

@@ -129,36 +129,45 @@ namespace ov
 		return dirname(path);
 	}
 
-	ov::String GetAbsolutePath(const ov::String &path)
+	ov::String GetFilePath(const ov::String &file_path, const ov::String &relative_root)
 	{
-		ov::String temp = path;
-		ov::String absolute_path;
+		ov::String final_path;
 
-		 // Add trailing slash
-        if (temp.HasSuffix('/') == false)
-        {
-            temp.Append('/');
-        }
+		// Absolute path
+		if (file_path.Get(0) == '/' || file_path.Get(0) == '\\')
+		{
+			final_path = file_path;
+		}
+		// Relative path
+		else
+		{
+			// Get binary path
+			auto root_path = relative_root;
+			if (root_path.IsEmpty())
+			{
+				root_path = ov::GetBinaryPath();
+			}
 
-        // Absolute path
-        if (temp.Get(0) == '/' || temp.Get(0) == '\\')
-        {
-            absolute_path = temp;
-        }
-        // Relative path
-        else
-        {
-            // Get binary path
-            auto binary_path = ov::GetBinaryPath();
-            if (binary_path.HasSuffix('/') == false)
-            {
-                binary_path.Append('/');
-            }
+			if (root_path.HasSuffix('/') == false)
+			{
+				root_path.Append('/');
+			}
 
-            absolute_path = binary_path + temp;
-        }
+			final_path = root_path + file_path;
+		}
 
-		return absolute_path;
+		return final_path;
+	}
+
+	ov::String GetDirPath(const ov::String &dir_path, const ov::String &relative_root)
+	{
+		ov::String final_path = GetFilePath(dir_path, relative_root);
+		if (final_path.HasSuffix('/') == false)
+		{
+			final_path.Append('/');
+		}
+
+		return final_path;
 	}
 
 	ov::String GetFileName(const ov::String &path)

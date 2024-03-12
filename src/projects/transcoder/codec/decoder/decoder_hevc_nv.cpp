@@ -247,41 +247,21 @@ void DecoderHEVCxNV::CodecThread()
 					}
 				}
 
-				AVFrame *sw_frame = ::av_frame_alloc();
-				AVFrame *tmp_frame = NULL;
-
-				if (_frame->format == AV_PIX_FMT_CUDA)
-				{
-					/* retrieve data from GPU to CPU */
-					if ((ret = ::av_hwframe_transfer_data(sw_frame, _frame, 0)) < 0)
-					{
-						logte("Error transferring the data to system memory\n");
-						continue;
-					}
-					tmp_frame = sw_frame;
-				}
-				else
-				{
-					tmp_frame = _frame;
-				}
-				tmp_frame->pts = _frame->pts;
-
 				// If there is no duration, the duration is calculated by framerate and timebase.
 				if(_frame->pkt_duration <= 0LL && _context->framerate.num > 0 && _context->framerate.den > 0)
 				{
 					_frame->pkt_duration = (int64_t)( ((double)_context->framerate.den / (double)_context->framerate.num) / ((double) GetRefTrack()->GetTimeBase().GetNum() / (double) GetRefTrack()->GetTimeBase().GetDen()) );
 				}
 
-				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, tmp_frame);
+				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				if (decoded_frame == nullptr)
 				{
 					continue;
 				}
 
 				::av_frame_unref(_frame);
-				::av_frame_free(&sw_frame);
 
-				SendOutputBuffer(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
+				Complete(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
 			}
 		}
 	}

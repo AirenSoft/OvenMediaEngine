@@ -71,8 +71,8 @@ namespace api
 				return {http::StatusCode::Forbidden}; // Not enabled
 			}
 
-			auto media_root_dir = ov::GetAbsolutePath(schedule_config.GetMediaRootDir());
-			auto schedule_files_dir = ov::GetAbsolutePath(schedule_config.GetScheduleFilesDir());
+			auto media_root_dir = ov::GetDirPath(schedule_config.GetMediaRootDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
+			auto schedule_files_dir = ov::GetDirPath(schedule_config.GetScheduleFilesDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
 
 			auto [schedule, error] = pvd::Schedule::CreateFromJsonObject(request_body, media_root_dir);
 			if (schedule == nullptr)
@@ -145,7 +145,7 @@ namespace api
 				return {http::StatusCode::Forbidden}; // Not enabled
 			}
 
-			auto schedule_files_dir = ov::GetAbsolutePath(schedule_config.GetScheduleFilesDir());
+			auto schedule_files_dir = ov::GetDirPath(schedule_config.GetScheduleFilesDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
 
 			auto old_schedule = scheduled_stream->PeekSchedule();
 			if (old_schedule == nullptr)
@@ -261,8 +261,8 @@ namespace api
 				return {http::StatusCode::Forbidden}; // Not enabled
 			}
 
-			auto media_root_dir = ov::GetAbsolutePath(schedule_config.GetMediaRootDir());
-			auto schedule_files_dir = ov::GetAbsolutePath(schedule_config.GetScheduleFilesDir());
+			auto media_root_dir = ov::GetDirPath(schedule_config.GetMediaRootDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
+			auto schedule_files_dir = ov::GetDirPath(schedule_config.GetScheduleFilesDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
 
 			auto schedule_file_path = ov::String::FormatString("%s/%s.%s", schedule_files_dir.CStr(), stream->GetName().CStr(), pvd::ScheduleFileExtension);
 

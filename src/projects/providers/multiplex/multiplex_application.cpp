@@ -35,18 +35,9 @@ namespace pvd
 
     bool MultiplexApplication::Start()
     {
-        bool parsed = false;
-        auto config = GetConfig().GetProviders().GetMultiplexProvider(&parsed);
+        auto config = GetConfig().GetProviders().GetMultiplexProvider();
 
-        if (parsed == false ||
-            config.GetMuxFilesDir().IsEmpty())
-        {
-            logte("Could not create %s application for MultiplexProvider since invalid configuration", GetName().CStr());
-            return false;
-        }
-
-        _multiplex_files_path = ov::GetAbsolutePath(config.GetMuxFilesDir());
-
+        _multiplex_files_path = ov::GetDirPath(config.GetMuxFilesDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
         _multiplex_file_name_regex = ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(ov::String::FormatString("*.%s", MultiplexFileExtension)));
         
         return Application::Start();
@@ -55,6 +46,24 @@ namespace pvd
     bool MultiplexApplication::Stop()
     {
         return Application::Stop();
+    }
+
+    std::map<ov::String, std::shared_ptr<MultiplexStream>> MultiplexApplication::GetMultiplexStreams()
+    {
+        std::shared_lock<std::shared_mutex> lock(_multiplex_streams_mutex);
+        return _multiplex_streams;
+    }
+
+    std::shared_ptr<MultiplexStream> MultiplexApplication::GetMultiplexStream(const ov::String &stream_name)
+    {
+        std::shared_lock<std::shared_mutex> lock(_multiplex_streams_mutex);
+        auto it = _multiplex_streams.find(stream_name);
+        if (it == _multiplex_streams.end())
+        {
+            return nullptr;
+        }
+
+        return it->second;
     }
 
     // Called by MultiplexProvider thread every 500ms 
@@ -91,13 +100,28 @@ namespace pvd
             }
         }
 
-        // Check if file is deleted
+        // Check if file is deleted or stream is terminated
         for (auto it = _multiplex_file_info_db.begin(); it != _multiplex_file_info_db.end();)
         {
+            bool found = false;
             auto &multiplex_file_info = it->second;
+
+            // Get file stat
             struct stat file_stat = {0};
             auto result = stat(multiplex_file_info._file_path.CStr(), &file_stat);
             if (result != 0 && errno == ENOENT)
+            {
+                found = true;
+            }
+
+            // Check if stream is terminated
+            auto stream = std::static_pointer_cast<MultiplexStream>(GetStreamByName(multiplex_file_info._multiplex_profile->GetOutputStreamName()));
+            if (stream != nullptr && stream->GetState() == Stream::State::TERMINATED)
+            {
+                found = true;
+            }
+
+            if (found == true)
             {
                 // VI Editor ":wq" will delete file and create new file, 
                 // so we need to check if file is really deleted by checking ENOENT 3 times
@@ -198,7 +222,10 @@ namespace pvd
         }
 
         // later stream will call AddStream by itself when it is ready
-        _multiplex_streams.emplace(stream_info.GetName(), stream);
+        {
+            std::lock_guard<std::shared_mutex> lock(_multiplex_streams_mutex);
+            _multiplex_streams.emplace(stream_info.GetName(), stream);
+        }
 
         // Add file info to DB 
         multiplex_file_info._multiplex_profile = multiplex_profile;
@@ -230,18 +257,33 @@ namespace pvd
         }
 
         // Multiplex Provider will delete old stream and create new stream
-        auto stream = std::static_pointer_cast<MultiplexStream>(GetStreamByName(old_profile->GetOutputStreamName()));
+
+        auto stream = GetMultiplexStream(old_profile->GetOutputStreamName());
         if (stream == nullptr)
         {
             logte("Failed to update multiplex (Could not find %s stream): %s", old_profile->GetOutputStreamName().CStr(), multiplex_file_info._file_path.CStr());
             return false;
         }
 
-        _multiplex_streams.erase(old_profile->GetOutputStreamName());
-        if (DeleteStream(stream) == false)
         {
-            logte("Failed to update multiplex (Could not delete %s stream): %s", old_profile->GetOutputStreamName().CStr(), multiplex_file_info._file_path.CStr());
-            return false;
+            // Remove from stream list
+            std::lock_guard<std::shared_mutex> lock(_multiplex_streams_mutex);
+            _multiplex_streams.erase(old_profile->GetOutputStreamName());
+        }
+
+        // Remove from application
+        if (GetStreamByName(old_profile->GetOutputStreamName()) != nullptr)
+        {
+            if (DeleteStream(stream) == false)
+            {
+                logte("Failed to update multiplex (Could not delete %s stream): %s", old_profile->GetOutputStreamName().CStr(), multiplex_file_info._file_path.CStr());
+                return false;
+            }
+        }
+        else
+        {
+            // just stop since stream has not been added to application
+            stream->Stop();
         }
 
         // Create new stream
@@ -263,8 +305,11 @@ namespace pvd
             return false;
         }
 
-        // later stream will call AddStream by itself when it is ready
-        _multiplex_streams.emplace(stream_info.GetName(), new_stream);
+        {
+            // later stream will call AddStream by itself when it is ready
+            std::lock_guard<std::shared_mutex> lock(_multiplex_streams_mutex);
+            _multiplex_streams.emplace(stream_info.GetName(), new_stream);
+        }
 
         new_multiplex_file_info._multiplex_profile = new_profile;
 
@@ -275,20 +320,26 @@ namespace pvd
     {
         auto stream_name = multiplex_file_info._multiplex_profile->GetOutputStreamName();
 
-        // Remove Stream
-        auto stream = std::static_pointer_cast<MultiplexStream>(GetStreamByName(stream_name));
-        if (stream == nullptr)
         {
-            logte("Failed to remove multiplex (Could not find %s stream): %s", stream_name.CStr(), multiplex_file_info._file_path.CStr());
-            return false;
+            auto mux_stream = GetMultiplexStream(stream_name);
+            if (mux_stream != nullptr)
+            {
+                mux_stream->Stop();
+            }
+
+            std::lock_guard<std::shared_mutex> lock(_multiplex_streams_mutex);
+            _multiplex_streams.erase(stream_name);
         }
 
-        _multiplex_streams.erase(stream_name);
-
-        if (DeleteStream(stream) == false)
+         // Remove Stream if it published
+        auto stream = std::static_pointer_cast<MultiplexStream>(GetStreamByName(stream_name));
+        if (stream != nullptr)
         {
-            logte("Failed to remove multiplex (Could not delete %s stream): %s", stream_name.CStr(), multiplex_file_info._file_path.CStr());
-            return false;
+            if (DeleteStream(stream) == false)
+            {
+                logte("Failed to remove multiplex (Could not delete %s stream): %s", stream_name.CStr(), multiplex_file_info._file_path.CStr());
+                return false;
+            }
         }
 
         return true;

@@ -26,7 +26,21 @@ bool EncoderHEVCxNV::SetCodecParams()
 	_codec_context->pix_fmt = (AVPixelFormat)GetSupportedFormat();
 	_codec_context->width = GetRefTrack()->GetWidth();
 	_codec_context->height = GetRefTrack()->GetHeight();
-	_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
+	
+	// KeyFrame Interval By Time
+	if(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::TIME)
+	{
+		// When inserting a keyframe based on time, set the GOP value to 10 seconds.
+		_codec_context->gop_size = (int32_t)(GetRefTrack()->GetFrameRate() * 10);
+		::av_opt_set(_codec_context->priv_data, "forced-idr", "1", 0);
+
+		_force_keyframe_timer.Start(GetRefTrack()->GetKeyFrameInterval());
+	}
+	// KeyFrame Interval By Frame
+	if(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::FRAME)
+	{
+		_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
+	}
 
 	// Preset
 	if (GetRefTrack()->GetPreset() == "slower")
@@ -57,6 +71,10 @@ bool EncoderHEVCxNV::SetCodecParams()
 	
 	::av_opt_set(_codec_context->priv_data, "tune", "ull", 0);
 	::av_opt_set(_codec_context->priv_data, "rc", "cbr", 0);
+
+	_bitstream_format = cmn::BitstreamFormat::H265_ANNEXB;
+	
+	_packet_type = cmn::PacketType::NALU;
 
 	return true;
 }
@@ -99,6 +117,28 @@ bool EncoderHEVCxNV::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
+	auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, GetRefTrack()->GetCodecDeviceId());
+	if(hw_device_ctx == nullptr)
+	{
+		logte("Could not get hw device context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		return false;
+	}
+
+	// Assign HW device context to encoder
+	if(ffmpeg::Conv::SetHwDeviceCtxOfAVCodecContext(_codec_context, hw_device_ctx) == false)
+	{
+		logte("Could not set hw device context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		return false;
+	}
+
+
+	// Assign HW frames context to encoder
+	if(ffmpeg::Conv::SetHWFramesCtxOfAVCodecContext(_codec_context) == false)
+	{
+		logte("Could not set hw frames context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		return false;
+	}
+
 	if (::avcodec_open2(_codec_context, codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", codec->name, codec->id);
@@ -122,65 +162,4 @@ bool EncoderHEVCxNV::Configure(std::shared_ptr<MediaTrack> context)
 	}
 
 	return true;
-}
-
-void EncoderHEVCxNV::CodecThread()
-{
-	while (!_kill_flag)
-	{
-		auto obj = _input_buffer.Dequeue();
-		if (obj.has_value() == false)
-			continue;
-
-
-		auto media_frame = std::move(obj.value());
-
-		///////////////////////////////////////////////////
-		// Request frame encoding to codec
-		///////////////////////////////////////////////////
-		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
-		if(!av_frame)
-		{
-			logte("Could not allocate the frame data");
-			break;
-		}
-
-		int ret = ::avcodec_send_frame(_codec_context, av_frame);
-		if (ret < 0)
-		{
-			logte("Error sending a frame for encoding : %d", ret);
-		}
-
-		///////////////////////////////////////////////////
-		// The encoded packet is taken from the codec.
-		///////////////////////////////////////////////////
-		while (true)
-		{
-			// Check frame is available
-			int ret = ::avcodec_receive_packet(_codec_context, _packet);
-			if (ret == AVERROR(EAGAIN))
-			{
-				// More packets are needed for encoding.
-				break;
-			}
-			else if (ret == AVERROR_EOF && ret < 0)
-			{
-				logte("Error receiving a packet for decoding : %d", ret);
-				break;
-			}
-			else
-			{
-				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, cmn::MediaType::Video, cmn::BitstreamFormat::H265_ANNEXB, cmn::PacketType::NALU);
-				if (media_packet == nullptr)
-				{
-					logte("Could not allocate the media packet");
-					break;
-				}
-
-				::av_packet_unref(_packet);
-
-				SendOutputBuffer(std::move(media_packet));
-			}
-		}
-	}
 }
