@@ -1382,7 +1382,7 @@ namespace ov
 			*total_sent_bytes += sent;
 		}
 
-		logtp("[#%d] %zu bytes sent", total_sent_bytes);
+		logtp("[#%d] %zu bytes sent", socket_handle, *total_sent_bytes);
 
 		return true;
 	}
