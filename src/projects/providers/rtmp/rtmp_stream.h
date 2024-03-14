@@ -14,10 +14,9 @@
 #include "modules/access_control/access_controller.h"
 
 #include "chunk/amf_document.h"
-#include "chunk/rtmp_chunk_parser.h"
 #include "chunk/rtmp_export_chunk.h"
 #include "chunk/rtmp_handshake.h"
-#include "chunk/rtmp_import_chunk.h"
+#include "chunk/rtmp_chunk_parser.h"
 
 #define MAX_STREAM_MESSAGE_COUNT (500)
 #define BASELINE_PROFILE (66)
@@ -77,7 +76,7 @@ namespace pvd
 		bool SendUserControlMessage(uint16_t message, std::shared_ptr<std::vector<uint8_t>> &data);
 		bool SendWindowAcknowledgementSize(uint32_t size);
 		bool SendSetPeerBandwidth(uint32_t bandwidth);
-		bool SendStreamBegin();
+		bool SendStreamBegin(uint32_t stream_id);
 		bool SendStreamEnd();
 		bool SendAcknowledgementSize();
 		bool SendAmfCommand(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document);
@@ -129,7 +128,7 @@ namespace pvd
 		// RTMP related
 		RtmpHandshakeState _handshake_state = RtmpHandshakeState::Uninitialized;
 		
-		std::shared_ptr<RtmpImportChunk> _import_chunk;
+		std::shared_ptr<RtmpChunkParser> _import_chunk;
 		std::shared_ptr<RtmpExportChunk> _export_chunk;
 		std::shared_ptr<RtmpMediaInfo> _media_info;
 
@@ -138,7 +137,10 @@ namespace pvd
 		uint32_t _stream_message_cache_audio_count = 0;
 
 		uint32_t _acknowledgement_size = RTMP_DEFAULT_ACKNOWNLEDGEMENT_SIZE / 2;
+		// Accumulated amount of traffic since the stream started
 		uint32_t _acknowledgement_traffic = 0;
+		// The accumulated amount of traffic since the last ACK was sent
+		uint32_t _acknowledgement_traffic_after_last_acked = 0;
 		uint32_t _rtmp_stream_id = 1;
 		uint32_t _peer_bandwidth = RTMP_DEFAULT_PEER_BANDWIDTH;
 		double _client_id = 12345.0;

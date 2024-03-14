@@ -1,144 +1,216 @@
 //==============================================================================
 //
-//  RtmpProvider
+//  OvenMediaEngine
 //
 //  Created by Hyunjun Jang
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #include "rtmp_chunk_parser.h"
-#include "providers/rtmp/rtmp_provider_private.h"
 
-off_t RtmpChunkParser::Parse(const std::map<uint32_t, std::shared_ptr<const RtmpChunkHeader>> &chunk_map, ov::ByteStream &stream)
+#include "../rtmp_provider_private.h"
+
+RtmpChunkParser::RtmpChunkParser(int chunk_size)
+	: _vhost_app_name(info::VHostAppName::InvalidVHostAppName())
 {
-	off_t total_parsed_bytes = 0LL;
-	off_t parsed_bytes = 0LL;
-
-	while (stream.IsEmpty() == false)
-	{
-		switch (_parse_status)
-		{
-			case ParseStatus::BasicHeader:
-				logtd("Trying to parse basic header...");
-
-				_current_chunk_header = std::make_shared<RtmpChunkHeader>();
-				total_parsed_bytes = 0LL;
-
-				switch (ParseBasicHeader(stream, &parsed_bytes))
-				{
-					case ParseResult::NeedMoreData:
-						logtd("Waiting for more data to parse (%jd bytes used)", total_parsed_bytes);
-						return total_parsed_bytes;
-
-					case ParseResult::Completed:
-						_parse_status = ParseStatus::MessageHeader;
-						total_parsed_bytes += parsed_bytes;
-						logtd("RTMP chunk is parsed (%jd bytes used)", total_parsed_bytes);
-						break;
-
-					case ParseResult::Failed:
-						return -1LL;
-				}
-
-				break;
-
-			case ParseStatus::MessageHeader:
-				switch (ParseMessageHeader(stream, &parsed_bytes))
-				{
-					case ParseResult::NeedMoreData:
-						return total_parsed_bytes;
-
-					case ParseResult::Completed:
-						_parse_status = ParseStatus::ExtendedTimestamp;
-						total_parsed_bytes += parsed_bytes;
-						break;
-
-					case ParseResult::Failed:
-						return -1LL;
-				}
-
-				break;
-
-			case ParseStatus::ExtendedTimestamp:
-			{
-				auto last_chunk_item = chunk_map.find(_current_chunk_header->basic_header.stream_id);
-				std::shared_ptr<const RtmpChunkHeader> last_chunk;
-
-				if (last_chunk_item != chunk_map.end())
-				{
-					last_chunk = last_chunk_item->second;
-				}
-
-				switch (ParseExtendedTimestamp(last_chunk, stream, &parsed_bytes))
-				{
-					case ParseResult::NeedMoreData:
-						return total_parsed_bytes;
-
-					case ParseResult::Completed:
-						_parse_status = ParseStatus::Completed;
-						total_parsed_bytes += parsed_bytes;
-						_current_chunk_header->RecalculateHeaderSize();
-
-						return total_parsed_bytes;
-
-					case ParseResult::Failed:
-						return -1LL;
-				}
-
-				break;
-			}
-
-			case ParseStatus::Completed:
-				_parse_status = ParseStatus::BasicHeader;
-
-				break;
-		}
-	}
-
-	return total_parsed_bytes;
+	_chunk_size = chunk_size;
 }
 
-RtmpChunkType RtmpChunkParser::GetChunkType(uint8_t first_byte)
+RtmpChunkParser::~RtmpChunkParser()
 {
-	auto chunk_type = static_cast<RtmpChunkType>(first_byte & 0b11000000);
+	Destroy();
+}
 
-	// Validate RTMP chunk type
-	switch (chunk_type)
+RtmpChunkParser::ParseResult RtmpChunkParser::Parse(const std::shared_ptr<const ov::Data> &data, size_t *bytes_used)
+{
+	ov::ByteStream stream(data.get());
+
+	*bytes_used = 0ULL;
+
+	logtp("Trying to parse RTMP chunk from %zu bytes (chunk size: %zu)", stream.Remained(), _chunk_size);
+
+	if (_need_to_parse_new_header)
 	{
-		case RtmpChunkType::T0:
-		case RtmpChunkType::T1:
-		case RtmpChunkType::T2:
-		case RtmpChunkType::T3:
+		// Need to parse new header when parsing for the first time or when reaching the chunk size
+		auto parsed_chunk_header = std::make_shared<RtmpChunkHeader>();
+		auto status = ParseHeader(stream, parsed_chunk_header.get());
+		if (status != ParseResult::Parsed)
+		{
+			// If the header parsing fails, the bytes_used value is not updated to try parsing again from the beginning next time.
+			return status;
+		}
+
+		_need_to_parse_new_header = false;
+
+#if DEBUG
+		parsed_chunk_header->chunk_index = _chunk_index;
+		parsed_chunk_header->from_byte_offset = _total_read_bytes;
+#endif	// DEBUG
+
+		logtp("RTMP header is parsed: %s", parsed_chunk_header->ToString().CStr());
+
+		if (_current_message != nullptr)
+		{
+			auto &current_chunk_header = _current_message->header;
+			const auto current_chunk_stream_id = current_chunk_header->basic_header.chunk_stream_id;
+			const auto new_chunk_stream_id = parsed_chunk_header->basic_header.chunk_stream_id;
+
+			if (current_chunk_stream_id != new_chunk_stream_id)
+			{
+				// If there is a message being parsed, but a discontinuous message comes in, it is put in the map to be parsed later.
+				logtd("New chunk stream ID is detected: %u -> %u", current_chunk_stream_id, new_chunk_stream_id);
+
+				_pending_message_map[current_chunk_stream_id] = _current_message;
+
+				if (_pending_message_map.size() > 10)
+				{
+					logtw("Too many pending RTMP messages: %zu", _pending_message_map.size());
+				}
+
+				// Check if there was something being parsed
+				auto old_chunk = _pending_message_map.find(new_chunk_stream_id);
+
+				if (old_chunk != _pending_message_map.end())
+				{
+					logtd("Found pending message for chunk stream ID: %u", new_chunk_stream_id);
+
+					// Just append the data to the message being parsed
+					_current_message = old_chunk->second;
+
+					if (parsed_chunk_header->basic_header.format_type != RtmpMessageHeaderType::T3)
+					{
+						logte("Expected Type 3 header, but got: %d", parsed_chunk_header->basic_header.format_type);
+					}
+
+					_pending_message_map.erase(new_chunk_stream_id);
+				}
+				else
+				{
+					// If there was nothing being parsed, create a new message
+					_current_message = nullptr;
+				}
+			}
+			else
+			{
+				// If a continuous chunk comes in with the same chunk stream ID, it is combined.
+			}
+		}
+
+		if (_current_message == nullptr)
+		{
+			auto pending_message = _pending_message_map.find(parsed_chunk_header->basic_header.chunk_stream_id);
+
+			if (pending_message == _pending_message_map.end())
+			{
+				// If there was nothing being parsed, create a new message
+				_current_message = std::make_shared<RtmpMessage>(
+					parsed_chunk_header,
+					std::make_shared<ov::Data>(parsed_chunk_header->message_length));
+			}
+			else
+			{
+				_current_message = pending_message->second;
+				_pending_message_map.erase(pending_message);
+			}
+		}
+	}
+	else
+	{
+		// The header has already been parsed. Only the payload part needs to be parsed.
+	}
+
+	// Parse the payload
+
+	// RTMP data exists up to the maximum chunk size
+	ParseResult status;
+	logtp("Parsing RTMP Payload (%zu bytes needed)\n%s", _current_message->GetRemainedPayloadSize(), stream.Dump(32).CStr());
+
+	if (_current_message->payload->GetLength() > 0)
+	{
+		logtp("Append payload to current message payload: %s", _current_message->payload->Dump(32).CStr());
+	}
+	else
+	{
+		logtp("No payload in current message");
+	}
+
+	if (_current_message->ReadFromStream(stream, _chunk_size))
+	{
+		auto &current_message_header = _current_message->header;
+		_preceding_chunk_header_map[current_message_header->basic_header.chunk_stream_id] = current_message_header;
+
+		if (_current_message->GetRemainedPayloadSize() == 0UL)
+		{
+			// A new message is completed
+			_message_queue.Enqueue(_current_message);
+
+#if DEBUG
+			_chunk_index++;
+			current_message_header->message_total_bytes = (_total_read_bytes + stream.GetOffset()) - current_message_header->from_byte_offset;
+#endif	// DEBUG
+
+			logtd("New RTMP message is enqueued: %s", current_message_header->ToString().CStr());
+			logtp("New RTMP message payload: %s", _current_message->payload->Dump().CStr());
+			_current_message = nullptr;
+
+			status = ParseResult::Parsed;
+		}
+		else
+		{
+			logtp("Need to parse next chunk (%zu bytes remained to completed current messasge)", _current_message->GetRemainedPayloadSize());
+		}
+
+		// A new message is completed or the chunk size is reached, so a new header parsing is required.
+		_need_to_parse_new_header = true;
+	}
+	else
+	{
+		logtp("Need more data to parse payload: %zu bytes (current: %zu)", _current_message->GetRemainedPayloadSize(), stream.Remained());
+		status = ParseResult::NeedMoreData;
+	}
+
+#if DEBUG
+	_total_read_bytes += stream.GetOffset();
+#endif	// DEBUG
+
+	*bytes_used = stream.GetOffset();
+
+	return status;
+}
+
+RtmpChunkParser::ParseResult RtmpChunkParser::ParseBasicHeader(ov::ByteStream &stream, RtmpChunkHeader *chunk_header)
+{
+	if (stream.IsEmpty())
+	{
+		logtp("Need more data to parse basic header");
+		return ParseResult::NeedMoreData;
+	}
+
+	const auto first_byte = stream.Read8();
+
+	auto &basic_header = chunk_header->basic_header;
+
+	// Parse basic header
+	basic_header.format_type = static_cast<RtmpMessageHeaderType>((first_byte & 0b11000000) >> 6);
+	basic_header.chunk_stream_id = (first_byte & 0b00111111);
+
+	switch (basic_header.chunk_stream_id)
+	{
+		case 0b000000:
+			// Value 0 indicates the 2 byte form and an ID in the range of 64-319
+			// (the second byte + 64)
+			chunk_header->basic_header_length = 2;
+			break;
+
+		case 0b000001:
+			// Value 1 indicates the 3 byte form and an ID in the range of 64-65599
+			// ((the third byte) * 256 + the second byte + 64)
+			chunk_header->basic_header_length = 3;
 			break;
 
 		default:
-			// It is 4 bits, so no other value can be obtained
-			OV_ASSERT2(false);
-	}
-
-	return chunk_type;
-}
-
-int RtmpChunkParser::GetBasicHeaderSize(uint8_t first_byte)
-{
-	int chunk_stream_id = first_byte & 0b00111111;
-
-	switch (chunk_stream_id)
-	{
-		case 0:
-			// Value 0 indicates the 2 byte form and an ID in the range of 64-319
-			// (the second byte + 64)
-			return 2;
-
-		case 1:
-			// Value 1 indicates the 3 byte form and an ID in the range of 64-65599
-			// ((the third byte)*256 + the second byte + 64)
-			return 3;
-
-		default:
 			// Chunk stream IDs 2-63 can be encoded in the 1-byte version of this field
-
-			if (chunk_stream_id == 2)
+			if (basic_header.chunk_stream_id == 2)
 			{
 				// Chunk Stream ID with value 2 is reserved for low-level protocol control messages and commands
 			}
@@ -147,229 +219,406 @@ int RtmpChunkParser::GetBasicHeaderSize(uint8_t first_byte)
 				// Values in the range of 3-63 represent the complete stream ID
 			}
 
-			return 1;
+			chunk_header->basic_header_length = 1;
+			break;
 	}
-}
 
-RtmpChunkParser::ParseResult RtmpChunkParser::ParseBasicHeader(ov::ByteStream &stream, off_t *parsed_bytes)
-{
-	// The protocol supports up to 65597 streams with IDs 3-65599. The IDs
-	// 0, 1, and 2 are reserved. Value 0 indicates the 2 byte form and an
-	// ID in the range of 64-319 (the second byte + 64). Value 1 indicates
-	// the 3 byte form and an ID in the range of 64-65599 ((the third
-	// byte)*256 + the second byte + 64). Values in the range of 3-63
-	// represent the complete stream ID. Chunk Stream ID with value 2 is
-	// reserved for low-level protocol control messages and commands.
-	//
-	// The bits 0-5 (least significant) in the chunk basic header represent
-	// the chunk stream ID.
-	//
-	// Chunk stream IDs 2-63 can be encoded in the 1-byte version of this
-	// field.
-	//
-	//                            0 1 2 3 4 5 6 7
-	//                           +-+-+-+-+-+-+-+-+
-	//                           |fmt|   cs id   |
-	//                           +-+-+-+-+-+-+-+-+
-	//                         Chunk basic header 1
-	//
-	// Chunk stream IDs 64-319 can be encoded in the 2-byte form of the
-	// header. ID is computed as (the second byte + 64).
-	//
-	//                    0                   1
-	//                    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
-	//                   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	//                   |fmt|     0     |   cs id - 64  |
-	//                   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	//                         Chunk basic header 2
-	//
-	// Chunk stream IDs 64-65599 can be encoded in the 3-byte version of
-	// this field. ID is computed as ((the third byte)*256 + (the second
-	// byte) + 64).
-	//
-	//            0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
-	//           +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	//           |fmt|     1     |        cs id - 64             |
-	//           +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	//                         Chunk basic header 3
-
-	// Parse chunk format & basic header size & parse chunk stream ID
-	if (stream.IsRemained(1) == false)
+	if (stream.IsRemained(chunk_header->basic_header_length - 1) == false)
 	{
-		return ParseResult::NeedMoreData;
-	}
-	auto first_byte = stream.Read8();
-
-	_current_chunk_header->basic_header.format_type = GetChunkType(first_byte);
-	_current_chunk_header->basic_header_size = GetBasicHeaderSize(first_byte);
-
-	OV_ASSERT2(_current_chunk_header->basic_header_size > 0);
-
-	if (stream.IsRemained((_current_chunk_header->basic_header_size - 1)) == false)
-	{
+		logtp("Need more data to parse basic header: %d bytes needed, current: %zu", (chunk_header->basic_header_length - 1), stream.Remained());
 		return ParseResult::NeedMoreData;
 	}
 
-	int chunk_stream_id = first_byte & 0b00111111;
-
-	switch (_current_chunk_header->basic_header_size)
+	switch (basic_header.chunk_stream_id)
 	{
-		case 1:
+		case 0b000000:
+			basic_header.chunk_stream_id = stream.Read8() + 64;
 			break;
 
-		case 2:
-			// stream_id = (the second byte + 64)
-			chunk_stream_id = stream.Read8() + 64;
-
-			break;
-
-		case 3:
-			// stream_id = ((the third byte) * 256 + (the second byte) + 64)
-			chunk_stream_id = stream.Read8() + 64;
-			chunk_stream_id += stream.Read8() * 256;
+		case 0b000001:
+			basic_header.chunk_stream_id = stream.Read16() + 64;
 			break;
 	}
 
-	OV_ASSERT2(stream.GetOffset() == _current_chunk_header->basic_header_size);
-
-	_current_chunk_header->basic_header.stream_id = chunk_stream_id;
-	*parsed_bytes = _current_chunk_header->basic_header_size;
-
-	return ParseResult::Completed;
+	return ParseResult::Parsed;
 }
 
-RtmpChunkParser::ParseResult RtmpChunkParser::ParseMessageHeader(ov::ByteStream &stream, off_t *parsed_bytes)
+std::shared_ptr<const RtmpChunkHeader> RtmpChunkParser::GetPrecedingChunkHeader(const uint32_t chunk_stream_id)
 {
+	auto header = _preceding_chunk_header_map.find(chunk_stream_id);
+
+	if (header == _preceding_chunk_header_map.end())
+	{
+		return nullptr;
+	}
+
+	return header->second;
+}
+
+RtmpChunkParser::ParseResultForExtendedTimestamp RtmpChunkParser::ParseExtendedTimestamp(
+	const uint32_t stream_id,
+	ov::ByteStream &stream,
+	RtmpChunkHeader *chunk_header,
+	const int64_t timestamp,
+	RtmpChunkHeader::CompletedHeader *completed_header)
+{
+	if (timestamp != 0xFFFFFF)
+	{
+		chunk_header->is_extended_timestamp = false;
+
+		completed_header->timestamp = timestamp;
+		completed_header->timestamp_delta = 0U;
+
+		return ParseResultForExtendedTimestamp::NotExtended;
+	}
+
+	if (stream.IsRemained(RtmpChunkHeader::EXTENDED_TIMESTAMP_SIZE) == false)
+	{
+		logtp("Need more data to parse extended timestamp: %d bytes (current: %zu)", RtmpChunkHeader::EXTENDED_TIMESTAMP_SIZE, stream.Remained());
+		return ParseResultForExtendedTimestamp::NeedMoreData;
+	}
+
+	logtd("Extended timestamp is present for stream id: %u", stream_id);
+
+	int64_t extended_timestamp = stream.ReadBE32();
+
+	chunk_header->is_extended_timestamp = true;
+	chunk_header->message_header_length += RtmpChunkHeader::EXTENDED_TIMESTAMP_SIZE;
+
+	completed_header->timestamp = extended_timestamp;
+	completed_header->timestamp_delta = 0U;
+
+	return ParseResultForExtendedTimestamp::Extended;
+}
+
+RtmpChunkParser::ParseResultForExtendedTimestamp RtmpChunkParser::ParseExtendedTimestampDelta(
+	const uint32_t stream_id,
+	ov::ByteStream &stream,
+	RtmpChunkHeader *chunk_header,
+	const int64_t preceding_timestamp,
+	const int64_t timestamp_delta,
+	RtmpChunkHeader::CompletedHeader *completed_header)
+{
+	if (timestamp_delta != 0xFFFFFF)
+	{
+		chunk_header->is_extended_timestamp = false;
+
+		completed_header->timestamp = preceding_timestamp + timestamp_delta;
+		completed_header->timestamp_delta = timestamp_delta;
+
+		return ParseResultForExtendedTimestamp::NotExtended;
+	}
+
+	if (stream.IsRemained(RtmpChunkHeader::EXTENDED_TIMESTAMP_SIZE) == false)
+	{
+		logtp("Need more data to parse extended timestamp delta: %d bytes (current: %zu)", RtmpChunkHeader::EXTENDED_TIMESTAMP_SIZE, stream.Remained());
+		return ParseResultForExtendedTimestamp::NeedMoreData;
+	}
+
+	logtd("Extended timestamp delta is present for stream id: %u", stream_id);
+
+	OV_ASSERT(RtmpChunkHeader::EXTENDED_TIMESTAMP_SIZE == 4, "Extended timestamp delta size must be 4 bytes");
+
+	int64_t extended_timestamp_delta = stream.ReadBE32();
+
+	chunk_header->is_extended_timestamp = true;
+	chunk_header->message_header_length += RtmpChunkHeader::EXTENDED_TIMESTAMP_SIZE;
+
+	completed_header->timestamp = preceding_timestamp + extended_timestamp_delta;
+	completed_header->timestamp_delta = extended_timestamp_delta;
+
+	return ParseResultForExtendedTimestamp::Extended;
+}
+
+RtmpChunkParser::ParseResult RtmpChunkParser::ParseMessageHeader(ov::ByteStream &stream, RtmpChunkHeader *chunk_header)
+{
+	auto &basic_header = chunk_header->basic_header;
+	auto &message_header = chunk_header->message_header;
+	auto &completed = chunk_header->completed;
+
+	// Obtains minimum message header size to parse
+	switch (basic_header.format_type)
+	{
+		case RtmpMessageHeaderType::T0:
+			chunk_header->message_header_length = 11;
+			break;
+		case RtmpMessageHeaderType::T1:
+			chunk_header->message_header_length = 7;
+			break;
+		case RtmpMessageHeaderType::T2:
+			chunk_header->message_header_length = 3;
+			break;
+		case RtmpMessageHeaderType::T3: {
+			chunk_header->message_header_length = 0;
+		}
+	}
+
+	if (stream.IsRemained(chunk_header->message_header_length) == false)
+	{
+		logtp("Need more data to parse message header: %d bytes (current: %zu)", chunk_header->message_header_length, stream.Remained());
+		return ParseResult::NeedMoreData;
+	}
+
+	// Parse message header
+	chunk_header->is_extended_timestamp = false;
+
+	std::shared_ptr<const RtmpChunkHeader> preceding_chunk_header = GetPrecedingChunkHeader(basic_header.chunk_stream_id);
+
+	if (
+		(basic_header.format_type != RtmpMessageHeaderType::T0) &&
+		(preceding_chunk_header == nullptr))
+	{
+		// T1/T2/T3 message header must have a preceding chunk header
+		logte("Could not find preceding chunk header for chunk_stream_id: %u (type: %d)", basic_header.chunk_stream_id, basic_header.format_type);
+
 #if DEBUG
-	off_t current_offset = stream.GetOffset();
-#endif  // DEBUG
+		logte("chunk_index: %llu, total_read_bytes: %llu", _chunk_index, _total_read_bytes);
+#endif	// DEBUG
 
-	// Obtain header size to move the offset of raw_data_pos
-	switch (_current_chunk_header->basic_header.format_type)
-	{
-		case RtmpChunkType::T0:
-			_current_chunk_header->message_header_size = sizeof(RtmpChunkHeader::header.type_0);
-
-			if (stream.IsRemained(_current_chunk_header->message_header_size) == false)
-			{
-				return ParseResult::NeedMoreData;
-			}
-
-			_current_chunk_header->header.type_0.timestamp = stream.ReadBE24();
-			_current_chunk_header->header.type_0.length = stream.ReadBE24();
-			_current_chunk_header->header.type_0.type_id = stream.Read8();
-			_current_chunk_header->header.type_0.stream_id = stream.ReadLE32();
-
-			_current_chunk_header->payload_size = _current_chunk_header->header.type_0.length;
-
-			OV_ASSERT((stream.GetOffset() - current_offset) == _current_chunk_header->message_header_size, "Expected: %lld, But: %lld", _current_chunk_header->message_header_size, (stream.GetOffset() - current_offset));
-
-			break;
-
-		case RtmpChunkType::T1:
-			_current_chunk_header->message_header_size = sizeof(RtmpChunkHeader::header.type_1);
-
-			if (stream.IsRemained(_current_chunk_header->message_header_size) == false)
-			{
-				return ParseResult::NeedMoreData;
-			}
-
-			_current_chunk_header->header.type_1.timestamp_delta = stream.ReadBE24();
-			_current_chunk_header->header.type_1.length = stream.ReadBE24();
-			_current_chunk_header->header.type_1.type_id = stream.Read8();
-
-			_current_chunk_header->payload_size = _current_chunk_header->header.type_1.length;
-
-			OV_ASSERT((stream.GetOffset() - current_offset) == _current_chunk_header->message_header_size, "Expected: %lld, But: %lld", _current_chunk_header->message_header_size, (stream.GetOffset() - current_offset));
-
-			break;
-
-		case RtmpChunkType::T2:
-			_current_chunk_header->message_header_size = sizeof(RtmpChunkHeader::header.type_2);
-
-			if (stream.IsRemained(_current_chunk_header->message_header_size) == false)
-			{
-				return ParseResult::NeedMoreData;
-			}
-
-			_current_chunk_header->header.type_2.timestamp_delta = stream.ReadBE24();
-
-			// Neither the stream ID nor the message length is included;
-			// this chunk has the same stream ID and message length as the preceding chunk.
-			_current_chunk_header->payload_size = 0LL;
-
-			OV_ASSERT((stream.GetOffset() - current_offset) == _current_chunk_header->message_header_size, "Expected: %lld, But: %lld", _current_chunk_header->message_header_size, (stream.GetOffset() - current_offset));
-
-			break;
-
-		case RtmpChunkType::T3:
-			// Type 3 hasn't a header
-
-			// The stream ID, message length and timestamp delta fields are not present;
-			// chunks of this type take values from the preceding chunk for the same Chunk Stream ID
-			_current_chunk_header->payload_size = 0LL;
-
-			break;
-
-		default:
-			OV_ASSERT2(false);
-			return ParseResult::Failed;
+		return ParseResult::Error;
 	}
 
-	*parsed_bytes = _current_chunk_header->message_header_size;
-	return ParseResult::Completed;
-}
+	const auto preceding_completed_header = (preceding_chunk_header != nullptr) ? &(preceding_chunk_header->completed) : nullptr;
 
-RtmpChunkParser::ParseResult RtmpChunkParser::ParseExtendedTimestamp(std::shared_ptr<const RtmpChunkHeader> last_chunk, ov::ByteStream &stream, off_t *parsed_bytes)
-{
-	uint32_t target_timestamp = 0U;
-
-	switch (_current_chunk_header->basic_header.format_type)
+	// Process extended timestamp if needed
+	switch (basic_header.format_type)
 	{
-		case RtmpChunkType::T0:
-			target_timestamp = _current_chunk_header->header.type_0.timestamp;
-			break;
+		case RtmpMessageHeaderType::T0: {
+			auto &header = message_header.type_0;
+			header.timestamp = stream.ReadBE24();
+			header.length = stream.ReadBE24();
+			header.type_id = static_cast<RtmpMessageTypeID>(stream.Read8());
+			header.stream_id = stream.ReadLE32();
 
-		case RtmpChunkType::T1:
-			target_timestamp = _current_chunk_header->header.type_1.timestamp_delta;
-			break;
+			chunk_header->is_timestamp_delta = false;
+			chunk_header->message_length = header.length;
 
-		case RtmpChunkType::T2:
-			target_timestamp = _current_chunk_header->header.type_2.timestamp_delta;
-			break;
+			auto result = ParseExtendedTimestamp(
+				header.stream_id,
+				stream, chunk_header,
+				header.timestamp, &completed);
 
-		case RtmpChunkType::T3:
-			// Type 3 hasn't a header
-			if ((last_chunk != nullptr) && (last_chunk->is_extended))
+			if (result == ParseResultForExtendedTimestamp::NeedMoreData)
 			{
-				// Need to parse extended timestamp
-				target_timestamp = RTMP_EXTEND_TIMESTAMP;
-				break;
+				return ParseResult::NeedMoreData;
 			}
 
-			return ParseResult::Completed;
+			if (preceding_completed_header != nullptr)
+			{
+				completed.timestamp = CalculateRolledTimestamp(header.stream_id, preceding_completed_header->timestamp, completed.timestamp);
+			}
 
-		default:
-			OV_ASSERT2(false);
-			return ParseResult::Failed;
-	}
-
-	if (target_timestamp == RTMP_EXTEND_TIMESTAMP)
-	{
-		if (stream.IsRemained(sizeof(RtmpChunkHeader::extended_timestamp)) == false)
-		{
-			return ParseResult::NeedMoreData;
+			completed.type_id = header.type_id;
+			completed.stream_id = header.stream_id;
+			break;
 		}
 
-		_current_chunk_header->extended_timestamp = stream.ReadBE32();
-		_current_chunk_header->is_extended = true;
+		case RtmpMessageHeaderType::T1: {
+			auto &header = message_header.type_1;
+			header.timestamp_delta = stream.ReadBE24();
+			header.length = stream.ReadBE24();
+			header.type_id = static_cast<RtmpMessageTypeID>(stream.Read8());
 
-		*parsed_bytes = sizeof(RtmpChunkHeader::extended_timestamp);
+			chunk_header->is_timestamp_delta = true;
+			chunk_header->message_length = header.length;
+
+			auto result = ParseExtendedTimestampDelta(
+				preceding_completed_header->stream_id,
+				stream, chunk_header,
+				preceding_completed_header->timestamp,
+				header.timestamp_delta,
+				&completed);
+
+			if (result == ParseResultForExtendedTimestamp::NeedMoreData)
+			{
+				return ParseResult::NeedMoreData;
+			}
+
+			completed.type_id = header.type_id;
+			completed.stream_id = preceding_completed_header->stream_id;
+
+			break;
+		}
+
+		case RtmpMessageHeaderType::T2: {
+			auto &header = message_header.type_2;
+			header.timestamp_delta = stream.ReadBE24();
+
+			chunk_header->is_timestamp_delta = true;
+			chunk_header->message_length = preceding_chunk_header->message_length;
+
+			auto result = ParseExtendedTimestampDelta(
+				preceding_completed_header->stream_id,
+				stream, chunk_header,
+				preceding_completed_header->timestamp,
+				header.timestamp_delta,
+				&completed);
+
+			if (result == ParseResultForExtendedTimestamp::NeedMoreData)
+			{
+				return ParseResult::NeedMoreData;
+			}
+
+			completed.type_id = preceding_completed_header->type_id;
+			completed.stream_id = preceding_completed_header->stream_id;
+
+			break;
+		}
+
+		case RtmpMessageHeaderType::T3: {
+			chunk_header->is_extended_timestamp = preceding_chunk_header->is_extended_timestamp;
+			chunk_header->is_timestamp_delta = preceding_chunk_header->is_timestamp_delta;
+			chunk_header->message_length = preceding_chunk_header->message_length;
+
+			completed.timestamp = preceding_completed_header->timestamp;
+			completed.timestamp_delta = preceding_completed_header->timestamp_delta;
+
+			completed.type_id = preceding_completed_header->type_id;
+			completed.stream_id = preceding_completed_header->stream_id;
+
+			ParseResultForExtendedTimestamp result;
+
+			if (chunk_header->is_timestamp_delta == false)
+			{
+				// The origin message header is T0
+				result = ParseExtendedTimestamp(
+					completed.stream_id,
+					stream, chunk_header,
+					chunk_header->is_extended_timestamp ? 0xffffff : completed.timestamp, &completed);
+
+				if (result != ParseResultForExtendedTimestamp::NeedMoreData)
+				{
+					completed.timestamp = CalculateRolledTimestamp(completed.stream_id, preceding_completed_header->timestamp, completed.timestamp);
+				}
+			}
+			else
+			{
+				// The origin message header is T1 or T2
+				result = ParseExtendedTimestampDelta(
+					completed.stream_id,
+					stream, chunk_header,
+					completed.timestamp, chunk_header->is_extended_timestamp ? 0xffffff : completed.timestamp_delta, &completed);
+			}
+
+			if (result == ParseResultForExtendedTimestamp::NeedMoreData)
+			{
+				return ParseResult::NeedMoreData;
+			}
+
+			break;
+		}
+
+		default:
+			break;
+	}
+
+	return ParseResult::Parsed;
+}
+
+RtmpChunkParser::ParseResult RtmpChunkParser::ParseHeader(ov::ByteStream &stream, RtmpChunkHeader *chunk_header)
+{
+	logtp("Parsing RTMP Header\n%s", stream.Dump(16).CStr());
+
+	auto status = ParseBasicHeader(stream, chunk_header);
+
+	if (status != ParseResult::Parsed)
+	{
+		return status;
+	}
+
+	return ParseMessageHeader(stream, chunk_header);
+}
+
+int64_t RtmpChunkParser::CalculateRolledTimestamp(const uint32_t stream_id, const int64_t last_timestamp, int64_t parsed_timestamp)
+{
+	const static int64_t SERIAL_BITS = 31;
+	int64_t new_timestamp = parsed_timestamp;
+	int64_t delta = ::llabs(last_timestamp - parsed_timestamp);
+
+	// RTMP specification
+	//
+	// Because timestamps are 32 bits long, they roll over every 49 days, 17
+	// hours, 2 minutes and 47.296 seconds. Because streams are allowed to
+	// run continuously, potentially for years on end, an RTMP application
+	// SHOULD use serial number arithmetic [RFC1982] when processing
+	// timestamps, and SHOULD be capable of handling wraparound. For
+	// example, an application assumes that all adjacent timestamps are
+	// within 2^31 - 1 milliseconds of each other, so 10000 comes after
+	// 4000000000, and 3000000000 comes before 4000000000.
+
+	// completed.timestamp calculated from this formula (https://tools.ietf.org/html/rfc1982#section-3.1):
+	//
+	// Serial numbers may be incremented by the addition of a positive
+	// integer n, where n is taken from the range of integers
+	// [0 .. (2^(SERIAL_BITS - 1) - 1)].  For a sequence number s, the
+	// result of such an addition, s', is defined as
+	//
+	//                 s' = (s + n) modulo (2 ^ SERIAL_BITS)
+	//
+	// where the addition and modulus operations here act upon values that
+	// are non-negative values of unbounded size in the usual ways of
+	// integer arithmetic.
+
+	// Check if the timestamp is an adjacent timestamp
+	if (delta <= ((1LL << (SERIAL_BITS - 1)) - 1))
+	{
+		// Adjacent timestamp - No need to roll timestamp
 	}
 	else
 	{
-		*parsed_bytes = 0LL;
+		// Non-adjacent timestamp - Need to roll timestamp
+		new_timestamp = last_timestamp + (1LL << SERIAL_BITS) - (last_timestamp % (1LL << SERIAL_BITS)) + parsed_timestamp;
+
+		logti("Timestamp is rolled for stream id: %u: last TS: %lld, parsed: %lld, new: %lld",
+			  stream_id,
+			  last_timestamp,
+			  parsed_timestamp,
+			  new_timestamp);
 	}
 
-	return ParseResult::Completed;
+	return new_timestamp;
+}
+
+std::shared_ptr<const RtmpMessage> RtmpChunkParser::GetMessage()
+{
+	if (_message_queue.IsEmpty())
+	{
+		return nullptr;
+	}
+
+	auto item = _message_queue.Dequeue();
+
+	if (item.has_value())
+	{
+		return item.value();
+	}
+
+	return nullptr;
+}
+
+size_t RtmpChunkParser::GetMessageCount() const
+{
+	return _message_queue.Size();
+}
+
+void RtmpChunkParser::SetAppName(const info::VHostAppName &vhost_app_name)
+{
+	_vhost_app_name = vhost_app_name;
+
+	_message_queue.SetAlias(ov::String::FormatString("RTMP queue for %s/%s", _vhost_app_name.CStr(), _stream_name.CStr()));
+}
+
+void RtmpChunkParser::SetStreamName(const ov::String &stream_name)
+{
+	_stream_name = stream_name;
+
+	_message_queue.SetAlias(ov::String::FormatString("RTMP queue for %s/%s", _vhost_app_name.CStr(), _stream_name.CStr()));
+}
+
+void RtmpChunkParser::Destroy()
+{
+	_preceding_chunk_header_map.clear();
+
+	_message_queue.Stop();
+	_message_queue.Clear();
 }
