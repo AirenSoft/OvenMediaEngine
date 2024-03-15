@@ -19,11 +19,10 @@ namespace api
 	{
 		void V1Controller::PrepareHandlers()
 		{
-			RegisterGet(R"(\/(?<version>[^\/]*))", &V1Controller::OnGetVersion);
+			RegisterGet(R"(\/version)", &V1Controller::OnGetVersion);
 
 			CreateSubController<VHostsController>(R"(\/vhosts)");
 			CreateSubController<stats::StatsController>(R"(\/stats)");
-			RegisterGet(R"((version))", &V1Controller::OnGetVersion);
 		};
 
 		ApiResponse V1Controller::OnGetVersion(const std::shared_ptr<http::svr::HttpExchange> &client)
