@@ -13,6 +13,10 @@ using namespace cmn;
 AudioTrack::AudioTrack()
 {
 	_channel_layout.SetLayout(AudioChannel::Layout::LayoutUnknown);
+
+	// The default frame size of the audio frame is fixed to 1024. 
+	// If the frame size is different, settings must be made in an audio encoder or provider.
+	_audio_samples_per_frame = 1024;
 }
 
 void AudioTrack::SetSampleRate(int32_t sample_rate)

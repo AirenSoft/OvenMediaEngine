@@ -730,8 +730,8 @@ namespace ffmpeg
 				return false;
 			}
 
+			av_stream->start_time = 0;
 			av_stream->time_base = AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()};
-
 			AVCodecParameters* codecpar = av_stream->codecpar;
 			codecpar->codec_type 		= ToAVMediaType(media_track->GetMediaType());
 			codecpar->codec_id 			= ToAVCodecId(media_track->GetCodecId());

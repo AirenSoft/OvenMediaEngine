@@ -46,6 +46,11 @@ struct uint24_t
 	{
 	}
 
+	uint24_t()
+	{
+		data = 0U;
+	}
+
 	uint24_t(const uint24_t &value) noexcept = default;
 	uint24_t(uint24_t &&value) noexcept = default;
 
@@ -54,6 +59,12 @@ struct uint24_t
 	inline operator uint32_t() const noexcept
 	{
 		return data;
+	}
+
+	uint24_t &operator=(const uint24_t &value) noexcept
+	{
+		data = value.data;
+		return *this;
 	}
 };
 #pragma pack(pop)

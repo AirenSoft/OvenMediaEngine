@@ -1382,7 +1382,7 @@ namespace ov
 			*total_sent_bytes += sent;
 		}
 
-		logtp("[#%d] %zu bytes sent", total_sent_bytes);
+		logtp("[#%d] %zu bytes sent", socket_handle, *total_sent_bytes);
 
 		return true;
 	}
@@ -1406,7 +1406,7 @@ namespace ov
 			  data_length,
 			  remote_address.ToString().CStr(), local_address.ToString().CStr());
 
-		size_t total_sent_bytes;
+		size_t total_sent_bytes = 0;
 		bool sent = false;
 
 		switch (_family)

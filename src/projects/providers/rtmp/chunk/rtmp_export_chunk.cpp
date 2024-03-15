@@ -72,13 +72,13 @@ std::shared_ptr<RtmpChunkHeader> RtmpExportChunk::GetChunkHeader(std::shared_ptr
 		stream->message_header->stream_id == message_header->stream_id &&
 		stream->message_header->type_id == message_header->type_id)
 	{
-		chunk_header->basic_header.format_type = RtmpChunkType::T2;
-		chunk_header->basic_header.stream_id = message_header->chunk_stream_id;
-		chunk_header->header.type_2.timestamp_delta = message_header->timestamp - stream->message_header->timestamp;
+		chunk_header->basic_header.format_type = RtmpMessageHeaderType::T2;
+		chunk_header->basic_header.chunk_stream_id = message_header->chunk_stream_id;
+		chunk_header->message_header.type_2.timestamp_delta = message_header->timestamp - stream->message_header->timestamp;
 
-		if (chunk_header->header.type_2.timestamp_delta >= RTMP_EXTEND_TIMESTAMP)
+		if (chunk_header->message_header.type_2.timestamp_delta >= RTMP_EXTEND_TIMESTAMP)
 		{
-			chunk_header->is_extended = true;
+			chunk_header->is_extended_timestamp = true;
 		}
 	}
 	// type 1
@@ -86,30 +86,30 @@ std::shared_ptr<RtmpChunkHeader> RtmpExportChunk::GetChunkHeader(std::shared_ptr
 			 stream->message_header->chunk_stream_id == message_header->chunk_stream_id &&
 			 stream->message_header->stream_id == message_header->stream_id)
 	{
-		chunk_header->basic_header.format_type = RtmpChunkType::T1;
-		chunk_header->basic_header.stream_id = message_header->chunk_stream_id;
-		chunk_header->header.type_1.timestamp_delta = message_header->timestamp - stream->message_header->timestamp;
-		chunk_header->header.type_1.length = message_header->body_size;
-		chunk_header->header.type_1.type_id = message_header->type_id;
+		chunk_header->basic_header.format_type = RtmpMessageHeaderType::T1;
+		chunk_header->basic_header.chunk_stream_id = message_header->chunk_stream_id;
+		chunk_header->message_header.type_1.timestamp_delta = message_header->timestamp - stream->message_header->timestamp;
+		chunk_header->message_header.type_1.length = message_header->body_size;
+		chunk_header->message_header.type_1.type_id = message_header->type_id;
 
-		if (chunk_header->header.type_1.timestamp_delta >= RTMP_EXTEND_TIMESTAMP)
+		if (chunk_header->message_header.type_1.timestamp_delta >= RTMP_EXTEND_TIMESTAMP)
 		{
-			chunk_header->is_extended = true;
+			chunk_header->is_extended_timestamp = true;
 		}
 	}
 	// type_0  or none compress
 	else
 	{
-		chunk_header->basic_header.format_type = RtmpChunkType::T0;
-		chunk_header->basic_header.stream_id = message_header->chunk_stream_id;
-		chunk_header->header.type_0.timestamp = message_header->timestamp;
-		chunk_header->header.type_0.length = message_header->body_size;
-		chunk_header->header.type_0.type_id = message_header->type_id;
-		chunk_header->header.type_0.stream_id = message_header->stream_id;
+		chunk_header->basic_header.format_type = RtmpMessageHeaderType::T0;
+		chunk_header->basic_header.chunk_stream_id = message_header->chunk_stream_id;
+		chunk_header->message_header.type_0.timestamp = message_header->timestamp;
+		chunk_header->message_header.type_0.length = message_header->body_size;
+		chunk_header->message_header.type_0.type_id = message_header->type_id;
+		chunk_header->message_header.type_0.stream_id = message_header->stream_id;
 
-		if (chunk_header->header.type_0.timestamp >= RTMP_EXTEND_TIMESTAMP)
+		if (chunk_header->message_header.type_0.timestamp >= RTMP_EXTEND_TIMESTAMP)
 		{
-			chunk_header->is_extended = true;
+			chunk_header->is_extended_timestamp = true;
 		}
 	}
 
@@ -138,31 +138,31 @@ std::shared_ptr<std::vector<uint8_t>> RtmpExportChunk::ExportStreamData(std::sha
 	auto chunk_header = GetChunkHeader(stream, message_header);
 
 	// 버퍼 크기 설정(최대치 계산)
-	buffer_size = RTMP_PACKET_HEADER_SIZE_MAX + GetChunkDataRawSize(_chunk_size, message_header->chunk_stream_id, message_header->body_size, chunk_header->is_extended);
+	buffer_size = RTMP_PACKET_HEADER_SIZE_MAX + GetChunkDataRawSize(_chunk_size, message_header->chunk_stream_id, message_header->body_size, chunk_header->is_extended_timestamp);
 
-	switch(chunk_header->basic_header.format_type)
+	switch (chunk_header->basic_header.format_type)
 	{
-		case RtmpChunkType::T0:
-			type3_time = chunk_header->header.type_0.timestamp;
+		case RtmpMessageHeaderType::T0:
+			type3_time = chunk_header->message_header.type_0.timestamp;
 			break;
 
-		case RtmpChunkType::T1:
-			type3_time = chunk_header->header.type_1.timestamp_delta;
+		case RtmpMessageHeaderType::T1:
+			type3_time = chunk_header->message_header.type_1.timestamp_delta;
 			break;
 
-		case RtmpChunkType::T2:
-			type3_time = chunk_header->header.type_2.timestamp_delta;
+		case RtmpMessageHeaderType::T2:
+			type3_time = chunk_header->message_header.type_2.timestamp_delta;
 			break;
 
-		case RtmpChunkType::T3:
+		case RtmpMessageHeaderType::T3:
 			break;
 	}
 
 	auto export_data = std::make_shared<std::vector<uint8_t>>(buffer_size);
 
 	// Chunk Stream 인코딩
-	export_size += GetChunkHeaderRaw(chunk_header, export_data->data(), chunk_header->is_extended);
-	export_size += GetChunkDataRaw(_chunk_size, message_header->chunk_stream_id, data, export_data->data() + export_size, chunk_header->is_extended, type3_time);
+	export_size += GetChunkHeaderRaw(chunk_header, export_data->data(), chunk_header->is_extended_timestamp);
+	export_size += GetChunkDataRaw(_chunk_size, message_header->chunk_stream_id, data, export_data->data() + export_size, chunk_header->is_extended_timestamp, type3_time);
 	export_data->resize(export_size);
 
 	// 스트림 Message 헤더 정보 갱신

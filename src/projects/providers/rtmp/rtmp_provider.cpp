@@ -45,6 +45,11 @@ namespace pvd
 	{
 #if DEBUG
 		dump_packet = ov::Converter::ToBool(std::getenv("OME_DUMP_RTMP"));
+
+		if (dump_packet)
+		{
+			logtw("RTMP packet dump is enabled. Dump files are saved in %s", ov::PathManager::GetAppPath("dump/rtmp").CStr());
+		}
 #endif	// DEBUG
 
 		auto provider = std::make_shared<RtmpProvider>(server_config, router);

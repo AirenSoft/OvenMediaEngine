@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  RtmpProvider
+//  OvenMediaEngine
 //
 //  Created by Hyunjun Jang
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
@@ -8,71 +8,87 @@
 //==============================================================================
 #pragma once
 
-#include "rtmp_define.h"
+#include <base/info/info.h>
 
+#include <deque>
+#include <map>
 #include <memory>
 
-#include <base/ovlibrary/ovlibrary.h>
+#include "rtmp_datastructure.h"
+#include "rtmp_define.h"
+#include "rtmp_mux_util.h"
 
 class RtmpChunkParser
 {
 public:
-	// Return values:
-	//
-	// <0: An error occurred while parsing
-	//  0: Need more data
-	// >0: Parsing is completed (The header & the payload are available)
-	off_t Parse(const std::map<uint32_t, std::shared_ptr<const RtmpChunkHeader>> &chunk_map, ov::ByteStream &stream);
-
-	bool IsParseCompleted() const noexcept
-	{
-		return (_parse_status == ParseStatus::Completed);
-	}
-
-	bool Reset()
-	{
-		_current_chunk_header = nullptr;
-		_parse_status = ParseStatus::BasicHeader;
-
-		return true;
-	}
-
-	std::shared_ptr<RtmpChunkHeader> GetParsedChunkHeader()
-	{
-		if (IsParseCompleted())
-		{
-			return _current_chunk_header;
-		}
-
-		return nullptr;
-	}
-
-	static RtmpChunkType GetChunkType(uint8_t first_byte);
-	static int GetBasicHeaderSize(uint8_t first_byte);
-
-protected:
-	// Use ParseResult to distinguish between a header with a length of zero and a situation with insufficient data
 	enum class ParseResult
 	{
+		Error,
 		NeedMoreData,
-		Completed,
-		Failed
+		Parsed,
 	};
 
-	enum class ParseStatus
+	enum class ParseResultForExtendedTimestamp
 	{
-		BasicHeader,
-		MessageHeader,
-		ExtendedTimestamp,
-		Completed
+		NeedMoreData,
+		Extended,
+		NotExtended,
 	};
 
-	ParseResult ParseBasicHeader(ov::ByteStream &stream, off_t *parsed_bytes);
-	ParseResult ParseMessageHeader(ov::ByteStream &stream, off_t *parsed_bytes);
-	ParseResult ParseExtendedTimestamp(std::shared_ptr<const RtmpChunkHeader> last_chunk, ov::ByteStream &stream, off_t *parsed_bytes);
-	ParseResult ParsePayload(ov::ByteStream &stream, off_t *parsed_bytes);
+public:
+	RtmpChunkParser(int chunk_size);
+	virtual ~RtmpChunkParser();
 
-	std::shared_ptr<RtmpChunkHeader> _current_chunk_header;
+	ParseResult Parse(const std::shared_ptr<const ov::Data> &data, size_t *bytes_used);
 
-	ParseStatus _parse_status = ParseStatus::BasicHeader;
+	std::shared_ptr<const RtmpMessage> GetMessage();
+	size_t GetMessageCount() const;
+
+	void SetChunkSize(size_t chunk_size)
+	{
+		_chunk_size = chunk_size;
+	}
+
+	void SetAppName(const info::VHostAppName &app_name);
+	void SetStreamName(const ov::String &stream_name);
+
+	void Destroy();
+
+private:
+	std::shared_ptr<const RtmpChunkHeader> GetPrecedingChunkHeader(const uint32_t chunk_stream_id);
+
+	ParseResult ParseBasicHeader(ov::ByteStream &stream, RtmpChunkHeader *chunk_header);
+	ParseResultForExtendedTimestamp ParseExtendedTimestamp(
+		const uint32_t stream_id,
+		ov::ByteStream &stream,
+		RtmpChunkHeader *chunk_header,
+		const int64_t timestamp,
+		RtmpChunkHeader::CompletedHeader *completed_header);
+	ParseResultForExtendedTimestamp ParseExtendedTimestampDelta(
+		const uint32_t stream_id,
+		ov::ByteStream &stream,
+		RtmpChunkHeader *chunk_header,
+		const int64_t preceding_timestamp,
+		const int64_t timestamp_delta,
+		RtmpChunkHeader::CompletedHeader *completed_header);
+	ParseResult ParseMessageHeader(ov::ByteStream &stream, RtmpChunkHeader *chunk_header);
+	ParseResult ParseHeader(ov::ByteStream &stream, RtmpChunkHeader *chunk_header);
+
+	int64_t CalculateRolledTimestamp(const uint32_t stream_id, const int64_t last_timestamp, int64_t parsed_timestamp);
+
+#if DEBUG
+	uint64_t _chunk_index = 0ULL;
+	uint64_t _total_read_bytes = 0ULL;
+#endif	// DEBUG
+
+	bool _need_to_parse_new_header = true;
+	std::shared_ptr<RtmpMessage> _current_message;
+	std::map<uint32_t, std::shared_ptr<RtmpMessage>> _pending_message_map;
+	std::map<uint32_t, std::shared_ptr<const RtmpChunkHeader>> _preceding_chunk_header_map;
+
+	ov::Queue<std::shared_ptr<const RtmpMessage>> _message_queue{nullptr, 500};
+	size_t _chunk_size;
+
+	info::VHostAppName _vhost_app_name;
+	ov::String _stream_name;
 };
