@@ -143,10 +143,13 @@ bool LLHlsStream::Start()
 	auto default_playlist = Stream::GetPlaylist(default_playlist_name_without_ext);
 	if (default_playlist == nullptr)
 	{
-		auto playlist = std::make_shared<info::Playlist>("default", default_playlist_name_without_ext);
+		auto playlist = std::make_shared<info::Playlist>("llhls_default", default_playlist_name_without_ext);
 		auto rendition = std::make_shared<info::Rendition>("default", first_video_track ? first_video_track->GetVariantName() : "", first_audio_track ? first_audio_track->GetVariantName() : "");
 
 		playlist->AddRendition(rendition);
+
+		AddPlaylist(playlist);
+
 		auto master_playlist = CreateMasterPlaylist(playlist);
 
 		std::lock_guard<std::mutex> guard(_master_playlists_lock);

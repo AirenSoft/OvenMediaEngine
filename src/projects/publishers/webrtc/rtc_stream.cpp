@@ -188,10 +188,21 @@ bool RtcStream::Start()
 	}
 
 	// Create Default Playlist for no file name (ws://domain/app/stream)
-	_default_playlist_name = ov::Random::GenerateString(8);
-	auto rtc_master_playlist = std::make_shared<RtcMasterPlaylist>(_default_playlist_name, _default_playlist_name);
-	rtc_master_playlist->SetWebRtcAutoAbr(false);
-	rtc_master_playlist->AddRendition(std::make_shared<RtcRendition>("default", _first_video_track, _first_audio_track));
+	_default_playlist_name = "webrtc_default";
+
+	auto default_playlist = GetPlaylist(_default_playlist_name);
+	if (default_playlist == nullptr)
+	{
+		auto playlist = std::make_shared<info::Playlist>("webrtc_default", _default_playlist_name);
+		auto rendition = std::make_shared<info::Rendition>("default", _first_video_track ? _first_video_track->GetVariantName() : "", _first_audio_track ? _first_audio_track->GetVariantName() : "");
+
+		playlist->AddRendition(rendition);
+		playlist->SetWebRtcAutoAbr(false);
+
+		AddPlaylist(playlist);
+	}
+	
+	auto rtc_master_playlist = CreateRtcMasterPlaylist(_default_playlist_name);
 
 	// lock
 	std::lock_guard<std::shared_mutex> lock(_rtc_master_playlist_map_lock);

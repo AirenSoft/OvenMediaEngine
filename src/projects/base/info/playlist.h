@@ -81,6 +81,20 @@ namespace info
 		}
 		~Playlist() = default;
 
+		// copy constructor
+		Playlist(const Playlist &other)
+		{
+			_name = other._name;
+			_file_name = other._file_name;
+			_webrtc_auto_abr = other._webrtc_auto_abr;
+			_hls_chunklist_path_depth = other._hls_chunklist_path_depth;
+
+			for (auto &rendition : other._renditions)
+			{
+				_renditions.push_back(std::make_shared<Rendition>(*rendition));
+			}
+		}
+
 		void SetWebRtcAutoAbr(bool enabled)
 		{
 			_webrtc_auto_abr = enabled;
