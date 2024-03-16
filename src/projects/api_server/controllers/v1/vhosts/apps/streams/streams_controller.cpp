@@ -187,6 +187,7 @@ namespace api
 				}				
 			}
 
+			// update webrtc_default playlist from the WebRTC stream
 			publisher = orchestrator->GetPublisherFromType(PublisherType::Webrtc);
 			if (publisher)
 			{
@@ -195,7 +196,7 @@ namespace api
 					auto webrtc_stream = publisher->GetStream(app->GetId(), output_stream->GetId());
 					if (webrtc_stream)
 					{
-						auto webrtc_playlist = webrtc_stream->GetPlaylist("webrtc");
+						auto webrtc_playlist = webrtc_stream->GetPlaylist("webrtc_default");
 						if (webrtc_playlist)
 						{
 							output_stream->AddPlaylist(std::make_shared<info::Playlist>(*webrtc_playlist));
