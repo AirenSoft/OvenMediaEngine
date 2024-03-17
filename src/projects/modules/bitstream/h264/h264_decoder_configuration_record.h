@@ -51,7 +51,8 @@ public:
 
 	// Instance can be initialized by putting raw data in AVCDecoderConfigurationRecord.
 	bool Parse(const std::shared_ptr<ov::Data> &data) override;
-
+	bool Equals(const std::shared_ptr<DecoderConfigurationRecord> &other) override;
+	
 	// Instance can be initialized by putting SPS/PPS in AVCDecoderConfigurationRecord.
 	bool AddSPS(const std::shared_ptr<ov::Data> &sps);
 	bool AddPPS(const std::shared_ptr<ov::Data> &pps);

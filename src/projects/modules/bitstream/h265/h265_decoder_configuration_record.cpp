@@ -243,6 +243,42 @@ bool HEVCDecoderConfigurationRecord::Parse(const std::shared_ptr<ov::Data> &data
 	return true;
 }
 
+bool HEVCDecoderConfigurationRecord::Equals(const std::shared_ptr<DecoderConfigurationRecord> &other) 
+{
+	if (other == nullptr)
+	{
+		return false;
+	}
+	
+	auto other_config = std::dynamic_pointer_cast<HEVCDecoderConfigurationRecord>(other);
+	if (other_config == nullptr)
+	{
+		return false;
+	}
+
+	if (GeneralProfileIDC() != other_config->GeneralProfileIDC())
+	{
+		return false;
+	}
+
+	if (GeneralLevelIDC() != other_config->GeneralLevelIDC())
+	{
+		return false;
+	}
+
+	if(GetWidth() != other_config->GetWidth())
+	{
+		return false;
+	}
+
+	if(GetHeight() != other_config->GetHeight())
+	{
+		return false;
+	}
+
+	return true;
+}
+
 std::shared_ptr<ov::Data> HEVCDecoderConfigurationRecord::Serialize()
 {
 	if (IsValid() == false)

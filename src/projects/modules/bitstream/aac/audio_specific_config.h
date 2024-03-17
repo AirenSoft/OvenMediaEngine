@@ -138,6 +138,7 @@ public:
 	bool IsValid() const override;
 	// Instance can be initialized by putting raw data in AudioSpecificConfig.
 	bool Parse(const std::shared_ptr<ov::Data> &data) override;
+	bool Equals(const std::shared_ptr<DecoderConfigurationRecord> &other) override;
 
 	std::shared_ptr<ov::Data> Serialize() override;
 

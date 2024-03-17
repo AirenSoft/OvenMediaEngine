@@ -18,6 +18,7 @@ public:
 
 	virtual bool Parse(const std::shared_ptr<ov::Data> &data) = 0;
 	virtual bool IsValid() const = 0;
+	virtual bool Equals(const std::shared_ptr<DecoderConfigurationRecord> &other) = 0;
 
 	// RFC 6381
 	virtual ov::String GetCodecsParameter() const = 0;

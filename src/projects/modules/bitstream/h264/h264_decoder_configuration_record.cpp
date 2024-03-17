@@ -129,6 +129,42 @@ bool AVCDecoderConfigurationRecord::Parse(const std::shared_ptr<ov::Data> &data)
 	return IsValid();
 }
 
+bool AVCDecoderConfigurationRecord::Equals(const std::shared_ptr<DecoderConfigurationRecord> &other)  
+{
+	if (other == nullptr)
+	{
+		return false;
+	}
+	
+	auto other_config = std::dynamic_pointer_cast<AVCDecoderConfigurationRecord>(other);
+	if (other_config == nullptr)
+	{
+		return false;
+	}
+
+	if (ProfileIndication() != other_config->ProfileIndication())
+	{
+		return false;
+	}
+
+	if (LevelIndication() != other_config->LevelIndication())
+	{
+		return false;
+	}
+
+	if(GetWidth() != other_config->GetWidth())
+	{
+		return false;
+	}
+
+	if(GetHeight() != other_config->GetHeight())
+	{
+		return false;
+	}
+
+	return true;
+}
+
 std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::Serialize()
 {
 	ov::BitWriter bits(512);
