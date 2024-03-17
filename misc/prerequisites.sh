@@ -24,6 +24,9 @@ INTEL_QSV_HWACCELS=false
 NETINT_LOGAN_HWACCELS=false
 NETINT_LOGAN_PATCH_PATH=""
 NETINT_LOGAN_XCODER_COMPILE_PATH=""
+NETINT_QUADRA_HWACCELS=false
+NETINT_QUADRA_PATCH_PATH=""
+NETINT_QUADRA_XCODER_COMPILE_PATH=""
 NVIDIA_NV_CODEC_HWACCELS=false
 XILINX_XMA_CODEC_HWACCELS=false
 
@@ -302,6 +305,24 @@ install_ffmpeg()
         #ADDI_EXTRA_LIBS="-lpthread"
     fi
     
+    # If there is an enable-niquadra option, add patch from libxcoder_quadra-path
+    if [ "$NETINT_QUADRA_HWACCELS" = true ] ; then
+        echo "we are applying the patch founded in $NETINT_QUADRA_PATCH_PATH"
+        patch_name=$(basename $NETINT_QUADRA_PATCH_PATH)
+        cp $NETINT_QUADRA_PATCH_PATH ${DIR}
+        cd ${DIR} && patch -t -p 1 < $patch_name
+        if [ "$NETINT_QUADRA_XCODER_COMPILE_PATH" != "" ] ; then
+            cd $NETINT_QUADRA_XCODER_COMPILE_PATH && bash build.sh && ldconfig #the compilation of libxcoder can be done before
+        fi
+        ADDI_LIBS+=" --enable-ni_quadra --enable-avfilter  --enable-pthreads "
+        ADDI_ENCODER+=",h264_ni_quadra,h265_ni_quadra"
+        ADDI_DECODER+=",h264_ni_quadra,h265_ni_quadra"
+        ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
+        ADDI_LDFLAGS=" -lm -ldl"
+        ADDI_FILTERS+=",scale_ni_quadra,overlay_ni_quadra,split_ni_quadra,crop_ni_quadra,pad_ni_quadra,hwupload_ni_quadra,roi_ni_quadra,xstack_ni_quadra,rotate_ni_quadra,drawbox_ni_quadra,bg_ni_quadra,ai_pre_ni_quadra,delogo_ni_quadra,merge_ni_quadra"
+        #ADDI_EXTRA_LIBS="-lpthread"
+    fi
+
     # Patch for Enterprise
     if [[ "$(type -t install_patch_ffmpeg)"  == 'function' ]];
     then
@@ -373,12 +394,12 @@ install_hiredis()
 
 install_base_ubuntu()
 {
-    sudo apt-get install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev
+    sudo apt-get install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev git
 }
 
 install_base_fedora()
 {
-    sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc libuuid-devel 
+    sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc libuuid-devel git
     sudo yum install -y perl-IPC-Cmd
 }
 
@@ -396,7 +417,7 @@ install_base_centos()
         sudo yum install -y make git which
     fi
 
-    sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
+    sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel git
     sudo yum install -y perl-IPC-Cmd
 }
 
@@ -408,7 +429,7 @@ install_base_macos()
     fi
 
     # the default make on macOS does not work with these makefiles
-    brew install pkg-config nasm automake libtool xz cmake make
+    brew install pkg-config nasm automake libtool xz cmake make git
 
     # the nasm that comes with macOS does not work with libvpx thus put the path where the homebrew stuff is installed in front of PATH
     export PATH=/usr/local/bin:$PATH
@@ -485,13 +506,25 @@ case $i in
 	--enable-nilogan)
     NETINT_LOGAN_HWACCELS=true 	
     shift
-    ;;	
+    ;;
 	--nilogan-path=*)
     NETINT_LOGAN_PATCH_PATH="${i#*=}" 
     shift
     ;;
-	--nilogan-xocder-compile-path=*)
+	--nilogan-xcoder-compile-path=*)
     NETINT_LOGAN_XCODER_COMPILE_PATH="${i#*=}" 
+    shift
+    ;;
+        --enable-niquadra)
+    NETINT_QUADRA_HWACCELS=true
+    shift
+    ;;
+        --niquadra-path=*)
+    NETINT_QUADRA_PATCH_PATH="${i#*=}"
+    shift
+    ;;
+        --niquadra-xcoder-compile-path=*)
+    NETINT_QUADRA_XCODER_COMPILE_PATH="${i#*=}"
     shift
     ;;
     --enable-nvc)
@@ -516,6 +549,12 @@ if [ "$NETINT_LOGAN_HWACCELS" = true ] ; then
 	fi	
 fi
 
+if [ "$NETINT_QUADRA_HWACCELS" = true ] ; then
+        if [[ ! -f $NETINT_QUADRA_PATCH_PATH ]]; then
+                echo "You have activated netint quadra encoding but the patch path is not found"
+                exit 1
+        fi
+fi
 
 if [ "${OSNAME}" == "Ubuntu" ]; then
     check_version

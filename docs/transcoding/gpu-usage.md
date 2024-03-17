@@ -125,11 +125,50 @@ ldconfig -p | grep libxcoder_logan.so
 If you have finished installing the driver to use the VPU, you need to reinstall the open source library using Prerequisites.sh . The purpose is to allow external libraries to use the installed graphics driver. You also have to unzip the ffmpeg patch provide by netint in a specfic path
 
 #### Using Netint VPU
+Oven Media Engine uses FFMPEG n5.0. You will have to patch FFMPEG using the provided NetInt patch that matches.
 
 ```bash
 ./prerequisites.sh --enable-nilogan --nilogan-path=/root/T4xx/release/FFmpeg-n5.0_t4xx_patch
 ```
 {% endtab %}
+{% tab title="Netint VPU Ni Quadra" %}
+#### 1. Install XCODER
+Please refer to the Netint documentation to install XCODER.
+
+**How to check driver installation**
+
+After the driver installation is complete, check if the libxcoder exist: the CLI must return something like `libxcoder.so (libc6,x86-64) => /usr/local/lib/libxcoder.so` for the quadra libraries. Logan will have:  `libxcoder_logan.so (libc6,x86-64) => /usr/local/lib/libxcoder_logan.so`
+
+```bash
+ldconfig -p | grep libxcoder.so
+```
+
+#### 2. Prerequisites
+
+If you have finished installing the driver to use the VPU, you need to reinstall the open source library using Prerequisites.sh . The purpose is to allow external libraries to use the installed graphics driver. You also have to unzip the ffmpeg patch provide by netint in a specfic path
+
+#### Using Netint VPU
+Oven Media Engine uses FFMPEG n5.0. You will have to patch FFMPEG using the provided NetInt patch that matches.
+
+The Netint Quadra SDK supports building XCODER for both Quadra and Logan cards. The prerequisites.sh currently doesn't support this.
+
+```bash
+./prerequisites.sh --enable-nilogan --enable-niquadra --niquadra-path=/path/Quadra_V4.7.5/Quadra_SW_V4.7.5_RC3/FFmpeg-n5.0_netint_v4.7.5_RC3.diff
+```
+{% endtab %}
+{% tab title="Netint VPU Ni Quadra with Docker" %}
+#### 1. Download NETINT SDK
+
+Download the NetInt SW SDK ZIP to this folder.
+
+#### 1 . Build Image
+
+```
+docker build -t airensoft/ovenmediaengine_nv:dev -f Dockerfile.niquadra.local .
+docker run -it --privileged --device /dev/nvme0n1 --device /dev/nvme0 airensoft/ovenmediaengine_nv:dev
+```
+{% endtab %}
+
 {% endtabs %}
 
 ## 2. Build & Run

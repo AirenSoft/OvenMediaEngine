@@ -30,6 +30,7 @@ extern "C"
 #include <libavutil/version.h>
 #include <libswresample/version.h>
 #include <libswscale/version.h>
+#include <ni_log.h>
 }
 
 const char *GetFFmpegConfiguration()
@@ -120,6 +121,7 @@ static void OnFFmpegLog(void *avcl, int level, const char *fmt, va_list args)
 			break;
 
 		case AV_LOG_VERBOSE:
+        case AV_LOG_TRACE:
 		case AV_LOG_DEBUG:
 		default:
 			::ov_log_internal(OVLogLevelDebug, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s", message.CStr());
@@ -127,11 +129,49 @@ static void OnFFmpegLog(void *avcl, int level, const char *fmt, va_list args)
 	}
 }
 
+static void OnNetIntLog( int level, const char *fmt, va_list args)
+{
+    const char *NETINT_LOG_TAG = "NETINT";
+    ov::String message;
+
+    ov::String format(fmt);
+
+    if (format.HasSuffix("\n"))
+    {
+        // Remove new line character
+        format.SetLength(format.GetLength() - 1);
+    }
+
+    message.AppendVFormat(format, args);
+
+    switch (level)
+    {
+        case NI_LOG_NONE:
+            break;
+        case NI_LOG_FATAL:
+            ::ov_log_internal(OVLogLevelCritical, NETINT_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s", message.CStr());
+            break;
+        case NI_LOG_ERROR:
+            ::ov_log_internal(OVLogLevelError, NETINT_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s", message.CStr());
+            break;
+        case NI_LOG_INFO:
+            ::ov_log_internal(OVLogLevelInformation, NETINT_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s", message.CStr());
+            break;
+        case NI_LOG_DEBUG:
+        default:
+            ::ov_log_internal(OVLogLevelDebug, NETINT_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s", message.CStr());
+            break;
+    }
+}
+
 std::shared_ptr<ov::Error> InitializeFFmpeg()
 {
 	::av_log_set_callback(OnFFmpegLog);
 	::av_log_set_level(AV_LOG_DEBUG);
 	::avformat_network_init();
+
+    ::ni_log_set_callback(OnNetIntLog);
+    ::ni_log_set_level(NI_LOG_DEBUG);
 
 	return nullptr;
 }

@@ -1,0 +1,45 @@
+# Instruction: Build local OvenMediaEngine Dev Environment. Can be used with CLion dev environment as a toolchain
+# Information on hot to setup: https://www.jetbrains.com/help/clion/clion-toolchains-in-docker.html#sample-dockerfile
+
+
+FROM    ubuntu:20.04 AS base
+
+## Install libraries by package
+ENV     DEBIAN_FRONTEND=noninteractive
+RUN     apt-get update && apt-get install -y tzdata sudo curl
+
+RUN apt-get update \
+  && apt-get install -y build-essential \
+      gcc \
+      g++ \
+      gdb \
+      clang \
+      make \
+      ninja-build \
+      cmake \
+      autoconf \
+      automake \
+      libtool \
+      valgrind \
+      locales-all \
+      dos2unix \
+      rsync \
+      tar \
+      python \
+      python-dev \
+  && apt-get clean
+
+WORKDIR /tmp
+
+ENV     PREFIX=/opt/ovenmediaengine
+ENV     TEMP_DIR=/tmp/ome
+
+ARG     OME_VERSION=local
+ARG 	STRIP=TRUE
+
+## Copy code to image
+COPY    ./ ${TEMP_DIR}/
+
+## Install dependencies
+RUN \
+        ${TEMP_DIR}/misc/prerequisites.sh

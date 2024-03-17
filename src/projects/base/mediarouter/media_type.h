@@ -104,6 +104,7 @@ namespace cmn
 		QSV,		// HW
 		XMA,		// HW
 		NILOGAN,	// HW
+        NIQUADRA,	// HW
 		LIBVPX,		// SW
 		FDKAAC,		// SW
 		LIBOPUS,	// SW
@@ -258,6 +259,10 @@ namespace cmn
 		{
 			return cmn::MediaCodecModuleId::NILOGAN;
 		}
+        else if (name.HasSuffix("_NIQUADRA") || name.HasSuffix("NIQUADRA"))
+        {
+            return cmn::MediaCodecModuleId::NIQUADRA;
+        }
 		else if (name.HasSuffix("_XMA") || name.HasSuffix("XMA"))
 		{
 			return cmn::MediaCodecModuleId::XMA;
@@ -294,6 +299,8 @@ namespace cmn
 				return "qsv";
 			case cmn::MediaCodecModuleId::NILOGAN:
 				return "nilogan";
+            case cmn::MediaCodecModuleId::NIQUADRA:
+                return "niquadra";
 			case cmn::MediaCodecModuleId::XMA:
 				return "xma";				
 			case cmn::MediaCodecModuleId::LIBVPX:
@@ -318,6 +325,7 @@ namespace cmn
 			case cmn::MediaCodecModuleId::QSV:
 			case cmn::MediaCodecModuleId::XMA:
 			case cmn::MediaCodecModuleId::NILOGAN:
+            case cmn::MediaCodecModuleId::NIQUADRA:
 				return true;
 			default:
 				break;
@@ -366,6 +374,7 @@ namespace cmn
 			name == "H264_NVENC" ||
 			name == "H264_QSV" ||
 			name == "H264_NILOGAN" ||
+            name == "H264_NIQUADRA" ||
 			name == "H264_XMA")
 		{
 			return cmn::MediaCodecId::H264;
@@ -374,6 +383,7 @@ namespace cmn
 				 name == "H265_NVENC" || 
 				 name == "H265_QSV" ||
 				 name == "H265_NILOGAN" ||
+                 name == "H265_NIQUADRA" ||
 		 		 name == "H265_XMA")
 		{
 			return cmn::MediaCodecId::H265;

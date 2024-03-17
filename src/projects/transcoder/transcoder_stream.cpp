@@ -802,10 +802,10 @@ int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 			// These values are used in the Resampler/Rescaler filter.
 			if (output_track->GetMediaType() == cmn::MediaType::Video)
 			{
-				auto encoder = _encoders[encoder_id];
+				//auto encoder = _encoders[encoder_id];
+                output_track->SetColorspace(buffer->GetFormat());  // used AVPixelFormat
 
-				output_track->SetColorspace(encoder->GetSupportedFormat());
-			}
+            }
 			else if (output_track->GetMediaType() == cmn::MediaType::Audio)
 			{
 				auto encoder = _encoders[encoder_id];
