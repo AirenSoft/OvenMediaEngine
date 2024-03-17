@@ -164,6 +164,7 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 		const uint8_t START_CODE[4] = {0x00, 0x00, 0x00, 0x01};
 		const size_t START_CODE_LEN = sizeof(START_CODE);
 
+		std::shared_ptr<ov::Data> sps_nalu = nullptr, pps_nalu = nullptr;
 		bool has_idr = false;
 		bool has_sps = false;
 		bool has_pps = false;
@@ -215,11 +216,19 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 				{
 					// logtd("[SPS] %s ", ov::Base64::Encode(nalu).CStr());
 					has_sps = true;
+					if (sps_nalu == nullptr)
+					{
+						sps_nalu = std::make_shared<ov::Data>(nalu->GetDataAs<uint8_t>(), nalu->GetLength());
+					}
 				}
 				else if (nal_header.GetNalUnitType() == H264NalUnitType::Pps)
 				{
 					// logtd("[PPS] %s ", ov::Base64::Encode(nalu).CStr());
 					has_pps = true;
+					if (pps_nalu == nullptr)
+					{
+						pps_nalu = std::make_shared<ov::Data>(nalu->GetDataAs<uint8_t>(), nalu->GetLength());
+					}					
 				}
 				else if (nal_header.GetNalUnitType() == H264NalUnitType::FillerData)
 				{
@@ -231,8 +240,7 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 			converted_data->Append(START_CODE, sizeof(START_CODE));
 			nalu_offset += START_CODE_LEN;
 
-			fragment_header.fragmentation_offset.push_back(nalu_offset);
-			fragment_header.fragmentation_length.push_back(nalu->GetLength());
+			fragment_header.AddFragment(nalu_offset, nalu->GetLength());
 
 			converted_data->Append(nalu);
 			nalu_offset += nalu->GetLength();
@@ -242,6 +250,32 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 		media_packet->SetData(converted_data);
 		media_packet->SetBitstreamFormat(cmn::BitstreamFormat::H264_ANNEXB);
 		media_packet->SetPacketType(cmn::PacketType::NALU);
+
+		// Update DecoderConfigurationRecord
+		if(sps_nalu != nullptr && pps_nalu != nullptr)
+		{
+			auto new_avc_config = std::make_shared<AVCDecoderConfigurationRecord>();
+
+			new_avc_config->AddSPS(sps_nalu);
+			new_avc_config->AddPPS(pps_nalu);
+
+			if (new_avc_config->IsValid())
+			{
+				auto old_avc_config = std::static_pointer_cast<AVCDecoderConfigurationRecord>(media_track->GetDecoderConfigurationRecord());
+
+				if (media_track->IsValid() == false || old_avc_config == nullptr || old_avc_config->Equals(new_avc_config) == false)
+				{
+					media_track->SetWidth(new_avc_config->GetWidth());
+					media_track->SetHeight(new_avc_config->GetHeight());
+					media_track->SetDecoderConfigurationRecord(new_avc_config);
+				}
+			}
+			else 
+			{
+				auto stream_info = GetStream();
+				logtw("Failed to make AVCDecoderConfigurationRecord of %s/%s/%s track", stream_info->GetApplicationName(), stream_info->GetName().CStr(), media_track->GetVariantName().CStr());
+			}
+		}
 
 		// Insert SPS/PPS if there are no SPS/PPS nal units before IDR frame.
 		if (has_idr == true && (has_sps == false || has_pps == false))
@@ -297,8 +331,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 			offset_length = pos;
 		}
 
-		fragment_header.fragmentation_offset.push_back(offset);
-		fragment_header.fragmentation_length.push_back(offset_length);
+		fragment_header.AddFragment(offset, offset_length);
 
 		H264NalUnitHeader nal_header;
 		if (H264Parser::ParseNalUnitHeader(bitstream + offset, offset_length, nal_header) == false)
@@ -345,24 +378,28 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 	}
 	media_packet->SetFragHeader(&fragment_header);
 
-	// Make AVC Decoder Configuration Record
-	if (media_track->IsValid() == false && has_sps == true && has_pps == true)
+	// Update DecoderConfigurationRecord
+	if (sps_nalu != nullptr && pps_nalu != nullptr)
 	{
-		auto avc_config = std::make_shared<AVCDecoderConfigurationRecord>();
+		auto new_avc_config = std::make_shared<AVCDecoderConfigurationRecord>();
 
-		avc_config->AddSPS(sps_nalu);
-		avc_config->AddPPS(pps_nalu);
+		new_avc_config->AddSPS(sps_nalu);
+		new_avc_config->AddPPS(pps_nalu);
 
-		if (avc_config->IsValid())
+		if (new_avc_config->IsValid())
 		{
-			media_track->SetWidth(avc_config->GetWidth());
-			media_track->SetHeight(avc_config->GetHeight());
-			media_track->SetDecoderConfigurationRecord(avc_config);
+			auto old_avc_config = std::static_pointer_cast<AVCDecoderConfigurationRecord>(media_track->GetDecoderConfigurationRecord());
+
+			if (media_track->IsValid() == false || old_avc_config == nullptr || old_avc_config->Equals(new_avc_config) == false)
+			{
+				media_track->SetWidth(new_avc_config->GetWidth());
+				media_track->SetHeight(new_avc_config->GetHeight());
+				media_track->SetDecoderConfigurationRecord(new_avc_config);
+			}
 		}
 		else
 		{
-			auto stream_info = GetStream();
-			logtw("Failed to make AVCDecoderConfigurationRecord of %s/%s/%s track", stream_info->GetApplicationName(), stream_info->GetName().CStr(), media_track->GetVariantName().CStr());
+			logtw("Failed to make AVCDecoderConfigurationRecord of %s/%s/%s track", GetStream()->GetApplicationName(), GetStream()->GetName().CStr(), media_track->GetVariantName().CStr());
 		}
 	}
 
@@ -371,8 +408,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 	{
 		if (InsertH264SPSPPSAnnexB(media_track, media_packet) == false)
 		{
-			auto stream_info = GetStream();
-			logtw("Failed to insert SPS/PPS before IDR frame in %s/%s/%s track", stream_info->GetApplicationName(), stream_info->GetName().CStr(), media_track->GetVariantName().CStr());
+			logtw("Failed to insert SPS/PPS before IDR frame in %s/%s/%s track", GetStream()->GetApplicationName(), GetStream()->GetName().CStr(), media_track->GetVariantName().CStr());
 		}
 	}
 
@@ -423,8 +459,7 @@ bool MediaRouteStream::InsertH264SPSPPSAnnexB(std::shared_ptr<MediaTrack> &media
 	for (size_t i = 0; i < frag_header->fragmentation_offset.size(); i++)
 	{
 		size_t updated_offset = frag_header->fragmentation_offset[i] + offset_offset;
-		updated_frag_header.fragmentation_offset.push_back(updated_offset);
-		updated_frag_header.fragmentation_length.push_back(frag_header->fragmentation_length[i]);
+		updated_frag_header.AddFragment(updated_offset, frag_header->fragmentation_length[i]);
 	}
 
 	media_packet->SetFragHeader(&updated_frag_header);
@@ -563,8 +598,7 @@ bool MediaRouteStream::ProcessH265AnnexBStream(std::shared_ptr<MediaTrack> &medi
 			offset_length = pos;
 		}
 
-		fragment_header.fragmentation_offset.push_back(offset);
-		fragment_header.fragmentation_length.push_back(offset_length);
+		fragment_header.AddFragment(offset, offset_length);
 
 		H265NalUnitHeader header;
 		if (H265Parser::ParseNalUnitHeader(bitstream + offset, H265_NAL_UNIT_HEADER_SIZE, header) == false)
@@ -613,11 +647,17 @@ bool MediaRouteStream::ProcessH265AnnexBStream(std::shared_ptr<MediaTrack> &medi
 	}
 	media_packet->SetFragHeader(&fragment_header);
 
-	if (media_track->IsValid() == false && hevc_config != nullptr && hevc_config->IsValid() == true)
+	// Update DecoderConfigurationRecord
+	if(hevc_config && hevc_config->IsValid())
 	{
-		media_track->SetWidth(hevc_config->GetWidth());
-		media_track->SetHeight(hevc_config->GetHeight());
-		media_track->SetDecoderConfigurationRecord(hevc_config);
+		auto old_hevc_config = std::static_pointer_cast<HEVCDecoderConfigurationRecord>(media_track->GetDecoderConfigurationRecord());
+
+		if (old_hevc_config == nullptr || old_hevc_config->Equals(hevc_config) == false)
+		{
+			media_track->SetWidth(hevc_config->GetWidth());
+			media_track->SetHeight(hevc_config->GetHeight());
+			media_track->SetDecoderConfigurationRecord(hevc_config);
+		}
 	}
 
 	return true;
