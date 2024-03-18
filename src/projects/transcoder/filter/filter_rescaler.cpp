@@ -184,7 +184,15 @@ bool FilterRescaler::InitializeFilterDescription()
 	}
 	else if (output_module_id == cmn::MediaCodecModuleId::XMA)
 	{
-		ov::String scaler = "";
+		// multiscale_xma only supports resolutions multiple of 4.
+		bool need_crop_for_multiple_of_4 = (_input_track->GetHeight() % 4 != 0 || _input_track->GetHeight() % 4 != 0);;
+		if(need_crop_for_multiple_of_4)
+		{
+			logtw("multiscale_xma only supports resolutions multiple of 4. The resolution will be cropped to a multiple of 4.");
+		}
+
+		int32_t desire_width = _input_track->GetWidth() - _input_track->GetWidth() % 4;
+		int32_t desire_height = _input_track->GetHeight() - _input_track->GetHeight() % 4;
 
 		switch (input_module_id)
 		{
@@ -192,10 +200,18 @@ bool FilterRescaler::InitializeFilterDescription()
 				if (input_device_id != output_device_id)
 				{
 					desc = ov::String::FormatString("xvbm_convert,");
+					if (need_crop_for_multiple_of_4)
+					{
+						desc += ov::String::FormatString("crop=%d:%d:0:0,",  desire_width, desire_height);
+					}
 				}
 				else
 				{
 					desc = ov::String::FormatString("");
+					if (need_crop_for_multiple_of_4)
+					{
+						desc += ov::String::FormatString("xvbm_convert,crop=%d:%d:0:0,",  desire_width, desire_height);
+					}					
 				}
 			}
 			break;
@@ -214,6 +230,10 @@ bool FilterRescaler::InitializeFilterDescription()
 				_src_pixfmt = *(constraints->valid_sw_formats);
 				// desc = ov::String::FormatString("xvbm_convert,");
 				desc = ov::String::FormatString("");
+				if (need_crop_for_multiple_of_4)
+				{
+					desc += ov::String::FormatString("crop=%d:%d:0:0,", desire_width, desire_height);
+				}
 			}
 			break;
 			default:
@@ -225,6 +245,10 @@ bool FilterRescaler::InitializeFilterDescription()
 				// xvbm_convert is xvbm frame to av frame converter filter
 				// desc = ov::String::FormatString("xvbm_convert,");
 				desc = ov::String::FormatString("");
+				if (need_crop_for_multiple_of_4)
+				{
+					desc += ov::String::FormatString("crop=%d:%d:0:0,", desire_width, desire_height);
+				}
 			}
 		}
 
@@ -611,44 +635,47 @@ bool FilterRescaler::SetHWContextToFilterIfNeed()
 {
 	auto hw_device_ctx =  TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, _output_track->GetCodecDeviceId());
 
-	// Assign the hw device context and hw frames context to the filter graph
-	for (uint32_t i = 0 ; i < _filter_graph->nb_filters ; i++)
+	if (hw_device_ctx != nullptr)
 	{
-		auto filter = _filter_graph->filters[i];
-
-		if( (filter->filter->flags_internal & FILTER_FLAG_HWFRAME_AWARE) == 0 || (filter->inputs == nullptr))
+		// Assign the hw device context and hw frames context to the filter graph
+		for (uint32_t i = 0; i < _filter_graph->nb_filters; i++)
 		{
-			continue;
-		}
+			auto filter = _filter_graph->filters[i];
 
-		bool matched = false;
-		if( strstr(filter->name, "scale_cuda") != nullptr || strstr(filter->name, "scale_npp") != nullptr)
-		{
-			matched = true;
-		}
-
-		if (matched == true)
-		{
-			logtd("set hardware device/frames context to filter. name(%s)", filter->name);
-
-			if (ffmpeg::Conv::SetHwDeviceCtxOfAVFilterContext(filter, hw_device_ctx) == false)
+			if ((filter->filter->flags_internal & FILTER_FLAG_HWFRAME_AWARE) == 0 || (filter->inputs == nullptr))
 			{
-				logte("Could not set hw device context for %s", filter->name);
-				return false;
+				continue;
 			}
 
-			for (uint32_t j = 0; j < filter->nb_inputs; j++)
+			bool matched = false;
+			if (strstr(filter->name, "scale_cuda") != nullptr || strstr(filter->name, "scale_npp") != nullptr)
 			{
-				auto input = filter->inputs[j];
-				if (input == nullptr)
+				matched = true;
+			}
+
+			if (matched == true)
+			{
+				logtd("set hardware device/frames context to filter. name(%s)", filter->name);
+
+				if (ffmpeg::Conv::SetHwDeviceCtxOfAVFilterContext(filter, hw_device_ctx) == false)
 				{
-					continue;
+					logte("Could not set hw device context for %s", filter->name);
+					return false;
 				}
 
-				if (ffmpeg::Conv::SetHWFramesCtxOfAVFilterLink(input, hw_device_ctx, _output_track->GetWidth(), _output_track->GetHeight()) == false)
+				for (uint32_t j = 0; j < filter->nb_inputs; j++)
 				{
-					logte("Could not set hw frames context for %s", filter->name);
-					return false;
+					auto input = filter->inputs[j];
+					if (input == nullptr)
+					{
+						continue;
+					}
+
+					if (ffmpeg::Conv::SetHWFramesCtxOfAVFilterLink(input, hw_device_ctx, _output_track->GetWidth(), _output_track->GetHeight()) == false)
+					{
+						logte("Could not set hw frames context for %s", filter->name);
+						return false;
+					}
 				}
 			}
 		}
