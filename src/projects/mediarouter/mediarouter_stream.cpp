@@ -930,7 +930,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			// Time difference in pts values relative to uptime
 			int64_t last_delay = uptime - rescaled_last_pts;
 
-			stat_track_str.AppendFormat("\n\ttrack:%11d, type: %5s, codec: %4s(%d,%s), pts: %lldms, dly: %5lldms, tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %s/%s",
+			stat_track_str.AppendFormat("\n\ttrack:%11u, type: %5s, codec: %4s(%d,%s), pts: %lldms, dly: %5lldms, tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %s/%s",
 										track_id,
 										GetMediaTypeString(track->GetMediaType()).CStr(),
 										::StringFromMediaCodecId(track->GetCodecId()).CStr(),

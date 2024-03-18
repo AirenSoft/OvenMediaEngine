@@ -207,6 +207,8 @@ bool TranscoderStream::Update(const std::shared_ptr<info::Stream> &stream)
 	{
 		logti("%s This stream will be a smooth transition", _log_prefix.CStr());
 
+		// TODO: Flush 
+
 		RemoveDecoders();
 
 		CreateDecoders();
@@ -1053,11 +1055,11 @@ void TranscoderStream::DecodePacket(std::shared_ptr<MediaPacket> packet)
 {
 	MediaTrackId input_track_id = packet->GetTrackId();
 
-	// 1. bypass track processing.
-	auto output_streams_it = _link_input_to_outputs.find(input_track_id);
-	if (output_streams_it != _link_input_to_outputs.end())
+	// 1. Packet to Output Stream (bypass)
+	auto output_streams = _link_input_to_outputs.find(input_track_id);
+	if (output_streams != _link_input_to_outputs.end())
 	{
-		auto &output_tracks = output_streams_it->second;
+		auto &output_tracks = output_streams->second;
 
 		for (auto &[output_stream, output_track_id] : output_tracks)
 		{
@@ -1075,12 +1077,11 @@ void TranscoderStream::DecodePacket(std::shared_ptr<MediaPacket> packet)
 				continue;
 			}
 
-			auto clone_packet = packet->ClonePacket();
-
-			clone_packet->SetTrackId(output_track_id);
-
-			// PTS/DTS recalculation based on output timebase
 			double scale = input_track->GetTimeBase().GetExpr() / output_track->GetTimeBase().GetExpr();
+
+			// Clone the packet and send it to the output stream.
+			auto clone_packet = packet->ClonePacket();
+			clone_packet->SetTrackId(output_track_id);
 			clone_packet->SetPts((int64_t)((double)clone_packet->GetPts() * scale));
 			clone_packet->SetDts((int64_t)((double)clone_packet->GetDts() * scale));
 
@@ -1088,7 +1089,8 @@ void TranscoderStream::DecodePacket(std::shared_ptr<MediaPacket> packet)
 		}
 	}
 
-	// 2. decoding track processing
+
+	// 2. Packet to Decoder (transcoding)
 	auto input_to_decoder_it = _link_input_to_decoder.find(input_track_id);
 	if (input_to_decoder_it == _link_input_to_decoder.end())
 	{
@@ -1103,6 +1105,7 @@ void TranscoderStream::DecodePacket(std::shared_ptr<MediaPacket> packet)
 	{
 		return;
 	}
+
 	auto decoder = decoder_it->second;
 	decoder->SendBuffer(std::move(packet));
 }
