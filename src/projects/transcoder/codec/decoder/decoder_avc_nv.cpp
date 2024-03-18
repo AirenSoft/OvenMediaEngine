@@ -92,6 +92,8 @@ bool DecoderAVCxNV::InitCodec()
 		return false;
 	}
 
+	_change_format = false;
+	
 	return true;
 }
 
@@ -101,6 +103,25 @@ void DecoderAVCxNV::UninitCodec()
 	::avcodec_free_context(&_context);
 
 	_context = nullptr;
+}
+
+bool DecoderAVCxNV::ReinitCodecIfNeed()
+{
+	// NVIDIA H.264 decoder does not support dynamic resolution streams. (e.g. WebRTC)
+	// So, when a resolution change is detected, the codec is reset and recreated.
+	if (_context->width != 0 && _context->height != 0 && (_parser->width != _context->width || _parser->height != _context->height))
+	{
+		logti("Changed input resolution of %u track. (%dx%d -> %dx%d)", GetRefTrack()->GetId(), _context->width, _context->height, _parser->width, _parser->height);
+
+		UninitCodec();
+
+		if (InitCodec() == false)
+		{
+			return false;
+		}
+	}
+
+	return true;	
 }
 
 void DecoderAVCxNV::CodecThread()
@@ -136,18 +157,9 @@ void DecoderAVCxNV::CodecThread()
 				break;
 			}
 
-			// NVIDIA H.264 decoder does not support dynamic resolution streams. (e.g. WebRTC)
-			// So, when a resolution change is detected, the codec is reset and recreated.
-			if (_context->width != 0 && _context->height != 0 && (_parser->width != _context->width || _parser->height != _context->height))
+			if(ReinitCodecIfNeed() == false)
 			{
-				logti("Changed input resolution of %u track. (%dx%d -> %dx%d)", GetRefTrack()->GetId(), _context->width, _context->height, _parser->width, _parser->height);
-				
-				UninitCodec();
-
-				if(InitCodec() == false)
-				{
-					break;
-				}
+				break;
 			}
 
 			///////////////////////////////

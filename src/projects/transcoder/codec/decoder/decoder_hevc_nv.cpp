@@ -86,6 +86,8 @@ bool DecoderHEVCxNV::InitCodec()
 		return false;
 	}
 
+	_change_format = false;
+	
 	return true;
 }
 
@@ -95,6 +97,25 @@ void DecoderHEVCxNV::UninitCodec()
 	::avcodec_free_context(&_context);
 
 	_context = nullptr;
+}
+
+bool DecoderHEVCxNV::ReinitCodecIfNeed()
+{
+	// NVIDIA H.265 decoder does not support dynamic resolution streams.
+	// So, when a resolution change is detected, the codec is reset and recreated.
+	if (_context->width != 0 && _context->height != 0 && (_parser->width != _context->width || _parser->height != _context->height))
+	{
+		logti("Changed input resolution of %u track. (%dx%d -> %dx%d)", GetRefTrack()->GetId(), _context->width, _context->height, _parser->width, _parser->height);
+
+		UninitCodec();
+
+		if (InitCodec() == false)
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
 void DecoderHEVCxNV::CodecThread()
@@ -129,18 +150,9 @@ void DecoderHEVCxNV::CodecThread()
 				break;
 			}
 
-			// NVIDIA H.265 decoder does not support dynamic resolution streams.
-			// So, when a resolution change is detected, the codec is reset and recreated.
-			if (_context->width != 0 && _context->height != 0 && (_parser->width != _context->width || _parser->height != _context->height))
+			if(ReinitCodecIfNeed() == false)
 			{
-				logti("Changed input resolution of %u track. (%dx%d -> %dx%d)", GetRefTrack()->GetId(), _context->width, _context->height, _parser->width, _parser->height);
-
-				UninitCodec();
-
-				if(InitCodec() == false)
-				{
-					break;
-				}
+				break;
 			}
 
 			if (_pkt->size > 0)
