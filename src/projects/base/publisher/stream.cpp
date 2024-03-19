@@ -233,10 +233,10 @@ namespace pub
 	bool Stream::CreateStreamWorker(uint32_t worker_count)
 	{
 		std::unique_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
-		
-		if (worker_count > MAX_STREAM_WORKER_THREAD_COUNT)
+
+		if (worker_count > Stream::MaxStreamWorkerThreadCount())
 		{
-			worker_count = MAX_STREAM_WORKER_THREAD_COUNT;
+			worker_count = Stream::MaxStreamWorkerThreadCount();
 		}
 
 		_worker_count = worker_count;

@@ -69,8 +69,17 @@ bool HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<http::svr::Ht
 		return false;
 	}
 
+	// By default, set the Content-Type header as defined by the HLS standard
+	ov::String content_type = "application/vnd.apple.mpegurl";
+	// Allow environment variable to set custom Content-Type header
+	const char* content_type_env = std::getenv("HLS_CONTENT_TYPE_HEADER");
+	if (content_type_env != nullptr) 
+	{
+    	content_type = content_type_env;
+	}
+
 	// Set HTTP header
-	response->SetHeader("Content-Type", "application/vnd.apple.mpegurl");
+	response->SetHeader("Content-Type", content_type);
 	response->SetHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 	response->SetHeader("Pragma", "no-cache");
 	response->SetHeader("Expires", "0");

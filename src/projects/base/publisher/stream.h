@@ -8,8 +8,6 @@
 #include "modules/managed_queue/managed_queue.h"
 #include "session.h"
 
-#define MAX_STREAM_WORKER_THREAD_COUNT 72
-
 namespace pub
 {
 	class StreamWorker
@@ -122,6 +120,12 @@ namespace pub
 		}
 
 		const std::chrono::system_clock::time_point &GetStartedTime() const;
+
+    	static uint32_t MaxStreamWorkerThreadCount()
+    	{
+        const char* maxStreamWorkersEnv = std::getenv("OME_MAX_STREAM_WORKERS");
+        return maxStreamWorkersEnv ? std::atoi(maxStreamWorkersEnv) : 72;
+    	}
 
 	protected:
 		Stream(const std::shared_ptr<Application> application, const info::Stream &info);
