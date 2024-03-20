@@ -6,16 +6,16 @@ PREFIX=/opt/ovenmediaengine
 TEMP_PATH=/tmp
 
 OME_VERSION=dev
-OPENSSL_VERSION=3.0.7
-SRTP_VERSION=2.4.2
-SRT_VERSION=1.5.2
-OPUS_VERSION=1.3.1
-VPX_VERSION=1.11.0
-FDKAAC_VERSION=2.0.2
-NASM_VERSION=2.15.05
-FFMPEG_VERSION=5.0.1
+OPENSSL_VERSION=3.0.13
+SRTP_VERSION=2.5.0
+SRT_VERSION=1.5.3
+OPUS_VERSION=1.4
+VPX_VERSION=1.14.0
+FDKAAC_VERSION=2.0.3
+NASM_VERSION=2.16.01
+FFMPEG_VERSION=6.1.1
 JEMALLOC_VERSION=5.3.0
-PCRE2_VERSION=10.39
+PCRE2_VERSION=10.43
 OPENH264_VERSION=2.4.0
 HIREDIS_VERSION=1.0.2
 NVCC_HDR_VERSION=11.1.5.2
@@ -91,7 +91,7 @@ install_libopus()
     (DIR=${TEMP_PATH}/opus && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sSLf https://archive.mozilla.org/pub/opus/opus-${OPUS_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sSLf https://github.com/xiph/opus/archive/refs/tags/v${OPUS_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     autoreconf -fiv && \
     ./configure --prefix="${PREFIX}" --enable-shared --disable-static && \
     make -j$(nproc) && \
@@ -315,8 +315,8 @@ install_ffmpeg()
     --extra-ldflags="-L${PREFIX}/lib -Wl,-rpath,${PREFIX}/lib ${ADDI_LDFLAGS}" \
     --extra-libs=-ldl ${ADDI_EXTRA_LIBS} \
     ${ADDI_LICENSE} \
-    --disable-everything --disable-programs --disable-avdevice --disable-dwt --disable-lsp --disable-lzo --disable-faan --disable-pixelutils \
-    --enable-shared --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libopenh264 --enable-openssl --enable-network --enable-libsrt --enable-dct --enable-rdft  ${ADDI_LIBS} \
+    --disable-everything --disable-programs --disable-avdevice --disable-dwt --disable-lsp --disable-faan --disable-pixelutils \
+    --enable-shared --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libopenh264 --enable-openssl --enable-libsrt ${ADDI_LIBS} \
     ${ADDI_HWACCEL} \
     --enable-ffmpeg \
     --enable-encoder=libvpx_vp8,libopus,libfdk_aac,libopenh264,mjpeg,png${ADDI_ENCODER} \
