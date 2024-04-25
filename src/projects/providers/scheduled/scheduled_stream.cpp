@@ -400,6 +400,8 @@ namespace pvd
         std::map<int, int64_t> track_single_file_dts_offset_map;
         std::map<int, bool> end_of_track_map;
 
+        bool use_annexb { std::strncmp(context->iformat->name, "mpegts", 6) == 0 };
+
         while (_worker_thread_running)
         {
             if (CheckCurrentProgramChanged() == true)
@@ -477,13 +479,13 @@ namespace pvd
 			switch (track->GetCodecId())
 			{
 				case cmn::MediaCodecId::H264:
-					bitstream_format = cmn::BitstreamFormat::H264_AVCC;
+					bitstream_format = (use_annexb) ? cmn::BitstreamFormat::H264_ANNEXB : cmn::BitstreamFormat::H264_AVCC;
 					packet_type = cmn::PacketType::NALU;
 					break;
-                case cmn::MediaCodecId::H265:
-                    bitstream_format = cmn::BitstreamFormat::HVCC;
-                    packet_type = cmn::PacketType::NALU;
-                    break;
+				case cmn::MediaCodecId::H265:
+					bitstream_format = (use_annexb) ? cmn::BitstreamFormat::H265_ANNEXB : cmn::BitstreamFormat::HVCC;
+					packet_type = cmn::PacketType::NALU;
+					break;
 				case cmn::MediaCodecId::Aac:
 					bitstream_format = cmn::BitstreamFormat::AAC_RAW;
 					packet_type = cmn::PacketType::RAW;
