@@ -2,6 +2,7 @@
 
 #include <modules/bitstream/aac/aac_converter.h>
 #include <modules/bitstream/nalu/nal_stream_converter.h>
+#include <modules/bitstream/opus/opus_specific_config.h>
 #include <modules/ffmpeg/ffmpeg_conv.h>
 
 #define OV_LOG_TAG "FFmpegWriter"
@@ -70,6 +71,13 @@ namespace ffmpeg
 	{
 		std::unique_lock<std::mutex> mlock(_lock);
 
+		if (media_track->GetCodecId() == cmn::MediaCodecId::Opus &&
+			media_track->GetDecoderConfigurationRecord() == nullptr)
+		{
+			auto opus_config { std::make_shared<OpusSpecificConfig>(media_track->GetChannel().GetCounts(), media_track->GetSampleRate()) };
+			media_track->SetDecoderConfigurationRecord(opus_config);
+		}
+
 		AVStream *av_stream = avformat_new_stream(_av_format, nullptr);
 		if (!av_stream)
 		{
@@ -100,12 +108,13 @@ namespace ffmpeg
 		_need_to_flush = false;
 		_need_to_close = false;
 
-		AVDictionary *options = nullptr;
-		av_dict_set(&options, "fflags", "flush_packets", 0);
+		// AVDictionary *options = nullptr;
+		// av_dict_set(&options, "fflags", "flush_packets", 0);
+		_av_format->flush_packets = 1;
 
 		if (!(_av_format->oformat->flags & AVFMT_NOFILE))
 		{
-			int error = avio_open2(&_av_format->pb, _av_format->url, AVIO_FLAG_WRITE, nullptr, &options);
+			int error = avio_open2(&_av_format->pb, _av_format->url, AVIO_FLAG_WRITE, nullptr, nullptr);
 			if (error < 0)
 			{
 				logte("Error opening file. error(%s), url(%s)", ffmpeg::Conv::AVErrorToString(error).CStr(), _av_format->url);
@@ -270,6 +279,7 @@ namespace ffmpeg
 				}
 				break;
 				case cmn::BitstreamFormat::AAC_RAW:
+				case cmn::BitstreamFormat::OPUS:
 					break;
 				case cmn::BitstreamFormat::AAC_ADTS: {
 					new_data = AacConverter::ConvertAdtsToRaw(packet->GetData(), nullptr);

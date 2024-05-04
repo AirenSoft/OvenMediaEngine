@@ -29,6 +29,7 @@ src/projects/main/git_info.h
 *.cxxflags
 *.files
 *.includes
+.qtc_clangd
 
 *.o
 *.d

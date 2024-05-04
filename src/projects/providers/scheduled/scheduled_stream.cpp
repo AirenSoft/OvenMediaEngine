@@ -400,7 +400,7 @@ namespace pvd
         std::map<int, int64_t> track_single_file_dts_offset_map;
         std::map<int, bool> end_of_track_map;
 
-        bool use_annexb { std::strncmp(context->iformat->name, "mpegts", 6) == 0 };
+        bool is_mpegts { std::strncmp(context->iformat->name, "mpegts", 6) == 0 };
 
         while (_worker_thread_running)
         {
@@ -479,15 +479,15 @@ namespace pvd
 			switch (track->GetCodecId())
 			{
 				case cmn::MediaCodecId::H264:
-					bitstream_format = (use_annexb) ? cmn::BitstreamFormat::H264_ANNEXB : cmn::BitstreamFormat::H264_AVCC;
+					bitstream_format = (is_mpegts) ? cmn::BitstreamFormat::H264_ANNEXB : cmn::BitstreamFormat::H264_AVCC;
 					packet_type = cmn::PacketType::NALU;
 					break;
 				case cmn::MediaCodecId::H265:
-					bitstream_format = (use_annexb) ? cmn::BitstreamFormat::H265_ANNEXB : cmn::BitstreamFormat::HVCC;
+					bitstream_format = (is_mpegts) ? cmn::BitstreamFormat::H265_ANNEXB : cmn::BitstreamFormat::HVCC;
 					packet_type = cmn::PacketType::NALU;
 					break;
 				case cmn::MediaCodecId::Aac:
-					bitstream_format = cmn::BitstreamFormat::AAC_RAW;
+					bitstream_format = (is_mpegts) ? cmn::BitstreamFormat::AAC_ADTS : cmn::BitstreamFormat::AAC_RAW;
 					packet_type = cmn::PacketType::RAW;
 					break;
 				case cmn::MediaCodecId::Opus:
@@ -752,7 +752,7 @@ namespace pvd
                 }
 
                 new_track->SetId(kScheduledAudioTrackId);
-                new_track->SetTimeBase(1, kScheduledTimebase); // We fixed time base in scheduled stream
+                new_track->SetTimeBase(1, new_track->GetSampleRate()/*kScheduledTimebase*/); // We fixed time base in scheduled stream
                 _origin_id_track_id_map.emplace(stream->index, kScheduledAudioTrackId);
                 UpdateTrack(new_track);
 

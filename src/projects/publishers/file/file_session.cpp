@@ -323,14 +323,18 @@ namespace pub
 		// Drop until the first keyframe of the main track is received.
 		if (_found_first_keyframe == false)
 		{
-			if ((_default_track == session_packet->GetTrackId() && session_packet->GetFlag() == MediaPacketFlag::Key) == true)
+			if (_default_track == session_packet->GetTrackId())
 			{
-				_found_first_keyframe = true;
-			}
-			else
-			{
-				GetRecord()->UpdateRecordStartTime();
-				return;
+				if ((session_packet->GetMediaType() == cmn::MediaType::Audio) ||
+					(session_packet->GetMediaType() == cmn::MediaType::Video && session_packet->GetFlag() == MediaPacketFlag::Key))
+				{
+					_found_first_keyframe = true;
+				}
+				else
+				{
+					GetRecord()->UpdateRecordStartTime();
+					return;
+				}
 			}
 		}
 
@@ -338,7 +342,9 @@ namespace pub
 
 		// When setting interval parameter, perform segmentation recording.
 		if (((uint64_t)GetRecord()->GetInterval() > 0) && (GetRecord()->GetRecordTime() > (uint64_t)GetRecord()->GetInterval()) &&
-			(session_packet->GetFlag() == MediaPacketFlag::Key) && (session_packet->GetTrackId() == _default_track))
+			(session_packet->GetTrackId() == _default_track) &&
+			((session_packet->GetMediaType() == cmn::MediaType::Audio) ||
+			(session_packet->GetMediaType() == cmn::MediaType::Video && session_packet->GetFlag() == MediaPacketFlag::Key)) )
 		{
 			need_file_split = true;
 		}
