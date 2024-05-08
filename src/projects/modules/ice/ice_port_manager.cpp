@@ -188,10 +188,17 @@ bool IcePortManager::CreateTurnServersInternal(
 		}
 	}
 
-	logti("TURN port%s listening on %s (for %s)",
-		  (tcp_relay_address_string_list.size() == 1) ? " is" : "s are",
-		  ov::String::Join(tcp_relay_address_string_list, ", ").CStr(),
-		  server_name);
+	if (tcp_relay_address_string_list.empty())
+	{
+		logti("No TURN server is configured for %s", server_name);
+	}
+	else
+	{
+		logti("TURN port%s listening on %s (for %s)",
+			  (tcp_relay_address_string_list.size() == 1) ? " is" : "s are",
+			  ov::String::Join(tcp_relay_address_string_list, ", ").CStr(),
+			  server_name);
+	}
 
 	return true;
 }

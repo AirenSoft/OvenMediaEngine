@@ -325,7 +325,7 @@ install_ffmpeg()
     --enable-protocol=tcp,udp,rtp,file,rtmp,tls,rtmps,libsrt \
     --enable-demuxer=rtsp,flv,live_flv,mp4,mp3 \
     --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
-    --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb,format${ADDI_FILTERS} && \
+    --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb,crop,format${ADDI_FILTERS} && \
     make -j$(nproc) && \
     sudo make install && \
     sudo rm -rf ${PREFIX}/share && \

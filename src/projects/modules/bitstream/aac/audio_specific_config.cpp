@@ -50,6 +50,37 @@ bool AudioSpecificConfig::Parse(const std::shared_ptr<ov::Data> &data)
 	return true;
 }
 
+bool AudioSpecificConfig::Equals(const std::shared_ptr<DecoderConfigurationRecord> &other) 
+{
+	if (other == nullptr)
+	{
+		return false;
+	}
+
+	auto other_config = std::dynamic_pointer_cast<AudioSpecificConfig>(other);
+	if (other_config == nullptr)
+	{
+		return false;
+	}
+
+	if(ObjectType() != other_config->ObjectType())
+	{
+		return false;
+	}
+
+	if(SamplingFrequency() != other_config->SamplingFrequency())
+	{
+		return false;
+	}
+
+	if(Channel() != other_config->Channel())
+	{
+		return false;
+	}
+
+	return true;
+}
+
 std::shared_ptr<ov::Data> AudioSpecificConfig::Serialize()
 {
 	ov::BitWriter bits(2);

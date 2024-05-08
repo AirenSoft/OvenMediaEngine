@@ -100,9 +100,6 @@ private:
 	// Average Pts Increment
 	std::map<MediaTrackId, int64_t> _pts_avg_inc;
 
-	// Timebase of incoming packets
-	std::map<MediaTrackId, cmn::Timebase> _incoming_timebase;
-
 	// Statistics
 	// <TrackId, Values>
 	std::map<MediaTrackId, int64_t> _stat_recv_pkt_lpts;

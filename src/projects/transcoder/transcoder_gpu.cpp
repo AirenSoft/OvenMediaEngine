@@ -85,7 +85,7 @@ bool TranscodeGPU::Initialize()
 	_initialized = true;
 
 	// Resource Monitoring Thread
-	_thread = std::thread(&TranscodeGPU::CodecThread, this);
+	// _thread = std::thread(&TranscodeGPU::CodecThread, this);
 
 	return false;
 }

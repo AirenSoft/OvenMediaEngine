@@ -152,6 +152,12 @@ public:
 	// Currently only used for RTSP Provider only
 	bool last_fragment_complete = false;
 
+	void AddFragment(size_t offset, size_t length)
+	{
+		fragmentation_offset.push_back(offset);
+		fragmentation_length.push_back(length);
+	}
+
 	size_t GetCount() const
 	{
 		OV_ASSERT2(fragmentation_offset.size() == fragmentation_length.size());

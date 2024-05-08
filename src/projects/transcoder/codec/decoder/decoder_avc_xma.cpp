@@ -104,6 +104,8 @@ bool DecoderAVCxXMA::InitCodec()
 		return false;
 	}
 
+	_change_format = false;
+
 	return true;
 }
 
@@ -175,7 +177,11 @@ void DecoderAVCxXMA::CodecThread()
 				break;
 			}
 
-			ReinitCodecIfNeed();
+			if(ReinitCodecIfNeed() == false)
+			{
+				logte("An error occurred while reinit codec");
+				break;
+			}
 
 			///////////////////////////////
 			// Send to decoder

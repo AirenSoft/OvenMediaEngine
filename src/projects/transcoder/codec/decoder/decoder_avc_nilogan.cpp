@@ -108,6 +108,8 @@ bool DecoderAVCxNILOGAN::InitCodec()
 		return false;
 	}
 	
+	_change_format = false;
+
 	return true;
 }
 
@@ -177,7 +179,10 @@ void DecoderAVCxNILOGAN::CodecThread()
 			}
 			
 			// if activated, I got Warning: time out on receiving a decoded framefrom the decoder, assume dropped, received frame_num: 0, sent pkt_num: 1, pkt_num-frame_num: 1, sending another packet.
-			// ReinitCodecIfNeed();			
+			// if(ReinitCodecIfNeed() == false)
+			// {
+			// 	break;
+			// }
  
 			if (_pkt->size > 0)
 			{

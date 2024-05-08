@@ -51,6 +51,8 @@ public:
 	bool IsValid() const override;
 	ov::String GetCodecsParameter() const override;
 	bool Parse(const std::shared_ptr<ov::Data> &data) override;
+	bool Equals(const std::shared_ptr<DecoderConfigurationRecord> &other) override;
+
 	std::shared_ptr<ov::Data> Serialize() override;
 
 	void AddNalUnit(H265NALUnitType nal_type, const std::shared_ptr<ov::Data> &nal_unit); // SPS, PPS, VPS, etc.

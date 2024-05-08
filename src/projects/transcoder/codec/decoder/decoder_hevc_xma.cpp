@@ -104,6 +104,8 @@ bool DecoderHEVCxXMA::InitCodec()
 		return false;
 	}
 
+	_change_format = false;
+
 	return true;
 }
 
@@ -117,7 +119,7 @@ void DecoderHEVCxXMA::UninitCodec()
 
 bool DecoderHEVCxXMA::ReinitCodecIfNeed()
 {
-	// Xilinx H.264 decoder does not support dynamic resolution streams. (e.g. WebRTC)
+	// Xilinx H.265 decoder does not support dynamic resolution streams. (e.g. WebRTC)
 	// So, when a resolution change is detected, the codec is reset and recreated.
 	if (_context->width != 0 && _context->height != 0 && (_parser->width != _context->width || _parser->height != _context->height))
 	{
@@ -176,7 +178,10 @@ void DecoderHEVCxXMA::CodecThread()
 				break;
 			}
 
-			ReinitCodecIfNeed();
+			if(ReinitCodecIfNeed() == false)
+			{
+				break;
+			}
 
 			///////////////////////////////
 			// Send to decoder

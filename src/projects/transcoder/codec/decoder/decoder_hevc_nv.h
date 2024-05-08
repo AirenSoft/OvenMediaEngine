@@ -26,8 +26,8 @@ public:
 	bool Configure(std::shared_ptr<MediaTrack> context) override;
 
 	bool InitCodec();
-
 	void UninitCodec();
+	bool ReinitCodecIfNeed();
 
 	void CodecThread() override;
 };

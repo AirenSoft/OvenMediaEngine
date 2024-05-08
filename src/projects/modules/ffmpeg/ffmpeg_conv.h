@@ -382,46 +382,56 @@ namespace ffmpeg
 			{
 				case cmn::MediaCodecId::H264:
 				{
-					// AVCC format
-					auto avc_config = std::make_shared<AVCDecoderConfigurationRecord>();
-					auto extra_data = std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size, true);
-
-					if (avc_config->Parse(extra_data) == false)
+					if (stream->codecpar->extradata_size > 0)
 					{
-						return false;
+						// AVCC format
+						auto avc_config = std::make_shared<AVCDecoderConfigurationRecord>();
+						auto extra_data = std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size, true);
+
+						if (avc_config->Parse(extra_data) == false)
+						{
+							return false;
+						}
+
+						media_track->SetDecoderConfigurationRecord(avc_config);
 					}
 
-					media_track->SetDecoderConfigurationRecord(avc_config);
 					
 					break;
 				}
 				case cmn::MediaCodecId::H265:
 				{
-					// HVCC format
-					auto hevc_config = std::make_shared<HEVCDecoderConfigurationRecord>();
-					auto extra_data = std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size, true);
-
-					if (hevc_config->Parse(extra_data) == false)
+					if (stream->codecpar->extradata_size > 0)
 					{
-						return false;
-					}
+						// HVCC format
+						auto hevc_config = std::make_shared<HEVCDecoderConfigurationRecord>();
+						auto extra_data = std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size, true);
 
-					media_track->SetDecoderConfigurationRecord(hevc_config);
+						if (hevc_config->Parse(extra_data) == false)
+						{
+							return false;
+						}
+
+						media_track->SetDecoderConfigurationRecord(hevc_config);
+					}
 
 					break;
 				}
 				case cmn::MediaCodecId::Aac:
 				{
-					// ASC format
-					auto asc = std::make_shared<AudioSpecificConfig>();
-					auto extra_data = std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size, true);
-
-					if (asc->Parse(extra_data) == false)
+					if (stream->codecpar->extradata_size > 0)
 					{
-						return false;
+						// ASC format
+						auto asc = std::make_shared<AudioSpecificConfig>();
+						auto extra_data = std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size, true);
+
+						if (asc->Parse(extra_data) == false)
+						{
+							return false;
+						}
+
+						media_track->SetDecoderConfigurationRecord(asc);
 					}
-					
-					media_track->SetDecoderConfigurationRecord(asc);
 
 					break;
 				}
