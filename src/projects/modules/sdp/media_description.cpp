@@ -543,6 +543,12 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 						break;
 					}
 
+					if (GetSsrc() != 0)
+					{
+						// Already set
+						break;
+					}
+
 					SetSsrc(ov::Converter::ToUInt32(match.GetGroupAt(1).GetValue().CStr()));
 					SetCname(match.GetGroupAt(2).GetValue());
 				}
