@@ -35,7 +35,7 @@
 
 #include <modules/bitstream/nalu/nal_stream_converter.h>
 #include <modules/bitstream/h264/h264_decoder_configuration_record.h>
-#include <modules/bitstream/h264/h264_nal_unit_types.h>
+#include <modules/bitstream/h264/h264_common.h>
 #include <modules/bitstream/h264/h264_parser.h>
 
 #include <modules/bitstream/h265/h265_decoder_configuration_record.h>

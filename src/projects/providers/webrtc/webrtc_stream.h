@@ -19,6 +19,8 @@
 #include "modules/dtls_srtp/dtls_transport.h"
 #include "modules/rtp_rtcp/rtp_depacketizing_manager.h"
 
+#include "modules/bitstream/h264/h264_bitstream_parser.h"
+
 namespace pvd
 {
 	class WebRTCStream : public pvd::PushStream, public RtpRtcpInterface, public ov::Node
@@ -76,6 +78,8 @@ namespace pvd
 		bool AddDepacketizer(uint8_t payload_type, RtpDepacketizingManager::SupportedDepacketizerType codec_id);
 		std::shared_ptr<RtpDepacketizingManager> GetDepacketizer(uint8_t payload_type);
 
+		void OnFrame(const std::shared_ptr<MediaTrack> &track, const std::shared_ptr<MediaPacket> &media_packet);
+
 		ov::StopWatch _fir_timer;
 
 		ov::String _session_key;
@@ -93,8 +97,10 @@ namespace pvd
 		std::shared_mutex					_start_stop_lock;
 
 		// CompositionTime extmap
-		bool _cts_enabled = false;
+		bool _cts_extmap_enabled = false;
 		uint8_t _cts_extmap_id = 0;
+		std::map<int64_t, std::shared_ptr<MediaPacket>> _dts_ordered_frame_buffer;
+		H264BitstreamParser _h264_bitstream_parser;
 
 		// Payload type, Depacketizer
 		std::map<uint8_t, std::shared_ptr<RtpDepacketizingManager>> _depacketizers;

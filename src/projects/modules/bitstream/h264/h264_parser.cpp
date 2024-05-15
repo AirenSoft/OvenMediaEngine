@@ -4,6 +4,51 @@
 
 #define OV_LOG_TAG "H264Parser"
 
+std::vector<NaluIndex> H264Parser::FindNaluIndexes(const uint8_t *bitstream, size_t length)
+{
+	std::vector<NaluIndex> indexes;
+
+	size_t offset = 0;
+	while (offset < length)
+	{
+		size_t start_code_size = 0;
+		auto pos = FindAnnexBStartCode(bitstream + offset, length - offset, start_code_size);
+		offset += pos;
+
+		// get previous index
+		if (indexes.size() > 0)
+		{
+			auto& prev_index = indexes.back();
+
+			// last NALU
+			if (pos == -1)
+			{
+				prev_index._payload_size = length - prev_index._payload_offset;
+				break;
+			}
+
+			prev_index._payload_size = offset - prev_index._payload_offset;
+		}
+		else if (pos == -1)
+		{
+			// error
+			break;
+		}
+		
+		// new NALU
+		NaluIndex index;
+		index._start_offset = offset;
+		index._payload_offset = offset + start_code_size;
+		index._payload_size = 0;
+
+		indexes.push_back(index);
+
+		offset += start_code_size;
+	}
+
+	return indexes;
+}
+
 int H264Parser::FindAnnexBStartCode(const uint8_t *bitstream, size_t length, size_t &start_code_size)
 {
 	size_t offset = 0;
@@ -14,7 +59,13 @@ int H264Parser::FindAnnexBStartCode(const uint8_t *bitstream, size_t length, siz
 		size_t remaining = length - offset;
 		const uint8_t *data = bitstream + offset;
 
-		if ((remaining >= 3 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x01) ||
+		// fast forward to the next start code
+		// if the 3rd byte isn't 1 or 0, we can skip 3 bytes
+		if (remaining >= 3 && data[2] > 0x01)
+		{
+			offset += 3;
+		}
+		else if ((remaining >= 3 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x01) ||
 			(remaining >= 4 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00 && data[3] == 0x01))
 		{
 			if (data[2] == 0x01)

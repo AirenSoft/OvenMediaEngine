@@ -4,7 +4,7 @@
 #include <modules/bitstream/nalu/nal_unit_bitstream_parser.h>
 #include <stdint.h>
 
-#include "h264_nal_unit_types.h"
+#include "h264_common.h"
 
 #define H264_NAL_UNIT_HEADER_SIZE 1
 
@@ -180,9 +180,19 @@ private:
 	friend class H264Parser;
 };
 
+struct NaluIndex
+{
+	size_t _start_offset;
+	size_t _payload_offset;
+	size_t _payload_size;
+};
+
+// H264 Bitstream Parser Utility
 class H264Parser
 {
 public:
+
+	static std::vector<NaluIndex> FindNaluIndexes(const uint8_t *bitstream, size_t length);
 	// returns offset (start point), code_size : 3(001) or 4(0001)
 	// returns -1 if there is no start code in the buffer
 	static int FindAnnexBStartCode(const uint8_t *bitstream, size_t length, size_t &code_size);
@@ -203,6 +213,5 @@ public:
     static bool ParsePredWeightTable(NalUnitBitstreamParser &parser, const H264SPS &sps, H264SliceHeader &header);
     static bool ParseDecRefPicMarking(NalUnitBitstreamParser &parser, bool  idr, H264SliceHeader &header);
 
-private:
 	static bool ParseNalUnitHeader(NalUnitBitstreamParser &parser, H264NalUnitHeader &header);
 };

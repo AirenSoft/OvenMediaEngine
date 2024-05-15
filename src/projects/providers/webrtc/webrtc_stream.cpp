@@ -50,6 +50,8 @@ namespace pvd
 		_certificate = certificate;
 		_session_key = ov::Random::GenerateString(8);
 		_ice_session_id = ice_session_id;
+
+		_h264_bitstream_parser.SetConfig(H264BitstreamParser::Config{._parse_slice_type = true});
 	}
 
 	WebRTCStream::~WebRTCStream()
@@ -234,7 +236,7 @@ namespace pvd
 				ov::String cts_extmap_uri;
 				if (peer_media_desc->FindExtmapItem("CompositionTime", _cts_extmap_id, cts_extmap_uri))
 				{
-					_cts_enabled = true;
+					_cts_extmap_enabled = true;
 				}
 				
 				RegisterRtpClock(ssrc, video_track->GetTimeBase().GetExpr());
@@ -385,12 +387,15 @@ namespace pvd
 		cmn::BitstreamFormat bitstream_format;
 		cmn::PacketType packet_type;
 
+		bool cts_enabled = false;
 		switch (track->GetCodecId())
 		{
 			case cmn::MediaCodecId::H264:
 				// Our H264 depacketizer always converts packet to Annex B
 				bitstream_format = cmn::BitstreamFormat::H264_ANNEXB;
 				packet_type = cmn::PacketType::NALU;
+				cts_enabled = _cts_extmap_enabled == true;
+				cts_enabled = true; // for debug
 				break;
 
 			case cmn::MediaCodecId::Opus:
@@ -418,9 +423,8 @@ namespace pvd
 		}
 		
 		int64_t dts = adjusted_timestamp;
-		if (_cts_enabled == true)
+		if (cts_enabled == true)
 		{
-			// Reorder frames in DTS order
 			auto cts_extension_opt = first_rtp_packet->GetExtension<uint24_t>(_cts_extmap_id);
 			if (cts_extension_opt.has_value() == true)
 			{
@@ -429,7 +433,7 @@ namespace pvd
 			}
 		}
 		
-		logtp("Payload Type(%d) Timestamp(%u) PTS(%u) Time scale(%f) Adjust Timestamp(%f)",
+		logtd("Payload Type(%d) Timestamp(%u) PTS(%u) Time scale(%f) Adjust Timestamp(%f)",
 			  first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), adjusted_timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(adjusted_timestamp) * track->GetTimeBase().GetExpr());
 
 		auto frame = std::make_shared<MediaPacket>(GetMsid(),
@@ -441,31 +445,71 @@ namespace pvd
 												   bitstream_format,
 												   packet_type);
 
-		logtd("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%u)", track->GetId(), track->GetCodecId(), bitstream_format, packet_type, bitstream->GetLength(), first_rtp_packet->Timestamp());
+		// Reorder frames in DTS order
+		if (cts_enabled == true)
+		{
+			// PTS order to DTS order
+			// Q and Flush (if slice type is I or P)
+			_dts_ordered_frame_buffer.emplace(dts, frame);
+
+			switch (bitstream_format)
+			{
+				case cmn::BitstreamFormat::H264_ANNEXB:
+				{
+					if (_h264_bitstream_parser.Parse(bitstream) == true)
+					{
+						auto last_slice_type = _h264_bitstream_parser.GetLastSliceType();
+
+						logtd("DTS : %lld, Slice Type : %d", dts, last_slice_type.has_value()?static_cast<int>(last_slice_type.value()):-1);
+
+						if (last_slice_type.has_value() == true && last_slice_type.value() != H264SliceType::B)
+						{
+							// Flush All
+							for (auto &frame : _dts_ordered_frame_buffer)
+							{
+								OnFrame(track, frame.second);
+							}
+							_dts_ordered_frame_buffer.clear();
+						}
+					}
+
+					return;
+				}
+				default:
+					break;
+			}
+		}
+
+		OnFrame(track, frame);
+	}
+
+	void WebRTCStream::OnFrame(const std::shared_ptr<MediaTrack> &track, const std::shared_ptr<MediaPacket> &media_packet)
+	{
+		logtd("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%u)", track->GetId(), track->GetCodecId(), media_packet->GetBitstreamFormat(), media_packet->GetPacketType(), media_packet->GetDataLength(), media_packet->GetPts());
 
 		// This may not work since almost WebRTC browser sends SRS/PPS in-band
 		if (_sent_sequence_header == false && track->GetCodecId() == cmn::MediaCodecId::H264 && _h264_extradata_nalu != nullptr)
 		{
-			auto media_packet = std::make_shared<MediaPacket>(GetMsid(),	
+			auto sps_pps_packet = std::make_shared<MediaPacket>(GetMsid(),	
 																track->GetMediaType(), 
 																track->GetId(), 
 																_h264_extradata_nalu,
-																adjusted_timestamp, 
-																adjusted_timestamp, 
+																media_packet->GetPts(), 
+																media_packet->GetDts(), 
 																cmn::BitstreamFormat::H264_ANNEXB, 
 																cmn::PacketType::NALU);
-			SendFrame(media_packet);
+			SendFrame(sps_pps_packet);
 			_sent_sequence_header = true;
 		}
 
-		SendFrame(frame);
+		SendFrame(media_packet);
 
 		// Send FIR to reduce keyframe interval
 		if (_fir_timer.IsElapsed(3000) && track->GetMediaType() == cmn::MediaType::Video)
 		{
 			_fir_timer.Update();
 			//_rtp_rtcp->SendPLI(first_rtp_packet->Ssrc());
-			_rtp_rtcp->SendFIR(first_rtp_packet->Ssrc());
+			_rtp_rtcp->SendFIR(track->GetId());
 		}
 
 		// Send Receiver Report

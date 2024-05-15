@@ -1,7 +1,24 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
-#include <stdint.h>
+
+constexpr auto kH264NalUnitTypeMask = 0b11111;
+constexpr auto kH264NalRefIdcMask = 0b1100000;
+
+#define GET_NAL_REF_IDC(x) (((x) & kH264NalRefIdcMask) >> 5)
+
+constexpr auto kH264SpsPpsNalRefIdc = 0b11;
+
+enum class H264SliceType : uint8_t
+{
+    P = 0,
+    B = 1,
+    I = 2,
+    Sp = 3,
+    Si = 4
+};
+
+int16_t GetSliceTypeNalRefIdc(uint8_t slice_type);
 
 // If this enumeration is updated, also update IsKnownH264NalUnitType
 enum class H264NalUnitType : uint8_t
