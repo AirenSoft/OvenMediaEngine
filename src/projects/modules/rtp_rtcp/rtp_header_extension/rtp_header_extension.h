@@ -2,6 +2,21 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 
+#define RTP_HEADER_EXTENSION_FRAMEMARKING_ID	1
+#define RTP_HEADER_EXTENSION_FRAMEMARKING_ATTRIBUTE "urn:ietf:params:rtp-hdrext:framemarking"
+
+#define RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ID	2
+#define RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ATTRIBUTE "http://www.webrtc.org/experiments/rtp-hdrext/playout-delay"
+
+#define RTP_HEADER_EXTENSION_TRANSPORT_CC_ID	3
+#define RTP_HEADER_EXTENSION_TRANSPORT_CC_ATTRIBUTE "http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01"
+
+#define RTP_HEADER_EXTENSION_ABS_SEND_TIME_ID	4
+#define RTP_HEADER_EXTENSION_ABS_SEND_TIME_ATTRIBUTE "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time"
+
+#define RTP_HEADER_EXTENSION_COMPOSITION_TIME_ID	5
+#define RTP_HEADER_EXTENSION_COMPOSITION_TIME_ATTRIBUTE "uri:ietf:rtc:rtp-hdrext:video:CompositionTime"
+
 class RtpHeaderExtension
 {
 public:

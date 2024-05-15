@@ -13,9 +13,6 @@
 
 // a=extmap:12 http://www.webrtc.org/experiments/rtp-hdrext/playout-delay
 
-#define RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ID	2
-#define RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ATTRIBUTE "http://www.webrtc.org/experiments/rtp-hdrext/playout-delay"
-
 class RtpHeaderExtensionPlayoutDelay : public RtpHeaderExtension
 {
 public:

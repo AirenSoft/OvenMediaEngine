@@ -13,9 +13,6 @@
 
 // a=extmap:3 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
 
-#define RTP_HEADER_EXTENSION_TRANSPORT_CC_ID	3
-#define RTP_HEADER_EXTENSION_TRANSPORT_CC_ATTRIBUTE "http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01"
-
 class RtpHeaderExtensionTransportCc : public RtpHeaderExtension
 {
 public:

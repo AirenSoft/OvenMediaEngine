@@ -13,9 +13,6 @@
 
 // a=extmap:4 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time
 
-#define RTP_HEADER_EXTENSION_ABS_SEND_TIME_ID	4
-#define RTP_HEADER_EXTENSION_ABS_SEND_TIME_ATTRIBUTE "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time"
-
 class RtpHeaderExtensionAbsSendTime : public RtpHeaderExtension
 {
 public:

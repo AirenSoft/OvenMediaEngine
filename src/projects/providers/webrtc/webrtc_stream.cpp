@@ -229,6 +229,13 @@ namespace pvd
 						_rtp_rtcp->EnableTransportCcFeedback(transport_cc_extension_id);
 					}
 				}
+
+				// uri:ietf:rtc:rtp-hdrext:video:CompositionTime
+				ov::String cts_extmap_uri;
+				if (peer_media_desc->FindExtmapItem("CompositionTime", _cts_extmap_id, cts_extmap_uri))
+				{
+					_cts_enabled = true;
+				}
 				
 				RegisterRtpClock(ssrc, video_track->GetTimeBase().GetExpr());
 			}
@@ -410,6 +417,18 @@ namespace pvd
 			return;
 		}
 		
+		int64_t dts = adjusted_timestamp;
+		if (_cts_enabled == true)
+		{
+			// Reorder frames in DTS order
+			auto cts_extension_opt = first_rtp_packet->GetExtension<uint24_t>(_cts_extmap_id);
+			if (cts_extension_opt.has_value() == true)
+			{
+				uint32_t cts = cts_extension_opt.value();
+				dts = adjusted_timestamp - (cts * 90);
+			}
+		}
+		
 		logtp("Payload Type(%d) Timestamp(%u) PTS(%u) Time scale(%f) Adjust Timestamp(%f)",
 			  first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), adjusted_timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(adjusted_timestamp) * track->GetTimeBase().GetExpr());
 
@@ -418,7 +437,7 @@ namespace pvd
 												   track->GetId(),
 												   bitstream,
 												   adjusted_timestamp,
-												   adjusted_timestamp,
+												   dts,
 												   bitstream_format,
 												   packet_type);
 

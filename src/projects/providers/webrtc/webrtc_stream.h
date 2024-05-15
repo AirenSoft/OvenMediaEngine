@@ -92,6 +92,10 @@ namespace pvd
 		bool								_rtx_enabled = false;
 		std::shared_mutex					_start_stop_lock;
 
+		// CompositionTime extmap
+		bool _cts_enabled = false;
+		uint8_t _cts_extmap_id = 0;
+
 		// Payload type, Depacketizer
 		std::map<uint8_t, std::shared_ptr<RtpDepacketizingManager>> _depacketizers;
 

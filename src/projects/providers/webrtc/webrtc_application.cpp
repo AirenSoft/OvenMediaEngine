@@ -10,7 +10,7 @@
 #include "webrtc_private.h"
 #include "webrtc_application.h"
 
-#include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_transport_cc.h>
+#include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension.h>
 
 namespace pvd
 {
@@ -63,6 +63,7 @@ namespace pvd
 		}
 
 		bool transport_cc_enabled = true;
+		bool composition_time_enabled = true;
 
 		auto offer_sdp = std::make_shared<SessionDescription>();
 		offer_sdp->SetOrigin("OvenMediaEngine", ov::Random::GenerateUInt32(), 2, "IN", 4, "127.0.0.1");
@@ -95,6 +96,11 @@ namespace pvd
 		if (transport_cc_enabled)
 		{
 			video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_TRANSPORT_CC_ID, RTP_HEADER_EXTENSION_TRANSPORT_CC_ATTRIBUTE);
+		}
+
+		if (composition_time_enabled)
+		{
+			video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_COMPOSITION_TIME_ID, RTP_HEADER_EXTENSION_COMPOSITION_TIME_ATTRIBUTE);
 		}
 
 		std::shared_ptr<PayloadAttr> payload;
@@ -234,6 +240,12 @@ namespace pvd
 			uint8_t extmap_id = 0;
 			ov::String extmap_attribute;
 			if (offer_media_desc->FindExtmapItem("transport-wide-cc", extmap_id, extmap_attribute))
+			{
+				answer_media_desc->AddExtmap(extmap_id, extmap_attribute);
+			}
+
+			// CompositionTime
+			if (offer_media_desc->FindExtmapItem("uri:ietf:rtc:rtp-hdrext:video:CompositionTime", extmap_id, extmap_attribute))
 			{
 				answer_media_desc->AddExtmap(extmap_id, extmap_attribute);
 			}

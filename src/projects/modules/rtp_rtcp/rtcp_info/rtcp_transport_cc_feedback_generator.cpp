@@ -24,9 +24,8 @@ RtcpTransportCcFeedbackGenerator::RtcpTransportCcFeedbackGenerator(uint8_t exten
 
 bool RtcpTransportCcFeedbackGenerator::AddReceivedRtpPacket(const std::shared_ptr<RtpPacket> &packet)
 {
-	// Parsing RTP header extension
-	auto extension_data = packet->GetExtension(_extension_id);
-	if (extension_data.has_value() == false || extension_data.value().GetLength() < 2)
+	auto wide_sequence_number_opt = packet->GetExtension<uint16_t>(_extension_id);
+	if (wide_sequence_number_opt.has_value() == false)
 	{
 		// There is no transport-wide sequence number in the RTP header extension
 		static int log_times = 10;
@@ -38,10 +37,8 @@ bool RtcpTransportCcFeedbackGenerator::AddReceivedRtpPacket(const std::shared_pt
 		return false;
 	}
 
-	// Get transport-wide sequence number from extension_data
-	auto *data = extension_data.value().GetDataAs<uint8_t>();
 	// Read transport-wide sequence number
-	auto wide_sequence_number = ByteReader<uint16_t>::ReadBigEndian(data);
+	auto wide_sequence_number = wide_sequence_number_opt.value();
 
 	logtd("AddReceivedRtpPacket: wide_seq(%u) %s", wide_sequence_number, packet->Dump().CStr());
 
