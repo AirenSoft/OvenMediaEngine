@@ -823,7 +823,7 @@ namespace pvd
 		auto stream = GetStreamBySessionKey(session_key);
 		if (!stream)
 		{
-			logte("To stop stream failed. Cannot find stream. session key: %s", session_key);
+			logte("To stop stream failed. Cannot find stream. session key: %s", session_key.CStr());
 			return {http::StatusCode::NotFound, nullptr, nullptr};
 		}
 
