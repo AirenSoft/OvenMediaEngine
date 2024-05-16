@@ -451,7 +451,7 @@ bool RtcSignallingServer::SetupWebSocketHandler(std::shared_ptr<http::svr::ws::I
 					  ws_session->ToString().CStr(),
 					  info->vhost_app_name.CStr(), info->stream_name.CStr(),
 					  (info->offer_sdp != nullptr) ? info->offer_sdp->GetIceUfrag().CStr() : "(N/A)",
-					  (info->peer_sdp != nullptr) ? info->peer_sdp->GetIceUfrag().CStr() : "(N/A)");
+					  (info->answer_sdp != nullptr) ? info->answer_sdp->GetIceUfrag().CStr() : "(N/A)");
 			}
 			else
 			{
@@ -523,7 +523,7 @@ bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, c
 
 				return (info->vhost_app_name == vhost_app_name) &&
 					   (info->stream_name == stream_name) &&
-					   ((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
+					   ((info->answer_sdp != nullptr) && (*(info->answer_sdp) == *peer_sdp));
 			});
 	}
 
@@ -550,7 +550,7 @@ bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, c
 
 				return (info->vhost_app_name == vhost_app_name) &&
 					   (info->stream_name == stream_name) &&
-					   ((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
+					   ((info->answer_sdp != nullptr) && (*(info->answer_sdp) == *peer_sdp));
 			});
 	}
 
@@ -865,18 +865,18 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchAnswer(const std::
 	{
 		logtd("[Host -> OME] The host peer sents a answer: %s", object.ToString().CStr());
 
-		auto peer_sdp = std::make_shared<SessionDescription>();
+		auto answer_sdp = std::make_shared<SessionDescription>(SessionDescription::SdpType::Answer);
 
-		if (peer_sdp->FromString(sdp_value["sdp"].asCString()))
+		if (answer_sdp->FromString(sdp_value["sdp"].asCString()))
 		{
-			info->peer_sdp = peer_sdp;
+			info->answer_sdp = answer_sdp;
 
 			for (auto &observer : _observers)
 			{
 				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->vhost_app_name.CStr(), info->stream_name.CStr());
 
 				// TODO : Improved to return detailed error cause
-				if (observer->OnAddRemoteDescription(ws_session, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
+				if (observer->OnAddRemoteDescription(ws_session, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->answer_sdp) == false)
 				{
 					return std::make_shared<http::HttpError>(http::StatusCode::Forbidden, "Forbidden");
 				}
@@ -937,11 +937,11 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchChangeRendition(co
 		auto_abr = object.GetBoolValue("auto");
 	}
 
-	if (info->peer_sdp != nullptr)
+	if (info->answer_sdp != nullptr)
 	{
 		for (auto &observer : _observers)
 		{
-			if (observer->OnChangeRendition(ws_session, has_rendition_name, rendition_name, has_auto_abr, auto_abr, info->offer_sdp, info->peer_sdp) == false)
+			if (observer->OnChangeRendition(ws_session, has_rendition_name, rendition_name, has_auto_abr, auto_abr, info->offer_sdp, info->answer_sdp) == false)
 			{
 				return std::make_shared<http::HttpError>(http::StatusCode::Forbidden, "Forbidden");
 			}
@@ -1128,13 +1128,13 @@ std::shared_ptr<const ov::Error> RtcSignallingServer::DispatchStop(const std::sh
 {
 	bool result = true;
 
-	if (info->peer_sdp != nullptr)
+	if (info->answer_sdp != nullptr)
 	{
 		for (auto &observer : _observers)
 		{
 			logtd("Trying to callback OnStopCommand to %p for client %d (%s / %s)...", observer.get(), info->id, info->vhost_app_name.CStr(), info->stream_name.CStr());
 
-			if (observer->OnStopCommand(ws_session, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
+			if (observer->OnStopCommand(ws_session, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->answer_sdp) == false)
 			{
 				result = false;
 			}

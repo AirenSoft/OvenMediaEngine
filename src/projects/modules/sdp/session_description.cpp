@@ -12,7 +12,8 @@
 
 #include "sdp_regex_pattern.h"
 
-SessionDescription::SessionDescription()
+SessionDescription::SessionDescription(const SdpType &type)
+	: _type(type)
 {
 }
 
@@ -23,6 +24,11 @@ SessionDescription::~SessionDescription()
 void SessionDescription::Release()
 {
 	_media_list.clear();
+}
+
+SessionDescription::SdpType SessionDescription::GetType() const
+{
+	return _type;
 }
 
 bool SessionDescription::UpdateData(ov::String &sdp)

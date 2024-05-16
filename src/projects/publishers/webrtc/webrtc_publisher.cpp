@@ -382,7 +382,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
 											 const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 											 const std::shared_ptr<const SessionDescription> &offer_sdp,
-											 const std::shared_ptr<const SessionDescription> &peer_sdp)
+											 const std::shared_ptr<const SessionDescription> &answer_sdp)
 {
 	auto [autorized_exist, authorized] = ws_session->GetUserData("authorized");
 	ov::String requested_uri, final_uri;
@@ -447,7 +447,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	auto request = ws_session->GetRequest();
 	auto remote_address = request->GetRemote()->GetRemoteAddress();
 
-	ov::String remote_sdp_text = peer_sdp->ToString();
+	ov::String remote_sdp_text = answer_sdp->ToString();
 	logtd("OnAddRemoteDescription: %s", remote_sdp_text.CStr());
 
 	auto application = GetApplicationByName(final_vhost_app_name);
@@ -459,7 +459,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	}
 
 	auto ice_session_id = _ice_port->IssueUniqueSessionId();
-	auto session = RtcSession::Create(Publisher::GetSharedPtrAs<WebRtcPublisher>(), application, stream, final_file_name, offer_sdp, peer_sdp, _ice_port, ice_session_id, ws_session);
+	auto session = RtcSession::Create(Publisher::GetSharedPtrAs<WebRtcPublisher>(), application, stream, final_file_name, offer_sdp, answer_sdp, _ice_port, ice_session_id, ws_session);
 	if (session != nullptr)
 	{
 		stream->AddSession(session);
@@ -468,7 +468,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 		MonitorInstance->OnSessionConnected(*stream, PublisherType::Webrtc);
 
 		auto ice_timeout = application->GetConfig().GetPublishers().GetWebrtcPublisher().GetTimeout();
-		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), ice_session_id, IceSession::Role::CONTROLLING, offer_sdp, peer_sdp, ice_timeout, session_life_time, session);
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), ice_session_id, IceSession::Role::CONTROLLING, offer_sdp, answer_sdp, ice_timeout, session_life_time, session);
 	}
 	else
 	{

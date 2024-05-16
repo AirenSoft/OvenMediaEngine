@@ -363,7 +363,7 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 
 		logti("WHIP SDP Offer: %s", data->ToString().CStr());
 
-		auto offer_sdp = std::make_shared<SessionDescription>();
+		auto offer_sdp = std::make_shared<SessionDescription>(SessionDescription::SdpType::Offer);
 		if (offer_sdp->FromString(data->ToString()) == false)
 		{
 			logte("Could not parse SDP: %s", data->ToString().CStr());
@@ -539,7 +539,7 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 		logti("Received PATCH request: %s", data->ToString().CStr());
 
 		// Parse SDP
-		auto patch_sdp = std::make_shared<SessionDescription>();
+		auto patch_sdp = std::make_shared<SessionDescription>(SessionDescription::SdpType::Update);
 		if (patch_sdp->FromString(data->ToString()) == false)
 		{
 			logte("Could not parse SDP: %s", data->ToString().CStr());

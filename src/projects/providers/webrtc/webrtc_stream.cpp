@@ -19,12 +19,12 @@ namespace pvd
 	std::shared_ptr<WebRTCStream> WebRTCStream::Create(StreamSourceType source_type, ov::String stream_name,
 													   const std::shared_ptr<PushProvider> &provider,
 													   const std::shared_ptr<const SessionDescription> &local_sdp,
-													   const std::shared_ptr<const SessionDescription> &peer_sdp,
+													   const std::shared_ptr<const SessionDescription> &remote_sdp,
 													   const std::shared_ptr<Certificate> &certificate,
 													   const std::shared_ptr<IcePort> &ice_port,
 													   session_id_t ice_session_id)
 	{
-		auto stream = std::make_shared<WebRTCStream>(source_type, stream_name, provider, local_sdp, peer_sdp, certificate, ice_port, ice_session_id);
+		auto stream = std::make_shared<WebRTCStream>(source_type, stream_name, provider, local_sdp, remote_sdp, certificate, ice_port, ice_session_id);
 		if (stream != nullptr)
 		{
 			if (stream->Start() == false)
@@ -38,14 +38,26 @@ namespace pvd
 	WebRTCStream::WebRTCStream(StreamSourceType source_type, ov::String stream_name,
 							   const std::shared_ptr<PushProvider> &provider,
 							   const std::shared_ptr<const SessionDescription> &local_sdp,
-							   const std::shared_ptr<const SessionDescription> &peer_sdp,
+							   const std::shared_ptr<const SessionDescription> &remote_sdp,
 							   const std::shared_ptr<Certificate> &certificate,
 							   const std::shared_ptr<IcePort> &ice_port,
 							   session_id_t ice_session_id)
 		: PushStream(source_type, stream_name, provider), Node(NodeType::Edge)
 	{
 		_local_sdp = local_sdp;
-		_peer_sdp = peer_sdp;
+		_remote_sdp = remote_sdp;
+
+		if (_local_sdp->GetType() == SessionDescription::SdpType::Offer)
+		{
+			_offer_sdp = _local_sdp;
+			_answer_sdp = _remote_sdp;
+		}
+		else
+		{
+			_offer_sdp = _remote_sdp;
+			_answer_sdp = _local_sdp;
+		}
+
 		_ice_port = ice_port;
 		_certificate = certificate;
 		_session_key = ov::Random::GenerateString(8);
@@ -63,15 +75,16 @@ namespace pvd
 	{
 		std::lock_guard<std::shared_mutex> lock(_start_stop_lock);
 
-		logtd("[WebRTC Provider] Local SDP");
-		logtd("%s\n", _local_sdp->ToString().CStr());
-		logtd("[WebRTC Provider] Peer SDP");
-		logtd("%s", _peer_sdp->ToString().CStr());
+		logti("[WebRTC Provider] Local SDP");
+		logti("%s\n", _local_sdp->ToString().CStr());
+		logti("[WebRTC Provider] Peer SDP");
+		logti("%s", _remote_sdp->ToString().CStr());
 
 		auto local_media_desc_list = _local_sdp->GetMediaList();
-		auto peer_media_desc_list = _peer_sdp->GetMediaList();
+		auto remote_media_desc_list = _remote_sdp->GetMediaList();
+		auto answer_media_desc_list = _answer_sdp->GetMediaList();
 
-		if (local_media_desc_list.size() != peer_media_desc_list.size())
+		if (local_media_desc_list.size() != remote_media_desc_list.size())
 		{
 			logte("m= line of peer does not correspond with local");
 			return false;
@@ -89,29 +102,30 @@ namespace pvd
 		// RFC3264
 		// For each "m=" line in the local, there MUST be a corresponding "m=" line in the peer.
 		std::vector<uint32_t> ssrc_list;
-		for (size_t i = 0; i < peer_media_desc_list.size(); i++)
+		for (size_t i = 0; i < remote_media_desc_list.size(); i++)
 		{
-			auto peer_media_desc = peer_media_desc_list[i];
+			auto remote_media_desc = remote_media_desc_list[i];
 			auto local_media_desc = local_media_desc_list[i];
+			auto answer_media_desc = answer_media_desc_list[i];
 
-			if(peer_media_desc->GetDirection() != MediaDescription::Direction::SendOnly &&
-				peer_media_desc->GetDirection() != MediaDescription::Direction::SendRecv)
+			if(remote_media_desc->GetDirection() != MediaDescription::Direction::SendOnly &&
+				remote_media_desc->GetDirection() != MediaDescription::Direction::SendRecv)
 			{
-				logtd("Media (%s) is inactive", peer_media_desc->GetMediaTypeStr().CStr());
+				logtd("Media (%s) is inactive", remote_media_desc->GetMediaTypeStr().CStr());
 				continue;
 			}
 
 			// The first payload has the highest priority.
-			auto first_payload = peer_media_desc->GetFirstPayload();
+			auto first_payload = answer_media_desc->GetFirstPayload();
 			if (first_payload == nullptr)
 			{
 				logte("%s - Failed to get the first Payload type of peer sdp", GetName().CStr());
 				return false;
 			}
 
-			if (peer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
+			if (answer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
 			{
-				auto ssrc = peer_media_desc->GetSsrc();
+				auto ssrc = remote_media_desc->GetSsrc();
 				ssrc_list.push_back(ssrc);
 
 				// Add Track
@@ -168,7 +182,7 @@ namespace pvd
 					// a=extmap:id http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
 					uint8_t transport_cc_extension_id = 0;
 					ov::String transport_cc_extension_uri;
-					if (peer_media_desc->FindExtmapItem("transport-wide-cc-extensions", transport_cc_extension_id, transport_cc_extension_uri) == true)
+					if (answer_media_desc->FindExtmapItem("transport-wide-cc-extensions", transport_cc_extension_id, transport_cc_extension_uri) == true)
 					{
 						_rtp_rtcp->EnableTransportCcFeedback(transport_cc_extension_id);
 					}
@@ -178,7 +192,7 @@ namespace pvd
 			}
 			else
 			{
-				auto ssrc = peer_media_desc->GetSsrc();
+				auto ssrc = remote_media_desc->GetSsrc();
 				ssrc_list.push_back(ssrc);
 
 				// a=rtpmap:100 H264/90000
@@ -226,7 +240,7 @@ namespace pvd
 					// a=extmap:id http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
 					uint8_t transport_cc_extension_id = 0;
 					ov::String transport_cc_extension_uri;
-					if (peer_media_desc->FindExtmapItem("transport-wide-cc-extensions", transport_cc_extension_id, transport_cc_extension_uri) == true)
+					if (answer_media_desc->FindExtmapItem("transport-wide-cc-extensions", transport_cc_extension_id, transport_cc_extension_uri) == true)
 					{
 						_rtp_rtcp->EnableTransportCcFeedback(transport_cc_extension_id);
 					}
@@ -234,7 +248,7 @@ namespace pvd
 
 				// uri:ietf:rtc:rtp-hdrext:video:CompositionTime
 				ov::String cts_extmap_uri;
-				if (peer_media_desc->FindExtmapItem("CompositionTime", _cts_extmap_id, cts_extmap_uri))
+				if (answer_media_desc->FindExtmapItem("CompositionTime", _cts_extmap_id, cts_extmap_uri))
 				{
 					_cts_extmap_enabled = true;
 				}
@@ -334,7 +348,7 @@ namespace pvd
 
 	std::shared_ptr<const SessionDescription> WebRTCStream::GetPeerSDP()
 	{
-		return _peer_sdp;
+		return _remote_sdp;
 	}
 
 	bool WebRTCStream::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
@@ -395,7 +409,6 @@ namespace pvd
 				bitstream_format = cmn::BitstreamFormat::H264_ANNEXB;
 				packet_type = cmn::PacketType::NALU;
 				cts_enabled = _cts_extmap_enabled == true;
-				cts_enabled = true; // for debug
 				break;
 
 			case cmn::MediaCodecId::Opus:
@@ -425,11 +438,16 @@ namespace pvd
 		int64_t dts = adjusted_timestamp;
 		if (cts_enabled == true)
 		{
-			auto cts_extension_opt = first_rtp_packet->GetExtension<uint24_t>(_cts_extmap_id);
+			auto cts_extension_opt = first_rtp_packet->GetExtension<int24_t>(_cts_extmap_id);
 			if (cts_extension_opt.has_value() == true)
 			{
-				uint32_t cts = cts_extension_opt.value();
+				int32_t cts = cts_extension_opt.value();
 				dts = adjusted_timestamp - (cts * 90);
+				logtd("PTS(%lld) CTS(%d) DTS(%lld)", adjusted_timestamp, cts, dts);
+			}
+			else
+			{
+				logte("CTS is enabled but not found in the packet");
 			}
 		}
 		
@@ -460,7 +478,7 @@ namespace pvd
 					{
 						auto last_slice_type = _h264_bitstream_parser.GetLastSliceType();
 
-						logtd("DTS : %lld, Slice Type : %d", dts, last_slice_type.has_value()?static_cast<int>(last_slice_type.value()):-1);
+						logtd("PTS(%lld) DTS(%lld) Slice Type(%d)", adjusted_timestamp, dts, last_slice_type.has_value()?static_cast<int>(last_slice_type.value()):-1);
 
 						if (last_slice_type.has_value() == true && last_slice_type.value() != H264SliceType::B)
 						{

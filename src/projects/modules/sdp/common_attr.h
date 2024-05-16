@@ -30,6 +30,10 @@ public:
 		ActPass
 	};
 
+	// a=extmap-allow-mixed
+	void SetExtmapAllowMixed(bool allow);
+	bool GetExtmapAllowMixed() const;
+
 	// a=fingerprint:sha-256 D7:81:CF:01:46:FB:2D
 	void SetFingerprint(const ov::String& algorithm, const ov::String& value);
 	virtual ov::String GetFingerprintAlgorithm() const;
@@ -69,6 +73,9 @@ private:
 	// dtls
 	ov::String _fingerprint_algorithm;
 	ov::String _fingerprint_value;
+
+	// extmap-allow-mixed
+	bool _extmap_allow_mixed = false;
 
 	// For RTSP
 	// a=control:

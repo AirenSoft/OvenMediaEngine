@@ -29,7 +29,7 @@ namespace pvd
 		static std::shared_ptr<WebRTCStream> Create(StreamSourceType source_type, ov::String stream_name,
 													const std::shared_ptr<PushProvider> &provider,
 													const std::shared_ptr<const SessionDescription> &local_sdp,
-													const std::shared_ptr<const SessionDescription> &peer_sdp,
+													const std::shared_ptr<const SessionDescription> &remote_sdp,
 													const std::shared_ptr<Certificate> &certificate, 
 													const std::shared_ptr<IcePort> &ice_port,
 													session_id_t ice_session_id);
@@ -37,7 +37,7 @@ namespace pvd
 		explicit WebRTCStream(StreamSourceType source_type, ov::String stream_name, 
 								const std::shared_ptr<PushProvider> &provider,
 								const std::shared_ptr<const SessionDescription> &local_sdp,
-								const std::shared_ptr<const SessionDescription> &peer_sdp,
+								const std::shared_ptr<const SessionDescription> &remote_sdp,
 								const std::shared_ptr<Certificate> &certificate, 
 								const std::shared_ptr<IcePort> &ice_port,
 								session_id_t ice_session_id);
@@ -85,7 +85,10 @@ namespace pvd
 		ov::String _session_key;
 
 		std::shared_ptr<const SessionDescription> _local_sdp;
-		std::shared_ptr<const SessionDescription> _peer_sdp;
+		std::shared_ptr<const SessionDescription> _remote_sdp;
+		std::shared_ptr<const SessionDescription> _offer_sdp;
+		std::shared_ptr<const SessionDescription> _answer_sdp;
+
 		std::shared_ptr<IcePort> _ice_port;
 		std::shared_ptr<Certificate> _certificate;
 

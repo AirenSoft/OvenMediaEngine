@@ -25,6 +25,12 @@ bool CommonAttr::SerializeCommonAttr(ov::String &sdp)
 {
 	sdp = "";
 
+	// EXTMAP-ALLOW-MIXED
+	if (_extmap_allow_mixed)
+	{
+		sdp.AppendFormat("a=extmap-allow-mixed\r\n");
+	}
+
 	// FINGERPRINT
 	if (!_fingerprint_algorithm.IsEmpty() && !_fingerprint_value.IsEmpty())
 	{
@@ -72,8 +78,13 @@ bool CommonAttr::ParsingCommonAttrLine(char type, std::string content)
 {
 	std::smatch matches;
 
+	// a=extmap-allow-mixed
+	if (content.compare(0, OV_COUNTOF("extmap-allow-mixed") - 1, "extmap-allow-mixed") == 0)
+	{
+		_extmap_allow_mixed = true;
+	}
 	// a=fingerprint:sha-256 D7:81:CF:01:46:FB:2D
-	if (content.compare(0, OV_COUNTOF("fi") - 1, "fi") == 0)
+	else if (content.compare(0, OV_COUNTOF("fi") - 1, "fi") == 0)
 	{
 		/*
 		if(std::regex_search(content, matches, std::regex("^fingerprint:(\\S*) (\\S*)")))
@@ -201,6 +212,17 @@ bool CommonAttr::ParsingCommonAttrLine(char type, std::string content)
 	}
 
 	return true;
+}
+
+// a=extmap-allow-mixed
+void CommonAttr::SetExtmapAllowMixed(const bool allow)
+{
+	_extmap_allow_mixed = allow;
+}
+
+bool CommonAttr::GetExtmapAllowMixed() const
+{
+	return _extmap_allow_mixed;
 }
 
 // a=fingerprint:sha-256 D7:81:CF:01:46:FB:2D

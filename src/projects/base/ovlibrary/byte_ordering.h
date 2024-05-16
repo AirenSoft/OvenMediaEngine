@@ -67,6 +67,37 @@ struct uint24_t
 		return *this;
 	}
 };
+
+struct int24_t
+{
+	int24_t(int32_t value) noexcept
+		: data(value)
+	{
+	}
+
+	int24_t()
+	{
+		data = 0;
+	}
+
+	int24_t(const int24_t &value) noexcept = default;
+	int24_t(int24_t &&value) noexcept = default;
+
+	int data : 24;
+
+	inline operator int32_t() const noexcept
+	{
+		// sign extension
+		return (data << 8) >> 8;
+	}
+
+	int24_t &operator=(const int24_t &value) noexcept
+	{
+		data = value.data;
+		return *this;
+	}
+};
+
 #pragma pack(pop)
 
 // OV_SELECT_BY_ENDIAN(call_when_little_endian, call_when_big_endian) 정의

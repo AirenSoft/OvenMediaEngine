@@ -45,8 +45,20 @@ class SessionDescription : public SdpBase,
                            public ov::EnableSharedFromThis<SessionDescription>
 {
 public:
-	SessionDescription();
+	enum class SdpType
+	{
+		Offer,
+		Answer,
+		Pranswer,
+		Update,
+		Rollback,
+		Invalid
+	};
+
+	SessionDescription(const SdpType &type);
 	~SessionDescription();
+
+	SdpType GetType() const;
 
 	void Release();
 
@@ -108,6 +120,9 @@ public:
 private:
 	bool UpdateData(ov::String &sdp) override;
 	bool ParsingSessionLine(char type, std::string content);
+
+	// SdpType
+	SdpType _type = SdpType::Invalid;
 
 	// version
 	uint8_t _version = 0;

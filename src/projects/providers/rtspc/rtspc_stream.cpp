@@ -41,7 +41,7 @@ namespace pvd
 	}
 
 	RtspcStream::RtspcStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list, const std::shared_ptr<pvd::PullStreamProperties> &properties)
-		: pvd::PullStream(application, stream_info, url_list, properties), Node(NodeType::Rtsp)
+		: pvd::PullStream(application, stream_info, url_list, properties), Node(NodeType::Rtsp), _sdp(SessionDescription::SdpType::Answer)
 	{
 		SetState(State::IDLE);
 	}

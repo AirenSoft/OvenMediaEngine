@@ -276,7 +276,7 @@ namespace pvd
 		ov::String final_host_name = host_name;
 		ov::String final_stream_name = stream_name;
 
-		logtd("WebRTCProvider::OnAddRemoteDescription");
+		logtd("WebRTCProvider::OnRequestOffer");
 		auto request = ws_session->GetRequest();
 		auto remote_address = request->GetRemote()->GetRemoteAddress();
 		auto uri = request->GetUri();
@@ -409,7 +409,7 @@ namespace pvd
 	bool WebRTCProvider::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws::WebSocketSession> &ws_session,
 												const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 												const std::shared_ptr<const SessionDescription> &offer_sdp,
-												const std::shared_ptr<const SessionDescription> &peer_sdp)
+												const std::shared_ptr<const SessionDescription> &answer_sdp)
 	{
 		auto [autorized_exist, authorized] = ws_session->GetUserData("authorized");
 		ov::String requested_uri, final_uri;
@@ -492,7 +492,9 @@ namespace pvd
 
 		// Create Stream
 		auto ice_session_id = _ice_port->IssueUniqueSessionId();
-		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, final_stream_name, PushProvider::GetSharedPtrAs<PushProvider>(), offer_sdp, peer_sdp, _certificate, _ice_port, ice_session_id);
+
+		// Local Offer, Remote Answer
+		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, final_stream_name, PushProvider::GetSharedPtrAs<PushProvider>(), offer_sdp, answer_sdp, _certificate, _ice_port, ice_session_id);
 		if (stream == nullptr)
 		{
 			logte("Could not create %s stream in %s application", final_stream_name.CStr(), final_vhost_app_name.CStr());
@@ -516,7 +518,7 @@ namespace pvd
 		RegisterStreamToSessionKeyStreamMap(stream);
 
 		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
-		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), ice_session_id, IceSession::Role::CONTROLLING, offer_sdp, peer_sdp, ice_timeout, session_life_time, stream);
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), ice_session_id, IceSession::Role::CONTROLLING, offer_sdp, answer_sdp, ice_timeout, session_life_time, stream);
 
 		return true;
 	}
@@ -780,6 +782,8 @@ namespace pvd
 		}
 
 		auto ice_session_id = _ice_port->IssueUniqueSessionId();
+
+		// Remote Offer, Local Answer
 		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, final_stream_name, PushProvider::GetSharedPtrAs<PushProvider>(), answer_sdp, offer_sdp, _certificate, _ice_port, ice_session_id);
 		if (stream == nullptr)
 		{

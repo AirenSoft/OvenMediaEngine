@@ -52,7 +52,7 @@ protected:
 		RtcSignallingInfo(const info::VHostAppName &vhost_app_name,
 						  const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name,
 						  peer_id_t id, std::shared_ptr<RtcPeerInfo> peer_info,
-						  std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp,
+						  std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> answer_sdp,
 						  std::vector<RtcIceCandidate> local_candidates, std::vector<RtcIceCandidate> remote_candidates)
 			: vhost_app_name(vhost_app_name),
 			  host_name(host_name),
@@ -61,7 +61,7 @@ protected:
 			  id(id),
 			  peer_info(std::move(peer_info)),
 			  offer_sdp(std::move(offer_sdp)),
-			  peer_sdp(std::move(peer_sdp)),
+			  answer_sdp(std::move(answer_sdp)),
 			  local_candidates(std::move(local_candidates)),
 			  remote_candidates(std::move(remote_candidates))
 		{
@@ -96,7 +96,7 @@ protected:
 		// Offer SDP (SDP of OME/host peer)
 		std::shared_ptr<const SessionDescription> offer_sdp;
 		// Peer SDP (SDP of host/client peer)
-		std::shared_ptr<const SessionDescription> peer_sdp;
+		std::shared_ptr<const SessionDescription> answer_sdp;
 
 		// candidates of OME/host peer
 		std::vector<RtcIceCandidate> local_candidates;

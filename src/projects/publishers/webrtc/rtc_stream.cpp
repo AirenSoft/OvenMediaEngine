@@ -372,9 +372,10 @@ std::shared_ptr<SessionDescription> RtcStream::CreateSessionDescription(const ov
 		return nullptr;
 	}
 
-	auto offer_sdp = std::make_shared<SessionDescription>();
+	auto offer_sdp = std::make_shared<SessionDescription>(SessionDescription::SdpType::Offer);
 
 	offer_sdp->SetOrigin("OvenMediaEngine", ov::Random::GenerateUInt32(), 2, "IN", 4, "127.0.0.1");
+	offer_sdp->SetExtmapAllowMixed(true);
 	offer_sdp->SetTiming(0, 0);
 	offer_sdp->SetIceOption("trickle");
 	offer_sdp->SetIceUfrag(ov::Random::GenerateString(8));
