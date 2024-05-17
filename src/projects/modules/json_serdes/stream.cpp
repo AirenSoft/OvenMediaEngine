@@ -35,10 +35,16 @@ namespace serdes
 			SetInt(object, "width", track->GetWidth());
 			SetInt(object, "height", track->GetHeight());
 			SetString(object, "bitrate", ov::Converter::ToString(track->GetBitrate()), Optional::False);
+			SetString(object, "bitrate_conf", ov::Converter::ToString(track->GetBitrateByConfig()), Optional::False);
+			SetString(object, "bitrate_measured", ov::Converter::ToString(track->GetBitrateByMeasured()), Optional::False);
 			SetFloat(object, "framerate", track->GetFrameRate());
+			SetFloat(object, "framerate_conf", track->GetFrameRateByConfig());
+			SetFloat(object, "framerate_measured", track->GetFrameRateByMeasured());
 			SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
 			SetBool(object, "hasBframes", track->HasBframes());
 			SetInt(object, "keyFrameInterval", track->GetKeyFrameInterval());
+			SetInt(object, "keyFrameIntervalConf", track->GetKeyFrameIntervalByConfig());
+			SetInt(object, "keyFrameIntervalMeasured", track->GetKeyFrameIntervalByMeasured());
 		}
 	}
 
@@ -63,6 +69,8 @@ namespace serdes
 			// SetAudioChannel(object, "channel", track->GetChannel(), Optional::False);
 			SetInt(object, "channel", track->GetChannel().GetCounts());
 			SetString(object, "bitrate", ov::Converter::ToString(track->GetBitrate()), Optional::False);
+			SetString(object, "bitrate_conf", ov::Converter::ToString(track->GetBitrateByConfig()), Optional::False);
+			SetString(object, "bitrate_measured", ov::Converter::ToString(track->GetBitrateByMeasured()), Optional::False);
 			SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
 		}
 	}
