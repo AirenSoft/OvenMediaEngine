@@ -521,10 +521,18 @@ void MediaTrack::OnFrameAdded(const std::shared_ptr<MediaPacket> &media_packet)
 		_clock_from_first_frame_received.Start();
 	}
 
+	if (_timer_one_second.IsStart() == false)
+	{
+		_timer_one_second.Start();
+	}
+
 	size_t bytes = media_packet->GetDataLength();
 
 	_total_frame_count++;
 	_total_frame_bytes += bytes;
+
+	_last_seconds_frame_count++;
+	_last_seconds_frame_bytes += bytes;
 
 	// If bitrate is not set, calculate bitrate
 	if (_clock_from_first_frame_received.IsElapsed(VALID_BITRATE_CALCULATION_THRESHOLD_MSEC))
@@ -532,27 +540,48 @@ void MediaTrack::OnFrameAdded(const std::shared_ptr<MediaPacket> &media_packet)
 		auto seconds = static_cast<double>(_clock_from_first_frame_received.Elapsed()) / 1000.0;
 		auto bytes_per_second = static_cast<double>(_total_frame_bytes) / seconds;
 		auto bitrate = static_cast<int32_t>(bytes_per_second * 8.0);
+
 		SetBitrateByMeasured(bitrate);
 
 		logtd("Track(%u) Bitrates(%s)", GetId(), ov::Converter::BitToString(bitrate).CStr());
-	}
 
-	// If framerate is not set, calculate framerate
-	if (_clock_from_first_frame_received.IsElapsed(VALID_BITRATE_CALCULATION_THRESHOLD_MSEC))
-	{
-		auto seconds = static_cast<double>(_clock_from_first_frame_received.Elapsed()) / 1000.0;
 		auto frame_count = static_cast<double>(_total_frame_count);
 		auto framerate = frame_count / seconds;
+
 		SetFrameRateByMeasured(framerate);
 
 		logtd("Track(%u) FPS(%f)", GetId(), framerate);
+	}
+
+	if (_timer_one_second.IsElapsed(1000))
+	{
+		// It can be greater than 1 second due to the delay of the timer or the processing time of the frame.
+		auto seconds = static_cast<double>(_timer_one_second.Elapsed()) / 1000.0;
+
+		auto bitrate = static_cast<int32_t>(_last_seconds_frame_bytes * 8) / seconds;
+		SetBitrateLastSecond(bitrate);
+
+		auto framerate = static_cast<double>(_last_seconds_frame_count) / seconds;
+		SetFrameRateLastSecond(framerate);
+
+		_last_seconds_frame_count = 0;
+		_last_seconds_frame_bytes = 0;
+
+		_timer_one_second.Restart();
 	}
 
 	if (GetMediaType() == cmn::MediaType::Video)
 	{
 		if (media_packet->GetFlag() == MediaPacketFlag::Key)
 		{
-			SetKeyFrameIntervalByMeasured(_key_frame_interval_count);
+			_total_key_frame_count++;
+			auto key_frame_interval_avg = static_cast<double>(_total_frame_count) / static_cast<double>(_total_key_frame_count);
+
+			// Average
+			SetKeyFrameIntervalByMeasured(key_frame_interval_avg);
+
+			// Lastest
+			SetKeyFrameIntervalLastet(_key_frame_interval_count);
 			_key_frame_interval_count = 1;
 		}
 		else if (_key_frame_interval_count > 0)
@@ -590,7 +619,6 @@ int32_t MediaTrack::GetBitrate() const
 void MediaTrack::SetBitrateByMeasured(int32_t bitrate)
 {
 	_bitrate = bitrate;
-
 }
 
 int32_t MediaTrack::GetBitrateByMeasured() const
@@ -606,6 +634,16 @@ void MediaTrack::SetBitrateByConfig(int32_t bitrate)
 int32_t MediaTrack::GetBitrateByConfig() const
 {
 	return _bitrate_conf;
+}
+
+void MediaTrack::SetBitrateLastSecond(int32_t bitrate)
+{
+	_bitrate_last_second = bitrate;
+}
+
+int32_t MediaTrack::GetBitrateLastSecond() const
+{
+	return _bitrate_last_second;
 }
 
 void MediaTrack::SetBypassByConfig(bool flag)

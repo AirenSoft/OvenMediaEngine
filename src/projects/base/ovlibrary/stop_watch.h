@@ -17,6 +17,7 @@ namespace ov
 		bool IsStart();
 		bool IsPaused();
 		void Start();
+		void Restart();
 		void Stop();
 		bool Update();
 

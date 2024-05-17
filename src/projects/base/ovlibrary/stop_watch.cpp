@@ -33,6 +33,12 @@ namespace ov
 		_last = _start;
 	}
 
+	void StopWatch::Restart()
+	{
+		Stop();
+		Start();
+	}
+
 	void StopWatch::Stop()
 	{
 		_is_valid = false;

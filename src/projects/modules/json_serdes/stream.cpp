@@ -36,15 +36,18 @@ namespace serdes
 			SetInt(object, "height", track->GetHeight());
 			SetString(object, "bitrate", ov::Converter::ToString(track->GetBitrate()), Optional::False);
 			SetString(object, "bitrate_conf", ov::Converter::ToString(track->GetBitrateByConfig()), Optional::False);
-			SetString(object, "bitrate_measured", ov::Converter::ToString(track->GetBitrateByMeasured()), Optional::False);
+			SetString(object, "bitrate_avg", ov::Converter::ToString(track->GetBitrateByMeasured()), Optional::False);
+			SetString(object, "bitrate_latest", ov::Converter::ToString(track->GetBitrateLastSecond()), Optional::False);
 			SetFloat(object, "framerate", track->GetFrameRate());
 			SetFloat(object, "framerate_conf", track->GetFrameRateByConfig());
-			SetFloat(object, "framerate_measured", track->GetFrameRateByMeasured());
+			SetFloat(object, "framerate_avg", track->GetFrameRateByMeasured());
+			SetFloat(object, "framerate_latest", track->GetFrameRateLastSecond());
 			SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
 			SetBool(object, "hasBframes", track->HasBframes());
 			SetInt(object, "keyFrameInterval", track->GetKeyFrameInterval());
 			SetInt(object, "keyFrameInterval_conf", track->GetKeyFrameIntervalByConfig());
-			SetInt(object, "keyFrameInterval_measured", track->GetKeyFrameIntervalByMeasured());
+			SetInt(object, "keyFrameInterval_avg", track->GetKeyFrameIntervalByMeasured());
+			SetInt(object, "keyFrameInterval_latest", track->GetKeyFrameIntervalLatest());
 		}
 	}
 
@@ -70,7 +73,8 @@ namespace serdes
 			SetInt(object, "channel", track->GetChannel().GetCounts());
 			SetString(object, "bitrate", ov::Converter::ToString(track->GetBitrate()), Optional::False);
 			SetString(object, "bitrate_conf", ov::Converter::ToString(track->GetBitrateByConfig()), Optional::False);
-			SetString(object, "bitrate_measured", ov::Converter::ToString(track->GetBitrateByMeasured()), Optional::False);
+			SetString(object, "bitrate_avg", ov::Converter::ToString(track->GetBitrateByMeasured()), Optional::False);
+			SetString(object, "bitrate_latest", ov::Converter::ToString(track->GetBitrateLastSecond()), Optional::False);
 			SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
 		}
 	}

@@ -93,6 +93,10 @@ public:
 	void SetBitrateByMeasured(int32_t bitrate);
 	int32_t GetBitrateByMeasured() const;
 
+	// Bitrate last second (Set by measured)
+	void SetBitrateLastSecond(int32_t bitrate);
+	int32_t GetBitrateLastSecond() const;
+
 	// Bitrate (Set by user)
 	void SetBitrateByConfig(int32_t bitrate);
 	int32_t GetBitrateByConfig() const;
@@ -153,6 +157,8 @@ protected:
 	int32_t _bitrate;
 	// Bitrate (Set by user)
 	int32_t _bitrate_conf;
+	// Bitrate last one second
+	int32_t _bitrate_last_second;
 	
 	// Bypass
 	bool _byass;
@@ -167,11 +173,16 @@ protected:
 
 	// First frame received time
 	ov::StopWatch _clock_from_first_frame_received;
+	ov::StopWatch _timer_one_second;
 
 	// Statistics
 	uint64_t _total_frame_count = 0;
 	uint64_t _total_frame_bytes = 0;
+	uint64_t _total_key_frame_count = 0;
 	int32_t _key_frame_interval_count = 0;
+
+	uint64_t _last_seconds_frame_count = 0;
+	uint64_t _last_seconds_frame_bytes = 0;
 
 	// Validity
 	bool _is_valid = false;

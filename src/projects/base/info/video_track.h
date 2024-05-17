@@ -29,6 +29,9 @@ public:
 	void SetFrameRateByMeasured(double framerate);
 	double GetFrameRateByMeasured() const;
 
+	void SetFrameRateLastSecond(double framerate);
+	double GetFrameRateLastSecond() const;
+
 	void SetFrameRateByConfig(double framerate);
 	double GetFrameRateByConfig() const;
 
@@ -68,6 +71,9 @@ public:
 
 	void SetKeyFrameIntervalByMeasured(int32_t key_frame_interval);
 	int32_t GetKeyFrameIntervalByMeasured() const;
+
+	void SetKeyFrameIntervalLastet(int32_t key_frame_interval);
+	int32_t GetKeyFrameIntervalLatest() const;
 	
 	void SetKeyFrameIntervalByConfig(int32_t key_frame_interval);
 	int32_t GetKeyFrameIntervalByConfig() const;
@@ -89,6 +95,8 @@ protected:
 	double _framerate_conf;
 	// framerate (estimated) 
 	double _framerate_estimated;
+	// framerate last one second (measurement)
+	double _framerate_last_second;
 
 	double _video_timescale;
 	
@@ -100,8 +108,10 @@ protected:
 	int32_t _width_conf;
 	int32_t _height_conf;
 
-	// Key Frame Interval (measurement)
+	// Key Frame Interval Avg (measurement)
 	int32_t _key_frame_interval;
+	// Key Frame Interval Latest (measurement)
+	int32_t _key_frame_interval_latest;
 	// Key Frame Interval (set by user)
 	int32_t _key_frame_interval_conf;
 	// Key Frame Interval Type (set by user)

@@ -118,6 +118,16 @@ int32_t VideoTrack::GetKeyFrameIntervalByMeasured() const
 	return _key_frame_interval;
 }
 
+void VideoTrack::SetKeyFrameIntervalLastet(int32_t key_frame_interval)
+{
+	_key_frame_interval_latest = key_frame_interval;
+}
+
+int32_t VideoTrack::GetKeyFrameIntervalLatest() const
+{
+	return _key_frame_interval_latest;
+}
+
 void VideoTrack::SetKeyFrameIntervalByConfig(int32_t key_frame_interval)
 {
 	_key_frame_interval_conf = key_frame_interval;
@@ -190,6 +200,16 @@ void VideoTrack::SetFrameRateByMeasured(double framerate)
 double VideoTrack::GetFrameRateByMeasured() const
 {
 	return _framerate;
+}
+
+void VideoTrack::SetFrameRateLastSecond(double framerate)
+{
+	_framerate_last_second = framerate;
+}
+
+double VideoTrack::GetFrameRateLastSecond() const
+{
+	return _framerate_last_second;
 }
 
 void VideoTrack::SetFrameRateByConfig(double framerate)
