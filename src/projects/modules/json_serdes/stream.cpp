@@ -43,8 +43,8 @@ namespace serdes
 			SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
 			SetBool(object, "hasBframes", track->HasBframes());
 			SetInt(object, "keyFrameInterval", track->GetKeyFrameInterval());
-			SetInt(object, "keyFrameIntervalConf", track->GetKeyFrameIntervalByConfig());
-			SetInt(object, "keyFrameIntervalMeasured", track->GetKeyFrameIntervalByMeasured());
+			SetInt(object, "keyFrameInterval_conf", track->GetKeyFrameIntervalByConfig());
+			SetInt(object, "keyFrameInterval_measured", track->GetKeyFrameIntervalByMeasured());
 		}
 	}
 
