@@ -69,8 +69,8 @@ public:
 	// If there is a key_frame_interval set by the user, it is returned. If not, the automatically measured key_frame_interval is returned
 	int32_t GetKeyFrameInterval() const;
 
-	void SetKeyFrameIntervalByMeasured(int32_t key_frame_interval);
-	int32_t GetKeyFrameIntervalByMeasured() const;
+	void SetKeyFrameIntervalByMeasured(double key_frame_interval);
+	double GetKeyFrameIntervalByMeasured() const;
 
 	void SetKeyFrameIntervalLastet(int32_t key_frame_interval);
 	int32_t GetKeyFrameIntervalLatest() const;
@@ -81,6 +81,9 @@ public:
 	void SetKeyFrameIntervalTypeByConfig(cmn::KeyFrameIntervalType key_frame_interval_type);
 	cmn::KeyFrameIntervalType GetKeyFrameIntervalTypeByConfig() const;
 
+	void SetDeltaFrameCountSinceLastKeyFrame(int32_t delta_frame_count);
+	int32_t GetDeltaFramesSinceLastKeyFrame() const;
+
 	void SetBFrames(int32_t b_frames);
 	int32_t GetBFrames();
 
@@ -90,13 +93,13 @@ public:
 protected:
 
 	// framerate (measurement)
-	double _framerate;
+	double _framerate = 0;
 	// framerate (set by user)
-	double _framerate_conf;
+	double _framerate_conf = 0;
 	// framerate (estimated) 
-	double _framerate_estimated;
+	double _framerate_estimated = 0;
 	// framerate last one second (measurement)
-	double _framerate_last_second;
+	double _framerate_last_second = 0;
 
 	double _video_timescale;
 	
@@ -109,19 +112,22 @@ protected:
 	int32_t _height_conf;
 
 	// Key Frame Interval Avg (measurement)
-	int32_t _key_frame_interval;
+	double _key_frame_interval = 0;
 	// Key Frame Interval Latest (measurement)
-	int32_t _key_frame_interval_latest;
+	int32_t _key_frame_interval_latest = 0;
 	// Key Frame Interval (set by user)
-	int32_t _key_frame_interval_conf;
+	int32_t _key_frame_interval_conf = 0;
+	// Delta Frame Count since last key frame
+	int32_t _delta_frame_count_since_last_key_frame = 0;
+
 	// Key Frame Interval Type (set by user)
 	cmn::KeyFrameIntervalType _key_frame_interval_type_conf;
 
 	// Number of B-frame (set by user)
-	int32_t _b_frames;
+	int32_t _b_frames = 0;
 	
 	// B-frame (set by mediarouter)
-	bool _has_bframe;
+	bool _has_bframe = false;
 
 	// Colorspace of video
 	// This variable is temporarily used in the Pixel Format defined by FFMPEG.
@@ -141,5 +147,5 @@ protected:
 	// The skip frame is not less than the value set by the user.
 	// -1 : No SkipFrame
 	// 0 ~ 120 : minimum value of SkipFrames. it is automatically calculated and the SkipFrames value is changed.
-	int32_t _skip_frames_conf;
+	int32_t _skip_frames_conf = -1;
 };

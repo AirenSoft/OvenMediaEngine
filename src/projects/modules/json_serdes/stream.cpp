@@ -35,19 +35,20 @@ namespace serdes
 			SetInt(object, "width", track->GetWidth());
 			SetInt(object, "height", track->GetHeight());
 			SetString(object, "bitrate", ov::Converter::ToString(track->GetBitrate()), Optional::False);
-			SetString(object, "bitrate_conf", ov::Converter::ToString(track->GetBitrateByConfig()), Optional::False);
-			SetString(object, "bitrate_avg", ov::Converter::ToString(track->GetBitrateByMeasured()), Optional::False);
-			SetString(object, "bitrate_latest", ov::Converter::ToString(track->GetBitrateLastSecond()), Optional::False);
+			SetString(object, "bitrateConf", ov::Converter::ToString(track->GetBitrateByConfig()), Optional::False);
+			SetString(object, "bitrateAvg", ov::Converter::ToString(track->GetBitrateByMeasured()), Optional::False);
+			SetString(object, "bitrateLatest", ov::Converter::ToString(track->GetBitrateLastSecond()), Optional::False);
 			SetFloat(object, "framerate", track->GetFrameRate());
-			SetFloat(object, "framerate_conf", track->GetFrameRateByConfig());
-			SetFloat(object, "framerate_avg", track->GetFrameRateByMeasured());
-			SetFloat(object, "framerate_latest", track->GetFrameRateLastSecond());
+			SetFloat(object, "framerateConf", track->GetFrameRateByConfig());
+			SetFloat(object, "framerateAvg", track->GetFrameRateByMeasured());
+			SetFloat(object, "framerateLatest", track->GetFrameRateLastSecond());
 			SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
 			SetBool(object, "hasBframes", track->HasBframes());
 			SetInt(object, "keyFrameInterval", track->GetKeyFrameInterval());
-			SetInt(object, "keyFrameInterval_conf", track->GetKeyFrameIntervalByConfig());
-			SetInt(object, "keyFrameInterval_avg", track->GetKeyFrameIntervalByMeasured());
-			SetInt(object, "keyFrameInterval_latest", track->GetKeyFrameIntervalLatest());
+			SetFloat(object, "keyFrameIntervalConf", track->GetKeyFrameIntervalByConfig());
+			SetFloat(object, "keyFrameIntervalAvg", track->GetKeyFrameIntervalByMeasured());
+			SetInt(object, "keyFrameIntervalLatest", track->GetKeyFrameIntervalLatest());
+			SetInt(object, "deltaFramesSinceLastKeyFrame", track->GetDeltaFramesSinceLastKeyFrame());
 		}
 	}
 
@@ -72,9 +73,9 @@ namespace serdes
 			// SetAudioChannel(object, "channel", track->GetChannel(), Optional::False);
 			SetInt(object, "channel", track->GetChannel().GetCounts());
 			SetString(object, "bitrate", ov::Converter::ToString(track->GetBitrate()), Optional::False);
-			SetString(object, "bitrate_conf", ov::Converter::ToString(track->GetBitrateByConfig()), Optional::False);
-			SetString(object, "bitrate_avg", ov::Converter::ToString(track->GetBitrateByMeasured()), Optional::False);
-			SetString(object, "bitrate_latest", ov::Converter::ToString(track->GetBitrateLastSecond()), Optional::False);
+			SetString(object, "bitrateConf", ov::Converter::ToString(track->GetBitrateByConfig()), Optional::False);
+			SetString(object, "bitrateAvg", ov::Converter::ToString(track->GetBitrateByMeasured()), Optional::False);
+			SetString(object, "bitrateLatest", ov::Converter::ToString(track->GetBitrateLastSecond()), Optional::False);
 			SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
 		}
 	}

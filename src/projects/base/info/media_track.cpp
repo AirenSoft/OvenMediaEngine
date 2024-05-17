@@ -583,10 +583,13 @@ void MediaTrack::OnFrameAdded(const std::shared_ptr<MediaPacket> &media_packet)
 			// Lastest
 			SetKeyFrameIntervalLastet(_key_frame_interval_count);
 			_key_frame_interval_count = 1;
+			_delta_frame_count_since_last_key_frame = 0;
 		}
 		else if (_key_frame_interval_count > 0)
 		{
 			_key_frame_interval_count++;
+			_delta_frame_count_since_last_key_frame ++;
+			SetDeltaFrameCountSinceLastKeyFrame(_delta_frame_count_since_last_key_frame);
 		}
 	}
 }
@@ -658,51 +661,5 @@ bool MediaTrack::IsBypassByConf() const
 
 std::shared_ptr<MediaTrack> MediaTrack::Clone()
 {
-	auto track = std::make_shared<MediaTrack>();
-
-	// Media Track
-	track->_is_valid = _is_valid;
-	track->_has_quality_measured = _has_quality_measured;
-	track->_id = _id;
-	track->_variant_name = _variant_name;
-	track->_public_name = _public_name;
-	track->_language = _language;
-	track->_codec_id = _codec_id;
-	track->_codec_module_id = _codec_module_id;
-	track->_origin_bitstream_format = _origin_bitstream_format;	
-	track->_media_type = _media_type;
-	track->_time_base = _time_base;
-	track->_bitrate = _bitrate;
-	track->_bitrate_conf = _bitrate_conf;
-	track->_byass = _byass;
-	track->_bypass_conf = _bypass_conf;
-	track->_start_frame_time = _start_frame_time;
-	track->_last_frame_time = _last_frame_time;
-	track->_decoder_configuration_record = _decoder_configuration_record;
-	track->_total_frame_count = _total_frame_count;
-	track->_total_frame_bytes = _total_frame_bytes;
-
-	// Video Track
-	track->_framerate = _framerate;
-	track->_framerate_conf = _framerate_conf;
-	track->_framerate_estimated = _framerate_estimated;
-	track->_video_timescale = _video_timescale;
-	track->_width = _width;
-	track->_width_conf = _width_conf;
-	track->_height = _height;
-	track->_height_conf = _height_conf;
-	track->_key_frame_interval = _key_frame_interval;
-	track->_key_frame_interval_conf = _key_frame_interval_conf;
-	track->_b_frames = _b_frames;
-	track->_has_bframe = _has_bframe;
-	track->_preset = _preset;
-	track->_colorspace = _colorspace;
-
-	// Audio Track
-	track->_channel_layout = _channel_layout;
-	track->_sample = _sample;
-	track->_audio_timescale = _audio_timescale;
-	track->_audio_samples_per_frame= _audio_samples_per_frame;
-	
-	return track;
+	return std::make_shared<MediaTrack>(*this);
 }

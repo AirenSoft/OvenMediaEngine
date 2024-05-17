@@ -180,6 +180,7 @@ protected:
 	uint64_t _total_frame_bytes = 0;
 	uint64_t _total_key_frame_count = 0;
 	int32_t _key_frame_interval_count = 0;
+	int32_t _delta_frame_count_since_last_key_frame = 0;
 
 	uint64_t _last_seconds_frame_count = 0;
 	uint64_t _last_seconds_frame_bytes = 0;
