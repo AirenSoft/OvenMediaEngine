@@ -133,7 +133,7 @@ Connection: Closed
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | allowed **(required)** | <p>true or false</p><p>Allows or rejects the client's request.</p>                                                                                                                                                                                      |
 | new\_url (optional)    | Redirects the client to a new url. However, the `scheme`, `port`, and `file` cannot be different from the request. Only host, app, and stream can be changed. The host can only be changed to another virtual host on the same server.                  |
-| lifetime (optional)    | <p>The amount of time (in milliseconds) that a client can maintain a connection (Publishing or Playback)</p><ul><li>0 means infinity</li></ul><p>HTTP based streaming (HLS, DASH, LLDASH) does not keep a connection, so this value does not apply.</p> |
+| lifetime (optional)    | <p>The amount of time (in milliseconds) that a client can maintain a connection (Publishing or Playback)</p><ul><li>0 means infinity</li></ul><p>HTTP based streaming (HLS) does not keep a connection, so this value does not apply.</p> |
 | reason (optional)      | If allowed is false, it will be output to the log.                                                                                                                                                                                                      |
 
 ### User authentication and control

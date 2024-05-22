@@ -43,10 +43,7 @@ Content-Type: application/json
     "message": "OK",
     "response": {
         "connections": {
-            "dash": 0,
             "file": 0,
-            "hls": 0,
-            "lldash": 0,
             "llhls": 0,
             "mpegtspush": 0,
             "ovt": 0,
@@ -156,10 +153,7 @@ Content-Type: application/json
     "message": "OK",
     "response": {
         "connections": {
-            "dash": 0,
             "file": 0,
-            "hls": 0,
-            "lldash": 0,
             "llhls": 0,
             "mpegtspush": 0,
             "ovt": 0,
@@ -269,10 +263,7 @@ Content-Type: application/json
     "message": "OK",
     "response": {
         "connections": {
-            "dash": 0,
             "file": 0,
-            "hls": 0,
-            "lldash": 0,
             "llhls": 0,
             "mpegtspush": 0,
             "ovt": 0,

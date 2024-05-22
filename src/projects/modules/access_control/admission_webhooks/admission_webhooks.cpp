@@ -144,7 +144,7 @@ ov::String AdmissionWebhooks::GetMessageBody()
 		"request":
 		{
 			"direction": "incoming | outgoing",
-			"protocol": "webrtc | rtmp | srt | hls | dash | lldash",
+			"protocol": "webrtc | rtmp | srt ",
 			"url": "scheme://host[:port]/app/stream/file?query=value&query2=value2",
 			"status": "opening | closing",
 			"time": "2021-05-12T13:45:00.000Z" // ISO8601

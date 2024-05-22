@@ -383,9 +383,7 @@ You need many threads to transmit streams to a large number of users at the same
 <Application>
    <Publishers>
       <OVT />
-      <HLS />
-      <DASH />
-      <LLDASH />
+	  <LLHLS />
       <WebRTC />
    </Publishers>
 </Application>
@@ -601,7 +599,7 @@ Finally, `Server.xml` is configured as follows:
 
                 <Enables>
                     <Providers>rtmp,webrtc,srt</Providers>
-                    <Publishers>webrtc,hls,llhls,dash,lldash</Publishers>
+                    <Publishers>webrtc,llhls</Publishers>
                 </Enables>
             </SignedPolicy>
             -->
@@ -613,7 +611,7 @@ Finally, `Server.xml` is configured as follows:
                 <Timeout>3000</Timeout>
                 <Enables>
                     <Providers>rtmp,webrtc,srt</Providers>
-                    <Publishers>webrtc,hls,llhls,dash,lldash</Publishers>
+                    <Publishers>webrtc,llhls</Publishers>
                 </Enables>
             </AdmissionWebhooks>
             -->

@@ -128,9 +128,6 @@ int main(int argc, char *argv[])
 	// Initialize Publishers
 	INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, media_router));
 	INIT_MODULE(llhls_publisher, "LLHLS Publisher", LLHlsPublisher::Create(*server_config, media_router));
-	INIT_MODULE(hls_publisher, "HLS Publisher", HlsPublisher::Create(*server_config, media_router));
-	INIT_MODULE(dash_publisher, "MPEG-DASH Publisher", DashPublisher::Create(*server_config, media_router));
-	INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(*server_config, media_router));
 	INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, media_router));
 	INIT_MODULE(file_publisher, "File Publisher", pub::FilePublisher::Create(*server_config, media_router));
 	INIT_MODULE(mpegtspush_publisher, "MpegtsPush Publisher", MpegtsPushPublisher::Create(*server_config, media_router));
@@ -195,9 +192,6 @@ int main(int argc, char *argv[])
 
 	RELEASE_MODULE(webrtc_publisher, "WebRTC Publisher");
 	RELEASE_MODULE(llhls_publisher, "LLHLS Publisher");
-	RELEASE_MODULE(hls_publisher, "HLS Publisher");
-	RELEASE_MODULE(dash_publisher, "MPEG-DASH Publisher");
-	RELEASE_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher");
 	RELEASE_MODULE(ovt_publisher, "OVT Publisher");
 	RELEASE_MODULE(file_publisher, "File Publisher");
 	RELEASE_MODULE(mpegtspush_publisher, "MpegtsPush Publisher");
