@@ -1016,7 +1016,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			{
 				stat_track_str.AppendFormat(", fps: %.2f/%.2f",
 											track->GetFrameRateByMeasured(), track->GetFrameRate());
-				stat_track_str.AppendFormat(", kint: %d/%d/%s",
+				stat_track_str.AppendFormat(", kint: %.2f/%d/%s",
 											track->GetKeyFrameIntervalByMeasured(),
 											track->GetKeyFrameInterval(),
 											cmn::GetKeyFrameIntervalTypeToString(track->GetKeyFrameIntervalTypeByConfig()).CStr());
