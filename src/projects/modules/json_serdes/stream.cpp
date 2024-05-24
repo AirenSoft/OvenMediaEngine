@@ -148,6 +148,7 @@ namespace serdes
 
 		object["webrtcAutoAbr"] = playlist->IsWebRtcAutoAbr();
 		object["hlsChunklistPathDepth"] = playlist->GetHlsChunklistPathDepth();
+		object["enableTsPackaging"] = playlist->IsTsPackagingEnabled();
 	}
 
 	static void SetPlaylists(Json::Value &parent_object, const char *key, const std::map<ov::String, std::shared_ptr<info::Playlist>> &playlist, Optional optional)

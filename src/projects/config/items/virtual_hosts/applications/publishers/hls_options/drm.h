@@ -16,7 +16,7 @@ namespace cfg
 		{
 			namespace pub
 			{
-				struct LLHlsDrm : public Item
+				struct Drm : public Item
 				{
 				protected:
 					bool _enabled = false;

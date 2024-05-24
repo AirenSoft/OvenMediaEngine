@@ -381,7 +381,7 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 		track_id = ov::Converter::ToInt32(name_items[1].CStr());
 		stream_key = name_items[3];
 	}
-	else if (name_items[0] == "seg" || name_ext_items[1] != "m4s")
+	else if (name_items[0] == "seg" && name_ext_items[1] == "m4s")
 	{
 		// seg_<track id>_<segment number>_<media type>_<stream key>_llhls
 		if (name_items.size() < 6)
@@ -395,7 +395,7 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 		segment_number = ov::Converter::ToInt64(name_items[2].CStr());
 		stream_key = name_items[4];
 	}
-	else if (name_items[0] == "part" || name_ext_items[1] != "m4s")
+	else if (name_items[0] == "part" && name_ext_items[1] == "m4s")
 	{
 		// part_<track id>_<segment number>_<partial number>_<media type>_<stream key>_llhls
 		if (name_items.size() < 7)

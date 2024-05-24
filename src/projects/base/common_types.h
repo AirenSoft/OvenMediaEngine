@@ -97,6 +97,7 @@ enum class PublisherType : int8_t
 	Ovt,
 	File,
 	Thumbnail,
+	Hls, // HLSv3
 	NumberOfPublishers,
 };
 
@@ -387,6 +388,8 @@ static ov::String StringFromPublisherType(const PublisherType &type)
 			return "File";
 		case PublisherType::Thumbnail:
 			return "Thumbnail";
+		case PublisherType::Hls:
+			return "TS";
 	}
 
 	return "Unknown";

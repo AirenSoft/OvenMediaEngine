@@ -13,12 +13,18 @@
 #include <memory>
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovlibrary/bit_reader.h>
+#include <base/ovlibrary/bit_writer.h>
+
+#include <base/info/media_track.h>
+#include <base/mediarouter/media_buffer.h>
 
 #define MPEGTS_PES_HEADER_SIZE					6U
 #define MPEGTS_MIN_PES_OPTIONAL_HEADER_SIZE		3U
 
 namespace mpegts
 {
+	constexpr uint32_t PCR_OFFSET = 10000;
+
 	enum class WellKnownStreamId : uint8_t
 	{
 		PROGRAM_STREAM_MAP 		= 0b10111100,
@@ -46,6 +52,7 @@ namespace mpegts
 	{
 	public:
 		Pes(uint16_t pid);
+		Pes();
 		~Pes();
 		
 		// return consumed length
@@ -53,25 +60,29 @@ namespace mpegts
 		// All pes data has been inserted
 		bool SetEndOfData();
 
+		static std::shared_ptr<Pes> Build(uint16_t pid, const std::shared_ptr<const MediaTrack> &track, const std::shared_ptr<const MediaPacket> &media_packet);
+
 		// return true when section is completed when PES packet length is not zero
 		bool IsCompleted();
 
 		// Getter
 
 		// Header
-		uint16_t PID();
-		uint8_t StreamId();
-		uint16_t PesPacketLength();
+		uint16_t PID() const;
+		uint8_t StreamId() const;
+		uint16_t PesPacketLength() const;
 
 		// Optional PES Header ( >= 3bytes )
-		uint8_t ScramblingControl();
-		uint8_t Priority();
-		uint8_t DataAlignmentIndicator();
-		uint8_t Copyright();
-		uint8_t OriginalOrCopy();
-		int64_t Pts();
-		int64_t Dts();
+		uint8_t ScramblingControl() const;
+		uint8_t Priority() const;
+		uint8_t DataAlignmentIndicator() const;
+		uint8_t Copyright() const;
+		uint8_t OriginalOrCopy() const;
+		int64_t Pts() const;
+		int64_t Dts() const;
+		int64_t Pcr() const;
 
+		std::shared_ptr<const ov::Data> GetData();
 		const uint8_t* Payload();
 		uint32_t PayloadLength();
 
@@ -88,12 +99,15 @@ namespace mpegts
 		}
 
 	private:
-		bool HasOptionalHeader();
-		bool HasOptionalData();
+		bool HasOptionalHeader() const;
+		bool HasOptionalData() const;
 		bool ParsePesHeader(BitReader *parser);
 		bool ParsePesOptionalHeader(BitReader *parser);
 		bool ParsePesOPtionalData(BitReader *parser);
 		bool ParseTimestamp(BitReader *parser, uint8_t start_bits, int64_t &timestamp);
+		bool WriteTimestamp(ov::BitWriter *writer, int64_t& pts, int64_t& dts);
+
+		bool UpdateData();
 
 		bool _pes_header_parsed = false;
 		bool _pes_optional_header_parsed = false;
@@ -112,7 +126,7 @@ namespace mpegts
 		uint16_t _pes_packet_length = 0U;		// 16 bits
 
 		// Optional PES Header ( >= 3bytes )
-		uint8_t _marker_bits = 0U;				// 2 bits (10)
+		uint8_t _marker_bits = 0x2;				// 2 bits (10)
 		uint8_t _scrambling_control = 0U;		// 2 bits (00 : not scrambled)
 		uint8_t _priority = 0U;					// 1 bit
 		uint8_t _data_alignment_indicator = 0U; // 1 bit (1 : video start code or audio syncword)
@@ -130,8 +144,14 @@ namespace mpegts
 		int64_t _pts = -1LL;
 		int64_t _dts = -1LL;
 
-		ov::Data _data;
+		// Extra data
+		uint64_t _pcr = 0;
+		std::shared_ptr<const MediaTrack> _media_track = nullptr;
+		std::shared_ptr<const MediaPacket> _media_packet = nullptr;
+
+		std::shared_ptr<ov::Data> _data = nullptr;
 		uint8_t* _payload = nullptr;
 		uint32_t _payload_length = 0;
+		bool _need_to_update_data = false;
 	};
 }

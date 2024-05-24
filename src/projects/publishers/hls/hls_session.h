@@ -15,17 +15,17 @@
 
 #define MAX_PENDING_REQUESTS 10
 
-class LLHlsSession : public pub::Session
+class HlsSession : public pub::Session
 {
 public:
-	static std::shared_ptr<LLHlsSession> Create(session_id_t session_id, 
+	static std::shared_ptr<HlsSession> Create(session_id_t session_id, 
 												const bool &origin_mode,
 												const ov::String &session_key, 
 												const std::shared_ptr<pub::Application> &application,
 												const std::shared_ptr<pub::Stream> &stream,
 												uint64_t session_life_time);
 
-	static std::shared_ptr<LLHlsSession> Create(session_id_t session_id, 
+	static std::shared_ptr<HlsSession> Create(session_id_t session_id, 
 												const bool &origin_mode,
 												const ov::String &session_key, 
 												const std::shared_ptr<pub::Application> &application,
@@ -33,7 +33,7 @@ public:
 												const ov::String &user_agent,
 												uint64_t session_life_time);
 
-	LLHlsSession(const info::Session &session_info, 
+	HlsSession(const info::Session &session_info, 
 				const bool &origin_mode,
 				const ov::String &session_key,
 				const std::shared_ptr<pub::Application> &application, 
@@ -41,7 +41,7 @@ public:
 				const ov::String &user_agent,
 				uint64_t session_life_time);
 	
-	~LLHlsSession() override;
+	~HlsSession() override;
 
 	bool Start() override;
 	bool Stop() override;
@@ -57,11 +57,9 @@ public:
 
 	// Get session key
 	const ov::String &GetSessionKey() const;
-
 	const ov::String &GetUserAgent() const;
 
 private:
-
 	enum class RequestType : uint8_t
 	{
 		Playlist,
@@ -71,39 +69,15 @@ private:
 		PartialSegment,
 	};
 
-	bool ParseFileName(const ov::String &file_name, RequestType &type, int32_t &track_id, int64_t &segment_number, int64_t &partial_number, ov::String &stream_key) const;
+	bool ParseFileName(const ov::String &file_name, RequestType &type, ov::String &playlist, ov::String &variant_name, uint32_t &number) const;
 
-	void ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, bool legacy, bool rewind, bool holdIfAccepted = true);
-	void ResponseChunklist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, int64_t msn, int64_t part, bool skip, bool legacy, bool rewind, bool holdIfAccepted = true);
-	void ResponseInitializationSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id);
-	void ResponseSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, const int64_t &segment_number);
-	void ResponsePartialSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &file_name, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number, bool holdIfAccepted = true);
+	void ResponseMasterPlaylist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &playlist);
+	void ResponseMediaPlaylist(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &variant_name);
+	void ResponseSegment(const std::shared_ptr<http::svr::HttpExchange> &exchange, const ov::String &variant_name, uint32_t number);
 
 	void ResponseData(const std::shared_ptr<http::svr::HttpExchange> &exchange);
 
-	void OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn, const int64_t &part);
-
-	ov::String MakeQueryStringToPropagate(const std::shared_ptr<ov::Url> &request_uri);
-
-	// Pending requests
-	struct PendingRequest
-	{
-		RequestType type;
-		ov::String file_name;
-		int32_t track_id;
-		int64_t segment_number = -1;
-		int64_t partial_number = -1;
-		bool skip = false;
-		bool legacy = false;
-		bool rewind = false;
-
-		std::shared_ptr<http::svr::HttpExchange> exchange;
-	};
-
-	bool AddPendingRequest(const std::shared_ptr<http::svr::HttpExchange> &exchange, const RequestType &type, const ov::String &file_name, const int32_t &track_id, const int64_t &segment_number, const int64_t &partial_number, const bool &skip, const bool &legacy, const bool &rewind);
-
-	// Session runs on a single thread, so it doesn't need mutex
-	std::list<PendingRequest> _pending_requests;
+	bool GetRewindOptionValue(const std::shared_ptr<ov::Url> &url) const;
 
 	// ID list of connections requesting this session
 	// Connection ID : last request time
@@ -127,6 +101,5 @@ private:
 	ov::String _user_agent;
 
 	// default querystring value
-	bool _hls_legacy = false;
-	bool _hls_rewind = false;
+	bool _default_option_rewind = true;
 };

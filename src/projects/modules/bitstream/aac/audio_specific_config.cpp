@@ -85,9 +85,9 @@ std::shared_ptr<ov::Data> AudioSpecificConfig::Serialize()
 {
 	ov::BitWriter bits(2);
 
-	bits.Write(5, _object_type);
-	bits.Write(4, _sampling_frequency_index);
-	bits.Write(4, _channel);
+	bits.WriteBits(5, _object_type);
+	bits.WriteBits(4, _sampling_frequency_index);
+	bits.WriteBits(4, _channel);
 
 	return std::make_shared<ov::Data>(bits.GetData(), bits.GetDataSize());
 }

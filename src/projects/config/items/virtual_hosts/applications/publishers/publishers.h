@@ -16,6 +16,7 @@
 #include "thumbnail_publisher.h"
 #include "webrtc_publisher.h"
 #include "ll_hls_publisher.h"
+#include "hls_publisher.h"
 
 namespace cfg
 {
@@ -39,6 +40,7 @@ namespace cfg
 							&_rtmppush_publisher,
 							&_thumbnail_publisher,
 							&_srtpush_publisher,
+							&_hls_publisher,
 						};
 					}
 
@@ -52,6 +54,8 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetRtmpPushPublisher, _rtmppush_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetThumbnailPublisher, _thumbnail_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetSrtPushPublisher, _srtpush_publisher)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetHlsPublisher, _hls_publisher)
+
 
 				protected:
 					void MakeList() override
@@ -67,6 +71,7 @@ namespace cfg
 						Register<Optional>({"RTMPPush", "rtmpPush"}, &_rtmppush_publisher);
 						Register<Optional>({"Thumbnail", "thumbnail"}, &_thumbnail_publisher);
 						Register<Optional>({"SRTPush", "srtPush"}, &_srtpush_publisher);
+						Register<Optional>({"HLS", "hls"}, &_hls_publisher);
 					}
 
 					int _app_worker_count = 1;
@@ -80,6 +85,7 @@ namespace cfg
 					FilePublisher _file_publisher;
 					ThumbnailPublisher _thumbnail_publisher;
 					SrtPushPublisher _srtpush_publisher;
+					HlsPublisher _hls_publisher;
 				};
 			}  // namespace pub
 		}	   // namespace app

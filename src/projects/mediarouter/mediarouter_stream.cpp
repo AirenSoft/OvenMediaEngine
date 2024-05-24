@@ -168,6 +168,7 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 		bool has_idr = false;
 		bool has_sps = false;
 		bool has_pps = false;
+		bool has_aud = false;
 
 		ov::ByteStream read_stream(media_packet->GetData());
 		while (read_stream.Remained() > 0)
@@ -205,8 +206,6 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 			H264NalUnitHeader nal_header;
 			if (H264Parser::ParseNalUnitHeader(nalu->GetDataAs<uint8_t>(), H264_NAL_UNIT_HEADER_SIZE, nal_header) == true)
 			{
-				// logtd("nal_unit_type : %s", NalUnitTypeToStr((uint8_t)nal_header.GetNalUnitType()).CStr());
-
 				if (nal_header.GetNalUnitType() == H264NalUnitType::IdrSlice)
 				{
 					media_packet->SetFlag(MediaPacketFlag::Key);
@@ -229,6 +228,10 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 					{
 						pps_nalu = std::make_shared<ov::Data>(nalu->GetDataAs<uint8_t>(), nalu->GetLength());
 					}					
+				}
+				else if (nal_header.GetNalUnitType() == H264NalUnitType::Aud)
+				{
+					has_aud = true;
 				}
 				else if (nal_header.GetNalUnitType() == H264NalUnitType::FillerData)
 				{
@@ -280,10 +283,17 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 		// Insert SPS/PPS if there are no SPS/PPS nal units before IDR frame.
 		if (has_idr == true && (has_sps == false || has_pps == false))
 		{
-			if (InsertH264SPSPPSAnnexB(media_track, media_packet) == false)
+			if (InsertH264SPSPPSAnnexB(media_track, media_packet, !has_aud) == false)
 			{
 				auto stream_info = GetStream();
 				logtw("Failed to insert SPS/PPS before IDR frame in %s/%s/%s track", stream_info->GetApplicationName(), stream_info->GetName().CStr(), media_track->GetVariantName().CStr());
+			}
+		}
+		else if (has_aud == false)
+		{
+			if (InsertH264AudAnnexB(media_track, media_packet) == false)
+			{
+				logtw("Failed to insert AUD before IDR frame in %s/%s/%s track", GetStream()->GetApplicationName(), GetStream()->GetName().CStr(), media_track->GetVariantName().CStr());
 			}
 		}
 
@@ -303,7 +313,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 	size_t offset = 0, offset_length = 0;
 	auto bitstream = media_packet->GetData()->GetDataAs<uint8_t>();
 	auto bitstream_length = media_packet->GetData()->GetLength();
-	bool has_sps = false, has_pps = false, has_idr = false;
+	bool has_sps = false, has_pps = false, has_idr = false, has_aud = false;
 
 	while (offset < bitstream_length)
 	{
@@ -339,7 +349,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 			logte("Could not parse H264 Nal unit header");
 			return false;
 		}
-
+		
 		if (nal_header.GetNalUnitType() == H264NalUnitType::Sps)
 		{
 			has_sps = true;
@@ -362,6 +372,10 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 		{
 			has_idr = true;
 			media_packet->SetFlag(MediaPacketFlag::Key);
+		}
+		else if (nal_header.GetNalUnitType() == H264NalUnitType::Aud)
+		{
+			has_aud = true;
 		}
 		else if (nal_header.GetNalUnitType() == H264NalUnitType::FillerData)
 		{
@@ -406,16 +420,23 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 	// Insert SPS/PPS if there are no SPS/PPS nal units before IDR frame.
 	if (has_idr == true && media_track->IsValid() && (has_sps == false || has_pps == false))
 	{
-		if (InsertH264SPSPPSAnnexB(media_track, media_packet) == false)
+		if (InsertH264SPSPPSAnnexB(media_track, media_packet, !has_aud) == false)
 		{
 			logtw("Failed to insert SPS/PPS before IDR frame in %s/%s/%s track", GetStream()->GetApplicationName(), GetStream()->GetName().CStr(), media_track->GetVariantName().CStr());
+		}
+	}
+	else if (has_aud == false)
+	{
+		if (InsertH264AudAnnexB(media_track, media_packet) == false)
+		{
+			logtw("Failed to insert AUD before IDR frame in %s/%s/%s track", GetStream()->GetApplicationName(), GetStream()->GetName().CStr(), media_track->GetVariantName().CStr());
 		}
 	}
 
 	return true;
 }
 
-bool MediaRouteStream::InsertH264SPSPPSAnnexB(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
+bool MediaRouteStream::InsertH264SPSPPSAnnexB(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet, bool need_aud)
 {
 	if (media_track->IsValid() == false)
 	{
@@ -435,7 +456,7 @@ bool MediaRouteStream::InsertH264SPSPPSAnnexB(std::shared_ptr<MediaTrack> &media
 	const uint8_t START_CODE[4] = {0x00, 0x00, 0x00, 0x01};
 	const size_t START_CODE_LEN = sizeof(START_CODE);
 
-	auto [sps_pps_annexb, sps_pps_frag_header] = avc_config->GetSpsPpsAsAnnexB(START_CODE_LEN);
+	auto [sps_pps_annexb, sps_pps_frag_header] = avc_config->GetSpsPpsAsAnnexB(START_CODE_LEN, need_aud);
 	if (sps_pps_annexb == nullptr)
 	{
 		return false;
@@ -466,6 +487,49 @@ bool MediaRouteStream::InsertH264SPSPPSAnnexB(std::shared_ptr<MediaTrack> &media
 	media_packet->SetData(processed_data);
 
 	return true;
+}
+
+bool MediaRouteStream::InsertH264AudAnnexB(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
+{
+	if (media_track->IsValid() == false)
+	{
+		return false;
+	}
+
+	auto data = media_packet->GetData();
+	auto frag_header = media_packet->GetFragHeader();
+
+	const uint8_t START_CODE[4] = {0x00, 0x00, 0x00, 0x01};
+	const size_t START_CODE_LEN = sizeof(START_CODE);
+
+	// new media packet
+	auto processed_data = std::make_shared<ov::Data>(data->GetLength() + 1024);
+
+	// copy AUD first
+	const uint8_t AUD[2] = {0x09, 0xf0};
+	processed_data->Append(START_CODE, sizeof(START_CODE));
+	processed_data->Append(AUD, sizeof(AUD));
+
+	// and then copy original data
+	processed_data->Append(data);
+
+	// Update fragment header
+	FragmentationHeader updated_frag_header;
+	updated_frag_header.AddFragment(START_CODE_LEN, sizeof(AUD));
+
+	// Existing fragment header offset because AUD was inserted at front
+	auto offset_offset = sizeof(AUD) + START_CODE_LEN;
+	for (size_t i = 0; i < frag_header->fragmentation_offset.size(); i++)
+	{
+		size_t updated_offset = frag_header->fragmentation_offset[i] + offset_offset;
+		updated_frag_header.AddFragment(updated_offset, frag_header->fragmentation_length[i]);
+	}
+
+	media_packet->SetFragHeader(&updated_frag_header);
+	media_packet->SetData(processed_data);
+
+	return true;
+
 }
 
 bool MediaRouteStream::ProcessAACRawStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)

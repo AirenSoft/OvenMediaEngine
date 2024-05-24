@@ -4,7 +4,7 @@ include $(DEFAULT_VARIABLES)
 LOCAL_STATIC_LIBRARIES := \
 	webrtc_publisher \
 	llhls_publisher \
-	segment_publishers \
+	hls_publisher \
 	ovt_publisher \
 	file_publisher \
 	mpegtspush_publisher \

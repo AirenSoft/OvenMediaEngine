@@ -52,7 +52,7 @@ namespace pub
 		std::shared_mutex _lock;
 
 		std::map<cmn::MediaType, MediaTrackId> _default_track_by_type;
-		int32_t _default_track;
+		MediaTrackId _default_track;
 		bool _found_first_keyframe = false;
 	};
 }  // namespace pub

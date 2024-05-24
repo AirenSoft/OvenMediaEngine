@@ -370,6 +370,11 @@ namespace pvd
 				{
 					playlist->SetHlsChunklistPathDepth(json_options["hlsChunklistPathDepth"].asInt());
 				}
+
+				if (json_options["enableTsPackaging"].isBool())
+				{
+					playlist->EnableTsPackaging(json_options["enableTsPackaging"].asBool());
+				}
 			}
 
 			for (size_t j = 0; j < json_playlist["renditions"].size(); j++)

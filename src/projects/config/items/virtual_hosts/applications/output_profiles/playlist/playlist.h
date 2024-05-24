@@ -11,6 +11,7 @@
 #include "rendition.h"
 #include "options.h"
 #include "../encodes/encodes.h"
+#include <base/info/playlist.h>
 
 namespace cfg
 {
@@ -33,6 +34,22 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFileName, _file_name);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetOptions, _options);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetRenditions, _renditions);
+
+					// Copy cfg to info
+					std::shared_ptr<info::Playlist> GetPlaylistInfo() const
+					{
+						auto playlist = std::make_shared<info::Playlist>(GetName(), GetFileName());
+						playlist->SetHlsChunklistPathDepth(_options.GetHlsChunklistPathDepth());
+						playlist->SetWebRtcAutoAbr(_options.IsWebRtcAutoAbr());
+						playlist->EnableTsPackaging(_options.IsTsPackagingEnabled());
+
+						for (auto &rendition : _renditions)
+						{
+							playlist->AddRendition(std::make_shared<info::Rendition>(rendition.GetName(), rendition.GetVideoName(), rendition.GetAudioName()));
+						}
+
+						return playlist;
+					}
 
 					bool SetEncodes(const Encodes &encodes)
 					{

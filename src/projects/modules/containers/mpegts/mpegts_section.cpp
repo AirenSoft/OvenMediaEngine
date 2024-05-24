@@ -1,7 +1,8 @@
 #include "mpegts_section.h"
 #include "base/ovlibrary/crc.h"
 
-#define OV_LOG_TAG	"MpegTsSection"
+#include "mpegts_packet.h"
+#include "mpegts_private.h"
 
 namespace mpegts
 {
@@ -14,6 +15,156 @@ namespace mpegts
 	Section::~Section()
 	{
 
+	}
+
+	std::shared_ptr<Section> Section::Build(const PAT &pat)
+	{
+		auto section = std::make_shared<Section>(static_cast<uint16_t>(WellKnownPacketId::PAT));
+
+		// Table header
+		section->_table_id = static_cast<uint8_t>(WellKnownTableId::PROGRAM_ASSOCIATION_SECTION);
+		section->_section_syntax_indicator = true;
+		section->_section_length = 0; // later it will be calculated
+
+		// Table data
+		section->_table_id_extension = 1; // transport stream id
+		section->_version_number = 0;
+		section->_current_next_indicator = true;
+		section->_section_number = 0;
+		section->_last_section_number = 0;
+
+		section->_pat = std::make_shared<PAT>(pat);
+
+		// Make data
+		ov::BitWriter table_data(188);
+
+		// Table data
+		table_data.WriteBytes<uint16_t>(section->_table_id_extension);
+		table_data.WriteBits(2, section->_reserved_bits2);
+		table_data.WriteBits(5, section->_version_number);
+		table_data.WriteBits(1, section->_current_next_indicator);
+		table_data.WriteBytes<uint8_t>(section->_section_number);
+		table_data.WriteBytes<uint8_t>(section->_last_section_number);
+		
+		// PAT, only one program
+		table_data.WriteBytes<uint16_t>(section->_pat->_program_num);
+		table_data.WriteBits(3, section->_pat->_reserved_bits);
+		table_data.WriteBits(13, section->_pat->_program_map_pid);
+
+		section->_section_length = table_data.GetDataSize() + 4; // 4 bytes for CRC
+		
+		// Table header
+		ov::BitWriter data(188);
+		
+		data.WriteBytes<uint8_t>(0); // pointer field
+
+		// Table header
+		data.WriteBytes<uint8_t>(section->_table_id);
+		data.WriteBits(1, section->_section_syntax_indicator);
+		data.WriteBits(1, section->_private_bit);
+		data.WriteBits(2, section->_reserved_bits);
+		data.WriteBits(2, section->_section_length_unused_bits);
+		data.WriteBits(10, section->_section_length);
+		data.WriteData(table_data.GetData(), table_data.GetDataSize());
+
+		// CRC
+		section->_crc = ov::CRC::Crc32Mpeg2(data.GetData() + 1, data.GetDataSize() - 1); // except pointer field
+		data.WriteBytes<uint32_t>(section->_crc);
+
+		section->_data.Clear();
+		section->_data.Append(data.GetData(), data.GetDataSize());
+
+		section->_completed = true;
+
+		return section;
+	}
+
+	std::shared_ptr<Section> Section::Build(const PMT &pmt)
+	{
+		auto section = std::make_shared<Section>(pmt._pid);
+
+		section->_table_id = static_cast<uint8_t>(WellKnownTableId::PROGRAM_MAP_SECTION);
+		section->_section_syntax_indicator = true;
+		section->_section_length = 0; // 13 bytes, later it will be calculated
+
+		section->_table_id_extension = PROGRAM_NUMBER; // PMT uses this for the Program number.
+		section->_version_number = 0;
+		section->_current_next_indicator = true;
+		section->_section_number = 0;
+		section->_last_section_number = 0;
+
+		section->_pmt = std::make_shared<PMT>(pmt);
+
+		// Make data
+		ov::BitWriter table_data(188);
+
+		// Table data
+		table_data.WriteBytes<uint16_t>(section->_table_id_extension);
+		table_data.WriteBits(2, section->_reserved_bits2);
+		table_data.WriteBits(5, section->_version_number);
+		table_data.WriteBits(1, section->_current_next_indicator);
+		table_data.WriteBytes<uint8_t>(section->_section_number);
+		table_data.WriteBytes<uint8_t>(section->_last_section_number);
+
+		// PMT
+		table_data.WriteBits(3, section->_pmt->_reserved_bits);
+		table_data.WriteBits(13, section->_pmt->_pcr_pid);
+		table_data.WriteBits(4, section->_pmt->_reserved_bits);
+		table_data.WriteBits(2, section->_pmt->_program_info_length_unused_bits);
+		table_data.WriteBits(10, section->_pmt->_program_info_length);
+		
+		// PMT descriptors
+		for(auto descriptor : section->_pmt->_program_descriptors)
+		{
+			table_data.WriteBytes<uint8_t>(descriptor->_tag);
+			table_data.WriteBytes<uint8_t>(descriptor->_length);
+			table_data.WriteData(descriptor->_data, descriptor->_length);
+		}
+
+		// ES info
+		for(auto es_info : section->_pmt->_es_info_list)
+		{
+			table_data.WriteBytes<uint8_t>(es_info->_stream_type);
+			table_data.WriteBits(3, es_info->_reserved_bits);
+			table_data.WriteBits(13, es_info->_elementary_pid);
+			table_data.WriteBits(4, es_info->_reserved_bits2);
+			table_data.WriteBits(2, es_info->_es_info_length_unused_bits);
+			table_data.WriteBits(10, es_info->_es_info_length);
+
+			// ES descriptors
+			for(auto descriptor : es_info->_es_descriptors)
+			{
+				table_data.WriteBytes<uint8_t>(descriptor->_tag);
+				table_data.WriteBytes<uint8_t>(descriptor->_length);
+				table_data.WriteData(descriptor->_data, descriptor->_length);
+			}
+		}
+
+		section->_section_length = table_data.GetDataSize() + 4; // 4 bytes for CRC
+
+		ov::BitWriter data(188);
+
+		data.WriteBytes<uint8_t>(0); // pointer field
+
+		// Table header
+		data.WriteBytes<uint8_t>(section->_table_id);
+		data.WriteBits(1, section->_section_syntax_indicator);
+		data.WriteBits(1, section->_private_bit);
+		data.WriteBits(2, section->_reserved_bits);
+		data.WriteBits(2, section->_section_length_unused_bits);
+		data.WriteBits(10, section->_section_length);
+		data.WriteData(table_data.GetData(), table_data.GetDataSize());
+
+		// CRC
+		section->_crc = ov::CRC::Crc32Mpeg2(data.GetData() + 1, data.GetDataSize() - 1); // except pointer field
+		data.WriteBytes<uint32_t>(section->_crc);
+
+		section->_data.Clear();
+		section->_data.Append(data.GetData(), data.GetDataSize());
+
+		section->_completed = true;
+
+		return section;
 	}
 
 	// return consumed length (including stuff)
@@ -171,6 +322,13 @@ namespace mpegts
 		_current_next_indicator = parser->ReadBoolBit();
 		_section_number = parser->ReadBytes<uint8_t>();
 		_last_section_number = parser->ReadBytes<uint8_t>();
+
+		// TODO(Getroot): Now assume that PAT and PMT are only in one section
+		// It should be changed to support multiple sections
+		if (_section_number != 0 || _last_section_number != 0)
+		{
+			logtw("Now it only supports one section for PAT and PMT");
+		}
 
 		switch(_table_id)
 		{

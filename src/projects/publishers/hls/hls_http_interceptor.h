@@ -12,7 +12,7 @@
 #include <modules/http/server/http_default_interceptor.h>
 #include <modules/http/server/http_exchange.h>
 
-class LLHlsHttpInterceptor : public http::svr::DefaultInterceptor
+class TsHttpInterceptor : public http::svr::DefaultInterceptor
 {
 protected:
 	bool IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpExchange> &exchange) override
@@ -20,44 +20,38 @@ protected:
 		auto request = exchange->GetRequest();
 		if (request->GetParsedUri() == nullptr)
 		{
-			loge("LLHlsHttpInterceptor", "LLHlsHttpInterceptor::IsInterceptorForRequest - Failed to get the parsed URI\n");
+			loge("TsHttpInterceptor", "TsHttpInterceptor::IsInterceptorForRequest - Failed to get the parsed URI\n");
 			return false;
 		}
-
+		
 		auto parsed_uri = request->GetParsedUri();
 		auto file = parsed_uri->File().LowerCaseString();
 
 		if (request->GetMethod() == http::Method::Get || request->GetMethod() == http::Method::Options)
 		{
-			// ts:*.m3u8 is the master playlist for this HLSv3 Publisher(HLSv3)
+		 	// ts:*.m3u8 is the master playlist for this HLS Publisher(HLSv3)
 			if (file.HasPrefix("ts:") && file.HasSuffix(".m3u8"))
 			{
-				return false;
+				return true;
 			}
 
 			if (file.HasSuffix(".m3u8") && parsed_uri->GetQueryValue("format") == "ts")
 			{
-				return false;
+				return true;
 			}
 
-			// *hls.m3u8
-			// *hls.ts is for this HLSv3 Publisher(HLSv3)
+			// *_hls.m3u8 is media playlist for this HLS Publisher(HLSv3)
 			else if (file.HasSuffix("_hls.m3u8"))
 			{
-				return false;
-			}
-			
-			// Every other m3u8 file is for LL-HLS
-			else if (file.HasSuffix(".m3u8"))
-			{
 				return true;
 			}
 
-			// *_llhls.m4s is for LL-HLS
-			else if (file.HasSuffix("_llhls.m4s"))
+			// *_hls.ts is segment file for this HLS Publisher(HLSv3)
+			else if (file.HasSuffix("_hls.ts"))
 			{
 				return true;
 			}
+			
 		}
 
 		return false;

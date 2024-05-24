@@ -169,28 +169,28 @@ std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::Serialize()
 {
 	ov::BitWriter bits(512);
 
-	bits.Write(8, Version());
-	bits.Write(8, ProfileIndication());
-	bits.Write(8, Compatibility());
-	bits.Write(8, LevelIndication());
-	bits.Write(6, 0x3F);  // 111111'b
-	bits.Write(2, LengthMinusOne());
-	bits.Write(3, 0x07);		// 111b
+	bits.WriteBits(8, Version());
+	bits.WriteBits(8, ProfileIndication());
+	bits.WriteBits(8, Compatibility());
+	bits.WriteBits(8, LevelIndication());
+	bits.WriteBits(6, 0x3F);  // 111111'b
+	bits.WriteBits(2, LengthMinusOne());
+	bits.WriteBits(3, 0x07);		// 111b
 
-	bits.Write(5, NumOfSPS());	// num of SPS
+	bits.WriteBits(5, NumOfSPS());	// num of SPS
 	for (auto i = 0; i < NumOfSPS(); i++)
 	{
 		auto sps = GetSPSData(i);
-		bits.Write(16, sps->GetLength());  // sps length
-		bits.Write(sps->GetDataAs<uint8_t>(), sps->GetLength());
+		bits.WriteBits(16, sps->GetLength());  // sps length
+		bits.WriteData(sps->GetDataAs<uint8_t>(), sps->GetLength());
 	}
 
-	bits.Write(8, NumOfPPS());	// num of PPS
+	bits.WriteBits(8, NumOfPPS());	// num of PPS
 	for (auto i = 0; i < NumOfPPS(); i++)
 	{
 		auto pps = GetPPSData(i);
-		bits.Write(16, pps->GetLength());  // pps length
-		bits.Write(pps->GetDataAs<uint8_t>(), pps->GetLength());
+		bits.WriteBits(16, pps->GetLength());  // pps length
+		bits.WriteData(pps->GetDataAs<uint8_t>(), pps->GetLength());
 	}
 
 	return bits.GetDataObject();
@@ -343,7 +343,7 @@ aligned(8) class AVCDecoderConfigurationRecord {
 	}
 } */
 
-std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> AVCDecoderConfigurationRecord::GetSpsPpsAsAnnexB(uint8_t start_code_size)
+std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> AVCDecoderConfigurationRecord::GetSpsPpsAsAnnexB(uint8_t start_code_size, bool need_aud)
 {
 	if (IsValid() == false)
 	{
@@ -371,6 +371,21 @@ std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> AVCDecoderConfigurati
 	{
 		START_CODE[2] = 0x00;
 		START_CODE[3] = 0x01;
+	}
+
+	if (need_aud)
+	{
+		static uint8_t AUD[2] = {0x01, 0x09};
+		// AUD
+		data->Append(START_CODE, start_code_size);
+		offset += start_code_size;
+
+		frag_header.fragmentation_offset.push_back(offset);
+		frag_header.fragmentation_length.push_back(sizeof(AUD));
+
+		offset += sizeof(AUD);
+
+		data->Append(AUD, sizeof(AUD));
 	}
 
 	for (int i = 0; i < NumOfSPS(); i++)

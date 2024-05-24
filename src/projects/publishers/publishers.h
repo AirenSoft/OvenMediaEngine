@@ -16,3 +16,4 @@
 #include "./rtmppush/rtmppush_publisher.h"
 #include "./srtpush/srtpush_publisher.h"
 #include "./thumbnail/thumbnail_publisher.h"
+#include "./hls/hls_publisher.h"

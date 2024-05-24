@@ -449,16 +449,8 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 	{
 		for (const auto &cfg_playlist : cfg_playlists)
 		{
-			auto playlist = std::make_shared<info::Playlist>(cfg_playlist.GetName(), cfg_playlist.GetFileName());
-			playlist->SetWebRtcAutoAbr(cfg_playlist.GetOptions().IsWebRtcAutoAbr());
-			playlist->SetHlsChunklistPathDepth(cfg_playlist.GetOptions().GetHlsChunklistPathDepth());
-
-			for (const auto &cfg_rendition : cfg_playlist.GetRenditions())
-			{
-				playlist->AddRendition(std::make_shared<info::Rendition>(cfg_rendition.GetName(), cfg_rendition.GetVideoName(), cfg_rendition.GetAudioName()));
-			}
-
-			output_stream->AddPlaylist(playlist);
+			auto playlist_info = cfg_playlist.GetPlaylistInfo();
+			output_stream->AddPlaylist(playlist_info);
 		}
 	}
 

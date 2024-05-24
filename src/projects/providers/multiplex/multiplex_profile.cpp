@@ -260,6 +260,12 @@ namespace pvd
 				{
 					playlist->SetHlsChunklistPathDepth(hls_chunklist_path_depth_object.asInt());
 				}
+
+				auto enable_ts_packaging_object = options_object["enableTsPackaging"];
+				if (!enable_ts_packaging_object.isNull())
+				{
+					playlist->EnableTsPackaging(enable_ts_packaging_object.asBool());
+				}
 			}
 
 			// Rendition
@@ -416,6 +422,12 @@ namespace pvd
 				if (hls_chunklist_path_depth)
 				{
 					playlist->SetHlsChunklistPathDepth(hls_chunklist_path_depth.text().as_int());
+				}
+
+				auto enable_ts_packaging = options_node.child("EnableTsPackaging");
+				if (enable_ts_packaging)
+				{
+					playlist->EnableTsPackaging(enable_ts_packaging.text().as_bool());
 				}
 			}
 
@@ -611,6 +623,11 @@ namespace pvd
 					options_node.append_child("HlsChunklistPathDepth").text().set(playlist->GetHlsChunklistPathDepth());
 				}
 
+				if (playlist->IsTsPackagingEnabled())
+				{
+					options_node.append_child("EnableTsPackaging").text().set(playlist->IsTsPackagingEnabled());
+				}
+
 				// Renditions
 				for (const auto &rendition : playlist->GetRenditionList())
 				{
@@ -699,6 +716,11 @@ namespace pvd
 				if (playlist->GetHlsChunklistPathDepth() != -1)
 				{
 					options_object["hlsChunklistPathDepth"] = playlist->GetHlsChunklistPathDepth();
+				}
+
+				if (playlist->IsTsPackagingEnabled())
+				{
+					options_object["enableTsPackaging"] = playlist->IsTsPackagingEnabled();
 				}
 
 				playlist_object["options"] = options_object;

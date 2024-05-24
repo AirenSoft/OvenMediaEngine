@@ -44,7 +44,7 @@ namespace mpegts
 		~MpegTsDepacketizer();
 
 		bool AddPacket(const std::shared_ptr<const ov::Data> &packet);
-		bool AddPacket(const std::shared_ptr<MpegTsPacket> &packet);
+		bool AddPacket(const std::shared_ptr<Packet> &packet);
 
 		bool IsTrackInfoAvailable();
 		bool IsESAvailable();
@@ -57,10 +57,10 @@ namespace mpegts
 		const std::shared_ptr<Pes> PopES();
 
 	private:
-		PacketType GetPacketType(const std::shared_ptr<MpegTsPacket> &packet);
+		PacketType GetPacketType(const std::shared_ptr<Packet> &packet);
 
-		bool ParseSection(const std::shared_ptr<MpegTsPacket> &packet);
-		bool ParsePes(const std::shared_ptr<MpegTsPacket> &packet);
+		bool ParseSection(const std::shared_ptr<Packet> &packet);
+		bool ParsePes(const std::shared_ptr<Packet> &packet);
 		
 		const std::shared_ptr<Section> GetSectionDraft(uint16_t pid);	
 		// incompleted section will be inserted

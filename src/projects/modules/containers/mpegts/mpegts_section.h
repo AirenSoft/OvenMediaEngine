@@ -14,11 +14,12 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovlibrary/bit_reader.h>
 
-#define MPEGTS_TABLE_HEADER_SIZE		3
-#define MPEGTS_MIN_TABLE_DATA_SIZE		9
 
 namespace mpegts
-{
+{	
+	constexpr int MPEGTS_TABLE_HEADER_SIZE = 3;
+	constexpr int MPEGTS_MIN_TABLE_DATA_SIZE = 9;
+
 	struct PAT
 	{
 		uint16_t	_program_num; // 16bits
@@ -43,10 +44,11 @@ namespace mpegts
 
 	enum class WellKnownStreamTypes : uint8_t
 	{
-		H264 = 0x1B,
-		H265 = 0x24,
-		AAC = 0x0F, // AAC ADTS
-		AAC_LATM = 0x11 // AAC LATM
+		None = 0x00,
+		H264 = 0x1B, // 27
+		H265 = 0x24, // 36
+		AAC = 0x0F, // 15 AAC ADTS
+		AAC_LATM = 0x11 // 17 AAC LATM
 	};
 
 	struct ESInfo
@@ -96,9 +98,15 @@ namespace mpegts
 	class Section
 	{
 	public:
+		Section();
 		Section(uint16_t pid);
 		~Section();
 		
+		// Build section from PAT, PMT. 
+		// Now it only supports sizes that can fit in one section.
+		static std::shared_ptr<Section> Build(const PAT &pat);
+		static std::shared_ptr<Section> Build(const PMT &pmt);
+
 		// return consumed length (including stuff)
 		size_t AppendData(const uint8_t *data, uint32_t length);
 		// return true when section is completed
@@ -118,6 +126,11 @@ namespace mpegts
 
 		std::shared_ptr<PAT> GetPAT();
 		std::shared_ptr<PMT> GetPMT();
+
+		// Get Data
+		const ov::Data &GetData() {
+			return _data;
+		}
 
 	private:
 		bool ParseTableHeader(BitReader *parser);
@@ -141,7 +154,7 @@ namespace mpegts
 
 		// Table data
 		uint16_t _table_id_extension = 0U;		// 16 bits (PAT: Transport stream id, PMT: Program number)
-		uint8_t _reserved_bits2 = 0U;			// 2 bits, 0x03
+		uint8_t _reserved_bits2 = 0x03;			// 2 bits, 0x03
 		uint8_t _version_number = 0U;		  	// 5 bits
 		bool _current_next_indicator = false;  	// 1 bit
 		uint8_t _section_number = 0U;		  	// 8 bits, starts from 0

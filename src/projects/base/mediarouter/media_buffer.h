@@ -42,7 +42,7 @@ class MediaPacket
 public:
 	// Provider must inform the bitstream format so that MediaRouter can handle it.
 	// This constructor is usually used by the Provider to send media packets to the MediaRouter.
-	MediaPacket(uint32_t msid, cmn::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, cmn::BitstreamFormat bitstream_format, cmn::PacketType packet_type)
+	MediaPacket(uint32_t msid, cmn::MediaType media_type, uint32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, cmn::BitstreamFormat bitstream_format, cmn::PacketType packet_type)
 		: MediaPacket(msid, media_type, track_id, data, pts, dts, -1LL, MediaPacketFlag::Unknown)
 	{
 		_bitstream_format = bitstream_format;
@@ -50,7 +50,7 @@ public:
 	}
 
 	// This constructor is usually used by the MediaRouter to send media packets to the publishers.
-	MediaPacket(uint32_t msid, cmn::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag, cmn::BitstreamFormat bitstream_format, cmn::PacketType packet_type)
+	MediaPacket(uint32_t msid, cmn::MediaType media_type, uint32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag, cmn::BitstreamFormat bitstream_format, cmn::PacketType packet_type)
 		: _msid(msid),
 		  _media_type(media_type),
 		  _track_id(track_id),
@@ -66,7 +66,7 @@ public:
 	}
 
 	// This constructor is usually used by the MediaRouter to send media packets to the publishers.
-	MediaPacket(uint32_t msid, cmn::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
+	MediaPacket(uint32_t msid, cmn::MediaType media_type, uint32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
 		: _msid(msid),
 		  _media_type(media_type),
 		  _track_id(track_id),
@@ -78,7 +78,7 @@ public:
 	{
 	}
 
-	MediaPacket(uint32_t msid, cmn::MediaType media_type, int32_t track_id, const ov::Data *data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
+	MediaPacket(uint32_t msid, cmn::MediaType media_type, uint32_t track_id, const ov::Data *data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
 		: _msid(msid),
 		  _media_type(media_type),
 		  _track_id(track_id),
@@ -97,7 +97,7 @@ public:
 		}
 	}
 
-	MediaPacket(uint32_t msid, cmn::MediaType media_type, int32_t track_id, const void *data, int32_t data_size, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
+	MediaPacket(uint32_t msid, cmn::MediaType media_type, uint32_t track_id, const void *data, int32_t data_size, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
 		: MediaPacket(msid, media_type, track_id, nullptr, pts, dts, duration, flag)
 	{
 		if (data != nullptr)
@@ -165,12 +165,12 @@ public:
 		_duration = duration;
 	}
 
-	int32_t GetTrackId() const noexcept
+	uint32_t GetTrackId() const noexcept
 	{
 		return _track_id;
 	}
 
-	void SetTrackId(int32_t track_id)
+	void SetTrackId(uint32_t track_id)
 	{
 		_track_id = track_id;
 	}
@@ -189,9 +189,15 @@ public:
 	{
 		return _flag;
 	}
+
 	void SetFlag(MediaPacketFlag flag)
 	{
 		_flag = flag;
+	}
+
+	bool IsKeyFrame() const noexcept
+	{
+		return _flag == MediaPacketFlag::Key;
 	}
 
 	cmn::BitstreamFormat GetBitstreamFormat() const noexcept
@@ -267,7 +273,7 @@ public:
 protected:
 	uint32_t _msid = 0;
 	cmn::MediaType _media_type = cmn::MediaType::Unknown;
-	int32_t _track_id = -1;
+	uint32_t _track_id = UINT32_MAX;
 
 	std::shared_ptr<ov::Data> _data = nullptr;
 

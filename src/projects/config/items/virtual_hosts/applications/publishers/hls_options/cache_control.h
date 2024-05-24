@@ -16,7 +16,7 @@ namespace cfg
 		{
 			namespace pub
 			{
-				struct LLHlsCacheControl : public Item
+				struct CacheControl : public Item
 				{
 				protected:
 					// 0 means no-cache no-store

@@ -10,10 +10,10 @@
 
 #include "../../../common/cross_domain_support.h"
 #include "dumps/dumps.h"
-#include "default_query_string/default_query_string.h"
-#include "ll_hls_cache_control.h"
-#include "ll_hls_dvr.h"
-#include "ll_hls_drm.h"
+#include "hls_options/default_query_string.h"
+#include "hls_options/cache_control.h"
+#include "hls_options/dvr.h"
+#include "hls_options/drm.h"
 #include "publisher.h"
 
 namespace cfg
@@ -34,9 +34,9 @@ namespace cfg
 					double _part_hold_back = 0; // it will be set to 3 * chunk_duration automatically
 					double _segment_duration = 6.0;
 					Dumps _dumps;
-					LLHlsCacheControl _cache_control;
-					LLHlsDvr _dvr;
-					LLHlsDrm _drm;
+					CacheControl _cache_control;
+					Dvr _dvr;
+					Drm _drm;
 					bool _server_time_based_segment_numbering = false;
 					bool _enable_preload_hint = true;
 					DefaultQueryString _default_query_string;

@@ -84,7 +84,7 @@ public:
 	int32_t GetWidth() const;
 	int32_t GetHeight() const;
 
-	std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> GetSpsPpsAsAnnexB(uint8_t start_code_size);
+	std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> GetSpsPpsAsAnnexB(uint8_t start_code_size, bool need_aud=false);
 	ov::String GetInfoString() const;
 
 private:

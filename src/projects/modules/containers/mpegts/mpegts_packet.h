@@ -50,12 +50,13 @@
 //
 // (Total: 188 byte)
 
-// MPEGTS Packet's length must be 188, 192 or 204
-#define MPEGTS_MIN_PACKET_SIZE		188
-#define MPEGTS_SYNC_BYTE 			0x47
-
 namespace mpegts
 {
+	
+	// MPEGTS Packet's length must be 188, 192 or 204
+	constexpr uint8_t MPEGTS_MIN_PACKET_SIZE = 188;
+	constexpr uint8_t MPEGTS_HEADER_SIZE = 4;
+	constexpr uint8_t MPEGTS_SYNC_BYTE = 0x47;
 
 	enum class WellKnownPacketId : uint16_t
 	{
@@ -88,9 +89,9 @@ namespace mpegts
 		// Program Clock Reference
 		struct PCR
 		{
-			uint64_t _base = 0U;  // 33 bits
+			uint64_t _base = 0U;  // 33 bits, 90kHz 
 			uint8_t _reserved = 0U;	// 6 bits
-			uint16_t _extension = 0U;  // 9 bits
+			uint16_t _extension = 0U;  // 9 bits, 27MHz 
 		} _pcr;
 
 		// Original Program Clock Reference
@@ -146,19 +147,26 @@ namespace mpegts
 				uint8_t _marker_bit2 = 0U;   // 1 bit
 			} _seamless_splice;
 		} _extension;
+
+		uint32_t _stuffing_bytes = 0U;
 	};
 
-	class MpegTsPacket
+	class Section;
+	class Pes;
+	class Packet
 	{
 	public:
-		MpegTsPacket();
-		MpegTsPacket(const std::shared_ptr<ov::Data> &data);
-		virtual ~MpegTsPacket();
+		Packet();
+		Packet(const std::shared_ptr<ov::Data> &data);
+		virtual ~Packet();
 
 		//Note: Now, it only supports 188 bytes of mpegts packet
 		// It returns parsed data length
 		// If parsing is failed, it returns 0
 		uint32_t Parse();
+
+		static std::shared_ptr<Packet> Build(const std::shared_ptr<Section> &section, uint8_t continuity_counter);
+		static std::vector<std::shared_ptr<Packet>> Build(const std::shared_ptr<Pes> &pes, bool has_pcr, uint8_t continuity_counter);
 
 		// Getter
 		uint8_t SyncByte();
@@ -171,15 +179,26 @@ namespace mpegts
 		bool HasPayload();
 		uint8_t ContinuityCounter();
 
+		// Setter
+		void SetContinuityCounter(uint8_t continuity_counter);
+
 		const AdaptationField &GetAdaptationField();
 
 		const uint8_t* Payload();
 		size_t PayloadLength();
 
+		std::shared_ptr<const ov::Data> GetData();
+
+		ov::String ToDebugString() const;
+
 	private:
+		bool ParseAdaptationHeader();
+		bool ParsePayload();
+		void UpdateData();
+
 		uint8_t _packet_size = MPEGTS_MIN_PACKET_SIZE;	// at this time, it only supports for 188 bytes packet
 
-		uint8_t _sync_byte = 0U;					 // 8 bits
+		uint8_t _sync_byte = 0x47;					 // 8 bits
 		bool _transport_error_indicator = false;	 // 1 bit
 		bool _payload_unit_start_indicator = false;	 // 1 bit
 		uint8_t _transport_priority = 0U;			 // 1 bit
@@ -207,14 +226,18 @@ namespace mpegts
 		uint8_t _continuity_counter = 0U;		// 4 bits
 
 		AdaptationField	_adaptation_field;
+		size_t			_adaptation_field_size = 0U;
 
 		std::shared_ptr<BitReader>	_ts_parser = nullptr;
 		const uint8_t *				_buffer = nullptr;
+		
+		// Before UpdateData(), it will be used in UpdateData()
+		std::shared_ptr<ov::Data>	_payload_data = nullptr;
+
+		std::shared_ptr<ov::Data>	_data = nullptr;
 		const uint8_t *				_payload = nullptr;
 		size_t						_payload_length = 0;
-		std::shared_ptr<ov::Data>	_data = nullptr;
 
-		bool ParseAdaptationHeader();
-		bool ParsePayload();
+		bool _need_to_update_data = false;
 	};
 }

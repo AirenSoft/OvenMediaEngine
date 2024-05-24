@@ -16,21 +16,21 @@ std::shared_ptr<ov::Data> AacConverter::MakeAdtsHeader(uint8_t aac_profile, uint
 
 	ov::BitWriter bits(ADTS_HEADER_LENGTH);
 
-	bits.Write(12, 0x0FFF);			   // syncword [12b]
-	bits.Write(1, 0);				   // ID - 0=MPEG-4, 1=MPEG-2 [1b]
-	bits.Write(2, 0);				   // layer - Always 0 [2b]
-	bits.Write(1, 1);				   // protection_absent  [1b]
-	bits.Write(2, aac_profile);		   // profile [2b]
-	bits.Write(4, aac_sample_rate);	   // sampling_frequency_index[[4b]
-	bits.Write(1, 0);				   // private_bit[1b]
-	bits.Write(3, aac_channels);	   // channel_configuration[3b]
-	bits.Write(1, 0);				   // Original/copy[1b]
-	bits.Write(1, 0);				   // Home[1b]
-	bits.Write(1, 0);				   // copyright_identification_bit[1b]
-	bits.Write(1, 0);				   // copyright_identification_start[1b]
-	bits.Write(13, aac_frame_length);  // aac_frame_length[13b]
-	bits.Write(11, 0x3F);			   // adts_buffer_fullness[11b]
-	bits.Write(2, 0);				   // no_raw_data_blocks_inframe[2b]
+	bits.WriteBits(12, 0x0FFF);			   // syncword [12b]
+	bits.WriteBits(1, 0);				   // ID - 0=MPEG-4, 1=MPEG-2 [1b]
+	bits.WriteBits(2, 0);				   // layer - Always 0 [2b]
+	bits.WriteBits(1, 1);				   // protection_absent  [1b]
+	bits.WriteBits(2, aac_profile);		   // profile [2b]
+	bits.WriteBits(4, aac_sample_rate);	   // sampling_frequency_index[[4b]
+	bits.WriteBits(1, 0);				   // private_bit[1b]
+	bits.WriteBits(3, aac_channels);	   // channel_configuration[3b]
+	bits.WriteBits(1, 0);				   // Original/copy[1b]
+	bits.WriteBits(1, 0);				   // Home[1b]
+	bits.WriteBits(1, 0);				   // copyright_identification_bit[1b]
+	bits.WriteBits(1, 0);				   // copyright_identification_start[1b]
+	bits.WriteBits(13, aac_frame_length);  // aac_frame_length[13b]
+	bits.WriteBits(11, 0x3F);			   // adts_buffer_fullness[11b]
+	bits.WriteBits(2, 0);				   // no_raw_data_blocks_inframe[2b]
 
 	std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>(bits.GetData(), bits.GetDataSize());
 

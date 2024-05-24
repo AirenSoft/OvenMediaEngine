@@ -16,7 +16,7 @@ namespace cfg
 		{
 			namespace pub
 			{
-				struct LLHlsDvr : public Item
+				struct Dvr : public Item
 				{
 				protected:
 					bool _enabled = false;
