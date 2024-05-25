@@ -702,11 +702,10 @@ namespace ffmpeg
 					else
 					{
 						char channel_layout_buf[16]{};
-						
 						::av_channel_layout_describe(&parameters->ch_layout, channel_layout_buf, OV_COUNTOF(channel_layout_buf));
 
 						// 48000 Hz, stereo, fltp,
-						message.AppendFormat("%d Hz, %s(%d), %s, ", parameters->sample_rate, channel_layout_buf, parameters->channels, ::av_get_sample_fmt_name(static_cast<AVSampleFormat>(parameters->format)));
+						message.AppendFormat("%d Hz, %s(%d), %s, ", parameters->sample_rate, channel_layout_buf, parameters->ch_layout.nb_channels, ::av_get_sample_fmt_name(static_cast<AVSampleFormat>(parameters->format)));
 					}
 
 					message.AppendFormat("%d kbps, ", (parameters->bit_rate / 1024));
@@ -790,7 +789,7 @@ namespace ffmpeg
 				break;
 
 				case cmn::MediaType::Audio: {
-					codecpar->channels 				= static_cast<int>(media_track->GetChannel().GetCounts());
+					codecpar->ch_layout.nb_channels	= static_cast<int>(media_track->GetChannel().GetCounts());
 					codecpar->channel_layout 		= ToAVChannelLayout(media_track->GetChannel().GetLayout());
 					codecpar->sample_rate 			= media_track->GetSample().GetRateNum();
 					codecpar->frame_size 			= (media_track->GetAudioSamplesPerFrame()!=0)?media_track->GetAudioSamplesPerFrame():1024;
