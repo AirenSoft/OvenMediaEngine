@@ -478,7 +478,7 @@ namespace ffmpeg
 					media_frame->SetHeight(frame->height);
 					media_frame->SetFormat(frame->format);
 					media_frame->SetPts((frame->pts == AV_NOPTS_VALUE) ? -1LL : frame->pts);
-					media_frame->SetDuration(frame->pkt_duration);
+					media_frame->SetDuration(frame->duration);
 
 					AVFrame* moved_frame = av_frame_alloc();
 					av_frame_move_ref(moved_frame, frame);
@@ -496,7 +496,7 @@ namespace ffmpeg
 					media_frame->GetChannels().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(frame->ch_layout.u.mask));
 					media_frame->SetSampleRate(frame->sample_rate);
 					media_frame->SetFormat(frame->format);
-					media_frame->SetDuration(frame->pkt_duration);
+					media_frame->SetDuration(frame->duration);
 					media_frame->SetPts((frame->pts == AV_NOPTS_VALUE) ? -1LL : frame->pts);
 
 					AVFrame* moved_frame = av_frame_alloc();
