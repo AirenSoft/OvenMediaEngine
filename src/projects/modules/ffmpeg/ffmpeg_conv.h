@@ -701,11 +701,12 @@ namespace ffmpeg
 					}
 					else
 					{
-						char channel_layout[16]{};
-						::av_get_channel_layout_string(channel_layout, OV_COUNTOF(channel_layout), parameters->channels, parameters->channel_layout);
+						char channel_layout_buf[16]{};
+						
+						::av_channel_layout_describe(&parameters->ch_layout, channel_layout_buf, OV_COUNTOF(channel_layout_buf));
 
 						// 48000 Hz, stereo, fltp,
-						message.AppendFormat("%d Hz, %s(%d), %s, ", parameters->sample_rate, channel_layout, parameters->channels, ::av_get_sample_fmt_name(static_cast<AVSampleFormat>(parameters->format)));
+						message.AppendFormat("%d Hz, %s(%d), %s, ", parameters->sample_rate, channel_layout_buf, parameters->channels, ::av_get_sample_fmt_name(static_cast<AVSampleFormat>(parameters->format)));
 					}
 
 					message.AppendFormat("%d kbps, ", (parameters->bit_rate / 1024));
