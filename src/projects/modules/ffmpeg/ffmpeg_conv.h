@@ -373,7 +373,7 @@ namespace ffmpeg
 				case cmn::MediaType::Audio:
 					media_track->SetSampleRate(stream->codecpar->sample_rate);
 					media_track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(stream->codecpar->format));
-					media_track->GetChannel().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(stream->codecpar->ch_layout));
+					media_track->GetChannel().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(stream->codecpar->ch_layout.u.mask));
 					break;
 				default:
 					break;
@@ -493,7 +493,7 @@ namespace ffmpeg
 					media_frame->SetMediaType(media_type);
 					media_frame->SetBytesPerSample(::av_get_bytes_per_sample(static_cast<AVSampleFormat>(frame->format)));
 					media_frame->SetNbSamples(frame->nb_samples);
-					media_frame->GetChannels().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(frame->channel_layout));
+					media_frame->GetChannels().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(frame->ch_layout.u.mask));
 					media_frame->SetSampleRate(frame->sample_rate);
 					media_frame->SetFormat(frame->format);
 					media_frame->SetDuration(frame->pkt_duration);
