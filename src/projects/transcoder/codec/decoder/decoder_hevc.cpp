@@ -84,7 +84,6 @@ bool DecoderHEVC::InitCodec()
 
 void DecoderHEVC::UninitCodec()
 {
-	::avcodec_close(_context);
 	::avcodec_free_context(&_context);
 
 	_context = nullptr;
