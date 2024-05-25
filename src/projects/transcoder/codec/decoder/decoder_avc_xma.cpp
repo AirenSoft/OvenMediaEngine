@@ -111,7 +111,6 @@ bool DecoderAVCxXMA::InitCodec()
 
 void DecoderAVCxXMA::UninitCodec()
 {
-	::avcodec_close(_context);
 	::avcodec_free_context(&_context);
 
 	_context = nullptr;

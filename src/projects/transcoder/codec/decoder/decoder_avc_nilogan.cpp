@@ -117,7 +117,6 @@ bool DecoderAVCxNILOGAN::InitCodec()
 it seems that dynamic resolution is supported
 void DecoderAVCxNILOGAN::UninitCodec()
 {
-	::avcodec_close(_context);
 	::avcodec_free_context(&_context);
 
 	_context = nullptr;
