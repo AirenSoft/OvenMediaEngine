@@ -789,10 +789,15 @@ namespace ffmpeg
 				break;
 
 				case cmn::MediaType::Audio: {
-					codecpar->ch_layout.nb_channels	= static_cast<int>(media_track->GetChannel().GetCounts());
-					codecpar->channel_layout 		= ToAVChannelLayout(media_track->GetChannel().GetLayout());
-					codecpar->sample_rate 			= media_track->GetSample().GetRateNum();
-					codecpar->frame_size 			= (media_track->GetAudioSamplesPerFrame()!=0)?media_track->GetAudioSamplesPerFrame():1024;
+					uint64_t channel_layout = ToAVChannelLayout(media_track->GetChannel().GetLayout());
+					codecpar->ch_layout = {
+						.order = AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
+						.nb_channels = static_cast<int>(media_track->GetChannel().GetCounts()),
+						.u = {.mask = channel_layout}
+					};
+
+					codecpar->sample_rate	= media_track->GetSample().GetRateNum();
+					codecpar->frame_size 	= (media_track->GetAudioSamplesPerFrame()!=0)?media_track->GetAudioSamplesPerFrame():1024;
 				}
 				break;
 

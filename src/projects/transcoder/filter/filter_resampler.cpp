@@ -248,7 +248,7 @@ void FilterResampler::WorkerThread()
 		if (ret < 0)
 		{
 			logte("An error occurred while feeding the audio filtergraph: pts: %lld, linesize: %d, srate: %d, layout: %d, channels: %d, format: %d, rq: %d",
-				  _frame->pts, _frame->linesize[0], _frame->sample_rate, _frame->channel_layout, _frame->channels, _frame->format, _input_buffer.Size());
+				  _frame->pts, _frame->linesize[0], _frame->sample_rate, _frame->ch_layout.u.mask, _frame->ch_layout.nb_channels, _frame->format, _input_buffer.Size());
 
 			continue;
 		}
