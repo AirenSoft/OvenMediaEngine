@@ -62,6 +62,11 @@ namespace http
 			return true;
 		}
 
+		bool DefaultInterceptor::IsCacheable() const
+		{
+			return true;
+		}
+
 		bool DefaultInterceptor::OnRequestPrepared(const std::shared_ptr<HttpExchange> &exchange)
 		{
 			return true;

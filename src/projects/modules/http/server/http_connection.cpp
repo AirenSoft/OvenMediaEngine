@@ -202,18 +202,24 @@ namespace http
 		// Find Interceptor
 		std::shared_ptr<RequestInterceptor> HttpConnection::FindInterceptor(const std::shared_ptr<HttpExchange> &exchange)
 		{
-			if (_interceptor != nullptr)
+			std::shared_ptr<RequestInterceptor> interceptor = _interceptor;
+
+			if (interceptor != nullptr)
 			{
-				return _interceptor;
+				return interceptor;
 			}
 			else 
 			{
 				// Cache interceptor
-				_interceptor = _server->FindInterceptor(exchange);
+				interceptor = _server->FindInterceptor(exchange);
+				if (interceptor->IsCacheable())
+				{
+					_interceptor = interceptor;
+				}
 			}
 
 			// Find interceptor from server
-			return _interceptor;
+			return interceptor;
 		}
 
 		bool HttpConnection::UpgradeToWebSocket(const std::shared_ptr<HttpExchange> &exchange)
