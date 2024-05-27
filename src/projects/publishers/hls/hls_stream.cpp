@@ -299,6 +299,7 @@ bool HlsStream::CreatePackagers()
 			HlsMediaPlaylist::HlsMediaPlaylistConfig media_playlist_config;
 			media_playlist_config.segment_count = _ts_config.GetSegmentCount();
 			media_playlist_config.target_duration = _ts_config.GetSegmentDuration();
+			media_playlist_config.event_playlist_type = _ts_config.GetDvr().IsEventPlaylistType();
 
 			auto media_playlist_name = GetMediaPlaylistName(variant_name);
 			media_playlist = std::make_shared<HlsMediaPlaylist>(variant_name, media_playlist_name, media_playlist_config);

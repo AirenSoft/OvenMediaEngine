@@ -68,7 +68,7 @@ ov::String HlsMediaPlaylist::ToString(bool rewind) const
 	ov::String result = "#EXTM3U\n";
 
 	result += ov::String::FormatString("#EXT-X-VERSION:%d\n", 3);
-	if (rewind == true)
+	if (rewind == true && _config.event_playlist_type == true)
 	{
 		result += ov::String::FormatString("#EXT-X-PLAYLIST-TYPE:EVENT\n");
 	}

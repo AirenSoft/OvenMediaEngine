@@ -20,6 +20,7 @@ public:
 		uint8_t version = 3;
 		size_t segment_count = 10; // It shows the number of segments in the playlist if rewind is disabled
 		size_t target_duration = 6;
+		bool event_playlist_type = false;
 	};
 
 	HlsMediaPlaylist(const ov::String &variant_name, const ov::String &playlist_file_name, const HlsMediaPlaylistConfig &config);
