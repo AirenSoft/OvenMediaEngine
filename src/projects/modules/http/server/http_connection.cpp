@@ -212,7 +212,7 @@ namespace http
 			{
 				// Cache interceptor
 				interceptor = _server->FindInterceptor(exchange);
-				if (interceptor->IsCacheable())
+				if (interceptor != nullptr && interceptor->IsCacheable())
 				{
 					_interceptor = interceptor;
 				}
