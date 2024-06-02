@@ -299,7 +299,7 @@ namespace pvd
 			}
 			else
 			{
-				logtw("Could not obtain tcUrl from the RTMP stream: [%s]", _app_name);
+				logtw("Could not obtain tcUrl from the RTMP stream: [%s]", _app_name.CStr());
 
 				// TODO(dimiden): If tcUrl is not provided, it's not possible to determine which VHost the request was received,
 				// so it does not work properly.
