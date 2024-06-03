@@ -15,7 +15,6 @@
 
 #include <base/publisher/application.h>
 #include <base/publisher/stream.h>
-#include <modules/cpix_client/pallycon.h>
 
 #include "llhls_application.h"
 #include "llhls_session.h"
@@ -368,119 +367,6 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 
 				cenc_property.fairplay_key_uri = fairplay_key_url;
 				cenc_property.keyformat = keyformat;
-			}
-			else if (drm_provider.LowerCaseString() == "pallycon")
-			{
-				ov::String cenc_protect_scheme = drm_node.child_value("CencProtectScheme");
-				if (cenc_protect_scheme.IsEmpty())
-				{
-					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because CencProtectScheme is empty", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
-					return false;
-				}
-
-				cenc_protect_scheme = cenc_protect_scheme.Trim();
-
-				bmff::CencProtectScheme scheme_enum = bmff::CencProtectScheme::None;
-				if (cenc_protect_scheme.LowerCaseString() == "cbcs")
-				{
-					scheme_enum = bmff::CencProtectScheme::Cbcs;
-				}
-				else if (cenc_protect_scheme.LowerCaseString() == "cenc")
-				{
-					scheme_enum = bmff::CencProtectScheme::Cenc;
-				}
-				else
-				{
-					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because CencProtectScheme(%s) is not supported", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), cenc_protect_scheme.CStr());
-					return false;
-				}
-
-				ov::String content_id = drm_node.child_value("ContentId");
-				if (content_id.IsEmpty())
-				{
-					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because ContentId is empty", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
-					return false;
-				}
-
-				content_id = content_id.Trim();
-
-				content_id = content_id.Replace("${VHostName}", GetApplication()->GetName().GetVHostName().CStr());
-				content_id = content_id.Replace("${AppName}", GetApplication()->GetName().GetAppName().CStr());
-				content_id = content_id.Replace("${StreamName}", GetName().CStr());
-
-				ov::String url = drm_node.child_value("KMSUrl");
-				if (url.IsEmpty())
-				{
-					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because KMSUrl is empty", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
-					return false;
-				}
-
-				url = url.Trim();
-
-				ov::String token = drm_node.child_value("KMSToken");
-				if (token.IsEmpty())
-				{
-					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because KMSToken is empty", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
-					return false;
-				}
-
-				token = token.Trim();
-
-				ov::String drm_system = drm_node.child_value("DRMSystem");
-				if (drm_system.IsEmpty())
-				{
-					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because DRMSystem is empty", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
-					return false;
-				}
-
-				drm_system = drm_system.Trim();
-
-				bool widevine_enabled = false;
-				bool fairplay_enabled = false;
-				auto drm_system_items = drm_system.Split(",");
-				for (auto &drm_system_item : drm_system_items)
-				{
-					if (drm_system_item.LowerCaseString() == "widevine")
-					{
-						widevine_enabled = true;
-					}
-					else if (drm_system_item.LowerCaseString() == "fairplay")
-					{
-						fairplay_enabled = true;
-						if (scheme_enum != bmff::CencProtectScheme::Cbcs)
-						{
-							logtw("LLHlsStream(%s/%s) - FairPlay only supports Cbcs scheme. But CencProtectScheme is %s", GetApplication()->GetName().CStr(), GetName().CStr(), cenc_protect_scheme.CStr());
-							fairplay_enabled = false;
-						}
-					}
-				}
-
-				bmff::DRMSystem drm_system_enum = bmff::DRMSystem::None;
-				if (widevine_enabled == true && fairplay_enabled == true)
-				{
-					drm_system_enum = bmff::DRMSystem::All; 
-				}
-				else if (widevine_enabled == true)
-				{
-					drm_system_enum = bmff::DRMSystem::Widevine;
-				}
-				else if (fairplay_enabled == true)
-				{
-					drm_system_enum = bmff::DRMSystem::FairPlay;
-				}
-				else
-				{
-					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because DRMSystem(%s) is not supported", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), drm_system.CStr());
-					return false;
-				}
-
-				// Get DRM info from Pallycon
-				cpix::Pallycon pallycon;
-				if (pallycon.GetKeyInfo(url, token, content_id, drm_system_enum, scheme_enum, cenc_property) == false)
-				{
-					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because failed to get DRM info from Pallycon", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
-					return false;
-				}
 			}
 			else
 			{

@@ -15,7 +15,6 @@
 
 #include <base/publisher/application.h>
 #include <base/publisher/stream.h>
-#include <modules/cpix_client/pallycon.h>
 
 #include "hls_application.h"
 #include "hls_session.h"
