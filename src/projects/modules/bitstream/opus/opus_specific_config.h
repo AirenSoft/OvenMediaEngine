@@ -85,13 +85,13 @@ public:
 	{
 		ov::BitWriter bits(MIN_OPUS_SPECIFIC_CONFIG_SIZE);
 
-		bits.Write(_header_const.ToData()->GetDataAs<uint8_t>(), _header.GetLength());
-		bits.Write(8, _version);
-		bits.Write(8, _channels);
-		bits.Write(16, _pre_skip);
-		bits.Write(32, _sample_rate);
-		bits.Write(16, _output_gain);
-		bits.Write(8, _mapping_family);
+		bits.WriteData(_header_const.ToData()->GetDataAs<uint8_t>(), _header.GetLength());
+		bits.WriteBits(8, _version);
+		bits.WriteBits(8, _channels);
+		bits.WriteBits(16, _pre_skip);
+		bits.WriteBits(32, _sample_rate);
+		bits.WriteBits(16, _output_gain);
+		bits.WriteBits(8, _mapping_family);
 
 		return std::make_shared<ov::Data>(bits.GetData(), bits.GetDataSize());
 	}
