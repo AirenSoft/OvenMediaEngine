@@ -38,6 +38,7 @@ extern "C"
 #include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/bitstream/h265/h265_decoder_configuration_record.h>
 #include <modules/bitstream/aac/audio_specific_config.h>
+#include <modules/bitstream/opus/opus_specific_config.h>
 
 namespace ffmpeg
 {
@@ -435,11 +436,27 @@ namespace ffmpeg
 
 					break;
 				}
-				case cmn::MediaCodecId::Vp8:
+				case cmn::MediaCodecId::Opus:
+				{
+					if (stream->codecpar->extradata_size > 0)
+					{
+						// ASC format
+						auto opus_config = std::make_shared<OpusSpecificConfig>();
+						auto extra_data = std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size, true);
+
+						if (opus_config->Parse(extra_data) == false)
+						{
+							return false;
+						}
+
+						media_track->SetDecoderConfigurationRecord(opus_config);
+					}
+
+					break;
+				}				case cmn::MediaCodecId::Vp8:
 				case cmn::MediaCodecId::Vp9:
 				case cmn::MediaCodecId::Flv:
 				case cmn::MediaCodecId::Mp3:
-				case cmn::MediaCodecId::Opus:
 				case cmn::MediaCodecId::Jpeg:
 				case cmn::MediaCodecId::Png:
 				default:
