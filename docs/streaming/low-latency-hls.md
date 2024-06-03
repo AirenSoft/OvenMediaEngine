@@ -270,6 +270,10 @@ OvenPlayer now includes DRM-related options. Enable DRM and input the License UR
 
 ### Pallycon DRM
 
+{% hint style="danger" %}
+Pallycon is no longer supported by the Open Source project and is only supported in the [Enterprise](https://ovenmediaengine-enterprise.gitbook.io/docs/getting-started/getting-started-with-ubuntu) version. For more information, see this [article](https://github.com/AirenSoft/OvenMediaEngine/discussions/1634).
+{% endhint %}
+
 OvenMediaEngine integrates with [Pallycon](https://pallycon.com/), allowing you to more easily apply DRM to LLHLS streams.
 
 To integrate Pallycon, configure the DRMInfo.xml file as follows.
@@ -286,7 +290,7 @@ To integrate Pallycon, configure the DRMInfo.xml file as follows.
 
         <DRMProvider>Pallycon</DRMProvider> <!-- Manual(default), Pallycon -->
         <DRMSystem>Widevine,Fairplay</DRMSystem> <!-- Widevine, Fairplay -->
-        <CencProtectScheme>cbcs</CencProtectScheme> <!-- cbcs -->
+        <CencProtectScheme>cbcs</CencProtectScheme> <!-- cbcs, cenc -->
         <ContentId>${VHostName}_${AppName}_${StreamName}</ContentId>
         <KMSUrl>https://kms.pallycon.com/v2/cpix/pallycon/getKey/</KMSUrl>
         <KMSToken>xxxx</KMSToken>
