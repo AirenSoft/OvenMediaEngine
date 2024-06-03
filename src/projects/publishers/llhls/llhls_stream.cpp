@@ -1086,7 +1086,6 @@ bool LLHlsStream::AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_pa
 	{
 		logtw("Could not find track. id: %d", media_packet->GetTrackId());
 		return false;
-		;
 	}
 
 	if (IsSupportedCodec(track->GetCodecId()) == false)
