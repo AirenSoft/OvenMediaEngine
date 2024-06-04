@@ -839,6 +839,8 @@ namespace pvd
 				return CommonErrorCode::ERROR;
 			}
 
+			program_object["items"] = items_object;
+
 			root_object["programs"].append(program_object);
 		}
 
