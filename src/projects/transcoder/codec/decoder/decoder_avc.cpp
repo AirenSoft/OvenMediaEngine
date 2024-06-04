@@ -68,6 +68,8 @@ bool DecoderAVC::InitCodec()
 	}
 
 	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
+	_context->thread_count = 2;
+	_context->thread_type = FF_THREAD_SLICE;
 
 	// Set the number of b frames for compatibility with specific encoders.
 	auto bframes = GetRefTrack()->HasBframes()?1:0;
