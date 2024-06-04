@@ -6,11 +6,11 @@ OvenMediaEngine has a built-in live transcoder. The live transcoder can decode t
 
 ### Decoders
 
-<table><thead><tr><th width="179.33333333333331">Type</th><th width="544">Codec</th></tr></thead><tbody><tr><td>Video</td><td>VP8, H.264</td></tr><tr><td>Audio</td><td>AAC, Opus</td></tr></tbody></table>
+<table><thead><tr><th width="179.33333333333331">Type</th><th width="544">Codec</th></tr></thead><tbody><tr><td>Video</td><td>VP8, H.264, H.265</td></tr><tr><td>Audio</td><td>AAC, Opus</td></tr></tbody></table>
 
 ### Encoders
 
-<table><thead><tr><th width="184">Type</th><th width="177.33333333333331">Codec</th><th>Codec of Configuration</th></tr></thead><tbody><tr><td>Video</td><td>VP8</td><td>vp8</td></tr><tr><td></td><td>H.264</td><td>h264  <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td></td><td>h264_openh264</td></tr><tr><td></td><td></td><td>h264_nvenc</td></tr><tr><td></td><td></td><td>h264_qsv</td></tr><tr><td></td><td></td><td>h264_beamr <em><mark style="color:blue;">(Enterprise Only)</mark></em></td></tr><tr><td>Audio</td><td>AAC</td><td>aac</td></tr><tr><td></td><td>Opus</td><td>opus</td></tr><tr><td>Image</td><td>JPEG</td><td>jpeg</td></tr><tr><td></td><td>PNG</td><td>png</td></tr></tbody></table>
+<table><thead><tr><th width="184">Type</th><th width="177.33333333333331">Codec</th><th>Codec of Configuration</th></tr></thead><tbody><tr><td>Video</td><td>VP8</td><td>vp8</td></tr><tr><td></td><td>H.264</td><td>h264  <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td>Open H264</td><td>h264_openh264</td></tr><tr><td></td><td>Nvidia Hardware</td><td>h264_nvenc</td></tr><tr><td></td><td>Intel Hardware</td><td>h264_qsv</td></tr><tr><td></td><td>Xilinx Hardware</td><td>h264_XMA</td></tr><tr><td></td><td>NetInt Hardware</td><td>h264_NILOGAN</td></tr><tr><td></td><td>H.265</td><td>h265 <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td>Nvidia Hardware</td><td>h265_nvenc</td></tr><tr><td></td><td>Intel Hardware</td><td>h265_qsv</td></tr><tr><td></td><td>Xilinx Hardware</td><td>h265_xma</td></tr><tr><td></td><td>NetInt Hardware</td><td>h265_nilogan</td></tr><tr><td>Audio</td><td>AAC</td><td>aac</td></tr><tr><td></td><td>Opus</td><td>opus</td></tr><tr><td>Image</td><td>JPEG</td><td>jpeg</td></tr><tr><td></td><td>PNG</td><td>png</td></tr></tbody></table>
 
 
 
@@ -47,6 +47,7 @@ According to the above setting, if the incoming stream name is `stream`, the out
 
 * **`WebRTC`** ws://192.168.0.1:3333/app/<mark style="background-color:blue;">stream\_bypass</mark>
 * **`LLHLS`** http://192.168.0.1:8080/app/<mark style="background-color:blue;">stream\_bypass</mark>/llhls.m3u8
+* **`HLS`** http://192.168.0.1:8080/app/<mark style="background-color:blue;">stream\_bypass</mark>/ts:playlist.m3u8
 
 ### Encodes
 
@@ -313,6 +314,10 @@ The method to access the playlist set through LLHLS is as follows.
 
 `http[s]://<domain>[:port]/<app>/<stream>/`**`<FileName>`**`.m3u8`
 
+The method to access the playlist set through HLS is as follows.
+
+`http[s]://<domain>[:port]/<app>/<stream>/`**`<FileName>`**`.m3u8?format=ts`
+
 The method to access the Playlist set through WebRTC is as follows.
 
 `ws[s]://<domain>[:port]/<app>/<stream>/`**`<FileName>`**
@@ -322,6 +327,10 @@ Note that `<FileName>` must never contain the **`playlist`** and **`chunklist`**
 To set up `<Rendition>`, you need to add `<Name>` to the elements of `<Encodes>`. Connect the set `<Name>` into `<Rendition><Video>` or `<Rendition><Audio>`.
 
 In the example below, three quality renditions are provided and the URL to play the `abr` playlist as LLHLS is `https://domain:port/app/stream/abr.m3u8` and The WebRTC playback URL is `wss://domain:port/app/stream/abr`
+
+{% hint style="info" %}
+TS files used in HLS must have A/V pre-muxed, so the `EnableTsPackaging` option must be set in the Playlist.
+{% endhint %}
 
 ```xml
 <OutputProfile>
@@ -337,6 +346,7 @@ In the example below, three quality renditions are provided and the URL to play 
 			[Default] : true
 			-->
 			<WebRtcAutoAbr>true</WebRtcAutoAbr> 
+			<EnableTsPackaging>true</EnableTsPackaging>
 		</Options>
 		<Rendition>
 			<Name>Bypass</Name>
@@ -407,12 +417,12 @@ Even if you set up multiple codecs, there is a codec that matches each streaming
 
 The following is a list of codecs that match each streaming protocol:
 
-| Protocol | Supported Codec  |
-| -------- | ---------------- |
-| WebRTC   | VP8, H.264, Opus |
-| LLHLS    | H.264, AAC       |
+| Protocol | Supported Codec   |
+| -------- | ----------------- |
+| WebRTC   | VP8, H.264, Opus  |
+| LLHLS    | H.264, H.265, AAC |
 
-Therefore, you set it up as shown in the table. If you want to stream using LLHLS, you need to set up H.264 and AAC, and if you want to stream using WebRTC, you need to set up Opus.
+Therefore, you set it up as shown in the table. If you want to stream using LLHLS, you need to set up H.264, H.265 and AAC, and if you want to stream using WebRTC, you need to set up Opus.
 
 Also, if you are going to use WebRTC on all platforms, you need to configure both VP8 and H.264. This is because different codecs are supported for each browser, for example, VP8 only, H264 only, or both.
 
