@@ -23,10 +23,14 @@ public:
 	void SetInputTimebase(cmn::Timebase timebase);
 	void SetInputFrameRate(double framerate);
 	void SetOutputFrameRate(double framerate);
+	double GetOutputFrameRate();
 	void SetSkipFrames(int32_t skip_frames);
 	void SetMaximumDupulicateFrames(int32_t max_dupulicate_frames);
 	bool Push(std::shared_ptr<MediaFrame> media_frame);
 	std::shared_ptr<MediaFrame> Pop();
+
+	ov::String GetStatsString();
+	ov::String GetInfoString();
 
 private:
 	cmn::Timebase _input_timebase;
@@ -46,8 +50,9 @@ private:
 	std::vector<std::shared_ptr<MediaFrame>> _frames;
 
 	// The next PTS to be output
+	int64_t _curr_pts;
 	int64_t _next_pts;
-
+	
 	int64_t stat_input_frame_count = 0;
 	int64_t stat_output_frame_count = 0;
 	int64_t stat_skip_frame_count = 0;

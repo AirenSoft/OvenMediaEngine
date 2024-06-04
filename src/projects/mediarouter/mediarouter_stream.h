@@ -56,6 +56,7 @@ public:
 	
 private:
 	void DropNonDecodingPackets();
+	void DetectAbnormalPackets(std::shared_ptr<MediaPacket> &packet);
 
 	bool ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
 	bool ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);

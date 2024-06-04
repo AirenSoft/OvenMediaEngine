@@ -924,7 +924,7 @@ bool MediaRouteStream::AreAllTracksReady()
 		}
 
 		// If the track is an outbound track, it is necessary to check the quality.
-		if (GetInoutType() == MediaRouterStreamType::OUTBOUND && track->HasQualityMeasured() == false)
+		if (track->HasQualityMeasured() == false)
 		{
 			return false;
 		}
@@ -1186,9 +1186,10 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	//	- 3) and then, the current packet stash.
 	std::shared_ptr<MediaPacket> pop_media_packet = nullptr;
 
-	if ( (GetInoutType() == MediaRouterStreamType::OUTBOUND) && 
+	if ((GetInoutType() == MediaRouterStreamType::OUTBOUND) &&	
+		(media_packet->GetDuration()) <= 0 &&
 		// The packet duration recalculation applies only to video and audio types.
-		 (media_packet->GetMediaType() == MediaType::Video || media_packet->GetMediaType() == MediaType::Audio) )
+		(media_packet->GetMediaType() == MediaType::Video || media_packet->GetMediaType() == MediaType::Audio))
 	{
 		auto it = _media_packet_stash.find(media_packet->GetTrackId());
 		if (it == _media_packet_stash.end())
@@ -1264,42 +1265,50 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 	media_track->OnFrameAdded(pop_media_packet);
 
-	////////////////////////////////////////////////////////////////////////////////////
 	// Detect abnormal increases in PTS.
 	if (GetInoutType() == MediaRouterStreamType::INBOUND)
 	{
-		auto it = _pts_last.find(track_id);
-		if (it != _pts_last.end())
-		{
-			int64_t ts_ms = pop_media_packet->GetPts() * media_track->GetTimeBase().GetExpr();
-			int64_t ts_diff_ms = ts_ms - _pts_last[track_id];
-
-			if (std::abs(ts_diff_ms) > PTS_CORRECT_THRESHOLD_MS)
-			{
-				if (IsImageCodec(media_track->GetCodecId()) == false)
-				{
-					logtw("[%s/%s(%u)] Detected abnormal increased timestamp. track:%u last.pts: %lld, cur.pts: %lld, tb(%d/%d), diff: %lldms",
-						  _stream->GetApplicationInfo().GetName().CStr(),
-						  _stream->GetName().CStr(),
-						  _stream->GetId(),
-						  track_id, 
-						  _pts_last[track_id],
-						  pop_media_packet->GetPts(),
-						  media_track->GetTimeBase().GetNum(),
-						  media_track->GetTimeBase().GetDen(),
-						  ts_diff_ms);
-				}
-			}
-
-			_pts_last[track_id] = ts_ms;
-		}
+		DetectAbnormalPackets(pop_media_packet);
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////
 	// Statistics
 	UpdateStatistics(media_track, pop_media_packet);
 
 	return pop_media_packet;
+}
+
+void MediaRouteStream::DetectAbnormalPackets(std::shared_ptr<MediaPacket> &packet)
+{
+	auto track_id = packet->GetTrackId();
+	auto it = _pts_last.find(track_id);
+	if (it != _pts_last.end())
+	{
+		auto media_track = _stream->GetTrack(track_id);
+		if (!media_track)
+			return;
+
+		int64_t ts_ms = packet->GetPts() * media_track->GetTimeBase().GetExpr();
+		int64_t ts_diff_ms = ts_ms - _pts_last[track_id];
+
+		if (std::abs(ts_diff_ms) > PTS_CORRECT_THRESHOLD_MS)
+		{
+			if (IsImageCodec(media_track->GetCodecId()) == false)
+			{
+				logtw("[%s/%s(%u)] Detected abnormal increased timestamp. track:%u last.pts: %lld, cur.pts: %lld, tb(%d/%d), diff: %lldms",
+					  _stream->GetApplicationInfo().GetName().CStr(),
+					  _stream->GetName().CStr(),
+					  _stream->GetId(),
+					  track_id,
+					  _pts_last[track_id],
+					  packet->GetPts(),
+					  media_track->GetTimeBase().GetNum(),
+					  media_track->GetTimeBase().GetDen(),
+					  ts_diff_ms);
+			}
+		}
+
+		_pts_last[track_id] = ts_ms;
+	}
 }
 
 void MediaRouteStream::DumpPacket(

@@ -51,7 +51,7 @@ protected:
 
 	AVPacket *_packet = nullptr;
 	AVFrame *_frame = nullptr;
-	cmn::BitstreamFormat _bitstream_format = cmn::BitstreamFormat::Unknown; 
+	cmn::BitstreamFormat _bitstream_format = cmn::BitstreamFormat::Unknown;
 	cmn::PacketType _packet_type = cmn::PacketType::Unknown;
 
 	info::Stream _stream_info;
@@ -62,4 +62,9 @@ protected:
 	CompleteHandler _complete_handler;
 
 	ov::PreciseTimer _force_keyframe_timer;
+
+	// 0: no force keyframe,  > 0: force keyframe by sum of duration
+	int64_t _force_keyframe_by_time_interval;
+	// -1: force keyframe
+	int64_t _accumulate_frame_duration;
 };

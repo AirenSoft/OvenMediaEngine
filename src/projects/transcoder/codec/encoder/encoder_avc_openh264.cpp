@@ -14,24 +14,24 @@
 
 bool EncoderAVCxOpenH264::SetCodecParams()
 {
-	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRate() > 0) ? GetRefTrack()->GetFrameRate() : GetRefTrack()->GetEstimateFrameRate(), AV_TIME_BASE);
+	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRateByConfig() > 0) ? GetRefTrack()->GetFrameRateByConfig() : GetRefTrack()->GetEstimateFrameRate(), AV_TIME_BASE);
 	_codec_context->bit_rate = _codec_context->rc_min_rate = _codec_context->rc_max_rate = GetRefTrack()->GetBitrate();
 	_codec_context->sample_aspect_ratio = ::av_make_q(1, 1);
 	_codec_context->ticks_per_frame = 2;
-	_codec_context->time_base = ::av_inv_q(::av_mul_q(_codec_context->framerate, (AVRational){_codec_context->ticks_per_frame, 1}));
+	_codec_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetRefTrack()->GetTimeBase());
 	_codec_context->pix_fmt = (AVPixelFormat)GetSupportedFormat();
 	_codec_context->width = GetRefTrack()->GetWidth();
 	_codec_context->height = GetRefTrack()->GetHeight();
 
-	// KeyFrame Interval By Time
-	if(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::TIME)
+	// Keyframe Interval
+	// @see transcoder_encoder.cpp / force_keyframe_by_time_interval
+	// The openh264 encoder does not generate keyframes consistently.	
+	auto key_frame_interval_type = GetRefTrack()->GetKeyFrameIntervalTypeByConfig();
+	if (key_frame_interval_type == cmn::KeyFrameIntervalType::TIME)
 	{
-		// When inserting a keyframe based on time, set the GOP value to 10 seconds.
-		_codec_context->gop_size = (int32_t)(GetRefTrack()->GetFrameRate() * 10);
-		_force_keyframe_timer.Start(GetRefTrack()->GetKeyFrameInterval());
+		_codec_context->gop_size = 0; 
 	}
-	// KeyFrame Interval By Frame
-	if(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::FRAME)
+	else if (key_frame_interval_type == cmn::KeyFrameIntervalType::FRAME)
 	{
 		_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
 	}
