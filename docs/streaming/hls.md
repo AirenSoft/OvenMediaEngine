@@ -69,12 +69,12 @@ To use HLS, you need to add the `<HLS>` elements to the `<Publishers>` in the co
 </Server>
 ```
 
-| Element         | Decscription                                                                                                                                                                                                                               |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Bind            | Set the HTTP ports to provide HLS.                                                                                                                                                                                                         |
-| SegmentDuration | Set the length of the segment in seconds. Therefore, a shorter value allows the stream to start faster. However, a value that is too short will make legacy HLS players unstable. Apple recommends **6** seconds for this value.           |
-| SegmentCount    | The number of segments listed in the playlist. This value has little effect on LLHLS players, so use **10** as recommended by Apple. 5 is recommended for legacy HLS players. Do not set below 3. It can only be used for experimentation. |
-| CrossDomains    | Control the domain in which the player works through `<CorssDomain>`. For more information, please refer to the [CrossDomain](broken-reference) section.                                                                                   |
+| Element         | Decscription                                                                                                                                                                                                                     |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bind            | Set the HTTP ports to provide HLS.                                                                                                                                                                                               |
+| SegmentDuration | Set the length of the segment in seconds. Therefore, a shorter value allows the stream to start faster. However, a value that is too short will make legacy HLS players unstable. Apple recommends **6** seconds for this value. |
+| SegmentCount    | The number of segments listed in the playlist. 5 is recommended for HLS players. Do not set below 3. It can only be used for experimentation.                                                                                    |
+| CrossDomains    | Control the domain in which the player works through `<CorssDomain>`. For more information, please refer to the [CrossDomain](broken-reference) section.                                                                         |
 
 ## Playback
 
@@ -111,7 +111,7 @@ We have prepared a test player that you can quickly see if OvenMediaEngine is wo
 
 ## Adaptive Bitrates Streaming (ABR)
 
-HLS can deliver adaptive bitrate streaming. OME encodes the same source with multiple renditions and delivers it to the players. And LLHLS Player, including OvenPlayer, selects the best quality rendition according to its network environment. Of course, these players also provide option for users to manually select rendition.
+HLS can deliver adaptive bitrate streaming. OME encodes the same source with multiple renditions and delivers it to the players. And HLS Player, including OvenPlayer, selects the best quality rendition according to its network environment. Of course, these players also provide option for users to manually select rendition.
 
 See the [Adaptive Bitrates Streaming](../transcoding/#adaptive-bitrates-streaming-abr) section for how to configure renditions.
 
