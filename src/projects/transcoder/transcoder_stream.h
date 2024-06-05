@@ -178,7 +178,8 @@ private:
 
 	void RequestWebhoook();
 	bool StartInternal();
-
+	bool PrepareInternal();
+	
 	int32_t CreateOutputStreamDynamic();
 	int32_t CreateOutputStreams();
 	std::shared_ptr<info::Stream> CreateOutputStream(const cfg::vhost::app::oprf::OutputProfile &cfg_output_profile);
@@ -193,21 +194,21 @@ private:
 
 
 	int32_t CreateDecoders();
-	bool CreateDecoder(int32_t decoder_id, std::shared_ptr<info::Stream> input_stream, std::shared_ptr<MediaTrack> input_track);
+	bool CreateDecoder(MediaTrackId decoder_id, std::shared_ptr<info::Stream> input_stream, std::shared_ptr<MediaTrack> input_track);
 
 	int32_t CreateFilters(MediaFrame *buffer);
-	bool CreateFilter(int32_t filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track);
-	std::shared_ptr<MediaTrack> GetInputTrackOfFilter(int32_t decoder_id);
+	bool CreateFilter(MediaTrackId filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track);
+	std::shared_ptr<MediaTrack> GetInputTrackOfFilter(MediaTrackId decoder_id);
 
 	int32_t CreateEncoders(MediaFrame *buffer);
-	bool CreateEncoder(int32_t encoder_id, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
+	bool CreateEncoder(MediaTrackId encoder_id, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
 
 
 	// Step 1: Decode (Decode a frame from given packets)
 	void DecodePacket(std::shared_ptr<MediaPacket> packet);
-	void OnDecodedFrame(TranscodeResult result, int32_t decoder_id, std::shared_ptr<MediaFrame> decoded_frame);
-	void SetLastDecodedFrame(int32_t decoder_id, std::shared_ptr<MediaFrame> &decoded_frame);
-	std::shared_ptr<MediaFrame> GetLastDecodedFrame(int32_t decoder_id);
+	void OnDecodedFrame(TranscodeResult result, MediaTrackId decoder_id, std::shared_ptr<MediaFrame> decoded_frame);
+	void SetLastDecodedFrame(MediaTrackId decoder_id, std::shared_ptr<MediaFrame> &decoded_frame);
+	std::shared_ptr<MediaFrame> GetLastDecodedFrame(MediaTrackId decoder_id);
 
 	// Called when formatting of decoded frames is analyzed or changed.
 	void ChangeOutputFormat(MediaFrame *buffer);
@@ -216,14 +217,14 @@ private:
 	void UpdateMsidOfOutputStreams(uint32_t msid);
 
 	// Step 2: Filter (resample/rescale the decoded frame)
-	void SpreadToFilters(int32_t decoder_id, std::shared_ptr<MediaFrame> frame);
-	TranscodeResult FilterFrame(int32_t track_id, std::shared_ptr<MediaFrame> frame);
-	void OnFilteredFrame(int32_t filter_id, std::shared_ptr<MediaFrame> decoded_frame);
+	void SpreadToFilters(MediaTrackId decoder_id, std::shared_ptr<MediaFrame> frame);
+	TranscodeResult FilterFrame(MediaTrackId track_id, std::shared_ptr<MediaFrame> frame);
+	void OnFilteredFrame(MediaTrackId filter_id, std::shared_ptr<MediaFrame> decoded_frame);
 	bool IsAvailableSmoothTransitionStream(const std::shared_ptr<info::Stream> &stream);
 
 	// Step 3: Encode (Encode the filtered frame to packets)
 	TranscodeResult EncodeFrame(std::shared_ptr<const MediaFrame> frame);
-	void OnEncodedPacket(int32_t encoder_id, std::shared_ptr<MediaPacket> encoded_packet);
+	void OnEncodedPacket(MediaTrackId encoder_id, std::shared_ptr<MediaPacket> encoded_packet);
 
 	// Send encoded packet to mediarouter via transcoder application
 	void SendFrame(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> packet);

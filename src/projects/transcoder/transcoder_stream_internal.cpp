@@ -593,27 +593,55 @@ bool TranscoderStreamInternal::IsMatchesBypassCondition(const std::shared_ptr<Me
 	return (if_count > 0) ? true : false;
 }
 
-double TranscoderStreamInternal::GetEstimateFrameRate(const std::shared_ptr<MediaTrack> &input_track, MediaFrame *buffer)
+double TranscoderStreamInternal::GetProperFramerate(const std::shared_ptr<MediaTrack> &ref_track)
 {
-	double estimated_framerate = 0.0f;
+	double default_framerate = 30.0f;
 
-	if (input_track->GetFrameRate() != 0.0f)
+	if (ref_track->GetFrameRateByConfig() > 0.0f)
 	{
-		estimated_framerate = input_track->GetFrameRate();
-		logti("Framerate of the output stream is not set. set the estimated framerate from framerate of input track. %.2ffps", estimated_framerate);
+		double defined_framerate = ref_track->GetFrameRateByConfig();
+		logti("Output framerate is not set. set the estimated framerate from framerate of input track. %.2ffps",
+			  defined_framerate);
+		
+		return defined_framerate;
 	}
-	else if (input_track->GetEstimateFrameRate() != 0.0f)
+	else if (ref_track->GetFrameRateByMeasured() > 0.0f)
 	{
-		estimated_framerate = input_track->GetEstimateFrameRate();
-		logti("Framerate of the output stream is not set. set the estimated framerate from estimated framerate of input track. %.2ffps", estimated_framerate);
-	}
-	else
-	{
-		estimated_framerate = 1.0f / ((double)buffer->GetDuration() * input_track->GetTimeBase().GetExpr());
-		logti("Framerate of the output stream is not set. set the estimated framerate from decoded frame duration. %.2ffps", estimated_framerate);
+		double measured_framerate = ref_track->GetFrameRateByMeasured();
+		double recommended_framerate = MeasurementToRecommendFramerate(measured_framerate);
+
+		logti("Output framerate is not set. set the recommended framerate from measured framerate of input track. %.2f -> %.2f",
+			  measured_framerate, recommended_framerate);
+
+		return recommended_framerate;
 	}
 
-	return estimated_framerate;
+	logti("Output framerate is not set. set the default framerate. %.2ffps", default_framerate);
+
+	return default_framerate;
+}
+
+double TranscoderStreamInternal::MeasurementToRecommendFramerate(double framerate)
+{
+	double start_framerate = ::ceil(framerate);
+	if(start_framerate < 5.0f)
+		start_framerate = 5.0f;
+	
+	// It is greater than the measured frame rate and is set to a value that is divisible by an integer in the timebase(90Hz).
+	// In chunk-based protocols, the chunk length is made stable.
+	double recommend_framerate = start_framerate;
+
+	while (true)
+	{
+		if ((int)(90000 % (int64_t)recommend_framerate) == 0)
+		{
+			break;
+		}
+
+		recommend_framerate++;
+	}
+
+	return ::floor(recommend_framerate);
 }
 
 void TranscoderStreamInternal::UpdateOutputTrackPassthrough(const std::shared_ptr<MediaTrack> &output_track, MediaFrame *buffer)
@@ -662,8 +690,8 @@ void TranscoderStreamInternal::UpdateOutputTrackTranscode(const std::shared_ptr<
 		// Set framerate of the output track
 		if (output_track->GetFrameRate() == 0.0f)
 		{
-			auto estimated_framerate = GetEstimateFrameRate(input_track, buffer);
-			output_track->SetEstimateFrameRate(estimated_framerate);
+			auto framerate = GetProperFramerate(input_track);
+			output_track->SetEstimateFrameRate(framerate);
 		}
 
 		// To be compatible with all hardware. The encoding resolution must be a multiple of 4

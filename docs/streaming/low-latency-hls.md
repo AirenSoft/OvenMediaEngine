@@ -4,16 +4,14 @@ Apple supports Low-Latency HLS (LLHLS), which enables low-latency video streamin
 
 LLHLS is an extension of HLS, so legacy HLS players can play LLHLS streams. However, the legacy HLS player plays the stream without using the low-latency function.
 
-| Title     | Descriptions              |
-| --------- | ------------------------- |
-| Delivery  | <p>HTTP/1.1<br>HTTP/2</p> |
-| Security  | TLS (HTTPS)               |
-| Container | fMP4                      |
-| Codecs    | <p>H.264<br>AAC</p>       |
+| Title     | Descriptions                    |
+| --------- | ------------------------------- |
+| Delivery  | <p>HTTP/1.1<br>HTTP/2</p>       |
+| Security  | TLS (HTTPS)                     |
+| Container | fMP4                            |
+| Codecs    | <p>H.264</p><p>H.265<br>AAC</p> |
 
 ## Configuration
-
-
 
 To use LLHLS, you need to add the `<LLHLS>` elements to the `<Publishers>` in the configuration as shown in the following example.
 
@@ -60,7 +58,7 @@ To use LLHLS, you need to add the `<LLHLS>` elements to the `<Publishers>` in th
 | ChunkDuration   | Set the partial segment length to fractional seconds. This value affects low-latency HLS player. We recommend **0.2** seconds for this value.                                                                                              |
 | SegmentDuration | Set the length of the segment in seconds. Therefore, a shorter value allows the stream to start faster. However, a value that is too short will make legacy HLS players unstable. Apple recommends **6** seconds for this value.           |
 | SegmentCount    | The number of segments listed in the playlist. This value has little effect on LLHLS players, so use **10** as recommended by Apple. 5 is recommended for legacy HLS players. Do not set below 3. It can only be used for experimentation. |
-| CrossDomains    | Control the domain in which the player works through `<CorssDomain>`. For more information, please refer to the [CrossDomain](hls-mpeg-dash.md#crossdomain) section.                                                                       |
+| CrossDomains    | Control the domain in which the player works through `<CorssDomain>`. For more information, please refer to the [CrossDomain](broken-reference) section.                                                                                   |
 
 {% hint style="info" %}
 HTTP/2 outperforms HTTP/1.1, especially with LLHLS. Since all current browsers only support h2, HTTP/2 is supported only on TLS port. Therefore, it is highly recommended to use LLHLS on the TLS port.

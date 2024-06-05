@@ -87,7 +87,7 @@ The `<Origin>`has the ability to automatically create an application with that n
 
 #### \<Properties>
 
-<mark style="color:purple;"><mark style="color:blue;">**NoInputFailoverTimeout**<mark style="color:blue;"></mark> **(default 3000)**
+<mark style="color:purple;">**NoInputFailoverTimeout**</mark>** (default 3000)**
 
 NoInputFailoverTimeout is the time (in milliseconds) to switch to the next URL if there is no input for the set time.
 

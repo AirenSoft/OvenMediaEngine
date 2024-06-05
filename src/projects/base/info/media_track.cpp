@@ -490,7 +490,8 @@ bool MediaTrack::HasQualityMeasured()
 	{
 		case MediaType::Video:
 		{
-			if (_bitrate > 0 &&	_framerate > 0.0)
+			// It can be used when the value is set in the provider or settings, or when it is measured.
+			if ((_bitrate > 0 || _bitrate_conf > 0) && (_framerate > 0.0 || _framerate_conf > 0.0))
 			{
 				_has_quality_measured = true;
 			}
@@ -499,7 +500,7 @@ bool MediaTrack::HasQualityMeasured()
 
 		case MediaType::Audio:
 		{
-			if (_bitrate > 0)
+			if (_bitrate > 0 || _bitrate_conf > 0)
 			{
 				_has_quality_measured = true;
 			}
@@ -543,14 +544,10 @@ void MediaTrack::OnFrameAdded(const std::shared_ptr<MediaPacket> &media_packet)
 
 		SetBitrateByMeasured(bitrate);
 
-		logtd("Track(%u) Bitrates(%s)", GetId(), ov::Converter::BitToString(bitrate).CStr());
-
 		auto frame_count = static_cast<double>(_total_frame_count);
 		auto framerate = frame_count / seconds;
 
 		SetFrameRateByMeasured(framerate);
-
-		logtd("Track(%u) FPS(%f)", GetId(), framerate);
 	}
 
 	if (_timer_one_second.IsElapsed(1000))

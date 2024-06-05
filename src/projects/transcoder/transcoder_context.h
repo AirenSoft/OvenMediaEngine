@@ -75,6 +75,11 @@ public:
 	void SetDuration(int64_t duration)
 	{
 		_duration = duration;
+
+		if (_priv_data)
+		{
+			_priv_data->pkt_duration = duration;
+		}
 	}
 
 	void SetWidth(int32_t width)

@@ -13,6 +13,7 @@
 
 #include "../transcoder_gpu.h"
 #include "../transcoder_private.h"
+#include "../transcoder_stream_internal.h"
 
 #define DEFAULT_QUEUE_SIZE 120
 #define FILTER_FLAG_HWFRAME_AWARE (1 << 0)
@@ -60,7 +61,6 @@ bool FilterRescaler::InitializeSourceFilter()
 	src_params.push_back(ov::String::FormatString("pix_fmt=%s", ::av_get_pix_fmt_name((AVPixelFormat)_src_pixfmt)));
 	src_params.push_back(ov::String::FormatString("time_base=%s", _input_track->GetTimeBase().GetStringExpr().CStr()));
 	src_params.push_back(ov::String::FormatString("pixel_aspect=%d/%d", 1, 1));
-	src_params.push_back(ov::String::FormatString("frame_rate=%d/%d", 30, 1));
 
 	_src_args = ov::String::Join(src_params, ":");
 
@@ -290,8 +290,9 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	_fps_filter.SetInputTimebase(_input_track->GetTimeBase());
 	_fps_filter.SetInputFrameRate(_input_track->GetFrameRate());
 	// If the user is not the set output Framerate, use the measured Framerate
-	_fps_filter.SetOutputFrameRate(_output_track->GetFrameRateByConfig() > 0 ? _output_track->GetFrameRateByConfig() : _input_track->GetFrameRateByMeasured());  
+	_fps_filter.SetOutputFrameRate(_output_track->GetFrameRateByConfig() > 0 ? _output_track->GetFrameRateByConfig() : _output_track->GetEstimateFrameRate());
 	_fps_filter.SetSkipFrames(_output_track->GetSkipFramesByConfig() >= 0 ? _output_track->GetSkipFramesByConfig() : 0);
+	logtd("Created FPS filter. %s", _fps_filter.GetInfoString().CStr());
 
 	// Set the threshold of the input buffer to 2 seconds.
 	_input_buffer.SetThreshold(_input_track->GetFrameRate() * 2);
@@ -491,6 +492,9 @@ bool FilterRescaler::PopProcess()
 				continue;
 			}
 
+			// Convert duration to output track timebase
+			output_frame->SetDuration((int64_t)((double)output_frame->GetDuration() * _input_track->GetTimeBase().GetExpr() / _output_track->GetTimeBase().GetExpr()));
+
 			Complete(std::move(output_frame));
 		}
 	}
@@ -573,10 +577,23 @@ void FilterRescaler::WorkerThread()
 					skip_frames_previous_queue_size = _input_buffer.GetSize();
 					skip_frames_last_changed_time = curr_time;
 
-					logti("Scaler is stable. changing skip frames %d to %d", skip_frames+1, skip_frames);
+					logtd("Scaler is stable. changing skip frames %d to %d", skip_frames+1, skip_frames);
 				}
 
 				_fps_filter.SetSkipFrames(skip_frames);
+			}
+		}
+
+		// If the user does not set the output Framerate, use the recommend framerate
+		// Cases where the framerate changes dynamically, such as when using WebRTC, WHIP, or SRTP protocols, were considered.
+		// It is similar to maintaining the original frame rate.
+		if (_output_track->GetFrameRateByConfig() == 0.0f)
+		{
+			auto recommended_output_framerate = TranscoderStreamInternal::MeasurementToRecommendFramerate(_input_track->GetFrameRate());
+			if (_fps_filter.GetOutputFrameRate() != recommended_output_framerate)
+			{
+				logtd("Change output framerate. Input: %.2ffps, Output: %.2f -> %.2ffps", _input_track->GetFrameRate(), _fps_filter.GetOutputFrameRate(), recommended_output_framerate);
+				_fps_filter.SetOutputFrameRate(recommended_output_framerate);
 			}
 		}
 

@@ -171,7 +171,7 @@ The meaning of each element is shown in the following table:
 | RTMP              | RTMP port for incoming RTMP stream.                                                                                                                                                                                                                |
 | SRT               | SRT port for incoming SRT stream                                                                                                                                                                                                                   |
 | MPEG-TS           | MPEGTS ports for incoming MPEGTS/UDP stream.                                                                                                                                                                                                       |
-| WebRTC            | Port for WebRTC. If you want more information on the WebRTC port, see the [WebRTC Ingest](../live-source/webrtc-beta.md) and [WebRTC Streaming](../streaming/webrtc-publishing.md) chapters.                                                       |
+| WebRTC            | Port for WebRTC. If you want more information on the WebRTC port, see the [WebRTC Ingest](../live-source/webrtc.md) and [WebRTC Streaming](../streaming/webrtc-publishing.md) chapters.                                                            |
 | OVT               | <p>OVT port for an origin server.</p><p>OVT is a protocol defined by OvenMediaEngine for Origin-Edge communication. For more information about Origin-Edge, see the <a href="../origin-edge-clustering.md">Origin-Edge Clustering</a> chapter.</p> |
 | LLHLS             | HTTP(s) port for LLHLS streaming.                                                                                                                                                                                                                  |
 
@@ -391,7 +391,7 @@ You need many threads to transmit streams to a large number of users at the same
 
 ​OvenMediaEngine currently supports WebRTC, Low-Latency DASH, MEPG-DASH, and HLS. If you don't want to use any protocol then you can delete that protocol setting, the component for that protocol isn't initialized. As a result, you can save system resources by deleting the settings of unused protocol components.
 
-If you want to learn more about WebRTC, visit the [WebRTC Streaming](../streaming/webrtc-publishing.md) chapter. And if you want to get more information on Low-Latency DASH, MPEG-DASH, and HLS, refer to the chapter on [HLS & MPEG-DASH Streaming](../streaming/hls-mpeg-dash.md).
+If you want to learn more about WebRTC, visit the [WebRTC Streaming](../streaming/webrtc-publishing.md) chapter. And if you want to get more information on Low-Latency DASH, MPEG-DASH, and HLS, refer to the chapter on [HLS & MPEG-DASH Streaming](broken-reference).
 
 ## Configuration Example
 
