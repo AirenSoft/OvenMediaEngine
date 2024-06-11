@@ -803,6 +803,12 @@ namespace ocst
 				{
 					auto parsed_url = ov::Url::Parse(url);
 
+					if (parsed_url == nullptr)
+					{
+						logte("Invalid URL: %s", url.CStr());
+						continue;
+					}
+
 					url.Append(parsed_url->HasQueryString() ? '&' : '?');
 					url.Append(request_from->Query());
 

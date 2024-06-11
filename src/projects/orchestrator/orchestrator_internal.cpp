@@ -405,7 +405,7 @@ namespace ocst
 		// Find a provider type using the scheme
 		auto parsed_url = ov::Url::Parse(url);
 
-		if (url == nullptr)
+		if (parsed_url == nullptr)
 		{
 			logtw("Could not parse URL: %s", url.CStr());
 			return nullptr;
