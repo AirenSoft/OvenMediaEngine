@@ -526,6 +526,12 @@ namespace pvd
 	bool RtmpStream::SetFullUrl(ov::String url)
 	{
 		_url = ov::Url::Parse(url);
+
+		if (_url == nullptr)
+		{
+			return false;
+		}
+
 		// PORT can be omitted (1935), but SignedPolicy requires this information.
 		if (_url->Port() == 0)
 		{
