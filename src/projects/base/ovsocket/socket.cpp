@@ -2137,12 +2137,9 @@ namespace ov
 	{
 		auto post_callback = std::move(_post_callback);
 
-		if (post_callback != nullptr)
+		if ((post_callback != nullptr) && _connection_event_fired)
 		{
-			if (_connection_event_fired)
-			{
-				post_callback->OnClosed();
-			}
+			_worker->EnqueueToCloseCallbackLater(GetSharedPtr(), post_callback);
 		}
 	}
 

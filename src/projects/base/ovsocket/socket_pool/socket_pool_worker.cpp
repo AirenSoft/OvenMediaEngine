@@ -96,6 +96,11 @@ namespace ov
 			_sockets_to_dispatch.clear();
 		}
 
+		{
+			std::lock_guard lock_guard(_sockets_to_call_close_callback_mutex);
+			_sockets_to_call_close_callback.clear();
+		}
+
 		_connection_timed_out_queue.clear();
 
 		_gc_candidates.clear();
@@ -206,6 +211,11 @@ namespace ov
 
 	void SocketPoolWorker::GarbageCollection()
 	{
+		if ((_gc_interval.IsElapsed(SOCKET_POOL_WORKER_GC_INTERVAL) && _gc_interval.Update()) == false)
+		{
+			return;
+		}
+
 		auto candidate = _gc_candidates.begin();
 
 		while (candidate != _gc_candidates.end())
@@ -447,56 +457,9 @@ namespace ov
 				}
 			}
 
-			if (_sockets_to_dispatch.empty() == false)
-			{
-				// Move _extra_epoll_events to events to avoid blocking
-				std::unordered_map<std::shared_ptr<Socket>, std::shared_ptr<Socket>> socket_list;
-
-				{
-					std::lock_guard lock_guard(_sockets_to_dispatch_mutex);
-					std::swap(socket_list, _sockets_to_dispatch);
-				}
-
-				for (auto socket_item : socket_list)
-				{
-					auto socket = socket_item.second;
-
-					switch (socket->DispatchEvents())
-					{
-						case Socket::DispatchResult::Dispatched:
-							break;
-
-						case Socket::DispatchResult::PartialDispatched:
-							if (socket->IsClosable())
-							{
-								logad("Need to do garbage collection for %s (dispatch_later)", socket->ToString().CStr());
-								_gc_candidates[socket->GetNativeHandle()] = socket;
-							}
-							else
-							{
-								// Socket is already closed
-							}
-							break;
-
-						case Socket::DispatchResult::Error:
-							if (socket->IsClosable())
-							{
-								logad("Socket %s will be closed by dispatcher", socket->ToString().CStr());
-								socket->CloseImmediatelyWithState(SocketState::Error);
-							}
-							else
-							{
-								// Socket is already closed
-							}
-							break;
-					}
-				}
-			}
-
-			if (_gc_interval.IsElapsed(SOCKET_POOL_WORKER_GC_INTERVAL) && _gc_interval.Update())
-			{
-				GarbageCollection();
-			}
+			DispatchSocketEventsIfNeeded();
+			CallCloseCallbackIfNeeded();
+			GarbageCollection();
 
 			MergeSocketList();
 		}
@@ -733,6 +696,19 @@ namespace ov
 		_sockets_to_dispatch[socket] = socket;
 	}
 
+	void SocketPoolWorker::EnqueueToCloseCallbackLater(const std::shared_ptr<Socket> &socket, std::shared_ptr<SocketAsyncInterface> callback)
+	{
+		OV_ASSERT2(socket != nullptr);
+		OV_ASSERT2(callback != nullptr);
+
+		if (callback != nullptr)
+		{
+			std::lock_guard lock_guard(_sockets_to_call_close_callback_mutex);
+
+			_sockets_to_call_close_callback[socket] = callback;
+		}
+	}
+
 	void SocketPoolWorker::EnqueueToCheckConnectionTimeOut(const std::shared_ptr<Socket> &socket, int timeout_msec)
 	{
 		_connection_callback_queue.Push(
@@ -743,6 +719,77 @@ namespace ov
 			},
 			nullptr,
 			timeout_msec);
+	}
+
+	void SocketPoolWorker::DispatchSocketEventsIfNeeded()
+	{
+		if (_sockets_to_dispatch.empty())
+		{
+			return;
+		}
+
+		// Move _extra_epoll_events to events to avoid blocking
+		decltype(_sockets_to_dispatch) socket_list;
+
+		{
+			std::lock_guard lock_guard(_sockets_to_dispatch_mutex);
+			std::swap(socket_list, _sockets_to_dispatch);
+		}
+
+		for (auto socket_item : socket_list)
+		{
+			auto socket = socket_item.second;
+
+			switch (socket->DispatchEvents())
+			{
+				case Socket::DispatchResult::Dispatched:
+					break;
+
+				case Socket::DispatchResult::PartialDispatched:
+					if (socket->IsClosable())
+					{
+						logad("Need to do garbage collection for %s (dispatch_later)", socket->ToString().CStr());
+						_gc_candidates[socket->GetNativeHandle()] = socket;
+					}
+					else
+					{
+						// Socket is already closed
+					}
+					break;
+
+				case Socket::DispatchResult::Error:
+					if (socket->IsClosable())
+					{
+						logad("Socket %s will be closed by dispatcher", socket->ToString().CStr());
+						socket->CloseImmediatelyWithState(SocketState::Error);
+					}
+					else
+					{
+						// Socket is already closed
+					}
+					break;
+			}
+		}
+	}
+
+	void SocketPoolWorker::CallCloseCallbackIfNeeded()
+	{
+		if (_sockets_to_call_close_callback.empty())
+		{
+			return;
+		}
+
+		decltype(_sockets_to_call_close_callback) close_list;
+
+		{
+			std::lock_guard lock_guard(_sockets_to_call_close_callback_mutex);
+			std::swap(close_list, _sockets_to_call_close_callback);
+		}
+
+		for (auto close_item : close_list)
+		{
+			close_item.second->OnClosed();
+		}
 	}
 
 	bool SocketPoolWorker::DeleteFromEpoll(const std::shared_ptr<Socket> &socket)

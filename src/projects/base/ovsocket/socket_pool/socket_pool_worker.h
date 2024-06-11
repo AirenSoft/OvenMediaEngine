@@ -89,7 +89,11 @@ namespace ov
 		void ConvertSrtEventToEpollEvent(const SRT_EPOLL_EVENT &srt_event, epoll_event *event);
 
 		void EnqueueToDispatchLater(const std::shared_ptr<Socket> &socket);
+		void EnqueueToCloseCallbackLater(const std::shared_ptr<Socket> &socket, std::shared_ptr<SocketAsyncInterface> callback);
 		void EnqueueToCheckConnectionTimeOut(const std::shared_ptr<Socket> &socket, int timeout_msec);
+
+		void DispatchSocketEventsIfNeeded();
+		void CallCloseCallbackIfNeeded();
 
 	protected:
 		std::shared_ptr<SocketPool> _pool;
@@ -130,6 +134,9 @@ namespace ov
 		// The queue used in this case
 		std::mutex _sockets_to_dispatch_mutex;
 		std::unordered_map<std::shared_ptr<Socket>, std::shared_ptr<Socket>> _sockets_to_dispatch;
+
+		std::mutex _sockets_to_call_close_callback_mutex;
+		std::unordered_map<std::shared_ptr<Socket>, std::shared_ptr<SocketAsyncInterface>> _sockets_to_call_close_callback;
 
 		// Related to epoll
 		socket_t _epoll = InvalidSocket;
