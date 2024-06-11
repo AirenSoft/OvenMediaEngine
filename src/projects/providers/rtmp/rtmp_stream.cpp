@@ -459,13 +459,18 @@ namespace pvd
 			}
 
 			_full_url.Format("%s/%s", _tc_url.CStr(), document.GetProperty(3)->GetString());
-			SetFullUrl(_full_url);
-			CheckAccessControl();
+			if (SetFullUrl(_full_url))
+			{
+				CheckAccessControl();
 
-			if (ValidatePublishUrl() == false)
+				if (ValidatePublishUrl() == false)
+				{
+					Stop();
+				}
+			}
+			else
 			{
 				Stop();
-				return;
 			}
 		}
 	}
