@@ -129,6 +129,7 @@ public:
     bool GetBoolean() { return _boolean; }
 
     char *GetString() { return _string; }
+	const char *GetString() const { return _string; }
 
     AmfArray *GetArray() { return _array; }
 
@@ -266,6 +267,7 @@ public:
 
     int GetPropertyIndex(char *name);        // 실패하면 -1
     AmfProperty *GetProperty(int index);
+	const AmfProperty *GetProperty(int index) const;
 
 private:
     std::vector<AmfProperty *> _amf_properties;

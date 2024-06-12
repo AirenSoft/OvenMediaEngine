@@ -1381,3 +1381,11 @@ AmfProperty *AmfDocument::GetProperty(int index)
 
     return _amf_properties[index];
 }
+
+const AmfProperty *AmfDocument::GetProperty(int index) const
+{
+    if (index < 0) { return nullptr; }
+    if (index >= (int) _amf_properties.size()) { return nullptr; }
+
+    return _amf_properties[index];
+}

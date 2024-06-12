@@ -248,6 +248,27 @@ namespace pvd
 		return true;
 	}
 
+	bool RtmpStream::PostPublish(const AmfDocument &document)
+	{
+		if (_tc_url.IsEmpty() == false)
+		{
+			_full_url.Format("%s/%s", _tc_url.CStr(), document.GetProperty(3)->GetString());
+
+			if (SetFullUrl(_full_url))
+			{
+				CheckAccessControl();
+
+				if (ValidatePublishUrl())
+				{
+					return true;
+				}
+			}
+		}
+
+		Stop();
+		return false;
+	}
+
 	void RtmpStream::OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
 		double object_encoding = 0.0;
@@ -458,20 +479,7 @@ namespace pvd
 				return;
 			}
 
-			_full_url.Format("%s/%s", _tc_url.CStr(), document.GetProperty(3)->GetString());
-			if (SetFullUrl(_full_url))
-			{
-				CheckAccessControl();
-
-				if (ValidatePublishUrl() == false)
-				{
-					Stop();
-				}
-			}
-			else
-			{
-				Stop();
-			}
+			PostPublish(document);
 		}
 	}
 
@@ -481,13 +489,8 @@ namespace pvd
 		{
 			if (document.GetProperty(3) != nullptr && document.GetProperty(3)->GetType() == AmfDataType::String)
 			{
-				_full_url.Format("%s/%s", _tc_url.CStr(), document.GetProperty(3)->GetString());
-				SetFullUrl(_full_url);
-				CheckAccessControl();
-
-				if (ValidatePublishUrl() == false)
+				if (PostPublish(document) == false)
 				{
-					Stop();
 					return;
 				}
 			}

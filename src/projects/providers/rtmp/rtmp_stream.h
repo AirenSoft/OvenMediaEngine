@@ -58,6 +58,9 @@ namespace pvd
 		bool ConvertToAudioData(const std::shared_ptr<ov::Data> &data);
 		
 	private:
+		// Called when received AmfFCPublish & AmfPublish event
+		bool PostPublish(const AmfDocument &document);
+
 		// AMF Event
 		void OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
 		void OnAmfCreateStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
