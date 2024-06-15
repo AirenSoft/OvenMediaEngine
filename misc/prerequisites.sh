@@ -348,7 +348,7 @@ install_jemalloc()
     (DIR=${TEMP_PATH}/jemalloc && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sSLf https://github.com/jemalloc/jemalloc/releases/download/${JEMALLOC_VERSION}/jemalloc-${JEMALLOC_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
+    curl -sSLf https://github.com/jemalloc/jemalloc/releases/download/${JEMALLOC_VERSION}/jemalloc-${JEMALLOC_VERSION}.tar.bz2 | tar -jx --strip-components=1 --no-same-owner && \
     ./configure --prefix="${PREFIX}" && \
     make -j$(nproc) && \
     sudo make install_include install_lib && \
