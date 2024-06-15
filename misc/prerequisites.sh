@@ -316,8 +316,8 @@ install_ffmpeg()
     --extra-ldflags="${ADDI_LDFLAGS} -L${PREFIX}/lib -Wl,-rpath,${PREFIX}/lib " \
     --extra-libs=-ldl ${ADDI_EXTRA_LIBS} \
     ${ADDI_LICENSE} \
-    --disable-everything --disable-programs --disable-avdevice --disable-dwt --disable-lsp --disable-lzo --disable-faan --disable-pixelutils \
-    --enable-shared --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libopenh264 --enable-openssl --enable-network --enable-libsrt --enable-dct --enable-rdft  ${ADDI_LIBS} \
+    --disable-everything --disable-programs --disable-avdevice --disable-dwt --disable-lsp --disable-faan --disable-pixelutils \
+    --enable-shared --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libopenh264 --enable-openssl --enable-network --enable-libsrt  ${ADDI_LIBS} \
     ${ADDI_HWACCEL} \
     --enable-ffmpeg \
     --enable-encoder=libvpx_vp8,libopus,libfdk_aac,libopenh264,mjpeg,png${ADDI_ENCODER} \
