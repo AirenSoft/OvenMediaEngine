@@ -152,13 +152,13 @@ RtmpChunkParser::ParseResult RtmpChunkParser::Parse(const std::shared_ptr<const 
 			logtd("New RTMP message is enqueued: %s", current_message_header->ToString().CStr());
 			logtp("New RTMP message payload: %s", _current_message->payload->Dump().CStr());
 			_current_message = nullptr;
-
-			status = ParseResult::Parsed;
 		}
 		else
 		{
 			logtp("Need to parse next chunk (%zu bytes remained to completed current messasge)", _current_message->GetRemainedPayloadSize());
 		}
+
+		status = ParseResult::Parsed;
 
 		// A new message is completed or the chunk size is reached, so a new header parsing is required.
 		_need_to_parse_new_header = true;

@@ -119,7 +119,7 @@ std::shared_ptr<RtmpChunkHeader> RtmpExportChunk::GetChunkHeader(std::shared_ptr
 //====================================================================================================
 // Export 스트림
 //====================================================================================================
-std::shared_ptr<std::vector<uint8_t>> RtmpExportChunk::ExportStreamData(std::shared_ptr<RtmpMuxMessageHeader> &message_header, std::shared_ptr<std::vector<uint8_t>> &data)
+std::shared_ptr<std::vector<uint8_t>> RtmpExportChunk::ExportStreamData(std::shared_ptr<RtmpMuxMessageHeader> &message_header, const uint8_t *chunk_data, size_t chunk_size)
 {
 	int buffer_size = 0;
 	int export_size = 0;
@@ -162,7 +162,7 @@ std::shared_ptr<std::vector<uint8_t>> RtmpExportChunk::ExportStreamData(std::sha
 
 	// Chunk Stream 인코딩
 	export_size += GetChunkHeaderRaw(chunk_header, export_data->data(), chunk_header->is_extended_timestamp);
-	export_size += GetChunkDataRaw(_chunk_size, message_header->chunk_stream_id, data, export_data->data() + export_size, chunk_header->is_extended_timestamp, type3_time);
+	export_size += GetChunkDataRaw(_chunk_size, message_header->chunk_stream_id, chunk_data, chunk_size, export_data->data() + export_size, chunk_header->is_extended_timestamp, type3_time);
 	export_data->resize(export_size);
 
 	// 스트림 Message 헤더 정보 갱신

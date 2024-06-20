@@ -13,7 +13,7 @@
 #include "base/provider/push_provider/stream.h"
 #include "modules/access_control/access_controller.h"
 
-#include "chunk/amf_document.h"
+#include "amf0/amf_document.h"
 #include "chunk/rtmp_export_chunk.h"
 #include "chunk/rtmp_handshake.h"
 #include "chunk/rtmp_chunk_parser.h"
@@ -67,12 +67,13 @@ namespace pvd
 		void OnAmfFCPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
 		void OnAmfPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
 		void OnAmfDeleteStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
-		bool OnAmfMetaData(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, int32_t object_index);
+		bool OnAmfMetaData(const std::shared_ptr<const RtmpChunkHeader> &header, const AmfProperty *property);
 
 
 		// Send messages
 		bool SendData(const std::shared_ptr<const ov::Data> &data);
 		bool SendData(const void *data, size_t data_size);
+		bool SendMessagePacket(std::shared_ptr<RtmpMuxMessageHeader> &message_header, const ov::Data *data);
 		bool SendMessagePacket(std::shared_ptr<RtmpMuxMessageHeader> &message_header, std::shared_ptr<std::vector<uint8_t>> &data);
 		bool SendAcknowledgementSize(uint32_t acknowledgement_traffic);
 
@@ -88,9 +89,9 @@ namespace pvd
 		bool SendAmfCreateStreamResult(uint32_t chunk_stream_id, double transaction_id);
 		bool SendAmfOnStatus(uint32_t chunk_stream_id,
 							uint32_t stream_id,
-							char *level,
-							char *code,
-							char *description,
+							const char *level,
+							const char *code,
+							const char *description,
 							double client_id);
 
 		// Parsing handshake messages

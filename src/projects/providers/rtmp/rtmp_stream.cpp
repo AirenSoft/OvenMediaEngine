@@ -252,16 +252,13 @@ namespace pvd
 	{
 		if (_tc_url.IsEmpty() == false)
 		{
-			_full_url.Format("%s/%s", _tc_url.CStr(), document.GetProperty(3)->GetString());
+			_full_url.Format("%s/%s", _tc_url.CStr(), document.GetProperty(3)->GetString().CStr());
 
-			if (SetFullUrl(_full_url))
+			if (SetFullUrl(_full_url) &&
+				CheckAccessControl() &&
+				ValidatePublishUrl())
 			{
-				CheckAccessControl();
-
-				if (ValidatePublishUrl())
-				{
-					return true;
-				}
+				return true;
 			}
 		}
 
@@ -273,82 +270,84 @@ namespace pvd
 	{
 		double object_encoding = 0.0;
 
-		if (document.GetProperty(2) != nullptr && document.GetProperty(2)->GetType() == AmfDataType::Object)
+		auto meta_property = document.GetProperty(2, AmfTypeMarker::Object);
+		if (meta_property != nullptr)
 		{
-			AmfObject *object = document.GetProperty(2)->GetObject();
-			int32_t index;
+			auto object = meta_property->GetObject();
 
 			// object encoding
-			if ((index = object->FindName("objectEncoding")) >= 0 && object->GetType(index) == AmfDataType::Number)
+			auto pair = object->GetPair("objectEncoding", AmfTypeMarker::Number);
+			if (pair != nullptr)
 			{
-				object_encoding = object->GetNumber(index);
+				object_encoding = pair->property.GetNumber();
 			}
 
 			// app name set
-			if ((index = object->FindName("app")) >= 0 && object->GetType(index) == AmfDataType::String)
+			pair = object->GetPair("app", AmfTypeMarker::String);
+			if (pair != nullptr)
 			{
-				_app_name = object->GetString(index);
+				_app_name = pair->property.GetString();
 			}
 
 			// app url set
-			if ((index = object->FindName("tcUrl")) >= 0 && object->GetType(index) == AmfDataType::String)
+			pair = object->GetPair("tcUrl", AmfTypeMarker::String);
+			if (pair != nullptr)
 			{
-				_tc_url = object->GetString(index);
+				_tc_url = pair->property.GetString();
 			}
 		}
 
 		// Parse the URL to obtain the domain name
+		_url = ov::Url::Parse(_tc_url);
+
+		if (_url != nullptr)
 		{
-			_url = ov::Url::Parse(_tc_url);
-			if (_url != nullptr)
-			{
-				_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(_url->Host(), _app_name);
-				_import_chunk->SetAppName(_vhost_app_name);
+			_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(_url->Host(), _app_name);
+			_import_chunk->SetAppName(_vhost_app_name);
 
-				//Since vhost/app/stream can be changed in AdmissionWebhooks, it is not checked here.
-				// auto app_info = ocst::Orchestrator::GetInstance()->GetApplicationInfo(_vhost_app_name);
-				// if (app_info.IsValid())
-				// {
-				// 	_app_id = app_info.GetId();
-				// }
-				// else
-				// {
-				// 	logte("%s application does not exist", _vhost_app_name.CStr());
-				// 	Stop();
-				// 	return;
-				// }
-			}
-			else
-			{
-				logtw("Could not obtain tcUrl from the RTMP stream: [%s]", _app_name.CStr());
+			//Since vhost/app/stream can be changed in AdmissionWebhooks, it is not checked here.
+			// auto app_info = ocst::Orchestrator::GetInstance()->GetApplicationInfo(_vhost_app_name);
+			// if (app_info.IsValid())
+			// {
+			// 	_app_id = app_info.GetId();
+			// }
+			// else
+			// {
+			// 	logte("%s application does not exist", _vhost_app_name.CStr());
+			// 	Stop();
+			// 	return;
+			// }
+		}
+		else
+		{
+			logtw("Could not obtain tcUrl from the RTMP stream: [%s]", _app_name.CStr());
 
-				// TODO(dimiden): If tcUrl is not provided, it's not possible to determine which VHost the request was received,
-				// so it does not work properly.
-				// So, if there is currently one VHost associated with the RTMP Provider, we need to modify it to work without tcUrl.
-				_vhost_app_name = info::VHostAppName("", _app_name);
-				_import_chunk->SetAppName(_vhost_app_name);
-			}
+			// TODO(dimiden): If tcUrl is not provided, it's not possible to determine which VHost the request was received,
+			// so it does not work properly.
+			// So, if there is currently one VHost associated with the RTMP Provider, we need to modify it to work without tcUrl.
+			_vhost_app_name = info::VHostAppName("", _app_name);
+			_import_chunk->SetAppName(_vhost_app_name);
 		}
 
-		if (!SendWindowAcknowledgementSize(RTMP_DEFAULT_ACKNOWNLEDGEMENT_SIZE))
+		if (SendWindowAcknowledgementSize(RTMP_DEFAULT_ACKNOWNLEDGEMENT_SIZE) == false)
 		{
 			logte("SendWindowAcknowledgementSize Fail");
 			return;
 		}
 
-		if (!SendSetPeerBandwidth(_peer_bandwidth))
+		if (SendSetPeerBandwidth(_peer_bandwidth) == false)
 		{
 			logte("SendSetPeerBandwidth Fail");
 			return;
 		}
 
-		if (!SendStreamBegin(0))
+		if (SendStreamBegin(0) == false)
 		{
 			logte("SendStreamBegin Fail");
 			return;
 		}
 
-		if (!SendAmfConnectResult(header->basic_header.chunk_stream_id, transaction_id, object_encoding))
+		if (SendAmfConnectResult(header->basic_header.chunk_stream_id, transaction_id, object_encoding) == false)
 		{
 			logte("SendAmfConnectResult Fail");
 			return;
@@ -357,7 +356,7 @@ namespace pvd
 
 	void RtmpStream::OnAmfCreateStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
-		if (!SendAmfCreateStreamResult(header->basic_header.chunk_stream_id, transaction_id))
+		if (SendAmfCreateStreamResult(header->basic_header.chunk_stream_id, transaction_id) == false)
 		{
 			logte("SendAmfCreateStreamResult Fail");
 			return;
@@ -367,68 +366,69 @@ namespace pvd
 	bool RtmpStream::CheckAccessControl()
 	{
 		// Check SignedPolicy
+		auto provider = GetProvider();
 
-		auto [result, _signed_policy] = GetProvider()->VerifyBySignedPolicy(_url, _remote->GetRemoteAddress());
-		if (result == AccessController::VerificationResult::Off)
+		auto [result, _signed_policy] = provider->VerifyBySignedPolicy(_url, _remote->GetRemoteAddress());
+
+		switch (result)
 		{
-		}
-		else if (result == AccessController::VerificationResult::Pass)
-		{
-			_stream_expired_msec = _signed_policy->GetStreamExpireEpochMSec();
-		}
-		else if (result == AccessController::VerificationResult::Error)
-		{
-			logtw("SingedPolicy error : %s", _url->ToUrlString().CStr());
-			Stop();
-			return false;
-		}
-		else if (result == AccessController::VerificationResult::Fail)
-		{
-			logtw("%s", _signed_policy->GetErrMessage().CStr());
-			Stop();
-			return false;
+			case AccessController::VerificationResult::Error:
+				logtw("SingedPolicy error : %s", _url->ToUrlString().CStr());
+				Stop();
+				return false;
+
+			case AccessController::VerificationResult::Fail:
+				logtw("%s", _signed_policy->GetErrMessage().CStr());
+				Stop();
+				return false;
+
+			case AccessController::VerificationResult::Off:
+				break;
+
+			case AccessController::VerificationResult::Pass:
+				_stream_expired_msec = _signed_policy->GetStreamExpireEpochMSec();
+				break;
 		}
 
 		auto request_info = std::make_shared<AccessController::RequestInfo>(_url, _remote->GetRemoteAddress());
 
-		auto [webhooks_result, _admission_webhooks] = GetProvider()->VerifyByAdmissionWebhooks(request_info);
-		if (webhooks_result == AccessController::VerificationResult::Off)
+		auto [webhooks_result, _admission_webhooks] = provider->VerifyByAdmissionWebhooks(request_info);
+
+		switch (webhooks_result)
 		{
-			return true;
-		}
-		else if (webhooks_result == AccessController::VerificationResult::Pass)
-		{
-			// Lifetime
-			if (_admission_webhooks->GetLifetime() != 0)
-			{
-				// Choice smaller value
-				auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + _admission_webhooks->GetLifetime();
-				if (_stream_expired_msec == 0 || stream_expired_msec_from_webhooks < _stream_expired_msec)
+			case AccessController::VerificationResult::Error:
+				logtw("AdmissionWebhooks error : %s", _url->ToUrlString().CStr());
+				Stop();
+				break;
+
+			case AccessController::VerificationResult::Fail:
+				logtw("AdmissionWebhooks error : %s", _admission_webhooks->GetErrReason().CStr());
+				Stop();
+				break;
+
+			case AccessController::VerificationResult::Off:
+				return true;
+
+			case AccessController::VerificationResult::Pass:
+				// Lifetime
+				if (_admission_webhooks->GetLifetime() != 0)
 				{
-					_stream_expired_msec = stream_expired_msec_from_webhooks;
+					// Choice smaller value
+					auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + _admission_webhooks->GetLifetime();
+					if (_stream_expired_msec == 0 || stream_expired_msec_from_webhooks < _stream_expired_msec)
+					{
+						_stream_expired_msec = stream_expired_msec_from_webhooks;
+					}
 				}
-			}
 
-			// Redirect URL
-			if (_admission_webhooks->GetNewURL() != nullptr)
-			{
-				_publish_url = _admission_webhooks->GetNewURL();
-				SetFinalUrl(_publish_url);
-			}
+				// Redirect URL
+				if (_admission_webhooks->GetNewURL() != nullptr)
+				{
+					_publish_url = _admission_webhooks->GetNewURL();
+					SetFinalUrl(_publish_url);
+				}
 
-			return true;
-		}
-		else if (webhooks_result == AccessController::VerificationResult::Error)
-		{
-			logtw("AdmissionWebhooks error : %s", _url->ToUrlString().CStr());
-			Stop();
-			return false;
-		}
-		else if (webhooks_result == AccessController::VerificationResult::Fail)
-		{
-			logtw("AdmissionWebhooks error : %s", _admission_webhooks->GetErrReason().CStr());
-			Stop();
-			return false;
+				return true;
 		}
 
 		return false;
@@ -442,7 +442,8 @@ namespace pvd
 			return false;
 		}
 
-		if ((_publish_url->Scheme().UpperCaseString() != "RTMP" && _publish_url->Scheme().UpperCaseString() != "RTMPS") ||
+		auto scheme = _publish_url->Scheme().UpperCaseString();
+		if (((scheme != "RTMP") && (scheme != "RTMPS")) ||
 			_publish_url->Host().IsEmpty() ||
 			_publish_url->App().IsEmpty() ||
 			_publish_url->Stream().IsEmpty())
@@ -451,35 +452,38 @@ namespace pvd
 			return false;
 		}
 
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(_publish_url->Host(), _publish_url->App());
+		auto orchestrator = ocst::Orchestrator::GetInstance();
+		auto vhost_app_name = orchestrator->ResolveApplicationNameFromDomain(_publish_url->Host(), _publish_url->App());
 
-		auto app_info = ocst::Orchestrator::GetInstance()->GetApplicationInfo(vhost_app_name);
+		auto app_info = orchestrator->GetApplicationInfo(vhost_app_name);
+
 		if (app_info.IsValid())
 		{
 			_app_id = app_info.GetId();
-		}
-		else
-		{
-			logte("Could not find application: %s", vhost_app_name.CStr());
-			return false;
+			return true;
 		}
 
-		return true;
+		logte("Could not find application: %s", vhost_app_name.CStr());
+		return false;
 	}
 
 	void RtmpStream::OnAmfFCPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
-		if (_stream_name.IsEmpty() && document.GetProperty(3) != nullptr &&
-			document.GetProperty(3)->GetType() == AmfDataType::String)
+		if (_stream_name.IsEmpty())
 		{
-			// TODO: check if the chunk stream id is already exist, and generates new rtmp_stream_id and client_id.
-			if (!SendAmfOnFCPublish(header->basic_header.chunk_stream_id, _rtmp_stream_id, _client_id))
-			{
-				logte("SendAmfOnFCPublish Fail");
-				return;
-			}
+			auto property = document.GetProperty(3, AmfTypeMarker::String);
 
-			PostPublish(document);
+			if (property != nullptr)
+			{
+				// TODO: check if the chunk stream id is already exist, and generates new rtmp_stream_id and client_id.
+				if (SendAmfOnFCPublish(header->basic_header.chunk_stream_id, _rtmp_stream_id, _client_id) == false)
+				{
+					logte("SendAmfOnFCPublish Fail");
+					return;
+				}
+
+				PostPublish(document);
+			}
 		}
 	}
 
@@ -487,7 +491,8 @@ namespace pvd
 	{
 		if (_stream_name.IsEmpty())
 		{
-			if (document.GetProperty(3) != nullptr && document.GetProperty(3)->GetType() == AmfDataType::String)
+			auto property = document.GetProperty(3, AmfTypeMarker::String);
+			if (property != nullptr)
 			{
 				if (PostPublish(document) == false)
 				{
@@ -501,9 +506,10 @@ namespace pvd
 				//Reject
 				SendAmfOnStatus(header->basic_header.chunk_stream_id,
 								_rtmp_stream_id,
-								(char *)"error",
-								(char *)"NetStream.Publish.Rejected",
-								(char *)"Authentication Failed.", _client_id);
+								"error",
+								"NetStream.Publish.Rejected",
+								"Authentication Failed.",
+								_client_id);
 
 				return;
 			}
@@ -511,20 +517,18 @@ namespace pvd
 
 		_chunk_stream_id = header->basic_header.chunk_stream_id;
 
-		// stream begin 전송
-		if (!SendStreamBegin(_rtmp_stream_id))
+		if (SendStreamBegin(_rtmp_stream_id) == false)
 		{
 			logte("SendStreamBegin Fail");
 			return;
 		}
 
-		// 시작 상태 값 전송
-		if (!SendAmfOnStatus((uint32_t)_chunk_stream_id,
-							 _rtmp_stream_id,
-							 (char *)"status",
-							 (char *)"NetStream.Publish.Start",
-							 (char *)"Publishing",
-							 _client_id))
+		if (SendAmfOnStatus(static_cast<uint32_t>(_chunk_stream_id),
+							_rtmp_stream_id,
+							"status",
+							"NetStream.Publish.Start",
+							"Publishing",
+							_client_id) == false)
 		{
 			logte("SendAmfOnStatus Fail");
 			return;
@@ -537,6 +541,7 @@ namespace pvd
 
 		if (_url == nullptr)
 		{
+			logtw("Could not parse the URL: %s", url.CStr());
 			return false;
 		}
 
@@ -556,204 +561,292 @@ namespace pvd
 		return true;
 	}
 
-	bool RtmpStream::OnAmfMetaData(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, int32_t object_index)
+	bool RtmpStream::OnAmfMetaData(const std::shared_ptr<const RtmpChunkHeader> &header, const AmfProperty *property)
 	{
-		RtmpCodecType video_codec_type = RtmpCodecType::Unknown;
-		RtmpCodecType audio_codec_type = RtmpCodecType::Unknown;
-		bool video_Available = false;
-		bool audio_Available = false;
-		double frame_rate = 30.0;
-		double video_width = 0;
-		double video_height = 0;
-		double video_bitrate = 0;
-		double audio_bitrate = 0.0;
-		double audio_channels = 1.0;
-		double audio_samplerate = 0.0;
-		double audio_samplesize = 0.0;
-		AmfObjectArray *object = nullptr;
-		int32_t index = 0;
-		ov::String bitrate_string;
-		RtmpEncoderType encoder_type = RtmpEncoderType::Custom;
-
-		/*
-		// dump 정보 출력
-		std::string dump_string;
-		document.Dump(dump_string);
-		logti(dump_string.c_str());
-		*/
-
-		// object encoding 얻기
-		if (document.GetProperty(object_index)->GetType() == AmfDataType::Object)
-		{
-			object = (AmfObjectArray *)(document.GetProperty(object_index)->GetObject());
-		}
-		else
-		{
-			object = (AmfObjectArray *)(document.GetProperty(object_index)->GetArray());
-		}
+		auto object = (property->GetType() == AmfTypeMarker::Object)
+						  ? static_cast<const AmfObjectArray *>(property->GetObject())
+						  : static_cast<const AmfObjectArray *>(property->GetEcmaArray());
 
 		// DeviceType
-		if ((index = object->FindName("videodevice")) >= 0 && object->GetType(index) == AmfDataType::String)
 		{
-			_device_string = object->GetString(index);	//DeviceType - XSplit
-		}
-		else if ((index = object->FindName("encoder")) >= 0 && object->GetType(index) == AmfDataType::String)
-		{
-			_device_string = object->GetString(index);
+			auto property_pair = object->GetPair("videodevice", AmfTypeMarker::String);
+
+			if (property_pair != nullptr)
+			{
+				_device_string = property_pair->property.GetString();
+			}
+			else
+			{
+				property_pair = object->GetPair("encoder", AmfTypeMarker::String);
+
+				if (property_pair != nullptr)
+				{
+					_device_string = property_pair->property.GetString();
+				}
+			}
 		}
 
 		// Encoder
-		if (_device_string.IndexOf("Open Broadcaster") >= 0)
+		RtmpEncoderType encoder_type = RtmpEncoderType::Custom;
 		{
-			encoder_type = RtmpEncoderType::OBS;
-		}
-		else if (_device_string.IndexOf("obs-output") >= 0)
-		{
-			encoder_type = RtmpEncoderType::OBS;
-		}
-		else if (_device_string.IndexOf("XSplitBroadcaster") >= 0)
-		{
-			encoder_type = RtmpEncoderType::Xsplit;
-		}
-		else if (_device_string.IndexOf("Lavf") >= 0)
-		{
-			encoder_type = RtmpEncoderType::Lavf;
-		}
-		else
-		{
-			encoder_type = RtmpEncoderType::Custom;
+			if (_device_string.IndexOf("Open Broadcaster") >= 0)
+			{
+				encoder_type = RtmpEncoderType::OBS;
+			}
+			else if (_device_string.IndexOf("obs-output") >= 0)
+			{
+				encoder_type = RtmpEncoderType::OBS;
+			}
+			else if (_device_string.IndexOf("XSplitBroadcaster") >= 0)
+			{
+				encoder_type = RtmpEncoderType::Xsplit;
+			}
+			else if (_device_string.IndexOf("Lavf") >= 0)
+			{
+				encoder_type = RtmpEncoderType::Lavf;
+			}
+			else
+			{
+				encoder_type = RtmpEncoderType::Custom;
+			}
 		}
 
 		// Video Codec
-		if ((index = object->FindName("videocodecid")) >= 0)
+		bool video_available = false;
+		RtmpCodecType video_codec_type = RtmpCodecType::Unknown;
 		{
-			video_Available = true;
-			if (object->GetType(index) == AmfDataType::String && strcmp("avc1", object->GetString(index)) == 0)
+			auto property_pair = object->GetPair("videocodecid");
+
+			if (property_pair != nullptr)
 			{
-				video_codec_type = RtmpCodecType::H264;
-			}
-			else if (object->GetType(index) == AmfDataType::String && strcmp("H264Avc", object->GetString(index)) == 0)
-			{
-				video_codec_type = RtmpCodecType::H264;
-			}
-			else if (object->GetType(index) == AmfDataType::Number && object->GetNumber(index) == 7.0)
-			{
-				video_codec_type = RtmpCodecType::H264;
+				auto &property = property_pair->property;
+				video_available = true;
+
+				switch (property.GetType())
+				{
+					case AmfTypeMarker::String: {
+						auto value = property.GetString();
+						if ((value == "avc1") || (value == "H264Avc"))
+						{
+							video_codec_type = RtmpCodecType::H264;
+						}
+						break;
+					}
+
+					case AmfTypeMarker::Number: {
+						auto value = property.GetNumber();
+						if (value == 7.0)
+						{
+							video_codec_type = RtmpCodecType::H264;
+						}
+						break;
+					}
+
+					default:
+						break;
+				}
 			}
 		}
 
 		// Video Framerate
-		if ((index = object->FindName("framerate")) >= 0 && object->GetType(index) == AmfDataType::Number)
+		double frame_rate = 30.0;
 		{
-			frame_rate = object->GetNumber(index);
-		}
-		else if ((index = object->FindName("videoframerate")) >= 0 && object->GetType(index) == AmfDataType::Number)
-		{
-			frame_rate = object->GetNumber(index);
+			auto property_pair = object->GetPair("framerate", AmfTypeMarker::Number);
+
+			if (property_pair != nullptr)
+			{
+				frame_rate = property_pair->property.GetNumber();
+			}
+			else
+			{
+				property_pair = object->GetPair("videoframerate", AmfTypeMarker::Number);
+
+				if (property_pair != nullptr)
+				{
+					frame_rate = property_pair->property.GetNumber();
+				}
+			}
 		}
 
 		// Video Width
-		if ((index = object->FindName("width")) >= 0 && object->GetType(index) == AmfDataType::Number)
+		double video_width = 0;
 		{
-			video_width = object->GetNumber(index);
+			auto property_pair = object->GetPair("width", AmfTypeMarker::Number);
+
+			if (property_pair != nullptr)
+			{
+				video_width = property_pair->property.GetNumber();
+			}
 		}
 
 		// Video Height
-		if ((index = object->FindName("height")) >= 0 && object->GetType(index) == AmfDataType::Number)
+		double video_height = 0;
 		{
-			video_height = object->GetNumber(index);
+			auto property_pair = object->GetPair("height", AmfTypeMarker::Number);
+
+			if (property_pair != nullptr)
+			{
+				video_height = property_pair->property.GetNumber();
+			}
 		}
 
 		// Video Bitrate
-		if ((index = object->FindName("videodatarate")) >= 0 && object->GetType(index) == AmfDataType::Number)
+		double video_bitrate = 0;
 		{
-			video_bitrate = object->GetNumber(index);
-		}  // Video Data Rate
-		if ((index = object->FindName("bitrate")) >= 0 && object->GetType(index) == AmfDataType::Number)
-		{
-			video_bitrate = object->GetNumber(index);
-		}  // Video Data Rate
-		if (((index = object->FindName("maxBitrate")) >= 0) && object->GetType(index) == AmfDataType::String)
-		{
-			bitrate_string = object->GetString(index);
-			video_bitrate = strtol(bitrate_string.CStr(), nullptr, 0);
+			auto property_pair = object->GetPair("videodatarate", AmfTypeMarker::Number);
+
+			if (property_pair != nullptr)
+			{
+				video_bitrate = property_pair->property.GetNumber();
+			}
+			else
+			{
+				property_pair = object->GetPair("bitrate", AmfTypeMarker::Number);
+
+				if (property_pair != nullptr)
+				{
+					video_bitrate = property_pair->property.GetNumber();
+				}
+			}
+
+			property_pair = object->GetPair("maxBitrate", AmfTypeMarker::String);
+
+			if (property_pair != nullptr)
+			{
+				video_bitrate = ::strtol(property_pair->property.GetString(), nullptr, 0);
+			}
 		}
 
 		// Audio Codec
-		if ((index = object->FindName("audiocodecid")) >= 0)
+		RtmpCodecType audio_codec_type = RtmpCodecType::Unknown;
+		bool audio_available = false;
 		{
-			audio_Available = true;
-			if (object->GetType(index) == AmfDataType::String && strcmp("mp4a", object->GetString(index)) == 0)
+			auto property_pair = object->GetPair("audiocodecid");
+
+			if (property_pair != nullptr)
 			{
-				audio_codec_type = RtmpCodecType::AAC;	//AAC
+				audio_available = true;
+
+				auto &property = property_pair->property;
+				auto type = property.GetType();
+
+				switch (type)
+				{
+					case AmfTypeMarker::String: {
+						auto value = property.GetString();
+						if (value == "mp4a")
+						{
+							audio_codec_type = RtmpCodecType::AAC;
+						}
+						else if (value == "mp3" || value == ".mp3")
+						{
+							audio_codec_type = RtmpCodecType::MP3;
+						}
+						else if (value == "speex")
+						{
+							audio_codec_type = RtmpCodecType::SPEEX;
+						}
+						break;
+					}
+
+					case AmfTypeMarker::Number: {
+						auto value = property.GetNumber();
+						if (value == 10.0)
+						{
+							audio_codec_type = RtmpCodecType::AAC;
+						}
+						else if (value == 11.0)
+						{
+							audio_codec_type = RtmpCodecType::SPEEX;
+						}
+						else if (value == 2.0)
+						{
+							audio_codec_type = RtmpCodecType::MP3;
+						}
+						break;
+					}
+
+					default:
+						break;
+				}
 			}
-			else if (object->GetType(index) == AmfDataType::String && strcmp("mp3", object->GetString(index)) == 0)
-			{
-				audio_codec_type = RtmpCodecType::MP3;	//MP3
-			}
-			else if (object->GetType(index) == AmfDataType::String && strcmp(".mp3", object->GetString(index)) == 0)
-			{
-				audio_codec_type = RtmpCodecType::MP3;	//MP3
-			}
-			else if (object->GetType(index) == AmfDataType::String && strcmp("speex", object->GetString(index)) == 0)
-			{
-				audio_codec_type = RtmpCodecType::SPEEX;  //Speex
-			}
-			else if (object->GetType(index) == AmfDataType::Number && object->GetNumber(index) == 10.0)
-			{
-				audio_codec_type = RtmpCodecType::AAC;	//AAC
-			}
-			else if (object->GetType(index) == AmfDataType::Number && object->GetNumber(index) == 11.0)
-			{
-				audio_codec_type = RtmpCodecType::SPEEX;  //Speex
-			}
-			else if (object->GetType(index) == AmfDataType::Number && object->GetNumber(index) == 2.0)
-			{
-				audio_codec_type = RtmpCodecType::MP3;
-			}  //MP3
 		}
 
 		// Audio bitrate
-		if ((index = object->FindName("audiodatarate")) >= 0 && object->GetType(index) == AmfDataType::Number)
+		double audio_bitrate = 0.0;
 		{
-			audio_bitrate = object->GetNumber(index);  // Audio Data Rate
+			auto property_pair = object->GetPair("audiodatarate", AmfTypeMarker::Number);
+
+			if (property_pair != nullptr)
+			{
+				audio_bitrate = property_pair->property.GetNumber();
+			}
+			else
+			{
+				property_pair = object->GetPair("audiobitrate", AmfTypeMarker::Number);
+
+				if (property_pair != nullptr)
+				{
+					audio_bitrate = property_pair->property.GetNumber();
+				}
+			}
 		}
-		else if ((index = object->FindName("audiobitrate")) >= 0 && object->GetType(index) == AmfDataType::Number)
-		{
-			audio_bitrate = object->GetNumber(index);
-		}  // Audio Data Rate
 
 		// Audio Channels
-		if ((index = object->FindName("audiochannels")) >= 0)
+		double audio_channels = 1.0;
 		{
-			if (object->GetType(index) == AmfDataType::Number)
+			auto property_pair = object->GetPair("audiochannels");
+
+			if (property_pair != nullptr)
 			{
-				audio_channels = object->GetNumber(index);
-			}
-			else if (object->GetType(index) == AmfDataType::String && strcmp("stereo", object->GetString(index)) == 0)
-			{
-				audio_channels = 2;
-			}
-			else if (object->GetType(index) == AmfDataType::String && strcmp("mono", object->GetString(index)) == 0)
-			{
-				audio_channels = 1;
+				switch (property_pair->property.GetType())
+				{
+					case AmfTypeMarker::Number:
+						audio_channels = property_pair->property.GetNumber();
+						break;
+
+					case AmfTypeMarker::String: {
+						auto value = property_pair->property.GetString();
+						if (value == "stereo")
+						{
+							audio_channels = 2;
+						}
+						else if (value == "mono")
+						{
+							audio_channels = 1;
+						}
+					}
+
+					default:
+						break;
+				}
 			}
 		}
 
 		// Audio samplerate
-		if ((index = object->FindName("audiosamplerate")) >= 0)
+		double audio_samplerate = 0.0;
 		{
-			audio_samplerate = object->GetNumber(index);
-		}  // Audio Sample Rate
+			auto property_pair = object->GetPair("audiosamplerate");
+
+			if (property_pair != nullptr)
+			{
+				audio_samplerate = property_pair->property.GetNumber();
+			}
+		}
 
 		// Audio samplesize
-		if ((index = object->FindName("audiosamplesize")) >= 0)
+		double audio_samplesize = 0.0;
 		{
-			audio_samplesize = object->GetNumber(index);
-		}  // Audio Sample Size
+			auto property_pair = object->GetPair("audiosamplesize");
 
-		if ((video_Available == true && video_codec_type != RtmpCodecType::H264) ||
-			(audio_Available == true && audio_codec_type != RtmpCodecType::AAC))
+			if (property_pair != nullptr)
+			{
+				audio_samplesize = property_pair->property.GetNumber();
+			}
+		}
+
+		if (((video_available == true) && (video_codec_type != RtmpCodecType::H264)) ||
+			((audio_available == true) && (audio_codec_type != RtmpCodecType::AAC)))
 		{
 			logtw("AmfMeta has incompatible codec information. - stream(%s/%s) id(%u/%u) video(%s) audio(%s)",
 				  _vhost_app_name.CStr(),
@@ -765,15 +858,15 @@ namespace pvd
 		}
 
 		_media_info->video_codec_type = video_codec_type;
-		_media_info->video_width = (int32_t)video_width;
-		_media_info->video_height = (int32_t)video_height;
-		_media_info->video_framerate = (float)frame_rate;
-		_media_info->video_bitrate = (int32_t)video_bitrate;
+		_media_info->video_width = static_cast<int32_t>(video_width);
+		_media_info->video_height = static_cast<int32_t>(video_height);
+		_media_info->video_framerate = static_cast<float>(frame_rate);
+		_media_info->video_bitrate = static_cast<int32_t>(video_bitrate);
 		_media_info->audio_codec_type = audio_codec_type;
-		_media_info->audio_bitrate = (int32_t)audio_bitrate;
-		_media_info->audio_channels = (int32_t)audio_channels;
-		_media_info->audio_bits = (int32_t)audio_samplesize;
-		_media_info->audio_samplerate = (int32_t)audio_samplerate;
+		_media_info->audio_bitrate = static_cast<int32_t>(audio_bitrate);
+		_media_info->audio_channels = static_cast<int32_t>(audio_channels);
+		_media_info->audio_bits = static_cast<int32_t>(audio_samplesize);
+		_media_info->audio_samplerate = static_cast<int32_t>(audio_samplerate);
 		_media_info->encoder_type = encoder_type;
 
 		return true;
@@ -1072,34 +1165,44 @@ namespace pvd
 
 	void RtmpStream::ReceiveAmfCommandMessage(const std::shared_ptr<const RtmpMessage> &message)
 	{
-		AmfDocument document;
-		ov::String message_name;
-		double transaction_id = 0.0;
-
 		OV_ASSERT2(message->header != nullptr);
 		OV_ASSERT2(message->payload != nullptr);
+		OV_ASSERT2(message->payload->GetLength() == message->header->message_length);
 
-		if (document.Decode(message->payload->GetData(), message->header->message_length) == 0)
+		ov::ByteStream byte_stream(message->payload);
+		AmfDocument document;
+
+		if (document.Decode(byte_stream) == false)
 		{
-			logte("AmfDocument Size 0 ");
+			logte("Could not decode AMFDocument");
 			return;
 		}
 
 		// Message Name
-		if (document.GetProperty(0) == nullptr || document.GetProperty(0)->GetType() != AmfDataType::String)
+		ov::String message_name;
 		{
-			logte("Message Name Fail");
-			return;
-		}
-		message_name = document.GetProperty(0)->GetString();
+			auto property = document.GetProperty(0, AmfTypeMarker::String);
 
-		// Message Transaction ID 얻기
-		if (document.GetProperty(1) != nullptr && document.GetProperty(1)->GetType() == AmfDataType::Number)
+			if (property == nullptr)
+			{
+				logte("Message name is not available");
+				return;
+			}
+
+			message_name = property->GetString();
+		}
+
+		// Obtain the Message Transaction ID
+		double transaction_id = 0.0;
 		{
-			transaction_id = document.GetProperty(1)->GetNumber();
+			auto property = document.GetProperty(1, AmfTypeMarker::Number);
+
+			if (property != nullptr)
+			{
+				transaction_id = property->GetNumber();
+			}
 		}
 
-		// 처리
 		if (message_name == RTMP_CMD_NAME_CONNECT)
 		{
 			OnAmfConnect(message->header, document, transaction_id);
@@ -1136,45 +1239,51 @@ namespace pvd
 
 	void RtmpStream::ReceiveAmfDataMessage(const std::shared_ptr<const RtmpMessage> &message)
 	{
-		AmfDocument document;
-		int32_t decode_length = 0;
-		ov::String message_name;
-		ov::String data_name;
+		OV_ASSERT2(message->payload->GetLength() == message->header->message_length);
 
-		decode_length = document.Decode(message->payload->GetData(), message->header->message_length);
+		ov::ByteStream byte_stream(message->payload);
+		AmfDocument document;
+		auto decode_length = document.Decode(byte_stream);
+
 		if (decode_length == 0)
 		{
 			logte("Amf0DataMessage Document Length 0");
 			return;
 		}
 
-		// Message Name 얻기
-		if (document.GetProperty(0) != nullptr && document.GetProperty(0)->GetType() == AmfDataType::String)
+		// Obtain the message name
+		ov::String message_name;
+		auto message_name_property = document.GetProperty(0);
+		auto message_name_type = (message_name_property != nullptr) ? message_name_property->GetType() : AmfTypeMarker::Undefined;
+		if ((message_name_type == AmfTypeMarker::String))
 		{
-			message_name = document.GetProperty(0)->GetString();
+			message_name = message_name_property->GetString();
 		}
 
-		// Data 이름 얻기
-		if (document.GetProperty(1) != nullptr && document.GetProperty(1)->GetType() == AmfDataType::String)
+		// Obtain the data name
+		ov::String data_name;
+		auto data_name_property = document.GetProperty(1);
+		auto data_name_type = (data_name_property != nullptr) ? data_name_property->GetType() : AmfTypeMarker::Undefined;
+		if (data_name_type == AmfTypeMarker::String)
 		{
-			data_name = document.GetProperty(1)->GetString();
+			data_name = data_name_property->GetString();
 		}
 
-		// 처리
-		if (message_name == RTMP_CMD_DATA_SETDATAFRAME &&
-			data_name == RTMP_CMD_DATA_ONMETADATA &&
-			document.GetProperty(2) != nullptr &&
-			(document.GetProperty(2)->GetType() == AmfDataType::Object ||
-			 document.GetProperty(2)->GetType() == AmfDataType::Array))
+		auto third_property = document.GetProperty(2);
+		auto third_type = (third_property != nullptr) ? third_property->GetType() : AmfTypeMarker::Undefined;
+
+		if (
+			(message_name == RTMP_CMD_DATA_SETDATAFRAME) &&
+			(data_name == RTMP_CMD_DATA_ONMETADATA) &&
+			(third_type == AmfTypeMarker::Object || third_type == AmfTypeMarker::EcmaArray))
 		{
-			OnAmfMetaData(message->header, document, 2);
+			OnAmfMetaData(message->header, third_property);
 		}
-		else if (message_name == RTMP_CMD_DATA_ONMETADATA &&
-				 document.GetProperty(1) != nullptr &&
-				 (document.GetProperty(1)->GetType() == AmfDataType::Object ||
-				  document.GetProperty(1)->GetType() == AmfDataType::Array))
+		else if (
+			(message_name == RTMP_CMD_DATA_ONMETADATA) &&
+			(data_name_type == AmfTypeMarker::Object || data_name_type == AmfTypeMarker::EcmaArray))
 		{
-			OnAmfMetaData(message->header, document, 1);
+			OnAmfMetaData(message->header, data_name_property);
 		}
 		else if (message_name == RTMP_CMD_NAME_ONFI)
 		{
@@ -1208,39 +1317,51 @@ namespace pvd
 				continue;
 			}
 
-			if (header->completed.type_id == RtmpMessageTypeID::AMF0_DATA && trigger_list.at(0) == "AMFDataMessage")
+			if (
+				(header->completed.type_id == RtmpMessageTypeID::AMF0_DATA) &&
+				(trigger_list.at(0) == "AMFDataMessage"))
 			{
-				for (std::size_t i = 1; i < trigger_list.size(); i++)
+				auto count = trigger_list.size();
+
+				for (std::size_t size = 1; size < count; size++)
 				{
-					auto property = document.GetProperty(i - 1);
+					auto property = document.GetProperty(size - 1);
+
 					if (property == nullptr)
 					{
-						logtd("Document has no property at %d: %s", i - 1, trigger.CStr());
+						logtd("Document has no property at %d: %s", size - 1, trigger.CStr());
 						break;
 					}
 
+					auto type = property->GetType();
+
 					// if last item is must be object or array
-					if (i == trigger_list.size() - 1)
+					if (size == (count - 1))
 					{
-						if (property->GetType() == AmfDataType::Object || property->GetType() == AmfDataType::Array)
+						if ((type == AmfTypeMarker::Object) || (type == AmfTypeMarker::EcmaArray))
 						{
 							auto object = property->GetObject();
+
 							if (object == nullptr)
 							{
-								logtd("Property is not object: %s", property->GetString());
+								logtd("Property is not object: %s", property->GetString().CStr());
 								break;
 							}
 
-							auto key = trigger_list.at(i);
-							int32_t index = 0;
-							if ((index = object->FindName(key.CStr())) >= 0 && object->GetType(index) == AmfDataType::String)
+							auto key = trigger_list.at(size);
+
 							{
-								found = true;
-								auto value = object->GetString(index);
-								GenerateEvent(event, value);
+								auto property_pair = object->GetPair(key, AmfTypeMarker::String);
+
+								if (property_pair != nullptr)
+								{
+									found = true;
+									auto value = property_pair->property.GetString();
+									GenerateEvent(event, value);
+								}
 							}
 						}
-						else if (property->GetType() == AmfDataType::String)
+						else if (property->GetType() == AmfTypeMarker::String)
 						{
 							found = true;
 							auto value = property->GetString();
@@ -1248,15 +1369,16 @@ namespace pvd
 						}
 						else
 						{
-							logtd("Document property type mismatch at %d: %s", i - 1, property->GetString());
+							logtd("Document property type mismatch at %d: %s", size - 1, property->GetString().CStr());
 							break;
 						}
 					}
 					else
 					{
-						if (trigger_list.at(i) != property->GetString())
+						if (trigger_list.at(size) != property->GetString())
 						{
-							logtd("Document property mismatch at %d: %s != %s", i - 1, trigger_list.at(i).CStr(), property->GetString());
+							logtd("Document property mismatch at %d: %s != %s", size - 1, trigger_list.at(size).CStr(), property->GetString().CStr());
+
 							break;
 						}
 					}
@@ -1918,9 +2040,16 @@ namespace pvd
 		return _remote->Send(data, data_size);
 	}
 
+	bool RtmpStream::SendMessagePacket(std::shared_ptr<RtmpMuxMessageHeader> &message_header, const ov::Data *data)
+	{
+		auto export_data = _export_chunk->ExportStreamData(message_header, data->GetDataAs<uint8_t>(), data->GetLength());
+
+		return SendData(export_data->data(), export_data->size());
+	}
+
 	bool RtmpStream::SendMessagePacket(std::shared_ptr<RtmpMuxMessageHeader> &message_header, std::shared_ptr<std::vector<uint8_t>> &data)
 	{
-		auto export_data = _export_chunk->ExportStreamData(message_header, data);
+		auto export_data = _export_chunk->ExportStreamData(message_header, data->data(), data->size());
 
 		return SendData(export_data->data(), export_data->size());
 	}
@@ -2040,26 +2169,21 @@ namespace pvd
 
 	bool RtmpStream::SendAmfCommand(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document)
 	{
-		auto body = std::make_shared<std::vector<uint8_t>>(2048);
-		uint32_t body_size = 0;
-
 		if (message_header == nullptr)
 		{
 			return false;
 		}
 
-		// body
-		body_size = document.Encode(body->data());
-
-		if (body_size == 0)
+		ov::ByteStream stream(2048);
+		if (document.Encode(stream) == false)
 		{
 			return false;
 		}
 
-		message_header->body_size = body_size;
-		body->resize(body_size);
+		auto data = stream.GetData();
+		message_header->body_size = data->GetLength();
 
-		return SendMessagePacket(message_header, body);
+		return SendMessagePacket(message_header, data);
 	}
 
 	bool RtmpStream::SendAmfConnectResult(uint32_t chunk_stream_id, double transaction_id, double object_encoding)
@@ -2070,34 +2194,35 @@ namespace pvd
 																	 0,
 																	 0);
 		AmfDocument document;
-		AmfObject *object = nullptr;
-		AmfArray *array = nullptr;
 
 		// _result
-		document.AddProperty(RTMP_ACK_NAME_RESULT);
-		document.AddProperty(transaction_id);
+		document.AppendProperty(RTMP_ACK_NAME_RESULT);
+		document.AppendProperty(transaction_id);
 
 		// properties
-		object = new AmfObject;
-		object->AddProperty("fmsVer", "FMS/3,5,2,654");
-		object->AddProperty("capabilities", 31.0);
-		object->AddProperty("mode", 1.0);
-
-		document.AddProperty(object);
+		{
+			AmfObject object;
+			object.Append("fmsVer", "FMS/3,5,2,654");
+			object.Append("capabilities", 31.0);
+			object.Append("mode", 1.0);
+			document.AppendProperty(object);
+		}
 
 		// information
-		object = new AmfObject;
-		object->AddProperty("level", "status");
-		object->AddProperty("code", "NetConnection.Connect.Success");
-		object->AddProperty("description", "Connection succeeded.");
-		object->AddProperty("clientid", _client_id);
-		object->AddProperty("objectEncoding", object_encoding);
+		{
+			AmfObject object;
+			object.Append("level", "status");
+			object.Append("code", "NetConnection.Connect.Success");
+			object.Append("description", "Connection succeeded.");
+			object.Append("clientid", _client_id);
+			object.Append("objectEncoding", object_encoding);
 
-		array = new AmfArray;
-		array->AddProperty("version", "3,5,2,654");
-		object->AddProperty("data", array);
+			AmfEcmaArray array;
+			array.Append("version", "3,5,2,654");
+			object.Append("data", array);
 
-		document.AddProperty(object);
+			document.AppendProperty(object);
+		}
 
 		return SendAmfCommand(message_header, document);
 	}
@@ -2110,19 +2235,19 @@ namespace pvd
 																	 _rtmp_stream_id,
 																	 0);
 		AmfDocument document;
-		AmfObject *object = nullptr;
 
-		document.AddProperty(RTMP_CMD_NAME_ONFCPUBLISH);
-		document.AddProperty(0.0);
-		document.AddProperty(AmfDataType::Null);
+		document.AppendProperty(RTMP_CMD_NAME_ONFCPUBLISH);
+		document.AppendProperty(0.0);
+		document.AppendProperty(AmfProperty::NullProperty());
 
-		object = new AmfObject;
-		object->AddProperty("level", "status");
-		object->AddProperty("code", "NetStream.Publish.Start");
-		object->AddProperty("description", "FCPublish");
-		object->AddProperty("clientid", client_id);
-
-		document.AddProperty(object);
+		{
+			AmfObject object;
+			object.Append("level", "status");
+			object.Append("code", "NetStream.Publish.Start");
+			object.Append("description", "FCPublish");
+			object.Append("clientid", client_id);
+			document.AppendProperty(object);
+		}
 
 		return SendAmfCommand(message_header, document);
 	}
@@ -2139,19 +2264,19 @@ namespace pvd
 		// 스트림ID 정하기
 		_rtmp_stream_id = 1;
 
-		document.AddProperty(RTMP_ACK_NAME_RESULT);
-		document.AddProperty(transaction_id);
-		document.AddProperty(AmfDataType::Null);
-		document.AddProperty((double)_rtmp_stream_id);
+		document.AppendProperty(RTMP_ACK_NAME_RESULT);
+		document.AppendProperty(transaction_id);
+		document.AppendProperty(AmfProperty::NullProperty());
+		document.AppendProperty(static_cast<double>(_rtmp_stream_id));
 
 		return SendAmfCommand(message_header, document);
 	}
 
 	bool RtmpStream::SendAmfOnStatus(uint32_t chunk_stream_id,
 									 uint32_t stream_id,
-									 char *level,
-									 char *code,
-									 char *description,
+									 const char *level,
+									 const char *code,
+									 const char *description,
 									 double client_id)
 	{
 		auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id,
@@ -2160,19 +2285,19 @@ namespace pvd
 																	 stream_id,
 																	 0);
 		AmfDocument document;
-		AmfObject *object = nullptr;
 
-		document.AddProperty(RTMP_CMD_NAME_ONSTATUS);
-		document.AddProperty(0.0);
-		document.AddProperty(AmfDataType::Null);
+		document.AppendProperty(RTMP_CMD_NAME_ONSTATUS);
+		document.AppendProperty(0.0);
+		document.AppendProperty(AmfProperty::NullProperty());
 
-		object = new AmfObject;
-		object->AddProperty("level", level);
-		object->AddProperty("code", code);
-		object->AddProperty("description", description);
-		object->AddProperty("clientid", client_id);
-
-		document.AddProperty(object);
+		{
+			AmfObject object;
+			object.Append("level", level);
+			object.Append("code", code);
+			object.Append("description", description);
+			object.Append("clientid", client_id);
+			document.AppendProperty(object);
+		}
 
 		return SendAmfCommand(message_header, document);
 	}

@@ -39,7 +39,7 @@ public:
 	~RtmpExportChunk() override;
 
 public:
-	std::shared_ptr<std::vector<uint8_t>> 	ExportStreamData(std::shared_ptr<RtmpMuxMessageHeader> &message_header, std::shared_ptr<std::vector<uint8_t>> &data);
+	std::shared_ptr<std::vector<uint8_t>> 	ExportStreamData(std::shared_ptr<RtmpMuxMessageHeader> &message_header, const uint8_t *chunk_data, size_t chunk_size);
 
 private:
 	void									Destroy();

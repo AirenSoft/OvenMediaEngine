@@ -77,5 +77,5 @@ public:
 	static int GetChunkBasicHeaderRaw(RtmpMessageHeaderType chunk_type, uint32_t chunk_stream_id, void *raw_data);
 	static int GetChunkHeaderRaw(std::shared_ptr<RtmpChunkHeader> &chunk_header, void *raw_data, bool extend_type);
 	static int GetChunkDataRawSize(int chunk_size, uint32_t chunk_stream_id, int chunk_data_size, bool extend_type);
-	static int GetChunkDataRaw(int chunk_size, uint32_t chunk_stream_id, std::shared_ptr<std::vector<uint8_t>> &chunk_data, void *raw_data, bool extend_type, uint32_t time);
+	static int GetChunkDataRaw(int chunk_size, uint32_t chunk_stream_id, const uint8_t *chunk, size_t chunk_length, void *raw_data, bool extend_type, uint32_t time);
 };

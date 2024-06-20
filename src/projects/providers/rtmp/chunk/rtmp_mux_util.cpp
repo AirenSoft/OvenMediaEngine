@@ -461,7 +461,7 @@ int RtmpMuxUtil::GetChunkDataRawSize(int chunk_size, uint32_t chunk_stream_id, i
 // ChunkData 에서 RawData 획득
 // - RawData :     [Block] + [Type3 Header] + [Block] + [Type3 Header] + [Block] ..... 구조
 //====================================================================================================
-int RtmpMuxUtil::GetChunkDataRaw(int chunk_size, uint32_t chunk_stream_id, std::shared_ptr<std::vector<uint8_t>> &chunk_data, void *raw_data, bool extend_type, uint32_t time)
+int RtmpMuxUtil::GetChunkDataRaw(int chunk_size, uint32_t chunk_stream_id, const uint8_t *chunk_data, size_t chunk_length, void *raw_data, bool extend_type, uint32_t time)
 {
 	auto *raw_data_pos = (uint8_t *)raw_data;
 	uint8_t type3_header[RTMP_CHUNK_BASIC_HEADER_SIZE_MAX] = {
@@ -473,13 +473,13 @@ int RtmpMuxUtil::GetChunkDataRaw(int chunk_size, uint32_t chunk_stream_id, std::
 	int raw_data_size = 0;
 
 	// 파라미터 체크
-	if (chunk_size == 0 || chunk_data->empty() || raw_data == nullptr)
+	if (chunk_size == 0 || chunk_length == 0 || raw_data == nullptr)
 	{
 		return 0;
 	}
 
 	// 초기화
-	block_count = (chunk_data->size() - 1) / chunk_size;
+	block_count = (chunk_length - 1) / chunk_size;
 	block_count++;
 
 	// basic_header 만들기
@@ -507,10 +507,10 @@ int RtmpMuxUtil::GetChunkDataRaw(int chunk_size, uint32_t chunk_stream_id, std::
 		}
 
 		// 읽어들일 크기 설정
-		size = (static_cast<int>(chunk_data->size()) - read_data_size) > chunk_size ? chunk_size : (static_cast<int>(chunk_data->size()) - read_data_size);
+		size = (static_cast<int>(chunk_length) - read_data_size) > chunk_size ? chunk_size : (static_cast<int>(chunk_length) - read_data_size);
 
 		// 읽어들이기
-		memcpy(raw_data_pos, chunk_data->data() + read_data_size, (size_t)size);
+		memcpy(raw_data_pos, chunk_data + read_data_size, (size_t)size);
 
 		// 읽은크기 재설정
 		read_data_size += size;
