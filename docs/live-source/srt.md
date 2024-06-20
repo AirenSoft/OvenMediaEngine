@@ -59,42 +59,14 @@ The `streamid` has to be the urlencoded address of the server name as specified 
 
 ### Blackmagic Web Presenter
 
-For configuring a Blackmagic Web Presenter or similar device to stream to OvenMediaEngine over SRT, export the streaming xml configuration and set the `<streaming>` section to something like this:
+For configuring a Blackmagic Web Presenter, ATEM Mini Pro or similar device to stream to OvenMediaEngine over SRT, choose the "Custom URL H264/H265" platform option with the following syntax:
 
-```markup
-<streaming>
-    <service>
-        <name>SRT-Sample-Service</name>
-        <servers>
-            <server group="Primary">
-                <name>Some-server-name</name>
-                <url>srt://your-server-domain.com:9999</url>
-                <srt-extensions>
-                    <stream-id>
-                        <item key="streamid" value="srt://your-server-domain.com:9999/appname/streamname123"/>
-                    </stream-id>
-                    <stream-latency>
-                        <item key="latency" value="2000"/>
-                    </stream-latency>
-                </srt-extensions>
-            </server>
-        </servers>
-        <profiles default="Streaming Sample">
-            <profile>
-                <name>Streaming Sample</name>
-                <low-latency/>
-                <config resolution="1080p" fps="60">
-                    <bitrate>6000000</bitrate>
-                    <audio-bitrate>128000</audio-bitrate>
-                    <keyframe-interval>2</keyframe-interval>
-                </config>
-            </profile>
-        </profiles>
-    </service>
-</streaming>
+```
+Server: srt://your-server-domain.com:<SRT_PORT>
+Key: <PERCENT_ENCODED_STREAM_ID>
 ```
 
-The Web Presenter requires the latency value to be provided in milliseconds and the streamid should be the not-encoded URL.
+The default streaming profiles work well, and there are more advanced configuration options available if you [edit the streaming.xml settings file](https://airensoft.gitbook.io/ovenmediaengine/v/0.16.4/live-source/srt-beta#blackmagic-web-presenter)
 
 ## SRT Socket Options
 
