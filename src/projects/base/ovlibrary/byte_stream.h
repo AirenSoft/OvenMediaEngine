@@ -71,7 +71,7 @@ namespace ov
 		///
 		/// @return 읽은 데이터 개수 (0 ~ count 사이)
 		template <typename T = uint8_t>
-		inline size_t Peek(T *buffer, size_t count)
+		inline size_t Peek(T *buffer, size_t count) const
 		{
 			size_t peek_count = std::min(Remained<T>(), count);
 
@@ -92,7 +92,7 @@ namespace ov
 		///
 		/// @return 읽은 데이터 개수 (0 ~ 1 사이)
 		template <typename T = uint8_t>
-		inline size_t Peek(T *buffer)
+		inline size_t Peek(T *buffer) const
 		{
 			return Peek<T>(buffer, 1);
 		}
