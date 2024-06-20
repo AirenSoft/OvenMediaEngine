@@ -220,6 +220,25 @@ namespace pvd
 		}
 		else
 		{
+			// SRT AccessControl style : #!::u=abc123,bmd_uuid=1234567890...
+			if (streamid.GetLength() > 4 && streamid.HasPrefix("#!::"))
+			{
+				// Remove #!::
+				streamid = streamid.Substring(4);
+
+				auto key_values = streamid.Split(",");
+				// Extract u=xxx (user name)
+				for (const auto &key_value : key_values)
+				{
+					auto key_value_pair = key_value.Split("=");
+					if (key_value_pair.size() == 2 && key_value_pair[0] == "u")
+					{
+						streamid = key_value_pair[1];
+						break;
+					}
+				}
+			}
+
 			// urlencode(srt://host[:port]/app/stream?query=value)
 			decoded_url = ov::Url::Decode(streamid);
 		}
