@@ -1051,6 +1051,9 @@ namespace pvd
 				case RtmpMessageTypeID::SET_CHUNK_SIZE:
 					result = ReceiveSetChunkSize(message);
 					break;
+				case RtmpMessageTypeID::ACKNOWLEDGEMENT:
+					// OME doesn't use this message
+					break;
 				case RtmpMessageTypeID::AMF0_DATA:
 					ReceiveAmfDataMessage(message);
 					break;
