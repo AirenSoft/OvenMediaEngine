@@ -143,6 +143,8 @@ namespace ov
 
 		std::shared_ptr<Data> ToData(bool include_null_char = true) const;
 
+		static ov::String Repeat(const char *str, size_t count);
+
 		std::size_t Hash() const
 		{
 			auto temp = std::string_view(CStr(), GetLength());
