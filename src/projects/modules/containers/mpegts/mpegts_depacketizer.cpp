@@ -37,14 +37,14 @@ namespace mpegts
 			if(parsed_length == 0)
 			{
 				_buffer = _buffer->Subdata(MPEGTS_MIN_PACKET_SIZE);
-				return false;
+				continue;
 			}
 
 			_buffer = _buffer->Subdata(parsed_length);
 
 			if(AddPacket(packet) == false)
 			{
-				return false;
+				continue;
 			}
 		}
 
