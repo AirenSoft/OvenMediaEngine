@@ -48,6 +48,7 @@ fi
 
 MAKEFLAGS="${MAKEFLAGS} -j${NCPU}"
 CURRENT=$(pwd)
+SCRIPT_PATH=$(cd "$(dirname "$0")" && pwd)
 PATH=$PATH:${PREFIX}/bin
 
 install_openssl()
@@ -247,10 +248,10 @@ install_ffmpeg()
         ADDI_ENCODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
         ADDI_DECODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
         ADDI_FILTERS+=",multiscale_xma,xvbm_convert"
-        ADDI_LIBS+=" --enable-x86asm --enable-libxma2api --enable-libxvbm --enable-libxrm --enable-cross-compile "
+     	ADDI_LIBS+=" --enable-x86asm --enable-libxma2api --enable-libxvbm --enable-libxrm --enable-cross-compile "
         ADDI_CFLAGS+=" -I/opt/xilinx/xrt/include/xma2 "
-        ADDI_LDFLAGS+="-L/opt/xilinx/xrt/lib  -Wl,-rpath,/opt/xilinx/xrt/lib -Wl,-rpath,/opt/xilinx/xrm/lib "
-        ADDI_EXTRA_LIBS+="--extra-libs=-lxma2api --extra-libs=-lxrt_core --extra-libs=-lxrt_coreutil --extra-libs=-lpthread --extra-libs=-ldl "
+        ADDI_LDFLAGS+="-L/opt/xilinx/xrt/lib -L/opt/xilinx/xrm/lib  -Wl,-rpath,/opt/xilinx/xrt/lib,-rpath,/opt/xilinx/xrm/lib"
+        ADDI_EXTRA_LIBS+="--extra-libs=-lxma2api --extra-libs=-lxrt_core --extra-libs=-lxrm --extra-libs=-lxrt_coreutil --extra-libs=-lpthread --extra-libs=-ldl "
     fi
 
     # Options are added by external scripts.
@@ -312,7 +313,7 @@ install_ffmpeg()
     (cd ${DIR} && PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PREFIX}/lib64/pkgconfig:${PREFIX}/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH} ./configure \
     --prefix="${PREFIX}" \
     --extra-cflags="-I${PREFIX}/include ${ADDI_CFLAGS}"  \
-    --extra-ldflags="-L${PREFIX}/lib -Wl,-rpath,${PREFIX}/lib ${ADDI_LDFLAGS}" \
+    --extra-ldflags="${ADDI_LDFLAGS} -L${PREFIX}/lib -Wl,-rpath,${PREFIX}/lib,-rpath,${PREFIX}/lib/stubs " \
     --extra-libs=-ldl ${ADDI_EXTRA_LIBS} \
     ${ADDI_LICENSE} \
     --disable-everything --disable-programs --disable-avdevice --disable-dwt --disable-lsp --disable-lzo --disable-faan --disable-pixelutils \
@@ -332,7 +333,15 @@ install_ffmpeg()
     rm -rf ${DIR}) || fail_exit "ffmpeg"
 }
 
-
+install_stubs() 
+{
+    (DIR=${TEMP_PATH}/stubs && \
+    mkdir -p ${DIR} && \
+    cd ${DIR} && \
+    cp ${SCRIPT_PATH}/stubs/* . && \
+    sudo make install PREFIX=${PREFIX} && \
+    rm -rf ${DIR}) || fail_exit "stubs"    
+}
 
 install_jemalloc()
 {
@@ -549,6 +558,7 @@ install_libvpx
 install_fdk_aac
 install_nvcc_hdr
 install_ffmpeg
+install_stubs
 install_jemalloc
 install_libpcre2
 install_hiredis

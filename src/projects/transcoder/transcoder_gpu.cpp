@@ -36,7 +36,9 @@ TranscodeGPU::TranscodeGPU()
 bool TranscodeGPU::Initialize()
 {
 	if(_initialized)
+	{
 		return true;
+	}
 		
 	Uninitialize();
 
@@ -83,9 +85,6 @@ bool TranscodeGPU::Initialize()
 	}
 
 	_initialized = true;
-
-	// Resource Monitoring Thread
-	// _thread = std::thread(&TranscodeGPU::CodecThread, this);
 
 	return false;
 }
@@ -203,7 +202,7 @@ bool TranscodeGPU::CheckSupportedNV()
 	nvmlReturn_t result = nvmlInit();
 	if (result != NVML_SUCCESS)
 	{
-		logte("Failed to initialize NVML: %s", nvmlErrorString(result));
+		logtd("NVML: Driver is not loaded or installed");
 		return false;
 	}
 
@@ -233,7 +232,6 @@ bool TranscodeGPU::CheckSupportedNV()
 		if (result != NVML_SUCCESS)
 		{
 			logte("Failed to get device handle: %s", nvmlErrorString(result));
-			
 			continue;
 		}
 
@@ -275,12 +273,9 @@ bool TranscodeGPU::CheckSupportedNV()
 		}
 		else
 		{
+			_device_count_nv++;			
 			logti("NVIDIA. DeviceId(%d), Name(%s), BusId(%d), CudaId(%d)", gpu_id, device_name, pci_info.bus, cuda_index);			
 
-			// auto constraints = av_hwdevice_get_hwframe_constraints(_device_context_nv[gpu_id], nullptr);			
-			// logtd("constraints. hw.fmt(%d), sw.fmt(%d)", *constraints->valid_hw_formats,*constraints->valid_sw_formats);
-
-			_device_count_nv++;			
 		}		
 	}
 	
@@ -305,18 +300,19 @@ bool TranscodeGPU::CheckSupportedXMA()
 	xrmContext *xrm_ctx = (xrmContext *)xrmCreateContext(XRM_API_VERSION_1);
 	if (xrm_ctx == NULL)
 	{
-		logte("xrmCreateContext: Failed");
+		logtd("XMA: Driver is not loaded or installed");
+		return false;
 	}			
 
 	if (xrmIsDaemonRunning(xrm_ctx) == false)
 	{
-		logte("XRM daemon : NOT running");
+		logtw("XMA: Daemon is not running");
 		return false;
 	}
 		
 	if (xrmDestroyContext(xrm_ctx) != XRM_SUCCESS)
 	{
-		logte("xrmDestroyContext: Failed");
+		logte("XMA: Failed to destory context");
 		return false;
 	}
 
@@ -333,12 +329,13 @@ bool TranscodeGPU::CheckSupportedXMA()
 		xclbin_nparam[dev_id].xclbin_name = XLNX_XCLBIN_PATH;
 		_device_count_xma++;
 
-		logti("XMA. DeviceId(%d), xclbin(%s)", xclbin_nparam[dev_id].device_id, xclbin_nparam[dev_id].xclbin_name);			
+		logti("XMA: deviceId(%d), xclbin(%s)", xclbin_nparam[dev_id].device_id, xclbin_nparam[dev_id].xclbin_name);			
 	}
 
 	// Initialize all devices
 	if (xma_initialize(xclbin_nparam, _device_count_xma) != 0)
 	{
+		logte("XMA: Failed to initialze");
 		return false;
 	}
 
@@ -359,6 +356,9 @@ bool TranscodeGPU::CheckSupportedQSV()
 	{
 		av_buffer_unref(&_device_context_qsv[0]);
 		_device_context_qsv[0] = nullptr;
+
+		logtd("QSV: Driver is not loaded or installed");
+
 		return false;
 	}
 	
@@ -380,6 +380,8 @@ bool TranscodeGPU::CheckSupportedNILOGAN()
 	{
 		av_buffer_unref(&_device_context_nilogan[0]);
 		_device_context_nilogan[0] = nullptr;
+
+		logtd("Netint: Driver is not loaded or installed");
 		return false;
 	}
 	
@@ -399,7 +401,9 @@ bool TranscodeGPU::CheckSupportedNILOGAN()
 AVBufferRef* TranscodeGPU::GetDeviceContextQSV(int32_t gpu_id)
 {
 	if (gpu_id >= MAX_DEVICE_COUNT)
+	{
 		return nullptr;
+	}
 
 	return _device_context_qsv[gpu_id];
 }
@@ -407,7 +411,9 @@ AVBufferRef* TranscodeGPU::GetDeviceContextQSV(int32_t gpu_id)
 AVBufferRef* TranscodeGPU::GetDeviceContextNILOGAN(int32_t gpu_id)
 {
 	if (gpu_id >= MAX_DEVICE_COUNT)
+	{
 		return nullptr;
+	}
 
 	return _device_context_nilogan[gpu_id];
 }
@@ -415,7 +421,9 @@ AVBufferRef* TranscodeGPU::GetDeviceContextNILOGAN(int32_t gpu_id)
 AVBufferRef* TranscodeGPU::GetDeviceContextNV(int32_t gpu_id)
 {
 	if(gpu_id >= MAX_DEVICE_COUNT)
+	{
 		return nullptr;
+	}
 
 	return _device_context_nv[gpu_id];
 }

@@ -87,7 +87,6 @@ endif
 # Enable Xilinx Media SDK
 ifeq ($(call chk_pkg_exist,libxma2api),0)
 $(call add_pkg_config,libxma2api)
-$(call add_pkg_config,libxma2plugin)
 $(call add_pkg_config,xvbm)
 $(call add_pkg_config,libxrm)
 HWACCELS_XMA_ENABLED := true

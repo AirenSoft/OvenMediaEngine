@@ -19,8 +19,6 @@ $(call add_pkg_config,opus)
 # Enable Xilinx Media Accelerator
 ifeq ($(call chk_pkg_exist,libxma2api),0)
 $(call add_pkg_config,libxma2api)
-$(call add_pkg_config,libxma2plugin)
-$(call add_pkg_config,xvbm)
 $(call add_pkg_config,libxrm)
 endif
 
