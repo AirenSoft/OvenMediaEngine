@@ -70,7 +70,7 @@ install_base_ubuntu()
     fi
 
     # Install nvidia drivers and cuda-toolit
-    sudo add-apt-repository ppa:graphics-drivers/ppa
+    sudo add-apt-repository -y  ppa:graphics-drivers/ppa
 
     sudo apt -y update
     if [ -z "$NVIDIA_DRIVER_VERSION" ]
