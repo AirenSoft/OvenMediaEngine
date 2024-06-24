@@ -1,5 +1,30 @@
 #!/bin/bash
 
+##########################################################################################
+# Environment Variables
+##########################################################################################
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    NCPU=$(sysctl -n hw.ncpu)
+    OSNAME=$(sw_vers -productName)
+    OSVERSION=$(sw_vers -productVersion)
+else
+    NCPU=$(nproc)
+
+    # CentOS, Fedora
+    if [ -f /etc/redhat-release ]; then
+        OSNAME=$(cat /etc/redhat-release |awk '{print $1}')
+        OSVERSION=$(cat /etc/redhat-release |sed s/.*release\ // |sed s/\ .*// | cut -d"." -f1)
+    # Ubuntu
+    elif [ -f /etc/os-release ]; then
+        OSNAME=$(cat /etc/os-release | grep "^NAME" | tr -d "\"" | cut -d"=" -f2)
+        OSVERSION=$(cat /etc/os-release | grep ^VERSION= | tr -d "\"" | cut -d"=" -f2 | cut -d"." -f1 | awk '{print  $1}')
+        OSMINORVERSION=$(cat /etc/os-release | grep ^VERSION= | tr -d "\"" | cut -d"=" -f2 | cut -d"." -f2 | awk '{print  $1}')
+    fi
+fi
+
+##########################################################################################
+# Preload the installed drivers
+##########################################################################################
 check_xilinx_driver() {
     if [[ -f /opt/xilinx/xcdr/setup.sh ]]; then
         LIBXRM_PATH=/opt/xilinx/xrm/lib/libxrm.so.1
@@ -16,8 +41,22 @@ check_xilinx_driver() {
 }
 
 check_nvidia_driver() {
-    LIBNVIDIA_ML_PATH=/lib/x86_64-linux-gnu/libnvidia-ml.so.1
-    LIBCUDA_PATH=/lib/x86_64-linux-gnu/libcuda.so.1
+
+    LIBNVIDIA_ML_PATH=
+    LIBCUDA_PATH=
+
+    if [ "${OSNAME}" == "Ubuntu" ]; then
+        LIBNVIDIA_ML_PATH=/lib/x86_64-linux-gnu/libnvidia-ml.so.1
+        LIBCUDA_PATH=/lib/x86_64-linux-gnu/libcuda.so.1
+    elif  [ "${OSNAME}" == "CentOS" ]; then
+        LIBNVIDIA_ML_PATH=/usr/lib64/libnvidia-ml.so.1
+        LIBCUDA_PATH=/usr/lib64/libcuda.so.1
+    elif  [ "${OSNAME}" == "Amazon Linux" ]; then
+        LIBNVIDIA_ML_PATH=/usr/lib64/libnvidia-ml.so.1
+        LIBCUDA_PATH=/usr/lib64/libcuda.so.1
+    else
+        return
+    fi
     
     if [ -f $LIBNVIDIA_ML_PATH ] && [ -f $LIBCUDA_PATH ]; then
         export LD_PRELOAD=$LIBNVIDIA_ML_PATH:$LIBCUDA_PATH:$LD_PRELOAD

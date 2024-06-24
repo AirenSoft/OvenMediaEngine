@@ -33,7 +33,7 @@ CONFIG_CXX_EXTENSION := .cpp
 CONFIG_CXX_HEADER_EXTENSION := .h
 
 ifneq ($(DISABLE_CUSTOM_LIBRARY_PATHS),true)
-    CONFIG_LIBRARY_PATHS := /opt/ovenmediaengine/lib:/opt/ovenmediaengine/lib64:/opt/ovenmediaengine//lib/stubs
+    CONFIG_LIBRARY_PATHS := /opt/ovenmediaengine/lib:/opt/ovenmediaengine/lib64
     CONFIG_PKG_PATHS := /opt/ovenmediaengine/lib/pkgconfig:/opt/ovenmediaengine/lib64/pkgconfig
 else
     CONFIG_LIBRARY_PATHS :=
