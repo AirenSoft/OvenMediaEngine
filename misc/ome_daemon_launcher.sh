@@ -44,22 +44,30 @@ check_nvidia_driver() {
 
     LIBNVIDIA_ML_PATH=
     LIBCUDA_PATH=
+    LIBNPPICC_PATH=
+    LIBNPPIG_PATH=
 
     if [ "${OSNAME}" == "Ubuntu" ]; then
         LIBNVIDIA_ML_PATH=/lib/x86_64-linux-gnu/libnvidia-ml.so.1
         LIBCUDA_PATH=/lib/x86_64-linux-gnu/libcuda.so.1
+        LIBNPPICC_PATH=/lib/x86_64-linux-gnu/libnppicc.so.10
+        LIBNPPIG_PATH=/lib/x86_64-linux-gnu/libnppig.so.10       
     elif  [ "${OSNAME}" == "CentOS" ]; then
         LIBNVIDIA_ML_PATH=/usr/lib64/libnvidia-ml.so.1
         LIBCUDA_PATH=/usr/lib64/libcuda.so.1
+        LIBNPPICC_PATH=/usr/lib64/libnppicc.so.10
+        LIBNPPIG_PATH=/usr/lib64/libnppig.so.10           
     elif  [ "${OSNAME}" == "Amazon Linux" ]; then
         LIBNVIDIA_ML_PATH=/usr/lib64/libnvidia-ml.so.1
         LIBCUDA_PATH=/usr/lib64/libcuda.so.1
+        LIBNPPICC_PATH=/usr/lib64/libnppicc.so.10
+        LIBNPPIG_PATH=/usr/lib64/libnppig.so.10           
     else
         return
     fi
     
-    if [ -f $LIBNVIDIA_ML_PATH ] && [ -f $LIBCUDA_PATH ]; then
-        export LD_PRELOAD=$LIBNVIDIA_ML_PATH:$LIBCUDA_PATH:$LD_PRELOAD
+    if [ -f $LIBNVIDIA_ML_PATH ] && [ -f $LIBCUDA_PATH ] && [ -f $LIBNPPICC_PATH ] && [ -f $LIBNPPIG_PATH ]; then
+        export LD_PRELOAD=$LIBNVIDIA_ML_PATH:$LIBCUDA_PATH:$LIBNPPICC_PATH:$LIBNPPIG_PATH:$LD_PRELOAD
     fi
 }
 
