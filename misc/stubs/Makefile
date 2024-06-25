@@ -14,7 +14,7 @@ SOURCES = libnvidia-ml_stub.c libcuda_stub.c libxma2api_stub.c libxrm_stub.c lib
 OBJECTS = $(SOURCES:.c=.o)
 
 # Output libraries
-TARGETS = libnvidia-ml.so.1 libcuda.so.1 libxma2api.so.2 libxrm.so.1 libxrt_core.so.2
+TARGETS = libnvidia-ml.so.1 libcuda.so.1 libxma2api.so.2 libxrm.so.1 libxrt_core.so.2 libnppig.so.10 libnppicc.so.10
 
 # Install path prefix (default: /opt/ovenmediaengine)
 PREFIX ?= /opt/ovenmediaengine
@@ -38,6 +38,12 @@ libxrm.so.1: libxrm_stub.o
 	$(CC) $(LDFLAGS) -o $@ $^
 
 libxrt_core.so.2: libxrt_core_stub.o
+	$(CC) $(LDFLAGS) -o $@ $^
+
+libnppig.so.10: libnppig_stub.o
+	$(CC) $(LDFLAGS) -o $@ $^
+
+libnppicc.so.10: libnppicc_stub.o
 	$(CC) $(LDFLAGS) -o $@ $^
 
 %.o: %.c
