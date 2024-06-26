@@ -58,6 +58,28 @@ namespace pub
 		return true;
 	}
 
+	uint32_t ApplicationWorker::GetWorkerId() const
+	{
+		return _worker_id;
+	}
+
+	void ApplicationWorker::OnStreamCreated(const std::shared_ptr<info::Stream> &info)
+	{
+		logti("Stream(%s/%u) created on AppWorker (%s / %d)", info->GetName().CStr(), info->GetId(), _worker_name.CStr(), _worker_id);
+		_stream_count++;
+	}
+
+	void ApplicationWorker::OnStreamDeleted(const std::shared_ptr<info::Stream> &info)
+	{
+		logti("Stream(%s/%u) deleted on AppWorker (%s / %d)", info->GetName().CStr(), info->GetId(), _worker_name.CStr(), _worker_id);
+		_stream_count--;
+	}
+
+	uint32_t ApplicationWorker::GetStreamCount() const
+	{
+		return _stream_count.load();
+	}
+
 	bool ApplicationWorker::PushMediaPacket(const std::shared_ptr<Stream> &stream, const std::shared_ptr<MediaPacket> &media_packet)
 	{
 		auto data = std::make_shared<ApplicationWorker::StreamData>(stream, media_packet);
@@ -228,6 +250,8 @@ namespace pub
 			return false;
 		}
 
+		MapStreamToWorker(info);
+
 		std::lock_guard<std::shared_mutex> lock(_stream_map_mutex);
 		_streams[info->GetId()] = stream;
 
@@ -249,6 +273,8 @@ namespace pub
 		auto stream = stream_it->second;
 
 		lock.unlock();
+
+		UnmapStreamToWorker(info);
 
 		if (DeleteStream(info) == false)
 		{
@@ -310,15 +336,90 @@ namespace pub
 		return stream->OnStreamUpdated(info);
 	}
 
+	std::shared_ptr<ApplicationWorker> Application::GetLowestLoadWorker()
+	{
+		std::shared_lock lock(_application_worker_lock);
+		uint32_t min_load = UINT32_MAX;
+		uint32_t min_load_worker_id = 0;
+
+		for (const auto &worker : _application_workers)
+		{
+			auto stream_count = worker->GetStreamCount();
+			if (stream_count < min_load)
+			{
+				min_load = stream_count;
+				min_load_worker_id = worker->GetWorkerId();
+
+				if (min_load == 0)
+				{
+					break;
+				}
+			}
+		}
+
+		return _application_workers[min_load_worker_id];
+	}
+
+	void Application::MapStreamToWorker(const std::shared_ptr<info::Stream> &info)
+	{
+		auto app_worker = GetLowestLoadWorker();
+		if (app_worker == nullptr)
+		{
+			logte("Cannot find ApplicationWorker for stream mapping. %s / %u", info->GetName().CStr(), info->GetId());
+			return;
+		}
+
+		app_worker->OnStreamCreated(info);
+
+		std::unique_lock<std::shared_mutex> lock(_stream_app_worker_map_lock);
+		_stream_app_worker_map[info->GetId()] = app_worker->GetWorkerId();
+	}
+	
+	void Application::UnmapStreamToWorker(const std::shared_ptr<info::Stream> &info)
+	{
+		auto app_worker = GetWorkerByStreamID(info->GetId());
+		if (app_worker != nullptr)
+		{
+			app_worker->OnStreamDeleted(info);
+		}
+		else
+		{
+			logte("Cannot find ApplicationWorker for stream unmapping. %s / %u", info->GetName().CStr(), info->GetId());
+		}
+
+		std::unique_lock<std::shared_mutex> lock(_stream_app_worker_map_lock);
+		_stream_app_worker_map.erase(info->GetId());
+	}
+
 	std::shared_ptr<ApplicationWorker> Application::GetWorkerByStreamID(info::stream_id_t stream_id)
 	{
 		if (_application_worker_count == 0)
 		{
 			return nullptr;
 		}
+		
+		uint32_t worker_id = 0;
 
-		std::shared_lock<std::shared_mutex> worker_lock(_application_worker_lock);
-		return _application_workers[stream_id % _application_worker_count];
+		{
+			std::shared_lock<std::shared_mutex> lock(_stream_app_worker_map_lock);
+			auto it = _stream_app_worker_map.find(stream_id);
+			if (it == _stream_app_worker_map.end())
+			{
+				logte("Cannot find ApplicationWorker for stream mapping. %u", stream_id);
+				return nullptr;
+			}
+
+			worker_id = it->second;
+		}
+
+		std::shared_lock<std::shared_mutex> lock(_application_worker_lock);
+		if (worker_id >= _application_workers.size())
+		{
+			logte("Cannot find ApplicationWorker for stream mapping. %u", stream_id);
+			return nullptr;
+		}
+
+		return _application_workers[worker_id];
 	}
 
 	bool Application::OnSendFrame(const std::shared_ptr<info::Stream> &stream,
