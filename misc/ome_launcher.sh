@@ -1,5 +1,7 @@
 #!/bin/bash
 
+PREFIX=/opt/ovenmediaengine
+
 ##########################################################################################
 # Environment Variables
 ##########################################################################################
@@ -41,7 +43,6 @@ check_xilinx_driver() {
 }
 
 check_nvidia_driver() {
-
     LIBNVIDIA_ML_PATH=
     LIBCUDA_PATH=
     LIBNPPICC_PATH=
@@ -52,12 +53,7 @@ check_nvidia_driver() {
         LIBCUDA_PATH=/lib/x86_64-linux-gnu/libcuda.so.1
         LIBNPPICC_PATH=/lib/x86_64-linux-gnu/libnppicc.so.10
         LIBNPPIG_PATH=/lib/x86_64-linux-gnu/libnppig.so.10       
-    elif  [ "${OSNAME}" == "CentOS" ]; then
-        LIBNVIDIA_ML_PATH=/usr/lib64/libnvidia-ml.so.1
-        LIBCUDA_PATH=/usr/lib64/libcuda.so.1
-        LIBNPPICC_PATH=/usr/lib64/libnppicc.so.10
-        LIBNPPIG_PATH=/usr/lib64/libnppig.so.10           
-    elif  [ "${OSNAME}" == "Amazon Linux" ]; then
+    elif  [ "${OSNAME}" == "CentOS" ] || [ "${OSNAME}" == "Amazon Linux" ]; then
         LIBNVIDIA_ML_PATH=/usr/lib64/libnvidia-ml.so.1
         LIBCUDA_PATH=/usr/lib64/libcuda.so.1
         LIBNPPICC_PATH=/usr/lib64/libnppicc.so.10
@@ -65,7 +61,7 @@ check_nvidia_driver() {
     else
         return
     fi
-    
+       
     if [ -f $LIBNVIDIA_ML_PATH ] && [ -f $LIBCUDA_PATH ] && [ -f $LIBNPPICC_PATH ] && [ -f $LIBNPPIG_PATH ]; then
         export LD_PRELOAD=$LIBNVIDIA_ML_PATH:$LIBCUDA_PATH:$LIBNPPICC_PATH:$LIBNPPIG_PATH:$LD_PRELOAD
     fi
@@ -76,7 +72,9 @@ check_xilinx_driver
 check_nvidia_driver
 
 # Dependency library path
-export LD_LIBRARY_PATH=/opt/ovenmediaengine/lib:/opt/ovenmediaengine/lib/stubs:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=${PREFIX}/lib:${PREFIX}/lib/stubs:$LD_LIBRARY_PATH
 
 # Run as daemon 
-exec /usr/bin/OvenMediaEngine -d
+exec /usr/bin/OvenMediaEngine $1
+
+

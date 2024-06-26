@@ -119,7 +119,7 @@ install:
 	@echo "$(ANSI_GREEN)Installing directory$(ANSI_RESET) $(INSTALL_DIRECTORY)"
 	@mkdir -p $(INSTALL_CONF_DIRECTORY)
 	@install -m 755 -s bin/$(BUILD_METHOD)/$(OME) $(INSTALL_DIRECTORY)
-	@install -m 755 ../misc/ome_daemon_launcher.sh $(INSTALL_DIRECTORY)
+	@install -m 755 ../misc/ome_launcher.sh $(INSTALL_DIRECTORY)
 
 	@if test ! -f $(INSTALL_CONF_DIRECTORY)/Server.xml; then \
 		echo "$(ANSI_GREEN)Installing example Server config$(ANSI_RESET) $(INSTALL_CONF_DIRECTORY)/Server.xml"; \
