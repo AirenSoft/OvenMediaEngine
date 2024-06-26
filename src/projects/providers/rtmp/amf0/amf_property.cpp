@@ -197,6 +197,12 @@ bool AmfProperty::DecodeString(ov::ByteStream &byte_stream)
 
 	auto length = byte_stream.ReadBE16();
 
+	if (length == 0)
+	{
+		logtd("Empty string found");
+		return true;
+	}
+
 	if (byte_stream.IsRemained(length) == false)
 	{
 		logtd("Invalid string length: %u (%zu bytes remained)", length, byte_stream.Remained());
