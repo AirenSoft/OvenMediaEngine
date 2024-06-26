@@ -375,7 +375,7 @@ std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> AVCDecoderConfigurati
 
 	if (need_aud)
 	{
-		static uint8_t AUD[2] = {0x01, 0x09};
+		static uint8_t AUD[2] = {0x09, 0xf0};
 		// AUD
 		data->Append(START_CODE, start_code_size);
 		offset += start_code_size;
