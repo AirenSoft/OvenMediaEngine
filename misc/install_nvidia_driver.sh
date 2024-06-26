@@ -89,11 +89,11 @@ install_base_ubuntu()
 ##########################################################################################
 install_base_centos7()
 {
-    yum -y update
-    yum -y install kernel-devel
-    yum -y install epel-release
-    yum -y install dkms curl lshw
-    yum -y install subscription-manager
+    sudo yum -y update
+    sudo yum -y install kernel-devel
+    sudo yum -y install epel-release
+    sudo yum -y install dkms curl lshw
+    sudo yum -y install subscription-manager
 
     echo "Reboot is required to run with a new version of the kernel."
 
@@ -102,26 +102,26 @@ install_base_centos7()
     if [ ! -z "$USE_NOUVEAU" ]; then
 
             # Disable nouveau Driver
-            sed "s/GRUB_CMDLINE_LINUX=\"\(.*\)\"/GRUB_CMDLINE_LINUX=\"\1 rd.driver.blacklist=nouveau nouveau.modeset=0\"/" /etc/default/grub
-            grub2-mkconfig -o /boot/grub2/grub.cfg
-            echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
-            mv /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r)-nouveau.img
-            dracut /boot/initramfs-$(uname -r).img $(uname -r)
+            sudo sed "s/GRUB_CMDLINE_LINUX=\"\(.*\)\"/GRUB_CMDLINE_LINUX=\"\1 rd.driver.blacklist=nouveau nouveau.modeset=0\"/" /etc/default/grub
+            sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+            sudo echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
+            sudo mv /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r)-nouveau.img
+            sudo dracut /boot/initramfs-$(uname -r).img $(uname -r)
 
             echo "Using a driver display nouveau. so, remove the driver and reboot. "
             echo "After reboot and installation script to rerun the nvidia display the driver to complete the installation."
 
             sleep 5s
-            reboot
+            sudo reboot
     fi
 
-    subscription-manager repos --enable=rhel-7-server-optional-rpms
-    yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo
-    yum clean expire-cache
+    sudo subscription-manager repos --enable=rhel-7-server-optional-rpms
+    sudo yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo
+    sudo yum clean expire-cache
 
-    yum -y install nvidia-driver-latest-dkms
-    yum -y install cuda
-    yum -y install cuda-drivers
+    sudo yum -y install nvidia-driver-latest-dkms
+    sudo yum -y install cuda
+    sudo yum -y install cuda-drivers
 
     # Configure Envionment Variables
     echo "Please add the PATH below to the environment variable."
