@@ -326,6 +326,8 @@ namespace mpegts
 			uint32_t dvr_window_ms = 0; // Rewind window in milliseconds,  1 hour (60000 * 60), it will be saved in files
 
 			uint32_t segment_retention_count = 2; // This number of segments are retained event after the SegmentRemoved event occurs
+
+			ov::String stream_id_meta;
         };
 
         Packager(const ov::String &packager_id, const Config &config);

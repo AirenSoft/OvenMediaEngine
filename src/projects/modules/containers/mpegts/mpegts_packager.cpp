@@ -403,7 +403,7 @@ namespace mpegts
 		// Create directory
 		if (ov::IsDirExist(dir) == false)
 		{
-			logti("Try to create directory for LLHLS DVR: %s", dir.CStr());
+			logti("Try to create directory for HLS DVR: %s", dir.CStr());
 			if (ov::CreateDirectories(dir) == false)
 			{
 				logte("Could not create directory for DVR: %s", dir.CStr());
@@ -563,7 +563,7 @@ namespace mpegts
 
 	ov::String Packager::GetDvrStoragePath() const
 	{
-		return ov::String::FormatString("%s/%s", _config.dvr_storage_path.CStr(), _packager_id.CStr());
+		return ov::String::FormatString("%s/%s/%s", _config.dvr_storage_path.CStr(), _config.stream_id_meta.CStr(), _packager_id.CStr());
 	}
 
 	ov::String Packager::GetSegmentFilePath(uint32_t segment_id) const

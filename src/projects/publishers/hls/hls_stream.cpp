@@ -327,6 +327,8 @@ bool HlsStream::CreatePackagers()
 				packager_config.dvr_storage_path = dvr_config.GetTempStoragePath();
 			}
 
+			packager_config.stream_id_meta = ov::String::FormatString("%s_%s", GetApplicationName(), GetName().CStr());
+
 			auto packager = std::make_shared<mpegts::Packager>(variant_name, packager_config);
 			if (packager == nullptr)
 			{
