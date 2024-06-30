@@ -46,7 +46,9 @@ namespace cmn
 
 		HVCC, // H.265 HVCC
 
-		MP3
+		MP3,
+
+		OVEN_EVENT // OvenMediaEngine defined event
 	};
 
 	enum class PacketType : int8_t
@@ -229,6 +231,8 @@ namespace cmn
 				return "PNG";
 			case cmn::BitstreamFormat::ID3v2:
 				return "ID3v2";
+			case cmn::BitstreamFormat::OVEN_EVENT:
+				return "OVEN_EVENT";
 			default:
 				return "Unknown";
 		}

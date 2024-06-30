@@ -958,7 +958,7 @@ namespace ov
 			string.SetLength(total_length);
 			auto buffer = string.GetBuffer();
 
-			for (int index = 0; index < count; index++)
+			for (size_t index = 0; index < count; index++)
 			{
 				::memcpy(buffer, str, length);
 				buffer += length;

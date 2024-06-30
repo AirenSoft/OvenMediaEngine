@@ -114,24 +114,37 @@ namespace pub
 
 			// Check media data is available
 			auto stream_data = PopStreamData();
-			if ((stream_data != nullptr) && (stream_data->_stream != nullptr) && (stream_data->_media_packet != nullptr))
+			auto stream = stream_data->_stream;
+			auto media_packet = stream_data->_media_packet;
+
+			if (stream_data == nullptr || stream == nullptr || media_packet == nullptr)
 			{
-				if (stream_data->_media_packet->GetMediaType() == cmn::MediaType::Video)
+				continue;
+			}
+
+			if (media_packet->GetMediaType() == cmn::MediaType::Video)
+			{
+				stream->SendVideoFrame(stream_data->_media_packet);
+			}
+			else if (media_packet->GetMediaType() == cmn::MediaType::Audio)
+			{
+				stream->SendAudioFrame(stream_data->_media_packet);
+			}
+			else if (media_packet->GetMediaType() == cmn::MediaType::Data)
+			{
+				if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::OVEN_EVENT)
 				{
-					stream_data->_stream->SendVideoFrame(stream_data->_media_packet);
-				}
-				else if (stream_data->_media_packet->GetMediaType() == cmn::MediaType::Audio)
-				{
-					stream_data->_stream->SendAudioFrame(stream_data->_media_packet);
-				}
-				else if (stream_data->_media_packet->GetMediaType() == cmn::MediaType::Data)
-				{
-					stream_data->_stream->SendDataFrame(stream_data->_media_packet);
+					auto event = std::static_pointer_cast<MediaEvent>(media_packet);
+					stream->OnEvent(event);
 				}
 				else
 				{
-					// Nothing can do
+					stream->SendDataFrame(stream_data->_media_packet);
 				}
+			}
+			else
+			{
+				// Nothing can do
 			}
 		}
 	}

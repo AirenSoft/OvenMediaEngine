@@ -218,6 +218,8 @@ public:
 	std::shared_ptr<SegmentInfo> GetSegmentInfo(uint32_t segment_sequence) const;
 	bool GetLastSequenceNumber(int64_t &msn, int64_t &psn) const;
 
+	void SetEndList();
+
 private:
 	std::shared_ptr<SegmentInfo> GetLastSegmentInfo() const;
 
@@ -264,6 +266,8 @@ private:
 	mutable std::shared_mutex _cached_default_chunklist_gzip_guard;
 
 	bmff::CencProperty _cenc_property;
+
+	bool _end_list = false;
 
 	void UpdateCacheForDefaultChunklist();
 };

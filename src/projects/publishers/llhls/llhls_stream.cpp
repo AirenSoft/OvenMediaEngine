@@ -252,6 +252,39 @@ bool LLHlsStream::Stop()
 	return Stream::Stop();
 }
 
+std::tuple<bool, ov::String> LLHlsStream::ConcludeLive()
+{
+	std::unique_lock<std::shared_mutex> lock(_concluded_lock);
+	if (_concluded)
+	{
+		return {false, "Already concluded"};
+	}
+
+	_concluded = true;
+
+	// Flush all packagers
+	for (auto &it : _packager_map)
+	{
+		auto packager = it.second;
+		packager->Flush();
+	}
+
+	// Append #EXT-X-ENDLIST all chunklists
+	for (auto &it : _chunklist_map)
+	{
+		auto chunklist_writer = it.second;
+		chunklist_writer->SetEndList();
+	}
+
+	return {true, ""};
+}
+
+bool LLHlsStream::IsConcluded() const
+{
+	std::shared_lock<std::shared_mutex> lock(_concluded_lock);
+	return _concluded;
+}
+
 bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &cenc_property)
 {
 	ov::String final_path = ov::GetFilePath(file_path, cfg::ConfigManager::GetInstance()->GetConfigPath());
@@ -882,6 +915,12 @@ bool LLHlsStream::SendBufferedPackets()
 
 void LLHlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	// If the stream is concluded, it will not be processed.
+	if (IsConcluded() == true)
+	{
+		return;
+	}
+
 	if (media_packet == nullptr || media_packet->GetData() == nullptr)
 	{
 		return;
@@ -903,6 +942,12 @@ void LLHlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packe
 
 void LLHlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	// If the stream is concluded, it will not be processed.
+	if (IsConcluded() == true)
+	{
+		return;
+	}
+
 	if (media_packet == nullptr || media_packet->GetData() == nullptr)
 	{
 		return;
@@ -924,7 +969,8 @@ void LLHlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packe
 
 void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (media_packet->GetBitstreamFormat() != cmn::BitstreamFormat::ID3v2)
+	if (media_packet->GetBitstreamFormat() != cmn::BitstreamFormat::ID3v2 && 
+		media_packet->GetBitstreamFormat() != cmn::BitstreamFormat::OVEN_EVENT)
 	{
 		// Not supported
 		return;
@@ -962,6 +1008,29 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 		logtd("AppendSample : track(%d) length(%d)", media_packet->GetTrackId(), media_packet->GetDataLength());
 
 		packager->ReserveDataPacket(media_packet);
+	}
+}
+
+void LLHlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event)
+{
+	if (event == nullptr)
+	{
+		return;
+	}
+
+	switch(event->GetCommandType())
+	{
+		case MediaEvent::CommandType::ConcludeLive:
+		{
+			auto [result, message] = ConcludeLive();
+			if (result == false)
+			{
+				logte("LLHlsStream(%s/%s) - Failed to conclude live. %s", GetApplication()->GetName().CStr(), GetName().CStr(), message.CStr());
+			}
+			break;
+		}
+		default:
+			break;
 	}
 }
 

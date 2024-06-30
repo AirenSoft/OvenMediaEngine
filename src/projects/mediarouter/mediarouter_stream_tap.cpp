@@ -95,6 +95,12 @@ bool MediaRouterStreamTap::Push(const std::shared_ptr<MediaPacket> &media_packet
         return false;
     }
 
+	if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::OVEN_EVENT)
+	{
+		// Event packet doen't need to forward to tap
+		return true;
+	}
+
     _buffer.Enqueue(media_packet->ClonePacket());
 
     return true;

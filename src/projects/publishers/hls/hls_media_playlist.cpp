@@ -32,6 +32,11 @@ void HlsMediaPlaylist::AddMediaTrackInfo(const std::shared_ptr<MediaTrack> &trac
 	}
 }
 
+void HlsMediaPlaylist::SetEndList()
+{
+	_end_list = true;
+}
+
 bool HlsMediaPlaylist::OnSegmentCreated(const std::shared_ptr<mpegts::Segment> &segment)
 {
 	std::lock_guard<std::shared_mutex> lock(_segments_mutex);
@@ -103,6 +108,11 @@ ov::String HlsMediaPlaylist::ToString(bool rewind) const
 		const auto &segment = it->second;
 		result += ov::String::FormatString("#EXTINF:%.3f,\n", static_cast<double>(segment->GetDurationMs()) / 1000.0);
 		result += ov::String::FormatString("%s\n", segment->GetUrl().CStr());
+	}
+
+	if (_end_list == true)
+	{
+		result += "#EXT-X-ENDLIST\n";
 	}
 	
 	return result;

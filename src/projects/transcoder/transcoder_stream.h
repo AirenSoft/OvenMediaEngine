@@ -205,7 +205,7 @@ private:
 
 
 	// Step 1: Decode (Decode a frame from given packets)
-	void DecodePacket(std::shared_ptr<MediaPacket> packet);
+	void DecodePacket(const std::shared_ptr<MediaPacket> &packet);
 	void OnDecodedFrame(TranscodeResult result, MediaTrackId decoder_id, std::shared_ptr<MediaFrame> decoded_frame);
 	void SetLastDecodedFrame(MediaTrackId decoder_id, std::shared_ptr<MediaFrame> &decoded_frame);
 	std::shared_ptr<MediaFrame> GetLastDecodedFrame(MediaTrackId decoder_id);

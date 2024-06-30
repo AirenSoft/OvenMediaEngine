@@ -35,6 +35,7 @@ public:
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
+	void OnEvent(const std::shared_ptr<MediaEvent> &event) override;
 
 	enum class RequestResult : uint8_t
 	{
@@ -69,6 +70,14 @@ private:
 	std::shared_ptr<HlsMediaPlaylist> GetMediaPlaylist(const ov::String &variant_name);
 	std::shared_ptr<HlsMasterPlaylist> GetMasterPlaylist(const ov::String &playlist_name);
 
+	//////////////////////////
+	// Events
+	//////////////////////////
+
+	// <result, error message>
+	std::tuple<bool, ov::String> ConcludeLive();
+	bool IsConcluded() const;
+
 	uint32_t _worker_count = 0;
 
 	cfg::vhost::app::pub::HlsPublisher _ts_config;
@@ -91,4 +100,9 @@ private:
 	// variant name : Media playlist
 	std::map<ov::String, std::shared_ptr<HlsMediaPlaylist>> _media_playlists;
 	std::shared_mutex _media_playlists_guard;
+
+	// ConcludeLive
+	// Append #EXT-X-ENDLIST all chunklists, and no more update segment and chunklist
+	bool _concluded = false;
+	mutable std::shared_mutex _concluded_lock;
 };

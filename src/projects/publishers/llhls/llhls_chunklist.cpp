@@ -53,6 +53,13 @@ void LLHlsChunklist::Release()
 	_renditions.clear();
 }
 
+void LLHlsChunklist::SetEndList()
+{
+	_end_list = true;
+
+	UpdateCacheForDefaultChunklist();
+}
+
 void LLHlsChunklist::SaveOldSegmentInfo(bool enable)
 {
 	_keep_old_segments = enable;
@@ -276,6 +283,11 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 	if (_segments.size() == 0)
 	{
 		return "";
+	}
+
+	if (_end_list == true)
+	{
+		vod = true;
 	}
 
 	if (vod == true)

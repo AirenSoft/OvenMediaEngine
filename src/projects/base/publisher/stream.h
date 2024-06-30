@@ -5,6 +5,7 @@
 #include "base/info/stream.h"
 #include "base/info/push.h"
 #include "base/mediarouter/media_buffer.h"
+#include "base/mediarouter/media_event.h"
 #include "modules/managed_queue/managed_queue.h"
 #include "session.h"
 
@@ -96,6 +97,7 @@ namespace pub
 		virtual void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) = 0;
 		virtual void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) = 0;
 		virtual void SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet) = 0;
+		virtual void OnEvent(const std::shared_ptr<MediaEvent> &event) {}
 
 		virtual bool Start();
 		virtual bool Stop();

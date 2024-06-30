@@ -41,6 +41,9 @@ namespace bmff
 		// If the data frame is within the time interval of the fragment, it is added.
 		bool ReserveDataPacket(const std::shared_ptr<const MediaPacket> &media_packet);
 
+		// Flush all samples
+		bool Flush();
+
 	private:
 		const Config &GetConfig() const;
 

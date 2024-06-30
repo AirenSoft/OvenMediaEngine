@@ -190,6 +190,12 @@ bool HlsStream::CreateDefaultPlaylist()
 
 void HlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	// If the stream is concluded, it will not be processed.
+	if (IsConcluded() == true)
+	{
+		return;
+	}
+
 	std::shared_lock<std::shared_mutex> lock(_packetizers_guard);
 	auto& packetizers = _track_packetizers[media_packet->GetTrackId()];
 	for (auto& packetizer : packetizers)
@@ -200,12 +206,80 @@ void HlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 
 void HlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) 
 {
+	// If the stream is concluded, it will not be processed.
+	if (IsConcluded() == true)
+	{
+		return;
+	}
+
 	std::shared_lock<std::shared_mutex> lock(_packetizers_guard);
 	auto& packetizers = _track_packetizers[media_packet->GetTrackId()];
 	for (auto& packetizer : packetizers)
 	{
 		packetizer->AppendFrame(media_packet);
 	}
+}
+
+void HlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
+{
+	// Not implemented
+	// TODO(getroot) : Implement this function
+}
+
+void HlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event) 
+{
+	if (event == nullptr)
+	{
+		return;
+	}
+
+	switch(event->GetCommandType())
+	{
+		case MediaEvent::CommandType::ConcludeLive:
+		{
+			auto [result, message] = ConcludeLive();
+			if (result == false)
+			{
+				logte("HlsStream(%s/%s) - Failed to conclude live. %s", GetApplication()->GetName().CStr(), GetName().CStr(), message.CStr());
+			}
+			break;
+		}
+		default:
+			break;
+	}
+}
+
+std::tuple<bool, ov::String> HlsStream::ConcludeLive()
+{
+	std::unique_lock<std::shared_mutex> lock(_concluded_lock);
+	if (_concluded)
+	{
+		return {false, "Already concluded"};
+	}
+
+	_concluded = true;
+
+	// Flush all packagers
+	for (auto &it : _packagers)
+	{
+		auto packager = it.second;
+		packager->Flush();
+	}
+
+	// Append #EXT-X-ENDLIST all chunklists
+	for (auto &it : _media_playlists)
+	{
+		auto playlist = it.second;
+		playlist->SetEndList();
+	}
+
+	return {true, ""};
+}
+
+bool HlsStream::IsConcluded() const
+{
+	std::shared_lock<std::shared_mutex> lock(_concluded_lock);
+	return _concluded;
 }
 
 void HlsStream::OnSegmentCreated(const ov::String &packager_id, const std::shared_ptr<mpegts::Segment> &segment)
@@ -234,12 +308,6 @@ void HlsStream::OnSegmentDeleted(const ov::String &packager_id, const std::share
 	}
 
 	playlist->OnSegmentDeleted(segment);
-}
-
-void HlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
-{
-	// Not implemented
-	// TODO(getroot) : Implement this function
 }
 
 bool HlsStream::CreatePackagers()

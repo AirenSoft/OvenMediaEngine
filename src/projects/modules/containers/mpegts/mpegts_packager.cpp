@@ -149,6 +149,19 @@ namespace mpegts
         CreateSegmentIfReady();
     }
 
+	void Packager::Flush()
+	{
+		auto sample_buffer = GetSampleBuffer(_main_track_id);
+		if (sample_buffer == nullptr)
+		{
+			return;
+		}
+
+		sample_buffer->MarkSegmentBoundary();
+
+		CreateSegmentIfReady(true);
+	}
+
 	std::shared_ptr<Segment> Packager::GetSegment(uint32_t segment_id) const
 	{
 		{
@@ -192,7 +205,7 @@ namespace mpegts
 		return segment->GetData();
 	}
 
-    void Packager::CreateSegmentIfReady()
+    void Packager::CreateSegmentIfReady(bool force_create)
     {
         // Check if the main track has a segment boundary
         auto main_sample_buffer = GetSampleBuffer(_main_track_id);
@@ -210,26 +223,29 @@ namespace mpegts
         auto main_segment_duration_ms = main_sample_buffer->GetDurationUntilSegmentBoundaryMs();
         auto total_main_segment_duration_ms = main_sample_buffer->GetTotalConsumedDurationMs() + main_segment_duration_ms;
 
-        // Check if all tracks have enough samples
-        for (const auto &[track_id, sample_buffer] : _sample_buffers)
-        {
-            if (track_id == _main_track_id)
-            {
-                continue;
-            }
-            
-            auto total_segment_duration_ms = sample_buffer->GetTotalConsumedDurationMs();
-            auto target_duration_ms = total_main_segment_duration_ms - total_segment_duration_ms;
-            
-            // if video segment is 6000, audio segment is at least 6000*0.97(=5820)
-            if (sample_buffer->GetCurrentDurationMs() < target_duration_ms * 0.97)
-            {
-                // Not enough samples
-                logtd("Not enough samples for track_id %u, current_duration_ms %u, target_duration_ms %u", sample_buffer->GetTrack()->GetId(), sample_buffer->GetCurrentDurationMs(), target_duration_ms);
+		if (force_create == false)
+		{
+			// Check if all tracks have enough samples
+			for (const auto &[track_id, sample_buffer] : _sample_buffers)
+			{
+				if (track_id == _main_track_id)
+				{
+					continue;
+				}
+				
+				auto total_segment_duration_ms = sample_buffer->GetTotalConsumedDurationMs();
+				auto target_duration_ms = total_main_segment_duration_ms - total_segment_duration_ms;
+				
+				// if video segment is 6000, audio segment is at least 6000*0.97(=5820)
+				if (sample_buffer->GetCurrentDurationMs() < target_duration_ms * 0.97)
+				{
+					// Not enough samples
+					logtd("Not enough samples for track_id %u, current_duration_ms %u, target_duration_ms %u", sample_buffer->GetTrack()->GetId(), sample_buffer->GetCurrentDurationMs(), target_duration_ms);
 
-                return;
-            }
-        }
+					return;
+				}
+			}
+		}
 
         // Create a segment
         auto first_sample = main_sample_buffer->GetSample();

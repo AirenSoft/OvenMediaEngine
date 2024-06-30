@@ -270,6 +270,52 @@ namespace bmff
 		return true;
 	}
 
+	bool FMP4Packager::Flush()
+	{
+		std::shared_ptr<Samples> samples = _sample_buffer.GetSamples();
+
+		if (samples != nullptr && samples->GetTotalCount() > 0)
+		{
+			ov::ByteStream chunk_stream(4096);
+
+			auto data_samples = GetDataSamples(samples->GetStartTimestamp(), samples->GetEndTimestamp());
+			if (data_samples != nullptr)
+			{
+				if (WriteEmsgBox(chunk_stream, data_samples) == false)
+				{
+					logtw("FMP4Packager::Flush() - Failed to write emsg box");
+				}
+			}
+
+			if (WriteMoofBox(chunk_stream, samples) == false)
+			{
+				logte("FMP4Packager::Flush() - Failed to write moof box");
+				return false;
+			}
+
+			if (WriteMdatBox(chunk_stream, samples) == false)
+			{
+				logte("FMP4Packager::Flush() - Failed to write mdat box");
+				return false;
+			}
+
+			auto chunk = chunk_stream.GetDataPointer();
+
+			if (_storage != nullptr && _storage->AppendMediaChunk(chunk, 
+											samples->GetStartTimestamp(), 
+											samples->GetTotalDuration(), 
+											samples->IsIndependent(), true) == false)
+			{
+				logte("FMP4Packager::Flush() - Failed to store media chunk");
+				return false;
+			}
+
+			_sample_buffer.Reset();
+		}
+
+		return true;
+	}
+
 	// Get config
 	const FMP4Packager::Config &FMP4Packager::GetConfig() const
 	{

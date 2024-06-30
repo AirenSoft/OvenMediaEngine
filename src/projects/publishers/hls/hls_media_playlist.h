@@ -46,6 +46,8 @@ public:
 
 	ov::String ToString(bool rewind) const;
 
+	void SetEndList();
+
 private:
 	HlsMediaPlaylistConfig _config;
 	ov::String _variant_name;
@@ -59,4 +61,6 @@ private:
 	// Segment number : Segment
 	std::map<uint32_t, std::shared_ptr<mpegts::Segment>> _segments;
 	mutable std::shared_mutex _segments_mutex;
+
+	bool _end_list = false;
 };

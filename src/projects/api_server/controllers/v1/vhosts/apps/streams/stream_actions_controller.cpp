@@ -25,6 +25,8 @@ namespace api
 			RegisterPost(R"((startHlsDump))", &StreamActionsController::OnPostStartHLSDump);
 			RegisterPost(R"((stopHlsDump))", &StreamActionsController::OnPostStopHLSDump);
 			RegisterPost(R"((sendEvent))", &StreamActionsController::OnPostSendEvent);
+
+			RegisterPost(R"((concludeHlsLive))", &StreamActionsController::OnPostConcludeHlsLive);
 		}
 
 		// POST /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>:hlsDumps
@@ -64,7 +66,7 @@ namespace api
 			}
 
 			auto output_stream = *output_stream_it;
-			auto llhls_stream = GetLLHlsStream(output_stream);
+			auto llhls_stream = GetOutputStream<LLHlsStream>(output_stream, PublisherType::LLHls);
 			if (llhls_stream == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
@@ -141,7 +143,7 @@ namespace api
 			}
 
 			auto output_stream = *output_stream_it;
-			auto llhls_stream = GetLLHlsStream(output_stream);
+			auto llhls_stream = GetOutputStream<LLHlsStream>(output_stream, PublisherType::LLHls);
 			if (llhls_stream == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
@@ -197,7 +199,7 @@ namespace api
 			}
 
 			auto output_stream = *output_stream_it;
-			auto llhls_stream = GetLLHlsStream(output_stream);
+			auto llhls_stream = GetOutputStream<LLHlsStream>(output_stream, PublisherType::LLHls);
 			if (llhls_stream == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
@@ -359,6 +361,32 @@ namespace api
 			return {http::StatusCode::OK};
 		}
 
+		ApiResponse StreamActionsController::OnPostConcludeHlsLive(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
+											   const std::shared_ptr<mon::HostMetrics> &vhost,
+											   const std::shared_ptr<mon::ApplicationMetrics> &app,
+											   const std::shared_ptr<mon::StreamMetrics> &stream,
+											   const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+		{
+			auto source_stream = GetSourceStream(stream);
+			if (source_stream == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::NotFound,
+									"Could not find stream: [%s/%s/%s]",
+									vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), stream->GetName().CStr());
+			}
+
+			auto media_event = std::make_shared<MediaEvent>(MediaEvent::CommandType::ConcludeLive, nullptr);
+
+			if (source_stream->SendEvent(media_event) == false)
+			{
+				throw http::HttpError(http::StatusCode::InternalServerError,
+									"Internal Server Error - Could not inject ConcludeLive event: [%s/%s/%s]",
+									vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), stream->GetName().CStr());
+			}
+			
+			return {http::StatusCode::OK};
+		}
+
 		ApiResponse StreamActionsController::OnGetDummyAction(const std::shared_ptr<http::svr::HttpExchange> &client,
 														   const std::shared_ptr<mon::HostMetrics> &vhost,
 														   const std::shared_ptr<mon::ApplicationMetrics> &app,
@@ -420,29 +448,6 @@ namespace api
 			}
 
 			return application->GetStreamByName(stream->GetName());
-		}
-
-		std::shared_ptr<LLHlsStream> StreamActionsController::GetLLHlsStream(const std::shared_ptr<mon::StreamMetrics> &stream_metric)
-		{
-			auto publisher = std::dynamic_pointer_cast<LLHlsPublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::LLHls));
-			if (publisher == nullptr)
-			{
-				return nullptr;
-			}
-
-			auto appliation = publisher->GetApplicationByName(stream_metric->GetApplicationInfo().GetName());
-			if (appliation == nullptr)
-			{
-				return nullptr;
-			}
-
-			auto stream = appliation->GetStream(stream_metric->GetName());
-			if (stream == nullptr)
-			{
-				return nullptr;
-			}
-
-			return std::dynamic_pointer_cast<LLHlsStream>(stream);
 		}
 	}
 }

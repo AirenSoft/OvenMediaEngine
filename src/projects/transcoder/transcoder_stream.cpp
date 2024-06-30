@@ -1053,7 +1053,7 @@ void TranscoderStream::UpdateOutputTrack(MediaFrame *buffer)
 }
 
 
-void TranscoderStream::DecodePacket(std::shared_ptr<MediaPacket> packet)
+void TranscoderStream::DecodePacket(const std::shared_ptr<MediaPacket> &packet)
 {
 	MediaTrackId input_track_id = packet->GetTrackId();
 
@@ -1082,7 +1082,18 @@ void TranscoderStream::DecodePacket(std::shared_ptr<MediaPacket> packet)
 			double scale = input_track->GetTimeBase().GetExpr() / output_track->GetTimeBase().GetExpr();
 
 			// Clone the packet and send it to the output stream.
-			auto clone_packet = packet->ClonePacket();
+			std::shared_ptr<MediaPacket> clone_packet = nullptr;
+			
+			if (packet->GetBitstreamFormat() == cmn::BitstreamFormat::OVEN_EVENT)
+			{
+				auto event_packet = std::static_pointer_cast<MediaEvent>(packet);
+				clone_packet = event_packet->Clone();
+			}
+			else 
+			{
+				clone_packet = packet->ClonePacket();
+			}
+			
 			clone_packet->SetTrackId(output_track_id);
 			clone_packet->SetPts((int64_t)((double)clone_packet->GetPts() * scale));
 			clone_packet->SetDts((int64_t)((double)clone_packet->GetDts() * scale));
@@ -1374,7 +1385,17 @@ void TranscoderStream::OnEncodedPacket(MediaTrackId encoder_id, std::shared_ptr<
 	// If a track exists to output, copy the encoded packet and send it to that track.
 	for (auto &[output_stream, output_track_id] : output_tracks)
 	{
-		auto clone_packet = encoded_packet->ClonePacket();
+		std::shared_ptr<MediaPacket> clone_packet = nullptr;
+		
+		if (encoded_packet->GetBitstreamFormat() == cmn::BitstreamFormat::OVEN_EVENT)
+		{
+			auto event_packet = std::static_pointer_cast<MediaEvent>(encoded_packet);
+			clone_packet = event_packet->Clone();
+		}
+		else 
+		{
+			clone_packet = encoded_packet->ClonePacket();
+		}
 		clone_packet->SetTrackId(output_track_id);
 
 		// Send the packet to MediaRouter

@@ -883,6 +883,7 @@ bool MediaRouteStream::NormalizeMediaPacket(std::shared_ptr<MediaTrack> &media_t
 			result = ProcessMP3Stream(media_track, media_packet); 
 			break;
 		case cmn::BitstreamFormat::ID3v2:
+		case cmn::BitstreamFormat::OVEN_EVENT:
 			result = true;
 			break;
 		case cmn::BitstreamFormat::JPEG:
@@ -1165,6 +1166,11 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	}
 
 	auto &media_packet = media_packet_ref.value();
+
+	if (media_packet->GetMediaType() == MediaType::Data)
+	{
+		return media_packet;
+	}
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// [ Calculating Packet Timestamp, Duration]

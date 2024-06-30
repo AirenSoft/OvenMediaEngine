@@ -128,6 +128,26 @@ namespace pvd
 		return SendFrame(event_message);
 	}
 
+	bool Stream::SendEvent(const std::shared_ptr<MediaEvent> &event)
+	{
+		if (event == nullptr)
+		{
+			return false;
+		}
+
+		auto data_track = GetFirstTrackByType(cmn::MediaType::Data);
+		if (data_track == nullptr)
+		{
+			logte("Data track is not found. %s/%s(%u)", GetApplicationName(), GetName().CStr(), GetId());
+			return false;
+		}
+
+		event->SetMsid(GetMsid());
+		event->SetTrackId(data_track->GetId());
+
+		return SendFrame(event);
+	}
+
 	std::shared_ptr<ov::Url> Stream::GetRequestedUrl() const
 	{
 		return _requested_url;

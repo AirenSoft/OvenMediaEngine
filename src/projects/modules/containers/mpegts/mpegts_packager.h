@@ -344,6 +344,8 @@ namespace mpegts
         // PES packets for a frame
         void OnFrame(const std::shared_ptr<const MediaPacket> &media_packet, const std::vector<std::shared_ptr<mpegts::Packet>> &pes_packets) override;
 
+		void Flush();
+
 		// Get the segment data
 		std::shared_ptr<Segment> GetSegment(uint32_t segment_id) const;
 		std::shared_ptr<const ov::Data> GetSegmentData(uint32_t segment_id) const;
@@ -359,7 +361,7 @@ namespace mpegts
         std::shared_ptr<SampleBuffer> GetSampleBuffer(uint32_t track_id) const;
 
         // Check if a segment is ready to be created and create it
-        void CreateSegmentIfReady();
+        void CreateSegmentIfReady(bool force_create = false);
         void AddSegment(const std::shared_ptr<Segment> &segment);
 
 		// Buffer
