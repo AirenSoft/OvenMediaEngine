@@ -238,9 +238,13 @@ void HlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event)
 		case MediaEvent::CommandType::ConcludeLive:
 		{
 			auto [result, message] = ConcludeLive();
-			if (result == false)
+			if (result == true)
 			{
-				logte("HlsStream(%s/%s) - Failed to conclude live. %s", GetApplication()->GetName().CStr(), GetName().CStr(), message.CStr());
+				logti("HlsStream(%s/%s) - Live has concluded.", GetApplication()->GetName().CStr(), GetName().CStr());
+			}
+			else
+			{
+				logte("HlsStream(%s/%s) - Failed to conclude live.(%s)", GetApplication()->GetName().CStr(), GetName().CStr(), message.CStr());
 			}
 			break;
 		}

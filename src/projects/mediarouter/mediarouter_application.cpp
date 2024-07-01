@@ -47,20 +47,22 @@ MediaRouteApplication::MediaRouteApplication(const info::Application &applicatio
 	: _application_info(application_info)
 {
 	_max_worker_thread_count = std::min(std::max((uint32_t)_application_info.GetConfig().GetPublishers().GetAppWorkerCount(), (uint32_t)MIN_APPLICATION_WORKER_COUNT), (uint32_t)MAX_APPLICATION_WORKER_COUNT);
+	int delay_buffer_time_ms = _application_info.GetConfig().GetPublishers().GetDelayBufferTimeMs();
 
-	logti("[%s(%u)] Created Mediarouter application. worker(%d)", _application_info.GetName().CStr(), _application_info.GetId(), _max_worker_thread_count);
+	logti("[%s(%u)] Created Mediarouter application. Worker(%d) DelayBufferTime(%d)", _application_info.GetName().CStr(), _application_info.GetId(), _max_worker_thread_count, delay_buffer_time_ms);
 
 	for (uint32_t worker_id = 0; worker_id < _max_worker_thread_count; worker_id++)
 	{
 		{
 			auto urn = std::make_shared<info::ManagedQueue::URN>(_application_info.GetName(), nullptr, "imr", ov::String::FormatString("aw_%d", worker_id));
-			auto stream_data = std::make_shared<ov::ManagedQueue<std::shared_ptr<MediaRouteStream>>>(urn, 500);
+			auto stream_data = std::make_shared<ov::ManagedQueue<std::shared_ptr<MediaRouteStream>>>(urn, 1000);
+			stream_data->SetBufferingDelay(delay_buffer_time_ms);
 			_inbound_stream_indicator.push_back(stream_data);
 		}
 
 		{
 			auto urn = std::make_shared<info::ManagedQueue::URN>(_application_info.GetName(), nullptr, "omr", ov::String::FormatString("aw_%d", worker_id));
-			auto stream_data = std::make_shared<ov::ManagedQueue<std::shared_ptr<MediaRouteStream>>>(urn, 500);
+			auto stream_data = std::make_shared<ov::ManagedQueue<std::shared_ptr<MediaRouteStream>>>(urn, 1000);
 			_outbound_stream_indicator.push_back(stream_data);
 		}
 	}
@@ -734,7 +736,7 @@ bool MediaRouteApplication::OnPacketReceived(const std::shared_ptr<MediaRouterAp
 
 		stream->Push(packet);
 
-		_inbound_stream_indicator[GetWorkerIDByStreamID(stream_info->GetId())]->Enqueue(stream);
+		_inbound_stream_indicator[GetWorkerIDByStreamID(stream_info->GetId())]->Enqueue(stream, packet->IsHighPriority());
 	}
 	// Provider(relay), Transcoder => Outbound Stream
 	else if ((IS_CONNECTOR_PROVIDER(connector_type) && IS_REPRENT_RELAY(representation_type)) ||
@@ -850,6 +852,7 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 			// It may be called due to a normal stop signal.
 			continue;
 		}
+
 		auto stream = msg.value();
 		if (stream == nullptr)
 		{
@@ -858,7 +861,7 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 		}
 
 		// StreamDeliver media packet to Publisher(observer) of Transcoder(observer)
-		auto media_packet = stream->Pop();
+		auto media_packet = stream->PopAndNormalize();
 		if (media_packet == nullptr)
 		{
 			continue;
@@ -921,7 +924,7 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 		}
 
 		// StreamDeliver media packet to Publisher(observer) of Transcoder(observer)
-		auto media_packet = stream->Pop();
+		auto media_packet = stream->PopAndNormalize();
 		if (media_packet == nullptr)
 		{
 			continue;

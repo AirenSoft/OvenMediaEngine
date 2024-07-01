@@ -102,7 +102,7 @@ namespace pvd
 		return GetApplication()->GetApplicationTypeName();
 	}
 
-	bool Stream::SendDataFrame(int64_t timestamp, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame)
+	bool Stream::SendDataFrame(int64_t timestamp, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent)
 	{
 		if (frame == nullptr)
 		{
@@ -124,6 +124,7 @@ namespace pvd
 															timestamp,
 															format,
 															packet_type);
+		event_message->SetHighPriority(urgent);
 
 		return SendFrame(event_message);
 	}

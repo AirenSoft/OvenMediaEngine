@@ -969,8 +969,7 @@ void LLHlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packe
 
 void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (media_packet->GetBitstreamFormat() != cmn::BitstreamFormat::ID3v2 && 
-		media_packet->GetBitstreamFormat() != cmn::BitstreamFormat::OVEN_EVENT)
+	if (media_packet->GetBitstreamFormat() != cmn::BitstreamFormat::ID3v2)
 	{
 		// Not supported
 		return;
@@ -1023,9 +1022,13 @@ void LLHlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event)
 		case MediaEvent::CommandType::ConcludeLive:
 		{
 			auto [result, message] = ConcludeLive();
-			if (result == false)
+			if (result == true)
 			{
-				logte("LLHlsStream(%s/%s) - Failed to conclude live. %s", GetApplication()->GetName().CStr(), GetName().CStr(), message.CStr());
+				logti("LLHlsStream(%s/%s) - Live has concluded.", GetApplication()->GetName().CStr(), GetName().CStr());
+			}
+			else
+			{
+				logte("LLHlsStream(%s/%s) - Failed to conclude live(%s)", GetApplication()->GetName().CStr(), GetName().CStr(), message.CStr());
 			}
 			break;
 		}

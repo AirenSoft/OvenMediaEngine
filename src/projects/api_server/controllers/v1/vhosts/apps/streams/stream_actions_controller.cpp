@@ -229,6 +229,7 @@ namespace api
 			// {
 			//   "eventFormat": "id3v2",
 			//   "eventType": "video",
+			//	 "urgent": false,
 			//   "events":[
 			//       {
 			//         "frameType": "TXXX",
@@ -262,6 +263,12 @@ namespace api
 			}
 
 			cmn::BitstreamFormat event_format = cmn::BitstreamFormat::ID3v2;
+			bool urgent = false;
+
+			if (request_body.isMember("urgent") == true && request_body["urgent"].isBool() == true)
+			{
+				urgent = request_body["urgent"].asBool();
+			}
 
 			auto events = request_body["events"];
 			if (events.size() == 0)
@@ -351,7 +358,7 @@ namespace api
 									vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), stream->GetName().CStr());
 			}
 
-			if (source_stream->SendDataFrame(-1, event_format, event_type, id3v2_event->Serialize()) == false)
+			if (source_stream->SendDataFrame(-1, event_format, event_type, id3v2_event->Serialize(), urgent) == false)
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError,
 									"Internal Server Error - Could not inject event: [%s/%s/%s]",
@@ -367,6 +374,12 @@ namespace api
 											   const std::shared_ptr<mon::StreamMetrics> &stream,
 											   const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
+			/*
+			{
+				"urgent": true,
+			}
+			*/
+
 			auto source_stream = GetSourceStream(stream);
 			if (source_stream == nullptr)
 			{
@@ -375,7 +388,14 @@ namespace api
 									vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), stream->GetName().CStr());
 			}
 
+			bool urgent = false;
+			if (request_body.isMember("urgent") == true && request_body["urgent"].isBool() == true)
+			{
+				urgent = request_body["urgent"].asBool();
+			}
+
 			auto media_event = std::make_shared<MediaEvent>(MediaEvent::CommandType::ConcludeLive, nullptr);
+			media_event->SetHighPriority(urgent);
 
 			if (source_stream->SendEvent(media_event) == false)
 			{

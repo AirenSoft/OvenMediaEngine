@@ -46,6 +46,7 @@ namespace cfg
 
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetAppWorkerCount, _app_worker_count)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamWorkerCount, _stream_worker_count)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetDelayBufferTimeMs, _delay_buffer_time_ms)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetMpegtsPushPublisher, _mpegtspush_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetWebrtcPublisher, _webrtc_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetLLHlsPublisher, _ll_hls_publisher)
@@ -62,6 +63,7 @@ namespace cfg
 					{
 						Register<Optional>("AppWorkerCount", &_app_worker_count);
 						Register<Optional>("StreamWorkerCount", &_stream_worker_count);
+						Register<Optional>("DelayBufferTimeMs", &_delay_buffer_time_ms);
 
 						Register<Optional>("MPEGTSPush", &_mpegtspush_publisher);
 						Register<Optional>({"WebRTC", "webrtc"}, &_webrtc_publisher);
@@ -76,6 +78,7 @@ namespace cfg
 
 					int _app_worker_count = 1;
 					int _stream_worker_count = 8;
+					int _delay_buffer_time_ms = 0;
 
 					MpegtsPushPublisher _mpegtspush_publisher;
 					RtmpPushPublisher _rtmppush_publisher;

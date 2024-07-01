@@ -79,6 +79,7 @@ public:
 		cloned_event->SetBitstreamFormat(GetBitstreamFormat());
 		cloned_event->SetPacketType(GetPacketType());
 		cloned_event->SetFragHeader(GetFragHeader());
+		cloned_event->SetHighPriority(IsHighPriority());
 
 		return cloned_event;
 	}

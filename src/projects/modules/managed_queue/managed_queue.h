@@ -42,9 +42,10 @@ namespace ov
 			ManagedQueueNode* next;
 
 			std::chrono::high_resolution_clock::time_point _start;
+			bool _urgent = false;
 
-			ManagedQueueNode(const T& value, ManagedQueueNode* next_node = nullptr)
-				: data(value), next(next_node), _start(std::chrono::high_resolution_clock::time_point::min())
+			ManagedQueueNode(const T& value, bool urgent, ManagedQueueNode* next_node = nullptr)
+				: data(value), next(next_node), _start(std::chrono::high_resolution_clock::time_point::min()), _urgent(urgent)
 			{
 				_start = std::chrono::high_resolution_clock::now();
 			}
@@ -64,8 +65,6 @@ namespace ov
 			  _skip_message_enabled(false)
 		{
 			info::ManagedQueue::SetUrn(urn, Demangle(typeid(T).name()).CStr());
-
-			_timer.Start();
 
 			// Register to the server metrics
 			// If the Unique id is duplicated or memory allocation failed, retry
@@ -95,17 +94,257 @@ namespace ov
 			MonitorInstance->GetServerMetrics()->OnQueueUpdated(*this, true);
 		}
 
-		void Enqueue(const T& item)
+		// Urgent item will be inserted at the front of the queue
+		void Enqueue(const T& item, bool urgent = false)
 		{
-			EnqueueInternal(new ManagedQueueNode(item));
+			auto node = new ManagedQueueNode(item, urgent);
+			EnqeuePos pos = urgent ? EnqeuePos::EnqueuFrontPos : EnqeuePos::EnqueuBackPos;
+
+			EnqueueInternal(node, Infinite, pos);
 		}
 
-		void Enqueue(T&& item)
+		// Urgent item will be inserted at the front of the queue
+		void Enqueue(T&& item, bool urgent = false)
 		{
-			EnqueueInternal(new ManagedQueueNode(std::move(item)));
+			auto node = new ManagedQueueNode(item, urgent);
+			EnqeuePos pos = urgent ? EnqeuePos::EnqueuFrontPos : EnqeuePos::EnqueuBackPos;
+
+			EnqueueInternal(node, Infinite, pos);
 		}
 
-		void EnqueueInternal(ManagedQueueNode* node, int timeout = Infinite)
+		std::optional<T> Front(int timeout = Infinite)
+		{
+			auto unique_lock = std::unique_lock(_mutex);
+
+			if (_stop)
+			{
+				return {};	// Stop is requested
+			}
+
+			if (_size == 0)
+			{
+				std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
+
+				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
+					return (((_size == 0) == false) || _stop);
+				});
+
+				if (!result || _stop)
+				{
+					return {};	// timed out / Stop is requested
+				}
+			}
+
+			return _front_node->data;
+		}
+
+		// How long the first message has been buffered
+		int32_t GetBufferedTimeMs()
+		{
+			auto lock_guard = std::lock_guard(_mutex);
+
+			return GetBufferedTimeMsInternal();
+		}
+
+		std::optional<T> Back(int timeout = Infinite)
+		{
+			auto unique_lock = std::unique_lock(_mutex);
+
+			if (_stop)
+			{
+				return {};	// Stop is requested
+			}
+
+			if (_size == 0)
+			{
+				std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
+
+				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
+					return (((_size == 0) == false) || _stop);
+				});
+
+				if (!result || _stop)
+				{
+					return {};	// timed out / Stop is requested
+				}
+			}
+
+			return _rear_node->data;
+		}
+
+		std::optional<T> Dequeue(int timeout = Infinite)
+		{
+			auto unique_lock = std::unique_lock(_mutex);
+
+			if (_stop)
+			{
+				return {};	// Stop is requested
+			}
+
+			if ((_buffering_delay == 0 &&_size == 0) || 
+				(_buffering_delay != 0 && GetBufferedTimeMsInternal() < _buffering_delay))
+			{
+				std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
+
+				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
+					if (_buffering_delay == 0)
+					{
+						return ((_size != 0 ) || _stop);
+					}
+					else
+					{
+						if (_front_node != nullptr && _front_node->_urgent == true)
+						{
+							return true;
+						}
+
+						if (GetBufferedTimeMsInternal() >= _buffering_delay)
+						{
+							return true;
+						}
+					}
+
+					return false;
+				});
+
+				if (!result || _stop)
+				{
+					return {};	// timed out / Stop is requested
+				}
+			}
+
+			ManagedQueueNode* node = _front_node;
+			_front_node = _front_node->next;
+			if (_front_node == nullptr)
+			{
+				_rear_node = nullptr;
+			}
+
+			T value = std::move(node->data);
+
+			_size--;
+
+			// Update statistics of output message count
+			_output_message_count++;
+
+			// Update statistics of waiting time (microseconds)
+			if (node->_start != std::chrono::system_clock::time_point::max())
+			{
+				auto current = std::chrono::high_resolution_clock::now();
+				_waiting_time_in_us = _waiting_time_in_us * 0.9 + std::chrono::duration_cast<std::chrono::microseconds>(current - node->_start).count() * 0.1;
+			}
+
+			delete node;
+
+			UpdateMetrics();
+
+			if(_prevent_exceed_threshold_and_wait_enabled == true)
+			{
+				_condition.notify_all();
+			}
+
+			return value;
+		}
+
+		bool IsEmpty() const
+		{
+			auto lock_guard = std::lock_guard(_mutex);
+
+			return (_size == 0);
+		}
+
+		// Cleared all items in the queue
+		void Clear()
+		{
+			auto lock_guard = std::lock_guard(_mutex);
+
+			while (_front_node != nullptr)
+			{
+				ManagedQueueNode* temp = _front_node;
+
+				_front_node = _front_node->next;
+
+				delete temp;
+			}
+
+			_rear_node = nullptr;
+
+			_size = 0;
+
+			ClearMetrics();
+		}
+
+		size_t Size() const
+		{
+			auto lock_guard = std::lock_guard(_mutex);
+
+			return _size;
+		}
+
+		void Stop()
+		{
+			auto lock_guard = std::lock_guard(_mutex);
+
+			_stop = true;
+
+			ClearMetrics();
+
+			_condition.notify_all();
+		}
+
+		bool IsStopped() const
+		{
+			return _stop;
+		}
+
+		// Skip message for performance failure recovery
+		// If the queue size increases due to insufficient performance, the problem is avoided by dropping the message.
+		// * Warning: This should only be used where dropping a message will not affect the operation. example) video encoder, video scaler
+		void SetSkipMessageEnable(bool enable)
+		{
+			_skip_message_enabled = enable;
+		}
+
+		void SetPreventExceedThreshold(bool enable)
+		{
+			_prevent_exceed_threshold_and_wait_enabled = enable;
+		}
+
+		// Buffer keeps items for a certain amount of time
+		void SetBufferingDelay(int delay_ms)
+		{
+			_buffering_delay = delay_ms;
+		}
+
+	private:
+
+		int32_t GetBufferedTimeMsInternal()
+		{
+			if (_front_node == nullptr)
+			{
+				return 0;
+			}
+
+			if (_front_node->_urgent == true)
+			{
+				return ov::Infinite;
+			}
+
+			auto current = std::chrono::high_resolution_clock::now();
+			return std::chrono::duration_cast<std::chrono::milliseconds>(current - _front_node->_start).count();
+		}
+
+		// timeout works when the queue is full and _prevent_exceed_threshold_and_wait_enabled is true
+		// If the queue is full, it waits until the queue is less than the threshold or the timeout expires.
+		// If the timeout expires, the message is dropped.
+		// This is to avoid dropping items when the queue size exceeds the threshold, if it exceeds it momentarily due to jitter.
+		enum EnqeuePos : int8_t
+		{
+			EnqueuFrontPos = 0,
+			EnqueuBackPos
+		};
+
+		void EnqueueInternal(ManagedQueueNode* node, int timeout, EnqeuePos push_method)
 		{
 			auto unique_lock = std::unique_lock(_mutex);			
 
@@ -223,6 +462,33 @@ namespace ov
 				}
 			}
 
+			if (push_method == EnqeuePos::EnqueuBackPos)
+			{
+				PushBack(node);
+			}
+			else
+			{
+				PushFront(node);
+			}
+
+			UpdateMetrics();
+
+			if (_buffering_delay == 0)
+			{
+				_condition.notify_all();
+			}
+			else
+			{
+				// If the buffering delay is set, notify the waiting thread when the buffering time is exceeded.
+				if (GetBufferedTimeMsInternal() >= _buffering_delay)
+				{
+					_condition.notify_all();
+				}
+			}
+		}
+
+		void PushBack(ManagedQueueNode* node)
+		{
 			if (_size == 0)
 			{
 				_front_node = node;
@@ -235,182 +501,22 @@ namespace ov
 			_rear_node = node;
 
 			_size++;
-
-			UpdateMetrics();
-
-			_condition.notify_all();
 		}
 
-		std::optional<T> Front(int timeout = Infinite)
+		void PushFront(ManagedQueueNode* node)
 		{
-			auto unique_lock = std::unique_lock(_mutex);
-
-			if (_stop)
-			{
-				return {};	// Stop is requested
-			}
-
 			if (_size == 0)
 			{
-				std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
-
-				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
-					return (((_size == 0) == false) || _stop);
-				});
-
-				if (!result || _stop)
-				{
-					return {};	// timed out / Stop is requested
-				}
+				_rear_node = node;
 			}
-
-			return _front_node->data;
-		}
-
-		std::optional<T> Back(int timeout = Infinite)
-		{
-			auto unique_lock = std::unique_lock(_mutex);
-
-			if (_stop)
+			else
 			{
-				return {};	// Stop is requested
+				node->next = _front_node;
 			}
 
-			if (_size == 0)
-			{
-				std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
+			_front_node = node;
 
-				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
-					return (((_size == 0) == false) || _stop);
-				});
-
-				if (!result || _stop)
-				{
-					return {};	// timed out / Stop is requested
-				}
-			}
-
-			return _rear_node->data;
-		}
-
-		std::optional<T> Dequeue(int timeout = Infinite)
-		{
-			auto unique_lock = std::unique_lock(_mutex);
-
-			if (_stop)
-			{
-				return {};	// Stop is requested
-			}
-
-			if (_size == 0)
-			{
-				std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
-
-				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
-					return (((_size == 0) == false) || _stop);
-				});
-
-				if (!result || _stop)
-				{
-					return {};	// timed out / Stop is requested
-				}
-			}
-
-			ManagedQueueNode* node = _front_node;
-			_front_node = _front_node->next;
-			if (_front_node == nullptr)
-			{
-				_rear_node = nullptr;
-			}
-
-			T value = std::move(node->data);
-
-			_size--;
-
-			// Update statistics of output message count
-			_output_message_count++;
-
-			// Update statistics of waiting time (microseconds)
-			if (node->_start != std::chrono::system_clock::time_point::max())
-			{
-				auto current = std::chrono::high_resolution_clock::now();
-				_waiting_time_in_us = _waiting_time_in_us * 0.9 + std::chrono::duration_cast<std::chrono::microseconds>(current - node->_start).count() * 0.1;
-			}
-
-			delete node;
-
-			UpdateMetrics();
-
-			if(_prevent_exceed_threshold_and_wait_enabled == true)
-			{
-				_condition.notify_all();
-			}
-
-			return value;
-		}
-
-		bool IsEmpty() const
-		{
-			auto lock_guard = std::lock_guard(_mutex);
-
-			return (_size == 0);
-		}
-
-		// Cleared all items in the queue
-		void Clear()
-		{
-			auto lock_guard = std::lock_guard(_mutex);
-
-			while (_front_node != nullptr)
-			{
-				ManagedQueueNode* temp = _front_node;
-
-				_front_node = _front_node->next;
-
-				delete temp;
-			}
-
-			_rear_node = nullptr;
-
-			_size = 0;
-
-			ClearMetrics();
-		}
-
-		size_t Size() const
-		{
-			auto lock_guard = std::lock_guard(_mutex);
-
-			return _size;
-		}
-
-		void Stop()
-		{
-			auto lock_guard = std::lock_guard(_mutex);
-
-			_stop = true;
-
-			ClearMetrics();
-
-			_condition.notify_all();
-		}
-
-		bool IsStopped() const
-		{
-			return _stop;
-		}
-
-		// Skip message for performance failure recovery
-		// If the queue size increases due to insufficient performance, the problem is avoided by dropping the message.
-		// * Warning: This should only be used where dropping a message will not affect the operation. example) video encoder, video scaler
-		void SetSkipMessageEnable(bool enable)
-		{
-			_skip_message_enabled = enable;
-		}
-
-		void SetPreventExceedThreshold(bool enable)
-		{
-			_prevent_exceed_threshold_and_wait_enabled = enable;
+			_size++;
 		}
 
 	protected:
@@ -423,15 +529,39 @@ namespace ov
 				_peak = _size;
 			}
 
-			if (_timer.IsElapsed(_stats_metric_interval) && _timer.Update())
+			if (_timer.IsStart() == false)
 			{
+				_timer.Start();
+			}
+
+			if (_timer.IsElapsed(_stats_metric_interval))
+			{
+				int elapsed_time = _timer.Elapsed();
+				_timer.Update();
+
 				// Update statistics of message per second
-				_input_message_per_second = (_input_message_count - _last_input_message_count) * (1000 / _stats_metric_interval);
-				_output_message_per_second = (_output_message_count - _last_output_message_count) * (1000 / _stats_metric_interval);
+				_input_message_per_second = (double)(_input_message_count - _last_input_message_count) * (1000.0 / (double)elapsed_time);
+				_output_message_per_second = (double)(_output_message_count - _last_output_message_count) * (1000.0 / (double)elapsed_time);
 				_last_input_message_count = _input_message_count;
 				_last_output_message_count = _output_message_count;
+	
+				int adjusted_size = _size;
 
-				if ((_threshold > 0) && (_size >= _threshold))
+				if (_buffering_delay > 0)
+				{
+					// excluding the estimated intended buffer size
+					int intended_buffer_size = (double)_input_message_per_second * ((double)_buffering_delay / 1000.0);
+					adjusted_size -= intended_buffer_size;
+
+					// logi("DEBUG", "intended buffer size: %d, input_message_count: %d, input_message_per_second: %d, buffering_delay: %d, size: %d, adjusted_size: %d", intended_buffer_size, _input_message_count, _input_message_per_second, _buffering_delay, _size, adjusted_size);
+					
+					if (adjusted_size < 0)
+					{
+						adjusted_size = 0;
+					}
+				}
+
+				if ((_threshold > 0) && ((size_t)adjusted_size >= _threshold))
 				{
 					_threshold_exceeded_time_in_us += _stats_metric_interval;
 
@@ -495,6 +625,9 @@ namespace ov
 		// Prevent exceed threshold. If true, the queue will not exceed the threshold
 		// Wait until the queue falls below the threshold
 		bool _prevent_exceed_threshold_and_wait_enabled = false;
+
+		// Delay
+		int _buffering_delay = 0;
 	};
 
 }  // namespace ov

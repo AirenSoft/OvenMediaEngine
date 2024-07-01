@@ -1485,7 +1485,7 @@ namespace pvd
 				pts += _last_audio_pts_clock.Elapsed();
 			}
 
-			SendDataFrame(pts, cmn::BitstreamFormat::ID3v2, packet_type, tag.Serialize());
+			SendDataFrame(pts, cmn::BitstreamFormat::ID3v2, packet_type, tag.Serialize(), false);
 		}
 	}
 

@@ -40,10 +40,10 @@ public:
 	MediaRouterStreamType GetInoutType();
 
 	// Queue interfaces
-	void Push(std::shared_ptr<MediaPacket> media_packet);
+	void Push(const std::shared_ptr<MediaPacket> &media_packet);
 	bool NormalizeMediaPacket(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
 
-	std::shared_ptr<MediaPacket> Pop();
+	std::shared_ptr<MediaPacket> PopAndNormalize();
 
 	// Query original stream information
 	std::shared_ptr<info::Stream> GetStream();

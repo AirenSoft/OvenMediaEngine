@@ -250,35 +250,35 @@ namespace info
 		ov::String _type_name;
 
 		// Peak size of the queue
-		size_t _peak;
+		size_t _peak = 0;
 
 		// Current size of the queue
-		size_t _size;
+		size_t _size = 0;
 
 		// Threshold of the queue
-		size_t _threshold;
+		size_t _threshold = 0;
 
 		// threshold_exceeded_time increases from the point the queue is exceeded
 		int64_t _threshold_exceeded_time_in_us;
 
 		// Input Message Count
-		int64_t _input_message_count;
-		int64_t _last_input_message_count;
+		int64_t _input_message_count = 0;
+		int64_t _last_input_message_count = 0;
 		// Output Message Count
-		int64_t _output_message_count;
-		int64_t _last_output_message_count;
+		int64_t _output_message_count = 0;
+		int64_t _last_output_message_count = 0;
 
 		// Input Message Per Second
-		size_t _input_message_per_second;
+		size_t _input_message_per_second = 0;
 
 		// Output Message Per Second
-		size_t _output_message_per_second;
+		size_t _output_message_per_second = 0;
 
 		// Average Waiting Time(microseconds)
-		int64_t _waiting_time_in_us;
+		int64_t _waiting_time_in_us = 0;
 
 		// Drop Count
-		uint64_t _drop_message_count;
+		uint64_t _drop_message_count = 0;
 	};
 
 }  // namespace info

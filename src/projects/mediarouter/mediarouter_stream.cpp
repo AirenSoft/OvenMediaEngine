@@ -53,7 +53,7 @@ using namespace cmn;
 
 MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 	: _stream(stream),
-	  _packets_queue(nullptr, 100)
+	  _packets_queue(nullptr, 600)
 {
 	_inout_type = MediaRouterStreamType::UNKNOWN;
 
@@ -1146,12 +1146,19 @@ void MediaRouteStream::DropNonDecodingPackets()
 	}
 }
 
-void MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
+void MediaRouteStream::Push(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	if (GetInoutType() == MediaRouterStreamType::INBOUND)
+	{
+		// Only Inbound Stream needs to process urgent packets.
+		_packets_queue.Enqueue(media_packet, media_packet->IsHighPriority());
+		return;
+	}
+
 	_packets_queue.Enqueue(std::move(media_packet));
 }
 
-std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
+std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 {
 	// Get Media Packet
 	if (_packets_queue.IsEmpty())

@@ -235,6 +235,16 @@ public:
 		return &_frag_hdr;
 	}
 
+	void SetHighPriority(bool high_priority)
+	{
+		_high_priority = high_priority;
+	}
+
+	bool IsHighPriority() const
+	{
+		return _high_priority;
+	}
+
 	std::shared_ptr<MediaPacket> ClonePacket() const
 	{
 		auto packet = std::make_shared<MediaPacket>(
@@ -250,6 +260,7 @@ public:
 			GetPacketType());
 
 		packet->_frag_hdr = _frag_hdr;
+		packet->_high_priority = _high_priority;
 
 		return packet;
 	}
@@ -270,6 +281,12 @@ public:
 		return info;
 	}
 
+	// creation timepoint
+	std::chrono::time_point<std::chrono::system_clock> GetCreationTime() const
+	{
+		return _creation_time;
+	}
+
 protected:
 	uint32_t _msid = 0;
 	cmn::MediaType _media_type = cmn::MediaType::Unknown;
@@ -284,5 +301,11 @@ protected:
 	cmn::BitstreamFormat _bitstream_format = cmn::BitstreamFormat::Unknown;
 	cmn::PacketType _packet_type = cmn::PacketType::Unknown;
 	FragmentationHeader _frag_hdr;
+
+	// This flag is used to indicate that this packet should be sent with high priority.
+	bool _high_priority = false; 
+
+	// creation timepoint
+	std::chrono::time_point<std::chrono::system_clock> _creation_time = std::chrono::system_clock::now();
 };
 
