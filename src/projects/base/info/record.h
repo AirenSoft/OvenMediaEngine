@@ -25,8 +25,8 @@ namespace info
 		void SetId(ov::String id);
 		ov::String GetId() const;
 
-		void SetAutomated(bool auto_record);
-		bool IsAutomated();
+		void SetByConfig(bool is_config);
+		bool IsByConfig();
 
 		// set by user
 		void SetMetadata(ov::String metadata);
@@ -155,8 +155,8 @@ namespace info
 		// User custom id
 		ov::String _id;
 
-		// Auto Record Flag
-		bool _automated;
+		// by config
+		bool _is_config;
 		
 		// It is used as additional information for recording session. It's not essential information.
 		ov::String _metadata;

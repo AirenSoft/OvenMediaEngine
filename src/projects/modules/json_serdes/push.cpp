@@ -175,6 +175,7 @@ namespace serdes
 		SetTimestamp(response, "startTime", push->GetPushStartTime());
 		SetTimestamp(response, "finishTime", push->GetPushStopTime());
 		SetTimestamp(response, "createdTime", push->GetCreatedTime());
+		SetBool(response, "isConfig", push->IsByConfig());
 
 		return response;
 	}	

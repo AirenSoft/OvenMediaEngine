@@ -13,6 +13,24 @@ namespace info
 
 	class Push : public ov::EnableSharedFromThis<info::Push>
 	{
+	public:		
+		enum class PushState : int8_t
+		{
+			Ready,
+			Pushing,
+			Stopping,
+			Stopped,
+			Error
+		};
+
+		enum class ProtocolType : int8_t
+		{
+			UNKNOWN = 0,
+			RTMP,
+			SRT,
+			MPEGTS
+		};		
+
 	public:
 		Push();
 		~Push() override = default;
@@ -51,6 +69,8 @@ namespace info
 		
 		void SetProtocol(ov::String protocol);
 		ov::String GetProtocol();
+		Push::ProtocolType GetProtocolType();
+
 
 		void SetUrl(ov::String url);
 		ov::String GetUrl();
@@ -77,18 +97,12 @@ namespace info
 		const std::chrono::system_clock::time_point GetPushStartTime() const;
 		const std::chrono::system_clock::time_point GetPushStopTime() const;
 
-		enum class PushState : int8_t
-		{
-			Ready,
-			Pushing,
-			Stopping,
-			Stopped,
-			Error
-		};
-
 		PushState GetState();
 		void SetState(PushState state);
 		ov::String GetStateString();
+
+		void SetByConfig(bool is_config);
+		bool IsByConfig();
 
 		const ov::String GetInfoString();
 
@@ -100,6 +114,8 @@ namespace info
 
 		// Remove Flag
 		bool _remove;
+
+		bool _is_config;
 
 		// Virtual Host
 		ov::String _vhost_name;

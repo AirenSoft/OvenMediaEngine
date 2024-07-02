@@ -81,7 +81,8 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  "Could not parse json context: [%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+									  vhost->GetName().CStr(),
+									  app->GetName().GetAppName().CStr());
 			}
 			else
 			{
@@ -95,7 +96,8 @@ namespace api
 			if (error->GetCode() != pub::FilePublisher::FilePublisherStatusCode::Success)
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get records: [%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+									  vhost->GetName().CStr(),
+									  app->GetName().GetAppName().CStr());
 			}
 
 			response = Json::arrayValue;
@@ -119,7 +121,8 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find publisher: [%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+									  vhost->GetName().CStr(),
+									  app->GetName().GetAppName().CStr());
 			}
 
 			auto application = std::static_pointer_cast<pub::FileApplication>(publisher->GetApplicationByName(app->GetName()));
@@ -136,7 +139,8 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  "Could not parse json context: [%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+									  vhost->GetName().CStr(),
+									  app->GetName().GetAppName().CStr());
 			}
 			else
 			{
@@ -241,25 +245,19 @@ namespace api
 									  app->GetName().GetAppName().CStr());
 			}
 
-			std::vector<PublisherType> publisher_types{PublisherType::RtmpPush, PublisherType::MpegtsPush, PublisherType::SrtPush};
-			for (auto publisher_type : publisher_types)
+			auto publisher{ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::Push)};
+			if (publisher == nullptr)
 			{
-				auto publisher{
-					ocst::Orchestrator::GetInstance()->GetPublisherFromType(publisher_type)};
-				if (publisher == nullptr)
-				{
-					throw http::HttpError(http::StatusCode::NotFound,
-										  "Could not find publisher: [%s/%s]",
-										  vhost->GetName().CStr(),
-										  app->GetName().GetAppName().CStr());
-				}
+				throw http::HttpError(http::StatusCode::NotFound,
+									  "Could not find publisher: [%s/%s]",
+									  vhost->GetName().CStr(),
+									  app->GetName().GetAppName().CStr());
+			}
 
-				auto application{
-					std::static_pointer_cast<pub::PushApplication>(publisher->GetApplicationByName(app->GetName()))};
-				if (application != nullptr)
-				{
-					application->GetPushes(push, results);
-				}
+			auto application{std::static_pointer_cast<pub::PushApplication>(publisher->GetApplicationByName(app->GetName()))};
+			if (application != nullptr)
+			{
+				application->GetPushes(push, results);
 			}
 
 			response = Json::arrayValue;
@@ -288,9 +286,7 @@ namespace api
 			}
 
 			auto push_protocol{push->GetProtocol().LowerCaseString()};
-			auto publisher_type{(push_protocol == "rtmp") ? PublisherType::RtmpPush
-														: (push_protocol == "mpegts") ? PublisherType::MpegtsPush
-														: (push_protocol == "srt") ? PublisherType::SrtPush : PublisherType::Unknown};
+			auto publisher_type{(push_protocol == "rtmp" || push_protocol == "mpegts" || push_protocol == "srt") ? PublisherType::Push : PublisherType::Unknown};
 
 			if (publisher_type == PublisherType::Unknown)
 			{
@@ -329,7 +325,7 @@ namespace api
 			}
 
 			// If the stream does not exist, request a pull stream.
-			if(application->GetStream(push->GetStreamName()) == nullptr)
+			if (application->GetStream(push->GetStreamName()) == nullptr)
 			{
 				auto url = ov::Url::Parse(client->GetRequest()->GetUri());
 				auto app_name = app->GetName();
@@ -359,32 +355,26 @@ namespace api
 			push->SetVhost(vhost->GetName());
 			push->SetApplication(app->GetName().GetAppName());
 
-			std::vector<PublisherType> publisher_types{PublisherType::RtmpPush, PublisherType::MpegtsPush, PublisherType::SrtPush};
-			for (auto publisher_type : publisher_types)
+			auto publisher{ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::Push)};
+			if (publisher == nullptr)
 			{
-				auto publisher{
-					ocst::Orchestrator::GetInstance()->GetPublisherFromType(publisher_type)};
-				if (publisher == nullptr)
-				{
-					throw http::HttpError(http::StatusCode::NotFound,
-										  "Could not find publisher: [%s/%s]",
-										  vhost->GetName().CStr(),
-										  app->GetName().GetAppName().CStr());
-				}
+				throw http::HttpError(http::StatusCode::NotFound,
+									  "Could not find publisher: [%s/%s]",
+									  vhost->GetName().CStr(),
+									  app->GetName().GetAppName().CStr());
+			}
 
-				auto application{
-					std::static_pointer_cast<pub::PushApplication>(publisher->GetApplicationByName(app->GetName()))};
-				if (application != nullptr)
+			auto application{std::static_pointer_cast<pub::PushApplication>(publisher->GetApplicationByName(app->GetName()))};
+			if (application != nullptr)
+			{
+				auto error{application->StopPush(push)};
+				switch (error->GetCode())
 				{
-					auto error{application->StopPush(push)};
-					switch (error->GetCode())
-					{
-						case pub::PushApplication::ErrorCode::FailureInvalidParameter: {
-							throw http::HttpError(http::StatusCode::BadRequest, error->GetMessage());
-						}
-						case pub::PushApplication::ErrorCode::Success: {
-							return {http::StatusCode::OK};
-						}
+					case pub::PushApplication::ErrorCode::FailureInvalidParameter: {
+						throw http::HttpError(http::StatusCode::BadRequest, error->GetMessage());
+					}
+					case pub::PushApplication::ErrorCode::Success: {
+						return {http::StatusCode::OK};
 					}
 				}
 			}

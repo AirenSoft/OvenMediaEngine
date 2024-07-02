@@ -56,6 +56,14 @@ namespace mon
 		out_str.AppendFormat("\n\t\t>>>> By publisher\n");
 		for (int i = 0; i < static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
 		{
+			// Deprecated Statistics
+			if(static_cast<PublisherType>(i) == PublisherType::RtmpPush 
+			|| static_cast<PublisherType>(i) == PublisherType::MpegtsPush 
+			|| static_cast<PublisherType>(i) == PublisherType::SrtPush)
+			{
+				continue;
+			}
+
 			out_str.AppendFormat("\t\t- %s : Bytes out(%s) Concurrent Connections (%u)\n",
 								 ::StringFromPublisherType(static_cast<PublisherType>(i)).CStr(),
 								 ov::Converter::BytesToString(GetBytesOut(static_cast<PublisherType>(i))).CStr(),

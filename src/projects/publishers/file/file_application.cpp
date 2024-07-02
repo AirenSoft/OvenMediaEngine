@@ -40,15 +40,16 @@ namespace pub
 	{
 		logtd("Created Stream : %s/%u", info->GetName().CStr(), info->GetId());
 
-		auto config = GetConfig();
-		auto file_conifg = config.GetPublishers().GetFilePublisher();
-		auto record_config = file_conifg.GetRecord();
+		auto file_conifg = GetConfig().GetPublishers().GetFilePublisher();
+		auto stream_map_config = file_conifg.GetStreamMap();
 
-		if (record_config.IsEnabled() == true)
+		if (stream_map_config.IsEnabled() == true)
 		{
-			auto records_info = GetRecordInfoFromFile(record_config.GetRecordInfo(), info);
+			auto records_info = GetRecordInfoFromFile(stream_map_config.GetPath(), info);
 			for (auto record : records_info)
 			{
+				record->SetByConfig(true);
+
 				auto result = RecordStart(record);
 				if (result->GetCode() != FilePublisher::FilePublisherStatusCode::Success)
 				{
@@ -73,7 +74,7 @@ namespace pub
 		auto record_info_list = _record_info_list.GetByStreamName(info->GetName());
 		for (auto record_info : record_info_list)
 		{
-			if (record_info->IsAutomated() == false)
+			if (record_info->IsByConfig() == false)
 			{
 				continue;
 			}
@@ -448,7 +449,6 @@ namespace pub
 
 			record->SetFilePath(file_path);
 			record->SetInfoPath(info_path);
-			record->SetAutomated(true);
 			record->SetInterval(ov::Converter::ToInt32(segment_interval));
 			record->SetSegmentationRule(segment_rule);
 			record->SetSchedule(segment_schedule);

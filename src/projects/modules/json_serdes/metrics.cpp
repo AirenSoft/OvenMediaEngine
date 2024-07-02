@@ -40,8 +40,7 @@ namespace serdes
 		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::LLHls).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::LLHls));
 		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Ovt).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Ovt));
 		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::File).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::File));
-		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::RtmpPush).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::RtmpPush));
-		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::MpegtsPush).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::MpegtsPush));
+		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Push).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Push));
 		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Thumbnail).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Thumbnail));
 
 		return value;

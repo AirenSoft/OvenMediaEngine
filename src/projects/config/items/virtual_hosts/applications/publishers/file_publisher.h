@@ -9,7 +9,7 @@
 #pragma once
 
 #include "publisher.h"
-#include "file_record.h"
+#include "stream_map/stream_map.h"
 
 namespace cfg
 {
@@ -29,7 +29,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFilePath, _file_path)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetInfoPath, _info_path)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetRootPath, _root_path)
-					CFG_DECLARE_CONST_REF_GETTER_OF(GetRecord, 	_record)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamMap,_stream_map)
 
 				protected:
 					void MakeList() override
@@ -40,17 +40,20 @@ namespace cfg
 						Register<Optional>("FilePath", &_file_path);
 						Register<Optional>("InfoPath", &_info_path);
 
-						Register<Optional>("Record", &_record);
-
-						//@deprecated
-
+						// Record is Deprecated
+						Register<Optional>({"Record", "record"}, &_stream_map, nullptr, 
+							[=]() -> std::shared_ptr<ConfigError> {
+								logw("Config", "Publishers.FILE.Record will be deprecated. Please use Publishers.FILE.StreamMap instead");
+								return nullptr;
+							});
+						Register<Optional>({"StreamMap", "streamMap"}, &_stream_map);
 					}
 
 					ov::String _root_path = "";
 					ov::String _file_path = "";
 					ov::String _info_path = "";
 					
-					FileRecord _record;
+					pub::StreamMap _stream_map;
 				};
 			}  // namespace pub
 		}	   // namespace app

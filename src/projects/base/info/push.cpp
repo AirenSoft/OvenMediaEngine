@@ -32,6 +32,8 @@ namespace info
 		
 		_session_id = 0;
 
+		_is_config = false;
+
 		_state = PushState::Ready;
 	}
 
@@ -149,6 +151,25 @@ namespace info
 		return _protocol;
 	}
 
+	Push::ProtocolType Push::GetProtocolType()
+	{
+		if (GetProtocol().LowerCaseString() == "rtmp")
+		{
+			return ProtocolType::RTMP;
+		}
+		else if (GetProtocol().LowerCaseString() == "srt")
+		{
+			return ProtocolType::SRT;
+		}
+		else if (GetProtocol().LowerCaseString() == "mpegts")
+		{
+			return ProtocolType::MPEGTS;
+		}
+
+		return ProtocolType::UNKNOWN;
+	}
+
+
 	void Push::SetUrl(ov::String url)
 	{
 		_url = url.Trim();
@@ -228,6 +249,17 @@ namespace info
 	{
 		_state = state;
 	}
+
+	void Push::SetByConfig(bool is_config)
+	{
+		_is_config = is_config;
+	}
+
+	bool Push::IsByConfig()
+	{
+		return _is_config;
+	}
+
 	ov::String Push::GetStateString()
 	{
 		switch (GetState())
@@ -235,7 +267,7 @@ namespace info
 			case PushState::Ready:
 				return "ready";
 			case PushState::Pushing:
-				return "Pushing";
+				return "pushing";
 			case PushState::Stopping:
 				return "stopping";
 			case PushState::Stopped:

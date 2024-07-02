@@ -15,7 +15,7 @@ namespace info
 
 		_created_time = std::chrono::system_clock::now();
 		_id = "";
-		_automated = false;
+		_is_config = false;
 		_metadata = "";
 		_transaction_id = "";
 
@@ -62,15 +62,15 @@ namespace info
 	{
 		return _id;
 	}
-
-	void Record::SetAutomated(bool automated)
+	
+	void Record::SetByConfig(bool is_config)
 	{
-		_automated = automated;
+		_is_config = is_config;
 	}
 
-	bool Record::IsAutomated()
+	bool Record::IsByConfig()
 	{
-		return _automated;
+		return _is_config;
 	}
 
 	void Record::SetMetadata(ov::String metadata)
