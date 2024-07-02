@@ -26,10 +26,10 @@ Server.xml
       <InfoPath>/${VirtualHost}/${Application}/${Stream}.xml</InfoPath>
       
       <!-- [Optional] Recording settings for file-based automatic recording -->
-      <Record>
+      <StreamMap>
          <Enable>true</Enable>
-         <RecordInfo>./record_info.xml</RecordInfo>
-      </Record>
+         <Path>./record_map.xml</Path>
+      </StreamMap>
    </FILE>
 </Publishers>
 ```
@@ -46,7 +46,7 @@ For how to use the API, please refer to the link below.
 
 ## Automated Recording
 
-Provides a way to automatically start and stop recording upon input stream that matches your file-based settings. In the above settings, the XML file path is specified in **Record.RecordInfo**.  You can create the XML file at the specified path and configure automatic recording as follows.
+Provides a way to automatically start and stop recording upon input stream that matches your file-based settings. In the above settings, the XML file path is specified in **StreamMap.Path**.  You can create the XML file at the specified path and configure automatic recording as follows.
 
 {% code fullWidth="false" %}
 ```xml
@@ -96,7 +96,7 @@ Provides a way to automatically start and stop recording upon input stream that 
 ```
 {% endcode %}
 
-### Split Recording
+## Split Recording
 
 Split recording methods provide **SegmentInterval** and **SegmentSchedule**. The interval method splits files based on the accumulated recording time. The Schedule method then splits files according to scheduling options based on system time. The scheduling option is the same as the pattern used in crontab. However, only three options are used: seconds/minutes/hour.\
 You can set the **SegmentRule** parameter to determine whether the start timestamp of the separated recording files will start anew from 0(**discontinuity**)  or continue from where the previous file left off(**continuity**).
