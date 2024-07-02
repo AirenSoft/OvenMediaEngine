@@ -120,7 +120,7 @@ protected:
 	int DecideBufferSize() const;
 
 	int OnWrite(const uint8_t *buf, int buf_size);
-	static int OnWrite(void *opaque, uint8_t *buf, int buf_size)
+	static int OnWrite(void *opaque, const uint8_t *buf, int buf_size)
 	{
 		return (static_cast<Writer *>(opaque))->OnWrite(buf, buf_size);
 	}

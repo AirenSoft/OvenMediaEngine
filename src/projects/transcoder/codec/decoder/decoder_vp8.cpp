@@ -83,7 +83,6 @@ bool DecoderVP8::InitCodec()
 
 void DecoderVP8::UninitCodec()
 {
-	::avcodec_close(_context);
 	::avcodec_free_context(&_context);
 
 	_context = nullptr;
@@ -253,7 +252,7 @@ void DecoderVP8::CodecThread()
 				}
 
 				// If there is no duration, the duration is calculated by framerate and timebase.
-				_frame->pkt_duration = (_frame->pkt_duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, GetRefTrack()) : _frame->pkt_duration;
+				_frame->duration = (_frame->duration <= 0LL) ? ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Video, GetRefTrack()) : _frame->duration;
 
 				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				::av_frame_unref(_frame);
