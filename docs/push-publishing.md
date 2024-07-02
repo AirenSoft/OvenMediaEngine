@@ -1,8 +1,8 @@
 # Push Publishing
 
-&#x20;OvenMediaEngine supports **Push Publishing** function that can restreaming live streams to other systems. The protocol supported for retransmission uses **SRT**, **RTMP** and **MPEGTS**. Because, most services and products support this protocol. &#x20;
+&#x20;OvenMediaEngine supports **Push Publishing** function that can restreaming live streams to other systems.  The protocol supports widely used protocols such as SRT, RTMP, and MPEGTS. &#x20;
 
-The StreamMap feature has been added, and it now automatically restreaming based on predefined conditions. You can also use the Rest API to control and monitor it.
+The **StreamMap** feature has been added, and it now automatically restreaming based on predefined conditions. You can also use the Rest API to control and monitor it.
 
 ## Configuration
 
@@ -90,9 +90,7 @@ The RTMP protocol only supports H264 and AAC codecs.
 
 ## REST API
 
-For control of push, use the REST API. SRT, RTMP, MPEGTS push can be requested based on the output stream name (specified in the JSON body), and you can selectively transfer all/some tracks. In addition, you must specify the URL and Stream Key of the external server to be transmitted. It can send multiple Pushes simultaneously for the same stream. If transmission is interrupted due to network or other problems, it automatically reconnects.
-
-For how to use the API, please refer to the link below.
+Push can be controlled using the REST API. Please refer to the documentation below for more details.
 
 {% content-ref url="rest-api/v1/virtualhost/application/push.md" %}
 [push.md](rest-api/v1/virtualhost/application/push.md)
