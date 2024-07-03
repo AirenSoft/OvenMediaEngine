@@ -22,7 +22,8 @@
 #define MANAGED_QUEUE_METRICS_UPDATE_INTERVAL_IN_MSEC 1000
 #define MANAGED_QUEUE_LOG_INTERVAL_IN_MSEC 5000
 
-#define SKIP_MESSAGE_ENABLED 1
+// Deactivated as it is no longer used
+#define SKIP_MESSAGE_ENABLED 0
 #define SKIP_MESSAGE_CHECK_INTERVAL 500					 // 0.5 sec
 #define SKIP_MESSAGE_STABLE_FOR_RETRIEVE_INTERVAL 10000	 // 10 sec
 #define SKIP_MESSAGE_LOG_INTERVAL 5000					 // 1 sec
@@ -95,21 +96,21 @@ namespace ov
 		}
 
 		// Urgent item will be inserted at the front of the queue
-		void Enqueue(const T& item, bool urgent = false)
+		void Enqueue(const T& item, bool urgent = false, int timeout = Infinite)
 		{
 			auto node = new ManagedQueueNode(item, urgent);
 			EnqeuePos pos = urgent ? EnqeuePos::EnqueuFrontPos : EnqeuePos::EnqueuBackPos;
 
-			EnqueueInternal(node, Infinite, pos);
+			EnqueueInternal(node, timeout, pos);
 		}
 
 		// Urgent item will be inserted at the front of the queue
-		void Enqueue(T&& item, bool urgent = false)
+		void Enqueue(T&& item, bool urgent = false, int timeout = Infinite)
 		{
 			auto node = new ManagedQueueNode(item, urgent);
 			EnqeuePos pos = urgent ? EnqeuePos::EnqueuFrontPos : EnqeuePos::EnqueuBackPos;
 
-			EnqueueInternal(node, Infinite, pos);
+			EnqueueInternal(node, timeout, pos);
 		}
 
 		std::optional<T> Front(int timeout = Infinite)
@@ -238,7 +239,7 @@ namespace ov
 
 			UpdateMetrics();
 
-			if(_prevent_exceed_threshold_and_wait_enabled == true)
+			if(_exceed_threshold_and_wait_enabled == true)
 			{
 				_condition.notify_all();
 			}
@@ -305,9 +306,14 @@ namespace ov
 			_skip_message_enabled = enable;
 		}
 
-		void SetPreventExceedThreshold(bool enable)
+		void SetExceedWaitEnable(bool enable)
 		{
-			_prevent_exceed_threshold_and_wait_enabled = enable;
+			_exceed_threshold_and_wait_enabled = enable;
+		}
+
+		bool IsExceedWaitEnable()
+		{
+			return _exceed_threshold_and_wait_enabled;
 		}
 
 		// Buffer keeps items for a certain amount of time
@@ -334,7 +340,7 @@ namespace ov
 			return std::chrono::duration_cast<std::chrono::milliseconds>(current - _front_node->_start).count();
 		}
 
-		// timeout works when the queue is full and _prevent_exceed_threshold_and_wait_enabled is true
+		// timeout works when the queue is full and _exceed_threshold_and_wait_enabled is true
 		// If the queue is full, it waits until the queue is less than the threshold or the timeout expires.
 		// If the timeout expires, the message is dropped.
 		// This is to avoid dropping items when the queue size exceeds the threshold, if it exceeds it momentarily due to jitter.
@@ -447,9 +453,9 @@ namespace ov
 			}
 #endif
 
-			if(_prevent_exceed_threshold_and_wait_enabled == true)
+			// Wait until the queue size is less than threshold
+			if(_exceed_threshold_and_wait_enabled == true)
 			{
-				// Wait until the queue size is less than threshold
 				std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
 				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
 					return (_size  < _threshold);
@@ -624,7 +630,7 @@ namespace ov
 
 		// Prevent exceed threshold. If true, the queue will not exceed the threshold
 		// Wait until the queue falls below the threshold
-		bool _prevent_exceed_threshold_and_wait_enabled = false;
+		bool _exceed_threshold_and_wait_enabled = false;
 
 		// Delay
 		int _buffering_delay = 0;

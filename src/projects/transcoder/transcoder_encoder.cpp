@@ -346,11 +346,9 @@ bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 	_input_buffer.SetUrn(urn);
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
-	// Limit the queue so that it does not exceed the threshold.
-	// If the encoder performance is poor. I expect the frame to be dropped from the scaler.
-	// The 'SetSkipMessageEnable' function was painstakingly created, but unfortunately it is not used here.
-	_input_buffer.SetPreventExceedThreshold(true);
-
+	// This is used to prevent the from creating frames from rescaler/resampler filter. 
+	// Because of hardware resource limitations.
+	_input_buffer.SetExceedWaitEnable(true);
 
 	// SkipMessage is enabled due to the high possibility of queue overflow due to insufficient video encoding performance.
 	// Users will not experience any inconvenience even if the video is intermittently missing.
@@ -370,7 +368,14 @@ std::shared_ptr<MediaTrack> &TranscodeEncoder::GetRefTrack()
 
 void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 {
-	_input_buffer.Enqueue(std::move(frame));
+	if (_input_buffer.IsExceedWaitEnable() == true)
+	{
+		_input_buffer.Enqueue(std::move(frame), false, 1000);
+	}
+	else
+	{
+		_input_buffer.Enqueue(std::move(frame));
+	}
 }
 
 void TranscodeEncoder::SetCompleteHandler(CompleteHandler complete_handler)
