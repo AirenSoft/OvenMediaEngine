@@ -188,6 +188,54 @@ bool HlsStream::CreateDefaultPlaylist()
 	return true;
 }
 
+void HlsStream::BufferMediaPacketUntilReadyToPlay(const std::shared_ptr<MediaPacket> &media_packet)
+{
+	if (_initial_media_packet_buffer.Size() >= MAX_INITIAL_MEDIA_PACKET_BUFFER_SIZE)
+	{
+		// Drop the oldest packet, for OOM protection
+		_initial_media_packet_buffer.Dequeue(0);
+	}
+
+	_initial_media_packet_buffer.Enqueue(media_packet);
+}
+
+bool HlsStream::SendBufferedPackets()
+{
+	logtd("SendBufferedPackets - BufferSize (%u)", _initial_media_packet_buffer.Size());
+	while (_initial_media_packet_buffer.IsEmpty() == false)
+	{
+		auto buffered_media_packet = _initial_media_packet_buffer.Dequeue();
+		if (buffered_media_packet.has_value() == false)
+		{
+			continue;
+		}
+
+		auto media_packet = buffered_media_packet.value();
+		if (media_packet->GetMediaType() == cmn::MediaType::Data)
+		{
+			SendDataFrame(media_packet);
+		}
+		else
+		{
+			AppendMediaPacket(media_packet);
+		}
+	}
+
+	return true;
+}
+
+bool HlsStream::AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_packet)
+{
+	std::shared_lock<std::shared_mutex> lock(_packetizers_guard);
+	auto& packetizers = _track_packetizers[media_packet->GetTrackId()];
+	for (auto& packetizer : packetizers)
+	{
+		packetizer->AppendFrame(media_packet);
+	}
+
+	return true;
+}
+
 void HlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
 	// If the stream is concluded, it will not be processed.
@@ -196,12 +244,18 @@ void HlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 		return;
 	}
 
-	std::shared_lock<std::shared_mutex> lock(_packetizers_guard);
-	auto& packetizers = _track_packetizers[media_packet->GetTrackId()];
-	for (auto& packetizer : packetizers)
+	if (GetState() == State::CREATED)
 	{
-		packetizer->AppendFrame(media_packet);
+		BufferMediaPacketUntilReadyToPlay(media_packet);
+		return;
 	}
+
+	if (_initial_media_packet_buffer.IsEmpty() == false)
+	{
+		SendBufferedPackets();
+	}
+
+	AppendMediaPacket(media_packet);
 }
 
 void HlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) 
@@ -212,16 +266,33 @@ void HlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 		return;
 	}
 
-	std::shared_lock<std::shared_mutex> lock(_packetizers_guard);
-	auto& packetizers = _track_packetizers[media_packet->GetTrackId()];
-	for (auto& packetizer : packetizers)
+	if (GetState() == State::CREATED)
 	{
-		packetizer->AppendFrame(media_packet);
+		BufferMediaPacketUntilReadyToPlay(media_packet);
+		return;
 	}
+
+	if (_initial_media_packet_buffer.IsEmpty() == false)
+	{
+		SendBufferedPackets();
+	}
+
+	AppendMediaPacket(media_packet);
 }
 
 void HlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	if (GetState() == State::CREATED)
+	{
+		BufferMediaPacketUntilReadyToPlay(media_packet);
+		return;
+	}
+
+	if (_initial_media_packet_buffer.IsEmpty() == false)
+	{
+		SendBufferedPackets();
+	}
+
 	// Not implemented
 	// TODO(getroot) : Implement this function
 }

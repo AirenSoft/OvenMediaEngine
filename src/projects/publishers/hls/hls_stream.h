@@ -70,6 +70,11 @@ private:
 	std::shared_ptr<HlsMediaPlaylist> GetMediaPlaylist(const ov::String &variant_name);
 	std::shared_ptr<HlsMasterPlaylist> GetMasterPlaylist(const ov::String &playlist_name);
 
+	bool AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_packet);
+	void BufferMediaPacketUntilReadyToPlay(const std::shared_ptr<MediaPacket> &media_packet);
+	bool SendBufferedPackets();
+	ov::Queue<std::shared_ptr<MediaPacket>> _initial_media_packet_buffer;
+
 	//////////////////////////
 	// Events
 	//////////////////////////
