@@ -445,13 +445,17 @@ namespace api
 				case StreamSourceType::Srt:
 					provider_type = ProviderType::Srt;
 					break;
-
+				case StreamSourceType::Scheduled:
+					provider_type = ProviderType::Scheduled;
+					break;
+				case StreamSourceType::Multiplex:
+					provider_type = ProviderType::Multiplex;
+					break;
 				case StreamSourceType::File:
 					provider_type = ProviderType::File;
 					break;
 				case StreamSourceType::RtmpPull:
 				case StreamSourceType::Transcoder:
-				default:
 					return nullptr;
 			}
 
