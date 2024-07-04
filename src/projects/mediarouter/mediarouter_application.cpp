@@ -56,13 +56,13 @@ MediaRouteApplication::MediaRouteApplication(const info::Application &applicatio
 		{
 			auto urn = std::make_shared<info::ManagedQueue::URN>(_application_info.GetName(), nullptr, "imr", ov::String::FormatString("aw_%d", worker_id));
 			auto stream_data = std::make_shared<ov::ManagedQueue<std::shared_ptr<MediaRouteStream>>>(urn, 1000);
-			stream_data->SetBufferingDelay(delay_buffer_time_ms);
 			_inbound_stream_indicator.push_back(stream_data);
 		}
 
 		{
 			auto urn = std::make_shared<info::ManagedQueue::URN>(_application_info.GetName(), nullptr, "omr", ov::String::FormatString("aw_%d", worker_id));
 			auto stream_data = std::make_shared<ov::ManagedQueue<std::shared_ptr<MediaRouteStream>>>(urn, 1000);
+			stream_data->SetBufferingDelay(delay_buffer_time_ms);
 			_outbound_stream_indicator.push_back(stream_data);
 		}
 	}
