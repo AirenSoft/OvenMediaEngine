@@ -158,6 +158,11 @@ bool HlsStream::CreateDefaultPlaylist()
 				first_audio_track = track;
 			}
 		}
+		else if (track->GetMediaType() == cmn::MediaType::Data)
+		{
+			// Data track
+			// Do nothing
+		}
 		else
 		{
 			logti("LLHlsStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
@@ -408,7 +413,7 @@ bool HlsStream::CreatePackagers()
 		{
 			std::lock_guard<std::shared_mutex> lock(_master_playlists_guard);
 			_master_playlists.emplace(master_playlist->GetFileName(), master_playlist);
-			logtd("HLS Master Playlist has been created : %s", master_playlist->GetFileName().CStr());
+			logti("HLS Master Playlist has been created : %s", master_playlist->GetFileName().CStr());
 		}
 
 		for (const auto &rendition : playlist->GetRenditionList())

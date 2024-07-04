@@ -186,6 +186,8 @@ namespace pvd
                 continue;
             }
 
+			stream_tap->SetNeedPastData(true);
+
             if (stream_tap->GetState() != MediaRouterStreamTap::State::Tapped)
             {
                 auto stream_url = source_stream->GetUrl();

@@ -896,7 +896,21 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 			for (auto iter = it.first; iter != it.second; ++iter)
 			{
 				auto stream_tap = iter->second;
-				stream_tap->Push(media_packet);
+
+				if (stream_tap->GetState() == MediaRouterStreamTap::State::Tapped)
+				{
+					if (stream_tap->DoesNeedPastData())
+					{
+						stream_tap->SetNeedPastData(false);
+
+						for (const auto &item : stream->GetMirrorBuffer())
+						{
+							stream_tap->Push(item->packet);
+						}
+					}
+
+					stream_tap->Push(media_packet);
+				}
 			}
 		}
 	}
@@ -923,6 +937,12 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 			continue;
 		}
 
+		// check stream is exist, there can be removed streams packet because of delay buffer
+		if (GetOutboundStream(stream->GetStream()->GetId()) == nullptr)
+		{
+			continue;
+		}
+
 		// StreamDeliver media packet to Publisher(observer) of Transcoder(observer)
 		auto media_packet = stream->PopAndNormalize();
 		if (media_packet == nullptr)
@@ -944,7 +964,6 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 			{
 				// Get Stream Info
 				auto stream_info = stream->GetStream();
-
 				observer->OnSendFrame(stream_info, media_packet);
 			}
 		}
@@ -958,6 +977,16 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 				auto stream_tap = iter->second;
 				if (stream_tap->GetState() == MediaRouterStreamTap::State::Tapped)
 				{
+					if (stream_tap->DoesNeedPastData())
+					{
+						stream_tap->SetNeedPastData(false);
+
+						for (const auto &item : stream->GetMirrorBuffer())
+						{
+							stream_tap->Push(item->packet);
+						}
+					}
+
 					stream_tap->Push(media_packet);
 				}
 			}

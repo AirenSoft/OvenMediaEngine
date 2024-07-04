@@ -130,7 +130,7 @@ public:
 		return _data;
 	}
 
-	size_t GetDataLength() noexcept
+	size_t GetDataLength() const noexcept
 	{
 		return _data->GetLength();
 	}
@@ -265,7 +265,7 @@ public:
 		return packet;
 	}
 
-	ov::String GetInfoString() {
+	ov::String GetInfoString() const {
 		ov::String info;
 
 		info.AppendFormat("MSID(%u) ", GetMsid());

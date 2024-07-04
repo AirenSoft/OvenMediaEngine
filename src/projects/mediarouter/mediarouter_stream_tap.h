@@ -39,6 +39,9 @@ public:
     void Start();
     void Stop();
 
+	void SetNeedPastData(bool need_past_data);
+	bool DoesNeedPastData() const;
+
     // If the stream is Tapped, MediaPacket will be popped from the buffer.
     // If the stream is not Tapped and the buffer is empty, nullptr will be returned immediately without waiting.
     std::shared_ptr<MediaPacket> Pop(int timeout_in_msec = 0);
@@ -61,7 +64,9 @@ private:
 
     bool _is_destroy_requested = false;
 
-    bool _is_started = false;
+    bool _is_started = true;
+
+	bool _need_past_data = false;
 
     uint32_t _id = 0;
 };

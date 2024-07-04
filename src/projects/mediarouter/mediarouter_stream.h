@@ -44,6 +44,29 @@ public:
 	bool NormalizeMediaPacket(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
 
 	std::shared_ptr<MediaPacket> PopAndNormalize();
+	
+	// Return mirror buffer reference
+	struct MirrorBufferItem
+	{
+		MirrorBufferItem(std::shared_ptr<MediaPacket> &packet)
+			: packet(packet)
+		{
+			created_time = std::chrono::system_clock::now();
+		}
+
+		// Elapsed milliseconds
+		int64_t GetElapsedMilliseconds()
+		{
+			auto now = std::chrono::system_clock::now();
+			auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - created_time);
+			return elapsed.count();
+		}
+
+		// timepoint created
+		std::chrono::time_point<std::chrono::system_clock> created_time;
+		std::shared_ptr<MediaPacket> packet;
+	};
+	std::vector<std::shared_ptr<MirrorBufferItem>> GetMirrorBuffer();
 
 	// Query original stream information
 	std::shared_ptr<info::Stream> GetStream();
@@ -90,6 +113,8 @@ private:
 
 	// Packets queue
 	ov::ManagedQueue<std::shared_ptr<MediaPacket>> _packets_queue;
+
+	std::vector<std::shared_ptr<MirrorBufferItem>> _mirror_buffer;
 
 	// TODO(Soulk) : Modified to use by tying statistical information into a class and creating a map with MediaTrackId as a key
 

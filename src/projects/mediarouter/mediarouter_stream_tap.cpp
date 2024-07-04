@@ -41,6 +41,16 @@ MediaRouterStreamTap::State MediaRouterStreamTap::GetState() const
     return _state;
 }
 
+void MediaRouterStreamTap::SetNeedPastData(bool need_past_data)
+{
+	_need_past_data = need_past_data;
+}
+
+bool MediaRouterStreamTap::DoesNeedPastData() const
+{
+	return _need_past_data;
+}
+
 void MediaRouterStreamTap::Start()
 {
     _is_started = true;

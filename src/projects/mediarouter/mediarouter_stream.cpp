@@ -1287,7 +1287,28 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 	// Statistics
 	UpdateStatistics(media_track, pop_media_packet);
 
+	// Mirror Buffer
+	_mirror_buffer.emplace_back(std::make_shared<MirrorBufferItem>(pop_media_packet));
+	// Delete old packets
+	for (auto it = _mirror_buffer.begin(); it != _mirror_buffer.end();)
+	{
+		auto item = *it;
+		if (item->GetElapsedMilliseconds() > 3000)
+		{
+			it = _mirror_buffer.erase(it);
+		}
+		else
+		{
+			++it;
+		}
+	}
+
 	return pop_media_packet;
+}
+
+std::vector<std::shared_ptr<MediaRouteStream::MirrorBufferItem>> MediaRouteStream::GetMirrorBuffer()
+{
+	return _mirror_buffer;
 }
 
 void MediaRouteStream::DetectAbnormalPackets(std::shared_ptr<MediaPacket> &packet)

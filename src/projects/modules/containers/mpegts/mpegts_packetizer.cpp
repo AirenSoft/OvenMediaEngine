@@ -131,14 +131,11 @@ namespace mpegts
         {
             if (media_packet->IsKeyFrame() == false)
             {
+				logtw("First video frame is not key frame so it has been dropped : %s", media_packet->GetInfoString().CStr());
                 return false;
             }
 
             _first_video_frame_received = true;
-        }
-        else if (_has_video == true && _first_video_frame_received == false && media_packet->GetMediaType() == cmn::MediaType::Audio)
-        {
-            return false;
         }
 
         // logtd("AppendFrame track_id %u, media_type %s, pts %lld, dts %lld", media_packet->GetTrackId(), StringFromMediaType(media_packet->GetMediaType()).CStr(), media_packet->GetPts(), media_packet->GetDts());

@@ -418,7 +418,7 @@ namespace pub
 			auto it = _stream_app_worker_map.find(stream_id);
 			if (it == _stream_app_worker_map.end())
 			{
-				logte("Cannot find ApplicationWorker for stream mapping. %u", stream_id);
+				logte("(%s/%s) cannot find ApplicationWorker for stream mapping. %u", GetApplicationTypeName(), GetName().CStr(), stream_id);
 				return nullptr;
 			}
 
