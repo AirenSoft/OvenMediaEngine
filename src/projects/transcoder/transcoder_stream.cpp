@@ -20,6 +20,8 @@
 #define FILLER_ENABLED true
 #define UNUSED_VARIABLE(var) (void)var;
 
+// max initial media packet buffer size, for OOM protection
+#define MAX_INITIAL_MEDIA_PACKET_BUFFER_SIZE 10000
 
 std::shared_ptr<TranscoderStream> TranscoderStream::Create(const info::Application &application_info, const std::shared_ptr<info::Stream> &org_stream_info, TranscodeApplication *parent)
 {
@@ -51,30 +53,85 @@ TranscoderStream::~TranscoderStream()
 info::stream_id_t TranscoderStream::GetStreamId()
 {
 	if (_input_stream != nullptr)
+	{
 		return _input_stream->GetId();
+	}
 
 	return 0;
 }
 
 bool TranscoderStream::Start()
 {
-	_is_stopped = false;
-
-	logti("%s Transcoder stream has been started", _log_prefix.CStr());
+	if (GetState() != State::CREATED)
+	{
+		return false;
+	}
 
 	// Request to webhook to get output profiles
 	RequestWebhoook();
 
-	if(GetOutputProfilesCfg() == nullptr)
+	if (GetOutputProfilesCfg() == nullptr)
 	{
 		// If there is no output profile, the transcoder is not initialized
 		// But, returns success for stream management of the transcode application.
 		return true;
 	}
 
-	if(StartInternal() == false)
+	if (StartInternal() == false)
 	{
+		SetState(State::ERROR);
+
 		return false;
+	}
+
+	logti("%s Transcoder stream has been started", _log_prefix.CStr());
+
+	return true;
+}
+
+bool TranscoderStream::Prepare(const std::shared_ptr<info::Stream> &stream)
+{
+	if(PrepareInternal() == false)
+	{
+		SetState(State::ERROR);
+
+		return false;
+	}
+
+	SetState(State::STARTED);
+	
+	logti("%s Transcoder stream has been prepared", _log_prefix.CStr());
+
+	return true;
+}
+
+bool TranscoderStream::Update(const std::shared_ptr<info::Stream> &stream)
+{
+	// Check if smooth stream transition is possible
+	// [Rule]
+	// - The number of tracks per media type should not exceed one.
+	// - The number of tracks of the stream to be changed must be the same.
+	if (IsAvailableSmoothTransitionStream(stream) == true)
+	{
+		logti("%s This stream will be a smooth transition", _log_prefix.CStr());
+
+		RemoveDecoders();
+
+		CreateDecoders();
+
+		UpdateMsidOfOutputStreams(stream->GetMsid());
+	}
+	else
+	{
+		logti("%s This stream does not support smooth transitions. renew the encoder", _log_prefix.CStr());
+
+		RemoveAllComponents();
+
+		CreateDecoders();
+
+		UpdateMsidOfOutputStreams(stream->GetMsid());
+
+		NotifyUpdateStreams();
 	}
 
 	return true;
@@ -82,7 +139,7 @@ bool TranscoderStream::Start()
 
 bool TranscoderStream::Stop()
 {
-	if(_is_stopped == true)
+	if(GetState() == State::STOPPED)
 	{
 		return true;
 	}
@@ -108,7 +165,7 @@ bool TranscoderStream::Stop()
 	// Delete all output streams information
 	_output_streams.clear();
 
-	_is_stopped = true;
+	SetState(State::STOPPED);
 
 	logti("%s Transcoder stream has been stopped", _log_prefix.CStr());
 
@@ -125,7 +182,7 @@ void TranscoderStream::RequestWebhoook()
 	{
 		_output_profiles_cfg = nullptr;
 
-		logtw("%s Delete a stream by webhook", _log_prefix.CStr());
+		logtw("%s Delete a stream by transcode webhook", _log_prefix.CStr());
 
 		ocst::Orchestrator::GetInstance()->TerminateStream(_application_info.GetName(), _input_stream->GetName());
 	}		
@@ -145,23 +202,8 @@ void TranscoderStream::RequestWebhoook()
 	}
 }
 
-bool TranscoderStream::Prepare(const std::shared_ptr<info::Stream> &stream)
-{
-
-	if(PrepareInternal() == false)
-	{
-		return false;
-	}
-
-	logti("%s Transcoder stream has been prepared", _log_prefix.CStr());
-
-	return true;
-}
-
 bool TranscoderStream::StartInternal()
 {
-	_create_success	= true;
-
 	if (_link_input_to_outputs.size() > 0 || _link_encoder_to_outputs.size() > 0)
 	{
 		logtd("%s Stream has already been created", _log_prefix.CStr());
@@ -208,39 +250,7 @@ bool TranscoderStream::PrepareInternal()
 	return true;
 }
 
-bool TranscoderStream::Update(const std::shared_ptr<info::Stream> &stream)
-{
-	// Check if smooth stream transition is possible
-	// [Rule]
-	// - The number of tracks per media type should not exceed one.
-	// - The number of tracks of the stream to be changed must be the same.
-	if (IsAvailableSmoothTransitionStream(stream) == true)
-	{
-		logti("%s This stream will be a smooth transition", _log_prefix.CStr());
 
-		// TODO: Flush 
-
-		RemoveDecoders();
-
-		CreateDecoders();
-
-		UpdateMsidOfOutputStreams(stream->GetMsid());
-	}
-	else
-	{
-		logti("%s This stream does not support smooth transitions. renew the encoder", _log_prefix.CStr());
-
-		RemoveAllComponents();
-
-		CreateDecoders();
-
-		UpdateMsidOfOutputStreams(stream->GetMsid());
-
-		NotifyUpdateStreams();
-	}
-
-	return true;
-}
 
 
 void TranscoderStream::RemoveAllComponents()
@@ -344,15 +354,55 @@ bool TranscoderStream::IsAvailableSmoothTransitionStream(const std::shared_ptr<i
 	return true;
 }
 
-
 bool TranscoderStream::Push(std::shared_ptr<MediaPacket> packet)
 {
-	if(_create_success == false)
+	if (GetState() == State::STARTED)
 	{
-		return false;
+		if (_initial_media_packet_buffer.IsEmpty() == false)
+		{
+			SendBufferedPackets();
+		}
+
+		DecodePacket(std::move(packet));
+	}
+	else if (GetState() == State::CREATED)
+	{
+		BufferMediaPacketUntilReadyToPlay(packet);
+	}
+	else if (GetState() == State::ERROR || GetState() == State::STOPPED)
+	{
+		logtw("%s Stream is in an error state", _log_prefix.CStr());
 	}
 
-	DecodePacket(std::move(packet));
+	return true;
+}
+
+void TranscoderStream::BufferMediaPacketUntilReadyToPlay(const std::shared_ptr<MediaPacket> &media_packet)
+{
+	if (_initial_media_packet_buffer.Size() >= MAX_INITIAL_MEDIA_PACKET_BUFFER_SIZE)
+	{
+		// Drop the oldest packet, for OOM protection
+		_initial_media_packet_buffer.Dequeue(0);
+	}
+
+	_initial_media_packet_buffer.Enqueue(media_packet);
+}
+
+bool TranscoderStream::SendBufferedPackets()
+{
+	logtd("SendBufferedPackets - BufferSize (%u)", _initial_media_packet_buffer.Size());
+	while (_initial_media_packet_buffer.IsEmpty() == false)
+	{
+		auto buffered_media_packet = _initial_media_packet_buffer.Dequeue();
+		if (buffered_media_packet.has_value() == false)
+		{
+			continue;
+		}
+
+		auto media_packet = buffered_media_packet.value();
+	
+		DecodePacket(std::move(media_packet));
+	}
 
 	return true;
 }
@@ -892,9 +942,9 @@ int32_t TranscoderStream::CreateFilters(MediaFrame *buffer)
 		{
 			continue;
 		}
-		logtd("%s Created Filter. Decoder(%u) > Filter(%d) > Encoder(%d)", _log_prefix.CStr(), decoder_id, filter_id, encoder_id);
-
 		created++;
+
+		logtd("%s Created Filter. Decoder(%u) > Filter(%d) > Encoder(%d)", _log_prefix.CStr(), decoder_id, filter_id, encoder_id);
 	}
 
 	return created;
@@ -963,8 +1013,7 @@ void TranscoderStream::ChangeOutputFormat(MediaFrame *buffer)
 	{
 		logtw("%s No encoders have been created. InputTrack(%u)", _log_prefix.CStr(), buffer->GetTrackId());
 
-		_create_success = false;		
-		
+		SetState(State::ERROR);
 		return;
 	}
 
@@ -973,8 +1022,7 @@ void TranscoderStream::ChangeOutputFormat(MediaFrame *buffer)
 	{
 		logtw("%s No filters have been created. InputTrack(%u)", _log_prefix.CStr(), buffer->GetTrackId());
 		
-		_create_success = false;
-
+		SetState(State::ERROR);
 		return;
 	}
 }
@@ -995,19 +1043,22 @@ void TranscoderStream::UpdateInputTrack(MediaFrame *buffer)
 
 	switch (input_track->GetMediaType())
 	{
-		case cmn::MediaType::Video: {
+		case cmn::MediaType::Video: 
+		{
 			input_track->SetWidth(buffer->GetWidth());
 			input_track->SetHeight(buffer->GetHeight());
 			input_track->SetColorspace(buffer->GetFormat());  // used AVPixelFormat
 		}
 		break;
-		case cmn::MediaType::Audio: {
+		case cmn::MediaType::Audio: 
+		{
 			input_track->SetSampleRate(buffer->GetSampleRate());
 			input_track->SetChannel(buffer->GetChannels());
 			input_track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(buffer->GetFormat()));
 		}
 		break;
-		default: {
+		default: 
+		{
 			logtd("%s Unsupported media type. InputTrack(%d)", _log_prefix.CStr(), track_id);
 		}
 		break;

@@ -79,7 +79,7 @@ public:
 
 public:
 	static std::shared_ptr<TranscoderStream> Create(const info::Application &application_info, const std::shared_ptr<info::Stream> &stream, TranscodeApplication *parent);
-	
+
 	TranscoderStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &orig_stream, TranscodeApplication *parent);
 	~TranscoderStream();
 
@@ -97,23 +97,45 @@ public:
 	void NotifyUpdateStreams();
 
 private:
+	// Create stream --> Start stream --> Stop stream --> Delete stream
+	enum class State : uint8_t
+	{
+		CREATED = 0,
+		STARTED,
+		STOPPED,
+		ERROR,
+	};
+
+	// Set the stream state
+	void SetState(State state)
+	{
+		_state = state;
+	}
+
+	State GetState() const
+	{
+		return _state;
+	}
+
+	State _state = State::CREATED;
+
+private:
 	ov::String _log_prefix;
 	std::shared_mutex _format_change_mutex;
 	std::shared_mutex _decoder_map_mutex;
 	std::shared_mutex _filter_map_mutex;
 	std::shared_mutex _encoder_map_mutex;
 
-	bool _is_stopped = true;
-
 	TranscodeApplication *_parent;
 
 	const info::Application _application_info;
 
 	// Output profile settings. It is used as an external profile or local profile depending on the webhook result.
-	const cfg::vhost::app::oprf::OutputProfiles* GetOutputProfilesCfg() {
+	const cfg::vhost::app::oprf::OutputProfiles *GetOutputProfilesCfg()
+	{
 		return _output_profiles_cfg;
 	}
-	const cfg::vhost::app::oprf::OutputProfiles* _output_profiles_cfg;
+	const cfg::vhost::app::oprf::OutputProfiles *_output_profiles_cfg;
 	// Output profile set from webhook
 	cfg::vhost::app::oprf::OutputProfiles _remote_output_profiles;
 
@@ -123,8 +145,6 @@ private:
 	// Output Stream Info
 	// [OUTPUT_STREAM_NAME, OUTPUT_stream]
 	std::map<ov::String, std::shared_ptr<info::Stream>> _output_streams;
-
-private:
 
 	// Map of CompositeContext
 	// [
@@ -138,7 +158,6 @@ private:
 	// This map is used only when the Passthrough options is enabled.
 	// [INPUT_TRACK_ID,  OUTPUT_TRACK_IDS of OutputStream]
 	std::map<MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>>> _link_input_to_outputs;
-
 
 	// [INPUT_TRACK_ID, DECODER_ID]
 	std::map<MediaTrackId, MediaTrackId> _link_input_to_decoder;
@@ -155,7 +174,7 @@ private:
 	// Decoder Component
 	// [DECODER_ID, DECODER]
 	std::map<MediaTrackId, std::shared_ptr<TranscodeDecoder>> _decoders;
-	
+
 	// Last decoded frame and timestamp
 	// [DECODER_ID, MediaFrame]
 	std::map<MediaTrackId, std::shared_ptr<MediaFrame>> _last_decoded_frames;
@@ -170,8 +189,7 @@ private:
 	// [ENCODER_ID, ENCODER]
 	std::map<MediaTrackId, std::shared_ptr<TranscodeEncoder>> _encoders;
 
-	std::atomic<bool> _create_success = false;
-
+private:
 	std::shared_ptr<MediaTrack> GetInputTrack(MediaTrackId track_id);
 	std::shared_ptr<info::Stream> GetInputStream();
 	std::shared_ptr<info::Stream> GetOutputStreamByTrackId(MediaTrackId output_track_id);
@@ -179,7 +197,7 @@ private:
 	void RequestWebhoook();
 	bool StartInternal();
 	bool PrepareInternal();
-	
+
 	int32_t CreateOutputStreamDynamic();
 	int32_t CreateOutputStreams();
 	std::shared_ptr<info::Stream> CreateOutputStream(const cfg::vhost::app::oprf::OutputProfile &cfg_output_profile);
@@ -187,11 +205,9 @@ private:
 	int32_t BuildComposite();
 	// Store information for track mapping by stage
 	void AddComposite(ov::String unique_id,
-						 std::shared_ptr<info::Stream> input_stream, std::shared_ptr<MediaTrack> input_track,
-						 std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
+					  std::shared_ptr<info::Stream> input_stream, std::shared_ptr<MediaTrack> input_track,
+					  std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
 	ov::String GetInfoStringComposite();
-
-
 
 	int32_t CreateDecoders();
 	bool CreateDecoder(MediaTrackId decoder_id, std::shared_ptr<info::Stream> input_stream, std::shared_ptr<MediaTrack> input_track);
@@ -202,7 +218,6 @@ private:
 
 	int32_t CreateEncoders(MediaFrame *buffer);
 	bool CreateEncoder(MediaTrackId encoder_id, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
-
 
 	// Step 1: Decode (Decode a frame from given packets)
 	void DecodePacket(const std::shared_ptr<MediaPacket> &packet);
@@ -234,4 +249,10 @@ private:
 	void RemoveDecoders();
 	void RemoveFilters();
 	void RemoveEncoders();
+
+private:
+	// Initial buffer for ready to stream
+	void BufferMediaPacketUntilReadyToPlay(const std::shared_ptr<MediaPacket> &media_packet);
+	bool SendBufferedPackets();
+	ov::Queue<std::shared_ptr<MediaPacket>> _initial_media_packet_buffer;
 };
