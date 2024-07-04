@@ -369,10 +369,12 @@ bool TranscoderStream::Push(std::shared_ptr<MediaPacket> packet)
 	{
 		BufferMediaPacketUntilReadyToPlay(packet);
 	}
-	else if (GetState() == State::ERROR || GetState() == State::STOPPED)
+	else if (GetState() == State::ERROR)
 	{
-		logtw("%s Stream is in an error state", _log_prefix.CStr());
+		return false;
 	}
+
+	// State::STOPPED : Do nothing
 
 	return true;
 }
