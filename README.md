@@ -57,7 +57,7 @@ Although we have tested OvenMediaEngine on the platforms listed below, it may wo
 
 * [Docker](https://hub.docker.com/r/airensoft/ovenmediaengine)
 * Ubuntu 18+
-* CentOS 7+
+* ~~CentOS 7+~~ Rocky 9+ will be supported
 * Fedora 28+
 
 ## Quick Start
