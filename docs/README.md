@@ -15,7 +15,7 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
 * **Ingest**
   * Push: WebRTC, WHIP, SRT, RTMP, MPEG-2 TS
   * Pull: RTSP
-* **Adaptive Bitrate Streaming (ABR) for LLHLS and WebRTC**
+* **Adaptive Bitrate Streaming (ABR) for HLS, LLHLS and WebRTC**
 * **Low-Latency Streaming using LLHLS**
   * DVR (Live Rewind)
   * Dump for VoD
@@ -29,8 +29,10 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
     * _VP8, H.264_
   * In-band FEC (Forward Error Correction)
     * _Opus_
+* **HLSv3 Streaming support for legacy devices**
+  * DVR (Live Rewind)
 * **Embedded Live Transcoder**
-  * Video: VP8, H.264, Pass-through
+  * Video: VP8, H.264, H.265(Hardware encoder only), Pass-through
   * Audio: Opus, AAC, Pass-through
 * **Clustering** (Origin-Edge Structure)
 * **Monitoring**
@@ -38,11 +40,9 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
   * AdmissionWebhooks
   * SignedPolicy
 * **File Recording**
-* **Push Publishing using RTMP and MPEG2-TS** (Re-streaming)
+* **Push Publishing using SRT, RTMP and MPEG2-TS** (Re-streaming)
 * **Thumbnail**
 * **REST API**
-* **Experiment**
-  * P2P Traffic Distribution (Only WebRTC)
 
 ## Supported Platforms
 
