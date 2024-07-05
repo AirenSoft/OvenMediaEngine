@@ -15,6 +15,8 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
 * **Ingest**
   * Push: WebRTC, WHIP, SRT, RTMP, MPEG-2 TS
   * Pull: RTSP
+  * Scheduled Channel (Pre-recorded Live)
+  * Multiplex Channel (Duplicate stream / Mux tracks)
 * **Adaptive Bitrate Streaming (ABR) for HLS, LLHLS and WebRTC**
 * **Low-Latency Streaming using LLHLS**
   * DVR (Live Rewind)
@@ -29,7 +31,9 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
     * _VP8, H.264_
   * In-band FEC (Forward Error Correction)
     * _Opus_
-* **HLSv3 Streaming support for legacy devices**
+* **HLS (version 3) Streaming support for legacy devices**
+  * MPEG-2 TS Container
+  * Audio/Video Muxed
   * DVR (Live Rewind)
 * **Embedded Live Transcoder**
   * Video: VP8, H.264, H.265(Hardware encoder only), Pass-through
@@ -50,7 +54,7 @@ We have tested OvenMediaEngine on platforms, listed below. However, we think it 
 
 * Docker ([https://hub.docker.com/r/airensoft/ovenmediaengine](https://hub.docker.com/r/airensoft/ovenmediaengine))
 * Ubuntu 18+
-* CentOS 7+
+* ~~CentOS 7+~~ (Rocky 9+ will be supported)
 * Fedora 28+
 
 ## Getting Started
