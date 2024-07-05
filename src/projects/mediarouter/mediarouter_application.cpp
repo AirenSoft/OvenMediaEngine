@@ -908,8 +908,10 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 							stream_tap->Push(item->packet);
 						}
 					}
-
-					stream_tap->Push(media_packet);
+					else
+					{
+						stream_tap->Push(media_packet);
+					}
 				}
 			}
 		}
@@ -986,8 +988,10 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 							stream_tap->Push(item->packet);
 						}
 					}
-
-					stream_tap->Push(media_packet);
+					else
+					{
+						stream_tap->Push(media_packet);
+					}
 				}
 			}
 		}
