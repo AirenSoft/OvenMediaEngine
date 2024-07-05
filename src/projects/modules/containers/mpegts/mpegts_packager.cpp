@@ -526,9 +526,9 @@ namespace mpegts
 			auto oldest_segment = GetOldestSegmentFromRetentionBuffer();
 			RemoveSegmentFromRetentionBuffer(oldest_segment);
 
-			if (segment->GetFilePath().IsEmpty() == false)
+			if (oldest_segment->GetFilePath().IsEmpty() == false)
 			{
-				DeleteSegmentFile(segment);
+				DeleteSegmentFile(oldest_segment);
 			}
 		}
 	}
