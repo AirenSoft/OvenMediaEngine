@@ -69,12 +69,11 @@ To use HLS, you need to add the `<HLS>` elements to the `<Publishers>` in the co
 </Server>
 ```
 
-| Element         | Decscription                                                                                                                                                                                                                     |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Bind            | Set the HTTP ports to provide HLS.                                                                                                                                                                                               |
-| SegmentDuration | Set the length of the segment in seconds. Therefore, a shorter value allows the stream to start faster. However, a value that is too short will make legacy HLS players unstable. Apple recommends **6** seconds for this value. |
-| SegmentCount    | The number of segments listed in the playlist. 5 is recommended for HLS players. Do not set below 3. It can only be used for experimentation.                                                                                    |
-| CrossDomains    | Control the domain in which the player works through `<CorssDomain>`. For more information, please refer to the [CrossDomain](broken-reference) section.                                                                         |
+<table><thead><tr><th width="241">Element</th><th>Decscription</th></tr></thead><tbody><tr><td>Bind</td><td>Set the HTTP ports to provide HLS.</td></tr><tr><td>SegmentDuration</td><td>Set the length of the segment in seconds. Therefore, a shorter value allows the stream to start faster. However, a value that is too short will make legacy HLS players unstable. Apple recommends <strong>6</strong> seconds for this value.</td></tr><tr><td>SegmentCount</td><td>The number of segments listed in the playlist. 5 is recommended for HLS players. Do not set below 3. It can only be used for experimentation.</td></tr><tr><td>CrossDomains</td><td>Control the domain in which the player works through <code>&#x3C;CorssDomain></code>. For more information, please refer to the <a href="broken-reference">CrossDomain</a> section.</td></tr><tr><td>DVR</td><td><p><strong>Enable</strong> <br>You can turn DVR on or off.</p><p><strong>EventPlaylistType</strong> <br>Inserts #EXT-X-PLAYLIST-TYPE: EVENT into the m3u8 file.</p><p><strong>TempStoragePath</strong> <br>Specifies a temporary folder to store old segments.</p><p><strong>MaxDuration</strong> <br>Sets the maximum duration of recorded files in milliseconds.</p></td></tr></tbody></table>
+
+{% hint style="warning" %}
+Safari Native Player only provides the Seek UI if `#EXT-X-PLAYLIST-TYPE: EVENT` is present. Since it is specified that nothing can be removed from the playlist when it is of type EVENT, you must call the [concludeHlsLive API](../rest-api/v1/virtualhost/application/stream/conclude-hls-live.md) to switch to VoD or terminate the stream before MaxDuration is exceeded if you use this option. Otherwise, unexpected behavior may occur in the Safari Player.
+{% endhint %}
 
 ## Playback
 

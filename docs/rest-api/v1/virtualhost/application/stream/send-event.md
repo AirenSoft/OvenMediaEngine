@@ -76,10 +76,6 @@ Content-Type: application/json
 {
 	"statusCode": 200,
 	"message": "OK",
-	"response": [
-		"stream",
-		"stream2"
-	]
 }
 
 # statusCode
