@@ -1148,14 +1148,7 @@ void MediaRouteStream::DropNonDecodingPackets()
 
 void MediaRouteStream::Push(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (GetInoutType() == MediaRouterStreamType::INBOUND)
-	{
-		// Only Inbound Stream needs to process urgent packets.
-		_packets_queue.Enqueue(media_packet, media_packet->IsHighPriority());
-		return;
-	}
-
-	_packets_queue.Enqueue(std::move(media_packet));
+	_packets_queue.Enqueue(media_packet, media_packet->IsHighPriority());
 }
 
 std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()

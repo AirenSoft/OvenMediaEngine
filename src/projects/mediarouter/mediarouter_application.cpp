@@ -750,7 +750,7 @@ bool MediaRouteApplication::OnPacketReceived(const std::shared_ptr<MediaRouterAp
 
 		stream->Push(packet);
 
-		_outbound_stream_indicator[GetWorkerIDByStreamID(stream_info->GetId())]->Enqueue(stream);
+		_outbound_stream_indicator[GetWorkerIDByStreamID(stream_info->GetId())]->Enqueue(stream, packet->IsHighPriority());
 	}
 	else
 	{
