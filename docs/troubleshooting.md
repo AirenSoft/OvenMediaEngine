@@ -25,13 +25,10 @@ sudo yum install -y gcc-c++ make nasm autoconf libtool zlib-devel tcl cmake
 ```
 {% endtab %}
 
-{% tab title="CentOS 7" %}
+{% tab title="Rocky Linux/AlmaLinux 9" %}
 ```bash
-# for downloading latest version of nasm (x264 needs nasm 2.13+ but centos provides 2.10 )
-sudo curl -so /etc/yum.repos.d/nasm.repo https://www.nasm.us/nasm.repo
-sudo yum install centos-release-scl
-sudo yum install -y bc gcc-c++ cmake nasm autoconf libtool glibc-static tcl bzip2 zlib-devel devtoolset-7
-source scl_source enable devtoolset-7
+sudo dnf install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
+sudo dnf install -y perl-IPC-Cmd perl-FindBin
 ```
 {% endtab %}
 {% endtabs %}
