@@ -417,6 +417,21 @@ namespace pub
 				url = url.Replace("${SourceStream}", stream_info->GetName().CStr());
 			}
 
+			// Macro replacement for stream key
+			if(stream_key.IsEmpty() == false)
+			{
+				stream_key = stream_key.Replace("${Application}", stream_info->GetApplicationName());			
+				stream_key = stream_key.Replace("${Stream}", stream_info->GetName().CStr());
+				if (stream_info->GetLinkedInputStream() != nullptr)
+				{
+					stream_key = stream_key.Replace("${SourceStream}", stream_info->GetLinkedInputStream()->GetName().CStr());
+				}
+				else
+				{
+					stream_key = stream_key.Replace("${SourceStream}", stream_info->GetName().CStr());
+				}
+			}
+
 
 			auto push = std::make_shared<info::Push>();
 			if(push == nullptr)
