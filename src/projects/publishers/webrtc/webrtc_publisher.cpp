@@ -229,7 +229,6 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 	auto requested_url = final_url;
 
 	uint64_t session_life_time = 0;
-	std::shared_ptr<const SignedToken> signed_token;
 	auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(final_url, remote_address);
 	if (signed_policy_result == AccessController::VerificationResult::Pass)
 	{
@@ -246,21 +245,6 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 	}
 	else if (signed_policy_result == AccessController::VerificationResult::Off)
 	{
-		// SingedToken
-		auto [signed_token_result, signed_token] = Publisher::VerifyBySignedToken(final_url, remote_address);
-		if (signed_token_result == AccessController::VerificationResult::Error)
-		{
-			return nullptr;
-		}
-		else if (signed_token_result == AccessController::VerificationResult::Fail)
-		{
-			logtw("%s", signed_token->GetErrMessage().CStr());
-			return nullptr;
-		}
-		else if (signed_token_result == AccessController::VerificationResult::Pass)
-		{
-			session_life_time = signed_token->GetStreamExpiredTime();
-		}
 	}
 
 	// Admission Webhooks
@@ -443,7 +427,6 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	auto final_stream_name = final_url->Stream();
 	auto final_file_name = final_url->File();
 
-	// SignedPolicy and SignedToken
 	auto request = ws_session->GetRequest();
 	auto remote_address = request->GetRemote()->GetRemoteAddress();
 
