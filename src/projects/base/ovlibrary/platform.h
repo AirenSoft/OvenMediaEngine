@@ -45,7 +45,7 @@
 #   undef IS_ANDROID
 #   define IS_ANDROID                           1
 #elif defined(__linux__)
-// Debian, Ubuntu, Gentoo, Fedora, openSUSE, RedHat, Centos and other
+// Debian, Ubuntu, Gentoo, Fedora, openSUSE, RedHat, Rocky Linux, AlmaLinux and other
 #   define PLATFORM_NAME                        "Linux"
 #   undef IS_LINUX
 #   define IS_LINUX                             1
