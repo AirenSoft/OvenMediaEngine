@@ -67,31 +67,39 @@ bool TranscoderStream::Start()
 		return false;
 	}
 
-	// Request to webhook to get output profiles
-	RequestWebhoook();
+	SetState(State::PREPARING);
 
-	if (GetOutputProfilesCfg() == nullptr)
-	{
-		// If there is no output profile, the transcoder is not initialized
-		// But, returns success for stream management of the transcode application.
-		return true;
-	}
-
-	if (StartInternal() == false)
-	{
-		SetState(State::ERROR);
-
-		return false;
-	}
-
-	logti("%s Transcoder stream has been started", _log_prefix.CStr());
+	logti("%s stream has been started", _log_prefix.CStr());
 
 	return true;
 }
 
 bool TranscoderStream::Prepare(const std::shared_ptr<info::Stream> &stream)
 {
-	if(PrepareInternal() == false)
+	if(GetState() != State::PREPARING)
+	{
+		logte("%s stream has already prepared", _log_prefix.CStr());		
+		return false;
+	}
+
+	// Transcoder Webhook
+	_output_profiles_cfg = RequestWebhoook();
+	if (_output_profiles_cfg == nullptr)
+	{
+		logtw("%s There is no output profiles", _log_prefix.CStr());
+		return false;
+	}
+
+	// Create Ouput Streams & Notify to create a new stream on the media router.
+	if (!StartInternal())
+	{
+		SetState(State::ERROR);
+
+		return false;
+	}
+
+	// Create Decoders
+	if(!PrepareInternal())
 	{
 		SetState(State::ERROR);
 
@@ -100,42 +108,22 @@ bool TranscoderStream::Prepare(const std::shared_ptr<info::Stream> &stream)
 
 	SetState(State::STARTED);
 	
-	logti("%s Transcoder stream has been prepared", _log_prefix.CStr());
+	logti("%s stream has been prepared", _log_prefix.CStr());
 
 	return true;
 }
 
 bool TranscoderStream::Update(const std::shared_ptr<info::Stream> &stream)
 {
-	// Check if smooth stream transition is possible
-	// [Rule]
-	// - The number of tracks per media type should not exceed one.
-	// - The number of tracks of the stream to be changed must be the same.
-	if (IsAvailableSmoothTransitionStream(stream) == true)
+	if(GetState() != State::STARTED)
 	{
-		logti("%s This stream will be a smooth transition", _log_prefix.CStr());
-
-		RemoveDecoders();
-
-		CreateDecoders();
-
-		UpdateMsidOfOutputStreams(stream->GetMsid());
-	}
-	else
-	{
-		logti("%s This stream does not support smooth transitions. renew the encoder", _log_prefix.CStr());
-
-		RemoveAllComponents();
-
-		CreateDecoders();
-
-		UpdateMsidOfOutputStreams(stream->GetMsid());
-
-		NotifyUpdateStreams();
+		logte("%s stream is not started", _log_prefix.CStr());
+		return false;
 	}
 
-	return true;
+	return UpdateInternal(stream);
 }
+
 
 bool TranscoderStream::Stop()
 {
@@ -144,12 +132,13 @@ bool TranscoderStream::Stop()
 		return true;
 	}
 
-	logtd("%s Wait for terminated trancode stream thread", _log_prefix.CStr());
+	logtd("%s Wait for stream thread to terminated", _log_prefix.CStr());
 
 	RemoveAllComponents();
 
 	// Delete all composite of components
 	_link_input_to_outputs.clear();
+	
 	_link_input_to_decoder.clear();
 	_link_decoder_to_filters.clear();
 	_link_filter_to_encoder.clear();
@@ -167,12 +156,12 @@ bool TranscoderStream::Stop()
 
 	SetState(State::STOPPED);
 
-	logti("%s Transcoder stream has been stopped", _log_prefix.CStr());
+	logti("%s stream has been stopped", _log_prefix.CStr());
 
 	return true;
 }
 
-void TranscoderStream::RequestWebhoook()
+const cfg::vhost::app::oprf::OutputProfiles* TranscoderStream::RequestWebhoook()
 {
 	TranscodeWebhook webhook(_application_info);
 	
@@ -180,36 +169,29 @@ void TranscoderStream::RequestWebhoook()
 
 	if (policy == TranscodeWebhook::Policy::DeleteStream)
 	{
-		_output_profiles_cfg = nullptr;
-
 		logtw("%s Delete a stream by transcode webhook", _log_prefix.CStr());
-
 		ocst::Orchestrator::GetInstance()->TerminateStream(_application_info.GetName(), _input_stream->GetName());
+		return nullptr;
 	}		
 	else if (policy == TranscodeWebhook::Policy::CreateStream)
 	{
-		_output_profiles_cfg = &_remote_output_profiles;
-
 		logti("%s Using external output profiles by webhook", _log_prefix.CStr());		
-		logti("%s OutputProfile\n%s", _log_prefix.CStr(), _output_profiles_cfg->ToString().CStr());		
+		logti("%s OutputProfile\n%s", _log_prefix.CStr(), _remote_output_profiles.ToString().CStr());		
+		return &_remote_output_profiles;
 	}
 	else if (policy == TranscodeWebhook::Policy::UseLocalProfiles)
 	{
-		_output_profiles_cfg = &(_application_info.GetConfig().GetOutputProfiles());
-
 		logti("%s Using local output profiles by webhook", _log_prefix.CStr());		
-		logtd("%s OutputProfile \n%s", _log_prefix.CStr(), _output_profiles_cfg->ToString().CStr());		
+		logtd("%s OutputProfile \n%s", _log_prefix.CStr(), _application_info.GetConfig().GetOutputProfiles().ToString().CStr());		
+
+		return &(_application_info.GetConfig().GetOutputProfiles());;
 	}
+
+	return nullptr;
 }
 
 bool TranscoderStream::StartInternal()
 {
-	if (_link_input_to_outputs.size() > 0 || _link_encoder_to_outputs.size() > 0)
-	{
-		logtd("%s Stream has already been created", _log_prefix.CStr());
-		return true;
-	}
-
 	// If the application is created by Dynamic, make it bypass in Default Stream.
 	if (_application_info.IsDynamicApp() == true)
 	{
@@ -247,11 +229,40 @@ bool TranscoderStream::PrepareInternal()
 		logti("No decoder generated");
 	}
 
+	StoreInputTrackSnapshot(_input_stream);
+
 	return true;
 }
 
+bool TranscoderStream::UpdateInternal(const std::shared_ptr<info::Stream> &stream)
+{
+	// Check if smooth stream transition is possible
+	// [Rule]
+	// - The number of tracks per media type should not exceed one.
+	// - The input track should not change.
+	if (IsAvailableSmoothTransition(stream) == true)
+	{
+		logti("%s This stream will be a smooth transition", _log_prefix.CStr());
+		RemoveDecoders();
+		RemoveFilters();
+		
+		CreateDecoders();
+	}
+	else
+	{
+		logti("%s This stream does not support smooth transitions. renew the all components", _log_prefix.CStr());
+		RemoveAllComponents();
+		
+		CreateDecoders();
 
+		UpdateMsidOfOutputStreams(stream->GetMsid());
+		NotifyUpdateStreams();
 
+		StoreInputTrackSnapshot(stream);
+	}
+
+	return true;
+}
 
 void TranscoderStream::RemoveAllComponents()
 {
@@ -332,25 +343,29 @@ std::shared_ptr<info::Stream> TranscoderStream::GetOutputStreamByTrackId(MediaTr
 	return nullptr;
 }
 
-bool TranscoderStream::IsAvailableSmoothTransitionStream(const std::shared_ptr<info::Stream> &stream)
+bool TranscoderStream::IsAvailableSmoothTransition(const std::shared_ptr<info::Stream> &input_stream)
 {
+	// #1. The number of tracks per media type should not exceed one.
 	int32_t track_count_per_mediatype[(uint32_t)cmn::MediaType::Nb] = {0};
-
-	// Rule 1: The number of tracks per media type should not exceed one.
-	for (const auto &[track_id, track] : stream->GetTracks())
+	for (const auto &[track_id, track] : input_stream->GetTracks())
 	{
 		UNUSED_VARIABLE(track_id)
 		
 		if ((++track_count_per_mediatype[(uint32_t)track->GetMediaType()]) > 1)
 		{
 			// Could not support smooth transition. because, number of tracks per media type exceed one.
+			logtw("%s Smooth transitions are not possible because the number of tracks per media type exceeds one.", _log_prefix.CStr());
 			return false;
 		}
 	}
 
-	// Rule 2 : The number of tracks of the stream to be changed must be the same.
-	//  - Not applied yet.
-
+	// #2. Check if the number and type of original tracks are different.
+	if(IsEqualCountAndMediaTypeOfMediaTracks(input_stream->GetTracks(), GetInputTrackSnapshot()) == false)
+	{
+		logtw("%s The input track has changed. It does not support smooth transitions.", _log_prefix.CStr());
+		return false;
+	}
+	
 	return true;
 }
 
@@ -365,7 +380,7 @@ bool TranscoderStream::Push(std::shared_ptr<MediaPacket> packet)
 
 		DecodePacket(std::move(packet));
 	}
-	else if (GetState() == State::CREATED)
+	else if (GetState() == State::CREATED || GetState() == State::PREPARING)
 	{
 		BufferMediaPacketUntilReadyToPlay(packet);
 	}
@@ -439,13 +454,14 @@ int32_t TranscoderStream::CreateOutputStreamDynamic()
 		output_track->SetId(NewTrackId());
 
 		output_stream->AddTrack(output_track);
+
 		AddComposite("dynamic", _input_stream, input_track, output_stream, output_track);
 	}
 
 	// Add to Output Stream List. The key is the output stream name.
 	_output_streams.insert(std::make_pair(output_stream->GetName(), output_stream)); 
 
-	logti("%s dynamic output stream has been created. [%s/%s(%u)]",
+	logti("%s Output stream(dynamic) has been created. [%s/%s(%u)]",
 		  _log_prefix.CStr(),
 		  _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
 
@@ -459,11 +475,12 @@ int32_t TranscoderStream::CreateOutputStreams()
 	int32_t created_count = 0;
 
 	// Get the output profile to make the output stream
-	auto cfg_output_profile_list = GetOutputProfilesCfg()->GetOutputProfileList();
+	auto cfg_output_profile = GetOutputProfilesCfg();
+	auto cfg_output_profile_list = cfg_output_profile->GetOutputProfileList();
 	
-	for (const auto &cfg_output_profile : cfg_output_profile_list)
+	for (const auto &profile : cfg_output_profile_list)
 	{
-		auto output_stream = CreateOutputStream(cfg_output_profile);
+		auto output_stream = CreateOutputStream(profile);
 		if (output_stream == nullptr)
 		{
 			logte("Could not create output stream");
@@ -535,7 +552,7 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 
 					output_stream->AddTrack(output_track);
 
-					AddComposite(GetIdentifiedForVideoProfile(input_track_id, profile), _input_stream, input_track, output_stream, output_track);
+					AddComposite(ProfileToSerialize(input_track_id, profile), _input_stream, input_track, output_stream, output_track);
 				}
 
 				// Image Profile
@@ -550,7 +567,7 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 
 					output_stream->AddTrack(output_track);
 
-					AddComposite(GetIdentifiedForImageProfile(input_track_id, profile), _input_stream, input_track, output_stream, output_track);
+					AddComposite(ProfileToSerialize(input_track_id, profile), _input_stream, input_track, output_stream, output_track);
 				}
 			}
 			break;
@@ -567,7 +584,7 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 
 					output_stream->AddTrack(output_track);
 
-					AddComposite(GetIdentifiedForAudioProfile(input_track_id, profile), _input_stream, input_track, output_stream, output_track);
+					AddComposite(ProfileToSerialize(input_track_id, profile), _input_stream, input_track, output_stream, output_track);
 				}
 			}
 			break;
@@ -583,7 +600,7 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 
 					output_stream->AddTrack(output_track);
 
-					AddComposite(GetIdentifiedForDataProfile(input_track_id), _input_stream, input_track, output_stream, output_track);
+					AddComposite(ProfileToSerialize(input_track_id), _input_stream, input_track, output_stream, output_track);
 			}
 			break;
 			default: {
@@ -600,27 +617,23 @@ int32_t TranscoderStream::BuildComposite()
 {
 	int32_t created_count = 0;
 
-
 	for (auto &[key, composite] : _composite_map)
 	{
 		UNUSED_VARIABLE(key)
+		auto input_track 	= composite->GetInputTrack();
+
+		auto input_track_id = input_track->GetId();
+		auto decoder_id 	= input_track->GetId();
+
+		auto filter_id 		= composite->GetId();
+		auto encoder_id 	= composite->GetId();
 
 		for (auto &[output_stream, output_track] : composite->GetOutputTracks())
 		{
-			auto input_track = composite->GetInputTrack();
-
-			auto input_track_id = input_track->GetId();
-			auto decoder_id = input_track->GetId();
-
-			auto filter_id = composite->GetId();
-			auto encoder_id = composite->GetId();
-
-			auto output_track_id = output_track->GetId();
-
 			// Bypass Flow: InputTrack -> OutputTrack
 			if (output_track->IsBypass() == true)
 			{
-				_link_input_to_outputs[input_track_id].push_back(make_pair(output_stream, output_track_id));
+				_link_input_to_outputs[input_track_id].push_back(make_pair(output_stream, output_track->GetId()));
 			}
 			// Transcoding Flow: InputTrack -> Decoder -> Filter -> Encoder -> OutputTrack
 			else
@@ -629,16 +642,17 @@ int32_t TranscoderStream::BuildComposite()
 				_link_input_to_decoder[input_track_id] = decoder_id;
 
 				// Rescale/Resample Filtering: Decoder(1) -> Filter (N)
-				if (std::find(_link_decoder_to_filters[decoder_id].begin(), _link_decoder_to_filters[decoder_id].end(), filter_id) == _link_decoder_to_filters[decoder_id].end())
+				auto &filter_ids = _link_decoder_to_filters[decoder_id];
+				if (std::find(filter_ids.begin(), filter_ids.end(), filter_id) == filter_ids.end())
 				{
-					_link_decoder_to_filters[decoder_id].push_back(filter_id);
+					filter_ids.push_back(filter_id);
 				}
 
 				// Encoding: Filter(1) -> Encoder (1)
 				_link_filter_to_encoder[filter_id] = encoder_id;
 
 				// Flushing: Encoder(1) -> OutputTrack (N)
-				_link_encoder_to_outputs[encoder_id].push_back(make_pair(output_stream, output_track_id));
+				_link_encoder_to_outputs[encoder_id].push_back(make_pair(output_stream, output_track->GetId()));
 			}
 		}
 
@@ -727,11 +741,11 @@ ov::String TranscoderStream::GetInfoStringComposite()
 }
 
 void TranscoderStream::AddComposite(
-	ov::String profile_sign,
+	ov::String serialized_profile,
 	std::shared_ptr<info::Stream> input_stream,	std::shared_ptr<MediaTrack> input_track,
 	std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track)
 {
-	auto key = std::make_pair(profile_sign, input_track->GetMediaType());
+	auto key = std::make_pair(serialized_profile, input_track->GetMediaType());
 
 	if (_composite_map.find(key) == _composite_map.end())
 	{
@@ -850,7 +864,6 @@ int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 				logte("[%s/%s(%u)] Could not create encoder. Encoder(%d), OutputTrack(%d)", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId(), encoder_id, output_track->GetId());
 				continue;
 			}
-			logtd("%s Created encoder. InputTrack(%u) > Encoder(%d) > OutputTrack(%d)", _log_prefix.CStr(), track_id, encoder_id, output_track->GetId());
 
 			// Set the sample format and color space supported by the encoder to the output track.
 			// These values are used in the Resampler/Rescaler filter.
@@ -880,10 +893,8 @@ bool TranscoderStream::CreateEncoder(MediaTrackId encoder_id, std::shared_ptr<in
 
 	if (_encoders.find(encoder_id) != _encoders.end())
 	{
-		logtd("%s Remove the previously created encoder. Encoder(%d), OutputTrack(%d)", _log_prefix.CStr(), encoder_id, output_track->GetId());
-
-		_encoders[encoder_id]->Stop();
-		_encoders[encoder_id] = nullptr;
+		logtd("%s The encoder has already created. Encoder(%d) > OutputTrack(%d)", _log_prefix.CStr(), encoder_id, output_track->GetId());
+		return true;
 	}
 
 	// Get HWAccels configuration
@@ -906,6 +917,7 @@ bool TranscoderStream::CreateEncoder(MediaTrackId encoder_id, std::shared_ptr<in
 
 	_encoders[encoder_id] = std::move(encoder);
 
+	logtd("%s Created encoder. Encoder(%d) > OutputTrack(%d)", _log_prefix.CStr(), encoder_id, output_track->GetId());
 	return true;
 }
 
@@ -934,7 +946,7 @@ int32_t TranscoderStream::CreateFilters(MediaFrame *buffer)
 		MediaTrackId encoder_id = _link_filter_to_encoder[filter_id];
 		if (_encoders.find(encoder_id) == _encoders.end())
 		{
-			logte("%s Filter creation failed because the encoder could not be found. Encoder(%d), Filter(%d)", _log_prefix.CStr(), encoder_id, filter_id);
+			logte("%s Filter creation failed because the encoder could not be found. EncoderId(%d), FilterId(%d)", _log_prefix.CStr(), encoder_id, filter_id);
 			continue;
 		}
 
@@ -945,8 +957,6 @@ int32_t TranscoderStream::CreateFilters(MediaFrame *buffer)
 			continue;
 		}
 		created++;
-
-		logtd("%s Created Filter. Decoder(%u) > Filter(%d) > Encoder(%d)", _log_prefix.CStr(), decoder_id, filter_id, encoder_id);
 	}
 
 	return created;
@@ -958,10 +968,9 @@ bool TranscoderStream::CreateFilter(MediaTrackId filter_id, std::shared_ptr<Medi
 
 	if (_filters.find(filter_id) != _filters.end())
 	{
-		logtd("%s Remove the previously created filter. Filter(%d), OutputTrack(%d)", _log_prefix.CStr(), filter_id, output_track->GetId());
+		logtd("%s The filter has already created. FilterId(%d)", _log_prefix.CStr(), filter_id);
 
-		_filters[filter_id]->Stop();
-		_filters[filter_id] = nullptr;
+		return true;
 	}
 
 	auto input_stream = GetInputStream();
@@ -987,6 +996,8 @@ bool TranscoderStream::CreateFilter(MediaTrackId filter_id, std::shared_ptr<Medi
 
 	_filters[filter_id] = filter;
 
+	logtd("%s Created Filter. FilterId(%d)", _log_prefix.CStr(), filter_id);
+
 	return true;
 }
 
@@ -1010,7 +1021,7 @@ void TranscoderStream::ChangeOutputFormat(MediaFrame *buffer)
 	// Update Track of Output Stream
 	UpdateOutputTrack(buffer);
 
-	// Create an encoder. If there is an existing encoder, remove it and then create it.
+	// Create an encoder. If there is an existing encoder, reuse it
 	if(CreateEncoders(buffer) == 0)
 	{
 		logtw("%s No encoders have been created. InputTrack(%u)", _log_prefix.CStr(), buffer->GetTrackId());
@@ -1019,7 +1030,7 @@ void TranscoderStream::ChangeOutputFormat(MediaFrame *buffer)
 		return;
 	}
 
-	// Create an filter. If there is an existing filter, remove it and then create it.
+	// Create an filter. If there is an existing filter, reuse it
 	if(CreateFilters(buffer) == 0)
 	{
 		logtw("%s No filters have been created. InputTrack(%u)", _log_prefix.CStr(), buffer->GetTrackId());
@@ -1221,6 +1232,9 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 			// Record the timestamp of the last decoded frame. managed by microseconds.
 			_last_decoded_frame_pts[decoder_id] = last_frame->GetPts() * filter_expr * 1000000;
 
+			logtd("%s Create filler frame because there is no decoding frame. Type(%s), Decoder(%u), FillerFrames(%d)"
+				, _log_prefix.CStr(), cmn::GetMediaTypeString(input_track->GetMediaType()).CStr(), decoder_id, 1);
+
 			// Send Temporary Frame to Filter
 			SpreadToFilters(decoder_id, last_frame);
 #endif // End of Filler Frame Generation
@@ -1268,31 +1282,28 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 							break;
 					}
 
-					logtd("Number of fillter frames needed. Decoder(%u), NeededFrames(%d)", decoder_id, number_of_filler_frames_needed);
-
 					if(number_of_filler_frames_needed > 0)					
 					{
-						int64_t frame_hole_time_tb = (int64_t)((double)frame_hole_time_us / input_track->GetTimeBase().GetExpr() / 1000000);
-						int64_t frame_duration_avg = frame_hole_time_tb / number_of_filler_frames_needed;
-						int64_t start_pts = decoded_frame->GetPts() - frame_hole_time_tb + frame_duration_avg;
-						int64_t end_pts = decoded_frame->GetPts();
-						
-						for(int64_t filler_pts = start_pts ; filler_pts < end_pts ; filler_pts+=frame_duration_avg)
-						{
-							// logtd("Spread to filter. [%d], filter_frame_pts(%lld), avg_frame_duration(%lld)", decoder_id, filler_pts, frame_duration_avg);
+						logtd("%s Create filler frame because time diffrence from last frame. Type(%s), Decoder(%u), FillerFrames(%d)"
+							,_log_prefix.CStr(), cmn::GetMediaTypeString(input_track->GetMediaType()).CStr(), decoder_id, number_of_filler_frames_needed);
 
-							// TODO(soulk): More tests are needed.
-							// Video frames do not create filler frames. 
-							// Even if there are no filler frames of the video type, there is no problem with AV sync in the player.
+						int64_t frame_hole_time_tb 	= (int64_t)((double)frame_hole_time_us / input_track->GetTimeBase().GetExpr() / 1000000);
+						int64_t frame_duration_avg 	= frame_hole_time_tb / number_of_filler_frames_needed;
+						int64_t start_pts 			= decoded_frame->GetPts() - frame_hole_time_tb + frame_duration_avg;
+						int64_t end_pts 			= decoded_frame->GetPts();
+
+						for (int64_t filler_pts = start_pts; filler_pts < end_pts; filler_pts += frame_duration_avg)
+						{
+							auto clone_frame = decoded_frame->CloneFrame();
+							clone_frame->SetPts(filler_pts);
+
+							// Fill the silence in the audio frame.
 							if (input_track->GetMediaType() == cmn::MediaType::Audio)
 							{
-								auto cloned_filler_frame = decoded_frame->CloneFrame();
-								cloned_filler_frame->SetPts(filler_pts);
-
-								// Fill the silence in the audio frame.
-								cloned_filler_frame->FillZeroData();
-								SpreadToFilters(decoder_id, cloned_filler_frame);
+								clone_frame->FillZeroData();
 							}
+
+							SpreadToFilters(decoder_id, clone_frame);
 						}
 					}
 				}

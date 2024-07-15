@@ -19,7 +19,7 @@ TranscoderStreamInternal::~TranscoderStreamInternal()
 {
 }
 
-ov::String TranscoderStreamInternal::GetIdentifiedForVideoProfile(const uint32_t track_id, const cfg::vhost::app::oprf::VideoProfile &profile)
+ov::String TranscoderStreamInternal::ProfileToSerialize(const uint32_t track_id, const cfg::vhost::app::oprf::VideoProfile &profile)
 {
 	if (profile.IsBypass() == true)
 	{
@@ -48,7 +48,7 @@ ov::String TranscoderStreamInternal::GetIdentifiedForVideoProfile(const uint32_t
 	return unique_profile_name;
 }
 
-ov::String TranscoderStreamInternal::GetIdentifiedForImageProfile(const uint32_t track_id, const cfg::vhost::app::oprf::ImageProfile &profile)
+ov::String TranscoderStreamInternal::ProfileToSerialize(const uint32_t track_id, const cfg::vhost::app::oprf::ImageProfile &profile)
 {
 	return ov::String::FormatString("I=%d,O=%s:%.02f:%d:%d:%d",
 									track_id,
@@ -59,7 +59,7 @@ ov::String TranscoderStreamInternal::GetIdentifiedForImageProfile(const uint32_t
 									profile.GetHeight());
 }
 
-ov::String TranscoderStreamInternal::GetIdentifiedForAudioProfile(const uint32_t track_id, const cfg::vhost::app::oprf::AudioProfile &profile)
+ov::String TranscoderStreamInternal::ProfileToSerialize(const uint32_t track_id, const cfg::vhost::app::oprf::AudioProfile &profile)
 {
 	if (profile.IsBypass() == true)
 	{
@@ -74,7 +74,7 @@ ov::String TranscoderStreamInternal::GetIdentifiedForAudioProfile(const uint32_t
 									profile.GetChannel());
 }
 
-ov::String TranscoderStreamInternal::GetIdentifiedForDataProfile(const uint32_t track_id)
+ov::String TranscoderStreamInternal::ProfileToSerialize(const uint32_t track_id)
 {
 	return ov::String::FormatString("I=%d,O=bypass", track_id);
 }
@@ -727,4 +727,47 @@ void TranscoderStreamInternal::UpdateOutputTrackTranscode(const std::shared_ptr<
 			output_track->SetChannel(buffer->GetChannels());
 		}
 	}
+}
+
+bool TranscoderStreamInternal::StoreInputTrackSnapshot(std::shared_ptr<info::Stream> stream)
+{
+	_input_track_snapshot.clear();
+	
+	for (auto &[track_id, track] : stream->GetTracks())
+	{
+		auto clone = track->Clone();
+		_input_track_snapshot[track_id] = clone;
+	}	
+
+	return true;
+}
+
+std::map<int32_t, std::shared_ptr<MediaTrack>>& TranscoderStreamInternal::GetInputTrackSnapshot()
+{
+	return _input_track_snapshot;
+}
+
+bool TranscoderStreamInternal::IsEqualCountAndMediaTypeOfMediaTracks(std::map<int32_t, std::shared_ptr<MediaTrack>> a, std::map<int32_t, std::shared_ptr<MediaTrack>> b)
+{
+	if (a.size() != b.size())
+	{
+		return false;
+	}
+
+	for (auto &[track_id, track] : a)
+	{
+		if (b.find(track_id) == b.end())
+		{
+			return false;
+		}
+
+		auto track_b = b[track_id];
+
+		if(track->GetMediaType() != track_b->GetMediaType())
+		{
+			return false;
+		}
+	}
+
+	return true;
 }

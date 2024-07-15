@@ -101,6 +101,7 @@ private:
 	enum class State : uint8_t
 	{
 		CREATED = 0,
+		PREPARING,
 		STARTED,
 		STOPPED,
 		ERROR,
@@ -147,6 +148,8 @@ private:
 	std::map<ov::String, std::shared_ptr<info::Stream>> _output_streams;
 
 	// Map of CompositeContext
+	// Purpose of reusing the same encoding profile.
+	// 
 	// [
 	//   - MAP_ID
 	// 	 - INPUT  -> STREAM and TRACK
@@ -194,9 +197,10 @@ private:
 	std::shared_ptr<info::Stream> GetInputStream();
 	std::shared_ptr<info::Stream> GetOutputStreamByTrackId(MediaTrackId output_track_id);
 
-	void RequestWebhoook();
+	const cfg::vhost::app::oprf::OutputProfiles* RequestWebhoook();
 	bool StartInternal();
 	bool PrepareInternal();
+	bool UpdateInternal(const std::shared_ptr<info::Stream> &stream);
 
 	int32_t CreateOutputStreamDynamic();
 	int32_t CreateOutputStreams();
@@ -204,7 +208,7 @@ private:
 
 	int32_t BuildComposite();
 	// Store information for track mapping by stage
-	void AddComposite(ov::String unique_id,
+	void AddComposite(ov::String serialized_profile,
 					  std::shared_ptr<info::Stream> input_stream, std::shared_ptr<MediaTrack> input_track,
 					  std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
 	ov::String GetInfoStringComposite();
@@ -235,7 +239,7 @@ private:
 	void SpreadToFilters(MediaTrackId decoder_id, std::shared_ptr<MediaFrame> frame);
 	TranscodeResult FilterFrame(MediaTrackId track_id, std::shared_ptr<MediaFrame> frame);
 	void OnFilteredFrame(MediaTrackId filter_id, std::shared_ptr<MediaFrame> decoded_frame);
-	bool IsAvailableSmoothTransitionStream(const std::shared_ptr<info::Stream> &stream);
+	bool IsAvailableSmoothTransition(const std::shared_ptr<info::Stream> &stream);
 
 	// Step 3: Encode (Encode the filtered frame to packets)
 	TranscodeResult EncodeFrame(std::shared_ptr<const MediaFrame> frame);
