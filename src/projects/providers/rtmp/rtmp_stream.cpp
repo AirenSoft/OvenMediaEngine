@@ -134,16 +134,10 @@ namespace pvd
 		auto final_url = GetFinalUrl();
 		if (_remote && requested_url && final_url)
 		{
-			auto remote_address{_remote->GetRemoteAddress()};
-			if (remote_address)
-			{
-				auto request_info = std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, requested_url->ToUrlString(true) == final_url->ToUrlString(true) ? nullptr : final_url);
-
-				GetProvider()->SendCloseAdmissionWebhooks(request_info);
-			}
+			auto request_info = std::make_shared<ac::RequestInfo>(requested_url, final_url, _remote, nullptr);
+			GetProvider()->SendCloseAdmissionWebhooks(request_info);
 		}
 		// the return check is not necessary
-
 		if (_remote->GetState() == ov::SocketState::Connected)
 		{
 			_remote->Close();
@@ -252,7 +246,12 @@ namespace pvd
 	{
 		if (_tc_url.IsEmpty() == false)
 		{
-			_full_url.Format("%s/%s", _tc_url.CStr(), document.GetProperty(3)->GetString().CStr());
+			_full_url = _tc_url;
+			auto remain = document.GetProperty(3)->GetString();
+			if (remain.IsEmpty() == false)
+			{
+				_full_url += ov::String::FormatString("/%s", remain.CStr());
+			}
 
 			if (SetFullUrl(_full_url) &&
 				CheckAccessControl() &&
@@ -368,9 +367,10 @@ namespace pvd
 		// Check SignedPolicy
 		auto provider = GetProvider();
 
-		auto [result, _signed_policy] = provider->VerifyBySignedPolicy(_url, _remote->GetRemoteAddress());
+		auto request_info = std::make_shared<ac::RequestInfo>(_url, nullptr, _remote, nullptr);
 
-		switch (result)
+		auto [signed_policy_result, _signed_policy] = provider->VerifyBySignedPolicy(request_info);
+		switch (signed_policy_result)
 		{
 			case AccessController::VerificationResult::Error:
 				logtw("SingedPolicy error : %s", _url->ToUrlString().CStr());
@@ -390,10 +390,7 @@ namespace pvd
 				break;
 		}
 
-		auto request_info = std::make_shared<AccessController::RequestInfo>(_url, _remote->GetRemoteAddress());
-
 		auto [webhooks_result, _admission_webhooks] = provider->VerifyByAdmissionWebhooks(request_info);
-
 		switch (webhooks_result)
 		{
 			case AccessController::VerificationResult::Error:

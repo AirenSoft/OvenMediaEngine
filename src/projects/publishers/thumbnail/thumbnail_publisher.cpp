@@ -235,8 +235,9 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 		// Access Control
 		if (access_control_enabled == true)
 		{
+			auto request_info = std::make_shared<ac::RequestInfo>(request_url, nullptr, request->GetRemote(), request);
 			// Signed Policy
-			auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(request_url, remote_address);
+			auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(request_info);
 			if (signed_policy_result == AccessController::VerificationResult::Pass)
 			{
 
@@ -261,8 +262,6 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 			}
 
 			// Admission Webhooks
-			auto request_info = std::make_shared<AccessController::RequestInfo>(request_url, remote_address, request->GetHeader("USER-AGENT"));
-
 			auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
 			if (webhooks_result == AccessController::VerificationResult::Off)
 			{

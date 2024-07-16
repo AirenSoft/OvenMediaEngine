@@ -280,23 +280,23 @@ namespace pvd
 		auto request = ws_session->GetRequest();
 		auto remote_address = request->GetRemote()->GetRemoteAddress();
 		auto uri = request->GetUri();
-		auto final_url = ov::Url::Parse(uri);
-		if (final_url == nullptr)
+		auto requested_url = ov::Url::Parse(uri);
+		if (requested_url == nullptr)
 		{
 			logte("Could not parse the url: %s", uri.CStr());
 			return nullptr;
 		}
 
 		// PORT can be omitted if port is rtmp default port, but SignedPolicy requires this information.
-		if (final_url->Port() == 0)
+		if (requested_url->Port() == 0)
 		{
-			final_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
+			requested_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 		}
 
-		auto requested_url = final_url;
+		auto request_info = std::make_shared<ac::RequestInfo>(requested_url, nullptr, request->GetRemote(), request);
 
 		uint64_t session_life_time = 0;
-		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(final_url, remote_address);
+		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(request_info);
 		if (signed_policy_result == AccessController::VerificationResult::Off)
 		{
 			// Success
@@ -316,7 +316,8 @@ namespace pvd
 		}
 
 		// Admission Webhooks
-		auto request_info = std::make_shared<AccessController::RequestInfo>(final_url, remote_address, request->GetHeader("USER-AGENT"));
+		// final url can be changed by Admission Webhooks or not 
+		auto final_url = ov::Url::Parse(requested_url->ToUrlString(true)); 
 
 		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
 		if (webhooks_result == AccessController::VerificationResult::Off)
@@ -571,8 +572,7 @@ namespace pvd
 		auto final_url = stream->GetFinalUrl();
 		if (remote_address && requested_url && final_url)
 		{
-			auto request_info = std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, requested_url->ToUrlString(true) == final_url->ToUrlString(true) ? nullptr : final_url, request->GetHeader("USER-AGENT"));
-
+			auto request_info = std::make_shared<ac::RequestInfo>(requested_url, final_url, request->GetRemote(), request);
 			SendCloseAdmissionWebhooks(request_info);
 		}
 		// the return check is not necessary
@@ -618,32 +618,7 @@ namespace pvd
 			case IceConnectionState::Disconnected:
 			case IceConnectionState::Closed: {
 				logti("IcePort is disconnected. : (%s/%s) reason(%d)", stream->GetApplicationName(), stream->GetName().CStr(), state);
-
-				// Send Close to Admission Webhooks
-				std::shared_ptr<ov::SocketAddress> remote_address = nullptr;
-				if (stream->GetMediaSource())
-				{
-					auto source_url = ov::Url::Parse(stream->GetMediaSource());
-					if (source_url != nullptr)
-					{
-						remote_address = std::make_shared<ov::SocketAddress>(ov::SocketAddress::CreateAndGetFirst(source_url->Host(), source_url->Port()));
-					}
-					else
-					{
-						logtd("Could not parse the source url: %s", stream->GetMediaSource().CStr());
-					}
-				}
-
-				auto requested_url = stream->GetRequestedUrl();
-				auto final_url = stream->GetFinalUrl();
-				if (remote_address && requested_url && final_url)
-				{
-					auto request_info = std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, requested_url->ToUrlString(true) == final_url->ToUrlString(true) ? nullptr : final_url);
-
-					SendCloseAdmissionWebhooks(request_info);
-				}
-				// the return check is not necessary
-
+				
 				UnRegisterStreamToSessionKeyStreamMap(stream->GetSessionKey());
 
 				// Signalling server will call OnStopCommand, then stream will be removed in that function
@@ -679,9 +654,10 @@ namespace pvd
 
 		auto requested_url = final_url;
 
+		auto request_info = std::make_shared<ac::RequestInfo>(final_url, nullptr, request->GetRemote(), request);
 		// Signed Policy & Admission Webhooks
 		uint64_t session_life_time = 0;
-		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(final_url, remote_address);
+		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(request_info);
 		if (signed_policy_result == AccessController::VerificationResult::Off)
 		{
 			// Success
@@ -702,8 +678,6 @@ namespace pvd
 		}
 
 		// Admission Webhooks
-		auto request_info = std::make_shared<AccessController::RequestInfo>(final_url, remote_address, request->GetHeader("USER-AGENT"));
-
 		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
 		if (webhooks_result == AccessController::VerificationResult::Off)
 		{
@@ -832,30 +806,17 @@ namespace pvd
 		}
 
 		auto final_url = stream->GetFinalUrl();
-		auto vhost_name = final_url->Host();
-		auto app_name = final_url->App();
-
-		info::VHostAppName vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(vhost_name, app_name);
-		if (vhost_app_name.IsValid() == false)
-		{
-			logte("Could not resolve application name from domain: %s", final_url->Host().CStr());
-			return {http::StatusCode::NotFound, vhost_name, app_name};
-		}
-
 		auto requested_url = stream->GetRequestedUrl();
-		auto remote_address{request->GetRemote()->GetRemoteAddress()};
-
-		if (remote_address && requested_url)
-		{
-			auto request_info = std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, requested_url->ToUrlString(true) == final_url->ToUrlString(true) ? nullptr : final_url, request->GetHeader("USER-AGENT"));
-
-			SendCloseAdmissionWebhooks(request_info);
-		}
+		auto request_info = std::make_shared<ac::RequestInfo>(requested_url, final_url, request->GetRemote(), request);
+		SendCloseAdmissionWebhooks(request_info);
 
 		UnRegisterStreamToSessionKeyStreamMap(stream->GetSessionKey());
 
 		_ice_port->RemoveSession(stream->GetIceSessionId());
 		OnChannelDeleted(stream);
+
+		auto vhost_name = final_url->Host();
+		auto app_name = final_url->App();
 
 		return {http::StatusCode::OK, vhost_name, app_name};
 	}

@@ -142,6 +142,31 @@ namespace ov
 			return *this;
 		}
 
+		Url()
+		{
+		}
+
+		Url(const Url &other)
+		{
+			_source = other._source;
+			_scheme = other._scheme;
+			_host = other._host;
+			_port = other._port;
+			_path = other._path;
+			_has_query_string = other._has_query_string;
+			_query_string = other._query_string;
+			_query_parsed = other._query_parsed;
+			_query_map = other._query_map;
+			_app = other._app;
+			_stream = other._stream;
+			_file = other._file;
+		}
+
+		std::shared_ptr<Url> Clone() const
+		{
+			return std::make_shared<Url>(*this);
+		}
+
 	private:
 		void ParseQueryIfNeeded() const;
 

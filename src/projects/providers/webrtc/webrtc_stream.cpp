@@ -75,10 +75,10 @@ namespace pvd
 	{
 		std::lock_guard<std::shared_mutex> lock(_start_stop_lock);
 
-		logti("[WebRTC Provider] Local SDP");
-		logti("%s\n", _local_sdp->ToString().CStr());
-		logti("[WebRTC Provider] Peer SDP");
-		logti("%s", _remote_sdp->ToString().CStr());
+		logtd("[WebRTC Provider] Local SDP");
+		logtd("%s\n", _local_sdp->ToString().CStr());
+		logtd("[WebRTC Provider] Peer SDP");
+		logtd("%s", _remote_sdp->ToString().CStr());
 
 		auto local_media_desc_list = _local_sdp->GetMediaList();
 		auto remote_media_desc_list = _remote_sdp->GetMediaList();

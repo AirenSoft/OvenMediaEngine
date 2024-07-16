@@ -294,7 +294,9 @@ std::shared_ptr<TsHttpInterceptor> HlsPublisher::CreateInterceptor()
 		// Check if the request is for the master playlist
 		if (access_control_enabled == true && (final_url->File().IndexOf(".m3u8") > 0 && final_url->File().IndexOf("medialist") == -1))
 		{
-			auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(final_url, remote_address);
+			auto request_info = std::make_shared<ac::RequestInfo>(final_url, nullptr, request->GetRemote(), request);
+
+			auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(request_info);
 			if (signed_policy_result == AccessController::VerificationResult::Pass)
 			{
 				session_life_time = signed_policy->GetStreamExpireEpochMSec();
@@ -313,8 +315,6 @@ std::shared_ptr<TsHttpInterceptor> HlsPublisher::CreateInterceptor()
 			}
 
 			// Admission Webhooks
-			auto request_info = std::make_shared<AccessController::RequestInfo>(final_url, remote_address, request->GetHeader("USER-AGENT"));
-
 			auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
 			if (webhooks_result == AccessController::VerificationResult::Off)
 			{
@@ -546,7 +546,8 @@ std::shared_ptr<TsHttpInterceptor> HlsPublisher::CreateInterceptor()
 						auto final_url = session->GetFinalUrl();
 						if (remote_address && requested_url && final_url)
 						{
-							auto request_info = std::make_shared<AccessController::RequestInfo>(requested_url, remote_address, requested_url->ToUrlString(true) == final_url->ToUrlString(true) ? nullptr : final_url, session->GetUserAgent());
+							auto request_info = std::make_shared<ac::RequestInfo>(requested_url, final_url, connection->GetSocket(), nullptr);
+							request_info->SetUserAgent(session->GetUserAgent());
 
 							SendCloseAdmissionWebhooks(request_info);
 						}
