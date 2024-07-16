@@ -53,32 +53,24 @@ namespace pub
 	bool Publisher::OnCreateApplication(const info::Application &app_info)
 	{
 		// Check configuration
-		if(app_info.IsDynamicApp() == false)
+		auto cfg_publisher_list = app_info.GetConfig().GetPublishers().GetPublisherList();
+		for(const auto &cfg_publisher : cfg_publisher_list)
 		{
-			auto cfg_publisher_list = app_info.GetConfig().GetPublishers().GetPublisherList();
-			for(const auto &cfg_publisher : cfg_publisher_list)
+			if(cfg_publisher->GetType() == GetPublisherType())
 			{
-				if(cfg_publisher->GetType() == GetPublisherType())
+				if(cfg_publisher->IsParsed())
 				{
-					if(cfg_publisher->IsParsed())
-					{
-						break;
-					}
-					else
-					{
-						// This provider is diabled
-						logtw("%s publisher is disabled in %s application, so it was not created", 
-								::StringFromPublisherType(GetPublisherType()).CStr(), app_info.GetName().CStr());
-						return true;
-					}
+					break;
+				}
+				else
+				{
+					// This provider is diabled
+					logtw("%s publisher is disabled in %s application, so it was not created", 
+							::StringFromPublisherType(GetPublisherType()).CStr(), app_info.GetName().CStr());
+					return true;
 				}
 			}
 		}
-		else
-		{
-			// The dynamically created app activates all publishers
-		}
-
 
 		auto application = OnCreatePublisherApplication(app_info);
 		if (application == nullptr)

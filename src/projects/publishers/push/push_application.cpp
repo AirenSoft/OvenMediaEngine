@@ -20,7 +20,10 @@ namespace pub
 	std::shared_ptr<PushApplication> PushApplication::Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
 	{
 		auto application = std::make_shared<PushApplication>(publisher, application_info);
-		application->Start();
+		if (application->Start() == false)
+		{
+			return nullptr;
+		}
 		return application;
 	}
 
