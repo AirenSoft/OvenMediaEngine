@@ -516,9 +516,9 @@ namespace pvd
             auto duration = media_packet->GetDuration();
 
             // origin timebase to track timebase
-            pts = pts * track->GetTimeBase().GetTimescale() * origin_tb.num / origin_tb.den;
-            dts = dts * track->GetTimeBase().GetTimescale() * origin_tb.num / origin_tb.den;
-            duration = duration * track->GetTimeBase().GetTimescale() * origin_tb.num / origin_tb.den;
+            pts = ((pts * (double)origin_tb.num) / (double)origin_tb.den) * track->GetTimeBase().GetTimescale();
+            dts = ((dts * (double)origin_tb.num) / (double)origin_tb.den) * track->GetTimeBase().GetTimescale();
+            duration = ((duration * (double)origin_tb.num) / (double)origin_tb.den) * track->GetTimeBase().GetTimescale();
 
             if (track_first_packet_map.find(track_id) == track_first_packet_map.end())
             {
@@ -531,7 +531,7 @@ namespace pvd
 
             media_packet->SetPts(pts);
             media_packet->SetDts(dts);
-            media_packet->SetDuration(duration);
+            media_packet->SetDuration(-1); // Duration will be calculated in MediaRouter
 
             logtd("Scheduled Channel Send Packet : %s/%s: Track %d, origin dts : %lld, pts %lld, dts %lld, duration %lld, tb %f", GetApplicationName(), GetName().CStr(), track_id, single_file_dts, pts, dts, duration, track->GetTimeBase().GetExpr());
 
@@ -727,7 +727,7 @@ namespace pvd
                 }
 
                 new_track->SetId(kScheduledVideoTrackId);
-                new_track->SetTimeBase(1, kScheduledTimebase); // We fixed time base in scheduled stream
+                new_track->SetTimeBase(1, kScheduledVideoTimebase);
                 _origin_id_track_id_map.emplace(stream->index, kScheduledVideoTrackId);
                 UpdateTrack(new_track);
 
@@ -752,7 +752,7 @@ namespace pvd
                 }
 
                 new_track->SetId(kScheduledAudioTrackId);
-                new_track->SetTimeBase(1, new_track->GetSampleRate()/*kScheduledTimebase*/); // We fixed time base in scheduled stream
+                new_track->SetTimeBase(1, new_track->GetSampleRate());
                 _origin_id_track_id_map.emplace(stream->index, kScheduledAudioTrackId);
                 UpdateTrack(new_track);
 
@@ -929,12 +929,12 @@ namespace pvd
             media_packet->SetTrackId(track_id);
             auto pts = media_packet->GetPts();
             auto dts = media_packet->GetDts();
-            auto duration = media_packet->GetDuration();
+            //auto duration = media_packet->GetDuration();
 
             // origin timebase to track timebase
-            pts = pts * track->GetTimeBase().GetTimescale() * origin_tb.GetNum() / origin_tb.GetDen();
-            dts = dts * track->GetTimeBase().GetTimescale() * origin_tb.GetNum() / origin_tb.GetDen();
-            duration = duration * track->GetTimeBase().GetTimescale() * origin_tb.GetNum() / origin_tb.GetDen();
+            pts = ((pts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
+            dts = ((dts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
+            //duration = ((duration * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
 
             if (track_first_packet_map.find(track_id) == track_first_packet_map.end())
             {
@@ -944,13 +944,13 @@ namespace pvd
             auto single_file_dts = dts - track_single_file_dts_offset_map[track_id];
 
             //TODO(Getroot): need to calc duration?
-
             AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max());
 
             media_packet->SetPts(pts);
             media_packet->SetDts(dts);
+			media_packet->SetDuration(-1); // It will be calculated in MediaRouter
 
-            logtd("Scheduled Channel Send Packet : %s/%s: Track %d, origin dts : %lld, pts %lld, dts %lld, duration %lld, tb %f", GetApplicationName(), GetName().CStr(), track_id, single_file_dts, pts, dts, duration, track->GetTimeBase().GetExpr());
+            logtd("Scheduled Channel Send Packet : %s/%s: Track %d, origin dts : %lld, pts %lld, dts %lld, tb %f", GetApplicationName(), GetName().CStr(), track_id, single_file_dts, pts, dts, track->GetTimeBase().GetExpr());
 
             SendFrame(media_packet);
 
@@ -1117,7 +1117,7 @@ namespace pvd
                 }
 
                 new_track->SetId(kScheduledVideoTrackId);
-                new_track->SetTimeBase(1, kScheduledTimebase); // We fixed time base in scheduled stream
+                new_track->SetTimeBase(1, kScheduledVideoTimebase);
                 _origin_id_track_id_map.emplace(track_id, kScheduledVideoTrackId);
                 UpdateTrack(new_track);
 
@@ -1133,7 +1133,7 @@ namespace pvd
                 }
 
                 new_track->SetId(kScheduledAudioTrackId);
-                new_track->SetTimeBase(1, kScheduledTimebase); // We fixed time base in scheduled stream
+                new_track->SetTimeBase(1, new_track->GetSampleRate());
                 _origin_id_track_id_map.emplace(track_id, kScheduledAudioTrackId);
                 UpdateTrack(new_track);
 
