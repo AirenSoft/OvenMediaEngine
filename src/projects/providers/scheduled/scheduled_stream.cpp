@@ -1073,6 +1073,7 @@ namespace pvd
     std::shared_ptr<MediaRouterStreamTap> ScheduledStream::PrepareStreamPlayback(const std::shared_ptr<Schedule::Item> &item)
     {
         auto stream_tap = MediaRouterStreamTap::Create();
+		stream_tap->SetNeedPastData(true);
 
         auto stream_url = ov::Url::Parse(item->url);
         if (stream_url == nullptr)
