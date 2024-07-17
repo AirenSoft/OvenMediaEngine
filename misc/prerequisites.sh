@@ -188,8 +188,8 @@ install_nvcc_hdr() {
         (DIR=${TEMP_PATH}/nvcc-hdr && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        export DESTDIR=${PREFIX} && \
-        curl -sSLf https://github.com/FFmpeg/nv-codec-headers/releases/download/n${NVCC_HDR_VERSION}/nv-codec-headers-${NVCC_HDR_VERSION}.tar.gz | tar -xz --strip-components=1 && sed -i 's|PREFIX.*=\(.*\)|PREFIX =|g' Makefile && \
+        curl -sSLf https://github.com/FFmpeg/nv-codec-headers/releases/download/n${NVCC_HDR_VERSION}/nv-codec-headers-${NVCC_HDR_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+        sed -i 's|PREFIX.*=\(.*\)|PREFIX = '${PREFIX}'|g' Makefile && \
         sudo make install ) || fail_exit "nvcc_headers"
     fi
 }
