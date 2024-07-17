@@ -50,7 +50,7 @@ namespace pub
 
 		if (application_enabled == false)
 		{
-			logte("%s PushApplication is disabled", GetName().CStr());
+			logtd("%s PushApplication is disabled", GetName().CStr());
 			return false;
 		}
 
