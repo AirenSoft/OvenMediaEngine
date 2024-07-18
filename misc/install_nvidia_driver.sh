@@ -42,7 +42,7 @@ success_exit()
     echo ""
     echo "Reboot is required to use the nvidia video driver"
     export PATH=${PATH}:/usr/local/cuda/bin/
-    exit 1
+    exit 0
 }
 
 fail_exit()
