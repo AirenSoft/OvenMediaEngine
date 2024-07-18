@@ -597,9 +597,6 @@ bool IcePort::Send(session_id_t session_id, const std::shared_ptr<const ov::Data
 
 void IcePort::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
-
-	return ; 
-	
 	// called when TURN client connected to the turn server with TCP
 	auto demultiplexer = std::make_shared<IceTcpDemultiplexer>();
 
