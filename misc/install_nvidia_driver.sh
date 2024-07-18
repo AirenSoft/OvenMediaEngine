@@ -57,13 +57,12 @@ fail_exit()
 ##########################################################################################
 install_base_ubuntu()
 {
-    if [ "${OSVERSION}" == "18" ] && [ "${OSVERSION}" == "20" ] && [ "${OSVERSION}" == "22" ]; then
+    if [ "${OSVERSION}" == "18" ] || [ "${OSVERSION}" == "20" ] || [ "${OSVERSION}" == "22" ]; then
         sudo apt-get -y update
         sudo apt-get -y install --no-install-recommends apt-utils lshw
         sudo apt-get -y install --no-install-recommends keyboard-configuration
         sudo apt-get -y install --no-install-recommends ubuntu-drivers-common
         sudo apt-get -y install --no-install-recommends gnupg2 ca-certificates software-properties-common
-
 
         # Uninstalling a previously installed NVIDIA Driver
         sudo apt-get -y remove --purge nvidia-*
@@ -104,7 +103,7 @@ install_base_ubuntu()
 
         success_exit
     else
-        fail_xit
+        fail_exit
     fi
 }
 
