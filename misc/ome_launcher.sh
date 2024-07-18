@@ -74,7 +74,6 @@ echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
 echo "LD_PRELOAD: $LD_PRELOAD"
 
 # Run as daemon 
-ldd /usr/bin/OvenMediaEngine
-exec /usr/bin/OvenMediaEngine $1
+exec /usr/bin/OvenMediaEngine "$@"
 
 
