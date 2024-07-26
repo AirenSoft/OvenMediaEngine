@@ -331,6 +331,20 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 	{
 		first_segment = _segments.begin()->second;
 	}
+	else if (vod == true)
+	{
+		// find vod_start_segment_number
+		auto it = _segments.find(vod_start_segment_number);
+		if (it != _segments.end())
+		{
+			first_segment = it->second;
+		}
+		else
+		{
+			// vod_start_segment_number should be in old_segments
+			first_segment = _segments.begin()->second;
+		}
+	}
 	else
 	{
 		// max segment count is _segment_count
