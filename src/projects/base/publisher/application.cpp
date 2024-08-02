@@ -114,10 +114,14 @@ namespace pub
 
 			// Check media data is available
 			auto stream_data = PopStreamData();
+			if (stream_data == nullptr)
+			{
+				continue;
+			}
+			
 			auto stream = stream_data->_stream;
 			auto media_packet = stream_data->_media_packet;
-
-			if (stream_data == nullptr || stream == nullptr || media_packet == nullptr)
+			if (stream == nullptr || media_packet == nullptr)
 			{
 				continue;
 			}
