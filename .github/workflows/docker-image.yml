@@ -24,8 +24,8 @@ jobs:
         with:
           payload: |
             {
-              "branch": ${{ github.ref_name }},
-              "tag": ${{ env.TAG }},
+              "branch": "${{ github.ref_name }}",
+              "tag": "${{ env.TAG }}",
               "state": "Started"
             }
         env:
@@ -63,9 +63,9 @@ jobs:
         with:
           payload: |
             {
-              "branch": ${{ github.ref_name }},
-              "tag": ${{ env.TAG }},
-              "state": ${{ job.status }}
+              "branch": "${{ github.ref_name }}",
+              "tag": "${{ env.TAG }}",
+              "state": "${{ job.status }}"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.ACTION_STATE_NOTIFICATION_SLACK_WEBHOOK_URL }}
