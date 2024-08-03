@@ -25,7 +25,7 @@ jobs:
           payload: |
             {
               "branch": ${{ github.ref_name }},
-              "tag": ${{ TAG }},
+              "tag": ${{ env.TAG }},
               "state": "Started"
             }
         env:
@@ -52,7 +52,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ TAG }}
+          tags: ${{ env.TAG }}
           platforms: |
             linux/amd64
             linux/arm64
@@ -64,7 +64,7 @@ jobs:
           payload: |
             {
               "branch": ${{ github.ref_name }},
-              "tag": ${{ TAG }},
+              "tag": ${{ env.TAG }},
               "state": ${{ job.status }}
             }
         env:
