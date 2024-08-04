@@ -67,6 +67,7 @@ jobs:
 
       - name: Print context for debugging
         env:
+          TAGS: ${{ steps.meta.outputs.tags }}
           LABELS: ${{ steps.meta.outputs.labels }}
         run: |
           echo "$TAGS"
