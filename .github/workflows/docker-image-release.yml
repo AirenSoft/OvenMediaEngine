@@ -65,6 +65,13 @@ jobs:
       #       linux/amd64
       #       linux/arm64
 
+      - name: Print context for debugging
+        env:
+          LABELS: ${{ steps.meta.outputs.labels }}
+        run: |
+          echo "$TAGS"
+          echo "$LABELS"
+
       - name: Notify to Slack
         if: always()
         uses: slackapi/slack-github-action@v1.26.0
@@ -77,9 +84,3 @@ jobs:
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.ACTION_STATE_NOTIFICATION_SLACK_WEBHOOK_URL }}
-          TAGS: ${{ steps.meta.outputs.tags }}
-          LABELS: ${{ steps.meta.outputs.labels }}
-        run: |
-          echo "$TAGS"
-          echo "$LABELS"
-
