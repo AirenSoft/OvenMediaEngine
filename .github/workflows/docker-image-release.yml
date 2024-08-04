@@ -52,31 +52,23 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}.{{patch}}
 
-      # - name: Build and push
-      #   id: push
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: .
-      #     file: ./Dockerfile
-      #     push: true
-      #     tags: ${{ steps.meta.outputs.tags }}
-      #     labels: ${{ steps.meta.outputs.labels }}
-      #     platforms: |
-      #       linux/amd64
-      #       linux/arm64
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: |
+            linux/amd64
+            linux/arm64
 
-      - name: Print context for debugging
-        env:
-          TAGS: ${{ steps.meta.outputs.tags }}
-          LABELS: ${{ steps.meta.outputs.labels }}
-        run: |
-          echo "$TAGS"
-          echo "$LABELS"
-
-      - name: Remove newlines from tags
+      - name: Replace newlines with pipe in tags
         id: clean_tags
         run: |
-          cleaned_tags=$(echo "${{ steps.meta.outputs.tags }}" | tr -d '\n')
+          cleaned_tags=$(echo "${{ steps.meta.outputs.tags }}" | sed ':a;N;$!ba;s/\n/|/g')
           echo "::set-output name=cleaned_tags::$cleaned_tags"
 
       - name: Notify to Slack
