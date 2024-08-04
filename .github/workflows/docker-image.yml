@@ -1,10 +1,16 @@
-name: Docker Image CI for Master branch
+name: Docker Image CI 
 
 on:
   push:
     branches:
     - 'master'
+  release:
+    types: [published]
   workflow_dispatch:
+
+concurrency:
+    group: ${{ github.head_ref }}
+    cancel-in-progress: true
 
 env:
   TAG: 'airensoft/ovenmediaengine:dev'
