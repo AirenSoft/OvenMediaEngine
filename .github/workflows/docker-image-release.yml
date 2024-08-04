@@ -73,6 +73,12 @@ jobs:
           echo "$TAGS"
           echo "$LABELS"
 
+      - name: Remove newlines from tags
+        id: clean_tags
+        run: |
+          cleaned_tags=$(echo "${{ steps.meta.outputs.tags }}" | tr -d '\n')
+          echo "::set-output name=cleaned_tags::$cleaned_tags"
+
       - name: Notify to Slack
         if: always()
         uses: slackapi/slack-github-action@v1.26.0
@@ -80,7 +86,7 @@ jobs:
           payload: |
             {
               "branch": "${{ github.ref_name }}",
-              "tag": "${{ steps.meta.outputs.tags }}",
+              "tag": "${{ steps.clean_tags.outputs.cleaned_tags }}",
               "state": "${{ job.status }}"
             }
         env:
