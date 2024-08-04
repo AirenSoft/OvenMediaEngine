@@ -1,9 +1,8 @@
 name: Release Docker Image CI 
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
