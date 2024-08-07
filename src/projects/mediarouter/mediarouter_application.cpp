@@ -475,10 +475,12 @@ bool MediaRouteApplication::NotifyStreamCreate(const std::shared_ptr<info::Strea
 bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStream> &stream)
 {
 	std::shared_lock<std::shared_mutex> lock(_observers_lock);
+	auto observers = _observers; // Avoid deadlock
+	lock.unlock();
 
 	logti("[%s/%s(%u)] Stream has been prepared %s", _application_info.GetName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
 
-	for (auto observer : _observers)
+	for (auto observer : observers)
 	{
 		auto observer_type = observer->GetObserverType();
 
@@ -628,10 +630,12 @@ bool MediaRouteApplication::DeleteOutboundStream(const std::shared_ptr<info::Str
 bool MediaRouteApplication::NotifyStreamDeleted(const std::shared_ptr<info::Stream> &stream_info, const MediaRouterApplicationConnector::ConnectorType connector_type)
 {
 	std::shared_lock<std::shared_mutex> lock_guard(_observers_lock);
+	auto observers = _observers; // Avoid deadlock
+	lock_guard.unlock();
 
 	auto representation_type = stream_info->GetRepresentationType();
 
-	for (auto it = _observers.begin(); it != _observers.end(); ++it)
+	for (auto it = observers.begin(); it != observers.end(); ++it)
 	{
 		auto observer = *it;
 
@@ -672,10 +676,12 @@ bool MediaRouteApplication::NotifyStreamDeleted(const std::shared_ptr<info::Stre
 bool MediaRouteApplication::NotifyStreamUpdated(const std::shared_ptr<info::Stream> &stream_info, const MediaRouterApplicationConnector::ConnectorType connector_type)
 {
 	std::shared_lock<std::shared_mutex> lock_guard(_observers_lock);
+	auto observers = _observers; // Avoid deadlock
+	lock_guard.unlock();
 
 	auto representation_type = stream_info->GetRepresentationType();
 
-	for (auto it = _observers.begin(); it != _observers.end(); ++it)
+	for (auto it = observers.begin(); it != observers.end(); ++it)
 	{
 		auto observer = *it;
 
@@ -875,7 +881,9 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 		}
 
 		std::shared_lock<std::shared_mutex> lock(_observers_lock);
-		for (const auto &observer : _observers)
+		auto observers = _observers; // Avoid deadlock
+		lock.unlock();
+		for (const auto &observer : observers)
 		{
 			auto observer_type = observer->GetObserverType();
 
@@ -958,7 +966,9 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 		}
 
 		std::shared_lock<std::shared_mutex> lock(_observers_lock);
-		for (const auto &observer : _observers)
+		auto observers = _observers; // Avoid deadlock
+		lock.unlock();
+		for (const auto &observer : observers)
 		{
 			auto observer_type = observer->GetObserverType();
 
