@@ -92,7 +92,6 @@ bool DecoderAVC::InitCodec()
 
 void DecoderAVC::UninitCodec()
 {
-	::avcodec_close(_context);
 	::avcodec_free_context(&_context);
 
 	_context = nullptr;
@@ -270,9 +269,9 @@ void DecoderAVC::CodecThread()
 				}
 
 				// If there is no duration, the duration is calculated by framerate and timebase.
-				if(_frame->pkt_duration <= 0LL && _context->framerate.num > 0 && _context->framerate.den > 0)
+				if(_frame->duration <= 0LL && _context->framerate.num > 0 && _context->framerate.den > 0)
 				{
-					_frame->pkt_duration = (int64_t)( ((double)_context->framerate.den / (double)_context->framerate.num) / ((double) GetRefTrack()->GetTimeBase().GetNum() / (double) GetRefTrack()->GetTimeBase().GetDen()) );
+					_frame->duration = (int64_t)( ((double)_context->framerate.den / (double)_context->framerate.num) / ((double) GetRefTrack()->GetTimeBase().GetNum() / (double) GetRefTrack()->GetTimeBase().GetDen()) );
 				}
 				
 

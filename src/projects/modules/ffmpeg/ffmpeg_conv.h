@@ -373,7 +373,7 @@ namespace ffmpeg
 				case cmn::MediaType::Audio:
 					media_track->SetSampleRate(stream->codecpar->sample_rate);
 					media_track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(stream->codecpar->format));
-					media_track->GetChannel().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(stream->codecpar->channel_layout));
+					media_track->GetChannel().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(stream->codecpar->ch_layout.u.mask));
 					break;
 				default:
 					break;
@@ -478,7 +478,7 @@ namespace ffmpeg
 					media_frame->SetHeight(frame->height);
 					media_frame->SetFormat(frame->format);
 					media_frame->SetPts((frame->pts == AV_NOPTS_VALUE) ? -1LL : frame->pts);
-					media_frame->SetDuration(frame->pkt_duration);
+					media_frame->SetDuration(frame->duration);
 
 					AVFrame* moved_frame = av_frame_alloc();
 					av_frame_move_ref(moved_frame, frame);
@@ -493,10 +493,10 @@ namespace ffmpeg
 					media_frame->SetMediaType(media_type);
 					media_frame->SetBytesPerSample(::av_get_bytes_per_sample(static_cast<AVSampleFormat>(frame->format)));
 					media_frame->SetNbSamples(frame->nb_samples);
-					media_frame->GetChannels().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(frame->channel_layout));
+					media_frame->GetChannels().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(frame->ch_layout.u.mask));
 					media_frame->SetSampleRate(frame->sample_rate);
 					media_frame->SetFormat(frame->format);
-					media_frame->SetDuration(frame->pkt_duration);
+					media_frame->SetDuration(frame->duration);
 					media_frame->SetPts((frame->pts == AV_NOPTS_VALUE) ? -1LL : frame->pts);
 
 					AVFrame* moved_frame = av_frame_alloc();
@@ -701,11 +701,11 @@ namespace ffmpeg
 					}
 					else
 					{
-						char channel_layout[16]{};
-						::av_get_channel_layout_string(channel_layout, OV_COUNTOF(channel_layout), parameters->channels, parameters->channel_layout);
+						char channel_layout_buf[16]{};
+						::av_channel_layout_describe(&parameters->ch_layout, channel_layout_buf, OV_COUNTOF(channel_layout_buf));
 
 						// 48000 Hz, stereo, fltp,
-						message.AppendFormat("%d Hz, %s(%d), %s, ", parameters->sample_rate, channel_layout, parameters->channels, ::av_get_sample_fmt_name(static_cast<AVSampleFormat>(parameters->format)));
+						message.AppendFormat("%d Hz, %s(%d), %s, ", parameters->sample_rate, channel_layout_buf, parameters->ch_layout.nb_channels, ::av_get_sample_fmt_name(static_cast<AVSampleFormat>(parameters->format)));
 					}
 
 					message.AppendFormat("%d kbps, ", (parameters->bit_rate / 1024));
@@ -789,10 +789,15 @@ namespace ffmpeg
 				break;
 
 				case cmn::MediaType::Audio: {
-					codecpar->channels 				= static_cast<int>(media_track->GetChannel().GetCounts());
-					codecpar->channel_layout 		= ToAVChannelLayout(media_track->GetChannel().GetLayout());
-					codecpar->sample_rate 			= media_track->GetSample().GetRateNum();
-					codecpar->frame_size 			= (media_track->GetAudioSamplesPerFrame()!=0)?media_track->GetAudioSamplesPerFrame():1024;
+					uint64_t channel_layout = ToAVChannelLayout(media_track->GetChannel().GetLayout());
+					codecpar->ch_layout = {
+						.order = AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
+						.nb_channels = static_cast<int>(media_track->GetChannel().GetCounts()),
+						.u = {.mask = channel_layout}
+					};
+
+					codecpar->sample_rate	= media_track->GetSample().GetRateNum();
+					codecpar->frame_size 	= (media_track->GetAudioSamplesPerFrame()!=0)?media_track->GetAudioSamplesPerFrame():1024;
 				}
 				break;
 
