@@ -42,6 +42,9 @@ namespace ocst
 		Result Release();
 
 		Result CreateVirtualHost(const cfg::vhost::VirtualHost &vhost_cfg);
+		Result CreateVirtualHost(const info::Host &vhost_info);
+		Result ReloadCertificate(const std::shared_ptr<VirtualHost> &vhost);
+
 		Result DeleteVirtualHost(const info::Host &vhost_info);
 		CommonErrorCode ReloadCertificate(const ov::String &vhost_name);
 		CommonErrorCode ReloadAllCertificates();
@@ -194,9 +197,6 @@ namespace ocst
 		std::shared_ptr<const VirtualHost> GetVirtualHost(const ov::String &vhost_name) const;
 		std::shared_ptr<VirtualHost> GetVirtualHost(const info::VHostAppName &vhost_app_name);
 		std::shared_ptr<const VirtualHost> GetVirtualHost(const info::VHostAppName &vhost_app_name) const;
-
-		Result CreateVirtualHost(const info::Host &vhost_info);
-		Result ReloadCertificate(const std::shared_ptr<VirtualHost> &vhost);
 
 		Result CreateApplicationTemplate(const info::Host &host_info, const cfg::vhost::app::Application &app_config);
 
