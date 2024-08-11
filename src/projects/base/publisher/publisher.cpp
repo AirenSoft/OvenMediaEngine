@@ -66,7 +66,7 @@ namespace pub
 				{
 					// This provider is diabled
 					logtw("%s publisher is disabled in %s application, so it was not created", 
-							::StringFromPublisherType(GetPublisherType()).CStr(), app_info.GetName().CStr());
+							::StringFromPublisherType(GetPublisherType()).CStr(), app_info.GetVHostAppName().CStr());
 					return true;
 				}
 			}
@@ -84,7 +84,7 @@ namespace pub
 		// 생성한 Application을 Router와 연결하고 Start
 		if (_router->RegisterObserverApp(*application.get(), application) == false)
 		{
-			logte("Failed to register application(%s/%s) to router", GetPublisherName(), app_info.GetName().CStr());
+			logte("Failed to register application(%s/%s) to router", GetPublisherName(), app_info.GetVHostAppName().CStr());
 			return false;
 		}
 		
@@ -102,7 +102,7 @@ namespace pub
 		std::unique_lock<std::shared_mutex> lock(_application_map_mutex);
 		auto item = _applications.find(app_info.GetId());
 
-		logtd("Delete the application: [%s]", app_info.GetName().CStr());
+		logtd("Delete the application: [%s]", app_info.GetVHostAppName().CStr());
 		if(item == _applications.end())
 		{
 			// Check the reason the app is not created is because it is disabled in the configuration
@@ -122,7 +122,7 @@ namespace pub
 				}
 			}
 
-			logte("%s publisher hasn't the %s application.", ::StringFromPublisherType(GetPublisherType()).CStr(), app_info.GetName().CStr());
+			logte("%s publisher hasn't the %s application.", ::StringFromPublisherType(GetPublisherType()).CStr(), app_info.GetVHostAppName().CStr());
 			return false;
 		}
 
@@ -137,7 +137,7 @@ namespace pub
 		bool result = OnDeletePublisherApplication(application);
 		if(result == false)
 		{
-			logte("Could not delete the %s application of the %s publisher", app_info.GetName().CStr(), ::StringFromPublisherType(GetPublisherType()).CStr());
+			logte("Could not delete the %s application of the %s publisher", app_info.GetVHostAppName().CStr(), ::StringFromPublisherType(GetPublisherType()).CStr());
 			return false;
 		}
 
@@ -155,7 +155,7 @@ namespace pub
 		for (auto const &x : _applications)
 		{
 			auto application = x.second;
-			if (application->GetName() == vhost_app_name)
+			if (application->GetVHostAppName() == vhost_app_name)
 			{
 				return application;
 			}

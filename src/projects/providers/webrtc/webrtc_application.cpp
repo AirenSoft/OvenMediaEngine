@@ -38,7 +38,7 @@ namespace pvd
 
 		if(_certificate == nullptr || _offer_sdp == nullptr)
 		{
-			logte("Failed to generate certificate and offer SDP. Could not start %s/s", GetApplicationTypeName(), GetName().CStr());
+			logte("Failed to generate certificate and offer SDP. Could not start %s/s", GetApplicationTypeName(), GetVHostAppName().CStr());
 			return false;
 		}
 

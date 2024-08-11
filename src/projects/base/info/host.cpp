@@ -24,17 +24,7 @@ namespace info
 
 	bool Host::LoadCertificate()
 	{
-		std::vector<ov::String> name_list;
-
-		for (auto name : GetHost().GetNameList())
-		{
-			name_list.push_back(name.CStr());
-		}
-
-		const cfg::cmn::Tls &tls_config = GetHost().GetTls();
-		std::shared_ptr<ov::Error> error = nullptr;
-
-		auto certificate = Certificate::CreateCertificate(GetName(), name_list, tls_config);
+		auto certificate = Certificate::CreateCertificate(GetName(), GetHost().GetNameList(), GetHost().GetTls());
 		if (certificate == nullptr)
 		{
 			return false;

@@ -101,13 +101,13 @@ namespace api
 						}
 					}
 					
-					logti("Request to pull stream: %s/%s - persistent(%s) noInputFailoverTimeoutMs(%d) unusedStreamDeletionTimeoutMs(%d) ignoreRtcpSRTimestamp(%s)", app->GetName().CStr(), stream_name.CStr(), properties->IsPersistent() ? "true" : "false", properties->GetNoInputFailoverTimeout(), properties->GetUnusedStreamDeletionTimeout(), properties->IsRtcpSRTimestampIgnored() ? "true" : "false");
+					logti("Request to pull stream: %s/%s - persistent(%s) noInputFailoverTimeoutMs(%d) unusedStreamDeletionTimeoutMs(%d) ignoreRtcpSRTimestamp(%s)", app->GetVHostAppName().CStr(), stream_name.CStr(), properties->IsPersistent() ? "true" : "false", properties->GetNoInputFailoverTimeout(), properties->GetUnusedStreamDeletionTimeout(), properties->IsRtcpSRTimestampIgnored() ? "true" : "false");
 					for (auto &url : request_urls)
 					{
 						logti(" - %s", url.CStr());
 					}
 
-					auto result = orchestrator->RequestPullStreamWithUrls(source_url, app->GetName(), stream_name, request_urls, 0, properties);
+					auto result = orchestrator->RequestPullStreamWithUrls(source_url, app->GetVHostAppName(), stream_name, request_urls, 0, properties);
 
 					if (result)
 					{
@@ -166,7 +166,7 @@ namespace api
 		{
 			// Update llhls playlist from the LLHLS stream
 			auto orchestrator = ocst::Orchestrator::GetInstance();
-			auto app_name = app->GetName();
+			auto app_name = app->GetVHostAppName();
 			auto stream_name = stream->GetName();
 
 			auto publisher = orchestrator->GetPublisherFromType(PublisherType::LLHls);
@@ -215,7 +215,7 @@ namespace api
 		{
 			auto orchestrator = ocst::Orchestrator::GetInstance();
 
-			auto app_name = app->GetName();
+			auto app_name = app->GetVHostAppName();
 			auto stream_name = stream->GetName();
 
 			auto code = orchestrator->TerminateStream(app_name, stream_name);

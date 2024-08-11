@@ -160,7 +160,7 @@ bool RtcStream::Start()
 
 		if (IsSupportedCodec(track->GetCodecId()) == false)
 		{
-			logti("RtcStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
+			logti("RtcStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
 			continue;
 		}
 
@@ -701,7 +701,7 @@ void RtcStream::PacketizeVideoFrame(const std::shared_ptr<MediaPacket> &media_pa
 	auto media_track = GetTrack(media_packet->GetTrackId());
 	if (media_track == nullptr)
 	{
-		logtw("RtcStream(%s/%s) - MediaTrack(%u) is not found", GetApplication()->GetName().CStr(), GetName().CStr(), media_packet->GetTrackId());
+		logtw("RtcStream(%s/%s) - MediaTrack(%u) is not found", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), media_packet->GetTrackId());
 		return;
 	}
 
@@ -755,7 +755,7 @@ void RtcStream::PacketizeAudioFrame(const std::shared_ptr<MediaPacket> &media_pa
 	auto media_track = GetTrack(media_packet->GetTrackId());
 	if (media_track == nullptr)
 	{
-		logtw("RtcStream(%s/%s) - MediaTrack(%u) is not found", GetApplication()->GetName().CStr(), GetName().CStr(), media_packet->GetTrackId());
+		logtw("RtcStream(%s/%s) - MediaTrack(%u) is not found", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), media_packet->GetTrackId());
 		return;
 	}
 

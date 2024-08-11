@@ -43,7 +43,7 @@ namespace pvd
 
 	bool Application::Start()
 	{
-		logti("%s has created [%s] application", _provider->GetProviderName(), GetName().CStr());
+		logti("%s has created [%s] application", _provider->GetProviderName(), GetVHostAppName().CStr());
 
 		_state = ApplicationState::Started;
 
@@ -58,7 +58,7 @@ namespace pvd
 		}
 
 		DeleteAllStreams();
-		logti("%s has deleted [%s] application", _provider->GetProviderName(), GetName().CStr());
+		logti("%s has deleted [%s] application", _provider->GetProviderName(), GetVHostAppName().CStr());
 		_state = ApplicationState::Stopped;
 		return true;
 	}
@@ -104,7 +104,7 @@ namespace pvd
 		// Check if same stream name is exist in MediaRouter(may be created by another provider)
 		if (IsExistingInboundStream(stream->GetName()) == true)
 		{
-			logtw("Reject to add stream : there is already an incoming stream (%s) with the same name in application(%s) ", stream->GetName().CStr(), GetName().CStr());
+			logtw("Reject to add stream : there is already an incoming stream (%s) with the same name in application(%s) ", stream->GetName().CStr(), GetVHostAppName().CStr());
 			return false;
 		}
 
@@ -206,7 +206,7 @@ namespace pvd
 
 		if(_streams.find(stream->GetId()) == _streams.end())
 		{
-			logtc("Could not find stream to be removed : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+			logtc("Could not find stream to be removed : %s/%s(%u)", stream->GetApplicationInfo().GetVHostAppName().CStr(), stream->GetName().CStr(), stream->GetId());
 			return false;
 		}
 		_streams.erase(stream->GetId());

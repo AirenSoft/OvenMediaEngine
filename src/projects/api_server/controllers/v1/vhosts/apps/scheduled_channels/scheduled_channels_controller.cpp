@@ -132,7 +132,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get the scheduled provider");
 			}
 
-			auto scheduled_stream = std::static_pointer_cast<pvd::ScheduledStream>(provider->GetStreamByName(app->GetName(), stream->GetName()));
+			auto scheduled_stream = std::static_pointer_cast<pvd::ScheduledStream>(provider->GetStreamByName(app->GetVHostAppName(), stream->GetName()));
 			if (scheduled_stream == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get the scheduled stream");
@@ -188,7 +188,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get the scheduled provider");
 			}
 
-			auto scheduled_stream = std::static_pointer_cast<pvd::ScheduledStream>(provider->GetStreamByName(app->GetName(), stream->GetName()));
+			auto scheduled_stream = std::static_pointer_cast<pvd::ScheduledStream>(provider->GetStreamByName(app->GetVHostAppName(), stream->GetName()));
 			if (scheduled_stream == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get the scheduled stream");

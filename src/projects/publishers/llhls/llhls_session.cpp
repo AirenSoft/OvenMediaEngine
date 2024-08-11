@@ -485,7 +485,7 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 	{
 		if (holdIfAccepted == false)
 		{
-			logtw("%s/%s/%s Failed to respond to pending request.", GetApplication()->GetName().CStr(), GetStream()->GetName().CStr(), file_name.CStr());
+			logtw("%s/%s/%s Failed to respond to pending request.", GetApplication()->GetVHostAppName().CStr(), GetStream()->GetName().CStr(), file_name.CStr());
 		}
 
 		// Send error response
@@ -593,7 +593,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 	{
 		if (holdIfAccepted == false)
 		{
-			logtw("%s/%s/%s Failed to respond to pending request.", GetApplication()->GetName().CStr(), GetStream()->GetName().CStr(), file_name.CStr());
+			logtw("%s/%s/%s Failed to respond to pending request.", GetApplication()->GetVHostAppName().CStr(), GetStream()->GetName().CStr(), file_name.CStr());
 		}
 
 		// Send error response
@@ -758,7 +758,7 @@ void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpE
 	{
 		if (holdIfAccepted == false)
 		{
-			logtw("%s/%s/%s Failed to respond to pending request.", GetApplication()->GetName().CStr(), GetStream()->GetName().CStr(), file_name.CStr());
+			logtw("%s/%s/%s Failed to respond to pending request.", GetApplication()->GetVHostAppName().CStr(), GetStream()->GetName().CStr(), file_name.CStr());
 		}
 
 		// Send error response
@@ -855,7 +855,7 @@ bool LLHlsSession::AddPendingRequest(const std::shared_ptr<http::svr::HttpExchan
 	if (_pending_requests.size() > MAX_PENDING_REQUESTS)
 	{
 		logtd("[%s/%s/%u] Too many pending requests (%u)", 
-				GetApplication()->GetName().CStr(),
+				GetApplication()->GetVHostAppName().CStr(),
 				GetStream()->GetName().CStr(),
 				GetId(),
 				_pending_requests.size());

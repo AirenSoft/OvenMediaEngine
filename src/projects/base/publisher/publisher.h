@@ -18,7 +18,7 @@
 #include <modules/ice/ice_port_manager.h>
 #include <modules/physical_port/physical_port.h>
 
-#include <orchestrator/data_structures/data_structure.h>
+#include <orchestrator/interfaces.h>
 
 #include <modules/access_control/access_controller.h>
 

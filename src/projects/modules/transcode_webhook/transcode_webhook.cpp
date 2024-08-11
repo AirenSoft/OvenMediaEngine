@@ -33,7 +33,7 @@ TranscodeWebhook::Policy TranscodeWebhook::RequestOutputProfiles(const info::Str
    
     if (MakeRequestBody(input_stream_info, body) == false)
     {
-        logte("Internal Error: Failed to make request body for transcode webhook for stream: %s/%s", _application_info.GetName().CStr(), input_stream_info.GetName().CStr());
+        logte("Internal Error: Failed to make request body for transcode webhook for stream: %s/%s", _application_info.GetVHostAppName().CStr(), input_stream_info.GetName().CStr());
         return Policy::DeleteStream;
     }
 
@@ -160,8 +160,8 @@ bool TranscodeWebhook::MakeRequestBody(const info::Stream &input_stream_info, ov
     jv_stream = serdes::JsonFromStream(stream_metric);
 
     // Additioanl Info
-    jv_stream["virtualHost"] = input_stream_info.GetApplicationInfo().GetName().GetVHostName().CStr();
-    jv_stream["application"] = input_stream_info.GetApplicationInfo().GetName().GetAppName().CStr();
+    jv_stream["virtualHost"] = input_stream_info.GetApplicationInfo().GetVHostAppName().GetVHostName().CStr();
+    jv_stream["application"] = input_stream_info.GetApplicationInfo().GetVHostAppName().GetAppName().CStr();
 
     jv_root["stream"] = jv_stream;
 
@@ -189,7 +189,7 @@ TranscodeWebhook::Policy TranscodeWebhook::ParseResponse(const info::Stream &inp
     auto allowed = jv_allowed.asBool();
     if (allowed == false)
     {
-        logti("ControlServer disallowed creation of output profiles for stream: %s/%s", _application_info.GetName().CStr(), input_stream_info.GetName().CStr());
+        logti("ControlServer disallowed creation of output profiles for stream: %s/%s", _application_info.GetVHostAppName().CStr(), input_stream_info.GetName().CStr());
         return _config.GetUseLocalProfilesOnServerDisallow() ? Policy::UseLocalProfiles : Policy::DeleteStream;
     }
 

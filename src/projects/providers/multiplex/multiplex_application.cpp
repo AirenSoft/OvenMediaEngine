@@ -82,7 +82,7 @@ namespace pvd
                 if (AddMultiplex(multiplex_file_info_from_dir) == true)
                 {
                     _multiplex_file_info_db.emplace(multiplex_file_info_from_dir._file_path.Hash(), multiplex_file_info_from_dir);
-                    logti("Added multiplex channel : %s/%s (%s)", GetName().CStr(), multiplex_file_info_from_dir._multiplex_profile->GetOutputStreamName().CStr(), multiplex_file_info_from_dir._file_path.CStr());
+                    logti("Added multiplex channel : %s/%s (%s)", GetVHostAppName().CStr(), multiplex_file_info_from_dir._multiplex_profile->GetOutputStreamName().CStr(), multiplex_file_info_from_dir._file_path.CStr());
                 }
             }
             else
@@ -94,7 +94,7 @@ namespace pvd
                     if (UpdateMultiplex(multiplex_file_info_from_db, multiplex_file_info_from_dir) == true)
                     {
                         _multiplex_file_info_db[multiplex_file_info_from_dir._file_path.Hash()] = multiplex_file_info_from_dir;
-                        logti("Updated multiplex channel : %s/%s (%s)", GetName().CStr(), multiplex_file_info_from_dir._multiplex_profile->GetOutputStreamName().CStr(), multiplex_file_info_from_dir._file_path.CStr());
+                        logti("Updated multiplex channel : %s/%s (%s)", GetVHostAppName().CStr(), multiplex_file_info_from_dir._multiplex_profile->GetOutputStreamName().CStr(), multiplex_file_info_from_dir._file_path.CStr());
                     }
                 }
             }
@@ -133,7 +133,7 @@ namespace pvd
                 }
 
                 RemoveMultiplex(multiplex_file_info);
-                logti("Removed multiplex channel : %s/%s (%s)", GetName().CStr(), multiplex_file_info._multiplex_profile->GetOutputStreamName().CStr(), multiplex_file_info._file_path.CStr());
+                logti("Removed multiplex channel : %s/%s (%s)", GetVHostAppName().CStr(), multiplex_file_info._multiplex_profile->GetOutputStreamName().CStr(), multiplex_file_info._file_path.CStr());
 
                 it = _multiplex_file_info_db.erase(it);
             }

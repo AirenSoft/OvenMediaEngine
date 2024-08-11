@@ -121,7 +121,7 @@ namespace pvd
 							{
 								auto failback_url = stream->GetPrimaryURL()->ToUrlString(true);
 							
-								logtd("%s/%s(%u) Attempt to connect to verify that the primary stream is available. url(%s)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), failback_url.CStr());
+								logtd("%s/%s(%u) Attempt to connect to verify that the primary stream is available. url(%s)", stream->GetApplicationInfo().GetVHostAppName().CStr(), stream->GetName().CStr(), stream->GetId(), failback_url.CStr());
 							
 								auto ping_props = std::make_shared<pvd::PullStreamProperties>();
 								ping_props->SetRetryConnectCount(0);
@@ -142,7 +142,7 @@ namespace pvd
 								}
 								else 
 								{
-									logtd("%s/%s(%u) primary stream is not available.", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+									logtd("%s/%s(%u) primary stream is not available.", stream->GetApplicationInfo().GetVHostAppName().CStr(), stream->GetName().CStr(), stream->GetId());
 								}
 
 								props->UpdateFailbackCheckTime();
@@ -159,14 +159,14 @@ namespace pvd
 
 						if((elapsed_time_from_last_sent > unused_stream_timeout_ms) && (!is_persistent))
 						{
-							logtw("%s/%s(%u) stream will be deleted because it hasn't been used for %u milliseconds", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_sent);
+							logtw("%s/%s(%u) stream will be deleted because it hasn't been used for %u milliseconds", stream->GetApplicationInfo().GetVHostAppName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_sent);
 							DeleteStream(stream);
 						}
 						// The stream type is pull stream, if packets do NOT arrive for more than 3 seconds, it is a seriously warning situation
 						else if(elapsed_time_from_last_recv > no_input_timeout_ms && (!is_persistent))
 						{
 							logtw("Stop stream %s/%s(%u) : there are no incoming packets. %d milliseconds have elapsed since the last packet was received.",
-								  stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
+								  stream->GetApplicationInfo().GetVHostAppName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
 
 							// When the stream is stopped, it tries to reconnect using the next url.
 							stream->Stop();
@@ -195,7 +195,7 @@ namespace pvd
 		std::unique_lock<std::shared_mutex> lock(_stream_motors_guard);
 		_stream_motors.emplace(motor_id, motor);
 
-		logti("%s application has created %u stream motor", stream->GetApplicationInfo().GetName().CStr(), motor_id);
+		logti("%s application has created %u stream motor", stream->GetApplicationInfo().GetVHostAppName().CStr(), motor_id);
 
 		return motor;
 	}
@@ -210,7 +210,7 @@ namespace pvd
 		auto it = _stream_motors.find(motor_id);
 		if(it == _stream_motors.end())
 		{
-			logtd("Could not find stream motor : %s/%s(%u)", GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+			logtd("Could not find stream motor : %s/%s(%u)", GetVHostAppName().CStr(), stream->GetName().CStr(), stream->GetId());
 			return nullptr;
 		}
 
@@ -224,7 +224,7 @@ namespace pvd
 		auto motor = GetStreamMotorInternal(stream);
 		if(motor == nullptr)
 		{
-			logtc("Could not find stream motor to remove stream : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+			logtc("Could not find stream motor to remove stream : %s/%s(%u)", stream->GetApplicationInfo().GetVHostAppName().CStr(), stream->GetName().CStr(), stream->GetId());
 			return false;
 		}
 
@@ -238,7 +238,7 @@ namespace pvd
 			std::unique_lock<std::shared_mutex> lock(_stream_motors_guard);
 			_stream_motors.erase(motor_id);
 
-			logti("%s application has deleted %u stream motor", stream->GetApplicationInfo().GetName().CStr(), motor_id);
+			logti("%s application has deleted %u stream motor", stream->GetApplicationInfo().GetVHostAppName().CStr(), motor_id);
 		}
 
 		return true;
@@ -254,7 +254,7 @@ namespace pvd
 
 		if (AddStream(stream) == false)
 		{
-			logte("Could not add stream : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+			logte("Could not add stream : %s/%s(%u)", stream->GetApplicationInfo().GetVHostAppName().CStr(), stream->GetName().CStr(), stream->GetId());
 			return nullptr;
 		}
 
@@ -264,7 +264,7 @@ namespace pvd
 			motor = CreateStreamMotorInternal(stream);
 			if(motor == nullptr)
 			{
-				logtc("Cannot create StreamMotor : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+				logtc("Cannot create StreamMotor : %s/%s(%u)", stream->GetApplicationInfo().GetVHostAppName().CStr(), stream->GetName().CStr(), stream->GetId());
 				return nullptr;
 			}
 		}

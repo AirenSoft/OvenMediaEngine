@@ -210,35 +210,38 @@ static void User1Handler(int signum, siginfo_t *si, void *unused)
 
 static void ReloadHandler(int signum, siginfo_t *si, void *unused)
 {
-	logti("Trying to reload configuration...");
+	logti("Received SIGHUP signal. This signal is not implemented yet.");
+	return ;
 
-	auto config_manager = cfg::ConfigManager::GetInstance();
+	// logti("Trying to reload configuration...");
 
-	try
-	{
-		config_manager->ReloadConfigs();
-	}
-	catch (const cfg::ConfigError &error)
-	{
-		logte("An error occurred while reload configuration: %s", error.What());
-		return;
-	}
+	// auto config_manager = cfg::ConfigManager::GetInstance();
 
-	logti("Trying to apply OriginMap to Orchestrator...");
+	// try
+	// {
+	// 	config_manager->ReloadConfigs();
+	// }
+	// catch (const cfg::ConfigError &error)
+	// {
+	// 	logte("An error occurred while reload configuration: %s", error.What());
+	// 	return;
+	// }
 
-	std::vector<info::Host> host_info_list;
-	// Create info::Host
-	auto server_config = config_manager->GetServer();
-	auto hosts = server_config->GetVirtualHostList();
-	for (const auto &host : hosts)
-	{
-		host_info_list.emplace_back(info::Host(server_config->GetName(), server_config->GetID(), host));
-	}
+	// logti("Trying to apply OriginMap to Orchestrator...");
 
-	if (ocst::Orchestrator::GetInstance()->UpdateVirtualHosts(host_info_list) == false)
-	{
-		logte("Could not reload OriginMap");
-	}
+	// std::vector<info::Host> host_info_list;
+	// // Create info::Host
+	// auto server_config = config_manager->GetServer();
+	// auto hosts = server_config->GetVirtualHostList();
+	// for (const auto &host : hosts)
+	// {
+	// 	host_info_list.emplace_back(info::Host(server_config->GetName(), server_config->GetID(), host));
+	// }
+
+	// if (ocst::Orchestrator::GetInstance()->UpdateVirtualHosts(host_info_list) == false)
+	// {
+	// 	logte("Could not reload OriginMap");
+	// }
 }
 
 void TerminateHandler(int signum, siginfo_t *si, void *unused)

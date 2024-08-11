@@ -205,10 +205,10 @@ namespace pub
 
 		for (uint32_t i = 0; i < _application_worker_count; i++)
 		{
-			auto app_worker = std::make_shared<ApplicationWorker>(i, GetName().CStr(), StringFromPublisherType(_publisher->GetPublisherType()));
+			auto app_worker = std::make_shared<ApplicationWorker>(i, GetVHostAppName().CStr(), StringFromPublisherType(_publisher->GetPublisherType()));
 			if (app_worker->Start() == false)
 			{
-				logte("Cannot create ApplicationWorker (%s/%s/%d)", GetApplicationTypeName(), GetName().CStr(), i);
+				logte("Cannot create ApplicationWorker (%s/%s/%d)", GetApplicationTypeName(), GetVHostAppName().CStr(), i);
 				Stop();
 
 				return false;
@@ -217,7 +217,7 @@ namespace pub
 			_application_workers.push_back(app_worker);
 		}
 
-		logti("%s has created [%s] application", GetApplicationTypeName(), GetName().CStr());
+		logti("%s has created [%s] application", GetApplicationTypeName(), GetVHostAppName().CStr());
 
 		return true;
 	}
@@ -236,7 +236,7 @@ namespace pub
 		// release remaining streams
 		DeleteAllStreams();
 
-		logti("%s has deleted [%s] application", GetApplicationTypeName(), GetName().CStr());
+		logti("%s has deleted [%s] application", GetApplicationTypeName(), GetVHostAppName().CStr());
 
 		return true;
 	}
@@ -422,7 +422,7 @@ namespace pub
 			auto it = _stream_app_worker_map.find(stream_id);
 			if (it == _stream_app_worker_map.end())
 			{
-				logte("(%s/%s) cannot find ApplicationWorker for stream mapping. %u", GetApplicationTypeName(), GetName().CStr(), stream_id);
+				logte("(%s/%s) cannot find ApplicationWorker for stream mapping. %u", GetApplicationTypeName(), GetVHostAppName().CStr(), stream_id);
 				return nullptr;
 			}
 

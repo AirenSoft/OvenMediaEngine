@@ -12,7 +12,7 @@ namespace mon
     ov::String ApplicationMetrics::GetInfoString(bool show_children)
     {
         ov::String out_str = ov::String::FormatString("\n[Application Info]\nid(%u), name(%s)\nCreated Time (%s)\n",
-														GetId(), GetName().CStr(),
+														GetId(), GetVHostAppName().CStr(),
 														ov::Converter::ToString(_created_time).CStr());
         
 
@@ -49,7 +49,7 @@ namespace mon
         auto stream_metrics = std::make_shared<StreamMetrics>(GetSharedPtr(), stream);
         if(stream_metrics == nullptr)
         {
-            logte("Cannot create StreamMetrics (%s/%s - %s)", GetName().CStr(), stream.GetName().CStr(), stream.GetUUID().CStr());
+            logte("Cannot create StreamMetrics (%s/%s - %s)", GetVHostAppName().CStr(), stream.GetName().CStr(), stream.GetUUID().CStr());
             return false;
         }
 

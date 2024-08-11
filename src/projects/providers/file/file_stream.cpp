@@ -150,7 +150,7 @@ namespace pvd
 		auto url = ov::String::FormatString("%s%s", GetApplicationInfo().GetConfig().GetProviders().GetFileProvider().GetRootPath().CStr(), _url->Path().CStr());
 
 		_format_context = nullptr;
-		logtd("%s/%s(%u) Trying to open file. path(%s)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), url.CStr());
+		logtd("%s/%s(%u) Trying to open file. path(%s)", GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(), GetId(), url.CStr());
 		if ((err = ::avformat_open_input(&_format_context, url.CStr(), nullptr, nullptr)) < 0)
 		{
 			SetState(State::ERROR);
@@ -158,7 +158,7 @@ namespace pvd
 			char errbuf[256];
 			av_strerror(err, errbuf, sizeof(errbuf));
 
-			logte("%s/%s(%u) Failed to open file : %s (%s)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), errbuf, url.CStr());
+			logte("%s/%s(%u) Failed to open file : %s (%s)", GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(), GetId(), errbuf, url.CStr());
 
 			return false;
 		}
@@ -362,12 +362,12 @@ namespace pvd
 					RequestRewind();
 
 					UpdateBaseTimestamp();
-					logtd("%s/%s(%u) Reached the end of the file. rewind to the first frame.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+					logtd("%s/%s(%u) Reached the end of the file. rewind to the first frame.", GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(), GetId());
 					continue;
 				}
 
 				// If the I/O is broken, terminate the thread.
-				logte("%s/%s(%u) FileStream's I/O has broken.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+				logte("%s/%s(%u) FileStream's I/O has broken.", GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(), GetId());
 
 				SetState(State::ERROR);
 				

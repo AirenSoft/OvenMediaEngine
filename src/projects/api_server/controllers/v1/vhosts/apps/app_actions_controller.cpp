@@ -64,16 +64,16 @@ namespace api
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find publisher: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
-			auto application = std::static_pointer_cast<pub::FileApplication>(publisher->GetApplicationByName(app->GetName()));
+			auto application = std::static_pointer_cast<pub::FileApplication>(publisher->GetApplicationByName(app->GetVHostAppName()));
 			if (application == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find application: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
 			auto record = ::serdes::RecordFromJson(request_body);
@@ -82,12 +82,12 @@ namespace api
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  "Could not parse json context: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 			else
 			{
 				record->SetVhost(vhost->GetName());
-				record->SetApplication(app->GetName().GetAppName());
+				record->SetApplication(app->GetVHostAppName().GetAppName());
 			}
 
 			std::vector<std::shared_ptr<info::Record>> results;
@@ -97,7 +97,7 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get records: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
 			response = Json::arrayValue;
@@ -122,16 +122,16 @@ namespace api
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find publisher: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
-			auto application = std::static_pointer_cast<pub::FileApplication>(publisher->GetApplicationByName(app->GetName()));
+			auto application = std::static_pointer_cast<pub::FileApplication>(publisher->GetApplicationByName(app->GetVHostAppName()));
 			if (application == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find application: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
 			auto record = ::serdes::RecordFromJson(request_body);
@@ -140,12 +140,12 @@ namespace api
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  "Could not parse json context: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 			else
 			{
 				record->SetVhost(vhost->GetName());
-				record->SetApplication(app->GetName().GetAppName());
+				record->SetApplication(app->GetVHostAppName().GetAppName());
 			}
 
 			auto error = application->RecordStart(record);
@@ -178,16 +178,16 @@ namespace api
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find publisher: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
-			auto application = std::static_pointer_cast<pub::FileApplication>(publisher->GetApplicationByName(app->GetName()));
+			auto application = std::static_pointer_cast<pub::FileApplication>(publisher->GetApplicationByName(app->GetVHostAppName()));
 			if (application == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find application: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
 			auto record = ::serdes::RecordFromJson(request_body);
@@ -196,12 +196,12 @@ namespace api
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  "Could not parse json context: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 			else
 			{
 				record->SetVhost(vhost->GetName());
-				record->SetApplication(app->GetName().GetAppName());
+				record->SetApplication(app->GetVHostAppName().GetAppName());
 			}
 
 			auto error = application->RecordStop(record);
@@ -242,7 +242,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  "Could not parse json context: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
 			auto publisher{ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::Push)};
@@ -251,10 +251,10 @@ namespace api
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find publisher: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
-			auto application{std::static_pointer_cast<pub::PushApplication>(publisher->GetApplicationByName(app->GetName()))};
+			auto application{std::static_pointer_cast<pub::PushApplication>(publisher->GetApplicationByName(app->GetVHostAppName()))};
 			if (application != nullptr)
 			{
 				application->GetPushes(push, results);
@@ -282,7 +282,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  "Could not parse json context: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
 			auto push_protocol{push->GetProtocol().LowerCaseString()};
@@ -294,7 +294,7 @@ namespace api
 									  "Could not find protocol '%s': [%s/%s]",
 									  push_protocol.CStr(),
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
 			auto publisher{ocst::Orchestrator::GetInstance()->GetPublisherFromType(publisher_type)};
@@ -303,20 +303,20 @@ namespace api
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find publisher: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
-			auto application{std::static_pointer_cast<pub::PushApplication>(publisher->GetApplicationByName(app->GetName()))};
+			auto application{std::static_pointer_cast<pub::PushApplication>(publisher->GetApplicationByName(app->GetVHostAppName()))};
 			if (application == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find application: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
 			push->SetVhost(vhost->GetName());
-			push->SetApplication(app->GetName().GetAppName());
+			push->SetApplication(app->GetVHostAppName().GetAppName());
 
 			auto error{application->StartPush(push)};
 			if (error->GetCode() != pub::PushApplication::ErrorCode::Success)
@@ -328,7 +328,7 @@ namespace api
 			if (application->GetStream(push->GetStreamName()) == nullptr)
 			{
 				auto url = ov::Url::Parse(client->GetRequest()->GetUri());
-				auto app_name = app->GetName();
+				auto app_name = app->GetVHostAppName();
 				auto stream_name = push->GetStreamName();
 				ocst::Orchestrator::GetInstance()->RequestPullStreamWithOriginMap(url, app_name, stream_name);
 			}
@@ -349,11 +349,11 @@ namespace api
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  "Could not parse json context: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
 			push->SetVhost(vhost->GetName());
-			push->SetApplication(app->GetName().GetAppName());
+			push->SetApplication(app->GetVHostAppName().GetAppName());
 
 			auto publisher{ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::Push)};
 			if (publisher == nullptr)
@@ -361,10 +361,10 @@ namespace api
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find publisher: [%s/%s]",
 									  vhost->GetName().CStr(),
-									  app->GetName().GetAppName().CStr());
+									  app->GetVHostAppName().GetAppName().CStr());
 			}
 
-			auto application{std::static_pointer_cast<pub::PushApplication>(publisher->GetApplicationByName(app->GetName()))};
+			auto application{std::static_pointer_cast<pub::PushApplication>(publisher->GetApplicationByName(app->GetVHostAppName()))};
 			if (application != nullptr)
 			{
 				auto error{application->StopPush(push)};
@@ -383,14 +383,14 @@ namespace api
 								  "Could not find id '%s': [%s/%s]",
 								  push->GetId().CStr(),
 								  vhost->GetName().CStr(),
-								  app->GetName().GetAppName().CStr());
+								  app->GetVHostAppName().GetAppName().CStr());
 		}
 
 		ApiResponse AppActionsController::OnGetDummyAction(const std::shared_ptr<http::svr::HttpExchange> &client,
 														   const std::shared_ptr<mon::HostMetrics> &vhost,
 														   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			logte("Called OnGetDummyAction. invoke [%s/%s]", vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+			logte("Called OnGetDummyAction. invoke [%s/%s]", vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr());
 
 			return app->GetConfig().ToJson();
 		}

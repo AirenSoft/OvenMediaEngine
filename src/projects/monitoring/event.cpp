@@ -292,7 +292,7 @@ namespace mon
 
 		Json::Value json_app;
 		json_app["appID"] = app_metric->GetUUID().CStr();
-		json_app["name"] = app_metric->GetName().CStr();
+		json_app["name"] = app_metric->GetVHostAppName().CStr();
 		json_app["createdTime"] = ov::Converter::ToISO8601String(app_metric->CommonMetrics::GetCreatedTime()).CStr();
 		json_app["outputProfiles"] = app_metric->GetConfig().GetOutputProfiles().ToJson();
 		json_app["providers"] = app_metric->GetConfig().GetProviders().ToJson();
@@ -376,7 +376,7 @@ namespace mon
 				Json::Value json_app;
 
 				json_app["appID"] = app_metric->GetUUID().CStr();
-				json_app["appName"] = app_metric->GetName().CStr();
+				json_app["appName"] = app_metric->GetVHostAppName().CStr();
 				json_app["stat"] = serdes::JsonFromMetrics(app_metric);
 
 				Json::Value &json_streams = json_app["streams"];

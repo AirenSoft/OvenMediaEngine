@@ -89,7 +89,7 @@ namespace pvd
 				{
 					// This provider is diabled
 					logtw("%s provider is disabled in %s application, so it was not created", 
-							::StringFromProviderType(GetProviderType()).CStr(), app_info.GetName().CStr());
+							::StringFromProviderType(GetProviderType()).CStr(), app_info.GetVHostAppName().CStr());
 					return true;
 				}
 			}
@@ -99,7 +99,7 @@ namespace pvd
 		auto application = OnCreateProviderApplication(app_info);
 		if(application == nullptr)
 		{
-			logtd("Could not create application for [%s]", app_info.GetName().CStr());
+			logtd("Could not create application for [%s]", app_info.GetVHostAppName().CStr());
 			// It may not be a error that the Application failed due to disabling that Publisher.
 			// Failure to create a single application should not affect the whole.
 			// TODO(Getroot): The reason for the error must be defined and handled in detail.
@@ -126,7 +126,7 @@ namespace pvd
 		std::unique_lock<std::shared_mutex> lock(_application_map_mutex);
 		auto item = _applications.find(app_info.GetId());
 
-		logtd("Delete the application: [%s]", app_info.GetName().CStr());
+		logtd("Delete the application: [%s]", app_info.GetVHostAppName().CStr());
 		if(item == _applications.end())
 		{
 			// Check the reason the app is not created is because it is disabled in the configuration
@@ -147,7 +147,7 @@ namespace pvd
 			}
 
 			// It is not an error because it might not be created 
-			logtd("%s provider hasn't the %s application.", ::StringFromProviderType(GetProviderType()).CStr(), app_info.GetName().CStr());
+			logtd("%s provider hasn't the %s application.", ::StringFromProviderType(GetProviderType()).CStr(), app_info.GetVHostAppName().CStr());
 			return true;
 		}
 
@@ -167,7 +167,7 @@ namespace pvd
 		bool result = OnDeleteProviderApplication(application);
 		if(result == false)
 		{
-			logte("Could not delete [%s] the application of the %s provider", app_info.GetName().CStr(), ::StringFromProviderType(GetProviderType()).CStr());
+			logte("Could not delete [%s] the application of the %s provider", app_info.GetVHostAppName().CStr(), ::StringFromProviderType(GetProviderType()).CStr());
 			return false;
 		}
 
@@ -183,7 +183,7 @@ namespace pvd
 		for(auto const &x : _applications)
 		{
 			auto application = x.second;
-			if(application->GetName() == vhost_app_name)
+			if(application->GetVHostAppName() == vhost_app_name)
 			{
 				return application;
 			}

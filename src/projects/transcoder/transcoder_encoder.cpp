@@ -339,7 +339,7 @@ bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 
 	auto name = ov::String::FormatString("encoder_%s_%d", ::avcodec_get_name(GetCodecID()), _track->GetId());
 	auto urn = std::make_shared<info::ManagedQueue::URN>(
-		_stream_info.GetApplicationInfo().GetName(),
+		_stream_info.GetApplicationInfo().GetVHostAppName(),
 		_stream_info.GetName(),
 		"trs",
 		name);

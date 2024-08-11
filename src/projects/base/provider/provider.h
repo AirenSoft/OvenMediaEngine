@@ -10,7 +10,7 @@
 
 #include <base/common_types.h>
 #include <base/mediarouter/mediarouter_interface.h>
-#include <orchestrator/data_structures/data_structure.h>
+#include <orchestrator/interfaces.h>
 
 #include <modules/access_control/access_controller.h>
 

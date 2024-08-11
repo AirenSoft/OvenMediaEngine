@@ -65,7 +65,7 @@ namespace pub
 		auto file_application = std::static_pointer_cast<FileApplication>(application);
 		if (file_application == nullptr)
 		{
-			logte("Could not found file application. app:%s", file_application->GetName().CStr());
+			logte("Could not found file application. app:%s", file_application->GetVHostAppName().CStr());
 			return false;
 		}
 

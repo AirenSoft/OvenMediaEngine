@@ -118,7 +118,7 @@ namespace api
 			{
 				auto &app = item.second;
 
-				response.append(app->GetName().GetAppName().CStr());
+				response.append(app->GetVHostAppName().GetAppName().CStr());
 			}
 
 			return response;
@@ -176,13 +176,13 @@ namespace api
 				ocst::Orchestrator::GetInstance()->DeleteApplication(*app),
 				"delete",
 				"application",
-				ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
+				ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr()));
 
 			ThrowIfOrchestratorNotSucceeded(
 				ocst::Orchestrator::GetInstance()->CreateApplication(*vhost, app_config),
 				"create",
 				"application",
-				ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
+				ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr()));
 
 			auto app_metrics = GetApplication(vhost, app_config.GetName().CStr());
 
@@ -199,7 +199,7 @@ namespace api
 				ocst::Orchestrator::GetInstance()->DeleteApplication(*app),
 				"delete",
 				"application",
-				ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
+				ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr()));
 
 			return {};
 		}

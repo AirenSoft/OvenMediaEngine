@@ -49,7 +49,7 @@ bool OvtApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 		return false;
 	}
 	
-	logtd("OvtApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
+	logtd("OvtApplication %s/%s stream has been deleted", GetVHostAppName().CStr(), stream->GetName().CStr());
 
 	return true;
 }

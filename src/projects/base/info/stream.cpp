@@ -93,7 +93,7 @@ namespace info
 	ov::String Stream::GetUri()
 	{
 		// #vhost name#appname/stream name
-		ov::String vhost_app_name = _app_info != nullptr ? _app_info->GetName().CStr() : "Unknown";
+		ov::String vhost_app_name = _app_info != nullptr ? _app_info->GetVHostAppName().CStr() : "Unknown";
 		return ov::String::FormatString("%s/%s", vhost_app_name.CStr(), GetName().CStr());
 	}
 
@@ -447,7 +447,7 @@ namespace info
 			return "Unknown";
 		}
 
-		return _app_info->GetName().CStr();
+		return _app_info->GetVHostAppName().CStr();
 	}
 
 	ov::String Stream::GetInfoString()

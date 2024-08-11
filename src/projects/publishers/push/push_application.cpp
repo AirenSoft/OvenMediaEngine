@@ -50,7 +50,7 @@ namespace pub
 
 		if (application_enabled == false)
 		{
-			logtd("%s PushApplication is disabled", GetName().CStr());
+			logtd("%s PushApplication is disabled", GetVHostAppName().CStr());
 			return false;
 		}
 
@@ -113,7 +113,7 @@ namespace pub
 			StopPush(push);
 		}
 
-		logtd("%s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
+		logtd("%s/%s stream has been deleted", GetVHostAppName().CStr(), stream->GetName().CStr());
 
 		return true;
 	}
@@ -373,14 +373,14 @@ namespace pub
 		auto load_result = xml_doc.load_file(xml_real_path.CStr());
 		if (load_result == false)
 		{
-			logte("Stream(%s/%s) - Failed to load stream map file(%s) status(%d) description(%s)", GetName().CStr(), stream_info->GetName().CStr(), xml_real_path.CStr(), load_result.status, load_result.description());
+			logte("Stream(%s/%s) - Failed to load stream map file(%s) status(%d) description(%s)", GetVHostAppName().CStr(), stream_info->GetName().CStr(), xml_real_path.CStr(), load_result.status, load_result.description());
 			return results;
 		}
 
 		auto root_node = xml_doc.child("PushInfo");
 		if (root_node.empty())
 		{
-			logte("Stream(%s/%s) - Failed to load Record info file(%s) because root node is not found", GetName().CStr(), stream_info->GetName().CStr(), xml_real_path.CStr());
+			logte("Stream(%s/%s) - Failed to load Record info file(%s) because root node is not found", GetVHostAppName().CStr(), stream_info->GetName().CStr(), xml_real_path.CStr());
 			return results;
 		}
 
@@ -451,8 +451,8 @@ namespace pub
 
 			push->SetId(id);
 			push->SetEnable(enable);
-			push->SetVhost(GetName().GetVHostName());
-			push->SetApplication(GetName().GetAppName());
+			push->SetVhost(GetVHostAppName().GetVHostName());
+			push->SetApplication(GetVHostAppName().GetAppName());
 			push->SetStreamName(stream_info->GetName().CStr());
 			if(variant_names.IsEmpty() == false)
 			{

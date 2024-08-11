@@ -155,7 +155,7 @@ bool RtcSession::Start()
 																				CodecIdFromPayloadTypeNumber(_audio_payload_type));
 	if (_playlist == nullptr)
 	{
-		logte("Failed to get the playlist (%s/%s/%s) because there is no available rendition", GetApplication()->GetName().CStr(), GetStream()->GetName().CStr(), _file_name.CStr());
+		logte("Failed to get the playlist (%s/%s/%s) because there is no available rendition", GetApplication()->GetVHostAppName().CStr(), GetStream()->GetName().CStr(), _file_name.CStr());
 		return false;
 	}
 

@@ -90,7 +90,7 @@ void MediaRouteStream::SetInoutType(MediaRouterStreamType inout_type)
 	_inout_type = inout_type;
 
 	auto urn = std::make_shared<info::ManagedQueue::URN>(
-		_stream->GetApplicationInfo().GetName(),
+		_stream->GetApplicationInfo().GetVHostAppName(),
 		_stream->GetName(),
 		(_inout_type == MediaRouterStreamType::INBOUND) ? "imr" : "omr",
 		"streamworker");
@@ -961,7 +961,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 				if (media_track->HasBframes() == true)
 				{
 					logtw("[%s/%s(%u)] b-frame has been detected in the %u track of %s stream",
-						  _stream->GetApplicationInfo().GetName().CStr(),
+						  _stream->GetApplicationInfo().GetVHostAppName().CStr(),
 						  _stream->GetName().CStr(),
 						  _stream->GetId(),
 						  track_id,
@@ -1043,7 +1043,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 		stat_stream_str.AppendFormat("\n - Stream | id: %u, type: %s, name: %s/%s, uptime: %lldms, queue: %d, sync: %lldms",
 									 _stream->GetId(),
 									 _inout_type == MediaRouterStreamType::INBOUND ? "Inbound" : "Outbound",
-									 _stream->GetApplicationInfo().GetName().CStr(),
+									 _stream->GetApplicationInfo().GetVHostAppName().CStr(),
 									 _stream->GetName().CStr(),
 									 (int64_t)uptime,
 									 _packets_queue.Size(),
@@ -1322,7 +1322,7 @@ void MediaRouteStream::DetectAbnormalPackets(std::shared_ptr<MediaPacket> &packe
 			if (IsImageCodec(media_track->GetCodecId()) == false)
 			{
 				logtw("[%s/%s(%u)] Detected abnormal increased timestamp. track:%u last.pts: %lld, cur.pts: %lld, tb(%d/%d), diff: %lldms",
-					  _stream->GetApplicationInfo().GetName().CStr(),
+					  _stream->GetApplicationInfo().GetVHostAppName().CStr(),
 					  _stream->GetName().CStr(),
 					  _stream->GetId(),
 					  track_id,

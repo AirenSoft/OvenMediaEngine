@@ -49,13 +49,13 @@ namespace mon
 		auto app_metrics = std::make_shared<ApplicationMetrics>(GetSharedPtr(), app_info);
 		if (app_metrics == nullptr)
 		{
-			logte("Cannot create ApplicationMetrics (%s/%s - %s)", GetName().CStr(), app_info.GetName().CStr(), app_info.GetUUID().CStr());
+			logte("Cannot create ApplicationMetrics (%s/%s - %s)", GetName().CStr(), app_info.GetVHostAppName().CStr(), app_info.GetUUID().CStr());
 			return false;
 		}
 
 		_applications[app_info.GetId()] = app_metrics;
 
-		logti("Create ApplicationMetrics(%s/%s) for monitoring", app_info.GetName().CStr(), app_info.GetUUID().CStr());
+		logti("Create ApplicationMetrics(%s/%s) for monitoring", app_info.GetVHostAppName().CStr(), app_info.GetUUID().CStr());
 		return true;
 	}
 	bool HostMetrics::OnApplicationDeleted(const info::Application &app_info)
@@ -67,7 +67,7 @@ namespace mon
 		}
 		_applications.erase(app_info.GetId());
 
-		logti("Delete ApplicationMetrics(%s/%s) for monitoring", app_info.GetName().CStr(), app_info.GetUUID().CStr());
+		logti("Delete ApplicationMetrics(%s/%s) for monitoring", app_info.GetVHostAppName().CStr(), app_info.GetUUID().CStr());
 		return true;
 	}
 

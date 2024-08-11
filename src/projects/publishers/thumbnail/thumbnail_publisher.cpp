@@ -197,7 +197,7 @@ bool ThumbnailPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub:
 	auto file_application = std::static_pointer_cast<ThumbnailApplication>(application);
 	if (file_application == nullptr)
 	{
-		logte("Could not found thumbnail application. app:%s", file_application->GetName().CStr());
+		logte("Could not found thumbnail application. app:%s", file_application->GetVHostAppName().CStr());
 		return false;
 	}
 

@@ -165,14 +165,14 @@ bool HlsStream::CreateDefaultPlaylist()
 		}
 		else
 		{
-			logti("LLHlsStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
+			logti("LLHlsStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
 			continue;
 		}
 	}
 
 	if (first_video_track == nullptr && first_audio_track == nullptr)
 	{
-		logtw("HLS stream [%s/%s] could not create default playlist.m3u8 because there is no supported codec.", GetApplication()->GetName().CStr(), GetName().CStr());
+		logtw("HLS stream [%s/%s] could not create default playlist.m3u8 because there is no supported codec.", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
 		return false;
 	}
 
@@ -316,11 +316,11 @@ void HlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event)
 			auto [result, message] = ConcludeLive();
 			if (result == true)
 			{
-				logti("HlsStream(%s/%s) - Live has concluded.", GetApplication()->GetName().CStr(), GetName().CStr());
+				logti("HlsStream(%s/%s) - Live has concluded.", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
 			}
 			else
 			{
-				logte("HlsStream(%s/%s) - Failed to conclude live.(%s)", GetApplication()->GetName().CStr(), GetName().CStr(), message.CStr());
+				logte("HlsStream(%s/%s) - Failed to conclude live.(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), message.CStr());
 			}
 			break;
 		}
@@ -429,7 +429,7 @@ bool HlsStream::CreatePackagers()
 			if ((video_variant_name.IsEmpty() == false && GetMediaTrackGroup(video_variant_name) == nullptr) || 
 				(audio_variant_name.IsEmpty() == false && GetMediaTrackGroup(audio_variant_name) == nullptr))
 			{
-				logtw("HLS Stream(%s/%s) - Invalid rendition %s. The variant name video(%s) audio(%s) is not found in the track list", GetApplication()->GetName().CStr(), GetName().CStr(), playlist->GetFileName().CStr(), video_variant_name.CStr(), audio_variant_name.CStr());
+				logtw("HLS Stream(%s/%s) - Invalid rendition %s. The variant name video(%s) audio(%s) is not found in the track list", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), playlist->GetFileName().CStr(), video_variant_name.CStr(), audio_variant_name.CStr());
 				continue;
 			}
 

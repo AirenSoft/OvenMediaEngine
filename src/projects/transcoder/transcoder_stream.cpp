@@ -37,7 +37,7 @@ std::shared_ptr<TranscoderStream> TranscoderStream::Create(const info::Applicati
 TranscoderStream::TranscoderStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &stream, TranscodeApplication *parent)
 	: _parent(parent), _application_info(application_info), _input_stream(stream)
 {
-	_log_prefix = ov::String::FormatString("[%s/%s(%u)]", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId());
+	_log_prefix = ov::String::FormatString("[%s/%s(%u)]", _application_info.GetVHostAppName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId());
 
 	// default output profiles configuration
 	_output_profiles_cfg = &(_application_info.GetConfig().GetOutputProfiles());
@@ -170,7 +170,7 @@ const cfg::vhost::app::oprf::OutputProfiles* TranscoderStream::RequestWebhoook()
 	if (policy == TranscodeWebhook::Policy::DeleteStream)
 	{
 		logtw("%s Delete a stream by transcode webhook", _log_prefix.CStr());
-		ocst::Orchestrator::GetInstance()->TerminateStream(_application_info.GetName(), _input_stream->GetName());
+		ocst::Orchestrator::GetInstance()->TerminateStream(_application_info.GetVHostAppName(), _input_stream->GetName());
 		return nullptr;
 	}		
 	else if (policy == TranscodeWebhook::Policy::CreateStream)
@@ -463,7 +463,7 @@ int32_t TranscoderStream::CreateOutputStreamDynamic()
 
 	logti("%s Output stream(dynamic) has been created. [%s/%s(%u)]",
 		  _log_prefix.CStr(),
-		  _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
+		  _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
 
 	created_count++;
 
@@ -489,7 +489,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 
 		_output_streams.insert(std::make_pair(output_stream->GetName(), output_stream));
 
-		logti("%s Output stream has been created. [%s/%s(%u)]", _log_prefix.CStr(), _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
+		logti("%s Output stream has been created. [%s/%s(%u)]", _log_prefix.CStr(), _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
 
 		created_count++;
 	}
@@ -861,7 +861,7 @@ int32_t TranscoderStream::CreateEncoders(MediaFrame *buffer)
 
 			if (CreateEncoder(encoder_id, output_stream, output_track) == false)
 			{
-				logte("[%s/%s(%u)] Could not create encoder. Encoder(%d), OutputTrack(%d)", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId(), encoder_id, output_track->GetId());
+				logte("[%s/%s(%u)] Could not create encoder. Encoder(%d), OutputTrack(%d)", _application_info.GetVHostAppName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId(), encoder_id, output_track->GetId());
 				continue;
 			}
 
@@ -1525,7 +1525,7 @@ void TranscoderStream::NotifyCreateStreams()
 
 		if (_parent->CreateStream(output_stream) == false)
 		{
-			logtw("%s Could not create stream. [%s/%s(%u)]", _log_prefix.CStr(), _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
+			logtw("%s Could not create stream. [%s/%s(%u)]", _log_prefix.CStr(), _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
 		}
 	}
 }
@@ -1538,7 +1538,7 @@ void TranscoderStream::NotifyDeleteStreams()
 
 		if (_parent->DeleteStream(output_stream) == false)
 		{
-			logtw("%s Could not delete stream. %s/%s(%u)", _log_prefix.CStr(), _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
+			logtw("%s Could not delete stream. %s/%s(%u)", _log_prefix.CStr(), _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
 		}
 	}
 
@@ -1553,7 +1553,7 @@ void TranscoderStream::NotifyUpdateStreams()
 
 		if (_parent->UpdateStream(output_stream) == false)
 		{
-			logtw("%s Could not update stream. %s/%s(%u)", _log_prefix.CStr(), _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
+			logtw("%s Could not update stream. %s/%s(%u)", _log_prefix.CStr(), _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
 		}
 	}
 }

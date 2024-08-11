@@ -75,12 +75,12 @@ bool MediaRouter::OnCreateApplication(const info::Application &app_info)
 	auto route_app = MediaRouteApplication::Create(app_info);
 	if (route_app == nullptr)
 	{
-		logte("Failed to memory allocation. app(%s)", app_info.GetName().CStr());
+		logte("Failed to memory allocation. app(%s)", app_info.GetVHostAppName().CStr());
 		return false;
 	}
 	else
 	{
-		logti("Created Mediarouter. app(%s)", app_info.GetName().CStr());
+		logti("Created Mediarouter. app(%s)", app_info.GetVHostAppName().CStr());
 	}
 
 	_route_apps.insert(std::make_pair(application_id, route_app));
@@ -98,7 +98,7 @@ bool MediaRouter::OnDeleteApplication(const info::Application &app_info)
 
 	_route_apps.erase(application_id);
 
-	logti("Mediarouter has been destroyed. app(%s)", app_info.GetName().CStr());
+	logti("Mediarouter has been destroyed. app(%s)", app_info.GetVHostAppName().CStr());
 
 	return true;
 }
@@ -120,7 +120,7 @@ std::shared_ptr<MediaRouteApplication> MediaRouter::GetRouteApplicationByName(co
 {
 	for (auto const &_route_app : _route_apps)
 	{
-		if (_route_app.second->GetApplicationInfo().GetName() == vhost_app_name)
+		if (_route_app.second->GetApplicationInfo().GetVHostAppName() == vhost_app_name)
 		{
 			return _route_app.second;
 		}
@@ -169,7 +169,7 @@ bool MediaRouter::RegisterObserverApp(
 	auto media_route_app = GetRouteApplicationById(application_info.GetId());
 	if (media_route_app == nullptr)
 	{
-		logtw("Could not found application. app(%s)", application_info.GetName().CStr());
+		logtw("Could not found application. app(%s)", application_info.GetVHostAppName().CStr());
 		return false;
 	}
 
@@ -190,7 +190,7 @@ bool MediaRouter::UnregisterObserverApp(
 	auto media_route_app = GetRouteApplicationById(application_info.GetId());
 	if (media_route_app == nullptr)
 	{
-		logtw("Could not found application. app(%s)", application_info.GetName().CStr());
+		logtw("Could not found application. app(%s)", application_info.GetVHostAppName().CStr());
 		return false;
 	}
 
@@ -228,10 +228,10 @@ CommonErrorCode MediaRouter::UnmirrorStream(const std::shared_ptr<MediaRouterStr
 		return CommonErrorCode::INVALID_STATE;
 	}
 
-	auto route_app = GetRouteApplicationByName(stream_tap->GetStreamInfo()->GetApplicationInfo().GetName());
+	auto route_app = GetRouteApplicationByName(stream_tap->GetStreamInfo()->GetApplicationInfo().GetVHostAppName());
 	if (route_app == nullptr)
 	{
-		logtw("Could not found application. app(%s)", stream_tap->GetStreamInfo()->GetApplicationInfo().GetName().CStr());
+		logtw("Could not found application. app(%s)", stream_tap->GetStreamInfo()->GetApplicationInfo().GetVHostAppName().CStr());
 		return CommonErrorCode::NOT_FOUND;
 	}
 

@@ -196,7 +196,7 @@ bool HlsPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Appli
 	auto ts_application = std::static_pointer_cast<HlsApplication>(application);
 	if (ts_application == nullptr)
 	{
-		logte("Could not found ts application. app:%s", ts_application->GetName().CStr());
+		logte("Could not found ts application. app:%s", ts_application->GetVHostAppName().CStr());
 		return false;
 	}
 

@@ -560,7 +560,7 @@ namespace pub
 			{
 				// Delete Prefix virtualhost name. ex) #[VirtualHost]#Application
 				ov::String prefix = ov::String::FormatString("#%s#", host_config.GetName().CStr());
-				auto app_name = app->GetName();
+				auto app_name = app->GetVHostAppName();
 				auto application_name = app_name.ToString().Replace(prefix, "");
 
 				replaced_string = replaced_string.Replace(full_match, application_name);

@@ -19,7 +19,7 @@
 		http::StatusCode::NotFound,                                          \
 		"Could not find the output profile: [%s/%s/%s]",                     \
 		vhost_metrics->GetName().CStr(),                                     \
-		app_metrics->GetName().GetAppName().CStr(),                          \
+		app_metrics->GetVHostAppName().GetAppName().CStr(),                          \
 		output_profile_name.CStr())
 
 namespace api
@@ -137,7 +137,7 @@ namespace api
 			std::shared_ptr<mon::ApplicationMetrics> new_app;
 			Json::Value new_app_json;
 
-			new_app = GetApplication(vhost, app->GetName().GetAppName().CStr());
+			new_app = GetApplication(vhost, app->GetVHostAppName().GetAppName().CStr());
 			new_app_json = new_app->GetConfig().ToJson();
 
 			for (auto &response_profile : response)
@@ -251,7 +251,7 @@ namespace api
 
 			RecreateApplication(vhost, app, app_json);
 
-			auto new_app = GetApplication(vhost, app->GetName().GetAppName().CStr());
+			auto new_app = GetApplication(vhost, app->GetVHostAppName().GetAppName().CStr());
 
 			Json::Value value;
 

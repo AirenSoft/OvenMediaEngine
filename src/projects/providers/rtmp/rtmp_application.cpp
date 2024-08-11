@@ -39,13 +39,13 @@ namespace pvd
 			// Block
 			if(GetConfig().GetProviders().GetRtmpProvider().IsBlockDuplicateStreamName())
 			{
-				logti("Reject %s/%s stream it is a stream with a duplicate name.", GetName().CStr(), stream->GetName().CStr());		
+				logti("Reject %s/%s stream it is a stream with a duplicate name.", GetVHostAppName().CStr(), stream->GetName().CStr());		
 				return false;
 			}
 			else
 			{
 				// Disconnect exist stream
-				logti("Remove exist %s/%s stream because the stream with the same name is connected.", GetName().CStr(), stream->GetName().CStr());		
+				logti("Remove exist %s/%s stream because the stream with the same name is connected.", GetVHostAppName().CStr(), stream->GetName().CStr());		
 				DeleteStream(exist_stream);
 			}
 		}

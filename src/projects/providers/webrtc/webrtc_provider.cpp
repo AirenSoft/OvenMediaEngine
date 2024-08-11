@@ -253,7 +253,7 @@ namespace pvd
 				// There is no CORS setting in the WebRTC Provider in the already deployed Server.xml. In this case, provide * to avoid confusion.
 				cross_domains.push_back("*");
 			}
-			_whip_server->SetCors(application_info.GetName(), cross_domains);
+			_whip_server->SetCors(application_info.GetVHostAppName(), cross_domains);
 		}
 
 		return WebRTCApplication::Create(PushProvider::GetSharedPtrAs<PushProvider>(), application_info, _certificate, _ice_port, _signalling_server);
@@ -622,7 +622,7 @@ namespace pvd
 				UnRegisterStreamToSessionKeyStreamMap(stream->GetSessionKey());
 
 				// Signalling server will call OnStopCommand, then stream will be removed in that function
-				_signalling_server->Disconnect(stream->GetApplicationInfo().GetName(), stream->GetName(), stream->GetPeerSDP());
+				_signalling_server->Disconnect(stream->GetApplicationInfo().GetVHostAppName(), stream->GetName(), stream->GetPeerSDP());
 				OnChannelDeleted(stream);
 
 				break;

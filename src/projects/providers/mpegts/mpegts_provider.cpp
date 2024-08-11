@@ -214,7 +214,7 @@ namespace pvd
 				if (stream_port_item == nullptr)
 				{
 					logte("The %s application could not be created in %s provider because there are no ports available.",
-						  application_info.GetName().CStr(), GetProviderName());
+						  application_info.GetVHostAppName().CStr(), GetProviderName());
 					return nullptr;
 				}
 
@@ -232,12 +232,12 @@ namespace pvd
 				if (stream_port_item == nullptr || stream_port_item->IsAttached() == true)
 				{
 					logte("The %s application could not be created in %s provider because port %d requested to be assigned to mpegts is not available.",
-						  application_info.GetName().CStr(), GetProviderName(), port);
+						  application_info.GetVHostAppName().CStr(), GetProviderName(), port);
 					return nullptr;
 				}
 
 				auto stream_name = stream_item.GetName().Replace("${Port}", ov::Converter::ToString(port));
-				stream_port_item->AttachToApplication(application_info.GetName(), stream_name);
+				stream_port_item->AttachToApplication(application_info.GetVHostAppName(), stream_name);
 
 				auto url = ov::Url::Parse(ov::String::FormatString("%s://0.0.0.0:%d", ov::StringFromSocketType(stream_port_item->GetScheme()), stream_port_item->GetPortNumber()));
 				app_metrics->OnStreamReserved(GetProviderType(), *url, stream_name);
@@ -263,7 +263,7 @@ namespace pvd
 		for (const auto &item : _stream_port_map)
 		{
 			auto &stream_port_item = item.second;
-			if (stream_port_item->GetVhostAppName() == application->GetName())
+			if (stream_port_item->GetVhostAppName() == application->GetVHostAppName())
 			{
 				stream_port_item->DetachFromApplication();
 			}

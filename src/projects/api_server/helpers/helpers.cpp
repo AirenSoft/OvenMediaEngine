@@ -45,7 +45,7 @@ namespace api
 			auto app_list = GetApplicationList(vhost);
 			for (auto &item : app_list)
 			{
-				if (app_name == item.second->GetName().GetAppName().CStr())
+				if (app_name == item.second->GetVHostAppName().GetAppName().CStr())
 				{
 					return item.second;
 				}
@@ -204,7 +204,7 @@ namespace api
 		}
 
 		auto vhost_name = vhost_metrics->GetName();
-		auto app_name = app_metrics->GetName();
+		auto app_name = app_metrics->GetVHostAppName();
 		auto stream_name = stream_name_group.GetValue();
 		auto stream = GetStream(app_metrics, stream_name, output_streams);
 
@@ -369,13 +369,13 @@ namespace api
 			ocst::Orchestrator::GetInstance()->DeleteApplication(*app),
 			"delete",
 			"application",
-			ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
+			ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr()));
 
 		ThrowIfOrchestratorNotSucceeded(
 			ocst::Orchestrator::GetInstance()->CreateApplication(*vhost, app_config),
 			"create",
 			"application",
-			ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetName().GetAppName().CStr()));
+			ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr()));
 	}
 
 	ov::String GetOutputProfileName(const std::shared_ptr<http::svr::HttpExchange> &client)

@@ -39,7 +39,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get the multiplex provider");
 			}
 
-			auto multiplex_application = std::static_pointer_cast<pvd::MultiplexApplication>(provider->GetApplicationByName(app->GetName()));
+			auto multiplex_application = std::static_pointer_cast<pvd::MultiplexApplication>(provider->GetApplicationByName(app->GetVHostAppName()));
 			if (multiplex_application == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound, "Could not get the multiplex application");
@@ -127,7 +127,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get the multiplex provider");
 			}
 
-			auto multiplex_application = std::static_pointer_cast<pvd::MultiplexApplication>(provider->GetApplicationByName(app->GetName()));
+			auto multiplex_application = std::static_pointer_cast<pvd::MultiplexApplication>(provider->GetApplicationByName(app->GetVHostAppName()));
 			if (multiplex_application == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound, "Could not get the multiplex application");
@@ -179,7 +179,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not get the multiplex provider");
 			}
 
-			auto multiplex_application = std::static_pointer_cast<pvd::MultiplexApplication>(provider->GetApplicationByName(app->GetName()));
+			auto multiplex_application = std::static_pointer_cast<pvd::MultiplexApplication>(provider->GetApplicationByName(app->GetVHostAppName()));
 			if (multiplex_application == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound, "Could not get the multiplex application");

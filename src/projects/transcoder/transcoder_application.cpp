@@ -31,12 +31,12 @@ std::shared_ptr<TranscodeApplication> TranscodeApplication::Create(const info::A
 TranscodeApplication::TranscodeApplication(const info::Application &application_info)
 	: _application_info(application_info)
 {
-	logti("Created transcoder application. [%s]", application_info.GetName().CStr());
+	logti("Created transcoder application. [%s]", application_info.GetVHostAppName().CStr());
 }
 
 TranscodeApplication::~TranscodeApplication()
 {
-	logti("Transcoder application has been destroyed. [%s]", _application_info.GetName().CStr());
+	logti("Transcoder application has been destroyed. [%s]", _application_info.GetVHostAppName().CStr());
 }
 
 bool TranscodeApplication::Start()
@@ -58,7 +58,7 @@ bool TranscodeApplication::Stop()
 	}
 	_streams.clear();
 
-	logtd("Transcoder application has been stopped. [%s]", _application_info.GetName().CStr());
+	logtd("Transcoder application has been stopped. [%s]", _application_info.GetVHostAppName().CStr());
 
 	return true;
 }
@@ -170,25 +170,25 @@ bool TranscodeApplication::ValidateAppConfiguration()
 	{
 		if (cfg_output_profile.GetName().IsEmpty() == true)
 		{
-			logte("Output profile name is empty. [%s]", _application_info.GetName().CStr());
+			logte("Output profile name is empty. [%s]", _application_info.GetVHostAppName().CStr());
 			return false;
 		}
 
 		if (cfg_output_profile.GetOutputStreamName().IsEmpty() == true)
 		{
-			logte("Output stream name is empty. [%s]", _application_info.GetName().CStr());
+			logte("Output stream name is empty. [%s]", _application_info.GetVHostAppName().CStr());
 			return false;
 		}
 
 		if (std::find(profile_name_list.begin(), profile_name_list.end(), cfg_output_profile.GetName()) != profile_name_list.end())
 		{
-			logte("Output profile name is duplicated. [%s]. name(%s)", _application_info.GetName().CStr(), cfg_output_profile.GetName().CStr());
+			logte("Output profile name is duplicated. [%s]. name(%s)", _application_info.GetVHostAppName().CStr(), cfg_output_profile.GetName().CStr());
 			return false;
 		}
 
 		if (std::find(output_stream_name_list.begin(), output_stream_name_list.end(), cfg_output_profile.GetOutputStreamName()) != output_stream_name_list.end())
 		{
-			logte("Output stream name is duplicated. [%s]. name(%s)", _application_info.GetName().CStr(), cfg_output_profile.GetOutputStreamName().CStr());
+			logte("Output stream name is duplicated. [%s]. name(%s)", _application_info.GetVHostAppName().CStr(), cfg_output_profile.GetOutputStreamName().CStr());
 
 			return false;
 		}

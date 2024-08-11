@@ -53,7 +53,7 @@ namespace pub
 				auto result = RecordStart(record);
 				if (result->GetCode() != FilePublisher::FilePublisherStatusCode::Success)
 				{
-					logtw("FileStream(%s/%s) - Failed to start record(%s) status(%d) description(%s)", GetName().CStr(), info->GetName().CStr(), record->GetId().CStr(), result->GetCode(), result->GetMessage().CStr());
+					logtw("FileStream(%s/%s) - Failed to start record(%s) status(%d) description(%s)", GetVHostAppName().CStr(), info->GetName().CStr(), record->GetId().CStr(), result->GetCode(), result->GetMessage().CStr());
 				}
 			}
 		}
@@ -82,11 +82,11 @@ namespace pub
 			auto result = RecordStop(record_info);
 			if (result->GetCode() != FilePublisher::FilePublisherStatusCode::Success)
 			{
-				logtw("FileStream(%s/%s) - Failed to start record(%s) status(%d) description(%s)", GetName().CStr(), info->GetName().CStr(), record_info->GetId().CStr(), result->GetCode(), result->GetMessage().CStr());
+				logtw("FileStream(%s/%s) - Failed to start record(%s) status(%d) description(%s)", GetVHostAppName().CStr(), info->GetName().CStr(), record_info->GetId().CStr(), result->GetCode(), result->GetMessage().CStr());
 			}
 		}
 
-		logti("File Application %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
+		logti("File Application %s/%s stream has been deleted", GetVHostAppName().CStr(), stream->GetName().CStr());
 
 		return true;
 	}
@@ -389,14 +389,14 @@ namespace pub
 		auto load_result = xml_doc.load_file(final_path.CStr());
 		if (load_result == false)
 		{
-			logte("FileStream(%s/%s) - Failed to load Record info file(%s) status(%d) description(%s)", GetName().CStr(), stream_info->GetName().CStr(), final_path.CStr(), load_result.status, load_result.description());
+			logte("FileStream(%s/%s) - Failed to load Record info file(%s) status(%d) description(%s)", GetVHostAppName().CStr(), stream_info->GetName().CStr(), final_path.CStr(), load_result.status, load_result.description());
 			return results;
 		}
 
 		auto root_node = xml_doc.child("RecordInfo");
 		if (root_node.empty())
 		{
-			logte("FileStream(%s/%s) - Failed to load Record info file(%s) because root node is not found", GetName().CStr(), stream_info->GetName().CStr(), final_path.CStr());
+			logte("FileStream(%s/%s) - Failed to load Record info file(%s) because root node is not found", GetVHostAppName().CStr(), stream_info->GetName().CStr(), final_path.CStr());
 			return results;
 		}
 
@@ -434,8 +434,8 @@ namespace pub
 
 			record->SetId(ov::Random::GenerateString(16));
 			record->SetEnable(enable);
-			record->SetVhost(GetName().GetVHostName());
-			record->SetApplication(GetName().GetAppName());
+			record->SetVhost(GetVHostAppName().GetVHostName());
+			record->SetApplication(GetVHostAppName().GetAppName());
 
 			record->SetStreamName(stream_info->GetName().CStr());
 			if(variant_names.IsEmpty() == false)

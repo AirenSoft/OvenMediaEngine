@@ -93,7 +93,7 @@ bool LLHlsStream::Start()
 		{
 			if (AddPackager(track, data_track) == false)
 			{
-				logte("LLHlsStream(%s/%s) - Failed to add packager for track(%ld)", GetApplication()->GetName().CStr(), GetName().CStr(), track->GetId());
+				logte("LLHlsStream(%s/%s) - Failed to add packager for track(%ld)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), track->GetId());
 				return false;
 			}
 
@@ -114,7 +114,7 @@ bool LLHlsStream::Start()
 				continue;
 			}
 
-			logti("LLHlsStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
+			logti("LLHlsStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
 			continue;
 		}
 	}
@@ -131,7 +131,7 @@ bool LLHlsStream::Start()
 
 	if (first_video_track == nullptr && first_audio_track == nullptr)
 	{
-		logtw("LLHLS stream [%s/%s] could not be created because there is no supported codec.", GetApplication()->GetName().CStr(), GetName().CStr());
+		logtw("LLHLS stream [%s/%s] could not be created because there is no supported codec.", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
 		return false;
 	}
 
@@ -171,8 +171,8 @@ bool LLHlsStream::Start()
 			// Replace output path with macro
 			auto output_path = dump.GetOutputPath();
 			// ${VHostName}, ${AppName}, ${StreamName}
-			output_path = output_path.Replace("${VHostName}", GetApplication()->GetName().GetVHostName().CStr());
-			output_path = output_path.Replace("${AppName}", GetApplication()->GetName().GetAppName().CStr());
+			output_path = output_path.Replace("${VHostName}", GetApplication()->GetVHostAppName().GetVHostName().CStr());
+			output_path = output_path.Replace("${AppName}", GetApplication()->GetVHostAppName().GetAppName().CStr());
 			output_path = output_path.Replace("${StreamName}", GetName().CStr());
 
 			// ${YYYY}, ${MM}, ${DD}, ${hh}, ${mm}, ${ss}
@@ -293,14 +293,14 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 	auto load_result = xml_doc.load_file(final_path.CStr());
 	if (load_result == false)
 	{
-		logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) status(%d) description(%s)", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), load_result.status, load_result.description());
+		logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) status(%d) description(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), final_path.CStr(), load_result.status, load_result.description());
 		return false;
 	}
 
 	auto root_node = xml_doc.child("DRMInfo");
 	if (root_node.empty())
 	{
-		logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because root node is not found", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
+		logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because root node is not found", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), final_path.CStr());
 		return false;
 	}
 
@@ -317,8 +317,8 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 		ov::Regex _target_stream_name_regex = ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(stream_name));
 		auto match_result = _target_stream_name_regex.Matches(GetName().CStr());
 
-		if (virtual_host_name == GetApplication()->GetName().GetVHostName() &&
-			app_name == GetApplication()->GetName().GetAppName() &&
+		if (virtual_host_name == GetApplication()->GetVHostAppName().GetVHostName() &&
+			app_name == GetApplication()->GetVHostAppName().GetAppName() &&
 			match_result.IsMatched())
 		{
 			ov::String drm_provider = drm_node.child_value("DRMProvider");
@@ -335,7 +335,7 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 				// required
 				if (cenc_protect_scheme.IsEmpty() || key_id.IsEmpty() || key.IsEmpty() || iv.IsEmpty())
 				{
-					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because required field is empty", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr());
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because required field is empty", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), final_path.CStr());
 					return false;
 				}
 
@@ -349,13 +349,13 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 				}
 				else
 				{
-					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because CencProtectScheme(%s) is not supported", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), cenc_protect_scheme.CStr());
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because CencProtectScheme(%s) is not supported", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), final_path.CStr(), cenc_protect_scheme.CStr());
 				}
 
 				cenc_property.key_id = ov::Hex::Decode(key_id);
 				if (cenc_property.key_id == nullptr || cenc_property.key_id->GetLength() != 16)
 				{
-					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because KeyId(%s) is invalid (must be 16 bytes HEX foramt)", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), key_id.CStr());
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because KeyId(%s) is invalid (must be 16 bytes HEX foramt)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), final_path.CStr(), key_id.CStr());
 					cenc_property.scheme = bmff::CencProtectScheme::None;
 					return false;
 				}
@@ -363,7 +363,7 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 				cenc_property.key = ov::Hex::Decode(key);
 				if (cenc_property.key == nullptr || cenc_property.key->GetLength() != 16)
 				{
-					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because Key(%s) is invalid (must be 16 bytes HEX format)", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), key.CStr());
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because Key(%s) is invalid (must be 16 bytes HEX format)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), final_path.CStr(), key.CStr());
 					cenc_property.scheme = bmff::CencProtectScheme::None;
 					return false;
 				}
@@ -371,7 +371,7 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 				cenc_property.iv = ov::Hex::Decode(iv);
 				if (cenc_property.iv == nullptr || cenc_property.iv->GetLength() != 16)
 				{
-					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because Iv(%s) is invalid (must be 16 bytes HEX format)", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), iv.CStr());
+					logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because Iv(%s) is invalid (must be 16 bytes HEX format)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), final_path.CStr(), iv.CStr());
 					cenc_property.scheme = bmff::CencProtectScheme::None;
 					return false;
 				}
@@ -382,7 +382,7 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 					auto pssh_box_data = ov::Hex::Decode(pssh_node.child_value());
 					if (pssh_box_data == nullptr)
 					{
-						logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because Pssh(%s) is invalid (must be HEX format)", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), pssh_node.child_value());
+						logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because Pssh(%s) is invalid (must be HEX format)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), final_path.CStr(), pssh_node.child_value());
 						cenc_property.scheme = bmff::CencProtectScheme::None;
 						return false;
 					}
@@ -403,7 +403,7 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 			}
 			else
 			{
-				logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because DRMProvider(%s) is not supported", GetApplication()->GetName().CStr(), GetName().CStr(), final_path.CStr(), drm_provider.CStr());
+				logte("LLHlsStream(%s/%s) - Failed to load DRM info file(%s) because DRMProvider(%s) is not supported", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), final_path.CStr(), drm_provider.CStr());
 				return false;
 			}
 
@@ -466,7 +466,7 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 	auto master_playlist = std::make_shared<LLHlsMasterPlaylist>();
 
 	ov::String chunk_path;
-	ov::String app_name = GetApplicationInfo().GetName().GetAppName();
+	ov::String app_name = GetApplicationInfo().GetVHostAppName().GetAppName();
 	ov::String stream_name = GetName();
 	switch (playlist->GetHlsChunklistPathDepth())
 	{
@@ -522,7 +522,7 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 		if ((video_track != nullptr && IsSupportedCodec(video_track->GetCodecId()) == false) ||
 			(audio_track != nullptr && IsSupportedCodec(audio_track->GetCodecId()) == false))
 		{
-			logtw("LLHlsStream(%s/%s) - Exclude the rendition(%s) from the %s.m3u8 due to unsupported codec", GetApplication()->GetName().CStr(), GetName().CStr(),
+			logtw("LLHlsStream(%s/%s) - Exclude the rendition(%s) from the %s.m3u8 due to unsupported codec", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(),
 				  rendition->GetName().CStr(), playlist->GetFileName().CStr());
 			continue;
 		}
@@ -533,12 +533,12 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 
 		if (rendition->GetVideoVariantName().IsEmpty() == false && video_track == nullptr)
 		{
-			logtw("LLHlsStream(%s/%s) - %s video is excluded from the %s rendition in %s playlist because there is no video track.", GetApplication()->GetName().CStr(), GetName().CStr(), rendition->GetVideoVariantName().CStr(), rendition->GetName().CStr(), playlist->GetFileName().CStr());
+			logtw("LLHlsStream(%s/%s) - %s video is excluded from the %s rendition in %s playlist because there is no video track.", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), rendition->GetVideoVariantName().CStr(), rendition->GetName().CStr(), playlist->GetFileName().CStr());
 		}
 
 		if (rendition->GetAudioVariantName().IsEmpty() == false && audio_track == nullptr)
 		{
-			logtw("LLHlsStream(%s/%s) - %s audio is excluded from the %s rendition in %s playlist because there is no audio track.", GetApplication()->GetName().CStr(), GetName().CStr(), rendition->GetAudioVariantName().CStr(), rendition->GetName().CStr(), playlist->GetFileName().CStr());
+			logtw("LLHlsStream(%s/%s) - %s audio is excluded from the %s rendition in %s playlist because there is no audio track.", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), rendition->GetAudioVariantName().CStr(), rendition->GetName().CStr(), playlist->GetFileName().CStr());
 		}
 
 		master_playlist->AddStreamInfo(video_variant_name, audio_variant_name);
@@ -1024,11 +1024,11 @@ void LLHlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event)
 			auto [result, message] = ConcludeLive();
 			if (result == true)
 			{
-				logti("LLHlsStream(%s/%s) - Live has concluded.", GetApplication()->GetName().CStr(), GetName().CStr());
+				logti("LLHlsStream(%s/%s) - Live has concluded.", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
 			}
 			else
 			{
-				logte("LLHlsStream(%s/%s) - Failed to conclude live(%s)", GetApplication()->GetName().CStr(), GetName().CStr(), message.CStr());
+				logte("LLHlsStream(%s/%s) - Failed to conclude live(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), message.CStr());
 			}
 			break;
 		}
@@ -1071,7 +1071,7 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 {
 	auto cenc_property = _cenc_property;
 
-	auto tag = ov::String::FormatString("%s/%s", GetApplicationInfo().GetName().CStr(), GetName().CStr());
+	auto tag = ov::String::FormatString("%s/%s", GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr());
 
 	if (cenc_property.scheme != bmff::CencProtectScheme::None)
 	{

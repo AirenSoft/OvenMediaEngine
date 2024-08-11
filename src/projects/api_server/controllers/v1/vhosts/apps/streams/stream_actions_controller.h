@@ -75,7 +75,7 @@ namespace api
 					return nullptr;
 				}
 
-				auto appliation = publisher->GetApplicationByName(stream_metric->GetApplicationInfo().GetName());
+				auto appliation = publisher->GetApplicationByName(stream_metric->GetApplicationInfo().GetVHostAppName());
 				if (appliation == nullptr)
 				{
 					return nullptr;

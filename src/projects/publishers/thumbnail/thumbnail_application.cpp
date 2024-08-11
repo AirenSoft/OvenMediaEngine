@@ -20,14 +20,14 @@ ThumbnailApplication::ThumbnailApplication(const std::shared_ptr<pub::Publisher>
 
 	if (is_parsed)
 	{
-		_cors_manager.SetCrossDomains(application_info.GetName(), cross_domains);
+		_cors_manager.SetCrossDomains(application_info.GetVHostAppName(), cross_domains);
 	}
 	else
 	{
 		const auto &default_cross_domains = application_info.GetHostInfo().GetCrossDomainList(&is_parsed);
 		if (is_parsed)
 		{
-			_cors_manager.SetCrossDomains(application_info.GetName(), default_cross_domains);
+			_cors_manager.SetCrossDomains(application_info.GetVHostAppName(), default_cross_domains);
 		}
 	}
 }
@@ -66,7 +66,7 @@ bool ThumbnailApplication::DeleteStream(const std::shared_ptr<info::Stream> &inf
 		return false;
 	}
 
-	logtd("ThumbnailApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
+	logtd("ThumbnailApplication %s/%s stream has been deleted", GetVHostAppName().CStr(), stream->GetName().CStr());
 
 	return true;
 }

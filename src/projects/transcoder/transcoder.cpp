@@ -69,7 +69,7 @@ bool Transcoder::OnCreateApplication(const info::Application &app_info)
 	auto application = TranscodeApplication::Create(app_info);
 	if(application == nullptr)
 	{
-		logte("Could not create the transcoder application. [%s]", app_info.GetName().CStr());
+		logte("Could not create the transcoder application. [%s]", app_info.GetVHostAppName().CStr());
 		return false;
 	}
 
@@ -78,7 +78,7 @@ bool Transcoder::OnCreateApplication(const info::Application &app_info)
 	// Register to MediaRouter
 	if (_router->RegisterObserverApp(app_info, application) == false)
 	{
-		logte("Could not register transcoder application to mediarouter. [%s]", app_info.GetName().CStr());
+		logte("Could not register transcoder application to mediarouter. [%s]", app_info.GetVHostAppName().CStr());
 
 		return false;
 	}
@@ -86,12 +86,12 @@ bool Transcoder::OnCreateApplication(const info::Application &app_info)
 	// Register to MediaRouter
 	if (_router->RegisterConnectorApp(app_info, application) == false)
 	{
-		logte("Could not register transcoder application to mediarouter. [%s]", app_info.GetName().CStr());
+		logte("Could not register transcoder application to mediarouter. [%s]", app_info.GetVHostAppName().CStr());
 
 		return false;
 	}
 
-	logti("Transcoder has created [%s][%s] application", app_info.IsDynamicApp() ? "dynamic" : "config", app_info.GetName().CStr());
+	logti("Transcoder has created [%s][%s] application", app_info.IsDynamicApp() ? "dynamic" : "config", app_info.GetVHostAppName().CStr());
 
 	return true;
 }
@@ -127,7 +127,7 @@ bool Transcoder::OnDeleteApplication(const info::Application &app_info)
 
 	_transcode_apps.erase(it);
 
-	logti("Transcoder has deleted [%s][%s] application", app_info.IsDynamicApp() ? "dynamic" : "config", app_info.GetName().CStr());
+	logti("Transcoder has deleted [%s][%s] application", app_info.IsDynamicApp() ? "dynamic" : "config", app_info.GetVHostAppName().CStr());
 
 	return true;
 }

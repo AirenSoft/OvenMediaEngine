@@ -38,7 +38,7 @@ namespace info
 			return "";
 		}
 
-		return ov::String::FormatString("%s/%s", _host_info->GetUUID().CStr(), GetName().CStr());
+		return ov::String::FormatString("%s/%s", _host_info->GetUUID().CStr(), GetVHostAppName().CStr());
 	}
 
 	const Application &Application::GetInvalidApplication()
@@ -67,7 +67,7 @@ namespace info
 		return _application_id;
 	}
 
-	const VHostAppName &Application::GetName() const
+	const VHostAppName &Application::GetVHostAppName() const
 	{
 		return _name;
 	}

@@ -45,7 +45,7 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  "Could not parse json context: [%s/%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), stream->GetName().CStr());
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
 			}
 
 			if (dump_info->GetStreamName().IsEmpty() == true)
@@ -62,7 +62,7 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find output stream: [%s/%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), dump_info->GetStreamName().CStr());
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), dump_info->GetStreamName().CStr());
 			}
 
 			auto output_stream = *output_stream_it;
@@ -71,7 +71,7 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find LLHLS stream: [%s/%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), dump_info->GetStreamName().CStr());
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), dump_info->GetStreamName().CStr());
 			}
 
 			Json::Value response = Json::Value(Json::arrayValue);
@@ -120,7 +120,7 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  "Could not parse json context: [%s/%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), stream->GetName().CStr());
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
 			}
 
 			if (dump_info->GetId().IsEmpty() == true || 
@@ -139,7 +139,7 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find output stream: [%s/%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), dump_info->GetStreamName().CStr());
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), dump_info->GetStreamName().CStr());
 			}
 
 			auto output_stream = *output_stream_it;
@@ -148,7 +148,7 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find LLHLS stream: [%s/%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), dump_info->GetStreamName().CStr());
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), dump_info->GetStreamName().CStr());
 			}
 
 			auto [result, reason] = llhls_stream->StartDump(dump_info);
@@ -156,7 +156,7 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError,
 									  "Could not start dump: [%s/%s/%s] (%s)",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), dump_info->GetStreamName().CStr(), reason.CStr());
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), dump_info->GetStreamName().CStr(), reason.CStr());
 			}
 
 			return {http::StatusCode::OK};
@@ -178,7 +178,7 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::BadRequest,
 									  "Could not parse json context: [%s/%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), stream->GetName().CStr());
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
 			}
 
 			if (dump_info->GetStreamName().IsEmpty() == true)
@@ -195,7 +195,7 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find output stream: [%s/%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), dump_info->GetStreamName().CStr());
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), dump_info->GetStreamName().CStr());
 			}
 
 			auto output_stream = *output_stream_it;
@@ -204,7 +204,7 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									  "Could not find LLHLS stream: [%s/%s/%s]",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), dump_info->GetStreamName().CStr());
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), dump_info->GetStreamName().CStr());
 			}
 
 			auto [result, reason] = llhls_stream->StopDump(dump_info);
@@ -212,7 +212,7 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError,
 									  "Could not stop dump: [%s/%s/%s] (%s)",
-									  vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), dump_info->GetStreamName().CStr(), reason.CStr());
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), dump_info->GetStreamName().CStr(), reason.CStr());
 			}
 
 			return {http::StatusCode::OK};
@@ -355,14 +355,14 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									"Could not find stream: [%s/%s/%s]",
-									vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), stream->GetName().CStr());
+									vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
 			}
 
 			if (source_stream->SendDataFrame(-1, event_format, event_type, id3v2_event->Serialize(), urgent) == false)
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError,
 									"Internal Server Error - Could not inject event: [%s/%s/%s]",
-									vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), stream->GetName().CStr());
+									vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
 			}
 
 			return {http::StatusCode::OK};
@@ -385,7 +385,7 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
 									"Could not find stream: [%s/%s/%s]",
-									vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), stream->GetName().CStr());
+									vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
 			}
 
 			bool urgent = false;
@@ -401,7 +401,7 @@ namespace api
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError,
 									"Internal Server Error - Could not inject ConcludeLive event: [%s/%s/%s]",
-									vhost->GetName().CStr(), app->GetName().GetAppName().CStr(), stream->GetName().CStr());
+									vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
 			}
 			
 			return {http::StatusCode::OK};
@@ -413,7 +413,7 @@ namespace api
 														   const std::shared_ptr<mon::StreamMetrics> &stream,
 														   const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
-			logte("Called OnGetDummyAction. invoke [%s/%s/%s]", vhost->GetName().CStr(), app->GetName().GetAppName(), stream->GetName().CStr());
+			logte("Called OnGetDummyAction. invoke [%s/%s/%s]", vhost->GetName().CStr(), app->GetVHostAppName().GetAppName(), stream->GetName().CStr());
 
 			return app->GetConfig().ToJson();
 		}
@@ -465,7 +465,7 @@ namespace api
 				return nullptr;
 			}
 
-			auto application = provider->GetApplicationByName(stream->GetApplicationInfo().GetName());
+			auto application = provider->GetApplicationByName(stream->GetApplicationInfo().GetVHostAppName());
 			if (application == nullptr)
 			{
 				return nullptr;

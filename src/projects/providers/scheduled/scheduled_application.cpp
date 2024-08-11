@@ -65,7 +65,7 @@ namespace pvd
                 if (AddSchedule(schedule_file_info_from_dir) == true)
                 {
                     _schedule_file_info_db.emplace(schedule_file_info_from_dir._file_path.Hash(), schedule_file_info_from_dir);
-                    logti("Added schedule channel : %s/%s (%s)", GetName().CStr(), schedule_file_info_from_dir._schedule->GetStream().name.CStr(), schedule_file_info_from_dir._file_path.CStr());
+                    logti("Added schedule channel : %s/%s (%s)", GetVHostAppName().CStr(), schedule_file_info_from_dir._schedule->GetStream().name.CStr(), schedule_file_info_from_dir._file_path.CStr());
                 }
             }
             else
@@ -77,7 +77,7 @@ namespace pvd
                     if (UpdateSchedule(schedule_file_info_from_db, schedule_file_info_from_dir) == true)
                     {
                         _schedule_file_info_db[schedule_file_info_from_dir._file_path.Hash()] = schedule_file_info_from_dir;
-                        logti("Updated schedule channel : %s/%s (%s)", GetName().CStr(), schedule_file_info_from_dir._schedule->GetStream().name.CStr(), schedule_file_info_from_dir._file_path.CStr());
+                        logti("Updated schedule channel : %s/%s (%s)", GetVHostAppName().CStr(), schedule_file_info_from_dir._schedule->GetStream().name.CStr(), schedule_file_info_from_dir._file_path.CStr());
                     }
                 }
             }
@@ -101,7 +101,7 @@ namespace pvd
                 }
 
                 RemoveSchedule(schedule_file_info);
-                logti("Removed schedule channel : %s/%s (%s)", GetName().CStr(), schedule_file_info._schedule->GetStream().name.CStr(), schedule_file_info._file_path.CStr());
+                logti("Removed schedule channel : %s/%s (%s)", GetVHostAppName().CStr(), schedule_file_info._schedule->GetStream().name.CStr(), schedule_file_info._file_path.CStr());
 
                 it = _schedule_file_info_db.erase(it);
             }

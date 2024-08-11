@@ -112,7 +112,7 @@ namespace mon
 		else
 		{
 			logti("A new session has started playing %s/%s on the %s publisher. %s(%u)/Stream total(%u)/App total(%u)", 
-					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
+					GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(), 
 					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
 		}
 	}
@@ -134,7 +134,7 @@ namespace mon
 		else
 		{
 			logti("A session has been stopped playing %s/%s on the %s publisher. Concurrent Viewers[%s(%u)/Stream total(%u)/App total(%u)]", 
-					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
+					GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(), 
 					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
 		}
 	}
@@ -162,7 +162,7 @@ namespace mon
 		{
 			logti("%u sessions has been stopped playing %s/%s on the %s publisher. Concurrent Viewers[%s(%u)/Stream total(%u)/App total(%u)]", 
 					number_of_sessions,
-					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
+					GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(), 
 					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
 		}
 	}

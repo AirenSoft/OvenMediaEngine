@@ -67,10 +67,10 @@ bool RtcApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 
 		_ice_port->RemoveSession(session->GetIceSessionId());
 
-		_rtc_signalling->Disconnect(GetName(), stream->GetName(), session->GetPeerSDP());
+		_rtc_signalling->Disconnect(GetVHostAppName(), stream->GetName(), session->GetPeerSDP());
 	}
 
-	logtd("RtcApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
+	logtd("RtcApplication %s/%s stream has been deleted", GetVHostAppName().CStr(), stream->GetName().CStr());
 
 	return true;
 }

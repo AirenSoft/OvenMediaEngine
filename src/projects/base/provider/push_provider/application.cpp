@@ -23,7 +23,7 @@ namespace pvd
 	{
 		if(stream->IsReadyToReceiveStreamData() == false)
 		{
-			logte("The stream(%s/%s) is not yet ready to be published.", GetName().CStr(), stream->GetName().CStr());
+			logte("The stream(%s/%s) is not yet ready to be published.", GetVHostAppName().CStr(), stream->GetName().CStr());
 			return false;
 		}
 
