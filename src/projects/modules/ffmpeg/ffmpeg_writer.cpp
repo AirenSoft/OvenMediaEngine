@@ -17,13 +17,61 @@ namespace ffmpeg
 	}
 
 	Writer::Writer()
-		: _av_format(nullptr)
+		: _state(WriterStateNone),
+		_av_format(nullptr)
 	{
 	}
 
 	Writer::~Writer()
 	{
 		Stop();
+	}
+
+	void Writer::SetState(WriterState state)
+	{
+		_state = state;
+	}
+
+	Writer::WriterState Writer::GetState()
+	{
+		return _state;
+	}
+
+	int Writer::InterruptCallback(void *opaque)
+	{
+		Writer *writer = (Writer *)opaque;
+		if(writer == nullptr)
+		{
+			return 1;
+		}
+
+		auto ellapse = std::chrono::high_resolution_clock::now() - writer->GetLastPacketSentTime();
+		if(writer->GetState() == WriterStateClosed)
+		{
+			return 1;
+		}
+		else if(writer->GetState() == WriterStateConnecting)
+		{
+			if(std::chrono::duration_cast<std::chrono::milliseconds>(ellapse).count() > writer->_connection_timeout)
+			{
+				logte("connection timeout occurred. stop the writer. %d milliseconds. ", writer->_connection_timeout);
+				return 1;
+			}
+		}
+		else if(writer->GetState() == WriterStateConnected)
+		{
+			auto ellapse_ms = std::chrono::duration_cast<std::chrono::milliseconds>(ellapse).count();
+			if(ellapse_ms > 5)
+				logti("Send timeout check. %d milliseconds. ", ellapse_ms);
+
+			if(ellapse_ms > writer->_send_timeout)
+			{
+				logte("Send timeout occurred. stop the writer. %d milliseconds. ", ellapse_ms);
+				return 1;
+			}
+		}
+
+		return 0;
 	}
 
 	bool Writer::SetUrl(const ov::String url, const ov::String format)
@@ -39,6 +87,7 @@ namespace ffmpeg
 		_url = url;
 		_format = format;
 
+		// Create output context
 		int error = avformat_alloc_output_context2(&_av_format, nullptr, (_format != nullptr) ? _format.CStr() : nullptr, _url.CStr());
 		if (error < 0)
 		{
@@ -104,19 +153,25 @@ namespace ffmpeg
 	{
 		std::unique_lock<std::mutex> mlock(_lock);
 
+		SetState(WriterStateConnecting);
+
 		_start_time = -1LL;
 		_need_to_flush = false;
 		_need_to_close = false;
 
-		// AVDictionary *options = nullptr;
-		// av_dict_set(&options, "fflags", "flush_packets", 0);
 		_av_format->flush_packets = 1;
+
+		// Set Interrupt Callback
+		_interrupt_cb = {InterruptCallback, this};
 
 		if (!(_av_format->oformat->flags & AVFMT_NOFILE))
 		{
-			int error = avio_open2(&_av_format->pb, _av_format->url, AVIO_FLAG_WRITE, nullptr, nullptr);
+			_last_packet_sent_time = std::chrono::high_resolution_clock::now();
+			int error = avio_open2(&_av_format->pb, _av_format->url, AVIO_FLAG_WRITE, &_interrupt_cb, nullptr);
 			if (error < 0)
 			{
+				SetState(WriterStateError);
+				
 				logte("Error opening file. error(%s), url(%s)", ffmpeg::Conv::AVErrorToString(error).CStr(), _av_format->url);
 
 				return false;
@@ -125,21 +180,26 @@ namespace ffmpeg
 		_need_to_close = true;
 
 		// Write header
+		_last_packet_sent_time = std::chrono::high_resolution_clock::now();
 		if (avformat_write_header(_av_format, nullptr) < 0)
 		{
+			SetState(WriterStateError);
+			
 			logte("Could not create header");
+			
 			return false;
 		}
 		_need_to_flush = true;
 
-		// Dump format
-		// av_dump_format(_av_format, 0, _av_format->url, true);
-
+		SetState(WriterStateConnected);
+		
 		return true;
 	}
 
 	bool Writer::Stop()
 	{
+		SetState(WriterStateClosed);
+
 		std::unique_lock<std::mutex> mlock(_lock);
 
 		if (_av_format)
@@ -160,7 +220,6 @@ namespace ffmpeg
 			avformat_free_context(_av_format);
 			_av_format = nullptr;
 		}
-
 		return true;
 	}
 
@@ -168,8 +227,14 @@ namespace ffmpeg
 	{
 		std::unique_lock<std::mutex> mlock(_lock);
 
-		if (!_av_format || !packet)
+		if (!packet)
 		{
+			return false;
+		}
+
+		if (!_av_format)
+		{
+			SetState(WriterStateError);
 			return false;
 		}
 
@@ -303,13 +368,24 @@ namespace ffmpeg
 			// Passthrough
 		}
 
+		// 전송 시작 시간 계산
+		_last_packet_sent_time = std::chrono::high_resolution_clock::now();
+
 		int error = av_interleaved_write_frame(_av_format, &av_packet);
 		if (error != 0)
 		{
+			SetState(WriterStateError);
+
 			logte("Send packet error(%s)", ffmpeg::Conv::AVErrorToString(error).CStr());
+
 			return false;
 		}
 
 		return true;
+	}
+
+	std::chrono::high_resolution_clock::time_point Writer::GetLastPacketSentTime()
+	{
+		return _last_packet_sent_time;
 	}
 }  // namespace ffmpeg
