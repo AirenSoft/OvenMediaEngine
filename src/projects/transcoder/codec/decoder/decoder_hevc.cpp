@@ -69,7 +69,7 @@ bool DecoderHEVC::InitCodec()
 
 	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 	_context->thread_count = 2;
-	_context->thread_type = FF_THREAD_SLICE;
+	_context->thread_type = FF_THREAD_FRAME;
 
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
