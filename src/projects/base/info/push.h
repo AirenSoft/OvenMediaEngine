@@ -17,6 +17,7 @@ namespace info
 		enum class PushState : int8_t
 		{
 			Ready,
+			Connecting,
 			Pushing,
 			Stopping,
 			Stopped,

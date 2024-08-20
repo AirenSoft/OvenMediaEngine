@@ -45,7 +45,8 @@ namespace pub
 	bool PushSession::Start()
 	{
 		GetPush()->UpdatePushStartTime();
-		GetPush()->SetState(info::Push::PushState::Pushing);
+		GetPush()->SetState(info::Push::PushState::Connecting);
+		
 
 		ov::String rtmp_url;
 		if (GetPush()->GetStreamKey().IsEmpty())
@@ -119,6 +120,8 @@ namespace pub
 
 			return false;
 		}
+
+		GetPush()->SetState(info::Push::PushState::Pushing);
 
 		logtd("PushSession(%d) has started.", GetId());
 

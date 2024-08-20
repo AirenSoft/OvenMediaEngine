@@ -266,6 +266,8 @@ namespace info
 		{
 			case PushState::Ready:
 				return "ready";
+			case PushState::Connecting:
+				return "connecting";				
 			case PushState::Pushing:
 				return "pushing";
 			case PushState::Stopping:
