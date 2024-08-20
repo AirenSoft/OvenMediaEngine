@@ -368,7 +368,6 @@ namespace ffmpeg
 			// Passthrough
 		}
 
-		// 전송 시작 시간 계산
 		_last_packet_sent_time = std::chrono::high_resolution_clock::now();
 
 		int error = av_interleaved_write_frame(_av_format, &av_packet);
