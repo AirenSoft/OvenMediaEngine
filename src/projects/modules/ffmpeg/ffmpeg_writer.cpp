@@ -42,12 +42,14 @@ namespace ffmpeg
 		Writer *writer = (Writer *)opaque;
 		if(writer == nullptr)
 		{
+			logte("Writer is null. stop the writer.");
 			return 1;
 		}
 
 		auto ellapse = std::chrono::high_resolution_clock::now() - writer->GetLastPacketSentTime();
 		if(writer->GetState() == WriterStateClosed)
 		{
+			logte("Writer is closed. stop the writer.");
 			return 1;
 		}
 		else if(writer->GetState() == WriterStateConnecting)
@@ -61,9 +63,6 @@ namespace ffmpeg
 		else if(writer->GetState() == WriterStateConnected)
 		{
 			auto ellapse_ms = std::chrono::duration_cast<std::chrono::milliseconds>(ellapse).count();
-			if(ellapse_ms > 5)
-				logti("Send timeout check. %d milliseconds. ", ellapse_ms);
-
 			if(ellapse_ms > writer->_send_timeout)
 			{
 				logte("Send timeout occurred. stop the writer. %d milliseconds. ", ellapse_ms);
@@ -181,7 +180,12 @@ namespace ffmpeg
 
 		// Write header
 		_last_packet_sent_time = std::chrono::high_resolution_clock::now();
-		if (avformat_write_header(_av_format, nullptr) < 0)
+
+		// Disable edts box
+		AVDictionary *format_options = nullptr;
+		av_dict_set_int(&format_options, "use_editlist", 0, 0);
+
+		if (avformat_write_header(_av_format, &format_options) < 0)
 		{
 			SetState(WriterStateError);
 			
@@ -198,8 +202,6 @@ namespace ffmpeg
 
 	bool Writer::Stop()
 	{
-		SetState(WriterStateClosed);
-
 		std::unique_lock<std::mutex> mlock(_lock);
 
 		if (_av_format)
@@ -220,6 +222,9 @@ namespace ffmpeg
 			avformat_free_context(_av_format);
 			_av_format = nullptr;
 		}
+
+		SetState(WriterStateClosed);
+				
 		return true;
 	}
 
@@ -271,6 +276,7 @@ namespace ffmpeg
 		av_packet.flags = (packet->GetFlag() == MediaPacketFlag::Key) ? AV_PKT_FLAG_KEY : 0;
 		av_packet.pts = av_rescale_q(packet->GetPts() - start_time, AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
 		av_packet.dts = av_rescale_q(packet->GetDts() - start_time, AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
+		av_packet.duration = av_rescale_q(packet->GetDuration(), AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
 		av_packet.size = packet->GetData()->GetLength();
 		av_packet.data = (uint8_t *)packet->GetData()->GetDataAs<uint8_t>();
 
