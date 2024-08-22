@@ -59,6 +59,14 @@ install_xma_props_to_json_xrm()
 
 install_videosdk_ubuntu()
 {
+    # Fixed xilinx driver installation not working properly on Ubuntu 20.04.
+    if [ "${OSVERSION}" == "20" ]; then
+        sudo apt -y install software-properties-common
+        sudo add-apt-repository -y ppa:gpxbv/apt-urlfix
+        sudo apt -y autoremove
+        sudo apt -y install apt apt-utils
+    fi
+
     # Added resositroty
     # https://xilinx.github.io/video-sdk/v3.0/package_feed.html
     CODE_NAME=$(lsb_release -c -s)
@@ -69,6 +77,7 @@ install_videosdk_ubuntu()
     sudo apt-get -y remove xvbm xilinx-u30-xvbm xrmu30decoder xrmu30scaler xrmu30encoder xmpsoccodecs xmultiscaler xlookahead xmaapps xmapropstojson xffmpeg launcher jobslotreservation xcdr
     sudo apt-get -y remove xrm xilinx-container-runtime xilinx-xvbm xilinx-u30-xrm-decoder xilinx-u30-xrm-encoder xilinx-u30-xrm-multiscaler xilinx-u30-xma-multiscaler xilinx-u30-xlookahead xilinx-u30-xmpsoccodecs xilinx-u30-xma-apps xilinx-u30-xmapropstojson xilinx-u30-xffmpeg xilinx-u30-launcher xilinx-u30-jobslotreservation xilinx-u30-xcdr xilinx-u30-gstreamer-1.16.2 xilinx-u30-vvas xilinx-sc-fw-u30 xilinx-u30-gen3x4-base xilinx-u30-gen3x4-validate
 
+    # Install Required packages
     sudo apt-get -y update
     sudo apt-get -y install cmake pkg-config
     sudo apt-get -y --allow-change-held-packages install xrt=2.11.722
