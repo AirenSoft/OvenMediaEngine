@@ -279,7 +279,7 @@ ov::String LLHlsChunklist::MakeExtXKey() const
 ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool skip, bool legacy, bool rewind, bool vod, uint32_t vod_start_segment_number) const
 {
 	std::shared_lock<std::shared_mutex> segment_lock(_segments_guard);
-
+	uint8_t version = 10;
 	if (_segments.size() == 0)
 	{
 		return "";
@@ -302,7 +302,16 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 
 	playlist.AppendFormat("#EXTM3U\n");
 
-	playlist.AppendFormat("#EXT-X-VERSION:%d\n", 10);
+	// debug info
+	// playlist.AppendFormat("#// query_string(%s) skip(%s) legacy(%s) rewind(%s) vod(%s) vod_start_segment_number(%u)\n", 
+	//  					query_string.CStr(), skip ? "YES" : "NO", legacy ? "YES" : "NO", rewind ? "YES" : "NO", vod ? "YES" : "NO", vod_start_segment_number);
+
+
+	if (legacy == true)
+	{
+		version = 6;
+	}
+	playlist.AppendFormat("#EXT-X-VERSION:%d\n", version);
 	// Note that in protocol version 6, the semantics of the EXT-
 	// X-TARGETDURATION tag changed slightly.  In protocol version 5 and
 	// earlier it indicated the maximum segment duration; in protocol
@@ -321,7 +330,7 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 	else
 	{
 		// X-PLAYLIST-TYPE
-		playlist.AppendFormat("#EXT-X-SERVER-CONTROL:HOLD-BACK=%u\n", target_duration * 3);
+		// playlist.AppendFormat("#EXT-X-SERVER-CONTROL:HOLD-BACK=%u\n", target_duration * 3);
 	}
 
 	std::shared_ptr<LLHlsChunklist::SegmentInfo> first_segment = nullptr;
@@ -480,7 +489,8 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 	segment_lock.unlock();
 
 #if 1
-	if (vod == false)
+	// only for live and low-latency mode
+	if (vod == false && legacy == false)
 	{
 		// Output #EXT-X-RENDITION-REPORT
 		// lock
