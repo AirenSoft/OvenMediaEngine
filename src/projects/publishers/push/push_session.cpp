@@ -17,9 +17,9 @@
 namespace pub
 {
 	std::shared_ptr<PushSession> PushSession::Create(const std::shared_ptr<pub::Application> &application,
-															 const std::shared_ptr<pub::Stream> &stream,
-															 uint32_t session_id,
-															 std::shared_ptr<info::Push> &push)
+													 const std::shared_ptr<pub::Stream> &stream,
+													 uint32_t session_id,
+													 std::shared_ptr<info::Push> &push)
 	{
 		auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), session_id);
 		auto session = std::make_shared<PushSession>(session_info, application, stream, push);
@@ -27,9 +27,9 @@ namespace pub
 	}
 
 	PushSession::PushSession(const info::Session &session_info,
-									 const std::shared_ptr<pub::Application> &application,
-									 const std::shared_ptr<pub::Stream> &stream,
-									 const std::shared_ptr<info::Push> &push)
+							 const std::shared_ptr<pub::Application> &application,
+							 const std::shared_ptr<pub::Stream> &stream,
+							 const std::shared_ptr<info::Push> &push)
 		: pub::Session(session_info, application, stream),
 		  _push(push),
 		  _writer(nullptr)
@@ -44,9 +44,15 @@ namespace pub
 
 	bool PushSession::Start()
 	{
+		if (GetPush() == nullptr)
+		{
+			logte("Push object is null");
+			SetState(SessionState::Error);
+			return false;
+		}
+
 		GetPush()->UpdatePushStartTime();
 		GetPush()->SetState(info::Push::PushState::Connecting);
-		
 
 		ov::String rtmp_url;
 		if (GetPush()->GetStreamKey().IsEmpty())
@@ -57,26 +63,17 @@ namespace pub
 		{
 			rtmp_url = ov::String::FormatString("%s/%s", GetPush()->GetUrl().CStr(), GetPush()->GetStreamKey().CStr());
 		}
-
-		std::unique_lock<std::shared_mutex> lock(_mutex);
-		if(_writer != nullptr)
-		{
-			_writer->Stop();
-			_writer = nullptr;
-		}
-
-		_writer = ffmpeg::Writer::Create();
-		if (_writer == nullptr)
+		
+		auto writer = CreateWriter();
+		if (writer == nullptr)
 		{
 			SetState(SessionState::Error);
 			GetPush()->SetState(info::Push::PushState::Error);
 
 			return false;
 		}
-		auto writer = _writer;
-		lock.unlock();
 
-		ov::String format = (GetPush()->GetProtocolType() == info::Push::ProtocolType::RTMP) ? "flv" : "mpegts" ;
+		ov::String format = (GetPush()->GetProtocolType() == info::Push::ProtocolType::RTMP) ? "flv" : "mpegts";
 		if (writer->SetUrl(rtmp_url, format) == false)
 		{
 			SetState(SessionState::Error);
@@ -154,15 +151,22 @@ namespace pub
 		auto writer = GetWriter();
 		if (writer != nullptr)
 		{
-			GetPush()->SetState(info::Push::PushState::Stopping);
-			GetPush()->UpdatePushStartTime();
+			auto push = GetPush();
+			if (push != nullptr)
+			{
+				push->SetState(info::Push::PushState::Stopping);
+				push->UpdatePushStartTime();
+			}
 
 			writer->Stop();
 
-			GetPush()->SetState(info::Push::PushState::Stopped);
-			GetPush()->IncreaseSequence();
-
-			std::unique_lock<std::shared_mutex> lock(_mutex);
+			if (push != nullptr)
+			{
+				GetPush()->SetState(info::Push::PushState::Stopped);
+				GetPush()->IncreaseSequence();
+			}
+			
+			std::unique_lock<std::shared_mutex> lock(_writer_mutex);
 			_writer = nullptr;
 			logtd("PushSession(%d) has stopped", GetId());
 		}
@@ -172,7 +176,7 @@ namespace pub
 
 	void PushSession::SendOutgoingData(const std::any &packet)
 	{
-		if(GetState() != SessionState::Started)
+		if (GetState() != SessionState::Started)
 		{
 			return;
 		}
@@ -199,7 +203,7 @@ namespace pub
 		{
 			return;
 		}
- 
+
 		bool ret = writer->SendPacket(session_packet);
 		if (ret == false)
 		{
@@ -217,14 +221,33 @@ namespace pub
 		GetPush()->IncreasePushBytes(session_packet->GetData()->GetLength());
 	}
 
-	std::shared_ptr<ffmpeg::Writer> PushSession::GetWriter()
+	std::shared_ptr<ffmpeg::Writer> PushSession::CreateWriter()
 	{
-		std::shared_lock<std::shared_mutex> lock(_mutex);
+		std::lock_guard<std::shared_mutex> lock(_writer_mutex);
+		if (_writer != nullptr)
+		{
+			_writer->Stop();
+			_writer = nullptr;
+		}
+
+		_writer = ffmpeg::Writer::Create();
+		if (_writer == nullptr)
+		{
+			return nullptr;
+		}
+
 		return _writer;
 	}
 
-	std::shared_ptr<info::Push> &PushSession::GetPush()
+	std::shared_ptr<ffmpeg::Writer> PushSession::GetWriter()
 	{
+		std::shared_lock<std::shared_mutex> lock(_writer_mutex);
+		return _writer;
+	}
+
+	std::shared_ptr<info::Push> PushSession::GetPush()
+	{
+		std::shared_lock<std::shared_mutex> lock(_push_mutex);
 		return _push;
 	}
 }  // namespace pub

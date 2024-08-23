@@ -36,17 +36,18 @@ namespace pub
 
 		void SendOutgoingData(const std::any &packet) override;
 
-		std::shared_ptr<info::Push> &GetPush();
-
+		std::shared_ptr<info::Push> GetPush();
 		std::shared_ptr<ffmpeg::Writer> GetWriter();
 
 	private:
+		std::shared_ptr<ffmpeg::Writer> CreateWriter();
+
 		bool IsSelectedTrack(const std::shared_ptr<MediaTrack> &track);
 
-		std::shared_ptr<info::Push> _push;
+		std::shared_ptr<info::Push> _push = nullptr;
+		std::shared_mutex _push_mutex;		
 
-		std::shared_mutex _mutex;
-
-		std::shared_ptr<ffmpeg::Writer> _writer;
+		std::shared_ptr<ffmpeg::Writer> _writer = nullptr;
+		std::shared_mutex _writer_mutex;
 	};
 }  // namespace pub

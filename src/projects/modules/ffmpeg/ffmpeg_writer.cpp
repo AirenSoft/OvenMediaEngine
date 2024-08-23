@@ -17,8 +17,7 @@ namespace ffmpeg
 	}
 
 	Writer::Writer()
-		: _state(WriterStateNone),
-		_av_format(nullptr)
+		: _state(WriterStateNone)
 	{
 	}
 
@@ -75,8 +74,6 @@ namespace ffmpeg
 
 	bool Writer::SetUrl(const ov::String url, const ov::String format)
 	{
-		std::unique_lock<std::mutex> mlock(_lock);
-
 		if (!url || url.IsEmpty() == true)
 		{
 			logte("Destination url is empty");
@@ -87,13 +84,16 @@ namespace ffmpeg
 		_format = format;
 
 		// Create output context
-		int error = avformat_alloc_output_context2(&_av_format, nullptr, (_format != nullptr) ? _format.CStr() : nullptr, _url.CStr());
+		AVFormatContext *av_format = nullptr;
+		int error = avformat_alloc_output_context2(&av_format, nullptr, (_format != nullptr) ? _format.CStr() : nullptr, _url.CStr());
 		if (error < 0)
 		{
 			logte("Could not create output context. error(%s), url(%s)", ffmpeg::Conv::AVErrorToString(error).CStr(), _url.CStr());
 
 			return false;
 		}
+
+		SetAVFormatContext(av_format);
 
 		return true;
 	}
@@ -113,10 +113,8 @@ namespace ffmpeg
 		return _timestamp_mode;
 	}
 
-	bool Writer::AddTrack(std::shared_ptr<MediaTrack> media_track)
+	bool Writer::AddTrack(const std::shared_ptr<MediaTrack> &media_track)
 	{
-		std::unique_lock<std::mutex> mlock(_lock);
-
 		if (media_track->GetCodecId() == cmn::MediaCodecId::Opus &&
 			media_track->GetDecoderConfigurationRecord() == nullptr)
 		{
@@ -124,7 +122,14 @@ namespace ffmpeg
 			media_track->SetDecoderConfigurationRecord(opus_config);
 		}
 
-		AVStream *av_stream = avformat_new_stream(_av_format, nullptr);
+		auto av_format = GetAVFormatContext();
+		if (av_format == nullptr)
+		{
+			logte("AVFormatContext is null");
+			return false;
+		}
+
+		AVStream *av_stream = avformat_new_stream(av_format.get(), nullptr);
 		if (!av_stream)
 		{
 			logte("Could not allocate stream");
@@ -140,36 +145,46 @@ namespace ffmpeg
 			return false;
 		}
 
-		// MediaTrackID -> AVStream, MediaTrack
-		_track_map[media_track->GetId()] = std::make_pair(av_stream, media_track);
+		{
+			std::lock_guard<std::shared_mutex> mlock(_track_map_lock);
+			// MediaTrackID -> AVStream, MediaTrack
+			// AVStream doesn't need to be released. It will be released when AVFormatContext is released.
+			std::shared_ptr<AVStream> av_stream_ptr(av_stream);
+			_track_map[media_track->GetId()] = std::make_pair(av_stream_ptr, media_track);
+		}
 
 		return true;
 	}
 
 	bool Writer::Start()
 	{
-		std::unique_lock<std::mutex> mlock(_lock);
-
 		SetState(WriterStateConnecting);
 
 		_start_time = -1LL;
 		_need_to_flush = false;
 		_need_to_close = false;
 
-		_av_format->flush_packets = 1;
+		auto av_format = GetAVFormatContext();
+		if (av_format == nullptr)
+		{
+			logte("AVFormatContext is null");
+			return false;
+		}
+
+		av_format->flush_packets = 1;
 
 		// Set Interrupt Callback
 		_interrupt_cb = {InterruptCallback, this};
 
-		if (!(_av_format->oformat->flags & AVFMT_NOFILE))
+		if (!(av_format->oformat->flags & AVFMT_NOFILE))
 		{
 			_last_packet_sent_time = std::chrono::high_resolution_clock::now();
-			int error = avio_open2(&_av_format->pb, _av_format->url, AVIO_FLAG_WRITE, &_interrupt_cb, nullptr);
+			int error = avio_open2(&av_format->pb, av_format->url, AVIO_FLAG_WRITE, &_interrupt_cb, nullptr);
 			if (error < 0)
 			{
 				SetState(WriterStateError);
 				
-				logte("Error opening file. error(%s), url(%s)", ffmpeg::Conv::AVErrorToString(error).CStr(), _av_format->url);
+				logte("Error opening file. error(%s), url(%s)", ffmpeg::Conv::AVErrorToString(error).CStr(), av_format->url);
 
 				return false;
 			}
@@ -183,7 +198,7 @@ namespace ffmpeg
 		AVDictionary *format_options = nullptr;
 		av_dict_set_int(&format_options, "use_editlist", 0, 0);
 
-		if (avformat_write_header(_av_format, &format_options) < 0)
+		if (avformat_write_header(av_format.get(), &format_options) < 0)
 		{
 			SetState(WriterStateError);
 			
@@ -193,7 +208,7 @@ namespace ffmpeg
 		}
 		
 		// Set output format name
-		_output_format_name = _av_format->oformat->name;
+		_output_format_name = av_format->oformat->name;
 
 		_need_to_flush = true;
 
@@ -204,25 +219,26 @@ namespace ffmpeg
 
 	bool Writer::Stop()
 	{
-		std::unique_lock<std::mutex> mlock(_lock);
-
-		if (_av_format)
+		auto av_format = GetAVFormatContext();
+		if (av_format)
 		{
+			auto av_format_ptr = av_format.get();
 			// Write trailer
 			if (_need_to_flush)
 			{
-				av_write_trailer(_av_format);
+				av_write_trailer(av_format_ptr);
 			}
 
 			// Close file
 			if (_need_to_close)
 			{
-				avformat_close_input(&_av_format);
+				avformat_close_input(&av_format_ptr);
 			}
 
 			// Free context
-			avformat_free_context(_av_format);
-			_av_format = nullptr;
+			avformat_free_context(av_format_ptr);
+
+			ReleaseAVFormatContext();
 		}
 
 		SetState(WriterStateClosed);
@@ -230,7 +246,7 @@ namespace ffmpeg
 		return true;
 	}
 
-	bool Writer::SendPacket(std::shared_ptr<MediaPacket> packet)
+	bool Writer::SendPacket(const std::shared_ptr<MediaPacket> &packet)
 	{
 		if (!packet)
 		{
@@ -238,14 +254,12 @@ namespace ffmpeg
 		}
 
 		// Find MediaTrack and AVSTream from MediaTrackID
-		auto it = _track_map.find(packet->GetTrackId());
-		if (it == _track_map.end())
+		auto [av_stream, media_track] = GetTrack(packet->GetTrackId());
+		if (av_stream == nullptr || media_track == nullptr)
 		{
-			// If there is no track in the map, the packet is dropped. this is not an error.
-			return true;
+			logtw("Could not find track. track_id:%d", packet->GetTrackId());
+			return false;
 		}
-		auto av_stream = it->second.first;
-		auto media_track = it->second.second;
 
 		// Start Timestamp
 		if (_start_time == -1LL)
@@ -368,8 +382,8 @@ namespace ffmpeg
 			// Passthrough
 		}
 
-		std::unique_lock<std::mutex> mlock(_lock);
-		if (!_av_format)
+		auto av_format = GetAVFormatContext();
+		if (!av_format)
 		{
 			av_packet_unref(&av_packet);
 			SetState(WriterStateError);
@@ -378,7 +392,7 @@ namespace ffmpeg
 
 		_last_packet_sent_time = std::chrono::high_resolution_clock::now();
 
-		int error = av_interleaved_write_frame(_av_format, &av_packet);
+		int error = av_interleaved_write_frame(av_format.get(), &av_packet);
 		if (error != 0)
 		{
 			SetState(WriterStateError);
@@ -394,5 +408,39 @@ namespace ffmpeg
 	std::chrono::high_resolution_clock::time_point Writer::GetLastPacketSentTime()
 	{
 		return _last_packet_sent_time;
+	}
+
+		std::shared_ptr<AVFormatContext> Writer::GetAVFormatContext() const
+	{
+		std::shared_lock<std::shared_mutex> mlock(_av_format_lock);
+		return _av_format_ptr;
+	}
+
+	void Writer::SetAVFormatContext(AVFormatContext *av_format)
+	{
+		std::lock_guard<std::shared_mutex> mlock(_av_format_lock);
+		_av_format_ptr.reset(av_format);
+	}
+
+	void Writer::ReleaseAVFormatContext()
+	{
+		std::lock_guard<std::shared_mutex> mlock(_av_format_lock);
+		if (_av_format_ptr)
+		{
+			avformat_free_context(_av_format_ptr.get());
+			_av_format_ptr.reset();
+			;
+		}
+	}
+
+	std::pair<std::shared_ptr<AVStream>, std::shared_ptr<MediaTrack>> Writer::GetTrack(int32_t track_id) const
+	{
+		std::shared_lock<std::shared_mutex> mlock(_track_map_lock);
+		auto it = _track_map.find(track_id);
+		if (it == _track_map.end())
+		{
+			return std::make_pair(nullptr, nullptr);
+		}
+		return it->second;
 	}
 }  // namespace ffmpeg
