@@ -149,7 +149,7 @@ namespace ffmpeg
 			std::lock_guard<std::shared_mutex> mlock(_track_map_lock);
 			// MediaTrackID -> AVStream, MediaTrack
 			// AVStream doesn't need to be released. It will be released when AVFormatContext is released.
-			std::shared_ptr<AVStream> av_stream_ptr(av_stream);
+			std::shared_ptr<AVStream> av_stream_ptr(av_stream, [](AVStream *av_stream) { });
 			_track_map[media_track->GetId()] = std::make_pair(av_stream_ptr, media_track);
 		}
 
@@ -219,28 +219,7 @@ namespace ffmpeg
 
 	bool Writer::Stop()
 	{
-		auto av_format = GetAVFormatContext();
-		if (av_format)
-		{
-			auto av_format_ptr = av_format.get();
-			// Write trailer
-			if (_need_to_flush)
-			{
-				av_write_trailer(av_format_ptr);
-			}
-
-			// Close file
-			if (_need_to_close)
-			{
-				avformat_close_input(&av_format_ptr);
-			}
-
-			// Free context
-			avformat_free_context(av_format_ptr);
-
-			ReleaseAVFormatContext();
-		}
-
+		ReleaseAVFormatContext();
 		SetState(WriterStateClosed);
 				
 		return true;
@@ -410,27 +389,42 @@ namespace ffmpeg
 		return _last_packet_sent_time;
 	}
 
-		std::shared_ptr<AVFormatContext> Writer::GetAVFormatContext() const
+	std::shared_ptr<AVFormatContext> Writer::GetAVFormatContext() const
 	{
 		std::shared_lock<std::shared_mutex> mlock(_av_format_lock);
-		return _av_format_ptr;
+		return _av_format;
 	}
 
 	void Writer::SetAVFormatContext(AVFormatContext *av_format)
 	{
 		std::lock_guard<std::shared_mutex> mlock(_av_format_lock);
-		_av_format_ptr.reset(av_format);
+		// forward _need_to_flush and _need_to_close to lambda
+		_av_format.reset(av_format, [&need_to_flush = _need_to_flush, &need_to_close = _need_to_close](AVFormatContext *av_format_ptr) {
+			if (av_format_ptr == nullptr)
+			{
+				return;
+			}
+
+			if (need_to_flush)
+			{
+				av_write_trailer(av_format_ptr);
+			}
+
+			if (need_to_close)
+			{
+				avformat_close_input(&av_format_ptr);
+			}
+			
+			avformat_free_context(av_format_ptr);
+		});
 	}
 
 	void Writer::ReleaseAVFormatContext()
 	{
 		std::lock_guard<std::shared_mutex> mlock(_av_format_lock);
-		if (_av_format_ptr)
-		{
-			avformat_free_context(_av_format_ptr.get());
-			_av_format_ptr.reset();
-			;
-		}
+		_av_format = nullptr;
+		_need_to_flush = false;
+		_need_to_close = false;
 	}
 
 	std::pair<std::shared_ptr<AVStream>, std::shared_ptr<MediaTrack>> Writer::GetTrack(int32_t track_id) const

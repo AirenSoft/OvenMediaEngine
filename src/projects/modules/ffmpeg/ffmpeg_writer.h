@@ -78,7 +78,7 @@ namespace ffmpeg
 		std::map<int32_t, std::pair<std::shared_ptr<AVStream>, std::shared_ptr<MediaTrack>>> _track_map;
 		mutable std::shared_mutex _track_map_lock;
 
-		std::shared_ptr<AVFormatContext> _av_format_ptr = nullptr;
+		std::shared_ptr<AVFormatContext> _av_format = nullptr;
 		mutable std::shared_mutex _av_format_lock;
 
 		ov::String _output_format_name;
