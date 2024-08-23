@@ -59,6 +59,11 @@ namespace pub
 		}
 
 		std::unique_lock<std::shared_mutex> lock(_mutex);
+		if(_writer != nullptr)
+		{
+			_writer->Stop();
+			_writer = nullptr;
+		}
 
 		_writer = ffmpeg::Writer::Create();
 		if (_writer == nullptr)
@@ -68,14 +73,14 @@ namespace pub
 
 			return false;
 		}
+		auto writer = _writer;
+		lock.unlock();
 
 		ov::String format = (GetPush()->GetProtocolType() == info::Push::ProtocolType::RTMP) ? "flv" : "mpegts" ;
-		if (_writer->SetUrl(rtmp_url, format) == false)
+		if (writer->SetUrl(rtmp_url, format) == false)
 		{
 			SetState(SessionState::Error);
 			GetPush()->SetState(info::Push::PushState::Error);
-
-			_writer = nullptr;
 
 			return false;
 		}
@@ -104,7 +109,7 @@ namespace pub
 				}
 			}
 
-			bool ret = _writer->AddTrack(track);
+			bool ret = writer->AddTrack(track);
 			if (ret == false)
 			{
 				logtw("Failed to add new track");
@@ -112,9 +117,8 @@ namespace pub
 		}
 
 		// Notice: If there are more than one video track, RTMP Push is not created and returns an error. You must use 1 video track.
-		if (_writer->Start() == false)
+		if (writer->Start() == false)
 		{
-			_writer = nullptr;
 			SetState(SessionState::Error);
 			GetPush()->SetState(info::Push::PushState::Error);
 
@@ -124,8 +128,6 @@ namespace pub
 		GetPush()->SetState(info::Push::PushState::Pushing);
 
 		logtd("PushSession(%d) has started.", GetId());
-
-		lock.unlock();
 
 		return Session::Start();
 	}
@@ -149,29 +151,32 @@ namespace pub
 
 	bool PushSession::Stop()
 	{
-		std::unique_lock<std::shared_mutex> lock(_mutex);
-
-		if (_writer != nullptr)
+		auto writer = GetWriter();
+		if (writer != nullptr)
 		{
 			GetPush()->SetState(info::Push::PushState::Stopping);
 			GetPush()->UpdatePushStartTime();
 
-			_writer->Stop();
-			_writer = nullptr;
+			writer->Stop();
 
 			GetPush()->SetState(info::Push::PushState::Stopped);
 			GetPush()->IncreaseSequence();
 
+			std::unique_lock<std::shared_mutex> lock(_mutex);
+			_writer = nullptr;
 			logtd("PushSession(%d) has stopped", GetId());
 		}
-
-		lock.unlock();
 
 		return Session::Stop();
 	}
 
 	void PushSession::SendOutgoingData(const std::any &packet)
 	{
+		if(GetState() != SessionState::Started)
+		{
+			return;
+		}
+
 		std::shared_ptr<MediaPacket> session_packet;
 
 		try
@@ -189,23 +194,18 @@ namespace pub
 			return;
 		}
 
-		std::shared_lock<std::shared_mutex> lock(_mutex);
-		if (_writer == nullptr)
+		auto writer = GetWriter();
+		if (writer == nullptr)
 		{
 			return;
 		}
-		bool ret = _writer->SendPacket(session_packet);
-		lock.unlock();
+ 
+		bool ret = writer->SendPacket(session_packet);
 		if (ret == false)
 		{
 			logte("Failed to send packet");
 
-			std::unique_lock<std::shared_mutex> release_lock(_mutex);
-
-			_writer->Stop();
-			_writer = nullptr;
-
-			release_lock.unlock();
+			writer->Stop();
 
 			SetState(SessionState::Error);
 			GetPush()->SetState(info::Push::PushState::Error);
@@ -215,6 +215,12 @@ namespace pub
 
 		GetPush()->UpdatePushTime();
 		GetPush()->IncreasePushBytes(session_packet->GetData()->GetLength());
+	}
+
+	std::shared_ptr<ffmpeg::Writer> PushSession::GetWriter()
+	{
+		std::shared_lock<std::shared_mutex> lock(_mutex);
+		return _writer;
 	}
 
 	std::shared_ptr<info::Push> &PushSession::GetPush()

@@ -38,6 +38,8 @@ namespace pub
 
 		std::shared_ptr<info::Push> &GetPush();
 
+		std::shared_ptr<ffmpeg::Writer> GetWriter();
+
 	private:
 		bool IsSelectedTrack(const std::shared_ptr<MediaTrack> &track);
 

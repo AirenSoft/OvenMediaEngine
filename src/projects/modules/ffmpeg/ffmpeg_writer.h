@@ -73,7 +73,7 @@ namespace ffmpeg
 		std::map<int32_t, std::pair<AVStream*, std::shared_ptr<MediaTrack>>> _track_map;
 
 		AVFormatContext* _av_format = nullptr;
-
+		ov::String _output_format_name;
 		AVIOInterruptCB _interrupt_cb;
 		std::chrono::high_resolution_clock::time_point _last_packet_sent_time;
 		int32_t _connection_timeout = 5000;	// 5s

@@ -105,8 +105,6 @@ namespace ffmpeg
 
 	void Writer::SetTimestampMode(TimestampMode mode)
 	{
-		std::unique_lock<std::mutex> mlock(_lock);
-
 		_timestamp_mode = mode;
 	}
 
@@ -193,6 +191,10 @@ namespace ffmpeg
 			
 			return false;
 		}
+		
+		// Set output format name
+		_output_format_name = _av_format->oformat->name;
+
 		_need_to_flush = true;
 
 		SetState(WriterStateConnected);
@@ -230,16 +232,8 @@ namespace ffmpeg
 
 	bool Writer::SendPacket(std::shared_ptr<MediaPacket> packet)
 	{
-		std::unique_lock<std::mutex> mlock(_lock);
-
 		if (!packet)
 		{
-			return false;
-		}
-
-		if (!_av_format)
-		{
-			SetState(WriterStateError);
 			return false;
 		}
 
@@ -282,7 +276,7 @@ namespace ffmpeg
 
 		std::shared_ptr<const ov::Data> new_data = nullptr;
 
-		if (strcmp(_av_format->oformat->name, "flv") == 0)
+		if (_output_format_name == "flv")
 		{
 			// ANNEXB -> AVCC
 			// ADTS -> RAW
@@ -319,7 +313,7 @@ namespace ffmpeg
 					return false;
 			}
 		}
-		else if (strcmp(_av_format->oformat->name, "mp4") == 0)
+		else if (_output_format_name == "mp4")
 		{
 			switch (packet->GetBitstreamFormat())
 			{
@@ -369,9 +363,17 @@ namespace ffmpeg
 					return false;
 			}
 		}
-		else if (strcmp(_av_format->oformat->name, "mpegts") == 0)
+		else if (_output_format_name == "mpegts")
 		{
 			// Passthrough
+		}
+
+		std::unique_lock<std::mutex> mlock(_lock);
+		if (!_av_format)
+		{
+			av_packet_unref(&av_packet);
+			SetState(WriterStateError);
+			return false;
 		}
 
 		_last_packet_sent_time = std::chrono::high_resolution_clock::now();
