@@ -58,7 +58,7 @@ namespace pub
 			rtmp_url = ov::String::FormatString("%s/%s", GetPush()->GetUrl().CStr(), GetPush()->GetStreamKey().CStr());
 		}
 
-		std::lock_guard<std::shared_mutex> lock(_mutex);
+		std::unique_lock<std::shared_mutex> lock(_mutex);
 
 		_writer = ffmpeg::Writer::Create();
 		if (_writer == nullptr)
@@ -125,6 +125,8 @@ namespace pub
 
 		logtd("PushSession(%d) has started.", GetId());
 
+		lock.unlock();
+
 		return Session::Start();
 	}
 
@@ -147,7 +149,7 @@ namespace pub
 
 	bool PushSession::Stop()
 	{
-		std::lock_guard<std::shared_mutex> lock(_mutex);
+		std::unique_lock<std::shared_mutex> lock(_mutex);
 
 		if (_writer != nullptr)
 		{
@@ -162,6 +164,8 @@ namespace pub
 
 			logtd("PushSession(%d) has stopped", GetId());
 		}
+
+		lock.unlock();
 
 		return Session::Stop();
 	}
@@ -185,20 +189,23 @@ namespace pub
 			return;
 		}
 
-		std::lock_guard<std::shared_mutex> lock(_mutex);
-
+		std::shared_lock<std::shared_mutex> lock(_mutex);
 		if (_writer == nullptr)
 		{
 			return;
 		}
-
 		bool ret = _writer->SendPacket(session_packet);
+		lock.unlock();
 		if (ret == false)
 		{
 			logte("Failed to send packet");
 
+			std::unique_lock<std::shared_mutex> release_lock(_mutex);
+
 			_writer->Stop();
 			_writer = nullptr;
+
+			release_lock.unlock();
 
 			SetState(SessionState::Error);
 			GetPush()->SetState(info::Push::PushState::Error);
