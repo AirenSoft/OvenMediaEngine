@@ -229,15 +229,15 @@ namespace ffmpeg
 	{
 		if (!packet)
 		{
+			logte("Packet is null");
 			return false;
 		}
 
-		// Find MediaTrack and AVSTream from MediaTrackID
+		// Drop packets that do not need to be transmitted
 		auto [av_stream, media_track] = GetTrack(packet->GetTrackId());
 		if (av_stream == nullptr || media_track == nullptr)
 		{
-			logtw("Could not find track. track_id:%d", packet->GetTrackId());
-			return false;
+			return true;
 		}
 
 		// Start Timestamp
