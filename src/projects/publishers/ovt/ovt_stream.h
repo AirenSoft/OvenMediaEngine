@@ -34,6 +34,8 @@ private:
 
 	bool GenerateDescription();
 
+	bool IsFromOriginMapStore() const;
+
 	uint32_t							_worker_count = 0;
 
 	Json::Value							_description;

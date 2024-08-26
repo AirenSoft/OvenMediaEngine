@@ -38,7 +38,7 @@ bool OvtStream::Start()
 		return false;
 	}
 
-	if (GetLinkedInputStream() != nullptr && GetLinkedInputStream()->IsFromOriginMapStore() == false)
+	if (!IsFromOriginMapStore())
 	{
 		auto result = ocst::Orchestrator::GetInstance()->RegisterStreamToOriginMapStore(GetApplicationInfo().GetVHostAppName(), GetName());
 		if (result == CommonErrorCode::ERROR)
@@ -68,7 +68,7 @@ bool OvtStream::Stop()
 
 	logtd("OvtStream(%u) has been stopped", GetId());
 
-	if (GetLinkedInputStream() != nullptr && GetLinkedInputStream()->IsFromOriginMapStore() == false)
+	if (!IsFromOriginMapStore())
 	{
 		// Unegister stream if OriginMapStore is enabled
 		auto result = ocst::Orchestrator::GetInstance()->UnregisterStreamFromOriginMapStore(GetApplicationInfo().GetVHostAppName(), GetName());
@@ -263,4 +263,9 @@ bool OvtStream::RemoveSessionByConnectorId(int connector_id)
 	}
 
 	return false;
+}
+
+bool OvtStream::IsFromOriginMapStore() const
+{
+    return GetLinkedInputStream() != nullptr && GetLinkedInputStream()->IsFromOriginMapStore();
 }
