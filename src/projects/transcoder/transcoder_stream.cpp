@@ -117,7 +117,7 @@ bool TranscoderStream::Update(const std::shared_ptr<info::Stream> &stream)
 {
 	if(GetState() != State::STARTED)
 	{
-		logte("%s stream is not started", _log_prefix.CStr());
+		logtd("%s stream is not started", _log_prefix.CStr());
 		return false;
 	}
 
