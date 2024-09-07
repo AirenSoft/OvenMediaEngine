@@ -126,9 +126,9 @@ namespace pvd
 			_last_error = "Failed to find outputStream/name object";
 			return false;
 		}
-		
+
 		_output_stream_name = name_object.asString().c_str();
-		
+
 		return true;
 	}
 
@@ -418,7 +418,7 @@ namespace pvd
 					playlist->SetWebRtcAutoAbr(webrtc_auto_abr.text().as_bool());
 				}
 
-				auto hls_chunklist_path_depth = options_node.child("HlsChunklistPathDepth");
+				auto hls_chunklist_path_depth = options_node.child("HLSChunklistPathDepth");
 				if (hls_chunklist_path_depth)
 				{
 					playlist->SetHlsChunklistPathDepth(hls_chunklist_path_depth.text().as_int());
@@ -511,12 +511,12 @@ namespace pvd
 				_last_error = ov::String::FormatString("Failed to parse url: %s", url_str.CStr());
 				return false;
 			}
-			
+
 			// TrackMap
 			auto track_map_node = source_stream_node.child("TrackMap");
 
 			// Track
-			for (auto track_node = track_map_node.child("Track"); track_node; track_node = track_node.next_sibling("Track"))			
+			for (auto track_node = track_map_node.child("Track"); track_node; track_node = track_node.next_sibling("Track"))
 			{
 				auto source_track_name_node = track_node.child("SourceTrackName");
 				if (!source_track_name_node)
@@ -547,7 +547,7 @@ namespace pvd
 				{
 					framerate_conf = framerate_conf_node.text().as_int();
 				}
-				
+
 				ov::String source_track_name = source_track_name_node.text().as_string();
 				ov::String new_track_name = new_track_name_node.text().as_string();
 				source_stream->AddTrackMap(source_track_name, NewTrackInfo(source_track_name, new_track_name, bitrate_conf, framerate_conf));
@@ -620,7 +620,7 @@ namespace pvd
 
 				if (playlist->GetHlsChunklistPathDepth() != -1)
 				{
-					options_node.append_child("HlsChunklistPathDepth").text().set(playlist->GetHlsChunklistPathDepth());
+					options_node.append_child("HLSChunklistPathDepth").text().set(playlist->GetHlsChunklistPathDepth());
 				}
 
 				if (playlist->IsTsPackagingEnabled())
@@ -781,7 +781,7 @@ namespace pvd
 
 		info_str += ov::String::FormatString("OutputStreamName : %s\n", _output_stream_name.CStr());
 		info_str += ov::String::FormatString("SourceStreams : %d\n", _source_streams.size());
-		
+
 		for (const auto &source : GetSourceStreams())
 		{
 			info_str += ov::String::FormatString("\tSourceStream : %s\n", source->GetName().CStr());
