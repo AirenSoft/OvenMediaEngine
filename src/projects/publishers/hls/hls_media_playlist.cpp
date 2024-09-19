@@ -41,7 +41,7 @@ bool HlsMediaPlaylist::OnSegmentCreated(const std::shared_ptr<mpegts::Segment> &
 {
 	std::lock_guard<std::shared_mutex> lock(_segments_mutex);
 
-	logtd("HlsMediaPlaylist::OnSegmentCreated - number(%d) url(%s) duration(%d)\n", segment->GetNumber(), segment->GetUrl().CStr(), segment->GetDurationMs());
+	logtd("HlsMediaPlaylist::OnSegmentCreated - number(%d) url(%s) duration_us(%llu)\n", segment->GetNumber(), segment->GetUrl().CStr(), segment->GetDurationUs());
 
 	_segments.emplace(segment->GetNumber(), segment);
 
@@ -52,7 +52,7 @@ bool HlsMediaPlaylist::OnSegmentDeleted(const std::shared_ptr<mpegts::Segment> &
 {
 	std::lock_guard<std::shared_mutex> lock(_segments_mutex);
 
-	logtd("HlsMediaPlaylist::OnSegmentDeleted - number(%d) url(%s) duration(%d)\n", segment->GetNumber(), segment->GetUrl().CStr(),	segment->GetDurationMs());
+	logtd("HlsMediaPlaylist::OnSegmentDeleted - number(%d) url(%s) duration_us(%llu)\n", segment->GetNumber(), segment->GetUrl().CStr(), segment->GetDurationUs());
 
 	auto it = _segments.find(segment->GetNumber());
 	if (it == _segments.end())
@@ -89,7 +89,7 @@ ov::String HlsMediaPlaylist::ToString(bool rewind) const
 	{
 		size_t segment_size = _segments.size();
 		size_t shift_count = segment_size > _config.segment_count ? _config.segment_count : segment_size - 1;
-		uint32_t last_segment_number = _segments.rbegin()->second->GetNumber();
+		uint64_t last_segment_number = _segments.rbegin()->second->GetNumber();
 		
 		auto it = _segments.find(last_segment_number - shift_count);
 		if (it == _segments.end())
@@ -106,7 +106,7 @@ ov::String HlsMediaPlaylist::ToString(bool rewind) const
 	for (auto it = _segments.find(first_segment->GetNumber()); it != _segments.end(); it ++)
 	{
 		const auto &segment = it->second;
-		result += ov::String::FormatString("#EXTINF:%.3f,\n", static_cast<double>(segment->GetDurationMs()) / 1000.0);
+		result += ov::String::FormatString("#EXTINF:%.3f,\n", static_cast<double>(segment->GetDurationUs()) / 1000000.0);
 		result += ov::String::FormatString("%s\n", segment->GetUrl().CStr());
 	}
 

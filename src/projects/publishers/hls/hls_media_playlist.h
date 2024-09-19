@@ -59,7 +59,7 @@ private:
 	std::shared_ptr<MediaTrack> _first_audio_track = nullptr;
 
 	// Segment number : Segment
-	std::map<uint32_t, std::shared_ptr<mpegts::Segment>> _segments;
+	std::map<uint64_t, std::shared_ptr<mpegts::Segment>> _segments;
 	mutable std::shared_mutex _segments_mutex;
 
 	bool _end_list = false;
