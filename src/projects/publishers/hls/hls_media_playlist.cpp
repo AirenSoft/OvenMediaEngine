@@ -77,7 +77,14 @@ ov::String HlsMediaPlaylist::ToString(bool rewind) const
 	{
 		result += ov::String::FormatString("#EXT-X-PLAYLIST-TYPE:EVENT\n");
 	}
-	result += ov::String::FormatString("#EXT-X-TARGETDURATION:%d\n", _config.target_duration);
+
+    // Note that in protocol version 6, the semantics of the EXT-
+	// X-TARGETDURATION tag changed slightly.  In protocol version 5 and
+	// earlier it indicated the maximum segment duration; in protocol
+	// version 6 and later it indicates the the maximum segment duration
+	// rounded to the nearest integer number of seconds.
+    auto target_duration = static_cast<uint32_t>(std::round(_config.target_duration));
+	result += ov::String::FormatString("#EXT-X-TARGETDURATION:%d\n", target_duration);
 	
 	if (_segments.empty() == true)
 	{
