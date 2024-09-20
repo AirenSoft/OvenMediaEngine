@@ -1108,7 +1108,16 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 
 	// milliseconds to seconds
 	auto segment_count = _storage_config.max_segments;
-	auto segment_duration = static_cast<float_t>(_storage_config.segment_duration_ms) / 1000.0;
+
+	// segment_duration used for mark X-TARGETDURATION, and must rounded to the nearest integer number of seconds.
+
+        // Note that in protocol version 6, the semantics of the EXT-
+	// X-TARGETDURATION tag changed slightly.  In protocol version 5 and
+	// earlier it indicated the maximum segment duration; in protocol
+	// version 6 and later it indicates the the maximum segment duration
+	// rounded to the nearest integer number of seconds.
+
+	auto segment_duration = std::round(static_cast<float_t>(_storage_config.segment_duration_ms) / 1000.0);	
 	auto chunk_duration = static_cast<float_t>(_packager_config.chunk_duration_ms) / 1000.0;
 	auto track_id = media_track->GetId();
 
