@@ -124,6 +124,7 @@ namespace mpegts
 
         auto track_id = media_packet->GetTrackId();
         auto track = GetMediaTrack(track_id);
+
         auto sample_buffer = GetSampleBuffer(track_id);
         if (track == nullptr || sample_buffer == nullptr)
         {
@@ -215,15 +216,23 @@ namespace mpegts
             return;
         }
 
-        if (main_sample_buffer->HasSegmentBoundary() == false)
-        {
-			if (main_sample_buffer->GetCurrentDurationUs() >= MAX_SEGMENT_DURATION_US)
+		// If the segment duration is too long (twice the target duration), a new segment is forcibly created.
+		if (force_create == false && main_sample_buffer->GetTotalAvailableDurationUs() >= _config.target_duration_ms * 2000)
+		{
+			logtw("Stream(%s) Main Track(%u) has too long duration (%llu us, twice the target duration %u us), force to create a new segment", _config.stream_id_meta.CStr(), _main_track_id, main_sample_buffer->GetTotalAvailableDurationUs(), _config.target_duration_ms * 1000);
+			
+			if (main_sample_buffer->HasSegmentBoundary() == false)
 			{
-				logtw("Stream (%s) Main track (%u) does not have a segment boundary. However, the queued segment duration is too long: %u ms. A new segment will be forcibly created.", _config.stream_id_meta.CStr(), _main_track_id, main_sample_buffer->GetCurrentDurationUs());
-
 				Flush();
 			}
-			
+			else
+			{
+				force_create = true;
+			}
+		}
+
+        if (main_sample_buffer->HasSegmentBoundary() == false)
+        {
 			return;
         }
 
@@ -242,6 +251,8 @@ namespace mpegts
 				
 				auto total_sample_segment_duration_us = sample_buffer->GetTotalConsumedDurationUs() + sample_buffer->GetCurrentDurationUs();
 
+				logtd("Stream(%s) Track(%u) total_sample_segment_duration_us(%llu) total_main_segment_duration_us(%llu) main_sample_buffer->GetDurationUntilSegmentBoundaryUs()(%llu) sample_buffer->GetCurrentDurationUs()(%llu) main_sample_buffer->GetTotalAvailableDurationUs()(%llu)", _config.stream_id_meta.CStr(), track_id, total_sample_segment_duration_us, total_main_segment_duration_us, main_sample_buffer->GetDurationUntilSegmentBoundaryUs(), sample_buffer->GetCurrentDurationUs(), main_sample_buffer->GetTotalAvailableDurationUs());
+
 				// if video segment is 6000, audio segment is at least 6000*0.97(=5820), it is normal case, wait for more samples
 				if (total_sample_segment_duration_us < total_main_segment_duration_us * 0.97)
 				{
@@ -250,7 +261,7 @@ namespace mpegts
 					{
 						logtw("Stream(%s) Track(%u) has insufficient sample duration (%llu us) for the main track duration (%llu us)", _config.stream_id_meta.CStr(), track_id, total_sample_segment_duration_us, total_main_segment_duration_us);
 					}
-
+					
 					return;
 				}
 			}

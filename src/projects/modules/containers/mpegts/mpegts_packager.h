@@ -16,7 +16,6 @@
 namespace mpegts
 {
     constexpr size_t SEGMENT_BUFFER_SIZE = 2000000;
-	constexpr size_t MAX_SEGMENT_DURATION_US = 5 * 60 * 1000 * 1000; // 5 minutes
 
     class Segment
     {
@@ -175,6 +174,9 @@ namespace mpegts
             _current_samples_count++;
             _current_samples_duration_us += duration_us;
 
+			_total_available_count++;
+			_total_available_duration_us +=	duration_us;
+
             return true;
         }
         
@@ -215,6 +217,11 @@ namespace mpegts
 
             return _segment_boundaries.front().duration_us;
         }
+
+		uint64_t GetTotalAvailableDurationUs() const
+		{
+			return _total_available_duration_us;
+		}
         
         bool IsEmpty() const
         {
@@ -235,6 +242,9 @@ namespace mpegts
 
             _current_samples_count--;
             _current_samples_duration_us -= sample_duration_us;
+			
+			_total_available_count--;
+			_total_available_duration_us -= sample_duration_us;
 
             _total_consumed_samples_count++;
             _total_consumed_samples_duration_us += sample_duration_us;
@@ -278,6 +288,9 @@ namespace mpegts
             _total_consumed_samples_count += boundary.sample_count;
             _total_consumed_samples_duration_us += boundary.duration_us;
 
+			_total_available_duration_us -= boundary.duration_us;
+			_total_available_count -= boundary.sample_count;
+
             return samples;
         }
 
@@ -300,6 +313,9 @@ namespace mpegts
 
         uint64_t _current_samples_count = 0;
         uint64_t _current_samples_duration_us = 0;
+
+		uint64_t _total_available_duration_us = 0;
+		uint64_t _total_available_count = 0;
 
         uint64_t _total_consumed_samples_count = 0;
         uint64_t _total_consumed_samples_duration_us = 0;
