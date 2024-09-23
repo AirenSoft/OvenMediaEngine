@@ -251,18 +251,37 @@ namespace mpegts
 				
 				auto total_sample_segment_duration_us = sample_buffer->GetTotalConsumedDurationUs() + sample_buffer->GetCurrentDurationUs();
 
-				logtd("Stream(%s) Track(%u) total_sample_segment_duration_us(%llu) total_main_segment_duration_us(%llu) main_sample_buffer->GetDurationUntilSegmentBoundaryUs()(%llu) sample_buffer->GetCurrentDurationUs()(%llu) main_sample_buffer->GetTotalAvailableDurationUs()(%llu)", _config.stream_id_meta.CStr(), track_id, total_sample_segment_duration_us, total_main_segment_duration_us, main_sample_buffer->GetDurationUntilSegmentBoundaryUs(), sample_buffer->GetCurrentDurationUs(), main_sample_buffer->GetTotalAvailableDurationUs());
+				logtd("Stream(%s) Track(%u) \n\
+						total_sample_segment_duration_us(%llu)\n\
+							\tsample_buffer->GetTotalConsumedDurationUs()%llu\n\
+							\tsample_buffer->GetCurrentDurationUs()%llu\n\
+						total_main_segment_duration_us(%llu)\n\
+							\tmain_sample_buffer->GetDurationUntilSegmentBoundaryUs()(%llu)\n\
+							\tsample_buffer->GetCurrentDurationUs()(%llu)\n\
+						main_sample_buffer->GetTotalAvailableDurationUs()(%llu)", 
+									_config.stream_id_meta.CStr(), 
+									track_id, 
+									total_sample_segment_duration_us,
+									sample_buffer->GetTotalConsumedDurationUs(),
+									sample_buffer->GetCurrentDurationUs(),
+									total_main_segment_duration_us, 
+									main_sample_buffer->GetDurationUntilSegmentBoundaryUs(), 
+									sample_buffer->GetCurrentDurationUs(), 
+									main_sample_buffer->GetTotalAvailableDurationUs());
 
 				// if video segment is 6000, audio segment is at least 6000*0.97(=5820), it is normal case, wait for more samples
-				if (total_sample_segment_duration_us < total_main_segment_duration_us * 0.97)
+				if (static_cast<double>(total_sample_segment_duration_us) < static_cast<double>(total_main_segment_duration_us) * 0.97)
 				{
 					// Too much difference between the main track and the track, it means that the track may have a problem.
-					if (total_sample_segment_duration_us * 2 < total_main_segment_duration_us)
+					// For example, there may be cases where audio stops coming in at all at some point.
+					if (static_cast<double>(total_sample_segment_duration_us) * 2.0 < static_cast<double>(total_main_segment_duration_us))
 					{
-						logtw("Stream(%s) Track(%u) has insufficient sample duration (%llu us) for the main track duration (%llu us)", _config.stream_id_meta.CStr(), track_id, total_sample_segment_duration_us, total_main_segment_duration_us);
+						logtw("Stream(%s) Track(%u) sample duration (%llu us) is less than half of the main (%llu us), forcing segment generation.", _config.stream_id_meta.CStr(), track_id, total_sample_segment_duration_us, total_main_segment_duration_us);
 					}
-					
-					return;
+					else
+					{
+						return;
+					}
 				}
 			}
 		}

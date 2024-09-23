@@ -162,7 +162,8 @@ namespace mpegts
 
 		uint64_t GetSampleDurationUs(const Sample &sample) const
 		{
-			return static_cast<double>(sample.media_packet->GetDuration()) * 1000000.0 / GetTrack()->GetTimeBase().GetTimescale();
+			double duration = static_cast<double>(sample.media_packet->GetDuration()) * 1000000.0 / GetTrack()->GetTimeBase().GetTimescale();
+    		return static_cast<uint64_t>(duration);
 		}
 
         bool AddSample(const Sample &sample)
