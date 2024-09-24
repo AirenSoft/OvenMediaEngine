@@ -126,6 +126,12 @@ namespace pub
 				continue;
 			}
 
+			// State::CREATED could be needed for some cases
+			if (stream->GetState() == Stream::State::ERROR || stream->GetState() == Stream::State::STOPPED)
+			{
+				continue;
+			}
+
 			if (media_packet->GetMediaType() == cmn::MediaType::Video)
 			{
 				stream->SendVideoFrame(stream_data->_media_packet);

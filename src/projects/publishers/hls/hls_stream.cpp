@@ -83,12 +83,26 @@ bool HlsStream::Start()
 
 	_default_option_rewind = _ts_config.GetDefaultQueryString().GetBoolValue("_HLS_rewind", kDefaultHlsRewind);
 
-	CreateDefaultPlaylist();
+	if (_ts_config.ShouldCreateDefaultPlaylist() == true)
+	{
+		CreateDefaultPlaylist();
+	}
+	else
+	{
+		logti("HLS Stream(%s/%s) - Default playlist creation is disabled", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+		if (GetPlaylists().size() == 0)
+		{
+			logtw("HLS Stream(%s/%s) - There is no playlist to create packagers, HLSv3 will not work for this stream.", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+			Stop(); // Release resources
+			return false;
+		}
+	}
 
 	// Create Packetizer
 	if (CreatePackagers() == false)
 	{
 		logte("Failed to create packetizers");
+		Stop(); // Release resources
 		return false;
 	}
 

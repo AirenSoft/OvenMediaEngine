@@ -353,6 +353,7 @@
 							<Rtx>false</Rtx>
 							<Ulpfec>false</Ulpfec>
 							<JitterBuffer>false</JitterBuffer>
+							<CreateDefaultPlaylist>true</CreateDefaultPlaylist>
 						</WebRTC>
 						<LLHLS>
 							<OriginMode>true</OriginMode>
@@ -373,7 +374,22 @@
 							<CrossDomains>
 								<Url>*</Url>
 							</CrossDomains>
+							<CreateDefaultPlaylist>true</CreateDefaultPlaylist> <!-- llhls.m3u8 -->
 						</LLHLS>
+						<HLS>
+							<SegmentCount>4</SegmentCount>
+							<SegmentDuration>4</SegmentDuration>
+							<!-- <DVR>
+								<Enable>true</Enable>
+								<EventPlaylistType>false</EventPlaylistType>
+								<TempStoragePath>/tmp/ome_dvr/</TempStoragePath>
+								<MaxDuration>600</MaxDuration>
+							</DVR> -->
+							<CrossDomains>
+								<Url>*</Url>
+							</CrossDomains>
+							<CreateDefaultPlaylist>true</CreateDefaultPlaylist> <!-- ts:playlist.m3u8 -->
+						</HLS>
 					</Publishers>
 				</Application>
 			</Applications>

@@ -135,24 +135,38 @@ bool LLHlsStream::Start()
 		return false;
 	}
 
-	// If there is no default playlist, make default playlist
-	// Default playlist is consist of first compatible video and audio track among all tracks
-	ov::String default_playlist_name = DEFAULT_PLAYLIST_NAME;
-	auto default_playlist_name_without_ext = default_playlist_name.Substring(0, default_playlist_name.IndexOfRev('.'));
-	auto default_playlist = Stream::GetPlaylist(default_playlist_name_without_ext);
-	if (default_playlist == nullptr)
+
+	if (llhls_config.ShouldCreateDefaultPlaylist() == true)
 	{
-		auto playlist = std::make_shared<info::Playlist>("llhls_default", default_playlist_name_without_ext);
-		auto rendition = std::make_shared<info::Rendition>("default", first_video_track ? first_video_track->GetVariantName() : "", first_audio_track ? first_audio_track->GetVariantName() : "");
+		// If there is no default playlist, make default playlist
+		// Default playlist is consist of first compatible video and audio track among all tracks
+		ov::String default_playlist_name = DEFAULT_PLAYLIST_NAME;
+		auto default_playlist_name_without_ext = default_playlist_name.Substring(0, default_playlist_name.IndexOfRev('.'));
+		auto default_playlist = Stream::GetPlaylist(default_playlist_name_without_ext);
+		if (default_playlist == nullptr)
+		{
+			auto playlist = std::make_shared<info::Playlist>("llhls_default", default_playlist_name_without_ext);
+			auto rendition = std::make_shared<info::Rendition>("default", first_video_track ? first_video_track->GetVariantName() : "", first_audio_track ? first_audio_track->GetVariantName() : "");
 
-		playlist->AddRendition(rendition);
+			playlist->AddRendition(rendition);
 
-		AddPlaylist(playlist);
+			AddPlaylist(playlist);
 
-		auto master_playlist = CreateMasterPlaylist(playlist);
+			auto master_playlist = CreateMasterPlaylist(playlist);
 
-		std::lock_guard<std::mutex> guard(_master_playlists_lock);
-		_master_playlists[default_playlist_name] = master_playlist;
+			std::lock_guard<std::mutex> guard(_master_playlists_lock);
+			_master_playlists[default_playlist_name] = master_playlist;
+		}
+	}
+	else
+	{
+		logti("LLHLS stream [%s/%s] - Default playlist creation is disabled.", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+		if (GetPlaylists().size() == 0)
+		{
+			logtw("LLHLS stream [%s/%s] - There is no playlist, LLHLS will not work for this stream", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+			Stop(); // Release all resources
+			return false;
+		}
 	}
 
 	// Select the dump setting for this stream.

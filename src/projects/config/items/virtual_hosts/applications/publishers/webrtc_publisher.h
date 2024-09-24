@@ -49,6 +49,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsJitterBufferEnabled, _jitter_buffer)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetPlayoutDelay, _playout_delay)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBandwidthEstimationType, _bandwidth_estimation_type)
+					CFG_DECLARE_CONST_REF_GETTER_OF(ShouldCreateDefaultPlaylist, _create_default_playlist)
 
 				protected:
 					void MakeList() override
@@ -60,6 +61,7 @@ namespace cfg
 						Register<Optional>("Rtx", &_rtx);
 						Register<Optional>("Ulpfec", &_ulpfec);
 						Register<Optional>("PlayoutDelay", &_playout_delay);
+						Register<Optional>("CreateDefaultPlaylist", &_create_default_playlist);
 						Register<Optional>("BandwidthEstimation", &_bwe,	
 							[=]() -> std::shared_ptr<ConfigError> {
 								return nullptr;
@@ -92,6 +94,7 @@ namespace cfg
 
 					WebRtcBandwidthEstimationType _bandwidth_estimation_type = WebRtcBandwidthEstimationType::REMB;
 					PlayoutDelay _playout_delay;
+					bool _create_default_playlist = true;
 				};
 			}  // namespace pub
 		} // namespace app

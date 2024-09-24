@@ -40,6 +40,7 @@ namespace cfg
 					bool _server_time_based_segment_numbering = false;
 					bool _enable_preload_hint = true;
 					DefaultQueryString _default_query_string;
+					bool _create_default_playlist = true;
 
 				public:
 					PublisherType GetType() const override
@@ -59,6 +60,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetDrm, _drm)
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsPreloadHintEnabled, _enable_preload_hint)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetDefaultQueryString, _default_query_string)
+					CFG_DECLARE_CONST_REF_GETTER_OF(ShouldCreateDefaultPlaylist, _create_default_playlist)
 
 				protected:
 					void MakeList() override
@@ -78,6 +80,7 @@ namespace cfg
 						Register<Optional>("DRM", &_drm);
 						Register<Optional>("EnablePreloadHint", &_enable_preload_hint);
 						Register<Optional>("DefaultQueryString", &_default_query_string);
+						Register<Optional>("CreateDefaultPlaylist", &_create_default_playlist);
 					}
 				};
 			}  // namespace pub
