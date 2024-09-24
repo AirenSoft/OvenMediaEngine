@@ -38,6 +38,7 @@ private:
 	bool ConnectRedis();
 
 	bool NofifyStreamsAlive();
+	bool RetryRegister();
 
 	ov::String _redis_ip;
 	uint16_t _redis_port;
@@ -46,6 +47,7 @@ private:
 	ov::DelayQueue _update_timer{"OMapC"};
 
 	std::map<ov::String, ov::String> _origin_map;
+	std::map<ov::String, ov::String> _origin_map_candidates;
 	std::mutex _origin_map_mutex;
 
 	redisContext *_redis_context = nullptr;

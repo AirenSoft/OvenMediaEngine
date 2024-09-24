@@ -26,6 +26,7 @@ OriginMapClient::OriginMapClient(const ov::String &redis_host, const ov::String 
 
 	_update_timer.Push(
 		[this](void *paramter) -> ov::DelayQueueAction {
+			RetryRegister();
 			NofifyStreamsAlive();
 			return ov::DelayQueueAction::Repeat;
 		},
@@ -42,6 +43,38 @@ bool OriginMapClient::NofifyStreamsAlive()
 	for (auto &[key, value] : origin_map)
 	{
 		Update(key, value);
+	}
+
+	return true;
+}
+
+bool OriginMapClient::RetryRegister()
+{
+	std::unique_lock<std::mutex> lock(_origin_map_mutex);
+	if (_origin_map_candidates.size() == 0)
+	{
+		return true;
+	}
+
+	auto origin_map_candidates = _origin_map_candidates;
+	lock.unlock();
+
+	std::vector<ov::String> keys_to_remove;
+	for (auto &[key, value] : origin_map_candidates)
+	{
+		if (Register(key, value) == true)
+		{
+			keys_to_remove.push_back(key);
+		}
+	}
+
+	if (keys_to_remove.size() > 0)
+	{
+		std::lock_guard<std::mutex> lock(_origin_map_mutex);
+		for (auto &key : keys_to_remove)
+		{
+			_origin_map_candidates.erase(key);
+		}
 	}
 
 	return true;
@@ -78,8 +111,13 @@ bool OriginMapClient::Register(const ov::String &app_stream_name, const ov::Stri
 		}
 		else
 		{
-			logte("<%s> stream is already registered with different origin host.", app_stream_name.CStr());
+			logte("<%s> stream is already registered with different origin host (%s)", app_stream_name.CStr(), reply->str);
 			freeReplyObject(reply);
+			lock.unlock();
+
+			std::lock_guard<std::mutex> origin_map_lock(_origin_map_mutex);
+			_origin_map_candidates[app_stream_name] = origin_host;
+
 			return false;
 		}
 	}
@@ -99,6 +137,11 @@ bool OriginMapClient::Register(const ov::String &app_stream_name, const ov::Stri
 		else if (reply->type == REDIS_REPLY_NIL)
 		{
 			logte("<%s> stream is already registered.", app_stream_name.CStr());
+			freeReplyObject(reply);
+			lock.unlock();
+
+			std::lock_guard<std::mutex> origin_map_lock(_origin_map_mutex);
+			_origin_map_candidates[app_stream_name] = origin_host;
 			return false;
 		}
 
