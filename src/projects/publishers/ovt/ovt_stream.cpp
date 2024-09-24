@@ -38,7 +38,8 @@ bool OvtStream::Start()
 		return false;
 	}
 
-	if (GetLinkedInputStream() != nullptr && GetLinkedInputStream()->IsFromOriginMapStore() == false)
+	// If this stream is from OriginMapStore, don't register it to OriginMapStore again.
+	if (IsFromOriginMapStore() == false)
 	{
 		auto result = ocst::Orchestrator::GetInstance()->RegisterStreamToOriginMapStore(GetApplicationInfo().GetVHostAppName(), GetName());
 		if (result == CommonErrorCode::ERROR)
