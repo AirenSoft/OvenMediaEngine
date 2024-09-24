@@ -57,27 +57,60 @@ bool OriginMapClient::Register(const ov::String &app_stream_name, const ov::Stri
 
 	std::unique_lock<std::mutex> lock(_redis_context_mutex);
 
-	// Set origin host to redis
-	// The EXPIRE option is to prevent locking the app/stream when OvenMediaEngine unexpectedly stops.
-	// So _update_timer updates the expire time once every 2.5 seconds.
-	redisReply *reply = (redisReply *)redisCommand(_redis_context, "SET %s %s EX 10 NX", app_stream_name.CStr(), origin_host.CStr());
+	bool is_already_registered = false;
+
+	// Check if the app/stream is already registered with same origin host
+	redisReply *reply = (redisReply *)redisCommand(_redis_context, "GET %s", app_stream_name.CStr());
 	if (reply == nullptr || reply->type == REDIS_REPLY_ERROR)
 	{
-		logte("Failed to set origin host to redis : %s:%d (err:%s)", _redis_ip.CStr(), _redis_port, reply!=nullptr?reply->str:"nil");
+		logte("Failed to get origin host from redis : %s:%d (err:%s)", _redis_ip.CStr(), _redis_port, reply!=nullptr?reply->str:"nil");
 		return false;
 	}
 	else if (reply->type == REDIS_REPLY_NIL)
 	{
-		logte("<%s> stream is already registered.", app_stream_name.CStr());
-		return false;
+		// Not exist, keep going
 	}
-
+	else if (reply->type == REDIS_REPLY_STRING)
+	{
+		if (origin_host == reply->str)
+		{
+			is_already_registered = true;
+		}
+		else
+		{
+			logte("<%s> stream is already registered with different origin host.", app_stream_name.CStr());
+			freeReplyObject(reply);
+			return false;
+		}
+	}
 	freeReplyObject(reply);
+
+	if (is_already_registered == false)
+	{
+		// Set origin host to redis
+		// The EXPIRE option is to prevent locking the app/stream when OvenMediaEngine unexpectedly stops.
+		// So _update_timer updates the expire time once every 2.5 seconds.
+		redisReply *reply = (redisReply *)redisCommand(_redis_context, "SET %s %s EX %d NX", app_stream_name.CStr(), origin_host.CStr(), ORIGIN_MAP_STORE_KEY_EXPIRE_TIME);
+		if (reply == nullptr || reply->type == REDIS_REPLY_ERROR)
+		{
+			logte("Failed to set origin host to redis : %s:%d (err:%s)", _redis_ip.CStr(), _redis_port, reply!=nullptr?reply->str:"nil");
+			return false;
+		}
+		else if (reply->type == REDIS_REPLY_NIL)
+		{
+			logte("<%s> stream is already registered.", app_stream_name.CStr());
+			return false;
+		}
+
+		freeReplyObject(reply);
+	}
 
 	lock.unlock();
 
 	std::lock_guard<std::mutex> origin_map_lock(_origin_map_mutex);
 	_origin_map[app_stream_name] = origin_host;
+
+	logti("OriginMapStore: <%s> stream is registered with origin host : %s", app_stream_name.CStr(), origin_host.CStr());
 
 	return true;
 }
@@ -94,7 +127,7 @@ bool OriginMapClient::Update(const ov::String &app_stream_name, const ov::String
 
 	// Set origin host to redis
 	// XX option or EXPIRE cmd are not used because if redis server is restarted, update() can restore the origin stream info.
-	redisReply *reply = (redisReply *)redisCommand(_redis_context, "SET %s %s EX 10", app_stream_name.CStr(), origin_host.CStr());
+	redisReply *reply = (redisReply *)redisCommand(_redis_context, "SET %s %s EX %d", app_stream_name.CStr(), origin_host.CStr(), ORIGIN_MAP_STORE_KEY_EXPIRE_TIME);
 	if (reply == nullptr || reply->type == REDIS_REPLY_ERROR)
 	{
 		logte("Failed to set origin host to redis : %s:%d (err:%s)", _redis_ip.CStr(), _redis_port, reply!=nullptr?reply->str:"nil");
@@ -128,6 +161,8 @@ bool OriginMapClient::Unregister(const ov::String &app_stream_name)
 
 	std::lock_guard<std::mutex> origin_map_lock(_origin_map_mutex);
 	_origin_map.erase(app_stream_name);
+
+	logti("OriginMapStore: <%s> stream is unregistered.", app_stream_name.CStr());
 
 	return true;
 }

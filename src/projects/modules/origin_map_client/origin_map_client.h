@@ -13,6 +13,9 @@
 #include <base/ovlibrary/delay_queue.h>
 #include <hiredis/hiredis.h>
 
+// redis key expire time (sec)
+#define ORIGIN_MAP_STORE_KEY_EXPIRE_TIME 10
+
 // If Origins-Edges cluster uses OriginMapStore, app/stream must be unique in the cluster.
 class OriginMapClient
 {
