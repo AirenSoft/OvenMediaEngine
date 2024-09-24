@@ -425,9 +425,20 @@ bool HlsStream::CreatePackagers()
 			auto video_variant_name = rendition->GetVideoVariantName();
 			auto audio_variant_name = rendition->GetAudioVariantName();
 
+			if (video_variant_name.IsEmpty() == false && GetMediaTrackGroup(video_variant_name) == nullptr)
+			{
+				logtw("HLS Stream(%s/%s) - The variant name video(%s) in the rendition %s is not found in the track list, it will be ignored", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), video_variant_name.CStr(), playlist->GetFileName().CStr());
+				video_variant_name.Clear();
+			}
+
+			if (audio_variant_name.IsEmpty() == false && GetMediaTrackGroup(audio_variant_name) == nullptr)
+			{
+				logtw("HLS Stream(%s/%s) - The variant name audio(%s) in the rendition %s is not found in the track list, it will be ignored", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), audio_variant_name.CStr(), playlist->GetFileName().CStr());
+				audio_variant_name.Clear();
+			}
+
 			// Check if there is a track with the variant name
-			if ((video_variant_name.IsEmpty() == false && GetMediaTrackGroup(video_variant_name) == nullptr) || 
-				(audio_variant_name.IsEmpty() == false && GetMediaTrackGroup(audio_variant_name) == nullptr))
+			if (video_variant_name.IsEmpty() == true && audio_variant_name.IsEmpty() == true)
 			{
 				logtw("HLS Stream(%s/%s) - Invalid rendition %s. The variant name video(%s) audio(%s) is not found in the track list", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), playlist->GetFileName().CStr(), video_variant_name.CStr(), audio_variant_name.CStr());
 				continue;
