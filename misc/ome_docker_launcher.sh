@@ -7,23 +7,7 @@
 #  Copyright (c) 2023 AirenSoft. All rights reserved.
 #
 #==============================================================================
-VERSION="v0.3"
-
-# Configurations
-IMAGE_NAME=airensoft/ovenmediaengine:latest
-CONTAINER_NAME=${CONTAINER_NAME:-ovenemediaengine}
-PREFIX=${PREFIX:-/usr/share/ovenmediaengine/}
-PREFIX=$(realpath "${PREFIX}")/
-
-CONF_PATH=${PREFIX}conf
-LOGS_PATH=${PREFIX}logs
-CRASH_DUMPS_PATH=${PREFIX}dumps
-OME_MEDIA_ROOT=${OME_MEDIA_ROOT:-/dev/null}
-
-SERVER_XML_PATH="${CONF_PATH}/Server.xml"
-LOGGER_XML_PATH="${CONF_PATH}/Logger.xml"
-
-DOCKER=${DOCKER:-$(which docker)}
+VERSION="v0.4"
 
 prepare_colors()
 {
@@ -152,6 +136,33 @@ banner()
 	logi
 }
 
+# Configurations
+IMAGE_NAME=airensoft/ovenmediaengine:latest
+CONTAINER_NAME=${CONTAINER_NAME:-ovenemediaengine}
+PREFIX=${PREFIX:-/usr/share/ovenmediaengine/}
+
+if command -v realpath > /dev/null 2>&1
+then
+	PREFIX=$(realpath "${PREFIX}")/
+else
+	if command -v readlink > /dev/null 2>&1
+	then
+		PREFIX=$(readlink -f "$(dirname ${PREFIX})")/$(basename "${PREFIX}")/
+	else
+		[ -z "${DOCKER}" ] && die "• ERROR: realpath/readlink not found"
+	fi
+fi
+
+CONF_PATH=${PREFIX}conf
+LOGS_PATH=${PREFIX}logs
+CRASH_DUMPS_PATH=${PREFIX}dumps
+OME_MEDIA_ROOT=${OME_MEDIA_ROOT:-/dev/null}
+
+SERVER_XML_PATH="${CONF_PATH}/Server.xml"
+LOGGER_XML_PATH="${CONF_PATH}/Logger.xml"
+
+DOCKER=${DOCKER:-$(which docker)}
+
 run()
 {
 	local ARGS=("$@")
@@ -193,7 +204,7 @@ run()
 check_docker_is_available()
 {
 	[ -z "${DOCKER}" ] && die "• ERROR: Docker not found"
-	[ "$("${DOCKER}" ps 2>/dev/null)" ] && return
+	command -v "${DOCKER}" >/dev/null 2>&1 && return
 
 	loge "• Could not run ${DOCKER}"
 	exit 1
@@ -430,8 +441,13 @@ _start()
 
 				for( INDEX = 1; INDEX <= NF; INDEX++ ) {
 					if( $INDEX ~ /<([^ ]+)/ ) {
-						match( $INDEX, /<([^ ]+)/, RESULT )
-						TAG_NAME = RESULT[1]
+						START_INDEX = index($INDEX, "<") + 1
+						END_INDEX = index(substr($INDEX, START_INDEX), " ") - 1
+						if (END_INDEX == -1) {
+							# No space found, so the tag ends at the next ">"
+							END_INDEX = length($INDEX) - START_INDEX + 1
+						}
+						TAG_NAME = substr($INDEX, START_INDEX, END_INDEX)
 
 						if( !IS_BIND ) {
 							if( TAG_NAME == "Bind" ) {
@@ -462,7 +478,17 @@ _start()
 
 							if( IS_PORT ) {
 								# C-DATA
-								REMAINED = substr($INDEX, 0, length($INDEX) - RLENGTH)
+
+								# Find the position of the closing tag
+								CLOSE_INDEX = index($INDEX, "</")
+								if( CLOSE_INDEX > 0 ) {
+									# Extract content before the closing tag
+									REMAINED = substr($INDEX, 1, CLOSE_INDEX - 1)
+								} else {
+									# No closing tag found, take the entire content
+									REMAINED = $INDEX
+								}
+
 								if( length(REMAINED) > 0 ) {
 									logd( REMAINED COLOR_GREEN " // C-DATA before close tag, " COLOR_BLUE PARENTS[PARENT_INDEX - 1] COLOR_RESET "/" COLOR_BLUE PARENTS[PARENT_INDEX] ", Module: " MODULES[MODULE_INDEX] "\n" )
 
@@ -641,7 +667,7 @@ _start()
 		local IP="${BASH_REMATCH[2]}"
 		local PORT_RANGE="${BASH_REMATCH[3]}"
 		local PROTOCOL="${BASH_REMATCH[14]}"
-		PROTOCOL=${PROTOCOL^^}
+		PROTOCOL=$(echo -n "${PROTOCOL}" | tr '[:lower:]' '[:upper:]')
 
 		# Some protocol uses UDP by default (#1339)
 		case "${NAME}" in
