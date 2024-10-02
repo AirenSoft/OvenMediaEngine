@@ -188,9 +188,14 @@ namespace ov
 				std::chrono::system_clock::time_point expire = (timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
 
 				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
+					if (_stop)
+					{
+						return true;
+					}
+					
 					if (_buffering_delay == 0)
 					{
-						return ((_size != 0 ) || _stop);
+						return (_size != 0);
 					}
 					else
 					{
