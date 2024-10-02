@@ -112,7 +112,31 @@ static const char *GetSignalName(int signum)
 static char g_ome_version[1024];
 
 typedef void (*OV_SIG_ACTION)(int signum, siginfo_t *si, void *unused);
+struct sigaction GetSigAction(OV_SIG_ACTION action)
+{
+	struct sigaction sa
+	{
+	};
 
+	sa.sa_flags = SA_SIGINFO;
+
+	// sigemptyset is a macro on macOS, so :: breaks compilation
+#if defined(__APPLE__)
+	sigemptyset(&sa.sa_mask);
+#else
+	::sigemptyset(&sa.sa_mask);
+#endif
+
+	sa.sa_sigaction = action;
+
+	return sa;
+}
+
+// Configure for abort signals
+//
+// Intentional signals (ignore)
+//     SIGQUIT, SIGINT, SIGTERM, SIGTRAP, SIGHUP, SIGKILL
+//     SIGVTALRM, SIGPROF, SIGALRM
 static void AbortHandler(int signum, siginfo_t *si, void *context)
 {
 	char time_buffer[30]{};
@@ -203,15 +227,51 @@ static void AbortHandler(int signum, siginfo_t *si, void *context)
 	::exit(signum);
 }
 
-static void User1Handler(int signum, siginfo_t *si, void *unused)
+static bool InitializeForAbortSignals()
+{
+	::memset(g_ome_version, 0, sizeof(g_ome_version));
+	::strncpy(g_ome_version, info::OmeVersion::GetInstance()->ToString().CStr(), OV_COUNTOF(g_ome_version) - 1);
+
+	bool result = true;
+	auto sa = GetSigAction(AbortHandler);
+
+	// Core dumped signal
+	result = result && (::sigaction(SIGABRT, &sa, nullptr) == 0);  // assert()
+	result = result && (::sigaction(SIGSEGV, &sa, nullptr) == 0);  // illegal memory access
+	result = result && (::sigaction(SIGBUS, &sa, nullptr) == 0);   // illegal memory access
+	result = result && (::sigaction(SIGILL, &sa, nullptr) == 0);   // execute a malformed instruction.
+	result = result && (::sigaction(SIGFPE, &sa, nullptr) == 0);   // divide by zero
+	result = result && (::sigaction(SIGSYS, &sa, nullptr) == 0);   // bad system call
+	result = result && (::sigaction(SIGXCPU, &sa, nullptr) == 0);  // cpu time limit exceeded
+	result = result && (::sigaction(SIGXFSZ, &sa, nullptr) == 0);  // file size limit exceeded
+
+	// Terminated signal
+	result = result && (::sigaction(SIGPIPE, &sa, nullptr) == 0);  // write on a pipe with no one to read it
+#if IS_LINUX
+	result = result && (::sigaction(SIGPOLL, &sa, nullptr) == 0);  // pollable event
+#endif															   // IS_LINUX
+
+	return result;
+}
+
+// Configure for SIGUSR1
+// WARNING: USE THIS SIGNAL FOR DEBUGGING PURPOSE ONLY
+static void SigUsr1Handler(int signum, siginfo_t *si, void *unused)
 {
 	logtc("Trim result: %d", malloc_trim(0));
 }
 
-static void ReloadHandler(int signum, siginfo_t *si, void *unused)
+static bool InitializeForSigUsr1()
+{
+	auto sa = GetSigAction(SigUsr1Handler);
+	return (::sigaction(SIGUSR1, &sa, nullptr) == 0);
+}
+
+// Configure for SIGHUP
+static void SigHupHandler(int signum, siginfo_t *si, void *unused)
 {
 	logti("Received SIGHUP signal. This signal is not implemented yet.");
-	return ;
+	return;
 
 	// logti("Trying to reload configuration...");
 
@@ -244,7 +304,27 @@ static void ReloadHandler(int signum, siginfo_t *si, void *unused)
 	// }
 }
 
-void TerminateHandler(int signum, siginfo_t *si, void *unused)
+static bool InitializeForSigHup()
+{
+	auto sa = GetSigAction(SigHupHandler);
+	return (::sigaction(SIGHUP, &sa, nullptr) == 0);
+}
+
+// Configure for SIGTERM
+static void SigTermHandler(int signum, siginfo_t *si, void *unused)
+{
+	logtw("Caught terminate signal %d. OME is terminating...", signum);
+	g_is_terminated = true;
+}
+
+static bool InitializeForSigTerm()
+{
+	auto sa = GetSigAction(SigTermHandler);
+	return (::sigaction(SIGTERM, &sa, nullptr) == 0);
+}
+
+// Configure for SIGINT
+static void SigIntHandler(int signum, siginfo_t *si, void *unused)
 {
 	static constexpr int TERMINATE_COUNT = 3;
 	static int signal_count = 0;
@@ -264,92 +344,10 @@ void TerminateHandler(int signum, siginfo_t *si, void *unused)
 	g_is_terminated = true;
 }
 
-struct sigaction GetSigAction(OV_SIG_ACTION action)
+static bool InitializeForSigInt()
 {
-	struct sigaction sa
-	{
-	};
-
-	sa.sa_flags = SA_SIGINFO;
-
-	// sigemptyset is a macro on macOS, so :: breaks compilation
-#if defined(__APPLE__)
-	sigemptyset(&sa.sa_mask);
-#else
-	::sigemptyset(&sa.sa_mask);
-#endif
-
-	sa.sa_sigaction = action;
-
-	return sa;
-}
-
-// Configure abort signal
-//
-// Intentional signals (ignore)
-//     SIGQUIT, SIGINT, SIGTERM, SIGTRAP, SIGHUP, SIGKILL
-//     SIGVTALRM, SIGPROF, SIGALRM
-bool InitializeAbortSignal()
-{
-	::memset(g_ome_version, 0, sizeof(g_ome_version));
-	::strncpy(g_ome_version, info::OmeVersion::GetInstance()->ToString().CStr(), OV_COUNTOF(g_ome_version) - 1);
-
-	bool result = true;
-	auto sa = GetSigAction(AbortHandler);
-
-	// Core dumped signal
-	result = result && (::sigaction(SIGABRT, &sa, nullptr) == 0);  // assert()
-	result = result && (::sigaction(SIGSEGV, &sa, nullptr) == 0);  // illegal memory access
-	result = result && (::sigaction(SIGBUS, &sa, nullptr) == 0);   // illegal memory access
-	result = result && (::sigaction(SIGILL, &sa, nullptr) == 0);   // execute a malformed instruction.
-	result = result && (::sigaction(SIGFPE, &sa, nullptr) == 0);   // divide by zero
-	result = result && (::sigaction(SIGSYS, &sa, nullptr) == 0);   // bad system call
-	result = result && (::sigaction(SIGXCPU, &sa, nullptr) == 0);  // cpu time limit exceeded
-	result = result && (::sigaction(SIGXFSZ, &sa, nullptr) == 0);  // file size limit exceeded
-
-	// Terminated signal
-	result = result && (::sigaction(SIGPIPE, &sa, nullptr) == 0);  // write on a pipe with no one to read it
-#if IS_LINUX
-	result = result && (::sigaction(SIGPOLL, &sa, nullptr) == 0);  // pollable event
-#endif															   // IS_LINUX
-
-	return result;
-}
-
-// Configure SIGUSR1 signal
-// WARNING: USE THIS SIGNAL FOR DEBUGGING PURPOSE ONLY
-bool InitializeUser1Signal()
-{
-	auto sa = GetSigAction(User1Handler);
-	bool result = true;
-
-	result = result && (::sigaction(SIGUSR1, &sa, nullptr) == 0);
-
-	return result;
-}
-
-// Configure reload signal
-bool InitializeReloadSignal()
-{
-	auto sa = GetSigAction(ReloadHandler);
-	bool result = true;
-
-	result = result && (::sigaction(SIGHUP, &sa, nullptr) == 0);
-
-	return result;
-}
-
-// Configure terminate signal
-bool InitializeTerminateSignal()
-{
-	auto sa = GetSigAction(TerminateHandler);
-	bool result = true;
-
-	result = result && (::sigaction(SIGINT, &sa, nullptr) == 0);
-
-	g_is_terminated = false;
-
-	return result;
+	auto sa = GetSigAction(SigIntHandler);
+	return (::sigaction(SIGINT, &sa, nullptr) == 0);
 }
 
 bool InitializeSignals()
@@ -368,8 +366,11 @@ bool InitializeSignals()
 	//	58) SIGRTMAX-6	59) SIGRTMAX-5	60) SIGRTMAX-4	61) SIGRTMAX-3	62) SIGRTMAX-2
 	//	63) SIGRTMAX-1	64) SIGRTMAX
 
-	return InitializeAbortSignal() &&
-		   InitializeUser1Signal() &&
-		   InitializeReloadSignal() &&
-		   InitializeTerminateSignal();
+	g_is_terminated = false;
+
+	return InitializeForAbortSignals() &&
+		   InitializeForSigUsr1() &&
+		   InitializeForSigHup() &&
+		   InitializeForSigTerm() &&
+		   InitializeForSigInt();
 }
