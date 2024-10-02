@@ -24,14 +24,14 @@ namespace cfg
 				struct HlsPublisher : public Publisher, public cmn::CrossDomainSupport
 				{
 				protected:
-					int _segment_count = 3;
-					int _segment_duration = 5;
+					int _segment_count = 5;
+					double _segment_duration = 10;
 					Dvr _dvr;
 					DefaultQueryString _default_query_string;
 					bool _create_default_playlist = true;
 
 				public:
-					PublisherType GetType() const override
+					virtual PublisherType GetType() const override
 					{
 						return PublisherType::Hls;
 					}
@@ -44,7 +44,7 @@ namespace cfg
 
 
 				protected:
-					void MakeList() override
+					virtual void MakeList() override
 					{
 						Publisher::MakeList();
 
