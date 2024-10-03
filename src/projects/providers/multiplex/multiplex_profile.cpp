@@ -418,7 +418,7 @@ namespace pvd
 					playlist->SetWebRtcAutoAbr(webrtc_auto_abr.text().as_bool());
 				}
 
-				auto hls_chunklist_path_depth = options_node.child("HLSChunklistPathDepth");
+				auto hls_chunklist_path_depth = options_node.child("HLSChunklistPathDepth") || options_node.child("HlsChunklistPathDepth");
 				if (hls_chunklist_path_depth)
 				{
 					playlist->SetHlsChunklistPathDepth(hls_chunklist_path_depth.text().as_int());
@@ -618,9 +618,10 @@ namespace pvd
 					options_node.append_child("WebRtcAutoAbr").text().set(playlist->IsWebRtcAutoAbr());
 				}
 
-				if (playlist->GetHlsChunklistPathDepth() != -1)
+				int hls_chunklist_path_depth = playlist->GetHlsChunklistPathDepth();
+				if (hls_chunklist_path_depth != -1)
 				{
-					options_node.append_child("HLSChunklistPathDepth").text().set(playlist->GetHlsChunklistPathDepth());
+					options_node.append_child("HLSChunklistPathDepth").text().set(hls_chunklist_path_depth);
 				}
 
 				if (playlist->IsTsPackagingEnabled())
