@@ -418,11 +418,16 @@ namespace pvd
 					playlist->SetWebRtcAutoAbr(webrtc_auto_abr.text().as_bool());
 				}
 
-				auto hls_chunklist_path_depth = options_node.child("HLSChunklistPathDepth") || options_node.child("HlsChunklistPathDepth");
-				if (hls_chunklist_path_depth)
+				auto hls_chunklist_path_depth = options_node.child("HLSChunklistPathDepth");
+				if (!hls_chunklist_path_depth)
 				{
-					playlist->SetHlsChunklistPathDepth(hls_chunklist_path_depth.text().as_int());
+					hls_chunklist_path_depth = options_node.child("HlsChunklistPathDepth");
 				}
+
+				if (hls_chunklist_path_depth)
+    			{
+        			playlist->SetHlsChunklistPathDepth(hls_chunklist_path_depth.text().as_int());
+    			}
 
 				auto enable_ts_packaging = options_node.child("EnableTsPackaging");
 				if (enable_ts_packaging)
@@ -618,10 +623,9 @@ namespace pvd
 					options_node.append_child("WebRtcAutoAbr").text().set(playlist->IsWebRtcAutoAbr());
 				}
 
-				int hls_chunklist_path_depth = playlist->GetHlsChunklistPathDepth();
-				if (hls_chunklist_path_depth != -1)
+				if (playlist->GetHlsChunklistPathDepth() != -1)
 				{
-					options_node.append_child("HLSChunklistPathDepth").text().set(hls_chunklist_path_depth);
+					options_node.append_child("HLSChunklistPathDepth").text().set(playlist->GetHlsChunklistPathDepth());
 				}
 
 				if (playlist->IsTsPackagingEnabled())
