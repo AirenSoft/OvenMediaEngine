@@ -51,7 +51,8 @@ The RTMP protocol only supports H264 and AAC codecs.
     &#x3C;!-- [Must] -->
     &#x3C;Protocol>rtmp&#x3C;/Protocol>
     &#x3C;!-- [Must] -->
-    &#x3C;Url>rtmp://1.2.3.4:1935/app/${StreamName}&#x3C;/Url>
+    &#x3C;Url>rtmp://1.2.3.4:1935/app/${SourceStream}&#x3C;/Url>
+    &#x3C;!-- &#x3C;Url>rtmp://1.2.3.4:1935/app/${Stream}&#x3C;/Url> -->
 <strong>  &#x3C;/Push>  
 </strong>  &#x3C;Push>
     &#x3C;!-- [Must] -->
