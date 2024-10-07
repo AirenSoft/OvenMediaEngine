@@ -33,13 +33,14 @@ namespace ocst
 			return false;
 		}
 
-		_timer.Push(
-			[this](void *paramter) -> ov::DelayQueueAction {
-				DeleteUnusedDynamicApplications();
-				return ov::DelayQueueAction::Repeat;
-			},
-			10000);
-		_timer.Start();
+		// TODO(Getroot): 2024-10-07 // It has critical bug. It should be fixed.
+		// _timer.Push(
+		// 	[this](void *paramter) -> ov::DelayQueueAction {
+		// 		DeleteUnusedDynamicApplications();
+		// 		return ov::DelayQueueAction::Repeat;
+		// 	},
+		// 	10000);
+		// _timer.Start();
 
 		return true;
 	}
