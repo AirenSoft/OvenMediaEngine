@@ -8,7 +8,7 @@ FROM    base AS build
 
 WORKDIR /tmp
 
-ARG     OME_VERSION=v0.17.1
+ARG     OME_VERSION=master
 ARG 	STRIP=TRUE
 
 ENV     PREFIX=/opt/ovenmediaengine
