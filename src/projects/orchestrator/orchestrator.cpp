@@ -33,14 +33,18 @@ namespace ocst
 			return false;
 		}
 
-		// TODO(Getroot): 2024-10-07 // It has critical bug. It should be fixed.
-		// _timer.Push(
-		// 	[this](void *paramter) -> ov::DelayQueueAction {
-		// 		DeleteUnusedDynamicApplications();
-		// 		return ov::DelayQueueAction::Repeat;
-		// 	},
-		// 	10000);
-		// _timer.Start();
+		auto dynamic_app_removal = server_config->GetModules().GetDynamicAppRemoval();
+		if (dynamic_app_removal.IsEnabled() == true)
+		{
+			// TODO(Getroot): 2024-10-07 // It may have critical bug. It should be fixed.
+			_timer.Push(
+				[this](void *paramter) -> ov::DelayQueueAction {
+					DeleteUnusedDynamicApplications();
+					return ov::DelayQueueAction::Repeat;
+				},
+				10000);
+			_timer.Start();
+		}
 
 		return true;
 	}

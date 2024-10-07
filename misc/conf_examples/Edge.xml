@@ -22,11 +22,12 @@
 		<HTTP2>
 			<Enable>true</Enable>
 		</HTTP2>
-
 		<LLHLS>
 			<Enable>true</Enable>
 		</LLHLS>
-
+		<DynamicAppRemoval>
+			<Enable>false</Enable>
+		</DynamicAppRemoval>
 		<!-- P2P works only in WebRTC and is experiment feature -->
 		<P2P>
 			<!-- disabled by default -->
