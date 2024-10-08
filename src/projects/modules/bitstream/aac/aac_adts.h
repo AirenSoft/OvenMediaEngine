@@ -5,8 +5,6 @@
 
 #include <stdint.h>
 
-
-
 #define ADTS_MIN_SIZE	7
 
 class AACAdts
@@ -20,8 +18,8 @@ public:
 	uint8_t Id();
 	uint8_t Layer();
 	bool ProtectionAbsent();
-	AacObjectType Profile();
-	ov::String ProfileString();
+	AudioObjectType ObjectType();
+	ov::String ObjectTypeString();
 	AacSamplingFrequencies Samplerate();
 	uint32_t SamplerateNum();
 	uint8_t ChannelConfiguration();
