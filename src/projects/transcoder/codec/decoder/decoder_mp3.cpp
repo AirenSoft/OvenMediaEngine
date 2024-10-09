@@ -215,16 +215,16 @@ void DecoderMP3::CodecThread()
 			}
 
 			// If there is no duration, the duration is calculated by timebase.
-			if (_frame->pkt_duration <= 0LL)
+			if (_frame->duration <= 0LL)
 			{
-				_frame->pkt_duration = ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Audio, GetRefTrack(), _frame);
+				_frame->duration = ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Audio, GetRefTrack(), _frame);
 			}
 
 
 			// If the decoded audio frame does not have a PTS, Increase frame duration time in PTS of previous frame
 			if(_frame->pts == AV_NOPTS_VALUE)
 			{
-				_frame->pts = _last_pkt_pts + _frame->pkt_duration;
+				_frame->pts = _last_pkt_pts + _frame->duration;
 			}
 
 			auto output_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Audio, _frame);

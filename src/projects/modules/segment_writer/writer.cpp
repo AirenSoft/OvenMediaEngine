@@ -256,12 +256,16 @@ bool Writer::FillCodecParameters(const std::shared_ptr<const Track> &track, AVCo
 			codec_parameters->codec_type = AVMEDIA_TYPE_AUDIO;
 			codec_parameters->codec_id = AvCodecIdFromMediaCodecId(media_track->GetCodecId());
 			codec_parameters->bit_rate = media_track->GetBitrate();
-			codec_parameters->channels = static_cast<int>(media_track->GetChannel().GetCounts());
-			codec_parameters->channel_layout = AvChannelLayoutFromAudioChannelLayout(media_track->GetChannel().GetLayout());
 			codec_parameters->sample_rate = media_track->GetSample().GetRateNum();
 			codec_parameters->frame_size = 1024;
 			codec_parameters->format = static_cast<int>(media_track->GetSample().GetFormat());
 			codec_parameters->codec_tag = 0;
+
+			codec_parameters->ch_layout = {
+				.order = AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
+				.nb_channels = static_cast<int>(media_track->GetChannel().GetCounts()),
+				.u = {.mask = static_cast<uint64_t>(AvChannelLayoutFromAudioChannelLayout(media_track->GetChannel().GetLayout()))}
+			};
 
 			std::shared_ptr<ov::Data> extra_data = nullptr;
 			if (media_track->GetCodecId() == cmn::MediaCodecId::Aac)

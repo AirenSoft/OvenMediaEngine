@@ -13,7 +13,7 @@ OPUS_VERSION=1.3.1
 VPX_VERSION=1.11.0
 FDKAAC_VERSION=2.0.2
 NASM_VERSION=2.15.05
-FFMPEG_VERSION=5.0.1
+FFMPEG_VERSION=7.0
 JEMALLOC_VERSION=5.3.0
 PCRE2_VERSION=10.39
 OPENH264_VERSION=2.4.0
@@ -316,8 +316,8 @@ install_ffmpeg()
     --extra-ldflags="${ADDI_LDFLAGS} -L${PREFIX}/lib -Wl,-rpath,${PREFIX}/lib " \
     --extra-libs=-ldl ${ADDI_EXTRA_LIBS} \
     ${ADDI_LICENSE} \
-    --disable-everything --disable-programs --disable-avdevice --disable-dwt --disable-lsp --disable-lzo --disable-faan --disable-pixelutils \
-    --enable-shared --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libopenh264 --enable-openssl --enable-network --enable-libsrt --enable-dct --enable-rdft  ${ADDI_LIBS} \
+    --disable-everything --disable-programs --disable-avdevice --disable-dwt --disable-lsp --disable-faan --disable-pixelutils \
+    --enable-shared --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libopenh264 --enable-openssl --enable-network --enable-libsrt  ${ADDI_LIBS} \
     ${ADDI_HWACCEL} \
     --enable-ffmpeg \
     --enable-encoder=libvpx_vp8,libopus,libfdk_aac,libopenh264,mjpeg,png${ADDI_ENCODER} \
@@ -348,7 +348,7 @@ install_jemalloc()
     (DIR=${TEMP_PATH}/jemalloc && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sSLf https://github.com/jemalloc/jemalloc/releases/download/${JEMALLOC_VERSION}/jemalloc-${JEMALLOC_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
+    curl -sSLf https://github.com/jemalloc/jemalloc/releases/download/${JEMALLOC_VERSION}/jemalloc-${JEMALLOC_VERSION}.tar.bz2 | tar -jx --strip-components=1 --no-same-owner && \
     ./configure --prefix="${PREFIX}" && \
     make -j$(nproc) && \
     sudo make install_include install_lib && \
