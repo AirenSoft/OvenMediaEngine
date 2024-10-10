@@ -610,7 +610,7 @@ bool MediaRouteStream::ProcessAACAdtsStream(std::shared_ptr<MediaTrack> &media_t
 	}
 
 	auto audio_config = std::make_shared<AudioSpecificConfig>();
-	audio_config->SetOjbectType(adts.Profile());
+	audio_config->SetObjectType(adts.ObjectType());
 	audio_config->SetSamplingFrequency(adts.Samplerate());
 	audio_config->SetChannel(adts.ChannelConfiguration());
 

@@ -181,6 +181,14 @@ namespace pvd
 		}
 		_acknowledgement_traffic_after_last_acked += data_length;
 
+		if ((_remained_data != nullptr) && (_remained_data->GetLength() > RTMP_MAX_PACKET_SIZE))
+		{
+			logte("The packet is ignored because the size is too large: [%d]), packet size: %zu, threshold: %d",
+				  GetChannelId(), _remained_data->GetLength(), RTMP_MAX_PACKET_SIZE);
+
+			return false;
+		}
+
 		if ((_remained_data == nullptr) || _remained_data->IsEmpty())
 		{
 			_remained_data = data->Clone();
@@ -188,14 +196,6 @@ namespace pvd
 		else
 		{
 			_remained_data->Append(data);
-		}
-
-		if (_remained_data->GetLength() > RTMP_MAX_PACKET_SIZE)
-		{
-			logte("The packet is ignored because the size is too large: [%d]), packet size: %zu, threshold: %d",
-				  GetChannelId(), _remained_data->GetLength(), RTMP_MAX_PACKET_SIZE);
-
-			return false;
 		}
 
 		logtp("Trying to parse data\n%s", _remained_data->Dump(_remained_data->GetLength()).CStr());

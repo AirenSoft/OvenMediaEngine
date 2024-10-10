@@ -9,7 +9,7 @@
 
 bool AudioSpecificConfig::IsValid() const
 {
-	if (_object_type == AacObjectType::AacObjectTypeNull ||
+	if (_object_type == AudioObjectType::Null ||
 		_sampling_frequency_index == AacSamplingFrequencies::RATES_RESERVED ||
 		_channel == 15)
 	{
@@ -43,14 +43,14 @@ bool AudioSpecificConfig::Parse(const std::shared_ptr<ov::Data> &data)
 
 	BitReader parser(data->GetDataAs<uint8_t>(), data->GetLength());
 
-	_object_type = static_cast<AacObjectType>(parser.ReadBits<uint8_t>(5));
+	_object_type = static_cast<AudioObjectType>(parser.ReadBits<uint8_t>(5));
 	_sampling_frequency_index = static_cast<AacSamplingFrequencies>(parser.ReadBits<uint8_t>(4));
 	_channel = parser.ReadBits<uint8_t>(4);
 
 	return true;
 }
 
-bool AudioSpecificConfig::Equals(const std::shared_ptr<DecoderConfigurationRecord> &other) 
+bool AudioSpecificConfig::Equals(const std::shared_ptr<DecoderConfigurationRecord> &other)
 {
 	if (other == nullptr)
 	{
@@ -63,17 +63,17 @@ bool AudioSpecificConfig::Equals(const std::shared_ptr<DecoderConfigurationRecor
 		return false;
 	}
 
-	if(ObjectType() != other_config->ObjectType())
+	if (ObjectType() != other_config->ObjectType())
 	{
 		return false;
 	}
 
-	if(SamplingFrequency() != other_config->SamplingFrequency())
+	if (SamplingFrequency() != other_config->SamplingFrequency())
 	{
 		return false;
 	}
 
-	if(Channel() != other_config->Channel())
+	if (Channel() != other_config->Channel())
 	{
 		return false;
 	}
@@ -85,19 +85,19 @@ std::shared_ptr<ov::Data> AudioSpecificConfig::Serialize()
 {
 	ov::BitWriter bits(2);
 
-	bits.WriteBits(5, _object_type);
+	bits.WriteBits(5, ov::ToUnderlyingType(_object_type));
 	bits.WriteBits(4, _sampling_frequency_index);
 	bits.WriteBits(4, _channel);
 
 	return std::make_shared<ov::Data>(bits.GetData(), bits.GetDataSize());
 }
 
-AacObjectType AudioSpecificConfig::ObjectType() const
+AudioObjectType AudioSpecificConfig::ObjectType() const
 {
 	return _object_type;
 }
 
-void AudioSpecificConfig::SetOjbectType(AacObjectType object_type)
+void AudioSpecificConfig::SetObjectType(AudioObjectType object_type)
 {
 	_object_type = object_type;
 }
@@ -164,16 +164,19 @@ AacProfile AudioSpecificConfig::GetAacProfile() const
 {
 	switch (_object_type)
 	{
-		case AacObjectTypeAacMain:
-			return AacProfileMain;
-		case AacObjectTypeAacHE:
-		case AacObjectTypeAacHEV2:
-		case AacObjectTypeAacLC:
-			return AacProfileLC;
-		case AacObjectTypeAacSSR:
-			return AacProfileSSR;
+		case AudioObjectType::AacMain:
+			return AacProfile::Main;
+
+		case AudioObjectType::AacLc:
+		case AudioObjectType::Sbr:
+		case AudioObjectType::Ps:
+			return AacProfile::LC;
+
+		case AudioObjectType::AacSsr:
+			return AacProfile::SSR;
+
 		default:
-			return AacProfileReserved;
+			return AacProfile::Reserved;
 	}
 }
 
