@@ -74,6 +74,11 @@ bool LLHlsStream::Start()
 	// cenc property will be set in AddPackager
 
 	_storage_config.max_segments = llhls_config.GetSegmentCount();
+	if (_storage_config.max_segments < 3)
+	{
+		logtw("LLHlsStream(%s/%s) - Segment count should be at least 3, Set to 3", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+		_storage_config.max_segments = 3;
+	}
 	_storage_config.segment_duration_ms = llhls_config.GetSegmentDuration() * 1000;
 	_storage_config.dvr_enabled = dvr_config.IsEnabled();
 	_storage_config.dvr_storage_path = dvr_config.GetTempStoragePath();
@@ -1292,7 +1297,7 @@ bool LLHlsStream::CheckPlaylistReady()
 	for (const auto &[track_id, storage] : _storage_map)
 	{
 		// At least one segment must be created.
-		if (storage->GetLastSegmentNumber() < 0)
+		if (storage->GetSegmentCount() <= 1)
 		{
 			return false;
 		}
@@ -1315,6 +1320,8 @@ bool LLHlsStream::CheckPlaylistReady()
 	}
 
 	chunklist_lock.unlock();
+
+	logti("LLHlsStream(%s/%s) - Ready to play : Part Hold Back = %f", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), final_part_hold_back);
 
 	_playlist_ready = true;
 

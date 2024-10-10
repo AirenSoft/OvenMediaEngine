@@ -43,6 +43,8 @@ namespace bmff
 		std::shared_ptr<FMP4Segment> GetLastSegment() const;
 		std::shared_ptr<FMP4Chunk> GetMediaChunk(uint32_t segment_number, uint32_t chunk_number) const;
 
+		uint64_t GetSegmentCount() const;
+
 		std::tuple<int64_t, int64_t> GetLastChunkNumber() const;
 		int64_t GetLastSegmentNumber() const;
 

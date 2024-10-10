@@ -121,6 +121,12 @@ namespace bmff
 		return chunk;
 	}
 
+	uint64_t FMP4Storage::GetSegmentCount() const
+	{
+		std::shared_lock<std::shared_mutex> lock(_segments_lock);
+		return _segments.size();
+	}
+
 	std::tuple<int64_t, int64_t> FMP4Storage::GetLastChunkNumber() const
 	{
 		auto last_segment = GetLastSegment();
