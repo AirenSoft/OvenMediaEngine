@@ -1135,12 +1135,7 @@ namespace pvd
 				// ping response == event type (16 bits) + timestamp (32 bits)
 				auto body = std::make_shared<std::vector<uint8_t>>(2 + 4);
 				auto write_buffer = body->data();
-				auto message_header = std::make_shared<RtmpMuxMessageHeader>(
-					chunk_stream_id,
-					0,
-					RtmpMessageTypeID::USER_CONTROL,
-					message_stream_id,
-					6);
+				auto message_header = RtmpMuxMessageHeader::Create(chunk_stream_id, RtmpMessageTypeID::USER_CONTROL, message_stream_id, 6);
 
 				*(reinterpret_cast<uint16_t *>(write_buffer)) = ov::HostToBE16(RTMP_UCMID_PINGRESPONSE);
 				write_buffer += sizeof(uint16_t);
@@ -2061,16 +2056,14 @@ namespace pvd
 	bool RtmpStream::SendHandshake(const std::shared_ptr<const ov::Data> &data)
 	{
 		uint8_t s0 = 0;
-		uint8_t s1[RTMP_HANDSHAKE_PACKET_SIZE] = {
-			0,
-		};
-		uint8_t s2[RTMP_HANDSHAKE_PACKET_SIZE] = {
-			0,
-		};
+		uint8_t s1[RTMP_HANDSHAKE_PACKET_SIZE]{};
+		uint8_t s2[RTMP_HANDSHAKE_PACKET_SIZE]{};
 
 		s0 = RTMP_HANDSHAKE_VERSION;
+
 		RtmpHandshake::MakeS1(s1);
 		RtmpHandshake::MakeS2(data->GetDataAs<uint8_t>() + sizeof(uint8_t), s2);
+
 		_handshake_state = RtmpHandshakeState::C1;
 
 		// OM-1629 - Elemental Encoder
@@ -2093,11 +2086,8 @@ namespace pvd
 
 	bool RtmpStream::SendUserControlMessage(uint16_t message, std::shared_ptr<std::vector<uint8_t>> &data)
 	{
-		auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
-																	 0,
-																	 RtmpMessageTypeID::USER_CONTROL,
-																	 0,
-																	 data->size() + 2);
+		auto message_header = RtmpMuxMessageHeader::Create(
+			RTMP_CHUNK_STREAM_ID_URGENT, RtmpMessageTypeID::USER_CONTROL, 0, data->size() + 2);
 
 		data->insert(data->begin(), 0);
 		data->insert(data->begin(), 0);
@@ -2109,11 +2099,8 @@ namespace pvd
 	bool RtmpStream::SendWindowAcknowledgementSize(uint32_t size)
 	{
 		auto body = std::make_shared<std::vector<uint8_t>>(sizeof(int));
-		auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
-																	 0,
-																	 RtmpMessageTypeID::WINDOW_ACKNOWLEDGEMENT_SIZE,
-																	 _rtmp_stream_id,
-																	 body->size());
+		auto message_header = RtmpMuxMessageHeader::Create(
+			RTMP_CHUNK_STREAM_ID_URGENT, RtmpMessageTypeID::WINDOW_ACKNOWLEDGEMENT_SIZE, _rtmp_stream_id, body->size());
 
 		RtmpMuxUtil::WriteInt32(body->data(), size);
 
@@ -2123,11 +2110,8 @@ namespace pvd
 	bool RtmpStream::SendAcknowledgementSize(uint32_t acknowledgement_traffic)
 	{
 		auto body = std::make_shared<std::vector<uint8_t>>(sizeof(int));
-		auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
-																	 0,
-																	 RtmpMessageTypeID::ACKNOWLEDGEMENT,
-																	 0,
-																	 body->size());
+		auto message_header = RtmpMuxMessageHeader::Create(
+			RTMP_CHUNK_STREAM_ID_URGENT, RtmpMessageTypeID::ACKNOWLEDGEMENT, 0, body->size());
 
 		RtmpMuxUtil::WriteInt32(body->data(), acknowledgement_traffic);
 
@@ -2137,11 +2121,8 @@ namespace pvd
 	bool RtmpStream::SendSetPeerBandwidth(uint32_t bandwidth)
 	{
 		auto body = std::make_shared<std::vector<uint8_t>>(5);
-		auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
-																	 0,
-																	 RtmpMessageTypeID::SET_PEER_BANDWIDTH,
-																	 _rtmp_stream_id,
-																	 body->size());
+		auto message_header = RtmpMuxMessageHeader::Create(
+			RTMP_CHUNK_STREAM_ID_URGENT, RtmpMessageTypeID::SET_PEER_BANDWIDTH, _rtmp_stream_id, body->size());
 
 		RtmpMuxUtil::WriteInt32(body->data(), bandwidth);
 		RtmpMuxUtil::WriteInt8(body->data() + 4, 2);
@@ -2188,11 +2169,8 @@ namespace pvd
 
 	bool RtmpStream::SendAmfConnectResult(uint32_t chunk_stream_id, double transaction_id, double object_encoding)
 	{
-		auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id,
-																	 0,
-																	 RtmpMessageTypeID::AMF0_COMMAND,
-																	 0,
-																	 0);
+		auto message_header = RtmpMuxMessageHeader::Create(chunk_stream_id);
+
 		AmfDocument document;
 
 		// _result
@@ -2229,11 +2207,9 @@ namespace pvd
 
 	bool RtmpStream::SendAmfOnFCPublish(uint32_t chunk_stream_id, uint32_t stream_id, double client_id)
 	{
-		auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id,
-																	 0,
-																	 RtmpMessageTypeID::AMF0_COMMAND,
-																	 _rtmp_stream_id,
-																	 0);
+		auto message_header = RtmpMuxMessageHeader::Create(
+			chunk_stream_id, RtmpMessageTypeID::AMF0_COMMAND, _rtmp_stream_id);
+
 		AmfDocument document;
 
 		document.AppendProperty(RTMP_CMD_NAME_ONFCPUBLISH);
@@ -2254,11 +2230,8 @@ namespace pvd
 
 	bool RtmpStream::SendAmfCreateStreamResult(uint32_t chunk_stream_id, double transaction_id)
 	{
-		auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id,
-																	 0,
-																	 RtmpMessageTypeID::AMF0_COMMAND,
-																	 0,
-																	 0);
+		auto message_header = RtmpMuxMessageHeader::Create(chunk_stream_id);
+
 		AmfDocument document;
 
 		// 스트림ID 정하기
@@ -2279,11 +2252,7 @@ namespace pvd
 									 const char *description,
 									 double client_id)
 	{
-		auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id,
-																	 0,
-																	 RtmpMessageTypeID::AMF0_COMMAND,
-																	 stream_id,
-																	 0);
+		auto message_header = RtmpMuxMessageHeader::Create(chunk_stream_id, RtmpMessageTypeID::AMF0_COMMAND, stream_id);
 		AmfDocument document;
 
 		document.AppendProperty(RTMP_CMD_NAME_ONSTATUS);

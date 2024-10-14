@@ -61,7 +61,7 @@ std::shared_ptr<ExportStream> RtmpExportChunk::GetStream(uint32_t chunk_stream_i
 // - Type3는 확장 헤더 확인 못함 - 이전 정보를 기반으로 이후에 확인
 // - 압축 헤더 : 프레임이 정상 적으로 않나오는 상황에서 헤더 압축 사용하면 타임스템프 전달이 정상적으로 않됨
 //====================================================================================================
-std::shared_ptr<RtmpChunkHeader> RtmpExportChunk::GetChunkHeader(std::shared_ptr<ExportStream> &stream, const std::shared_ptr<RtmpMuxMessageHeader> &message_header)
+std::shared_ptr<RtmpChunkHeader> RtmpExportChunk::GetChunkHeader(std::shared_ptr<ExportStream> &stream, const std::shared_ptr<const RtmpMuxMessageHeader> &message_header)
 {
 	auto chunk_header = std::make_shared<RtmpChunkHeader>();
 
@@ -119,7 +119,7 @@ std::shared_ptr<RtmpChunkHeader> RtmpExportChunk::GetChunkHeader(std::shared_ptr
 //====================================================================================================
 // Export 스트림
 //====================================================================================================
-std::shared_ptr<std::vector<uint8_t>> RtmpExportChunk::ExportStreamData(std::shared_ptr<RtmpMuxMessageHeader> &message_header, const uint8_t *chunk_data, size_t chunk_size)
+std::shared_ptr<std::vector<uint8_t>> RtmpExportChunk::ExportStreamData(const std::shared_ptr<const RtmpMuxMessageHeader> &message_header, const uint8_t *chunk_data, size_t chunk_size)
 {
 	int buffer_size = 0;
 	int export_size = 0;
