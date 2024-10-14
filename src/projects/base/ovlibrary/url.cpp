@@ -118,6 +118,32 @@ namespace ov
 		return result_string;
 	}
 
+	void Url::SetPath(const ov::String &path)
+	{
+		_path = path;
+
+		// split <path> to /<app>/<stream>/<file> (4 tokens)
+		auto tokens = _path.Split("/");
+
+		switch (tokens.size())
+		{
+			default:
+			case 4:
+				_file = tokens[3];
+				[[fallthrough]];
+			case 3:
+				_stream = tokens[2];
+				[[fallthrough]];
+			case 2:
+				_app = tokens[1];
+				[[fallthrough]];
+			case 1:
+			case 0:
+				// Nothing to do
+				break;
+		}
+	}
+
 	std::shared_ptr<Url> Url::Parse(const ov::String &url)
 	{
 		auto object = std::make_shared<Url>();
@@ -139,30 +165,9 @@ namespace ov
 		object->_password = group_list["password"].GetValue();
 		object->_host = group_list["host"].GetValue();
 		object->_port = ov::Converter::ToUInt32(group_list["port"].GetValue());
-		object->_path = group_list["path"].GetValue();
+		object->SetPath(group_list["path"].GetValue());
 		object->_query_string = group_list["qs"].GetValue();
 		object->_has_query_string = (object->_query_string.IsEmpty() == false);
-
-		// split <path> to /<app>/<stream>/<file> (4 tokens)
-		auto tokens = object->_path.Split("/");
-
-		switch (tokens.size())
-		{
-			default:
-			case 4:
-				object->_file = tokens[3];
-				[[fallthrough]];
-			case 3:
-				object->_stream = tokens[2];
-				[[fallthrough]];
-			case 2:
-				object->_app = tokens[1];
-				[[fallthrough]];
-			case 1:
-			case 0:
-				// Nothing to do
-				break;
-		}
 
 		return object;
 	}
@@ -284,6 +289,83 @@ namespace ov
 		}
 	}
 
+	bool Url::HasQueryString() const
+	{
+		return _has_query_string;
+	}
+
+	const ov::String &Url::Query() const
+	{
+		ParseQueryIfNeeded();
+		return _query_string;
+	}
+
+	const bool Url::HasQueryKey(ov::String key) const
+	{
+		ParseQueryIfNeeded();
+		if (_query_map.find(key) == _query_map.end())
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	const ov::String Url::GetQueryValue(ov::String key) const
+	{
+		if (HasQueryKey(key) == false)
+		{
+			return "";
+		}
+
+		return Decode(_query_map[key]);
+	}
+
+	const std::map<ov::String, ov::String> &Url::QueryMap() const
+	{
+		ParseQueryIfNeeded();
+		return _query_map;
+	}
+
+	Url &Url::operator=(const Url &other) noexcept
+	{
+		_source = other._source;
+		_scheme = other._scheme;
+		_host = other._host;
+		_port = other._port;
+		_path = other._path;
+		_has_query_string = other._has_query_string;
+		_query_string = other._query_string;
+		_query_parsed = other._query_parsed;
+		_query_map = other._query_map;
+		_app = other._app;
+		_stream = other._stream;
+		_file = other._file;
+
+		return *this;
+	}
+
+	Url::Url(const Url &other)
+	{
+		_source = other._source;
+		_scheme = other._scheme;
+		_host = other._host;
+		_port = other._port;
+		_path = other._path;
+		_has_query_string = other._has_query_string;
+		_query_string = other._query_string;
+		_query_parsed = other._query_parsed;
+		_query_map = other._query_map;
+		_app = other._app;
+		_stream = other._stream;
+		_file = other._file;
+	}
+
+	std::shared_ptr<Url> Url::Clone() const
+	{
+		return std::make_shared<Url>(*this);
+	}
+
 	void Url::Print() const
 	{
 		logi("URL Parser", "%s %s %d %s %s %s %s",
@@ -302,16 +384,12 @@ namespace ov
 
 	ov::String Url::ToString() const
 	{
-		ov::String description;
-
-		description.AppendFormat(
+		return ov::String::FormatString(
 			"%s://%s%s%s%s%s%s (app: %s, stream: %s, file: %s)",
 			_scheme.CStr(),
 			_id.IsEmpty() ? "" : ov::String::FormatString("%s:%s@", _id.CStr(), _password.CStr()).CStr(),
 			_host.CStr(), (_port > 0) ? ov::String::FormatString(":%d", _port).CStr() : "",
 			_path.CStr(), _query_string.IsEmpty() ? "" : "?", _query_string.CStr(),
 			_app.CStr(), _stream.CStr(), _file.CStr());
-
-		return description;
 	}
 }  // namespace ov

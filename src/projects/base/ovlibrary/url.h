@@ -23,99 +23,23 @@ namespace ov
 		// <scheme>://<host>[:<port>][/<path/to/resource>][?<query string>]
 		static std::shared_ptr<Url> Parse(const ov::String &url);
 
-		const ov::String &Source() const
-		{
-			return _source;
-		}
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetSource, Source, _source, )
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetScheme, Scheme, _scheme, )
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetHost, Host, _host, )
+		OV_DEFINE_SETTER_CONST_GETTER(uint32_t, SetPort, Port, _port, )
+		OV_DEFINE_CONST_GETTER(ov::String, Path, _path, )
+		void SetPath(const ov::String &path);
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetApp, App, _app, )
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetStream, Stream, _stream, )
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetFile, File, _file, )
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetId, Id, _id, )
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetPassword, Password, _password, )
 
-		const ov::String &Scheme() const
-		{
-			return _scheme;
-		}
-
-		const ov::String &Host() const
-		{
-			return _host;
-		}
-
-		void SetPort(uint32_t port)
-		{
-			_port = port;
-		}
-
-		const uint32_t &Port() const
-		{
-			return _port;
-		}
-
-		const ov::String &Path() const
-		{
-			return _path;
-		}
-
-		const ov::String &App() const
-		{
-			return _app;
-		}
-
-		const ov::String &Stream() const
-		{
-			return _stream;
-		}
-
-		const ov::String &File() const
-		{
-			return _file;
-		}
-
-		const ov::String &Id() const
-		{
-			return _id;
-		}
-
-		const ov::String &Password() const
-		{
-			return _password;
-		}
-
-		bool HasQueryString() const
-		{
-			return _has_query_string;
-		}
-
-		const ov::String &Query() const
-		{
-			ParseQueryIfNeeded();
-			return _query_string;
-		}
-
-		const bool HasQueryKey(ov::String key) const
-		{
-			ParseQueryIfNeeded();
-			if(_query_map.find(key) == _query_map.end())
-			{
-				return false;
-			}
-
-			return true;
-		}
-
-		const ov::String GetQueryValue(ov::String key) const
-		{
-			if(HasQueryKey(key) == false)
-			{
-				return "";
-			}
-
-			return Decode(_query_map[key]);
-		}
-
-		const std::map<ov::String, ov::String> &QueryMap() const
-		{
-			ParseQueryIfNeeded();
-			return _query_map;
-		}
-
+		bool HasQueryString() const;
+		const ov::String &Query() const;
+		const bool HasQueryKey(ov::String key) const;
+		const ov::String GetQueryValue(ov::String key) const;
+		const std::map<ov::String, ov::String> &QueryMap() const;
 		bool PushBackQueryKey(const ov::String &key, const ov::String &value);
 		bool PushBackQueryKey(const ov::String &key);
 		bool RemoveQueryKey(const ov::String &key);
@@ -124,48 +48,12 @@ namespace ov
 		ov::String ToUrlString(bool include_query_string = true) const;
 		ov::String ToString() const;
 
-		Url	&operator=(const Url& other) noexcept
-		{
-			_source = other._source;
-			_scheme = other._scheme;
-			_host = other._host;
-			_port = other._port;
-			_path = other._path;
-			_has_query_string = other._has_query_string;
-			_query_string = other._query_string;
-			_query_parsed = other._query_parsed;
-			_query_map = other._query_map;
-			_app = other._app;
-			_stream = other._stream;
-			_file = other._file;
-			
-			return *this;
-		}
+		Url &operator=(const Url &other) noexcept;
 
-		Url()
-		{
-		}
+		Url() =default;
+		Url(const Url &other);
 
-		Url(const Url &other)
-		{
-			_source = other._source;
-			_scheme = other._scheme;
-			_host = other._host;
-			_port = other._port;
-			_path = other._path;
-			_has_query_string = other._has_query_string;
-			_query_string = other._query_string;
-			_query_parsed = other._query_parsed;
-			_query_map = other._query_map;
-			_app = other._app;
-			_stream = other._stream;
-			_file = other._file;
-		}
-
-		std::shared_ptr<Url> Clone() const
-		{
-			return std::make_shared<Url>(*this);
-		}
+		std::shared_ptr<Url> Clone() const;
 
 	private:
 		void ParseQueryIfNeeded() const;
