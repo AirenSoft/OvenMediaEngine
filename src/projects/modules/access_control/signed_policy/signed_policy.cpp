@@ -67,6 +67,12 @@ bool SignedPolicy::Process(const std::shared_ptr<const ac::RequestInfo> &request
 
 	// Extract policy
 	auto policy_base64 = url->GetQueryValue(policy_query_key);
+	if (policy_base64.IsEmpty())
+	{
+		SetError(ErrCode::NO_POLICY_VALUE_IN_URL, ov::String::FormatString("Policy value is empty in url(%s).", request_url_str.CStr()));
+		return false;
+	}
+
 	auto policy = ov::Base64::Decode(policy_base64, true);
 
 	if (ProcessPolicyJson(policy->ToString()) == false)
