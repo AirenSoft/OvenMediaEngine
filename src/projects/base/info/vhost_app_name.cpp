@@ -91,6 +91,11 @@ namespace info
 		return (_is_valid == another._is_valid) && (_vhost_app_name == another._vhost_app_name);
 	}
 
+	bool VHostAppName::operator<(const VHostAppName &another) const
+	{
+		return _vhost_app_name < another._vhost_app_name;
+	}
+
 	const ov::String &VHostAppName::GetVHostName() const
 	{
 		return _vhost_name;

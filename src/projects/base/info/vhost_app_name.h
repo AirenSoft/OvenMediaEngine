@@ -27,6 +27,7 @@ namespace info
 
 		bool IsValid() const;
 		bool operator==(const VHostAppName &another) const;
+		bool operator<(const VHostAppName &another) const;
 
 		const ov::String &GetVHostName() const;
 		const ov::String &GetAppName() const;
