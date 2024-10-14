@@ -66,6 +66,12 @@ namespace pvd
 			return _provider;
 		}
 
+		template <typename T>
+		std::enable_if_t<std::is_base_of<PushProvider, T>::value, std::shared_ptr<T>> GetProviderAs()
+		{
+			return std::dynamic_pointer_cast<T>(_provider);
+		}
+
 		DirectionType GetDirectionType() override
 		{
 			return DirectionType::PUSH;
