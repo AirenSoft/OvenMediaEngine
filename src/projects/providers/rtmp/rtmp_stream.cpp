@@ -215,13 +215,14 @@ namespace pvd
 
 			if (process_size < 0)
 			{
-				logtd("Could not parse RTMP packet: [%s/%s] (%u/%u), size: %zu bytes, returns: %d",
+				logtd("Could not process RTMP packet: [%s/%s] (%u/%u), size: %zu bytes, returns: %d",
 					  _vhost_app_name.CStr(), _stream_name.CStr(),
 					  _app_id, GetId(),
 					  _remained_data->GetLength(),
 					  process_size);
 
-				return process_size;
+				Stop();
+				return false;
 			}
 			else if (process_size == 0)
 			{
@@ -246,15 +247,36 @@ namespace pvd
 	{
 		if (_tc_url.IsEmpty() == false)
 		{
-			_full_url = _tc_url;
-			auto remain = document.GetProperty(3)->GetString();
-			if (remain.IsEmpty() == false)
+			auto url = ov::Url::Parse(_tc_url);
+
+			if (url == nullptr)
 			{
-				_full_url += ov::String::FormatString("/%s", remain.CStr());
+				logtw("Could not parse the URL: %s", _tc_url.CStr());
+				return false;
 			}
 
-			if (SetFullUrl(_full_url) &&
-				CheckAccessControl() &&
+			auto stream_name = document.GetProperty(3)->GetString();
+
+			if (stream_name.IsEmpty() == false)
+			{
+				url->SetStream(stream_name);
+			}
+
+			// PORT can be omitted (1935), but SignedPolicy requires this information.
+			if (url->Port() == 0)
+			{
+				url->SetPort(_remote->GetLocalAddress()->Port());
+			}
+
+			_url = url;
+			_publish_url = _url;
+			_stream_name = _url->Stream();
+			_import_chunk->SetStreamName(_stream_name);
+
+			SetRequestedUrl(_url);
+			SetFinalUrl(_url);
+
+			if (CheckAccessControl() &&
 				ValidatePublishUrl())
 			{
 				return true;
@@ -265,7 +287,7 @@ namespace pvd
 		return false;
 	}
 
-	void RtmpStream::OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
+	bool RtmpStream::OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
 		double object_encoding = 0.0;
 
@@ -331,35 +353,39 @@ namespace pvd
 		if (SendWindowAcknowledgementSize(RTMP_DEFAULT_ACKNOWNLEDGEMENT_SIZE) == false)
 		{
 			logte("SendWindowAcknowledgementSize Fail");
-			return;
+			return false;
 		}
 
 		if (SendSetPeerBandwidth(_peer_bandwidth) == false)
 		{
 			logte("SendSetPeerBandwidth Fail");
-			return;
+			return false;
 		}
 
 		if (SendStreamBegin(0) == false)
 		{
 			logte("SendStreamBegin Fail");
-			return;
+			return false;
 		}
 
 		if (SendAmfConnectResult(header->basic_header.chunk_stream_id, transaction_id, object_encoding) == false)
 		{
 			logte("SendAmfConnectResult Fail");
-			return;
+			return false;
 		}
+
+		return true;
 	}
 
-	void RtmpStream::OnAmfCreateStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
+	bool RtmpStream::OnAmfCreateStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
 		if (SendAmfCreateStreamResult(header->basic_header.chunk_stream_id, transaction_id) == false)
 		{
 			logte("SendAmfCreateStreamResult Fail");
-			return;
+			return false;
 		}
+
+		return true;
 	}
 
 	bool RtmpStream::CheckAccessControl()
@@ -464,7 +490,7 @@ namespace pvd
 		return false;
 	}
 
-	void RtmpStream::OnAmfFCPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
+	bool RtmpStream::OnAmfFCPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
 		if (_stream_name.IsEmpty())
 		{
@@ -476,15 +502,17 @@ namespace pvd
 				if (SendAmfOnFCPublish(header->basic_header.chunk_stream_id, _rtmp_stream_id, _client_id) == false)
 				{
 					logte("SendAmfOnFCPublish Fail");
-					return;
+					return false;
 				}
 
-				PostPublish(document);
+				return PostPublish(document);
 			}
 		}
+
+		return false;
 	}
 
-	void RtmpStream::OnAmfPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
+	bool RtmpStream::OnAmfPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
 		if (_stream_name.IsEmpty())
 		{
@@ -493,7 +521,7 @@ namespace pvd
 			{
 				if (PostPublish(document) == false)
 				{
-					return;
+					return false;
 				}
 			}
 			else
@@ -508,7 +536,7 @@ namespace pvd
 								"Authentication Failed.",
 								_client_id);
 
-				return;
+				return false;
 			}
 		}
 
@@ -517,7 +545,7 @@ namespace pvd
 		if (SendStreamBegin(_rtmp_stream_id) == false)
 		{
 			logte("SendStreamBegin Fail");
-			return;
+			return false;
 		}
 
 		if (SendAmfOnStatus(static_cast<uint32_t>(_chunk_stream_id),
@@ -528,32 +556,8 @@ namespace pvd
 							_client_id) == false)
 		{
 			logte("SendAmfOnStatus Fail");
-			return;
-		}
-	}
-
-	bool RtmpStream::SetFullUrl(ov::String url)
-	{
-		_url = ov::Url::Parse(url);
-
-		if (_url == nullptr)
-		{
-			logtw("Could not parse the URL: %s", url.CStr());
 			return false;
 		}
-
-		// PORT can be omitted (1935), but SignedPolicy requires this information.
-		if (_url->Port() == 0)
-		{
-			_url->SetPort(_remote->GetLocalAddress()->Port());
-		}
-
-		_publish_url = _url;
-		_stream_name = _url->Stream();
-		_import_chunk->SetStreamName(_stream_name);
-
-		SetRequestedUrl(_url);
-		SetFinalUrl(_url);
 
 		return true;
 	}
@@ -869,7 +873,7 @@ namespace pvd
 		return true;
 	}
 
-	void RtmpStream::OnAmfDeleteStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
+	bool RtmpStream::OnAmfDeleteStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
 		logtd("Delete Stream - stream(%s/%s) id(%u/%u)", _vhost_app_name.CStr(), _stream_name.CStr(), _app_id, GetId());
 
@@ -878,6 +882,8 @@ namespace pvd
 
 		// it will call PhysicalPort::OnDisconnected
 		_remote->Close();
+
+		return true;
 	}
 
 	off_t RtmpStream::ReceiveHandshakePacket(const std::shared_ptr<const ov::Data> &data)
@@ -1055,7 +1061,7 @@ namespace pvd
 					ReceiveAmfDataMessage(message);
 					break;
 				case RtmpMessageTypeID::AMF0_COMMAND:
-					ReceiveAmfCommandMessage(message);
+					result = ReceiveAmfCommandMessage(message);
 					break;
 				case RtmpMessageTypeID::USER_CONTROL:
 					result = ReceiveUserControlMessage(message);
@@ -1158,7 +1164,7 @@ namespace pvd
 		}
 	}
 
-	void RtmpStream::ReceiveAmfCommandMessage(const std::shared_ptr<const RtmpMessage> &message)
+	bool RtmpStream::ReceiveAmfCommandMessage(const std::shared_ptr<const RtmpMessage> &message)
 	{
 		OV_ASSERT2(message->header != nullptr);
 		OV_ASSERT2(message->payload != nullptr);
@@ -1170,7 +1176,7 @@ namespace pvd
 		if (document.Decode(byte_stream) == false)
 		{
 			logte("Could not decode AMFDocument");
-			return;
+			return false;
 		}
 
 		// Message Name
@@ -1181,7 +1187,7 @@ namespace pvd
 			if (property == nullptr)
 			{
 				logte("Message name is not available");
-				return;
+				return false;
 			}
 
 			message_name = property->GetString();
@@ -1200,7 +1206,7 @@ namespace pvd
 
 		if (message_name == RTMP_CMD_NAME_CONNECT)
 		{
-			OnAmfConnect(message->header, document, transaction_id);
+			return OnAmfConnect(message->header, document, transaction_id);
 		}
 		else if (message_name == RTMP_CMD_NAME_CREATESTREAM)
 		{
@@ -1228,8 +1234,10 @@ namespace pvd
 		else
 		{
 			logtd("Unknown Amf0CommandMessage - Message(%s:%.1f)", message_name.CStr(), transaction_id);
-			return;
+			return false;
 		}
+
+		return true;
 	}
 
 	void RtmpStream::ReceiveAmfDataMessage(const std::shared_ptr<const RtmpMessage> &message)

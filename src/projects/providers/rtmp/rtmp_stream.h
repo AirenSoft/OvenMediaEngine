@@ -54,19 +54,16 @@ namespace pvd
 	protected:
 		bool Start() override;
 
-		bool ConvertToVideoData(const std::shared_ptr<ov::Data> &data, int64_t &cts);
-		bool ConvertToAudioData(const std::shared_ptr<ov::Data> &data);
-		
 	private:
 		// Called when received AmfFCPublish & AmfPublish event
 		bool PostPublish(const AmfDocument &document);
 
 		// AMF Event
-		void OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
-		void OnAmfCreateStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
-		void OnAmfFCPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
-		void OnAmfPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
-		void OnAmfDeleteStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
+		bool OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
+		bool OnAmfCreateStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
+		bool OnAmfFCPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
+		bool OnAmfPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
+		bool OnAmfDeleteStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
 		bool OnAmfMetaData(const std::shared_ptr<const RtmpChunkHeader> &header, const AmfProperty *property);
 
 
@@ -105,7 +102,7 @@ namespace pvd
 		bool ReceiveSetChunkSize(const std::shared_ptr<const RtmpMessage> &message);
 		bool ReceiveUserControlMessage(const std::shared_ptr<const RtmpMessage> &message);
 		void ReceiveWindowAcknowledgementSize(const std::shared_ptr<const RtmpMessage> &message);
-		void ReceiveAmfCommandMessage(const std::shared_ptr<const RtmpMessage> &message);
+		bool ReceiveAmfCommandMessage(const std::shared_ptr<const RtmpMessage> &message);
 		void ReceiveAmfDataMessage(const std::shared_ptr<const RtmpMessage> &message);
 
 		bool CheckEventMessage(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document);
@@ -120,8 +117,6 @@ namespace pvd
 		bool CheckReadyToPublish();
 		bool PublishStream();
 		bool SetTrackInfo(const std::shared_ptr<RtmpMediaInfo> &media_info);
-
-		bool SetFullUrl(ov::String url);
 
 		bool CheckAccessControl();
 		bool CheckStreamExpired();
