@@ -578,11 +578,14 @@ namespace ov
 
 					// Logging
 					_last_logging_time += _stats_metric_interval;
-					if (_last_logging_time >= _log_interval)
+					if ((_last_logging_time >= _log_interval) && (_last_logged_peak < _peak))
 					{
 						_last_logging_time = 0;
+
 						auto shared_lock = std::shared_lock(_name_mutex);
-						logw(LOG_TAG, "[%u] %s size has exceeded the threshold: queue: %zu, threshold: %zu, peak: %zu", GetId(), _urn->ToString().CStr(), _size, _threshold, _peak);
+						logw(LOG_TAG, "[%u] %s has exceeded the threshold and increased peak. size: %zu, threshold: %zu, peak: %zu", GetId(), _urn->ToString().CStr(), _size, _threshold, _peak);
+
+						_last_logged_peak = _peak;
 					}
 				}
 				else
@@ -624,6 +627,9 @@ namespace ov
 
 		// Stop flag
 		bool _stop;
+
+		// Use to print logs when the peak value of the queue is increased.
+		size_t _last_logged_peak = 0;
 
 		// Message Skip for lack of performance
 		bool _skip_message_enabled = false;
