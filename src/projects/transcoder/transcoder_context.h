@@ -78,7 +78,7 @@ public:
 
 		if (_priv_data)
 		{
-			_priv_data->pkt_duration = duration;
+			_priv_data->duration = duration;
 		}
 	}
 
