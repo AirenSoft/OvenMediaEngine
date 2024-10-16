@@ -184,6 +184,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(
 	if (need_bypass == true)
 	{
 		output_track->SetBypass(true);
+
 		output_track->SetCodecId(input_track->GetCodecId());
 		output_track->SetCodecModules(input_track->GetCodecModules());
 		output_track->SetCodecModuleId(input_track->GetCodecModuleId());
@@ -194,15 +195,34 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(
 	else
 	{
 		output_track->SetBypass(false);
-		output_track->SetCodecId(cmn::GetCodecIdByName(profile.GetCodec()));
+
+		auto codec_id = cmn::GetCodecIdByName(profile.GetCodec());
+
+		output_track->SetCodecId(codec_id);
 		output_track->SetCodecModules(profile.GetModules());
 		output_track->SetWidth(profile.GetWidth());
 		output_track->SetHeight(profile.GetHeight());
-		output_track->SetTimeBase(GetDefaultTimebaseByCodecId(output_track->GetCodecId()));
+		output_track->SetTimeBase(GetDefaultTimebaseByCodecId(codec_id));
 		output_track->SetPreset(profile.GetPreset());
 		output_track->SetThreadCount(profile.GetThreadCount());
 		output_track->SetBFrames(profile.GetBFrames());
 		output_track->SetProfile(profile.GetProfile());
+
+		// Used when the encoding profile codec name includes the module name.
+		// ex) <Codec>h264_nvenc</Codec>
+		// ex) <Codec>h264_openh264</Codec>
+		auto module_id = cmn::GetCodecModuleIdByName(profile.GetCodec());
+		if(module_id != cmn::MediaCodecModuleId::None)
+		{
+			if(output_track->GetCodecModules().IsEmpty() == false)
+			{
+				output_track->SetCodecModules(ov::String::FormatString("%s,%s", cmn::GetStringFromCodecModuleId(module_id).CStr(), output_track->GetCodecModules().CStr()));
+			}
+			else
+			{
+				output_track->SetCodecModules(cmn::GetStringFromCodecModuleId(module_id));
+			}
+		}
 	}
 
 	//  If the framerate is not set, it is set to the same value as the input.
@@ -434,7 +454,7 @@ bool TranscoderStreamInternal::IsMatchesBypassCondition(const std::shared_ptr<Me
 	condition = if_match.GetCodec(&is_parsed).UpperCaseString();
 	if (is_parsed == true)
 	{
-		if ((condition == "EQ") && (cmn::GetCodecIdByName(profile.GetCodec().CStr()) != input_track->GetCodecId()))
+		if ((condition == "EQ") && (cmn::GetCodecIdByName(profile.GetCodec()) != input_track->GetCodecId()))
 		{
 			return false;
 		}
@@ -541,9 +561,9 @@ bool TranscoderStreamInternal::IsMatchesBypassCondition(const std::shared_ptr<Me
 	condition = if_match.GetCodec(&is_parsed).UpperCaseString();
 	if (is_parsed == true)
 	{
-		if ((condition == "EQ") && (cmn::GetCodecIdByName(profile.GetCodec().CStr()) != input_track->GetCodecId()))
+		if ((condition == "EQ") && (cmn::GetCodecIdByName(profile.GetCodec()) != input_track->GetCodecId()))
 		{
-			if (cmn::GetCodecIdByName(profile.GetCodec().CStr()) != input_track->GetCodecId())
+			if (cmn::GetCodecIdByName(profile.GetCodec()) != input_track->GetCodecId())
 			{
 				return false;
 			}

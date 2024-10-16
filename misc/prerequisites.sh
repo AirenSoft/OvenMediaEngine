@@ -19,6 +19,7 @@ PCRE2_VERSION=10.39
 OPENH264_VERSION=2.4.0
 HIREDIS_VERSION=1.0.2
 NVCC_HDR_VERSION=11.1.5.2
+X264_VERSION=20191217-2245-stable 
 
 INTEL_QSV_HWACCELS=false
 NETINT_LOGAN_HWACCELS=false
@@ -26,6 +27,8 @@ NETINT_LOGAN_PATCH_PATH=""
 NETINT_LOGAN_XCODER_COMPILE_PATH=""
 NVIDIA_NV_CODEC_HWACCELS=false
 XILINX_XMA_CODEC_HWACCELS=false
+VIDEOLAN_X264_CODEC=true
+
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     NCPU=$(sysctl -n hw.ncpu)
@@ -99,6 +102,22 @@ install_libopus()
     sudo make install && \
     sudo rm -rf ${PREFIX}/share && \
     rm -rf ${DIR}) || fail_exit "opus"
+}
+
+install_libx264()
+{
+    if [ "$VIDEOLAN_X264_CODEC" = false ] ; then
+        return
+    fi
+
+    (DIR=${TEMP_PATH}/x264 && \
+    mkdir -p ${DIR} && \
+    cd ${DIR} && \
+    curl -sLf https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-${X264_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
+    ./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli && \
+    make -j$(nproc) && \
+    sudo make install && \
+    rm -rf ${DIR}) || fail_exit "x264"
 }
 
 install_libopenh264()
@@ -252,6 +271,12 @@ install_ffmpeg()
         ADDI_CFLAGS+=" -I/opt/xilinx/xrt/include/xma2 "
         ADDI_LDFLAGS+="-L/opt/xilinx/xrt/lib -L/opt/xilinx/xrm/lib  -Wl,-rpath,/opt/xilinx/xrt/lib,-rpath,/opt/xilinx/xrm/lib"
         ADDI_EXTRA_LIBS+="--extra-libs=-lxma2api --extra-libs=-lxrt_core --extra-libs=-lxrm --extra-libs=-lxrt_coreutil --extra-libs=-lpthread --extra-libs=-ldl "
+    fi
+
+    if [ "$VIDEOLAN_X264_CODEC" == true ]; then
+        ADDI_LIBS+=" --enable-libx264 "
+        ADDI_ENCODER+=",libx264"
+        ADDI_LICENSE+=" --enable-gpl --enable-nonfree "
     fi
 
     # Options are added by external scripts.
@@ -512,7 +537,15 @@ case $i in
     --enable-xma)
     XILINX_XMA_CODEC_HWACCELS=true
     shift
-    ;;    
+    ;;
+    --disable-x264)
+    VIDEOLAN_X264_CODEC=false
+    shift
+    ;;
+    --enable-x264)
+    VIDEOLAN_X264_CODEC=true
+    shift
+    ;;
     *)
             # unknown option
     ;;
@@ -560,6 +593,7 @@ install_libsrtp
 install_libsrt
 install_libopus
 install_libopenh264
+install_libx264
 install_libvpx
 install_fdk_aac
 install_nvcc_hdr

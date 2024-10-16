@@ -10,6 +10,7 @@
 
 #include <utility>
 
+#include "codec/encoder/encoder_avc_x264.h"
 #include "codec/encoder/encoder_aac.h"
 #include "codec/encoder/encoder_avc_nv.h"
 #include "codec/encoder/encoder_avc_openh264.h"
@@ -36,7 +37,8 @@
 
 std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::GetCandidates(bool hwaccels_enable, ov::String hwaccles_modules, std::shared_ptr<MediaTrack> track)
 {
-	logtd("Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s), Video.Modules(%s)",
+	logtd("Track(%d) Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s), Encode.Modules(%s)",
+		  track->GetId(),
 		  GetCodecIdToString(track->GetCodecId()).CStr(),
 		  hwaccels_enable ? "true" : "false",
 		  hwaccles_modules.CStr(),
@@ -182,8 +184,9 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 		{
 			switch (candidate->GetModuleId())
 			{
-				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderAVCxOpenH264);
+				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderAVCx264);
 				CASE_CREATE_CODEC_IFNEED(OPENH264, EncoderAVCxOpenH264);
+				CASE_CREATE_CODEC_IFNEED(X264, EncoderAVCx264);
 				CASE_CREATE_CODEC_IFNEED(QSV, EncoderAVCxQSV);
 				CASE_CREATE_CODEC_IFNEED(NILOGAN, EncoderAVCxNILOGAN);
 				CASE_CREATE_CODEC_IFNEED(XMA, EncoderAVCxXMA);
@@ -191,12 +194,12 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 				default:
 					break;
 			}
-			break;
 		}
 		else if (candidate->GetCodecId() == cmn::MediaCodecId::H265)
 		{
 			switch (candidate->GetModuleId())
 			{
+				// No default module for HEVC
 				CASE_CREATE_CODEC_IFNEED(QSV, EncoderHEVCxQSV);
 				CASE_CREATE_CODEC_IFNEED(NILOGAN, EncoderHEVCxNILOGAN);
 				CASE_CREATE_CODEC_IFNEED(XMA, EncoderHEVCxXMA);
@@ -237,7 +240,6 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderFFOPUS);
 				CASE_CREATE_CODEC_IFNEED(LIBOPUS, EncoderFFOPUS);
 #endif
-
 					break;
 			}
 		}
@@ -247,7 +249,6 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 			{
 				default:
 				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderJPEG);
-
 					break;
 			}
 			break;

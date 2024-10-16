@@ -102,6 +102,7 @@ namespace cmn
 		DEFAULT,	// SW
 		OPENH264,	// SW
 		BEAMR,		// SW
+		X264,		// SW		
 		NVENC,		// HW
 		QSV,		// HW
 		XMA,		// HW
@@ -250,7 +251,7 @@ namespace cmn
 		{
 			return cmn::MediaCodecModuleId::BEAMR;
 		}
-		else if (name.HasSuffix("_NVENC") || name.HasSuffix("NV") || name.HasSuffix("NVENC"))
+		else if (name.HasSuffix("_NVENC") || name.HasSuffix("_NV") || name.HasSuffix("NV") || name.HasSuffix("NVENC"))
 		{
 			return cmn::MediaCodecModuleId::NVENC;
 		}
@@ -273,6 +274,10 @@ namespace cmn
 		else if (name.HasSuffix("_FDKAAC") || name.HasSuffix("FDKAAC"))
 		{
 			return cmn::MediaCodecModuleId::FDKAAC;
+		}
+		else if (name.HasSuffix("_X264") || name.HasSuffix("X264") )
+		{
+			return cmn::MediaCodecModuleId::X264;
 		}
 		else if (name.HasSuffix("_DEFAULT") || name.HasSuffix("DEFAULT"))
 		{
@@ -306,6 +311,8 @@ namespace cmn
 				return "fdkaac";
 			case cmn::MediaCodecModuleId::LIBOPUS:
 				return "libopus";
+			case cmn::MediaCodecModuleId::X264:
+				return "x264";								
 			case cmn::MediaCodecModuleId::None:
 			default:
 				break;
@@ -334,6 +341,7 @@ namespace cmn
 	{
 		switch (id)
 		{
+			// Video codecs
 			case cmn::MediaCodecId::H264:
 				return "H264";
 			case cmn::MediaCodecId::H265:
@@ -342,16 +350,19 @@ namespace cmn
 				return "VP8";
 			case cmn::MediaCodecId::Vp9:
 				return "VP9";
+			case cmn::MediaCodecId::Flv:
+				return "FLV";
+			case cmn::MediaCodecId::Jpeg:
+				return "JPEG";
+			case cmn::MediaCodecId::Png:
+				return "PNG";
+			// Audio codecs				
 			case cmn::MediaCodecId::Aac:
 				return "AAC";
 			case cmn::MediaCodecId::Mp3:
 				return "MP3";				
 			case cmn::MediaCodecId::Opus:
 				return "OPUS";
-			case cmn::MediaCodecId::Jpeg:
-				return "JPEG";
-			case cmn::MediaCodecId::Png:
-				return "PNG";
 			default:
 				break;
 		}
@@ -364,55 +375,44 @@ namespace cmn
 		name.MakeUpper();
 
 		// Video codecs
-		if (name == "H264" ||
-			name == "H264_OPENH264" ||
-			name == "H264_BEAMR" ||
-			name == "H264_NVENC" ||
-			name == "H264_QSV" ||
-			name == "H264_NILOGAN" ||
-			name == "H264_XMA")
+		if (name.HasPrefix("H264"))
 		{
 			return cmn::MediaCodecId::H264;
 		}
-		else if (name == "H265" || 
-				 name == "H265_NVENC" || 
-				 name == "H265_QSV" ||
-				 name == "H265_NILOGAN" ||
-		 		 name == "H265_XMA")
+		else if (name.HasPrefix("H265"))
 		{
 			return cmn::MediaCodecId::H265;
 		}
-		else if (name == "VP8")
+		else if (name.HasPrefix("VP8"))
 		{
 			return cmn::MediaCodecId::Vp8;
 		}
-		else if (name == "VP9")
+		else if (name.HasPrefix("VP9"))
 		{
 			return cmn::MediaCodecId::Vp9;
 		}
-		else if (name == "FLV")
+		else if (name.HasPrefix("FLV"))
 		{
 			return cmn::MediaCodecId::Flv;
 		}
-		else if (name == "JPEG")
+		else if (name.HasPrefix("JPEG"))
 		{
 			return cmn::MediaCodecId::Jpeg;
 		}
-		else if (name == "PNG")
+		else if (name.HasPrefix("PNG"))
 		{
 			return cmn::MediaCodecId::Png;
 		}
-
 		// Audio codecs
-		if (name == "AAC")
+		if (name.HasPrefix("AAC"))
 		{
 			return cmn::MediaCodecId::Aac;
 		}
-		else if (name == "MP3")
+		else if (name.HasPrefix("MP3"))
 		{
 			return cmn::MediaCodecId::Mp3;
 		}
-		else if (name == "OPUS")
+		else if (name.HasPrefix("OPUS"))
 		{
 			return cmn::MediaCodecId::Opus;
 		}

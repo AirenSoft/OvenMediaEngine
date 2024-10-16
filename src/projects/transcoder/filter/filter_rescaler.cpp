@@ -115,6 +115,8 @@ bool FilterRescaler::InitializeFilterDescription()
 
 	if (output_module_id == cmn::MediaCodecModuleId::DEFAULT ||
 		output_module_id == cmn::MediaCodecModuleId::BEAMR ||
+		output_module_id == cmn::MediaCodecModuleId::OPENH264 ||
+		output_module_id == cmn::MediaCodecModuleId::X264 ||
 		output_module_id == cmn::MediaCodecModuleId::QSV ||
 		output_module_id == cmn::MediaCodecModuleId::LIBVPX ||
 		// Until now, Logan VPU processes in CPU memory like SW-based modules. Performance needs to be improved in the future

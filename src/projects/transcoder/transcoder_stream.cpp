@@ -801,7 +801,10 @@ bool TranscoderStream::CreateDecoder(MediaTrackId decoder_id, std::shared_ptr<in
 
 	// Get a list of available decoder candidates.
 	// TODO: GetOutputProfilesCfg()->IsHardwareAcceleration() is deprecated. It will be deleted soon.
-	auto candidates = TranscodeDecoder::GetCandidates(cfg_hwaccels.GetDecoder().IsEnable() || GetOutputProfilesCfg()->IsHardwareAcceleration(), cfg_hwaccels.GetDecoder().GetModules(), input_track);
+	auto candidates = TranscodeDecoder::GetCandidates(
+		cfg_hwaccels.GetDecoder().IsEnable() || GetOutputProfilesCfg()->IsHardwareAcceleration(), 
+		cfg_hwaccels.GetDecoder().GetModules(), 
+		input_track);
 	if(candidates == nullptr)
 	{
 		logte("%s Decoder candidates are not found. InputTrack(%u)", _log_prefix.CStr(), input_track->GetId());
@@ -902,7 +905,9 @@ bool TranscoderStream::CreateEncoder(MediaTrackId encoder_id, std::shared_ptr<in
 
 	// Get a list of available encoder candidates.
 	// TODO: GetOutputProfilesCfg()->IsHardwareAcceleration() is deprecated. It will be deleted soon.
-	auto candidates = TranscodeEncoder::GetCandidates(cfg_hwaccels.GetEncoder().IsEnable() || GetOutputProfilesCfg()->IsHardwareAcceleration(), cfg_hwaccels.GetEncoder().GetModules(), output_track);
+	auto candidates = TranscodeEncoder::GetCandidates(
+		cfg_hwaccels.GetEncoder().IsEnable() || GetOutputProfilesCfg()->IsHardwareAcceleration(), 
+		cfg_hwaccels.GetEncoder().GetModules(), output_track);
 	if(candidates == nullptr)
 	{
 		logte("%s Decoder candidates are not found. InputTrack(%d)", _log_prefix.CStr(), output_track->GetId());
@@ -946,7 +951,8 @@ int32_t TranscoderStream::CreateFilters(MediaFrame *buffer)
 		MediaTrackId encoder_id = _link_filter_to_encoder[filter_id];
 		if (_encoders.find(encoder_id) == _encoders.end())
 		{
-			logte("%s Filter creation failed because the encoder could not be found. EncoderId(%d), FilterId(%d)", _log_prefix.CStr(), encoder_id, filter_id);
+			logte("%s Filter creation failed because the encoder could not be found. EncoderId(%d), FilterId(%d)",
+				  _log_prefix.CStr(), encoder_id, filter_id);
 			continue;
 		}
 
@@ -988,7 +994,8 @@ bool TranscoderStream::CreateFilter(MediaTrackId filter_id, std::shared_ptr<Medi
 	}
 
 	auto filter = std::make_shared<TranscodeFilter>();
-	if (filter->Configure(filter_id, input_stream, input_track, output_stream, output_track, bind(&TranscoderStream::OnFilteredFrame, this, std::placeholders::_1, std::placeholders::_2)) != true)
+	if (filter->Configure(filter_id, input_stream, input_track, output_stream, output_track,
+						  bind(&TranscoderStream::OnFilteredFrame, this, std::placeholders::_1, std::placeholders::_2)) != true)
 	{
 		logte("%s Failed to create filter. Filter(%d)", _log_prefix.CStr(), filter_id);
 		return false;
@@ -1486,7 +1493,8 @@ void TranscoderStream::SendFrame(std::shared_ptr<info::Stream> &stream, std::sha
 	bool ret = _parent->SendFrame(stream, std::move(packet));
 	if (ret == false)
 	{
-		logtw("%s Could not send frame to mediarouter. Stream(%s(%u)), OutputTrack(%u)", _log_prefix.CStr(), stream->GetName().CStr(), stream->GetId(), packet->GetTrackId());
+		logtw("%s Could not send frame to mediarouter. Stream(%s(%u)), OutputTrack(%u)",
+			  _log_prefix.CStr(), stream->GetName().CStr(), stream->GetId(), packet->GetTrackId());
 	}
 }
 
@@ -1525,7 +1533,8 @@ void TranscoderStream::NotifyCreateStreams()
 
 		if (_parent->CreateStream(output_stream) == false)
 		{
-			logtw("%s Could not create stream. [%s/%s(%u)]", _log_prefix.CStr(), _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
+			logtw("%s Could not create stream. [%s/%s(%u)]",
+				  _log_prefix.CStr(), _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
 		}
 	}
 }
@@ -1538,7 +1547,8 @@ void TranscoderStream::NotifyDeleteStreams()
 
 		if (_parent->DeleteStream(output_stream) == false)
 		{
-			logtw("%s Could not delete stream. %s/%s(%u)", _log_prefix.CStr(), _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
+			logtw("%s Could not delete stream. %s/%s(%u)",
+				  _log_prefix.CStr(), _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
 		}
 	}
 
@@ -1553,7 +1563,8 @@ void TranscoderStream::NotifyUpdateStreams()
 
 		if (_parent->UpdateStream(output_stream) == false)
 		{
-			logtw("%s Could not update stream. %s/%s(%u)", _log_prefix.CStr(), _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
+			logtw("%s Could not update stream. %s/%s(%u)",
+				  _log_prefix.CStr(), _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
 		}
 	}
 }
