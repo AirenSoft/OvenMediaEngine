@@ -101,6 +101,16 @@ public:
 		}
 	}
 
+	void SetInputTrack(std::shared_ptr<MediaTrack> input_track)
+	{
+		_input_track = input_track;
+	}
+
+	void SetOutputTrack(std::shared_ptr<MediaTrack> output_track)
+	{
+		_output_track = output_track;
+	}
+
 protected:
 
 	std::atomic<State> _state = State::CREATED;
@@ -125,8 +135,8 @@ protected:
 
 	const AVFilter *_buffersrc = nullptr;
 	const AVFilter *_buffersink = nullptr;
-	
-	// double _scale = 0.0;
+
+	ov::Future _codec_init_event;
 
 	// resolution of the input video frame
 	std::shared_ptr<MediaTrack> _input_track;

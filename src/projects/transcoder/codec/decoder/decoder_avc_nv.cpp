@@ -12,45 +12,6 @@
 #include "../../transcoder_private.h"
 #include "base/info/application.h"
 
-bool DecoderAVCxNV::Configure(std::shared_ptr<MediaTrack> context)
-{
-	if (TranscodeDecoder::Configure(context) == false)
-	{
-		return false;
-	}
-
-	// Initialize H.264 stream parser
-	_parser = ::av_parser_init(GetCodecID());
-	if (_parser == nullptr)
-	{
-		logte("Parser not found");
-		return false;
-	}
-	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
-
-	if (InitCodec() == false)
-	{
-		return false;
-	}
-
-	try
-	{
-		_kill_flag = false;
-
-		_codec_thread = std::thread(&TranscodeDecoder::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%sNV", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr()).CStr());
-	}
-	catch (const std::system_error &e)
-	{
-		logte("Failed to start decoder thread");
-		_kill_flag = true;
-
-		return false;
-	}
-
-	return true;
-}
-
 bool DecoderAVCxNV::InitCodec()
 {
 	const AVCodec *_codec = ::avcodec_find_decoder_by_name("h264_cuvid");
@@ -73,36 +34,51 @@ bool DecoderAVCxNV::InitCodec()
 
 	// Get hardware device context
 	auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, GetRefTrack()->GetCodecDeviceId());
-	if(hw_device_ctx == nullptr)
+	if (hw_device_ctx == nullptr)
 	{
 		logte("Could not get hw device context for %s", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr());
 		return false;
 	}
 
 	// Assign HW device context to decoder
-	if(ffmpeg::Conv::SetHwDeviceCtxOfAVCodecContext(_context, hw_device_ctx) == false)
+	if (ffmpeg::Conv::SetHwDeviceCtxOfAVCodecContext(_context, hw_device_ctx) == false)
 	{
 		logte("Could not set hw device context for %s", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr());
 		return false;
 	}
-	
+
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr());
 		return false;
 	}
 
+	_parser = ::av_parser_init(GetCodecID());
+	if (_parser == nullptr)
+	{
+		logte("Parser not found");
+		return false;
+	}
+	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
+
 	_change_format = false;
-	
+
 	return true;
 }
 
 void DecoderAVCxNV::UninitCodec()
 {
-	::avcodec_close(_context);
-	::avcodec_free_context(&_context);
-
+	if (_context != nullptr)
+	{
+		::avcodec_free_context(&_context);
+	}
 	_context = nullptr;
+
+	if (_parser != nullptr)
+	{
+		::av_parser_close(_parser);
+	}
+	_parser = nullptr;
 }
 
 bool DecoderAVCxNV::ReinitCodecIfNeed()
@@ -121,11 +97,17 @@ bool DecoderAVCxNV::ReinitCodecIfNeed()
 		}
 	}
 
-	return true;	
+	return true;
 }
 
 void DecoderAVCxNV::CodecThread()
 {
+	// Initialize the codec and notify the main thread.
+	if(_codec_init_event.Submit(InitCodec()) == false)
+	{
+		return;
+	}
+	
 	while (!_kill_flag)
 	{
 		auto obj = _input_buffer.Dequeue();
@@ -157,7 +139,7 @@ void DecoderAVCxNV::CodecThread()
 				break;
 			}
 
-			if(ReinitCodecIfNeed() == false)
+			if (ReinitCodecIfNeed() == false)
 			{
 				break;
 			}
@@ -271,9 +253,9 @@ void DecoderAVCxNV::CodecThread()
 				}
 
 				// If there is no duration, the duration is calculated by framerate and timebase.
-				if(_frame->pkt_duration <= 0LL && _context->framerate.num > 0 && _context->framerate.den > 0)
+				if (_frame->pkt_duration <= 0LL && _context->framerate.num > 0 && _context->framerate.den > 0)
 				{
-					_frame->pkt_duration = (int64_t)( ((double)_context->framerate.den / (double)_context->framerate.num) / (double) GetRefTrack()->GetTimeBase().GetExpr() );
+					_frame->pkt_duration = (int64_t)(((double)_context->framerate.den / (double)_context->framerate.num) / (double)GetRefTrack()->GetTimeBase().GetExpr());
 				}
 
 				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);

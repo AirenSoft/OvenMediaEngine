@@ -11,13 +11,8 @@
 #include "../../transcoder_private.h"
 #include "base/info/application.h"
 
-bool DecoderMP3::Configure(std::shared_ptr<MediaTrack> context)
+bool DecoderMP3::InitCodec()
 {
-	if (TranscodeDecoder::Configure(context) == false)
-	{
-		return false;
-	}
-
 	const AVCodec *_codec = ::avcodec_find_decoder(GetCodecID());
 	if (_codec == nullptr)
 	{
@@ -40,36 +35,24 @@ bool DecoderMP3::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
-	// Create packet parser
 	_parser = ::av_parser_init(GetCodecID());
 	if (_parser == nullptr)
 	{
 		logte("Parser not found");
 		return false;
 	}
-
 	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
-
-	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
-	try
-	{
-		_kill_flag = false;
-
-		_codec_thread = std::thread(&TranscodeDecoder::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%s", avcodec_get_name(GetCodecID())).CStr());
-	}
-	catch (const std::system_error &e)
-	{
-		logte("Failed to start decoder thread");
-		_kill_flag = true;
-		return false;
-	}
 
 	return true;
 }
 
 void DecoderMP3::CodecThread()
 {
+	// Initialize the codec and notify the main thread.
+	if(_codec_init_event.Submit(InitCodec()) == false)
+	{
+		return;
+	}
 	bool no_data_to_encode = false;
 
 	while (!_kill_flag)
@@ -104,7 +87,7 @@ void DecoderMP3::CodecThread()
 			if (_pkt_offset < _cur_data->GetLength())
 			{
 				_pkt->size = 0;
-				
+
 				int32_t parsed_size = ::av_parser_parse2(
 					_parser,
 					_context,
@@ -143,7 +126,6 @@ void DecoderMP3::CodecThread()
 					int ret = ::avcodec_send_packet(_context, _pkt);
 					if (ret == AVERROR(EAGAIN))
 					{
-
 					}
 					else if (ret == AVERROR_EOF)
 					{
@@ -220,9 +202,8 @@ void DecoderMP3::CodecThread()
 				_frame->pkt_duration = ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Audio, GetRefTrack(), _frame);
 			}
 
-
 			// If the decoded audio frame does not have a PTS, Increase frame duration time in PTS of previous frame
-			if(_frame->pts == AV_NOPTS_VALUE)
+			if (_frame->pts == AV_NOPTS_VALUE)
 			{
 				_frame->pts = _last_pkt_pts + _frame->pkt_duration;
 			}

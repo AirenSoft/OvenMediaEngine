@@ -44,17 +44,16 @@ void FilterFps::SetOutputFrameRate(double framerate)
 	if (_next_pts != AV_NOPTS_VALUE)
 	{
 		int64_t scaled_next_pts = av_rescale_q_rnd(_next_pts,
-									 av_inv_q(av_d2q(_output_framerate, INT_MAX)),
-									 av_inv_q(av_d2q(framerate, INT_MAX)),
-									 (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
+												   av_inv_q(av_d2q(_output_framerate, INT_MAX)),
+												   av_inv_q(av_d2q(framerate, INT_MAX)),
+												   (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
 
 		// logtd("Change NextPTS : %lld -> %lld", _next_pts, scaled_next_pts);
 
-		_next_pts = scaled_next_pts;										 
+		_next_pts = scaled_next_pts;
 	}
 
 	_output_framerate = framerate;
-
 }
 
 double FilterFps::GetOutputFrameRate()
@@ -70,7 +69,7 @@ void FilterFps::SetSkipFrames(int32_t skip_frames)
 bool FilterFps::Push(std::shared_ptr<MediaFrame> media_frame)
 {
 	stat_input_frame_count++;
-	
+
 	if (_frames.size() >= 2)
 	{
 		logtw("FPS filter is full");
@@ -121,17 +120,16 @@ std::shared_ptr<MediaFrame> FilterFps::Pop()
 
 		// Changed from Framerate PTS to Timebase PTS
 		int64_t curr_timebase_pts = av_rescale_q_rnd(_curr_pts,
-											   av_inv_q(av_d2q(_output_framerate, INT_MAX)),
-											   (AVRational){_input_timebase.GetNum(), _input_timebase.GetDen()},
-											   (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
+													 av_inv_q(av_d2q(_output_framerate, INT_MAX)),
+													 (AVRational){_input_timebase.GetNum(), _input_timebase.GetDen()},
+													 (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
 
-		// Calculate the PTS of the next frame considering the Skip Frame. 
+		// Calculate the PTS of the next frame considering the Skip Frame.
 		// Purpose of calculating the Duration of the current frame
 		int64_t next_timebase_pts = av_rescale_q_rnd(_next_pts + _skip_frames,
-											   av_inv_q(av_d2q(_output_framerate, INT_MAX)),
-											   (AVRational){_input_timebase.GetNum(), _input_timebase.GetDen()},
-											   (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
-
+													 av_inv_q(av_d2q(_output_framerate, INT_MAX)),
+													 (AVRational){_input_timebase.GetNum(), _input_timebase.GetDen()},
+													 (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
 
 		auto pop_frame = _frames[0]->CloneFrame();
 		pop_frame->SetPts(curr_timebase_pts);

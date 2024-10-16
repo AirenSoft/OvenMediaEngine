@@ -814,7 +814,7 @@ bool TranscoderStream::CreateDecoder(MediaTrackId decoder_id, std::shared_ptr<in
 	// Create a decoder
 	auto decoder = TranscodeDecoder::Create(
 		decoder_id,
-		*(input_stream),
+		input_stream,
 		input_track,
 		candidates,
 		bind(&TranscoderStream::OnDecodedFrame, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -914,7 +914,11 @@ bool TranscoderStream::CreateEncoder(MediaTrackId encoder_id, std::shared_ptr<in
 		return false;
 	}
 
-	auto encoder = TranscodeEncoder::Create(encoder_id, *output_stream, output_track, candidates, bind(&TranscoderStream::OnEncodedPacket, this, std::placeholders::_1, std::placeholders::_2));
+	auto encoder = TranscodeEncoder::Create(
+		encoder_id, 
+		output_stream, 
+		output_track, 
+		candidates, bind(&TranscoderStream::OnEncodedPacket, this, std::placeholders::_1, std::placeholders::_2));
 	if (encoder == nullptr)
 	{
 		return false;
@@ -1028,6 +1032,7 @@ void TranscoderStream::ChangeOutputFormat(MediaFrame *buffer)
 	// Update Track of Output Stream
 	UpdateOutputTrack(buffer);
 
+
 	// Create an encoder. If there is an existing encoder, reuse it
 	if(CreateEncoders(buffer) == 0)
 	{
@@ -1045,6 +1050,7 @@ void TranscoderStream::ChangeOutputFormat(MediaFrame *buffer)
 		SetState(State::ERROR);
 		return;
 	}
+
 }
 
 // Information of the input track is updated by the decoded frame

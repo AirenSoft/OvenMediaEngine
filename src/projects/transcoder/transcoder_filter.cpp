@@ -68,14 +68,8 @@ bool TranscodeFilter::Create()
 		name.LowerCaseString());
 	_internal->SetQueueUrn(urn);
 	_internal->SetCompleteHandler(bind(&TranscodeFilter::OnComplete, this, std::placeholders::_1));
-
-	bool success = _internal->Configure(_input_track, _output_track);
-	if (success == false)
-	{
-		logte("Could not create filter");
-
-		return false;
-	}
+	_internal->SetInputTrack(_input_track);
+	_internal->SetOutputTrack(_output_track);
 
 	return _internal->Start();
 }

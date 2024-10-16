@@ -92,13 +92,8 @@ bool EncoderAVCxXMA::SetCodecParams()
 	return true;
 }
 
-bool EncoderAVCxXMA::Configure(std::shared_ptr<MediaTrack> context)
+bool EncoderAVCxXMA::InitCodec()
 {
-	if (TranscodeEncoder::Configure(context) == false)
-	{
-		return false;
-	}
-	
 	ov::String codec_name = "mpsoc_vcu_h264";
 	
 	const AVCodec *codec = ::avcodec_find_encoder_by_name(codec_name.CStr());
@@ -127,19 +122,34 @@ bool EncoderAVCxXMA::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
-	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
+	return true;
+}
+
+bool EncoderAVCxXMA::Configure(std::shared_ptr<MediaTrack> context)
+{
+	if (TranscodeEncoder::Configure(context) == false)
+	{
+		return false;
+	}
+
 	try
 	{
+		// Initialize the codec and wait for completion.
 		_kill_flag = false;
 
-		_codec_thread = std::thread(&TranscodeEncoder::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Enc%s", avcodec_get_name(GetCodecID())).CStr());
+		_codec_thread = std::thread(&EncoderAVCxXMA::CodecThread, this);
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("ENC-%sxa-t%d", avcodec_get_name(GetCodecID()), _track->GetId()).CStr());
+
+		// Initialize the codec and wait for completion.
+		if(_codec_init_event.Get() == false)
+		{
+			_kill_flag = true;
+			return false;
+		}
 	}
 	catch (const std::system_error &e)
 	{
-		logte("Failed to start encoder thread.");
 		_kill_flag = true;
-
 		return false;
 	}
 

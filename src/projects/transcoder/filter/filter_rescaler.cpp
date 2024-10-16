@@ -360,13 +360,19 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 
 bool FilterRescaler::Start()
 {
-	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
 	try
 	{
 		_kill_flag = false;
 
 		_thread_work = std::thread(&FilterRescaler::WorkerThread, this);
-		pthread_setname_np(_thread_work.native_handle(), "Rescaler");
+		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("FLT-rscl-t%u", _output_track->GetId()).CStr());
+		
+		if (_codec_init_event.Get() == false)
+		{
+			_kill_flag = false;
+
+			return false;
+		}	
 	}
 	catch (const std::system_error &e)
 	{
@@ -510,6 +516,11 @@ bool FilterRescaler::PopProcess()
 
 void FilterRescaler::WorkerThread()
 {
+	if(_codec_init_event.Submit(Configure(_input_track, _output_track)) == false)
+	{
+		return;
+	}
+
 	SetState(State::STARTED);
 
 #if _SKIP_FRAMES_ENABLED

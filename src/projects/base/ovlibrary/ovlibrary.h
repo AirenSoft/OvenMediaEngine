@@ -33,6 +33,7 @@
 #include "./random.h"
 #include "./regex.h"
 #include "./semaphore.h"
+#include "./future.h"
 #include "./singleton.h"
 #include "./stack_trace.h"
 #include "./stop_watch.h"

@@ -15,46 +15,6 @@
 #include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/bitstream/nalu/nal_stream_converter.h>
 
-bool DecoderHEVCxNILOGAN::Configure(std::shared_ptr<MediaTrack> context)
-{
-	if (TranscodeDecoder::Configure(context) == false)
-	{
-		return false;
-	}
-
-	
-	// Create packet parser
-	_parser = ::av_parser_init(GetCodecID());
-	if (_parser == nullptr)
-	{
-		logte("Parser not found");
-		return false;
-	}
-	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
-	
-	if (InitCodec() == false)
-	{
-		return false;
-	}
-	
-	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
-	try
-	{
-		_kill_flag = false;
-
-		_codec_thread = std::thread(&TranscodeDecoder::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%sNilogan", avcodec_get_name(GetCodecID())).CStr());
-	}
-	catch (const std::system_error &e)
-	{
-		logte("Failed to start decoder thread");
-		_kill_flag = true;
-		return false;
-	}
-
-	return true;
-}
-
 bool DecoderHEVCxNILOGAN::InitCodec()
 {
 	const AVCodec *_codec = ::avcodec_find_decoder_by_name("h265_ni_logan_dec");
@@ -78,8 +38,6 @@ bool DecoderHEVCxNILOGAN::InitCodec()
 		return false;
 	}
 	
-	
-
 	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 	_context->pkt_timebase = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 	_context->flags |= AV_CODEC_FLAG_LOW_DELAY;
@@ -108,11 +66,25 @@ bool DecoderHEVCxNILOGAN::InitCodec()
 		return false;
 	}
 	
+	_parser = ::av_parser_init(GetCodecID());
+	if (_parser == nullptr)
+	{
+		logte("Parser not found");
+		return false;
+	}
+	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
+
 	return true;
 }
 
 void DecoderHEVCxNILOGAN::CodecThread()
 {
+	// Initialize the codec and notify the main thread.
+	if(_codec_init_event.Submit(InitCodec()) == false)
+	{
+		return;
+	}
+
 	while (!_kill_flag)
 	{
 		auto obj = _input_buffer.Dequeue();
@@ -267,9 +239,6 @@ void DecoderHEVCxNILOGAN::CodecThread()
 				{
 					continue;
 				}
-
-				// logtd("%d / %d / fmt(%d)", decoded_frame->GetWidth(), decoded_frame->GetHeight(), decoded_frame->GetFormat());
-
 				::av_frame_unref(_frame);
 
 				Complete(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));

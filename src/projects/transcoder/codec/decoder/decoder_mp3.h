@@ -29,7 +29,7 @@ public:
 
 	int64_t _last_pkt_pts = 0;
 
-	bool Configure(std::shared_ptr<MediaTrack> context) override;
+	bool InitCodec();
 
 	void CodecThread() override;
 

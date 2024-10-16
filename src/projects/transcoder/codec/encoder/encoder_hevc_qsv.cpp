@@ -47,17 +47,8 @@ bool EncoderHEVCxQSV::SetCodecParams()
 	return true;
 }
 
-// Notes.
-//
-// - B-frame must be disabled. because, WEBRTC does not support B-Frame.
-//
-bool EncoderHEVCxQSV::Configure(std::shared_ptr<MediaTrack> context)
+bool EncoderHEVCxQSV::InitCodec()
 {
-	if (TranscodeEncoder::Configure(context) == false)
-	{
-		return false;
-	}
-
 	auto codec_id = GetCodecID();
 
 	const AVCodec *codec = ::avcodec_find_encoder_by_name("hevc_qsv");
@@ -86,20 +77,34 @@ bool EncoderHEVCxQSV::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
-	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
+	return true;
+}
+
+bool EncoderHEVCxQSV::Configure(std::shared_ptr<MediaTrack> context)
+{
+	if (TranscodeEncoder::Configure(context) == false)
+	{
+		return false;
+	}
+
 	try
 	{
 		_kill_flag = false;
 
 		_codec_thread = std::thread(&EncoderHEVCxQSV::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Enc%sQsv", avcodec_get_name(GetCodecID())).CStr());
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("ENC-%s-t%d", avcodec_get_name(GetCodecID()), _track->GetId()).CStr());
+		
+		// Initialize the codec and wait for completion.
+		if(_codec_init_event.Get() == false)
+		{
+			_kill_flag = true;
+			return false;
+		}
 	}
 	catch (const std::system_error &e)
 	{
 		_kill_flag = true;
-
-		logte("Failed to start transcode stream thread.");
+		return false;
 	}
-
 	return true;
 }

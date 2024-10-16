@@ -8,51 +8,12 @@
 //==============================================================================
 #include "decoder_avc_nilogan.h"
 
-#include "../../transcoder_gpu.h"
-#include "../../transcoder_private.h"
-#include "base/info/application.h"
-
 #include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/bitstream/nalu/nal_stream_converter.h>
 
-bool DecoderAVCxNILOGAN::Configure(std::shared_ptr<MediaTrack> context)
-{
-	if (TranscodeDecoder::Configure(context) == false)
-	{
-		return false;
-	}
-
-	// Create packet parser
-	_parser = ::av_parser_init(GetCodecID());
-	if (_parser == nullptr)
-	{
-		logte("Parser not found");
-		return false;
-	}
-	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
-	
-	if (InitCodec() == false)
-	{
-		return false;
-	}
-	
-	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
-	try
-	{
-		_kill_flag = false;
-
-		_codec_thread = std::thread(&TranscodeDecoder::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%sNilogan", avcodec_get_name(GetCodecID())).CStr());
-	}
-	catch (const std::system_error &e)
-	{
-		logte("Failed to start decoder thread");
-		_kill_flag = true;
-		return false;
-	}
-
-	return true;
-}
+#include "../../transcoder_gpu.h"
+#include "../../transcoder_private.h"
+#include "base/info/application.h"
 
 bool DecoderAVCxNILOGAN::InitCodec()
 {
@@ -71,43 +32,50 @@ bool DecoderAVCxNILOGAN::InitCodec()
 	}
 
 	_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NILOGAN, _track->GetCodecDeviceId()));
-	if(_context->hw_device_ctx == nullptr)
+	if (_context->hw_device_ctx == nullptr)
 	{
 		logte("Could not allocate hw device context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
 		return false;
 	}
-	
-	
 
 	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 	_context->pkt_timebase = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
 	_context->flags |= AV_CODEC_FLAG_LOW_DELAY;
-	
+
 	auto decoder_config = std::static_pointer_cast<AVCDecoderConfigurationRecord>(GetRefTrack()->GetDecoderConfigurationRecord());
-	
-	if(decoder_config->ChromaFormat() > 1) {			
+
+	if (decoder_config->ChromaFormat() > 1)
+	{
 		logte("Could not initialize codec because nilogan decoder support only AV_PIX_FMT_YUV420P pixel format: %d", decoder_config->ChromaFormat());
 		return false;
 	}
 
 	if (decoder_config != nullptr)
-	{		
-		_context->pix_fmt = AV_PIX_FMT_YUV420P; //Forced here nilogan decoder support only AV_PIX_FMT_YUV420P pixel format
+	{
+		_context->pix_fmt = AV_PIX_FMT_YUV420P;	 //Forced here nilogan decoder support only AV_PIX_FMT_YUV420P pixel format
 		_context->width = decoder_config->GetWidth();
 		_context->height = decoder_config->GetHeight();
 	}
-	
+
 	//dec_options
 	::av_opt_set(_context->priv_data, "xcoder-params", "out=sw:lowDelayMode=1:lowDelay=100", 0);
 	//::av_opt_set(_context->priv_data, "xcoder-params", "out=hw:lowDelayMode=1:lowDelay=100", 0);
 	//::av_opt_set(_context->priv_data, "dec", 0, 0);
-	
+
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
 		return false;
 	}
-	
+
+	_parser = ::av_parser_init(GetCodecID());
+	if (_parser == nullptr)
+	{
+		logte("Parser not found");
+		return false;
+	}
+	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
+
 	_change_format = false;
 
 	return true;
@@ -145,6 +113,12 @@ bool DecoderAVCxNILOGAN::ReinitCodecIfNeed()
 
 void DecoderAVCxNILOGAN::CodecThread()
 {
+	// Initialize the codec and notify the main thread.
+	if(_codec_init_event.Submit(InitCodec()) == false)
+	{
+		return;
+	}
+
 	while (!_kill_flag)
 	{
 		auto obj = _input_buffer.Dequeue();
@@ -177,13 +151,13 @@ void DecoderAVCxNILOGAN::CodecThread()
 				logte("An error occurred while parsing: %d", parsed_size);
 				break;
 			}
-			
+
 			// if activated, I got Warning: time out on receiving a decoded framefrom the decoder, assume dropped, received frame_num: 0, sent pkt_num: 1, pkt_num-frame_num: 1, sending another packet.
 			// if(ReinitCodecIfNeed() == false)
 			// {
 			// 	break;
 			// }
- 
+
 			if (_pkt->size > 0)
 			{
 				_pkt->pts = _parser->pts;
@@ -292,9 +266,9 @@ void DecoderAVCxNILOGAN::CodecThread()
 				}
 
 				// If there is no duration, the duration is calculated by framerate and timebase.
-				if(_frame->pkt_duration <= 0LL && _context->framerate.num > 0 && _context->framerate.den > 0)
+				if (_frame->pkt_duration <= 0LL && _context->framerate.num > 0 && _context->framerate.den > 0)
 				{
-					_frame->pkt_duration = (int64_t)( ((double)_context->framerate.den / (double)_context->framerate.num) / ((double) GetRefTrack()->GetTimeBase().GetNum() / (double) GetRefTrack()->GetTimeBase().GetDen()) );
+					_frame->pkt_duration = (int64_t)(((double)_context->framerate.den / (double)_context->framerate.num) / ((double)GetRefTrack()->GetTimeBase().GetNum() / (double)GetRefTrack()->GetTimeBase().GetDen()));
 				}
 
 				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);

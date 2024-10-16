@@ -173,8 +173,6 @@ public:
 		return _flags;
 	}
 
-	// 데이터를 빈값으로 채움
-	// FillZero
 	void FillZeroData()
 	{
 		if(!_priv_data) {

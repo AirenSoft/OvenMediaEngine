@@ -11,46 +11,6 @@
 #include "../../transcoder_private.h"
 #include "base/info/application.h"
 
-bool DecoderHEVC::Configure(std::shared_ptr<MediaTrack> context)
-{
-	if (TranscodeDecoder::Configure(context) == false)
-	{
-		return false;
-	}
-
-	// Create packet parser
-	_parser = ::av_parser_init(GetCodecID());
-	if (_parser == nullptr)
-	{
-		logte("Parser not found");
-		return false;
-	}
-
-	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
-
-	if (InitCodec() == false)
-	{
-		return false;
-	}
-
-	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
-	try
-	{
-		_kill_flag = false;
-
-		_codec_thread = std::thread(&TranscodeDecoder::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%s", avcodec_get_name(GetCodecID())).CStr());
-	}
-	catch (const std::system_error &e)
-	{
-		logte("Failed to start decoder thread");
-		_kill_flag = true;
-		return false;
-	}
-
-	return true;
-}
-
 bool DecoderHEVC::InitCodec()
 {
 	const AVCodec *_codec = ::avcodec_find_decoder(GetCodecID());
@@ -77,17 +37,32 @@ bool DecoderHEVC::InitCodec()
 		return false;
 	}
 
+	_parser = ::av_parser_init(GetCodecID());
+	if (_parser == nullptr)
+	{
+		logte("Parser not found");
+		return false;
+	}
+	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
+
 	_change_format = false;
-	
+
 	return true;
 }
 
 void DecoderHEVC::UninitCodec()
 {
-	::avcodec_close(_context);
-	::avcodec_free_context(&_context);
-
+	if (_context != nullptr)
+	{
+		::avcodec_free_context(&_context);
+	}
 	_context = nullptr;
+
+	if (_parser != nullptr)
+	{
+		::av_parser_close(_parser);
+	}
+	_parser = nullptr;
 }
 
 bool DecoderHEVC::ReinitCodecIfNeed()
@@ -106,11 +81,17 @@ bool DecoderHEVC::ReinitCodecIfNeed()
 		}
 	}
 
-	return true;	
+	return true;
 }
 
 void DecoderHEVC::CodecThread()
 {
+	// Initialize the codec and notify the main thread.
+	if(_codec_init_event.Submit(InitCodec()) == false)
+	{
+		return;
+	}
+
 	while (!_kill_flag)
 	{
 		auto obj = _input_buffer.Dequeue();
@@ -145,7 +126,7 @@ void DecoderHEVC::CodecThread()
 				break;
 			}
 
-			if(ReinitCodecIfNeed() == false)
+			if (ReinitCodecIfNeed() == false)
 			{
 				break;
 			}
@@ -261,11 +242,11 @@ void DecoderHEVC::CodecThread()
 				}
 
 				// If there is no duration, the duration is calculated by framerate and timebase.
-				if(_frame->pkt_duration <= 0LL && _context->framerate.num > 0 && _context->framerate.den > 0)
+				if (_frame->pkt_duration <= 0LL && _context->framerate.num > 0 && _context->framerate.den > 0)
 				{
-					_frame->pkt_duration = (int64_t)( ((double)_context->framerate.den / (double)_context->framerate.num) / ((double) GetRefTrack()->GetTimeBase().GetNum() / (double) GetRefTrack()->GetTimeBase().GetDen()) );
+					_frame->pkt_duration = (int64_t)(((double)_context->framerate.den / (double)_context->framerate.num) / ((double)GetRefTrack()->GetTimeBase().GetNum() / (double)GetRefTrack()->GetTimeBase().GetDen()));
 				}
-				
+
 				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				::av_frame_unref(_frame);
 				if (decoded_frame == nullptr)

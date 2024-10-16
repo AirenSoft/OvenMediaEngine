@@ -11,13 +11,8 @@
 #include "../../transcoder_private.h"
 #include "base/info/application.h"
 
-bool DecoderHEVCxQSV::Configure(std::shared_ptr<MediaTrack> context)
+bool DecoderHEVCxQSV::InitCodec()
 {
-	if (TranscodeDecoder::Configure(context) == false)
-	{
-		return false;
-	}
-
 	const AVCodec *_codec = ::avcodec_find_decoder_by_name("hevc_qsv");
 	if (_codec == nullptr)
 	{
@@ -40,36 +35,25 @@ bool DecoderHEVCxQSV::Configure(std::shared_ptr<MediaTrack> context)
 		return false;
 	}
 
-	// Create packet parser
 	_parser = ::av_parser_init(GetCodecID());
 	if (_parser == nullptr)
 	{
 		logte("Parser not found");
 		return false;
 	}
-
 	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
-
-	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
-	try
-	{
-		_kill_flag = false;
-
-		_codec_thread = std::thread(&TranscodeDecoder::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("Dec%sQsv", avcodec_get_name(GetCodecID())).CStr());
-	}
-	catch (const std::system_error &e)
-	{
-		logte("Failed to start decoder thread");
-		_kill_flag = true;
-		return false;
-	}
 
 	return true;
 }
 
 void DecoderHEVCxQSV::CodecThread()
 {
+	// Initialize the codec and notify the main thread.
+	if(_codec_init_event.Submit(InitCodec()) == false)
+	{
+		return;
+	}
+
 	while (!_kill_flag)
 	{
 		auto obj = _input_buffer.Dequeue();
@@ -208,11 +192,11 @@ void DecoderHEVCxQSV::CodecThread()
 				}
 
 				// If there is no duration, the duration is calculated by framerate and timebase.
-				if(_frame->pkt_duration <= 0LL && _context->framerate.num > 0 && _context->framerate.den > 0)
+				if (_frame->pkt_duration <= 0LL && _context->framerate.num > 0 && _context->framerate.den > 0)
 				{
-					_frame->pkt_duration = (int64_t)( ((double)_context->framerate.den / (double)_context->framerate.num) / ((double) GetRefTrack()->GetTimeBase().GetNum() / (double) GetRefTrack()->GetTimeBase().GetDen()) );
+					_frame->pkt_duration = (int64_t)(((double)_context->framerate.den / (double)_context->framerate.num) / ((double)GetRefTrack()->GetTimeBase().GetNum() / (double)GetRefTrack()->GetTimeBase().GetDen()));
 				}
-				
+
 				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				::av_frame_unref(_frame);
 				if (decoded_frame == nullptr)

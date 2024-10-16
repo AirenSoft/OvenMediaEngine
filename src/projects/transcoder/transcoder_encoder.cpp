@@ -153,7 +153,7 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 
 #define CASE_CREATE_CODEC_IFNEED(MODULE_ID, CLS) \
 	case cmn::MediaCodecModuleId::MODULE_ID: \
-		encoder = std::make_shared<CLS>(info); \
+		encoder = std::make_shared<CLS>(*info); \
 		if (encoder == nullptr) \
 		{ \
 			break; \
@@ -168,7 +168,7 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 
 std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 	int32_t encoder_id,
-	const info::Stream &info,
+	std::shared_ptr<info::Stream> info,
 	std::shared_ptr<MediaTrack> track,
 	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidates,
 	CompleteHandler complete_handler)
@@ -338,7 +338,7 @@ bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 	_track = output_track;	
 	_track->SetOriginBitstream(GetBitstreamFormat());
 
-	auto name = ov::String::FormatString("encoder_%s_%d", ::avcodec_get_name(GetCodecID()), _track->GetId());
+	auto name = ov::String::FormatString("enc_%s_%d", ::avcodec_get_name(GetCodecID()), _track->GetId());
 	auto urn = std::make_shared<info::ManagedQueue::URN>(
 		_stream_info.GetApplicationInfo().GetVHostAppName(),
 		_stream_info.GetName(),
@@ -361,6 +361,7 @@ bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 
 	return (_track != nullptr);
 }
+
 
 std::shared_ptr<MediaTrack> &TranscodeEncoder::GetRefTrack()
 {
@@ -407,6 +408,12 @@ void TranscodeEncoder::Stop()
 
 void TranscodeEncoder::CodecThread()
 {
+	// Initialize the codec and notify the main thread.
+	if(_codec_init_event.Submit(InitCodec()) == false)
+	{
+		return;
+	}
+
 	if ((GetRefTrack()->GetMediaType() == cmn::MediaType::Video) &&
 		(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::TIME))
 	{

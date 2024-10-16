@@ -182,13 +182,18 @@ bool FilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_track, 
 
 bool FilterResampler::Start()
 {
-	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
 	try
 	{
 		_kill_flag = false;
 
 		_thread_work = std::thread(&FilterResampler::WorkerThread, this);
-		pthread_setname_np(_thread_work.native_handle(), "Resampler");
+		pthread_setname_np(_thread_work.native_handle(), ov::String::FormatString("FLT-rsmp-t%u", _output_track->GetId()).CStr());
+		if (_codec_init_event.Get() == false)
+		{
+			_kill_flag = false;
+
+			return false;
+		}		
 	}
 	catch (const std::system_error &e)
 	{
@@ -222,7 +227,14 @@ void FilterResampler::Stop()
 
 void FilterResampler::WorkerThread()
 {
+	if(_codec_init_event.Submit(Configure(_input_track, _output_track)) == false)
+	{
+		return;
+	}
+
 	int ret;
+
+	SetState(State::STARTED);
 
 	while (!_kill_flag)
 	{
