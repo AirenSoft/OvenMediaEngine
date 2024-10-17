@@ -184,7 +184,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 		{
 			switch (candidate->GetModuleId())
 			{
-				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderAVCx264);
+				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderAVCxOpenH264);
 				CASE_CREATE_CODEC_IFNEED(OPENH264, EncoderAVCxOpenH264);
 				CASE_CREATE_CODEC_IFNEED(X264, EncoderAVCx264);
 				CASE_CREATE_CODEC_IFNEED(QSV, EncoderAVCxQSV);
