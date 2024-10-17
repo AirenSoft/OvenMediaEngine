@@ -308,6 +308,8 @@ install_ffmpeg()
         # Download FFmpeg for xilinx video sdk 3.0
 	    (rm -rf ${DIR}  && mkdir -p ${DIR} && \
 	    git clone --depth=1 --branch U30_GA_3 https://github.com/Xilinx/app-ffmpeg4-xma.git ${DIR}) || fail_exit "ffmpeg"	
+        # Compatible with nvcc 11.x
+        (cd ${DIR} && sed -i 's/compute_30/compute_50/g' configure &&  sed -i 's/sm_30/sm_50/g' configure) || fail_exit "ffmpeg"
     fi
 	
     # If there is an enable-nilogan option, add patch from libxcoder_logan-path 
