@@ -510,9 +510,11 @@ The given vhost or application name could not be found.
 
 The Push Publishing task has the state shown in the table below. You can get the `state` in the Start Push Publishing and Get Push Publishing State API response.
 
-| Ready    | Preparing to start or waiting for the stream to be created. |
-| -------- | ----------------------------------------------------------- |
-| Started  | In Progress                                                 |
-| Stopping | Is stopping                                                 |
-| Stopped  | Stopped                                                     |
-| Error    | Error                                                       |
+| State      | Description 						 |
+| ---------- | ----------------------------------------------------------|
+| ready      | Waiting for the stream to be created. 			 |
+| connecting | Connecting to destination			         |
+| pushing    | Connected and streaming                                   | 
+| stopping   | Disconnection / stop in progress                          |
+| stopped    | Push is disconnected / stopped                            |
+| error      | Push encountered an error                                 |
