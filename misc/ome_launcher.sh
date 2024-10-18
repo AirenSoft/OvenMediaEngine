@@ -44,7 +44,7 @@ check_xilinx_driver() {
 
 check_nvidia_driver() {
     LIB_PATH=""
-    LIB_FILES=("libnvidia-ml.so.1" "libcuda.so.1" "libnppicc.so.10" "libnppig.so.10" "libnppicc.so.10", "libnppig.so.11" "libnppicc.so.12" "libnppig.so.12")
+    LIB_FILES=("libnvidia-ml.so.1" "libcuda.so.1" "libnppicc.so.10" "libnppig.so.10" "libnppicc.so.11" "libnppig.so.11" "libnppicc.so.12" "libnppig.so.12")
 
     if [ "${OSNAME}" == "Ubuntu" ]; then
         LIB_PATH=/lib/x86_64-linux-gnu
