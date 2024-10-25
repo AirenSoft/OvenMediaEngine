@@ -34,6 +34,9 @@ namespace http
 			// Get Reason
 			ov::String GetReason() const;
 
+			void SetMethod(Method method);
+			Method GetMethod() const;
+
 			// reason = default
 			void SetStatusCode(StatusCode status_code);
 			// custom reason
@@ -123,6 +126,8 @@ namespace http
 			// Responsed time
 			std::chrono::system_clock::time_point _response_time;
 			uint32_t _sent_size = 0;
+
+			Method _method = Method::Unknown;
 		};
 	}  // namespace svr
 }  // namespace http

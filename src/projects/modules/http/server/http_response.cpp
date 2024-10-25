@@ -64,6 +64,16 @@ namespace http
 			return _tls_data;
 		}
 
+		void HttpResponse::SetMethod(Method method)
+		{
+			_method = method;
+		}
+
+		Method HttpResponse::GetMethod() const
+		{
+			return _method;
+		}
+
 		StatusCode HttpResponse::GetStatusCode() const
 		{
 			return _status_code;
@@ -242,6 +252,12 @@ namespace http
 				{
 					_is_header_sent = true;
 				}
+			}
+
+			if (GetMethod() == Method::Head)
+			{
+				_sent_size += sent_size;
+				return sent_size;
 			}
 
 			auto sent_data_size = SendPayload();

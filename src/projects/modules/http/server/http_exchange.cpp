@@ -271,6 +271,8 @@ namespace http
 				return InterceptorResult::Error;
 			}
 
+			GetResponse()->SetMethod(GetRequest()->GetMethod());
+
 			return interceptor->OnRequestCompleted(GetSharedPtr());
 		}
 

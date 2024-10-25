@@ -27,7 +27,7 @@ protected:
 		auto parsed_uri = request->GetParsedUri();
 		auto file = parsed_uri->File().LowerCaseString();
 
-		if (request->GetMethod() == http::Method::Get || request->GetMethod() == http::Method::Options)
+		if (request->GetMethod() == http::Method::Get || request->GetMethod() == http::Method::Head || request->GetMethod() == http::Method::Options)
 		{
 		 	// ts:*.m3u8 is the master playlist for this HLS Publisher(HLSv3)
 			if (file.HasPrefix("ts:") && file.HasSuffix(".m3u8"))

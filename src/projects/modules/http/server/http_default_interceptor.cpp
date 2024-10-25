@@ -38,6 +38,12 @@ namespace http
 
 			if (error == nullptr)
 			{
+				// if mehotd == GET, set HEAD automatically
+				if (HTTP_CHECK_METHOD(method, Method::Get))
+				{
+					method |= Method::Head;
+				}
+
 				_request_handler_list.push_back((RequestInfo) {
 #if DEBUG
 					.pattern_string = whole_pattern,
