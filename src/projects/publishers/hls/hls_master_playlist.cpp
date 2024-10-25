@@ -24,7 +24,7 @@ bool HlsMasterPlaylist::SetDefaultOption(bool rewind)
 void HlsMasterPlaylist::AddMediaPlaylist(const std::shared_ptr<HlsMediaPlaylist> &media_playlist)
 {
 	std::lock_guard<std::shared_mutex> lock(_media_playlists_mutex);
-	_media_playlists.emplace(media_playlist->GetVariantName(), media_playlist);
+	_media_playlists.emplace_back(media_playlist);
 }
 
 ov::String HlsMasterPlaylist::ToString(bool rewind) const
@@ -35,10 +35,8 @@ ov::String HlsMasterPlaylist::ToString(bool rewind) const
 
 	result += ov::String::FormatString("#EXT-X-VERSION:%d\n", _config.version);
 
-	for (const auto &media_playlist_it : _media_playlists)
+	for (const auto &media_playlist : _media_playlists)
 	{
-		const auto &media_playlist = media_playlist_it.second;
-
 		if (media_playlist->HasVideo())
 		{			
 			result += ov::String::FormatString("#EXT-X-STREAM-INF:BANDWIDTH=%d,AVERAGE-BANDWIDTH=%d,RESOLUTION=%s,FRAME-RATE=%.3f,CODECS=\"%s\"\n",

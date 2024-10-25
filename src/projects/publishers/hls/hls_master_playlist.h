@@ -36,7 +36,7 @@ private:
 
 	bool _default_option_rewind = true;
 
-	std::map<ov::String, std::shared_ptr<HlsMediaPlaylist>> _media_playlists;
+	std::vector<std::shared_ptr<HlsMediaPlaylist>> _media_playlists;
 	mutable std::shared_mutex _media_playlists_mutex;
 
 };
