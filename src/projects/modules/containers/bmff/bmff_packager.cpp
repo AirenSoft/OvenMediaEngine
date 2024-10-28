@@ -218,7 +218,7 @@ namespace bmff
 
 		// track_ID is an integer that uniquely identifies this track over the entire life‐time of this presentation. Track IDs are never re-used and cannot be zero.
 		// track_ID + 1 because zero track ID is valid for OME
-		stream.WriteBE32(GetMediaTrack()->GetId()+1); // track_ID
+		stream.WriteBE32(1); // track_ID
 		stream.WriteBE32(0); // reserved
 		stream.WriteBE32(0); // duration
 		stream.WriteBE32(0); // reserved
@@ -1101,7 +1101,7 @@ namespace bmff
 		ov::ByteStream stream(4096);
 
 		// uint(16) ES_ID;
-		stream.WriteBE16(GetMediaTrack()->GetId()+1);
+		stream.WriteBE16(1);
 		// bit(1) streamDependenceFlag; disabled
 		// bit(1) URL_Flag; disabled
 		// bit(1) OCRstreamFlag; disabled
@@ -1405,7 +1405,7 @@ namespace bmff
 		ov::ByteStream stream(24);
 
 		// unsigned int(32) track_ID;
-		stream.WriteBE32(GetMediaTrack()->GetId()+1);
+		stream.WriteBE32(1);
 
 		// unsigned int(32) default_sample_description_index;
 		stream.WriteBE32(1);
@@ -1665,7 +1665,7 @@ namespace bmff
 		ov::ByteStream stream(64);
 
 		// unsigned int(32) track_ID;
-		stream.WriteBE32(GetMediaTrack()->GetId()+1);
+		stream.WriteBE32(1);
 
 		// unsigned int(64) base_data_offset;
 
