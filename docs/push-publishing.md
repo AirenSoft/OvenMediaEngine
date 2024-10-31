@@ -37,7 +37,7 @@ The RTMP protocol only supports H264 and AAC codecs.
 
 **\<StreamMap>** is used for automatically pushing content based on user-defined conditions. The XML file path should be specified relative to \<ApplicationPath>/conf.&#x20;
 
-&#x20;**\<StreamName>** is used to match output stream names and supports the use of wildcard characters. **\<VariantNames>** can be used to select specific tracks. Multiple variants can be specified using commas (',').  The **\<Protocol>** supports rtmp, mpegts, and srt. You enter the destination address in the **\<Url>** field, where macros can also be used.
+&#x20;**\<StreamName>** is used to match output stream names and supports the use of wildcard characters. **\<VariantNames>** can be used to select specific tracks. Multiple variants can be specified using commas (',').  The **\<Protocol>** supports rtmp, mpegts, and srt. You enter the destination address in the **\<Url>** and **\<StreamKey>** field, where macros can also be used.
 
 <pre class="language-xml"><code class="lang-xml">&#x3C;?xml version="1.0" encoding="UTF-8"?>
 &#x3C;PushInfo>
@@ -53,6 +53,9 @@ The RTMP protocol only supports H264 and AAC codecs.
     &#x3C;!-- [Must] -->
     &#x3C;Url>rtmp://1.2.3.4:1935/app/${SourceStream}&#x3C;/Url>
     &#x3C;!-- &#x3C;Url>rtmp://1.2.3.4:1935/app/${Stream}&#x3C;/Url> -->
+    &#x3C;!-- [Optional] -->
+    &#x3C;StreamKey>&#x3C;/StreamKey>
+    &#x3C;!-- &#x3C;StreamKey>some-stream-key&#x3C;/StreamKey> -->
 <strong>  &#x3C;/Push>  
 </strong>  &#x3C;Push>
     &#x3C;!-- [Must] -->
