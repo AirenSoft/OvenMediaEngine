@@ -58,6 +58,8 @@ HlsSession::HlsSession(const info::Session &session_info,
 	}
 
 	logtd("TsSession::TsSession (%d)", session_info.GetId());
+	MonitorInstance->OnSessionConnected(*stream, PublisherType::Hls);
+	_number_of_players = 1;
 }
 
 HlsSession::~HlsSession()

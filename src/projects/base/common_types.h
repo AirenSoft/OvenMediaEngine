@@ -392,7 +392,7 @@ static ov::String StringFromPublisherType(const PublisherType &type)
 		case PublisherType::Thumbnail:
 			return "Thumbnail";
 		case PublisherType::Hls:
-			return "TS";
+			return "HLSv3";
 	}
 
 	return "Unknown";

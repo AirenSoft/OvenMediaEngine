@@ -53,6 +53,8 @@ public:
 	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetMediaPlaylistData(const ov::String &variant_name, bool rewind);
 	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetSegmentData(const ov::String &variant_name, uint32_t number);
 
+	ov::String GetStreamId() const;
+
 private:
 	bool Start() override;
 	bool Stop() override;

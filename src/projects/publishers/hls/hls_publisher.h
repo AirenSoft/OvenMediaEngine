@@ -43,7 +43,7 @@ private:
 	}
 	const char *GetPublisherName() const override
 	{
-		return "HLS Publisher";
+		return "HLSv3 Publisher";
 	}
 
 	bool OnCreateHost(const info::Host &host_info) override;

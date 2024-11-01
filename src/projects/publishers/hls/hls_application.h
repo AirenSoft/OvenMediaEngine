@@ -41,5 +41,5 @@ private:
 	bool DeleteStream(const std::shared_ptr<info::Stream> &info) override;
 
 	http::CorsManager _cors_manager;
-	bool _origin_mode = false;
+	bool _origin_mode = true;
 };

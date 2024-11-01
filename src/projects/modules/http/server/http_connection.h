@@ -131,6 +131,7 @@ namespace http
 			std::shared_ptr<prot::ws::Frame> _websocket_frame = nullptr;
 
 			std::shared_ptr<RequestInterceptor> _interceptor = nullptr;
+			std::vector<std::shared_ptr<RequestInterceptor>> _need_to_close_interceptors;
 
 			std::recursive_mutex _close_mutex;
 			bool _closed = false;

@@ -57,6 +57,12 @@ LLHlsSession::LLHlsSession(const info::Session &session_info,
 		_session_key = ov::Random::GenerateString(8);
 	}
 
+	if (_origin_mode == true)
+	{
+		MonitorInstance->OnSessionConnected(*stream, PublisherType::LLHls);
+		_number_of_players = 1;
+	}
+
 	logtd("LLHlsSession::LLHlsSession (%d)", session_info.GetId());
 }
 
@@ -85,6 +91,8 @@ bool LLHlsSession::Start()
 
 bool LLHlsSession::Stop()
 {
+	logtd("LLHlsSession(%u) : Pending request size(%d)", GetId(), _pending_requests.size());
+
 	return Session::Stop();
 }
 
@@ -186,8 +194,6 @@ void LLHlsSession::OnMessageReceived(const std::any &message)
 		ResponseData(exchange);
 		return;
 	}
-
-	logtd("LLHlsSession::OnMessageReceived(%u) - %s", GetId(), exchange->ToString().CStr());
 
 	auto request = exchange->GetRequest();
 	auto request_uri = request->GetParsedUri();
@@ -472,8 +478,11 @@ void LLHlsSession::ResponsePlaylist(const std::shared_ptr<http::svr::HttpExchang
 
 		response->AppendData(playlist);
 
-		MonitorInstance->OnSessionConnected(*GetStream(), PublisherType::LLHls);
-		_number_of_players += 1;
+		if (_origin_mode == false)
+		{
+			MonitorInstance->OnSessionConnected(*GetStream(), PublisherType::LLHls);
+			_number_of_players += 1;
+		}
 	}
 	else if (result == LLHlsStream::RequestResult::Accepted && holdIfAccepted == true)
 	{
@@ -574,7 +583,7 @@ void LLHlsSession::ResponseChunklist(const std::shared_ptr<http::svr::HttpExchan
 		response->AppendData(chunklist);
 
 		// If a client uses previously cached llhls.m3u8 and requests chunklist
-		if (_number_of_players == 0)
+		if (_origin_mode == false && _number_of_players == 0)
 		{
 			MonitorInstance->OnSessionConnected(*GetStream(), PublisherType::LLHls);
 			_number_of_players += 1;
@@ -788,6 +797,7 @@ void LLHlsSession::OnPlaylistUpdated(const int32_t &track_id, const int64_t &msn
 {
 	logtd("LLHlsSession::OnPlaylistUpdated track_id: %d, msn: %lld, part: %lld", track_id, msn, part);
 	// Find the pending request
+
 	auto it = _pending_requests.begin();
 	while (it != _pending_requests.end())
 	{

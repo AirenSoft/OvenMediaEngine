@@ -216,6 +216,16 @@ namespace http
 				{
 					_interceptor = interceptor;
 				}
+
+				// If there is no interceptor in _need_to_close_interceptors, add it
+				if (interceptor != nullptr)
+				{
+					auto found = std::find(_need_to_close_interceptors.begin(), _need_to_close_interceptors.end(), interceptor);
+					if (found == _need_to_close_interceptors.end())
+					{
+						_need_to_close_interceptors.push_back(interceptor);
+					}
+				}
 			}
 
 			// Find interceptor from server
@@ -241,9 +251,9 @@ namespace http
 				return;
 			}
 
-			if (_interceptor != nullptr)
+			for (auto &interceptor : _need_to_close_interceptors)
 			{
-				_interceptor->OnClosed(GetSharedPtr(), reason);
+				interceptor->OnClosed(GetSharedPtr(), reason);
 			}
 
 			if (_http_transaction != nullptr)

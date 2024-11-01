@@ -66,6 +66,11 @@ HlsStream::~HlsStream()
 	logtd("TsStream(%s/%s) has been terminated finally", GetApplicationName(), GetName().CStr());
 }
 
+ov::String HlsStream::GetStreamId() const
+{
+	return ov::String::FormatString("hlsv3/%s", GetUri().CStr());
+}
+
 bool HlsStream::Start()
 {
 	if (GetState() != State::CREATED)

@@ -36,6 +36,11 @@ LLHlsStream::~LLHlsStream()
 	logtd("LLHlsStream(%s/%s) has been terminated finally", GetApplicationName(), GetName().CStr());
 }
 
+ov::String LLHlsStream::GetStreamId() const
+{
+	return ov::String::FormatString("llhls/%s", GetUri().CStr());
+}
+
 bool LLHlsStream::Start()
 {
 	if (GetState() != State::CREATED)

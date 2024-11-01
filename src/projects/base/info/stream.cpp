@@ -90,7 +90,7 @@ namespace info
 		return _id;
 	}
 
-	ov::String Stream::GetUri()
+	ov::String Stream::GetUri() const
 	{
 		// #vhost name#appname/stream name
 		ov::String vhost_app_name = _app_info != nullptr ? _app_info->GetVHostAppName().CStr() : "Unknown";
