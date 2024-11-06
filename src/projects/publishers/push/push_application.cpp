@@ -85,7 +85,6 @@ namespace pub
 			auto pushes = GetPushesByStreamMap(stream_map.GetPath(), info);
 			for(auto &push : pushes)
 			{
-				push->SetByConfig(true);
 				StartPush(push);
 			}
 		}
@@ -146,9 +145,9 @@ namespace pub
 			return ov::Error::CreateError(PUSH_PUBLISHER_ERROR_DOMAIN, ErrorCode::FailureDuplicateKey, error_message);
 		}
 
-		// 녹화 활성화
 		push->SetEnable(true);
 		push->SetRemove(false);
+		push->SetByConfig(false);
 
 		std::unique_lock<std::shared_mutex> lock(_push_map_mutex);
 		_pushes[push->GetId()] = push;
@@ -257,7 +256,7 @@ namespace pub
 		{
 			case pub::Session::SessionState::Started:
 				session->Stop();
-				logti("Push ended. %s", push->GetInfoString().CStr());
+				logti("Push stopped. %s", push->GetInfoString().CStr());
 				break;
 			case pub::Session::SessionState::Ready:
 				[[fallthrough]];
@@ -320,7 +319,7 @@ namespace pub
 
 					// Find a session by session ID
 					auto session = stream->GetSession(push->GetSessionId());
-					if (session == nullptr)
+					if (session == nullptr || push->GetSessionId() == 0)
 					{
 						session = stream->CreatePushSession(push);
 						if (session == nullptr)
@@ -451,6 +450,7 @@ namespace pub
 
 			push->SetId(id);
 			push->SetEnable(enable);
+			push->SetByConfig(true);
 			push->SetVhost(GetVHostAppName().GetVHostName());
 			push->SetApplication(GetVHostAppName().GetAppName());
 			push->SetStreamName(stream_info->GetName().CStr());
