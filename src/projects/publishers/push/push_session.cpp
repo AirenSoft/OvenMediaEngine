@@ -34,12 +34,14 @@ namespace pub
 		  _push(push),
 		  _writer(nullptr)
 	{
+		MonitorInstance->OnSessionConnected(*stream, PublisherType::Push);
 	}
 
 	PushSession::~PushSession()
 	{
 		Stop();
 		logtd("PushSession(%d) has been terminated finally", GetId());
+		MonitorInstance->OnSessionDisconnected(*GetStream(), PublisherType::Push);
 	}
 
 	bool PushSession::Start()
@@ -204,7 +206,9 @@ namespace pub
 			return;
 		}
 
-		bool ret = writer->SendPacket(session_packet);
+		uint64_t sent_bytes = 0;
+
+		bool ret = writer->SendPacket(session_packet, &sent_bytes);
 		if (ret == false)
 		{
 			logte("Failed to send packet");
@@ -218,7 +222,9 @@ namespace pub
 		}
 
 		GetPush()->UpdatePushTime();
-		GetPush()->IncreasePushBytes(session_packet->GetData()->GetLength());
+		GetPush()->IncreasePushBytes(sent_bytes);
+
+		MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::Push, sent_bytes);
 	}
 
 	std::shared_ptr<ffmpeg::Writer> PushSession::CreateWriter()
