@@ -317,8 +317,7 @@ void HlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 		SendBufferedPackets();
 	}
 
-	// Not implemented
-	// TODO(getroot) : Implement this function
+	AppendMediaPacket(media_packet);
 }
 
 void HlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event) 
@@ -588,6 +587,18 @@ bool HlsStream::CreatePackagers()
 					// Now we support EXT-X-VERSION 3
 					// Therefore, we don't support multiple audio tracks now
 					break;
+				}
+			}
+
+			auto data_track = GetFirstTrackByType(cmn::MediaType::Data);
+			if (data_track != nullptr)
+			{
+				packetizer->AddTrack(data_track);
+
+				// Add to track packetizers
+				{
+					std::lock_guard<std::shared_mutex> lock(_packetizers_guard);
+					_track_packetizers[data_track->GetId()].emplace_back(packetizer);
 				}
 			}
 

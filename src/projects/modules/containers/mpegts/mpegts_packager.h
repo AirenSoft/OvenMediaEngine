@@ -137,12 +137,21 @@ namespace mpegts
 
     struct Sample
     {
-        Sample(const std::shared_ptr<const MediaPacket> &media_packet, const std::shared_ptr<const ov::Data> &ts_packet_data)
+        Sample(const std::shared_ptr<const MediaPacket> &media_packet, const std::shared_ptr<const ov::Data> &ts_packet_data, double timescale)
         {
             this->media_packet = media_packet;
             this->ts_packet_data = ts_packet_data;
+
+			if (media_packet != nullptr)
+			{
+				_pts = (static_cast<double>(media_packet->GetPts()) / timescale * 90000.0);
+				_dts = (static_cast<double>(media_packet->GetDts()) / timescale * 90000.0);
+			}
         }
 
+		int64_t _pts = -1;
+		int64_t _dts = -1;
+		
         std::shared_ptr<const MediaPacket> media_packet = nullptr;
         std::shared_ptr<const ov::Data> ts_packet_data = nullptr;
     };
@@ -233,7 +242,7 @@ namespace mpegts
         {
             if (_samples.empty())
             {
-                return Sample(nullptr, nullptr);
+                return Sample(nullptr, nullptr, 0);
             }
 
             auto sample = _samples.front();
@@ -257,7 +266,7 @@ namespace mpegts
         {
             if (_samples.empty())
             {
-                return Sample(nullptr, nullptr);
+                return Sample(nullptr, nullptr, 0);
             }
 
             return _samples.front();

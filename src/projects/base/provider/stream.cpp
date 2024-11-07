@@ -116,6 +116,21 @@ namespace pvd
 			return false;
 		}
 
+		if (timestamp == -1)
+		{
+			// Not yet started
+			if (_last_media_timestamp_ms == -1)
+			{
+				logte("Could not send data frame. %s/%s(%u) - Media is not started yet", GetApplicationName(), GetName().CStr(), GetId());
+				return false;
+			}
+			timestamp = _last_media_timestamp_ms + _elapsed_from_last_media_timestamp.Elapsed();
+
+			logti("SendDataFrame - %s/%s(%u) - last_media_timestamp_ms: %lld, elapsed_from_last_media_timestamp: %lld, timestamp: %lld",
+				  GetApplicationName(), GetName().CStr(), GetId(),
+				  _last_media_timestamp_ms, _elapsed_from_last_media_timestamp.Elapsed(), timestamp);
+		}
+
 		auto event_message = std::make_shared<MediaPacket>(GetMsid(),
 															cmn::MediaType::Data,
 															data_track->GetId(),
@@ -193,6 +208,9 @@ namespace pvd
 		MonitorInstance->IncreaseBytesIn(*GetSharedPtrAs<info::Stream>(), packet->GetData()->GetLength());
 
 		_last_pkt_received_time = std::chrono::system_clock::now();
+
+		_last_media_timestamp_ms = packet->GetPts() / GetTrack(packet->GetTrackId())->GetTimeBase().GetTimescale() * 1000.0;
+		_elapsed_from_last_media_timestamp.Restart();
 
 		return _application->SendFrame(GetSharedPtr(), packet);
 	}

@@ -112,15 +112,18 @@ namespace mpegts
 		table_data.WriteBits(4, section->_pmt->_reserved_bits);
 		table_data.WriteBits(2, section->_pmt->_program_info_length_unused_bits);
 		table_data.WriteBits(10, section->_pmt->_program_info_length);
-		
-		// PMT descriptors
-		for(auto descriptor : section->_pmt->_program_descriptors)
+		if (section->_pmt->_program_info_length > 0)
 		{
-			table_data.WriteBytes<uint8_t>(descriptor->_tag);
-			table_data.WriteBytes<uint8_t>(descriptor->_length);
-			table_data.WriteData(descriptor->_data, descriptor->_length);
+			for (auto descriptor : section->_pmt->_program_descriptors)
+			{
+				auto descriptor_data = descriptor->Build();
+				if (descriptor_data != nullptr)
+				{
+					table_data.WriteData(descriptor_data->GetDataAs<uint8_t>(), descriptor_data->GetLength());
+				}
+			}
 		}
-
+		
 		// ES info
 		for(auto es_info : section->_pmt->_es_info_list)
 		{
@@ -134,9 +137,11 @@ namespace mpegts
 			// ES descriptors
 			for(auto descriptor : es_info->_es_descriptors)
 			{
-				table_data.WriteBytes<uint8_t>(descriptor->_tag);
-				table_data.WriteBytes<uint8_t>(descriptor->_length);
-				table_data.WriteData(descriptor->_data, descriptor->_length);
+				auto descriptor_data = descriptor->Build();
+				if (descriptor_data != nullptr)
+				{
+					table_data.WriteData(descriptor_data->GetDataAs<uint8_t>(), descriptor_data->GetLength());
+				}
 			}
 		}
 
@@ -391,7 +396,7 @@ namespace mpegts
 		auto descriptors_length = _pmt->_program_info_length;
 		while(descriptors_length > 0)
 		{
-			auto descriptor = ParseDescriptor(parser);
+			auto descriptor = Descriptor::Parse(parser);
 			if(descriptor == nullptr)
 			{
 				// error
@@ -400,7 +405,7 @@ namespace mpegts
 
 			_pmt->_program_descriptors.push_back(descriptor);
 
-			descriptors_length -= (DESCRIPTOR_HEADER_SIZE + descriptor->_length);
+			descriptors_length -= descriptor->GetPacketLength();
 		}
 
 		// es info, remaining bytes excluding CRC(32bits)
@@ -419,7 +424,7 @@ namespace mpegts
 			descriptors_length = es_info->_es_info_length;
 			while(descriptors_length > 0)
 			{
-				auto descriptor = ParseDescriptor(parser);
+				auto descriptor = Descriptor::Parse(parser);
 				if(descriptor == nullptr)
 				{
 					// error
@@ -427,36 +432,14 @@ namespace mpegts
 				}
 
 				es_info->_es_descriptors.push_back(descriptor);
-				descriptors_length -= (DESCRIPTOR_HEADER_SIZE + descriptor->_length);
+
+				descriptors_length -= descriptor->GetPacketLength();
 			}
 
 			_pmt->_es_info_list.push_back(es_info);
 		}
 
 		return true;
-	}
-
-	std::shared_ptr<Descriptor> Section::ParseDescriptor(BitReader *parser)
-	{
-		auto descriptor = std::make_shared<Descriptor>();
-
-		if(parser->BytesRemained() < 2)
-		{
-			return nullptr;
-		}
-
-		descriptor->_tag = parser->ReadBytes<uint8_t>();
-		descriptor->_length = parser->ReadBytes<uint8_t>();
-
-		if(parser->BytesRemained() < descriptor->_length)
-		{
-			return nullptr;
-		}
-
-		descriptor->_data = parser->CurrentPosition();
-		parser->SkipBytes(descriptor->_length);
-
-		return descriptor;
 	}
 
 	// return true when section is completed

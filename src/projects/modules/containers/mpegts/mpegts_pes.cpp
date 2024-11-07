@@ -38,6 +38,11 @@ namespace mpegts
 		{
 			pes->_stream_id = 0xC0; // + (pid - MIN_ELEMENTARY_PID); // 0xC0 ~ 0xDF
 		}
+		else if (track->GetMediaType() == cmn::MediaType::Data)
+		{
+			// Now only support 65535 length ID3 tag
+			pes->_stream_id = 0xBD; // + (pid - MIN_ELEMENTARY_PID); // 0xBD, 0xBF
+		}
 		else
 		{
 			logte("Unsupported media type: %d", static_cast<int>(track->GetMediaType()));
@@ -64,7 +69,15 @@ namespace mpegts
 		pes->_data_alignment_indicator = true;
 		pes->_copyright = 0;
 		pes->_original_or_copy = 0;
-		pes->_pts_dts_flags = 0b11; // pts and dts
+
+		if (track->GetMediaType() == cmn::MediaType::Video)
+		{
+			pes->_pts_dts_flags = 0b11; // pts and dts
+		}
+		else
+		{
+			pes->_pts_dts_flags = 0b10; // only pts
+		}
 		pes->_escr_flag = 0;
 		pes->_es_rate_flag = 0;
 		pes->_dsm_trick_mode_flag = 0;
@@ -86,9 +99,9 @@ namespace mpegts
 	{
 		// Build data
 		ov::BitWriter optional_data(16);
-		// Only use PTS and DTS option
+
 		WriteTimestamp(&optional_data, _pts, _dts);
-		_header_data_length = optional_data.GetDataSize(); // 5+5
+		_header_data_length = optional_data.GetDataSize();
 		
 		// Optional Header + Optional Data + Payload
 		ov::BitWriter optional_header(32);
@@ -362,7 +375,6 @@ namespace mpegts
 		// s: start_bits
 		// m: marker_bit (should be 1)
 		// T: timestamp
-
 		auto prefix = parser->ReadBits<uint8_t>(4);
 		if (prefix != start_bits)
 		{
@@ -419,7 +431,26 @@ namespace mpegts
 		
 		// maximum timestamp is 0x1FFFFFFFF
 		// PTS start bits (0010), DTS start bits (0001)
-		writer->WriteBits(4, 0b0011);
+
+		if (_pts_dts_flags == 0b00 || _pts_dts_flags == 0b01)
+		{
+			// forbidden
+			return false;
+		}
+
+		bool pts_flag = OV_GET_BIT(_pts_dts_flags, 1);
+		bool dts_flag = OV_GET_BIT(_pts_dts_flags, 0);
+		
+		// Write PTS
+		if (pts_flag == true && dts_flag == true)
+		{
+			writer->WriteBits(4, 0b0011);
+		}
+		else if (pts_flag == true && dts_flag == false)
+		{
+			writer->WriteBits(4, 0b0010);
+		}
+
 		writer->WriteBits(3, pts >> 30);
 		writer->WriteBits(1, 0b1);
 		writer->WriteBits(8, (pts >> 22) & 0xFF);
@@ -429,15 +460,18 @@ namespace mpegts
 		writer->WriteBits(7, pts & 0x7F);
 		writer->WriteBits(1, 0b1);
 
-		writer->WriteBits(4, 0b0001);
-		writer->WriteBits(3, dts >> 30);
-		writer->WriteBits(1, 0b1);
-		writer->WriteBits(8, (dts >> 22) & 0xFF);
-		writer->WriteBits(7, (dts >> 15) & 0x7F);
-		writer->WriteBits(1, 0b1);
-		writer->WriteBits(8, (dts >> 7) & 0xFF);
-		writer->WriteBits(7, dts & 0x7F);
-		writer->WriteBits(1, 0b1);
+		if (dts_flag == true)
+		{
+			writer->WriteBits(4, 0b0001);
+			writer->WriteBits(3, dts >> 30);
+			writer->WriteBits(1, 0b1);
+			writer->WriteBits(8, (dts >> 22) & 0xFF);
+			writer->WriteBits(7, (dts >> 15) & 0x7F);
+			writer->WriteBits(1, 0b1);
+			writer->WriteBits(8, (dts >> 7) & 0xFF);
+			writer->WriteBits(7, dts & 0x7F);
+			writer->WriteBits(1, 0b1);
+		}
 
 		return true;
 	}

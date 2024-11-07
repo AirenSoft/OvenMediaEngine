@@ -57,9 +57,13 @@ namespace mpegts
         std::shared_ptr<mpegts::Packet> BuildPatPacket();
         std::shared_ptr<mpegts::Packet> BuildPmtPacket();
 
+
+		std::shared_ptr<mpegts::Descriptor> BuildID3MetadataPointerDescriptor();
+		std::shared_ptr<mpegts::Descriptor> BuildID3MetadataDescriptor();
+
         uint16_t GetElementaryPid(uint32_t track_id);
         uint16_t GetFirstElementaryPid() const;
-        WellKnownStreamTypes GetElementaryStreamType(cmn::MediaCodecId codec_id) const;
+        WellKnownStreamTypes GetElementaryStreamTypeByCodecId(cmn::MediaCodecId codec_id) const;
         uint8_t GetNextContinuityCounter(uint16_t pid);
         void IncreaseContinuityCounter(uint16_t pid, uint32_t add_count);
 

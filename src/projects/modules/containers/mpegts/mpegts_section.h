@@ -14,6 +14,7 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovlibrary/bit_reader.h>
 
+#include "descriptors/descriptor.h"
 
 namespace mpegts
 {	
@@ -27,28 +28,14 @@ namespace mpegts
 		uint16_t	_program_map_pid; // associated PMT
 	};
 
-	#define DESCRIPTOR_HEADER_SIZE	2
-
-	enum class WellKnownDescriptorTags : uint8_t
-	{
-		H264_VIDEO_STREAM_HEADER_PARAMS = 0x28,
-		ADTS_AAC_AUDIO_STREAM_HEADER_PARAMS = 0x2B
-	};
-
-	struct Descriptor
-	{
-		uint8_t		_tag; // 8bits
-		uint8_t 	_length = 0; // 8bits
-		const uint8_t*	_data = nullptr; // _length
-	};
-
 	enum class WellKnownStreamTypes : uint8_t
 	{
 		None = 0x00,
 		H264 = 0x1B, // 27
 		H265 = 0x24, // 36
 		AAC = 0x0F, // 15 AAC ADTS
-		AAC_LATM = 0x11 // 17 AAC LATM
+		AAC_LATM = 0x11, // 17 AAC LATM
+		METADATA_CARRIED_IN_PES = 0x15
 	};
 
 	struct ESInfo
@@ -137,7 +124,6 @@ namespace mpegts
 		bool ParseTableData(BitReader *parser);
 		bool ParsePat(BitReader *parser);
 		bool ParsePmt(BitReader *parser);
-		std::shared_ptr<Descriptor> ParseDescriptor(BitReader *parser);
 
 		bool _header_parsed = false;
 		bool _completed = false;

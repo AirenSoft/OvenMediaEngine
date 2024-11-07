@@ -92,9 +92,9 @@ namespace mpegts
 
         for (const auto &track : tracks)
         {   
-            if (track->GetMediaType() != cmn::MediaType::Video && track->GetMediaType() != cmn::MediaType::Audio)
+            if (track->GetMediaType() != cmn::MediaType::Video && track->GetMediaType() != cmn::MediaType::Audio && track->GetMediaType() != cmn::MediaType::Data)
             {
-                logte("Unsupported media type %s in Mpeg-2 TS Packager", StringFromMediaType(track->GetMediaType()).CStr());
+                logte("Unsupported media type (%s) in Mpeg-2 TS Packager", StringFromMediaType(track->GetMediaType()).CStr());
                 continue;
             }
 
@@ -145,7 +145,7 @@ namespace mpegts
             }
         }
 
-        sample_buffer->AddSample(mpegts::Sample(media_packet, MergeTsPacketData(pes_packets)));
+        sample_buffer->AddSample(mpegts::Sample(media_packet, MergeTsPacketData(pes_packets), track->GetTimeBase().GetTimescale()));
 
         CreateSegmentIfReady();
     }
@@ -248,6 +248,11 @@ namespace mpegts
 				{
 					continue;
 				}
+
+				if (GetMediaTrack(track_id)->GetMediaType() == cmn::MediaType::Data)
+				{
+					continue;
+				}
 				
 				auto total_sample_segment_duration_us = sample_buffer->GetTotalConsumedDurationUs() + sample_buffer->GetCurrentDurationUs();
 
@@ -294,7 +299,7 @@ namespace mpegts
             return;
         }
 
-        auto segment = std::make_shared<Segment>(GetNextSegmentId(), first_sample.media_packet->GetDts(), main_segment_duration_us);
+        auto segment = std::make_shared<Segment>(GetNextSegmentId(), first_sample._dts, main_segment_duration_us);
 
         // Add PSI packets
         segment->AddPacketData(_psi_packet_data);
@@ -306,7 +311,7 @@ namespace mpegts
         for (const auto &main_sample : main_samples)
         {
             segment->AddPacketData(main_sample.ts_packet_data);
-            auto main_timestamp = main_sample.media_packet->GetDts();
+            auto main_timestamp = main_sample._dts;
 
             for (const auto &[track_id, sample_buffer] : _sample_buffers)
             {
@@ -330,7 +335,7 @@ namespace mpegts
                         break;
                     }
 
-                    if (sample.media_packet->GetDts() <= main_timestamp)
+                    if (sample._dts <= main_timestamp)
                     {
                         segment->AddPacketData(sample.ts_packet_data);
                         sample_buffer->PopSample();
@@ -355,6 +360,12 @@ namespace mpegts
                 {
                     continue;
                 }
+
+				if (GetMediaTrack(track_id)->GetMediaType() == cmn::MediaType::Data)
+				{
+					completed_tracks[track_id] = true;
+					continue;
+				}
                 
                 if (sample_buffer->IsEmpty())
                 {
@@ -390,7 +401,7 @@ namespace mpegts
     void Packager::AddSegment(const std::shared_ptr<Segment> &segment)
     {
 #if 0
-        logtd("AddSegment segment_id %u", segment->GetId());
+        logti("AddSegment segment_id %u", segment->GetId());
         auto file_name = ov::String::FormatString("segment_%u.ts", segment->GetId());
         ov::DumpToFile(file_name.CStr(), segment->GetData());
 #endif 

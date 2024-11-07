@@ -9,6 +9,9 @@
 #include "mpegts_packetizer.h"
 #include "mpegts_private.h"
 
+#include "descriptors/metadata_pointer.h"
+#include "descriptors/metadata.h"
+
 namespace mpegts
 {
     Packetizer::Packetizer()
@@ -49,12 +52,23 @@ namespace mpegts
             return false;
         }
 
-        auto stream_type = GetElementaryStreamType(media_track->GetCodecId());
-        if (stream_type == WellKnownStreamTypes::None)
-        {
-            logte("%s codec is not supported", cmn::GetCodecIdToString(media_track->GetCodecId()).CStr());
-            return false;
-        }
+		if (media_track->GetMediaType() == cmn::MediaType::Data)
+		{
+			if (media_track->GetOriginBitstream() != cmn::BitstreamFormat::ID3v2)
+			{
+				logte("Data Track (%s bitstream format) is not supported", GetBitstreamFormatString(media_track->GetOriginBitstream()).CStr());
+				return false;
+			}
+		}
+		else if (media_track->GetMediaType() == cmn::MediaType::Audio || media_track->GetMediaType() == cmn::MediaType::Video)
+		{
+			auto stream_type = GetElementaryStreamTypeByCodecId(media_track->GetCodecId());
+			if (stream_type == WellKnownStreamTypes::None)
+			{
+				logte("%s codec is not supported", cmn::GetCodecIdToString(media_track->GetCodecId()).CStr());
+				return false;
+			}
+		}
 
         _media_tracks.emplace(media_track->GetId(), media_track);
 
@@ -203,19 +217,62 @@ namespace mpegts
         return pat_packet;
     }
 
+	std::shared_ptr<mpegts::Descriptor> Packetizer::BuildID3MetadataPointerDescriptor()
+	{
+		auto descriptor = std::make_shared<MetadataPointerDescriptor>();
+
+		descriptor->SetMetadataApplicationFormatIdentifier(0x49443320); // "ID3 "
+		descriptor->SetMetadataFormatIdentifier(0x49443320); // "ID3 "
+		descriptor->SetMetadataServiceId(0);
+		descriptor->SetMetadataLocatorRecordFlag(0);
+		descriptor->SetMpegCarriageFlag(0);
+		descriptor->SetProgramNumber(PROGRAM_NUMBER);
+
+		return descriptor;
+	}
+
+	std::shared_ptr<mpegts::Descriptor> Packetizer::BuildID3MetadataDescriptor()
+	{
+		auto descriptor = std::make_shared<MetadataDescriptor>();
+
+		descriptor->SetMetadataApplicationFormatIdentifier(0x49443320); // "ID3 "
+		descriptor->SetMetadataFormatIdentifier(0x49443320); // "ID3 "
+		descriptor->SetMetadataServiceId(0);
+		descriptor->SetDecoderConfigFlags(0);
+		descriptor->SetDsmCcFlag(0);
+
+		return descriptor;
+	}
+
     std::shared_ptr<mpegts::Packet> Packetizer::BuildPmtPacket()
     {
         _pmt._pid = PMT_PID;
-    
+
+		auto program_info_descriptor = BuildID3MetadataPointerDescriptor();
+		auto program_info_descriptor_data = program_info_descriptor->Build();
+
+		if (program_info_descriptor_data != nullptr)
+		{
+			_pmt._program_info_length = program_info_descriptor_data->GetLength();
+			_pmt._program_descriptors.emplace_back(program_info_descriptor);
+		}
+		
+		// Media tracks first
         for (const auto &track_it : _media_tracks)
         {
             auto track = track_it.second;
+			if (track->GetMediaType() == cmn::MediaType::Data)
+			{
+				// Add it later
+				continue;
+			}
+
             auto es_info = std::make_shared<ESInfo>();
 
-            es_info->_stream_type = static_cast<uint8_t>(GetElementaryStreamType(track->GetCodecId()));
+            es_info->_stream_type = static_cast<uint8_t>(GetElementaryStreamTypeByCodecId(track->GetCodecId()));
             if (es_info->_stream_type == 0)
             {
-                logte("%s codec is not supported", cmn::GetCodecIdToString(track->GetCodecId()).CStr());
+                logte("Could not get stream type for track(%u)", track->GetId());
                 return nullptr;
             }
 
@@ -235,6 +292,32 @@ namespace mpegts
         {
             _pmt._pcr_pid = GetFirstElementaryPid();
         }
+
+		// Data tracks
+		for (const auto &track_it : _media_tracks)
+		{
+			auto track = track_it.second;
+			if (track->GetMediaType() != cmn::MediaType::Data)
+			{
+				continue;
+			}
+
+			if (track->GetOriginBitstream() == cmn::BitstreamFormat::ID3v2)
+			{
+				auto es_info = std::make_shared<ESInfo>();
+				auto es_descriptor = BuildID3MetadataDescriptor();
+				auto es_descriptor_data = es_descriptor->Build();
+
+				if (es_descriptor_data != nullptr)
+				{
+					es_info->_stream_type = static_cast<uint8_t>(WellKnownStreamTypes::METADATA_CARRIED_IN_PES);
+					es_info->_elementary_pid = GetElementaryPid(track->GetId());
+					es_info->_es_info_length = es_descriptor_data->GetLength();
+					es_info->_es_descriptors.emplace_back(es_descriptor);
+					_pmt._es_info_list.push_back(es_info);
+				}
+			}
+		}
 
         auto pmt_section = Section::Build(_pmt);
         if (pmt_section == nullptr)
@@ -276,19 +359,19 @@ namespace mpegts
         return _pids.begin()->second;
     }
 
-    WellKnownStreamTypes Packetizer::GetElementaryStreamType(cmn::MediaCodecId codec_id) const
+    WellKnownStreamTypes Packetizer::GetElementaryStreamTypeByCodecId(cmn::MediaCodecId codec_id) const
     {
-        switch (codec_id)
-        {
-        case cmn::MediaCodecId::H264:
-            return WellKnownStreamTypes::H264;
-        case cmn::MediaCodecId::H265:
-            return WellKnownStreamTypes::H265;
-        case cmn::MediaCodecId::Aac:
-            return WellKnownStreamTypes::AAC;
-        default:
-            return WellKnownStreamTypes::None;
-        }
+		switch (codec_id)
+		{
+			case cmn::MediaCodecId::H264:
+				return WellKnownStreamTypes::H264;
+			case cmn::MediaCodecId::H265:
+				return WellKnownStreamTypes::H265;
+			case cmn::MediaCodecId::Aac:
+				return WellKnownStreamTypes::AAC;
+			default:
+				return WellKnownStreamTypes::None;
+		}
 
         return WellKnownStreamTypes::None;
     }

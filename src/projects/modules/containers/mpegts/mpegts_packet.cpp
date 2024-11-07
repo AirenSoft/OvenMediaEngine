@@ -98,7 +98,7 @@ namespace mpegts
 				payload_buffer_size -= 2; // Adaptation field(2)
 			}
 			
-			// We always use adaptation field for the last packet
+			// We always use adaptation field for the last packet 
 			// It may be last packet, but if the remaining bytes are 183, it is not the last packet
 			if (remaining_pes_bytes < payload_buffer_size)
 			{

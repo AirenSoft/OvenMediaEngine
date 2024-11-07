@@ -140,6 +140,9 @@ namespace pvd
 		LipSyncClock 						_rtp_lip_sync_clock;
 		ov::StopWatch						_first_rtp_received_time;
 
+		int64_t _last_media_timestamp_ms = -1LL;
+		ov::StopWatch _elapsed_from_last_media_timestamp;
+
 		std::shared_ptr<pvd::Application> _application = nullptr;
 	};
 }
