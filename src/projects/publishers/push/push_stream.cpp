@@ -76,9 +76,6 @@ namespace pub
 		auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
 
 		BroadcastPacket(stream_packet);
-
-		// TODO(Keukhan): Because the transmission size varies for each session, it needs to be improved
-		MonitorInstance->IncreaseBytesOut(*pub::Stream::GetSharedPtrAs<info::Stream>(), PublisherType::Push, media_packet->GetData()->GetLength() * GetSessionCount());
 	}
 
 	void PushStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)

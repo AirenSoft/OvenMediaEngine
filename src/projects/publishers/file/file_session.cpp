@@ -33,11 +33,13 @@ namespace pub
 		: pub::Session(session_info, application, stream),
 		  _writer(nullptr)
 	{
+		MonitorInstance->OnSessionConnected(*stream, PublisherType::File);
 	}
 
 	FileSession::~FileSession()
 	{
 		logtd("FileSession(%d) has been terminated finally", GetId());
+		MonitorInstance->OnSessionDisconnected(*GetStream(), PublisherType::File);
 	}
 
 	bool FileSession::Start()
@@ -154,7 +156,7 @@ namespace pub
 
 			if (ffmpeg::Conv::IsSupportCodec(output_format, track->GetCodecId()) == false)
 			{
-				logtw("%s format does not support the codec(%s)", output_format.CStr(), cmn::GetCodecIdToString(track->GetCodecId()).CStr());
+				logtd("%s format does not support the codec(%s)", output_format.CStr(), cmn::GetCodecIdToString(track->GetCodecId()).CStr());
 				continue;
 			}
 
@@ -376,7 +378,9 @@ namespace pub
 
 		if (_writer != nullptr)
 		{
-			bool ret = _writer->SendPacket(session_packet);
+			uint64_t sent_bytes = 0;
+
+			bool ret = _writer->SendPacket(session_packet, &sent_bytes);
 
 			if (ret == false)
 			{
@@ -390,7 +394,9 @@ namespace pub
 			}
 
 			GetRecord()->UpdateRecordTime();
-			GetRecord()->IncreaseRecordBytes(session_packet->GetData()->GetLength());
+			GetRecord()->IncreaseRecordBytes(sent_bytes);
+			
+			MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::File, sent_bytes);
 		}
 	}
 

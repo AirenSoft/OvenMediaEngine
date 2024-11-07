@@ -225,7 +225,7 @@ namespace ffmpeg
 		return true;
 	}
 
-	bool Writer::SendPacket(const std::shared_ptr<MediaPacket> &packet)
+	bool Writer::SendPacket(const std::shared_ptr<MediaPacket> &packet, uint64_t *sent_bytes)
 	{
 		if (!packet)
 		{
@@ -366,10 +366,16 @@ namespace ffmpeg
 		{
 			av_packet_unref(&av_packet);
 			SetState(WriterStateError);
+
 			return false;
 		}
 
 		_last_packet_sent_time = std::chrono::high_resolution_clock::now();
+
+		if (sent_bytes != nullptr)
+		{
+			*sent_bytes = av_packet.size;
+		}
 
 		int error = av_interleaved_write_frame(av_format.get(), &av_packet);
 		if (error != 0)

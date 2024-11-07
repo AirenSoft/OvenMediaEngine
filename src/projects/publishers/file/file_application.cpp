@@ -48,12 +48,10 @@ namespace pub
 			auto records_info = GetRecordInfoFromFile(stream_map_config.GetPath(), info);
 			for (auto record : records_info)
 			{
-				record->SetByConfig(true);
-
 				auto result = RecordStart(record);
 				if (result->GetCode() != FilePublisher::FilePublisherStatusCode::Success)
 				{
-					logtw("FileStream(%s/%s) - Failed to start record(%s) status(%d) description(%s)", GetVHostAppName().CStr(), info->GetName().CStr(), record->GetId().CStr(), result->GetCode(), result->GetMessage().CStr());
+					logtw("FileStream(%s/%s) - Failed to start record. id(%s) status(%d) description(%s)", GetVHostAppName().CStr(), info->GetName().CStr(), record->GetId().CStr(), result->GetCode(), result->GetMessage().CStr());
 				}
 			}
 		}
@@ -82,7 +80,7 @@ namespace pub
 			auto result = RecordStop(record_info);
 			if (result->GetCode() != FilePublisher::FilePublisherStatusCode::Success)
 			{
-				logtw("FileStream(%s/%s) - Failed to start record(%s) status(%d) description(%s)", GetVHostAppName().CStr(), info->GetName().CStr(), record_info->GetId().CStr(), result->GetCode(), result->GetMessage().CStr());
+				logtw("FileStream(%s/%s) - Failed to stop record. id(%s) status(%d) description(%s)", GetVHostAppName().CStr(), info->GetName().CStr(), record_info->GetId().CStr(), result->GetCode(), result->GetMessage().CStr());
 			}
 		}
 
@@ -100,10 +98,11 @@ namespace pub
 		{
 			// State of disconnected and ready to connect
 			case pub::Session::SessionState::Ready:
-				session->Start();
-				break;
+				[[fallthrough]];
 			case pub::Session::SessionState::Stopped:
 				session->Start();
+				logti("Recording Started. %s", session->GetRecord()->GetInfoString().CStr());
+
 				break;
 			// State of Recording
 			case pub::Session::SessionState::Started:
@@ -133,6 +132,7 @@ namespace pub
 		{
 			case pub::Session::SessionState::Started:
 				session->Stop();
+				logti("Recording Stopped. %s", session->GetRecord()->GetInfoString().CStr());
 				break;
 			default:
 				break;
@@ -149,30 +149,26 @@ namespace pub
 	{
 		// If there is no session, create a new file(record) session.
 		auto session = std::static_pointer_cast<FileSession>(stream->GetSession(userdata->GetSessionId()));
-		if (session == nullptr)
+		if (session == nullptr || userdata->GetSessionId() == 0)
 		{
 			session = stream->CreateSession();
 			if (session == nullptr)
 			{
-				logte("Could not create session");
+				logte("Failed to create session");
 				return;
 			}
 			userdata->SetSessionId(session->GetId());
-
 			session->SetRecord(userdata);
 		}
 
 		if (userdata->GetEnable() == true && userdata->GetRemove() == false)
 		{
 			SessionStart(session);
-			logti("Recording Started. %s", userdata->GetInfoString().CStr());
 		}
 
 		if (userdata->GetEnable() == false || userdata->GetRemove() == true)
 		{
 			SessionStop(session);
-			logti("Recording Completed. %s", userdata->GetInfoString().CStr());
-
 		}
 	}
 
@@ -297,6 +293,8 @@ namespace pub
 		record->SetTransactionId(ov::Random::GenerateString(16));
 		record->SetEnable(true);
 		record->SetRemove(false);
+		record->SetByConfig(false);
+		record->SetSessionId(0);
 		record->SetFilePathSetByUser((record->GetFilePath().IsEmpty() != true) ? true : false);
 		record->SetInfoPathSetByUser((record->GetInfoPath().IsEmpty() != true) ? true : false);
 
@@ -434,6 +432,7 @@ namespace pub
 
 			record->SetId(ov::Random::GenerateString(16));
 			record->SetEnable(enable);
+			record->SetByConfig(true);
 			record->SetVhost(GetVHostAppName().GetVHostName());
 			record->SetApplication(GetVHostAppName().GetAppName());
 
