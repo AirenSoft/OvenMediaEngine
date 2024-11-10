@@ -43,7 +43,7 @@ echo ${CURRENT}
 install_xma_props_to_json_xrm()
 {
     # https://github.com/Xilinx/app-xma-props-to-json-xrm/tree/U30_GA_3
-
+    sudo apt -y install curl
 
     (DIR=${TEMP_PATH}/xmaPropsTojson && \
     mkdir -p ${DIR} && \
@@ -80,7 +80,7 @@ install_videosdk_ubuntu()
     # Install Required packages
     sudo apt-get -y update
     sudo apt-get -y install cmake pkg-config
-    sudo apt-get -y --allow-change-held-packages install xrt=2.11.722
+    sudo apt-get -y --allow-change-held-packages install xrt=2.11.730
     sudo apt-mark hold xrt
     sudo apt-get -y install xilinx-alveo-u30-core
 
