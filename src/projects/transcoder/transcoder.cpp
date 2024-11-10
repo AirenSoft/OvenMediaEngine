@@ -48,6 +48,9 @@ bool Transcoder::Start()
 bool Transcoder::Stop()
 {
 	logtd("Transcoder has been stopped");
+
+	TranscodeGPU::GetInstance()->Uninitialize();
+
 	return true;
 }
 
