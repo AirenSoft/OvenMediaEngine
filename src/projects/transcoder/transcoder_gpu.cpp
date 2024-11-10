@@ -35,53 +35,53 @@ TranscodeGPU::TranscodeGPU()
 
 bool TranscodeGPU::Initialize()
 {
-	if(_initialized)
+	if (_initialized)
 	{
 		return true;
 	}
-		
+
 	Uninitialize();
 
-	logti("Trying to check the hardware accelerator");
+	logti("Trying to check available hardware accelerators");
 
 	// CUDA
-	if(CheckSupportedNV() == true)
+	if (CheckSupportedNV() == true)
 	{
-		logti("Supported NVIDIA Accelerator. Number of devices(%d)", GetDeviceCount(cmn::MediaCodecModuleId::NVENC));
+		logti("Supported NVIDIA accelerator. Number of devices(%d)", GetDeviceCount(cmn::MediaCodecModuleId::NVENC));
 	}
 	else
 	{
-		logtw("No supported NVIDIA Accelerator");		
+		logtw("No supported NVIDIA accelerator");
 	}
 
 	// XMA
-	if(CheckSupportedXMA() == true)
+	if (CheckSupportedXMA() == true)
 	{
-		logti("Supported Xilinx Media Accelerator. Number of devices(%d)", GetDeviceCount(cmn::MediaCodecModuleId::XMA));
+		logti("Supported Xilinx Media accelerator. Number of devices(%d)", GetDeviceCount(cmn::MediaCodecModuleId::XMA));
 	}
 	else
 	{
-		logtw("No supported Xilinx Media Accelerator");
+		logtw("No supported Xilinx Media accelerator");
 	}
 
 	// QSV
-	if(CheckSupportedQSV() == true)
+	if (CheckSupportedQSV() == true)
 	{
-		logti("Supported Intel QuickSync Accelerator. Number of devices(%d)", GetDeviceCount(cmn::MediaCodecModuleId::QSV));
+		logti("Supported Intel QuickSync accelerator. Number of devices(%d)", GetDeviceCount(cmn::MediaCodecModuleId::QSV));
 	}
 	else
 	{
-		logtw("No supported Intel QuickSync Accelerator");
+		logtw("No supported Intel QuickSync accelerator");
 	}
 
 	// NILOGAN
-	if(CheckSupportedNILOGAN() == true)
+	if (CheckSupportedNILOGAN() == true)
 	{
-		logti("Supported Netint VPU Accelerator. Number of devices(%d)", GetDeviceCount(cmn::MediaCodecModuleId::NILOGAN));
+		logti("Supported Netint VPU accelerator. Number of devices(%d)", GetDeviceCount(cmn::MediaCodecModuleId::NILOGAN));
 	}
 	else
 	{
-		logtw("No supported Netint VPU Accelerator");
+		logtw("No supported Netint VPU accelerator");
 	}
 
 	_initialized = true;
@@ -89,9 +89,10 @@ bool TranscodeGPU::Initialize()
 	return false;
 }
 
-
 bool TranscodeGPU::Uninitialize()
 {
+	logti("Trying to release Transcoder GPU resources");
+
 	for (int i = 0; i < MAX_DEVICE_COUNT; i++)
 	{
 		if (_device_context_nv[i] != nullptr)
@@ -113,7 +114,7 @@ bool TranscodeGPU::Uninitialize()
 		}
 	}
 
-#ifdef HWACCELS_NVIDIA_ENABLED	
+#ifdef HWACCELS_NVIDIA_ENABLED
 	nvmlShutdown();
 #endif
 	return true;
@@ -121,7 +122,7 @@ bool TranscodeGPU::Uninitialize()
 
 bool TranscodeGPU::IsSupported(cmn::MediaCodecModuleId id, int32_t gpu_id)
 {
-	switch(id)
+	switch (id)
 	{
 		case cmn::MediaCodecModuleId::QSV:
 			return IsSupportedQSV(gpu_id);
@@ -140,7 +141,7 @@ bool TranscodeGPU::IsSupported(cmn::MediaCodecModuleId id, int32_t gpu_id)
 
 int32_t TranscodeGPU::GetDeviceCount(cmn::MediaCodecModuleId id)
 {
-	switch(id)
+	switch (id)
 	{
 		case cmn::MediaCodecModuleId::QSV:
 			return GetDeviceCountQSV();
@@ -157,9 +158,9 @@ int32_t TranscodeGPU::GetDeviceCount(cmn::MediaCodecModuleId id)
 	return 0;
 }
 
-AVBufferRef *TranscodeGPU::GetDeviceContext(cmn::MediaCodecModuleId id, int32_t gpu_id)
+AVBufferRef* TranscodeGPU::GetDeviceContext(cmn::MediaCodecModuleId id, int32_t gpu_id)
 {
-	switch(id)
+	switch (id)
 	{
 		case cmn::MediaCodecModuleId::QSV:
 			return GetDeviceContextQSV(gpu_id);
@@ -197,7 +198,7 @@ int32_t TranscodeGPU::GetDeviceCountXMA()
 
 bool TranscodeGPU::CheckSupportedNV()
 {
-#ifdef HWACCELS_NVIDIA_ENABLED	
+#ifdef HWACCELS_NVIDIA_ENABLED
 	// Initialize NVML library
 	nvmlReturn_t result = nvmlInit();
 	if (result != NVML_SUCCESS)
@@ -207,12 +208,12 @@ bool TranscodeGPU::CheckSupportedNV()
 	}
 
 	// Initialize CUDA library
-	if(cuInit(0) != CUDA_SUCCESS)
+	if (cuInit(0) != CUDA_SUCCESS)
 	{
 		logte("Failed to initialize CUDA");
 		return false;
 	}
-	
+
 	// Get GPU device count
 	unsigned int device_count;
 	result = nvmlDeviceGetCount(&device_count);
@@ -251,15 +252,15 @@ bool TranscodeGPU::CheckSupportedNV()
 			cuDeviceGet(&cu_device, j);
 
 			int32_t cu_pci_bus_is;
-			cuDeviceGetAttribute(&cu_pci_bus_is, CU_DEVICE_ATTRIBUTE_PCI_BUS_ID , cu_device);
+			cuDeviceGetAttribute(&cu_pci_bus_is, CU_DEVICE_ATTRIBUTE_PCI_BUS_ID, cu_device);
 
-			if(cu_pci_bus_is == (int32_t)pci_info.bus)
+			if (cu_pci_bus_is == (int32_t)pci_info.bus)
 			{
 				cuda_index = j;
 				break;
 			}
 		}
-		
+
 		// Get HW device context
 		char device_id[10];
 		sprintf(device_id, "%d", cuda_index);
@@ -273,14 +274,12 @@ bool TranscodeGPU::CheckSupportedNV()
 		}
 		else
 		{
-			_device_count_nv++;			
-			logti("NVIDIA. DeviceId(%d), Name(%s), BusId(%d), CudaId(%d)", gpu_id, device_name, pci_info.bus, cuda_index);			
-
-		}		
+			_device_count_nv++;
+			logti("NVIDIA. DeviceId(%d), Name(%s), BusId(%d), CudaId(%d)", gpu_id, device_name, pci_info.bus, cuda_index);
+		}
 	}
-	
 
-	if(_device_count_nv == 0)
+	if (_device_count_nv == 0)
 	{
 		return false;
 	}
@@ -296,20 +295,20 @@ bool TranscodeGPU::CheckSupportedNV()
 
 bool TranscodeGPU::CheckSupportedXMA()
 {
-#ifdef HWACCELS_XMA_ENABLED	
-	xrmContext *xrm_ctx = (xrmContext *)xrmCreateContext(XRM_API_VERSION_1);
+#ifdef HWACCELS_XMA_ENABLED
+	xrmContext* xrm_ctx = (xrmContext*)xrmCreateContext(XRM_API_VERSION_1);
 	if (xrm_ctx == NULL)
 	{
 		logtd("XMA: Driver is not loaded or installed");
 		return false;
-	}			
+	}
 
 	if (xrmIsDaemonRunning(xrm_ctx) == false)
 	{
 		logtw("XMA: Daemon is not running");
 		return false;
 	}
-		
+
 	if (xrmDestroyContext(xrm_ctx) != XRM_SUCCESS)
 	{
 		logte("XMA: Failed to destory context");
@@ -329,7 +328,7 @@ bool TranscodeGPU::CheckSupportedXMA()
 		xclbin_nparam[dev_id].xclbin_name = XLNX_XCLBIN_PATH;
 		_device_count_xma++;
 
-		logti("XMA: deviceId(%d), xclbin(%s)", xclbin_nparam[dev_id].device_id, xclbin_nparam[dev_id].xclbin_name);			
+		logti("XMA: deviceId(%d), xclbin(%s)", xclbin_nparam[dev_id].device_id, xclbin_nparam[dev_id].xclbin_name);
 	}
 
 	// Initialize all devices
@@ -361,7 +360,7 @@ bool TranscodeGPU::CheckSupportedQSV()
 
 		return false;
 	}
-	
+
 	_device_count_qsv++;
 
 	[[maybe_unused]]
@@ -374,7 +373,7 @@ bool TranscodeGPU::CheckSupportedQSV()
 bool TranscodeGPU::CheckSupportedNILOGAN()
 {
 	_device_count_nilogan = 0;
-#ifdef HWACCELS_NILOGAN_ENABLED		
+#ifdef HWACCELS_NILOGAN_ENABLED
 	int ret = ::av_hwdevice_ctx_create(&_device_context_nilogan[0], AV_HWDEVICE_TYPE_NI_LOGAN, nullptr, nullptr, 0);
 	if (ret < 0)
 	{
@@ -384,11 +383,11 @@ bool TranscodeGPU::CheckSupportedNILOGAN()
 		logtd("Netint: Driver is not loaded or installed");
 		return false;
 	}
-	
-	_device_count_nilogan++;		
+
+	_device_count_nilogan++;
 
 	auto constraints = av_hwdevice_get_hwframe_constraints(_device_context_nilogan[0], nullptr);
-	
+
 	logtd("constraints. hw.fmt(%d), sw.fmt(%d)", *constraints->valid_hw_formats, *constraints->valid_sw_formats);
 
 	return true;
@@ -396,7 +395,6 @@ bool TranscodeGPU::CheckSupportedNILOGAN()
 	return false;
 #endif
 }
-
 
 AVBufferRef* TranscodeGPU::GetDeviceContextQSV(int32_t gpu_id)
 {
@@ -420,7 +418,7 @@ AVBufferRef* TranscodeGPU::GetDeviceContextNILOGAN(int32_t gpu_id)
 
 AVBufferRef* TranscodeGPU::GetDeviceContextNV(int32_t gpu_id)
 {
-	if(gpu_id >= MAX_DEVICE_COUNT)
+	if (gpu_id >= MAX_DEVICE_COUNT)
 	{
 		return nullptr;
 	}
@@ -430,7 +428,7 @@ AVBufferRef* TranscodeGPU::GetDeviceContextNV(int32_t gpu_id)
 
 bool TranscodeGPU::IsSupportedQSV(int32_t gpu_id)
 {
-	if(_device_count_qsv == 0 || gpu_id >= _device_count_qsv)
+	if (_device_count_qsv == 0 || gpu_id >= _device_count_qsv)
 	{
 		return false;
 	}
@@ -440,7 +438,7 @@ bool TranscodeGPU::IsSupportedQSV(int32_t gpu_id)
 
 bool TranscodeGPU::IsSupportedNILOGAN(int32_t gpu_id)
 {
-	if(_device_count_nilogan == 0 || gpu_id >= _device_count_nilogan)
+	if (_device_count_nilogan == 0 || gpu_id >= _device_count_nilogan)
 	{
 		return false;
 	}
@@ -465,7 +463,7 @@ bool TranscodeGPU::IsSupportedXMA(int32_t gpu_id)
 		return false;
 	}
 
-	return true;	
+	return true;
 }
 
 uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, int32_t gpu_id)
@@ -473,7 +471,7 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, i
 	switch (id)
 	{
 		case cmn::MediaCodecModuleId::XMA: {
-#ifdef HWACCELS_XMA_ENABLED				
+#ifdef HWACCELS_XMA_ENABLED
 			if (type == IPType::ENCODER)
 			{
 				return 0;
@@ -485,12 +483,12 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, i
 			else if (type == IPType::SCALER)
 			{
 				return 0;
-			}			
-#endif			
+			}
+#endif
 		}
 		break;
 		case cmn::MediaCodecModuleId::NVENC: {
-#ifdef HWACCELS_NVIDIA_ENABLED				
+#ifdef HWACCELS_NVIDIA_ENABLED
 			nvmlDevice_t device;
 			nvmlReturn_t result = nvmlDeviceGetHandleByIndex(gpu_id, &device);
 			if (result != NVML_SUCCESS)
@@ -521,8 +519,8 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, i
 				nvmlDeviceGetUtilizationRates(device, &device_utilization);
 
 				return device_utilization.gpu;
-			}			
-#endif			
+			}
+#endif
 			// logti("GpuId(%d), Name(%40s), dec.utilization(%d%%), enc.utilization(%d%%)", gpu_id, name, decUtilization, encUtilization);
 		}
 		break;
@@ -538,11 +536,11 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, i
 			else if (type == IPType::SCALER)
 			{
 				return 0;
-			}			
+			}
 		}
 		break;
 		case cmn::MediaCodecModuleId::NILOGAN: {
-#ifdef HWACCELS_NILOGAN_ENABLED				
+#ifdef HWACCELS_NILOGAN_ENABLED
 			if (type == IPType::ENCODER)
 			{
 				return 0;
@@ -554,8 +552,8 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, i
 			else if (type == IPType::SCALER)
 			{
 				return 0;
-			}	
-#endif				
+			}
+#endif
 		}
 		break;
 		default:
@@ -571,10 +569,10 @@ void TranscodeGPU::CodecThread()
 
 	modules.push_back(cmn::MediaCodecModuleId::NVENC);
 	modules.push_back(cmn::MediaCodecModuleId::XMA);
-	modules.push_back(cmn::MediaCodecModuleId::QSV);	
-	modules.push_back(cmn::MediaCodecModuleId::NILOGAN);	
+	modules.push_back(cmn::MediaCodecModuleId::QSV);
+	modules.push_back(cmn::MediaCodecModuleId::NILOGAN);
 
-	for(auto module : modules)
+	for (auto module : modules)
 	{
 		for (int gpu_id = 0; gpu_id < GetDeviceCount(module); gpu_id++)
 		{
