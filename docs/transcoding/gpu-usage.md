@@ -1,4 +1,4 @@
-# Enable GPU Acceleration
+# GPU Acceleration
 
 OvenMediaEngine supports GPU-based hardware decoding and encoding. Currently supported GPU acceleration devices are Intel's QuickSync and NVIDIA. This article explains how to install the drivers for OvenMediaEngine and set up the configuration to use your GPU.
 
@@ -154,35 +154,35 @@ you must include the **--gpus all** option when running Docker
 To use hardware acceleration, set the **HardwareAcceleration** option to **true** under OutputProfiles. If this option is enabled, a hardware codec is automatically used when creating a stream, and if it is unavailable due to insufficient hardware resources, it is replaced with a software codec.
 
 ```markup
-<VirtualHosts>
-   <VirtualHost>
-      <Name>default</Name>
-      ...
-      <!-- Settings for applications -->
-      <Applications>
-         <Application>
-            <Name>app</Name>
-            <Type>live</Type>
-            <OutputProfiles>
-               <!-- Settings to use hardware codecs -->
-               <HardwareAcceleration>true</HardwareAcceleration>
-               <OutputProfile>
-                  ...
-               </OutputProfile>
-               <OutputProfile>
-                  ...
-               </OutputProfile>
-            </OutputProfiles>
-            <Providers>
-               ...
-            </Providers>
-            <Publishers>
-               ...
-            </Publishers>
-         </Application>
-      </Applications>
-   </VirtualHost>
-</VirtualHosts>
+<OutputProfiles>
+    <HWAccels>
+        <!-- 
+        Setting for Hardware Modules.
+            - nv : Nvidia Video Codec SDK
+            - xma :Xilinx Media Accelerator
+            - qsv :Intel Quick Sync Video
+            - nilogan: Netint VPU
+
+        You can use multiple modules by separating them with commas.
+        For example, if you want to use xma and nv, you can set it as follows.
+
+        <Modules>[ModuleName]:[DeviceId],[ModuleName]:[DeviceId],...</Modules>
+        <Modules>xma:0,nv:0</Modules>
+        -->
+        <Decoder>
+                <Enable>true</Enable>
+                <Modules>nv</Modules>
+        </Decoder>
+        <Encoder>
+                <Enable>true</Enable>
+                <Modules>nv</Modules>
+        </Encoder>
+    </HWAccels>
+    
+    <OutputProfile>
+        ...
+    </OutputProfile>
+</OutputProfiles>
 ```
 
 {% content-ref url="../configuration/" %}
@@ -193,17 +193,17 @@ To use hardware acceleration, set the **HardwareAcceleration** option to **true*
 
 The codecs available using hardware accelerators in OvenMediaEngine are as shown in the table below. Different GPUs support different codecs. If the hardware codec is not available, you should check if your GPU device supports the codec.
 
-<table><thead><tr><th>Device</th><th width="199" align="center">H264</th><th align="center">H265</th><th align="center">VP8</th><th align="center">VP9</th></tr></thead><tbody><tr><td>QuickSync</td><td align="center">D / E</td><td align="center">D / E</td><td align="center">-</td><td align="center">-</td></tr><tr><td>NVIDIA</td><td align="center">D / E</td><td align="center">D / E</td><td align="center">-</td><td align="center">-</td></tr><tr><td>Docker on NVIDIA Container Toolkit</td><td align="center">D / E</td><td align="center">D / E</td><td align="center">-</td><td align="center">-</td></tr></tbody></table>
+<table><thead><tr><th>Device</th><th width="199" align="center">H264</th><th align="center">H265</th><th align="center">VP8</th><th align="center">VP9</th></tr></thead><tbody><tr><td>QuickSync</td><td align="center">D / E</td><td align="center">D / E</td><td align="center">-</td><td align="center">-</td></tr><tr><td>NVIDIA</td><td align="center">D / E</td><td align="center">D / E</td><td align="center">-</td><td align="center">-</td></tr><tr><td>Docker on NVIDIA Container Toolkit</td><td align="center">D / E</td><td align="center">D / E</td><td align="center">-</td><td align="center">-</td></tr><tr><td>Xilinx U30MA</td><td align="center">D / E</td><td align="center">D / E</td><td align="center"></td><td align="center"></td></tr></tbody></table>
 
 D : Decoding, E : Encoding
 
 ## Reference
 
-* Quick Sync Video Format : [https://en.wikipedia.org/wiki/Intel\_Quick\_Sync\_Video](https://en.wikipedia.org/wiki/Intel\_Quick\_Sync\_Video)
 * NVIDIA NVDEC Video Format : [https://en.wikipedia.org/wiki/Nvidia\_NVDEC](https://en.wikipedia.org/wiki/Nvidia\_NVDEC)
 * NVIDIA NVENV Video Format : [https://en.wikipedia.org/wiki/Nvidia\_NVENC](https://en.wikipedia.org/wiki/Nvidia\_NVENC)
 * CUDA Toolkit Installation Guide : [https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#introduction](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#introduction)
 * NVIDIA Container Toolkit : [https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/arch-overview.html#arch-overview](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/arch-overview.html#arch-overview)
 * Quick Sync Video format support: [https://en.wikipedia.org/wiki/Intel\_Quick\_Sync\_Video](https://en.wikipedia.org/wiki/Intel\_Quick\_Sync\_Video#AMD)
+* Xilinx Video SDK : [https://xilinx.github.io/video-sdk/v3.0/index.html](https://xilinx.github.io/video-sdk/v3.0/index.html)
 
 ##

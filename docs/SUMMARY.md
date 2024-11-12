@@ -18,7 +18,7 @@
   * [Scheduled Channel](live-source/scheduled-channel.md)
   * [Multiplex Channel](live-source/multiplex-channel.md)
 * [ABR and Transcoding](transcoding/README.md)
-  * [Enable GPU Acceleration](transcoding/gpu-usage.md)
+  * [GPU Acceleration](transcoding/gpu-usage.md)
   * [TranscodeWebhook](transcoding/transcodewebhook.md)
 * [Streaming](streaming/README.md)
   * [WebRTC Streaming](streaming/webrtc-publishing.md)
