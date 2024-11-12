@@ -804,6 +804,9 @@ bool TranscoderStream::CreateDecoder(MediaTrackId decoder_id, std::shared_ptr<in
 		input_track->SetKeyframeDecodeOnly(IsKeyframeOnlyDecodable(_output_streams));
 	}
 
+	// Set the thread count for the decoder.
+	input_track->SetThreadCount(GetOutputProfilesCfg()->GetDecodes().GetThreadCount());
+
 	// Get a list of available decoder candidates.
 	// TODO: GetOutputProfilesCfg()->IsHardwareAcceleration() is deprecated. It will be deleted soon.
 	auto candidates = TranscodeDecoder::GetCandidates(

@@ -28,7 +28,9 @@ bool DecoderVP8::InitCodec()
 	}
 
 	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
-
+	_context->thread_count = GetRefTrack()->GetThreadCount();
+	_context->thread_type = FF_THREAD_FRAME;
+	
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
