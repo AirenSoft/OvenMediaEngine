@@ -791,3 +791,74 @@ bool TranscoderStreamInternal::IsEqualCountAndMediaTypeOfMediaTracks(std::map<in
 
 	return true;
 }
+
+bool TranscoderStreamInternal::IsKeyframeOnlyDecodable(const std::map<ov::String, std::shared_ptr<info::Stream>> &streams)
+{
+	uint32_t video, video_bypass, audio, audio_bypass, image, data;
+
+	GetCountByEncodingType(streams, video, video_bypass, audio, audio_bypass, image, data);
+
+	// logtd("Video:%u, Video(Bypass):%u, Audio:%u, Audio(Bypass):%u, Image:%u, Data:%u",
+	// 	  video, video_bypass, audio, audio_bypass, image, data);
+
+	if (video == 0 && image > 0)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+void TranscoderStreamInternal::GetCountByEncodingType(
+	const std::map<ov::String, std::shared_ptr<info::Stream>> &streams,
+	uint32_t &video, uint32_t &video_bypass, uint32_t &audio, uint32_t &audio_bypass, uint32_t &image, uint32_t &data)
+{
+	video = 0;
+	video_bypass = 0;
+	audio = 0;
+	audio_bypass = 0;
+	image = 0;
+	data = 0;
+
+	for (auto &[stream_name, stream] : streams)
+	{
+		for (auto &[track_id, track] : stream->GetTracks())
+		{
+			switch (track->GetMediaType())
+			{
+				case cmn::MediaType::Video:
+					if (cmn::IsImageCodec(track->GetCodecId()) == true)
+					{
+						image++;
+					}
+					else if (cmn::IsVideoCodec(track->GetCodecId()) == true)
+					{
+						if (track->IsBypass() == true)
+						{
+							video_bypass++;
+						}
+						else
+						{
+							video++;
+						}
+					}
+					break;
+				case cmn::MediaType::Audio:
+					if (track->IsBypass() == true)
+					{
+						audio_bypass++;
+					}
+					else
+					{
+						audio++;
+					}
+					break;
+				case cmn::MediaType::Data:
+					data++;
+					break;
+				default:
+					break;
+			}
+		}
+	}
+}

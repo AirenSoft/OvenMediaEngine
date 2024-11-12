@@ -260,3 +260,13 @@ int32_t VideoTrack::GetSkipFramesByConfig() const
 {
 	return _skip_frames_conf;
 }
+
+bool VideoTrack::IsKeyframeDecodeOnly() const
+{
+	return _keyframe_decode_only;
+}
+
+void VideoTrack::SetKeyframeDecodeOnly(bool keyframe_decode_only)
+{
+	_keyframe_decode_only = keyframe_decode_only;
+}

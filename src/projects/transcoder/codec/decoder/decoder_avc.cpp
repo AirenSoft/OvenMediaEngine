@@ -153,6 +153,17 @@ void DecoderAVC::CodecThread()
 					_pkt->duration = duration;
 				}
 
+				// Keyframe Decode Only
+				// If set to decode only key frames, non-keyframe packets are dropped.
+				if(GetRefTrack()->IsKeyframeDecodeOnly() == true)
+				{
+					// Drop non-keyframe packets
+					if (!(_pkt->flags & AV_PKT_FLAG_KEY))
+					{
+						break;
+					}
+				}
+
 				int ret = ::avcodec_send_packet(_context, _pkt);
 				if (ret == AVERROR(EAGAIN))
 				{

@@ -84,10 +84,12 @@ namespace cfg
 						return CreateConfigErrorPtr("Unknown type: %s", _type.CStr());
 					});
 
+					// TODO: Deprecated
 					Register<Optional>("Decodes", &_decodes);
 					Register<Optional>("OutputProfiles", &_output_profiles);
 					Register<Optional>("Providers", &_providers);
 					Register<Optional>("Publishers", &_publishers);
+					// TODO: Deprecated
 					Register<Optional>("PersistentStreams", &_persistent_streams);
 					Register<Optional>("TranscodeWebhook", &_transcode_webhook);
 				}

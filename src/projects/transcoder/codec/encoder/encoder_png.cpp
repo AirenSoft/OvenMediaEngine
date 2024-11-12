@@ -23,6 +23,9 @@ bool EncoderPNG::SetCodecParams()
 	_codec_context->width = GetRefTrack()->GetWidth();
 	_codec_context->height = GetRefTrack()->GetHeight();
 
+	// Set the compression level
+	_codec_context->compression_level = 1;
+
 	_bitstream_format = cmn::BitstreamFormat::PNG;
 	
 	_packet_type = cmn::PacketType::RAW;

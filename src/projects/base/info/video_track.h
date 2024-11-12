@@ -90,6 +90,10 @@ public:
 	void SetSkipFramesByConfig(int32_t skip_frames);
 	int32_t GetSkipFramesByConfig() const;
 
+	// decoder only parameter
+	bool IsKeyframeDecodeOnly() const;
+	void SetKeyframeDecodeOnly(bool keyframe_decode_only);
+
 protected:
 
 	// framerate (measurement)
@@ -148,4 +152,8 @@ protected:
 	// -1 : No SkipFrame
 	// 0 ~ 120 : minimum value of SkipFrames. it is automatically calculated and the SkipFrames value is changed.
 	int32_t _skip_frames_conf = -1;
+
+	// @decoder
+	// Keyframe Decode Only (set by user)
+	bool _keyframe_decode_only = false;
 };

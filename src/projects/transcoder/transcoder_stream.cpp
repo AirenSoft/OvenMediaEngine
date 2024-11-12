@@ -475,8 +475,7 @@ int32_t TranscoderStream::CreateOutputStreams()
 	int32_t created_count = 0;
 
 	// Get the output profile to make the output stream
-	auto cfg_output_profile = GetOutputProfilesCfg();
-	auto cfg_output_profile_list = cfg_output_profile->GetOutputProfileList();
+	auto cfg_output_profile_list = GetOutputProfilesCfg()->GetOutputProfileList();
 	
 	for (const auto &profile : cfg_output_profile_list)
 	{
@@ -630,10 +629,12 @@ int32_t TranscoderStream::BuildComposite()
 
 		for (auto &[output_stream, output_track] : composite->GetOutputTracks())
 		{
+			auto output_stream_and_track = std::make_pair(output_stream, output_track->GetId());
+
 			// Bypass Flow: InputTrack -> OutputTrack
 			if (output_track->IsBypass() == true)
 			{
-				_link_input_to_outputs[input_track_id].push_back(make_pair(output_stream, output_track->GetId()));
+				_link_input_to_outputs[input_track_id].push_back(output_stream_and_track);
 			}
 			// Transcoding Flow: InputTrack -> Decoder -> Filter -> Encoder -> OutputTrack
 			else
@@ -652,7 +653,7 @@ int32_t TranscoderStream::BuildComposite()
 				_link_filter_to_encoder[filter_id] = encoder_id;
 
 				// Flushing: Encoder(1) -> OutputTrack (N)
-				_link_encoder_to_outputs[encoder_id].push_back(make_pair(output_stream, output_track->GetId()));
+				_link_encoder_to_outputs[encoder_id].push_back(output_stream_and_track);
 			}
 		}
 
@@ -796,16 +797,20 @@ bool TranscoderStream::CreateDecoder(MediaTrackId decoder_id, std::shared_ptr<in
 		return true;
 	}
 
-	// Get HWAccels configuration
-	auto cfg_hwaccels = GetOutputProfilesCfg()->GetHWAccels();
+	// Set the keyframe decode only flag for the decoder.
+	if (input_track->GetMediaType() == cmn::MediaType::Video &&
+		GetOutputProfilesCfg()->GetDecodes().IsKeyframeOnlyIfNeed() == true)
+	{
+		input_track->SetKeyframeDecodeOnly(IsKeyframeOnlyDecodable(_output_streams));
+	}
 
 	// Get a list of available decoder candidates.
 	// TODO: GetOutputProfilesCfg()->IsHardwareAcceleration() is deprecated. It will be deleted soon.
 	auto candidates = TranscodeDecoder::GetCandidates(
-		cfg_hwaccels.GetDecoder().IsEnable() || GetOutputProfilesCfg()->IsHardwareAcceleration(), 
-		cfg_hwaccels.GetDecoder().GetModules(), 
+		GetOutputProfilesCfg()->GetHWAccels().GetDecoder().IsEnable() || GetOutputProfilesCfg()->IsHardwareAcceleration(),
+		GetOutputProfilesCfg()->GetHWAccels().GetDecoder().GetModules(),
 		input_track);
-	if(candidates == nullptr)
+	if (candidates == nullptr)
 	{
 		logte("%s Decoder candidates are not found. InputTrack(%u)", _log_prefix.CStr(), input_track->GetId());
 		return false;
@@ -900,14 +905,11 @@ bool TranscoderStream::CreateEncoder(MediaTrackId encoder_id, std::shared_ptr<in
 		return true;
 	}
 
-	// Get HWAccels configuration
-	auto cfg_hwaccels = GetOutputProfilesCfg()->GetHWAccels();
-
 	// Get a list of available encoder candidates.
 	// TODO: GetOutputProfilesCfg()->IsHardwareAcceleration() is deprecated. It will be deleted soon.
 	auto candidates = TranscodeEncoder::GetCandidates(
-		cfg_hwaccels.GetEncoder().IsEnable() || GetOutputProfilesCfg()->IsHardwareAcceleration(), 
-		cfg_hwaccels.GetEncoder().GetModules(), output_track);
+		GetOutputProfilesCfg()->GetHWAccels().GetEncoder().IsEnable() || GetOutputProfilesCfg()->IsHardwareAcceleration(), 
+		GetOutputProfilesCfg()->GetHWAccels().GetEncoder().GetModules(), output_track);
 	if(candidates == nullptr)
 	{
 		logte("%s Decoder candidates are not found. InputTrack(%d)", _log_prefix.CStr(), output_track->GetId());

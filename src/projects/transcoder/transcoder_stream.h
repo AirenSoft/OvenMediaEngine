@@ -159,19 +159,19 @@ private:
 	std::atomic<MediaTrackId> _last_composite_id = 0;
 
 	// This map is used only when the Passthrough options is enabled.
-	// [INPUT_TRACK_ID,  OUTPUT_TRACK_IDS of OutputStream]
+	// [INPUT_TRACK_ID,  OUTPUT_TRACK_ID]
 	std::map<MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>>> _link_input_to_outputs;
 
 	// [INPUT_TRACK_ID, DECODER_ID]
 	std::map<MediaTrackId, MediaTrackId> _link_input_to_decoder;
 
-	// [DECODER_ID, FILTER_IDS]
+	// [DECODER_ID, FILTER_ID]
 	std::map<MediaTrackId, std::vector<MediaTrackId>> _link_decoder_to_filters;
 
 	// [FILTER_ID, ENCODER_ID]
 	std::map<MediaTrackId, MediaTrackId> _link_filter_to_encoder;
 
-	// [ENCODER_ID, OUTPUT_TRACK_IDS Of OutputStream]
+	// [ENCODER_ID, OUTPUT_TRACK_ID]
 	std::map<MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>>> _link_encoder_to_outputs;
 
 	// Decoder Component

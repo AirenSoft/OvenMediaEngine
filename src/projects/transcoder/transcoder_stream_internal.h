@@ -51,6 +51,16 @@ public:
 	void UpdateOutputTrackTranscode(const std::shared_ptr<MediaTrack> &output_track, const std::shared_ptr<MediaTrack> &input_track, MediaFrame *buffer);
 
 
+	// This is used to check if only keyframes can be decoded.
+	// If the output profile has only image encoding options, keyframes can be decoded to use the CPU efficiently.
+	bool IsKeyframeOnlyDecodable(const std::map<ov::String, std::shared_ptr<info::Stream>> &streams);
+
+	void GetCountByEncodingType(const std::map<ov::String, std::shared_ptr<info::Stream>> &streams,
+								  uint32_t &video, uint32_t &video_bypass,
+								  uint32_t &audio, uint32_t &audio_bypass,
+								  uint32_t &image, uint32_t &data);
+
+
 public:
 	// For the purpose of checking if the input track has changed during the update.
 	bool StoreInputTrackSnapshot(std::shared_ptr<info::Stream> stream);
