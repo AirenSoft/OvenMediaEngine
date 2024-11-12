@@ -2,15 +2,17 @@
 
 OvenMediaEngine has a built-in live transcoder. The live transcoder can decode the incoming live source and re-encode it with the set codec or adjust the quality to encode at multiple bitrates.
 
+
+
 ## Supported Video, Audio and Image Codecs
 
 ### Decoders
 
-<table><thead><tr><th width="179.33333333333331">Type</th><th width="544">Codec</th></tr></thead><tbody><tr><td>Video</td><td>VP8, H.264, H.265</td></tr><tr><td>Audio</td><td>AAC, Opus</td></tr></tbody></table>
+<table><thead><tr><th width="148.33333333333331">Type</th><th width="544">Codec</th></tr></thead><tbody><tr><td>Video</td><td>VP8, H.264, H.265</td></tr><tr><td>Audio</td><td>AAC, Opus</td></tr></tbody></table>
 
 ### Encoders
 
-<table><thead><tr><th width="184">Type</th><th width="177.33333333333331">Codec</th><th>Codec of Configuration</th></tr></thead><tbody><tr><td>Video</td><td>VP8</td><td>vp8</td></tr><tr><td></td><td>H.264</td><td>h264  <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td>x264</td><td>h264_x264</td></tr><tr><td></td><td>OpenH264</td><td>h264_openh264</td></tr><tr><td></td><td>NVIDIA Hardware</td><td>h264_nvenc</td></tr><tr><td></td><td>Intel Hardware</td><td>h264_qsv</td></tr><tr><td></td><td>Xilinx Hardware</td><td>h264_xma</td></tr><tr><td></td><td>NetInt Hardware</td><td>h264_nilogan</td></tr><tr><td></td><td>H.265</td><td>h265 <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td>NVIDIA Hardware</td><td>h265_nvenc</td></tr><tr><td></td><td>Intel Hardware</td><td>h265_qsv</td></tr><tr><td></td><td>Xilinx Hardware</td><td>h265_xma</td></tr><tr><td></td><td>NetInt Hardware</td><td>h265_nilogan</td></tr><tr><td>Audio</td><td>AAC</td><td>aac</td></tr><tr><td></td><td>Opus</td><td>opus</td></tr><tr><td>Image</td><td>JPEG</td><td>jpeg</td></tr><tr><td></td><td>PNG</td><td>png</td></tr></tbody></table>
+<table><thead><tr><th width="149">Type</th><th width="177.33333333333331">Codec</th><th>Codec of Configuration</th></tr></thead><tbody><tr><td>Video</td><td>VP8</td><td>vp8</td></tr><tr><td></td><td>H.264</td><td>h264  <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td>x264</td><td>h264_x264</td></tr><tr><td></td><td>OpenH264</td><td>h264_openh264</td></tr><tr><td></td><td>NVIDIA Hardware</td><td>h264_nvenc</td></tr><tr><td></td><td>Intel Hardware</td><td>h264_qsv</td></tr><tr><td></td><td>Xilinx Hardware</td><td>h264_xma</td></tr><tr><td></td><td>NetInt Hardware</td><td>h264_nilogan</td></tr><tr><td></td><td>H.265</td><td>h265 <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td>NVIDIA Hardware</td><td>h265_nvenc</td></tr><tr><td></td><td>Intel Hardware</td><td>h265_qsv</td></tr><tr><td></td><td>Xilinx Hardware</td><td>h265_xma</td></tr><tr><td></td><td>NetInt Hardware</td><td>h265_nilogan</td></tr><tr><td>Audio</td><td>AAC</td><td>aac</td></tr><tr><td></td><td>Opus</td><td>opus</td></tr><tr><td>Image</td><td>JPEG</td><td>jpeg</td></tr><tr><td></td><td>PNG</td><td>png</td></tr></tbody></table>
 
 
 
@@ -22,6 +24,19 @@ The `<OutputProfile>` setting allows incoming streams to be re-encoded via the `
 
 ```markup
 <OutputProfiles>
+    <!-- 
+    Common setting for decoders. Decodes is optional.
+
+    <Decodes>
+	Number of threads for the decoder.
+	<ThreadCount>2</ThreadCount>
+
+	To reduce resource usage, only keyframes are decoded.
+	It is only activated when image encoding and video bypass are enabled.
+	<KeyframeOnlyIfNeed>false</KeyframeOnlyIfNeed>
+    </Decodes>
+    -->
+
     <OutputProfile>
         <Name>bypass_stream</Name>
         <OutputStreamName>${OriginStreamName}_bypass</OutputStreamName>
@@ -151,7 +166,7 @@ The meaning of each property is as follows:
 The image encoding profile is only used by thumbnail publishers. and, bypass option is not supported.
 {% endhint %}
 
-### Bypass without transcoding
+### Passthrough (Bypass)
 
 You can configure Video and Audio to bypass transcoding as follows:
 
@@ -184,7 +199,7 @@ WebRTC doesn't support AAC, so if video bypasses transcoding, audio must be enco
 </Encodes>
 ```
 
-### **Conditional transcoding**
+### **Conditional Encoding**
 
 If the codec or quality of the input stream is the same as the profile to be encoded into the output stream. there is no need to perform re-transcoding while unnecessarily consuming a lot of system resources. If the quality of the input track matches all the conditions of **BypassIfMatch**, it will be Pass-through without encoding
 
@@ -261,7 +276,7 @@ If a video track with a lower quality than the encoding option is input, unneces
 
 ###
 
-### **Keep the original with transcoding**
+### **Keep Original and Change Bitrate**
 
 If you want to transcode with the same quality as the original. See the sample below for possible parameters that OME supports to keep original. If you remove the **Width**, **Height**, **Framerate**, **Samplerate**, and **Channel** parameters. then, It is transcoded with the same options as the original.
 
@@ -281,7 +296,7 @@ If you want to transcode with the same quality as the original. See the sample b
 </Encodes>
 ```
 
-### Rescaling while keep the aspect ratio
+### Rescaling with Keep the Aspect Ratio&#x20;
 
 To change the video resolution when transcoding, use the values of width and height in the Video encode option. If you don't know the resolution of the original, it will be difficult to keep the aspect ratio after transcoding. Please use the following methods to solve these problems. For example, if you input only the **Width** value in the Video encoding option, the **Height** value is automatically generated according to the ratio of the original video.
 
@@ -302,6 +317,59 @@ To change the video resolution when transcoding, use the values of width and hei
         <Framerate>30.0</Framerate>
     </Video>    
 </Encodes>
+```
+
+### Decoding Thread Configuration
+
+The software decoder uses 2 threads by default. If the CPU speed is too low for decoding, increasing the thread count can improve performance.
+
+```xml
+<OutputProfiles>
+    <!-- 
+    Common setting for decoders. Decodes is optional.
+    -->
+    <Decodes>
+	<!-- Number of threads for the decoder.-->
+	<ThreadCount>2</ThreadCount>
+    </Decodes>
+
+    <OutputProfile>
+    ....
+    </OutputProfile>
+</OutputProfiles>
+```
+
+### Keyframe Decoding Only
+
+If only thumbnails are used without video encoding, decoding all frames wastes CPU resources. By decoding only keyframes for thumbnails, resource usage can be reduced. However, the frame rate of the output image may not be accurate.  Use the <**KeyFrameOnlyIfNeed>** option. Even if this value is set to true, if video encoding is enabled (Bypass is not included), all frames will be decoded.&#x20;
+
+```xml
+<OutputProfiles>
+    <!-- 
+    Common setting for decoders. Decodes is optional.
+    -->
+    <Decodes>
+	<!-- 
+	To reduce resource usage, only keyframes are decoded.
+	It is only activated when image encoding and video bypass are enabled. 
+	-->
+        <KeyframeOnlyIfNeed>false</KeyframeOnlyIfNeed>
+    </Decodes>
+
+    <OutputProfile>
+       <Encodes>
+           <Video>
+                <Bypass>true</Bypass>	
+  	   </Video>
+           <Image>
+               <Codec>jpeg</Codec>
+               <Width>1280</Width>
+               <Height>720</Height>
+               <Framerate>1</Framerate>
+          </Image>
+       </Encodes>
+    </OutputProfile>
+</OutputProfiles>
 ```
 
 ## Adaptive Bitrate Streaming (ABR)
