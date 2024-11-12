@@ -54,6 +54,33 @@ bool EncoderAVCx264::SetCodecParams()
 	// >1 => Set
 	_codec_context->thread_count = GetRefTrack()->GetThreadCount() < 0 ? FFMIN(FFMAX(4, av_cpu_count() / 3), 8) : GetRefTrack()->GetThreadCount();
 
+	// Profile
+	auto profile = GetRefTrack()->GetProfile();
+	if (profile.IsEmpty() == true)
+	{
+		::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+	}
+	else
+	{
+		if (profile == "baseline")
+		{
+			::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+		}
+		else if (profile == "main")
+		{
+			::av_opt_set(_codec_context->priv_data, "profile", "main", 0);
+		}
+		else if (profile == "high")
+		{
+			::av_opt_set(_codec_context->priv_data, "profile", "high", 0);
+		}
+		else
+		{
+			logtw("This is an unknown profile. change to the default(baseline) profile.");
+			::av_opt_set(_codec_context->priv_data, "profile", "baseline", 0);
+		}
+	}
+
 	// Preset
 	if (GetRefTrack()->GetPreset() == "slower")
 	{
@@ -80,9 +107,6 @@ bool EncoderAVCx264::SetCodecParams()
 		// Default
 		::av_opt_set(_codec_context->priv_data, "preset", "faster", 0);
 	}
-
-	// Profile
-	::av_opt_set(_codec_context->priv_data, "profile", "main", 0);
 
 	// Tune
 	::av_opt_set(_codec_context->priv_data, "tune", "zerolatency", 0);
