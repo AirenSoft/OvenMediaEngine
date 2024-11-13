@@ -20,8 +20,8 @@ public:
 	bool ProtectionAbsent();
 	AudioObjectType ObjectType();
 	ov::String ObjectTypeString();
-	AacSamplingFrequencies Samplerate();
-	uint32_t SamplerateNum();
+	AacSamplingFrequencies SamplingFrequencyIndex();
+	uint32_t Samplerate();
 	uint8_t ChannelConfiguration();
 	bool Originality();
 	bool Home();
@@ -35,7 +35,7 @@ private:
 	uint8_t _layer = 0; // 2 bits (always 0)
 	bool _protection_absent; // 1 bit (1: no CRC | 0: CRC)
 	uint8_t _profile; // 2 bits (AacObjectType - 1)
-	uint8_t _sampling_frequency_index; // 4 bits (15 is forbidden)
+	AacSamplingFrequencies _sampling_frequency_index; // 4 bits (15 is forbidden)
 	uint8_t _private_bit; // 1 bit (never to be used by MPEG, set 0: encoding ignore when decoding)
 	uint8_t _channel_configuration; // 3 bits (0 : sent via an inband PCE)
 	bool _original_copy; // 1 bit (set 0: encoding, ignore when decoding)

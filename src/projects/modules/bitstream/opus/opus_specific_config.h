@@ -55,7 +55,7 @@ public:
 		return (_header == _header_const) && (_version == 1) && (_channels > 0) && (_sample_rate == 48000);
 	}
 
-	bool Parse(const std::shared_ptr<ov::Data> &data) override
+	bool Parse(const std::shared_ptr<const ov::Data> &data) override
 	{
 		if (data->GetLength() < MIN_OPUS_SPECIFIC_CONFIG_SIZE)
 		{
@@ -81,7 +81,7 @@ public:
 		return other->GetData()->IsEqual(GetData());
 	}
 
-	std::shared_ptr<ov::Data> Serialize() override
+	std::shared_ptr<const ov::Data> Serialize() override
 	{
 		ov::BitWriter bits(MIN_OPUS_SPECIFIC_CONFIG_SIZE);
 

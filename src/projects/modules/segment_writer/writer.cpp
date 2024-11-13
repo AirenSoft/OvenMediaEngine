@@ -223,7 +223,7 @@ bool Writer::FillCodecParameters(const std::shared_ptr<const Track> &track, AVCo
 			codec_parameters->height = media_track->GetHeight();
 			codec_parameters->format = media_track->GetColorspace();
 
-			std::shared_ptr<ov::Data> extra_data = nullptr;
+			std::shared_ptr<const ov::Data> extra_data = nullptr;
 			if (media_track->GetCodecId() == cmn::MediaCodecId::H265)
 			{
 				codec_parameters->codec_tag = MKTAG('h', 'v', 'c', '1');
@@ -263,7 +263,7 @@ bool Writer::FillCodecParameters(const std::shared_ptr<const Track> &track, AVCo
 			codec_parameters->format = static_cast<int>(media_track->GetSample().GetFormat());
 			codec_parameters->codec_tag = 0;
 
-			std::shared_ptr<ov::Data> extra_data = nullptr;
+			std::shared_ptr<const ov::Data> extra_data = nullptr;
 			if (media_track->GetCodecId() == cmn::MediaCodecId::Aac)
 			{
 				codec_parameters->codec_tag = MKTAG('a', 'a', 'c', 'p');

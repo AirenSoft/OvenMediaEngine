@@ -101,7 +101,7 @@ ov::String HEVCDecoderConfigurationRecord::GetCodecsParameter() const
 	return codecs_parameter;
 }
 
-bool HEVCDecoderConfigurationRecord::Parse(const std::shared_ptr<ov::Data> &data)
+bool HEVCDecoderConfigurationRecord::Parse(const std::shared_ptr<const ov::Data> &data)
 {
 	if (data == nullptr)
 	{
@@ -279,7 +279,7 @@ bool HEVCDecoderConfigurationRecord::Equals(const std::shared_ptr<DecoderConfigu
 	return true;
 }
 
-std::shared_ptr<ov::Data> HEVCDecoderConfigurationRecord::Serialize()
+std::shared_ptr<const ov::Data> HEVCDecoderConfigurationRecord::Serialize()
 {
 	if (IsValid() == false)
 	{

@@ -46,14 +46,14 @@ bool DecoderAVCxXMA::InitCodec()
 	}
 
 	// Set the SPS/PPS to extradata
-	std::shared_ptr<ov::Data> extra_data = nullptr;
+	std::shared_ptr<const ov::Data> extra_data = nullptr;
 	extra_data = decoder_config != nullptr ? decoder_config->GetData() : nullptr;
 	if (extra_data != nullptr)
 	{
 		_context->extradata_size = extra_data->GetLength();
 		_context->extradata = (uint8_t *)::av_malloc(_context->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
 		::memset(_context->extradata, 0, _context->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
-		::memcpy(_context->extradata, reinterpret_cast<const uint8_t *>(extra_data->GetData()), _context->extradata_size);
+		::memcpy(_context->extradata, extra_data->GetData(), _context->extradata_size);
 	}
 
 	::av_opt_set_int(_context->priv_data, "lxlnx_hwdev", _track->GetCodecDeviceId(), 0);

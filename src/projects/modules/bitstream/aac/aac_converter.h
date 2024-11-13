@@ -1,9 +1,10 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
-#include "base/mediarouter/media_buffer.h"
-#include "audio_specific_config.h"
 #include <stdint.h>
+
+#include "audio_specific_config.h"
+#include "base/mediarouter/media_buffer.h"
 
 // Default = AacObjectTypeAacLC
 #define AAC_CONVERTER_DEFAULT_PROFILE "2"
@@ -19,5 +20,5 @@ public:
 	static ov::String GetProfileString(const std::shared_ptr<AudioSpecificConfig> &aac_config);
 	static ov::String GetProfileString(const std::shared_ptr<ov::Data> &aac_config_data);
 
-	static std::shared_ptr<ov::Data> MakeAdtsHeader(uint8_t aac_profile, uint8_t aac_sample_rate, uint8_t aac_channels, int16_t data_length);
+	static std::shared_ptr<ov::Data> MakeAdtsHeader(uint8_t aac_profile, uint8_t aac_sample_rate, uint8_t aac_channels, int16_t data_length, const std::shared_ptr<ov::Data> &data = nullptr);
 };

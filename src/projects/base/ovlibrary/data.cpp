@@ -210,6 +210,16 @@ namespace ov
 		return IsEqual(data->GetData(), data->GetLength());
 	}
 
+	bool Data::IsEqual(const std::shared_ptr<const Data> &data) const
+	{
+		return IsEqual(data->GetData(), data->GetLength());
+	}
+
+	bool Data::IsEqual(const std::shared_ptr<Data> &data) const
+	{
+		return IsEqual(data->GetData(), data->GetLength());
+	}
+
 	bool Data::IsEmpty() const
 	{
 		return (GetLength() == 0);

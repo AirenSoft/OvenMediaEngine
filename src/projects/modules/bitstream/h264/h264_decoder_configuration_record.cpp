@@ -22,7 +22,7 @@ ov::String AVCDecoderConfigurationRecord::GetCodecsParameter() const
 	return ov::String::FormatString("avc1.%02x%02x%02x", ProfileIndication(), Compatibility(), LevelIndication());
 }
 
-bool AVCDecoderConfigurationRecord::Parse(const std::shared_ptr<ov::Data> &data)
+bool AVCDecoderConfigurationRecord::Parse(const std::shared_ptr<const ov::Data> &data)
 {
 	if (data == nullptr)
 	{
@@ -165,7 +165,7 @@ bool AVCDecoderConfigurationRecord::Equals(const std::shared_ptr<DecoderConfigur
 	return true;
 }
 
-std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::Serialize()
+std::shared_ptr<const ov::Data> AVCDecoderConfigurationRecord::Serialize()
 {
 	ov::BitWriter bits(512);
 

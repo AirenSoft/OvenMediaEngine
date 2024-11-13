@@ -193,10 +193,8 @@ namespace ov
 		bool IsEqual(const void *data, size_t length) const;
 		bool IsEqual(const Data &data) const;
 		bool IsEqual(const Data *data) const;
-		bool IsEqual(const std::shared_ptr<Data> &data) const
-		{
-			return IsEqual(data->GetData(), data->GetLength());
-		}
+		bool IsEqual(const std::shared_ptr<const Data> &data) const;
+		bool IsEqual(const std::shared_ptr<Data> &data) const;
 
 		bool IsEmpty() const;
 

@@ -48,7 +48,7 @@ bool AACAdts::Parse(const uint8_t *data, size_t data_length, AACAdts &adts)
 	adts._layer = parser.ReadBits<uint8_t>(2);
 	adts._protection_absent = parser.ReadBoolBit();
 	adts._profile = parser.ReadBits<uint8_t>(2);
-	adts._sampling_frequency_index = parser.ReadBits<uint8_t>(4);
+	adts._sampling_frequency_index = parser.ReadBits<AacSamplingFrequencies>(4);
 	adts._private_bit = parser.ReadBit();
 	adts._channel_configuration = parser.ReadBits<uint8_t>(3);
 	adts._original_copy = parser.ReadBoolBit();
@@ -155,47 +155,14 @@ ov::String AACAdts::ObjectTypeString()
 	return "Unknown";
 }
 
-AacSamplingFrequencies AACAdts::Samplerate()
+AacSamplingFrequencies AACAdts::SamplingFrequencyIndex()
 {
-	return static_cast<AacSamplingFrequencies>(_sampling_frequency_index);
+	return _sampling_frequency_index;
 }
 
-uint32_t AACAdts::SamplerateNum()
+uint32_t AACAdts::Samplerate()
 {
-	switch (Samplerate())
-	{
-		case RATES_96000HZ:
-			return 96000;
-		case RATES_88200HZ:
-			return 88200;
-		case RATES_64000HZ:
-			return 64000;
-		case RATES_48000HZ:
-			return 48000;
-		case RATES_44100HZ:
-			return 44100;
-		case RATES_32000HZ:
-			return 32000;
-		case RATES_24000HZ:
-			return 24000;
-		case RATES_22050HZ:
-			return 22050;
-		case RATES_16000HZ:
-			return 16000;
-		case RATES_12000HZ:
-			return 12000;
-		case RATES_11025HZ:
-			return 11025;
-		case RATES_8000HZ:
-			return 8000;
-		case RATES_7350HZ:
-			return 7350;
-		case RATES_RESERVED:
-		case EXPLICIT_RATE:
-			return 0;
-	}
-
-	return 0;
+	return GetAacSamplingFrequency(_sampling_frequency_index);
 }
 
 uint8_t AACAdts::ChannelConfiguration()
@@ -226,7 +193,7 @@ ov::String AACAdts::GetInfoString()
 	out_str.AppendFormat("\tLayer(%d)\n", Layer());
 	out_str.AppendFormat("\tProtectionAbsent(%s)\n", ProtectionAbsent() ? "true" : "false");
 	out_str.AppendFormat("\tObjectType(%d/%s)\n", ObjectType(), ObjectTypeString().CStr());
-	out_str.AppendFormat("\tSamplerate(%d/%d)\n", Samplerate(), SamplerateNum());
+	out_str.AppendFormat("\tSamplerate(%d/%d)\n", SamplingFrequencyIndex(), Samplerate());
 	out_str.AppendFormat("\tChannelConfiguration(%d)\n", ChannelConfiguration());
 	out_str.AppendFormat("\tHome(%s)\n", Home() ? "true" : "false");
 	out_str.AppendFormat("\tAacFrameLength(%d)\n", AacFrameLength());
