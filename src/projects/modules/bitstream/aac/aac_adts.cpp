@@ -100,61 +100,6 @@ AudioObjectType AACAdts::ObjectType()
 	return AudioObjectType::Null;
 }
 
-#define OBJECT_TYPE_DESC_CASE(value, description) \
-	case AudioObjectType::value:                  \
-		return description
-
-ov::String AACAdts::ObjectTypeString()
-{
-	switch (ObjectType())
-	{
-		OBJECT_TYPE_DESC_CASE(Null, "Null");
-		OBJECT_TYPE_DESC_CASE(AacMain, "AAC main");
-		OBJECT_TYPE_DESC_CASE(AacLc, "AAC LC");
-		OBJECT_TYPE_DESC_CASE(AacSsr, "AAC SSR");
-		OBJECT_TYPE_DESC_CASE(AacLtp, "AAC LTP");
-		OBJECT_TYPE_DESC_CASE(Sbr, "SBR");
-		OBJECT_TYPE_DESC_CASE(AacScalable, "AAC Scalable");
-		OBJECT_TYPE_DESC_CASE(Twinvq, "TwinVQ");
-		OBJECT_TYPE_DESC_CASE(Celp, "CELP");
-		OBJECT_TYPE_DESC_CASE(Hvxc, "HVXC");
-		OBJECT_TYPE_DESC_CASE(Reserved10, "(reserved-10)");
-		OBJECT_TYPE_DESC_CASE(Reserved11, "(reserved-11)");
-		OBJECT_TYPE_DESC_CASE(Ttsi, "TTSI");
-		OBJECT_TYPE_DESC_CASE(MainSynthetic, "Main synthetic");
-		OBJECT_TYPE_DESC_CASE(WavetableSynthesis, "Wavetable synthesis");
-		OBJECT_TYPE_DESC_CASE(GeneralMidi, "General MIDI");
-		OBJECT_TYPE_DESC_CASE(AlgorithmicSynthesisAndAudioFx, "Algorithmic Synthesis and Audio FX");
-		OBJECT_TYPE_DESC_CASE(ErAacLc, "ER AAC LC");
-		OBJECT_TYPE_DESC_CASE(Reserved18, "(reserved-18)");
-		OBJECT_TYPE_DESC_CASE(ErAacLtp, "ER AAC LTP");
-		OBJECT_TYPE_DESC_CASE(ErAacScalable, "ER AAC Scalable");
-		OBJECT_TYPE_DESC_CASE(ErTwinvq, "ER TwinVQ");
-		OBJECT_TYPE_DESC_CASE(ErBsac, "ER BSAC");
-		OBJECT_TYPE_DESC_CASE(ErAacLd, "ER AAC LD");
-		OBJECT_TYPE_DESC_CASE(ErCelp, "ER CELP");
-		OBJECT_TYPE_DESC_CASE(ErHvxc, "ER HVXC");
-		OBJECT_TYPE_DESC_CASE(ErHiln, "ER HILN");
-		OBJECT_TYPE_DESC_CASE(ErParametric, "ER Parametric");
-		OBJECT_TYPE_DESC_CASE(Ssc, "SSC");
-		OBJECT_TYPE_DESC_CASE(Ps, "PS");
-		OBJECT_TYPE_DESC_CASE(MpegSurround, "MPEG Surround");
-		OBJECT_TYPE_DESC_CASE(Escape, "(escape)");
-		OBJECT_TYPE_DESC_CASE(Layer1, "Layer-1");
-		OBJECT_TYPE_DESC_CASE(Layer2, "Layer-2");
-		OBJECT_TYPE_DESC_CASE(Layer3, "Layer-3");
-		OBJECT_TYPE_DESC_CASE(Dst, "DST");
-		OBJECT_TYPE_DESC_CASE(Als, "ALS");
-		OBJECT_TYPE_DESC_CASE(Sls, "SLS");
-		OBJECT_TYPE_DESC_CASE(SlsNonCore, "SLS non-core");
-		OBJECT_TYPE_DESC_CASE(ErAacEld, "ER AAC ELD");
-		OBJECT_TYPE_DESC_CASE(SmrSimple, "SMR Simple");
-		OBJECT_TYPE_DESC_CASE(SmrMain, "SMR Main");
-	}
-
-	return "Unknown";
-}
-
 AacSamplingFrequencies AACAdts::SamplingFrequencyIndex()
 {
 	return _sampling_frequency_index;
@@ -192,7 +137,7 @@ ov::String AACAdts::GetInfoString()
 	out_str.AppendFormat("\tId(%d)\n", Id());
 	out_str.AppendFormat("\tLayer(%d)\n", Layer());
 	out_str.AppendFormat("\tProtectionAbsent(%s)\n", ProtectionAbsent() ? "true" : "false");
-	out_str.AppendFormat("\tObjectType(%d/%s)\n", ObjectType(), ObjectTypeString().CStr());
+	out_str.AppendFormat("\tObjectType(%d/%s)\n", ObjectType(), StringFromAudioObjectType(ObjectType()));
 	out_str.AppendFormat("\tSamplerate(%d/%d)\n", SamplingFrequencyIndex(), Samplerate());
 	out_str.AppendFormat("\tChannelConfiguration(%d)\n", ChannelConfiguration());
 	out_str.AppendFormat("\tHome(%s)\n", Home() ? "true" : "false");

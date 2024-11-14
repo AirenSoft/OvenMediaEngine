@@ -497,7 +497,7 @@ ov::String AudioSpecificConfig::GetInfoString() const
 {
 	ov::String out_str = ov::String::FormatString("\n[AudioSpecificConfig]\n");
 
-	out_str.AppendFormat("\tObjectType(%d)\n", ObjectType());
+	out_str.AppendFormat("\tObjectType(%d, %s)\n", ObjectType(), StringFromAudioObjectType(ObjectType()));
 	out_str.AppendFormat("\tSamplingFrequency(%d)\n", SamplingFrequencyIndex());
 	out_str.AppendFormat("\tChannel(%d)\n", Channel());
 

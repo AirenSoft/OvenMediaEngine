@@ -49,6 +49,7 @@ enum class AudioObjectType : uint8_t
 	SmrSimple = 40,						  // Symbolic Music Representation Simple
 	SmrMain = 41,						  // Symbolic Music Representation Main
 };
+const char *StringFromAudioObjectType(AudioObjectType object_type);
 
 enum class AacProfile : uint8_t
 {

@@ -11,7 +11,6 @@
 
 #include <base/info/media_extradata.h>
 #include <base/mediarouter/media_type.h>
-#include <modules/bitstream/aac/audio_specific_config.h>
 #include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/containers/flv/flv_parser.h>
 #include <modules/id3v2/frames/id3v2_frames.h>
@@ -1800,6 +1799,19 @@ namespace pvd
 				return false;
 			}
 
+			auto data = std::make_shared<ov::Data>(flv_audio.Payload(), flv_audio.PayloadLength());
+
+			cmn::PacketType packet_type = cmn::PacketType::Unknown;
+
+			if (flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
+			{
+				packet_type = cmn::PacketType::SEQUENCE_HEADER;
+			}
+			else if (flv_audio.PacketType() == FlvAACPacketType::RAW)
+			{
+				packet_type = cmn::PacketType::RAW;
+			}
+
 			int64_t dts = message->header->completed.timestamp;
 			int64_t pts = dts;
 
@@ -1821,17 +1833,6 @@ namespace pvd
 				AdjustTimestamp(pts, dts);
 			}
 
-			cmn::PacketType packet_type = cmn::PacketType::Unknown;
-			if (flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
-			{
-				packet_type = cmn::PacketType::SEQUENCE_HEADER;
-			}
-			else if (flv_audio.PacketType() == FlvAACPacketType::RAW)
-			{
-				packet_type = cmn::PacketType::RAW;
-			}
-
-			auto data = std::make_shared<ov::Data>(flv_audio.Payload(), flv_audio.PayloadLength());
 			auto frame = std::make_shared<MediaPacket>(GetMsid(),
 													   cmn::MediaType::Audio,
 													   RTMP_AUDIO_TRACK_ID,

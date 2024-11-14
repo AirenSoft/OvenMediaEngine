@@ -19,7 +19,6 @@ public:
 	uint8_t Layer();
 	bool ProtectionAbsent();
 	AudioObjectType ObjectType();
-	ov::String ObjectTypeString();
 	AacSamplingFrequencies SamplingFrequencyIndex();
 	uint32_t Samplerate();
 	uint8_t ChannelConfiguration();
