@@ -416,8 +416,13 @@ namespace ov
 		return String(GetDataAs<const char>(), GetLength());
 	}
 
+	String Data::ToHexString(size_t length) const
+	{
+		return ov::ToHexString(GetDataAs<const uint8_t>(), length);
+	}
+
 	String Data::ToHexString() const
 	{
-		return ov::ToHexString(GetDataAs<const uint8_t>(), GetLength());
+		return ToHexString(GetLength());
 	}
 }  // namespace ov
