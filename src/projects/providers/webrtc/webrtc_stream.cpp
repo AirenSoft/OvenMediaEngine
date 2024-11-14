@@ -158,7 +158,6 @@ namespace pvd
 				audio_track->SetId(ssrc);
 				audio_track->SetMediaType(cmn::MediaType::Audio);
 				audio_track->SetTimeBase(1, samplerate);
-				audio_track->SetAudioTimestampScale(1.0);
 
 				if (channels == 1)
 				{

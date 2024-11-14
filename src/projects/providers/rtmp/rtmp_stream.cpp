@@ -1812,9 +1812,6 @@ namespace pvd
 				return false;
 			}
 
-			pts *= audio_track->GetAudioTimestampScale();
-			dts *= audio_track->GetAudioTimestampScale();
-
 			if (_is_incoming_timestamp_used == false)
 			{
 				AdjustTimestamp(pts, dts);
@@ -1984,7 +1981,6 @@ namespace pvd
 			new_track->SetCodecId(cmn::MediaCodecId::Aac);
 			new_track->SetOriginBitstream(cmn::BitstreamFormat::AAC_RAW);
 			new_track->SetTimeBase(1, 1000);
-			new_track->SetAudioTimestampScale(1.0);
 
 			//////////////////
 			// Below items are not mandatory, it will be parsed again from ADTS parser

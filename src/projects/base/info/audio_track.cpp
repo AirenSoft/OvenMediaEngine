@@ -29,16 +29,6 @@ int32_t AudioTrack::GetSampleRate() const
 	return (int32_t)_sample.GetRate();
 }
 
-void AudioTrack::SetAudioTimestampScale(double scale)
-{
-	_audio_timescale = scale;
-}
-
-double AudioTrack::GetAudioTimestampScale() const
-{
-	return _audio_timescale;
-}
-
 AudioSample &AudioTrack::GetSample()
 {
 	return _sample;

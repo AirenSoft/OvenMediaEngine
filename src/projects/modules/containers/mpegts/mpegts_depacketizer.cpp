@@ -549,7 +549,6 @@ namespace mpegts
 				track->SetCodecId(cmn::MediaCodecId::Aac);
 				track->SetOriginBitstream(cmn::BitstreamFormat::AAC_ADTS);
 				track->SetTimeBase(1, 90000);
-				track->SetAudioTimestampScale(90000/1000);
 				break;
 
 			default:
