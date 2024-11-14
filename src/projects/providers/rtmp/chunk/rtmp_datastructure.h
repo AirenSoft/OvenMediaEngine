@@ -83,7 +83,7 @@ struct RtmpChunkHeader
 		int64_t timestamp = 0LL;
 		uint32_t timestamp_delta = 0U;
 
-		RtmpMessageTypeID type_id = RtmpMessageTypeID::UNKNOWN;
+		RtmpMessageTypeID type_id = RtmpMessageTypeID::Unknown;
 		uint32_t stream_id = 0U;
 	} completed;
 

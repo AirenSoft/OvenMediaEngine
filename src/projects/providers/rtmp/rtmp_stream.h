@@ -72,7 +72,7 @@ namespace pvd
 		bool SendMessagePacket(std::shared_ptr<RtmpMuxMessageHeader> &message_header, std::shared_ptr<std::vector<uint8_t>> &data);
 		bool SendAcknowledgementSize(uint32_t acknowledgement_traffic);
 
-		bool SendUserControlMessage(uint16_t message, std::shared_ptr<std::vector<uint8_t>> &data);
+		bool SendUserControlMessage(UserControlMessageId message, std::shared_ptr<std::vector<uint8_t>> &data);
 		bool SendWindowAcknowledgementSize(uint32_t size);
 		bool SendSetPeerBandwidth(uint32_t bandwidth);
 		bool SendStreamBegin(uint32_t stream_id);

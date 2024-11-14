@@ -25,16 +25,25 @@ public:
 
 	static std::shared_ptr<RtmpMuxMessageHeader> Create(
 		uint32_t chunk_stream_id,
-		RtmpMessageTypeID type_id = RtmpMessageTypeID::AMF0_COMMAND,
+		RtmpMessageTypeID type_id = RtmpMessageTypeID::Amf0Command,
 		uint32_t stream_id = 0,
 		uint32_t body_size = 0)
 	{
 		return std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id, 0, type_id, stream_id, body_size);
 	}
 
+	static std::shared_ptr<RtmpMuxMessageHeader> Create(
+		RtmpChunkStreamId chunk_stream_id,
+		RtmpMessageTypeID type_id = RtmpMessageTypeID::Amf0Command,
+		uint32_t stream_id = 0,
+		uint32_t body_size = 0)
+	{
+		return Create(ov::ToUnderlyingType(chunk_stream_id), type_id, stream_id, body_size);
+	}
+
 	uint32_t chunk_stream_id = 0;
 	uint32_t timestamp = 0;
-	RtmpMessageTypeID type_id = RtmpMessageTypeID::UNKNOWN;
+	RtmpMessageTypeID type_id = RtmpMessageTypeID::Unknown;
 	uint32_t stream_id = 0;
 	uint32_t body_size = 0;
 };

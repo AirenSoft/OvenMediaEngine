@@ -95,7 +95,7 @@ int RtmpMuxUtil::GetBasicHeaderSizeByRawData(uint8_t data) noexcept
 {
 	int header_size = 1;
 
-	switch (data & RTMP_CHUNK_STREAM_ID_MASK)
+	switch (data & RtmpChunkStreamId::Mask)
 	{
 		case 0:
 			header_size = 2;
@@ -130,7 +130,7 @@ int RtmpMuxUtil::GetChunkHeaderSize(RtmpMessageHeaderType chunk_type, uint32_t c
 	int message_header_size = 0;
 	auto *raw_data_pos = (uint8_t *)raw_data;
 
-	// uint32_t chunk_stream_id = (uint32_t)(raw_data_pos[0] & RTMP_CHUNK_STREAM_ID_MASK);
+	// uint32_t chunk_stream_id = (uint32_t)(raw_data_pos[0] & RtmpChunkStreamId::Mask);
 
 	switch (chunk_type)
 	{

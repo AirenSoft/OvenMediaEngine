@@ -13,10 +13,13 @@
 namespace ov
 {
 	template <typename T>
-	std::underlying_type_t<T> ToUnderlyingType(T enum_value)
+	inline std::underlying_type_t<T> ToUnderlyingType(T enum_value)
 	{
 		return static_cast<std::underlying_type_t<T>>(enum_value);
 	}
+
+	template <typename T>
+	using UnderylingType = std::underlying_type_t<T>;
 }  // namespace ov
 
 #define OV_DEFINE_SETTER(type, setter, member, extra_qualifier) \
