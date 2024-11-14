@@ -1593,7 +1593,7 @@ namespace pvd
 		{
 			// Parsing FLV
 			FlvVideoData flv_video;
-			if (FlvVideoData::Parse(message->payload->GetDataAs<uint8_t>(), message->payload->GetLength(), flv_video) == false)
+			if (flv_video.Parse(message->payload) == false)
 			{
 				logte("Could not parse flv video (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
@@ -1791,9 +1791,17 @@ namespace pvd
 		// audio stream callback
 		if (_media_info->audio_stream_coming)
 		{
+			// Get audio track info
+			auto audio_track = GetTrack(RTMP_AUDIO_TRACK_ID);
+			if (audio_track == nullptr)
+			{
+				logte("Cannot get audio track (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
+				return false;
+			}
+
 			// Parsing FLV
 			FlvAudioData flv_audio;
-			if (FlvAudioData::Parse(message->payload->GetDataAs<uint8_t>(), message->payload->GetLength(), flv_audio) == false)
+			if (flv_audio.Parse(message->payload) == false)
 			{
 				logte("Could not parse flv audio (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
@@ -1818,14 +1826,6 @@ namespace pvd
 			if (_negative_cts_detected)
 			{
 				pts += ADJUST_PTS;
-			}
-
-			// Get audio track info
-			auto audio_track = GetTrack(RTMP_AUDIO_TRACK_ID);
-			if (audio_track == nullptr)
-			{
-				logte("Cannot get video track (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
-				return false;
 			}
 
 			if (_is_incoming_timestamp_used == false)

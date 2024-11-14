@@ -12,19 +12,15 @@
 class BitReader
 {
 public:
-	BitReader(const uint8_t *buffer, size_t capacity)
-		: _buffer(buffer),
-		  _position(buffer),
-		  _capacity(capacity)
-	{
-	}
+	BitReader(const uint8_t *buffer, size_t capacity);
+	BitReader(const std::shared_ptr<const ov::Data> &data);
 
 	template <typename T>
 	T ReadBytes(bool big_endian = true)
 	{
 		T value;
-		bool result = ReadBytes(value, big_endian);
-		if (result == false)
+
+		if (ReadBytes(value, big_endian) == false)
 		{
 			return 0;
 		}
@@ -69,14 +65,7 @@ public:
 			return false;
 		}
 
-		if (big_endian == true)
-		{
-			value = ByteReader<T>::ReadBigEndian(_position);
-		}
-		else
-		{
-			value = ByteReader<T>::ReadLittleEndian(_position);
-		}
+		value = big_endian ? ByteReader<T>::ReadBigEndian(_position) : ByteReader<T>::ReadLittleEndian(_position);
 
 		_position += sizeof(value);
 

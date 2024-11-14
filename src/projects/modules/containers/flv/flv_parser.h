@@ -80,7 +80,7 @@ enum class FlvAACPacketType : uint8_t
 class FlvVideoData
 {
 public:
-	static bool Parse(const uint8_t *data, size_t data_length, FlvVideoData &video_data);
+	bool Parse(const std::shared_ptr<const ov::Data> &data);
 
 	FlvVideoFrameTypes FrameType();
 	FlvVideoCodecId CodecId();
@@ -112,7 +112,7 @@ private:
 class FlvAudioData
 {
 public:
-	static bool Parse(const uint8_t *data, size_t data_length, FlvAudioData &audio_data);
+	bool Parse(const std::shared_ptr<const ov::Data> &data);
 
 	FlvSoundFormat Format();
 	FlvSoundRate SampleRate();
