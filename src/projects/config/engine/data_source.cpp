@@ -167,7 +167,7 @@ namespace cfg
 		const pugi::xml_node &node,
 		const bool resolve_path)
 	{
-		const auto ignore = GetAttribute(current_file_path, node, "ignore", resolve_path);
+		const auto ignore = GetAttribute(current_file_path, node, "ignore", false);
 
 		if (ignore.HasValue())
 		{
