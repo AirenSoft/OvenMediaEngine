@@ -22,10 +22,12 @@ namespace ov
 	using UnderylingType = std::underlying_type_t<T>;
 }  // namespace ov
 
-#define OV_DEFINE_SETTER(type, setter, member, extra_qualifier) \
-	void setter(const type &value) extra_qualifier              \
-	{                                                           \
-		member = value;                                         \
+#define OV_DEFINE_SETTER(type, setter, member, extra_qualifier, pre_process, post_process) \
+	void setter(const type &value) extra_qualifier                                         \
+	{                                                                                      \
+		pre_process;                                                                       \
+		member = value;                                                                    \
+		post_process;                                                                      \
 	}
 
 #define OV_DEFINE_GETTER(type, getter, member, extra_qualifier) \
@@ -40,6 +42,6 @@ namespace ov
 		return member;                                                \
 	}
 
-#define OV_DEFINE_SETTER_CONST_GETTER(type, setter, getter, member, extra_qualifier) \
-	OV_DEFINE_SETTER(type, setter, member, extra_qualifier)                          \
+#define OV_DEFINE_SETTER_CONST_GETTER(type, setter, getter, member, extra_qualifier, pre_process, post_process) \
+	OV_DEFINE_SETTER(type, setter, member, extra_qualifier, pre_process, post_process)                          \
 	OV_DEFINE_CONST_GETTER(type, getter, member, extra_qualifier)
