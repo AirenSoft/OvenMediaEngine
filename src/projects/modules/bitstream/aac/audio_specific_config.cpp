@@ -374,6 +374,9 @@ bool AudioSpecificConfig::Parse(const std::shared_ptr<const ov::Data> &data)
 			break;
 	}
 
+	// Set serialized data
+	SetData(data->Clone());
+
 	return true;
 }
 
@@ -408,6 +411,7 @@ bool AudioSpecificConfig::Equals(const std::shared_ptr<DecoderConfigurationRecor
 	return true;
 }
 
+// This is not used after Parse() is called. It is only used when values are set with Setter.
 std::shared_ptr<const ov::Data> AudioSpecificConfig::Serialize()
 {
 	ov::BitWriter bits(2);
@@ -415,6 +419,12 @@ std::shared_ptr<const ov::Data> AudioSpecificConfig::Serialize()
 	bits.WriteBits(5, ov::ToUnderlyingType(_audio_object_type));
 	bits.WriteBits(4, ov::ToUnderlyingType(_sampling_frequency_index));
 	bits.WriteBits(4, _channel_configuration);
+	// frame_length : only support 1024
+	bits.WriteBits(1, 0);
+	// dependsOnCoreCoder
+	bits.WriteBits(1, 0);
+	// extensionFlag
+	bits.WriteBits(1, 0);
 
 	return std::make_shared<ov::Data>(bits.GetData(), bits.GetDataSize());
 }

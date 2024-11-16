@@ -1090,9 +1090,48 @@ bool LLHlsStream::AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_pa
 	return true;
 }
 
+double LLHlsStream::ComputeOptimalPartDuration(const std::shared_ptr<const MediaTrack> &track) const
+{
+	auto part_target = _packager_config.chunk_duration_ms;
+	double optimal_part_target = part_target;
+
+	if (track->GetMediaType() == cmn::MediaType::Audio)
+	{
+		// Duration of a frame is 1024 samples / sample rate
+		auto frame_duration = static_cast<double>(track->GetAudioSamplesPerFrame()) / static_cast<double>(track->GetSampleRate());
+		auto frame_duration_ms = frame_duration * 1000.0;
+
+		// Find the closest multiple of frame_duration_ms to part_target
+		auto optimal_frame_count = std::round(part_target / frame_duration_ms);
+		optimal_part_target = optimal_frame_count * frame_duration_ms;
+
+		logti("LLHlsStream::ComputeOptimalPartDuration() - Audio track(%d) SampleRate(%d) frame_duration_ms(%f) optimal_frame_count(%f) part_target(%f) optimal_part_target(%f)", track->GetId(), track->GetSampleRate(), frame_duration_ms, optimal_frame_count, part_target, optimal_part_target);
+	}
+	else if (track->GetMediaType() == cmn::MediaType::Video)
+	{
+		// Duration of a frame is 1 / frame rate
+		auto frame_duration = 1.0 / track->GetFrameRate();
+		auto frame_duration_ms = frame_duration * 1000.0;
+
+		// Find the closest multiple of frame_duration_ms to part_target
+		auto optimal_frame_count = std::round(part_target / frame_duration_ms);
+		optimal_part_target = optimal_frame_count * frame_duration_ms;
+
+		logti("LLHlsStream::ComputeOptimalPartDuration() - Video track(%d) FrameRate(%f) frame_duration_ms(%f) optimal_frame_count(%f) part_target(%f) optimal_part_target(%f)", track->GetId(), track->GetFrameRate(), frame_duration_ms, optimal_frame_count, part_target, optimal_part_target);
+	}
+
+	return optimal_part_target;
+}
+
 // Create and Get fMP4 packager with track info, storage and packager_config
 bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<const MediaTrack> &data_track)
 {
+	auto packager_config = _packager_config;
+
+	packager_config.chunk_duration_ms = std::round(ComputeOptimalPartDuration(media_track));
+
+	logti("LLHlsStream::AddPackager() - Track(%d) ChunkDuration(%f)", media_track->GetId(), packager_config.chunk_duration_ms);
+	
 	auto cenc_property = _cenc_property;
 
 	auto tag = ov::String::FormatString("%s/%s", GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr());
@@ -1120,8 +1159,8 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 	auto storage = std::make_shared<bmff::FMP4Storage>(bmff::FMp4StorageObserver::GetSharedPtr(), media_track, _storage_config, tag);
 
 	// Create fMP4 Packager
-	_packager_config.cenc_property = cenc_property;
-	auto packager = std::make_shared<bmff::FMP4Packager>(storage, media_track, data_track, _packager_config);
+	packager_config.cenc_property = cenc_property;
+	auto packager = std::make_shared<bmff::FMP4Packager>(storage, media_track, data_track, packager_config);
 
 	// Create Initialization Segment
 	if (packager->CreateInitializationSegment() == false)
@@ -1142,7 +1181,7 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 	// rounded to the nearest integer number of seconds.
 
 	auto segment_duration = std::round(static_cast<float_t>(_storage_config.segment_duration_ms) / 1000.0);	
-	auto chunk_duration = static_cast<float_t>(_packager_config.chunk_duration_ms) / 1000.0;
+	auto chunk_duration = static_cast<float_t>(packager_config.chunk_duration_ms) / 1000.0;
 	auto track_id = media_track->GetId();
 
 	auto chunklist = std::make_shared<LLHlsChunklist>(GetChunklistName(track_id),

@@ -286,6 +286,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 		output_track->GetSample().SetFormat(input_track->GetSample().GetFormat());
 		output_track->SetTimeBase(input_track->GetTimeBase());
 		output_track->SetSampleRate(input_track->GetSampleRate());
+		output_track->SetDecoderConfigurationRecord(input_track->GetDecoderConfigurationRecord());
 	}
 	else
 	{
