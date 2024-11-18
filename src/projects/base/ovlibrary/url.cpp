@@ -118,9 +118,13 @@ namespace ov
 		return result_string;
 	}
 
-	void Url::SetPath(const ov::String &path)
+	bool Url::SetPath(const ov::String &path)
 	{
 		_path = path;
+
+		_file = "";
+		_stream = "";
+		_app = "";
 
 		// split <path> to /<app>/<stream>/<file> (4 tokens)
 		auto tokens = _path.Split("/");
@@ -142,6 +146,8 @@ namespace ov
 				// Nothing to do
 				break;
 		}
+
+		return true;
 	}
 
 	bool Url::ParseFromSource()
@@ -186,9 +192,12 @@ namespace ov
 	{
 		auto object = std::make_shared<Url>();
 
-		object->SetSource(url);
+		if (object->SetSource(url))
+		{
+			return object;
+		}
 
-		return object;
+		return nullptr;
 	}
 
 	bool Url::PushBackQueryKey(const ov::String &key)
@@ -268,37 +277,37 @@ namespace ov
 		return true;
 	}
 
-	void Url::UpdateUrl(bool is_source_updated)
+	bool Url::UpdateUrl(bool is_source_updated)
 	{
 		if (is_source_updated)
 		{
 			// Get component values from the _source
-			ParseFromSource();
+			return ParseFromSource();
 		}
-		else
+
+		_source = ToUrlString();
+
+		_path = "";
+
+		if (_app.IsEmpty() == false)
 		{
-			_source = ToUrlString();
-
-			_path = "";
-
-			if (_app.IsEmpty() == false)
-			{
-				_path.Append("/");
-				_path.Append(_app);
-			}
-
-			if (_stream.IsEmpty() == false)
-			{
-				_path.Append("/");
-				_path.Append(_stream);
-			}
-
-			if (_file.IsEmpty() == false)
-			{
-				_path.Append("/");
-				_path.Append(_file);
-			}
+			_path.Append("/");
+			_path.Append(_app);
 		}
+
+		if (_stream.IsEmpty() == false)
+		{
+			_path.Append("/");
+			_path.Append(_stream);
+		}
+
+		if (_file.IsEmpty() == false)
+		{
+			_path.Append("/");
+			_path.Append(_file);
+		}
+
+		return true;
 	}
 
 	void Url::ParseQueryIfNeeded() const
@@ -383,6 +392,8 @@ namespace ov
 	{
 		_source = other._source;
 		_scheme = other._scheme;
+		_id = other._id;
+		_password = other._password;
 		_host = other._host;
 		_port = other._port;
 		_path = other._path;
@@ -401,6 +412,8 @@ namespace ov
 	{
 		_source = other._source;
 		_scheme = other._scheme;
+		_id = other._id;
+		_password = other._password;
 		_host = other._host;
 		_port = other._port;
 		_path = other._path;

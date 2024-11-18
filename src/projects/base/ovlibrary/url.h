@@ -23,17 +23,17 @@ namespace ov
 		// <scheme>://<host>[:<port>][/<path/to/resource>][?<query string>]
 		static std::shared_ptr<Url> Parse(const ov::String &url);
 
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetSource, Source, _source, , , UpdateUrl(true))
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetScheme, Scheme, _scheme, , , UpdateUrl(false))
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetHost, Host, _host, , , UpdateUrl(false))
-		OV_DEFINE_SETTER_CONST_GETTER(uint32_t, SetPort, Port, _port, , , UpdateUrl(false))
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetSource, Source, _source, , , return UpdateUrl(true))
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetScheme, Scheme, _scheme, , , return UpdateUrl(false))
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetHost, Host, _host, , , return UpdateUrl(false))
+		OV_DEFINE_SETTER_CONST_GETTER(uint32_t, bool, SetPort, Port, _port, , , return UpdateUrl(false))
 		OV_DEFINE_CONST_GETTER(ov::String, Path, _path, )
-		void SetPath(const ov::String &path);
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetApp, App, _app, , , UpdateUrl(false))
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetStream, Stream, _stream, , , UpdateUrl(false))
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetFile, File, _file, , , UpdateUrl(false))
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetId, Id, _id, , , UpdateUrl(false))
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetPassword, Password, _password, , , UpdateUrl(false))
+		bool SetPath(const ov::String &path);
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetApp, App, _app, , , return UpdateUrl(false))
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetStream, Stream, _stream, , , return UpdateUrl(false))
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetFile, File, _file, , , return UpdateUrl(false))
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetId, Id, _id, , , return UpdateUrl(false))
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetPassword, Password, _password, , , return UpdateUrl(false))
 
 		bool HasQueryString() const;
 		const ov::String &Query() const;
@@ -57,7 +57,7 @@ namespace ov
 
 	protected:
 		bool ParseFromSource();
-		void UpdateUrl(bool is_source_updated);
+		bool UpdateUrl(bool is_source_updated);
 
 	private:
 		void ParseQueryIfNeeded() const;
