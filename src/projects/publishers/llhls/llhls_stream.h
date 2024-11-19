@@ -137,6 +137,8 @@ private:
 	int64_t GetMinimumLastSegmentNumber() const;
 	bool StopToSaveOldSegmentsInfo();
 
+	double ComputeOptimalPartDuration(const std::shared_ptr<const MediaTrack> &track) const;
+
 	//////////////////////////
 	// Events
 	//////////////////////////

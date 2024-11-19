@@ -9,23 +9,22 @@
 
 #pragma once
 
+#include "amf0/amf_document.h"
 #include "base/common_types.h"
 #include "base/provider/push_provider/stream.h"
-#include "modules/access_control/access_controller.h"
-
-#include "amf0/amf_document.h"
+#include "chunk/rtmp_chunk_parser.h"
 #include "chunk/rtmp_export_chunk.h"
 #include "chunk/rtmp_handshake.h"
-#include "chunk/rtmp_chunk_parser.h"
+#include "modules/access_control/access_controller.h"
 
 #define MAX_STREAM_MESSAGE_COUNT (500)
 #define BASELINE_PROFILE (66)
 #define MAIN_PROFILE (77)
 
 // Fix track id
-#define RTMP_VIDEO_TRACK_ID		0
-#define RTMP_AUDIO_TRACK_ID		1
-#define RTMP_DATA_TRACK_ID		2
+#define RTMP_VIDEO_TRACK_ID 0
+#define RTMP_AUDIO_TRACK_ID 1
+#define RTMP_DATA_TRACK_ID 2
 
 namespace pvd
 {
@@ -33,7 +32,7 @@ namespace pvd
 	{
 	public:
 		static std::shared_ptr<RtmpStream> Create(StreamSourceType source_type, uint32_t channel_id, const std::shared_ptr<ov::Socket> &client_socket, const std::shared_ptr<PushProvider> &provider);
-		
+
 		explicit RtmpStream(StreamSourceType source_type, uint32_t channel_id, std::shared_ptr<ov::Socket> client_socket, const std::shared_ptr<PushProvider> &provider);
 		~RtmpStream() final;
 
@@ -66,7 +65,6 @@ namespace pvd
 		bool OnAmfDeleteStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
 		bool OnAmfMetaData(const std::shared_ptr<const RtmpChunkHeader> &header, const AmfProperty *property);
 
-
 		// Send messages
 		bool SendData(const std::shared_ptr<const ov::Data> &data);
 		bool SendData(const void *data, size_t data_size);
@@ -74,7 +72,7 @@ namespace pvd
 		bool SendMessagePacket(std::shared_ptr<RtmpMuxMessageHeader> &message_header, std::shared_ptr<std::vector<uint8_t>> &data);
 		bool SendAcknowledgementSize(uint32_t acknowledgement_traffic);
 
-		bool SendUserControlMessage(uint16_t message, std::shared_ptr<std::vector<uint8_t>> &data);
+		bool SendUserControlMessage(UserControlMessageId message, std::shared_ptr<std::vector<uint8_t>> &data);
 		bool SendWindowAcknowledgementSize(uint32_t size);
 		bool SendSetPeerBandwidth(uint32_t bandwidth);
 		bool SendStreamBegin(uint32_t stream_id);
@@ -85,11 +83,11 @@ namespace pvd
 		bool SendAmfOnFCPublish(uint32_t chunk_stream_id, uint32_t stream_id, double client_id);
 		bool SendAmfCreateStreamResult(uint32_t chunk_stream_id, double transaction_id);
 		bool SendAmfOnStatus(uint32_t chunk_stream_id,
-							uint32_t stream_id,
-							const char *level,
-							const char *code,
-							const char *description,
-							double client_id);
+							 uint32_t stream_id,
+							 const char *level,
+							 const char *code,
+							 const char *description,
+							 double client_id);
 
 		// Parsing handshake messages
 		off_t ReceiveHandshakePacket(const std::shared_ptr<const ov::Data> &data);
@@ -126,7 +124,7 @@ namespace pvd
 
 		// RTMP related
 		RtmpHandshakeState _handshake_state = RtmpHandshakeState::Uninitialized;
-		
+
 		std::shared_ptr<RtmpChunkParser> _import_chunk;
 		std::shared_ptr<RtmpExportChunk> _export_chunk;
 		std::shared_ptr<RtmpMediaInfo> _media_info;
@@ -151,7 +149,7 @@ namespace pvd
 		std::shared_ptr<const SignedPolicy> _signed_policy = nullptr;
 		std::shared_ptr<const AdmissionWebhooks> _admission_webhooks = nullptr;
 
-		ov::String _full_url; // with stream_name
+		ov::String _full_url;  // with stream_name
 		ov::String _tc_url;
 		ov::String _app_name;
 		ov::String _domain_name;
@@ -159,7 +157,7 @@ namespace pvd
 		ov::String _stream_name;
 		ov::String _device_string;
 
-		std::shared_ptr<ov::Url> _publish_url = nullptr; // AccessControl can redirect url set in RTMP to another url.
+		std::shared_ptr<ov::Url> _publish_url = nullptr;  // AccessControl can redirect url set in RTMP to another url.
 
 		// Cache (GetApplicationInfo()->GetId())
 		info::application_id_t _app_id = 0;
@@ -168,7 +166,7 @@ namespace pvd
 		std::shared_ptr<ov::Socket> _remote = nullptr;
 
 		// Received data buffer
-		std::shared_ptr<ov::Data> 	_remained_data = nullptr;
+		std::shared_ptr<ov::Data> _remained_data = nullptr;
 
 		// Singed Policy
 		uint64_t _stream_expired_msec = 0;
@@ -184,7 +182,7 @@ namespace pvd
 		int64_t _last_audio_pts = 0;
 		ov::StopWatch _last_audio_pts_clock;
 
-		// For statistics 
+		// For statistics
 		time_t _stream_check_time = 0;
 
 		uint32_t _key_frame_interval = 0;
@@ -203,4 +201,4 @@ namespace pvd
 
 		bool _is_incoming_timestamp_used = false;
 	};
-}
+}  // namespace pvd

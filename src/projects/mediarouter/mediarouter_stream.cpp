@@ -549,7 +549,7 @@ bool MediaRouteStream::ProcessAACRawStream(std::shared_ptr<MediaTrack> &media_tr
 				return false;
 			}
 
-			media_track->SetSampleRate(audio_config->SamplerateNum());
+			media_track->SetSampleRate(audio_config->Samplerate());
 			media_track->GetChannel().SetLayout(audio_config->Channel() == 1 ? AudioChannel::Layout::LayoutMono : AudioChannel::Layout::LayoutStereo);
 			
 			media_track->SetDecoderConfigurationRecord(audio_config);
@@ -611,10 +611,10 @@ bool MediaRouteStream::ProcessAACAdtsStream(std::shared_ptr<MediaTrack> &media_t
 
 	auto audio_config = std::make_shared<AudioSpecificConfig>();
 	audio_config->SetObjectType(adts.ObjectType());
-	audio_config->SetSamplingFrequency(adts.Samplerate());
+	audio_config->SetSamplingFrequencyIndex(adts.SamplingFrequencyIndex());
 	audio_config->SetChannel(adts.ChannelConfiguration());
 
-	media_track->SetSampleRate(audio_config->SamplerateNum());
+	media_track->SetSampleRate(audio_config->Samplerate());
 	media_track->GetChannel().SetLayout(audio_config->Channel() == 1 ? AudioChannel::Layout::LayoutMono : AudioChannel::Layout::LayoutStereo);
 
 	media_track->SetDecoderConfigurationRecord(audio_config);

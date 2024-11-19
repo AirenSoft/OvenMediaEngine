@@ -32,253 +32,6 @@ namespace cfg
 		}
 	};
 
-	DataSource::DataSource(const ov::String &current_path, const ov::String &file_name, const std::shared_ptr<pugi::xml_document> &document, const pugi::xml_node &node, cfg::CheckUnknownItems check_unknown_items)
-		: _type(DataType::Xml),
-
-		  _check_unknown_items(check_unknown_items),
-
-		  _document(document),
-		  _node(node),
-		  _current_file_path(current_path),
-		  _file_name(file_name)
-	{
-		logtd("Trying to create a DataSource from XML node [%s]... (%s, cwd: %s)", node.name(), file_name.CStr(), current_path.CStr());
-	}
-
-	DataSource::DataSource(const ov::String &current_path, const ov::String &file_name, const ov::String json_name, const Json::Value &json, cfg::CheckUnknownItems check_unknown_items)
-		: _type(DataType::Json),
-
-		  _check_unknown_items(check_unknown_items),
-
-		  _json_name(json_name),
-		  _json(json),
-		  _current_file_path(current_path),
-		  _file_name(file_name)
-	{
-		logtd("Trying to create a DataSource from JSON value [%s]... (%s, cwd: %s)", json_name.CStr(), file_name.CStr(), current_path.CStr());
-	}
-
-	DataSource::DataSource(DataType type, const ov::String &current_path, const ov::String &file_name, const ItemName &root_name, cfg::CheckUnknownItems check_unknown_items)
-		: _type(type),
-
-		  _check_unknown_items(check_unknown_items),
-
-		  _current_file_path(current_path)
-	{
-		_full_file_path = file_name;
-
-		if (ov::PathManager::IsAbsolute(_full_file_path))
-		{
-			_current_file_path.Clear();
-		}
-		else
-		{
-			if (_current_file_path.IsEmpty() == false)
-			{
-				_full_file_path = ov::PathManager::Combine(_current_file_path, _full_file_path);
-			}
-		}
-
-		if (_current_file_path.IsEmpty())
-		{
-			_current_file_path = ov::PathManager::ExtractPath(_full_file_path);
-		}
-
-		logtd("Trying to create a DataSource for %s from %s file: %s [cwd: %s => %s, file: %s]",
-			  root_name.ToString().CStr(),
-			  (type == DataType::Xml) ? "XML" : "JSON",
-			  _full_file_path.CStr(),
-			  current_path.CStr(), _current_file_path.CStr(),
-			  file_name.CStr());
-
-		LoadFromFile(_full_file_path, root_name);
-	}
-
-	DataSource::DataSource(DataType type, const ov::String &file_path, const ItemName &root_name, cfg::CheckUnknownItems check_unknown_items)
-		: DataSource(
-			  type,
-			  ov::PathManager::ExtractPath(file_path),
-			  ov::PathManager::ExtractFileName(file_path),
-			  root_name,
-			  check_unknown_items)
-	{
-	}
-
-	void DataSource::LoadFromFile(ov::String file_name, const ItemName &root_name)
-	{
-		_file_name = file_name;
-
-		logtd("Trying to load data source from %s", file_name.CStr());
-
-		switch (_type)
-		{
-			case DataType::Xml:
-				LoadFromXmlFile(file_name, root_name.GetName(_type));
-				return;
-
-			case DataType::Json:
-				LoadFromJson(file_name, root_name.GetName(_type));
-				return;
-		}
-
-		throw CreateConfigError("Not implemented for type: %d (%s)", _type, file_name.CStr());
-	}
-
-	void DataSource::LoadFromXmlFile(const ov::String &file_name, const ov::String &root_name)
-	{
-		auto document = std::make_shared<pugi::xml_document>();
-
-		pugi::xml_parse_result result = document->load_file(file_name);
-
-		if (result == false)
-		{
-			throw CreateConfigError("Could not read the file: %s (reason: %s, offset: %td)",
-									file_name.CStr(), result.description(), result.offset);
-		}
-
-		_document = document;
-		_node = document->root().child(root_name);
-
-		if (_node.empty())
-		{
-			throw CreateConfigError("Could not find the root element: <%s> in %s", root_name.CStr(), file_name.CStr());
-		}
-	}
-
-	void DataSource::LoadFromJson(const ov::String &file_name, const ov::String &root_name)
-	{
-		std::ifstream json_file;
-		json_file.open(file_name, std::ifstream::in | std::ifstream::binary);
-
-		if (json_file.is_open())
-		{
-			json_file >> _json;
-			json_file.close();
-		}
-		else
-		{
-			throw CreateConfigError("Could not read the file: %s", file_name.CStr());
-		}
-	}
-
-	void DataSource::CheckUnknownItems(const ov::String &path,
-									   const std::unordered_map<ov::String, std::shared_ptr<Child>> &children_for_xml,
-									   const std::unordered_map<ov::String, std::shared_ptr<Child>> &children_for_json) const
-	{
-		if (_check_unknown_items == CheckUnknownItems::DontCheck)
-		{
-			logtd("Checking unknown items is skipped: %s", path.CStr());
-			return;
-		}
-
-		auto file_path = GetFileName();
-
-		switch (_type)
-		{
-			case DataType::Xml:
-				for (auto &child_node : _node.children())
-				{
-					ov::String name(child_node.name());
-
-					if (children_for_xml.find(name) == children_for_xml.end())
-					{
-						if (file_path.IsEmpty())
-						{
-							throw CreateConfigError("Unknown item found: %s.%s", path.CStr(), name.CStr());
-						}
-						else
-						{
-							throw CreateConfigError("Unknown item found: %s.%s in %s", path.CStr(), name.CStr(), file_path.CStr());
-						}
-					}
-				}
-				break;
-
-			case DataType::Json: {
-				if (_json.isObject())
-				{
-					auto members = _json.getMemberNames();
-
-					for (auto &member : members)
-					{
-						ov::String name(member.c_str());
-
-						if (name == "$")
-						{
-							// $ == attributes
-							continue;
-						}
-
-						if (children_for_json.find(name) == children_for_json.end())
-						{
-							if (file_path.IsEmpty())
-							{
-								throw CreateConfigError("Unknown item found: %s.%s", path.CStr(), name.CStr());
-							}
-							else
-							{
-								throw CreateConfigError("Unknown item found: %s.%s in %s", path.CStr(), name.CStr(), file_path.CStr());
-							}
-						}
-					}
-				}
-
-				break;
-			}
-		}
-	}
-
-	bool DataSource::IsArray(const ItemName &name) const
-	{
-		switch (_type)
-		{
-			case DataType::Xml:
-				// if (_node)
-				// {
-				// 	auto iterator = _node.children(name.GetName(DataType::Json));
-				// 	auto count = std::distance(iterator.begin(), iterator.end());
-				// 	return count > 1;
-				// }
-				return true;
-
-			case DataType::Json:
-				return _json.isArray();
-		}
-
-		OV_ASSERT2(false);
-		return false;
-	}
-
-	Variant DataSource::GetRootValue(ValueType value_type, bool resolve_path, bool omit_json, Json::Value *original_value) const
-	{
-		switch (_type)
-		{
-			case DataType::Xml:
-				return GetValueFromXml(value_type, "", false, resolve_path, original_value);
-
-			case DataType::Json:
-				return GetValueFromJson(value_type, "", false, resolve_path, omit_json, original_value);
-		}
-
-		OV_ASSERT2(false);
-		return {};
-	}
-
-	Variant DataSource::GetValue(ValueType value_type, const ItemName &name, bool resolve_path, bool omit_json, Json::Value *original_value) const
-	{
-		switch (_type)
-		{
-			case DataType::Xml:
-				return GetValueFromXml(value_type, name.GetName(_type), true, resolve_path, original_value);
-
-			case DataType::Json:
-				return GetValueFromJson(value_type, name.GetName(_type), true, resolve_path, omit_json, original_value);
-		}
-
-		OV_ASSERT2(false);
-		return {};
-	}
-
 	ov::String GetEnv(const char *key, const char *default_value, bool *is_default_value)
 	{
 		auto env = std::getenv(key);
@@ -414,7 +167,7 @@ namespace cfg
 		const pugi::xml_node &node,
 		const bool resolve_path)
 	{
-		const auto ignore = GetAttribute(current_file_path, node, "ignore", resolve_path);
+		const auto ignore = GetAttribute(current_file_path, node, "ignore", false);
 
 		if (ignore.HasValue())
 		{
@@ -425,6 +178,7 @@ namespace cfg
 				{
 					return true;
 				}
+
 
 				// Otherwise, use the value as-is
 			}
@@ -675,6 +429,259 @@ namespace cfg
 		}
 
 		return data_sources;
+	}
+
+	DataSource::DataSource(const ov::String &current_path, const ov::String &file_name, const std::shared_ptr<pugi::xml_document> &document, const pugi::xml_node &node, cfg::CheckUnknownItems check_unknown_items)
+		: _type(DataType::Xml),
+
+		  _check_unknown_items(check_unknown_items),
+
+		  _document(document),
+		  _node(node),
+		  _current_file_path(current_path),
+		  _file_name(file_name)
+	{
+		logtd("Trying to create a DataSource from XML node [%s]... (%s, cwd: %s)", node.name(), file_name.CStr(), current_path.CStr());
+	}
+
+	DataSource::DataSource(const ov::String &current_path, const ov::String &file_name, const ov::String json_name, const Json::Value &json, cfg::CheckUnknownItems check_unknown_items)
+		: _type(DataType::Json),
+
+		  _check_unknown_items(check_unknown_items),
+
+		  _json_name(json_name),
+		  _json(json),
+		  _current_file_path(current_path),
+		  _file_name(file_name)
+	{
+		logtd("Trying to create a DataSource from JSON value [%s]... (%s, cwd: %s)", json_name.CStr(), file_name.CStr(), current_path.CStr());
+	}
+
+	DataSource::DataSource(DataType type, const ov::String &current_path, const ov::String &file_name, const ItemName &root_name, cfg::CheckUnknownItems check_unknown_items)
+		: _type(type),
+
+		  _check_unknown_items(check_unknown_items),
+
+		  _current_file_path(current_path)
+	{
+		_full_file_path = file_name;
+
+		if (ov::PathManager::IsAbsolute(_full_file_path))
+		{
+			_current_file_path.Clear();
+		}
+		else
+		{
+			if (_current_file_path.IsEmpty() == false)
+			{
+				_full_file_path = ov::PathManager::Combine(_current_file_path, _full_file_path);
+			}
+		}
+
+		if (_current_file_path.IsEmpty())
+		{
+			_current_file_path = ov::PathManager::ExtractPath(_full_file_path);
+		}
+
+		logtd("Trying to create a DataSource for %s from %s file: %s [cwd: %s => %s, file: %s]",
+			  root_name.ToString().CStr(),
+			  (type == DataType::Xml) ? "XML" : "JSON",
+			  _full_file_path.CStr(),
+			  current_path.CStr(), _current_file_path.CStr(),
+			  file_name.CStr());
+
+		LoadFromFile(_full_file_path, root_name);
+	}
+
+	DataSource::DataSource(DataType type, const ov::String &file_path, const ItemName &root_name, cfg::CheckUnknownItems check_unknown_items)
+		: DataSource(
+			  type,
+			  ov::PathManager::ExtractPath(file_path),
+			  ov::PathManager::ExtractFileName(file_path),
+			  root_name,
+			  check_unknown_items)
+	{
+	}
+
+	void DataSource::LoadFromFile(ov::String file_name, const ItemName &root_name)
+	{
+		_file_name = file_name;
+
+		logtd("Trying to load data source from %s", file_name.CStr());
+
+		switch (_type)
+		{
+			case DataType::Xml:
+				LoadFromXmlFile(file_name, root_name.GetName(_type));
+				return;
+
+			case DataType::Json:
+				LoadFromJson(file_name, root_name.GetName(_type));
+				return;
+		}
+
+		throw CreateConfigError("Not implemented for type: %d (%s)", _type, file_name.CStr());
+	}
+
+	void DataSource::LoadFromXmlFile(const ov::String &file_name, const ov::String &root_name)
+	{
+		auto document = std::make_shared<pugi::xml_document>();
+
+		pugi::xml_parse_result result = document->load_file(file_name);
+
+		if (result == false)
+		{
+			throw CreateConfigError("Could not read the file: %s (reason: %s, offset: %td)",
+									file_name.CStr(), result.description(), result.offset);
+		}
+
+		_document = document;
+		_node = document->root().child(root_name);
+
+		if (_node.empty())
+		{
+			throw CreateConfigError("Could not find the root element: <%s> in %s", root_name.CStr(), file_name.CStr());
+		}
+	}
+
+	void DataSource::LoadFromJson(const ov::String &file_name, const ov::String &root_name)
+	{
+		std::ifstream json_file;
+		json_file.open(file_name, std::ifstream::in | std::ifstream::binary);
+
+		if (json_file.is_open())
+		{
+			json_file >> _json;
+			json_file.close();
+		}
+		else
+		{
+			throw CreateConfigError("Could not read the file: %s", file_name.CStr());
+		}
+	}
+
+	void DataSource::CheckUnknownItems(const ov::String &path,
+									   const std::unordered_map<ov::String, std::shared_ptr<Child>> &children_for_xml,
+									   const std::unordered_map<ov::String, std::shared_ptr<Child>> &children_for_json) const
+	{
+		if (_check_unknown_items == CheckUnknownItems::DontCheck)
+		{
+			logtd("Checking unknown items is skipped: %s", path.CStr());
+			return;
+		}
+
+		auto file_path = GetFileName();
+
+		switch (_type)
+		{
+			case DataType::Xml:
+				for (auto &child_node : _node.children())
+				{
+					ov::String name(child_node.name());
+
+					if (children_for_xml.find(name) == children_for_xml.end())
+					{
+						if (NeedToIgnore(file_path, child_node, false))
+						{
+							logtw("Unknown item found, but ignored: %s.%s", path.CStr(), name.CStr());
+							continue;
+						}
+
+						if (file_path.IsEmpty())
+						{
+							throw CreateConfigError("Unknown item found: %s.%s", path.CStr(), name.CStr());
+						}
+						else
+						{
+							throw CreateConfigError("Unknown item found: %s.%s in %s", path.CStr(), name.CStr(), file_path.CStr());
+						}
+					}
+				}
+				break;
+
+			case DataType::Json: {
+				if (_json.isObject())
+				{
+					auto members = _json.getMemberNames();
+
+					for (auto &member : members)
+					{
+						ov::String name(member.c_str());
+
+						if (name == "$")
+						{
+							// $ == attributes
+							continue;
+						}
+
+						if (children_for_json.find(name) == children_for_json.end())
+						{
+							if (file_path.IsEmpty())
+							{
+								throw CreateConfigError("Unknown item found: %s.%s", path.CStr(), name.CStr());
+							}
+							else
+							{
+								throw CreateConfigError("Unknown item found: %s.%s in %s", path.CStr(), name.CStr(), file_path.CStr());
+							}
+						}
+					}
+				}
+
+				break;
+			}
+		}
+	}
+
+	bool DataSource::IsArray(const ItemName &name) const
+	{
+		switch (_type)
+		{
+			case DataType::Xml:
+				// if (_node)
+				// {
+				// 	auto iterator = _node.children(name.GetName(DataType::Json));
+				// 	auto count = std::distance(iterator.begin(), iterator.end());
+				// 	return count > 1;
+				// }
+				return true;
+
+			case DataType::Json:
+				return _json.isArray();
+		}
+
+		OV_ASSERT2(false);
+		return false;
+	}
+
+	Variant DataSource::GetRootValue(ValueType value_type, bool resolve_path, bool omit_json, Json::Value *original_value) const
+	{
+		switch (_type)
+		{
+			case DataType::Xml:
+				return GetValueFromXml(value_type, "", false, resolve_path, original_value);
+
+			case DataType::Json:
+				return GetValueFromJson(value_type, "", false, resolve_path, omit_json, original_value);
+		}
+
+		OV_ASSERT2(false);
+		return {};
+	}
+
+	Variant DataSource::GetValue(ValueType value_type, const ItemName &name, bool resolve_path, bool omit_json, Json::Value *original_value) const
+	{
+		switch (_type)
+		{
+			case DataType::Xml:
+				return GetValueFromXml(value_type, name.GetName(_type), true, resolve_path, original_value);
+
+			case DataType::Json:
+				return GetValueFromJson(value_type, name.GetName(_type), true, resolve_path, omit_json, original_value);
+		}
+
+		OV_ASSERT2(false);
+		return {};
 	}
 
 	Variant DataSource::GetValueFromJson(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, bool omit_json, Json::Value *original_value) const

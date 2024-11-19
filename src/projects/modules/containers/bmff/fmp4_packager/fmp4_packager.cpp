@@ -159,6 +159,15 @@ namespace bmff
 
 		if (samples != nullptr && samples->GetTotalCount() > 0)
 		{
+			bool next_frame_is_idr = (next_frame->GetFlag() == MediaPacketFlag::Key) || (GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio);
+
+			// Calculate duration as milliseconds
+			double total_sample_duration = samples->GetTotalDuration();
+			double next_total_sample_duration = total_sample_duration + next_frame->GetDuration();
+
+			double total_sample_duration_ms = (static_cast<double>(total_sample_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
+			double next_total_sample_duration_ms = (static_cast<double>(next_total_sample_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
+
 			// https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-4.4.3.8
 			// The duration of a Partial Segment MUST be less than or equal to the Part Target Duration.  
 			// The duration of each Partial Segment MUST be at least 85% of the Part Target Duration, 
@@ -166,7 +175,7 @@ namespace bmff
 			// and the final Partial Segment of any Parent Segment.
 
 			auto last_segment = _storage->GetLastSegment();
-			bool last_partial_segment = false;
+			bool is_last_partial_segment = false;
 			if (last_segment != nullptr && last_segment->IsCompleted() == false)
 			{
 				// https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-4.4.4.9
@@ -175,35 +184,27 @@ namespace bmff
 				// at least 85% of the Part Target Duration, with the exception of
 				// Partial Segments with the INDEPENDENT=YES attribute and the final
 				// Partial Segment of any Parent Segment.
-				if (_target_chunk_duration_ms + last_segment->GetDuration() >= _storage->GetTargetSegmentDuration())
+				if (total_sample_duration_ms + last_segment->GetDuration() >= _storage->GetTargetSegmentDuration())
 				{
 					// Last partial segment
-					last_partial_segment = true;
+					is_last_partial_segment = true;
 				}
 			}
 
-			bool next_frame_is_idr = (next_frame->GetFlag() == MediaPacketFlag::Key) || (GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio);
-
-			// Calculate duration as milliseconds
-			double total_duration = samples->GetTotalDuration();
-			double expected_duration = total_duration + next_frame->GetDuration();
-
-			double total_duration_ms = (static_cast<double>(total_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
-			double expected_duration_ms = (static_cast<double>(expected_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
-
-			logtd("track(%d), total_duration_ms: %lf, expected_duration_ms: %lf, target_chunk_duration_ms: %lf, next_frame_is_idr: %d, last_partial_segment: %d last_segment_duration: %lf, target_segment_duration: %lld", GetMediaTrack()->GetId(), total_duration_ms, expected_duration_ms, _target_chunk_duration_ms, next_frame_is_idr, last_partial_segment, last_segment != nullptr ? last_segment->GetDuration() : -1, _storage->GetTargetSegmentDuration());
+			logtd("track(%d), total_sample_duration_ms: %lf, next_total_sample_duration_ms: %lf, target_chunk_duration_ms: %lf, next_frame_is_idr: %d, is_last_partial_segment: %d last_segment_duration: %lf, target_segment_duration: %lld", GetMediaTrack()->GetId(), total_sample_duration_ms, next_total_sample_duration_ms, _target_chunk_duration_ms, next_frame_is_idr, is_last_partial_segment, last_segment != nullptr ? last_segment->GetDuration() : -1, _storage->GetTargetSegmentDuration());
 
 			// - In the last partial segment, if the next frame is a keyframe, a segment is created immediately. This allows the segment to start with a keyframe.
 			// - When adding samples, if the Part Target Duration is exceeded, a chunk is created immediately.
 			// - If it exceeds 85% and the next sample is independent, a chunk is created. This makes the next chunk start independent.
 			if ( 
-				   (last_partial_segment == true && 
-					GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && 
+				   (is_last_partial_segment == true && GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && 
 					next_frame->GetFlag() == MediaPacketFlag::Key)
+				
+				|| (is_last_partial_segment == true && GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio)
 
-				|| (total_duration_ms >= _target_chunk_duration_ms) 
+				|| (total_sample_duration_ms >= _target_chunk_duration_ms) 
 
-				|| ((expected_duration_ms > _target_chunk_duration_ms) && (total_duration_ms >= _target_chunk_duration_ms * 0.85)) 
+				|| ((next_total_sample_duration_ms > _target_chunk_duration_ms) && (total_sample_duration_ms >= _target_chunk_duration_ms * 0.85)) 
 				)
 			{
 				double reserve_buffer_size;
@@ -246,8 +247,8 @@ namespace bmff
 
 				if (_storage != nullptr && _storage->AppendMediaChunk(chunk, 
 												samples->GetStartTimestamp(), 
-												total_duration_ms, 
-												samples->IsIndependent(), (last_partial_segment && next_frame_is_idr)) == false)
+												total_sample_duration_ms, 
+												samples->IsIndependent(), (is_last_partial_segment && next_frame_is_idr)) == false)
 				{
 					logte("FMP4Packager::AppendSample() - Failed to store media chunk");
 					return false;
@@ -256,7 +257,7 @@ namespace bmff
 				_sample_buffer.Reset();
 
 				// Set the average chunk duration to config.chunk_duration_ms
-				// _target_chunk_duration_ms -= total_duration_ms;
+				// _target_chunk_duration_ms -= total_sample_duration_ms;
 				// _target_chunk_duration_ms += _config.chunk_duration_ms;
 			}
 		}

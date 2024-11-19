@@ -210,6 +210,16 @@ namespace ov
 		return IsEqual(data->GetData(), data->GetLength());
 	}
 
+	bool Data::IsEqual(const std::shared_ptr<const Data> &data) const
+	{
+		return IsEqual(data->GetData(), data->GetLength());
+	}
+
+	bool Data::IsEqual(const std::shared_ptr<Data> &data) const
+	{
+		return IsEqual(data->GetData(), data->GetLength());
+	}
+
 	bool Data::IsEmpty() const
 	{
 		return (GetLength() == 0);
@@ -404,6 +414,11 @@ namespace ov
 	String Data::ToString() const
 	{
 		return String(GetDataAs<const char>(), GetLength());
+	}
+
+	String Data::ToHexString(size_t length) const
+	{
+		return ov::ToHexString(GetDataAs<const uint8_t>(), std::min(GetLength(), length));
 	}
 
 	String Data::ToHexString() const

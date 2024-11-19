@@ -19,7 +19,7 @@ PCRE2_VERSION=10.39
 OPENH264_VERSION=2.4.0
 HIREDIS_VERSION=1.0.2
 NVCC_HDR_VERSION=11.1.5.2
-X264_VERSION=20191217-2245-stable 
+X264_VERSION=31e19f92
 
 INTEL_QSV_HWACCELS=false
 NETINT_LOGAN_HWACCELS=false
@@ -113,7 +113,7 @@ install_libx264()
     (DIR=${TEMP_PATH}/x264 && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-${X264_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
+    curl -sLf https://code.videolan.org/videolan/x264/-/archive/master/x264-${X264_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
     ./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli && \
     make -j$(nproc) && \
     sudo make install && \

@@ -9,7 +9,7 @@
 
 #define OV_LOG_TAG "AACConverter"
 
-std::shared_ptr<ov::Data> AacConverter::MakeAdtsHeader(uint8_t aac_profile, uint8_t aac_sample_rate, uint8_t aac_channels, int16_t data_length)
+std::shared_ptr<ov::Data> AacConverter::MakeAdtsHeader(uint8_t aac_profile, uint8_t aac_sample_rate, uint8_t aac_channels, int16_t data_length, const std::shared_ptr<ov::Data> &data)
 {
 	uint8_t ADTS_HEADER_LENGTH = 7;
 	int16_t aac_frame_length = data_length + 7;
@@ -32,8 +32,12 @@ std::shared_ptr<ov::Data> AacConverter::MakeAdtsHeader(uint8_t aac_profile, uint
 	bits.WriteBits(11, 0x3F);			   // adts_buffer_fullness[11b]
 	bits.WriteBits(2, 0);				   // no_raw_data_blocks_inframe[2b]
 
-	std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>(bits.GetData(), bits.GetDataSize());
+	if (data == nullptr)
+	{
+		return std::make_shared<ov::Data>(bits.GetData(), bits.GetDataSize());
+	}
 
+	data->Append(bits.GetData(), bits.GetDataSize());
 	return data;
 }
 
@@ -73,19 +77,18 @@ std::shared_ptr<ov::Data> AacConverter::MakeAdtsHeader(uint8_t aac_profile, uint
 	11 (3)   (reserved)   AAC LTP
 */
 
-// Raw audio data msut be 1 frame
+// Raw audio data must be 1 frame
 std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const uint8_t *data, size_t data_len, const AudioSpecificConfig &aac_config)
 {
 	auto adts_data = std::make_shared<ov::Data>(data_len + 16);
 
-	//Get the AudioSpecificConfig value from extradata;
-	uint8_t aac_profile = (uint8_t)aac_config.GetAacProfile();
-	uint8_t aac_sample_rate = (uint8_t)aac_config.SamplingFrequency();
-	uint8_t aac_channels = (uint8_t)aac_config.Channel();
+	MakeAdtsHeader(
+		static_cast<uint8_t>(aac_config.GetAacProfile()),
+		static_cast<uint8_t>(aac_config.ProbeAacSamplingFrequencyIndex()),
+		aac_config.Channel(),
+		data_len,
+		adts_data);
 
-	auto adts_header = MakeAdtsHeader(aac_profile, aac_sample_rate, aac_channels, data_len);
-
-	adts_data->Append(adts_header);
 	adts_data->Append(data, data_len);
 
 	return adts_data;
@@ -93,17 +96,17 @@ std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const uint8_t *data, si
 
 std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const std::shared_ptr<const ov::Data> &data, const std::shared_ptr<AudioSpecificConfig> &aac_config)
 {
-	if(aac_config == nullptr)
+	if (aac_config == nullptr)
 	{
 		return nullptr;
 	}
-	
+
 	return ConvertRawToAdts(data->GetDataAs<uint8_t>(), data->GetLength(), *aac_config);
 }
 
 std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const std::shared_ptr<const ov::Data> &data, const std::shared_ptr<ov::Data> &aac_config_data)
 {
-	if(aac_config_data == nullptr)
+	if (aac_config_data == nullptr)
 	{
 		return nullptr;
 	}
@@ -211,12 +214,12 @@ std::shared_ptr<ov::Data> AacConverter::ConvertAdtsToRaw(const std::shared_ptr<c
 
 ov::String AacConverter::GetProfileString(const std::shared_ptr<AudioSpecificConfig> &aac_config)
 {
-	if(aac_config == nullptr)
+	if (aac_config == nullptr)
 	{
 		return "";
 	}
 
-	return ov::String::FormatString("%d", static_cast<int>(aac_config->ObjectType())); 
+	return ov::String::FormatString("%d", static_cast<int>(aac_config->ObjectType()));
 }
 
 ov::String AacConverter::GetProfileString(const std::shared_ptr<ov::Data> &aac_config_data)

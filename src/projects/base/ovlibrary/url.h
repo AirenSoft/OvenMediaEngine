@@ -23,17 +23,17 @@ namespace ov
 		// <scheme>://<host>[:<port>][/<path/to/resource>][?<query string>]
 		static std::shared_ptr<Url> Parse(const ov::String &url);
 
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetSource, Source, _source, )
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetScheme, Scheme, _scheme, )
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetHost, Host, _host, )
-		OV_DEFINE_SETTER_CONST_GETTER(uint32_t, SetPort, Port, _port, )
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetSource, Source, _source, , , return UpdateUrl(true))
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetScheme, Scheme, _scheme, , , return UpdateUrl(false))
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetHost, Host, _host, , , return UpdateUrl(false))
+		OV_DEFINE_SETTER_CONST_GETTER(uint32_t, bool, SetPort, Port, _port, , , return UpdateUrl(false))
 		OV_DEFINE_CONST_GETTER(ov::String, Path, _path, )
-		void SetPath(const ov::String &path);
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetApp, App, _app, )
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetStream, Stream, _stream, )
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetFile, File, _file, )
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetId, Id, _id, )
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, SetPassword, Password, _password, )
+		bool SetPath(const ov::String &path);
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetApp, App, _app, , , return UpdateUrl(false))
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetStream, Stream, _stream, , , return UpdateUrl(false))
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetFile, File, _file, , , return UpdateUrl(false))
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetId, Id, _id, , , return UpdateUrl(false))
+		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetPassword, Password, _password, , , return UpdateUrl(false))
 
 		bool HasQueryString() const;
 		const ov::String &Query() const;
@@ -50,10 +50,14 @@ namespace ov
 
 		Url &operator=(const Url &other) noexcept;
 
-		Url() =default;
+		Url() = default;
 		Url(const Url &other);
 
 		std::shared_ptr<Url> Clone() const;
+
+	protected:
+		bool ParseFromSource();
+		bool UpdateUrl(bool is_source_updated);
 
 	private:
 		void ParseQueryIfNeeded() const;
@@ -66,8 +70,8 @@ namespace ov
 		ov::String _host;
 		uint32_t _port = 0;
 		ov::String _path;
-		bool _has_query_string = false;
 		ov::String _query_string;
+		bool _has_query_string = false;
 		// To reduce the cost of parsing the query map, parsing the query only when Query() or QueryMap() is called
 		mutable bool _query_parsed = false;
 		mutable std::mutex _query_map_mutex;

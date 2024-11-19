@@ -55,7 +55,7 @@ std::shared_ptr<ov::Data> RtpDepacketizerMpeg4GenericAudio::ParseAndAssembleFram
 
 				//Get the AACSecificConfig value from extradata;
 				uint8_t aac_profile = static_cast<uint8_t>(_aac_config.GetAacProfile());
-				uint8_t aac_sample_rate = static_cast<uint8_t>(_aac_config.SamplingFrequency());
+				uint8_t aac_sample_rate = static_cast<uint8_t>(_aac_config.SamplingFrequencyIndex());
 				uint8_t aac_channels = static_cast<uint8_t>(_aac_config.Channel());
 
 				bitstream->Append(AacConverter::MakeAdtsHeader(aac_profile, aac_sample_rate, aac_channels, raw_aac_data_length));

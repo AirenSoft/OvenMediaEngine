@@ -20,9 +20,6 @@ public:
 	void SetSampleRate(int32_t samplerate);
 	int32_t GetSampleRate() const;
 
-	void SetAudioTimestampScale(double scale);
-	double GetAudioTimestampScale() const;
-
 	cmn::AudioSample &GetSample();
 	const cmn::AudioSample &GetSample() const;
 

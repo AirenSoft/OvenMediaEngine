@@ -11,7 +11,6 @@
 
 #include <base/info/media_extradata.h>
 #include <base/mediarouter/media_type.h>
-#include <modules/bitstream/aac/audio_specific_config.h>
 #include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/containers/flv/flv_parser.h>
 #include <modules/id3v2/frames/id3v2_frames.h>
@@ -718,6 +717,12 @@ namespace pvd
 			}
 		}
 
+		_media_info->video_codec_type = video_codec_type;
+		_media_info->video_width = static_cast<int32_t>(video_width);
+		_media_info->video_height = static_cast<int32_t>(video_height);
+		_media_info->video_framerate = static_cast<float>(frame_rate);
+		_media_info->video_bitrate = static_cast<int32_t>(video_bitrate);
+
 		// Audio Codec
 		RtmpCodecType audio_codec_type = RtmpCodecType::Unknown;
 		bool audio_available = false;
@@ -846,8 +851,15 @@ namespace pvd
 			}
 		}
 
-		if (((video_available == true) && (video_codec_type != RtmpCodecType::H264)) ||
-			((audio_available == true) && (audio_codec_type != RtmpCodecType::AAC)))
+		_media_info->audio_codec_type = audio_codec_type;
+		_media_info->audio_bitrate = static_cast<int32_t>(audio_bitrate);
+		_media_info->audio_channels = static_cast<int32_t>(audio_channels);
+		_media_info->audio_bits = static_cast<int32_t>(audio_samplesize);
+		_media_info->audio_samplerate = static_cast<int32_t>(audio_samplerate);
+		_media_info->encoder_type = encoder_type;
+
+		if ((video_available && (video_codec_type != RtmpCodecType::H264)) ||
+			(audio_available && (audio_codec_type != RtmpCodecType::AAC)))
 		{
 			logtw("AmfMeta has incompatible codec information. - stream(%s/%s) id(%u/%u) video(%s) audio(%s)",
 				  _vhost_app_name.CStr(),
@@ -857,18 +869,6 @@ namespace pvd
 				  GetCodecString(video_codec_type).CStr(),
 				  GetCodecString(audio_codec_type).CStr());
 		}
-
-		_media_info->video_codec_type = video_codec_type;
-		_media_info->video_width = static_cast<int32_t>(video_width);
-		_media_info->video_height = static_cast<int32_t>(video_height);
-		_media_info->video_framerate = static_cast<float>(frame_rate);
-		_media_info->video_bitrate = static_cast<int32_t>(video_bitrate);
-		_media_info->audio_codec_type = audio_codec_type;
-		_media_info->audio_bitrate = static_cast<int32_t>(audio_bitrate);
-		_media_info->audio_channels = static_cast<int32_t>(audio_channels);
-		_media_info->audio_bits = static_cast<int32_t>(audio_samplesize);
-		_media_info->audio_samplerate = static_cast<int32_t>(audio_samplerate);
-		_media_info->encoder_type = encoder_type;
 
 		return true;
 	}
@@ -1045,28 +1045,28 @@ namespace pvd
 
 			switch (message->header->completed.type_id)
 			{
-				case RtmpMessageTypeID::AUDIO:
+				case RtmpMessageTypeID::Audio:
 					result = ReceiveAudioMessage(message);
 					break;
-				case RtmpMessageTypeID::VIDEO:
+				case RtmpMessageTypeID::Video:
 					result = ReceiveVideoMessage(message);
 					break;
-				case RtmpMessageTypeID::SET_CHUNK_SIZE:
+				case RtmpMessageTypeID::SetChunkSize:
 					result = ReceiveSetChunkSize(message);
 					break;
-				case RtmpMessageTypeID::ACKNOWLEDGEMENT:
+				case RtmpMessageTypeID::Acknowledgement:
 					// OME doesn't use this message
 					break;
-				case RtmpMessageTypeID::AMF0_DATA:
+				case RtmpMessageTypeID::Amf0Data:
 					ReceiveAmfDataMessage(message);
 					break;
-				case RtmpMessageTypeID::AMF0_COMMAND:
+				case RtmpMessageTypeID::Amf0Command:
 					result = ReceiveAmfCommandMessage(message);
 					break;
-				case RtmpMessageTypeID::USER_CONTROL:
+				case RtmpMessageTypeID::UserControl:
 					result = ReceiveUserControlMessage(message);
 					break;
-				case RtmpMessageTypeID::WINDOW_ACKNOWLEDGEMENT_SIZE:
+				case RtmpMessageTypeID::WindowAcknowledgementSize:
 					ReceiveWindowAcknowledgementSize(message);
 					break;
 				default:
@@ -1121,11 +1121,11 @@ namespace pvd
 
 		ov::ByteStream byte_stream(data);
 
-		auto type = byte_stream.ReadBE16();
+		auto type = static_cast<UserControlMessageId>(byte_stream.ReadBE16());
 
 		switch (type)
 		{
-			case RTMP_UCMID_PINGREQUEST: {
+			case UserControlMessageId::PingRequest: {
 				if (data->GetLength() != 6)
 				{
 					logte("Invalid ping message size: %zu", data->GetLength());
@@ -1141,14 +1141,17 @@ namespace pvd
 				// ping response == event type (16 bits) + timestamp (32 bits)
 				auto body = std::make_shared<std::vector<uint8_t>>(2 + 4);
 				auto write_buffer = body->data();
-				auto message_header = RtmpMuxMessageHeader::Create(chunk_stream_id, RtmpMessageTypeID::USER_CONTROL, message_stream_id, 6);
+				auto message_header = RtmpMuxMessageHeader::Create(chunk_stream_id, RtmpMessageTypeID::UserControl, message_stream_id, 6);
 
-				*(reinterpret_cast<uint16_t *>(write_buffer)) = ov::HostToBE16(RTMP_UCMID_PINGRESPONSE);
+				*(reinterpret_cast<uint16_t *>(write_buffer)) = ov::HostToBE16(ov::ToUnderlyingType(UserControlMessageId::PingResponse));
 				write_buffer += sizeof(uint16_t);
 				*(reinterpret_cast<uint32_t *>(write_buffer)) = ov::HostToBE32(byte_stream.ReadBE32());
 
 				return SendMessagePacket(message_header, body);
 			}
+
+			default:
+				break;
 		}
 
 		return true;
@@ -1321,7 +1324,7 @@ namespace pvd
 			}
 
 			if (
-				(header->completed.type_id == RtmpMessageTypeID::AMF0_DATA) &&
+				(header->completed.type_id == RtmpMessageTypeID::Amf0Data) &&
 				(trigger_list.at(0) == "AMFDataMessage"))
 			{
 				auto count = trigger_list.size();
@@ -1590,7 +1593,7 @@ namespace pvd
 		{
 			// Parsing FLV
 			FlvVideoData flv_video;
-			if (FlvVideoData::Parse(message->payload->GetDataAs<uint8_t>(), message->payload->GetLength(), flv_video) == false)
+			if (flv_video.Parse(message->payload) == false)
 			{
 				logte("Could not parse flv video (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
@@ -1788,12 +1791,33 @@ namespace pvd
 		// audio stream callback
 		if (_media_info->audio_stream_coming)
 		{
+			// Get audio track info
+			auto audio_track = GetTrack(RTMP_AUDIO_TRACK_ID);
+			if (audio_track == nullptr)
+			{
+				logte("Cannot get audio track (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
+				return false;
+			}
+
 			// Parsing FLV
 			FlvAudioData flv_audio;
-			if (FlvAudioData::Parse(message->payload->GetDataAs<uint8_t>(), message->payload->GetLength(), flv_audio) == false)
+			if (flv_audio.Parse(message->payload) == false)
 			{
 				logte("Could not parse flv audio (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
+			}
+
+			auto data = std::make_shared<ov::Data>(flv_audio.Payload(), flv_audio.PayloadLength());
+
+			cmn::PacketType packet_type = cmn::PacketType::Unknown;
+
+			if (flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
+			{
+				packet_type = cmn::PacketType::SEQUENCE_HEADER;
+			}
+			else if (flv_audio.PacketType() == FlvAACPacketType::RAW)
+			{
+				packet_type = cmn::PacketType::RAW;
 			}
 
 			int64_t dts = message->header->completed.timestamp;
@@ -1804,33 +1828,11 @@ namespace pvd
 				pts += ADJUST_PTS;
 			}
 
-			// Get audio track info
-			auto audio_track = GetTrack(RTMP_AUDIO_TRACK_ID);
-			if (audio_track == nullptr)
-			{
-				logte("Cannot get video track (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
-				return false;
-			}
-
-			pts *= audio_track->GetAudioTimestampScale();
-			dts *= audio_track->GetAudioTimestampScale();
-
 			if (_is_incoming_timestamp_used == false)
 			{
 				AdjustTimestamp(pts, dts);
 			}
 
-			cmn::PacketType packet_type = cmn::PacketType::Unknown;
-			if (flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
-			{
-				packet_type = cmn::PacketType::SEQUENCE_HEADER;
-			}
-			else if (flv_audio.PacketType() == FlvAACPacketType::RAW)
-			{
-				packet_type = cmn::PacketType::RAW;
-			}
-
-			auto data = std::make_shared<ov::Data>(flv_audio.Payload(), flv_audio.PayloadLength());
 			auto frame = std::make_shared<MediaPacket>(GetMsid(),
 													   cmn::MediaType::Audio,
 													   RTMP_AUDIO_TRACK_ID,
@@ -1900,8 +1902,10 @@ namespace pvd
 			return false;
 		}
 
-		_event_generator = application->GetConfig().GetProviders().GetRtmpProvider().GetEventGenerator();
-		_is_incoming_timestamp_used = application->GetConfig().GetProviders().GetRtmpProvider().IsIncomingTimestampUsed();
+		const auto &rtmp_provider = application->GetConfig().GetProviders().GetRtmpProvider();
+
+		_event_generator = rtmp_provider.GetEventGenerator();
+		_is_incoming_timestamp_used = rtmp_provider.IsIncomingTimestampUsed();
 
 		SetName(_publish_url->Stream());
 
@@ -1937,11 +1941,11 @@ namespace pvd
 		//   stored messages
 		for (auto message : _stream_message_cache)
 		{
-			if (message->header->completed.type_id == RtmpMessageTypeID::VIDEO && _media_info->video_stream_coming)
+			if ((message->header->completed.type_id == RtmpMessageTypeID::Video) && _media_info->video_stream_coming)
 			{
 				ReceiveVideoMessage(message);
 			}
-			else if (message->header->completed.type_id == RtmpMessageTypeID::AUDIO && _media_info->audio_stream_coming)
+			else if ((message->header->completed.type_id == RtmpMessageTypeID::Audio) && _media_info->audio_stream_coming)
 			{
 				ReceiveAudioMessage(message);
 			}
@@ -1984,7 +1988,6 @@ namespace pvd
 			new_track->SetCodecId(cmn::MediaCodecId::Aac);
 			new_track->SetOriginBitstream(cmn::BitstreamFormat::AAC_RAW);
 			new_track->SetTimeBase(1, 1000);
-			new_track->SetAudioTimestampScale(1.0);
 
 			//////////////////
 			// Below items are not mandatory, it will be parsed again from ADTS parser
@@ -2092,14 +2095,14 @@ namespace pvd
 		return true;
 	}
 
-	bool RtmpStream::SendUserControlMessage(uint16_t message, std::shared_ptr<std::vector<uint8_t>> &data)
+	bool RtmpStream::SendUserControlMessage(UserControlMessageId message, std::shared_ptr<std::vector<uint8_t>> &data)
 	{
 		auto message_header = RtmpMuxMessageHeader::Create(
-			RTMP_CHUNK_STREAM_ID_URGENT, RtmpMessageTypeID::USER_CONTROL, 0, data->size() + 2);
+			RtmpChunkStreamId::Urgent, RtmpMessageTypeID::UserControl, 0, data->size() + 2);
 
 		data->insert(data->begin(), 0);
 		data->insert(data->begin(), 0);
-		RtmpMuxUtil::WriteInt16(data->data(), message);
+		RtmpMuxUtil::WriteInt16(data->data(), ov::ToUnderlyingType(message));
 
 		return SendMessagePacket(message_header, data);
 	}
@@ -2108,7 +2111,7 @@ namespace pvd
 	{
 		auto body = std::make_shared<std::vector<uint8_t>>(sizeof(int));
 		auto message_header = RtmpMuxMessageHeader::Create(
-			RTMP_CHUNK_STREAM_ID_URGENT, RtmpMessageTypeID::WINDOW_ACKNOWLEDGEMENT_SIZE, _rtmp_stream_id, body->size());
+			RtmpChunkStreamId::Urgent, RtmpMessageTypeID::WindowAcknowledgementSize, _rtmp_stream_id, body->size());
 
 		RtmpMuxUtil::WriteInt32(body->data(), size);
 
@@ -2119,7 +2122,7 @@ namespace pvd
 	{
 		auto body = std::make_shared<std::vector<uint8_t>>(sizeof(int));
 		auto message_header = RtmpMuxMessageHeader::Create(
-			RTMP_CHUNK_STREAM_ID_URGENT, RtmpMessageTypeID::ACKNOWLEDGEMENT, 0, body->size());
+			RtmpChunkStreamId::Urgent, RtmpMessageTypeID::Acknowledgement, 0, body->size());
 
 		RtmpMuxUtil::WriteInt32(body->data(), acknowledgement_traffic);
 
@@ -2130,7 +2133,7 @@ namespace pvd
 	{
 		auto body = std::make_shared<std::vector<uint8_t>>(5);
 		auto message_header = RtmpMuxMessageHeader::Create(
-			RTMP_CHUNK_STREAM_ID_URGENT, RtmpMessageTypeID::SET_PEER_BANDWIDTH, _rtmp_stream_id, body->size());
+			RtmpChunkStreamId::Urgent, RtmpMessageTypeID::SetPeerBandwidth, _rtmp_stream_id, body->size());
 
 		RtmpMuxUtil::WriteInt32(body->data(), bandwidth);
 		RtmpMuxUtil::WriteInt8(body->data() + 4, 2);
@@ -2144,7 +2147,7 @@ namespace pvd
 
 		RtmpMuxUtil::WriteInt32(body->data(), stream_id);
 
-		return SendUserControlMessage(RTMP_UCMID_STREAMBEGIN, body);
+		return SendUserControlMessage(UserControlMessageId::StreamBegin, body);
 	}
 
 	bool RtmpStream::SendStreamEnd()
@@ -2153,7 +2156,7 @@ namespace pvd
 
 		RtmpMuxUtil::WriteInt32(body->data(), _rtmp_stream_id);
 
-		return SendUserControlMessage(RTMP_UCMID_STREAMEOF, body);
+		return SendUserControlMessage(UserControlMessageId::StreamEof, body);
 	}
 
 	bool RtmpStream::SendAmfCommand(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document)
@@ -2216,7 +2219,7 @@ namespace pvd
 	bool RtmpStream::SendAmfOnFCPublish(uint32_t chunk_stream_id, uint32_t stream_id, double client_id)
 	{
 		auto message_header = RtmpMuxMessageHeader::Create(
-			chunk_stream_id, RtmpMessageTypeID::AMF0_COMMAND, _rtmp_stream_id);
+			chunk_stream_id, RtmpMessageTypeID::Amf0Command, _rtmp_stream_id);
 
 		AmfDocument document;
 
@@ -2260,7 +2263,7 @@ namespace pvd
 									 const char *description,
 									 double client_id)
 	{
-		auto message_header = RtmpMuxMessageHeader::Create(chunk_stream_id, RtmpMessageTypeID::AMF0_COMMAND, stream_id);
+		auto message_header = RtmpMuxMessageHeader::Create(chunk_stream_id, RtmpMessageTypeID::Amf0Command, stream_id);
 		AmfDocument document;
 
 		document.AppendProperty(RTMP_CMD_NAME_ONSTATUS);
