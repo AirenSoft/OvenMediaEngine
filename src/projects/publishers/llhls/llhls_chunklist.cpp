@@ -279,7 +279,7 @@ ov::String LLHlsChunklist::MakeExtXKey() const
 ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool skip, bool legacy, bool rewind, bool vod, uint32_t vod_start_segment_number) const
 {
 	std::shared_lock<std::shared_mutex> segment_lock(_segments_guard);
-	uint8_t version = 10;
+	uint8_t version = 6;
 	if (_segments.size() == 0)
 	{
 		return "";

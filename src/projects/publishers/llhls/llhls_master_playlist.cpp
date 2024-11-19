@@ -248,7 +248,7 @@ ov::String LLHlsMasterPlaylist::MakePlaylist(const ov::String &chunk_query_strin
 {
 	ov::String playlist(10240);
 
-	uint8_t version = 7;
+	uint8_t version = 6;
 	if (legacy == true)
 	{
 		version = 6;
