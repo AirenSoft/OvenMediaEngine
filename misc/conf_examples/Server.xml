@@ -319,7 +319,7 @@
 
 							To reduce resource usage, only keyframes are decoded.
 							It is only activated when image encoding and video bypass are enabled.
-							<KeyframeOnlyIfNeed>false</KeyframeOnlyIfNeed>
+							<OnlyKeyframes>false</OnlyKeyframes>
 						</Decodes>
 						-->
 
