@@ -348,16 +348,17 @@ Supported since OvenmediaEngine version 0.18.0
 
 ```xml
 <OutputProfiles>
-    <!-- 
-    Common setting for decoders. Decodes is optional.
-    -->
-    <Decodes>
+<!-- Common setting for decoders. Decodes is optional. -->
+	<Decodes>
 	<!-- 
-	By default, OME decodes all video frames. If OnlyKeyframes is true, only the keyframes will be decoded, massively improving performance
-	The trade off is that since thumbnails can only be generated on a keyframe, you have less control regarding the exact timing of the thumbnail generation
+	By default, OME decodes all video frames. 
+	With OnlyKeyframes, only keyframes are decoded,
+	massively improving performance.
+	Thumbnails are generated only on keyframes,
+	they may not generate at your requested fps!
 	-->
-        <OnlyKeyframes>true</OnlyKeyframes>
-    </Decodes>
+		<OnlyKeyframes>true</OnlyKeyframes>
+	</Decodes>
 
     <OutputProfile>
        <Encodes>

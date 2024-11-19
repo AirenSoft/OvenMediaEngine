@@ -309,7 +309,17 @@
 					<!-- Application type (live/vod) -->
 					<Type>live</Type>
 					<OutputProfiles>
-						
+					<!-- Common setting for decoders. Decodes is optional. -->
+						<Decodes>
+						<!-- 
+						By default, OME decodes all video frames. 
+						With OnlyKeyframes, only keyframes are decoded,
+						massively improving performance.
+						Thumbnails are generated only on keyframes,
+						they may not generate at your requested fps!
+						-->
+							<OnlyKeyframes>true</OnlyKeyframes>
+						</Decodes>
 						<!-- 
 						Common setting for decoders. Decodes is optional.
 
