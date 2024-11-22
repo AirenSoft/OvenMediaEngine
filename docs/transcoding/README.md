@@ -31,9 +31,8 @@ The `<OutputProfile>` setting allows incoming streams to be re-encoded via the `
 	Number of threads for the decoder.
 	<ThreadCount>2</ThreadCount>
 
-	To reduce resource usage, only keyframes are decoded.
-	It is only activated when image encoding and video bypass are enabled.
-	<KeyframeOnlyIfNeed>false</KeyframeOnlyIfNeed>
+	By default, OME decodes all video frames. If OnlyKeyframes is true, only the keyframes will be decoded, massively improving thumbnail performance at the cost of having less control over when exactly they are generated
+	<OnlyKeyframes>false</OnlyKeyframes>
     </Decodes>
     -->
 
@@ -341,26 +340,31 @@ The software decoder uses 2 threads by default. If the CPU speed is too low for 
 
 ### Keyframe Decoding Only
 
-If only thumbnails are used without video encoding, decoding all frames wastes CPU resources. By decoding only keyframes for thumbnails, resource usage can be reduced. However, the frame rate of the output image may not be accurate.  Use the <**KeyFrameOnlyIfNeed>** option. Even if this value is set to true, if video encoding is enabled (Bypass is not included), all frames will be decoded.&#x20;
+For use cases without video (re)encoding, OME can be set to only decode the keyframes of incoming streams. This is a massive performance increase when all you are using the encoder for is generating thumbnails.
+
+To set OME to only decode keyframes, all of your encoder Output Profiles must be set to **<Bypass>true</Bypass>** set **<OnlyKeyframes>true</OnlyKeyframes>**. 
+
+Supported since OvenmediaEngine version 0.18.0 
 
 ```xml
 <OutputProfiles>
-    <!-- 
-    Common setting for decoders. Decodes is optional.
-    -->
-    <Decodes>
+<!-- Common setting for decoders. Decodes is optional. -->
+	<Decodes>
 	<!-- 
-	To reduce resource usage, only keyframes are decoded.
-	It is only activated when image encoding and video bypass are enabled. 
+	By default, OME decodes all video frames. 
+	With OnlyKeyframes, only keyframes are decoded,
+	massively improving performance.
+	Thumbnails are generated only on keyframes,
+	they may not generate at your requested fps!
 	-->
-        <KeyframeOnlyIfNeed>false</KeyframeOnlyIfNeed>
-    </Decodes>
+		<OnlyKeyframes>true</OnlyKeyframes>
+	</Decodes>
 
     <OutputProfile>
        <Encodes>
            <Video>
                 <Bypass>true</Bypass>	
-  	   </Video>
+  		   </Video>
            <Image>
                <Codec>jpeg</Codec>
                <Width>1280</Width>

@@ -799,7 +799,7 @@ bool TranscoderStream::CreateDecoder(MediaTrackId decoder_id, std::shared_ptr<in
 
 	// Set the keyframe decode only flag for the decoder.
 	if (input_track->GetMediaType() == cmn::MediaType::Video &&
-		GetOutputProfilesCfg()->GetDecodes().IsKeyframeOnlyIfNeed() == true)
+		GetOutputProfilesCfg()->GetDecodes().IsOnlyKeyframes() == true)
 	{
 		input_track->SetKeyframeDecodeOnly(IsKeyframeOnlyDecodable(_output_streams));
 	}
