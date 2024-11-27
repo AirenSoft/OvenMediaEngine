@@ -100,14 +100,19 @@ namespace pvd
         std::shared_ptr<Schedule> _current_schedule;
         std::shared_ptr<Schedule::Program> _current_program;
         std::shared_ptr<Schedule::Item> _current_item;
-        int64_t _current_item_position_ms = 0;
+        double _current_item_position_ms = 0;
 
         // Fallback
         std::shared_ptr<Schedule::Program> _fallback_program;
 
         std::map<int, int> _origin_id_track_id_map;
 
+		std::map<uint32_t, int64_t> _last_timestamp_map;
+		int64_t _biggest_timestamp = -1LL;
+
         ov::StopWatch _realtime_clock;
         ov::StopWatch _failback_check_clock;
+
+        std::map<uint32_t, std::shared_ptr<MediaPacket>> _last_packet_map;
     };
 }

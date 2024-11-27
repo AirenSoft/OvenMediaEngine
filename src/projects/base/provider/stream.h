@@ -110,16 +110,18 @@ namespace pvd
 
 		// TrackID : Timestamp(us)
 		std::map<uint32_t, int64_t>			_source_timestamp_map;
-		std::map<uint32_t, int64_t>			_last_timestamp_map;
-		std::map<uint32_t, int64_t>			_base_timestamp_map;
+		std::map<uint32_t, double>			_last_timestamp_us_map;
+		std::map<uint32_t, double>			_base_timestamp_us_map;
+		std::map<uint32_t, double>			_last_duration_us_map;
 
-		std::map<uint32_t, int64_t>			_last_duration_map;
+		std::map<uint32_t, double>			_last_pts_tb_remainder_map;
+		std::map<uint32_t, double>			_last_dts_tb_remainder_map;
 
 		// For Wraparound
 		std::map<uint32_t, int64_t>			_last_origin_ts_map[2];
 		std::map<uint32_t, int64_t>			_wraparound_count_map[2]; // 0 : pts 1: dts
 
-		int64_t								_start_timestamp = -1LL;
+		double								_start_timestamp = -1LL;
 		std::chrono::time_point<std::chrono::system_clock>	_last_pkt_received_time = std::chrono::time_point<std::chrono::system_clock>::min();
 
 		State 	_state = State::IDLE;

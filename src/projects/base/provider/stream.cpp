@@ -85,9 +85,9 @@ namespace pvd
 
 			logtd("Time taken to reconnect is %lld milliseconds. add to the basetime", reconnection_time_us/1000);
 
-			for (const auto &[track_id, timestamp] : _base_timestamp_map)
+			for (const auto &[track_id, timestamp] : _base_timestamp_us_map)
 			{
-				_base_timestamp_map[track_id] = (timestamp + reconnection_time_us);
+				_base_timestamp_us_map[track_id] = (timestamp + reconnection_time_us);
 			}
 		}
 	}
@@ -248,8 +248,8 @@ namespace pvd
 		// Set the last timestamp of the highest value of all tracks
 		// In this algorithm, the timestamp of A or V jumps for synchronization.
 		// But after testing with a variety of players, this is better.
-		int64_t last_timestamp = std::numeric_limits<int64_t>::min();
-		for (const auto &[track_id, timestamp] : _last_timestamp_map)
+		double last_timestamp = std::numeric_limits<double>::min();
+		for (const auto &[track_id, timestamp] : _last_timestamp_us_map)
 		{
 			auto track = GetTrack(track_id);
 			if (!track)
@@ -262,18 +262,24 @@ namespace pvd
 #endif
 
 		// Update base timestamp using last received timestamp
-		for (const auto &[track_id, timestamp] : _last_timestamp_map)
+		for (const auto &[track_id, timestamp] : _last_timestamp_us_map)
 		{
 			// base_timestamp is the last timestamp value of the previous stream. Increase it based on this.
 			// last_timestamp is a value that is updated every time a packet is received.
 			[[maybe_unused]]
-			int64_t prev_base_timestamp = _base_timestamp_map[track_id];
+			int64_t prev_base_timestamp = _base_timestamp_us_map[track_id];
 			
-			_base_timestamp_map[track_id] = last_timestamp;
+			_base_timestamp_us_map[track_id] = last_timestamp;
+
+			// + last_duration
+			if (_last_duration_us_map.find(track_id) != _last_duration_us_map.end())
+			{
+				_base_timestamp_us_map[track_id] += _last_duration_us_map[track_id];
+			}
 
 			logtd("%s/%s(%u) Update base timestamp [%d] %lld => %lld, last_timestamp: %lld",
 				  GetApplicationName(), GetName().CStr(), GetId(),
-				  track_id, prev_base_timestamp, _base_timestamp_map[track_id], last_timestamp);
+				  track_id, prev_base_timestamp, _base_timestamp_us_map[track_id], last_timestamp);
 		}
 
 		// Initialized start timestamp
@@ -384,30 +390,42 @@ namespace pvd
 		// 1. Get the start timestamp and base timebase of this stream.
 		if (_start_timestamp == -1LL)
 		{
-			_start_timestamp = (int64_t)((double)dts * expr_tb2us);
-
-			// Updated stream's first timestamp should be next timestamp of last timestamp + duration of previous stream.
-			if (_last_duration_map.find(track_id) != _last_duration_map.end())
-			{
-				_start_timestamp -= (_last_duration_map[track_id] * expr_tb2us);
-			}
+			_start_timestamp = static_cast<double>(dts) * expr_tb2us;
 
 			// for debugging
-			logtd("[%s/%s(%d)] Get start timestamp of stream. track:%d, ts:%lld (%d/%d) (%lldus)", _application->GetVHostAppName().CStr(), GetName().CStr(), GetId(), track_id, dts, track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(), _start_timestamp);
+			logtd("[%s/%s(%d)] Get start timestamp of stream. track:%d, ts:%lld (%d/%d) (%f us)", _application->GetVHostAppName().CStr(), GetName().CStr(), GetId(), track_id, dts, track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(), _start_timestamp);
 		}
-		int64_t start_timestamp_tb = (int64_t)((double)_start_timestamp * expr_us2tb);
+		double start_timestamp_tb = static_cast<int64_t>(_start_timestamp * expr_us2tb);
 
 		// 2. Get the base timestamp of the track
-		int64_t base_timestamp_tb = 0;
-		auto it = _base_timestamp_map.find(track_id);
-		if (it != _base_timestamp_map.end())
+		double base_timestamp_tb = 0;
+		auto it = _base_timestamp_us_map.find(track_id);
+		if (it != _base_timestamp_us_map.end())
 		{
-			base_timestamp_tb = (int64_t)((double)it->second * expr_us2tb);
+			base_timestamp_tb = static_cast<double>(it->second) * expr_us2tb;
 		}
 
 		// 3. Calculate PTS/DTS (base_timestamp + (pts - start_timestamp))
-		int64_t final_pkt_pts_tb = base_timestamp_tb + (pts - start_timestamp_tb);
-		int64_t final_pkt_dts_tb = base_timestamp_tb + (dts - start_timestamp_tb);
+
+		double final_pkt_pts_tb_d = base_timestamp_tb + (pts - start_timestamp_tb);
+		int64_t final_pkt_pts_tb = static_cast<int64_t>(final_pkt_pts_tb_d);
+		// remainder
+		_last_pts_tb_remainder_map[track_id] += final_pkt_pts_tb_d - final_pkt_pts_tb;
+		if (_last_pts_tb_remainder_map[track_id] >= 1.0)
+		{
+			final_pkt_pts_tb++;
+			_last_pts_tb_remainder_map[track_id] -= 1.0;
+		}
+
+		double final_pkt_dts_tb_d = base_timestamp_tb + (dts - start_timestamp_tb);
+		int64_t final_pkt_dts_tb = static_cast<int64_t>(final_pkt_dts_tb_d);
+		// remainder
+		_last_dts_tb_remainder_map[track_id] += final_pkt_dts_tb_d - final_pkt_dts_tb;
+		if (_last_dts_tb_remainder_map[track_id] >= 1.0)
+		{
+			final_pkt_dts_tb++;
+			_last_dts_tb_remainder_map[track_id] -= 1.0;
+		}
 
 		// 4. Check wrap around and adjust PTS/DTS
 
@@ -461,12 +479,13 @@ namespace pvd
 		final_pkt_dts_tb += _wraparound_count_map[1][track_id] * max_timestamp;
 		
 		// 5. Update last timestamp ( Managed in microseconds )
-		_last_timestamp_map[track_id] = (int64_t)((double)final_pkt_dts_tb * expr_tb2us);
+		_last_timestamp_us_map[track_id] = static_cast<double>(final_pkt_dts_tb) * expr_tb2us;
 
 		_last_origin_ts_map[0][track_id] = pts;
 		_last_origin_ts_map[1][track_id] = dts;
 
-		_last_duration_map[track_id] = duration;
+		auto duration_us = static_cast<double>(duration) * expr_tb2us;
+		_last_duration_us_map[track_id] = duration_us;
 
 		pts = final_pkt_pts_tb;
 		dts = final_pkt_dts_tb;
@@ -493,9 +512,9 @@ namespace pvd
 		}
 
 		int64_t base_timestamp = 0;
-		if (_base_timestamp_map.find(track_id) != _base_timestamp_map.end())
+		if (_base_timestamp_us_map.find(track_id) != _base_timestamp_us_map.end())
 		{
-			base_timestamp = _base_timestamp_map[track_id];
+			base_timestamp = _base_timestamp_us_map[track_id];
 		}
 
 		auto base_timestamp_tb = (base_timestamp * track->GetTimeBase().GetTimescale() / 1000000);
@@ -508,19 +527,19 @@ namespace pvd
 	{
 		int64_t curr_timestamp;
 
-		if (_last_timestamp_map.find(track_id) == _last_timestamp_map.end())
+		if (_last_timestamp_us_map.find(track_id) == _last_timestamp_us_map.end())
 		{
 			curr_timestamp = 0;
 		}
 		else
 		{
-			curr_timestamp = _last_timestamp_map[track_id];
+			curr_timestamp = _last_timestamp_us_map[track_id];
 		}
 
 		auto delta = GetDeltaTimestamp(track_id, timestamp, max_timestamp);
 		curr_timestamp += delta;
 
-		_last_timestamp_map[track_id] = curr_timestamp;
+		_last_timestamp_us_map[track_id] = curr_timestamp;
 
 		return curr_timestamp;
 	}
