@@ -108,29 +108,131 @@ enum class UserControlMessageId : uint16_t
 	BufferReady = 32,
 };
 
-// COMMAND NAME
-#define RTMP_CMD_NAME_CONNECT "connect"
-#define RTMP_CMD_NAME_CREATESTREAM "createStream"
-#define RTMP_CMD_NAME_RELEASESTREAM "releaseStream"
-#define RTMP_CMD_NAME_DELETESTREAM "deleteStream"
-#define RTMP_CMD_NAME_CLOSESTREAM "closeStream"
-#define RTMP_CMD_NAME_PLAY "play"
-#define RTMP_CMD_NAME_ONSTATUS "onStatus"
-#define RTMP_CMD_NAME_PUBLISH "publish"
-#define RTMP_CMD_NAME_FCPUBLISH "FCPublish"
-#define RTMP_CMD_NAME_FCUNPUBLISH "FCUnpublish"
-#define RTMP_CMD_NAME_ONFCPUBLISH "onFCPublish"
-#define RTMP_CMD_NAME_ONFCUNPUBLISH "onFCUnpublish"
-#define RTMP_CMD_NAME_CLOSE "close"
-#define RTMP_CMD_NAME_SETCHALLENGE "setChallenge"
-#define RTMP_CMD_DATA_SETDATAFRAME "@setDataFrame"
-#define RTMP_CMD_NAME_ONFI "onFI"
-#define RTMP_CMD_NAME_ONCLIENTLOGIN "onClientLogin"
-#define RTMP_CMD_DATA_ONMETADATA "onMetaData"
-#define RTMP_ACK_NAME_RESULT "_result"
-#define RTMP_ACK_NAME_ERROR "_error"
-#define RTMP_ACK_NAME_BWDONE "onBWDone"
-#define RTMP_PING "ping"
+enum class RtmpCommand : uint16_t
+{
+	Unknown,
+
+	// NetConnection Commands
+	Connect,	   // "connect"
+	Call,		   // "call"
+	Close,		   // "close"
+	CreateStream,  // "createStream"
+
+	// NetStream Commands
+	Play,		   // "play"
+	Play2,		   // "play2"
+	DeleteStream,  // "deleteStream"
+	CloseStream,   // "closeStream"
+	ReceiveAudio,  // "receiveAudio"
+	ReceiveVideo,  // "receiveVideo"
+	Publish,	   // "publish"
+	Seek,		   // "seek"
+	Pause,		   // "pause"
+
+	ReleaseStream,	// "releaseStream"
+	FCPublish,		// "FCPublish"
+	FCUnpublish,	// "FCUnpublish"
+	SetChallenge,	// "setChallenge"
+	SetDataFrame,	// "@setDataFrame"
+	Ping,			// "ping"
+
+	OnStatus,		// "onStatus"
+	OnFCPublish,	// "onFCPublish"
+	OnFCUnpublish,	// "onFCUnpublish"
+	OnFI,			// "onFI"
+	OnClientLogin,	// "onClientLogin"
+	OnMetaData,		// "onMetaData"
+	OnBWDone,		// "onBWDone"
+
+	// Response strings
+	AckResult,	// "_result"
+	AckError,	// "_error"
+};
+
+#define _DECLARE_STRING_TO_RTMP_COMMAND(enum_name, command) \
+	do                                                      \
+	{                                                       \
+		if (::strcmp(name, command) == 0)                   \
+		{                                                   \
+			return RtmpCommand::enum_name;                  \
+		}                                                   \
+	} while (false)
+
+inline constexpr RtmpCommand RtmpCommandFromString(const char *name)
+{
+	_DECLARE_STRING_TO_RTMP_COMMAND(Connect, "connect");
+	_DECLARE_STRING_TO_RTMP_COMMAND(Call, "call");
+	_DECLARE_STRING_TO_RTMP_COMMAND(Close, "close");
+	_DECLARE_STRING_TO_RTMP_COMMAND(CreateStream, "createStream");
+	_DECLARE_STRING_TO_RTMP_COMMAND(Play, "play");
+	_DECLARE_STRING_TO_RTMP_COMMAND(Play2, "play2");
+	_DECLARE_STRING_TO_RTMP_COMMAND(DeleteStream, "deleteStream");
+	_DECLARE_STRING_TO_RTMP_COMMAND(CloseStream, "closeStream");
+	_DECLARE_STRING_TO_RTMP_COMMAND(ReceiveAudio, "receiveAudio");
+	_DECLARE_STRING_TO_RTMP_COMMAND(ReceiveVideo, "receiveVideo");
+	_DECLARE_STRING_TO_RTMP_COMMAND(Publish, "publish");
+	_DECLARE_STRING_TO_RTMP_COMMAND(Seek, "seek");
+	_DECLARE_STRING_TO_RTMP_COMMAND(Pause, "pause");
+	_DECLARE_STRING_TO_RTMP_COMMAND(ReleaseStream, "releaseStream");
+	_DECLARE_STRING_TO_RTMP_COMMAND(FCPublish, "FCPublish");
+	_DECLARE_STRING_TO_RTMP_COMMAND(FCUnpublish, "FCUnpublish");
+	_DECLARE_STRING_TO_RTMP_COMMAND(SetChallenge, "setChallenge");
+	_DECLARE_STRING_TO_RTMP_COMMAND(SetDataFrame, "@setDataFrame");
+	_DECLARE_STRING_TO_RTMP_COMMAND(Ping, "ping");
+	_DECLARE_STRING_TO_RTMP_COMMAND(OnStatus, "onStatus");
+	_DECLARE_STRING_TO_RTMP_COMMAND(OnFCPublish, "onFCPublish");
+	_DECLARE_STRING_TO_RTMP_COMMAND(OnFCUnpublish, "onFCUnpublish");
+	_DECLARE_STRING_TO_RTMP_COMMAND(OnFI, "onFI");
+	_DECLARE_STRING_TO_RTMP_COMMAND(OnClientLogin, "onClientLogin");
+	_DECLARE_STRING_TO_RTMP_COMMAND(OnMetaData, "onMetaData");
+	_DECLARE_STRING_TO_RTMP_COMMAND(OnBWDone, "onBWDone");
+	_DECLARE_STRING_TO_RTMP_COMMAND(AckResult, "_result");
+	_DECLARE_STRING_TO_RTMP_COMMAND(AckError, "_error");
+
+	return RtmpCommand::Unknown;
+}
+
+#define _DECLARE_RTMP_COMMAND_TO_STRING(enum_name, command) \
+	case RtmpCommand::enum_name:                            \
+		return command
+
+inline constexpr const char *StringFromRtmpCommand(RtmpCommand command)
+{
+	switch (command)
+	{
+		_DECLARE_RTMP_COMMAND_TO_STRING(Unknown, nullptr);
+		_DECLARE_RTMP_COMMAND_TO_STRING(Connect, "connect");
+		_DECLARE_RTMP_COMMAND_TO_STRING(Call, "call");
+		_DECLARE_RTMP_COMMAND_TO_STRING(Close, "close");
+		_DECLARE_RTMP_COMMAND_TO_STRING(CreateStream, "createStream");
+		_DECLARE_RTMP_COMMAND_TO_STRING(Play, "play");
+		_DECLARE_RTMP_COMMAND_TO_STRING(Play2, "play2");
+		_DECLARE_RTMP_COMMAND_TO_STRING(DeleteStream, "deleteStream");
+		_DECLARE_RTMP_COMMAND_TO_STRING(CloseStream, "closeStream");
+		_DECLARE_RTMP_COMMAND_TO_STRING(ReceiveAudio, "receiveAudio");
+		_DECLARE_RTMP_COMMAND_TO_STRING(ReceiveVideo, "receiveVideo");
+		_DECLARE_RTMP_COMMAND_TO_STRING(Publish, "publish");
+		_DECLARE_RTMP_COMMAND_TO_STRING(Seek, "seek");
+		_DECLARE_RTMP_COMMAND_TO_STRING(Pause, "pause");
+		_DECLARE_RTMP_COMMAND_TO_STRING(ReleaseStream, "releaseStream");
+		_DECLARE_RTMP_COMMAND_TO_STRING(FCPublish, "FCPublish");
+		_DECLARE_RTMP_COMMAND_TO_STRING(FCUnpublish, "FCUnpublish");
+		_DECLARE_RTMP_COMMAND_TO_STRING(SetChallenge, "setChallenge");
+		_DECLARE_RTMP_COMMAND_TO_STRING(SetDataFrame, "@setDataFrame");
+		_DECLARE_RTMP_COMMAND_TO_STRING(Ping, "ping");
+		_DECLARE_RTMP_COMMAND_TO_STRING(OnStatus, "onStatus");
+		_DECLARE_RTMP_COMMAND_TO_STRING(OnFCPublish, "onFCPublish");
+		_DECLARE_RTMP_COMMAND_TO_STRING(OnFCUnpublish, "onFCUnpublish");
+		_DECLARE_RTMP_COMMAND_TO_STRING(OnFI, "onFI");
+		_DECLARE_RTMP_COMMAND_TO_STRING(OnClientLogin, "onClientLogin");
+		_DECLARE_RTMP_COMMAND_TO_STRING(OnMetaData, "onMetaData");
+		_DECLARE_RTMP_COMMAND_TO_STRING(OnBWDone, "onBWDone");
+		_DECLARE_RTMP_COMMAND_TO_STRING(AckResult, "_result");
+		_DECLARE_RTMP_COMMAND_TO_STRING(AckError, "_error");
+	}
+
+	return nullptr;
+}
 
 #define RTMP_DEFAULT_ACKNOWNLEDGEMENT_SIZE 2500000
 #define RTMP_DEFAULT_PEER_BANDWIDTH 2500000

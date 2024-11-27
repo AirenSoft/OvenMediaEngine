@@ -244,46 +244,42 @@ namespace pvd
 
 	bool RtmpStream::PostPublish(const AmfDocument &document)
 	{
-		if (_tc_url.IsEmpty() == false)
+		if (_tc_url.IsEmpty())
 		{
-			auto url = ov::Url::Parse(_tc_url);
-
-			if (url == nullptr)
-			{
-				logtw("Could not parse the URL: %s", _tc_url.CStr());
-				return false;
-			}
-
-			auto stream_name = document.GetProperty(3)->GetString();
-
-			if (stream_name.IsEmpty() == false)
-			{
-				url->SetStream(stream_name);
-			}
-
-			// PORT can be omitted (1935), but SignedPolicy requires this information.
-			if (url->Port() == 0)
-			{
-				url->SetPort(_remote->GetLocalAddress()->Port());
-			}
-
-			_url = url;
-			_publish_url = _url;
-			_stream_name = _url->Stream();
-			_import_chunk->SetStreamName(_stream_name);
-
-			SetRequestedUrl(_url);
-			SetFinalUrl(_url);
-
-			if (CheckAccessControl() &&
-				ValidatePublishUrl())
-			{
-				return true;
-			}
+			Stop();
+			return false;
 		}
 
-		Stop();
-		return false;
+		auto url = ov::Url::Parse(_tc_url);
+
+		if (url == nullptr)
+		{
+			logtw("Could not parse the URL: %s", _tc_url.CStr());
+			return false;
+		}
+
+		auto stream_name = document.GetProperty(3)->GetString();
+
+		if (stream_name.IsEmpty() == false)
+		{
+			url->SetStream(stream_name);
+		}
+
+		// PORT can be omitted (1935), but SignedPolicy requires this information.
+		if (url->Port() == 0)
+		{
+			url->SetPort(_remote->GetLocalAddress()->Port());
+		}
+
+		_url = url;
+		_publish_url = _url;
+		_stream_name = _url->Stream();
+		_import_chunk->SetStreamName(_stream_name);
+
+		SetRequestedUrl(_url);
+		SetFinalUrl(_url);
+
+		return CheckAccessControl() && ValidatePublishUrl();
 	}
 
 	bool RtmpStream::OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
@@ -495,20 +491,23 @@ namespace pvd
 		{
 			auto property = document.GetProperty(3, AmfTypeMarker::String);
 
-			if (property != nullptr)
+			if (property == nullptr)
 			{
-				// TODO: check if the chunk stream id is already exist, and generates new rtmp_stream_id and client_id.
-				if (SendAmfOnFCPublish(header->basic_header.chunk_stream_id, _rtmp_stream_id, _client_id) == false)
-				{
-					logte("SendAmfOnFCPublish Fail");
-					return false;
-				}
-
-				return PostPublish(document);
+				logte("OnAmfFCPublish - No stream name provided");
+				return false;
 			}
+
+			// TODO: check if the chunk stream id is already exist, and generates new rtmp_stream_id and client_id.
+			if (SendAmfOnFCPublish(header->basic_header.chunk_stream_id, _rtmp_stream_id, _client_id) == false)
+			{
+				logte("SendAmfOnFCPublish Fail");
+				return false;
+			}
+
+			return PostPublish(document);
 		}
 
-		return false;
+		return true;
 	}
 
 	bool RtmpStream::OnAmfPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
@@ -525,9 +524,9 @@ namespace pvd
 			}
 			else
 			{
-				logte("OnPublish - Publish Name None");
+				logte("OnAmfPublish - No stream name provided");
 
-				//Reject
+				// Reject
 				SendAmfOnStatus(header->basic_header.chunk_stream_id,
 								_rtmp_stream_id,
 								"error",
@@ -1189,8 +1188,8 @@ namespace pvd
 
 			if (property == nullptr)
 			{
-				logte("Message name is not available");
-				return false;
+				logtw("The message (type: %d) was ignored - the name does not exist", property->GetType());
+				return true;
 			}
 
 			message_name = property->GetString();
@@ -1207,38 +1206,38 @@ namespace pvd
 			}
 		}
 
-		if (message_name == RTMP_CMD_NAME_CONNECT)
+		switch (RtmpCommandFromString(message_name))
 		{
-			return OnAmfConnect(message->header, document, transaction_id);
+			case RtmpCommand::Connect:
+				return OnAmfConnect(message->header, document, transaction_id);
+
+			case RtmpCommand::CreateStream:
+				return OnAmfCreateStream(message->header, document, transaction_id);
+
+			case RtmpCommand::Publish:
+				return OnAmfPublish(message->header, document, transaction_id);
+
+			case RtmpCommand::FCPublish:
+				return OnAmfFCPublish(message->header, document, transaction_id);
+
+			case RtmpCommand::DeleteStream:
+				//TODO(Dimiden): Check this message, This causes the stream to be deleted twice.
+				//OnAmfDeleteStream(message->header, document, transaction_id);
+				return true;
+
+			case RtmpCommand::FCUnpublish:
+				[[fallthrough]];
+			case RtmpCommand::ReleaseStream:
+				[[fallthrough]];
+			case RtmpCommand::Ping:
+				return true;
+
+			default:
+				break;
 		}
-		else if (message_name == RTMP_CMD_NAME_CREATESTREAM)
-		{
-			OnAmfCreateStream(message->header, document, transaction_id);
-		}
-		else if (message_name == RTMP_CMD_NAME_FCPUBLISH)
-		{
-			OnAmfFCPublish(message->header, document, transaction_id);
-		}
-		else if (message_name == RTMP_CMD_NAME_PUBLISH)
-		{
-			OnAmfPublish(message->header, document, transaction_id);
-		}
-		else if (message_name == RTMP_CMD_NAME_RELEASESTREAM)
-		{
-		}
-		else if (message_name == RTMP_PING)
-		{
-		}
-		else if (message_name == RTMP_CMD_NAME_DELETESTREAM)
-		{
-			//TODO(Dimiden): Check this message, This causes the stream to be deleted twice.
-			//OnAmfDeleteStream(message->header, document, transaction_id);
-		}
-		else
-		{
-			logtd("Unknown Amf0CommandMessage - Message(%s:%.1f)", message_name.CStr(), transaction_id);
-			return false;
-		}
+
+		// Commands not handled by OME are not treated as errors but simply ignored
+		logtw("Unknown Amf0CommandMessage - Message(%s:%.1f)", message_name.CStr(), transaction_id);
 
 		return true;
 	}
@@ -1278,31 +1277,34 @@ namespace pvd
 		auto third_property = document.GetProperty(2);
 		auto third_type = (third_property != nullptr) ? third_property->GetType() : AmfTypeMarker::Undefined;
 
-		if (
-			(message_name == RTMP_CMD_DATA_SETDATAFRAME) &&
-			(data_name == RTMP_CMD_DATA_ONMETADATA) &&
-			(third_type == AmfTypeMarker::Object || third_type == AmfTypeMarker::EcmaArray))
+		switch (RtmpCommandFromString(message_name))
 		{
-			OnAmfMetaData(message->header, third_property);
-		}
-		else if (
-			(message_name == RTMP_CMD_DATA_ONMETADATA) &&
-			(data_name_type == AmfTypeMarker::Object || data_name_type == AmfTypeMarker::EcmaArray))
-		{
-			OnAmfMetaData(message->header, data_name_property);
-		}
-		else if (message_name == RTMP_CMD_NAME_ONFI)
-		{
-			// Not support yet
-		}
-		else
-		{
-			// Find it in Events
-			if (CheckEventMessage(message->header, document) == false)
-			{
-				logtw("Unknown Amf0DataMessage - Message(%s / %s)", message_name.CStr(), data_name.CStr());
-				return;
-			}
+			case RtmpCommand::SetDataFrame:
+				if ((::strcmp(data_name, StringFromRtmpCommand(RtmpCommand::OnMetaData)) == 0) &&
+					((third_type == AmfTypeMarker::Object) || (third_type == AmfTypeMarker::EcmaArray)))
+				{
+					OnAmfMetaData(message->header, third_property);
+				}
+				break;
+
+			case RtmpCommand::OnMetaData:
+				if ((data_name_type == AmfTypeMarker::Object) || (data_name_type == AmfTypeMarker::EcmaArray))
+				{
+					OnAmfMetaData(message->header, data_name_property);
+				}
+				break;
+
+			case RtmpCommand::OnFI:
+				// Not support yet
+				break;
+
+			default:
+				// Find it in Events
+				if (CheckEventMessage(message->header, document) == false)
+				{
+					logtw("Unknown Amf0DataMessage - Message(%s / %s)", message_name.CStr(), data_name.CStr());
+				}
+				break;
 		}
 	}
 
@@ -2185,7 +2187,7 @@ namespace pvd
 		AmfDocument document;
 
 		// _result
-		document.AppendProperty(RTMP_ACK_NAME_RESULT);
+		document.AppendProperty(StringFromRtmpCommand(RtmpCommand::AckResult));
 		document.AppendProperty(transaction_id);
 
 		// properties
@@ -2223,7 +2225,7 @@ namespace pvd
 
 		AmfDocument document;
 
-		document.AppendProperty(RTMP_CMD_NAME_ONFCPUBLISH);
+		document.AppendProperty(StringFromRtmpCommand(RtmpCommand::OnFCPublish));
 		document.AppendProperty(0.0);
 		document.AppendProperty(AmfProperty::NullProperty());
 
@@ -2248,7 +2250,7 @@ namespace pvd
 		// 스트림ID 정하기
 		_rtmp_stream_id = 1;
 
-		document.AppendProperty(RTMP_ACK_NAME_RESULT);
+		document.AppendProperty(StringFromRtmpCommand(RtmpCommand::AckResult));
 		document.AppendProperty(transaction_id);
 		document.AppendProperty(AmfProperty::NullProperty());
 		document.AppendProperty(static_cast<double>(_rtmp_stream_id));
@@ -2266,7 +2268,7 @@ namespace pvd
 		auto message_header = RtmpMuxMessageHeader::Create(chunk_stream_id, RtmpMessageTypeID::Amf0Command, stream_id);
 		AmfDocument document;
 
-		document.AppendProperty(RTMP_CMD_NAME_ONSTATUS);
+		document.AppendProperty(StringFromRtmpCommand(RtmpCommand::OnStatus));
 		document.AppendProperty(0.0);
 		document.AppendProperty(AmfProperty::NullProperty());
 
