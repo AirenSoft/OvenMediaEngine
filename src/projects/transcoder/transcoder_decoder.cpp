@@ -32,7 +32,7 @@
 std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeDecoder::GetCandidates(bool hwaccels_enable, ov::String hwaccles_modules, std::shared_ptr<MediaTrack> track)
 {
 	logtd("Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s)",
-		  GetCodecIdToString(track->GetCodecId()).CStr(), hwaccels_enable ? "true" : "falase", hwaccles_modules.CStr());
+		  GetCodecIdToString(track->GetCodecId()).CStr(), hwaccels_enable ? "true" : "false", hwaccles_modules.CStr());
 
 	ov::String configuration = "";
 	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidate_modules = std::make_shared<std::vector<std::shared_ptr<CodecCandidate>>>();
