@@ -76,6 +76,7 @@ MediaRouteStream::~MediaRouteStream()
 
 	_stat_recv_pkt_lpts.clear();
 	_stat_recv_pkt_ldts.clear();
+	_stat_recv_pkt_adur.clear();
 
 	_pts_last.clear();
 }
@@ -978,7 +979,13 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 	_stat_recv_pkt_lpts[track_id] = media_packet->GetPts();
 	_stat_recv_pkt_ldts[track_id] = media_packet->GetDts();
 
-	if (_stop_watch.IsElapsed(30000) && _stop_watch.Update())
+	// The packet from the provider has no duration. Do not add it to the total duration.
+	if(media_packet->GetDuration() != -1)
+	{
+		_stat_recv_pkt_adur[track_id] += media_packet->GetDuration();
+	}
+
+	if (_stop_watch.IsElapsed(5000) && _stop_watch.Update())
 	{
 		// Uptime
 		int64_t uptime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - _stat_start_time).count();
@@ -990,25 +997,28 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 
 		for (const auto &[track_id, track] : _stream->GetTracks())
 		{
-			int64_t rescaled_last_pts = (int64_t)((double)(_stat_recv_pkt_lpts[track_id] * 1000) * track->GetTimeBase().GetExpr());
-			
-			// Time difference in pts values relative to uptime
-			int64_t last_delay = uptime - rescaled_last_pts;
+			int64_t scaled_last_pts = (int64_t)((double)(_stat_recv_pkt_lpts[track_id] * 1000) * track->GetTimeBase().GetExpr());
+			int64_t scaled_acc_duration = (int64_t)((double)(_stat_recv_pkt_adur[track_id] * 1000) * track->GetTimeBase().GetExpr());
 
-			stat_track_str.AppendFormat("\n\ttrack:%11u, type: %5s, codec: %4s(%d,%s), pts: %lldms, dly: %5lldms, tb: %d/%5d, pkt_cnt: %6lld, pkt_siz: %sB, bps: %s/%s",
+			auto codec_name = ov::String::FormatString("%s(%s)",
+													   ::StringFromMediaCodecId(track->GetCodecId()).CStr(),
+													   track->IsBypass() ? "PT" : GetStringFromCodecModuleId(track->GetCodecModuleId()).CStr());
+
+			auto timebase = ov::String::FormatString("%d/%d", track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen());
+
+			stat_track_str.AppendFormat("\n - track:%11u, type: %5s, codec: %14s, pts: %10lldms, dur: %10lld(%lld)ms, tb: %7s, pkt_cnt: %6lld, pkt_siz: %7sB, bps: %7s/%7s",
 										track_id,
 										GetMediaTypeString(track->GetMediaType()).CStr(),
-										::StringFromMediaCodecId(track->GetCodecId()).CStr(),
-										track->GetCodecId(),
-										track->IsBypass() ? "Passthrough" : GetStringFromCodecModuleId(track->GetCodecModuleId()).CStr(),
-										rescaled_last_pts,
-										last_delay,
-										track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(),
+										codec_name.CStr(),
+										scaled_last_pts,
+										scaled_acc_duration,
+										(scaled_acc_duration>0)?scaled_last_pts - scaled_acc_duration:0,
+										timebase.CStr(),
 										track->GetTotalFrameCount(),
 										ov::Converter::ToSiString(track->GetTotalFrameBytes(), 1).CStr(),
 										ov::Converter::BitToString(track->GetBitrateByMeasured()).CStr(), ov::Converter::BitToString(track->GetBitrateByConfig()).CStr());
 
-			if(track->GetMediaType() == MediaType::Data)
+			if (track->GetMediaType() == MediaType::Data)
 			{
 				continue;
 			}
@@ -1026,21 +1036,21 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			// calc min/max pts
 			if (min_pts == -1LL)
 			{
-				min_pts = rescaled_last_pts;
+				min_pts = scaled_last_pts;
 			}
 
 			if (max_pts == -1LL)
 			{
-				max_pts = rescaled_last_pts;
+				max_pts = scaled_last_pts;
 			}
 
-			min_pts = std::min(min_pts, rescaled_last_pts);
-			max_pts = std::max(max_pts, rescaled_last_pts);										
+			min_pts = std::min(min_pts, scaled_last_pts);
+			max_pts = std::max(max_pts, scaled_last_pts);
 		}
 
 		ov::String stat_stream_str = "";
 
-		stat_stream_str.AppendFormat("\n - Stream | id: %u, type: %s, name: %s/%s, uptime: %lldms, queue: %d, sync: %lldms",
+		stat_stream_str.AppendFormat("Stream. id: %10u, type: %s, name: %s/%s, uptime: %lldms, queue: %d, sync: %lldms",
 									 _stream->GetId(),
 									 _inout_type == MediaRouterStreamType::INBOUND ? "Inbound" : "Outbound",
 									 _stream->GetApplicationInfo().GetVHostAppName().CStr(),
@@ -1225,6 +1235,11 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 
 		int64_t duration = media_packet->GetDts() - pop_media_packet->GetDts();
 		pop_media_packet->SetDuration(duration);
+
+		// if(pop_media_packet->GetMediaType() == cmn::MediaType::Audio)
+		// {
+		// 	logtd("%s", pop_media_packet->GetInfoString().CStr());
+		// }
 
 		_media_packet_stash[media_packet->GetTrackId()] = std::move(media_packet);
 	}
