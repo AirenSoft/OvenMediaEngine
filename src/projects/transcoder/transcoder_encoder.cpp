@@ -280,7 +280,7 @@ done:
 		encoder->SetEncoderId(encoder_id);
 		encoder->SetCompleteHandler(complete_handler);
 
-		logti("The encoder has been created successfully. track(#%d), codec(%s), module(%s:%d)",
+		logti("The encoder has been created. track(#%d), codec(%s), module(%s:%d)",
 			track->GetId(),
 			cmn::GetCodecIdToString(track->GetCodecId()).CStr(),
 			cmn::GetStringFromCodecModuleId(track->GetCodecModuleId()).CStr(),
@@ -493,7 +493,7 @@ void TranscodeEncoder::CodecThread()
 
 				if(GetRefTrack()->GetMediaType() == cmn::MediaType::Audio)
 				{
-					// TODO : If the pts value are under zero, the dash packetizer does not work.
+					// If the pts value are under zero, the dash packetizer does not work.
 					if (media_packet->GetPts() < 0)
 					{
 						continue;

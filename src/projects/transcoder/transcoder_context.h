@@ -136,6 +136,10 @@ public:
 	void SetNbSamples(int32_t nb_samples)
 	{
 		_nb_samples = nb_samples;
+
+		if(_priv_data) {
+			_priv_data->nb_samples = nb_samples;
+		}
 	}
 
 	cmn::AudioChannel &GetChannels()
@@ -250,6 +254,9 @@ public:
 		info.AppendFormat("Type(%s) ", cmn::GetMediaTypeString(GetMediaType()).CStr());
 		info.AppendFormat("PTS(%" PRId64 ") ", GetPts());
 		info.AppendFormat("Duration(%" PRId64 ") ", GetDuration());
+		if(_priv_data != nullptr) {
+			info.AppendFormat("NbSamples(%d) ", GetNbSamples());
+		}
 
 		return info;
 	}

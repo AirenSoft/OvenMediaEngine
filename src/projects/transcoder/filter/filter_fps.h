@@ -22,9 +22,12 @@ public:
 
 	void SetInputTimebase(cmn::Timebase timebase);
 	void SetInputFrameRate(double framerate);
+	double GetInputFrameRate() const;
 	void SetOutputFrameRate(double framerate);
-	double GetOutputFrameRate();
+	double GetOutputFrameRate() const;
+
 	void SetSkipFrames(int32_t skip_frames);
+	int32_t GetSkipFrames() const;
 	void SetMaximumDupulicateFrames(int32_t max_dupulicate_frames);
 	bool Push(std::shared_ptr<MediaFrame> media_frame);
 	std::shared_ptr<MediaFrame> Pop();
@@ -58,4 +61,7 @@ private:
 	int64_t stat_skip_frame_count = 0;
 	int64_t stat_duplicate_frame_count = 0;
 	int64_t stat_discard_frame_count = 0;
+
+	int64_t _last_input_pts = AV_NOPTS_VALUE;
+	int64_t _last_input_scaled_pts = AV_NOPTS_VALUE;
 };

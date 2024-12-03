@@ -244,7 +244,7 @@ done:
 		decoder->SetDecoderId(decoder_id);
 		decoder->SetCompleteHandler(complete_handler);
 
-		logti("The decoder has been created successfully. track(#%d) codec(%s), module(%s:%d)",
+		logti("The decoder has been created. track(#%d) codec(%s), module(%s:%d)",
 			  track->GetId(),
 			  cmn::GetCodecIdToString(track->GetCodecId()).CStr(),
 			  cmn::GetStringFromCodecModuleId(track->GetCodecModuleId()).CStr(),
