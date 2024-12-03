@@ -47,8 +47,8 @@ public:
 	double GetProperFramerate(const std::shared_ptr<MediaTrack> &ref_track);
 	static double MeasurementToRecommendFramerate(double framerate);
 
-	void UpdateOutputTrackPassthrough(const std::shared_ptr<MediaTrack> &output_track, MediaFrame *buffer);
-	void UpdateOutputTrackTranscode(const std::shared_ptr<MediaTrack> &output_track, const std::shared_ptr<MediaTrack> &input_track, MediaFrame *buffer);
+	void UpdateOutputTrackPassthrough(const std::shared_ptr<MediaTrack> &output_track, std::shared_ptr<MediaFrame> buffer);
+	void UpdateOutputTrackTranscode(const std::shared_ptr<MediaTrack> &output_track, const std::shared_ptr<MediaTrack> &input_track, std::shared_ptr<MediaFrame> buffer);
 
 
 	// This is used to check if only keyframes can be decoded.

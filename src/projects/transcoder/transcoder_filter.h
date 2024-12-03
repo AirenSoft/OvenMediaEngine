@@ -23,15 +23,25 @@ class TranscodeFilter
 public:
 	typedef std::function<void(int32_t, std::shared_ptr<MediaFrame>)> CompleteHandler;
 
-public:
-	TranscodeFilter();
-	~TranscodeFilter();
-
-	bool Configure(
+	static std::shared_ptr<TranscodeFilter> Create(
 		int32_t filter_id,
 		const std::shared_ptr<info::Stream> &input_stream_info, std::shared_ptr<MediaTrack> input_track,
 		const std::shared_ptr<info::Stream> &output_stream_info, std::shared_ptr<MediaTrack> output_track,
 		CompleteHandler complete_handler);
+
+	static std::shared_ptr<TranscodeFilter> Create(
+		int32_t filter_id,
+		const std::shared_ptr<info::Stream> &output_tsream_info, std::shared_ptr<MediaTrack> output_track,
+		CompleteHandler complete_handler);
+
+public:
+	TranscodeFilter();
+	~TranscodeFilter();
+	
+	bool Configure(
+		int32_t filter_id,
+		const std::shared_ptr<info::Stream> &input_stream_info, std::shared_ptr<MediaTrack> input_track,
+		const std::shared_ptr<info::Stream> &output_stream_info, std::shared_ptr<MediaTrack> output_track);
 	bool SendBuffer(std::shared_ptr<MediaFrame> buffer);
 	void Stop(); 
 
@@ -44,7 +54,7 @@ public:
 	void OnComplete(std::shared_ptr<MediaFrame> frame);
 
 private:
-	bool Create();
+	bool CreateInternal();
 	bool IsNeedUpdate(std::shared_ptr<MediaFrame> buffer);
 
 	int32_t _id;

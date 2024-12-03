@@ -18,24 +18,51 @@ TranscodeFilter::~TranscodeFilter()
 {
 }
 
+std::shared_ptr<TranscodeFilter> TranscodeFilter::Create(int32_t id,
+														 const std::shared_ptr<info::Stream>& input_stream_info, std::shared_ptr<MediaTrack> input_track,
+														 const std::shared_ptr<info::Stream>& output_stream_info, std::shared_ptr<MediaTrack> output_track,
+														 CompleteHandler complete_handler)
+{
+	auto filter = std::make_shared<TranscodeFilter>();
+	if (filter->Configure(id, input_stream_info, input_track, output_stream_info, output_track) == false)
+	{
+		return nullptr;
+	}
+	filter->SetCompleteHandler(complete_handler);
+	return filter;
+}
+
+std::shared_ptr<TranscodeFilter> TranscodeFilter::Create(int32_t id,
+														 const std::shared_ptr<info::Stream>& output_stream_info, std::shared_ptr<MediaTrack> output_track,
+														 CompleteHandler complete_handler)
+{
+	auto filter = std::make_shared<TranscodeFilter>();
+	if (filter->Configure(id, output_stream_info, output_track, output_stream_info, output_track) == false)
+	{
+		return nullptr;
+	}
+	filter->SetCompleteHandler(complete_handler);
+	return filter;
+}
+
 bool TranscodeFilter::Configure(int32_t id,
 								const std::shared_ptr<info::Stream>& input_stream_info, std::shared_ptr<MediaTrack> input_track,
-								const std::shared_ptr<info::Stream>& output_stream_info, std::shared_ptr<MediaTrack> output_track,
-								CompleteHandler complete_handler)
+								const std::shared_ptr<info::Stream>& output_stream_info, std::shared_ptr<MediaTrack> output_track)
 {
 	_id = id;
 	_input_stream_info = input_stream_info;
 	_input_track = input_track;
+
+	[[maybe_unused]]
 	_output_stream_info = output_stream_info;
 	_output_track = output_track;
-	_complete_handler = complete_handler;
-
+	
 	_timestamp_jump_threshold = (int64_t)_input_track->GetTimeBase().GetTimescale() * PTS_INCREMENT_LIMIT;
 
-	return Create();
+	return CreateInternal();
 }
 
-bool TranscodeFilter::Create()
+bool TranscodeFilter::CreateInternal()
 {
 	std::lock_guard<std::shared_mutex> lock(_mutex);
 
@@ -90,7 +117,7 @@ bool TranscodeFilter::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 {
 	if (IsNeedUpdate(buffer) == true)
 	{
-		if (Create() == false)
+		if (CreateInternal() == false)
 		{
 			logte("Failed to regenerate filter");
 			return false;

@@ -63,6 +63,13 @@ public:
 		return _src_height;
 	}
 
+	// 	If the input track and output track are the same, the filter is used for a single track.
+	// The main goal of this filter is to handle frame drops.
+	bool IsSingleTrack() const
+	{
+		return (_input_track == _output_track)? true : false;
+	}
+
 	void SetCompleteHandler(CompleteHandler complete_handler) {
 		_complete_handler = complete_handler;
 	}
