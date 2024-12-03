@@ -275,8 +275,11 @@ void TranscoderStream::RemoveDecoders()
 	for (auto &it : _decoders)
 	{
 		auto object = it.second;
-		object->Stop();
-		object.reset();
+		if (object != nullptr)
+		{
+			object->Stop();
+			object.reset();
+		}
 	}
 	_decoders.clear();
 }
@@ -288,8 +291,11 @@ void TranscoderStream::RemoveFilters()
 	for (auto &it : _filters)
 	{
 		auto object = it.second;
-		object->Stop();
-		object.reset();
+		if (object != nullptr)
+		{
+			object->Stop();
+			object.reset();
+		}
 	}
 	_filters.clear();
 }
@@ -302,10 +308,17 @@ void TranscoderStream::RemoveEncoders()
 		auto filter = encoder_pair.first;
 		auto encoder = encoder_pair.second;
 		
-		filter->Stop();
-		filter.reset();
-		encoder->Stop();
-		encoder.reset();
+		if(filter != nullptr)
+		{
+			filter->Stop();
+			filter.reset();
+		}
+
+		if(encoder != nullptr)
+		{
+			encoder->Stop();
+			encoder.reset();
+		}
 	}
 	_encoders.clear();
 }
@@ -1520,7 +1533,7 @@ TranscodeResult TranscoderStream::PreEncodeFilterFrame(std::shared_ptr<MediaFram
 	}
 
 	encoder->SendBuffer(std::move(frame));
-	
+
 	return TranscodeResult::DataReady;
 }
 
