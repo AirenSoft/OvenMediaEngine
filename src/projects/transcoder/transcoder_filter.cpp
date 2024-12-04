@@ -137,6 +137,12 @@ bool TranscodeFilter::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 
 bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 {
+	// Single track(paired with encoder) does not need to be updated.
+	if(_internal->IsSingleTrack() == true)
+	{
+		return false;
+	}
+	
 	// In case of pts/dts jumps
 	int64_t last_timestamp = _last_timestamp;
 	int64_t curr_timestamp = buffer->GetPts();
@@ -166,8 +172,10 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 			buffer->GetHeight() != (int32_t)_internal->GetInputHeight())
 		{
 			logti("Changed input resolution of %u track. (%dx%d -> %dx%d)", _input_track->GetId(), _internal->GetInputWidth(), _internal->GetInputHeight(), buffer->GetWidth(), buffer->GetHeight());
+
 			_input_track->SetWidth(buffer->GetWidth());
 			_input_track->SetHeight(buffer->GetHeight());
+
 			return true;
 		}
 	}
@@ -179,6 +187,7 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 		_output_track->GetCodecModuleId() == cmn::MediaCodecModuleId::XMA)
 	{
 		logtw("It is assumed that the XMA resource allocation failed. So, recreate the filter.");
+
 		return true;
 	}
 
