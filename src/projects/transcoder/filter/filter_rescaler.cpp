@@ -409,6 +409,8 @@ void FilterRescaler::Stop()
 	if (_thread_work.joinable())
 	{
 		_thread_work.join();
+		
+		logtd("filter rescaler thread has ended");
 	}
 
 	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);

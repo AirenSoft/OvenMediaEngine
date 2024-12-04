@@ -97,7 +97,7 @@ bool FilterFps::Push(std::shared_ptr<MediaFrame> media_frame)
 
 	if ((scaled_pts - _last_input_scaled_pts) != 1 && _last_input_scaled_pts != AV_NOPTS_VALUE)
 	{
-		logtd("PTS is not continuous. lastPts(%lld/%lld) -> currPts(%lld/%lld)", _last_input_scaled_pts, _last_input_pts, scaled_pts, media_frame->GetPts());
+		// logtd("PTS is not continuous. lastPts(%lld/%lld) -> currPts(%lld/%lld)", _last_input_scaled_pts, _last_input_pts, scaled_pts, media_frame->GetPts());
 	}
 
 	_last_input_pts = media_frame->GetPts();

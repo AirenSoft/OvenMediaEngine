@@ -225,7 +225,7 @@ void FilterResampler::Stop()
 	{
 		_thread_work.join();
 
-		logtd("resampler filter thread has ended");
+		logtd("filter resampler thread has ended");
 	}
 
 	SetState(State::STOPPED);
