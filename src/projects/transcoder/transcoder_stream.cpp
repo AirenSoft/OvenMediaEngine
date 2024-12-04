@@ -1230,12 +1230,13 @@ void TranscoderStream::UpdateOutputTrack(std::shared_ptr<MediaFrame> buffer)
 
 void TranscoderStream::DecodePacket(const std::shared_ptr<MediaPacket> &packet)
 {
-	MediaTrackId input_track_id = packet->GetTrackId();
+	if(_input_stream->GetMsid() != packet->GetMsid())
+	{
+		// logtd("%s Invalid MediaStreamId. InputStream(%u), Packet(%u)", _log_prefix.CStr(), _input_stream->GetMsid(), packet->GetMsid());
+		return;
+	}
 
-	// if(input_track_id == 1)
-	// {
-	// 	logtd("%s DecodePacket.(%u) %s", _log_prefix.CStr(), input_track_id, packet->GetInfoString().CStr());
-	// }
+	MediaTrackId input_track_id = packet->GetTrackId();
 
 	// 1. Packet to Output Stream (bypass)
 	auto output_streams = _link_input_to_outputs.find(input_track_id);
