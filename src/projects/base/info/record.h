@@ -156,6 +156,8 @@ namespace info
 		ov::String _id;
 
 		// by config
+		// False - This is a recording task requested via the REST API, and it will remain active until a STOP command is issued through the REST API.
+		// True - This is a recording task requested via the configuration file, and it will remain active until the configuration is changed.
 		bool _is_config;
 		
 		// It is used as additional information for recording session. It's not essential information.

@@ -293,7 +293,8 @@ namespace pub
 		record->SetTransactionId(ov::Random::GenerateString(16));
 		record->SetEnable(true);
 		record->SetRemove(false);
-		record->SetByConfig(false);
+		// @see AppActionsController::OnPostStartRecord, FileApplication::GetRecordInfoFromFile
+		// record->SetByConfig(false);
 		record->SetSessionId(0);
 		record->SetFilePathSetByUser((record->GetFilePath().IsEmpty() != true) ? true : false);
 		record->SetInfoPathSetByUser((record->GetInfoPath().IsEmpty() != true) ? true : false);
@@ -432,6 +433,8 @@ namespace pub
 
 			record->SetId(ov::Random::GenerateString(16));
 			record->SetEnable(enable);
+			// Recording tasks created by the configuration are one-time tasks 
+			// and will be automatically deleted when the stream ends.
 			record->SetByConfig(true);
 			record->SetVhost(GetVHostAppName().GetVHostName());
 			record->SetApplication(GetVHostAppName().GetAppName());

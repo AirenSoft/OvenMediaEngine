@@ -148,6 +148,10 @@ namespace api
 				record->SetApplication(app->GetVHostAppName().GetAppName());
 			}
 
+			// This is a recording task requested via the REST API, 
+			// and it will remain active until a STOP command is issued through the REST API.
+			record->SetByConfig(false);
+			
 			auto error = application->RecordStart(record);
 			if (error->GetCode() == pub::FilePublisher::FilePublisherStatusCode::FailureInvalidParameter)
 			{
