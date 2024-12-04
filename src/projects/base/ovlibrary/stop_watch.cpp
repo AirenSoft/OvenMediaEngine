@@ -102,8 +102,9 @@ namespace ov
 		if (_is_valid)
 		{
 			auto current = std::chrono::high_resolution_clock::now();
+			auto elapsed = current - _last - _paused_duration;
 
-			return std::chrono::duration_cast<std::chrono::microseconds>(current - _last).count();
+			return std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
 		}
 
 		return -1LL;
