@@ -1050,13 +1050,14 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 
 		ov::String stat_stream_str = "";
 
-		stat_stream_str.AppendFormat("Stream. id: %10u, type: %s, name: %s/%s, uptime: %lldms, queue: %d, sync: %lldms",
+		stat_stream_str.AppendFormat("Stream. id: %10u, type: %s, name: %s/%s, uptime: %lldms, queue: %d, msid: %u, sync: %lldms",
 									 _stream->GetId(),
 									 _inout_type == MediaRouterStreamType::INBOUND ? "Inbound" : "Outbound",
 									 _stream->GetApplicationInfo().GetVHostAppName().CStr(),
 									 _stream->GetName().CStr(),
 									 (int64_t)uptime,
 									 _packets_queue.Size(),
+									 _stream->GetMsid(),
 									 max_pts - min_pts);
 
 		stat_track_str = stat_stream_str + stat_track_str;
