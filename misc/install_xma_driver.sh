@@ -59,6 +59,9 @@ install_xma_props_to_json_xrm()
 
 install_videosdk_ubuntu()
 {
+    # Adding Xilinx public key
+    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys FD3DD2C355D2B701
+
     # Fixed xilinx driver installation not working properly on Ubuntu 20.04.
     if [ "${OSVERSION}" == "20" ]; then
         sudo apt -y install software-properties-common
