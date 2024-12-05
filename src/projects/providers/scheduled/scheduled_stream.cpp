@@ -957,7 +957,8 @@ namespace pvd
 
             //TODO(Getroot): need to calc duration?
             AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max());
-
+			
+			media_packet->SetMsid(GetMsid());
             media_packet->SetPts(pts);
             media_packet->SetDts(dts);
 			media_packet->SetDuration(-1); // It will be calculated in MediaRouter
