@@ -64,7 +64,7 @@ private:
 
     bool _is_destroy_requested = false;
 
-    bool _is_started = true;
+    bool _is_started = false;
 
 	bool _need_past_data = false;
 

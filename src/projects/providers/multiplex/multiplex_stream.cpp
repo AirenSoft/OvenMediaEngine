@@ -198,6 +198,7 @@ namespace pvd
                     _pulling_state_msg = ov::String::FormatString("Multiplex Channel : %s/%s: Wait for stream %s", GetApplicationName(), GetName().CStr(), stream_url->Stream().CStr());
                     logti("%s", _pulling_state_msg.CStr());
 
+					ReleaseSourceStreams();
                     return false;
                 }
 
@@ -207,6 +208,8 @@ namespace pvd
                 {
                     _pulling_state_msg = ov::String::FormatString("Multiplex Channel : %s/%s: Failed to mirror stream %s (err : %d)", GetApplicationName(), GetName().CStr(), source_stream->GetUrlStr().CStr(), static_cast<int>(result));
                     logte("%s", _pulling_state_msg.CStr());
+
+					ReleaseSourceStreams();
                     return false;
                 }
             }
