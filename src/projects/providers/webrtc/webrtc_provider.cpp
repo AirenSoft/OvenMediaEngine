@@ -247,11 +247,12 @@ namespace pvd
 		if (_whip_server != nullptr)
 		{
 			auto webrtc_cfg = application_info.GetConfig().GetProviders().GetWebrtcProvider();
-			auto cross_domains = webrtc_cfg.GetCrossDomainList();
-			if (cross_domains.empty())
+			bool is_parsed;
+			auto cross_domains = webrtc_cfg.GetCrossDomains(&is_parsed);
+			if (is_parsed == false)
 			{
 				// There is no CORS setting in the WebRTC Provider in the already deployed Server.xml. In this case, provide * to avoid confusion.
-				cross_domains.push_back("*");
+				cross_domains.AllowAll();
 			}
 			_whip_server->SetCors(application_info.GetVHostAppName(), cross_domains);
 		}

@@ -32,7 +32,7 @@ namespace api
 	bool Server::SetupCORS(const cfg::mgr::api::API &api_config)
 	{
 		bool is_cors_parsed;
-		auto cross_domains = api_config.GetCrossDomainList(&is_cors_parsed);
+		auto cross_domains = api_config.GetCrossDomains(&is_cors_parsed);
 
 		if (is_cors_parsed)
 		{

@@ -14,10 +14,12 @@
 
 namespace http
 {
-	void CorsManager::SetCrossDomains(const info::VHostAppName &vhost_app_name, const std::vector<ov::String> &url_list)
+	void CorsManager::SetCrossDomains(const info::VHostAppName &vhost_app_name, const cfg::cmn::CrossDomains &cross_domain_cfg)
 	{
 		std::lock_guard lock_guard(_cors_mutex);
 
+		auto url_list = cross_domain_cfg.GetUrls();
+		_cors_cfg_map[vhost_app_name] = cross_domain_cfg;
 		auto &cors_policy = _cors_policy_map[vhost_app_name];
 		auto &cors_regex_list = _cors_item_list_map[vhost_app_name];
 		ov::String cors_rtmp;
@@ -147,11 +149,14 @@ namespace http
 		ov::String origin_header = request->GetHeader("ORIGIN");
 		ov::String cors_header = "";
 
+		std::unordered_map<info::VHostAppName, cfg::cmn::CrossDomains>::const_iterator cors_cfg_iterator;
+
 		{
 			std::lock_guard lock_guard(_cors_mutex);
 
 			auto cors_policy_iterator = _cors_policy_map.find(vhost_app_name);
 			auto cors_regex_list_iterator = _cors_item_list_map.find(vhost_app_name);
+			cors_cfg_iterator = _cors_cfg_map.find(vhost_app_name);
 
 			if (
 				(cors_policy_iterator == _cors_policy_map.end()) ||
@@ -210,20 +215,74 @@ namespace http
 		response->SetHeader("Access-Control-Allow-Origin", cors_header);
 		response->SetHeader("Vary", "Origin");
 
-		std::vector<ov::String> method_list;
-
-		for (const auto &method : allowed_methods)
+		if (cors_cfg_iterator == _cors_cfg_map.end())
 		{
-			method_list.push_back(http::StringFromMethod(method));
+			// This happens in the following situations:
+			//
+			// 1) Request to an application that doesn't exist
+			// 2) Request while the application is being created
+			return false;
 		}
 
-		response->SetHeader("Access-Control-Allow-Credentials", "true");
+		auto &cors_cfg = _cors_cfg_map.at(vhost_app_name);
 
-		if (method_list.empty() == false)
+		// Access-Control-Allow-Credentials
+		auto custom_header_opt = cors_cfg.GetCustomHeader("Access-Control-Allow-Credentials");
+		if (custom_header_opt.has_value())
 		{
-			response->SetHeader("Access-Control-Allow-Methods", ov::String::Join(method_list, ", "));
+			response->SetHeader(std::get<0>(custom_header_opt.value()), std::get<1>(custom_header_opt.value()));
 		}
-		response->SetHeader("Access-Control-Allow-Headers", "*");
+		else
+		{
+			response->SetHeader("Access-Control-Allow-Credentials", "true");
+		}
+
+		// Access-Control-Allow-Methods
+		custom_header_opt = cors_cfg.GetCustomHeader("Access-Control-Allow-Methods");
+		if (custom_header_opt.has_value())
+		{
+			response->SetHeader(std::get<0>(custom_header_opt.value()), std::get<1>(custom_header_opt.value()));
+		}
+		else 
+		{
+			std::vector<ov::String> method_list;
+			for (const auto &method : allowed_methods)
+			{
+				method_list.push_back(http::StringFromMethod(method));
+			}
+
+			if (method_list.empty() == false)
+			{
+				response->SetHeader("Access-Control-Allow-Methods", ov::String::Join(method_list, ", "));
+			}
+		}
+
+		// Access-Control-Allow-Headers
+		custom_header_opt = cors_cfg.GetCustomHeader("Access-Control-Allow-Headers");
+		if (custom_header_opt.has_value())
+		{
+			response->SetHeader(std::get<0>(custom_header_opt.value()), std::get<1>(custom_header_opt.value()));
+		}
+		else
+		{
+			response->SetHeader("Access-Control-Allow-Headers", "*");
+		}
+
+		// Remaining custom headers
+		auto custom_headers = cors_cfg.GetCustomHeaders();
+		for (const auto &item : custom_headers)
+		{
+			auto key = item.GetKey();
+			if (key.LowerCaseString() == "access-control-allow-origin" ||
+				key.LowerCaseString() == "access-control-allow-credentials" ||
+				key.LowerCaseString() == "access-control-allow-methods" ||
+				key.LowerCaseString() == "access-control-allow-headers")
+			{
+				continue;
+			}
+
+			response->SetHeader(key, item.GetValue());
+		}
 
 		return true;
 	}

@@ -52,7 +52,7 @@ namespace ocst
 
 		// CORS
 		bool is_cors_parsed;
-		auto cross_domains = _host_info.GetCrossDomainList(&is_cors_parsed);
+		auto cross_domains = _host_info.GetCrossDomains(&is_cors_parsed);
 
 		if (is_cors_parsed)
 		{

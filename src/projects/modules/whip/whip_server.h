@@ -30,8 +30,7 @@ public:
 	bool InsertCertificate(const std::shared_ptr<const info::Certificate> &certificate);
 	bool RemoveCertificate(const std::shared_ptr<const info::Certificate> &certificate);
 
-	void SetCors(const info::VHostAppName &vhost_app_name, const std::vector<ov::String> &url_list);
-	void EraseCors(const info::VHostAppName &vhost_app_name);
+	void SetCors(const info::VHostAppName &vhost_app_name, const cfg::cmn::CrossDomains &cross_domain_cfg);
 
 protected:
 	struct TurnIP

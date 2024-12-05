@@ -23,7 +23,7 @@ HlsApplication::HlsApplication(const std::shared_ptr<pub::Publisher> &publisher,
 {
 	auto ts_config = application_info.GetConfig().GetPublishers().GetHlsPublisher();
 	bool is_parsed;
-	const auto &cross_domains = ts_config.GetCrossDomainList(&is_parsed);
+	const auto &cross_domains = ts_config.GetCrossDomains(&is_parsed);
 
 	if (is_parsed)
 	{
@@ -31,7 +31,7 @@ HlsApplication::HlsApplication(const std::shared_ptr<pub::Publisher> &publisher,
 	}
 	else
 	{
-		const auto &default_cross_domains = application_info.GetHostInfo().GetCrossDomainList(&is_parsed);
+		const auto &default_cross_domains = application_info.GetHostInfo().GetCrossDomains(&is_parsed);
 		if (is_parsed)
 		{
 			_cors_manager.SetCrossDomains(application_info.GetVHostAppName(), default_cross_domains);

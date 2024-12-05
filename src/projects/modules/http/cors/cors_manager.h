@@ -12,6 +12,7 @@
 #include <base/ovlibrary/ovlibrary.h>
 
 #include "../server/http_server.h"
+#include "config/items/common/cross_domains.h"
 
 namespace http
 {
@@ -28,7 +29,7 @@ namespace http
 		// Empty url_list means 'Do not set any CORS header'
 		//
 		// NOTE - SetCrossDomains() isn't thread-safe.
-		void SetCrossDomains(const info::VHostAppName &vhost_app_name, const std::vector<ov::String> &url_list);
+		void SetCrossDomains(const info::VHostAppName &vhost_app_name, const cfg::cmn::CrossDomains &cross_domain_cfg);
 
 		bool SetupRtmpCorsXml(const std::shared_ptr<http::svr::HttpResponse> &response) const;
 
@@ -83,6 +84,8 @@ namespace http
 		// CORS for HTTP
 		// key: VHostAppName, value: regex
 		std::unordered_map<info::VHostAppName, std::vector<CorsItem>> _cors_item_list_map;
+
+		std::unordered_map<info::VHostAppName, cfg::cmn::CrossDomains> _cors_cfg_map;
 
 		// CORS for RTMP
 		//

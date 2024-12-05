@@ -261,14 +261,9 @@ bool WhipServer::RemoveCertificate(const std::shared_ptr<const info::Certificate
 	return true;
 }
 
-void WhipServer::SetCors(const info::VHostAppName &vhost_app_name, const std::vector<ov::String> &url_list)
+void WhipServer::SetCors(const info::VHostAppName &vhost_app_name, const cfg::cmn::CrossDomains &cross_domain_cfg)
 {
-	_cors_manager.SetCrossDomains(vhost_app_name, url_list);
-}
-
-void WhipServer::EraseCors(const info::VHostAppName &vhost_app_name)
-{
-	_cors_manager.SetCrossDomains(vhost_app_name, {});
+	_cors_manager.SetCrossDomains(vhost_app_name, cross_domain_cfg);
 }
 
 ov::String WhipServer::GetIceServerLinkValue(const ov::String &URL, const ov::String &username, const ov::String &credential)

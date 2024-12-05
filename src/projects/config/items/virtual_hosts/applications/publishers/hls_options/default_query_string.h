@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "default_query_string_item.h"
+#include "../../../../common/option.h"
 
 namespace cfg
 {
@@ -21,7 +21,7 @@ namespace cfg
 				struct DefaultQueryString : public Item
 				{
 				protected:
-					std::vector<DefaultQueryStringItem> _items;
+					std::vector<cmn::Option> _items;
 					std::map<ov::String, ov::String> _item_map;
 
 				public:
