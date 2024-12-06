@@ -77,7 +77,7 @@ install_videosdk_ubuntu()
     # Official repository
     sudo echo deb [trusted=yes] https://packages.xilinx.com/artifactory/debian-packages ${CODE_NAME} main > /etc/apt/sources.list.d/xilinx.list
     # Mirror repository
-    sudo echo deb [trusted=yes] http://xilinx-mirror.movm.pro/artifactory/debian-packages ${CODE_NAME} main > /etc/apt/sources.list.d/xilinx-mirror.list
+    # sudo echo deb [trusted=yes] http://xilinx-repo-mirror.ovenmediaengine.com/artifactory/debian-packages ${CODE_NAME} main > /etc/apt/sources.list.d/xilinx-mirror.list
 
     # Remove older versions of the Xilinx Video SDK
     sudo apt-get -y remove xvbm xilinx-u30-xvbm xrmu30decoder xrmu30scaler xrmu30encoder xmpsoccodecs xmultiscaler xlookahead xmaapps xmapropstojson xffmpeg launcher jobslotreservation xcdr
