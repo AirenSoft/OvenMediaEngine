@@ -309,29 +309,17 @@
 					<!-- Application type (live/vod) -->
 					<Type>live</Type>
 					<OutputProfiles>
-					<!-- Common setting for decoders. Decodes is optional. -->
+						<!-- Common setting for decoders. Decodes is optional. -->
 						<Decodes>
-						<!-- 
-						By default, OME decodes all video frames. 
-						With OnlyKeyframes, only keyframes are decoded,
-						massively improving performance.
-						Thumbnails are generated only on keyframes,
-						they may not generate at your requested fps!
-						-->
-							<OnlyKeyframes>true</OnlyKeyframes>
-						</Decodes>
-						<!-- 
-						Common setting for decoders. Decodes is optional.
-
-						<Decodes>
-							Number of threads for the decoder.
+							<!-- Number of threads for the decoder. -->
 							<ThreadCount>2</ThreadCount>
-
-							To reduce resource usage, only keyframes are decoded.
-							It is only activated when image encoding and video bypass are enabled.
+							<!-- 
+							By default, OME decodes all video frames. 
+							With OnlyKeyframes, only keyframes are decoded, massively improving performance.
+							Thumbnails are generated only on keyframes, they may not generate at your requested fps!
+							-->
 							<OnlyKeyframes>false</OnlyKeyframes>
 						</Decodes>
-						-->
 
 						<!-- Enable this configuration if you want to hardware acceleration using GPU -->
 						<HWAccels>
@@ -437,7 +425,7 @@
 									<Codec>h264</Codec>
 									<Bitrate>5024000</Bitrate>
 									<Width>1920</Width>
-									<Height>1280</Height>
+									<Height>1080</Height>
 									<Framerate>30</Framerate>
 									<KeyFrameInterval>30</KeyFrameInterval>
 									<BFrames>0</BFrames>
