@@ -55,7 +55,7 @@ namespace cfg
 		protected:
 			void MakeList() override
 			{
-				Register<Optional>("Url", &_url_list);
+				Register<Optional>({"Url", "urls"}, &_url_list);
 				Register<Optional>({"Header", "headers"}, &_custom_headers, nullptr,
 							[=]() -> std::shared_ptr<ConfigError> {
 								for (auto &item : _custom_headers)
