@@ -173,6 +173,12 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(
 		output_track->SetSkipFramesByConfig(profile.GetSkipFrames());
 	}
 
+	profile.GetLookahead(&is_parsed);
+	if (is_parsed == true)
+	{
+		output_track->SetLookaheadByConfig(profile.GetLookahead());
+	}
+
 	output_track->SetMediaType(cmn::MediaType::Video);
 	output_track->SetId(NewTrackId());
 	output_track->SetVariantName(profile.GetName());

@@ -22,7 +22,8 @@ VideoTrack::VideoTrack()
 	  _has_bframe(false),
 	  _preset(""),
 	  _thread_count(0),
-	  _skip_frames_conf(-1) // Default value is -1
+	  _skip_frames_conf(-1), // Default value is -1
+	  _lookahead_conf(-1)
 {
 }
 
@@ -269,4 +270,14 @@ bool VideoTrack::IsKeyframeDecodeOnly() const
 void VideoTrack::SetKeyframeDecodeOnly(bool keyframe_decode_only)
 {
 	_keyframe_decode_only = keyframe_decode_only;
+}
+
+void VideoTrack::SetLookaheadByConfig(int32_t lookahead)
+{
+	_lookahead_conf = lookahead;
+}
+
+int32_t VideoTrack::GetLookaheadByConfig() const
+{
+	return _lookahead_conf;
 }

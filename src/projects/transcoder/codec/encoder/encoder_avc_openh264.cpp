@@ -48,6 +48,12 @@ bool EncoderAVCxOpenH264::SetCodecParams()
 	//  'Warning:bEnableFrameSkip = 0,bitrate can't be controlled for RC_QUALITY_MODE,RC_BITRATE_MODE and RC_TIMESTAMP_MODE without enabling skip frame'
 	::av_opt_set(_codec_context->priv_data, "allow_skip_frames", "false", 0);
 
+	// Lookahead
+	if (GetRefTrack()->GetLookaheadByConfig() >= 0)
+	{
+		logtw("Lookahead is not supported in OpenH264.");
+	}
+
 	// Profile
 	auto profile = GetRefTrack()->GetProfile();
 	if (profile.IsEmpty() == true)

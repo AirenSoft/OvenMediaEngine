@@ -38,6 +38,7 @@ namespace cfg
 					int _b_frames = 0;
 					BypassIfMatch _bypass_if_match;
 					ov::String _profile;
+					int _lookahead = -1;
 
 					// SkipFrames 
 					// If the set value is greater than or equal to 0, the skip frame is automatically calculated. 
@@ -64,6 +65,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBypassIfMatch, _bypass_if_match)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetProfile, _profile)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetSkipFrames, _skip_frames)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetLookahead, _lookahead)
 
 					void SetName(const ov::String &name){_name = name;}
 					void SetBypass(bool bypass){_bypass = bypass;}
@@ -77,6 +79,7 @@ namespace cfg
 					void SetThreadCount(int thread_count){_thread_count = thread_count;}
 					void SetKeyFrameInterval(int key_frame_interval){_key_frame_interval = key_frame_interval;}
 					void SetBFrames(int b_frames){_b_frames = b_frames;}
+					void SetLookahead(int lookahead){_lookahead = lookahead;}
 
 				protected:
 					void MakeList() override
@@ -166,6 +169,7 @@ namespace cfg
 							}
 							return CreateConfigErrorPtr("Profile must be baseline, main or high");
 						});
+						Register<Optional>("Lookahead", &_lookahead);
 
 					}
 				};

@@ -43,6 +43,12 @@ bool EncoderAVCxQSV::SetCodecParams()
 	// Bframes
 	_codec_context->max_b_frames = GetRefTrack()->GetBFrames();
 
+	// Lookahead
+	if (GetRefTrack()->GetLookaheadByConfig() >= 0)
+	{
+		logtw("Lookahead is not supported in QSV.");
+	}
+
 	// Profile
 	auto profile = GetRefTrack()->GetProfile();
 	if (profile.IsEmpty() == true)

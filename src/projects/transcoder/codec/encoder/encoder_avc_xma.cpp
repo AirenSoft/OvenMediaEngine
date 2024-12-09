@@ -45,6 +45,13 @@ bool EncoderAVCxXMA::SetCodecParams()
 	// Bframes
 	::av_opt_set_int(_codec_context->priv_data, "bf", GetRefTrack()->GetBFrames(), 0);
 
+	// Lookahead (1 ~ 30)
+	if (GetRefTrack()->GetLookaheadByConfig() >= 0)
+	{
+		av_opt_set_int(_codec_context->priv_data, "lookahead_depth", GetRefTrack()->GetLookaheadByConfig(), 0);
+		// ::av_opt_set(_codec_context->priv_data, "expert-options", "lookahead-rc-off=0", 0);
+	}
+
 	// Profile
 	auto profile = GetRefTrack()->GetProfile();
 	if (profile == "baseline" || profile.IsEmpty() == true)

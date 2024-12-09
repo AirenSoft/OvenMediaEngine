@@ -32,6 +32,12 @@ bool DecoderAVCxQSV::InitCodec()
 
 	::av_opt_set(_context->priv_data, "gpu_copy", "on", 0);
 
+	// Lookahead
+	if (GetRefTrack()->GetLookaheadByConfig() >= 0)
+	{
+		logtw("Lookahead is not supported in QSV.");
+	}
+
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());

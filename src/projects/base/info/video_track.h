@@ -94,6 +94,9 @@ public:
 	bool IsKeyframeDecodeOnly() const;
 	void SetKeyframeDecodeOnly(bool keyframe_decode_only);
 
+	void SetLookaheadByConfig(int32_t lookahead);
+	int32_t GetLookaheadByConfig() const;
+	
 protected:
 
 	// framerate (measurement)
@@ -156,4 +159,8 @@ protected:
 	// @decoder
 	// Keyframe Decode Only (set by user)
 	bool _keyframe_decode_only = false;
+
+	// @encoder
+	// Lookahead (set by user)
+	int32_t _lookahead_conf = -1;
 };

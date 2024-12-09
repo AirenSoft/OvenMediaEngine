@@ -54,6 +54,12 @@ bool EncoderAVCx264::SetCodecParams()
 	// >1 => Set
 	_codec_context->thread_count = GetRefTrack()->GetThreadCount() < 0 ? FFMIN(FFMAX(4, av_cpu_count() / 3), 8) : GetRefTrack()->GetThreadCount();
 
+	// Lookahead
+	if (GetRefTrack()->GetLookaheadByConfig() >= 0)
+	{
+		av_opt_set_int(_codec_context->priv_data, "rc-lookahead", GetRefTrack()->GetLookaheadByConfig(), 0);
+	}
+
 	// Profile
 	auto profile = GetRefTrack()->GetProfile();
 	if (profile.IsEmpty() == true)

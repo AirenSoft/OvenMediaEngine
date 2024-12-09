@@ -40,6 +40,12 @@ bool EncoderHEVCxNV::SetCodecParams()
 		_codec_context->gop_size = (GetRefTrack()->GetKeyFrameInterval() == 0) ? (_codec_context->framerate.num / _codec_context->framerate.den) : GetRefTrack()->GetKeyFrameInterval();
 	}
 
+	// Lookahead
+	if (GetRefTrack()->GetLookaheadByConfig() >= 0)
+	{
+		av_opt_set_int(_codec_context->priv_data, "rc-lookahead", GetRefTrack()->GetLookaheadByConfig(), 0);
+	}
+
 	// Preset
 	if (GetRefTrack()->GetPreset() == "slower")
 	{
