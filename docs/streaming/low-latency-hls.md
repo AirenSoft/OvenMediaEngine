@@ -72,27 +72,7 @@ See the [Adaptive Bitrates Streaming](../transcoding/#adaptive-bitrates-streamin
 
 ## CrossDomain
 
-Most browsers and players prohibit accessing other domain resources in the currently running domain. You can control this situation through Cross-Origin Resource Sharing (CORS) or Cross-Domain (CrossDomain). You can set CORS and Cross-Domain as `<CrossDomains>` element.
-
-{% code title="Server.xml" %}
-```markup
-<CrossDomains>
-    <Url>*</Url>
-    <Url>*.airensoft.com</Url>
-    <Url>http://*.ovenplayer.com</Url>
-    <Url>https://demo.ovenplayer.com</Url>
-</CrossDomains>
-```
-{% endcode %}
-
-You can set it using the `<Url>` element as shown above, and you can use the following values:
-
-| Url Value      | Description                                                   |
-| -------------- | ------------------------------------------------------------- |
-| \*             | Allows requests from all Domains                              |
-| domain         | Allows both HTTP and HTTPS requests from the specified Domain |
-| http://domain  | Allows HTTP requests from the specified Domain                |
-| https://domain | Allows HTTPS requests from the specified Domain               |
+For information on CrossDomains, see [CrossDomains ](../crossdomains.md)chapter.
 
 ## Streaming
 

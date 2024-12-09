@@ -68,6 +68,10 @@ Declaring a thumbnail publisher. Cross-domain settings are available as a detail
 
 When the setting is made for the thumbnail and the stream is input, you can view the thumbnail through the following URL.
 
-| Method | URL Pattern                                                                             |
-| ------ | --------------------------------------------------------------------------------------- |
-| GET    | http(s)://\<ome\_host_>:\<port>/\<app\_name>/\<output\_stream\_name>/thumb.\<jpg\|png>_ |
+| Method | URL Pattern                                                                                  |
+| ------ | -------------------------------------------------------------------------------------------- |
+| GET    | http(s)://\<ome\_hos&#x74;_>:\<port>/\<app\_name>/\<output\_stream\_name>/thumb.\<jpg\|png>_ |
+
+## CrossDomains
+
+For information on CrossDomains, see [CrossDomains ](crossdomains.md)chapter.
