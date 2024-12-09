@@ -188,7 +188,7 @@ bool FilterRescaler::InitializeFilterDescription()
 					desc = ov::String::FormatString("hwupload_cuda=device=%d,", output_device_id);
 				}
 			}
-			desc += ov::String::FormatString("scale_npp=%d:%d", _output_track->GetWidth(), _output_track->GetHeight());
+			desc += ov::String::FormatString("scale_cuda=%d:%d", _output_track->GetWidth(), _output_track->GetHeight());
 		}
 		else if (output_module_id == cmn::MediaCodecModuleId::XMA)
 		{
