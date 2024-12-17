@@ -23,17 +23,36 @@ namespace ov
 		// <scheme>://<host>[:<port>][/<path/to/resource>][?<query string>]
 		static std::shared_ptr<Url> Parse(const ov::String &url);
 
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetSource, Source, _source, , , return UpdateUrl(true))
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetScheme, Scheme, _scheme, , , return UpdateUrl(false))
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetHost, Host, _host, , , return UpdateUrl(false))
-		OV_DEFINE_SETTER_CONST_GETTER(uint32_t, bool, SetPort, Port, _port, , , return UpdateUrl(false))
-		OV_DEFINE_CONST_GETTER(ov::String, Path, _path, )
-		bool SetPath(const ov::String &path);
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetApp, App, _app, , , return UpdateUrl(false))
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetStream, Stream, _stream, , , return UpdateUrl(false))
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetFile, File, _file, , , return UpdateUrl(false))
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetId, Id, _id, , , return UpdateUrl(false))
-		OV_DEFINE_SETTER_CONST_GETTER(ov::String, bool, SetPassword, Password, _password, , , return UpdateUrl(false))
+		// Getters and Setters (Setters are NOT THREAD-SAFE)
+		OV_DEFINE_CONST_GETTER(Source, _source)
+		bool SetSource(const ov::String &value);
+
+		OV_DEFINE_CONST_GETTER(Scheme, _scheme)
+		bool SetScheme(const ov::String &value);
+
+		OV_DEFINE_CONST_GETTER(Host, _host)
+		bool SetHost(const ov::String &value);
+
+		OV_DEFINE_CONST_GETTER(Port, _port)
+		bool SetPort(uint32_t port);
+
+		OV_DEFINE_CONST_GETTER(Path, _path)
+		bool SetPath(const ov::String &value);
+
+		OV_DEFINE_CONST_GETTER(App, _app)
+		bool SetApp(const ov::String &value);
+
+		OV_DEFINE_CONST_GETTER(Stream, _stream)
+		bool SetStream(const ov::String &value);
+
+		OV_DEFINE_CONST_GETTER(File, _file)
+		bool SetFile(const ov::String &value);
+
+		OV_DEFINE_CONST_GETTER(Id, _id)
+		bool SetId(const ov::String &value);
+
+		OV_DEFINE_CONST_GETTER(Password, _password)
+		bool SetPassword(const ov::String &value);
 
 		bool HasQueryString() const;
 		const ov::String &Query() const;
@@ -42,6 +61,7 @@ namespace ov
 		const std::map<ov::String, ov::String> &QueryMap() const;
 		bool PushBackQueryKey(const ov::String &key, const ov::String &value);
 		bool PushBackQueryKey(const ov::String &key);
+		bool AppendQueryString(const ov::String &query_string);
 		bool RemoveQueryKey(const ov::String &key);
 
 		void Print() const;
@@ -57,19 +77,29 @@ namespace ov
 
 	protected:
 		bool ParseFromSource();
-		bool UpdateUrl(bool is_source_updated);
+		// Since _path is in the form of /app/stream/file, the index of `app` should be 1
+		const ov::String &SetPathComponent(size_t index, const ov::String &value);
+		bool UpdateSource();
+		// Update _path from _path_components
+		bool UpdatePathFromComponents();
+		// Update _path_components/_app/_stream/_file from _path
+		bool UpdatePathComponentsFromPath();
 
 	private:
 		void ParseQueryIfNeeded() const;
 
+	private:
 		// Full URL
 		ov::String _source;
+
 		ov::String _scheme;
 		ov::String _id;
 		ov::String _password;
 		ov::String _host;
 		uint32_t _port = 0;
 		ov::String _path;
+		// Path tokens (separated by '/')
+		std::vector<ov::String> _path_components;
 		ov::String _query_string;
 		bool _has_query_string = false;
 		// To reduce the cost of parsing the query map, parsing the query only when Query() or QueryMap() is called
@@ -77,7 +107,7 @@ namespace ov
 		mutable std::mutex _query_map_mutex;
 		mutable std::map<ov::String, ov::String> _query_map;
 
-		// Valid for URLs of the form: <scheme>://<domain>[:<port>]/<app>/<stream>[<file>][?<query string>]
+		// Valid for URLs of the form: <scheme>://<domain>[:<port>]/<app>/<stream>[<file>[/<remaining>]][?<query string>]
 		ov::String _app;
 		ov::String _stream;
 		ov::String _file;
