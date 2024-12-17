@@ -259,6 +259,12 @@ namespace pvd
 		}
 
 		auto stream_name = document.GetProperty(3)->GetString();
+		auto query_position = stream_name.IndexOf('?');
+		if (query_position >= 0)
+		{
+			url->AppendQueryString(stream_name.Substring(query_position));
+			stream_name = stream_name.Substring(0, query_position);
+		}
 
 		if (stream_name.IsEmpty() == false)
 		{
