@@ -168,9 +168,18 @@ namespace pvd
 			}
 		}
 
-		std::unique_lock<std::shared_mutex> streams_lock(_streams_guard);
-		_streams[stream->GetId()] = stream;
-		streams_lock.unlock();
+		{
+			std::lock_guard<std::shared_mutex> streams_lock(_streams_guard);
+
+			// check if stream is already exist one more time
+			if (_streams.find(stream->GetId()) != _streams.end())
+			{
+				logtw("Stream is already exist : %s/%s(%u)", stream->GetApplicationInfo().GetVHostAppName().CStr(), stream->GetName().CStr(), stream->GetId());
+				return false;
+			}
+
+			_streams[stream->GetId()] = stream;
+		}
 
 		NotifyStreamCreated(stream);
 		
