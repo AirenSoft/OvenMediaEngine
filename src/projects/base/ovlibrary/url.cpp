@@ -120,14 +120,13 @@ namespace ov
 
 	bool Url::SetPath(const ov::String &path)
 	{
-		_path = path;
 
 		_file = "";
 		_stream = "";
 		_app = "";
 
 		// split <path> to /<app>/<stream>/<file> (4 tokens)
-		auto tokens = _path.Split("/");
+		auto tokens = path.Split("/");
 
 		switch (tokens.size())
 		{
@@ -180,7 +179,11 @@ namespace ov
 		_password = group_list["password"].GetValue();
 		_host = group_list["host"].GetValue();
 		_port = ov::Converter::ToUInt32(group_list["port"].GetValue());
-		SetPath(group_list["path"].GetValue());
+		if (_scheme.CStr() == "rtmp" || _scheme.CStr() == "rtmps") {
+			SetPath(group_list["path"].GetValue());
+		} else {
+			_path = group_list["path"].GetValue();
+		}
 		_query_string = group_list["qs"].GetValue();
 		_has_query_string = (_query_string.IsEmpty() == false);
 		_query_parsed = false;
@@ -287,24 +290,25 @@ namespace ov
 
 		_source = ToUrlString();
 
-		_path = "";
+		if (_scheme.CStr() == "rtmp" || _scheme.CStr() == "rtmps") {
+			_path = "";
+			if (_app.IsEmpty() == false)
+			{
+				_path.Append("/");
+				_path.Append(_app);
+			}
 
-		if (_app.IsEmpty() == false)
-		{
-			_path.Append("/");
-			_path.Append(_app);
-		}
+			if (_stream.IsEmpty() == false)
+			{
+				_path.Append("/");
+				_path.Append(_stream);
+			}
 
-		if (_stream.IsEmpty() == false)
-		{
-			_path.Append("/");
-			_path.Append(_stream);
-		}
-
-		if (_file.IsEmpty() == false)
-		{
-			_path.Append("/");
-			_path.Append(_file);
+			if (_file.IsEmpty() == false)
+			{
+				_path.Append("/");
+				_path.Append(_file);
+			}
 		}
 
 		return true;
