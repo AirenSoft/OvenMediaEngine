@@ -60,7 +60,7 @@ X-OME-Signature: f871jd991jj1929jsjd91pqa0amm1
     "status": "opening | closing",
     "url": "scheme://host[:port]/app/stream/file?query=value&query2=value2",
     "new_url": "scheme://host[:port]/app/new_stream/file?query=value&query2=value2",
-    "time": ""2021-05-12T13:45:00.000Z"
+    "time": "2021-05-12T13:45:00.000Z"
   }
 }
 ```
