@@ -2,8 +2,6 @@
 
 OvenMediaEngine has a built-in live transcoder. The live transcoder can decode the incoming live source and re-encode it with the set codec or adjust the quality to encode at multiple bitrates.
 
-
-
 ## Supported Video, Audio and Image Codecs
 
 ### Decoders
@@ -12,9 +10,7 @@ OvenMediaEngine has a built-in live transcoder. The live transcoder can decode t
 
 ### Encoders
 
-<table><thead><tr><th width="149">Type</th><th width="177.33333333333331">Codec</th><th>Codec of Configuration</th></tr></thead><tbody><tr><td>Video</td><td>VP8</td><td>vp8</td></tr><tr><td></td><td>H.264</td><td>h264  <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td>x264</td><td>h264_x264</td></tr><tr><td></td><td>OpenH264</td><td>h264_openh264</td></tr><tr><td></td><td>NVIDIA Hardware</td><td>h264_nvenc</td></tr><tr><td></td><td>Intel Hardware</td><td>h264_qsv</td></tr><tr><td></td><td>Xilinx Hardware</td><td>h264_xma</td></tr><tr><td></td><td>NetInt Hardware</td><td>h264_nilogan</td></tr><tr><td></td><td>H.265</td><td>h265 <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td>NVIDIA Hardware</td><td>h265_nvenc</td></tr><tr><td></td><td>Intel Hardware</td><td>h265_qsv</td></tr><tr><td></td><td>Xilinx Hardware</td><td>h265_xma</td></tr><tr><td></td><td>NetInt Hardware</td><td>h265_nilogan</td></tr><tr><td>Audio</td><td>AAC</td><td>aac</td></tr><tr><td></td><td>Opus</td><td>opus</td></tr><tr><td>Image</td><td>JPEG</td><td>jpeg</td></tr><tr><td></td><td>PNG</td><td>png</td></tr></tbody></table>
-
-
+<table><thead><tr><th width="149">Type</th><th width="177.33333333333331">Codec</th><th>Codec of Configuration</th></tr></thead><tbody><tr><td>Video</td><td>VP8</td><td>vp8</td></tr><tr><td></td><td>H.264</td><td>h264 <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td>x264</td><td>h264_x264</td></tr><tr><td></td><td>OpenH264</td><td>h264_openh264</td></tr><tr><td></td><td>NVIDIA Hardware</td><td>h264_nvenc</td></tr><tr><td></td><td>Intel Hardware</td><td>h264_qsv</td></tr><tr><td></td><td>Xilinx Hardware</td><td>h264_xma</td></tr><tr><td></td><td>NetInt Hardware</td><td>h264_nilogan</td></tr><tr><td></td><td>H.265</td><td>h265 <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td>NVIDIA Hardware</td><td>h265_nvenc</td></tr><tr><td></td><td>Intel Hardware</td><td>h265_qsv</td></tr><tr><td></td><td>Xilinx Hardware</td><td>h265_xma</td></tr><tr><td></td><td>NetInt Hardware</td><td>h265_nilogan</td></tr><tr><td>Audio</td><td>AAC</td><td>aac</td></tr><tr><td></td><td>Opus</td><td>opus</td></tr><tr><td>Image</td><td>JPEG</td><td>jpeg</td></tr><tr><td></td><td>PNG</td><td>png</td></tr></tbody></table>
 
 ## OutputProfiles
 
@@ -88,11 +84,9 @@ You can set the video profile as below:
 
 The meaning of each property is as follows:
 
-<table><thead><tr><th width="238">Property</th><th>Description</th></tr></thead><tbody><tr><td>Codec<mark style="color:red;">*</mark></td><td>Specifies the <code>vp8</code> or <code>h264</code> codec to use</td></tr><tr><td>Bitrate<mark style="color:red;">*</mark></td><td>Bit per second</td></tr><tr><td>Name</td><td>Encode name for Renditions</td></tr><tr><td>Width</td><td>Width of resolution</td></tr><tr><td>Height</td><td>Height of resolution</td></tr><tr><td>Framerate</td><td>Frames per second</td></tr><tr><td>KeyFrameInterval</td><td>Number of frames between two keyframes (0~600)<br><mark style="color:blue;">default is framerate (i.e. 1 second)</mark></td></tr><tr><td>BFrames</td><td>Number of B-frame (0~16)<br><mark style="color:blue;">default is 0</mark></td></tr><tr><td>Profile</td><td>H264 only encoding profile (baseline, main, high)</td></tr><tr><td>Preset</td><td>Presets of encoding quality and performance</td></tr><tr><td>ThreadCount</td><td>Number of threads in encoding</td></tr></tbody></table>
+<table><thead><tr><th width="238">Property</th><th>Description</th></tr></thead><tbody><tr><td>Codec<mark style="color:red;">*</mark></td><td>Specifies the <code>vp8</code> or <code>h264</code> codec to use</td></tr><tr><td>Bitrate<mark style="color:red;">*</mark></td><td>Bit per second</td></tr><tr><td>Name<mark style="color:red;">*</mark></td><td>Encode name for Renditions</td></tr><tr><td>Width</td><td>Width of resolution</td></tr><tr><td>Height</td><td>Height of resolution</td></tr><tr><td>Framerate</td><td>Frames per second</td></tr><tr><td>KeyFrameInterval</td><td>Number of frames between two keyframes (0~600)<br><mark style="color:blue;">default is framerate (i.e. 1 second)</mark></td></tr><tr><td>BFrames</td><td>Number of B-frames (0~16)<br><mark style="color:blue;">default is 0</mark></td></tr><tr><td>Profile</td><td>H264 only encoding profile (baseline, main, high)</td></tr><tr><td>Preset</td><td>Presets of encoding quality and performance</td></tr><tr><td>ThreadCount</td><td>Number of threads in encoding</td></tr><tr><td>Lookahead</td><td><p>Number of frames to look ahead <br><mark style="color:blue;">default is 0</mark><br><mark style="color:blue;">x264 is 0-250</mark></p><p><mark style="color:blue;">nvenc is 0-31</mark><br><mark style="color:blue;">xma is 0-20</mark></p></td></tr></tbody></table>
 
-&#x20;<mark style="color:red;">\*</mark> required
-
-
+<mark style="color:red;">\*</mark> required
 
 **Table of presets**
 
@@ -131,9 +125,7 @@ The meaning of each property is as follows:
 | Samplerate                                | Samples per second                         |
 | Channel                                   | The number of audio channels               |
 
-&#x20;<mark style="color:red;">\*</mark> required
-
-
+<mark style="color:red;">\*</mark> required
 
 It is possible to have an audio only output profile by specifying the Audio profile and omitting a Video one.
 
@@ -206,15 +198,13 @@ If the codec or quality of the input stream is the same as the profile to be enc
 
 <table><thead><tr><th width="206">Elements</th><th width="166">Condition</th><th>Description</th></tr></thead><tbody><tr><td>Codec <em><mark style="color:blue;">(Optional)</mark></em></td><td>eq</td><td>Compare video codecs</td></tr><tr><td>Width <em><mark style="color:blue;">(Optional)</mark></em></td><td>eq, lte, gte</td><td>Compare horizontal pixel of video resolution</td></tr><tr><td>Height <em><mark style="color:blue;">(Optional)</mark></em></td><td>eq, lte, gte</td><td>Compare vertical pixel of video resolution</td></tr><tr><td>SAR <em><mark style="color:blue;">(Optional)</mark></em></td><td>eq</td><td>Compare ratio of video resolution</td></tr></tbody></table>
 
-&#x20;  \* **eq**: equal to / **lte**: less than or equal to / **gte**: greater than or equal to
+\* **eq**: equal to / **lte**: less than or equal to / **gte**: greater than or equal to
 
 #### Matching elements in audio
 
 <table><thead><tr><th width="214">Elements</th><th width="162">Condition</th><th>Description</th></tr></thead><tbody><tr><td>Codec <em><mark style="color:blue;">(Optional)</mark></em></td><td>eq</td><td>Compare audio codecs</td></tr><tr><td>Samplerate <em><mark style="color:blue;">(Optional)</mark></em></td><td>eq, lte, gte</td><td>Compare sampling rate of audio</td></tr><tr><td>Channel <em><mark style="color:blue;">(Optional)</mark></em></td><td>eq, lte, gte</td><td>Compare number of channels in audio</td></tr></tbody></table>
 
-&#x20;  \* **eq**: equal to / **lte**: less than or equal to / **gte**: greater than or equal to
-
-
+\* **eq**: equal to / **lte**: less than or equal to / **gte**: greater than or equal to
 
 To support WebRTC and LLHLS, AAC and Opus codecs must be supported at the same time. Use the settings below to reduce unnecessary audio encoding.
 
@@ -250,9 +240,7 @@ To support WebRTC and LLHLS, AAC and Opus codecs must be supported at the same t
 </Encodes>
 ```
 
-
-
-If a video track with a lower quality than the encoding option is input, unnecessary upscaling can be prevented.   **SAR (Storage Aspect Ratio)** is the ratio of original pixels. In the example below, even if the width and height of the original video are smaller than or equal to the width and height set in the encoding option, if the ratio is different, it means that encoding is performed without bypassing.
+If a video track with a lower quality than the encoding option is input, unnecessary upscaling can be prevented. **SAR (Storage Aspect Ratio)** is the ratio of original pixels. In the example below, even if the width and height of the original video are smaller than or equal to the width and height set in the encoding option, if the ratio is different, it means that encoding is performed without bypassing.
 
 ```xml
 <Encodes>
@@ -295,7 +283,7 @@ If you want to transcode with the same quality as the original. See the sample b
 </Encodes>
 ```
 
-### Rescaling with Keep the Aspect Ratio&#x20;
+### Rescaling with Keep the Aspect Ratio
 
 To change the video resolution when transcoding, use the values of width and height in the Video encode option. If you don't know the resolution of the original, it will be difficult to keep the aspect ratio after transcoding. Please use the following methods to solve these problems. For example, if you input only the **Width** value in the Video encoding option, the **Height** value is automatically generated according to the ratio of the original video.
 
@@ -342,9 +330,9 @@ The software decoder uses 2 threads by default. If the CPU speed is too low for 
 
 For use cases without video (re)encoding, OME can be set to only decode the keyframes of incoming streams. This is a massive performance increase when all you are using the encoder for is generating thumbnails.
 
-To set OME to only decode keyframes, all of your encoder Output Profiles must be set to **<Bypass>true</Bypass>** set **<OnlyKeyframes>true</OnlyKeyframes>**. 
+To set OME to only decode keyframes, all of your encoder Output Profiles must be set to **true** set **true**.
 
-Supported since OvenmediaEngine version 0.18.0 
+Supported since OvenmediaEngine version 0.18.0
 
 ```xml
 <OutputProfiles>
