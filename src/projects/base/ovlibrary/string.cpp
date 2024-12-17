@@ -724,6 +724,28 @@ namespace ov
 		return string;
 	}
 
+	String String::Join(const std::vector<String> &list, char separator)
+	{
+		String string;
+		bool is_first = true;
+
+		for (auto const &item : list)
+		{
+			if (is_first == false)
+			{
+				string.Append(separator);
+			}
+			else
+			{
+				is_first = false;
+			}
+
+			string.Append(item.CStr());
+		}
+
+		return string;
+	}
+
 	bool String::HasPrefix(String prefix) const
 	{
 		return (Left(prefix.GetLength()) == prefix);
