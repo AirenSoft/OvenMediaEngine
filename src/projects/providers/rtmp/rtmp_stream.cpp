@@ -1282,7 +1282,6 @@ namespace pvd
 		auto third_property = document.GetProperty(2);
 		auto third_type = (third_property != nullptr) ? third_property->GetType() : AmfTypeMarker::Undefined;
 
-		logtw("RtmpCommand : %s", message_name.CStr());
 		switch (RtmpCommandFromString(message_name))
 		{
 			case RtmpCommand::SetDataFrame:
