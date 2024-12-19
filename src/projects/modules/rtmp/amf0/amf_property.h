@@ -105,7 +105,7 @@ protected:
 
 protected:
 	double _number = 0.0;
-	bool _boolean = true;
+	bool _boolean = false;
 	ov::String _string;
 	AmfObject *_object = nullptr;
 	AmfEcmaArray *_ecma_array = nullptr;

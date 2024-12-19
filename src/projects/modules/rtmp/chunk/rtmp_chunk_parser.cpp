@@ -8,7 +8,7 @@
 //==============================================================================
 #include "rtmp_chunk_parser.h"
 
-#include "../rtmp_provider_private.h"
+#include "../rtmp_private.h"
 
 RtmpChunkParser::RtmpChunkParser(int chunk_size)
 	: _vhost_app_name(info::VHostAppName::InvalidVHostAppName())

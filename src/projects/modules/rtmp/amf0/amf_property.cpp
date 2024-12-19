@@ -10,7 +10,7 @@
 
 #include <string.h>
 
-#include "../rtmp_provider_private.h"
+#include "../rtmp_private.h"
 #include "./amf_object_array.h"
 #include "./amf_strict_array.h"
 

@@ -1048,6 +1048,11 @@ namespace pvd
 
 			bool result = true;
 
+			if(message->header->completed.type_id != RtmpMessageTypeID::Video && message->header->completed.type_id != RtmpMessageTypeID::Audio)
+			{
+				logti("%s", StringFromRtmpMessageTypeID(message->header->completed.type_id));
+			}
+			
 			switch (message->header->completed.type_id)
 			{
 				case RtmpMessageTypeID::Audio:
@@ -1262,6 +1267,8 @@ namespace pvd
 			return;
 		}
 
+		logti("AmfDocument \n%s", document.ToString(2).CStr());
+
 		// Obtain the message name
 		ov::String message_name;
 		auto message_name_property = document.GetProperty(0);
@@ -1283,6 +1290,7 @@ namespace pvd
 		auto third_property = document.GetProperty(2);
 		auto third_type = (third_property != nullptr) ? third_property->GetType() : AmfTypeMarker::Undefined;
 
+		logtw("RtmpCommand : %s", message_name.CStr());
 		switch (RtmpCommandFromString(message_name))
 		{
 			case RtmpCommand::SetDataFrame:
@@ -1291,12 +1299,20 @@ namespace pvd
 				{
 					OnAmfMetaData(message->header, third_property);
 				}
+				else
+				{
+					logtw("SetDataFrame - Data type is not object or ecma array");
+				}
 				break;
 
 			case RtmpCommand::OnMetaData:
 				if ((data_name_type == AmfTypeMarker::Object) || (data_name_type == AmfTypeMarker::EcmaArray))
 				{
 					OnAmfMetaData(message->header, data_name_property);
+				}
+				else 
+				{
+					logtw("OnMetaData - Data type is not object or ecma array");
 				}
 				break;
 

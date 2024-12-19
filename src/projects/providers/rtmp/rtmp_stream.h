@@ -9,12 +9,12 @@
 
 #pragma once
 
-#include "amf0/amf_document.h"
+#include "modules/rtmp/amf0/amf_document.h"
 #include "base/common_types.h"
 #include "base/provider/push_provider/stream.h"
-#include "chunk/rtmp_chunk_parser.h"
-#include "chunk/rtmp_export_chunk.h"
-#include "chunk/rtmp_handshake.h"
+#include "modules/rtmp/chunk/rtmp_chunk_parser.h"
+#include "modules/rtmp/chunk/rtmp_export_chunk.h"
+#include "modules/rtmp/chunk/rtmp_handshake.h"
 #include "modules/access_control/access_controller.h"
 
 #define MAX_STREAM_MESSAGE_COUNT (500)
