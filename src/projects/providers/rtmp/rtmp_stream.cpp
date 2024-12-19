@@ -1046,13 +1046,7 @@ namespace pvd
 				break;
 			}
 
-			bool result = true;
-
-			if(message->header->completed.type_id != RtmpMessageTypeID::Video && message->header->completed.type_id != RtmpMessageTypeID::Audio)
-			{
-				logti("%s", StringFromRtmpMessageTypeID(message->header->completed.type_id));
-			}
-			
+			bool result = true;			
 			switch (message->header->completed.type_id)
 			{
 				case RtmpMessageTypeID::Audio:
@@ -1266,8 +1260,6 @@ namespace pvd
 			logte("Amf0DataMessage Document Length 0");
 			return;
 		}
-
-		logti("AmfDocument \n%s", document.ToString(2).CStr());
 
 		// Obtain the message name
 		ov::String message_name;
