@@ -13,8 +13,8 @@
 #include <modules/bitstream/nalu/nal_stream_converter.h>
 #include <modules/bitstream/aac/aac_converter.h>
 
-#include <modules/id3v2/id3v2.h>
-#include <modules/id3v2/frames/id3v2_text_frame.h>
+#include <modules/data_format/id3v2/id3v2.h>
+#include <modules/data_format/id3v2/frames/id3v2_text_frame.h>
 
 namespace bmff
 {

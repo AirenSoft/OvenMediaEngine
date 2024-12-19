@@ -46,6 +46,13 @@ namespace api
 										   const std::shared_ptr<mon::ApplicationMetrics> &app,
 										   const std::shared_ptr<mon::StreamMetrics> &stream,
 										   const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
+			
+			// POST /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>:sendEvent
+			ApiResponse OnPostSendEvents(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
+										   const std::shared_ptr<mon::HostMetrics> &vhost,
+										   const std::shared_ptr<mon::ApplicationMetrics> &app,
+										   const std::shared_ptr<mon::StreamMetrics> &stream,
+										   const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
 
 			// POST /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>:concludeHlsLive
 			ApiResponse OnPostConcludeHlsLive(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
@@ -89,6 +96,10 @@ namespace api
 
 				return std::static_pointer_cast<T>(stream);
 			}
+
+			
+			std::shared_ptr<ov::Data> MakeID3Data(const Json::Value &events); // ID3v2
+			std::shared_ptr<ov::Data> MakeCueData(const Json::Value &events); // CUE
 		};
 	}
 }

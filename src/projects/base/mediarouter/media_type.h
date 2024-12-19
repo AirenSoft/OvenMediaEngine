@@ -48,7 +48,9 @@ namespace cmn
 
 		MP3,
 
-		OVEN_EVENT // OvenMediaEngine defined event
+		OVEN_EVENT, // OvenMediaEngine defined event
+
+		CUE
 	};
 
 	enum class PacketType : int8_t

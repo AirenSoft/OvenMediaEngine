@@ -160,6 +160,11 @@ namespace mpegts
             return false;
         }
 
+		if (media_packet->GetMediaType() == cmn::MediaType::Data && media_packet->GetBitstreamFormat() != cmn::BitstreamFormat::ID3v2)
+		{
+			return false;
+		}
+
         auto pid = GetElementaryPid(media_packet->GetTrackId());
         auto pes = Pes::Build(pid, track, media_packet);
         if (pes == nullptr)

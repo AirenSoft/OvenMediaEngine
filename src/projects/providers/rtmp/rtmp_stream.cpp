@@ -13,8 +13,8 @@
 #include <base/mediarouter/media_type.h>
 #include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/containers/flv/flv_parser.h>
-#include <modules/id3v2/frames/id3v2_frames.h>
-#include <modules/id3v2/id3v2.h>
+#include <modules/data_format/id3v2/frames/id3v2_frames.h>
+#include <modules/data_format/id3v2/id3v2.h>
 #include <orchestrator/orchestrator.h>
 
 #include "base/info/application.h"

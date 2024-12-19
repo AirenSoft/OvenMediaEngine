@@ -30,6 +30,7 @@ LOCAL_STATIC_LIBRARIES := \
 	rtp_rtcp \
 	sdp \
 	id3v2 \
+	cue_event \
 	segment_writer \
 	web_console \
 	mediarouter \
