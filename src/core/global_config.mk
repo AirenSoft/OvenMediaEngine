@@ -1,5 +1,5 @@
 GCC_VERSION := $(shell gcc -v 2>&1 | tail -1 | awk ' { print $3 } ')
-GCC_VERSION := $(word 3, $(GCC_VERSION))
+# GCC_VERSION := $(word 3, $(GCC_VERSION))
 GCC_VERSION := $(subst ., ,$(GCC_VERSION))
 
 GCC_VERSION_MAJOR := $(word 1, $(GCC_VERSION))
