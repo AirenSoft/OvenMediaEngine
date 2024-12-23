@@ -118,7 +118,7 @@ public:
 	void SetChannel(uint8_t channel);
 
 	// Helpers
-	ov::String GetCodecsParameter() const;
+	ov::String GetCodecsParameter() const override;
 
 protected:
 	// Table 1.16 - Syntax of GetAudioObjectType()

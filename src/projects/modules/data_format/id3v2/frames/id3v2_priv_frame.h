@@ -20,7 +20,7 @@ public:
 		SetPrivateData(private_data);
 	}
 
-	~ID3v2PrivFrame(){}
+	virtual ~ID3v2PrivFrame(){}
 	
 	void SetOwner(const ov::String &owner)
 	{

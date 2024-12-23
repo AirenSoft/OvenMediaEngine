@@ -1265,7 +1265,7 @@ namespace pvd
 		ov::String message_name;
 		auto message_name_property = document.GetProperty(0);
 		auto message_name_type = (message_name_property != nullptr) ? message_name_property->GetType() : AmfTypeMarker::Undefined;
-		if ((message_name_type == AmfTypeMarker::String))
+		if (message_name_type == AmfTypeMarker::String)
 		{
 			message_name = message_name_property->GetString();
 		}

@@ -306,7 +306,7 @@ namespace ov
 		}
 
 		OV_ASSERT2(info != nullptr);
-		throw ov::SocketAddressError(ov::Error::CreateErrorFromErrno(), "getaddrinfo() returns invalid value: %s", host);
+		throw ov::SocketAddressError(ov::Error::CreateErrorFromErrno(), "getaddrinfo() returns invalid value: %s", host.CStr());
 	}
 
 	bool SocketAddress::Resolve(ov::String host, SocketAddress::StorageList *storage_list, bool *is_wildcard_host)

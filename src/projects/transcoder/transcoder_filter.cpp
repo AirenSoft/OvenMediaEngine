@@ -53,7 +53,6 @@ bool TranscodeFilter::Configure(int32_t id,
 	_input_stream_info = input_stream_info;
 	_input_track = input_track;
 
-	[[maybe_unused]]
 	_output_stream_info = output_stream_info;
 	_output_track = output_track;
 	
@@ -196,7 +195,7 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 
 void TranscodeFilter::SetCompleteHandler(CompleteHandler complete_handler)
 {
-	_complete_handler = move(complete_handler);
+	_complete_handler = std::move(complete_handler);
 }
 
 void TranscodeFilter::OnComplete(std::shared_ptr<MediaFrame> frame)

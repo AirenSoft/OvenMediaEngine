@@ -107,7 +107,7 @@ namespace pvd
 		if (rtmp_address_list.empty())
 		{
 			logte("Could not obtain IP list from IP(s): %s, port: %d",
-				  ov::String::Join(server.GetIPList(), ", "),
+				  ov::String::Join(server.GetIPList(), ", ").CStr(),
 				  static_cast<uint16_t>(rtmp_config.GetPort().GetPort()));
 
 			return false;

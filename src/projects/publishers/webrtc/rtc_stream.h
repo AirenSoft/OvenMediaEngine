@@ -21,7 +21,7 @@
 #include "rtc_session.h"
 #include "rtc_playlist.h"
 
-class RtcStream : public pub::Stream, public RtpPacketizerInterface
+class RtcStream final : public pub::Stream, public RtpPacketizerInterface
 {
 public:
 	static std::shared_ptr<RtcStream> Create(const std::shared_ptr<pub::Application> application,

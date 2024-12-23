@@ -19,7 +19,7 @@ public:
 		SetText(text);
 	}
 
-	~ID3v2TextFrame(){}
+	virtual ~ID3v2TextFrame(){}
 	
 	void SetText(const ov::String &text)
 	{

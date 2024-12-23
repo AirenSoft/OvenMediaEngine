@@ -429,7 +429,7 @@ namespace api
 														   const std::shared_ptr<mon::StreamMetrics> &stream,
 														   const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
-			logte("Called OnGetDummyAction. invoke [%s/%s/%s]", vhost->GetName().CStr(), app->GetVHostAppName().GetAppName(), stream->GetName().CStr());
+			logte("Called OnGetDummyAction. invoke [%s/%s/%s]", vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
 
 			return app->GetConfig().ToJson();
 		}

@@ -9,7 +9,7 @@
 
 namespace pub
 {
-	class FileApplication : public pub::Application
+	class FileApplication final : public pub::Application
 	{
 	public:
 		static std::shared_ptr<FileApplication> Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info);

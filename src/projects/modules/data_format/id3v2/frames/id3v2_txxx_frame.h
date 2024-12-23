@@ -20,7 +20,7 @@ public:
 		SetValue(value);
 	}
 
-	~ID3v2TxxxFrame(){}
+	virtual ~ID3v2TxxxFrame(){}
 	
 	void SetDescription(const ov::String &description)
 	{

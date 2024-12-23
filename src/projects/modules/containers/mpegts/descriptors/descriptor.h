@@ -23,6 +23,7 @@ namespace mpegts
 			_tag = tag;
 			_data = data;
 		}
+		virtual ~Descriptor() = default;
 
 		std::shared_ptr<const ov::Data> Build()
 		{

@@ -24,7 +24,7 @@ namespace ov
                 return false;
             }
 
-            size_t output_length = 0;
+            [[maybe_unused]] size_t output_length = 0;
 
 			EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 			if (ctx == nullptr)

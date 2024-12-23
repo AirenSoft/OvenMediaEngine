@@ -33,9 +33,9 @@ public:
 	// Implementation of Node
 	//--------------------------------------------------------------------
 	// Receive data from upper node, and send data to lower node.
-	bool OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data);
+	bool OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
 	// Receive data from lower node, and send data to upper node.
-	bool OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data);
+	bool OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 
 	// IcePort -> Publisher ->[queue] Application {thread}-> Session -> DtlsTransport -> SRTP -> RTP/RTCP
 	// ICE에서는 STUN을 제외한 모든 패킷을 위로 올린다.

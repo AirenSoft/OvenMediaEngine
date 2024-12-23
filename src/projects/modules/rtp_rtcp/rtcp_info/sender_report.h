@@ -33,7 +33,7 @@ public:
 	
 	bool Parse(const RtcpPacket &packet) override;
 	std::shared_ptr<ov::Data> GetData() const override;
-	void DebugPrint();
+	void DebugPrint() override;
 
 	RtcpPacketType GetPacketType() const override
 	{

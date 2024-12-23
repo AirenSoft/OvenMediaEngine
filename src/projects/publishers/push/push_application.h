@@ -17,7 +17,7 @@
 
 namespace pub
 {
-	class PushApplication : public pub::Application
+	class PushApplication final : public pub::Application
 	{
 	public:
 		enum ErrorCode

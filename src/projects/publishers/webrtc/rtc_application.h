@@ -18,7 +18,7 @@
 #include <modules/rtp_rtcp/rtcp_packet.h>
 #include "rtc_stream.h"
 
-class RtcApplication : public pub::Application
+class RtcApplication final : public pub::Application
 {
 
 public:

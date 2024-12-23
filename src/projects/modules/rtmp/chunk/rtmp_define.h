@@ -149,16 +149,27 @@ enum class RtmpCommand : uint16_t
 	AckError,	// "_error"
 };
 
+constexpr bool ConstExprStrCmp(const char *str1, const char *str2)
+{
+	while (*str1 && (*str1 == *str2))
+	{
+		++str1;
+		++str2;
+	}
+
+	return *str1 == *str2;
+}
+
 #define _DECLARE_STRING_TO_RTMP_COMMAND(enum_name, command) \
 	do                                                      \
 	{                                                       \
-		if (::strcmp(name, command) == 0)                   \
+		if (ConstExprStrCmp(name, command))                 \
 		{                                                   \
 			return RtmpCommand::enum_name;                  \
 		}                                                   \
 	} while (false)
 
-inline constexpr RtmpCommand RtmpCommandFromString(const char *name)
+constexpr RtmpCommand RtmpCommandFromString(const char *name)
 {
 	_DECLARE_STRING_TO_RTMP_COMMAND(Connect, "connect");
 	_DECLARE_STRING_TO_RTMP_COMMAND(Call, "call");

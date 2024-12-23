@@ -17,7 +17,7 @@
 
 namespace pub
 {
-	class PushStream : public pub::Stream
+	class PushStream final : public pub::Stream
 	{
 	public:
 		static std::shared_ptr<PushStream> Create(const std::shared_ptr<pub::Application> application,

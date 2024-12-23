@@ -6,7 +6,7 @@
 
 #include "monitoring/monitoring.h"
 
-class ThumbnailStream : public pub::Stream
+class ThumbnailStream final : public pub::Stream
 {
 public:
 	static std::shared_ptr<ThumbnailStream> Create(const std::shared_ptr<pub::Application> application,

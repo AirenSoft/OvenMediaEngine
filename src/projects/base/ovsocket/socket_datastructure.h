@@ -186,7 +186,7 @@ namespace ov
 		}
 	}
 
-	struct SocketAddressPair;
+	class SocketAddressPair;
 
 	// For SocketPoolWorker callback
 	enum class PostProcessMethod

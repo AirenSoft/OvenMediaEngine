@@ -25,7 +25,7 @@
 // max initial media packet buffer size, for OOM protection
 #define MAX_INITIAL_MEDIA_PACKET_BUFFER_SIZE		10000
 
-class LLHlsStream : public pub::Stream, public bmff::FMp4StorageObserver
+class LLHlsStream final : public pub::Stream, public bmff::FMp4StorageObserver
 {
 public:
 	static std::shared_ptr<LLHlsStream> Create(const std::shared_ptr<pub::Application> application, 

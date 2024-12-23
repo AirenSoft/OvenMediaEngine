@@ -28,7 +28,7 @@
 
 namespace pvd
 {
-	class RtmpStream : public pvd::PushStream
+	class RtmpStream final : public pvd::PushStream
 	{
 	public:
 		static std::shared_ptr<RtmpStream> Create(StreamSourceType source_type, uint32_t channel_id, const std::shared_ptr<ov::Socket> &client_socket, const std::shared_ptr<PushProvider> &provider);

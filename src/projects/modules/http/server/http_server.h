@@ -26,7 +26,7 @@
 
 namespace ocst
 {
-	struct VirtualHost;
+	class VirtualHost;
 }
 
 namespace http

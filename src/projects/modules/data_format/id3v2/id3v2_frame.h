@@ -14,7 +14,7 @@ class ID3v2Frame
 {
 public:
 	ID3v2Frame();
-	~ID3v2Frame();
+	virtual ~ID3v2Frame();
 
 	void SetFrameId(const ov::String &frame_id);
 

@@ -109,7 +109,7 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const Admission
 	}
 
 	// Probably this doesn't happen
-	logte("Could not find VirtualHost (%s)", vhost_name);
+	logte("Could not find VirtualHost (%s)", vhost_name.CStr());
 	return {AccessController::VerificationResult::Error, nullptr};
 }
 
@@ -206,7 +206,7 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const Admission
 	}
 
 	// Probably this doesn't happen
-	logte("Could not find VirtualHost (%s)", vhost_name);
+	logte("Could not find VirtualHost (%s)", vhost_name.CStr());
 	return {AccessController::VerificationResult::Error, nullptr};
 }
 

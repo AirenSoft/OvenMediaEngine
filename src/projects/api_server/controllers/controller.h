@@ -91,6 +91,8 @@ namespace api
 	class Controller : public ControllerInterface
 	{
 	public:
+		virtual ~Controller() = default;
+
 		void SetServer(const std::shared_ptr<Server> &server)
 		{
 			_server = server;

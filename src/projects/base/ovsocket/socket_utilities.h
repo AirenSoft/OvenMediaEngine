@@ -14,7 +14,7 @@
 
 namespace ov
 {
-	struct Socket;
+	class Socket;
 
 	String GetStat(Socket socket);
 

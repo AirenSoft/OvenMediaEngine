@@ -130,6 +130,6 @@ private:
 	uint8_t _temporal_id = 0;
 
 	// Not used
-	uint8_t _layer_id = 0;
-	uint8_t _tl0picidx = 0;
+	[[maybe_unused]] uint8_t _layer_id = 0;
+	[[maybe_unused]] uint8_t _tl0picidx = 0;
 };

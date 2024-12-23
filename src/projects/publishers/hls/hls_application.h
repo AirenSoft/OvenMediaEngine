@@ -15,7 +15,7 @@
 
 #include "hls_stream.h"
 
-class HlsApplication : public pub::Application
+class HlsApplication final : public pub::Application
 {
 public:
 	static std::shared_ptr<HlsApplication> Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info);

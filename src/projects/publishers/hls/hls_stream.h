@@ -22,7 +22,7 @@
 // max initial media packet buffer size, for OOM protection
 #define MAX_INITIAL_MEDIA_PACKET_BUFFER_SIZE 10000
 
-class HlsStream : public pub::Stream, public mpegts::PackagerSink
+class HlsStream final : public pub::Stream, public mpegts::PackagerSink
 {
 public:
 	static std::shared_ptr<HlsStream> Create(const std::shared_ptr<pub::Application> application, 

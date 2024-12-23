@@ -376,7 +376,7 @@ void TranscodeDecoder::SendBuffer(std::shared_ptr<const MediaPacket> packet)
 
 void TranscodeDecoder::SetCompleteHandler(CompleteHandler complete_handler)
 {
-	_complete_handler = move(complete_handler);
+	_complete_handler = std::move(complete_handler);
 }
 
 void TranscodeDecoder::Complete(TranscodeResult result, std::shared_ptr<MediaFrame> frame)

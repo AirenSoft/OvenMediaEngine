@@ -70,8 +70,8 @@ namespace pub
 
 		ov::ManagedQueue<std::shared_ptr<StreamData>> _stream_data_queue;
 
-		int64_t	_last_video_ts_ms = 0;
-		int64_t	_last_audio_ts_ms = 0;
+		[[maybe_unused]] int64_t _last_video_ts_ms = 0;
+		[[maybe_unused]] int64_t _last_audio_ts_ms = 0;
 
 		std::atomic<uint32_t> _stream_count = 0;
 	};

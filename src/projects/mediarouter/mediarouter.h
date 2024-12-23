@@ -29,7 +29,7 @@
 #include "mediarouter_application.h"
 #include "mediarouter_stream.h"
 
-class MediaRouter : public MediaRouterInterface, public ocst::MediaRouterModuleInterface
+class MediaRouter final : public MediaRouterInterface, public ocst::MediaRouterModuleInterface
 {
 public:
 	static std::shared_ptr<MediaRouter> Create();

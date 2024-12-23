@@ -23,7 +23,7 @@
 
 namespace pvd
 {
-	class WebRTCStream : public pvd::PushStream, public RtpRtcpInterface, public ov::Node
+	class WebRTCStream final : public pvd::PushStream, public RtpRtcpInterface, public ov::Node
 	{
 	public:
 		static std::shared_ptr<WebRTCStream> Create(StreamSourceType source_type, ov::String stream_name,
