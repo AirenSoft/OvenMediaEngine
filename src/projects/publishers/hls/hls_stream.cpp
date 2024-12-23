@@ -317,6 +317,48 @@ void HlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 		SendBufferedPackets();
 	}
 
+	if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::CUE)
+	{
+		mpegts::Marker marker;
+		marker.timestamp = media_packet->GetDts();
+		marker.data = media_packet->GetData()->Clone();
+
+		// Parse the cue data
+		auto cue_event = CueEvent::Parse(marker.data);
+		if (cue_event == nullptr)
+		{
+			logte("(%s/%s) Failed to parse the cue event data", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+			return;
+		}
+
+		marker.tag = ov::String::FormatString("CueEvent-%s", cue_event->GetCueTypeName().CStr());
+
+		// Insert marker to all packagers
+		for (auto &it : _packagers)
+		{
+			auto packager = it.second;
+			auto result = packager->InsertMarker(media_packet->GetTrackId(), marker);
+
+			if (result == true && cue_event->GetCueType() == CueEvent::CueType::OUT)
+			{
+				// Make CUE-IN event after the duration
+				auto duration_msec = cue_event->GetDurationMsec();
+				auto data_track = GetTrack(media_packet->GetTrackId());
+				auto cue_in_timestamp = media_packet->GetDts() + (duration_msec * data_track->GetTimeBase().GetTimescale() / 1000);
+
+				// Create CUE-IN event
+				mpegts::Marker cue_in_marker;
+				cue_in_marker.timestamp = cue_in_timestamp;
+				cue_in_marker.tag = "CueEvent-IN";
+				cue_in_marker.data = CueEvent::Create(CueEvent::CueType::IN, 0)->Serialize();
+
+				packager->InsertMarker(media_packet->GetTrackId(), cue_in_marker);
+			}
+		}
+
+		return;
+	}
+
 	AppendMediaPacket(media_packet);
 }
 

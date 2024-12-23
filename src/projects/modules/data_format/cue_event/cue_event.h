@@ -37,6 +37,10 @@ public:
 
 	std::shared_ptr<ov::Data> Serialize() const;
 
+	CueType GetCueType() const;
+	ov::String GetCueTypeName() const;
+	uint32_t GetDurationMsec() const;
+
 private:
 	CueType _cue_type;
 	uint32_t _duration_msec;

@@ -10,6 +10,8 @@
 #include "hls_media_playlist.h"
 #include "hls_private.h"
 
+#include <modules/data_format/cue_event/cue_event.h>
+
 HlsMediaPlaylist::HlsMediaPlaylist(const ov::String &id, const ov::String &playlist_file_name, const HlsMediaPlaylistConfig &config)
 	: _config(config)
 	, _variant_name(id)
@@ -42,6 +44,11 @@ bool HlsMediaPlaylist::OnSegmentCreated(const std::shared_ptr<mpegts::Segment> &
 	std::lock_guard<std::shared_mutex> lock(_segments_mutex);
 
 	logtd("HlsMediaPlaylist::OnSegmentCreated - number(%d) url(%s) duration_us(%llu)\n", segment->GetNumber(), segment->GetUrl().CStr(), segment->GetDurationUs());
+
+	if (segment->HasMarker() == true)
+	{
+		logti("Marker is found in the segment %d, tag : %s, timestamp : %lld", segment->GetNumber(), segment->GetMarker().tag.CStr(), segment->GetMarker().timestamp);
+	}
 
 	_segments.emplace(segment->GetNumber(), segment);
 

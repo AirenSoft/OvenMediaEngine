@@ -118,6 +118,104 @@ namespace mpegts
         _psi_packet_data = MergeTsPacketData(psi_packets);
     }
 
+	bool Packager::InsertMarker(uint32_t data_track_id, const Marker &marker)
+	{
+		std::lock_guard<std::shared_mutex> lock(_markers_guard);
+
+		auto data_track = GetMediaTrack(data_track_id);
+		if (data_track == nullptr)
+		{
+			logte("Data track is not found for track_id %u", data_track_id);
+			return false;
+		}
+
+		// mpeg-2 ts time base is 90khz
+		int64_t timestamp = (static_cast<double>(marker.timestamp) / data_track->GetTimeBase().GetTimescale() * 90000.0);
+	
+		Marker converted_marker = marker;
+		converted_marker.timestamp = timestamp;
+
+		// if there is CUE-IN event in the marker list, remove it
+		if (marker.tag.UpperCaseString() == "CUEEVENT-IN")
+		{
+			// first item is CUE-IN event in the marker list, remove it
+			if (_markers.empty() == false)
+			{
+				auto it = _markers.begin();
+				if (it->second.tag.UpperCaseString() == "CUEEVENT-IN")
+				{
+					logti("CUE-IN event is already in the marker list, remove it");
+					_markers.erase(it);
+				}
+			}
+			else if (_last_removed_marker.tag.UpperCaseString() == "CUEEVENT-IN" || _last_removed_marker.tag.IsEmpty())
+			{
+				// if it was already applied, do not insert
+				logtw("CUE-IN event needs CUE-OUT event before it, cannot insert CUE-IN event");
+				return false;
+			}
+		}
+		else if (marker.tag.UpperCaseString() == "CUEEVENT-OUT")
+		{
+			// if there is CUE-OUT event in the marker list, remove it
+			if (_markers.empty() == false)
+			{
+				auto it = _markers.begin();
+				auto first_marker = it->second;
+				if (first_marker.tag.UpperCaseString() == "CUEEVENT-OUT")
+				{
+					// Cannot insert CUE-OUT event if there is already CUE-OUT event
+					logtw("Cannot insert CUE-OUT event if there is already CUE-OUT event in the marker list");
+					return false;
+				}
+				else if (first_marker.timestamp >= timestamp)
+				{
+					// Cannot insert CUE-OUT event before the CUE-IN event
+					logtw("Cannot insert CUE-OUT event before the CUE-IN event");
+					return false;
+				}
+			}
+		}
+
+		_markers.emplace(timestamp, converted_marker);
+
+		return true;
+	}
+
+	bool Packager::HasMarker() const
+	{
+		std::shared_lock<std::shared_mutex> lock(_markers_guard);
+		return _markers.empty() == false;
+	}
+
+	const Marker Packager::GetFirstMarker() const
+	{
+		std::shared_lock<std::shared_mutex> lock(_markers_guard);
+		if (_markers.empty() == true)
+		{
+			return Marker();
+		}
+
+		return _markers.begin()->second;
+	}
+
+	bool Packager::RemoveMarker(int64_t timestamp)
+	{
+		std::lock_guard<std::shared_mutex> lock(_markers_guard);
+
+		auto it = _markers.find(timestamp);
+		if (it == _markers.end())
+		{
+			return false;
+		}
+
+		// It means that the last removed marker was applied
+		_last_removed_marker = it->second;
+
+		_markers.erase(it);
+		return true;
+	}
+
     void Packager::OnFrame(const std::shared_ptr<const MediaPacket> &media_packet, const std::vector<std::shared_ptr<mpegts::Packet>> &pes_packets)
     {
        //logtd("OnFrame track_id %u", media_packet->GetTrackId());
@@ -132,20 +230,37 @@ namespace mpegts
             return;
         }
 
-        if (track_id == _main_track_id && 
-            sample_buffer->GetCurrentDurationUs() >= _config.target_duration_ms * 1000)
-        {
-            if (media_packet->GetMediaType() == cmn::MediaType::Video && media_packet->IsKeyFrame())
-            {
-                sample_buffer->MarkSegmentBoundary();
-            }
-            else if (media_packet->GetMediaType() == cmn::MediaType::Audio)
-            {
-                sample_buffer->MarkSegmentBoundary();
-            }
-        }
+		auto sample = mpegts::Sample(media_packet, MergeTsPacketData(pes_packets), track->GetTimeBase().GetTimescale());
 
-        sample_buffer->AddSample(mpegts::Sample(media_packet, MergeTsPacketData(pes_packets), track->GetTimeBase().GetTimescale()));
+		if (track_id == _main_track_id)
+		{
+			if (_force_make_boundary == false && HasMarker() == true)
+			{
+				auto marker = GetFirstMarker();
+				if (marker.timestamp >= sample._dts && marker.timestamp < sample._dts + sample._duration)
+				{
+					logti("Stream(%s) Track(%u) has a marker at %lld, force to create a new boundary", _config.stream_id_meta.CStr(), track_id, marker.timestamp);
+
+					_force_make_boundary = true;
+				}
+			}
+
+			if ((sample_buffer->GetCurrentDurationUs() >= _config.target_duration_ms * 1000) || _force_make_boundary == true)
+			{
+				if (media_packet->GetMediaType() == cmn::MediaType::Video && media_packet->IsKeyFrame())
+				{
+					sample_buffer->MarkSegmentBoundary();
+					_force_make_boundary = false;
+				}
+				else if (media_packet->GetMediaType() == cmn::MediaType::Audio)
+				{
+					sample_buffer->MarkSegmentBoundary();
+					_force_make_boundary = false;
+				}
+			}
+		}
+
+        sample_buffer->AddSample(sample);
 
         CreateSegmentIfReady();
     }
@@ -238,6 +353,45 @@ namespace mpegts
 
         auto main_segment_duration_us = main_sample_buffer->GetDurationUntilSegmentBoundaryUs();
         uint64_t total_main_segment_duration_us = main_sample_buffer->GetTotalConsumedDurationUs() + main_segment_duration_us;
+		
+		bool found_marker = false;
+		Marker marker;
+		if (HasMarker() == true)
+		{
+			int64_t main_segment_base_timestamp = main_sample_buffer->GetSample()._dts;
+			int64_t main_segment_duration = main_segment_duration_us / 1000000 * 90000;
+			int64_t main_segment_end_timestamp = main_segment_base_timestamp + main_segment_duration;
+
+			while (HasMarker())
+			{
+				marker = GetFirstMarker();
+				if (marker.timestamp < main_segment_base_timestamp)
+				{
+					logte("Stream(%s) Main Track(%u) has a marker at %lld, but it is before the current segment", _config.stream_id_meta.CStr(), _main_track_id, marker.timestamp);
+					RemoveMarker(marker.timestamp);
+				}
+				else
+				{
+					break;
+				}
+			}
+
+			// All Marker can be removed so check again
+			if (HasMarker() == true)
+			{	
+				marker = GetFirstMarker();
+				if (marker.timestamp >= main_segment_base_timestamp && marker.timestamp < main_segment_end_timestamp)
+				{
+					logti("Stream(%s) Main Track(%u) has a marker at %lld, force to create a new segment", _config.stream_id_meta.CStr(), _main_track_id, marker.timestamp);
+
+					RemoveMarker(marker.timestamp);
+					found_marker = true;
+					force_create = true;
+				}
+
+				// Else wait for the next segment
+			}
+		}
 
 		if (force_create == false)
 		{
@@ -300,6 +454,10 @@ namespace mpegts
         }
 
         auto segment = std::make_shared<Segment>(GetNextSegmentId(), first_sample._dts, main_segment_duration_us);
+		if (found_marker == true)
+		{
+			segment->SetMarker(marker);
+		}
 
         // Add PSI packets
         segment->AddPacketData(_psi_packet_data);

@@ -22,7 +22,23 @@ std::shared_ptr<CueEvent> CueEvent::Parse(const std::shared_ptr<ov::Data> &data)
 
 	ov::ByteStream stream(data);
 
-	CueType cue_type = static_cast<CueEvent::CueType>(stream.Read8());
+	if (data->GetLength() != 5)
+	{
+		return nullptr;
+	}
+
+	uint8_t cue_type_value = stream.Read8();
+	if (cue_type_value > static_cast<uint8_t>(CueType::IN))
+	{
+		return nullptr;
+	}
+
+	CueType cue_type = static_cast<CueEvent::CueType>(cue_type_value);
+	if (cue_type == CueType::Unknown)
+	{
+		return nullptr;
+	}
+
 	uint32_t duration_msec = stream.ReadBE32();
 
 	return Create(cue_type, duration_msec);
@@ -56,4 +72,27 @@ std::shared_ptr<ov::Data> CueEvent::Serialize() const
 	stream.WriteBE32(_duration_msec);
 
 	return stream.GetDataPointer();
+}
+
+CueEvent::CueType CueEvent::GetCueType() const
+{
+	return _cue_type;
+}
+
+ov::String CueEvent::GetCueTypeName() const
+{
+	switch (_cue_type)
+	{
+	case CueType::OUT:
+		return "OUT";
+	case CueType::IN:
+		return "IN";
+	default:
+		return "Unknown";
+	}
+}
+
+uint32_t CueEvent::GetDurationMsec() const
+{
+	return _duration_msec;
 }

@@ -17,6 +17,13 @@ namespace mpegts
 {
     constexpr size_t SEGMENT_BUFFER_SIZE = 2000000;
 
+	struct Marker
+	{
+		int64_t timestamp = -1;
+		ov::String tag;
+		std::shared_ptr<ov::Data> data = nullptr;
+	};
+
     class Segment
     {
     public:
@@ -122,6 +129,21 @@ namespace mpegts
 			return nullptr;
 		}
 
+		bool HasMarker() const
+		{
+			return _marker.timestamp != -1;
+		}
+
+		void SetMarker(const Marker &marker)
+		{
+			_marker = marker;
+		}
+
+		const Marker &GetMarker() const
+		{
+			return _marker;
+		}
+
     private:
         uint64_t _segment_id = 0;
         int64_t _first_dts = -1;
@@ -133,6 +155,8 @@ namespace mpegts
 
 		bool _is_data_in_memory = false;
 		bool _is_data_in_file = false;
+
+		Marker _marker;
     };
 
     struct Sample
@@ -146,11 +170,13 @@ namespace mpegts
 			{
 				_pts = (static_cast<double>(media_packet->GetPts()) / timescale * 90000.0);
 				_dts = (static_cast<double>(media_packet->GetDts()) / timescale * 90000.0);
+				_duration = (static_cast<double>(media_packet->GetDuration()) / timescale * 90000.0);
 			}
         }
 
 		int64_t _pts = -1;
 		int64_t _dts = -1;
+		int64_t _duration = -1;
 		
         std::shared_ptr<const MediaPacket> media_packet = nullptr;
         std::shared_ptr<const ov::Data> ts_packet_data = nullptr;
@@ -367,6 +393,10 @@ namespace mpegts
 
 		bool AddSink(const std::shared_ptr<PackagerSink> &sink);
 
+		// When a marker is added, create a segment as soon as possible and send the information to the Sink.
+		// track_id is data track id, not the main track id
+		bool InsertMarker(uint32_t data_track_id, const Marker &marker);
+
         ////////////////////////////////
         // PacketizerSink interface
         ////////////////////////////////
@@ -421,9 +451,16 @@ namespace mpegts
 
 		ov::String GetDvrStoragePath() const;
 		ov::String GetSegmentFilePath(uint64_t segment_id) const;
-        
+
+		bool HasMarker() const;
+		const Marker GetFirstMarker() const;
+		bool RemoveMarker(int64_t timestamp);
+       
         ov::String _packager_id;
         Config _config;
+
+		// make segment boundary as soon as possible
+		bool _force_make_boundary = false;
 
         // track_id -> SampleBuffer
         std::map<uint32_t, std::shared_ptr<SampleBuffer>> _sample_buffers;
@@ -432,6 +469,9 @@ namespace mpegts
         std::map<uint32_t, std::shared_ptr<const MediaTrack>> _media_tracks;
         std::vector<std::shared_ptr<mpegts::Packet>> _psi_packets;
         std::shared_ptr<ov::Data> _psi_packet_data;
+
+		std::map<int64_t, Marker> _markers;
+		mutable std::shared_mutex _markers_guard;
 
         uint64_t _last_segment_id = 0;
 
@@ -447,5 +487,7 @@ namespace mpegts
 		mutable std::shared_mutex _retained_segments_guard;
 
 		std::vector<std::shared_ptr<PackagerSink>> _sinks;
+
+		Marker _last_removed_marker;
     };
 }
