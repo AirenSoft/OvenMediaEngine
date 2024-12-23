@@ -854,6 +854,11 @@ bool MediaRouteStream::NormalizeMediaPacket(std::shared_ptr<MediaTrack> &media_t
 {
 	bool result = false;
 
+	if(media_track->GetMediaType() == cmn::MediaType::Data)
+	{
+		return true;
+	}
+
 	switch (media_packet->GetBitstreamFormat())
 	{
 		case cmn::BitstreamFormat::H264_ANNEXB:
@@ -1178,11 +1183,6 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 
 	auto &media_packet = media_packet_ref.value();
 
-	if (media_packet->GetMediaType() == MediaType::Data)
-	{
-		return media_packet;
-	}
-
 	////////////////////////////////////////////////////////////////////////////////////
 	// [ Calculating Packet Timestamp, Duration]
 
@@ -1290,7 +1290,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 	// Detect abnormal increases in PTS.
 	if (GetInoutType() == MediaRouterStreamType::INBOUND)
 	{
-		DetectAbnormalPackets(pop_media_packet);
+		DetectAbnormalPackets(media_track, pop_media_packet);
 	}
 
 	// Statistics
@@ -1320,22 +1320,18 @@ std::vector<std::shared_ptr<MediaRouteStream::MirrorBufferItem>> MediaRouteStrea
 	return _mirror_buffer;
 }
 
-void MediaRouteStream::DetectAbnormalPackets(std::shared_ptr<MediaPacket> &packet)
+void MediaRouteStream::DetectAbnormalPackets(std::shared_ptr<MediaTrack> &media_track,  std::shared_ptr<MediaPacket> &packet)
 {
 	auto track_id = packet->GetTrackId();
 	auto it = _pts_last.find(track_id);
 	if (it != _pts_last.end())
 	{
-		auto media_track = _stream->GetTrack(track_id);
-		if (!media_track)
-			return;
-
 		int64_t ts_ms = packet->GetPts() * media_track->GetTimeBase().GetExpr();
 		int64_t ts_diff_ms = ts_ms - _pts_last[track_id];
 
 		if (std::abs(ts_diff_ms) > PTS_CORRECT_THRESHOLD_MS)
 		{
-			if (IsImageCodec(media_track->GetCodecId()) == false)
+			if (IsVideoCodec(media_track->GetCodecId()) || IsAudioCodec(media_track->GetCodecId()))
 			{
 				logtw("[%s/%s(%u)] Detected abnormal increased timestamp. track:%u last.pts: %lld, cur.pts: %lld, tb(%d/%d), diff: %lldms",
 					  _stream->GetApplicationInfo().GetVHostAppName().CStr(),
