@@ -85,7 +85,7 @@ namespace pub
 			auto pushes = GetPushesByStreamMap(stream_map.GetPath(), info);
 			for(auto &push : pushes)
 			{
-				StartPush(push);
+				StartPush(push, true);
 			}
 		}
 
@@ -129,7 +129,7 @@ namespace pub
 		return it->second;
 	}
 
-	std::shared_ptr<ov::Error> PushApplication::StartPush(const std::shared_ptr<info::Push> &push)
+	std::shared_ptr<ov::Error> PushApplication::StartPush(const std::shared_ptr<info::Push> &push, bool is_config)
 	{
 		ov::String error_message;
 
@@ -147,7 +147,7 @@ namespace pub
 
 		push->SetEnable(true);
 		push->SetRemove(false);
-		push->SetByConfig(false);
+		push->SetByConfig(is_config);
 
 		std::unique_lock<std::shared_mutex> lock(_push_map_mutex);
 		_pushes[push->GetId()] = push;

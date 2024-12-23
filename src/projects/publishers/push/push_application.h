@@ -43,7 +43,7 @@ namespace pub
 		bool DeleteStream(const std::shared_ptr<info::Stream> &info) override;
 
 	public:
-		std::shared_ptr<ov::Error> StartPush(const std::shared_ptr<info::Push> &push);
+		std::shared_ptr<ov::Error> StartPush(const std::shared_ptr<info::Push> &push, bool is_config = false);
 		std::shared_ptr<ov::Error> StopPush(const std::shared_ptr<info::Push> &push);
 		std::shared_ptr<ov::Error> GetPushes(const std::shared_ptr<info::Push> push, std::vector<std::shared_ptr<info::Push>> &results);
 		
