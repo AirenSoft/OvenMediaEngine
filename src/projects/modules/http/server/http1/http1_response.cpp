@@ -60,7 +60,9 @@ namespace http
 				std::shared_ptr<ov::Data> response = std::make_shared<ov::Data>(65535);
 				ov::ByteStream stream(response.get());
 
-				if (_chunked_transfer == false)
+				if (_chunked_transfer == false && 
+						GetStatusCode() != StatusCode::NoContent && 
+						GetStatusCode() != StatusCode::NotModified)
 				{
 					// Calculate the content length
 					SetHeader("Content-Length", ov::Converter::ToString(GetResponseDataSize()));

@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <memory>
 #include <utility>
+#include "config/config_manager.h"
 
 #include "./http_server_private.h"
 
@@ -26,6 +27,9 @@ namespace http
 			OV_ASSERT2(_client_socket != nullptr);
 
 			_created_time = std::chrono::system_clock::now();
+
+			auto module_config = cfg::ConfigManager::GetInstance()->GetServer()->GetModules();
+			_etag_enabled_by_config = module_config.GetETag().IsEnabled();
 		}
 
 		HttpResponse::HttpResponse(const std::shared_ptr<HttpResponse> &http_response)
@@ -72,6 +76,16 @@ namespace http
 		Method HttpResponse::GetMethod() const
 		{
 			return _method;
+		}
+
+		void HttpResponse::SetIfNoneMatch(const ov::String &etag)
+		{
+			_if_none_match = etag;
+		}
+
+		const ov::String &HttpResponse::GetIfNoneMatch() const
+		{
+			return _if_none_match;
 		}
 
 		StatusCode HttpResponse::GetStatusCode() const
@@ -156,6 +170,16 @@ namespace http
 			return true;
 		}
 
+		ov::String HttpResponse::GetEtag()
+		{
+			if (_response_hash == nullptr)
+			{
+				return "";
+			}
+
+			return ov::String::FormatString("%s-%d", _response_hash->ToHexString().CStr(), _response_data_size);
+		}
+
 		bool HttpResponse::AppendData(const std::shared_ptr<const ov::Data> &data)
 		{
 			if (data == nullptr)
@@ -169,6 +193,33 @@ namespace http
 
 			_response_data_list.push_back(cloned_data);
 			_response_data_size += cloned_data->GetLength();
+
+			if (_etag_enabled_by_config == false)
+			{
+				return true;
+			}
+
+			auto md5 = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Md5, cloned_data);
+			if (md5 == nullptr || md5->GetLength() != 16)
+			{
+				// Could not compute MD5
+				OV_ASSERT2(md5->GetLength() == 16);
+				return true;
+			}
+
+			if (_response_hash == nullptr)
+			{
+				_response_hash = md5;
+			}
+			else
+			{
+				// Update hash, xor with previous hash
+				for (size_t i = 0; i < md5->GetLength(); i++)
+				{
+					auto ptr = _response_hash->GetWritableDataAs<uint8_t>();
+					ptr[i] ^= md5->At(i);
+				}
+			}
 
 			return true;
 		}
@@ -237,9 +288,33 @@ namespace http
 			_response_time = std::chrono::system_clock::now();
 
 			uint32_t sent_size = 0;
+			bool only_header = false;
 
 			if (IsHeaderSent() == false)
 			{
+				if (_etag_enabled_by_config == true)
+				{
+					// IF-NONE-MATCH check
+					auto if_none_match = GetIfNoneMatch();
+					if (if_none_match.IsEmpty() == false)
+					{
+						if (if_none_match == GetEtag())
+						{
+							SetStatusCode(StatusCode::NotModified);
+							only_header = true;
+						}
+					}
+
+					if (GetStatusCode() == StatusCode::OK || GetStatusCode() == StatusCode::NotModified)
+					{
+						auto etag_value = GetEtag();
+						if (etag_value.IsEmpty() == false)
+						{
+							SetHeader("ETag", etag_value);
+						}
+					}
+				}
+				
 				auto sent_header_size = SendHeader();
 				// Header must be bigger than 0, if header is not sent, it is an error
 				if (sent_header_size <= 0)
@@ -254,7 +329,7 @@ namespace http
 				}
 			}
 
-			if (GetMethod() == Method::Head)
+			if (GetMethod() == Method::Head || only_header == true)
 			{
 				_sent_size += sent_size;
 				return sent_size;

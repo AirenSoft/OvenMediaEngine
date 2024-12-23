@@ -37,7 +37,9 @@ namespace http
 		void HttpExchange::Release()
 		{
 			// print debug info
-			if ((static_cast<int>(GetResponse()->GetStatusCode()) / 100) != 2)
+			// 200 / 300 are not error
+			if ((static_cast<int>(GetResponse()->GetStatusCode()) / 100) != 2 &&
+				(static_cast<int>(GetResponse()->GetStatusCode()) / 100) != 3)
 			{
 				logte("\n%s", GetDebugInfo().CStr());
 			}
@@ -271,7 +273,16 @@ namespace http
 				return InterceptorResult::Error;
 			}
 
-			GetResponse()->SetMethod(GetRequest()->GetMethod());
+			auto request = GetRequest();
+			auto response = GetResponse();
+
+			response->SetMethod(request->GetMethod());
+
+			auto if_none_match = request->GetHeader("If-None-Match");
+			if (if_none_match.IsEmpty() == false)
+			{
+				response->SetIfNoneMatch(if_none_match);
+			}
 
 			return interceptor->OnRequestCompleted(GetSharedPtr());
 		}
