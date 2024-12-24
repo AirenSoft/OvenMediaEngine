@@ -307,8 +307,8 @@ namespace ffmpeg
 					// Do nothing
 					break;
 				default:
-					// Unsupported bitstream foramt
-					return false;
+					// Unsupported bitstream foramt, but it is not an error.
+					return true;
 			}
 		}
 		else if (_output_format_name == "mp4")
@@ -357,8 +357,8 @@ namespace ffmpeg
 				break;
 
 				default:
-					// Unsupported bitstream foramt
-					return false;
+					// Unsupported bitstream foramt, but it is not an error.
+					return true;
 			}
 		}
 		else if (_output_format_name == "mpegts")
