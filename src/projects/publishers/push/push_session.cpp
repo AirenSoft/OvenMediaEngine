@@ -85,12 +85,6 @@ namespace pub
 
 		for (auto &[track_id, track] : GetStream()->GetTracks())
 		{
-			if (IsSupportTrack(track) == false)
-			{
-				logtw("Could not supported track. track_id:%d, codec_id: %d", track->GetId(), track->GetCodecId());
-				continue;
-			}
-
 			// If the selected track list exists. if the current trackid does not exist on the list, ignore it.
 			// If no track list is selected, save all tracks.
 			if (IsSelectedTrack(track) == false)
@@ -98,10 +92,15 @@ namespace pub
 				continue;
 			}
 
+			if (IsSupportTrack(GetPush()->GetProtocolType(), track) == false)
+			{
+				logtd("Could not supported track. track_id:%d, codec_id: %d", track->GetId(), track->GetCodecId());
+				continue;
+			}
+
 			if (IsSupportCodec(GetPush()->GetProtocolType(), track->GetCodecId()) == false)
 			{
-				logtw("Could not supported codec. track_id:%d, codec_id: %d", track->GetId(), track->GetCodecId());
-
+				logtd("Could not supported codec. track_id:%d, codec_id: %d", track->GetId(), track->GetCodecId());
 				continue;
 			}
 
@@ -264,14 +263,25 @@ namespace pub
 		return true;
 	}
 
-	bool PushSession::IsSupportTrack(const std::shared_ptr<MediaTrack> &track)
+	bool PushSession::IsSupportTrack(const info::Push::ProtocolType protocol_type, const std::shared_ptr<MediaTrack> &track)
 	{
-		// If the track is not video, audio, or data, ignore it.
-		if (track->GetMediaType() == cmn::MediaType::Video ||
-			track->GetMediaType() == cmn::MediaType::Audio ||
-			track->GetMediaType() == cmn::MediaType::Data)
+		if (protocol_type == info::Push::ProtocolType::RTMP)
 		{
-			return true;
+			if (track->GetMediaType() == cmn::MediaType::Video ||
+				track->GetMediaType() == cmn::MediaType::Audio ||
+				track->GetMediaType() == cmn::MediaType::Data)
+			{
+				return true;
+			}
+		}
+		else if (protocol_type == info::Push::ProtocolType::SRT || protocol_type == info::Push::ProtocolType::MPEGTS)
+		{
+			if (track->GetMediaType() == cmn::MediaType::Video ||
+				track->GetMediaType() == cmn::MediaType::Audio)
+				// SRT and MPEGTS do not support data track.
+			{
+				return true;
+			}
 		}
 
 		return false;
