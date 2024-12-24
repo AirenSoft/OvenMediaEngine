@@ -143,6 +143,8 @@ enum class RtmpCommand : uint16_t
 	OnClientLogin,	// "onClientLogin"
 	OnMetaData,		// "onMetaData"
 	OnBWDone,		// "onBWDone"
+	OnTextData,		// "onTextData"
+	OnCuePoint,		// "onCuePoint"
 
 	// Response strings
 	AckResult,	// "_result"
@@ -197,6 +199,8 @@ constexpr RtmpCommand RtmpCommandFromString(const char *name)
 	_DECLARE_STRING_TO_RTMP_COMMAND(OnClientLogin, "onClientLogin");
 	_DECLARE_STRING_TO_RTMP_COMMAND(OnMetaData, "onMetaData");
 	_DECLARE_STRING_TO_RTMP_COMMAND(OnBWDone, "onBWDone");
+	_DECLARE_STRING_TO_RTMP_COMMAND(OnTextData, "onTextData");
+	_DECLARE_STRING_TO_RTMP_COMMAND(OnCuePoint, "onCuePoint");
 	_DECLARE_STRING_TO_RTMP_COMMAND(AckResult, "_result");
 	_DECLARE_STRING_TO_RTMP_COMMAND(AckError, "_error");
 
@@ -238,6 +242,8 @@ inline constexpr const char *StringFromRtmpCommand(RtmpCommand command)
 		_DECLARE_RTMP_COMMAND_TO_STRING(OnClientLogin, "onClientLogin");
 		_DECLARE_RTMP_COMMAND_TO_STRING(OnMetaData, "onMetaData");
 		_DECLARE_RTMP_COMMAND_TO_STRING(OnBWDone, "onBWDone");
+		_DECLARE_RTMP_COMMAND_TO_STRING(OnTextData, "onTextData");
+		_DECLARE_RTMP_COMMAND_TO_STRING(OnCuePoint, "onCuePoint");		
 		_DECLARE_RTMP_COMMAND_TO_STRING(AckResult, "_result");
 		_DECLARE_RTMP_COMMAND_TO_STRING(AckError, "_error");
 	}
