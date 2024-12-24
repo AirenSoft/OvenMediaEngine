@@ -13,6 +13,7 @@
 #include <modules/data_format/id3v2/id3v2.h>
 #include <modules/data_format/id3v2/frames/id3v2_frames.h>
 #include <modules/data_format/cue_event/cue_event.h>
+#include <modules/data_format/amf_event/amf_event.h>
 
 namespace api
 {
@@ -571,6 +572,56 @@ namespace api
 			auto cue_event = CueEvent::Create(type, duration_msec);
 
 			return cue_event->Serialize();
+		}
+
+		std::shared_ptr<ov::Data> StreamActionsController::MakeAMFData(const Json::Value &events)
+		{
+			if (events.size() == 0)
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "events must have at least one event");
+			}
+
+			// only first event is used
+			auto event = events[0];
+			if (event.isMember("amfType") == false || event["amfType"].isString() == false)
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "amfType is required in events");
+			}
+
+			ov::String amf_type = event["amfType"].asString().c_str();
+
+			if (AmfTextDataEvent::IsMatch(amf_type))
+			{
+				if(AmfTextDataEvent::IsValid(event) == false)
+				{
+					throw http::HttpError(http::StatusCode::BadRequest, "data is required in events");
+				}
+
+				auto amf_event = AmfTextDataEvent::Parse(event);
+				if (amf_event == nullptr)
+				{
+					throw http::HttpError(http::StatusCode::BadRequest, "Could not parse amf data");
+				}
+
+				return amf_event->Serialize();
+			}
+			else if (AmfCuePointEvent::IsMatch(amf_type))
+			{
+				if(AmfCuePointEvent::IsValid(event) == false)
+				{
+					throw http::HttpError(http::StatusCode::BadRequest, "version, preRollTimeSec is required in events");
+				}
+				
+				auto amf_event = AmfCuePointEvent::Parse(event);
+				if (amf_event == nullptr)
+				{
+					throw http::HttpError(http::StatusCode::BadRequest, "Could not parse amf data");
+				}
+
+				return amf_event->Serialize();
+			}
+
+			return nullptr;
 		}
 	} // namespace v1
 } // namespace api

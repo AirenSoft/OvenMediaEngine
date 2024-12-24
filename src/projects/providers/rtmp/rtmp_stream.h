@@ -64,6 +64,8 @@ namespace pvd
 		bool OnAmfPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
 		bool OnAmfDeleteStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id);
 		bool OnAmfMetaData(const std::shared_ptr<const RtmpChunkHeader> &header, const AmfProperty *property);
+		bool OnAmfTextData(const std::shared_ptr<const RtmpChunkHeader> &header, const AmfDocument &document);
+		bool OnAmfCuePoint(const std::shared_ptr<const RtmpChunkHeader> &header, const AmfDocument &document);
 
 		// Send messages
 		bool SendData(const std::shared_ptr<const ov::Data> &data);

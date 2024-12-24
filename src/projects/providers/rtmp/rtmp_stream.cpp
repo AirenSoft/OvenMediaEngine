@@ -891,6 +891,48 @@ namespace pvd
 		return true;
 	}
 
+	bool RtmpStream::OnAmfTextData(const std::shared_ptr<const RtmpChunkHeader> &header, const AmfDocument &document)
+	{
+		int64_t pts = 0;
+		if (_last_video_pts > _last_audio_pts)
+		{
+			pts = _last_video_pts + _last_video_pts_clock.Elapsed();
+		}
+		else
+		{
+			pts = _last_audio_pts + _last_audio_pts_clock.Elapsed();
+		}
+
+		ov::ByteStream byte_stream;
+		if (document.Encode(byte_stream) == false)
+		{
+			return false;
+		}
+
+		return SendDataFrame(pts, cmn::BitstreamFormat::AMF, cmn::PacketType::EVENT, byte_stream.GetDataPointer(), false);
+	}
+
+	bool RtmpStream::OnAmfCuePoint(const std::shared_ptr<const RtmpChunkHeader> &header, const AmfDocument &document)
+	{
+		int64_t pts = 0;
+		if (_last_video_pts > _last_audio_pts)
+		{
+			pts = _last_video_pts + _last_video_pts_clock.Elapsed();
+		}
+		else
+		{
+			pts = _last_audio_pts + _last_audio_pts_clock.Elapsed();
+		}
+
+		ov::ByteStream byte_stream;
+		if (document.Encode(byte_stream) == false)
+		{
+			return false;
+		}
+
+		return SendDataFrame(pts, cmn::BitstreamFormat::AMF, cmn::PacketType::EVENT, byte_stream.GetDataPointer(), false);
+	}
+
 	off_t RtmpStream::ReceiveHandshakePacket(const std::shared_ptr<const ov::Data> &data)
 	{
 		// +-------------+                           +-------------+
@@ -1312,12 +1354,13 @@ namespace pvd
 				break;
 
 			default:
-				// Find it in Events
-				if (CheckEventMessage(message->header, document) == false)
-				{
-					logtw("Unknown Amf0DataMessage - Message(%s / %s)", message_name.CStr(), data_name.CStr());
-				}
 				break;
+		}
+
+		// Find it in Events
+		if (CheckEventMessage(message->header, document) == false)
+		{
+			logtd("There were no triggered events - Message(%s / %s)", message_name.CStr(), data_name.CStr());
 		}
 	}
 
