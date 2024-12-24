@@ -292,6 +292,10 @@ namespace http
 
 			if (IsHeaderSent() == false)
 			{
+				// Date header
+				auto date = ov::Converter::ToRFC7231String(_response_time);
+				SetHeader("Date", date);
+
 				if (_etag_enabled_by_config == true)
 				{
 					// IF-NONE-MATCH check

@@ -49,6 +49,9 @@ namespace ov
 		// From ISO8601 string to time_point
 		static std::chrono::system_clock::time_point FromISO8601(const ov::String &iso8601_string);
 
+		// HTTP Date format
+		static String ToRFC7231String(const std::chrono::system_clock::time_point &tp);
+
 		static ov::String ToSiString(int64_t number, int precision);
 
 		static ov::String BitToString(int64_t bits);
