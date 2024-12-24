@@ -50,7 +50,9 @@ namespace cmn
 
 		OVEN_EVENT, // OvenMediaEngine defined event
 
-		CUE
+		CUE,
+
+		AMF // AMF0
 	};
 
 	enum class PacketType : int8_t
@@ -236,6 +238,10 @@ namespace cmn
 				return "ID3v2";
 			case cmn::BitstreamFormat::OVEN_EVENT:
 				return "OVEN_EVENT";
+			case cmn::BitstreamFormat::CUE:
+				return "CUE";
+			case cmn::BitstreamFormat::AMF:
+				return "AMF";
 			default:
 				return "Unknown";
 		}
