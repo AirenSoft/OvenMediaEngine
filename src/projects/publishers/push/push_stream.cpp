@@ -88,6 +88,11 @@ namespace pub
 		SendFrame(media_packet);
 	}
 
+	void PushStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
+	{
+		SendFrame(media_packet);
+	}
+
 	std::shared_ptr<pub::Session> PushStream::CreatePushSession(std::shared_ptr<info::Push> &push)
 	{
 		auto session = std::static_pointer_cast<pub::Session>(PushSession::Create(GetApplication(), GetSharedPtrAs<pub::Stream>(), this->IssueUniqueSessionId(), push));
