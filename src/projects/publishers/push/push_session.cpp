@@ -56,16 +56,16 @@ namespace pub
 		GetPush()->UpdatePushStartTime();
 		GetPush()->SetState(info::Push::PushState::Connecting);
 
-		ov::String rtmp_url;
+		ov::String dest_url;
 		if (GetPush()->GetStreamKey().IsEmpty())
 		{
-			rtmp_url = GetPush()->GetUrl();
+			dest_url = GetPush()->GetUrl();
 		}
 		else
 		{
-			rtmp_url = ov::String::FormatString("%s/%s", GetPush()->GetUrl().CStr(), GetPush()->GetStreamKey().CStr());
+			dest_url = ov::String::FormatString("%s/%s", GetPush()->GetUrl().CStr(), GetPush()->GetStreamKey().CStr());
 		}
-		
+
 		auto writer = CreateWriter();
 		if (writer == nullptr)
 		{
@@ -75,8 +75,7 @@ namespace pub
 			return false;
 		}
 
-		ov::String format = (GetPush()->GetProtocolType() == info::Push::ProtocolType::RTMP) ? "flv" : "mpegts";
-		if (writer->SetUrl(rtmp_url, format) == false)
+		if (writer->SetUrl(dest_url, ffmpeg::Conv::GetFormatByProtocolType(GetPush()->GetProtocolType())) == false)
 		{
 			SetState(SessionState::Error);
 			GetPush()->SetState(info::Push::PushState::Error);
@@ -86,8 +85,9 @@ namespace pub
 
 		for (auto &[track_id, track] : GetStream()->GetTracks())
 		{
-			if (track->GetMediaType() != cmn::MediaType::Video && track->GetMediaType() != cmn::MediaType::Audio)
+			if (IsSupportTrack(track) == false)
 			{
+				logtw("Could not supported track. track_id:%d, codec_id: %d", track->GetId(), track->GetCodecId());
 				continue;
 			}
 
@@ -98,14 +98,11 @@ namespace pub
 				continue;
 			}
 
-			// RTMP protocol does not supported except for H264 and AAC codec.
-			if (GetPush()->GetProtocolType() == info::Push::ProtocolType::RTMP)
+			if (IsSupportCodec(GetPush()->GetProtocolType(), track->GetCodecId()) == false)
 			{
-				if (!(track->GetCodecId() == cmn::MediaCodecId::H264 || track->GetCodecId() == cmn::MediaCodecId::Aac))
-				{
-					logtw("Could not supported codec. track_id:%d, codec_id: %d", track->GetId(), track->GetCodecId());
-					continue;
-				}
+				logtw("Could not supported codec. track_id:%d, codec_id: %d", track->GetId(), track->GetCodecId());
+
+				continue;
 			}
 
 			bool ret = writer->AddTrack(track);
@@ -131,23 +128,6 @@ namespace pub
 		return Session::Start();
 	}
 
-	bool PushSession::IsSelectedTrack(const std::shared_ptr<MediaTrack> &track)
-	{
-		auto selected_track_ids = GetPush()->GetTrackIds();
-		auto selected_track_names = GetPush()->GetVariantNames();
-
-		if (selected_track_ids.size() > 0 || selected_track_names.size() > 0)
-		{
-			if ((find(selected_track_ids.begin(), selected_track_ids.end(), track->GetId()) == selected_track_ids.end()) &&
-				(find(selected_track_names.begin(), selected_track_names.end(), track->GetVariantName()) == selected_track_names.end()))
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
-
 	bool PushSession::Stop()
 	{
 		auto writer = GetWriter();
@@ -167,9 +147,9 @@ namespace pub
 				GetPush()->SetState(info::Push::PushState::Stopped);
 				GetPush()->IncreaseSequence();
 			}
-			
-			std::unique_lock<std::shared_mutex> lock(_writer_mutex);
-			_writer = nullptr;
+
+			DestoryWriter();
+
 			logtd("PushSession(%d) has stopped", GetId());
 		}
 
@@ -251,9 +231,78 @@ namespace pub
 		return _writer;
 	}
 
+	void PushSession::DestoryWriter()
+	{
+		std::lock_guard<std::shared_mutex> lock(_writer_mutex);
+		if (_writer != nullptr)
+		{
+			_writer->Stop();
+			_writer = nullptr;
+		}
+	}
+
 	std::shared_ptr<info::Push> PushSession::GetPush()
 	{
 		std::shared_lock<std::shared_mutex> lock(_push_mutex);
 		return _push;
+	}
+
+	bool PushSession::IsSelectedTrack(const std::shared_ptr<MediaTrack> &track)
+	{
+		auto selected_track_ids = GetPush()->GetTrackIds();
+		auto selected_track_names = GetPush()->GetVariantNames();
+
+		if (selected_track_ids.size() > 0 || selected_track_names.size() > 0)
+		{
+			if ((find(selected_track_ids.begin(), selected_track_ids.end(), track->GetId()) == selected_track_ids.end()) &&
+				(find(selected_track_names.begin(), selected_track_names.end(), track->GetVariantName()) == selected_track_names.end()))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	bool PushSession::IsSupportTrack(const std::shared_ptr<MediaTrack> &track)
+	{
+		// If the track is not video, audio, or data, ignore it.
+		if (track->GetMediaType() == cmn::MediaType::Video ||
+			track->GetMediaType() == cmn::MediaType::Audio ||
+			track->GetMediaType() == cmn::MediaType::Data)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	bool PushSession::IsSupportCodec(const info::Push::ProtocolType protocol_type, cmn::MediaCodecId codec_id)
+	{
+		// RTMP protocol does not supported except for H264 and AAC codec.
+		if (protocol_type == info::Push::ProtocolType::RTMP)
+		{
+			if (codec_id == cmn::MediaCodecId::H264 ||
+				codec_id == cmn::MediaCodecId::Aac ||
+				codec_id == cmn::MediaCodecId::None)
+			{
+				return true;
+			}
+		}
+		else if (protocol_type == info::Push::ProtocolType::SRT || protocol_type == info::Push::ProtocolType::MPEGTS)
+		{
+			if (codec_id == cmn::MediaCodecId::H264 ||
+				codec_id == cmn::MediaCodecId::H265 ||
+				codec_id == cmn::MediaCodecId::Vp8 ||
+				codec_id == cmn::MediaCodecId::Vp9 ||
+				codec_id == cmn::MediaCodecId::Aac ||
+				codec_id == cmn::MediaCodecId::Mp3 ||
+				codec_id == cmn::MediaCodecId::Opus)
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 }  // namespace pub

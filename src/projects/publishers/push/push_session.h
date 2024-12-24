@@ -12,6 +12,7 @@
 #include <base/info/media_track.h>
 #include <base/publisher/session.h>
 #include <modules/ffmpeg/ffmpeg_writer.h>
+#include <modules/ffmpeg/ffmpeg_conv.h>
 
 #include "base/info/push.h"
 
@@ -41,8 +42,11 @@ namespace pub
 
 	private:
 		std::shared_ptr<ffmpeg::Writer> CreateWriter();
+		void DestoryWriter();
 
 		bool IsSelectedTrack(const std::shared_ptr<MediaTrack> &track);
+		bool IsSupportTrack(const std::shared_ptr<MediaTrack> &track);
+		bool IsSupportCodec(const info::Push::ProtocolType protocol_type, cmn::MediaCodecId codec_id);
 
 		std::shared_ptr<info::Push> _push = nullptr;
 		std::shared_mutex _push_mutex;		

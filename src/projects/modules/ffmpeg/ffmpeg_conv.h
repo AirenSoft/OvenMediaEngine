@@ -31,6 +31,7 @@ extern "C"
 
 #include <base/common_types.h>
 #include <base/info/media_track.h>
+#include <base/info/push.h>
 #include <base/mediarouter/media_type.h>
 #include <base/ovlibrary/ovlibrary.h>
 #include <transcoder/transcoder_context.h>
@@ -796,6 +797,11 @@ namespace ffmpeg
 				}
 				break;
 
+				case cmn::MediaType::Data:
+				{
+					codecpar->codec_id = AV_CODEC_ID_NONE;
+				}
+				break;
 				default:
 					return false;
 			}
@@ -808,7 +814,7 @@ namespace ffmpeg
 			return ov::String::FormatString("%s", ::avcodec_get_name(codec_id));
 		}
 
-		static ov::String GetFormatByExtension(ov::String extension, ov::String default_format)
+		static ov::String GetFormatByExtension(ov::String extension, ov::String default_format = "mpegts")
 		{
 			if (extension == "mp4")
 			{
@@ -821,6 +827,23 @@ namespace ffmpeg
 			else if (extension == "webm")
 			{
 				return "webm";
+			}
+
+			return default_format;
+		}
+
+		static ov::String GetFormatByProtocolType(const info::Push::ProtocolType protocol_type, ov::String default_format = "flv")
+		{
+			switch (protocol_type)
+			{
+				case info::Push::ProtocolType::RTMP:
+					return "flv";
+				case info::Push::ProtocolType::MPEGTS:
+					return "mpegts";
+				case info::Push::ProtocolType::SRT:
+					return "mpegts";
+				default:
+					break;
 			}
 
 			return default_format;

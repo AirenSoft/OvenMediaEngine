@@ -115,6 +115,7 @@ namespace ffmpeg
 
 	bool Writer::AddTrack(const std::shared_ptr<MediaTrack> &media_track)
 	{
+		// TODO: This code will move to mediarouter.
 		if (media_track->GetCodecId() == cmn::MediaCodecId::Opus &&
 			media_track->GetDecoderConfigurationRecord() == nullptr)
 		{
@@ -276,6 +277,7 @@ namespace ffmpeg
 			switch (packet->GetBitstreamFormat())
 			{
 				case cmn::BitstreamFormat::H264_AVCC:
+					// Do nothing
 					break;
 				case cmn::BitstreamFormat::H264_ANNEXB: {
 					new_data = NalStreamConverter::ConvertAnnexbToXvcc(packet->GetData(), packet->GetFragHeader());
@@ -301,6 +303,9 @@ namespace ffmpeg
 					av_packet.data = (uint8_t *)new_data->GetDataAs<uint8_t>();
 				}
 				break;
+				case cmn::BitstreamFormat::AMF:
+					// Do nothing
+					break;
 				default:
 					// Unsupported bitstream foramt
 					return false;
