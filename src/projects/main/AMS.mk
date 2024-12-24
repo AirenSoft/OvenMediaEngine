@@ -31,6 +31,7 @@ LOCAL_STATIC_LIBRARIES := \
 	sdp \
 	id3v2 \
 	cue_event \
+	amf_event \
 	segment_writer \
 	web_console \
 	mediarouter \
