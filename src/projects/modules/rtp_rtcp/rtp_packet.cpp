@@ -402,7 +402,7 @@ void RtpPacket::SetExtensions(const RtpHeaderExtensions& extensions)
 
 	// Write Extensions
 	auto extensions_map = extensions.GetMap();
-	for(const auto [id, extension] : extensions_map)
+	for(const auto &[id, extension] : extensions_map)
 	{
 		_extension_buffer_offset[id] = offset;
 

@@ -136,12 +136,12 @@ namespace ov
 		if (offset > 0)
 		{
 			// ========== xxxxx 0x12345678 + 0xABCDEF01 (102400 / 1024000) ==========
-			dump.AppendFormat("%s========== %s 0x%08X + 0x%08X (%d/%" PRIi64 " bytes) ==========", line_prefix, title, data, offset, dump_bytes, length);
+			dump.AppendFormat("%s========== %s 0x%08llX + 0x%08llX (%d/%" PRIi64 " bytes) ==========", line_prefix, title, data, offset, dump_bytes, length);
 		}
 		else
 		{
 			// ========== xxxxx 0x12345678 (102400 / 1024000) ==========
-			dump.AppendFormat("%s========== %s 0x%08X (%d/%" PRIi64 " bytes) ==========", line_prefix, title, data, dump_bytes, length);
+			dump.AppendFormat("%s========== %s 0x%08llX (%d/%" PRIi64 " bytes) ==========", line_prefix, title, data, dump_bytes, length);
 		}
 
 		if (dump_bytes == 0L)

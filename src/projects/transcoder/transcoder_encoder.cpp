@@ -382,7 +382,7 @@ void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 
 void TranscodeEncoder::SetCompleteHandler(CompleteHandler complete_handler)
 {
-	_complete_handler = move(complete_handler);
+	_complete_handler = std::move(complete_handler);
 }
 
 void TranscodeEncoder::Complete(std::shared_ptr<MediaPacket> packet)

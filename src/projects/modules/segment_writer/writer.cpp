@@ -864,6 +864,8 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 			[[fallthrough]];
 		case cmn::BitstreamFormat::OVEN_EVENT:
 			[[fallthrough]];
+		case cmn::BitstreamFormat::CUE:
+			[[fallthrough]];
 		case cmn::BitstreamFormat::PNG:
 			break;
 	}

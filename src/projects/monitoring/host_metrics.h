@@ -32,11 +32,16 @@ namespace mon
 
 		void Release()
 		{
-			for (const auto &app : _applications)
+			std::map<uint32_t, std::shared_ptr<ApplicationMetrics>> applications;
+			{
+				std::unique_lock<std::shared_mutex> lock(_map_guard);
+				applications = std::move(_applications);
+			}
+
+			for (const auto &app : applications)
 			{
 				app.second->Release();
 			}
-			_applications.clear();
 		}
 
 		ov::String GetInfoString(bool show_children = true) override;

@@ -32,6 +32,8 @@ namespace info
 	class Application
 	{
 	public:
+		virtual ~Application() = default;
+
 		virtual const char *GetApplicationTypeName()
 		{
 			return "ApplicationInfo";

@@ -5,6 +5,8 @@
 class DecoderConfigurationRecord
 {
 public:
+	virtual ~DecoderConfigurationRecord() = default;
+
 	std::shared_ptr<const ov::Data> GetData()
 	{
 		if (_updated)

@@ -38,11 +38,22 @@
 #if __cplusplus
 namespace ov
 {
-	template <typename T, typename std::enable_if_t<std::is_enum_v<T>, int> = 0>
+	template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>, typename U = typename std::underlying_type_t<T>>
 	inline bool CheckFlag(const T &lhs, const T &rhs)
 	{
-		using U = typename std::underlying_type<T>::type;
-		return OV_CHECK_FLAG(static_cast<U>(lhs), static_cast<U>(rhs));
+		return OV_CHECK_FLAG(static_cast<const U>(lhs), static_cast<const U>(rhs));
+	}
+
+	template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>, typename U = typename std::underlying_type_t<T>>
+	inline bool CheckFlag(const T &lhs, const U &rhs)
+	{
+		return OV_CHECK_FLAG(static_cast<const U>(lhs), static_cast<const U>(rhs));
+	}
+
+	template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>, typename U = typename std::underlying_type_t<T>>
+	inline bool CheckFlag(const U &lhs, const T &rhs)
+	{
+		return OV_CHECK_FLAG(static_cast<const U>(lhs), static_cast<const U>(rhs));
 	}
 }  // namespace ov
 #endif	// __cplusplus
