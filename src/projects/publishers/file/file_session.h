@@ -37,19 +37,20 @@ namespace pub
 		ov::String GetOutputTempFilePath(std::shared_ptr<info::Record> &record);
 		ov::String GetOutputFilePath();
 		ov::String GetOutputFileInfoPath();
-		ov::String ConvertMacro(ov::String src);
 
 		bool IsSelectedTrack(const std::shared_ptr<MediaTrack> &track);
 		void SelectDefaultTrack(const std::shared_ptr<MediaTrack> &track);
 
-		bool MakeDirectoryRecursive(std::string s);
+		std::shared_ptr<ffmpeg::Writer> CreateWriter();
+		std::shared_ptr<ffmpeg::Writer> GetWriter();
+		void DestoryWriter();
 
 	private:
 		std::shared_ptr<ffmpeg::Writer> _writer;
+		std::shared_mutex _writer_mutex;
 
 		std::shared_ptr<info::Record> _record;
-
-		std::shared_mutex _lock;
+		std::shared_mutex _record_mutex;
 
 		std::map<cmn::MediaType, MediaTrackId> _default_track_by_type;
 		MediaTrackId _default_track;

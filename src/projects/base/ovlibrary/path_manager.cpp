@@ -115,6 +115,46 @@ namespace ov
 		return (mkdir(path, static_cast<mode_t>(mask)) == 0) || (errno == EEXIST);
 	}
 
+	bool PathManager::MakeDirectoryRecursive(const String path)
+	{
+		off_t pos = 0;
+		ov::String s = path;
+		ov::String dir;
+
+		// Check if the directory already exists
+		if (access(path.CStr(), R_OK | W_OK) == 0)
+		{
+			return true;
+		}
+
+		// Append '/' to the end of the path
+		if (s.Get(s.GetLength() - 1) != '/')
+		{
+			s.Append('/');
+		}
+
+		// Create directories recursively
+		while ((pos = s.IndexOf('/', pos)) != -1)
+		{
+			dir = s.Substring(0, pos++);
+			if (dir.GetLength() == 0)
+				continue;
+
+			if (ov::PathManager::MakeDirectory(dir.CStr()) == false)
+			{
+				return false;
+			}
+		}
+
+		// Confirm the directory is created
+		if (access(path.CStr(), R_OK | W_OK) != 0)
+		{
+			return false;
+		}
+
+		return true;
+	}
+
 	String PathManager::Combine(String path1, String path2)
 	{
 		if ((path1.HasSuffix("/") == false) && (path2.HasPrefix("/") == false))

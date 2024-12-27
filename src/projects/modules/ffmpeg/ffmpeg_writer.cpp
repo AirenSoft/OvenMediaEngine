@@ -382,6 +382,8 @@ namespace ffmpeg
 			*sent_bytes = av_packet.size;
 		}
 
+		std::unique_lock<std::shared_mutex> mlock(_av_format_lock);
+
 		int error = av_interleaved_write_frame(av_format.get(), &av_packet);
 		if (error != 0)
 		{
@@ -391,6 +393,8 @@ namespace ffmpeg
 
 			return false;
 		}
+
+		mlock.unlock();
 
 		return true;
 	}
