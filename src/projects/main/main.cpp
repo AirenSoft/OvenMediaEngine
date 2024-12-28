@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 	if (SDPRegexPattern::GetInstance()->Compile() == false)
 	{
 		OV_ASSERT(false, "SDPRegexPattern compile failed");
-		return false;
+		return -1;
 	}
 
 	logti("This host supports %s", ov::ipv6::Checker::GetInstance()->ToString().CStr());
@@ -133,6 +133,7 @@ int main(int argc, char *argv[])
 	INIT_MODULE(push_publisher, "Push Publisher", pub::PushPublisher::Create(*server_config, media_router));
 	INIT_MODULE(thumbnail_publisher, "Thumbnail Publisher", ThumbnailPublisher::Create(*server_config, media_router));
 	INIT_MODULE(hls_publisher, "HLS Publisher", HlsPublisher::Create(*server_config, media_router));
+	INIT_MODULE(srt_publisher, "SRT Publisher", pub::SrtPublisher::Create(*server_config, media_router));
 
 	// Initialize Transcoder
 	INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
@@ -196,6 +197,7 @@ int main(int argc, char *argv[])
 	RELEASE_MODULE(push_publisher, "Push Publisher");	
 	RELEASE_MODULE(thumbnail_publisher, "Thumbnail Publisher");
 	RELEASE_MODULE(hls_publisher, "HLS Publisher");
+	RELEASE_MODULE(srt_publisher, "SRT Publisher");
 
 	RELEASE_MODULE(media_router, "MediaRouter");
 

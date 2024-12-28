@@ -80,25 +80,26 @@ namespace pvd
 							const std::shared_ptr<const ov::Error> &error) override;
 
 	private:
-		std::mutex _physical_port_list_mutex;
-		std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
-
 		struct StreamMap
 		{
-			StreamMap(int port, const ov::String &listen_url)
-				: _port(port)
-				, _listen_url(listen_url)
+			StreamMap(int port, const ov::String &stream_path)
+				: port(port), stream_path(stream_path)
 			{
 			}
 
-			int _port;
-			ov::String _listen_url;
+			int port;
+			ov::String stream_path;
 		};
 
+	private:
 		std::shared_ptr<StreamMap> GetStreamMap(int port);
 
-		// Port : StreamMap
-		std::map<int, std::shared_ptr<StreamMap>> _stream_map;
+	private:
+		std::mutex _physical_port_list_mutex;
+		std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
+
 		std::shared_mutex _stream_map_mutex;
+		// Key: port, Value: StreamMap
+		std::map<int, std::shared_ptr<StreamMap>> _stream_map;
 	};
 }  // namespace pvd

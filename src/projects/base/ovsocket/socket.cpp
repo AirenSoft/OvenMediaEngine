@@ -409,7 +409,7 @@ namespace ov
 					logae("Could not bind to %s (%d, %s)",
 						  address.ToString().CStr(),
 						  result,
-						  ov::Error::CreateErrorFromErrno()->What());
+						  Error::CreateErrorFromErrno()->What());
 					return false;
 				}
 
@@ -718,7 +718,7 @@ namespace ov
 
 		if (result != 0)
 		{
-			const auto error = ov::Error::CreateErrorFromErrno();
+			const auto error = Error::CreateErrorFromErrno();
 			logaw("Could not set option: %d (proto: %d) (result: %d, %s)", option, proto, result, error->What());
 			return false;
 		}
@@ -764,7 +764,7 @@ namespace ov
 
 	bool Socket::IsClosable() const
 	{
-		return OV_CHECK_FLAG(ToUnderlyingType(_state), SOCKET_STATE_CLOSABLE);
+		return CheckFlag(_state, SOCKET_STATE_CLOSABLE);
 	}
 
 	SocketState Socket::GetState() const
@@ -1132,32 +1132,18 @@ namespace ov
 	ssize_t Socket::SendSrtData(
 		const std::shared_ptr<const Data> &data)
 	{
-		SRT_MSGCTRL msgctrl{};
 		auto data_to_send = data->GetDataAs<char>();
 		size_t remaining_bytes = data->GetLength();
 		size_t total_sent_bytes = 0L;
 
 		logap("Trying to send data %zu bytes...", remaining_bytes);
 
-#if 0
-		// 10b == start of frame
-		msgctrl.boundary = 2;
-#endif
-
 		while ((remaining_bytes > 0L) && (_force_stop == false))
 		{
 			// SRT limits packet size up to 1316
 			const auto bytes_to_send = std::min(1316UL, remaining_bytes);
 
-#if 0
-			if (bytes_to_send == remaining_bytes)
-			{
-				// 01b == end of frame
-				msgctrl.boundary |= 1;
-			}
-#endif
-
-			const auto sent = ::srt_sendmsg2(GetNativeHandle(), data_to_send, bytes_to_send, &msgctrl);
+			const auto sent = ::srt_sendmsg(GetNativeHandle(), data_to_send, bytes_to_send, -1, 1);
 
 			if (sent == SRT_ERROR)
 			{
@@ -1176,8 +1162,6 @@ namespace ov
 			}
 
 			OV_ASSERT2(static_cast<ssize_t>(remaining_bytes) >= sent);
-
-			msgctrl.boundary = 0;
 
 			STATS_COUNTER_INCREASE_PPS();
 
@@ -1691,9 +1675,9 @@ namespace ov
 
 				local.ss_family = remote.ss_family;
 
-				auto sock = ov::ToSockAddrIn4(&local);
+				auto sock = ToSockAddrIn4(&local);
 
-				sock->sin_port = ov::HostToNetwork16(local_port);
+				sock->sin_port = HostToNetwork16(local_port);
 				sock->sin_addr = pktinfo->ipi_addr;
 
 				return SocketAddress("", local);
@@ -1711,7 +1695,7 @@ namespace ov
 
 				const auto pktinfo = reinterpret_cast<in6_pktinfo *>(CMSG_DATA(cmsg));
 
-				auto sock = ov::ToSockAddrIn6(&local);
+				auto sock = ToSockAddrIn6(&local);
 
 				sock->sin6_port = local_port;
 				sock->sin6_addr = pktinfo->ipi6_addr;
@@ -2145,7 +2129,7 @@ namespace ov
 
 	String Socket::ToString(const char *class_name) const
 	{
-		ov::String caller(class_name);
+		String caller(class_name);
 		bool ignore_privacy_protection = true;
 
 		// ClientSocket must follow privacy rule
@@ -2154,14 +2138,27 @@ namespace ov
 			ignore_privacy_protection = false;
 		}
 
+		String extra(256);
+
+		if (_remote_address != nullptr)
+		{
+			extra.Append(", ");
+			extra.Append(_remote_address->ToString(ignore_privacy_protection));
+		}
+
+		if (GetType() == SocketType::Srt)
+		{
+			extra.Append(", streamid: ");
+			extra.Append(_stream_id);
+		}
+
 		return String::FormatString(
-			"<%s: %p, #%d, %s, %s, %s%s%s>",
+			"<%s: %p, #%d, %s, %s, %s%s>",
 			class_name, this,
 			GetNativeHandle(), StringFromSocketState(_state),
 			StringFromSocketType(GetType()),
 			StringFromBlockingMode(_blocking_mode),
-			(_remote_address != nullptr) ? ", " : "",
-			(_remote_address != nullptr) ? _remote_address->ToString(ignore_privacy_protection).CStr() : "");
+			extra.CStr());
 	}
 
 	String Socket::ToString() const

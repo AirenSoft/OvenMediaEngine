@@ -99,6 +99,9 @@ enum class PublisherType : int8_t
 	File,
 	Thumbnail,
 	Hls, // HLSv3
+	Srt,
+
+	// End Marker
 	NumberOfPublishers,
 };
 
@@ -286,7 +289,7 @@ struct CodecSpecificInfo
 {
 	cmn::MediaCodecId codec_type = cmn::MediaCodecId::None;
 	const char *codec_name = nullptr;
-	CodecSpecificInfoUnion codec_specific = {0};
+	CodecSpecificInfoUnion codec_specific = {};
 };
 
 static ov::String StringFromStreamSourceType(const StreamSourceType &type)
@@ -393,6 +396,8 @@ static ov::String StringFromPublisherType(const PublisherType &type)
 			return "Thumbnail";
 		case PublisherType::Hls:
 			return "HLSv3";
+		case PublisherType::Srt:
+			return "SRT";
 	}
 
 	return "Unknown";

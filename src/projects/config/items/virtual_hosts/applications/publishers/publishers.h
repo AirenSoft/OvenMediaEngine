@@ -18,6 +18,8 @@
 #include "ll_hls_publisher.h"
 #include "hls_publisher.h"
 #include "push_publisher.h"
+#include "srt_publisher.h"
+
 namespace cfg
 {
 	namespace vhost
@@ -41,7 +43,8 @@ namespace cfg
 							&_thumbnail_publisher,
 							// &_srtpush_publisher,
 							&_hls_publisher,
-							&_push_publisher
+							&_push_publisher,
+							&_srt_publisher,
 						};
 					}
 
@@ -55,6 +58,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetThumbnailPublisher, _thumbnail_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetHlsPublisher, _hls_publisher)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetPushPublisher, _push_publisher)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetSrtPublisher, _srt_publisher)
 					
 					// Deprecated
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetRtmpPushPublisher, _rtmppush_publisher)
@@ -74,6 +78,7 @@ namespace cfg
 						Register<Optional>({"FILE", "file"}, &_file_publisher);
 						Register<Optional>({"Thumbnail", "thumbnail"}, &_thumbnail_publisher);
 						Register<Optional>({"Push", "push"}, &_push_publisher);
+						Register<Optional>({"SRT", "srt"}, &_srt_publisher);
 
 						// Deprecated
 						Register<Optional>("MPEGTSPush", &_mpegtspush_publisher, nullptr,
@@ -107,6 +112,7 @@ namespace cfg
 					FilePublisher _file_publisher;
 					ThumbnailPublisher _thumbnail_publisher;
 					PushPublisher _push_publisher;
+					SrtPublisher _srt_publisher;
 
 					// Deprecated
 					RtmpPushPublisher _rtmppush_publisher;

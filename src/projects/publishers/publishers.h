@@ -15,3 +15,4 @@
 #include "./thumbnail/thumbnail_publisher.h"
 #include "./hls/hls_publisher.h"
 #include "./push/push_publisher.h"
+#include "./srt/srt_publisher.h"

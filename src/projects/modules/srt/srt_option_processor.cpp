@@ -124,13 +124,16 @@ std::shared_ptr<ov::Error> SrtOptionProcessor::SetOptions(
 	{
 		const auto name = option.GetKey();
 		const auto value = option.GetValue();
-#if ENABLE_AEAD_API_PREVIEW
-#endif
+
 		SRT_SET_OPTION(SRTO_BINDTODEVICE, ov::String);
 		SRT_SET_OPTION(SRTO_CONGESTION, ov::String);
 		SRT_SET_OPTION(SRTO_CONNTIMEO, int32_t);
+#ifndef ENABLE_AEAD_API_PREVIEW
 		// SRTO_CRYPTOMODE is only available in SRT 1.5.2 or later with ENABLE_AEAD_API_PREVIEW=true
 		SRT_NOT_SUPPORTED_OPTION(SRTO_CRYPTOMODE, int32_t, "Not supported in " SRT_VERSION_STRING " (This option is available starting from version 1.5.2)");
+#else	// ENABLE_AEAD_API_PREVIEW
+		SRT_SET_OPTION(SRTO_CRYPTOMODE, int32_t);
+#endif	// ENABLE_AEAD_API_PREVIEW
 		SRT_SET_OPTION(SRTO_DRIFTTRACER, bool);
 		SRT_SET_OPTION(SRTO_ENFORCEDENCRYPTION, bool);
 		SRT_SET_OPTION(SRTO_EVENT, int32_t);

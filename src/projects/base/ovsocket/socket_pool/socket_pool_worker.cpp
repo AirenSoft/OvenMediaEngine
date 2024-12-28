@@ -415,10 +415,26 @@ namespace ov
 							// An error occurred
 							int socket_error;
 
-							if (socket->IsClosable() && socket->GetSockOpt(SO_ERROR, &socket_error))
+#if DEBUG
+							if (socket->IsClosable())
 							{
-								logad("EPOLLERR detected: %s\n", ::strerror(socket_error));
+								if (socket->GetType() != SocketType::Srt)
+								{
+									if (socket->GetSockOpt(SO_ERROR, &socket_error))
+									{
+										logad("EPOLLERR detected: %s\n", ::strerror(socket_error));
+									}
+									else
+									{
+										logad("EPOLLERR detected, errno: %s\n", Error::CreateErrorFromErrno()->What());
+									}
+								}
+								else
+								{
+									logad("EPOLLERR detected, errno: %s\n", SrtError::CreateErrorFromSrt()->What());
+								}
 							}
+#endif	// DEBUG
 
 							new_state = SocketState::Error;
 							need_to_close = true;

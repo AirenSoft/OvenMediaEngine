@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include <base/ovlibrary/ovlibrary.h>
+
 #include "base/common_types.h"
 #include "base/info/session.h"
-
-#include <base/ovlibrary/ovlibrary.h>
 
 namespace pub
 {
@@ -22,7 +22,9 @@ namespace pub
 		virtual ~Session();
 
 		const std::shared_ptr<Application> &GetApplication();
+		std::shared_ptr<const Application> GetApplication() const;
 		const std::shared_ptr<Stream> &GetStream();
+		std::shared_ptr<const Stream> GetStream() const;
 
 		std::shared_ptr<ov::Url> GetRequestedUrl() const;
 		void SetRequestedUrl(const std::shared_ptr<ov::Url> &requested_url);
@@ -32,9 +34,9 @@ namespace pub
 
 		virtual bool Start();
 		virtual bool Stop();
-		
-		virtual void SendOutgoingData(const std::any &packet){};
-		virtual void OnMessageReceived(const std::any &message){};
+
+		virtual void SendOutgoingData(const std::any &packet) {};
+		virtual void OnMessageReceived(const std::any &message) {};
 
 		enum class SessionState : int8_t
 		{

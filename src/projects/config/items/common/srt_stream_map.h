@@ -8,25 +8,24 @@
 //==============================================================================
 #pragma once
 
+#include "srt_stream.h"
+
 namespace cfg
 {
 	namespace cmn
 	{
-		struct Stream : public Item
+		struct SrtStreamMap : public Item
 		{
 		protected:
-			int _port;
-			ov::String _url;
+			std::vector<SrtStream> _stream_list;
 
 		public:
-			CFG_DECLARE_CONST_REF_GETTER_OF(GetPort, _port)
-			CFG_DECLARE_CONST_REF_GETTER_OF(GetUrl, _url)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamList, _stream_list)
 
 		protected:
 			void MakeList() override
 			{
-				Register("Port", &_port);
-				Register("ListenURL", &_url);
+				Register<OmitJsonName>("Stream", &_stream_list);
 			}
 		};
 	}  // namespace cmn

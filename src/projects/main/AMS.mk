@@ -9,6 +9,7 @@ LOCAL_STATIC_LIBRARIES := \
 	file_publisher \
 	push_publisher \
 	thumbnail_publisher \
+	srt_publisher \
 	ovt_provider \
 	rtmp_provider \
 	srt_provider \

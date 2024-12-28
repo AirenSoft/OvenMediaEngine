@@ -8,24 +8,25 @@
 //==============================================================================
 #pragma once
 
-#include "stream.h"
-
 namespace cfg
 {
 	namespace cmn
 	{
-		struct StreamMap : public Item
+		struct SrtStream : public Item
 		{
 		protected:
-			std::vector<Stream> _stream_list;
+			int _port;
+			ov::String _stream_path;
 
 		public:
-			CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamList, _stream_list)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetPort, _port)
+			CFG_DECLARE_CONST_REF_GETTER_OF(GetStreamPath, _stream_path)
 
 		protected:
 			void MakeList() override
 			{
-				Register<OmitJsonName>("Stream", &_stream_list);
+				Register("Port", &_port);
+				Register("StreamPath", &_stream_path);
 			}
 		};
 	}  // namespace cmn

@@ -1,4 +1,5 @@
 #include "session.h"
+
 #include "application.h"
 #include "base/info/stream.h"
 #include "publisher_private.h"
@@ -30,7 +31,17 @@ namespace pub
 		return _application;
 	}
 
+	std::shared_ptr<const Application> Session::GetApplication() const
+	{
+		return _application;
+	}
+
 	const std::shared_ptr<Stream> &Session::GetStream()
+	{
+		return _stream;
+	}
+
+	std::shared_ptr<const Stream> Session::GetStream() const
 	{
 		return _stream;
 	}

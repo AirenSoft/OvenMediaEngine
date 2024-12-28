@@ -8,10 +8,10 @@
 //==============================================================================
 #pragma once
 
+#include "../common/webrtc/webrtc.h"
 #include "./provider.h"
 #include "./provider_with_options.h"
 #include "./srt.h"
-#include "../common/webrtc/webrtc.h"
 
 namespace cfg
 {
@@ -56,5 +56,5 @@ namespace cfg
 				};
 			};
 		}  // namespace pvd
-	}	   // namespace bind
+	}  // namespace bind
 }  // namespace cfg

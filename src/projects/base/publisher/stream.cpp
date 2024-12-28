@@ -209,7 +209,7 @@ namespace pub
 			return false;
 		}
 
-		logti("%s application has started [%s(%u)] stream (MSID : %d)", GetApplicationTypeName(), GetName().CStr(), GetId(), GetMsid());
+		logti("%s has started [%s(%u)] stream (MSID : %d)", GetApplicationTypeName(), GetName().CStr(), GetId(), GetMsid());
 
 		_started_time = std::chrono::system_clock::now();
 		_state = State::STARTED;

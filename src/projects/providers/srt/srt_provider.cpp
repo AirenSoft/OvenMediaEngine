@@ -56,14 +56,11 @@ namespace pvd
 		auto stream_map = srt_bind_config.GetStreamMap();
 		for (const auto &stream : stream_map.GetStreamList())
 		{
-			_stream_map.emplace(stream.GetPort(), std::make_shared<StreamMap>(stream.GetPort(), stream.GetUrl()));
+			_stream_map.emplace(stream.GetPort(), std::make_shared<StreamMap>(stream.GetPort(), stream.GetStreamPath()));
 		}
 		lock.unlock();
 
 		bool is_configured;
-		auto worker_count = srt_bind_config.GetWorkerCount(&is_configured);
-		worker_count = is_configured ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
-
 		bool is_port_configured;
 		auto &port_config = srt_bind_config.GetPort(&is_port_configured);
 
@@ -89,6 +86,9 @@ namespace pvd
 		std::vector<std::shared_ptr<PhysicalPort>> physical_port_list;
 
 		auto physical_port_manager = PhysicalPortManager::GetInstance();
+
+		auto worker_count = srt_bind_config.GetWorkerCount(&is_configured);
+		worker_count = is_configured ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
 
 		for (const auto &address : address_list)
 		{
@@ -216,7 +216,7 @@ namespace pvd
 				return;
 			}
 
-			decoded_url = stream_map->_listen_url;
+			decoded_url = stream_map->stream_path;
 		}
 		else
 		{

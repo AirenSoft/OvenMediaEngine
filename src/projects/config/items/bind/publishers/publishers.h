@@ -8,8 +8,9 @@
 //==============================================================================
 #pragma once
 
-#include "./publisher.h"
 #include "../common/webrtc/webrtc.h"
+#include "./publisher.h"
+#include "./srt.h"
 
 namespace cfg
 {
@@ -27,12 +28,15 @@ namespace cfg
 
 				cmm::Webrtc _webrtc{"3333/tcp", "3334/tcp"};
 
+				SRT _srt{"9998/srt"};
+
 			public:
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetOvt, _ovt)
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetLLHls, _llhls)
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetWebrtc, _webrtc)
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetThumbnail, _thumbnail)
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetHls, _hls)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetSrt, _srt)
 
 			protected:
 				void MakeList() override
@@ -42,8 +46,9 @@ namespace cfg
 					Register<Optional>({"WebRTC", "webrtc"}, &_webrtc);
 					Register<Optional>({"Thumbnail", "thumbnail"}, &_thumbnail);
 					Register<Optional>({"HLS", "hls"}, &_hls);
+					Register<Optional>({"SRT", "srt"}, &_srt);
 				};
 			};
-		} // namespace pub
-	} // namespace bind
+		}  // namespace pub
+	}  // namespace bind
 }  // namespace cfg

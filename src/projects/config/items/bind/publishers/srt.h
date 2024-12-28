@@ -2,24 +2,24 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Getroot
-//  Copyright (c) 2023 AirenSoft. All rights reserved.
+//  Created by Hyunjun Jang
+//  Copyright (c) 2024 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
 
-#include "../../common/ranged_port.h"
 #include "../../common/options.h"
+#include "../../common/ranged_port.h"
 #include "../../common/srt_stream_map.h"
-#include "./provider.h"
+#include "./publisher.h"
 
 namespace cfg
 {
 	namespace bind
 	{
-		namespace pvd
+		namespace pub
 		{
-			struct SRT : public Provider<cmn::RangedPort>
+			struct SRT : public Publisher<cmn::RangedPort>
 			{
 			protected:
 				cmn::Options _options;
@@ -29,7 +29,7 @@ namespace cfg
 				using Item::IsParsed;
 
 				explicit SRT(const char *port)
-					: Provider<cmn::RangedPort>(port)
+					: Publisher<cmn::RangedPort>(port)
 				{
 				}
 
@@ -39,12 +39,12 @@ namespace cfg
 			protected:
 				void MakeList() override
 				{
-					Provider<cmn::RangedPort>::MakeList();
+					Publisher<cmn::RangedPort>::MakeList();
 
 					Item::Register<Optional>("Options", &_options);
 					Item::Register<Optional>("StreamMap", &_stream_map);
 				};
 			};
-		}  // namespace pvd
-	}	   // namespace bind
+		}  // namespace pub
+	}  // namespace bind
 }  // namespace cfg
