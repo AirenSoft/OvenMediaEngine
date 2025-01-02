@@ -361,9 +361,24 @@ namespace ffmpeg
 					return true;
 			}
 		}
-		else if (_output_format_name == "mpegts")
+		else if (_output_format_name == "mpegts") // TS, SRT
 		{
-			// Passthrough
+			switch(packet->GetBitstreamFormat())
+			{
+				case cmn::BitstreamFormat::H264_ANNEXB:
+				case cmn::BitstreamFormat::H264_AVCC:
+				case cmn::BitstreamFormat::H265_ANNEXB:
+				case cmn::BitstreamFormat::HVCC:
+				case cmn::BitstreamFormat::AAC_RAW:
+				case cmn::BitstreamFormat::AAC_ADTS:
+				case cmn::BitstreamFormat::AAC_LATM:
+				case cmn::BitstreamFormat::OPUS:
+				case cmn::BitstreamFormat::MP3:
+					break;
+				default:
+					// Unsupported bitstream foramt, but it is not an error.
+					return true;
+			}
 		}
 
 		auto av_format = GetAVFormatContext();
