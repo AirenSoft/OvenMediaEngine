@@ -76,17 +76,17 @@ AmfTextDataEvent::AmfTextDataEvent()
 	_arrays = std::make_shared<AmfEcmaArray>();
 }
 
-bool AmfTextDataEvent::Append(const char *name, const bool &value)
+bool AmfTextDataEvent::Append(const char *name, const bool value)
 {
 	return _arrays->Append(name, AmfProperty(value));
 }
 
-bool AmfTextDataEvent::Append(const char *name, const double &value)
+bool AmfTextDataEvent::Append(const char *name, const double value)
 {
 	return _arrays->Append(name, AmfProperty(value));
 }
 
-bool AmfTextDataEvent::Append(const char *name, const ov::String &value)
+bool AmfTextDataEvent::Append(const char *name, const char *value)
 {
 	return _arrays->Append(name, AmfProperty(value));
 }

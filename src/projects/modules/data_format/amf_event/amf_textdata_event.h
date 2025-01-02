@@ -42,9 +42,9 @@ public:
 
 	std::shared_ptr<ov::Data> Serialize() const;
 
-	bool Append(const char *name, const bool &value);
-	bool Append(const char *name, const double &value);
-	bool Append(const char *name, const ov::String &value);
+	bool Append(const char *name, const bool value);
+	bool Append(const char *name, const double value);
+	bool Append(const char *name, const char *value);
 
 private:
 	std::shared_ptr<AmfEcmaArray> _arrays = nullptr;
