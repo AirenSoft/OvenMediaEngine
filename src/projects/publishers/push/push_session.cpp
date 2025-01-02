@@ -85,8 +85,8 @@ namespace pub
 
 		for (auto &[track_id, track] : GetStream()->GetTracks())
 		{
-			// If the selected track list exists. if the current trackid does not exist on the list, ignore it.
-			// If no track list is selected, save all tracks.
+			// If the track defined in VariantNames exists, use it. If not, it is ignored.
+			// If VariantNames is empty, all tracks are selected.
 			if (IsSelectedTrack(track) == false)
 			{
 				continue;
@@ -250,6 +250,12 @@ namespace pub
 	{
 		auto selected_track_ids = GetPush()->GetTrackIds();
 		auto selected_track_names = GetPush()->GetVariantNames();
+
+		// Data type track is always selected.
+		if(track->GetMediaType() == cmn::MediaType::Data)
+		{
+			return true;
+		}
 
 		if (selected_track_ids.size() > 0 || selected_track_names.size() > 0)
 		{
