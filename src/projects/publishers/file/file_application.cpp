@@ -382,26 +382,31 @@ namespace pub
 	{
 		std::vector<std::shared_ptr<info::Record>> results;
 
-		ov::String final_path = ov::GetFilePath(file_path, cfg::ConfigManager::GetInstance()->GetConfigPath());
+		ov::String real_path = ov::GetFilePath(file_path, cfg::ConfigManager::GetInstance()->GetConfigPath());
 
 		pugi::xml_document xml_doc;
-		auto load_result = xml_doc.load_file(final_path.CStr());
+		auto load_result = xml_doc.load_file(real_path.CStr());
 		if (load_result == false)
 		{
-			logte("FileStream(%s/%s) - Failed to load Record info file(%s) status(%d) description(%s)", GetVHostAppName().CStr(), stream_info->GetName().CStr(), final_path.CStr(), load_result.status, load_result.description());
+			logte("FileStream(%s/%s) - Failed to load Record info file(%s) status(%d) description(%s)", GetVHostAppName().CStr(), stream_info->GetName().CStr(), real_path.CStr(), load_result.status, load_result.description());
 			return results;
 		}
 
 		auto root_node = xml_doc.child("RecordInfo");
 		if (root_node.empty())
 		{
-			logte("FileStream(%s/%s) - Failed to load Record info file(%s) because root node is not found", GetVHostAppName().CStr(), stream_info->GetName().CStr(), final_path.CStr());
+			logte("FileStream(%s/%s) - Failed to load Record info file(%s) because root node is not found", GetVHostAppName().CStr(), stream_info->GetName().CStr(), real_path.CStr());
 			return results;
 		}
 
 		for (pugi::xml_node record_node = root_node.child("Record"); record_node; record_node = record_node.next_sibling("Record"))
 		{
 			bool enable = (strcmp(record_node.child_value("Enable"), "true") == 0) ? true : false;
+			if (enable == false)
+			{
+				continue;
+			}
+
 			ov::String target_stream_name = record_node.child_value("StreamName");
 			ov::String file_path = record_node.child_value("FilePath");
 			ov::String info_path = record_node.child_value("InfoPath");
@@ -411,12 +416,21 @@ namespace pub
 			ov::String segment_rule = record_node.child_value("SegmentRule");
 			ov::String metadata = record_node.child_value("Metadata");
 
-			if(enable == false)
+		
+			// Get the source stream name. If no linked input stream, use the current output stream name.
+			ov::String source_stream_name = stream_info->GetName();
+			if (stream_info->GetLinkedInputStream() != nullptr)
 			{
-				continue;
+				source_stream_name = stream_info->GetLinkedInputStream()->GetName();
+			}
+			else
+			{
+				source_stream_name = stream_info->GetName();
 			}
 
 			// stream_name can be regex
+			target_stream_name = target_stream_name.Replace("${SourceStream}", source_stream_name.CStr());
+
 			ov::Regex _target_stream_name_regex = ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(target_stream_name));
 			auto match_result = _target_stream_name_regex.Matches(stream_info->GetName().CStr());
 

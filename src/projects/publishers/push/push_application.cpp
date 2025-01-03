@@ -391,6 +391,7 @@ namespace pub
 				continue;
 			}
 
+			// Get configuration values
 			ov::String map_id = curr_node.child_value("Id");
 			ov::String target_stream_name = curr_node.child_value("StreamName");
 			ov::String variant_names = curr_node.child_value("VariantNames");
@@ -398,7 +399,20 @@ namespace pub
 			ov::String url = curr_node.child_value("Url");
 			ov::String stream_key = curr_node.child_value("StreamKey");
 
+			// Get the source stream name. If no linked input stream, use the current output stream name.
+			ov::String source_stream_name = stream_info->GetName();
+			if (stream_info->GetLinkedInputStream() != nullptr)
+			{
+				source_stream_name = stream_info->GetLinkedInputStream()->GetName();
+			}
+			else
+			{
+				source_stream_name = stream_info->GetName();
+			}
+
 			// stream_name can be regex
+			target_stream_name = target_stream_name.Replace("${SourceStream}", source_stream_name.CStr());
+
 			ov::Regex _target_stream_name_regex = ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(target_stream_name));
 			auto match_result = _target_stream_name_regex.Matches(stream_info->GetName().CStr());
 
@@ -410,30 +424,15 @@ namespace pub
 			// Macro replacement for stream name
 			url = url.Replace("${Application}", stream_info->GetApplicationName());			
 			url = url.Replace("${Stream}", stream_info->GetName().CStr());
-			if (stream_info->GetLinkedInputStream() != nullptr)
-			{
-				url = url.Replace("${SourceStream}", stream_info->GetLinkedInputStream()->GetName().CStr());
-			}
-			else
-			{
-				url = url.Replace("${SourceStream}", stream_info->GetName().CStr());
-			}
+			url = url.Replace("${SourceStream}", source_stream_name.CStr());
 
 			// Macro replacement for stream key
 			if(stream_key.IsEmpty() == false)
 			{
 				stream_key = stream_key.Replace("${Application}", stream_info->GetApplicationName());			
 				stream_key = stream_key.Replace("${Stream}", stream_info->GetName().CStr());
-				if (stream_info->GetLinkedInputStream() != nullptr)
-				{
-					stream_key = stream_key.Replace("${SourceStream}", stream_info->GetLinkedInputStream()->GetName().CStr());
-				}
-				else
-				{
-					stream_key = stream_key.Replace("${SourceStream}", stream_info->GetName().CStr());
-				}
+				stream_key = stream_key.Replace("${SourceStream}", source_stream_name.CStr());
 			}
-
 
 			auto push = std::make_shared<info::Push>();
 			if(push == nullptr)
