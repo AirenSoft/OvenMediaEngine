@@ -32,7 +32,7 @@ namespace pub
 		//--------------------------------------------------------------------
 		void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 		void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
-		void SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet) override {}  // Not supported yet
+		void SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 		//--------------------------------------------------------------------
 
 		//--------------------------------------------------------------------

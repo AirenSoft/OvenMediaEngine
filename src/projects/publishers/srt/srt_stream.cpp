@@ -78,6 +78,7 @@ namespace pub
 
 		std::shared_ptr<MediaTrack> first_video_track = nullptr;
 		std::shared_ptr<MediaTrack> first_audio_track = nullptr;
+		std::shared_ptr<MediaTrack> first_data_track = nullptr;
 
 		for (const auto &[id, track] : GetTracks())
 		{
@@ -94,6 +95,10 @@ namespace pub
 			}
 			else if (track->GetMediaType() == cmn::MediaType::Data)
 			{
+				if (first_data_track == nullptr)
+				{
+					first_data_track = track;
+				}
 			}
 			else
 			{
@@ -111,7 +116,8 @@ namespace pub
 		}
 
 		bool result = ((first_video_track != nullptr) ? packetizer->AddTrack(first_video_track) : true) &&
-					  ((first_audio_track != nullptr) ? packetizer->AddTrack(first_audio_track) : true);
+					  ((first_audio_track != nullptr) ? packetizer->AddTrack(first_audio_track) : true) &&
+					  ((first_data_track != nullptr) ? packetizer->AddTrack(first_data_track) : true);
 
 		if (result == false)
 		{
@@ -204,6 +210,11 @@ namespace pub
 	}
 
 	void SrtStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
+	{
+		EnqueuePacket(media_packet);
+	}
+
+	void SrtStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	{
 		EnqueuePacket(media_packet);
 	}
