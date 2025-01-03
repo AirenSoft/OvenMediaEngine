@@ -43,6 +43,8 @@ namespace mpegts
         bool AddSink(const std::shared_ptr<PacketizerSink> &sink);
         bool RemoveSink(const std::shared_ptr<PacketizerSink> &sink);
 
+		static bool IsSupportedCodec(cmn::MediaCodecId codec_id);
+
         bool AddTrack(const std::shared_ptr<const MediaTrack> &media_track);
 
         bool Start();
@@ -63,7 +65,7 @@ namespace mpegts
 
         uint16_t GetElementaryPid(uint32_t track_id);
         uint16_t GetFirstElementaryPid() const;
-        WellKnownStreamTypes GetElementaryStreamTypeByCodecId(cmn::MediaCodecId codec_id) const;
+        static WellKnownStreamTypes GetElementaryStreamTypeByCodecId(cmn::MediaCodecId codec_id);
         uint8_t GetNextContinuityCounter(uint16_t pid);
         void IncreaseContinuityCounter(uint16_t pid, uint32_t add_count);
 

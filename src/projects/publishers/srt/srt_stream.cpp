@@ -76,9 +76,47 @@ namespace pub
 
 		auto packetizer = std::make_shared<mpegts::Packetizer>();
 
-		for (auto &track : GetTracks())
+		std::shared_ptr<MediaTrack> first_video_track = nullptr;
+		std::shared_ptr<MediaTrack> first_audio_track = nullptr;
+
+		for (const auto &[id, track] : GetTracks())
 		{
-			packetizer->AddTrack(track.second);
+			if (mpegts::Packetizer::IsSupportedCodec(track->GetCodecId()))
+			{
+				if ((first_video_track == nullptr) && (track->GetMediaType() == cmn::MediaType::Video))
+				{
+					first_video_track = track;
+				}
+				else if ((first_audio_track == nullptr) && (track->GetMediaType() == cmn::MediaType::Audio))
+				{
+					first_audio_track = track;
+				}
+			}
+			else if (track->GetMediaType() == cmn::MediaType::Data)
+			{
+			}
+			else
+			{
+				logai("SrtStream - Ignore unsupported codec(%s)",
+					  StringFromMediaCodecId(track->GetCodecId()).CStr());
+
+				continue;
+			}
+		}
+
+		if ((first_video_track == nullptr) && (first_audio_track == nullptr))
+		{
+			logaw("There is no track to create SRT stream");
+			return false;
+		}
+
+		bool result = ((first_video_track != nullptr) ? packetizer->AddTrack(first_video_track) : true) &&
+					  ((first_audio_track != nullptr) ? packetizer->AddTrack(first_audio_track) : true);
+
+		if (result == false)
+		{
+			logae("Failed to add track to packetizer");
+			return false;
 		}
 
 		_psi_data->Clear();

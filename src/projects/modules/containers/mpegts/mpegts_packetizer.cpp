@@ -45,6 +45,11 @@ namespace mpegts
         return true;
     }
 
+	bool Packetizer::IsSupportedCodec(cmn::MediaCodecId codec_id)
+	{
+		return GetElementaryStreamTypeByCodecId(codec_id) != WellKnownStreamTypes::None;
+	}
+
     bool Packetizer::AddTrack(const std::shared_ptr<const MediaTrack> &media_track)
     {
         if (IsStarted())
@@ -364,7 +369,7 @@ namespace mpegts
         return _pids.begin()->second;
     }
 
-    WellKnownStreamTypes Packetizer::GetElementaryStreamTypeByCodecId(cmn::MediaCodecId codec_id) const
+    WellKnownStreamTypes Packetizer::GetElementaryStreamTypeByCodecId(cmn::MediaCodecId codec_id)
     {
 		switch (codec_id)
 		{
