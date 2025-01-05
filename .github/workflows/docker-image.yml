@@ -3,7 +3,10 @@ name: Docker Image CI
 on:
   push:
     branches:
-    - master
+      - master
+    paths-ignore:
+      - 'dist/**'
+      - 'docs/**'
   workflow_dispatch:
 
 concurrency:
