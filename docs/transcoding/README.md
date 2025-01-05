@@ -2,7 +2,7 @@
 
 OvenMediaEngine has a built-in live transcoder. The live transcoder can decode the incoming live source and re-encode it with the set codec or adjust the quality to encode at multiple bitrates.
 
-## Supported Video, Audio and Image Codecs
+## Supported Video, Audio Codecs
 
 ### Decoders
 
@@ -10,7 +10,7 @@ OvenMediaEngine has a built-in live transcoder. The live transcoder can decode t
 
 ### Encoders
 
-<table><thead><tr><th width="149">Type</th><th width="177.33333333333331">Codec</th><th>Codec of Configuration</th></tr></thead><tbody><tr><td>Video</td><td>VP8</td><td>vp8</td></tr><tr><td></td><td>H.264</td><td>h264 <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td>x264</td><td>h264_x264</td></tr><tr><td></td><td>OpenH264</td><td>h264_openh264</td></tr><tr><td></td><td>NVIDIA Hardware</td><td>h264_nvenc</td></tr><tr><td></td><td>Intel Hardware</td><td>h264_qsv</td></tr><tr><td></td><td>Xilinx Hardware</td><td>h264_xma</td></tr><tr><td></td><td>NetInt Hardware</td><td>h264_nilogan</td></tr><tr><td></td><td>H.265</td><td>h265 <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td>NVIDIA Hardware</td><td>h265_nvenc</td></tr><tr><td></td><td>Intel Hardware</td><td>h265_qsv</td></tr><tr><td></td><td>Xilinx Hardware</td><td>h265_xma</td></tr><tr><td></td><td>NetInt Hardware</td><td>h265_nilogan</td></tr><tr><td>Audio</td><td>AAC</td><td>aac</td></tr><tr><td></td><td>Opus</td><td>opus</td></tr><tr><td>Image</td><td>JPEG</td><td>jpeg</td></tr><tr><td></td><td>PNG</td><td>png</td></tr></tbody></table>
+<table><thead><tr><th width="149">Type</th><th width="177.33333333333331">Codec</th><th>Codec of Configuration</th></tr></thead><tbody><tr><td>Video</td><td>VP8</td><td>vp8</td></tr><tr><td></td><td>H.264</td><td>h264 <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td>x264</td><td>h264_x264</td></tr><tr><td></td><td>OpenH264</td><td>h264_openh264</td></tr><tr><td></td><td>NVIDIA Hardware</td><td>h264_nvenc</td></tr><tr><td></td><td>Intel Hardware</td><td>h264_qsv</td></tr><tr><td></td><td>Xilinx Hardware</td><td>h264_xma</td></tr><tr><td></td><td>NetInt Hardware</td><td>h264_nilogan</td></tr><tr><td></td><td>H.265</td><td>h265 <em><mark style="color:blue;">(Automatic Codec Selection)</mark></em></td></tr><tr><td></td><td>NVIDIA Hardware</td><td>h265_nvenc</td></tr><tr><td></td><td>Intel Hardware</td><td>h265_qsv</td></tr><tr><td></td><td>Xilinx Hardware</td><td>h265_xma</td></tr><tr><td></td><td>NetInt Hardware</td><td>h265_nilogan</td></tr><tr><td>Audio</td><td>AAC</td><td>aac</td></tr><tr><td></td><td>Opus</td><td>opus</td></tr></tbody></table>
 
 ## OutputProfiles
 
@@ -128,34 +128,6 @@ The meaning of each property is as follows:
 <mark style="color:red;">\*</mark> required
 
 It is possible to have an audio only output profile by specifying the Audio profile and omitting a Video one.
-
-#### Image
-
-You can set the Image profile as below:
-
-```markup
-<Encodes>
-    <Image>
-        <Codec>jpeg</Codec>
-        <Width>1280</Width>
-        <Height>720</Height>
-        <Framerate>1</Framerate>
-    </Image>
-</Encodes>
-```
-
-The meaning of each property is as follows:
-
-| Property  | Description                                |
-| --------- | ------------------------------------------ |
-| Codec     | Specifies the `jpeg` or `png` codec to use |
-| Width     | Width of resolution                        |
-| Height    | Height of resolution                       |
-| Framerate | Frames per second                          |
-
-{% hint style="warning" %}
-The image encoding profile is only used by thumbnail publishers. and, bypass option is not supported.
-{% endhint %}
 
 ### Passthrough (Bypass)
 
@@ -326,43 +298,7 @@ The software decoder uses 2 threads by default. If the CPU speed is too low for 
 </OutputProfiles>
 ```
 
-### Keyframe Decoding Only
 
-For use cases without video (re)encoding, OME can be set to only decode the keyframes of incoming streams. This is a massive performance increase when all you are using the encoder for is generating thumbnails.
-
-To set OME to only decode keyframes, all of your encoder Output Profiles must be set to **true** set **true**.
-
-Supported since OvenmediaEngine version 0.18.0
-
-```xml
-<OutputProfiles>
-<!-- Common setting for decoders. Decodes is optional. -->
-	<Decodes>
-	<!-- 
-	By default, OME decodes all video frames. 
-	With OnlyKeyframes, only keyframes are decoded,
-	massively improving performance.
-	Thumbnails are generated only on keyframes,
-	they may not generate at your requested fps!
-	-->
-		<OnlyKeyframes>true</OnlyKeyframes>
-	</Decodes>
-
-    <OutputProfile>
-       <Encodes>
-           <Video>
-                <Bypass>true</Bypass>	
-  		   </Video>
-           <Image>
-               <Codec>jpeg</Codec>
-               <Width>1280</Width>
-               <Height>720</Height>
-               <Framerate>1</Framerate>
-          </Image>
-       </Encodes>
-    </OutputProfile>
-</OutputProfiles>
-```
 
 ## Adaptive Bitrate Streaming (ABR)
 
