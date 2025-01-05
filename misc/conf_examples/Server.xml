@@ -143,6 +143,10 @@
 					<TcpRelayWorkerCount>1</TcpRelayWorkerCount>
 				</IceCandidates>
 			</WebRTC>
+			<SRT>
+				<Port>9998</Port>
+				<WorkerCount>1</WorkerCount>
+			</SRT>
 		</Publishers>
 	</Bind>
 
