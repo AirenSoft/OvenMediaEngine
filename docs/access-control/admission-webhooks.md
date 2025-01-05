@@ -20,7 +20,7 @@ AdmissionWebhooks can be set up on VirtualHost, as shown below.
 		<Timeout>3000</Timeout>
 		<Enables>
 			<Providers>rtmp,webrtc,srt</Providers>
-			<Publishers>webrtc,llhls,thumbnail</Publishers>
+			<Publishers>webrtc,llhls,thumbnail,srt</Publishers>
 		</Enables>
 	</AdmissionWebhooks>
 </VirtualHost>

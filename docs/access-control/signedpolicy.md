@@ -12,7 +12,7 @@ scheme://domain.com:port/app/stream?policy=<>&signature=<>
 
 ### Policy
 
-Policy is in json format and provides the following properties.
+Policy is in JSON format and provides the following properties.
 
 ```
 {
@@ -59,12 +59,33 @@ When creating a signature, you cannot omit the default port such as http port 80
 {% endhint %}
 
 {% hint style="danger" %}
-When using SignedPolicy with SRT providers, only use the **streamid** portion of the URL, e.g. srt://myserver:9999?streamid=**srt://myserver:9999/app/stream?policy=abc123**
+When using SignedPolicy with [SRT providers](../live-source/srt.md), only use the **streamid** portion of the URL, e.g. srt://myserver:9999?streamid=**srt://myserver:9999/app/stream?policy=abc123**
 {% endhint %}
+
+{% hint style="danger" %}
+When using SignedPolicy with [SRT publishers](../streaming/srt.md), you must generate the SignedPolicy using the  `streamid`.
+
+
+
+For example, to generate a SignedPolicy for the URL `srt://1.2.3.4:9998?streamid=default/app/stream`, you can use the following command:
+
+```bash
+$ ./simple_signed_policy_url_generator.sh ome_is_the_best \
+    srt://default/app/stream signature policy 600
+[URL] srt://default/app/stream?policy=__POLICY__&signature=__SIGNATURE__
+[Percent encoded URL] srt%3A//default/app/stream%3Fpolicy%3D__POLICY__%26signature%3D__SIGNATURE__
+```
+
+
+
+When the SignedPolicy is applied, the final SRT URL becomes `srt://1.2.3.4:9998?streamid=default%2Fapp%2Fstream%3Fpolicy%3D__POLICY__%26signature%3D__SIGNATURE__`.
+{% endhint %}
+
+
 
 ## Configuration
 
-To enable SignedPolicy, you need to add the following \<SignedPolicy> setting in Server.xml under \<VirtualHost>.
+To enable SignedPolicy, you need to add the following `<SignedPolicy>` setting in `Server.xml` under `<VirtualHost>`.
 
 ```
 <VirtualHost>
