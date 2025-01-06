@@ -48,20 +48,6 @@ namespace pub
 		logad("SrtStream has been terminated finally");
 	}
 
-	bool SrtStream::IsSupportedCodec(cmn::MediaCodecId codec_id)
-	{
-		switch (codec_id)
-		{
-			case cmn::MediaCodecId::H264:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Aac:
-				return true;
-
-			default:
-				return false;
-		}
-	}
-
 #define SRT_SET_TRACK(from, to, supported, message, ...)  \
 	if (to == nullptr)                                    \
 	{                                                     \
@@ -113,21 +99,18 @@ namespace pub
 			{
 				case cmn::MediaType::Video:
 					SRT_SET_TRACK(track, first_video_track,
-								  IsSupportedCodec(track->GetCodecId()),
+								  mpegts::Packetizer::IsSupportedCodec(track->GetCodecId()),
 								  "Ignore unsupported video codec (%s)", StringFromMediaCodecId(track->GetCodecId()).CStr());
 					break;
 
 				case cmn::MediaType::Audio:
 					SRT_SET_TRACK(track, first_audio_track,
-								  IsSupportedCodec(track->GetCodecId()),
+								  mpegts::Packetizer::IsSupportedCodec(track->GetCodecId()),
 								  "Ignore unsupported audio codec (%s)", StringFromMediaCodecId(track->GetCodecId()).CStr());
 					break;
 
 				case cmn::MediaType::Data:
-					// mpegts::Packetizer only supports ID3v2 format for data track
-					SRT_SET_TRACK(track, first_data_track,
-								  (track->GetOriginBitstream() == cmn::BitstreamFormat::ID3v2),
-								  "Ignore unsupported data bitstream format (%s)", GetBitstreamFormatString(track->GetOriginBitstream()).CStr());
+					SRT_SET_TRACK(track, first_data_track, true, );
 					break;
 
 				default:

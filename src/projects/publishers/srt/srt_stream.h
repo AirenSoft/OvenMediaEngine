@@ -27,8 +27,6 @@ namespace pub
 						   uint32_t worker_count);
 		~SrtStream() override final;
 
-		static bool IsSupportedCodec(cmn::MediaCodecId codec_id);
-
 		//--------------------------------------------------------------------
 		// Overriding of Stream
 		//--------------------------------------------------------------------
