@@ -150,6 +150,7 @@ bool HlsStream::IsSupportedCodec(cmn::MediaCodecId codec_id) const
 {
 	switch (codec_id)
 	{
+		case cmn::MediaCodecId::H265:
 		case cmn::MediaCodecId::H264:
 		case cmn::MediaCodecId::Aac:
 			return true;
