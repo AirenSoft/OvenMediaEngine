@@ -27,6 +27,8 @@ namespace pub
 						   uint32_t worker_count);
 		~SrtStream() override final;
 
+		static bool IsSupportedCodec(cmn::MediaCodecId codec_id);
+
 		//--------------------------------------------------------------------
 		// Overriding of Stream
 		//--------------------------------------------------------------------
@@ -52,6 +54,8 @@ namespace pub
 	private:
 		bool Start() override;
 		bool Stop() override;
+
+		void SetTrack(const std::shared_ptr<MediaTrack> &from, std::shared_ptr<MediaTrack> *to);
 
 		void EnqueuePacket(const std::shared_ptr<MediaPacket> &media_packet);
 		void BroadcastIfReady(const std::vector<std::shared_ptr<mpegts::Packet>> &packets);

@@ -48,6 +48,33 @@ namespace pub
 		logad("SrtStream has been terminated finally");
 	}
 
+	bool SrtStream::IsSupportedCodec(cmn::MediaCodecId codec_id)
+	{
+		switch (codec_id)
+		{
+			case cmn::MediaCodecId::H264:
+				[[fallthrough]];
+			case cmn::MediaCodecId::Aac:
+				return true;
+
+			default:
+				return false;
+		}
+	}
+
+#define SRT_SET_TRACK(from, to, supported, message, ...)  \
+	if (to == nullptr)                                    \
+	{                                                     \
+		if (supported)                                    \
+		{                                                 \
+			to = from;                                    \
+		}                                                 \
+		else                                              \
+		{                                                 \
+			logai("SrtStream - " message, ##__VA_ARGS__); \
+		}                                                 \
+	}
+
 	bool SrtStream::Start()
 	{
 		if (GetState() != Stream::State::CREATED)
@@ -82,39 +109,30 @@ namespace pub
 
 		for (const auto &[id, track] : GetTracks())
 		{
-			if (mpegts::Packetizer::IsSupportedCodec(track->GetCodecId()))
+			switch (track->GetMediaType())
 			{
-				if ((first_video_track == nullptr) && (track->GetMediaType() == cmn::MediaType::Video))
-				{
-					first_video_track = track;
-				}
-				else if ((first_audio_track == nullptr) && (track->GetMediaType() == cmn::MediaType::Audio))
-				{
-					first_audio_track = track;
-				}
-			}
-			else if (track->GetMediaType() == cmn::MediaType::Data)
-			{
-				// mpegts::Packetizer only supports ID3v2 format for data track
-				if (track->GetOriginBitstream() == cmn::BitstreamFormat::ID3v2)
-				{
-					if (first_data_track == nullptr)
-					{
-						first_data_track = track;
-					}
-				}
-				else
-				{
-					logai("SrtStream - Ignore unsupported bitstream format(%s)",
-						  GetBitstreamFormatString(track->GetOriginBitstream()).CStr());
-				}
-			}
-			else
-			{
-				logai("SrtStream - Ignore unsupported codec(%s)",
-					  StringFromMediaCodecId(track->GetCodecId()).CStr());
+				case cmn::MediaType::Video:
+					SRT_SET_TRACK(track, first_video_track,
+								  IsSupportedCodec(track->GetCodecId()),
+								  "Ignore unsupported video codec (%s)", StringFromMediaCodecId(track->GetCodecId()).CStr());
+					break;
 
-				continue;
+				case cmn::MediaType::Audio:
+					SRT_SET_TRACK(track, first_audio_track,
+								  IsSupportedCodec(track->GetCodecId()),
+								  "Ignore unsupported audio codec (%s)", StringFromMediaCodecId(track->GetCodecId()).CStr());
+					break;
+
+				case cmn::MediaType::Data:
+					// mpegts::Packetizer only supports ID3v2 format for data track
+					SRT_SET_TRACK(track, first_data_track,
+								  (track->GetOriginBitstream() == cmn::BitstreamFormat::ID3v2),
+								  "Ignore unsupported data bitstream format (%s)", GetBitstreamFormatString(track->GetOriginBitstream()).CStr());
+					break;
+
+				default:
+					logad("SrtStream - Ignore unsupported media type(%s)", GetMediaTypeString(track->GetMediaType()).CStr());
+					continue;
 			}
 		}
 
