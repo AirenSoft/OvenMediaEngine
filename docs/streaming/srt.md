@@ -58,6 +58,50 @@ SRT clients such as FFmpeg, OBS Studio, and `srt-live-transmit` allow you to spe
 
 > streamid = percent\_encoding("{virtual host name}/{app name}/{stream name}")
 
+## Playback
+
+To ensure that SRT streaming works correctly, you can use tools like FFmpeg or OBS Studio to verify the functionality. Here is the guidance on how to playback the stream using the generated SRT URL.
+
+The SRT URL to be used in the player is structured as follows:
+
+```
+srt://<OME Host>:<SRT Publisher Port>?streamid={vhost name}%2F{app name}%2F{stream name}
+```
+
+For example, to playback the `default/app/stream` stream from OME listening on port `9998` at `192.168.0.160`, use the following SRT URL:
+
+> `srt://192.168.0.160:9998?streamid=default/app/stream`
+
+You can input the SRT URL as shown above into your SRT client. Below, we provide instructions on how to input the SRT URL for each client.
+
+### FFplay (FFmpeg/FFprobe)
+
+If you want to test SRT with FFplay, FFmpeg, or FFprobe, simply enter the SRT URL next to the command. For example, with FFplay, you can use the following command:
+
+```
+$ ffplay "srt://192.168.0.160:9998?streamid=default%2Fapp%2Fstream"
+```
+
+<figure><img src="../.gitbook/assets/{68CFBC16-D034-47C0-B835-2AF8E2F0475F}.png" alt=""><figcaption></figcaption></figure>
+
+### OBS Studio
+
+OBS Studio offers the ability to add an SRT stream as an input source. To use this feature, follow the steps below to add a Media Source:
+
+<figure><img src="../.gitbook/assets/image (35).png" alt=""><figcaption></figcaption></figure>
+
+Once added, you will see the SRT stream as a source, as shown below. This added source can be used just like any other media source.
+
+<figure><img src="../.gitbook/assets/image (40).png" alt=""><figcaption></figcaption></figure>
+
+### VLC
+
+You can also playback the SRT stream in VLC. Simply select `Media` > `Open Network Stream` from the menu and enter the SRT URL.
+
+<figure><img src="../.gitbook/assets/image (42).png" alt=""><figcaption></figcaption></figure>
+
+<figure><img src="../.gitbook/assets/image (43).png" alt=""><figcaption></figcaption></figure>
+
 ## SRT Socket Options
 
 You can configure SRT's socket options of the OvenMediaEngine server using `<Options>`. This is particularly useful when setting the encryption for SRT, and you can specify a passphrase by configuring as follows:
