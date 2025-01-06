@@ -57,15 +57,7 @@ namespace mpegts
             return false;
         }
 
-		if (media_track->GetMediaType() == cmn::MediaType::Data)
-		{
-			if (media_track->GetOriginBitstream() != cmn::BitstreamFormat::ID3v2)
-			{
-				logte("Data Track (%s bitstream format) is not supported", GetBitstreamFormatString(media_track->GetOriginBitstream()).CStr());
-				return false;
-			}
-		}
-		else if (media_track->GetMediaType() == cmn::MediaType::Audio || media_track->GetMediaType() == cmn::MediaType::Video)
+		if (media_track->GetMediaType() == cmn::MediaType::Audio || media_track->GetMediaType() == cmn::MediaType::Video)
 		{
 			auto stream_type = GetElementaryStreamTypeByCodecId(media_track->GetCodecId());
 			if (stream_type == WellKnownStreamTypes::None)
@@ -312,20 +304,17 @@ namespace mpegts
 				continue;
 			}
 
-			if (track->GetOriginBitstream() == cmn::BitstreamFormat::ID3v2)
-			{
-				auto es_info = std::make_shared<ESInfo>();
-				auto es_descriptor = BuildID3MetadataDescriptor();
-				auto es_descriptor_data = es_descriptor->Build();
+			auto es_info = std::make_shared<ESInfo>();
+			auto es_descriptor = BuildID3MetadataDescriptor();
+			auto es_descriptor_data = es_descriptor->Build();
 
-				if (es_descriptor_data != nullptr)
-				{
-					es_info->_stream_type = static_cast<uint8_t>(WellKnownStreamTypes::METADATA_CARRIED_IN_PES);
-					es_info->_elementary_pid = GetElementaryPid(track->GetId());
-					es_info->_es_info_length = es_descriptor_data->GetLength();
-					es_info->_es_descriptors.emplace_back(es_descriptor);
-					_pmt._es_info_list.push_back(es_info);
-				}
+			if (es_descriptor_data != nullptr)
+			{
+				es_info->_stream_type = static_cast<uint8_t>(WellKnownStreamTypes::METADATA_CARRIED_IN_PES);
+				es_info->_elementary_pid = GetElementaryPid(track->GetId());
+				es_info->_es_info_length = es_descriptor_data->GetLength();
+				es_info->_es_descriptors.emplace_back(es_descriptor);
+				_pmt._es_info_list.push_back(es_info);
 			}
 		}
 

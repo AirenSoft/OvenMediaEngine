@@ -2076,7 +2076,7 @@ namespace pvd
 			data_track->SetId(RTMP_DATA_TRACK_ID);
 			data_track->SetMediaType(cmn::MediaType::Data);
 			data_track->SetTimeBase(1, 1000);
-			data_track->SetOriginBitstream(cmn::BitstreamFormat::ID3v2);
+			data_track->SetOriginBitstream(cmn::BitstreamFormat::Unknown);
 
 			AddTrack(data_track);
 		}

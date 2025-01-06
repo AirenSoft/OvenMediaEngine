@@ -888,8 +888,11 @@ bool MediaRouteStream::NormalizeMediaPacket(std::shared_ptr<MediaTrack> &media_t
 		case cmn::BitstreamFormat::MP3:
 			result = ProcessMP3Stream(media_track, media_packet); 
 			break;
+		// Data Format
 		case cmn::BitstreamFormat::ID3v2:
 		case cmn::BitstreamFormat::OVEN_EVENT:
+		case cmn::BitstreamFormat::CUE:
+		case cmn::BitstreamFormat::AMF:
 			result = true;
 			break;
 		case cmn::BitstreamFormat::JPEG:
