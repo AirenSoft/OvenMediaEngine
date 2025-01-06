@@ -95,9 +95,18 @@ namespace pub
 			}
 			else if (track->GetMediaType() == cmn::MediaType::Data)
 			{
-				if (first_data_track == nullptr)
+				// mpegts::Packetizer only supports ID3v2 format for data track
+				if (track->GetOriginBitstream() == cmn::BitstreamFormat::ID3v2)
 				{
-					first_data_track = track;
+					if (first_data_track == nullptr)
+					{
+						first_data_track = track;
+					}
+				}
+				else
+				{
+					logai("SrtStream - Ignore unsupported bitstream format(%s)",
+						  GetBitstreamFormatString(track->GetOriginBitstream()).CStr());
 				}
 			}
 			else
