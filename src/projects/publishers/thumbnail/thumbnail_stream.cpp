@@ -34,10 +34,13 @@ bool ThumbnailStream::Start()
 		return false;
 	}
 
+	// Check if there is a supported codec
 	bool found = false;
 	for (const auto &[id, track] : _tracks)
 	{
-		if ((track->GetCodecId() == cmn::MediaCodecId::Png || track->GetCodecId() == cmn::MediaCodecId::Jpeg))
+		if ((track->GetCodecId() == cmn::MediaCodecId::Png ||
+			 track->GetCodecId() == cmn::MediaCodecId::Jpeg ||
+			 track->GetCodecId() == cmn::MediaCodecId::Webp))
 		{
 			found = true;
 			break;
@@ -75,7 +78,9 @@ void ThumbnailStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_p
 		return;
 	}
 
-	if (!(track->GetCodecId() == cmn::MediaCodecId::Png || track->GetCodecId() == cmn::MediaCodecId::Jpeg))
+	if (!(track->GetCodecId() == cmn::MediaCodecId::Png ||
+		  track->GetCodecId() == cmn::MediaCodecId::Jpeg ||
+		  track->GetCodecId() == cmn::MediaCodecId::Webp))
 	{
 		// Could not support codec for image
 		return;

@@ -427,6 +427,8 @@ static ov::String StringFromMediaCodecId(const cmn::MediaCodecId &type)
 			return "JPEG";
 		case cmn::MediaCodecId::Png:
 			return "PNG";
+		case cmn::MediaCodecId::Webp:
+			return "WEBP";			
 		case cmn::MediaCodecId::None:
 		default:
 			return "Unknown";

@@ -894,14 +894,12 @@ bool MediaRouteStream::NormalizeMediaPacket(std::shared_ptr<MediaTrack> &media_t
 			break;
 		case cmn::BitstreamFormat::JPEG:
 		case cmn::BitstreamFormat::PNG:
-		{
-			if (GetInoutType()  == MediaRouterStreamType::OUTBOUND)
+		case cmn::BitstreamFormat::WEBP:
+			if (GetInoutType() == MediaRouterStreamType::OUTBOUND)
 			{
 				result = true;
 			}
 			break;
-		}
-		
 		case cmn::BitstreamFormat::AAC_LATM:
 		case cmn::BitstreamFormat::Unknown:
 		default:
@@ -1055,11 +1053,12 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 
 		ov::String stat_stream_str = "";
 
-		stat_stream_str.AppendFormat("Stream. id: %10u, type: %s, name: %s/%s, uptime: %lldms, queue: %d, msid: %u, sync: %lldms",
+		stat_stream_str.AppendFormat("Stream. id: %10u, type: %s, name: %s/%s, status: %s, uptime: %lldms, queue: %d, msid: %u, sync: %lldms",
 									 _stream->GetId(),
 									 _inout_type == MediaRouterStreamType::INBOUND ? "Inbound" : "Outbound",
 									 _stream->GetApplicationInfo().GetVHostAppName().CStr(),
 									 _stream->GetName().CStr(),
+									IsStreamPrepared() ? "Started" : "Preapring",
 									 (int64_t)uptime,
 									 _packets_queue.Size(),
 									 _stream->GetMsid(),

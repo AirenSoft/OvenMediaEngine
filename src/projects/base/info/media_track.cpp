@@ -425,7 +425,8 @@ bool MediaTrack::IsValid()
 		}
 		break;
 		case MediaCodecId::Jpeg:
-		case MediaCodecId::Png: {
+		case MediaCodecId::Png:
+		case MediaCodecId::Webp: {
 			if (_width > 0 &&
 				_height > 0 &&
 				_time_base.GetNum() > 0 &&

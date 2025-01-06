@@ -40,6 +40,7 @@ namespace cmn
 		OPUS_RTP_RFC_7587,
 		JPEG,
 		PNG,
+		WEBP,
 
 		// For Data Track
 		ID3v2,
@@ -98,6 +99,7 @@ namespace cmn
 		Opus,
 		Jpeg,
 		Png,
+		Webp
 	};
 
 	enum class MediaCodecModuleId : uint8_t
@@ -138,9 +140,11 @@ namespace cmn
 		return false;
 	}
 
-	static bool IsImageCodec(cmn::MediaCodecId codec_id) {
-		if (codec_id == cmn::MediaCodecId::Jpeg || 
-		    codec_id == cmn::MediaCodecId::Png)
+	static bool IsImageCodec(cmn::MediaCodecId codec_id)
+	{
+		if (codec_id == cmn::MediaCodecId::Jpeg ||
+			codec_id == cmn::MediaCodecId::Png ||
+			codec_id == cmn::MediaCodecId::Webp)
 		{
 			return true;
 		}
@@ -234,6 +238,8 @@ namespace cmn
 				return "JPEG";
 			case cmn::BitstreamFormat::PNG:
 				return "PNG";
+			case cmn::BitstreamFormat::WEBP:
+				return "WEBP";				
 			case cmn::BitstreamFormat::ID3v2:
 				return "ID3v2";
 			case cmn::BitstreamFormat::OVEN_EVENT:
@@ -360,10 +366,13 @@ namespace cmn
 				return "VP9";
 			case cmn::MediaCodecId::Flv:
 				return "FLV";
+			// Image codecs
 			case cmn::MediaCodecId::Jpeg:
 				return "JPEG";
 			case cmn::MediaCodecId::Png:
 				return "PNG";
+			case cmn::MediaCodecId::Webp:
+				return "WEBP";				
 			// Audio codecs				
 			case cmn::MediaCodecId::Aac:
 				return "AAC";
@@ -403,6 +412,7 @@ namespace cmn
 		{
 			return cmn::MediaCodecId::Flv;
 		}
+		// Image codecs
 		else if (name.HasPrefix("JPEG"))
 		{
 			return cmn::MediaCodecId::Jpeg;
@@ -411,8 +421,12 @@ namespace cmn
 		{
 			return cmn::MediaCodecId::Png;
 		}
+		else if (name.HasPrefix("WEBP"))
+		{
+			return cmn::MediaCodecId::Webp;
+		}		
 		// Audio codecs
-		if (name.HasPrefix("AAC"))
+		else if (name.HasPrefix("AAC"))
 		{
 			return cmn::MediaCodecId::Aac;
 		}

@@ -2,7 +2,7 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Keukhan
+//  Created by Kwon Keuk Han
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
@@ -25,9 +25,11 @@ bool ThumbnailInterceptor::IsInterceptorForRequest(const std::shared_ptr<const h
 		return false;
 	}
 
-	// ts/m3u8
-	if ((request->GetRequestTarget().LowerCaseString().IndexOf(".jpg") >= 0) ||
-		(request->GetRequestTarget().LowerCaseString().IndexOf(".png") >= 0))
+	const auto target = request->GetRequestTarget().LowerCaseString();
+
+	if ((target.IndexOf(".jpg") >= 0) ||
+		(target.IndexOf(".png") >= 0) ||
+		(target.IndexOf(".webp") >= 0))
 	{
 		return true;
 	}

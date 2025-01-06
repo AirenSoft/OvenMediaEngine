@@ -48,6 +48,8 @@ private:
 	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
 	bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) override;
 
+	static ov::String MimeTypeFromMediaCodecId(const cmn::MediaCodecId &type);
+	
 private:
 	std::shared_ptr<ThumbnailInterceptor> CreateInterceptor();
 

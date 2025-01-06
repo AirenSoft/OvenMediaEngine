@@ -6,7 +6,7 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "encoder_png.h"
+#include "encoder_webp.h"
 
 #include <unistd.h>
 
@@ -14,7 +14,7 @@
 
 #include "../../transcoder_private.h"
 
-bool EncoderPNG::SetCodecParams()
+bool EncoderWEBP::SetCodecParams()
 {
 	_codec_context->codec_type = AVMEDIA_TYPE_VIDEO;
 	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRateByConfig() > 0) ? GetRefTrack()->GetFrameRateByConfig() : GetRefTrack()->GetEstimateFrameRate(), AV_TIME_BASE);
@@ -26,6 +26,26 @@ bool EncoderPNG::SetCodecParams()
 	// Set the compression level
 	_codec_context->compression_level = 1;
 
+	// Set the preset
+	auto preset = GetRefTrack()->GetPreset();
+	if (preset.IsEmpty())
+	{
+		::av_opt_set(_codec_context->priv_data, "preset", "default", 0);
+	}
+	else
+	{
+		if (preset == "none" ||
+			preset == "default" ||
+			preset == "picture" ||
+			preset == "photo" ||
+			preset == "drawing" ||
+			preset == "icon" ||
+			preset == "text")
+		{
+			::av_opt_set(_codec_context->priv_data, "preset", preset.CStr(), 0);
+		}
+	}
+
 	_bitstream_format = GetBitstreamFormat();
 	
 	_packet_type = cmn::PacketType::RAW;
@@ -33,7 +53,7 @@ bool EncoderPNG::SetCodecParams()
 	return true;
 }
 
-bool EncoderPNG::InitCodec()
+bool EncoderWEBP::InitCodec()
 {
 	auto codec_id = GetCodecID();
 
@@ -67,7 +87,7 @@ bool EncoderPNG::InitCodec()
 	return true;
 }
 
-bool EncoderPNG::Configure(std::shared_ptr<MediaTrack> context)
+bool EncoderWEBP::Configure(std::shared_ptr<MediaTrack> context)
 {
 	if (TranscodeEncoder::Configure(context) == false)
 	{
@@ -78,7 +98,7 @@ bool EncoderPNG::Configure(std::shared_ptr<MediaTrack> context)
 	{
 		_kill_flag = false;
 
-		_codec_thread = std::thread(&EncoderPNG::CodecThread, this);
+		_codec_thread = std::thread(&EncoderWEBP::CodecThread, this);
 		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("ENC-%s-t%d", avcodec_get_name(GetCodecID()), _track->GetId()).CStr());
 		
 		// Initialize the codec and wait for completion.

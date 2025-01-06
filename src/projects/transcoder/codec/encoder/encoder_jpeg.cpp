@@ -29,7 +29,7 @@ bool EncoderJPEG::SetCodecParams()
 	_codec_context->color_range = AVCOL_RANGE_JPEG;
 	_codec_context->strict_std_compliance = FF_COMPLIANCE_STRICT;
 
-	_bitstream_format = cmn::BitstreamFormat::JPEG;
+	_bitstream_format = GetBitstreamFormat();
 	
 	_packet_type = cmn::PacketType::RAW;
 

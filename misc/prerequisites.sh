@@ -20,7 +20,7 @@ OPENH264_VERSION=2.4.0
 HIREDIS_VERSION=1.0.2
 NVCC_HDR_VERSION=11.1.5.2
 X264_VERSION=31e19f92
-
+WEBP_VERSION=1.5.0
 INTEL_QSV_HWACCELS=false
 NETINT_LOGAN_HWACCELS=false
 NETINT_LOGAN_PATCH_PATH=""
@@ -171,6 +171,18 @@ install_libvpx()
     make -j$(nproc) && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "vpx"
+}
+
+install_libwebp()
+{
+    (DIR=${TEMP_PATH}/webp && \
+    mkdir -p ${DIR} && \
+    cd ${DIR} && \
+    curl -sSLf https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-${WEBP_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    ./configure --prefix="${PREFIX}" --enable-shared --disable-static && \
+    make -j$(nproc) && \
+    sudo make install && \
+    rm -rf ${DIR}) || fail_exit "webp"
 }
 
 install_fdk_aac()
@@ -344,10 +356,10 @@ install_ffmpeg()
     --extra-libs=-ldl ${ADDI_EXTRA_LIBS} \
     ${ADDI_LICENSE} \
     --disable-everything --disable-programs --disable-avdevice --disable-dwt --disable-lsp --disable-lzo --disable-faan --disable-pixelutils \
-    --enable-shared --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libopenh264 --enable-openssl --enable-network --enable-libsrt --enable-dct --enable-rdft  ${ADDI_LIBS} \
+    --enable-shared --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libopenh264 --enable-openssl --enable-network --enable-libsrt --enable-dct --enable-rdft --enable-libwebp ${ADDI_LIBS} \
     ${ADDI_HWACCEL} \
     --enable-ffmpeg \
-    --enable-encoder=libvpx_vp8,libopus,libfdk_aac,libopenh264,mjpeg,png${ADDI_ENCODER} \
+    --enable-encoder=libvpx_vp8,libopus,libfdk_aac,libopenh264,mjpeg,png,libwebp${ADDI_ENCODER} \
     --enable-decoder=aac,aac_latm,aac_fixed,mp3float,mp3,h264,hevc,opus,vp8${ADDI_DECODER} \
     --enable-parser=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
     --enable-protocol=tcp,udp,rtp,file,rtmp,tls,rtmps,libsrt \
@@ -597,6 +609,7 @@ install_libopus
 install_libopenh264
 install_libx264
 install_libvpx
+install_libwebp
 install_fdk_aac
 install_nvcc_hdr
 install_ffmpeg

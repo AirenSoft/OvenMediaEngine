@@ -26,6 +26,8 @@
 #include "codec/encoder/encoder_opus.h"
 #include "codec/encoder/encoder_png.h"
 #include "codec/encoder/encoder_vp8.h"
+#include "codec/encoder/encoder_webp.h"
+
 #include "transcoder_gpu.h"
 #include "transcoder_private.h"
 
@@ -263,6 +265,16 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 			}
 			break;
 		}
+		else if (candidate->GetCodecId() == cmn::MediaCodecId::Webp)
+		{
+			switch (candidate->GetModuleId())
+			{
+				default:
+				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderWEBP);
+					break;
+			}
+			break;
+		}		
 		else
 		{
 			OV_ASSERT(false, "Not supported codec: %d", track->GetCodecId());
