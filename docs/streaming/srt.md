@@ -45,7 +45,7 @@ You can control whether to enable SRT playback for each application. To activate
             <Applications>
                 <Application>
                     <Name>app</Name>
-                    <Providers>
+                    <Publishers>
                         <SRT />
 ...
 ```
