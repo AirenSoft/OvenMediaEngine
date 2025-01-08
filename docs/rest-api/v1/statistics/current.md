@@ -4,7 +4,7 @@ Provides statistics of virtual host, application, and stream.
 
 ## Get Statistics of Virtual Host
 
-> #### Request
+> **Request**
 
 <details>
 
@@ -21,7 +21,7 @@ Authorization: Basic {credentials}
 
 </details>
 
-> #### Responses
+> **Responses**
 
 <details>
 
@@ -44,10 +44,11 @@ Content-Type: application/json
     "response": {
         "connections": {
             "file": 0,
+            "hlsv3": 0,
             "llhls": 0,
-            "mpegtspush": 0,
             "ovt": 0,
-            "rtmppush": 0,
+            "push": 0,
+            "srt": 0,
             "thumbnail": 0,
             "webrtc": 0
         },
@@ -114,7 +115,7 @@ The given vhost name could not be found.
 
 ## Get Statistics of Application
 
-> #### Request
+> **Request**
 
 <details>
 
@@ -131,7 +132,7 @@ Authorization: Basic {credentials}
 
 </details>
 
-> #### Responses
+> **Responses**
 
 <details>
 
@@ -224,7 +225,7 @@ The given vhost or application name could not be found.
 
 ## Get Statistics of Stream
 
-> #### Request
+> **Request**
 
 <details>
 
@@ -241,7 +242,7 @@ Authorization: Basic {credentials}
 
 </details>
 
-> #### Responses
+> **Responses**
 
 <details>
 
