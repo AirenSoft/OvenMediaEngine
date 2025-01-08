@@ -155,10 +155,11 @@ Content-Type: application/json
     "response": {
         "connections": {
             "file": 0,
+            "hlsv3": 0,
             "llhls": 0,
-            "mpegtspush": 0,
             "ovt": 0,
-            "rtmppush": 0,
+            "push": 0,
+            "srt": 0,
             "thumbnail": 0,
             "webrtc": 0
         },
@@ -265,10 +266,11 @@ Content-Type: application/json
     "response": {
         "connections": {
             "file": 0,
+            "hlsv3": 0,
             "llhls": 0,
-            "mpegtspush": 0,
             "ovt": 0,
-            "rtmppush": 0,
+            "push": 0,
+            "srt": 0,
             "thumbnail": 0,
             "webrtc": 0
         },
