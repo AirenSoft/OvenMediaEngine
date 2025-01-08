@@ -36,12 +36,24 @@ namespace serdes
 		SetTimestamp(value, "maxTotalConnectionTime", metrics->GetMaxTotalConnectionsTime());
 
 		Json::Value &connections = value["connections"];
-		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Webrtc).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Webrtc));
-		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::LLHls).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::LLHls));
-		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Ovt).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Ovt));
-		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::File).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::File));
-		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Push).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Push));
-		SetInt(connections, ov::String::FormatString("%s", StringFromPublisherType(PublisherType::Thumbnail).LowerCaseString().CStr()).CStr(), metrics->GetConnections(PublisherType::Thumbnail));
+
+		auto target_publishers = {
+			PublisherType::Webrtc,
+			PublisherType::LLHls,
+			PublisherType::Ovt,
+			PublisherType::File,
+			PublisherType::Push,
+			PublisherType::Thumbnail,
+			PublisherType::Hls,
+			PublisherType::Srt,
+		};
+
+		for (auto publisher : target_publishers)
+		{
+			auto name = StringFromPublisherType(publisher).LowerCaseString();
+
+			SetInt(connections, name, metrics->GetConnections(publisher));
+		}
 
 		return value;
 	}
