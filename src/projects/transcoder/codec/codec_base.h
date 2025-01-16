@@ -85,6 +85,11 @@ public:
 
 	virtual void SendBuffer(std::shared_ptr<const InputType> buf) = 0;
 
+	int32_t GetBufferSize() const
+	{
+		return _input_buffer.Size();
+	}
+	
 protected:
 	ov::ManagedQueue<std::shared_ptr<const InputType>> _input_buffer;
 };

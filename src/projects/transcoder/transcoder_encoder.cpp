@@ -305,31 +305,13 @@ done:
 TranscodeEncoder::TranscodeEncoder(info::Stream stream_info) : 
 	_stream_info(stream_info)
 {
-	_packet = ::av_packet_alloc();
-	_frame = ::av_frame_alloc();
-	_codec_par = ::avcodec_parameters_alloc();
 }
 
 TranscodeEncoder::~TranscodeEncoder()
 {
 	Stop();
 
-	if (_codec_context != nullptr && _codec_context->codec != nullptr)
-	{
-		if (_codec_context->codec->capabilities & AV_CODEC_CAP_ENCODER_FLUSH)
-		{
-			::avcodec_flush_buffers(_codec_context);
-		}
-	}
-
-	if (_codec_context != nullptr)
-	{
-		OV_SAFE_FUNC(_codec_context, nullptr, ::avcodec_free_context, &);
-	}
-	
-	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
-	OV_SAFE_FUNC(_packet, nullptr, ::av_packet_free, &);
-	OV_SAFE_FUNC(_codec_par, nullptr, ::avcodec_parameters_free, &);
+	DeinitCodec();
 
 	_input_buffer.Clear();
 }
@@ -382,6 +364,8 @@ std::shared_ptr<MediaTrack> &TranscodeEncoder::GetRefTrack()
 
 void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 {
+	// logte("%lld, msid:%u", frame->GetPts(), frame->GetMsid());
+		
 	if (_input_buffer.IsExceedWaitEnable() == true)
 	{
 		_input_buffer.Enqueue(std::move(frame), false, 1000);
@@ -418,14 +402,141 @@ void TranscodeEncoder::Stop()
 	}
 }
 
+bool TranscodeEncoder::InitCodecInteral()
+{
+	_packet = ::av_packet_alloc();
+	_frame = ::av_frame_alloc();
+	_codec_par = ::avcodec_parameters_alloc();
+
+	// Called the codec specific initialization function.
+	return InitCodec();
+}
+
+void TranscodeEncoder::DeinitCodec()
+{
+	// Flush the codc.
+	if (_codec_context != nullptr && _codec_context->codec != nullptr)
+	{
+		if (_codec_context->codec->capabilities & AV_CODEC_CAP_ENCODER_FLUSH)
+		{
+			::avcodec_flush_buffers(_codec_context);
+		}
+	}
+
+	// Close the codec 
+	if (_codec_context != nullptr)
+	{
+		avcodec_close(_codec_context);
+		
+		OV_SAFE_FUNC(_codec_context, nullptr, ::avcodec_free_context, &);
+	}
+
+	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
+	OV_SAFE_FUNC(_packet, nullptr, ::av_packet_free, &);
+	OV_SAFE_FUNC(_codec_par, nullptr, ::avcodec_parameters_free, &);
+}
+
+void TranscodeEncoder::Flush()
+{
+	// Not implemented
+}
+
+bool TranscodeEncoder::PushProcess(std::shared_ptr<const MediaFrame> media_frame)
+{
+	// Flush the encoder if the frame is nullptr.
+	if (media_frame == nullptr)
+	{
+		int ret = ::avcodec_send_frame(_codec_context, nullptr);
+		if (ret < 0)
+		{
+			logte("Error sending a frame for encoding : %d", ret);
+			return false;
+		}
+
+		return true;
+	}
+
+	auto av_frame = ffmpeg::Conv::ToAVFrame(GetRefTrack()->GetMediaType(), media_frame);
+	if (!av_frame)
+	{
+		logte("Could not allocate the video frame data");
+		return false;
+	}
+
+	// Force inserts keyframes based on accumulated frame duration.
+	if (GetRefTrack()->GetMediaType() == cmn::MediaType::Video)
+	{
+		av_frame->pict_type = AV_PICTURE_TYPE_NONE;
+		if (_force_keyframe_by_time_interval > 0)
+		{
+			if (_accumulate_frame_duration >= _force_keyframe_by_time_interval ||
+				_accumulate_frame_duration == -1)  // First Frame
+			{
+				av_frame->pict_type = AV_PICTURE_TYPE_I;
+				_accumulate_frame_duration = 0;
+			}
+			_accumulate_frame_duration += media_frame->GetDuration();
+		}
+	}
+
+	int ret = ::avcodec_send_frame(_codec_context, av_frame);
+	if (ret < 0)
+	{
+		logte("Error sending a frame for encoding : %d", ret);
+		return false;
+	}
+
+	return true;
+}
+
+// true: continue, false: stop
+bool TranscodeEncoder::PopProcess()
+{
+	// Check frame is available
+	int ret = ::avcodec_receive_packet(_codec_context, _packet);
+	if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+	{
+		// There is no more remain frame.
+		return false;
+	}
+	else if (ret < 0)
+	{
+		logte("Error receiving a packet for decoding : %s", ffmpeg::Conv::ErrorToString(ret).CStr());
+		return false;
+	}
+
+	auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, GetRefTrack()->GetMediaType(), _bitstream_format, _packet_type);
+	if (media_packet == nullptr)
+	{
+		logte("Could not allocate the media packet");
+		return false;
+	}
+	::av_packet_unref(_packet);
+
+	if (GetRefTrack()->GetMediaType() == cmn::MediaType::Audio)
+	{
+		// If the pts value are under zero, the dash packetizer does not work.
+		if (media_packet->GetPts() < 0)
+		{
+			return true;
+		}
+	}
+	
+	// Call the complete handler.
+	Complete(std::move(media_packet));
+
+	return true;
+}
+
 void TranscodeEncoder::CodecThread()
 {
 	// Initialize the codec and notify the main thread.
-	if(_codec_init_event.Submit(InitCodec()) == false)
+	if(_codec_init_event.Submit(InitCodecInteral()) == false)
 	{
 		return;
 	}
 
+	// Initialize for force keyframe by time interval.
 	if ((GetRefTrack()->GetMediaType() == cmn::MediaType::Video) &&
 		(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::TIME))
 	{
@@ -437,6 +548,8 @@ void TranscodeEncoder::CodecThread()
 		_accumulate_frame_duration = -1;
 	}
 
+	int32_t curr_source_id = 0;
+
 	while (!_kill_flag)
 	{
 		auto obj = _input_buffer.Dequeue();
@@ -446,76 +559,49 @@ void TranscodeEncoder::CodecThread()
 		auto media_frame = std::move(obj.value());
 
 		///////////////////////////////////////////////////
+		// Recreate the codec context if the source id is changed.
+		// Xilinx VCU does not support frame buffer sharing between xvbm multi sclaler filter.
+		///////////////////////////////////////////////////
+		if (GetSupportedFormat() == AV_PIX_FMT_XVBM_8)
+		{
+			if (curr_source_id != media_frame->GetSourceId() && curr_source_id != 0)
+			{
+				///////////////////////////////////////////////////
+				// Flush encoder
+				///////////////////////////////////////////////////
+				if (PushProcess(nullptr) == true)
+				{
+					while (PopProcess() == true && !_kill_flag)
+					{
+					}
+				}
+
+				///////////////////////////////////////////////////
+				// Reinit codec
+				///////////////////////////////////////////////////
+				DeinitCodec();
+
+				if (InitCodecInteral() == false)
+				{
+					break;
+				}
+			}
+			curr_source_id = media_frame->GetSourceId();
+		}
+
+		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-		auto av_frame = ffmpeg::Conv::ToAVFrame(GetRefTrack()->GetMediaType(), media_frame);
-		if (!av_frame)
+		if(PushProcess(media_frame) == false)
 		{
-			logte("Could not allocate the video frame data");
 			break;
-		}
-
-		// Force inserts keyframes based on accumulated frame duration.
-		if (GetRefTrack()->GetMediaType() == cmn::MediaType::Video)
-		{
-			av_frame->pict_type = AV_PICTURE_TYPE_NONE;
-			if (_force_keyframe_by_time_interval > 0)
-			{
-				if (_accumulate_frame_duration >= _force_keyframe_by_time_interval ||
-					_accumulate_frame_duration == -1) // First Frame
-				{
-					av_frame->pict_type = AV_PICTURE_TYPE_I;
-					_accumulate_frame_duration = 0;
-				}
-				_accumulate_frame_duration += media_frame->GetDuration();
-			}
-		}
-
-		int ret = ::avcodec_send_frame(_codec_context, av_frame);
-		if (ret < 0)
-		{
-			logte("Error sending a frame for encoding : %d", ret);
 		}
 
 		///////////////////////////////////////////////////
 		// The encoded packet is taken from the codec.
 		///////////////////////////////////////////////////
-		while (!_kill_flag)
+		while (PopProcess() == true && !_kill_flag)
 		{
-			// Check frame is available
-			int ret = ::avcodec_receive_packet(_codec_context, _packet);
-			if (ret == AVERROR(EAGAIN))
-			{
-				// More packets are needed for encoding.
-				break;
-			}
-			else if (ret == AVERROR_EOF && ret < 0)
-			{
-				logte("Error receiving a packet for decoding : %d", ret);
-				break;
-			}
-			else
-			{
-				auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, GetRefTrack()->GetMediaType(), _bitstream_format, _packet_type);
-				if (media_packet == nullptr)
-				{
-					logte("Could not allocate the media packet");
-					break;
-				}
-
-				if(GetRefTrack()->GetMediaType() == cmn::MediaType::Audio)
-				{
-					// If the pts value are under zero, the dash packetizer does not work.
-					if (media_packet->GetPts() < 0)
-					{
-						continue;
-					}
-				}
-
-				::av_packet_unref(_packet);
-
-				Complete(std::move(media_packet));
-			}
 		}
 	}
 }

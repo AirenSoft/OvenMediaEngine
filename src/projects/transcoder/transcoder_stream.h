@@ -249,6 +249,7 @@ private:
 	void UpdateOutputTrack(std::shared_ptr<MediaFrame> buffer);
 	void UpdateMsidOfOutputStreams(uint32_t msid);
 	bool IsAvailableSmoothTransition(const std::shared_ptr<info::Stream> &stream);
+	void FlushBuffers();
 
 	// Step 2: Filter (resample/rescale the decoded frame)
 	void SpreadToFilters(MediaTrackId decoder_id, std::shared_ptr<MediaFrame> frame);
@@ -272,4 +273,6 @@ private:
 	void BufferMediaPacketUntilReadyToPlay(const std::shared_ptr<MediaPacket> &media_packet);
 	bool SendBufferedPackets();
 	ov::Queue<std::shared_ptr<MediaPacket>> _initial_media_packet_buffer;
+
+	std::atomic<bool> _is_updating = false;
 };

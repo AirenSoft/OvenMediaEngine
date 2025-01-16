@@ -26,7 +26,15 @@ FilterFps::FilterFps()
 
 FilterFps::~FilterFps()
 {
-	_frames.clear();
+	Clear();
+}
+
+void FilterFps::Clear()
+{
+	if(_frames.size() > 0)
+	{
+		_frames.clear();
+	}
 }
 
 void FilterFps::SetInputTimebase(cmn::Timebase timebase)

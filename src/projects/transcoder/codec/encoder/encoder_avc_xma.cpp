@@ -48,8 +48,12 @@ bool EncoderAVCxXMA::SetCodecParams()
 	// Lookahead (1 ~ 30)
 	if (GetRefTrack()->GetLookaheadByConfig() >= 0)
 	{
+#if 0
 		av_opt_set_int(_codec_context->priv_data, "lookahead_depth", GetRefTrack()->GetLookaheadByConfig(), 0);
 		// ::av_opt_set(_codec_context->priv_data, "expert-options", "lookahead-rc-off=0", 0);
+#else
+		logtw("Xilinx encoder does not support Lookahead yet.");		
+#endif
 	}
 
 	// Profile
@@ -61,7 +65,7 @@ bool EncoderAVCxXMA::SetCodecParams()
 	}
 	else if (profile == "main")
 	{
-		::av_opt_set(_codec_context->priv_data, "profile", "high", 0);
+		::av_opt_set(_codec_context->priv_data, "profile", "main", 0);
 	}
 	else if (profile == "high")
 	{

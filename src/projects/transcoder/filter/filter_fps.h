@@ -20,6 +20,8 @@ public:
 	FilterFps();
 	~FilterFps();
 
+	void Clear();
+
 	void SetInputTimebase(cmn::Timebase timebase);
 	void SetInputFrameRate(double framerate);
 	double GetInputFrameRate() const;

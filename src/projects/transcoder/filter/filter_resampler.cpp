@@ -188,6 +188,8 @@ bool FilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_track, 
 
 bool FilterResampler::Start()
 {
+	_source_id = ov::Random::GenerateInt32();
+
 	try
 	{
 		_kill_flag = false;
@@ -309,6 +311,8 @@ void FilterResampler::WorkerThread()
 
 					continue;
 				}
+
+				output_frame->SetSourceId(_source_id);
 
 				Complete(std::move(output_frame));
 			}

@@ -33,7 +33,7 @@ private:
 	bool InitializeSinkFilter();	
 
 	bool PushProcess(std::shared_ptr<MediaFrame> media_frame);
-	bool PopProcess();
+	bool PopProcess(bool is_flush = false);
 
 	bool SetHWContextToFilterIfNeed();	
 

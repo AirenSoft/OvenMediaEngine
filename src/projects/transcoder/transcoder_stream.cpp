@@ -242,17 +242,24 @@ bool TranscoderStream::UpdateInternal(const std::shared_ptr<info::Stream> &strea
 	// [Rule]
 	// - The number of tracks per media type should not exceed one.
 	// - The input track should not change.
+	_is_updating = true;
+
 	if (IsAvailableSmoothTransition(stream) == true)
 	{
 		logtd("%s This stream will be a smooth transition", _log_prefix.CStr());
+		FlushBuffers();
+
 		RemoveDecoders();
 		RemoveFilters();
-		
+
 		CreateDecoders();
 	}
 	else
 	{
 		logtw("%s This stream does not support smooth transitions. renew the all components", _log_prefix.CStr());
+
+		FlushBuffers();
+
 		RemoveDecoders();
 		RemoveFilters();
 		RemoveEncoders();
@@ -265,7 +272,27 @@ bool TranscoderStream::UpdateInternal(const std::shared_ptr<info::Stream> &strea
 		StoreInputTrackSnapshot(stream);
 	}
 
+	_is_updating = false;
+
 	return true;
+}
+
+void TranscoderStream::FlushBuffers()
+{
+	for (auto &[id, object] : _encoders)
+	{
+		auto filter = object.first;
+		if (filter != nullptr)
+		{
+			filter->Flush();
+		}
+
+		auto encoder = object.second;
+		if (encoder != nullptr)
+		{
+			encoder->Flush();
+		}
+	}
 }
 
 void TranscoderStream::RemoveDecoders()
@@ -1308,6 +1335,12 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 		return;
 	}
 
+	if(_is_updating == true)
+	{
+		logtd("%s Current state is updating format. suspend decoded frame. Decoder(%d)", _log_prefix.CStr(), decoder_id);
+		return;
+	}
+
 	switch (result)
 	{
 		case TranscodeResult::NoData: {
@@ -1526,6 +1559,12 @@ TranscodeResult TranscoderStream::FilterFrame(MediaTrackId filter_id, std::share
 
 void TranscoderStream::OnFilteredFrame(MediaTrackId filter_id, std::shared_ptr<MediaFrame> filtered_frame)
 {
+	if(_is_updating == true)
+	{
+		logtd("%s Current state is updating format. suspend filted frame. Filter(%d)", _log_prefix.CStr(), filter_id);
+		return;
+	}
+
 	filtered_frame->SetTrackId(filter_id);
 
 	PreEncodeFilterFrame(std::move(filtered_frame));
@@ -1566,6 +1605,12 @@ TranscodeResult TranscoderStream::PreEncodeFilterFrame(std::shared_ptr<MediaFram
 
 void TranscoderStream::OnPreEncodeFilteredFrame(MediaTrackId encoder_id, std::shared_ptr<MediaFrame> filtered_frame)
 {
+	if(_is_updating == true)
+	{
+		logtd("%s Current state is updating format. suspend filtered frame. Encoder(%d)", _log_prefix.CStr(), encoder_id);
+		return;
+	}
+
 	filtered_frame->SetTrackId(encoder_id);
 
 	EncodeFrame(std::move(filtered_frame));

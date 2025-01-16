@@ -44,7 +44,8 @@ public:
 		const std::shared_ptr<info::Stream> &output_stream_info, std::shared_ptr<MediaTrack> output_track);
 	bool SendBuffer(std::shared_ptr<MediaFrame> buffer);
 	void Stop(); 
-
+	void Flush();
+	
 	cmn::Timebase GetInputTimebase() const;
 	cmn::Timebase GetOutputTimebase() const;
 	std::shared_ptr<MediaTrack> &GetInputTrack();

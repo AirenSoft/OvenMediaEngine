@@ -118,6 +118,11 @@ public:
 		_output_track = output_track;
 	}
 
+	int32_t GetBufferSize() const
+	{
+		return _input_buffer.Size();
+	}
+
 protected:
 
 	std::atomic<State> _state = State::CREATED;
@@ -155,4 +160,6 @@ protected:
 	CompleteHandler _complete_handler;
 
 	bool _use_hwframe_transfer = false;
+
+	int32_t _source_id = 0;
 };

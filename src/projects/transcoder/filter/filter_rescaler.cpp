@@ -299,6 +299,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	// Initialize Constant Framerate & Skip Frames Filter
 	_fps_filter.SetInputTimebase(_input_track->GetTimeBase());
 	_fps_filter.SetInputFrameRate(_input_track->GetFrameRate());
+	
 	// If the user is not the set output Framerate, use the measured Framerate
 	_fps_filter.SetOutputFrameRate(_output_track->GetFrameRateByConfig() > 0 ? _output_track->GetFrameRateByConfig() : _output_track->GetEstimateFrameRate());
 	_fps_filter.SetSkipFrames(_output_track->GetSkipFramesByConfig() >= 0 ? _output_track->GetSkipFramesByConfig() : 0);
@@ -370,6 +371,8 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 
 bool FilterRescaler::Start()
 {
+	_source_id = ov::Random::GenerateInt32();
+
 	try
 	{
 		_kill_flag = false;
@@ -410,12 +413,13 @@ void FilterRescaler::Stop()
 	{
 		_thread_work.join();
 		
-		logtd("filter rescaler thread has ended");
 	}
 
-	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
+	OV_SAFE_FUNC(_buffersrc_ctx, nullptr, ::avfilter_free, );
+	OV_SAFE_FUNC(_buffersink_ctx, nullptr, ::avfilter_free, );
 	OV_SAFE_FUNC(_inputs, nullptr, ::avfilter_inout_free, &);
 	OV_SAFE_FUNC(_outputs, nullptr, ::avfilter_inout_free, &);
+	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
 	OV_SAFE_FUNC(_filter_graph, nullptr, ::avfilter_graph_free, &);
 
 	_buffersrc= nullptr;
@@ -423,11 +427,21 @@ void FilterRescaler::Stop()
 	
 	_input_buffer.Clear();
 
+	_fps_filter.Clear();
+
 	SetState(State::STOPPED);
+
+	logtd("rescale filter has ended");
 }
 
 bool FilterRescaler::PushProcess(std::shared_ptr<MediaFrame> media_frame)
 {
+	// Flush the buffer source filter
+	if (media_frame == nullptr)
+	{
+		return false;
+	}
+
 	auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
 	if (!av_frame)
 	{
@@ -476,9 +490,9 @@ bool FilterRescaler::PushProcess(std::shared_ptr<MediaFrame> media_frame)
 	return true;
 }
 
-bool FilterRescaler::PopProcess()
+bool FilterRescaler::PopProcess(bool is_flush)
 {
-	while (!_kill_flag)
+	while (!_kill_flag || is_flush)
 	{
 		// Receive from filtergraph
 		int ret = ::av_buffersink_get_frame(_buffersink_ctx, _frame);
@@ -488,16 +502,24 @@ bool FilterRescaler::PopProcess()
 		}
 		else if (ret == AVERROR_EOF)
 		{
+			if(is_flush)
+			{
+				break;
+			}
+			
 			logte("Error receiving filtered frame. error(EOF)");
-
 			SetState(State::ERROR);
 
 			return false;
 		}
 		else if (ret < 0)
 		{
-			logte("Error receiving filtered frame. error(%d)", ret);
+			if(is_flush)
+			{
+				break;
+			}
 
+			logte("Error receiving filtered frame. error(%d)", ret);
 			SetState(State::ERROR);
 
 			return false;
@@ -514,6 +536,7 @@ bool FilterRescaler::PopProcess()
 
 			// Convert duration to output track timebase
 			output_frame->SetDuration((int64_t)((double)output_frame->GetDuration() * _input_track->GetTimeBase().GetExpr() / _output_track->GetTimeBase().GetExpr()));
+			output_frame->SetSourceId(_source_id);
 
 			Complete(std::move(output_frame));
 		}
@@ -525,6 +548,9 @@ bool FilterRescaler::PopProcess()
 #define DO_FILTER_ONCE(frame) \
 		if (!PushProcess(frame)) { break; } \
 		if (!PopProcess()) { break; } 
+
+#define FLUSH_FILTER_ONCE() \
+		{ PushProcess(nullptr); PopProcess(true); }
 
 void FilterRescaler::WorkerThread()
 {
@@ -671,7 +697,9 @@ void FilterRescaler::WorkerThread()
 #endif
 
 	}
-	
+
+	// Flush the filter
+	FLUSH_FILTER_ONCE();
 }
 
 bool FilterRescaler::SetHWContextToFilterIfNeed()

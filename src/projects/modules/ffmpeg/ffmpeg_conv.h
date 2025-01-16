@@ -920,7 +920,7 @@ namespace ffmpeg
 			frames_ctx->sw_format = *(constraints->valid_sw_formats);;
 			frames_ctx->width = context->width;
 			frames_ctx->height = context->height;
-			frames_ctx->initial_pool_size = 10;
+			frames_ctx->initial_pool_size = 2;
 			
 			if ((err = ::av_hwframe_ctx_init(hw_frames_ref)) < 0)
 			{
@@ -965,7 +965,7 @@ namespace ffmpeg
 			frames_ctx->sw_format = *(constraints->valid_sw_formats);
 			frames_ctx->width = width;
 			frames_ctx->height = height;
-			frames_ctx->initial_pool_size = 10;
+			frames_ctx->initial_pool_size = 2;
 
 			if (av_hwframe_ctx_init(hw_frames_ref) < 0)
 			{
@@ -977,7 +977,16 @@ namespace ffmpeg
 
 			av_buffer_unref(&hw_frames_ref);
 
-			return true;
+			return true; 
+		}
+
+		static ov::String ErrorToString(int av_errno)
+		{
+			char errbuf[1024];
+			::av_make_error_string(errbuf, sizeof(errbuf), av_errno);
+
+			ov::String error_message = errbuf;
+			return error_message;
 		}
 	};
 

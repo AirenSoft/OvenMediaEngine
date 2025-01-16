@@ -112,6 +112,15 @@ void TranscodeFilter::Stop()
 	}
 }
 
+void TranscodeFilter::Flush()
+{
+	std::shared_lock<std::shared_mutex> lock(_mutex);
+	if (_internal != nullptr)
+	{
+		// Not implemented
+	}
+}
+
 bool TranscodeFilter::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 {
 	if (IsNeedUpdate(buffer) == true)

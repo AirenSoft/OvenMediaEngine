@@ -56,6 +56,7 @@ bool DecoderAVCxXMA::InitCodec()
 		::memcpy(_context->extradata, extra_data->GetData(), _context->extradata_size);
 	}
 
+	// Set the device ID to the codec context.
 	::av_opt_set_int(_context->priv_data, "lxlnx_hwdev", _track->GetCodecDeviceId(), 0);
 
 	if (::avcodec_open2(_context, _codec, nullptr) < 0)
