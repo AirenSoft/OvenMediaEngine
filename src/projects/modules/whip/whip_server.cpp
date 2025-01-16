@@ -299,7 +299,7 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			response->SetStatusCode(http::StatusCode::NotFound);
 			return http::svr::NextHandler::DoNotCall;
 		}
-		
+
 		if (_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response, {http::Method::Options, http::Method::Post, http::Method::Patch, http::Method::Delete}) == false)
 		{
 			// CORS from default cors manager from virtual host
@@ -380,7 +380,11 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			}
 
 			// Set CORS header in response
-			_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
+			_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response, {http::Method::Post});
+
+			// Access-Control-Expose-Headers header allows a server
+			// to indicate which response headers should be made available to scripts running in the browser in response to a cross-origin request.
+			response->AddHeader("Access-Control-Expose-Headers", "Location, Link, ETag");
 
 			// Set SDP
 			response->SetHeader("Content-Type", "application/sdp");
@@ -511,12 +515,12 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 		//TODO(way) : If url is changed by Webhooks, we use the changed url in PATCH request like delete request.
 
 		// Set CORS header in response
-		_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
+		_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response, {http::Method::Patch});
 
-		auto session_id = request_url->GetQueryValue("session");
+		auto session_id = request_url->File();
 		if (session_id.IsEmpty())
 		{
-			logte("Could not get session id from query string");
+			logte("Could not get session id from url");
 			response->SetStatusCode(http::StatusCode::BadRequest);
 			return http::svr::NextHandler::DoNotCall;
 		}
