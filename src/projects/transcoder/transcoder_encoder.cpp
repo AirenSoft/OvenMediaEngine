@@ -548,6 +548,7 @@ void TranscodeEncoder::CodecThread()
 		_accumulate_frame_duration = -1;
 	}
 
+	[[maybe_unused]] 
 	int32_t curr_source_id = 0;
 
 	while (!_kill_flag)
