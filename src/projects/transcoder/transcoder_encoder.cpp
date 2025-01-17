@@ -558,6 +558,7 @@ void TranscodeEncoder::CodecThread()
 
 		auto media_frame = std::move(obj.value());
 
+#ifdef HWACCELS_XMA_ENABLED
 		///////////////////////////////////////////////////
 		// Recreate the codec context if the source id is changed.
 		// Xilinx VCU does not support frame buffer sharing between xvbm multi sclaler filter.
@@ -588,6 +589,7 @@ void TranscodeEncoder::CodecThread()
 			}
 			curr_source_id = media_frame->GetSourceId();
 		}
+#endif
 
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
