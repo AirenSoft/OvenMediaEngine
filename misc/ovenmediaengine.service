@@ -11,7 +11,7 @@ Restart=always
 RestartSec=2
 RestartPreventExitStatus=1
 StandardOutput=null
-StandardError=syslog+console
+StandardError=null
 LimitNOFILE=65535
 
 [Install]
