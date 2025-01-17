@@ -28,13 +28,16 @@ fi
 # Preload the installed drivers
 ##########################################################################################
 check_xilinx_driver() {
-    if [[ -f /opt/xilinx/xcdr/setup.sh ]]; then
+    if [[ -f /opt/xilinx/xcdr/xrmd_start.bash ]]; then
         LIBXRM_PATH=/opt/xilinx/xrm/lib/libxrm.so.1
         LIBXRT_CORE_PATH=/opt/xilinx/xrt/lib/libxrt_core.so.2
         LIBXRT_COREUTIL_PATH=/opt/xilinx/xrt/lib/libxrt_coreutil.so.2
         LIBXMA2API_PATH=/opt/xilinx/xrt/lib/libxma2api.so.2
 
-        source /opt/xilinx/xcdr/setup.sh -f
+        # source /opt/xilinx/xcdr/setup.sh -f
+        source /opt/xilinx/xrt/setup.sh > /dev/null 2>&1
+        source /opt/xilinx/xrm/setup.sh > /dev/null 2>&1
+        source /opt/xilinx/xcdr/xrmd_start.bash
 
         if [ -f $LIBXRM_PATH ] && [ -f $LIBXRT_CORE_PATH ] && [ -f $LIBXRT_COREUTIL_PATH ] && [ -f $LIBXMA2API_PATH ]; then
             export LD_PRELOAD=$LIBXRM_PATH:$LIBXRT_CORE_PATH:$LIBXRT_COREUTIL_PATH:$LIBXMA2API_PATH:$LD_PRELOAD
