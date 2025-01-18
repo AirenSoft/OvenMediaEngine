@@ -20,12 +20,13 @@ namespace cfg
 			{
 				struct SrtPublisher : public Publisher
 				{
+				public:
 					PublisherType GetType() const override
 					{
 						return PublisherType::Srt;
 					}
 				};
 			}  // namespace pub
-		}	   // namespace app
-	}		   // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

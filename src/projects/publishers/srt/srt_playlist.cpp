@@ -1,0 +1,144 @@
+//==============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by Hyunjun Jang
+//  Copyright (c) 2025 AirenSoft. All rights reserved.
+//
+//==============================================================================
+#include "srt_playlist.h"
+
+#include <base/info/playlist.h>
+#include <base/info/stream.h>
+#include <base/ovsocket/socket.h>
+
+#include "srt_private.h"
+
+#define SRT_STREAM_DESC \
+	_stream_info->GetApplicationName(), _stream_info->GetName().CStr(), _stream_info->GetId()
+
+#define logap(format, ...) logtp("[%s/%s(%u)] " format, SRT_STREAM_DESC, ##__VA_ARGS__)
+#define logad(format, ...) logtd("[%s/%s(%u)] " format, SRT_STREAM_DESC, ##__VA_ARGS__)
+#define logas(format, ...) logts("[%s/%s(%u)] " format, SRT_STREAM_DESC, ##__VA_ARGS__)
+
+#define logai(format, ...) logti("[%s/%s(%u)] " format, SRT_STREAM_DESC, ##__VA_ARGS__)
+#define logaw(format, ...) logtw("[%s/%s(%u)] " format, SRT_STREAM_DESC, ##__VA_ARGS__)
+#define logae(format, ...) logte("[%s/%s(%u)] " format, SRT_STREAM_DESC, ##__VA_ARGS__)
+#define logac(format, ...) logtc("[%s/%s(%u)] " format, SRT_STREAM_DESC, ##__VA_ARGS__)
+
+namespace pub
+{
+	SrtPlaylist::SrtPlaylist(
+		const std::shared_ptr<const info::Stream> &stream_info,
+		const std::shared_ptr<const info::Playlist> &playlist_info,
+		const std::shared_ptr<SrtPlaylistSink> &sink)
+		: _stream_info(stream_info),
+		  _playlist_info(playlist_info),
+		  _sink(sink)
+	{
+		_packetizer = std::make_shared<mpegts::Packetizer>();
+	}
+
+	void SrtPlaylist::AddTrack(const std::shared_ptr<MediaTrack> &track)
+	{
+		// Duplicated tracks will be ignored by the packetizer
+		_packetizer->AddTrack(track);
+		_track_map[track->GetId()] = track;
+	}
+
+	void SrtPlaylist::AddTracks(const std::vector<std::shared_ptr<MediaTrack>> &tracks)
+	{
+		for (const auto &track : tracks)
+		{
+			// Duplicated tracks will be ignored by the packetizer
+			_packetizer->AddTrack(track);
+			_track_map[track->GetId()] = track;
+		}
+	}
+
+	bool SrtPlaylist::Start()
+	{
+		_packetizer->AddSink(GetSharedPtrAs<mpegts::PacketizerSink>());
+
+		return _packetizer->Start();
+	}
+
+	bool SrtPlaylist::Stop()
+	{
+		return _packetizer->Stop();
+	}
+
+	void SrtPlaylist::EnqueuePacket(const std::shared_ptr<MediaPacket> &media_packet)
+	{
+#if DEBUG
+		if (_track_map.find(media_packet->GetTrackId()) == _track_map.end())
+		{
+			logte("The track is not found in the playlist map");
+			OV_ASSERT2(false);
+		}
+#endif	// DEBUG
+
+		_packetizer->AppendFrame(media_packet);
+	}
+
+	void SrtPlaylist::SendData(const std::vector<std::shared_ptr<mpegts::Packet>> &packets)
+	{
+		if (_sink == nullptr)
+		{
+			return;
+		}
+
+		auto self = GetSharedPtrAs<SrtPlaylist>();
+
+		for (auto &packet : packets)
+		{
+			auto size = _data_to_send->GetLength();
+			const auto &data = packet->GetData();
+
+			// Broadcast if the data size exceeds the SRT's payload length
+			if ((size + data->GetLength()) > SRT_LIVE_DEF_PLSIZE)
+			{
+				_sink->OnSrtPlaylistData(self, _data_to_send);
+				_data_to_send = data->Clone();
+			}
+			else
+			{
+				_data_to_send->Append(packet->GetData());
+			}
+		}
+	}
+
+	void SrtPlaylist::OnPsi(const std::vector<std::shared_ptr<const MediaTrack>> &tracks, const std::vector<std::shared_ptr<mpegts::Packet>> &psi_packets)
+	{
+		std::shared_ptr<ov::Data> psi_data = std::make_shared<ov::Data>();
+
+		// Concatenate PSI packets
+		for (const auto &packet : psi_packets)
+		{
+			psi_data->Append(packet->GetData());
+		}
+
+		logap("OnPsi - %zu packets (total %zu bytes)", psi_packets.size(), psi_data->GetLength());
+
+		_psi_data = std::move(psi_data);
+
+		SendData(psi_packets);
+	}
+
+	void SrtPlaylist::OnFrame(const std::shared_ptr<const MediaPacket> &media_packet, const std::vector<std::shared_ptr<mpegts::Packet>> &pes_packets)
+	{
+#if DEBUG
+		// Since adding up the total packet size is costly, it is calculated only in debug mode
+		size_t total_packet_size = 0;
+
+		for (const auto &packet : pes_packets)
+		{
+			total_packet_size += packet->GetData()->GetLength();
+		}
+
+		logap("OnFrame - %zu packets (total %zu bytes)", pes_packets.size(), total_packet_size);
+#endif	// DEBUG
+
+		SendData(pes_packets);
+	}
+}  // namespace pub

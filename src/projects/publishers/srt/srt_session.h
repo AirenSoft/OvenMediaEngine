@@ -12,6 +12,8 @@
 #include <base/ovsocket/socket.h>
 #include <base/publisher/session.h>
 
+#include "./srt_playlist.h"
+
 namespace pub
 {
 	class SrtSession final : public Session
@@ -20,12 +22,14 @@ namespace pub
 		static std::shared_ptr<SrtSession> Create(const std::shared_ptr<Application> &application,
 												  const std::shared_ptr<Stream> &stream,
 												  uint32_t srt_session_id,
-												  const std::shared_ptr<ov::Socket> &connector);
+												  const std::shared_ptr<ov::Socket> &connector,
+												  const std::shared_ptr<SrtPlaylist> &srt_playlist);
 
 		SrtSession(const info::Session &session_info,
 				   const std::shared_ptr<Application> &application,
 				   const std::shared_ptr<Stream> &stream,
-				   const std::shared_ptr<ov::Socket> &connector);
+				   const std::shared_ptr<ov::Socket> &connector,
+				   const std::shared_ptr<SrtPlaylist> &srt_playlist);
 		~SrtSession() override final;
 
 		//--------------------------------------------------------------------
@@ -64,8 +68,12 @@ namespace pub
 	private:
 		ov::String GetAppStreamName() const;
 
+		std::shared_ptr<const SrtData> ToSrtData(const std::any &packet);
+
 	private:
 		std::shared_ptr<ov::Socket> _connector;
+
+		std::shared_ptr<const SrtPlaylist> _srt_playlist;
 
 		bool _need_to_send_psi = true;
 		bool _is_keyframe_sent = false;

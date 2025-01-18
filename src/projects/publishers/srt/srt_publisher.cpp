@@ -272,16 +272,17 @@ namespace pub
 		}
 		else
 		{
-			// {vhost}/{app}/{stream} format
+			// {vhost}/{app}/{stream}[/{playlist}] format
 			auto parts = stream_path.Split("/");
+			auto part_count = parts.size();
 
-			if (parts.size() != 3)
+			if ((part_count != 3) && (part_count != 4))
 			{
-				logte("The streamid for SRT must be in the following format: {vhost}/{app}/{stream}, but [%s]", stream_path.CStr());
+				logte("The streamid for SRT must be in the following format: {vhost}/{app}/{stream}[/{playlist}], but [%s]", stream_path.CStr());
 				return nullptr;
 			}
 
-			// Convert to srt://{vhost}/{app}/{stream}
+			// Convert to srt://{vhost}/{app}/{stream}[/{playlist}]
 			stream_path.Prepend("srt://");
 
 			is_vhost = true;
@@ -298,14 +299,8 @@ namespace pub
 		}
 		else
 		{
-			if (streamid.IsEmpty())
-			{
-				logte("The streamid for SRT must be in one of the following formats: srt://{host}[:{port}]/{app}/{stream}[?{query}={value}] or {vhost}/{app}/{stream}, but [%s]", stream_path.CStr());
-			}
-			else
-			{
-				logte("The streamid for SRT must be in one of the following formats: srt://{host}[:{port}]/{app}/{stream}[?{query}={value}] or {vhost}/{app}/{stream}, but [%s] (streamid: [%s])", stream_path.CStr(), streamid.CStr());
-			}
+			auto extra_log = streamid.IsEmpty() ? "" : ov::String::FormatString(" (streamid: [%s])", streamid.CStr());
+			logte("The streamid for SRT must be in one of the following formats: srt://{host}[:{port}]/{app}/{stream}[/{playlist}][?{query}={value}] or {vhost}/{app}/{stream}[/{playlist}], but [%s]%s", stream_path.CStr(), extra_log.CStr());
 		}
 
 		return final_url;
@@ -414,18 +409,38 @@ namespace pub
 			return;
 		}
 
-		auto stream = application->GetStream(final_url->Stream());
+		auto stream = application->GetStreamAs<SrtStream>(final_url->Stream());
 
 		if (stream == nullptr)
 		{
-			logte("Could not find stream: %s", final_url->Stream().CStr());
+			stream = std::dynamic_pointer_cast<SrtStream>(PullStream(final_url, vhost_app_name, final_url->Host(), final_url->Stream()));
+		}
 
-			::srt_setrejectreason(remote->GetNativeHandle(), 1404);
+		if(stream == nullptr)
+		{
+			logte("Could not find stream: %s", final_url->Stream().CStr());
 			remote->Close();
 			return;
 		}
 
-		auto session = SrtSession::Create(application, stream, remote->GetNativeHandle(), remote);
+		auto playlist_name = final_url->File();
+		std::shared_ptr<SrtPlaylist> srt_playlist = nullptr;
+
+		if (playlist_name.IsEmpty())
+		{
+			playlist_name = DEFAULT_SRT_PLAYLIST_NAME;
+		}
+
+		srt_playlist = stream->GetSrtPlaylist(playlist_name);
+
+		if (srt_playlist == nullptr)
+		{
+			logte("Could not find playlist: %s", final_url->File().CStr());
+			remote->Close();
+			return;
+		}
+
+		auto session = SrtSession::Create(application, stream, remote->GetNativeHandle(), remote, srt_playlist);
 
 		{
 			std::unique_lock lock(_session_map_mutex);

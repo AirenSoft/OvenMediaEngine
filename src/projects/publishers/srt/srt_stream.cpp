@@ -12,6 +12,7 @@
 
 #include "base/publisher/application.h"
 #include "base/publisher/stream.h"
+#include "srt_playlist.h"
 #include "srt_private.h"
 #include "srt_session.h"
 
@@ -48,36 +49,185 @@ namespace pub
 		logad("SrtStream has been terminated finally");
 	}
 
-#define SRT_SET_TRACK(from, to, supported, message, ...)  \
-	if (to == nullptr)                                    \
-	{                                                     \
-		if (supported)                                    \
-		{                                                 \
-			to = from;                                    \
-		}                                                 \
-		else                                              \
-		{                                                 \
-			logai("SrtStream - " message, ##__VA_ARGS__); \
-		}                                                 \
+	std::shared_ptr<const info::Playlist> SrtStream::PrepareDefaultPlaylist()
+	{
+		auto playlist_name = DEFAULT_SRT_PLAYLIST_NAME;
+		auto playlist = Stream::GetPlaylist(playlist_name);
+
+		if (playlist != nullptr)
+		{
+			// The playlist is already created
+			logaw("The playlist %s is already created", playlist_name);
+			OV_ASSERT2(false);
+			return playlist;
+		}
+
+		// Pick the first track of each media type
+		std::shared_ptr<MediaTrack> first_video_track = nullptr;
+		std::shared_ptr<MediaTrack> first_audio_track = nullptr;
+		std::shared_ptr<MediaTrack> first_data_track = nullptr;
+
+		for (const auto &[id, track] : GetSupportedTracks(GetTracks()))
+		{
+			const auto media_type = track->GetMediaType();
+
+			switch (media_type)
+			{
+				case cmn::MediaType::Video:
+					first_video_track = (first_video_track == nullptr) ? track : first_video_track;
+					break;
+
+				case cmn::MediaType::Audio:
+					first_audio_track = (first_audio_track == nullptr) ? track : first_audio_track;
+					break;
+
+				case cmn::MediaType::Data:
+					first_data_track = (first_data_track == nullptr) ? track : first_data_track;
+					break;
+
+				default:
+					logad("SrtStream - Ignore unsupported media type: %s", GetMediaTypeString(track->GetMediaType()).CStr());
+					break;
+			}
+		}
+
+		if ((first_video_track == nullptr) && (first_audio_track == nullptr))
+		{
+			logaw("There is no track to create SRT stream");
+			return nullptr;
+		}
+
+		auto new_playlist = std::make_shared<info::Playlist>(playlist_name, playlist_name);
+		auto rendition = std::make_shared<info::Rendition>(
+			"default",
+			(first_video_track != nullptr) ? first_video_track->GetVariantName() : "",
+			(first_audio_track != nullptr) ? first_audio_track->GetVariantName() : "");
+
+		new_playlist->AddRendition(rendition);
+
+		AddPlaylist(new_playlist);
+
+		return new_playlist;
+	}
+
+	bool SrtStream::IsSupportedTrack(const std::shared_ptr<MediaTrack> &track) const
+	{
+		auto media_type = track->GetMediaType();
+
+		if ((media_type == cmn::MediaType::Video) || (media_type == cmn::MediaType::Audio))
+		{
+			auto codec_id = track->GetCodecId();
+
+			if (mpegts::Packetizer::IsSupportedCodec(codec_id))
+			{
+				return true;
+			}
+			else
+			{
+				logai("Ignore unsupported %s codec (%s)",
+					  StringFromMediaType(media_type).CStr(),
+					  StringFromMediaCodecId(codec_id).CStr());
+			}
+		}
+		else if (media_type == cmn::MediaType::Data)
+		{
+			return true;
+		}
+		else
+		{
+			logai("Ignore unsupported media type: %s", StringFromMediaType(media_type).CStr());
+		}
+
+		return false;
+	}
+
+	std::shared_ptr<SrtPlaylist> SrtStream::GetSrtPlaylistInternal(const ov::String &file_name)
+	{
+		auto item = _srt_playlist_map_by_file_name.find(file_name);
+		if (item == _srt_playlist_map_by_file_name.end())
+		{
+			return nullptr;
+		}
+
+		return item->second;
+	}
+
+	std::shared_ptr<SrtPlaylist> SrtStream::GetSrtPlaylist(const ov::String &file_name)
+	{
+		std::shared_lock lock(_srt_playlist_map_mutex);
+
+		return GetSrtPlaylistInternal(file_name);
+	}
+
+	std::map<int32_t, std::shared_ptr<MediaTrack>> SrtStream::GetSupportedTracks(const std::map<int32_t, std::shared_ptr<MediaTrack>> &track_map) const
+	{
+		return ov::maputils::Filter(
+			track_map,
+			std::bind(&SrtStream::IsSupportedTrack, this, std::placeholders::_2));
+	}
+
+	std::vector<std::shared_ptr<MediaTrack>> SrtStream::GetSupportedTracks(const std::vector<std::shared_ptr<MediaTrack>> &tracks) const
+	{
+		std::vector<std::shared_ptr<MediaTrack>> supported_tracks;
+
+		std::copy_if(
+			tracks.begin(), tracks.end(),
+			std::back_inserter(supported_tracks),
+			std::bind(&SrtStream::IsSupportedTrack, this, std::placeholders::_1));
+
+		return supported_tracks;
+	}
+
+	std::vector<std::shared_ptr<MediaTrack>> SrtStream::GetSupportedTracks(const std::shared_ptr<MediaTrackGroup> &group) const
+	{
+		return (group != nullptr) ? GetSupportedTracks(group->GetTracks()) : std::vector<std::shared_ptr<MediaTrack>>();
+	}
+
+	void SrtStream::AddSupportedTrack(const std::shared_ptr<MediaTrack> &track, std::map<ov::String, std::shared_ptr<MediaTrack>> &to)
+	{
+		auto media_type = track->GetMediaType();
+
+		if ((media_type == cmn::MediaType::Video) || (media_type == cmn::MediaType::Audio))
+		{
+			auto codec_id = track->GetCodecId();
+
+			if (mpegts::Packetizer::IsSupportedCodec(codec_id))
+			{
+				to[track->GetVariantName()] = track;
+			}
+			else
+			{
+				logai("SrtStream - Ignore unsupported %s codec (%s)",
+					  StringFromMediaType(media_type).CStr(),
+					  StringFromMediaCodecId(codec_id).CStr());
+			}
+		}
+		else if (media_type == cmn::MediaType::Data)
+		{
+			to[track->GetVariantName()] = track;
+		}
+		else
+		{
+			logai("SrtStream - Ignore unsupported media type: %s", StringFromMediaType(media_type).CStr());
+		}
+	}
+
+	void SrtStream::PrepareForTrack(
+		const std::shared_ptr<MediaTrack> &track,
+		std::map<uint32_t, std::shared_ptr<ov::Data>> &psi_data_map,
+		std::map<uint32_t, std::shared_ptr<ov::Data>> &data_to_send_map)
+	{
+		psi_data_map[track->GetId()] = std::make_shared<ov::Data>();
+		data_to_send_map[track->GetId()] = std::make_shared<ov::Data>();
 	}
 
 	bool SrtStream::Start()
 	{
+		std::unique_lock lock(_srt_playlist_map_mutex);
+
 		if (GetState() != Stream::State::CREATED)
 		{
 			return false;
-		}
-
-		// If this stream is from OriginMapStore, don't register it to OriginMapStore again.
-		if (IsFromOriginMapStore() == false)
-		{
-			auto result = ocst::Orchestrator::GetInstance()->RegisterStreamToOriginMapStore(GetApplicationInfo().GetVHostAppName(), GetName());
-
-			if (result == CommonErrorCode::ERROR)
-			{
-				logaw("Failed to register stream to origin map store");
-				return false;
-			}
 		}
 
 		if (CreateStreamWorker(_worker_count) == false)
@@ -85,133 +235,193 @@ namespace pub
 			return false;
 		}
 
-		logad("The SRT stream has been started");
+		auto config = GetApplication()->GetConfig();
+		auto srt_config = config.GetPublishers().GetSrtPublisher();
 
-		auto packetizer = std::make_shared<mpegts::Packetizer>();
+		std::map<int32_t, std::shared_ptr<MediaTrack>> data_tracks;
 
-		std::shared_ptr<MediaTrack> first_video_track = nullptr;
-		std::shared_ptr<MediaTrack> first_audio_track = nullptr;
-		std::shared_ptr<MediaTrack> first_data_track = nullptr;
+		PrepareDefaultPlaylist();
 
-		for (const auto &[id, track] : GetTracks())
+		data_tracks = ov::maputils::Filter(GetSupportedTracks(GetTracks()), [](int32_t track_id, const std::shared_ptr<MediaTrack> &track) {
+			return track->GetMediaType() == cmn::MediaType::Data;
+		});
+
+		auto suceeded = true;
+
+		for (const auto &[file_name, playlist] : GetPlaylists())
 		{
-			switch (track->GetMediaType())
+			bool is_default_playlist = (file_name == DEFAULT_SRT_PLAYLIST_NAME);
+			auto &rendition_list = playlist->GetRenditionList();
+
+			auto srt_playlist = GetSrtPlaylistInternal(file_name);
+
+			if (srt_playlist != nullptr)
 			{
-				case cmn::MediaType::Video:
-					SRT_SET_TRACK(track, first_video_track,
-								  mpegts::Packetizer::IsSupportedCodec(track->GetCodecId()),
-								  "Ignore unsupported video codec (%s)", StringFromMediaCodecId(track->GetCodecId()).CStr());
-					break;
+				// The playlist is already created
+				continue;
+			}
 
-				case cmn::MediaType::Audio:
-					SRT_SET_TRACK(track, first_audio_track,
-								  mpegts::Packetizer::IsSupportedCodec(track->GetCodecId()),
-								  "Ignore unsupported audio codec (%s)", StringFromMediaCodecId(track->GetCodecId()).CStr());
-					break;
+			srt_playlist = std::make_shared<SrtPlaylist>(
+				GetSharedPtrAs<info::Stream>(),
+				playlist,
+				GetSharedPtrAs<SrtPlaylistSink>());
 
-				case cmn::MediaType::Data:
-					SRT_SET_TRACK(track, first_data_track, true, );
-					break;
+			_srt_playlist_map_by_file_name[file_name] = srt_playlist;
 
-				default:
-					logad("SrtStream - Ignore unsupported media type(%s)", GetMediaTypeString(track->GetMediaType()).CStr());
-					continue;
+			auto first_supported_rendition_found = false;
+
+			for (const auto &rendition : rendition_list)
+			{
+				if (first_supported_rendition_found == false)
+				{
+					auto video_variant_name = rendition->GetVideoVariantName();
+					auto audio_variant_name = rendition->GetAudioVariantName();
+
+					auto video_media_track_group = (video_variant_name.IsEmpty() == false) ? GetMediaTrackGroup(video_variant_name) : nullptr;
+					auto audio_media_track_group = (audio_variant_name.IsEmpty() == false) ? GetMediaTrackGroup(audio_variant_name) : nullptr;
+
+					if ((video_variant_name.IsEmpty() == false) && (video_media_track_group == nullptr))
+					{
+						logaw("%s video is excluded from the %s rendition in %s playlist because there is no video track.",
+							  video_variant_name.CStr(), rendition->GetName().CStr(), playlist->GetFileName().CStr());
+						video_variant_name.Clear();
+					}
+
+					if ((audio_variant_name.IsEmpty() == false) && (audio_media_track_group == nullptr))
+					{
+						logaw("%s audio is excluded from the %s rendition in %s playlist because there is no audio track.",
+							  audio_variant_name.CStr(), rendition->GetName().CStr(), playlist->GetFileName().CStr());
+						audio_variant_name.Clear();
+					}
+
+					if (video_variant_name.IsEmpty() && audio_variant_name.IsEmpty())
+					{
+						logaw("Invalid rendition %s. The variant name video(%s) audio(%s) is not found in the track list",
+							  rendition->GetName().CStr(), video_variant_name.CStr(), audio_variant_name.CStr());
+						continue;
+					}
+
+					auto video_tracks = GetSupportedTracks(video_media_track_group);
+					auto audio_tracks = GetSupportedTracks(audio_media_track_group);
+
+					if (video_tracks.empty() && audio_tracks.empty())
+					{
+						logaw("Could not add variants (video: %s, audio: %s) because there is no supported codec.",
+							  video_variant_name.CStr(), audio_variant_name.CStr());
+						continue;
+					}
+
+					for (const auto &track : video_tracks)
+					{
+						_srt_playlist_map_by_track_id[track->GetId()].push_back(srt_playlist);
+					}
+					srt_playlist->AddTracks(video_tracks);
+
+					for (const auto &track : audio_tracks)
+					{
+						_srt_playlist_map_by_track_id[track->GetId()].push_back(srt_playlist);
+					}
+					srt_playlist->AddTracks(audio_tracks);
+
+					if (is_default_playlist)
+					{
+						// Add data tracks to the default playlist
+						for (const auto &[id, track] : data_tracks)
+						{
+							_srt_playlist_map_by_track_id[track->GetId()].push_back(srt_playlist);
+							srt_playlist->AddTrack(track);
+						}
+					}
+
+					first_supported_rendition_found = true;
+
+					logai("A SRT playist %s has been created (with variant: %s, %s)",
+						  file_name.CStr(),
+						  video_variant_name.CStr(),
+						  audio_variant_name.CStr());
+				}
+				else
+				{
+					logaw("Rendition %s is ignored - SRT stream supports only one rendition per playlist", rendition->GetName().CStr());
+				}
+			}
+
+			suceeded = suceeded && srt_playlist->Start();
+
+			if (suceeded == false)
+			{
+				logae("Could not start the SRT playlist: %s", file_name.CStr());
+				break;
 			}
 		}
 
-		if ((first_video_track == nullptr) && (first_audio_track == nullptr))
+		auto result = Stream::Start();
+
+		if (result)
 		{
-			logaw("There is no track to create SRT stream");
-			return false;
-		}
-
-		bool result = ((first_video_track != nullptr) ? packetizer->AddTrack(first_video_track) : true) &&
-					  ((first_audio_track != nullptr) ? packetizer->AddTrack(first_audio_track) : true) &&
-					  ((first_data_track != nullptr) ? packetizer->AddTrack(first_data_track) : true);
-
-		if (result == false)
-		{
-			logae("Failed to add track to packetizer");
-			return false;
-		}
-
-		_psi_data->Clear();
-		_data_to_send->Clear();
-
-		if (packetizer->AddSink(GetSharedPtrAs<mpegts::PacketizerSink>()))
-		{
-			std::unique_lock lock(_packetizer_mutex);
-			_packetizer = packetizer;
+			logai("The SRT stream has been started");
 		}
 		else
 		{
-			logae("Could not initialize packetizer for SRT Stream");
-			return false;
+			logae("Failed to start the SRT stream");
 		}
 
-		return packetizer->Start() && Stream::Start();
+		return result;
 	}
 
 	bool SrtStream::Stop()
 	{
+		std::unique_lock lock(_srt_playlist_map_mutex);
+
 		if (GetState() != Stream::State::STARTED)
 		{
 			return false;
 		}
 
-		logad("The SRT stream has been stopped");
-
-		auto linked_input_stream = GetLinkedInputStream();
-
-		if ((linked_input_stream != nullptr) && (linked_input_stream->IsFromOriginMapStore() == false))
+		for (const auto &[file_name, playlist] : _srt_playlist_map_by_file_name)
 		{
-			// Unregister stream if OriginMapStore is enabled
-			auto result = ocst::Orchestrator::GetInstance()->UnregisterStreamFromOriginMapStore(GetApplicationInfo().GetVHostAppName(), GetName());
-
-			if (result == CommonErrorCode::ERROR)
-			{
-				logaw("Failed to unregister stream from origin map store");
-				return false;
-			}
+			playlist->Stop();
 		}
 
-		std::shared_ptr<mpegts::Packetizer> packetizer;
+		auto result = Stream::Stop();
 
+		if (result)
 		{
-			std::unique_lock lock(_packetizer_mutex);
-			packetizer = std::move(_packetizer);
+			logai("The SRT stream has been stopped");
+		}
+		else
+		{
+			logae("Failed to stop the SRT stream");
 		}
 
-		OV_ASSERT2(packetizer != nullptr);
-
-		if (packetizer != nullptr)
-		{
-			packetizer->Stop();
-			packetizer.reset();
-		}
-
-		return Stream::Stop();
+		return result;
 	}
 
 	void SrtStream::EnqueuePacket(const std::shared_ptr<MediaPacket> &media_packet)
 	{
+		std::shared_lock lock(_srt_playlist_map_mutex);
+
 		if (GetState() != Stream::State::STARTED)
 		{
 			return;
 		}
 
-		std::unique_lock lock(_packetizer_mutex);
+		auto track_id = media_packet->GetTrackId();
 
-		if (_packetizer == nullptr)
+		auto srt_playlists_iterator = _srt_playlist_map_by_track_id.find(track_id);
+
+		if (srt_playlists_iterator == _srt_playlist_map_by_track_id.end())
 		{
-			OV_ASSERT2(false);
-#if DEBUG
-			logaw("Packetizer is not initialized");
-#endif	// DEBUG
+			// It may have been filtered out because it is an unsupported codec
 			return;
 		}
 
-		_packetizer->AppendFrame(media_packet);
+		auto &srt_playlists = srt_playlists_iterator->second;
+
+		for (const auto &srt_playlist : srt_playlists)
+		{
+			srt_playlist->EnqueuePacket(media_packet);
+		}
 	}
 
 	void SrtStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
@@ -229,75 +439,17 @@ namespace pub
 		EnqueuePacket(media_packet);
 	}
 
-	void SrtStream::BroadcastIfReady(const std::vector<std::shared_ptr<mpegts::Packet>> &packets)
+	void SrtStream::OnSrtPlaylistData(
+		const std::shared_ptr<SrtPlaylist> &playlist,
+		const std::shared_ptr<const ov::Data> &data)
 	{
-		std::vector<std::shared_ptr<ov::Data>> data_list;
-		size_t total_data_size = 0;
+		auto srt_data = std::make_shared<const SrtData>(playlist, data);
 
-		{
-			for (auto &packet : packets)
-			{
-				auto size = _data_to_send->GetLength();
-				const auto &data = packet->GetData();
-
-				if ((size + data->GetLength()) > SRT_LIVE_DEF_PLSIZE)
-				{
-					total_data_size += _data_to_send->GetLength();
-					data_list.push_back(std::move(_data_to_send));
-
-					_data_to_send = data->Clone();
-				}
-				else
-				{
-					_data_to_send->Append(packet->GetData());
-				}
-			}
-		}
-
-		for (const auto &data : data_list)
-		{
-			BroadcastPacket(std::make_any<std::shared_ptr<const ov::Data>>(data));
-		}
+		BroadcastPacket(std::make_any<std::shared_ptr<const SrtData>>(srt_data));
 
 		MonitorInstance->IncreaseBytesOut(
 			*GetSharedPtrAs<info::Stream>(),
 			PublisherType::Srt,
-			total_data_size * GetSessionCount());
-	}
-
-	void SrtStream::OnPsi(const std::vector<std::shared_ptr<const MediaTrack>> &tracks, const std::vector<std::shared_ptr<mpegts::Packet>> &psi_packets)
-	{
-		std::shared_ptr<ov::Data> psi_data = std::make_shared<ov::Data>();
-
-		for (const auto &packet : psi_packets)
-		{
-			psi_data->Append(packet->GetData());
-		}
-
-		logap("OnPsi - %zu packets (total %zu bytes)", psi_packets.size(), psi_data->GetLength());
-
-		{
-			std::unique_lock lock(_psi_data_mutex);
-			_psi_data = std::move(psi_data);
-		}
-
-		BroadcastIfReady(psi_packets);
-	}
-
-	void SrtStream::OnFrame(const std::shared_ptr<const MediaPacket> &media_packet, const std::vector<std::shared_ptr<mpegts::Packet>> &pes_packets)
-	{
-#if DEBUG
-		// Since adding up the total packet size is costly, it is calculated only in debug mode
-		size_t total_packet_size = 0;
-
-		for (const auto &packet : pes_packets)
-		{
-			total_packet_size += packet->GetData()->GetLength();
-		}
-
-		logap("OnFrame - %zu packets (total %zu bytes)", pes_packets.size(), total_packet_size);
-#endif	// DEBUG
-
-		BroadcastIfReady(pes_packets);
+			data->GetLength() * GetSessionCount());
 	}
 }  // namespace pub
