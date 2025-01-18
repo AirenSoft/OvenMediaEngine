@@ -418,7 +418,7 @@ namespace info
 		return _tracks;
 	}
 
-	bool Stream::AddPlaylist(const std::shared_ptr<Playlist> &playlist)
+	bool Stream::AddPlaylist(const std::shared_ptr<const Playlist> &playlist)
 	{
 		auto result = _playlists.emplace(playlist->GetFileName(), playlist);
 		return result.second;
@@ -435,7 +435,7 @@ namespace info
 		return item->second;
 	}
 
-	const std::map<ov::String, std::shared_ptr<Playlist>> &Stream::GetPlaylists() const
+	const std::map<ov::String, std::shared_ptr<const Playlist>> &Stream::GetPlaylists() const
 	{
 		return _playlists;
 	}
@@ -448,6 +448,11 @@ namespace info
 		}
 
 		return _app_info->GetVHostAppName().CStr();
+	}
+
+	const char *Stream::GetApplicationName() const
+	{
+		return (_app_info == nullptr) ? "Unknown" : _app_info->GetVHostAppName().CStr();
 	}
 
 	ov::String Stream::GetInfoString()
