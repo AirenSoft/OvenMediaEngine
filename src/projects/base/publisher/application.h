@@ -95,6 +95,19 @@ namespace pub
 		uint32_t GetStreamCount();
 		std::shared_ptr<Stream> GetStream(uint32_t stream_id);
 		std::shared_ptr<Stream> GetStream(ov::String stream_name);
+		template <typename T>
+		std::enable_if_t<std::is_base_of<Stream, T>::value, std::shared_ptr<T>>
+		GetStreamAs(uint32_t stream_id)
+		{
+			return std::dynamic_pointer_cast<T>(GetStream(stream_id));
+		}
+
+		template <typename T>
+		std::enable_if_t<std::is_base_of<Stream, T>::value, std::shared_ptr<T>>
+		GetStreamAs(ov::String stream_name)
+		{
+			return std::dynamic_pointer_cast<T>(GetStream(stream_name));
+		}
 
 		virtual bool Start();
 		virtual bool Stop();
