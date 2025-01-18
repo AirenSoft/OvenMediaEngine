@@ -142,7 +142,7 @@ namespace serdes
 		}
 	}
 
-	static void SetOptions(Json::Value &parent_object, const char *key, const std::shared_ptr<info::Playlist> &playlist, Optional optional)
+	static void SetOptions(Json::Value &parent_object, const char *key, const std::shared_ptr<const info::Playlist> &playlist, Optional optional)
 	{
 		CONVERTER_RETURN_IF(false, Json::objectValue);
 
@@ -151,7 +151,7 @@ namespace serdes
 		object["enableTsPackaging"] = playlist->IsTsPackagingEnabled();
 	}
 
-	static void SetPlaylists(Json::Value &parent_object, const char *key, const std::map<ov::String, std::shared_ptr<info::Playlist>> &playlist, Optional optional)
+	static void SetPlaylists(Json::Value &parent_object, const char *key, const std::map<ov::String, std::shared_ptr<const info::Playlist>> &playlist, Optional optional)
 	{
 		CONVERTER_RETURN_IF(false, Json::arrayValue);
 
