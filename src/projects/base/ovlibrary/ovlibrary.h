@@ -24,6 +24,7 @@
 #include "./json.h"
 #include "./log.h"
 #include "./memory_utilities.h"
+#include "./map_utilities.h"
 #include "./ovdata_structure.h"
 #include "./path_manager.h"
 #include "./pcm_utilities.h"
