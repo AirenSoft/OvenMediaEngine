@@ -9,6 +9,7 @@
 #pragma once
 
 #include "../../transcoder_decoder.h"
+#include <list>
 
 class DecoderAVCxXMA : public TranscodeDecoder
 {
@@ -28,4 +29,9 @@ public:
 	bool ReinitCodecIfNeed();
 
 	void CodecThread() override;
+
+private:
+	[[maybe_unused]]
+	std::list<int64_t> _pts_reorder_list;
+
 };

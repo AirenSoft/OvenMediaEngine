@@ -15,6 +15,11 @@
 #include "../../transcoder_private.h"
 #include "base/info/application.h"
 
+
+// The Xilinx Video SDK decoder uses a 32-bit PTS. At some point, it wrap around and becomes negative. 
+// To fix this, we changed it to calculate the PTS outside the codec.
+#define USE_EXTERNAL_TIMESTAMP 	true
+
 bool DecoderAVCxXMA::InitCodec()
 {
 	const AVCodec *_codec = ::avcodec_find_decoder_by_name("mpsoc_vcu_h264");
@@ -91,6 +96,11 @@ void DecoderAVCxXMA::UninitCodec()
 		::av_parser_close(_parser);
 	}
 	_parser = nullptr;
+
+#if USE_EXTERNAL_TIMESTAMP
+	_pts_reorder_list.clear();
+#endif
+
 }
 
 bool DecoderAVCxXMA::ReinitCodecIfNeed()
@@ -224,6 +234,10 @@ void DecoderAVCxXMA::CodecThread()
 					logte("An error occurred while sending a packet for decoding: Unhandled error (%d:%s) ", ret, err_msg);
 					break;
 				}
+
+#if USE_EXTERNAL_TIMESTAMP
+				_pts_reorder_list.push_back(_pkt->pts);
+#endif
 			}
 
 			OV_ASSERT(
@@ -288,6 +302,14 @@ void DecoderAVCxXMA::CodecThread()
 				{
 					_frame->pkt_duration = (int64_t)(((double)_context->framerate.den / (double)_context->framerate.num) / ((double)GetRefTrack()->GetTimeBase().GetNum() / (double)GetRefTrack()->GetTimeBase().GetDen()));
 				}
+
+#if USE_EXTERNAL_TIMESTAMP
+				_pts_reorder_list.sort();
+				auto ordered_pts = _pts_reorder_list.front();
+				// logtd("in: %lld, out: %lld (%s), list: %d", ordered_pts, _frame->pts, (ordered_pts == _frame->pts) ? "match" : "No match", _pts_reorder_list.size());
+				_frame->pts = ordered_pts;
+				_pts_reorder_list.pop_front();
+#endif
 
 				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
 				if (decoded_frame == nullptr)
