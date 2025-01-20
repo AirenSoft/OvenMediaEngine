@@ -33,6 +33,12 @@ public:
 					   uint32_t worker_count);
 	~RtcStream() final;
 
+	//--------------------------------------------------------------------
+	// Implementation of info::Stream
+	//--------------------------------------------------------------------
+	std::shared_ptr<const pub::Stream::DefaultPlaylistInfo> GetDefaultPlaylistInfo() const override;
+	//--------------------------------------------------------------------
+
 	std::shared_ptr<const SessionDescription> GetSessionDescription(const ov::String &file_name);
 	std::shared_ptr<const RtcPlaylist> GetRtcPlaylist(const ov::String &file_name, cmn::MediaCodecId video_codec_id, cmn::MediaCodecId audio_codec_id);
 

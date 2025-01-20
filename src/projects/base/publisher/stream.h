@@ -68,7 +68,6 @@ namespace pub
 	class Stream : public info::Stream, public ov::EnableSharedFromThis<Stream>
 	{
 	public:
-
 		// Create stream --> Start stream --> Stop stream --> Delete stream
 		enum class State : uint8_t
 		{
@@ -77,6 +76,43 @@ namespace pub
 			STOPPED,
 			ERROR,
 		};
+
+		struct DefaultPlaylistInfo
+		{
+			// Playlist name
+			//
+			// For example, in LL-HLS, the value is "llhls_default"
+			ov::String name;
+
+			// Playlist file name, used to retrieve a playlist from the Stream, such as with GetPlaylist()
+			//
+			// For example, in LL-HLS, the value is "llhls"
+			ov::String file_name;
+
+			// Used internally by the stream of publisher to distinguish playlists based on file names
+			// (e.g., when caching the master playlist in LLHlsStream)
+			//
+			// For example, in LL-HLS, the value is "llhls.m3u8"
+			ov::String internal_file_name;
+
+			DefaultPlaylistInfo(
+				const ov::String &name,
+				const ov::String &file_name,
+				const ov::String &internal_file_name)
+				: name(name),
+				  file_name(file_name),
+				  internal_file_name(internal_file_name)
+			{
+			}
+		};
+
+	public:
+		virtual std::shared_ptr<const DefaultPlaylistInfo> GetDefaultPlaylistInfo() const
+		{
+			return nullptr;
+		}
+
+		std::shared_ptr<const info::Playlist> GetDefaultPlaylist() const;
 
 		// Session을 추가한다.
 		bool AddSession(std::shared_ptr<Session> session);

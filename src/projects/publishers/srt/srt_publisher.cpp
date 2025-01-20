@@ -428,7 +428,8 @@ namespace pub
 
 		if (playlist_name.IsEmpty())
 		{
-			playlist_name = DEFAULT_SRT_PLAYLIST_NAME;
+			// Use default playlist
+			playlist_name = stream->GetDefaultPlaylistInfo()->file_name;
 		}
 
 		srt_playlist = stream->GetSrtPlaylist(playlist_name);

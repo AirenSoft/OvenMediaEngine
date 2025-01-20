@@ -66,6 +66,23 @@ HlsStream::~HlsStream()
 	logtd("TsStream(%s/%s) has been terminated finally", GetApplicationName(), GetName().CStr());
 }
 
+std::shared_ptr<const pub::Stream::DefaultPlaylistInfo> HlsStream::GetDefaultPlaylistInfo() const
+{
+	// Since the same value is always stored in info, it is not an issue
+	// even if multiple instances of info are created due to a race conditio in multi-threading
+	static auto info = []() -> std::shared_ptr<const pub::Stream::DefaultPlaylistInfo> {
+		ov::String file_name = "playlist.m3u8";
+		auto file_name_without_ext = file_name.Substring(0, file_name.IndexOfRev('.'));
+
+		return std::make_shared<const pub::Stream::DefaultPlaylistInfo>(
+			"hls_default",
+			file_name_without_ext,
+			file_name);
+	}();
+
+	return info;
+}
+
 ov::String HlsStream::GetStreamId() const
 {
 	return ov::String::FormatString("hlsv3/%s", GetUri().CStr());
@@ -197,12 +214,13 @@ bool HlsStream::CreateDefaultPlaylist()
 	}
 
 	// Create default playlist
-	ov::String default_playlist_name = TS_HLS_DEFAULT_PLAYLIST_NAME;
-	auto default_playlist_name_without_ext = default_playlist_name.Substring(0, default_playlist_name.IndexOfRev('.'));
-	auto default_playlist = Stream::GetPlaylist(default_playlist_name_without_ext);
+	auto default_playlist_info = GetDefaultPlaylistInfo();
+	OV_ASSERT2(default_playlist_info != nullptr);
+
+	auto default_playlist = Stream::GetPlaylist(default_playlist_info->file_name);
 	if (default_playlist == nullptr)
 	{
-		auto playlist = std::make_shared<info::Playlist>("hls_default", default_playlist_name_without_ext);
+		auto playlist = std::make_shared<info::Playlist>(default_playlist_info->name, default_playlist_info->file_name, true);
 		auto rendition = std::make_shared<info::Rendition>("default", first_video_track ? first_video_track->GetVariantName() : "", first_audio_track ? first_audio_track->GetVariantName() : "");
 
 		playlist->AddRendition(rendition);

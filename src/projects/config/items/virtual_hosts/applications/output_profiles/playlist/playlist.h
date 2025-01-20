@@ -38,7 +38,7 @@ namespace cfg
 					// Copy cfg to info
 					std::shared_ptr<info::Playlist> GetPlaylistInfo() const
 					{
-						auto playlist = std::make_shared<info::Playlist>(GetName(), GetFileName());
+						auto playlist = std::make_shared<info::Playlist>(GetName(), GetFileName(), false);
 						playlist->SetHlsChunklistPathDepth(_options.GetHlsChunklistPathDepth());
 						playlist->SetWebRtcAutoAbr(_options.IsWebRtcAutoAbr());
 						playlist->EnableTsPackaging(_options.IsTsPackagingEnabled());

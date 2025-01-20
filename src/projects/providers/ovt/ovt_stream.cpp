@@ -353,7 +353,7 @@ namespace pvd
 			ov::String playlist_name = json_playlist["name"].asString().c_str();
 			ov::String playlist_file_name = json_playlist["fileName"].asString().c_str();
 
-			auto playlist = std::make_shared<info::Playlist>(playlist_name, playlist_file_name);
+			auto playlist = std::make_shared<info::Playlist>(playlist_name, playlist_file_name, false);
 
 			// Options
 			auto json_options = json_playlist["options"];

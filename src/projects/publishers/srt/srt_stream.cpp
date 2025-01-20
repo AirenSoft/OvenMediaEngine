@@ -49,15 +49,27 @@ namespace pub
 		logad("SrtStream has been terminated finally");
 	}
 
+	std::shared_ptr<const Stream::DefaultPlaylistInfo> SrtStream::GetDefaultPlaylistInfo() const
+	{
+		static auto info = std::make_shared<Stream::DefaultPlaylistInfo>(
+			"srt_default",
+			"srt_default",
+			"srt_default");
+
+		return info;
+	}
+
 	std::shared_ptr<const info::Playlist> SrtStream::PrepareDefaultPlaylist()
 	{
-		auto playlist_name = DEFAULT_SRT_PLAYLIST_NAME;
-		auto playlist = Stream::GetPlaylist(playlist_name);
+		auto default_playlist_info = GetDefaultPlaylistInfo();
+		OV_ASSERT2(default_playlist_info != nullptr);
+
+		auto playlist = Stream::GetPlaylist(default_playlist_info->file_name);
 
 		if (playlist != nullptr)
 		{
 			// The playlist is already created
-			logaw("The playlist %s is already created", playlist_name);
+			logaw("The playlist %s is already created", default_playlist_info->file_name.CStr());
 			OV_ASSERT2(false);
 			return playlist;
 		}
@@ -97,7 +109,7 @@ namespace pub
 			return nullptr;
 		}
 
-		auto new_playlist = std::make_shared<info::Playlist>(playlist_name, playlist_name);
+		auto new_playlist = std::make_shared<info::Playlist>(default_playlist_info->name, default_playlist_info->file_name, true);
 		auto rendition = std::make_shared<info::Rendition>(
 			"default",
 			(first_video_track != nullptr) ? first_video_track->GetVariantName() : "",
@@ -250,7 +262,7 @@ namespace pub
 
 		for (const auto &[file_name, playlist] : GetPlaylists())
 		{
-			bool is_default_playlist = (file_name == DEFAULT_SRT_PLAYLIST_NAME);
+			bool is_default_playlist = playlist->IsDefault();
 			auto &rendition_list = playlist->GetRenditionList();
 
 			auto srt_playlist = GetSrtPlaylistInternal(file_name);

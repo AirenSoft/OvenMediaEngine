@@ -243,7 +243,7 @@ namespace pvd
 				return false;
 			}
 
-			auto playlist = std::make_shared<info::Playlist>(name_object.asString().c_str(), file_name_object.asString().c_str());
+			auto playlist = std::make_shared<info::Playlist>(name_object.asString().c_str(), file_name_object.asString().c_str(), false);
 
 			// Options
 			auto options_object = playlist_object["options"];
@@ -406,7 +406,7 @@ namespace pvd
 				return false;
 			}
 
-			auto playlist = std::make_shared<info::Playlist>(playlist_name_node.text().as_string(), file_name_node.text().as_string());
+			auto playlist = std::make_shared<info::Playlist>(playlist_name_node.text().as_string(), file_name_node.text().as_string(), false);
 
 			// Options
 			auto options_node = playlist_node.child("Options");

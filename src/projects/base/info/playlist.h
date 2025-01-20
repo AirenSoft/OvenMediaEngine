@@ -74,10 +74,11 @@ namespace info
 	class Playlist
 	{
 	public:
-		Playlist(const ov::String &name, const ov::String &file_name)
+		Playlist(const ov::String &name, const ov::String &file_name, bool is_default)
 		{
 			_name = name;
 			_file_name = file_name;
+			_is_default = is_default;
 		}
 		~Playlist() = default;
 
@@ -86,6 +87,7 @@ namespace info
 		{
 			_name = other._name;
 			_file_name = other._file_name;
+			_is_default = other._is_default;
 			_webrtc_auto_abr = other._webrtc_auto_abr;
 			_hls_chunklist_path_depth = other._hls_chunklist_path_depth;
 			_enable_ts_packaging = other._enable_ts_packaging;
@@ -143,6 +145,11 @@ namespace info
 			return _file_name;
 		}
 
+		bool IsDefault() const
+		{
+			return _is_default;
+		}
+
 		// Get Rendition List
 		const std::vector<std::shared_ptr<Rendition>> &GetRenditionList() const
 		{
@@ -158,6 +165,11 @@ namespace info
 			}
 
 			if (_file_name != rhs._file_name)
+			{
+				return false;
+			}
+
+			if (_is_default != rhs._is_default)
 			{
 				return false;
 			}
@@ -202,6 +214,8 @@ namespace info
 	private:
 		ov::String _name;
 		ov::String _file_name;
+
+		bool _is_default = false;
 
 		bool _webrtc_auto_abr = false;
 		int _hls_chunklist_path_depth = -1;

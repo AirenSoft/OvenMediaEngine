@@ -14,8 +14,6 @@
 #include "./srt_playlist.h"
 #include "monitoring/monitoring.h"
 
-#define DEFAULT_SRT_PLAYLIST_NAME "playlist"
-
 namespace pub
 {
 	class SrtStream final : public Stream, public SrtPlaylistSink
@@ -30,6 +28,12 @@ namespace pub
 		~SrtStream() override final;
 
 		std::shared_ptr<SrtPlaylist> GetSrtPlaylist(const ov::String &file_name);
+
+		//--------------------------------------------------------------------
+		// Implementation of info::Stream
+		//--------------------------------------------------------------------
+		std::shared_ptr<const pub::Stream::DefaultPlaylistInfo> GetDefaultPlaylistInfo() const override;
+		//--------------------------------------------------------------------
 
 		//--------------------------------------------------------------------
 		// Overriding of Stream

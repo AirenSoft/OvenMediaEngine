@@ -19,9 +19,6 @@
 #include "llhls_master_playlist.h"
 #include "llhls_chunklist.h"
 
-#define DEFAULT_PLAYLIST_NAME	"llhls.m3u8"
-
-
 // max initial media packet buffer size, for OOM protection
 #define MAX_INITIAL_MEDIA_PACKET_BUFFER_SIZE		10000
 
@@ -36,6 +33,12 @@ public:
 	~LLHlsStream() final;
 
 	ov::String GetStreamId() const;
+
+	//--------------------------------------------------------------------
+	// Implementation of info::Stream
+	//--------------------------------------------------------------------
+	std::shared_ptr<const DefaultPlaylistInfo> GetDefaultPlaylistInfo() const override;
+	//--------------------------------------------------------------------
 
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;

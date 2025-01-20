@@ -202,6 +202,18 @@ namespace pub
 	{
 	}
 
+	std::shared_ptr<const info::Playlist> Stream::GetDefaultPlaylist() const
+	{
+		auto info = GetDefaultPlaylistInfo();
+
+		if (info != nullptr)
+		{
+			return GetPlaylist(info->file_name);
+		}
+
+		return nullptr;
+	}
+
 	bool Stream::Start()
 	{
 		if (_state != State::CREATED)

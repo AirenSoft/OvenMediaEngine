@@ -19,8 +19,6 @@
 #include "hls_master_playlist.h"
 #include "hls_media_playlist.h"
 
-#define TS_HLS_DEFAULT_PLAYLIST_NAME	"playlist.m3u8"
-
 // max initial media packet buffer size, for OOM protection
 #define MAX_INITIAL_MEDIA_PACKET_BUFFER_SIZE 10000
 
@@ -33,6 +31,12 @@ public:
 
 	explicit HlsStream(const std::shared_ptr<pub::Application> application, const info::Stream &info, uint32_t worker_count);
 	~HlsStream() final;
+
+	//--------------------------------------------------------------------
+	// Implementation of info::Stream
+	//--------------------------------------------------------------------
+	std::shared_ptr<const pub::Stream::DefaultPlaylistInfo> GetDefaultPlaylistInfo() const override;
+	//--------------------------------------------------------------------
 
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;

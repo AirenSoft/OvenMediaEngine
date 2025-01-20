@@ -9,16 +9,15 @@
 #include "llhls_stream.h"
 
 #include <base/ovlibrary/hex.h>
+#include <base/publisher/application.h>
+#include <base/publisher/stream.h>
 #include <config/config_manager.h>
 
 #include <pugixml-1.9/src/pugixml.hpp>
 
-#include <base/publisher/application.h>
-#include <base/publisher/stream.h>
-
 #include "llhls_application.h"
-#include "llhls_session.h"
 #include "llhls_private.h"
+#include "llhls_session.h"
 
 std::shared_ptr<LLHlsStream> LLHlsStream::Create(const std::shared_ptr<pub::Application> application, const info::Stream &info, uint32_t worker_count)
 {
@@ -39,6 +38,21 @@ LLHlsStream::~LLHlsStream()
 ov::String LLHlsStream::GetStreamId() const
 {
 	return ov::String::FormatString("llhls/%s", GetUri().CStr());
+}
+
+std::shared_ptr<const pub::Stream::DefaultPlaylistInfo> LLHlsStream::GetDefaultPlaylistInfo() const
+{
+	static auto info = []() -> std::shared_ptr<const pub::Stream::DefaultPlaylistInfo> {
+		ov::String file_name = "llhls.m3u8";
+		auto file_name_without_ext = file_name.Substring(0, file_name.IndexOfRev('.'));
+
+		return std::make_shared<const pub::Stream::DefaultPlaylistInfo>(
+			"llhls_default",
+			file_name_without_ext,
+			file_name);
+	}();
+
+	return info;
 }
 
 bool LLHlsStream::Start()
@@ -150,12 +164,13 @@ bool LLHlsStream::Start()
 	{
 		// If there is no default playlist, make default playlist
 		// Default playlist is consist of first compatible video and audio track among all tracks
-		ov::String default_playlist_name = DEFAULT_PLAYLIST_NAME;
-		auto default_playlist_name_without_ext = default_playlist_name.Substring(0, default_playlist_name.IndexOfRev('.'));
-		auto default_playlist = Stream::GetPlaylist(default_playlist_name_without_ext);
+		auto default_playlist_info = GetDefaultPlaylistInfo();
+		OV_ASSERT2(default_playlist_info != nullptr);
+
+		auto default_playlist = Stream::GetPlaylist(default_playlist_info->file_name);
 		if (default_playlist == nullptr)
 		{
-			auto playlist = std::make_shared<info::Playlist>("llhls_default", default_playlist_name_without_ext);
+			auto playlist = std::make_shared<info::Playlist>(default_playlist_info->name, default_playlist_info->file_name, true);
 			auto rendition = std::make_shared<info::Rendition>("default", first_video_track ? first_video_track->GetVariantName() : "", first_audio_track ? first_audio_track->GetVariantName() : "");
 
 			playlist->AddRendition(rendition);
@@ -165,7 +180,7 @@ bool LLHlsStream::Start()
 			auto master_playlist = CreateMasterPlaylist(playlist);
 
 			std::lock_guard<std::mutex> guard(_master_playlists_lock);
-			_master_playlists[default_playlist_name] = master_playlist;
+			_master_playlists[default_playlist_info->internal_file_name] = master_playlist;
 		}
 	}
 	else

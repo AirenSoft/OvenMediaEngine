@@ -8,12 +8,13 @@
 //==============================================================================
 #include "streams_controller.h"
 
-#include <orchestrator/orchestrator.h>
 #include <base/provider/pull_provider/stream_props.h>
+#include <orchestrator/orchestrator.h>
+
 #include <functional>
 
-#include "stream_actions_controller.h"
 #include "../../../../../api_private.h"
+#include "stream_actions_controller.h"
 
 namespace api
 {
@@ -100,7 +101,7 @@ namespace api
 							properties->EnableIgnoreRtcpSRTimestamp(jv_properties["ignoreRtcpSRTimestamp"].asBool());
 						}
 					}
-					
+
 					logti("Request to pull stream: %s/%s - persistent(%s) noInputFailoverTimeoutMs(%d) unusedStreamDeletionTimeoutMs(%d) ignoreRtcpSRTimestamp(%s)", app->GetVHostAppName().CStr(), stream_name.CStr(), properties->IsPersistent() ? "true" : "false", properties->GetNoInputFailoverTimeout(), properties->GetUnusedStreamDeletionTimeout(), properties->IsRtcpSRTimestampIgnored() ? "true" : "false");
 					for (auto &url : request_urls)
 					{
@@ -164,42 +165,32 @@ namespace api
 												   const std::shared_ptr<mon::ApplicationMetrics> &app,
 												   const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
-			// Update llhls playlist from the LLHLS stream
 			auto orchestrator = ocst::Orchestrator::GetInstance();
 			auto app_name = app->GetVHostAppName();
 			auto stream_name = stream->GetName();
 
-			auto publisher = orchestrator->GetPublisherFromType(PublisherType::LLHls);
-			if (publisher)
+			// Get default playlist from the publishers
+			for (
+				auto publisher_type = PublisherType::Webrtc;
+				publisher_type < PublisherType::NumberOfPublishers;
+				publisher_type = static_cast<PublisherType>(ov::ToUnderlyingType(publisher_type) + 1))
 			{
-				
-				for (auto &output_stream : output_streams)
-				{
-					auto llhls_stream = publisher->GetStream(app->GetId(), output_stream->GetId());
-					if (llhls_stream)
-					{
-						auto llhls_playlist = llhls_stream->GetPlaylist("llhls");
-						if (llhls_playlist)
-						{
-							output_stream->AddPlaylist(std::make_shared<info::Playlist>(*llhls_playlist));
-						}
-					}
-				}				
-			}
+				auto publisher = orchestrator->GetPublisherFromType(publisher_type);
 
-			// update webrtc_default playlist from the WebRTC stream
-			publisher = orchestrator->GetPublisherFromType(PublisherType::Webrtc);
-			if (publisher)
-			{
-				for (auto &output_stream : output_streams)
+				if (publisher != nullptr)
 				{
-					auto webrtc_stream = publisher->GetStream(app->GetId(), output_stream->GetId());
-					if (webrtc_stream)
+					for (auto &output_stream : output_streams)
 					{
-						auto webrtc_playlist = webrtc_stream->GetPlaylist("webrtc_default");
-						if (webrtc_playlist)
+						auto stream = publisher->GetStream(app->GetId(), output_stream->GetId());
+
+						if (stream != nullptr)
 						{
-							output_stream->AddPlaylist(std::make_shared<info::Playlist>(*webrtc_playlist));
+							auto playlist = stream->GetDefaultPlaylist();
+
+							if (playlist != nullptr)
+							{
+								output_stream->AddPlaylist(std::make_shared<info::Playlist>(*playlist));
+							}
 						}
 					}
 				}
@@ -221,7 +212,7 @@ namespace api
 			auto code = orchestrator->TerminateStream(app_name, stream_name);
 			auto http_code = http::StatusCodeFromCommonError(code);
 			if (http_code != http::StatusCode::OK)
-			{	
+			{
 				throw http::HttpError(http_code, "Could not terminate the stream");
 			}
 
