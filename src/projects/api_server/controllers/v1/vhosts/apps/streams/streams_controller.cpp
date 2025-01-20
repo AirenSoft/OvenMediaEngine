@@ -171,7 +171,7 @@ namespace api
 
 			// Get default playlist from the publishers
 			for (
-				auto publisher_type = PublisherType::Webrtc;
+				auto publisher_type = static_cast<PublisherType>(ov::ToUnderlyingType(PublisherType::Unknown) + 1);
 				publisher_type < PublisherType::NumberOfPublishers;
 				publisher_type = static_cast<PublisherType>(ov::ToUnderlyingType(publisher_type) + 1))
 			{

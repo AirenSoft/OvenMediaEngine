@@ -57,9 +57,11 @@ namespace mon
 		for (int i = 0; i < static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
 		{
 			// Deprecated Statistics
-			if(static_cast<PublisherType>(i) == PublisherType::RtmpPush 
-			|| static_cast<PublisherType>(i) == PublisherType::MpegtsPush 
-			|| static_cast<PublisherType>(i) == PublisherType::SrtPush)
+			if(
+				static_cast<PublisherType>(i) == PublisherType::Unknown ||
+				static_cast<PublisherType>(i) == PublisherType::RtmpPush ||
+				static_cast<PublisherType>(i) == PublisherType::MpegtsPush ||
+				static_cast<PublisherType>(i) == PublisherType::SrtPush)
 			{
 				continue;
 			}
