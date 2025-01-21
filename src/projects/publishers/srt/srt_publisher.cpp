@@ -118,6 +118,29 @@ namespace pub
 				_physical_port_list = std::move(physical_port_list);
 			}
 
+			_disconnect_timer.Push(
+				[this](void *parameter) {
+					if (_has_socket_list_to_disconnect)
+					{
+						decltype(_socket_list_to_disconnect) socket_list_to_disconnect;
+
+						{
+							std::lock_guard lock_guard(_socket_list_to_disconnect_mutex);
+							_has_socket_list_to_disconnect = false;
+							socket_list_to_disconnect = std::move(_socket_list_to_disconnect);
+						}
+
+						for (const auto &socket : socket_list_to_disconnect)
+						{
+							socket->Close();
+						}
+					}
+
+					return ov::DelayQueueAction::Repeat;
+				},
+				100);
+			_disconnect_timer.Start();
+
 			return Publisher::Start();
 		}
 
@@ -143,6 +166,9 @@ namespace pub
 			server_port->RemoveObserver(this);
 			server_port->Close();
 		}
+
+		_disconnect_timer.Stop();
+		_disconnect_timer.Clear();
 
 		return Publisher::Stop();
 	}
@@ -170,6 +196,13 @@ namespace pub
 	bool SrtPublisher::OnDeletePublisherApplication(const std::shared_ptr<Application> &application)
 	{
 		return true;
+	}
+
+	void SrtPublisher::AddToDisconnect(const std::shared_ptr<ov::Socket> &remote)
+	{
+		std::lock_guard lock(_socket_list_to_disconnect_mutex);
+		_has_socket_list_to_disconnect = true;
+		_socket_list_to_disconnect.emplace_back(remote);
 	}
 
 	std::shared_ptr<ov::Url> SrtPublisher::GetStreamUrlForRemote(const std::shared_ptr<ov::Socket> &remote, bool *is_vhost_form)
@@ -317,7 +350,7 @@ namespace pub
 
 		if (final_url == nullptr)
 		{
-			remote->Close();
+			AddToDisconnect(remote);
 			return;
 		}
 
@@ -336,12 +369,12 @@ namespace pub
 		{
 			case AccessController::VerificationResult::Error:
 				// will not reach here
-				remote->Close();
+				AddToDisconnect(remote);
 				return;
 
 			case AccessController::VerificationResult::Fail:
 				logtw("%s", signed_policy->GetErrMessage().CStr());
-				remote->Close();
+				AddToDisconnect(remote);
 				return;
 
 			case AccessController::VerificationResult::Off:
@@ -366,12 +399,12 @@ namespace pub
 		{
 			case AccessController::VerificationResult::Error:
 				logte("An error occurred while verifying with the AdmissionWebhooks: %s", final_url->ToUrlString().CStr());
-				remote->Close();
+				AddToDisconnect(remote);
 				return;
 
 			case AccessController::VerificationResult::Fail:
 				logtw("AdmissionWebhooks server returns an error: %s", admission_webhooks->GetErrReason().CStr());
-				remote->Close();
+				AddToDisconnect(remote);
 				return;
 
 			case AccessController::VerificationResult::Off:
@@ -405,7 +438,7 @@ namespace pub
 		if (application == nullptr)
 		{
 			logte("Could not find vhost/app: %s", vhost_app_name.CStr());
-			remote->Close();
+			AddToDisconnect(remote);
 			return;
 		}
 
@@ -413,13 +446,15 @@ namespace pub
 
 		if (stream == nullptr)
 		{
-			stream = std::dynamic_pointer_cast<SrtStream>(PullStream(final_url, vhost_app_name, final_url->Host(), final_url->Stream()));
+			logte("Could not find stream: %s", final_url->Stream().CStr());
+			AddToDisconnect(remote);
+			return;
 		}
 
-		if(stream == nullptr)
+		if (stream->GetState() != Stream::State::STARTED)
 		{
-			logte("Could not find stream: %s", final_url->Stream().CStr());
-			remote->Close();
+			logtw("The stream is not started: %s/%u", stream->GetName().CStr(), stream->GetId());
+			AddToDisconnect(remote);
 			return;
 		}
 
@@ -459,6 +494,15 @@ namespace pub
 									  const std::shared_ptr<const ov::Data> &data)
 	{
 		// Nothing to do
+	}
+
+	std::shared_ptr<SrtPublisher::StreamMap> SrtPublisher::GetStreamMap(int port)
+	{
+		std::shared_lock lock(_stream_map_mutex);
+
+		auto item = _stream_map.find(port);
+
+		return (item == _stream_map.end()) ? nullptr : item->second;
 	}
 
 	std::shared_ptr<SrtSession> SrtPublisher::GetSession(const std::shared_ptr<ov::Socket> &remote)
@@ -504,14 +548,5 @@ namespace pub
 		}
 
 		logti("The SRT client has disconnected: [%s/%s], %s", stream->GetApplicationName(), stream->GetName().CStr(), remote->ToString().CStr());
-	}
-
-	std::shared_ptr<SrtPublisher::StreamMap> SrtPublisher::GetStreamMap(int port)
-	{
-		std::shared_lock lock(_stream_map_mutex);
-
-		auto item = _stream_map.find(port);
-
-		return (item == _stream_map.end()) ? nullptr : item->second;
 	}
 }  // namespace pub
