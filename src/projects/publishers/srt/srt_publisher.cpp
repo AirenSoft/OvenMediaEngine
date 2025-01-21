@@ -446,6 +446,11 @@ namespace pub
 
 		if (stream == nullptr)
 		{
+			stream = std::dynamic_pointer_cast<SrtStream>(PullStream(final_url, vhost_app_name, final_url->Host(), final_url->Stream()));
+		}
+
+		if(stream == nullptr)
+		{
 			logte("Could not find stream: %s", final_url->Stream().CStr());
 			AddToDisconnect(remote);
 			return;
