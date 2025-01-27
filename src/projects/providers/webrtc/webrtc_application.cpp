@@ -234,21 +234,43 @@ namespace pvd
 			answer_media_desc->SetSetup(MediaDescription::SetupType::Passive);
 
 			// mid
-			answer_media_desc->SetMid(offer_media_desc->GetMid());
+			answer_media_desc->SetMid(offer_media_desc->GetMid().value_or(""));
+
+			// ssrc & cname
+			if (offer_media_desc->GetSsrc().has_value())
+			{
+				answer_media_desc->SetSsrc(offer_media_desc->GetSsrc().value());
+			}
+
+			if (offer_media_desc->GetCname().has_value())
+			{
+				answer_media_desc->SetCname(offer_media_desc->GetCname().value());
+			}
 
 			// transport-cc
 			uint8_t extmap_id = 0;
-			uint8_t new_extmap_id = 1;
 			ov::String extmap_attribute;
 			if (offer_media_desc->FindExtmapItem("transport-wide-cc", extmap_id, extmap_attribute))
 			{
-				answer_media_desc->AddExtmap(new_extmap_id++, extmap_attribute);
+				answer_media_desc->AddExtmap(extmap_id, extmap_attribute);
 			}
 
 			// CompositionTime
 			if (offer_media_desc->FindExtmapItem("uri:ietf:rtc:rtp-hdrext:video:CompositionTime", extmap_id, extmap_attribute))
 			{
-				answer_media_desc->AddExtmap(new_extmap_id++, extmap_attribute);
+				answer_media_desc->AddExtmap(extmap_id, extmap_attribute);
+			}
+
+			// MID
+			if (offer_media_desc->FindExtmapItem("urn:ietf:params:rtp-hdrext:sdes:mid", extmap_id, extmap_attribute))
+			{
+				answer_media_desc->AddExtmap(extmap_id, extmap_attribute);
+			}
+
+			// RTP-STREAM-ID
+			if (offer_media_desc->FindExtmapItem("urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id", extmap_id, extmap_attribute))
+			{
+				answer_media_desc->AddExtmap(extmap_id, extmap_attribute);
 			}
 
 			// a=candidate
@@ -293,6 +315,46 @@ namespace pvd
 				}
 				
 				answer_media_desc->AddPayload(answer_payload);
+			}
+
+			// rids
+			for (auto &rid : offer_media_desc->GetRidList())
+			{
+				auto answer_rid = std::make_shared<RidAttr>();
+				answer_rid->SetId(rid->GetId());
+				answer_rid->SetDirection(rid->GetDirection() == RidAttr::Direction::Send ? RidAttr::Direction::Recv : RidAttr::Direction::Send);
+				answer_rid->SetState(rid->GetState());
+				for (const auto &restriction : rid->GetRestrictions())
+				{
+					auto key = restriction.first;
+					auto value = restriction.second;
+
+					// remove alternative pt, OME doesn't support it 
+					if (key.LowerCaseString() == "pt")
+					{
+						auto pt_list = value.Split(",");
+						value = pt_list[0];
+					}
+
+					answer_rid->AddRestriction(key, value);
+				}
+
+				answer_media_desc->AddRid(answer_rid, false);
+			}
+
+			// simulcast
+			for (auto &layer : offer_media_desc->GetSendLayerList())
+			{
+				auto answer_layer = std::make_shared<SimulcastLayer>();
+				answer_layer->SetRidList(layer->GetRidList());
+				answer_media_desc->AddRecvLayerToSimulcast(answer_layer);
+			}
+
+			for (auto &layer : offer_media_desc->GetRecvLayerList())
+			{
+				auto answer_layer = std::make_shared<SimulcastLayer>();
+				answer_layer->SetRidList(layer->GetRidList());
+				answer_media_desc->AddSendLayerToSimulcast(answer_layer);
 			}
 
 			answer_media_desc->Update();

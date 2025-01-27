@@ -14,6 +14,8 @@
 #include "sdp_regex_pattern.h"
 #include "session_description.h"
 
+#include "sdp_private.h"
+
 MediaDescription::MediaDescription()
 {
 	UseDtls(true);
@@ -48,7 +50,7 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 		"a=setup:%s\r\n",
 		_connection_ip_version, _connection_ip.CStr(),
 		_direction_str.CStr(),
-		_mid.CStr(),
+		_mid.value_or("").CStr(),
 		GetSetupStr().CStr());
 
 	// Common Attributes
@@ -75,9 +77,9 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 		sdp.AppendFormat("a=rtcp-rsize\r\n");
 	}
 
-	if (_msid_appdata.IsEmpty() == false)
+	if (_msid_appdata.has_value() == false)
 	{
-		sdp.AppendFormat("a=msid:%s %s\r\n", _msid.CStr(), _msid_appdata.CStr());
+		sdp.AppendFormat("a=msid:%s %s\r\n", _msid.value_or("").CStr(), _msid_appdata.value_or("").CStr());
 	}
 
 	// Extmap
@@ -134,24 +136,84 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 		}
 	}
 
-	// SSRCs
-	if (_cname.IsEmpty() == false)
+	// rid 
+	for (auto &rid : _rid_list)
 	{
-		if (_rtx_ssrc != 0)
+		sdp.AppendFormat("%s\r\n", rid->ToString().CStr());
+	}
+
+	// Simulcast
+	// a=simulcast:send 1,2;3,4 recv 5;6
+	if (_send_layers.empty() == false || _recv_layers.empty() == false)
+	{
+		sdp.Append("a=simulcast:");
+
+		// send layer
+		if (_send_layers.empty() == false)
+		{
+			sdp.Append("send ");
+		}
+		for (auto &layer : _send_layers)
+		{
+			for (auto &rid : layer->GetRidList())
+			{
+				sdp.AppendFormat("%s", rid->GetId().CStr());
+				// if not last rid
+				if (rid != layer->GetRidList().back())
+				{
+					sdp.Append(",");
+				}
+			}
+			// if not last layer
+			if (layer != _send_layers.back())
+			{
+				sdp.Append(";");
+			}
+		}
+		// recv layer
+		if (_recv_layers.empty() == false)
+		{
+			sdp.Append(" recv ");
+		}
+		for (auto &layer : _recv_layers)
+		{
+			for (auto &rid : layer->GetRidList())
+			{
+				sdp.AppendFormat("%s", rid->GetId().CStr());
+				// if not last rid
+				if (rid != layer->GetRidList().back())
+				{
+					sdp.Append(",");
+				}
+			}
+			// if not last layer
+			if (layer != _recv_layers.back())
+			{
+				sdp.Append(";");
+			}
+		}
+
+		sdp.Append("\r\n");
+	}
+
+	// SSRCs
+	if (_cname.has_value())
+	{
+		if (_rtx_ssrc.has_value())
 		{
 			sdp.AppendFormat("a=ssrc-group:FID %u %u\r\n", _ssrc, _rtx_ssrc);
 		}
-		sdp.AppendFormat("a=ssrc:%u cname:%s\r\n", _ssrc, _cname.CStr());
-		sdp.AppendFormat("a=ssrc:%u msid:%s %s\r\n", _ssrc, _msid.CStr(), _msid_appdata.CStr());
-		sdp.AppendFormat("a=ssrc:%u mslabel:%s\r\n", _ssrc, _msid.CStr());
-		sdp.AppendFormat("a=ssrc:%u label:%s\r\n", _ssrc, _msid_appdata.CStr());
+		sdp.AppendFormat("a=ssrc:%u cname:%s\r\n", _ssrc, _cname.value_or("").CStr());
+		sdp.AppendFormat("a=ssrc:%u msid:%s %s\r\n", _ssrc, _msid.value_or("").CStr(), _msid_appdata.value_or("").CStr());
+		sdp.AppendFormat("a=ssrc:%u mslabel:%s\r\n", _ssrc, _msid.value_or("").CStr());
+		sdp.AppendFormat("a=ssrc:%u label:%s\r\n", _ssrc, _msid_appdata.value_or("").CStr());
 
-		if (_rtx_ssrc != 0)
+		if (_rtx_ssrc.has_value())
 		{
-			sdp.AppendFormat("a=ssrc:%u cname:%s\r\n", _rtx_ssrc, _cname.CStr());
-			sdp.AppendFormat("a=ssrc:%u msid:%s %s\r\n", _rtx_ssrc, _msid.CStr(), _msid_appdata.CStr());
-			sdp.AppendFormat("a=ssrc:%u mslabel:%s\r\n", _rtx_ssrc, _msid.CStr());
-			sdp.AppendFormat("a=ssrc:%u label:%s\r\n", _rtx_ssrc, _msid_appdata.CStr());
+			sdp.AppendFormat("a=ssrc:%u cname:%s\r\n", _rtx_ssrc, _cname.value_or("").CStr());
+			sdp.AppendFormat("a=ssrc:%u msid:%s %s\r\n", _rtx_ssrc, _msid.value_or("").CStr(), _msid_appdata.value_or("").CStr());
+			sdp.AppendFormat("a=ssrc:%u mslabel:%s\r\n", _rtx_ssrc, _msid.value_or("").CStr());
+			sdp.AppendFormat("a=ssrc:%u label:%s\r\n", _rtx_ssrc, _msid_appdata.value_or("").CStr());
 		}
 	}
 
@@ -202,6 +264,13 @@ bool MediaDescription::FromString(const ov::String &desc)
 		}
 	}
 
+	// Run post parsing tasks
+	while (_post_parsing_tasks.empty() == false)
+	{
+		_post_parsing_tasks.front()();
+		_post_parsing_tasks.pop();
+	}
+
 	Update();
 
 	return true;
@@ -242,53 +311,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 	{
 		case 'm':
 			// m=video 9 UDP/TLS/RTP/SAVPF 97
-			/*
-			if(std::regex_search(content, matches, std::regex("^(\\w*) (\\d*) ([\\w\\/]*)(?: (.*))?")))
-			{
-				if(matches.size() < 4 + 1)
-				{
-					parsing_error = true;
-					break;
-				}
-
-				if(!SetMediaType(std::string(matches[1]).c_str()))
-				{
-					parsing_error = true;
-					break;
-				}
-
-				SetPort(std::stoul(matches[2]));
-
-				ov::String protocol = std::string(matches[3]).c_str();
-				if(protocol.UpperCaseString() == "UDP/TLS/RTP/SAVPF")
-				{
-					UseDtls(true);
-				}
-				else if(protocol.UpperCaseString() == "RTP/AVPF" || protocol.UpperCaseString() == "RTP/AVP")
-				{
-					UseDtls(false);
-				}
-				else
-				{
-					loge("SDP", "Cannot support %s protocol", protocol.CStr());
-					parsing_error = true;
-					break;
-				}
-
-				std::string payload_number;
-				std::stringstream payload_numbers(matches[4]);
-				while(std::getline(payload_numbers, payload_number, ' '))
-				{
-					auto payload = std::make_shared<PayloadAttr>();
-					payload->SetId(static_cast<uint8_t>(std::stoul(payload_number)));
-					AddPayload(payload);
-				}
-			}
-			else
-			{
-				parsing_error = true;
-			}
-			*/
 			{
 				auto match = SDPRegexPattern::GetInstance()->MatchMedia(content.c_str());
 				if (match.GetGroupCount() != 4 + 1)
@@ -333,23 +355,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			break;
 		case 'c':
 			// c=IN IP4 0.0.0.0
-			/*
-			if(std::regex_search(content, matches, std::regex("^IN IP(\\d) (\\S*)")))
-			{
-				if(matches.size() != 2 + 1)
-				{
-					parsing_error = true;
-					break;
-				}
-
-				SetConnection(std::stoul(matches[1]), std::string(matches[2]).c_str());
-			}
-			else
-			{
-				parsing_error = true;
-			}
-			*/
-
 			{
 				auto match = SDPRegexPattern::GetInstance()->MatchConnection(content.c_str());
 				if (match.GetGroupCount() != 2 + 1)
@@ -368,21 +373,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			if (content.compare(0, OV_COUNTOF("rtp") - 1, "rtp") == 0)
 			{
 				// a=rtpmap:96 VP8/50000/?
-				/*
-				if(std::regex_search(content,
-				                     matches,
-				                     std::regex("rtpmap:(\\d*) ([\\w\\-\\.]*)(?:\\s*\\/(\\d*)(?:\\s*\\/(\\S*))?)?")))
-				{
-					if(matches.size() < 3 + 1)
-					{
-						parsing_error = true;
-						break;
-					}
-
-					AddRtpmap(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str(),
-					          static_cast<uint32_t>(std::stoul(matches[3])), std::string(matches[4]).c_str());
-				}
-				*/
 				auto match = SDPRegexPattern::GetInstance()->MatchRtpmap(content.c_str());
 				if (match.GetGroupCount() < 3 + 1)
 				{
@@ -396,15 +386,47 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 					ov::Converter::ToUInt32(match.GetGroupAt(3).GetValue().CStr()),
 					match.GetGroupAt(4).GetValue());
 			}
-			// a=rtcp-mux
+			else if (content.compare(0, OV_COUNTOF("rid") - 1, "rid") == 0)
+			{
+				// a=rid:1 send pt=100;max-width=1280;max-height=720;max-fps=60;depend=2
+				// a=rid:2 send pt=101;max-width=1280;max-height=720;max-fps=30
+				// a=rid:3 send pt=101;max-width=640;max-height=360
+				// a=rid:4 send pt=103;max-width=640;max-height=360
+				auto match = SDPRegexPattern::GetInstance()->MatchRid(content.c_str());
+				if (match.GetGroupCount() < 1 + 2)
+				{
+					parsing_error = true;
+					break;
+				}
+				
+				if (AddRid(match.GetGroupAt(1).GetValue(), match.GetGroupAt(2).GetValue(), match.GetGroupAt(3).GetValue()) == false)
+				{
+					parsing_error = true;
+					break;
+				}
+			}
+			// a=simulcast
+			else if (content.compare(0, OV_COUNTOF("simulcast") - 1, "simulcast") == 0)
+			{
+				// a=simulcast:send 1;2,3 recv 4
+				auto match = SDPRegexPattern::GetInstance()->MatchSimulcast(content.c_str());
+
+				// 1 + 4 groups
+				if (match.GetGroupCount() < 1 + 2)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				_post_parsing_tasks.push([=]() {
+					// It must be run after parsing all rid lines
+					SetSimulcast(match.GetGroupAt(2).GetValue(), match.GetGroupAt(4).GetValue());
+				});
+
+			}
 			else if (content.compare(0, OV_COUNTOF("rtcp-m") - 1, "rtcp-m") == 0)
 			{
-				/*
-				if(std::regex_search(content, matches, std::regex("^(rtcp-mux)")))
-				{
-					UseRtcpMux(true);
-				}
-				*/
+				// a=rtcp-mux
 				auto match = SDPRegexPattern::GetInstance()->MatchRtcpMux(content.c_str());
 				if (match.GetError() == nullptr)
 				{
@@ -413,12 +435,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			}
 			else if (content.compare(0, OV_COUNTOF("rtcp-r") - 1, "rtcp-r") == 0)
 			{
-				/*
-				if(std::regex_search(content, matches, std::regex("^(rtcp-rsize)")))
-				{
-					UseRtcpRsize(true);
-				}
-				*/
+				// a=rtcp-rsize
 				auto match = SDPRegexPattern::GetInstance()->MatchRtcpRsize(content.c_str());
 				if (match.GetError() == nullptr)
 				{
@@ -430,21 +447,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 				//TODO(Getroot): Implement full spec
 				//https://datatracker.ietf.org/doc/html/rfc5104#section-7.1
 				// a=rtcp-fb:96 nack pli
-				/*
-				if(std::regex_search(content,
-				                     matches,
-				                     std::regex("rtcp-fb:(\\*|\\d*) (.*)")))
-				{
-					if(matches.size() != 2 + 1)
-					{
-						parsing_error = true;
-						break;
-					}
-
-					EnableRtcpFb(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str(), true);
-				}
-				*/
-
 				auto match = SDPRegexPattern::GetInstance()->MatchRtcpFb(content.c_str());
 				if (match.GetGroupCount() != 2 + 1)
 				{
@@ -460,18 +462,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			else if (content.compare(0, OV_COUNTOF("mid") - 1, "mid") == 0)
 			{
 				// a=mid:video,
-				/*
-				if(std::regex_search(content, matches, std::regex("^mid:([^\\s]*)")))
-				{
-					if(matches.size() != 1 + 1)
-					{
-						parsing_error = true;
-						break;
-					}
-
-					SetMid(std::string(matches[1]).c_str());
-				}
-				*/
 				auto match = SDPRegexPattern::GetInstance()->MatchMid(content.c_str());
 				if (match.GetGroupCount() != 1 + 1)
 				{
@@ -484,18 +474,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			else if (content.compare(0, OV_COUNTOF("msid") - 1, "msid") == 0)
 			{
 				// a=msid:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf 6jHsvxRPcpiEVZbA5QegGowmCtOlh8kTaXJ4
-				/*
-				if(std::regex_search(content, matches, std::regex("^msid:(.*) (.*)")))
-				{
-					if(matches.size() != 2 + 1)
-					{
-						parsing_error = true;
-						break;
-					}
-
-					SetMsid(std::string(matches[1]).c_str(), std::string(matches[2]).c_str());
-				}
-				*/
 				auto match = SDPRegexPattern::GetInstance()->MatchMsid(content.c_str());
 				if (match.GetGroupCount() != 2 + 1)
 				{
@@ -510,30 +488,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			else if (content.compare(0, OV_COUNTOF("ss") - 1, "ss") == 0)
 			{
 				// a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
-				/*
-				if(std::regex_search(content, matches, std::regex("^ssrc:(\\d*) cname(?::(.*))?")))
-				{
-					if(matches.size() != 2 + 1)
-					{
-						parsing_error = true;
-						break;
-					}
-					SetSsrc(stoul(matches[1]));
-					SetCname(std::string(matches[2]).c_str());
-				}
-				else if(std::regex_search(content, matches, std::regex("^ssrc-group:FID ([0-9]*) ([0-9]*)")))
-				{
-					if(matches.size() != 2 + 1)
-					{
-						parsing_error = true;
-						break;
-					}
-
-					SetSsrc(stoul(matches[1]));
-					SetRtxSsrc(stoul(matches[2]));
-				}
-				*/
-
 				auto match = SDPRegexPattern::GetInstance()->MatchSsrcCname(content.c_str());
 				if (match.GetError() == nullptr)
 				{
@@ -543,7 +497,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 						break;
 					}
 
-					if (GetSsrc() != 0)
+					if (GetSsrc().has_value())
 					{
 						// Already set
 						break;
@@ -575,19 +529,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			else if (content.compare(0, OV_COUNTOF("fra") - 1, "fra") == 0)
 			{
 				// a=framerate:29.97
-				/*
-				if(std::regex_search(content, matches, std::regex("^framerate:(\\d+(?:$|\\.\\d+))")))
-				{
-					if(matches.size() != 1 + 1)
-					{
-						parsing_error = true;
-						break;
-					}
-
-					SetFramerate(std::stof(matches[1]));
-				}
-				*/
-
 				auto match = SDPRegexPattern::GetInstance()->MatchFramerate(content.c_str());
 				if (match.GetGroupCount() != 1 + 1)
 				{
@@ -600,28 +541,14 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 
 				SetFramerate(ov::Converter::ToFloat(match.GetGroupAt(1).GetValue().CStr()));
 			}
-			// a=sendonly
 			else if (content.compare(0, OV_COUNTOF("sen") - 1, "sen") == 0 ||
 					 content.compare(0, OV_COUNTOF("rec") - 1, "rec") == 0 ||
 					 content.compare(0, OV_COUNTOF("ina") - 1, "ina") == 0)
 			{
-				/*
-				if(std::regex_search(content, matches, std::regex("^(sendrecv|recvonly|sendonly|inactive)")))
-				{
-					if(matches.size() != 1 + 1)
-					{
-						parsing_error = true;
-						break;
-					}
-
-					if(!SetDirection(std::string(matches[1]).c_str()))
-					{
-						parsing_error = true;
-						break;
-					}
-				}
-				*/
-
+				// a=sendonly
+				// a=recvonly
+				// a=sendrecv
+				// a=inactive
 				auto match = SDPRegexPattern::GetInstance()->MatchDirection(content.c_str());
 				if (match.GetGroupCount() != 1 + 1)
 				{
@@ -633,13 +560,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			}
 			else if (content.compare(0, OV_COUNTOF("fmtp") - 1, "fmtp") == 0)
 			{
-				/*
-				if(std::regex_search(content, matches, std::regex("fmtp:(\\*|\\d*) (.*)")))
-				{
-					SetFmtp(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str());
-				}
-				*/
-
+				// a=fmtp:96 packetization-mode=1;profile-level-id=42e01f;level-asymmetry-allowed=1
 				auto match = SDPRegexPattern::GetInstance()->MatchFmtp(content.c_str());
 				if (match.GetGroupCount() != 2 + 1)
 				{
@@ -658,21 +579,6 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			else if (content.compare(0, OV_COUNTOF("ext") - 1, "ext") == 0)
 			{
 				// a=extmap:1[/direction] urn:ietf:params:rtp-hdrext:framemarking
-				/*
-				if(std::regex_search(content,
-				                     matches,
-				                     std::regex("extmap:(\\*|\\d*) (.*)")))
-				{
-					if(matches.size() != 2 + 1)
-					{
-						parsing_error = true;
-						break;
-					}
-
-					AddExtmap(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str());
-				}
-				*/
-
 				auto match = SDPRegexPattern::GetInstance()->MatchExtmap(content.c_str());
 				if (match.GetGroupCount() < 2 + 1)
 				{
@@ -823,6 +729,228 @@ const std::vector<std::shared_ptr<PayloadAttr>> &MediaDescription::GetPayloadLis
 	return _payload_list;
 }
 
+bool MediaDescription::AddRid(const ov::String &rid_id, const ov::String &direction, const ov::String &restrictions)
+{
+	// 1 send pt=100;max-width=1280;max-height=720;max-fps=60;depend=2
+
+	auto rid = std::make_shared<RidAttr>();
+	rid->SetId(rid_id);
+
+	if (direction.UpperCaseString() == "SEND")
+	{
+		rid->SetDirection(RidAttr::Direction::Send);
+	}
+	else if (direction.UpperCaseString() == "RECV")
+	{
+		rid->SetDirection(RidAttr::Direction::Recv);
+	}
+	else
+	{
+		logte("Unknown direction : %s", direction.CStr());
+		return false;
+	}
+
+	if (restrictions.IsEmpty() == false)
+	{
+		auto restrictions_list = restrictions.Split(";");
+		for (const auto &restriction : restrictions_list)
+		{
+			auto key_value = restriction.Split("=");
+			if (key_value.size() != 2)
+			{
+				logte("Unknown restriction : %s", restriction.CStr());
+				return false;
+			}
+
+			auto key = key_value[0].UpperCaseString();
+			auto value = key_value[1];
+
+			rid->AddRestriction(key, value);
+		}
+	}
+
+	_rid_list.push_back(rid);
+
+	return true;
+}
+
+bool MediaDescription::SetSimulcast(const ov::String &send_rids, const ov::String &recv_rids)
+{
+	// a=simulcast:send 1;2,3 recv 4
+	if (send_rids.IsEmpty() == false)
+	{
+		auto send_rid_list = send_rids.Split(";");
+		for (const auto &send_rid : send_rid_list)
+		{
+			auto send_rids = send_rid.Split(",");
+			auto layer = std::make_shared<SimulcastLayer>();
+
+			for (const auto &rid : send_rids)
+			{
+				// ~rid-id
+				if (rid[0] == '~')
+				{
+					continue;
+				}
+
+				auto rid_attr = GetRid(rid);
+				if (rid_attr == nullptr)
+				{
+					logtw("Cannot find rid : %s", rid.CStr());
+					continue;
+				}
+
+				layer->AddRid(rid_attr);
+			}
+
+			AddSendLayerToSimulcast(layer);
+		}
+	}
+
+	if (recv_rids.IsEmpty() == false)
+	{
+		auto recv_rid_list = recv_rids.Split(";");
+		for (const auto &recv_rid : recv_rid_list)
+		{
+			auto recv_rids = recv_rid.Split(",");
+			auto layer = std::make_shared<SimulcastLayer>();
+
+			for (const auto &rid : recv_rids)
+			{
+				// ~rid-id
+				if (rid[0] == '~')
+				{
+					continue;
+				}
+
+				auto rid_attr = GetRid(rid);
+				if (rid_attr == nullptr)
+				{
+					logtw("Cannot find rid : %s", rid.CStr());
+					continue;
+				}
+
+				layer->AddRid(rid_attr);
+			}
+
+			AddRecvLayerToSimulcast(layer);
+		}
+	}
+
+	return true;
+}
+
+bool MediaDescription::AddSendLayerToSimulcast(const std::shared_ptr<SimulcastLayer> &layer)
+{
+	_send_layers.push_back(layer);
+	return true;
+}
+
+bool MediaDescription::AddRecvLayerToSimulcast(const std::shared_ptr<SimulcastLayer> &layer)
+{
+	_recv_layers.push_back(layer);
+	return true;
+}
+
+// a=rid:1 send max-width=1280;max-height=720;max-fps=30
+// a=simulcast:send 1,2,3;recv 4,5
+bool MediaDescription::AddRid(const std::shared_ptr<RidAttr> &rid, bool simulcast, const ov::String &alternative_to_base_rid)
+{
+	if (simulcast == true)
+	{
+		if (alternative_to_base_rid.IsEmpty() == false)
+		{
+			// find base rid from send layers
+			// RFC 8853 : To avoid complications in implementations, a single rid-id MUST NOT occur more than once per "a=simulcast" line.
+			auto layer = GetSimulcastLayer(alternative_to_base_rid);
+			if (layer == nullptr)
+			{
+				logte("Cannot find base rid : %s", alternative_to_base_rid.CStr());
+				return false;
+			}
+
+			auto base_rid = layer->GetRid(alternative_to_base_rid);
+			if (base_rid->GetDirection() != rid->GetDirection())
+			{
+				logte("Direction is not matched : %s", alternative_to_base_rid.CStr());
+				return false;
+			}
+
+			layer->AddRid(rid);
+		}
+		else
+		{
+			// add new layer
+			auto layer = std::make_shared<SimulcastLayer>();
+			layer->AddRid(rid);
+
+			if (rid->GetDirection() == RidAttr::Direction::Send)
+			{
+				AddSendLayerToSimulcast(layer);
+			}
+			else
+			{
+				AddRecvLayerToSimulcast(layer);
+			}
+		}
+	}
+
+	_rid_list.push_back(rid);
+
+	return true;
+}
+
+std::shared_ptr<RidAttr> MediaDescription::GetRid(const ov::String &id)
+{
+	for (auto &rid : _rid_list)
+	{
+		if (rid->GetId() == id)
+		{
+			return rid;
+		}
+	}
+
+	return nullptr;
+}
+
+// rid list
+std::vector<std::shared_ptr<RidAttr>> MediaDescription::GetRidList() const
+{
+	return _rid_list;
+}
+
+std::shared_ptr<SimulcastLayer> MediaDescription::GetSimulcastLayer(const ov::String &base_rid)
+{
+	for (auto &layer : _send_layers)
+	{
+		if (layer->GetRid(base_rid) != nullptr)
+		{
+			return layer;
+		}
+	}
+
+	for (auto &layer : _recv_layers)
+	{
+		if (layer->GetRid(base_rid) != nullptr)
+		{
+			return layer;
+		}
+	}
+
+	return nullptr;
+}
+
+// simulcast list
+std::vector<std::shared_ptr<SimulcastLayer>> MediaDescription::GetSendLayerList() const
+{
+	return _send_layers;
+}
+
+std::vector<std::shared_ptr<SimulcastLayer>> MediaDescription::GetRecvLayerList() const
+{
+	return _recv_layers;
+}
+
 // a=rtcp-mux
 void MediaDescription::UseRtcpMux(bool flag)
 {
@@ -880,7 +1008,7 @@ void MediaDescription::SetMid(const ov::String &mid)
 	_mid = mid;
 }
 
-const ov::String &MediaDescription::GetMid() const
+std::optional<ov::String> MediaDescription::GetMid() const
 {
 	return _mid;
 }
@@ -892,12 +1020,12 @@ void MediaDescription::SetMsid(const ov::String &msid, const ov::String &msid_ap
 	_msid_appdata = msid_appdata;
 }
 
-const ov::String &MediaDescription::GetMsid()
+std::optional<ov::String> MediaDescription::GetMsid()
 {
 	return _msid;
 }
 
-const ov::String &MediaDescription::GetMsidAppdata()
+std::optional<ov::String> MediaDescription::GetMsidAppdata()
 {
 	return _msid_appdata;
 }
@@ -935,17 +1063,17 @@ void MediaDescription::SetRtxSsrc(uint32_t rtx_ssrc)
 	_rtx_ssrc = rtx_ssrc;
 }
 
-uint32_t MediaDescription::GetSsrc() const
+std::optional<uint32_t> MediaDescription::GetSsrc() const
 {
 	return _ssrc;
 }
 
-uint32_t MediaDescription::GetRtxSsrc() const
+std::optional<uint32_t> MediaDescription::GetRtxSsrc() const
 {
 	return _rtx_ssrc;
 }
 
-ov::String MediaDescription::GetCname() const
+std::optional<ov::String> MediaDescription::GetCname() const
 {
 	return _cname;
 }

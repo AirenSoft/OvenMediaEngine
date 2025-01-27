@@ -55,6 +55,10 @@ public:
 	void SetVariantName(const ov::String &name);
 	ov::String GetVariantName() const;
 
+	// Group Index (used for rendition of playlist)
+	void SetGroupIndex(int index);
+	int GetGroupIndex() const;
+
 	// Public Name (used for multiple audio/video tracks. e.g. multilingual audio)
 	void SetPublicName(const ov::String &name);
 	ov::String GetPublicName() const;
@@ -142,6 +146,7 @@ protected:
 	// Variant Name : Original encoder profile that made this track 
 	// from <OutputProfile><Encodes>(<Video> || <Audio> || <Image>)<Name>
 	ov::String _variant_name;
+	int _group_index = -1;
 
 	// Set by AudioMap or VideoMap
 	ov::String _public_name;

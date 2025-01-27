@@ -69,7 +69,7 @@ private:
 	bool CreateDefaultPlaylist();
 	bool CreatePackagers();
 
-	ov::String GetVariantName(const ov::String &video_variant_name, const ov::String &audio_variant_name) const;
+	ov::String GetVariantName(const ov::String &video_variant_name, int video_index, const ov::String &audio_variant_name, int audio_index) const;
 	ov::String GetMediaPlaylistName(const ov::String &variant_name) const;
 	ov::String GetSegmentName(const ov::String &variant_name, uint32_t number) const;
 

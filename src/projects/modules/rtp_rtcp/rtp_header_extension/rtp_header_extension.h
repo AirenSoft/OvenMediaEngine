@@ -17,6 +17,12 @@
 #define RTP_HEADER_EXTENSION_COMPOSITION_TIME_ID	5
 #define RTP_HEADER_EXTENSION_COMPOSITION_TIME_ATTRIBUTE "uri:ietf:rtc:rtp-hdrext:video:CompositionTime"
 
+#define RTP_HEADER_EXTENSION_MID_ID	6
+#define RTP_HEADER_EXTENSION_MID_ATTRIBUTE "urn:ietf:params:rtp-hdrext:sdes:mid"
+
+#define RTP_HEADER_EXTENSION_RTP_STREAM_ID	7
+#define RTP_HEADER_EXTENSION_RTP_STREAM_ATTRIBUTE "urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id"
+
 class RtpHeaderExtension
 {
 public:

@@ -59,6 +59,26 @@ public:
 		return true;
 	}
 
+	// Get Chunk list
+	const std::vector<std::shared_ptr<SdesChunk>> &GetChunks() const
+	{
+		return _sdes_chunk_list;
+	}
+
+	// Get Chunk by type
+	std::shared_ptr<SdesChunk> GetChunk(SdesChunk::Type type) const
+	{
+		for (auto &chunk : _sdes_chunk_list)
+		{
+			if (chunk->GetType() == type)
+			{
+				return chunk;
+			}
+		}
+
+		return nullptr;
+	}
+
 private:
 	std::vector<std::shared_ptr<SdesChunk>>	_sdes_chunk_list;
 };

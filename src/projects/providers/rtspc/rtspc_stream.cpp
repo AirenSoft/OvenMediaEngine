@@ -613,8 +613,11 @@ namespace pvd
 			AddTrack(track);
 
 			// Some RTSP servers ignore the ssrc of SETUP, so they use an interleaved channel instead.
-			_rtp_rtcp->AddRtpReceiver(interleaved_channel, track);
-			RegisterRtpClock(interleaved_channel, track->GetTimeBase().GetExpr());
+			RtpRtcp::RtpTrackIdentifier rtp_track_id(track->GetId());
+			rtp_track_id.interleaved_channel = interleaved_channel;
+
+			_rtp_rtcp->AddRtpReceiver(track, rtp_track_id);
+			RegisterRtpClock(track->GetId(), track->GetTimeBase().GetExpr());
 
 			interleaved_channel += 2;
 		}

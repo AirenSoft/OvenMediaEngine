@@ -29,6 +29,7 @@ bool MediaTrackGroup::AddTrack(const std::shared_ptr<MediaTrack> &track)
 		return false;
 	}
 
+	track->SetGroupIndex(_tracks.size());
 	_tracks.push_back(track);
 
 	return true;
@@ -46,6 +47,12 @@ bool MediaTrackGroup::RemoveTrack(uint32_t id)
 	}
 	
 	_tracks.erase(it);
+
+	// Update group index
+	for (size_t i = 0; i < _tracks.size(); i++)
+	{
+		_tracks[i]->SetGroupIndex(i);
+	}
 
 	return true;
 }

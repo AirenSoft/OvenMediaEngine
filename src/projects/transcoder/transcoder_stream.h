@@ -266,7 +266,7 @@ private:
 	// Send encoded packet to mediarouter via transcoder application
 	void SendFrame(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> packet);
 
-
+	ov::String MakeRenditionName(const ov::String &name_template, const std::shared_ptr<info::Playlist> &playlist_info, const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track);
 
 private:
 	// Initial buffer for ready to stream

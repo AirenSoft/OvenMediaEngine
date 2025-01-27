@@ -503,6 +503,8 @@ bool HlsStream::CreatePackagers()
 
 			auto video_variant_name = rendition->GetVideoVariantName();
 			auto audio_variant_name = rendition->GetAudioVariantName();
+			auto video_index_hint = rendition->GetVideoIndexHint();
+			auto audio_index_hint = rendition->GetAudioIndexHint();
 
 			if (video_variant_name.IsEmpty() == false && GetMediaTrackGroup(video_variant_name) == nullptr)
 			{
@@ -523,8 +525,15 @@ bool HlsStream::CreatePackagers()
 				continue;
 			}
 
-			auto variant_name = GetVariantName(video_variant_name, audio_variant_name);
+			// Check if the rendition has supported codec
+			if ((GetFirstTrackByVariant(video_variant_name) != nullptr && IsSupportedCodec(GetFirstTrackByVariant(audio_variant_name)->GetCodecId()) == false) || 
+				(GetFirstTrackByVariant(audio_variant_name) != nullptr && IsSupportedCodec(GetFirstTrackByVariant(audio_variant_name)->GetCodecId()) == false))
+			{
+				logtw("HLS Stream(%s/%s) - Exclude the rendition(%s) from the %s playlist due to unsupported codec", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), rendition->GetName().CStr(), playlist->GetFileName().CStr());
+				continue;
+			}
 
+			auto variant_name = GetVariantName(video_variant_name, video_index_hint, audio_variant_name, audio_index_hint);
 			auto media_playlist = GetMediaPlaylist(variant_name);
 			if (media_playlist != nullptr)
 			{
@@ -610,44 +619,86 @@ bool HlsStream::CreatePackagers()
 			if (video_variant_name.IsEmpty() == false)
 			{
 				auto video_track_group = GetMediaTrackGroup(video_variant_name);
-				for (auto &track : video_track_group->GetTracks())
+
+				if (video_index_hint != -1)
 				{
-					packetizer->AddTrack(track);
-
-					// Add to track packetizers
+					auto track = video_track_group->GetTrack(video_index_hint);
+					if (track == nullptr)
 					{
-						std::lock_guard<std::shared_mutex> lock(_packetizers_guard);
-						_track_packetizers[track->GetId()].emplace_back(packetizer);
+						logtw("HLS Stream(%s/%s) - The video track index %d in the rendition %s is not found in the track list, it will be ignored", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), video_index_hint, playlist->GetFileName().CStr());
 					}
+					else
+					{
+						packetizer->AddTrack(track);
 
-					media_playlist->AddMediaTrackInfo(track);
+						// Add to track packetizers
+						{
+							std::lock_guard<std::shared_mutex> lock(_packetizers_guard);
+							_track_packetizers[track->GetId()].emplace_back(packetizer);
+						}
 
-					// EXT-X-MEDIA is supported in EXT-X-VERSION 4 or higher
-					// Now we support EXT-X-VERSION 3
-					// Therefore, we don't support multiple video tracks now
-					break;
+						media_playlist->AddMediaTrackInfo(track);
+					}
+				}
+				else
+				{
+					for (auto track : video_track_group->GetTracks())
+					{
+						packetizer->AddTrack(track);
+
+						// Add to track packetizers
+						{
+							std::lock_guard<std::shared_mutex> lock(_packetizers_guard);
+							_track_packetizers[track->GetId()].emplace_back(packetizer);
+						}
+
+						media_playlist->AddMediaTrackInfo(track);
+
+						// EXT-X-MEDIA is supported in EXT-X-VERSION 4 or higher
+						// Now we support EXT-X-VERSION 3
+						// Therefore, we don't support multiple video tracks now
+						break;
+					}
 				}
 			}
 
 			if (audio_variant_name.IsEmpty() == false)
 			{
 				auto audio_track_group = GetMediaTrackGroup(audio_variant_name);
-				for (auto &track : audio_track_group->GetTracks())
+				if (audio_index_hint != -1)
 				{
-					packetizer->AddTrack(track);
-
-					// Add to track packetizers
+					auto track = audio_track_group->GetTrack(audio_index_hint);
+					if (track == nullptr)
 					{
-						std::lock_guard<std::shared_mutex> lock(_packetizers_guard);
-						_track_packetizers[track->GetId()].emplace_back(packetizer);
+						logtw("HLS Stream(%s/%s) - The audio track index %d in the rendition %s is not found in the track list, it will be ignored", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), audio_index_hint, playlist->GetFileName().CStr());
 					}
+					else
+					{
+						packetizer->AddTrack(track);
 
-					media_playlist->AddMediaTrackInfo(track);
+						// Add to track packetizers
+						{
+							std::lock_guard<std::shared_mutex> lock(_packetizers_guard);
+							_track_packetizers[track->GetId()].emplace_back(packetizer);
+						}
 
-					// EXT-X-MEDIA is supported in EXT-X-VERSION 4 or higher
-					// Now we support EXT-X-VERSION 3
-					// Therefore, we don't support multiple audio tracks now
-					break;
+						media_playlist->AddMediaTrackInfo(track);
+					}
+				}
+				else
+				{
+					for (auto track : audio_track_group->GetTracks())
+					{
+						packetizer->AddTrack(track);
+
+						// Add to track packetizers
+						{
+							std::lock_guard<std::shared_mutex> lock(_packetizers_guard);
+							_track_packetizers[track->GetId()].emplace_back(packetizer);
+						}
+
+						media_playlist->AddMediaTrackInfo(track);
+					}
 				}
 			}
 
@@ -671,9 +722,9 @@ bool HlsStream::CreatePackagers()
 	return true;
 }
 
-ov::String HlsStream::GetVariantName(const ov::String &video_variant_name, const ov::String &audio_variant_name) const
+ov::String HlsStream::GetVariantName(const ov::String &video_variant_name, int video_index, const ov::String &audio_variant_name, int audio_index) const
 {
-	auto variant_name = ov::String::FormatString("%s_%s", video_variant_name.CStr(), audio_variant_name.CStr());
+	auto variant_name = ov::String::FormatString("%s%d_%s%d", video_variant_name.CStr(), video_index, audio_variant_name.CStr(), audio_index);
 	return ov::Converter::ToString(variant_name.Hash());
 }
 

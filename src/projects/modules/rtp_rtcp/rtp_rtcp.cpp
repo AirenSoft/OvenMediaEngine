@@ -46,7 +46,7 @@ bool RtpRtcp::AddRtpSender(uint8_t payload_type, uint32_t ssrc, uint32_t codec_r
 	return true;
 }
 
-bool RtpRtcp::AddRtpReceiver(uint32_t track_id, const std::shared_ptr<MediaTrack> &track)
+bool RtpRtcp::AddRtpReceiver(const std::shared_ptr<MediaTrack> &track, const RtpTrackIdentifier &rtp_track_id)
 {
 	std::shared_lock<std::shared_mutex> lock(_state_lock);
 	if(GetNodeState() != ov::Node::NodeState::Ready)
@@ -55,7 +55,7 @@ bool RtpRtcp::AddRtpReceiver(uint32_t track_id, const std::shared_ptr<MediaTrack
 		return false;
 	}
 
-	_tracks[track_id] = track;
+	auto track_id = track->GetId();
 
 	switch(track->GetOriginBitstream())
 	{
@@ -79,6 +79,14 @@ bool RtpRtcp::AddRtpReceiver(uint32_t track_id, const std::shared_ptr<MediaTrack
 	else if (track->GetMediaType() == cmn::MediaType::Audio)
 	{
 		_audio_receiver_enabled = true;
+	}
+
+	_tracks[track_id] = track;
+	_rtp_track_identifiers.push_back(rtp_track_id);
+	if (rtp_track_id.ssrc.has_value())
+	{
+		logti("AddRtpReceiver : %d / %u / %s / %s", track_id, rtp_track_id.ssrc.value(), rtp_track_id.mid.value_or(ov::String("")), rtp_track_id.rid.value_or(ov::String("")));
+		ConnectSsrcToTrack(rtp_track_id.ssrc.value(), track_id);
 	}
 
 	return true;
@@ -220,6 +228,127 @@ void RtpRtcp::DisableTransportCcFeedback()
 	_transport_cc_feedback_enabled = false;
 }
 
+std::optional<uint32_t> RtpRtcp::GetTrackId(uint32_t ssrc) const
+{
+	auto it = _ssrc_to_track_id.find(ssrc);
+	if(it == _ssrc_to_track_id.end())
+	{
+		return std::nullopt;
+	}
+
+	return it->second;
+}
+
+// Find track id by mid or mid + rid
+std::optional<uint32_t> RtpRtcp::FindTrackId(const std::shared_ptr<const RtpPacket> &rtp_packet) const
+{
+	auto track_id = GetTrackId(rtp_packet->Ssrc());
+	if(track_id.has_value())
+	{
+		return track_id;
+	}
+
+	for (const auto &rtp_track_id : _rtp_track_identifiers)
+	{
+		// with ssrc
+		if (rtp_track_id.ssrc.has_value() && rtp_track_id.ssrc.value() == rtp_packet->Ssrc())
+		{
+			return rtp_track_id.GetTrackId();
+		}
+
+		// Get mid from rtp header extension
+		auto mid = rtp_packet->GetExtension(rtp_track_id.mid_extension_id);
+		auto rid = rtp_packet->GetExtension(rtp_track_id.rid_extension_id);
+
+		// with mid or mid + rid
+		if (rtp_track_id.mid.has_value() && mid.has_value() &&
+			mid.value().ToString() == rtp_track_id.mid.value())
+		{
+			// mid + rid
+			if (rtp_track_id.rid.has_value() && rid.has_value() &&
+				rid.value().ToString() == rtp_track_id.rid.value())
+			{
+				return rtp_track_id.GetTrackId();
+			}
+			// mid only
+			else if (rtp_track_id.rid.has_value() == false)
+			{
+				return rtp_track_id.GetTrackId();
+			}
+		}
+	}
+
+	return std::nullopt;
+}
+
+// Find track id by cname or cname + rid
+std::optional<uint32_t> RtpRtcp::FindTrackId(const std::shared_ptr<const Sdes> &sdes) const
+{
+	auto track_id = GetTrackId(sdes->GetRtpSsrc());
+	if(track_id.has_value())
+	{
+		return track_id;
+	}
+
+	for (const auto &rtp_track_id : _rtp_track_identifiers)
+	{
+		// with ssrc
+		if (rtp_track_id.ssrc.has_value() && rtp_track_id.ssrc.value() == sdes->GetRtpSsrc())
+		{
+			return rtp_track_id.GetTrackId();
+		}
+
+		// with cname or cname + rid
+		if (rtp_track_id.cname.has_value())
+		{
+			auto sdes_chunk = sdes->GetChunk(SdesChunk::Type::CNAME);
+			if (sdes_chunk != nullptr && sdes_chunk->GetText() == rtp_track_id.cname.value())
+			{
+				// cname + rid
+				if (rtp_track_id.rid.has_value())
+				{
+					auto rid_chunk = sdes->GetChunk(SdesChunk::Type::RtpStreamId);
+					if (rid_chunk != nullptr && rid_chunk->GetText() == rtp_track_id.rid.value())
+					{
+						return rtp_track_id.GetTrackId();
+					}
+				}
+				// cname only
+				else
+				{
+					return rtp_track_id.GetTrackId();
+				}
+			}
+		}
+	}
+
+	return std::nullopt;
+}
+
+std::optional<uint32_t> RtpRtcp::FindTrackId(uint8_t rtsp_inter_channel) const
+{
+	for (const auto &rtp_track_id : _rtp_track_identifiers)
+	{
+		// with interleaved channel
+		if (rtp_track_id.interleaved_channel.has_value() && rtp_track_id.interleaved_channel.value() == rtsp_inter_channel)
+		{
+			return rtp_track_id.GetTrackId();
+		}
+	}
+
+	return std::nullopt;
+}
+
+void RtpRtcp::ConnectSsrcToTrack(uint32_t ssrc, uint32_t track_id)
+{
+	if (_ssrc_to_track_id.find(ssrc) != _ssrc_to_track_id.end())
+	{	
+		logtw("SSRC(%u) is already connected to track ID(%u), it will be replaced.", ssrc, _ssrc_to_track_id[ssrc]);
+	}
+
+	_ssrc_to_track_id[ssrc] = track_id;
+}
+
 // In general, since RTP_RTCP is the first node, there is no previous node. So it will not be called
 bool RtpRtcp::OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
@@ -309,25 +438,42 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 {
 	auto packet = std::make_shared<RtpPacket>(data);
 
-	uint32_t track_id = 0;
-	if(from_node == NodeType::Rtsp)
+	std::optional<uint32_t> track_id_opt = GetTrackId(packet->Ssrc());
+	if (track_id_opt.has_value() == false)
 	{
-		auto rtsp_data = std::dynamic_pointer_cast<const RtspData>(data);
-		if(rtsp_data == nullptr)
+		if(from_node == NodeType::Rtsp)
 		{
-			logte("Could not convert to RtspData");
-			return false;
+			auto rtsp_data = std::static_pointer_cast<const RtspData>(data);
+			if(rtsp_data == nullptr)
+			{
+				logte("Could not convert to RtspData");
+				return false;
+			}
+
+			// RTSP Node uses channelID as trackID
+			track_id_opt = FindTrackId(rtsp_data->GetChannelId());
+			if (track_id_opt.has_value() == false)
+			{
+				logte("Could not find track ID for RTSP channel ID %u", rtsp_data->GetChannelId());
+				return false;
+			}
+
+			packet->SetRtspChannel(track_id_opt.value());
+		}
+		else
+		{
+			track_id_opt = FindTrackId(packet);
+			if (track_id_opt.has_value() == false)
+			{
+				logte("Could not find track ID for SSRC %u", packet->Ssrc());
+				return false;
+			}
 		}
 
-		// RTSP Node uses channelID as trackID
-		track_id = rtsp_data->GetChannelId();
-		packet->SetRtspChannel(track_id);
-	}
-	else
-	{
-		track_id = packet->Ssrc();
+		ConnectSsrcToTrack(packet->Ssrc(), track_id_opt.value());
 	}
 
+	auto track_id = track_id_opt.value();
 	auto track_it = _tracks.find(track_id);
 	if(track_it == _tracks.end())
 	{
@@ -497,7 +643,7 @@ bool RtpRtcp::OnRtcpReceived(NodeType from_node, const std::shared_ptr<const ov:
 	uint32_t rtsp_channel = 0;
 	if(from_node == NodeType::Rtsp)
 	{
-		auto rtsp_data = std::dynamic_pointer_cast<const RtspData>(data);
+		auto rtsp_data = std::static_pointer_cast<const RtspData>(data);
 		if(rtsp_data == nullptr)
 		{
 			logte("Could not convert to RtspData");

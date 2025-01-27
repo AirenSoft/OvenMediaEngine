@@ -101,11 +101,11 @@ namespace pvd
 
 		// RFC3264
 		// For each "m=" line in the local, there MUST be a corresponding "m=" line in the peer.
-		std::vector<uint32_t> ssrc_list;
 		for (size_t i = 0; i < remote_media_desc_list.size(); i++)
 		{
 			auto remote_media_desc = remote_media_desc_list[i];
 			auto local_media_desc = local_media_desc_list[i];
+			auto offer_media_desc = local_media_desc_list[i];
 			auto answer_media_desc = answer_media_desc_list[i];
 
 			if(remote_media_desc->GetDirection() != MediaDescription::Direction::SendOnly &&
@@ -115,144 +115,64 @@ namespace pvd
 				continue;
 			}
 
-			// The first payload has the highest priority.
-			auto first_payload = answer_media_desc->GetFirstPayload();
-			if (first_payload == nullptr)
+			// Create Channel
+
+			// Simulcast Layer
+			if (local_media_desc->GetRecvLayerList().size() == 0)
 			{
-				logte("%s - Failed to get the first Payload type of peer sdp", GetName().CStr());
-				return false;
-			}
-
-			if (answer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
-			{
-				auto ssrc = remote_media_desc->GetSsrc();
-				ssrc_list.push_back(ssrc);
-
-				// Add Track
-				auto audio_track = std::make_shared<MediaTrack>();
-
-				// 	a=rtpmap:102 OPUS/48000/2
-				auto codec = first_payload->GetCodec();
-				auto samplerate = first_payload->GetCodecRate();
-				auto channels = std::atoi(first_payload->GetCodecParams());
-				RtpDepacketizingManager::SupportedDepacketizerType depacketizer_type;
-
-				if (codec == PayloadAttr::SupportCodec::OPUS)
+				auto first_payload = answer_media_desc->GetFirstPayload();
+				if (first_payload == nullptr)
 				{
-					audio_track->SetCodecId(cmn::MediaCodecId::Opus);
-					audio_track->SetOriginBitstream(cmn::BitstreamFormat::OPUS_RTP_RFC_7587);
-					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::OPUS;
+					logte("Could not find payload in the media description");
+					continue;
 				}
-				else if (codec == PayloadAttr::SupportCodec::MPEG4_GENERIC)
+				
+				if (CreateChannel(remote_media_desc, local_media_desc, nullptr, first_payload) == false)
 				{
-					audio_track->SetCodecId(cmn::MediaCodecId::Aac);
-					audio_track->SetOriginBitstream(cmn::BitstreamFormat::AAC_MPEG4_GENERIC);
-					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::MPEG4_GENERIC_AUDIO;
+					logte("Could not create channel : pt(%d)", first_payload->GetId());
+					continue;
 				}
-				else
-				{
-					logte("%s - Unsupported audio codec : %s", GetName().CStr(), first_payload->GetCodecStr().CStr());
-					return false;
-				}
-
-				audio_track->SetId(ssrc);
-				audio_track->SetMediaType(cmn::MediaType::Audio);
-				audio_track->SetTimeBase(1, samplerate);
-
-				if (channels == 1)
-				{
-					audio_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutMono);
-				}
-				else
-				{
-					audio_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutStereo);
-				}
-
-				if (AddDepacketizer(ssrc, depacketizer_type) == false)
-				{
-					return false;
-				}
-
-				AddTrack(audio_track);
-				_rtp_rtcp->AddRtpReceiver(ssrc, audio_track);
-
-				if (_rtp_rtcp->IsTransportCcFeedbackEnabled() == false && first_payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::TransportCc) == true)
-				{
-					// a=extmap:id http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
-					uint8_t transport_cc_extension_id = 0;
-					ov::String transport_cc_extension_uri;
-					if (answer_media_desc->FindExtmapItem("transport-wide-cc-extensions", transport_cc_extension_id, transport_cc_extension_uri) == true)
-					{
-						_rtp_rtcp->EnableTransportCcFeedback(transport_cc_extension_id);
-					}
-				}
-
-				RegisterRtpClock(ssrc, audio_track->GetTimeBase().GetExpr());
 			}
 			else
 			{
-				auto ssrc = remote_media_desc->GetSsrc();
-				ssrc_list.push_back(ssrc);
-
-				// a=rtpmap:100 H264/90000
-				auto codec = first_payload->GetCodec();
-				auto timebase = first_payload->GetCodecRate();
-				RtpDepacketizingManager::SupportedDepacketizerType depacketizer_type;
-
-				auto video_track = std::make_shared<MediaTrack>();
-
-				video_track->SetId(ssrc);
-				video_track->SetMediaType(cmn::MediaType::Video);
-
-				if (codec == PayloadAttr::SupportCodec::H264)
+				for (auto &layer : local_media_desc->GetRecvLayerList())
 				{
-					video_track->SetCodecId(cmn::MediaCodecId::H264);
-					video_track->SetOriginBitstream(cmn::BitstreamFormat::H264_RTP_RFC_6184);
-					_h264_extradata_nalu = first_payload->GetH264ExtraDataAsAnnexB();
-					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::H264;
-				}
-				else if (codec == PayloadAttr::SupportCodec::VP8)
-				{
-					video_track->SetCodecId(cmn::MediaCodecId::Vp8);
-					video_track->SetOriginBitstream(cmn::BitstreamFormat::VP8_RTP_RFC_7741);
-					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::VP8;
-				}
-				else
-				{
-					logte("%s - Unsupported video codec  : %s", GetName().CStr(), first_payload->GetCodecParams().CStr());
-					return false;
-				}
-
-				video_track->SetTimeBase(1, timebase);
-				video_track->SetVideoTimestampScale(1.0);
-
-				if (AddDepacketizer(ssrc, depacketizer_type) == false)
-				{
-					return false;
-				}
-
-				AddTrack(video_track);
-				_rtp_rtcp->AddRtpReceiver(ssrc, video_track);
-
-				if (_rtp_rtcp->IsTransportCcFeedbackEnabled() == false && first_payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::TransportCc) == true)
-				{
-					// a=extmap:id http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
-					uint8_t transport_cc_extension_id = 0;
-					ov::String transport_cc_extension_uri;
-					if (answer_media_desc->FindExtmapItem("transport-wide-cc-extensions", transport_cc_extension_id, transport_cc_extension_uri) == true)
+					// OME doesn't support alternative rid and alternative pt
+					// It already has been discarded in the SDP
+					auto first_rid = layer->GetFirstRid();
+					if (first_rid == nullptr)
 					{
-						_rtp_rtcp->EnableTransportCcFeedback(transport_cc_extension_id);
+						logte("Could not find RID in the simulcast layer");
+						continue;
+					}
+
+					auto first_pt = first_rid->GetFirstPt();
+					if (first_pt.has_value() == false)	
+					{
+						// If there is no payload type, use the first payload type of the media description.
+						auto first_payload = local_media_desc->GetFirstPayload();
+						if (first_payload == nullptr)
+						{
+							logte("Could not find payload in the RID of the simulcast layer : rid(%s)", first_rid->GetId().CStr());
+							continue;
+						}
+
+						first_pt = first_payload->GetId();
+					}
+
+					auto payload_attr = local_media_desc->GetPayload(first_pt.value());
+					if (payload_attr == nullptr)
+					{
+						logte("Could not find payload in the RID of the simulcast layer : rid(%s), pt(%d)", first_rid->GetId().CStr(), first_pt.value());
+						continue;
+					}
+
+					if (CreateChannel(offer_media_desc, answer_media_desc, first_rid, payload_attr) == false)
+					{
+						logte("Could not create channel : rid(%s), pt(%d)", first_rid->GetId().CStr(), first_pt.value());
+						continue;
 					}
 				}
-
-				// uri:ietf:rtc:rtp-hdrext:video:CompositionTime
-				ov::String cts_extmap_uri;
-				if (answer_media_desc->FindExtmapItem("CompositionTime", _cts_extmap_id, cts_extmap_uri))
-				{
-					_cts_extmap_enabled = true;
-				}
-				
-				RegisterRtpClock(ssrc, video_track->GetTimeBase().GetExpr());
 			}
 		}
 
@@ -278,29 +198,193 @@ namespace pvd
 		return pvd::Stream::Start();
 	}
 
+	bool WebRTCStream::CreateChannel(const std::shared_ptr<const MediaDescription> &remote_media_desc, 
+						const std::shared_ptr<const MediaDescription> &local_media_desc,
+						const std::shared_ptr<const RidAttr> &rid_attr, /* Optional / can be nullptr */
+						const std::shared_ptr<const PayloadAttr> &payload_attr)
+	{
+		auto offer_media_desc = _local_sdp->GetType() == SessionDescription::SdpType::Offer ? local_media_desc : remote_media_desc;
+		auto answer_media_desc = _local_sdp->GetType() == SessionDescription::SdpType::Offer ? remote_media_desc : local_media_desc;
+
+		auto track = CreateTrack(payload_attr);
+		if (track == nullptr)
+		{
+			logte("Could not create track : pt(%d)", payload_attr->GetId());
+			return false;
+		}
+
+		if (AddTrack(track) == false)
+		{
+			logte("Could not add track : pt(%d)", payload_attr->GetId());
+			return false;
+		}
+
+		// Add Depacketizer
+		if (AddDepacketizer(track->GetId()) == false)
+		{
+			logte("Could not add depacketizer : pt(%d)", payload_attr->GetId());
+			return false;
+		}
+
+		if (_rtp_rtcp->IsTransportCcFeedbackEnabled() == false && payload_attr->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::TransportCc) == true)
+		{
+			// a=extmap:id http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
+			uint8_t transport_cc_extension_id = 0;
+			ov::String transport_cc_extension_uri;
+			if (answer_media_desc->FindExtmapItem("transport-wide-cc-extensions", transport_cc_extension_id, transport_cc_extension_uri) == true)
+			{
+				_rtp_rtcp->EnableTransportCcFeedback(transport_cc_extension_id);
+			}
+		}
+
+		// uri:ietf:rtc:rtp-hdrext:video:CompositionTime
+		ov::String cts_extmap_uri;
+		if (answer_media_desc->FindExtmapItem("CompositionTime", _cts_extmap_id, cts_extmap_uri))
+		{
+			_cts_extmap_enabled = true;
+		}
+
+		// mid extension
+		uint8_t mid_extension_id = 0;
+		ov::String mid_extension_uri;
+		bool has_mid_extension = answer_media_desc->FindExtmapItem("urn:ietf:params:rtp-hdrext:sdes:mid", mid_extension_id, mid_extension_uri);
+
+		// rid extension
+		uint8_t rid_extension_id = 0;
+		ov::String rid_extension_uri;
+		bool has_rid_extension = false;
+		if (rid_attr != nullptr)
+		{
+			has_rid_extension = answer_media_desc->FindExtmapItem("urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id", rid_extension_id, rid_extension_uri);
+		}
+
+		// Add Rtp Receiver
+		RtpRtcp::RtpTrackIdentifier rtp_track_id(track->GetId());
+
+		rtp_track_id.ssrc = remote_media_desc->GetSsrc();
+		rtp_track_id.cname = answer_media_desc->GetCname();
+		rtp_track_id.mid = has_mid_extension ? answer_media_desc->GetMid() : std::nullopt;
+		rtp_track_id.mid_extension_id = mid_extension_id;
+		rtp_track_id.rid = has_rid_extension ? std::optional<ov::String>(rid_attr->GetId()) : std::nullopt;
+		rtp_track_id.rid_extension_id = rid_extension_id;
+
+		if (_rtp_rtcp->AddRtpReceiver(track, rtp_track_id) == false)
+		{
+			logte("Could not add rtp receiver : track_id(%u)", track->GetId());
+			return false;
+		}
+
+		// Clock
+		RegisterRtpClock(track->GetId(), track->GetTimeBase().GetExpr());
+
+		return true;
+	}
+
+	std::shared_ptr<MediaTrack> WebRTCStream::CreateTrack(const std::shared_ptr<const PayloadAttr> &payload_attr)
+	{
+		auto track = std::make_shared<MediaTrack>();
+
+		track->SetId(IssueUniqueTrackId());
+		track->SetTimeBase(1, payload_attr->GetCodecRate());
+
+		auto codec = payload_attr->GetCodec();
+		if (codec == PayloadAttr::SupportCodec::OPUS)
+		{
+			track->SetMediaType(cmn::MediaType::Audio);
+			track->SetCodecId(cmn::MediaCodecId::Opus);
+			track->SetOriginBitstream(cmn::BitstreamFormat::OPUS_RTP_RFC_7587);
+		}
+		else if (codec == PayloadAttr::SupportCodec::MPEG4_GENERIC)
+		{
+			track->SetMediaType(cmn::MediaType::Audio);
+			track->SetCodecId(cmn::MediaCodecId::Aac);
+			track->SetOriginBitstream(cmn::BitstreamFormat::AAC_MPEG4_GENERIC);
+		}
+		else if (codec == PayloadAttr::SupportCodec::H264)
+		{
+			track->SetMediaType(cmn::MediaType::Video);
+			track->SetCodecId(cmn::MediaCodecId::H264);
+			track->SetOriginBitstream(cmn::BitstreamFormat::H264_RTP_RFC_6184);
+			track->SetVideoTimestampScale(1.0);
+		}
+		else if (codec == PayloadAttr::SupportCodec::VP8)
+		{
+			track->SetMediaType(cmn::MediaType::Video);
+			track->SetCodecId(cmn::MediaCodecId::Vp8);
+			track->SetOriginBitstream(cmn::BitstreamFormat::VP8_RTP_RFC_7741);
+			track->SetVideoTimestampScale(1.0);
+		}
+		else
+		{
+			logte("%s - Unsupported codec : codec(%d)", GetName().CStr(), static_cast<uint8_t>(codec));
+			return nullptr;
+		}
+
+		if (track->GetMediaType() == cmn::MediaType::Audio)
+		{	
+			// channel
+			auto channels = std::atoi(payload_attr->GetCodecParams());
+			if (channels == 1)
+			{
+				track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutMono);
+			}
+			else
+			{
+				track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutStereo);
+			}
+		}
+
+		return track;
+	}
+
 	ov::String WebRTCStream::GetSessionKey() const
 	{
 		return _session_key;
 	}
 
-	bool WebRTCStream::AddDepacketizer(uint8_t payload_type, RtpDepacketizingManager::SupportedDepacketizerType codec_id)
+	bool WebRTCStream::AddDepacketizer(uint32_t track_id)
 	{
-		// Depacketizer
-		auto depacketizer = RtpDepacketizingManager::Create(codec_id);
+		auto track = GetTrack(track_id);
+		RtpDepacketizingManager::SupportedDepacketizerType depacketizer_codec_id;
+
+		switch (track->GetCodecId())
+		{
+			case cmn::MediaCodecId::H264:
+				depacketizer_codec_id = RtpDepacketizingManager::SupportedDepacketizerType::H264;
+				break;
+
+			case cmn::MediaCodecId::Opus:
+				depacketizer_codec_id = RtpDepacketizingManager::SupportedDepacketizerType::OPUS;
+				break;
+
+			case cmn::MediaCodecId::Vp8:
+				depacketizer_codec_id = RtpDepacketizingManager::SupportedDepacketizerType::VP8;
+				break;
+
+			case cmn::MediaCodecId::Aac:
+				depacketizer_codec_id = RtpDepacketizingManager::SupportedDepacketizerType::MPEG4_GENERIC_AUDIO;
+				break;
+
+			default:
+				logte("%s - Unsupported codec : codec(%d)", GetName().CStr(), static_cast<uint8_t>(track->GetCodecId()));
+				return false;
+		}
+
+		auto depacketizer = RtpDepacketizingManager::Create(depacketizer_codec_id);
 		if (depacketizer == nullptr)
 		{
-			logte("%s - Could not create depacketizer : codec_id(%d)", GetName().CStr(), static_cast<uint8_t>(codec_id));
+			logte("%s - Could not create depacketizer : codec_id(%d)", GetName().CStr(), static_cast<uint8_t>(depacketizer_codec_id));
 			return false;
 		}
 
-		_depacketizers[payload_type] = depacketizer;
+		_depacketizers[track_id] = depacketizer;
 
 		return true;
 	}
 
-	std::shared_ptr<RtpDepacketizingManager> WebRTCStream::GetDepacketizer(uint8_t payload_type)
+	std::shared_ptr<RtpDepacketizingManager> WebRTCStream::GetDepacketizer(uint32_t track_id)
 	{
-		auto it = _depacketizers.find(payload_type);
+		auto it = _depacketizers.find(track_id);
 		if (it == _depacketizers.end())
 		{
 			return nullptr;
@@ -366,16 +450,24 @@ namespace pvd
 	{
 		auto first_rtp_packet = rtp_packets.front();
 		auto ssrc = first_rtp_packet->Ssrc();
+		auto track_id_opt = _rtp_rtcp->GetTrackId(ssrc);
+		if (track_id_opt.has_value() == false)
+		{
+			logte("%s - Could not find track id : ssrc(%u)", GetName().CStr(), ssrc);
+			return;
+		}
+		auto track_id = track_id_opt.value();
+
 		logtp("%s", first_rtp_packet->Dump().CStr());
 
-		auto track = GetTrack(ssrc);
+		auto track = GetTrack(track_id);
 		if (track == nullptr)
 		{
 			logte("%s - Could not find track : ssrc(%u)", GetName().CStr(), ssrc);
 			return;
 		}
 
-		auto depacketizer = GetDepacketizer(ssrc);
+		auto depacketizer = GetDepacketizer(track_id);
 		if (depacketizer == nullptr)
 		{
 			logte("%s - Could not find depacketizer : ssrc(%u", GetName().CStr(), ssrc);

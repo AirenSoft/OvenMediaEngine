@@ -336,12 +336,12 @@ namespace info
 	const std::shared_ptr<MediaTrackGroup> Stream::GetMediaTrackGroup(const ov::String &group_name) const
 	{
 		auto item = _track_group_map.find(group_name);
-		if (item == _track_group_map.end())
+		if (item != _track_group_map.end())
 		{
-			return nullptr;
+			return item->second;
 		}
 
-		return item->second;
+		return nullptr;
 	}
 
 	const std::map<ov::String, std::shared_ptr<MediaTrackGroup>> &Stream::GetMediaTrackGroups() const
@@ -398,6 +398,17 @@ namespace info
 		}
 
 		return group->GetTrack(0);
+	}
+
+	const std::shared_ptr<MediaTrack> Stream::GetTrackByVariant(const ov::String &variant_name, uint32_t order) const
+	{
+		auto group = GetMediaTrackGroup(variant_name);
+		if (group == nullptr || group->GetTrackCount() == 0)
+		{
+			return nullptr;
+		}
+
+		return group->GetTrack(order);
 	}
 
 	const std::shared_ptr<MediaTrack> Stream::GetFirstTrackByType(const cmn::MediaType &type) const

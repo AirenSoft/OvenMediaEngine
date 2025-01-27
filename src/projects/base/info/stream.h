@@ -86,6 +86,7 @@ namespace info
 		
 		const std::shared_ptr<MediaTrack> GetFirstTrackByType(const cmn::MediaType &type) const;
 		const std::shared_ptr<MediaTrack> GetFirstTrackByVariant(const ov::String &name) const;
+		const std::shared_ptr<MediaTrack> GetTrackByVariant(const ov::String &variant_name, uint32_t order) const;
 
 		bool AddPlaylist(const std::shared_ptr<const Playlist> &playlist);
 		std::shared_ptr<const Playlist> GetPlaylist(const ov::String &file_name) const;

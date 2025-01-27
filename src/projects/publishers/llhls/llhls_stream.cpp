@@ -555,7 +555,14 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 	// Add stream
 	for (const auto &rendition : playlist->GetRenditionList())
 	{
+		auto video_index_hint = rendition->GetVideoIndexHint();
+		if (video_index_hint < 0)
+		{
+			video_index_hint = 0;
+		}
 		auto video_track = GetFirstTrackByVariant(rendition->GetVideoVariantName());
+
+		// LLHLS Audio does not use audio_index_hint because it has multilingual support
 		auto audio_track = GetFirstTrackByVariant(rendition->GetAudioVariantName());
 
 		if ((video_track != nullptr && IsSupportedCodec(video_track->GetCodecId()) == false) ||
@@ -580,7 +587,7 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 			logtw("LLHlsStream(%s/%s) - %s audio is excluded from the %s rendition in %s playlist because there is no audio track.", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), rendition->GetAudioVariantName().CStr(), rendition->GetName().CStr(), playlist->GetFileName().CStr());
 		}
 
-		master_playlist->AddStreamInfo(video_variant_name, audio_variant_name);
+		master_playlist->AddStreamInfo(video_variant_name, video_index_hint, audio_variant_name);
 	}
 
 	master_playlist->UpdateCacheForDefaultPlaylist();

@@ -8,10 +8,12 @@
 //==============================================================================
 #pragma once
 
+#include <base/info/playlist.h>
 #include "rendition.h"
+#include "rendition_template.h"
 #include "options.h"
 #include "../encodes/encodes.h"
-#include <base/info/playlist.h>
+
 
 namespace cfg
 {
@@ -28,12 +30,14 @@ namespace cfg
 					ov::String _file_name;
 					Options _options;
 					std::vector<Rendition> _renditions;
+					std::vector<RenditionTemplate> _rendition_templates;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFileName, _file_name);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetOptions, _options);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetRenditions, _renditions);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetRenditionTemplates, _rendition_templates);
 
 					// Copy cfg to info
 					std::shared_ptr<info::Playlist> GetPlaylistInfo() const
@@ -45,7 +49,11 @@ namespace cfg
 
 						for (auto &rendition : _renditions)
 						{
-							playlist->AddRendition(std::make_shared<info::Rendition>(rendition.GetName(), rendition.GetVideoName(), rendition.GetAudioName()));
+							auto rendition_info = std::make_shared<info::Rendition>(rendition.GetName(), rendition.GetVideoName(), rendition.GetAudioName());
+							rendition_info->SetVideoIndexHint(rendition.GetVideoIndexHint());
+							rendition_info->SetAudioIndexHint(rendition.GetAudioIndexHint());
+
+							playlist->AddRendition(rendition_info);
 						}
 
 						return playlist;
@@ -148,6 +156,8 @@ namespace cfg
 								return nullptr;
 							}
 						);
+
+						Register<Optional>({"RenditionTemplate", "rendition_templates"}, &_rendition_templates);
 					}
 				};
 			}  // namespace oprf

@@ -13,6 +13,7 @@
 #include "rtp_receive_statistics.h"
 
 
+
 #define RECEIVER_REPORT_CYCLE_MS	500
 #define TRANSPORT_CC_CYCLE_MS		50
 #define SDES_CYCLE_MS 500
@@ -27,11 +28,37 @@ public:
 class RtpRtcp : public ov::Node
 {
 public:
+	struct RtpTrackIdentifier
+	{
+	public:
+		RtpTrackIdentifier(uint32_t track_id)
+			: track_id(track_id)
+		{
+		}
+
+		uint32_t GetTrackId() const
+		{
+			return track_id;
+		}
+
+		std::optional<uint32_t> ssrc;
+		std::optional<uint32_t> interleaved_channel;
+		std::optional<ov::String> cname;
+		std::optional<ov::String> mid;
+		uint32_t mid_extension_id = 0;
+		std::optional<ov::String> rid;
+		uint32_t rid_extension_id = 0;
+
+	private:
+		uint32_t track_id = 0;
+	};
+
+
 	RtpRtcp(const std::shared_ptr<RtpRtcpInterface> &observer);
 	~RtpRtcp() override;
 
 	bool AddRtpSender(uint8_t payload_type, uint32_t ssrc, uint32_t codec_rate, ov::String cname);
-	bool AddRtpReceiver(uint32_t track_id, const std::shared_ptr<MediaTrack> &track);
+	bool AddRtpReceiver(const std::shared_ptr<MediaTrack> &track, const RtpTrackIdentifier &rtp_track_id);
 	bool Stop() override;
 
 	bool SendRtpPacket(const std::shared_ptr<RtpPacket> &packet);
@@ -50,6 +77,8 @@ public:
 	// Implement Node Interface
 	bool OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
 	bool OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
+
+	std::optional<uint32_t> GetTrackId(uint32_t ssrc) const;
 	
 private:
 	bool OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data);
@@ -58,6 +87,18 @@ private:
 	std::shared_ptr<RtpFrameJitterBuffer> GetJitterBuffer(uint8_t payload_type);
 
 	std::shared_ptr<RtcpPacket> GenerateTransportCcFeedbackIfNeeded();
+
+	std::vector<RtpTrackIdentifier> _rtp_track_identifiers;
+	std::map<uint32_t /*ssrc*/, uint32_t /*track_id*/> _ssrc_to_track_id;
+
+	// Find track id by mid or rid
+	std::optional<uint32_t> FindTrackId(const std::shared_ptr<const RtpPacket> &rtp_packet) const;
+	// Find track id by SDES
+	std::optional<uint32_t> FindTrackId(const std::shared_ptr<const Sdes> &sdes) const;
+	// Find track id by rtsp channel id
+	std::optional<uint32_t> FindTrackId(uint8_t rtsp_inter_channel) const;
+
+	void ConnectSsrcToTrack(uint32_t ssrc, uint32_t track_id);
 
     time_t _first_receiver_report_time = 0; // 0 - not received RR packet
     time_t _last_sender_report_time = 0;

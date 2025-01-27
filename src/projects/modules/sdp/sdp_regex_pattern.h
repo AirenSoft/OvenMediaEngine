@@ -72,9 +72,11 @@ public:
 		RegisterPattern(_framerate_pattern, R"(^framerate:(\d+(?:$|\.\d+)))");
 		RegisterPattern(_direction_pattern, R"(^(sendrecv|recvonly|sendonly|inactive))");
 
-		RegisterPattern(_fmtp_pattern, R"(fmtp:(\*|\d*) (.*))");
+		RegisterPattern(_fmtp_pattern, R"(^fmtp:(\*|\d*) (.*))");
 		RegisterPattern(_extmap_pattern, R"(^extmap:([\w_/]*) (\S*)(?: (\S*))?)");
 
+		RegisterPattern(_rid_pattern, R"(^rid:([a-zA-Z0-9\-_]+)\s+(send|recv)(?:\s+(.*))?)");
+		RegisterPattern(_simulcast_pattern, R"(^simulcast:\s*(send|recv)\s+([a-zA-Z0-9\-_\,;]+)(?:\s*(send|recv)\s+([a-zA-Z0-9\-_\,;]+))?)");
 		_built = true;
 
 		return true;
@@ -115,6 +117,9 @@ public:
 	RegisterMatchFunction(_fmtp_pattern, MatchFmtp)
 	RegisterMatchFunction(_extmap_pattern, MatchExtmap)
 
+	RegisterMatchFunction(_rid_pattern, MatchRid)
+	RegisterMatchFunction(_simulcast_pattern, MatchSimulcast)
+
 private:
 	bool _built = false;
 
@@ -152,4 +157,7 @@ private:
 
 	ov::Regex _fmtp_pattern; // a=fmtp:96 packetization-mode=xx ~~
 	ov::Regex _extmap_pattern; // a=extmap:1 urn:ietf:params:~
+
+	ov::Regex _rid_pattern; // a=rid:1 send pt=97,98;max-width=1280;max-height=720
+	ov::Regex _simulcast_pattern; // a=simulcast:send 1;2,3
 };

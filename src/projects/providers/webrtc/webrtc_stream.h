@@ -75,8 +75,14 @@ namespace pvd
 		bool OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 
 	private:
-		bool AddDepacketizer(uint8_t payload_type, RtpDepacketizingManager::SupportedDepacketizerType codec_id);
-		std::shared_ptr<RtpDepacketizingManager> GetDepacketizer(uint8_t payload_type);
+		bool CreateChannel(const std::shared_ptr<const MediaDescription> &local_media_desc, 
+							const std::shared_ptr<const MediaDescription> &remote_media_desc,
+							const std::shared_ptr<const RidAttr> &rid_attr, /* Optional / can be nullptr */
+							const std::shared_ptr<const PayloadAttr> &payload_attr);
+
+		std::shared_ptr<MediaTrack> CreateTrack(const std::shared_ptr<const PayloadAttr> &payload_attr);
+		bool AddDepacketizer(uint32_t track_id);
+		std::shared_ptr<RtpDepacketizingManager> GetDepacketizer(uint32_t track_id);
 
 		void OnFrame(const std::shared_ptr<MediaTrack> &track, const std::shared_ptr<MediaPacket> &media_packet);
 
@@ -105,8 +111,8 @@ namespace pvd
 		std::map<int64_t, std::shared_ptr<MediaPacket>> _dts_ordered_frame_buffer;
 		H264BitstreamParser _h264_bitstream_parser;
 
-		// Payload type, Depacketizer
-		std::map<uint8_t, std::shared_ptr<RtpDepacketizingManager>> _depacketizers;
+		// Track ID, Depacketizer
+		std::map<uint32_t, std::shared_ptr<RtpDepacketizingManager>> _depacketizers;
 
 		std::shared_ptr<ov::Data> _h264_extradata_nalu = nullptr;
 		bool _sent_sequence_header = false;

@@ -119,14 +119,14 @@ bool RtcSession::Start()
 		if(peer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
 		{
 			_audio_payload_type = first_payload->GetId();
-			_audio_ssrc = offer_media_desc->GetSsrc();
-			_rtp_rtcp->AddRtpSender(_audio_payload_type, _audio_ssrc, first_payload->GetCodecRate(), offer_media_desc->GetCname());
+			_audio_ssrc = offer_media_desc->GetSsrc().value_or(0);
+			_rtp_rtcp->AddRtpSender(_audio_payload_type, _audio_ssrc, first_payload->GetCodecRate(), offer_media_desc->GetCname().value_or(""));
 		}
 		else
 		{
 			_video_payload_type = first_payload->GetId();
-			_video_ssrc = offer_media_desc->GetSsrc();
-			_rtp_rtcp->AddRtpSender(_video_payload_type, _video_ssrc, first_payload->GetCodecRate(), offer_media_desc->GetCname());
+			_video_ssrc = offer_media_desc->GetSsrc().value_or(0);
+			_rtp_rtcp->AddRtpSender(_video_payload_type, _video_ssrc, first_payload->GetCodecRate(), offer_media_desc->GetCname().value_or(""));
 
 			auto payload = peer_media_desc->GetPayload(static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE));
 			if(payload != nullptr)

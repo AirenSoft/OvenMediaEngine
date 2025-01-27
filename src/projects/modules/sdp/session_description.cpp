@@ -50,14 +50,14 @@ bool SessionDescription::UpdateData(ov::String &sdp)
 
 	for(auto &media_description : _media_list)
 	{
-		sdp.AppendFormat(" %s", media_description->GetMid().CStr());
+		sdp.AppendFormat(" %s", media_description->GetMid().value_or("").CStr());
 	}
 
 	sdp += "\r\n";
 	sdp += "a=group:LS";
 	for(auto &media_description : _media_list)
 	{
-		sdp.AppendFormat(" %s", media_description->GetMid().CStr());
+		sdp.AppendFormat(" %s", media_description->GetMid().value_or("").CStr());
 	}
 
 	/* 

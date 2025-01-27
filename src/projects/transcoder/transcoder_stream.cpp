@@ -567,18 +567,6 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 	}
 	output_stream->SetName(name);
 
-	// Playlist
-	bool is_parsed = false;
-	auto cfg_playlists = cfg_output_profile.GetPlaylists(&is_parsed);
-	if (is_parsed)
-	{
-		for (const auto &cfg_playlist : cfg_playlists)
-		{
-			auto playlist_info = cfg_playlist.GetPlaylistInfo();
-			output_stream->AddPlaylist(playlist_info);
-		}
-	}
-
 	// Create a Output Track
 	for (auto &[input_track_id, input_track] : _input_stream->GetTracks())
 	{
@@ -653,9 +641,152 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 				continue;
 			}
 		}
-	}	
+	}
+
+	// Playlist
+	bool is_parsed = false;
+	auto cfg_playlists = cfg_output_profile.GetPlaylists(&is_parsed);
+	if (is_parsed)
+	{
+		for (const auto &cfg_playlist : cfg_playlists)
+		{
+			auto playlist_info = cfg_playlist.GetPlaylistInfo();
+
+			// Create renditions with RenditionTemplate
+			auto rendition_templates = cfg_playlist.GetRenditionTemplates();
+			auto tracks = output_stream->GetTracks();
+
+			for (const auto &rendition_template : rendition_templates)
+			{
+				bool has_video_template = false, has_audio_template = false;
+				auto video_template = rendition_template.GetVideoTemplate(&has_video_template);
+				auto audio_template = rendition_template.GetAudioTemplate(&has_audio_template);
+
+				std::vector<std::shared_ptr<MediaTrack>> matched_video_tracks, matched_audio_tracks;
+
+				if (has_video_template)
+				{
+					for (const auto &[track_id, track] : tracks)
+					{
+						if (video_template.IsMatched(track) == false)
+						{
+							continue;
+						}
+
+						// Separate the Track from the existing Variant group.
+						matched_video_tracks.push_back(track);
+					}
+				}
+				
+				if (has_audio_template)
+				{
+					// Do not separate the Audio track group. (Used as Multilingual)
+					for (const auto &[group_name, group] : output_stream->GetMediaTrackGroups())
+					{
+						auto track = group->GetFirstTrack();
+						if (audio_template.IsMatched(track) == false)
+						{
+							continue;
+						}
+
+						matched_audio_tracks.push_back(track);
+					}
+				}
+
+				if (matched_video_tracks.empty() && matched_audio_tracks.empty())
+				{
+					logtw("No matched tracks for the rendition template (%s).", rendition_template.GetName().CStr());
+					continue;
+				}
+
+				if (matched_video_tracks.empty() == false && matched_audio_tracks.empty() == false)
+				{
+					for (const auto &video_track : matched_video_tracks)
+					{
+						for (const auto &audio_track : matched_audio_tracks)
+						{
+							// Make Rendition Name
+							ov::String rendition_name = MakeRenditionName(rendition_template.GetName(), playlist_info, video_track, audio_track);
+							
+							auto rendition = std::make_shared<info::Rendition>(rendition_name, video_track->GetVariantName(), audio_track->GetVariantName());
+							rendition->SetVideoIndexHint(video_track->GetGroupIndex());
+							rendition->SetAudioIndexHint(audio_track->GetGroupIndex());
+
+							playlist_info->AddRendition(rendition);
+
+							logti("Rendition(%s) has been created from template in Playlist(%s) : video(%s/%d), audio(%s%d)", rendition_name.CStr(), playlist_info->GetName().CStr(), video_track->GetPublicName().CStr(), video_track->GetGroupIndex(), audio_track->GetPublicName().CStr(), audio_track->GetGroupIndex());
+						}
+					}
+				}
+				else if (matched_video_tracks.empty() == false)
+				{
+					for (const auto &video_track : matched_video_tracks)
+					{
+						// Make Rendition Name
+						ov::String rendition_name = MakeRenditionName(rendition_template.GetName(), playlist_info, video_track, nullptr);
+						auto rendition = std::make_shared<info::Rendition>(rendition_name, video_track->GetVariantName(), "");
+						rendition->SetVideoIndexHint(video_track->GetGroupIndex());
+
+						playlist_info->AddRendition(rendition);
+
+						logti("Rendition(%s) has been created from template in Playlist(%s) : video(%s/%d)", rendition_name.CStr(), playlist_info->GetName().CStr(), video_track->GetPublicName().CStr(), video_track->GetGroupIndex());
+					}
+				}
+				else if (matched_audio_tracks.empty() == false)
+				{
+					for (const auto &audio_track : matched_audio_tracks)
+					{
+						// Make Rendition Name
+						ov::String rendition_name = MakeRenditionName(rendition_template.GetName(), playlist_info, nullptr, audio_track);
+
+						auto rendition = std::make_shared<info::Rendition>(rendition_name, "", audio_track->GetVariantName());
+						rendition->SetAudioIndexHint(audio_track->GetGroupIndex());
+
+						playlist_info->AddRendition(rendition);
+
+						logti("Rendition(%s) has been created from template in Playlist(%s) : audio(%s/%d)", rendition_name.CStr(), playlist_info->GetName().CStr(), audio_track->GetPublicName().CStr(), audio_track->GetGroupIndex());
+					}
+				}
+			}
+
+			logti("Playlist(%s) has been created", playlist_info->GetName().CStr());
+			logti("%s", playlist_info->ToString().CStr());
+
+			output_stream->AddPlaylist(playlist_info);
+		}
+	}
 
 	return output_stream;
+}
+
+ov::String TranscoderStream::MakeRenditionName(const ov::String &name_template, const std::shared_ptr<info::Playlist> &playlist_info, const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track)
+{
+	ov::String rendition_name = name_template;
+	
+	rendition_name.Replace("${Width}", ov::String::FormatString("%d", video_track->GetWidth()).CStr());
+
+	if (video_track != nullptr)
+	{
+		rendition_name = rendition_name.Replace("${Height}", ov::String::FormatString("%d", video_track->GetHeight()).CStr());
+		rendition_name = rendition_name.Replace("${Bitrate}", ov::String::FormatString("%d", video_track->GetBitrate()).CStr());
+		rendition_name = rendition_name.Replace("${Framerate}", ov::String::FormatString("%d", video_track->GetFrameRate()).CStr());
+	}
+
+	if (audio_track != nullptr)
+	{
+		rendition_name = rendition_name.Replace("${Samplerate}", ov::String::FormatString("%d", audio_track->GetSampleRate()).CStr());
+		rendition_name = rendition_name.Replace("${Channel}", ov::String::FormatString("%d", audio_track->GetChannel()).CStr());
+	}
+
+	// Check if the rendition name is duplicated
+	uint32_t rendition_index = 0;
+	ov::String unique_rendition_name = rendition_name;
+	while (playlist_info->GetRendition(unique_rendition_name) != nullptr)
+	{
+		unique_rendition_name = ov::String::FormatString("%s_%d", rendition_name.CStr(), ++rendition_index);
+	}
+
+	return unique_rendition_name;
 }
 
 int32_t TranscoderStream::BuildComposite()
