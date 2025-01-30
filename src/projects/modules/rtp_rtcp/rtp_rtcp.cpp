@@ -346,6 +346,8 @@ void RtpRtcp::ConnectSsrcToTrack(uint32_t ssrc, uint32_t track_id)
 		logtw("SSRC(%u) is already connected to track ID(%u), it will be replaced.", ssrc, _ssrc_to_track_id[ssrc]);
 	}
 
+	logti("Connect SSRC(%u) to track ID(%u)", ssrc, track_id);
+
 	_ssrc_to_track_id[ssrc] = track_id;
 }
 
@@ -457,8 +459,6 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 				logte("Could not find track ID for RTSP channel ID %u", rtsp_data->GetChannelId());
 				return false;
 			}
-
-			packet->SetRtspChannel(track_id_opt.value());
 		}
 		else
 		{
@@ -471,6 +471,12 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 		}
 
 		ConnectSsrcToTrack(packet->Ssrc(), track_id_opt.value());
+	}
+
+	if (from_node == NodeType::Rtsp)
+	{
+		// RTSP Node uses channelID as trackID
+		packet->SetRtspChannel(track_id_opt.value());
 	}
 
 	auto track_id = track_id_opt.value();
