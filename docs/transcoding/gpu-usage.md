@@ -72,41 +72,6 @@ OvenMediaEngine-master/Dockerfile.cuda.local
 ```
 {% endtab %}
 
-{% tab title="Intel Quick Sync" %}
-#### 1. Install Intel QuickSync Driver
-
-If you are using an Intel CPU that supports QuickSync, please refer to the following guide to install the driver. The OSes that support installation using the provided scripts are **CentOS 7/8** and **Ubuntu 18/20** versions. If you want to install the driver on a different OS, please refer to the Manual Installation Guide document.
-
-When the Intel QuickSync driver installation is complete, the OS must be rebooted for normal operation.
-
-{% code overflow="wrap" lineNumbers="true" %}
-```bash
-(curl -LOJ https://github.com/AirenSoft/OvenMediaEngine/archive/master.tar.gz && tar xvfz OvenMediaEngine-master.tar.gz) 
-OvenMediaEngine-master/misc/install_intel_driver.sh
-```
-{% endcode %}
-
-**How to check driver installation**
-
-After the driver installation is complete, check whether the driver operates normally with the Matrix Monitor program.
-
-```bash
-# Use the samples provided in the Intel Media SDK
-# Check the list of codecs supported by iGPU
-/MediaSDK-intel-mediasdk-21.1.2/build/__bin/release/simple_7_codec
-```
-
-#### 2. Prerequisites
-
-If you have finished installing the driver to use the GPU, you need to reinstall the open source library using Prerequisites.sh . The purpose is to allow external libraries to use the installed graphics driver.
-
-#### Using Intel QuickSync GPU
-
-```bash
-OvenMediaEngine-master/misc/prerequisites.sh --enable-qsv
-```
-{% endtab %}
-
 {% tab title="Netint VPU Ni Logan" %}
 #### 1. Install XCODER
 
@@ -199,11 +164,11 @@ D : Decoding, E : Encoding
 
 ## Reference
 
-* NVIDIA NVDEC Video Format : [https://en.wikipedia.org/wiki/Nvidia\_NVDEC](https://en.wikipedia.org/wiki/Nvidia\_NVDEC)
-* NVIDIA NVENV Video Format : [https://en.wikipedia.org/wiki/Nvidia\_NVENC](https://en.wikipedia.org/wiki/Nvidia\_NVENC)
+* NVIDIA NVDEC Video Format : [https://en.wikipedia.org/wiki/Nvidia\_NVDEC](https://en.wikipedia.org/wiki/Nvidia_NVDEC)
+* NVIDIA NVENV Video Format : [https://en.wikipedia.org/wiki/Nvidia\_NVENC](https://en.wikipedia.org/wiki/Nvidia_NVENC)
 * CUDA Toolkit Installation Guide : [https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#introduction](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#introduction)
 * NVIDIA Container Toolkit : [https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/arch-overview.html#arch-overview](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/arch-overview.html#arch-overview)
-* Quick Sync Video format support: [https://en.wikipedia.org/wiki/Intel\_Quick\_Sync\_Video](https://en.wikipedia.org/wiki/Intel\_Quick\_Sync\_Video#AMD)
+* Quick Sync Video format support: [https://en.wikipedia.org/wiki/Intel\_Quick\_Sync\_Video](https://en.wikipedia.org/wiki/Intel_Quick_Sync_Video#AMD)
 * Xilinx Video SDK : [https://xilinx.github.io/video-sdk/v3.0/index.html](https://xilinx.github.io/video-sdk/v3.0/index.html)
 
 ##
