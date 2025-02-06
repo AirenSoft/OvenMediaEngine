@@ -62,8 +62,8 @@ public:
 	bool Stop() override;
 
 	bool SendRtpPacket(const std::shared_ptr<RtpPacket> &packet);
-	bool SendPLI(uint32_t media_ssrc);
-	bool SendFIR(uint32_t media_ssrc);
+	bool SendPLI(uint32_t track_id);
+	bool SendFIR(uint32_t track_id);
 
 	bool IsTransportCcFeedbackEnabled() const;
 	bool EnableTransportCcFeedback(uint8_t extension_id);
@@ -116,6 +116,7 @@ private:
 	uint8_t _transport_cc_feedback_extension_id = 0;
 	
 	// Receiver SSRC (For RTCP RR, FIR... etc)
+	// track_id : Receiver Statistics
 	std::unordered_map<uint32_t, std::shared_ptr<RtpReceiveStatistics>> _receive_statistics;
 
 	// Transport-cc feedback

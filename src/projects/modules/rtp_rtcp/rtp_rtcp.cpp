@@ -160,9 +160,9 @@ bool RtpRtcp::SendRtpPacket(const std::shared_ptr<RtpPacket> &rtp_packet)
 	return SendDataToNextNode(NodeType::Rtp, rtp_packet->GetData());
 }
 
-bool RtpRtcp::SendPLI(uint32_t media_ssrc)
+bool RtpRtcp::SendPLI(uint32_t track_id)
 {
-	auto stat_it = _receive_statistics.find(media_ssrc);
+	auto stat_it = _receive_statistics.find(track_id);
 	if(stat_it == _receive_statistics.end())
 	{
 		// Never received such SSRC packet
@@ -174,7 +174,7 @@ bool RtpRtcp::SendPLI(uint32_t media_ssrc)
 	auto pli = std::make_shared<PLI>();
 
 	pli->SetSrcSsrc(stat->GetReceiverSSRC());
-	pli->SetMediaSsrc(media_ssrc);
+	pli->SetMediaSsrc(stat->GetMediaSSRC());
 
 	auto rtcp_packet = std::make_shared<RtcpPacket>();
 	rtcp_packet->Build(pli);
@@ -184,9 +184,9 @@ bool RtpRtcp::SendPLI(uint32_t media_ssrc)
 	return SendDataToNextNode(NodeType::Rtcp, rtcp_packet->GetData());
 }
 
-bool RtpRtcp::SendFIR(uint32_t media_ssrc)
+bool RtpRtcp::SendFIR(uint32_t track_id)
 {
-	auto stat_it = _receive_statistics.find(media_ssrc);
+	auto stat_it = _receive_statistics.find(track_id);
 	if(stat_it == _receive_statistics.end())
 	{
 		// Never received such SSRC packet
@@ -198,8 +198,8 @@ bool RtpRtcp::SendFIR(uint32_t media_ssrc)
 	auto fir = std::make_shared<FIR>();
 
 	fir->SetSrcSsrc(stat->GetReceiverSSRC());
-	fir->SetMediaSsrc(media_ssrc);
-	fir->AddFirMessage(media_ssrc, static_cast<uint8_t>(stat->GetNumberOfFirRequests()%256));
+	fir->SetMediaSsrc(stat->GetMediaSSRC());
+	fir->AddFirMessage(stat->GetMediaSSRC(), static_cast<uint8_t>(stat->GetNumberOfFirRequests()%256));
 	auto rtcp_packet = std::make_shared<RtcpPacket>();
 	rtcp_packet->Build(fir);
 
@@ -490,13 +490,15 @@ bool RtpRtcp::OnRtpReceived(NodeType from_node, const std::shared_ptr<const ov::
 
 	// For RTCP Receiver Report
 	std::shared_ptr<RtpReceiveStatistics> stat;
-	auto stat_it = _receive_statistics.find(packet->Ssrc());
-	if(stat_it == _receive_statistics.end())
+	auto stat_it = _receive_statistics.find(track_id);
+	if(stat_it == _receive_statistics.end() || stat_it->second->GetMediaSSRC() != packet->Ssrc())
 	{
 		// First receive
 		// Some encoders or servers do not provide SSRC in SDP. Therefore, after receiving the packet, the ssrc can be extracted and used.
 		stat = std::make_shared<RtpReceiveStatistics>(packet->Ssrc(), track->GetTimeBase().GetDen());
-		_receive_statistics.emplace(packet->Ssrc(), stat);
+
+		// If ssrc is changed, the previous statistics should be deleted.
+		_receive_statistics[track_id] = stat;
 	}
 	else
 	{
@@ -668,11 +670,15 @@ bool RtpRtcp::OnRtcpReceived(NodeType from_node, const std::shared_ptr<const ov:
 		if(info->GetPacketType() == RtcpPacketType::SR)
 		{
 			auto sr = std::dynamic_pointer_cast<SenderReport>(info);
-			auto stat_it = _receive_statistics.find(sr->GetSenderSsrc());
-			if(stat_it != _receive_statistics.end())
+			auto track_id = GetTrackId(sr->GetSenderSsrc());
+			if (track_id.has_value())
 			{
-				auto stat = stat_it->second;
-				stat->AddReceivedRtcpSenderReport(sr);
+				auto stat_it = _receive_statistics.find(track_id.value());
+				if(stat_it != _receive_statistics.end())
+				{
+					auto stat = stat_it->second;
+					stat->AddReceivedRtcpSenderReport(sr);
+				}
 			}
 		}
 		
