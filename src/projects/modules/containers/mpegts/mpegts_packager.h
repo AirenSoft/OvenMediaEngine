@@ -131,17 +131,17 @@ namespace mpegts
 
 		bool HasMarker() const
 		{
-			return _marker.timestamp != -1;
+			return _markers.empty() == false;
 		}
 
-		void SetMarker(const Marker &marker)
+		void SetMarkers(const std::vector<Marker> &markers)
 		{
-			_marker = marker;
+			_markers = markers;
 		}
 
-		const Marker &GetMarker() const
+		const std::vector<Marker> &GetMarkers() const
 		{
-			return _marker;
+			return _markers;
 		}
 
     private:
@@ -156,7 +156,7 @@ namespace mpegts
 		bool _is_data_in_memory = false;
 		bool _is_data_in_file = false;
 
-		Marker _marker;
+		std::vector<Marker> _markers;
     };
 
     struct Sample

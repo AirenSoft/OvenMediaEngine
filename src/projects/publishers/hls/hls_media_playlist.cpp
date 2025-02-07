@@ -47,7 +47,7 @@ bool HlsMediaPlaylist::OnSegmentCreated(const std::shared_ptr<mpegts::Segment> &
 
 	if (segment->HasMarker() == true)
 	{
-		logti("Marker is found in the segment %d, tag : %s, timestamp : %lld", segment->GetNumber(), segment->GetMarker().tag.CStr(), segment->GetMarker().timestamp);
+		logti("Marker is found in the segment %d (%d)", segment->GetNumber(), segment->GetMarkers().size());
 	}
 
 	_segments.emplace(segment->GetNumber(), segment);

@@ -355,8 +355,7 @@ namespace mpegts
 		auto total_main_segment_duration = main_sample_buffer->GetTotalConsumedDuration() + main_segment_duration;
         auto main_segment_duration_ms = main_sample_buffer->GetDurationUntilSegmentBoundaryMs();
 
-		bool found_marker = false;
-		Marker marker;
+		std::vector<Marker> markers;
 		if (HasMarker() == true)
 		{
 			int64_t main_segment_base_timestamp = main_sample_buffer->GetSample()._dts;
@@ -366,7 +365,7 @@ namespace mpegts
 
 			while (HasMarker())
 			{
-				marker = GetFirstMarker();
+				auto marker = GetFirstMarker();
 				if (marker.timestamp < main_segment_base_timestamp)
 				{
 					logte("Stream(%s) Main Track(%u) has a marker at %lld, but it is before the current segment %lld", _config.stream_id_meta.CStr(), _main_track_id, marker.timestamp, main_segment_base_timestamp);
@@ -379,19 +378,22 @@ namespace mpegts
 			}
 
 			// All Marker can be removed so check again
-			if (HasMarker() == true)
-			{	
-				marker = GetFirstMarker();
+			while (HasMarker())
+			{
+				auto marker = GetFirstMarker();
 				if (marker.timestamp >= main_segment_base_timestamp && marker.timestamp < main_segment_end_timestamp)
 				{
-					logti("Stream(%s) Main Track(%u) has a marker at %lld, force to create a new segment", _config.stream_id_meta.CStr(), _main_track_id, marker.timestamp);
+					logti("Stream(%s) Main Track(%u) Segment(%lld) has a marker at %lld, tag : %s", _config.stream_id_meta.CStr(), _main_track_id, main_segment_base_timestamp, marker.timestamp, marker.tag.CStr());
+
+					markers.push_back(marker);
 
 					RemoveMarker(marker.timestamp);
-					found_marker = true;
 					force_create = true;
 				}
-
-				// Else wait for the next segment
+				else
+				{
+					break;
+				}
 			}
 		}
 
@@ -438,9 +440,9 @@ namespace mpegts
         }
 
         auto segment = std::make_shared<Segment>(GetNextSegmentId(), first_sample._dts, main_segment_duration_ms);
-		if (found_marker == true)
+		if (markers.empty() == false)
 		{
-			segment->SetMarker(marker);
+			segment->SetMarkers(markers);
 		}
 
         // Add PSI packets
