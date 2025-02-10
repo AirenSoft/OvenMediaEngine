@@ -10,6 +10,7 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/common_types.h>
+#include <base/info/audio_map_item.h>
 #include <pugixml-1.9/src/pugixml.hpp>
 
 /*
@@ -100,6 +101,8 @@ namespace pvd
             bool bypass_transcoder = false;
             bool video_track = true;
             bool audio_track = true;
+
+			std::vector<info::AudioMapItem> audio_map;
         };
             
         struct Program

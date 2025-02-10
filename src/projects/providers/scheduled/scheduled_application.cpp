@@ -206,16 +206,41 @@ namespace pvd
 
         if (channel_info.audio_track == true)
         {
-            auto track = std::make_shared<MediaTrack>();
-            track->SetId(kScheduledAudioTrackId);
-            auto public_name = ov::String::FormatString("Audio_%d", track->GetId());
-            track->SetPublicName(public_name);
-            track->SetMediaType(cmn::MediaType::Audio);
+			if (channel_info.audio_map.empty())
+			{
+				auto track = std::make_shared<MediaTrack>();
+				track->SetId(kScheduledAudioTrackId);
+				auto public_name = ov::String::FormatString("Audio_%d", track->GetId());
+				track->SetPublicName(public_name);
+				track->SetMediaType(cmn::MediaType::Audio);
 
-            // Set Timebase to 1/1000 fixed
-            track->SetTimeBase(1, 1000);
+				// Set Timebase to 1/1000 fixed
+				track->SetTimeBase(1, 1000);
 
-            stream->AddTrack(track);
+				stream->AddTrack(track);
+			}
+			else
+			{
+				for (const auto &audio_map_item : channel_info.audio_map)
+				{
+					auto track = std::make_shared<MediaTrack>();
+					track->SetId(kScheduledAudioTrackId + audio_map_item.GetIndex());
+
+					ov::String public_name = audio_map_item.GetName();
+					if (public_name.IsEmpty())
+					{
+						public_name = ov::String::FormatString("Audio_%d", track->GetId());
+					}
+					track->SetPublicName(public_name);
+					track->SetLanguage(audio_map_item.GetLanguage());
+					track->SetMediaType(cmn::MediaType::Audio);
+
+					// Set Timebase to 1/1000 fixed
+					track->SetTimeBase(1, 1000);
+
+					stream->AddTrack(track);
+				}
+			}
         }
 
         if (AddStream(stream) == false)

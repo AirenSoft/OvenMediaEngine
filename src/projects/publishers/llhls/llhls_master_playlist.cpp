@@ -70,7 +70,7 @@ bool LLHlsMasterPlaylist::AddStreamInfo(const ov::String &video_group_id, int vi
 	if (video_group_id.IsEmpty() == false)
 	{
 		auto video_group = GetMediaGroup(video_group_id);
-		if (video_group == nullptr || video_group->_media_infos.size() <= video_index_hint)
+		if (video_group == nullptr || video_group->_media_infos.size() <= static_cast<std::size_t>(video_index_hint))
 		{
 			logte("Could not find valid video group: %s", video_group_id.CStr());
 			return false;

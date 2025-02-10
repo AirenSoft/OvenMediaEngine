@@ -141,6 +141,57 @@ namespace pvd
 
 		_stream = MakeStream(name, bypass_transcoder, video_track, audio_track);
 
+		// audioMap
+
+		/*
+			"audioMap": [
+				{
+					"name": "Korean",
+					"language": "kor"
+				},
+				{
+					"name": "English",
+					"language": "eng"
+				}
+			]
+
+			for (uint32_t i=0; i<programs_object.size(); i++)
+			{
+				auto program_object = programs_object[i];
+		
+		*/
+
+		auto audio_map_object = stream_object["audioMap"];
+		if (audio_map_object.isNull() == false)
+		{
+			if (audio_map_object.isArray() == false)
+			{
+				_last_error = "audioMap must be an array";
+				return false;
+			}
+
+			for (uint32_t i=0; i<audio_map_object.size(); i++)
+			{
+				auto audio_map_item_object = audio_map_object[i];
+				ov::String public_name;
+				ov::String language;
+				
+				auto public_name_object = audio_map_item_object["name"];
+				if (public_name_object.isNull() == false || public_name_object.isString() == true)
+				{
+					public_name = public_name_object.asString().c_str();
+				}
+
+				auto language_object = audio_map_item_object["language"];
+				if (language_object.isNull() == false || language_object.isString() == true)
+				{
+					language = language_object.asString().c_str();
+				}
+
+				_stream.audio_map.push_back({static_cast<int>(i), public_name, language});
+			}
+		}
+
 		return true;
 	}
 
@@ -421,6 +472,42 @@ namespace pvd
 		}
 
 		_stream = MakeStream(name, bypass_transcoder, video_track, audio_track);
+
+		// Optional
+		/*
+			<AudioMap>
+				<Item>
+					<Name>Korean</Name>
+					<Language>kor</Language>
+				</Item>
+				<Item>
+					<Name>English</Name>
+					<Language>eng</Language>
+				</Item>
+			</AudioMap>
+		*/
+		auto audio_map_node = stream_node.child("AudioMap");
+		uint32_t index = 0;
+		for (auto audio_map_item_node = audio_map_node.child("Item"); audio_map_item_node; audio_map_item_node = audio_map_item_node.next_sibling("Item"))
+		{
+			ov::String public_name;
+			ov::String language;
+
+			auto public_name_node = audio_map_item_node.child("Name");
+			if (public_name_node)
+			{
+				public_name = public_name_node.text().as_string();
+			}
+
+			auto language_node = audio_map_item_node.child("Language");
+			if (language_node)
+			{
+				language = language_node.text().as_string();
+			}
+
+			_stream.audio_map.push_back({static_cast<int>(index), public_name, language});
+			index ++;
+		}
 
 		return true;
 	}

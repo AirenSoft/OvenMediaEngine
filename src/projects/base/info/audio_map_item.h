@@ -58,6 +58,6 @@ namespace info
 	private:
 		int _index;
 		ov::String _name;
-		ov::String _language;
+		ov::String _language = "und";
 	};
 } // namespace info

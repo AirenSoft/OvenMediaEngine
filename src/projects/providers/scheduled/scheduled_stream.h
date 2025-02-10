@@ -19,8 +19,8 @@ namespace pvd
 {
     // ScheduledStream doesn't support multiple tracks yet
     constexpr int kScheduledVideoTrackId = 0;
-    constexpr int kScheduledAudioTrackId = 1;
-    constexpr int kScheduledDataTrackId = 2;
+    constexpr int kScheduledAudioTrackId = 100;
+    constexpr int kScheduledDataTrackId = 200;
     constexpr int kScheduledVideoTimebase = 90000;
 
     class ScheduledStream : public Stream
