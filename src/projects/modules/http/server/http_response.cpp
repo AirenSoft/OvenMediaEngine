@@ -293,8 +293,10 @@ namespace http
 			if (IsHeaderSent() == false)
 			{
 				// Date header
-				auto date = ov::Converter::ToRFC7231String(_response_time);
-				SetHeader("Date", date);
+
+				// Disabled due to Safari bug when playing llhls
+				// auto date = ov::Converter::ToRFC7231String(_response_time);
+				// SetHeader("Date", date);
 
 				if (_etag_enabled_by_config == true)
 				{

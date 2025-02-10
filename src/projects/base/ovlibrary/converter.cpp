@@ -139,7 +139,8 @@ namespace ov
 		int min_part = (gmtoff % 3600) / 60;
 		oss << sign << std::setfill('0') << std::setw(2) << hour_part << ":" << std::setfill('0') << std::setw(2) << min_part;
 
-		return oss.str().c_str();
+		ov::String time_string = oss.str().c_str();
+		return time_string;
 	}
 
 	// HTTP-date    = IMF-fixdate / obs-date
@@ -161,7 +162,8 @@ namespace ov
         std::ostringstream oss;
         oss << std::put_time(&gmt_time, "%a, %d %b %Y %H:%M:%S GMT");
 
-        return oss.str().c_str();
+		ov::String time_string = oss.str().c_str();
+        return time_string;
     }
 
 	// From ISO8601 string to time_point
