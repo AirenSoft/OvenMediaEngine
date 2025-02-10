@@ -274,6 +274,9 @@ namespace pvd
                             {
                                 continue;
                             }
+
+							need_break = true;
+							break;
                         }
                         // Play next item
                         else
