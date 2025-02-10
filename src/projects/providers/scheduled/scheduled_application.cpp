@@ -243,6 +243,13 @@ namespace pvd
 			}
         }
 
+		auto data_track = std::make_shared<MediaTrack>();
+		data_track->SetId(kScheduledDataTrackId);
+		data_track->SetMediaType(cmn::MediaType::Data);
+		data_track->SetTimeBase(1, 1000); // Data track time base is always 1/1000 in
+		data_track->SetOriginBitstream(cmn::BitstreamFormat::Unknown);
+		stream->AddTrack(data_track);
+
         if (AddStream(stream) == false)
         {
             logte("Failed to add schedule (Could not add stream): %s", schedule_file_info._file_path.CStr());
