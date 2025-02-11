@@ -756,41 +756,41 @@ void TranscoderStreamInternal::UpdateOutputTrackTranscode(const std::shared_ptr<
 	}
 }
 
-bool TranscoderStreamInternal::StoreInputTrackSnapshot(std::shared_ptr<info::Stream> stream)
+bool TranscoderStreamInternal::StoreTracks(std::shared_ptr<info::Stream> stream)
 {
-	_input_track_snapshot.clear();
+	_store_tracks.clear();
 	
 	for (auto &[track_id, track] : stream->GetTracks())
 	{
 		auto clone = track->Clone();
-		_input_track_snapshot[track_id] = clone;
+		_store_tracks[track_id] = clone;
 	}	
 
 	return true;
 }
 
-std::map<int32_t, std::shared_ptr<MediaTrack>>& TranscoderStreamInternal::GetInputTrackSnapshot()
+std::map<int32_t, std::shared_ptr<MediaTrack>>& TranscoderStreamInternal::GetStoredTracks()
 {
-	return _input_track_snapshot;
+	return _store_tracks;
 }
 
-bool TranscoderStreamInternal::IsEqualCountAndMediaTypeOfMediaTracks(std::map<int32_t, std::shared_ptr<MediaTrack>> a, std::map<int32_t, std::shared_ptr<MediaTrack>> b)
+bool TranscoderStreamInternal::CompareTracksForSeamlessTransition(std::map<int32_t, std::shared_ptr<MediaTrack>> prev_tracks, std::map<int32_t, std::shared_ptr<MediaTrack>> new_tracks)
 {
-	if (a.size() != b.size())
+	// #1 Check the number of tracks
+	if (prev_tracks.size() != new_tracks.size())
 	{
 		return false;
 	}
 
-	for (auto &[track_id, track] : a)
+	// #2 Check type of tracks
+	for (auto &[track_id, prev_track] : prev_tracks)
 	{
-		if (b.find(track_id) == b.end())
+		if (new_tracks.find(track_id) == new_tracks.end())
 		{
 			return false;
 		}
 
-		auto track_b = b[track_id];
-
-		if(track->GetMediaType() != track_b->GetMediaType())
+		if(prev_track->GetMediaType() != new_tracks[track_id]->GetMediaType())
 		{
 			return false;
 		}

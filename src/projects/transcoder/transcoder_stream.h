@@ -248,7 +248,7 @@ private:
 	void UpdateInputTrack(std::shared_ptr<MediaFrame> buffer);
 	void UpdateOutputTrack(std::shared_ptr<MediaFrame> buffer);
 	void UpdateMsidOfOutputStreams(uint32_t msid);
-	bool IsAvailableSmoothTransition(const std::shared_ptr<info::Stream> &stream);
+	bool CanSeamlessTransition(const std::shared_ptr<info::Stream> &stream);
 	void FlushBuffers();
 
 	// Step 2: Filter (resample/rescale the decoded frame)

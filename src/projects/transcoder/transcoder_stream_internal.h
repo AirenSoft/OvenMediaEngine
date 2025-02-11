@@ -60,13 +60,11 @@ public:
 								  uint32_t &audio, uint32_t &audio_bypass,
 								  uint32_t &image, uint32_t &data);
 
-
 public:
-	// For the purpose of checking if the input track has changed during the update.
-	bool StoreInputTrackSnapshot(std::shared_ptr<info::Stream> stream);
-	std::map<int32_t, std::shared_ptr<MediaTrack>>& GetInputTrackSnapshot();
-	bool IsEqualCountAndMediaTypeOfMediaTracks(std::map<int32_t, std::shared_ptr<MediaTrack>> a, std::map<int32_t, std::shared_ptr<MediaTrack>> b);
+	// This is used to check if the input track has changed during the update.
+	bool StoreTracks(std::shared_ptr<info::Stream> stream);
+	std::map<int32_t, std::shared_ptr<MediaTrack>> &GetStoredTracks();
+	bool CompareTracksForSeamlessTransition(std::map<int32_t, std::shared_ptr<MediaTrack>> prev_tracks, std::map<int32_t, std::shared_ptr<MediaTrack>> new_tracks);
 
-private:
-	std::map<int32_t, std::shared_ptr<MediaTrack>> _input_track_snapshot;	
+	std::map<int32_t, std::shared_ptr<MediaTrack>> _store_tracks;	
 };

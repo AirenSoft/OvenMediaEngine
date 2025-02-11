@@ -231,7 +231,7 @@ bool TranscoderStream::PrepareInternal()
 		logti("No decoder generated");
 	}
 
-	StoreInputTrackSnapshot(_input_stream);
+	StoreTracks(_input_stream);
 
 	return true;
 }
@@ -244,9 +244,9 @@ bool TranscoderStream::UpdateInternal(const std::shared_ptr<info::Stream> &strea
 	// - The input track should not change.
 	_is_updating = true;
 
-	if (IsAvailableSmoothTransition(stream) == true)
+	if (CanSeamlessTransition(stream) == true)
 	{
-		logtd("%s This stream will be a smooth transition", _log_prefix.CStr());
+		logtd("%s This stream support seamless transitions", _log_prefix.CStr());
 		FlushBuffers();
 
 		RemoveDecoders();
@@ -256,7 +256,7 @@ bool TranscoderStream::UpdateInternal(const std::shared_ptr<info::Stream> &strea
 	}
 	else
 	{
-		logtw("%s This stream does not support smooth transitions. renew the all components", _log_prefix.CStr());
+		logtw("%s This stream does not support seamless transitions. Renewing all", _log_prefix.CStr());
 
 		FlushBuffers();
 
@@ -269,7 +269,7 @@ bool TranscoderStream::UpdateInternal(const std::shared_ptr<info::Stream> &strea
 		UpdateMsidOfOutputStreams(stream->GetMsid());
 		NotifyUpdateStreams();
 
-		StoreInputTrackSnapshot(stream);
+		StoreTracks(stream);
 	}
 
 	_is_updating = false;
@@ -389,24 +389,12 @@ std::shared_ptr<info::Stream> TranscoderStream::GetOutputStreamByTrackId(MediaTr
 	return nullptr;
 }
 
-bool TranscoderStream::IsAvailableSmoothTransition(const std::shared_ptr<info::Stream> &input_stream)
+bool TranscoderStream::CanSeamlessTransition(const std::shared_ptr<info::Stream> &input_stream)
 {
-	// #1. The number of tracks per media type should not exceed one.
-	int32_t track_count_per_mediatype[(uint32_t)cmn::MediaType::Nb] = {0};
-	for (const auto &[track_id, track] : input_stream->GetTracks())
-	{
-		UNUSED_VARIABLE(track_id)
-		
-		if ((++track_count_per_mediatype[(uint32_t)track->GetMediaType()]) > 1)
-		{
-			// Could not support smooth transition. because, number of tracks per media type exceed one.
-			logtw("%s Smooth transitions are not possible because the number of tracks per media type exceeds one.", _log_prefix.CStr());
-			return false;
-		}
-	}
+	auto new_tracks = input_stream->GetTracks();
 
-	// #2. Check if the number and type of original tracks are different.
-	if(IsEqualCountAndMediaTypeOfMediaTracks(input_stream->GetTracks(), GetInputTrackSnapshot()) == false)
+	// Check if the number and type of original tracks are different.
+	if(CompareTracksForSeamlessTransition(new_tracks, GetStoredTracks()) == false)
 	{
 		logtw("%s The input track has changed. It does not support smooth transitions.", _log_prefix.CStr());
 		return false;
@@ -1509,8 +1497,8 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 			// Record the timestamp of the last decoded frame. managed by microseconds.
 			_last_decoded_frame_pts[decoder_id] = last_frame->GetPts() * filter_expr * 1000000.0;
 
-			logtd("%s Create filler frame because there is no decoding frame. Type(%s), Decoder(%u), FillerFrames(%d)"
-				, _log_prefix.CStr(), cmn::GetMediaTypeString(input_track->GetMediaType()).CStr(), decoder_id, 1);
+			// logtd("%s Create filler frame because there is no decoding frame. Type(%s), Decoder(%u), FillerFrames(%d)"
+			// 	, _log_prefix.CStr(), cmn::GetMediaTypeString(input_track->GetMediaType()).CStr(), decoder_id, 1);
 
 			// Send Temporary Frame to Filter
 			SpreadToFilters(decoder_id, last_frame);
@@ -1600,7 +1588,7 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 						}
 
 						SpreadToFilters(decoder_id, clone_frame);
-						// logte("%s Create filler frame. Type(%s), %s", _log_prefix.CStr(), cmn::GetMediaTypeString(input_track->GetMediaType()).CStr(), clone_frame->GetInfoString().CStr());
+						// logtd("%s Create filler frame. Type(%s), %s", _log_prefix.CStr(), cmn::GetMediaTypeString(input_track->GetMediaType()).CStr(), clone_frame->GetInfoString().CStr());
 					}
 				}
 			}
@@ -1610,6 +1598,7 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 		}
 		
 		case TranscodeResult::DataReady: {
+			
 
 			// The last decoded frame is kept and used as a filling frame in the blank section.
 			SetLastDecodedFrame(decoder_id, decoded_frame);
