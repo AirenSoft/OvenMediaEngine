@@ -41,6 +41,8 @@ void HlsMediaPlaylist::SetEndList()
 
 bool HlsMediaPlaylist::OnSegmentCreated(const std::shared_ptr<mpegts::Segment> &segment)
 {
+	OV_ASSERT(_wallclock_offset_ms > 0, "Wallclock offset is not set");
+
 	std::lock_guard<std::shared_mutex> lock(_segments_mutex);
 
 	logtd("HlsMediaPlaylist::OnSegmentCreated - number(%d) url(%s) duration_us(%.3f)\n", segment->GetNumber(), segment->GetUrl().CStr(), segment->GetDurationMs());
@@ -113,6 +115,10 @@ ov::String HlsMediaPlaylist::ToString(bool rewind) const
 	for (auto it = _segments.find(first_segment->GetNumber()); it != _segments.end(); it ++)
 	{
 		const auto &segment = it->second;
+
+		auto start_time = static_cast<int64_t>(((segment->GetFirstTimestamp() / mpegts::TIMEBASE_DBL) * 1000.0) + _wallclock_offset_ms);
+		std::chrono::system_clock::time_point tp{std::chrono::milliseconds{start_time}};
+		result += ov::String::FormatString("#EXT-X-PROGRAM-DATE-TIME:%s\n", ov::Converter::ToISO8601String(tp).CStr());
 		result += ov::String::FormatString("#EXTINF:%.3f,\n", segment->GetDurationMs() / 1000.0);
 		result += ov::String::FormatString("%s\n", segment->GetUrl().CStr());
 	}

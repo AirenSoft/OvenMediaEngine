@@ -452,6 +452,17 @@ void HlsStream::OnSegmentCreated(const ov::String &packager_id, const std::share
 
 	segment->SetUrl(GetSegmentName(packager_id, segment->GetNumber()));
 
+	if (_is_first_segment)
+	{
+		_is_first_segment = false;
+
+		auto first_segment_timestamp_ms = (segment->GetFirstTimestamp() / mpegts::TIMEBASE_DBL) * 1000.0;
+
+		auto wallclock_offset_ms = static_cast<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(GetInputStreamPublishedTime().time_since_epoch()).count() - first_segment_timestamp_ms);
+
+		playlist->SetWallclockOffset(wallclock_offset_ms);
+	}
+
 	playlist->OnSegmentCreated(segment);
 
 	logtd("Playlist : %s", playlist->ToString(false).CStr());

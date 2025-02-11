@@ -27,6 +27,8 @@ public:
 
 	void AddMediaTrackInfo(const std::shared_ptr<MediaTrack> &track);
 
+	void SetWallclockOffset(int64_t offset_ms) { _wallclock_offset_ms = offset_ms; }
+
 	bool OnSegmentCreated(const std::shared_ptr<mpegts::Segment> &segment);
 	bool OnSegmentDeleted(const std::shared_ptr<mpegts::Segment> &segment);
 
@@ -61,6 +63,7 @@ private:
 	// Segment number : Segment
 	std::map<uint64_t, std::shared_ptr<mpegts::Segment>> _segments;
 	mutable std::shared_mutex _segments_mutex;
+	int64_t _wallclock_offset_ms = 0;
 
 	bool _end_list = false;
 };

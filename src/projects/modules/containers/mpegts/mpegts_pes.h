@@ -18,6 +18,8 @@
 #include <base/info/media_track.h>
 #include <base/mediarouter/media_buffer.h>
 
+#include "mpegts_common.h"
+
 #define MPEGTS_PES_HEADER_SIZE					6U
 #define MPEGTS_MIN_PES_OPTIONAL_HEADER_SIZE		3U
 

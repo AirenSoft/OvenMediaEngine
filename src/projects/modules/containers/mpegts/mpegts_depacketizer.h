@@ -12,6 +12,7 @@
 #include <base/mediarouter/media_type.h>
 #include <base/info/media_track.h>
 
+#include "mpegts_common.h"
 #include "mpegts_packet.h"
 #include "mpegts_section.h"
 #include "mpegts_pes.h"

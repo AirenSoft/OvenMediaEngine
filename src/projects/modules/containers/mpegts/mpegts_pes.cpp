@@ -51,8 +51,8 @@ namespace mpegts
 
 		// timestamp
 		// Timescale of MPEG-2 TS is 90000
-		pes->_pts = (static_cast<double>(media_packet->GetPts()) / track->GetTimeBase().GetTimescale() * 90000.0); // + PCR_OFFSET;
-		pes->_dts = (static_cast<double>(media_packet->GetDts()) / track->GetTimeBase().GetTimescale() * 90000.0); // + PCR_OFFSET;
+		pes->_pts = (static_cast<double>(media_packet->GetPts()) / track->GetTimeBase().GetTimescale() * TIMEBASE_DBL); // + PCR_OFFSET;
+		pes->_dts = (static_cast<double>(media_packet->GetDts()) / track->GetTimeBase().GetTimescale() * TIMEBASE_DBL); // + PCR_OFFSET;
 
 		pes->_pcr = (pes->_dts/*- PCR_OFFSET*/) * 300;
 

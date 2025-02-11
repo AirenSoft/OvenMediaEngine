@@ -130,7 +130,7 @@ namespace mpegts
 		}
 
 		// mpeg-2 ts time base is 90khz
-		int64_t timestamp = (static_cast<double>(marker.timestamp) / data_track->GetTimeBase().GetTimescale() * 90000.0);
+		int64_t timestamp = (static_cast<double>(marker.timestamp) / data_track->GetTimeBase().GetTimescale() * TIMEBASE_DBL);
 	
 		Marker converted_marker = marker;
 		converted_marker.timestamp = timestamp;

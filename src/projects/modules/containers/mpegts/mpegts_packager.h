@@ -168,9 +168,9 @@ namespace mpegts
 
 			if (media_packet != nullptr)
 			{
-				_pts = (static_cast<double>(media_packet->GetPts()) / timescale * 90000.0);
-				_dts = (static_cast<double>(media_packet->GetDts()) / timescale * 90000.0);
-				_duration = (static_cast<double>(media_packet->GetDuration()) / timescale * 90000.0);
+				_pts = (static_cast<double>(media_packet->GetPts()) / timescale * TIMEBASE_DBL);
+				_dts = (static_cast<double>(media_packet->GetDts()) / timescale * TIMEBASE_DBL);
+				_duration = (static_cast<double>(media_packet->GetDuration()) / timescale * TIMEBASE_DBL);
 			}
         }
 
@@ -216,7 +216,7 @@ namespace mpegts
 		double GetCurrentDurationMs() const
 		{
 			// return in milliseconds, sample duration is in 90kHz
-			return static_cast<double>(GetCurrentDuration()) / 90000.0 * 1000.0;
+			return static_cast<double>(GetCurrentDuration()) / TIMEBASE_DBL * 1000.0;
 		}
 
         bool HasSegmentBoundary() const
@@ -255,7 +255,7 @@ namespace mpegts
 		double GetDurationUntilSegmentBoundaryMs() const
 		{
 			// return in milliseconds, sample duration is in 90kHz
-			return static_cast<double>(GetDurationUntilSegmentBoundary()) / 90000.0 * 1000.0;
+			return static_cast<double>(GetDurationUntilSegmentBoundary()) / TIMEBASE_DBL * 1000.0;
 		}
 
 		uint64_t GetTotalAvailableDuration() const
@@ -266,7 +266,7 @@ namespace mpegts
 		double GetTotalAvailableDurationMs() const
 		{
 			// return in milliseconds, sample duration is in 90kHz
-			return static_cast<double>(GetTotalAvailableDuration()) / 90000.0 * 1000.0;
+			return static_cast<double>(GetTotalAvailableDuration()) / TIMEBASE_DBL * 1000.0;
 		}
         
         bool IsEmpty() const
@@ -346,7 +346,7 @@ namespace mpegts
 		double GetTotalConsumedDurationMs() const
 		{
 			// return in milliseconds, sample duration is in 90kHz
-			return static_cast<double>(GetTotalConsumedDuration()) / 90000.0 * 1000.0;
+			return static_cast<double>(GetTotalConsumedDuration()) / TIMEBASE_DBL * 1000.0;
 		}
 
     private:
