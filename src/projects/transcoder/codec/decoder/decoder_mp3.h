@@ -27,7 +27,9 @@ public:
 	size_t _pkt_offset = 0;
 	std::shared_ptr<const ov::Data> _cur_data = nullptr;
 
-	int64_t _last_pkt_pts = 0;
+	int64_t _first_pkt_pts = INT64_MIN;
+	int64_t _last_pkt_pts = INT64_MIN;
+	int64_t _last_pkt_duration = 0;
 
 	bool InitCodec();
 

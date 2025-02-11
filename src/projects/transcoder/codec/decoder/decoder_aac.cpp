@@ -139,6 +139,12 @@ void DecoderAAC::CodecThread()
 						av_strerror(ret, err_msg, sizeof(err_msg));
 						logte("An error occurred while sending a packet for decoding. %s ", err_msg);
 					}
+
+					// Save first pakcet's PTS
+					if(_first_pkt_pts == INT64_MIN)
+					{
+						_first_pkt_pts = _pkt->pts;
+					}
 				}
 			}
 
@@ -197,16 +203,21 @@ void DecoderAAC::CodecThread()
 				}
 			}
 
-			// If there is no duration, the duration is calculated by timebase.
-			if (_frame->pkt_duration <= 0LL)
-			{
-				_frame->pkt_duration = ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Audio, GetRefTrack(), _frame);
-			}
+			// The actual duration is calculated based on the number of samples in the decoded frame.
+			_frame->pkt_duration = ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Audio, GetRefTrack(), _frame);
 
-			// If the decoded audio frame does not have a PTS, Increase frame duration time in PTS of previous frame
+			// If the decoded audio frame has no PTS, add the frame duration to the previous frame's PTS.
 			if (_frame->pts == AV_NOPTS_VALUE)
 			{
-				_frame->pts = _last_pkt_pts + _frame->pkt_duration;
+				if(_last_pkt_pts == INT64_MIN)
+				{
+					// If the previous frame has no PTS, use the PTS of the first packet.
+					_frame->pts = _first_pkt_pts;
+				}
+				else 
+				{
+					_frame->pts = _last_pkt_pts + _last_pkt_duration;
+				}
 			}
 
 			auto output_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Audio, _frame);
@@ -217,6 +228,7 @@ void DecoderAAC::CodecThread()
 			}
 
 			_last_pkt_pts = output_frame->GetPts();
+			_last_pkt_duration = output_frame->GetDuration();
 
 			Complete(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(output_frame));
 		}
