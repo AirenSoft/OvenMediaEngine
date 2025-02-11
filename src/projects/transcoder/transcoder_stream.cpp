@@ -762,7 +762,7 @@ ov::String TranscoderStream::MakeRenditionName(const ov::String &name_template, 
 	if (audio_track != nullptr)
 	{
 		rendition_name = rendition_name.Replace("${Samplerate}", ov::String::FormatString("%d", audio_track->GetSampleRate()).CStr());
-		rendition_name = rendition_name.Replace("${Channel}", ov::String::FormatString("%d", audio_track->GetChannel()).CStr());
+		rendition_name = rendition_name.Replace("${Channel}", ov::String::FormatString("%u", audio_track->GetChannel().GetCounts()).CStr());
 	}
 
 	// Check if the rendition name is duplicated

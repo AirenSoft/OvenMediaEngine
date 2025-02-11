@@ -85,7 +85,7 @@ bool RtpRtcp::AddRtpReceiver(const std::shared_ptr<MediaTrack> &track, const Rtp
 	_rtp_track_identifiers.push_back(rtp_track_id);
 	if (rtp_track_id.ssrc.has_value())
 	{
-		logti("AddRtpReceiver : %d / %u / %s / %s", track_id, rtp_track_id.ssrc.value(), rtp_track_id.mid.value_or(ov::String("")), rtp_track_id.rid.value_or(ov::String("")));
+		logti("AddRtpReceiver : %d / %u / %s / %s", track_id, rtp_track_id.ssrc.value(), rtp_track_id.mid.value_or(ov::String("")).CStr(), rtp_track_id.rid.value_or(ov::String("")).CStr());
 		ConnectSsrcToTrack(rtp_track_id.ssrc.value(), track_id);
 	}
 
