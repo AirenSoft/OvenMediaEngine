@@ -38,6 +38,10 @@ OvenSpace is a sub-second latency streaming demo service using [OvenMediaEngine]
   * MPEG-2 TS Container
   * Audio/Video Muxed
   * DVR
+* Sub-Second Latency Streaming using SRT
+  * Secure Reliable Transport
+  * MPEG-2 TS Container
+  * Audio/Video Muxed
 * Embedded Live Transcoder
   * Video: VP8, H.264, H.265(Hardware only), Pass-through
   * Audio: Opus, AAC, Pass-through
