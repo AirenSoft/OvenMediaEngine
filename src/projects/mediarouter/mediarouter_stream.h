@@ -1,8 +1,8 @@
 //==============================================================================
 //
-//  MediaRouteStream
+//  OvenMediaEngine
 //
-//  Created by Kwon Keuk Han
+//  Created by Keukhan
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
@@ -16,8 +16,10 @@
 
 #include "base/info/stream.h"
 #include "base/mediarouter/media_buffer.h"
-#include "base/mediarouter/mediarouter_application_connector.h"
 #include "base/mediarouter/media_type.h"
+#include "base/mediarouter/mediarouter_application_connector.h"
+#include "mediarouter_nomalize.h"
+#include "mediarouter_stats.h"
 #include "modules/managed_queue/managed_queue.h"
 
 enum class MediaRouterStreamType : int8_t
@@ -27,22 +29,20 @@ enum class MediaRouterStreamType : int8_t
 	OUTBOUND
 };
 
-
-class MediaRouteStream
+class MediaRouteStream : public MediaRouterNormalize, public MediaRouterStats
 {
 public:
 	MediaRouteStream(const std::shared_ptr<info::Stream> &stream);
-	MediaRouteStream(const std::shared_ptr<info::Stream> &stream, MediaRouterStreamType inout_type);
+	MediaRouteStream(const std::shared_ptr<info::Stream> &stream, MediaRouterStreamType type);
 	~MediaRouteStream();
 
 	// Inout Stream Type
-	void SetInoutType(MediaRouterStreamType inout_type);
-	MediaRouterStreamType GetInoutType();
+	void SetType(MediaRouterStreamType type);
+	bool IsInbound() { return _type == MediaRouterStreamType::INBOUND; }
+	bool IsOutbound() { return _type == MediaRouterStreamType::OUTBOUND; }
 
 	// Queue interfaces
 	void Push(const std::shared_ptr<MediaPacket> &media_packet);
-	bool NormalizeMediaPacket(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
-
 	std::shared_ptr<MediaPacket> PopAndNormalize();
 	
 	// Return mirror buffer reference
@@ -73,7 +73,7 @@ public:
 
 	void OnStreamPrepared(bool completed);
 	bool IsStreamPrepared();
-	bool AreAllTracksReady();
+	bool IsStreamReady();
 
 	void Flush();
 	
@@ -81,29 +81,11 @@ private:
 	void DropNonDecodingPackets();
 	void DetectAbnormalPackets(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &packet);
 
-	bool ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
-	bool ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
-	bool InsertH264SPSPPSAnnexB(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet, bool need_aud = false);
-	
-	bool InsertH264AudAnnexB(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
-	bool ProcessH265AnnexBStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
-	bool ProcessH265HVCCStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
-	bool ProcessAACRawStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
-	bool ProcessAACAdtsStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
-	bool ProcessVP8Stream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
-	bool ProcessOPUSStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
-	bool ProcessMP3Stream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
-
-	void UpdateStatistics(std::shared_ptr<MediaTrack> &media_track,  std::shared_ptr<MediaPacket> &media_packet);
-
 	bool _is_stream_prepared = false;
-	bool _are_all_tracks_parsed = false;
+	bool _is_all_tracks_parsed = false;
 
 	// Incoming/Outgoing Stream
-	MediaRouterStreamType _inout_type;
-
-	// Connector Type
-	MediaRouterApplicationConnector::ConnectorType _application_connector_type;
+	MediaRouterStreamType _type;
 
 	// Stream Information
 	std::shared_ptr<info::Stream> _stream = nullptr;
@@ -114,34 +96,10 @@ private:
 	// Packets queue
 	ov::ManagedQueue<std::shared_ptr<MediaPacket>> _packets_queue;
 
+	// Mirror buffer
 	std::vector<std::shared_ptr<MirrorBufferItem>> _mirror_buffer;
-
-	// TODO(Soulk) : Modified to use by tying statistical information into a class and creating a map with MediaTrackId as a key
 
 	// Store the correction values in case of sudden change in PTS.
 	// If the PTS suddenly increases, the filter behaves incorrectly.
 	std::map<MediaTrackId, int64_t> _pts_last;
-
-	// <TrackId, Pts>
-	std::map<MediaTrackId, int64_t> _pts_correct;
-	// Average Pts Increment
-	std::map<MediaTrackId, int64_t> _pts_avg_inc;
-
-	// Statistics
-	// <TrackId, Values>
-	std::map<MediaTrackId, int64_t> _stat_recv_pkt_lpts;
-	std::map<MediaTrackId, int64_t> _stat_recv_pkt_ldts;
-	std::map<MediaTrackId, int64_t> _stat_recv_pkt_adur;
-
-	// Time for statistics
-	ov::StopWatch _stop_watch;
-	std::chrono::time_point<std::chrono::system_clock> _last_recv_time;
-	std::chrono::time_point<std::chrono::system_clock> _stat_start_time;
-
-
-	uint32_t _warning_count_bframe;
-	uint32_t _warning_count_out_of_order;
-
-
-	void DumpPacket(std::shared_ptr<MediaPacket> &media_packet, bool dump = false);
 };
