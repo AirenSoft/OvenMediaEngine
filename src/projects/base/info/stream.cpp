@@ -213,6 +213,11 @@ namespace info
 		return _source_type;
 	}
 
+	ProviderType Stream::GetProviderType() const
+	{
+		return ::ProviderTypeFromSourceType(_source_type);
+	}
+
 	StreamRepresentationType Stream::GetRepresentationType() const
 	{
 		return _representation_type;

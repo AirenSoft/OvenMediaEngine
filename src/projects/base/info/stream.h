@@ -62,7 +62,8 @@ namespace info
 
 		uint32_t GetUptimeSec();
 		StreamSourceType GetSourceType() const;
-
+		ProviderType GetProviderType() const;
+		
 		StreamRepresentationType GetRepresentationType() const;
 		void SetRepresentationType(const StreamRepresentationType &type);
 
