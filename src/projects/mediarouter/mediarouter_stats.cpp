@@ -32,7 +32,19 @@ MediaRouterStats::~MediaRouterStats()
 	_stat_recv_pkt_ldts.clear();
 	_stat_recv_pkt_adur.clear();
 }
-void MediaRouterStats::UpdateStatistics(int8_t type, bool prepared, ov::ManagedQueue<std::shared_ptr<MediaPacket>> &packets_queue, const std::shared_ptr<info::Stream> &stream_info, std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
+
+void MediaRouterStats::Init(const std::shared_ptr<info::Stream> &stream_info)
+{
+
+}
+
+void MediaRouterStats::Update(
+	const int8_t type,
+	const bool prepared,
+	const ov::ManagedQueue<std::shared_ptr<MediaPacket>> &packets_queue,
+	const std::shared_ptr<info::Stream> &stream_info,
+	const std::shared_ptr<MediaTrack> &media_track,
+	const std::shared_ptr<MediaPacket> &media_packet)
 {
 	auto track_id = media_track->GetId();
 
@@ -74,7 +86,7 @@ void MediaRouterStats::UpdateStatistics(int8_t type, bool prepared, ov::ManagedQ
 	_stat_recv_pkt_ldts[track_id] = media_packet->GetDts();
 
 	// The packet from the provider has no duration. Do not add it to the total duration.
-	if(media_packet->GetDuration() != -1)
+	if (media_packet->GetDuration() != -1)
 	{
 		_stat_recv_pkt_adur[track_id] += media_packet->GetDuration();
 	}
@@ -106,7 +118,7 @@ void MediaRouterStats::UpdateStatistics(int8_t type, bool prepared, ov::ManagedQ
 										codec_name.CStr(),
 										scaled_last_pts,
 										scaled_acc_duration,
-										(scaled_acc_duration>0)?scaled_last_pts - scaled_acc_duration:0,
+										(scaled_acc_duration > 0) ? scaled_last_pts - scaled_acc_duration : 0,
 										timebase.CStr(),
 										track->GetTotalFrameCount(),
 										ov::Converter::ToSiString(track->GetTotalFrameBytes(), 1).CStr(),
@@ -149,7 +161,7 @@ void MediaRouterStats::UpdateStatistics(int8_t type, bool prepared, ov::ManagedQ
 									 (type == 1) ? "Inbound" : "Outbound",
 									 stream_info->GetApplicationInfo().GetVHostAppName().CStr(),
 									 stream_info->GetName().CStr(),
-									prepared ? "Started" : "Preapring",
+									 prepared ? "Started" : "Preapring",
 									 (int64_t)uptime,
 									 packets_queue.Size(),
 									 stream_info->GetMsid(),

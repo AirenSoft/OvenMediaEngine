@@ -23,10 +23,13 @@
 #include "transcoder_encoder.h"
 #include "transcoder_filter.h"
 #include "transcoder_stream_internal.h"
+#include "transcoder_events.h"
 
 class TranscodeApplication;
 
-class TranscoderStream : public ov::EnableSharedFromThis<TranscoderStream>, public TranscoderStreamInternal
+class TranscoderStream : public ov::EnableSharedFromThis<TranscoderStream>,
+						 public TranscoderStreamInternal,
+						 public TranscoderEvents
 {
 public:
 	class CompositeContext
@@ -236,8 +239,11 @@ private:
 	std::optional<std::pair<std::shared_ptr<TranscodeFilter>, std::shared_ptr<TranscodeEncoder>>> GetEncoder(MediaTrackId encoder_id);
 	void SetEncoder(MediaTrackId encoder_id, std::shared_ptr<TranscodeFilter> filter, std::shared_ptr<TranscodeEncoder> encoder);
 	void RemoveEncoders();
-	
+
+	void ProcessPacket(const std::shared_ptr<MediaPacket> &packet);
+
 	// Step 1: Decode (Decode a frame from given packets)
+	void BypassPacket(const std::shared_ptr<MediaPacket> &packet);	
 	void DecodePacket(const std::shared_ptr<MediaPacket> &packet);
 	void OnDecodedFrame(TranscodeResult result, MediaTrackId decoder_id, std::shared_ptr<MediaFrame> decoded_frame);
 	void SetLastDecodedFrame(MediaTrackId decoder_id, std::shared_ptr<MediaFrame> &decoded_frame);

@@ -26,7 +26,15 @@ public:
 	MediaRouterStats();
 	~MediaRouterStats();
 
-	void UpdateStatistics(int8_t type, bool prepared, ov::ManagedQueue<std::shared_ptr<MediaPacket>> &packets_queue, const std::shared_ptr<info::Stream> &stream_info, std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
+	void Init(const std::shared_ptr<info::Stream> &stream_info);
+
+	void Update(
+		const int8_t type,
+		const bool prepared,
+		const ov::ManagedQueue<std::shared_ptr<MediaPacket>> &packets_queue,
+		const std::shared_ptr<info::Stream> &stream_info,
+		const std::shared_ptr<MediaTrack> &media_track,
+		const std::shared_ptr<MediaPacket> &media_packet);
 
 	// <TrackId, Values>
 	std::map<MediaTrackId, int64_t> _stat_recv_pkt_lpts;

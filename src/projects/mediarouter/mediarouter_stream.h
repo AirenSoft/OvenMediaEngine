@@ -17,9 +17,9 @@
 #include "base/info/stream.h"
 #include "base/mediarouter/media_buffer.h"
 #include "base/mediarouter/media_type.h"
-#include "base/mediarouter/mediarouter_application_connector.h"
 #include "mediarouter_nomalize.h"
 #include "mediarouter_stats.h"
+#include "mediarouter_event_generator.h"
 #include "modules/managed_queue/managed_queue.h"
 
 enum class MediaRouterStreamType : int8_t
@@ -29,10 +29,9 @@ enum class MediaRouterStreamType : int8_t
 	OUTBOUND
 };
 
-class MediaRouteStream : public MediaRouterNormalize, public MediaRouterStats
+class MediaRouteStream : public MediaRouterNormalize, public MediaRouterStats, public MediaRouterEventGenerator
 {
 public:
-	MediaRouteStream(const std::shared_ptr<info::Stream> &stream);
 	MediaRouteStream(const std::shared_ptr<info::Stream> &stream, MediaRouterStreamType type);
 	~MediaRouteStream();
 

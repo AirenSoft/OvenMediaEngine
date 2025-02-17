@@ -14,6 +14,7 @@
 #include <modules/data_format/id3v2/frames/id3v2_frames.h>
 #include <modules/data_format/cue_event/cue_event.h>
 #include <modules/data_format/amf_event/amf_event.h>
+#include <modules/bitstream/h264/h264_sei.h>
 
 namespace api
 {
@@ -301,6 +302,20 @@ namespace api
 			// 	]
 			// }
 
+			// SEI Event
+			// {
+			// 	"eventFormat": "sei",
+			// 	"eventType" : "video",
+			// 	"urgent" : true,
+			// 	"events": [
+			// 		{
+			// 			"seiType" : "UserDataUnregistered",
+			// 			"data": "Hello! Digitia1212n!"  
+			// 		}
+			// 	]
+			// }
+
+
 			if (request_body.isMember("eventFormat") == false || request_body["eventFormat"].isString() == false ||
 				request_body.isMember("events") == false || request_body["events"].isArray() == false || request_body["events"].size() == 0)
 			{
@@ -381,7 +396,6 @@ namespace api
 									"Internal Server Error - Could not inject event: [%s/%s/%s]",
 									vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
 			}
-
 			return {http::StatusCode::OK};
 		}
 
@@ -438,43 +452,12 @@ namespace api
 		std::shared_ptr<pvd::Stream> StreamActionsController::GetSourceStream(const std::shared_ptr<mon::StreamMetrics> &stream)
 		{
 			// Get PrivderType from SourceType
-			ProviderType provider_type = ProviderType::Unknown;
-			switch (stream->GetSourceType())
+			ProviderType provider_type = stream->GetProviderType();
+			if(provider_type == ProviderType::Unknown)
 			{
-				case StreamSourceType::WebRTC:
-					provider_type = ProviderType::WebRTC;
-					break;
-				case StreamSourceType::Ovt:
-					provider_type = ProviderType::Ovt;
-					break;
-				case StreamSourceType::Rtmp:
-					provider_type = ProviderType::Rtmp;
-					break;
-				case StreamSourceType::Rtsp:
-					provider_type = ProviderType::Rtsp;
-					break;
-				case StreamSourceType::RtspPull:
-					provider_type = ProviderType::RtspPull;
-					break;
-				case StreamSourceType::Mpegts:
-					provider_type = ProviderType::Mpegts;
-					break;
-				case StreamSourceType::Srt:
-					provider_type = ProviderType::Srt;
-					break;
-				case StreamSourceType::Scheduled:
-					provider_type = ProviderType::Scheduled;
-					break;
-				case StreamSourceType::Multiplex:
-					provider_type = ProviderType::Multiplex;
-					break;
-				case StreamSourceType::File:
-					provider_type = ProviderType::File;
-					break;
-				case StreamSourceType::RtmpPull:
-				case StreamSourceType::Transcoder:
-					return nullptr;
+				return nullptr;
 			}
+			
 
 			auto provider = std::dynamic_pointer_cast<pvd::Provider>(ocst::Orchestrator::GetInstance()->GetProviderFromType(provider_type));
 			if (provider == nullptr)
@@ -622,6 +605,44 @@ namespace api
 			}
 
 			return nullptr;
+		}
+
+		std::shared_ptr<ov::Data> StreamActionsController::MakeSEIData(const Json::Value &events)
+		{
+			if (events.size() == 0)
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "events must have at least one event");
+			}
+
+			// only first event is used
+			auto event = events[0];
+			H264SEI::PayloadType payload_type = H264SEI::PayloadType::USER_DATA_UNREGISTERED;
+			if (event.isMember("seiType") == true && event["seiType"].isString() == true)
+			{
+				payload_type = H264SEI::StringToPayloadType(ov::String(event["seiType"].asString().c_str()));
+			}
+
+			// data (optional)
+			std::shared_ptr<ov::Data> payload_data = nullptr;
+			if (event.isMember("data") == true && event["data"].isString() == true)
+			{
+				payload_data = std::make_shared<ov::Data>(event["data"].asString().c_str(), event["data"].asString().size());
+			}
+			else
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "data is required in events");
+			}
+
+			auto current_eopch_time = H264SEI::GetCurrentEpochTimeToTimeCode();
+
+			auto sei_event = std::make_shared<H264SEI>();
+			sei_event->SetPayloadType(payload_type);
+			sei_event->SetPayloadTimeCode(current_eopch_time);
+			sei_event->SetPayloadData(payload_data);
+
+			logtd("%s", sei_event->GetInfoString().CStr());
+
+			return sei_event->Serialize();
 		}
 	} // namespace v1
 } // namespace api

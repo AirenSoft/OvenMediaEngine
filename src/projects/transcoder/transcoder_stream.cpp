@@ -412,7 +412,7 @@ bool TranscoderStream::Push(std::shared_ptr<MediaPacket> packet)
 			SendBufferedPackets();
 		}
 
-		DecodePacket(std::move(packet));
+		ProcessPacket(std::move(packet));
 	}
 	else if (GetState() == State::CREATED || GetState() == State::PREPARING)
 	{
@@ -452,7 +452,7 @@ bool TranscoderStream::SendBufferedPackets()
 
 		auto media_packet = buffered_media_packet.value();
 	
-		DecodePacket(std::move(media_packet));
+		ProcessPacket(std::move(media_packet));
 	}
 
 	return true;
@@ -1372,71 +1372,77 @@ void TranscoderStream::UpdateOutputTrack(std::shared_ptr<MediaFrame> buffer)
 	}
 }
 
+void TranscoderStream::ProcessPacket(const std::shared_ptr<MediaPacket> &packet)
+{
+	if (_input_stream->GetMsid() != packet->GetMsid() || packet == nullptr)
+	{
+		return;
+	}
+
+	BypassPacket(packet);
+
+	DecodePacket(packet);
+}
+
+void TranscoderStream::BypassPacket(const std::shared_ptr<MediaPacket> &packet)
+{
+	MediaTrackId input_track_id = packet->GetTrackId();
+
+	auto it = _link_input_to_outputs.find(input_track_id);
+	if (it == _link_input_to_outputs.end())
+	{
+		return;
+	}
+
+	auto input_track = _input_stream->GetTrack(input_track_id);
+	if (input_track == nullptr)
+	{
+		logte("%s Could not found input track. InputTrack(%d)", _log_prefix.CStr(), input_track_id);
+		return;
+	}
+
+	for (auto &[output_stream, output_track_id] : it->second)
+	{
+		auto output_track = output_stream->GetTrack(output_track_id);
+		if (output_track == nullptr)
+		{
+			logte("%s Could not found output track. OutputTrack(%d)", _log_prefix.CStr(), output_track_id);
+			continue;
+		}
+
+		// Clone the packet and send it to the output stream.
+		std::shared_ptr<MediaPacket> clone = nullptr;
+		
+		if (packet->GetBitstreamFormat() == cmn::BitstreamFormat::OVEN_EVENT)
+		{
+			auto event_packet = std::static_pointer_cast<MediaEvent>(packet);
+			clone = event_packet->Clone();
+		}
+		else 
+		{
+			clone = packet->ClonePacket();
+		}
+
+		double scale = input_track->GetTimeBase().GetExpr() / output_track->GetTimeBase().GetExpr();
+		clone->SetPts(static_cast<int64_t>((double)clone->GetPts() * scale));
+		clone->SetDts(static_cast<int64_t>((double)clone->GetDts() * scale));
+		clone->SetTrackId(output_track_id);
+
+		SendFrame(output_stream, std::move(clone));
+	}
+}
 
 void TranscoderStream::DecodePacket(const std::shared_ptr<MediaPacket> &packet)
 {
-	if(_input_stream->GetMsid() != packet->GetMsid())
-	{
-		// logtd("%s Invalid MediaStreamId. InputStream(%u), Packet(%u)", _log_prefix.CStr(), _input_stream->GetMsid(), packet->GetMsid());
-		return;
-	}
-
 	MediaTrackId input_track_id = packet->GetTrackId();
 
-	// 1. Packet to Output Stream (bypass)
-	auto output_streams = _link_input_to_outputs.find(input_track_id);
-	if (output_streams != _link_input_to_outputs.end())
-	{
-		auto &output_tracks = output_streams->second;
-
-		for (auto &[output_stream, output_track_id] : output_tracks)
-		{
-			auto input_track = _input_stream->GetTrack(input_track_id);
-			if (input_track == nullptr)
-			{
-				logte("%s Could not found input track. InputTrack(%d)", _log_prefix.CStr(), input_track_id);
-				continue;
-			}
-
-			auto output_track = output_stream->GetTrack(output_track_id);
-			if (output_track == nullptr)
-			{
-				logte("%s Could not found output track. OutputTrack(%d)", _log_prefix.CStr(), output_track_id);
-				continue;
-			}
-
-			double scale = input_track->GetTimeBase().GetExpr() / output_track->GetTimeBase().GetExpr();
-
-			// Clone the packet and send it to the output stream.
-			std::shared_ptr<MediaPacket> clone_packet = nullptr;
-			
-			if (packet->GetBitstreamFormat() == cmn::BitstreamFormat::OVEN_EVENT)
-			{
-				auto event_packet = std::static_pointer_cast<MediaEvent>(packet);
-				clone_packet = event_packet->Clone();
-			}
-			else 
-			{
-				clone_packet = packet->ClonePacket();
-			}
-			
-			clone_packet->SetTrackId(output_track_id);
-			clone_packet->SetPts((int64_t)((double)clone_packet->GetPts() * scale));
-			clone_packet->SetDts((int64_t)((double)clone_packet->GetDts() * scale));
-
-			SendFrame(output_stream, std::move(clone_packet));
-		}
-	}
-
-
-	// 2. Packet to Decoder (transcoding)
-	auto input_to_decoder_it = _link_input_to_decoder.find(input_track_id);
-	if (input_to_decoder_it == _link_input_to_decoder.end())
+	auto it = _link_input_to_decoder.find(input_track_id);
+	if (it == _link_input_to_decoder.end())
 	{
 		return;
 	}
-	auto decoder_id = input_to_decoder_it->second;
 
+	auto decoder_id = it->second;
 	auto decoder = GetDecoder(decoder_id);
 	if (decoder == nullptr)
 	{
@@ -1764,35 +1770,36 @@ void TranscoderStream::OnEncodedPacket(MediaTrackId encoder_id, std::shared_ptr<
 		return;
 	}
 
-	// Explore if output tracks exist to send encoded packets
-	auto encoder_to_outputs_it = _link_encoder_to_outputs.find(encoder_id);
-	if (encoder_to_outputs_it == _link_encoder_to_outputs.end())
+	auto it = _link_encoder_to_outputs.find(encoder_id);
+	if (it == _link_encoder_to_outputs.end())
 	{
 		return;
 	}
-	auto output_tracks = encoder_to_outputs_it->second;
+	auto output_tracks = it->second;
 
-	// If a track exists to output, copy the encoded packet and send it to that track.
+
+	// The encoded packet is used in multiple tracks. 
+	int32_t used_count = output_tracks.size();
 	for (auto &[output_stream, output_track_id] : output_tracks)
 	{
-		std::shared_ptr<MediaPacket> clone_packet = nullptr;
+		std::shared_ptr<MediaPacket> packet = nullptr;
 		
-		if (encoded_packet->GetBitstreamFormat() == cmn::BitstreamFormat::OVEN_EVENT)
+		// If the packet is used in multiple tracks, it is cloned. 
+		packet = (used_count == 1) ? encoded_packet : encoded_packet->ClonePacket();
+		if (packet == nullptr)
 		{
-			auto event_packet = std::static_pointer_cast<MediaEvent>(encoded_packet);
-			clone_packet = event_packet->Clone();
+			logte("%s Could not clone packet. Encoder(%d)", _log_prefix.CStr(), encoder_id);
+			continue;
 		}
-		else 
-		{
-			clone_packet = encoded_packet->ClonePacket();
-		}
-		clone_packet->SetTrackId(output_track_id);
+
+		packet->SetTrackId(output_track_id);
 
 		// Send the packet to MediaRouter
-		SendFrame(output_stream, std::move(clone_packet));
+		SendFrame(output_stream, std::move(packet));
+
+		used_count--;
 	}
 }
-
 
 void TranscoderStream::UpdateMsidOfOutputStreams(uint32_t msid)
 {
@@ -1809,6 +1816,7 @@ void TranscoderStream::SendFrame(std::shared_ptr<info::Stream> &stream, std::sha
 {
 	packet->SetMsid(stream->GetMsid());
 
+	// Send the packet to MediaRouter
 	bool ret = _parent->SendFrame(stream, std::move(packet));
 	if (ret == false)
 	{

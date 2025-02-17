@@ -101,6 +101,7 @@ namespace api
 			std::shared_ptr<ov::Data> MakeID3Data(const Json::Value &events); // ID3v2
 			std::shared_ptr<ov::Data> MakeCueData(const Json::Value &events); // CUE
 			std::shared_ptr<ov::Data> MakeAMFData(const Json::Value &events); // AMF
+			std::shared_ptr<ov::Data> MakeSEIData(const Json::Value &events); // SEI
 		};
 	}
 }

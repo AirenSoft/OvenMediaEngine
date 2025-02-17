@@ -36,17 +36,13 @@
 
 using namespace cmn;
 
-MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
+MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream, MediaRouterStreamType type)
 	: _stream(stream),
 	  _packets_queue(nullptr, 600)
 {
-	_type = MediaRouterStreamType::UNKNOWN;
-}
-
-MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream, MediaRouterStreamType type)
-	: MediaRouteStream(stream)
-{
 	SetType(type);
+
+	MediaRouterStats::Init(stream);
 }
 
 MediaRouteStream::~MediaRouteStream()
@@ -322,7 +318,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 
 	// Convert bitstream format and normalize (e.g. Add SPS/PPS to head of H264 IDR frame)
 	// @MediaRouterNormalize
-	if (NormalizeMediaPacket(GetStream(), media_track, pop_media_packet) == false)
+	if (MediaRouterNormalize::NormalizeMediaPacket(GetStream(), media_track, pop_media_packet) == false)
 	{
 		return nullptr;
 	}
@@ -343,11 +339,11 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 		DetectAbnormalPackets(media_track, pop_media_packet);
 	}
 
+
 	media_track->OnFrameAdded(pop_media_packet);
 
 	// Update statistics
-	// @MediaRouterStats
-	UpdateStatistics(static_cast<uint8_t>(_type), IsStreamPrepared(), _packets_queue, GetStream(), media_track, pop_media_packet);
+	MediaRouterStats::Update(static_cast<uint8_t>(_type), IsStreamPrepared(), _packets_queue, GetStream(), media_track, pop_media_packet);
 
 	// Mirror Buffer
 	_mirror_buffer.emplace_back(std::make_shared<MirrorBufferItem>(pop_media_packet));

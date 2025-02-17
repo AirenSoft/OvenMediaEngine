@@ -29,6 +29,7 @@ namespace cmn
 		H264_AVCC = 0,
 		H264_ANNEXB,		// OME's default internal bitstream format for H264
 		H264_RTP_RFC_6184,
+		HVCC, // H.265 HVCC
 		H265_ANNEXB,		// OME's default internal bitstream format for H265
 		VP8,/*raw*/			// OME's default internal bitstream format for VP8
 		VP8_RTP_RFC_7741,
@@ -38,22 +39,17 @@ namespace cmn
 		AAC_LATM,
 		OPUS,/*raw*/		// OME's default internal bitstream format for OPUS
 		OPUS_RTP_RFC_7587,
+		MP3,
 		JPEG,
 		PNG,
 		WEBP,
 
 		// For Data Track
 		ID3v2,
-
-		HVCC, // H.265 HVCC
-
-		MP3,
-
 		OVEN_EVENT, // OvenMediaEngine defined event
-
 		CUE,
-
-		AMF // AMF0
+		AMF, 				// AMF0
+		SEI					// H.264/H.265 SEI
 	};
 
 	enum class PacketType : int8_t
@@ -248,6 +244,8 @@ namespace cmn
 				return "CUE";
 			case cmn::BitstreamFormat::AMF:
 				return "AMF";
+			case cmn::BitstreamFormat::SEI:
+				return "SEI";				
 			default:
 				return "Unknown";
 		}
