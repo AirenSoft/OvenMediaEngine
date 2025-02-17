@@ -79,6 +79,128 @@ To use WebRTC/tcp, `<TcpRelay>` must be turned on in `<Bind>` setting.&#x20;
 If `<TcpForce>` is set to true, it works over TCP even if you omit the `?transport=tcp` query string from the URL.
 {% endhint %}
 
+## Simulcast
+
+Simulcast is a feature that allows the sender to deliver multiple layers of quality to the end viewer without relying on a server encoder. This is a useful feature that allows for high-quality streaming to be delivered to viewers while significantly reducing costs in environments with limited server resources.
+
+OvenMediaEngine supports webrtc simulcast since 0.18.0. OvenMediaEngine only supports simulcast with WHIP signaling, and not with OvenMediaEngine's own signaling. Simulcast is only supported with WHIP signaling, and is not supported with OvenMediaEngine's own defined signaling.
+
+You can test this using an encoder that supports WHIP and simulcast, such as OvenLiveKit or OBS. You can usually set the number of layers as below, and if you use the OvenLiveKit API directly, you can also configure the resolution and bitrate per layer.
+
+<figure><img src="../.gitbook/assets/image (45).png" alt=""><figcaption></figcaption></figure>
+
+<figure><img src="../.gitbook/assets/image (46).png" alt=""><figcaption></figcaption></figure>
+
+<figure><img src="../.gitbook/assets/image (47).png" alt=""><figcaption></figcaption></figure>
+
+### Playlist Template for Simulcast
+
+When multiple input video Tracks exist, it means that several Tracks with the same Variant Name are present. For example, consider the following basic OutputProfile and assume there are three input video Tracks. In this case, three Tracks with the Variant Name `video_bypass` will be created:
+
+```xml
+<OutputProfile>
+	<Name>stream</Name>
+	<OutputStreamName>${OriginStreamName}</OutputStreamName>
+	<Encodes>
+		<Video>
+			<Name>video_bypass</Name>
+			<Bypass>true</Bypass>
+		</Video>
+	</Encodes>
+</OutputProfile>
+```
+
+How can we structure Playlists with multiple Tracks? A simple method introduces an `Index` concept in Playlists:
+
+```xml
+<Playlist>
+	<Name>simulcast</Name>
+	<FileName>template</FileName>
+	<Options>
+		<WebRtcAutoAbr>true</WebRtcAutoAbr>
+		<HLSChunklistPathDepth>0</HLSChunklistPathDepth>
+		<EnableTsPackaging>true</EnableTsPackaging>
+	</Options>
+	<Rendition>
+		<Name>first</Name>
+		<Video>video_bypass</Video>
+		<VideoIndexHint>0</VideoIndexHint> <!-- Optional, default : 0 -->
+		<Audio>aac_audio</Audio>
+	</Rendition>
+	<Rendition>
+		<Name>second</Name>
+		<Video>video_bypass</Video>
+		<VideoIndexHint>1</VideoIndexHint> <!-- Optional, default : 0 -->
+		<Audio>aac_audio</Audio>
+		<AudioIndexHint>0</AudioIndexHint> <!-- Optional, default : 0 -->
+	</Rendition>
+</Playlist>
+```
+
+`VideoIndexHint` and `AudioIndexHint` specify the Index of input video and audio Tracks, respectively.
+
+However, when using the above configuration, if the encoder broadcasts 3 video tracks with Simulcast, it is inconvenient to change the configuration and restart the server to provide HLS/WebRTC streaming with 3 ABR layers. So I implemented a dynamic Rendition tool called RenditionTemplate.
+
+
+
+### RenditionTemplate
+
+The `RenditionTemplate` feature automatically generates Renditions based on specified conditions, eliminating the need to define each one manually. Here’s an example:
+
+```xml
+<Playlist>
+	<Name>template</Name>
+	<FileName>template</FileName>
+	<Options>
+		<WebRtcAutoAbr>true</WebRtcAutoAbr>
+		<HLSChunklistPathDepth>0</HLSChunklistPathDepth>
+		<EnableTsPackaging>true</EnableTsPackaging>
+	</Options>
+	<RenditionTemplate>
+		<Name>hls_${Height}p</Name>
+		<VideoTemplate>
+			<EncodingType>bypassed</EncodingType>
+		</VideoTemplate>
+		<AudioTemplate>
+			<VariantName>aac_audio</VariantName>
+		</AudioTemplate>
+	</RenditionTemplate>
+</Playlist>
+```
+
+This configuration creates Renditions for all bypassed videos and uses audio Tracks with the `aac_audio` Variant Name.\
+The following macros can be used in the Name of a RenditionTemplate:\
+`${Width}` | `${Height}` | `${Bitrate}` | `${Framerate}` | `${Samplerate}` | `${Channel}`
+
+You can specify conditions to control Rendition creation. For example, to include only videos with a minimum resolution of 280p and bitrate above 500kbps, or to exclude videos exceeding 1080p or 2Mbps:
+
+```xml
+<VideoTemplate>
+	<EncodingType>bypassed</EncodingType> <!-- all, bypassed, encoded -->
+	<VariantName>bypass_video</VariantName>
+	<VideoIndexHint>0</VideoIndexHint>
+	<MaxWidth>1080</MaxWidth>
+	<MinWidth>240</MinWidth>
+	<MaxHeight>720</MaxHeight>
+	<MinHeight>240</MinHeight>
+	<MaxFPS>30</MaxFPS>
+	<MinFPS>30</MinFPS>
+	<MaxBitrate>2000000</MaxBitrate>
+	<MinBitrate>500000</MinBitrate>
+</VideoTemplate>
+<AudioTemplate>
+         <EncodingType>encoded</EncodingType> <!-- all, bypassed, encoded -->
+	<VariantName>aac_audio</VariantName>
+	<MaxBitrate>128000</MaxBitrate>
+	<MinBitrate>128000</MinBitrate>
+	<MaxSamplerate>48000</MaxSamplerate>
+	<MinSamplerate>48000</MinSamplerate>
+	<MaxChannel>2</MaxChannel>
+	<MinChannel>2</MinChannel>
+	<AudioIndexHint>0</AudioIndexHint>
+</AudioTemplate>
+```
+
 ## WebRTC Producer
 
 We provide a demo page so you can easily test your WebRTC input. You can access the demo page at the URL below.
@@ -88,7 +210,7 @@ We provide a demo page so you can easily test your WebRTC input. You can access 
 ![](<../.gitbook/assets/image (4) (1).png>)
 
 {% hint style="warning" %}
-The getUserMedia API to access the local device only works in a [secure context](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia#privacy\_and\_security). So, the WebRTC Input demo page can only work on the https site \*\*\*\* [**https**://demo.ovenplayer.com/demo\_input.html](https://demo.ovenplayer.com/demo\_input.html). This means that due to [mixed content](https://developer.mozilla.org/en-US/docs/Web/Security/Mixed\_content) you have to install the certificate in OvenMediaEngine and use the signaling URL as wss to test this. If you can't install the certificate in OvenMediaEngine, you can temporarily test it by allowing the insecure content of the demo.ovenplayer.com URL in your browser.
+The getUserMedia API to access the local device only works in a [secure context](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia#privacy_and_security). So, the WebRTC Input demo page can only work on the https site \*\*\*\* [**https**://demo.ovenplayer.com/demo\_input.html](https://demo.ovenplayer.com/demo_input.html). This means that due to [mixed content](https://developer.mozilla.org/en-US/docs/Web/Security/Mixed_content) you have to install the certificate in OvenMediaEngine and use the signaling URL as wss to test this. If you can't install the certificate in OvenMediaEngine, you can temporarily test it by allowing the insecure content of the demo.ovenplayer.com URL in your browser.
 {% endhint %}
 
 ### Self-defined WebRTC Ingest Signaling Protocol

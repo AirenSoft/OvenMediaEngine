@@ -13,7 +13,7 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
 ## Features
 
 * **Ingest**
-  * Push: WebRTC, WHIP, SRT, RTMP, MPEG-2 TS
+  * Push: WebRTC, WHIP (Simulcast), SRT, RTMP, MPEG-2 TS
   * Pull: RTSP
   * Scheduled Channel (Pre-recorded Live)
   * Multiplex Channel (Duplicate stream / Mux tracks)

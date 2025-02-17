@@ -35,6 +35,20 @@ Scheduled Channel creates/updates/deletes streams by creating/editing/deleting f
         <BypassTranscoder>false</BypassTranscoder>
         <VideoTrack>true</VideoTrack>
         <AudioTrack>true</AudioTrack>
+        <AudioMap> <!-- optional, only needed if you want to enable multilingual audio -->
+	    <Item>
+	        <Name>English</Name>
+		<Language>en</Language> 
+	    </Item>
+	    <Item>
+		<Name>Korean</Name>
+		<Language>ko</Language> 
+	    </Item>
+	    <Item>
+		<Name>Japanese</Name>
+		<Language>ja</Language> 
+	    </Item>
+        </AudioMap>
     </Stream>
     
     <FallbackProgram> <!-- Not yet supported -->
@@ -66,6 +80,9 @@ Determines whether to use the video track. If VideoTrack is set to true and ther
 
 `Stream.AudioTrack (optional, default: true)`\
 Determines whether to use the audio track. If AudioTrack is set to true and there's no audio track in the Item, an error will occur.
+
+`Stream.AudioMap (optional, default: false)`\
+To enable multiple audio tracks (multilingual audio) in ScheduleChannel, enable AudioMap. It is important that all scheduled live sources and file sources provide audio tracks equal to or greater than the number of audio tracks defined in AudioMap. If you define 3 AudioMaps, but the file source or live source provides less than 3 audio tracks, the Program will generate an error. If you provide more audio tracks than the defined AudioMaps, they will be mapped in order and the rest will be ignored.
 
 `FallbackProgram (optional)`\
 It is a program that switches automatically when there is no program scheduled at the current time or an error occurs in an item. If the program is updated at the current time or the item returns to normal, it will fail back to the original program. Both files and live can be used for items in FallbackProgram. However, it is recommended to use a stable file.
