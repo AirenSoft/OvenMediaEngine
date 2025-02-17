@@ -169,7 +169,7 @@ namespace bmff
 		return true;
 	}
 
-	int64_t FMP4Storage::GetTargetSegmentDuration() const
+	double FMP4Storage::GetTargetSegmentDuration() const
 	{
 		return _target_segment_duration_ms;
 	}
@@ -317,7 +317,7 @@ namespace bmff
 		return segment;
 	}
 
-	bool FMP4Storage::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent, bool last_chunk)
+	bool FMP4Storage::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent, bool last_chunk, const std::vector<Marker> &markers)
 	{
 		auto segment = GetLastSegment();
 		if (segment == nullptr || segment->IsCompleted() == true)
@@ -330,17 +330,28 @@ namespace bmff
 			return false;
 		}
 
+		segment->AddMarkers(markers);
+
 		// Complete Segment if segment duration is over and new chunk data is independent(new segment should be started with independent chunk)
 		if (last_chunk == true)
 		{
 			segment->SetCompleted();
 
 			logtd("Segment[%u] is created : track(%u), duration(%u) chunks(%u)", segment->GetNumber(), _track->GetId(),segment->GetDuration(), segment->GetChunkCount());
-
-			// avg segment duration 
-			_target_segment_duration_ms -= segment->GetDuration();
-			_target_segment_duration_ms += _config.segment_duration_ms;
-			_target_segment_duration_ms = std::max(_target_segment_duration_ms, static_cast<int64_t>(_config.segment_duration_ms / 2));
+			
+			if (segment->HasMarker())
+			{
+				// If the segment outputted by markers, it is not a normal segment.
+				_target_segment_duration_ms = _config.segment_duration_ms;
+			}
+			else 
+			{
+				// avg segment duration 
+				_target_segment_duration_ms -= segment->GetDuration();
+				_target_segment_duration_ms += static_cast<double>(_config.segment_duration_ms);
+				// Adjust too short segment duration
+				_target_segment_duration_ms = std::max(_target_segment_duration_ms, static_cast<double>(_config.segment_duration_ms / 2));
+			}
 			
 			if (segment->GetDuration() >= _config.segment_duration_ms * 1.2)
 			{
@@ -355,7 +366,7 @@ namespace bmff
 
 			segment->SetCompleted();
 
-			_target_segment_duration_ms = std::max(_target_segment_duration_ms, static_cast<int64_t>(_config.segment_duration_ms / 2));
+			_target_segment_duration_ms = std::max(_target_segment_duration_ms, static_cast<double>(_config.segment_duration_ms / 2));
 		}
 
 		_max_chunk_duration_ms = std::max(_max_chunk_duration_ms, duration_ms);

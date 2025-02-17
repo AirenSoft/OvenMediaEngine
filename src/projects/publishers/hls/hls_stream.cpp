@@ -336,10 +336,19 @@ void HlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 		SendBufferedPackets();
 	}
 
+	auto data_track = GetTrack(media_packet->GetTrackId());
+	if (data_track == nullptr)
+	{
+		logtw("Could not find track. id: %d", media_packet->GetTrackId());
+		return;
+	}
+
 	if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::CUE)
 	{
-		mpegts::Marker marker;
-		marker.timestamp = media_packet->GetDts();
+		Marker marker;
+
+		// Rescale to the timescale of MPEG-TS (90kHz)
+		marker.timestamp = static_cast<double>(media_packet->GetDts()) / data_track->GetTimeBase().GetTimescale() * mpegts::TIMEBASE_DBL;
 		marker.data = media_packet->GetData()->Clone();
 
 		// Parse the cue data
@@ -356,22 +365,23 @@ void HlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 		for (auto &it : _packagers)
 		{
 			auto packager = it.second;
-			auto result = packager->InsertMarker(media_packet->GetTrackId(), marker);
+			auto result = packager->InsertMarker(marker);
 
 			if (result == true && cue_event->GetCueType() == CueEvent::CueType::OUT)
 			{
 				// Make CUE-IN event after the duration
 				auto duration_msec = cue_event->GetDurationMsec();
 				auto data_track = GetTrack(media_packet->GetTrackId());
-				auto cue_in_timestamp = media_packet->GetDts() + (duration_msec * data_track->GetTimeBase().GetTimescale() / 1000);
+				auto cue_in_timestamp = media_packet->GetDts() + (static_cast<double>(duration_msec) / 1000.0 * data_track->GetTimeBase().GetTimescale());
 
 				// Create CUE-IN event
-				mpegts::Marker cue_in_marker;
-				cue_in_marker.timestamp = cue_in_timestamp;
+				Marker cue_in_marker;
+				// Rescale to the timescale of MPEG-TS (90kHz)
+				cue_in_marker.timestamp = static_cast<double>(cue_in_timestamp) / data_track->GetTimeBase().GetTimescale() * mpegts::TIMEBASE_DBL;
 				cue_in_marker.tag = "CueEvent-IN";
 				cue_in_marker.data = CueEvent::Create(CueEvent::CueType::IN, 0)->Serialize();
 
-				packager->InsertMarker(media_packet->GetTrackId(), cue_in_marker);
+				packager->InsertMarker(cue_in_marker);
 			}
 		}
 

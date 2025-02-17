@@ -9,6 +9,7 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <modules/marker/marker_box.h>
 
 namespace bmff
 {
@@ -175,6 +176,26 @@ namespace bmff
 			return _chunks[index];
 		}
 
+		bool HasMarker() const
+		{
+			return _markers.empty() == false;
+		}
+
+		void SetMarkers(const std::vector<Marker> &markers)
+		{
+			_markers = markers;
+		}
+
+		void AddMarkers(const std::vector<Marker> &markers)
+		{
+			_markers.insert(_markers.end(), markers.begin(), markers.end());
+		}
+
+		const std::vector<Marker> &GetMarkers() const
+		{
+			return _markers;
+		}
+
 	private:
 		bool _is_completed = false;
 
@@ -190,5 +211,7 @@ namespace bmff
 
 		// Segment Data
 		std::shared_ptr<ov::Data> _data;
+
+		std::vector<Marker> _markers;
 	};
 }

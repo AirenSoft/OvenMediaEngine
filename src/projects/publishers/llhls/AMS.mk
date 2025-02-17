@@ -3,7 +3,8 @@ include $(DEFAULT_VARIABLES)
 
 LOCAL_STATIC_LIBRARIES := \
 	bmff_container \
-	cpix_client
+	cpix_client \
+	marker
 
 LOCAL_TARGET := llhls_publisher
 

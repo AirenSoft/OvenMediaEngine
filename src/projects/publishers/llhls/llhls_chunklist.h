@@ -11,6 +11,7 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/info/media_track.h>
 #include <base/mediarouter/media_buffer.h>
+#include <modules/marker/marker_box.h>
 
 #include "modules/containers/bmff/cenc.h"
 
@@ -116,6 +117,11 @@ public:
 
 			_duration += partial_segment->GetDuration();
 
+			if (partial_segment->HasMarker())
+			{
+				SetMarkers(partial_segment->GetMarkers());
+			}
+
 			_partial_segments.push_back(partial_segment);
 
 			return true;
@@ -166,6 +172,21 @@ public:
 			return start_date;
 		}
 
+		bool HasMarker() const
+		{
+			return _markers.empty() == false;
+		}
+
+		void SetMarkers(const std::vector<Marker> &markers)
+		{
+			_markers = markers;
+		}
+
+		const std::vector<Marker> &GetMarkers() const
+		{
+			return _markers;
+		}
+
 		ov::String ToString() const
 		{
 			return ov::String::FormatString("seq(%d) start_date(%s) duration(%f) size(%lu) url(%s) next_url(%s) is_independent(%s) completed(%s)", _sequence, GetStartDate().CStr(), _duration, _size, _url.CStr(), _next_url.CStr(), _is_independent ? "true" : "false", _completed ? "true" : "false");
@@ -182,6 +203,8 @@ public:
 		bool _completed = false;
 
 		std::deque<std::shared_ptr<SegmentInfo>> _partial_segments;
+
+		std::vector<Marker> _markers;
 	}; // class SegmentInfo
 
 	LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, 
@@ -228,6 +251,8 @@ private:
 	ov::String MakeChunklist(const ov::String &query_string, bool skip, bool legacy, bool rewind, bool vod = false, uint32_t vod_start_segment_number = 0) const;
 
 	ov::String MakeExtXKey() const;
+
+	ov::String MakeMarkers(const std::vector<Marker> &markers) const;
 
 	std::shared_ptr<const MediaTrack> _track;
 

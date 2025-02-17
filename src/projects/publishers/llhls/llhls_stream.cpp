@@ -15,6 +15,8 @@
 
 #include <pugixml-1.9/src/pugixml.hpp>
 
+#include <modules/data_format/cue_event/cue_event.h>
+
 #include "llhls_application.h"
 #include "llhls_private.h"
 #include "llhls_session.h"
@@ -1015,15 +1017,16 @@ void LLHlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packe
 
 void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (media_packet->GetBitstreamFormat() != cmn::BitstreamFormat::ID3v2)
-	{
-		// Not supported
-		return;
-	}
-
 	if (GetState() == State::CREATED)
 	{
 		BufferMediaPacketUntilReadyToPlay(media_packet);
+		return;
+	}
+
+	auto data_track = GetTrack(media_packet->GetTrackId());
+	if (data_track == nullptr)
+	{
+		logtw("Could not find track. id: %d", media_packet->GetTrackId());
 		return;
 	}
 
@@ -1032,27 +1035,77 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 		SendBufferedPackets();
 	}
 
-	auto target_media_type = (media_packet->GetPacketType() == cmn::PacketType::VIDEO_EVENT) ? cmn::MediaType::Video : cmn::MediaType::Audio;
-
-	for (const auto &it : GetTracks())
+	if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::ID3v2)
 	{
-		auto track = it.second;
+		auto target_media_type = (media_packet->GetPacketType() == cmn::PacketType::VIDEO_EVENT) ? cmn::MediaType::Video : cmn::MediaType::Audio;
 
-		if (media_packet->GetPacketType() != cmn::PacketType::EVENT && track->GetMediaType() != target_media_type)
+		for (const auto &it : GetTracks())
 		{
-			continue;
-		}
+			auto track = it.second;
+			if (media_packet->GetPacketType() != cmn::PacketType::EVENT && track->GetMediaType() != target_media_type)
+			{
+				continue;
+			}
 
-		// Get Packager
-		auto packager = GetPackager(track->GetId());
-		if (packager == nullptr)
+			// Get Packager
+			auto packager = GetPackager(track->GetId());
+			if (packager == nullptr)
+			{
+				logtd("Could not find packager. track id: %d", track->GetId());
+				continue;
+			}
+			logtd("AppendSample : track(%d) length(%d)", media_packet->GetTrackId(), media_packet->GetDataLength());
+
+			packager->ReserveDataPacket(media_packet);
+		}
+	}
+	else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::CUE)
+	{
+		// Insert marker to all packagers
+		for (const auto &it : GetTracks())
 		{
-			logtd("Could not find packager. track id: %d", track->GetId());
-			continue;
-		}
-		logtd("AppendSample : track(%d) length(%d)", media_packet->GetTrackId(), media_packet->GetDataLength());
+			auto track = it.second;
+			
+			// Only video and audio tracks are supported
+			if (track->GetMediaType() != cmn::MediaType::Video && track->GetMediaType() != cmn::MediaType::Audio)
+			{
+				continue;
+			}
 
-		packager->ReserveDataPacket(media_packet);
+			Marker marker;
+			marker.timestamp = static_cast<double>(media_packet->GetDts()) / data_track->GetTimeBase().GetTimescale() * track->GetTimeBase().GetTimescale();
+			marker.data = media_packet->GetData()->Clone();
+	
+			// Parse the cue data
+			auto cue_event = CueEvent::Parse(marker.data);
+			if (cue_event == nullptr)
+			{
+				logte("(%s/%s) Failed to parse the cue event data", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+				return;
+			}
+	
+			marker.tag = ov::String::FormatString("CueEvent-%s", cue_event->GetCueTypeName().CStr());
+
+			// Get Packager
+			auto packager = GetPackager(track->GetId());
+			auto result = packager->InsertMarker(marker);
+
+			if (result == true && cue_event->GetCueType() == CueEvent::CueType::OUT)
+			{
+				// Make CUE-IN event after the duration
+				auto duration_msec = cue_event->GetDurationMsec();
+				auto data_track = GetTrack(media_packet->GetTrackId());
+				auto cue_in_timestamp = media_packet->GetDts() + (static_cast<double>(duration_msec) / 1000.0 * data_track->GetTimeBase().GetTimescale());
+
+				// Create CUE-IN event
+				Marker cue_in_marker;
+				cue_in_marker.timestamp = static_cast<double>(cue_in_timestamp) / data_track->GetTimeBase().GetTimescale() * track->GetTimeBase().GetTimescale();
+				cue_in_marker.tag = "CueEvent-IN";
+				cue_in_marker.data = CueEvent::Create(CueEvent::CueType::IN, 0)->Serialize();
+
+				packager->InsertMarker(cue_in_marker);
+			}
+		}
 	}
 }
 
@@ -1474,6 +1527,21 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 												  GetPartialSegmentName(track_id, segment_number, chunk->GetNumber()),
 												  GetNextPartialSegmentName(track_id, segment_number, chunk->GetNumber(), last_chunk),
 												  chunk->IsIndependent(), last_chunk);
+
+	// Set markers
+	auto segment = storage->GetMediaSegment(segment_number);
+	if (segment != nullptr)
+	{
+		if (segment->HasMarker() == true)
+		{
+			logti("Media chunk has markers : track_id = %d, segment_number = %d, chunk_number = %d", track_id, segment_number, chunk_number);
+			for (const auto &marker : segment->GetMarkers())
+			{
+				logti("Marker : timestamp = %lld, tag = %s", marker.timestamp, marker.tag.CStr());
+			}
+			chunk_info.SetMarkers(segment->GetMarkers());
+		}
+	}
 
 	playlist->AppendPartialSegmentInfo(segment_number, chunk_info);
 

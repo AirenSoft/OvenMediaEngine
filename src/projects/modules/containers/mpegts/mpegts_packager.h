@@ -11,18 +11,13 @@
 #include <base/info/media_track.h>
 #include <base/mediarouter/media_buffer.h>
 
+#include <modules/marker/marker_box.h>
+
 #include "mpegts_packetizer.h"
 
 namespace mpegts
 {
     constexpr size_t SEGMENT_BUFFER_SIZE = 2000000;
-
-	struct Marker
-	{
-		int64_t timestamp = -1;
-		ov::String tag;
-		std::shared_ptr<ov::Data> data = nullptr;
-	};
 
     class Segment
     {
@@ -385,7 +380,7 @@ namespace mpegts
 	// DVR off, Retention > 0 	: Buffer --> Retention
 	// DVR on, Retention > 0	: Buffer --> DVR(file) --> Retention(file) 
 	// DVR on, Retention 0		: Buffer --> DVR(file)
-    class Packager : public PacketizerSink
+    class Packager : public PacketizerSink, public MarkerBox
     {
     public:
         struct Config
@@ -406,10 +401,6 @@ namespace mpegts
         ~Packager();
 
 		bool AddSink(const std::shared_ptr<PackagerSink> &sink);
-
-		// When a marker is added, create a segment as soon as possible and send the information to the Sink.
-		// track_id is data track id, not the main track id
-		bool InsertMarker(uint32_t data_track_id, const Marker &marker);
 
         ////////////////////////////////
         // PacketizerSink interface
@@ -465,10 +456,6 @@ namespace mpegts
 
 		ov::String GetDvrStoragePath() const;
 		ov::String GetSegmentFilePath(uint64_t segment_id) const;
-
-		bool HasMarker() const;
-		const Marker GetFirstMarker() const;
-		bool RemoveMarker(int64_t timestamp);
        
         ov::String _packager_id;
         Config _config;
@@ -484,9 +471,6 @@ namespace mpegts
         std::vector<std::shared_ptr<mpegts::Packet>> _psi_packets;
         std::shared_ptr<ov::Data> _psi_packet_data;
 
-		std::map<int64_t, Marker> _markers;
-		mutable std::shared_mutex _markers_guard;
-
         uint64_t _last_segment_id = 0;
 
         std::map<uint64_t, std::shared_ptr<Segment>> _segments;
@@ -501,7 +485,5 @@ namespace mpegts
 		mutable std::shared_mutex _retained_segments_guard;
 
 		std::vector<std::shared_ptr<PackagerSink>> _sinks;
-
-		Marker _last_removed_marker;
     };
 }

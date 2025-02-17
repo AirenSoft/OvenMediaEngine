@@ -10,13 +10,14 @@
 
 #include <base/info/media_track.h>
 #include <base/mediarouter/media_buffer.h>
+#include <modules/marker/marker_box.h>
 
 #include "../bmff_packager.h"
 #include "fmp4_storage.h"
 
 namespace bmff
 {
-	class FMP4Packager : public Packager
+	class FMP4Packager : public Packager, public MarkerBox
 	{
 	public:
 		struct Config
@@ -61,5 +62,11 @@ namespace bmff
 		double _target_chunk_duration_ms = 0.0;
 
 		std::queue<std::shared_ptr<const MediaPacket>> _reserved_data_packets;
+
+		std::map<int64_t, Marker> _markers;
+		mutable std::shared_mutex _markers_guard;
+
+		// if cue event is found, flush the samples immediately
+		bool _force_segment_flush = false;
 	};
 }
