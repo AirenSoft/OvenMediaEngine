@@ -8,7 +8,7 @@ on:
 jobs:
   push_to_registry:
     name: Push Docker image to Docker Hub
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       packages: write
       contents: read
@@ -31,6 +31,9 @@ jobs:
         
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+        with:
+          # https://github.com/docker/setup-qemu-action/issues/198
+          image: tonistiigi/binfmt:qemu-v8.1.5
         
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
