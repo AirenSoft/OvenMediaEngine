@@ -1,0 +1,38 @@
+name: macos
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macOS-latest
+    name: "macOS Clang (C++11, Release)"
+    strategy:
+      fail-fast: true
+      matrix:
+        config:
+            - USE_STD_FORMAT: 'ON'
+              BUILD_EXAMPLE: 'OFF'
+            - USE_STD_FORMAT: 'OFF'
+              BUILD_EXAMPLE: 'ON'
+              
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          mkdir -p build && cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_STANDARD=11 \
+            -DSPDLOG_BUILD_EXAMPLE=${{ matrix.config.BUILD_EXAMPLE }} \
+            -DSPDLOG_BUILD_EXAMPLE_HO=${{ matrix.config.BUILD_EXAMPLE }} \
+            -DSPDLOG_BUILD_WARNINGS=ON \
+            -DSPDLOG_BUILD_BENCH=OFF \
+            -DSPDLOG_BUILD_TESTS=ON \
+            -DSPDLOG_BUILD_TESTS_HO=OFF \
+            -DSPDLOG_USE_STD_FORMAT=${{ matrix.config.USE_STD_FORMAT }} \
+            -DSPDLOG_SANITIZE_ADDRESS=OFF
+          make -j 4
+          ctest -j 4 --output-on-failure

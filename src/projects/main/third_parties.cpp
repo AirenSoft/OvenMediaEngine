@@ -15,6 +15,8 @@
 #	include <jemalloc/jemalloc.h>
 #endif	// !DEBUG
 
+#include <spdlog/spdlog.h>
+
 #include <regex>
 
 //--------------------------------------------------------------------
@@ -329,4 +331,16 @@ const char *GetJemallocVersion()
 #else	// !DEBUG
 	return "(disabled)";
 #endif	// !DEBUG
+}
+
+const char *GetSpdlogVersion()
+{
+	static char version[32]{0};
+
+	if (version[0] == '\0')
+	{
+		::snprintf(version, sizeof(version), "%d.%d.%d", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
+	}
+
+	return version;
 }

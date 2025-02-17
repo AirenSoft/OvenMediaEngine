@@ -39,4 +39,5 @@ void PrintBanner()
 	logti("    Configuration: %s", GetOpenSslConfiguration());
 	logti("  JsonCpp: %s", GetJsonCppVersion());
 	logti("  jemalloc: %s", GetJemallocVersion());
+	logti("  spdlog: %s", GetSpdlogVersion());
 }

@@ -55,3 +55,8 @@ const char *GetJsonCppVersion();
 // Related to jemalloc
 //--------------------------------------------------------------------
 const char *GetJemallocVersion();
+
+//--------------------------------------------------------------------
+// Related to spdlog
+//--------------------------------------------------------------------
+const char *GetSpdlogVersion();
