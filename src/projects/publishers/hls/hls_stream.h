@@ -118,6 +118,4 @@ private:
 	// Append #EXT-X-ENDLIST all chunklists, and no more update segment and chunklist
 	bool _concluded = false;
 	mutable std::shared_mutex _concluded_lock;
-
-	bool _is_first_segment = true;
 };

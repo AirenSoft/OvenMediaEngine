@@ -41,7 +41,7 @@ void HlsMediaPlaylist::SetEndList()
 
 bool HlsMediaPlaylist::OnSegmentCreated(const std::shared_ptr<mpegts::Segment> &segment)
 {
-	OV_ASSERT(_wallclock_offset_ms > 0, "Wallclock offset is not set");
+	OV_ASSERT(_wallclock_offset_ms != INT64_MIN, "Wallclock offset is not set");
 
 	std::lock_guard<std::shared_mutex> lock(_segments_mutex);
 
