@@ -27,7 +27,6 @@ Root path where the schedule file is located. If you specify a relative path, th
 
 Scheduled Channel creates/updates/deletes streams by creating/editing/deleting files with the .sch extension in the ScheduleFileDir path. Schedule files (.sch) use the following XML format. When a `<Stream Name>.sch` file is created in ScheduleFileDir, OvenMediaEngine analyzes the file and creates a Schedule Channel with `<Stream Name>`. If the contents of `<Stream Name>.sch` are changed, the Schedule Channel is updated, and if the file is deleted, the stream is deleted.
 
-````xml
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <Schedule>
@@ -66,7 +65,6 @@ Scheduled Channel creates/updates/deletes streams by creating/editing/deleting f
     </Program>
 </Schedule>
 ```
-````
 
 `Stream (required)`\
 This is the stream information that the Channel needs to create.
