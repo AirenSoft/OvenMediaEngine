@@ -34,7 +34,7 @@ void MediaRouterEventGenerator::Init(const std::shared_ptr<info::Stream> &stream
 	}
 	if(_cfg_path.Get(0) != '/')
 	{
-		_cfg_path = ov::PathManager::GetAppPath() + _cfg_path;
+		_cfg_path = ov::PathManager::GetAppPath("conf") + _cfg_path;
 	}
 
 	logtd("Enabled: %s, Path:%s", _cfg_enabled ? "true" : "false", _cfg_path.CStr());
