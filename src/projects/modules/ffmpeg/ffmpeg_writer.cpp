@@ -399,7 +399,7 @@ namespace ffmpeg
 
 		std::unique_lock<std::shared_mutex> mlock(_av_format_lock);
 
-		int error = av_interleaved_write_frame(av_format.get(), &av_packet);
+		int error = ::av_write_frame(av_format.get(), &av_packet);
 		if (error != 0)
 		{
 			SetState(WriterStateError);
