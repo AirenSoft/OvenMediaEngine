@@ -126,7 +126,7 @@ namespace pvd
 			}
 			timestamp = _last_media_timestamp_ms + _elapsed_from_last_media_timestamp.Elapsed();
 
-			logti("SendDataFrame - %s/%s(%u) - last_media_timestamp_ms: %lld, elapsed_from_last_media_timestamp: %lld, timestamp: %lld",
+			logtd("SendDataFrame - %s/%s(%u) - last_media_timestamp_ms: %lld, elapsed_from_last_media_timestamp: %lld, timestamp: %lld",
 				  GetApplicationName(), GetName().CStr(), GetId(),
 				  _last_media_timestamp_ms, _elapsed_from_last_media_timestamp.Elapsed(), timestamp);
 		}
