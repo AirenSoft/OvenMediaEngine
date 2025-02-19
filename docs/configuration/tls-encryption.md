@@ -3,8 +3,7 @@
 Most browsers can't load resources via HTTP and WS (WebSocket) from HTTPS web pages secured with TLS. Therefore, if the player is on an HTTPS page, the player must request streaming through "https" and "wss" URLs secured with TLS. In this case, you must apply the TLS certificate to the OvenMediaEngine.
 
 ### Docker
-You can enable the #commented out setting in volumes to link certificates from the host machine, from the docker compose file or flag that through the creation command, 
-
+To link certificates from your Docker host, uncomment the example in the Docker compose file or manually connect a volume in the Docker run command, e.g. -v ~/local/cert/path:/opt/ovenmediaengine/bin/certs
 You can set the port for TLS in `TLSPort`. Currently, LLHLS and WebRTC Signaling support TLS.
 
 ```markup
