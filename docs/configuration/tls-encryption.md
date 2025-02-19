@@ -81,14 +81,13 @@ To enable HTTP for HLS and WebRTC signaling servers, you must enable the TLS ele
 Assuming the certificate settings are correctly configured, WebRTC streaming can then be played via the wss://url protocol, while LLHLS streaming can be accessed via [https://url](https://url/).
 
 ### Let's Encrypt, 
-
-It is likely that you used certbot to create your certificates, if so you likely generated files in a .PEM format if this is the case the correct syntax for these in your Server.xml is 
+If you used certbot to create your certificates, the PEM files it creates can be linked in your Server.xml like this:
 
 ```markup
 			<!-- Settings for multi ip/domain and TLS -->
 			<Host>
 				<Names>
-					<Name>live.johnrogerscolour.co.uk</Name>
+					<Name>example.com</Name>
 				</Names>
 				<TLS>
 					<CertPath>/opt/ovenmediaengine/bin/cert/live/example.com/cert.pem</CertPath>
