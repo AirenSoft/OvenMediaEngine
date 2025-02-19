@@ -261,7 +261,7 @@ namespace mpegts
 
 			logtd("Stream(%s) Main Track(%u) main_segment_base_timestamp(%lld) main_segment_duration(%lld) main_segment_duration_ms(%f) main_segment_end_timestamp(%lld)", _config.stream_id_meta.CStr(), _main_track_id, main_segment_base_timestamp, main_segment_duration, main_segment_duration_ms, main_segment_end_timestamp);
 
-			auto markers = PopMarkers(main_segment_base_timestamp, main_segment_end_timestamp);
+			markers = PopMarkers(main_segment_base_timestamp, main_segment_end_timestamp);
 			RemoveExpiredMarkers(main_segment_base_timestamp);
 			force_create = true;
 		}
