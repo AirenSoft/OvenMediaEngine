@@ -1065,10 +1065,17 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 		for (const auto &it : GetTracks())
 		{
 			auto track = it.second;
-			
 			// Only video and audio tracks are supported
 			if (track->GetMediaType() != cmn::MediaType::Video && track->GetMediaType() != cmn::MediaType::Audio)
 			{
+				continue;
+			}
+
+			// Get Packager
+			auto packager = GetPackager(track->GetId());
+			if (packager == nullptr)
+			{
+				logtd("Could not find packager. track id: %d", track->GetId());
 				continue;
 			}
 
@@ -1086,8 +1093,6 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 	
 			marker.tag = ov::String::FormatString("CueEvent-%s", cue_event->GetCueTypeName().CStr());
 
-			// Get Packager
-			auto packager = GetPackager(track->GetId());
 			auto result = packager->InsertMarker(marker);
 
 			if (result == true && cue_event->GetCueType() == CueEvent::CueType::OUT)
