@@ -27,8 +27,10 @@ protected:
 	bool HasMarker() const;
 	// Has marker with the given range
 	bool HasMarker(int64_t start_timestamp, int64_t end_timestamp) const;
+	bool HasMarker(int64_t end_timestamp) const;
 	const Marker GetFirstMarker() const;
 	std::vector<Marker> PopMarkers(int64_t start_timestamp, int64_t end_timestamp);
+	std::vector<Marker> PopMarkers(int64_t end_timestamp);
 	bool RemoveMarker(int64_t timestamp);
 	// remove expired markers
 	void RemoveExpiredMarkers(int64_t current_timestamp);

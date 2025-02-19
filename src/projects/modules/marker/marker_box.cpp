@@ -80,6 +80,21 @@ bool MarkerBox::HasMarker(int64_t start_timestamp, int64_t end_timestamp) const
 	return false;
 }
 
+bool MarkerBox::HasMarker(int64_t end_timestamp) const
+{
+	std::shared_lock<std::shared_mutex> lock(_markers_guard);
+	for (auto &it : _markers)
+	{
+		auto &marker = it.second;
+		if (marker.timestamp < end_timestamp)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 const Marker MarkerBox::GetFirstMarker() const
 {
 	std::shared_lock<std::shared_mutex> lock(_markers_guard);
@@ -100,6 +115,28 @@ std::vector<Marker> MarkerBox::PopMarkers(int64_t start_timestamp, int64_t end_t
 	{
 		auto &marker = it->second;
 		if (marker.timestamp >= start_timestamp && marker.timestamp < end_timestamp)
+		{
+			markers.push_back(marker);
+			it = _markers.erase(it);
+		}
+		else
+		{
+			++it;
+		}
+	}
+
+	return markers;
+}
+
+std::vector<Marker> MarkerBox::PopMarkers(int64_t end_timestamp)
+{
+	std::lock_guard<std::shared_mutex> lock(_markers_guard);
+
+	std::vector<Marker> markers;
+	for (auto it = _markers.begin(); it != _markers.end();)
+	{
+		auto &marker = it->second;
+		if (marker.timestamp < end_timestamp)
 		{
 			markers.push_back(marker);
 			it = _markers.erase(it);

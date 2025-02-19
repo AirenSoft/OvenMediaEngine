@@ -162,7 +162,7 @@ namespace bmff
 			// If the CUE-OUT/IN event is included in the samples time range, flush the samples as soon as possible.
 			// samples->GetStartTimestamp() <= CUE events < samples->GetEndTimestamp()
 			
-			if (_force_segment_flush == false && HasMarker(samples->GetStartTimestamp(), samples->GetEndTimestamp()))
+			if (_force_segment_flush == false && HasMarker(samples->GetEndTimestamp()))
 			{
 				auto marker = GetFirstMarker();
 
@@ -264,7 +264,7 @@ namespace bmff
 
 				auto chunk = chunk_stream.GetDataPointer();
 
-				std::vector<Marker> markers = PopMarkers(samples->GetStartTimestamp(), samples->GetEndTimestamp());
+				std::vector<Marker> markers = PopMarkers(samples->GetEndTimestamp());
 				RemoveExpiredMarkers(samples->GetStartTimestamp());
 
 				if (_storage != nullptr && _storage->AppendMediaChunk(chunk, 

@@ -136,7 +136,7 @@ namespace mpegts
 
 		if (track_id == _main_track_id)
 		{
-			if (_force_make_boundary == false && HasMarker(sample._dts, sample._dts + sample._duration) == true)
+			if (_force_make_boundary == false && HasMarker(sample._dts + sample._duration) == true)
 			{
 				logti("Stream(%s) Track(%u) has a marker at %lld (%lld - %lld), force to create a new boundary", _config.stream_id_meta.CStr(), track_id, sample._dts, sample._dts, sample._dts + sample._duration);
 
@@ -261,8 +261,7 @@ namespace mpegts
 
 			logtd("Stream(%s) Main Track(%u) main_segment_base_timestamp(%lld) main_segment_duration(%lld) main_segment_duration_ms(%f) main_segment_end_timestamp(%lld)", _config.stream_id_meta.CStr(), _main_track_id, main_segment_base_timestamp, main_segment_duration, main_segment_duration_ms, main_segment_end_timestamp);
 
-			markers = PopMarkers(main_segment_base_timestamp, main_segment_end_timestamp);
-			RemoveExpiredMarkers(main_segment_base_timestamp);
+			markers = PopMarkers(main_segment_end_timestamp);
 			force_create = true;
 		}
 
