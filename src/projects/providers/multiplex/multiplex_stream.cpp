@@ -216,6 +216,7 @@ namespace pvd
         }
 
         // Make tracks
+		std::chrono::system_clock::time_point oldest_publish_time = std::chrono::system_clock::time_point::max();
         for (auto &source_stream : source_streams)
         {
             auto stream_tap = source_stream->GetStreamTap();
@@ -229,6 +230,11 @@ namespace pvd
             {
                 continue;
             }
+
+			if (stream_info->GetInputStreamPublishedTime() < oldest_publish_time)
+			{
+				oldest_publish_time = stream_info->GetInputStreamPublishedTime();
+			}
 
             auto tracks = stream_info->GetTracks();
             for (auto &[source_track_id, source_track] : tracks)
@@ -259,6 +265,9 @@ namespace pvd
                 logti("Multiplex Stream : %s/%s: Added track %s from %s/%s (%d)", GetApplicationName(), GetName().CStr(), new_track->GetVariantName().CStr(), source_stream->GetUrlStr().CStr(), source_track_name.CStr(), source_track_id);
             }
         }
+		
+		// Mux's published time is the oldest published time of source streams
+		SetPublishedTime(oldest_publish_time);
 
         // Make Playlist
         auto playlists = _multiplex_profile->GetPlaylists();

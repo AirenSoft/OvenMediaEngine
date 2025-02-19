@@ -424,13 +424,27 @@ std::shared_ptr<MediaRouteStream> MediaRouteApplication::CreateOutboundStream(co
 {
 	std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
 
-	auto new_stream = std::make_shared<MediaRouteStream>(stream_info, MediaRouterStreamType::OUTBOUND);
+	// Since the publisher creates the stream by copying the stream_info, 
+	// it eventually loses the link to the original stream. 
+	// For this, the relay stream must also be linked to the input stream.
+	auto out_stream_info = stream_info;
+	if (stream_info->GetRepresentationType() == StreamRepresentationType::Relay)
+	{
+		out_stream_info = std::make_shared<info::Stream>(*stream_info);
+		if (!out_stream_info)
+		{
+			return nullptr;
+		}
+		out_stream_info->LinkInputStream(stream_info);
+	}
+
+	auto new_stream = std::make_shared<MediaRouteStream>(out_stream_info, MediaRouterStreamType::OUTBOUND);
 	if (!new_stream)
 	{
 		return nullptr;
 	}
 	
-	_outbound_streams.insert(std::make_pair(stream_info->GetId(), new_stream));
+	_outbound_streams.insert(std::make_pair(out_stream_info->GetId(), new_stream));
 
 	return new_stream;
 }

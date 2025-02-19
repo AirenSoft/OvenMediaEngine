@@ -56,7 +56,7 @@ namespace info
 		const std::chrono::system_clock::time_point &GetInputStreamCreatedTime() const;
 		const std::chrono::system_clock::time_point &GetCreatedTime() const;
 
-		void SetPublishedTimeNow();
+		void SetPublishedTime(const std::chrono::system_clock::time_point &time);
 		const std::chrono::system_clock::time_point &GetInputStreamPublishedTime() const;
 		const std::chrono::system_clock::time_point &GetPublishedTime() const;
 
@@ -123,6 +123,21 @@ namespace info
 			return _from_origin_map_store;
 		}
 
+		bool IsOnAir() const
+		{
+			return _on_air;
+		}
+
+		void SetOnAir(bool on_air)
+		{
+			_on_air = on_air;
+
+			if (_on_air)
+			{
+				_published_time = std::chrono::system_clock::now();
+			}
+		}
+
 	protected:
 		info::stream_id_t _id = 0;
 		uint32_t _msid = 0;
@@ -164,5 +179,7 @@ namespace info
 
 		// If the source if this stream is a remote stream of the origin server, store the uuid of origin stream
 		ov::String _origin_stream_uuid;
+
+		bool _on_air = false;
 	};
 }  // namespace info

@@ -40,8 +40,6 @@ public:
 			return false;
 		}
 
-		stream->SetPublishedTimeNow();
-
 		return GetMediaRouteApplication()->OnStreamCreated(this->GetSharedPtr(), stream);
 	}
 
@@ -73,6 +71,11 @@ public:
 		{
 			OV_ASSERT(false, "MediaRouteApplication MUST NOT BE NULL");
 			return false;
+		}
+
+		if (stream->IsOnAir() == false)
+		{
+			stream->SetOnAir(true);
 		}
 
 		return GetMediaRouteApplication()->OnPacketReceived(this->GetSharedPtr(), stream, packet);

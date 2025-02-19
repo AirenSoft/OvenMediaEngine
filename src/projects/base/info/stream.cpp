@@ -57,6 +57,8 @@ namespace info
 
 		_playlists = stream._playlists;
 		_representation_type = stream._representation_type;
+
+		_on_air = stream._on_air;
 	}
 
 	Stream::Stream(StreamSourceType source)
@@ -182,9 +184,10 @@ namespace info
 		return _created_time;
 	}
 
-	void Stream::SetPublishedTimeNow()
+	void Stream::SetPublishedTime(const std::chrono::system_clock::time_point &time)
 	{
-		_published_time = std::chrono::system_clock::now();
+		_published_time = time;
+		_on_air = true;
 	}
 
 	const std::chrono::system_clock::time_point &Stream::GetPublishedTime() const
