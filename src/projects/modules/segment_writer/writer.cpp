@@ -874,6 +874,8 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 		case cmn::BitstreamFormat::CUE:
 			[[fallthrough]];
 		case cmn::BitstreamFormat::AMF:
+			[[fallthrough]];
+		case cmn::BitstreamFormat::SEI:
 			break;
 	}
 
