@@ -77,7 +77,6 @@ namespace pub
 		// Pick the first track of each media type
 		std::shared_ptr<MediaTrack> first_video_track = nullptr;
 		std::shared_ptr<MediaTrack> first_audio_track = nullptr;
-		std::shared_ptr<MediaTrack> first_data_track = nullptr;
 
 		for (const auto &[id, track] : GetSupportedTracks(GetTracks()))
 		{
@@ -91,10 +90,6 @@ namespace pub
 
 				case cmn::MediaType::Audio:
 					first_audio_track = (first_audio_track == nullptr) ? track : first_audio_track;
-					break;
-
-				case cmn::MediaType::Data:
-					first_data_track = (first_data_track == nullptr) ? track : first_data_track;
 					break;
 
 				default:
@@ -262,7 +257,11 @@ namespace pub
 
 		for (const auto &[file_name, playlist] : GetPlaylists())
 		{
-			bool is_default_playlist = playlist->IsDefault();
+			if ((playlist->IsDefault() == false) && (playlist->IsTsPackagingEnabled() == false))
+			{
+				continue;
+			}
+
 			auto &rendition_list = playlist->GetRenditionList();
 
 			auto srt_playlist = GetSrtPlaylistInternal(file_name);
@@ -335,14 +334,11 @@ namespace pub
 					}
 					srt_playlist->AddTracks(audio_tracks);
 
-					if (is_default_playlist)
+					// Add data tracks to the default playlist
+					for (const auto &[id, track] : data_tracks)
 					{
-						// Add data tracks to the default playlist
-						for (const auto &[id, track] : data_tracks)
-						{
-							_srt_playlist_map_by_track_id[track->GetId()].push_back(srt_playlist);
-							srt_playlist->AddTrack(track);
-						}
+						_srt_playlist_map_by_track_id[track->GetId()].push_back(srt_playlist);
+						srt_playlist->AddTrack(track);
 					}
 
 					first_supported_rendition_found = true;
