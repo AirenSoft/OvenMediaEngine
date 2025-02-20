@@ -118,51 +118,6 @@ namespace mpegts
         _psi_packet_data = MergeTsPacketData(psi_packets);
     }
 
-    void Packager::OnFrame(const std::shared_ptr<const MediaPacket> &media_packet, const std::vector<std::shared_ptr<mpegts::Packet>> &pes_packets)
-    {
-       //logtd("OnFrame track_id %u", media_packet->GetTrackId());
-
-        auto track_id = media_packet->GetTrackId();
-        auto track = GetMediaTrack(track_id);
-
-        auto sample_buffer = GetSampleBuffer(track_id);
-        if (track == nullptr || sample_buffer == nullptr)
-        {
-            logte("SampleBuffer is not found for track_id %u", track_id);
-            return;
-        }
-
-		auto sample = mpegts::Sample(media_packet, MergeTsPacketData(pes_packets), track->GetTimeBase().GetTimescale());
-
-		if (track_id == _main_track_id)
-		{
-			if (_force_make_boundary == false && HasMarker(sample._dts + sample._duration) == true)
-			{
-				logti("Stream(%s) Track(%u) has a marker at %lld (%lld - %lld), force to create a new boundary", _config.stream_id_meta.CStr(), track_id, sample._dts, sample._dts, sample._dts + sample._duration);
-
-				_force_make_boundary = true;
-			}
-
-			if ((sample_buffer->GetCurrentDurationMs() >= _config.target_duration_ms) || _force_make_boundary == true)
-			{
-				if (media_packet->GetMediaType() == cmn::MediaType::Video && media_packet->IsKeyFrame())
-				{
-					sample_buffer->MarkSegmentBoundary();
-					_force_make_boundary = false;
-				}
-				else if (media_packet->GetMediaType() == cmn::MediaType::Audio)
-				{
-					sample_buffer->MarkSegmentBoundary();
-					_force_make_boundary = false;
-				}
-			}
-		}
-
-        sample_buffer->AddSample(sample);
-
-        CreateSegmentIfReady();
-    }
-
 	void Packager::Flush()
 	{
 		auto sample_buffer = GetSampleBuffer(_main_track_id);
@@ -219,6 +174,52 @@ namespace mpegts
 		return segment->GetData();
 	}
 
+    void Packager::OnFrame(const std::shared_ptr<const MediaPacket> &media_packet, const std::vector<std::shared_ptr<mpegts::Packet>> &pes_packets)
+    {
+       //logtd("OnFrame track_id %u", media_packet->GetTrackId());
+
+        auto track_id = media_packet->GetTrackId();
+        auto track = GetMediaTrack(track_id);
+
+        auto sample_buffer = GetSampleBuffer(track_id);
+        if (track == nullptr || sample_buffer == nullptr)
+        {
+            logte("SampleBuffer is not found for track_id %u", track_id);
+            return;
+        }
+
+		auto sample = mpegts::Sample(media_packet, MergeTsPacketData(pes_packets), track->GetTimeBase().GetTimescale());
+
+		if (track_id == _main_track_id)
+		{
+			// sample._dts is "the last dts + sample duration" of the sample_buffer
+			if (_force_make_boundary == false && HasMarker(sample._dts) == true)
+			{
+				logti("Stream(%s) Track(%u) has a marker at %lld, force to create a new boundary", _config.stream_id_meta.CStr(), track_id, sample._dts);
+
+				_force_make_boundary = true;
+			}
+
+			if ((sample_buffer->GetCurrentDurationMs() >= _config.target_duration_ms) || _force_make_boundary == true)
+			{
+				if (media_packet->GetMediaType() == cmn::MediaType::Video && media_packet->IsKeyFrame())
+				{
+					sample_buffer->MarkSegmentBoundary();
+					_force_make_boundary = false;
+				}
+				else if (media_packet->GetMediaType() == cmn::MediaType::Audio)
+				{
+					sample_buffer->MarkSegmentBoundary();
+					_force_make_boundary = false;
+				}
+			}
+		}
+
+        sample_buffer->AddSample(sample);
+
+		CreateSegmentIfReady();
+    }
+
     void Packager::CreateSegmentIfReady(bool force_create)
     {
         // Check if the main track has a segment boundary
@@ -253,19 +254,16 @@ namespace mpegts
 		auto total_main_segment_duration = main_sample_buffer->GetTotalConsumedDuration() + main_segment_duration;
         auto main_segment_duration_ms = main_sample_buffer->GetDurationUntilSegmentBoundaryMs();
 
-		std::vector<Marker> markers;
-		if (HasMarker() == true)
-		{
-			int64_t main_segment_base_timestamp = main_sample_buffer->GetSample()._dts;
-			int64_t main_segment_end_timestamp = main_segment_base_timestamp + main_segment_duration;
+		int64_t main_segment_base_timestamp = main_sample_buffer->GetSample()._dts;
+		int64_t main_segment_end_timestamp = main_segment_base_timestamp + main_segment_duration;
 
+		std::vector<Marker> markers;
+		if (HasMarker(main_segment_end_timestamp) == true)
+		{
 			logtd("Stream(%s) Main Track(%u) main_segment_base_timestamp(%lld) main_segment_duration(%lld) main_segment_duration_ms(%f) main_segment_end_timestamp(%lld)", _config.stream_id_meta.CStr(), _main_track_id, main_segment_base_timestamp, main_segment_duration, main_segment_duration_ms, main_segment_end_timestamp);
 
 			markers = PopMarkers(main_segment_end_timestamp);
-			if (markers.empty() == false)
-			{
-				force_create = true;
-			}
+			force_create = true;
 		}
 
 		if (force_create == false)
@@ -409,6 +407,11 @@ namespace mpegts
                 segment->AddPacketData(sample.ts_packet_data);
             }
         }
+
+		if (segment->GetDurationMs() < 1100 & segment->HasMarker() == false)
+		{
+			logtc("Stream(%s) Segment(%u) duration is too short (%f ms)", _config.stream_id_meta.CStr(), segment->GetId(), segment->GetDurationMs());
+		}
 
         AddSegment(segment);
     }
