@@ -68,9 +68,7 @@ namespace pub
 
 		if (playlist != nullptr)
 		{
-			// The playlist is already created
-			logaw("The playlist %s is already created", default_playlist_info->file_name.CStr());
-			OV_ASSERT2(false);
+			// The playlist is already created - user has created it manually
 			return playlist;
 		}
 
