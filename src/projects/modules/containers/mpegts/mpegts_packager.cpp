@@ -408,11 +408,6 @@ namespace mpegts
             }
         }
 
-		if (segment->GetDurationMs() < 1100 & segment->HasMarker() == false)
-		{
-			logtc("Stream(%s) Segment(%u) duration is too short (%f ms)", _config.stream_id_meta.CStr(), segment->GetId(), segment->GetDurationMs());
-		}
-
         AddSegment(segment);
     }
 
