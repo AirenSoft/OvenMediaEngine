@@ -52,11 +52,11 @@ You can control whether to enable SRT playback for each application. To activate
 
 ## SRT client and `streamid`
 
-As with using [SRT as a live source](../live-source/srt.md#encoders-and-streamid), multiple streams can be serviced on a single port. To distinguish each stream, you must set the `streamid` option to a value in the format `<virtual host>/<app>/<stream>`.
+As with using [SRT as a live source](../live-source/srt.md#encoders-and-streamid), multiple streams can be serviced on a single port. To distinguish each stream, you must set the `streamid` in the format `<virtual host>/<app>/<stream>/<playlist>`.
 
-SRT clients such as FFmpeg, OBS Studio, and `srt-live-transmit` allow you to specify the `streamid` as a query string appended to the SRT URL. For example, you can specify the `streamid` in the SRT URL like this to play a specific SRT stream:: `srt://host:port?streamid=default/app/stream`.
+> streamid = "\<virtual host name>/\<app name>/\<stream name>/\<playlist name>"
 
-> streamid = "{virtual host name}/{app name}/{stream name}"
+SRT clients such as FFmpeg, OBS Studio, and `srt-live-transmit` allow you to specify the `streamid` as a query string appended to the SRT URL. For example, you can specify the `streamid` in the SRT URL like this to play a specific SRT stream: `srt://host:port?streamid=default/app/stream/playlist`.
 
 ## Playback
 
@@ -65,12 +65,14 @@ To ensure that SRT streaming works correctly, you can use tools like FFmpeg or O
 The SRT URL to be used in the player is structured as follows:
 
 ```
-srt://<OME Host>:<SRT Publisher Port>?streamid={vhost name}/{app name}/{stream name}
+srt://<OME Host>:<SRT Publisher Port>?streamid=<vhost name>/<app name>/<stream name>/<playlist name>
 ```
 
-For example, to playback the `default/app/stream` stream from OME listening on port `9998` at `192.168.0.160`, use the following SRT URL:
+SRT Publisher creates a default playlist named `playlist` with the first track from each of the audio tracks, video tracks, and data tracks.
 
-> `srt://192.168.0.160:9998?streamid=default/app/stream`
+For example, to playback the `default/app/stream` stream with the default playlist from OME listening on port `9998` at `192.168.0.160`, use the following SRT URL:
+
+> `srt://192.168.0.160:9998?streamid=default/app/stream/playlist`
 
 You can input the SRT URL as shown above into your SRT client. Below, we provide instructions on how to input the SRT URL for each client.
 
@@ -79,30 +81,28 @@ You can input the SRT URL as shown above into your SRT client. Below, we provide
 If you want to test SRT with FFplay, FFmpeg, or FFprobe, simply enter the SRT URL next to the command. For example, with FFplay, you can use the following command:
 
 ```
-$ ffplay "srt://192.168.0.160:9998?streamid=default/app/stream"
+$ ffplay "srt://192.168.0.160:9998?streamid=default/app/stream/playlist"
 ```
 
-<figure><img src="../.gitbook/assets/{4EE7ED61-4D9C-4824-90BC-4602F86C3734}.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/{BEF5152C-6311-4A4E-A715-22FDB1DDC9C3}.png" alt=""><figcaption></figcaption></figure>
 
 ### OBS Studio
 
 OBS Studio offers the ability to add an SRT stream as an input source. To use this feature, follow the steps below to add a Media Source:
 
-<figure><img src="../.gitbook/assets/image (49).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (57).png" alt=""><figcaption></figcaption></figure>
 
 Once added, you will see the SRT stream as a source, as shown below. This added source can be used just like any other media source.
 
-<figure><img src="../.gitbook/assets/image (50).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (58).png" alt=""><figcaption></figcaption></figure>
 
 ### VLC
 
 You can also playback the SRT stream in VLC. Simply select `Media` > `Open Network Stream` from the menu and enter the SRT URL.
 
+<figure><img src="../.gitbook/assets/image (59).png" alt=""><figcaption></figcaption></figure>
 
-
-<figure><img src="../.gitbook/assets/image (53).png" alt=""><figcaption></figcaption></figure>
-
-<figure><img src="../.gitbook/assets/image (54).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (60).png" alt=""><figcaption></figcaption></figure>
 
 ## Using Playlist
 
@@ -120,8 +120,8 @@ By utilizing this feature, you can provide services with different codecs, profi
 Since SRT does not support ABR, it uses only the first rendition when there are multiple renditions.
 {% endhint %}
 
-{% hint style="warning" %}
-Since SRT is always packaged in the MPEG-TS, the `Playlist.Options.EnableTsPackaging` option is ignored.
+{% hint style="info" %}
+Since SRT is packaged in the MPEG-TS, the `EnableTsPackaging` option must be set to `true` to use the playlist.
 {% endhint %}
 
 ```xml
@@ -159,6 +159,9 @@ Since SRT is always packaged in the MPEG-TS, the `Playlist.Options.EnableTsPacka
 	<Playlist>
 		<Name>Low</Name>
 		<FileName>360p</FileName>
+		<Options>
+			<EnableTsPackaging>true</EnableTsPackaging>
+		</Options>
 		<Rendition>
 			<Name>360p</Name>
 			<Video>video_360p</Video>
@@ -180,6 +183,9 @@ Since SRT is always packaged in the MPEG-TS, the `Playlist.Options.EnableTsPacka
 	<Playlist>
 		<Name>High</Name>
 		<FileName>1080p</FileName>
+		<Options>
+			<EnableTsPackaging>true</EnableTsPackaging>
+		</Options>
 		<Rendition>
 			<Name>1080p</Name>
 			<Video>video_1080p</Video>
@@ -191,12 +197,12 @@ Since SRT is always packaged in the MPEG-TS, the `Playlist.Options.EnableTsPacka
 
 ### **Playback using the playlists**
 
-To play a stream using a particular playlist, append the `Playlist.FileName` to the stream name in the SRT playback URL, as shown below:
+To play a stream using a particular playlist, specify the `Playlist.FileName` to the playlist name in the SRT playback URL, as shown below:
 
-**SRT playback URL (Playback with the default playlist)**
+**SRT playback URL using default playlist**
 
 ```
-srt://192.168.0.160:9998?streamid=default/app/stream
+srt://192.168.0.160:9998?streamid=default/app/stream/playlist
 ```
 
 **SRT playback URL using `360p` playlist**
