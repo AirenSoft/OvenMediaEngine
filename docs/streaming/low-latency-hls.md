@@ -203,19 +203,19 @@ To assign labels to audio signals in the SRT Provider, configure the AudioMap as
     <SRT>
       <AudioMap>
         <Item>
-          <Name>English</Name>
-          <Language>en</Language>
-          <Characteristics>public.accessibility.describes-video</Characteristics>
+          <Name>English</Name> 
+          <Language>en</Language> <!-- Optioanl, RFC 5646 -->
+          <Characteristics>public.accessibility.describes-video</Characteristics> <!-- Optional -->
         </Item>
         <Item>
           <Name>Korean</Name>
-          <Language>ko</Language>
-          <Characteristics>public.alternate</Characteristics>
+          <Language>ko</Language> <!-- Optioanl, RFC 5646 -->
+          <Characteristics>public.alternate</Characteristics> <!-- Optional -->
         </Item>
         <Item>
           <Name>Japanese</Name>
-          <Language>ja</Language>
-          <Characteristics>public.alternate</Characteristics>
+          <Language>ja</Language> <!-- Optioanl, RFC 5646 -->
+          <Characteristics>public.alternate</Characteristics> <!-- Optional -->
         </Item>
       </AudioMap>
    ...
@@ -234,18 +234,18 @@ To assign labels to audio signals in the SRT Provider, configure the AudioMap as
     <AudioMap>
       <Item>
         <Name>English</Name>
-        <Language>en</Language>
-        <Characteristics>public.accessibility.describes-video</Characteristics>
+        <Language>en</Language> <!-- Optioanl, RFC 5646 -->
+        <Characteristics>public.accessibility.describes-video</Characteristics> <!-- Optional -->
       </Item>
       <Item>
         <Name>Korean</Name>
-        <Language>ko</Language>
-        <Characteristics>public.alternate</Characteristics>
+        <Language>ko</Language> <!-- Optioanl, RFC 5646 -->
+        <Characteristics>public.alternate</Characteristics> <!-- Optional -->
       </Item>
       <Item>
         <Name>Japanese</Name>
-        <Language>ja</Language>
-        <Characteristics>public.alternate</Characteristics>
+        <Language>ja</Language> <!-- Optioanl, RFC 5646 -->
+        <Characteristics>public.alternate</Characteristics> <!-- Optional -->
       </Item>
     </AudioMap>
 ```
