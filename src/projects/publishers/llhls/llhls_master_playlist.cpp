@@ -45,6 +45,7 @@ bool LLHlsMasterPlaylist::AddMediaCandidateGroup(const std::shared_ptr<const Med
 		new_media_info->_type = track->GetMediaType();
 		new_media_info->_name = track->GetPublicName();
 		new_media_info->_language = track->GetLanguage();
+		new_media_info->_characteristics = track->GetCharacteristics();
 		new_media_info->_default = first;
 		new_media_info->_auto_select = first || (track->GetLanguage().IsEmpty() == false);
 		new_media_info->_instream_id = "";
@@ -288,6 +289,11 @@ ov::String LLHlsMasterPlaylist::MakePlaylist(const ov::String &chunk_query_strin
 			if (!media_info->_language.IsEmpty())
 			{
 				playlist.AppendFormat(",LANGUAGE=\"%s\"", media_info->_language.CStr());
+			}
+
+			if (!media_info->_characteristics.IsEmpty())
+			{
+				playlist.AppendFormat(",CHARACTERISTICS=\"%s\"", media_info->_characteristics.CStr());
 			}
 
 			if (!media_info->_instream_id.IsEmpty())

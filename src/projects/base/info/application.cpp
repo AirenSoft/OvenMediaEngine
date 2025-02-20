@@ -105,7 +105,8 @@ namespace info
 			auto audio_map_item = std::make_shared<AudioMapItem>(
 				cfg_audio_map_item.GetIndex(),
 				cfg_audio_map_item.GetName(),
-				cfg_audio_map_item.GetLanguage());
+				cfg_audio_map_item.GetLanguage(),
+				cfg_audio_map_item.GetCharacteristics());
 
 			AddAudioMapItem(audio_map_item);
 		}

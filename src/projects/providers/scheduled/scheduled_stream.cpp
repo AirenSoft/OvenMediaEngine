@@ -779,6 +779,7 @@ namespace pvd
                 new_track->SetTimeBase(1, new_track->GetSampleRate());
 				new_track->SetPublicName(old_track->GetPublicName());
 				new_track->SetLanguage(old_track->GetLanguage());
+				new_track->SetCharacteristics(old_track->GetCharacteristics());
                 _origin_id_track_id_map.emplace(stream->index, audio_track_id);
                 UpdateTrack(new_track);
 
@@ -1178,6 +1179,7 @@ namespace pvd
                 new_track->SetTimeBase(1, new_track->GetSampleRate());
 				new_track->SetPublicName(old_track->GetPublicName());
 				new_track->SetLanguage(old_track->GetLanguage());
+				new_track->SetCharacteristics(old_track->GetCharacteristics());
                 _origin_id_track_id_map.emplace(track_id, audio_track_id);
                 UpdateTrack(new_track);
 				

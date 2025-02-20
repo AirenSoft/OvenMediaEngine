@@ -23,12 +23,14 @@ namespace cfg
 				protected:
 					ov::String _name;
 					ov::String _language;
+					ov::String _characteristics;
 					int _index = -1;
 					
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetLanguage, _language);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetIndex, _index);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetCharacteristics, _characteristics);
 
 					void SetIndex(int index)
 					{
@@ -40,6 +42,7 @@ namespace cfg
 					{
 						Register("Name", &_name);
 						Register<Optional>("Language", &_language);
+						Register<Optional>("Characteristics", &_characteristics);
 					}
 				};
 			}  // namespace pub

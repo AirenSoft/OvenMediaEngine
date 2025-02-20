@@ -57,6 +57,7 @@ bool MediaTrack::Update(const MediaTrack &media_track)
 	_public_name = media_track._public_name;
 	_variant_name = media_track._variant_name;
 	_language = media_track._language;
+	_characteristics = media_track._characteristics;
 
 	// Video
 	_framerate = media_track._framerate;
@@ -145,6 +146,17 @@ void MediaTrack::SetLanguage(const ov::String &language)
 ov::String MediaTrack::GetLanguage() const
 {
 	return _language;
+}
+
+// Characteristics (e.g. "main", "sign", "visually-impaired")
+void MediaTrack::SetCharacteristics(const ov::String &characteristics)
+{
+	_characteristics = characteristics;
+}
+
+ov::String MediaTrack::GetCharacteristics() const
+{
+	return _characteristics;
 }
 
 void MediaTrack::SetMediaType(MediaType type)

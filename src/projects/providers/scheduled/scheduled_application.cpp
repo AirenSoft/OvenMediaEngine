@@ -233,6 +233,7 @@ namespace pvd
 					}
 					track->SetPublicName(public_name);
 					track->SetLanguage(audio_map_item.GetLanguage());
+					track->SetCharacteristics(audio_map_item.GetCharacteristics());
 					track->SetMediaType(cmn::MediaType::Audio);
 
 					// Set Timebase to 1/1000 fixed

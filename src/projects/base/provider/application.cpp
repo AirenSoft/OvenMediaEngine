@@ -153,6 +153,7 @@ namespace pvd
 
 				audio_track->SetPublicName(audio_map_item->GetName());
 				audio_track->SetLanguage(audio_map_item->GetLanguage());
+				audio_track->SetCharacteristics(audio_map_item->GetCharacteristics());
 			}
 		}
 
