@@ -1094,21 +1094,9 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 			marker.tag = ov::String::FormatString("CueEvent-%s", cue_event->GetCueTypeName().CStr());
 
 			auto result = packager->InsertMarker(marker);
-
-			if (result == true && cue_event->GetCueType() == CueEvent::CueType::OUT)
+			if (result == false)
 			{
-				// Make CUE-IN event after the duration
-				auto duration_msec = cue_event->GetDurationMsec();
-				auto data_track = GetTrack(media_packet->GetTrackId());
-				auto cue_in_timestamp = media_packet->GetDts() + (static_cast<double>(duration_msec) / 1000.0 * data_track->GetTimeBase().GetTimescale());
-
-				// Create CUE-IN event
-				Marker cue_in_marker;
-				cue_in_marker.timestamp = static_cast<double>(cue_in_timestamp) / data_track->GetTimeBase().GetTimescale() * track->GetTimeBase().GetTimescale();
-				cue_in_marker.tag = "CueEvent-IN";
-				cue_in_marker.data = CueEvent::Create(CueEvent::CueType::IN, 0)->Serialize();
-
-				packager->InsertMarker(cue_in_marker);
+				logte("Failed to insert marker (timestamp: %lld, tag: %s)", marker.timestamp, marker.tag.CStr());
 			}
 		}
 	}
