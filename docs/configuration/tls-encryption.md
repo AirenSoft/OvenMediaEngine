@@ -2,6 +2,8 @@
 
 Most browsers can't load resources via HTTP and WS (WebSocket) from HTTPS web pages secured with TLS. Therefore, if the player is on an HTTPS page, the player must request streaming through "https" and "wss" URLs secured with TLS. In this case, you must apply the TLS certificate to the OvenMediaEngine.
 
+### Docker
+To link certificates from your Docker host, uncomment the example in the Docker compose file or manually connect a volume in the Docker run command, e.g. -v ~/local/cert/path:/opt/ovenmediaengine/bin/certs
 You can set the port for TLS in `TLSPort`. Currently, LLHLS and WebRTC Signaling support TLS.
 
 ```markup
@@ -78,7 +80,21 @@ To enable HTTP for HLS and WebRTC signaling servers, you must enable the TLS ele
 
 Assuming the certificate settings are correctly configured, WebRTC streaming can then be played via the wss://url protocol, while LLHLS streaming can be accessed via [https://url](https://url/).
 
+### Let's Encrypt, 
+If you used certbot to create your certificates, the PEM files it creates can be linked in your Server.xml like this:
 
-
+```markup
+			<!-- Settings for multi ip/domain and TLS -->
+			<Host>
+				<Names>
+					<Name>example.com</Name>
+				</Names>
+				<TLS>
+					<CertPath>/opt/ovenmediaengine/bin/cert/live/example.com/cert.pem</CertPath>
+					<KeyPath>/opt/ovenmediaengine/bin/cert/live/example.com/privkey.pem</KeyPath>
+					<ChainCertPath>/opt/ovenmediaengine/bin/cert/live/example.com/chain.pem</ChainCertPath>
+				</TLS>
+			</Host>
+```
 
 
