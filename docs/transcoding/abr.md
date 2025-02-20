@@ -36,7 +36,7 @@ TS files used in HLS must have A/V pre-muxed, so the `EnableTsPackaging` option 
 	<Playlist>
 		<Name>For LLHLS</Name>
 		<FileName>abr</FileName>
-		<Options> <!-- Optinal -->
+		<Options> <!-- Optional -->
 			<!-- 
 			Automatically switch rendition in WebRTC ABR 
 			[Default] : true
