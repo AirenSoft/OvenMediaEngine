@@ -87,7 +87,7 @@ The settings below are recommended for ultra-low latency.&#x20;
 | Profile           | baseline                                                                                                                                                    |
 | Tune              | zerolatency                                                                                                                                                 |
 
-<figure><img src="../.gitbook/assets/image (4) (2).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (4) (2) (1).png" alt=""><figcaption></figcaption></figure>
 
 ## Playback
 
@@ -107,5 +107,5 @@ Add `ws://Your.Docker.Host.IP:3333/app/stream` to the Playback URL and click the
 
 Add `http://Your.Docker.Host.IP:3333/app/stream/llhls.m3u8` to the Playback URL and click the ADD SOURCE and LOAD PLAYER button to play the live stream with LLHLS.
 
-<figure><img src="../.gitbook/assets/image (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
 

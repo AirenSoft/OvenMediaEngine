@@ -84,7 +84,7 @@ Also, `<App name>` and `<Stream name>` can be changed and used as desired in the
 
 If you use the default configuration, set the OBS as follows:
 
-![](<../.gitbook/assets/image (2) (1) (1).png>)
+![](<../.gitbook/assets/image (2) (1) (1) (1).png>)
 
 You can set the Stream Key to any name you like at any time.
 

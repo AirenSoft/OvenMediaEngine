@@ -68,7 +68,7 @@ The SRT URL to be used in the player is structured as follows:
 srt://<OME Host>:<SRT Publisher Port>?streamid=<vhost name>/<app name>/<stream name>/<playlist name>
 ```
 
-SRT Publisher creates a default playlist named `playlist` with the first track from each of the audio tracks, video tracks, and data tracks.
+SRT Publisher creates a default playlist named `playlist` with the first track from each of the audio tracks and video tracks, and all data tracks.
 
 For example, to playback the `default/app/stream` stream with the default playlist from OME listening on port `9998` at `192.168.0.160`, use the following SRT URL:
 
@@ -155,7 +155,7 @@ Since SRT is packaged in the MPEG-TS, the `EnableTsPackaging` option must be set
 		</Video>
 	</Encodes>
 
-	<!-- SRT URL: srt://host/app/stream/360p -->
+	<!-- SRT URL: srt://<host>:<port>?streamid=default/app/stream/360p -->
 	<Playlist>
 		<Name>Low</Name>
 		<FileName>360p</FileName>
@@ -179,7 +179,7 @@ Since SRT is packaged in the MPEG-TS, the `EnableTsPackaging` option must be set
 		</Rendition>
 	</Playlist>
 
-	<!-- SRT URL: srt://host/app/stream/1080p -->
+	<!-- SRT URL: srt://<host>:<port>?streamid=default/app/stream/1080p -->
 	<Playlist>
 		<Name>High</Name>
 		<FileName>1080p</FileName>
