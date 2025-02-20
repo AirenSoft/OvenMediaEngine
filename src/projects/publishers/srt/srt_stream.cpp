@@ -53,8 +53,8 @@ namespace pub
 	{
 		static auto info = std::make_shared<Stream::DefaultPlaylistInfo>(
 			"srt_default",
-			"srt_default",
-			"srt_default");
+			"playlist",
+			"playlist");
 
 		return info;
 	}
