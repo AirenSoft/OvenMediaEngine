@@ -16,6 +16,8 @@
 #include <modules/data_format/id3v2/id3v2.h>
 #include <modules/data_format/id3v2/frames/id3v2_text_frame.h>
 
+#include <modules/data_format/cue_event/cue_event.h>
+
 namespace bmff
 {
 	FMP4Packager::FMP4Packager(const std::shared_ptr<FMP4Storage> &storage, const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<const MediaTrack> &data_track, const Config &config)
@@ -265,7 +267,29 @@ namespace bmff
 				auto chunk = chunk_stream.GetDataPointer();
 
 				std::vector<Marker> markers = PopMarkers(samples->GetEndTimestamp());
-				RemoveExpiredMarkers(samples->GetStartTimestamp());
+				if (markers.empty() == false)
+				{
+					// If the last marker is a cue-out marker, insert a cue-in marker automatically after duration of cue-out marker
+					auto last_marker = markers.back();
+					auto next_marker = GetFirstMarker();
+					if (last_marker.tag.UpperCaseString() == "CUEEVENT-OUT" && next_marker.tag.UpperCaseString() != "CUEEVENT-IN")
+					{
+						auto cue_out_event = CueEvent::Parse(last_marker.data);
+						if (cue_out_event != nullptr)
+						{
+							auto duration_msec = cue_out_event->GetDurationMsec();
+							auto main_track = GetMediaTrack();
+							int64_t cue_in_timestamp = (samples->GetEndTimestamp() - 1) + (static_cast<double>(duration_msec) / 1000.0 * main_track->GetTimeBase().GetTimescale());
+
+							Marker cue_in_marker;
+							cue_in_marker.timestamp = cue_in_timestamp;
+							cue_in_marker.tag = "CueEvent-IN";
+							cue_in_marker.data = CueEvent::Create(CueEvent::CueType::IN, 0)->Serialize();
+
+							InsertMarker(cue_in_marker);
+						}
+					}
+				}
 
 				if (_storage != nullptr && _storage->AppendMediaChunk(chunk, 
 												samples->GetStartTimestamp(), 
