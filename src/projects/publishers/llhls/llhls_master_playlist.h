@@ -49,6 +49,7 @@ private:
 		cmn::MediaType _type = cmn::MediaType::Unknown; // Required
 		ov::String _name; // Required
 		ov::String _language; // Optional
+		ov::String _characteristics; // Optional
 		bool _auto_select = true; // Optional
 		bool _default = false; // Optional
 		ov::String _instream_id; // Required for closed captions

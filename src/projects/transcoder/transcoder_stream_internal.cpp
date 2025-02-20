@@ -184,6 +184,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(
 	output_track->SetVariantName(profile.GetName());
 	output_track->SetPublicName(input_track->GetPublicName());
 	output_track->SetLanguage(input_track->GetLanguage());
+	output_track->SetCharacteristics(input_track->GetCharacteristics());
 	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
 
 	bool need_bypass = IsMatchesBypassCondition(input_track, profile);
@@ -279,6 +280,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 	output_track->SetVariantName(profile.GetName());
 	output_track->SetPublicName(input_track->GetPublicName());
 	output_track->SetLanguage(input_track->GetLanguage());
+	output_track->SetCharacteristics(input_track->GetCharacteristics());
 	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
 
 	bool need_bypass = IsMatchesBypassCondition(input_track, profile);
@@ -375,6 +377,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 
 	output_track->SetPublicName(input_track->GetPublicName());
 	output_track->SetLanguage(input_track->GetLanguage());
+	output_track->SetCharacteristics(input_track->GetCharacteristics());
 	output_track->SetVariantName(profile.GetName());
 	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
 
@@ -426,6 +429,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrackDataType(
 	output_track->SetVariantName("");
 	output_track->SetPublicName(input_track->GetPublicName());
 	output_track->SetLanguage(input_track->GetLanguage());
+	output_track->SetCharacteristics(input_track->GetCharacteristics());
 	output_track->SetBypass(true);
 	output_track->SetCodecId(input_track->GetCodecId());
 	output_track->SetCodecModules("");

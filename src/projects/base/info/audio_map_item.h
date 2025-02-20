@@ -16,10 +16,11 @@ namespace info
 	class AudioMapItem
 	{
 	public:
-		AudioMapItem(int index, const ov::String &name, const ov::String &language)
+		AudioMapItem(int index, const ov::String &name, const ov::String &language, const ov::String &characteristics)
 			: _index(index),
 			  _name(name),
-			  _language(language)
+			  _language(language),
+			  _characteristics(characteristics)
 		{
 		}
 
@@ -39,6 +40,11 @@ namespace info
 			_language = language;
 		}
 
+		void SetCharacteristics(const ov::String &characteristics)
+		{
+			_characteristics = characteristics;
+		}
+
 		// Getter
 		int GetIndex() const
 		{
@@ -55,9 +61,15 @@ namespace info
 			return _language;
 		}
 
+		const ov::String &GetCharacteristics() const
+		{
+			return _characteristics;
+		}
+
 	private:
 		int _index;
 		ov::String _name;
 		ov::String _language = "und";
+		ov::String _characteristics;
 	};
 } // namespace info

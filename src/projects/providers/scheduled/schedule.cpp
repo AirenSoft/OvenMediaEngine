@@ -175,6 +175,7 @@ namespace pvd
 				auto audio_map_item_object = audio_map_object[i];
 				ov::String public_name;
 				ov::String language;
+				ov::String characteristics;
 				
 				auto public_name_object = audio_map_item_object["name"];
 				if (public_name_object.isNull() == false || public_name_object.isString() == true)
@@ -188,7 +189,13 @@ namespace pvd
 					language = language_object.asString().c_str();
 				}
 
-				_stream.audio_map.push_back({static_cast<int>(i), public_name, language});
+				auto characteristics_object = audio_map_item_object["characteristics"];
+				if (characteristics_object.isNull() == false || characteristics_object.isString() == true)
+				{
+					characteristics = characteristics_object.asString().c_str();
+				}
+
+				_stream.audio_map.push_back({static_cast<int>(i), public_name, language, characteristics});
 			}
 		}
 
@@ -492,6 +499,7 @@ namespace pvd
 		{
 			ov::String public_name;
 			ov::String language;
+			ov::String characteristics;
 
 			auto public_name_node = audio_map_item_node.child("Name");
 			if (public_name_node)
@@ -505,7 +513,13 @@ namespace pvd
 				language = language_node.text().as_string();
 			}
 
-			_stream.audio_map.push_back({static_cast<int>(index), public_name, language});
+			auto characteristics_node = audio_map_item_node.child("Characteristics");
+			if (characteristics_node)
+			{
+				characteristics = characteristics_node.text().as_string();
+			}
+
+			_stream.audio_map.push_back({static_cast<int>(index), public_name, language, characteristics});
 			index ++;
 		}
 

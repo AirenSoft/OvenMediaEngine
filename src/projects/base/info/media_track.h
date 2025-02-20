@@ -67,6 +67,10 @@ public:
 	void SetLanguage(const ov::String &language);
 	ov::String GetLanguage() const;
 
+	// Characteristics (e.g. "main", "sign", "visually-impaired")
+	void SetCharacteristics(const ov::String &characteristics);
+	ov::String GetCharacteristics() const;
+
 	// Media Type 
 	void SetMediaType(cmn::MediaType type);
 	cmn::MediaType GetMediaType() const;
@@ -151,6 +155,7 @@ protected:
 	// Set by AudioMap or VideoMap
 	ov::String _public_name;
 	ov::String _language;
+	ov::String _characteristics;
 
 	// Bitstream format 
 	cmn::BitstreamFormat _origin_bitstream_format = cmn::BitstreamFormat::Unknown;
