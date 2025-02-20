@@ -136,7 +136,7 @@ namespace pub
 			}
 			else
 			{
-				logai("Ignore unsupported %s codec (%s)",
+				logaw("Ignore unsupported %s codec (%s)",
 					  StringFromMediaType(media_type).CStr(),
 					  StringFromMediaCodecId(codec_id).CStr());
 			}
@@ -147,7 +147,7 @@ namespace pub
 		}
 		else
 		{
-			logai("Ignore unsupported media type: %s", StringFromMediaType(media_type).CStr());
+			logaw("Ignore unsupported media type: %s", StringFromMediaType(media_type).CStr());
 		}
 
 		return false;
@@ -347,14 +347,14 @@ namespace pub
 
 					first_supported_rendition_found = true;
 
-					logai("A SRT playist %s has been created (with variant: %s, %s)",
+					logai("A SRT playist [%s] has been created (with variant: %s, %s)",
 						  file_name.CStr(),
 						  video_variant_name.CStr(),
 						  audio_variant_name.CStr());
 				}
 				else
 				{
-					logaw("Rendition %s is ignored - SRT stream supports only one rendition per playlist", rendition->GetName().CStr());
+					logaw("Rendition [%s] is ignored - SRT stream supports only one rendition per playlist", rendition->GetName().CStr());
 				}
 			}
 
