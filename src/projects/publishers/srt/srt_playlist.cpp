@@ -43,17 +43,13 @@ namespace pub
 	{
 		// Duplicated tracks will be ignored by the packetizer
 		_packetizer->AddTrack(track);
-		_track_map[track->GetId()] = track;
+
+		_track_info_map.emplace(track->GetId(), track);
 	}
 
 	void SrtPlaylist::AddTracks(const std::vector<std::shared_ptr<MediaTrack>> &tracks)
 	{
-		for (const auto &track : tracks)
-		{
-			// Duplicated tracks will be ignored by the packetizer
-			_packetizer->AddTrack(track);
-			_track_map[track->GetId()] = track;
-		}
+		std::for_each(tracks.begin(), tracks.end(), std::bind(&SrtPlaylist::AddTrack, this, std::placeholders::_1));
 	}
 
 	bool SrtPlaylist::Start()
@@ -70,15 +66,26 @@ namespace pub
 
 	void SrtPlaylist::EnqueuePacket(const std::shared_ptr<MediaPacket> &media_packet)
 	{
-#if DEBUG
-		if (_track_map.find(media_packet->GetTrackId()) == _track_map.end())
+		auto track_info_iterator = _track_info_map.find(media_packet->GetTrackId());
+
+		if (track_info_iterator == _track_info_map.end())
 		{
 			logte("The track is not found in the playlist map");
 			OV_ASSERT2(false);
+			return;
 		}
-#endif	// DEBUG
 
-		_packetizer->AppendFrame(media_packet);
+		auto &track_info = track_info_iterator->second;
+
+		if (track_info.first_key_frame_received == false)
+		{
+			track_info.first_key_frame_received = media_packet->IsKeyFrame();
+		}
+
+		if (track_info.first_key_frame_received)
+		{
+			_packetizer->AppendFrame(media_packet);
+		}
 	}
 
 	void SrtPlaylist::SendData(const std::vector<std::shared_ptr<mpegts::Packet>> &packets)

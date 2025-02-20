@@ -79,13 +79,26 @@ namespace pub
 		}
 
 	private:
+		struct TrackInfo
+		{
+			std::shared_ptr<MediaTrack> track;
+
+			bool first_key_frame_received = false;
+
+			TrackInfo(const std::shared_ptr<MediaTrack> &track)
+				: track(track)
+			{
+			}
+		};
+
+	private:
 		void SendData(const std::vector<std::shared_ptr<mpegts::Packet>> &packets);
 
 	private:
 		std::shared_ptr<const info::Stream> _stream_info;
 		std::shared_ptr<const info::Playlist> _playlist_info;
 
-		std::map<int32_t, std::shared_ptr<MediaTrack>> _track_map;
+		std::unordered_map<int32_t, TrackInfo> _track_info_map;
 
 		std::shared_ptr<mpegts::Packetizer> _packetizer;
 
