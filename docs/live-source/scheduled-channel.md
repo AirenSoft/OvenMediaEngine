@@ -2,7 +2,7 @@
 
 Scheduled Channel that allows you to create a live channel by scheduling pre-recorded files has been added to OvenMediaEngine. Other services or software call this Pre-recorded Live or File Live, but OvenMediaEngine plans to expand the function to organize live channels as a source, so we named it Scheduled Channel.
 
-### Getting Started
+## Getting Started
 
 To use this feature, activate Schedule Provider as follows.
 
@@ -23,7 +23,7 @@ Root path where media files are located. If you specify a relative path, the dir
 `ScheduleFileDir`\
 Root path where the schedule file is located. If you specify a relative path, the directory where the config file is located is root.
 
-### Schedule Files
+## Schedule Files
 
 Scheduled Channel creates/updates/deletes streams by creating/editing/deleting files with the .sch extension in the ScheduleFileDir path. Schedule files (.sch) use the following XML format. When a `<Stream Name>.sch` file is created in ScheduleFileDir, OvenMediaEngine analyzes the file and creates a Schedule Channel with `<Stream Name>`. If the contents of `<Stream Name>.sch` are changed, the Schedule Channel is updated, and if the file is deleted, the stream is deleted.
 
@@ -99,7 +99,42 @@ For 'file' cases, the `start` attribute can be set in milliseconds to indicate w
 `duration` indicates the playback time of that item in milliseconds. After the duration ends, it moves to the next item.\
 Both 'start' and 'duration' are optional. If not set, `start` defaults to 0, and `duration` defaults to the file's duration; if not specified, the media file will be played until its full duration.
 
-### Application : Persistent Live Channel
+## Multiple Audio Track
+
+The Scheduled Channel supports multiple audio tracks. This is automatically applied to the LLHLS Publisher. You can configure the **AudioMap** settings as follows to prepare multiple audio tracks in a Scheduled Channel.
+
+```xml
+<?xml version="1.0"?>
+<Schedule>
+  <Stream>
+    <Name>today</Name>
+    <BypassTranscoder>false</BypassTranscoder>
+    <VideoTrack>true</VideoTrack>
+    <AudioTrack>true</AudioTrack>
+    <AudioMap>
+      <Item>
+        <Name>English</Name>
+        <Language>en</Language> <!-- Optioanl, RFC 5646 -->
+        <Characteristics>public.accessibility.describes-video</Characteristics> <!-- Optional -->
+      </Item>
+      <Item>
+        <Name>Korean</Name>
+        <Language>ko</Language> <!-- Optioanl, RFC 5646 -->
+        <Characteristics>public.alternate</Characteristics> <!-- Optional -->
+      </Item>
+      <Item>
+        <Name>Japanese</Name>
+        <Language>ja</Language> <!-- Optioanl, RFC 5646 -->
+        <Characteristics>public.alternate</Characteristics> <!-- Optional -->
+      </Item>
+    </AudioMap>
+```
+
+{% hint style="warning" %}
+A Scheduled Channel creates streams in advance and copies tracks from files or other streams. Therefore, all source content used in a Scheduled Channel with multiple audio tracks must provide at least the same number of audio tracks. Otherwise, the content will not be scheduled.
+{% endhint %}
+
+## Application : Persistent Live Channel
 
 This function is a scheduling channel, but it can be used for applications such as creating a permanent stream as follows.
 

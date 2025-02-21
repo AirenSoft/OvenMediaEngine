@@ -136,7 +136,7 @@ The `IceCandidate` settings for Providers and Publishers are the same.
 
 By setting up as above, OME is ready to use ICE Candidates for IPv6 as well as IPv4. The ICE Candidate generated here can be viewed in the signaling step of the web browser.
 
-<figure><img src="../.gitbook/assets/image (3).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (3) (1).png" alt=""><figcaption></figcaption></figure>
 
 ## 3. Configuration for `<Origin>`
 

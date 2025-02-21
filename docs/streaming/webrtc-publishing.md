@@ -53,7 +53,7 @@ If you want to change the signaling port, change the value of `<Ports><WebRTC><S
 
 The Signalling protocol is defined in a simple way:
 
-![](<../.gitbook/assets/image (3) (1).png>)
+![](<../.gitbook/assets/image (3) (1) (1).png>)
 
 If you want to use a player other than OvenPlayer, you need to develop the signalling protocol as shown above and can integrate OvenMediaEngine.
 
@@ -364,7 +364,7 @@ If \* is used as the IP of TcpRelay and IceCandidate, all available candidates a
 
 ### WebRTC over TCP with OvenPlayer
 
-WebRTC players can configure the TURN server through the [iceServers ](https://developer.mozilla.org/en-US/docs/Web/API/RTCIceServer/urls#a\_single\_ice\_server\_with\_authentication)setting.
+WebRTC players can configure the TURN server through the [iceServers ](https://developer.mozilla.org/en-US/docs/Web/API/RTCIceServer/urls#a_single_ice_server_with_authentication)setting.
 
 You can play the WebRTC stream over TCP by attaching the query `transport=tcp` to the existing WebRTC play URL as follows.
 

@@ -68,6 +68,36 @@ Key: <PERCENT_ENCODED_STREAM_ID>
 
 The default streaming profiles work well, and there are more advanced configuration options available if you [edit the streaming.xml settings file](https://airensoft.gitbook.io/ovenmediaengine/v/0.16.4/live-source/srt-beta#blackmagic-web-presenter)
 
+## Multiple Audio Track
+
+The SRT Provider supports multiple audio track inputs. This is automatically applied to the LLHLS Publisher.
+
+If you want to label the input audio tracks, configure them as follows. This affects the player's audio selection UI when playing LLHLS.
+
+```xml
+<Application>
+  <Providers>
+    <SRT>
+      <AudioMap>
+        <Item>
+          <Name>English</Name> 
+          <Language>en</Language> <!-- Optioanl, RFC 5646 -->
+          <Characteristics>public.accessibility.describes-video</Characteristics> <!-- Optional -->
+        </Item>
+        <Item>
+          <Name>Korean</Name>
+          <Language>ko</Language> <!-- Optioanl, RFC 5646 -->
+          <Characteristics>public.alternate</Characteristics> <!-- Optional -->
+        </Item>
+        <Item>
+          <Name>Japanese</Name>
+          <Language>ja</Language> <!-- Optioanl, RFC 5646 -->
+          <Characteristics>public.alternate</Characteristics> <!-- Optional -->
+        </Item>
+      </AudioMap>
+   ...
+```
+
 ## SRT Socket Options
 
 You can configure SRT's socket options of the OvenMediaEngine server using `<Options>`. This is particularly useful when setting the encryption for SRT, and you can specify a passphrase by configuring as follows:
