@@ -849,6 +849,16 @@ namespace pvd
 		stream_node.append_child("BypassTranscoder").text().set(_stream.bypass_transcoder);
 		stream_node.append_child("VideoTrack").text().set(_stream.video_track);
 		stream_node.append_child("AudioTrack").text().set(_stream.audio_track);
+		
+		// AudioMap
+		stream_node.append_child("AudioMap");
+		for (const auto &audio_map_item : _stream.audio_map)
+		{
+			auto audio_map_item_node = stream_node.child("AudioMap").append_child("Item");
+			audio_map_item_node.append_child("Name").text().set(audio_map_item.GetName().CStr());
+			audio_map_item_node.append_child("Language").text().set(audio_map_item.GetLanguage().CStr());
+			audio_map_item_node.append_child("Characteristics").text().set(audio_map_item.GetCharacteristics().CStr());
+		}
 
 		// FallbackProgram
 		if (_fallback_program != nullptr)
@@ -905,6 +915,17 @@ namespace pvd
 		stream_object["bypassTranscoder"] = _stream.bypass_transcoder;
 		stream_object["videoTrack"] = _stream.video_track;
 		stream_object["audioTrack"] = _stream.audio_track;
+		// audio map
+		Json::Value audio_map_object;
+		for (const auto &audio_map_item : _stream.audio_map)
+		{
+			Json::Value audio_map_item_object;
+			audio_map_item_object["name"] = audio_map_item.GetName().CStr();
+			audio_map_item_object["language"] = audio_map_item.GetLanguage().CStr();
+			audio_map_item_object["characteristics"] = audio_map_item.GetCharacteristics().CStr();
+			audio_map_object.append(audio_map_item_object);
+		}
+		stream_object["audioMap"] = audio_map_object;
 
 		root_object["stream"] = stream_object;
 
