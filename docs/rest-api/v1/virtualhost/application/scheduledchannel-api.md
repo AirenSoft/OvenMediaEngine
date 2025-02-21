@@ -1,4 +1,4 @@
-# ScheduledChannel API
+# ScheduledChannel
 
 ScheduledChannel allows you to create a live channel by scheduling pre-recorded files has been added to OvenMediaEngine. Other services or software call this Pre-recorded Live or File Live, but OvenMediaEngine plans to expand the function to organize live channels as a source, so we named it Scheduled Channel.
 
@@ -142,7 +142,24 @@ Content-Type: application/json
         "name": "stream2",
         "bypassTranscoder": false,
         "videoTrack": true,
-        "audioTrack": true
+        "audioTrack": true,
+        "audioMap": [ // Optional
+            {
+                "name": "english",
+                "language": "en",
+                "characteristics": "1"
+            },
+            {
+                "name": "Korean",
+                "language": "ko",
+                "characteristics": "2"
+            },
+            {
+                "name": "Japanese",
+                "language": "ja",
+                "characteristics": "3"
+            }
+        ]
     },
     "fallbackProgram": {
         "items": [
