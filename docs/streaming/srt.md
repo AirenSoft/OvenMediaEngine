@@ -84,6 +84,12 @@ If you want to test SRT with FFplay, FFmpeg, or FFprobe, simply enter the SRT UR
 $ ffplay "srt://192.168.0.160:9998?streamid=default/app/stream/playlist"
 ```
 
+If you have multiple audio tracks, you can choose one with `-ast` parameter
+
+```
+$ ffplay "srt://192.168.0.160:9998?streamid=default/app/stream/playlist" -ast 1
+```
+
 <figure><img src="../.gitbook/assets/{BEF5152C-6311-4A4E-A715-22FDB1DDC9C3}.png" alt=""><figcaption></figcaption></figure>
 
 ### OBS Studio
