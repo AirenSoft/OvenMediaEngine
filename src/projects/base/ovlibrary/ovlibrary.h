@@ -45,3 +45,6 @@
 #include "./url.h"
 #include "./precise_timer.h"
 #include "./files.h"
+#include "./sequencial_map.h"
+
+#include "./logger/logger.h"
