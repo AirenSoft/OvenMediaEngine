@@ -61,7 +61,6 @@ LOCAL_STATIC_LIBRARIES := \
 # rtsp_provider 
 
 LOCAL_PREBUILT_LIBRARIES := \
-	libspdlog.a \
 	libpugixml.a
 
 LOCAL_LDFLAGS := -lpthread -luuid
@@ -81,6 +80,7 @@ $(call add_pkg_config,opus)
 $(call add_pkg_config,libsrtp2)
 $(call add_pkg_config,libpcre2-8)
 $(call add_pkg_config,hiredis)
+$(call add_pkg_config,spdlog)
 
 ifeq ($(call chk_pkg_exist,ffnvcodec),0)
 $(call add_pkg_config,ffnvcodec)

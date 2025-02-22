@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+# set -x
 
 PREFIX=/opt/ovenmediaengine
 TEMP_PATH=/tmp
@@ -21,6 +21,8 @@ HIREDIS_VERSION=1.0.2
 NVCC_HDR_VERSION=11.1.5.2
 X264_VERSION=31e19f92
 WEBP_VERSION=1.5.0
+SPDLOG_VERSION=1.15.1
+
 INTEL_QSV_HWACCELS=false
 NETINT_LOGAN_HWACCELS=false
 NETINT_LOGAN_PATCH_PATH=""
@@ -28,7 +30,6 @@ NETINT_LOGAN_XCODER_COMPILE_PATH=""
 NVIDIA_NV_CODEC_HWACCELS=false
 XILINX_XMA_CODEC_HWACCELS=false
 VIDEOLAN_X264_CODEC=true
-
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     NCPU=$(sysctl -n hw.ncpu)
@@ -419,6 +420,51 @@ install_hiredis()
     rm -rf ${DIR} ) || fail_exit "hiredis"
 }
 
+install_spdlog()
+{
+    # Apply patch for getting thread name
+    local SPDLOG_PATCH_CONTENT='diff --git a/include/spdlog/details/log_msg-inl.h b/include/spdlog/details/log_msg-inl.h
+index aa3a9576..508ae9c1 100644
+--- a/include/spdlog/details/log_msg-inl.h
++++ b/include/spdlog/details/log_msg-inl.h
+@@ -25,6 +25,8 @@ SPDLOG_INLINE log_msg::log_msg(spdlog::log_clock::time_point log_time,
+       thread_id(os::thread_id())
+ #endif
+       ,
++      // AirenSoft - Add pthread to get thread name
++      pthread_id(::pthread_self()),
+       source(loc),
+       payload(msg) {
+ }
+diff --git a/include/spdlog/details/log_msg.h b/include/spdlog/details/log_msg.h
+index 87df1e83..e83f8576 100644
+--- a/include/spdlog/details/log_msg.h
++++ b/include/spdlog/details/log_msg.h
+@@ -24,6 +24,8 @@ struct SPDLOG_API log_msg {
+     level::level_enum level{level::off};
+     log_clock::time_point time;
+     size_t thread_id{0};
++    // AirenSoft - Add pthread to get thread name
++    pthread_t pthread_id{0};
+ 
+     // wrapping the formatted text with color (updated by pattern_formatter).
+     mutable size_t color_range_start{0};
+'
+    (DIR=${TEMP_PATH}/spdlog && \
+    mkdir -p ${DIR} && \
+    cd ${DIR} && \
+    curl -sSLf https://github.com/gabime/spdlog/archive/refs/tags/v${SPDLOG_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    echo "${SPDLOG_PATCH_CONTENT}" | git apply && \
+    mkdir -p build && \
+    cd build && \
+    cmake .. \
+        "-DCMAKE_INSTALL_PREFIX=${PREFIX}" \
+        "-DCMAKE_INSTALL_LIBDIR=${PREFIX}/lib" && \
+    make -j$(nproc) && \
+    sudo make install && \
+    rm -rf ${DIR} ) || fail_exit "spdlog"
+}
+
 install_base_ubuntu()
 {
     sudo apt-get install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev
@@ -516,6 +562,8 @@ Do you want to continue [y/N] ? " ANS
     fi
 }
 
+INSTALL_TARGETS=()
+
 for i in "$@"
 do
 case $i in
@@ -561,7 +609,12 @@ case $i in
     shift
     ;;
     *)
-            # unknown option
+    if declare -f "install_$i" > /dev/null
+    then
+        INSTALL_TARGETS+=("$i")
+    else
+        echo "Unknown option: $i"
+    fi
     ;;
 esac
 done
@@ -601,23 +654,34 @@ else
     exit 1
 fi
 
-install_nasm
-install_openssl
-install_libsrtp
-install_libsrt
-install_libopus
-install_libopenh264
-install_libx264
-install_libvpx
-install_libwebp
-install_fdk_aac
-install_nvcc_hdr
-install_ffmpeg
-install_stubs
-install_jemalloc
-install_libpcre2
-install_hiredis
+if [ ${#INSTALL_TARGETS[@]} -eq 0 ]
+then
+    INSTALL_TARGETS=(
+        nasm
+        openssl
+        libsrtp
+        libsrt
+        libopus
+        libopenh264
+        libx264
+        libvpx
+        libwebp
+        fdk_aac
+        nvcc_hdr
+        ffmpeg
+        stubs
+        jemalloc
+        libpcre2
+        hiredis
+        spdlog
+    )
+fi
 
 if [ "${WITH_OME}" == "true" ]; then
-    install_ovenmediaengine
+    INSTALL_TARGETS+=(ovenmediaengine)
 fi
+
+for INSTALL_TARGET in ${INSTALL_TARGETS[@]}
+do
+    install_${INSTALL_TARGET} || exit 1
+done
