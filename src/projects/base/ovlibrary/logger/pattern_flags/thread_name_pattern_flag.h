@@ -8,6 +8,8 @@
 //==============================================================================
 #include <spdlog/pattern_formatter.h>
 
+#include "../../platform.h"
+
 namespace ov
 {
 	namespace logger
@@ -34,13 +36,10 @@ namespace ov
 		protected:
 			void AppendThreadName(pthread_t thread_id, spdlog::memory_buf_t &dest)
 			{
-				char name[16]{0};
-				size_t length = 0;
+				auto thread_name = Platform::GetThreadName();
+				auto length = ::strlen(thread_name);
 
-				::pthread_getname_np(thread_id, name, 16);
-				length = ::strlen(name);
-
-				dest.append(name, name + length);
+				dest.append(thread_name, thread_name + length);
 			}
 		};
 	}  // namespace logger
