@@ -468,18 +468,21 @@ index 87df1e83..e83f8576 100644
 install_base_ubuntu()
 {
     sudo apt-get install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev
+	sudo apt-get install -y git
 }
 
 install_base_fedora()
 {
     sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc libuuid-devel 
     sudo yum install -y perl-IPC-Cmd
+	sudo yum install -y git
 }
 
 install_base_rhel()
 {
     sudo dnf install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
     sudo dnf install -y perl-IPC-Cmd perl-FindBin
+	sudo dnf install -y git
 }
 
 install_base_amazon()
@@ -490,6 +493,7 @@ install_base_amazon()
 
     sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
     sudo yum install -y perl-IPC-Cmd
+	sudo yum install -y git
 }
 
 install_base_macos()
