@@ -8,12 +8,13 @@
 //==============================================================================
 #include "logger.h"
 
-#include <spdlog/sinks/daily_file_sink.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
 #include <memory>
+
+#include "sinks/sinks.h"
 
 #define OV_LOG_COLOR_RESET "\x1B[0m"
 
@@ -127,9 +128,7 @@ namespace ov
 
 			if (options.to_file)
 			{
-				auto sink = std::make_shared<spdlog::sinks::daily_file_sink<std::mutex, DailyFilenameCalculator>>(
-					options.to_file->CStr(),
-					0, 0);
+				auto sink = sinks::DailyFileSink::Create(options.to_file.value());
 
 				sinks.push_back(sink);
 			}
@@ -167,6 +166,7 @@ namespace ov
 		void Logger::Log(LogLevel level, const char *file, int line, const char *function, const std::string &message)
 		{
 			_logger->log(spdlog::source_loc{file, line, function}, LogLevelToSpdlogLevel(level), message);
+			_logger->flush();
 		}
 	}  // namespace logger
 }  // namespace ov
