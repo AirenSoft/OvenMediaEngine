@@ -13,6 +13,7 @@
 #include <cstdarg>
 #include <map>
 #include <memory>
+#include <optional>
 
 #include "./pattern_flags/pattern_flags.h"
 #include "formatters/formatters.h"
