@@ -118,7 +118,7 @@ namespace ov
 		return "Unknown";
 	}
 
-	static const char *StringFromSocketState(SocketState state)
+	constexpr static const char *StringFromSocketState(SocketState state)
 	{
 		switch (state)
 		{

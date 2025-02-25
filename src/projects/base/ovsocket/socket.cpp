@@ -1521,10 +1521,18 @@ namespace ov
 					{
 						if (_blocking_mode == BlockingMode::NonBlocking)
 						{
-							// Timed out
-							read_bytes = 0L;
-							// Actually, it is not an error
-							socket_error = nullptr;
+							if (IsEndOfStream() == false)
+							{
+								// Timed out
+								read_bytes = 0L;
+								// Actually, it is not an error
+								socket_error = nullptr;
+							}
+							else
+							{
+								// Socket is closed
+								socket_error = SocketError::CreateError(error);
+							}
 						}
 						else
 						{
@@ -1573,6 +1581,8 @@ namespace ov
 				((_socket.GetType() != SocketType::Srt) && (read_bytes == 0L)) ||
 				((_socket.GetType() == SocketType::Srt) && (socket_error->GetCode() == SRT_ECONNLOST)))
 			{
+				logtd("Remote is disconnected with error: %s", socket_error->What());
+
 				socket_error = SocketError::CreateError("Remote is disconnected");
 				*received_length = 0UL;
 
@@ -1857,7 +1867,11 @@ namespace ov
 	{
 		CHECK_STATE(>= SocketState::Closed, false);
 
-		logad("Closing %s...", GetRemoteAddress() != nullptr ? GetRemoteAddress()->ToString(false).CStr() : GetStreamId().CStr());
+		logad("Closing %s with state %s...",
+			  (GetRemoteAddress() != nullptr)
+				  ? GetRemoteAddress()->ToString(false).CStr()
+				  : GetStreamId().CStr(),
+			  StringFromSocketState(new_state));
 
 		if (GetState() == SocketState::Closed)
 		{

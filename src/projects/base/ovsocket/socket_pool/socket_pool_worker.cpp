@@ -319,6 +319,20 @@ namespace ov
 						continue;
 					}
 
+					if (OV_CHECK_FLAG(events, EPOLLRDHUP) || OV_CHECK_FLAG(events, EPOLLHUP))
+					{
+						if (socket->GetState() != SocketState::Error)
+						{
+							// Remote has closed the connection
+							// (or closed the write stream (half-close))
+							socket->SetEndOfStream();
+						}
+						else
+						{
+							// The socket is already in error state, so ignore this event
+						}
+					}
+
 					// Normal socket generates (EPOLLOUT | EPOLLHUP) events as soon as it is added to epoll
 					// Client socket generates (EPOLLOUT | EPOLLIN) events as soon as it is added to epoll
 					if (socket->NeedToWaitFirstEpollEvent())
@@ -374,8 +388,6 @@ namespace ov
 
 					if (need_to_close == false)
 					{
-						auto name = String(Platform::GetThreadName());
-
 						if (OV_CHECK_FLAG(events, EPOLLOUT))
 						{
 							if (OV_CHECK_FLAG(events, EPOLLHUP) == false)
@@ -445,8 +457,6 @@ namespace ov
 							if (socket->GetState() != SocketState::Error)
 							{
 								// Disconnected
-								socket->SetEndOfStream();
-
 								new_state = SocketState::Disconnected;
 							}
 							else
