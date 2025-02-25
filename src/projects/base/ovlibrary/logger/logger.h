@@ -37,6 +37,12 @@ namespace ov
 			Critical,
 		};
 
+		struct LogOptions
+		{
+			bool to_stdout_err = true;
+			std::optional<ov::String> to_file;
+		};
+
 		class Logger
 		{
 		public:
@@ -140,6 +146,7 @@ namespace ov
 			std::shared_ptr<spdlog::logger> _logger;
 		};
 
+		std::shared_ptr<Logger> GetLogger(const char *tag, const LogOptions &options);
 		std::shared_ptr<Logger> GetLogger(const char *tag);
 	}  // namespace logger
 }  // namespace ov

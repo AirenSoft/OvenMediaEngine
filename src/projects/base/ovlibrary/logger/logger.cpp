@@ -8,6 +8,8 @@
 //==============================================================================
 #include "logger.h"
 
+#include <spdlog/sinks/daily_file_sink.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
@@ -81,7 +83,17 @@ namespace ov
 			return spdlog::level::off;
 		}
 
-		std::shared_ptr<Logger> GetLogger(const char *tag)
+		struct DailyFilenameCalculator
+		{
+			static spdlog::filename_t calc_filename(const spdlog::filename_t &filename, const tm &now_tm)
+			{
+				return spdlog::fmt_lib::format(
+					SPDLOG_FMT_STRING(SPDLOG_FILENAME_T("{}.{:04d}-{:02d}-{:02d}")),
+					filename, now_tm.tm_year + 1900, now_tm.tm_mon + 1, now_tm.tm_mday);
+			}
+		};
+
+		std::shared_ptr<Logger> GetLogger(const char *tag, const LogOptions &options)
 		{
 			static std::mutex logger_map_mutex;
 			static std::map<std::string, std::shared_ptr<Logger>> logger_map;
@@ -97,18 +109,32 @@ namespace ov
 				}
 			}
 
-			// TODO(dimiden): Need to initialize logger according to the contents of Logger.xml here
-			auto internal_logger = spdlog::stdout_color_mt(tag);
+			std::vector<spdlog::sink_ptr> sinks;
 
-			auto &sinks = internal_logger->sinks();
-			auto sink = std::dynamic_pointer_cast<spdlog::sinks::stdout_color_sink_mt>(sinks[0]);
+			if (options.to_stdout_err)
+			{
+				auto sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 
-			sink->set_color(spdlog::level::trace, OV_LOG_COLOR_FG_CYAN);
-			sink->set_color(spdlog::level::debug, OV_LOG_COLOR_FG_CYAN);
-			sink->set_color(spdlog::level::info, OV_LOG_COLOR_FG_WHITE);
-			sink->set_color(spdlog::level::warn, OV_LOG_COLOR_FG_YELLOW);
-			sink->set_color(spdlog::level::err, OV_LOG_COLOR_FG_RED);
-			sink->set_color(spdlog::level::critical, OV_LOG_COLOR_FG_BR_WHITE OV_LOG_COLOR_BG_RED);
+				sink->set_color(spdlog::level::trace, OV_LOG_COLOR_FG_CYAN);
+				sink->set_color(spdlog::level::debug, OV_LOG_COLOR_FG_CYAN);
+				sink->set_color(spdlog::level::info, OV_LOG_COLOR_FG_WHITE);
+				sink->set_color(spdlog::level::warn, OV_LOG_COLOR_FG_YELLOW);
+				sink->set_color(spdlog::level::err, OV_LOG_COLOR_FG_RED);
+				sink->set_color(spdlog::level::critical, OV_LOG_COLOR_FG_BR_WHITE OV_LOG_COLOR_BG_RED);
+
+				sinks.push_back(sink);
+			}
+
+			if (options.to_file)
+			{
+				auto sink = std::make_shared<spdlog::sinks::daily_file_sink<std::mutex, DailyFilenameCalculator>>(
+					options.to_file->CStr(),
+					0, 0);
+
+				sinks.push_back(sink);
+			}
+
+			auto internal_logger = std::make_shared<spdlog::logger>(tag, sinks.begin(), sinks.end());
 
 			// [2025-02-12 17:54:01.445] I [SPRTMP-t41935:423153] Publisher | stream.cpp:294  | [stream(1423176515)] LLHLS Publisher Application - All StreamWorker has been stopped
 
@@ -118,6 +144,7 @@ namespace ov
 				->add_flag<ThreadNamePatternFlag>(ThreadNamePatternFlag::FLAG)
 				.set_pattern("%^[%Y-%m-%d %H:%M:%S.%e%z] %L [%N:%t] %n | %s:%-4# | %v%$");
 
+			// TODO(dimiden): Need to initialize logger according to the contents of Logger.xml here
 			internal_logger->set_formatter(std::move(formatter));
 
 			auto logger = std::make_shared<Logger>(internal_logger);
@@ -125,6 +152,11 @@ namespace ov
 			logger_map[tag] = logger;
 
 			return logger;
+		}
+
+		std::shared_ptr<Logger> GetLogger(const char *tag)
+		{
+			return GetLogger(tag, {});
 		}
 
 		void Logger::SetLogPattern(const char *pattern)
