@@ -301,7 +301,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	_fps_filter.SetInputFrameRate(_input_track->GetFrameRate());
 	
 	// If the user is not the set output Framerate, use the measured Framerate
-	_fps_filter.SetOutputFrameRate(_output_track->GetFrameRateByConfig() > 0 ? _output_track->GetFrameRateByConfig() : _output_track->GetEstimateFrameRate());
+	_fps_filter.SetOutputFrameRate(_output_track->GetFrameRateByConfig() > 0 ? _output_track->GetFrameRateByConfig() : _output_track->GetFrameRateByMeasured());
 	_fps_filter.SetSkipFrames(_output_track->GetSkipFramesByConfig() >= 0 ? _output_track->GetSkipFramesByConfig() : 0);
 	
 	// Set the threshold of the input buffer to 2 seconds.

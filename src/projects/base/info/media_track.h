@@ -195,6 +195,11 @@ protected:
 	uint64_t _last_seconds_frame_count = 0;
 	uint64_t _last_seconds_frame_bytes = 0;
 
+	uint64_t _last_frame_count = 0;
+	uint64_t _last_frame_bytes = 0;
+	
+	int64_t _last_received_timestamp = 0;
+
 	// Validity
 	bool _is_valid = false;
 

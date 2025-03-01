@@ -22,7 +22,7 @@ bool EncoderAVCxQSV::SetCodecParams()
 	_codec_context->rc_buffer_size = static_cast<int>(_codec_context->bit_rate / 2);
 	_codec_context->sample_aspect_ratio = (AVRational){1, 1};
 	_codec_context->ticks_per_frame = 2;
-	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRateByConfig() > 0) ? GetRefTrack()->GetFrameRateByConfig() : GetRefTrack()->GetEstimateFrameRate(), AV_TIME_BASE);
+	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRateByConfig() > 0) ? GetRefTrack()->GetFrameRateByConfig() : GetRefTrack()->GetFrameRateByMeasured(), AV_TIME_BASE);
 	_codec_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetRefTrack()->GetTimeBase());
 	_codec_context->pix_fmt = (AVPixelFormat)GetSupportedFormat();
 	_codec_context->width = GetRefTrack()->GetWidth();

@@ -22,10 +22,6 @@ public:
 	// If there is a framerate set by the user, it is returned. If not, the automatically measured framerate is returned	
 	double GetFrameRate() const;
 
-	// Estimated at intervals between frames
-	void SetEstimateFrameRate(double framerate);
-	double GetEstimateFrameRate() const;
-
 	void SetFrameRateByMeasured(double framerate);
 	double GetFrameRateByMeasured() const;
 
@@ -103,8 +99,6 @@ protected:
 	double _framerate = 0;
 	// framerate (set by user)
 	double _framerate_conf = 0;
-	// framerate (estimated) 
-	double _framerate_estimated = 0;
 	// framerate last one second (measurement)
 	double _framerate_last_second = 0;
 

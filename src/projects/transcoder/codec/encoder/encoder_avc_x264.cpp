@@ -18,9 +18,9 @@ bool EncoderAVCx264::SetCodecParams()
 	_codec_context->bit_rate = GetRefTrack()->GetBitrate();
 	_codec_context->rc_min_rate = _codec_context->rc_max_rate = _codec_context->bit_rate;
 	_codec_context->rc_buffer_size = static_cast<int>(_codec_context->bit_rate / 2);
-	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRateByConfig() > 0) ? GetRefTrack()->GetFrameRateByConfig() : GetRefTrack()->GetEstimateFrameRate(), AV_TIME_BASE);
+	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRateByConfig() > 0) ? GetRefTrack()->GetFrameRateByConfig() : GetRefTrack()->GetFrameRateByMeasured(), AV_TIME_BASE);
 	_codec_context->sample_aspect_ratio = ::av_make_q(1, 1);
-
+	
 	// From avcodec.h:
 	// For some codecs, the time base is closer to the field rate than the frame rate.
 	// Most notably, H.264 and MPEG-2 specify time_base as half of frame duration

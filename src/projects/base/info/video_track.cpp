@@ -11,23 +11,24 @@
 VideoTrack::VideoTrack()
 	: _framerate(0),
 	  _framerate_conf(0),
-	  _framerate_estimated(0),
 	  _video_timescale(0),
 	  _width(0),
 	  _height(0),
+	  _width_conf(0),
+	  _height_conf(0),
 	  _key_frame_interval(0),
 	  _key_frame_interval_conf(0),
 	  _key_frame_interval_type_conf(cmn::KeyFrameIntervalType::FRAME),
 	  _b_frames(0),
 	  _has_bframe(false),
+	  _colorspace(0),	  
 	  _preset(""),
 	  _thread_count(0),
 	  _skip_frames_conf(-1), // Default value is -1
+	  _keyframe_decode_only(false),
 	  _lookahead_conf(-1)
 {
 }
-
-
 
 void VideoTrack::SetWidth(int32_t width)
 {
@@ -175,22 +176,8 @@ double VideoTrack::GetFrameRate() const
 	{
 		return _framerate_conf;
 	}
-	else if(_framerate_estimated > 0)
-	{
-		return _framerate_estimated;
-	}
 
 	return _framerate;
-}
-
-void VideoTrack::SetEstimateFrameRate(double framerate)
-{
-	_framerate_estimated = framerate;
-}
-
-double VideoTrack::GetEstimateFrameRate() const
-{
-	return _framerate_estimated;
 }
 
 void VideoTrack::SetFrameRateByMeasured(double framerate)

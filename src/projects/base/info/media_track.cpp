@@ -559,24 +559,35 @@ void MediaTrack::OnFrameAdded(const std::shared_ptr<MediaPacket> &media_packet)
 	_total_frame_count++;
 	_total_frame_bytes += bytes;
 
+	_last_frame_count++;
+	_last_frame_bytes += bytes;
+
 	_last_seconds_frame_count++;
 	_last_seconds_frame_bytes += bytes;
 
-	// If bitrate is not set, calculate bitrate
-	if (_clock_from_first_frame_received.IsElapsed(VALID_BITRATE_CALCULATION_THRESHOLD_MSEC))
+	// Calculate the framerate and bitrate every second(base on packet timestamp).
+	if (_last_received_timestamp == 0)
 	{
-		auto seconds = static_cast<double>(_clock_from_first_frame_received.Elapsed()) / 1000.0;
-		auto bytes_per_second = static_cast<double>(_total_frame_bytes) / seconds;
-		auto bitrate = static_cast<int32_t>(bytes_per_second * 8.0);
+		_last_received_timestamp = media_packet->GetDts();
+	}
+	else
+	{
+		auto duration = (media_packet->GetDts() - _last_received_timestamp) * _time_base.GetExpr();
+		if (duration >= 1.0)
+		{
+			auto bitrate = static_cast<int32_t>(_last_frame_bytes / duration * 8);
+			SetBitrateByMeasured(bitrate);
 
-		SetBitrateByMeasured(bitrate);
+			auto framerate = static_cast<double>(_last_frame_count) / duration;
+			SetFrameRateByMeasured(framerate);
 
-		auto frame_count = static_cast<double>(_total_frame_count);
-		auto framerate = frame_count / seconds;
-
-		SetFrameRateByMeasured(framerate);
+			_last_received_timestamp = media_packet->GetDts();
+			_last_frame_count = 0;
+			_last_frame_bytes = 0;
+		}
 	}
 
+	// Calculate the framerate and bitrate every second(base on the system clock).
 	if (_timer_one_second.IsElapsed(1000))
 	{
 		// It can be greater than 1 second due to the delay of the timer or the processing time of the frame.

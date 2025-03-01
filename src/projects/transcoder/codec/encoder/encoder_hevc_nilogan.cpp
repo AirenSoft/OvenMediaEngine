@@ -15,7 +15,7 @@
 
 bool EncoderHEVCxNILOGAN::SetCodecParams()
 {
-	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRateByConfig() > 0) ? GetRefTrack()->GetFrameRateByConfig() : GetRefTrack()->GetEstimateFrameRate(), AV_TIME_BASE);
+	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRateByConfig() > 0) ? GetRefTrack()->GetFrameRateByConfig() : GetRefTrack()->GetFrameRateByMeasured(), AV_TIME_BASE);
 	_codec_context->bit_rate = GetRefTrack()->GetBitrate();
 	_codec_context->rc_min_rate = _codec_context->rc_max_rate = _codec_context->bit_rate;
 	_codec_context->rc_buffer_size = static_cast<int>(_codec_context->bit_rate / 2);
