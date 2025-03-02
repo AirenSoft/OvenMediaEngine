@@ -358,4 +358,14 @@ namespace ov
 
 		_log_file.SetLogPath(log_path);
 	}
+
+	const char *LogInternal::GetLogPath() const
+	{
+		if (_released)
+		{
+			return "";
+		}
+
+		return _log_file.GetLogPath();
+	}
 }  // namespace ov

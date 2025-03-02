@@ -125,6 +125,7 @@ bool ov_log_get_enabled(const char *tag, OVLogLevel level);
 
 void ov_log_internal(OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, ...);
 void ov_log_set_path(const char *log_path);
+const char *ov_log_get_path();
 
 void ov_stat_log_internal(StatLogType type, OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, ...);
 void ov_stat_log_set_path(StatLogType type, const char *log_path);
