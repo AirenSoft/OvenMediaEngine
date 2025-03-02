@@ -110,13 +110,12 @@ static const char *GetSignalName(int signum)
 //
 // This variable contains strings in the format of "v0.1.2 (v0.1.2-xxx-yyyy) [debug]".
 static char g_ome_version[1024];
+static char g_dump_fallback_directory[PATH_MAX];
 
 typedef void (*OV_SIG_ACTION)(int signum, siginfo_t *si, void *unused);
-struct sigaction GetSigAction(OV_SIG_ACTION action)
+struct sigaction GetSigAction(::OV_SIG_ACTION action)
 {
-	struct sigaction sa
-	{
-	};
+	struct sigaction sa{};
 
 	sa.sa_flags = SA_SIGINFO;
 
@@ -143,9 +142,24 @@ static void AbortHandler(int signum, siginfo_t *si, void *context)
 	char file_name[32]{};
 	time_t t = ::time(nullptr);
 
+	const auto pid = ov::Platform::GetProcessId();
+	const auto tid = ov::Platform::GetThreadId();
+	const auto thread_name = ov::Platform::GetThreadName();
+
+	utsname uts{};
+	::uname(&uts);
+
 	// Ensure that the version string is not corrupted.
 	g_ome_version[OV_COUNTOF(g_ome_version) - 1] = '\0';
-	logtc("OME %s received signal %d (%s), interrupt.", g_ome_version, signum, GetSignalName(signum));
+	logtc("OME %s received signal %d (%s), interrupt.", g_ome_version, signum, ::GetSignalName(signum));
+	logtc("  - pid: %lu, OS: %s %s - %s, %s", pid, uts.sysname, uts.machine, uts.release, uts.version);
+
+	const auto stack_trace = ov::StackTrace::GetStackTrace();
+
+	logtc("  - Stack trace\n%s", stack_trace.CStr());
+
+	// Ensure that g_dump_path is not corrupted.
+	g_dump_fallback_directory[OV_COUNTOF(g_dump_fallback_directory) - 1] = '\0';
 
 	std::tm local_time{};
 	::localtime_r(&t, &local_time);
@@ -156,8 +170,11 @@ static void AbortHandler(int signum, siginfo_t *si, void *context)
 	{
 		if (errno != EEXIST)
 		{
-			logtc("Could not create a directory for crash dump: %s", file_prefix);
-			file_prefix = "";
+			logtc("Could not create a directory for crash dump: %s, use the fallback directory instead: %s",
+				  file_prefix,
+				  g_dump_fallback_directory);
+
+			file_prefix = g_dump_fallback_directory;
 		}
 	}
 
@@ -168,22 +185,15 @@ static void AbortHandler(int signum, siginfo_t *si, void *context)
 
 	if (ostream.is_open())
 	{
-		::strftime(time_buffer, sizeof(time_buffer) / sizeof(time_buffer[0]), "%Y-%m-%dT%H:%M:%S%z", &local_time);
-
-		auto pid = ov::Platform::GetProcessId();
-		auto tid = ov::Platform::GetThreadId();
-		auto thread_name = ov::Platform::GetThreadName();
-
-		utsname uts{};
-		::uname(&uts);
+		::strftime(time_buffer, OV_COUNTOF(time_buffer), "%Y-%m-%dT%H:%M:%S%z", &local_time);
 
 		ostream << "***** Crash dump *****" << std::endl;
-		ostream << "OvenMediaEngine " << g_ome_version << " received signal " << signum << " (" << GetSignalName(signum) << ")" << std::endl;
+		ostream << "OvenMediaEngine " << g_ome_version << " received signal " << signum << " (" << ::GetSignalName(signum) << ")" << std::endl;
 		ostream << "- OS: " << uts.sysname << " " << uts.machine << " - " << uts.release << ", " << uts.version << std::endl;
 		ostream << "- Time: " << time_buffer << ", pid: " << pid << ", tid: " << tid << " (" << thread_name << ")" << std::endl;
 		ostream << "- Stack trace" << std::endl;
 
-		ov::StackTrace::WriteStackTrace(ostream);
+		ostream << stack_trace;
 
 		[[maybe_unused]] const ucontext_t *ucontext = reinterpret_cast<const ucontext_t *>(context);
 
@@ -229,11 +239,8 @@ static void AbortHandler(int signum, siginfo_t *si, void *context)
 
 static bool InitializeForAbortSignals()
 {
-	::memset(g_ome_version, 0, sizeof(g_ome_version));
-	::strncpy(g_ome_version, info::OmeVersion::GetInstance()->ToString().CStr(), OV_COUNTOF(g_ome_version) - 1);
-
 	bool result = true;
-	auto sa = GetSigAction(AbortHandler);
+	auto sa = ::GetSigAction(::AbortHandler);
 
 	// Core dumped signal
 	result = result && (::sigaction(SIGABRT, &sa, nullptr) == 0);  // assert()
@@ -258,12 +265,12 @@ static bool InitializeForAbortSignals()
 // WARNING: USE THIS SIGNAL FOR DEBUGGING PURPOSE ONLY
 static void SigUsr1Handler(int signum, siginfo_t *si, void *unused)
 {
-	logtc("Trim result: %d", malloc_trim(0));
+	logtc("Trim result: %d", ::malloc_trim(0));
 }
 
 static bool InitializeForSigUsr1()
 {
-	auto sa = GetSigAction(SigUsr1Handler);
+	auto sa = ::GetSigAction(::SigUsr1Handler);
 	return (::sigaction(SIGUSR1, &sa, nullptr) == 0);
 }
 
@@ -306,7 +313,7 @@ static void SigHupHandler(int signum, siginfo_t *si, void *unused)
 
 static bool InitializeForSigHup()
 {
-	auto sa = GetSigAction(SigHupHandler);
+	auto sa = ::GetSigAction(::SigHupHandler);
 	return (::sigaction(SIGHUP, &sa, nullptr) == 0);
 }
 
@@ -319,7 +326,7 @@ static void SigTermHandler(int signum, siginfo_t *si, void *unused)
 
 static bool InitializeForSigTerm()
 {
-	auto sa = GetSigAction(SigTermHandler);
+	auto sa = ::GetSigAction(::SigTermHandler);
 	return (::sigaction(SIGTERM, &sa, nullptr) == 0);
 }
 
@@ -334,7 +341,7 @@ static void SigIntHandler(int signum, siginfo_t *si, void *unused)
 	if (signal_count == TERMINATE_COUNT)
 	{
 		logtc("The termination request has been made %d times. OME is forcibly terminated.", TERMINATE_COUNT, signum);
-		exit(1);
+		::exit(1);
 	}
 	else
 	{
@@ -346,7 +353,7 @@ static void SigIntHandler(int signum, siginfo_t *si, void *unused)
 
 static bool InitializeForSigInt()
 {
-	auto sa = GetSigAction(SigIntHandler);
+	auto sa = ::GetSigAction(::SigIntHandler);
 	return (::sigaction(SIGINT, &sa, nullptr) == 0);
 }
 
@@ -368,9 +375,32 @@ bool InitializeSignals()
 
 	g_is_terminated = false;
 
+	::memset(g_ome_version, 0, sizeof(g_ome_version));
+	::strncpy(g_ome_version, info::OmeVersion::GetInstance()->ToString().CStr(), OV_COUNTOF(g_ome_version) - 1);
+
+	::SetDumpFallbackPath(::ov_log_get_path());
+
 	return InitializeForAbortSignals() &&
 		   InitializeForSigUsr1() &&
 		   InitializeForSigHup() &&
 		   InitializeForSigTerm() &&
 		   InitializeForSigInt();
+}
+
+void SetDumpFallbackPath(const char *path)
+{
+	::memset(g_dump_fallback_directory, 0, sizeof(g_dump_fallback_directory));
+	::strncpy(g_dump_fallback_directory, path, OV_COUNTOF(g_dump_fallback_directory) - 1);
+
+	if (g_dump_fallback_directory[0] != '\0')
+	{
+		::strncat(g_dump_fallback_directory, "/", sizeof(g_dump_fallback_directory) - 1);
+	}
+	else
+	{
+		// No fallback path is set, so use the current directory
+	}
+
+	// To prevent overflow where memory is corrupt, add a null character explicitly to work as well as possible
+	g_dump_fallback_directory[OV_COUNTOF(g_dump_fallback_directory) - 1] = '\0';
 }

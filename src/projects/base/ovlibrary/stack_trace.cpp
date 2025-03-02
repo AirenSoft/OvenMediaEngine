@@ -287,9 +287,9 @@ namespace ov
 		char **symbol_list = ::backtrace_symbols(addr_list, buffer_size);
 		int count = (line_count >= 0) ? std::min(line_count + offset, buffer_size) : buffer_size;
 
-		// Called by signal handler (AbortHandler -> WriteStackTrace -> GetStackTraceInternal):
+		// Called by signal handler (AbortHandler -> GetStackTrace -> GetStackTraceInternal):
 		// #0: GetStackTraceInternal()
-		// #1: WriteStackTrace()
+		// #1: GetStackTrace()
 		// #2: AbortHandler()
 
 		// Called by GetStackTrace (GetStackTrace -> GetStackTraceInternal);
@@ -342,10 +342,5 @@ namespace ov
 		::free(symbol_list);
 
 		return log;
-	}
-
-	void StackTrace::WriteStackTrace(std::ofstream &stream)
-	{
-		stream << GetStackTraceInternal(3);
 	}
 }  // namespace ov

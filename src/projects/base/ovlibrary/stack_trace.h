@@ -21,7 +21,6 @@ namespace ov
 		StackTrace() = delete;
 
 		static String GetStackTrace(int line_count = -1);
-		static void WriteStackTrace(std::ofstream &stream);
 
 	private:
 		struct ParseResult

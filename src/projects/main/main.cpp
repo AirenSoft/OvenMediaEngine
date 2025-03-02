@@ -268,7 +268,7 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 		}
 	}
 
-	if (InitializeSignals() == false)
+	if (::InitializeSignals() == false)
 	{
 		logte("Could not initialize signals");
 		return ov::Daemon::State::CHILD_FAIL;
@@ -281,6 +281,8 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 	try
 	{
 		config_manager->LoadConfigs(parse_option->config_path);
+
+		::SetDumpFallbackPath(::ov_log_get_path());
 
 		return ov::Daemon::State::CHILD_SUCCESS;
 	}
