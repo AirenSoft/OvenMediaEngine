@@ -139,7 +139,7 @@ struct sigaction GetSigAction(::OV_SIG_ACTION action)
 static void AbortHandler(int signum, siginfo_t *si, void *context)
 {
 	char time_buffer[30]{};
-	char file_name[32]{};
+	ov::String file_name(PATH_MAX);
 	time_t t = ::time(nullptr);
 
 	const auto pid = ov::Platform::GetProcessId();
@@ -152,11 +152,14 @@ static void AbortHandler(int signum, siginfo_t *si, void *context)
 	// Ensure that the version string is not corrupted.
 	g_ome_version[OV_COUNTOF(g_ome_version) - 1] = '\0';
 	logtc("OME %s received signal %d (%s), interrupt.", g_ome_version, signum, ::GetSignalName(signum));
-	logtc("  - pid: %lu, OS: %s %s - %s, %s", pid, uts.sysname, uts.machine, uts.release, uts.version);
+	logtc("- PID: %lu, OS: %s %s - %s, %s", pid, uts.sysname, uts.machine, uts.release, uts.version);
 
-	const auto stack_trace = ov::StackTrace::GetStackTrace();
+	// Exclude AbortHandler() from the stack trace
+	const auto stack_trace = ov::StackTrace::GetStackTrace(1);
+	logtc("- Stack trace\n%s", stack_trace.CStr());
 
-	logtc("  - Stack trace\n%s", stack_trace.CStr());
+	const auto registers = ov::StackTrace::GetRegisters(reinterpret_cast<const ucontext_t *>(context));
+	logtc("- Registers\n%s", registers.CStr());
 
 	// Ensure that g_dump_path is not corrupted.
 	g_dump_fallback_directory[OV_COUNTOF(g_dump_fallback_directory) - 1] = '\0';
@@ -164,24 +167,62 @@ static void AbortHandler(int signum, siginfo_t *si, void *context)
 	std::tm local_time{};
 	::localtime_r(&t, &local_time);
 
-	const char *file_prefix = "dumps/";
+	std::ofstream ostream;
 
-	if (::mkdir(file_prefix, 0755) != 0)
 	{
-		if (errno != EEXIST)
-		{
-			logtc("Could not create a directory for crash dump: %s, use the fallback directory instead: %s",
-				  file_prefix,
-				  g_dump_fallback_directory);
+		const char *file_prefix = "dumps/";
+		bool fallback = false;
 
+		::strftime(time_buffer, OV_COUNTOF(time_buffer), "crash_%Y%m%d.dump", &local_time);
+
+		file_name = file_prefix;
+		file_name.AppendFormat(time_buffer);
+
+		if (::mkdir(file_prefix, 0755) != 0)
+		{
+			if (errno != EEXIST)
+			{
+				logtc("Could not create a directory for crash dump: %s, use the fallback directory instead: %s",
+					  file_prefix,
+					  g_dump_fallback_directory);
+
+				fallback = true;
+			}
+		}
+
+		if (fallback == false)
+		{
+			auto stream = std::ofstream(file_name, std::ofstream::app);
+
+			if (stream.is_open())
+			{
+				ostream = std::move(stream);
+			}
+			else
+			{
+				logte("Could not open dump file to write: %s, use the fallback directory instead: %s",
+					  file_name.CStr(),
+					  g_dump_fallback_directory);
+
+				fallback = true;
+			}
+		}
+
+		if (fallback)
+		{
 			file_prefix = g_dump_fallback_directory;
+
+			file_name = file_prefix;
+			file_name.AppendFormat(time_buffer);
+
+			ostream = std::ofstream(file_name, std::ofstream::app);
+
+			if (ostream.is_open() == false)
+			{
+				logte("Could not open dump file to write: %s", file_name.CStr());
+			}
 		}
 	}
-
-	::strcpy(file_name, file_prefix);
-	::strftime(file_name + ::strlen(file_prefix), 32, "crash_%Y%m%d.dump", &local_time);
-
-	std::ofstream ostream(file_name, std::ofstream::app);
 
 	if (ostream.is_open())
 	{
@@ -190,30 +231,13 @@ static void AbortHandler(int signum, siginfo_t *si, void *context)
 		ostream << "***** Crash dump *****" << std::endl;
 		ostream << "OvenMediaEngine " << g_ome_version << " received signal " << signum << " (" << ::GetSignalName(signum) << ")" << std::endl;
 		ostream << "- OS: " << uts.sysname << " " << uts.machine << " - " << uts.release << ", " << uts.version << std::endl;
-		ostream << "- Time: " << time_buffer << ", pid: " << pid << ", tid: " << tid << " (" << thread_name << ")" << std::endl;
+		ostream << "- Time: " << time_buffer << ", PID: " << pid << ", TID: " << tid << " (" << thread_name << ")" << std::endl;
+
 		ostream << "- Stack trace" << std::endl;
+		ostream << stack_trace << std::endl;
 
-		ostream << stack_trace;
-
-		[[maybe_unused]] const ucontext_t *ucontext = reinterpret_cast<const ucontext_t *>(context);
-
-		// Testing
-#if 0
 		ostream << "- Registers" << std::endl;
-
-#	if !IS_ARM
-		ostream << "  RAX: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RAX] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RAX] << ")" << std::endl;
-		ostream << "  RBX: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RBX] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RBX] << ")" << std::endl;
-		ostream << "  RCX: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RCX] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RCX] << ")" << std::endl;
-		ostream << "  RDX: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RDX] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RDX] << ")" << std::endl;
-		ostream << "  RSP: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RSP] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RSP] << ")" << std::endl;
-		ostream << "  RBP: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RBP] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RBP] << ")" << std::endl;
-		ostream << "  RSI: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RSI] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RSI] << ")" << std::endl;
-		ostream << "  RDI: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RDI] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RDI] << ")" << std::endl;
-		ostream << "  RIP: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_RIP] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_RIP] << ")" << std::endl;
-		ostream << "  EFL: 0x" << std::hex << ucontext->uc_mcontext.gregs[REG_EFL] << " (" << std::dec << ucontext->uc_mcontext.gregs[REG_EFL] << ")" << std::endl;
-#	endif	// !IS_ARM
-#endif
+		ostream << registers << std::endl;
 
 		std::ifstream istream("/proc/self/maps", std::ifstream::in);
 
@@ -228,10 +252,6 @@ static void AbortHandler(int signum, siginfo_t *si, void *context)
 		}
 
 		// need not call fstream::close() explicitly to close the file
-	}
-	else
-	{
-		logte("Could not open dump file to write");
 	}
 
 	::exit(signum);
