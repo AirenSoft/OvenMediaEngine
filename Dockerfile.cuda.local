@@ -8,7 +8,7 @@ FROM    nvidia/cuda:11.4.3-devel-ubuntu20.04 AS base
 
 ## Install libraries by package
 ENV     DEBIAN_FRONTEND=noninteractive
-RUN     apt-get update && apt-get install -y tzdata sudo curl
+RUN     apt-get update && apt-get install -y tzdata sudo curl git
 
 FROM    base AS build
 

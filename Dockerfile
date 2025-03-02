@@ -2,7 +2,7 @@ FROM    ubuntu:22.04 AS base
 
 ## Install libraries by package
 ENV     DEBIAN_FRONTEND=noninteractive
-RUN     apt-get update && apt-get install -y tzdata sudo curl
+RUN     apt-get update && apt-get install -y tzdata sudo curl git
 
 FROM    base AS build
 
@@ -18,7 +18,7 @@ ENV     TEMP_DIR=/tmp/ome
 RUN \
         mkdir -p ${TEMP_DIR} && \
         cd ${TEMP_DIR} && \
-        curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1
+        git clone --branch ${OME_VERSION} --single-branch --depth 1 https://github.com/AirenSoft/OvenMediaEngine .
 
 ## Install dependencies
 RUN \

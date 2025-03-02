@@ -8,7 +8,7 @@ FROM    nvidia/cuda:11.4.3-devel-ubuntu20.04 AS base
 
 ## Install libraries by package
 ENV     DEBIAN_FRONTEND=noninteractive
-RUN     apt-get update && apt-get install -y tzdata sudo curl
+RUN     apt-get update && apt-get install -y tzdata sudo curl git
 
 FROM    base AS build
 
@@ -31,7 +31,7 @@ RUN     echo "/usr/local/cuda-11.4/targets/x86_64-linux/lib/stubs" > /etc/ld.so.
 RUN \
         mkdir -p ${TEMP_DIR} && \
         cd ${TEMP_DIR} && \
-        curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1
+        git clone --branch ${OME_VERSION} --single-branch --depth 1 https://github.com/AirenSoft/OvenMediaEngine .
 
 ## Install dependencies
 RUN \
