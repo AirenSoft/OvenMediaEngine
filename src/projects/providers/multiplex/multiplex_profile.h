@@ -21,9 +21,10 @@
     
     <OutputStream>
         <Name>tv1</Name>
+		<BypassTranscoder>true</BypassTranscoder> <!-- defualt : true -->
     </OutputStream>
 
-    <Playlists>
+    <Playlists> <!-- only available when BypassTranscoder is true -->
         <Playlist>
             <Name>LLHLS ABR</Name>
             <FileName>abr</FileName> <!-- FileName must be unique in the application -->
@@ -312,6 +313,7 @@ namespace pvd
         ov::String GetFilePath() const;
         std::chrono::system_clock::time_point GetCreatedTime() const;
         ov::String GetOutputStreamName() const;
+		bool IsBypassTranscoder() const;
         const std::vector<std::shared_ptr<info::Playlist>> &GetPlaylists() const;
         const std::vector<std::shared_ptr<SourceStream>> &GetSourceStreams() const;
 
@@ -337,6 +339,7 @@ namespace pvd
         ov::String _file_path; // when loaded from file
 
         ov::String _output_stream_name;
+		bool _bypass_transcoder = true;
         std::vector<std::shared_ptr<info::Playlist>> _playlists;
         std::vector<std::shared_ptr<SourceStream>> _source_streams;
 

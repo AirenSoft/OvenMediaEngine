@@ -62,6 +62,11 @@ namespace pvd
 			return false;
 		}
 
+		if (_bypass_transcoder != other._bypass_transcoder)
+		{
+			return false;
+		}
+
 		if (_source_streams.size() != other._source_streams.size())
 		{
 			return false;
@@ -128,6 +133,12 @@ namespace pvd
 		}
 
 		_output_stream_name = name_object.asString().c_str();
+
+		auto bypass_transcoder_object = output_stream_object["bypassTranscoder"];
+		if (bypass_transcoder_object.isNull() == false)
+		{
+			_bypass_transcoder = bypass_transcoder_object.asBool();		
+		}
 
 		return true;
 	}
@@ -378,6 +389,12 @@ namespace pvd
 
 		_output_stream_name = name.text().as_string();
 
+		auto bypass_transcoder = output_stream_node.child("BypassTranscoder");
+		if (bypass_transcoder)
+		{
+			_bypass_transcoder = bypass_transcoder.text().as_bool();
+		}
+
 		return true;
 	}
 
@@ -578,6 +595,7 @@ namespace pvd
 		// OutputStream
 		auto output_stream_node = root_node.append_child("OutputStream");
 		output_stream_node.append_child("Name").text().set(_output_stream_name.CStr());
+		output_stream_node.append_child("BypassTranscoder").text().set(_bypass_transcoder);
 
 		// SourceStreams
 		auto source_streams_node = root_node.append_child("SourceStreams");
@@ -665,6 +683,7 @@ namespace pvd
 		// OutputStream
 		Json::Value output_stream_object;
 		output_stream_object["name"] = _output_stream_name.CStr();
+		output_stream_object["bypassTranscoder"] = _bypass_transcoder;
 		root_object["outputStream"] = output_stream_object;
 
 		// SourceStreams
@@ -768,6 +787,11 @@ namespace pvd
 	ov::String MultiplexProfile::GetOutputStreamName() const
 	{
 		return _output_stream_name;
+	}
+
+	bool MultiplexProfile::IsBypassTranscoder() const
+	{
+		return _bypass_transcoder;
 	}
 
 	const std::vector<std::shared_ptr<info::Playlist>> &MultiplexProfile::GetPlaylists() const

@@ -206,7 +206,15 @@ namespace pvd
         // Create Stream
         auto stream_info = info::Stream(*this, IssueUniqueStreamId(), StreamSourceType::Multiplex);
         stream_info.SetName(multiplex_profile->GetOutputStreamName());
-        stream_info.SetRepresentationType(StreamRepresentationType::Relay);
+
+		if (multiplex_profile->IsBypassTranscoder())
+		{
+        	stream_info.SetRepresentationType(StreamRepresentationType::Relay);
+		}
+		else
+		{
+			stream_info.SetRepresentationType(StreamRepresentationType::Source);
+		}
 
         auto stream = MultiplexStream::Create(GetSharedPtrAs<Application>(), stream_info, multiplex_profile);
         if (stream == nullptr)
