@@ -239,6 +239,7 @@ private:
 	std::optional<std::pair<std::shared_ptr<TranscodeFilter>, std::shared_ptr<TranscodeEncoder>>> GetEncoder(MediaTrackId encoder_id);
 	void SetEncoder(MediaTrackId encoder_id, std::shared_ptr<TranscodeFilter> filter, std::shared_ptr<TranscodeEncoder> encoder);
 	void RemoveEncoders();
+	void RemoveSpecificEncoders();
 
 	void ProcessPacket(const std::shared_ptr<MediaPacket> &packet);
 

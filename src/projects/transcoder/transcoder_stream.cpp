@@ -251,6 +251,7 @@ bool TranscoderStream::UpdateInternal(const std::shared_ptr<info::Stream> &strea
 
 		RemoveDecoders();
 		RemoveFilters();
+		RemoveSpecificEncoders();
 
 		CreateDecoders();
 	}
@@ -329,6 +330,44 @@ void TranscoderStream::RemoveFilters()
 		{
 			object->Stop();
 			object.reset();
+		}
+	}
+}
+
+// In a scheduled stream, when the video input changes and the decoder is reinitialized,
+//  the NVIDIA encoder must also be reinitialized. If not, video corruption may occur.
+void TranscoderStream::RemoveSpecificEncoders()
+{
+	std::unique_lock<std::shared_mutex> encoder_lock(_encoder_map_mutex);
+	auto encoders = _encoders;
+	encoder_lock.unlock();
+
+	for (auto &[id, object] : encoders)
+	{
+		auto filter = object.first;
+		auto encoder = object.second;
+
+		if (encoder->GetRefTrack()->GetMediaType() != cmn::MediaType::Video)
+		{
+			continue;
+		}
+		if (encoder->GetRefTrack()->GetCodecModuleId() != cmn::MediaCodecModuleId::NVENC)
+		{
+			continue;
+		}
+
+		_encoders.erase(id);
+
+		if (filter != nullptr)
+		{
+			filter->Stop();
+			filter.reset();
+		}
+
+		if (encoder != nullptr)
+		{
+			encoder->Stop();
+			encoder.reset();
 		}
 	}
 }
