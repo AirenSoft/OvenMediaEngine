@@ -18,6 +18,7 @@
 
 #define MAX_QUEUE_SIZE 100
 #define FILLER_ENABLED true
+#define MAX_FILLER_FRAMES 100
 #define UNUSED_VARIABLE(var) (void)var;
 
 // max initial media packet buffer size, for OOM protection
@@ -1557,7 +1558,7 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 			// Re-create filter and encoder using the format of decoded frame
 			ChangeOutputFormat(decoded_frame);
 
- #if FILLER_ENABLED
+#if FILLER_ENABLED
 			///////////////////////////////////////////////////////////////////
 			// Generate a filler frame (Part 2). * Using latest decoded frame
 			///////////////////////////////////////////////////////////////////
@@ -1584,16 +1585,14 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 				int64_t hole_time_us = curr_decoded_frame_time_us - (last_decoded_frame_time_us + last_decoded_frame_duration_us);
 				int64_t hole_time_tb = (int64_t)(floor((double)hole_time_us / input_track->GetTimeBase().GetExpr() / 1000000));
 
-				int64_t duration_per_frame = 0;
-
-				if (input_track->GetFrameRate() == 0)
-				{
-					input_track->SetFrameRateByConfig(30.0);
-				}
+				int64_t duration_per_frame = -1LL;
 				switch (input_track->GetMediaType())
 				{
 					case cmn::MediaType::Video:
-						duration_per_frame = input_track->GetTimeBase().GetTimescale() / input_track->GetFrameRate();
+						if(input_track->GetFrameRate() > 0 && input_track->GetTimeBase().GetTimescale() > 0)
+						{
+							duration_per_frame = static_cast<int64_t>(input_track->GetTimeBase().GetTimescale() / input_track->GetFrameRate());
+						}
 						break;
 					case cmn::MediaType::Audio:
 						duration_per_frame = decoded_frame->GetNbSamples();
@@ -1603,15 +1602,15 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 				}
 
 				// If the time difference is greater than 0, it means that there is a hole between with the last frame and the current frame.
-				if (hole_time_tb >= duration_per_frame)
+				if (duration_per_frame > 0 && hole_time_tb >= duration_per_frame)
 				{
 					int64_t start_pts = decoded_frame->GetPts() - hole_time_tb;
 					int64_t end_pts = decoded_frame->GetPts();
 					int32_t needed_frames = hole_time_tb / duration_per_frame;
-					int64_t reamiain_pts = hole_time_tb - (needed_frames * duration_per_frame);
+					int32_t created_count = 0;
 
-					logtd("%s Create filler frame because time diffrence from last frame. Type(%s), needed(%d), last_pts(%lld), curr_pts(%lld), hole_time(%lld), hole_time_tb(%lld), frame_duration(%lld), remain_pts(%lld), start_pts(%lld), end_pts(%lld)",
-						  _log_prefix.CStr(), cmn::GetMediaTypeString(input_track->GetMediaType()).CStr(), needed_frames, last_decoded_frame_time_us, curr_decoded_frame_time_us, hole_time_us, hole_time_tb, duration_per_frame, reamiain_pts, start_pts, end_pts);
+					logtd("%s Generate filler frame because time diffrence from last frame. Type(%s), needed(%d), last_pts(%lld), curr_pts(%lld), hole_time(%lld), hole_time_tb(%lld), frame_duration(%lld), start_pts(%lld), end_pts(%lld)",
+						  _log_prefix.CStr(), cmn::GetMediaTypeString(input_track->GetMediaType()).CStr(), needed_frames, last_decoded_frame_time_us, curr_decoded_frame_time_us, hole_time_us, hole_time_tb, duration_per_frame, start_pts, end_pts);
 
 					for (int64_t filler_pts = start_pts; filler_pts < end_pts; filler_pts += duration_per_frame)
 					{
@@ -1638,7 +1637,20 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 						}
 
 						SpreadToFilters(decoder_id, clone_frame);
-						// logtd("%s Create filler frame. Type(%s), %s", _log_prefix.CStr(), cmn::GetMediaTypeString(input_track->GetMediaType()).CStr(), clone_frame->GetInfoString().CStr());
+
+						// Prevent infinite loop
+						if(created_count++ >= MAX_FILLER_FRAMES)
+						{
+							break;
+						}
+					}
+				}
+				else
+				{
+					if (duration_per_frame <= 0)
+					{
+						logtw("%s Could not create filler frame. track(%d), timebase(%s), framerate(%.2f), samples(%d)",
+							  _log_prefix.CStr(), input_track->GetId(), input_track->GetTimeBase().GetStringExpr().CStr(), input_track->GetFrameRate(), decoded_frame->GetNbSamples());
 					}
 				}
 			}

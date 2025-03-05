@@ -36,3 +36,8 @@ src/projects/main/git_info.h
 *.texi
 *.dump
 misc/oven_rtc_tester/OvenRtcTester
+misc/app-ffmpeg4*
+misc/FFmpeg*
+misc/openh264*
+misc/opt/20*
+misc/opt/22*
