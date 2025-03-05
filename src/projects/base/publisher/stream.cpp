@@ -31,7 +31,9 @@ namespace pub
 		
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&StreamWorker::WorkerThread, this);
-		pthread_setname_np(_worker_thread.native_handle(), "StreamWorker");
+
+		ov::String thread_name = ov::String::FormatString("SW-%s", _parent->GetApplication()->GetPublisherTypeName());
+		pthread_setname_np(_worker_thread.native_handle(), thread_name.CStr());
 
 		return true;
 	}
