@@ -199,7 +199,7 @@ namespace pvd
             track->SetMediaType(cmn::MediaType::Video);
 
             // Set Timebase to 1/1000 fixed
-            track->SetTimeBase(1, 1000);
+            track->SetTimeBase(1, kScheduledVideoTimebase);
 
             stream->AddTrack(track);
         }
@@ -213,9 +213,7 @@ namespace pvd
 				auto public_name = ov::String::FormatString("Audio_%d", track->GetId());
 				track->SetPublicName(public_name);
 				track->SetMediaType(cmn::MediaType::Audio);
-
-				// Set Timebase to 1/1000 fixed
-				track->SetTimeBase(1, 1000);
+				track->SetTimeBase(1, kScheduledAudioTimebase);
 
 				stream->AddTrack(track);
 			}
@@ -235,9 +233,7 @@ namespace pvd
 					track->SetLanguage(audio_map_item.GetLanguage());
 					track->SetCharacteristics(audio_map_item.GetCharacteristics());
 					track->SetMediaType(cmn::MediaType::Audio);
-
-					// Set Timebase to 1/1000 fixed
-					track->SetTimeBase(1, 1000);
+					track->SetTimeBase(1, kScheduledAudioTimebase);
 
 					stream->AddTrack(track);
 				}

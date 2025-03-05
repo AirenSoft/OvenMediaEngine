@@ -23,6 +23,7 @@ namespace pvd
     constexpr int kScheduledDataTrackId = 200;
 
     constexpr int kScheduledVideoTimebase = 90000;
+	constexpr int kScheduledAudioTimebase = 90000;
 
     class ScheduledStream : public Stream
     {

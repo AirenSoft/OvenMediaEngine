@@ -776,7 +776,7 @@ namespace pvd
 				auto old_track = GetTrack(audio_track_id);
 
                 new_track->SetId(audio_track_id);
-                new_track->SetTimeBase(1, new_track->GetSampleRate());
+                new_track->SetTimeBase(1, kScheduledAudioTimebase);
 				new_track->SetPublicName(old_track->GetPublicName());
 				new_track->SetLanguage(old_track->GetLanguage());
 				new_track->SetCharacteristics(old_track->GetCharacteristics());
@@ -963,9 +963,11 @@ namespace pvd
             auto duration = media_packet->GetDuration();
 
             // origin timebase to track timebase
-            pts = ((pts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
-            dts = ((dts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
-            duration = ((duration * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
+            pts = (((double)pts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
+            dts = (((double)dts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
+			duration = static_cast<double>(duration) * (static_cast<double>(origin_tb.GetNum()) / static_cast<double>(origin_tb.GetDen()) * track->GetTimeBase().GetTimescale());
+
+			logtd("Scheduled Channel : %s/%s: Track %d, origin dts : %lld, pts %lld, dts %lld, duration %lld, tb %f", GetApplicationName(), GetName().CStr(), track_id, dts, pts, dts, duration, track->GetTimeBase().GetExpr());
 
             if (track_first_packet_map.find(track_id) == track_first_packet_map.end())
             {
@@ -1175,7 +1177,7 @@ namespace pvd
 				auto old_track = GetTrack(audio_track_id);
 
                 new_track->SetId(audio_track_id);
-                new_track->SetTimeBase(1, new_track->GetSampleRate());
+                new_track->SetTimeBase(1, kScheduledAudioTimebase);
 				new_track->SetPublicName(old_track->GetPublicName());
 				new_track->SetLanguage(old_track->GetLanguage());
 				new_track->SetCharacteristics(old_track->GetCharacteristics());
