@@ -960,12 +960,12 @@ namespace pvd
             media_packet->SetTrackId(track_id);
             auto pts = media_packet->GetPts();
             auto dts = media_packet->GetDts();
-            //auto duration = media_packet->GetDuration();
+            auto duration = media_packet->GetDuration();
 
             // origin timebase to track timebase
             pts = ((pts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
             dts = ((dts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
-            //duration = ((duration * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
+            duration = ((duration * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
 
             if (track_first_packet_map.find(track_id) == track_first_packet_map.end())
             {
@@ -974,8 +974,7 @@ namespace pvd
             }
             auto single_file_dts = dts - track_single_file_dts_offset_map[track_id];
 
-            //TODO(Getroot): need to calc duration?
-            AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max());
+            AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max(), duration);
 			
 			media_packet->SetMsid(GetMsid());
             media_packet->SetPts(pts);

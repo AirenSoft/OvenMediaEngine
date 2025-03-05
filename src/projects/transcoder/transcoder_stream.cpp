@@ -1585,6 +1585,11 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 				int64_t hole_time_tb = (int64_t)(floor((double)hole_time_us / input_track->GetTimeBase().GetExpr() / 1000000));
 
 				int64_t duration_per_frame = 0;
+
+				if (input_track->GetFrameRate() == 0)
+				{
+					input_track->SetFrameRateByConfig(30.0);
+				}
 				switch (input_track->GetMediaType())
 				{
 					case cmn::MediaType::Video:

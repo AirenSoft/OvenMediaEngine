@@ -254,8 +254,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 	//	- 3) and then, the current packet stash.
 	std::shared_ptr<MediaPacket> pop_media_packet = nullptr;
 
-	if (IsOutbound() &&
-		(media_packet->GetDuration()) <= 0 &&
+	if ((media_packet->GetDuration()) <= 0 &&
 		// The packet duration recalculation applies only to video and audio types.
 		(media_packet->GetMediaType() == MediaType::Video || media_packet->GetMediaType() == MediaType::Audio))
 	{
