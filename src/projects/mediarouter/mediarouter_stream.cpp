@@ -254,7 +254,8 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 	//	- 3) and then, the current packet stash.
 	std::shared_ptr<MediaPacket> pop_media_packet = nullptr;
 
-	if ((media_packet->GetDuration()) <= 0 &&
+	if ((IsOutbound()) &&
+		(media_packet->GetDuration()) <= 0 &&
 		// The packet duration recalculation applies only to video and audio types.
 		(media_packet->GetMediaType() == MediaType::Video || media_packet->GetMediaType() == MediaType::Audio))
 	{
@@ -304,7 +305,6 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 	// Bitstream format converting to standard format. and, parsing track information
 	auto media_type = pop_media_packet->GetMediaType();
 	auto track_id = pop_media_packet->GetTrackId();
-
 	auto media_track = _stream->GetTrack(track_id);
 	if (media_track == nullptr)
 	{
