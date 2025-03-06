@@ -77,14 +77,14 @@ namespace ov
 		static std::shared_ptr<JsonBuilder> Builder(JsonBuilderModifier modifier = nullptr);
 
 		// These APIs can be used when the JSON value currently being created is an object
-		JsonBuilder *PushBack(const char *key, ::Json::Value value);
-		JsonBuilder *PushBack(const char *key, std::shared_ptr<JsonBuilder> builder);
-		JsonBuilder *PushBack(const char *key, JsonBuilderModifier modifier);
+		std::shared_ptr<JsonBuilder> PushBack(const char *key, ::Json::Value value);
+		std::shared_ptr<JsonBuilder> PushBack(const char *key, std::shared_ptr<JsonBuilder> builder);
+		std::shared_ptr<JsonBuilder> PushBack(const char *key, JsonBuilderModifier modifier);
 
 		// These APIs can be used when the JSON value currently being created is an array
-		JsonBuilder *PushBack(::Json::Value value);
-		JsonBuilder *PushBack(std::shared_ptr<JsonBuilder> builder);
-		JsonBuilder *PushBack(JsonBuilderModifier modifier);
+		std::shared_ptr<JsonBuilder> PushBack(::Json::Value value);
+		std::shared_ptr<JsonBuilder> PushBack(std::shared_ptr<JsonBuilder> builder);
+		std::shared_ptr<JsonBuilder> PushBack(JsonBuilderModifier modifier);
 
 		// To JSON string
 		ov::String Stringify() const;

@@ -24,7 +24,7 @@ namespace ov
 
 		if (modified_builder != nullptr)
 		{
-			return modified_builder->GetSharedPtrAs<JsonBuilder>();
+			return modified_builder->GetSharedPtr();
 		}
 
 		return nullptr;
@@ -46,14 +46,14 @@ namespace ov
 		_value_map.PushBack(key, std::move(value));
 	}
 
-	JsonBuilder *JsonBuilder::PushBack(const char *key, ::Json::Value value)
+	std::shared_ptr<JsonBuilder> JsonBuilder::PushBack(const char *key, ::Json::Value value)
 	{
 		PushBackInternal(key, std::move(value));
 
-		return this;
+		return GetSharedPtr();
 	}
 
-	JsonBuilder *JsonBuilder::PushBack(const char *key, std::shared_ptr<JsonBuilder> builder)
+	std::shared_ptr<JsonBuilder> JsonBuilder::PushBack(const char *key, std::shared_ptr<JsonBuilder> builder)
 	{
 		if (builder == nullptr)
 		{
@@ -64,10 +64,10 @@ namespace ov
 			PushBackInternal(key, builder);
 		}
 
-		return this;
+		return GetSharedPtr();
 	}
 
-	JsonBuilder *JsonBuilder::PushBack(const char *key, JsonBuilderModifier modifier)
+	std::shared_ptr<JsonBuilder> JsonBuilder::PushBack(const char *key, JsonBuilderModifier modifier)
 	{
 		if (modifier == nullptr)
 		{
@@ -78,7 +78,7 @@ namespace ov
 			PushBackInternal(key, Builder(modifier));
 		}
 
-		return this;
+		return GetSharedPtr();
 	}
 
 	void JsonBuilder::PushBackInternal(JsonValueType item)
@@ -97,14 +97,14 @@ namespace ov
 		_value_list.push_back(std::move(item));
 	}
 
-	JsonBuilder *JsonBuilder::PushBack(::Json::Value value)
+	std::shared_ptr<JsonBuilder> JsonBuilder::PushBack(::Json::Value value)
 	{
 		PushBackInternal(std::move(value));
 
-		return this;
+		return GetSharedPtr();
 	}
 
-	JsonBuilder *JsonBuilder::PushBack(std::shared_ptr<JsonBuilder> builder)
+	std::shared_ptr<JsonBuilder> JsonBuilder::PushBack(std::shared_ptr<JsonBuilder> builder)
 	{
 		if (builder == nullptr)
 		{
@@ -115,10 +115,10 @@ namespace ov
 			PushBackInternal(builder);
 		}
 
-		return this;
+		return GetSharedPtr();
 	}
 
-	JsonBuilder *JsonBuilder::PushBack(JsonBuilderModifier modifier)
+	std::shared_ptr<JsonBuilder> JsonBuilder::PushBack(JsonBuilderModifier modifier)
 	{
 		if (modifier == nullptr)
 		{
@@ -129,7 +129,7 @@ namespace ov
 			PushBackInternal(Builder(modifier));
 		}
 
-		return this;
+		return GetSharedPtr();
 	}
 
 	ov::String JsonBuilder::Stringify() const
