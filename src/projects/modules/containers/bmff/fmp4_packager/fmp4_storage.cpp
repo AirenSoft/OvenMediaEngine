@@ -339,21 +339,13 @@ namespace bmff
 
 			logtd("Segment[%u] is created : track(%u), duration(%u) chunks(%u)", segment->GetNumber(), _track->GetId(),segment->GetDuration(), segment->GetChunkCount());
 			
-			if (segment->HasMarker())
-			{
-				// If the segment outputted by markers, it is not a normal segment.
-				_target_segment_duration_ms = _config.segment_duration_ms;
-			}
-			else 
-			{
-				// avg segment duration 
-				_target_segment_duration_ms -= segment->GetDuration();
+			_target_segment_duration_ms -= segment->GetDuration();
+			while (_target_segment_duration_ms <= 0) {
 				_target_segment_duration_ms += static_cast<double>(_config.segment_duration_ms);
-				// Adjust too short segment duration
-				_target_segment_duration_ms = std::max(_target_segment_duration_ms, static_cast<double>(_config.segment_duration_ms / 2));
 			}
 			
-			if (segment->GetDuration() >= _config.segment_duration_ms * 1.2)
+			// If segment has marker, it is not a regular segment
+			if (segment->HasMarker() == false && segment->GetDuration() >= _config.segment_duration_ms * 1.2)
 			{
 				logtw("LLHLS stream (%s) / track (%d) - a longer-than-expected (%.1lf | expected : %llu) segment has created. Long or irregular keyframe interval could be the cause.", _stream_tag.CStr(), _track->GetId(), segment->GetDuration(), _config.segment_duration_ms);
 			}

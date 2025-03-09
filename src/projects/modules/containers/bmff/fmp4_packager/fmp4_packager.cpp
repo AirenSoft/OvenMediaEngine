@@ -163,13 +163,21 @@ namespace bmff
 		{
 			// If the CUE-OUT/IN event is included in the samples time range, flush the samples as soon as possible.
 			// samples->GetStartTimestamp() <= CUE events < samples->GetEndTimestamp()
-			
-			if (_force_segment_flush == false && HasMarker(samples->GetEndTimestamp()))
+			bool force_segment_flush_immediately = false;
+			if (_force_segment_flush == false && HasMarker(samples->GetStartTimestamp(), samples->GetEndTimestamp()))
 			{
 				auto marker = GetFirstMarker();
 
 				logti("track(%d) - Force segment flush, has marker (start: %lld, marker:%lld (%s) end: %lld)", GetMediaTrack()->GetId(), samples->GetStartTimestamp(), marker.timestamp, marker.tag.CStr(), samples->GetEndTimestamp());
 				_force_segment_flush = true;
+
+				if (marker.tag.UpperCaseString() == "CUEEVENT-OUT")
+				{
+					// If a CUE-OUT marker is included, flush the samples immediately. This may cause the next segment to start with a non-keyframe, but it will be replaced by a new segment through another ad-insertion solution.
+					force_segment_flush_immediately = true;
+					_force_segment_flush = false;
+					logtc("track(%d) - Force segment flush immediately, cue-out marker : sample duration (%f)", GetMediaTrack()->GetId(), samples->GetTotalDuration());
+				}
 			}
 
 			bool next_frame_is_idr = (next_frame->GetFlag() == MediaPacketFlag::Key) || (GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio);
@@ -204,7 +212,9 @@ namespace bmff
 				// Video && next_frame_is_idr && force_segment_flush
 				(GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && next_frame_is_idr && _force_segment_flush) || 
 				// Audio && force_segment_flush
-				(GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio && _force_segment_flush))
+				(GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio && _force_segment_flush) ||
+				// force segment flush immediately
+				(force_segment_flush_immediately == true))
 			{
 				// Last partial segment
 				is_last_partial_segment = true;
@@ -215,15 +225,11 @@ namespace bmff
 			// - In the last partial segment, if the next frame is a keyframe, a segment is created immediately. This allows the segment to start with a keyframe.
 			// - When adding samples, if the Part Target Duration is exceeded, a chunk is created immediately.
 			// - If it exceeds 85% and the next sample is independent, a chunk is created. This makes the next chunk start independent.
-			if ( 
-				   (is_last_partial_segment == true && GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && 
-				   next_frame_is_idr == true)
-				
-				|| (is_last_partial_segment == true && GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio)
-
-				|| (total_sample_duration_ms >= _target_chunk_duration_ms) 
-
-				|| ((next_total_sample_duration_ms > _target_chunk_duration_ms) && (total_sample_duration_ms >= _target_chunk_duration_ms * 0.85)) 
+			if ( 	(force_segment_flush_immediately == true) ||
+					(is_last_partial_segment == true && GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && next_frame_is_idr == true) ||
+					(is_last_partial_segment == true && GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio) ||
+					(total_sample_duration_ms >= _target_chunk_duration_ms) ||
+					((next_total_sample_duration_ms > _target_chunk_duration_ms) && (total_sample_duration_ms >= _target_chunk_duration_ms * 0.85)) 
 				)
 			{
 				double reserve_buffer_size;
@@ -266,7 +272,7 @@ namespace bmff
 
 				auto chunk = chunk_stream.GetDataPointer();
 
-				std::vector<Marker> markers = PopMarkers(samples->GetEndTimestamp());
+				std::vector<Marker> markers = PopMarkers(samples->GetStartTimestamp(), samples->GetEndTimestamp());
 				if (markers.empty() == false)
 				{
 					// If the last marker is a cue-out marker, insert a cue-in marker automatically after duration of cue-out marker
@@ -294,7 +300,9 @@ namespace bmff
 				if (_storage != nullptr && _storage->AppendMediaChunk(chunk, 
 												samples->GetStartTimestamp(), 
 												total_sample_duration_ms, 
-												samples->IsIndependent(), (is_last_partial_segment && next_frame_is_idr), markers) == false)
+												samples->IsIndependent(), 
+												is_last_partial_segment, 
+												markers) == false)
 				{
 					logte("FMP4Packager::AppendSample() - Failed to store media chunk");
 					return false;
