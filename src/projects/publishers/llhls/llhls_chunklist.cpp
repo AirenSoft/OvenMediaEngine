@@ -116,9 +116,17 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 
 	if (info.IsCompleted() == true)
 	{
+		std::unique_lock<std::shared_mutex> lock(_segments_guard);
 		segment->SetCompleted();
 		_last_completed_segment_sequence = segment_sequence;
 		_first_segment = false;
+
+		if (_segments.size() > _max_segment_count)
+		{
+			auto old_segment = _segments.begin()->second;
+			SaveOldSegmentInfo(old_segment);
+			_segments.erase(old_segment->GetSequence());
+		}
 	}
 
 	_last_segment_sequence = segment_sequence;
@@ -133,25 +141,32 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 
 bool LLHlsChunklist::RemoveSegmentInfo(uint32_t segment_sequence)
 {
-	std::unique_lock<std::shared_mutex> lock(_segments_guard);
+	return true;
 
-	logtd("RemoveSegmentInfo[Track : %s/%s]: %lld", _track->GetPublicName().CStr(), _track->GetVariantName().CStr(), segment_sequence);
+	//////////
+	// It is not used in the current version, expired segments will be removed when the segment is completed.
+	//////////
 
-	if (_segments.empty())
-	{
-		return false;
-	}
 
-	auto old_segment = _segments.begin()->second;
-	if (old_segment->GetSequence() != segment_sequence)
-	{
-		logtc("The sequence number of the segment to be deleted is not the first segment. segment(%lld) first(%lld)", segment_sequence, old_segment->GetSequence());
-		return false;
-	}
+	// std::unique_lock<std::shared_mutex> lock(_segments_guard);
 
-	SaveOldSegmentInfo(old_segment);
+	// logtd("RemoveSegmentInfo[Track : %s/%s]: %lld", _track->GetPublicName().CStr(), _track->GetVariantName().CStr(), segment_sequence);
 
-	_segments.erase(segment_sequence);
+	// if (_segments.empty())
+	// {
+	// 	return false;
+	// }
+
+	// auto old_segment = _segments.begin()->second;
+	// if (old_segment->GetSequence() != segment_sequence)
+	// {
+	// 	logtc("The sequence number of the segment to be deleted is not the first segment. segment(%lld) first(%lld)", segment_sequence, old_segment->GetSequence());
+	// 	return false;
+	// }
+
+	// SaveOldSegmentInfo(old_segment);
+
+	// _segments.erase(segment_sequence);
 
 	return true;
 }
