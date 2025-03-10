@@ -425,9 +425,9 @@ namespace ov
 						if (OV_CHECK_FLAG(events, EPOLLERR))
 						{
 							// An error occurred
+#if DEBUG
 							int socket_error;
 
-#if DEBUG
 							if (socket->IsClosable())
 							{
 								if (socket->GetType() != SocketType::Srt)
