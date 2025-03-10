@@ -332,6 +332,15 @@ namespace bmff
 
 		segment->AddMarkers(markers);
 
+		if (segment->GetDuration() > _config.segment_duration_ms * 2)
+		{
+			// Force to complete the segment
+			last_chunk = true;
+			// Too long segment buffered
+			logte("LLHLS stream (%s) / track (%d) - the duration of the segment being created exceeded twice the target segment duration (%.1lf ms | expected: %llu) because there were no IDR frames for a long time. This segment is forcibly created and may not play normally.", 
+			_stream_tag.CStr(), _track->GetId(), segment->GetDuration(), _config.segment_duration_ms);
+		}
+
 		// Complete Segment if segment duration is over and new chunk data is independent(new segment should be started with independent chunk)
 		if (last_chunk == true)
 		{
@@ -339,26 +348,34 @@ namespace bmff
 
 			logtd("Segment[%u] is created : track(%u), duration(%u) chunks(%u)", segment->GetNumber(), _track->GetId(),segment->GetDuration(), segment->GetChunkCount());
 			
-			_target_segment_duration_ms -= segment->GetDuration();
-			while (_target_segment_duration_ms <= 0) {
-				_target_segment_duration_ms += static_cast<double>(_config.segment_duration_ms);
-			}
-			
-			// If segment has marker, it is not a regular segment
-			if (segment->HasMarker() == false && segment->GetDuration() >= _config.segment_duration_ms * 1.2)
+			_total_expected_duration_ms += _config.segment_duration_ms;
+			_total_segment_duration_ms += segment->GetDuration();
+
+			// When there is a marker, it comes out smaller than or equal to the expected Segment.
+			// Depending on the conditions, Audio may come out smaller or equal, but Video may come out smaller, equal or larger.
+			// If Audio comes out smaller and Video comes out the equal, the Sequnce is broken.
+			// Therefore, in this case, the algorithm is configured to come out smaller unconditionally.
+			if (segment->HasMarker() == true)
 			{
-				logtw("LLHLS stream (%s) / track (%d) - a longer-than-expected (%.1lf | expected : %llu) segment has created. Long or irregular keyframe interval could be the cause.", _stream_tag.CStr(), _track->GetId(), segment->GetDuration(), _config.segment_duration_ms);
+				_total_expected_duration_ms -= _config.segment_duration_ms;
 			}
-		}
-		else if (segment->GetDuration() > _config.segment_duration_ms * 2)
-		{
-			// Too long segment buffered
-			logte("LLHLS stream (%s) / track (%d) - the duration of the segment being created exceeded twice the target segment duration (%.1lf ms | expected: %llu) because there were no IDR frames for a long time. This segment is forcibly created and may not play normally.", 
-			_stream_tag.CStr(), _track->GetId(), segment->GetDuration(), _config.segment_duration_ms);
 
-			segment->SetCompleted();
+			double next_target_duration = _total_expected_duration_ms - _total_segment_duration_ms + _config.segment_duration_ms;
+			
+			// Long duration segment
+			if (next_target_duration > 0)
+			{
+				_target_segment_duration_ms = next_target_duration;
+			}
+			else
+			{
+				// Next segment duration must be smaller than the target segment duration
+				_target_segment_duration_ms = static_cast<double>(_config.segment_duration_ms / 2);
+			}
 
-			_target_segment_duration_ms = std::max(_target_segment_duration_ms, static_cast<double>(_config.segment_duration_ms / 2));
+
+			logtd("LLHLS stream (%s) / track (%d) - segment_duration_ms: %f total_expected_duration_ms: %f, total_segment_duration_ms: %f, next_target_duration: %f, target_segment_duration: %f has_marker: %d",
+				_stream_tag.CStr(), _track->GetId(), segment->GetDuration(), _total_expected_duration_ms, _total_segment_duration_ms, next_target_duration, _target_segment_duration_ms, segment->HasMarker());
 		}
 
 		_max_chunk_duration_ms = std::max(_max_chunk_duration_ms, duration_ms);

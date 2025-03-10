@@ -184,6 +184,9 @@ namespace bmff
 
 		double _target_segment_duration_ms = 0;
 
+		double _total_segment_duration_ms = 0;
+		double _total_expected_duration_ms = 0;
+
 		std::shared_ptr<FMp4StorageObserver> _observer;
 
 		ov::String _stream_tag;
