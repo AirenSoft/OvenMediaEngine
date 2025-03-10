@@ -397,11 +397,53 @@ std::shared_ptr<ThumbnailInterceptor> ThumbnailPublisher::CreateInterceptor()
 
 	// Register Preflight interceptor
 	http_interceptor->Register(http::Method::Options, thumbnail_url_pattern, [this](const std::shared_ptr<http::svr::HttpExchange> &exchange) -> http::svr::NextHandler {
-		
-		// Respond 204 No Content for preflight request
-		exchange->GetResponse()->SetStatusCode(http::StatusCode::NoContent);
-		
-		// Do not call the next handler to prevent 404 Not Found
+		auto connection = exchange->GetConnection();
+		auto request = exchange->GetRequest();
+		auto response = exchange->GetResponse();
+
+		auto request_url = request->GetParsedUri();
+		if (request_url == nullptr)
+		{
+			logte("Could not parse request url: %s", request->GetUri().CStr());
+			response->SetStatusCode(http::StatusCode::BadRequest);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		auto vhost_name = ocst::Orchestrator::GetInstance()->GetVhostNameFromDomain(request_url->Host());
+		if (vhost_name.IsEmpty())
+		{
+			logte("Could not resolve vhost name from domain: %s", request_url->Host().CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
+		if (vhost_app_name.IsValid() == false)
+		{
+			logte("Could not resolve application name from domain: %s", request_url->Host().CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		auto application = std::static_pointer_cast<ThumbnailApplication>(GetApplicationByName(vhost_app_name));
+		if (application != nullptr)
+		{
+			application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response, {http::Method::Options, http::Method::Get});
+		}
+		else
+		{
+			// CORS from default cors manager
+			auto cors_manager_ref_opt = ocst::Orchestrator::GetInstance()->GetCorsManager(vhost_name);
+			if (cors_manager_ref_opt.has_value())
+			{
+				const auto &cors_manager = cors_manager_ref_opt.value().get();
+				cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
+			}
+		}
+
+		response->SetStatusCode(http::StatusCode::OK);
+		response->SetHeader("Access-Control-Allow-Private-Network", "true");
+
 		return http::svr::NextHandler::DoNotCall;
 	});
 
