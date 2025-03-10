@@ -119,7 +119,7 @@ namespace ffmpeg
 		if (media_track->GetCodecId() == cmn::MediaCodecId::Opus &&
 			media_track->GetDecoderConfigurationRecord() == nullptr)
 		{
-			auto opus_config { std::make_shared<OpusSpecificConfig>(media_track->GetChannel().GetCounts(), media_track->GetSampleRate()) };
+			auto opus_config{std::make_shared<OpusSpecificConfig>(media_track->GetChannel().GetCounts(), media_track->GetSampleRate())};
 			media_track->SetDecoderConfigurationRecord(opus_config);
 		}
 
@@ -146,13 +146,11 @@ namespace ffmpeg
 			return false;
 		}
 
-		{
-			std::lock_guard<std::shared_mutex> mlock(_track_map_lock);
-			// MediaTrackID -> AVStream, MediaTrack
-			// AVStream doesn't need to be released. It will be released when AVFormatContext is released.
-			std::shared_ptr<AVStream> av_stream_ptr(av_stream, [](AVStream *av_stream) { });
-			_track_map[media_track->GetId()] = std::make_pair(av_stream_ptr, media_track);
-		}
+		std::lock_guard<std::shared_mutex> mlock(_track_map_lock);
+		// MediaTrackID -> AVStream, MediaTrack
+		// AVStream doesn't need to be released. It will be released when AVFormatContext is released.
+		std::shared_ptr<AVStream> av_stream_ptr(av_stream, [](AVStream *av_stream) {});
+		_track_map[media_track->GetId()] = std::make_pair(av_stream_ptr, media_track);
 
 		return true;
 	}
@@ -190,6 +188,7 @@ namespace ffmpeg
 				return false;
 			}
 		}
+
 		_need_to_close = true;
 
 		// Write header
@@ -259,14 +258,11 @@ namespace ffmpeg
 
 		// Convert MediaPacket to AVPacket
 		AVPacket av_packet = {0};
-
-		av_packet.stream_index = av_stream->index;
-		av_packet.flags = (packet->GetFlag() == MediaPacketFlag::Key) ? AV_PKT_FLAG_KEY : 0;
-		av_packet.pts = av_rescale_q(packet->GetPts() - start_time, AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
-		av_packet.dts = av_rescale_q(packet->GetDts() - start_time, AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
-		av_packet.duration = av_rescale_q(packet->GetDuration(), AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
-		av_packet.size = packet->GetData()->GetLength();
-		av_packet.data = (uint8_t *)packet->GetData()->GetDataAs<uint8_t>();
+		if (ToAVPacket(av_packet, av_stream, packet, media_track, start_time) == false)
+		{
+			logte("Failed to convert packet to av packet");
+			return false;
+		}
 
 		std::shared_ptr<const ov::Data> new_data = nullptr;
 
@@ -392,11 +388,6 @@ namespace ffmpeg
 
 		_last_packet_sent_time = std::chrono::high_resolution_clock::now();
 
-		if (sent_bytes != nullptr)
-		{
-			*sent_bytes = av_packet.size;
-		}
-
 		std::unique_lock<std::shared_mutex> mlock(_av_format_lock);
 
 		int error = ::av_write_frame(av_format.get(), &av_packet);
@@ -410,6 +401,11 @@ namespace ffmpeg
 		}
 
 		mlock.unlock();
+
+		if (sent_bytes != nullptr)
+		{
+			*sent_bytes = av_packet.size;
+		}
 
 		return true;
 	}
@@ -466,5 +462,23 @@ namespace ffmpeg
 			return std::make_pair(nullptr, nullptr);
 		}
 		return it->second;
+	}
+
+	bool Writer::ToAVPacket(AVPacket &av_packet, const std::shared_ptr<AVStream> av_stream, const std::shared_ptr<MediaPacket> &media_packet, const std::shared_ptr<MediaTrack> &media_track, int64_t start_time)
+	{
+		if (av_stream == nullptr || media_packet == nullptr || media_track == nullptr)
+		{
+			return false;
+		}
+
+		av_packet.stream_index = av_stream->index;
+		av_packet.flags = (media_packet->GetFlag() == MediaPacketFlag::Key) ? AV_PKT_FLAG_KEY : 0;
+		av_packet.pts = av_rescale_q(media_packet->GetPts() - start_time, AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
+		av_packet.dts = av_rescale_q(media_packet->GetDts() - start_time, AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
+		av_packet.duration = av_rescale_q(media_packet->GetDuration(), AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
+		av_packet.size = media_packet->GetData()->GetLength();
+		av_packet.data = (uint8_t *)media_packet->GetData()->GetDataAs<uint8_t>();
+
+		return true;
 	}
 }  // namespace ffmpeg

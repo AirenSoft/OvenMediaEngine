@@ -63,6 +63,7 @@ namespace ffmpeg
 		void SetAVFormatContext(AVFormatContext* av_format);
 		void ReleaseAVFormatContext();
 		std::pair<std::shared_ptr<AVStream>, std::shared_ptr<MediaTrack>> GetTrack(int32_t track_id) const;
+		bool ToAVPacket(AVPacket &av_packet, const std::shared_ptr<AVStream> av_stream, const std::shared_ptr<MediaPacket> &media_packet, const std::shared_ptr<MediaTrack> &media_track, int64_t start_time);
 
 		WriterState _state;
 

@@ -782,6 +782,16 @@ namespace ffmpeg
 					codecpar->width 				= media_track->GetWidth();
 					codecpar->height 				= media_track->GetHeight();
 					codecpar->sample_aspect_ratio 	= AVRational{1, 1};
+
+					// Compatible with macOS
+					if (media_track->GetCodecId() == cmn::MediaCodecId::H265)
+					{
+						codecpar->codec_tag = MKTAG('h', 'v', 'c', '1');
+					}
+					else if (media_track->GetCodecId() == cmn::MediaCodecId::H264)
+					{
+						codecpar->codec_tag = MKTAG('a', 'v', 'c', '1');
+					}
 				}
 				break;
 
