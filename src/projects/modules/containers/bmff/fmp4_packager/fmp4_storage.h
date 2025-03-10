@@ -190,5 +190,10 @@ namespace bmff
 		std::shared_ptr<FMp4StorageObserver> _observer;
 
 		ov::String _stream_tag;
+
+		// for making CUE-OUT-CONT
+		bool _is_cue_out_on = false;
+		uint32_t _cue_out_duration_msec = 0;
+		uint32_t _cue_out_elapsed_msec = 0;
 	};
 }

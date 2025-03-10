@@ -10,6 +10,8 @@
 #include <base/info/media_track.h>
 #include <base/ovlibrary/files.h>
 
+#include <modules/data_format/cue_event/cue_event.h>
+
 #include "fmp4_storage.h"
 #include "fmp4_private.h"
 
@@ -373,6 +375,43 @@ namespace bmff
 				_target_segment_duration_ms = static_cast<double>(_config.segment_duration_ms / 2);
 			}
 
+			// Make CUE-OUT-CONT
+			if (segment->HasMarker())
+			{
+				for (const auto &it : segment->GetMarkers())
+				{
+					if (it.tag.UpperCaseString() == "CUEEVENT-OUT")
+					{
+						// Get duration
+						auto cue_out_event = ::CueEvent::Parse(it.data);
+						if (cue_out_event != nullptr)
+						{
+							_is_cue_out_on = true;
+							_cue_out_duration_msec = cue_out_event->GetDurationMsec();
+							_cue_out_elapsed_msec = 0;
+						}
+
+					}
+					else if (it.tag.UpperCaseString() == "CUEEVENT-IN")
+					{
+						_is_cue_out_on = false;
+						_cue_out_duration_msec = 0;
+						_cue_out_elapsed_msec = 0;
+					}
+				}
+			}
+			else if (segment->HasMarker() == false && _is_cue_out_on == true)
+			{
+				_cue_out_elapsed_msec += segment->GetDuration();
+
+				// Make CUE-OUT-CONT
+				Marker marker;
+				marker.timestamp = segment->GetStartTimestamp() + segment->GetDuration();
+				marker.tag = "CUEEVENT-OUT-CONT";
+				marker.data = CueEvent::Create(::CueEvent::CueType::CONT, _cue_out_duration_msec, _cue_out_elapsed_msec)->Serialize();
+
+				segment->SetMarkers({ marker });
+			}
 
 			logtd("LLHLS stream (%s) / track (%d) - segment_duration_ms: %f total_expected_duration_ms: %f, total_segment_duration_ms: %f, next_target_duration: %f, target_segment_duration: %f has_marker: %d",
 				_stream_tag.CStr(), _track->GetId(), segment->GetDuration(), _total_expected_duration_ms, _total_segment_duration_ms, next_target_duration, _target_segment_duration_ms, segment->HasMarker());
