@@ -132,7 +132,11 @@ static void OnFFmpegLog(void *avcl, int level, const char *fmt, va_list args)
 std::shared_ptr<ov::Error> InitializeFFmpeg()
 {
 	::av_log_set_callback(OnFFmpegLog);
+#if DEBUG
 	::av_log_set_level(AV_LOG_DEBUG);
+#else	// DEBUG
+	::av_log_set_level(AV_LOG_INFO);
+#endif	// DEBUG
 	::avformat_network_init();
 
 	return nullptr;
@@ -268,7 +272,11 @@ std::shared_ptr<ov::Error> InitializeSrt()
 		return ov::SrtError::CreateErrorFromSrt();
 	}
 
+#if DEBUG
 	::srt_setloglevel(srt_logging::LogLevel::debug);
+#else	// DEBUG
+	::srt_setloglevel(srt_logging::LogLevel::note);
+#endif	// DEBUG
 	::srt_setloghandler(nullptr, SrtLogHandler);
 
 	return nullptr;
