@@ -132,10 +132,12 @@ void MediaRouterStats::Update(
 			if (track->GetMediaType() == MediaType::Video)
 			{
 				stat_track_str.AppendFormat(", fps: %.2f/%.2f",
-											track->GetFrameRateByMeasured(), track->GetFrameRate());
+											track->GetFrameRateByMeasured(), 
+											track->GetFrameRateByConfig());
+											
 				stat_track_str.AppendFormat(", kint: %.2f/%d/%s",
 											track->GetKeyFrameIntervalByMeasured(),
-											track->GetKeyFrameInterval(),
+											track->GetKeyFrameIntervalByConfig(),
 											cmn::GetKeyFrameIntervalTypeToString(track->GetKeyFrameIntervalTypeByConfig()).CStr());
 			}
 
@@ -158,7 +160,7 @@ void MediaRouterStats::Update(
 
 		stat_stream_str.AppendFormat("Stream. id: %10u, type: %s, name: %s/%s, status: %s, uptime: %lldms, queue: %d, msid: %u, sync: %lldms",
 									 stream_info->GetId(),
-									 (type == 1) ? "Inbound" : "Outbound",
+									 (type == 0) ? "Inbound" : "Outbound",
 									 stream_info->GetApplicationInfo().GetVHostAppName().CStr(),
 									 stream_info->GetName().CStr(),
 									 prepared ? "Started" : "Preapring",
