@@ -176,7 +176,7 @@ namespace bmff
 					// If a CUE-OUT marker is included, flush the samples immediately. This may cause the next segment to start with a non-keyframe, but it will be replaced by a new segment through another ad-insertion solution.
 					force_segment_flush_immediately = true;
 					_force_segment_flush = false;
-					logtc("track(%d) - Force segment flush immediately, cue-out marker : sample duration (%f)", GetMediaTrack()->GetId(), samples->GetTotalDuration());
+					logti("track(%d) - Force segment flush immediately, cue-out marker : sample duration (%f)", GetMediaTrack()->GetId(), samples->GetTotalDuration());
 				}
 			}
 
