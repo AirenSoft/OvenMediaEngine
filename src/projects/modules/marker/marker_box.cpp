@@ -9,6 +9,52 @@
 #include "marker_box.h"
 #include "marker_box_private.h"
 
+bool MarkerBox::CanInsertMarker(const Marker &marker) const
+{
+	std::shared_lock<std::shared_mutex> lock(_markers_guard);
+
+	if (marker.tag.UpperCaseString() == "CUEEVENT-OUT")
+	{
+		if (_last_inserted_marker.tag.UpperCaseString() == "CUEEVENT-OUT")
+		{
+			logtw("CUEEVENT-OUT marker cannot be inserted after CUEEVENT-OUT marker");
+			return false;
+		}
+		else if (_last_inserted_marker.tag.UpperCaseString() == "CUEEVENT-IN" && _last_inserted_marker.timestamp > marker.timestamp)
+		{
+			logtw("CUEEVENT-OUT marker cannot be inserted before CUEEVENT-IN marker");
+			return false;
+		}
+	}
+	else if (marker.tag.UpperCaseString() == "CUEEVENT-IN")
+	{
+		if (_last_inserted_marker.tag.UpperCaseString() == "CUEEVENT-IN")
+		{
+			if (_last_inserted_marker.timestamp > marker.timestamp)
+			{
+				return true;
+			}
+			else
+			{
+				logtw("CUEEVENT-IN marker only can be modified with the less timestamp");
+				return false;
+			}
+		}
+		else if (_last_inserted_marker.tag.UpperCaseString() == "CUEEVENT-OUT" && _last_inserted_marker.timestamp > marker.timestamp)
+		{
+			logtw("CUEEVENT-IN marker cannot be inserted before CUEEVENT-OUT marker");
+			return false;
+		}
+	}
+	else 
+	{
+		logtw("Unsupported marker tag: %s", marker.tag.CStr());
+		return false;
+	}
+
+	return true;
+}
+
 bool MarkerBox::InsertMarker(const Marker &marker)
 {
 	std::lock_guard<std::shared_mutex> lock(_markers_guard);

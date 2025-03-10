@@ -22,6 +22,7 @@ class MarkerBox
 {
 public:
 	bool InsertMarker(const Marker &marker);
+	bool CanInsertMarker(const Marker &marker) const;
 
 protected:
 	bool HasMarker() const;

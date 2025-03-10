@@ -1061,42 +1061,59 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 	}
 	else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::CUE)
 	{
-		// Insert marker to all packagers
-		for (const auto &it : GetTracks())
+		// 0: check if it can insert
+		// 1: insert
+		for (int i=0; i<2; i++)
 		{
-			auto track = it.second;
-			// Only video and audio tracks are supported
-			if (track->GetMediaType() != cmn::MediaType::Video && track->GetMediaType() != cmn::MediaType::Audio)
+			// Insert marker to all packagers
+			for (const auto &it : GetTracks())
 			{
-				continue;
-			}
+				auto track = it.second;
+				// Only video and audio tracks are supported
+				if (track->GetMediaType() != cmn::MediaType::Video && track->GetMediaType() != cmn::MediaType::Audio)
+				{
+					continue;
+				}
 
-			// Get Packager
-			auto packager = GetPackager(track->GetId());
-			if (packager == nullptr)
-			{
-				logtd("Could not find packager. track id: %d", track->GetId());
-				continue;
-			}
+				// Get Packager
+				auto packager = GetPackager(track->GetId());
+				if (packager == nullptr)
+				{
+					logtd("Could not find packager. track id: %d", track->GetId());
+					continue;
+				}
 
-			Marker marker;
-			marker.timestamp = static_cast<double>(media_packet->GetDts()) / data_track->GetTimeBase().GetTimescale() * track->GetTimeBase().GetTimescale();
-			marker.data = media_packet->GetData()->Clone();
-	
-			// Parse the cue data
-			auto cue_event = CueEvent::Parse(marker.data);
-			if (cue_event == nullptr)
-			{
-				logte("(%s/%s) Failed to parse the cue event data", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
-				return;
-			}
-	
-			marker.tag = ov::String::FormatString("CueEvent-%s", cue_event->GetCueTypeName().CStr());
-
-			auto result = packager->InsertMarker(marker);
-			if (result == false)
-			{
-				logte("Failed to insert marker (timestamp: %lld, tag: %s)", marker.timestamp, marker.tag.CStr());
+				Marker marker;
+				marker.timestamp = static_cast<double>(media_packet->GetDts()) / data_track->GetTimeBase().GetTimescale() * track->GetTimeBase().GetTimescale();
+				marker.data = media_packet->GetData()->Clone();
+		
+				// Parse the cue data
+				auto cue_event = CueEvent::Parse(marker.data);
+				if (cue_event == nullptr)
+				{
+					logte("(%s/%s) Failed to parse the cue event data", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+					return;
+				}
+		
+				marker.tag = ov::String::FormatString("CueEvent-%s", cue_event->GetCueTypeName().CStr());
+				
+				if (i == 0) // check
+				{
+					auto result = packager->CanInsertMarker(marker);
+					if (result == false)
+					{
+						logte("Failed to insert marker (timestamp: %lld, tag: %s)", marker.timestamp, marker.tag.CStr());
+						return;
+					}
+				}
+				else
+				{
+					auto result = packager->InsertMarker(marker);
+					if (result == false)
+					{
+						logte("Failed to insert marker (timestamp: %lld, tag: %s)", marker.timestamp, marker.tag.CStr());
+					}
+				}
 			}
 		}
 	}
