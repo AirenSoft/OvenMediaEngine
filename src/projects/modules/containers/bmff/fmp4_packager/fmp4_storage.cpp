@@ -359,59 +359,68 @@ namespace bmff
 			// Therefore, in this case, the algorithm is configured to come out smaller unconditionally.
 			if (segment->HasMarker() == true)
 			{
-				_total_expected_duration_ms -= _config.segment_duration_ms;
+				auto last_marker = segment->GetMarkers().back();
+				if (last_marker.tag.UpperCaseString() == "CUEEVENT-OUT")
+				{
+					// We can initialize the all time variables here
+					_total_expected_duration_ms = 0;
+					_total_segment_duration_ms = 0;
+				}
+				else if (last_marker.tag.UpperCaseString() == "CUEEVENT-IN")
+				{
+					_total_expected_duration_ms -= _config.segment_duration_ms;
+				}
 			}
 
 			double next_target_duration = _total_expected_duration_ms - _total_segment_duration_ms + _config.segment_duration_ms;
 			
-			// Long duration segment
-			if (next_target_duration > 0)
+			if (next_target_duration >= static_cast<double>(_config.segment_duration_ms)/2.0)
 			{
 				_target_segment_duration_ms = next_target_duration;
 			}
 			else
 			{
-				// Next segment duration must be smaller than the target segment duration
 				_target_segment_duration_ms = static_cast<double>(_config.segment_duration_ms / 2);
 			}
 
 			// Make CUE-OUT-CONT
-			if (segment->HasMarker())
-			{
-				for (const auto &it : segment->GetMarkers())
-				{
-					if (it.tag.UpperCaseString() == "CUEEVENT-OUT")
-					{
-						// Get duration
-						auto cue_out_event = ::CueEvent::Parse(it.data);
-						if (cue_out_event != nullptr)
-						{
-							_is_cue_out_on = true;
-							_cue_out_duration_msec = cue_out_event->GetDurationMsec();
-							_cue_out_elapsed_msec = 0;
-						}
+			// TODO(Getroot): Later it will be added with server option
+			// if (segment->HasMarker())
+			// {
+			// 	for (const auto &it : segment->GetMarkers())
+			// 	{
+			// 		if (it.tag.UpperCaseString() == "CUEEVENT-OUT")
+			// 		{
+			// 			// Get duration
+			// 			auto cue_out_event = ::CueEvent::Parse(it.data);
+			// 			if (cue_out_event != nullptr)
+			// 			{
+			// 				_is_cue_out_on = true;
+			// 				_cue_out_duration_msec = cue_out_event->GetDurationMsec();
+			// 				_cue_out_elapsed_msec = 0;
+			// 			}
 
-					}
-					else if (it.tag.UpperCaseString() == "CUEEVENT-IN")
-					{
-						_is_cue_out_on = false;
-						_cue_out_duration_msec = 0;
-						_cue_out_elapsed_msec = 0;
-					}
-				}
-			}
-			else if (segment->HasMarker() == false && _is_cue_out_on == true)
-			{
-				_cue_out_elapsed_msec += segment->GetDuration();
+			// 		}
+			// 		else if (it.tag.UpperCaseString() == "CUEEVENT-IN")
+			// 		{
+			// 			_is_cue_out_on = false;
+			// 			_cue_out_duration_msec = 0;
+			// 			_cue_out_elapsed_msec = 0;
+			// 		}
+			// 	}
+			// }
+			// else if (segment->HasMarker() == false && _is_cue_out_on == true)
+			// {
+			// 	_cue_out_elapsed_msec += segment->GetDuration();
 
-				// Make CUE-OUT-CONT
-				Marker marker;
-				marker.timestamp = segment->GetStartTimestamp() + segment->GetDuration();
-				marker.tag = "CUEEVENT-OUT-CONT";
-				marker.data = CueEvent::Create(::CueEvent::CueType::CONT, _cue_out_duration_msec, _cue_out_elapsed_msec)->Serialize();
+			// 	// Make CUE-OUT-CONT
+			// 	Marker marker;
+			// 	marker.timestamp = segment->GetStartTimestamp() + segment->GetDuration();
+			// 	marker.tag = "CUEEVENT-OUT-CONT";
+			// 	marker.data = CueEvent::Create(::CueEvent::CueType::CONT, _cue_out_duration_msec, _cue_out_elapsed_msec)->Serialize();
 
-				segment->SetMarkers({ marker });
-			}
+			// 	segment->SetMarkers({ marker });
+			// }
 
 			logtd("LLHLS stream (%s) / track (%d) - segment_duration_ms: %f total_expected_duration_ms: %f, total_segment_duration_ms: %f, next_target_duration: %f, target_segment_duration: %f has_marker: %d",
 				_stream_tag.CStr(), _track->GetId(), segment->GetDuration(), _total_expected_duration_ms, _total_segment_duration_ms, next_target_duration, _target_segment_duration_ms, segment->HasMarker());
