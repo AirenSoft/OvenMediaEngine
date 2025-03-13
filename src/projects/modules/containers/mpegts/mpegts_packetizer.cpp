@@ -201,6 +201,12 @@ namespace mpegts
 
     std::shared_ptr<mpegts::Packet> Packetizer::BuildPatPacket()
     {
+		_pat._table_id_extension = 1;
+		_pat._version_number = 0;
+		_pat._current_next_indicator = true;
+		_pat._section_number = 0;
+		_pat._last_section_number = 0;
+
         _pat._program_num = PROGRAM_NUMBER;
         _pat._program_map_pid = PMT_PID;
 
@@ -248,7 +254,11 @@ namespace mpegts
 
     std::shared_ptr<mpegts::Packet> Packetizer::BuildPmtPacket()
     {
-        _pmt._pid = PMT_PID;
+		_pmt._table_id_extension = PROGRAM_NUMBER;
+		_pmt._version_number = 0;
+		_pmt._current_next_indicator = true;
+		_pmt._section_number = 0;
+		_pmt._last_section_number = 0;
 
 		auto program_info_descriptor = BuildID3MetadataPointerDescriptor();
 		auto program_info_descriptor_data = program_info_descriptor->Build();
@@ -318,7 +328,7 @@ namespace mpegts
 			}
 		}
 
-        auto pmt_section = Section::Build(_pmt);
+        auto pmt_section = Section::Build(PMT_PID, _pmt);
         if (pmt_section == nullptr)
         {
             return nullptr;

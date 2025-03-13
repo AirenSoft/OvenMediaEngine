@@ -53,7 +53,15 @@ namespace mpegts
 		packet->_adaptation_field_control = 0b01;
 		packet->_continuity_counter = continuity_counter;
 
-		packet->_payload_data = std::shared_ptr<ov::Data>(section->GetData().Clone());
+		ov::ByteStream payload_buffer(188);
+
+		if (packet->_payload_unit_start_indicator)
+		{
+			payload_buffer.Write8(0x00); // Pointer field
+		}
+		payload_buffer.Write(section->GetData().GetData(), section->GetData().GetLength()); // Section data
+
+		packet->_payload_data = payload_buffer.GetDataPointer();
 
 		packet->_need_to_update_data = true;
 		

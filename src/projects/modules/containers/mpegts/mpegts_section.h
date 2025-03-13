@@ -15,6 +15,7 @@
 #include <base/ovlibrary/bit_reader.h>
 
 #include "descriptors/descriptor.h"
+#include "scte35/mpegts_splice_info.h"
 
 namespace mpegts
 {	
@@ -23,8 +24,15 @@ namespace mpegts
 
 	struct PAT
 	{
+		uint16_t 	_table_id_extension = 0U;		// 16 bits (PAT: Transport stream id, PMT: Program number)
+		uint8_t 	_reserved_bits = 0x03;			// 2 bits, 0x03
+		uint8_t 	_version_number = 0U;		  	// 5 bits
+		bool 		_current_next_indicator = false;  // 1 bit
+		uint8_t 	_section_number = 0U;		  	// 8 bits, starts from 0
+		uint8_t 	_last_section_number = 0U;	 	// 8 bits
+
 		uint16_t	_program_num; // 16bits
-		uint8_t		_reserved_bits = 0x07; // 3bits (0x07)
+		uint8_t		_reserved_bits2 = 0x07; // 3bits (0x07)
 		uint16_t	_program_map_pid; // associated PMT
 	};
 
@@ -51,11 +59,16 @@ namespace mpegts
 
 	struct PMT
 	{
-		uint16_t	_pid = 0; // from MPEGTS Header
+		uint16_t 	_table_id_extension = 0U;		// 16 bits (PAT: Transport stream id, PMT: Program number)
+		uint8_t 	_reserved_bits1 = 0x03;			// 2 bits, 0x03
+		uint8_t 	_version_number = 0U;		  	// 5 bits
+		bool 		_current_next_indicator = false;  	// 1 bit
+		uint8_t 	_section_number = 0U;		  	// 8 bits, starts from 0
+		uint8_t 	_last_section_number = 0U;	 	// 8 bits
 
-		uint8_t		_reserved_bits = 0x07; // 3bits
+		uint8_t		_reserved_bits2 = 0x07; // 3bits
 		uint16_t	_pcr_pid = 0X1FFF; // 13bits, program clock reference, if this is unused then it is set to 0x1FFF
-		uint8_t		_reserved_bits2 = 0x0F; // 4bits 
+		uint8_t		_reserved_bits3 = 0x0F; // 4bits 
 		uint8_t		_program_info_length_unused_bits = 0; // 2bits
 		uint16_t	_program_info_length = 0; //10bits, the number of bytes that follow for the program descriptors
 		std::vector<std::shared_ptr<Descriptor>> _program_descriptors;
@@ -72,6 +85,7 @@ namespace mpegts
 		OBJECT_DESCRIPTION_SECTION = 0x05,
 		METADATA_SECTION = 0x06,
 		IPMP_CONTROL_INFORMATION = 0x07,
+		SPLICE_INFO_SECTION = 0xFC,
 		NULL_PADDING = 0xFF	
 	};
 
@@ -85,14 +99,14 @@ namespace mpegts
 	class Section
 	{
 	public:
-		Section();
 		Section(uint16_t pid);
 		~Section();
 		
 		// Build section from PAT, PMT. 
 		// Now it only supports sizes that can fit in one section.
 		static std::shared_ptr<Section> Build(const PAT &pat);
-		static std::shared_ptr<Section> Build(const PMT &pmt);
+		static std::shared_ptr<Section> Build(uint16_t pid, const PMT &pmt);
+		static std::shared_ptr<Section> Build(uint16_t pid, const std::shared_ptr<SpliceInfo> &splice_info);
 
 		// return consumed length (including stuff)
 		size_t AppendData(const uint8_t *data, uint32_t length);
@@ -105,14 +119,11 @@ namespace mpegts
 		uint8_t	TableId();
 		bool	SectionSyntaxIndicator();
 		uint16_t SectionLength();
-		uint16_t TableIdExtension();
-		uint8_t VersionNumber();
-		bool CurrentNextIndicator();
-		uint8_t SectionNumber();
-		uint8_t LastSectionNumber();
 
+		// TODO(Getroot) It is better to change it to an inheritance structure that inherits Section in the future.
 		std::shared_ptr<PAT> GetPAT();
 		std::shared_ptr<PMT> GetPMT();
+		std::shared_ptr<SpliceInfo> GetSpliceInfo();
 
 		// Get Data
 		const ov::Data &GetData() {
@@ -124,6 +135,7 @@ namespace mpegts
 		bool ParseTableData(BitReader *parser);
 		bool ParsePat(BitReader *parser);
 		bool ParsePmt(BitReader *parser);
+		bool ParseSpliceInfo(BitReader *parser);
 
 		bool _header_parsed = false;
 		bool _completed = false;
@@ -138,19 +150,13 @@ namespace mpegts
 		uint8_t	_section_length_unused_bits = 0; // 2bits
 		uint16_t _section_length = 0; // 10bits, <=1021
 
-		// Table data
-		uint16_t _table_id_extension = 0U;		// 16 bits (PAT: Transport stream id, PMT: Program number)
-		uint8_t _reserved_bits2 = 0x03;			// 2 bits, 0x03
-		uint8_t _version_number = 0U;		  	// 5 bits
-		bool _current_next_indicator = false;  	// 1 bit
-		uint8_t _section_number = 0U;		  	// 8 bits, starts from 0
-		uint8_t _last_section_number = 0U;	 	// 8 bits
-
 		ov::Data _data; // All section data
 		uint32_t _crc; // checksum, excluding the pointer field
 
+		// TODO(Getroot) It is better to change it to an inheritance structure that inherits Section in the future.
 		// One table per section
 		std::shared_ptr<PAT>		_pat = nullptr;
 		std::shared_ptr<PMT>		_pmt = nullptr;
+		std::shared_ptr<SpliceInfo> _splice_info = nullptr;
 	};
 }
