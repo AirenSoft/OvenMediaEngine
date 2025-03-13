@@ -49,7 +49,8 @@ namespace cmn
 		OVEN_EVENT, // OvenMediaEngine defined event
 		CUE,
 		AMF, 				// AMF0
-		SEI					// H.264/H.265 SEI
+		SEI,				// H.264/H.265 SEI
+		SCTE35				// SCTE35
 	};
 
 	enum class PacketType : int8_t
@@ -245,7 +246,9 @@ namespace cmn
 			case cmn::BitstreamFormat::AMF:
 				return "AMF";
 			case cmn::BitstreamFormat::SEI:
-				return "SEI";				
+				return "SEI";
+			case cmn::BitstreamFormat::SCTE35:
+				return "SCTE35";			
 			default:
 				return "Unknown";
 		}
