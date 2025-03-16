@@ -37,13 +37,15 @@ When a live source inputs to the `<Application>`, a stream is automatically crea
 If you set up a live stream using an RTMP-based encoder, you need to set the following in `Server.xml`:
 
 ```markup
-<Application>
-   <Providers>
-      <RTMP>
-         <BlockDuplicateStreamName>true</BlockDuplicateStreamName>
-      </RTMP>
-   </Providers>
-<Application>
+<Server>
+    ...
+    <VirtualHosts>
+        <VirtualHost>
+            <Application>
+                <Providers>
+                    <RTMP>
+                        <BlockDuplicateStreamName>true</BlockDuplicateStreamName>
+                        ...
 ```
 
 * `<BlockDuplicateStreamName>` is a policy for streams that are inputted as overlaps.
