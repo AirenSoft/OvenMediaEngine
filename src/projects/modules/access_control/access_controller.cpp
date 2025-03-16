@@ -264,7 +264,7 @@ std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPol
 		if(signed_policy == nullptr)
 		{
 			// Probably this doesn't happen
-			logte("Could not load SingedPolicy");
+			logte("Could not load SignedPolicy");
 			return {AccessController::VerificationResult::Error, nullptr};
 		}
 

@@ -263,7 +263,7 @@ namespace pvd
 		auto remote_address = remote->GetRemoteAddress();
 		auto request_info = std::make_shared<ac::RequestInfo>(final_url, nullptr, remote, nullptr);
 
-		// SingedPolicy
+		// SignedPolicy
 		uint64_t life_time = 0;
 		
 		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(request_info);

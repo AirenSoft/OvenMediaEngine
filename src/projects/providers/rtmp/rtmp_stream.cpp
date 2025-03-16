@@ -400,7 +400,7 @@ namespace pvd
 		switch (signed_policy_result)
 		{
 			case AccessController::VerificationResult::Error:
-				logtw("SingedPolicy error : %s", _url->ToUrlString().CStr());
+				logtw("SignedPolicy error : %s", _url->ToUrlString().CStr());
 				Stop();
 				return false;
 
