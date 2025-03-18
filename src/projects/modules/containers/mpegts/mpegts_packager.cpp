@@ -270,7 +270,7 @@ namespace mpegts
 			// If the last marker is a cue-out marker, insert a cue-in marker automatically after duration of cue-out marker
 			auto last_marker = markers.back();
 			auto next_marker = GetFirstMarker();
-			if (last_marker->GetTag().UpperCaseString() == "CUEEVENT-OUT" && next_marker->GetTag().UpperCaseString() != "CUEEVENT-IN")
+			if (last_marker->GetTag().UpperCaseString() == "CUEEVENT-OUT" && (next_marker == nullptr || next_marker->GetTag().UpperCaseString() != "CUEEVENT-IN"))
 			{
 				auto cue_out_event = last_marker->GetCueEvent();
 				if (cue_out_event != nullptr)
