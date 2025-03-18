@@ -1082,7 +1082,16 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 
 			if (cue_event->GetCueType() == CueEvent::CueType::OUT)
 			{
-				// Insert CUE-IN event
+				// Make CUE-IN event
+				auto cue_out_duration_ms = cue_event->GetDurationMsec();
+				auto cue_in_timestamp_ms = timestamp_ms + cue_out_duration_ms;
+				auto cue_in_data = CueEvent::Create(CueEvent::CueType::IN)->Serialize();
+
+				if (InsertMarkerToAllPackagers(media_packet->GetTrackId(), cmn::BitstreamFormat::CUE, cue_in_timestamp_ms, cue_in_data) == false)
+				{
+					logte("Failed to insert CUE-IN marker to all packagers (track_id: %d, timestamp: %lld)", media_packet->GetTrackId(), cue_in_timestamp_ms);
+					return;
+				}
 			}
 		}
 		else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::SCTE35)
