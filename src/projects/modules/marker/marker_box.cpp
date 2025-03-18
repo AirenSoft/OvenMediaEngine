@@ -178,15 +178,15 @@ ov::String Marker::ToHlsTag(int64_t timestamp_offset) const
 
 		if (cue_event->GetCueType() == CueEvent::CueType::OUT)
 		{
-			return ov::String::FormatString("#EXT-X-CUE-OUT:DURATION=%.3f", static_cast<double>(cue_event->GetDurationMsec()) / 1000.0);
+			return ov::String::FormatString("#EXT-X-CUE-OUT:DURATION=%.3f\n", static_cast<double>(cue_event->GetDurationMsec()) / 1000.0);
 		}
 		else if (cue_event->GetCueType() == CueEvent::CueType::CONT)
 		{
-			return ov::String::FormatString("#EXT-X-CUE-OUT-CONT:ElapsedTime=%.3f,Duration=%.3f", static_cast<double>(cue_event->GetElapsedMsec()) / 1000.0, static_cast<double>(cue_event->GetDurationMsec()) / 1000.0);
+			return ov::String::FormatString("#EXT-X-CUE-OUT-CONT:ElapsedTime=%.3f,Duration=%.3f\n", static_cast<double>(cue_event->GetElapsedMsec()) / 1000.0, static_cast<double>(cue_event->GetDurationMsec()) / 1000.0);
 		}
 		else if (cue_event->GetCueType() == CueEvent::CueType::IN)
 		{
-			return "#EXT-X-CUE-IN";
+			return "#EXT-X-CUE-IN\n";
 		}
 	}
 	else if (_marker_format == cmn::BitstreamFormat::SCTE35)

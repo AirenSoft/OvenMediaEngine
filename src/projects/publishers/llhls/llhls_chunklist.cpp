@@ -118,24 +118,26 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 		return false;
 	}
 
-	// part duration is calculated on first segment
-	if (_first_segment == true)
 	{
-		_max_part_duration = std::max(_max_part_duration, info.GetDuration());
+		std::lock_guard<std::shared_mutex> lock(_segments_guard);
+		// part duration is calculated on first segment
+		if (_first_segment == true)
+		{
+			_max_part_duration = std::max(_max_part_duration, info.GetDuration());
+		}
+
+		if (info.IsCompleted() == true)
+		{
+			segment->SetCompleted();
+			_last_completed_segment_sequence = segment_sequence;
+			_first_segment = false;
+		}
+	
+		_last_segment_sequence = segment_sequence;
+		_last_partial_segment_sequence = info.GetSequence();
+
+		segment->InsertPartialSegmentInfo(std::make_shared<SegmentInfo>(info));
 	}
-
-	if (info.IsCompleted() == true)
-	{
-		std::unique_lock<std::shared_mutex> lock(_segments_guard);
-		segment->SetCompleted();
-		_last_completed_segment_sequence = segment_sequence;
-		_first_segment = false;
-	}
-
-	_last_segment_sequence = segment_sequence;
-	_last_partial_segment_sequence = info.GetSequence();
-
-	segment->InsertPartialSegmentInfo(std::make_shared<SegmentInfo>(info));
 
 	UpdateCacheForDefaultChunklist();
 
