@@ -177,12 +177,12 @@ public:
 			return _markers.empty() == false;
 		}
 
-		void SetMarkers(const std::vector<Marker> &markers)
+		void SetMarkers(const std::vector<std::shared_ptr<Marker>> &markers)
 		{
 			_markers = markers;
 		}
 
-		const std::vector<Marker> &GetMarkers() const
+		const std::vector<std::shared_ptr<Marker>> &GetMarkers() const
 		{
 			return _markers;
 		}
@@ -204,7 +204,7 @@ public:
 
 		std::deque<std::shared_ptr<SegmentInfo>> _partial_segments;
 
-		std::vector<Marker> _markers;
+		std::vector<std::shared_ptr<Marker>> _markers;
 	}; // class SegmentInfo
 
 	LLHlsChunklist(const ov::String &url, const std::shared_ptr<const MediaTrack> &track, 
@@ -243,6 +243,9 @@ public:
 
 	void SetEndList();
 
+	void SetWallclockOffset(int64_t offset_ms);
+	int64_t GetWallclockOffset() const;
+
 private:
 	std::shared_ptr<SegmentInfo> GetLastSegmentInfo() const;
 
@@ -252,7 +255,7 @@ private:
 
 	ov::String MakeExtXKey() const;
 
-	ov::String MakeMarkers(const std::vector<Marker> &markers) const;
+	ov::String MakeMarkers(const std::vector<std::shared_ptr<Marker>> &markers) const;
 
 	std::shared_ptr<const MediaTrack> _track;
 
@@ -293,6 +296,10 @@ private:
 	bmff::CencProperty _cenc_property;
 
 	bool _end_list = false;
+
+	int64_t _wallclock_offset_ms = 0;
+
+	std::shared_ptr<Marker> _root_marker;
 
 	void UpdateCacheForDefaultChunklist();
 };

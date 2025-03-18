@@ -26,20 +26,20 @@ namespace mpegts
 
 	struct SpliceTime
 	{
-		uint8_t _time_specified_flag = 0;  // 1bit
+		uint8_t _time_specified_flag = 1;  // 1bit
 
 		// time_specified_flag == 1
-		uint8_t _reserved = 0x07;  // 6bits
+		uint8_t _reserved = 0x00;  // 6bits
 		int64_t _pts_time = 0;	   // 33bits
 
 		// time_specified_flag == 0
-		uint8_t _reserved2 = 0x07;	// 7bits
+		uint8_t _reserved2 = 0x00;	// 7bits
 	};
 
 	struct BreakDuration
 	{
 		uint8_t _auto_return = 0;  // 1bit
-		uint8_t _reserved = 0x07;  // 6bits
+		uint8_t _reserved = 0;  // 6bits
 		uint64_t _duration = 0;	   // 33bits
 	};
 
@@ -67,7 +67,7 @@ namespace mpegts
 
 		// SpliceCommand - Child class will implement this
 
-		uint8_t _descriptor_loop_length = 0;  // 12bits
+		uint16_t _descriptor_loop_length = 0;  // 16bits
 
 		// Does not support yet
 		std::vector<std::shared_ptr<Descriptor>> _descriptors;

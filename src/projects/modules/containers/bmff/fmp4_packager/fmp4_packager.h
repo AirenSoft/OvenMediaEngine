@@ -48,6 +48,9 @@ namespace bmff
 	private:
 		const Config &GetConfig() const;
 
+		MarkerBox::SegmentationInfo _segmentation_info;
+		std::optional<MarkerBox::SegmentationInfo> GetSegmentationInfo() const override;
+
 		std::shared_ptr<bmff::Samples> GetDataSamples(int64_t start_timestamp, int64_t end_timestamp);
 
 		bool StoreInitializationSection(const std::shared_ptr<ov::Data> &segment);
@@ -65,8 +68,5 @@ namespace bmff
 
 		std::map<int64_t, Marker> _markers;
 		mutable std::shared_mutex _markers_guard;
-
-		// if cue event is found, flush the samples immediately
-		bool _force_segment_flush = false;
 	};
 }

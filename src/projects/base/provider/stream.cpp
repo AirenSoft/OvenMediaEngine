@@ -102,6 +102,17 @@ namespace pvd
 		return GetApplication()->GetApplicationTypeName();
 	}
 
+	int64_t Stream::GetCurrentTimestampMs()
+	{
+		// Not yet started
+		if (_last_media_timestamp_ms == -1)
+		{
+			return -1;
+		}
+		
+		return _last_media_timestamp_ms + _elapsed_from_last_media_timestamp.Elapsed();
+	}
+
 	bool Stream::SendDataFrame(int64_t timestamp, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent)
 	{
 		if (frame == nullptr)
@@ -118,18 +129,21 @@ namespace pvd
 
 		if (timestamp == -1)
 		{
-			// Not yet started
-			if (_last_media_timestamp_ms == -1)
+			timestamp = GetCurrentTimestampMs();
+			if (timestamp == -1)
 			{
 				logte("Could not send data frame. %s/%s(%u) - Media is not started yet", GetApplicationName(), GetName().CStr(), GetId());
 				return false;
 			}
-			timestamp = _last_media_timestamp_ms + _elapsed_from_last_media_timestamp.Elapsed();
 
 			logtd("SendDataFrame - %s/%s(%u) - last_media_timestamp_ms: %lld, elapsed_from_last_media_timestamp: %lld, timestamp: %lld",
 				  GetApplicationName(), GetName().CStr(), GetId(),
 				  _last_media_timestamp_ms, _elapsed_from_last_media_timestamp.Elapsed(), timestamp);
 		}
+
+		// In the case of a bypass stream, data may arrive later than video, so a delay of 100ms is given to correct this.
+		// constexpr int64_t kDataDelay = 100;
+		// timestamp += kDataDelay;
 
 		auto event_message = std::make_shared<MediaPacket>(GetMsid(),
 															cmn::MediaType::Data,

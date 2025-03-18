@@ -6,6 +6,50 @@
 //  Copyright (c) 2025 AirenSoft. All rights reserved.
 //
 //==============================================================================
+/*
+	table_id: 8 (8)
+	section_syntax_indicator: 1 (9)
+	private_indicator: 1 (10)
+	reserved: 2 (12)
+	section_length: 12 (24)
+	protocol_version: 8 (32)
+	encrypted_packet: 1 (33)
+	encryption_algorithm: 6 (39)
+	pts_adjustment: 33 (72)
+	cw_index: 8 (80)
+	tier: 12 (92)
+	splice_command_length: 12 (104)
+	splice_command_type: 8 (112)
+		// SPLICE_INSERT
+		splice_event_id: 32 (144)
+		splice_event_cancel_indicator: 1 (145)
+		reserved: 7 (152)
+
+		out_of_network_indicator: 1 (153)
+		program_splice_flag: 1 (154)
+		duration_flag: 1 (155)
+		splice_immediate_flag: 1 (156)
+		event_id_compliance_flag: 1 (157)
+		reserved: 3 (160)
+
+		// splice_time
+		time_specified_flag: 1 (161)
+		reserved: 6 (167)
+		pts_time: 33 (200)
+
+		// break_duration
+		auto_return: 1 (201)
+		reserved: 6 (207)
+		duration: 33 (240)
+
+		unique_program_id: 16 (256)
+		avail_num: 8 (264)
+		avails_expected: 8 (272)
+
+	descriptor_loop_length: 16 (288)
+	CRC_32: 32 (320)
+*/
+
 
 #pragma once
 
@@ -24,6 +68,7 @@ namespace mpegts
 		void SetOutofNetworkIndicator(bool out_of_network);
 		void SetPTS(int64_t pts);
 		void SetDuration(uint64_t duration);
+		void SetAutoReturn(bool auto_return);
 
 	private:
 		std::shared_ptr<ov::Data> BuildSpliceCommand() override;
@@ -34,7 +79,7 @@ namespace mpegts
 
 		// cancel indicator == 0
 			uint8_t _out_of_network_indicator = 0;	// 1bit, 1: scte35-out 0: scte35-in
-			uint8_t _program_splice_flag = 0;		// 1bit
+			uint8_t _program_splice_flag = 1;		// 1bit
 			uint8_t _duration_flag = 0;				// 1bit
 			uint8_t _splice_immediate_flag = 0;		// 1bit
 			uint8_t _event_id_compliance_flag = 0;	// 1bit

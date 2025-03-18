@@ -27,6 +27,19 @@ namespace bmff
 		_config = config;
 
 		_target_chunk_duration_ms = _config.chunk_duration_ms;
+
+		if (media_track->GetMediaType() == cmn::MediaType::Video)
+		{
+			_segmentation_info.keyframe_interval = media_track->GetKeyFrameInterval();
+		}
+		else 
+		{
+			_segmentation_info.keyframe_interval = 1;
+		}
+		
+		_segmentation_info.media_type = media_track->GetMediaType();
+		_segmentation_info.framerate = media_track->GetFrameRate();
+		_segmentation_info.target_segment_duration_ms = _config.segment_duration_ms;
 	}
 
 	FMP4Packager::~FMP4Packager()
@@ -159,82 +172,134 @@ namespace bmff
 
 		std::shared_ptr<Samples> samples = _sample_buffer.GetSamples();
 
+		auto last_segment = _storage->GetLastSegment();
+		double total_sample_duration = samples != nullptr ? samples->GetTotalDuration() : 0;
+		double total_sample_duration_ms = (static_cast<double>(total_sample_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
+		// Calculate duration as milliseconds
+		double next_total_sample_duration = total_sample_duration + next_frame->GetDuration();
+		double next_total_sample_duration_ms = (static_cast<double>(next_total_sample_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
+		bool next_frame_is_idr = (next_frame->GetFlag() == MediaPacketFlag::Key) || (GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio);
+
+		// Marker handling
+		constexpr uint8_t kNoMarker = 0;
+		constexpr uint8_t kFlushAsSoonAsPossible = 1;
+		constexpr uint8_t kShouldDeferSegmentFlush = 2;
+		constexpr uint8_t kShouldFlushImmediately = 3;
+
+		int64_t last_sequence_number = -1; 
+		if (last_segment != nullptr)
+		{
+			last_sequence_number = last_segment->GetNumber();
+			if (last_segment->IsCompleted() == true)
+			{
+				last_sequence_number++;
+			}
+		}
+
+		bool has_marker_in_this_sequence = HasMarkerWithSeq(last_sequence_number);
+		bool has_marker_in_next_sample = HasMarker(next_frame->GetDts(), next_frame->GetDts() + next_frame->GetDuration());
+		bool has_marker_in_curr_samples = false;
+		if (samples != nullptr)
+		{
+			has_marker_in_curr_samples = HasMarker(samples->GetStartTimestamp(), samples->GetEndTimestamp());
+		}
+
+		uint8_t marker_handling = kNoMarker;
+
+		ov::String marker_handling_desc; 
+		if (has_marker_in_this_sequence == true && has_marker_in_curr_samples == true)
+		{
+			marker_handling = kFlushAsSoonAsPossible;
+			marker_handling_desc = "Flush as soon as possible";
+		}
+		else if (has_marker_in_this_sequence == true && has_marker_in_curr_samples == false)
+		{
+			marker_handling = kShouldDeferSegmentFlush;
+			marker_handling_desc = "Defer segment flush";
+		}
+		else if (has_marker_in_this_sequence == false && has_marker_in_next_sample == true)
+		{
+			marker_handling = kShouldFlushImmediately;
+			marker_handling_desc = "Flush immediately";
+		}
+		else if (has_marker_in_this_sequence == false && has_marker_in_curr_samples == true)
+		{
+			// Too Late
+			// Never happen, it must be handled in the previous condition (has_marker_in_this_sequence == false && has_marker_in_next_sample == true)
+			logte("track(%d) - Too late, marker is included in the samples time range : sequence(%d), sample(%lld - %lld)", GetMediaTrack()->GetId(), last_sequence_number, samples->GetStartTimestamp(), samples->GetEndTimestamp());
+		}
+
 		if (samples != nullptr && samples->GetTotalCount() > 0)
 		{
 			// If the CUE-OUT/IN event is included in the samples time range, flush the samples as soon as possible.
 			// samples->GetStartTimestamp() <= CUE events < samples->GetEndTimestamp()
-			bool force_segment_flush_immediately = false;
-			if (_force_segment_flush == false && HasMarker(samples->GetStartTimestamp(), samples->GetEndTimestamp()))
+			if (marker_handling == kFlushAsSoonAsPossible)
 			{
 				auto marker = GetFirstMarker();
+				if (marker == nullptr)
+				{
+					// Never reach here
+					logtc("track(%d) - Marker handling : Flush as soon as possible, but marker is null", GetMediaTrack()->GetId());
+					return false;
+				}
 
-				logti("track(%d) - Force segment flush, has marker (start: %lld, marker:%lld (%s) end: %lld)", GetMediaTrack()->GetId(), samples->GetStartTimestamp(), marker.timestamp, marker.tag.CStr(), samples->GetEndTimestamp());
-				_force_segment_flush = true;
+				logti("track(%d) - Force segment flush, has marker (start: %lld, marker:%lld (%s) end: %lld)", GetMediaTrack()->GetId(), samples->GetStartTimestamp(), marker->GetTimestamp(), marker->GetTag().CStr(), samples->GetEndTimestamp());
 
-				if (marker.tag.UpperCaseString() == "CUEEVENT-OUT")
+				if (marker->IsOutOfNetwork() == true)
 				{
 					// If a CUE-OUT marker is included, flush the samples immediately. This may cause the next segment to start with a non-keyframe, but it will be replaced by a new segment through another ad-insertion solution.
-					force_segment_flush_immediately = true;
-					_force_segment_flush = false;
+					marker_handling = kShouldFlushImmediately;
 					logti("track(%d) - Force segment flush immediately, cue-out marker : sample duration (%f)", GetMediaTrack()->GetId(), samples->GetTotalDuration());
 				}
 			}
-
-			bool next_frame_is_idr = (next_frame->GetFlag() == MediaPacketFlag::Key) || (GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio);
-
-			// Calculate duration as milliseconds
-			double total_sample_duration = samples->GetTotalDuration();
-			double next_total_sample_duration = total_sample_duration + next_frame->GetDuration();
-
-			double total_sample_duration_ms = (static_cast<double>(total_sample_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
-			double next_total_sample_duration_ms = (static_cast<double>(next_total_sample_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
 
 			// https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-4.4.3.8
 			// The duration of a Partial Segment MUST be less than or equal to the Part Target Duration.  
 			// The duration of each Partial Segment MUST be at least 85% of the Part Target Duration, 
 			// with the exception of Partial Segments with the INDEPENDENT=YES attribute 
 			// and the final Partial Segment of any Parent Segment.
-
-			auto last_segment = _storage->GetLastSegment();
-			auto last_segment_duration = 0; 
+			double last_segment_duration = 0.0; 
 			if (last_segment != nullptr && last_segment->IsCompleted() == false)
 			{
-				last_segment_duration = last_segment->GetDuration();
+				last_segment_duration = last_segment->GetDurationMs();
 			}
-			bool is_last_partial_segment = false;
+			bool should_segemnt_complete = false;
 			// https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-4.4.4.9
 			// The duration of a Partial Segment MUST be less than or equal to the
 			// Part Target Duration.  The duration of each Partial Segment MUST be
 			// at least 85% of the Part Target Duration, with the exception of
 			// Partial Segments with the INDEPENDENT=YES attribute and the final
 			// Partial Segment of any Parent Segment.
-			if ((total_sample_duration_ms + last_segment_duration >= _storage->GetTargetSegmentDuration()) ||
+			if ((marker_handling != kShouldDeferSegmentFlush) && // Wait marker
+				
+				((total_sample_duration_ms + last_segment_duration >= _storage->GetTargetSegmentDuration()) ||
 				// Video && next_frame_is_idr && force_segment_flush
-				(GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && next_frame_is_idr && _force_segment_flush) || 
+				(GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && next_frame_is_idr && marker_handling == kFlushAsSoonAsPossible) || 
 				// Audio && force_segment_flush
-				(GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio && _force_segment_flush) ||
+				(GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio && marker_handling == kFlushAsSoonAsPossible) ||
 				// force segment flush immediately
-				(force_segment_flush_immediately == true))
+				(marker_handling == kShouldFlushImmediately)))
 			{
 				// Last partial segment
-				is_last_partial_segment = true;
+				should_segemnt_complete = true;
 			}
 
-			logtd("track(%d), total_sample_duration_ms: %lf, next_total_sample_duration_ms: %lf, target_chunk_duration_ms: %lf, next_frame_is_idr: %d, is_last_partial_segment: %d last_segment_duration: %lf, target_segment_duration: %f", GetMediaTrack()->GetId(), total_sample_duration_ms, next_total_sample_duration_ms, _target_chunk_duration_ms, next_frame_is_idr, is_last_partial_segment, last_segment != nullptr ? last_segment->GetDuration() : -1, _storage->GetTargetSegmentDuration());
+			logtd("track(%d), total_sample_duration_ms: %lf, next_total_sample_duration_ms: %lf, target_chunk_duration_ms: %lf, next_frame_is_idr: %d, is_last_partial_segment: %d last_segment_duration: %lf, target_segment_duration: %f", GetMediaTrack()->GetId(), total_sample_duration_ms, next_total_sample_duration_ms, _target_chunk_duration_ms, next_frame_is_idr, should_segemnt_complete, last_segment != nullptr ? last_segment->GetDurationMs() : -1, _storage->GetTargetSegmentDuration());
 
 			// - In the last partial segment, if the next frame is a keyframe, a segment is created immediately. This allows the segment to start with a keyframe.
 			// - When adding samples, if the Part Target Duration is exceeded, a chunk is created immediately.
 			// - If it exceeds 85% and the next sample is independent, a chunk is created. This makes the next chunk start independent.
-			if ( 	(force_segment_flush_immediately == true) ||
-					(is_last_partial_segment == true && GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && next_frame_is_idr == true) ||
-					(is_last_partial_segment == true && GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio) ||
-					(total_sample_duration_ms >= _target_chunk_duration_ms) ||
+			if (	(total_sample_duration_ms >= _target_chunk_duration_ms) ||
+				
+					(marker_handling == kShouldFlushImmediately) ||
+
+					(should_segemnt_complete == true && GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && next_frame_is_idr == true) ||
+					(should_segemnt_complete == true && GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio) ||
+					
 					((next_total_sample_duration_ms > _target_chunk_duration_ms) && (total_sample_duration_ms >= _target_chunk_duration_ms * 0.85)) 
 				)
 			{
 				double reserve_buffer_size;
-
-				_force_segment_flush = _force_segment_flush && is_last_partial_segment && next_frame_is_idr ? false : _force_segment_flush;
 				
 				if (GetMediaTrack()->GetMediaType() == cmn::MediaType::Video)
 				{
@@ -272,36 +337,61 @@ namespace bmff
 
 				auto chunk = chunk_stream.GetDataPointer();
 
-				std::vector<Marker> markers = PopMarkers(samples->GetStartTimestamp(), samples->GetEndTimestamp());
-				if (markers.empty() == false)
-				{
-					// If the last marker is a cue-out marker, insert a cue-in marker automatically after duration of cue-out marker
-					auto last_marker = markers.back();
-					auto next_marker = GetFirstMarker();
-					if (last_marker.tag.UpperCaseString() == "CUEEVENT-OUT" && next_marker.tag.UpperCaseString() != "CUEEVENT-IN")
-					{
-						auto cue_out_event = CueEvent::Parse(last_marker.data);
-						if (cue_out_event != nullptr)
-						{
-							auto duration_msec = cue_out_event->GetDurationMsec();
-							auto main_track = GetMediaTrack();
-							int64_t cue_in_timestamp = (samples->GetEndTimestamp() - 1) + (static_cast<double>(duration_msec) / 1000.0 * main_track->GetTimeBase().GetTimescale());
+				auto markers = PopMarkers(samples->GetStartTimestamp(), samples->GetEndTimestamp());
 
-							Marker cue_in_marker;
-							cue_in_marker.timestamp = cue_in_timestamp;
-							cue_in_marker.tag = "CueEvent-IN";
-							cue_in_marker.data = CueEvent::Create(CueEvent::CueType::IN, 0)->Serialize();
+				////////////////////////////////////////////////////
+				// Auto Insertion of Cue-In/SCTE35-IN Marker
+				// It is moved to the upper layer (LLHLS Stream) to synchronize with all tracks
+				////////////////////////////////////////////////////
 
-							InsertMarker(cue_in_marker);
-						}
-					}
-				}
+				// if (markers.empty() == false)
+				// {
+				// 	// If the last marker is a cue-out marker, insert a cue-in marker automatically after duration of cue-out marker
+				// 	auto last_pop_marker = markers.back();
+				// 	auto next_marker = GetFirstMarker();
+				// 	if (last_pop_marker != nullptr && last_pop_marker->IsOutOfNetwork() == true && next_marker == nullptr)
+				// 	{
+				// 		// If there is no next xxx-IN marker, insert a xxx-in marker automatically
+				// 		if (last_pop_marker->GetMarkerFormat() == cmn::BitstreamFormat::CUE)
+				// 		{
+				// 			// Insert a CUE-IN marker
+				// 			auto cue_out_event = last_pop_marker->GetCueEvent();
+				// 			if (cue_out_event != nullptr)
+				// 			{
+				// 				auto duration_msec = cue_out_event->GetDurationMsec();
+				// 				auto main_track = GetMediaTrack();
+				// 				int64_t cue_in_timestamp = (samples->GetEndTimestamp() - 1) + (static_cast<double>(duration_msec) / 1000.0 * main_track->GetTimeBase().GetTimescale());
+
+				// 				auto cue_in_marker = Marker::CreateMarker(cmn::BitstreamFormat::CUE, cue_in_timestamp, CueEvent::Create(CueEvent::CueType::IN, 0)->Serialize());
+
+				// 				InsertMarker(cue_in_marker);
+				// 			}
+				// 		}
+				// 		else if (last_pop_marker->GetMarkerFormat() == cmn::BitstreamFormat::SCTE35)
+				// 		{
+				// 			// Insert a SCTE35-IN marker
+				// 			auto scte35_out_event = last_pop_marker->GetScte35Event();
+				// 			if (scte35_out_event != nullptr)
+				// 			{
+				// 				auto duration_msec = scte35_out_event->GetDurationMsec();
+				// 				auto main_track = GetMediaTrack();
+				// 				int64_t scte35_in_timestamp = (samples->GetEndTimestamp() - 1) + (static_cast<double>(duration_msec) / 1000.0 * main_track->GetTimeBase().GetTimescale());
+
+				// 				auto scte_in_data = Scte35Event::Create(mpegts::SpliceCommandType::SPLICE_INSERT, scte35_out_event->GetID(), false, scte35_in_timestamp, duration_msec, false)->Serialize();
+
+				// 				auto marker = Marker::CreateMarker(cmn::BitstreamFormat::SCTE35, scte35_in_timestamp, scte_in_data);
+
+				// 				InsertMarker(marker);
+				// 			}
+				// 		}
+				// 	}
+				// }
 
 				if (_storage != nullptr && _storage->AppendMediaChunk(chunk, 
 												samples->GetStartTimestamp(), 
 												total_sample_duration_ms, 
 												samples->IsIndependent(), 
-												is_last_partial_segment, 
+												should_segemnt_complete, 
 												markers) == false)
 				{
 					logte("FMP4Packager::AppendSample() - Failed to store media chunk");
@@ -320,6 +410,28 @@ namespace bmff
 		{
 			logte("FMP4Packager::AppendSample() - Failed to append sample");
 			return false;
+		}
+
+		samples = _sample_buffer.GetSamples();
+		total_sample_duration = samples != nullptr ? samples->GetTotalDuration() : 0;
+		total_sample_duration_ms = (static_cast<double>(total_sample_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
+
+		_segmentation_info.last_sample_timestamp_ms = static_cast<double>(next_frame->GetDts()) / GetMediaTrack()->GetTimeBase().GetTimescale() * 1000.0;
+		_segmentation_info.last_sample_duration_ms = static_cast<double>(next_frame->GetDuration()) / GetMediaTrack()->GetTimeBase().GetTimescale() * 1000.0;
+
+		last_segment = _storage->GetLastSegment();
+
+		if (last_segment != nullptr)
+		{
+			_segmentation_info.is_last_segment_completed = last_segment->IsCompleted();
+			_segmentation_info.last_segment_number = last_segment->GetNumber();
+			_segmentation_info.last_partial_segment_number = last_segment->GetLastChunkNumber();
+			_segmentation_info.last_segement_duration_ms = total_sample_duration_ms;
+			if (last_segment->IsCompleted() == false)
+			{
+				_segmentation_info.last_segement_duration_ms += last_segment->GetDurationMs();
+			} 
+			logtd("track(%d) - last_segment_number: %lld, last_partial_segment_number: %lld, last_segment_duration_ms: %f", GetMediaTrack()->GetId(), _segmentation_info.last_segment_number, _segmentation_info.last_partial_segment_number, _segmentation_info.last_segement_duration_ms);
 		}
 
 		return true;
@@ -377,6 +489,11 @@ namespace bmff
 		return _config;
 	}
 
+	std::optional<MarkerBox::SegmentationInfo> FMP4Packager::GetSegmentationInfo() const
+	{
+		return _segmentation_info;
+	}
+
 	bool FMP4Packager::StoreInitializationSection(const std::shared_ptr<ov::Data> &section)
 	{
 		if (section == nullptr || _storage == nullptr)
@@ -391,8 +508,6 @@ namespace bmff
 
 		return true;
 	}
-
-	
 
 	std::shared_ptr<const MediaPacket> FMP4Packager::ConvertBitstreamFormat(const std::shared_ptr<const MediaPacket> &media_packet)
 	{

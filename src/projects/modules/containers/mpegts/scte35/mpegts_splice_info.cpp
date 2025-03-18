@@ -47,7 +47,7 @@ namespace mpegts
 		// descriptor loop length
 		// Not supported
 		_descriptor_loop_length = 0;
-		stream.WriteBits(12, _descriptor_loop_length);
+		stream.WriteBytes<uint16_t>(_descriptor_loop_length);
 
 		return stream.GetDataObject();
 	}

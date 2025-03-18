@@ -36,6 +36,11 @@ namespace mpegts
 		_break_duration._duration = duration;
 	}
 
+	void SpliceInsert::SetAutoReturn(bool auto_return)
+	{
+		_break_duration._auto_return = auto_return;
+	}
+
 	std::shared_ptr<ov::Data> SpliceInsert::BuildSpliceCommand()
 	{
 		ov::BitWriter stream(188);
@@ -55,7 +60,7 @@ namespace mpegts
 
 			if (_program_splice_flag == 1)
 			{
-				stream.WriteBits(8, _splice_time._time_specified_flag);
+				stream.WriteBits(1, _splice_time._time_specified_flag);
 				if (_splice_time._time_specified_flag == 1)
 				{
 					stream.WriteBits(6, _splice_time._reserved);
@@ -73,6 +78,10 @@ namespace mpegts
 				stream.WriteBits(6, _break_duration._reserved);
 				stream.WriteBits(33, _break_duration._duration);
 			}
+
+			stream.WriteBytes<uint16_t>(_unique_program_id);
+			stream.WriteBytes<uint8_t>(_avail_num);
+			stream.WriteBytes<uint8_t>(_avails_expected);
 		}
 
 		return stream.GetDataObject();

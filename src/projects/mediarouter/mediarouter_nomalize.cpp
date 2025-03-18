@@ -78,6 +78,7 @@ bool MediaRouterNormalize::NormalizeMediaPacket(const std::shared_ptr<info::Stre
 		case cmn::BitstreamFormat::ID3v2:
 		case cmn::BitstreamFormat::OVEN_EVENT:
 		case cmn::BitstreamFormat::CUE:
+		case cmn::BitstreamFormat::SCTE35:
 		case cmn::BitstreamFormat::AMF:
 			result = true;
 			break;

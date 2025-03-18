@@ -50,7 +50,7 @@ namespace bmff
 		int64_t GetLastSegmentNumber() const;
 
 		bool StoreInitializationSection(const std::shared_ptr<ov::Data> &section);
-		bool AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent, bool last_chunk, const std::vector<Marker> &markers = {});
+		bool AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent, bool last_chunk, const std::vector<std::shared_ptr<Marker>> &markers = {});
 
 		uint64_t GetMaxChunkDurationMs() const;
 		uint64_t GetMinChunkDurationMs() const;

@@ -76,6 +76,8 @@ namespace pvd
 		std::shared_ptr<ov::Url> GetFinalUrl() const;
 		void SetFinalUrl(const std::shared_ptr<ov::Url> &final_url);
 
+		int64_t GetCurrentTimestampMs();
+
 	protected:
 		Stream(const std::shared_ptr<pvd::Application> &application, StreamSourceType source_type);
 		Stream(const std::shared_ptr<pvd::Application> &application, info::stream_id_t stream_id, StreamSourceType source_type);

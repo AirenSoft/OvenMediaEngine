@@ -7,14 +7,16 @@
 //
 //==============================================================================
 #include "stream_actions_controller.h"
-#include "../../../../../api_private.h"
 
 #include <base/provider/application.h>
-#include <modules/data_format/id3v2/id3v2.h>
-#include <modules/data_format/id3v2/frames/id3v2_frames.h>
-#include <modules/data_format/cue_event/cue_event.h>
-#include <modules/data_format/amf_event/amf_event.h>
 #include <modules/bitstream/h264/h264_sei.h>
+#include <modules/data_format/amf_event/amf_event.h>
+#include <modules/data_format/cue_event/cue_event.h>
+#include <modules/data_format/id3v2/frames/id3v2_frames.h>
+#include <modules/data_format/id3v2/id3v2.h>
+#include <modules/data_format/scte35_event/scte35_event.h>
+
+#include "../../../../../api_private.h"
 
 namespace api
 {
@@ -39,10 +41,10 @@ namespace api
 		//  "id": "dump_id"
 		// }
 		ApiResponse StreamActionsController::OnPostHLSDumps(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
-									const std::shared_ptr<mon::HostMetrics> &vhost,
-									const std::shared_ptr<mon::ApplicationMetrics> &app,
-									const std::shared_ptr<mon::StreamMetrics> &stream,
-									const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+															const std::shared_ptr<mon::HostMetrics> &vhost,
+															const std::shared_ptr<mon::ApplicationMetrics> &app,
+															const std::shared_ptr<mon::StreamMetrics> &stream,
+															const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
 			auto dump_info = ::serdes::DumpInfoFromJson(request_body);
 			if (dump_info == nullptr)
@@ -98,7 +100,7 @@ namespace api
 			{
 				response.append(::serdes::JsonFromDumpInfo(dump));
 			}
-			
+
 			return response;
 		}
 
@@ -114,10 +116,10 @@ namespace api
 		//	}
 		// }
 		ApiResponse StreamActionsController::OnPostStartHLSDump(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
-										const std::shared_ptr<mon::HostMetrics> &vhost,
-										const std::shared_ptr<mon::ApplicationMetrics> &app,
-										const std::shared_ptr<mon::StreamMetrics> &stream,
-										const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+																const std::shared_ptr<mon::HostMetrics> &vhost,
+																const std::shared_ptr<mon::ApplicationMetrics> &app,
+																const std::shared_ptr<mon::StreamMetrics> &stream,
+																const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
 			auto dump_info = ::serdes::DumpInfoFromJson(request_body);
 			if (dump_info == nullptr)
@@ -127,7 +129,7 @@ namespace api
 									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
 			}
 
-			if (dump_info->GetId().IsEmpty() == true || 
+			if (dump_info->GetId().IsEmpty() == true ||
 				dump_info->GetStreamName().IsEmpty() == true ||
 				dump_info->GetOutputPath().IsEmpty() == true)
 			{
@@ -172,10 +174,10 @@ namespace api
 		//  "id": "dump_id"
 		// }
 		ApiResponse StreamActionsController::OnPostStopHLSDump(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
-										const std::shared_ptr<mon::HostMetrics> &vhost,
-										const std::shared_ptr<mon::ApplicationMetrics> &app,
-										const std::shared_ptr<mon::StreamMetrics> &stream,
-										const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+															   const std::shared_ptr<mon::HostMetrics> &vhost,
+															   const std::shared_ptr<mon::ApplicationMetrics> &app,
+															   const std::shared_ptr<mon::StreamMetrics> &stream,
+															   const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
 			auto dump_info = ::serdes::DumpInfoFromJson(request_body);
 			if (dump_info == nullptr)
@@ -224,10 +226,10 @@ namespace api
 
 		// POST /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>:injectHLSEvent
 		ApiResponse StreamActionsController::OnPostSendEvents(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
-										const std::shared_ptr<mon::HostMetrics> &vhost,
-										const std::shared_ptr<mon::ApplicationMetrics> &app,
-										const std::shared_ptr<mon::StreamMetrics> &stream,
-										const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+															  const std::shared_ptr<mon::HostMetrics> &vhost,
+															  const std::shared_ptr<mon::ApplicationMetrics> &app,
+															  const std::shared_ptr<mon::StreamMetrics> &stream,
+															  const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
 			if (request_body.isArray() == false || request_body.size() == 0)
 			{
@@ -260,10 +262,10 @@ namespace api
 
 		// POST /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>:injectHLSEvent
 		ApiResponse StreamActionsController::OnPostSendEvent(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
-										const std::shared_ptr<mon::HostMetrics> &vhost,
-										const std::shared_ptr<mon::ApplicationMetrics> &app,
-										const std::shared_ptr<mon::StreamMetrics> &stream,
-										const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+															 const std::shared_ptr<mon::HostMetrics> &vhost,
+															 const std::shared_ptr<mon::ApplicationMetrics> &app,
+															 const std::shared_ptr<mon::StreamMetrics> &stream,
+															 const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
 			// Validate request body
 
@@ -310,11 +312,18 @@ namespace api
 			// 	"events": [
 			// 		{
 			// 			"seiType" : "UserDataUnregistered",
-			// 			"data": "Hello! Digitia1212n!"  
+			// 			"data": "Hello! Digitia1212n!"
 			// 		}
 			// 	]
 			// }
 
+			auto source_stream = GetSourceStream(stream);
+			if (source_stream == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::NotFound,
+									  "Could not find stream: [%s/%s/%s]",
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
+			}
 
 			if (request_body.isMember("eventFormat") == false || request_body["eventFormat"].isString() == false ||
 				request_body.isMember("events") == false || request_body["events"].isArray() == false || request_body["events"].size() == 0)
@@ -325,6 +334,7 @@ namespace api
 			cmn::BitstreamFormat event_format = cmn::BitstreamFormat::Unknown;
 			ov::String event_format_string = request_body["eventFormat"].asString().c_str();
 			std::shared_ptr<ov::Data> events_data = nullptr;
+			int64_t timestamp = -1;
 
 			if (event_format_string.UpperCaseString() == "ID3V2")
 			{
@@ -335,6 +345,12 @@ namespace api
 			{
 				event_format = cmn::BitstreamFormat::CUE;
 				events_data = MakeCueData(request_body["events"]);
+			}
+			else if (event_format_string.UpperCaseString() == "SCTE35")
+			{
+				event_format = cmn::BitstreamFormat::SCTE35;
+				timestamp = source_stream->GetCurrentTimestampMs();
+				events_data = MakeScte35Data(request_body["events"], timestamp);
 			}
 			else
 			{
@@ -382,28 +398,20 @@ namespace api
 				urgent = request_body["urgent"].asBool();
 			}
 
-			auto source_stream = GetSourceStream(stream);
-			if (source_stream == nullptr)
-			{
-				throw http::HttpError(http::StatusCode::NotFound,
-									"Could not find stream: [%s/%s/%s]",
-									vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
-			}
-
-			if (source_stream->SendDataFrame(-1, event_format, event_type, events_data, urgent) == false)
+			if (source_stream->SendDataFrame(timestamp, event_format, event_type, events_data, urgent) == false)
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError,
-									"Internal Server Error - Could not inject event: [%s/%s/%s]",
-									vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
+									  "Internal Server Error - Could not inject event: [%s/%s/%s]",
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
 			}
 			return {http::StatusCode::OK};
 		}
 
 		ApiResponse StreamActionsController::OnPostConcludeHlsLive(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
-											   const std::shared_ptr<mon::HostMetrics> &vhost,
-											   const std::shared_ptr<mon::ApplicationMetrics> &app,
-											   const std::shared_ptr<mon::StreamMetrics> &stream,
-											   const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+																   const std::shared_ptr<mon::HostMetrics> &vhost,
+																   const std::shared_ptr<mon::ApplicationMetrics> &app,
+																   const std::shared_ptr<mon::StreamMetrics> &stream,
+																   const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
 			/*
 			{
@@ -415,8 +423,8 @@ namespace api
 			if (source_stream == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
-									"Could not find stream: [%s/%s/%s]",
-									vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
+									  "Could not find stream: [%s/%s/%s]",
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
 			}
 
 			bool urgent = false;
@@ -431,18 +439,18 @@ namespace api
 			if (source_stream->SendEvent(media_event) == false)
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError,
-									"Internal Server Error - Could not inject ConcludeLive event: [%s/%s/%s]",
-									vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
+									  "Internal Server Error - Could not inject ConcludeLive event: [%s/%s/%s]",
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
 			}
-			
+
 			return {http::StatusCode::OK};
 		}
 
 		ApiResponse StreamActionsController::OnGetDummyAction(const std::shared_ptr<http::svr::HttpExchange> &client,
-														   const std::shared_ptr<mon::HostMetrics> &vhost,
-														   const std::shared_ptr<mon::ApplicationMetrics> &app,
-														   const std::shared_ptr<mon::StreamMetrics> &stream,
-														   const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+															  const std::shared_ptr<mon::HostMetrics> &vhost,
+															  const std::shared_ptr<mon::ApplicationMetrics> &app,
+															  const std::shared_ptr<mon::StreamMetrics> &stream,
+															  const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
 			logte("Called OnGetDummyAction. invoke [%s/%s/%s]", vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
 
@@ -453,11 +461,10 @@ namespace api
 		{
 			// Get PrivderType from SourceType
 			ProviderType provider_type = stream->GetProviderType();
-			if(provider_type == ProviderType::Unknown)
+			if (provider_type == ProviderType::Unknown)
 			{
 				return nullptr;
 			}
-			
 
 			auto provider = std::dynamic_pointer_cast<pvd::Provider>(ocst::Orchestrator::GetInstance()->GetProviderFromType(provider_type));
 			if (provider == nullptr)
@@ -575,7 +582,7 @@ namespace api
 
 			if (AmfTextDataEvent::IsMatch(amf_type))
 			{
-				if(AmfTextDataEvent::IsValid(event) == false)
+				if (AmfTextDataEvent::IsValid(event) == false)
 				{
 					throw http::HttpError(http::StatusCode::BadRequest, "data is required in events");
 				}
@@ -590,11 +597,11 @@ namespace api
 			}
 			else if (AmfCuePointEvent::IsMatch(amf_type))
 			{
-				if(AmfCuePointEvent::IsValid(event) == false)
+				if (AmfCuePointEvent::IsValid(event) == false)
 				{
 					throw http::HttpError(http::StatusCode::BadRequest, "version, preRollTimeSec is required in events");
 				}
-				
+
 				auto amf_event = AmfCuePointEvent::Parse(event);
 				if (amf_event == nullptr)
 				{
@@ -644,5 +651,86 @@ namespace api
 
 			return sei_event->Serialize();
 		}
-	} // namespace v1
-} // namespace api
+
+		std::shared_ptr<ov::Data> StreamActionsController::MakeScte35Data(const Json::Value &events, int64_t timestamp)
+		{
+			if (events.size() == 0)
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "events must have at least one event");
+			}
+
+			// only first event is used
+			auto event = events[0];
+
+			/*
+			{
+				"eventFormat": "scte35",
+				"events":[
+					{
+						"spliceCommand": "spliceInsert", // optional, spliceNull, spliceTime ...
+						"id": 12345, // optional, 32bits unsigned number, auto filled if not present
+						"type": "out", // required, out | in
+						"duration": 60500, // milliseconds, only available when cueType is out
+						"autoReturn": false 
+					}
+				]
+			}
+			*/
+			
+			// spliceCommand (optional)
+			ov::String splice_command = "spliceInsert";
+			if (event.isMember("spliceCommand") == true && event["spliceCommand"].isString() == true)
+			{
+				splice_command = event["spliceCommand"].asString().c_str();
+			}
+
+			if (splice_command.UpperCaseString() != "SPLICEINSERT")
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "Now only spliceInsert is supported");
+			}
+
+			// id (required)
+			if (event.isMember("id") == false || event["id"].isUInt() == false)
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "id is required in events");
+			}
+			uint32_t id = event["id"].asUInt();
+
+			// type (required)
+			if (event.isMember("type") == false || event["type"].isString() == false)
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "type is required in events");
+			}
+
+			ov::String type = event["type"].asString().c_str();
+			if (type.UpperCaseString() != "OUT" && type.UpperCaseString() != "IN")
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "type must be 'out' or 'in'");
+			}
+
+			bool out_of_network = type.UpperCaseString() == "OUT";
+
+			// duration (optional)
+			uint32_t duration_msec = 0;
+			if (event.isMember("duration") == true && event["duration"].isUInt() == true)
+			{
+				duration_msec = event["duration"].asUInt();
+			}
+
+			// autoReturn (optional)
+			bool auto_return = false;
+			if (event.isMember("autoReturn") == true && event["autoReturn"].isBool() == true)
+			{
+				auto_return = event["autoReturn"].asBool();
+			}
+
+			auto scte_event = Scte35Event::Create(mpegts::SpliceCommandType::SPLICE_INSERT, id, out_of_network, timestamp, duration_msec, auto_return);
+			if (scte_event == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "Could not create SCTE35 event");
+			}
+
+			return scte_event->Serialize();
+		}
+	}  // namespace v1
+}  // namespace api

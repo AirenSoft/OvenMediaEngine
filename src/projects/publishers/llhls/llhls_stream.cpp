@@ -17,6 +17,8 @@
 
 #include <modules/data_format/cue_event/cue_event.h>
 
+#include <pugixml-1.9/src/pugixml.hpp>
+
 #include "llhls_application.h"
 #include "llhls_private.h"
 #include "llhls_session.h"
@@ -161,7 +163,6 @@ bool LLHlsStream::Start()
 		return false;
 	}
 
-
 	if (llhls_config.ShouldCreateDefaultPlaylist() == true)
 	{
 		// If there is no default playlist, make default playlist
@@ -191,7 +192,7 @@ bool LLHlsStream::Start()
 		if (GetPlaylists().size() == 0)
 		{
 			logtw("LLHLS stream [%s/%s] - There is no playlist, LLHLS will not work for this stream", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
-			Stop(); // Release all resources
+			Stop();	 // Release all resources
 			return false;
 		}
 	}
@@ -454,10 +455,10 @@ bool LLHlsStream::GetDrmInfo(const ov::String &file_path, bmff::CencProperty &ce
 	}
 
 	// If cenc_property has fairplay_key_uri, but there is no pssh box for fairplay, add it.
-	// default pssh box 
+	// default pssh box
 	if (cenc_property.fairplay_key_uri.IsEmpty() == false && has_fairplay_pssh_box == false)
 	{
-    	cenc_property.pssh_box_list.push_back(bmff::PsshBox("94ce86fb-07ff-4f43-adb8-93d2fa968ca2", {cenc_property.key_id}, nullptr));
+		cenc_property.pssh_box_list.push_back(bmff::PsshBox("94ce86fb-07ff-4f43-adb8-93d2fa968ca2", {cenc_property.key_id}, nullptr));
 	}
 
 	// Set profiles
@@ -1059,64 +1060,128 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 			packager->ReserveDataPacket(media_packet);
 		}
 	}
-	else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::CUE)
+	else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::CUE || media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::SCTE35)
 	{
-		// 0: check if it can insert
-		// 1: insert
-		for (int i=0; i<2; i++)
+		// milliseconds scale
+		auto timestamp_ms = static_cast<double>(media_packet->GetDts()) / data_track->GetTimeBase().GetTimescale() * 1000.0;
+		if (InsertMarkerToAllPackagers(media_packet->GetTrackId(), media_packet->GetBitstreamFormat(), timestamp_ms, media_packet->GetData()->Clone()) == false)
 		{
-			// Insert marker to all packagers
-			for (const auto &it : GetTracks())
+			logte("Failed to insert marker to all packagers (track_id: %d, bitstream_format: %d, timestamp: %lld)", media_packet->GetTrackId(), media_packet->GetBitstreamFormat(), media_packet->GetDts());
+			return;
+		}
+
+		// Parse data
+		if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::CUE)
+		{
+			auto cue_event = CueEvent::Parse(media_packet->GetData());
+			if (cue_event == nullptr)
 			{
-				auto track = it.second;
-				// Only video and audio tracks are supported
-				if (track->GetMediaType() != cmn::MediaType::Video && track->GetMediaType() != cmn::MediaType::Audio)
-				{
-					continue;
-				}
+				logte("Failed to parse cue event");
+				return;
+			}
 
-				// Get Packager
-				auto packager = GetPackager(track->GetId());
-				if (packager == nullptr)
-				{
-					logtd("Could not find packager. track id: %d", track->GetId());
-					continue;
-				}
+			if (cue_event->GetCueType() == CueEvent::CueType::OUT)
+			{
+				// Insert CUE-IN event
+			}
+		}
+		else if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::SCTE35)
+		{
+			auto scte35_event = Scte35Event::Parse(media_packet->GetData());
+			if (scte35_event == nullptr)
+			{
+				logte("Failed to parse scte35 event (track_id: %d, timestamp: %lld)", media_packet->GetTrackId(), media_packet->GetDts());
+				return;
+			}
 
-				Marker marker;
-				marker.timestamp = static_cast<double>(media_packet->GetDts()) / data_track->GetTimeBase().GetTimescale() * track->GetTimeBase().GetTimescale();
-				marker.data = media_packet->GetData()->Clone();
-		
-				// Parse the cue data
-				auto cue_event = CueEvent::Parse(marker.data);
-				if (cue_event == nullptr)
+			if (scte35_event->IsOutOfNetwork() == true)
+			{
+				// Make SCTE35-IN event
+				auto scte_out_duration_ms = scte35_event->GetDurationMsec();
+				auto scte_in_timestamp_ms = timestamp_ms + scte_out_duration_ms;
+				auto scte_in_data = Scte35Event::Create(mpegts::SpliceCommandType::SPLICE_INSERT, scte35_event->GetID(), false, scte_in_timestamp_ms, scte_out_duration_ms, false)->Serialize();
+
+				if (InsertMarkerToAllPackagers(media_packet->GetTrackId(), cmn::BitstreamFormat::SCTE35, scte_in_timestamp_ms, scte_in_data) == false)
 				{
-					logte("(%s/%s) Failed to parse the cue event data", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+					logte("Failed to insert SCTE35-IN marker to all packagers (track_id: %d, timestamp: %lld)", media_packet->GetTrackId(), scte_in_timestamp_ms);
 					return;
-				}
-		
-				marker.tag = ov::String::FormatString("CueEvent-%s", cue_event->GetCueTypeName().CStr());
-				
-				if (i == 0) // check
-				{
-					auto result = packager->CanInsertMarker(marker);
-					if (result == false)
-					{
-						logte("Failed to insert marker (timestamp: %lld, tag: %s)", marker.timestamp, marker.tag.CStr());
-						return;
-					}
-				}
-				else
-				{
-					auto result = packager->InsertMarker(marker);
-					if (result == false)
-					{
-						logte("Failed to insert marker (timestamp: %lld, tag: %s)", marker.timestamp, marker.tag.CStr());
-					}
 				}
 			}
 		}
 	}
+}
+
+bool LLHlsStream::InsertMarkerToAllPackagers(uint32_t data_track_id, cmn::BitstreamFormat bitstream_format, int64_t timestamp_ms, const std::shared_ptr<ov::Data> &data)
+{
+	auto data_track = GetTrack(data_track_id);
+	if (data_track == nullptr)
+	{
+		logtw("Could not find track. id: %d", data_track_id);
+		return false;
+	}
+
+	auto first_video_media_track = GetFirstTrackByType(cmn::MediaType::Video);
+	auto first_video_packager = GetPackager(first_video_media_track->GetId());
+
+	// Create marker
+	int64_t estimated_seq = first_video_packager->GetEstimatedSequenceNumber(timestamp_ms);
+
+	// 0: check if it can insert
+	// 1: insert
+	for (int i = 0; i < 2; i++)
+	{
+		// Insert marker to all packagers
+		for (const auto &it : GetTracks())
+		{
+			auto track = it.second;
+			// Only video and audio tracks are supported
+			if (track->GetMediaType() != cmn::MediaType::Video && track->GetMediaType() != cmn::MediaType::Audio)
+			{
+				continue;
+			}
+
+			// Get Packager
+			auto packager = GetPackager(track->GetId());
+			if (packager == nullptr)
+			{
+				logtd("Could not find packager. track id: %d", track->GetId());
+				continue;
+			}
+
+			auto timestamp_media_scale = static_cast<double>(timestamp_ms) / 1000.0 * track->GetTimeBase().GetTimescale();
+			auto marker = Marker::CreateMarker(bitstream_format, timestamp_media_scale, data);
+			if (marker == nullptr)
+			{
+				logte("(%s/%s) Failed to create the marker", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+				return false;
+			}
+
+			if (i == 0)	 // check
+			{
+				auto result = packager->CanInsertMarker(marker);
+				if (result == false)
+				{
+					logte("Failed to insert marker (timestamp: %lld, tag: %s)", marker->GetTimestamp(), marker->GetTag().CStr());
+					return false;
+				}
+			}
+			else
+			{
+				logti("Packager(%d) - Insert marker: %s Estimated sequence number: %lld", track->GetId(), marker->GetTag().CStr(), estimated_seq);
+
+				marker->SetDesiredSequenceNumber(estimated_seq);
+				auto result = packager->InsertMarker(marker);
+				if (result == false)
+				{
+					// We checked it can be inserted, so it should not fail
+					logtc("Failed to insert marker (timestamp: %lld, tag: %s)", marker->GetTimestamp(), marker->GetTag().CStr());
+					return false;
+				}
+			}
+		}
+	}
+
+	return true;
 }
 
 void LLHlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event)
@@ -1126,10 +1191,9 @@ void LLHlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event)
 		return;
 	}
 
-	switch(event->GetCommandType())
+	switch (event->GetCommandType())
 	{
-		case MediaEvent::CommandType::ConcludeLive:
-		{
+		case MediaEvent::CommandType::ConcludeLive: {
 			auto [result, message] = ConcludeLive();
 			if (result == true)
 			{
@@ -1216,7 +1280,7 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 	packager_config.chunk_duration_ms = std::round(ComputeOptimalPartDuration(media_track));
 
 	logti("LLHlsStream::AddPackager() - Track(%d) ChunkDuration(%f)", media_track->GetId(), packager_config.chunk_duration_ms);
-	
+
 	auto cenc_property = _cenc_property;
 
 	auto tag = ov::String::FormatString("%s/%s", GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr());
@@ -1259,13 +1323,13 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 
 	// segment_duration used for mark X-TARGETDURATION, and must rounded to the nearest integer number of seconds.
 
-        // Note that in protocol version 6, the semantics of the EXT-
+	// Note that in protocol version 6, the semantics of the EXT-
 	// X-TARGETDURATION tag changed slightly.  In protocol version 5 and
 	// earlier it indicated the maximum segment duration; in protocol
 	// version 6 and later it indicates the the maximum segment duration
 	// rounded to the nearest integer number of seconds.
 
-	auto segment_duration = std::round(static_cast<float_t>(_storage_config.segment_duration_ms) / 1000.0);	
+	auto segment_duration = std::round(static_cast<float_t>(_storage_config.segment_duration_ms) / 1000.0);
 	auto chunk_duration = static_cast<float_t>(packager_config.chunk_duration_ms) / 1000.0;
 	auto track_id = media_track->GetId();
 
@@ -1528,6 +1592,11 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 		auto first_chunk_timestamp_ms = (static_cast<float>(chunk->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
 
 		_wallclock_offset_ms = std::chrono::duration_cast<std::chrono::milliseconds>(GetInputStreamPublishedTime().time_since_epoch()).count() - first_chunk_timestamp_ms;
+
+		for (const auto &[track_id, chunklist] : _chunklist_map)
+		{
+			chunklist->SetWallclockOffset(_wallclock_offset_ms);
+		}
 	}
 
 	auto start_timestamp = (static_cast<float>(chunk->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
@@ -1547,7 +1616,7 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 			logti("Media chunk has markers : track_id = %d, segment_number = %d, chunk_number = %d", track_id, segment_number, chunk_number);
 			for (const auto &marker : segment->GetMarkers())
 			{
-				logti("Marker : timestamp = %lld, tag = %s", marker.timestamp, marker.tag.CStr());
+				logti("Marker : timestamp = %lld, tag = %s", marker->GetTimestamp(), marker->GetTag().CStr());
 			}
 			chunk_info.SetMarkers(segment->GetMarkers());
 		}

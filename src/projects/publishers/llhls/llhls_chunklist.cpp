@@ -60,6 +60,16 @@ void LLHlsChunklist::SetEndList()
 	UpdateCacheForDefaultChunklist();
 }
 
+void LLHlsChunklist::SetWallclockOffset(int64_t offset_ms)
+{
+	_wallclock_offset_ms = offset_ms;
+}
+
+int64_t LLHlsChunklist::GetWallclockOffset() const
+{
+	return _wallclock_offset_ms;
+}
+
 void LLHlsChunklist::SaveOldSegmentInfo(bool enable)
 {
 	_keep_old_segments = enable;
@@ -120,13 +130,6 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 		segment->SetCompleted();
 		_last_completed_segment_sequence = segment_sequence;
 		_first_segment = false;
-
-		if (_segments.size() > _max_segment_count)
-		{
-			auto old_segment = _segments.begin()->second;
-			SaveOldSegmentInfo(old_segment);
-			_segments.erase(old_segment->GetSequence());
-		}
 	}
 
 	_last_segment_sequence = segment_sequence;
@@ -141,32 +144,25 @@ bool LLHlsChunklist::AppendPartialSegmentInfo(uint32_t segment_sequence, const S
 
 bool LLHlsChunklist::RemoveSegmentInfo(uint32_t segment_sequence)
 {
-	return true;
+	std::unique_lock<std::shared_mutex> lock(_segments_guard);
 
-	//////////
-	// It is not used in the current version, expired segments will be removed when the segment is completed.
-	//////////
+	logtd("RemoveSegmentInfo[Track : %s/%s]: %lld", _track->GetPublicName().CStr(), _track->GetVariantName().CStr(), segment_sequence);
 
+	if (_segments.empty())
+	{
+		return false;
+	}
 
-	// std::unique_lock<std::shared_mutex> lock(_segments_guard);
+	auto old_segment = _segments.begin()->second;
+	if (old_segment->GetSequence() != segment_sequence)
+	{
+		logtc("The sequence number of the segment to be deleted is not the first segment. segment(%lld) first(%lld)", segment_sequence, old_segment->GetSequence());
+		return false;
+	}
 
-	// logtd("RemoveSegmentInfo[Track : %s/%s]: %lld", _track->GetPublicName().CStr(), _track->GetVariantName().CStr(), segment_sequence);
+	SaveOldSegmentInfo(old_segment);
 
-	// if (_segments.empty())
-	// {
-	// 	return false;
-	// }
-
-	// auto old_segment = _segments.begin()->second;
-	// if (old_segment->GetSequence() != segment_sequence)
-	// {
-	// 	logtc("The sequence number of the segment to be deleted is not the first segment. segment(%lld) first(%lld)", segment_sequence, old_segment->GetSequence());
-	// 	return false;
-	// }
-
-	// SaveOldSegmentInfo(old_segment);
-
-	// _segments.erase(segment_sequence);
+	_segments.erase(segment_sequence);
 
 	return true;
 }
@@ -350,6 +346,20 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 
 	std::shared_ptr<LLHlsChunklist::SegmentInfo> first_segment = nullptr;
 	auto last_segment = _segments.rbegin()->second;
+	if (last_segment == nullptr)
+	{
+		// no segment info
+		return "";
+	}
+
+	// skip empty segment info 
+	if (last_segment->GetPartialSegmentsCount() == 0)
+	{
+		if (_segments.size() > 1)
+		{
+			last_segment = std::prev(_segments.end(), 2)->second;
+		}
+	}
 
 	if (rewind == true)
 	{

@@ -31,5 +31,7 @@ namespace bmff
 
         std::shared_ptr<const MediaTrack> _media_track = nullptr;
         std::shared_ptr<Encryptor> _encryptor = nullptr;
+
+		double _duration = 0;
     };
 }

@@ -102,6 +102,7 @@ namespace api
 			std::shared_ptr<ov::Data> MakeCueData(const Json::Value &events); // CUE
 			std::shared_ptr<ov::Data> MakeAMFData(const Json::Value &events); // AMF
 			std::shared_ptr<ov::Data> MakeSEIData(const Json::Value &events); // SEI
+			std::shared_ptr<ov::Data> MakeScte35Data(const Json::Value &events, int64_t timestamp); // SCTE35
 		};
 	}
 }

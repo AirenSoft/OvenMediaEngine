@@ -140,7 +140,7 @@ namespace bmff
 		}
 
 		// Get Duration
-		double GetDuration() const
+		double GetDurationMs() const
 		{
 			return _duration_ms;
 		}
@@ -181,17 +181,17 @@ namespace bmff
 			return _markers.empty() == false;
 		}
 
-		void SetMarkers(const std::vector<Marker> &markers)
+		void SetMarkers(const std::vector<std::shared_ptr<Marker>> &markers)
 		{
 			_markers = markers;
 		}
 
-		void AddMarkers(const std::vector<Marker> &markers)
+		void AddMarkers(const std::vector<std::shared_ptr<Marker>> &markers)
 		{
 			_markers.insert(_markers.end(), markers.begin(), markers.end());
 		}
 
-		const std::vector<Marker> &GetMarkers() const
+		const std::vector<std::shared_ptr<Marker>> &GetMarkers() const
 		{
 			return _markers;
 		}
@@ -212,6 +212,6 @@ namespace bmff
 		// Segment Data
 		std::shared_ptr<ov::Data> _data;
 
-		std::vector<Marker> _markers;
+		std::vector<std::shared_ptr<Marker>> _markers;
 	};
 }

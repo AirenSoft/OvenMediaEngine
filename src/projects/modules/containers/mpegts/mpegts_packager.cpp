@@ -259,7 +259,7 @@ namespace mpegts
 		int64_t main_segment_base_timestamp = main_sample_buffer->GetSample()._dts;
 		int64_t main_segment_end_timestamp = main_segment_base_timestamp + main_segment_duration;
 
-		std::vector<Marker> markers;
+		std::vector<std::shared_ptr<Marker>> markers;
 		if (HasMarker(main_segment_end_timestamp) == true)
 		{
 			logtd("Stream(%s) Main Track(%u) main_segment_base_timestamp(%lld) main_segment_duration(%lld) main_segment_duration_ms(%f) main_segment_end_timestamp(%lld)", _config.stream_id_meta.CStr(), _main_track_id, main_segment_base_timestamp, main_segment_duration, main_segment_duration_ms, main_segment_end_timestamp);
@@ -270,21 +270,20 @@ namespace mpegts
 			// If the last marker is a cue-out marker, insert a cue-in marker automatically after duration of cue-out marker
 			auto last_marker = markers.back();
 			auto next_marker = GetFirstMarker();
-			if (last_marker.tag.UpperCaseString() == "CUEEVENT-OUT" && next_marker.tag.UpperCaseString() != "CUEEVENT-IN")
+			if (last_marker->GetTag().UpperCaseString() == "CUEEVENT-OUT" && next_marker->GetTag().UpperCaseString() != "CUEEVENT-IN")
 			{
-				auto cue_out_event = CueEvent::Parse(last_marker.data);
+				auto cue_out_event = last_marker->GetCueEvent();
 				if (cue_out_event != nullptr)
 				{
 					auto duration_msec = cue_out_event->GetDurationMsec();
 					auto main_track = GetMediaTrack(_main_track_id);
 					int64_t cue_in_timestamp = (main_segment_end_timestamp - 1) + (static_cast<double>(duration_msec) / 1000.0 * main_track->GetTimeBase().GetTimescale());
 
-					Marker cue_in_marker;
-					cue_in_marker.timestamp = cue_in_timestamp;
-					cue_in_marker.tag = "CueEvent-IN";
-					cue_in_marker.data = CueEvent::Create(CueEvent::CueType::IN, 0)->Serialize();
-
-					InsertMarker(cue_in_marker);
+					auto cue_in_marker = Marker::CreateMarker(cmn::BitstreamFormat::CUE, cue_in_timestamp, CueEvent::Create(CueEvent::CueType::IN, 0)->Serialize());
+					if (cue_in_marker != nullptr)
+					{
+						InsertMarker(cue_in_marker);
+					}
 				}
 			}
 		}

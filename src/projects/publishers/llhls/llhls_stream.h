@@ -150,6 +150,8 @@ private:
 	std::tuple<bool, ov::String> ConcludeLive();
 	bool IsConcluded() const;
 
+	bool InsertMarkerToAllPackagers(uint32_t data_track_id, cmn::BitstreamFormat bitstream_format, int64_t timestamp_ms, const std::shared_ptr<ov::Data> &data);
+
 	// Config
 	bmff::FMP4Packager::Config _packager_config;
 	bmff::FMP4Storage::Config _storage_config;

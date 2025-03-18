@@ -33,6 +33,7 @@ LOCAL_STATIC_LIBRARIES := \
 	id3v2 \
 	cue_event \
 	amf_event \
+	scte35_event \
 	segment_writer \
 	web_console \
 	mediarouter \

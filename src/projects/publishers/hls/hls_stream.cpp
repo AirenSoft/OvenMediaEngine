@@ -345,21 +345,15 @@ void HlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 
 	if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::CUE)
 	{
-		Marker marker;
+		auto timestamp = static_cast<double>(media_packet->GetDts()) / data_track->GetTimeBase().GetTimescale() * mpegts::TIMEBASE_DBL;
+		auto data = media_packet->GetData()->Clone();
 
-		// Rescale to the timescale of MPEG-TS (90kHz)
-		marker.timestamp = static_cast<double>(media_packet->GetDts()) / data_track->GetTimeBase().GetTimescale() * mpegts::TIMEBASE_DBL;
-		marker.data = media_packet->GetData()->Clone();
-
-		// Parse the cue data
-		auto cue_event = CueEvent::Parse(marker.data);
-		if (cue_event == nullptr)
+		auto marker = Marker::CreateMarker(media_packet->GetBitstreamFormat(), timestamp, data);
+		if (marker == nullptr)
 		{
-			logte("(%s/%s) Failed to parse the cue event data", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+			logte("(%s/%s) Failed to create the marker", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
 			return;
 		}
-
-		marker.tag = ov::String::FormatString("CueEvent-%s", cue_event->GetCueTypeName().CStr());
 
 		// Insert marker to all packagers
 		for (auto &it : _packagers)
@@ -368,7 +362,7 @@ void HlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 			auto result = packager->InsertMarker(marker);
 			if (result == false)
 			{
-				logte("Failed to insert marker (timestamp: %lld, tag: %s)", marker.timestamp, marker.tag.CStr());
+				logte("Failed to insert marker (timestamp: %lld, tag: %s)", marker->GetTimestamp(), marker->GetTag().CStr());
 			}
 		}
 

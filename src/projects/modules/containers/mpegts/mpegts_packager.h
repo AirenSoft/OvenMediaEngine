@@ -129,12 +129,12 @@ namespace mpegts
 			return _markers.empty() == false;
 		}
 
-		void SetMarkers(const std::vector<Marker> &markers)
+		void SetMarkers(const std::vector<std::shared_ptr<Marker>> &markers)
 		{
 			_markers = markers;
 		}
 
-		const std::vector<Marker> &GetMarkers() const
+		const std::vector<std::shared_ptr<Marker>> &GetMarkers() const
 		{
 			return _markers;
 		}
@@ -151,7 +151,7 @@ namespace mpegts
 		bool _is_data_in_memory = false;
 		bool _is_data_in_file = false;
 
-		std::vector<Marker> _markers;
+		std::vector<std::shared_ptr<Marker>> _markers;
     };
 
     struct Sample
