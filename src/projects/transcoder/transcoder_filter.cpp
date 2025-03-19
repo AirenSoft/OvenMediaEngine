@@ -146,33 +146,27 @@ bool TranscodeFilter::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 {
 	// Single track(paired with encoder) does not need to be updated.
-	if(_internal->IsSingleTrack() == true)
+	if (_internal == nullptr || _internal->IsSingleTrack() == true)
 	{
 		return false;
 	}
-	
+
 	// In case of pts/dts jumps
 	int64_t last_timestamp = _last_timestamp;
 	int64_t curr_timestamp = buffer->GetPts();
 	_last_timestamp = curr_timestamp;
 
 	// Check #1 - Abnormal timestamp
-	int64_t increment = abs(curr_timestamp - last_timestamp);
-	bool is_abnormal_timestamp = (last_timestamp != -1LL && increment > _timestamp_jump_threshold) ? true : false;
-	if (is_abnormal_timestamp)
+	int64_t diff_timestamp = abs(curr_timestamp - last_timestamp);
+	bool is_abnormal = (last_timestamp != -1LL && diff_timestamp > _timestamp_jump_threshold) ? true : false;
+	if (is_abnormal)
 	{
-		logtw("Timestamp has changed abnormally.  %lld -> %lld", last_timestamp, buffer->GetPts());
-
+		logtw("The timestamp has changed unexpectedly. %lld -> %lld (%lld > %lld)", last_timestamp, buffer->GetPts(), diff_timestamp, _timestamp_jump_threshold);
 		return true;
 	}
 
 	// Check #2 - Resolution change
 	std::shared_lock<std::shared_mutex> lock(_mutex);
-	
-	if (_internal == nullptr)
-	{
-		return false;
-	}
 
 	if (_input_track->GetMediaType() == MediaType::Video)
 	{
