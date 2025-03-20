@@ -44,10 +44,10 @@ namespace serdes
 			SetFloat(object, "framerateLatest", track->GetFrameRateLastSecond());
 			SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
 			SetBool(object, "hasBframes", track->HasBframes());
-			SetInt(object, "keyFrameInterval", track->GetKeyFrameInterval());
+			SetFloat(object, "keyFrameInterval", track->GetKeyFrameInterval());
 			SetFloat(object, "keyFrameIntervalConf", track->GetKeyFrameIntervalByConfig());
 			SetFloat(object, "keyFrameIntervalAvg", track->GetKeyFrameIntervalByMeasured());
-			SetInt(object, "keyFrameIntervalLatest", track->GetKeyFrameIntervalLatest());
+			SetFloat(object, "keyFrameIntervalLatest", track->GetKeyFrameIntervalLatest());
 			SetInt(object, "deltaFramesSinceLastKeyFrame", track->GetDeltaFramesSinceLastKeyFrame());
 		}
 	}

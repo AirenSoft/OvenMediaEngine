@@ -229,6 +229,11 @@ namespace bmff
 			logte("track(%d) - Too late, marker is included in the samples time range : sequence(%d), sample(%lld - %lld)", GetMediaTrack()->GetId(), last_sequence_number, samples->GetStartTimestamp(), samples->GetEndTimestamp());
 		}
 
+		if (marker_handling != kNoMarker)
+		{
+			logtd("track(%d) - Marker handling : %s, has marker in this sequence(%d), next sample(%d), current samples(%d)", GetMediaTrack()->GetId(), marker_handling_desc.CStr(), has_marker_in_this_sequence, has_marker_in_next_sample, has_marker_in_curr_samples);
+		}
+
 		if (samples != nullptr && samples->GetTotalCount() > 0)
 		{
 			// If the CUE-OUT/IN event is included in the samples time range, flush the samples as soon as possible.
@@ -243,7 +248,7 @@ namespace bmff
 					return false;
 				}
 
-				logti("track(%d) - Force segment flush, has marker (start: %lld, marker:%lld (%s) end: %lld)", GetMediaTrack()->GetId(), samples->GetStartTimestamp(), marker->GetTimestamp(), marker->GetTag().CStr(), samples->GetEndTimestamp());
+				logtd("track(%d) - Force segment flush, has marker (start: %lld, marker:%lld (%s) end: %lld)", GetMediaTrack()->GetId(), samples->GetStartTimestamp(), marker->GetTimestamp(), marker->GetTag().CStr(), samples->GetEndTimestamp());
 
 				if (marker->IsOutOfNetwork() == true)
 				{
@@ -263,28 +268,31 @@ namespace bmff
 			{
 				last_segment_duration = last_segment->GetDurationMs();
 			}
-			bool should_segemnt_complete = false;
+			bool can_be_last_chunk = false;
 			// https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-4.4.4.9
 			// The duration of a Partial Segment MUST be less than or equal to the
 			// Part Target Duration.  The duration of each Partial Segment MUST be
 			// at least 85% of the Part Target Duration, with the exception of
 			// Partial Segments with the INDEPENDENT=YES attribute and the final
 			// Partial Segment of any Parent Segment.
-			if ((marker_handling != kShouldDeferSegmentFlush) && // Wait marker
-				
-				((total_sample_duration_ms + last_segment_duration >= _storage->GetTargetSegmentDuration()) ||
-				// Video && next_frame_is_idr && force_segment_flush
-				(GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && next_frame_is_idr && marker_handling == kFlushAsSoonAsPossible) || 
-				// Audio && force_segment_flush
-				(GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio && marker_handling == kFlushAsSoonAsPossible) ||
-				// force segment flush immediately
-				(marker_handling == kShouldFlushImmediately)))
+			if (	(marker_handling != kShouldDeferSegmentFlush) && // Wait marker
+					
+					(
+						(total_sample_duration_ms + last_segment_duration >= _storage->GetTargetSegmentDuration()) ||
+						// Video && next_frame_is_idr && force_segment_flush
+						(GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && next_frame_is_idr && marker_handling == kFlushAsSoonAsPossible) || 
+						// Audio && force_segment_flush
+						(GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio && marker_handling == kFlushAsSoonAsPossible) ||
+						// force segment flush immediately
+						(marker_handling == kShouldFlushImmediately)
+					)
+				)
 			{
 				// Last partial segment
-				should_segemnt_complete = true;
+				can_be_last_chunk = true;
 			}
 
-			logtd("track(%d), total_sample_duration_ms: %lf, next_total_sample_duration_ms: %lf, target_chunk_duration_ms: %lf, next_frame_is_idr: %d, is_last_partial_segment: %d last_segment_duration: %lf, target_segment_duration: %f", GetMediaTrack()->GetId(), total_sample_duration_ms, next_total_sample_duration_ms, _target_chunk_duration_ms, next_frame_is_idr, should_segemnt_complete, last_segment != nullptr ? last_segment->GetDurationMs() : -1, _storage->GetTargetSegmentDuration());
+			logtd("track(%d), total_sample_duration_ms: %lf, next_total_sample_duration_ms: %lf, target_chunk_duration_ms: %lf, next_frame_is_idr: %d, is_last_partial_segment: %d last_segment_duration: %lf, target_segment_duration: %f", GetMediaTrack()->GetId(), total_sample_duration_ms, next_total_sample_duration_ms, _target_chunk_duration_ms, next_frame_is_idr, can_be_last_chunk, last_segment != nullptr ? last_segment->GetDurationMs() : -1, _storage->GetTargetSegmentDuration());
 
 			// - In the last partial segment, if the next frame is a keyframe, a segment is created immediately. This allows the segment to start with a keyframe.
 			// - When adding samples, if the Part Target Duration is exceeded, a chunk is created immediately.
@@ -293,8 +301,8 @@ namespace bmff
 				
 					(marker_handling == kShouldFlushImmediately) ||
 
-					(should_segemnt_complete == true && GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && next_frame_is_idr == true) ||
-					(should_segemnt_complete == true && GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio) ||
+					(can_be_last_chunk == true && GetMediaTrack()->GetMediaType() == cmn::MediaType::Video && next_frame_is_idr == true) ||
+					(can_be_last_chunk == true && GetMediaTrack()->GetMediaType() == cmn::MediaType::Audio) ||
 					
 					((next_total_sample_duration_ms > _target_chunk_duration_ms) && (total_sample_duration_ms >= _target_chunk_duration_ms * 0.85)) 
 				)
@@ -387,11 +395,17 @@ namespace bmff
 				// 	}
 				// }
 
+				bool last_chunk = can_be_last_chunk && next_frame_is_idr;
+				if (marker_handling == kShouldFlushImmediately)
+				{
+					last_chunk = true;
+				}
+
 				if (_storage != nullptr && _storage->AppendMediaChunk(chunk, 
 												samples->GetStartTimestamp(), 
 												total_sample_duration_ms, 
 												samples->IsIndependent(), 
-												should_segemnt_complete, 
+												last_chunk, 
 												markers) == false)
 				{
 					logte("FMP4Packager::AppendSample() - Failed to store media chunk");

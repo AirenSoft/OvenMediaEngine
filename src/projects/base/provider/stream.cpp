@@ -141,9 +141,23 @@ namespace pvd
 				  _last_media_timestamp_ms, _elapsed_from_last_media_timestamp.Elapsed(), timestamp);
 		}
 
-		// In the case of a bypass stream, data may arrive later than video, so a delay of 100ms is given to correct this.
-		// constexpr int64_t kDataDelay = 100;
-		// timestamp += kDataDelay;
+
+		if (format == cmn::BitstreamFormat::SCTE35 || format == cmn::BitstreamFormat::CUE)
+		{
+			// SCTE35 and CUE should be in the same sequence number in HLS. However, A and V can differ by up to the maximum keyframe interval duration, so the sequence number may be different when observed at the same time. Therefore, it should be put in advance, and delayed when creating a segment to be entered in the same number.
+
+			// Get Duration of keyframe interval
+			auto first_video_track = GetFirstTrackByType(cmn::MediaType::Video);
+			if (first_video_track != nullptr)
+			{
+				double keyframe_interval_duration_ms = GetFirstTrackByType(cmn::MediaType::Video)->GetKeyframeIntervalDurationMs();
+				double keyframe_interval_duration = keyframe_interval_duration_ms / 1000.0 * data_track->GetTimeBase().GetTimescale();
+				timestamp += std::ceil(keyframe_interval_duration);
+
+				logti("SendDataFrame - %s/%s(%u) - timestamp: %lld, keyframe_interval_duration_ms: %f, keyframe_interval_duration: %f, keyframe_interval: %f, framerate: %f",
+				GetApplicationName(), GetName().CStr(), GetId(), timestamp, keyframe_interval_duration_ms, std::ceil(keyframe_interval_duration), first_video_track->GetKeyFrameInterval(), first_video_track->GetFrameRate());
+			}
+		}
 
 		auto event_message = std::make_shared<MediaPacket>(GetMsid(),
 															cmn::MediaType::Data,

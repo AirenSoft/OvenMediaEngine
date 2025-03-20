@@ -159,13 +159,12 @@ namespace mpegts
 		auto section = std::make_shared<Section>(pid);
 
 		section->_table_id = static_cast<uint8_t>(WellKnownTableId::SPLICE_INFO_SECTION);
-		section->_section_syntax_indicator = true;
+		section->_section_syntax_indicator = false;
 
 		section->_splice_info = splice_info;
 		auto splice_info_data = section->_splice_info->Build();
 
 		section->_section_length = splice_info_data->GetLength() + 4;  // 4 bytes for CRC
-		section->_crc = ov::CRC::Crc32Mpeg2(splice_info_data->GetDataAs<uint8_t>(), splice_info_data->GetLength());
 
 		ov::BitWriter data(188);
 
@@ -178,12 +177,15 @@ namespace mpegts
 		data.WriteBits(10, section->_section_length);
 		data.WriteData(splice_info_data->GetDataAs<uint8_t>(), splice_info_data->GetLength());
 
+		ov::Data crc_data(data.GetData(), data.GetDataSize());
+
 		// CRC
+		section->_crc = ov::CRC::Crc32Mpeg2(data.GetData(), data.GetDataSize());
+
 		data.WriteBytes<uint32_t>(section->_crc);
 
 		section->_data.Clear();
 		section->_data.Append(data.GetData(), data.GetDataSize());
-
 		section->_completed = true;
 
 		return section;

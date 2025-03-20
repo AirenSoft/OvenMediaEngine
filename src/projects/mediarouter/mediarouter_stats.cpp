@@ -135,7 +135,7 @@ void MediaRouterStats::Update(
 											track->GetFrameRateByMeasured(), 
 											track->GetFrameRateByConfig());
 											
-				stat_track_str.AppendFormat(", kint: %.2f/%d/%s",
+				stat_track_str.AppendFormat(", kint: %.2f/%.2f/%s",
 											track->GetKeyFrameIntervalByMeasured(),
 											track->GetKeyFrameIntervalByConfig(),
 											cmn::GetKeyFrameIntervalTypeToString(track->GetKeyFrameIntervalTypeByConfig()).CStr());

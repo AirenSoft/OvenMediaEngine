@@ -361,18 +361,20 @@ namespace bmff
 			if (segment->HasMarker() == true)
 			{
 				logti("LLHLS stream (%s) / track (%d) - segment[%u] has markers %s", _stream_tag.CStr(), _track->GetId(), segment->GetNumber(), segment->GetMarkers().back()->GetTag().CStr());
+
+				_total_expected_duration_ms -= _config.segment_duration_ms;
 				
-				auto last_marker = segment->GetMarkers().back();
-				if (last_marker != nullptr && last_marker->IsOutOfNetwork() == true)
-				{
-					// We can initialize the all time variables here
-					_total_expected_duration_ms = 0;
-					_total_segment_duration_ms = 0;
-				}
-				else if (last_marker != nullptr && last_marker->IsOutOfNetwork() == false)
-				{
-					_total_expected_duration_ms -= _config.segment_duration_ms;
-				}
+				// auto last_marker = segment->GetMarkers().back();
+				// if (last_marker != nullptr && last_marker->IsOutOfNetwork() == true)
+				// {
+				// 	// We can initialize the all time variables here
+				// 	_total_expected_duration_ms = 0;
+				// 	_total_segment_duration_ms = 0;
+				// }
+				// else if (last_marker != nullptr && last_marker->IsOutOfNetwork() == false)
+				// {
+				// 	_total_expected_duration_ms -= _config.segment_duration_ms;
+				// }
 			}
 
 			double next_target_duration = _total_expected_duration_ms - _total_segment_duration_ms + _config.segment_duration_ms;
@@ -386,7 +388,7 @@ namespace bmff
 			}
 			else
 			{
-				_target_segment_duration_ms = static_cast<double>(_config.segment_duration_ms / 2);
+				_target_segment_duration_ms = next_target_duration; //static_cast<double>(_config.segment_duration_ms / 2);
 			}
 
 			// Make CUE-OUT-CONT

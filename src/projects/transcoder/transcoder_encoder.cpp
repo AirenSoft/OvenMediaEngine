@@ -542,7 +542,7 @@ void TranscodeEncoder::CodecThread()
 	{
 		auto timebase_timescale = GetRefTrack()->GetTimeBase().GetTimescale();
 		auto key_frame_interval = GetRefTrack()->GetKeyFrameInterval();
-		_force_keyframe_by_time_interval = static_cast<int64_t>(timebase_timescale * (double)key_frame_interval / 1000);
+		_force_keyframe_by_time_interval = static_cast<int64_t>(timebase_timescale * (double)key_frame_interval / 1000.0);
 
 		// Insert keyframe in first frame
 		_accumulate_frame_duration = -1;

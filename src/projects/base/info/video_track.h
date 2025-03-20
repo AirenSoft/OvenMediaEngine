@@ -63,16 +63,18 @@ public:
 
 	// Return the proper key_frame_interval for this track. 
 	// If there is a key_frame_interval set by the user, it is returned. If not, the automatically measured key_frame_interval is returned
-	int32_t GetKeyFrameInterval() const;
+	double GetKeyFrameInterval() const;
 
 	void SetKeyFrameIntervalByMeasured(double key_frame_interval);
 	double GetKeyFrameIntervalByMeasured() const;
 
-	void SetKeyFrameIntervalLastet(int32_t key_frame_interval);
-	int32_t GetKeyFrameIntervalLatest() const;
+	void SetKeyFrameIntervalLastet(double key_frame_interval);
+	double GetKeyFrameIntervalLatest() const;
 	
 	void SetKeyFrameIntervalByConfig(int32_t key_frame_interval);
-	int32_t GetKeyFrameIntervalByConfig() const;
+	double GetKeyFrameIntervalByConfig() const;
+
+	double GetKeyframeIntervalDurationMs() const;
 
 	void SetKeyFrameIntervalTypeByConfig(cmn::KeyFrameIntervalType key_frame_interval_type);
 	cmn::KeyFrameIntervalType GetKeyFrameIntervalTypeByConfig() const;
@@ -115,9 +117,9 @@ protected:
 	// Key Frame Interval Avg (measurement)
 	double _key_frame_interval = 0;
 	// Key Frame Interval Latest (measurement)
-	int32_t _key_frame_interval_latest = 0;
+	double _key_frame_interval_latest = 0;
 	// Key Frame Interval (set by user)
-	int32_t _key_frame_interval_conf = 0;
+	double _key_frame_interval_conf = 0;
 	// Delta Frame Count since last key frame
 	int32_t _delta_frame_count_since_last_key_frame = 0;
 

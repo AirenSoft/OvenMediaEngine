@@ -331,7 +331,7 @@ ov::String MediaTrack::GetInfoString()
 				"BSF(%s) "
 				"Resolution(%dx%d) "
 				"Framerate(%.2f) "
-				"KeyInterval(%d/%s) "
+				"KeyInterval(%.2f/%s) "
 				"SkipFrames(%d) "
 				"BFrames(%d) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),

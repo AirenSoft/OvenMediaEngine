@@ -100,7 +100,7 @@ int VideoTrack::GetThreadCount()
 	return _thread_count;
 }
 
-int32_t VideoTrack::GetKeyFrameInterval() const
+double VideoTrack::GetKeyFrameInterval() const
 {
 	if(_key_frame_interval_conf > 0)
 	{
@@ -120,12 +120,12 @@ double VideoTrack::GetKeyFrameIntervalByMeasured() const
 	return _key_frame_interval;
 }
 
-void VideoTrack::SetKeyFrameIntervalLastet(int32_t key_frame_interval)
+void VideoTrack::SetKeyFrameIntervalLastet(double key_frame_interval)
 {
 	_key_frame_interval_latest = key_frame_interval;
 }
 
-int32_t VideoTrack::GetKeyFrameIntervalLatest() const
+double VideoTrack::GetKeyFrameIntervalLatest() const
 {
 	return _key_frame_interval_latest;
 }
@@ -135,7 +135,7 @@ void VideoTrack::SetKeyFrameIntervalByConfig(int32_t key_frame_interval)
 	_key_frame_interval_conf = key_frame_interval;
 }
 
-int32_t VideoTrack::GetKeyFrameIntervalByConfig() const
+double VideoTrack::GetKeyFrameIntervalByConfig() const
 {
 	return _key_frame_interval_conf;
 }
@@ -148,6 +148,14 @@ void VideoTrack::SetKeyFrameIntervalTypeByConfig(cmn::KeyFrameIntervalType key_f
 cmn::KeyFrameIntervalType VideoTrack::GetKeyFrameIntervalTypeByConfig() const
 {
 	return _key_frame_interval_type_conf;
+}
+
+double VideoTrack::GetKeyframeIntervalDurationMs() const
+{
+	double keyframe_interval = std::ceil(GetKeyFrameInterval());
+	double framerate = std::ceil(GetFrameRate());
+
+	return (keyframe_interval / framerate) * 1000.0;
 }
 
 void VideoTrack::SetBFrames(int32_t b_frames)

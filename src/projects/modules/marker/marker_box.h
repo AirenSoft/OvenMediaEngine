@@ -87,7 +87,7 @@ protected:
 		int64_t last_partial_segment_number = -1;
 		double last_segement_duration_ms = 0;
 		
-		int32_t keyframe_interval = 1; // 29, 30, 31...
+		double keyframe_interval = 1.0; // 29, 30, 31...
 		double framerate = 0.0;
 		double target_segment_duration_ms = 0;
 	};
