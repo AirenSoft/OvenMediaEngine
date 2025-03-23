@@ -14,9 +14,9 @@
 // Marker
 ///////////////////////////////////
 
-std::shared_ptr<Marker> Marker::CreateMarker(cmn::BitstreamFormat marker_format, int64_t timestamp, const std::shared_ptr<ov::Data> &data)
+std::shared_ptr<Marker> Marker::CreateMarker(cmn::BitstreamFormat marker_format, int64_t timestamp, int64_t timestamp_ms, const std::shared_ptr<ov::Data> &data)
 {
-	std::shared_ptr<Marker> marker(new Marker(marker_format, timestamp, data));
+	std::shared_ptr<Marker> marker(new Marker(marker_format, timestamp, timestamp_ms, data));
 	if (marker == nullptr)
 	{
 		return nullptr;
@@ -30,10 +30,11 @@ std::shared_ptr<Marker> Marker::CreateMarker(cmn::BitstreamFormat marker_format,
 	return marker;
 }
 
-Marker::Marker(cmn::BitstreamFormat marker_format, int64_t timestamp, const std::shared_ptr<ov::Data> &data)
+Marker::Marker(cmn::BitstreamFormat marker_format, int64_t timestamp, int64_t timestamp_ms, const std::shared_ptr<ov::Data> &data)
 {
 	_marker_format = marker_format;
 	_timestamp = timestamp;
+	_timestamp_ms = timestamp_ms;
 	_data = data;
 }
 
@@ -95,18 +96,27 @@ cmn::BitstreamFormat Marker::GetMarkerFormat() const
 {
 	return _marker_format;
 }
+
 int64_t Marker::GetTimestamp() const
 {
 	return _timestamp;
 }
+
+int64_t Marker::GetTimestampMs() const
+{
+	return _timestamp_ms;
+}
+
 ov::String Marker::GetTag() const
 {
 	return _tag;
 }
+
 std::shared_ptr<ov::Data> Marker::GetData() const
 {
 	return _data;
 }
+
 std::optional<bool> Marker::IsOutOfNetwork() const
 {
 	if (_marker_format == cmn::BitstreamFormat::SCTE35)
@@ -286,6 +296,16 @@ bool MarkerBox::CanInsertMarker(const std::shared_ptr<Marker> &marker) const
 		return false;
 	}
 	bool last_out_of_network_value = last_out_of_network.value();
+
+	auto actual_segment_duration_ms = GetActualTargetSegmentDurationMs();
+	auto required_gap = actual_segment_duration_ms * 1.5;
+
+	// Markers can only be inserted 1.5 times the segment length after the last marker.marker_box.cpp:608
+	if (marker->GetTimestampMs() - _last_inserted_marker->GetTimestampMs() < required_gap)
+	{
+		logte("Marker can only be inserted 1.5 times the segment length (%f ms) after the last marker", required_gap);
+		return false;
+	}
 
 	if (curr_out_of_network_value == true)
 	{
@@ -498,6 +518,12 @@ std::vector<std::shared_ptr<Marker>> MarkerBox::PopMarkers(int64_t end_timestamp
 	return markers;
 }
 
+uint32_t MarkerBox::GetMarkerCount() const
+{
+	std::shared_lock<std::shared_mutex> lock(_markers_guard);
+	return _markers_by_timestamp.size();
+}
+
 bool MarkerBox::RemoveMarker(int64_t timestamp)
 {
 	std::lock_guard<std::shared_mutex> lock(_markers_guard);
@@ -534,6 +560,17 @@ void MarkerBox::RemoveExpiredMarkers(int64_t current_timestamp)
 	}
 }
 
+int64_t MarkerBox::GetCurrentSequenceNumber() const
+{
+	auto segment_info = GetSegmentationInfo();
+	if (segment_info.has_value() == false)
+	{
+		return -1;
+	}
+
+	return segment_info->last_segment_number;
+}
+
 int64_t MarkerBox::GetEstimatedSequenceNumber(int64_t timestamp_ms) const
 {
 	auto segment_info = GetSegmentationInfo();
@@ -547,8 +584,7 @@ int64_t MarkerBox::GetEstimatedSequenceNumber(int64_t timestamp_ms) const
 		return -1;
 	}
 
-	auto keyframe_interval_ms = segment_info->keyframe_interval / segment_info->framerate * 1000;
-	auto actual_segment_duration_ms = std::ceil(segment_info->target_segment_duration_ms / keyframe_interval_ms) * keyframe_interval_ms;
+	auto actual_segment_duration_ms = GetActualTargetSegmentDurationMs();
 	auto last_sample_end_timestamp_ms = segment_info->last_sample_timestamp_ms + segment_info->last_sample_duration_ms;
 	auto time_until_marker_ms = timestamp_ms - last_sample_end_timestamp_ms;
 	auto remaining_time_in_current_segment_ms = segment_info->is_last_segment_completed ? 0 : actual_segment_duration_ms - segment_info->last_segement_duration_ms;
@@ -564,10 +600,32 @@ int64_t MarkerBox::GetEstimatedSequenceNumber(int64_t timestamp_ms) const
 	{
 		estimated_sequence_number += std::ceil((time_until_marker_ms - remaining_time_in_current_segment_ms) / actual_segment_duration_ms);
 	}
-	
 
-	logtd("keyframe_interval_ms: %f, actual_segment_duration_ms: %f, last_sample_end_timestamp_ms: %f, time_until_marker_ms: %f, remaining_time_in_current_segment_ms: %f, estimated_sequence_number: %lld last_segment_number: %lld  last_segment_duration: %f is_last_segment_completed: %d",
-		  keyframe_interval_ms, actual_segment_duration_ms, last_sample_end_timestamp_ms, time_until_marker_ms, remaining_time_in_current_segment_ms, estimated_sequence_number, segment_info->last_segment_number, segment_info->last_segement_duration_ms, segment_info->is_last_segment_completed);
+	// Plus previous markers count, marker makes the sequence number increase
+	auto prev_markers = GetMarkerCount();
+	estimated_sequence_number += prev_markers;
+
+	logtd("actual_segment_duration_ms: %f, last_sample_end_timestamp_ms: %f, time_until_marker_ms: %f, remaining_time_in_current_segment_ms: %f, estimated_sequence_number: %lld last_segment_number: %lld  last_segment_duration: %f is_last_segment_completed: %d",
+		  actual_segment_duration_ms, last_sample_end_timestamp_ms, time_until_marker_ms, remaining_time_in_current_segment_ms, estimated_sequence_number, segment_info->last_segment_number, segment_info->last_segement_duration_ms, segment_info->is_last_segment_completed);
 
 	return estimated_sequence_number;
+}
+
+double MarkerBox::GetActualTargetSegmentDurationMs() const
+{
+	auto segment_info = GetSegmentationInfo();
+	if (segment_info.has_value() == false)
+	{
+		return -1;
+	}
+
+	double actual_segment_duration_ms = segment_info->target_segment_duration_ms;
+
+	if (segment_info->media_type != cmn::MediaType::Video)
+	{
+		auto keyframe_interval_ms = segment_info->keyframe_interval / segment_info->framerate * 1000;
+		actual_segment_duration_ms = std::ceil(segment_info->target_segment_duration_ms / keyframe_interval_ms) * keyframe_interval_ms;
+	}
+
+	return actual_segment_duration_ms;
 }

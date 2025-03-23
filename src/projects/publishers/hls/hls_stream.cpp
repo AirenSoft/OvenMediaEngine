@@ -346,9 +346,10 @@ void HlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::CUE)
 	{
 		auto timestamp = static_cast<double>(media_packet->GetDts()) / data_track->GetTimeBase().GetTimescale() * mpegts::TIMEBASE_DBL;
+		auto timestamp_ms = static_cast<double>(media_packet->GetDts()) / data_track->GetTimeBase().GetTimescale() * 1000.0;
 		auto data = media_packet->GetData()->Clone();
 
-		auto marker = Marker::CreateMarker(media_packet->GetBitstreamFormat(), timestamp, data);
+		auto marker = Marker::CreateMarker(media_packet->GetBitstreamFormat(), timestamp, timestamp_ms, data);
 		if (marker == nullptr)
 		{
 			logte("(%s/%s) Failed to create the marker", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());

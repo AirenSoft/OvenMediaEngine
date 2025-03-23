@@ -18,11 +18,12 @@
 class Marker
 {
 public:
-	static std::shared_ptr<Marker> CreateMarker(cmn::BitstreamFormat marker_format, int64_t timestamp, const std::shared_ptr<ov::Data> &data);
+	static std::shared_ptr<Marker> CreateMarker(cmn::BitstreamFormat marker_format, int64_t timestamp, int64_t timestamp_ms, const std::shared_ptr<ov::Data> &data);
 
 	// Getter
 	cmn::BitstreamFormat GetMarkerFormat() const;
 	int64_t GetTimestamp() const;
+	int64_t GetTimestampMs() const;
 	ov::String GetTag() const;
 	std::shared_ptr<ov::Data> GetData() const;
 	std::optional<bool> IsOutOfNetwork() const;
@@ -37,11 +38,12 @@ public:
 	int64_t GetDesiredSequenceNumber() const;
 
 private:
-	Marker(cmn::BitstreamFormat marker_format, int64_t timestamp, const std::shared_ptr<ov::Data> &data);
+	Marker(cmn::BitstreamFormat marker_format, int64_t timestamp, int64_t timestamp_ms, const std::shared_ptr<ov::Data> &data);
 	bool Init();
 
 	cmn::BitstreamFormat _marker_format;
 	int64_t _timestamp = -1;
+	int64_t _timestamp_ms = -1;
 	ov::String _tag;
 	std::shared_ptr<ov::Data> _data = nullptr;
 
@@ -59,6 +61,7 @@ public:
 	bool InsertMarker(const std::shared_ptr<Marker> &marker);
 	bool CanInsertMarker(const std::shared_ptr<Marker> &marker) const;
 
+	int64_t GetCurrentSequenceNumber() const;
 	int64_t GetEstimatedSequenceNumber(int64_t timestamp_ms) const;
 
 protected:
@@ -67,12 +70,14 @@ protected:
 	bool HasMarker(int64_t start_timestamp, int64_t end_timestamp) const;
 	bool HasMarker(int64_t end_timestamp) const;
 	bool HasMarkerWithSeq(int64_t sequence_number) const;
+	uint32_t GetMarkerCount() const;
 	const std::shared_ptr<Marker> GetFirstMarker() const;
 	std::vector<std::shared_ptr<Marker>> PopMarkers(int64_t start_timestamp, int64_t end_timestamp);
 	std::vector<std::shared_ptr<Marker>> PopMarkers(int64_t end_timestamp);
 	bool RemoveMarker(int64_t timestamp);
 	// remove expired markers
 	void RemoveExpiredMarkers(int64_t current_timestamp);
+	double GetActualTargetSegmentDurationMs() const;
 
 	struct SegmentationInfo
 	{

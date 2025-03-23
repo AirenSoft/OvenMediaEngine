@@ -1064,7 +1064,7 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 	{
 		// milliseconds scale
 		auto timestamp_ms = static_cast<double>(media_packet->GetDts()) / data_track->GetTimeBase().GetTimescale() * 1000.0;
-		if (InsertMarkerToAllPackagers(media_packet->GetTrackId(), media_packet->GetBitstreamFormat(), timestamp_ms, media_packet->GetData()->Clone(), 0) == false)
+		if (InsertMarkerToAllPackagers(media_packet->GetTrackId(), media_packet->GetBitstreamFormat(), timestamp_ms, media_packet->GetData()->Clone()) == false)
 		{
 			logte("Failed to insert marker to all packagers (track_id: %d, bitstream_format: %d, timestamp: %lld)", media_packet->GetTrackId(), media_packet->GetBitstreamFormat(), media_packet->GetDts());
 			return;
@@ -1087,7 +1087,7 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 				auto cue_in_timestamp_ms = timestamp_ms + cue_out_duration_ms;
 				auto cue_in_data = CueEvent::Create(CueEvent::CueType::IN)->Serialize();
 
-				if (InsertMarkerToAllPackagers(media_packet->GetTrackId(), cmn::BitstreamFormat::CUE, cue_in_timestamp_ms, cue_in_data, 1) == false)
+				if (InsertMarkerToAllPackagers(media_packet->GetTrackId(), cmn::BitstreamFormat::CUE, cue_in_timestamp_ms, cue_in_data) == false)
 				{
 					logte("Failed to insert CUE-IN marker to all packagers (track_id: %d, timestamp: %lld)", media_packet->GetTrackId(), cue_in_timestamp_ms);
 					return;
@@ -1111,7 +1111,7 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 				auto scte_in_data = Scte35Event::Create(mpegts::SpliceCommandType::SPLICE_INSERT, scte35_event->GetID(), false, scte_in_timestamp_ms, scte_out_duration_ms, false)->Serialize();
 				
 				// xxx-OUT marker will create one more segment, so we need to shift the sequence number by 1
-				if (InsertMarkerToAllPackagers(media_packet->GetTrackId(), cmn::BitstreamFormat::SCTE35, scte_in_timestamp_ms, scte_in_data, 1) == false)
+				if (InsertMarkerToAllPackagers(media_packet->GetTrackId(), cmn::BitstreamFormat::SCTE35, scte_in_timestamp_ms, scte_in_data) == false)
 				{
 					logte("Failed to insert SCTE35-IN marker to all packagers (track_id: %d, timestamp: %lld)", media_packet->GetTrackId(), scte_in_timestamp_ms);
 					return;
@@ -1121,7 +1121,7 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 	}
 }
 
-bool LLHlsStream::InsertMarkerToAllPackagers(uint32_t data_track_id, cmn::BitstreamFormat bitstream_format, int64_t timestamp_ms, const std::shared_ptr<ov::Data> &data, uint32_t shift_sequence)
+bool LLHlsStream::InsertMarkerToAllPackagers(uint32_t data_track_id, cmn::BitstreamFormat bitstream_format, int64_t timestamp_ms, const std::shared_ptr<ov::Data> &data)
 {
 	auto data_track = GetTrack(data_track_id);
 	if (data_track == nullptr)
@@ -1134,12 +1134,23 @@ bool LLHlsStream::InsertMarkerToAllPackagers(uint32_t data_track_id, cmn::Bitstr
 	auto first_video_packager = GetPackager(first_video_media_track->GetId());
 
 	// Create marker
-	int64_t estimated_seq = first_video_packager->GetEstimatedSequenceNumber(timestamp_ms) + shift_sequence;
-
+	int64_t estimated_seq = first_video_packager->GetEstimatedSequenceNumber(timestamp_ms);
+	int64_t max_current_seq = 0;
 	// 0: check if it can insert
 	// 1: insert
 	for (int i = 0; i < 2; i++)
 	{
+		if (i == 1)
+		{
+			logti("InsertMarkerToAllPackagers - Estimated sequence number: %lld Max current sequence number: %lld", estimated_seq, max_current_seq);
+
+			if (max_current_seq > estimated_seq)
+			{
+				logtw("Estimated sequence number is smaller than the current sequence number. estimated_seq: %lld, max_current_seq: %lld", estimated_seq, max_current_seq);
+				estimated_seq = max_current_seq;
+			}
+		}
+
 		// Insert marker to all packagers
 		for (const auto &it : GetTracks())
 		{
@@ -1158,8 +1169,8 @@ bool LLHlsStream::InsertMarkerToAllPackagers(uint32_t data_track_id, cmn::Bitstr
 				continue;
 			}
 
-			auto timestamp_media_scale = static_cast<double>(timestamp_ms) / 1000.0 * track->GetTimeBase().GetTimescale();
-			auto marker = Marker::CreateMarker(bitstream_format, timestamp_media_scale, data);
+			auto timestamp_media_scale = static_cast<double>(timestamp_ms) / data_track->GetTimeBase().GetTimescale() * track->GetTimeBase().GetTimescale();
+			auto marker = Marker::CreateMarker(bitstream_format, timestamp_media_scale, timestamp_ms, data);
 			if (marker == nullptr)
 			{
 				logte("(%s/%s) Failed to create the marker", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
@@ -1168,6 +1179,7 @@ bool LLHlsStream::InsertMarkerToAllPackagers(uint32_t data_track_id, cmn::Bitstr
 
 			if (i == 0)	 // check
 			{
+				max_current_seq = std::max(max_current_seq, packager->GetCurrentSequenceNumber());
 				auto result = packager->CanInsertMarker(marker);
 				if (result == false)
 				{
