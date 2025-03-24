@@ -896,8 +896,8 @@ namespace pvd
                     break;
                 }
             }
-
-            auto media_packet = stream_tap->Pop(500);
+			
+            auto media_packet = stream_tap->Pop(_channel_info.error_tolerance_duration_ms);
             if (media_packet == nullptr)
             {
                 if (CheckCurrentProgramChanged() == true)
@@ -907,7 +907,7 @@ namespace pvd
                 }
                 else
                 {
-                    logtw("Scheduled Channel : %s/%s: Failed to pop packet", GetApplicationName(), GetName().CStr());
+                    logtw("Scheduled Channel : %s/%s: Failed to pop packet until %d ms. Try to play next item", GetApplicationName(), GetName().CStr(), _channel_info.error_tolerance_duration_ms);
                     result = PlaybackResult::ERROR;
                     break;
                 }

@@ -199,6 +199,13 @@ namespace pvd
 			}
 		}
 
+		// error_tolerance_duration_ms
+		auto error_tolerance_duration_ms_object = stream_object["errorToleranceDurationMs"];
+		if (error_tolerance_duration_ms_object.isNull() == false || error_tolerance_duration_ms_object.isInt() == true)
+		{
+			_stream.error_tolerance_duration_ms = error_tolerance_duration_ms_object.asInt();
+		}
+
 		return true;
 	}
 
@@ -521,6 +528,13 @@ namespace pvd
 
 			_stream.audio_map.push_back({static_cast<int>(index), public_name, language, characteristics});
 			index ++;
+		}
+
+		// error_tolerance_duration_ms
+		auto error_tolerance_duration_ms_node = stream_node.child("ErrorToleranceDurationMs");
+		if (error_tolerance_duration_ms_node)
+		{
+			_stream.error_tolerance_duration_ms = error_tolerance_duration_ms_node.text().as_llong();
 		}
 
 		return true;
@@ -860,6 +874,9 @@ namespace pvd
 			audio_map_item_node.append_child("Characteristics").text().set(audio_map_item.GetCharacteristics().CStr());
 		}
 
+		// ErrorToleranceDurationMs
+		stream_node.append_child("ErrorToleranceDurationMs").text().set(_stream.error_tolerance_duration_ms);
+
 		// FallbackProgram
 		if (_fallback_program != nullptr)
 		{
@@ -926,6 +943,9 @@ namespace pvd
 			audio_map_object.append(audio_map_item_object);
 		}
 		stream_object["audioMap"] = audio_map_object;
+
+		// error_tolerance_duration_ms
+		stream_object["errorToleranceDurationMs"] = _stream.error_tolerance_duration_ms;
 
 		root_object["stream"] = stream_object;
 

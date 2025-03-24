@@ -21,6 +21,8 @@
         <BypassTranscoder>false</BypassTranscoder> <!-- optional, default : false -->
         <VideoTrack>true</VideoTrack> <!-- optional, default : true -->
         <AudioTrack>true</AudioTrack> <!-- optional, default : true -->
+
+		<ErrorToleranceDurationMs>1000</ErrorToleranceDurationMs>
     </Stream>
 
     <FallbackProgram>
@@ -103,6 +105,8 @@ namespace pvd
             bool audio_track = true;
 
 			std::vector<info::AudioMapItem> audio_map;
+
+			int64_t error_tolerance_duration_ms = 500;
         };
             
         struct Program
