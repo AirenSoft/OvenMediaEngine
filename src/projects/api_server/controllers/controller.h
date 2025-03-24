@@ -66,21 +66,36 @@ namespace api
 		// Move ctor
 		ApiResponse(ApiResponse &&response);
 
-		bool IsSucceeded()
+		static ApiResponse Deferred()
+		{
+			return ApiResponse(true);
+		}
+
+		bool IsDeferred() const
+		{
+			return _is_deferred;
+		}
+
+		bool IsSucceeded() const
 		{
 			// 2xx
 			return (static_cast<int>(_status_code) / 100) == 2;
 		}
 
-		bool SendToClient(const std::shared_ptr<http::svr::HttpExchange> &client);
+		bool SendToClient(const std::shared_ptr<http::svr::HttpExchange> &client) const;
 
 	protected:
+		// Delay response instead of responding immediately (keep the connection open)
+		explicit ApiResponse(bool deferred);
+
 		void SetResponse(http::StatusCode status_code);
 		void SetResponse(http::StatusCode status_code, const char *message);
 		void SetResponse(http::StatusCode status_code, const char *message, const Json::Value &json);
 
 		http::StatusCode _status_code = http::StatusCode::OK;
 		Json::Value _json = Json::Value::null;
+
+		bool _is_deferred = false;
 	};
 
 	class ControllerInterface
@@ -125,7 +140,7 @@ namespace api
 		virtual void PrepareHandlers() = 0;
 
 	protected:
-		using Handler = std::function<void(Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client)>;
+		using Handler = std::function<ApiResponse(Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client)>;
 
 		// API Handlers
 		using ApiHandler = ApiResponse (Tclass::*)(const std::shared_ptr<http::svr::HttpExchange> &client);
@@ -149,7 +164,15 @@ namespace api
 				{
 					try
 					{
-						handler(that, client);
+						ApiResponse response = handler(that, client);
+
+						if (response.IsDeferred() == false)
+						{
+							response.SendToClient(client);
+							return http::svr::NextHandler::DoNotCall;
+						}
+
+						return http::svr::NextHandler::DoNotCallAndDoNotResponse;
 					}
 					catch (const http::HttpError &error)
 					{
@@ -178,31 +201,27 @@ namespace api
 
 		void Register(http::Method method, const ov::String &pattern, const ApiHandler &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
-
-				ApiResponse result = (clazz->*handler)(client);
-				result.SendToClient(client);
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) -> ApiResponse {
+				return (clazz->*handler)(client);
 			});
 		}
 
 		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithVHost &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) -> ApiResponse {
+				auto &match_result = client->GetRequest()->GetMatchResult();
 
 				std::shared_ptr<mon::HostMetrics> vhost_metrics;
 				GetVirtualHostMetrics(match_result, &vhost_metrics);
 
-				ApiResponse result = (clazz->*handler)(client, vhost_metrics);
-				result.SendToClient(client);
+				return (clazz->*handler)(client, vhost_metrics);
 			});
 		}
 
 		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithVHostApp &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) -> ApiResponse {
+				auto &match_result = client->GetRequest()->GetMatchResult();
 
 				std::shared_ptr<mon::HostMetrics> vhost_metrics;
 				GetVirtualHostMetrics(match_result, &vhost_metrics);
@@ -210,15 +229,14 @@ namespace api
 				std::shared_ptr<mon::ApplicationMetrics> app_metrics;
 				GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
 
-				ApiResponse result = (clazz->*handler)(client, vhost_metrics, app_metrics);
-				result.SendToClient(client);
+				return (clazz->*handler)(client, vhost_metrics, app_metrics);
 			});
 		}
 
 		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithVHostAppStream &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) -> ApiResponse {
+				auto &match_result = client->GetRequest()->GetMatchResult();
 
 				std::shared_ptr<mon::HostMetrics> vhost_metrics;
 				GetVirtualHostMetrics(match_result, &vhost_metrics);
@@ -230,28 +248,24 @@ namespace api
 				std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
 				GetStreamMetrics(match_result, vhost_metrics, app_metrics, &stream_metrics, &output_streams);
 
-				ApiResponse result = (clazz->*handler)(client, vhost_metrics, app_metrics, stream_metrics, output_streams);
-				result.SendToClient(client);
+				return (clazz->*handler)(client, vhost_metrics, app_metrics, stream_metrics, output_streams);
 			});
 		}
 
 		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithBody &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
-
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) -> ApiResponse {
 				Json::Value request_body;
 				GetRequestBody(client, &request_body);
 
-				ApiResponse result = (clazz->*handler)(client, request_body);
-				result.SendToClient(client);
+				return (clazz->*handler)(client, request_body);
 			});
 		}
 
 		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithBodyVHost &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) -> ApiResponse {
+				auto &match_result = client->GetRequest()->GetMatchResult();
 
 				Json::Value request_body;
 				GetRequestBody(client, &request_body);
@@ -259,15 +273,14 @@ namespace api
 				std::shared_ptr<mon::HostMetrics> vhost_metrics;
 				GetVirtualHostMetrics(match_result, &vhost_metrics);
 
-				ApiResponse result = (clazz->*handler)(client, request_body, vhost_metrics);
-				result.SendToClient(client);
+				return (clazz->*handler)(client, request_body, vhost_metrics);
 			});
 		}
 
 		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithBodyVHostApp &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) -> ApiResponse {
+				auto &match_result = client->GetRequest()->GetMatchResult();
 
 				Json::Value request_body;
 				GetRequestBody(client, &request_body);
@@ -278,15 +291,14 @@ namespace api
 				std::shared_ptr<mon::ApplicationMetrics> app_metrics;
 				GetApplicationMetrics(match_result, vhost_metrics, &app_metrics);
 
-				ApiResponse result = (clazz->*handler)(client, request_body, vhost_metrics, app_metrics);
-				result.SendToClient(client);
+				return (clazz->*handler)(client, request_body, vhost_metrics, app_metrics);
 			});
 		}
 
 		void Register(http::Method method, const ov::String &pattern, const ApiHandlerWithBodyVHostAppStream &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) {
-				[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult();
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client) -> ApiResponse {
+				auto &match_result = client->GetRequest()->GetMatchResult();
 
 				Json::Value request_body;
 				GetRequestBody(client, &request_body);
@@ -301,8 +313,7 @@ namespace api
 				std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
 				GetStreamMetrics(match_result, vhost_metrics, app_metrics, &stream_metrics, &output_streams);
 
-				ApiResponse result = (clazz->*handler)(client, request_body, vhost_metrics, app_metrics, stream_metrics, output_streams);
-				result.SendToClient(client);
+				return (clazz->*handler)(client, request_body, vhost_metrics, app_metrics, stream_metrics, output_streams);
 			});
 		}
 

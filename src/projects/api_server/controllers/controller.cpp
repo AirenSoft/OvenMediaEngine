@@ -15,6 +15,11 @@ namespace api
 	{
 	}
 
+	ApiResponse::ApiResponse(bool deferred)
+		: _is_deferred(deferred)
+	{
+	}
+
 	ApiResponse::ApiResponse(http::StatusCode status_code)
 	{
 		SetResponse(status_code);
@@ -93,7 +98,7 @@ namespace api
 		_json["response"] = json;
 	}
 
-	bool ApiResponse::SendToClient(const std::shared_ptr<http::svr::HttpExchange> &client)
+	bool ApiResponse::SendToClient(const std::shared_ptr<http::svr::HttpExchange> &client) const
 	{
 		const auto &response = client->GetResponse();
 
