@@ -277,6 +277,45 @@ bool MarkerBox::CanInsertMarker(const std::shared_ptr<Marker> &marker) const
 	}
 	bool curr_out_of_network_value = curr_out_of_network.value();
 
+	auto actual_segment_duration_ms = GetActualTargetSegmentDurationMs();
+	auto required_gap = actual_segment_duration_ms * 1.5;
+	if (curr_out_of_network_value == true)
+	{
+		// Duration check
+		if (marker->GetMarkerFormat() == cmn::BitstreamFormat::CUE)
+		{
+			auto cue_event = marker->GetCueEvent();
+			if (cue_event == nullptr)
+			{
+				logte("Failed to get CueEvent from the marker : %s", marker->GetTag().CStr());
+				return false;
+			}
+
+			auto duration_ms = cue_event->GetDurationMsec();
+			if (duration_ms <= required_gap)
+			{
+				logte("Duration of the marker must be greater than %f ms : %s", required_gap, marker->GetTag().CStr());
+				return false;
+			}
+		}
+		else if (marker->GetMarkerFormat() == cmn::BitstreamFormat::SCTE35)
+		{
+			auto scte_event = marker->GetScte35Event();
+			if (scte_event == nullptr)
+			{
+				logte("Failed to get Scte35Event from the marker : %s", marker->GetTag().CStr());
+				return false;
+			}
+
+			auto duration_ms = scte_event->GetDurationMsec();
+			if (duration_ms <= required_gap)
+			{
+				logte("Duration of the marker must be greater than %f ms : %s", required_gap, marker->GetTag().CStr());
+				return false;
+			}
+		}
+	}
+
 	if (_last_inserted_marker == nullptr)
 	{
 		if (curr_out_of_network_value == false)
@@ -297,45 +336,54 @@ bool MarkerBox::CanInsertMarker(const std::shared_ptr<Marker> &marker) const
 	}
 	bool last_out_of_network_value = last_out_of_network.value();
 
-	auto actual_segment_duration_ms = GetActualTargetSegmentDurationMs();
-	auto required_gap = actual_segment_duration_ms * 1.5;
-
-	// Markers can only be inserted 1.5 times the segment length after the last marker.marker_box.cpp:608
-	if (marker->GetTimestampMs() - _last_inserted_marker->GetTimestampMs() < required_gap)
-	{
-		logte("Marker can only be inserted 1.5 times the segment length (%f ms) after the last marker", required_gap);
-		return false;
-	}
-
+	// XXX-OUT marker
 	if (curr_out_of_network_value == true)
 	{
+		// OUT -> OUT
 		if (last_out_of_network_value == true)
 		{
-			logtw("OUT marker cannot be inserted after OUT marker");
+			logte("OUT marker cannot be inserted after OUT marker");
 			return false;
 		}
+		// IN -> OUT
 		else if (last_out_of_network_value == false && _last_inserted_marker->GetTimestamp() > marker->GetTimestamp())
 		{
-			logtw("OUT marker cannot be inserted before IN marker");
+			logte("OUT marker cannot be inserted before IN marker");
+			return false;
+		}
+		// IN -> OUT with the small gap
+		else if (last_out_of_network_value == false && (marker->GetTimestampMs() - _last_inserted_marker->GetTimestampMs() < required_gap))
+		{
+			logte("OUT marker must be inserted with the gap of %f ms", required_gap);
 			return false;
 		}
 	}
+	// XXX-IN marker
 	else
 	{
+		// IN -> IN
 		if (last_out_of_network_value == false)
 		{
 			if (_last_inserted_marker->GetTimestamp() > marker->GetTimestamp())
 			{
+				// IN -> IN with the earlier timestamp, it will cancel the last IN marker
 			}
 			else
 			{
-				logtw("IN marker only can be modified with the less timestamp");
+				logte("IN marker only can be modified with the less timestamp");
 				return false;
 			}
 		}
+		// OUT -> IN
 		else if (last_out_of_network_value == true && _last_inserted_marker->GetTimestamp() > marker->GetTimestamp())
 		{
-			logtw("IN marker cannot be inserted before OUT marker");
+			logte("IN marker cannot be inserted before OUT marker");
+			return false;
+		}
+		// OUT -> IN with the small gap
+		else if (last_out_of_network_value == true && (marker->GetTimestampMs() - _last_inserted_marker->GetTimestampMs() < required_gap))
+		{
+			logte("IN marker must be inserted with the gap of %f ms", required_gap);
 			return false;
 		}
 	}
