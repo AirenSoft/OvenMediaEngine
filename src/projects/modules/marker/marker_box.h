@@ -59,7 +59,7 @@ class MarkerBox
 {
 public:
 	bool InsertMarker(const std::shared_ptr<Marker> &marker);
-	bool CanInsertMarker(const std::shared_ptr<Marker> &marker) const;
+	std::tuple<bool, ov::String> CanInsertMarker(const std::shared_ptr<Marker> &marker) const;
 
 	int64_t GetCurrentSequenceNumber() const;
 	int64_t GetEstimatedSequenceNumber(int64_t timestamp_ms) const;

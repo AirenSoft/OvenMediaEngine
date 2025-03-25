@@ -89,6 +89,11 @@ public:
 	// Get dumps
 	std::vector<std::shared_ptr<const mdl::Dump>> GetDumpInfoList();
 
+	//////////////////////////
+	// Check marker can be inserted
+	//////////////////////////
+	std::tuple<bool, ov::String> CanInsertMarker(cmn::BitstreamFormat bitstream_format, int64_t timestamp_ms, const std::shared_ptr<ov::Data> &data) const;
+
 private:
 	bool Start() override;
 	bool Stop() override;

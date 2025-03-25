@@ -265,15 +265,14 @@ ov::String Marker::ToHlsTag(int64_t timestamp_offset) const
 	return "";
 }
 
-bool MarkerBox::CanInsertMarker(const std::shared_ptr<Marker> &marker) const
+std::tuple<bool, ov::String> MarkerBox::CanInsertMarker(const std::shared_ptr<Marker> &marker) const
 {
 	std::shared_lock<std::shared_mutex> lock(_markers_guard);
 
 	auto curr_out_of_network = marker->IsOutOfNetwork();
 	if (curr_out_of_network.has_value() == false)
 	{
-		logtw("Failed to get out of network value of the marker : %s", marker->GetTag().CStr());
-		return false;
+		return {false, ov::String::FormatString("Failed to get out of network value of the marker : %s", marker->GetTag().CStr())};
 	}
 	bool curr_out_of_network_value = curr_out_of_network.value();
 
@@ -287,15 +286,13 @@ bool MarkerBox::CanInsertMarker(const std::shared_ptr<Marker> &marker) const
 			auto cue_event = marker->GetCueEvent();
 			if (cue_event == nullptr)
 			{
-				logte("Failed to get CueEvent from the marker : %s", marker->GetTag().CStr());
-				return false;
+				return {false, ov::String::FormatString("Failed to get CueEvent from the marker : %s", marker->GetTag().CStr())};
 			}
 
 			auto duration_ms = cue_event->GetDurationMsec();
 			if (duration_ms <= required_gap)
 			{
-				logte("Duration of the marker must be greater than %f ms : %s", required_gap, marker->GetTag().CStr());
-				return false;
+				return {false, ov::String::FormatString("Duration of the marker must be greater than %f ms : %s", required_gap, marker->GetTag().CStr())};
 			}
 		}
 		else if (marker->GetMarkerFormat() == cmn::BitstreamFormat::SCTE35)
@@ -303,15 +300,13 @@ bool MarkerBox::CanInsertMarker(const std::shared_ptr<Marker> &marker) const
 			auto scte_event = marker->GetScte35Event();
 			if (scte_event == nullptr)
 			{
-				logte("Failed to get Scte35Event from the marker : %s", marker->GetTag().CStr());
-				return false;
+				return {false, ov::String::FormatString("Failed to get Scte35Event from the marker : %s", marker->GetTag().CStr())};
 			}
 
 			auto duration_ms = scte_event->GetDurationMsec();
 			if (duration_ms <= required_gap)
 			{
-				logte("Duration of the marker must be greater than %f ms : %s", required_gap, marker->GetTag().CStr());
-				return false;
+				return {false, ov::String::FormatString("Duration of the marker must be greater than %f ms : %s", required_gap, marker->GetTag().CStr())};
 			}
 		}
 	}
@@ -320,19 +315,17 @@ bool MarkerBox::CanInsertMarker(const std::shared_ptr<Marker> &marker) const
 	{
 		if (curr_out_of_network_value == false)
 		{
-			logte("First marker must be OUT marker");
-			return false;
+			return {false, "First marker must be OUT marker"};
 		}
 
 		// First marker always can be inserted
-		return true;
+		return {true, ""};
 	}
 
 	auto last_out_of_network = _last_inserted_marker->IsOutOfNetwork();
 	if (last_out_of_network.has_value() == false)
 	{
-		logtw("Failed to get out of network value of the last inserted marker", marker->GetTag().CStr());
-		return false;
+		return {false, ov::String::FormatString("Failed to get out of network value of the last inserted marker", marker->GetTag().CStr())};
 	}
 	bool last_out_of_network_value = last_out_of_network.value();
 
@@ -342,20 +335,17 @@ bool MarkerBox::CanInsertMarker(const std::shared_ptr<Marker> &marker) const
 		// OUT -> OUT
 		if (last_out_of_network_value == true)
 		{
-			logte("OUT marker cannot be inserted after OUT marker");
-			return false;
+			return {false, "OUT marker cannot be inserted after OUT marker"};
 		}
 		// IN -> OUT
 		else if (last_out_of_network_value == false && _last_inserted_marker->GetTimestamp() > marker->GetTimestamp())
 		{
-			logte("OUT marker cannot be inserted before IN marker");
-			return false;
+			return {false, "OUT marker cannot be inserted before IN marker"};
 		}
 		// IN -> OUT with the small gap
 		else if (last_out_of_network_value == false && (marker->GetTimestampMs() - _last_inserted_marker->GetTimestampMs() < required_gap))
 		{
-			logte("OUT marker must be inserted with the gap of %f ms", required_gap);
-			return false;
+			return {false, ov::String::FormatString("OUT marker must be inserted with the gap of %f ms", required_gap)};
 		}
 	}
 	// XXX-IN marker
@@ -370,31 +360,30 @@ bool MarkerBox::CanInsertMarker(const std::shared_ptr<Marker> &marker) const
 			}
 			else
 			{
-				logte("IN marker only can be modified with the less timestamp");
-				return false;
+				return {false, "IN marker only can be modified with the less timestamp"};
 			}
 		}
 		// OUT -> IN
 		else if (last_out_of_network_value == true && _last_inserted_marker->GetTimestamp() > marker->GetTimestamp())
 		{
-			logte("IN marker cannot be inserted before OUT marker");
-			return false;
+			return {false, "IN marker cannot be inserted before OUT marker"};
 		}
 		// OUT -> IN with the small gap
 		else if (last_out_of_network_value == true && (marker->GetTimestampMs() - _last_inserted_marker->GetTimestampMs() < required_gap))
 		{
-			logte("IN marker must be inserted with the gap of %f ms", required_gap);
-			return false;
+			return {false, ov::String::FormatString("IN marker must be inserted with the gap of %f ms", required_gap)};
 		}
 	}
 
-	return true;
+	return {true, ""};
 }
 
 bool MarkerBox::InsertMarker(const std::shared_ptr<Marker> &marker)
 {
-	if (CanInsertMarker(marker) == false)
+	auto [can_insert, message] = CanInsertMarker(marker);
+	if (can_insert == false)
 	{
+		logte("Failed to insert the marker : %s", message.CStr());
 		return false;
 	}
 

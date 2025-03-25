@@ -344,6 +344,7 @@ namespace api
 			else if (event_format_string.UpperCaseString() == "CUE")
 			{
 				event_format = cmn::BitstreamFormat::CUE;
+				timestamp = source_stream->GetCurrentTimestampMs();
 				events_data = MakeCueData(request_body["events"]);
 			}
 			else if (event_format_string.UpperCaseString() == "SCTE35")

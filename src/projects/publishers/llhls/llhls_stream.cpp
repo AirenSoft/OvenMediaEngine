@@ -1121,6 +1121,54 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 	}
 }
 
+std::tuple<bool, ov::String> LLHlsStream::CanInsertMarker(cmn::BitstreamFormat bitstream_format, int64_t timestamp_ms, const std::shared_ptr<ov::Data> &data) const
+{
+	auto data_track = GetFirstTrackByType(cmn::MediaType::Data);
+	if (data_track == nullptr)
+	{
+		return {false, "Could not find data track"};
+	}
+
+	auto first_video_media_track = GetFirstTrackByType(cmn::MediaType::Video);
+	auto first_video_packager = GetPackager(first_video_media_track->GetId());
+
+	// Insert marker to all packagers
+	for (const auto &it : GetTracks())
+	{
+		auto track = it.second;
+		// Only video and audio tracks are supported
+		if (track->GetMediaType() != cmn::MediaType::Video && track->GetMediaType() != cmn::MediaType::Audio)
+		{
+			continue;
+		}
+
+		// Get Packager
+		auto packager = GetPackager(track->GetId());
+		if (packager == nullptr)
+		{
+			logtd("Could not find packager. track id: %d", track->GetId());
+			continue;
+		}
+
+		auto timestamp_media_scale = static_cast<double>(timestamp_ms) / data_track->GetTimeBase().GetTimescale() * track->GetTimeBase().GetTimescale();
+		auto marker = Marker::CreateMarker(bitstream_format, timestamp_media_scale, timestamp_ms, data);
+		if (marker == nullptr)
+		{
+			logte("(%s/%s) Failed to create the marker", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+			return {false, "Failed to create the marker"};
+		}
+
+		auto [result, message] = packager->CanInsertMarker(marker);
+		if (result == false)
+		{
+			logte("Failed to insert marker (timestamp: %lld, tag: %s)", marker->GetTimestamp(), marker->GetTag().CStr());
+			return {false, message};
+		}
+	}
+
+	return {true, ""};
+}
+
 bool LLHlsStream::InsertMarkerToAllPackagers(uint32_t data_track_id, cmn::BitstreamFormat bitstream_format, int64_t timestamp_ms, const std::shared_ptr<ov::Data> &data)
 {
 	auto data_track = GetTrack(data_track_id);
@@ -1180,10 +1228,10 @@ bool LLHlsStream::InsertMarkerToAllPackagers(uint32_t data_track_id, cmn::Bitstr
 			if (i == 0)	 // check
 			{
 				max_current_seq = std::max(max_current_seq, packager->GetCurrentSequenceNumber());
-				auto result = packager->CanInsertMarker(marker);
+				auto [result, msg] = packager->CanInsertMarker(marker);
 				if (result == false)
 				{
-					logte("Failed to insert marker (timestamp: %lld, tag: %s)", marker->GetTimestamp(), marker->GetTag().CStr());
+					logte("Failed to insert marker (timestamp: %lld, tag: %s, msg: %s)", marker->GetTimestamp(), marker->GetTag().CStr(), msg.CStr());
 					return false;
 				}
 			}
