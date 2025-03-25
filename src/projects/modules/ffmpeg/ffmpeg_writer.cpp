@@ -175,6 +175,16 @@ namespace ffmpeg
 		// Set Interrupt Callback
 		_interrupt_cb = {InterruptCallback, this};
 
+		// The codec_tag value added in the ffmpeg::Conv::ToAVStream function is removed when using the RTMP (FLV) format
+		// Related log. "Tag avc1 incompatible with output codec id '27'"
+		for (uint32_t i = 0; i < av_format->nb_streams; i++)
+		{
+			if (strcmp(av_format->oformat->name, "flv") == 0 && av_format->streams[i]->codecpar != nullptr)
+			{
+				av_format->streams[i]->codecpar->codec_tag = 0;
+			}
+		}
+
 		if (!(av_format->oformat->flags & AVFMT_NOFILE))
 		{
 			_last_packet_sent_time = std::chrono::high_resolution_clock::now();
