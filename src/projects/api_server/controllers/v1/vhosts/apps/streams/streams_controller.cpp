@@ -27,7 +27,7 @@ namespace api
 			RegisterGet(R"(\/(?<stream_name>[^\/]*))", &StreamsController::OnGetStream);
 			RegisterDelete(R"(\/(?<stream_name>[^\/]*))", &StreamsController::OnDeleteStream);
 
-			CreateSubController<StreamActionsController>(R"(\/(?<stream_name>[^\/:]*):)");
+			CreateSubController<StreamActionsController>(R"(\/(?<stream_name>[^\/]*):)");
 		};
 
 		ApiResponse StreamsController::OnPostStream(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
