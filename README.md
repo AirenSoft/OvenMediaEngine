@@ -16,7 +16,7 @@ OvenSpace is a sub-second latency streaming demo service using [OvenMediaEngine]
 
 ## Features
 * Ingest
-  * Push: WebRTC, WHIP, SRT, RTMP, MPEG-2 TS
+  * Push: WebRTC, WHIP(Simulcast), SRT, RTMP, MPEG-2 TS
   * Pull: RTSP
   * Scheduled Channel (Pre-recorded Live)
   * Multiplex Channel (Duplicate stream / Mux tracks)
@@ -51,7 +51,7 @@ OvenSpace is a sub-second latency streaming demo service using [OvenMediaEngine]
   * Admission Webhooks
   * Signed Policy
 * File Recording
-* RTMP/SRT Push Publishing (Re-streaming)
+* Push Publishing using SRT, RTMP and MPEG2-TS (Re-streaming)
 * Thumbnail
 * REST API
 
