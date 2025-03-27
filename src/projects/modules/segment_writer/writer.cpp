@@ -847,6 +847,8 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 			[[fallthrough]];
 		case cmn::BitstreamFormat::H264_RTP_RFC_6184:
 			[[fallthrough]];
+		case cmn::BitstreamFormat::H265_RTP_RFC_7798:
+			[[fallthrough]];
 		case cmn::BitstreamFormat::VP8:
 			[[fallthrough]];
 		case cmn::BitstreamFormat::VP8_RTP_RFC_7741:
