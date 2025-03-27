@@ -132,7 +132,7 @@ public:
 
 	size_t GetDataLength() const noexcept
 	{
-		return _data->GetLength();
+		return (_data != nullptr) ? _data->GetLength() : 0;
 	}
 
 	int64_t GetPts() const noexcept
