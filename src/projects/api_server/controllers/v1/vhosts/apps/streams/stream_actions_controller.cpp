@@ -24,8 +24,6 @@ namespace api
 	{
 		void StreamActionsController::PrepareHandlers()
 		{
-			RegisterGet(R"()", &StreamActionsController::OnGetDummyAction);
-
 			RegisterPost(R"((hlsDumps))", &StreamActionsController::OnPostHLSDumps);
 			RegisterPost(R"((startHlsDump))", &StreamActionsController::OnPostStartHLSDump);
 			RegisterPost(R"((stopHlsDump))", &StreamActionsController::OnPostStopHLSDump);
@@ -445,17 +443,6 @@ namespace api
 			}
 
 			return {http::StatusCode::OK};
-		}
-
-		ApiResponse StreamActionsController::OnGetDummyAction(const std::shared_ptr<http::svr::HttpExchange> &client,
-															  const std::shared_ptr<mon::HostMetrics> &vhost,
-															  const std::shared_ptr<mon::ApplicationMetrics> &app,
-															  const std::shared_ptr<mon::StreamMetrics> &stream,
-															  const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
-		{
-			logte("Called OnGetDummyAction. invoke [%s/%s/%s]", vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
-
-			return app->GetConfig().ToJson();
 		}
 
 		std::shared_ptr<pvd::Stream> StreamActionsController::GetSourceStream(const std::shared_ptr<mon::StreamMetrics> &stream)

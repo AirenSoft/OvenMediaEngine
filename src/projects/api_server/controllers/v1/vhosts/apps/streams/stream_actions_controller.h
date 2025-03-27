@@ -61,12 +61,6 @@ namespace api
 											   const std::shared_ptr<mon::StreamMetrics> &stream,
 											   const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
 
-			// GET /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>:<action>
-			ApiResponse OnGetDummyAction(const std::shared_ptr<http::svr::HttpExchange> &client,
-										 const std::shared_ptr<mon::HostMetrics> &vhost,
-										 const std::shared_ptr<mon::ApplicationMetrics> &app,
-										 const std::shared_ptr<mon::StreamMetrics> &stream,
-										 const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
 		private:
 
 			// TODO(Getroot): Move to mon::StreamMetrics
