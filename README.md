@@ -31,7 +31,7 @@ OvenSpace is a sub-second latency streaming demo service using [OvenMediaEngine]
   * Embedded WebRTC Signalling Server (WebSocket based)
   * Retransmission with NACK
   * ULPFEC (Uneven Level Protection Forward Error Correction)
-    * <i>VP8, H.264</i>
+    * <i>VP8, H.264, H.265</i>
   * In-band FEC (Forward Error Correction)
     * <i>Opus</i>
 * Legacy HLS (HLS version 3)
@@ -51,11 +51,9 @@ OvenSpace is a sub-second latency streaming demo service using [OvenMediaEngine]
   * Admission Webhooks
   * Signed Policy
 * File Recording
-* RTMP Push Publishing (Re-streaming)
+* RTMP/SRT Push Publishing (Re-streaming)
 * Thumbnail
 * REST API
-* Experiment
-  * P2P Traffic Distribution (Only WebRTC)
 
 ## Supported Platforms
 We have tested OvenMediaEngine on the platforms listed below.
