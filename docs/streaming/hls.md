@@ -15,7 +15,7 @@ HLS based on MPEG-2 TS containers is still useful because it provides high compa
 | Delivery  | <p>HTTP/1.1<br>HTTP/2</p>                             |
 | Security  | TLS (HTTPS)                                           |
 | Container | <p>MPEG-2 TS<br>(Only supports Audio/Video muxed)</p> |
-| Codecs    | <p>H.264</p><p>AAC</p>                                |
+| Codecs    | <p>H.264</p><p>H.265</p><p>AAC</p>                    |
 
 {% hint style="info" %}
 To differentiate between LLHLS and HLS playback addresses, we created the following rule for HLS playback addresses:

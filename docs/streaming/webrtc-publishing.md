@@ -4,14 +4,14 @@ OvenMediaEngine uses WebRTC to provide sub-second latency streaming. WebRTC uses
 
 OvenMediaEngine provides the following features:
 
-| Title            | Functions                                                             |
-| ---------------- | --------------------------------------------------------------------- |
-| Delivery         | RTP / RTCP                                                            |
-| Security         | DTLS, SRTP                                                            |
-| Connectivity     | ICE                                                                   |
-| Error Correction | ULPFEC (VP8, H.264), In-band FEC (Opus)                               |
-| Codec            | VP8, H.264, Opus                                                      |
-| Signalling       | Self-Defined Signalling Protocol and Embedded Web Socket-Based Server |
+| Title            | Functions                                                            |
+| ---------------- | -------------------------------------------------------------------- |
+| Delivery         | RTP / RTCP                                                           |
+| Security         | DTLS, SRTP                                                           |
+| Connectivity     | ICE                                                                  |
+| Error Correction | ULPFEC (VP8, H.264), In-band FEC (Opus)                              |
+| Codec            | VP8, H.264, H.265, Opus                                              |
+| Signaling        | Self-Defined Signaling Protocol and Embedded Web Socket-Based Server |
 
 ## Configuration
 
