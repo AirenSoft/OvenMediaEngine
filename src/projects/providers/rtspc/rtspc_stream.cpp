@@ -538,6 +538,16 @@ namespace pvd
 					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::H264;
 					break;
 
+#if 0
+				case PayloadAttr::SupportCodec::H265:
+					track->SetMediaType(cmn::MediaType::Video);
+					track->SetCodecId(cmn::MediaCodecId::H265);
+					track->SetOriginBitstream(cmn::BitstreamFormat::H265_RTP_RFC_7798);
+					// Get Extradata from the first payload(out of band)
+					// _h264_extradata_nalu = first_payload->GetH264ExtraDataAsAnnexB(); 
+					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::H265;
+					break;
+#endif
 				case PayloadAttr::SupportCodec::VP8:
 					track->SetMediaType(cmn::MediaType::Video);
 					track->SetCodecId(cmn::MediaCodecId::Vp8);
@@ -1035,6 +1045,11 @@ namespace pvd
 
 		switch (track->GetCodecId())
 		{
+			case cmn::MediaCodecId::H265:
+				// Our H265 depacketizer always converts packet to H265
+				bitstream_format = cmn::BitstreamFormat::H265_ANNEXB;
+				packet_type = cmn::PacketType::NALU;
+				break;
 			case cmn::MediaCodecId::H264:
 				// Our H264 depacketizer always converts packet to AnnexB
 				bitstream_format = cmn::BitstreamFormat::H264_ANNEXB;

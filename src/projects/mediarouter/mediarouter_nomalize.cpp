@@ -611,7 +611,8 @@ bool MediaRouterNormalize::ProcessH265AnnexBStream(const std::shared_ptr<info::S
 
 	auto bitstream = media_packet->GetData()->GetDataAs<uint8_t>();
 	auto bitstream_length = media_packet->GetData()->GetLength();
-	
+	bool has_vps = false, has_sps = false, has_pps = false, has_idr = false;
+
 	size_t offset = 0, offset_length = 0;
 	while (offset < bitstream_length)
 	{
@@ -659,6 +660,21 @@ bool MediaRouterNormalize::ProcessH265AnnexBStream(const std::shared_ptr<info::S
 			header.GetNalUnitType() == H265NALUnitType::IRAP_VCL23)
 		{
 			media_packet->SetFlag(MediaPacketFlag::Key);
+
+			has_idr = true;
+		}
+		// VPS/SPS/PPS
+		else if(header.GetNalUnitType() == H265NALUnitType::VPS)
+		{
+			has_vps = true;
+		}
+		else if(header.GetNalUnitType() == H265NALUnitType::SPS)
+		{
+			has_sps = true;
+		}
+		else if(header.GetNalUnitType() == H265NALUnitType::PPS)
+		{
+			has_pps = true;
 		}
 
 		// Track info
@@ -700,6 +716,68 @@ bool MediaRouterNormalize::ProcessH265AnnexBStream(const std::shared_ptr<info::S
 			media_track->SetDecoderConfigurationRecord(hevc_config);
 		}
 	}
+
+	// Insert VPS/SPS/PPS if there are no VPS/SPS/PPS nal units before IDR frame.
+	if(media_track->IsValid() == true && has_idr == true && (has_vps == false || has_sps == false || has_pps == false))
+	{
+		if (InsertH265VPSSPSPPSAnnexB(stream_info, media_track, media_packet) == false)
+		{
+			logtw("Failed to insert VPS/SPS/PPS before IDR frame in %s/%s/%s track", stream_info->GetApplicationName(), stream_info->GetName().CStr(), media_track->GetVariantName().CStr());
+		}
+	}
+
+	return true;
+}
+
+bool MediaRouterNormalize::InsertH265VPSSPSPPSAnnexB(const std::shared_ptr<info::Stream> &stream_info, std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
+{
+	if (media_track->IsValid() == false)
+	{
+		return false;
+	}
+
+	// Get AVC Decoder Configuration Record
+	auto hevc_config = std::static_pointer_cast<HEVCDecoderConfigurationRecord>(media_track->GetDecoderConfigurationRecord());
+	if (hevc_config == nullptr)
+	{
+		return false;
+	}
+
+	auto data = media_packet->GetData();
+
+	const uint8_t START_CODE[4] = {0x00, 0x00, 0x00, 0x01};
+	const size_t START_CODE_LEN = sizeof(START_CODE);
+
+	auto vps_list = hevc_config->GetNalUnits(H265NALUnitType::VPS);
+	auto sps_list = hevc_config->GetNalUnits(H265NALUnitType::SPS);
+	auto pps_list = hevc_config->GetNalUnits(H265NALUnitType::PPS);
+
+	// new media packet
+	auto processed_data = std::make_shared<ov::Data>(data->GetLength() + 1024);
+
+	// copy sps/pps first
+	if(vps_list.size() > 0)
+	{
+		processed_data->Append(START_CODE, START_CODE_LEN);
+		processed_data->Append(vps_list[0]);
+	}
+	if(sps_list.size() > 0)
+	{
+		processed_data->Append(START_CODE, START_CODE_LEN);
+		processed_data->Append(sps_list[0]);
+	}
+	if(pps_list.size() > 0)
+	{
+		processed_data->Append(START_CODE, START_CODE_LEN);
+		processed_data->Append(pps_list[0]);
+	}
+
+	// and then copy original data
+	processed_data->Append(data);
+
+	// TODO : Update fragment header
+	
+	media_packet->SetData(processed_data);
 
 	return true;
 }

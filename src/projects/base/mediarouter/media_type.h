@@ -31,6 +31,7 @@ namespace cmn
 		H264_RTP_RFC_6184,
 		HVCC, // H.265 HVCC
 		H265_ANNEXB,		// OME's default internal bitstream format for H265
+		H265_RTP_RFC_7798,
 		VP8,/*raw*/			// OME's default internal bitstream format for VP8
 		VP8_RTP_RFC_7741,
 		AAC_RAW,
@@ -211,6 +212,8 @@ namespace cmn
 				return "H264_RTP_RFC_6184";
 			case cmn::BitstreamFormat::H265_ANNEXB:
 				return "H265_ANNEXB";
+			case cmn::BitstreamFormat::H265_RTP_RFC_7798:
+				return "H265_RTP_RFC_7798";
 			case cmn::BitstreamFormat::HVCC:
 				return "HVCC";
 			case cmn::BitstreamFormat::VP8:

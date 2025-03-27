@@ -307,6 +307,13 @@ namespace pvd
 			track->SetOriginBitstream(cmn::BitstreamFormat::H264_RTP_RFC_6184);
 			track->SetVideoTimestampScale(1.0);
 		}
+		else if (codec == PayloadAttr::SupportCodec::H265)
+		{
+			track->SetMediaType(cmn::MediaType::Video);
+			track->SetCodecId(cmn::MediaCodecId::H265);
+			track->SetOriginBitstream(cmn::BitstreamFormat::H265_RTP_RFC_7798);
+			track->SetVideoTimestampScale(1.0);
+		}
 		else if (codec == PayloadAttr::SupportCodec::VP8)
 		{
 			track->SetMediaType(cmn::MediaType::Video);
@@ -351,6 +358,10 @@ namespace pvd
 		{
 			case cmn::MediaCodecId::H264:
 				depacketizer_codec_id = RtpDepacketizingManager::SupportedDepacketizerType::H264;
+				break;
+
+			case cmn::MediaCodecId::H265:
+				depacketizer_codec_id = RtpDepacketizingManager::SupportedDepacketizerType::H265;
 				break;
 
 			case cmn::MediaCodecId::Opus:
@@ -495,11 +506,26 @@ namespace pvd
 		bool cts_enabled = false;
 		switch (track->GetCodecId())
 		{
+			case cmn::MediaCodecId::H265:
+				// Our H265 depacketizer always converts packet to Annex B
+				bitstream_format = cmn::BitstreamFormat::H265_ANNEXB;
+				packet_type = cmn::PacketType::NALU;
+				cts_enabled = _cts_extmap_enabled == true;
+				if (_h26x_extradata_nalu == nullptr)
+				{
+					_h26x_extradata_nalu = depacketizer->GetDecodingParameterSetsToAnnexB();
+				}
+				break;
+
 			case cmn::MediaCodecId::H264:
 				// Our H264 depacketizer always converts packet to Annex B
 				bitstream_format = cmn::BitstreamFormat::H264_ANNEXB;
 				packet_type = cmn::PacketType::NALU;
 				cts_enabled = _cts_extmap_enabled == true;
+				if (_h26x_extradata_nalu == nullptr)
+				{
+					_h26x_extradata_nalu = depacketizer->GetDecodingParameterSetsToAnnexB();
+				}
 				break;
 
 			case cmn::MediaCodecId::Opus:
@@ -542,7 +568,7 @@ namespace pvd
 			}
 		}
 		
-		logtd("Payload Type(%d) Timestamp(%u) PTS(%u) Time scale(%f) Adjust Timestamp(%f)",
+		logtp("Payload Type(%d) Timestamp(%u) PTS(%u) Time scale(%f) Adjust Timestamp(%f)",
 			  first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), adjusted_timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(adjusted_timestamp) * track->GetTimeBase().GetExpr());
 
 		auto frame = std::make_shared<MediaPacket>(GetMsid(),
@@ -584,6 +610,11 @@ namespace pvd
 
 					return;
 				}
+				case cmn::BitstreamFormat::H265_ANNEXB:
+				{
+					// logtw("H265 is not supported yet");
+					return;
+				}
 				default:
 					break;
 			}
@@ -594,18 +625,21 @@ namespace pvd
 
 	void WebRTCStream::OnFrame(const std::shared_ptr<MediaTrack> &track, const std::shared_ptr<MediaPacket> &media_packet)
 	{
-		logtd("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%u)", track->GetId(), track->GetCodecId(), media_packet->GetBitstreamFormat(), media_packet->GetPacketType(), media_packet->GetDataLength(), media_packet->GetPts());
+		logtp("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%u)", track->GetId(), track->GetCodecId(), media_packet->GetBitstreamFormat(), media_packet->GetPacketType(), media_packet->GetDataLength(), media_packet->GetPts());
 
-		// This may not work since almost WebRTC browser sends SRS/PPS in-band
-		if (_sent_sequence_header == false && track->GetCodecId() == cmn::MediaCodecId::H264 && _h264_extradata_nalu != nullptr)
+		// This may not work since almost WebRTC browser sends SPS/PPS/VPS in-band
+		if (_sent_sequence_header == false &&
+			(track->GetCodecId() == cmn::MediaCodecId::H264 || track->GetCodecId() == cmn::MediaCodecId::H265) &&
+			_h26x_extradata_nalu != nullptr)
 		{
-			auto sps_pps_packet = std::make_shared<MediaPacket>(GetMsid(),	
-																track->GetMediaType(), 
-																track->GetId(), 
-																_h264_extradata_nalu,
-																media_packet->GetPts(), 
-																media_packet->GetDts(), 
-																cmn::BitstreamFormat::H264_ANNEXB, 
+			auto bitstream_format = (track->GetCodecId() == cmn::MediaCodecId::H264) ? cmn::BitstreamFormat::H264_ANNEXB : cmn::BitstreamFormat::H265_ANNEXB;
+			auto sps_pps_packet = std::make_shared<MediaPacket>(GetMsid(),
+																track->GetMediaType(),
+																track->GetId(),
+																_h26x_extradata_nalu,
+																media_packet->GetPts(),
+																media_packet->GetDts(),
+																bitstream_format,
 																cmn::PacketType::NALU);
 			SendFrame(sps_pps_packet);
 			_sent_sequence_header = true;

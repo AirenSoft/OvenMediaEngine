@@ -282,8 +282,9 @@ namespace pvd
 			// payloads
 			for (auto &offer_payload : offer_media_desc->GetPayloadList())
 			{
-				if (offer_payload->GetCodec() != PayloadAttr::SupportCodec::H264 && 
-					offer_payload->GetCodec() != PayloadAttr::SupportCodec::VP8 && 
+				if (offer_payload->GetCodec() != PayloadAttr::SupportCodec::H264 &&
+					offer_payload->GetCodec() != PayloadAttr::SupportCodec::H265 &&
+					offer_payload->GetCodec() != PayloadAttr::SupportCodec::VP8 &&
 					offer_payload->GetCodec() != PayloadAttr::SupportCodec::OPUS)
 				{
 					logti("unsupported codec(%s) has ignored", offer_payload->GetCodecStr().CStr());

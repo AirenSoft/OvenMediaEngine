@@ -35,6 +35,15 @@ enum NaluType : uint8_t {
 	kFuA = 28
 };
 
+enum H265NaluType : uint8_t {
+	kVPS = 32,
+	kSPS = 33,
+	kPPS = 34,
+	kAPs = 48,
+	kFUs = 49,
+	kPACI = 50
+};
+
 enum H26XPacketizationTypes {
 	kH264SingleNalu,
 	kH264StapA,

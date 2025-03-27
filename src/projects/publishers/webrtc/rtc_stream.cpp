@@ -273,7 +273,7 @@ bool RtcStream::IsSupportedCodec(cmn::MediaCodecId codec_id)
 	switch (codec_id)
 	{
 	case cmn::MediaCodecId::H264:
-	//case cmn::MediaCodecId::H265:
+	case cmn::MediaCodecId::H265:
 	case cmn::MediaCodecId::Vp8:
 	case cmn::MediaCodecId::Opus:
 		return true;
