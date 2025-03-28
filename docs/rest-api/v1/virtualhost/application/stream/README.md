@@ -435,6 +435,291 @@ Content-Type: application/json
 
 </details>
 
+<details>
+
+<summary>OpenAPI Specification</summary>
+
+OpenAPI 3.0 specification
+
+```yaml
+openapi: 3.0.0
+info:
+  title: Stream API
+  version: 1.0.0
+  description: API for stream information
+
+paths:
+  /stream:
+    get:
+      summary: Get stream information
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error401'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+
+components:
+  schemas:
+    SuccessResponse:
+      type: object
+      required:
+        - statusCode
+        - message
+        - response
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        response:
+          type: object
+          required:
+            - name
+            - input
+          properties:
+            name:
+              type: string
+            input:
+              $ref: '#/components/schemas/Input'
+            outputs:
+              type: array
+              items:
+                $ref: '#/components/schemas/Output'
+    Error401:
+      type: object
+      required:
+        - statusCode
+        - message
+      properties:
+        statusCode:
+          type: integer
+          enum: [401]
+        message:
+          type: string
+          enum: ["[HTTP] Authorization header is required to call API (401)"]
+          
+    Error404:
+      type: object
+      required:
+        - statusCode
+        - message
+      properties:
+        statusCode:
+          type: integer
+          enum: [404]
+        message:
+          type: string
+          enum: ["Could not find the application or stream (404)"]
+          
+          
+    VideoTrack:
+      type: object
+      required:
+        - id
+        - type
+        - video
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - Video
+        video:
+          type: object
+          properties:
+            bitrate:
+              type: string
+            bitrateAvg:
+              type: string
+            bitrateConf:
+              type: string
+            bitrateLatest:
+              type: string
+            bypass:
+              type: boolean
+            codec:
+              type: string
+            deltaFramesSinceLastKeyFrame:
+              type: integer
+            framerate:
+              type: number
+            framerateAvg:
+              type: number
+            framerateConf:
+              type: number
+            framerateLatest:
+              type: number
+            hasBframes:
+              type: boolean
+            keyFrameInterval:
+              type: integer
+            keyFrameIntervalAvg:
+              type: number
+            keyFrameIntervalConf:
+              type: number
+            keyFrameIntervalLatest:
+              type: integer
+            height:
+              type: integer
+            width:
+              type: integer
+              
+    AudioTrack:
+      type: object
+      required:
+        - id
+        - type
+        - audio
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - Audio
+        audio:
+          type: object
+          properties:
+            bitrate:
+              type: string
+            bitrateAvg:
+              type: string
+            bitrateConf:
+              type: string
+            bitrateLatest:
+              type: string
+            bypass:
+              type: boolean
+            channel:
+              type: integer
+            codec:
+              type: string
+            samplerate:
+              type: integer
+              
+    DataTrack:
+      type: object
+      required:
+        - id
+        - type
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - Data
+            
+    Track:
+      oneOf:
+        - $ref: '#/components/schemas/VideoTrack'
+        - $ref: '#/components/schemas/AudioTrack'
+        - $ref: '#/components/schemas/DataTrack'
+      discriminator:
+        propertyName: type
+        mapping:
+          Video: '#/components/schemas/VideoTrack'
+          Audio: '#/components/schemas/AudioTrack'
+          Data: '#/components/schemas/DataTrack'
+          
+    Rendition:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        videoVariantName:
+          type: string
+        audioVariantName:
+          type: string
+          
+    Playlist:
+      type: object
+      required:
+        - name
+        - fileName
+        - options
+        - renditions
+      properties:
+        name:
+          type: string
+        fileName:
+          type: string
+        options:
+          type: object
+          properties:
+            enableTsPackaging:
+              type: boolean
+            hlsChunklistPathDepth:
+              type: integer
+            webrtcAutoAbr:
+              type: boolean
+        renditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Rendition'
+            
+    Output:
+      type: object
+      required:
+        - name
+        - tracks
+      properties:
+        name:
+          type: string
+        playlists:
+          type: array
+          items:
+            $ref: '#/components/schemas/Playlist'
+        tracks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Track'
+            
+    Input:
+      type: object
+      required:
+        - createdTime
+        - sourceType
+        - tracks
+      properties:
+        createdTime:
+          type: string
+          format: date-time
+        sourceType:
+          type: string
+        sourceUrl:
+          type: string
+        tracks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Track'
+```
+
+</details>
+
 ## Delete Stream
 
 Delete Stream. This terminates the ingress connection.
