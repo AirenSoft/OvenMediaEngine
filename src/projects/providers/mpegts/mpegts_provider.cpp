@@ -189,7 +189,7 @@ namespace pvd
 		return true;
 	}
 
-	std::shared_ptr<pvd::Application> MpegTsProvider::OnCreateProviderApplication(const info::Application &application_info)
+	std::shared_ptr<Application> MpegTsProvider::OnCreateProviderApplication(const info::Application &application_info)
 	{
 		if (IsModuleAvailable() == false)
 		{
@@ -244,7 +244,7 @@ namespace pvd
 			}
 		}
 
-		auto application = MpegTsApplication::Create(GetSharedPtrAs<pvd::PushProvider>(), application_info);
+		auto application = MpegTsApplication::Create(GetSharedPtrAs<PushProvider>(), application_info);
 		if (application == nullptr)
 		{
 			return nullptr;
@@ -256,7 +256,7 @@ namespace pvd
 		return application;
 	}
 
-	bool MpegTsProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
+	bool MpegTsProvider::OnDeleteProviderApplication(const std::shared_ptr<Application> &application)
 	{
 		std::shared_lock<std::shared_mutex> lock(_stream_port_map_lock);
 
@@ -308,7 +308,7 @@ namespace pvd
 			return false;
 		}
 
-		auto stream = MpegTsStream::Create(StreamSourceType::Mpegts, channel_id, stream_port_item->GetVhostAppName(), stream_port_item->GetOutputStreamName(), remote, remote_address, 0, GetSharedPtrAs<pvd::PushProvider>());
+		auto stream = MpegTsStream::Create(StreamSourceType::Mpegts, channel_id, stream_port_item->GetVhostAppName(), stream_port_item->GetOutputStreamName(), remote, remote_address, 0, GetSharedPtrAs<PushProvider>());
 		if (PushProvider::OnChannelCreated(remote->GetNativeHandle(), stream) == true)
 		{
 			logti("A MPEG-TS client has connected");  // %s", remote->ToString().CStr());

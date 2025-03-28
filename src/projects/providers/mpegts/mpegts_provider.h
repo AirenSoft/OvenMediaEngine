@@ -110,7 +110,7 @@ namespace pvd
 		std::atomic<uint32_t> _client_id = 0;
 	};
 
-	class MpegTsProvider : public pvd::PushProvider, protected PhysicalPortObserver
+	class MpegTsProvider : public PushProvider, protected PhysicalPortObserver
 	{
 	public:
 		static std::shared_ptr<MpegTsProvider> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouterInterface> &router);
@@ -159,8 +159,8 @@ namespace pvd
 		//--------------------------------------------------------------------
 		bool OnCreateHost(const info::Host &host_info) override;
 		bool OnDeleteHost(const info::Host &host_info) override;
-		std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &application_info) override;
-		bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
+		std::shared_ptr<Application> OnCreateProviderApplication(const info::Application &application_info) override;
+		bool OnDeleteProviderApplication(const std::shared_ptr<Application> &application) override;
 
 		//--------------------------------------------------------------------
 		// Implementation of PushProvider's virtual functions

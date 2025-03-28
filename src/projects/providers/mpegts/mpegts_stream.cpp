@@ -62,7 +62,7 @@ namespace pvd
 			return true;
 		}
 
-		if(_remote->GetState() == ov::SocketState::Connected)
+		if (_remote->GetState() == ov::SocketState::Connected)
 		{
 			_remote->Close();
 		}
@@ -77,7 +77,7 @@ namespace pvd
 
 	bool MpegTsStream::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
 	{
-		if(GetState() == Stream::State::ERROR || GetState() == Stream::State::STOPPED)
+		if (GetState() == Stream::State::ERROR || GetState() == Stream::State::STOPPED)
 		{
 			return false;
 		}
@@ -158,7 +158,7 @@ namespace pvd
 				{
 					auto payload = es->Payload();
 					auto payload_length = es->PayloadLength();
-				
+
 					auto data = std::make_shared<ov::Data>(payload, payload_length);
 					auto media_packet = std::make_shared<MediaPacket>(GetMsid(),
 																	  cmn::MediaType::Audio,
@@ -197,6 +197,7 @@ namespace pvd
 		// Publish
 		if (PublishChannel(_vhost_app_name) == false)
 		{
+			Stop();
 			return false;
 		}
 
