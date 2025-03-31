@@ -193,7 +193,7 @@ namespace pvd
 
 		_fir_timer.Start();
 
-		_sent_sequence_header = false;
+		// _sent_sequence_header = false;
 
 		return pvd::Stream::Start();
 	}
@@ -511,9 +511,9 @@ namespace pvd
 				bitstream_format = cmn::BitstreamFormat::H265_ANNEXB;
 				packet_type = cmn::PacketType::NALU;
 				cts_enabled = _cts_extmap_enabled == true;
-				if (_h26x_extradata_nalu == nullptr)
+				if( _h26x_extradata_nalu.find(track->GetId()) == _h26x_extradata_nalu.end())
 				{
-					_h26x_extradata_nalu = depacketizer->GetDecodingParameterSetsToAnnexB();
+					_h26x_extradata_nalu[track->GetId()] = depacketizer->GetDecodingParameterSetsToAnnexB();
 				}
 				break;
 
@@ -522,9 +522,9 @@ namespace pvd
 				bitstream_format = cmn::BitstreamFormat::H264_ANNEXB;
 				packet_type = cmn::PacketType::NALU;
 				cts_enabled = _cts_extmap_enabled == true;
-				if (_h26x_extradata_nalu == nullptr)
+				if (_h26x_extradata_nalu.find(track->GetId()) == _h26x_extradata_nalu.end())
 				{
-					_h26x_extradata_nalu = depacketizer->GetDecodingParameterSetsToAnnexB();
+					_h26x_extradata_nalu[track->GetId()] = depacketizer->GetDecodingParameterSetsToAnnexB();
 				}
 				break;
 
@@ -628,21 +628,23 @@ namespace pvd
 		logtp("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%u)", track->GetId(), track->GetCodecId(), media_packet->GetBitstreamFormat(), media_packet->GetPacketType(), media_packet->GetDataLength(), media_packet->GetPts());
 
 		// This may not work since almost WebRTC browser sends SPS/PPS/VPS in-band
-		if (_sent_sequence_header == false &&
-			(track->GetCodecId() == cmn::MediaCodecId::H264 || track->GetCodecId() == cmn::MediaCodecId::H265) &&
-			_h26x_extradata_nalu != nullptr)
+		if ((track->GetCodecId() == cmn::MediaCodecId::H264 || track->GetCodecId() == cmn::MediaCodecId::H265) &&
+			_sent_sequence_header.find(track->GetId()) == _sent_sequence_header.end())
 		{
-			auto bitstream_format = (track->GetCodecId() == cmn::MediaCodecId::H264) ? cmn::BitstreamFormat::H264_ANNEXB : cmn::BitstreamFormat::H265_ANNEXB;
-			auto sps_pps_packet = std::make_shared<MediaPacket>(GetMsid(),
-																track->GetMediaType(),
-																track->GetId(),
-																_h26x_extradata_nalu,
-																media_packet->GetPts(),
-																media_packet->GetDts(),
-																bitstream_format,
-																cmn::PacketType::NALU);
-			SendFrame(sps_pps_packet);
-			_sent_sequence_header = true;
+			if (_h26x_extradata_nalu.find(track->GetId()) != _h26x_extradata_nalu.end())
+			{
+				auto bitstream_format = (track->GetCodecId() == cmn::MediaCodecId::H264) ? cmn::BitstreamFormat::H264_ANNEXB : cmn::BitstreamFormat::H265_ANNEXB;
+				auto sps_pps_packet = std::make_shared<MediaPacket>(GetMsid(),
+																	track->GetMediaType(),
+																	track->GetId(),
+																	_h26x_extradata_nalu[track->GetId()],
+																	media_packet->GetPts(),
+																	media_packet->GetDts(),
+																	bitstream_format,
+																	cmn::PacketType::NALU);
+				SendFrame(sps_pps_packet);
+				_sent_sequence_header[track->GetId()] = true;
+			}
 		}
 
 		SendFrame(media_packet);

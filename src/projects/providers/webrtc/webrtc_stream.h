@@ -114,8 +114,8 @@ namespace pvd
 		// Track ID, Depacketizer
 		std::map<uint32_t, std::shared_ptr<RtpDepacketizingManager>> _depacketizers;
 
-		std::shared_ptr<ov::Data> _h26x_extradata_nalu = nullptr;
-		bool _sent_sequence_header = false;
+		std::map<uint32_t, std::shared_ptr<ov::Data>> _h26x_extradata_nalu;
+		std::map<uint32_t, bool> _sent_sequence_header;
 
 		session_id_t _ice_session_id = 0;
 	};
