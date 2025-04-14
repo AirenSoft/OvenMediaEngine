@@ -275,7 +275,7 @@ enum class RtmpCodecType : int32_t
 	H264,	//	H264/X264 avc1(7)
 	AAC,	//	AAC          mp4a(10)
 	MP3,	//	MP3(2)
-	SPEEX,	//	SPEEX(11)
+	Speex,	//	SPEEX(11)
 };
 
 enum class RtmpHandshakeState

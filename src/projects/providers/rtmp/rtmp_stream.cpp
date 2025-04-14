@@ -755,7 +755,7 @@ namespace pvd
 						}
 						else if (value == "speex")
 						{
-							audio_codec_type = RtmpCodecType::SPEEX;
+							audio_codec_type = RtmpCodecType::Speex;
 						}
 						break;
 					}
@@ -768,7 +768,7 @@ namespace pvd
 						}
 						else if (value == 11.0)
 						{
-							audio_codec_type = RtmpCodecType::SPEEX;
+							audio_codec_type = RtmpCodecType::Speex;
 						}
 						else if (value == 2.0)
 						{
@@ -1088,7 +1088,7 @@ namespace pvd
 				break;
 			}
 
-			bool result = true;			
+			bool result = true;
 			switch (message->header->completed.type_id)
 			{
 				case RtmpMessageTypeID::Audio:
@@ -1343,7 +1343,7 @@ namespace pvd
 				{
 					OnAmfMetaData(message->header, data_name_property);
 				}
-				else 
+				else
 				{
 					logtw("OnMetaData - Data type is not object or ecma array");
 				}
@@ -1650,7 +1650,7 @@ namespace pvd
 		if (_media_info->video_stream_coming)
 		{
 			// Parsing FLV
-			FlvVideoData flv_video;
+			flv::VideoData flv_video;
 			if (flv_video.Parse(message->payload) == false)
 			{
 				logte("Could not parse flv video (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
@@ -1690,15 +1690,15 @@ namespace pvd
 			}
 
 			cmn::PacketType packet_type = cmn::PacketType::Unknown;
-			if (flv_video.PacketType() == FlvAvcPacketType::AVC_SEQUENCE_HEADER)
+			if (flv_video.PacketType() == flv::AvcPacketType::SequenceHeader)
 			{
 				packet_type = cmn::PacketType::SEQUENCE_HEADER;
 			}
-			else if (flv_video.PacketType() == FlvAvcPacketType::AVC_NALU)
+			else if (flv_video.PacketType() == flv::AvcPacketType::NALU)
 			{
 				packet_type = cmn::PacketType::NALU;
 			}
-			else if (flv_video.PacketType() == FlvAvcPacketType::AVC_END_SEQUENCE)
+			else if (flv_video.PacketType() == flv::AvcPacketType::EndOfSequence)
 			{
 				// what can I do?
 				return true;
@@ -1736,7 +1736,7 @@ namespace pvd
 			}
 
 			// Statistics for debugging
-			if (flv_video.FrameType() == FlvVideoFrameTypes::KEY_FRAME)
+			if (flv_video.FrameType() == flv::VideoFrameType::Key)
 			{
 				_key_frame_interval = message->header->completed.timestamp - _previous_key_frame_timestamp;
 				_previous_key_frame_timestamp = message->header->completed.timestamp;
@@ -1858,7 +1858,7 @@ namespace pvd
 			}
 
 			// Parsing FLV
-			FlvAudioData flv_audio;
+			flv::AudioData flv_audio;
 			if (flv_audio.Parse(message->payload) == false)
 			{
 				logte("Could not parse flv audio (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
@@ -1869,11 +1869,11 @@ namespace pvd
 
 			cmn::PacketType packet_type = cmn::PacketType::Unknown;
 
-			if (flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
+			if (flv_audio.PacketType() == flv::AACPacketType::SequenceHeader)
 			{
 				packet_type = cmn::PacketType::SEQUENCE_HEADER;
 			}
-			else if (flv_audio.PacketType() == FlvAACPacketType::RAW)
+			else if (flv_audio.PacketType() == flv::AACPacketType::Raw)
 			{
 				packet_type = cmn::PacketType::RAW;
 			}
@@ -2355,7 +2355,7 @@ namespace pvd
 			case RtmpCodecType::MP3:
 				codec_string = "mp3";
 				break;
-			case RtmpCodecType::SPEEX:
+			case RtmpCodecType::Speex:
 				codec_string = "speex";
 				break;
 			case RtmpCodecType::Unknown:
