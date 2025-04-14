@@ -2,7 +2,7 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Kwon Keuk Han
+//  Created by Keukhan
 //  Copyright (c) 2024 AirenSoft. All rights reserved.
 //
 //==============================================================================
@@ -10,7 +10,8 @@
 
 bool AmfCuePointEvent::IsMatch(const ov::String &amf_type)
 {
-	return amf_type.UpperCaseString() == ov::String("onCuePoint.Youtube").UpperCaseString();
+	return amf_type.UpperCaseString() == ov::String("onCuePoint.Youtube").UpperCaseString() || 
+		   amf_type.UpperCaseString() == ov::String("com.youtube.cuepoint").UpperCaseString();
 }
 
 std::shared_ptr<AmfCuePointEvent> AmfCuePointEvent::Create()
@@ -59,7 +60,7 @@ std::shared_ptr<AmfCuePointEvent> AmfCuePointEvent::Parse(const Json::Value &jso
 
 	auto object = std::make_shared<AmfCuePointEvent>();
 
-	object->SetType("onCuePoint.YouTube");
+	object->SetType("com.youtube.cuepoint");
 
 	object->SetVersion(json["version"].asString().c_str());
 
@@ -129,18 +130,21 @@ std::shared_ptr<ov::Data> AmfCuePointEvent::Serialize() const
 
 	object.Append("version", AmfProperty(_version.CStr()));
 
-	object.Append("preRollTimeSec", AmfProperty(_pre_roll_time_sec));
+	object.Append("pre_roll_time_sec", AmfProperty(_pre_roll_time_sec));
 
-	object.Append("cuePointStart", AmfProperty(_cue_point_start));
+	if(_cue_point_start == true)
+	{
+		object.Append("cue_point_start", AmfProperty(_cue_point_start));
+	}
 
 	if (_break_duration_sec != -1)
 	{
-		object.Append("breakDurationSec", AmfProperty(_break_duration_sec));
+		object.Append("break_duration_sec", AmfProperty(_break_duration_sec));
 	}
 
 	if (_splice_event_id != -1)
 	{
-		object.Append("spliceEventId", AmfProperty(_splice_event_id));
+		object.Append("splice_event_id", AmfProperty(_splice_event_id));
 	}
 
 	AmfDocument doc;

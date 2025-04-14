@@ -310,7 +310,7 @@ namespace ffmpeg
 				}
 				break;
 				case cmn::BitstreamFormat::AMF:
-					// Do nothing
+					// Related to 'com.youtube.cuepoint', 'textdata' event message
 					break;
 				default:
 					// Unsupported bitstream foramt, but it is not an error.
