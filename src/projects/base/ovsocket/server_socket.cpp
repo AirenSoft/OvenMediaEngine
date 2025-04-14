@@ -111,10 +111,14 @@ namespace ov
 				}
 				else
 				{
-					std::lock_guard lock_guard(_client_list_mutex);
-					_client_list.erase(key);
+					{
+						std::lock_guard lock_guard(_client_list_mutex);
+						_client_list.erase(key);
+					}
 
 					logae("Client(%s) is connected, but could not prepare socket options", client->ToString().CStr());
+
+					client->CloseImmediately();
 				}
 			}
 		}
