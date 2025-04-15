@@ -654,49 +654,22 @@ namespace pvd
 		}
 
 		// Video Framerate
-		double frame_rate = 30.0;
+		double frame_rate;
 		{
-			auto property_pair = object->GetPair("framerate", AmfTypeMarker::Number);
-
-			if (property_pair != nullptr)
-			{
-				frame_rate = property_pair->property.GetNumber();
-			}
-			else
-			{
-				property_pair = object->GetPair("videoframerate", AmfTypeMarker::Number);
-
-				if (property_pair != nullptr)
-				{
-					frame_rate = property_pair->property.GetNumber();
-				}
-			}
+			auto value = object->GetDoubleValue("framerate");
+			value = value.has_value() ? value : object->GetDoubleValue("videoframerate");
+			frame_rate = value.value_or(30.0);
 		}
 
-		// Video Width
-		double video_width = 0;
-		{
-			auto property_pair = object->GetPair("width", AmfTypeMarker::Number);
+		double video_width = object->GetDoubleValue("width").value_or(0.0);
+		double video_height = object->GetDoubleValue("height").value_or(0.0);
 
-			if (property_pair != nullptr)
-			{
-				video_width = property_pair->property.GetNumber();
-			}
+		double video_bitrate;
+		{
+			auto value = object->GetDoubleValue("videodatarate");
+			value = value.has_value() ? value : object->GetDoubleValue("bitrate");
 		}
 
-		// Video Height
-		double video_height = 0;
-		{
-			auto property_pair = object->GetPair("height", AmfTypeMarker::Number);
-
-			if (property_pair != nullptr)
-			{
-				video_height = property_pair->property.GetNumber();
-			}
-		}
-
-		// Video Bitrate
-		double video_bitrate = 0;
 		{
 			auto property_pair = object->GetPair("videodatarate", AmfTypeMarker::Number);
 

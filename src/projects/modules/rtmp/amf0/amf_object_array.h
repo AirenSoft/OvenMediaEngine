@@ -36,6 +36,9 @@ public:
 	const AmfPropertyPair *GetPair(const char *name) const;
 	const AmfPropertyPair *GetPair(const char *name, AmfTypeMarker expected_type) const;
 
+	const std::optional<double> GetDoubleValue(const char *name) const;
+	const std::optional<ov::String> GetStringValue(const char *name) const;
+
 	void ToString(ov::String &description, size_t indent = 0) const override;
 	ov::String ToString(size_t indent = 0) const override;
 

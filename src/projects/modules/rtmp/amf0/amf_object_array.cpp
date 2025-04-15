@@ -211,6 +211,30 @@ const AmfPropertyPair *AmfObjectArray::GetPair(const char *name, AmfTypeMarker e
 	return nullptr;
 }
 
+const std::optional<double> AmfObjectArray::GetDoubleValue(const char *name) const
+{
+	auto pair = GetPair(name, AmfTypeMarker::Number);
+
+	if (pair != nullptr)
+	{
+		return pair->property.GetNumber();
+	}
+
+	return std::nullopt;
+}
+
+const std::optional<ov::String> AmfObjectArray::GetStringValue(const char *name) const
+{
+	auto pair = GetPair(name, AmfTypeMarker::String);
+
+	if (pair != nullptr)
+	{
+		return pair->property.GetString();
+	}
+
+	return std::nullopt;
+}
+
 void AmfObjectArray::ToString(ov::String &description, size_t indent) const
 {
 	auto indent_string = ov::String::Repeat("    ", indent);
