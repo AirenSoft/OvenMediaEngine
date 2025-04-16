@@ -187,6 +187,7 @@ namespace pvd
             }
 
 			stream_tap->SetNeedPastData(true);
+			stream_tap->Start();
 
             if (stream_tap->GetState() != MediaRouterStreamTap::State::Tapped)
             {
@@ -282,18 +283,6 @@ namespace pvd
             logte("Multiplex Channel : %s/%s: Failed to publish stream", GetApplicationName(), GetName().CStr());
             Terminate();
             return false;
-        }
-
-        // Start all stream taps
-        for (auto &source_stream : source_streams)
-        {
-            auto stream_tap = source_stream->GetStreamTap();
-            if (stream_tap == nullptr)
-            {
-                continue;
-            }
-
-            stream_tap->Start();
         }
 
         logti("Multiplex Channel : %s/%s: Started\n%s", GetApplicationName(), GetName().CStr(), _multiplex_profile->InfoStr().CStr());
