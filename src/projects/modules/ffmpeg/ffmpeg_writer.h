@@ -87,6 +87,6 @@ namespace ffmpeg
 		AVIOInterruptCB _interrupt_cb;
 		std::chrono::high_resolution_clock::time_point _last_packet_sent_time;
 		int32_t _connection_timeout = 5000;	// 5s
-		int32_t _send_timeout 		= 1000;	// 1s
+		int32_t _send_timeout 		= 2000;	// 2s
 	};
 }  // namespace ffmpeg
