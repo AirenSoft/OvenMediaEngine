@@ -64,22 +64,33 @@ std::shared_ptr<AmfCuePointEvent> AmfCuePointEvent::Parse(const Json::Value &jso
 
 	object->SetVersion(json["version"].asString().c_str());
 
-	object->SetPreRollTimeSec(json["preRollTimeSec"].asDouble());
+	// [Must]
+	if (json.isMember("preRollTimeSec") == true && json["preRollTimeSec"].isNumeric() == true)
+	{
+		object->SetPreRollTimeSec(json["preRollTimeSec"].asDouble());
+	}
+	else
+	{
+		object->SetPreRollTimeSec(0);
+	}
 
+	// [Optional]
 	if (json.isMember("cuePointStart") == true && json["cuePointStart"].isBool() == true)
 	{
 		object->SetCuePointStart(json["cuePointStart"].asBool());
 	}
-	else
-	{
-		object->SetCuePointStart(true);
-	}
 
+	// [Must]
 	if (json.isMember("breakDurationSec") == true && json["breakDurationSec"].isNumeric() == true)
 	{
 		object->SetBreakDurationSec(json["breakDurationSec"].asDouble());
 	}
+	else 
+	{
+		object->SetBreakDurationSec(0);
+	}
 
+	// [Optional]
 	if (json.isMember("spliceEventId") == true && json["spliceEventId"].isNumeric() == true)
 	{
 		object->SetSpliceEventId(json["spliceEventId"].asDouble());
@@ -130,7 +141,10 @@ std::shared_ptr<ov::Data> AmfCuePointEvent::Serialize() const
 
 	object.Append("version", AmfProperty(_version.CStr()));
 
-	object.Append("pre_roll_time_sec", AmfProperty(_pre_roll_time_sec));
+	if(_pre_roll_time_sec != -1)
+	{
+		object.Append("pre_roll_time_sec", AmfProperty(_pre_roll_time_sec));
+	}
 
 	if(_cue_point_start == true)
 	{

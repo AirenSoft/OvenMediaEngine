@@ -18,8 +18,8 @@
 			{
 				"amfType": "onCuePoint.YouTube",    // Required
 				"version": "0.1",					// Required
-				"preRollTimeSec": 2.56,			    // Required
-				"cuePointStart": true,				// Optional (default: true)
+				"preRollTimeSec": 0,			    // Required
+				"cuePointStart": false,				// Optional (default: false)
 				"breakDurationSec": 30,				// Optional
 				"spliceEventId": 0					// Optional
 			}
@@ -54,8 +54,8 @@ private:
 
 	ov::String _type;
 	ov::String _version;
-	double _pre_roll_time_sec;
-	bool _cue_point_start = true;
+	double _pre_roll_time_sec = -1;
+	bool _cue_point_start = false;
 	double _break_duration_sec = -1;
 	double _splice_event_id = -1;
 };
