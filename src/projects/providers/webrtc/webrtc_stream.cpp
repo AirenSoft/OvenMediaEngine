@@ -544,9 +544,8 @@ namespace pvd
 		}
 
 		int64_t adjusted_timestamp;
-		if (AdjustRtpTimestamp(first_rtp_packet->Ssrc(), first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max(), adjusted_timestamp) == false)
+		if (AdjustRtpTimestamp(track_id, first_rtp_packet->Timestamp(), std::numeric_limits<uint32_t>::max(), adjusted_timestamp) == false)
 		{
-			logtd("not yet received sr packet : %u", first_rtp_packet->Ssrc());
 			// Prevents the stream from being deleted because there is no input data
 			MonitorInstance->IncreaseBytesIn(*Stream::GetSharedPtr(), bitstream->GetLength());
 			return;
@@ -568,7 +567,7 @@ namespace pvd
 			}
 		}
 		
-		logtp("Payload Type(%d) Timestamp(%u) PTS(%u) Time scale(%f) Adjust Timestamp(%f)",
+		logtd("Payload Type(%d) Timestamp(%u) PTS(%u) Time scale(%f) Adjust Timestamp(%f)",
 			  first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), adjusted_timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(adjusted_timestamp) * track->GetTimeBase().GetExpr());
 
 		auto frame = std::make_shared<MediaPacket>(GetMsid(),
@@ -667,7 +666,16 @@ namespace pvd
 		if (rtcp_info->GetPacketType() == RtcpPacketType::SR)
 		{
 			auto sr = std::dynamic_pointer_cast<SenderReport>(rtcp_info);
-			UpdateSenderReportTimestamp(sr->GetSenderSsrc(), sr->GetMsw(), sr->GetLsw(), sr->GetTimestamp());
+
+			auto track_id = _rtp_rtcp->GetTrackId(sr->GetSenderSsrc());
+			if (track_id.has_value() == false)
+			{
+				// This can happen if RTCP arrives before RTP
+				logtw("%s - Could not find track id for RTCP SR : ssrc(%u)", GetName().CStr(), sr->GetSenderSsrc());
+				return;
+			}
+
+			UpdateSenderReportTimestamp(track_id.value(), sr->GetMsw(), sr->GetLsw(), sr->GetTimestamp());
 		}
 	}
 
