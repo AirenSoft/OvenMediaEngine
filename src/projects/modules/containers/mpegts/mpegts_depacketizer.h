@@ -75,7 +75,7 @@ namespace mpegts
 		// process completed section and remove, extract a elementary stream (es)
 		bool CompletePes(const std::shared_ptr<Pes> &pes);
 
-		bool CreateTrackInfo(const std::shared_ptr<Pes> &pes);
+		bool CreateTracks();
 		bool ExtractH264TrackInfo(const std::shared_ptr<Pes> &pes);
 		bool ExtractAACTrackInfo(const std::shared_ptr<Pes> &pes);
 		

@@ -438,6 +438,11 @@ namespace mpegts
 				_es_info_map.emplace(es_info->_elementary_pid, es_info);
 			}
 
+			if (_track_list_completed == false)
+			{
+				CreateTracks();
+			}
+
 			// Check if PMT is completed
 			if (_pmt_map.count(pmt->_table_id_extension) - 1 == pmt->_last_section_number)
 			{
@@ -493,7 +498,7 @@ namespace mpegts
 		// there is no media track, extracts it
 		if (_media_tracks.find(pes->PID()) == _media_tracks.end())
 		{
-			CreateTrackInfo(pes);
+			return false;
 		}
 
 		std::unique_lock<std::shared_mutex> lock(_es_list_lock);
@@ -508,60 +513,51 @@ namespace mpegts
 		return true;
 	}
 
-	bool MpegTsDepacketizer::CreateTrackInfo(const std::shared_ptr<Pes> &pes)
+	bool MpegTsDepacketizer::CreateTracks()
 	{
-		auto it = _es_info_map.find(pes->PID());
-		// Unknown PID
-		if (it == _es_info_map.end())
+		for (const auto &[pid, es_info] : _es_info_map)
 		{
-			logtw("Unknown PID was inputted.(PID : %d)", pes->PID());
-			return false;
+			auto track = std::make_shared<MediaTrack>();
+
+			// Codec
+			switch (es_info->_stream_type)
+			{
+				case static_cast<uint8_t>(WellKnownStreamTypes::H264):
+					track->SetId(pid);
+					track->SetMediaType(cmn::MediaType::Video);
+					track->SetCodecId(cmn::MediaCodecId::H264);
+					track->SetOriginBitstream(cmn::BitstreamFormat::H264_ANNEXB);
+					track->SetTimeBase(1, TIMEBASE);
+					track->SetVideoTimestampScale(TIMEBASE_DBL / 1000.0);
+					break;
+
+				case static_cast<uint8_t>(WellKnownStreamTypes::H265):
+					track->SetId(pid);
+					track->SetMediaType(cmn::MediaType::Video);
+					track->SetCodecId(cmn::MediaCodecId::H265);
+					track->SetOriginBitstream(cmn::BitstreamFormat::H265_ANNEXB);
+					track->SetTimeBase(1, TIMEBASE);
+					track->SetVideoTimestampScale(TIMEBASE_DBL / 1000.0);
+					break;
+
+				case static_cast<uint8_t>(WellKnownStreamTypes::AAC):
+					track->SetId(pid);
+					track->SetMediaType(cmn::MediaType::Audio);
+					track->SetCodecId(cmn::MediaCodecId::Aac);
+					track->SetOriginBitstream(cmn::BitstreamFormat::AAC_ADTS);
+					track->SetTimeBase(1, TIMEBASE);
+					break;
+
+				default:
+					// Doesn't support
+					logti("Unsupported stream_type has been received. (pid : %d stream_type : %d)", pid, es_info->_stream_type);
+					continue;
+			}
+
+			_media_tracks.emplace(track->GetId(), track);
 		}
 
-		auto es_info = it->second;
-		auto track = std::make_shared<MediaTrack>();
-
-		// Codec
-		switch (es_info->_stream_type)
-		{
-			case static_cast<uint8_t>(WellKnownStreamTypes::H264):
-				track->SetId(pes->PID());
-				track->SetMediaType(cmn::MediaType::Video);
-				track->SetCodecId(cmn::MediaCodecId::H264);
-				track->SetOriginBitstream(cmn::BitstreamFormat::H264_ANNEXB);
-				track->SetTimeBase(1, TIMEBASE);
-				track->SetVideoTimestampScale(TIMEBASE_DBL / 1000.0);
-				break;
-
-			case static_cast<uint8_t>(WellKnownStreamTypes::H265):
-				track->SetId(pes->PID());
-				track->SetMediaType(cmn::MediaType::Video);
-				track->SetCodecId(cmn::MediaCodecId::H265);
-				track->SetOriginBitstream(cmn::BitstreamFormat::H265_ANNEXB);
-				track->SetTimeBase(1, TIMEBASE);
-				track->SetVideoTimestampScale(TIMEBASE_DBL / 1000.0);
-				break;
-
-			case static_cast<uint8_t>(WellKnownStreamTypes::AAC):
-				track->SetId(pes->PID());
-				track->SetMediaType(cmn::MediaType::Audio);
-				track->SetCodecId(cmn::MediaCodecId::Aac);
-				track->SetOriginBitstream(cmn::BitstreamFormat::AAC_ADTS);
-				track->SetTimeBase(1, TIMEBASE);
-				break;
-
-			default:
-				// Doesn't support
-				logte("Unsupported codec has been received. (pid : %d stream_type : %d)", pes->PID(), es_info->_stream_type);
-				return false;
-		}
-
-		_media_tracks.emplace(track->GetId(), track);
-
-		if (_media_tracks.size() == _es_info_map.size())
-		{
-			_track_list_completed = true;
-		}
+		_track_list_completed = true;
 
 		return true;
 	}
