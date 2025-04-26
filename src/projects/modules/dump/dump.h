@@ -19,7 +19,7 @@ namespace mdl
 		Dump();
 		Dump(const info::Dump &info);
 		Dump(const std::shared_ptr<info::Dump> &info);
-		bool DumpData(const ov::String &file_name, const std::shared_ptr<const ov::Data> &data);
+		bool DumpData(const ov::String &file_name, const std::shared_ptr<const ov::Data> &data, bool append = false);
 		bool CompleteDump();
 
 		bool HasExtraData(const int32_t &id)
@@ -38,7 +38,7 @@ namespace mdl
 		}
 
 	private:
-		bool DumpToFile(const ov::String &path, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data, bool add_history = true);
+		bool DumpToFile(const ov::String &path, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data, bool add_history = true, bool append = false);
 		bool MakeDumpInfo(ov::String &dump_info);
 
 		struct DumpHistory

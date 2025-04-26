@@ -210,43 +210,12 @@ bool LLHlsStream::Start()
 		auto match_result = dump.GetTargetStreamNameRegex().Matches(GetName().CStr());
 		if (match_result.IsMatched())
 		{
-			// Replace output path with macro
-			auto output_path = dump.GetOutputPath();
-			// ${VHostName}, ${AppName}, ${StreamName}
-			output_path = output_path.Replace("${VHostName}", GetApplication()->GetVHostAppName().GetVHostName().CStr());
-			output_path = output_path.Replace("${AppName}", GetApplication()->GetVHostAppName().GetAppName().CStr());
-			output_path = output_path.Replace("${StreamName}", GetName().CStr());
-
-			// ${YYYY}, ${MM}, ${DD}, ${hh}, ${mm}, ${ss}
-			auto now = std::chrono::system_clock::now();
-			auto time = std::chrono::system_clock::to_time_t(now);
-			struct tm tm;
-			::localtime_r(&time, &tm);
-
-			char tmbuf[2048];
-
-			// Replace ${ISO8601} to ISO8601 format
-			memset(tmbuf, 0, sizeof(tmbuf));
-			::strftime(tmbuf, sizeof(tmbuf), "%Y-%m-%dT%H:%M:%S%z", &tm);
-			output_path = output_path.Replace("${ISO8601}", tmbuf);
-
-			// Replace ${YYYY}, ${MM}, ${DD}, ${hh}, ${mm}, ${ss}
-			output_path = output_path.Replace("${YYYY}", ov::Converter::ToString(tm.tm_year + 1900).CStr());
-			output_path = output_path.Replace("${MM}", ov::String::FormatString("%02d", tm.tm_mon + 1).CStr());
-			output_path = output_path.Replace("${DD}", ov::String::FormatString("%02d", tm.tm_mday).CStr());
-			output_path = output_path.Replace("${hh}", ov::String::FormatString("%02d", tm.tm_hour).CStr());
-			output_path = output_path.Replace("${mm}", ov::String::FormatString("%02d", tm.tm_min).CStr());
-			output_path = output_path.Replace("${ss}", ov::String::FormatString("%02d", tm.tm_sec).CStr());
-			output_path = output_path.Replace("${S}", tm.tm_zone);
-
-			// +hhmm or -hhmm
-			memset(tmbuf, 0, sizeof(tmbuf));
-			strftime(tmbuf, sizeof(tmbuf), "%z", &tm);
-			output_path = output_path.Replace("${z}", tmbuf);
+			auto output_path = std::make_shared<ov::String>(dump.GetOutputPath());
+			dump.ConfigureOutputPath(output_path, GetApplication()->GetVHostAppName().GetVHostName(), GetApplication()->GetVHostAppName().GetAppName(), GetName());
 
 			auto dump_item = std::make_shared<mdl::Dump>();
 			dump_item->SetId(dump.GetId());
-			dump_item->SetOutputPath(output_path);
+			dump_item->SetOutputPath(*output_path);
 			dump_item->SetPlaylists(dump.GetPlaylists());
 			dump_item->SetEnabled(true);
 

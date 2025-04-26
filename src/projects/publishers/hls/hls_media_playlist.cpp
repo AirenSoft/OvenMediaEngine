@@ -87,7 +87,7 @@ ov::String HlsMediaPlaylist::ToString(bool rewind) const
 		result += ov::String::FormatString("#EXT-X-PLAYLIST-TYPE:EVENT\n");
 	}
 	result += ov::String::FormatString("#EXT-X-TARGETDURATION:%d\n", _config.target_duration);
-	
+
 	if (_segments.empty() == true)
 	{
 		return result;
@@ -99,7 +99,7 @@ ov::String HlsMediaPlaylist::ToString(bool rewind) const
 		size_t segment_size = _segments.size();
 		size_t shift_count = segment_size > _config.segment_count ? _config.segment_count : segment_size - 1;
 		uint64_t last_segment_number = _segments.rbegin()->second->GetNumber();
-		
+
 		auto it = _segments.find(last_segment_number - shift_count);
 		if (it == _segments.end())
 		{
@@ -109,25 +109,20 @@ ov::String HlsMediaPlaylist::ToString(bool rewind) const
 
 		first_segment = it->second;
 	}
-	
+
 	result += ov::String::FormatString("#EXT-X-MEDIA-SEQUENCE:%d\n", first_segment->GetNumber());
 
-	for (auto it = _segments.find(first_segment->GetNumber()); it != _segments.end(); it ++)
+	for (auto it = _segments.find(first_segment->GetNumber()); it != _segments.end(); it++)
 	{
 		const auto &segment = it->second;
-
-		auto start_time = static_cast<int64_t>(((segment->GetFirstTimestamp() / mpegts::TIMEBASE_DBL) * 1000.0) + _wallclock_offset_ms);
-		std::chrono::system_clock::time_point tp{std::chrono::milliseconds{start_time}};
-		result += ov::String::FormatString("#EXT-X-PROGRAM-DATE-TIME:%s\n", ov::Converter::ToISO8601String(tp).CStr());
-		result += ov::String::FormatString("#EXTINF:%.3f,\n", segment->GetDurationMs() / 1000.0);
-		result += ov::String::FormatString("%s\n", segment->GetUrl().CStr());
+		result += MakeSegmentString(segment);
 	}
 
 	if (_end_list == true)
 	{
 		result += "#EXT-X-ENDLIST\n";
 	}
-	
+
 	return result;
 }
 
@@ -205,7 +200,7 @@ double HlsMediaPlaylist::GetFramerate() const
 ov::String HlsMediaPlaylist::GetCodecsString() const
 {
 	ov::String result;
-	
+
 	if (_first_video_track != nullptr)
 	{
 		result += _first_video_track->GetCodecsParameter();
@@ -222,4 +217,27 @@ ov::String HlsMediaPlaylist::GetCodecsString() const
 	}
 
 	return result;
+}
+
+ov::String HlsMediaPlaylist::MakeSegmentString(const std::shared_ptr<mpegts::Segment> &segment) const
+{
+	ov::String result;
+	auto start_time = static_cast<int64_t>(((segment->GetFirstTimestamp() / mpegts::TIMEBASE_DBL) * 1000.0) + _wallclock_offset_ms);
+	std::chrono::system_clock::time_point tp{std::chrono::milliseconds{start_time}};
+	result += ov::String::FormatString("#EXT-X-PROGRAM-DATE-TIME:%s\n", ov::Converter::ToISO8601String(tp).CStr());
+	result += ov::String::FormatString("#EXTINF:%.3f,\n", segment->GetDurationMs() / 1000.0);
+	result += ov::String::FormatString("%s\n", segment->GetUrl().CStr());
+	return result;
+}
+
+std::shared_ptr<mpegts::Segment> HlsMediaPlaylist::GetLatestSegment() const
+{
+	std::shared_lock<std::shared_mutex> lock(_segments_mutex);
+
+	if (_segments.empty() == true)
+	{
+		return nullptr;
+	}
+
+	return _segments.rbegin()->second;
 }
