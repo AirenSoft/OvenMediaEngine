@@ -220,3 +220,54 @@ You can create as long a playlist as you want by setting `<DVR>` to the HLS publ
     ...
 </HLS>
 ```
+
+## Dump
+
+You can dump the HLS stream for VoD. You can enable it by setting the following in `<Application><Publishers><LLHLS>`. Unlike LLHLS, dump function cannot be controlled by REST API at this time.
+
+{% code overflow="wrap" %}
+```xml
+<LLHLS>
+    <Dumps>
+        <Dump>
+            <Enable>true</Enable>
+            <TargetStreamName>stream*</TargetStreamName>
+            
+            <Playlists>
+                <Playlist>playlist.m3u8</Playlist>
+            </Playlists>
+    
+            <OutputPath>/service/www/ome-dev.airensoft.com/html/${VHostName}_${AppName}_${StreamName}/${YYYY}_${MM}_${DD}_${hh}_${mm}_${ss}</OutputPath>
+        </Dump>
+    </Dumps>
+    ...
+</LLHLS>
+```
+{% endcode %}
+
+**TargetStreamName**
+
+The name of the stream to dump to. You can use \* and ? to filter stream names.
+
+**Playlists**
+
+The name of the master playlist file to be dumped together.
+
+**OutputPath**
+
+The folder to output to. In the OutputPath you can use the macros shown in the table below. You must have write permission on the specified folder.
+
+| Macro         | Description                    |
+| ------------- | ------------------------------ |
+| ${VHostName}  | Virtual Host Name              |
+| ${AppName}    | Application Name               |
+| ${StreamName} | Stream Name                    |
+| ${YYYY}       | Year                           |
+| ${MM}         | Month                          |
+| ${DD}         | Day                            |
+| ${hh}         | Hour                           |
+| ${mm}         | Minute                         |
+| ${ss}         | Second                         |
+| ${S}          | Timezone                       |
+| ${z}          | UTC offset (ex: +0900)         |
+| ${ISO8601}    | Current time in ISO8601 format |

@@ -10,6 +10,7 @@
 
 #include <base/ovlibrary/hex.h>
 #include <config/config_manager.h>
+#include <modules/dump/dump.h>
 
 #include <pugixml-1.9/src/pugixml.hpp>
 
@@ -131,6 +132,8 @@ bool HlsStream::Start()
 	logti("HLS Stream has been created : %s/%u\nSegment Duration(%u) Segment Count(%u)", GetName().CStr(), GetId(),
 		  _ts_config.GetSegmentDuration(), _ts_config.GetSegmentCount());
 
+	InitializeAllDumps();
+
 	return Stream::Start();
 }
 
@@ -157,8 +160,10 @@ bool HlsStream::Stop()
 	{
 		std::lock_guard<std::shared_mutex> lock(_master_playlists_guard);
 		_master_playlists.clear();
-	
+
 	}
+
+	StopDumps();
 
 	return Stream::Stop();
 }
@@ -301,7 +306,7 @@ void HlsStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	AppendMediaPacket(media_packet);
 }
 
-void HlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) 
+void HlsStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
 	// If the stream is concluded, it will not be processed.
 	if (IsConcluded() == true)
@@ -373,7 +378,7 @@ void HlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	AppendMediaPacket(media_packet);
 }
 
-void HlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event) 
+void HlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event)
 {
 	if (event == nullptr)
 	{
@@ -382,7 +387,7 @@ void HlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event)
 
 	switch(event->GetCommandType())
 	{
-		case MediaEvent::CommandType::ConcludeLive:
+		case MediaEvent::CommandType::ConcludeLive: 
 		{
 			auto [result, message] = ConcludeLive();
 			if (result == true)
@@ -458,6 +463,13 @@ void HlsStream::OnSegmentCreated(const ov::String &packager_id, const std::share
 	playlist->OnSegmentCreated(segment);
 
 	logtd("Playlist : %s", playlist->ToString(false).CStr());
+
+	if (segment->GetNumber() == 0)
+	{
+		DumpMasterPlaylistOfAllItems();
+	}
+
+	DumpSegmentOfAllItems(packager_id, segment->GetNumber());
 }
 
 void HlsStream::OnSegmentDeleted(const ov::String &packager_id, const std::shared_ptr<mpegts::Segment> &segment)
@@ -529,7 +541,7 @@ bool HlsStream::CreatePackagers()
 			}
 
 			// Check if the rendition has supported codec
-			if ((GetFirstTrackByVariant(video_variant_name) != nullptr && IsSupportedCodec(GetFirstTrackByVariant(video_variant_name)->GetCodecId()) == false) || 
+			if ((GetFirstTrackByVariant(video_variant_name) != nullptr && IsSupportedCodec(GetFirstTrackByVariant(video_variant_name)->GetCodecId()) == false) ||
 				(GetFirstTrackByVariant(audio_variant_name) != nullptr && IsSupportedCodec(GetFirstTrackByVariant(audio_variant_name)->GetCodecId()) == false))
 			{
 				logtw("HLS Stream(%s/%s) - Exclude the rendition(%s) from the %s playlist due to unsupported codec", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), rendition->GetName().CStr(), playlist->GetFileName().CStr());
@@ -578,7 +590,7 @@ bool HlsStream::CreatePackagers()
 			mpegts::Packager::Config packager_config;
 			packager_config.target_duration_ms = _ts_config.GetSegmentDuration() * 1000;
 			packager_config.max_segment_count = _ts_config.GetSegmentCount();
-			
+
 			auto dvr_config = _ts_config.GetDvr();
 			if (dvr_config.IsEnabled())
 			{
@@ -842,4 +854,199 @@ std::tuple<HlsStream::RequestResult, std::shared_ptr<const ov::Data>> HlsStream:
 	}
 
 	return std::make_tuple(RequestResult::Success, segment_data);
+}
+
+void HlsStream::InitializeAllDumps()
+{
+	auto dump_configs = _ts_config.GetDumps().GetDumps();
+	// Select the dump setting for this stream.
+	std::lock_guard<std::shared_mutex> lock(_dumps_lock);
+	for (auto dump : dump_configs)
+	{
+		if (dump.IsEnabled() == false)
+		{
+			continue;
+		}
+
+		// check if dump.TargetStreamName is same as this stream name
+		auto match_result = dump.GetTargetStreamNameRegex().Matches(GetName().CStr());
+		if (match_result.IsMatched())
+		{
+			auto output_path = std::make_shared<ov::String>(dump.GetOutputPath());
+			dump.ConfigureOutputPath(output_path, GetApplication()->GetVHostAppName().GetVHostName(), GetApplication()->GetVHostAppName().GetAppName(), GetName());
+
+			auto dump_item = std::make_shared<mdl::Dump>();
+			dump_item->SetId(dump.GetId());
+			dump_item->SetOutputPath(*output_path);
+			dump_item->SetPlaylists(dump.GetPlaylists());
+			dump_item->SetEnabled(true);
+
+			_dumps.emplace(dump_item->GetId(), dump_item);
+		}
+	}
+}
+
+void HlsStream::DumpMasterPlaylistOfAllItems()
+{
+	std::shared_lock<std::shared_mutex> lock(_dumps_lock);
+	for (auto &it : _dumps)
+	{
+		auto dump = it.second;
+		if (dump->IsEnabled() == false)
+		{
+			continue;
+		}
+
+		if (DumpMasterPlaylist(dump) == false)
+		{
+			// Event if the dump fails, it will not be deleted
+			//dump->SetEnabled(false);
+		}
+	}
+}
+
+bool HlsStream::DumpMasterPlaylist(const std::shared_ptr<mdl::Dump> &dump)
+{
+	if (dump->IsEnabled() == false)
+	{
+		return false;
+	}
+
+	for (const auto &playlist_name : dump->GetPlaylists())
+	{
+		auto file_name_without_ext = playlist_name.Substring(0, playlist_name.IndexOfRev('.'));
+		auto [result, data] = GetMasterPlaylistData(file_name_without_ext, false);
+		if (result == RequestResult::NotFound)
+		{
+			logtw("Could not get master playlist(%s) for dump", playlist_name.CStr());
+			return false;
+		}
+
+		if (!DumpData(dump, playlist_name, data))
+		{
+			logtw("Could not dump master playlist(%s)", playlist_name.CStr());
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void HlsStream::DumpSegmentOfAllItems(const ov::String &packager_id, const uint32_t &segment_number)
+{
+	std::shared_lock<std::shared_mutex> lock(_dumps_lock);
+	for (auto &it : _dumps)
+	{
+		auto dump = it.second;
+		if (dump->IsEnabled() == false)
+		{
+			continue;
+		}
+
+		if (DumpSegment(dump, packager_id, segment_number) == false)
+		{
+			dump->SetEnabled(false);
+			continue;
+		}
+	}
+}
+
+bool HlsStream::DumpSegment(const std::shared_ptr<mdl::Dump> &dump, const ov::String &packager_id, const uint32_t &segment_number)
+{
+	// Write segment data
+	auto packager = GetPackager(packager_id);  // packager_id is variant_name
+	if (!packager)
+	{
+		logte("HlsStream(%s/%s) - Could not find packager for variant %s during dumping.",
+			  GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), packager_id.CStr());
+		return false;
+	}
+
+	auto segment_data = packager->GetSegmentData(segment_number);
+	if (!segment_data)
+	{
+		logte("HlsStream(%s/%s) - Could not get segment for dumping variant %s, segment %u",
+			  GetApplication()->GetVHostAppName().CStr(), GetName().CStr(),
+			  packager_id.CStr(), segment_number);
+		return false;
+	}
+
+	auto segment_filename = GetSegmentName(packager_id, segment_number);
+	if (!DumpData(dump, segment_filename, segment_data, false))
+	{
+		logte("HlsStream(%s/%s) - Dump '%s' failed to dump segment: %s",
+			  GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), dump->GetId().CStr(), segment_filename.CStr());
+		return false;
+	}
+
+	// Append to media playlist data
+	auto playlist = GetMediaPlaylist(packager_id);
+	if (!playlist)
+	{
+		logte("HlsStream(%s/%s) - Could not find playlist for variant %s during dumping.",
+			  GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), packager_id.CStr());
+		return false;
+	}
+
+	std::shared_ptr<ov::Data> playlist_data;
+	if (segment_number == 0) 
+	{
+		playlist_data = playlist->ToString(false).ToData(false);
+		if (!playlist_data)
+		{
+			logte("HlsStream(%s/%s) - Could not get playlist data for variant %s during dumping.",
+				  GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), packager_id.CStr());
+			return false;
+		}
+	}
+	else
+	{
+		auto playlist_latest_segment = playlist->GetLatestSegment();
+		if (!playlist_latest_segment)
+		{
+			logte("HlsStream(%s/%s) - Could not find latest segment for variant %s during dumping.",
+				GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), packager_id.CStr());
+			return false;
+		}
+		playlist_data = playlist->MakeSegmentString(playlist_latest_segment).ToData(false);
+	}
+
+	if (DumpData(dump, playlist->GetPlaylistFileName(), playlist_data, true) == false)
+	{
+		logte("HlsStream(%s/%s) - Dump '%s' failed to dump media playlist: %s",
+			  GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), dump->GetId().CStr(), playlist->GetPlaylistFileName().CStr());
+		return false;
+	}
+
+	return true;
+}
+
+bool HlsStream::DumpData(const std::shared_ptr<mdl::Dump> &dump, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data, bool append)
+{
+	return dump->DumpData(file_name, data, append);
+}
+
+void HlsStream::StopDumps()
+{
+	std::lock_guard<std::shared_mutex> dumper_lock(_dumps_lock);
+	for (auto &[dump_id, dump] : _dumps)
+	{
+		StopDump(dump);
+	}
+	_dumps.clear();
+}
+
+void HlsStream::StopDump(const std::shared_ptr<mdl::Dump> &dump)
+{
+	if (!dump)
+	{
+		return;
+	}
+
+	logti("HlsStream(%s/%s) - Stopping dump '%s'.", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), dump->GetId().CStr());
+
+	// Dump final master playlists
+	DumpMasterPlaylist(dump);
+
+	dump->CompleteDump();
 }
