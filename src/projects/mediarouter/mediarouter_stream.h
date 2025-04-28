@@ -20,25 +20,20 @@
 #include "mediarouter_nomalize.h"
 #include "mediarouter_stats.h"
 #include "mediarouter_event_generator.h"
+#include "mediarouter_alert.h"
 #include "modules/managed_queue/managed_queue.h"
 
-enum class MediaRouterStreamType : int8_t
-{
-	UNKNOWN = -1,
-	INBOUND,
-	OUTBOUND
-};
 
-class MediaRouteStream : public MediaRouterNormalize, public MediaRouterStats, public MediaRouterEventGenerator
+class MediaRouteStream : public MediaRouterNormalize, public MediaRouterStats, public MediaRouterEventGenerator, public MediaRouterAlert
 {
 public:
-	MediaRouteStream(const std::shared_ptr<info::Stream> &stream, MediaRouterStreamType type);
+	MediaRouteStream(const std::shared_ptr<info::Stream> &stream, cmn::MediaRouterStreamType type);
 	~MediaRouteStream();
 
 	// Inout Stream Type
-	void SetType(MediaRouterStreamType type);
-	bool IsInbound() { return _type == MediaRouterStreamType::INBOUND; }
-	bool IsOutbound() { return _type == MediaRouterStreamType::OUTBOUND; }
+	void SetType(cmn::MediaRouterStreamType type);
+	bool IsInbound() { return _type == cmn::MediaRouterStreamType::INBOUND; }
+	bool IsOutbound() { return _type == cmn::MediaRouterStreamType::OUTBOUND; }
 
 	// Queue interfaces
 	void Push(const std::shared_ptr<MediaPacket> &media_packet);
@@ -78,13 +73,12 @@ public:
 	
 private:
 	void DropNonDecodingPackets();
-	void DetectAbnormalPackets(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &packet);
 
 	bool _is_stream_prepared = false;
 	bool _is_all_tracks_parsed = false;
 
 	// Incoming/Outgoing Stream
-	MediaRouterStreamType _type;
+	cmn::MediaRouterStreamType _type;
 
 	// Stream Information
 	std::shared_ptr<info::Stream> _stream = nullptr;
@@ -97,8 +91,4 @@ private:
 
 	// Mirror buffer
 	std::vector<std::shared_ptr<MirrorBufferItem>> _mirror_buffer;
-
-	// Store the correction values in case of sudden change in PTS.
-	// If the PTS suddenly increases, the filter behaves incorrectly.
-	std::map<MediaTrackId, int64_t> _pts_last;
 };

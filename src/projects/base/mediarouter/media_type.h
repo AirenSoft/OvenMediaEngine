@@ -12,6 +12,13 @@
 
 namespace cmn
 {
+	enum class MediaRouterStreamType : int8_t
+	{
+		UNKNOWN = -1,
+		INBOUND,
+		OUTBOUND
+	};
+
 	enum class MediaType : int8_t
 	{
 		Unknown = -1,

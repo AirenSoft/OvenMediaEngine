@@ -28,10 +28,7 @@
 
 #include "mediarouter_private.h"
 
-#define PTS_CORRECT_THRESHOLD_MS 3000
-
 using namespace cmn;
-
 
 // H264 : AVCC -> AnnexB, Add SPS/PPS in front of IDR frame
 // H265 : 

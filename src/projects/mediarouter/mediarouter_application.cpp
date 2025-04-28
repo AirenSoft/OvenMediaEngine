@@ -409,7 +409,7 @@ std::shared_ptr<MediaRouteStream> MediaRouteApplication::CreateInboundStream(con
 {
 	std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
 
-	auto new_stream = std::make_shared<MediaRouteStream>(stream_info, MediaRouterStreamType::INBOUND);
+	auto new_stream = std::make_shared<MediaRouteStream>(stream_info, cmn::MediaRouterStreamType::INBOUND);
 	if (!new_stream)
 	{
 		return nullptr;
@@ -438,7 +438,7 @@ std::shared_ptr<MediaRouteStream> MediaRouteApplication::CreateOutboundStream(co
 		out_stream_info->LinkInputStream(stream_info);
 	}
 
-	auto new_stream = std::make_shared<MediaRouteStream>(out_stream_info, MediaRouterStreamType::OUTBOUND);
+	auto new_stream = std::make_shared<MediaRouteStream>(out_stream_info, cmn::MediaRouterStreamType::OUTBOUND);
 	if (!new_stream)
 	{
 		return nullptr;

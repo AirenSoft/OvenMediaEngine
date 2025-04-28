@@ -13,15 +13,10 @@
 
 #include "mediarouter_private.h"
 
-#define PTS_CORRECT_THRESHOLD_MS 3000
-
 using namespace cmn;
 
 MediaRouterStats::MediaRouterStats()
 {
-	_warning_count_bframe = 0;
-	_warning_count_out_of_order = 0;
-
 	_stat_start_time = std::chrono::system_clock::now();
 	_stop_watch.Start();
 }
@@ -46,41 +41,10 @@ void MediaRouterStats::Update(
 	const std::shared_ptr<MediaTrack> &media_track,
 	const std::shared_ptr<MediaPacket> &media_packet)
 {
+	// Update statistics of media track
+	media_track->OnFrameAdded(media_packet);
+
 	auto track_id = media_track->GetId();
-
-	// Check b-frame of H264/H265 codec
-	//
-	// Basically, in order to check the presence of B-Frame, the SliceType of H264 should be checked,
-	// but in general, it is assumed that there is a B-frame when PTS and DTS are different. This has a performance advantage.
-	switch (media_packet->GetBitstreamFormat())
-	{
-		case cmn::BitstreamFormat::H264_ANNEXB:
-		case cmn::BitstreamFormat::H264_AVCC:
-		case cmn::BitstreamFormat::H265_ANNEXB:
-		case cmn::BitstreamFormat::HVCC:
-			if (_warning_count_bframe < 10)
-			{
-				if (media_track->GetTotalFrameCount() > 0 && _stat_recv_pkt_lpts[track_id] > media_packet->GetPts())
-				{
-					media_track->SetHasBframes(true);
-				}
-
-				// Display a warning message that b-frame exists
-				if (media_track->HasBframes() == true)
-				{
-					logtw("[%s/%s(%u)] b-frame has been detected in the %u track",
-						  stream_info->GetApplicationInfo().GetVHostAppName().CStr(),
-						  stream_info->GetName().CStr(),
-						  stream_info->GetId(),
-						  track_id);
-
-					_warning_count_bframe++;
-				}
-			}
-			break;
-		default:
-			break;
-	}
 
 	_stat_recv_pkt_lpts[track_id] = media_packet->GetPts();
 	_stat_recv_pkt_ldts[track_id] = media_packet->GetDts();

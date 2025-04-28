@@ -20,29 +20,30 @@
 #include "base/mediarouter/mediarouter_application_connector.h"
 #include "modules/managed_queue/managed_queue.h"
 
-class MediaRouterStats
+class MediaRouterAlert
 {
 public:
-	MediaRouterStats();
-	~MediaRouterStats();
+	MediaRouterAlert();
+	~MediaRouterAlert();
 
 	void Init(const std::shared_ptr<info::Stream> &stream_info);
 
-	void Update(
-		const int8_t type,
+	bool Update(
+		const cmn::MediaRouterStreamType type,
 		const bool prepared,
 		const ov::ManagedQueue<std::shared_ptr<MediaPacket>> &packets_queue,
 		const std::shared_ptr<info::Stream> &stream_info,
 		const std::shared_ptr<MediaTrack> &media_track,
 		const std::shared_ptr<MediaPacket> &media_packet);
 
-	// <TrackId, Values>
-	std::map<MediaTrackId, int64_t> _stat_recv_pkt_lpts;
-	std::map<MediaTrackId, int64_t> _stat_recv_pkt_ldts;
-	std::map<MediaTrackId, int64_t> _stat_recv_pkt_adur;
+	bool DetectInvalidPacketDuration(const std::shared_ptr<info::Stream> &stream_info, const std::shared_ptr<MediaTrack> &media_track, const std::shared_ptr<MediaPacket> &media_packet);
+	bool DetectBBframes(const std::shared_ptr<info::Stream> &stream_info, const std::shared_ptr<MediaTrack> &media_track, const std::shared_ptr<MediaPacket> &media_packet);
+	bool DetectPTSDiscontinuity(const std::shared_ptr<info::Stream> &stream_info, const std::shared_ptr<MediaTrack> &media_track, const std::shared_ptr<MediaPacket> &media_packet);
 
-	// Time for statistics
-	ov::StopWatch _stop_watch;
-	std::chrono::time_point<std::chrono::system_clock> _last_recv_time;
-	std::chrono::time_point<std::chrono::system_clock> _stat_start_time;
+	// <TrackId, Values>
+	std::map<MediaTrackId, int64_t> _last_pts;
+	std::map<MediaTrackId, int64_t> _last_pts_ms;	
+
+	uint32_t _alert_count_bframe;
+	uint32_t _alert_count_out_of_order;
 };

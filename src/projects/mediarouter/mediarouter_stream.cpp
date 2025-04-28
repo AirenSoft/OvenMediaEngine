@@ -32,25 +32,23 @@
 
 #include "mediarouter_private.h"
 
-#define PTS_CORRECT_THRESHOLD_MS 3000
 
 using namespace cmn;
 
-MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream, MediaRouterStreamType type)
+MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream, cmn::MediaRouterStreamType type)
 	: _stream(stream),
 	  _packets_queue(nullptr, 600)
 {
 	SetType(type);
 
 	MediaRouterStats::Init(stream);
+	MediaRouterAlert::Init(stream);
 }
 
 MediaRouteStream::~MediaRouteStream()
 {
 	_media_packet_stash.clear();
 	_packets_queue.Clear();
-
-	_pts_last.clear();
 }
 
 std::shared_ptr<info::Stream> MediaRouteStream::GetStream()
@@ -58,14 +56,14 @@ std::shared_ptr<info::Stream> MediaRouteStream::GetStream()
 	return _stream;
 }
 
-void MediaRouteStream::SetType(MediaRouterStreamType type)
+void MediaRouteStream::SetType(cmn::MediaRouterStreamType type)
 {
 	_type = type;
 
 	auto urn = std::make_shared<info::ManagedQueue::URN>(
 		_stream->GetApplicationInfo().GetVHostAppName(),
 		_stream->GetName(),
-		(_type == MediaRouterStreamType::INBOUND) ? "imr" : "omr",
+		(_type == cmn::MediaRouterStreamType::INBOUND) ? "imr" : "omr",
 		"streamworker");
 	_packets_queue.SetUrn(urn);
 }
@@ -248,12 +246,10 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 		media_packet->SetPts(media_packet->GetDts());
 	}
 
-	// Accumulate Packet duplication
-	//	- 1) If the current packet does not have a Duration value then stashed.
-	//	- 1) If packets stashed, calculate duration compared to the current packet timestamp.
-	//	- 3) and then, the current packet stash.
+
 	std::shared_ptr<MediaPacket> pop_media_packet = nullptr;
 
+	// Update PTS, DTS, Duration
 	if ((IsOutbound()) &&
 		(media_packet->GetDuration()) <= 0 &&
 		// The packet duration recalculation applies only to video and audio types.
@@ -273,7 +269,8 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 		// So, the code below is a temporary measure to avoid this problem. A more fundamental solution should be considered.
 		if (pop_media_packet->GetDts() >= media_packet->GetDts())
 		{
-			if (_warning_count_out_of_order++ < 10)
+			// TODO(Keukhan): Move to mediarouter_alert
+			if (_alert_count_out_of_order++ < 10)
 			{
 				logtw("[%s/%s] Detected out of order DTS of packet. track_id:%d dts:%lld->%lld",
 					  _stream->GetApplicationName(), _stream->GetName().CStr(), pop_media_packet->GetTrackId(), pop_media_packet->GetDts(), media_packet->GetDts());
@@ -283,7 +280,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 			// It must be seen that the order of the packets is jumbled.
 			media_packet->SetPts(pop_media_packet->GetPts() + 1);
 			media_packet->SetDts(pop_media_packet->GetDts() + 1);
-		}  // end of temporary measure code
+		} 
 
 		int64_t duration = media_packet->GetDts() - pop_media_packet->GetDts();
 		pop_media_packet->SetDuration(duration);
@@ -322,24 +319,12 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 		return nullptr;
 	}
 
-	// Detect abnormal packet
-	if (IsOutbound())
+	// Detect the abnormal packets
+	if(MediaRouterAlert::Update(_type, IsStreamPrepared(), _packets_queue, GetStream(), media_track, pop_media_packet) == false)
 	{
-		if (pop_media_packet->GetDuration() < 0)
-		{
-			logtw("[%s/%s] found invalid duration of packet. We need to find the cause of the incorrect Duration.", _stream->GetApplicationName(), _stream->GetName().CStr());
-			return nullptr;
-		}
+		// If the packet is judged to be incorrect, drop the packet.
+		return nullptr;
 	}
-
-	// Detect abnormal packet
-	if (IsInbound())
-	{
-		DetectAbnormalPackets(media_track, pop_media_packet);
-	}
-
-
-	media_track->OnFrameAdded(pop_media_packet);
 
 	// Update statistics
 	MediaRouterStats::Update(static_cast<uint8_t>(_type), IsStreamPrepared(), _packets_queue, GetStream(), media_track, pop_media_packet);
@@ -369,32 +354,3 @@ std::vector<std::shared_ptr<MediaRouteStream::MirrorBufferItem>> MediaRouteStrea
 	return _mirror_buffer;
 }
 
-void MediaRouteStream::DetectAbnormalPackets(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &packet)
-{
-	auto track_id = packet->GetTrackId();
-	auto it = _pts_last.find(track_id);
-	if (it != _pts_last.end())
-	{
-		int64_t ts_ms = packet->GetPts() * media_track->GetTimeBase().GetExpr();
-		int64_t ts_diff_ms = ts_ms - _pts_last[track_id];
-
-		if (std::abs(ts_diff_ms) > PTS_CORRECT_THRESHOLD_MS)
-		{
-			if (IsVideoCodec(media_track->GetCodecId()) || IsAudioCodec(media_track->GetCodecId()))
-			{
-				logtw("[%s/%s(%u)] Detected abnormal increased timestamp. track:%u last.pts: %lld, cur.pts: %lld, tb(%d/%d), diff: %lldms",
-					  _stream->GetApplicationInfo().GetVHostAppName().CStr(),
-					  _stream->GetName().CStr(),
-					  _stream->GetId(),
-					  track_id,
-					  _pts_last[track_id],
-					  packet->GetPts(),
-					  media_track->GetTimeBase().GetNum(),
-					  media_track->GetTimeBase().GetDen(),
-					  ts_diff_ms);
-			}
-		}
-
-		_pts_last[track_id] = ts_ms;
-	}
-}
