@@ -215,7 +215,7 @@ namespace bmff
 			return false;
 		}
 
-		_dvr_info.AppendSegment(segment->GetNumber(), segment->GetDurationMs(), segment->GetData()->GetLength());
+		_dvr_info.AppendSegment(segment->GetNumber(), segment->GetDurationMs(), segment->GetDataLength());
 
 		// Delete old segments until the total duration is less than the maximum DVR duration
 		while (_dvr_info.GetTotalDurationMs() > (_config.dvr_duration_sec * 1000.0))

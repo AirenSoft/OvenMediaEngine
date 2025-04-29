@@ -87,8 +87,10 @@ void ThumbnailStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_p
 	}
 
 	std::lock_guard<std::shared_mutex> lock(_encoded_frame_mutex);
-
-	_encoded_frames[track->GetCodecId()] = std::move(media_packet->GetData()->Clone());
+	if (media_packet->GetData() != nullptr)
+	{
+		_encoded_frames[track->GetCodecId()] = std::move(media_packet->GetData()->Clone());
+	}
 }
 
 void ThumbnailStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)

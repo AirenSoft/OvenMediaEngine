@@ -294,6 +294,11 @@ namespace mpegts
 		return _data;
 	}
 
+	size_t Packet::GetDataLength()
+	{
+		return GetData() == nullptr ? 0 : GetData()->GetLength();
+	}
+
 	// Getter
 	uint8_t Packet::SyncByte()
 	{

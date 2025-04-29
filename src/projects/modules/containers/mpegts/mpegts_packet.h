@@ -188,6 +188,7 @@ namespace mpegts
 		size_t PayloadLength();
 
 		std::shared_ptr<const ov::Data> GetData();
+		size_t GetDataLength();
 
 		ov::String ToDebugString() const;
 

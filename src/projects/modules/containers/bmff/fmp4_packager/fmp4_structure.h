@@ -127,6 +127,11 @@ namespace bmff
 			return _data;
 		}
 
+		size_t GetDataLength() const
+		{
+			return _data == nullptr ? 0 : _data->GetLength();
+		}
+
 		// Get Number
 		int64_t GetNumber() const
 		{

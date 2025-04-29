@@ -57,7 +57,7 @@ public:
 
 	bool Parse(const std::shared_ptr<const ov::Data> &data) override
 	{
-		if (data->GetLength() < MIN_OPUS_SPECIFIC_CONFIG_SIZE)
+		if (data == nullptr || data->GetLength() < MIN_OPUS_SPECIFIC_CONFIG_SIZE)
 		{
 			//logte("The data inputed is too small for parsing (%d must be bigger than %d)", data->GetLength(), MIN_OPUS_SPECIFIC_CONFIG_SIZE);
 			return false;
@@ -78,6 +78,11 @@ public:
 
 	bool Equals(const std::shared_ptr<DecoderConfigurationRecord> &other) override
 	{
+		if (other == nullptr || other->GetData() == nullptr || GetData() == nullptr)
+		{
+			return false;
+		}
+
 		return other->GetData()->IsEqual(GetData());
 	}
 

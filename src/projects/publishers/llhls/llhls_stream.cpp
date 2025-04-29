@@ -1064,7 +1064,8 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 	{
 		// milliseconds scale
 		auto timestamp_ms = static_cast<double>(media_packet->GetDts()) / data_track->GetTimeBase().GetTimescale() * 1000.0;
-		if (InsertMarkerToAllPackagers(media_packet->GetTrackId(), media_packet->GetBitstreamFormat(), timestamp_ms, media_packet->GetData()->Clone()) == false)
+		std::shared_ptr<ov::Data> data = media_packet->GetData() != nullptr ? media_packet->GetData()->Clone() : nullptr;
+		if (InsertMarkerToAllPackagers(media_packet->GetTrackId(), media_packet->GetBitstreamFormat(), timestamp_ms, data) == false)
 		{
 			logte("Failed to insert marker to all packagers (track_id: %d, bitstream_format: %d, timestamp: %lld)", media_packet->GetTrackId(), media_packet->GetBitstreamFormat(), media_packet->GetDts());
 			return;

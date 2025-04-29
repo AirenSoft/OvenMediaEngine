@@ -233,7 +233,7 @@ namespace pvd
 		}
 
 		// Statistics
-		MonitorInstance->IncreaseBytesIn(*GetSharedPtrAs<info::Stream>(), packet->GetData()->GetLength());
+		MonitorInstance->IncreaseBytesIn(*GetSharedPtrAs<info::Stream>(), packet->GetDataLength());
 
 		_last_pkt_received_time = std::chrono::system_clock::now();
 

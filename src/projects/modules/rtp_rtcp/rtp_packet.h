@@ -108,6 +108,7 @@ public:
 
 	// Data
 	std::shared_ptr<ov::Data> GetData() const;
+	size_t GetDataLength() const;
 
 	// Created time
 	std::chrono::system_clock::time_point GetCreatedTime();

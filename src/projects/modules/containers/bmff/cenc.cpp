@@ -222,13 +222,13 @@ namespace bmff
             total_bytes += clear_bytes;
         }
 
-        if (total_bytes != media_packet->GetData()->GetLength())
+        if (total_bytes != media_packet->GetDataLength())
         {
-            logte("Total subsample bytes (%u) is not equal to sample data length (%u)", total_bytes, media_packet->GetData()->GetLength());
+            logte("Total subsample bytes (%u) is not equal to sample data length (%u)", total_bytes, media_packet->GetDataLength());
             return false;
         }
 
-		logtd("Subsample count : %d Total subsamples : %u / %u", sub_samples.size(), total_bytes, media_packet->GetData()->GetLength());
+		logtd("Subsample count : %d Total subsamples : %u / %u", sub_samples.size(), total_bytes, media_packet->GetDataLength());
 
 		return true;
 	}

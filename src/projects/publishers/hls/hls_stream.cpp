@@ -347,7 +347,7 @@ void HlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	{
 		auto timestamp = static_cast<double>(media_packet->GetDts()) / data_track->GetTimeBase().GetTimescale() * mpegts::TIMEBASE_DBL;
 		auto timestamp_ms = static_cast<double>(media_packet->GetDts()) / data_track->GetTimeBase().GetTimescale() * 1000.0;
-		auto data = media_packet->GetData()->Clone();
+		auto data = media_packet->GetData() != nullptr ? media_packet->GetData()->Clone() : nullptr;
 
 		auto marker = Marker::CreateMarker(media_packet->GetBitstreamFormat(), timestamp, timestamp_ms, data);
 		if (marker == nullptr)

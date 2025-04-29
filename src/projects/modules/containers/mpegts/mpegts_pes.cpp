@@ -123,7 +123,7 @@ namespace mpegts
 		optional_header.WriteBits(8, _header_data_length);
 
 		// PES Packet Data
-		ov::BitWriter pes_packet_data(_media_packet->GetData()->GetLength() + 64);
+		ov::BitWriter pes_packet_data(_media_packet->GetDataLength() + 64);
 
 		// PES Header
 		pes_packet_data.WriteBytes<uint8_t>(_start_code_prefix_1);
@@ -131,7 +131,7 @@ namespace mpegts
 		pes_packet_data.WriteBytes<uint8_t>(_start_code_prefix_3);
 		pes_packet_data.WriteBytes<uint8_t>(_stream_id);
 
-		uint64_t pes_packet_length = optional_header.GetDataSize() + optional_data.GetDataSize() + _media_packet->GetData()->GetLength();
+		uint64_t pes_packet_length = optional_header.GetDataSize() + optional_data.GetDataSize() + _media_packet->GetDataLength();
 		if (pes_packet_length > 0xFF && _media_track->GetMediaType() == cmn::MediaType::Video)
 		{
 			_pes_packet_length = 0;
@@ -152,7 +152,7 @@ namespace mpegts
 		auto payload_offset = pes_packet_data.GetDataSize();
 
 		// Payload
-		pes_packet_data.WriteData(_media_packet->GetData()->GetDataAs<uint8_t>(), _media_packet->GetData()->GetLength());
+		pes_packet_data.WriteData(_media_packet->GetData()->GetDataAs<uint8_t>(), _media_packet->GetDataLength());
 
 		_data = pes_packet_data.GetDataObject();
 		_payload = _data->GetWritableDataAs<uint8_t>() + payload_offset;

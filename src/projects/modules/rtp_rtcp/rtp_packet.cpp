@@ -219,6 +219,11 @@ std::shared_ptr<ov::Data> RtpPacket::GetData() const
 	return _data;
 }
 
+size_t RtpPacket::GetDataLength() const
+{
+	return _data == nullptr ? 0 : _data->GetLength();
+}
+
 // Getter
 bool RtpPacket::Marker() const
 {

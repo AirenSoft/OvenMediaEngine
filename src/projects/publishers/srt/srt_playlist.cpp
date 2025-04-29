@@ -140,7 +140,7 @@ namespace pub
 
 		for (const auto &packet : pes_packets)
 		{
-			total_packet_size += packet->GetData()->GetLength();
+			total_packet_size += packet->GetDataLength();
 		}
 
 		logap("OnFrame - %zu packets (total %zu bytes)", pes_packets.size(), total_packet_size);

@@ -476,7 +476,7 @@ namespace ffmpeg
 
 	bool Writer::ToAVPacket(AVPacket &av_packet, const std::shared_ptr<AVStream> av_stream, const std::shared_ptr<MediaPacket> &media_packet, const std::shared_ptr<MediaTrack> &media_track, int64_t start_time)
 	{
-		if (av_stream == nullptr || media_packet == nullptr || media_track == nullptr)
+		if (av_stream == nullptr || media_packet == nullptr || media_packet->GetData() == nullptr || media_track == nullptr)
 		{
 			return false;
 		}
@@ -486,7 +486,7 @@ namespace ffmpeg
 		av_packet.pts = av_rescale_q(media_packet->GetPts() - start_time, AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
 		av_packet.dts = av_rescale_q(media_packet->GetDts() - start_time, AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
 		av_packet.duration = av_rescale_q(media_packet->GetDuration(), AVRational{media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen()}, av_stream->time_base);
-		av_packet.size = media_packet->GetData()->GetLength();
+		av_packet.size = media_packet->GetDataLength();
 		av_packet.data = (uint8_t *)media_packet->GetData()->GetDataAs<uint8_t>();
 
 		return true;

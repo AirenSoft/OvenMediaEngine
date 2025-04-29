@@ -227,7 +227,7 @@ bool OvtStream::OnOvtPacketized(std::shared_ptr<OvtPacket> &packet)
 	BroadcastPacket(stream_packet);
 	
 	
-	MonitorInstance->IncreaseBytesOut(*pub::Stream::GetSharedPtrAs<info::Stream>(), PublisherType::Ovt, packet->GetData()->GetLength() * GetSessionCount());
+	MonitorInstance->IncreaseBytesOut(*pub::Stream::GetSharedPtrAs<info::Stream>(), PublisherType::Ovt, packet->GetDataLength() * GetSessionCount());
 
 	return true;
 }

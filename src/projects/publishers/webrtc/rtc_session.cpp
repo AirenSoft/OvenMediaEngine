@@ -554,7 +554,7 @@ void RtcSession::SendOutgoingData(const std::any &packet)
 
 	_wide_sequence_number ++;
 
-	MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::Webrtc, copy_packet->GetData()->GetLength());
+	MonitorInstance->IncreaseBytesOut(*GetStream(), PublisherType::Webrtc, copy_packet->GetDataLength());
 }
 
 bool RtcSession::SetTransportWideSequenceNumber(const std::shared_ptr<RtpPacket> &rtp_packet, uint16_t wide_sequence_number)
@@ -605,7 +605,7 @@ bool RtcSession::RecordRtpSent(const std::shared_ptr<const RtpPacket> &rtp_packe
 	sent_log->_marker = rtp_packet->Marker();
 	sent_log->_ssrc = rtp_packet->Ssrc();
 
-	sent_log->_sent_bytes = rtp_packet->GetData()->GetLength();
+	sent_log->_sent_bytes = rtp_packet->GetDataLength();
 	sent_log->_sent_time = std::chrono::system_clock::now();
 
 	auto video_rtp_key = sent_log->_sequence_number % MAX_RTP_RECORDS;

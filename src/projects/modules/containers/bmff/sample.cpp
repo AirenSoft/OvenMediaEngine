@@ -30,7 +30,7 @@ namespace bmff
 
 		_end_timestamp = sample._media_packet->GetDts() + sample._media_packet->GetDuration();
 		_total_duration += sample._media_packet->GetDuration();
-		_total_size += sample._media_packet->GetData()->GetLength();
+		_total_size += sample._media_packet->GetDataLength();
 		_total_count += 1;
 
 		_samples.push_back(sample);

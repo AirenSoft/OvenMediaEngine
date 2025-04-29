@@ -37,7 +37,7 @@ bool MediaRouterNormalize::NormalizeMediaPacket(const std::shared_ptr<info::Stre
 {
 	bool result = false;
 
-	if(media_track->GetMediaType() == cmn::MediaType::Data)
+	if (media_track->GetMediaType() == cmn::MediaType::Data)
 	{
 		return true;
 	}
@@ -45,31 +45,31 @@ bool MediaRouterNormalize::NormalizeMediaPacket(const std::shared_ptr<info::Stre
 	switch (media_packet->GetBitstreamFormat())
 	{
 		case cmn::BitstreamFormat::H264_ANNEXB:
-			result = ProcessH264AnnexBStream(stream_info, media_track, media_packet);
+			result = media_packet->GetData() != nullptr && ProcessH264AnnexBStream(stream_info, media_track, media_packet);
 			break;
 		case cmn::BitstreamFormat::H264_AVCC:
-			result = ProcessH264AVCCStream(stream_info,  media_track, media_packet);
+			result = media_packet->GetData() != nullptr && ProcessH264AVCCStream(stream_info,  media_track, media_packet);
 			break;
 		case cmn::BitstreamFormat::H265_ANNEXB:
-			result = ProcessH265AnnexBStream(stream_info,media_track, media_packet);
+			result = media_packet->GetData() != nullptr && ProcessH265AnnexBStream(stream_info,media_track, media_packet);
 			break;
 		case cmn::BitstreamFormat::HVCC:
-			result = ProcessH265HVCCStream(stream_info, media_track, media_packet);
+			result = media_packet->GetData() != nullptr && ProcessH265HVCCStream(stream_info, media_track, media_packet);
 			break;
 		case cmn::BitstreamFormat::VP8:
-			result = ProcessVP8Stream(stream_info, media_track, media_packet);
+			result = media_packet->GetData() != nullptr && ProcessVP8Stream(stream_info, media_track, media_packet);
 			break;
 		case cmn::BitstreamFormat::AAC_RAW:
-			result = ProcessAACRawStream(stream_info, media_track, media_packet);
+			result = media_packet->GetData() != nullptr && ProcessAACRawStream(stream_info, media_track, media_packet);
 			break;
 		case cmn::BitstreamFormat::AAC_ADTS:
-			result = ProcessAACAdtsStream(stream_info, media_track, media_packet);
+			result = media_packet->GetData() != nullptr && ProcessAACAdtsStream(stream_info, media_track, media_packet);
 			break;
 		case cmn::BitstreamFormat::OPUS:
-			result = ProcessOPUSStream(stream_info, media_track, media_packet);
+			result = media_packet->GetData() != nullptr && ProcessOPUSStream(stream_info, media_track, media_packet);
 			break;
 		case cmn::BitstreamFormat::MP3:
-			result = ProcessMP3Stream(stream_info, media_track, media_packet); 
+			result = media_packet->GetData() != nullptr && ProcessMP3Stream(stream_info, media_track, media_packet); 
 			break;
 		// Data Format
 		case cmn::BitstreamFormat::ID3v2:
@@ -281,7 +281,7 @@ bool MediaRouterNormalize::ProcessH264AnnexBStream(const std::shared_ptr<info::S
 	FragmentationHeader fragment_header;
 	size_t offset = 0, offset_length = 0;
 	auto bitstream = media_packet->GetData()->GetDataAs<uint8_t>();
-	auto bitstream_length = media_packet->GetData()->GetLength();
+	auto bitstream_length = media_packet->GetDataLength();
 	bool has_sps = false, has_pps = false, has_idr = false, has_aud = false;
 
 	while (offset < bitstream_length)
@@ -607,7 +607,7 @@ bool MediaRouterNormalize::ProcessH265AnnexBStream(const std::shared_ptr<info::S
 	FragmentationHeader fragment_header;
 
 	auto bitstream = media_packet->GetData()->GetDataAs<uint8_t>();
-	auto bitstream_length = media_packet->GetData()->GetLength();
+	auto bitstream_length = media_packet->GetDataLength();
 	bool has_vps = false, has_sps = false, has_pps = false, has_idr = false;
 
 	size_t offset = 0, offset_length = 0;

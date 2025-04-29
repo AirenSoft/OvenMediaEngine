@@ -119,7 +119,7 @@ bool RtpReceiveStatistics::UpdateStat(const std::shared_ptr<RtpPacket> &packet)
 	}
 
 	_received_packets += 1;
-	_received_bytes += packet->GetData()->GetLength();
+	_received_bytes += packet->GetDataLength();
 
 	return true;
 }

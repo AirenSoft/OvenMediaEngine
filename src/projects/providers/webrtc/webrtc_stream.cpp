@@ -630,7 +630,7 @@ namespace pvd
 		if ((track->GetCodecId() == cmn::MediaCodecId::H264 || track->GetCodecId() == cmn::MediaCodecId::H265) &&
 			_sent_sequence_header.find(track->GetId()) == _sent_sequence_header.end())
 		{
-			if (_h26x_extradata_nalu.find(track->GetId()) != _h26x_extradata_nalu.end())
+			if (_h26x_extradata_nalu.find(track->GetId()) != _h26x_extradata_nalu.end() && _h26x_extradata_nalu[track->GetId()] != nullptr)
 			{
 				auto bitstream_format = (track->GetCodecId() == cmn::MediaCodecId::H264) ? cmn::BitstreamFormat::H264_ANNEXB : cmn::BitstreamFormat::H265_ANNEXB;
 				auto sps_pps_packet = std::make_shared<MediaPacket>(GetMsid(),
@@ -642,8 +642,9 @@ namespace pvd
 																	bitstream_format,
 																	cmn::PacketType::NALU);
 				SendFrame(sps_pps_packet);
-				_sent_sequence_header[track->GetId()] = true;
 			}
+			
+			_sent_sequence_header[track->GetId()] = true;
 		}
 
 		SendFrame(media_packet);

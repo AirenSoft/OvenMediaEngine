@@ -180,6 +180,11 @@ const std::shared_ptr<ov::Data>& OvtPacket::GetData() const
 	return _data;
 }
 
+size_t OvtPacket::GetDataLength() const
+{
+	return _data == nullptr ? 0 : _data->GetLength();
+}
+
 void OvtPacket::SetMarker(bool marker_bit)
 {
 	_marker = marker_bit;

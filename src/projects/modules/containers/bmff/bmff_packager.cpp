@@ -1796,7 +1796,7 @@ namespace bmff
 			if (GetMediaTrack()->GetMediaType() == cmn::MediaType::Video)
 			{
 				// unsigned int(32) sample_size;
-				stream.WriteBE32(sample._media_packet->GetData()->GetLength());
+				stream.WriteBE32(sample._media_packet->GetDataLength());
 
 				// unsigned int(32) sample_flags;
 				uint32_t sample_flags = 0;
@@ -1808,7 +1808,7 @@ namespace bmff
 			}
 			else
 			{
-				stream.WriteBE32(sample._media_packet->GetData()->GetLength());
+				stream.WriteBE32(sample._media_packet->GetDataLength());
 			}
 		}
 

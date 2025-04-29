@@ -180,7 +180,7 @@ namespace mpegts
 #if 0
         // debug print
         logtd("------------------------------------------------------------------------");
-        logtd("Track(%u) / MediaPacket(%u)", media_packet->GetTrackId(), media_packet->GetData()->GetLength());
+        logtd("Track(%u) / MediaPacket(%u)", media_packet->GetTrackId(), media_packet->GetDataLength());
         for (const auto &packet : packets)
         {
             logtd("%s", packet->ToDebugString().CStr());
