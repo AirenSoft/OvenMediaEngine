@@ -41,9 +41,6 @@ void MediaRouterStats::Update(
 	const std::shared_ptr<MediaTrack> &media_track,
 	const std::shared_ptr<MediaPacket> &media_packet)
 {
-	// Update statistics of media track
-	media_track->OnFrameAdded(media_packet);
-
 	auto track_id = media_track->GetId();
 
 	_stat_recv_pkt_lpts[track_id] = media_packet->GetPts();
