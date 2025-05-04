@@ -185,6 +185,8 @@ namespace cmn
 				return "VIDEO_EVENT";
 			case cmn::PacketType::AUDIO_EVENT:
 				return "AUDIO_EVENT";
+			case cmn::PacketType::EVENT:
+				return "EVENT";							
 			default:
 				return "Unknown";
 		}

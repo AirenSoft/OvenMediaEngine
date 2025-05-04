@@ -25,12 +25,13 @@ public:
 	class Event
 	{
 	public:
-		Event(cmn::BitstreamFormat eventFormat, cmn::PacketType eventType, bool urgent, int32_t interval)
+		Event(cmn::BitstreamFormat eventFormat, cmn::PacketType eventType, bool urgent, int32_t interval, bool keyframe_only)
 		{
 			_event_format = eventFormat;
 			_event_type = eventType;
 			_urgent = urgent;
 			_interval = interval;
+			_keyframe_only = keyframe_only;
 
 			_stop_watch.Start();
 		}
@@ -49,27 +50,37 @@ public:
 
 		virtual ov::String GetInfoString()
 		{
-			return ov::String::FormatString("EventFormat:%s, EventType:%s, Urgent:%s, Interval:%d",
+			return ov::String::FormatString("EventFormat:%s, EventType:%s, Urgent:%s, Interval:%d, keyframeOnly:%s",
 											GetBitstreamFormatString(_event_format).CStr(),
 											GetMediaPacketTypeString(_event_type).CStr(),
 											_urgent ? "true" : "false",
-											_interval);
+											_interval, 
+											_keyframe_only ? "true" : "false");
 		}
 
 		int32_t _interval;
 		cmn::BitstreamFormat _event_format;
 		cmn::PacketType _event_type;
 		bool _urgent;
+		bool _keyframe_only;
 		ov::StopWatch _stop_watch;
 	};
 
 	class SeiEvent : public Event
 	{
 	public:
-		SeiEvent(cmn::BitstreamFormat eventFormat, cmn::PacketType eventType, bool urgent, int32_t interval, ov::String sei_type, ov::String data)
-			: Event(eventFormat, eventType, urgent, interval)
+		SeiEvent(cmn::BitstreamFormat eventFormat, cmn::PacketType eventType, bool urgent, int32_t interval, bool keyframe_only)
+			: Event(eventFormat, eventType, urgent, interval, keyframe_only)
+		{
+		}
+
+		void SetSeiType(ov::String sei_type)
 		{
 			_sei_type = sei_type;
+		}
+
+		void SetData(ov::String data)
+		{
 			_data = data;
 		}
 
@@ -85,24 +96,34 @@ public:
 	class AmfEvent : public Event
 	{
 	public:
-		AmfEvent(cmn::BitstreamFormat eventFormat,cmn::PacketType eventType, bool urgent, int32_t interval, ov::String amf_type)
-			: Event(eventFormat, eventType, urgent, interval)
+		AmfEvent(cmn::BitstreamFormat eventFormat, cmn::PacketType eventType, bool urgent, int32_t interval, bool keyframe_only)
+			: Event(eventFormat, eventType, urgent, interval, keyframe_only)
+		{
+		}
+
+		void SetAmfType(ov::String amf_type)
 		{
 			_amf_type = amf_type;
 		}
 
-		// void AddData(ov::String key, ov::String value)
-		// {
-		// 	_data[key] = value;
-		// }
+		ov::String GetAmfType() const
+		{
+			return _amf_type;
+		}
+
+		void AddData(ov::String key, ov::String type, ov::String value)
+		{
+			_data[key] = std::make_pair(type, value);
+		}
 
 		ov::String GetInfoString()
 		{
 			return ov::String::FormatString("%s, AmfType:%s", Event::GetInfoString().CStr(), _amf_type.CStr());
 		}
 
+
 		ov::String _amf_type;
-		std::map<ov::String, ov::String> _data;
+		std::map<ov::String, std::pair<ov::String, ov::String>> _data;
 	};
 
 	MediaRouterEventGenerator();
@@ -124,6 +145,7 @@ private:
 	static const std::shared_ptr<pvd::Stream> GetSourceStream(const std::shared_ptr<info::Stream> &stream_info);
 
 	std::shared_ptr<ov::Data> MakeSEIData(std::shared_ptr<Event> event);
+	std::shared_ptr<ov::Data> MakeAMFData(std::shared_ptr<Event> event);
 
 	std::vector<std::shared_ptr<MediaRouterEventGenerator::Event>> _events;
 	ov::StopWatch _stop_watch;
