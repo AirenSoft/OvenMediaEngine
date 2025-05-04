@@ -628,11 +628,9 @@ namespace api
 				throw http::HttpError(http::StatusCode::BadRequest, "data is required in events");
 			}
 
-			auto current_eopch_time = H264SEI::GetCurrentEpochTimeToTimeCode();
-
 			auto sei_event = std::make_shared<H264SEI>();
 			sei_event->SetPayloadType(payload_type);
-			sei_event->SetPayloadTimeCode(current_eopch_time);
+			sei_event->SetPayloadTimeCode(ov::Time::GetTimestampInMs());
 			sei_event->SetPayloadData(payload_data);
 
 			logtd("%s", sei_event->GetInfoString().CStr());
