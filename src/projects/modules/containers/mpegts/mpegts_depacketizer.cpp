@@ -490,6 +490,11 @@ namespace mpegts
 	// process completed section and remove, extract a elementary stream (es)
 	bool MpegTsDepacketizer::CompletePes(const std::shared_ptr<Pes> &pes)
 	{
+		std::unique_lock<std::shared_mutex> lock2(_pes_draft_map_lock);
+		// if there is the pes in _pes_draft_map, remove it
+		_pes_draft_map.erase(pes->PID());
+		lock2.unlock();
+
 		if (pes->SetEndOfData() == false)
 		{
 			return false;
@@ -498,17 +503,13 @@ namespace mpegts
 		// there is no media track, extracts it
 		if (_media_tracks.find(pes->PID()) == _media_tracks.end())
 		{
+			logti("Unsupported PES has been received. (pid : %d stream_id : %d)", pes->PID(), pes->StreamId());
 			return false;
 		}
 
 		std::unique_lock<std::shared_mutex> lock(_es_list_lock);
 		_es_list.push(pes);
 		lock.unlock();
-
-		std::unique_lock<std::shared_mutex> lock2(_pes_draft_map_lock);
-		// if there is the pes in _pes_draft_map, remove it
-		_pes_draft_map.erase(pes->PID());
-		lock2.unlock();
 
 		return true;
 	}
