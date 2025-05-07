@@ -64,7 +64,11 @@ std::shared_ptr<AmfTextDataEvent> AmfTextDataEvent::Parse(const Json::Value &jso
 		}
 		else if (value.isString())
 		{
-			object->Append(key.c_str(), value.asString().c_str());
+			// Replace ${EpochTime} with current epoch time
+			ov::String str_value = value.asString().c_str();
+			str_value = str_value.Replace("${EpochTime}", ov::String::FormatString("%lld", ov::Time::GetTimestampInMs()));
+			
+			object->Append(key.c_str(), str_value.CStr());
 		}
 	}
 

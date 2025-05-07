@@ -179,12 +179,6 @@ public:
 		_payload_data = payload_data;
 	}
 
-	// Get Cuurent epoch time to Timecode
-	static int64_t GetCurrentEpochTimeToTimeCode()
-	{
-		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	}
-
 	static std::shared_ptr<ov::Data> HexStrToByteArray(const std::shared_ptr<ov::Data> &hex_string);
 
 	ov::String GetInfoString();

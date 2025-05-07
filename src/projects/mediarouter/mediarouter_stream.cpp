@@ -319,6 +319,9 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 		return nullptr;
 	}
 
+	// Update statistics of media track
+	media_track->OnFrameAdded(pop_media_packet);
+
 	// Detect the abnormal packets
 	if(MediaRouterAlert::Update(_type, IsStreamPrepared(), _packets_queue, GetStream(), media_track, pop_media_packet) == false)
 	{
