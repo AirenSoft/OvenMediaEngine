@@ -102,7 +102,7 @@ namespace mpegts
 
             _media_tracks.emplace(track->GetId(), track);
 
-            if (_main_track_id == UINT32_MAX)
+            if (_main_track_id == UINT32_MAX && track->GetMediaType() != cmn::MediaType::Data)
             {
                 _main_track_id = track->GetId();
             }
