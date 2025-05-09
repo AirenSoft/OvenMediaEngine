@@ -1229,7 +1229,7 @@ components:
               outputProfiles:
                 $ref: '#/components/schemas/OutputProfiles'
 paths:
-  /v1/admissions:
+  /admissions:
     post:
       operationId: AdmissionsPost
       tags: [hook]
@@ -1239,7 +1239,7 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Admitted'
-  /v1/transcodecs:
+  /transcodecs:
     post:
       operationId: TranscodecsPost
       tags: [hook]
@@ -1249,7 +1249,7 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Transcoded'
-  /v1/vhosts:
+  /vhosts:
     get:
       operationId: VHostsGet
       tags: [api]
@@ -1311,7 +1311,7 @@ paths:
           $ref: '#/components/responses/Status'
         '409':
           $ref: '#/components/responses/Empty'
-  /v1/vhosts/{vhost}:
+  /vhosts/{vhost}:
     parameters:
       - $ref: '#/components/parameters/vhostName'
     get:
@@ -1346,7 +1346,7 @@ paths:
           $ref: '#/components/responses/Status'
         '500':
           $ref: '#/components/responses/Status'
-  /v1/vhosts/{vhost}/apps:
+  /vhosts/{vhost}/apps:
     parameters:
       - $ref: '#/components/parameters/vhostName'
     get:
@@ -1411,7 +1411,7 @@ paths:
           $ref: '#/components/responses/Status'
         '409':
           $ref: '#/components/responses/Empty'
-  /v1/vhosts/{vhost}/apps/{app}:
+  /vhosts/{vhost}/apps/{app}:
     parameters:
     - $ref: '#/components/parameters/vhostName'
     - $ref: '#/components/parameters/appName'
@@ -1478,7 +1478,7 @@ paths:
           $ref: '#/components/responses/Status'
         '500':
           $ref: '#/components/responses/Status'
-  /v1/vhosts/{vhost}/apps/{app}/outputProfiles:
+  /vhosts/{vhost}/apps/{app}/outputProfiles:
     parameters:
     - $ref: '#/components/parameters/vhostName'
     - $ref: '#/components/parameters/appName'
@@ -1544,7 +1544,7 @@ paths:
           $ref: '#/components/responses/Status'
         '409':
           $ref: '#/components/responses/Status'
-  /v1/vhosts/{vhost}/apps/{app}/outputProfiles/{profile}:
+  /vhosts/{vhost}/apps/{app}/outputProfiles/{profile}:
     parameters:
     - $ref: '#/components/parameters/vhostName'
     - $ref: '#/components/parameters/appName'
@@ -1579,7 +1579,7 @@ paths:
           $ref: '#/components/responses/Status'
         '404':
           $ref: '#/components/responses/Status'
-  /v1/vhosts/{vhost}/apps/{app}/streams:
+  /vhosts/{vhost}/apps/{app}/streams:
     parameters:
     - $ref: '#/components/parameters/vhostName'
     - $ref: '#/components/parameters/appName'
@@ -1639,7 +1639,7 @@ paths:
           $ref: '#/components/responses/Status'
         '500':
           $ref: '#/components/responses/Status'        
-  /v1/vhosts/{vhost}/apps/{app}/streams/{stream}:
+  /vhosts/{vhost}/apps/{app}/streams/{stream}:
     parameters:
     - $ref: '#/components/parameters/vhostName'
     - $ref: '#/components/parameters/appName'
@@ -1697,7 +1697,7 @@ paths:
           $ref: '#/components/responses/Status'
         '404':
           $ref: '#/components/responses/Status'
-  /v1/vhosts/{vhost}/apps/{app}:startPush:
+  /vhosts/{vhost}/apps/{app}:startPush:
     parameters:
     - $ref: '#/components/parameters/vhostName'
     - $ref: '#/components/parameters/appName'
@@ -1730,7 +1730,7 @@ paths:
           $ref: '#/components/responses/Status'
         '409':
           $ref: '#/components/responses/Status'
-  /v1/vhosts/{vhost}/apps/{app}:stopPush:
+  /vhosts/{vhost}/apps/{app}:stopPush:
     parameters:
     - $ref: '#/components/parameters/vhostName'
     - $ref: '#/components/parameters/appName'
@@ -1756,7 +1756,7 @@ paths:
           $ref: '#/components/responses/Status'
         '404':
           $ref: '#/components/responses/Status'
-  /v1/vhosts/{vhost}/apps/{app}:pushes:
+  /vhosts/{vhost}/apps/{app}:pushes:
     parameters:
     - $ref: '#/components/parameters/vhostName'
     - $ref: '#/components/parameters/appName'
@@ -1789,7 +1789,7 @@ paths:
           $ref: '#/components/responses/Status'
         '404':
           $ref: '#/components/responses/Status'
-  /v1/vhosts/{vhost}/apps/{app}:startRecord:
+  /vhosts/{vhost}/apps/{app}:startRecord:
     parameters:
     - $ref: '#/components/parameters/vhostName'
     - $ref: '#/components/parameters/appName'
@@ -1822,7 +1822,7 @@ paths:
           $ref: '#/components/responses/Status'
         '409':
           $ref: '#/components/responses/Status'
-  /v1/vhosts/{vhost}/apps/{app}:stopRecord:
+  /vhosts/{vhost}/apps/{app}:stopRecord:
     parameters:
     - $ref: '#/components/parameters/vhostName'
     - $ref: '#/components/parameters/appName'
@@ -1848,7 +1848,7 @@ paths:
           $ref: '#/components/responses/Status'
         '404':
           $ref: '#/components/responses/Status'
-  /v1/vhosts/{vhost}/apps/{app}:records:
+  /vhosts/{vhost}/apps/{app}:records:
     parameters:
     - $ref: '#/components/parameters/vhostName'
     - $ref: '#/components/parameters/appName'
@@ -1883,7 +1883,7 @@ paths:
           $ref: '#/components/responses/Status'
         '404':
           $ref: '#/components/responses/Status'
-  /v1/stats/current/vhosts/{vhost}:
+  /stats/current/vhosts/{vhost}:
     parameters:
     - $ref: '#/components/parameters/vhostName'
     get:
@@ -1905,7 +1905,7 @@ paths:
           $ref: '#/components/responses/Status'
         '404':
           $ref: '#/components/responses/Status'
-  /v1/stats/current/vhosts/{vhost}/apps/{app}:
+  /stats/current/vhosts/{vhost}/apps/{app}:
     parameters:
     - $ref: '#/components/parameters/vhostName'
     - $ref: '#/components/parameters/appName'
@@ -1928,7 +1928,7 @@ paths:
           $ref: '#/components/responses/Status'
         '404':
           $ref: '#/components/responses/Status'
-  /v1/stats/current/vhosts/{vhost}/apps/{app}/streams/{stream}:
+  /stats/current/vhosts/{vhost}/apps/{app}/streams/{stream}:
     parameters:
     - $ref: '#/components/parameters/vhostName'
     - $ref: '#/components/parameters/appName'
