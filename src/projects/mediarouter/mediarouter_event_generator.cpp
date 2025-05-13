@@ -37,12 +37,12 @@
 		<Enable>true</Enable>							// Optional (default: false)
 		<SourceStreamName>*</SourceStreamName>			// Must
 		<Interval>2000</Interval>						// Must
-		<KeyframeOnly>true</KeyframeOnly>				// Optional (default: false)
 		<EventFormat>sei</EventFormat>					// Must
 		<EventType>video</EventType>					// Optional (default: video)
 		<Values>
 			<SeiType>UserDataUnregistered</SeiType> 	// Optional (default: UserDataUnregistered)
 			<Data>Hi! OvenMediaEngine!</Data>			// Must
+			<KeyframeOnly>true</KeyframeOnly>			// Optional (default: false)			
 		</Values>
 	</Event>
 
@@ -78,11 +78,11 @@ void MediaRouterEventGenerator::Init(const std::shared_ptr<info::Stream> &stream
 {
 	_cfg_enabled = stream_info->GetApplicationInfo().GetConfig().GetEventGenerator().IsEnable();
 	_cfg_path = stream_info->GetApplicationInfo().GetConfig().GetEventGenerator().GetPath();
-	if(_cfg_path.IsEmpty())
+	if (_cfg_path.IsEmpty())
 	{
 		_cfg_enabled = false;
 	}
-	if(_cfg_path.Get(0) != '/')
+	if (_cfg_path.Get(0) != '/')
 	{
 		_cfg_path = ov::PathManager::GetAppPath("conf") + _cfg_path;
 	}
@@ -116,14 +116,13 @@ void MediaRouterEventGenerator::Update(
 		}
 		_last_modified_time = file_stat.st_mtime;
 
-		auto events = GetMatchedEvents(stream_info);
-		_events = events;
+		_events = GetMatchedEvents(stream_info);
 	}
 
-	// Send events
+	// Generate events
 	for (auto &event : _events)
 	{
-		if (!event->IsTrigger())
+		if (!(event->IsTrigger()))
 		{
 			continue;
 		}
@@ -131,11 +130,11 @@ void MediaRouterEventGenerator::Update(
 
 		logtd("Event Triggered: %s, %s", stream_info->GetName().CStr(), event->GetInfoString().CStr());
 
-		std::shared_ptr<ov::Data> event_data;
+		std::shared_ptr<ov::Data> event_data = nullptr;
 		switch (event->_event_format)
 		{
 			case cmn::BitstreamFormat::SEI: {
-				// This event is passed to the TranscoderEvent class and then disappears. 
+				// This event is passed to the TranscoderEvent class and then disappears.
 				// In TranscoderEvent, an SEI NAL unit is inserted into the video frame.
 				event_data = MakeSEIData(event);
 			}
@@ -143,7 +142,7 @@ void MediaRouterEventGenerator::Update(
 			case cmn::BitstreamFormat::AMF:
 				// This event creates an AmfTextDataEvent packet and sends it to the Publisher through the Data track.
 				event_data = MakeAMFData(event);
-			break;
+				break;
 			case cmn::BitstreamFormat::ID3v2:
 			case cmn::BitstreamFormat::CUE:
 			default:
@@ -151,7 +150,7 @@ void MediaRouterEventGenerator::Update(
 				continue;
 		}
 
-		if(event_data == nullptr)
+		if (event_data == nullptr)
 		{
 			continue;
 		}
@@ -163,7 +162,7 @@ void MediaRouterEventGenerator::Update(
 			return;
 		}
 
-		if(!stream->SendDataFrame(-1, event->_event_format, event->_event_type, event_data, event->_urgent))
+		if (!stream->SendDataFrame(-1, event->_event_format, event->_event_type, event_data, event->_urgent, event->_keyframe_only ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag))
 		{
 			logtw("Failed to send event data");
 		}
@@ -219,15 +218,15 @@ std::vector<std::shared_ptr<MediaRouterEventGenerator::Event>> MediaRouterEventG
 		}
 
 		ov::String event_format = curr_node.child_value("EventFormat");
-		
+
 		bool urgent = curr_node.child("Urgent") ? (strcmp(curr_node.child_value("Urgent"), "true") == 0) : false;
-		
+
 		int32_t interval = curr_node.child("Interval") ? curr_node.child("Interval").text().as_int() : 0;
+
 		
-		bool keyframe_only = curr_node.child("KeyframeOnly") ? (strcmp(curr_node.child_value("KeyframeOnly"), "true") == 0) : false;
-		
+
 		ov::String event_type_string = curr_node.child_value("EventType");
-		
+
 		cmn::PacketType event_type = cmn::PacketType::EVENT;
 		if (!event_type_string.IsEmpty())
 		{
@@ -255,15 +254,17 @@ std::vector<std::shared_ptr<MediaRouterEventGenerator::Event>> MediaRouterEventG
 			pugi::xml_node values = curr_node.child("Values");
 			ov::String sei_type = values.child_value("SeiType");
 			ov::String sei_data = values.child_value("Data");
+			bool keyframe_only = values.child("KeyframeOnly") ? (strcmp(values.child_value("KeyframeOnly"), "true") == 0) : false;
 
-			if(sei_data.IsEmpty())
+			if (sei_data.IsEmpty())
 			{
 				sei_type = "UserDataUnregistered";
 			}
 
-			auto event = std::make_shared<SeiEvent>(cmn::BitstreamFormat::SEI, event_type, urgent, interval, keyframe_only);
+			auto event = std::make_shared<SeiEvent>(cmn::BitstreamFormat::SEI, event_type, urgent, interval);
 			event->SetSeiType(sei_type);
 			event->SetData(sei_data);
+			event->SetKeyframeOnly(keyframe_only);
 
 			results.push_back(event);
 		}
@@ -272,7 +273,13 @@ std::vector<std::shared_ptr<MediaRouterEventGenerator::Event>> MediaRouterEventG
 			pugi::xml_node values = curr_node.child("Values");
 			ov::String amf_type = values.child_value("AmfType");
 
-			auto event = std::make_shared<AmfEvent>(cmn::BitstreamFormat::AMF, event_type, urgent, interval, keyframe_only);
+			if(amf_type.UpperCaseString() != "ONTEXTDATA")
+			{
+				logte("Unsupported AMF event type [%s]", amf_type.CStr());
+				continue;
+			}
+
+			auto event = std::make_shared<AmfEvent>(cmn::BitstreamFormat::AMF, event_type, urgent, interval);
 			event->SetAmfType(amf_type);
 
 			for (pugi::xml_node data_node = values.child("Data").first_child(); data_node; data_node = data_node.next_sibling())
@@ -280,7 +287,7 @@ std::vector<std::shared_ptr<MediaRouterEventGenerator::Event>> MediaRouterEventG
 				ov::String key = data_node.name();
 				ov::String type = data_node.attribute("type").as_string();
 				ov::String value = data_node.child_value();
-				
+
 				logtd("key:%s, value:%s, type:%s", key.CStr(), value.CStr(), type.CStr());
 
 				event->AddData(key, type, value);
@@ -338,13 +345,16 @@ std::shared_ptr<ov::Data> MediaRouterEventGenerator::MakeSEIData(std::shared_ptr
 	{
 		payload_type = H264SEI::StringToPayloadType(sei_event->_sei_type);
 	}
+
 	// data (optional)
-	std::shared_ptr<ov::Data> payload_data = (!sei_event->_data.IsEmpty()) ? std::make_shared<ov::Data>(sei_event->_data.CStr(), sei_event->_data.GetLength()) : std::make_shared<ov::Data>();
+	ov::String payload_data = sei_event->_data.IsEmpty() ? "" : sei_event->_data;
+
+	logtd("SEI PayloadType:%s, Data:%s", sei_event->_sei_type.CStr(), payload_data.CStr());
 
 	auto sei = std::make_shared<H264SEI>();
 	sei->SetPayloadType(payload_type);
 	sei->SetPayloadTimeCode(ov::Time::GetTimestampInMs());
-	sei->SetPayloadData(payload_data);
+	sei->SetPayloadData(payload_data.ToData());
 
 	return sei->Serialize();
 }
@@ -353,35 +363,31 @@ std::shared_ptr<ov::Data> MediaRouterEventGenerator::MakeAMFData(std::shared_ptr
 {
 	std::shared_ptr<AmfEvent> amf_event = std::static_pointer_cast<AmfEvent>(event);
 
-	if(amf_event->GetAmfType().UpperCaseString() != "ONTEXTDATA")
-	{
-		logte("Unsupported AMF event type [%s]", amf_event->GetAmfType().CStr());
-		return nullptr;
-	}
-
 	auto amf = std::make_shared<AmfTextDataEvent>();
-	
-	for(auto &data : amf_event->_data)
+
+	for (auto &data : amf_event->_data)
 	{
 		auto key = data.first;
 		auto type = data.second.first;
 		auto value = data.second.second;
 
+		// TODO: Refactor this code. Duplicate code exists in AmfTextDataEvent::Parse and MediaRouterEventGener::MakeAMFData
 		// Replace ${EpochTime} with current epoch time
+		if (value.IsEmpty() == false)
 		{
 			value = value.Replace("${EpochTime}", ov::String::FormatString("%lld", ov::Time::GetTimestampInMs()));
 		}
-		
-		if(type == "string")
+
+		if (type == "string")
 		{
 			amf->Append(key.CStr(), value.CStr());
 		}
-		else if(type == "double")
+		else if (type == "double")
 		{
 			double double_value = atof(value.CStr());
 			amf->Append(key.CStr(), double_value);
 		}
-		else if(type == "boolean")
+		else if (type == "boolean")
 		{
 			bool bool_value = (strcmp(value.CStr(), "true") == 0) ? true : false;
 			amf->Append(key.CStr(), bool_value);

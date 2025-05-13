@@ -64,6 +64,7 @@ std::shared_ptr<AmfTextDataEvent> AmfTextDataEvent::Parse(const Json::Value &jso
 		}
 		else if (value.isString())
 		{
+			// TODO: Refactor this code. Duplicate code exists in AmfTextDataEvent::Parse and MediaRouterEventGener::MakeAMFData
 			// Replace ${EpochTime} with current epoch time
 			ov::String str_value = value.asString().c_str();
 			str_value = str_value.Replace("${EpochTime}", ov::String::FormatString("%lld", ov::Time::GetTimestampInMs()));

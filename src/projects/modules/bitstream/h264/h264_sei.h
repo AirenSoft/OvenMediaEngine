@@ -155,6 +155,7 @@ public:
 	~H264SEI() = default;
 
 	std::shared_ptr<ov::Data> Serialize();
+	static std::shared_ptr<H264SEI> Parse(const std::shared_ptr<ov::Data> &data);
 
 	// Set payload type
 	void SetPayloadType(PayloadType payload_type)
@@ -162,9 +163,19 @@ public:
 		_payload_type = payload_type;
 	}
 
+	PayloadType GetPayloadType() const
+	{
+		return _payload_type;
+	}
+
 	void SetPayloadDataType(PayloadDataType payload_data_type)
 	{
 		_payload_data_type = payload_data_type;
+	}
+
+	PayloadDataType GetPayloadDataType() const
+	{
+		return _payload_data_type;
 	}
 
 	// Epoch time in milliseconds
@@ -173,10 +184,20 @@ public:
 		_payload_time_code = payload_time_code;
 	}
 
+	uint64_t GetPayloadTimeCode() const
+	{
+		return _payload_time_code;
+	}
+
 	// Set payload data (plintext or binary)
 	void SetPayloadData(const std::shared_ptr<ov::Data> &payload_data)
 	{
 		_payload_data = payload_data;
+	}
+
+	std::shared_ptr<ov::Data> GetPayloadData() const
+	{
+		return _payload_data;
 	}
 
 	static std::shared_ptr<ov::Data> HexStrToByteArray(const std::shared_ptr<ov::Data> &hex_string);

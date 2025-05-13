@@ -25,14 +25,14 @@ public:
 	class Event
 	{
 	public:
-		Event(cmn::BitstreamFormat eventFormat, cmn::PacketType eventType, bool urgent, int32_t interval, bool keyframe_only)
+		Event(cmn::BitstreamFormat eventFormat, cmn::PacketType eventType, bool urgent, int32_t interval)
 		{
 			_event_format = eventFormat;
 			_event_type = eventType;
 			_urgent = urgent;
 			_interval = interval;
-			_keyframe_only = keyframe_only;
-
+			_keyframe_only = false;
+			
 			_stop_watch.Start();
 		}
 		virtual ~Event() = default;
@@ -47,10 +47,14 @@ public:
 			return _stop_watch.Update();
 		}
 
+		void SetKeyframeOnly(bool keyframe_only)
+		{
+			_keyframe_only = keyframe_only;
+		}
 
 		virtual ov::String GetInfoString()
 		{
-			return ov::String::FormatString("EventFormat:%s, EventType:%s, Urgent:%s, Interval:%d, keyframeOnly:%s",
+			return ov::String::FormatString("EventFormat:%s, EventType:%s, Urgent:%s, Interval:%d, KeyframeOnly:%s",
 											GetBitstreamFormatString(_event_format).CStr(),
 											GetMediaPacketTypeString(_event_type).CStr(),
 											_urgent ? "true" : "false",
@@ -69,8 +73,8 @@ public:
 	class SeiEvent : public Event
 	{
 	public:
-		SeiEvent(cmn::BitstreamFormat eventFormat, cmn::PacketType eventType, bool urgent, int32_t interval, bool keyframe_only)
-			: Event(eventFormat, eventType, urgent, interval, keyframe_only)
+		SeiEvent(cmn::BitstreamFormat eventFormat, cmn::PacketType eventType, bool urgent, int32_t interval)
+			: Event(eventFormat, eventType, urgent, interval)
 		{
 		}
 
@@ -84,6 +88,7 @@ public:
 			_data = data;
 		}
 
+
 		ov::String GetInfoString()
 		{
 			return ov::String::FormatString("%s, SeiType:%s, Data:%s", Event::GetInfoString().CStr(), _sei_type.CStr(), _data.CStr());
@@ -96,8 +101,8 @@ public:
 	class AmfEvent : public Event
 	{
 	public:
-		AmfEvent(cmn::BitstreamFormat eventFormat, cmn::PacketType eventType, bool urgent, int32_t interval, bool keyframe_only)
-			: Event(eventFormat, eventType, urgent, interval, keyframe_only)
+		AmfEvent(cmn::BitstreamFormat eventFormat, cmn::PacketType eventType, bool urgent, int32_t interval)
+			: Event(eventFormat, eventType, urgent, interval)
 		{
 		}
 

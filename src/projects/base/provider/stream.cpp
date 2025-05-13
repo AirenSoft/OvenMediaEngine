@@ -113,7 +113,7 @@ namespace pvd
 		return _last_media_timestamp_ms + _elapsed_from_last_media_timestamp.Elapsed();
 	}
 
-	bool Stream::SendDataFrame(int64_t timestamp, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent)
+	bool Stream::SendDataFrame(int64_t timestamp, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, const MediaPacketFlag packet_flag)
 	{
 		if (frame == nullptr)
 		{
@@ -167,6 +167,7 @@ namespace pvd
 															timestamp,
 															format,
 															packet_type);
+		event_message->SetFlag(packet_flag);
 		event_message->SetHighPriority(urgent);
 
 		return SendFrame(event_message);

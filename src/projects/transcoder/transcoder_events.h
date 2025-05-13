@@ -29,4 +29,7 @@ public:
 	bool PushEvent(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> &packet);
 	void RunEvent(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> &packet);
 	std::map<MediaTrackId, std::vector<std::shared_ptr<MediaPacket>>> _event_packets;
+
+private:
+	bool UpdateEventPacket(std::shared_ptr<MediaPacket> &event_packet);
 };
