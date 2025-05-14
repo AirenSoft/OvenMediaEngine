@@ -41,21 +41,15 @@ OvenMediaEngine classifies each stream using SRT's streamid. This means that unl
 
 Therefore, in order for the SRT encoder to transmit a stream to OvenMediaEngine, the following information must be included in the streamid as [percent encoded](https://tools.ietf.org/html/rfc3986#section-2.1).
 
-> streamid = percent\_encoding("srt://{host}\[:port]/{app name}/{stream name}\[?query=value]")
-
-{% hint style="warning" %}
-The **streamid** contains the URL format, so it must be [**percent encoded**](https://tools.ietf.org/html/rfc3986#section-2.1)\*\*\*\*
-{% endhint %}
+> streamid = {vhost name}/{app name}/{stream name}
 
 ### OBS Studio
 
 OBS Studio 25.0 or later supports SRT. Please refer to the [OBS official documentation](https://obsproject.com/wiki/Streaming-With-SRT-Protocol) for more information. Enter the address of OvenMediaEngine in OBS Studio's Server as follows: When using SRT in OBS, leave the Stream Key blank.
 
-`srt://{full domain or IP address}:port?streamid=srt%3A%2F%2F{full domain or IP address}[%3APort]%2F{App name}%2F{Stream name}&latency=2000000`
+`srt://{full domain or IP address}:port?streamid={vhost name}/{app name}/{stream name}`
 
-The `streamid` has to be the urlencoded address of the server name as specified in the ome server configuration plus the app name and the stream name, each separated by `/`. The `latency` configures the size of the server-side recive buffer and the time limit for SRT in nanoseconds. Typical value for latency are 150000 (150ms) for stremaing to a server in the local network, 600000 (600ms) for streaming to a server over the internet in the local region, and 2000000 (2 seconds) when stremaing over long distance.
-
-![](<../.gitbook/assets/image (38).png>)
+<figure><img src="../.gitbook/assets/image (61).png" alt=""><figcaption></figcaption></figure>
 
 ### Blackmagic Web Presenter
 

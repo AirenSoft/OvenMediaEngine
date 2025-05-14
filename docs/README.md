@@ -28,7 +28,7 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
   * Embedded WebRTC Signaling Server (WebSocket based)
   * Retransmission with NACK
   * ULPFEC (Uneven Level Protection Forward Error Correction)
-    * _VP8, H.264_
+    * _VP8, H.264, H.265_
   * In-band FEC (Forward Error Correction)
     * _Opus_
 * **HLS (version 3) Streaming support for legacy devices**
@@ -40,7 +40,7 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
   * MPEG-2 TS Container
   * Audio/Video Muxed
 * **Embedded Live Transcoder**
-  * Video: VP8, H.264, H.265(Hardware encoder only), Pass-through
+  * Video: VP8, H.264, H.265(Hardware only), Pass-through
   * Audio: Opus, AAC, Pass-through
 * **Clustering** (Origin-Edge Structure)
 * **Monitoring**
