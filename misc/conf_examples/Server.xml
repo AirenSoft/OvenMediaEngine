@@ -354,49 +354,42 @@
 							<Name>bypass_stream</Name>
 							<OutputStreamName>${OriginStreamName}</OutputStreamName>
 
-							<!-- 
-							You can provide ABR with Playlist. Currently, ABR is supported in LLHLS and WebRTC.
-							
 							<Playlist>
-								<Name>Paid</Name>
-								You can play this playlist with 
-								LLHLS : http[s]://<domain>[:port]/<app>/<stream>/<FileName>.m3u8 
-								WebRTC : ws[s]://<domain>[:port]/<app>/<stream>/<FileName>
-								Note that the keywords "playlist" and "chunklist" MUST NOT be included in FileName.
-								<FileName>premium</FileName>
-
-								Options is optional. 
+								<Name>default</Name>
+								<FileName>master</FileName>
 								<Options>
-									WebRtcAutoAbr : Default value is true
-									<WebRtcAutoAbr>true</WebRtcAutoAbr> 
+									<WebRtcAutoAbr>true</WebRtcAutoAbr>
+									<HLSChunklistPathDepth>0</HLSChunklistPathDepth>
+									<EnableTsPackaging>true</EnableTsPackaging>
 								</Options>
-								
-								<Rendition>
-									<Name>bypass</Name>
-									<Video>bypass_video</Video>
-									<Audio>bypass_audio</Audio>
-								</Rendition>
-								<Rendition>
-									<Name>480p</Name>
-									<Video>480p</Video>
-									<Audio>bypass_audio</Audio>
-								</Rendition>
-								<Rendition>
-									<Name>720p</Name>
-									<Video>720p</Video>
-									<Audio>bypass_audio</Audio>
-								</Rendition>
+								<RenditionTemplate>
+									<Name>${Height}p</Name>
+									<VideoTemplate> <!-- Filter by video properties -->
+										<EncodingType>all</EncodingType> <!-- all, bypassed, encoded -->
+										<!-- <VariantName>bypass_video</VariantName>
+										<VideoIndexHint>0</VideoIndexHint>
+										<MaxWidth>1080</MaxWidth>
+										<MinWidth>240</MinWidth>
+										<MaxHeight>720</MaxHeight>
+										<MinHeight>240</MinHeight>
+										<MaxFPS>30</MaxFPS>
+										<MinFPS>30</MinFPS>
+										<MaxBitrate>2000000</MaxBitrate>
+										<MinBitrate>500000</MinBitrate> -->
+									</VideoTemplate>
+									<AudioTemplate> <!-- Filter by audio properties -->
+										<EncodingType>all</EncodingType> <!-- all, bypassed, encoded -->
+										<!-- <VariantName>aac_audio</VariantName>
+										<MaxBitrate>128000</MaxBitrate>
+										<MinBitrate>128000</MinBitrate>
+										<MaxSamplerate>48000</MaxSamplerate>
+										<MinSamplerate>48000</MinSamplerate>
+										<MaxChannel>2</MaxChannel>
+										<MinChannel>2</MinChannel>
+										<AudioIndexHint>0</AudioIndexHint> -->
+									</AudioTemplate>
+								</RenditionTemplate>
 							</Playlist>
-							<Playlist>
-								<Name>free</Name>
-								<FileName>free</FileName>
-								<Rendition>
-									<Name>720p</Name>
-									<Video>720p</Video>
-									<Audio>bypass_audio</Audio>
-								</Rendition>
-							</Playlist>
-							-->
 
 							<Encodes>
 								<Video>
