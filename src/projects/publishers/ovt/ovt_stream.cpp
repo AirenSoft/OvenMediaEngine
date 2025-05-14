@@ -133,7 +133,9 @@ bool OvtStream::GenerateDescription()
 
 			json_rendition["name"] = rendition->GetName().CStr();
 			json_rendition["videoTrackName"] = rendition->GetVideoVariantName().CStr();
+			json_rendition["videoIndexHint"] = rendition->GetVideoIndexHint();
 			json_rendition["audioTrackName"] = rendition->GetAudioVariantName().CStr();
+			json_rendition["audioIndexHint"] = rendition->GetAudioIndexHint();
 
 			json_playlist["renditions"].append(json_rendition);
 		}

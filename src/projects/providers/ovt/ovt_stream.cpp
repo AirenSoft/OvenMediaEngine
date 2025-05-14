@@ -392,9 +392,28 @@ namespace pvd
 				ov::String rendition_name = json_rendition["name"].asString().c_str();
 				ov::String video_track_name = json_rendition["videoTrackName"].asString().c_str();
 				ov::String audio_track_name = json_rendition["audioTrackName"].asString().c_str();
+				
+				int video_index_hint = -1;
+				int audio_index_hint = -1;
 
-				playlist->AddRendition(std::make_shared<info::Rendition>(rendition_name, video_track_name, audio_track_name));
+				if (json_rendition["videoIndexHint"].isInt())
+				{
+					video_index_hint = json_rendition["videoIndexHint"].asInt();
+				}
+
+				if (json_rendition["audioIndexHint"].isInt())
+				{
+					audio_index_hint = json_rendition["audioIndexHint"].asInt();
+				}
+				
+				auto rendition = std::make_shared<info::Rendition>(rendition_name, video_track_name, audio_track_name);
+				rendition->SetVideoIndexHint(video_index_hint);
+				rendition->SetAudioIndexHint(audio_index_hint);
+				
+				playlist->AddRendition(rendition);
 			}
+
+			logti("%s", playlist->ToString().CStr());
 
 			AddPlaylist(playlist);
 		}
