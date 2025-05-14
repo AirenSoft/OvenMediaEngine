@@ -198,55 +198,151 @@ namespace pvd
 		return it->second;
 	}
 
-	void SrtProvider::OnConnected(const std::shared_ptr<ov::Socket> &remote)
+	std::shared_ptr<ov::Url> SrtProvider::GetStreamUrlForRemote(const std::shared_ptr<ov::Socket> &remote, bool *is_vhost_form)
 	{
-		logti("The SRT client has connected : %s [%d] [%s]", remote->ToString().CStr(), remote->GetNativeHandle(), remote->GetStreamId().CStr());
+		// stream_id can be in the following format:
+		//
+		//   #!::u=abc123,bmd_uuid=1234567890...
+		//
+		// https://github.com/Haivision/srt/blob/master/docs/features/access-control.md
+		constexpr static const char SRT_STREAM_ID_PREFIX[] = "#!::";
+		constexpr static const char SRT_USER_NAME_PREFIX[] = "u=";
 
-		// Get app/stream name from streamid
+		std::shared_ptr<ov::Url> parsed_url = nullptr;
+
+		// Get app/stream name from stream_id
 		auto streamid = remote->GetStreamId();
-		ov::String decoded_url;
+
+		bool is_vhost;
+
+		// stream_path takes one of two forms:
+		//
+		// 1. urlencode(srt://host[:port]/app/stream[?query=value]) (deprecated)
+		// 2. <vhost>/<app>/<stream>[?query=value]
+		ov::String stream_path;
 
 		if (streamid.IsEmpty())
 		{
 			auto stream_map = GetStreamMap(remote->GetLocalAddress()->Port());
+
 			if (stream_map == nullptr)
 			{
-				logte("There is no stream information in the streamid and stream map. : %s", remote->ToString().CStr());
-				remote->Close();
-				return;
+				logte("There is no stream information in the stream map for the SRT client: %s", remote->ToString().CStr());
+				return nullptr;
 			}
 
-			decoded_url = stream_map->stream_path;
+			stream_path = stream_map->stream_path;
 		}
 		else
 		{
-			// SRT AccessControl style : #!::u=abc123,bmd_uuid=1234567890...
-			if (streamid.GetLength() > 4 && streamid.HasPrefix("#!::"))
-			{
-				// Remove #!::
-				streamid = streamid.Substring(4);
+			auto final_streamid = streamid;
+			ov::String user_name;
+			bool from_user_name = false;
 
-				auto key_values = streamid.Split(",");
-				// Extract u=xxx (user name)
+			if (final_streamid.HasPrefix(SRT_STREAM_ID_PREFIX))
+			{
+				// Remove the prefix `#!::`
+				final_streamid = final_streamid.Substring(OV_COUNTOF(SRT_STREAM_ID_PREFIX) - 1);
+
+				auto key_values = final_streamid.Split(",");
+
+				// Extract user name part (u=xxx)
 				for (const auto &key_value : key_values)
 				{
-					auto key_value_pair = key_value.Split("=");
-					if (key_value_pair.size() == 2 && key_value_pair[0] == "u")
+					if (key_value.HasPrefix(SRT_USER_NAME_PREFIX))
 					{
-						streamid = key_value_pair[1];
+						final_streamid = key_value.Substring(OV_COUNTOF(SRT_USER_NAME_PREFIX) - 1);
+						from_user_name = true;
+
 						break;
 					}
 				}
 			}
 
-			// urlencode(srt://host[:port]/app/stream?query=value)
-			decoded_url = ov::Url::Decode(streamid);
+			if (final_streamid.IsEmpty())
+			{
+				if (from_user_name)
+				{
+					logte("Empty user name is not allowed in the streamid: [%s]", streamid.CStr());
+				}
+				else
+				{
+					logte("Empty streamid is not allowed");
+				}
+
+				return nullptr;
+			}
+
+			stream_path = ov::Url::Decode(final_streamid);
+
+			if (stream_path.IsEmpty())
+			{
+				if (from_user_name)
+				{
+					logte("Invalid user name in the streamid: [%s] (streamid: [%s])", user_name.CStr(), streamid.CStr());
+				}
+				else
+				{
+					logte("Invalid streamid: [%s]", streamid.CStr());
+				}
+
+				return nullptr;
+			}
 		}
 
-		auto final_url = ov::Url::Parse(decoded_url);
+		if (stream_path.HasPrefix("srt://"))
+		{
+			// Deprecated format
+			logtw("The srt://... format is deprecated. Use {vhost}/{app}/{stream} format instead: %s", streamid.CStr());
+			is_vhost = false;
+		}
+		else
+		{
+			// {vhost}/{app}/{stream}[/{playlist}] format
+			auto parts = stream_path.Split("/");
+			auto part_count = parts.size();
+
+			if ((part_count != 3) && (part_count != 4))
+			{
+				logte("The streamid for SRT must be in the following format: {vhost}/{app}/{stream}[/{playlist}], but [%s]", stream_path.CStr());
+				return nullptr;
+			}
+
+			// Convert to srt://{vhost}/{app}/{stream}[/{playlist}]
+			stream_path.Prepend("srt://");
+
+			is_vhost = true;
+		}
+
+		auto final_url = stream_path.IsEmpty() ? nullptr : ov::Url::Parse(stream_path);
+
+		if (final_url != nullptr)
+		{
+			if (is_vhost_form != nullptr)
+			{
+				*is_vhost_form = is_vhost;
+			}
+		}
+		else
+		{
+			auto extra_log = streamid.IsEmpty() ? "" : ov::String::FormatString(" (streamid: [%s])", streamid.CStr());
+			logte("The streamid for SRT must be in one of the following formats: srt://{host}[:{port}]/{app}/{stream}[/{playlist}][?{query}={value}] or {vhost}/{app}/{stream}[/{playlist}], but [%s]%s", stream_path.CStr(), extra_log.CStr());
+		}
+
+		return final_url;
+	}
+
+	void SrtProvider::OnConnected(const std::shared_ptr<ov::Socket> &remote)
+	{
+		auto orchestrator = ocst::Orchestrator::GetInstance();
+		
+		logti("The SRT client has connected : %s [%d] [%s]", remote->ToString().CStr(), remote->GetNativeHandle(), remote->GetStreamId().CStr());
+
+		bool is_vhost_form;
+		auto final_url = GetStreamUrlForRemote(remote, &is_vhost_form);
+
 		if (final_url == nullptr)
 		{
-			logte("SRT's streamid streamid must be in the following format, percent encoded. srt://{host}[:port]/{app}/{stream}?{query}={value} : %s", streamid.CStr());
 			remote->Close();
 			return;
 		}
@@ -254,8 +350,6 @@ namespace pvd
 		auto requested_url = final_url;
 
 		auto channel_id = remote->GetNativeHandle();
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
-		auto stream_name = final_url->Stream();
 
 		//TODO(Getroot): For security enhancement,
 		// it should be checked whether the actual ip:port is the same as the ip:port of streamid (after dns resolve if it is domain).
@@ -287,6 +381,12 @@ namespace pvd
 			remote->Close();
 			return;
 		}
+
+		// Admission Webhooks
+		auto vhost_app_name = is_vhost_form
+								  ? orchestrator->ResolveApplicationName(final_url->Host(), final_url->App())
+								  : orchestrator->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+		auto stream_name = final_url->Stream();
 
 		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
 		if (webhooks_result == AccessController::VerificationResult::Off)

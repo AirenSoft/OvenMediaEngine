@@ -93,6 +93,7 @@ namespace pvd
 
 	private:
 		std::shared_ptr<StreamMap> GetStreamMap(int port);
+		std::shared_ptr<ov::Url> GetStreamUrlForRemote(const std::shared_ptr<ov::Socket> &remote, bool *is_vhost_form);
 
 	private:
 		std::mutex _physical_port_list_mutex;
