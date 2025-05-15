@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 #define OV_COUNTOF(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define OV_PTR_FORMAT "0x%016" PRIxPTR
 

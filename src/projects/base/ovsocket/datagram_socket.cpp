@@ -25,19 +25,49 @@
 
 namespace ov
 {
-	bool DatagramSocket::Prepare(int port, DatagramCallback datagram_callback)
+	bool DatagramSocket::SetSocketOptions(SetAdditionalOptionsCallback callback)
 	{
-		return Prepare(SocketAddress::CreateAndGetFirst(nullptr, port), std::move(datagram_callback));
+		switch (GetType())
+		{
+			case SocketType::Tcp:
+				[[fallthrough]];
+			case SocketType::Srt:
+				[[fallthrough]];
+			default:
+				// DatagramSocket should not be created with TCP or SRT
+				OV_ASSERT2(false);
+				return false;
+
+			case SocketType::Udp:
+				break;
+		}
+
+		auto result = SetSockOpt<int>(SO_REUSEADDR, 1);
+
+		return result &&
+			   // Call the callback function if it is set
+			   ((callback == nullptr) || (callback(GetSharedPtrAs<Socket>()) == nullptr));
 	}
 
-	bool DatagramSocket::Prepare(const SocketAddress &address, DatagramCallback datagram_callback)
+	bool DatagramSocket::Prepare(
+		int port,
+		SetAdditionalOptionsCallback callback,
+		DatagramCallback datagram_callback)
+	{
+		return Prepare(SocketAddress::CreateAndGetFirst(nullptr, port), callback, std::move(datagram_callback));
+	}
+
+	bool DatagramSocket::Prepare(
+		const SocketAddress &address,
+		SetAdditionalOptionsCallback callback,
+		DatagramCallback datagram_callback)
 	{
 		CHECK_STATE(== SocketState::Created, false);
 
 		if (
 			(
 				MakeNonBlocking(GetSharedPtrAs<ov::SocketAsyncInterface>()) &&
-				SetSockOpt<int>(SO_REUSEADDR, 1) &&
+				SetSocketOptions(callback) &&
 				Bind(address)))
 		{
 			_datagram_callback = std::move(datagram_callback);
@@ -73,7 +103,6 @@ namespace ov
 
 		while (true)
 		{
-
 			auto error = RecvFrom(data, &address_pair);
 
 			if (error == nullptr)

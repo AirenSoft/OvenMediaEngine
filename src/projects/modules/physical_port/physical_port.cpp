@@ -131,19 +131,14 @@ bool PhysicalPort::CreateServerSocket(
 
 			if (socket != nullptr)
 			{
-				const std::shared_ptr<ov::Error> error = (on_socket_created != nullptr) ? on_socket_created(socket) : nullptr;
-
-				if (error != nullptr)
-				{
-					logte("An error occurred while initializing socket: %s", error->What());
-				}
-				else if (socket->Prepare(
-							 address,
-							 std::bind(&PhysicalPort::OnClientConnectionStateChanged, this,
-									   std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
-							 std::bind(&PhysicalPort::OnClientData, this,
-									   std::placeholders::_1, std::placeholders::_2),
-							 send_buffer_size, recv_buffer_size, 4096))
+				if (socket->Prepare(
+						address,
+						on_socket_created,
+						std::bind(&PhysicalPort::OnClientConnectionStateChanged, this,
+								  std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+						std::bind(&PhysicalPort::OnClientData, this,
+								  std::placeholders::_1, std::placeholders::_2),
+						send_buffer_size, recv_buffer_size, 4096))
 				{
 					_type = type;
 					_server_socket = socket;
@@ -183,14 +178,9 @@ bool PhysicalPort::CreateDatagramSocket(
 
 			if (socket != nullptr)
 			{
-				const std::shared_ptr<ov::Error> error = (on_socket_created != nullptr) ? on_socket_created(socket) : nullptr;
-
-				if (error != nullptr)
-				{
-					logte("An error occurred while initializing socket: %s", error->What());
-				}
-				else if (socket->Prepare(
+				if (socket->Prepare(
 							 address,
+							 on_socket_created,
 							 std::bind(&PhysicalPort::OnDatagram, this,
 									   std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)))
 				{

@@ -53,6 +53,10 @@ namespace ov
 
 	class Socket : public EnableSharedFromThis<Socket>, public SocketPoolEventInterface
 	{
+	public:
+		// Called when the server socket is created
+		using SetAdditionalOptionsCallback = std::function<std::shared_ptr<ov::Error>(const std::shared_ptr<ov::Socket> &socket)>;
+
 	protected:
 		friend class SocketPoolWorker;
 
