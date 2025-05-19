@@ -27,7 +27,7 @@ endif
 
 __COMMA := ,
 ifneq ($(CONFIG_LIBRARY_PATHS),)
-__RPATH := -Wl,-rpath,$(subst :,$(__COMMA)-rpath$(__COMMA),$(CONFIG_LIBRARY_PATHS))
+__RPATH := -Wl,-rpath,$(subst :,$(__COMMA)-rpath$(__COMMA),$(CONFIG_LIBRARY_PATHS)) -Wl,--disable-new-dtags
 endif
 
 ifneq ($(CONFIG_PKG_PATHS),)
