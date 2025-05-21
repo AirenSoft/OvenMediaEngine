@@ -10,6 +10,7 @@
 
 #include "./assert.h"
 #include "./bit_reader.h"
+#include "./bit_reader_v2.h"
 #include "./bit_writer.h"
 #include "./bps_calculator.h"
 #include "./byte_ordering.h"
@@ -36,6 +37,7 @@
 #include "./semaphore.h"
 #include "./future.h"
 #include "./flow_utilities.h"
+#include "./fourcc_utilities.h"
 #include "./singleton.h"
 #include "./stack_trace.h"
 #include "./stop_watch.h"
