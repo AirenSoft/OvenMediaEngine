@@ -1544,7 +1544,7 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 			_last_decoded_frame_pts[decoder_id] = last_frame->GetPts() * filter_expr * 1000000.0;
 
 			// logtd("%s Create filler frame because there is no decoding frame. Type(%s), Decoder(%u), FillerFrames(%d)"
-			// 	, _log_prefix.CStr(), cmn::GetMediaTypeString(input_track->GetMediaType()).CStr(), decoder_id, 1);
+			// 	, _log_prefix.CStr(), cmn::GetMediaTypeString(input_track->GetMediaType()), decoder_id, 1);
 
 			// Send Temporary Frame to Filter
 			SpreadToFilters(decoder_id, last_frame);
@@ -1610,7 +1610,7 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 					int32_t created_count = 0;
 
 					logtd("%s Generate filler frame because time diffrence from last frame. Type(%s), needed(%d), last_pts(%lld), curr_pts(%lld), hole_time(%lld), hole_time_tb(%lld), frame_duration(%lld), start_pts(%lld), end_pts(%lld)",
-						  _log_prefix.CStr(), cmn::GetMediaTypeString(input_track->GetMediaType()).CStr(), needed_frames, last_decoded_frame_time_us, curr_decoded_frame_time_us, hole_time_us, hole_time_tb, duration_per_frame, start_pts, end_pts);
+						  _log_prefix.CStr(), cmn::GetMediaTypeString(input_track->GetMediaType()), needed_frames, last_decoded_frame_time_us, curr_decoded_frame_time_us, hole_time_us, hole_time_tb, duration_per_frame, start_pts, end_pts);
 
 					for (int64_t filler_pts = start_pts; filler_pts < end_pts; filler_pts += duration_per_frame)
 					{

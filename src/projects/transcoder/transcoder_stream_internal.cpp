@@ -223,7 +223,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(
 		{
 			if(output_track->GetCodecModules().IsEmpty() == false)
 			{
-				output_track->SetCodecModules(ov::String::FormatString("%s,%s", cmn::GetStringFromCodecModuleId(module_id).CStr(), output_track->GetCodecModules().CStr()));
+				output_track->SetCodecModules(ov::String::FormatString("%s,%s", cmn::GetStringFromCodecModuleId(module_id), output_track->GetCodecModules()));
 			}
 			else
 			{

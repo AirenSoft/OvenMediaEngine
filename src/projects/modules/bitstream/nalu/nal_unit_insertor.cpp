@@ -52,7 +52,7 @@ std::optional<std::tuple<std::shared_ptr<ov::Data>, std::shared_ptr<Fragmentatio
 		  format == cmn::BitstreamFormat::H264_AVCC ||
 		  format == cmn::BitstreamFormat::H265_ANNEXB))
 	{
-		logte("Not supported bitstream format: %s", GetBitstreamFormatString(format).CStr());
+		logte("Not supported bitstream format: %s", GetBitstreamFormatString(format));
 		return std::nullopt;
 	}
 

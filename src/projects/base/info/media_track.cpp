@@ -336,8 +336,8 @@ ov::String MediaTrack::GetInfoString()
 				"BFrames(%d) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
-				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecModuleId(GetCodecModuleId()).CStr(), GetCodecDeviceId(),
-				GetBitstreamFormatString(GetOriginBitstream()).CStr(),
+				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecModuleId(GetCodecModuleId()), GetCodecDeviceId(),
+				GetBitstreamFormatString(GetOriginBitstream()),
 				GetWidth(), GetHeight(),
 				GetFrameRate(),
 				GetKeyFrameInterval(),
@@ -359,8 +359,8 @@ ov::String MediaTrack::GetInfoString()
 				"Channel(%s, %d) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
-				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecModuleId(GetCodecModuleId()).CStr(),
-				GetBitstreamFormatString(GetOriginBitstream()).CStr(),
+				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecModuleId(GetCodecModuleId()),
+				GetBitstreamFormatString(GetOriginBitstream()),
 				ov::Converter::ToSiString(GetSampleRate(), 1).CStr(),
 				GetSample().GetName(), GetSample().GetSampleSize() * 8,
 				GetChannel().GetName(), GetChannel().GetCounts());
@@ -373,8 +373,8 @@ ov::String MediaTrack::GetInfoString()
 				"Codec(%d,%s,%s) "
 				"BSF(%s) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
-				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecModuleId(GetCodecModuleId()).CStr(),
-				GetBitstreamFormatString(GetOriginBitstream()).CStr());
+				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecModuleId(GetCodecModuleId()),
+				GetBitstreamFormatString(GetOriginBitstream()));
 			break;
 
 		default:

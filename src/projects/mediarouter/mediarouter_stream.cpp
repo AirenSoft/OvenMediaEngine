@@ -307,7 +307,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 	{
 		logte("Could not find the media track. track_id: %d, media_type: %s",
 			  track_id,
-			  GetMediaTypeString(media_type).CStr());
+			  GetMediaTypeString(media_type));
 
 		return nullptr;
 	}

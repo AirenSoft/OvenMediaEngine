@@ -98,6 +98,7 @@ namespace cmn
 		H265,
 		Vp8,
 		Vp9,
+		Av1,
 		Flv,
 		Aac,
 		Mp3,
@@ -169,101 +170,75 @@ namespace cmn
 		return false;
 	}
 
-	static ov::String GetMediaPacketTypeString(cmn::PacketType packet_type)
+	constexpr const char *GetMediaPacketTypeString(cmn::PacketType packet_type)
 	{
 		switch (packet_type)
 		{
-			case cmn::PacketType::OVT:
-				return "OVT";
-			case cmn::PacketType::RAW:
-				return "RAW";
-			case cmn::PacketType::SEQUENCE_HEADER:
-				return "SEQUENCE_HEADER";
-			case cmn::PacketType::NALU:
-				return "NALU";
-			case cmn::PacketType::VIDEO_EVENT:
-				return "VIDEO_EVENT";
-			case cmn::PacketType::AUDIO_EVENT:
-				return "AUDIO_EVENT";
-			case cmn::PacketType::EVENT:
-				return "EVENT";							
-			default:
-				return "Unknown";
+			OV_CASE_RETURN_ENUM_STRING(PacketType, Unknown);
+			OV_CASE_RETURN_ENUM_STRING(PacketType, OVT);
+			OV_CASE_RETURN_ENUM_STRING(PacketType, RAW);
+			OV_CASE_RETURN_ENUM_STRING(PacketType, SEQUENCE_HEADER);
+			OV_CASE_RETURN_ENUM_STRING(PacketType, NALU);
+			// Dimiden - Kept this value as it was returning `Unknown`
+			// before refactoring due to not being handled in the case statement
+			OV_CASE_RETURN(PacketType::EVENT, "Unknown");
+			OV_CASE_RETURN_ENUM_STRING(PacketType, VIDEO_EVENT);
+			OV_CASE_RETURN_ENUM_STRING(PacketType, AUDIO_EVENT);
 		}
+
+		return "Unknown";
 	}
 
-	static ov::String GetMediaTypeString(cmn::MediaType media_type)
+	constexpr const char *GetMediaTypeString(cmn::MediaType media_type)
 	{
 		switch (media_type)
 		{
-			case cmn::MediaType::Video:
-				return "Video";
-			case cmn::MediaType::Audio:
-				return "Audio";
-			case cmn::MediaType::Data:
-				return "Data";
-			case cmn::MediaType::Subtitle:
-				return "Subtitle";
-			case cmn::MediaType::Attachment:
-				return "Attachment";
-			default:
-				return "Unknown";
+			OV_CASE_RETURN_ENUM_STRING(MediaType, Unknown);
+			OV_CASE_RETURN_ENUM_STRING(MediaType, Video);
+			OV_CASE_RETURN_ENUM_STRING(MediaType, Audio);
+			OV_CASE_RETURN_ENUM_STRING(MediaType, Data);
+			OV_CASE_RETURN_ENUM_STRING(MediaType, Subtitle);
+			OV_CASE_RETURN_ENUM_STRING(MediaType, Attachment);
+			// Dimiden - Kept this value as it was returning `Unknown`
+			// before refactoring due to not being handled in the case statement
+			OV_CASE_RETURN(MediaType::Nb, "Unknown");
 		}
+
+		return "Unknown";
 	}
 
-	static ov::String GetBitstreamFormatString(cmn::BitstreamFormat format) {
-		switch (format) {
-			case cmn::BitstreamFormat::H264_AVCC:
-				return "AVCC";
-			case cmn::BitstreamFormat::H264_ANNEXB:
-				return "H264_ANNEXB";
-			case cmn::BitstreamFormat::H264_RTP_RFC_6184:
-				return "H264_RTP_RFC_6184";
-			case cmn::BitstreamFormat::H265_ANNEXB:
-				return "H265_ANNEXB";
-			case cmn::BitstreamFormat::H265_RTP_RFC_7798:
-				return "H265_RTP_RFC_7798";
-			case cmn::BitstreamFormat::HVCC:
-				return "HVCC";
-			case cmn::BitstreamFormat::VP8:
-				return "VP8";
-			case cmn::BitstreamFormat::VP8_RTP_RFC_7741:
-				return "VP8_RTP_RFC_7741";
-			case cmn::BitstreamFormat::AAC_RAW:
-				return "AAC_RAW";
-			case cmn::BitstreamFormat::AAC_MPEG4_GENERIC:
-				return "AAC_MPEG4_GENERIC";
-			case cmn::BitstreamFormat::AAC_ADTS:
-				return "AAC_ADTS";
-			case cmn::BitstreamFormat::AAC_LATM:
-				return "AAC_LATM";
-			case cmn::BitstreamFormat::MP3:
-				return "MP3";
-			case cmn::BitstreamFormat::OPUS:
-				return "OPUS";
-			case cmn::BitstreamFormat::OPUS_RTP_RFC_7587:
-				return "OPUS_RTP_RFC_7587";
-			case cmn::BitstreamFormat::JPEG:
-				return "JPEG";
-			case cmn::BitstreamFormat::PNG:
-				return "PNG";
-			case cmn::BitstreamFormat::WEBP:
-				return "WEBP";				
-			case cmn::BitstreamFormat::ID3v2:
-				return "ID3v2";
-			case cmn::BitstreamFormat::OVEN_EVENT:
-				return "OVEN_EVENT";
-			case cmn::BitstreamFormat::CUE:
-				return "CUE";
-			case cmn::BitstreamFormat::AMF:
-				return "AMF";
-			case cmn::BitstreamFormat::SEI:
-				return "SEI";
-			case cmn::BitstreamFormat::SCTE35:
-				return "SCTE35";			
-			default:
-				return "Unknown";
+	constexpr const char *GetBitstreamFormatString(cmn::BitstreamFormat format)
+	{
+		switch (format)
+		{
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, Unknown);
+			OV_CASE_RETURN(BitstreamFormat::H264_AVCC, "AVCC");
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, H264_ANNEXB);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, H264_RTP_RFC_6184);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, H265_ANNEXB);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, H265_RTP_RFC_7798);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, HVCC);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, VP8);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, VP8_RTP_RFC_7741);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, AAC_RAW);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, AAC_MPEG4_GENERIC);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, AAC_ADTS);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, AAC_LATM);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, MP3);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, OPUS);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, OPUS_RTP_RFC_7587);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, JPEG);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, PNG);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, WEBP);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, ID3v2);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, OVEN_EVENT);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, CUE);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, AMF);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, SEI);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, SCTE35);
 		}
+
+		return "Unknown";
 	}
 
 	static cmn::MediaCodecModuleId GetCodecModuleIdByName(ov::String name)
@@ -314,35 +289,25 @@ namespace cmn
 		return cmn::MediaCodecModuleId::None;
 	}
 
-	static ov::String GetStringFromCodecModuleId(cmn::MediaCodecModuleId id)
+	constexpr const char *GetStringFromCodecModuleId(MediaCodecModuleId id)
 	{
 		switch (id)
 		{
-			case cmn::MediaCodecModuleId::DEFAULT:
-				return "default";
-			case cmn::MediaCodecModuleId::OPENH264:
-				return "openh264";
-			case cmn::MediaCodecModuleId::BEAMR:
-				return "beamr";
-			case cmn::MediaCodecModuleId::NVENC:
-				return "nvenc";
-			case cmn::MediaCodecModuleId::QSV:
-				return "qsv";
-			case cmn::MediaCodecModuleId::NILOGAN:
-				return "nilogan";
-			case cmn::MediaCodecModuleId::XMA:
-				return "xma";				
-			case cmn::MediaCodecModuleId::LIBVPX:
-				return "libvpx";
-			case cmn::MediaCodecModuleId::FDKAAC:
-				return "fdkaac";
-			case cmn::MediaCodecModuleId::LIBOPUS:
-				return "libopus";
-			case cmn::MediaCodecModuleId::X264:
-				return "x264";								
-			case cmn::MediaCodecModuleId::None:
-			default:
-				break;
+			OV_CASE_RETURN(MediaCodecModuleId::DEFAULT, "default");
+			OV_CASE_RETURN(MediaCodecModuleId::OPENH264, "openh264");
+			OV_CASE_RETURN(MediaCodecModuleId::BEAMR, "beamr");
+			OV_CASE_RETURN(MediaCodecModuleId::NVENC, "nvenc");
+			OV_CASE_RETURN(MediaCodecModuleId::QSV, "qsv");
+			OV_CASE_RETURN(MediaCodecModuleId::NILOGAN, "nilogan");
+			OV_CASE_RETURN(MediaCodecModuleId::XMA, "xma";);
+			OV_CASE_RETURN(MediaCodecModuleId::LIBVPX, "libvpx");
+			OV_CASE_RETURN(MediaCodecModuleId::FDKAAC, "fdkaac");
+			OV_CASE_RETURN(MediaCodecModuleId::LIBOPUS, "libopus");
+			OV_CASE_RETURN(MediaCodecModuleId::X264, "x264");
+			OV_CASE_RETURN(MediaCodecModuleId::None, "none");
+			// Dimiden - Kept this value as it was returning `none`
+			// before refactoring due to not being handled in the case statement
+			OV_CASE_RETURN(MediaCodecModuleId::NB, "none");
 		}
 
 		return "none";
@@ -364,37 +329,26 @@ namespace cmn
 		return false;
 	}
 
-	static ov::String GetCodecIdToString(cmn::MediaCodecId id)
+	constexpr const char *GetCodecIdToString(cmn::MediaCodecId id)
 	{
 		switch (id)
 		{
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecId, None);
 			// Video codecs
-			case cmn::MediaCodecId::H264:
-				return "H264";
-			case cmn::MediaCodecId::H265:
-				return "H265";
-			case cmn::MediaCodecId::Vp8:
-				return "VP8";
-			case cmn::MediaCodecId::Vp9:
-				return "VP9";
-			case cmn::MediaCodecId::Flv:
-				return "FLV";
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecId, H264);
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecId, H265);
+			OV_CASE_RETURN(MediaCodecId::Vp8, "VP8");
+			OV_CASE_RETURN(MediaCodecId::Vp9, "VP9");
+			OV_CASE_RETURN(MediaCodecId::Flv, "FLV");
+			OV_CASE_RETURN(MediaCodecId::Av1, "AV1");
 			// Image codecs
-			case cmn::MediaCodecId::Jpeg:
-				return "JPEG";
-			case cmn::MediaCodecId::Png:
-				return "PNG";
-			case cmn::MediaCodecId::Webp:
-				return "WEBP";				
-			// Audio codecs				
-			case cmn::MediaCodecId::Aac:
-				return "AAC";
-			case cmn::MediaCodecId::Mp3:
-				return "MP3";				
-			case cmn::MediaCodecId::Opus:
-				return "OPUS";
-			default:
-				break;
+			OV_CASE_RETURN(MediaCodecId::Jpeg, "JPEG");
+			OV_CASE_RETURN(MediaCodecId::Png, "PNG");
+			OV_CASE_RETURN(MediaCodecId::Webp, "WEBP");
+			// Audio codecs
+			OV_CASE_RETURN(MediaCodecId::Aac, "AAC");
+			OV_CASE_RETURN(MediaCodecId::Mp3, "MP3");
+			OV_CASE_RETURN(MediaCodecId::Opus, "OPUS");
 		}
 
 		return "Unknown";

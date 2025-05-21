@@ -321,7 +321,7 @@ bool MediaRouterNormalize::ProcessH264AnnexBStream(const std::shared_ptr<info::S
 		
 		// if (nal_header.GetNalUnitType() == H264NalUnitType::Sps || nal_header.GetNalUnitType() == H264NalUnitType::Pps)
 		// {
-		// 	logtd("NALU Type : %s", NalUnitTypeToStr(static_cast<uint8_t>(nal_header.GetNalUnitType())).CStr());
+		// 	logtd("NALU Type : %s", NalUnitTypeToStr(nal_header.GetNalUnitType()).CStr());
 		// }
 
 		if (nal_header.GetNalUnitType() == H264NalUnitType::Sps)

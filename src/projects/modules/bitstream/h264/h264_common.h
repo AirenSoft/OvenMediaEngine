@@ -40,9 +40,9 @@ enum class H264NalUnitType : uint8_t
     AuxiliarySlice = 19
 };
 
-ov::String NalUnitTypeToStr(uint8_t nal_unit_type);
+constexpr const char *NalUnitTypeToStr(H264NalUnitType nal_unit_type);
 bool IsValidH264NalUnitType(uint8_t nal_unit_type);
-bool IsKnownH264NalUnitType(uint8_t nal_unit_type);
+bool IsKnownH264NalUnitType(H264NalUnitType nal_unit_type);
 
 bool operator==(uint8_t first, H264NalUnitType second);
 bool operator!=(uint8_t first, H264NalUnitType second);

@@ -274,8 +274,8 @@ public:
 		info.AppendFormat("DTS(%" PRId64 ") ", GetDts());
 		info.AppendFormat("Duration(%" PRId64 ") ", GetDuration());
 		info.AppendFormat("Flag(%s) ", GetMediaPacketFlagString(GetFlag()).CStr());
-		info.AppendFormat("BitstreamFormat(%s) ", GetBitstreamFormatString(GetBitstreamFormat()).CStr());
-		info.AppendFormat("PacketType(%s) ", GetMediaPacketTypeString(GetPacketType()).CStr());
+		info.AppendFormat("BitstreamFormat(%s) ", GetBitstreamFormatString(GetBitstreamFormat()));
+		info.AppendFormat("PacketType(%s) ", GetMediaPacketTypeString(GetPacketType()));
 		info.AppendFormat("DataLength(%zu) ", GetDataLength());
 
 		return info;

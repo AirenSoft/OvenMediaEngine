@@ -86,7 +86,7 @@ bool TranscodeFilter::CreateInternal()
 			return false;
 	}
 
-	auto name = ov::String::FormatString("filter_%s", cmn::GetMediaTypeString(_input_track->GetMediaType()).CStr());
+	auto name = ov::String::FormatString("filter_%s", cmn::GetMediaTypeString(_input_track->GetMediaType()));
 	auto urn = std::make_shared<info::ManagedQueue::URN>(
 		_input_stream_info->GetApplicationName(),
 		_input_stream_info->GetName(),

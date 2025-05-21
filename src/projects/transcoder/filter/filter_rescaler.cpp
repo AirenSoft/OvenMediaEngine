@@ -139,7 +139,7 @@ bool FilterRescaler::InitializeFilterDescription()
 					auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(input_module_id, input_device_id);
 					if (hw_device_ctx == nullptr)
 					{
-						logte("Could not get hw device context for %s(%d)", cmn::GetStringFromCodecModuleId(input_module_id).CStr(), input_device_id);
+						logte("Could not get hw device context for %s(%d)", cmn::GetStringFromCodecModuleId(input_module_id), input_device_id);
 						return false;
 					}
 					auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
@@ -153,7 +153,7 @@ bool FilterRescaler::InitializeFilterDescription()
 				}
 				break;
 				default:
-					logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id).CStr());
+					logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id));
 				case cmn::MediaCodecModuleId::X264:
 				case cmn::MediaCodecModuleId::QSV:		// CPU memory using 'gpu_copy=on'
 				case cmn::MediaCodecModuleId::NILOGAN:	// CPU memory using 'out=sw'
@@ -179,7 +179,7 @@ bool FilterRescaler::InitializeFilterDescription()
 				}
 				break;
 				default:
-					logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id).CStr());
+					logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id));
 				case cmn::MediaCodecModuleId::X264:
 				case cmn::MediaCodecModuleId::QSV:		// CPU memory using 'gpu_copy=on'
 				case cmn::MediaCodecModuleId::NILOGAN:	// CPU memory using 'out=sw'
@@ -231,7 +231,7 @@ bool FilterRescaler::InitializeFilterDescription()
 					auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(input_module_id, input_device_id);
 					if (hw_device_ctx == nullptr)
 					{
-						logte("Could not get hw device context for %s(%d)", cmn::GetStringFromCodecModuleId(input_module_id).CStr(), input_device_id);
+						logte("Could not get hw device context for %s(%d)", cmn::GetStringFromCodecModuleId(input_module_id), input_device_id);
 						return false;
 					}
 					auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
@@ -245,7 +245,7 @@ bool FilterRescaler::InitializeFilterDescription()
 				}
 				break;
 				default:
-					logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id).CStr());
+					logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id));
 				case cmn::MediaCodecModuleId::X264:		// CPU memory
 				case cmn::MediaCodecModuleId::QSV:		// CPU memory using 'gpu_copy=on'
 				case cmn::MediaCodecModuleId::NILOGAN:	// CPU memory using 'out=sw'
@@ -332,9 +332,9 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	logti("Rescaler parameters. track(#%u -> #%u), module(%s:%d -> %s:%d). desc(src:%s -> output:%s), fps(%.2f -> %.2f), skipFrames(%d)",
 		  _input_track->GetId(),
 		  _output_track->GetId(),
-		  GetStringFromCodecModuleId(_input_track->GetCodecModuleId()).CStr(),
+		  GetStringFromCodecModuleId(_input_track->GetCodecModuleId()),
 		  _input_track->GetCodecDeviceId(),
-		  GetStringFromCodecModuleId(_output_track->GetCodecModuleId()).CStr(),
+		  GetStringFromCodecModuleId(_output_track->GetCodecModuleId()),
 		  _output_track->GetCodecDeviceId(),
 		  _src_args.CStr(),
 		  _filter_desc.CStr(),

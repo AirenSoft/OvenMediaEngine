@@ -62,7 +62,7 @@ namespace mpegts
 			auto stream_type = GetElementaryStreamTypeByCodecId(media_track->GetCodecId());
 			if (stream_type == WellKnownStreamTypes::None)
 			{
-				logte("%s codec is not supported", cmn::GetCodecIdToString(media_track->GetCodecId()).CStr());
+				logte("%s codec is not supported", cmn::GetCodecIdToString(media_track->GetCodecId()));
 				return false;
 			}
 		}

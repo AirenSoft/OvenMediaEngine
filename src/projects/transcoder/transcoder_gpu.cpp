@@ -577,7 +577,7 @@ void TranscodeGPU::CodecThread()
 		for (int gpu_id = 0; gpu_id < GetDeviceCount(module); gpu_id++)
 		{
 			logti("[%s:%d] %d%%, %d%%, %d%%",
-				  cmn::GetStringFromCodecModuleId(module).CStr(),
+				  cmn::GetStringFromCodecModuleId(module),
 				  gpu_id,
 				  GetUtilization(IPType::DECODER, module, gpu_id),
 				  GetUtilization(IPType::ENCODER, module, gpu_id),

@@ -262,7 +262,7 @@ public:
 
 		info.AppendFormat("TrackID(%d) ", GetTrackId());
 		info.AppendFormat("SourceId(%u) ", _source_id);
-		info.AppendFormat("Type(%s) ", cmn::GetMediaTypeString(GetMediaType()).CStr());
+		info.AppendFormat("Type(%s) ", cmn::GetMediaTypeString(GetMediaType()));
 		info.AppendFormat("PTS(%" PRId64 ") ", GetPts());
 		info.AppendFormat("Duration(%" PRId64 ") ", GetDuration());
 		if(_priv_data != nullptr) {

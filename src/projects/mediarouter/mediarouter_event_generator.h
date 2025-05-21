@@ -55,8 +55,8 @@ public:
 		virtual ov::String GetInfoString()
 		{
 			return ov::String::FormatString("EventFormat:%s, EventType:%s, Urgent:%s, Interval:%d, KeyframeOnly:%s",
-											GetBitstreamFormatString(_event_format).CStr(),
-											GetMediaPacketTypeString(_event_type).CStr(),
+											GetBitstreamFormatString(_event_format),
+											GetMediaPacketTypeString(_event_type),
 											_urgent ? "true" : "false",
 											_interval, 
 											_keyframe_only ? "true" : "false");

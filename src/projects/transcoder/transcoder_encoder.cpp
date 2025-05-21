@@ -41,7 +41,7 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 {
 	logtd("Track(%d) Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s), Encode.Modules(%s)",
 		  track->GetId(),
-		  GetCodecIdToString(track->GetCodecId()).CStr(),
+		  GetCodecIdToString(track->GetCodecId()),
 		  hwaccels_enable ? "true" : "false",
 		  hwaccles_modules.CStr(),
 		  track->GetCodecModules().CStr());
@@ -143,9 +143,9 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 		(void)(candidate);
 		
 		logtd("Candidate module: %s(%d), %s(%d):%d",
-			  cmn::GetCodecIdToString(candidate->GetCodecId()).CStr(),
+			  cmn::GetCodecIdToString(candidate->GetCodecId()),
 			  candidate->GetCodecId(),
-			  cmn::GetStringFromCodecModuleId(candidate->GetModuleId()).CStr(),
+			  cmn::GetStringFromCodecModuleId(candidate->GetModuleId()),
 			  candidate->GetModuleId(),
 			  candidate->GetDeviceId());
 	}
@@ -294,8 +294,8 @@ done:
 
 		logti("The encoder has been created. track(#%d), codec(%s), module(%s:%d)",
 			track->GetId(),
-			cmn::GetCodecIdToString(track->GetCodecId()).CStr(),
-			cmn::GetStringFromCodecModuleId(track->GetCodecModuleId()).CStr(),
+			cmn::GetCodecIdToString(track->GetCodecId()),
+			cmn::GetStringFromCodecModuleId(track->GetCodecModuleId()),
 			track->GetCodecDeviceId());		
 	}
 

@@ -164,7 +164,7 @@ namespace pvd
 			if (track->GetPublicName().IsEmpty())
 			{
 				// MediaType_TrackId
-				auto public_name = ov::String::FormatString("%s_%u", cmn::GetMediaTypeString(track->GetMediaType()).CStr(), track->GetId());
+				auto public_name = ov::String::FormatString("%s_%u", cmn::GetMediaTypeString(track->GetMediaType()), track->GetId());
 				track->SetPublicName(public_name);
 			}
 		}

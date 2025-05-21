@@ -91,7 +91,7 @@ namespace pub
 					break;
 
 				default:
-					logad("SrtStream - Ignore unsupported media type: %s", GetMediaTypeString(track->GetMediaType()).CStr());
+					logad("SrtStream - Ignore unsupported media type: %s", GetMediaTypeString(track->GetMediaType()));
 					break;
 			}
 		}
